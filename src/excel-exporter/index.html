@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ExcelExporter — fmIDE → Live Excel Model</title>
+<script>
+<!-- build:js js-head -->
+</script>
+<style>
+<!-- build:css styles.css -->
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>ExcelExporter</h1>
+    <div class="sub">fmIDE → a live-formula Excel workbook</div>
+  </div>
+  <div class="row">
+    <button id="btnClearAll" class="danger" title="Clears the current session. Saved layouts are kept — use &quot;Reset Mapping to Defaults&quot; to discard one.">Start Over</button>
+  </div>
+</header>
+
+<main>
+
+  <section class="panel" id="loadPanel">
+    <h2>1. Load an fmIDE model</h2>
+    <p class="hint">Export a system from fmIDE ("Save System" or "Export Workspace") and load the JSON here — or try the built-in sample to see how the tool works. Use "Export Workspace" (not just "Save System") if you want rectangles using fmIDE's shared "Inputs" format to carry that formatting into Excel.</p>
+    <div class="drop" id="dropZone">
+      Drop an fmIDE JSON file here, or click to choose one
+      <input type="file" id="fileInput" accept="application/json,.json">
+    </div>
+    <div class="row" style="margin-top:12px;">
+      <button id="btnLoadSample">▶ Load Sample Model</button>
+      <button id="btnTogglePaste">Paste JSON instead</button>
+    </div>
+    <div id="pasteWrap" class="hidden" style="margin-top:12px;">
+      <textarea id="pasteArea" placeholder="Paste fmIDE system JSON here…"></textarea>
+      <div class="row" style="margin-top:8px;"><button id="btnLoadPasted" class="primary">Load Pasted JSON</button></div>
+    </div>
+    <div id="loadStatus" style="margin-top:12px;"></div>
+  </section>
+
+  <div id="afterLoad" class="hidden">
+
+    <section class="panel">
+      <h2>2. Period columns &amp; output</h2>
+      <p class="hint">The number of columns is fixed by fmIDE's own timeline (<span id="periodCountLabel">0</span> periods) — this just controls how the header row labels them.</p>
+      <div class="row">
+        <label class="field"><span>Start label</span><input type="text" id="cfgStartLabel" value="2027" style="width:100px;"></label>
+        <label class="field"><span>Frequency</span>
+          <select id="cfgFrequency">
+            <option value="annual">Annual</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </label>
+        <label class="field"><span>Fallback number format</span>
+          <select id="cfgFallbackFormat">
+            <option value="General">General</option>
+            <option value="#,##0" selected>#,##0</option>
+            <option value="#,##0.00">#,##0.00</option>
+            <option value='"$"#,##0'>$#,##0</option>
+            <option value='"$"#,##0.00'>$#,##0.00</option>
+            <option value="0.0%">0.0%</option>
+          </select>
+        </label>
+        <label class="field"><span>Output file name</span><input type="text" id="cfgFileName" value="fmIDE-export" style="width:180px;"></label>
+      </div>
+      <div class="roles-block">
+        <div style="font-size:12.5px; font-weight:600; margin-bottom:4px;">Format roles</div>
+        <p class="hint" style="margin:0 0 8px;">Every cell in the workbook takes its fill, font colour and border from one of these roles. Edit them in fmIDE's Formats manager (they travel in the exported JSON) — including which cell sides get a border and whether to use Excel's default font size. A rectangle's own 🎨 format still sets its number format, weight and size.</p>
+        <div id="rolesLegend" class="roles-legend"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>3. Tabs</h2>
+      <p class="hint">One tab per fmIDE canvas by default. Rename, reorder, add, or delete tabs — rows are assigned to tabs below.</p>
+      <table class="tabs-table">
+        <thead><tr><th style="width:36px;"></th><th>Tab name</th><th style="width:90px;">Rows</th><th style="width:110px;"></th></tr></thead>
+        <tbody id="tabsBody"></tbody>
+      </table>
+      <div class="row" style="margin-top:10px;"><button id="btnAddTab">+ Add Tab</button></div>
+      <div class="inputs-settings">
+        <label style="display:flex; align-items:center; gap:6px; font-weight:600; font-size:13px;">
+          <input type="checkbox" id="cfgInputsEnabled"> Gather inputs on a separate tab
+        </label>
+        <p class="hint" style="margin:4px 0 10px;">Every input rectangle (no incoming arrow) gets a row on this tab holding its typed numbers. Its original row stays where it is and links to it (green font). Rename, include/exclude and "Constant" stay in sync between the two. Tick "scenarios" on a row of this tab (Rows panel) to give that input several scenarios; a Scenarios tab then picks which one applies to each.</p>
+        <div id="inputsOptions" class="row">
+          <label class="field"><span>Tab name</span><input type="text" id="cfgInputsName" style="width:140px;"></label>
+          <label class="field"><span>Group by</span>
+            <select id="cfgInputsGroup"><option value="tab">Excel tab</option><option value="canvas">Canvas</option><option value="none">No grouping</option></select>
+          </label>
+          <label class="field"><span>Order within group</span>
+            <select id="cfgInputsOrder"><option value="sheet">Sheet order (top to bottom)</option><option value="alpha">Alphabetical</option></select>
+          </label>
+          <label class="field" title="Number of scenarios a variable gets when you switch scenarios on for it"><span>Scenarios per variable</span><input type="number" id="cfgInputsScenarios" min="2" max="20" style="width:70px;"></label>
+          <label class="field" title="Number of global cases on the Scenarios tab. Each case picks one scenario per variable; the Global Case cell picks the case the whole model runs. 0 = no global case (type each variable's scenario directly)."><span>Global cases</span><input type="number" id="cfgInputsCases" min="0" max="50" style="width:70px;"></label>
+          <span id="casesHint" class="hint" style="align-self:flex-end; margin:0 0 6px;"></span>
+          <button id="btnInputsRelayout" style="align-self:flex-end;" title="Rebuild the inputs tab's grouping and order from these settings (rows you added there yourself are kept at the end)">Re-apply layout</button>
+        </div>
+        <div id="inputsStatus" style="margin-top:8px;"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>4. Rows</h2>
+      <p class="hint">Every value rectangle becomes one labeled row. Operators, aliases, and period-shift nodes are inlined into formulas automatically — they don't get their own row (a rectangle fed through an alias points straight at the alias's source; a rectangle fed through a period-shift points straight at the shifted source, in the shifted period's column). A Block instance is <strong>unpacked</strong>: its definition canvas's own rectangles each get a row too, once per instance (a separate "Block instance —" group below, one per instance, since two instances of the same block compute independently and need independent cells) — a rectangle marked as a Block Input port inside the block is itself inlined, resolving straight to whatever's wired into that instance's port (or to 0 if the port is left unwired), the same way an alias is inlined. Assign each row's tab, section, order, and label; uncheck "Include" to skip a rectangle entirely. For a true input rectangle that's really just formula plumbing (a sign flip, a unit-scale factor like ×1000) rather than a labeled assumption, check "Constant" to splice its value directly into every formula that references it instead of giving it a row of its own — this works inside an unpacked block instance too. A rectangle marked as a Block Input or Block Output in fmIDE's Block feature shows a small "Block In" / "Block Out" tag next to its type, so you can see fmIDE's own port role — this is separate from the Input/Calc/Output section below, which is just this tool's own edge-based placement. To reorder many rows at once, or move a batch to a different tab or section, check the leftmost box on each row you want and use the bar that appears above the table — "Move Up/Down" nudges the whole selection by one slot, "Move to Top/Bottom" sends it to the edge of its group, and "Move to" relocates the whole selection to any tab (and section, if sections are enforced) you pick. Uncheck "Enforce Input / Calc / Output sections" below to stop treating those as hard bands in the generated sheet — a row's section then stays as an informational tag only, and rows in a tab are freely ordered as one flat list; use a Custom / Label row for any banner you still want. "Tree View" shows every row assigned to each tab — including an excluded or "Constant" one, dimmed, so it stays reachable — as one flat, clickable list: click to select a row, Ctrl/Cmd-click to add or remove one, Shift-click to select a range. From there, the bar above the list can set Include or Constant for every row in the selection at once (custom rows and ineligible rows are skipped automatically), and double-clicking a single row's label lets you rename just that one row in place.</p>
+      <div class="row" style="margin-bottom:14px;">
+        <button id="viewByCanvas" class="tbtn-toggle">Group by Canvas</button>
+        <button id="viewByTab" class="tbtn-toggle">Group by Excel Tab</button>
+        <button id="viewByTree" class="tbtn-toggle">Tree View</button>
+        <label style="display:flex; align-items:center; gap:5px; font-size:12.5px; color:var(--muted); margin-left:8px;" title="When off, Input/Calc/Output stops being a layout partition — it's kept only as an informational tag, and rows in a tab are one freely-ordered flat list.">
+          <input type="checkbox" id="cfgSectionsEnabled" checked>
+          Enforce Input / Calc / Output sections
+        </label>
+        <span style="flex:1 1 auto;"></span>
+        <button id="btnAddCustomRow" title="Adds a label/divider row — below the selected row(s) if any are selected, otherwise at the bottom of the first tab. In Tree View you can also right-click a row to insert above or below it.">+ Add Custom Row</button>
+      </div>
+      <div class="row" id="sortBar" style="margin-bottom:12px; padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:#fafafa;">
+        <span style="font-size:12.5px; font-weight:600;">Sort rows by</span>
+        <select id="sortMethod" title="How to order rows. Custom / label rows stay in their slots; rectangle rows are re-ordered around them."></select>
+        <select id="sortWithin" title="How rows that feed the same calculation are ordered next to each other: alphabetically, or in the order they appear in the formula (left to right on the canvas — e.g. Revenue before COGS in Revenue − COGS)."></select>
+        <span style="font-size:12px; color:var(--muted);">in</span>
+        <select id="sortScope" title="Which rows to sort. With sections enforced, each Input / Calc / Output band is sorted separately."></select>
+        <button id="btnApplySort" class="primary">Apply</button>
+        <span id="sortStatus" style="font-size:12px; color:var(--muted); display:inline-flex; align-items:center;"></span>
+      </div>
+      <div id="bulkMoveBar" class="row hidden" style="margin-bottom:12px; padding:8px 12px; background:var(--accent-soft); border:1px solid #c7d2fe; border-radius:8px;"></div>
+      <div id="rowGroups"></div>
+      <div id="blockInstanceGroups"></div>
+      <div id="rowGroupsByTab" class="hidden"></div>
+      <div id="rowGroupsTree" class="hidden"></div>
+    </section>
+
+    <section class="panel" id="customRowsPanel">
+      <h2>4b. Custom / Label Rows</h2>
+      <p class="hint">Insert a labeled or divider row anywhere among your rows, for section headers or spacing — these aren't tied to any fmIDE rectangle and don't compute anything. Use their ↑/↓ to position them relative to the real rows above. (Switch to "Group by Excel Tab" above to edit these inline, right where they'll appear.)</p>
+      <div class="rows-scroll"><table class="rows-table" id="customRowsTable">
+        <thead><tr><th>Label</th><th>Tab</th><th>Section</th><th>Order</th><th>Show period labels</th><th>Format</th><th></th></tr></thead>
+        <tbody id="customRowsBody"></tbody>
+      </table></div>
+    </section>
+
+    <section class="panel">
+      <h2>5. Generate</h2>
+      <div class="limits">
+        <strong>Known limitations:</strong> a block instance's own compact node never gets a row — it's fully unpacked into its own "Block instance —" group instead (see the Rows panel above), so map/rename/reorder its rows there like any other. A <strong>vertical</strong> block instance (fmIDE's Vertical Block feature) is unpacked once per vintage/run — a "V1", "V2", … tagged copy of every internal row per period in the timeline — plus one "Σ Total"-tagged row per output port that reduces all those vintages back into the single value the rest of the model sees, via SUM/MAX/MIN/AVERAGE/PRODUCT matching that output's reducer (default sum); this is exactly a vintage/waterfall schedule with a Total row underneath, so with many periods a vertical block can add a lot of rows — reorder, rename, or exclude them like any other row. A block that instantiates itself, directly or indirectly, is skipped (avoids an infinite unpack). Formulas, number formats, and cell fill/border/font all carry through reliably. Excel recalculates formulas automatically when the file opens.
+      </div>
+      <div id="storageWarn" class="status err hidden" role="alert" style="margin-bottom:10px;"></div>
+      <div class="row" style="margin-top:14px;">
+        <button id="btnGenerate" class="primary">⬇ Generate &amp; Download .xlsx</button>
+        <button id="btnExportMapping">Export Mapping JSON</button>
+        <button id="btnImportMapping">Import Mapping JSON</button>
+        <input type="file" id="mappingFileInput" accept="application/json,.json" style="display:none;">
+        <button id="btnResetMapping" class="danger" title="Discard the saved layout for this model and rebuild the default mapping">Reset Mapping to Defaults</button>
+      </div>
+      <p class="hint" style="margin:10px 0 0;">Your mapping autosaves in this browser and comes back whenever you load the same model again (even after Start Over). "Reset Mapping to Defaults" discards it for the loaded model — export it first if you might want it back.</p>
+      <div id="genStatus" style="margin-top:12px;"></div>
+    </section>
+
+  </div>
+
+</main>
+
+<div id="treeCtxMenu" class="ctx-menu hidden" role="menu"></div>
+
+<div id="confirmModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+  <div class="modal">
+    <h3 id="confirmTitle"></h3>
+    <p id="confirmMessage"></p>
+    <div class="modal-actions">
+      <button id="confirmCancel">Cancel</button>
+      <button id="confirmOk" class="danger-solid">OK</button>
+    </div>
+  </div>
+</div>
+
+<footer>ExcelExporter — a standalone companion to fmIDE. Nothing here is uploaded anywhere; everything runs in your browser.</footer>
+
+<script>
+<!-- build:js js -->
+</script>
+</body>
+</html>
