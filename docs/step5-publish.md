@@ -23,6 +23,14 @@ A PWA needs three things the single files can't carry: a **web app manifest** (n
 
 **Tests (group 12):** a small local web server (Node only) serves a freshly built site from `localhost`: valid manifest; the service worker installs; the app works offline after the server is stopped; the update notice appears when the version changes and Reload switches to it; `apps/fmIDE.html` registers no service worker; a `.fmide` handed over through a faked `launchQueue` opens as a document (asking first if there are unsaved changes); Open ExcelExporter opens it.
 
+**Done (5a)** — how it turned out:
+
+- `tools/build.js` exports `buildSite(dir)` and takes `--site DIR`; `npm run build` writes `site/`, `npm run serve` (`tools/serve.js`) shows it at `http://localhost:8080/`. The icons are a placeholder (`src/site/icons/icon.svg`, PNGs rendered from it).
+- The mobile viewport line was left out of the site page: touch support comes later, and it would change the layout on phones.
+- Code in `src/fmide/js/21-web-app.js` (the start-up piece is now `22-`). New commands **Open ExcelExporter** and **Install fmIDE** in an App group on the default File tab (customised ribbons reach them through the Command Launcher and Customize Ribbon).
+- The manifest asks the browser to reuse the open window for a double-clicked file (`launch_handler: focus-existing`), so two windows don't compete for the same autosave.
+- Tests: group 12 (`tests/12-web-app.spec.js`, `npm run test:web-app`), including Chrome's own installability check.
+
 ## Phase 5b — publish (after the open decisions)
 
 Deploy `site/` to the chosen host automatically when `main` changes; document the address and how updates reach people.

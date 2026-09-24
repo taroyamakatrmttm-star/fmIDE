@@ -17,7 +17,7 @@ Workflow since step 3a: edit `src/` → `npm run build` → `npm test` (the file
 2. Permanent test suite — one command that runs every check, on every change ✅ (`npm test`, see `tests/README.md`)
 3. Split each app into modules (still building to single files), protected by the tests ✅ — 3a source split into `src/`, built by `npm run build`; 3b shared code in `src/shared/` (see `docs/step3-modules.md`)
 4. Storage for the web app: IndexedDB plus explicit open/save of `.fmide` files ✅ — 4a IndexedDB underneath, 4b `.fmide` documents (Open, Save, Save As, Recent, recovery), 4c Preferences file (see `docs/step4-storage.md`). Double-clicking a `.fmide` file to open it (PWA file association; PWA = installable web app) belongs to step 5.
-5. Publish the web app; then formula IR and plugins, community library, touch support
+5. Publish the web app (see `docs/step5-publish.md`) — 5a installable web app (PWA) ✅: offline, updates, install, double-click `.fmide`, one app with ExcelExporter inside (decided 24 Sep 2026); 5b publishing needs decision 3, the host and the address. Then formula IR and plugins, community library, touch support
 
 ## Phase 0 (hardening) — status
 
