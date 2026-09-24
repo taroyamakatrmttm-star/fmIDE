@@ -88,6 +88,7 @@ Load `tests/fixtures/security/evil-workspace.json` and `evil-system.json`:
 **fmIDE** (`tests/fixtures/formats/`):
 - `sys-current`, `sys-legacy` (no kind/version) load via `loadSystem`.
 - `sys-newer` (version 3): a dialog mentions "newer version" and "format version 3"; Cancel leaves the current canvases unchanged; OK then opens it.
+- `preferences` via `loadSystem` → "That is an fmIDE preferences file, not a system. Open it with File → Import Preferences." (and the same via Open…, group 10).
 - `templates` via `loadSystem` → message "That is an fmIDE templates file, not a system. Open it with Templates → Import Templates."; `sys-current` via `loadModule` → message naming it a system; `mapping` via `loadSystem` → message pointing to ExcelExporter.
 - `templates` via the Templates dialog: one question up front mentioning the template "Future T" is from a newer fmIDE; continuing imports both.
 - `shortcuts-v1`: after import, `fm.commands()` shows `openShortcuts = Mod+Shift+K` and `openMacros = Mod+Alt+M`.
@@ -99,7 +100,7 @@ Load `tests/fixtures/security/evil-workspace.json` and `evil-system.json`:
 **ExcelExporter**:
 - A `.fmide` document (a workspace) loads through `#fileInput`.
 - `sys-current`, `sys-legacy` load; `sys-newer` shows `#confirmModal` — Cancel → status "Not loaded."; Open Anyway → loads. `ws-nested-newer` → confirm mentions its system.
-- `module`, `templates`, `mapping` loaded as a model → a message saying what the file is and where it belongs.
+- `module`, `templates`, `mapping`, `preferences` loaded as a model → a message saying what the file is and where it belongs.
 - Mapping: `#btnExportMapping` download has `kind: "fmIDE-excel-mapping"`, `version: 1`; re-importing it works; `map-legacy` (no kind/version) imports; `map-newer` asks; importing a system file as a mapping is rejected. The saved layout in browser storage never contains `kind`/`version`.
 
 ### 7. UI flows
@@ -136,10 +137,19 @@ Driven with `fm.command('newDocument' | 'openDocument' | 'saveDocument' | 'saveD
 - Fallback: a new session is "Untitled — fmIDE"; opening `Revenue model.fmide` titles it "Revenue model — fmIDE"; a change adds " •"; Save downloads `Revenue model.fmide` (a workspace) and clears the dot. An untitled Save asks for a name, then later Saves download without asking; the download opens again. Save As always asks. A system `.json` opens, and Save then asks for a `.fmide` name. A templates file is refused with the wrong-kind message. Ctrl+S in a text box saves.
 - Unsaved changes before New / Open: Cancel keeps everything; Don't save goes ahead (undo history starts afresh); Save saves first; cancelling the name question cancels all.
 - File handles: Save writes back to the same file with no dialog; Save As asks (suggesting the current name) and later Saves go to the new file; an untitled Save suggests `Untitled.fmide`; a system `.json` opened from disk is never overwritten (Save asks for `model.fmide`); Open Recent reopens the real file (its current content).
-- Recent: Save As makes a new entry (the old file keeps its own). Open two files, reopen the first from its copy (toast "Opened the copy saved in this browser on …"), the order survives a reload, Clear Recent empties it. File names with markup are shown as plain text (the test passes such a file from memory: a file with `<` in its name on disk breaks the CI artifact upload).
+- Recent: Save As makes a new entry (the old file keeps its own); Open Recent opened the moment a save finishes already lists it. Open two files, reopen the first from its copy (toast "Opened the copy saved in this browser on …"), the order survives a reload, Clear Recent empties it. File names with markup are shown as plain text (the test passes such a file from memory: a file with `<` in its name on disk breaks the CI artifact upload).
 - Recovery: a change is autosaved about 2 s later (before the 8 s timer). After a reload with unsaved changes the title keeps the dot and `#recoveryBanner` says "Recovered unsaved changes to “name”." — Dismiss hides it, Save saves the document. A saved session comes back without a notice.
 - Opening a `.fmide` adds templates and macros that aren't already there (same name and content; a clashing macro becomes "… (imported)", and is not added again on a second open), leaves shortcuts and ribbon unchanged, and takes the file's format roles. New keeps format presets.
 - Ribbon: the File tab starts with the Document group; a ribbon customised before it existed gets it once; if removed afterwards it stays removed, also after a reload.
+
+### 11. Preferences (fmIDE)
+Commands `exportPreferences` (download `fmIDE-preferences.json`) and `importPreferences` (file input `#fileInputPreferences`, then the confirm "Replace your shortcuts, ribbon and KeyTips settings with the ones in this file?"). The Customize Ribbon dialog (`.rbc-box`) has the same two buttons.
+- Round trip: customise a shortcut (Import Shortcuts), the ribbon (add Add Rectangle to the Quick Access Toolbar, move Cut down) and the KeyTips trigger (F10); Export Preferences (kind `fmIDE-preferences`, version 1, no active tab / launcher recents / last-run macro); reset all three; Import → all come back exactly, and the model, templates, macros and format presets are unchanged, as is the window title.
+- Cancel at the confirmation leaves every setting unchanged.
+- `preferences.json` applies as a whole (shortcuts not in the file get their defaults); `preferences-newer.json` asks first.
+- Macros: your macro shortcuts are kept, unless a built-in command from the file takes the same key; the file's macro shortcuts and ribbon/QAT buttons for macros you don't have are dropped.
+- From the file, safely: a tab name with markup is shown as text; malformed groups/items are cleaned up; a tap trigger on an ordinary key falls back to the default.
+- The default File tab has a Preferences group (Export, Import).
 
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.

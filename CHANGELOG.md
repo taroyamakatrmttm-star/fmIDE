@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Preferences file (build step 4c)
+- **File → Export Preferences…** / **Import Preferences…** (also in Customize Ribbon): your keyboard shortcuts, ribbon layout, Quick Access Toolbar, collapsed ribbon and KeyTips key, in one shareable file (`fmIDE-preferences.json`, a new file kind). Import asks once, then replaces exactly those settings; your model, templates, macros and format presets are never touched. Macro shortcuts stay your own.
+- Ribbon layouts read from files (preferences and workspaces) are checked and cleaned before use, and a KeyTips trigger from a file must be a modifier key or a valid shortcut.
+- Other readers point preferences files to the right place, in fmIDE and ExcelExporter.
+
 ## Documents (build step 4b)
 - fmIDE works like a document app: **New**, **Open…** (Ctrl/Cmd+O), **Save** (Ctrl/Cmd+S), **Save As…** (Ctrl/Cmd+Shift+S) and **Open Recent…** (up to 10) in a new Document group on the File tab. A document is a `.fmide` file, which is exactly the workspace JSON, so no new file format. Chrome and Edge save straight back to the file. Other browsers download `name.fmide`, and Open Recent reopens the copy kept in the browser, saying so.
 - Unsaved changes show as a dot in the window title. New, Open and Open Recent ask Save / Don't save / Cancel, and closing the tab asks "Leave site?".

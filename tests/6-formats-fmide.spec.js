@@ -48,6 +48,7 @@ const WRONG_KIND = [
   ['loadModule', 'sys-current', /^That is an fmIDE system, not a module\./],
   ['loadSystem', 'mapping', /ExcelExporter/],
   ['loadSystem', 'map-legacy', /^That is an ExcelExporter mapping file — open it in ExcelExporter/], // saved before kinds were written
+  ['loadSystem', 'preferences', /^That is an fmIDE preferences file, not a system\. Open it with File → Import Preferences\.$/],
 ];
 for(const [command, name, message] of WRONG_KIND){
   test(`${name} via ${command} is rejected with a message`, async ({ page }) => {

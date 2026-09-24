@@ -631,6 +631,7 @@
   <input type="file" id="fileInputSystem" accept="application/json,.json" style="display:none;">
   <input type="file" id="fileInputModule" accept="application/json,.json" style="display:none;">
   <input type="file" id="fileInputDocument" accept=".fmide,application/json,.json" style="display:none;">
+  <input type="file" id="fileInputPreferences" accept="application/json,.json" style="display:none;">
   <div id="viewport">
     <div id="canvas">
       <svg id="edges"></svg>
@@ -744,6 +745,8 @@
     { id:'loadModule',  label:'Load Module',           icon:'📥', category:'File', defaultShortcut:null, action:() => fileInputModule.click() },
     { id:'exportWorkspace', label:'Export Workspace',  icon:'⇩', category:'File', defaultShortcut:null, action:() => fm.exportWorkspace() },
     { id:'importWorkspace', label:'Import Workspace',  icon:'⇧', category:'File', defaultShortcut:null, action:() => fileInputWorkspace.click() },
+    { id:'exportPreferences', label:'Export Preferences…', icon:'⚙', category:'File', defaultShortcut:null, action:() => exportPreferencesToFile() },
+    { id:'importPreferences', label:'Import Preferences…', icon:'⚙', category:'File', defaultShortcut:null, action:() => importPreferencesInteractive() },
     { id:'openTemplates',label:'Templates',            icon:'📚', category:'File', defaultShortcut:null, action:() => showTemplatesPicker() },
     { id:'openFormats', label:'Format Presets',        icon:'🎨', category:'File', defaultShortcut:null, action:() => showFormatPresetsPicker(null) },
     // Documents (.fmide files) — last in the File list, so a shortcut someone already gave
@@ -1754,7 +1757,8 @@
     'fmIDE-templates':      { current: 1, label: 'templates file',      where: 'Templates → Import Templates' },
     'fmIDE-format-presets': { current: 1, label: 'format presets file', where: 'Format Presets → Import Presets' },
     'fmIDE-shortcuts':      { current: 2, label: 'shortcuts file',      where: 'Keyboard Shortcuts → Import Shortcuts' },
-    'fmIDE-macros':         { current: 1, label: 'macros file',         where: 'Macro Builder → Import' }
+    'fmIDE-macros':         { current: 1, label: 'macros file',         where: 'Macro Builder → Import' },
+    'fmIDE-preferences':    { current: 1, label: 'preferences file',    where: 'File → Import Preferences' }
   };
   const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
     // v1 shortcut files stored combos in the old notation.
@@ -7165,6 +7169,7 @@
         { label:'System', items:[ { cmd:'saveSystem', size:'large' }, { cmd:'loadSystem' }, { cmd:'addSystem' } ] },
         { label:'Module', items:[ { cmd:'saveModule', size:'large' }, { cmd:'loadModule' } ] },
         { label:'Workspace', items:[ { cmd:'exportWorkspace' }, { cmd:'importWorkspace' } ] },
+        { label:'Preferences', items:[ { cmd:'exportPreferences' }, { cmd:'importPreferences' } ] },
         { label:'Library', items:[ { cmd:'openTemplates', size:'large' }, { cmd:'openFormats', size:'large' } ] },
       ]},
       { id:'home', label:'Home', keytip:'H', groups:[
@@ -9342,8 +9347,9 @@
     return recentQueue;
   }
 
+  // Waits for Recent updates still being written (a document opened or saved a moment ago).
   function showOpenRecent(){
-    readRecent().then(list => {
+    recentQueue.then(readRecent).then(list => {
       const overlay = document.createElement('div');
       overlay.className = 'modal-overlay';
       const box = document.createElement('div');
@@ -9627,6 +9633,12 @@
     });
     rt('↑', 'Move up', () => moveSelected(-1));
     rt('↓', 'Move down', () => moveSelected(1));
+    const reopen = () => { overlay.remove(); document.removeEventListener('keydown', onKey); renderRibbon(); showCustomizeRibbon(); };
+    rt('Export Preferences…', 'Download your shortcuts, ribbon and KeyTips settings as a file', () => {
+      if(JSON.stringify(ribbonState.config) !== cfgAtOpen) ribbonState.customized = true; // include edits made in this dialog
+      exportPreferencesToFile();
+    });
+    rt('Import Preferences…', 'Replace your shortcuts, ribbon and KeyTips settings with a preferences file', () => importPreferencesInteractive(reopen));
     rt('Reset', 'Restore the default ribbon layout', () => {
       showConfirm('Reset the ribbon and Quick Access Toolbar to the default layout?', () => {
         ribbonState.config = cloneData(DEFAULT_RIBBON);
@@ -9718,8 +9730,9 @@
   }
   function applyUiPayload(ui){
     if(!ui || typeof ui !== 'object') return;
-    if(ui.ribbonCustomized && ui.ribbon && Array.isArray(ui.ribbon.tabs) && ui.ribbon.tabs.length){
-      ribbonState.config = { qat: Array.isArray(ui.ribbon.qat) ? ui.ribbon.qat.slice() : [], tabs: cloneData(ui.ribbon.tabs) };
+    const fileRibbon = ui.ribbonCustomized ? cleanRibbonConfig(ui.ribbon) : null;
+    if(fileRibbon){
+      ribbonState.config = fileRibbon;
       ribbonState.customized = true;
       if(ui.documentGroupAdded !== true) addDocumentGroupToRibbon();
     }
@@ -9732,6 +9745,110 @@
     if(Array.isArray(ui.launcherRecent)) launcherRecent = ui.launcherRecent.slice(0, LAUNCHER_RECENT_MAX);
     if(typeof ui.lastRunMacroId === 'string') lastRunMacroId = ui.lastRunMacroId;
   }
+
+  // A ribbon layout read from a file (a workspace or preferences file, maybe someone
+  // else's): only the known fields, with the right types, so a malformed layout can't break
+  // the ribbon. Returns null when there is no usable layout.
+  function cleanRibbonConfig(r){
+    if(!r || typeof r !== 'object' || !Array.isArray(r.tabs)) return null;
+    const str = (v, max) => (typeof v === 'string' ? v.slice(0, max) : undefined);
+    const obj = v => !!v && typeof v === 'object';
+    const tabs = r.tabs.filter(obj).map((t, ti) => {
+      const tab = { id: str(t.id, 80) || ('tab' + ti), label: str(t.label, 60) || 'Tab', groups: [] };
+      if(str(t.keytip, 3)) tab.keytip = str(t.keytip, 3);
+      tab.groups = (Array.isArray(t.groups) ? t.groups : []).filter(obj).map(g => {
+        const group = { label: str(g.label, 60) || 'Group', items: [] };
+        if(str(g.id, 80)) group.id = str(g.id, 80);
+        group.items = (Array.isArray(g.items) ? g.items : []).filter(it => obj(it) && typeof it.cmd === 'string').map(it => {
+          const item = { cmd: it.cmd.slice(0, 120) };
+          if(it.size === 'large') item.size = 'large';
+          if(str(it.keytip, 3)) item.keytip = str(it.keytip, 3);
+          if(str(it.label, 60)) item.label = str(it.label, 60);
+          return item;
+        });
+        return group;
+      });
+      return tab;
+    });
+    if(!tabs.length) return null;
+    return { qat: (Array.isArray(r.qat) ? r.qat : []).filter(x => typeof x === 'string').map(x => x.slice(0, 120)), tabs };
+  }
+
+  // ---------- Preferences file (fmIDE-preferences) ----------
+  // The person's own settings, to take to another computer or share: shortcuts for built-in
+  // commands, the ribbon and Quick Access Toolbar, the ribbon's collapsed state and the
+  // KeyTips trigger. Macro shortcuts stay out (macro ids belong to one person's library)
+  // and are kept on import, unless a built-in command from the file takes the same key;
+  // ribbon buttons for macros this person doesn't have are dropped.
+  const fileInputPreferences = document.getElementById('fileInputPreferences');
+  let afterPreferencesImport = null;
+
+  function buildPreferencesPayload(){
+    const bindings = {};
+    COMMANDS.forEach(c => { if(!c.id.startsWith('macro:')) bindings[c.id] = shortcutBindings[c.id] || null; });
+    return {
+      kind: 'fmIDE-preferences', version: 1,
+      shortcutBindings: bindings, shortcutBindingsVersion: 2,
+      ribbonCustomized: !!ribbonState.customized,
+      ribbon: ribbonState.customized ? cloneData(ribbonState.config) : null,
+      ribbonCollapsed: !!ribbonState.collapsed,
+      keytipTrigger: Object.assign({}, keytipTrigger)
+    };
+  }
+  function exportPreferencesToFile(){ downloadJSON(buildPreferencesPayload(), 'fmIDE-preferences.json'); }
+
+  function applyPreferencesPayload(data){
+    COMMANDS.forEach(c => { if(!c.id.startsWith('macro:')) shortcutBindings[c.id] = c.defaultShortcut || null; });
+    if(data.shortcutBindings && typeof data.shortcutBindings === 'object'){
+      const legacy = !(data.shortcutBindingsVersion >= 2);
+      Object.keys(data.shortcutBindings).forEach(id => {
+        if(id.startsWith('macro:') || !COMMANDS.some(c => c.id === id)) return;
+        const v = data.shortcutBindings[id];
+        shortcutBindings[id] = typeof v === 'string' ? (canonicalCombo(v, legacy) || null) : null;
+      });
+    }
+    const fileRibbon = data.ribbonCustomized ? cleanRibbonConfig(data.ribbon) : null;
+    ribbonState.config = fileRibbon || cloneData(DEFAULT_RIBBON);
+    ribbonState.customized = !!fileRibbon;
+    ribbonState.collapsed = data.ribbonCollapsed === true;
+    ribbonState.flyout = false;
+    if(!ribbonState.config.tabs.some(t => t.id === ribbonState.activeTab)) ribbonState.activeTab = ribbonState.config.tabs[0].id;
+    // A tap trigger is one of the modifier keys the dialog offers (any other key would
+    // arm KeyTips while typing); a combo must be a valid shortcut.
+    const kt = data.keytipTrigger;
+    const combo = kt && kt.type === 'combo' ? canonicalCombo(kt.combo, false) : null;
+    if(kt && kt.type === 'tap' && ['Alt', 'Shift', 'Control', 'Meta'].includes(kt.key)) keytipTrigger = { type: 'tap', key: kt.key };
+    else if(combo) keytipTrigger = { type: 'combo', combo };
+    else keytipTrigger = Object.assign({}, DEFAULT_KEYTIP_TRIGGER);
+    dedupeBindings();      // built-in commands come first, so they win over a macro's key
+    rebuildShortcutMap();
+    syncPinnedMacrosIntoRibbon();
+    renderRibbon();
+    saveWorkspaceSoon();
+  }
+
+  // onDone runs after the settings were replaced (e.g. to reopen the Customize dialog).
+  function importPreferencesInteractive(onDone){
+    afterPreferencesImport = onDone || null;
+    fileInputPreferences.click();
+  }
+  fileInputPreferences.addEventListener('change', () => {
+    const file = fileInputPreferences.files && fileInputPreferences.files[0];
+    fileInputPreferences.value = '';
+    const onDone = afterPreferencesImport;
+    afterPreferencesImport = null;
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => openFmFileText(String(reader.result), ['fmIDE-preferences'], (data) => {
+      showConfirm('Replace your shortcuts, ribbon and KeyTips settings with the ones in this file?', () => {
+        applyPreferencesPayload(data);
+        if(onDone) onDone();
+        toast('Preferences imported.');
+      });
+    });
+    reader.onerror = () => showMessage('Could not read that file.');
+    reader.readAsText(file);
+  });
 
   function startRenameActiveCanvas(){
     const tab = canvasTabsEl.querySelector(`.canvas-tab[data-id="${activeCanvasId}"]`);

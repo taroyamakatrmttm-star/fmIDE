@@ -1,0 +1,65 @@
+{
+  "kind": "fmIDE-preferences",
+  "version": 1,
+  "shortcutBindings": {
+    "openLauncher": "Mod+Shift+L",
+    "evaluate": "F5",
+    "newCanvas": "Alt+N"
+  },
+  "shortcutBindingsVersion": 2,
+  "ribbonCustomized": true,
+  "ribbon": {
+    "qat": [
+      "undo",
+      "redo",
+      "evaluate",
+      "openLauncher",
+      "addRect"
+    ],
+    "tabs": [
+      {
+        "id": "file",
+        "label": "File",
+        "keytip": "F",
+        "groups": [
+          {
+            "id": "document",
+            "label": "Document",
+            "items": [
+              {
+                "cmd": "saveDocument",
+                "size": "large"
+              },
+              {
+                "cmd": "openDocument"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "mine",
+        "label": "My Tab",
+        "groups": [
+          {
+            "label": "Favourites",
+            "items": [
+              {
+                "cmd": "evaluate",
+                "size": "large"
+              },
+              {
+                "cmd": "addRect"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "ribbonCollapsed": false,
+  "keytipTrigger": {
+    "type": "combo",
+    "combo": "F10"
+  }
+}

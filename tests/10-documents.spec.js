@@ -110,6 +110,13 @@ test.describe('without file handles', () => {
     expect(await D.title(page)).toBe('Untitled — fmIDE');
   });
 
+  test('a preferences file is refused, pointing to Import Preferences', async ({ page }) => {
+    await D.openViaInput(page, 'openDocument', fixture('formats', 'preferences.json'));
+    await expect(dialog(page)).toHaveText(/^That is an fmIDE preferences file, not a workspace or system\. Open it with File → Import Preferences\./);
+    await F.dismissMessage(page);
+    expect(await D.title(page)).toBe('Untitled — fmIDE');
+  });
+
   test('Ctrl+S while typing in a field saves (the browser does not get it)', async ({ page }) => {
     await rename(page, 'Typed');
     await page.locator('#canvasTabs .canvas-tab .name').first().dblclick();
@@ -270,6 +277,20 @@ test('Save As makes a new Recent entry; the old file keeps its own', async ({ pa
   await downloadText(page, () => page.keyboard.press('Enter'));
   await expect.poll(() => D.title(page)).toBe('Copy — fmIDE');
   await cmd(page, 'openRecent');
+  await expect(page.locator('#recentList .recent-name')).toHaveText(['Copy', 'Original']);
+});
+
+test('Open Recent the moment a save finishes already lists the new file', async ({ page }, testInfo) => {
+  await F.openFmIDE(page);
+  await D.openViaInput(page, 'openDocument', D.tempFile(testInfo, 'Original.fmide', workspaceText('O')));
+  await expect.poll(() => D.title(page)).toBe('Original — fmIDE');
+  await cmd(page, 'saveDocumentAs');
+  await page.locator('#saveAsName').fill('Copy');
+  await Promise.all([page.waitForEvent('download'), page.evaluate(async () => {
+    document.querySelector('#saveAsDialog button.primary').click();
+    while(!document.title.startsWith('Copy')) await new Promise(r => setTimeout(r, 0));
+    fm.command('openRecent'); // while the Recent entry may still be being written
+  })]);
   await expect(page.locator('#recentList .recent-name')).toHaveText(['Copy', 'Original']);
 });
 
