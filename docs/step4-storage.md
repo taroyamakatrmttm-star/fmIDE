@@ -101,7 +101,7 @@ Opening a `.fmide` deliberately ignores personal settings, so they need their ow
 
 **Done (4c)** — how it turned out:
 
-- Code in `src/fmide/js/21-customize-ribbon-ui-state.js`, next to the workspace's `ui` part it mirrors. A new Preferences group on the default File tab only; customised ribbons reach the commands through the Command Launcher and the Customize Ribbon dialog's buttons.
+- Code in `src/fmide/js/22-customize-ribbon-ui-state.js`, next to the workspace's `ui` part it mirrors. A new Preferences group on the default File tab only; customised ribbons reach the commands through the Command Launcher and the Customize Ribbon dialog's buttons.
 - Macros: export writes only built-in command shortcuts. Import keeps the person's macro shortcuts, unless a built-in command from the file takes the same key; ribbon and Quick Access Toolbar buttons for macros they don't have are dropped.
 - Ribbon layouts from files (preferences and Import Workspace) go through `cleanRibbonConfig()`; a KeyTips tap trigger must be Alt, Shift, Control or Meta.
 - ExcelExporter says a preferences file belongs in fmIDE.

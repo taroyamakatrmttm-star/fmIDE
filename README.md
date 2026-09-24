@@ -14,6 +14,8 @@ Both are single self-contained HTML files with no external dependencies: open th
 1. Open `apps/fmIDE.html` and build a model. Save it as a document with **File → Save** (Ctrl/Cmd+S): a `.fmide` file. **File → Open…** (Ctrl/Cmd+O) opens it again, and **Open Recent…** lists the last ten. In Chrome and Edge, Save writes straight back to the file. Other browsers download `name.fmide` each time you save, and Open Recent reopens the copy kept in the browser. Work is also autosaved in the browser: after a crash, fmIDE comes back with your unsaved changes and offers to save them.
 2. Open `apps/ExcelExporter.html`, load the `.fmide` file (or a **File → Save System** / **Export Workspace** file), arrange tabs and rows, and click **Generate & Download .xlsx**.
 
+**As an installable app:** `npm run build` also writes `site/`, the web app version (not yet published anywhere). To try it: `npm run serve`, then open `http://localhost:8080/` in Chrome or Edge and use the browser's install button (or **File → Install fmIDE**). Installed, fmIDE gets its own window and icon, works offline, opens `.fmide` files you double-click, and tells you when a new version is ready. **File → Open ExcelExporter** opens ExcelExporter from inside fmIDE.
+
 Opening someone else's `.fmide` never replaces your own setup: their templates and macros are added to yours, and your shortcuts and ribbon stay as they are.
 
 Your own settings (keyboard shortcuts, ribbon layout, Quick Access Toolbar and KeyTips key) travel separately: **File → Export Preferences…** saves them to `fmIDE-preferences.json`, and **File → Import Preferences…** on another computer (or for a colleague) replaces theirs with yours. Your macros' own shortcuts are kept.

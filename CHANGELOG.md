@@ -2,6 +2,12 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Installable web app (build step 5a)
+- fmIDE can be installed as an app (a PWA, progressive web app) from the web version: its own window and icon, works offline after the first visit, and opens `.fmide` files double-clicked in the operating system (Chrome and Edge on desktop). Nothing is published yet; `npm run build` writes the web version to `site/`, and `npm run serve` shows it locally.
+- New versions download in the background; a notice offers **Reload** (your work is autosaved first and comes back if unsaved) or **Later**.
+- New commands in a File-tab App group: **Open ExcelExporter** (in its own window) and **Install fmIDE** (when the browser offers installing).
+- The files in `apps/` stay single self-contained HTML files that work opened from disk; nothing changes for them.
+
 ## Preferences file (build step 4c)
 - **File → Export Preferences…** / **Import Preferences…** (also in Customize Ribbon): your keyboard shortcuts, ribbon layout, Quick Access Toolbar, collapsed ribbon and KeyTips key, in one shareable file (`fmIDE-preferences.json`, a new file kind). Import asks once, then replaces exactly those settings; your model, templates, macros and format presets are never touched. Macro shortcuts stay your own.
 - Ribbon layouts read from files (preferences and workspaces) are checked and cleaned before use, and a KeyTips trigger from a file must be a modifier key or a valid shortcut.

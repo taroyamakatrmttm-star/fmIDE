@@ -51,6 +51,7 @@
   //   enabled  — optional () => bool; drives disabled state everywhere
   //   dynLabel — optional () => string; a live label (e.g. the current period)
   const hasNodeSel = () => selectedNodeIds.size > 0;
+  let installPrompt = null; // the browser's offer to install fmIDE (21-web-app.js)
   const COMMANDS = [
     { id:'undo',        label:'Undo',                  icon:'↶', category:'Edit', defaultShortcut:'Mod+Z',       enabled:() => history.length > 0, action:() => undo() },
     { id:'redo',        label:'Redo',                  icon:'↷', category:'Edit', defaultShortcut:'Mod+Shift+Z', enabled:() => future.length > 0,  action:() => redo() },
@@ -112,6 +113,8 @@
     { id:'saveDocument',label:'Save',                  icon:'💾', category:'File', defaultShortcut:'Mod+S', action:() => saveDocument() },
     { id:'saveDocumentAs',label:'Save As…',            icon:'📝', category:'File', defaultShortcut:'Mod+Shift+S', action:() => saveDocumentAs() },
     { id:'openRecent',  label:'Open Recent…',          icon:'🕘', category:'File', defaultShortcut:null, action:() => showOpenRecent() },
+    { id:'openExcelExporter', label:'Open ExcelExporter', icon:'📊', category:'File', defaultShortcut:null, action:() => openExcelExporter() },
+    { id:'installApp',  label:'Install fmIDE',         icon:'⤓', category:'File', defaultShortcut:null, enabled:() => !!installPrompt, action:() => installApp() },
 
     { id:'openLauncher',label:'Command Launcher',      icon:'🔎', category:'View', defaultShortcut:'Mod+K', action:() => openLauncher() },
     { id:'openShortcuts',label:'Keyboard Shortcuts',   icon:'⌨', category:'View', defaultShortcut:null, action:() => showShortcutsPicker() },

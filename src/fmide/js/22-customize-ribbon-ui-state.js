@@ -493,6 +493,7 @@
     workspaceRestored = true;
     updateDocTitle();
     showRecoveryNotice();
+    startWebApp();
     setInterval(saveWorkspace, 8000);
     document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') saveWorkspace(); });
     window.addEventListener('beforeunload', saveWorkspace);

@@ -17,3 +17,6 @@ tests/output/
 # Exports made while testing — keep deliberate examples in tests/fixtures/ instead
 *.xlsx
 !tests/fixtures/*.xlsx
+
+# The installable web app, built by `npm run build` (never committed)
+/site/

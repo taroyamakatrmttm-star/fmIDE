@@ -67,13 +67,14 @@
   // Writes are asynchronous; the browser applies them in the order they were made.
   let autosaveFailing = false, autosaveBannerDismissed = false;
   let workspaceRestored = false; // no autosave before the stored workspace is read: it would overwrite it
+  // Returns a promise that settles once the save has been written (or has failed).
   function saveWorkspace(){
-    if(!workspaceRestored) return;
+    if(!workspaceRestored) return Promise.resolve();
     let text;
     try{ text = JSON.stringify(buildWorkspacePayload()); }
-    catch(err){ onAutosaveFailed(err); return; }
+    catch(err){ onAutosaveFailed(err); return Promise.resolve(); }
     // The workspace, plus which document is open and whether it has unsaved changes (20).
-    Promise.all([workspaceStore.put(WORKSPACE_STORAGE_KEY, text), workspaceStore.put(SESSION_KEY, documentSessionText())]).then(() => {
+    return Promise.all([workspaceStore.put(WORKSPACE_STORAGE_KEY, text), workspaceStore.put(SESSION_KEY, documentSessionText())]).then(() => {
       if(autosaveFailing){ autosaveFailing = false; autosaveBannerDismissed = false; hideAutosaveBanner(); }
     }, onAutosaveFailed);
   }

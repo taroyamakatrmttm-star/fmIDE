@@ -16,11 +16,12 @@ The workflow: build in fmIDE → **File → Save System** or **Export Workspace*
 ## How the code is built
 
 - **Each app is delivered as one self-contained HTML file** with all HTML, CSS and JavaScript inline, generated from `src/` by `npm run build`. There is no package manager for the apps, no framework and **no external dependencies** — no `<script src>`, no CDN, no network calls. They must keep working offline, opened straight from disk in any modern browser. Nothing is uploaded anywhere.
+- **The installable web app (PWA) is built from the same `src/`** into `site/` by `npm run build` — not committed (Git ignores it); `npm run serve` shows it at `http://localhost:8080/`. It adds what a single file can't carry: `src/site/` (web app manifest, icons, the service worker `sw.js`, whose version the build fills in from a hash of the site's files). fmIDE's page gets the manifest links through its `<!-- build:site-head -->` marker, which is empty in `apps/`. The service worker keeps only the site's own files (offline) and never contacts another site. See `docs/step5-publish.md`.
 - ExcelExporter has its **own built-in Excel (xlsx/zip) writer**; it replaced an external library on purpose. Do not bring a library back.
 - **Edit `src/`, never `apps/`.** `apps/*.html` are generated: after editing, run `npm run build` (`tools/build.js`, Node only, no packages) and commit `src/` and the rebuilt `apps/` together. CI rebuilds and fails if they disagree; `npm run build:check` checks locally. Git keeps the history, so never add version numbers to file names or make copies like `fmIDE-v2.html`.
 - Source layout: `src/fmide/` and `src/excel-exporter/` each hold `index.html` (the page; a line `<!-- build:css styles.css -->` / `<!-- build:js js -->` marks where a file or folder goes), `styles.css`, and `js/NN-name.js` — plain fragments of the one wrapped function (no `import`/`export`), joined in file-name order. ExcelExporter's built-in Excel writer (the `XLSX` global) is its own script, `js-head/`. To find a function, Grep `src/` and read around it.
 - **Shared code lives once in `src/shared/`** and is pulled into both apps by a line `// build:include shared/<file>.js` inside a script piece (indented like the marker). Today: `escaping.js` (escapeXml, safeNum, safeColor), `input-rule.js` (the input-rectangle rule), `format-roles.js` (the seven roles and their defaults), `file-formats.js` (shared kinds, versions, upgrades, kind inference), `store.js` (browser storage, below). Change shared behaviour there, never by copying it into one app; where the apps must differ, the shared function takes a parameter.
-- Layout: `apps/` the two apps (generated) · `src/` their source (`src/shared/` used by both) · `tools/` the build · `docs/` reference notes · `tests/` the test suite (`tests/README.md`; brief in `tests/SPEC.md`; sample files in `tests/fixtures/`, which are not edited — add new ones alongside).
+- Layout: `apps/` the two apps (generated) · `src/` their source (`src/shared/` used by both, `src/site/` the web app's extra files) · `site/` the web app (generated, not committed) · `tools/` the build and `serve.js` · `docs/` reference notes · `tests/` the test suite (`tests/README.md`; brief in `tests/SPEC.md`; sample files in `tests/fixtures/`, which are not edited — add new ones alongside).
 - The apps have no dependencies; the test tooling (`package.json`: Playwright, exceljs, jszip) is dev-only and must never be loaded by an app.
 - Record notable changes in `CHANGELOG.md`.
 
@@ -59,7 +60,8 @@ A document is a `.fmide` file: the `fmIDE-workspace` JSON, nothing new. Commands
 - **Opening** loads the model and format presets/roles (same-name presets replaced), adds templates and macros not already present, ignores shortcuts and ribbon/KeyTips, and clears undo history. New keeps the current presets, templates, macros and settings.
 - **Recovery:** after a restart with unsaved changes, `#recoveryBanner` offers Save / Dismiss.
 - Ribbons customised before the Document group existed get it once (`ui.documentGroupAdded`); a removed group is never added back.
-- **Preferences** (`fmIDE-preferences`, in `21-customize-ribbon-ui-state.js`): Export / Import Preferences carry shortcuts for built-in commands, the ribbon and Quick Access Toolbar, its collapsed state and the KeyTips trigger. Import replaces exactly those; macro shortcuts stay the person's own. Ribbon layouts from files go through `cleanRibbonConfig()`.
+- **Web app** (`21-web-app.js`): registers the service worker only where the page links a manifest (the `site/` build) and the browser allows it; `#updateBanner` offers Reload (autosave first, no "Leave site?") or Later; commands Install fmIDE and Open ExcelExporter (File tab, App group); a `.fmide` handed over by the operating system (`launchQueue`) opens like Open….
+- **Preferences** (`fmIDE-preferences`, in `22-customize-ribbon-ui-state.js`): Export / Import Preferences carry shortcuts for built-in commands, the ribbon and Quick Access Toolbar, its collapsed state and the KeyTips trigger. Import replaces exactly those; macro shortcuts stay the person's own. Ribbon layouts from files go through `cleanRibbonConfig()`.
 
 ## File formats (`docs/file-formats.md`)
 
@@ -118,9 +120,9 @@ Build order — work in this sequence and don't jump ahead unless asked:
 2. Permanent test suite ✅ — `npm test`
 3. Split each app into modules — **still building to single HTML files** — protected by the tests ✅ (`docs/step3-modules.md`: 3a source in `src/`, 3b shared code in `src/shared/`; 3c real modules is later, with the plugin work)
 4. Storage for the web app: IndexedDB plus explicit open/save of `.fmide` files ✅ — 4a IndexedDB underneath, 4b documents, 4c Preferences file
-5. Publish the web app; then formula IR and plugins, community library, touch support
+5. Publish the web app (`docs/step5-publish.md`): 5a installable web app ✅; 5b publishing waits on the open decisions (open source, host, address). Then formula IR and plugins, community library, touch support
 
-Phase 0 hardening done: escaping text from files, built-in Excel writer, file-format versions and migrations, autosave-failure warning, storage (step 4). Next: step 5.
+Phase 0 hardening done: escaping text from files, built-in Excel writer, file-format versions and migrations, autosave-failure warning, storage (step 4). Next: step 5b (publishing), once decided.
 
 ## Checking a change
 
