@@ -261,10 +261,23 @@ test('Open Recent: two files, reopen the first from its copy, then Clear Recent'
   expect(await S.storedKeys(page, 'fmIDE', 'fmIDE-recent:')).toEqual([]);
 });
 
-test('file names are shown as plain text', async ({ page }, testInfo) => {
+test('Save As makes a new Recent entry; the old file keeps its own', async ({ page }, testInfo) => {
+  await F.openFmIDE(page);
+  await D.openViaInput(page, 'openDocument', D.tempFile(testInfo, 'Original.fmide', workspaceText('O')));
+  await expect.poll(() => D.title(page)).toBe('Original — fmIDE');
+  await cmd(page, 'saveDocumentAs');
+  await page.locator('#saveAsName').fill('Copy');
+  await downloadText(page, () => page.keyboard.press('Enter'));
+  await expect.poll(() => D.title(page)).toBe('Copy — fmIDE');
+  await cmd(page, 'openRecent');
+  await expect(page.locator('#recentList .recent-name')).toHaveText(['Copy', 'Original']);
+});
+
+test('file names are shown as plain text', async ({ page }) => {
   await F.openFmIDE(page);
   const evil = '<img src=x onerror=window.__pwned=1>';
-  await D.openViaInput(page, 'openDocument', D.tempFile(testInfo, evil + '.fmide', workspaceText('X')));
+  // Given from memory: a file with this name on disk would break the CI artifact upload.
+  await D.openViaInput(page, 'openDocument', { name: evil + '.fmide', mimeType: 'application/json', buffer: Buffer.from(workspaceText('X')) });
   await expect.poll(() => D.title(page)).toBe(evil + ' — fmIDE');
   await cmd(page, 'openRecent');
   await expect(page.locator('#recentList .recent-name')).toHaveText([evil]);

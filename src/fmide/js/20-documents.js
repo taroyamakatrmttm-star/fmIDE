@@ -24,7 +24,8 @@
 
   // name: shown in the title (null = "Untitled"); fileName: the .fmide file it lives in,
   // if any (Save downloads it again where there is no handle); handle: the file handle.
-  const currentDoc = { name: null, fileName: null, handle: null, recentId: null, dirty: false };
+  // serial changes whenever another document is opened or a new one started.
+  const currentDoc = { name: null, fileName: null, handle: null, recentId: null, dirty: false, serial: 0 };
   const recentHandles = new Map(); // handles from this session, for when the browser can't store them
   let docChangeCount = 0;          // bumped on every change: a save only marks clean what it wrote
   let dirtySaveTimer = null;
@@ -191,7 +192,7 @@
     confirmDiscardChanges(() => {
       applySystemDataDirect({ canvases: [{ id: 'c' + nextCanvasId, name: 'Canvas 1', nodes: [], edges: [] }], periods: ['Period 1'], currentPeriod: 0 });
       render();
-      Object.assign(currentDoc, { name: null, fileName: null, handle: null, recentId: null });
+      Object.assign(currentDoc, { name: null, fileName: null, handle: null, recentId: null, serial: currentDoc.serial + 1 });
       clearUndoHistory();
       hideRecoveryNotice();
       markDocClean();
@@ -247,7 +248,8 @@
         name: docNameFromFile(fileName),
         fileName: isDocFile ? String(fileName).split(/[\\/]/).pop() : null,
         handle: isDocFile && isFileHandle(handle) ? handle : null,
-        recentId: opts.recentId || null
+        recentId: opts.recentId || null,
+        serial: currentDoc.serial + 1
       });
       clearUndoHistory();
       hideRecoveryNotice();
@@ -336,7 +338,7 @@
     const viaDownload = () => askDocumentFileName(suggested).then(fileName => {
       if(!fileName) return false;
       downloadDocument(text, fileName);
-      afterSaved(text, null, fileName, changesSaved);
+      afterSaved(text, null, fileName, changesSaved, true);
       return true;
     });
     if(!canPickSaveFile()) return viaDownload();
@@ -345,7 +347,7 @@
     catch(err){ return viaDownload(); }
     return Promise.resolve(picking).then(handle => writeToHandle(handle, text).then(ok => {
       if(!ok){ showMessage('Could not save to that file.'); return false; }
-      afterSaved(text, handle, handle.name || suggested, changesSaved);
+      afterSaved(text, handle, handle.name || suggested, changesSaved, true);
       return true;
     }), err => {
       if(err && err.name === 'AbortError') return false;
@@ -379,7 +381,9 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  function afterSaved(text, handle, fileName, changesSaved){
+  // asNewFile (Save As): a new file, so a new Recent entry; the old file keeps its own.
+  function afterSaved(text, handle, fileName, changesSaved, asNewFile){
+    if(asNewFile){ currentDoc.recentId = null; currentDoc.serial++; }
     currentDoc.handle = handle || null;
     currentDoc.fileName = String(fileName || '').split(/[\\/]/).pop() || null;
     currentDoc.name = docNameFromFile(currentDoc.fileName);
@@ -409,10 +413,15 @@
     workspaceStore.remove(recentCopyKey(id)).catch(() => {});
     workspaceStore.remove(recentHandleKey(id)).catch(() => {});
   }
+  // The document is captured when the update is queued: by the time it runs, another
+  // document may be open, and that one must not take over this entry.
   function addToRecent(text, handle, fileName){
+    const docAtCall = currentDoc.serial;
+    const nameAtCall = currentDoc.name;
+    const recentIdAtCall = currentDoc.recentId;
     recentQueue = recentQueue.then(async () => {
       const list = await readRecent();
-      let entry = currentDoc.recentId ? list.find(e => e.id === currentDoc.recentId) : null;
+      let entry = recentIdAtCall ? list.find(e => e.id === recentIdAtCall) : null;
       if(!entry && handle && typeof handle.isSameEntry === 'function'){
         for(const e of list){
           const h = recentHandles.get(e.id) || await workspaceStore.get(recentHandleKey(e.id)).catch(() => null);
@@ -422,10 +431,10 @@
       if(!entry && !handle && fileName) entry = list.find(e => e.fileName === fileName);
       if(!entry) entry = { id: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7) };
       const now = new Date().toISOString();
-      entry.name = currentDoc.name || docNameFromFile(fileName);
+      entry.name = nameAtCall || docNameFromFile(fileName);
       entry.fileName = fileName || null;
       entry.lastOpened = now;
-      currentDoc.recentId = entry.id;
+      if(currentDoc.serial === docAtCall) currentDoc.recentId = entry.id;
       try{ await workspaceStore.put(recentCopyKey(entry.id), text); entry.copySavedAt = now; }
       catch(err){ /* storage full: the entry can still reopen the real file */ }
       if(handle){
