@@ -10,9 +10,12 @@ Decision 3 can wait: going from closed to open later is easy, but open to closed
 
 ## Build order
 
+Workflow since step 3a: edit `src/` → `npm run build` → `npm test` (the files in `apps/` are generated — never edit them by hand).
+
+
 1. Repository (this) ✅
 2. Permanent test suite — one command that runs every check, on every change ✅ (`npm test`, see `tests/README.md`)
-3. Split each app into modules (still building to single files), protected by the tests
+3. Split each app into modules (still building to single files), protected by the tests — in progress: 3a ✅ source split into `src/`, built by `npm run build` (see `docs/step3-modules.md`)
 4. Storage for the web app: IndexedDB plus explicit open/save of `.fmide` files
 5. Publish the web app; then formula IR and plugins, community library, touch support
 
@@ -23,4 +26,4 @@ Decision 3 can wait: going from closed to open later is easy, but open to closed
 - ✅ File-format versions and migrations in both apps
 - ✅ Warning when autosave fails
 - ⬜ Storage (build step 4)
-- ⬜ Modules (build step 3)
+- ⬜ Modules (build step 3) — 3a done: the apps are generated from `src/`; next, shared code in `src/shared/` (3b)
