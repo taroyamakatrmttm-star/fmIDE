@@ -44,11 +44,12 @@ Review the snapshot diff before committing: it is the record of what the change 
 ## Layout
 
 ```
-0-smoke.spec.js …  8-snapshots.spec.js   one file per group in SPEC.md (6 and 7 split per app)
+0-smoke.spec.js …  9-storage.spec.js     one file per group in SPEC.md (6 and 7 split per app)
 helpers/apps.js       the offline fixture: serves the apps, blocks and counts other requests
 helpers/excel.js      load a model, toggle options, capture the workbook (window.__wb + real .xlsx bytes)
 helpers/soffice.js    find LibreOffice, recalculate workbooks, read values
 helpers/fmide.js      fmIDE file choosers, dialogs, downloads
+helpers/storage.js    read the apps' IndexedDB, make its writes fail, hide the page
 helpers/snapshot.js   JSON snapshots
 fixtures/             sample files (do not edit; add new ones alongside)
 snapshots/            generated; update only with the command above

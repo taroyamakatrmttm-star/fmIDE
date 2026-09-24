@@ -28,6 +28,14 @@ Replace `localStorage` with IndexedDB in both apps without changing what the use
 - The autosave-failure banner (fmIDE) and `#storageWarn` (ExcelExporter) now react to IndexedDB write failures, same wording and behaviour.
 - **Acceptance:** everything behaves as before; a workspace/layout saved by the previous version (in `localStorage`) appears after the upgrade; tests updated where they poked `localStorage` directly.
 
+**Done (4a)** — how it turned out:
+
+- Databases `fmIDE` and `fmIDE-ExcelExporter`, object store `kv`, the same keys and JSON text as before. Where IndexedDB is missing or won't open, the same calls use `localStorage`.
+- The migration runs once per browser, recorded by a `<dbName>/migrated-from-localStorage` marker. Without it, a layout removed by Reset Mapping would be copied back from the old `localStorage` copy on the next start.
+- Persistence is requested **on the first change** (fmIDE: the first change that goes into undo history; ExcelExporter: the first layout change), not at start-up, in every browser. The answer, granted or declined, is kept in `<dbName>/persistence-requested` and the browser is never asked again. Firefox shows the user a question; the others decide silently.
+- fmIDE saves every 8 s, when the page is hidden, and on `beforeunload`. ExcelExporter saves on every change and when the page is hidden.
+- Tests: group 9 in `tests/SPEC.md` (`tests/9-storage.spec.js`).
+
 ## Phase 4b — fmIDE documents
 
 **Commands** (File tab and Command Launcher):
@@ -58,6 +66,7 @@ The existing Import/Export Workspace, Load/Save System and Load/Save Module comm
 **Recovery (the safety net)**
 
 - Autosave (from 4a) now stores the current document's state **plus** its name, file handle and whether it has unsaved changes.
+- Also save about **2 seconds after the last change** (keeping the 8-second timer and the save when the page is hidden), so a crash loses at most a couple of seconds of work.
 - On start, fmIDE restores the last session. If that session had unsaved changes, show a notice: "Recovered unsaved changes to *name*" with **Save** and **Dismiss**.
 
 **What opening a `.fmide` changes** — a file may come from someone else, so opening it must not overwrite the person's own setup:
