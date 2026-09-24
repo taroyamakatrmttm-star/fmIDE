@@ -1,14 +1,15 @@
 // ============================================================
-// File formats — mirrors fmIDE's FILE_FORMATS for the two kinds ExcelExporter reads
-// (system, workspace) plus its own mapping file. Every loaded file goes through
+// File formats — the two kinds ExcelExporter reads from fmIDE (system, workspace; their
+// versions and upgrades are shared with fmIDE in src/shared/file-formats.js) plus its own
+// mapping file. Every loaded file goes through
 // readKnownFile(): it identifies the kind (older files by shape), says plainly when a
 // file is the wrong kind and where it belongs, upgrades older versions step by step,
 // and flags a file from a NEWER app version so the user can choose to open it anyway.
-// Keep the system/workspace entries in sync with fmIDE.
 // ============================================================
+// build:include shared/file-formats.js
 const FILE_FORMATS = {
-  'system':              { current: 2, label: 'fmIDE system' },
-  'fmIDE-workspace':     { current: 1, label: 'fmIDE workspace' },
+  'system':              { current: SHARED_FILE_VERSIONS['system'], label: 'fmIDE system' },
+  'fmIDE-workspace':     { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'fmIDE workspace' },
   'fmIDE-excel-mapping': { current: 1, label: 'ExcelExporter mapping file' }
 };
 // Kinds that are fmIDE files but not something ExcelExporter reads — say where they belong.
@@ -19,32 +20,12 @@ const OTHER_FMIDE_KINDS = {
   'fmIDE-shortcuts': 'an fmIDE shortcuts file — import it in fmIDE',
   'fmIDE-macros': 'an fmIDE macros file — import it in fmIDE'
 };
-const FILE_MIGRATIONS = {
-  'system': {
-    1: d => {
-      if(!Array.isArray(d.canvases) && Array.isArray(d.nodes)){
-        d.canvases = [{ id: 'c1', name: d.name || 'Canvas 1', nodes: d.nodes, edges: Array.isArray(d.edges) ? d.edges : [] }];
-        delete d.nodes; delete d.edges;
-      }
-    }
-  }
-};
-function inferKind(d){
-  if(Array.isArray(d)) return 'fmIDE-macros';
-  if(typeof d.kind === 'string') return d.kind;
-  if(Array.isArray(d.canvases)) return 'system';
-  if(Array.isArray(d.nodes) && Array.isArray(d.edges)) return 'module';
-  if(Array.isArray(d.tabs) && Array.isArray(d.rows)) return 'fmIDE-excel-mapping'; // mappings saved before versions were written
-  if(Array.isArray(d.templates)) return 'fmIDE-templates';
-  if(Array.isArray(d.presets)) return 'fmIDE-format-presets';
-  if(d.bindings && typeof d.bindings === 'object') return 'fmIDE-shortcuts';
-  if(Array.isArray(d.macros)) return 'fmIDE-macros';
-  return null;
-}
+// The mapping file has had no upgrades yet.
+const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS);
 // Returns { error } or { kind, data (migrated copy), fromVersion, newer, newerParts }.
 function readKnownFile(raw, accept){
   if(!raw || typeof raw !== 'object') return { error: "That file doesn't contain fmIDE data." };
-  const kind = inferKind(raw);
+  const kind = inferFileKind(raw, true); // true: also recognise mappings saved before versions were written
   if(!kind || !FILE_FORMATS[kind]){
     if(OTHER_FMIDE_KINDS[kind]) return { error: 'That is ' + OTHER_FMIDE_KINDS[kind] + '.' };
     return { error: "That file isn't an fmIDE file this version recognises" + (kind ? ' (kind "' + String(kind).slice(0, 40) + '")' : '') + '.' };
@@ -53,19 +34,8 @@ function readKnownFile(raw, accept){
     return { error: 'That is an ' + FILE_FORMATS[kind].label + ', not ' + accept.map(k => 'an ' + FILE_FORMATS[k].label).join(' or ') + '.' +
       (kind === 'fmIDE-excel-mapping' ? ' Use "Import Mapping JSON" after loading the model.' : ' Load it with the file picker in section 1.') };
   }
-  const fmt = FILE_FORMATS[kind];
   const data = JSON.parse(JSON.stringify(raw));
-  let version = Number(data.version);
-  if(!Number.isInteger(version) || version < 1) version = 1;
-  const newer = version > fmt.current;
-  if(!newer){
-    for(let v = version; v < fmt.current; v++){
-      const step = FILE_MIGRATIONS[kind] && FILE_MIGRATIONS[kind][v];
-      if(step) step(data);
-    }
-    data.version = fmt.current;
-  }
-  data.kind = kind;
+  const { fromVersion: version, newer } = upgradeFileData(data, kind, FILE_FORMATS, FILE_MIGRATIONS);
   const newerParts = [];
   if(kind === 'fmIDE-workspace' && data.system){
     const r = readKnownFile(data.system, ['system']);
