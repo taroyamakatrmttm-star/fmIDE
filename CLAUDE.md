@@ -61,7 +61,7 @@ A document is a `.fmide` file: the `fmIDE-workspace` JSON, nothing new. Commands
 - **Recovery:** after a restart with unsaved changes, `#recoveryBanner` offers Save / Dismiss.
 - Ribbons customised before the Document group existed get it once (`ui.documentGroupAdded`); a removed group is never added back.
 - **Web app** (`21-web-app.js`): registers the service worker only where the page links a manifest (the `site/` build) and the browser allows it; `#updateBanner` offers Reload (autosave first, no "Leave site?") or Later; commands Install fmIDE and Open ExcelExporter (File tab, App group); a `.fmide` handed over by the operating system (`launchQueue`) opens like Open….
-- **Preferences** (`fmIDE-preferences`, in `21-customize-ribbon-ui-state.js`): Export / Import Preferences carry shortcuts for built-in commands, the ribbon and Quick Access Toolbar, its collapsed state and the KeyTips trigger. Import replaces exactly those; macro shortcuts stay the person's own. Ribbon layouts from files go through `cleanRibbonConfig()`.
+- **Preferences** (`fmIDE-preferences`, in `22-customize-ribbon-ui-state.js`): Export / Import Preferences carry shortcuts for built-in commands, the ribbon and Quick Access Toolbar, its collapsed state and the KeyTips trigger. Import replaces exactly those; macro shortcuts stay the person's own. Ribbon layouts from files go through `cleanRibbonConfig()`.
 
 ## File formats (`docs/file-formats.md`)
 
