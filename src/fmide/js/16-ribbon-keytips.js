@@ -16,6 +16,7 @@
         { label:'System', items:[ { cmd:'saveSystem', size:'large' }, { cmd:'loadSystem' }, { cmd:'addSystem' } ] },
         { label:'Module', items:[ { cmd:'saveModule', size:'large' }, { cmd:'loadModule' } ] },
         { label:'Workspace', items:[ { cmd:'exportWorkspace' }, { cmd:'importWorkspace' } ] },
+        { label:'Preferences', items:[ { cmd:'exportPreferences' }, { cmd:'importPreferences' } ] },
         { label:'Library', items:[ { cmd:'openTemplates', size:'large' }, { cmd:'openFormats', size:'large' } ] },
       ]},
       { id:'home', label:'Home', keytip:'H', groups:[

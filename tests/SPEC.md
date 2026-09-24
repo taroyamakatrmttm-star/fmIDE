@@ -142,6 +142,15 @@ Driven with `fm.command('newDocument' | 'openDocument' | 'saveDocument' | 'saveD
 - Opening a `.fmide` adds templates and macros that aren't already there (same name and content; a clashing macro becomes "… (imported)", and is not added again on a second open), leaves shortcuts and ribbon unchanged, and takes the file's format roles. New keeps format presets.
 - Ribbon: the File tab starts with the Document group; a ribbon customised before it existed gets it once; if removed afterwards it stays removed, also after a reload.
 
+### 11. Preferences (fmIDE)
+Commands `exportPreferences` (download `fmIDE-preferences.json`) and `importPreferences` (file input `#fileInputPreferences`, then the confirm "Replace your shortcuts, ribbon and KeyTips settings with the ones in this file?"). The Customize Ribbon dialog (`.rbc-box`) has the same two buttons.
+- Round trip: customise a shortcut (Import Shortcuts), the ribbon (add Add Rectangle to the Quick Access Toolbar, move Cut down) and the KeyTips trigger (F10); Export Preferences (kind `fmIDE-preferences`, version 1, no active tab / launcher recents / last-run macro); reset all three; Import → all come back exactly, and the model, templates, macros and format presets are unchanged, as is the window title.
+- Cancel at the confirmation leaves every setting unchanged.
+- `preferences.json` applies as a whole (shortcuts not in the file get their defaults); `preferences-newer.json` asks first.
+- Macros: your macro shortcuts are kept, unless a built-in command from the file takes the same key; the file's macro shortcuts and ribbon/QAT buttons for macros you don't have are dropped.
+- From the file, safely: a tab name with markup is shown as text; malformed groups/items are cleaned up; a tap trigger on an ordinary key falls back to the default.
+- The default File tab has a Preferences group (Export, Import).
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.

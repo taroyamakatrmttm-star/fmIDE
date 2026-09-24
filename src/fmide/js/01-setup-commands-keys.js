@@ -101,6 +101,8 @@
     { id:'loadModule',  label:'Load Module',           icon:'📥', category:'File', defaultShortcut:null, action:() => fileInputModule.click() },
     { id:'exportWorkspace', label:'Export Workspace',  icon:'⇩', category:'File', defaultShortcut:null, action:() => fm.exportWorkspace() },
     { id:'importWorkspace', label:'Import Workspace',  icon:'⇧', category:'File', defaultShortcut:null, action:() => fileInputWorkspace.click() },
+    { id:'exportPreferences', label:'Export Preferences…', icon:'⚙', category:'File', defaultShortcut:null, action:() => exportPreferencesToFile() },
+    { id:'importPreferences', label:'Import Preferences…', icon:'⚙', category:'File', defaultShortcut:null, action:() => importPreferencesInteractive() },
     { id:'openTemplates',label:'Templates',            icon:'📚', category:'File', defaultShortcut:null, action:() => showTemplatesPicker() },
     { id:'openFormats', label:'Format Presets',        icon:'🎨', category:'File', defaultShortcut:null, action:() => showFormatPresetsPicker(null) },
     // Documents (.fmide files) — last in the File list, so a shortcut someone already gave
