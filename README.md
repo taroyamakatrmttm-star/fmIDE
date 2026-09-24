@@ -11,8 +11,10 @@ Both are single self-contained HTML files with no external dependencies: open th
 
 ## Using them
 
-1. Open `apps/fmIDE.html`, build a model, then **File → Save System** or **File → Export Workspace**.
-2. Open `apps/ExcelExporter.html`, load that file, arrange tabs and rows, and click **Generate & Download .xlsx**.
+1. Open `apps/fmIDE.html` and build a model. Save it as a document with **File → Save** (Ctrl/Cmd+S): a `.fmide` file. **File → Open…** (Ctrl/Cmd+O) opens it again, and **Open Recent…** lists the last ten. In Chrome and Edge, Save writes straight back to the file. Other browsers download `name.fmide` each time you save, and Open Recent reopens the copy kept in the browser. Work is also autosaved in the browser: after a crash, fmIDE comes back with your unsaved changes and offers to save them.
+2. Open `apps/ExcelExporter.html`, load the `.fmide` file (or a **File → Save System** / **Export Workspace** file), arrange tabs and rows, and click **Generate & Download .xlsx**.
+
+Opening someone else's `.fmide` never replaces your own setup: their templates and macros are added to yours, and your shortcuts and ribbon stay as they are.
 
 ## Repository layout
 

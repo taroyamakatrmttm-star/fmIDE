@@ -10,13 +10,17 @@ Every JSON file the apps write carries a `kind` and a `version`. Every file they
 
 The part both apps share lives once in `src/shared/file-formats.js`: the versions and upgrade steps of the two kinds both apps read (`SHARED_FILE_VERSIONS`, `SHARED_FILE_MIGRATIONS` for `system` and `fmIDE-workspace`), kind inference (`inferFileKind`) and the version check with step-by-step upgrades (`upgradeFileData`). Each app's `FILE_FORMATS` / `FILE_MIGRATIONS` are built from those plus its own kinds; the messages and nested-content handling stay in each app's reader.
 
+## Documents (`.fmide`)
+
+A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same reader) saved with the `.fmide` extension by fmIDE's **File → Save / Save As**. There is no separate format. Opening one with **File → Open…** loads the model and its format presets/roles, adds its templates and macros when not already there, and ignores its shortcuts and ribbon/KeyTips settings. **Import Workspace** of the same file replaces everything, as before. The workspace's `ui` part may carry `documentGroupAdded: true` (a customised ribbon already got the Document group once); older readers ignore it.
+
 ## Current versions
 
 | `kind` | Version | What it is | Opened with |
 |---|---|---|---|
 | `system` | 2 | A whole model (all canvases, periods) | fmIDE: File → Load System · ExcelExporter |
 | `module` | 1 | One canvas | fmIDE: File → Load Module |
-| `fmIDE-workspace` | 1 | Everything: system + templates, format presets, shortcuts, macros | fmIDE: File → Import Workspace · ExcelExporter |
+| `fmIDE-workspace` | 1 | Everything: system + templates, format presets, shortcuts, macros. A **`.fmide` document** is exactly this, with the `.fmide` extension | fmIDE: File → Open… (a document) or Import Workspace (a full replace) · ExcelExporter |
 | `fmIDE-templates` | 1 | Saved templates (each holds a module or system) | fmIDE: Templates → Import Templates |
 | `fmIDE-format-presets` | 1 | Format presets, including the format roles | fmIDE: Format Presets → Import Presets |
 | `fmIDE-shortcuts` | 2 | Keyboard shortcut bindings | fmIDE: Keyboard Shortcuts → Import Shortcuts |
