@@ -458,8 +458,9 @@
     return recentQueue;
   }
 
+  // Waits for Recent updates still being written (a document opened or saved a moment ago).
   function showOpenRecent(){
-    readRecent().then(list => {
+    recentQueue.then(readRecent).then(list => {
       const overlay = document.createElement('div');
       overlay.className = 'modal-overlay';
       const box = document.createElement('div');

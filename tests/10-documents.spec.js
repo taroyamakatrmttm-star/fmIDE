@@ -280,6 +280,20 @@ test('Save As makes a new Recent entry; the old file keeps its own', async ({ pa
   await expect(page.locator('#recentList .recent-name')).toHaveText(['Copy', 'Original']);
 });
 
+test('Open Recent the moment a save finishes already lists the new file', async ({ page }, testInfo) => {
+  await F.openFmIDE(page);
+  await D.openViaInput(page, 'openDocument', D.tempFile(testInfo, 'Original.fmide', workspaceText('O')));
+  await expect.poll(() => D.title(page)).toBe('Original — fmIDE');
+  await cmd(page, 'saveDocumentAs');
+  await page.locator('#saveAsName').fill('Copy');
+  await Promise.all([page.waitForEvent('download'), page.evaluate(async () => {
+    document.querySelector('#saveAsDialog button.primary').click();
+    while(!document.title.startsWith('Copy')) await new Promise(r => setTimeout(r, 0));
+    fm.command('openRecent'); // while the Recent entry may still be being written
+  })]);
+  await expect(page.locator('#recentList .recent-name')).toHaveText(['Copy', 'Original']);
+});
+
 test('file names are shown as plain text', async ({ page }) => {
   await F.openFmIDE(page);
   const evil = '<img src=x onerror=window.__pwned=1>';
