@@ -424,10 +424,10 @@ var XLSX = (function(){
 
   <section class="panel" id="loadPanel">
     <h2>1. Load an fmIDE model</h2>
-    <p class="hint">Export a system from fmIDE ("Save System" or "Export Workspace") and load the JSON here — or try the built-in sample to see how the tool works. Use "Export Workspace" (not just "Save System") if you want rectangles using fmIDE's shared "Inputs" format to carry that formatting into Excel.</p>
+    <p class="hint">Save a document in fmIDE (File → Save, a <code>.fmide</code> file), or export a system ("Save System" or "Export Workspace"), and load it here — or try the built-in sample to see how the tool works. Use "Export Workspace" (not just "Save System") if you want rectangles using fmIDE's shared "Inputs" format to carry that formatting into Excel.</p>
     <div class="drop" id="dropZone">
-      Drop an fmIDE JSON file here, or click to choose one
-      <input type="file" id="fileInput" accept="application/json,.json">
+      Drop an fmIDE file (.fmide or .json) here, or click to choose one
+      <input type="file" id="fileInput" accept="application/json,.json,.fmide">
     </div>
     <div class="row" style="margin-top:12px;">
       <button id="btnLoadSample">▶ Load Sample Model</button>

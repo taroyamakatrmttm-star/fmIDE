@@ -97,6 +97,7 @@ Load `tests/fixtures/security/evil-workspace.json` and `evil-system.json`:
 - Import Workspace replaces format presets with the same name as one in the file (one "Inputs", with the file's style) and keeps the user's other presets.
 
 **ExcelExporter**:
+- A `.fmide` document (a workspace) loads through `#fileInput`.
 - `sys-current`, `sys-legacy` load; `sys-newer` shows `#confirmModal` — Cancel → status "Not loaded."; Open Anyway → loads. `ws-nested-newer` → confirm mentions its system.
 - `module`, `templates`, `mapping` loaded as a model → a message saying what the file is and where it belongs.
 - Mapping: `#btnExportMapping` download has `kind: "fmIDE-excel-mapping"`, `version: 1`; re-importing it works; `map-legacy` (no kind/version) imports; `map-newer` asks; importing a system file as a mapping is rejected. The saved layout in browser storage never contains `kind`/`version`.
