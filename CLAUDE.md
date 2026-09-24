@@ -8,18 +8,18 @@ fmIDE is a visual logic builder for financial models, plus a companion that turn
 
 | App | File | What it does |
 |---|---|---|
-| **fmIDE** | `apps/fmIDE.html` | Build a model as a graph of rectangles (values), operators, aliases, period shifts and blocks, across canvases and periods. Saves systems, modules, workspaces, templates, format presets, shortcuts and macros. Scriptable through `window.fm` (see `docs/fmIDE-automation-api.md`). |
-| **ExcelExporter** | `apps/ExcelExporter.html` | Loads an fmIDE system or workspace export and writes an `.xlsx` with real formulas: tabs, Inputs tab, scenarios and global cases, vertical-block vintages, format roles. |
+| **fmIDE** | `apps/fmIDE.html` (source `src/fmide/`) | Build a model as a graph of rectangles (values), operators, aliases, period shifts and blocks, across canvases and periods. Saves systems, modules, workspaces, templates, format presets, shortcuts and macros. Scriptable through `window.fm` (see `docs/fmIDE-automation-api.md`). |
+| **ExcelExporter** | `apps/ExcelExporter.html` (source `src/excel-exporter/`) | Loads an fmIDE system or workspace export and writes an `.xlsx` with real formulas: tabs, Inputs tab, scenarios and global cases, vertical-block vintages, format roles. |
 
 The workflow: build in fmIDE → **File → Save System** or **Export Workspace** → load that file in ExcelExporter → **Generate & Download .xlsx**.
 
 ## How the code is built
 
-- **Each app is one self-contained HTML file** with all HTML, CSS and JavaScript inline. There is no build step, no package manager, no framework and **no external dependencies** — no `<script src>`, no CDN, no network calls. They must keep working offline, opened straight from disk in any modern browser. Nothing is uploaded anywhere.
+- **Each app is delivered as one self-contained HTML file** with all HTML, CSS and JavaScript inline, generated from `src/` by `npm run build`. There is no package manager for the apps, no framework and **no external dependencies** — no `<script src>`, no CDN, no network calls. They must keep working offline, opened straight from disk in any modern browser. Nothing is uploaded anywhere.
 - ExcelExporter has its **own built-in Excel (xlsx/zip) writer**; it replaced an external library on purpose. Do not bring a library back.
-- Edit the apps in place. Git keeps the history, so never add version numbers to file names or make copies like `fmIDE-v2.html`.
-- The files are large (fmIDE ≈ 430 KB, ExcelExporter ≈ 260 KB). Search with Grep for the function you need and read around it rather than reading the whole file.
-- Layout: `apps/` the two apps · `docs/` reference notes · `tests/` the test suite (`tests/README.md`; brief in `tests/SPEC.md`; sample files in `tests/fixtures/`, which are not edited — add new ones alongside).
+- **Edit `src/`, never `apps/`.** `apps/*.html` are generated: after editing, run `npm run build` (`tools/build.js`, Node only, no packages) and commit `src/` and the rebuilt `apps/` together. CI rebuilds and fails if they disagree; `npm run build:check` checks locally. Git keeps the history, so never add version numbers to file names or make copies like `fmIDE-v2.html`.
+- Source layout: `src/fmide/` and `src/excel-exporter/` each hold `index.html` (the page; a line `<!-- build:css styles.css -->` / `<!-- build:js js -->` marks where a file or folder goes), `styles.css`, and `js/NN-name.js` — plain fragments of the one wrapped function (no `import`/`export`), joined in file-name order. ExcelExporter's built-in Excel writer (the `XLSX` global) is its own script, `js-head/`. To find a function, Grep `src/` and read around it.
+- Layout: `apps/` the two apps (generated) · `src/` their source · `tools/` the build · `docs/` reference notes · `tests/` the test suite (`tests/README.md`; brief in `tests/SPEC.md`; sample files in `tests/fixtures/`, which are not edited — add new ones alongside).
 - The apps have no dependencies; the test tooling (`package.json`: Playwright, exceljs, jszip) is dev-only and must never be loaded by an app.
 - Record notable changes in `CHANGELOG.md`.
 
@@ -87,15 +87,15 @@ Build order — work in this sequence and don't jump ahead unless asked:
 
 1. Repository ✅
 2. Permanent test suite ✅ — `npm test`
-3. Split each app into modules — **still building to single HTML files** — protected by the tests
+3. Split each app into modules — **still building to single HTML files** — protected by the tests (plan: `docs/step3-modules.md`; 3a ✅ source in `src/`; next 3b shared code in `src/shared/`)
 4. Storage for the web app: IndexedDB plus explicit open/save of `.fmide` files
 5. Publish the web app; then formula IR and plugins, community library, touch support
 
-Phase 0 hardening done: escaping text from files, built-in Excel writer, file-format versions and migrations, autosave-failure warning. Still to do: storage (step 4), modules (step 3).
+Phase 0 hardening done: escaping text from files, built-in Excel writer, file-format versions and migrations, autosave-failure warning. Still to do: storage (step 4), modules (step 3b onward).
 
 ## Checking a change
 
-Run **`npm test`** before every commit (setup and details: `tests/README.md`). It runs offline, every group in `tests/SPEC.md`, and must pass against the apps as they are.
+Workflow: edit `src/` → **`npm run build`** → **`npm test`**. Run **`npm test`** before every commit (setup and details: `tests/README.md`). It runs offline, every group in `tests/SPEC.md`, and must pass against the apps as they are.
 
 - Tests drive the apps only through their globals and page elements (`window.fm`, `XLSX`, element ids). Never change an app to make it testable; if a check seems to need that, ask first.
 - A failing check is reported, not weakened.

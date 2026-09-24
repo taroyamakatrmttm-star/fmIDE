@@ -3,6 +3,8 @@
   "private": true,
   "description": "Automated test suite for fmIDE and ExcelExporter (the apps themselves have no dependencies).",
   "scripts": {
+    "build": "node tools/build.js",
+    "build:check": "node tools/build.js --check",
     "test": "playwright test",
     "test:update-snapshots": "playwright test tests/7-ui-fmide.spec.js tests/8-snapshots.spec.js --update-snapshots",
     "test:excel": "playwright test tests/1-excel-structure.spec.js tests/2-excel-values.spec.js tests/3-excel-layout.spec.js tests/4-format-roles.spec.js",
