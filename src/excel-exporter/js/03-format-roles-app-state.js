@@ -137,7 +137,14 @@ function nodeStyleToExcelCellStyle(style){
 // ============================================================
 let model = null;      // { periods, canvases: [{id,name,nodes,edges}] }
 let mapping = null;    // { tabs:[{id,name,order}], rows:[{id,canvasId,nodeId,tabId,section,order,label,include}], cfg:{...} }
-let mappingKey = null; // localStorage key derived from the loaded model's structure
+let mappingKey = null; // storage key derived from the loaded model's structure ('fmide-excelmap-…')
+
+// Saved layouts live in the browser's IndexedDB (database 'fmIDE-ExcelExporter'), one key
+// per model — the same keys and JSON text older versions kept in localStorage, which are
+// copied across once on start (the localStorage copies are kept).
+// build:include shared/store.js
+const layoutStore = createStore('fmIDE-ExcelExporter');
+const layoutsMigrated = layoutStore.migrateFromLocalStorage(k => k.startsWith('fmide-excelmap-'));
 
 const $ = (id) => document.getElementById(id);
 

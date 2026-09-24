@@ -96,3 +96,88 @@ test.describe('fmIDE', () => {
     expect(await persistCalls(page)).toBe(1);
   });
 });
+
+test.describe('ExcelExporter', () => {
+  const X = require('./helpers/excel');
+  const MODEL = 'revenue-bs-corkscrew.json';
+  const PREFIX = 'fmide-excelmap-';
+  const tabNames = (page) => page.locator('#tabsBody input[type=text]').evaluateAll(els => els.map(e => e.value));
+  async function renameFirstTab(page, name){
+    const input = page.locator('#tabsBody input[type=text]').first();
+    await input.fill(name);
+    await input.dispatchEvent('change');
+  }
+  async function reloadWithModel(page){
+    await page.reload();
+    await X.loadFixtureModel(page, MODEL);
+  }
+
+  // Saves a layout the normal way, then turns it into what an older ExcelExporter left:
+  // the same key and text in localStorage, and no IndexedDB database at all.
+  async function makeLegacyLayout(page){
+    await X.openExporter(page);
+    await X.loadFixtureModel(page, MODEL);
+    await renameFirstTab(page, 'Legacy Tab');
+    await expect.poll(async () => Object.values(await S.storedEntries(page, 'ExcelExporter', PREFIX)).join('')).toContain('Legacy Tab');
+    const entries = await S.storedEntries(page, 'ExcelExporter', PREFIX);
+    await page.evaluate((entries) => new Promise((resolve, reject) => {
+      Object.entries(entries).forEach(([k, v]) => localStorage.setItem(k, v));
+      const req = indexedDB.deleteDatabase('fmIDE-ExcelExporter'); // the app's open connection closes itself
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    }), entries);
+    return entries;
+  }
+
+  test('a layout left in localStorage by an older ExcelExporter appears, and is kept there', async ({ page }) => {
+    const entries = await makeLegacyLayout(page);
+    await reloadWithModel(page);
+    expect(await tabNames(page)).toContain('Legacy Tab');
+    expect(await S.storedEntries(page, 'ExcelExporter', PREFIX)).toEqual(entries);
+    const key = Object.keys(entries)[0];
+    expect(await page.evaluate((k) => localStorage.getItem(k), key)).toBe(entries[key]);
+  });
+
+  test('after a Reset Mapping the old localStorage layout does not come back', async ({ page }) => {
+    const entries = await makeLegacyLayout(page);
+    await reloadWithModel(page);
+    expect(await tabNames(page)).toContain('Legacy Tab');
+    await page.click('#btnResetMapping');
+    await page.click('#confirmOk');
+    await expect(page.locator('#genStatus')).toContainText('Mapping reset to defaults.');
+    expect(await S.storedKeys(page, 'ExcelExporter', PREFIX)).toEqual([]);
+    await reloadWithModel(page);
+    expect(await tabNames(page)).not.toContain('Legacy Tab');
+    expect(await S.storedKeys(page, 'ExcelExporter', PREFIX)).toEqual([]);
+    // The old copy is still there, untouched.
+    const key = Object.keys(entries)[0];
+    expect(await page.evaluate((k) => localStorage.getItem(k), key)).toBe(entries[key]);
+  });
+
+  test('without IndexedDB the layout is saved to localStorage and restored after a reload', async ({ page }) => {
+    await page.addInitScript(() => { Object.defineProperty(window, 'indexedDB', { value: undefined, configurable: true }); });
+    await X.openExporter(page);
+    await X.loadFixtureModel(page, MODEL);
+    await renameFirstTab(page, 'No IndexedDB');
+    await expect.poll(() => page.evaluate((p) => Object.keys(localStorage).filter(k => k.startsWith(p)).length, PREFIX)).toBe(1);
+    await expect(page.locator('#storageWarn')).toBeHidden();
+    await reloadWithModel(page);
+    expect(await tabNames(page)).toContain('No IndexedDB');
+  });
+
+  test('asks the browser to keep the data once — on the first change, never again', async ({ page }) => {
+    await fakePersist(page, true);
+    await X.openExporter(page);
+    await X.loadFixtureModel(page, MODEL);
+    expect(await persistCalls(page)).toBe(0); // not at start-up, nor for loading a model
+    await renameFirstTab(page, 'First Change');
+    await expect.poll(() => persistCalls(page)).toBe(1);
+    await expect.poll(async () => (await S.storedEntries(page, 'ExcelExporter', 'fmIDE-ExcelExporter/persistence-requested'))['fmIDE-ExcelExporter/persistence-requested'] || '')
+      .toContain('"granted":true');
+    await renameFirstTab(page, 'Second Change');
+    await reloadWithModel(page);
+    await renameFirstTab(page, 'After Reload');
+    await expect.poll(() => S.storedEntries(page, 'ExcelExporter', PREFIX).then(e => Object.values(e).join(''))).toContain('After Reload');
+    expect(await persistCalls(page)).toBe(1);
+  });
+});

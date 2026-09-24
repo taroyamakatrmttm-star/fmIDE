@@ -56,7 +56,8 @@ function confirmNewerFile(r){
     'Open Anyway');
 }
 
-function loadModel(m){
+// Asynchronous: it waits for the saved layout (IndexedDB) before showing the model.
+async function loadModel(m){
   let systemData = m, formatPresets = [];
   if(m && m.kind === 'fmIDE-workspace' && m.system){
     systemData = m.system;
@@ -67,17 +68,20 @@ function loadModel(m){
   if(!systemData || !Array.isArray(systemData.canvases) || systemData.canvases.length === 0){
     throw new Error('Expected a system export (or a workspace export containing one) with a non-empty "canvases" array.');
   }
-  model = {
+  const loaded = {
     periods: Array.isArray(systemData.periods) && systemData.periods.length ? systemData.periods : ['Period 1'],
     canvases: systemData.canvases,
     formatPresets
   };
-  mappingKey = signatureOf(model);
+  const key = signatureOf(loaded);
   let restored = null;
   try{
-    const raw = localStorage.getItem(mappingKey);
+    await layoutsMigrated;
+    const raw = await layoutStore.get(key);
     if(raw) restored = JSON.parse(raw);
   }catch(err){ /* ignore */ }
+  model = loaded;
+  mappingKey = key;
   mapping = restored || buildDefaultMapping(model);
   // reconcile: drop rows/tabs referencing nodes/canvases no longer present, add rows for new nodes
   reconcileMapping();
@@ -146,24 +150,32 @@ function reconcileMapping(){
   mapping.tabs.forEach(t => { ensureSectionOrderAll(t.id); ensureFlatOrder(t.id); });
 }
 
-// The layout autosaves on every change. If the browser refuses (storage full or
-// unavailable), say so once — the layout still works now, but would be gone after a
-// reload unless exported. Clears itself when a save succeeds again.
+// The layout autosaves on every change (and again when the page is hidden). If the browser
+// refuses (storage full or unavailable), say so once — the layout still works now, but
+// would be gone after a reload unless exported. Clears itself when a save succeeds again.
+// Writes are asynchronous; the browser applies them in the order they were made.
 let mappingSaveFailing = false;
 function saveMapping(){
   if(!mappingKey) return;
-  try{
-    localStorage.setItem(mappingKey, JSON.stringify(mapping));
+  layoutStore.requestPersistence(); // once, ever — on the first change, not at start-up
+  writeMapping();
+}
+function writeMapping(){
+  if(!mappingKey) return;
+  let text;
+  try{ text = JSON.stringify(mapping); }
+  catch(err){ onMappingSaveFailed(err); return; }
+  layoutStore.put(mappingKey, text).then(() => {
     if(mappingSaveFailing){ mappingSaveFailing = false; $('storageWarn').classList.add('hidden'); }
-  }catch(err){
-    if(!mappingSaveFailing){
-      mappingSaveFailing = true;
-      const full = err && (err.name === 'QuotaExceededError' || err.code === 22 || err.code === 1014);
-      $('storageWarn').textContent = (full ? "Autosave failed: the browser's storage is full." : 'Autosave failed: this browser is not letting ExcelExporter store data.') +
-        ' Your layout works for now but will be lost on reload — use "Export Mapping JSON" to keep it.';
-      $('storageWarn').classList.remove('hidden');
-    }
-  }
+  }, onMappingSaveFailed);
+}
+function onMappingSaveFailed(err){
+  if(mappingSaveFailing) return;
+  mappingSaveFailing = true;
+  const full = err && (err.name === 'QuotaExceededError' || err.code === 22 || err.code === 1014);
+  $('storageWarn').textContent = (full ? "Autosave failed: the browser's storage is full." : 'Autosave failed: this browser is not letting ExcelExporter store data.') +
+    ' Your layout works for now but will be lost on reload — use "Export Mapping JSON" to keep it.';
+  $('storageWarn').classList.remove('hidden');
 }
 
 

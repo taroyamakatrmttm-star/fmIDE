@@ -9,7 +9,7 @@ async function tryLoad(jsonText, label){
   if(r.error){ setStatus($('loadStatus'), r.error, 'err'); return; }
   if(!(await confirmNewerFile(r))){ setStatus($('loadStatus'), 'Not loaded.', 'info'); return; }
   try{
-    loadModel(r.data);
+    await loadModel(r.data);
     setStatus($('loadStatus'), `Loaded ${label} — ${model.canvases.length} canvas${model.canvases.length === 1 ? '' : 'es'}, ${model.periods.length} periods.`, 'ok');
   }catch(err){
     setStatus($('loadStatus'), 'Could not read that as an fmIDE system export: ' + err.message, 'err');
@@ -156,9 +156,9 @@ function showConfirm(title, message, okLabel){
 // Discard the saved mapping for the currently loaded model and rebuild the default —
 // exactly what loadModel() produces for a model that has never been seen before.
 // Deliberately does NOT save afterwards (same as a first load): the next real edit saves.
-function resetMappingToDefaults(){
+async function resetMappingToDefaults(){
   if(!model) return;
-  try{ localStorage.removeItem(mappingKey); }catch(err){ /* ignore */ }
+  try{ await layoutStore.remove(mappingKey); }catch(err){ /* ignore */ }
   mapping = buildDefaultMapping(model);
   reconcileMapping();
   renderAll();
@@ -172,9 +172,12 @@ $('btnResetMapping').addEventListener('click', async () => {
     'Reset Mapping'
   );
   if(!ok) return;
-  resetMappingToDefaults();
+  await resetMappingToDefaults();
   setStatus($('genStatus'), 'Mapping reset to defaults.', 'ok');
 });
+
+// A write started only while the page unloads may not finish, so save when it is hidden.
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') writeMapping(); });
 
 $('btnClearAll').addEventListener('click', () => {
   model = null; mapping = null; mappingKey = null;

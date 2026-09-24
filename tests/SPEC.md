@@ -28,7 +28,7 @@ This is the brief for building the permanent automated test suite. Until now eve
   then click `#btnGenerate`. `window.__wb` is the intended workbook object (`SheetNames`, `Sheets[name][addr] = {t, v, f, z, s}`); `window.__bytes` is the real `.xlsx` file. `XLSX` is the app's built-in writer (a global).
 - To test the real download path once: don't override, and use Playwright's `download` event.
 - Useful ids: `#cfgSectionsEnabled`, `#cfgInputsEnabled`, `#cfgInputsName`, `#cfgInputsGroup`, `#cfgInputsOrder`, `#cfgInputsScenarios`, `#cfgInputsCases`, `#casesHint`, `#viewByCanvas` / `#viewByTab` / `#viewByTree`, `#rowGroupsTree .tree-row`, `.scn-ctl` (per-row scenario checkbox + count, on Inputs-tab rows in Tree view), `#sortMethod` / `#sortWithin` / `#sortScope` / `#btnApplySort`, `#treeCtxMenu`, `#bulkMoveBar`, `#btnAddCustomRow`, `#confirmModal` / `#confirmOk` / `#confirmCancel` (in-page confirm dialog), `#btnExportMapping`, `#mappingFileInput`, `#btnResetMapping`, `#btnClearAll`, `#storageWarn`, `#rolesLegend .role-chip`, `#loadStatus`, `#genStatus`, `#inputsStatus`.
-- The layout autosaves to `localStorage` under keys starting `fmide-excelmap-`; clear `localStorage` between tests.
+- The layout autosaves to IndexedDB (database `fmIDE-ExcelExporter`, object store `kv`) under keys starting `fmide-excelmap-`; read it with `tests/helpers/storage.js`. Writes are asynchronous, so poll after an edit. Each test starts with empty storage.
 
 **fmIDE** (`apps/fmIDE.html`)
 - Automation API: `window.fm` (see `docs/fmIDE-automation-api.md`) — e.g. `fm.clearCanvas()`, `fm.createRect({x, y, name, value})`, `fm.createOperator({x, y, op})`, `fm.connect(from, to)`, `fm.nodes()`, `fm.canvases()`, `fm.commands()` (includes each command's shortcut), `fm.command(id)`, `fm.saveSystem()`, `fm.exportWorkspace()`.
@@ -98,7 +98,7 @@ Load `tests/fixtures/security/evil-workspace.json` and `evil-system.json`:
 **ExcelExporter**:
 - `sys-current`, `sys-legacy` load; `sys-newer` shows `#confirmModal` — Cancel → status "Not loaded."; Open Anyway → loads. `ws-nested-newer` → confirm mentions its system.
 - `module`, `templates`, `mapping` loaded as a model → a message saying what the file is and where it belongs.
-- Mapping: `#btnExportMapping` download has `kind: "fmIDE-excel-mapping"`, `version: 1`; re-importing it works; `map-legacy` (no kind/version) imports; `map-newer` asks; importing a system file as a mapping is rejected. The saved layout in localStorage never contains `kind`/`version`.
+- Mapping: `#btnExportMapping` download has `kind: "fmIDE-excel-mapping"`, `version: 1`; re-importing it works; `map-legacy` (no kind/version) imports; `map-newer` asks; importing a system file as a mapping is rejected. The saved layout in browser storage never contains `kind`/`version`.
 
 ### 7. UI flows
 **ExcelExporter**
@@ -106,7 +106,7 @@ Load `tests/fixtures/security/evil-workspace.json` and `evil-system.json`:
 - Sort (`revenue-bs-corkscrew.json`, sections off): "Calculation order: inputs first", A→Z, all tabs → BS tab order Unit Price, Volume, AR outstanding rate, Revenue, Accounts Receivable, Cash, Inventory, Total Assets. With formula order, the Corkscrew tab reads Beginning Balance, Additions, Subtractions, Ending Balance. Undo restores the previous order. Custom rows keep their slots. With sections on, the Input band is ordered Unit Price, Volume, AR outstanding rate, Cash, Inventory. The Inputs tab is never sorted and never offered in the scope list.
 - Tree view: right-click → Insert custom row above/below inserts next to the row (with several selected: above the first / below the last), opens rename, stays in the anchor's section when sections are on; "+ Add Custom Row" inserts below the selection or, with nothing selected, at the bottom of the first tab. Double-clicking a row when nothing was selected renames **that** row (the selection bar appearing must not shift the target).
 - Inputs tab: renaming an Inputs-tab row renames its source; excluding the source removes it from the Inputs tab; an Inputs-tab row can't be moved to another tab; name clash ("Inputs" already a tab) → "Inputs 2" with a warning.
-- Storage failure: make `Storage.prototype.setItem` throw a `QuotaExceededError` DOMException, edit something → `#storageWarn` visible; restore and edit → hidden.
+- Storage failure: make `IDBObjectStore.prototype.put` throw a `QuotaExceededError` DOMException (`breakStorage`), edit something → `#storageWarn` visible; restore and edit → hidden.
 
 **fmIDE**
 - Canvas: build Unit Price × Volume → Revenue with `fm`; the arrow SVG markup is stable (snapshot); a rectangle fed by an operator with no inputs gets the Inputs look.
@@ -122,6 +122,12 @@ For each fixture in `tests/fixtures/models/` (Inputs tab off and on): store ever
 - Hiding the page (`visibilitychange` → hidden) saves the workspace without waiting for the 8 s timer.
 - With `window.indexedDB` removed, autosave falls back to `localStorage` and restores after a reload.
 - `navigator.storage.persist()` is not called at start-up; it is called once on the first change, and never again (after a reload either), whatever the answer.
+
+**ExcelExporter**
+- A layout an older ExcelExporter left in `localStorage` (`fmide-excelmap-…`, no IndexedDB database yet) appears when the model is loaded, is copied into IndexedDB, and stays in `localStorage`.
+- After Reset Mapping to Defaults, a reload does not bring the old `localStorage` layout back (the move happens once).
+- With `window.indexedDB` removed, the layout is saved to `localStorage` (no warning) and restored after a reload.
+- `navigator.storage.persist()` is not called at start-up or for loading a model; once on the first layout change, never again.
 
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
