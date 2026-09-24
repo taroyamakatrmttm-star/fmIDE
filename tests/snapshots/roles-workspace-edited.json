@@ -1,0 +1,20 @@
+{
+ "Revenue Model": {
+  "A1": {"v":"Revenue Model"},
+  "A2": {"v":"Line item"},
+  "B2": {"v":"UOM"},
+  "E2": {"v":"2027"},
+  "A3": {"v":"Period #"},
+  "E3": {"v":1},
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Unit Price"},
+  "E5": {"v":10},
+  "A6": {"v":"Volume"},
+  "E6": {"v":5},
+  "A7": {"v":"Cash"},
+  "E7": {"v":0},
+  "A9": {"v":"OUTPUTS"},
+  "A10": {"v":"Revenue"},
+  "E10": {"f":"(E5*E6)"}
+ }
+}

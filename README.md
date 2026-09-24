@@ -19,7 +19,7 @@ Both are single self-contained HTML files with no external dependencies: open th
 ```
 apps/    the two apps (edit these; Git keeps the history, so no version numbers in file names)
 docs/    reference notes: file formats, format roles, automation API, decisions
-tests/   automated checks (next step — see tests/README.md)
+tests/   the automated test suite — `npm test` (see tests/README.md)
 ```
 
 ## Docs
@@ -28,6 +28,7 @@ tests/   automated checks (next step — see tests/README.md)
 - [`docs/file-formats.md`](docs/file-formats.md) — every JSON file type, its version, and how to change a format safely
 - [`docs/format-roles.md`](docs/format-roles.md) — how cell and rectangle formatting is defined in one place
 - [`docs/fmIDE-automation-api.md`](docs/fmIDE-automation-api.md) — the `window.fm` actions used by the ribbon, shortcuts and macros
+- [`tests/README.md`](tests/README.md) — running the test suite and updating snapshots
 - [`CHANGELOG.md`](CHANGELOG.md) — notable changes
 
 ## Licence

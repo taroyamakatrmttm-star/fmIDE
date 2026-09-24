@@ -19,7 +19,8 @@ The workflow: build in fmIDE → **File → Save System** or **Export Workspace*
 - ExcelExporter has its **own built-in Excel (xlsx/zip) writer**; it replaced an external library on purpose. Do not bring a library back.
 - Edit the apps in place. Git keeps the history, so never add version numbers to file names or make copies like `fmIDE-v2.html`.
 - The files are large (fmIDE ≈ 430 KB, ExcelExporter ≈ 260 KB). Search with Grep for the function you need and read around it rather than reading the whole file.
-- Layout: `apps/` the two apps · `docs/` reference notes · `tests/` the test suite (not built yet — see `tests/README.md`; sample models will go in `tests/fixtures/`).
+- Layout: `apps/` the two apps · `docs/` reference notes · `tests/` the test suite (`tests/README.md`; brief in `tests/SPEC.md`; sample files in `tests/fixtures/`, which are not edited — add new ones alongside).
+- The apps have no dependencies; the test tooling (`package.json`: Playwright, exceljs, jszip) is dev-only and must never be loaded by an app.
 - Record notable changes in `CHANGELOG.md`.
 
 ## Non-negotiable rules for every change
@@ -54,7 +55,7 @@ To change a format:
 1. Raise `current` for that kind in `FILE_FORMATS`.
 2. Add `FILE_MIGRATIONS[kind][oldVersion]` — a function that upgrades a **copy** of an old file by exactly **one** version.
 3. `system` and `fmIDE-workspace` are read by both apps: change **both** apps' tables together.
-4. Add an old-version sample to the tests so the upgrade stays covered.
+4. Add an old-version sample to `tests/fixtures/formats/` and a test in `tests/6-formats-*.spec.js` so the upgrade stays covered.
 
 ## Format roles (`docs/format-roles.md`)
 
@@ -85,7 +86,7 @@ Agreed: code lives in a private GitHub repository; the first platform is an inst
 Build order — work in this sequence and don't jump ahead unless asked:
 
 1. Repository ✅
-2. **Permanent test suite** — one command that runs every check on every change (Excel output recalculated with LibreOffice, security, file formats, UI flows)
+2. Permanent test suite ✅ — `npm test`
 3. Split each app into modules — **still building to single HTML files** — protected by the tests
 4. Storage for the web app: IndexedDB plus explicit open/save of `.fmide` files
 5. Publish the web app; then formula IR and plugins, community library, touch support
@@ -94,4 +95,10 @@ Phase 0 hardening done: escaping text from files, built-in Excel writer, file-fo
 
 ## Checking a change
 
-Until the test suite exists, verify by hand: open the changed app in a browser (Chromium/Playwright is available in cloud sessions), load a saved system or workspace, and for ExcelExporter changes generate a workbook and check the formulas. For anything touching loading or saving, also try an older file, a wrong-kind file, and a file containing HTML/script in names and labels to confirm it displays as plain text.
+Run **`npm test`** before every commit (setup and details: `tests/README.md`). It runs offline, every group in `tests/SPEC.md`, and must pass against the apps as they are.
+
+- Tests drive the apps only through their globals and page elements (`window.fm`, `XLSX`, element ids). Never change an app to make it testable; if a check seems to need that, ask first.
+- A failing check is reported, not weakened.
+- The LibreOffice recalculation tests need LibreOffice with Calc; they skip locally without it but are required on CI.
+- If a change deliberately alters the generated workbooks, run `npm run test:update-snapshots` and commit the updated `tests/snapshots/` with the change.
+- A change to a file format needs an old-version sample in `tests/fixtures/formats/` and a test that it still opens.

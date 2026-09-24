@@ -11,7 +11,7 @@ Decision 3 can wait: going from closed to open later is easy, but open to closed
 ## Build order
 
 1. Repository (this) ✅
-2. Permanent test suite — one command that runs every check, on every change
+2. Permanent test suite — one command that runs every check, on every change ✅ (`npm test`, see `tests/README.md`)
 3. Split each app into modules (still building to single files), protected by the tests
 4. Storage for the web app: IndexedDB plus explicit open/save of `.fmide` files
 5. Publish the web app; then formula IR and plugins, community library, touch support
