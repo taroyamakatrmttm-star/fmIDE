@@ -630,6 +630,7 @@
   <input type="file" id="fileInputWorkspace" accept="application/json,.json" style="display:none;">
   <input type="file" id="fileInputSystem" accept="application/json,.json" style="display:none;">
   <input type="file" id="fileInputModule" accept="application/json,.json" style="display:none;">
+  <input type="file" id="fileInputDocument" accept=".fmide,application/json,.json" style="display:none;">
   <div id="viewport">
     <div id="canvas">
       <svg id="edges"></svg>
@@ -745,6 +746,13 @@
     { id:'importWorkspace', label:'Import Workspace',  icon:'⇧', category:'File', defaultShortcut:null, action:() => fileInputWorkspace.click() },
     { id:'openTemplates',label:'Templates',            icon:'📚', category:'File', defaultShortcut:null, action:() => showTemplatesPicker() },
     { id:'openFormats', label:'Format Presets',        icon:'🎨', category:'File', defaultShortcut:null, action:() => showFormatPresetsPicker(null) },
+    // Documents (.fmide files) — last in the File list, so a shortcut someone already gave
+    // another command keeps priority over these defaults.
+    { id:'newDocument', label:'New',                   icon:'📄', category:'File', defaultShortcut:null, action:() => newDocument() },
+    { id:'openDocument',label:'Open…',                 icon:'📁', category:'File', defaultShortcut:'Mod+O', action:() => openDocument() },
+    { id:'saveDocument',label:'Save',                  icon:'💾', category:'File', defaultShortcut:'Mod+S', action:() => saveDocument() },
+    { id:'saveDocumentAs',label:'Save As…',            icon:'📝', category:'File', defaultShortcut:'Mod+Shift+S', action:() => saveDocumentAs() },
+    { id:'openRecent',  label:'Open Recent…',          icon:'🕘', category:'File', defaultShortcut:null, action:() => showOpenRecent() },
 
     { id:'openLauncher',label:'Command Launcher',      icon:'🔎', category:'View', defaultShortcut:'Mod+K', action:() => openLauncher() },
     { id:'openShortcuts',label:'Keyboard Shortcuts',   icon:'⌨', category:'View', defaultShortcut:null, action:() => showShortcutsPicker() },
@@ -1262,6 +1270,7 @@
     future = [];
     updateHistoryButtons();
     requestStoragePersistence();
+    markDocDirty();
   }
 
   function restore(snap){
@@ -1288,6 +1297,7 @@
     render();
     renderCanvasTabs();
     updateHistoryButtons();
+    markDocDirty();
   }
 
   function redo(){
@@ -1300,6 +1310,7 @@
     render();
     renderCanvasTabs();
     updateHistoryButtons();
+    markDocDirty();
   }
 
   function updateHistoryButtons(){ refreshCommandStates(); }
@@ -1542,6 +1553,23 @@
 
   function updateClipboardButtons(){ refreshCommandStates(); }
 
+  // Save / Save As / Open shortcuts also work while typing (the edit is committed first),
+  // and are kept from the browser's own "Save page" / "Open file" while a dialog is open.
+  // Listening on window in the capture phase: text boxes stop their key events bubbling,
+  // and a dialog that captures keys itself (e.g. assigning a shortcut) still gets them.
+  const DOCUMENT_SHORTCUT_COMMANDS = new Set(['saveDocument', 'saveDocumentAs', 'openDocument']);
+  window.addEventListener('keydown', (e) => {
+    const editing = document.activeElement && (document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT');
+    const dialogOpen = !!document.querySelector('.modal-overlay, .launcher-overlay');
+    if(!editing && !dialogOpen) return; // the handler below takes it
+    const docCmd = shortcutMap[normalizeCombo(e) || ''];
+    if(!docCmd || !DOCUMENT_SHORTCUT_COMMANDS.has(docCmd)) return;
+    e.preventDefault();
+    if(dialogOpen) return;
+    e.stopPropagation();
+    document.activeElement.blur();
+    runCommand(docCmd);
+  }, true);
   document.addEventListener('keydown', (e) => {
     const editing = document.activeElement && (document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT');
     if(editing) return;
@@ -1835,13 +1863,17 @@
   // the same key and JSON text older versions kept in localStorage, copied across once.
   // ---------- browser storage (shared: src/shared/store.js, used by both apps) ----------
   // createStore(dbName): a small promise-based key–value store on IndexedDB, one database
-  // per app, one object store ('kv'). Values are strings (the apps store JSON text, exactly
-  // what they used to keep in localStorage). Where IndexedDB is missing or will not open
+  // per app, one object store ('kv'). Values are mostly strings (the apps store JSON text,
+  // exactly what they used to keep in localStorage); IndexedDB also keeps other values the
+  // browser can store, such as file handles. Where IndexedDB is missing or will not open
   // (some browsers block it for pages opened from disk, or in private windows) the same
   // calls fall back to localStorage, so the app keeps working — it never fails for that.
   //   ready                        resolves once the store is usable (never rejects)
-  //   get(key)                     the stored string, or null
-  //   put(key, value)              rejects with the browser's error (e.g. QuotaExceededError)
+  //   get(key)                     the stored value, or null
+  //   put(key, value)              rejects with the browser's error (e.g. QuotaExceededError,
+  //                                or DataCloneError for a value it cannot store); on the
+  //                                localStorage fallback, anything but a string is refused
+  //   canStoreObjects()            whether put accepts more than strings (after ready)
   //   remove(key)
   //   keys(prefix)                 every stored key that starts with prefix
   //   migrateFromLocalStorage(fn)  once per browser: copy localStorage keys for which fn(key)
@@ -1893,11 +1925,15 @@
 
     function get(key){
       return ready.then(() => db
-        ? run('readonly', s => s.get(key)).then(v => (typeof v === 'string' ? v : null))
+        ? run('readonly', s => s.get(key)).then(v => (v === undefined ? null : v))
         : localStorage.getItem(key));
     }
     function put(key, value){
-      return ready.then(() => db ? run('readwrite', s => { s.put(String(value), key); }) : localStorage.setItem(key, String(value)));
+      return ready.then(() => {
+        if(db) return run('readwrite', s => { s.put(value, key); });
+        if(typeof value !== 'string') throw new TypeError('Only text can be stored in this browser.');
+        localStorage.setItem(key, value);
+      });
     }
     function remove(key){
       return ready.then(() => db ? run('readwrite', s => { s.delete(key); }) : localStorage.removeItem(key));
@@ -1954,7 +1990,7 @@
       }).catch(() => { /* silent */ });
     }
 
-    return { ready, get, put, remove, keys, migrateFromLocalStorage, requestPersistence };
+    return { ready, get, put, remove, keys, migrateFromLocalStorage, requestPersistence, canStoreObjects: () => !!db };
   }
   const WORKSPACE_STORAGE_KEY = 'fmIDE-workspace-v1';
   const workspaceStore = createStore('fmIDE');
@@ -1974,6 +2010,17 @@
     };
   }
 
+  // A file's format presets replace the ones with the same name (so its roles win, and
+  // no name appears twice); presets only the user has are kept, new ones are added.
+  function mergeFormatPresets(list){
+    list.forEach(p => {
+      if(!p || typeof p.name !== 'string' || !p.style) return;
+      const i = FORMAT_PRESETS.findIndex(x => x.name === p.name);
+      if(i >= 0) FORMAT_PRESETS[i] = { id: FORMAT_PRESETS[i].id, name: p.name, style: p.style };
+      else FORMAT_PRESETS.push({ id: p.id || ('fmt' + (nextFormatPresetId++)), name: p.name, style: p.style });
+    });
+  }
+
   function applyWorkspacePayload(data){
     if(data.system && Array.isArray(data.system.canvases) && data.system.canvases.length){
       applySystemDataDirect(data.system);
@@ -1988,12 +2035,7 @@
         });
       });
     }
-    if(Array.isArray(data.formatPresets)){
-      data.formatPresets.forEach(p => {
-        if(!p || typeof p.name !== 'string' || !p.style) return;
-        FORMAT_PRESETS.push({ id: p.id || ('fmt' + (nextFormatPresetId++)), name: p.name, style: p.style });
-      });
-    }
+    if(Array.isArray(data.formatPresets)) mergeFormatPresets(data.formatPresets);
     // ribbon/KeyTips settings, then macros (so macro commands exist before their
     // shortcut bindings are applied below); syncMacroCommands re-renders the ribbon
     if(data.ui) applyUiPayload(data.ui);
@@ -2008,7 +2050,7 @@
     }
   }
 
-  // Autosave runs every 8 s, when the page is hidden, and on close. If the browser refuses
+  // Autosave runs every 8 s, about 2 s after each change (20), when the page is hidden, and on close. If the browser refuses
   // to store (storage full, or unavailable e.g. in some private-browsing modes) a banner
   // says so ONCE per failure streak — fmIDE keeps working, but nothing done from now on
   // would survive a reload unless exported. It clears itself as soon as a save succeeds.
@@ -2020,7 +2062,8 @@
     let text;
     try{ text = JSON.stringify(buildWorkspacePayload()); }
     catch(err){ onAutosaveFailed(err); return; }
-    workspaceStore.put(WORKSPACE_STORAGE_KEY, text).then(() => {
+    // The workspace, plus which document is open and whether it has unsaved changes (20).
+    Promise.all([workspaceStore.put(WORKSPACE_STORAGE_KEY, text), workspaceStore.put(SESSION_KEY, documentSessionText())]).then(() => {
       if(autosaveFailing){ autosaveFailing = false; autosaveBannerDismissed = false; hideAutosaveBanner(); }
     }, onAutosaveFailed);
   }
@@ -2062,7 +2105,7 @@
     return workspaceStore.migrateFromLocalStorage(k => k === WORKSPACE_STORAGE_KEY)
       .then(() => workspaceStore.get(WORKSPACE_STORAGE_KEY))
       .then(raw => {
-        if(!raw) return false;
+        if(typeof raw !== 'string' || !raw) return false;
         let parsed;
         try{ parsed = JSON.parse(raw); }
         catch(err){ return false; }
@@ -7110,10 +7153,15 @@
   // The ribbon layout is plain data (tabs → groups → command ids) so users can customize
   // it; it is saved with the workspace. Items reference COMMANDS ids (including macros,
   // whose ids are "macro:<id>"). size: 'large' | 'small'; keytip: optional fixed KeyTip.
+  // The Document group leads the File tab. Ribbons customised before it existed get it once
+  // (addDocumentGroupToRibbon, 21); removing it afterwards is respected.
+  const DOCUMENT_RIBBON_GROUP = { id:'document', label:'Document', items:[
+    { cmd:'saveDocument', size:'large' }, { cmd:'newDocument' }, { cmd:'openDocument' }, { cmd:'saveDocumentAs' }, { cmd:'openRecent' } ] };
   const DEFAULT_RIBBON = {
     qat: ['undo', 'redo', 'evaluate', 'openLauncher'],
     tabs: [
       { id:'file', label:'File', keytip:'F', groups:[
+        cloneData(DOCUMENT_RIBBON_GROUP),
         { label:'System', items:[ { cmd:'saveSystem', size:'large' }, { cmd:'loadSystem' }, { cmd:'addSystem' } ] },
         { label:'Module', items:[ { cmd:'saveModule', size:'large' }, { cmd:'loadModule' } ] },
         { label:'Workspace', items:[ { cmd:'exportWorkspace' }, { cmd:'importWorkspace' } ] },
@@ -8835,6 +8883,533 @@
   }
 
   // =====================================================================================
+  // ---------- Documents: New · Open · Save · Save As · Open Recent ----------
+  // =====================================================================================
+  // A document is a .fmide file holding the whole workspace — exactly the fmIDE-workspace
+  // JSON that Export Workspace writes, so there is no new file format. Where the browser
+  // has the File System Access API (Chrome, Edge) Open and Save As get a file handle and
+  // Save writes straight back to the file; elsewhere Open uses a file input and Save
+  // downloads name.fmide. Browser storage (05, src/shared/store.js) is the safety net:
+  // the autosave also keeps which document is open and whether it has unsaved changes,
+  // and Recent keeps a copy of each document as it was last opened or saved.
+  // Opening a document never overwrites the person's own setup: the model and its format
+  // presets/roles come from the file; its templates and macros are added when not already
+  // present; its shortcuts and ribbon/KeyTips settings are ignored.
+  const DOC_EXT = '.fmide';
+  const DOC_PICKER_TYPES = [{ description: 'fmIDE document', accept: { 'application/json': [DOC_EXT, '.json'] } }];
+  const DOC_SAVE_TYPES = [{ description: 'fmIDE document', accept: { 'application/json': [DOC_EXT] } }];
+  const SESSION_KEY = 'fmIDE-session';               // { name, fileName, recentId, dirty } (JSON)
+  const SESSION_HANDLE_KEY = 'fmIDE-session-handle'; // the open document's file handle
+  const RECENT_KEY = 'fmIDE-recent';                 // [{ id, name, fileName, lastOpened, copySavedAt }] (JSON)
+  const RECENT_MAX = 10;
+  const recentCopyKey = (id) => 'fmIDE-recent:' + id;
+  const recentHandleKey = (id) => 'fmIDE-recent-handle:' + id;
+  const fileInputDocument = document.getElementById('fileInputDocument');
+
+  // name: shown in the title (null = "Untitled"); fileName: the .fmide file it lives in,
+  // if any (Save downloads it again where there is no handle); handle: the file handle.
+  // serial changes whenever another document is opened or a new one started.
+  const currentDoc = { name: null, fileName: null, handle: null, recentId: null, dirty: false, serial: 0 };
+  const recentHandles = new Map(); // handles from this session, for when the browser can't store them
+  let docChangeCount = 0;          // bumped on every change: a save only marks clean what it wrote
+  let dirtySaveTimer = null;
+
+  function docDisplayName(){ return currentDoc.name || 'Untitled'; }
+  function updateDocTitle(){ document.title = docDisplayName() + (currentDoc.dirty ? ' •' : '') + ' — fmIDE'; }
+
+  // Called for every change that goes into undo history (and undo/redo themselves). The
+  // autosave follows about 2 s after the last change, besides the 8-second timer.
+  function markDocDirty(){
+    docChangeCount++;
+    if(!currentDoc.dirty){ currentDoc.dirty = true; updateDocTitle(); }
+    clearTimeout(dirtySaveTimer);
+    dirtySaveTimer = setTimeout(saveWorkspace, 2000);
+  }
+  function markDocClean(){ currentDoc.dirty = false; updateDocTitle(); }
+  function clearUndoHistory(){ history = []; future = []; updateHistoryButtons(); }
+
+  function docNameFromFile(fileName){
+    const base = String(fileName || '').split(/[\\/]/).pop().replace(/\.(fmide|json)$/i, '').trim();
+    return base.slice(0, 200) || 'Untitled';
+  }
+  function safeFileBase(name){
+    return String(name || '').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').trim().slice(0, 120) || 'Untitled';
+  }
+  function withDocExt(name){ const base = safeFileBase(String(name || '').replace(/\.fmide$/i, '')); return base + DOC_EXT; }
+  function isFileHandle(h){ return !!h && typeof h === 'object' && typeof h.getFile === 'function'; }
+  function formatWhen(iso){
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? 'an earlier date' : d.toLocaleString();
+  }
+
+  // ---------- the session, as saved with the autosave ----------
+  function documentSessionText(){
+    return JSON.stringify({ name: currentDoc.name, fileName: currentDoc.fileName, recentId: currentDoc.recentId, dirty: currentDoc.dirty });
+  }
+  // A handle the browser can't keep is dropped rather than left pointing at the previous
+  // document's file: after a reload, Save then asks where to save.
+  function rememberSessionHandle(){
+    const drop = () => workspaceStore.remove(SESSION_HANDLE_KEY).catch(() => {});
+    if(currentDoc.handle) workspaceStore.put(SESSION_HANDLE_KEY, currentDoc.handle).catch(drop);
+    else drop();
+  }
+  // Restores which document was open (only when the autosaved workspace itself came back).
+  function loadDocumentSession(restored){
+    if(!restored) return Promise.resolve();
+    return workspaceStore.get(SESSION_KEY).then(text => {
+      let s = null;
+      try{ s = typeof text === 'string' ? JSON.parse(text) : null; }catch(err){ s = null; }
+      if(!s || typeof s !== 'object') return;
+      currentDoc.name = (typeof s.name === 'string' && s.name) ? s.name.slice(0, 200) : null;
+      currentDoc.fileName = (typeof s.fileName === 'string' && s.fileName) ? s.fileName.slice(0, 255) : null;
+      currentDoc.recentId = typeof s.recentId === 'string' ? s.recentId : null;
+      currentDoc.dirty = s.dirty === true;
+      // Only the handle of this very file (never write one document into another's file).
+      return workspaceStore.get(SESSION_HANDLE_KEY).then(h => {
+        if(isFileHandle(h) && currentDoc.fileName && h.name === currentDoc.fileName) currentDoc.handle = h;
+      });
+    }).catch(() => {});
+  }
+
+  // After a restart with unsaved changes: say so, and offer to save them.
+  function showRecoveryNotice(){
+    if(!currentDoc.dirty || document.getElementById('recoveryBanner')) return;
+    const bar = document.createElement('div');
+    bar.id = 'recoveryBanner';
+    bar.setAttribute('role', 'status');
+    bar.style.cssText = 'position:fixed; top:60px; left:50%; transform:translateX(-50%); z-index:1999; max-width:640px; ' +
+      'display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:10px; background:#1e3a8a; color:#fff; ' +
+      'font-size:13px; box-shadow:0 10px 30px rgba(0,0,0,.35);';
+    const msg = document.createElement('span');
+    msg.textContent = 'Recovered unsaved changes to “' + docDisplayName() + '”.';
+    const save = document.createElement('button');
+    save.textContent = 'Save';
+    save.style.cssText = 'flex:none; padding:6px 10px; border-radius:6px; border:none; background:#fff; color:#1e3a8a; font-weight:700; cursor:pointer;';
+    save.addEventListener('click', () => { saveDocument().then(ok => { if(ok) bar.remove(); }); });
+    const dis = document.createElement('button');
+    dis.textContent = 'Dismiss';
+    dis.style.cssText = 'flex:none; padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,.5); background:transparent; color:#fff; cursor:pointer;';
+    dis.addEventListener('click', () => bar.remove());
+    bar.append(msg, save, dis);
+    document.body.appendChild(bar);
+  }
+  function hideRecoveryNotice(){ const b = document.getElementById('recoveryBanner'); if(b) b.remove(); }
+
+  // Closing the tab with unsaved changes: the browser's own "Leave site?" question.
+  window.addEventListener('beforeunload', (ev) => {
+    if(!currentDoc.dirty) return;
+    ev.preventDefault();
+    ev.returnValue = '';
+  });
+
+  // ---------- in-app dialogs ----------
+  // Save / Don't save / Cancel. Escape and a click outside mean Cancel.
+  function confirmDiscardChanges(proceed){
+    if(!currentDoc.dirty){ proceed(); return; }
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const box = document.createElement('div');
+    box.className = 'modal-box';
+    box.id = 'saveChangesDialog';
+    const p = document.createElement('p');
+    p.textContent = 'Do you want to save the changes to “' + docDisplayName() + '”?';
+    const actions = document.createElement('div');
+    actions.className = 'modal-actions';
+    const cancelBtn = document.createElement('button'); cancelBtn.textContent = 'Cancel';
+    const dontBtn = document.createElement('button'); dontBtn.textContent = "Don't save";
+    const saveBtn = document.createElement('button'); saveBtn.className = 'primary'; saveBtn.textContent = 'Save';
+    actions.append(cancelBtn, dontBtn, saveBtn);
+    box.append(p, actions);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    function close(){ overlay.remove(); document.removeEventListener('keydown', onKey); }
+    function onKey(ev){ if(ev.key === 'Escape') close(); }
+    cancelBtn.addEventListener('click', close);
+    overlay.addEventListener('mousedown', (ev) => { if(ev.target === overlay) close(); });
+    dontBtn.addEventListener('click', () => { close(); proceed(); });
+    saveBtn.addEventListener('click', () => { close(); saveDocument().then(saved => { if(saved) proceed(); }); });
+    document.addEventListener('keydown', onKey);
+    saveBtn.focus();
+  }
+
+  // Where the browser can't show a save dialog: ask for a name, then download. Resolves
+  // with the file name, or null when cancelled.
+  function askDocumentFileName(suggested){
+    return new Promise(resolve => {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      const box = document.createElement('div');
+      box.className = 'modal-box';
+      box.id = 'saveAsDialog';
+      const p = document.createElement('p');
+      p.textContent = 'Save as (the file is downloaded):';
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.id = 'saveAsName';
+      input.value = suggested.replace(/\.fmide$/i, '');
+      input.style.cssText = 'width:100%; box-sizing:border-box; margin-bottom:14px; padding:6px 8px;';
+      const actions = document.createElement('div');
+      actions.className = 'modal-actions';
+      const cancelBtn = document.createElement('button'); cancelBtn.textContent = 'Cancel';
+      const saveBtn = document.createElement('button'); saveBtn.className = 'primary'; saveBtn.textContent = 'Save';
+      actions.append(cancelBtn, saveBtn);
+      box.append(p, input, actions);
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+      function done(value){ overlay.remove(); resolve(value); }
+      cancelBtn.addEventListener('click', () => done(null));
+      overlay.addEventListener('mousedown', (ev) => { if(ev.target === overlay) done(null); });
+      saveBtn.addEventListener('click', () => done(withDocExt(input.value)));
+      input.addEventListener('keydown', (ev) => {
+        if(ev.key === 'Enter'){ ev.preventDefault(); done(withDocExt(input.value)); }
+        if(ev.key === 'Escape'){ ev.preventDefault(); done(null); }
+      });
+      input.focus();
+      input.select();
+    });
+  }
+
+  // ---------- New ----------
+  // An empty model: one empty "Canvas 1" and one period. The format presets and roles are
+  // kept (a house style), as are templates, macros, shortcuts and the ribbon.
+  function newDocument(){
+    confirmDiscardChanges(() => {
+      applySystemDataDirect({ canvases: [{ id: 'c' + nextCanvasId, name: 'Canvas 1', nodes: [], edges: [] }], periods: ['Period 1'], currentPeriod: 0 });
+      render();
+      Object.assign(currentDoc, { name: null, fileName: null, handle: null, recentId: null, serial: currentDoc.serial + 1 });
+      clearUndoHistory();
+      hideRecoveryNotice();
+      markDocClean();
+      rememberSessionHandle();
+      saveWorkspace();
+    });
+  }
+
+  // ---------- Open ----------
+  function openDocument(){ confirmDiscardChanges(pickDocumentToOpen); }
+
+  function pickDocumentToOpen(){
+    if(typeof window.showOpenFilePicker !== 'function'){ fileInputDocument.click(); return; }
+    let picking;
+    try{ picking = window.showOpenFilePicker({ types: DOC_PICKER_TYPES, multiple: false }); }
+    catch(err){ fileInputDocument.click(); return; }
+    Promise.resolve(picking).then(async (handles) => {
+      const handle = handles && handles[0];
+      if(!handle) return;
+      const file = await handle.getFile();
+      openDocumentText(await file.text(), file.name || handle.name, handle);
+    }).catch(err => {
+      if(err && err.name === 'AbortError') return; // the person closed the dialog
+      if(err && err.name === 'SecurityError'){ fileInputDocument.click(); return; }
+      showMessage('Could not open that file.');
+    });
+  }
+
+  fileInputDocument.addEventListener('change', () => {
+    const file = fileInputDocument.files && fileInputDocument.files[0];
+    fileInputDocument.value = ''; // the same file can be picked again
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => openDocumentText(String(reader.result), file.name, null);
+    reader.onerror = () => showMessage('Could not read that file.');
+    reader.readAsText(file);
+  });
+
+  // Opens a .fmide (a workspace) or a workspace/system .json. Only a .fmide keeps its file
+  // handle: Save on a .json document asks where to save a .fmide instead of overwriting it.
+  // opts: { recentId, notice }
+  function openDocumentText(text, fileName, handle, opts){
+    opts = opts || {};
+    openFmFileText(text, ['fmIDE-workspace', 'system'], (data, r) => {
+      const system = r.kind === 'system' ? data : data.system;
+      if(!system || !Array.isArray(system.canvases) || system.canvases.length === 0){
+        showMessage("That file doesn't contain a model (expected a non-empty \"canvases\" list).");
+        return;
+      }
+      const isDocFile = /\.fmide$/i.test(String(fileName || ''));
+      applyDocumentData(data, r.kind);
+      Object.assign(currentDoc, {
+        name: docNameFromFile(fileName),
+        fileName: isDocFile ? String(fileName).split(/[\\/]/).pop() : null,
+        handle: isDocFile && isFileHandle(handle) ? handle : null,
+        recentId: opts.recentId || null,
+        serial: currentDoc.serial + 1
+      });
+      clearUndoHistory();
+      hideRecoveryNotice();
+      markDocClean();
+      rememberSessionHandle();
+      saveWorkspace();
+      addToRecent(text, isFileHandle(handle) ? handle : null, String(fileName || ''));
+      if(opts.notice) toast(opts.notice, 6000);
+    });
+  }
+
+  function applyDocumentData(data, kind){
+    const system = kind === 'system' ? data : data.system;
+    applySystemDataDirect(system);
+    const presets = (kind === 'fmIDE-workspace' && Array.isArray(data.formatPresets) && data.formatPresets.length)
+      ? data.formatPresets : system.formatPresets;
+    if(Array.isArray(presets)) mergeFormatPresets(presets);
+    ensureDefaultFormatPresets();
+    if(kind === 'fmIDE-workspace'){
+      addMissingTemplates(data.templates);
+      addMissingMacros(data.macros);
+      syncMacroCommands();
+    }
+    renderCanvasTabs();
+    render();
+  }
+
+  // Templates and macros from a document join the person's library, unless the same one
+  // (same name and content) is already there. Nothing of theirs is replaced or removed.
+  function addMissingTemplates(list){
+    (Array.isArray(list) ? list : []).forEach(t => {
+      if(!t || typeof t.name !== 'string' || !t.name.trim() || !t.data || (t.kind !== 'module' && t.kind !== 'system')) return;
+      const name = t.name.trim();
+      const content = JSON.stringify(t.data);
+      if(TEMPLATES.some(x => x.name === name && x.kind === t.kind && JSON.stringify(x.data) === content)) return;
+      TEMPLATES.push({
+        id: 'usr' + (nextTemplateId++), name,
+        description: typeof t.description === 'string' ? t.description : '',
+        group: (typeof t.group === 'string' && t.group.trim()) ? t.group.trim() : 'My Templates',
+        kind: t.kind, builtin: false, data: t.data
+      });
+    });
+  }
+  // Steps get fresh ids whenever a macro is imported, so compare them without ids. A macro
+  // whose name was taken is imported as "<name> (imported)" — that copy counts as present.
+  function macroStepsFingerprint(steps){
+    return JSON.stringify(steps, (k, v) => (k === 'id' ? undefined : v));
+  }
+  function addMissingMacros(list){
+    const fresh = (Array.isArray(list) ? list : []).filter(src => {
+      if(!src || typeof src !== 'object' || !Array.isArray(src.steps)) return false;
+      const name = String(src.name || 'Imported macro');
+      const steps = macroStepsFingerprint(normalizeSteps(cloneData(src.steps)));
+      return !MACROS.some(m => (m.name === name || m.name === name + ' (imported)') && macroStepsFingerprint(m.steps) === steps);
+    });
+    if(fresh.length) importMacros(fresh, 'add');
+  }
+
+  // ---------- Save / Save As ----------
+  function documentText(){ return JSON.stringify(buildWorkspacePayload(), null, 2); }
+  function canPickSaveFile(){ return typeof window.showSaveFilePicker === 'function'; }
+
+  // Resolves true once the document is saved, false if it wasn't (cancelled or failed).
+  function saveDocument(){
+    const text = documentText();
+    const changesSaved = docChangeCount;
+    if(currentDoc.handle){
+      return writeToHandle(currentDoc.handle, text).then(ok => {
+        if(ok){ afterSaved(text, currentDoc.handle, currentDoc.handle.name || currentDoc.fileName, changesSaved); return true; }
+        toast('Could not write to “' + docDisplayName() + '” — choose where to save it.', 4000);
+        return saveDocumentAs(text, changesSaved);
+      });
+    }
+    if(currentDoc.fileName && !canPickSaveFile()){
+      downloadDocument(text, currentDoc.fileName);
+      afterSaved(text, null, currentDoc.fileName, changesSaved);
+      return Promise.resolve(true);
+    }
+    return saveDocumentAs(text, changesSaved);
+  }
+
+  function saveDocumentAs(text, changesSaved){
+    if(typeof text !== 'string') text = documentText();
+    if(typeof changesSaved !== 'number') changesSaved = docChangeCount;
+    const suggested = withDocExt(docDisplayName());
+    const viaDownload = () => askDocumentFileName(suggested).then(fileName => {
+      if(!fileName) return false;
+      downloadDocument(text, fileName);
+      afterSaved(text, null, fileName, changesSaved, true);
+      return true;
+    });
+    if(!canPickSaveFile()) return viaDownload();
+    let picking;
+    try{ picking = window.showSaveFilePicker({ suggestedName: suggested, types: DOC_SAVE_TYPES }); }
+    catch(err){ return viaDownload(); }
+    return Promise.resolve(picking).then(handle => writeToHandle(handle, text).then(ok => {
+      if(!ok){ showMessage('Could not save to that file.'); return false; }
+      afterSaved(text, handle, handle.name || suggested, changesSaved, true);
+      return true;
+    }), err => {
+      if(err && err.name === 'AbortError') return false;
+      return viaDownload();
+    });
+  }
+
+  function writeToHandle(handle, text){
+    return (async () => {
+      if(typeof handle.queryPermission === 'function'){
+        let perm = await handle.queryPermission({ mode: 'readwrite' });
+        if(perm !== 'granted' && typeof handle.requestPermission === 'function') perm = await handle.requestPermission({ mode: 'readwrite' });
+        if(perm !== 'granted') return false;
+      }
+      const w = await handle.createWritable();
+      await w.write(text);
+      await w.close();
+      return true;
+    })().catch(() => false);
+  }
+
+  function downloadDocument(text, fileName){
+    // octet-stream, so no browser swaps the .fmide extension for .json
+    const url = URL.createObjectURL(new Blob([text], { type: 'application/octet-stream' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  // asNewFile (Save As): a new file, so a new Recent entry; the old file keeps its own.
+  function afterSaved(text, handle, fileName, changesSaved, asNewFile){
+    if(asNewFile){ currentDoc.recentId = null; currentDoc.serial++; }
+    currentDoc.handle = handle || null;
+    currentDoc.fileName = String(fileName || '').split(/[\\/]/).pop() || null;
+    currentDoc.name = docNameFromFile(currentDoc.fileName);
+    // A change made while the file was being written is still unsaved.
+    if(docChangeCount === changesSaved) markDocClean(); else updateDocTitle();
+    hideRecoveryNotice();
+    rememberSessionHandle();
+    saveWorkspace();
+    addToRecent(text, handle || null, currentDoc.fileName);
+    toast('Saved “' + docDisplayName() + '”.');
+  }
+
+  // ---------- Recent ----------
+  // Each entry keeps its name, when it was last opened, the file handle when the browser
+  // gives one, and a copy of the document as last opened or saved (so browsers without
+  // file handles can still reopen it). Updates run one at a time.
+  let recentQueue = Promise.resolve();
+  function readRecent(){
+    return workspaceStore.get(RECENT_KEY).then(text => {
+      let list = [];
+      try{ list = typeof text === 'string' ? JSON.parse(text) : []; }catch(err){ list = []; }
+      return (Array.isArray(list) ? list : []).filter(e => e && typeof e.id === 'string' && typeof e.name === 'string');
+    }, () => []);
+  }
+  function forgetRecentEntry(id){
+    recentHandles.delete(id);
+    workspaceStore.remove(recentCopyKey(id)).catch(() => {});
+    workspaceStore.remove(recentHandleKey(id)).catch(() => {});
+  }
+  // The document is captured when the update is queued: by the time it runs, another
+  // document may be open, and that one must not take over this entry.
+  function addToRecent(text, handle, fileName){
+    const docAtCall = currentDoc.serial;
+    const nameAtCall = currentDoc.name;
+    const recentIdAtCall = currentDoc.recentId;
+    recentQueue = recentQueue.then(async () => {
+      const list = await readRecent();
+      let entry = recentIdAtCall ? list.find(e => e.id === recentIdAtCall) : null;
+      if(!entry && handle && typeof handle.isSameEntry === 'function'){
+        for(const e of list){
+          const h = recentHandles.get(e.id) || await workspaceStore.get(recentHandleKey(e.id)).catch(() => null);
+          if(isFileHandle(h) && await Promise.resolve(h.isSameEntry(handle)).catch(() => false)){ entry = e; break; }
+        }
+      }
+      if(!entry && !handle && fileName) entry = list.find(e => e.fileName === fileName);
+      if(!entry) entry = { id: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7) };
+      const now = new Date().toISOString();
+      entry.name = nameAtCall || docNameFromFile(fileName);
+      entry.fileName = fileName || null;
+      entry.lastOpened = now;
+      if(currentDoc.serial === docAtCall) currentDoc.recentId = entry.id;
+      try{ await workspaceStore.put(recentCopyKey(entry.id), text); entry.copySavedAt = now; }
+      catch(err){ /* storage full: the entry can still reopen the real file */ }
+      if(handle){
+        recentHandles.set(entry.id, handle);
+        await workspaceStore.put(recentHandleKey(entry.id), handle).catch(() => {});
+      }
+      const others = list.filter(e => e.id !== entry.id);
+      others.slice(RECENT_MAX - 1).forEach(e => forgetRecentEntry(e.id));
+      await workspaceStore.put(RECENT_KEY, JSON.stringify([entry].concat(others.slice(0, RECENT_MAX - 1)))).catch(() => {});
+      saveWorkspace(); // the session now names this entry
+    }).catch(() => {});
+    return recentQueue;
+  }
+  function clearRecent(){
+    recentQueue = recentQueue.then(async () => {
+      (await readRecent()).forEach(e => forgetRecentEntry(e.id));
+      await workspaceStore.put(RECENT_KEY, '[]').catch(() => {});
+      currentDoc.recentId = null;
+      saveWorkspace();
+    }).catch(() => {});
+    return recentQueue;
+  }
+
+  function showOpenRecent(){
+    readRecent().then(list => {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      const box = document.createElement('div');
+      box.className = 'modal-box';
+      box.id = 'openRecentDialog';
+      box.style.minWidth = '380px';
+      const h = document.createElement('p');
+      h.textContent = list.length ? 'Open a recent document:' : 'No recent documents.';
+      const ul = document.createElement('div');
+      ul.id = 'recentList';
+      ul.style.cssText = 'display:flex; flex-direction:column; gap:6px; margin-bottom:16px;';
+      function close(){ overlay.remove(); document.removeEventListener('keydown', onKey); }
+      function onKey(ev){ if(ev.key === 'Escape') close(); }
+      list.forEach(e => {
+        const item = document.createElement('button');
+        item.className = 'recent-item';
+        item.style.cssText = 'display:flex; justify-content:space-between; gap:16px; text-align:left; padding:8px 10px; cursor:pointer;';
+        const name = document.createElement('span'); name.className = 'recent-name'; name.textContent = e.name;
+        const when = document.createElement('span'); when.style.opacity = '0.65'; when.textContent = formatWhen(e.lastOpened);
+        item.append(name, when);
+        item.addEventListener('click', () => { close(); confirmDiscardChanges(() => reopenRecent(e)); });
+        ul.appendChild(item);
+      });
+      const actions = document.createElement('div');
+      actions.className = 'modal-actions';
+      const clearBtn = document.createElement('button'); clearBtn.textContent = 'Clear Recent'; clearBtn.disabled = !list.length;
+      clearBtn.addEventListener('click', () => { close(); clearRecent().then(() => toast('Recent documents cleared.')); });
+      const closeBtn = document.createElement('button'); closeBtn.className = 'primary'; closeBtn.textContent = 'Close';
+      closeBtn.addEventListener('click', close);
+      actions.append(clearBtn, closeBtn);
+      box.append(h, ul, actions);
+      overlay.appendChild(box);
+      overlay.addEventListener('mousedown', (ev) => { if(ev.target === overlay) close(); });
+      document.addEventListener('keydown', onKey);
+      document.body.appendChild(overlay);
+      (ul.querySelector('button') || closeBtn).focus();
+    });
+  }
+
+  // The real file when there is a handle and the person allows access again; otherwise
+  // the copy kept in this browser, saying so.
+  async function reopenRecent(entry){
+    const handle = recentHandles.get(entry.id) || await workspaceStore.get(recentHandleKey(entry.id)).catch(() => null);
+    if(isFileHandle(handle)){
+      try{
+        if(typeof handle.queryPermission === 'function'){
+          let perm = await handle.queryPermission({ mode: 'read' });
+          if(perm !== 'granted' && typeof handle.requestPermission === 'function') perm = await handle.requestPermission({ mode: 'read' });
+          if(perm !== 'granted') throw new Error('Access not allowed');
+        }
+        const file = await handle.getFile();
+        openDocumentText(await file.text(), file.name || handle.name || entry.fileName, handle, { recentId: entry.id });
+        return;
+      }catch(err){ /* fall back to the copy */ }
+    }
+    const copy = await workspaceStore.get(recentCopyKey(entry.id)).catch(() => null);
+    if(typeof copy === 'string'){
+      openDocumentText(copy, entry.fileName || withDocExt(entry.name), null, {
+        recentId: entry.id,
+        notice: 'Opened the copy saved in this browser on ' + formatWhen(entry.copySavedAt) + '.'
+      });
+      return;
+    }
+    showMessage('“' + entry.name + '” can no longer be opened: the file is not available and no copy was kept in this browser.');
+  }
+  // =====================================================================================
   // ---------- Customize Ribbon & KeyTips dialog ----------
   // =====================================================================================
   function showCustomizeRibbon(){
@@ -9128,14 +9703,25 @@
     return {
       ribbon: ribbonState.customized ? cloneData(ribbonState.config) : null, ribbonCustomized: !!ribbonState.customized,
       ribbonCollapsed: ribbonState.collapsed, activeTab: ribbonState.activeTab,
-      keytipTrigger: Object.assign({}, keytipTrigger), comboVersion: 2, launcherRecent: launcherRecent.slice(), lastRunMacroId
+      keytipTrigger: Object.assign({}, keytipTrigger), comboVersion: 2, launcherRecent: launcherRecent.slice(), lastRunMacroId,
+      documentGroupAdded: true // the default ribbon has it; a customised one got it once
     };
+  }
+  // One-time update of a ribbon customised before the Document group existed: add it at
+  // the front of the File tab (or the first tab, if File was removed).
+  function addDocumentGroupToRibbon(){
+    const tabs = ribbonState.config.tabs;
+    const tab = tabs.find(t => t && t.id === 'file') || tabs[0];
+    if(!tab) return;
+    if(!Array.isArray(tab.groups)) tab.groups = [];
+    tab.groups.unshift(cloneData(DOCUMENT_RIBBON_GROUP));
   }
   function applyUiPayload(ui){
     if(!ui || typeof ui !== 'object') return;
     if(ui.ribbonCustomized && ui.ribbon && Array.isArray(ui.ribbon.tabs) && ui.ribbon.tabs.length){
       ribbonState.config = { qat: Array.isArray(ui.ribbon.qat) ? ui.ribbon.qat.slice() : [], tabs: cloneData(ui.ribbon.tabs) };
       ribbonState.customized = true;
+      if(ui.documentGroupAdded !== true) addDocumentGroupToRibbon();
     }
     if(typeof ui.ribbonCollapsed === 'boolean') ribbonState.collapsed = ui.ribbonCollapsed;
     if(typeof ui.activeTab === 'string') ribbonState.activeTab = ui.activeTab;
@@ -9157,7 +9743,7 @@
 
   // The autosaved workspace is read asynchronously (IndexedDB), so the rest of start-up
   // waits for it; window.fm appears once fmIDE is ready.
-  loadWorkspaceFromStore().then(restoredFromWorkspace => {
+  loadWorkspaceFromStore().then(restored => loadDocumentSession(restored).then(() => restored)).then(restoredFromWorkspace => {
     ensureDefaultFormatPresets();
 
     if(!restoredFromWorkspace){
@@ -9205,6 +9791,8 @@
     // Saving is asynchronous, so it also happens as soon as the page is hidden (switching
     // tab, minimising, closing): a write started only while the page unloads may not finish.
     workspaceRestored = true;
+    updateDocTitle();
+    showRecoveryNotice();
     setInterval(saveWorkspace, 8000);
     document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') saveWorkspace(); });
     window.addEventListener('beforeunload', saveWorkspace);

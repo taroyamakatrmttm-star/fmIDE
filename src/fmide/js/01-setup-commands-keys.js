@@ -103,6 +103,13 @@
     { id:'importWorkspace', label:'Import Workspace',  icon:'⇧', category:'File', defaultShortcut:null, action:() => fileInputWorkspace.click() },
     { id:'openTemplates',label:'Templates',            icon:'📚', category:'File', defaultShortcut:null, action:() => showTemplatesPicker() },
     { id:'openFormats', label:'Format Presets',        icon:'🎨', category:'File', defaultShortcut:null, action:() => showFormatPresetsPicker(null) },
+    // Documents (.fmide files) — last in the File list, so a shortcut someone already gave
+    // another command keeps priority over these defaults.
+    { id:'newDocument', label:'New',                   icon:'📄', category:'File', defaultShortcut:null, action:() => newDocument() },
+    { id:'openDocument',label:'Open…',                 icon:'📁', category:'File', defaultShortcut:'Mod+O', action:() => openDocument() },
+    { id:'saveDocument',label:'Save',                  icon:'💾', category:'File', defaultShortcut:'Mod+S', action:() => saveDocument() },
+    { id:'saveDocumentAs',label:'Save As…',            icon:'📝', category:'File', defaultShortcut:'Mod+Shift+S', action:() => saveDocumentAs() },
+    { id:'openRecent',  label:'Open Recent…',          icon:'🕘', category:'File', defaultShortcut:null, action:() => showOpenRecent() },
 
     { id:'openLauncher',label:'Command Launcher',      icon:'🔎', category:'View', defaultShortcut:'Mod+K', action:() => openLauncher() },
     { id:'openShortcuts',label:'Keyboard Shortcuts',   icon:'⌨', category:'View', defaultShortcut:null, action:() => showShortcutsPicker() },

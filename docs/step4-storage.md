@@ -78,6 +78,17 @@ The existing Import/Export Workspace, Load/Save System and Load/Save Module comm
 
 **ExcelExporter:** its model picker also accepts `.fmide` files.
 
+**Done (4b)** — how it turned out:
+
+- Code in `src/fmide/js/20-documents.js`. Storage keys: `fmIDE-session`, `fmIDE-session-handle`, `fmIDE-recent`, `fmIDE-recent:<id>`, `fmIDE-recent-handle:<id>` (see CLAUDE.md).
+- The Document group leads the File tab. Ribbons customised earlier get it once, recorded as `ui.documentGroupAdded` in the workspace, so a removed group is never added back.
+- **New** keeps the current format presets and roles (a house style), templates, macros and settings.
+- **Opening** replaces format presets with the same name and keeps the others (the same rule now used by Import Workspace, which used to add duplicates). A macro whose name was taken is added as "… (imported)", and that copy counts as present when the document is opened again.
+- A workspace or system `.json` opened as a document never keeps its file handle: Save asks for a `.fmide` instead of overwriting the `.json`.
+- On the fallback path, the first Save of an untitled document asks for a name (`#saveAsDialog`). Later Saves download under the same name.
+- The session's file handle is used after a restart only if it belongs to that same file.
+- Tests: group 10 (`tests/10-documents.spec.js`).
+
 ## Phase 4c — Preferences file
 
 Opening a `.fmide` deliberately ignores personal settings, so they need their own way to travel. Today shortcuts can be exported alone, but the ribbon layout, Quick Access Toolbar and KeyTips key only travel inside a whole workspace.

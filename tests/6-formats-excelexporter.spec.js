@@ -136,3 +136,12 @@ test.describe('mapping files', () => {
     await expectCleanStorage(page);
   });
 });
+
+test('a .fmide document (a workspace) loads', async ({ page }, testInfo) => {
+  expect(await page.locator('#fileInput').getAttribute('accept')).toContain('.fmide');
+  const doc = testInfo.outputPath('Revenue.fmide');
+  fs.writeFileSync(doc, fs.readFileSync(fixture('models', 'roles-workspace-edited.json'), 'utf8'));
+  await X.loadModelFile(page, doc);
+  await expect(loadStatus(page)).toHaveClass(/ok/);
+  await expect(loadStatus(page)).toContainText('Loaded Revenue.fmide');
+});

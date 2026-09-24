@@ -36,17 +36,29 @@ The workflow: build in fmIDE → **File → Save System** or **Export Workspace*
 
 ## Browser storage (`docs/step4-storage.md`)
 
-Autosave lives in IndexedDB, through `createStore(dbName)` in `src/shared/store.js`: a promise-based key–value store (one object store `kv`, string values of JSON text) that falls back to `localStorage` where IndexedDB is unavailable. Writes are asynchronous; failures reach the autosave warnings (fmIDE's `#autosaveBanner`, ExcelExporter's `#storageWarn`).
+Autosave lives in IndexedDB, through `createStore(dbName)` in `src/shared/store.js`: a promise-based key–value store (one object store `kv`, mostly string values of JSON text, plus file handles) that falls back to `localStorage` (text only) where IndexedDB is unavailable. Writes are asynchronous; failures reach the autosave warnings (fmIDE's `#autosaveBanner`, ExcelExporter's `#storageWarn`).
 
 | App | Database | Keys |
 |---|---|---|
-| fmIDE | `fmIDE` | `fmIDE-workspace-v1` — the whole workspace; saved every 8 s, when the page is hidden, and on close |
+| fmIDE | `fmIDE` | `fmIDE-workspace-v1` — the whole workspace; saved every 8 s, about 2 s after each change, when the page is hidden, and on close |
+| fmIDE | `fmIDE` | `fmIDE-session` (open document: name, file name, Recent entry, unsaved flag) and `fmIDE-session-handle` (its file handle), saved with the workspace |
+| fmIDE | `fmIDE` | `fmIDE-recent` (the list, at most 10), `fmIDE-recent:<id>` (a copy of that document), `fmIDE-recent-handle:<id>` (its file handle) |
 | ExcelExporter | `fmIDE-ExcelExporter` | `fmide-excelmap-<model signature>` — one layout per model; saved on every change and when the page is hidden |
 | both | (same) | `<dbName>/migrated-from-localStorage`, `<dbName>/persistence-requested` — bookkeeping |
 
 - **Migration:** on start, keys an older version left in `localStorage` are copied into IndexedDB once (the marker records it, so a later delete is not undone). The `localStorage` copies are kept; never delete user data in the same step that moves it.
 - fmIDE finishes starting (restores or adds the starter model, sets `window.fm`) only after the autosave has been read, and does not autosave before then. ExcelExporter's `loadModel()` is asynchronous for the same reason.
 - `navigator.storage.persist()` is requested once, ever, on the first change (not at start-up); the answer is remembered.
+
+## Documents (fmIDE, `src/fmide/js/20-documents.js`)
+
+A document is a `.fmide` file: the `fmIDE-workspace` JSON, nothing new. Commands New, Open… (Mod+O), Save (Mod+S), Save As… (Mod+Shift+S), Open Recent… sit in the File tab's Document group.
+
+- With the File System Access API (Chrome, Edge) Save writes back through a file handle; otherwise Open uses `#fileInputDocument` and Save downloads `name.fmide`. A `.json` opened as a document never keeps its handle, so it is never overwritten with a workspace.
+- **Unsaved changes:** every change that goes into undo history (plus undo/redo) marks the document; saving clears it. Title `name • — fmIDE`. New / Open / Open Recent ask Save / Don't save / Cancel; closing the tab triggers "Leave site?".
+- **Opening** loads the model and format presets/roles (same-name presets replaced), adds templates and macros not already present, ignores shortcuts and ribbon/KeyTips, and clears undo history. New keeps the current presets, templates, macros and settings.
+- **Recovery:** after a restart with unsaved changes, `#recoveryBanner` offers Save / Dismiss.
+- Ribbons customised before the Document group existed get it once (`ui.documentGroupAdded`); a removed group is never added back.
 
 ## File formats (`docs/file-formats.md`)
 
@@ -103,10 +115,10 @@ Build order — work in this sequence and don't jump ahead unless asked:
 1. Repository ✅
 2. Permanent test suite ✅ — `npm test`
 3. Split each app into modules — **still building to single HTML files** — protected by the tests ✅ (`docs/step3-modules.md`: 3a source in `src/`, 3b shared code in `src/shared/`; 3c real modules is later, with the plugin work)
-4. Storage for the web app: IndexedDB plus explicit open/save of `.fmide` files — 4a (IndexedDB underneath) ✅; 4b documents, 4c Preferences file next
+4. Storage for the web app: IndexedDB plus explicit open/save of `.fmide` files — 4a (IndexedDB underneath) ✅, 4b documents ✅; 4c Preferences file next
 5. Publish the web app; then formula IR and plugins, community library, touch support
 
-Phase 0 hardening done: escaping text from files, built-in Excel writer, file-format versions and migrations, autosave-failure warning. Still to do: the rest of storage (step 4b, 4c).
+Phase 0 hardening done: escaping text from files, built-in Excel writer, file-format versions and migrations, autosave-failure warning. Still to do: the rest of storage (step 4c).
 
 ## Checking a change
 
