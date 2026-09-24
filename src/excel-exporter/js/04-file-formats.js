@@ -166,7 +166,7 @@ function reconcileMapping(){
     if(!r.inlineConstant) return;
     const c = canvasById[r.canvasId];
     const node = c && c.nodes.find(n => n.id === r.nodeId);
-    if(!node || !isInputNode(c, node)) r.inlineConstant = false;
+    if(!node || !isInputRectangle(c, node)) r.inlineConstant = false;
   });
   syncInputMirrors(); // add/drop Inputs-tab rows for inputs that appeared/disappeared in fmIDE
   // Keep both order dimensions clean and fully populated regardless of which one is

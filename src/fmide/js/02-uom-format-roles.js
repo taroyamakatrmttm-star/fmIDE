@@ -224,25 +224,9 @@
     return r ? r.style : null;
   }
 
-  // True if nothing actually feeds `nodeId` on the active canvas: an operator (or period
-  // shift) whose every input is itself fed by nothing — including one with no inputs at
-  // all, like a socket operator with nothing plugged in. Same rule as ExcelExporter.
-  function feedsNothing(nodeId, visiting){
-    if(visiting.has(nodeId)) return false;
-    visiting.add(nodeId);
-    const n = nodes.find(x => x.id === nodeId);
-    if(!n) return true;
-    if(n.type !== 'operator' && n.type !== 'periodShift') return false;
-    return edges.filter(e => e.to === nodeId).every(e => feedsNothing(e.from, visiting));
-  }
-  // An input rectangle: no incoming arrow, or one whose single incoming arrow comes from
-  // something fed by nothing (fmIDE then uses the rectangle's own typed number).
-  function isInputRect(n){
-    if(!n || n.type !== 'value') return false;
-    const inc = edges.filter(e => e.to === n.id);
-    if(inc.length === 0) return true;
-    return inc.length === 1 && feedsNothing(inc[0].from, new Set());
-  }
+  // build:include shared/input-rule.js
+  // The rule applied to the active canvas.
+  function isInputRect(n){ return isInputRectangle({ nodes, edges }, n); }
   // The role a value rectangle takes on the canvas.
   function canvasRoleOf(n){
     if(!n || n.type !== 'value') return null;

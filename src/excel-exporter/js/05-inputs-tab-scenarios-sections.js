@@ -25,7 +25,7 @@ function isTrueInputRow(row){
   const c = model.canvases.find(x => x.id === row.canvasId);
   const n = c && c.nodes.find(x => x.id === row.nodeId);
   if(!n || n.type !== 'value' || n.blockRole === 'input' || n.blockRole === 'index') return false;
-  return isInputNode(c, n);
+  return isInputRectangle(c, n);
 }
 
 function attachMirror(m){

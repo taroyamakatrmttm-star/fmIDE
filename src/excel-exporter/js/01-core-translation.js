@@ -491,7 +491,7 @@ function buildCellContent(canvasId, node, periodIndex, ctx, currentTabName, path
   const canvas = ctx.canvasById[canvasId];
   if(node.type === 'value'){
     const incoming = canvas.edges.filter(e => e.to === node.id);
-    const effectiveInput = isInputNode(canvas, node); // includes "fed by an operator fed by nothing"
+    const effectiveInput = isInputRectangle(canvas, node); // includes "fed by an operator fed by nothing"
 
     // Mirrors fmIDE's own "Value-node priority fixed" rule: a rectangle with a single
     // incoming edge is ALWAYS driven by that edge, regardless of any number typed into
@@ -531,29 +531,7 @@ function buildCellContent(canvasId, node, periodIndex, ctx, currentTabName, path
   // something else points at them. This fallback only covers a stray/unexpected type.
   return { isFormula: false, value: null };
 }
-// True if nothing actually feeds `nodeId`: an operator whose every input is itself fed
-// by nothing (including one with no inputs at all, like a socket operator with nothing
-// plugged into it), or a period shift with no (or such an) input. Aliases, rectangles
-// and block instances always count as a real source.
-function feedsNothing(canvas, nodeId, visiting){
-  if(visiting.has(nodeId)) return false;
-  visiting.add(nodeId);
-  const n = canvas.nodes.find(x => x.id === nodeId);
-  if(!n) return true;
-  if(n.type !== 'operator' && n.type !== 'periodShift') return false;
-  return canvas.edges.filter(e => e.to === nodeId).every(e => feedsNothing(canvas, e.from, visiting));
-}
-// An input rectangle: a value rectangle with no incoming arrow, or whose single incoming
-// arrow comes from something fed by nothing (feedsNothing) — e.g. Cash ← [+] where the
-// + operator's socket has nothing plugged in. fmIDE falls back to the rectangle's own
-// typed number in that case, so it's treated as an input everywhere here: its section,
-// its values, the "Inputs" format preset, Constant eligibility and the Inputs tab.
-function isInputNode(canvas, node){
-  if(!canvas || !node || node.type !== 'value') return false;
-  const inc = canvas.edges.filter(e => e.to === node.id);
-  if(inc.length === 0) return true;
-  return inc.length === 1 && feedsNothing(canvas, inc[0].from, new Set());
-}
+// build:include shared/input-rule.js
 
 function classifyNode(canvas, node){
   // Operators, block instances, aliases, and period-shift nodes never get their own row:
@@ -566,7 +544,7 @@ function classifyNode(canvas, node){
   if(node.blockRole === 'index') return null;
   const hasIncoming = canvas.edges.some(e => e.to === node.id);
   const hasOutgoing = canvas.edges.some(e => e.from === node.id);
-  if(!hasIncoming || isInputNode(canvas, node)) return 'input';
+  if(!hasIncoming || isInputRectangle(canvas, node)) return 'input';
   if(!hasOutgoing) return 'output';
   return 'calc';
 }

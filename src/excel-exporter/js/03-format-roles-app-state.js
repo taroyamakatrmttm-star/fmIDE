@@ -94,7 +94,7 @@ function renderRolesLegend(){
 
 function resolveNodeStyle(canvas, node, formatPresets){
   if(node.style) return node.style;
-  if(node.type === 'value' && isInputNode(canvas, node)){
+  if(node.type === 'value' && isInputRectangle(canvas, node)){
     const preset = (formatPresets || []).find(p => p.name === 'Inputs');
     if(preset) return preset.style;
   }

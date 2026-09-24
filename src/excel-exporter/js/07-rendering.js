@@ -138,7 +138,7 @@ function buildVerticalRowTag(row, node){
 
 function buildCanvasViewRowTR(r, definitionCanvas, sortedTabs){
   const node = definitionCanvas.nodes.find(n => n.id === r.nodeId);
-  const isTrueInput = !!node && isInputNode(definitionCanvas, node);
+  const isTrueInput = !!node && isInputRectangle(definitionCanvas, node);
   const tr = document.createElement('tr');
   if(!r.include || r.inlineConstant) tr.classList.add('excluded');
 

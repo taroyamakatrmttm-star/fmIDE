@@ -159,7 +159,7 @@ function bulkSetInlineConstant(value){
     if(!row || row.isCustom) return;
     const canvas = model.canvases.find(c => c.id === row.canvasId);
     const node = canvas && canvas.nodes.find(n => n.id === row.nodeId);
-    const isTrueInput = !!node && !!canvas && isInputNode(canvas, node);
+    const isTrueInput = !!node && !!canvas && isInputRectangle(canvas, node);
     if(!isTrueInput) return;
     row.inlineConstant = value;
     if(value) row.include = true; // mirrors the single-row checkbox's side effect

@@ -1072,7 +1072,7 @@ function buildCellContent(canvasId, node, periodIndex, ctx, currentTabName, path
   const canvas = ctx.canvasById[canvasId];
   if(node.type === 'value'){
     const incoming = canvas.edges.filter(e => e.to === node.id);
-    const effectiveInput = isInputNode(canvas, node); // includes "fed by an operator fed by nothing"
+    const effectiveInput = isInputRectangle(canvas, node); // includes "fed by an operator fed by nothing"
 
     // Mirrors fmIDE's own "Value-node priority fixed" rule: a rectangle with a single
     // incoming edge is ALWAYS driven by that edge, regardless of any number typed into
@@ -1112,10 +1112,12 @@ function buildCellContent(canvasId, node, periodIndex, ctx, currentTabName, path
   // something else points at them. This fallback only covers a stray/unexpected type.
   return { isFormula: false, value: null };
 }
-// True if nothing actually feeds `nodeId`: an operator whose every input is itself fed
-// by nothing (including one with no inputs at all, like a socket operator with nothing
-// plugged into it), or a period shift with no (or such an) input. Aliases, rectangles
-// and block instances always count as a real source.
+// ---------- input-rectangle rule (shared: src/shared/input-rule.js, used by both apps) ----------
+// `canvas` is { nodes, edges }.
+// True if nothing actually feeds `nodeId`: an operator (or period shift) whose every input
+// is itself fed by nothing — including one with no inputs at all, like a socket operator
+// with nothing plugged into it. Aliases, rectangles and block instances always count as a
+// real source.
 function feedsNothing(canvas, nodeId, visiting){
   if(visiting.has(nodeId)) return false;
   visiting.add(nodeId);
@@ -1126,10 +1128,10 @@ function feedsNothing(canvas, nodeId, visiting){
 }
 // An input rectangle: a value rectangle with no incoming arrow, or whose single incoming
 // arrow comes from something fed by nothing (feedsNothing) — e.g. Cash ← [+] where the
-// + operator's socket has nothing plugged in. fmIDE falls back to the rectangle's own
-// typed number in that case, so it's treated as an input everywhere here: its section,
-// its values, the "Inputs" format preset, Constant eligibility and the Inputs tab.
-function isInputNode(canvas, node){
+// + operator's socket has nothing plugged in. fmIDE then uses the rectangle's own typed
+// number, so both apps treat it as an input everywhere (canvas look, Excel section,
+// values, the "Inputs" role, Constant eligibility and the Inputs tab).
+function isInputRectangle(canvas, node){
   if(!canvas || !node || node.type !== 'value') return false;
   const inc = canvas.edges.filter(e => e.to === node.id);
   if(inc.length === 0) return true;
@@ -1147,7 +1149,7 @@ function classifyNode(canvas, node){
   if(node.blockRole === 'index') return null;
   const hasIncoming = canvas.edges.some(e => e.to === node.id);
   const hasOutgoing = canvas.edges.some(e => e.from === node.id);
-  if(!hasIncoming || isInputNode(canvas, node)) return 'input';
+  if(!hasIncoming || isInputRectangle(canvas, node)) return 'input';
   if(!hasOutgoing) return 'output';
   return 'calc';
 }
@@ -1517,7 +1519,7 @@ function renderRolesLegend(){
 
 function resolveNodeStyle(canvas, node, formatPresets){
   if(node.style) return node.style;
-  if(node.type === 'value' && isInputNode(canvas, node)){
+  if(node.type === 'value' && isInputRectangle(canvas, node)){
     const preset = (formatPresets || []).find(p => p.name === 'Inputs');
     if(preset) return preset.style;
   }
@@ -1867,7 +1869,7 @@ function reconcileMapping(){
     if(!r.inlineConstant) return;
     const c = canvasById[r.canvasId];
     const node = c && c.nodes.find(n => n.id === r.nodeId);
-    if(!node || !isInputNode(c, node)) r.inlineConstant = false;
+    if(!node || !isInputRectangle(c, node)) r.inlineConstant = false;
   });
   syncInputMirrors(); // add/drop Inputs-tab rows for inputs that appeared/disappeared in fmIDE
   // Keep both order dimensions clean and fully populated regardless of which one is
@@ -1925,7 +1927,7 @@ function isTrueInputRow(row){
   const c = model.canvases.find(x => x.id === row.canvasId);
   const n = c && c.nodes.find(x => x.id === row.nodeId);
   if(!n || n.type !== 'value' || n.blockRole === 'input' || n.blockRole === 'index') return false;
-  return isInputNode(c, n);
+  return isInputRectangle(c, n);
 }
 
 function attachMirror(m){
@@ -2602,7 +2604,7 @@ function bulkSetInlineConstant(value){
     if(!row || row.isCustom) return;
     const canvas = model.canvases.find(c => c.id === row.canvasId);
     const node = canvas && canvas.nodes.find(n => n.id === row.nodeId);
-    const isTrueInput = !!node && !!canvas && isInputNode(canvas, node);
+    const isTrueInput = !!node && !!canvas && isInputRectangle(canvas, node);
     if(!isTrueInput) return;
     row.inlineConstant = value;
     if(value) row.include = true; // mirrors the single-row checkbox's side effect
@@ -3165,7 +3167,7 @@ function buildVerticalRowTag(row, node){
 
 function buildCanvasViewRowTR(r, definitionCanvas, sortedTabs){
   const node = definitionCanvas.nodes.find(n => n.id === r.nodeId);
-  const isTrueInput = !!node && isInputNode(definitionCanvas, node);
+  const isTrueInput = !!node && isInputRectangle(definitionCanvas, node);
   const tr = document.createElement('tr');
   if(!r.include || r.inlineConstant) tr.classList.add('excluded');
 
@@ -4256,7 +4258,7 @@ function generateWorkbook(){
       const rowRole = scnBlock ? 'Calculations'
         : row.isInputMirror ? 'Inputs'
         : linkPos ? 'Links'
-        : isInputNode(canvas, node) ? 'Inputs'
+        : isInputRectangle(canvas, node) ? 'Inputs'
         : (contents.length && contents.every(c => c.isFormula && PURE_LINK.test(c.formula))) ? 'Links'
         : 'Calculations';
       const rowStyleObj = composeStyle(rowRole, own);
