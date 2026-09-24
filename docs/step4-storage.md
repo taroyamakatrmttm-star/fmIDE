@@ -1,6 +1,6 @@
 # Build step 4 — documents and storage
 
-**Goal:** fmIDE works like a normal desktop document app — you **Open**, **Save** and **Save As** `.fmide` files — and browser storage becomes a safety net (autosave, crash recovery, a Recent list) instead of the only place work lives. ExcelExporter moves its layout storage to the same sturdier store.
+**Goal:** fmIDE works like a normal desktop document app — you **Open**, **Save** and **Save As** `.fmide` files — and browser storage becomes a safety net (autosave, crash recovery, a Recent list) instead of the only place work lives. ExcelExporter moves its layout storage to the same sturdier store. Personal settings (shortcuts, ribbon, KeyTips) get their own shareable Preferences file.
 
 **Decisions already made** (see `docs/decisions.md`):
 
@@ -64,10 +64,20 @@ The existing Import/Export Workspace, Load/Save System and Load/Save Module comm
 
 - The **model and its format presets / roles** load from the file (they are part of the document — ExcelExporter needs them).
 - The file's **templates and macros** are **added** to the user's library when not already present (matched by name and content); nothing of the user's is replaced or deleted.
-- The file's **shortcuts and ribbon/KeyTips customisation are ignored** — those are the user's own preferences. (Import Workspace keeps today's full-replace behaviour for backups and moving to a new computer.)
+- The file's **shortcuts and ribbon/KeyTips customisation are ignored** — those are the user's own preferences, shared separately with a Preferences file (phase 4c). (Import Workspace keeps today's full-replace behaviour for backups and moving to a new computer.)
 - Save writes the whole workspace, as today's Export Workspace does.
 
 **ExcelExporter:** its model picker also accepts `.fmide` files.
+
+## Phase 4c — Preferences file
+
+Opening a `.fmide` deliberately ignores personal settings, so they need their own way to travel. Today shortcuts can be exported alone, but the ribbon layout, Quick Access Toolbar and KeyTips key only travel inside a whole workspace.
+
+- **New file kind** `fmIDE-preferences`, version 1, added to fmIDE's `FILE_FORMATS` (fmIDE-only — not in `src/shared/`). It holds the user's **shortcut bindings, ribbon layout, Quick Access Toolbar, ribbon collapsed/expanded state and KeyTips trigger** — the same data as the workspace's `shortcutBindings` and `ui` parts, minus session details (active tab, Command Launcher recents, last-run macro).
+- **Commands:** **Export Preferences…** and **Import Preferences…** in the File tab (and Command Launcher), plus matching buttons in the Customize Ribbon dialog. Export downloads `fmIDE-preferences.json`.
+- **Import:** goes through the existing reader (wrong-kind and newer-version handling as for every file); asks once — "Replace your shortcuts, ribbon and KeyTips settings with the ones in this file?" — then replaces exactly those settings. It never touches the model, templates, macros or format presets.
+- **Kept as they are:** Export/Import Shortcuts (shortcuts only), Import/Export Workspace (everything).
+- Other readers point to the right place: a preferences file opened with Load System, Open… etc. gets the usual "That is an fmIDE preferences file… Open it with File → Import Preferences" message.
 
 ## Tests (phase 4b)
 
@@ -77,6 +87,13 @@ Headless browsers can't show real save dialogs, so:
 - Test the **file-handle path** by replacing `window.showOpenFilePicker` / `window.showSaveFilePicker` in the page with fakes that record what was written; check Save writes back to the same handle and Save As asks for a new one.
 - Dirty state and title; Save/Don't save/Cancel prompts; recovery after a reload with unsaved changes; Recent (open two files, reopen the first, clear); opening a `.fmide` adds templates/macros without replacing existing ones and leaves shortcuts unchanged; a legacy `localStorage` workspace is migrated (4a).
 
+## Tests (phase 4c)
+
+- Customise shortcuts, the ribbon (move a command, add one to the Quick Access Toolbar) and the KeyTips key; Export Preferences; reset everything; Import Preferences → all four restored, and the model, templates, macros and format presets unchanged.
+- Cancel at the confirmation leaves every setting unchanged.
+- A preferences file opened with Load System / Open… gets the wrong-kind message naming Import Preferences; a newer-version preferences file asks first.
+- Add a `preferences.json` fixture under `tests/fixtures/formats/`.
+
 ## Docs
 
-`docs/file-formats.md` (`.fmide` = workspace), README (how to open/save), CLAUDE.md (storage layout: IndexedDB, keys, migration), CHANGELOG, `docs/decisions.md` (step 4 ✅; note: PWA file association — double-clicking a `.fmide` to open it — belongs to step 5).
+`docs/file-formats.md` (`.fmide` = workspace; new `fmIDE-preferences` row), README (how to open/save, how to share your preferences), CLAUDE.md (storage layout: IndexedDB, keys, migration), CHANGELOG, `docs/decisions.md` (step 4 ✅; note: PWA file association — double-clicking a `.fmide` to open it — belongs to step 5).
