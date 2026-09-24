@@ -23,6 +23,7 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | `npm run test:formats` | file formats, both apps |
 | `npm run test:ui` | UI flows, both apps |
 | `npm run test:snapshots` | formula/value snapshots only |
+| `npm run test:web-app` | the installable web app (site build, service worker, offline, updates) |
 | `npx playwright test -g "Tree view"` | tests whose name matches |
 
 After a failure, `npx playwright show-report` opens the report, with a trace for each failed test.
@@ -44,13 +45,14 @@ Review the snapshot diff before committing: it is the record of what the change 
 ## Layout
 
 ```
-0-smoke.spec.js … 11-preferences.spec.js  one file per group in SPEC.md (6 and 7 split per app)
+0-smoke.spec.js … 12-web-app.spec.js  one file per group in SPEC.md (6 and 7 split per app)
 helpers/apps.js       the offline fixture: serves the apps, blocks and counts other requests
 helpers/excel.js      load a model, toggle options, capture the workbook (window.__wb + real .xlsx bytes)
 helpers/soffice.js    find LibreOffice, recalculate workbooks, read values
 helpers/fmide.js      fmIDE file choosers, dialogs, downloads
 helpers/storage.js    read the apps' IndexedDB, make its writes fail, hide the page
 helpers/documents.js  fake file pickers (File System Access API) for fmIDE documents
+helpers/site.js       builds the installable site and serves it from this machine (group 12)
 helpers/snapshot.js   JSON snapshots
 fixtures/             sample files (do not edit; add new ones alongside)
 snapshots/            generated; update only with the command above

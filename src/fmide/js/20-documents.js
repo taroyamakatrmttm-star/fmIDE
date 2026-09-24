@@ -112,8 +112,10 @@
   function hideRecoveryNotice(){ const b = document.getElementById('recoveryBanner'); if(b) b.remove(); }
 
   // Closing the tab with unsaved changes: the browser's own "Leave site?" question.
+  // skipLeaveWarning: set for fmIDE's own reload onto a new version, after an autosave.
+  let skipLeaveWarning = false;
   window.addEventListener('beforeunload', (ev) => {
-    if(!currentDoc.dirty) return;
+    if(!currentDoc.dirty || skipLeaveWarning) return;
     ev.preventDefault();
     ev.returnValue = '';
   });

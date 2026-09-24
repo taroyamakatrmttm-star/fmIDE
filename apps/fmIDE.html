@@ -695,6 +695,7 @@
   //   enabled  — optional () => bool; drives disabled state everywhere
   //   dynLabel — optional () => string; a live label (e.g. the current period)
   const hasNodeSel = () => selectedNodeIds.size > 0;
+  let installPrompt = null; // the browser's offer to install fmIDE (21-web-app.js)
   const COMMANDS = [
     { id:'undo',        label:'Undo',                  icon:'↶', category:'Edit', defaultShortcut:'Mod+Z',       enabled:() => history.length > 0, action:() => undo() },
     { id:'redo',        label:'Redo',                  icon:'↷', category:'Edit', defaultShortcut:'Mod+Shift+Z', enabled:() => future.length > 0,  action:() => redo() },
@@ -756,6 +757,8 @@
     { id:'saveDocument',label:'Save',                  icon:'💾', category:'File', defaultShortcut:'Mod+S', action:() => saveDocument() },
     { id:'saveDocumentAs',label:'Save As…',            icon:'📝', category:'File', defaultShortcut:'Mod+Shift+S', action:() => saveDocumentAs() },
     { id:'openRecent',  label:'Open Recent…',          icon:'🕘', category:'File', defaultShortcut:null, action:() => showOpenRecent() },
+    { id:'openExcelExporter', label:'Open ExcelExporter', icon:'📊', category:'File', defaultShortcut:null, action:() => openExcelExporter() },
+    { id:'installApp',  label:'Install fmIDE',         icon:'⤓', category:'File', defaultShortcut:null, enabled:() => !!installPrompt, action:() => installApp() },
 
     { id:'openLauncher',label:'Command Launcher',      icon:'🔎', category:'View', defaultShortcut:'Mod+K', action:() => openLauncher() },
     { id:'openShortcuts',label:'Keyboard Shortcuts',   icon:'⌨', category:'View', defaultShortcut:null, action:() => showShortcutsPicker() },
@@ -2061,13 +2064,14 @@
   // Writes are asynchronous; the browser applies them in the order they were made.
   let autosaveFailing = false, autosaveBannerDismissed = false;
   let workspaceRestored = false; // no autosave before the stored workspace is read: it would overwrite it
+  // Returns a promise that settles once the save has been written (or has failed).
   function saveWorkspace(){
-    if(!workspaceRestored) return;
+    if(!workspaceRestored) return Promise.resolve();
     let text;
     try{ text = JSON.stringify(buildWorkspacePayload()); }
-    catch(err){ onAutosaveFailed(err); return; }
+    catch(err){ onAutosaveFailed(err); return Promise.resolve(); }
     // The workspace, plus which document is open and whether it has unsaved changes (20).
-    Promise.all([workspaceStore.put(WORKSPACE_STORAGE_KEY, text), workspaceStore.put(SESSION_KEY, documentSessionText())]).then(() => {
+    return Promise.all([workspaceStore.put(WORKSPACE_STORAGE_KEY, text), workspaceStore.put(SESSION_KEY, documentSessionText())]).then(() => {
       if(autosaveFailing){ autosaveFailing = false; autosaveBannerDismissed = false; hideAutosaveBanner(); }
     }, onAutosaveFailed);
   }
@@ -7170,6 +7174,7 @@
         { label:'Module', items:[ { cmd:'saveModule', size:'large' }, { cmd:'loadModule' } ] },
         { label:'Workspace', items:[ { cmd:'exportWorkspace' }, { cmd:'importWorkspace' } ] },
         { label:'Preferences', items:[ { cmd:'exportPreferences' }, { cmd:'importPreferences' } ] },
+        { label:'App', items:[ { cmd:'openExcelExporter', size:'large' }, { cmd:'installApp' } ] },
         { label:'Library', items:[ { cmd:'openTemplates', size:'large' }, { cmd:'openFormats', size:'large' } ] },
       ]},
       { id:'home', label:'Home', keytip:'H', groups:[
@@ -9001,8 +9006,10 @@
   function hideRecoveryNotice(){ const b = document.getElementById('recoveryBanner'); if(b) b.remove(); }
 
   // Closing the tab with unsaved changes: the browser's own "Leave site?" question.
+  // skipLeaveWarning: set for fmIDE's own reload onto a new version, after an autosave.
+  let skipLeaveWarning = false;
   window.addEventListener('beforeunload', (ev) => {
-    if(!currentDoc.dirty) return;
+    if(!currentDoc.dirty || skipLeaveWarning) return;
     ev.preventDefault();
     ev.returnValue = '';
   });
@@ -9414,6 +9421,101 @@
       return;
     }
     showMessage('“' + entry.name + '” can no longer be opened: the file is not available and no copy was kept in this browser.');
+  }
+  // =====================================================================================
+  // ---------- The installable web app (PWA) ----------
+  // =====================================================================================
+  // The published site (site/, built from src/site/) links a web app manifest; there fmIDE
+  // registers the service worker (site/sw.js: keeps the app's files for offline use, and
+  // fetches new versions), offers "Install fmIDE" when the browser does, and says when a new
+  // version is ready. Opened straight from disk (apps/) there is no manifest and none of
+  // that happens. Opening ExcelExporter, and .fmide files handed over by the operating
+  // system (launchQueue, when installed), work wherever the browser supports them.
+  window.addEventListener('beforeinstallprompt', (ev) => {
+    ev.preventDefault(); // offered through the Install fmIDE command instead of a pop-up bar
+    installPrompt = ev;
+    refreshCommandStates();
+  });
+  window.addEventListener('appinstalled', () => {
+    installPrompt = null;
+    refreshCommandStates();
+    toast('fmIDE is installed.');
+  });
+  function installApp(){
+    if(!installPrompt) return;
+    const offer = installPrompt;
+    installPrompt = null;
+    Promise.resolve(offer.prompt()).catch(() => {}).then(() => refreshCommandStates());
+  }
+
+  // ExcelExporter sits next to fmIDE (site/ and apps/ alike) and opens in its own window.
+  function openExcelExporter(){
+    const w = window.open('ExcelExporter.html', 'fmIDE-ExcelExporter');
+    if(!w) showMessage('The browser blocked the ExcelExporter window. Allow pop-ups for fmIDE, or open ExcelExporter.html from the same folder as fmIDE.');
+  }
+
+  // A .fmide double-clicked in the operating system (installed app, Chrome/Edge desktop):
+  // opened like Open…, asking about unsaved changes first.
+  function openLaunchedFile(handle){
+    Promise.resolve(handle.getFile())
+      .then(file => file.text().then(text => openDocumentText(text, file.name || handle.name, handle)))
+      .catch(() => showMessage('Could not open that file.'));
+  }
+
+  function showUpdateNotice(reg){
+    if(document.getElementById('updateBanner')) return;
+    const bar = document.createElement('div');
+    bar.id = 'updateBanner';
+    bar.setAttribute('role', 'status');
+    bar.style.cssText = 'position:fixed; bottom:16px; right:16px; z-index:1998; max-width:420px; ' +
+      'display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:10px; background:#1e3a8a; color:#fff; ' +
+      'font-size:13px; box-shadow:0 10px 30px rgba(0,0,0,.35);';
+    const msg = document.createElement('span');
+    msg.textContent = 'A new version of fmIDE is ready.';
+    const reload = document.createElement('button');
+    reload.textContent = 'Reload';
+    reload.style.cssText = 'flex:none; padding:6px 10px; border-radius:6px; border:none; background:#fff; color:#1e3a8a; font-weight:700; cursor:pointer;';
+    const later = document.createElement('button');
+    later.textContent = 'Later';
+    later.style.cssText = 'flex:none; padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,.5); background:transparent; color:#fff; cursor:pointer;';
+    later.addEventListener('click', () => bar.remove());
+    // Reload: autosave first (unsaved changes come back through recovery), then let the new
+    // version take over and reload once it has.
+    reload.addEventListener('click', () => {
+      bar.remove();
+      Promise.resolve(saveWorkspace()).catch(() => {}).then(() => {
+        const waiting = reg.waiting;
+        const go = () => { skipLeaveWarning = true; location.reload(); };
+        if(!waiting){ go(); return; }
+        navigator.serviceWorker.addEventListener('controllerchange', go, { once: true });
+        waiting.postMessage('skipWaiting');
+      });
+    });
+    bar.append(msg, reload, later);
+    document.body.appendChild(bar);
+  }
+
+  // Called once start-up has finished (the autosave restored).
+  function startWebApp(){
+    if(window.launchQueue && typeof window.launchQueue.setConsumer === 'function'){
+      window.launchQueue.setConsumer(params => {
+        const handle = params && params.files && params.files[0];
+        if(handle) confirmDiscardChanges(() => openLaunchedFile(handle));
+      });
+    }
+    if(!document.querySelector('link[rel="manifest"]') || !('serviceWorker' in navigator) || !window.isSecureContext) return;
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      if(reg.waiting && navigator.serviceWorker.controller) showUpdateNotice(reg);
+      reg.addEventListener('updatefound', () => {
+        const incoming = reg.installing;
+        if(!incoming) return;
+        incoming.addEventListener('statechange', () => {
+          // installed while another version runs this page = an update is waiting
+          if(incoming.state === 'installed' && navigator.serviceWorker.controller) showUpdateNotice(reg);
+        });
+      });
+      setInterval(() => { reg.update().catch(() => {}); }, 60 * 60 * 1000);
+    }).catch(() => { /* no offline copy: fmIDE still works as a normal page */ });
   }
   // =====================================================================================
   // ---------- Customize Ribbon & KeyTips dialog ----------
@@ -9910,6 +10012,7 @@
     workspaceRestored = true;
     updateDocTitle();
     showRecoveryNotice();
+    startWebApp();
     setInterval(saveWorkspace, 8000);
     document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') saveWorkspace(); });
     window.addEventListener('beforeunload', saveWorkspace);

@@ -151,6 +151,14 @@ Commands `exportPreferences` (download `fmIDE-preferences.json`) and `importPref
 - From the file, safely: a tab name with markup is shown as text; malformed groups/items are cleaned up; a tap trigger on an ordinary key falls back to the default.
 - The default File tab has a Preferences group (Export, Import).
 
+### 12. The installable web app (PWA)
+`tests/helpers/site.js` builds the site (`tools/build.js`'s `buildSite`) into a temporary folder and serves it from `http://127.0.0.1:<port>/` (a secure context, so service workers work), with `apps/` under `/apps/`. Every request the browser makes, the service worker's included, must go to that server.
+- The page links `manifest.webmanifest`: name fmIDE, `start_url`/`scope` `./`, `standalone`, 192 and 512 icons (all load), a `.fmide` file handler; Chrome reports no installability errors.
+- After the first visit the server is stopped: fmIDE and ExcelExporter still load (offline).
+- A new version (sw.js changed): `#updateBanner` "A new version of fmIDE is ready."; the old cache stays until Reload; Reload switches to the new cache only, keeps unsaved work (the recovery notice shows it), and shows no "Leave site?". "Later" puts it away without switching.
+- `apps/fmIDE.html` links no manifest and registers no service worker, even on a secure origin.
+- Anywhere: Open ExcelExporter opens `ExcelExporter.html` next to fmIDE in its own window; Install fmIDE is disabled until the browser offers it, then prompts once; a `.fmide` handed over through a (faked) `launchQueue` opens as a document, asking Save / Don't save / Cancel first when there are unsaved changes.
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.
