@@ -292,14 +292,25 @@
     return {
       ribbon: ribbonState.customized ? cloneData(ribbonState.config) : null, ribbonCustomized: !!ribbonState.customized,
       ribbonCollapsed: ribbonState.collapsed, activeTab: ribbonState.activeTab,
-      keytipTrigger: Object.assign({}, keytipTrigger), comboVersion: 2, launcherRecent: launcherRecent.slice(), lastRunMacroId
+      keytipTrigger: Object.assign({}, keytipTrigger), comboVersion: 2, launcherRecent: launcherRecent.slice(), lastRunMacroId,
+      documentGroupAdded: true // the default ribbon has it; a customised one got it once
     };
+  }
+  // One-time update of a ribbon customised before the Document group existed: add it at
+  // the front of the File tab (or the first tab, if File was removed).
+  function addDocumentGroupToRibbon(){
+    const tabs = ribbonState.config.tabs;
+    const tab = tabs.find(t => t && t.id === 'file') || tabs[0];
+    if(!tab) return;
+    if(!Array.isArray(tab.groups)) tab.groups = [];
+    tab.groups.unshift(cloneData(DOCUMENT_RIBBON_GROUP));
   }
   function applyUiPayload(ui){
     if(!ui || typeof ui !== 'object') return;
     if(ui.ribbonCustomized && ui.ribbon && Array.isArray(ui.ribbon.tabs) && ui.ribbon.tabs.length){
       ribbonState.config = { qat: Array.isArray(ui.ribbon.qat) ? ui.ribbon.qat.slice() : [], tabs: cloneData(ui.ribbon.tabs) };
       ribbonState.customized = true;
+      if(ui.documentGroupAdded !== true) addDocumentGroupToRibbon();
     }
     if(typeof ui.ribbonCollapsed === 'boolean') ribbonState.collapsed = ui.ribbonCollapsed;
     if(typeof ui.activeTab === 'string') ribbonState.activeTab = ui.activeTab;
@@ -321,7 +332,7 @@
 
   // The autosaved workspace is read asynchronously (IndexedDB), so the rest of start-up
   // waits for it; window.fm appears once fmIDE is ready.
-  loadWorkspaceFromStore().then(restoredFromWorkspace => {
+  loadWorkspaceFromStore().then(restored => loadDocumentSession(restored).then(() => restored)).then(restoredFromWorkspace => {
     ensureDefaultFormatPresets();
 
     if(!restoredFromWorkspace){
@@ -369,6 +380,8 @@
     // Saving is asynchronous, so it also happens as soon as the page is hidden (switching
     // tab, minimising, closing): a write started only while the page unloads may not finish.
     workspaceRestored = true;
+    updateDocTitle();
+    showRecoveryNotice();
     setInterval(saveWorkspace, 8000);
     document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') saveWorkspace(); });
     window.addEventListener('beforeunload', saveWorkspace);

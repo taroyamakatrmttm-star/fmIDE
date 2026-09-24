@@ -60,7 +60,7 @@
     }
   }
 
-  // Autosave runs every 8 s, when the page is hidden, and on close. If the browser refuses
+  // Autosave runs every 8 s, about 2 s after each change (20), when the page is hidden, and on close. If the browser refuses
   // to store (storage full, or unavailable e.g. in some private-browsing modes) a banner
   // says so ONCE per failure streak — fmIDE keeps working, but nothing done from now on
   // would survive a reload unless exported. It clears itself as soon as a save succeeds.
@@ -72,7 +72,8 @@
     let text;
     try{ text = JSON.stringify(buildWorkspacePayload()); }
     catch(err){ onAutosaveFailed(err); return; }
-    workspaceStore.put(WORKSPACE_STORAGE_KEY, text).then(() => {
+    // The workspace, plus which document is open and whether it has unsaved changes (20).
+    Promise.all([workspaceStore.put(WORKSPACE_STORAGE_KEY, text), workspaceStore.put(SESSION_KEY, documentSessionText())]).then(() => {
       if(autosaveFailing){ autosaveFailing = false; autosaveBannerDismissed = false; hideAutosaveBanner(); }
     }, onAutosaveFailed);
   }
@@ -114,7 +115,7 @@
     return workspaceStore.migrateFromLocalStorage(k => k === WORKSPACE_STORAGE_KEY)
       .then(() => workspaceStore.get(WORKSPACE_STORAGE_KEY))
       .then(raw => {
-        if(!raw) return false;
+        if(typeof raw !== 'string' || !raw) return false;
         let parsed;
         try{ parsed = JSON.parse(raw); }
         catch(err){ return false; }

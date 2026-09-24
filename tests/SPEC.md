@@ -130,6 +130,16 @@ For each fixture in `tests/fixtures/models/` (Inputs tab off and on): store ever
 - With `window.indexedDB` removed, the layout is saved to `localStorage` (no warning) and restored after a reload.
 - `navigator.storage.persist()` is not called at start-up or for loading a model; once on the first layout change, never again.
 
+### 10. Documents (fmIDE)
+Driven with `fm.command('newDocument' | 'openDocument' | 'saveDocument' | 'saveDocumentAs' | 'openRecent')`. The test origin is not a secure context, so there is no File System Access API: by default fmIDE takes the fallback path (file input `#fileInputDocument`, downloads). `tests/helpers/documents.js` installs fake `showOpenFilePicker` / `showSaveFilePicker` that record what was written. Dialog ids: `#saveChangesDialog` (Save / Don't save / Cancel), `#saveAsDialog` with `#saveAsName`, `#openRecentDialog` with `#recentList .recent-item` / `.recent-name`; `#recoveryBanner`; `#fmToast`.
+- Fallback: a new session is "Untitled — fmIDE"; opening `Revenue model.fmide` titles it "Revenue model — fmIDE"; a change adds " •"; Save downloads `Revenue model.fmide` (a workspace) and clears the dot. An untitled Save asks for a name, then later Saves download without asking; the download opens again. Save As always asks. A system `.json` opens, and Save then asks for a `.fmide` name. A templates file is refused with the wrong-kind message. Ctrl+S in a text box saves.
+- Unsaved changes before New / Open: Cancel keeps everything; Don't save goes ahead (undo history starts afresh); Save saves first; cancelling the name question cancels all.
+- File handles: Save writes back to the same file with no dialog; Save As asks (suggesting the current name) and later Saves go to the new file; an untitled Save suggests `Untitled.fmide`; a system `.json` opened from disk is never overwritten (Save asks for `model.fmide`); Open Recent reopens the real file (its current content).
+- Recent: open two files, reopen the first from its copy (toast "Opened the copy saved in this browser on …"), the order survives a reload, Clear Recent empties it. File names with markup are shown as plain text.
+- Recovery: a change is autosaved about 2 s later (before the 8 s timer). After a reload with unsaved changes the title keeps the dot and `#recoveryBanner` says "Recovered unsaved changes to “name”." — Dismiss hides it, Save saves the document. A saved session comes back without a notice.
+- Opening a `.fmide` adds templates and macros that aren't already there (same name and content; a clashing macro becomes "… (imported)", and is not added again on a second open), leaves shortcuts and ribbon unchanged, and takes the file's format roles. New keeps format presets.
+- Ribbon: the File tab starts with the Document group; a ribbon customised before it existed gets it once; if removed afterwards it stays removed, also after a reload.
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.

@@ -78,7 +78,7 @@ async function loadModel(m){
   try{
     await layoutsMigrated;
     const raw = await layoutStore.get(key);
-    if(raw) restored = JSON.parse(raw);
+    if(typeof raw === 'string' && raw) restored = JSON.parse(raw);
   }catch(err){ /* ignore */ }
   model = loaded;
   mappingKey = key;

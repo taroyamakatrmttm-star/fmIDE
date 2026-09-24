@@ -1,12 +1,16 @@
 // ---------- browser storage (shared: src/shared/store.js, used by both apps) ----------
 // createStore(dbName): a small promise-based key–value store on IndexedDB, one database
-// per app, one object store ('kv'). Values are strings (the apps store JSON text, exactly
-// what they used to keep in localStorage). Where IndexedDB is missing or will not open
+// per app, one object store ('kv'). Values are mostly strings (the apps store JSON text,
+// exactly what they used to keep in localStorage); IndexedDB also keeps other values the
+// browser can store, such as file handles. Where IndexedDB is missing or will not open
 // (some browsers block it for pages opened from disk, or in private windows) the same
 // calls fall back to localStorage, so the app keeps working — it never fails for that.
 //   ready                        resolves once the store is usable (never rejects)
-//   get(key)                     the stored string, or null
-//   put(key, value)              rejects with the browser's error (e.g. QuotaExceededError)
+//   get(key)                     the stored value, or null
+//   put(key, value)              rejects with the browser's error (e.g. QuotaExceededError,
+//                                or DataCloneError for a value it cannot store); on the
+//                                localStorage fallback, anything but a string is refused
+//   canStoreObjects()            whether put accepts more than strings (after ready)
 //   remove(key)
 //   keys(prefix)                 every stored key that starts with prefix
 //   migrateFromLocalStorage(fn)  once per browser: copy localStorage keys for which fn(key)
@@ -58,11 +62,15 @@ function createStore(dbName){
 
   function get(key){
     return ready.then(() => db
-      ? run('readonly', s => s.get(key)).then(v => (typeof v === 'string' ? v : null))
+      ? run('readonly', s => s.get(key)).then(v => (v === undefined ? null : v))
       : localStorage.getItem(key));
   }
   function put(key, value){
-    return ready.then(() => db ? run('readwrite', s => { s.put(String(value), key); }) : localStorage.setItem(key, String(value)));
+    return ready.then(() => {
+      if(db) return run('readwrite', s => { s.put(value, key); });
+      if(typeof value !== 'string') throw new TypeError('Only text can be stored in this browser.');
+      localStorage.setItem(key, value);
+    });
   }
   function remove(key){
     return ready.then(() => db ? run('readwrite', s => { s.delete(key); }) : localStorage.removeItem(key));
@@ -119,5 +127,5 @@ function createStore(dbName){
     }).catch(() => { /* silent */ });
   }
 
-  return { ready, get, put, remove, keys, migrateFromLocalStorage, requestPersistence };
+  return { ready, get, put, remove, keys, migrateFromLocalStorage, requestPersistence, canStoreObjects: () => !!db };
 }

@@ -4,10 +4,15 @@
   // The ribbon layout is plain data (tabs → groups → command ids) so users can customize
   // it; it is saved with the workspace. Items reference COMMANDS ids (including macros,
   // whose ids are "macro:<id>"). size: 'large' | 'small'; keytip: optional fixed KeyTip.
+  // The Document group leads the File tab. Ribbons customised before it existed get it once
+  // (addDocumentGroupToRibbon, 21); removing it afterwards is respected.
+  const DOCUMENT_RIBBON_GROUP = { id:'document', label:'Document', items:[
+    { cmd:'saveDocument', size:'large' }, { cmd:'newDocument' }, { cmd:'openDocument' }, { cmd:'saveDocumentAs' }, { cmd:'openRecent' } ] };
   const DEFAULT_RIBBON = {
     qat: ['undo', 'redo', 'evaluate', 'openLauncher'],
     tabs: [
       { id:'file', label:'File', keytip:'F', groups:[
+        cloneData(DOCUMENT_RIBBON_GROUP),
         { label:'System', items:[ { cmd:'saveSystem', size:'large' }, { cmd:'loadSystem' }, { cmd:'addSystem' } ] },
         { label:'Module', items:[ { cmd:'saveModule', size:'large' }, { cmd:'loadModule' } ] },
         { label:'Workspace', items:[ { cmd:'exportWorkspace' }, { cmd:'importWorkspace' } ] },

@@ -33,6 +33,7 @@
     future = [];
     updateHistoryButtons();
     requestStoragePersistence();
+    markDocDirty();
   }
 
   function restore(snap){
@@ -59,6 +60,7 @@
     render();
     renderCanvasTabs();
     updateHistoryButtons();
+    markDocDirty();
   }
 
   function redo(){
@@ -71,6 +73,7 @@
     render();
     renderCanvasTabs();
     updateHistoryButtons();
+    markDocDirty();
   }
 
   function updateHistoryButtons(){ refreshCommandStates(); }
@@ -313,6 +316,23 @@
 
   function updateClipboardButtons(){ refreshCommandStates(); }
 
+  // Save / Save As / Open shortcuts also work while typing (the edit is committed first),
+  // and are kept from the browser's own "Save page" / "Open file" while a dialog is open.
+  // Listening on window in the capture phase: text boxes stop their key events bubbling,
+  // and a dialog that captures keys itself (e.g. assigning a shortcut) still gets them.
+  const DOCUMENT_SHORTCUT_COMMANDS = new Set(['saveDocument', 'saveDocumentAs', 'openDocument']);
+  window.addEventListener('keydown', (e) => {
+    const editing = document.activeElement && (document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT');
+    const dialogOpen = !!document.querySelector('.modal-overlay, .launcher-overlay');
+    if(!editing && !dialogOpen) return; // the handler below takes it
+    const docCmd = shortcutMap[normalizeCombo(e) || ''];
+    if(!docCmd || !DOCUMENT_SHORTCUT_COMMANDS.has(docCmd)) return;
+    e.preventDefault();
+    if(dialogOpen) return;
+    e.stopPropagation();
+    document.activeElement.blur();
+    runCommand(docCmd);
+  }, true);
   document.addEventListener('keydown', (e) => {
     const editing = document.activeElement && (document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT');
     if(editing) return;
