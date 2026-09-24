@@ -1,0 +1,201 @@
+{
+ "version": 2,
+ "kind": "system",
+ "periods": [
+  "P1",
+  "P2",
+  "P3"
+ ],
+ "canvases": [
+  {
+   "id": "c1",
+   "name": "Audit",
+   "nodes": [
+    {
+     "id": "a",
+     "type": "value",
+     "x": 50,
+     "y": 50,
+     "w": 170,
+     "h": 64,
+     "text": "Assets\n100"
+    },
+    {
+     "id": "l",
+     "type": "value",
+     "x": 50,
+     "y": 170,
+     "w": 170,
+     "h": 64,
+     "text": "Liabilities\n100"
+    },
+    {
+     "id": "minus",
+     "type": "operator",
+     "x": 260,
+     "y": 110,
+     "w": 56,
+     "h": 56,
+     "text": "\u2212"
+    },
+    {
+     "id": "diff",
+     "type": "value",
+     "x": 340,
+     "y": 100,
+     "w": 170,
+     "h": 64,
+     "text": "Difference"
+    },
+    {
+     "id": "abs",
+     "type": "operator",
+     "x": 540,
+     "y": 110,
+     "w": 56,
+     "h": 40,
+     "text": "abs"
+    },
+    {
+     "id": "tol",
+     "type": "value",
+     "x": 600,
+     "y": 220,
+     "w": 170,
+     "h": 64,
+     "text": "Tolerance\n0.001"
+    },
+    {
+     "id": "le",
+     "type": "operator",
+     "x": 640,
+     "y": 110,
+     "w": 56,
+     "h": 56,
+     "text": "\u2264"
+    },
+    {
+     "id": "chk",
+     "type": "value",
+     "x": 740,
+     "y": 100,
+     "w": 170,
+     "h": 64,
+     "text": "BS check"
+    },
+    {
+     "id": "one",
+     "type": "value",
+     "x": 740,
+     "y": 320,
+     "w": 170,
+     "h": 64,
+     "text": "One\n1"
+    },
+    {
+     "id": "mn",
+     "type": "operator",
+     "x": 960,
+     "y": 200,
+     "w": 56,
+     "h": 56,
+     "text": "min"
+    },
+    {
+     "id": "minprobe",
+     "type": "value",
+     "x": 1060,
+     "y": 190,
+     "w": 170,
+     "h": 64,
+     "text": "Min probe"
+    },
+    {
+     "id": "ge",
+     "type": "operator",
+     "x": 960,
+     "y": 320,
+     "w": 56,
+     "h": 56,
+     "text": "\u2265"
+    },
+    {
+     "id": "geprobe",
+     "type": "value",
+     "x": 1060,
+     "y": 310,
+     "w": 170,
+     "h": 64,
+     "text": "GE probe"
+    }
+   ],
+   "edges": [
+    {
+     "id": "e1",
+     "from": "a",
+     "to": "minus"
+    },
+    {
+     "id": "e2",
+     "from": "l",
+     "to": "minus"
+    },
+    {
+     "id": "e3",
+     "from": "minus",
+     "to": "diff"
+    },
+    {
+     "id": "e4",
+     "from": "diff",
+     "to": "abs"
+    },
+    {
+     "id": "e5",
+     "from": "abs",
+     "to": "le"
+    },
+    {
+     "id": "e6",
+     "from": "tol",
+     "to": "le"
+    },
+    {
+     "id": "e7",
+     "from": "le",
+     "to": "chk"
+    },
+    {
+     "id": "e8",
+     "from": "chk",
+     "to": "mn"
+    },
+    {
+     "id": "e9",
+     "from": "one",
+     "to": "mn"
+    },
+    {
+     "id": "e10",
+     "from": "mn",
+     "to": "minprobe"
+    },
+    {
+     "id": "e11",
+     "from": "chk",
+     "to": "ge"
+    },
+    {
+     "id": "e12",
+     "from": "one",
+     "to": "ge"
+    },
+    {
+     "id": "e13",
+     "from": "ge",
+     "to": "geprobe"
+    }
+   ]
+  }
+ ]
+}
