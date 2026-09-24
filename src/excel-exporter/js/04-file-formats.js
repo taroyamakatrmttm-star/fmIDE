@@ -25,7 +25,7 @@ const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS);
 // Returns { error } or { kind, data (migrated copy), fromVersion, newer, newerParts }.
 function readKnownFile(raw, accept){
   if(!raw || typeof raw !== 'object') return { error: "That file doesn't contain fmIDE data." };
-  const kind = inferFileKind(raw, true); // true: also recognise mappings saved before versions were written
+  const kind = inferFileKind(raw);
   if(!kind || !FILE_FORMATS[kind]){
     if(OTHER_FMIDE_KINDS[kind]) return { error: 'That is ' + OTHER_FMIDE_KINDS[kind] + '.' };
     return { error: "That file isn't an fmIDE file this version recognises" + (kind ? ' (kind "' + String(kind).slice(0, 40) + '")' : '') + '.' };

@@ -1687,14 +1687,13 @@
     }
   };
   // A file's kind: its "kind" field, or — for files saved before kinds were written — its
-  // shape. recogniseLegacyMapping: also recognise an ExcelExporter mapping saved before
-  // versions were written (tabs + rows).
-  function inferFileKind(d, recogniseLegacyMapping){
+  // shape, so either app can say where a file belongs.
+  function inferFileKind(d){
     if(Array.isArray(d)) return 'fmIDE-macros';                       // a bare macro list
     if(typeof d.kind === 'string') return d.kind;
     if(Array.isArray(d.canvases)) return 'system';
     if(Array.isArray(d.nodes) && Array.isArray(d.edges)) return 'module';
-    if(recogniseLegacyMapping && Array.isArray(d.tabs) && Array.isArray(d.rows)) return 'fmIDE-excel-mapping';
+    if(Array.isArray(d.tabs) && Array.isArray(d.rows)) return 'fmIDE-excel-mapping'; // an ExcelExporter mapping saved before versions were written
     if(Array.isArray(d.templates)) return 'fmIDE-templates';
     if(Array.isArray(d.presets)) return 'fmIDE-format-presets';
     if(d.bindings && typeof d.bindings === 'object') return 'fmIDE-shortcuts';

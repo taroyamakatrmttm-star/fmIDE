@@ -1759,14 +1759,13 @@ const SHARED_FILE_MIGRATIONS = {
   }
 };
 // A file's kind: its "kind" field, or — for files saved before kinds were written — its
-// shape. recogniseLegacyMapping: also recognise an ExcelExporter mapping saved before
-// versions were written (tabs + rows).
-function inferFileKind(d, recogniseLegacyMapping){
+// shape, so either app can say where a file belongs.
+function inferFileKind(d){
   if(Array.isArray(d)) return 'fmIDE-macros';                       // a bare macro list
   if(typeof d.kind === 'string') return d.kind;
   if(Array.isArray(d.canvases)) return 'system';
   if(Array.isArray(d.nodes) && Array.isArray(d.edges)) return 'module';
-  if(recogniseLegacyMapping && Array.isArray(d.tabs) && Array.isArray(d.rows)) return 'fmIDE-excel-mapping';
+  if(Array.isArray(d.tabs) && Array.isArray(d.rows)) return 'fmIDE-excel-mapping'; // an ExcelExporter mapping saved before versions were written
   if(Array.isArray(d.templates)) return 'fmIDE-templates';
   if(Array.isArray(d.presets)) return 'fmIDE-format-presets';
   if(d.bindings && typeof d.bindings === 'object') return 'fmIDE-shortcuts';
@@ -1809,7 +1808,7 @@ const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS);
 // Returns { error } or { kind, data (migrated copy), fromVersion, newer, newerParts }.
 function readKnownFile(raw, accept){
   if(!raw || typeof raw !== 'object') return { error: "That file doesn't contain fmIDE data." };
-  const kind = inferFileKind(raw, true); // true: also recognise mappings saved before versions were written
+  const kind = inferFileKind(raw);
   if(!kind || !FILE_FORMATS[kind]){
     if(OTHER_FMIDE_KINDS[kind]) return { error: 'That is ' + OTHER_FMIDE_KINDS[kind] + '.' };
     return { error: "That file isn't an fmIDE file this version recognises" + (kind ? ' (kind "' + String(kind).slice(0, 40) + '")' : '') + '.' };
