@@ -1,0 +1,44 @@
+<svg id="edges">
+<defs>
+<marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto">
+<path d="M0,0 L7,3.5 L0,7 Z" fill="#64748b">
+</path>
+</marker>
+<marker id="arrow-sel" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto">
+<path d="M0,0 L7,3.5 L0,7 Z" fill="#ef4444">
+</path>
+</marker>
+<marker id="arrow-auto" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto">
+<path d="M0,0 L7,3.5 L0,7 Z" fill="#8b5cf6">
+</path>
+</marker>
+</defs>
+<g class="edge" data-id="e23">
+<path class="hit" d="M 270 143.82266009852216 L 360 177.51724137931035">
+</path>
+<path class="line" d="M 270 143.82266009852216 L 360 177.51724137931035" marker-end="url(#arrow)">
+</path>
+<g class="order-badge">
+<circle cx="340.2" cy="170.10443349753695" r="8" stroke="#94a3b8" stroke-width="1.5">
+</circle>
+<text x="340.2" y="173.60443349753695" text-anchor="middle" font-size="10" fill="#334155">1</text>
+</g>
+</g>
+<g class="edge" data-id="e24">
+<path class="hit" d="M 262.3333333333333 240 L 360 199.58620689655172">
+</path>
+<path class="line" d="M 262.3333333333333 240 L 360 199.58620689655172" marker-end="url(#arrow)">
+</path>
+<g class="order-badge">
+<circle cx="338.5133333333333" cy="208.47724137931033" r="8" stroke="#94a3b8" stroke-width="1.5">
+</circle>
+<text x="338.5133333333333" y="211.97724137931033" text-anchor="middle" font-size="10" fill="#334155">2</text>
+</g>
+</g>
+<g class="edge" data-id="e25">
+<path class="hit" d="M 416 187.2258064516129 L 520 184.35023041474653">
+</path>
+<path class="line" d="M 416 187.2258064516129 L 520 184.35023041474653" marker-end="url(#arrow)">
+</path>
+</g>
+</svg>
