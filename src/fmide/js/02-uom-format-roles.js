@@ -182,40 +182,7 @@
     if(active) loadCanvasState(active);
   }
 
-  // ---------- format roles ----------
-  // One place defines how every kind of cell looks — on the canvas AND in the Excel file
-  // ExcelExporter writes. Each role is an ordinary format preset with a reserved name
-  // (edit it in the Formats manager); ExcelExporter reads these presets from the saved
-  // workspace/system JSON. "Inputs" and "Calculations" also style canvas rectangles; the
-  // rest only exist in the spreadsheet. A rectangle's own 🎨 format sets how it looks
-  // (number format, weight, size, border); the ROLE owns the colours (fill, font colour)
-  // (and border) in Excel unless the rectangle's format has "Use this fill, font colour &
-  // border in Excel too" ticked. Border sides and "Use Excel's default font size" are
-  // Excel-only settings of a style.
-  const FORMAT_ROLES = [
-    { name: 'Inputs', where: 'Canvas + Excel',
-      desc: 'Hard-coded numbers: input rectangles, scenario values, and the cells you type on the Scenarios tab.',
-      style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: '#eff6ff',
-               border: { color: '#93c5fd', width: 1.5, style: 'solid' }, font: { family: '', size: 14, weight: 'normal', color: '#1e3a8a' } } },
-    { name: 'Calculations', where: 'Canvas + Excel',
-      desc: 'Formulas: rectangles fed by an arrow, and every calculated cell in Excel. Blank by default (the normal rectangle look).',
-      style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: null, border: null, font: { family: '', size: null, weight: 'normal', color: null } } },
-    { name: 'Links', where: 'Excel',
-      desc: 'Formulas that only pull a value from another sheet (e.g. a row linked to the Inputs tab).',
-      style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: null, border: null, font: { family: '', size: null, weight: 'normal', color: '#008000' } } },
-    { name: 'Headers', where: 'Excel',
-      desc: 'Each sheet\'s title and column-header row.',
-      style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: '#f1f5f9', border: null, font: { family: '', size: null, weight: '700', color: null } } },
-    { name: 'Section Headers', where: 'Excel',
-      desc: 'The INPUTS / CALCULATIONS / OUTPUTS bands.',
-      style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: '#f8fafc', border: null, font: { family: '', size: null, weight: '700', color: '#475569' } } },
-    { name: 'Labels', where: 'Excel',
-      desc: 'Custom / label rows and group headers (unless the row has its own format in ExcelExporter).',
-      style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: null, border: null, font: { family: '', size: null, weight: '700', color: '#475569' } } },
-    { name: 'Notes', where: 'Excel',
-      desc: 'Notes, the Period # counter, scenario numbering and other helper text.',
-      style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: null, border: null, font: { family: '', size: 9, weight: 'normal', color: '#94a3b8' } } }
-  ];
+  // build:include shared/format-roles.js
   function formatRoleOf(name){ return FORMAT_ROLES.find(r => r.name === name) || null; }
   function rolePresetStyle(name){
     const p = FORMAT_PRESETS.find(x => x.name === name);
@@ -224,25 +191,9 @@
     return r ? r.style : null;
   }
 
-  // True if nothing actually feeds `nodeId` on the active canvas: an operator (or period
-  // shift) whose every input is itself fed by nothing — including one with no inputs at
-  // all, like a socket operator with nothing plugged in. Same rule as ExcelExporter.
-  function feedsNothing(nodeId, visiting){
-    if(visiting.has(nodeId)) return false;
-    visiting.add(nodeId);
-    const n = nodes.find(x => x.id === nodeId);
-    if(!n) return true;
-    if(n.type !== 'operator' && n.type !== 'periodShift') return false;
-    return edges.filter(e => e.to === nodeId).every(e => feedsNothing(e.from, visiting));
-  }
-  // An input rectangle: no incoming arrow, or one whose single incoming arrow comes from
-  // something fed by nothing (fmIDE then uses the rectangle's own typed number).
-  function isInputRect(n){
-    if(!n || n.type !== 'value') return false;
-    const inc = edges.filter(e => e.to === n.id);
-    if(inc.length === 0) return true;
-    return inc.length === 1 && feedsNothing(inc[0].from, new Set());
-  }
+  // build:include shared/input-rule.js
+  // The rule applied to the active canvas.
+  function isInputRect(n){ return isInputRectangle({ nodes, edges }, n); }
   // The role a value rectangle takes on the canvas.
   function canvasRoleOf(n){
     if(!n || n.type !== 'value') return null;

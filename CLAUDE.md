@@ -19,14 +19,15 @@ The workflow: build in fmIDE → **File → Save System** or **Export Workspace*
 - ExcelExporter has its **own built-in Excel (xlsx/zip) writer**; it replaced an external library on purpose. Do not bring a library back.
 - **Edit `src/`, never `apps/`.** `apps/*.html` are generated: after editing, run `npm run build` (`tools/build.js`, Node only, no packages) and commit `src/` and the rebuilt `apps/` together. CI rebuilds and fails if they disagree; `npm run build:check` checks locally. Git keeps the history, so never add version numbers to file names or make copies like `fmIDE-v2.html`.
 - Source layout: `src/fmide/` and `src/excel-exporter/` each hold `index.html` (the page; a line `<!-- build:css styles.css -->` / `<!-- build:js js -->` marks where a file or folder goes), `styles.css`, and `js/NN-name.js` — plain fragments of the one wrapped function (no `import`/`export`), joined in file-name order. ExcelExporter's built-in Excel writer (the `XLSX` global) is its own script, `js-head/`. To find a function, Grep `src/` and read around it.
-- Layout: `apps/` the two apps (generated) · `src/` their source · `tools/` the build · `docs/` reference notes · `tests/` the test suite (`tests/README.md`; brief in `tests/SPEC.md`; sample files in `tests/fixtures/`, which are not edited — add new ones alongside).
+- **Shared code lives once in `src/shared/`** and is pulled into both apps by a line `// build:include shared/<file>.js` inside a script piece (indented like the marker). Today: `escaping.js` (escapeXml, safeNum, safeColor), `input-rule.js` (the input-rectangle rule), `format-roles.js` (the seven roles and their defaults), `file-formats.js` (shared kinds, versions, upgrades, kind inference). Change shared behaviour there, never by copying it into one app; where the apps must differ, the shared function takes a parameter.
+- Layout: `apps/` the two apps (generated) · `src/` their source (`src/shared/` used by both) · `tools/` the build · `docs/` reference notes · `tests/` the test suite (`tests/README.md`; brief in `tests/SPEC.md`; sample files in `tests/fixtures/`, which are not edited — add new ones alongside).
 - The apps have no dependencies; the test tooling (`package.json`: Playwright, exceljs, jszip) is dev-only and must never be loaded by an app.
 - Record notable changes in `CHANGELOG.md`.
 
 ## Non-negotiable rules for every change
 
 1. **Text from files is always escaped.** Files may come from other people (the planned community library), so anything read from a file is untrusted:
-   - show it as plain text (`textContent`, or `esc()` in ExcelExporter / `escapeXml()` in fmIDE when building markup or XML) — never insert it as HTML;
+   - show it as plain text (`textContent`, or `escapeXml()` from `src/shared/escaping.js` when building markup or XML — ExcelExporter's XLSX writer calls it through `esc()`) — never insert it as HTML;
    - force numbers to be numbers and validate coordinates;
    - check colours before use (e.g. `safeColor()` in fmIDE);
    - never run text from a file as code (no `eval`, `new Function`, inline handlers built from file text, etc.).
@@ -52,14 +53,14 @@ Current versions:
 
 To change a format:
 
-1. Raise `current` for that kind in `FILE_FORMATS`.
-2. Add `FILE_MIGRATIONS[kind][oldVersion]` — a function that upgrades a **copy** of an old file by exactly **one** version.
-3. `system` and `fmIDE-workspace` are read by both apps: change **both** apps' tables together.
+1. Raise `current` for that kind in `FILE_FORMATS` (for the shared kinds: in `SHARED_FILE_VERSIONS`, see 3).
+2. Add `FILE_MIGRATIONS[kind][oldVersion]` (shared kinds: `SHARED_FILE_MIGRATIONS`) — a function that upgrades a **copy** of an old file by exactly **one** version.
+3. `system` and `fmIDE-workspace` are read by both apps: their versions and upgrade steps live once in `src/shared/file-formats.js` (`SHARED_FILE_VERSIONS`, `SHARED_FILE_MIGRATIONS`) — change them there.
 4. Add an old-version sample to `tests/fixtures/formats/` and a test in `tests/6-formats-*.spec.js` so the upgrade stays covered.
 
 ## Format roles (`docs/format-roles.md`)
 
-All formatting — on the canvas and in Excel — is defined in one place: **format roles** in fmIDE's Formats manager (File → Format Presets). Each role is a format preset with a reserved name; roles can be edited but not deleted, and they travel inside system and workspace exports, which is how ExcelExporter reads them. Files without them get the built-in defaults. Do not add a second place where formatting is defined.
+All formatting — on the canvas and in Excel — is defined in one place: **format roles** in fmIDE's Formats manager (File → Format Presets). Each role is a format preset with a reserved name; roles can be edited but not deleted, and they travel inside system and workspace exports, which is how ExcelExporter reads them. Files without them get the built-in defaults (`FORMAT_ROLES` in `src/shared/format-roles.js`). Do not add a second place where formatting is defined.
 
 | Role | Used on | Covers |
 |---|---|---|
@@ -77,7 +78,7 @@ Who decides what:
 - **Number format, weight, font size**: the rectangle's own format if it has one, otherwise the role.
 - Excel-only style settings: *Excel border sides* (none ticked = no Excel border; the canvas always draws the full outline) and *Use Excel's default font size*.
 
-**Input rectangle** — the same rule in both apps, so keep them identical: no incoming arrow, or a single incoming arrow from an operator or period shift that nothing feeds.
+**Input rectangle** — one rule for both apps, in `src/shared/input-rule.js`: no incoming arrow, or a single incoming arrow from an operator or period shift that nothing feeds.
 
 ## Decisions and build order (`docs/decisions.md`)
 
@@ -87,11 +88,11 @@ Build order — work in this sequence and don't jump ahead unless asked:
 
 1. Repository ✅
 2. Permanent test suite ✅ — `npm test`
-3. Split each app into modules — **still building to single HTML files** — protected by the tests (plan: `docs/step3-modules.md`; 3a ✅ source in `src/`; next 3b shared code in `src/shared/`)
+3. Split each app into modules — **still building to single HTML files** — protected by the tests ✅ (`docs/step3-modules.md`: 3a source in `src/`, 3b shared code in `src/shared/`; 3c real modules is later, with the plugin work)
 4. Storage for the web app: IndexedDB plus explicit open/save of `.fmide` files
 5. Publish the web app; then formula IR and plugins, community library, touch support
 
-Phase 0 hardening done: escaping text from files, built-in Excel writer, file-format versions and migrations, autosave-failure warning. Still to do: storage (step 4), modules (step 3b onward).
+Phase 0 hardening done: escaping text from files, built-in Excel writer, file-format versions and migrations, autosave-failure warning. Still to do: storage (step 4).
 
 ## Checking a change
 

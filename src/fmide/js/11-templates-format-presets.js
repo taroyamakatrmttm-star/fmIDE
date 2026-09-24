@@ -1,12 +1,6 @@
+  // build:include shared/escaping.js
+
   // ---------- templates ----------
-  // Anything that came from a file (names, labels, kinds — including shared/community
-  // content) must never be parsed as HTML/SVG markup: escape it (text), coerce it
-  // (numbers), or validate it (colours) before it goes into a markup string.
-  function escapeXml(s){
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-  }
-  function safeNum(v, fallback){ const n = Number(v); return Number.isFinite(n) ? n : (fallback || 0); }
-  function safeColor(c, fallback){ return (typeof c === 'string' && /^#[0-9a-f]{3,8}$/i.test(c)) ? c : fallback; }
 
   function buildPreviewSVG(previewNodes, previewEdges){
     // Coordinates go into a markup string below — coerce them to numbers first.

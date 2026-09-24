@@ -9,48 +9,26 @@
   //      caller can warn before a best-effort open,
   //   5. does the same for nested content (a workspace's system, each template's model).
   // To change a format: bump its "current" here, and add FILE_MIGRATIONS[kind][oldVersion]
-  // that upgrades a copy of an old payload by exactly one version. ExcelExporter mirrors
-  // the system/workspace entries — keep the two in sync.
+  // that upgrades a copy of an old payload by exactly one version. The system and
+  // workspace formats are shared with ExcelExporter: change those in src/shared/file-formats.js.
   // ============================================================
+  // build:include shared/file-formats.js
   const FILE_FORMATS = {
-    'system':               { current: 2, label: 'system',              where: 'File → Load System' },
+    'system':               { current: SHARED_FILE_VERSIONS['system'], label: 'system', where: 'File → Load System' },
     'module':               { current: 1, label: 'module',              where: 'File → Load Module' },
-    'fmIDE-workspace':      { current: 1, label: 'workspace',           where: 'File → Import Workspace' },
+    'fmIDE-workspace':      { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'workspace', where: 'File → Import Workspace' },
     'fmIDE-templates':      { current: 1, label: 'templates file',      where: 'Templates → Import Templates' },
     'fmIDE-format-presets': { current: 1, label: 'format presets file', where: 'Format Presets → Import Presets' },
     'fmIDE-shortcuts':      { current: 2, label: 'shortcuts file',      where: 'Keyboard Shortcuts → Import Shortcuts' },
     'fmIDE-macros':         { current: 1, label: 'macros file',         where: 'Macro Builder → Import' }
   };
-  const FILE_MIGRATIONS = {
-    // v1 systems were accepted with fields the loader already defaults (periods, ids…);
-    // the only structural difference handled here is a single-canvas file that kept its
-    // nodes/edges at the top level.
-    'system': {
-      1: d => {
-        if(!Array.isArray(d.canvases) && Array.isArray(d.nodes)){
-          d.canvases = [{ id: 'c1', name: d.name || 'Canvas 1', nodes: d.nodes, edges: Array.isArray(d.edges) ? d.edges : [] }];
-          d.activeCanvasId = 'c1';
-          delete d.nodes; delete d.edges;
-        }
-      }
-    },
+  const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
     // v1 shortcut files stored combos in the old notation.
     'fmIDE-shortcuts': {
       1: d => { Object.keys(d.bindings || {}).forEach(k => { d.bindings[k] = canonicalCombo(d.bindings[k], true); }); }
     }
-  };
+  });
   function fileKindLabel(kind){ return FILE_FORMATS[kind] ? FILE_FORMATS[kind].label : 'file'; }
-  function inferFileKind(d){
-    if(Array.isArray(d)) return 'fmIDE-macros';                       // a bare macro list
-    if(typeof d.kind === 'string') return d.kind;
-    if(Array.isArray(d.canvases)) return 'system';
-    if(Array.isArray(d.nodes) && Array.isArray(d.edges)) return 'module';
-    if(Array.isArray(d.templates)) return 'fmIDE-templates';
-    if(Array.isArray(d.presets)) return 'fmIDE-format-presets';
-    if(d.bindings && typeof d.bindings === 'object') return 'fmIDE-shortcuts';
-    if(Array.isArray(d.macros)) return 'fmIDE-macros';
-    return null;
-  }
   // Returns { error } or { kind, data (a migrated copy), fromVersion, newer, warnings }.
   function readFmFile(raw, accept){
     if(!raw || typeof raw !== 'object') return { error: "That file doesn't contain fmIDE data." };
@@ -66,18 +44,8 @@
       return { error: `That is an fmIDE ${fmt.label}, not a ${wanted.join(' or ')}. Open it with ${fmt.where}.` };
     }
     let data = cloneData(Array.isArray(raw) ? { kind, version: 1, macros: raw } : raw);
-    let version = Number(data.version);
-    if(!Number.isInteger(version) || version < 1) version = 1;          // files from before versions were written
+    const { fromVersion: version, newer } = upgradeFileData(data, kind, FILE_FORMATS, FILE_MIGRATIONS);
     const warnings = [];
-    const newer = version > fmt.current;
-    if(!newer){
-      for(let v = version; v < fmt.current; v++){
-        const step = FILE_MIGRATIONS[kind] && FILE_MIGRATIONS[kind][v];
-        if(step) step(data);
-      }
-      data.version = fmt.current;
-    }
-    data.kind = kind;
     // Nested content.
     const nestedTemplates = (list) => (list || []).map(t => {
       if(!t || !t.data || (t.kind !== 'module' && t.kind !== 'system')) return t;

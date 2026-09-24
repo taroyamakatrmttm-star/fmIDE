@@ -26,12 +26,23 @@ var XLSX = (function(){
   const NS_PKG_REL = 'http://schemas.openxmlformats.org/package/2006/relationships';
   const REL_BASE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/';
 
-  // XML text: escape markup characters and drop characters XML 1.0 forbids.
-  function esc(s){
-    return String(s)
-      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, '')
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  // ---------- escaping & validation (shared: src/shared/escaping.js, used by both apps) ----------
+  // Anything that came from a file (names, labels, kinds — including shared/community
+  // content) must never be parsed as markup: escape it (text), coerce it (numbers), or
+  // validate it (colours) before it goes into a markup string.
+  // escapeXml(s): for HTML/SVG markup — escapes & < > " and '.
+  // escapeXml(s, true): for XML 1.0 files (the .xlsx writer) — also drops the characters
+  // XML 1.0 forbids, and leaves ' as is (the writer quotes attributes with ").
+  function escapeXml(s, xmlFile){
+    let t = String(s);
+    if(xmlFile) t = t.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]/g, '');
+    t = t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return xmlFile ? t : t.replace(/'/g, '&#39;');
   }
+  function safeNum(v, fallback){ const n = Number(v); return Number.isFinite(n) ? n : (fallback || 0); }
+  function safeColor(c, fallback){ return (typeof c === 'string' && /^#[0-9a-f]{3,8}$/i.test(c)) ? c : fallback; }
+  // XML text: escape markup characters and drop characters XML 1.0 forbids.
+  function esc(s){ return escapeXml(s, true); }
   function colToNum(letters){ let n = 0; for(const ch of letters) n = n * 26 + (ch.charCodeAt(0) - 64); return n; }
   function numToCol(n){ let s = ''; while(n > 0){ const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; }
   function encodeCell(r, c){ return numToCol(c + 1) + (r + 1); } // 0-based -> "A1"
@@ -1061,7 +1072,7 @@ function buildCellContent(canvasId, node, periodIndex, ctx, currentTabName, path
   const canvas = ctx.canvasById[canvasId];
   if(node.type === 'value'){
     const incoming = canvas.edges.filter(e => e.to === node.id);
-    const effectiveInput = isInputNode(canvas, node); // includes "fed by an operator fed by nothing"
+    const effectiveInput = isInputRectangle(canvas, node); // includes "fed by an operator fed by nothing"
 
     // Mirrors fmIDE's own "Value-node priority fixed" rule: a rectangle with a single
     // incoming edge is ALWAYS driven by that edge, regardless of any number typed into
@@ -1101,10 +1112,12 @@ function buildCellContent(canvasId, node, periodIndex, ctx, currentTabName, path
   // something else points at them. This fallback only covers a stray/unexpected type.
   return { isFormula: false, value: null };
 }
-// True if nothing actually feeds `nodeId`: an operator whose every input is itself fed
-// by nothing (including one with no inputs at all, like a socket operator with nothing
-// plugged into it), or a period shift with no (or such an) input. Aliases, rectangles
-// and block instances always count as a real source.
+// ---------- input-rectangle rule (shared: src/shared/input-rule.js, used by both apps) ----------
+// `canvas` is { nodes, edges }.
+// True if nothing actually feeds `nodeId`: an operator (or period shift) whose every input
+// is itself fed by nothing — including one with no inputs at all, like a socket operator
+// with nothing plugged into it. Aliases, rectangles and block instances always count as a
+// real source.
 function feedsNothing(canvas, nodeId, visiting){
   if(visiting.has(nodeId)) return false;
   visiting.add(nodeId);
@@ -1115,10 +1128,10 @@ function feedsNothing(canvas, nodeId, visiting){
 }
 // An input rectangle: a value rectangle with no incoming arrow, or whose single incoming
 // arrow comes from something fed by nothing (feedsNothing) — e.g. Cash ← [+] where the
-// + operator's socket has nothing plugged in. fmIDE falls back to the rectangle's own
-// typed number in that case, so it's treated as an input everywhere here: its section,
-// its values, the "Inputs" format preset, Constant eligibility and the Inputs tab.
-function isInputNode(canvas, node){
+// + operator's socket has nothing plugged in. fmIDE then uses the rectangle's own typed
+// number, so both apps treat it as an input everywhere (canvas look, Excel section,
+// values, the "Inputs" role, Constant eligibility and the Inputs tab).
+function isInputRectangle(canvas, node){
   if(!canvas || !node || node.type !== 'value') return false;
   const inc = canvas.edges.filter(e => e.to === node.id);
   if(inc.length === 0) return true;
@@ -1136,7 +1149,7 @@ function classifyNode(canvas, node){
   if(node.blockRole === 'index') return null;
   const hasIncoming = canvas.edges.some(e => e.to === node.id);
   const hasOutgoing = canvas.edges.some(e => e.from === node.id);
-  if(!hasIncoming || isInputNode(canvas, node)) return 'input';
+  if(!hasIncoming || isInputRectangle(canvas, node)) return 'input';
   if(!hasOutgoing) return 'output';
   return 'calc';
 }
@@ -1419,7 +1432,8 @@ function numberFormatToExcel(style, fallback){
 // Format roles — the ONE place cell formatting comes from. Every cell this tool writes
 // has a role; each role is a format preset of that name in fmIDE (Formats manager),
 // read from the loaded JSON. A role missing from the file (an older export) falls back
-// to the built-in default below — kept identical to fmIDE's own defaults.
+// to the built-in default — the same table fmIDE seeds its role presets from
+// (src/shared/format-roles.js).
 // Rule for rectangle rows: the ROLE owns fill, font colour and border — so the look
 // always says what kind of cell it is — and the rectangle's own 🎨 format owns number
 // format, weight and size. A rectangle whose format has "Use this fill, font colour &
@@ -1427,16 +1441,42 @@ function numberFormatToExcel(style, fallback){
 // Excel-only style settings: border.sides (which cell sides get the border; absent = all
 // four, [] = none) and font.excelDefaultSize (leave the size to the workbook default).
 // ============================================================
-const NF_GENERAL = { kind: 'general', decimals: 2, currencySymbol: '$' };
-const DEFAULT_ROLE_STYLES = {
-  'Inputs':          { numberFormat: NF_GENERAL, fill: '#eff6ff', border: { color: '#93c5fd', width: 1.5, style: 'solid' }, font: { family: '', size: 14, weight: 'normal', color: '#1e3a8a' } },
-  'Calculations':    { numberFormat: NF_GENERAL, fill: null, border: null, font: { family: '', size: null, weight: 'normal', color: null } },
-  'Links':           { numberFormat: NF_GENERAL, fill: null, border: null, font: { family: '', size: null, weight: 'normal', color: '#008000' } },
-  'Headers':         { numberFormat: NF_GENERAL, fill: '#f1f5f9', border: null, font: { family: '', size: null, weight: '700', color: null } },
-  'Section Headers': { numberFormat: NF_GENERAL, fill: '#f8fafc', border: null, font: { family: '', size: null, weight: '700', color: '#475569' } },
-  'Labels':          { numberFormat: NF_GENERAL, fill: null, border: null, font: { family: '', size: null, weight: '700', color: '#475569' } },
-  'Notes':           { numberFormat: NF_GENERAL, fill: null, border: null, font: { family: '', size: 9, weight: 'normal', color: '#94a3b8' } }
-};
+// ---------- format roles (shared: src/shared/format-roles.js, used by both apps) ----------
+// One place defines how every kind of cell looks — on the canvas AND in the Excel file
+// ExcelExporter writes. Each role is an ordinary format preset with a reserved name
+// (edit it in the Formats manager); ExcelExporter reads these presets from the saved
+// workspace/system JSON. "Inputs" and "Calculations" also style canvas rectangles; the
+// rest only exist in the spreadsheet. A rectangle's own 🎨 format sets how it looks
+// (number format, weight, size, border); the ROLE owns the colours (fill, font colour)
+// (and border) in Excel unless the rectangle's format has "Use this fill, font colour &
+// border in Excel too" ticked. Border sides and "Use Excel's default font size" are
+// Excel-only settings of a style.
+const FORMAT_ROLES = [
+  { name: 'Inputs', where: 'Canvas + Excel',
+    desc: 'Hard-coded numbers: input rectangles, scenario values, and the cells you type on the Scenarios tab.',
+    style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: '#eff6ff',
+             border: { color: '#93c5fd', width: 1.5, style: 'solid' }, font: { family: '', size: 14, weight: 'normal', color: '#1e3a8a' } } },
+  { name: 'Calculations', where: 'Canvas + Excel',
+    desc: 'Formulas: rectangles fed by an arrow, and every calculated cell in Excel. Blank by default (the normal rectangle look).',
+    style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: null, border: null, font: { family: '', size: null, weight: 'normal', color: null } } },
+  { name: 'Links', where: 'Excel',
+    desc: 'Formulas that only pull a value from another sheet (e.g. a row linked to the Inputs tab).',
+    style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: null, border: null, font: { family: '', size: null, weight: 'normal', color: '#008000' } } },
+  { name: 'Headers', where: 'Excel',
+    desc: 'Each sheet\'s title and column-header row.',
+    style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: '#f1f5f9', border: null, font: { family: '', size: null, weight: '700', color: null } } },
+  { name: 'Section Headers', where: 'Excel',
+    desc: 'The INPUTS / CALCULATIONS / OUTPUTS bands.',
+    style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: '#f8fafc', border: null, font: { family: '', size: null, weight: '700', color: '#475569' } } },
+  { name: 'Labels', where: 'Excel',
+    desc: 'Custom / label rows and group headers (unless the row has its own format in ExcelExporter).',
+    style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: null, border: null, font: { family: '', size: null, weight: '700', color: '#475569' } } },
+  { name: 'Notes', where: 'Excel',
+    desc: 'Notes, the Period # counter, scenario numbering and other helper text.',
+    style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: null, border: null, font: { family: '', size: 9, weight: 'normal', color: '#94a3b8' } } }
+];
+// The seven roles' default styles by name (the fallback for a role missing from the file).
+const DEFAULT_ROLE_STYLES = Object.fromEntries(FORMAT_ROLES.map(r => [r.name, r.style]));
 const ROLE_NAMES = Object.keys(DEFAULT_ROLE_STYLES);
 
 // The role's style (fmIDE-style object): from the file's presets, else the default.
@@ -1506,7 +1546,7 @@ function renderRolesLegend(){
 
 function resolveNodeStyle(canvas, node, formatPresets){
   if(node.style) return node.style;
-  if(node.type === 'value' && isInputNode(canvas, node)){
+  if(node.type === 'value' && isInputRectangle(canvas, node)){
     const preset = (formatPresets || []).find(p => p.name === 'Inputs');
     if(preset) return preset.style;
   }
@@ -1689,16 +1729,70 @@ function buildDefaultMapping(m){
 }
 
 // ============================================================
-// File formats — mirrors fmIDE's FILE_FORMATS for the two kinds ExcelExporter reads
-// (system, workspace) plus its own mapping file. Every loaded file goes through
+// File formats — the two kinds ExcelExporter reads from fmIDE (system, workspace; their
+// versions and upgrades are shared with fmIDE in src/shared/file-formats.js) plus its own
+// mapping file. Every loaded file goes through
 // readKnownFile(): it identifies the kind (older files by shape), says plainly when a
 // file is the wrong kind and where it belongs, upgrades older versions step by step,
 // and flags a file from a NEWER app version so the user can choose to open it anyway.
-// Keep the system/workspace entries in sync with fmIDE.
 // ============================================================
+// ---------- file formats (shared: src/shared/file-formats.js, used by both apps) ----------
+// The two kinds both apps read — a system and a workspace — keep their current version
+// and their upgrade steps here, once. Each app builds its own FILE_FORMATS and
+// FILE_MIGRATIONS from these, adding its own kinds, labels and messages
+// (docs/file-formats.md). To change one of these formats: raise its version here and add
+// SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
+// exactly one version.
+const SHARED_FILE_VERSIONS = { 'system': 2, 'fmIDE-workspace': 1 };
+const SHARED_FILE_MIGRATIONS = {
+  // v1 systems were accepted with fields the loader already defaults (periods, ids…);
+  // the only structural difference handled here is a single-canvas file that kept its
+  // nodes/edges at the top level.
+  'system': {
+    1: d => {
+      if(!Array.isArray(d.canvases) && Array.isArray(d.nodes)){
+        d.canvases = [{ id: 'c1', name: d.name || 'Canvas 1', nodes: d.nodes, edges: Array.isArray(d.edges) ? d.edges : [] }];
+        d.activeCanvasId = 'c1';
+        delete d.nodes; delete d.edges;
+      }
+    }
+  }
+};
+// A file's kind: its "kind" field, or — for files saved before kinds were written — its
+// shape, so either app can say where a file belongs.
+function inferFileKind(d){
+  if(Array.isArray(d)) return 'fmIDE-macros';                       // a bare macro list
+  if(typeof d.kind === 'string') return d.kind;
+  if(Array.isArray(d.canvases)) return 'system';
+  if(Array.isArray(d.nodes) && Array.isArray(d.edges)) return 'module';
+  if(Array.isArray(d.tabs) && Array.isArray(d.rows)) return 'fmIDE-excel-mapping'; // an ExcelExporter mapping saved before versions were written
+  if(Array.isArray(d.templates)) return 'fmIDE-templates';
+  if(Array.isArray(d.presets)) return 'fmIDE-format-presets';
+  if(d.bindings && typeof d.bindings === 'object') return 'fmIDE-shortcuts';
+  if(Array.isArray(d.macros)) return 'fmIDE-macros';
+  return null;
+}
+// The version check and step-by-step upgrade, applied in place to `data` (a copy of the
+// file, of a kind listed in `formats`). A file from a NEWER version is left as it is so the
+// caller can ask before a best-effort open. Returns { fromVersion, newer }.
+function upgradeFileData(data, kind, formats, migrations){
+  const fmt = formats[kind];
+  let version = Number(data.version);
+  if(!Number.isInteger(version) || version < 1) version = 1;          // files from before versions were written
+  const newer = version > fmt.current;
+  if(!newer){
+    for(let v = version; v < fmt.current; v++){
+      const step = migrations[kind] && migrations[kind][v];
+      if(step) step(data);
+    }
+    data.version = fmt.current;
+  }
+  data.kind = kind;
+  return { fromVersion: version, newer };
+}
 const FILE_FORMATS = {
-  'system':              { current: 2, label: 'fmIDE system' },
-  'fmIDE-workspace':     { current: 1, label: 'fmIDE workspace' },
+  'system':              { current: SHARED_FILE_VERSIONS['system'], label: 'fmIDE system' },
+  'fmIDE-workspace':     { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'fmIDE workspace' },
   'fmIDE-excel-mapping': { current: 1, label: 'ExcelExporter mapping file' }
 };
 // Kinds that are fmIDE files but not something ExcelExporter reads — say where they belong.
@@ -1709,32 +1803,12 @@ const OTHER_FMIDE_KINDS = {
   'fmIDE-shortcuts': 'an fmIDE shortcuts file — import it in fmIDE',
   'fmIDE-macros': 'an fmIDE macros file — import it in fmIDE'
 };
-const FILE_MIGRATIONS = {
-  'system': {
-    1: d => {
-      if(!Array.isArray(d.canvases) && Array.isArray(d.nodes)){
-        d.canvases = [{ id: 'c1', name: d.name || 'Canvas 1', nodes: d.nodes, edges: Array.isArray(d.edges) ? d.edges : [] }];
-        delete d.nodes; delete d.edges;
-      }
-    }
-  }
-};
-function inferKind(d){
-  if(Array.isArray(d)) return 'fmIDE-macros';
-  if(typeof d.kind === 'string') return d.kind;
-  if(Array.isArray(d.canvases)) return 'system';
-  if(Array.isArray(d.nodes) && Array.isArray(d.edges)) return 'module';
-  if(Array.isArray(d.tabs) && Array.isArray(d.rows)) return 'fmIDE-excel-mapping'; // mappings saved before versions were written
-  if(Array.isArray(d.templates)) return 'fmIDE-templates';
-  if(Array.isArray(d.presets)) return 'fmIDE-format-presets';
-  if(d.bindings && typeof d.bindings === 'object') return 'fmIDE-shortcuts';
-  if(Array.isArray(d.macros)) return 'fmIDE-macros';
-  return null;
-}
+// The mapping file has had no upgrades yet.
+const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS);
 // Returns { error } or { kind, data (migrated copy), fromVersion, newer, newerParts }.
 function readKnownFile(raw, accept){
   if(!raw || typeof raw !== 'object') return { error: "That file doesn't contain fmIDE data." };
-  const kind = inferKind(raw);
+  const kind = inferFileKind(raw);
   if(!kind || !FILE_FORMATS[kind]){
     if(OTHER_FMIDE_KINDS[kind]) return { error: 'That is ' + OTHER_FMIDE_KINDS[kind] + '.' };
     return { error: "That file isn't an fmIDE file this version recognises" + (kind ? ' (kind "' + String(kind).slice(0, 40) + '")' : '') + '.' };
@@ -1743,19 +1817,8 @@ function readKnownFile(raw, accept){
     return { error: 'That is an ' + FILE_FORMATS[kind].label + ', not ' + accept.map(k => 'an ' + FILE_FORMATS[k].label).join(' or ') + '.' +
       (kind === 'fmIDE-excel-mapping' ? ' Use "Import Mapping JSON" after loading the model.' : ' Load it with the file picker in section 1.') };
   }
-  const fmt = FILE_FORMATS[kind];
   const data = JSON.parse(JSON.stringify(raw));
-  let version = Number(data.version);
-  if(!Number.isInteger(version) || version < 1) version = 1;
-  const newer = version > fmt.current;
-  if(!newer){
-    for(let v = version; v < fmt.current; v++){
-      const step = FILE_MIGRATIONS[kind] && FILE_MIGRATIONS[kind][v];
-      if(step) step(data);
-    }
-    data.version = fmt.current;
-  }
-  data.kind = kind;
+  const { fromVersion: version, newer } = upgradeFileData(data, kind, FILE_FORMATS, FILE_MIGRATIONS);
   const newerParts = [];
   if(kind === 'fmIDE-workspace' && data.system){
     const r = readKnownFile(data.system, ['system']);
@@ -1856,7 +1919,7 @@ function reconcileMapping(){
     if(!r.inlineConstant) return;
     const c = canvasById[r.canvasId];
     const node = c && c.nodes.find(n => n.id === r.nodeId);
-    if(!node || !isInputNode(c, node)) r.inlineConstant = false;
+    if(!node || !isInputRectangle(c, node)) r.inlineConstant = false;
   });
   syncInputMirrors(); // add/drop Inputs-tab rows for inputs that appeared/disappeared in fmIDE
   // Keep both order dimensions clean and fully populated regardless of which one is
@@ -1914,7 +1977,7 @@ function isTrueInputRow(row){
   const c = model.canvases.find(x => x.id === row.canvasId);
   const n = c && c.nodes.find(x => x.id === row.nodeId);
   if(!n || n.type !== 'value' || n.blockRole === 'input' || n.blockRole === 'index') return false;
-  return isInputNode(c, n);
+  return isInputRectangle(c, n);
 }
 
 function attachMirror(m){
@@ -2591,7 +2654,7 @@ function bulkSetInlineConstant(value){
     if(!row || row.isCustom) return;
     const canvas = model.canvases.find(c => c.id === row.canvasId);
     const node = canvas && canvas.nodes.find(n => n.id === row.nodeId);
-    const isTrueInput = !!node && !!canvas && isInputNode(canvas, node);
+    const isTrueInput = !!node && !!canvas && isInputRectangle(canvas, node);
     if(!isTrueInput) return;
     row.inlineConstant = value;
     if(value) row.include = true; // mirrors the single-row checkbox's side effect
@@ -3154,7 +3217,7 @@ function buildVerticalRowTag(row, node){
 
 function buildCanvasViewRowTR(r, definitionCanvas, sortedTabs){
   const node = definitionCanvas.nodes.find(n => n.id === r.nodeId);
-  const isTrueInput = !!node && isInputNode(definitionCanvas, node);
+  const isTrueInput = !!node && isInputRectangle(definitionCanvas, node);
   const tr = document.createElement('tr');
   if(!r.include || r.inlineConstant) tr.classList.add('excluded');
 
@@ -4245,7 +4308,7 @@ function generateWorkbook(){
       const rowRole = scnBlock ? 'Calculations'
         : row.isInputMirror ? 'Inputs'
         : linkPos ? 'Links'
-        : isInputNode(canvas, node) ? 'Inputs'
+        : isInputRectangle(canvas, node) ? 'Inputs'
         : (contents.length && contents.every(c => c.isFormula && PURE_LINK.test(c.formula))) ? 'Links'
         : 'Calculations';
       const rowStyleObj = composeStyle(rowRole, own);

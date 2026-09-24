@@ -232,7 +232,7 @@ function generateWorkbook(){
       const rowRole = scnBlock ? 'Calculations'
         : row.isInputMirror ? 'Inputs'
         : linkPos ? 'Links'
-        : isInputNode(canvas, node) ? 'Inputs'
+        : isInputRectangle(canvas, node) ? 'Inputs'
         : (contents.length && contents.every(c => c.isFormula && PURE_LINK.test(c.formula))) ? 'Links'
         : 'Calculations';
       const rowStyleObj = composeStyle(rowRole, own);

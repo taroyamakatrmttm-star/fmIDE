@@ -1090,7 +1090,7 @@
     if(active) loadCanvasState(active);
   }
 
-  // ---------- format roles ----------
+  // ---------- format roles (shared: src/shared/format-roles.js, used by both apps) ----------
   // One place defines how every kind of cell looks — on the canvas AND in the Excel file
   // ExcelExporter writes. Each role is an ordinary format preset with a reserved name
   // (edit it in the Formats manager); ExcelExporter reads these presets from the saved
@@ -1132,25 +1132,33 @@
     return r ? r.style : null;
   }
 
-  // True if nothing actually feeds `nodeId` on the active canvas: an operator (or period
-  // shift) whose every input is itself fed by nothing — including one with no inputs at
-  // all, like a socket operator with nothing plugged in. Same rule as ExcelExporter.
-  function feedsNothing(nodeId, visiting){
+  // ---------- input-rectangle rule (shared: src/shared/input-rule.js, used by both apps) ----------
+  // `canvas` is { nodes, edges }.
+  // True if nothing actually feeds `nodeId`: an operator (or period shift) whose every input
+  // is itself fed by nothing — including one with no inputs at all, like a socket operator
+  // with nothing plugged into it. Aliases, rectangles and block instances always count as a
+  // real source.
+  function feedsNothing(canvas, nodeId, visiting){
     if(visiting.has(nodeId)) return false;
     visiting.add(nodeId);
-    const n = nodes.find(x => x.id === nodeId);
+    const n = canvas.nodes.find(x => x.id === nodeId);
     if(!n) return true;
     if(n.type !== 'operator' && n.type !== 'periodShift') return false;
-    return edges.filter(e => e.to === nodeId).every(e => feedsNothing(e.from, visiting));
+    return canvas.edges.filter(e => e.to === nodeId).every(e => feedsNothing(canvas, e.from, visiting));
   }
-  // An input rectangle: no incoming arrow, or one whose single incoming arrow comes from
-  // something fed by nothing (fmIDE then uses the rectangle's own typed number).
-  function isInputRect(n){
-    if(!n || n.type !== 'value') return false;
-    const inc = edges.filter(e => e.to === n.id);
+  // An input rectangle: a value rectangle with no incoming arrow, or whose single incoming
+  // arrow comes from something fed by nothing (feedsNothing) — e.g. Cash ← [+] where the
+  // + operator's socket has nothing plugged in. fmIDE then uses the rectangle's own typed
+  // number, so both apps treat it as an input everywhere (canvas look, Excel section,
+  // values, the "Inputs" role, Constant eligibility and the Inputs tab).
+  function isInputRectangle(canvas, node){
+    if(!canvas || !node || node.type !== 'value') return false;
+    const inc = canvas.edges.filter(e => e.to === node.id);
     if(inc.length === 0) return true;
-    return inc.length === 1 && feedsNothing(inc[0].from, new Set());
+    return inc.length === 1 && feedsNothing(canvas, inc[0].from, new Set());
   }
+  // The rule applied to the active canvas.
+  function isInputRect(n){ return isInputRectangle({ nodes, edges }, n); }
   // The role a value rectangle takes on the canvas.
   function canvasRoleOf(n){
     if(!n || n.type !== 'value') return null;
@@ -1653,19 +1661,18 @@
   //      caller can warn before a best-effort open,
   //   5. does the same for nested content (a workspace's system, each template's model).
   // To change a format: bump its "current" here, and add FILE_MIGRATIONS[kind][oldVersion]
-  // that upgrades a copy of an old payload by exactly one version. ExcelExporter mirrors
-  // the system/workspace entries — keep the two in sync.
+  // that upgrades a copy of an old payload by exactly one version. The system and
+  // workspace formats are shared with ExcelExporter: change those in src/shared/file-formats.js.
   // ============================================================
-  const FILE_FORMATS = {
-    'system':               { current: 2, label: 'system',              where: 'File → Load System' },
-    'module':               { current: 1, label: 'module',              where: 'File → Load Module' },
-    'fmIDE-workspace':      { current: 1, label: 'workspace',           where: 'File → Import Workspace' },
-    'fmIDE-templates':      { current: 1, label: 'templates file',      where: 'Templates → Import Templates' },
-    'fmIDE-format-presets': { current: 1, label: 'format presets file', where: 'Format Presets → Import Presets' },
-    'fmIDE-shortcuts':      { current: 2, label: 'shortcuts file',      where: 'Keyboard Shortcuts → Import Shortcuts' },
-    'fmIDE-macros':         { current: 1, label: 'macros file',         where: 'Macro Builder → Import' }
-  };
-  const FILE_MIGRATIONS = {
+  // ---------- file formats (shared: src/shared/file-formats.js, used by both apps) ----------
+  // The two kinds both apps read — a system and a workspace — keep their current version
+  // and their upgrade steps here, once. Each app builds its own FILE_FORMATS and
+  // FILE_MIGRATIONS from these, adding its own kinds, labels and messages
+  // (docs/file-formats.md). To change one of these formats: raise its version here and add
+  // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
+  // exactly one version.
+  const SHARED_FILE_VERSIONS = { 'system': 2, 'fmIDE-workspace': 1 };
+  const SHARED_FILE_MIGRATIONS = {
     // v1 systems were accepted with fields the loader already defaults (periods, ids…);
     // the only structural difference handled here is a single-canvas file that kept its
     // nodes/edges at the top level.
@@ -1677,24 +1684,56 @@
           delete d.nodes; delete d.edges;
         }
       }
-    },
-    // v1 shortcut files stored combos in the old notation.
-    'fmIDE-shortcuts': {
-      1: d => { Object.keys(d.bindings || {}).forEach(k => { d.bindings[k] = canonicalCombo(d.bindings[k], true); }); }
     }
   };
-  function fileKindLabel(kind){ return FILE_FORMATS[kind] ? FILE_FORMATS[kind].label : 'file'; }
+  // A file's kind: its "kind" field, or — for files saved before kinds were written — its
+  // shape, so either app can say where a file belongs.
   function inferFileKind(d){
     if(Array.isArray(d)) return 'fmIDE-macros';                       // a bare macro list
     if(typeof d.kind === 'string') return d.kind;
     if(Array.isArray(d.canvases)) return 'system';
     if(Array.isArray(d.nodes) && Array.isArray(d.edges)) return 'module';
+    if(Array.isArray(d.tabs) && Array.isArray(d.rows)) return 'fmIDE-excel-mapping'; // an ExcelExporter mapping saved before versions were written
     if(Array.isArray(d.templates)) return 'fmIDE-templates';
     if(Array.isArray(d.presets)) return 'fmIDE-format-presets';
     if(d.bindings && typeof d.bindings === 'object') return 'fmIDE-shortcuts';
     if(Array.isArray(d.macros)) return 'fmIDE-macros';
     return null;
   }
+  // The version check and step-by-step upgrade, applied in place to `data` (a copy of the
+  // file, of a kind listed in `formats`). A file from a NEWER version is left as it is so the
+  // caller can ask before a best-effort open. Returns { fromVersion, newer }.
+  function upgradeFileData(data, kind, formats, migrations){
+    const fmt = formats[kind];
+    let version = Number(data.version);
+    if(!Number.isInteger(version) || version < 1) version = 1;          // files from before versions were written
+    const newer = version > fmt.current;
+    if(!newer){
+      for(let v = version; v < fmt.current; v++){
+        const step = migrations[kind] && migrations[kind][v];
+        if(step) step(data);
+      }
+      data.version = fmt.current;
+    }
+    data.kind = kind;
+    return { fromVersion: version, newer };
+  }
+  const FILE_FORMATS = {
+    'system':               { current: SHARED_FILE_VERSIONS['system'], label: 'system', where: 'File → Load System' },
+    'module':               { current: 1, label: 'module',              where: 'File → Load Module' },
+    'fmIDE-workspace':      { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'workspace', where: 'File → Import Workspace' },
+    'fmIDE-templates':      { current: 1, label: 'templates file',      where: 'Templates → Import Templates' },
+    'fmIDE-format-presets': { current: 1, label: 'format presets file', where: 'Format Presets → Import Presets' },
+    'fmIDE-shortcuts':      { current: 2, label: 'shortcuts file',      where: 'Keyboard Shortcuts → Import Shortcuts' },
+    'fmIDE-macros':         { current: 1, label: 'macros file',         where: 'Macro Builder → Import' }
+  };
+  const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
+    // v1 shortcut files stored combos in the old notation.
+    'fmIDE-shortcuts': {
+      1: d => { Object.keys(d.bindings || {}).forEach(k => { d.bindings[k] = canonicalCombo(d.bindings[k], true); }); }
+    }
+  });
+  function fileKindLabel(kind){ return FILE_FORMATS[kind] ? FILE_FORMATS[kind].label : 'file'; }
   // Returns { error } or { kind, data (a migrated copy), fromVersion, newer, warnings }.
   function readFmFile(raw, accept){
     if(!raw || typeof raw !== 'object') return { error: "That file doesn't contain fmIDE data." };
@@ -1710,18 +1749,8 @@
       return { error: `That is an fmIDE ${fmt.label}, not a ${wanted.join(' or ')}. Open it with ${fmt.where}.` };
     }
     let data = cloneData(Array.isArray(raw) ? { kind, version: 1, macros: raw } : raw);
-    let version = Number(data.version);
-    if(!Number.isInteger(version) || version < 1) version = 1;          // files from before versions were written
+    const { fromVersion: version, newer } = upgradeFileData(data, kind, FILE_FORMATS, FILE_MIGRATIONS);
     const warnings = [];
-    const newer = version > fmt.current;
-    if(!newer){
-      for(let v = version; v < fmt.current; v++){
-        const step = FILE_MIGRATIONS[kind] && FILE_MIGRATIONS[kind][v];
-        if(step) step(data);
-      }
-      data.version = fmt.current;
-    }
-    data.kind = kind;
     // Nested content.
     const nestedTemplates = (list) => (list || []).map(t => {
       if(!t || !t.data || (t.kind !== 'module' && t.kind !== 'system')) return t;
@@ -4906,15 +4935,23 @@
     box.appendChild(actions);
   }
 
-  // ---------- templates ----------
+  // ---------- escaping & validation (shared: src/shared/escaping.js, used by both apps) ----------
   // Anything that came from a file (names, labels, kinds — including shared/community
-  // content) must never be parsed as HTML/SVG markup: escape it (text), coerce it
-  // (numbers), or validate it (colours) before it goes into a markup string.
-  function escapeXml(s){
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  // content) must never be parsed as markup: escape it (text), coerce it (numbers), or
+  // validate it (colours) before it goes into a markup string.
+  // escapeXml(s): for HTML/SVG markup — escapes & < > " and '.
+  // escapeXml(s, true): for XML 1.0 files (the .xlsx writer) — also drops the characters
+  // XML 1.0 forbids, and leaves ' as is (the writer quotes attributes with ").
+  function escapeXml(s, xmlFile){
+    let t = String(s);
+    if(xmlFile) t = t.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]/g, '');
+    t = t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return xmlFile ? t : t.replace(/'/g, '&#39;');
   }
   function safeNum(v, fallback){ const n = Number(v); return Number.isFinite(n) ? n : (fallback || 0); }
   function safeColor(c, fallback){ return (typeof c === 'string' && /^#[0-9a-f]{3,8}$/i.test(c)) ? c : fallback; }
+
+  // ---------- templates ----------
 
   function buildPreviewSVG(previewNodes, previewEdges){
     // Coordinates go into a markup string below — coerce them to numbers first.

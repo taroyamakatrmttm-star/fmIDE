@@ -7,7 +7,8 @@
 // Format roles — the ONE place cell formatting comes from. Every cell this tool writes
 // has a role; each role is a format preset of that name in fmIDE (Formats manager),
 // read from the loaded JSON. A role missing from the file (an older export) falls back
-// to the built-in default below — kept identical to fmIDE's own defaults.
+// to the built-in default — the same table fmIDE seeds its role presets from
+// (src/shared/format-roles.js).
 // Rule for rectangle rows: the ROLE owns fill, font colour and border — so the look
 // always says what kind of cell it is — and the rectangle's own 🎨 format owns number
 // format, weight and size. A rectangle whose format has "Use this fill, font colour &
@@ -15,16 +16,9 @@
 // Excel-only style settings: border.sides (which cell sides get the border; absent = all
 // four, [] = none) and font.excelDefaultSize (leave the size to the workbook default).
 // ============================================================
-const NF_GENERAL = { kind: 'general', decimals: 2, currencySymbol: '$' };
-const DEFAULT_ROLE_STYLES = {
-  'Inputs':          { numberFormat: NF_GENERAL, fill: '#eff6ff', border: { color: '#93c5fd', width: 1.5, style: 'solid' }, font: { family: '', size: 14, weight: 'normal', color: '#1e3a8a' } },
-  'Calculations':    { numberFormat: NF_GENERAL, fill: null, border: null, font: { family: '', size: null, weight: 'normal', color: null } },
-  'Links':           { numberFormat: NF_GENERAL, fill: null, border: null, font: { family: '', size: null, weight: 'normal', color: '#008000' } },
-  'Headers':         { numberFormat: NF_GENERAL, fill: '#f1f5f9', border: null, font: { family: '', size: null, weight: '700', color: null } },
-  'Section Headers': { numberFormat: NF_GENERAL, fill: '#f8fafc', border: null, font: { family: '', size: null, weight: '700', color: '#475569' } },
-  'Labels':          { numberFormat: NF_GENERAL, fill: null, border: null, font: { family: '', size: null, weight: '700', color: '#475569' } },
-  'Notes':           { numberFormat: NF_GENERAL, fill: null, border: null, font: { family: '', size: 9, weight: 'normal', color: '#94a3b8' } }
-};
+// build:include shared/format-roles.js
+// The seven roles' default styles by name (the fallback for a role missing from the file).
+const DEFAULT_ROLE_STYLES = Object.fromEntries(FORMAT_ROLES.map(r => [r.name, r.style]));
 const ROLE_NAMES = Object.keys(DEFAULT_ROLE_STYLES);
 
 // The role's style (fmIDE-style object): from the file's presets, else the default.
@@ -94,7 +88,7 @@ function renderRolesLegend(){
 
 function resolveNodeStyle(canvas, node, formatPresets){
   if(node.style) return node.style;
-  if(node.type === 'value' && isInputNode(canvas, node)){
+  if(node.type === 'value' && isInputRectangle(canvas, node)){
     const preset = (formatPresets || []).find(p => p.name === 'Inputs');
     if(preset) return preset.style;
   }

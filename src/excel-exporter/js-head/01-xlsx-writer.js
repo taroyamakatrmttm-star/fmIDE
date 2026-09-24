@@ -18,12 +18,9 @@ var XLSX = (function(){
   const NS_PKG_REL = 'http://schemas.openxmlformats.org/package/2006/relationships';
   const REL_BASE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/';
 
+  // build:include shared/escaping.js
   // XML text: escape markup characters and drop characters XML 1.0 forbids.
-  function esc(s){
-    return String(s)
-      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, '')
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
+  function esc(s){ return escapeXml(s, true); }
   function colToNum(letters){ let n = 0; for(const ch of letters) n = n * 26 + (ch.charCodeAt(0) - 64); return n; }
   function numToCol(n){ let s = ''; while(n > 0){ const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; }
   function encodeCell(r, c){ return numToCol(c + 1) + (r + 1); } // 0-based -> "A1"
