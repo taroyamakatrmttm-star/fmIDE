@@ -110,6 +110,13 @@ test.describe('without file handles', () => {
     expect(await D.title(page)).toBe('Untitled — fmIDE');
   });
 
+  test('a preferences file is refused, pointing to Import Preferences', async ({ page }) => {
+    await D.openViaInput(page, 'openDocument', fixture('formats', 'preferences.json'));
+    await expect(dialog(page)).toHaveText(/^That is an fmIDE preferences file, not a workspace or system\. Open it with File → Import Preferences\./);
+    await F.dismissMessage(page);
+    expect(await D.title(page)).toBe('Untitled — fmIDE');
+  });
+
   test('Ctrl+S while typing in a field saves (the browser does not get it)', async ({ page }) => {
     await rename(page, 'Typed');
     await page.locator('#canvasTabs .canvas-tab .name').first().dblclick();

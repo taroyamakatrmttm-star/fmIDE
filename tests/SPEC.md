@@ -88,6 +88,7 @@ Load `tests/fixtures/security/evil-workspace.json` and `evil-system.json`:
 **fmIDE** (`tests/fixtures/formats/`):
 - `sys-current`, `sys-legacy` (no kind/version) load via `loadSystem`.
 - `sys-newer` (version 3): a dialog mentions "newer version" and "format version 3"; Cancel leaves the current canvases unchanged; OK then opens it.
+- `preferences` via `loadSystem` → "That is an fmIDE preferences file, not a system. Open it with File → Import Preferences." (and the same via Open…, group 10).
 - `templates` via `loadSystem` → message "That is an fmIDE templates file, not a system. Open it with Templates → Import Templates."; `sys-current` via `loadModule` → message naming it a system; `mapping` via `loadSystem` → message pointing to ExcelExporter.
 - `templates` via the Templates dialog: one question up front mentioning the template "Future T" is from a newer fmIDE; continuing imports both.
 - `shortcuts-v1`: after import, `fm.commands()` shows `openShortcuts = Mod+Shift+K` and `openMacros = Mod+Alt+M`.
@@ -99,7 +100,7 @@ Load `tests/fixtures/security/evil-workspace.json` and `evil-system.json`:
 **ExcelExporter**:
 - A `.fmide` document (a workspace) loads through `#fileInput`.
 - `sys-current`, `sys-legacy` load; `sys-newer` shows `#confirmModal` — Cancel → status "Not loaded."; Open Anyway → loads. `ws-nested-newer` → confirm mentions its system.
-- `module`, `templates`, `mapping` loaded as a model → a message saying what the file is and where it belongs.
+- `module`, `templates`, `mapping`, `preferences` loaded as a model → a message saying what the file is and where it belongs.
 - Mapping: `#btnExportMapping` download has `kind: "fmIDE-excel-mapping"`, `version: 1`; re-importing it works; `map-legacy` (no kind/version) imports; `map-newer` asks; importing a system file as a mapping is rejected. The saved layout in browser storage never contains `kind`/`version`.
 
 ### 7. UI flows
