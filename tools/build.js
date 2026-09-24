@@ -8,8 +8,14 @@
 // is replaced by content:
 //   <!-- build:css styles.css -->   the contents of that file
 //   <!-- build:js js -->            every .js file in that folder, in file-name order
-// Everything is copied exactly as it is — nothing is trimmed, added or reformatted — so
-// the pieces must each end with a newline. Needs only Node: no packages.
+// Inside a .js piece, a line consisting only of an include marker pulls in shared code
+// that both apps use (src/shared/, path relative to src/):
+//   <indent>// build:include shared/escaping.js
+// The file replaces that line, with <indent> added in front of each non-empty line, so
+// the same shared file sits at the right depth in either app's wrapped function.
+// Shared files are plain fragments too, and may not include other files.
+// Everything else is copied exactly as it is — nothing is trimmed, added or reformatted —
+// so the pieces must each end with a newline. Needs only Node: no packages.
 'use strict';
 
 const fs = require('fs');
@@ -21,6 +27,7 @@ const APPS = [
   { src: path.join(ROOT, 'src', 'excel-exporter'), out: path.join(ROOT, 'apps', 'ExcelExporter.html') },
 ];
 const MARKER = /^<!-- build:(css|js) ([A-Za-z0-9._\/-]+) -->\r?$/; // \r: CRLF checkouts on Windows
+const INCLUDE = /^([ \t]*)\/\/ build:include ([A-Za-z0-9._\/-]+)\r?$/;
 
 function fail(msg){
   console.error('build: ' + msg);
@@ -38,7 +45,22 @@ function readFolder(dir){
   if(!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) fail('missing folder ' + path.relative(ROOT, dir));
   const names = fs.readdirSync(dir).filter(n => n.endsWith('.js')).sort();
   if(names.length === 0) fail('no .js files in ' + path.relative(ROOT, dir));
-  return names.map(n => readPiece(path.join(dir, n))).join('');
+  return names.map(n => expandIncludes(readPiece(path.join(dir, n)))).join('');
+}
+
+// Replaces each include-marker line of a script piece with the (indented) shared file.
+function expandIncludes(text){
+  return text.split('\n').map(line => {
+    const m = INCLUDE.exec(line);
+    if(!m) return line;
+    const [, indent, rel] = m;
+    if(rel.split('/').includes('..')) fail('include path may not contain "..": ' + rel);
+    const file = path.join(ROOT, 'src', ...rel.split('/'));
+    const body = readPiece(file);
+    if(body.split('\n').some(l => INCLUDE.test(l))) fail(rel + ' is included, so it may not include other files');
+    // The marker line's own newline stays (join below); drop the file's final one.
+    return body.slice(0, -1).split('\n').map(l => (l === '' || l === '\r') ? l : indent + l).join('\n');
+  }).join('\n');
 }
 
 function buildApp(app){
