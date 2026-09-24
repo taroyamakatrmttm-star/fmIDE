@@ -59,6 +59,7 @@ A document is a `.fmide` file: the `fmIDE-workspace` JSON, nothing new. Commands
 - **Opening** loads the model and format presets/roles (same-name presets replaced), adds templates and macros not already present, ignores shortcuts and ribbon/KeyTips, and clears undo history. New keeps the current presets, templates, macros and settings.
 - **Recovery:** after a restart with unsaved changes, `#recoveryBanner` offers Save / Dismiss.
 - Ribbons customised before the Document group existed get it once (`ui.documentGroupAdded`); a removed group is never added back.
+- **Preferences** (`fmIDE-preferences`, in `21-customize-ribbon-ui-state.js`): Export / Import Preferences carry shortcuts for built-in commands, the ribbon and Quick Access Toolbar, its collapsed state and the KeyTips trigger. Import replaces exactly those; macro shortcuts stay the person's own. Ribbon layouts from files go through `cleanRibbonConfig()`.
 
 ## File formats (`docs/file-formats.md`)
 
@@ -75,6 +76,7 @@ Current versions:
 | `fmIDE-format-presets` | 1 | Format presets, including the format roles |
 | `fmIDE-shortcuts` | 2 | Keyboard shortcut bindings |
 | `fmIDE-macros` | 1 | Macros |
+| `fmIDE-preferences` | 1 | Shortcuts, ribbon and Quick Access Toolbar, KeyTips trigger (fmIDE only; Export / Import Preferences) |
 | `fmIDE-excel-mapping` | 1 | ExcelExporter's tab/row layout for one model |
 
 To change a format:
@@ -115,10 +117,10 @@ Build order — work in this sequence and don't jump ahead unless asked:
 1. Repository ✅
 2. Permanent test suite ✅ — `npm test`
 3. Split each app into modules — **still building to single HTML files** — protected by the tests ✅ (`docs/step3-modules.md`: 3a source in `src/`, 3b shared code in `src/shared/`; 3c real modules is later, with the plugin work)
-4. Storage for the web app: IndexedDB plus explicit open/save of `.fmide` files — 4a (IndexedDB underneath) ✅, 4b documents ✅; 4c Preferences file next
+4. Storage for the web app: IndexedDB plus explicit open/save of `.fmide` files ✅ — 4a IndexedDB underneath, 4b documents, 4c Preferences file
 5. Publish the web app; then formula IR and plugins, community library, touch support
 
-Phase 0 hardening done: escaping text from files, built-in Excel writer, file-format versions and migrations, autosave-failure warning. Still to do: the rest of storage (step 4c).
+Phase 0 hardening done: escaping text from files, built-in Excel writer, file-format versions and migrations, autosave-failure warning, storage (step 4). Next: step 5.
 
 ## Checking a change
 

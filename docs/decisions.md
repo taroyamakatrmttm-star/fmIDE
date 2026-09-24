@@ -16,7 +16,7 @@ Workflow since step 3a: edit `src/` → `npm run build` → `npm test` (the file
 1. Repository (this) ✅
 2. Permanent test suite — one command that runs every check, on every change ✅ (`npm test`, see `tests/README.md`)
 3. Split each app into modules (still building to single files), protected by the tests ✅ — 3a source split into `src/`, built by `npm run build`; 3b shared code in `src/shared/` (see `docs/step3-modules.md`)
-4. Storage for the web app: IndexedDB plus explicit open/save of `.fmide` files
+4. Storage for the web app: IndexedDB plus explicit open/save of `.fmide` files ✅ — 4a IndexedDB underneath, 4b `.fmide` documents (Open, Save, Save As, Recent, recovery), 4c Preferences file (see `docs/step4-storage.md`). Double-clicking a `.fmide` file to open it (PWA file association; PWA = installable web app) belongs to step 5.
 5. Publish the web app; then formula IR and plugins, community library, touch support
 
 ## Phase 0 (hardening) — status
@@ -25,7 +25,7 @@ Workflow since step 3a: edit `src/` → `npm run build` → `npm test` (the file
 - ✅ Built-in Excel writer — no external library; confirmed in Windows and iPhone Excel
 - ✅ File-format versions and migrations in both apps
 - ✅ Warning when autosave fails
-- ⬜ Storage (build step 4)
+- ✅ Storage (build step 4): IndexedDB, `.fmide` documents, Preferences file
 - ✅ Modules (build step 3): the apps are generated from `src/`, with shared logic once in `src/shared/`
 
 ## Step 3c (later): which pieces to turn into real modules first
