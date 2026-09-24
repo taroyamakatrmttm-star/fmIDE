@@ -1,2 +1,3 @@
-# Auto detect text files and perform LF normalization
+# Normalise line endings so Windows and Mac edits don't show up as whole-file changes
 * text=auto
+*.xlsx binary

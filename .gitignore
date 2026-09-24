@@ -1,0 +1,19 @@
+# Operating system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Test tooling (added with the test suite)
+node_modules/
+test-results/
+playwright-report/
+tests/output/
+
+# Exports made while testing — keep deliberate examples in tests/fixtures/ instead
+*.xlsx
+!tests/fixtures/*.xlsx
