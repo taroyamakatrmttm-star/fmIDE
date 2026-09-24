@@ -35,7 +35,7 @@ This is the brief for building the permanent automated test suite. Until now eve
 - File imports open a file chooser: `Promise.all([page.waitForEvent('filechooser'), page.evaluate(() => fm.command('loadSystem'))])`, then `fileChooser.setFiles(path)`. Commands: `loadSystem`, `loadModule`, `importWorkspace`; dialogs `openTemplates`, `openFormats`, `openShortcuts`, `openMacros` contain import buttons labelled `⇧ Import Templates`, `⇧ Import Presets`, `⇧ Import Shortcuts`, `⇧ Import`.
 - Dialogs are `.modal-box` elements; the confirm button is `button.danger` ("OK"); plain buttons include "Cancel".
 - Exports download: use the `download` event.
-- Workspace autosave: `localStorage['fmIDE-workspace-v1']`, every 8 s and on unload. **Do not** seed a workspace by writing localStorage and reloading — the save-on-unload overwrites it. Import through the UI instead.
+- Workspace autosave: IndexedDB database `fmIDE`, object store `kv`, key `fmIDE-workspace-v1` (read it with `tests/helpers/storage.js`); every 8 s, when the page is hidden and on unload. `window.fm` appears only after the autosave has been read. **Do not** seed a workspace by writing storage and reloading — the save-on-unload overwrites it. Import through the UI instead (group 9 seeds `localStorage` before the first start, to test the move from older versions).
 
 ## Test groups
 
@@ -111,10 +111,17 @@ Load `tests/fixtures/security/evil-workspace.json` and `evil-system.json`:
 **fmIDE**
 - Canvas: build Unit Price × Volume → Revenue with `fm`; the arrow SVG markup is stable (snapshot); a rectangle fed by an operator with no inputs gets the Inputs look.
 - Format dialogs: the Formats manager lists the 7 roles first, their delete buttons disabled; the rectangle format dialog has "Use this fill, font colour & border in Excel too", "Excel border sides" and "Use Excel's default font size".
-- Autosave failure: break `setItem` as above, wait for the 8 s autosave → `#autosaveBanner` visible with "Export workspace now" (downloads) and "Dismiss" (stays hidden while failing); after a successful save and a new failure it returns; once saving works it disappears by itself.
+- Autosave failure: make `IDBObjectStore.prototype.put` throw a `QuotaExceededError` DOMException (`breakStorage` in `tests/helpers/storage.js`), wait for the 8 s autosave → `#autosaveBanner` visible with "Export workspace now" (downloads) and "Dismiss" (stays hidden while failing); after a successful save and a new failure it returns; once saving works it disappears by itself.
 
 ### 8. Snapshots
 For each fixture in `tests/fixtures/models/` (Inputs tab off and on): store every sheet's formulas and values (not styles) as JSON under `tests/snapshots/`. A test fails on any difference and prints the changed cells. `npm run test:update-snapshots` rewrites them — only after a deliberate change.
+
+### 9. Storage
+**fmIDE**
+- A workspace an older fmIDE left in `localStorage['fmIDE-workspace-v1']` opens on first start, is copied into IndexedDB, and stays in `localStorage`; after that the IndexedDB autosave wins.
+- Hiding the page (`visibilitychange` → hidden) saves the workspace without waiting for the 8 s timer.
+- With `window.indexedDB` removed, autosave falls back to `localStorage` and restores after a reload.
+- `navigator.storage.persist()` is not called at start-up; it is called once on the first change, and never again (after a reload either), whatever the answer.
 
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.

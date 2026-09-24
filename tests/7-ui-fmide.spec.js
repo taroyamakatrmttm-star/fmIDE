@@ -1,6 +1,7 @@
 // 7. UI flows — fmIDE.
 const { test, expect } = require('./helpers/apps');
 const F = require('./helpers/fmide');
+const S = require('./helpers/storage');
 
 const ROLES = ['Inputs', 'Calculations', 'Links', 'Headers', 'Section Headers', 'Labels', 'Notes'];
 const nodeEl = (page, id) => page.locator(`.node[data-id="${id}"]`);
@@ -76,11 +77,8 @@ test.describe('format dialogs', () => {
 test('autosave failure banner', async ({ page }) => {
   await page.clock.install();
   await F.openFmIDE(page);
-  const breakStorage = () => page.evaluate(() => {
-    window.__realSetItem = window.__realSetItem || Storage.prototype.setItem;
-    Storage.prototype.setItem = function(){ throw new DOMException('full', 'QuotaExceededError'); };
-  });
-  const fixStorage = () => page.evaluate(() => { Storage.prototype.setItem = window.__realSetItem; });
+  const breakStorage = () => S.breakStorage(page);
+  const fixStorage = () => S.fixStorage(page);
   const banner = page.locator('#autosaveBanner');
   const tick = () => page.clock.runFor(9000);
 

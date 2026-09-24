@@ -287,7 +287,7 @@
 
   // ---------- persistence of UI state (saved inside the workspace) ----------
   let saveSoonTimer = null;
-  function saveWorkspaceSoon(){ clearTimeout(saveSoonTimer); saveSoonTimer = setTimeout(saveWorkspaceToLocalStorage, 600); }
+  function saveWorkspaceSoon(){ clearTimeout(saveSoonTimer); saveSoonTimer = setTimeout(saveWorkspace, 600); }
   function buildUiPayload(){
     return {
       ribbon: ribbonState.customized ? cloneData(ribbonState.config) : null, ribbonCustomized: !!ribbonState.customized,
@@ -319,70 +319,77 @@
 
   renderRibbon();
 
-  const restoredFromWorkspace = loadWorkspaceFromLocalStorage();
-  ensureDefaultFormatPresets();
+  // The autosaved workspace is read asynchronously (IndexedDB), so the rest of start-up
+  // waits for it; window.fm appears once fmIDE is ready.
+  loadWorkspaceFromStore().then(restoredFromWorkspace => {
+    ensureDefaultFormatPresets();
 
-  if(!restoredFromWorkspace){
-    // seed: Unit Price x Volume x FX = Revenue
-    (function seed(){
-      const unitPrice = { id: uid('n'), type:'value', x:80,  y:60,  w:160, h:64, text:'Unit Price\n50\n$/t' };
-      const volume    = { id: uid('n'), type:'value', x:80,  y:190, w:160, h:64, text:'Volume\n1200\nkt' };
-      const fx        = { id: uid('n'), type:'value', x:80,  y:320, w:160, h:64, text:'FX\n1.1' };
-      const mul       = { id: uid('n'), type:'operator', x:380, y:196, w:56, h:56, text:'×' };
-      const revenue   = { id: uid('n'), type:'value', x:620, y:190, w:160, h:64, text:'Revenue' };
-      nodes.push(unitPrice, volume, fx, mul, revenue);
-      edges.push({id:uid('e'), from:unitPrice.id, to:mul.id});
-      edges.push({id:uid('e'), from:volume.id,    to:mul.id});
-      edges.push({id:uid('e'), from:fx.id,        to:mul.id});
-      edges.push({id:uid('e'), from:mul.id,       to:revenue.id});
+    if(!restoredFromWorkspace){
+      // seed: Unit Price x Volume x FX = Revenue
+      (function seed(){
+        const unitPrice = { id: uid('n'), type:'value', x:80,  y:60,  w:160, h:64, text:'Unit Price\n50\n$/t' };
+        const volume    = { id: uid('n'), type:'value', x:80,  y:190, w:160, h:64, text:'Volume\n1200\nkt' };
+        const fx        = { id: uid('n'), type:'value', x:80,  y:320, w:160, h:64, text:'FX\n1.1' };
+        const mul       = { id: uid('n'), type:'operator', x:380, y:196, w:56, h:56, text:'×' };
+        const revenue   = { id: uid('n'), type:'value', x:620, y:190, w:160, h:64, text:'Revenue' };
+        nodes.push(unitPrice, volume, fx, mul, revenue);
+        edges.push({id:uid('e'), from:unitPrice.id, to:mul.id});
+        edges.push({id:uid('e'), from:volume.id,    to:mul.id});
+        edges.push({id:uid('e'), from:fx.id,        to:mul.id});
+        edges.push({id:uid('e'), from:mul.id,       to:revenue.id});
 
-      // plug / socket demo: any rectangle plugged "Revenue" auto-feeds the + operator socketed "Revenue"
-      const gold   = { id: uid('n'), type:'value', x:80,  y:480, w:160, h:64, text:'Gold Revenue\n500', plug:'Revenue' };
-      const silver = { id: uid('n'), type:'value', x:80,  y:600, w:160, h:64, text:'Silver Revenue\n300', plug:'Revenue' };
-      const copper = { id: uid('n'), type:'value', x:80,  y:720, w:160, h:64, text:'Copper Revenue\n200', plug:'Revenue' };
-      const sumOp  = { id: uid('n'), type:'operator', x:380, y:596, w:56, h:56, text:'+', socket:'Revenue' };
-      const total  = { id: uid('n'), type:'value', x:620, y:590, w:160, h:64, text:'Total Revenue' };
-      nodes.push(gold, silver, copper, sumOp, total);
-      edges.push({id:uid('e'), from:sumOp.id, to:total.id});
-    })();
+        // plug / socket demo: any rectangle plugged "Revenue" auto-feeds the + operator socketed "Revenue"
+        const gold   = { id: uid('n'), type:'value', x:80,  y:480, w:160, h:64, text:'Gold Revenue\n500', plug:'Revenue' };
+        const silver = { id: uid('n'), type:'value', x:80,  y:600, w:160, h:64, text:'Silver Revenue\n300', plug:'Revenue' };
+        const copper = { id: uid('n'), type:'value', x:80,  y:720, w:160, h:64, text:'Copper Revenue\n200', plug:'Revenue' };
+        const sumOp  = { id: uid('n'), type:'operator', x:380, y:596, w:56, h:56, text:'+', socket:'Revenue' };
+        const total  = { id: uid('n'), type:'value', x:620, y:590, w:160, h:64, text:'Total Revenue' };
+        nodes.push(gold, silver, copper, sumOp, total);
+        edges.push({id:uid('e'), from:sumOp.id, to:total.id});
+      })();
 
-    render();
+      render();
 
-    canvases.push({
-      id: 'c' + (nextCanvasId++),
-      name: 'Revenue Model',
-      nodes, edges, computedValues, computeErrors, portValues, portErrors
-    });
-    activeCanvasId = canvases[0].id;
-    syncAutoConnections();
-    evaluateAll();
-    renderCanvasTabs();
-  }
+      canvases.push({
+        id: 'c' + (nextCanvasId++),
+        name: 'Revenue Model',
+        nodes, edges, computedValues, computeErrors, portValues, portErrors
+      });
+      activeCanvasId = canvases[0].id;
+      syncAutoConnections();
+      evaluateAll();
+      renderCanvasTabs();
+    }
 
-  syncMacroCommands();   // also renders the ribbon with any restored layout
-  updateHistoryButtons();
+    syncMacroCommands();   // also renders the ribbon with any restored layout
+    updateHistoryButtons();
 
-  // Autosave the whole workspace (system + templates + format presets + shortcuts) so
-  // nothing needs re-loading next time the app is opened — no explicit save action needed.
-  setInterval(saveWorkspaceToLocalStorage, 8000);
-  window.addEventListener('beforeunload', saveWorkspaceToLocalStorage);
+    // Autosave the whole workspace (system + templates + format presets + shortcuts) so
+    // nothing needs re-loading next time the app is opened — no explicit save action needed.
+    // Saving is asynchronous, so it also happens as soon as the page is hidden (switching
+    // tab, minimising, closing): a write started only while the page unloads may not finish.
+    workspaceRestored = true;
+    setInterval(saveWorkspace, 8000);
+    document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') saveWorkspace(); });
+    window.addEventListener('beforeunload', saveWorkspace);
 
-  // Debug/test hook only — not used by the running app itself. Lets an isolated Node.js
-  // test harness load this whole file in a stubbed DOM and drive the computation engine
-  // directly (load a system export, evaluate, inspect results) without simulating any UI.
-  if(typeof window !== 'undefined'){
-    window.__fmIDE = {
-      applySystemData: applySystemDataDirect,
-      evaluateAll,
-      getCanvases: () => canvases,
-      getPeriods: () => periods,
-      getMacros: () => MACROS,
-      recorder,
-      startRecording, stopRecording, runMacroInteractive, importMacros, syncMacroCommands,
-      getRibbonConfig: () => ribbonState.config
-    };
-    // Public automation API: every action a user can take with the mouse/keyboard.
-    // fm.actions() lists them with their parameters.
-    window.fm = fm;
-  }
+    // Debug/test hook only — not used by the running app itself. Lets an isolated Node.js
+    // test harness load this whole file in a stubbed DOM and drive the computation engine
+    // directly (load a system export, evaluate, inspect results) without simulating any UI.
+    if(typeof window !== 'undefined'){
+      window.__fmIDE = {
+        applySystemData: applySystemDataDirect,
+        evaluateAll,
+        getCanvases: () => canvases,
+        getPeriods: () => periods,
+        getMacros: () => MACROS,
+        recorder,
+        startRecording, stopRecording, runMacroInteractive, importMacros, syncMacroCommands,
+        getRibbonConfig: () => ribbonState.config
+      };
+      // Public automation API: every action a user can take with the mouse/keyboard.
+      // fm.actions() lists them with their parameters.
+      window.fm = fm;
+    }
+  });
 })();

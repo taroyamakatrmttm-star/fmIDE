@@ -1,5 +1,9 @@
   // ---------- whole-workspace persistence (system + templates + format presets + shortcuts) ----------
+  // The workspace autosaves to the browser's IndexedDB (database 'fmIDE') under this key —
+  // the same key and JSON text older versions kept in localStorage, copied across once.
+  // build:include shared/store.js
   const WORKSPACE_STORAGE_KEY = 'fmIDE-workspace-v1';
+  const workspaceStore = createStore('fmIDE');
 
   function buildWorkspacePayload(){
     return {
@@ -50,20 +54,29 @@
     }
   }
 
-  // Autosave runs every 8 s and on close. If the browser refuses to store (storage full,
-  // or unavailable e.g. in some private-browsing modes) a banner says so ONCE per failure
-  // streak — fmIDE keeps working, but nothing done from now on would survive a reload
-  // unless exported. It clears itself as soon as a save succeeds again.
+  // Autosave runs every 8 s, when the page is hidden, and on close. If the browser refuses
+  // to store (storage full, or unavailable e.g. in some private-browsing modes) a banner
+  // says so ONCE per failure streak — fmIDE keeps working, but nothing done from now on
+  // would survive a reload unless exported. It clears itself as soon as a save succeeds.
+  // Writes are asynchronous; the browser applies them in the order they were made.
   let autosaveFailing = false, autosaveBannerDismissed = false;
-  function saveWorkspaceToLocalStorage(){
-    try{
-      localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(buildWorkspacePayload()));
+  let workspaceRestored = false; // no autosave before the stored workspace is read: it would overwrite it
+  function saveWorkspace(){
+    if(!workspaceRestored) return;
+    let text;
+    try{ text = JSON.stringify(buildWorkspacePayload()); }
+    catch(err){ onAutosaveFailed(err); return; }
+    workspaceStore.put(WORKSPACE_STORAGE_KEY, text).then(() => {
       if(autosaveFailing){ autosaveFailing = false; autosaveBannerDismissed = false; hideAutosaveBanner(); }
-    }catch(err){
-      autosaveFailing = true;
-      if(!autosaveBannerDismissed) showAutosaveBanner(err);
-    }
+    }, onAutosaveFailed);
   }
+  function onAutosaveFailed(err){
+    autosaveFailing = true;
+    if(!autosaveBannerDismissed) showAutosaveBanner(err);
+  }
+  // Asks the browser (once, ever) to keep fmIDE's data — called on the first change to the
+  // model rather than at start-up, since some browsers show the user a question.
+  function requestStoragePersistence(){ workspaceStore.requestPersistence(); }
   function showAutosaveBanner(err){
     if(document.getElementById('autosaveBanner')) return;
     const full = err && (err.name === 'QuotaExceededError' || err.code === 22 || err.code === 1014);
@@ -89,23 +102,25 @@
   }
   function hideAutosaveBanner(){ const b = document.getElementById('autosaveBanner'); if(b) b.remove(); }
 
-  function loadWorkspaceFromLocalStorage(){
-    let raw;
-    try{ raw = localStorage.getItem(WORKSPACE_STORAGE_KEY); }
-    catch(err){ return false; }
-    if(!raw) return false;
-    let parsed;
-    try{ parsed = JSON.parse(raw); }
-    catch(err){ return false; }
-    // Same reader as file imports (migrates an older autosave). A newer-format autosave
-    // (after going back to an older fmIDE) still loads, best effort — there is no UI yet.
-    const r = readFmFile(parsed, ['fmIDE-workspace']);
-    if(r.error) return false;
-    const data = r.data;
-    try{
-      applyWorkspacePayload(data);
-      return true;
-    }catch(err){ return false; }
+  // Resolves true when the autosaved workspace was restored. A workspace left in
+  // localStorage by an older fmIDE is copied into IndexedDB first (once).
+  function loadWorkspaceFromStore(){
+    return workspaceStore.migrateFromLocalStorage(k => k === WORKSPACE_STORAGE_KEY)
+      .then(() => workspaceStore.get(WORKSPACE_STORAGE_KEY))
+      .then(raw => {
+        if(!raw) return false;
+        let parsed;
+        try{ parsed = JSON.parse(raw); }
+        catch(err){ return false; }
+        // Same reader as file imports (migrates an older autosave). A newer-format autosave
+        // (after going back to an older fmIDE) still loads, best effort — there is no UI yet.
+        const r = readFmFile(parsed, ['fmIDE-workspace']);
+        if(r.error) return false;
+        try{
+          applyWorkspacePayload(r.data);
+          return true;
+        }catch(err){ return false; }
+      }, () => false);
   }
 
   function exportWorkspaceToFile(){
@@ -122,7 +137,7 @@
         ensureDefaultFormatPresets();
         renderCanvasTabs();
         render();
-        saveWorkspaceToLocalStorage();
+        saveWorkspace();
         showMessage('Workspace imported.');
       });
       });

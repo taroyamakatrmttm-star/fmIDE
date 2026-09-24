@@ -213,7 +213,7 @@
     }
     m.steps = m.steps.concat(steps);
     syncMacroCommands();
-    saveWorkspaceToLocalStorage();
+    saveWorkspace();
     showMacroBuilder(m.id, steps[0].id);
     mbSetStatus(`Recorded ${steps.length} step${steps.length === 1 ? '' : 's'}.`, 'ok');
   }

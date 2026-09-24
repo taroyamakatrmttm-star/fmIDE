@@ -32,6 +32,7 @@
     if(history.length > MAX_HISTORY) history.shift();
     future = [];
     updateHistoryButtons();
+    requestStoragePersistence();
   }
 
   function restore(snap){
