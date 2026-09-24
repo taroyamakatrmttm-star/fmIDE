@@ -2,6 +2,7 @@
 const fs = require('fs');
 const { test, expect, fixture } = require('./helpers/apps');
 const X = require('./helpers/excel');
+const S = require('./helpers/storage');
 
 const file = (name) => fixture('formats', name + '.json');
 const loadStatus = (page) => page.locator('#loadStatus .status');
@@ -18,9 +19,10 @@ async function renameFirstTab(page, name){
 async function importMapping(page, path){
   await page.setInputFiles('#mappingFileInput', path);
 }
-// Saved layouts in localStorage never carry the file envelope.
+// Saved layouts in browser storage never carry the file envelope.
 async function expectCleanStorage(page){
-  const saved = await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('fmide-excelmap-')).map(k => JSON.parse(localStorage.getItem(k))));
+  await expect.poll(() => S.storedKeys(page, 'ExcelExporter', 'fmide-excelmap-')).not.toHaveLength(0);
+  const saved = Object.values(await S.storedEntries(page, 'ExcelExporter', 'fmide-excelmap-')).map(t => JSON.parse(t));
   for(const m of saved){
     expect(m).not.toHaveProperty('kind');
     expect(m).not.toHaveProperty('version');

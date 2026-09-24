@@ -14,7 +14,7 @@
 
 // Canonical row-id / cellPos key for a node reached via a given instance path. An
 // empty path reproduces the exact pre-existing "canvasId|nodeId" format, so normal
-// (non-block) rows and any mapping already saved in localStorage are unaffected.
+// (non-block) rows and any mapping already saved in browser storage are unaffected.
 // A hop that belongs to a specific vintage/run of a VERTICAL block instance carries
 // a `vIndex` (1-based); it's folded into the key so each vintage's copy of a node
 // gets its own distinct row identity, while the hop with no vIndex stays the

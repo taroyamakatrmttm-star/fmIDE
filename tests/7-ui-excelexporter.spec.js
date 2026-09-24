@@ -1,6 +1,7 @@
 // 7. UI flows — ExcelExporter.
 const { test, expect, fixture } = require('./helpers/apps');
 const X = require('./helpers/excel');
+const S = require('./helpers/storage');
 
 const MODEL = fixture('models', 'revenue-bs-corkscrew.json');
 const SECTION_BANDS = /^(INPUTS|CALCULATIONS|OUTPUTS)$/;
@@ -21,7 +22,7 @@ async function renameTab(page, from, to){
   }
   throw new Error('No tab named ' + from);
 }
-const savedLayouts = (page) => page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('fmide-excelmap-')));
+const savedLayouts = (page) => S.storedKeys(page, 'ExcelExporter', 'fmide-excelmap-');
 
 // Tree view: { tabName: [row labels in order] }.
 async function tree(page){
@@ -67,7 +68,7 @@ test.describe('Start Over and Reset Mapping', () => {
   test('Start Over keeps the saved layout; re-picking the same file loads it', async ({ page }) => {
     await open(page);
     await renameTab(page, 'BS', 'Balance Sheet');
-    expect(await savedLayouts(page)).toHaveLength(1);
+    await expect.poll(() => savedLayouts(page)).toHaveLength(1);
     await page.click('#btnClearAll');
     await expect(page.locator('#afterLoad')).toBeHidden();
     expect(await savedLayouts(page)).toHaveLength(1);
@@ -80,6 +81,7 @@ test.describe('Start Over and Reset Mapping', () => {
     test(`Reset Mapping: ${how} keeps the layout`, async ({ page }) => {
       await open(page);
       await renameTab(page, 'BS', 'Balance Sheet');
+      await expect.poll(() => savedLayouts(page)).toHaveLength(1);
       await page.click('#btnResetMapping');
       await expect(page.locator('#confirmModal')).toBeVisible();
       if(how === 'Cancel') await page.click('#confirmCancel');
@@ -310,14 +312,11 @@ test.describe('Inputs tab', () => {
 // ---------- Storage failure ----------
 test('storage failure shows a warning, and it clears once saving works', async ({ page }) => {
   await open(page);
-  await page.evaluate(() => {
-    window.__realSetItem = Storage.prototype.setItem;
-    Storage.prototype.setItem = function(){ throw new DOMException('full', 'QuotaExceededError'); };
-  });
+  await S.breakStorage(page);
   await renameTab(page, 'BS', 'Balance Sheet');
   await expect(page.locator('#storageWarn')).toBeVisible();
   await expect(page.locator('#storageWarn')).toContainText('storage is full');
-  await page.evaluate(() => { Storage.prototype.setItem = window.__realSetItem; });
+  await S.fixStorage(page);
   await renameTab(page, 'Balance Sheet', 'Balance');
   await expect(page.locator('#storageWarn')).toBeHidden();
 });

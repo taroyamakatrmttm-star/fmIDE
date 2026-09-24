@@ -1170,7 +1170,7 @@ function classifyNode(canvas, node){
 
 // Canonical row-id / cellPos key for a node reached via a given instance path. An
 // empty path reproduces the exact pre-existing "canvasId|nodeId" format, so normal
-// (non-block) rows and any mapping already saved in localStorage are unaffected.
+// (non-block) rows and any mapping already saved in browser storage are unaffected.
 // A hop that belongs to a specific vintage/run of a VERTICAL block instance carries
 // a `vIndex` (1-based); it's folded into the key so each vintage's copy of a node
 // gets its own distinct row identity, while the hop with no vIndex stays the
@@ -1595,7 +1595,136 @@ function nodeStyleToExcelCellStyle(style){
 // ============================================================
 let model = null;      // { periods, canvases: [{id,name,nodes,edges}] }
 let mapping = null;    // { tabs:[{id,name,order}], rows:[{id,canvasId,nodeId,tabId,section,order,label,include}], cfg:{...} }
-let mappingKey = null; // localStorage key derived from the loaded model's structure
+let mappingKey = null; // storage key derived from the loaded model's structure ('fmide-excelmap-…')
+
+// Saved layouts live in the browser's IndexedDB (database 'fmIDE-ExcelExporter'), one key
+// per model — the same keys and JSON text older versions kept in localStorage, which are
+// copied across once on start (the localStorage copies are kept).
+// ---------- browser storage (shared: src/shared/store.js, used by both apps) ----------
+// createStore(dbName): a small promise-based key–value store on IndexedDB, one database
+// per app, one object store ('kv'). Values are strings (the apps store JSON text, exactly
+// what they used to keep in localStorage). Where IndexedDB is missing or will not open
+// (some browsers block it for pages opened from disk, or in private windows) the same
+// calls fall back to localStorage, so the app keeps working — it never fails for that.
+//   ready                        resolves once the store is usable (never rejects)
+//   get(key)                     the stored string, or null
+//   put(key, value)              rejects with the browser's error (e.g. QuotaExceededError)
+//   remove(key)
+//   keys(prefix)                 every stored key that starts with prefix
+//   migrateFromLocalStorage(fn)  once per browser: copy localStorage keys for which fn(key)
+//                                is true into IndexedDB (never over a key already there);
+//                                the localStorage copies are kept
+//   requestPersistence()         ask the browser once, ever, to keep this app's data
+//                                (navigator.storage.persist); the answer is remembered
+function createStore(dbName){
+  const KV = 'kv';
+  const META_MIGRATED = dbName + '/migrated-from-localStorage';
+  const META_PERSIST = dbName + '/persistence-requested';
+  let db = null;   // the open IndexedDB database, or null when using localStorage
+
+  const ready = new Promise(resolve => {
+    let settled = false;
+    const done = (openDb) => {
+      if(settled){ if(openDb) openDb.close(); return; }
+      settled = true;
+      db = openDb || null;
+      if(db) db.onversionchange = () => { db.close(); };
+      resolve();
+    };
+    let req;
+    try{
+      if(!window.indexedDB){ done(null); return; }
+      req = window.indexedDB.open(dbName, 1);
+    }catch(err){ done(null); return; }
+    req.onupgradeneeded = () => { req.result.createObjectStore(KV); };
+    req.onsuccess = () => done(req.result);
+    req.onerror = (ev) => { if(ev && ev.preventDefault) ev.preventDefault(); done(null); };
+    // A browser that never answers must not hold the app up.
+    setTimeout(() => done(null), 5000);
+  });
+
+  // Runs fn(objectStore) in one transaction; resolves with the result of the request fn
+  // returns (if any) once the transaction has committed.
+  function run(mode, fn){
+    return ready.then(() => new Promise((resolve, reject) => {
+      let result;
+      try{
+        const t = db.transaction(KV, mode);
+        t.oncomplete = () => resolve(result);
+        t.onabort = t.onerror = () => reject(t.error || new DOMException('The browser did not store the data.', 'UnknownError'));
+        const r = fn(t.objectStore(KV));
+        if(r) r.onsuccess = () => { result = r.result; };
+      }catch(err){ reject(err); }
+    }));
+  }
+
+  function get(key){
+    return ready.then(() => db
+      ? run('readonly', s => s.get(key)).then(v => (typeof v === 'string' ? v : null))
+      : localStorage.getItem(key));
+  }
+  function put(key, value){
+    return ready.then(() => db ? run('readwrite', s => { s.put(String(value), key); }) : localStorage.setItem(key, String(value)));
+  }
+  function remove(key){
+    return ready.then(() => db ? run('readwrite', s => { s.delete(key); }) : localStorage.removeItem(key));
+  }
+  function keys(prefix){
+    return ready.then(() => {
+      if(db) return run('readonly', s => s.getAllKeys(IDBKeyRange.bound(prefix, prefix + '￿')))
+        .then(ks => (ks || []).filter(k => typeof k === 'string' && k.startsWith(prefix)));
+      const out = [];
+      for(let i = 0; i < localStorage.length; i++){
+        const k = localStorage.key(i);
+        if(k !== null && k.startsWith(prefix)) out.push(k);
+      }
+      return out;
+    });
+  }
+
+  // The marker makes this happen once: without it, a key deleted later (e.g. a layout
+  // reset) would be copied back from the old localStorage copy on the next start.
+  function migrateFromLocalStorage(match){
+    return ready.then(() => {
+      if(!db) return 0; // already using localStorage: nothing to move
+      return get(META_MIGRATED).then(migrated => {
+        if(migrated) return 0;
+        const items = [];
+        try{
+          for(let i = 0; i < localStorage.length; i++){
+            const k = localStorage.key(i);
+            if(k !== null && match(k)){ const v = localStorage.getItem(k); if(v !== null) items.push([k, v]); }
+          }
+        }catch(err){ /* localStorage unavailable: nothing to move */ }
+        let copied = 0;
+        return run('readwrite', s => {
+          items.forEach(([k, v]) => {
+            const r = s.get(k);
+            r.onsuccess = () => { if(r.result === undefined){ s.put(v, k); copied++; } };
+          });
+          s.put(new Date().toISOString(), META_MIGRATED);
+        }).then(() => copied);
+      });
+    }).catch(() => 0); // a failed copy leaves the old data where it was; try again next start
+  }
+
+  let persistenceRequested = false;
+  function requestPersistence(){
+    if(persistenceRequested) return;
+    persistenceRequested = true;
+    const sm = navigator.storage;
+    if(!sm || typeof sm.persist !== 'function') return;
+    get(META_PERSIST).then(asked => {
+      if(asked) return;
+      return Promise.resolve(sm.persist()).then(granted =>
+        put(META_PERSIST, JSON.stringify({ granted: !!granted, at: new Date().toISOString() })));
+    }).catch(() => { /* silent */ });
+  }
+
+  return { ready, get, put, remove, keys, migrateFromLocalStorage, requestPersistence };
+}
+const layoutStore = createStore('fmIDE-ExcelExporter');
+const layoutsMigrated = layoutStore.migrateFromLocalStorage(k => k.startsWith('fmide-excelmap-'));
 
 const $ = (id) => document.getElementById(id);
 
@@ -1839,7 +1968,8 @@ function confirmNewerFile(r){
     'Open Anyway');
 }
 
-function loadModel(m){
+// Asynchronous: it waits for the saved layout (IndexedDB) before showing the model.
+async function loadModel(m){
   let systemData = m, formatPresets = [];
   if(m && m.kind === 'fmIDE-workspace' && m.system){
     systemData = m.system;
@@ -1850,17 +1980,20 @@ function loadModel(m){
   if(!systemData || !Array.isArray(systemData.canvases) || systemData.canvases.length === 0){
     throw new Error('Expected a system export (or a workspace export containing one) with a non-empty "canvases" array.');
   }
-  model = {
+  const loaded = {
     periods: Array.isArray(systemData.periods) && systemData.periods.length ? systemData.periods : ['Period 1'],
     canvases: systemData.canvases,
     formatPresets
   };
-  mappingKey = signatureOf(model);
+  const key = signatureOf(loaded);
   let restored = null;
   try{
-    const raw = localStorage.getItem(mappingKey);
+    await layoutsMigrated;
+    const raw = await layoutStore.get(key);
     if(raw) restored = JSON.parse(raw);
   }catch(err){ /* ignore */ }
+  model = loaded;
+  mappingKey = key;
   mapping = restored || buildDefaultMapping(model);
   // reconcile: drop rows/tabs referencing nodes/canvases no longer present, add rows for new nodes
   reconcileMapping();
@@ -1929,24 +2062,32 @@ function reconcileMapping(){
   mapping.tabs.forEach(t => { ensureSectionOrderAll(t.id); ensureFlatOrder(t.id); });
 }
 
-// The layout autosaves on every change. If the browser refuses (storage full or
-// unavailable), say so once — the layout still works now, but would be gone after a
-// reload unless exported. Clears itself when a save succeeds again.
+// The layout autosaves on every change (and again when the page is hidden). If the browser
+// refuses (storage full or unavailable), say so once — the layout still works now, but
+// would be gone after a reload unless exported. Clears itself when a save succeeds again.
+// Writes are asynchronous; the browser applies them in the order they were made.
 let mappingSaveFailing = false;
 function saveMapping(){
   if(!mappingKey) return;
-  try{
-    localStorage.setItem(mappingKey, JSON.stringify(mapping));
+  layoutStore.requestPersistence(); // once, ever — on the first change, not at start-up
+  writeMapping();
+}
+function writeMapping(){
+  if(!mappingKey) return;
+  let text;
+  try{ text = JSON.stringify(mapping); }
+  catch(err){ onMappingSaveFailed(err); return; }
+  layoutStore.put(mappingKey, text).then(() => {
     if(mappingSaveFailing){ mappingSaveFailing = false; $('storageWarn').classList.add('hidden'); }
-  }catch(err){
-    if(!mappingSaveFailing){
-      mappingSaveFailing = true;
-      const full = err && (err.name === 'QuotaExceededError' || err.code === 22 || err.code === 1014);
-      $('storageWarn').textContent = (full ? "Autosave failed: the browser's storage is full." : 'Autosave failed: this browser is not letting ExcelExporter store data.') +
-        ' Your layout works for now but will be lost on reload — use "Export Mapping JSON" to keep it.';
-      $('storageWarn').classList.remove('hidden');
-    }
-  }
+  }, onMappingSaveFailed);
+}
+function onMappingSaveFailed(err){
+  if(mappingSaveFailing) return;
+  mappingSaveFailing = true;
+  const full = err && (err.name === 'QuotaExceededError' || err.code === 22 || err.code === 1014);
+  $('storageWarn').textContent = (full ? "Autosave failed: the browser's storage is full." : 'Autosave failed: this browser is not letting ExcelExporter store data.') +
+    ' Your layout works for now but will be lost on reload — use "Export Mapping JSON" to keep it.';
+  $('storageWarn').classList.remove('hidden');
 }
 
 
@@ -4491,7 +4632,7 @@ async function tryLoad(jsonText, label){
   if(r.error){ setStatus($('loadStatus'), r.error, 'err'); return; }
   if(!(await confirmNewerFile(r))){ setStatus($('loadStatus'), 'Not loaded.', 'info'); return; }
   try{
-    loadModel(r.data);
+    await loadModel(r.data);
     setStatus($('loadStatus'), `Loaded ${label} — ${model.canvases.length} canvas${model.canvases.length === 1 ? '' : 'es'}, ${model.periods.length} periods.`, 'ok');
   }catch(err){
     setStatus($('loadStatus'), 'Could not read that as an fmIDE system export: ' + err.message, 'err');
@@ -4638,9 +4779,9 @@ function showConfirm(title, message, okLabel){
 // Discard the saved mapping for the currently loaded model and rebuild the default —
 // exactly what loadModel() produces for a model that has never been seen before.
 // Deliberately does NOT save afterwards (same as a first load): the next real edit saves.
-function resetMappingToDefaults(){
+async function resetMappingToDefaults(){
   if(!model) return;
-  try{ localStorage.removeItem(mappingKey); }catch(err){ /* ignore */ }
+  try{ await layoutStore.remove(mappingKey); }catch(err){ /* ignore */ }
   mapping = buildDefaultMapping(model);
   reconcileMapping();
   renderAll();
@@ -4654,9 +4795,12 @@ $('btnResetMapping').addEventListener('click', async () => {
     'Reset Mapping'
   );
   if(!ok) return;
-  resetMappingToDefaults();
+  await resetMappingToDefaults();
   setStatus($('genStatus'), 'Mapping reset to defaults.', 'ok');
 });
+
+// A write started only while the page unloads may not finish, so save when it is hidden.
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') writeMapping(); });
 
 $('btnClearAll').addEventListener('click', () => {
   model = null; mapping = null; mappingKey = null;

@@ -52,7 +52,7 @@
     mb.overlay = null;
     mb.els = {};
     syncMacroCommands();
-    if(!silent) saveWorkspaceToLocalStorage();
+    if(!silent) saveWorkspace();
   }
 
   function renderMBList(){

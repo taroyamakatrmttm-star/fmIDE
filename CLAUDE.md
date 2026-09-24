@@ -19,7 +19,7 @@ The workflow: build in fmIDE → **File → Save System** or **Export Workspace*
 - ExcelExporter has its **own built-in Excel (xlsx/zip) writer**; it replaced an external library on purpose. Do not bring a library back.
 - **Edit `src/`, never `apps/`.** `apps/*.html` are generated: after editing, run `npm run build` (`tools/build.js`, Node only, no packages) and commit `src/` and the rebuilt `apps/` together. CI rebuilds and fails if they disagree; `npm run build:check` checks locally. Git keeps the history, so never add version numbers to file names or make copies like `fmIDE-v2.html`.
 - Source layout: `src/fmide/` and `src/excel-exporter/` each hold `index.html` (the page; a line `<!-- build:css styles.css -->` / `<!-- build:js js -->` marks where a file or folder goes), `styles.css`, and `js/NN-name.js` — plain fragments of the one wrapped function (no `import`/`export`), joined in file-name order. ExcelExporter's built-in Excel writer (the `XLSX` global) is its own script, `js-head/`. To find a function, Grep `src/` and read around it.
-- **Shared code lives once in `src/shared/`** and is pulled into both apps by a line `// build:include shared/<file>.js` inside a script piece (indented like the marker). Today: `escaping.js` (escapeXml, safeNum, safeColor), `input-rule.js` (the input-rectangle rule), `format-roles.js` (the seven roles and their defaults), `file-formats.js` (shared kinds, versions, upgrades, kind inference). Change shared behaviour there, never by copying it into one app; where the apps must differ, the shared function takes a parameter.
+- **Shared code lives once in `src/shared/`** and is pulled into both apps by a line `// build:include shared/<file>.js` inside a script piece (indented like the marker). Today: `escaping.js` (escapeXml, safeNum, safeColor), `input-rule.js` (the input-rectangle rule), `format-roles.js` (the seven roles and their defaults), `file-formats.js` (shared kinds, versions, upgrades, kind inference), `store.js` (browser storage, below). Change shared behaviour there, never by copying it into one app; where the apps must differ, the shared function takes a parameter.
 - Layout: `apps/` the two apps (generated) · `src/` their source (`src/shared/` used by both) · `tools/` the build · `docs/` reference notes · `tests/` the test suite (`tests/README.md`; brief in `tests/SPEC.md`; sample files in `tests/fixtures/`, which are not edited — add new ones alongside).
 - The apps have no dependencies; the test tooling (`package.json`: Playwright, exceljs, jszip) is dev-only and must never be loaded by an app.
 - Record notable changes in `CHANGELOG.md`.
@@ -33,6 +33,20 @@ The workflow: build in fmIDE → **File → Save System** or **Export Workspace*
    - never run text from a file as code (no `eval`, `new Function`, inline handlers built from file text, etc.).
    This includes names, values, units, labels, canvas/tab names, macro text, template names and anything else that comes out of a loaded file.
 2. **Do not break the file formats.** Every file the apps write must still be readable, and every older file must still open. Follow the rules below whenever a saved structure changes.
+
+## Browser storage (`docs/step4-storage.md`)
+
+Autosave lives in IndexedDB, through `createStore(dbName)` in `src/shared/store.js`: a promise-based key–value store (one object store `kv`, string values of JSON text) that falls back to `localStorage` where IndexedDB is unavailable. Writes are asynchronous; failures reach the autosave warnings (fmIDE's `#autosaveBanner`, ExcelExporter's `#storageWarn`).
+
+| App | Database | Keys |
+|---|---|---|
+| fmIDE | `fmIDE` | `fmIDE-workspace-v1` — the whole workspace; saved every 8 s, when the page is hidden, and on close |
+| ExcelExporter | `fmIDE-ExcelExporter` | `fmide-excelmap-<model signature>` — one layout per model; saved on every change and when the page is hidden |
+| both | (same) | `<dbName>/migrated-from-localStorage`, `<dbName>/persistence-requested` — bookkeeping |
+
+- **Migration:** on start, keys an older version left in `localStorage` are copied into IndexedDB once (the marker records it, so a later delete is not undone). The `localStorage` copies are kept; never delete user data in the same step that moves it.
+- fmIDE finishes starting (restores or adds the starter model, sets `window.fm`) only after the autosave has been read, and does not autosave before then. ExcelExporter's `loadModel()` is asynchronous for the same reason.
+- `navigator.storage.persist()` is requested once, ever, on the first change (not at start-up); the answer is remembered.
 
 ## File formats (`docs/file-formats.md`)
 
@@ -89,10 +103,10 @@ Build order — work in this sequence and don't jump ahead unless asked:
 1. Repository ✅
 2. Permanent test suite ✅ — `npm test`
 3. Split each app into modules — **still building to single HTML files** — protected by the tests ✅ (`docs/step3-modules.md`: 3a source in `src/`, 3b shared code in `src/shared/`; 3c real modules is later, with the plugin work)
-4. Storage for the web app: IndexedDB plus explicit open/save of `.fmide` files
+4. Storage for the web app: IndexedDB plus explicit open/save of `.fmide` files — 4a (IndexedDB underneath) ✅; 4b documents, 4c Preferences file next
 5. Publish the web app; then formula IR and plugins, community library, touch support
 
-Phase 0 hardening done: escaping text from files, built-in Excel writer, file-format versions and migrations, autosave-failure warning. Still to do: storage (step 4).
+Phase 0 hardening done: escaping text from files, built-in Excel writer, file-format versions and migrations, autosave-failure warning. Still to do: the rest of storage (step 4b, 4c).
 
 ## Checking a change
 
