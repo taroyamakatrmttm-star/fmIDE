@@ -1,6 +1,6 @@
 # Format roles
 
-All formatting — on fmIDE's canvas and in the Excel workbook — is defined in one place: **format roles** in fmIDE's Formats manager (File → Format Presets). Each role is a format preset with a reserved name. Roles can be edited but not deleted, and they travel inside system and workspace exports, which is how ExcelExporter reads them. A file without them gets the built-in defaults.
+All formatting — on fmIDE's canvas and in the Excel workbook — is defined in one place: **format roles** in fmIDE's Formats manager (File → Format Presets). Each role is a format preset with a reserved name. Roles can be edited but not deleted, and they travel inside system and workspace exports, which is how ExcelExporter reads them. A file without them gets the built-in defaults — the `FORMAT_ROLES` table in `src/shared/format-roles.js`, the one source both apps build from (fmIDE seeds its role presets from it; ExcelExporter falls back to it).
 
 | Role | Used on | Covers |
 |---|---|---|
@@ -21,4 +21,4 @@ All formatting — on fmIDE's canvas and in the Excel workbook — is defined in
 
 **Excel-only settings of a style:** *Excel border sides* (Top / Bottom / Left / Right; none ticked = no border in Excel — the canvas always draws the full outline) and *Use Excel's default font size*.
 
-**Input rectangle** (same rule in both apps): no incoming arrow, or a single incoming arrow from an operator or period shift that nothing feeds (e.g. a socket operator with nothing plugged in).
+**Input rectangle** (one rule for both apps, in `src/shared/input-rule.js`): no incoming arrow, or a single incoming arrow from an operator or period shift that nothing feeds (e.g. a socket operator with nothing plugged in).

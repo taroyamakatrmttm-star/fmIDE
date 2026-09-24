@@ -8,6 +8,8 @@ Every JSON file the apps write carries a `kind` and a `version`. Every file they
 4. asks once, up front, before opening a file saved by a **newer** version (cancel, or open anyway);
 5. does the same for nested content: a workspace's system, each template's model.
 
+The part both apps share lives once in `src/shared/file-formats.js`: the versions and upgrade steps of the two kinds both apps read (`SHARED_FILE_VERSIONS`, `SHARED_FILE_MIGRATIONS` for `system` and `fmIDE-workspace`), kind inference (`inferFileKind`) and the version check with step-by-step upgrades (`upgradeFileData`). Each app's `FILE_FORMATS` / `FILE_MIGRATIONS` are built from those plus its own kinds; the messages and nested-content handling stay in each app's reader.
+
 ## Current versions
 
 | `kind` | Version | What it is | Opened with |
@@ -23,11 +25,11 @@ Every JSON file the apps write carries a `kind` and a `version`. Every file they
 
 ## Changing a format
 
-1. Raise `current` for that kind in `FILE_FORMATS`.
-2. Add `FILE_MIGRATIONS[kind][oldVersion]`: a function that upgrades a copy of an old file by exactly **one** version.
-3. `system` and `fmIDE-workspace` are read by **both** apps — change both apps' tables together.
-4. Add an old-version sample to the tests so the upgrade stays covered.
+1. Raise the version for that kind: for `system` and `fmIDE-workspace` (read by **both** apps) in `SHARED_FILE_VERSIONS` in `src/shared/file-formats.js`; for any other kind in its app's `FILE_FORMATS`.
+2. Add the upgrade step `[kind][oldVersion]` — a function that upgrades a copy of an old file by exactly **one** version — to `SHARED_FILE_MIGRATIONS` (shared kinds) or the app's `FILE_MIGRATIONS` (its own kinds).
+3. `npm run build`: both apps pick up a shared change.
+4. Add an old-version sample to `tests/fixtures/formats/` and a test in `tests/6-formats-*.spec.js` so the upgrade stays covered.
 
 ## Rules for anything read from a file
 
-Files may come from other people (the planned community library), so text from a file is always shown as plain text, never as HTML; numbers are forced to be numbers; colours are checked before use. Neither app ever runs text from a file as code.
+Files may come from other people (the planned community library), so text from a file is always shown as plain text, never as HTML; numbers are forced to be numbers; colours are checked before use. Neither app ever runs text from a file as code. The helpers for this (`escapeXml`, `safeNum`, `safeColor`) live in `src/shared/escaping.js`.
