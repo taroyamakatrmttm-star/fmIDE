@@ -94,6 +94,7 @@ Load `tests/fixtures/security/evil-workspace.json` and `evil-system.json`:
 - `macros-bare` (a bare array): imports; the macro "Bare List Macro" appears.
 - `ws-nested-newer`: one question up front ("Its system was saved by a newer fmIDE…"), then the normal "Import this workspace?" confirm.
 - Autosave survives a reload: rename a canvas, reload, the name persists.
+- Import Workspace replaces format presets with the same name as one in the file (one "Inputs", with the file's style) and keeps the user's other presets.
 
 **ExcelExporter**:
 - `sys-current`, `sys-legacy` load; `sys-newer` shows `#confirmModal` — Cancel → status "Not loaded."; Open Anyway → loads. `ws-nested-newer` → confirm mentions its system.

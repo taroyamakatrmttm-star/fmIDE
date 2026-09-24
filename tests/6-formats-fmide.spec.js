@@ -1,5 +1,5 @@
 // 6. File formats — fmIDE: current, legacy, newer-version and wrong-kind files.
-const { test, expect, fixture } = require('./helpers/apps');
+const { test, expect, fixture, readFixture } = require('./helpers/apps');
 const F = require('./helpers/fmide');
 
 const file = (name) => fixture('formats', name + '.json');
@@ -107,4 +107,26 @@ test('autosave survives a reload', async ({ page }) => {
   await page.reload();
   await page.waitForFunction(() => window.fm && typeof window.fm.canvases === 'function');
   expect(await canvasNames(page)).toEqual(['Persisted Canvas']);
+});
+
+test('Import Workspace replaces presets with the same name and keeps the others', async ({ page }, testInfo) => {
+  // The user's own setup: default roles plus a preset of their own.
+  const mine = testInfo.outputPath('user-workspace.json');
+  require('fs').writeFileSync(mine, JSON.stringify({
+    kind: 'fmIDE-workspace', version: 1,
+    system: readFixture('formats', 'sys-current.json'),
+    formatPresets: [{ id: 'fmtUser', name: 'User Only', style: { fill: '#123456' } }]
+  }));
+  await F.importViaCommand(page, 'importWorkspace', mine);
+  await F.acceptAll(page);
+  // A workspace whose roles were edited (Inputs fill #fff7ed).
+  await F.importViaCommand(page, 'importWorkspace', fixture('models', 'roles-workspace-edited.json'));
+  await F.acceptAll(page);
+  const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
+  const named = (n) => data.formatPresets.filter(p => p.name === n);
+  expect(named('Inputs')).toHaveLength(1);
+  expect(named('Inputs')[0].style.fill).toBe('#fff7ed');
+  expect(named('User Only')).toHaveLength(1);
+  expect(named('User Only')[0].style.fill).toBe('#123456');
+  for(const role of ['Calculations', 'Links', 'Headers', 'Section Headers', 'Labels', 'Notes']) expect(named(role)).toHaveLength(1);
 });

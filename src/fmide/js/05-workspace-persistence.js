@@ -20,6 +20,17 @@
     };
   }
 
+  // A file's format presets replace the ones with the same name (so its roles win, and
+  // no name appears twice); presets only the user has are kept, new ones are added.
+  function mergeFormatPresets(list){
+    list.forEach(p => {
+      if(!p || typeof p.name !== 'string' || !p.style) return;
+      const i = FORMAT_PRESETS.findIndex(x => x.name === p.name);
+      if(i >= 0) FORMAT_PRESETS[i] = { id: FORMAT_PRESETS[i].id, name: p.name, style: p.style };
+      else FORMAT_PRESETS.push({ id: p.id || ('fmt' + (nextFormatPresetId++)), name: p.name, style: p.style });
+    });
+  }
+
   function applyWorkspacePayload(data){
     if(data.system && Array.isArray(data.system.canvases) && data.system.canvases.length){
       applySystemDataDirect(data.system);
@@ -34,12 +45,7 @@
         });
       });
     }
-    if(Array.isArray(data.formatPresets)){
-      data.formatPresets.forEach(p => {
-        if(!p || typeof p.name !== 'string' || !p.style) return;
-        FORMAT_PRESETS.push({ id: p.id || ('fmt' + (nextFormatPresetId++)), name: p.name, style: p.style });
-      });
-    }
+    if(Array.isArray(data.formatPresets)) mergeFormatPresets(data.formatPresets);
     // ribbon/KeyTips settings, then macros (so macro commands exist before their
     // shortcut bindings are applied below); syncMacroCommands re-renders the ribbon
     if(data.ui) applyUiPayload(data.ui);
