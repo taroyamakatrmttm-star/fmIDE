@@ -1,0 +1,39 @@
+ExcelExporter Licence
+
+Copyright (c) 2026 Taro Yamaka. All rights reserved.
+
+This licence covers ExcelExporter: everything in src/excel-exporter/ and the
+files built from it (apps/ExcelExporter.html, and ExcelExporter.html in the
+published web app). It does not cover the rest of this repository, which is
+licensed under the Apache License 2.0 (see LICENSING.md). The shared code that
+ExcelExporter includes from src/shared/ stays under the Apache License 2.0.
+
+1. Use. You may use ExcelExporter free of charge, for any purpose, including
+   commercial and professional work. The Excel workbooks you create with it
+   are yours: you may use, share and sell them freely.
+
+2. What you may not do. Except as this licence allows, you may not:
+   a. copy, redistribute, publish, sublicense, sell, rent or otherwise make
+      ExcelExporter or any part of it available to others, including as part
+      of another product or service;
+   b. modify, adapt or translate ExcelExporter, or create works based on it;
+   c. remove or change this notice.
+   You may read the source code, build an unmodified copy from this
+   repository for your own use, and keep the copies that your browser or
+   device makes in order to run it.
+
+3. Ownership. ExcelExporter is licensed, not sold. All rights not expressly
+   granted here are reserved by the copyright holder.
+
+4. No warranty. ExcelExporter is provided "as is", without warranty of any
+   kind, express or implied, including fitness for a particular purpose. You
+   are responsible for checking the workbooks it produces before relying on
+   them.
+
+5. Limitation of liability. To the fullest extent permitted by law, the
+   copyright holder is not liable for any damages arising from the use of,
+   or inability to use, ExcelExporter.
+
+6. Other versions. Future versions of ExcelExporter may be offered under
+   different terms. Each version remains available under the licence it was
+   released with.

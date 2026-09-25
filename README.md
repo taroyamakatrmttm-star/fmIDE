@@ -59,4 +59,10 @@ The script pieces are plain fragments of one wrapped function — no `import`/`e
 
 ## Licence
 
-All rights reserved. This repository is private; a licence will be chosen before the first public release (see `docs/decisions.md`).
+Open core, Copyright 2026 Taro Yamaka — see [LICENSING.md](LICENSING.md):
+
+- **fmIDE**, the shared code, build tools and tests: [Apache License 2.0](LICENSE) (open source).
+- **ExcelExporter**: [free to use, including at work, but proprietary](src/excel-exporter/LICENSE) — the workbooks you make are yours; ExcelExporter itself may not be copied, modified or redistributed.
+- **File-format documentation**: [CC BY 4.0](docs/LICENSE-CC-BY-4.0.txt), so anyone can build tools for fmIDE files.
+
+Outside contributions are not accepted yet ([CONTRIBUTING.md](CONTRIBUTING.md)).

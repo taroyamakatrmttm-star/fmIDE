@@ -36,6 +36,13 @@ The owner decides what is built and approves each change; sessions do the work a
 - The apps have no dependencies; the test tooling (`package.json`: Playwright, exceljs, jszip) is dev-only and must never be loaded by an app.
 - Record notable changes in `CHANGELOG.md`.
 
+## Licences (`LICENSING.md`)
+
+- Keep each part under its own licence. **Never move code between the open part (fmIDE, `src/shared/`) and ExcelExporter** without the owner's decision: code placed in `src/shared/` is Apache-licensed in both apps.
+- New files take the licence of the folder they are in; new file-format documentation goes in `docs/file-formats.md` (CC BY 4.0).
+- No outside contributions until a contributor licence agreement exists (`CONTRIBUTING.md`).
+- The apps' licence notices (a comment at the top of each `index.html`) and the licence files shipped with the site (`tools/build.js`) stay in place.
+
 ## Non-negotiable rules for every change
 
 1. **Text from files is always escaped.** Files may come from other people (the planned community library), so anything read from a file is untrusted:
@@ -123,7 +130,7 @@ Who decides what:
 
 ## Decisions and build order (`docs/decisions.md`)
 
-Agreed: code lives in a private GitHub repository; the first platform is an installable web app (PWA), then desktop via Tauri. Open: open source or not — decide by the first public release (recommendation: open core). The repository stays private until then.
+Agreed: code lives in a GitHub repository (private until the owner makes it public); the first platform is an installable web app (PWA), then desktop via Tauri; one app, with ExcelExporter opening from inside fmIDE; hosting on Cloudflare Pages. **Licensing — open core, one repository with two licences** (`LICENSING.md`): fmIDE, `src/shared/`, tools and tests under the Apache License 2.0; ExcelExporter (`src/excel-exporter/`) proprietary, free to use; the file-format docs under CC BY 4.0.
 
 Build order — work in this sequence and don't jump ahead unless asked:
 
@@ -131,9 +138,9 @@ Build order — work in this sequence and don't jump ahead unless asked:
 2. Permanent test suite ✅ — `npm test`
 3. Split each app into modules — **still building to single HTML files** — protected by the tests ✅ (`docs/step3-modules.md`: 3a source in `src/`, 3b shared code in `src/shared/`; 3c real modules is later, with the plugin work)
 4. Storage for the web app: IndexedDB plus explicit open/save of `.fmide` files ✅ — 4a IndexedDB underneath, 4b documents, 4c Preferences file
-5. Publish the web app (`docs/step5-publish.md`): 5a installable web app ✅; 5b publishing waits on the open decisions (open source, host, address). Then formula IR and plugins, community library, touch support
+5. Publish the web app (`docs/step5-publish.md`): 5a installable web app ✅; 5b: licences ✅, then automatic publishing to Cloudflare Pages. Then formula IR and plugins, community library, touch support
 
-Phase 0 hardening done: escaping text from files, built-in Excel writer, file-format versions and migrations, autosave-failure warning, storage (step 4). Next: step 5b (publishing), once decided.
+Phase 0 hardening done: escaping text from files, built-in Excel writer, file-format versions and migrations, autosave-failure warning, storage (step 4). Next: step 5b part 2 (automatic publishing).
 
 ## Checking a change
 

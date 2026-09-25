@@ -8,7 +8,8 @@
 //
 // site/ is not committed (it is rebuilt wherever it is needed): index.html (fmIDE, with the
 // lines of its <!-- build:site-head --> marker, which is empty in apps/), ExcelExporter.html,
-// and the files of src/site/ (manifest, icons), plus sw.js with its version and file list
+// the files of src/site/ (manifest, icons), the licence files (LICENSE.txt, NOTICE.txt,
+// ExcelExporter-LICENSE.txt), plus sw.js with its version and file list
 // filled in. The version is a hash of the site's files, so any change gives a new version.
 //
 // Each app has a page, src/<app>/index.html, in which a line consisting only of a marker
@@ -119,6 +120,9 @@ function buildSite(outDir){
   files.set('index.html', Buffer.from(buildApp(APPS[0], true), 'utf8'));
   files.set('ExcelExporter.html', Buffer.from(buildApp(APPS[1], true), 'utf8'));
   listFiles(SITE_SRC).filter(f => f !== 'sw.js').forEach(f => files.set(f, fs.readFileSync(path.join(SITE_SRC, ...f.split('/')))));
+  // The licences travel with the published app (see LICENSING.md).
+  [['LICENSE.txt', 'LICENSE'], ['NOTICE.txt', 'NOTICE'], ['ExcelExporter-LICENSE.txt', 'src/excel-exporter/LICENSE']]
+    .forEach(([name, from]) => files.set(name, fs.readFileSync(path.join(ROOT, ...from.split('/')))));
   const names = [...files.keys()].sort();
   const hash = require('crypto').createHash('sha256');
   names.forEach(n => { hash.update(n + '\0'); hash.update(files.get(n)); });

@@ -13,7 +13,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.webmanifest': 'application/manifest+json', '.json': 'application/json',
-  '.svg': 'image/svg+xml', '.png': 'image/png'
+  '.svg': 'image/svg+xml', '.png': 'image/png', '.txt': 'text/plain; charset=utf-8'
 };
 
 // Resolves { origin, dir, close() }.

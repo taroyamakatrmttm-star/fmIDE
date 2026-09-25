@@ -22,3 +22,7 @@ All formatting — on fmIDE's canvas and in the Excel workbook — is defined in
 **Excel-only settings of a style:** *Excel border sides* (Top / Bottom / Left / Right; none ticked = no border in Excel — the canvas always draws the full outline) and *Use Excel's default font size*.
 
 **Input rectangle** (one rule for both apps, in `src/shared/input-rule.js`): no incoming arrow, or a single incoming arrow from an operator or period shift that nothing feeds (e.g. a socket operator with nothing plugged in).
+
+---
+
+This document is licensed under [Creative Commons Attribution 4.0 International](LICENSE-CC-BY-4.0.txt) (CC BY 4.0): anyone may use it — for example to build tools that read or write fmIDE files — with credit to fmIDE (Copyright 2026 Taro Yamaka). See [LICENSING.md](../LICENSING.md).
