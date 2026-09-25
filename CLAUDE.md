@@ -13,6 +13,17 @@ fmIDE is a visual logic builder for financial models, plus a companion that turn
 
 The workflow: build in fmIDE → **File → Save System** or **Export Workspace** → load that file in ExcelExporter → **Generate & Download .xlsx**.
 
+## How we work (every session)
+
+The owner decides what is built and approves each change; sessions do the work and explain it in plain language. Each new feature or change is best done in its own session, one at a time.
+
+1. **Plan first.** Read this file and the relevant `docs/`, then present a plan and **change nothing until the owner approves it** (unless they say to go ahead). Where a choice is the owner's to make, give the options with a recommendation. Follow the build order below; don't jump ahead unless asked.
+2. **One change per branch and pull request**, starting from the latest `main`. Larger work goes in phases (as in `docs/step4-storage.md`); after each phase: summarise, push, open a pull request, and wait for approval before the next.
+3. **Build and test.** Edit `src/` → `npm run build` → `npm test` before every commit (see "Checking a change"). New behaviour gets a test; a bug fix gets a test that fails without the fix; a test changed on purpose is named in the commit message; a failing test is reported and fixed, never weakened or skipped.
+4. **Keep the docs in step, in the same pull request:** this file (when structure, rules, storage, file formats or the build order change), the relevant `docs/*.md` (a brief gets a short "how it turned out" when its phase is done), `tests/SPEC.md` and `tests/README.md` for new tests, `README.md` for anything a user does differently, and `CHANGELOG.md` for notable changes to the apps.
+5. **Pull requests:** explain what changed and why in plain language, and list the tests. Then watch CI (continuous integration — the automatic test run on GitHub) and fix anything red until it is green.
+6. **Talk plainly:** the owner reads every message. Spell out an abbreviation the first time it is used (for example PR, pull request; CI, continuous integration; PWA, installable web app), say what was verified and how, and report problems found along the way, even ones from earlier work.
+
 ## How the code is built
 
 - **Each app is delivered as one self-contained HTML file** with all HTML, CSS and JavaScript inline, generated from `src/` by `npm run build`. There is no package manager for the apps, no framework and **no external dependencies** — no `<script src>`, no CDN, no network calls. They must keep working offline, opened straight from disk in any modern browser. Nothing is uploaded anywhere.
