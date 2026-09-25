@@ -152,11 +152,13 @@ Commands `exportPreferences` (download `fmIDE-preferences.json`) and `importPref
 - The default File tab has a Preferences group (Export, Import).
 
 ### 12. The installable web app (PWA)
-`tests/helpers/site.js` builds the site (`tools/build.js`'s `buildSite`) into a temporary folder and serves it from `http://127.0.0.1:<port>/` (a secure context, so service workers work), with `apps/` under `/apps/`. Every request the browser makes, the service worker's included, must go to that server.
+`tests/helpers/site.js` builds the site (`tools/build.js`'s `buildSite`) into a temporary folder and serves it from `http://127.0.0.1:<port>/` (a secure context, so service workers work) the way Cloudflare Pages does (`tools/pages-server.js`: short page addresses, the `_headers` security policy), with `apps/` under `/apps/`. Every request the browser makes, the service worker's included, must go to that server.
 - The page links `manifest.webmanifest`: name fmIDE, `start_url`/`scope` `./`, `standalone`, 192 and 512 icons (all load), a `.fmide` file handler; Chrome reports no installability errors.
 - After the first visit the server is stopped: fmIDE and ExcelExporter still load (offline).
 - A new version (sw.js changed): `#updateBanner` "A new version of fmIDE is ready."; the old cache stays until Reload; Reload switches to the new cache only, keeps unsaved work (the recovery notice shows it), and shows no "Leave site?". "Later" puts it away without switching.
 - The site ships `LICENSE.txt` (Apache), `NOTICE.txt` (copyright) and `ExcelExporter-LICENSE.txt`, also in the offline copy; each app page carries its licence comment.
+- Under the security policy (the page's `Content-Security-Policy` lists script hashes): a whole workflow — build a rectangle, Save As a `.fmide` download, Open ExcelExporter (from the offline copy), load the sample, generate an `.xlsx` — records no policy violations in either window; a script injected into fmIDE or ExcelExporter is blocked and never runs.
+- Short addresses: `/ExcelExporter.html` → `/ExcelExporter`, `/index.html` → `/`; `_headers` is not served.
 - `apps/fmIDE.html` links no manifest and registers no service worker, even on a secure origin.
 - Anywhere: Open ExcelExporter opens `ExcelExporter.html` next to fmIDE in its own window; Install fmIDE is disabled until the browser offers it, then prompts once; a `.fmide` handed over through a (faked) `launchQueue` opens as a document, asking Save / Don't save / Cancel first when there are unsaved changes.
 
