@@ -106,10 +106,13 @@ jobs:
         if: steps.secrets.outputs.ready == 'true'
         env:
           BRANCH: ${{ github.head_ref || github.ref_name }}
+          # the pull request's own latest commit (GITHUB_SHA is GitHub's temporary merge commit there)
+          COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          npx --yes wrangler@4 pages deploy site --project-name="$PROJECT" --branch="$BRANCH" --commit-hash="$GITHUB_SHA" --commit-dirty=false | tee deploy.log
-          url=$(grep -Eo 'https://[A-Za-z0-9.-]+\.pages\.dev' deploy.log | head -n 1 || true)
-          alias=$(grep -Ei 'alias' deploy.log | grep -Eo 'https://[A-Za-z0-9.-]+\.pages\.dev' | tail -n 1 || true)
+          log="$RUNNER_TEMP/deploy.log"   # outside the checkout, so wrangler sees no uncommitted files
+          npx --yes wrangler@4 pages deploy site --project-name="$PROJECT" --branch="$BRANCH" --commit-hash="$COMMIT" --commit-dirty=false | tee "$log"
+          url=$(grep -Eo 'https://[A-Za-z0-9.-]+\.pages\.dev' "$log" | head -n 1 || true)
+          alias=$(grep -Ei 'alias' "$log" | grep -Eo 'https://[A-Za-z0-9.-]+\.pages\.dev' | tail -n 1 || true)
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "alias=${alias:-$url}" >> "$GITHUB_OUTPUT"
           echo "### Published: ${alias:-$url}" >> "$GITHUB_STEP_SUMMARY"
@@ -124,7 +127,7 @@ jobs:
           script: |
             const marker = '<!-- fmide-preview -->';
             const body = marker + '\n**Preview of this pull request:** ' + process.env.PREVIEW +
-              '\n\nThis version (' + context.sha.slice(0, 7) + '): ' + process.env.THIS_VERSION +
+              '\n\nThis version (' + context.payload.pull_request.head.sha.slice(0, 7) + '): ' + process.env.THIS_VERSION +
               '\n\nThe live site changes only when this pull request is merged.';
             const { owner, repo } = context.repo;
             const issue_number = context.payload.pull_request.number;
