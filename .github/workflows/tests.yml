@@ -44,3 +44,91 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 14
+
+  # Publishes the web app (site/) to Cloudflare Pages once the tests pass: a merge into
+  # main updates the live site; a pull request from this repository gets its own preview
+  # address, posted on the pull request. Needs the repository secrets CLOUDFLARE_API_TOKEN
+  # (a token with the Cloudflare Pages: Edit permission) and CLOUDFLARE_ACCOUNT_ID; without
+  # them the job only notes that it skipped. See docs/step5-publish.md.
+  deploy:
+    needs: test
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: deploy-${{ github.head_ref || github.ref_name }}
+      cancel-in-progress: true
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PROJECT: fmide
+    steps:
+      - name: Check the Cloudflare secrets are set
+        id: secrets
+        run: |
+          if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Not published: the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID secrets are not set (see docs/step5-publish.md)."
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.secrets.outputs.ready == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.secrets.outputs.ready == 'true'
+        with:
+          node-version: lts/*
+
+      - name: Build the site
+        if: steps.secrets.outputs.ready == 'true'
+        run: node tools/build.js --site site
+
+      - name: Create the Pages project (first time only)
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          if out=$(npx --yes wrangler@4 pages project create "$PROJECT" --production-branch=main 2>&1); then
+            echo "$out"
+          elif echo "$out" | grep -qi "already exist"; then
+            echo "Pages project $PROJECT already exists."
+          else
+            echo "$out"; exit 1
+          fi
+
+      - name: Publish
+        id: publish
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          npx --yes wrangler@4 pages deploy site --project-name="$PROJECT" --branch="$BRANCH" --commit-hash="$GITHUB_SHA" --commit-dirty=false | tee deploy.log
+          url=$(grep -Eo 'https://[A-Za-z0-9.-]+\.pages\.dev' deploy.log | head -n 1 || true)
+          alias=$(grep -Ei 'alias' deploy.log | grep -Eo 'https://[A-Za-z0-9.-]+\.pages\.dev' | tail -n 1 || true)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "alias=${alias:-$url}" >> "$GITHUB_OUTPUT"
+          echo "### Published: ${alias:-$url}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post the preview link on the pull request
+        if: steps.secrets.outputs.ready == 'true' && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          PREVIEW: ${{ steps.publish.outputs.alias }}
+          THIS_VERSION: ${{ steps.publish.outputs.url }}
+        with:
+          script: |
+            const marker = '<!-- fmide-preview -->';
+            const body = marker + '\n**Preview of this pull request:** ' + process.env.PREVIEW +
+              '\n\nThis version (' + context.sha.slice(0, 7) + '): ' + process.env.THIS_VERSION +
+              '\n\nThe live site changes only when this pull request is merged.';
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
+            const mine = comments.find(c => c.body && c.body.startsWith(marker));
+            if (mine) await github.rest.issues.updateComment({ owner, repo, comment_id: mine.id, body });
+            else await github.rest.issues.createComment({ owner, repo, issue_number, body });

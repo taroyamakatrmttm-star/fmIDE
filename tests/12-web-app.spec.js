@@ -107,6 +107,69 @@ test.describe('the site', () => {
       .toEqual(expect.arrayContaining(['/LICENSE.txt', '/NOTICE.txt', '/ExcelExporter-LICENSE.txt']));
   });
 
+  // ---------- as served by Cloudflare Pages: short addresses and the security policy ----------
+  // Every page records what the policy blocks. On the window, not the document: a window
+  // opened by fmIDE starts with a blank document that is replaced when the page loads.
+  const recordViolations = (context) => context.addInitScript(() => {
+    window.__cspViolations = [];
+    window.addEventListener('securitypolicyviolation', e => window.__cspViolations.push(e.violatedDirective + ' ' + e.blockedURI));
+  });
+
+  test('both apps work under the security policy: a whole workflow, no violations', async ({ page, context, site, requests }) => {
+    void requests;
+    await recordViolations(context);
+    // A headless browser can't show Chrome's own save dialog: use the download route.
+    await context.addInitScript(() => { Object.defineProperty(window, 'showSaveFilePicker', { value: undefined, configurable: true }); });
+    const response = await page.goto(site.origin);
+    expect(response.headers()['content-security-policy']).toContain("script-src 'self' 'sha256-");
+    await page.waitForFunction(() => window.fm && typeof window.fm.canvases === 'function');
+    await W.waitForController(page);
+    // fmIDE: build something, save it as a document (a download).
+    await page.evaluate(() => { fm.clearCanvas(); fm.createRect({ x: 60, y: 60, name: 'Price', value: 5 }); });
+    await page.evaluate(() => fm.command('saveDocumentAs'));
+    await page.locator('#saveAsName').fill('Policy Check');
+    const [saved] = await Promise.all([page.waitForEvent('download'), page.locator('#saveAsDialog button.primary').click()]);
+    expect(saved.suggestedFilename()).toBe('Policy Check.fmide');
+    // ExcelExporter, opened from fmIDE (its short address): load the sample, make a workbook.
+    const [popup] = await Promise.all([page.waitForEvent('popup'), page.evaluate(() => fm.command('openExcelExporter'))]);
+    await popup.waitForLoadState();
+    // Answered from the offline copy (so no redirect to the short address) — which must still
+    // carry the policy: a script that isn't ExcelExporter's own is blocked there too.
+    expect(new URL(popup.url()).pathname).toMatch(/^\/ExcelExporter(\.html)?$/);
+    await popup.click('#btnLoadSample');
+    await expect(popup.locator('#afterLoad')).toBeVisible();
+    const [xlsx] = await Promise.all([popup.waitForEvent('download'), popup.click('#btnGenerate')]);
+    expect(xlsx.suggestedFilename()).toMatch(/\.xlsx$/);
+    expect(await page.evaluate(() => window.__cspViolations)).toEqual([]);
+    expect(await popup.evaluate(() => window.__cspViolations)).toEqual([]);
+    await popup.evaluate(() => { const s = document.createElement('script'); s.textContent = 'window.__injected = true;'; document.body.appendChild(s); });
+    await expect.poll(() => popup.evaluate(() => window.__cspViolations.length)).toBeGreaterThan(0);
+    expect(await popup.evaluate(() => window.__injected)).toBeUndefined();
+  });
+
+  test('the policy blocks a script that is not the app\'s own', async ({ page, context, site, requests }) => {
+    void requests;
+    await recordViolations(context);
+    await W.openSite(page, site.origin);
+    await page.evaluate(() => {
+      const s = document.createElement('script');
+      s.textContent = 'window.__injected = true;';
+      document.body.appendChild(s);
+    });
+    await expect.poll(() => page.evaluate(() => window.__cspViolations.length)).toBeGreaterThan(0);
+    expect(await page.evaluate(() => window.__injected)).toBeUndefined();
+  });
+
+  test('short addresses work, and the host settings file is not served', async ({ page, site, requests }) => {
+    void requests;
+    await page.goto(site.origin + 'ExcelExporter.html');
+    expect(new URL(page.url()).pathname).toBe('/ExcelExporter');
+    await expect(page.locator('#dropZone')).toBeVisible();
+    await page.goto(site.origin + 'index.html');
+    expect(new URL(page.url()).pathname).toBe('/');
+    expect((await page.request.get(site.origin + '_headers')).status()).toBe(404);
+  });
+
   test('the single file in apps/ registers no service worker', async ({ page, site, requests }) => {
     void requests;
     await W.openSite(page, site.origin + 'apps/fmIDE.html');

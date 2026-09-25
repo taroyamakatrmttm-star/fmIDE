@@ -7,8 +7,18 @@ const VERSION = '__VERSION__';
 const CACHE = 'fmide-' + VERSION;
 const FILES = __FILES__;
 
+// Cloudflare Pages shortens page addresses (/index.html → /, /ExcelExporter.html →
+// /ExcelExporter) with a redirect, and a browser refuses to show a page that a service
+// worker answers with a redirected response. So each file is stored as a clean copy, under
+// the name it was asked for.
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(FILES.map(f => new Request(f, { cache: 'reload' })))));
+  event.waitUntil(caches.open(CACHE).then(cache => Promise.all(FILES.map(f =>
+    fetch(new Request(f, { cache: 'reload' })).then(res => {
+      if(!res.ok) throw new Error('Could not fetch ' + f + ' (' + res.status + ')');
+      if(!res.redirected) return cache.put(f, res);
+      return res.blob().then(body => cache.put(f, new Response(body, { status: res.status, statusText: res.statusText, headers: res.headers })));
+    })
+  ))));
 });
 
 self.addEventListener('activate', (event) => {
@@ -23,8 +33,9 @@ self.addEventListener('message', (event) => {
   if(event.data === 'skipWaiting') self.skipWaiting();
 });
 
-// The site's own files come from the cache (the page itself for "./"); anything else of the
-// site's origin goes to the network as usual. Other origins are left alone.
+// The site's own files come from the cache: a page asked for by its short address
+// (/ExcelExporter) is its .html file, and "/" is index.html. Anything else of the site's
+// origin goes to the network as usual. Other origins are left alone.
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if(req.method !== 'GET') return;
@@ -32,9 +43,11 @@ self.addEventListener('fetch', (event) => {
   if(url.origin !== self.location.origin) return;
   event.respondWith(
     caches.open(CACHE).then(cache =>
-      cache.match(req, { ignoreSearch: true }).then(hit => hit ||
-        (req.mode === 'navigate' && url.pathname.endsWith('/') ? cache.match('./index.html') : null)
-      ).then(hit => hit || fetch(req))
+      cache.match(req, { ignoreSearch: true }).then(hit => {
+        if(hit || req.mode !== 'navigate') return hit;
+        const page = url.pathname.endsWith('/') ? url.pathname + 'index.html' : url.pathname + '.html';
+        return cache.match(new URL(page, url).href);
+      }).then(hit => hit || fetch(req))
     )
   );
 });
