@@ -1,0 +1,13 @@
+fmIDE
+Copyright 2026 Taro Yamaka
+
+This repository is licensed in parts (see LICENSING.md):
+
+- fmIDE, the shared code (src/shared/), the build tools and the tests are
+  licensed under the Apache License, Version 2.0 (LICENSE).
+- ExcelExporter (src/excel-exporter/ and the files built from it) is NOT
+  covered by the Apache License. It is free to use but proprietary; see
+  src/excel-exporter/LICENSE.
+- The file-format documentation (docs/file-formats.md, docs/format-roles.md)
+  is licensed under Creative Commons Attribution 4.0 International
+  (docs/LICENSE-CC-BY-4.0.txt).

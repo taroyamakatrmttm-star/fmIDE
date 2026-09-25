@@ -156,6 +156,7 @@ Commands `exportPreferences` (download `fmIDE-preferences.json`) and `importPref
 - The page links `manifest.webmanifest`: name fmIDE, `start_url`/`scope` `./`, `standalone`, 192 and 512 icons (all load), a `.fmide` file handler; Chrome reports no installability errors.
 - After the first visit the server is stopped: fmIDE and ExcelExporter still load (offline).
 - A new version (sw.js changed): `#updateBanner` "A new version of fmIDE is ready."; the old cache stays until Reload; Reload switches to the new cache only, keeps unsaved work (the recovery notice shows it), and shows no "Leave site?". "Later" puts it away without switching.
+- The site ships `LICENSE.txt` (Apache), `NOTICE.txt` (copyright) and `ExcelExporter-LICENSE.txt`, also in the offline copy; each app page carries its licence comment.
 - `apps/fmIDE.html` links no manifest and registers no service worker, even on a secure origin.
 - Anywhere: Open ExcelExporter opens `ExcelExporter.html` next to fmIDE in its own window; Install fmIDE is disabled until the browser offers it, then prompts once; a `.fmide` handed over through a (faked) `launchQueue` opens as a document, asking Save / Don't save / Cancel first when there are unsaved changes.
 

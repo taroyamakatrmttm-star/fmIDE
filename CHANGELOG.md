@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Licences (build step 5b, part 1)
+- fmIDE is **open core**: fmIDE, the shared code, tools and tests are open source under the Apache License 2.0; ExcelExporter is free to use (including at work) but proprietary; the file-format documentation is under CC BY 4.0. `LICENSING.md` explains which licence covers what.
+- Each app carries a one-line licence notice, and the web app ships the licence files (`LICENSE.txt`, `NOTICE.txt`, `ExcelExporter-LICENSE.txt`).
+
 ## Installable web app (build step 5a)
 - fmIDE can be installed as an app (a PWA, progressive web app) from the web version: its own window and icon, works offline after the first visit, and opens `.fmide` files double-clicked in the operating system (Chrome and Edge on desktop). Nothing is published yet; `npm run build` writes the web version to `site/`, and `npm run serve` shows it locally.
 - New versions download in the background; a notice offers **Reload** (your work is autosaved first and comes back if unsaved) or **Later**.

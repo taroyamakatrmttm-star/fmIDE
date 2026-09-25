@@ -12,7 +12,7 @@ const DIR = path.join(__dirname, '..', 'site');
 const PORT = Number(process.argv[2]) || 8080;
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
-  '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png'
+  '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png', '.txt': 'text/plain; charset=utf-8'
 };
 if(!fs.existsSync(path.join(DIR, 'index.html'))){
   console.error('serve: site/ is missing — run: npm run build');

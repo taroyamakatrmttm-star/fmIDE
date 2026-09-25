@@ -7,7 +7,7 @@
 - **One app** (24 Sep 2026): fmIDE and ExcelExporter install as one app; ExcelExporter opens from inside fmIDE.
 - `apps/*.html` stay single self-contained files that work opened straight from disk. The published site is built from the same `src/`.
 
-**Still open (needed for 5b, not 5a):** open source or not (`docs/decisions.md`, decision 3 — publishing is the first public release); where to host (recommendation: Cloudflare Pages, which keeps the repository private); which web address.
+**Decided for 5b (25 Sep 2026):** open core with two licences (`LICENSING.md`, decision 3 in `docs/decisions.md`); hosting on Cloudflare Pages, on its free address for now (both can change later — but a new address means reinstalling, and browser-stored data such as the autosave and Recent does not move with it, so a custom domain is best chosen before the app is shared widely).
 
 ## Phase 5a — make it a PWA (nothing published yet)
 
@@ -31,6 +31,8 @@ A PWA needs three things the single files can't carry: a **web app manifest** (n
 - The manifest asks the browser to reuse the open window for a double-clicked file (`launch_handler: focus-existing`), so two windows don't compete for the same autosave.
 - Tests: group 12 (`tests/12-web-app.spec.js`, `npm run test:web-app`), including Chrome's own installability check.
 
-## Phase 5b — publish (after the open decisions)
+## Phase 5b — publish
 
-Deploy `site/` to the chosen host automatically when `main` changes; document the address and how updates reach people.
+**Part 1 — licences ✅:** `LICENSE` (Apache 2.0, official text), `NOTICE` (copyright), `src/excel-exporter/LICENSE` (proprietary, free to use), `docs/LICENSE-CC-BY-4.0.txt` (file-format docs), `LICENSING.md` (which covers what), `CONTRIBUTING.md` (no outside contributions until a CLA). Each app's `index.html` carries a licence comment; `tools/build.js` ships `LICENSE.txt`, `NOTICE.txt` and `ExcelExporter-LICENSE.txt` with the site (tested in group 12). The licence texts are drafts for a lawyer to review before the repository goes public.
+
+**Part 2 — automatic publishing:** a GitHub Actions workflow builds `site/` and deploys it to Cloudflare Pages whenever `main` changes and the tests pass. The owner creates the Cloudflare account, the Pages project and an API token (stored as GitHub secrets). Document the address and how updates reach people.

@@ -19,5 +19,6 @@
     "@playwright/test": "1.56.1",
     "exceljs": "4.4.0",
     "jszip": "3.10.2"
-  }
+  },
+  "license": "SEE LICENSE IN LICENSING.md"
 }

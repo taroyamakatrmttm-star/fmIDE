@@ -4,9 +4,11 @@
 |---|---|---|---|
 | 1 | Where the code lives | Agreed (24 Sep 2026) | Private Git repository on GitHub |
 | 2 | First platform | Agreed (24 Sep 2026) | Installable web app (PWA) first, then desktop via Tauri |
-| 3 | Open source or not | Open — decide by the first public release | Recommendation: open core (apps and file formats open, hosted/paid services closed) |
+| 3 | Open source or not | Agreed (25 Sep 2026) | **Open core**, one repository with two licences (see `LICENSING.md`): fmIDE, the shared code, tools and tests under the **Apache License 2.0**; the file-format documentation under **CC BY 4.0**; **ExcelExporter proprietary** — free to use, including at work, but not to copy, modify or redistribute. Copyright 2026 Taro Yamaka. |
+| 4 | Where the web app is hosted | Agreed (25 Sep 2026) | Cloudflare Pages, on its free address for now (both can change later) |
+| 5 | One app or two | Agreed (24 Sep 2026) | One installable app: fmIDE, with ExcelExporter opening from inside it |
 
-Decision 3 can wait: going from closed to open later is easy, but open to closed is effectively irreversible. The repository stays private until it is decided.
+Why decision 3: an open editor and an open, documented file format build trust and let a community and other tools grow around fmIDE ("the ecosystem is the most"); ExcelExporter is where Pro / Enterprise / Marketplace editions can build later. Licences can be loosened later (ExcelExporter could be opened), but a version once published as open source stays open. The licence texts should be reviewed by a lawyer before the repository is made public. Before accepting outside contributions, a contributor licence agreement (CLA) is needed (`CONTRIBUTING.md`). Making the repository public is a separate step, taken by the owner when ready.
 
 ## Build order
 

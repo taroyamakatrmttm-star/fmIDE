@@ -91,6 +91,22 @@ test.describe('the site', () => {
     expect(await page.evaluate(() => caches.keys())).toContain('fmide-' + site.version);
   });
 
+  test('the licences ship with the app, and each app names its own', async ({ page, site, requests }) => {
+    void requests;
+    await W.openSite(page, site.origin);
+    const text = (f) => page.evaluate((f) => fetch(f).then(r => r.ok ? r.text() : ''), f);
+    expect(await text('LICENSE.txt')).toContain('Apache License');
+    expect(await text('NOTICE.txt')).toContain('Copyright 2026 Taro Yamaka');
+    expect(await text('ExcelExporter-LICENSE.txt')).toContain('ExcelExporter Licence');
+    const html = (f) => fs.readFileSync(path.join(site.dir, f), 'utf8');
+    expect(html('index.html')).toContain('Licensed under the Apache License 2.0');
+    expect(html('ExcelExporter.html')).toContain('All rights reserved. Free to use, but not open source');
+    // The licence files are part of the offline copy too.
+    await W.waitForController(page);
+    expect(await page.evaluate(() => caches.keys().then(k => caches.open(k[0])).then(c => c.keys()).then(r => r.map(q => new URL(q.url).pathname))))
+      .toEqual(expect.arrayContaining(['/LICENSE.txt', '/NOTICE.txt', '/ExcelExporter-LICENSE.txt']));
+  });
+
   test('the single file in apps/ registers no service worker', async ({ page, site, requests }) => {
     void requests;
     await W.openSite(page, site.origin + 'apps/fmIDE.html');
