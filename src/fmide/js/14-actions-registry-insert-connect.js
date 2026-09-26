@@ -268,12 +268,16 @@
     } });
 
   defineAction({ name:'insertTemplate', label:'Insert Template', category:'Insert', icon:'📚',
-    desc:'Inserts a saved template: its name (the latest version), "Name@latest", "Name@3" (version 3), the same with its family id, or "#id". Modules: "here" (this canvas) or "newCanvas". Systems: "add" (merge alongside) or "replace".',
+    desc:'Inserts a saved template: its name (the latest version), "Name@latest", "Name@3" (version 3), the same with its family id, or "#id". Modules: "here" (this canvas) or "newCanvas". Systems: "add" (merge alongside) or "replace". Recipes: "add" builds one canvas per part and returns { canvases, warnings, unfedSockets }.',
     params:[ P('template','template'), P('mode','enum',{ options:['auto','here','newCanvas','add','replace'], def:'auto' }),
       P('onCollision','enum',{ options:['merge','keep'], def:'merge', label:'same-name canvases', help:'systems added alongside' }),
       P('decisions','json',{ optional:true, help:'per-canvas {"Name":"merge"|"keep"}' }) ],
     run(a){
       const t = a.template;
+      if(t.kind === 'recipe'){
+        if(a.mode !== 'auto' && a.mode !== 'add') fail(`"${t.name}" is a recipe — use mode "add" (it adds one canvas per part).`);
+        return buildRecipe(t);
+      }
       const data = cloneData(t.data);
       const mode = a.mode === 'auto' ? (t.kind === 'system' ? 'add' : 'here') : a.mode;
       if(t.kind !== 'system'){
@@ -298,6 +302,33 @@
       }
     } });
 
+  defineAction({ name:'saveRecipe', label:'Save Recipe', category:'Insert', icon:'🧾', returns:'value',
+    desc:'Saves a recipe: canvas templates added together, each "Name" / "Name@latest" (follows the latest version) or "Name@2" (that version). A name already in use fails unless newVersionOf names that recipe. Returns the recipe as "Name@version".',
+    params:[ P('name','string',{ def:'' }), P('parts','json',{ help:'list of template references' }),
+      P('group','string',{ def:'My Templates' }), P('description','string',{ def:'' }), P('note','string',{ def:'' }),
+      P('newVersionOf','string',{ def:'', help:'a recipe to save the next version of' }) ],
+    run(a){
+      if(!Array.isArray(a.parts) || !a.parts.length) fail('A recipe needs a list of parts, e.g. ["Income Statement@latest", "Balance Sheet@2"].');
+      if(a.parts.length > RECIPE_MAX_PARTS) fail(`A recipe can have at most ${RECIPE_MAX_PARTS} parts.`);
+      const parts = a.parts.map(ref => {
+        const s = String(ref == null ? '' : ref).trim();
+        const t = resolveTemplateRef(s);
+        if(t.kind !== 'module') fail(`"${t.name}" is not a canvas template — a recipe's parts are canvas templates.`);
+        return recipePartOf(t, /@\s*\d+$/.test(s) || /^#/.test(s));
+      });
+      let base = null;
+      if(a.newVersionOf.trim()){
+        base = resolveTemplateRef(a.newVersionOf);
+        if(base.kind !== 'recipe') fail(`"${base.name}" is not a recipe.`);
+      } else {
+        const name = a.name.trim();
+        if(!name) fail('A recipe needs a name.');
+        const taken = familiesNamed(name)[0];
+        if(taken) fail(`There is already a template called "${taken.name}". Choose another name, or use newVersionOf to save its next version.`);
+      }
+      const t = saveRecipeTemplate({ name: a.name.trim(), group: a.group.trim() || 'My Templates', description: a.description, note: a.note, parts, newVersionOf: base });
+      return t.name + '@' + t.version;
+    } });
   defineAction({ name:'updateCanvasFromTemplate', label:'Update Canvas from Template', category:'Insert', icon:'⬆',
     desc:'Rebuilds a canvas made from a canvas template from another version of it ("latest", or a number). Input values typed on the canvas are kept (matched by rectangle name); everything else comes from that version. Returns { version, kept, lostAliases }.',
     params:[ P('canvas','canvas',{ def:'@current' }), P('version','string',{ def:'latest', help:'"latest" or a version number' }) ],

@@ -327,7 +327,9 @@
   // for something that isn't a template. The caller gives it an id.
   function templateEntryFrom(t, over){
     if(!t || typeof t !== 'object' || typeof t.name !== 'string' || !t.name.trim() || !t.data || typeof t.data !== 'object') return null;
-    if(t.kind !== 'module' && t.kind !== 'system') return null;
+    if(t.kind !== 'module' && t.kind !== 'system' && t.kind !== 'recipe') return null;
+    const data = t.kind === 'recipe' ? cleanRecipeData(t.data) : t.data;
+    if(!data) return null;
     const o = Object.assign({}, t, over || {});
     const version = Number(o.version);
     return {
@@ -339,7 +341,7 @@
       version: Number.isInteger(version) && version >= 1 ? version : 1,
       note: cleanTemplateNote(o.note),
       versionId: isTemplateUid(o.versionId) && !TEMPLATES.some(x => x.versionId === o.versionId) ? o.versionId : newRandomId(),
-      data: t.data
+      data
     };
   }
   // Makes a new entry fit the library: a family already holding the other kind can't take
@@ -409,7 +411,7 @@
     const taken = new Set(TEMPLATES.map(x => x.id));
     (Array.isArray(list) ? list : []).forEach(t => {
       // (A workspace has always read a kind other than 'system' as a canvas template.)
-      const e = templateEntryFrom(t && typeof t === 'object' ? Object.assign({}, t, { kind: t.kind === 'system' ? 'system' : 'module' }) : t);
+      const e = templateEntryFrom(t && typeof t === 'object' ? Object.assign({}, t, { kind: templateKindOf(t.kind) }) : t);
       if(!e) return;
       // Every template keeps its own id: new ids continue after the highest saved "usrN",
       // and one whose id is missing or already taken gets a fresh one.
@@ -445,6 +447,8 @@
   // same model; when in doubt (two otherwise identical rectangles wired differently) the
   // texts differ, so templates are only ever treated as the same when they really are.
   function templateLogicKey(t, layout){
+    // A recipe is its list of parts (the names shown for them don't count).
+    if(t.kind === 'recipe') return stableJSON({ recipe: ((t.data && t.data.parts) || []).map(p => [p.family, p.version, p.versionId || null]) });
     const d = t.data || {};
     const canvases = t.kind === 'system'
       ? (Array.isArray(d.canvases) ? d.canvases : [])
@@ -579,6 +583,7 @@
     box.appendChild(actions);
 
     const showPreview = (t) => {
+      if(t.kind === 'recipe'){ preview.innerHTML = ''; return; }
       const pc = t.kind === 'system' ? ((t.data.canvases || [])[0] || { nodes: [], edges: [] }) : t.data;
       preview.innerHTML = buildPreviewSVG(pc.nodes || [], pc.edges || []);
     };
@@ -607,7 +612,7 @@
           const meta = document.createElement('span');
           meta.className = 'dedupe-meta';
           const older = familyVersions(t.family).length - 1;
-          meta.textContent = (t.group || 'Ungrouped') + ' · ' + (t.kind === 'system' ? 'system' : 'module') + ' · v' + t.version
+          meta.textContent = (t.group || 'Ungrouped') + ' · ' + t.kind + ' · v' + t.version
             + (older ? ` (and ${older} older version${older === 1 ? '' : 's'})` : '');
           const fate = document.createElement('span');
           fate.className = 'dedupe-fate';
@@ -691,6 +696,226 @@
     };
     reader.onerror = () => showMessage('Could not read that file.');
     reader.readAsText(file);
+  }
+
+  // ---------- recipes (templates of kind "recipe", templates file v3) ----------
+  // A recipe lists canvas templates to add together: data = { kind: 'recipe', parts: [
+  // { family, version: 'latest' | N, versionId?, name } ] }. A pinned part records the version
+  // id it was made with; `name` is only shown when the family isn't in the library. Building
+  // adds one canvas per part (each linked to its template, like Add to new canvas); plugs and
+  // sockets then connect them by name (syncAutoConnections).
+  const RECIPE_MAX_PARTS = 50;
+  // The kinds a template can be. A workspace has always read an unknown kind as a canvas template.
+  function templateKindOf(k){ return k === 'system' || k === 'recipe' ? k : 'module'; }
+  // A recipe's data read from a file (untrusted): bad parts are dropped; null when none is left.
+  function cleanRecipeData(d){
+    if(!d || typeof d !== 'object' || !Array.isArray(d.parts)) return null;
+    const parts = [];
+    d.parts.slice(0, RECIPE_MAX_PARTS).forEach(p => {
+      if(!p || typeof p !== 'object' || !isTemplateUid(p.family)) return;
+      const n = Number(p.version);
+      const version = p.version === 'latest' ? 'latest' : (Number.isInteger(n) && n >= 1 ? n : null);
+      if(version === null) return;
+      const part = { family: p.family, version, name: typeof p.name === 'string' ? p.name.slice(0, 200) : '' };
+      if(version !== 'latest' && isTemplateUid(p.versionId)) part.versionId = p.versionId;
+      parts.push(part);
+    });
+    return parts.length ? { kind: 'recipe', parts } : null;
+  }
+  // A part for the recipe from a library version: pinned to it, or following the latest.
+  function recipePartOf(t, pinned){
+    const part = { family: t.family, version: pinned ? t.version : 'latest', name: t.name };
+    if(pinned) part.versionId = t.versionId;
+    return part;
+  }
+  // How a part stands against the library: { part, template (the version to use, or null),
+  // state: 'ok' | 'differs' (pinned number here, but not the same version) | 'missing-version'
+  // | 'missing-family' | 'wrong-kind', label (for people) }.
+  function recipePartStatus(part){
+    const latest = latestOfFamily(part.family);
+    const shown = (latest && latest.name) || part.name || 'A part';
+    const vText = part.version === 'latest' ? '@latest' : '@' + part.version;
+    if(!latest) return { part, template: null, state: 'missing-family', label: `${shown} ${vText} — not in your library` };
+    if(latest.kind !== 'module') return { part, template: null, state: 'wrong-kind', label: `${shown} — not a canvas template` };
+    if(part.version === 'latest') return { part, template: latest, state: 'ok', label: `${shown} @latest (v${latest.version})` };
+    const t = familyVersions(part.family).find(v => v.version === part.version);
+    if(!t) return { part, template: null, state: 'missing-version', label: `${shown} v${part.version} — not in your library` };
+    if(part.versionId && t.versionId !== part.versionId) return { part, template: t, state: 'differs', label: `${shown} v${part.version} — yours differs from the one this recipe was made with` };
+    return { part, template: t, state: 'ok', label: `${shown} v${part.version}` };
+  }
+  // Sockets nothing feeds among the versions a recipe would use.
+  function recipeUnfedSockets(parts){
+    const list = parts.map(recipePartStatus).filter(st => st.template)
+      .map(st => ({ name: st.template.name, nodes: st.template.data.nodes || [] }));
+    return unfedSocketsIn(list);
+  }
+  function unfedSocketsText(list){
+    return 'Sockets nothing feeds: ' + list.map(u => `“${u.socket}” (${u.canvas})`).join(', ') + '.';
+  }
+
+  // Builds recipe `t` into the open system (the caller is an action: one undo step).
+  // Returns { canvases: [ids], warnings: [text], unfedSockets: [{ canvas, socket }] }.
+  function buildRecipe(t){
+    const made = [], warnings = [];
+    t.data.parts.forEach(part => {
+      const st = recipePartStatus(part);
+      if(!st.template){ warnings.push(`Skipped ${st.label}.`); return; }
+      if(st.state === 'differs') warnings.push(`${st.template.name} v${st.template.version} in your library isn't the one this recipe was made with — built with yours.`);
+      applyModuleDataToNewCanvas(cloneData(st.template.data));
+      const c = canvases.find(x => x.id === activeCanvasId);
+      setCanvasTemplateLink(c, st.template);
+      made.push(c.id);
+    });
+    if(!made.length) fail(`Nothing to build: none of the parts of "${t.name}" is in your library.`);
+    syncAutoConnections();
+    clearComputed();
+    evaluateAll();
+    syncActiveIntoRegistry();
+    const unfed = unfedSocketsIn(canvases.map(c => ({ name: c.name, nodes: c.nodes })));
+    return { canvases: made, warnings, unfedSockets: unfed };
+  }
+  function recipeBuildSummary(t, r){
+    const lines = [`Built ${t.name}: ${r.canvases.length} canvas${r.canvases.length === 1 ? '' : 'es'}.`];
+    r.warnings.forEach(w => lines.push(w));
+    if(r.unfedSockets.length) lines.push(unfedSocketsText(r.unfedSockets));
+    return lines.join('\n');
+  }
+
+  // Saves a recipe of these parts: a new family, or (newVersionOf) the next version of one.
+  function saveRecipeTemplate(opts){
+    const base = opts.newVersionOf ? latestOfFamily(opts.newVersionOf.family) : null;
+    const t = {
+      id: 'usr' + (nextTemplateId++),
+      name: base ? base.name : opts.name, description: base ? base.description : (opts.description || ''),
+      group: base ? base.group : (opts.group || 'My Templates'), kind: 'recipe', builtin: false,
+      family: base ? base.family : newRandomId(), version: base ? nextVersionNumber(base.family) : 1,
+      note: cleanTemplateNote(opts.note), versionId: newRandomId(),
+      data: { kind: 'recipe', parts: cloneData(opts.parts) }
+    };
+    TEMPLATES.push(t);
+    saveWorkspaceSoon();
+    return t;
+  }
+
+  // The recipe window: name etc. (new recipe), parts with their version, a live socket check.
+  // `from` (a recipe) starts from its parts and saves the next version of it.
+  function showRecipeEditor(from, onSaved){
+    let parts = from ? cloneData(from.data.parts) : [];
+    const modules = () => templateFamilies().filter(f => f.kind === 'module');
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const box = document.createElement('div');
+    box.className = 'modal-box recipe-editor';
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    function close(){ overlay.remove(); document.removeEventListener('keydown', onKey, true); }
+    function onKey(ev){
+      const all = document.querySelectorAll('.modal-overlay');
+      if(ev.key === 'Escape' && all[all.length - 1] === overlay){ ev.preventDefault(); ev.stopPropagation(); close(); }
+    }
+    document.addEventListener('keydown', onKey, true);
+
+    const title = document.createElement('p');
+    title.textContent = from ? `New version of the recipe “${from.name}” (v${nextVersionNumber(from.family)})` : 'New recipe';
+    box.appendChild(title);
+    const inputStyle = 'width:100%;font-size:13px;padding:6px 8px;border-radius:6px;border:1px solid #d1d5db;font-family:inherit;box-sizing:border-box;';
+    const field = (label, el) => {
+      const w = document.createElement('label'); w.className = 'recipe-field';
+      const l = document.createElement('span'); l.textContent = label;
+      el.style.cssText = inputStyle; w.append(l, el); box.appendChild(w); return el;
+    };
+    let nameIn = null, groupIn = null, descIn = null;
+    if(!from){
+      nameIn = field('Name', document.createElement('input')); nameIn.className = 'recipe-name';
+      groupIn = field('Group', document.createElement('input')); groupIn.value = 'My Templates';
+      descIn = field('Description', document.createElement('input'));
+    }
+    const noteIn = field('Change note', document.createElement('input'));
+    noteIn.className = 'recipe-note'; noteIn.maxLength = TEMPLATE_NOTE_MAX; noteIn.placeholder = 'What changed (optional)';
+
+    const head = document.createElement('p'); head.className = 'recipe-parts-head'; head.textContent = 'Parts (canvas templates, added in this order)';
+    const list = document.createElement('div'); list.className = 'recipe-parts';
+    const addBtn = document.createElement('button'); addBtn.className = 'recipe-add-part'; addBtn.textContent = '+ Add part';
+    const check = document.createElement('p'); check.className = 'recipe-check';
+    box.append(head, list, addBtn, check);
+
+    const actions = document.createElement('div'); actions.className = 'modal-actions';
+    const cancelBtn = document.createElement('button'); cancelBtn.textContent = 'Cancel'; cancelBtn.addEventListener('click', close);
+    const saveBtn = document.createElement('button'); saveBtn.className = 'primary'; saveBtn.textContent = from ? `Save version ${nextVersionNumber(from.family)}` : 'Save Recipe';
+    actions.append(cancelBtn, saveBtn);
+    box.appendChild(actions);
+
+    function render(){
+      list.innerHTML = '';
+      parts.forEach((part, i) => {
+        const row = document.createElement('div'); row.className = 'recipe-part';
+        const fam = document.createElement('select'); fam.className = 'recipe-part-family';
+        const fams = modules();
+        if(!fams.some(f => f.family === part.family)){
+          const o = document.createElement('option'); o.value = part.family; o.textContent = (part.name || 'Unknown') + ' (not in your library)'; fam.appendChild(o);
+        }
+        fams.forEach(f => { const o = document.createElement('option'); o.value = f.family; o.textContent = f.name; fam.appendChild(o); });
+        fam.value = part.family;
+        fam.addEventListener('change', () => {
+          const f = latestOfFamily(fam.value);
+          parts[i] = f ? recipePartOf(f, false) : parts[i];
+          render();
+        });
+        const ver = document.createElement('select'); ver.className = 'recipe-part-version';
+        const latestOpt = document.createElement('option'); latestOpt.value = 'latest'; latestOpt.textContent = 'latest'; ver.appendChild(latestOpt);
+        familyVersions(part.family).forEach(v => { const o = document.createElement('option'); o.value = String(v.version); o.textContent = 'v' + v.version; ver.appendChild(o); });
+        if(part.version !== 'latest' && !familyVersions(part.family).some(v => v.version === part.version)){
+          const o = document.createElement('option'); o.value = String(part.version); o.textContent = `v${part.version} (missing)`; ver.appendChild(o);
+        }
+        ver.value = String(part.version);
+        ver.addEventListener('change', () => {
+          if(ver.value === 'latest'){ parts[i] = Object.assign({}, part, { version: 'latest' }); delete parts[i].versionId; }
+          else {
+            const v = familyVersions(part.family).find(x => String(x.version) === ver.value);
+            if(v) parts[i] = recipePartOf(v, true);
+          }
+          render();
+        });
+        const st = recipePartStatus(part);
+        const mark = document.createElement('span'); mark.className = 'recipe-part-state ' + st.state;
+        mark.textContent = st.state === 'ok' ? '✓' : '⚠'; mark.title = st.label;
+        const btn = (label, cls, fn, disabled) => { const b = document.createElement('button'); b.textContent = label; b.className = cls; b.disabled = !!disabled; b.addEventListener('click', fn); return b; };
+        row.append(fam, ver, mark,
+          btn('↑', 'recipe-up', () => { [parts[i - 1], parts[i]] = [parts[i], parts[i - 1]]; render(); }, i === 0),
+          btn('↓', 'recipe-down', () => { [parts[i + 1], parts[i]] = [parts[i], parts[i + 1]]; render(); }, i === parts.length - 1),
+          btn('✕', 'recipe-remove', () => { parts.splice(i, 1); render(); }));
+        list.appendChild(row);
+      });
+      if(!parts.length){ const p = document.createElement('p'); p.className = 'template-desc'; p.textContent = 'No parts yet.'; list.appendChild(p); }
+      addBtn.disabled = !modules().length || parts.length >= RECIPE_MAX_PARTS;
+      const unfed = recipeUnfedSockets(parts);
+      check.classList.toggle('warn', unfed.length > 0);
+      check.textContent = !parts.length ? '' : (unfed.length ? unfedSocketsText(unfed) : 'Every socket is fed by a plug in these parts.');
+      saveBtn.disabled = !parts.length;
+    }
+    addBtn.addEventListener('click', () => {
+      const used = new Set(parts.map(p => p.family));
+      const f = modules().find(x => !used.has(x.family)) || modules()[0];
+      if(f){ parts.push(recipePartOf(f, false)); render(); }
+    });
+    saveBtn.addEventListener('click', () => {
+      const note = cleanTemplateNote(noteIn.value);
+      if(from){ close(); onSaved(saveRecipeTemplate({ newVersionOf: from, parts, note })); return; }
+      const name = nameIn.value.trim();
+      if(!name){ nameIn.focus(); return; }
+      const other = familiesNamed(name).find(f => f.kind !== 'recipe');
+      if(other){ showMessage(`There is already a ${other.kind === 'system' ? 'system' : 'canvas'} template called "${other.name}". Choose another name.`); return; }
+      const opts = { name, group: groupIn.value.trim() || 'My Templates', description: descIn.value.trim(), parts, note };
+      const taken = familiesNamed(name, 'recipe');
+      if(taken.length){
+        askNameTaken(taken[0], () => { close(); onSaved(saveRecipeTemplate(Object.assign(opts, { newVersionOf: taken[0] }))); }, () => { nameIn.focus(); nameIn.select(); });
+        return;
+      }
+      close();
+      onSaved(saveRecipeTemplate(opts));
+    });
+    render();
+    (nameIn || noteIn).focus();
   }
 
   // ---------- canvases linked to a canvas template (system v4) ----------
@@ -1183,8 +1408,13 @@
     saveCanvasBtn.textContent = '+ Save Canvas as Template';
     const saveSystemBtn = document.createElement('button');
     saveSystemBtn.textContent = '+ Save System as Template';
+    const newRecipeBtn = document.createElement('button');
+    newRecipeBtn.className = 'template-new-recipe';
+    newRecipeBtn.textContent = '+ New Recipe…';
+    newRecipeBtn.title = 'A recipe adds several canvas templates together; their plugs and sockets connect them.';
     saveRow.appendChild(saveCanvasBtn);
     saveRow.appendChild(saveSystemBtn);
+    saveRow.appendChild(newRecipeBtn);
     box.appendChild(saveRow);
 
     const ioRow = document.createElement('div');
@@ -1259,6 +1489,9 @@
     saveCanvasBtn.addEventListener('click', () => {
       saveCurrentCanvasAsTemplate((newTpl) => { selected = newTpl; previewCanvasIdx = 0; renderList(); renderDetail(); });
     });
+    newRecipeBtn.addEventListener('click', () => {
+      showRecipeEditor(null, (newTpl) => { selected = newTpl; previewCanvasIdx = 0; renderList(); renderDetail(); });
+    });
     saveSystemBtn.addEventListener('click', () => {
       saveCurrentSystemAsTemplate((newTpl) => { selected = newTpl; previewCanvasIdx = 0; renderList(); renderDetail(); });
     });
@@ -1269,11 +1502,58 @@
       if(!t) return;
       close();
       if(t.kind === 'module'){ guarded(() => fm.insertTemplate(t.id, 'here')); return; }
+      if(t.kind === 'recipe'){
+        guarded(() => { const r = fm.insertTemplate(t.id, 'add'); if(r) showMessage(recipeBuildSummary(t, r)); });
+        return;
+      }
       const collisions = (t.data.canvases || [])
         .filter(c => canvases.some(ec => ec.name.trim().toLowerCase() === (c.name || '').trim().toLowerCase()))
         .map(c => ({ name: c.name || 'Canvas' }));
       if(collisions.length === 0) guarded(() => fm.insertTemplate(t.id, 'add'));
       else showCanvasMergeDecisionModal(collisions, (decisions) => guarded(() => fm.insertTemplate({ template: t.id, mode: 'add', decisions })));
+    }
+
+    // A recipe: its parts (with how each stands against the library), the socket check,
+    // and Build / Edit as new version / Edit info / Delete.
+    function renderRecipeDetail(all){
+      const ul = document.createElement('ul');
+      ul.className = 'recipe-detail-parts';
+      selected.data.parts.forEach(part => {
+        const st = recipePartStatus(part);
+        const li = document.createElement('li');
+        li.className = 'recipe-part-state ' + st.state;
+        li.textContent = (st.state === 'ok' ? '✓ ' : '⚠ ') + st.label;
+        ul.appendChild(li);
+      });
+      detail.appendChild(ul);
+      const unfed = recipeUnfedSockets(selected.data.parts);
+      const check = document.createElement('p');
+      check.className = 'recipe-check' + (unfed.length ? ' warn' : '');
+      check.textContent = unfed.length ? unfedSocketsText(unfed) : 'Every socket is fed by a plug in these parts.';
+      detail.appendChild(check);
+      const actionsRow = document.createElement('div');
+      actionsRow.className = 'template-import-actions';
+      const buildBtn = document.createElement('button');
+      buildBtn.className = 'primary recipe-build';
+      buildBtn.textContent = 'Build (add canvases)';
+      buildBtn.addEventListener('click', runMain);
+      const editBtn = document.createElement('button');
+      editBtn.className = 'recipe-edit';
+      editBtn.textContent = 'Edit as new version…';
+      editBtn.addEventListener('click', () => showRecipeEditor(selected, (t) => { selected = t; renderList(); renderDetail(); }));
+      const infoBtn = document.createElement('button');
+      infoBtn.textContent = '✎ Edit info';
+      infoBtn.addEventListener('click', () => editTemplateMeta(selected, () => { renderList(); renderDetail(); }));
+      const delBtn = document.createElement('button');
+      delBtn.className = 'template-delete';
+      const latest = isLatestVersion(selected);
+      delBtn.textContent = !latest ? `🗑 Delete version ${selected.version}` : (all.length > 1 ? `🗑 Delete (all ${all.length} versions)` : '🗑 Delete');
+      delBtn.addEventListener('click', () => deleteTemplate(selected, () => {
+        const left = TEMPLATES.includes(selected) ? selected : latestOfFamily(selected.family);
+        selected = left || templateFamilies()[0] || null; renderList(); renderDetail();
+      }));
+      actionsRow.append(buildBtn, editBtn, infoBtn, delBtn);
+      detail.appendChild(actionsRow);
     }
 
     function renderDetail(){
@@ -1308,6 +1588,7 @@
       detail.appendChild(desc);
 
       const data = selected.data;
+      if(selected.kind === 'recipe'){ renderRecipeDetail(all); return; }
       let previewCanvases;
       if(selected.kind === 'system'){
         previewCanvases = data.canvases;
@@ -1394,7 +1675,7 @@
       b.className = 'template-family' + (selected === t ? ' active' : '');
       b.appendChild(idx ? highlightLabel(t.name, idx) : document.createTextNode(t.name));
       b.appendChild(document.createElement('br'));
-      const kind = t.kind === 'system' ? 'system' : 'module';
+      const kind = t.kind;
       const tag = document.createElement('span');
       tag.className = 'kind-tag ' + kind;
       tag.textContent = kind;

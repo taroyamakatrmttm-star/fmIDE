@@ -158,3 +158,15 @@ test('a version 2 workspace (templates with families and versions) loads', async
   await expect(loadStatus(page)).toHaveClass(/ok/);
   await expect(loadStatus(page)).toContainText('Loaded v2.fmide');
 });
+
+test('a version 3 workspace (with a recipe template) loads', async ({ page }, testInfo) => {
+  const ws = JSON.parse(fs.readFileSync(fixture('models', 'roles-workspace-edited.json'), 'utf8'));
+  ws.version = 3;
+  ws.templates = [{ name: 'Three Statements', kind: 'recipe', family: '3f2a9c1e-0000-4000-8000-000000000011', version: 1, note: '',
+    versionId: '3f2a9c1e-0000-4000-8000-000000000012', data: { kind: 'recipe', parts: [{ family: '3f2a9c1e-0000-4000-8000-000000000001', version: 'latest', name: 'Income Statement' }] } }];
+  const doc = testInfo.outputPath('v3.fmide');
+  fs.writeFileSync(doc, JSON.stringify(ws));
+  await X.loadModelFile(page, doc);
+  await expect(loadStatus(page)).toHaveClass(/ok/);
+  await expect(loadStatus(page)).toContainText('Loaded v3.fmide');
+});

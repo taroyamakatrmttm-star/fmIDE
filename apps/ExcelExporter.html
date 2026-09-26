@@ -1900,7 +1900,7 @@ function buildDefaultMapping(m){
 // (docs/file-formats.md). To change one of these formats: raise its version here and add
 // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
 // exactly one version.
-const SHARED_FILE_VERSIONS = { 'system': 4, 'fmIDE-workspace': 2 };
+const SHARED_FILE_VERSIONS = { 'system': 4, 'fmIDE-workspace': 3 };
 // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
 // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
 function upgradeNodePlugs(nodes){
@@ -1937,7 +1937,9 @@ function upgradeTemplateEntries(list){
 const SHARED_FILE_MIGRATIONS = {
   // v1 → v2: templates get a family, a version number, a change note and a version id.
   'fmIDE-workspace': {
-    1: d => upgradeTemplateEntries(d.templates)
+    1: d => upgradeTemplateEntries(d.templates),
+    // v2 → v3: templates may be recipes (kind "recipe"); older files have none.
+    2: () => {}
   },
   'system': {
     // v1 systems were accepted with fields the loader already defaults (periods, ids…);

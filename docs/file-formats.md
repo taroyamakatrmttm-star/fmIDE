@@ -20,8 +20,8 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 |---|---|---|---|
 | `system` | 4 | A whole model (all canvases, periods); v4: a canvas may remember the canvas template it came from | fmIDE: File → Load System · ExcelExporter |
 | `module` | 2 | One canvas | fmIDE: File → Load Module |
-| `fmIDE-workspace` | 2 | Everything: system + templates, format presets, shortcuts, macros. A **`.fmide` document** is exactly this, with the `.fmide` extension | fmIDE: File → Open… (a document) or Import Workspace (a full replace) · ExcelExporter |
-| `fmIDE-templates` | 2 | Saved templates (each holds a module or system), with their families and versions | fmIDE: Templates → Import Templates |
+| `fmIDE-workspace` | 3 | Everything: system + templates, format presets, shortcuts, macros. A **`.fmide` document** is exactly this, with the `.fmide` extension | fmIDE: File → Open… (a document) or Import Workspace (a full replace) · ExcelExporter |
+| `fmIDE-templates` | 3 | Saved templates (each holds a module, a system or a recipe), with their families and versions | fmIDE: Templates → Import Templates |
 | `fmIDE-format-presets` | 1 | Format presets, including the format roles | fmIDE: Format Presets → Import Presets |
 | `fmIDE-shortcuts` | 2 | Keyboard shortcut bindings | fmIDE: Keyboard Shortcuts → Import Shortcuts |
 | `fmIDE-macros` | 1 | Macros | fmIDE: Macro Builder → Import |
@@ -33,6 +33,22 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 A value rectangle can carry several plug names: `"plugs": ["to Income Tax expense", "to CF Income Tax paid"]`. Each name feeds the rectangle into every operator whose `socket` has that name (names match regardless of capitals), on any canvas; an operator still has one `socket`. The connections this makes are saved too (arrows and aliases marked `"auto": true`), which is all ExcelExporter reads.
 
 Older files (`system` 1–2, `module` 1) held one name, `"plug": "Revenue"` (blank for none). Reading one turns it into `"plugs": ["Revenue"]` (or `[]`) and removes `plug` — the upgrade step `SHARED_FILE_MIGRATIONS.system[2]` and fmIDE's `FILE_MIGRATIONS.module[1]`, both using `upgradeNodePlugs()` in `src/shared/file-formats.js`. That covers every way a model arrives: Load System / Load Module, Open… and Open Recent, Import Workspace, templates (each template's model is upgraded as it is read) and the autosave. An older fmIDE opening a newer file asks first ("saved by a newer version"), so it never drops extra plugs without saying so.
+
+## Recipes (`fmIDE-templates` 3, `fmIDE-workspace` 3)
+
+A **recipe** is a template (with a family, version and note like any other) whose `kind` is `"recipe"`. It lists canvas templates to add together:
+
+```json
+{ "name": "Three Statements", "kind": "recipe", "family": "…", "version": 1, "note": "", "versionId": "…",
+  "data": { "kind": "recipe", "parts": [
+    { "family": "…income…", "version": "latest", "name": "Income Statement" },
+    { "family": "…balance…", "version": 2, "versionId": "…", "name": "Balance Sheet" } ] } }
+```
+
+- Each part is a canvas template family, either `"latest"` (whatever the newest version is when the recipe is built) or a pinned version number. A pinned part records the `versionId` it was made with. `name` is only for display, when the family isn't in the library.
+- **Building** adds one canvas per part, in order, each linked to its template version (see below). Plugs and sockets then connect the canvases by name. The build warns when a pinned version in the library isn't the one the recipe recorded (it builds with the library's), skips a part whose family or pinned version isn't in the library (with a warning), and lists sockets nothing feeds. Nothing is refused unless no part at all can be built.
+- **Reading:** at most 50 parts. A part whose `family` isn't 8–64 letters, digits and dashes, or whose `version` isn't `"latest"` or a whole number of 1 or more, is dropped; a recipe with no parts left is skipped. Names are text of at most 200 characters.
+- Older files (`fmIDE-templates` 1–2, `fmIDE-workspace` 1–2) have no recipes; the upgrade steps change nothing. An older fmIDE asks before opening a version 3 file; without that, it would read a recipe as a broken canvas template. ExcelExporter ignores templates.
 
 ## Canvases linked to a template (`system` 4)
 
