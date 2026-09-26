@@ -2,6 +2,15 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter writes its formulas from the shared formula IR (phase C)
+- ExcelExporter now reads the model through the same shared calculation description fmIDE calculates on (the IR). Workbooks are unchanged for every sample model; Generate is faster on large models (about a third less time on a model of about 1,900 nodes).
+- Plugs and sockets: both apps now work out which plug feeds which socket from the names themselves, instead of trusting the connections saved in the file. A file whose saved connections were out of date (a plug renamed or removed after saving) used to give ExcelExporter different numbers from fmIDE's.
+- Units come from the IR in both apps. fmIDE now also shows the unit of a rectangle fed by a block (worked out through that block, as the workbook already did: $/t × kt inside a block gives $k outside it).
+- A block's input port whose source needs a period outside the timeline uses the port's typed number in Excel too, as in fmIDE (Excel wrote 0). A port whose source fails for another reason (a divide by zero) now shows "?" in fmIDE, as Excel shows an error (fmIDE used the port's typed number and hid the error).
+- New: before you download, ExcelExporter lists where the workbook will differ from fmIDE — rows where fmIDE shows "?" because something is broken (a loop, an alias to nothing, two arrows into one rectangle, a missing block…) but Excel writes 0 or leaves the cell blank, operators fmIDE doesn't know, and rows left out of the layout that other rows read. It never blocks the download.
+- Fix: ExcelExporter could not generate a workbook ("Maximum call stack size exceeded") from a model with a block that contains itself; it now writes 0 there and lists it.
+- Fix: a saved ExcelExporter layout was lost whenever fmIDE redrew the connections plugs make (they get new ids each time). The layout's key now leaves them out; layouts saved before are still found.
+
 ## fmIDE calculates on the shared formula IR (phase B)
 - fmIDE now calculates from a shared description of the model's calculation (the IR, intermediate representation, in `src/shared/`): an operator catalogue with lasting ids, units of measure, and `compileModel`, which reads only the model. Values, error messages, units and the automation interface (`window.fm`) are unchanged; ExcelExporter moves onto the IR next (phase C).
 - Faster: on a large model (about 1,900 nodes, 24 periods) a full calculation takes about a third of the time it did.

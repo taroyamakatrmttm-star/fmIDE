@@ -1,8 +1,9 @@
 // 17. Agreement — the canvas and Excel give the same numbers.
 // Each model is opened in fmIDE (values read through window.fm) and in ExcelExporter (the
 // workbook recalculated by LibreOffice); every rectangle that has its own row on its
-// canvas's tab must show the same value in every period, in both apps. An error on both
-// sides ("?" in fmIDE, an error cell in Excel) counts as agreeing.
+// canvas's tab must show the same value in every period, in both apps. So must every row on
+// a block instance's tab, against fmIDE's calculation of that instance (the shared IR, run
+// in Node). An error on both sides ("?" in fmIDE, an error cell in Excel) counts as agreeing.
 const fs = require('fs');
 const path = require('path');
 const { test, expect, fixture, FIXTURES } = require('./helpers/apps');
@@ -39,6 +40,52 @@ async function fmideValues(page, file){
     });
     return out;
   });
+}
+
+// Rows inside block instances: fmIDE shows only a block's outputs, so their values come from
+// fmIDE's calculation run on its own in Node (the shared IR, the same code fmIDE runs — test
+// group 18 checks that). One entry per block-instance tab, as ExcelExporter names them:
+// { tab: [{ label, values[] }] }, labelled as ExcelExporter labels rows ("Name — Vintage 2",
+// "Name (Total)", "Name (shared)").
+const vm = require('vm');
+function loadIR(){
+  const dir = path.join(__dirname, '..', 'src', 'shared');
+  const code = ['operators.js', 'uom.js', 'input-rule.js', 'ir.js'].map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
+  return vm.runInContext(code + '\n;({ compileModel, evaluateModel, parseRectText })', vm.createContext({}));
+}
+function instanceValues(system){
+  const IR = loadIR();
+  const ir = IR.compileModel(system);
+  const results = IR.evaluateModel(ir, { instances: true });
+  // Tab names: one per block instance, canvas by canvas, numbered per block (sanitizeSheetName).
+  const tabOf = {}, count = {};
+  ir.order.forEach(c => c.list.forEach(n => {
+    if(n.type !== 'blockInstance' || !n.blockDefCanvasId || tabOf[c.id + '|' + n.id]) return;
+    const def = ir.canvases.get(n.blockDefCanvasId);
+    count[n.blockDefCanvasId] = (count[n.blockDefCanvasId] || 0) + 1;
+    const name = (def ? (def.name || n.blockDefCanvasId) : 'Block') + ' (instance ' + count[n.blockDefCanvasId] + ')';
+    tabOf[c.id + '|' + n.id] = name.replace(/[\\/?*\[\]:]/g, ' ').slice(0, 31).trim() || 'Sheet';
+  }));
+  const out = {};
+  results.instances.forEach((list, p) => list.forEach(e => {
+    const n = ir.canvases.get(e.canvasId).byId.get(e.nodeId);
+    if(!n || n.type !== 'value' || n.blockRole === 'index') return;
+    const tab = tabOf[e.path[0].canvasId + '|' + e.path[0].nodeId];
+    const name = IR.parseRectText(n.node.text).name || '(unnamed)';
+    const last = e.path[e.path.length - 1];
+    const labels = e.combined ? [name + ' (Total)']
+      : typeof last.vintage === 'number' ? [name + ' — Vintage ' + last.vintage].concat(last.vintage === 1 ? [name + ' (shared)'] : [])
+      : [name];
+    const v = (e.value === null || e.value === undefined || Number.isNaN(e.value)) ? 'error' : e.value;
+    const key = e.path.map(h => h.canvasId + ':' + h.nodeId + ':' + (h.vintage || '')).join('>') + '|' + e.canvasId + '|' + e.nodeId + (e.combined ? '#total' : '');
+    labels.forEach(label => {
+      out[tab] = out[tab] || {};
+      const k = key + '|' + label;
+      out[tab][k] = out[tab][k] || { label, values: [] };
+      out[tab][k].values[p] = v;
+    });
+  }));
+  return Object.fromEntries(Object.entries(out).map(([tab, m]) => [tab, Object.values(m)]));
 }
 
 // ExcelExporter's workbook (Inputs tab on or off), recalculated by LibreOffice.
@@ -95,7 +142,32 @@ for(const [folder, model] of CASES){
         }
       }
     }
+    // Rows inside block-instance tabs, against fmIDE's calculation of each instance.
+    const comparedOutside = compared;
+    const json = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const inside = instanceValues(json.system || json);
+    for(const mode of Object.keys(books)){
+      const intended = books[mode].wb;
+      const book = await X.readBack(recalculated[mode]);
+      for(const [tab, rows] of Object.entries(inside)){
+        const ws = intended.Sheets[tab];
+        if(!ws) continue;
+        const p1 = X.periodOneCol(ws);
+        const sheet = book.getWorksheet(tab);
+        for(const r of rows){
+          if(rows.filter(o => o.label === r.label).length !== 1) continue; // label not unique on the tab
+          const found = X.findRow(ws, r.label);
+          if(found.length !== 1) continue; // no row of its own (e.g. a port something feeds)
+          r.values.forEach((v, p) => {
+            const got = excelValue(sheet.getCell(X.numToCol(p1 + p) + found[0]));
+            compared++;
+            if(!same(v, got)) mismatches.push(`${mode === 'on' ? 'Inputs tab on' : 'Inputs tab off'} · ${tab} · ${r.label} · period ${p + 1}: fmIDE ${v}, Excel ${got}`);
+          });
+        }
+      }
+    }
     expect(compared, 'some rectangles were compared').toBeGreaterThan(0);
+    if(Object.keys(inside).length) expect(compared - comparedOutside, 'some rows inside block instances were compared').toBeGreaterThan(0);
     expect(mismatches).toEqual([]);
   });
 }

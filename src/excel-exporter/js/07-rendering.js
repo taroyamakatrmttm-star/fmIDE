@@ -262,6 +262,7 @@ function renderRows(){
   renderBlockInstanceGroups();
   renderRowsByTab();
   renderTreeView();
+  renderDifferences();
 }
 
 // Mirrors renderRows()'s per-canvas grouping, but one group per top-level block

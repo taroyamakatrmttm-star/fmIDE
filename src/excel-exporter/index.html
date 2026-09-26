@@ -153,6 +153,7 @@
         <strong>Known limitations:</strong> a block instance's own compact node never gets a row — it's fully unpacked into its own "Block instance —" group instead (see the Rows panel above), so map/rename/reorder its rows there like any other. A <strong>vertical</strong> block instance (fmIDE's Vertical Block feature) is unpacked once per vintage/run — a "V1", "V2", … tagged copy of every internal row per period in the timeline — plus one "Σ Total"-tagged row per output port that reduces all those vintages back into the single value the rest of the model sees, via SUM/MAX/MIN/AVERAGE/PRODUCT matching that output's reducer (default sum); this is exactly a vintage/waterfall schedule with a Total row underneath, so with many periods a vertical block can add a lot of rows — reorder, rename, or exclude them like any other row. A block that instantiates itself, directly or indirectly, is skipped (avoids an infinite unpack). Formulas, number formats, and cell fill/border/font all carry through reliably. Excel recalculates formulas automatically when the file opens.
       </div>
       <div id="storageWarn" class="status err hidden" role="alert" style="margin-bottom:10px;"></div>
+      <div id="differencesPanel" class="differences hidden" role="status"></div>
       <div class="row" style="margin-top:14px;">
         <button id="btnGenerate" class="primary">⬇ Generate &amp; Download .xlsx</button>
         <button id="btnExportMapping">Export Mapping JSON</button>
