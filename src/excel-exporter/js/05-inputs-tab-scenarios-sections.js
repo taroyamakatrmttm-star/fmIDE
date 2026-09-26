@@ -20,15 +20,21 @@ function inputsTab(){ return mapping.tabs.find(t => t.id === INPUTS_TAB_ID) || n
 function mirrorIdFor(sourceRowId){ return 'inp|' + sourceRowId; }
 
 // A real rectangle row whose rectangle has no incoming arrow — i.e. its numbers are typed.
-// A Block Input rectangle counts too, unless its canvas is used as a block: then it is a
-// port fed by whatever each instance wires in (inside an instance, row.path is not empty),
-// and on the definition's own tab only a placeholder.
+// A Block Input rectangle counts too: inside an instance (row.path not empty) when nothing
+// feeds that instance's port (it then has a row of its own); on its own canvas unless the
+// canvas is used as a block, where it is only a placeholder for what instances wire in.
 function isTrueInputRow(row){
   if(!row || row.isCustom || row.isInputMirror || row.verticalCombined) return false;
   const c = model.canvases.find(x => x.id === row.canvasId);
   const n = c && c.nodes.find(x => x.id === row.nodeId);
   if(!n || n.type !== 'value' || n.blockRole === 'index') return false;
-  if(n.blockRole === 'input' && ((row.path && row.path.length) || isUsedAsBlock(c.id))) return false;
+  if(n.blockRole === 'input'){
+    if(row.path && row.path.length){
+      const canvasById = {}; model.canvases.forEach(x => canvasById[x.id] = x);
+      return isUnfedBlockInput(canvasById, row.path, c, n);
+    }
+    if(isUsedAsBlock(c.id)) return false;
+  }
   return isInputRectangle(c, n);
 }
 function isUsedAsBlock(canvasId){

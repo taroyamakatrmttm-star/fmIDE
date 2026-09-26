@@ -37,9 +37,26 @@ function pathKey(path, canvasId, nodeId){
 // (blockRole 'index', fmIDE's Vertical Block feature) gets the same pass-through
 // treatment as a Block Input — it never gets a row either; operandRef resolves it
 // directly to the current vintage/run's 1-based index as a literal.
-function classifyUnpackedNode(canvas, node){
-  if(node.blockRole === 'input' || node.blockRole === 'index') return null;
+//
+// Exception: a Block Input port that nothing feeds in this instance (isUnfedBlockInput)
+// is a real input of the instance — it gets its own row holding the port's own typed
+// number(s), as fmIDE uses them, and operandRef refers to that row.
+function classifyUnpackedNode(canvas, node, canvasById, path){
+  if(node.blockRole === 'index') return null;
+  if(node.blockRole === 'input') return (canvasById && isUnfedBlockInput(canvasById, path, canvas, node)) ? 'input' : null;
   return classifyNode(canvas, node);
+}
+
+// True if `node`, a Block Input port of `defCanvas` reached through `path` (its last hop
+// is the instance), is fed by nothing: no arrow into the instance's port, or one from
+// something fed by nothing (feedsNothing — e.g. an operator with an empty socket).
+function isUnfedBlockInput(canvasById, path, defCanvas, node){
+  if(!node || node.blockRole !== 'input' || !path || !path.length) return false;
+  const hop = path[path.length - 1];
+  const host = canvasById[hop.canvasId];
+  if(!host) return false;
+  const edge = host.edges.find(e => e.to === hop.nodeId && e.toPort === blockInputPortIndex(defCanvas, node));
+  return !edge || feedsNothing(host, edge.from, new Set());
 }
 
 // A block definition's port order is the left-to-right (x, then y) reading order of
@@ -76,7 +93,7 @@ function collectUnpackedRows(canvasById, defCanvasId, pathPrefix, visitingDefIds
       out.push(...collectInstanceRows(canvasById, pathPrefix, defCanvasId, n, nextVisiting, periodCount));
       return;
     }
-    const section = classifyUnpackedNode(canvas, n);
+    const section = classifyUnpackedNode(canvas, n, canvasById, pathPrefix);
     if(section === null) return;
     out.push({ path: pathPrefix, canvasId: defCanvasId, nodeId: n.id, section });
   });
@@ -179,12 +196,12 @@ function collectInstanceRows(canvasById, pathPrefixOuter, hostCanvasId, hostNode
     const skipNodeIds = new Set();
     defCanvas.nodes.forEach(dn => {
       if(dn.type === 'blockInstance' || dn.blockRole === 'output') return;
-      if(classifyUnpackedNode(defCanvas, dn) === null) return;
+      if(classifyUnpackedNode(defCanvas, dn, canvasById, combinedPath) === null) return;
       if(!isVintageVarying(canvasById, hostCanvasId, hostNode, hostNode.blockDefCanvasId, dn.id, new Set())){
         skipNodeIds.add(dn.id);
         out.push({
           path: combinedPath, canvasId: hostNode.blockDefCanvasId, nodeId: dn.id,
-          section: classifyUnpackedNode(defCanvas, dn), verticalShared: true
+          section: classifyUnpackedNode(defCanvas, dn, canvasById, combinedPath), verticalShared: true
         });
       }
     });

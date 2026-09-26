@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Unconnected block inputs are real inputs in Excel
+- ExcelExporter: when nothing feeds a block instance's input (no arrow, or an arrow from something fed by nothing, such as an operator with an empty socket), that input gets its own row on the instance's tab, holding the number typed in the block, just as fmIDE uses it. The block's formulas refer to that row (before, they used a typed 0), and "Gather inputs on a separate tab" gathers it, one row per instance. Inputs that are fed work as before.
+
 ## Search in the Templates window
 - fmIDE: **File → Templates** has a search box, with the cursor in it when the window opens. It matches like the Command Launcher (Ctrl/Cmd+K): part of a name, or its group or description, best match first with the matched letters in bold. ↑ ↓ move the selection (the preview follows), Enter runs the main button (Add to current canvas, or Add System; never Replace System), and Esc closes the window.
 

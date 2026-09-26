@@ -120,6 +120,34 @@ test.describe('known answers — scenarios and global cases', () => {
   });
 });
 
+test.describe('known answers — unfed block inputs', () => {
+  // block-unfed-inputs.json: COGS = Negatizer(Inputs) = Inputs × -1, with Inputs typed 4 and
+  // nothing feeding either instance's port. Each instance's Inputs row is its own input.
+  test('the typed value is used, and each instance follows its own Inputs-tab cell', async ({ page }) => {
+    requireSoffice(test);
+    await X.openExporter(page);
+    await X.loadFixtureModel(page, 'block-unfed-inputs.json');
+    await X.setInputsTab(page, true);
+    const { wb } = await X.generate(page);
+    const inputs = wb.Sheets['Inputs'], p1 = X.numToCol(X.periodOneCol(inputs));
+    // The "Inputs" row gathered under "Negatizer (instance 1)".
+    const group = X.findRow(inputs, 'Negatizer (instance 1)')[0];
+    const target = X.findRow(inputs, 'Inputs').filter(r => r > group).sort((a, b) => a - b)[0];
+    expect(target, 'Inputs row under Negatizer (instance 1)').toBeTruthy();
+    const edited = JSON.parse(JSON.stringify(wb));
+    edited.Sheets['Inputs'][p1 + target] = { t: 'n', v: 5 };
+    const out = recalc({ as_typed: (await X.generate(page)).bytes, edited: await X.writeWithApp(page, edited) });
+    const cogs = async (name, tab) => {
+      const ws = wb.Sheets[tab], [r] = X.findRow(ws, 'COGS');
+      return valueOf((await X.readBack(out[name])).getWorksheet(tab).getCell(X.numToCol(X.periodOneCol(ws)) + r));
+    };
+    expect(await cogs('as_typed', 'Case1')).toBe(-4);
+    expect(await cogs('as_typed', 'Case2')).toBe(-4);
+    expect(await cogs('edited', 'Case1')).toBe(-5);
+    expect(await cogs('edited', 'Case2')).toBe(-4);
+  });
+});
+
 // Block-definition tabs compute with unconnected inputs, so #DIV/0! is expected there.
 const BLOCK_DEF_TABS = ['DepBlock', 'Depreciation Block'];
 

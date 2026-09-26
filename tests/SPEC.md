@@ -61,6 +61,7 @@ Recalculate generated workbooks with `soffice --headless --calc --convert-to xls
   | "x" (not a number → uses 1; check says "Not a number - using 1") | 50 |
 
   Also: renaming scenario row "Scenario 2" to "Upside" on the Inputs tab shows "Upside" in the Scenarios tab's name column; a formula `=<empty scenario cell>+1` evaluates to 1 (not `#VALUE!`).
+- **Known answers — unfed block inputs** — `block-unfed-inputs.json` (COGS = Negatizer: Inputs × −1, Inputs typed 4; on Case1 the instance's port is fed by a "+" with nothing plugged in, on Case2 it is unconnected), Inputs tab on: COGS is −4 on both. With instance 1's Inputs-tab cell set to 5, Case1 COGS is −5 and Case2 stays −4.
 - **No errors** except the known ones: standalone block-definition tabs (e.g. "DepBlock", "Depreciation Block") may show `#DIV/0!` because their inputs are unconnected — allow those, flag any other error cell.
 
 ### 3. Excel output — layout rules
@@ -68,7 +69,7 @@ Recalculate generated workbooks with `soffice --headless --calc --convert-to xls
 - Column C header: "Variable Scenario" on the Inputs tab, "Vintage" on tabs with vertical-block vintage rows, blank elsewhere.
 - **Vertical blocks** (`vertical-depreciation-block.json`, `combined-bs-corkscrew-block.json`): convert every vintage-row formula to relative R1C1 form; within each line item's vintage block there must be exactly one distinct formula per column group (each helper column, and the period columns). Helper columns are headed "<input> @ vintage". The Total row is a `SUM(<range>)` over the contiguous vintage rows. No "Vertical Index" row exists anywhere.
 - **Comparisons** (`comparisons.json`): "BS check" is `=(ABS(...)<=...)` — no `IF`; "Min probe" is `=MIN(N(...),...)`; "GE probe" is `=(N(...)>=...)`.
-- **Inputs tab** (`revenue-bs-corkscrew.json`, Inputs tab on): Inputs tab is first; each input row on other tabs is a link formula to the Inputs tab (sheet-qualified single cell); "Beginning Balance" (fed through a period shift) is not gathered. `block-input-rectangles.json`: Volume and DSO, marked Block Input on a canvas no block instance uses, are gathered and their rows link to the Inputs tab (Block Inputs of a canvas that is used as a block stay off it). Group by Excel tab / Canvas / No grouping and Alphabetical order produce headers and orders accordingly.
+- **Inputs tab** (`revenue-bs-corkscrew.json`, Inputs tab on): Inputs tab is first; each input row on other tabs is a link formula to the Inputs tab (sheet-qualified single cell); "Beginning Balance" (fed through a period shift) is not gathered. `block-input-rectangles.json`: Volume and DSO, marked Block Input on a canvas no block instance uses, are gathered and their rows link to the Inputs tab (Block Inputs of a canvas that is used as a block stay off it). `block-unfed-inputs.json`: each Negatizer instance tab has an "Inputs" row whose cell links to an Inputs-tab "Inputs" row (value 4) under that instance's group, and Output multiplies the Inputs and Negative one rows (no typed 0); the Negatizer definition tab's Inputs placeholder is not gathered. Group by Excel tab / Canvas / No grouping and Alphabetical order produce headers and orders accordingly.
 
 ### 4. Format roles
 Using the `roles-workspace-*.json` fixtures:
