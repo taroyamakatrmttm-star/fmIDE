@@ -172,3 +172,77 @@ test.describe('Templates search', () => {
     await expect(picker(page)).toHaveCount(0);
   });
 });
+
+// ---------- Templates duplicates ----------
+test.describe('Templates duplicates', () => {
+  const fs = require('fs');
+  const { fixture, readFixture } = require('./helpers/apps');
+  const picker = (page) => page.locator('.modal-box.template-box');
+  const listNames = async (page) => (await picker(page).locator('.template-list button').allInnerTexts()).map(t => t.split('\n')[0]).sort();
+  const FOUR = ['Audit BS', 'Cash flow statement', 'Depreciation schedule', 'Income Statement'];
+  const importTemplates = (page, name) => F.importViaDialog(page, 'openTemplates', '⇧ Import Templates', fixture('templates', name));
+  const closePicker = (page) => picker(page).locator('.modal-actions button', { hasText: /^Close$/ }).click();
+
+  test('importing templates you already have adds nothing and says so', async ({ page }) => {
+    await F.openFmIDE(page);
+    await importTemplates(page, 'search.json');
+    await F.dismissMessage(page);
+    await closePicker(page);
+    await importTemplates(page, 'search.json');
+    expect(await F.dialogText(page)).toBe('All 4 templates in that file are already in your library.');
+    await F.dismissMessage(page);
+    expect(await listNames(page)).toEqual(FOUR);
+  });
+
+  test('only the templates you don\'t have are added', async ({ page }) => {
+    await F.openFmIDE(page);
+    await importTemplates(page, 'search.json');
+    await F.dismissMessage(page);
+    await closePicker(page);
+    await importTemplates(page, 'one-new.json');
+    expect(await F.dialogText(page)).toBe('Imported 1 template (1 was already there).');
+    await F.dismissMessage(page);
+    expect(await listNames(page)).toEqual([...FOUR, 'Tax schedule'].sort());
+  });
+
+  test('Import Workspace of your own export does not copy your templates again', async ({ page }, testInfo) => {
+    await F.openFmIDE(page);
+    await importTemplates(page, 'search.json');
+    await F.dismissMessage(page);
+    await closePicker(page);
+    const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
+    expect(data.templates).toHaveLength(4);
+    const file = testInfo.outputPath('own-workspace.json');
+    fs.writeFileSync(file, JSON.stringify(data));
+    await F.importViaCommand(page, 'importWorkspace', file);
+    await F.acceptAll(page);
+    await page.evaluate(() => fm.command('openTemplates'));
+    expect(await listNames(page)).toEqual(FOUR);
+  });
+
+  test('"Remove duplicates" removes exact copies only, after asking', async ({ page }) => {
+    // An autosave (left by an older version) that already holds copies: each of the four
+    // twice, plus an "Audit BS" with different content, which is a different template.
+    const tpl = readFixture('templates', 'search.json').templates;
+    const other = JSON.parse(JSON.stringify(tpl[3]));
+    other.data.canvases[0].nodes[0].text = 'Audit Rect\n2';
+    const ws = { version: 1, kind: 'fmIDE-workspace', system: readFixture('formats', 'sys-current.json'),
+      templates: [...tpl, ...tpl, other].map((t, i) => Object.assign({ id: 'usr' + (i + 1) }, t)), formatPresets: [] };
+    await page.addInitScript((text) => {
+      if(sessionStorage.getItem('__seeded')) return;
+      sessionStorage.setItem('__seeded', '1');
+      localStorage.setItem('fmIDE-workspace-v1', text);
+    }, JSON.stringify(ws));
+    await F.openFmIDE(page);
+    expect(await page.evaluate(() => fm.commands().find(c => c.id === 'removeDuplicateTemplates').label)).toBe('Remove Duplicate Templates');
+    await page.evaluate(() => fm.command('openTemplates'));
+    expect((await listNames(page)).length).toBe(9);
+    const btn = picker(page).locator('button.template-dedupe');
+    await expect(btn).toHaveText('🧹 Remove 4 duplicates');
+    await btn.click();
+    expect(await F.dialogText(page)).toContain('Remove 4 duplicate templates?');
+    await F.confirmDanger(page);
+    expect(await listNames(page)).toEqual(['Audit BS', 'Audit BS', 'Cash flow statement', 'Depreciation schedule', 'Income Statement']);
+    await expect(btn).toBeHidden();
+  });
+});
