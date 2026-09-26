@@ -2,6 +2,12 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Canvases remember their template; "Update this canvas"
+- fmIDE: a canvas made from a canvas template (Add to new canvas, or Add to current canvas on an empty canvas) remembers the template and version. Saving the canvas as a template links it too.
+- When a newer version is in your library, a bar above the canvas says so, and the canvas tab shows ⬆. **Update this canvas…** shows the change notes, which input values will be kept and which inputs the new version dropped, and warns when the canvas has changes of its own. The update keeps the canvas's name, its input values (matched by rectangle name, including values per period) and the links other canvases' aliases have to rectangles that still exist. Undo reverses it. **Not now** hides the notice until an even newer version appears.
+- New commands **Update Canvas from Template…** (can also go back to an older version) and **Unlink Canvas from Template**. New automation actions `updateCanvasFromTemplate` and `unlinkCanvasFromTemplate`; `fm.canvases()` reports each canvas's template.
+- File formats: `system` is now version 4 (a canvas can carry its template link). Older systems open as before; ExcelExporter reads version 4 and its workbooks are unchanged; an older fmIDE asks before opening a version 4 file.
+
 ## Template versions
 - fmIDE: every template now belongs to a **family** — a lasting random id, so templates from different people never clash — and has a **version number** (1, 2, 3) and a short **change note**. **Templates → ⤴ Save as new version** saves the open canvas (or system) as the next version. Saving under a new name starts a new template; under a name already in use, fmIDE asks whether to make a new version or pick another name.
 - The Templates window lists each template once, at its latest version, with **▸ older versions** underneath (newest first) to preview or add. **✎ Edit info** renames all versions together; the note belongs to one version. Older versions can be deleted one by one, but the latest only with the whole template, so a version number is never used twice. **Remove duplicates…** compares latest versions and removes whole templates.

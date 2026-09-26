@@ -22,6 +22,8 @@ Every canvas interaction is an action. The Ribbon, shortcuts, Command Launcher (
 - **duplicate**(nodes="@sel", dx=24, dy=24) — Duplicate Nodes. Copies nodes (and the connections between them) offset by dx, dy — like Ctrl+drag.
 - **aliasOf**(nodes="@sel", dx=30, dy=30) — Create Aliases Of. Creates an alias of each rectangle, offset by dx, dy — like Alt+drag.
 - **insertTemplate**(template, mode="auto", onCollision="merge", decisions?) — Insert Template. Inserts a saved template: its name (the latest version), "Name@latest", "Name@3" (version 3), the same with its family id, or "#id". Modules: "here" (this canvas) or "newCanvas". Systems: "add" (merge alongside) or "replace".
+- **updateCanvasFromTemplate**(canvas="@current", version="latest") — Update Canvas from Template. Rebuilds a canvas made from a canvas template from another version of it ("latest", or a number). Input values typed on the canvas are kept (matched by rectangle name); everything else comes from that version. Returns { version, kept, lostAliases }.
+- **unlinkCanvasFromTemplate**(canvas="@current") — Unlink Canvas from Template. Makes a canvas forget the canvas template it was made from (no more update notices). Its content stays.
 
 ### Connect
 - **connect**(from, to, fromPort="", toPort="") — Connect. Draws an arrow from one node to another. Block instances take a port: its name or 1-based number.

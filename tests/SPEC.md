@@ -88,7 +88,7 @@ Load `tests/fixtures/security/evil-workspace.json` and `evil-system.json`:
 ### 6. File formats
 **fmIDE** (`tests/fixtures/formats/`):
 - `sys-current`, `sys-legacy` (no kind/version) load via `loadSystem`.
-- `sys-newer-v4` (version 4): a dialog mentions "newer version" and "format version 4"; Cancel leaves the current canvases unchanged; OK then opens it. (`sys-newer`, version 3, was the "newer" sample until system v3 became current.)
+- `sys-newer-v5` (version 5): a dialog mentions "newer version" and "format version 5"; Cancel leaves the current canvases unchanged; OK then opens it. (`sys-newer`, version 3, and `sys-newer-v4` were the "newer" samples until system v3 and v4 became current; `sys-newer-v4` now opens normally, group 15.)
 - `preferences` via `loadSystem` → "That is an fmIDE preferences file, not a system. Open it with File → Import Preferences." (and the same via Open…, group 10).
 - `templates` via `loadSystem` → message "That is an fmIDE templates file, not a system. Open it with Templates → Import Templates."; `sys-current` via `loadModule` → message naming it a system; `mapping` via `loadSystem` → message pointing to ExcelExporter.
 - `templates` via the Templates dialog: one question up front mentioning the template "Future T" is from a newer fmIDE; continuing imports both.
@@ -97,11 +97,11 @@ Load `tests/fixtures/security/evil-workspace.json` and `evil-system.json`:
 - `ws-nested-newer`: one question up front ("Its system was saved by a newer fmIDE…"), then the normal "Import this workspace?" confirm.
 - Autosave survives a reload: rename a canvas, reload, the name persists.
 - Import Workspace replaces format presets with the same name as one in the file (one "Inputs", with the file's style) and keeps the user's other presets.
-- Plugs from older files: `sys-v2-plug` (a v2 system, one `plug` per rectangle) opens with `plugs: ["Income Tax"]` (a blank plug becomes `[]`, no `plug` left) and the plug still feeds its socket on another canvas (value 30); Save System writes version 3. `module-v1-plug` via `loadModule` → `plugs` upgraded the same way. The same module inside a v1 templates file is upgraded when inserted.
+- Plugs from older files: `sys-v2-plug` (a v2 system, one `plug` per rectangle) opens with `plugs: ["Income Tax"]` (a blank plug becomes `[]`, no `plug` left) and the plug still feeds its socket on another canvas (value 30); Save System writes version 4. `module-v1-plug` via `loadModule` → `plugs` upgraded the same way. The same module inside a v1 templates file is upgraded when inserted.
 
 **ExcelExporter**:
 - A `.fmide` document (a workspace) loads through `#fileInput`, and so does a version 2 workspace (templates with families; group 14).
-- `sys-current`, `sys-legacy` load; `sys-newer-v4` shows `#confirmModal` — Cancel → status "Not loaded."; Open Anyway → loads. `ws-nested-newer` → confirm mentions its system.
+- `sys-current`, `sys-legacy` load; `sys-newer-v5` shows `#confirmModal` — Cancel → status "Not loaded."; Open Anyway → loads. `ws-nested-newer` → confirm mentions its system.
 - `module`, `templates`, `mapping`, `preferences` loaded as a model → a message saying what the file is and where it belongs.
 - Mapping: `#btnExportMapping` download has `kind: "fmIDE-excel-mapping"`, `version: 1`; re-importing it works; `map-legacy` (no kind/version) imports; `map-newer` asks; importing a system file as a mapping is rejected. The saved layout in browser storage never contains `kind`/`version`.
 
@@ -193,6 +193,19 @@ Commands `exportPreferences` (download `fmIDE-preferences.json`) and `importPref
 - A family id `<script>…`, a `versionId` with markup and a version "two" from a file are replaced by valid ones; a note with markup is shown as text and never runs.
 - Remove duplicates compares one entry per family (its latest version): a family whose latest matches another family is offered ("v2 (and 1 older version)"); a copy of an older version only is not. Removing the family removes every version.
 - ExcelExporter (group 6): a version 2 workspace with templates that have families loads.
+
+### 15. Canvases linked to their template (fmIDE)
+"Sales" v1 is saved from an "Author" canvas: inputs Price 10, Volume 5 and Discount 1, and Revenue = Price × Volume. It is added with "Add to new canvas" as a canvas called "Sales". Version 2, saved from Author, removes Discount and adds an input Tax 2 (note "tax added").
+- The Sales canvas (and Author, which it was saved from) is linked to v1. `fm.canvases()` shows it, Save System writes version 4 with `template`, and the link survives a reload.
+- "Add to current canvas" links an empty canvas, not one with content; adding a second template into a linked canvas removes its link. Save Module writes no link. Unlink removes the link, and undo brings it back.
+- With v2 saved: the bar says "This canvas came from “Sales” v1. Version 2 is available — ‘tax added’.", the Sales tab shows ⬆, and the Author canvas (at v2) shows no bar. "Not now" hides both until v3 exists.
+- Update (with Price typed as 12 and per-period Volume 5, 6, 7 over 3 periods): the window lists "Input values kept: Price, Volume (2)" and "Not in v2 (values dropped): Discount", with no warning. Afterwards the message says "Updated to v2. Kept 2 input values."; the canvas keeps its id; its rectangles are Price, Revenue, Tax and Volume; Revenue is 60, 72, 84. Undo restores v1, including its link.
+- An alias on another canvas pointing at Revenue still works after the update (50); one pointing at Discount is reported as lost.
+- The window warns about changes of the canvas's own when a rectangle was added, but not when only an input value was typed.
+- An older version can be chosen (v2 → v1 restores Discount; the canvas then shows v2 is newer); asking for a missing version gives a message listing the versions there are. With the templates cleared, there is no notice and the update says the template isn't in the library.
+- A macro records the update as `updateCanvasFromTemplate({ canvas: 'Sales', version: '2' })`.
+- Links from a file: a bad one is dropped; one whose version id isn't in the library is "unknown-version", and the update window says it can't check for changes of your own; a name with markup is shown as text and never runs.
+- `sys-newer-v4` now opens without asking; a version 3 system opens with no links.
 
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.

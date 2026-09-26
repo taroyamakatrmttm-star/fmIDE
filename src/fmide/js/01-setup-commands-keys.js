@@ -109,6 +109,8 @@
     { id:'openTemplates',label:'Templates',            icon:'📚', category:'File', defaultShortcut:null, action:() => showTemplatesPicker() },
     { id:'removeDuplicateTemplates', label:'Remove Duplicate Templates…', icon:'🧹', category:'File', defaultShortcut:null, enabled:() => templateFamilies().length > 1, action:() => showRemoveDuplicatesDialog() },
     { id:'clearAllTemplates', label:'Clear All Templates', icon:'🗑', category:'File', defaultShortcut:null, enabled:() => TEMPLATES.length > 0, action:() => clearAllTemplates() },
+    { id:'updateCanvasTemplate', label:'Update Canvas from Template…', icon:'⬆', category:'File', defaultShortcut:null, enabled:() => { const c = canvases.find(x => x.id === activeCanvasId); return !!(c && c.template); }, action:() => showUpdateCanvasDialog() },
+    { id:'unlinkCanvasTemplate', label:'Unlink Canvas from Template', icon:'⛓', category:'File', defaultShortcut:null, enabled:() => { const c = canvases.find(x => x.id === activeCanvasId); return !!(c && c.template); }, action:() => guarded(() => fm.unlinkCanvasFromTemplate()) },
     { id:'openFormats', label:'Format Presets',        icon:'🎨', category:'File', defaultShortcut:null, action:() => showFormatPresetsPicker(null) },
     // Documents (.fmide files) — last in the File list, so a shortcut someone already gave
     // another command keeps priority over these defaults.

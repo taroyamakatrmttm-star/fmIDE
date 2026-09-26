@@ -40,16 +40,16 @@ for(const name of ['sys-current', 'sys-legacy']){
   });
 }
 
-test('sys-newer-v4 asks: Cancel → "Not loaded.", Open Anyway → loads', async ({ page }) => {
-  await page.setInputFiles('#fileInput', file('sys-newer-v4'));
+test('sys-newer-v5 asks: Cancel → "Not loaded.", Open Anyway → loads', async ({ page }) => {
+  await page.setInputFiles('#fileInput', file('sys-newer-v5'));
   await expect(page.locator('#confirmModal')).toBeVisible();
-  await expect(page.locator('#confirmMessage')).toContainText('format version 4');
+  await expect(page.locator('#confirmMessage')).toContainText('format version 5');
   await page.click('#confirmCancel');
   await expect(page.locator('#confirmModal')).toBeHidden();
   await expect(loadStatus(page)).toHaveText('Not loaded.');
   await expect(page.locator('#afterLoad')).toBeHidden();
 
-  await page.setInputFiles('#fileInput', file('sys-newer-v4'));
+  await page.setInputFiles('#fileInput', file('sys-newer-v5'));
   await expect(page.locator('#confirmModal')).toBeVisible();
   await expect(page.locator('#confirmOk')).toHaveText('Open Anyway');
   await page.click('#confirmOk');

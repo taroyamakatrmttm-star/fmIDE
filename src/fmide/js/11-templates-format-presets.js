@@ -162,8 +162,15 @@
       note: cleanTemplateNote(note), versionId: newRandomId(), data: openModelAsTemplateData(latest.kind, latest.name)
     };
     TEMPLATES.push(t);
+    if(t.kind === 'module') linkActiveCanvasTo(t);
     saveWorkspaceSoon();
     return t;
+  }
+  // The canvas just saved as a template now matches it: link them.
+  function linkActiveCanvasTo(t){
+    setCanvasTemplateLink(canvases.find(c => c.id === activeCanvasId), t);
+    markDocDirty();
+    renderCanvasTabs();
   }
 
   // "Save as new version" in the Templates window.
@@ -231,6 +238,7 @@
           data: openModelAsTemplateData(kind, name)
         };
         TEMPLATES.push(t);
+        if(kind === 'module') linkActiveCanvasTo(t);
         saveWorkspaceSoon();
         reopenPicker(t);
       }
@@ -683,6 +691,297 @@
     };
     reader.onerror = () => showMessage('Could not read that file.');
     reader.readAsText(file);
+  }
+
+  // ---------- canvases linked to a canvas template (system v4) ----------
+  // A canvas made from a canvas template remembers it: canvas.template = { family, version,
+  // versionId, name, skipped? } (name only for display; skipped: a newer version the person
+  // chose "Not now" for). Set by "Add to new canvas", by "Add to current canvas" on an empty
+  // canvas, and by saving the canvas as a template; adding a template into a canvas with
+  // content removes it (the content is mixed). Saved in system files (and so workspaces,
+  // documents, the autosave); never in module files.
+  function templateLinkOf(t){
+    return { family: t.family, version: t.version, versionId: t.versionId, name: t.name };
+  }
+  // A link read from a file (untrusted): kept only when its ids and version are valid.
+  function cleanTemplateLink(l){
+    if(!l || typeof l !== 'object' || !isTemplateUid(l.family)) return null;
+    const version = Number(l.version);
+    if(!Number.isInteger(version) || version < 1) return null;
+    const out = { family: l.family, version, versionId: isTemplateUid(l.versionId) ? l.versionId : null,
+      name: typeof l.name === 'string' ? l.name.slice(0, 200) : '' };
+    const skipped = Number(l.skipped);
+    if(Number.isInteger(skipped) && skipped > version) out.skipped = skipped;
+    return out;
+  }
+  function withTemplateLink(c, link){
+    const clean = cleanTemplateLink(link);
+    if(clean) c.template = clean;
+    return c;
+  }
+  function setCanvasTemplateLink(c, t){
+    if(!c) return;
+    if(t && t.family && t.kind === 'module') c.template = templateLinkOf(t);
+    else delete c.template;
+  }
+  // The library version a link came from: the same family and version id. (A number alone
+  // is not enough: an import may have given that number to different content.)
+  function linkedTemplate(link){
+    return (link && link.versionId && TEMPLATES.find(t => t.family === link.family && t.versionId === link.versionId)) || null;
+  }
+  // { state, link, source, latest }: state 'current', 'newer' (a newer version is in the
+  // library), 'unknown-version' (the family is here, this version isn't) or 'not-in-library'.
+  function templateLinkStatus(c){
+    const link = c && c.template;
+    if(!link) return null;
+    const latest = latestOfFamily(link.family);
+    if(!latest || latest.kind !== 'module') return { state: 'not-in-library', link, source: null, latest: null };
+    const source = linkedTemplate(link);
+    if(!source) return { state: 'unknown-version', link, source: null, latest };
+    return { state: latest.version > source.version ? 'newer' : 'current', link, source, latest };
+  }
+  // The newer version to offer, or null: none, or the person said "Not now" to it.
+  function offeredTemplateUpdate(c){
+    const st = templateLinkStatus(c);
+    if(!st || !st.latest) return null;
+    const newer = st.state === 'newer' || (st.state === 'unknown-version' && st.latest.version > st.link.version);
+    if(!newer || (st.link.skipped && st.link.skipped >= st.latest.version)) return null;
+    return st;
+  }
+  function templateUpdateText(st){
+    return `This canvas came from “${st.link.name || st.latest.name}” v${st.link.version}. Version ${st.latest.version} is available`
+      + (st.latest.note ? ` — ‘${st.latest.note}’.` : '.');
+  }
+
+  // The bar above the canvas (active canvas only) and the ⬆ marker on canvas tabs. Called
+  // from renderCanvasTabs(), which every action and canvas switch ends with.
+  function refreshTemplateNotices(){
+    canvasTabsEl.querySelectorAll('.canvas-tab').forEach(tab => {
+      const c = canvases.find(x => x.id === tab.dataset.id);
+      const st = c ? offeredTemplateUpdate(c) : null;
+      let mark = tab.querySelector('.template-update-mark');
+      if(st && !mark){
+        mark = document.createElement('span');
+        mark.className = 'template-update-mark';
+        mark.textContent = '⬆';
+        tab.insertBefore(mark, tab.querySelector('.close-x'));
+      }
+      if(!st){ if(mark) mark.remove(); }
+      else mark.title = templateUpdateText(st);
+    });
+    const active = canvases.find(c => c.id === activeCanvasId);
+    const st = active ? offeredTemplateUpdate(active) : null;
+    let bar = document.getElementById('templateUpdateBanner');
+    if(!st){ if(bar) bar.remove(); return; }
+    if(!bar){
+      bar = document.createElement('div');
+      bar.id = 'templateUpdateBanner';
+      bar.setAttribute('role', 'status');
+      const msg = document.createElement('span');
+      msg.className = 'template-update-text';
+      const update = document.createElement('button');
+      update.className = 'template-update-go';
+      update.textContent = 'Update this canvas…';
+      update.addEventListener('click', () => showUpdateCanvasDialog());
+      const later = document.createElement('button');
+      later.className = 'template-update-later';
+      later.textContent = 'Not now';
+      later.addEventListener('click', () => {
+        const c = canvases.find(x => x.id === activeCanvasId);
+        const s2 = c && offeredTemplateUpdate(c);
+        if(s2){ c.template.skipped = s2.latest.version; saveWorkspaceSoon(); }
+        refreshTemplateNotices();
+      });
+      bar.append(msg, update, later);
+      document.getElementById('app').insertBefore(bar, document.getElementById('viewport'));
+    }
+    bar.querySelector('.template-update-text').textContent = templateUpdateText(st);
+  }
+
+  // What updating canvas `c` to template version `t` would do, without doing it.
+  // Rectangles are matched by name (capitals and outer spaces ignored; a name that appears
+  // more than once on either side matches nothing). Matched rectangles keep their ids, so
+  // aliases and block ports elsewhere still find them; each input rectangle of the new
+  // version keeps the value typed on the canvas when the old one was an input too.
+  function planCanvasUpdate(c, t){
+    const old = { nodes: c.id === activeCanvasId ? nodes : c.nodes, edges: c.id === activeCanvasId ? edges : c.edges };
+    const neu = { nodes: t.data.nodes || [], edges: t.data.edges || [] };
+    const byName = (canvas) => {
+      const m = new Map(), dup = new Set();
+      canvas.nodes.forEach(n => {
+        if(!n || n.type !== 'value') return;
+        const k = (parseNode(n).name || '').trim().toLowerCase();
+        if(!k) return;
+        if(m.has(k)) dup.add(k); else m.set(k, n);
+      });
+      dup.forEach(k => m.delete(k));
+      return m;
+    };
+    const oldByName = byName(old), newByName = byName(neu);
+    const keepIds = new Map(), kept = [], dropped = [];
+    newByName.forEach((n, k) => {
+      const o = oldByName.get(k);
+      if(!o) return;
+      keepIds.set(n.id, o.id);
+      if(isInputRectangle(neu, n) && isInputRectangle(old, o)) kept.push({ from: o, to: n });
+    });
+    oldByName.forEach((o, k) => {
+      if(!isInputRectangle(old, o)) return;
+      const n = newByName.get(k);
+      if(!n || !isInputRectangle(neu, n)) dropped.push(o);
+    });
+    const source = linkedTemplate(c.template);
+    return { canvas: c, target: t, keepIds, kept, dropped, source,
+      ownChanges: source ? canvasDiffersFromTemplate(old, c.id, source) : null };
+  }
+
+  // True when the canvas has changes of its own compared with the template version it came
+  // from: anything but input values (and positions, sizes, formats) counts.
+  function canvasDiffersFromTemplate(old, canvasId, source){
+    const strip = (canvas, selfId) => {
+      const ns = canvas.nodes.map(n => {
+        if(!isInputRectangle(canvas, n)) return n;
+        const o = Object.assign({}, n);
+        const lines = String(o.text || '').split('\n');
+        if(lines.length > 1) lines[1] = '';
+        o.text = lines.join('\n');
+        delete o.periodValues; delete o.periodValuesRange; delete o.literalPeriods;
+        return o;
+      });
+      return { kind: 'module', data: { selfCanvasId: selfId, nodes: ns, edges: canvas.edges.filter(e => !e.auto) } };
+    };
+    const srcCanvas = { nodes: source.data.nodes || [], edges: source.data.edges || [] };
+    return templateLogicKey(strip(old, canvasId), false) !== templateLogicKey(strip(srcCanvas, source.data.selfCanvasId), false);
+  }
+
+  // Replaces the canvas's content with the planned version's. The caller has pushed history.
+  // Returns { kept, lostAliases }.
+  function applyCanvasUpdate(plan){
+    const c = plan.canvas;
+    if(c.id !== activeCanvasId){
+      syncActiveIntoRegistry();
+      activeCanvasId = c.id;
+      loadCanvasState(c);
+    }
+    nodes = []; edges = [];
+    applyModuleDataDirect(cloneData(plan.target.data), plan.keepIds);
+    plan.kept.forEach(({ from, to }) => {
+      const n = nodes.find(x => x.id === plan.keepIds.get(to.id));
+      if(!n) return;
+      const lines = String(n.text || '').split('\n');
+      const oldValue = String(from.text || '').split('\n')[1];
+      while(lines.length < 2) lines.push('');
+      lines[1] = oldValue === undefined ? '' : oldValue;
+      n.text = lines.join('\n');
+      ['periodValues', 'periodValuesRange', 'literalPeriods'].forEach(k => {
+        if(from[k] !== undefined) n[k] = cloneData(from[k]); else delete n[k];
+      });
+      if(Array.isArray(n.periodValues)) n.periodValues = padPeriodValuesArray(n.periodValues, periods.length);
+    });
+    syncAutoConnections();
+    clearComputed();
+    evaluateAll();
+    syncActiveIntoRegistry();
+    setCanvasTemplateLink(c, plan.target);
+    const ids = new Set(nodes.map(n => n.id));
+    const lostAliases = [];
+    canvases.forEach(o => {
+      if(o === c) return;
+      o.nodes.forEach(n => {
+        if(n.type === 'alias' && n.sourceCanvasId === c.id && !ids.has(n.sourceNodeId)) lostAliases.push(o.name);
+      });
+    });
+    return { kept: plan.kept.length, lostAliases };
+  }
+
+  // "Update this canvas…": choose a version, see what happens, then Update (one undo step).
+  function showUpdateCanvasDialog(canvasRef){
+    const c = canvasRef || canvases.find(x => x.id === activeCanvasId);
+    const st = templateLinkStatus(c);
+    if(!st){ showMessage("This canvas wasn't made from a canvas template."); return; }
+    if(!st.latest){ showMessage(`This canvas came from “${st.link.name}” v${st.link.version}, which isn't in your template library.`); return; }
+    const versions = familyVersions(st.latest.family);
+    let target = st.latest;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const box = document.createElement('div');
+    box.className = 'modal-box template-update-box';
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    function close(){ overlay.remove(); document.removeEventListener('keydown', onKey, true); }
+    function onKey(ev){
+      const all = document.querySelectorAll('.modal-overlay');
+      if(ev.key === 'Escape' && all[all.length - 1] === overlay){ ev.preventDefault(); ev.stopPropagation(); close(); }
+    }
+    document.addEventListener('keydown', onKey, true);
+    overlay.addEventListener('mousedown', (ev) => { if(ev.target === overlay) close(); });
+
+    const title = document.createElement('p');
+    title.textContent = `Update “${c.name}” from its template`;
+    box.appendChild(title);
+    const pickRow = document.createElement('label');
+    pickRow.className = 'template-update-pick';
+    pickRow.append(document.createTextNode(`${st.latest.name}: v${st.link.version} → `));
+    const pick = document.createElement('select');
+    versions.forEach(v => {
+      const o = document.createElement('option');
+      o.value = String(v.version);
+      o.textContent = 'v' + v.version + (v === st.latest ? ' (latest)' : '') + (v === st.source ? ' (this canvas)' : '');
+      pick.appendChild(o);
+    });
+    pickRow.appendChild(pick);
+    box.appendChild(pickRow);
+    const body = document.createElement('div');
+    body.className = 'template-update-body';
+    box.appendChild(body);
+    const actions = document.createElement('div');
+    actions.className = 'modal-actions';
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.addEventListener('click', close);
+    const goBtn = document.createElement('button');
+    goBtn.className = 'primary';
+    goBtn.textContent = 'Update';
+    actions.append(cancelBtn, goBtn);
+    box.appendChild(actions);
+
+    const line = (text, cls) => { const p = document.createElement('p'); p.className = cls || 'template-desc'; p.textContent = text; body.appendChild(p); return p; };
+    const nameList = (list) => list.map(x => (parseNode(x).name || '').trim()).join(', ');
+    function paint(){
+      body.innerHTML = '';
+      const plan = planCanvasUpdate(c, target);
+      const fromV = st.source ? st.source.version : st.link.version;
+      const between = versions.filter(v => v.version > Math.min(fromV, target.version) && v.version <= Math.max(fromV, target.version) && v.note);
+      if(between.length){
+        const ul = document.createElement('ul');
+        ul.className = 'template-update-notes';
+        between.forEach(v => { const li = document.createElement('li'); li.textContent = `v${v.version} — ${v.note}`; ul.appendChild(li); });
+        line(target.version >= fromV ? 'What changed:' : 'Going back past:');
+        body.appendChild(ul);
+      }
+      line(plan.kept.length ? `Input values kept: ${nameList(plan.kept.map(k => k.from))} (${plan.kept.length})` : 'No input values to keep.', 'template-update-kept');
+      if(plan.dropped.length) line(`Not in v${target.version} (values dropped): ${nameList(plan.dropped)}`, 'template-update-dropped');
+      if(plan.ownChanges === null) line(`The version this canvas came from (v${st.link.version}) isn't in your library, so fmIDE can't check for changes of your own. Updating replaces everything on the canvas except the input values above; Undo brings it back.`, 'template-update-warning');
+      else if(plan.ownChanges) line(`This canvas has changes of its own since v${fromV} was added. Updating replaces them; Undo brings them back.`, 'template-update-warning');
+      else line('Everything else on the canvas is replaced by the new version. Undo brings it back.');
+    }
+    pick.value = String(target.version);
+    pick.addEventListener('change', () => { target = versions.find(v => String(v.version) === pick.value) || st.latest; paint(); });
+    goBtn.addEventListener('click', () => {
+      close();
+      guarded(() => {
+        const r = fm.updateCanvasFromTemplate({ canvas: '#' + c.id, version: String(target.version) });
+        if(r) showMessage(updateSummary(r));
+      });
+    });
+    paint();
+    goBtn.focus();
+  }
+  function updateSummary(r){
+    let text = `Updated to v${r.version}. Kept ${r.kept} input value${r.kept === 1 ? '' : 's'}.`;
+    if(r.lostAliases.length) text += ` ${r.lostAliases.length} alias${r.lostAliases.length === 1 ? '' : 'es'} on other canvases lost what ${r.lostAliases.length === 1 ? 'it' : 'they'} pointed to (on ${Array.from(new Set(r.lostAliases)).join(', ')}).`;
+    return text;
   }
 
   // ---------- rectangle formatting presets ----------

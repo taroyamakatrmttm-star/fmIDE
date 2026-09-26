@@ -173,6 +173,7 @@
     if(btnAddCanvas.parentNode === canvasTabsEl && btnAddCanvas.nextSibling && btnAddCanvas.nextSibling.classList && btnAddCanvas.nextSibling.classList.contains('canvas-tab')){
       canvasTabsEl.appendChild(btnAddCanvas);
     }
+    refreshTemplateNotices();
   }
 
   // Drag a canvas tab left/right to reorder canvases: the tab follows the pointer and a

@@ -5,7 +5,7 @@
 // (docs/file-formats.md). To change one of these formats: raise its version here and add
 // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
 // exactly one version.
-const SHARED_FILE_VERSIONS = { 'system': 3, 'fmIDE-workspace': 2 };
+const SHARED_FILE_VERSIONS = { 'system': 4, 'fmIDE-workspace': 2 };
 // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
 // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
 function upgradeNodePlugs(nodes){
@@ -56,7 +56,10 @@ const SHARED_FILE_MIGRATIONS = {
       }
     },
     // v2 → v3: one plug name per rectangle becomes a list of plug names.
-    2: d => { (Array.isArray(d.canvases) ? d.canvases : []).forEach(c => { if(c) upgradeNodePlugs(c.nodes); }); }
+    2: d => { (Array.isArray(d.canvases) ? d.canvases : []).forEach(c => { if(c) upgradeNodePlugs(c.nodes); }); },
+    // v3 → v4: a canvas may remember the canvas template it came from (`template`). Older
+    // systems have no such links, so there is nothing to change.
+    3: () => {}
   }
 };
 // A file's kind: its "kind" field, or — for files saved before kinds were written — its

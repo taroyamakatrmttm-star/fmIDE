@@ -245,7 +245,7 @@
         const edgesToAdd = srcEdges
           .filter(e => !e.auto && localNodeMap[e.from] !== undefined && localNodeMap[e.to] !== undefined)
           .map(e => Object.assign({}, e, { id: uid('e'), from: localNodeMap[e.from], to: localNodeMap[e.to] }));
-        return { name: (c.name || 'Canvas').toString(), target, nodesToAdd, edgesToAdd, newCanvasId: canvasIdMap[c.id] };
+        return { name: (c.name || 'Canvas').toString(), target, nodesToAdd, edgesToAdd, newCanvasId: canvasIdMap[c.id], template: c.template };
       }
 
       // Pass 1: value rectangles, matched by name (existing anchors for everything else)
@@ -392,11 +392,12 @@
         s.target.edges = s.target.edges.concat(newEdgesFiltered);
         if(firstTouchedCanvasId === null) firstTouchedCanvasId = s.target.id;
       } else {
-        canvases.push({
+        // A canvas added as it is keeps its template link; one merged into yours doesn't.
+        canvases.push(withTemplateLink({
           id: s.newCanvasId, name: s.name,
           nodes: s.nodesToAdd, edges: s.edgesToAdd,
           computedValues: {}, computeErrors: {}, portValues: {}, portErrors: {}
-        });
+        }, s.template));
         if(firstTouchedCanvasId === null) firstTouchedCanvasId = s.newCanvasId;
       }
     });
@@ -445,13 +446,13 @@
       (c.edges||[]).forEach(e => { const m=/(\d+)$/.exec(e.id||''); if(m) maxId=Math.max(maxId,+m[1]); });
     });
     nextCanvasId = Math.max(nextCanvasId, maxCanvasNum + 1, typeof data.nextCanvasId === 'number' ? data.nextCanvasId : 0);
-    canvases = data.canvases.map(c => ({
+    canvases = data.canvases.map(c => withTemplateLink({
       id: c.id || ('c' + (nextCanvasId++)),
       name: (c.name || 'Canvas').toString(),
       nodes: Array.isArray(c.nodes) ? c.nodes : [],
       edges: Array.isArray(c.edges) ? c.edges : [],
       computedValues: {}, computeErrors: {}, portValues: {}, portErrors: {}
-    }));
+    }, c.template));
     nextId = Math.max(nextId, maxId + 1, typeof data.nextId === 'number' ? data.nextId : 0);
     activeCanvasId = (typeof data.activeCanvasId === 'string' && canvases.some(c => c.id === data.activeCanvasId))
       ? data.activeCanvasId : canvases[0].id;
@@ -499,10 +500,11 @@
   // Core of inserting a module's nodes/edges into whatever canvas is currently active
   // (remapping ids and self-referencing alias/blockInstance nodes) — used both when adding
   // to the current canvas and when adding to a freshly created one. No history/validation.
-  function applyModuleDataDirect(data){
+  // keepIds (optional): Map of a module node id → the id it should keep (Update this canvas).
+  function applyModuleDataDirect(data, keepIds){
     const idMap = {};
     const newNodes = data.nodes.map(n => {
-      const newId = uid('n');
+      const newId = (keepIds && keepIds.get(n.id)) || uid('n');
       idMap[n.id] = newId;
       return Object.assign({}, n, { id: newId });
     });
