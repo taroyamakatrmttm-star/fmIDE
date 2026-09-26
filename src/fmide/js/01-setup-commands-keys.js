@@ -107,7 +107,7 @@
     { id:'exportPreferences', label:'Export Preferences…', icon:'⚙', category:'File', defaultShortcut:null, action:() => exportPreferencesToFile() },
     { id:'importPreferences', label:'Import Preferences…', icon:'⚙', category:'File', defaultShortcut:null, action:() => importPreferencesInteractive() },
     { id:'openTemplates',label:'Templates',            icon:'📚', category:'File', defaultShortcut:null, action:() => showTemplatesPicker() },
-    { id:'removeDuplicateTemplates', label:'Remove Duplicate Templates…', icon:'🧹', category:'File', defaultShortcut:null, enabled:() => TEMPLATES.length > 1, action:() => showRemoveDuplicatesDialog() },
+    { id:'removeDuplicateTemplates', label:'Remove Duplicate Templates…', icon:'🧹', category:'File', defaultShortcut:null, enabled:() => templateFamilies().length > 1, action:() => showRemoveDuplicatesDialog() },
     { id:'clearAllTemplates', label:'Clear All Templates', icon:'🗑', category:'File', defaultShortcut:null, enabled:() => TEMPLATES.length > 0, action:() => clearAllTemplates() },
     { id:'openFormats', label:'Format Presets',        icon:'🎨', category:'File', defaultShortcut:null, action:() => showFormatPresetsPicker(null) },
     // Documents (.fmide files) — last in the File list, so a shortcut someone already gave

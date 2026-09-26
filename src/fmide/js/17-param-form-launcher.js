@@ -12,7 +12,10 @@
     } else if(p.type === 'canvas'){
       canvases.forEach(c => out.push(c.name));
     } else if(p.type === 'template'){
-      TEMPLATES.forEach(t => out.push(t.name));
+      templateFamilies().forEach(t => {
+        out.push(t.name);
+        familyVersions(t.family).slice(1).forEach(o => out.push(t.name + '@' + o.version));
+      });
     } else if(p.type === 'macro'){
       MACROS.forEach(m => out.push(m.name));
     }

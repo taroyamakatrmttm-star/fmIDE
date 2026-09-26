@@ -211,15 +211,40 @@
     fail(`There is no canvas called "${s}".`);
   }
 
+  // A template reference: "#usrN" (that exact entry), or a family — its name or its family
+  // id — optionally followed by "@latest" or "@<version>". No "@…" means the latest version.
   function resolveTemplateRef(ref){
     if(ref && typeof ref === 'object' && ref.data) return ref;
     const s = String(ref || '').trim();
     const byId = TEMPLATES.find(t => t.id === s || '#' + t.id === s);
     if(byId) return byId;
-    const byName = TEMPLATES.filter(t => t.name.trim().toLowerCase() === s.toLowerCase());
-    if(byName.length === 1) return byName[0];
-    if(byName.length > 1) fail(`More than one template is named "${s}".`);
-    fail(`There is no template called "${s}".`);
+    const family = (text) => {
+      if(TEMPLATES.some(t => t.family === text)) return latestOfFamily(text);
+      const named = familiesNamed(text);
+      if(named.length > 1) fail(`More than one template family is named "${text}" — refer to it by its family ID.`);
+      return named[0] || null;
+    };
+    const m = /^(.*?)\s*@\s*(latest|\d+)$/i.exec(s);
+    const base = m && m[1] ? family(m[1]) : null;
+    if(!base){
+      const whole = family(s);            // a name that itself ends in "@…"
+      if(whole) return whole;
+      fail(`There is no template called "${m && m[1] ? m[1] : s}".`);
+    }
+    if(m[2].toLowerCase() === 'latest') return base;
+    const n = Number(m[2]);
+    const all = familyVersions(base.family);
+    const v = all.find(t => t.version === n);
+    if(!v) fail(`There is no version ${n} of "${base.name}" (it has version${all.length === 1 ? '' : 's'} ${all.map(t => t.version).reverse().join(', ')}).`);
+    return v;
+  }
+
+  // How to refer to a template in a recorded macro: its name when that names one family
+  // (else its family id), with "@N" for an older version — the latest follows updates.
+  function templateRefText(t){
+    const byName = familiesNamed(t.name).length === 1 && !/@\s*(latest|\d+)$/i.test(t.name);
+    if(isLatestVersion(t)) return byName ? t.name : t.family + '@latest';
+    return (byName ? t.name : t.family) + '@' + t.version;
   }
 
   function resolveMacroRef(ref){

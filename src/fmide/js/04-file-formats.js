@@ -17,7 +17,7 @@
     'system':               { current: SHARED_FILE_VERSIONS['system'], label: 'system', where: 'File → Load System' },
     'module':               { current: 2, label: 'module',              where: 'File → Load Module' },
     'fmIDE-workspace':      { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'workspace', where: 'File → Import Workspace' },
-    'fmIDE-templates':      { current: 1, label: 'templates file',      where: 'Templates → Import Templates' },
+    'fmIDE-templates':      { current: 2, label: 'templates file',      where: 'Templates → Import Templates' },
     'fmIDE-format-presets': { current: 1, label: 'format presets file', where: 'Format Presets → Import Presets' },
     'fmIDE-shortcuts':      { current: 2, label: 'shortcuts file',      where: 'Keyboard Shortcuts → Import Shortcuts' },
     'fmIDE-macros':         { current: 1, label: 'macros file',         where: 'Macro Builder → Import' },
@@ -27,6 +27,10 @@
     // v1 → v2: one plug name per rectangle becomes a list of plug names (as system v2 → v3).
     'module': {
       1: d => upgradeNodePlugs(d.nodes)
+    },
+    // v1 → v2: templates get a family, a version number, a change note and a version id.
+    'fmIDE-templates': {
+      1: d => upgradeTemplateEntries(d.templates)
     },
     // v1 shortcut files stored combos in the old notation.
     'fmIDE-shortcuts': {

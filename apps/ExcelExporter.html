@@ -1900,7 +1900,7 @@ function buildDefaultMapping(m){
 // (docs/file-formats.md). To change one of these formats: raise its version here and add
 // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
 // exactly one version.
-const SHARED_FILE_VERSIONS = { 'system': 3, 'fmIDE-workspace': 1 };
+const SHARED_FILE_VERSIONS = { 'system': 3, 'fmIDE-workspace': 2 };
 // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
 // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
 function upgradeNodePlugs(nodes){
@@ -1913,7 +1913,32 @@ function upgradeNodePlugs(nodes){
     delete n.plug;
   });
 }
+// A random ID in the UUID v4 form, for things that must never clash between people (a
+// template family, one version of it). crypto.getRandomValues works everywhere, file:// too.
+function newRandomId(){
+  const b = new Uint8Array(16);
+  crypto.getRandomValues(b);
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
+  return h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' + h.slice(16, 20) + '-' + h.slice(20);
+}
+// Before templates file v2 (workspace v2) a template had no family or version. Each one
+// becomes a family of its own, version 1, with no change note. Upgrades a list in place.
+function upgradeTemplateEntries(list){
+  (Array.isArray(list) ? list : []).forEach(t => {
+    if(!t || typeof t !== 'object') return;
+    if(t.family === undefined) t.family = newRandomId();
+    if(t.version === undefined) t.version = 1;
+    if(t.note === undefined) t.note = '';
+    if(t.versionId === undefined) t.versionId = newRandomId();
+  });
+}
 const SHARED_FILE_MIGRATIONS = {
+  // v1 → v2: templates get a family, a version number, a change note and a version id.
+  'fmIDE-workspace': {
+    1: d => upgradeTemplateEntries(d.templates)
+  },
   'system': {
     // v1 systems were accepted with fields the loader already defaults (periods, ids…);
     // the only structural difference handled here is a single-canvas file that kept its

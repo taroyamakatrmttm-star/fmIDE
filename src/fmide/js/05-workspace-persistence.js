@@ -7,11 +7,9 @@
 
   function buildWorkspacePayload(){
     return {
-      version: 1, kind: 'fmIDE-workspace',
+      version: FILE_FORMATS['fmIDE-workspace'].current, kind: 'fmIDE-workspace',
       system: buildSystemPayload(),
-      templates: TEMPLATES.filter(t => !t.builtin).map(t => ({
-        id: t.id, name: t.name, description: t.description, group: t.group, kind: t.kind, data: t.data
-      })),
+      templates: TEMPLATES.filter(t => !t.builtin).map(t => templateRecord(t, true)),
       formatPresets: FORMAT_PRESETS.map(p => ({ id: p.id, name: p.name, style: p.style })),
       shortcutBindings: Object.assign({}, shortcutBindings),
       shortcutBindingsVersion: 2,
@@ -40,27 +38,7 @@
     // (A workspace has always read a kind other than 'system' as a canvas template.)
     if(fromImport) addMissingTemplates((Array.isArray(data.templates) ? data.templates : [])
       .map(t => (t && typeof t === 'object') ? Object.assign({}, t, { kind: t.kind === 'system' ? 'system' : 'module' }) : t));
-    else if(Array.isArray(data.templates)){
-      // Every template keeps its own id: new ids continue after the highest saved "usrN"
-      // (the counter used to restart at 1, reusing a saved id), and a template whose id is
-      // missing or already taken — copies an older Import Workspace added with the file's
-      // ids — gets a fresh one, so Delete and Remove duplicates act on that template alone.
-      data.templates.forEach(t => {
-        const m = t && typeof t.id === 'string' && /^usr(\d+)$/.exec(t.id);
-        if(m) nextTemplateId = Math.max(nextTemplateId, Number(m[1]) + 1);
-      });
-      const taken = new Set(TEMPLATES.map(x => x.id));
-      data.templates.forEach(t => {
-        if(!t || typeof t.name !== 'string' || !t.data) return;
-        const id = (typeof t.id === 'string' && t.id && !taken.has(t.id)) ? t.id : ('usr' + (nextTemplateId++));
-        taken.add(id);
-        TEMPLATES.push({
-          id, name: t.name, description: t.description || '',
-          group: t.group || 'My Templates', kind: t.kind === 'system' ? 'system' : 'module',
-          builtin: false, data: t.data
-        });
-      });
-    }
+    else restoreTemplates(data.templates);
     if(Array.isArray(data.formatPresets)) mergeFormatPresets(data.formatPresets);
     // ribbon/KeyTips settings, then macros (so macro commands exist before their
     // shortcut bindings are applied below); syncMacroCommands re-renders the ribbon

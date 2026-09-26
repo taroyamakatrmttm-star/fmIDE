@@ -268,7 +268,7 @@
     } });
 
   defineAction({ name:'insertTemplate', label:'Insert Template', category:'Insert', icon:'📚',
-    desc:'Inserts a saved template. Modules: "here" (this canvas) or "newCanvas". Systems: "add" (merge alongside) or "replace".',
+    desc:'Inserts a saved template: its name (the latest version), "Name@latest", "Name@3" (version 3), the same with its family id, or "#id". Modules: "here" (this canvas) or "newCanvas". Systems: "add" (merge alongside) or "replace".',
     params:[ P('template','template'), P('mode','enum',{ options:['auto','here','newCanvas','add','replace'], def:'auto' }),
       P('onCollision','enum',{ options:['merge','keep'], def:'merge', label:'same-name canvases', help:'systems added alongside' }),
       P('decisions','json',{ optional:true, help:'per-canvas {"Name":"merge"|"keep"}' }) ],

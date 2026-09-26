@@ -20,8 +20,8 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 |---|---|---|---|
 | `system` | 3 | A whole model (all canvases, periods) | fmIDE: File → Load System · ExcelExporter |
 | `module` | 2 | One canvas | fmIDE: File → Load Module |
-| `fmIDE-workspace` | 1 | Everything: system + templates, format presets, shortcuts, macros. A **`.fmide` document** is exactly this, with the `.fmide` extension | fmIDE: File → Open… (a document) or Import Workspace (a full replace) · ExcelExporter |
-| `fmIDE-templates` | 1 | Saved templates (each holds a module or system) | fmIDE: Templates → Import Templates |
+| `fmIDE-workspace` | 2 | Everything: system + templates, format presets, shortcuts, macros. A **`.fmide` document** is exactly this, with the `.fmide` extension | fmIDE: File → Open… (a document) or Import Workspace (a full replace) · ExcelExporter |
+| `fmIDE-templates` | 2 | Saved templates (each holds a module or system), with their families and versions | fmIDE: Templates → Import Templates |
 | `fmIDE-format-presets` | 1 | Format presets, including the format roles | fmIDE: Format Presets → Import Presets |
 | `fmIDE-shortcuts` | 2 | Keyboard shortcut bindings | fmIDE: Keyboard Shortcuts → Import Shortcuts |
 | `fmIDE-macros` | 1 | Macros | fmIDE: Macro Builder → Import |
@@ -33,6 +33,32 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 A value rectangle can carry several plug names: `"plugs": ["to Income Tax expense", "to CF Income Tax paid"]`. Each name feeds the rectangle into every operator whose `socket` has that name (names match regardless of capitals), on any canvas; an operator still has one `socket`. The connections this makes are saved too (arrows and aliases marked `"auto": true`), which is all ExcelExporter reads.
 
 Older files (`system` 1–2, `module` 1) held one name, `"plug": "Revenue"` (blank for none). Reading one turns it into `"plugs": ["Revenue"]` (or `[]`) and removes `plug` — the upgrade step `SHARED_FILE_MIGRATIONS.system[2]` and fmIDE's `FILE_MIGRATIONS.module[1]`, both using `upgradeNodePlugs()` in `src/shared/file-formats.js`. That covers every way a model arrives: Load System / Load Module, Open… and Open Recent, Import Workspace, templates (each template's model is upgraded as it is read) and the autosave. An older fmIDE opening a newer file asks first ("saved by a newer version"), so it never drops extra plugs without saying so.
+
+## Template families and versions (`fmIDE-templates` 2, `fmIDE-workspace` 2)
+
+Each saved template is one **version** of a template **family**. A templates file (and a workspace's `templates` list) holds one entry per version:
+
+```json
+{ "name": "Income Statement", "description": "", "group": "Statements", "kind": "module",
+  "family": "3f2a9c1e-7b4d-4e0a-9c3b-5d8e1f2a6b7c", "version": 3, "note": "Tax split out",
+  "versionId": "9b1c…", "data": { "kind": "module", "version": 2, "nodes": [], "edges": [] } }
+```
+
+- `family` — a random id (UUID v4 form), the same for every version of the template. It is random so that templates from different people never clash; the name is only a label.
+- `version` — 1, 2, 3… within the family. A new version is made only by **Save as new version** (or by choosing it when saving under a name already used). Saving under a new name starts a new family.
+- `note` — a short change note (at most 200 characters, plain text).
+- `versionId` — a random id for this one version. Version numbers are counted in each person's library, so two libraries can each have a different "version 3" of the same family. `versionId` tells them apart.
+- `name`, `group`, `description` and `kind` belong to the family: every version carries the same ones. A family is always one kind. A workspace entry also has `id`, fmIDE's local id for the entry (reassigned when read; never refer to it from elsewhere).
+
+**Reading.** A malformed `family` or `versionId` (anything but 8–64 letters, digits and dashes) gets a new random one. A `version` that isn't a whole number of 1 or more becomes 1. Two entries with the same family and version get separate numbers. When templates are imported (Open…, Import Workspace, Import Templates):
+- a version the library already has (same family, the same content under the same number or the same `versionId`) is skipped;
+- a version whose number is free in that family is added under its number;
+- a version whose number is already taken by different content is added after the file's other versions, under the family's next number, with the note "Imported — was vN in the file: …";
+- a family the library doesn't have is added, unless the library already holds the same template (same name, kind and content). An older file read twice gets new random families each time, so this rule is what keeps its templates from being added twice.
+
+**Referring to a template** (`insertTemplate`, macros): `Name` (the latest version), `Name@latest`, `Name@3`, or the same with the family id in place of the name. If two families share a name, only the family id works. Anything lasting should store the family id and the version (or `versionId`), not the name.
+
+**Older files** (`fmIDE-templates` 1, `fmIDE-workspace` 1) had no families. Reading one makes each template a family of its own, version 1, with an empty note and new random ids: the upgrade steps `FILE_MIGRATIONS['fmIDE-templates'][1]` (fmIDE) and `SHARED_FILE_MIGRATIONS['fmIDE-workspace'][1]`, both using `upgradeTemplateEntries()` in `src/shared/file-formats.js`. ExcelExporter reads workspace version 2 and ignores templates. An older fmIDE asks before opening a version 2 file.
 
 ## Changing a format
 
