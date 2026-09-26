@@ -1,0 +1,18 @@
+{
+ "Revenue AR": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Unit Price"},
+  "A6": {"v":"Volume"},
+  "A7": {"v":"DSO"},
+  "A8": {"v":"-1"},
+  "A10": {"v":"CALCULATIONS"},
+  "A11": {"v":"Beginning Balance"},
+  "A12": {"v":"Increase"},
+  "A13": {"v":"Decrease"},
+  "A14": {"v":"AR Ending Balance"},
+  "A16": {"v":"OUTPUTS"},
+  "A17": {"v":"Revenue"},
+  "A18": {"v":"Account Receivable"},
+  "A19": {"v":"delta AR"}
+ }
+}

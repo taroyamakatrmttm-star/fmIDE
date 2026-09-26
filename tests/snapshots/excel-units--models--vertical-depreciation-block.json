@@ -1,0 +1,34 @@
+{
+ "Capex": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Asset Life"},
+  "A6": {"v":"Capex"},
+  "A7": {"v":"Other"},
+  "A9": {"v":"OUTPUTS"},
+  "A10": {"v":"Total Tax Shield"},
+  "A11": {"v":"Grand Total"}
+ },
+ "DepBlock": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Capex In"},
+  "A6": {"v":"Life In"},
+  "A7": {"v":"Tax rate"},
+  "A9": {"v":"CALCULATIONS"},
+  "A10": {"v":"Annual Dep"},
+  "A12": {"v":"OUTPUTS"},
+  "A13": {"v":"Tax Shield"}
+ },
+ "DepBlock (instance 1)": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Tax rate (shared)"},
+  "A7": {"v":"CALCULATIONS"},
+  "A8": {"v":"Annual Dep — Vintage 1"},
+  "A9": {"v":"Annual Dep — Vintage 2"},
+  "A10": {"v":"Annual Dep — Vintage 3"},
+  "A12": {"v":"OUTPUTS"},
+  "A13": {"v":"Tax Shield — Vintage 1"},
+  "A14": {"v":"Tax Shield — Vintage 2"},
+  "A15": {"v":"Tax Shield — Vintage 3"},
+  "A16": {"v":"Tax Shield (Total)"}
+ }
+}

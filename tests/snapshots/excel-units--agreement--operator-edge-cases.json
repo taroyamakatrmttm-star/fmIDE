@@ -1,0 +1,32 @@
+{
+ "Edge cases": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Minus seven"},
+  "A6": {"v":"One"},
+  "A7": {"v":"Three"},
+  "A8": {"v":"Three again"},
+  "A9": {"v":"Seven"},
+  "A10": {"v":"Two"},
+  "A11": {"v":"Minus three"},
+  "A12": {"v":"Ten"},
+  "A13": {"v":"Zero"},
+  "A14": {"v":"Fallback seven"},
+  "A15": {"v":"Fed by empty operator"},
+  "A16": {"v":"Fed by empty iferror"},
+  "A18": {"v":"CALCULATIONS"},
+  "A19": {"v":"Opening balance"},
+  "A20": {"v":"Closing balance"},
+  "A21": {"v":"Opening balance nested"},
+  "A22": {"v":"Closing balance nested"},
+  "A24": {"v":"OUTPUTS"},
+  "A25": {"v":"Mod negative dividend"},
+  "A26": {"v":"Chain 1<3<2"},
+  "A27": {"v":"Mod negative divisor"},
+  "A28": {"v":"Comparison with one input"},
+  "A29": {"v":"Abs of two"},
+  "A30": {"v":"Iferror one input"},
+  "A31": {"v":"Divided by zero, typed"},
+  "A32": {"v":"Iferror of prior period"},
+  "A33": {"v":"Override first period"}
+ }
+}

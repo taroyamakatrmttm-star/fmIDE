@@ -201,9 +201,6 @@ let lastSortUndo = null; // { snapshot: {id: [order, flatOrder]}, label } — tr
 // through a Period Shift is a prior-period link, not a same-period dependency, and is
 // dropped (otherwise a corkscrew would be a loop).
 function rowDependencyTracer(){
-  const canvasById = {}; model.canvases.forEach(c => canvasById[c.id] = c);
-  const nodeById = {};
-  model.canvases.forEach(c => c.nodes.forEach(n => { nodeById[c.id + '|' + n.id] = n; }));
   const inlineConstantIds = new Set(mapping.rows.filter(r => r.inlineConstant).map(r => r.id));
   const rowById = {}; mapping.rows.forEach(r => rowById[r.id] = r);
   const nP = model.periods.length;
@@ -221,11 +218,11 @@ function rowDependencyTracer(){
     const seen = new Set();
     memo[id] = found; // set before tracing, so a (malformed) self-reference can't recurse
     if(!row) return found;
-    const canvas = canvasById[row.canvasId];
-    const node = canvas && canvas.nodes.find(n => n.id === row.nodeId);
+    const n = irNode(row.canvasId, row.nodeId);
+    const node = n && n.node;
     if(!node) return found;
     const ctx = {
-      canvasById, nodeById, cellPos: {}, periodCount: nP, inlineConstantIds, lagDepth: 0,
+      cellPos: {}, periodCount: nP, inlineConstantIds, lagDepth: 0,
       onRef(key, lagged){
         if(lagged || key === id || seen.has(key) || !rowById[key]) return;
         seen.add(key); found.push(key);

@@ -2,169 +2,24 @@
 'use strict';
 
 // ============================================================
-// Core translation logic (parsing / UOM / formula building) —
-// unit-tested standalone before being wired to this UI.
+// Core translation: the model's calculation comes from the shared IR (src/shared/ir.js,
+// compileModel — the same one fmIDE calculates on), with the shared operator catalogue and
+// units; this file turns it into Excel formulas.
 // ============================================================
 
-function parseNodeText(text){
-  const raw = text || '';
-  const lines = raw.split('\n');
-  if(lines.length === 1){
-    const t = lines[0].trim();
-    if(t !== '' && !isNaN(Number(t))) return { name: '', literal: Number(t), uom: null };
-    return { name: lines[0], literal: null, uom: null };
-  }
-  const name = lines[0];
-  const second = (lines[1] || '').trim();
-  const literal = (second !== '' && !isNaN(Number(second))) ? Number(second) : null;
-  const uom = (lines.length >= 3 && lines[2].trim() !== '') ? lines[2].trim() : null;
-  return { name, literal, uom };
-}
+// build:include shared/operators.js
+// build:include shared/uom.js
+// build:include shared/input-rule.js
+// build:include shared/ir.js
 
-// Only consulted by buildCellContent for a node with no single incoming edge (a genuine
-// input, or a broken/ambiguous multi-edge state) — a wired, edge-driven node is handled
-// entirely in buildCellContent itself and never reaches this function, so a stale
-// periodValues array left over from before a rectangle was wired up can't override it.
-function effectiveLiteral(node, periodIndex){
-  if(Array.isArray(node.periodValues) && typeof node.periodValues[periodIndex] === 'number' && isFinite(node.periodValues[periodIndex])){
-    return node.periodValues[periodIndex];
-  }
-  const { literal } = parseNodeText(node.text);
-  if(literal === null) return null;
-  if(Array.isArray(node.literalPeriods) && !node.literalPeriods.includes(periodIndex)) return null;
-  return literal;
-}
-
-const UOM_PREFIXES = [['bn', 1e9], ['mm', 1e6], ['k', 1e3], ['m', 1e6]];
-const UOM_CURRENCY_SYMBOLS = new Set(['$', '€', '£', '¥']);
-const UOM_SCALE_TO_PREFIX = { 1: '', 1000: 'k', 1000000: 'm', 1000000000: 'bn' };
-
-function parseUOMAtom(tok){
-  tok = tok.trim();
-  if(!tok) return null;
-  if(tok === '%') return { scale: 0.01, symbol: '' };
-  for(const [pfx, mult] of UOM_PREFIXES){
-    if(tok.length > pfx.length){
-      if(tok.slice(0, pfx.length).toLowerCase() === pfx) return { scale: mult, symbol: tok.slice(pfx.length).trim() };
-      if(tok.slice(-pfx.length).toLowerCase() === pfx) return { scale: mult, symbol: tok.slice(0, -pfx.length).trim() };
-    }
-  }
-  return { scale: 1, symbol: tok };
-}
-function parseUOMSegment(seg){ return seg.split(/[*·]/).map(parseUOMAtom).filter(Boolean); }
-function parseUOM(str){
-  if(!str) return null;
-  const s = str.trim();
-  if(!s) return null;
-  const slashIdx = s.indexOf('/');
-  const numAtoms = parseUOMSegment(slashIdx === -1 ? s : s.slice(0, slashIdx));
-  const denAtoms = slashIdx === -1 ? [] : parseUOMSegment(s.slice(slashIdx + 1));
-  if(numAtoms.length === 0 && denAtoms.length === 0) return null;
-  let scale = 1;
-  const dims = {};
-  numAtoms.forEach(a => { scale *= a.scale; if(a.symbol) dims[a.symbol] = (dims[a.symbol] || 0) + 1; });
-  denAtoms.forEach(a => { scale /= a.scale; if(a.symbol) dims[a.symbol] = (dims[a.symbol] || 0) - 1; });
-  Object.keys(dims).forEach(k => { if(dims[k] === 0) delete dims[k]; });
-  return { scale, dims };
-}
-function formatUOM(u){
-  if(!u) return '';
-  const numSyms = Object.keys(u.dims).filter(k => u.dims[k] > 0).sort();
-  const denSyms = Object.keys(u.dims).filter(k => u.dims[k] < 0).sort();
-  const prefix = UOM_SCALE_TO_PREFIX.hasOwnProperty(u.scale) ? UOM_SCALE_TO_PREFIX[u.scale] : '';
-  const atomStr = (sym, exp) => (exp > 1 ? sym + '^' + exp : sym);
-  let numPart;
-  if(numSyms.length === 0) numPart = prefix;
-  else if(numSyms.length === 1 && prefix){
-    const sym = numSyms[0];
-    numPart = UOM_CURRENCY_SYMBOLS.has(sym) ? (atomStr(sym, u.dims[sym]) + prefix) : (prefix + atomStr(sym, u.dims[sym]));
-  } else numPart = (prefix ? prefix + '·' : '') + numSyms.map(s => atomStr(s, u.dims[s])).join('·');
-  const denPart = denSyms.map(s => atomStr(s, -u.dims[s])).join('·');
-  return denPart ? (numPart || '1') + '/' + denPart : numPart;
-}
-function uomCombineDims(a, b, sign){
-  const dims = Object.assign({}, a.dims);
-  Object.keys(b.dims).forEach(k => { dims[k] = (dims[k] || 0) + sign * b.dims[k]; if(dims[k] === 0) delete dims[k]; });
-  return dims;
-}
-function uomMultiply(a, b){ return (a && b) ? { scale: a.scale * b.scale, dims: uomCombineDims(a, b, 1) } : null; }
-function uomDivide(a, b){ return (a && b) ? { scale: a.scale / b.scale, dims: uomCombineDims(a, b, -1) } : null; }
-function uomDimsEqual(a, b){
-  const ak = Object.keys(a.dims), bk = Object.keys(b.dims);
-  return ak.length === bk.length && ak.every(k => a.dims[k] === b.dims[k]);
-}
-// `path` mirrors operandRef's instance-path threading — a rectangle's UOM can
-// legitimately differ per block instance (an alias/Block-Input redirect resolves to
-// whatever is wired externally, which varies by instance), so the memo/visiting keys
-// must be instance-scoped (pathKey), not just canvasId|nodeId.
-function computeNodeUOM(canvasId, nodeId, ctx, visiting, memo, path){
-  path = path || [];
-  const key = pathKey(path, canvasId, nodeId);
-  if(memo.hasOwnProperty(key)) return memo[key];
-  if(visiting.has(key)) return null;
-  const n = ctx.nodeById[canvasId + '|' + nodeId];
-  if(!n){ memo[key] = null; return null; }
-  visiting.add(key);
-  let result = null;
-  const canvas = ctx.canvasById[canvasId];
-  if(n.type === 'value' && n.blockRole === 'input' && path.length > 0 && !isUnfedBlockInput(ctx.canvasById, path, canvas, n)){
-    // Same redirect as operandRef: a Block Input port's UOM comes from whatever
-    // feeds the CURRENT instance's corresponding port, one level up the path.
-    const outerHop = path[path.length - 1];
-    const outerPath = path.slice(0, -1);
-    const outerCanvas = ctx.canvasById[outerHop.canvasId];
-    const portIndex = blockInputPortIndex(canvas, n);
-    const edge = outerCanvas && outerCanvas.edges.find(e => e.to === outerHop.nodeId && e.toPort === portIndex);
-    result = edge ? resolveEdgeUOM(outerHop.canvasId, edge, ctx, visiting, memo, outerPath) : null;
-  } else if(n.type === 'value'){
-    const manual = parseNodeText(n.text).uom;
-    if(manual) result = parseUOM(manual);
-    else {
-      const incoming = canvas.edges.filter(e => e.to === n.id);
-      if(incoming.length === 1) result = resolveEdgeUOM(canvasId, incoming[0], ctx, visiting, memo, path);
-    }
-  } else if(n.type === 'alias'){
-    if(n.sourceCanvasId && n.sourceNodeId){
-      const nextPath = (n.sourceCanvasId === canvasId) ? path : [];
-      result = computeNodeUOM(n.sourceCanvasId, n.sourceNodeId, ctx, visiting, memo, nextPath);
-    }
-  } else if(n.type === 'periodShift'){
-    const incoming = canvas.edges.filter(e => e.to === n.id);
-    if(incoming.length === 1) result = resolveEdgeUOM(canvasId, incoming[0], ctx, visiting, memo, path);
-  } else if(n.type === 'operator'){
-    const incomingEdges = canvas.edges.filter(e => e.to === n.id && ctx.nodeById[canvasId + '|' + e.from]);
-    incomingEdges.sort((a, b) => {
-      const na = ctx.nodeById[canvasId + '|' + a.from], nb = ctx.nodeById[canvasId + '|' + b.from];
-      return (na.x - nb.x) || (na.y - nb.y);
-    });
-    const uoms = incomingEdges.map(e => resolveEdgeUOM(canvasId, e, ctx, visiting, memo, path));
-    if(uoms.length > 0 && !uoms.some(u => u === null)){
-      if(n.text === '×') result = uoms.reduce((acc, u, i) => i === 0 ? u : uomMultiply(acc, u));
-      else if(n.text === '÷') result = uoms.reduce((acc, u, i) => i === 0 ? u : uomDivide(acc, u));
-      else if(['+', '−', 'abs', 'min', 'max', 'ave', 'iferror'].includes(n.text)){
-        result = uoms.every(u => uomDimsEqual(u, uoms[0])) ? uoms[0] : null;
-      }
-    }
-  }
-  visiting.delete(key);
-  memo[key] = result;
-  return result;
-}
-function resolveEdgeUOM(canvasId, edge, ctx, visiting, memo, path){
-  path = path || [];
-  const srcNode = ctx.nodeById[canvasId + '|' + edge.from];
-  if(!srcNode) return null;
-  if(srcNode.type === 'blockInstance'){
-    const defCanvasId = srcNode.blockDefCanvasId;
-    const defCanvas = defCanvasId && ctx.canvasById[defCanvasId];
-    if(!defCanvas || edge.fromPort === undefined) return null;
-    const outNode = blockOutputPortNode(defCanvas, edge.fromPort);
-    if(!outNode) return null;
-    const childPath = path.concat([{ canvasId, nodeId: edge.from }]);
-    return computeNodeUOM(defCanvasId, outNode.id, ctx, visiting, memo, childPath);
-  }
-  return computeNodeUOM(canvasId, edge.from, ctx, visiting, memo, path);
-}
+// The loaded model's IR (compileModel), set by loadModel. Every question about the graph —
+// what feeds what, in which order, block ports, plug-to-socket links, units — is asked of
+// it; the layout's `model.canvases` are its canvases as the calculation sees them.
+let modelIR = null;
+function irCanvas(canvasId){ return modelIR ? modelIR.canvases.get(canvasId) : undefined; }
+function irNode(canvasId, nodeId){ return modelIR ? irNodeIn(modelIR, canvasId, nodeId) : undefined; }
+// The block-instance hops of a row path, as the IR reads them (a vintage doesn't change units).
+function irPath(path){ return (path || []).map(h => ({ canvasId: h.canvasId, nodeId: h.nodeId })); }
 
 function colLetter(n){
   let s = '';
@@ -250,9 +105,9 @@ function resolvedRowPath(canvasId, nodeId, path, ctx){
   if(!path || path.length === 0) return path || [];
   const hop = path[path.length - 1];
   if(typeof hop.vIndex !== 'number') return path;
-  const hostNodeForHop = ctx.nodeById[hop.canvasId + '|' + hop.nodeId];
+  const hostNodeForHop = irNode(hop.canvasId, hop.nodeId);
   if(!hostNodeForHop || !hostNodeForHop.vertical) return path;
-  if(isVintageVarying(ctx.canvasById, hop.canvasId, hostNodeForHop, canvasId, nodeId, new Set())) return path;
+  if(isVintageVarying(hop.canvasId, hostNodeForHop, canvasId, nodeId, new Set())) return path;
   return path.slice(0, -1).concat([{ canvasId: hop.canvasId, nodeId: hop.nodeId }]);
 }
 
@@ -269,13 +124,12 @@ function indexIntoRowRange(ref, periodIndex, ctx){
 // Indexed input ports (edge.verticalIndexed) of a vertical block instance, in port order:
 // [{ portIndex, edge, name }] — each gets one helper column on that instance's rows.
 function indexedPortsOf(ctx, hostCanvasId, hostNodeId){
-  const host = ctx.nodeById[hostCanvasId + '|' + hostNodeId];
-  const hostCanvas = ctx.canvasById[hostCanvasId];
-  const defCanvas = host && host.blockDefCanvasId && ctx.canvasById[host.blockDefCanvasId];
-  if(!host || !host.vertical || !hostCanvas || !defCanvas) return [];
-  return blockPortNodes(defCanvas, 'input').map((portNode, portIndex) => {
-    const edge = hostCanvas.edges.find(e => e.to === hostNodeId && e.toPort === portIndex);
-    return edge && edge.verticalIndexed ? { portIndex, edge, name: parseNodeText(portNode.text).name || ('Input ' + (portIndex + 1)) } : null;
+  const host = irNode(hostCanvasId, hostNodeId);
+  const def = host && host.blockDefCanvasId && irCanvas(host.blockDefCanvasId);
+  if(!host || !host.vertical || !def) return [];
+  return def.ports.inputs.map((portNode, portIndex) => {
+    const edge = irPortEdge(modelIR, hostCanvasId, hostNodeId, portIndex);
+    return edge && edge.verticalIndexed ? { portIndex, edge, name: parseRectText(portNode.node.text).name || ('Input ' + (portIndex + 1)) } : null;
   }).filter(Boolean);
 }
 
@@ -293,19 +147,26 @@ function helperCellFormula(ctx, hop, outerPath, port, excelRow, tabName){
   return idx || ref;
 }
 
+// True if the block instance whose output `path` is about to enter (definition `defId`) is
+// already one of the instances on the path: a block that contains itself. fmIDE shows "?"
+// there (block-cycle); the formula reads 0, and the check before download lists it.
+function pathEntersItself(path, defId){
+  return path.some(h => { const inst = irNode(h.canvasId, h.nodeId); return !!inst && inst.blockDefCanvasId === defId; });
+}
+
 function operandRef(canvasId, nodeId, periodIndex, ctx, currentTabName, path, fromPort){
   path = path || [];
-  const node = ctx.nodeById[canvasId + '|' + nodeId];
-  if(!node) return '0';
+  const n = irNode(canvasId, nodeId);
+  if(!n) return '0';
+  const node = n.node;
 
-  if(node.type === 'blockInstance'){
-    const defCanvasId = node.blockDefCanvasId;
-    const defCanvas = defCanvasId && ctx.canvasById[defCanvasId];
-    if(!defCanvas || fromPort === undefined) return '0';
-    const outNode = blockOutputPortNode(defCanvas, fromPort);
-    if(!outNode) return '0';
+  if(n.type === 'blockInstance'){
+    const def = n.blockDefCanvasId && irCanvas(n.blockDefCanvasId);
+    if(!def || fromPort === undefined) return '0';
+    const outNode = def.ports.outputs[fromPort];
+    if(!outNode || pathEntersItself(path, def.id)) return '0';
     const childPath = path.concat([{ canvasId, nodeId }]);
-    return operandRef(defCanvasId, outNode.id, periodIndex, ctx, currentTabName, childPath);
+    return operandRef(def.id, outNode.id, periodIndex, ctx, currentTabName, childPath);
   }
 
   // A node that's provably vintage-invariant (isVintageVarying === false) was only
@@ -320,33 +181,44 @@ function operandRef(canvasId, nodeId, periodIndex, ctx, currentTabName, path, fr
     const lit = effectiveLiteral(node, periodIndex);
     return lit !== null ? formatLiteralForFormula(lit) : '0';
   }
-  if(node.type === 'operator') return buildOperatorFormula(canvasId, node, periodIndex, ctx, currentTabName, path);
-  if(node.type === 'alias'){
-    if(!node.sourceCanvasId || !node.sourceNodeId) return '0';
-    // An alias source on the SAME canvas as the current context stays inside the
-    // current instance (same path); a source on a DIFFERENT canvas is an
-    // unambiguous escape back to that canvas's own single, global identity —
-    // aliases always address a literal node by id, never a per-instance copy.
-    const nextPath = (node.sourceCanvasId === canvasId) ? path : [];
-    return operandRef(node.sourceCanvasId, node.sourceNodeId, periodIndex, ctx, currentTabName, nextPath);
+  // Operators, aliases and period shifts are written inline. A loop made only of them (no
+  // rectangle with a row of its own to break it) would never end: it reads 0 instead —
+  // fmIDE shows "?" (a loop), and the check before download lists it.
+  const inline = n.type === 'operator' || n.type === 'alias' || n.type === 'periodShift';
+  const loopKey = inline ? key + '@' + periodIndex : null;
+  if(inline){
+    if(!ctx.inlining) ctx.inlining = new Set();
+    if(ctx.inlining.has(loopKey)) return '0';
+    ctx.inlining.add(loopKey);
   }
-  if(node.type === 'periodShift'){
-    const canvas = ctx.canvasById[canvasId];
-    const incoming = canvas ? canvas.edges.filter(e => e.to === node.id) : [];
-    if(incoming.length !== 1) return '0';
-    const offset = (typeof node.shift === 'number') ? node.shift : -1;
-    const targetPeriod = periodIndex + offset;
-    // Outside the timeline. A row whose own formula would read this shows its typed number
-    // or 0 instead (reachesOutsideTimeline in buildCellContent), so this is only reached
-    // inside an iferror's first input — where fmIDE falls back to the second input, so it
-    // must be an error for IFERROR to catch — or through a block's input port.
-    if(targetPeriod < 0 || targetPeriod >= ctx.periodCount) return ctx.iferrorDepth ? 'NA()' : '0';
-    // lagDepth > 0 marks every reference reached through a period shift as a prior-/
-    // later-period one — only consulted by the row sorter (a corkscrew's shifted link is
-    // not a same-period dependency); generation never reads it.
-    ctx.lagDepth = (ctx.lagDepth || 0) + 1;
-    try{ return operandRef(canvasId, incoming[0].from, targetPeriod, ctx, currentTabName, path, incoming[0].fromPort); }
-    finally{ ctx.lagDepth--; }
+  try{
+    if(n.type === 'operator') return buildOperatorFormula(canvasId, n, periodIndex, ctx, currentTabName, path);
+    if(n.type === 'alias'){
+      if(!n.sourceCanvasId || !n.sourceNodeId) return '0';
+      // An alias source on the SAME canvas as the current context stays inside the
+      // current instance (same path); a source on a DIFFERENT canvas is an
+      // unambiguous escape back to that canvas's own single, global identity —
+      // aliases always address a literal node by id, never a per-instance copy.
+      const nextPath = (n.sourceCanvasId === canvasId) ? path : [];
+      return operandRef(n.sourceCanvasId, n.sourceNodeId, periodIndex, ctx, currentTabName, nextPath);
+    }
+    if(n.type === 'periodShift'){
+      if(n.incoming.length !== 1) return '0';
+      const targetPeriod = periodIndex + n.offset;
+      // Outside the timeline. A row whose own formula would read this shows its typed number
+      // or 0 instead (reachesOutsideTimeline in buildCellContent; a block's input port does
+      // the same), so this is only reached inside an iferror's first input — where fmIDE
+      // falls back to the second input, so it must be an error for IFERROR to catch.
+      if(targetPeriod < 0 || targetPeriod >= ctx.periodCount) return ctx.iferrorDepth ? 'NA()' : '0';
+      // lagDepth > 0 marks every reference reached through a period shift as a prior-/
+      // later-period one — only consulted by the row sorter (a corkscrew's shifted link is
+      // not a same-period dependency); generation never reads it.
+      ctx.lagDepth = (ctx.lagDepth || 0) + 1;
+      try{ return operandRef(canvasId, n.incoming[0].from, targetPeriod, ctx, currentTabName, path, n.incoming[0].fromPort); }
+      finally{ ctx.lagDepth--; }
+    }
+  } finally {
+    if(inline) ctx.inlining.delete(loopKey);
   }
   // "Vertical Index" port (fmIDE's Vertical Block feature): resolves to the current
   // vintage/run's own 1-based index as a literal, constant across every period column
@@ -354,7 +226,7 @@ function operandRef(canvasId, nodeId, periodIndex, ctx, currentTabName, path, fr
   // Falls back to 1 outside a vertical run's path (e.g. this canvas rendered
   // standalone), mirroring "unbound Block input ports default to 0"-style graceful
   // fallbacks elsewhere in this file rather than erroring.
-  if(node.blockRole === 'index'){
+  if(n.blockRole === 'index'){
     const hop = path.length > 0 ? path[path.length - 1] : null;
     const v = (hop && typeof hop.vIndex === 'number') ? hop.vIndex : 1;
     // While writing a per-vintage row, its own Vintage cell holds exactly this v — refer
@@ -364,13 +236,11 @@ function operandRef(canvasId, nodeId, periodIndex, ctx, currentTabName, path, fr
   }
   // A port nothing feeds has its own row (see classifyUnpackedNode): it resolves below
   // like any input rectangle instead.
-  if(node.blockRole === 'input' && path.length > 0 && !isUnfedBlockInput(ctx.canvasById, path, ctx.canvasById[canvasId], node)){
+  if(n.blockRole === 'input' && path.length > 0 && !irPortUnfed(modelIR, path, canvasId, n)){
     const outerHop = path[path.length - 1];
     const outerPath = path.slice(0, -1);
-    const outerCanvas = ctx.canvasById[outerHop.canvasId];
-    const defCanvas = ctx.canvasById[canvasId];
-    const portIndex = blockInputPortIndex(defCanvas, node);
-    const edge = outerCanvas && outerCanvas.edges.find(e => e.to === outerHop.nodeId && e.toPort === portIndex);
+    const portIndex = irCanvas(canvasId).ports.inputs.indexOf(n);
+    const edge = irPortEdge(modelIR, outerHop.canvasId, outerHop.nodeId, portIndex);
     if(!edge) return '0';
     // Inside a vertical instance's vintage/run v, a port whose feeding edge is marked
     // `verticalIndexed` is pinned to its source's value AT PERIOD (v-1) for every
@@ -380,6 +250,12 @@ function operandRef(canvasId, nodeId, periodIndex, ctx, currentTabName, path, fr
     // non-vertical instance) keeps the existing per-column pass-through unchanged.
     const pinned = typeof outerHop.vIndex === 'number' && edge.verticalIndexed;
     const effectivePeriodIndex = pinned ? (outerHop.vIndex - 1) : periodIndex;
+    // Where what feeds the port needs a period outside the timeline, the port's own typed
+    // number applies, or 0 — as fmIDE does, and as for any wired rectangle.
+    if(reachesOutsideTimeline(irRawCanvas, outerHop.canvasId, edge.from, effectivePeriodIndex, ctx.periodCount)){
+      const lit = effectiveLiteral(node, periodIndex);
+      return formatLiteralForFormula(lit !== null ? lit : 0);
+    }
     const ref = operandRef(outerHop.canvasId, edge.from, effectivePeriodIndex, ctx, currentTabName, outerPath, edge.fromPort);
     // Pinned read inside a per-vintage row: when the source resolves to a plain cell in
     // that period's column, write it as INDEX(<the source row's period range>, $C<row>)
@@ -399,7 +275,12 @@ function operandRef(canvasId, nodeId, periodIndex, ctx, currentTabName, path, fr
   }
   if(ctx.onRef) ctx.onRef(key, !!ctx.lagDepth); // dependency tracing for row sorting (see rowDependencyTracer)
   const pos = ctx.cellPos[key];
-  if(!pos) return '0';
+  if(!pos){
+    // A rectangle whose row was left out of the layout: the formula reads 0 (the check
+    // before download lists it).
+    if(ctx.onMissingRow) ctx.onMissingRow(key);
+    return '0';
+  }
   const col = colLetter(periodCol(periodIndex));
   // Inside a per-vintage row, a reference to a row of the SAME vintage stays relative
   // (each line item's vintages sit in parallel runs, so the offset is the same for every
@@ -408,6 +289,10 @@ function operandRef(canvasId, nodeId, periodIndex, ctx, currentTabName, path, fr
   const absRow = ctx.currentRowVintage != null && pathKey(rowPath, '', '') !== ctx.currentRowHopsKey;
   return sheetRef(pos.tabName, col, pos.row, currentTabName, absRow);
 }
+// A canvas as the calculation sees it ({ nodes, edges }), for the shared rules that read a
+// whole canvas.
+function irRawCanvas(canvasId){ const c = irCanvas(canvasId); return c ? c.raw : undefined; }
+
 // Comparison operators produce Excel's native TRUE/FALSE (e.g. =ABS(C8)<=C9), not an
 // IF(...,1,0) wrapper. Two Excel behaviors make a TRUE/FALSE cell differ from fmIDE's
 // 1/0 when it's read somewhere else, and only there does a reference get N() (which
@@ -416,7 +301,7 @@ function operandRef(canvasId, nodeId, periodIndex, ctx, currentTabName, path, fr
 //     (min/max/ave operators here, and a vertical block's reducer row);
 //   - a comparison ranks any logical value above every number (TRUE > 1000 is TRUE).
 // Plain arithmetic (+ − × ÷ ^ MOD ABS) already treats TRUE as 1, so it's left alone.
-const COMPARISON_SYMBOLS = new Set(['≤', '≥', '<', '>']);
+function isComparison(n){ return !!(n && n.op && EXCEL_SPELLINGS[n.op.id] && EXCEL_SPELLINGS[n.op.id].compare); }
 
 // True if what an edge from nodeId reads is a comparison's TRUE/FALSE — looking through
 // value rectangles fed by a single edge, aliases, period shifts, and block ports, the
@@ -429,82 +314,80 @@ function isLogicalValued(canvasId, nodeId, ctx, path, fromPort, visiting){
   const vKey = pathKey(path, canvasId, nodeId) + '#' + (fromPort === undefined ? '' : fromPort);
   if(visiting.has(vKey)) return false;
   visiting.add(vKey);
-  const node = ctx.nodeById[canvasId + '|' + nodeId];
-  if(!node) return false;
-  const canvas = ctx.canvasById[canvasId];
-  if(node.type === 'operator') return COMPARISON_SYMBOLS.has(node.text);
-  if(node.type === 'alias'){
-    if(!node.sourceCanvasId || !node.sourceNodeId) return false;
-    return isLogicalValued(node.sourceCanvasId, node.sourceNodeId, ctx, node.sourceCanvasId === canvasId ? path : [], undefined, visiting);
+  const n = irNode(canvasId, nodeId);
+  if(!n) return false;
+  if(n.type === 'operator') return isComparison(n);
+  if(n.type === 'alias'){
+    if(!n.sourceCanvasId || !n.sourceNodeId) return false;
+    return isLogicalValued(n.sourceCanvasId, n.sourceNodeId, ctx, n.sourceCanvasId === canvasId ? path : [], undefined, visiting);
   }
-  if(node.type === 'periodShift'){
-    const inc = canvas ? canvas.edges.filter(e => e.to === node.id) : [];
+  if(n.type === 'periodShift'){
+    const inc = n.incoming;
     return inc.length === 1 && isLogicalValued(canvasId, inc[0].from, ctx, path, inc[0].fromPort, visiting);
   }
-  if(node.type === 'blockInstance'){
-    if(node.vertical) return false;
-    const defCanvas = node.blockDefCanvasId && ctx.canvasById[node.blockDefCanvasId];
-    const outNode = defCanvas && fromPort !== undefined ? blockOutputPortNode(defCanvas, fromPort) : null;
-    return !!outNode && isLogicalValued(node.blockDefCanvasId, outNode.id, ctx, path.concat([{ canvasId, nodeId }]), undefined, visiting);
+  if(n.type === 'blockInstance'){
+    if(n.vertical) return false;
+    const def = n.blockDefCanvasId && irCanvas(n.blockDefCanvasId);
+    const outNode = def && fromPort !== undefined ? def.ports.outputs[fromPort] : null;
+    return !!outNode && isLogicalValued(def.id, outNode.id, ctx, path.concat([{ canvasId, nodeId }]), undefined, visiting);
   }
-  if(node.type !== 'value' || node.blockRole === 'index') return false;
+  if(n.type !== 'value' || n.blockRole === 'index') return false;
   if(ctx.inlineConstantIds && ctx.inlineConstantIds.has(pathKey(resolvedRowPath(canvasId, nodeId, path, ctx), canvasId, nodeId))) return false;
-  if(node.blockRole === 'input' && path.length > 0 && !isUnfedBlockInput(ctx.canvasById, path, canvas, node)){
+  if(n.blockRole === 'input' && path.length > 0 && !irPortUnfed(modelIR, path, canvasId, n)){
     const hop = path[path.length - 1];
-    const outerCanvas = ctx.canvasById[hop.canvasId];
-    const edge = outerCanvas && outerCanvas.edges.find(e => e.to === hop.nodeId && e.toPort === blockInputPortIndex(canvas, node));
+    const edge = irPortEdge(modelIR, hop.canvasId, hop.nodeId, irCanvas(canvasId).ports.inputs.indexOf(n));
     return !!edge && isLogicalValued(hop.canvasId, edge.from, ctx, path.slice(0, -1), edge.fromPort, visiting);
   }
-  const inc = canvas ? canvas.edges.filter(e => e.to === node.id) : [];
+  const inc = n.incoming;
   return inc.length === 1 && isLogicalValued(canvasId, inc[0].from, ctx, path, inc[0].fromPort, visiting);
 }
 
+// An operator's formula: its inputs left to right (the IR's order), spelled as
+// EXCEL_SPELLINGS says for its catalogue id. An operator the catalogue doesn't know (only a
+// hand-edited file has one) is written as 0; the check before download lists it.
 function buildOperatorFormula(canvasId, opNode, periodIndex, ctx, currentTabName, path){
   path = path || [];
-  const canvas = ctx.canvasById[canvasId];
-  const incoming = canvas.edges.filter(e => e.to === opNode.id)
-    .map(e => ({ edge: e, from: ctx.nodeById[canvasId + '|' + e.from] }))
-    .filter(x => x.from)
-    .sort((a, b) => (a.from.x - b.from.x) || (a.from.y - b.from.y));
-  const sym = opNode.text;
-  const needsNumeric = sym === 'min' || sym === 'max' || sym === 'ave' || COMPARISON_SYMBOLS.has(sym);
-  const operandStrs = incoming.map((x, i) => {
+  const spell = opNode.op ? EXCEL_SPELLINGS[opNode.op.id] : null;
+  const inputs = opNode.inputs;
+  const needsNumeric = !!(spell && (spell.numeric || spell.compare));
+  const operandStrs = inputs.map((edge, i) => {
     // An iferror's first input is where a failure is caught (see the period-shift branch of operandRef).
-    const catches = sym === 'iferror' && i === 0;
+    const catches = !!(spell && spell.fallback) && i === 0;
     if(catches) ctx.iferrorDepth = (ctx.iferrorDepth || 0) + 1;
     let ref;
-    try{ ref = operandRef(canvasId, x.from.id, periodIndex, ctx, currentTabName, path, x.edge.fromPort); }
+    try{ ref = operandRef(canvasId, edge.from, periodIndex, ctx, currentTabName, path, edge.fromPort); }
     finally{ if(catches) ctx.iferrorDepth--; }
-    return (needsNumeric && ref !== '0' && isLogicalValued(canvasId, x.from.id, ctx, path, x.edge.fromPort)) ? 'N(' + ref + ')' : ref;
+    return (needsNumeric && ref !== '0' && isLogicalValued(canvasId, edge.from, ctx, path, edge.fromPort)) ? 'N(' + ref + ')' : ref;
   });
-  if(operandStrs.length === 0) return '0';
+  if(operandStrs.length === 0 || !spell) return '0';
+  return spellOperator(spell, operandStrs);
+}
+
+// One operator applied to its operands' formula text (at least one), as `spell` says.
+function spellOperator(spell, operandStrs){
   // An error, as fmIDE shows "?": abs takes exactly one input, a comparison at least two.
-  if(sym === 'abs') return operandStrs.length === 1 ? 'ABS(' + operandStrs[0] + ')' : 'NA()';
-  if(sym === 'min') return 'MIN(' + operandStrs.join(',') + ')';
-  if(sym === 'max') return 'MAX(' + operandStrs.join(',') + ')';
-  if(sym === 'ave') return 'AVERAGE(' + operandStrs.join(',') + ')';
-  if(sym === 'iferror') return 'IFERROR(' + operandStrs[0] + ',' + (operandStrs[1] !== undefined ? operandStrs[1] : '0') + ')';
-  const infix = { '+': '+', '−': '-', '×': '*', '÷': '/', '^': '^' }[sym];
-  if(infix) return '(' + operandStrs.reduce((acc, s, i) => i === 0 ? s : acc + infix + s) + ')';
-  if(sym === '%') return operandStrs.reduce((acc, s, i) => i === 0 ? s : 'MOD(' + acc + ',' + s + ')');
-  const cmp = { '≤': '<=', '≥': '>=', '<': '<', '>': '>' }[sym];
-  if(cmp){
+  if(spell.one) return operandStrs.length === 1 ? spell.fn + '(' + operandStrs[0] + ')' : 'NA()';
+  if(spell.fallback) return spell.fn + '(' + operandStrs[0] + ',' + (operandStrs[1] !== undefined ? operandStrs[1] : '0') + ')';
+  if(spell.fn) return spell.fn + '(' + operandStrs.join(',') + ')';
+  if(spell.infix) return '(' + operandStrs.reduce((acc, s, i) => i === 0 ? s : acc + spell.infix + s) + ')';
+  if(spell.fold) return operandStrs.reduce((acc, s, i) => i === 0 ? s : spell.fold + '(' + acc + ',' + s + ')');
+  if(spell.compare){
     // Native TRUE/FALSE. Parenthesized so it stays a single operand wherever it's
-    // inlined into a bigger formula; buildCellContent strips nothing, and Excel shows
-    // =(A<=B) identically to =A<=B.
+    // inlined into a bigger formula; Excel shows =(A<=B) identically to =A<=B.
     if(operandStrs.length === 1) return 'NA()';
-    if(operandStrs.length === 2) return '(' + operandStrs[0] + cmp + operandStrs[1] + ')';
-    const pairs = operandStrs.slice(0, -1).map((s, i) => s + cmp + operandStrs[i + 1]);
+    if(operandStrs.length === 2) return '(' + operandStrs[0] + spell.compare + operandStrs[1] + ')';
+    const pairs = operandStrs.slice(0, -1).map((s, i) => s + spell.compare + operandStrs[i + 1]);
     return 'AND(' + pairs.join(',') + ')';
   }
   return '0';
 }
+
 function buildCellContent(canvasId, node, periodIndex, ctx, currentTabName, path){
   path = path || [];
-  const canvas = ctx.canvasById[canvasId];
-  if(node.type === 'value'){
-    const incoming = canvas.edges.filter(e => e.to === node.id);
-    const effectiveInput = isInputRectangle(canvas, node); // includes "fed by an operator fed by nothing"
+  const n = irNode(canvasId, node.id);
+  if(n && n.type === 'value'){
+    const incoming = n.incoming;
+    const effectiveInput = n.isInput; // includes "fed by an operator fed by nothing"
 
     // Mirrors fmIDE's own "Value-node priority fixed" rule: a rectangle with a single
     // incoming edge is ALWAYS driven by that edge, regardless of any number typed into
@@ -515,19 +398,16 @@ function buildCellContent(canvasId, node, periodIndex, ctx, currentTabName, path
     // mark specific periods to use its own typed literal instead (e.g. a corkscrew's
     // period-0 opening balance), which is checked here regardless of edge presence.
     if(incoming.length === 1 && !effectiveInput){
-      const restrictedToLiteral = Array.isArray(node.literalPeriods) && node.literalPeriods.includes(periodIndex);
-      if(restrictedToLiteral){
-        const { literal } = parseNodeText(node.text);
-        if(literal !== null) return { isFormula: false, value: literal };
-      }
+      const restrictedToLiteral = Array.isArray(n.literalPeriods) && n.literalPeriods.includes(periodIndex);
+      if(restrictedToLiteral && n.typed !== null) return { isFormula: false, value: n.typed };
       // src can be an operator, an alias, a period-shift node, a block instance, or
       // another value rectangle — operandRef inlines through all of them uniformly.
-      const src = ctx.nodeById[canvasId + '|' + incoming[0].from];
+      const src = irNode(canvasId, incoming[0].from);
       // Where the source would need a period outside the timeline (a corkscrew's opening
       // balance in period 1), the rectangle's own typed number applies, or 0 — the shared
       // rule fmIDE follows too.
-      if(src && reachesOutsideTimeline(id => ctx.canvasById[id], canvasId, src.id, periodIndex, ctx.periodCount)){
-        const lit = effectiveLiteral(node, periodIndex);
+      if(src && reachesOutsideTimeline(irRawCanvas, canvasId, src.id, periodIndex, ctx.periodCount)){
+        const lit = effectiveLiteral(n.node, periodIndex);
         return { isFormula: false, value: lit !== null ? lit : 0 };
       }
       if(src) return { isFormula: true, formula: operandRef(canvasId, src.id, periodIndex, ctx, currentTabName, path, incoming[0].fromPort) };
@@ -537,7 +417,7 @@ function buildCellContent(canvasId, node, periodIndex, ctx, currentTabName, path
     // No single incoming edge — either a genuine input (0 edges) or a broken/ambiguous
     // state (2+ edges). periodValues and the typed literal (gated by literalPeriods, same
     // as before) apply only here.
-    const lit = effectiveLiteral(node, periodIndex);
+    const lit = effectiveLiteral(n.node, periodIndex);
     if(lit !== null) return { isFormula: false, value: lit };
     // A true input (no incoming edge at all) with nothing typed in yet — default to 0
     // rather than leaving the cell blank, so downstream formulas never hit an empty
@@ -551,7 +431,13 @@ function buildCellContent(canvasId, node, periodIndex, ctx, currentTabName, path
   // something else points at them. This fallback only covers a stray/unexpected type.
   return { isFormula: false, value: null };
 }
-// build:include shared/input-rule.js
+
+// True if `node` on `canvas` (a canvas of `model.canvases`) is an input rectangle — the
+// shared input rule, as the IR worked it out.
+function isInputNode(canvas, node){
+  const n = canvas && node ? irNode(canvas.id, node.id) : null;
+  return !!n && !!n.isInput;
+}
 
 function classifyNode(canvas, node){
   // Operators, block instances, aliases, and period-shift nodes never get their own row:
@@ -562,9 +448,10 @@ function classifyNode(canvas, node){
   // instance it's the row's own Vintage cell (column C); anywhere else it resolves to
   // the literal 1 (see operandRef), so a row of its own would only show a misleading value.
   if(node.blockRole === 'index') return null;
-  const hasIncoming = canvas.edges.some(e => e.to === node.id);
-  const hasOutgoing = canvas.edges.some(e => e.from === node.id);
-  if(!hasIncoming || isInputRectangle(canvas, node)) return 'input';
+  const n = irNode(canvas.id, node.id);
+  const hasIncoming = !!n && n.incoming.length > 0;
+  const hasOutgoing = !!n && n.outgoing.length > 0;
+  if(!hasIncoming || (n && n.isInput)) return 'input';
   if(!hasOutgoing) return 'output';
   return 'calc';
 }

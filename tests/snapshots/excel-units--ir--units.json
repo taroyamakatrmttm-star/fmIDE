@@ -1,0 +1,53 @@
+{
+ "Units": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Unit price"},
+  "B5": {"v":"$/t"},
+  "A6": {"v":"Volume"},
+  "B6": {"v":"kt"},
+  "A7": {"v":"Cost"},
+  "B7": {"v":"$k"},
+  "A8": {"v":"Rate"},
+  "B8": {"v":"%"},
+  "A9": {"v":"Big"},
+  "B9": {"v":"$bn"},
+  "A11": {"v":"CALCULATIONS"},
+  "A12": {"v":"Revenue"},
+  "B12": {"v":"$k"},
+  "A14": {"v":"OUTPUTS"},
+  "A15": {"v":"Price back"},
+  "B15": {"v":"t/$"},
+  "A16": {"v":"Per unit"},
+  "A17": {"v":"Revenue plus cost"},
+  "B17": {"v":"$k"},
+  "A18": {"v":"Mismatched"},
+  "A19": {"v":"Prior revenue"},
+  "B19": {"v":"$k"},
+  "A20": {"v":"Block result"},
+  "A21": {"v":"Typed over"},
+  "B21": {"v":"USD"},
+  "A22": {"v":"Max of cost"},
+  "B22": {"v":"$k"},
+  "A23": {"v":"Power"},
+  "A24": {"v":"Scaled"},
+  "B24": {"v":"$"}
+ },
+ "Linked": {
+  "A4": {"v":"OUTPUTS"},
+  "A5": {"v":"Linked revenue"},
+  "B5": {"v":"$k"}
+ },
+ "UnitBlock": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"B In"},
+  "A6": {"v":"Two"},
+  "A8": {"v":"OUTPUTS"},
+  "A9": {"v":"B Out"}
+ },
+ "UnitBlock (instance 1)": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Two"},
+  "A7": {"v":"OUTPUTS"},
+  "A8": {"v":"B Out"}
+ }
+}

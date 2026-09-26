@@ -1,0 +1,22 @@
+{
+ "Top": {
+  "sales": {"values":[100,110,121]},
+  "sh": {"values":["error: period shift t−1 has no value: There's no period that far back/forward for this shifter to read — it's fine at the timeline's edge..",100,110]},
+  "b1": {"values":[[8],[101],[111]]},
+  "r1": {"values":[8,101,111]},
+  "a": {"values":[1,1,1]},
+  "z": {"values":[0,0,0]},
+  "dv": {"values":["error: operator ÷ has no value: Invalid result (e.g. divide by zero)..","error: operator ÷ has no value: Invalid result (e.g. divide by zero)..","error: operator ÷ has no value: Invalid result (e.g. divide by zero).."]},
+  "b2": {"values":[[null],[null],[null]]},
+  "r2": {"values":["error: \"From a failing source\" has no value: One of this operator's inputs could not be computed..","error: \"From a failing source\" has no value: One of this operator's inputs could not be computed..","error: \"From a failing source\" has no value: One of this operator's inputs could not be computed.."]},
+  "sh2": {"values":[110,121,"error: period shift t+1 has no value: There's no period that far back/forward for this shifter to read — it's fine at the timeline's edge.."]},
+  "b3": {"values":[[111],[122],[8]]},
+  "r3": {"values":[111,122,8]}
+ },
+ "PlusOne": {
+  "bin": {"values":[7,7,7]},
+  "one": {"values":[1,1,1]},
+  "bp": {"values":[8,8,8]},
+  "bout": {"values":[8,8,8]}
+ }
+}

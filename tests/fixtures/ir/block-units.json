@@ -1,0 +1,444 @@
+{
+ "version": 4,
+ "kind": "system",
+ "nextId": 500,
+ "nextCanvasId": 10,
+ "activeCanvasId": "cT",
+ "periods": [
+  "P1",
+  "P2",
+  "P3"
+ ],
+ "currentPeriod": 0,
+ "canvases": [
+  {
+   "id": "cT",
+   "name": "Top",
+   "nodes": [
+    {
+     "id": "price",
+     "type": "value",
+     "x": 40,
+     "y": 40,
+     "w": 170,
+     "h": 64,
+     "text": "Unit price\n10\n$/t"
+    },
+    {
+     "id": "vol",
+     "type": "value",
+     "x": 40,
+     "y": 140,
+     "w": 170,
+     "h": 64,
+     "text": "Volume\n5\nkt"
+    },
+    {
+     "id": "cost",
+     "type": "value",
+     "x": 40,
+     "y": 240,
+     "w": 170,
+     "h": 64,
+     "text": "Cost\n3\n$k"
+    },
+    {
+     "id": "b1",
+     "type": "blockInstance",
+     "x": 300,
+     "y": 40,
+     "w": 170,
+     "h": 90,
+     "blockDefCanvasId": "cMul"
+    },
+    {
+     "id": "rev",
+     "type": "value",
+     "x": 560,
+     "y": 40,
+     "w": 170,
+     "h": 64,
+     "text": "Block revenue"
+    },
+    {
+     "id": "b2",
+     "type": "blockInstance",
+     "x": 300,
+     "y": 200,
+     "w": 170,
+     "h": 90,
+     "blockDefCanvasId": "cPass"
+    },
+    {
+     "id": "passed",
+     "type": "value",
+     "x": 560,
+     "y": 200,
+     "w": 170,
+     "h": 64,
+     "text": "Passed through"
+    },
+    {
+     "id": "b3",
+     "type": "blockInstance",
+     "x": 300,
+     "y": 320,
+     "w": 170,
+     "h": 90,
+     "blockDefCanvasId": "cOuter"
+    },
+    {
+     "id": "nested",
+     "type": "value",
+     "x": 560,
+     "y": 320,
+     "w": 170,
+     "h": 64,
+     "text": "Nested"
+    },
+    {
+     "id": "b4",
+     "type": "blockInstance",
+     "x": 300,
+     "y": 440,
+     "w": 170,
+     "h": 90,
+     "blockDefCanvasId": "cMul",
+     "vertical": true
+    },
+    {
+     "id": "vsum",
+     "type": "value",
+     "x": 560,
+     "y": 440,
+     "w": 170,
+     "h": 64,
+     "text": "Vertical sum"
+    },
+    {
+     "id": "b5",
+     "type": "blockInstance",
+     "x": 300,
+     "y": 560,
+     "w": 170,
+     "h": 90,
+     "blockDefCanvasId": "cMul"
+    },
+    {
+     "id": "unfed",
+     "type": "value",
+     "x": 560,
+     "y": 560,
+     "w": 170,
+     "h": 64,
+     "text": "Unfed port"
+    },
+    {
+     "id": "pl",
+     "type": "operator",
+     "x": 700,
+     "y": 120,
+     "w": 56,
+     "h": 56,
+     "text": "+"
+    },
+    {
+     "id": "tot",
+     "type": "value",
+     "x": 800,
+     "y": 120,
+     "w": 170,
+     "h": 64,
+     "text": "Revenue plus cost"
+    }
+   ],
+   "edges": [
+    {
+     "id": "e1",
+     "from": "price",
+     "to": "b1",
+     "toPort": 0
+    },
+    {
+     "id": "e2",
+     "from": "vol",
+     "to": "b1",
+     "toPort": 1
+    },
+    {
+     "id": "e3",
+     "from": "b1",
+     "to": "rev",
+     "fromPort": 0
+    },
+    {
+     "id": "e4",
+     "from": "cost",
+     "to": "b2",
+     "toPort": 0
+    },
+    {
+     "id": "e5",
+     "from": "b2",
+     "to": "passed",
+     "fromPort": 0
+    },
+    {
+     "id": "e6",
+     "from": "price",
+     "to": "b3",
+     "toPort": 0
+    },
+    {
+     "id": "e7",
+     "from": "b3",
+     "to": "nested",
+     "fromPort": 0
+    },
+    {
+     "id": "e8",
+     "from": "price",
+     "to": "b4",
+     "toPort": 0,
+     "verticalIndexed": true
+    },
+    {
+     "id": "e9",
+     "from": "vol",
+     "to": "b4",
+     "toPort": 1
+    },
+    {
+     "id": "e10",
+     "from": "b4",
+     "to": "vsum",
+     "fromPort": 0
+    },
+    {
+     "id": "e11",
+     "from": "price",
+     "to": "b5",
+     "toPort": 0
+    },
+    {
+     "id": "e12",
+     "from": "b5",
+     "to": "unfed",
+     "fromPort": 0
+    },
+    {
+     "id": "e13",
+     "from": "rev",
+     "to": "pl"
+    },
+    {
+     "id": "e14",
+     "from": "cost",
+     "to": "pl"
+    },
+    {
+     "id": "e15",
+     "from": "pl",
+     "to": "tot"
+    }
+   ]
+  },
+  {
+   "id": "cMul",
+   "name": "MulBlock",
+   "nodes": [
+    {
+     "id": "mIn",
+     "type": "value",
+     "x": 40,
+     "y": 40,
+     "w": 170,
+     "h": 64,
+     "text": "Price in\n1\nEUR/t",
+     "blockRole": "input"
+    },
+    {
+     "id": "mQty",
+     "type": "value",
+     "x": 40,
+     "y": 160,
+     "w": 170,
+     "h": 64,
+     "text": "Quantity in\n2\nt",
+     "blockRole": "input"
+    },
+    {
+     "id": "mx",
+     "type": "operator",
+     "x": 240,
+     "y": 100,
+     "w": 56,
+     "h": 56,
+     "text": "×"
+    },
+    {
+     "id": "mOut",
+     "type": "value",
+     "x": 400,
+     "y": 100,
+     "w": 170,
+     "h": 64,
+     "text": "Amount out",
+     "blockRole": "output",
+     "verticalReducer": "sum"
+    },
+    {
+     "id": "mCopy",
+     "type": "value",
+     "x": 400,
+     "y": 220,
+     "w": 170,
+     "h": 64,
+     "text": "Price seen"
+    }
+   ],
+   "edges": [
+    {
+     "id": "m1",
+     "from": "mIn",
+     "to": "mx"
+    },
+    {
+     "id": "m2",
+     "from": "mQty",
+     "to": "mx"
+    },
+    {
+     "id": "m3",
+     "from": "mx",
+     "to": "mOut"
+    },
+    {
+     "id": "m4",
+     "from": "mIn",
+     "to": "mCopy"
+    }
+   ]
+  },
+  {
+   "id": "cPass",
+   "name": "PassBlock",
+   "nodes": [
+    {
+     "id": "pIn",
+     "type": "value",
+     "x": 40,
+     "y": 40,
+     "w": 170,
+     "h": 64,
+     "text": "In",
+     "blockRole": "input"
+    },
+    {
+     "id": "pp",
+     "type": "operator",
+     "x": 200,
+     "y": 40,
+     "w": 56,
+     "h": 56,
+     "text": "+"
+    },
+    {
+     "id": "pOut",
+     "type": "value",
+     "x": 360,
+     "y": 40,
+     "w": 170,
+     "h": 64,
+     "text": "Out",
+     "blockRole": "output"
+    },
+    {
+     "id": "pal",
+     "type": "alias",
+     "x": 40,
+     "y": 160,
+     "w": 170,
+     "h": 64,
+     "sourceCanvasId": "cPass",
+     "sourceNodeId": "pIn"
+    },
+    {
+     "id": "pSeen",
+     "type": "value",
+     "x": 240,
+     "y": 160,
+     "w": 170,
+     "h": 64,
+     "text": "Alias of in"
+    }
+   ],
+   "edges": [
+    {
+     "id": "p1",
+     "from": "pIn",
+     "to": "pp"
+    },
+    {
+     "id": "p2",
+     "from": "pp",
+     "to": "pOut"
+    },
+    {
+     "id": "p3",
+     "from": "pal",
+     "to": "pSeen"
+    }
+   ]
+  },
+  {
+   "id": "cOuter",
+   "name": "OuterBlock",
+   "nodes": [
+    {
+     "id": "oIn",
+     "type": "value",
+     "x": 40,
+     "y": 40,
+     "w": 170,
+     "h": 64,
+     "text": "O In",
+     "blockRole": "input"
+    },
+    {
+     "id": "oInst",
+     "type": "blockInstance",
+     "x": 200,
+     "y": 40,
+     "w": 170,
+     "h": 90,
+     "blockDefCanvasId": "cPass"
+    },
+    {
+     "id": "oOut",
+     "type": "value",
+     "x": 420,
+     "y": 40,
+     "w": 170,
+     "h": 64,
+     "text": "O Out",
+     "blockRole": "output"
+    }
+   ],
+   "edges": [
+    {
+     "id": "o1",
+     "from": "oIn",
+     "to": "oInst",
+     "toPort": 0
+    },
+    {
+     "id": "o2",
+     "from": "oInst",
+     "to": "oOut",
+     "fromPort": 0
+    }
+   ]
+  }
+ ]
+}

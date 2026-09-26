@@ -1,0 +1,191 @@
+{
+ "version": 4,
+ "kind": "system",
+ "nextId": 900,
+ "nextCanvasId": 10,
+ "activeCanvasId": "cU",
+ "periods": [
+  "P1",
+  "P2",
+  "P3"
+ ],
+ "currentPeriod": 0,
+ "canvases": [
+  {
+   "id": "cS",
+   "name": "Sales",
+   "nodes": [
+    {
+     "id": "rev",
+     "type": "value",
+     "x": 40,
+     "y": 40,
+     "w": 170,
+     "h": 64,
+     "text": "Revenue\n100",
+     "plugs": [
+      "Revenue"
+     ]
+    },
+    {
+     "id": "old",
+     "type": "value",
+     "x": 40,
+     "y": 140,
+     "w": 170,
+     "h": 64,
+     "text": "Old revenue\n999"
+    },
+    {
+     "id": "inc",
+     "type": "value",
+     "x": 40,
+     "y": 240,
+     "w": 170,
+     "h": 64,
+     "text": "Other income\n7",
+     "plugs": [
+      " income "
+     ]
+    },
+    {
+     "id": "late",
+     "type": "value",
+     "x": 300,
+     "y": 40,
+     "w": 170,
+     "h": 64,
+     "text": "Late revenue\n20",
+     "plugs": [
+      "REVENUE"
+     ]
+    }
+   ],
+   "edges": []
+  },
+  {
+   "id": "cU",
+   "name": "Summary",
+   "nodes": [
+    {
+     "id": "fee",
+     "type": "value",
+     "x": 40,
+     "y": 40,
+     "w": 170,
+     "h": 64,
+     "text": "Fee\n5",
+     "plugs": [
+      "Revenue"
+     ]
+    },
+    {
+     "id": "disc",
+     "type": "value",
+     "x": 300,
+     "y": 160,
+     "w": 170,
+     "h": 64,
+     "text": "Discount\n10"
+    },
+    {
+     "id": "minus",
+     "type": "operator",
+     "x": 400,
+     "y": 40,
+     "w": 56,
+     "h": 56,
+     "text": "−",
+     "socket": "Revenue"
+    },
+    {
+     "id": "net",
+     "type": "value",
+     "x": 560,
+     "y": 40,
+     "w": 170,
+     "h": 64,
+     "text": "Net"
+    },
+    {
+     "id": "plus",
+     "type": "operator",
+     "x": 400,
+     "y": 300,
+     "w": 56,
+     "h": 56,
+     "text": "+",
+     "socket": "Income"
+    },
+    {
+     "id": "totinc",
+     "type": "value",
+     "x": 560,
+     "y": 300,
+     "w": 170,
+     "h": 64,
+     "text": "Total income\n1"
+    },
+    {
+     "id": "auto1",
+     "type": "alias",
+     "x": 200,
+     "y": 40,
+     "w": 170,
+     "h": 64,
+     "sourceCanvasId": "cS",
+     "sourceNodeId": "old",
+     "auto": true,
+     "plugs": []
+    },
+    {
+     "id": "auto2",
+     "type": "alias",
+     "x": 350,
+     "y": 90,
+     "w": 170,
+     "h": 64,
+     "sourceCanvasId": "cS",
+     "sourceNodeId": "rev",
+     "auto": true,
+     "plugs": []
+    }
+   ],
+   "edges": [
+    {
+     "id": "u1",
+     "from": "disc",
+     "to": "minus"
+    },
+    {
+     "id": "u2",
+     "from": "minus",
+     "to": "net"
+    },
+    {
+     "id": "u3",
+     "from": "plus",
+     "to": "totinc"
+    },
+    {
+     "id": "a1",
+     "from": "auto1",
+     "to": "minus",
+     "auto": true
+    },
+    {
+     "id": "a2",
+     "from": "auto2",
+     "to": "minus",
+     "auto": true
+    },
+    {
+     "id": "a3",
+     "from": "disc",
+     "to": "plus",
+     "auto": true
+    }
+   ]
+  }
+ ]
+}

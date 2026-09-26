@@ -1,0 +1,105 @@
+{
+ "Top": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Unit price"},
+  "B5": {"v":"$/t"},
+  "A6": {"v":"Volume"},
+  "B6": {"v":"kt"},
+  "A7": {"v":"Cost"},
+  "B7": {"v":"$k"},
+  "A9": {"v":"CALCULATIONS"},
+  "A10": {"v":"Block revenue"},
+  "B10": {"v":"$k"},
+  "A12": {"v":"OUTPUTS"},
+  "A13": {"v":"Revenue plus cost"},
+  "B13": {"v":"$k"},
+  "A14": {"v":"Passed through"},
+  "B14": {"v":"$k"},
+  "A15": {"v":"Nested"},
+  "B15": {"v":"$/t"},
+  "A16": {"v":"Vertical sum"},
+  "B16": {"v":"$k"},
+  "A17": {"v":"Unfed port"},
+  "B17": {"v":"$"}
+ },
+ "MulBlock": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Price in"},
+  "B5": {"v":"EUR/t"},
+  "A6": {"v":"Quantity in"},
+  "B6": {"v":"t"},
+  "A8": {"v":"OUTPUTS"},
+  "A9": {"v":"Amount out"},
+  "B9": {"v":"EUR"},
+  "A10": {"v":"Price seen"},
+  "B10": {"v":"EUR/t"}
+ },
+ "PassBlock": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"In"},
+  "A7": {"v":"OUTPUTS"},
+  "A8": {"v":"Out"},
+  "A9": {"v":"Alias of in"}
+ },
+ "OuterBlock": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"O In"},
+  "A7": {"v":"OUTPUTS"},
+  "A8": {"v":"O Out"}
+ },
+ "MulBlock (instance 1)": {
+  "A4": {"v":"OUTPUTS"},
+  "A5": {"v":"Amount out"},
+  "B5": {"v":"$k"},
+  "A6": {"v":"Price seen"},
+  "B6": {"v":"$/t"}
+ },
+ "PassBlock (instance 1)": {
+  "A4": {"v":"OUTPUTS"},
+  "A5": {"v":"Out"},
+  "B5": {"v":"$k"},
+  "A6": {"v":"Alias of in"},
+  "B6": {"v":"$k"}
+ },
+ "OuterBlock (instance 1)": {
+  "A4": {"v":"OUTPUTS"},
+  "A5": {"v":"Out"},
+  "B5": {"v":"$/t"},
+  "A6": {"v":"O Out"},
+  "B6": {"v":"$/t"},
+  "A7": {"v":"Alias of in"},
+  "B7": {"v":"$/t"}
+ },
+ "MulBlock (instance 2)": {
+  "A4": {"v":"OUTPUTS"},
+  "A5": {"v":"Amount out — Vintage 1"},
+  "B5": {"v":"$k"},
+  "A6": {"v":"Amount out — Vintage 2"},
+  "B6": {"v":"$k"},
+  "A7": {"v":"Amount out — Vintage 3"},
+  "B7": {"v":"$k"},
+  "A8": {"v":"Amount out (Total)"},
+  "B8": {"v":"$k"},
+  "A9": {"v":"Price seen — Vintage 1"},
+  "B9": {"v":"$/t"},
+  "A10": {"v":"Price seen — Vintage 2"},
+  "B10": {"v":"$/t"},
+  "A11": {"v":"Price seen — Vintage 3"},
+  "B11": {"v":"$/t"}
+ },
+ "MulBlock (instance 3)": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Quantity in"},
+  "B5": {"v":"t"},
+  "A7": {"v":"OUTPUTS"},
+  "A8": {"v":"Amount out"},
+  "B8": {"v":"$"},
+  "A9": {"v":"Price seen"},
+  "B9": {"v":"$/t"}
+ },
+ "PassBlock (instance 2)": {
+  "A4": {"v":"OUTPUTS"},
+  "A5": {"v":"Out"},
+  "A6": {"v":"Alias of in"}
+ }
+}

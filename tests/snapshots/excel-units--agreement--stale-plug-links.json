@@ -1,0 +1,17 @@
+{
+ "Sales": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Revenue"},
+  "A6": {"v":"Late revenue"},
+  "A7": {"v":"Old revenue"},
+  "A8": {"v":"Other income"}
+ },
+ "Summary": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Fee"},
+  "A6": {"v":"Discount"},
+  "A8": {"v":"OUTPUTS"},
+  "A9": {"v":"Net"},
+  "A10": {"v":"Total income"}
+ }
+}

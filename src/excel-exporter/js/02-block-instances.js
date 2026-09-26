@@ -41,36 +41,29 @@ function pathKey(path, canvasId, nodeId){
 // Exception: a Block Input port that nothing feeds in this instance (isUnfedBlockInput)
 // is a real input of the instance — it gets its own row holding the port's own typed
 // number(s), as fmIDE uses them, and operandRef refers to that row.
-function classifyUnpackedNode(canvas, node, canvasById, path){
+function classifyUnpackedNode(canvas, node, path){
   if(node.blockRole === 'index') return null;
-  if(node.blockRole === 'input') return (canvasById && isUnfedBlockInput(canvasById, path, canvas, node)) ? 'input' : null;
+  if(node.blockRole === 'input') return path ? (isUnfedBlockInput(path, canvas, node) ? 'input' : null) : null;
   return classifyNode(canvas, node);
 }
 
 // True if `node`, a Block Input port of `defCanvas` reached through `path` (its last hop
 // is the instance), is fed by nothing: no arrow into the instance's port, or one from
-// something fed by nothing (feedsNothing — e.g. an operator with an empty socket).
-function isUnfedBlockInput(canvasById, path, defCanvas, node){
+// something fed by nothing (feedsNothing — e.g. an operator with an empty socket). The
+// IR's rule (irPortUnfed), which fmIDE's calculation follows too.
+function isUnfedBlockInput(path, defCanvas, node){
   if(!node || node.blockRole !== 'input' || !path || !path.length) return false;
-  const hop = path[path.length - 1];
-  const host = canvasById[hop.canvasId];
-  if(!host) return false;
-  const edge = host.edges.find(e => e.to === hop.nodeId && e.toPort === blockInputPortIndex(defCanvas, node));
-  return !edge || feedsNothing(host, edge.from, new Set());
+  const n = irNode(defCanvas.id, node.id);
+  if(!n || !irCanvas(path[path.length - 1].canvasId)) return false;
+  return irPortUnfed(modelIR, path, defCanvas.id, n);
 }
 
-// A block definition's port order is the left-to-right (x, then y) reading order of
-// its Block Input/Output-marked rectangles — the same convention fmIDE uses for
-// operand ordering on non-commutative operators. Verified against a real exported
-// model's actual toPort/fromPort wiring for two independent block instances.
+// A block definition's ports, in the IR's order: its Block Input / Output rectangles left
+// to right (x, then y) — the same order fmIDE reads them in. Raw nodes.
 function blockPortNodes(defCanvas, role){
-  return defCanvas.nodes.filter(n => n.blockRole === role).sort((a, b) => (a.x - b.x) || (a.y - b.y));
-}
-function blockInputPortIndex(defCanvas, node){
-  return blockPortNodes(defCanvas, 'input').findIndex(n => n.id === node.id);
-}
-function blockOutputPortNode(defCanvas, portIndex){
-  return blockPortNodes(defCanvas, 'output')[portIndex] || null;
+  const def = irCanvas(defCanvas.id);
+  if(!def) return [];
+  return (role === 'input' ? def.ports.inputs : def.ports.outputs).map(n => n.node);
 }
 
 // Recursively collects unpack rows for everything reachable from a block instance's
@@ -80,20 +73,20 @@ function blockOutputPortNode(defCanvas, portIndex){
 // Set of node ids (within THIS SAME defCanvasId) to leave out entirely — used for a
 // vertical instance's per-vintage walk, to avoid re-emitting a node that's already
 // been given a single shared row (see collectInstanceRows / isVintageVarying).
-function collectUnpackedRows(canvasById, defCanvasId, pathPrefix, visitingDefIds, periodCount, skipNodeIds){
+function collectUnpackedRows(defCanvasId, pathPrefix, visitingDefIds, periodCount, skipNodeIds){
   const out = [];
   if(visitingDefIds.has(defCanvasId)) return out;
-  const canvas = canvasById[defCanvasId];
+  const canvas = irRawCanvas(defCanvasId);
   if(!canvas) return out;
   const nextVisiting = new Set(visitingDefIds); nextVisiting.add(defCanvasId);
   canvas.nodes.forEach(n => {
     if(skipNodeIds && skipNodeIds.has(n.id)) return;
     if(n.type === 'blockInstance'){
       if(!n.blockDefCanvasId) return;
-      out.push(...collectInstanceRows(canvasById, pathPrefix, defCanvasId, n, nextVisiting, periodCount));
+      out.push(...collectInstanceRows(pathPrefix, defCanvasId, n, nextVisiting, periodCount));
       return;
     }
-    const section = classifyUnpackedNode(canvas, n, canvasById, pathPrefix);
+    const section = classifyUnpackedNode(canvas, n, pathPrefix);
     if(section === null) return;
     out.push({ path: pathPrefix, canvasId: defCanvasId, nodeId: n.id, section });
   });
@@ -113,35 +106,30 @@ function collectUnpackedRows(canvasById, defCanvasId, pathPrefix, visitingDefIds
 // this per-vintage") on anything unclear — a cycle, an unresolved edge, a nested
 // block instance's own internals — so a row is only ever collapsed when it's
 // actually provable to be vintage-invariant.
-function isVintageVarying(canvasById, hostCanvasId, hostNode, canvasId, nodeId, visiting){
+function isVintageVarying(hostCanvasId, hostNode, canvasId, nodeId, visiting){
   const key = canvasId + '|' + nodeId;
   if(visiting.has(key)) return true;
-  const canvas = canvasById[canvasId];
-  const n = canvas && canvas.nodes.find(x => x.id === nodeId);
+  const n = irNode(canvasId, nodeId);
   if(!n) return true;
   if(n.blockRole === 'index') return true;
   const nextVisiting = new Set(visiting); nextVisiting.add(key);
   if(n.type === 'operator' || n.type === 'periodShift'){
-    const incoming = canvas.edges.filter(e => e.to === n.id);
-    return incoming.some(e => isVintageVarying(canvasById, hostCanvasId, hostNode, canvasId, e.from, nextVisiting));
+    return n.incoming.some(e => isVintageVarying(hostCanvasId, hostNode, canvasId, e.from, nextVisiting));
   }
   if(n.type === 'alias'){
     if(!n.sourceCanvasId || !n.sourceNodeId) return false;
-    return isVintageVarying(canvasById, hostCanvasId, hostNode, n.sourceCanvasId, n.sourceNodeId, nextVisiting);
+    return isVintageVarying(hostCanvasId, hostNode, n.sourceCanvasId, n.sourceNodeId, nextVisiting);
   }
   if(n.type === 'blockInstance') return true; // not analyzed — conservative
   if(n.type === 'value'){
     if(n.blockRole === 'input'){
       if(canvasId !== hostNode.blockDefCanvasId) return true; // only the immediate definition is analyzed
-      const portIndex = blockInputPortIndex(canvas, n);
-      const hostCanvas = canvasById[hostCanvasId];
-      const edge = hostCanvas && hostCanvas.edges.find(e => e.to === hostNode.id && e.toPort === portIndex);
+      const edge = irPortEdge(modelIR, hostCanvasId, hostNode.id, irCanvas(canvasId).ports.inputs.indexOf(n));
       if(!edge) return false; // unwired port defaults to a fixed literal (0) — invariant
       if(edge.verticalIndexed) return true;
-      return isVintageVarying(canvasById, hostCanvasId, hostNode, hostCanvasId, edge.from, nextVisiting);
+      return isVintageVarying(hostCanvasId, hostNode, hostCanvasId, edge.from, nextVisiting);
     }
-    const incoming = canvas.edges.filter(e => e.to === n.id);
-    if(incoming.length === 1) return isVintageVarying(canvasById, hostCanvasId, hostNode, canvasId, incoming[0].from, nextVisiting);
+    if(n.incoming.length === 1) return isVintageVarying(hostCanvasId, hostNode, canvasId, n.incoming[0].from, nextVisiting);
     return false; // a true input (literal / periodValues only) — invariant
   }
   return true;
@@ -172,10 +160,10 @@ function isVintageVarying(canvasById, hostCanvasId, hostNode, canvasId, nodeId, 
 // exists and is a reducer (`verticalCombined: true`). Any other internal node that's
 // provably the same in every vintage (isVintageVarying) also gets just ONE row
 // (`verticalShared: true`) instead of N identical duplicates.
-function collectInstanceRows(canvasById, pathPrefixOuter, hostCanvasId, hostNode, visitingDefIds, periodCount){
+function collectInstanceRows(pathPrefixOuter, hostCanvasId, hostNode, visitingDefIds, periodCount){
   const out = [];
   if(!hostNode.blockDefCanvasId) return out;
-  const defCanvas = canvasById[hostNode.blockDefCanvasId];
+  const defCanvas = irRawCanvas(hostNode.blockDefCanvasId);
   if(!defCanvas) return out;
   if(hostNode.vertical){
     const combinedPath = pathPrefixOuter.concat([{ canvasId: hostCanvasId, nodeId: hostNode.id }]);
@@ -196,24 +184,24 @@ function collectInstanceRows(canvasById, pathPrefixOuter, hostCanvasId, hostNode
     const skipNodeIds = new Set();
     defCanvas.nodes.forEach(dn => {
       if(dn.type === 'blockInstance' || dn.blockRole === 'output') return;
-      if(classifyUnpackedNode(defCanvas, dn, canvasById, combinedPath) === null) return;
-      if(!isVintageVarying(canvasById, hostCanvasId, hostNode, hostNode.blockDefCanvasId, dn.id, new Set())){
+      if(classifyUnpackedNode(defCanvas, dn, combinedPath) === null) return;
+      if(!isVintageVarying(hostCanvasId, hostNode, hostNode.blockDefCanvasId, dn.id, new Set())){
         skipNodeIds.add(dn.id);
         out.push({
           path: combinedPath, canvasId: hostNode.blockDefCanvasId, nodeId: dn.id,
-          section: classifyUnpackedNode(defCanvas, dn, canvasById, combinedPath), verticalShared: true
+          section: classifyUnpackedNode(defCanvas, dn, combinedPath), verticalShared: true
         });
       }
     });
     const n = Math.max(1, periodCount || 1);
     for(let v = 1; v <= n; v++){
       const vPath = pathPrefixOuter.concat([{ canvasId: hostCanvasId, nodeId: hostNode.id, vIndex: v }]);
-      out.push(...collectUnpackedRows(canvasById, hostNode.blockDefCanvasId, vPath, visitingDefIds, periodCount, skipNodeIds)
+      out.push(...collectUnpackedRows(hostNode.blockDefCanvasId, vPath, visitingDefIds, periodCount, skipNodeIds)
         .map(u => Object.assign({}, u, { verticalVintage: v })));
     }
   } else {
     const path = pathPrefixOuter.concat([{ canvasId: hostCanvasId, nodeId: hostNode.id }]);
-    out.push(...collectUnpackedRows(canvasById, hostNode.blockDefCanvasId, path, visitingDefIds, periodCount));
+    out.push(...collectUnpackedRows(hostNode.blockDefCanvasId, path, visitingDefIds, periodCount));
   }
   return out;
 }

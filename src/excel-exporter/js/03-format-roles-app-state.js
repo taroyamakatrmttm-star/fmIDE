@@ -167,9 +167,15 @@ function setStatus(el, msg, kind){
 }
 
 // ---------- Loading & default mapping ----------
-function signatureOf(m){
+// The key a model's layout is saved under: its canvas and node ids. `withoutAutoLinks`
+// leaves out the aliases plugs make (marked `auto`), whose ids change whenever fmIDE redraws
+// them; layouts saved before that was so used the key with them.
+function signatureOf(m, withoutAutoLinks){
   const parts = [];
-  m.canvases.forEach(c => { parts.push(c.id); c.nodes.forEach(n => parts.push(n.id)); });
+  m.canvases.forEach(c => {
+    parts.push(c.id);
+    c.nodes.forEach(n => { if(!(withoutAutoLinks && n && n.type === 'alias' && n.auto)) parts.push(n.id); });
+  });
   let h = 0;
   const s = parts.join('|');
   for(let i = 0; i < s.length; i++){ h = ((h << 5) - h + s.charCodeAt(i)) | 0; }
@@ -189,7 +195,7 @@ function nodeDisplayName(canvasById, node){
     const srcNode = srcCanvas && srcCanvas.nodes.find(n => n.id === node.sourceNodeId);
     return srcNode ? nodeDisplayName(canvasById, srcNode) : '(unnamed)';
   }
-  const { name } = parseNodeText(node.text);
+  const { name } = parseRectText(node.text);
   return name || '(unnamed)';
 }
 
@@ -211,7 +217,7 @@ function buildBlockInstanceTabsAndRows(m, canvasById, tabs, rows){
     const tabName = sanitizeSheetName((defCanvas ? (defCanvas.name || hostNode.blockDefCanvasId) : 'Block') + ' (instance ' + n + ')');
     tabs.push({ id: tabId, name: tabName, order: tabs.length });
 
-    const unpacked = collectInstanceRows(canvasById, [], hostCanvasId, hostNode, new Set(), periodCount)
+    const unpacked = collectInstanceRows([], hostCanvasId, hostNode, new Set(), periodCount)
       .map(u => ({ u, node: canvasById[u.canvasId].nodes.find(nn => nn.id === u.nodeId) }));
     // Default ordering: for a NON-vertical instance this is unchanged — pure
     // canvas-layout (y, then x) order. For a VERTICAL instance: every shared row
