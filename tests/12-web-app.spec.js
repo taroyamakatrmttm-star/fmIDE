@@ -91,6 +91,63 @@ test.describe('the site', () => {
     expect(await page.evaluate(() => caches.keys())).toContain('fmide-' + site.version);
   });
 
+  // Publish a new version of the site: the service worker's version changes.
+  function publishNewVersion(site, version){
+    const swFile = path.join(site.dir, 'sw.js');
+    fs.writeFileSync(swFile, fs.readFileSync(swFile, 'utf8').replace(JSON.stringify(site.version), JSON.stringify(version)));
+  }
+  const checkForUpdate = (page) => page.evaluate(() => navigator.serviceWorker.getRegistration().then(r => r.update()));
+
+  test('ExcelExporter says when a new version is ready, and Reload switches to it', async ({ page, site, requests }) => {
+    void requests;
+    await W.openSite(page, site.origin);
+    await W.waitForController(page);
+    await page.goto(site.origin + 'ExcelExporter.html');
+    await expect(page.locator('#dropZone')).toBeVisible();
+    publishNewVersion(site, 'test-exporter-version');
+    await checkForUpdate(page);
+    const banner = page.locator('#updateBanner');
+    await expect(banner).toContainText('A new version of ExcelExporter is ready.');
+    await expect(banner).toContainText('Your layout is kept');
+    expect(await page.evaluate(() => caches.keys())).toContain('fmide-' + site.version); // not switched yet
+    await Promise.all([page.waitForEvent('load'), banner.locator('button', { hasText: 'Reload' }).click()]);
+    await expect(page.locator('#dropZone')).toBeVisible();
+    expect(await page.evaluate(() => caches.keys())).toEqual(['fmide-test-exporter-version']);
+    await expect(page.locator('#updateBanner')).toHaveCount(0);
+  });
+
+  test('Reload in fmIDE tells an open ExcelExporter too, and its Reload loads the new version', async ({ page, context, site, requests }) => {
+    void requests;
+    await W.openSite(page, site.origin);
+    await W.waitForController(page);
+    const exporter = await context.newPage();
+    await exporter.goto(site.origin + 'ExcelExporter.html');
+    await expect(exporter.locator('#dropZone')).toBeVisible();
+    publishNewVersion(site, 'test-both-tabs');
+    await checkForUpdate(page);
+    // ExcelExporter's notice is put away; then fmIDE switches to the new version.
+    await exporter.locator('#updateBanner button', { hasText: 'Later' }).click();
+    await expect(exporter.locator('#updateBanner')).toHaveCount(0);
+    await Promise.all([page.waitForEvent('load'), page.locator('#updateBanner button', { hasText: 'Reload' }).click()]);
+    await page.waitForFunction(() => window.fm && typeof window.fm.canvases === 'function');
+    // ExcelExporter is still the old page, so it says so again.
+    const banner = exporter.locator('#updateBanner');
+    await expect(banner).toContainText('A new version of ExcelExporter is ready.');
+    await Promise.all([exporter.waitForEvent('load'), banner.locator('button', { hasText: 'Reload' }).click()]);
+    await expect(exporter.locator('#dropZone')).toBeVisible();
+    expect(await exporter.evaluate(() => caches.keys())).toEqual(['fmide-test-both-tabs']);
+    await expect(page.locator('#updateBanner')).toHaveCount(0);
+  });
+
+  test('ExcelExporter registers no service worker itself', async ({ page, site, requests }) => {
+    void requests;
+    await page.goto(site.origin + 'ExcelExporter.html');
+    await expect(page.locator('#dropZone')).toBeVisible();
+    await page.waitForTimeout(500);
+    expect(await page.evaluate(() => navigator.serviceWorker.getRegistrations().then(r => r.length))).toBe(0);
+    await expect(page.locator('#updateBanner')).toHaveCount(0);
+  });
+
   test('the licences ship with the app, and each app names its own', async ({ page, site, requests }) => {
     void requests;
     await W.openSite(page, site.origin);

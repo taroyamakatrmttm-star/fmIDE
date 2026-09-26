@@ -38,38 +38,7 @@
       .catch(() => showMessage('Could not open that file.'));
   }
 
-  function showUpdateNotice(reg){
-    if(document.getElementById('updateBanner')) return;
-    const bar = document.createElement('div');
-    bar.id = 'updateBanner';
-    bar.setAttribute('role', 'status');
-    bar.style.cssText = 'position:fixed; bottom:16px; right:16px; z-index:1998; max-width:420px; ' +
-      'display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:10px; background:#1e3a8a; color:#fff; ' +
-      'font-size:13px; box-shadow:0 10px 30px rgba(0,0,0,.35);';
-    const msg = document.createElement('span');
-    msg.textContent = 'A new version of fmIDE is ready.';
-    const reload = document.createElement('button');
-    reload.textContent = 'Reload';
-    reload.style.cssText = 'flex:none; padding:6px 10px; border-radius:6px; border:none; background:#fff; color:#1e3a8a; font-weight:700; cursor:pointer;';
-    const later = document.createElement('button');
-    later.textContent = 'Later';
-    later.style.cssText = 'flex:none; padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,.5); background:transparent; color:#fff; cursor:pointer;';
-    later.addEventListener('click', () => bar.remove());
-    // Reload: autosave first (unsaved changes come back through recovery), then let the new
-    // version take over and reload once it has.
-    reload.addEventListener('click', () => {
-      bar.remove();
-      Promise.resolve(saveWorkspace()).catch(() => {}).then(() => {
-        const waiting = reg.waiting;
-        const go = () => { skipLeaveWarning = true; location.reload(); };
-        if(!waiting){ go(); return; }
-        navigator.serviceWorker.addEventListener('controllerchange', go, { once: true });
-        waiting.postMessage('skipWaiting');
-      });
-    });
-    bar.append(msg, reload, later);
-    document.body.appendChild(bar);
-  }
+  // build:include shared/update-notice.js
 
   // Called once start-up has finished (the autosave restored).
   function startWebApp(){
@@ -79,17 +48,12 @@
         if(handle) confirmDiscardChanges(() => openLaunchedFile(handle));
       });
     }
-    if(!document.querySelector('link[rel="manifest"]') || !('serviceWorker' in navigator) || !window.isSecureContext) return;
-    navigator.serviceWorker.register('sw.js').then(reg => {
-      if(reg.waiting && navigator.serviceWorker.controller) showUpdateNotice(reg);
-      reg.addEventListener('updatefound', () => {
-        const incoming = reg.installing;
-        if(!incoming) return;
-        incoming.addEventListener('statechange', () => {
-          // installed while another version runs this page = an update is waiting
-          if(incoming.state === 'installed' && navigator.serviceWorker.controller) showUpdateNotice(reg);
-        });
-      });
-      setInterval(() => { reg.update().catch(() => {}); }, 60 * 60 * 1000);
-    }).catch(() => { /* no offline copy: fmIDE still works as a normal page */ });
+    // Only the published site links a manifest; there fmIDE registers the service worker.
+    // Reload autosaves first (unsaved changes come back through recovery), with no "Leave site?".
+    if(!document.querySelector('link[rel="manifest"]')) return;
+    watchForUpdates({
+      appName: 'fmIDE', register: true,
+      beforeReload: () => saveWorkspace(),
+      onReload: () => { skipLeaveWarning = true; },
+    });
   }

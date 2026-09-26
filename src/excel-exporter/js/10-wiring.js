@@ -179,6 +179,15 @@ $('btnResetMapping').addEventListener('click', async () => {
 // A write started only while the page unloads may not finish, so save when it is hidden.
 document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') writeMapping(); });
 
+// On the published site (the service worker already runs this page; fmIDE registers it):
+// say when a new version is ready. The layout is saved first; the model file is not kept.
+// build:include shared/update-notice.js
+watchForUpdates({
+  appName: 'ExcelExporter',
+  note: 'Your layout is kept; load your file again after reloading.',
+  beforeReload: () => writeMapping(),
+});
+
 $('btnClearAll').addEventListener('click', () => {
   model = null; mapping = null; mappingKey = null;
   $('fileInput').value = '';
