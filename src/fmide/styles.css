@@ -516,6 +516,17 @@
     background:#1f2937; color:#e5e7eb; cursor:pointer; white-space:nowrap;
   }
   .tag-popup button:hover{ background:var(--accent); border-color:var(--accent); }
+  .tag-popup.plug-editor{ flex-direction:column; align-items:stretch; }
+  .plug-editor .plug-list{ display:flex; flex-wrap:wrap; gap:4px; max-width:320px; }
+  .plug-editor .plug-item{
+    display:inline-flex; align-items:center; gap:4px; font-size:11px; font-family:Menlo,Consolas,monospace;
+    padding:2px 2px 2px 7px; border-radius:9px; background:#ede9fe; color:#6d28d9; border:1px solid #c4b5fd;
+  }
+  .plug-editor .plug-item button.plug-remove{
+    font-size:10px; padding:0 5px; border:none; background:transparent; color:#6d28d9; line-height:16px;
+  }
+  .plug-editor .plug-item button.plug-remove:hover{ background:#c4b5fd; color:#4c1d95; }
+  .plug-editor .plug-add-row{ display:flex; gap:6px; align-items:center; }
 
   /* period shift */
   .node.periodshift{ background:#fdf4ff; border:1.5px solid #a855f7; border-radius:10px; }

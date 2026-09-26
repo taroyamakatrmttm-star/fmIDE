@@ -46,17 +46,51 @@
       a.node.shift = a.shift;
       clearComputed();
     } });
+  // A rectangle's plugs are a list of names (`plugs`); every change replaces the list
+  // (never edits it in place — copies made by paste/duplicate may share it).
+  function applyPlugs(node, list){
+    const next = plugsOf({ plugs: list });
+    const cur = plugsOf(node);
+    if(!('plug' in node) && next.length === cur.length && next.every((p, i) => p === cur[i])) return NOOP;
+    pushHistory();
+    node.plugs = next;
+    delete node.plug;
+    syncAutoConnections();
+    clearComputed();
+  }
   defineAction({ name:'setPlug', label:'Set Plug', category:'Edit', icon:'🔌',
-    desc:'A plug name auto-feeds this rectangle into every operator whose socket has the same name.',
-    params:[ P('node','node'), P('plug','string',{ def:'', help:'blank clears' }) ],
+    desc:'Replaces all of this rectangle\'s plugs with one name. A plug name auto-feeds the rectangle into every operator whose socket has the same name.',
+    params:[ P('node','node'), P('plug','string',{ def:'', help:'blank clears all plugs' }) ],
     run(a){
       requireType(a.node, ['value','alias'], 'a rectangle or alias');
       const v = a.plug.trim();
-      if((a.node.plug || '') === v) return NOOP;
-      pushHistory();
-      a.node.plug = v;
-      syncAutoConnections();
-      clearComputed();
+      return applyPlugs(a.node, v ? [v] : []);
+    } });
+  defineAction({ name:'setPlugs', label:'Set Plugs', category:'Edit', icon:'🔌',
+    desc:'Replaces all of this rectangle\'s plugs with a list of names — one rectangle can feed several differently named sockets.',
+    params:[ P('node','node'), P('plugs','json',{ def:'[]', help:'a list, e.g. ["Income Tax", "Tax paid"]; [] clears' }) ],
+    run(a){
+      requireType(a.node, ['value','alias'], 'a rectangle or alias');
+      const list = a.plugs == null ? [] : a.plugs;
+      if(!Array.isArray(list) || !list.every(p => typeof p === 'string')) fail('Plugs must be a list of names, e.g. ["Income Tax", "Tax paid"].');
+      return applyPlugs(a.node, list.map(interpolate));
+    } });
+  defineAction({ name:'addPlug', label:'Add Plug', category:'Edit', icon:'🔌',
+    desc:'Adds a plug name to this rectangle, keeping its other plugs.',
+    params:[ P('node','node'), P('plug','string') ],
+    run(a){
+      requireType(a.node, ['value','alias'], 'a rectangle or alias');
+      const v = a.plug.trim();
+      if(!v) fail('Give a plug name to add.');
+      return applyPlugs(a.node, plugsOf(a.node).concat([v]));
+    } });
+  defineAction({ name:'removePlug', label:'Remove Plug', category:'Edit', icon:'🔌',
+    desc:'Removes one plug name from this rectangle (names match regardless of capitals).',
+    params:[ P('node','node'), P('plug','string') ],
+    run(a){
+      requireType(a.node, ['value','alias'], 'a rectangle or alias');
+      const k = a.plug.trim().toLowerCase();
+      return applyPlugs(a.node, plugsOf(a.node).filter(p => p.toLowerCase() !== k));
     } });
   defineAction({ name:'setSocket', label:'Set Socket', category:'Edit', icon:'⚡',
     params:[ P('node','node'), P('socket','string',{ def:'', help:'blank clears' }) ],

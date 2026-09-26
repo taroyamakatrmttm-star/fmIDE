@@ -18,8 +18,8 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 
 | `kind` | Version | What it is | Opened with |
 |---|---|---|---|
-| `system` | 2 | A whole model (all canvases, periods) | fmIDE: File → Load System · ExcelExporter |
-| `module` | 1 | One canvas | fmIDE: File → Load Module |
+| `system` | 3 | A whole model (all canvases, periods) | fmIDE: File → Load System · ExcelExporter |
+| `module` | 2 | One canvas | fmIDE: File → Load Module |
 | `fmIDE-workspace` | 1 | Everything: system + templates, format presets, shortcuts, macros. A **`.fmide` document** is exactly this, with the `.fmide` extension | fmIDE: File → Open… (a document) or Import Workspace (a full replace) · ExcelExporter |
 | `fmIDE-templates` | 1 | Saved templates (each holds a module or system) | fmIDE: Templates → Import Templates |
 | `fmIDE-format-presets` | 1 | Format presets, including the format roles | fmIDE: Format Presets → Import Presets |
@@ -27,6 +27,12 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 | `fmIDE-macros` | 1 | Macros | fmIDE: Macro Builder → Import |
 | `fmIDE-preferences` | 1 | Personal settings: shortcut bindings for built-in commands, ribbon layout and Quick Access Toolbar, ribbon collapsed state, KeyTips trigger (fmIDE only) | fmIDE: File → Import Preferences (or Customize Ribbon) |
 | `fmIDE-excel-mapping` | 1 | ExcelExporter's tab/row layout for one model | ExcelExporter: Import Mapping JSON |
+
+## Plugs (`system` 3, `module` 2)
+
+A value rectangle can carry several plug names: `"plugs": ["to Income Tax expense", "to CF Income Tax paid"]`. Each name feeds the rectangle into every operator whose `socket` has that name (names match regardless of capitals), on any canvas; an operator still has one `socket`. The connections this makes are saved too (arrows and aliases marked `"auto": true`), which is all ExcelExporter reads.
+
+Older files (`system` 1–2, `module` 1) held one name, `"plug": "Revenue"` (blank for none). Reading one turns it into `"plugs": ["Revenue"]` (or `[]`) and removes `plug` — the upgrade step `SHARED_FILE_MIGRATIONS.system[2]` and fmIDE's `FILE_MIGRATIONS.module[1]`, both using `upgradeNodePlugs()` in `src/shared/file-formats.js`. That covers every way a model arrives: Load System / Load Module, Open… and Open Recent, Import Workspace, templates (each template's model is upgraded as it is read) and the autosave. An older fmIDE opening a newer file asks first ("saved by a newer version"), so it never drops extra plugs without saying so.
 
 ## Changing a format
 

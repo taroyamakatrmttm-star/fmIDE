@@ -15,7 +15,7 @@
   // build:include shared/file-formats.js
   const FILE_FORMATS = {
     'system':               { current: SHARED_FILE_VERSIONS['system'], label: 'system', where: 'File → Load System' },
-    'module':               { current: 1, label: 'module',              where: 'File → Load Module' },
+    'module':               { current: 2, label: 'module',              where: 'File → Load Module' },
     'fmIDE-workspace':      { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'workspace', where: 'File → Import Workspace' },
     'fmIDE-templates':      { current: 1, label: 'templates file',      where: 'Templates → Import Templates' },
     'fmIDE-format-presets': { current: 1, label: 'format presets file', where: 'Format Presets → Import Presets' },
@@ -24,6 +24,10 @@
     'fmIDE-preferences':    { current: 1, label: 'preferences file',    where: 'File → Import Preferences' }
   };
   const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
+    // v1 → v2: one plug name per rectangle becomes a list of plug names (as system v2 → v3).
+    'module': {
+      1: d => upgradeNodePlugs(d.nodes)
+    },
     // v1 shortcut files stored combos in the old notation.
     'fmIDE-shortcuts': {
       1: d => { Object.keys(d.bindings || {}).forEach(k => { d.bindings[k] = canonicalCombo(d.bindings[k], true); }); }
@@ -112,7 +116,7 @@
   function buildSystemPayload(){
     syncActiveIntoRegistry();
     return {
-      version: 2, kind: 'system',
+      version: SHARED_FILE_VERSIONS['system'], kind: 'system',
       nextId, nextCanvasId, activeCanvasId,
       periods, currentPeriod,
       canvases: canvases.map(c => ({ id:c.id, name:c.name, nodes:c.nodes, edges:c.edges })),

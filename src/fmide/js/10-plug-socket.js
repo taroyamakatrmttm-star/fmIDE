@@ -1,4 +1,19 @@
   // ---------- plug / socket ----------
+  // A rectangle's plug names (system v3: a list, `plugs`). Tolerates a node still holding
+  // the older single `plug` text and drops anything that isn't a non-empty name; names
+  // match case-insensitively, so a name appears once.
+  function plugsOf(n){
+    if(!n) return [];
+    const raw = Array.isArray(n.plugs) ? n.plugs : (typeof n.plug === 'string' ? [n.plug] : []);
+    const out = [], seen = new Set();
+    raw.forEach(p => {
+      if(typeof p !== 'string') return;
+      const t = p.trim(), k = t.toLowerCase();
+      if(t && !seen.has(k)){ seen.add(k); out.push(t); }
+    });
+    return out;
+  }
+
   function syncAutoConnections(){
     syncActiveIntoRegistry();
 
@@ -9,20 +24,21 @@
       c.edges = c.edges.filter(e => !e.auto && !autoAliasIds.has(e.from) && !autoAliasIds.has(e.to));
     });
 
-    // every plug-tagged rectangle, system-wide, tagged with which canvas (and its order) it lives on
+    // every plugged rectangle, system-wide, tagged with which canvas (and its order) it lives on
     const plugSources = [];
     canvases.forEach((c, idx) => {
       c.nodes.forEach(n => {
-        if(n.type === 'value' && n.plug && n.plug.trim() !== ''){
-          plugSources.push({ canvasId: c.id, canvasIndex: idx, node: n });
-        }
+        if(n.type !== 'value') return;
+        const keys = new Set(plugsOf(n).map(p => p.toLowerCase()));
+        if(keys.size) plugSources.push({ canvasId: c.id, canvasIndex: idx, node: n, keys });
       });
     });
 
     canvases.forEach(c => {
       c.nodes.filter(n => n.type === 'operator' && n.socket && n.socket.trim() !== '').forEach(op => {
         const key = op.socket.trim().toLowerCase();
-        const matches = plugSources.filter(p => p.node.plug.trim().toLowerCase() === key);
+        // each plugged rectangle is connected at most once to this socket
+        const matches = plugSources.filter(p => p.keys.has(key));
         const sameCanvas = matches.filter(p => p.canvasId === c.id);
         const cross = matches
           .filter(p => p.canvasId !== c.id)
@@ -39,7 +55,7 @@
             id: aliasId, type: 'alias', auto: true,
             x: Math.max(0, op.x - 200 + i * 2), y: op.y + i * 74,
             w: 170, h: 64,
-            sourceCanvasId: p.canvasId, sourceNodeId: p.node.id, plug: ''
+            sourceCanvasId: p.canvasId, sourceNodeId: p.node.id, plugs: []
           });
           c.edges.push({ id: uid('e'), from: aliasId, to: op.id, auto: true });
         });
@@ -54,14 +70,119 @@
     canvases.forEach(c => {
       const pool = c.id === activeCanvasId ? nodes : c.nodes;
       pool.forEach(n => {
-        if(n.type === 'value' && n.plug && n.plug.trim() !== '') values.add(n.plug.trim());
+        if(n.type === 'value') plugsOf(n).forEach(p => values.add(p));
         if(n.type === 'operator' && n.socket && n.socket.trim() !== '') values.add(n.socket.trim());
       });
     });
     return Array.from(values).sort((a,b) => a.localeCompare(b));
   }
 
+  function tagNameDatalist(){
+    const datalist = document.createElement('datalist');
+    datalist.id = 'tagNameOptions';
+    collectAllTagNames().forEach(name => {
+      const o = document.createElement('option');
+      o.value = name;
+      datalist.appendChild(o);
+    });
+    return datalist;
+  }
+
+  // A rectangle's plugs: one chip per name (✕ removes it) and a field that adds another.
+  // Each add or remove is its own undo step; a name typed but not yet added is added when
+  // the popup closes by a click elsewhere (Escape drops it).
+  function showPlugEditor(node){
+    closePicker();
+    const el = canvas.querySelector(`.node[data-id="${node.id}"]`);
+    if(!el) return;
+
+    const popup = document.createElement('div');
+    popup.className = 'tag-popup plug-editor';
+    popup.style.left = node.x + 'px';
+    popup.style.top = Math.max(0, node.y - 46) + 'px';
+
+    const list = document.createElement('div');
+    list.className = 'plug-list';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'Add a plug name (e.g. Revenue)';
+    input.setAttribute('list', 'tagNameOptions');
+    input.setAttribute('autocomplete', 'off');
+
+    const addBtn = document.createElement('button');
+    addBtn.textContent = 'Add';
+    const clearBtn = document.createElement('button');
+    clearBtn.textContent = 'Clear all';
+
+    function refreshList(){
+      list.textContent = '';
+      const names = plugsOf(getNode(node.id) || node);
+      names.forEach(name => {
+        const chip = document.createElement('span');
+        chip.className = 'plug-item';
+        const txt = document.createElement('span');
+        txt.textContent = '🔌 ' + name;
+        const rm = document.createElement('button');
+        rm.type = 'button';
+        rm.className = 'plug-remove';
+        rm.textContent = '✕';
+        rm.title = 'Remove this plug';
+        rm.addEventListener('mousedown', (ev) => ev.stopPropagation());
+        rm.addEventListener('click', () => { guarded(() => fm.removePlug(node.id, name)); render(); refreshList(); input.focus(); });
+        chip.appendChild(txt);
+        chip.appendChild(rm);
+        list.appendChild(chip);
+      });
+      list.style.display = names.length ? 'flex' : 'none';
+      clearBtn.style.display = names.length ? '' : 'none';
+    }
+    function addTyped(){
+      const v = input.value.trim();
+      if(!v) return;
+      guarded(() => fm.addPlug(node.id, v));
+      input.value = '';
+      render();
+      refreshList();
+    }
+
+    const row = document.createElement('div');
+    row.className = 'plug-add-row';
+    row.appendChild(input);
+    row.appendChild(addBtn);
+    row.appendChild(clearBtn);
+    popup.appendChild(list);
+    popup.appendChild(row);
+    popup.appendChild(tagNameDatalist());
+    canvas.appendChild(popup);
+    activePicker = popup;
+    refreshList();
+    input.focus();
+
+    let docListener = null;
+    function finish(commit){
+      if(docListener) document.removeEventListener('mousedown', docListener);
+      if(commit) addTyped();
+      closePicker();
+      render();
+    }
+    input.addEventListener('keydown', (ev) => {
+      ev.stopPropagation();
+      if(ev.key === 'Enter'){ if(input.value.trim()) addTyped(); else finish(false); }
+      if(ev.key === 'Escape'){ finish(false); }
+    });
+    [addBtn, clearBtn].forEach(b => b.addEventListener('mousedown', (ev) => ev.stopPropagation()));
+    addBtn.addEventListener('click', () => { addTyped(); input.focus(); });
+    clearBtn.addEventListener('click', () => { input.value = ''; guarded(() => fm.setPlugs(node.id, [])); finish(false); });
+
+    setTimeout(() => {
+      docListener = (ev) => { if(!popup.contains(ev.target)) finish(true); };
+      document.addEventListener('mousedown', docListener);
+    }, 0);
+  }
+
   function showTagEditor(node, kind){
+    if(kind === 'plug'){ showPlugEditor(node); return; }
     closePicker();
     const el = canvas.querySelector(`.node[data-id="${node.id}"]`);
     if(!el) return;
@@ -73,24 +194,16 @@
 
     const input = document.createElement('input');
     input.type = 'text';
-    input.placeholder = kind === 'plug' ? 'Plug name (e.g. Revenue)' : 'Socket name (e.g. Revenue)';
-    input.value = kind === 'plug' ? (node.plug || '') : (node.socket || '');
+    input.placeholder = 'Socket name (e.g. Revenue)';
+    input.value = node.socket || '';
     input.setAttribute('list', 'tagNameOptions');
     input.setAttribute('autocomplete', 'off');
-
-    const datalist = document.createElement('datalist');
-    datalist.id = 'tagNameOptions';
-    collectAllTagNames().forEach(name => {
-      const o = document.createElement('option');
-      o.value = name;
-      datalist.appendChild(o);
-    });
 
     const clearBtn = document.createElement('button');
     clearBtn.textContent = 'Clear';
 
     popup.appendChild(input);
-    popup.appendChild(datalist);
+    popup.appendChild(tagNameDatalist());
     popup.appendChild(clearBtn);
     canvas.appendChild(popup);
     activePicker = popup;
@@ -102,11 +215,7 @@
       if(docListener) document.removeEventListener('mousedown', docListener);
       if(commit){
         const trimmed = input.value.trim();
-        const oldVal = kind === 'plug' ? (node.plug || '') : (node.socket || '');
-        if(trimmed !== oldVal){
-          if(kind === 'plug') guarded(() => fm.setPlug(node.id, trimmed));
-          else guarded(() => fm.setSocket(node.id, trimmed));
-        }
+        if(trimmed !== (node.socket || '')) guarded(() => fm.setSocket(node.id, trimmed));
       }
       closePicker();
       render();

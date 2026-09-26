@@ -500,7 +500,7 @@
   function saveModuleToFile(){
     const active = canvases.find(c => c.id === activeCanvasId);
     const payload = {
-      version: 1, kind: 'module',
+      version: FILE_FORMATS['module'].current, kind: 'module',
       name: active ? active.name : 'Canvas',
       selfCanvasId: activeCanvasId,
       nextId, nodes, edges

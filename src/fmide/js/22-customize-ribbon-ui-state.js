@@ -465,9 +465,9 @@
         edges.push({id:uid('e'), from:mul.id,       to:revenue.id});
 
         // plug / socket demo: any rectangle plugged "Revenue" auto-feeds the + operator socketed "Revenue"
-        const gold   = { id: uid('n'), type:'value', x:80,  y:480, w:160, h:64, text:'Gold Revenue\n500', plug:'Revenue' };
-        const silver = { id: uid('n'), type:'value', x:80,  y:600, w:160, h:64, text:'Silver Revenue\n300', plug:'Revenue' };
-        const copper = { id: uid('n'), type:'value', x:80,  y:720, w:160, h:64, text:'Copper Revenue\n200', plug:'Revenue' };
+        const gold   = { id: uid('n'), type:'value', x:80,  y:480, w:160, h:64, text:'Gold Revenue\n500', plugs:['Revenue'] };
+        const silver = { id: uid('n'), type:'value', x:80,  y:600, w:160, h:64, text:'Silver Revenue\n300', plugs:['Revenue'] };
+        const copper = { id: uid('n'), type:'value', x:80,  y:720, w:160, h:64, text:'Copper Revenue\n200', plugs:['Revenue'] };
         const sumOp  = { id: uid('n'), type:'operator', x:380, y:596, w:56, h:56, text:'+', socket:'Revenue' };
         const total  = { id: uid('n'), type:'value', x:620, y:590, w:160, h:64, text:'Total Revenue' };
         nodes.push(gold, silver, copper, sumOp, total);

@@ -524,6 +524,17 @@
     background:#1f2937; color:#e5e7eb; cursor:pointer; white-space:nowrap;
   }
   .tag-popup button:hover{ background:var(--accent); border-color:var(--accent); }
+  .tag-popup.plug-editor{ flex-direction:column; align-items:stretch; }
+  .plug-editor .plug-list{ display:flex; flex-wrap:wrap; gap:4px; max-width:320px; }
+  .plug-editor .plug-item{
+    display:inline-flex; align-items:center; gap:4px; font-size:11px; font-family:Menlo,Consolas,monospace;
+    padding:2px 2px 2px 7px; border-radius:9px; background:#ede9fe; color:#6d28d9; border:1px solid #c4b5fd;
+  }
+  .plug-editor .plug-item button.plug-remove{
+    font-size:10px; padding:0 5px; border:none; background:transparent; color:#6d28d9; line-height:16px;
+  }
+  .plug-editor .plug-item button.plug-remove:hover{ background:#c4b5fd; color:#4c1d95; }
+  .plug-editor .plug-add-row{ display:flex; gap:6px; align-items:center; }
 
   /* period shift */
   .node.periodshift{ background:#fdf4ff; border:1.5px solid #a855f7; border-radius:10px; }
@@ -1737,19 +1748,33 @@
   // (docs/file-formats.md). To change one of these formats: raise its version here and add
   // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
   // exactly one version.
-  const SHARED_FILE_VERSIONS = { 'system': 2, 'fmIDE-workspace': 1 };
+  const SHARED_FILE_VERSIONS = { 'system': 3, 'fmIDE-workspace': 1 };
+  // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
+  // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
+  function upgradeNodePlugs(nodes){
+    (Array.isArray(nodes) ? nodes : []).forEach(n => {
+      if(!n || typeof n !== 'object' || !('plug' in n)) return;
+      if(!Array.isArray(n.plugs)){
+        const p = typeof n.plug === 'string' ? n.plug.trim() : '';
+        n.plugs = p ? [p] : [];
+      }
+      delete n.plug;
+    });
+  }
   const SHARED_FILE_MIGRATIONS = {
-    // v1 systems were accepted with fields the loader already defaults (periods, ids…);
-    // the only structural difference handled here is a single-canvas file that kept its
-    // nodes/edges at the top level.
     'system': {
+      // v1 systems were accepted with fields the loader already defaults (periods, ids…);
+      // the only structural difference handled here is a single-canvas file that kept its
+      // nodes/edges at the top level.
       1: d => {
         if(!Array.isArray(d.canvases) && Array.isArray(d.nodes)){
           d.canvases = [{ id: 'c1', name: d.name || 'Canvas 1', nodes: d.nodes, edges: Array.isArray(d.edges) ? d.edges : [] }];
           d.activeCanvasId = 'c1';
           delete d.nodes; delete d.edges;
         }
-      }
+      },
+      // v2 → v3: one plug name per rectangle becomes a list of plug names.
+      2: d => { (Array.isArray(d.canvases) ? d.canvases : []).forEach(c => { if(c) upgradeNodePlugs(c.nodes); }); }
     }
   };
   // A file's kind: its "kind" field, or — for files saved before kinds were written — its
@@ -1786,7 +1811,7 @@
   }
   const FILE_FORMATS = {
     'system':               { current: SHARED_FILE_VERSIONS['system'], label: 'system', where: 'File → Load System' },
-    'module':               { current: 1, label: 'module',              where: 'File → Load Module' },
+    'module':               { current: 2, label: 'module',              where: 'File → Load Module' },
     'fmIDE-workspace':      { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'workspace', where: 'File → Import Workspace' },
     'fmIDE-templates':      { current: 1, label: 'templates file',      where: 'Templates → Import Templates' },
     'fmIDE-format-presets': { current: 1, label: 'format presets file', where: 'Format Presets → Import Presets' },
@@ -1795,6 +1820,10 @@
     'fmIDE-preferences':    { current: 1, label: 'preferences file',    where: 'File → Import Preferences' }
   };
   const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
+    // v1 → v2: one plug name per rectangle becomes a list of plug names (as system v2 → v3).
+    'module': {
+      1: d => upgradeNodePlugs(d.nodes)
+    },
     // v1 shortcut files stored combos in the old notation.
     'fmIDE-shortcuts': {
       1: d => { Object.keys(d.bindings || {}).forEach(k => { d.bindings[k] = canonicalCombo(d.bindings[k], true); }); }
@@ -1883,7 +1912,7 @@
   function buildSystemPayload(){
     syncActiveIntoRegistry();
     return {
-      version: 2, kind: 'system',
+      version: SHARED_FILE_VERSIONS['system'], kind: 'system',
       nextId, nextCanvasId, activeCanvasId,
       periods, currentPeriod,
       canvases: canvases.map(c => ({ id:c.id, name:c.name, nodes:c.nodes, edges:c.edges })),
@@ -2528,7 +2557,7 @@
   function saveModuleToFile(){
     const active = canvases.find(c => c.id === activeCanvasId);
     const payload = {
-      version: 1, kind: 'module',
+      version: FILE_FORMATS['module'].current, kind: 'module',
       name: active ? active.name : 'Canvas',
       selfCanvasId: activeCanvasId,
       nextId, nodes, edges
@@ -3233,7 +3262,8 @@
       } else if(isAlias){
         const chip = el.querySelector('.plug-chip');
         if(chip){
-          if(n.plug){ chip.textContent = '🔌 ' + n.plug; chip.style.display = 'block'; }
+          const plugs = plugsOf(n);
+          if(plugs.length){ chip.textContent = '🔌 ' + plugs.join(' · '); chip.style.display = 'block'; }
           else chip.style.display = 'none';
         }
         const lbl = el.querySelector('.label');
@@ -3281,7 +3311,8 @@
       } else {
         const chip = el.querySelector('.plug-chip');
         if(chip){
-          if(n.plug){ chip.textContent = '🔌 ' + n.plug; chip.style.display = 'block'; }
+          const plugs = plugsOf(n);
+          if(plugs.length){ chip.textContent = '🔌 ' + plugs.join(' · '); chip.style.display = 'block'; }
           else chip.style.display = 'none';
         }
         const roleChip = el.querySelector('.io-role-chip');
@@ -3816,7 +3847,7 @@
       if(!historyPushed){ pushHistory(); historyPushed = true; }
       const newNodes = sourceNodes.map(sn => ({
         id: uid('n'), type:'alias', x: sn.x, y: sn.y, w: sn.w, h: sn.h,
-        sourceCanvasId: activeCanvasId, sourceNodeId: sn.id, plug:''
+        sourceCanvasId: activeCanvasId, sourceNodeId: sn.id, plugs:[]
       }));
       nodes = nodes.concat(newNodes);
       aliasIds = newNodes.map(n => n.id);
@@ -4733,6 +4764,21 @@
   }
 
   // ---------- plug / socket ----------
+  // A rectangle's plug names (system v3: a list, `plugs`). Tolerates a node still holding
+  // the older single `plug` text and drops anything that isn't a non-empty name; names
+  // match case-insensitively, so a name appears once.
+  function plugsOf(n){
+    if(!n) return [];
+    const raw = Array.isArray(n.plugs) ? n.plugs : (typeof n.plug === 'string' ? [n.plug] : []);
+    const out = [], seen = new Set();
+    raw.forEach(p => {
+      if(typeof p !== 'string') return;
+      const t = p.trim(), k = t.toLowerCase();
+      if(t && !seen.has(k)){ seen.add(k); out.push(t); }
+    });
+    return out;
+  }
+
   function syncAutoConnections(){
     syncActiveIntoRegistry();
 
@@ -4743,20 +4789,21 @@
       c.edges = c.edges.filter(e => !e.auto && !autoAliasIds.has(e.from) && !autoAliasIds.has(e.to));
     });
 
-    // every plug-tagged rectangle, system-wide, tagged with which canvas (and its order) it lives on
+    // every plugged rectangle, system-wide, tagged with which canvas (and its order) it lives on
     const plugSources = [];
     canvases.forEach((c, idx) => {
       c.nodes.forEach(n => {
-        if(n.type === 'value' && n.plug && n.plug.trim() !== ''){
-          plugSources.push({ canvasId: c.id, canvasIndex: idx, node: n });
-        }
+        if(n.type !== 'value') return;
+        const keys = new Set(plugsOf(n).map(p => p.toLowerCase()));
+        if(keys.size) plugSources.push({ canvasId: c.id, canvasIndex: idx, node: n, keys });
       });
     });
 
     canvases.forEach(c => {
       c.nodes.filter(n => n.type === 'operator' && n.socket && n.socket.trim() !== '').forEach(op => {
         const key = op.socket.trim().toLowerCase();
-        const matches = plugSources.filter(p => p.node.plug.trim().toLowerCase() === key);
+        // each plugged rectangle is connected at most once to this socket
+        const matches = plugSources.filter(p => p.keys.has(key));
         const sameCanvas = matches.filter(p => p.canvasId === c.id);
         const cross = matches
           .filter(p => p.canvasId !== c.id)
@@ -4773,7 +4820,7 @@
             id: aliasId, type: 'alias', auto: true,
             x: Math.max(0, op.x - 200 + i * 2), y: op.y + i * 74,
             w: 170, h: 64,
-            sourceCanvasId: p.canvasId, sourceNodeId: p.node.id, plug: ''
+            sourceCanvasId: p.canvasId, sourceNodeId: p.node.id, plugs: []
           });
           c.edges.push({ id: uid('e'), from: aliasId, to: op.id, auto: true });
         });
@@ -4788,14 +4835,119 @@
     canvases.forEach(c => {
       const pool = c.id === activeCanvasId ? nodes : c.nodes;
       pool.forEach(n => {
-        if(n.type === 'value' && n.plug && n.plug.trim() !== '') values.add(n.plug.trim());
+        if(n.type === 'value') plugsOf(n).forEach(p => values.add(p));
         if(n.type === 'operator' && n.socket && n.socket.trim() !== '') values.add(n.socket.trim());
       });
     });
     return Array.from(values).sort((a,b) => a.localeCompare(b));
   }
 
+  function tagNameDatalist(){
+    const datalist = document.createElement('datalist');
+    datalist.id = 'tagNameOptions';
+    collectAllTagNames().forEach(name => {
+      const o = document.createElement('option');
+      o.value = name;
+      datalist.appendChild(o);
+    });
+    return datalist;
+  }
+
+  // A rectangle's plugs: one chip per name (✕ removes it) and a field that adds another.
+  // Each add or remove is its own undo step; a name typed but not yet added is added when
+  // the popup closes by a click elsewhere (Escape drops it).
+  function showPlugEditor(node){
+    closePicker();
+    const el = canvas.querySelector(`.node[data-id="${node.id}"]`);
+    if(!el) return;
+
+    const popup = document.createElement('div');
+    popup.className = 'tag-popup plug-editor';
+    popup.style.left = node.x + 'px';
+    popup.style.top = Math.max(0, node.y - 46) + 'px';
+
+    const list = document.createElement('div');
+    list.className = 'plug-list';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'Add a plug name (e.g. Revenue)';
+    input.setAttribute('list', 'tagNameOptions');
+    input.setAttribute('autocomplete', 'off');
+
+    const addBtn = document.createElement('button');
+    addBtn.textContent = 'Add';
+    const clearBtn = document.createElement('button');
+    clearBtn.textContent = 'Clear all';
+
+    function refreshList(){
+      list.textContent = '';
+      const names = plugsOf(getNode(node.id) || node);
+      names.forEach(name => {
+        const chip = document.createElement('span');
+        chip.className = 'plug-item';
+        const txt = document.createElement('span');
+        txt.textContent = '🔌 ' + name;
+        const rm = document.createElement('button');
+        rm.type = 'button';
+        rm.className = 'plug-remove';
+        rm.textContent = '✕';
+        rm.title = 'Remove this plug';
+        rm.addEventListener('mousedown', (ev) => ev.stopPropagation());
+        rm.addEventListener('click', () => { guarded(() => fm.removePlug(node.id, name)); render(); refreshList(); input.focus(); });
+        chip.appendChild(txt);
+        chip.appendChild(rm);
+        list.appendChild(chip);
+      });
+      list.style.display = names.length ? 'flex' : 'none';
+      clearBtn.style.display = names.length ? '' : 'none';
+    }
+    function addTyped(){
+      const v = input.value.trim();
+      if(!v) return;
+      guarded(() => fm.addPlug(node.id, v));
+      input.value = '';
+      render();
+      refreshList();
+    }
+
+    const row = document.createElement('div');
+    row.className = 'plug-add-row';
+    row.appendChild(input);
+    row.appendChild(addBtn);
+    row.appendChild(clearBtn);
+    popup.appendChild(list);
+    popup.appendChild(row);
+    popup.appendChild(tagNameDatalist());
+    canvas.appendChild(popup);
+    activePicker = popup;
+    refreshList();
+    input.focus();
+
+    let docListener = null;
+    function finish(commit){
+      if(docListener) document.removeEventListener('mousedown', docListener);
+      if(commit) addTyped();
+      closePicker();
+      render();
+    }
+    input.addEventListener('keydown', (ev) => {
+      ev.stopPropagation();
+      if(ev.key === 'Enter'){ if(input.value.trim()) addTyped(); else finish(false); }
+      if(ev.key === 'Escape'){ finish(false); }
+    });
+    [addBtn, clearBtn].forEach(b => b.addEventListener('mousedown', (ev) => ev.stopPropagation()));
+    addBtn.addEventListener('click', () => { addTyped(); input.focus(); });
+    clearBtn.addEventListener('click', () => { input.value = ''; guarded(() => fm.setPlugs(node.id, [])); finish(false); });
+
+    setTimeout(() => {
+      docListener = (ev) => { if(!popup.contains(ev.target)) finish(true); };
+      document.addEventListener('mousedown', docListener);
+    }, 0);
+  }
+
   function showTagEditor(node, kind){
+    if(kind === 'plug'){ showPlugEditor(node); return; }
     closePicker();
     const el = canvas.querySelector(`.node[data-id="${node.id}"]`);
     if(!el) return;
@@ -4807,24 +4959,16 @@
 
     const input = document.createElement('input');
     input.type = 'text';
-    input.placeholder = kind === 'plug' ? 'Plug name (e.g. Revenue)' : 'Socket name (e.g. Revenue)';
-    input.value = kind === 'plug' ? (node.plug || '') : (node.socket || '');
+    input.placeholder = 'Socket name (e.g. Revenue)';
+    input.value = node.socket || '';
     input.setAttribute('list', 'tagNameOptions');
     input.setAttribute('autocomplete', 'off');
-
-    const datalist = document.createElement('datalist');
-    datalist.id = 'tagNameOptions';
-    collectAllTagNames().forEach(name => {
-      const o = document.createElement('option');
-      o.value = name;
-      datalist.appendChild(o);
-    });
 
     const clearBtn = document.createElement('button');
     clearBtn.textContent = 'Clear';
 
     popup.appendChild(input);
-    popup.appendChild(datalist);
+    popup.appendChild(tagNameDatalist());
     popup.appendChild(clearBtn);
     canvas.appendChild(popup);
     activePicker = popup;
@@ -4836,11 +4980,7 @@
       if(docListener) document.removeEventListener('mousedown', docListener);
       if(commit){
         const trimmed = input.value.trim();
-        const oldVal = kind === 'plug' ? (node.plug || '') : (node.socket || '');
-        if(trimmed !== oldVal){
-          if(kind === 'plug') guarded(() => fm.setPlug(node.id, trimmed));
-          else guarded(() => fm.setSocket(node.id, trimmed));
-        }
+        if(trimmed !== (node.socket || '')) guarded(() => fm.setSocket(node.id, trimmed));
       }
       closePicker();
       render();
@@ -5312,7 +5452,7 @@
       initialName: active ? active.name : 'My Module',
       submitLabel: 'Save Template',
       onSubmit: ({name, description, group}) => {
-        const payload = { version:1, kind:'module', name, selfCanvasId: activeCanvasId, nextId, nodes, edges };
+        const payload = { version: FILE_FORMATS['module'].current, kind:'module', name, selfCanvasId: activeCanvasId, nextId, nodes, edges };
         TEMPLATES.push({
           id: 'usr' + (nextTemplateId++), name, description, group, kind:'module', builtin:false,
           data: cloneData(payload)
@@ -5330,7 +5470,7 @@
       submitLabel: 'Save Template',
       onSubmit: ({name, description, group}) => {
         const payload = {
-          version:2, kind:'system', nextId, nextCanvasId, activeCanvasId,
+          version: SHARED_FILE_VERSIONS['system'], kind:'system', nextId, nextCanvasId, activeCanvasId,
           canvases: canvases.map(c => ({ id:c.id, name:c.name, nodes:c.nodes, edges:c.edges }))
         };
         TEMPLATES.push({
@@ -5422,7 +5562,9 @@
     const REFS = new Set(['id', 'sourceNodeId', 'sourceCanvasId', 'blockDefCanvasId']);
     const own = (n) => {
       const o = {};
-      Object.keys(n || {}).forEach(k => { if(!REFS.has(k) && (layout || !LAYOUT.has(k))) o[k] = n[k]; });
+      Object.keys(n || {}).forEach(k => { if(!REFS.has(k) && k !== 'plug' && k !== 'plugs' && (layout || !LAYOUT.has(k))) o[k] = n[k]; });
+      const plugs = plugsOf(n);                     // the same plugs in any order are the same
+      if(plugs.length) o.plugs = plugs.slice().sort();
       if(n && n.blockDefCanvasId !== undefined) o.blockDef = canvasRef(n.blockDefCanvasId);
       return o;
     };
@@ -6908,7 +7050,7 @@
       P('uom','string',{ def:'', help:'unit, e.g. kt or $/t' }), P('w','number',{ def:170, min:40 }), P('h','number',{ def:64, min:30 }) ],
     run(a){
       pushHistory();
-      const n = { id: uid('n'), type:'value', x: clampPos(a.x), y: clampPos(a.y), w: a.w, h: a.h, text: composeText(a), plug:'' };
+      const n = { id: uid('n'), type:'value', x: clampPos(a.x), y: clampPos(a.y), w: a.w, h: a.h, text: composeText(a), plugs:[] };
       nodes.push(n);
       clearComputed();
       return n.id;
@@ -6944,7 +7086,7 @@
       requireType(a.source, ['value'], 'a plain rectangle (only rectangles can be aliased)');
       const srcCanvas = canvasOfNode(a.source);
       pushHistory();
-      const n = { id: uid('n'), type:'alias', x: clampPos(a.x), y: clampPos(a.y), w:170, h:64, sourceCanvasId: srcCanvas.id, sourceNodeId: a.source.id, plug:'' };
+      const n = { id: uid('n'), type:'alias', x: clampPos(a.x), y: clampPos(a.y), w:170, h:64, sourceCanvasId: srcCanvas.id, sourceNodeId: a.source.id, plugs:[] };
       nodes.push(n);
       clearComputed();
       evaluateAll();
@@ -6997,7 +7139,7 @@
       pushHistory();
       const newNodes = list.map(sn => ({
         id: uid('n'), type:'alias', x: clampPos(sn.x + a.dx), y: clampPos(sn.y + a.dy), w: sn.w, h: sn.h,
-        sourceCanvasId: activeCanvasId, sourceNodeId: sn.id, plug:''
+        sourceCanvasId: activeCanvasId, sourceNodeId: sn.id, plugs:[]
       }));
       nodes = nodes.concat(newNodes);
       clearComputed();
@@ -7130,17 +7272,51 @@
       a.node.shift = a.shift;
       clearComputed();
     } });
+  // A rectangle's plugs are a list of names (`plugs`); every change replaces the list
+  // (never edits it in place — copies made by paste/duplicate may share it).
+  function applyPlugs(node, list){
+    const next = plugsOf({ plugs: list });
+    const cur = plugsOf(node);
+    if(!('plug' in node) && next.length === cur.length && next.every((p, i) => p === cur[i])) return NOOP;
+    pushHistory();
+    node.plugs = next;
+    delete node.plug;
+    syncAutoConnections();
+    clearComputed();
+  }
   defineAction({ name:'setPlug', label:'Set Plug', category:'Edit', icon:'🔌',
-    desc:'A plug name auto-feeds this rectangle into every operator whose socket has the same name.',
-    params:[ P('node','node'), P('plug','string',{ def:'', help:'blank clears' }) ],
+    desc:'Replaces all of this rectangle\'s plugs with one name. A plug name auto-feeds the rectangle into every operator whose socket has the same name.',
+    params:[ P('node','node'), P('plug','string',{ def:'', help:'blank clears all plugs' }) ],
     run(a){
       requireType(a.node, ['value','alias'], 'a rectangle or alias');
       const v = a.plug.trim();
-      if((a.node.plug || '') === v) return NOOP;
-      pushHistory();
-      a.node.plug = v;
-      syncAutoConnections();
-      clearComputed();
+      return applyPlugs(a.node, v ? [v] : []);
+    } });
+  defineAction({ name:'setPlugs', label:'Set Plugs', category:'Edit', icon:'🔌',
+    desc:'Replaces all of this rectangle\'s plugs with a list of names — one rectangle can feed several differently named sockets.',
+    params:[ P('node','node'), P('plugs','json',{ def:'[]', help:'a list, e.g. ["Income Tax", "Tax paid"]; [] clears' }) ],
+    run(a){
+      requireType(a.node, ['value','alias'], 'a rectangle or alias');
+      const list = a.plugs == null ? [] : a.plugs;
+      if(!Array.isArray(list) || !list.every(p => typeof p === 'string')) fail('Plugs must be a list of names, e.g. ["Income Tax", "Tax paid"].');
+      return applyPlugs(a.node, list.map(interpolate));
+    } });
+  defineAction({ name:'addPlug', label:'Add Plug', category:'Edit', icon:'🔌',
+    desc:'Adds a plug name to this rectangle, keeping its other plugs.',
+    params:[ P('node','node'), P('plug','string') ],
+    run(a){
+      requireType(a.node, ['value','alias'], 'a rectangle or alias');
+      const v = a.plug.trim();
+      if(!v) fail('Give a plug name to add.');
+      return applyPlugs(a.node, plugsOf(a.node).concat([v]));
+    } });
+  defineAction({ name:'removePlug', label:'Remove Plug', category:'Edit', icon:'🔌',
+    desc:'Removes one plug name from this rectangle (names match regardless of capitals).',
+    params:[ P('node','node'), P('plug','string') ],
+    run(a){
+      requireType(a.node, ['value','alias'], 'a rectangle or alias');
+      const k = a.plug.trim().toLowerCase();
+      return applyPlugs(a.node, plugsOf(a.node).filter(p => p.toLowerCase() !== k));
     } });
   defineAction({ name:'setSocket', label:'Set Socket', category:'Edit', icon:'⚡',
     params:[ P('node','node'), P('socket','string',{ def:'', help:'blank clears' }) ],
@@ -10398,9 +10574,9 @@
         edges.push({id:uid('e'), from:mul.id,       to:revenue.id});
 
         // plug / socket demo: any rectangle plugged "Revenue" auto-feeds the + operator socketed "Revenue"
-        const gold   = { id: uid('n'), type:'value', x:80,  y:480, w:160, h:64, text:'Gold Revenue\n500', plug:'Revenue' };
-        const silver = { id: uid('n'), type:'value', x:80,  y:600, w:160, h:64, text:'Silver Revenue\n300', plug:'Revenue' };
-        const copper = { id: uid('n'), type:'value', x:80,  y:720, w:160, h:64, text:'Copper Revenue\n200', plug:'Revenue' };
+        const gold   = { id: uid('n'), type:'value', x:80,  y:480, w:160, h:64, text:'Gold Revenue\n500', plugs:['Revenue'] };
+        const silver = { id: uid('n'), type:'value', x:80,  y:600, w:160, h:64, text:'Silver Revenue\n300', plugs:['Revenue'] };
+        const copper = { id: uid('n'), type:'value', x:80,  y:720, w:160, h:64, text:'Copper Revenue\n200', plugs:['Revenue'] };
         const sumOp  = { id: uid('n'), type:'operator', x:380, y:596, w:56, h:56, text:'+', socket:'Revenue' };
         const total  = { id: uid('n'), type:'value', x:620, y:590, w:160, h:64, text:'Total Revenue' };
         nodes.push(gold, silver, copper, sumOp, total);

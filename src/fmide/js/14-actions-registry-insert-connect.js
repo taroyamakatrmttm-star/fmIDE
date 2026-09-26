@@ -170,7 +170,7 @@
       P('uom','string',{ def:'', help:'unit, e.g. kt or $/t' }), P('w','number',{ def:170, min:40 }), P('h','number',{ def:64, min:30 }) ],
     run(a){
       pushHistory();
-      const n = { id: uid('n'), type:'value', x: clampPos(a.x), y: clampPos(a.y), w: a.w, h: a.h, text: composeText(a), plug:'' };
+      const n = { id: uid('n'), type:'value', x: clampPos(a.x), y: clampPos(a.y), w: a.w, h: a.h, text: composeText(a), plugs:[] };
       nodes.push(n);
       clearComputed();
       return n.id;
@@ -206,7 +206,7 @@
       requireType(a.source, ['value'], 'a plain rectangle (only rectangles can be aliased)');
       const srcCanvas = canvasOfNode(a.source);
       pushHistory();
-      const n = { id: uid('n'), type:'alias', x: clampPos(a.x), y: clampPos(a.y), w:170, h:64, sourceCanvasId: srcCanvas.id, sourceNodeId: a.source.id, plug:'' };
+      const n = { id: uid('n'), type:'alias', x: clampPos(a.x), y: clampPos(a.y), w:170, h:64, sourceCanvasId: srcCanvas.id, sourceNodeId: a.source.id, plugs:[] };
       nodes.push(n);
       clearComputed();
       evaluateAll();
@@ -259,7 +259,7 @@
       pushHistory();
       const newNodes = list.map(sn => ({
         id: uid('n'), type:'alias', x: clampPos(sn.x + a.dx), y: clampPos(sn.y + a.dy), w: sn.w, h: sn.h,
-        sourceCanvasId: activeCanvasId, sourceNodeId: sn.id, plug:''
+        sourceCanvasId: activeCanvasId, sourceNodeId: sn.id, plugs:[]
       }));
       nodes = nodes.concat(newNodes);
       clearComputed();

@@ -90,7 +90,8 @@
       } else if(isAlias){
         const chip = el.querySelector('.plug-chip');
         if(chip){
-          if(n.plug){ chip.textContent = '🔌 ' + n.plug; chip.style.display = 'block'; }
+          const plugs = plugsOf(n);
+          if(plugs.length){ chip.textContent = '🔌 ' + plugs.join(' · '); chip.style.display = 'block'; }
           else chip.style.display = 'none';
         }
         const lbl = el.querySelector('.label');
@@ -138,7 +139,8 @@
       } else {
         const chip = el.querySelector('.plug-chip');
         if(chip){
-          if(n.plug){ chip.textContent = '🔌 ' + n.plug; chip.style.display = 'block'; }
+          const plugs = plugsOf(n);
+          if(plugs.length){ chip.textContent = '🔌 ' + plugs.join(' · '); chip.style.display = 'block'; }
           else chip.style.display = 'none';
         }
         const roleChip = el.querySelector('.io-role-chip');

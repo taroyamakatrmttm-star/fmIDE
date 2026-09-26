@@ -264,7 +264,7 @@
       if(!historyPushed){ pushHistory(); historyPushed = true; }
       const newNodes = sourceNodes.map(sn => ({
         id: uid('n'), type:'alias', x: sn.x, y: sn.y, w: sn.w, h: sn.h,
-        sourceCanvasId: activeCanvasId, sourceNodeId: sn.id, plug:''
+        sourceCanvasId: activeCanvasId, sourceNodeId: sn.id, plugs:[]
       }));
       nodes = nodes.concat(newNodes);
       aliasIds = newNodes.map(n => n.id);

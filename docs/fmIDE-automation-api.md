@@ -33,7 +33,10 @@ Every canvas interaction is an action. The Ribbon, shortcuts, Command Launcher (
 - **setUOM**(node, uom) — Set Unit of Measure.
 - **setOperator**(node, op) — Set Operator Symbol.
 - **setShift**(node, shift) — Set Period Shift.
-- **setPlug**(node, plug="") — Set Plug. A plug name auto-feeds this rectangle into every operator whose socket has the same name.
+- **setPlug**(node, plug="") — Set Plug. Replaces all of this rectangle's plugs with one name. A plug name auto-feeds the rectangle into every operator whose socket has the same name.
+- **setPlugs**(node, plugs="[]") — Set Plugs. Replaces all of this rectangle's plugs with a list of names — one rectangle can feed several differently named sockets.
+- **addPlug**(node, plug) — Add Plug. Adds a plug name to this rectangle, keeping its other plugs.
+- **removePlug**(node, plug) — Remove Plug. Removes one plug name from this rectangle (names match regardless of capitals).
 - **setSocket**(node, socket="") — Set Socket.
 - **setRole**(node, role) — Set Block Role. Marks a rectangle as a Block input, output, or the Vertical Index.
 - **setReducer**(node, reducer) — Set Vertical Reducer.
