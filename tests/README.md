@@ -25,6 +25,7 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | `npm run test:snapshots` | formula/value snapshots only |
 | `npm run test:web-app` | the installable web app (site build, service worker, offline, updates) |
 | `npm run test:agreement` | fmIDE's values against the recalculated workbooks (needs LibreOffice) |
+| `npm run test:ir` | the shared IR: fmIDE's pinned values, errors and units; the IR alone in Node |
 | `npx playwright test -g "Tree view"` | tests whose name matches |
 
 After a failure, `npx playwright show-report` opens the report, with a trace for each failed test.
@@ -33,7 +34,7 @@ Every test runs offline. Each app is served from a fake origin (`http://local.te
 
 ## Snapshots
 
-`tests/snapshots/` holds every sheet's formulas and values for each model in `fixtures/models/` (Inputs tab off and on), plus fmIDE's arrow markup. A test fails on any difference and lists the changed cells, for example `Audit!E5: {"v":100} -> {"v":101}`.
+`tests/snapshots/` holds every sheet's formulas and values for each model in `fixtures/models/` (Inputs tab off and on), fmIDE's arrow markup, and (`fmide-values--*`) what fmIDE shows for every node of every sample in `fixtures/models/`, `fixtures/agreement/` and `fixtures/ir/`: its value or error message in each period, and its unit. A test fails on any difference and lists the changed cells, for example `Audit!E5: {"v":100} -> {"v":101}`.
 
 If a change to the output is **deliberate**, regenerate them and commit the new files along with the change:
 
@@ -43,10 +44,14 @@ npm run test:update-snapshots
 
 Review the snapshot diff before committing: it is the record of what the change did to every workbook.
 
+## Timing the calculation
+
+`npm run bench` (`tools/bench-calc.js`) times fmIDE's calculation (`fm.evaluate`) on the biggest sample model and on a large generated model (about 1,900 nodes on 21 canvases, 24 periods; `BENCH_PERIODS=12 npm run bench` changes the periods). It is not a test: timings vary between machines, so compare runs made on the same one, before and after a change to the calculation.
+
 ## Layout
 
 ```
-0-smoke.spec.js … 17-agreement.spec.js    one file per group in SPEC.md (6 and 7 split per app)
+0-smoke.spec.js … 18-ir.spec.js          one file per group in SPEC.md (6 and 7 split per app)
 helpers/apps.js       the offline fixture: serves the apps, blocks and counts other requests
 helpers/excel.js      load a model, toggle options, capture the workbook (window.__wb + real .xlsx bytes)
 helpers/soffice.js    find LibreOffice, recalculate workbooks, read values

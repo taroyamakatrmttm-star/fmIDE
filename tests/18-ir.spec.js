@@ -68,3 +68,89 @@ test('units on the canvas: worked out from the inputs, or typed', async ({ page 
   expect(unit('Linked', 'lr')).toBe('$k (auto)');                // and passes it on
   expect(unit('Linked', 'lb')).toBe('$/t (auto)');
 });
+
+// Changing a unit shows at once, before any Evaluate, and so does undoing it.
+test('units follow an edit and its undo straight away', async ({ page }) => {
+  await openFmIDE(page);
+  await importViaCommand(page, 'loadSystem', fixture('ir', 'units.json'));
+  await acceptAll(page);
+  await page.waitForFunction(() => fm.canvases().length === 3);
+  const unitOn = (id) => page.locator(`.node[data-id="${id}"] .line-uom`);
+  await expect(unitOn('rev')).toHaveText('$k');
+  await page.evaluate(() => fm.setUOM('#price', '€/t'));
+  await expect(unitOn('rev')).toHaveText('€k');
+  await expect(unitOn('tot')).toHaveText('');                    // €k + $k: no unit
+  await page.evaluate(() => fm.command('undo'));
+  await expect(unitOn('rev')).toHaveText('$k');
+  await expect(unitOn('tot')).toHaveText('$k');
+});
+
+// ---- the shared IR on its own, in Node: no browser, no app ----
+// Loaded into an empty context, so compileModel can only use what the shared files define:
+// any use of fmIDE's own state would fail here.
+const vm = require('vm');
+const SHARED = path.join(__dirname, '..', 'src', 'shared');
+function loadIR(){
+  const code = ['operators.js', 'uom.js', 'input-rule.js', 'ir.js'].map(f => fs.readFileSync(path.join(SHARED, f), 'utf8')).join('\n');
+  const ctx = vm.createContext({});
+  return vm.runInContext(code + '\n;({ compileModel, evaluateModel, unitOf, formatUOM, OPERATORS, operatorForSymbol, operatorById, applyOperator })', ctx);
+}
+const SNAPSHOTS = path.join(__dirname, 'snapshots');
+
+for(const [dir, model] of CASES){
+  test(`${dir}/${model}: compileModel alone gives fmIDE's values and units, and leaves the file as it was`, () => {
+    const IR = loadIR();
+    const json = JSON.parse(fs.readFileSync(fixture(dir, model), 'utf8'));
+    const system = json.system || json;
+    const before = JSON.stringify(system);
+    const ir = IR.compileModel(system);
+    const results = IR.evaluateModel(ir);
+    expect(JSON.stringify(system)).toBe(before);
+
+    const pinned = JSON.parse(fs.readFileSync(path.join(SNAPSHOTS, 'fmide-values--' + dir + '--' + model.replace(/\.json$/, '') + '.json'), 'utf8'));
+    system.canvases.forEach((c, ci) => {
+      const r = results[ci];
+      (c.nodes || []).forEach(n => {
+        const shown = pinned[c.name][n.id];
+        shown.values.forEach((v, p) => {
+          const where = `${c.name} ${n.id} period ${p + 1}`;
+          // + 0 turns -0 into 0, as the JSON snapshot does.
+          if(n.type === 'blockInstance') expect(r.portValues[p][n.id].map(x => x === null ? null : x + 0), where).toEqual(v);
+          else if(typeof v === 'number') expect(r.values[p][n.id] + 0, where).toBe(v);
+          else{
+            expect(r.values[p][n.id], where).toBeUndefined();
+            expect(r.errors[p][n.id], where).toBeTruthy();
+          }
+        });
+        if(n.type === 'value' || n.type === 'alias'){
+          const lines = (n.text || '').split('\n');
+          const typed = n.type === 'value' && lines.length >= 3 ? lines[2].trim() : '';
+          const unit = IR.unitOf(ir, c.id, n.id);
+          const expected = typed || (unit && IR.formatUOM(unit) ? IR.formatUOM(unit) + ' (auto)' : '');
+          expect(expected, `${c.name} ${n.id} unit`).toBe(shown.unit || '');
+        }
+      });
+    });
+  });
+}
+
+// The catalogue's ids are lasting: plugins and saved references will use them.
+test('the operator catalogue: lasting ids, one symbol each, in palette order', () => {
+  const IR = loadIR();
+  expect(IR.OPERATORS.map(op => op.id)).toEqual(['add', 'subtract', 'multiply', 'divide', 'power', 'mod', 'le', 'ge', 'lt', 'gt', 'abs', 'min', 'max', 'average', 'iferror']);
+  expect(IR.OPERATORS.map(op => op.symbol)).toEqual(['+', '−', '×', '÷', '^', '%', '≤', '≥', '<', '>', 'abs', 'min', 'max', 'ave', 'iferror']);
+  IR.OPERATORS.forEach(op => {
+    const kinds = ['fold', 'all', 'unary', 'compare', 'fallback'].filter(k => op[k]);
+    expect(kinds, op.id).toHaveLength(1);
+    expect(IR.operatorById(op.id)).toBe(op);
+    expect(IR.operatorForSymbol(op.symbol)).toBe(op);
+  });
+  expect(IR.operatorForSymbol('foo')).toBeNull();
+  const apply = (id, vs) => IR.applyOperator(IR.operatorById(id), vs);
+  expect(apply('mod', [-7, 3])).toEqual({ value: 2 });
+  expect(apply('divide', [1, 0])).toEqual({ error: 'math-error' });
+  expect(apply('abs', [1, 2])).toEqual({ error: 'unary-only' });
+  expect(apply('lt', [1])).toEqual({ error: 'needs-two' });
+  expect(apply('lt', [1, 3, 2])).toEqual({ value: 0 });
+  expect(IR.applyOperator(null, [4, 5])).toEqual({ value: 4 }); // unknown: first input
+});

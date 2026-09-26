@@ -3,8 +3,6 @@
     if(tx.depth > 0) return; // batched: rendered once when the transaction finishes
     const existing = new Map();
     canvas.querySelectorAll('.node').forEach(el => existing.set(el.dataset.id, el));
-    const uomVisiting = new Set();
-    const uomMemo = {};
     let plugMap = null; // plug name → rectangles carrying it (built once, when a socket needs it)
 
     nodes.forEach(n => {
@@ -120,7 +118,7 @@
           if(uomEl){
             let uomStr = '', isAuto = false;
             if(srcNode && srcCanvas){
-              const auto = computeNodeUOM(srcCanvas.id, srcNode.id, uomVisiting, uomMemo);
+              const auto = nodeUOM(srcCanvas.id, srcNode.id);
               if(auto){ uomStr = formatUOM(auto); isAuto = true; }
             }
             uomEl.textContent = uomStr;
@@ -189,7 +187,7 @@
             if(parsed.uom){
               uomStr = parsed.uom;
             } else {
-              const auto = computeNodeUOM(activeCanvasId, n.id, uomVisiting, uomMemo);
+              const auto = nodeUOM(activeCanvasId, n.id);
               if(auto){ uomStr = formatUOM(auto); isAuto = true; }
             }
             uomEl.textContent = uomStr;

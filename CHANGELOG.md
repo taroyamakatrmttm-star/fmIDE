@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmIDE calculates on the shared formula IR (phase B)
+- fmIDE now calculates from a shared description of the model's calculation (the IR, intermediate representation, in `src/shared/`): an operator catalogue with lasting ids, units of measure, and `compileModel`, which reads only the model. Values, error messages, units and the automation interface (`window.fm`) are unchanged; ExcelExporter moves onto the IR next (phase C).
+- Faster: on a large model (about 1,900 nodes, 24 periods) a full calculation takes about a third of the time it did.
+- Units on the canvas are worked out from the IR. They update after every change as before; while a rectangle is being dragged, they update when it is dropped.
+
 ## The canvas and Excel give the same numbers (formula IR, phase A)
 - A new test compares fmIDE's value of every rectangle, in every period, with the workbook recalculated by LibreOffice, for every sample model. It found these differences, now fixed so both apps agree:
 - `%` works like Excel's MOD: the result takes the divisor's sign (−7 % 3 is now 2 in fmIDE, as in Excel).

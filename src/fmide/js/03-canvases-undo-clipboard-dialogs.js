@@ -14,6 +14,7 @@
   }
 
   function loadCanvasState(c){
+    invalidateIR();
     nodes = c.nodes; edges = c.edges;
     computedValues = c.computedValues; computeErrors = c.computeErrors;
     portValues = c.portValues || {}; portErrors = c.portErrors || {};
@@ -25,6 +26,7 @@
   }
 
   function pushHistory(){
+    invalidateIR(); // the model is about to change
     // Inside a transaction (one API action, or a whole macro run) only the first push
     // records a snapshot, so the entire transaction undoes as a single step.
     if(tx.depth > 0){ if(tx.pushed) return; tx.pushed = true; }
