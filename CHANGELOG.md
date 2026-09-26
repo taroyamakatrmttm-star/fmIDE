@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## "Remove duplicates…" — choose what must match
+- fmIDE: **Templates → 🧹 Remove duplicates…** (and the command "Remove Duplicate Templates…") now opens a window. Kind and the calculation must always match; you tick whether the **name**, **layout and formatting**, **group** and **description** must match too (defaults: name only). Internal ids and counters are always ignored, so re-arranged or re-saved copies of the same calculation are found. Each set lists its templates with a preview; you pick which one to keep, see how many will be removed, and confirm (or Cancel). The tick boxes are remembered.
+- Imports still skip only exact copies.
+
 ## Fix: "Remove duplicates" removed originals too; new "Clear all templates"
 - fmIDE: **Remove duplicates** removed every template that had a copy, originals included, when the copies shared an internal id with their original (which an older Import Workspace did). It now removes only the copies. On start-up every template now gets its own id, and new ids no longer restart at 1 after a reload (which reused a saved template's id). So Delete, selection and Remove duplicates each act on one template.
 - New in the Templates window: **🗑 Clear all templates** (also the command "Clear All Templates"). It asks first and removes templates only.

@@ -199,27 +199,227 @@
     return { added, present };
   }
 
-  // Exact copies (same name, kind and content) beyond the first of each.
-  function duplicateTemplates(){
-    const seen = new Set();
-    return TEMPLATES.filter(t => {
-      const key = templateFingerprint(t.name, t.kind, t.data);
-      if(seen.has(key)) return true;
-      seen.add(key);
-      return false;
-    });
+  // ---------- Remove duplicates… (a choice of what must match) ----------
+  // What two templates must share to count as copies. Kind and the calculation always;
+  // the rest per the tick boxes in the window (remembered in the workspace's UI settings).
+  // Imports never use this: they skip only exact copies (templateFingerprint).
+  const DEDUPE_OPTIONS = [
+    { key:'name',        label:'Name', hint:'exactly the same name' },
+    { key:'layout',      label:'Layout and formatting', hint:'positions and sizes on the canvas, 🎨 formats, and the format presets inside a system' },
+    { key:'group',       label:'Group', hint:'' },
+    { key:'description', label:'Description', hint:'' },
+  ];
+
+  // JSON text with object keys sorted, so the order keys were written in never matters.
+  function stableJSON(v){
+    if(Array.isArray(v)) return '[' + v.map(stableJSON).join(',') + ']';
+    if(v && typeof v === 'object') return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + stableJSON(v[k])).join(',') + '}';
+    return JSON.stringify(v === undefined ? null : v);
   }
-  function removeDuplicateTemplates(onDone){
-    const extra = duplicateTemplates();
-    if(!extra.length){ showMessage('There are no duplicate templates.'); return; }
-    const n = extra.length;
-    showConfirm(`Remove ${n} duplicate template${n === 1 ? '' : 's'}? Only exact copies (same name, kind and content) are removed; one of each is kept.`, () => {
-      const drop = new Set(extra); // the copies themselves, not their ids (copies may share one)
+
+  // A text describing a template's calculation — and its layout too, when `layout` — that
+  // leaves out internal ids and counters. Nodes are renumbered in an order worked out from
+  // their own content (not their ids); arrows, alias targets and block references follow that
+  // renumbering, and canvases are numbered by their place in the list. Equal texts mean the
+  // same model; when in doubt (two otherwise identical rectangles wired differently) the
+  // texts differ, so templates are only ever treated as the same when they really are.
+  function templateLogicKey(t, layout){
+    const d = t.data || {};
+    const canvases = t.kind === 'system'
+      ? (Array.isArray(d.canvases) ? d.canvases : [])
+      : [{ id: d.selfCanvasId, name: null, nodes: d.nodes, edges: d.edges }];
+    const canvasIndex = new Map();
+    canvases.forEach((c, i) => { if(c && c.id !== undefined) canvasIndex.set(c.id, i); });
+    const canvasRef = (id) => canvasIndex.has(id) ? 'C' + canvasIndex.get(id) : ['external', id];
+    const LAYOUT = new Set(['x', 'y', 'w', 'h', 'style']);
+    const REFS = new Set(['id', 'sourceNodeId', 'sourceCanvasId', 'blockDefCanvasId']);
+    const own = (n) => {
+      const o = {};
+      Object.keys(n || {}).forEach(k => { if(!REFS.has(k) && (layout || !LAYOUT.has(k))) o[k] = n[k]; });
+      if(n && n.blockDefCanvasId !== undefined) o.blockDef = canvasRef(n.blockDefCanvasId);
+      return o;
+    };
+    // Pass 1: number every node by its own content, canvas by canvas.
+    const nodeName = new Map(); // canvasIndex + '|' + node id -> canonical name
+    const ordered = canvases.map((c, ci) => {
+      const nodes = (c && Array.isArray(c.nodes) ? c.nodes : []).map((n, i) => ({ n, i, sig: stableJSON(own(n)) }));
+      nodes.sort((a, b) => (a.sig < b.sig ? -1 : a.sig > b.sig ? 1 : a.i - b.i));
+      nodes.forEach((x, k) => nodeName.set(ci + '|' + (x.n && x.n.id), ci + ':' + k));
+      return nodes;
+    });
+    // Pass 2: each canvas's nodes (with references renamed) and arrows.
+    const out = canvases.map((c, ci) => {
+      const nodes = ordered[ci].map(({ n }) => {
+        const o = own(n);
+        if(n && n.sourceNodeId !== undefined){
+          const sc = canvasIndex.has(n.sourceCanvasId) ? canvasIndex.get(n.sourceCanvasId) : null;
+          o.source = sc !== null && nodeName.has(sc + '|' + n.sourceNodeId)
+            ? nodeName.get(sc + '|' + n.sourceNodeId) : ['external', n.sourceCanvasId, n.sourceNodeId];
+        }
+        return o;
+      });
+      const edges = (c && Array.isArray(c.edges) ? c.edges : []).map(e => {
+        const o = {};
+        Object.keys(e || {}).forEach(k => { if(k !== 'id' && k !== 'from' && k !== 'to') o[k] = e[k]; });
+        o.from = nodeName.get(ci + '|' + (e && e.from)) || ['missing', e && e.from];
+        o.to = nodeName.get(ci + '|' + (e && e.to)) || ['missing', e && e.to];
+        return stableJSON(o);
+      }).sort();
+      return { name: t.kind === 'system' ? (c && c.name) : null, nodes, edges };
+    });
+    // Everything else in the data, less the internal counters (and formats, unless layout).
+    const rest = {};
+    const SKIP = new Set(['canvases', 'nodes', 'edges', 'nextId', 'nextCanvasId', 'selfCanvasId', 'activeCanvasId', 'currentPeriod', 'name', 'version', 'kind']);
+    Object.keys(d).forEach(k => { if(!SKIP.has(k) && (layout || k !== 'formatPresets')) rest[k] = d[k]; });
+    return stableJSON({ canvases: out, rest });
+  }
+
+  // Sets of templates that match under `match` (2 or more each), in library order.
+  function duplicateTemplateSets(match){
+    const sets = new Map();
+    TEMPLATES.forEach(t => {
+      const key = stableJSON([t.kind, match.name ? t.name : null, match.group ? (t.group || '') : null,
+        match.description ? (t.description || '') : null, templateLogicKey(t, !!match.layout)]);
+      if(!sets.has(key)) sets.set(key, []);
+      sets.get(key).push(t);
+    });
+    return [...sets.values()].filter(s => s.length > 1);
+  }
+
+  function showRemoveDuplicatesDialog(onDone){
+    if(TEMPLATES.length < 2){ showMessage('There are no duplicate templates.'); return; }
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const box = document.createElement('div');
+    box.className = 'modal-box dedupe-box';
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    function close(){ overlay.remove(); document.removeEventListener('keydown', onKey, true); }
+    function onKey(ev){
+      const all = document.querySelectorAll('.modal-overlay');
+      if(ev.key === 'Escape' && all[all.length - 1] === overlay){ ev.preventDefault(); ev.stopPropagation(); close(); }
+    }
+    document.addEventListener('keydown', onKey, true);
+    overlay.addEventListener('mousedown', (ev) => { if(ev.target === overlay) close(); });
+
+    const title = document.createElement('p');
+    title.textContent = 'Remove duplicate templates';
+    box.appendChild(title);
+    const intro = document.createElement('p');
+    intro.className = 'template-desc';
+    intro.textContent = 'Templates count as copies when everything ticked below matches. Internal ids and counters are always ignored. Pick which one of each set to keep.';
+    box.appendChild(intro);
+
+    const opts = document.createElement('div');
+    opts.className = 'dedupe-options';
+    box.appendChild(opts);
+    const addOption = (label, hint, checked, disabled, onChange) => {
+      const row = document.createElement('label');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.checked = checked; cb.disabled = disabled;
+      if(onChange) cb.addEventListener('change', () => onChange(cb.checked));
+      const txt = document.createElement('span');
+      txt.textContent = label;
+      row.append(cb, txt);
+      if(hint){ const h = document.createElement('span'); h.className = 'dedupe-hint'; h.textContent = ' — ' + hint; row.appendChild(h); }
+      opts.appendChild(row);
+      return row;
+    };
+    addOption('Kind (canvas or system)', 'always', true, true);
+    addOption('The calculation', 'always: the same rectangles, numbers, operators, blocks, arrows, canvases and periods', true, true);
+    DEDUPE_OPTIONS.forEach(o => addOption(o.label, o.hint, !!dedupeMatch[o.key], false, (on) => {
+      dedupeMatch[o.key] = on; saveWorkspaceSoon(); render();
+    }).dataset.option = o.key);
+
+    const summary = document.createElement('p');
+    summary.className = 'dedupe-summary';
+    box.appendChild(summary);
+    const body = document.createElement('div');
+    body.className = 'dedupe-body';
+    const setsEl = document.createElement('div');
+    setsEl.className = 'dedupe-sets';
+    const preview = document.createElement('div');
+    preview.className = 'template-preview dedupe-preview';
+    body.append(setsEl, preview);
+    box.appendChild(body);
+
+    const actions = document.createElement('div');
+    actions.className = 'modal-actions';
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.addEventListener('click', close);
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'danger';
+    actions.append(cancelBtn, removeBtn);
+    box.appendChild(actions);
+
+    const showPreview = (t) => {
+      const pc = t.kind === 'system' ? ((t.data.canvases || [])[0] || { nodes: [], edges: [] }) : t.data;
+      preview.innerHTML = buildPreviewSVG(pc.nodes || [], pc.edges || []);
+    };
+    let sets = [], keep = [];
+    function render(){
+      sets = duplicateTemplateSets(dedupeMatch);
+      keep = sets.map(s => s[0]);
+      setsEl.innerHTML = '';
+      preview.innerHTML = '';
+      sets.forEach((s, si) => {
+        const setEl = document.createElement('div');
+        setEl.className = 'dedupe-set';
+        const head = document.createElement('div');
+        head.className = 'dedupe-set-head';
+        head.textContent = `Set ${si + 1}`;
+        setEl.appendChild(head);
+        s.forEach(t => {
+          const row = document.createElement('label');
+          row.className = 'dedupe-row';
+          const radio = document.createElement('input');
+          radio.type = 'radio'; radio.name = 'dedupe-keep-' + si; radio.checked = keep[si] === t;
+          radio.addEventListener('change', () => { keep[si] = t; paint(); });
+          const nm = document.createElement('span');
+          nm.className = 'dedupe-name';
+          nm.textContent = t.name;
+          const meta = document.createElement('span');
+          meta.className = 'dedupe-meta';
+          meta.textContent = (t.group || 'Ungrouped') + ' · ' + (t.kind === 'system' ? 'system' : 'module');
+          const fate = document.createElement('span');
+          fate.className = 'dedupe-fate';
+          const info = document.createElement('span');
+          info.className = 'dedupe-info';
+          info.append(nm, meta);
+          row.append(radio, info, fate);
+          row.addEventListener('mouseenter', () => showPreview(t));
+          row._tpl = t; row._set = si;
+          setEl.appendChild(row);
+        });
+        setsEl.appendChild(setEl);
+      });
+      paint();
+    }
+    function toRemove(){ return sets.flatMap((s, si) => s.filter(t => t !== keep[si])); }
+    function paint(){
+      setsEl.querySelectorAll('.dedupe-row').forEach(r => {
+        const kept = keep[r._set] === r._tpl;
+        r.classList.toggle('remove', !kept);
+        r.querySelector('.dedupe-fate').textContent = kept ? 'keep' : 'remove';
+      });
+      const n = toRemove().length;
+      summary.textContent = sets.length
+        ? `${sets.length} set${sets.length === 1 ? '' : 's'} of duplicates — ${n} template${n === 1 ? '' : 's'} will be removed.`
+        : 'No duplicates with these settings.';
+      removeBtn.textContent = `Remove ${n} template${n === 1 ? '' : 's'}`;
+      removeBtn.disabled = n === 0;
+    }
+    removeBtn.addEventListener('click', () => {
+      const drop = new Set(toRemove()); // the templates themselves, never their ids
+      if(!drop.size) return;
       TEMPLATES = TEMPLATES.filter(t => !drop.has(t));
       saveWorkspace();
-      toast(`Removed ${n} duplicate template${n === 1 ? '' : 's'}.`);
+      close();
+      toast(`Removed ${drop.size} template${drop.size === 1 ? '' : 's'}.`);
       if(onDone) onDone();
     });
+    render();
   }
 
   function clearAllTemplates(onDone){
@@ -480,7 +680,7 @@
     tplFileInput.style.display = 'none';
     const dedupeBtn = document.createElement('button');
     dedupeBtn.className = 'template-dedupe';
-    dedupeBtn.addEventListener('click', () => removeDuplicateTemplates(() => {
+    dedupeBtn.addEventListener('click', () => showRemoveDuplicatesDialog(() => {
       if(selected && !TEMPLATES.includes(selected)) selected = TEMPLATES[0] || null;
       renderList(); renderDetail();
     }));
@@ -660,9 +860,8 @@
     }
 
     function renderList(){
-      const extra = duplicateTemplates().length;
-      dedupeBtn.textContent = `🧹 Remove ${extra} duplicate${extra === 1 ? '' : 's'}`;
-      dedupeBtn.style.display = extra ? '' : 'none';
+      dedupeBtn.textContent = '🧹 Remove duplicates…';
+      dedupeBtn.style.display = TEMPLATES.length > 1 ? '' : 'none';
       clearBtn.style.display = TEMPLATES.length ? '' : 'none';
       list.innerHTML = '';
       shown = [];
