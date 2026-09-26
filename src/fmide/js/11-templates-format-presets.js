@@ -743,11 +743,21 @@
     if(part.versionId && t.versionId !== part.versionId) return { part, template: t, state: 'differs', label: `${shown} v${part.version} — yours differs from the one this recipe was made with` };
     return { part, template: t, state: 'ok', label: `${shown} v${part.version}` };
   }
-  // Sockets nothing feeds among the versions a recipe would use.
-  function recipeUnfedSockets(parts){
-    const list = parts.map(recipePartStatus).filter(st => st.template)
+  // The versions a recipe would use, as canvases ({ name, nodes }).
+  function recipeCanvasList(parts){
+    return parts.map(recipePartStatus).filter(st => st.template)
       .map(st => ({ name: st.template.name, nodes: st.template.data.nodes || [] }));
-    return unfedSocketsIn(list);
+  }
+  // Sockets nothing feeds among the versions a recipe would use.
+  function recipeUnfedSockets(parts){ return unfedSocketsIn(recipeCanvasList(parts)); }
+  // The socket check shown for a recipe: unfed sockets, and sockets more than one plug feeds.
+  function recipeCheckText(parts){
+    const list = recipeCanvasList(parts);
+    const unfed = unfedSocketsIn(list), multi = multiFedSocketsIn(list);
+    const lines = [];
+    if(unfed.length) lines.push(unfedSocketsText(unfed));
+    if(multi.length) lines.push(multiFedSocketsText(multi));
+    return { warn: lines.length > 0, text: lines.length ? lines.join('\n') : 'Every socket is fed by a plug in these parts.' };
   }
   function unfedSocketsText(list){
     return 'Sockets nothing feeds: ' + list.map(u => `“${u.socket}” (${u.canvas})`).join(', ') + '.';
@@ -771,13 +781,19 @@
     clearComputed();
     evaluateAll();
     syncActiveIntoRegistry();
-    const unfed = unfedSocketsIn(canvases.map(c => ({ name: c.name, nodes: c.nodes })));
-    return { canvases: made, warnings, unfedSockets: unfed };
+    const all = canvases.map(c => ({ name: c.name, nodes: c.nodes }));
+    const unfed = unfedSocketsIn(all);
+    // Sockets more than one plug feeds, where the build is involved (the socket or a plug
+    // is on a canvas it added) — e.g. a part whose canvas was already in the model.
+    const newNames = new Set(made.map(id => canvases.find(c => c.id === id).name));
+    const multi = multiFedSocketsIn(all).filter(m => newNames.has(m.canvas) || m.sources.some(s => newNames.has(s.split('::')[0])));
+    return { canvases: made, warnings, unfedSockets: unfed, multiFedSockets: multi };
   }
   function recipeBuildSummary(t, r){
     const lines = [`Built ${t.name}: ${r.canvases.length} canvas${r.canvases.length === 1 ? '' : 'es'}.`];
     r.warnings.forEach(w => lines.push(w));
     if(r.unfedSockets.length) lines.push(unfedSocketsText(r.unfedSockets));
+    if(r.multiFedSockets && r.multiFedSockets.length) lines.push(multiFedSocketsText(r.multiFedSockets));
     return lines.join('\n');
   }
 
@@ -888,9 +904,9 @@
       });
       if(!parts.length){ const p = document.createElement('p'); p.className = 'template-desc'; p.textContent = 'No parts yet.'; list.appendChild(p); }
       addBtn.disabled = !modules().length || parts.length >= RECIPE_MAX_PARTS;
-      const unfed = recipeUnfedSockets(parts);
-      check.classList.toggle('warn', unfed.length > 0);
-      check.textContent = !parts.length ? '' : (unfed.length ? unfedSocketsText(unfed) : 'Every socket is fed by a plug in these parts.');
+      const chk = recipeCheckText(parts);
+      check.classList.toggle('warn', parts.length > 0 && chk.warn);
+      check.textContent = !parts.length ? '' : chk.text;
       saveBtn.disabled = !parts.length;
     }
     addBtn.addEventListener('click', () => {
@@ -1526,10 +1542,10 @@
         ul.appendChild(li);
       });
       detail.appendChild(ul);
-      const unfed = recipeUnfedSockets(selected.data.parts);
+      const chk = recipeCheckText(selected.data.parts);
       const check = document.createElement('p');
-      check.className = 'recipe-check' + (unfed.length ? ' warn' : '');
-      check.textContent = unfed.length ? unfedSocketsText(unfed) : 'Every socket is fed by a plug in these parts.';
+      check.className = 'recipe-check' + (chk.warn ? ' warn' : '');
+      check.textContent = chk.text;
       detail.appendChild(check);
       const actionsRow = document.createElement('div');
       actionsRow.className = 'template-import-actions';

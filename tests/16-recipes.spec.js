@@ -232,3 +232,39 @@ test('a macro records building a recipe', async ({ page }) => {
   const steps = data.macros[data.macros.length - 1].steps.filter(s => s.action === 'insertTemplate');
   expect(steps.map(s => s.args)).toEqual([{ template: 'Three Statements', mode: 'add' }]);
 });
+
+// ---------- the same plug twice ----------
+test('building next to a canvas that already has the plug: warns, and the socket shows ×2', async ({ page }) => {
+  await saveRecipe(page, { name: 'Three Statements', parts: ['Income Statement', 'Balance Sheet@2'] });
+  await page.evaluate(() => fm.insertTemplate('Income Statement', 'newCanvas'));   // already in the model
+  await page.evaluate(() => fm.command('openTemplates'));
+  await picker(page).locator('.template-list button.template-family', { hasText: 'Three Statements' }).click();
+  await picker(page).locator('button.recipe-build').click();
+  expect(await messageText(page)).toBe('Built Three Statements: 2 canvases.\n'
+    + 'Sockets nothing feeds: “to Cash” (Balance Sheet).\n'
+    + 'Sockets fed by more than one plug (their values are added): “to Net Income” (Balance Sheet) ← Income Statement::Net Income, Income Statement::Net Income.');
+  await F.dismissMessage(page);
+  // Both Net Incomes (40 each) feed Retained Earnings.
+  expect(await valueOn(page, 'Balance Sheet', 'Retained Earnings')).toBe(80);
+  const chip = page.locator('.node .socket-chip', { hasText: 'to Net Income' });
+  await expect(chip).toHaveText('⚡ to Net Income ×2');
+  await expect(chip).toHaveClass(/multi/);
+  await expect(chip).toHaveAttribute('title', 'Fed by 2 plugs, added together: Income Statement::Net Income, Income Statement::Net Income. If one was added by mistake, remove its plug.');
+  // Remove one of them: one plug left, no warning.
+  await page.evaluate(() => { const c = fm.canvases().find(x => x.name === 'Income Statement'); fm.deleteCanvas(c.id); fm.switchCanvas('Balance Sheet'); });
+  await expect(chip).toHaveText('⚡ to Net Income');
+  await expect(chip).not.toHaveClass(/multi/);
+  expect(await valueOn(page, 'Balance Sheet', 'Retained Earnings')).toBe(40);
+});
+
+test('the recipe check lists a socket that two parts plug into', async ({ page }) => {
+  await saveRecipe(page, { name: 'Doubled', parts: ['Income Statement', 'Income Statement@1', 'Balance Sheet@2', 'Cash Flow'] });
+  await page.evaluate(() => fm.command('openTemplates'));
+  await picker(page).locator('.template-list button.template-family', { hasText: 'Doubled' }).click();
+  await expect(picker(page).locator('.recipe-check')).toHaveText(
+    'Sockets fed by more than one plug (their values are added): “to Net Income” (Balance Sheet) ← Income Statement::Net Income, Income Statement::Net Income.');
+  await expect(picker(page).locator('.recipe-check')).toHaveClass(/warn/);
+  await closeTemplates(page);
+  const r = await build(page, 'Doubled');
+  expect(r.multiFedSockets).toEqual([{ canvas: 'Balance Sheet', socket: 'to Net Income', sources: ['Income Statement::Net Income', 'Income Statement::Net Income'] }]);
+});

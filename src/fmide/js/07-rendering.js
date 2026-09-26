@@ -5,6 +5,7 @@
     canvas.querySelectorAll('.node').forEach(el => existing.set(el.dataset.id, el));
     const uomVisiting = new Set();
     const uomMemo = {};
+    let plugMap = null; // plug name → rectangles carrying it (built once, when a socket needs it)
 
     nodes.forEach(n => {
       let el = existing.get(n.id);
@@ -51,7 +52,11 @@
         if(sym) sym.textContent = n.text;
         const chip = el.querySelector('.socket-chip');
         if(chip){
-          if(n.socket){ chip.textContent = '⚡ ' + n.socket; chip.style.display = 'block'; }
+          // More than one plug feeding the socket: their values are added — say so.
+          const from = n.socket ? (plugMap || (plugMap = plugSourcesIn(liveCanvasList()))).get(n.socket.trim().toLowerCase()) || [] : [];
+          chip.classList.toggle('multi', from.length > 1);
+          chip.title = from.length > 1 ? `Fed by ${from.length} plugs, added together: ${from.join(', ')}. If one was added by mistake, remove its plug.` : '';
+          if(n.socket){ chip.textContent = '⚡ ' + n.socket + (from.length > 1 ? ' ×' + from.length : ''); chip.style.display = 'block'; }
           else chip.style.display = 'none';
         }
         const res = el.querySelector('.op-result');
