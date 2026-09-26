@@ -65,6 +65,23 @@
     loadCanvasState(canvases.find(cc => cc.id === activeCanvasId));
   }
 
+  // Sockets nothing feeds: operators whose socket name matches no plug on any of `list`'s
+  // canvases ({ name, nodes }), by the same rule as syncAutoConnections (trimmed, any
+  // capitals). Returns [{ canvas, socket }], each socket once per canvas.
+  function unfedSocketsIn(list){
+    const plugged = new Set();
+    list.forEach(c => (c.nodes || []).forEach(n => { if(n && n.type === 'value') plugsOf(n).forEach(p => plugged.add(p.toLowerCase())); }));
+    const out = [], seen = new Set();
+    list.forEach(c => (c.nodes || []).forEach(n => {
+      if(!n || n.type !== 'operator' || typeof n.socket !== 'string' || !n.socket.trim()) return;
+      const k = n.socket.trim().toLowerCase(), key = c.name + '\u0000' + k;
+      if(plugged.has(k) || seen.has(key)) return;
+      seen.add(key);
+      out.push({ canvas: c.name, socket: n.socket.trim() });
+    }));
+    return out;
+  }
+
   function collectAllTagNames(){
     const values = new Set();
     canvases.forEach(c => {

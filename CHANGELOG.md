@@ -2,6 +2,12 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Recipes: templates made of templates
+- fmIDE: a **recipe** lists canvas templates to add together, each at its latest version or a fixed one, for example Three Statements = Income Statement (latest) + Balance Sheet (v2) + Cash Flow (latest). **Templates → + New Recipe…** picks the parts, their versions and order, with a live check for sockets that no plug in the parts feeds.
+- **Build (add canvases)** adds one canvas per part, each linked to its template (so "Update this canvas" works on it), and plugs and sockets connect them by name. It warns when a fixed version in your library differs from the one the recipe was made with, skips parts you don't have, and lists sockets nothing feeds. Undo removes the whole build. Recipes have versions like other templates (**Edit as new version…**).
+- Automation: new `saveRecipe`; `insertTemplate` builds a recipe and returns the new canvases, warnings and unfed sockets.
+- File formats: the templates file and the workspace are now version 3 (they can hold recipes). Older files open as before; ExcelExporter reads the new workspace version; an older fmIDE asks before opening a version 3 file.
+
 ## Canvases remember their template; "Update this canvas"
 - fmIDE: a canvas made from a canvas template (Add to new canvas, or Add to current canvas on an empty canvas) remembers the template and version. Saving the canvas as a template links it too.
 - When a newer version is in your library, a bar above the canvas says so, and the canvas tab shows ⬆. **Update this canvas…** shows the change notes, which input values will be kept and which inputs the new version dropped, and warns when the canvas has changes of its own. The update keeps the canvas's name, its input values (matched by rectangle name, including values per period) and the links other canvases' aliases have to rectangles that still exist. Undo reverses it. **Not now** hides the notice until an even newer version appears.

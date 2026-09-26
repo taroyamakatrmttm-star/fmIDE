@@ -100,7 +100,7 @@ Load `tests/fixtures/security/evil-workspace.json` and `evil-system.json`:
 - Plugs from older files: `sys-v2-plug` (a v2 system, one `plug` per rectangle) opens with `plugs: ["Income Tax"]` (a blank plug becomes `[]`, no `plug` left) and the plug still feeds its socket on another canvas (value 30); Save System writes version 4. `module-v1-plug` via `loadModule` → `plugs` upgraded the same way. The same module inside a v1 templates file is upgraded when inserted.
 
 **ExcelExporter**:
-- A `.fmide` document (a workspace) loads through `#fileInput`, and so does a version 2 workspace (templates with families; group 14).
+- A `.fmide` document (a workspace) loads through `#fileInput`, and so do a version 2 workspace (templates with families; group 14) and a version 3 workspace (with a recipe; group 16).
 - `sys-current`, `sys-legacy` load; `sys-newer-v5` shows `#confirmModal` — Cancel → status "Not loaded."; Open Anyway → loads. `ws-nested-newer` → confirm mentions its system.
 - `module`, `templates`, `mapping`, `preferences` loaded as a model → a message saying what the file is and where it belongs.
 - Mapping: `#btnExportMapping` download has `kind: "fmIDE-excel-mapping"`, `version: 1`; re-importing it works; `map-legacy` (no kind/version) imports; `map-newer` asks; importing a system file as a mapping is rejected. The saved layout in browser storage never contains `kind`/`version`.
@@ -189,7 +189,7 @@ Commands `exportPreferences` (download `fmIDE-preferences.json`) and `importPref
 - ✎ Edit info renames every version; the change note belongs to the selected version only.
 - Autosave: families, versions, notes and `versionId`s are the same after a reload.
 - Macro recording writes `Revenue plan@1` for an older version and `Revenue plan` for the latest.
-- Older files: `templates-v1` (a v1 templates file) gives each template its own family at version 1, and importing it again adds nothing. `ws-v1-templates` (a v1 workspace) does the same, exports as workspace version 2, and `Old Revenue@1` inserts. A workspace of version 3 asks first ("reads up to version 2").
+- Older files: `templates-v1` (a v1 templates file) gives each template its own family at version 1, and importing it again adds nothing. `ws-v1-templates` (a v1 workspace) does the same, exports as the current workspace version (3), and `Old Revenue@1` inserts. A workspace of version 4 asks first ("reads up to version 3").
 - A family id `<script>…`, a `versionId` with markup and a version "two" from a file are replaced by valid ones; a note with markup is shown as text and never runs.
 - Remove duplicates compares one entry per family (its latest version): a family whose latest matches another family is offered ("v2 (and 1 older version)"); a copy of an older version only is not. Removing the family removes every version.
 - ExcelExporter (group 6): a version 2 workspace with templates that have families loads.
@@ -206,6 +206,19 @@ Commands `exportPreferences` (download `fmIDE-preferences.json`) and `importPref
 - A macro records the update as `updateCanvasFromTemplate({ canvas: 'Sales', version: '2' })`.
 - Links from a file: a bad one is dropped; one whose version id isn't in the library is "unknown-version", and the update window says it can't check for changes of your own; a name with markup is shown as text and never runs.
 - `sys-newer-v4` now opens without asking; a version 3 system opens with no links.
+
+### 16. Recipes (fmIDE)
+The library comes from `templates-v2.json` (a version 2 templates file, which also shows that such files still open): Income Statement v1 (Net Income 40, plug "to Net Income"); Balance Sheet v1 and v2 (v2: Retained Earnings fed by a socket "to Net Income", Cash balance fed by a socket "to Cash"); Cash Flow v1 (Cash 25, plug "to Cash").
+- `fm.saveRecipe({ name: 'Three Statements', parts: ['Income Statement@latest', 'Balance Sheet@2'] })` returns "Three Statements@1"; the parts are saved as `latest` and pinned `2` (with Balance Sheet v2's version id). The Templates window shows it with a "recipe" tag, "✓ Income Statement @latest (v1)", "✓ Balance Sheet v2" and "Sockets nothing feeds: “to Cash” (Balance Sheet).". A second recipe with the same name (any capitals) fails without making a version.
+- Build (the window's button): the message is "Built Three Statements: 2 canvases." followed by the unfed-socket line; the canvases Income Statement and Balance Sheet are linked to v1 and v2; Retained Earnings is 40 (wired from the other canvas). Undo removes both canvases.
+- Version 2 of the recipe (`newVersionOf`) adds Cash Flow: no warnings, no unfed sockets, Cash balance 25. Version 1 still builds (`Three Statements@1`).
+- `@latest` follows the library (after Income Statement v2 arrives, the build uses it: Net Income 50); a pinned part stays on its version.
+- A pinned part whose version id isn't the library's → "Balance Sheet v2 in your library isn't the one this recipe was made with — built with yours.", and it is built.
+- A missing pinned version and a missing family are skipped ("Skipped Balance Sheet v7 — not in your library.", "Skipped Debt Schedule @latest — not in your library."), and the rest is built; a recipe with nothing to build fails and changes nothing.
+- The recipe editor: add parts, pick families and versions, move a part up, remove one; the check updates live (unfed → "Every socket is fed by a plug in these parts."); Save Recipe keeps the order and versions; "Edit as new version…" saves v2 with its note; a new recipe under a name in use asks first, and "Choose another name" returns to the editor.
+- Export Templates writes version 3 with the recipe; a reload keeps it; a recipe with no valid parts is skipped on import; a part name with markup is shown as text and never runs.
+- A saved workspace is version 3; a version 4 workspace asks first. ExcelExporter loads a version 3 workspace holding a recipe (group 6).
+- A macro records the build as `insertTemplate({ template: 'Three Statements', mode: 'add' })`.
 
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.

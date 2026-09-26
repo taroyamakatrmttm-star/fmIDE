@@ -17,7 +17,7 @@
     'system':               { current: SHARED_FILE_VERSIONS['system'], label: 'system', where: 'File → Load System' },
     'module':               { current: 2, label: 'module',              where: 'File → Load Module' },
     'fmIDE-workspace':      { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'workspace', where: 'File → Import Workspace' },
-    'fmIDE-templates':      { current: 2, label: 'templates file',      where: 'Templates → Import Templates' },
+    'fmIDE-templates':      { current: 3, label: 'templates file',      where: 'Templates → Import Templates' },
     'fmIDE-format-presets': { current: 1, label: 'format presets file', where: 'Format Presets → Import Presets' },
     'fmIDE-shortcuts':      { current: 2, label: 'shortcuts file',      where: 'Keyboard Shortcuts → Import Shortcuts' },
     'fmIDE-macros':         { current: 1, label: 'macros file',         where: 'Macro Builder → Import' },
@@ -30,7 +30,9 @@
     },
     // v1 → v2: templates get a family, a version number, a change note and a version id.
     'fmIDE-templates': {
-      1: d => upgradeTemplateEntries(d.templates)
+      1: d => upgradeTemplateEntries(d.templates),
+      // v2 → v3: templates may be recipes (kind "recipe"); older files have none.
+      2: () => {}
     },
     // v1 shortcut files stored combos in the old notation.
     'fmIDE-shortcuts': {
@@ -57,6 +59,7 @@
     const warnings = [];
     // Nested content.
     const nestedTemplates = (list) => (list || []).map(t => {
+      // A recipe holds no model (only its parts, checked when it joins the library).
       if(!t || !t.data || (t.kind !== 'module' && t.kind !== 'system')) return t;
       const r = readFmFile(t.data, [t.kind]);
       if(r.error){ warnings.push(`Template "${String(t.name || '').slice(0, 60)}" was skipped: ${r.error}`); return null; }

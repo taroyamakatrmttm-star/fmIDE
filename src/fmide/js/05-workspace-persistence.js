@@ -37,7 +37,7 @@
     }
     // (A workspace has always read a kind other than 'system' as a canvas template.)
     if(fromImport) addMissingTemplates((Array.isArray(data.templates) ? data.templates : [])
-      .map(t => (t && typeof t === 'object') ? Object.assign({}, t, { kind: t.kind === 'system' ? 'system' : 'module' }) : t));
+      .map(t => (t && typeof t === 'object') ? Object.assign({}, t, { kind: templateKindOf(t.kind) }) : t));
     else restoreTemplates(data.templates);
     if(Array.isArray(data.formatPresets)) mergeFormatPresets(data.formatPresets);
     // ribbon/KeyTips settings, then macros (so macro commands exist before their
