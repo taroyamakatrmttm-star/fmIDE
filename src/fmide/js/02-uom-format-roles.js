@@ -248,6 +248,7 @@
       case 'no-input': return 'This operator has nothing connected to it.';
       case 'math-error': return 'Invalid result (e.g. divide by zero).';
       case 'unary-only': return 'This operator takes exactly one input.';
+      case 'needs-two': return 'A comparison needs at least two inputs.';
       case 'alias-unset': return "This alias isn't linked to a rectangle yet — click its 🔗 icon to choose one.";
       case 'alias-missing-canvas': return 'The canvas this alias points to no longer exists.';
       case 'alias-missing-node': return 'The rectangle this alias points to no longer exists.';

@@ -1,0 +1,604 @@
+{
+ "version": 4,
+ "kind": "system",
+ "nextId": 200,
+ "nextCanvasId": 2,
+ "activeCanvasId": "c1",
+ "periods": [
+  "P1",
+  "P2",
+  "P3"
+ ],
+ "currentPeriod": 0,
+ "canvases": [
+  {
+   "id": "c1",
+   "name": "Edge cases",
+   "nodes": [
+    {
+     "id": "m1a",
+     "type": "value",
+     "x": 40,
+     "y": 40,
+     "w": 170,
+     "h": 64,
+     "text": "Minus seven\n-7"
+    },
+    {
+     "id": "m1b",
+     "type": "value",
+     "x": 40,
+     "y": 120,
+     "w": 170,
+     "h": 64,
+     "text": "Three\n3"
+    },
+    {
+     "id": "mod1",
+     "type": "operator",
+     "x": 260,
+     "y": 80,
+     "w": 56,
+     "h": 56,
+     "text": "%"
+    },
+    {
+     "id": "mod1r",
+     "type": "value",
+     "x": 360,
+     "y": 70,
+     "w": 170,
+     "h": 64,
+     "text": "Mod negative dividend"
+    },
+    {
+     "id": "m2a",
+     "type": "value",
+     "x": 40,
+     "y": 200,
+     "w": 170,
+     "h": 64,
+     "text": "Seven\n7"
+    },
+    {
+     "id": "m2b",
+     "type": "value",
+     "x": 40,
+     "y": 280,
+     "w": 170,
+     "h": 64,
+     "text": "Minus three\n-3"
+    },
+    {
+     "id": "mod2",
+     "type": "operator",
+     "x": 260,
+     "y": 240,
+     "w": 56,
+     "h": 56,
+     "text": "%"
+    },
+    {
+     "id": "mod2r",
+     "type": "value",
+     "x": 360,
+     "y": 230,
+     "w": 170,
+     "h": 64,
+     "text": "Mod negative divisor"
+    },
+    {
+     "id": "c1",
+     "type": "value",
+     "x": 600,
+     "y": 40,
+     "w": 170,
+     "h": 64,
+     "text": "One\n1"
+    },
+    {
+     "id": "c3",
+     "type": "value",
+     "x": 640,
+     "y": 120,
+     "w": 170,
+     "h": 64,
+     "text": "Three again\n3"
+    },
+    {
+     "id": "c2",
+     "type": "value",
+     "x": 680,
+     "y": 200,
+     "w": 170,
+     "h": 64,
+     "text": "Two\n2"
+    },
+    {
+     "id": "lt",
+     "type": "operator",
+     "x": 880,
+     "y": 120,
+     "w": 56,
+     "h": 56,
+     "text": "<"
+    },
+    {
+     "id": "chain",
+     "type": "value",
+     "x": 960,
+     "y": 110,
+     "w": 170,
+     "h": 64,
+     "text": "Chain 1<3<2"
+    },
+    {
+     "id": "gt1",
+     "type": "operator",
+     "x": 880,
+     "y": 260,
+     "w": 56,
+     "h": 56,
+     "text": ">"
+    },
+    {
+     "id": "cmp1",
+     "type": "value",
+     "x": 960,
+     "y": 250,
+     "w": 170,
+     "h": 64,
+     "text": "Comparison with one input"
+    },
+    {
+     "id": "abs2",
+     "type": "operator",
+     "x": 260,
+     "y": 380,
+     "w": 56,
+     "h": 56,
+     "text": "abs"
+    },
+    {
+     "id": "abs2r",
+     "type": "value",
+     "x": 360,
+     "y": 370,
+     "w": 170,
+     "h": 64,
+     "text": "Abs of two"
+    },
+    {
+     "id": "ten",
+     "type": "value",
+     "x": 40,
+     "y": 520,
+     "w": 170,
+     "h": 64,
+     "text": "Ten\n10"
+    },
+    {
+     "id": "zero",
+     "type": "value",
+     "x": 40,
+     "y": 600,
+     "w": 170,
+     "h": 64,
+     "text": "Zero\n0"
+    },
+    {
+     "id": "div0",
+     "type": "operator",
+     "x": 260,
+     "y": 560,
+     "w": 56,
+     "h": 56,
+     "text": "÷"
+    },
+    {
+     "id": "ife1",
+     "type": "operator",
+     "x": 340,
+     "y": 560,
+     "w": 56,
+     "h": 56,
+     "text": "iferror"
+    },
+    {
+     "id": "ife1r",
+     "type": "value",
+     "x": 420,
+     "y": 550,
+     "w": 170,
+     "h": 64,
+     "text": "Iferror one input"
+    },
+    {
+     "id": "sh3",
+     "type": "periodShift",
+     "x": 260,
+     "y": 700,
+     "w": 56,
+     "h": 40,
+     "shift": -1
+    },
+    {
+     "id": "ife2",
+     "type": "operator",
+     "x": 520,
+     "y": 700,
+     "w": 56,
+     "h": 56,
+     "text": "iferror"
+    },
+    {
+     "id": "caught",
+     "type": "value",
+     "x": 600,
+     "y": 690,
+     "w": 170,
+     "h": 64,
+     "text": "Iferror of prior period"
+    },
+    {
+     "id": "plus5",
+     "type": "operator",
+     "x": 260,
+     "y": 820,
+     "w": 56,
+     "h": 56,
+     "text": "+"
+    },
+    {
+     "id": "override",
+     "type": "value",
+     "x": 360,
+     "y": 810,
+     "w": 170,
+     "h": 64,
+     "text": "Override first period\n7",
+     "literalPeriods": [
+      0
+     ]
+    },
+    {
+     "id": "open",
+     "type": "value",
+     "x": 600,
+     "y": 520,
+     "w": 170,
+     "h": 64,
+     "text": "Opening balance\n50"
+    },
+    {
+     "id": "plus6",
+     "type": "operator",
+     "x": 820,
+     "y": 540,
+     "w": 56,
+     "h": 56,
+     "text": "+"
+    },
+    {
+     "id": "close",
+     "type": "value",
+     "x": 900,
+     "y": 530,
+     "w": 170,
+     "h": 64,
+     "text": "Closing balance"
+    },
+    {
+     "id": "sh6",
+     "type": "periodShift",
+     "x": 760,
+     "y": 660,
+     "w": 56,
+     "h": 40,
+     "shift": -1
+    },
+    {
+     "id": "open2",
+     "type": "value",
+     "x": 600,
+     "y": 760,
+     "w": 170,
+     "h": 64,
+     "text": "Opening balance nested\n50"
+    },
+    {
+     "id": "plus6b",
+     "type": "operator",
+     "x": 820,
+     "y": 780,
+     "w": 56,
+     "h": 56,
+     "text": "+"
+    },
+    {
+     "id": "close2",
+     "type": "value",
+     "x": 900,
+     "y": 770,
+     "w": 170,
+     "h": 64,
+     "text": "Closing balance nested"
+    },
+    {
+     "id": "sh6b",
+     "type": "periodShift",
+     "x": 700,
+     "y": 900,
+     "w": 56,
+     "h": 40,
+     "shift": -1
+    },
+    {
+     "id": "plus6c",
+     "type": "operator",
+     "x": 760,
+     "y": 900,
+     "w": 56,
+     "h": 56,
+     "text": "+"
+    },
+    {
+     "id": "empty",
+     "type": "operator",
+     "x": 260,
+     "y": 980,
+     "w": 56,
+     "h": 56,
+     "text": "+"
+    },
+    {
+     "id": "emptyr",
+     "type": "value",
+     "x": 360,
+     "y": 970,
+     "w": 170,
+     "h": 64,
+     "text": "Fed by empty operator"
+    },
+    {
+     "id": "emptyif",
+     "type": "operator",
+     "x": 260,
+     "y": 1080,
+     "w": 56,
+     "h": 56,
+     "text": "iferror"
+    },
+    {
+     "id": "emptyifr",
+     "type": "value",
+     "x": 360,
+     "y": 1070,
+     "w": 170,
+     "h": 64,
+     "text": "Fed by empty iferror\n5"
+    },
+    {
+     "id": "div0r",
+     "type": "value",
+     "x": 420,
+     "y": 620,
+     "w": 170,
+     "h": 64,
+     "text": "Divided by zero, typed\n5"
+    },
+    {
+     "id": "fb7",
+     "type": "value",
+     "x": 300,
+     "y": 760,
+     "w": 170,
+     "h": 64,
+     "text": "Fallback seven\n7"
+    }
+   ],
+   "edges": [
+    {
+     "id": "e1",
+     "from": "m1a",
+     "to": "mod1"
+    },
+    {
+     "id": "e2",
+     "from": "m1b",
+     "to": "mod1"
+    },
+    {
+     "id": "e3",
+     "from": "mod1",
+     "to": "mod1r"
+    },
+    {
+     "id": "e4",
+     "from": "m2a",
+     "to": "mod2"
+    },
+    {
+     "id": "e5",
+     "from": "m2b",
+     "to": "mod2"
+    },
+    {
+     "id": "e6",
+     "from": "mod2",
+     "to": "mod2r"
+    },
+    {
+     "id": "e7",
+     "from": "c1",
+     "to": "lt"
+    },
+    {
+     "id": "e8",
+     "from": "c3",
+     "to": "lt"
+    },
+    {
+     "id": "e9",
+     "from": "c2",
+     "to": "lt"
+    },
+    {
+     "id": "e10",
+     "from": "lt",
+     "to": "chain"
+    },
+    {
+     "id": "e11",
+     "from": "c1",
+     "to": "gt1"
+    },
+    {
+     "id": "e12",
+     "from": "gt1",
+     "to": "cmp1"
+    },
+    {
+     "id": "e13",
+     "from": "m1a",
+     "to": "abs2"
+    },
+    {
+     "id": "e14",
+     "from": "m1b",
+     "to": "abs2"
+    },
+    {
+     "id": "e15",
+     "from": "abs2",
+     "to": "abs2r"
+    },
+    {
+     "id": "e16",
+     "from": "ten",
+     "to": "div0"
+    },
+    {
+     "id": "e17",
+     "from": "zero",
+     "to": "div0"
+    },
+    {
+     "id": "e18",
+     "from": "div0",
+     "to": "ife1"
+    },
+    {
+     "id": "e19",
+     "from": "ife1",
+     "to": "ife1r"
+    },
+    {
+     "id": "e20",
+     "from": "ten",
+     "to": "sh3"
+    },
+    {
+     "id": "e21",
+     "from": "sh3",
+     "to": "ife2"
+    },
+    {
+     "id": "e22",
+     "from": "fb7",
+     "to": "ife2"
+    },
+    {
+     "id": "e23",
+     "from": "ife2",
+     "to": "caught"
+    },
+    {
+     "id": "e24",
+     "from": "ten",
+     "to": "plus5"
+    },
+    {
+     "id": "e25",
+     "from": "plus5",
+     "to": "override"
+    },
+    {
+     "id": "e26",
+     "from": "open",
+     "to": "plus6"
+    },
+    {
+     "id": "e27",
+     "from": "ten",
+     "to": "plus6"
+    },
+    {
+     "id": "e28",
+     "from": "plus6",
+     "to": "close"
+    },
+    {
+     "id": "e29",
+     "from": "close",
+     "to": "sh6"
+    },
+    {
+     "id": "e30",
+     "from": "sh6",
+     "to": "open"
+    },
+    {
+     "id": "e31",
+     "from": "open2",
+     "to": "plus6b"
+    },
+    {
+     "id": "e32",
+     "from": "ten",
+     "to": "plus6b"
+    },
+    {
+     "id": "e33",
+     "from": "plus6b",
+     "to": "close2"
+    },
+    {
+     "id": "e34",
+     "from": "close2",
+     "to": "sh6b"
+    },
+    {
+     "id": "e35",
+     "from": "sh6b",
+     "to": "plus6c"
+    },
+    {
+     "id": "e36",
+     "from": "zero",
+     "to": "plus6c"
+    },
+    {
+     "id": "e37",
+     "from": "plus6c",
+     "to": "open2"
+    },
+    {
+     "id": "e38",
+     "from": "empty",
+     "to": "emptyr"
+    },
+    {
+     "id": "e39",
+     "from": "emptyif",
+     "to": "emptyifr"
+    },
+    {
+     "id": "e99",
+     "from": "div0",
+     "to": "div0r"
+    }
+   ]
+  }
+ ]
+}

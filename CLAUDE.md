@@ -32,7 +32,7 @@ The owner decides what is built and approves each change; sessions do the work a
 - ExcelExporter has its **own built-in Excel (xlsx/zip) writer**; it replaced an external library on purpose. Do not bring a library back.
 - **Edit `src/`, never `apps/`.** `apps/*.html` are generated: after editing, run `npm run build` (`tools/build.js`, Node only, no packages) and commit `src/` and the rebuilt `apps/` together. CI rebuilds and fails if they disagree; `npm run build:check` checks locally. Git keeps the history, so never add version numbers to file names or make copies like `fmIDE-v2.html`.
 - Source layout: `src/fmide/` and `src/excel-exporter/` each hold `index.html` (the page; a line `<!-- build:css styles.css -->` / `<!-- build:js js -->` marks where a file or folder goes), `styles.css`, and `js/NN-name.js` — plain fragments of the one wrapped function (no `import`/`export`), joined in file-name order. ExcelExporter's built-in Excel writer (the `XLSX` global) is its own script, `js-head/`. To find a function, Grep `src/` and read around it.
-- **Shared code lives once in `src/shared/`** and is pulled into both apps by a line `// build:include shared/<file>.js` inside a script piece (indented like the marker). Today: `escaping.js` (escapeXml, safeNum, safeColor), `input-rule.js` (the input-rectangle rule), `format-roles.js` (the seven roles and their defaults), `file-formats.js` (shared kinds, versions, upgrades, kind inference), `store.js` (browser storage, below), `update-notice.js` (the "new version is ready" notice, `watchForUpdates`). Change shared behaviour there, never by copying it into one app; where the apps must differ, the shared function takes a parameter.
+- **Shared code lives once in `src/shared/`** and is pulled into both apps by a line `// build:include shared/<file>.js` inside a script piece (indented like the marker). Today: `escaping.js` (escapeXml, safeNum, safeColor), `input-rule.js` (the input-rectangle rule, and `reachesOutsideTimeline` — when a rectangle's source needs a period outside the timeline), `format-roles.js` (the seven roles and their defaults), `file-formats.js` (shared kinds, versions, upgrades, kind inference), `store.js` (browser storage, below), `update-notice.js` (the "new version is ready" notice, `watchForUpdates`). Change shared behaviour there, never by copying it into one app; where the apps must differ, the shared function takes a parameter.
 - Layout: `apps/` the two apps (generated) · `src/` their source (`src/shared/` used by both, `src/site/` the web app's extra files) · `site/` the web app (generated, not committed) · `tools/` the build and `serve.js` · `docs/` reference notes · `tests/` the test suite (`tests/README.md`; brief in `tests/SPEC.md`; sample files in `tests/fixtures/`, which are not edited — add new ones alongside).
 - The apps have no dependencies; the test tooling (`package.json`: Playwright, exceljs, jszip) is dev-only and must never be loaded by an app.
 - Record notable changes in `CHANGELOG.md`.
@@ -144,11 +144,11 @@ Build order — work in this sequence and don't jump ahead unless asked:
 4. Storage for the web app: IndexedDB plus explicit open/save of `.fmide` files ✅ — 4a IndexedDB underneath, 4b documents, 4c Preferences file
 5. Publish the web app (`docs/step5-publish.md`) ✅ — 5a installable web app, 5b licences and automatic publishing to Cloudflare Pages (with pull-request previews)
 6. Template management ✅ — families and versions, linked canvases and "Update this canvas", recipes, the several-plugs-on-one-socket warning
-7. Formula IR and plugins — next
+7. Formula IR and plugins — in progress (`docs/step7-formula-ir.md`): A agreement tests and fixes ✅; next B, the shared IR
 8. Community library
 9. Touch support
 
-Phase 0 hardening done: escaping text from files, built-in Excel writer, file-format versions and migrations, autosave-failure warning, storage (step 4). Next: step 7, formula IR and plugins (the owner's chosen order: 7, 8, 9).
+Phase 0 hardening done: escaping text from files, built-in Excel writer, file-format versions and migrations, autosave-failure warning, storage (step 4). Now: step 7, formula IR and plugins (the owner's chosen order: 7, 8, 9); phase A done, B next.
 
 ## Checking a change
 
@@ -157,5 +157,6 @@ Workflow: edit `src/` → **`npm run build`** → **`npm test`**. Run **`npm tes
 - Tests drive the apps only through their globals and page elements (`window.fm`, `XLSX`, element ids). Never change an app to make it testable; if a check seems to need that, ask first.
 - A failing check is reported, not weakened.
 - The LibreOffice recalculation tests need LibreOffice with Calc; they skip locally without it but are required on CI.
+- Both apps must calculate alike: test group 17 (`npm run test:agreement`) compares fmIDE's values with the recalculated workbooks for every sample model. A change to how either app calculates keeps it green; a new calculation feature gets a case in `tests/fixtures/agreement/`.
 - If a change deliberately alters the generated workbooks, run `npm run test:update-snapshots` and commit the updated `tests/snapshots/` with the change.
 - A change to a file format needs an old-version sample in `tests/fixtures/formats/` and a test that it still opens.

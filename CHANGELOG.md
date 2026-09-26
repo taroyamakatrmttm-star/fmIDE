@@ -2,6 +2,18 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## The canvas and Excel give the same numbers (formula IR, phase A)
+- A new test compares fmIDE's value of every rectangle, in every period, with the workbook recalculated by LibreOffice, for every sample model. It found these differences, now fixed so both apps agree:
+- `%` works like Excel's MOD: the result takes the divisor's sign (−7 % 3 is now 2 in fmIDE, as in Excel).
+- A comparison with three or more inputs, a < b < c, means a < b and b < c (fmIDE used to compare the first result, 1 or 0, with c). A comparison with one input is now an error in both apps (Excel got an invalid `AND()`).
+- `abs` with more than one input is an error in Excel too (`#N/A`; Excel used to ignore the extra inputs).
+- `iferror` with one input that fails, or with nothing wired in, gives 0 in fmIDE too.
+- A period ticked under "Which periods use this rectangle's own number?" uses the typed number in fmIDE even when the rectangle is wired, as Excel already did.
+- A corkscrew's opening balance (a typed number, fed by a period shift) now shows the typed number in period 1 in Excel, as fmIDE already did (Excel wrote 0, so every later period was off). A rectangle without a typed number shows 0 there, now as a number instead of the formula `=0`.
+- A rectangle fed by an operator that nothing feeds shows 0 in fmIDE when it has no typed number (it showed "?"), as in Excel.
+- A wired rectangle whose source fails (e.g. a divide by zero) shows "?" in fmIDE instead of falling back to its typed number, as Excel shows an error.
+- Fix: in a file that used the same node id on two canvases, fmIDE could show one canvas's number on the other. Each canvas now keeps its own values.
+
 ## Warning when more than one plug feeds a socket; fix for deleting a canvas with plugs
 - fmIDE: plugs feeding the same socket are added together. When there is more than one, the socket shows **⚡ name ×2** in amber, and hovering lists the plugs (for example, the same Net Income added twice by building a recipe next to the canvas the template was made from). Building a recipe and the recipe check list such sockets too. Nothing is blocked, because adding several plugs can be intended.
 - Fix: deleting a canvas left behind the automatic connections from its plugs, so a socket that other plugs still fed could show 0 until the next change. Deleting a canvas now rebuilds the connections and recalculates.
