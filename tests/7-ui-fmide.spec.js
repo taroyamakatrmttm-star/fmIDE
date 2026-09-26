@@ -110,3 +110,65 @@ test('autosave failure banner', async ({ page }) => {
   await tick();
   await expect(banner).toBeHidden();
 });
+
+// ---------- Templates search ----------
+test.describe('Templates search', () => {
+  const { fixture } = require('./helpers/apps');
+  const picker = (page) => page.locator('.modal-box.template-box');
+  const search = (page) => picker(page).locator('input.template-search');
+  const listNames = async (page) => (await picker(page).locator('.template-list button').allInnerTexts()).map(t => t.split('\n')[0]);
+  const selectedName = (page) => picker(page).locator('.template-list button.active');
+  const rectNames = (page) => page.evaluate(() => fm.nodes().filter(n => n.type === 'value').map(n => n.text.split('\n')[0]));
+
+  // Import four templates, then reopen the window fresh.
+  async function openWithTemplates(page){
+    await F.openFmIDE(page);
+    await F.importViaDialog(page, 'openTemplates', '⇧ Import Templates', fixture('templates', 'search.json'));
+    await F.dismissMessage(page);
+    await picker(page).locator('.modal-actions button', { hasText: /^Close$/ }).click();
+    await expect(picker(page)).toHaveCount(0);
+    await page.evaluate(() => fm.command('openTemplates'));
+    await expect(picker(page)).toBeVisible();
+  }
+
+  test('the search box has the cursor when the window opens', async ({ page }) => {
+    await openWithTemplates(page);
+    await expect(search(page)).toBeFocused();
+  });
+
+  test('typing narrows the list, best match first, and previews it; clearing restores the groups', async ({ page }) => {
+    await openWithTemplates(page);
+    await page.keyboard.type('inc st');
+    // A name match comes first; "Cash flow statement" matches only through its group "Financial Statement".
+    expect(await listNames(page)).toEqual(['Income Statement', 'Cash flow statement']);
+    await expect(selectedName(page)).toContainText('Income Statement');
+    await expect(picker(page).locator('.template-detail h4')).toHaveText('Income Statement');
+    // Matches the group and description too, after name matches.
+    await search(page).fill('straight');
+    expect(await listNames(page)).toEqual(['Depreciation schedule']);
+    await search(page).fill('zzzz');
+    await expect(picker(page).locator('.template-list')).toContainText('No matching templates');
+    await search(page).fill('');
+    expect((await listNames(page)).sort()).toEqual(['Audit BS', 'Cash flow statement', 'Depreciation schedule', 'Income Statement']);
+    await expect(picker(page).locator('.template-list')).toContainText('Financial Statement');
+  });
+
+  test('arrow keys move the selection; Enter adds the selected canvas template', async ({ page }) => {
+    await openWithTemplates(page);
+    await page.keyboard.type('statement');
+    expect(await listNames(page)).toEqual(['Income Statement', 'Cash flow statement']);
+    await page.keyboard.press('ArrowDown');
+    await expect(selectedName(page)).toContainText('Cash flow statement');
+    await expect(search(page)).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(picker(page)).toHaveCount(0);
+    expect(await rectNames(page)).toContain('CF Rect');
+    expect(await rectNames(page)).not.toContain('IS Rect');
+  });
+
+  test('Esc closes the window', async ({ page }) => {
+    await openWithTemplates(page);
+    await page.keyboard.press('Escape');
+    await expect(picker(page)).toHaveCount(0);
+  });
+});

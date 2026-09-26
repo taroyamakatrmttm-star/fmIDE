@@ -114,6 +114,7 @@ Load `tests/fixtures/security/evil-workspace.json` and `evil-system.json`:
 **fmIDE**
 - Canvas: build Unit Price × Volume → Revenue with `fm`; the arrow SVG markup is stable (snapshot); a rectangle fed by an operator with no inputs gets the Inputs look.
 - Format dialogs: the Formats manager lists the 7 roles first, their delete buttons disabled; the rectangle format dialog has "Use this fill, font colour & border in Excel too", "Excel border sides" and "Use Excel's default font size".
+- Templates search (`tests/fixtures/templates/search.json`, four templates imported through the Templates window, which is then reopened): the search box has the focus on opening; "inc st" lists Income Statement first (name match) and then Cash flow statement (group "Financial Statement"), selects and previews the first; "straight" finds Depreciation schedule by its description; no match shows "No matching templates"; clearing restores the grouped list; "statement" + ↓ + Enter adds Cash flow statement's rectangle to the canvas and closes the window; Esc closes it.
 - Autosave failure: make `IDBObjectStore.prototype.put` throw a `QuotaExceededError` DOMException (`breakStorage` in `tests/helpers/storage.js`), wait for the 8 s autosave → `#autosaveBanner` visible with "Export workspace now" (downloads) and "Dismiss" (stays hidden while failing); after a successful save and a new failure it returns; once saving works it disappears by itself.
 
 ### 8. Snapshots
