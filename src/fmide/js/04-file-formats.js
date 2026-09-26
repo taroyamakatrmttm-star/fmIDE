@@ -123,7 +123,7 @@
       version: SHARED_FILE_VERSIONS['system'], kind: 'system',
       nextId, nextCanvasId, activeCanvasId,
       periods, currentPeriod,
-      canvases: canvases.map(c => ({ id:c.id, name:c.name, nodes:c.nodes, edges:c.edges })),
+      canvases: canvases.map(c => Object.assign({ id:c.id, name:c.name, nodes:c.nodes, edges:c.edges }, c.template ? { template: c.template } : {})),
       // format roles/presets ride along so ExcelExporter formats a plain system export too
       formatPresets: FORMAT_PRESETS.map(p => ({ id: p.id, name: p.name, style: p.style }))
     };

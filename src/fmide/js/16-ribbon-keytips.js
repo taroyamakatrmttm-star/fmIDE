@@ -32,7 +32,7 @@
         { label:'Arithmetic', items:[0,1,2,3,4,5].map(i => ({ cmd:'insertOp' + i })) },
         { label:'Compare', items:[6,7,8,9].map(i => ({ cmd:'insertOp' + i })) },
         { label:'Functions', items:[10,11,12,13,14].map(i => ({ cmd:'insertOp' + i })) },
-        { label:'Library', items:[ { cmd:'openTemplates', size:'large' } ] },
+        { label:'Library', items:[ { cmd:'openTemplates', size:'large' }, { cmd:'updateCanvasTemplate' }, { cmd:'unlinkCanvasTemplate' } ] },
       ]},
       { id:'arrange', label:'Arrange', keytip:'A', groups:[
         { label:'Align', items:[ { cmd:'alignLeft' }, { cmd:'alignCenterH' }, { cmd:'alignRight' }, { cmd:'alignTop' }, { cmd:'alignCenterV' }, { cmd:'alignBottom' } ] },

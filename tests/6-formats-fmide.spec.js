@@ -28,18 +28,18 @@ for(const name of ['sys-current', 'sys-legacy']){
   });
 }
 
-test('sys-newer-v4 asks first: Cancel keeps the current canvases, OK opens it', async ({ page }) => {
-  await F.importViaCommand(page, 'loadSystem', file('sys-newer-v4'));
+test('sys-newer-v5 asks first: Cancel keeps the current canvases, OK opens it', async ({ page }) => {
+  await F.importViaCommand(page, 'loadSystem', file('sys-newer-v5'));
   const text = await F.dialogText(page);
   expect(text).toContain('newer version');
-  expect(text).toContain('format version 4');
+  expect(text).toContain('format version 5');
   await F.cancelDialog(page);
   await expect(page.locator('.modal-box')).toHaveCount(0);
   expect(await canvasNames(page)).toEqual(['Before load']);
 
-  await F.importViaCommand(page, 'loadSystem', file('sys-newer-v4'));
+  await F.importViaCommand(page, 'loadSystem', file('sys-newer-v5'));
   const seen = await F.acceptAll(page);
-  expect(seen[0]).toContain('format version 4');
+  expect(seen[0]).toContain('format version 5');
   expect(seen[1]).toMatch(/^Load this system\?/);
   expect(await canvasNames(page)).toEqual(['Revenue Model']);
 });
@@ -154,7 +154,7 @@ test.describe('plugs: files from before a rectangle could have several', () => {
     expect(await valueOn(page, 'Income Statement', 'Income Tax expense')).toBe(30);
 
     const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.command('saveSystem')));
-    expect(data.version).toBe(3);
+    expect(data.version).toBe(4);
     const tax = data.canvases.find(c => c.name === 'Tax').nodes.find(n => /^Income Tax/.test(n.text));
     expect(tax.plugs).toEqual(['Income Tax']);
     expect(tax).not.toHaveProperty('plug');

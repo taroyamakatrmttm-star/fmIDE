@@ -16,6 +16,13 @@ const closeTemplates = (page) => picker(page).locator('.modal-actions button', {
 const familyEntries = (page) => picker(page).locator('.template-list button.template-family');
 const familyNames = async (page) => (await familyEntries(page).allInnerTexts()).map(t => t.split('\n')[0]);
 const selectFamily = (page, name) => familyEntries(page).filter({ hasText: name }).click();
+// The message an import shows (a box with a single OK). Waits for that box itself: the
+// Templates window is also a .modal-box, so the topmost one may still be the window.
+async function messageText(page){
+  const box = page.locator('.modal-box', { has: page.locator('.modal-actions button', { hasText: /^OK$/ }) }).last();
+  await expect(box).toBeVisible();
+  return (await box.locator('p').first().textContent()) || '';
+}
 
 // One rectangle, "Revenue", holding `value`, on a cleared model.
 const setRevenue = (page, value) => page.evaluate((v) => {
@@ -145,7 +152,7 @@ test('two families with the same name: refer to them by family id', async ({ pag
     name: 'Revenue plan', kind: 'module', family: 'someone-elses-family', version: 1, note: '', versionId: 'someone-elses-v1',
     data: { version: 2, kind: 'module', nodes: [{ id: 'n1', type: 'value', x: 50, y: 50, w: 170, h: 64, text: 'Revenue\n99' }], edges: [] } }] }));
   await F.importViaDialog(page, 'openTemplates', '⇧ Import Templates', other);
-  expect(await F.dialogText(page)).toBe('Imported 1 template.');
+  expect(await messageText(page)).toBe('Imported 1 template.');
   await F.dismissMessage(page);
   expect(await familyNames(page)).toEqual(['Revenue plan', 'Revenue plan']);
   expect(await insertedRevenue(page, 'Revenue plan@1')).toBe('Error: More than one template family is named "Revenue plan" — refer to it by its family ID.');
@@ -171,7 +178,7 @@ test('import: a version with a taken number but different content becomes the ne
   const path = testInfo.outputPath('theirs.json');
   fs.writeFileSync(path, JSON.stringify(theirs));
   await F.importViaDialog(page, 'openTemplates', '⇧ Import Templates', path);
-  expect(await F.dialogText(page)).toBe('Imported 2 templates (1 was already there). 1 was added as a new version because its number was already taken by a different version.');
+  expect(await messageText(page)).toBe('Imported 2 templates (1 was already there). 1 was added as a new version because its number was already taken by a different version.');
   await F.dismissMessage(page);
   const saved = await library(page);
   // Their v3 keeps its number (it was free); their v2 goes after it.
@@ -181,7 +188,7 @@ test('import: a version with a taken number but different content becomes the ne
   // The same file again adds nothing.
   await closeTemplates(page);
   await F.importViaDialog(page, 'openTemplates', '⇧ Import Templates', path);
-  expect(await F.dialogText(page)).toBe('All 3 templates in that file are already in your library.');
+  expect(await messageText(page)).toBe('All 3 templates in that file are already in your library.');
 });
 
 test('the latest version is deleted only with the whole template; older ones one by one', async ({ page }) => {
@@ -249,7 +256,7 @@ test('a macro records an older version as "Name@1", the latest as the name', asy
 test('a v1 templates file: each template becomes a family of its own, version 1', async ({ page }) => {
   const file = fixture('formats', 'templates-v1.json');
   await F.importViaDialog(page, 'openTemplates', '⇧ Import Templates', file);
-  expect(await F.dialogText(page)).toBe('Imported 2 templates.');
+  expect(await messageText(page)).toBe('Imported 2 templates.');
   await F.dismissMessage(page);
   const saved = await library(page);
   expect(saved.map(t => [t.name, t.version, t.note])).toEqual([['Old Revenue', 1, ''], ['Old Costs', 1, '']]);
@@ -258,7 +265,7 @@ test('a v1 templates file: each template becomes a family of its own, version 1'
   // Read again, it gets new random families — but they are the same templates, so nothing is added.
   await closeTemplates(page);
   await F.importViaDialog(page, 'openTemplates', '⇧ Import Templates', file);
-  expect(await F.dialogText(page)).toBe('All 2 templates in that file are already in your library.');
+  expect(await messageText(page)).toBe('All 2 templates in that file are already in your library.');
 });
 
 test('a v1 workspace: its templates become families, and it saves as version 2', async ({ page }) => {

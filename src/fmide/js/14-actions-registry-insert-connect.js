@@ -277,8 +277,14 @@
       const data = cloneData(t.data);
       const mode = a.mode === 'auto' ? (t.kind === 'system' ? 'add' : 'here') : a.mode;
       if(t.kind !== 'system'){
-        if(mode === 'here'){ pushHistory(); applyModuleDataDirect(data); }
-        else if(mode === 'newCanvas'){ applyModuleDataToNewCanvas(data); }
+        // The canvas remembers the template when it holds nothing else (Update this canvas).
+        const active = () => canvases.find(c => c.id === activeCanvasId);
+        if(mode === 'here'){
+          const wasEmpty = nodes.length === 0;
+          pushHistory(); applyModuleDataDirect(data);
+          setCanvasTemplateLink(active(), wasEmpty ? t : null);
+        }
+        else if(mode === 'newCanvas'){ applyModuleDataToNewCanvas(data); setCanvasTemplateLink(active(), t); }
         else fail(`"${t.name}" is a module template — use mode "here" or "newCanvas".`);
       } else {
         if(!Array.isArray(data.canvases) || !data.canvases.length) fail(`Template "${t.name}" has no canvases.`);
@@ -290,6 +296,31 @@
         }
         else fail(`"${t.name}" is a system template — use mode "add" or "replace".`);
       }
+    } });
+
+  defineAction({ name:'updateCanvasFromTemplate', label:'Update Canvas from Template', category:'Insert', icon:'⬆',
+    desc:'Rebuilds a canvas made from a canvas template from another version of it ("latest", or a number). Input values typed on the canvas are kept (matched by rectangle name); everything else comes from that version. Returns { version, kept, lostAliases }.',
+    params:[ P('canvas','canvas',{ def:'@current' }), P('version','string',{ def:'latest', help:'"latest" or a version number' }) ],
+    run(a){
+      const st = templateLinkStatus(a.canvas);
+      if(!st) fail(`Canvas "${a.canvas.name}" wasn't made from a canvas template.`);
+      if(!st.latest) fail(`Canvas "${a.canvas.name}" came from “${st.link.name}”, which isn't in your template library.`);
+      const want = String(a.version == null ? 'latest' : a.version).trim().toLowerCase();
+      const all = familyVersions(st.latest.family);
+      const t = (want === '' || want === 'latest') ? st.latest : all.find(v => String(v.version) === want);
+      if(!t) fail(`There is no version ${want} of "${st.latest.name}" (it has version${all.length === 1 ? '' : 's'} ${all.map(v => v.version).reverse().join(', ')}).`);
+      const plan = planCanvasUpdate(a.canvas, t);
+      pushHistory();
+      const r = applyCanvasUpdate(plan);
+      return { version: t.version, kept: r.kept, lostAliases: r.lostAliases };
+    } });
+  defineAction({ name:'unlinkCanvasFromTemplate', label:'Unlink Canvas from Template', category:'Insert', icon:'⛓',
+    desc:'Makes a canvas forget the canvas template it was made from (no more update notices). Its content stays.',
+    params:[ P('canvas','canvas',{ def:'@current' }) ],
+    run(a){
+      if(!a.canvas.template) return NOOP;
+      pushHistory();
+      delete a.canvas.template;
     } });
 
   // ---------------------------------- Connect ----------------------------------

@@ -491,7 +491,12 @@
   fm.nodes = () => nodes.map(n => ({ id: n.id, type: n.type, name: refNameOf(n), x: n.x, y: n.y, w: n.w, h: n.h, text: n.text }));
   fm.edges = () => edges.map(e => Object.assign({}, e));
   fm.selection = () => Array.from(selectedNodeIds);
-  fm.canvases = () => canvases.map(c => ({ id: c.id, name: c.name, active: c.id === activeCanvasId }));
+  fm.canvases = () => canvases.map(c => {
+    const out = { id: c.id, name: c.name, active: c.id === activeCanvasId };
+    const st = templateLinkStatus(c);
+    if(st) out.template = { family: st.link.family, version: st.link.version, name: st.link.name, status: st.state, latest: st.latest ? st.latest.version : null };
+    return out;
+  });
   fm.command = (id) => runCommand(id);
   fm.commands = () => COMMANDS.map(c => ({ id: c.id, label: c.label, category: c.category, shortcut: shortcutBindings[c.id] || null }));
   fm.runMacro = (ref) => callAction('runMacro', { macro: ref });

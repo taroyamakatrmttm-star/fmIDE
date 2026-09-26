@@ -18,7 +18,7 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 
 | `kind` | Version | What it is | Opened with |
 |---|---|---|---|
-| `system` | 3 | A whole model (all canvases, periods) | fmIDE: File → Load System · ExcelExporter |
+| `system` | 4 | A whole model (all canvases, periods); v4: a canvas may remember the canvas template it came from | fmIDE: File → Load System · ExcelExporter |
 | `module` | 2 | One canvas | fmIDE: File → Load Module |
 | `fmIDE-workspace` | 2 | Everything: system + templates, format presets, shortcuts, macros. A **`.fmide` document** is exactly this, with the `.fmide` extension | fmIDE: File → Open… (a document) or Import Workspace (a full replace) · ExcelExporter |
 | `fmIDE-templates` | 2 | Saved templates (each holds a module or system), with their families and versions | fmIDE: Templates → Import Templates |
@@ -33,6 +33,22 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 A value rectangle can carry several plug names: `"plugs": ["to Income Tax expense", "to CF Income Tax paid"]`. Each name feeds the rectangle into every operator whose `socket` has that name (names match regardless of capitals), on any canvas; an operator still has one `socket`. The connections this makes are saved too (arrows and aliases marked `"auto": true`), which is all ExcelExporter reads.
 
 Older files (`system` 1–2, `module` 1) held one name, `"plug": "Revenue"` (blank for none). Reading one turns it into `"plugs": ["Revenue"]` (or `[]`) and removes `plug` — the upgrade step `SHARED_FILE_MIGRATIONS.system[2]` and fmIDE's `FILE_MIGRATIONS.module[1]`, both using `upgradeNodePlugs()` in `src/shared/file-formats.js`. That covers every way a model arrives: Load System / Load Module, Open… and Open Recent, Import Workspace, templates (each template's model is upgraded as it is read) and the autosave. An older fmIDE opening a newer file asks first ("saved by a newer version"), so it never drops extra plugs without saying so.
+
+## Canvases linked to a template (`system` 4)
+
+A canvas made from a canvas template remembers it:
+
+```json
+{ "id": "c3", "name": "Sales", "nodes": [], "edges": [],
+  "template": { "family": "3f2a9c1e-…", "version": 2, "versionId": "9b1c…", "name": "Sales", "skipped": 3 } }
+```
+
+- `family`, `version` and `versionId` identify the template version the canvas came from (see below). `name` is only for display, when the family isn't in the library. `skipped` (optional) is a newer version the person chose "Not now" for.
+- A link is set by **Add to new canvas**, by **Add to current canvas** on an empty canvas, and by saving the canvas as a template (or as a new version). Adding a template into a canvas that has other content removes the link. **Unlink Canvas from Template** removes it too.
+- Links are saved in systems, and so in workspaces, `.fmide` documents and the autosave. Module files never carry one. **Add System** keeps the links of the canvases it adds as new canvases; a canvas merged into an existing one gets none.
+- **Reading:** a link whose `family` or `versionId` isn't 8–64 letters, digits and dashes, or whose `version` isn't a whole number of 1 or more, is dropped (a bad `versionId` alone becomes "unknown"). A link counts as coming from a library version only when the family *and* `versionId` match, never by number alone.
+- **Update this canvas** replaces the canvas's content with another version of its template. The canvas keeps its id and name. Rectangles whose names match between the canvas and that version keep their ids, so aliases elsewhere keep working. Each input rectangle keeps the value typed on the canvas: the value line, `periodValues`, `periodValuesRange` and `literalPeriods`.
+- Older systems (`system` 1–3) have no links. The upgrade step `SHARED_FILE_MIGRATIONS.system[3]` changes nothing. ExcelExporter ignores links, so its workbooks are unchanged.
 
 ## Template families and versions (`fmIDE-templates` 2, `fmIDE-workspace` 2)
 
