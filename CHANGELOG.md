@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## No more duplicate templates
+- fmIDE: **Import Workspace** and **Import Templates** now add only the templates you don't already have (same name, kind and content), like **Open** already did. Before, importing a file that held your own templates added a full second copy of each. Templates with the same name but different content are still both kept.
+- New in the Templates window: **Remove duplicates** (also the command "Remove Duplicate Templates"), shown when exact copies exist; it asks first and keeps one of each.
+
 ## ExcelExporter says when a new version is ready
 - On the web app, ExcelExporter now shows the same "A new version is ready" notice as fmIDE, with Reload (your layout is kept; load your file again) and Later. Before, it silently stayed on the old version. Once one open tab switches to a new version, every other open tab of fmIDE or ExcelExporter gets the notice too.
 - The preview comment on a pull request now leads with the address of that exact version, which the browser can't have an older copy of.

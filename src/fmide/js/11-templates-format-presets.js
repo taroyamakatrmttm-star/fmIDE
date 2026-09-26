@@ -174,6 +174,54 @@
     });
   }
 
+  // Templates from a file (Open, Import Workspace, Import Templates) join the person's
+  // library, unless the same one — same name, kind and content — is already there. Nothing of
+  // theirs is replaced or removed; a same-name template with different content is added.
+  // Returns { added, present } (present: valid ones skipped because they are already there).
+  function templateFingerprint(name, kind, data){ return name + '\u0000' + kind + '\u0000' + JSON.stringify(data); }
+  function addMissingTemplates(list){
+    const have = new Set(TEMPLATES.map(x => templateFingerprint(x.name, x.kind, x.data)));
+    let added = 0, present = 0;
+    (Array.isArray(list) ? list : []).forEach(t => {
+      if(!t || typeof t.name !== 'string' || !t.name.trim() || !t.data || (t.kind !== 'module' && t.kind !== 'system')) return;
+      const name = t.name.trim();
+      const key = templateFingerprint(name, t.kind, t.data);
+      if(have.has(key)){ present++; return; }
+      have.add(key);
+      TEMPLATES.push({
+        id: 'usr' + (nextTemplateId++), name,
+        description: typeof t.description === 'string' ? t.description : '',
+        group: (typeof t.group === 'string' && t.group.trim()) ? t.group.trim() : 'My Templates',
+        kind: t.kind, builtin: false, data: t.data
+      });
+      added++;
+    });
+    return { added, present };
+  }
+
+  // Exact copies (same name, kind and content) beyond the first of each.
+  function duplicateTemplates(){
+    const seen = new Set();
+    return TEMPLATES.filter(t => {
+      const key = templateFingerprint(t.name, t.kind, t.data);
+      if(seen.has(key)) return true;
+      seen.add(key);
+      return false;
+    });
+  }
+  function removeDuplicateTemplates(onDone){
+    const extra = duplicateTemplates();
+    if(!extra.length){ showMessage('There are no duplicate templates.'); return; }
+    const n = extra.length;
+    showConfirm(`Remove ${n} duplicate template${n === 1 ? '' : 's'}? Only exact copies (same name, kind and content) are removed; one of each is kept.`, () => {
+      const drop = new Set(extra.map(t => t.id));
+      TEMPLATES = TEMPLATES.filter(t => !drop.has(t.id));
+      saveWorkspace();
+      toast(`Removed ${n} duplicate template${n === 1 ? '' : 's'}.`);
+      if(onDone) onDone();
+    });
+  }
+
   function exportTemplatesToFile(){
     if(TEMPLATES.length === 0){
       showMessage("You don't have any templates to export.");
@@ -194,20 +242,11 @@
         showMessage('That templates file has no "templates" list.');
         return;
       }
-      let count = 0;
-      data.templates.forEach(t => {
-        if(!t || typeof t.name !== 'string' || !t.name.trim() || !t.data || (t.kind !== 'module' && t.kind !== 'system')) return;
-        TEMPLATES.push({
-          id: 'usr' + (nextTemplateId++),
-          name: t.name.trim(),
-          description: typeof t.description === 'string' ? t.description : '',
-          group: (typeof t.group === 'string' && t.group.trim()) ? t.group.trim() : 'My Templates',
-          kind: t.kind, builtin: false, data: t.data
-        });
-        count++;
-      });
-      if(count === 0) showMessage("That file didn't contain any templates fmIDE could recognize.");
-      onDone(count);
+      const { added, present } = addMissingTemplates(data.templates);
+      if(added === 0 && present === 0) showMessage("That file didn't contain any templates fmIDE could recognize.");
+      else if(added === 0) showMessage(`All ${present} template${present === 1 ? ' in that file is' : 's in that file are'} already in your library.`);
+      else showMessage(`Imported ${added} template${added === 1 ? '' : 's'}` + (present ? ` (${present} ${present === 1 ? 'was' : 'were'} already there).` : '.'));
+      onDone(added);
       });
     };
     reader.onerror = () => showMessage('Could not read that file.');
@@ -428,8 +467,15 @@
     tplFileInput.type = 'file';
     tplFileInput.accept = 'application/json,.json';
     tplFileInput.style.display = 'none';
+    const dedupeBtn = document.createElement('button');
+    dedupeBtn.className = 'template-dedupe';
+    dedupeBtn.addEventListener('click', () => removeDuplicateTemplates(() => {
+      if(selected && !TEMPLATES.includes(selected)) selected = TEMPLATES[0] || null;
+      renderList(); renderDetail();
+    }));
     ioRow.appendChild(exportBtn);
     ioRow.appendChild(importBtn);
+    ioRow.appendChild(dedupeBtn);
     ioRow.appendChild(tplFileInput);
     box.appendChild(ioRow);
 
@@ -440,11 +486,7 @@
       tplFileInput.value = '';
       if(!file) return;
       importTemplatesFromFile(file, (count) => {
-        if(count > 0){
-          showMessage(`Imported ${count} template${count===1?'':'s'}.`);
-          renderList();
-          renderDetail();
-        }
+        if(count > 0){ renderList(); renderDetail(); }
       });
     });
 
@@ -602,6 +644,9 @@
     }
 
     function renderList(){
+      const extra = duplicateTemplates().length;
+      dedupeBtn.textContent = `🧹 Remove ${extra} duplicate${extra === 1 ? '' : 's'}`;
+      dedupeBtn.style.display = extra ? '' : 'none';
       list.innerHTML = '';
       shown = [];
       if(TEMPLATES.length === 0){

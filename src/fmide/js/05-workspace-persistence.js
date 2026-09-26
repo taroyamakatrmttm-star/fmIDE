@@ -31,11 +31,16 @@
     });
   }
 
-  function applyWorkspacePayload(data){
+  // fromImport: File → Import Workspace, where the file's templates join the library only
+  // when not already there (addMissingTemplates). Restoring the autosave keeps them as saved.
+  function applyWorkspacePayload(data, fromImport){
     if(data.system && Array.isArray(data.system.canvases) && data.system.canvases.length){
       applySystemDataDirect(data.system);
     }
-    if(Array.isArray(data.templates)){
+    // (A workspace has always read a kind other than 'system' as a canvas template.)
+    if(fromImport) addMissingTemplates((Array.isArray(data.templates) ? data.templates : [])
+      .map(t => (t && typeof t === 'object') ? Object.assign({}, t, { kind: t.kind === 'system' ? 'system' : 'module' }) : t));
+    else if(Array.isArray(data.templates)){
       data.templates.forEach(t => {
         if(!t || typeof t.name !== 'string' || !t.data) return;
         TEMPLATES.push({
@@ -139,9 +144,9 @@
     const reader = new FileReader();
     reader.onload = () => {
       openFmFileText(reader.result, ['fmIDE-workspace'], (data) => {
-      showConfirm('Import this workspace? It will replace your current system, and add in the file\'s templates, format presets, and shortcut bindings. (You can Undo the canvas change afterward if needed.)', () => {
+      showConfirm('Import this workspace? It will replace your current system, and add in the file\'s templates you don\'t already have, its format presets, and shortcut bindings. (You can Undo the canvas change afterward if needed.)', () => {
         pushHistory();
-        applyWorkspacePayload(data);
+        applyWorkspacePayload(data, true);
         ensureDefaultFormatPresets();
         renderCanvasTabs();
         render();

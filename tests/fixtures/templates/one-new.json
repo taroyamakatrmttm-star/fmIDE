@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "kind": "fmIDE-templates",
+  "templates": [
+    {
+      "name": "Income Statement",
+      "group": "Financial Statement",
+      "description": "Revenue to Net Income",
+      "kind": "module",
+      "data": {
+        "version": 1,
+        "kind": "module",
+        "nodes": [
+          {
+            "id": "n1",
+            "type": "value",
+            "x": 50,
+            "y": 50,
+            "w": 170,
+            "h": 64,
+            "text": "IS Rect\n7"
+          }
+        ],
+        "edges": []
+      }
+    },
+    {
+      "name": "Tax schedule",
+      "group": "Financial Statement",
+      "description": "Taxes",
+      "kind": "module",
+      "data": {
+        "version": 1,
+        "kind": "module",
+        "nodes": [
+          {
+            "id": "n1",
+            "type": "value",
+            "x": 50,
+            "y": 50,
+            "w": 170,
+            "h": 64,
+            "text": "Tax Rect\n3"
+          }
+        ],
+        "edges": []
+      }
+    }
+  ]
+}

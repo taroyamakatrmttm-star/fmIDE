@@ -279,22 +279,8 @@
     render();
   }
 
-  // Templates and macros from a document join the person's library, unless the same one
-  // (same name and content) is already there. Nothing of theirs is replaced or removed.
-  function addMissingTemplates(list){
-    (Array.isArray(list) ? list : []).forEach(t => {
-      if(!t || typeof t.name !== 'string' || !t.name.trim() || !t.data || (t.kind !== 'module' && t.kind !== 'system')) return;
-      const name = t.name.trim();
-      const content = JSON.stringify(t.data);
-      if(TEMPLATES.some(x => x.name === name && x.kind === t.kind && JSON.stringify(x.data) === content)) return;
-      TEMPLATES.push({
-        id: 'usr' + (nextTemplateId++), name,
-        description: typeof t.description === 'string' ? t.description : '',
-        group: (typeof t.group === 'string' && t.group.trim()) ? t.group.trim() : 'My Templates',
-        kind: t.kind, builtin: false, data: t.data
-      });
-    });
-  }
+  // Templates from a document join the person's library through addMissingTemplates()
+  // (11-templates-format-presets.js); macros likewise, unless the same one is already there.
   // Steps get fresh ids whenever a macro is imported, so compare them without ids. A macro
   // whose name was taken is imported as "<name> (imported)" — that copy counts as present.
   function macroStepsFingerprint(steps){
