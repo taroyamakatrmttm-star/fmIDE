@@ -88,7 +88,7 @@ Load `tests/fixtures/security/evil-workspace.json` and `evil-system.json`:
 ### 6. File formats
 **fmIDE** (`tests/fixtures/formats/`):
 - `sys-current`, `sys-legacy` (no kind/version) load via `loadSystem`.
-- `sys-newer` (version 3): a dialog mentions "newer version" and "format version 3"; Cancel leaves the current canvases unchanged; OK then opens it.
+- `sys-newer-v4` (version 4): a dialog mentions "newer version" and "format version 4"; Cancel leaves the current canvases unchanged; OK then opens it. (`sys-newer`, version 3, was the "newer" sample until system v3 became current.)
 - `preferences` via `loadSystem` → "That is an fmIDE preferences file, not a system. Open it with File → Import Preferences." (and the same via Open…, group 10).
 - `templates` via `loadSystem` → message "That is an fmIDE templates file, not a system. Open it with Templates → Import Templates."; `sys-current` via `loadModule` → message naming it a system; `mapping` via `loadSystem` → message pointing to ExcelExporter.
 - `templates` via the Templates dialog: one question up front mentioning the template "Future T" is from a newer fmIDE; continuing imports both.
@@ -97,10 +97,11 @@ Load `tests/fixtures/security/evil-workspace.json` and `evil-system.json`:
 - `ws-nested-newer`: one question up front ("Its system was saved by a newer fmIDE…"), then the normal "Import this workspace?" confirm.
 - Autosave survives a reload: rename a canvas, reload, the name persists.
 - Import Workspace replaces format presets with the same name as one in the file (one "Inputs", with the file's style) and keeps the user's other presets.
+- Plugs from older files: `sys-v2-plug` (a v2 system, one `plug` per rectangle) opens with `plugs: ["Income Tax"]` (a blank plug becomes `[]`, no `plug` left) and the plug still feeds its socket on another canvas (value 30); Save System writes version 3. `module-v1-plug` via `loadModule` → `plugs` upgraded the same way. The same module inside a v1 templates file is upgraded when inserted.
 
 **ExcelExporter**:
 - A `.fmide` document (a workspace) loads through `#fileInput`.
-- `sys-current`, `sys-legacy` load; `sys-newer` shows `#confirmModal` — Cancel → status "Not loaded."; Open Anyway → loads. `ws-nested-newer` → confirm mentions its system.
+- `sys-current`, `sys-legacy` load; `sys-newer-v4` shows `#confirmModal` — Cancel → status "Not loaded."; Open Anyway → loads. `ws-nested-newer` → confirm mentions its system.
 - `module`, `templates`, `mapping`, `preferences` loaded as a model → a message saying what the file is and where it belongs.
 - Mapping: `#btnExportMapping` download has `kind: "fmIDE-excel-mapping"`, `version: 1`; re-importing it works; `map-legacy` (no kind/version) imports; `map-newer` asks; importing a system file as a mapping is rejected. The saved layout in browser storage never contains `kind`/`version`.
 
@@ -167,6 +168,15 @@ Commands `exportPreferences` (download `fmIDE-preferences.json`) and `importPref
 - Short addresses: `/ExcelExporter.html` → `/ExcelExporter`, `/index.html` → `/`; `_headers` is not served.
 - `apps/fmIDE.html` links no manifest and registers no service worker, even on a secure origin.
 - Anywhere: Open ExcelExporter opens `ExcelExporter.html` next to fmIDE in its own window; Install fmIDE is disabled until the browser offers it, then prompts once; a `.fmide` handed over through a (faked) `launchQueue` opens as a document, asking Save / Don't save / Cancel first when there are unsaved changes.
+
+### 13. Plugs (fmIDE, and ExcelExporter reading the result)
+"Income Tax" (30) on a Tax canvas carries two plugs, "to Income Tax expense" and "to CF Income Tax paid", feeding operators with those sockets on an Income Statement and a Cash Flow canvas.
+- Both "Income Tax expense" and "Income Tax paid" compute 30.
+- `removePlug` (any capitals) removes only that connection (paid falls back to its typed 0); undo brings it back.
+- `addPlug` ignores a name already there; `setPlug` replaces all plugs with one; `setPlugs` sets a list (blanks and repeats dropped), `[]` clears, anything but a list of names is refused.
+- The plug editor (🔌): one chip per plug; ✕ removes one; Enter adds the typed name; Escape drops a typed name; a click elsewhere adds it. The rectangle shows "🔌 to Income Tax expense · to CF Income Tax paid".
+- A plug name with markup from a file is shown as text and never runs.
+- ExcelExporter: the saved v3 system loads; with the Inputs tab off, both rows are formulas (fed), not typed numbers.
 
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.

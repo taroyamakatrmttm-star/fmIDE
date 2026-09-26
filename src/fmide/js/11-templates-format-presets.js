@@ -125,7 +125,7 @@
       initialName: active ? active.name : 'My Module',
       submitLabel: 'Save Template',
       onSubmit: ({name, description, group}) => {
-        const payload = { version:1, kind:'module', name, selfCanvasId: activeCanvasId, nextId, nodes, edges };
+        const payload = { version: FILE_FORMATS['module'].current, kind:'module', name, selfCanvasId: activeCanvasId, nextId, nodes, edges };
         TEMPLATES.push({
           id: 'usr' + (nextTemplateId++), name, description, group, kind:'module', builtin:false,
           data: cloneData(payload)
@@ -143,7 +143,7 @@
       submitLabel: 'Save Template',
       onSubmit: ({name, description, group}) => {
         const payload = {
-          version:2, kind:'system', nextId, nextCanvasId, activeCanvasId,
+          version: SHARED_FILE_VERSIONS['system'], kind:'system', nextId, nextCanvasId, activeCanvasId,
           canvases: canvases.map(c => ({ id:c.id, name:c.name, nodes:c.nodes, edges:c.edges }))
         };
         TEMPLATES.push({
@@ -235,7 +235,9 @@
     const REFS = new Set(['id', 'sourceNodeId', 'sourceCanvasId', 'blockDefCanvasId']);
     const own = (n) => {
       const o = {};
-      Object.keys(n || {}).forEach(k => { if(!REFS.has(k) && (layout || !LAYOUT.has(k))) o[k] = n[k]; });
+      Object.keys(n || {}).forEach(k => { if(!REFS.has(k) && k !== 'plug' && k !== 'plugs' && (layout || !LAYOUT.has(k))) o[k] = n[k]; });
+      const plugs = plugsOf(n);                     // the same plugs in any order are the same
+      if(plugs.length) o.plugs = plugs.slice().sort();
       if(n && n.blockDefCanvasId !== undefined) o.blockDef = canvasRef(n.blockDefCanvasId);
       return o;
     };

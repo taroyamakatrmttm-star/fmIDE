@@ -90,8 +90,8 @@ Current versions:
 
 | `kind` | Version | What it is |
 |---|---|---|
-| `system` | 2 | A whole model (all canvases, periods) — read by **both** apps |
-| `module` | 1 | One canvas |
+| `system` | 3 | A whole model (all canvases, periods) — read by **both** apps. v3: a rectangle's plugs are a list, `plugs` |
+| `module` | 2 | One canvas (v2: `plugs`, as system v3) |
 | `fmIDE-workspace` | 1 | System + templates, format presets, shortcuts, macros — read by **both** apps |
 | `fmIDE-templates` | 1 | Saved templates (each holds a module or system) |
 | `fmIDE-format-presets` | 1 | Format presets, including the format roles |

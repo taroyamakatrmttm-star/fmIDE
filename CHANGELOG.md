@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Several plugs on one rectangle
+- fmIDE: a rectangle can carry more than one plug name, each feeding the operators whose socket has that name — for example "Income Tax" feeding both "to Income Tax expense" and "to CF Income Tax paid". The 🔌 editor lists one chip per plug (✕ removes it) and adds a typed name with Enter; the rectangle shows all of them. Automation: `setPlug` still sets a single plug (replacing the others); new `addPlug`, `removePlug` and `setPlugs`.
+- File formats: `system` is now version 3 and `module` version 2 (a rectangle's `plug` became a list, `plugs`). Older files, templates, documents and the autosave are upgraded as they are read; ExcelExporter reads the new version, and its workbooks are unchanged.
+
 ## "Remove duplicates…" — choose what must match
 - fmIDE: **Templates → 🧹 Remove duplicates…** (and the command "Remove Duplicate Templates…") now opens a window. Kind and the calculation must always match; you tick whether the **name**, **layout and formatting**, **group** and **description** must match too (defaults: name only). Internal ids and counters are always ignored, so re-arranged or re-saved copies of the same calculation are found. Each set lists its templates with a preview; you pick which one to keep, see how many will be removed, and confirm (or Cancel). The tick boxes are remembered.
 - Imports still skip only exact copies.

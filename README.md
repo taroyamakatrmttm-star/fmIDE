@@ -20,6 +20,8 @@ Both are single self-contained HTML files with no external dependencies: open th
 
 Importing templates (or a workspace) never adds a template you already have (same name and content); if copies built up before, **File → Templates → Remove duplicates…** finds them — you choose what must match besides the calculation (name, layout, group, description) and which one of each to keep — and **Clear all templates** empties the library after asking.
 
+A rectangle can have **several plugs**: click its 🔌 button to see one chip per plug name, ✕ to remove one, and type a name and press Enter to add another. Each name feeds the rectangle into every operator whose socket has that name, on any canvas — so "Income Tax" can feed both "to Income Tax expense" and "to CF Income Tax paid". Files saved before this open as before (their one plug becomes a list of one); older copies of fmIDE ask before opening a file saved by this version.
+
 Opening someone else's `.fmide` never replaces your own setup: their templates and macros are added to yours, and your shortcuts and ribbon stay as they are.
 
 Your own settings (keyboard shortcuts, ribbon layout, Quick Access Toolbar and KeyTips key) travel separately: **File → Export Preferences…** saves them to `fmIDE-preferences.json`, and **File → Import Preferences…** on another computer (or for a colleague) replaces theirs with yours. Your macros' own shortcuts are kept.

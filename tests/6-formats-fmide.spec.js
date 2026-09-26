@@ -1,4 +1,5 @@
 // 6. File formats — fmIDE: current, legacy, newer-version and wrong-kind files.
+const fs = require('fs');
 const { test, expect, fixture, readFixture } = require('./helpers/apps');
 const F = require('./helpers/fmide');
 
@@ -27,18 +28,18 @@ for(const name of ['sys-current', 'sys-legacy']){
   });
 }
 
-test('sys-newer asks first: Cancel keeps the current canvases, OK opens it', async ({ page }) => {
-  await F.importViaCommand(page, 'loadSystem', file('sys-newer'));
+test('sys-newer-v4 asks first: Cancel keeps the current canvases, OK opens it', async ({ page }) => {
+  await F.importViaCommand(page, 'loadSystem', file('sys-newer-v4'));
   const text = await F.dialogText(page);
   expect(text).toContain('newer version');
-  expect(text).toContain('format version 3');
+  expect(text).toContain('format version 4');
   await F.cancelDialog(page);
   await expect(page.locator('.modal-box')).toHaveCount(0);
   expect(await canvasNames(page)).toEqual(['Before load']);
 
-  await F.importViaCommand(page, 'loadSystem', file('sys-newer'));
+  await F.importViaCommand(page, 'loadSystem', file('sys-newer-v4'));
   const seen = await F.acceptAll(page);
-  expect(seen[0]).toContain('format version 3');
+  expect(seen[0]).toContain('format version 4');
   expect(seen[1]).toMatch(/^Load this system\?/);
   expect(await canvasNames(page)).toEqual(['Revenue Model']);
 });
@@ -130,4 +131,55 @@ test('Import Workspace replaces presets with the same name and keeps the others'
   expect(named('User Only')).toHaveLength(1);
   expect(named('User Only')[0].style.fill).toBe('#123456');
   for(const role of ['Calculations', 'Links', 'Headers', 'Section Headers', 'Labels', 'Notes']) expect(named(role)).toHaveLength(1);
+});
+
+// Plugs (system v3, module v2): older files held one `plug` name per rectangle.
+const valueOn = (page, canvas, name) => page.evaluate(([c, n]) => { fm.switchCanvas(c); return fm.getValue({ node: n }); }, [canvas, name]);
+// Every rectangle as saved by File → Save System ("Canvas::Name" → node).
+async function savedNodes(page){
+  const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.command('saveSystem')));
+  const nodes = {};
+  data.canvases.forEach(c => c.nodes.forEach(n => { if(n.type === 'value') nodes[c.name + '::' + n.text.split('\n')[0]] = n; }));
+  return { data, nodes };
+}
+const plugsOfNode = async (page, ref) => (await savedNodes(page)).nodes[ref].plugs;
+
+test.describe('plugs: files from before a rectangle could have several', () => {
+  test('a v2 system opens with its plug as a one-name list and still wires up; it saves as v3', async ({ page }) => {
+    await F.importViaCommand(page, 'loadSystem', file('sys-v2-plug'));
+    await F.acceptAll(page);
+    expect(await plugsOfNode(page, 'Tax::Income Tax')).toEqual(['Income Tax']);
+    expect((await savedNodes(page)).nodes['Tax::Income Tax']).not.toHaveProperty('plug');
+    expect(await plugsOfNode(page, 'Tax::Other')).toEqual([]);
+    expect(await valueOn(page, 'Income Statement', 'Income Tax expense')).toBe(30);
+
+    const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.command('saveSystem')));
+    expect(data.version).toBe(3);
+    const tax = data.canvases.find(c => c.name === 'Tax').nodes.find(n => /^Income Tax/.test(n.text));
+    expect(tax.plugs).toEqual(['Income Tax']);
+    expect(tax).not.toHaveProperty('plug');
+  });
+
+  test('a v1 module opens with its plugs upgraded', async ({ page }) => {
+    await page.evaluate(() => fm.clearCanvas());
+    await F.importViaCommand(page, 'loadModule', file('module-v1-plug'));
+    await F.acceptAll(page);
+    const canvas = await page.evaluate(() => fm.canvases().find(c => c.active).name);
+    const { nodes } = await savedNodes(page);
+    const byName = (n) => nodes[canvas + '::' + n];
+    expect(byName('Gold Revenue').plugs).toEqual(['Revenue']);
+    expect(byName('Silver Revenue').plugs).toEqual([]);
+    for(const n of ['Gold Revenue', 'Silver Revenue', 'Copper Revenue']) expect(byName(n)).not.toHaveProperty('plug');
+  });
+
+  test('a v1 module inside a templates file is upgraded when inserted', async ({ page }, testInfo) => {
+    const path = testInfo.outputPath('plug-templates.json');
+    fs.writeFileSync(path, JSON.stringify({ version: 1, kind: 'fmIDE-templates',
+      templates: [{ name: 'Revenue lines', kind: 'module', data: JSON.parse(fs.readFileSync(file('module-v1-plug'), 'utf8')) }] }));
+    await F.importViaDialog(page, 'openTemplates', '⇧ Import Templates', path);
+    await expect(page.locator('.modal-box .template-list button', { hasText: 'Revenue lines' })).toHaveCount(1);
+    await page.evaluate(() => { fm.clearCanvas(); fm.insertTemplate('Revenue lines', 'here'); });
+    const canvas = await page.evaluate(() => fm.canvases().find(c => c.active).name);
+    expect(await plugsOfNode(page, canvas + '::Gold Revenue')).toEqual(['Revenue']);
+  });
 });
