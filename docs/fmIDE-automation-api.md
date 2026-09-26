@@ -8,6 +8,7 @@ Every canvas interaction is an action. The Ribbon, shortcuts, Command Launcher (
 - `Revenue` — rectangle by name (aliases/blocks by the name they show)
 - `#n12` — node by id · `@sel`, `@sel[0]` — selection (in a macro: as it was when the macro started) · `@cur` live selection · `@all` every node
 - `$r1`, `$r1[0]` — macro variables · `Canvas::Name` — rectangle on another canvas
+- Templates: `Income Statement` (latest version) · `Income Statement@latest` · `Income Statement@3` (version 3) · the same with the family id instead of the name (`3f2a…@2`, needed when two families share a name) · `#usr4` (one exact entry, this session only)
 - Numbers accept expressions: `100 + $i*80`, `$periods`, `round($x/2)`. Text accepts `${var}`.
 
 ## Actions
@@ -20,7 +21,7 @@ Every canvas interaction is an action. The Ribbon, shortcuts, Command Launcher (
 - **createBlock**(x="(auto)", y="(auto)", block, vertical=false) — Create Block Instance. Inserts an instance of a Block (a canvas with Output rectangles).
 - **duplicate**(nodes="@sel", dx=24, dy=24) — Duplicate Nodes. Copies nodes (and the connections between them) offset by dx, dy — like Ctrl+drag.
 - **aliasOf**(nodes="@sel", dx=30, dy=30) — Create Aliases Of. Creates an alias of each rectangle, offset by dx, dy — like Alt+drag.
-- **insertTemplate**(template, mode="auto", onCollision="merge", decisions?) — Insert Template. Inserts a saved template. Modules: "here" (this canvas) or "newCanvas". Systems: "add" (merge alongside) or "replace".
+- **insertTemplate**(template, mode="auto", onCollision="merge", decisions?) — Insert Template. Inserts a saved template: its name (the latest version), "Name@latest", "Name@3" (version 3), the same with its family id, or "#id". Modules: "here" (this canvas) or "newCanvas". Systems: "add" (merge alongside) or "replace".
 
 ### Connect
 - **connect**(from, to, fromPort="", toPort="") — Connect. Draws an arrow from one node to another. Block instances take a port: its name or 1-based number.

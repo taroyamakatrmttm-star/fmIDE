@@ -146,3 +146,15 @@ test('a .fmide document (a workspace) loads', async ({ page }, testInfo) => {
   await expect(loadStatus(page)).toHaveClass(/ok/);
   await expect(loadStatus(page)).toContainText('Loaded Revenue.fmide');
 });
+
+test('a version 2 workspace (templates with families and versions) loads', async ({ page }, testInfo) => {
+  const ws = JSON.parse(fs.readFileSync(fixture('models', 'roles-workspace-edited.json'), 'utf8'));
+  ws.version = 2;
+  ws.templates = [{ name: 'Revenue plan', kind: 'module', family: '3f2a9c1e-0000-4000-8000-000000000001', version: 2,
+    note: 'price up', versionId: '3f2a9c1e-0000-4000-8000-000000000002', data: { version: 2, kind: 'module', nodes: [], edges: [] } }];
+  const doc = testInfo.outputPath('v2.fmide');
+  fs.writeFileSync(doc, JSON.stringify(ws));
+  await X.loadModelFile(page, doc);
+  await expect(loadStatus(page)).toHaveClass(/ok/);
+  await expect(loadStatus(page)).toContainText('Loaded v2.fmide');
+});

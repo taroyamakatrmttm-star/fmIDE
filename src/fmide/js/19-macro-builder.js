@@ -399,6 +399,7 @@
     add('$r1  $r1[0]', 'a node saved by an earlier step');
     add('#n12', 'a node by id');
     add('Canvas::Name', 'a rectangle on another canvas (alias sources)');
+    add('Name@3  Name@latest', 'a template: version 3, or the latest (the name alone is the latest too)');
     h.appendChild(el('div', '', 'Numbers accept expressions: 100 + $i*80, $periods, round($x/2).'));
     return h;
   }

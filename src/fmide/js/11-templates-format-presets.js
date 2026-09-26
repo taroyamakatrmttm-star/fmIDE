@@ -43,11 +43,14 @@
   function cloneData(d){ return JSON.parse(JSON.stringify(d)); }
 
   function showTemplateForm(opts){
-    // opts: { title, kind, initialName, initialDescription, initialGroup, submitLabel, onSubmit }
+    // opts: { title, fields (default name, description, group), initialName, initialDescription,
+    //         initialGroup, initialNote, noteLabel, submitLabel, onSubmit(values, close) }.
+    // onSubmit may return false to keep the form open (it then closes it itself, or not).
+    const fields = opts.fields || ['name', 'description', 'group'];
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
-    box.className = 'modal-box';
+    box.className = 'modal-box template-form';
     box.style.minWidth = '320px';
     overlay.appendChild(box);
     document.body.appendChild(overlay);
@@ -75,30 +78,46 @@
     actionsPlaceholder.className = 'modal-actions';
     box.appendChild(actionsPlaceholder);
 
-    const nameWrap = field('Name');
-    const nameInput = document.createElement('input');
-    nameInput.type = 'text'; nameInput.style.cssText = inputStyle;
-    nameInput.value = opts.initialName || '';
-    nameWrap.appendChild(nameInput);
+    let nameInput = null, descInput = null, groupInput = null, noteInput = null;
+    if(fields.includes('name')){
+      nameInput = document.createElement('input');
+      nameInput.type = 'text'; nameInput.style.cssText = inputStyle;
+      nameInput.className = 'template-form-name';
+      nameInput.value = opts.initialName || '';
+      field('Name').appendChild(nameInput);
+    }
 
-    const descWrap = field('Description');
-    const descInput = document.createElement('textarea');
-    descInput.rows = 3; descInput.style.cssText = inputStyle + 'resize:vertical;';
-    descInput.value = opts.initialDescription || '';
-    descWrap.appendChild(descInput);
+    if(fields.includes('description')){
+      descInput = document.createElement('textarea');
+      descInput.rows = 3; descInput.style.cssText = inputStyle + 'resize:vertical;';
+      descInput.value = opts.initialDescription || '';
+      field('Description').appendChild(descInput);
+    }
 
-    const groupWrap = field('Group');
-    const groupInput = document.createElement('input');
-    groupInput.type = 'text'; groupInput.style.cssText = inputStyle;
-    groupInput.setAttribute('list', 'tplGroupOptions');
-    groupInput.value = opts.initialGroup || 'My Templates';
-    const datalist = document.createElement('datalist');
-    datalist.id = 'tplGroupOptions';
-    Array.from(new Set(TEMPLATES.map(t => t.group || 'My Templates'))).forEach(g => {
-      const o = document.createElement('option'); o.value = g; datalist.appendChild(o);
-    });
-    groupWrap.appendChild(groupInput);
-    groupWrap.appendChild(datalist);
+    if(fields.includes('group')){
+      const groupWrap = field('Group');
+      groupInput = document.createElement('input');
+      groupInput.type = 'text'; groupInput.style.cssText = inputStyle;
+      groupInput.setAttribute('list', 'tplGroupOptions');
+      groupInput.value = opts.initialGroup || 'My Templates';
+      const datalist = document.createElement('datalist');
+      datalist.id = 'tplGroupOptions';
+      Array.from(new Set(TEMPLATES.map(t => t.group || 'My Templates'))).forEach(g => {
+        const o = document.createElement('option'); o.value = g; datalist.appendChild(o);
+      });
+      groupWrap.appendChild(groupInput);
+      groupWrap.appendChild(datalist);
+    }
+
+    if(fields.includes('note')){
+      noteInput = document.createElement('input');
+      noteInput.type = 'text'; noteInput.style.cssText = inputStyle;
+      noteInput.className = 'template-form-note';
+      noteInput.maxLength = TEMPLATE_NOTE_MAX;
+      noteInput.placeholder = 'What changed (optional)';
+      noteInput.value = opts.initialNote || '';
+      field(opts.noteLabel || 'Change note').appendChild(noteInput);
+    }
 
     const cancelBtn = document.createElement('button');
     cancelBtn.textContent = 'Cancel';
@@ -107,96 +126,290 @@
     submitBtn.className = 'primary';
     submitBtn.textContent = opts.submitLabel || 'Save';
     submitBtn.addEventListener('click', () => {
-      const name = nameInput.value.trim();
-      if(!name){ nameInput.focus(); return; }
-      opts.onSubmit({ name, description: descInput.value.trim(), group: groupInput.value.trim() || 'My Templates' });
-      close();
+      const values = {};
+      if(nameInput){
+        values.name = nameInput.value.trim();
+        if(!values.name){ nameInput.focus(); return; }
+      }
+      if(descInput) values.description = descInput.value.trim();
+      if(groupInput) values.group = groupInput.value.trim() || 'My Templates';
+      if(noteInput) values.note = cleanTemplateNote(noteInput.value);
+      if(opts.onSubmit(values, close) !== false) close();
     });
     actionsPlaceholder.appendChild(cancelBtn);
     actionsPlaceholder.appendChild(submitBtn);
-    nameInput.focus();
+    (nameInput || noteInput || submitBtn).focus();
+    return { focusName(){ if(nameInput){ nameInput.focus(); nameInput.select(); } } };
   }
 
-  function saveCurrentCanvasAsTemplate(reopenPicker){
+  // The model a template of this kind holds, taken from what is open now: the active
+  // canvas (a module) or every canvas (a system).
+  function openModelAsTemplateData(kind, name){
+    syncActiveIntoRegistry();
+    const payload = kind === 'module'
+      ? { version: FILE_FORMATS['module'].current, kind:'module', name, selfCanvasId: activeCanvasId, nextId, nodes, edges }
+      : { version: SHARED_FILE_VERSIONS['system'], kind:'system', nextId, nextCanvasId, activeCanvasId,
+          canvases: canvases.map(c => ({ id:c.id, name:c.name, nodes:c.nodes, edges:c.edges })) };
+    return cloneData(payload);
+  }
+
+  // The open canvas or system as the next version of the family `fam` (any of its versions).
+  function saveTemplateVersion(fam, note){
+    const latest = latestOfFamily(fam.family);
+    const t = {
+      id: 'usr' + (nextTemplateId++), name: latest.name, description: latest.description, group: latest.group,
+      kind: latest.kind, builtin: false, family: latest.family, version: nextVersionNumber(latest.family),
+      note: cleanTemplateNote(note), versionId: newRandomId(), data: openModelAsTemplateData(latest.kind, latest.name)
+    };
+    TEMPLATES.push(t);
+    saveWorkspaceSoon();
+    return t;
+  }
+
+  // "Save as new version" in the Templates window.
+  function saveNewVersionOf(fam, reopenPicker){
+    const latest = latestOfFamily(fam.family);
+    const n = nextVersionNumber(latest.family);
+    showTemplateForm({
+      title: `Save the open ${latest.kind === 'system' ? 'system' : 'canvas'} as version ${n} of "${latest.name}"`,
+      fields: ['note'], submitLabel: `Save version ${n}`,
+      onSubmit: ({ note }) => { reopenPicker(saveTemplateVersion(latest, note)); }
+    });
+  }
+
+  // Template names are unique among the families here (any kind), so "Name@3" means one
+  // thing; imports may still bring in a second family of the same name.
+  // Saving under a name a family of the same kind already has: a new version only when the
+  // person chooses it; otherwise they pick another name (the form stays open).
+  function askNameTaken(fam, onNewVersion, onRename){
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const box = document.createElement('div');
+    box.className = 'modal-box template-name-taken';
+    const p = document.createElement('p');
+    p.textContent = `There is already a template called "${fam.name}" (version ${fam.version}). Save this as its next version, or choose another name for a new template?`;
+    const actions = document.createElement('div');
+    actions.className = 'modal-actions';
+    const renameBtn = document.createElement('button'); renameBtn.textContent = 'Choose another name';
+    const versionBtn = document.createElement('button'); versionBtn.className = 'primary';
+    versionBtn.textContent = `Save as new version of "${fam.name}"`;
+    actions.append(renameBtn, versionBtn);
+    box.append(p, actions);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    function close(){ overlay.remove(); document.removeEventListener('keydown', onKey, true); }
+    function onKey(ev){ if(ev.key === 'Escape'){ ev.preventDefault(); ev.stopPropagation(); close(); onRename(); } }
+    renameBtn.addEventListener('click', () => { close(); onRename(); });
+    versionBtn.addEventListener('click', () => { close(); onNewVersion(); });
+    document.addEventListener('keydown', onKey, true);
+    versionBtn.focus();
+  }
+
+  // "+ Save Canvas / System as Template": a new family, version 1.
+  function saveOpenAsTemplate(kind, reopenPicker){
     syncActiveIntoRegistry();
     const active = canvases.find(c => c.id === activeCanvasId);
-    showTemplateForm({
-      title: 'Save this canvas as a Template',
-      initialName: active ? active.name : 'My Module',
+    const form = showTemplateForm({
+      title: kind === 'module' ? 'Save this canvas as a Template' : 'Save this whole system as a Template',
+      fields: ['name', 'description', 'group', 'note'],
+      initialName: kind === 'module' ? (active ? active.name : 'My Module') : 'My System',
       submitLabel: 'Save Template',
-      onSubmit: ({name, description, group}) => {
-        const payload = { version: FILE_FORMATS['module'].current, kind:'module', name, selfCanvasId: activeCanvasId, nextId, nodes, edges };
-        TEMPLATES.push({
-          id: 'usr' + (nextTemplateId++), name, description, group, kind:'module', builtin:false,
-          data: cloneData(payload)
-        });
-        reopenPicker(TEMPLATES[TEMPLATES.length - 1]);
-      }
-    });
-  }
-
-  function saveCurrentSystemAsTemplate(reopenPicker){
-    syncActiveIntoRegistry();
-    showTemplateForm({
-      title: 'Save this whole system as a Template',
-      initialName: 'My System',
-      submitLabel: 'Save Template',
-      onSubmit: ({name, description, group}) => {
-        const payload = {
-          version: SHARED_FILE_VERSIONS['system'], kind:'system', nextId, nextCanvasId, activeCanvasId,
-          canvases: canvases.map(c => ({ id:c.id, name:c.name, nodes:c.nodes, edges:c.edges }))
+      onSubmit: ({ name, description, group, note }, closeForm) => {
+        const other = familiesNamed(name).find(f => f.kind !== kind);
+        if(other){
+          showMessage(`There is already a ${other.kind === 'system' ? 'system' : 'canvas'} template called "${other.name}". Choose another name.`);
+          return false;
+        }
+        const taken = familiesNamed(name, kind);
+        if(taken.length){
+          askNameTaken(taken[0], () => { closeForm(); reopenPicker(saveTemplateVersion(taken[0], note)); }, () => form.focusName());
+          return false;
+        }
+        const t = {
+          id: 'usr' + (nextTemplateId++), name, description, group, kind, builtin: false,
+          family: newRandomId(), version: 1, note, versionId: newRandomId(),
+          data: openModelAsTemplateData(kind, name)
         };
-        TEMPLATES.push({
-          id: 'usr' + (nextTemplateId++), name, description, group, kind:'system', builtin:false,
-          data: cloneData(payload)
-        });
-        reopenPicker(TEMPLATES[TEMPLATES.length - 1]);
+        TEMPLATES.push(t);
+        saveWorkspaceSoon();
+        reopenPicker(t);
       }
     });
   }
+  function saveCurrentCanvasAsTemplate(reopenPicker){ saveOpenAsTemplate('module', reopenPicker); }
+  function saveCurrentSystemAsTemplate(reopenPicker){ saveOpenAsTemplate('system', reopenPicker); }
 
+  // Name, group and description belong to the family (all its versions); the change note to
+  // this version.
   function editTemplateMeta(t, onDone){
     showTemplateForm({
       title: 'Edit Template',
-      initialName: t.name, initialDescription: t.description, initialGroup: t.group,
+      fields: ['name', 'description', 'group', 'note'],
+      initialName: t.name, initialDescription: t.description, initialGroup: t.group, initialNote: t.note,
+      noteLabel: `Change note (version ${t.version})`,
       submitLabel: 'Save Changes',
-      onSubmit: ({name, description, group}) => {
-        t.name = name; t.description = description; t.group = group;
+      onSubmit: ({ name, description, group, note }) => {
+        if(familiesNamed(name).some(f => f.family !== t.family)){
+          showMessage(`There is already another template called "${name}". Choose another name.`);
+          return false;
+        }
+        TEMPLATES.forEach(x => { if(x.family === t.family){ x.name = name; x.description = description; x.group = group; } });
+        t.note = note;
+        saveWorkspaceSoon();
         onDone();
       }
     });
   }
 
+  // The latest version deletes the whole template (every version); an older version can go
+  // on its own. The latest never goes alone, so a version number is never used twice.
   function deleteTemplate(t, onDone){
-    showConfirm(`Delete the template "${t.name}"? This can't be undone.`, () => {
-      TEMPLATES = TEMPLATES.filter(x => x.id !== t.id);
+    const all = familyVersions(t.family);
+    const message = !isLatestVersion(t)
+      ? `Delete version ${t.version} of "${t.name}"? The other versions stay. This can't be undone.`
+      : `Delete the template "${t.name}"` + (all.length > 1 ? ` and all ${all.length} of its versions` : '') + `? This can't be undone.`;
+    showConfirm(message, () => {
+      TEMPLATES = isLatestVersion(t) ? TEMPLATES.filter(x => x.family !== t.family) : TEMPLATES.filter(x => x !== t);
+      saveWorkspaceSoon();
       onDone();
     });
   }
 
+  // ---------- template families and versions ----------
+  // TEMPLATES holds one entry per version. Versions of the same template share a `family` —
+  // a lasting random id, so templates from different people never clash — and are numbered
+  // 1, 2, 3 (`version`), each with a short change `note` and its own random `versionId`.
+  // Name, group, description and kind belong to the family: every version carries the
+  // same ones, and Edit info changes them all. `id` ("usrN") is local and reassigned on
+  // import and restore; nothing lasting may refer to it.
+  const TEMPLATE_NOTE_MAX = 200;
+  const isTemplateUid = (v) => typeof v === 'string' && /^[A-Za-z0-9-]{8,64}$/.test(v);
+  const cleanTemplateNote = (v) => (typeof v === 'string' ? v.trim().slice(0, TEMPLATE_NOTE_MAX) : '');
+  // A family's versions, newest first.
+  function familyVersions(family){
+    return TEMPLATES.filter(t => t.family === family).sort((a, b) => b.version - a.version);
+  }
+  function latestOfFamily(family){ return familyVersions(family)[0] || null; }
+  function isLatestVersion(t){ return latestOfFamily(t.family) === t; }
+  function nextVersionNumber(family){
+    return TEMPLATES.reduce((m, t) => (t.family === family ? Math.max(m, t.version) : m), 0) + 1;
+  }
+  // One entry per family (its latest version), in the order the families first appear.
+  function templateFamilies(){
+    const seen = new Set(), out = [];
+    TEMPLATES.forEach(t => { if(!seen.has(t.family)){ seen.add(t.family); out.push(latestOfFamily(t.family)); } });
+    return out;
+  }
+  // Families of this kind called `name` (case and outer spaces ignored), as their latest versions.
+  function familiesNamed(name, kind){
+    const k = String(name || '').trim().toLowerCase();
+    return templateFamilies().filter(t => t.name.trim().toLowerCase() === k && (!kind || t.kind === kind));
+  }
+  // How a template is written to a file (workspace, templates file).
+  function templateRecord(t, withId){
+    const r = withId ? { id: t.id } : {};
+    return Object.assign(r, { name: t.name, description: t.description, group: t.group, kind: t.kind,
+      family: t.family, version: t.version, note: t.note, versionId: t.versionId, data: t.data });
+  }
+
+  // A library entry from a template read from a file (or the autosave), with its family
+  // fields checked: text from files is untrusted. A missing or malformed family or version
+  // id gets a fresh one, a version that isn't a whole number ≥ 1 becomes 1. `family`,
+  // `version` and `versionId` in `over` replace the file's (after checking). Returns null
+  // for something that isn't a template. The caller gives it an id.
+  function templateEntryFrom(t, over){
+    if(!t || typeof t !== 'object' || typeof t.name !== 'string' || !t.name.trim() || !t.data || typeof t.data !== 'object') return null;
+    if(t.kind !== 'module' && t.kind !== 'system') return null;
+    const o = Object.assign({}, t, over || {});
+    const version = Number(o.version);
+    return {
+      id: null, name: t.name.trim(),
+      description: typeof t.description === 'string' ? t.description : '',
+      group: (typeof t.group === 'string' && t.group.trim()) ? t.group.trim() : 'My Templates',
+      kind: t.kind, builtin: false,
+      family: isTemplateUid(o.family) ? o.family : newRandomId(),
+      version: Number.isInteger(version) && version >= 1 ? version : 1,
+      note: cleanTemplateNote(o.note),
+      versionId: isTemplateUid(o.versionId) && !TEMPLATES.some(x => x.versionId === o.versionId) ? o.versionId : newRandomId(),
+      data: t.data
+    };
+  }
+  // Makes a new entry fit the library: a family already holding the other kind can't take
+  // it (it starts a family of its own); a version number already taken in its family moves
+  // to the next free one. Returns true when the number was moved.
+  function fitTemplateEntry(e){
+    const fam = latestOfFamily(e.family);
+    if(fam && fam.kind !== e.kind){ e.family = newRandomId(); return false; }
+    if(fam){ e.name = fam.name; e.description = fam.description; e.group = fam.group; }
+    if(TEMPLATES.some(x => x.family === e.family && x.version === e.version)){ e.version = nextVersionNumber(e.family); return true; }
+    return false;
+  }
+
   // Templates from a file (Open, Import Workspace, Import Templates) join the person's
-  // library, unless the same one — same name, kind and content — is already there. Nothing of
-  // theirs is replaced or removed; a same-name template with different content is added.
-  // Returns { added, present } (present: valid ones skipped because they are already there).
+  // library. Nothing of theirs is replaced or removed:
+  //  - a version of a family already here: skipped when its content is the same (under its
+  //    number, or under the one an earlier import gave it); added as it is when its number
+  //    is free; otherwise added after the file's other versions, as the family's next number,
+  //    with a note saying so. The family keeps its name, group and description.
+  //  - a family not here: skipped when the same template (name, kind and content) is already
+  //    in the library — an older file read twice gets fresh random families each time —
+  //    otherwise added, even when a family of that name exists.
+  // Returns { added, present, renumbered } (present: skipped because already there;
+  // renumbered: added under a new number because theirs was taken).
   function templateFingerprint(name, kind, data){ return name + '\u0000' + kind + '\u0000' + JSON.stringify(data); }
   function addMissingTemplates(list){
-    const have = new Set(TEMPLATES.map(x => templateFingerprint(x.name, x.kind, x.data)));
-    let added = 0, present = 0;
-    (Array.isArray(list) ? list : []).forEach(t => {
-      if(!t || typeof t.name !== 'string' || !t.name.trim() || !t.data || (t.kind !== 'module' && t.kind !== 'system')) return;
-      const name = t.name.trim();
-      const key = templateFingerprint(name, t.kind, t.data);
-      if(have.has(key)){ present++; return; }
-      have.add(key);
-      TEMPLATES.push({
-        id: 'usr' + (nextTemplateId++), name,
-        description: typeof t.description === 'string' ? t.description : '',
-        group: (typeof t.group === 'string' && t.group.trim()) ? t.group.trim() : 'My Templates',
-        kind: t.kind, builtin: false, data: t.data
-      });
+    let added = 0, present = 0, renumbered = 0;
+    const clashes = [];
+    const add = (e) => {
+      const was = e.version;
+      if(fitTemplateEntry(e)){
+        e.note = cleanTemplateNote(`Imported — was v${was} in the file` + (e.note ? ': ' + e.note : ''));
+        renumbered++;
+      }
+      e.id = 'usr' + (nextTemplateId++);
+      TEMPLATES.push(e);
       added++;
+    };
+    (Array.isArray(list) ? list : []).forEach(t => {
+      const e = templateEntryFrom(t);
+      if(!e) return;
+      const known = TEMPLATES.some(x => x.family === e.family && x.kind === e.kind);
+      if(known){
+        // Already here: the same content under the same number, or under the number it
+        // was given when an earlier import found its number taken (same version id).
+        const data = JSON.stringify(e.data);
+        if(TEMPLATES.some(x => x.family === e.family && (x.version === e.version || x.versionId === t.versionId)
+          && JSON.stringify(x.data) === data)){ present++; return; }
+      } else {
+        const key = templateFingerprint(e.name, e.kind, e.data);
+        if(TEMPLATES.some(x => templateFingerprint(x.name, x.kind, x.data) === key)){ present++; return; }
+      }
+      // A taken number waits until the file's other versions are in, so those keep theirs.
+      if(known && TEMPLATES.some(x => x.family === e.family && x.version === e.version)){ clashes.push(e); return; }
+      add(e);
     });
-    return { added, present };
+    clashes.forEach(add);
+    return { added, present, renumbered };
+  }
+
+  // Restoring the autosave keeps every template as it was saved, after the same checks.
+  function restoreTemplates(list){
+    (Array.isArray(list) ? list : []).forEach(t => {
+      const m = t && typeof t.id === 'string' && /^usr(\d+)$/.exec(t.id);
+      if(m) nextTemplateId = Math.max(nextTemplateId, Number(m[1]) + 1);
+    });
+    const taken = new Set(TEMPLATES.map(x => x.id));
+    (Array.isArray(list) ? list : []).forEach(t => {
+      // (A workspace has always read a kind other than 'system' as a canvas template.)
+      const e = templateEntryFrom(t && typeof t === 'object' ? Object.assign({}, t, { kind: t.kind === 'system' ? 'system' : 'module' }) : t);
+      if(!e) return;
+      // Every template keeps its own id: new ids continue after the highest saved "usrN",
+      // and one whose id is missing or already taken gets a fresh one.
+      e.id = (typeof t.id === 'string' && t.id && !taken.has(t.id)) ? t.id : ('usr' + (nextTemplateId++));
+      taken.add(e.id);
+      fitTemplateEntry(e);
+      TEMPLATES.push(e);
+    });
   }
 
   // ---------- Remove duplicates… (a choice of what must match) ----------
@@ -276,10 +489,12 @@
     return stableJSON({ canvases: out, rest });
   }
 
-  // Sets of templates that match under `match` (2 or more each), in library order.
+  // Sets of templates that match under `match` (2 or more each), in library order. Each
+  // family takes part once, as its latest version; versions of one family are never
+  // compared with each other.
   function duplicateTemplateSets(match){
     const sets = new Map();
-    TEMPLATES.forEach(t => {
+    templateFamilies().forEach(t => {
       const key = stableJSON([t.kind, match.name ? t.name : null, match.group ? (t.group || '') : null,
         match.description ? (t.description || '') : null, templateLogicKey(t, !!match.layout)]);
       if(!sets.has(key)) sets.set(key, []);
@@ -289,7 +504,7 @@
   }
 
   function showRemoveDuplicatesDialog(onDone){
-    if(TEMPLATES.length < 2){ showMessage('There are no duplicate templates.'); return; }
+    if(templateFamilies().length < 2){ showMessage('There are no duplicate templates.'); return; }
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
@@ -309,7 +524,7 @@
     box.appendChild(title);
     const intro = document.createElement('p');
     intro.className = 'template-desc';
-    intro.textContent = 'Templates count as copies when everything ticked below matches. Internal ids and counters are always ignored. Pick which one of each set to keep.';
+    intro.textContent = 'Templates count as copies when everything ticked below matches, comparing each template\'s latest version. Internal ids and counters are always ignored. Pick which one of each set to keep; removing a template removes all its versions.';
     box.appendChild(intro);
 
     const opts = document.createElement('div');
@@ -383,7 +598,9 @@
           nm.textContent = t.name;
           const meta = document.createElement('span');
           meta.className = 'dedupe-meta';
-          meta.textContent = (t.group || 'Ungrouped') + ' · ' + (t.kind === 'system' ? 'system' : 'module');
+          const older = familyVersions(t.family).length - 1;
+          meta.textContent = (t.group || 'Ungrouped') + ' · ' + (t.kind === 'system' ? 'system' : 'module') + ' · v' + t.version
+            + (older ? ` (and ${older} older version${older === 1 ? '' : 's'})` : '');
           const fate = document.createElement('span');
           fate.className = 'dedupe-fate';
           const info = document.createElement('span');
@@ -413,9 +630,9 @@
       removeBtn.disabled = n === 0;
     }
     removeBtn.addEventListener('click', () => {
-      const drop = new Set(toRemove()); // the templates themselves, never their ids
+      const drop = new Set(toRemove().map(t => t.family)); // whole families, never ids
       if(!drop.size) return;
-      TEMPLATES = TEMPLATES.filter(t => !drop.has(t));
+      TEMPLATES = TEMPLATES.filter(t => !drop.has(t.family));
       saveWorkspace();
       close();
       toast(`Removed ${drop.size} template${drop.size === 1 ? '' : 's'}.`);
@@ -425,9 +642,9 @@
   }
 
   function clearAllTemplates(onDone){
-    const n = TEMPLATES.length;
+    const n = templateFamilies().length, v = TEMPLATES.length;
     if(!n){ showMessage("You don't have any templates."); return; }
-    showConfirm(`Delete all ${n} template${n === 1 ? '' : 's'}? This can't be undone — use ⇩ Export Templates first if you might want them back.`, () => {
+    showConfirm(`Delete all ${n} template${n === 1 ? '' : 's'}` + (v > n ? ` (${v} versions)` : '') + `? This can't be undone — use ⇩ Export Templates first if you might want them back.`, () => {
       TEMPLATES = [];
       saveWorkspace();
       toast(`Deleted ${n} template${n === 1 ? '' : 's'}.`);
@@ -441,8 +658,8 @@
       return;
     }
     const payload = {
-      version: 1, kind: 'fmIDE-templates',
-      templates: TEMPLATES.map(t => ({ name: t.name, description: t.description, group: t.group, kind: t.kind, data: t.data }))
+      version: FILE_FORMATS['fmIDE-templates'].current, kind: 'fmIDE-templates',
+      templates: TEMPLATES.map(t => templateRecord(t, false))
     };
     downloadJSON(payload, `fmIDE-templates-${timestamp()}.json`);
   }
@@ -455,10 +672,12 @@
         showMessage('That templates file has no "templates" list.');
         return;
       }
-      const { added, present } = addMissingTemplates(data.templates);
+      const { added, present, renumbered } = addMissingTemplates(data.templates);
       if(added === 0 && present === 0) showMessage("That file didn't contain any templates fmIDE could recognize.");
       else if(added === 0) showMessage(`All ${present} template${present === 1 ? ' in that file is' : 's in that file are'} already in your library.`);
-      else showMessage(`Imported ${added} template${added === 1 ? '' : 's'}` + (present ? ` (${present} ${present === 1 ? 'was' : 'were'} already there).` : '.'));
+      else showMessage(`Imported ${added} template${added === 1 ? '' : 's'}` + (present ? ` (${present} ${present === 1 ? 'was' : 'were'} already there).` : '.')
+        + (renumbered ? ` ${renumbered} ${renumbered === 1 ? 'was' : 'were'} added as a new version because ${renumbered === 1 ? 'its number was' : 'their numbers were'} already taken by a different version.` : ''));
+      saveWorkspaceSoon();
       onDone(added);
       });
     };
@@ -683,7 +902,7 @@
     const dedupeBtn = document.createElement('button');
     dedupeBtn.className = 'template-dedupe';
     dedupeBtn.addEventListener('click', () => showRemoveDuplicatesDialog(() => {
-      if(selected && !TEMPLATES.includes(selected)) selected = TEMPLATES[0] || null;
+      if(selected && !TEMPLATES.includes(selected)) selected = templateFamilies()[0] || null;
       renderList(); renderDetail();
     }));
     ioRow.appendChild(exportBtn);
@@ -734,8 +953,9 @@
     detail.className = 'template-detail';
     layout.appendChild(detail);
 
-    let selected = TEMPLATES[0];
+    let selected = templateFamilies()[0] || null;
     let previewCanvasIdx = 0;
+    const expanded = new Set(); // families whose older versions are showing
 
     saveCanvasBtn.addEventListener('click', () => {
       saveCurrentCanvasAsTemplate((newTpl) => { selected = newTpl; previewCanvasIdx = 0; renderList(); renderDetail(); });
@@ -769,6 +989,20 @@
       const h = document.createElement('h4');
       h.textContent = selected.name;
       detail.appendChild(h);
+      const all = familyVersions(selected.family);
+      const ver = document.createElement('p');
+      ver.className = 'template-version-info';
+      const verLabel = document.createElement('b');
+      verLabel.textContent = `Version ${selected.version}` + (all.length > 1 ? ` of ${all[0].version}` : '');
+      ver.appendChild(verLabel);
+      if(!isLatestVersion(selected)) ver.appendChild(document.createTextNode(' (an older version)'));
+      if(selected.note){
+        const note = document.createElement('span');
+        note.className = 'template-note';
+        note.textContent = ' — ' + selected.note;
+        ver.appendChild(note);
+      }
+      detail.appendChild(ver);
       const desc = document.createElement('p');
       desc.className = 'template-desc';
       desc.textContent = selected.description || '(no description)';
@@ -827,23 +1061,38 @@
         actionsRow.appendChild(addSysBtn);
       }
       {
+        const versionBtn = document.createElement('button');
+        versionBtn.className = 'template-save-version';
+        versionBtn.textContent = '⤴ Save as new version';
+        versionBtn.title = `Save the open ${selected.kind === 'system' ? 'system' : 'canvas'} as version ${nextVersionNumber(selected.family)} of this template`;
+        versionBtn.addEventListener('click', () => saveNewVersionOf(selected, (t) => {
+          selected = t; previewCanvasIdx = 0; renderList(); renderDetail();
+        }));
         const editBtn = document.createElement('button');
         editBtn.textContent = '✎ Edit info';
         editBtn.addEventListener('click', () => editTemplateMeta(selected, () => { renderList(); renderDetail(); }));
         const delBtn = document.createElement('button');
-        delBtn.textContent = '🗑 Delete';
+        delBtn.className = 'template-delete';
+        const latest = isLatestVersion(selected);
+        delBtn.textContent = !latest ? `🗑 Delete version ${selected.version}`
+          : (all.length > 1 ? `🗑 Delete (all ${all.length} versions)` : '🗑 Delete');
+        if(latest && all.length > 1) delBtn.title = 'The latest version can only be deleted with the whole template, so its number is never used again. Older versions can be deleted one by one.';
         delBtn.addEventListener('click', () => deleteTemplate(selected, () => {
-          selected = TEMPLATES[0] || null; previewCanvasIdx = 0; renderList(); renderDetail();
+          const left = TEMPLATES.includes(selected) ? selected : latestOfFamily(selected.family);
+          selected = left || templateFamilies()[0] || null; previewCanvasIdx = 0; renderList(); renderDetail();
         }));
+        actionsRow.appendChild(versionBtn);
         actionsRow.appendChild(editBtn);
         actionsRow.appendChild(delBtn);
       }
       detail.appendChild(actionsRow);
     }
 
+    // One entry per family (its latest version); a family with older versions gets a
+    // "▸ N older versions" toggle, and when open, one entry per older version, newest first.
     function templateButton(t, idx, groupName){
       const b = document.createElement('button');
-      b.className = (selected && t.id === selected.id) ? 'active' : '';
+      b.className = 'template-family' + (selected === t ? ' active' : '');
       b.appendChild(idx ? highlightLabel(t.name, idx) : document.createTextNode(t.name));
       b.appendChild(document.createElement('br'));
       const kind = t.kind === 'system' ? 'system' : 'module';
@@ -851,6 +1100,10 @@
       tag.className = 'kind-tag ' + kind;
       tag.textContent = kind;
       b.appendChild(tag);
+      const v = document.createElement('span');
+      v.className = 'template-version-tag';
+      v.textContent = 'v' + t.version;
+      b.appendChild(v);
       if(groupName){
         const g = document.createElement('span');
         g.className = 'template-group-tag';
@@ -859,15 +1112,44 @@
       }
       b.addEventListener('click', () => { selected = t; previewCanvasIdx = 0; renderList(); renderDetail(); });
       list.appendChild(b);
+      shown.push(t);
+      const older = familyVersions(t.family).slice(1);
+      if(!older.length) return;
+      const open = expanded.has(t.family) || (selected && selected.family === t.family && selected !== t);
+      const toggle = document.createElement('button');
+      toggle.className = 'template-versions-toggle';
+      toggle.textContent = (open ? '▾ ' : '▸ ') + older.length + ' older version' + (older.length === 1 ? '' : 's');
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.addEventListener('click', () => {
+        if(open){
+          expanded.delete(t.family);
+          if(selected && selected.family === t.family) selected = t;
+        } else expanded.add(t.family);
+        renderList(); renderDetail();
+      });
+      list.appendChild(toggle);
+      if(!open) return;
+      older.forEach(o => {
+        const ob = document.createElement('button');
+        ob.className = 'template-version' + (selected === o ? ' active' : '');
+        const label = document.createElement('b');
+        label.textContent = 'v' + o.version;
+        ob.appendChild(label);
+        if(o.note) ob.appendChild(document.createTextNode(' — ' + o.note));
+        ob.addEventListener('click', () => { selected = o; expanded.add(t.family); previewCanvasIdx = 0; renderList(); renderDetail(); });
+        list.appendChild(ob);
+        shown.push(o);
+      });
     }
 
     function renderList(){
+      const families = templateFamilies();
       dedupeBtn.textContent = '🧹 Remove duplicates…';
-      dedupeBtn.style.display = TEMPLATES.length > 1 ? '' : 'none';
+      dedupeBtn.style.display = families.length > 1 ? '' : 'none';
       clearBtn.style.display = TEMPLATES.length ? '' : 'none';
       list.innerHTML = '';
       shown = [];
-      if(TEMPLATES.length === 0){
+      if(families.length === 0){
         const empty = document.createElement('p');
         empty.className = 'template-desc';
         empty.textContent = 'No templates yet — use "+ Save Canvas as Template" / "+ Save System as Template" above, or import some.';
@@ -877,7 +1159,7 @@
       const q = search.value.trim();
       if(q){
         // Name first; group and description only when the name doesn't match.
-        const hits = TEMPLATES.map(t => {
+        const hits = families.map(t => {
           const onName = fuzzyMatch(q, t.name || '');
           if(onName) return { t, score: onName.score + 500, idx: onName.idx };
           const other = fuzzyMatch(q, t.group || '') || fuzzyMatch(q, t.description || '');
@@ -890,11 +1172,11 @@
           list.appendChild(none);
           return;
         }
-        hits.forEach(h => { shown.push(h.t); templateButton(h.t, h.idx, h.t.group || 'Ungrouped'); });
+        hits.forEach(h => templateButton(h.t, h.idx, h.t.group || 'Ungrouped'));
         return;
       }
       const groups = {};
-      TEMPLATES.forEach(t => {
+      families.forEach(t => {
         const g = t.group || 'Ungrouped';
         (groups[g] = groups[g] || []).push(t);
       });
@@ -903,7 +1185,7 @@
         header.textContent = g;
         header.style.cssText = 'font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.4px;margin:8px 0 2px;';
         list.appendChild(header);
-        groups[g].forEach(t => { shown.push(t); templateButton(t, null, null); });
+        groups[g].forEach(t => templateButton(t, null, null));
       });
     }
 

@@ -100,7 +100,7 @@ Load `tests/fixtures/security/evil-workspace.json` and `evil-system.json`:
 - Plugs from older files: `sys-v2-plug` (a v2 system, one `plug` per rectangle) opens with `plugs: ["Income Tax"]` (a blank plug becomes `[]`, no `plug` left) and the plug still feeds its socket on another canvas (value 30); Save System writes version 3. `module-v1-plug` via `loadModule` → `plugs` upgraded the same way. The same module inside a v1 templates file is upgraded when inserted.
 
 **ExcelExporter**:
-- A `.fmide` document (a workspace) loads through `#fileInput`.
+- A `.fmide` document (a workspace) loads through `#fileInput`, and so does a version 2 workspace (templates with families; group 14).
 - `sys-current`, `sys-legacy` load; `sys-newer-v4` shows `#confirmModal` — Cancel → status "Not loaded."; Open Anyway → loads. `ws-nested-newer` → confirm mentions its system.
 - `module`, `templates`, `mapping`, `preferences` loaded as a model → a message saying what the file is and where it belongs.
 - Mapping: `#btnExportMapping` download has `kind: "fmIDE-excel-mapping"`, `version: 1`; re-importing it works; `map-legacy` (no kind/version) imports; `map-newer` asks; importing a system file as a mapping is rejected. The saved layout in browser storage never contains `kind`/`version`.
@@ -177,6 +177,22 @@ Commands `exportPreferences` (download `fmIDE-preferences.json`) and `importPref
 - The plug editor (🔌): one chip per plug; ✕ removes one; Enter adds the typed name; Escape drops a typed name; a click elsewhere adds it. The rectangle shows "🔌 to Income Tax expense · to CF Income Tax paid".
 - A plug name with markup from a file is shown as text and never runs.
 - ExcelExporter: the saved v3 system loads; with the Inputs tab off, both rows are formulas (fed), not typed numbers.
+
+### 14. Template families and versions (fmIDE)
+"Revenue plan" is saved from a canvas whose Revenue is 10 (v1, note "first"), then saved again at 20 with **⤴ Save as new version** (v2, note "price up"). The library is read from an exported workspace.
+- Both versions share one `family` (a random id), have their own `versionId`, and keep their notes.
+- The window shows one entry per family with its `v` tag; "▸ 2 older versions" opens a list of older versions, newest first ("v2 — price up", "v1 — first"). Selecting v1 shows "Version 1 of 3 (an older version) — first", and "Add to new canvas" inserts that version.
+- Saving under a taken name (any capitals) asks first. "Choose another name" goes back to the form and saves nothing; a new name starts a new family; "Save as new version of …" adds v2 to the existing family.
+- `insertTemplate`: `Name` and `Name@latest` give 20; `Name@1` (spaces and capitals allowed) and `<family>@1` give 10; `Name@9` → "There is no version 9 of "Revenue plan" (it has versions 1, 2)."; an unknown name → "There is no template called …". With a second family of the same name imported, `Name@1` → "More than one template family is named …", and the family id still works.
+- Import clash: in a file that edits v2 and adds a v3, their v3 keeps number 3 and their v2 becomes v4 with the note "Imported — was v2 in the file: …" and its own `versionId`. The message says so. The same file again adds nothing.
+- Deleting: the latest version's button deletes the family ("all 2 versions"); an older version is deleted on its own; a new version after that is still numbered 3.
+- ✎ Edit info renames every version; the change note belongs to the selected version only.
+- Autosave: families, versions, notes and `versionId`s are the same after a reload.
+- Macro recording writes `Revenue plan@1` for an older version and `Revenue plan` for the latest.
+- Older files: `templates-v1` (a v1 templates file) gives each template its own family at version 1, and importing it again adds nothing. `ws-v1-templates` (a v1 workspace) does the same, exports as workspace version 2, and `Old Revenue@1` inserts. A workspace of version 3 asks first ("reads up to version 2").
+- A family id `<script>…`, a `versionId` with markup and a version "two" from a file are replaced by valid ones; a note with markup is shown as text and never runs.
+- Remove duplicates compares one entry per family (its latest version): a family whose latest matches another family is offered ("v2 (and 1 older version)"); a copy of an older version only is not. Removing the family removes every version.
+- ExcelExporter (group 6): a version 2 workspace with templates that have families loads.
 
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.

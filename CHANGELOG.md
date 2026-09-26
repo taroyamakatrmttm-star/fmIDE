@@ -2,6 +2,13 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Template versions
+- fmIDE: every template now belongs to a **family** — a lasting random id, so templates from different people never clash — and has a **version number** (1, 2, 3) and a short **change note**. **Templates → ⤴ Save as new version** saves the open canvas (or system) as the next version. Saving under a new name starts a new template; under a name already in use, fmIDE asks whether to make a new version or pick another name.
+- The Templates window lists each template once, at its latest version, with **▸ older versions** underneath (newest first) to preview or add. **✎ Edit info** renames all versions together; the note belongs to one version. Older versions can be deleted one by one, but the latest only with the whole template, so a version number is never used twice. **Remove duplicates…** compares latest versions and removes whole templates.
+- Automation and macros: `insertTemplate` takes `Name@latest`, `Name@3`, or the family id in place of the name. A recorded macro writes `Name@N` when an older version was added.
+- Importing: a version you already have is skipped. A different version with a number you already use is added as the next number, with a note, and the import message says so.
+- File formats: `fmIDE-templates` and `fmIDE-workspace` are now version 2. Older files, documents and the autosave are upgraded as they are read (each template becomes version 1 of its own family). ExcelExporter reads the new workspace version. An older fmIDE asks before opening a file saved by this version.
+
 ## Several plugs on one rectangle
 - fmIDE: a rectangle can carry more than one plug name, each feeding the operators whose socket has that name — for example "Income Tax" feeding both "to Income Tax expense" and "to CF Income Tax paid". The 🔌 editor lists one chip per plug (✕ removes it) and adds a typed name with Enter; the rectangle shows all of them. Automation: `setPlug` still sets a single plug (replacing the others); new `addPlug`, `removePlug` and `setPlugs`.
 - File formats: `system` is now version 3 and `module` version 2 (a rectangle's `plug` became a list, `plugs`). Older files, templates, documents and the autosave are upgraded as they are read; ExcelExporter reads the new version, and its workbooks are unchanged.

@@ -96,7 +96,7 @@
         if(p.type === 'node') v = this.refOf(v);
         else if(p.type === 'nodes') v = this.refsOf(v);
         else if(p.type === 'canvas') v = this.canvasRef(v);
-        else if(p.type === 'template') v = TEMPLATES.filter(t => t.name === v.name).length === 1 ? v.name : '#' + v.id;
+        else if(p.type === 'template') v = templateRefText(v);
         else if(p.type === 'macro') v = v.name;
         else if(p.coord && this.origin && typeof v === 'number') v = v - this.origin[p.coord];
         if(typeof v === 'number') v = Math.round(v * 1000) / 1000;
