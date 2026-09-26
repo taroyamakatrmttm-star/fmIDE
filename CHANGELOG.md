@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Fix: "Remove duplicates" removed originals too; new "Clear all templates"
+- fmIDE: **Remove duplicates** removed every template that had a copy, originals included, when the copies shared an internal id with their original (which an older Import Workspace did). It now removes only the copies. On start-up every template now gets its own id, and new ids no longer restart at 1 after a reload (which reused a saved template's id). So Delete, selection and Remove duplicates each act on one template.
+- New in the Templates window: **🗑 Clear all templates** (also the command "Clear All Templates"). It asks first and removes templates only.
+
 ## No more duplicate templates
 - fmIDE: **Import Workspace** and **Import Templates** now add only the templates you don't already have (same name, kind and content), like **Open** already did. Before, importing a file that held your own templates added a full second copy of each. Templates with the same name but different content are still both kept.
 - New in the Templates window: **Remove duplicates** (also the command "Remove Duplicate Templates"), shown when exact copies exist; it asks first and keeps one of each.

@@ -214,10 +214,21 @@
     if(!extra.length){ showMessage('There are no duplicate templates.'); return; }
     const n = extra.length;
     showConfirm(`Remove ${n} duplicate template${n === 1 ? '' : 's'}? Only exact copies (same name, kind and content) are removed; one of each is kept.`, () => {
-      const drop = new Set(extra.map(t => t.id));
-      TEMPLATES = TEMPLATES.filter(t => !drop.has(t.id));
+      const drop = new Set(extra); // the copies themselves, not their ids (copies may share one)
+      TEMPLATES = TEMPLATES.filter(t => !drop.has(t));
       saveWorkspace();
       toast(`Removed ${n} duplicate template${n === 1 ? '' : 's'}.`);
+      if(onDone) onDone();
+    });
+  }
+
+  function clearAllTemplates(onDone){
+    const n = TEMPLATES.length;
+    if(!n){ showMessage("You don't have any templates."); return; }
+    showConfirm(`Delete all ${n} template${n === 1 ? '' : 's'}? This can't be undone — use ⇩ Export Templates first if you might want them back.`, () => {
+      TEMPLATES = [];
+      saveWorkspace();
+      toast(`Deleted ${n} template${n === 1 ? '' : 's'}.`);
       if(onDone) onDone();
     });
   }
@@ -476,6 +487,11 @@
     ioRow.appendChild(exportBtn);
     ioRow.appendChild(importBtn);
     ioRow.appendChild(dedupeBtn);
+    const clearBtn = document.createElement('button');
+    clearBtn.className = 'template-clear-all';
+    clearBtn.textContent = '🗑 Clear all templates';
+    clearBtn.addEventListener('click', () => clearAllTemplates(() => { selected = null; renderList(); renderDetail(); }));
+    ioRow.appendChild(clearBtn);
     ioRow.appendChild(tplFileInput);
     box.appendChild(ioRow);
 
@@ -647,6 +663,7 @@
       const extra = duplicateTemplates().length;
       dedupeBtn.textContent = `🧹 Remove ${extra} duplicate${extra === 1 ? '' : 's'}`;
       dedupeBtn.style.display = extra ? '' : 'none';
+      clearBtn.style.display = TEMPLATES.length ? '' : 'none';
       list.innerHTML = '';
       shown = [];
       if(TEMPLATES.length === 0){

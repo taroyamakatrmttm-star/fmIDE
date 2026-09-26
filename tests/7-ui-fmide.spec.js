@@ -220,19 +220,29 @@ test.describe('Templates duplicates', () => {
     expect(await listNames(page)).toEqual(FOUR);
   });
 
-  test('"Remove duplicates" removes exact copies only, after asking', async ({ page }) => {
-    // An autosave (left by an older version) that already holds copies: each of the four
-    // twice, plus an "Audit BS" with different content, which is a different template.
-    const tpl = readFixture('templates', 'search.json').templates;
-    const other = JSON.parse(JSON.stringify(tpl[3]));
-    other.data.canvases[0].nodes[0].text = 'Audit Rect\n2';
-    const ws = { version: 1, kind: 'fmIDE-workspace', system: readFixture('formats', 'sys-current.json'),
-      templates: [...tpl, ...tpl, other].map((t, i) => Object.assign({ id: 'usr' + (i + 1) }, t)), formatPresets: [] };
-    await page.addInitScript((text) => {
+  // Seeds the autosave (as an older version left it) with these templates, before start-up.
+  function seedTemplates(page, templates){
+    const ws = { version: 1, kind: 'fmIDE-workspace', system: readFixture('formats', 'sys-current.json'), templates, formatPresets: [] };
+    return page.addInitScript((text) => {
       if(sessionStorage.getItem('__seeded')) return;
       sessionStorage.setItem('__seeded', '1');
       localStorage.setItem('fmIDE-workspace-v1', text);
     }, JSON.stringify(ws));
+  }
+  // The four search.json templates twice — each copy with its original's id, as an older
+  // Import Workspace left them — plus an "Audit BS" with different content.
+  function copiesSharingIds(){
+    const tpl = readFixture('templates', 'search.json').templates;
+    const withIds = tpl.map((t, i) => Object.assign({ id: 'usr' + (i + 1) }, t));
+    const other = JSON.parse(JSON.stringify(withIds[3]));
+    other.id = 'usr5';
+    other.data.canvases[0].nodes[0].text = 'Audit Rect\n2';
+    return [...withIds, ...JSON.parse(JSON.stringify(withIds)), other];
+  }
+  const selectTemplate = (page, name, nth = 0) => picker(page).locator('.template-list button', { hasText: name }).nth(nth).click();
+
+  test('"Remove duplicates" removes exact copies only, after asking — even when copies share an id', async ({ page }) => {
+    await seedTemplates(page, copiesSharingIds());
     await F.openFmIDE(page);
     expect(await page.evaluate(() => fm.commands().find(c => c.id === 'removeDuplicateTemplates').label)).toBe('Remove Duplicate Templates');
     await page.evaluate(() => fm.command('openTemplates'));
@@ -244,5 +254,48 @@ test.describe('Templates duplicates', () => {
     await F.confirmDanger(page);
     expect(await listNames(page)).toEqual(['Audit BS', 'Audit BS', 'Cash flow statement', 'Depreciation schedule', 'Income Statement']);
     await expect(btn).toBeHidden();
+  });
+
+  test('deleting one of two copies that shared an id deletes only that one', async ({ page }) => {
+    await seedTemplates(page, copiesSharingIds());
+    await F.openFmIDE(page);
+    await page.evaluate(() => fm.command('openTemplates'));
+    await selectTemplate(page, 'Income Statement', 1);
+    await expect(picker(page).locator('.template-list button.active')).toHaveCount(1);
+    await picker(page).locator('.template-detail button', { hasText: 'Delete' }).click();
+    await F.confirmDanger(page);
+    expect((await listNames(page)).filter(n => n === 'Income Statement')).toHaveLength(1);
+    expect((await listNames(page)).length).toBe(8);
+  });
+
+  test('a template added after a restart gets a new id, so deleting it leaves the others', async ({ page }) => {
+    const tpl = readFixture('templates', 'search.json').templates.map((t, i) => Object.assign({ id: 'usr' + (i + 1) }, t));
+    await seedTemplates(page, tpl);
+    await F.openFmIDE(page);
+    await importTemplates(page, 'one-new.json'); // adds "Tax schedule" only
+    await F.dismissMessage(page);
+    await selectTemplate(page, 'Tax schedule');
+    await picker(page).locator('.template-detail button', { hasText: 'Delete' }).click();
+    await F.confirmDanger(page);
+    expect(await listNames(page)).toEqual(FOUR);
+  });
+
+  test('"Clear all templates" asks first, then removes every template and nothing else', async ({ page }) => {
+    await F.openFmIDE(page);
+    const canvasesBefore = await page.evaluate(() => fm.canvases().map(c => c.name));
+    await importTemplates(page, 'search.json');
+    await F.dismissMessage(page);
+    const btn = picker(page).locator('button.template-clear-all');
+    await expect(btn).toHaveText('🗑 Clear all templates');
+    await btn.click();
+    expect(await F.dialogText(page)).toContain('Delete all 4 templates?');
+    await F.cancelDialog(page);
+    expect(await listNames(page)).toEqual(FOUR);
+    await btn.click();
+    await F.confirmDanger(page);
+    await expect(picker(page).locator('.template-list')).toContainText('No templates yet');
+    await expect(btn).toBeHidden();
+    expect(await page.evaluate(() => fm.canvases().map(c => c.name))).toEqual(canvasesBefore);
+    expect(await page.evaluate(() => fm.commands().some(c => c.id === 'clearAllTemplates'))).toBe(true);
   });
 });
