@@ -241,19 +241,114 @@ test.describe('Templates duplicates', () => {
   }
   const selectTemplate = (page, name, nth = 0) => picker(page).locator('.template-list button', { hasText: name }).nth(nth).click();
 
-  test('"Remove duplicates" removes exact copies only, after asking — even when copies share an id', async ({ page }) => {
+  // The "Remove duplicates…" window: its sets, as the group names of their rows.
+  const dedupe = (page) => page.locator('.modal-box.dedupe-box');
+  const dedupeSets = (page) => dedupe(page).locator('.dedupe-set').evaluateAll(sets =>
+    sets.map(s => [...s.querySelectorAll('.dedupe-row .dedupe-meta')].map(m => m.textContent.split(' · ')[0])));
+  const option = (page, key) => dedupe(page).locator(`label[data-option="${key}"] input`);
+  const openDedupe = async (page) => {
+    await page.evaluate(() => fm.command('openTemplates'));
+    await picker(page).locator('button.template-dedupe', { hasText: 'Remove duplicates…' }).click();
+    await expect(dedupe(page)).toBeVisible();
+  };
+
+  test('"Remove duplicates…" with exact copies that share an id keeps one of each', async ({ page }) => {
     await seedTemplates(page, copiesSharingIds());
     await F.openFmIDE(page);
-    expect(await page.evaluate(() => fm.commands().find(c => c.id === 'removeDuplicateTemplates').label)).toBe('Remove Duplicate Templates');
-    await page.evaluate(() => fm.command('openTemplates'));
-    expect((await listNames(page)).length).toBe(9);
-    const btn = picker(page).locator('button.template-dedupe');
-    await expect(btn).toHaveText('🧹 Remove 4 duplicates');
-    await btn.click();
-    expect(await F.dialogText(page)).toContain('Remove 4 duplicate templates?');
-    await F.confirmDanger(page);
+    expect(await page.evaluate(() => fm.commands().find(c => c.id === 'removeDuplicateTemplates').label)).toBe('Remove Duplicate Templates…');
+    await openDedupe(page);
+    await expect(dedupe(page).locator('.dedupe-summary')).toHaveText('4 sets of duplicates — 4 templates will be removed.');
+    await dedupe(page).locator('.modal-actions button.danger', { hasText: 'Remove 4 templates' }).click();
+    await expect(dedupe(page)).toHaveCount(0);
     expect(await listNames(page)).toEqual(['Audit BS', 'Audit BS', 'Cash flow statement', 'Depreciation schedule', 'Income Statement']);
-    await expect(btn).toBeHidden();
+  });
+
+  // A: Price × Qty → Revenue. Copies: moved, re-numbered, renamed, and one with a different number.
+  function nearCopies(){
+    const base = { version: 1, kind: 'module', selfCanvasId: 'c1', nextId: 10,
+      nodes: [
+        { id: 'n1', type: 'value', x: 50, y: 50, w: 170, h: 64, text: 'Price\n10' },
+        { id: 'n2', type: 'value', x: 50, y: 200, w: 170, h: 64, text: 'Qty\n5' },
+        { id: 'n3', type: 'operator', x: 300, y: 120, w: 56, h: 56, text: '×' },
+        { id: 'n4', type: 'value', x: 450, y: 120, w: 170, h: 64, text: 'Revenue' }],
+      edges: [{ id: 'e5', from: 'n1', to: 'n3' }, { id: 'e6', from: 'n2', to: 'n3' }, { id: 'e7', from: 'n3', to: 'n4' }] };
+    const copy = () => JSON.parse(JSON.stringify(base));
+    const moved = copy(); moved.nodes[0].x = 400;
+    const reids = copy();
+    reids.nextId = 30; reids.selfCanvasId = 'c9';
+    const rename = { n1: 'n21', n2: 'n22', n3: 'n23', n4: 'n24' };
+    reids.nodes.forEach(n => { n.id = rename[n.id]; });
+    reids.nodes.reverse();
+    reids.edges = reids.edges.map((e, i) => ({ id: 'e' + (40 + i), from: rename[e.from], to: rename[e.to] })).reverse();
+    const other = copy(); other.nodes[0].text = 'Price\n11';
+    const t = (id, name, group, data) => ({ id, name, group, description: '', kind: 'module', data });
+    const x = readFixture('templates', 'search.json').templates[1];
+    return [t('usr1', 'Revenue calc', 'G-A', base), t('usr2', 'Revenue calc', 'G-moved', moved), t('usr3', 'Revenue calc', 'G-reids', reids),
+      t('usr4', 'Sales calc', 'G-B', copy()), t('usr5', 'Revenue calc', 'G-other', other),
+      Object.assign({ id: 'usr6' }, x), Object.assign({ id: 'usr6' }, x)];
+  }
+
+  test('"Remove duplicates…": what must match decides the sets; choose which to keep', async ({ page }) => {
+    await seedTemplates(page, nearCopies());
+    await F.openFmIDE(page);
+    await openDedupe(page);
+    const FS = 'Financial Statement';
+    // Defaults: name must match, layout need not. Internal ids never count.
+    await expect(option(page, 'name')).toBeChecked();
+    await expect(option(page, 'layout')).not.toBeChecked();
+    expect(await dedupeSets(page)).toEqual([['G-A', 'G-moved', 'G-reids'], [FS, FS]]);
+    // Layout must match too: the moved copy is no longer the same.
+    await option(page, 'layout').check();
+    expect(await dedupeSets(page)).toEqual([['G-A', 'G-reids'], [FS, FS]]);
+    await option(page, 'layout').uncheck();
+    // Name need not match: the same calculation under another name joins; a different number never does.
+    await option(page, 'name').uncheck();
+    expect(await dedupeSets(page)).toEqual([['G-A', 'G-moved', 'G-reids', 'G-B'], [FS, FS]]);
+    await option(page, 'name').check();
+    // Keep the moved one.
+    await dedupe(page).locator('.dedupe-row', { hasText: 'G-moved' }).locator('input[type=radio]').check();
+    await expect(dedupe(page).locator('.dedupe-summary')).toHaveText('2 sets of duplicates — 3 templates will be removed.');
+    await expect(dedupe(page).locator('.dedupe-row', { hasText: 'G-A' }).locator('.dedupe-fate')).toHaveText('remove');
+    await dedupe(page).locator('.modal-actions button.danger', { hasText: 'Remove 3 templates' }).click();
+    await expect(dedupe(page)).toHaveCount(0);
+    const groups = await picker(page).locator('.template-list > div').allInnerTexts();
+    expect(groups.map(g => g.toUpperCase()).sort()).toEqual(['FINANCIAL STATEMENT', 'G-B', 'G-MOVED', 'G-OTHER']);
+    expect((await listNames(page)).length).toBe(4);
+  });
+
+  test('"Remove duplicates…": Cancel removes nothing; the tick boxes are remembered; nothing found says so', async ({ page }) => {
+    await seedTemplates(page, nearCopies());
+    await F.openFmIDE(page);
+    await openDedupe(page);
+    await option(page, 'layout').check();
+    await option(page, 'description').check(); // descriptions are all empty, so nothing changes
+    await option(page, 'group').check();       // every group differs: only the exact copies remain a set
+    expect(await dedupeSets(page)).toEqual([['Financial Statement', 'Financial Statement']]);
+    await dedupe(page).locator('.modal-actions button', { hasText: /^Cancel$/ }).click();
+    await expect(dedupe(page)).toHaveCount(0);
+    expect((await listNames(page)).length).toBe(7);
+    await picker(page).locator('button.template-dedupe').click();
+    await expect(option(page, 'layout')).toBeChecked();
+    await expect(option(page, 'group')).toBeChecked();
+    await option(page, 'name').uncheck();
+    await page.keyboard.press('Escape');
+    await expect(dedupe(page)).toHaveCount(0);
+    expect((await listNames(page)).length).toBe(7);
+  });
+
+  // The owner's two "Depreciation - straight line v2" look alike but are different
+  // calculations (one block has 22 pieces and 20 arrows, with named in-between steps; the
+  // other 15 and 15), so they are never offered for removal — whatever is unticked.
+  test('"Remove duplicates…" never offers two different calculations with the same name', async ({ page }) => {
+    await F.openFmIDE(page);
+    await importTemplates(page, 'near-copies.json');
+    expect(await F.dialogText(page)).toBe('Imported 2 templates.'); // imports stay exact: both kept
+    await F.dismissMessage(page);
+    await picker(page).locator('button.template-dedupe').click();
+    for(const key of ['name', 'layout', 'group', 'description']) await option(page, key).uncheck();
+    await expect(dedupe(page).locator('.dedupe-summary')).toHaveText('No duplicates with these settings.');
+    await expect(dedupe(page).locator('.modal-actions button.danger')).toBeDisabled();
+    await expect(dedupe(page).locator('.dedupe-set')).toHaveCount(0);
   });
 
   test('deleting one of two copies that shared an id deletes only that one', async ({ page }) => {

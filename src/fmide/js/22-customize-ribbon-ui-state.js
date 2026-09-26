@@ -299,6 +299,7 @@
       ribbon: ribbonState.customized ? cloneData(ribbonState.config) : null, ribbonCustomized: !!ribbonState.customized,
       ribbonCollapsed: ribbonState.collapsed, activeTab: ribbonState.activeTab,
       keytipTrigger: Object.assign({}, keytipTrigger), comboVersion: 2, launcherRecent: launcherRecent.slice(), lastRunMacroId,
+      dedupeMatch: Object.assign({}, dedupeMatch),
       documentGroupAdded: true // the default ribbon has it; a customised one got it once
     };
   }
@@ -327,6 +328,9 @@
     }
     if(Array.isArray(ui.launcherRecent)) launcherRecent = ui.launcherRecent.slice(0, LAUNCHER_RECENT_MAX);
     if(typeof ui.lastRunMacroId === 'string') lastRunMacroId = ui.lastRunMacroId;
+    if(ui.dedupeMatch && typeof ui.dedupeMatch === 'object'){
+      Object.keys(dedupeMatch).forEach(k => { if(typeof ui.dedupeMatch[k] === 'boolean') dedupeMatch[k] = ui.dedupeMatch[k]; });
+    }
   }
 
   // A ribbon layout read from a file (a workspace or preferences file, maybe someone

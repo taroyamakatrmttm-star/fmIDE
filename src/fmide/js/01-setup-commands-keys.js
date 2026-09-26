@@ -25,6 +25,8 @@
   // ---------- built-in templates ----------
   let TEMPLATES = []; // built-in starter templates removed by request — this now holds only user-saved templates
   let nextTemplateId = 1;
+  // What "Remove duplicates…" requires to match, besides kind and the calculation (saved with the UI settings).
+  let dedupeMatch = { name: true, layout: false, group: false, description: false };
 
   // Reusable rectangle-formatting presets (number format / border / font / fill),
   // saved and applied independently of any one rectangle, and exportable via JSON.
@@ -105,7 +107,7 @@
     { id:'exportPreferences', label:'Export Preferences…', icon:'⚙', category:'File', defaultShortcut:null, action:() => exportPreferencesToFile() },
     { id:'importPreferences', label:'Import Preferences…', icon:'⚙', category:'File', defaultShortcut:null, action:() => importPreferencesInteractive() },
     { id:'openTemplates',label:'Templates',            icon:'📚', category:'File', defaultShortcut:null, action:() => showTemplatesPicker() },
-    { id:'removeDuplicateTemplates', label:'Remove Duplicate Templates', icon:'🧹', category:'File', defaultShortcut:null, enabled:() => duplicateTemplates().length > 0, action:() => removeDuplicateTemplates() },
+    { id:'removeDuplicateTemplates', label:'Remove Duplicate Templates…', icon:'🧹', category:'File', defaultShortcut:null, enabled:() => TEMPLATES.length > 1, action:() => showRemoveDuplicatesDialog() },
     { id:'clearAllTemplates', label:'Clear All Templates', icon:'🗑', category:'File', defaultShortcut:null, enabled:() => TEMPLATES.length > 0, action:() => clearAllTemplates() },
     { id:'openFormats', label:'Format Presets',        icon:'🎨', category:'File', defaultShortcut:null, action:() => showFormatPresetsPicker(null) },
     // Documents (.fmide files) — last in the File list, so a shortcut someone already gave
