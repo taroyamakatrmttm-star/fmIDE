@@ -1,0 +1,282 @@
+{
+  "version": 2,
+  "kind": "system",
+  "nextId": 275,
+  "nextCanvasId": 6,
+  "activeCanvasId": "c3",
+  "periods": [
+    "P1",
+    "P2",
+    "P3"
+  ],
+  "currentPeriod": 0,
+  "canvases": [
+    {
+      "id": "c3",
+      "name": "Case1",
+      "nodes": [
+        {
+          "id": "n182",
+          "type": "value",
+          "x": 991.5,
+          "y": 167.5,
+          "w": 170,
+          "h": 64,
+          "text": "Revenue",
+          "plug": ""
+        },
+        {
+          "id": "n183",
+          "type": "value",
+          "x": 778.5,
+          "y": 254.1,
+          "w": 170,
+          "h": 64,
+          "text": "COGS",
+          "plug": ""
+        },
+        {
+          "id": "n184",
+          "type": "value",
+          "x": 991.5,
+          "y": 340.7,
+          "w": 170,
+          "h": 64,
+          "text": "Gross Profit",
+          "plug": ""
+        },
+        {
+          "id": "n196",
+          "type": "operator",
+          "x": 1048.5,
+          "y": 258.1,
+          "w": 56,
+          "h": 56,
+          "text": "+",
+          "socket": ""
+        },
+        {
+          "id": "n201",
+          "type": "operator",
+          "x": 403.5,
+          "y": 171.5,
+          "w": 56,
+          "h": 56,
+          "text": "+",
+          "socket": "Total Revenue"
+        },
+        {
+          "id": "n202",
+          "type": "operator",
+          "x": 403.5,
+          "y": 262.1,
+          "w": 56,
+          "h": 56,
+          "text": "+",
+          "socket": "Total COGS"
+        },
+        {
+          "id": "n244",
+          "type": "blockInstance",
+          "x": 524,
+          "y": 259.1,
+          "w": 190,
+          "h": 54,
+          "blockDefCanvasId": "c4"
+        }
+      ],
+      "edges": [
+        {
+          "id": "e210",
+          "from": "n182",
+          "to": "n196"
+        },
+        {
+          "id": "e211",
+          "from": "n183",
+          "to": "n196"
+        },
+        {
+          "id": "e212",
+          "from": "n196",
+          "to": "n184"
+        },
+        {
+          "id": "e227",
+          "from": "n201",
+          "to": "n182"
+        },
+        {
+          "id": "e245",
+          "from": "n202",
+          "to": "n244",
+          "toPort": 0
+        },
+        {
+          "id": "e246",
+          "from": "n244",
+          "to": "n183",
+          "fromPort": 0
+        }
+      ]
+    },
+    {
+      "id": "c5",
+      "name": "Case2",
+      "nodes": [
+        {
+          "id": "n262",
+          "type": "value",
+          "x": 1015.5,
+          "y": 191.5,
+          "w": 170,
+          "h": 64,
+          "text": "Revenue",
+          "plug": ""
+        },
+        {
+          "id": "n263",
+          "type": "value",
+          "x": 802.5,
+          "y": 278.1,
+          "w": 170,
+          "h": 64,
+          "text": "COGS",
+          "plug": ""
+        },
+        {
+          "id": "n264",
+          "type": "value",
+          "x": 1015.5,
+          "y": 364.7,
+          "w": 170,
+          "h": 64,
+          "text": "Gross Profit",
+          "plug": ""
+        },
+        {
+          "id": "n265",
+          "type": "operator",
+          "x": 1072.5,
+          "y": 282.1,
+          "w": 56,
+          "h": 56,
+          "text": "+",
+          "socket": ""
+        },
+        {
+          "id": "n266",
+          "type": "operator",
+          "x": 427.5,
+          "y": 195.5,
+          "w": 56,
+          "h": 56,
+          "text": "+",
+          "socket": "Total Revenue"
+        },
+        {
+          "id": "n268",
+          "type": "blockInstance",
+          "x": 548,
+          "y": 283.1,
+          "w": 190,
+          "h": 54,
+          "blockDefCanvasId": "c4"
+        }
+      ],
+      "edges": [
+        {
+          "id": "e269",
+          "from": "n262",
+          "to": "n265"
+        },
+        {
+          "id": "e270",
+          "from": "n263",
+          "to": "n265"
+        },
+        {
+          "id": "e271",
+          "from": "n265",
+          "to": "n264"
+        },
+        {
+          "id": "e272",
+          "from": "n266",
+          "to": "n262"
+        },
+        {
+          "id": "e274",
+          "from": "n268",
+          "to": "n263",
+          "fromPort": 0
+        }
+      ]
+    },
+    {
+      "id": "c4",
+      "name": "Negatizer",
+      "nodes": [
+        {
+          "id": "n237",
+          "type": "operator",
+          "x": 113.5,
+          "y": 134,
+          "w": 56,
+          "h": 56,
+          "text": "×",
+          "socket": ""
+        },
+        {
+          "id": "n238",
+          "type": "value",
+          "x": 250.5,
+          "y": 127,
+          "w": 170,
+          "h": 64,
+          "text": "Negative one\n-1",
+          "plug": ""
+        },
+        {
+          "id": "n239",
+          "type": "value",
+          "x": 56.5,
+          "y": 42,
+          "w": 170,
+          "h": 64,
+          "text": "Inputs\n4",
+          "plug": "",
+          "blockRole": "input"
+        },
+        {
+          "id": "n240",
+          "type": "value",
+          "x": 56.5,
+          "y": 218,
+          "w": 170,
+          "h": 64,
+          "text": "Output",
+          "plug": "",
+          "blockRole": "output"
+        }
+      ],
+      "edges": [
+        {
+          "id": "e241",
+          "from": "n239",
+          "to": "n237"
+        },
+        {
+          "id": "e242",
+          "from": "n238",
+          "to": "n237"
+        },
+        {
+          "id": "e243",
+          "from": "n237",
+          "to": "n240"
+        }
+      ]
+    }
+  ]
+}

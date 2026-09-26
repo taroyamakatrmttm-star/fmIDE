@@ -251,3 +251,35 @@ test.describe('Inputs tab', () => {
     expect(X.findRow(inputs, 'DSO').map(r => inputs[X.numToCol(X.periodOneCol(inputs)) + r].v)).toEqual([0.08]);
   });
 });
+
+test.describe('unfed block inputs', () => {
+  // Negatizer (Inputs × Negative one → Output) used twice: on Case1 its input is fed by a
+  // "+" with nothing plugged in, on Case2 it is not connected. Its Inputs holds a typed 4.
+  const MODEL = 'block-unfed-inputs.json';
+
+  test('each instance gets its own Inputs row, gathered on the Inputs tab and used by the block', async ({ page }) => {
+    const wb = await generateFor(page, MODEL, { inputs: true });
+    const inputs = wb.Sheets['Inputs'], ip1 = X.numToCol(X.periodOneCol(inputs));
+    const problems = [];
+    for(const tab of ['Negatizer (instance 1)', 'Negatizer (instance 2)']){
+      const ws = wb.Sheets[tab], p1 = X.numToCol(X.periodOneCol(ws));
+      const [inRow] = X.findRow(ws, 'Inputs'), [negRow] = X.findRow(ws, 'Negative one'), [outRow] = X.findRow(ws, 'Output');
+      if(!inRow){ problems.push(`${tab}: no "Inputs" row`); continue; }
+      // Its first-period cell links to an Inputs-tab row holding the typed 4, under this instance's group.
+      const m = /^'?Inputs'?!\$?([A-Z]+)\$?(\d+)$/.exec(X.formulaOf(ws[p1 + inRow]) || '');
+      if(!m){ problems.push(`${tab}!${p1}${inRow} does not link to the Inputs tab: ${JSON.stringify(X.formulaOf(ws[p1 + inRow]))}`); continue; }
+      const target = Number(m[2]);
+      if(X.text(inputs, 'A' + target) !== 'Inputs') problems.push(`${tab}: links to Inputs row "${X.text(inputs, 'A' + target)}"`);
+      if(inputs[ip1 + target].v !== 4) problems.push(`${tab}: Inputs-tab value ${inputs[ip1 + target].v}, expected 4`);
+      const groupAbove = Object.keys(X.rowsOf(inputs)).map(Number).filter(r => r < target && /^Negatizer/.test(X.text(inputs, 'A' + r))).pop();
+      if(X.text(inputs, 'A' + groupAbove) !== tab) problems.push(`${tab}: gathered under "${X.text(inputs, 'A' + groupAbove)}"`);
+      // Output multiplies the two rows — no typed 0 for the input.
+      const f = (X.formulaOf(ws[p1 + outRow]) || '').replace(/\$/g, '');
+      if(!f.includes(p1 + inRow) || !f.includes(p1 + negRow)) problems.push(`${tab}: Output is ${JSON.stringify(f)}`);
+    }
+    // The definition's own tab keeps its placeholder where it is (not gathered).
+    const def = wb.Sheets['Negatizer'], [defIn] = X.findRow(def, 'Inputs');
+    if(/Inputs'?!/.test(X.formulaOf(def[X.numToCol(X.periodOneCol(def)) + defIn]) || '')) problems.push('Negatizer tab: its Inputs placeholder was gathered');
+    expect(problems, problems.join('\n')).toEqual([]);
+  });
+});

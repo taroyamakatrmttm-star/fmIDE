@@ -107,7 +107,7 @@ function computeNodeUOM(canvasId, nodeId, ctx, visiting, memo, path){
   visiting.add(key);
   let result = null;
   const canvas = ctx.canvasById[canvasId];
-  if(n.type === 'value' && n.blockRole === 'input' && path.length > 0){
+  if(n.type === 'value' && n.blockRole === 'input' && path.length > 0 && !isUnfedBlockInput(ctx.canvasById, path, canvas, n)){
     // Same redirect as operandRef: a Block Input port's UOM comes from whatever
     // feeds the CURRENT instance's corresponding port, one level up the path.
     const outerHop = path[path.length - 1];
@@ -358,7 +358,9 @@ function operandRef(canvasId, nodeId, periodIndex, ctx, currentTabName, path, fr
     if(ctx.currentRow && ctx.currentRowVintage === v) return '$' + VINTAGE_COL + ctx.currentRow;
     return formatLiteralForFormula(v);
   }
-  if(node.blockRole === 'input' && path.length > 0){
+  // A port nothing feeds has its own row (see classifyUnpackedNode): it resolves below
+  // like any input rectangle instead.
+  if(node.blockRole === 'input' && path.length > 0 && !isUnfedBlockInput(ctx.canvasById, path, ctx.canvasById[canvasId], node)){
     const outerHop = path[path.length - 1];
     const outerPath = path.slice(0, -1);
     const outerCanvas = ctx.canvasById[outerHop.canvasId];
@@ -443,7 +445,7 @@ function isLogicalValued(canvasId, nodeId, ctx, path, fromPort, visiting){
   }
   if(node.type !== 'value' || node.blockRole === 'index') return false;
   if(ctx.inlineConstantIds && ctx.inlineConstantIds.has(pathKey(resolvedRowPath(canvasId, nodeId, path, ctx), canvasId, nodeId))) return false;
-  if(node.blockRole === 'input' && path.length > 0){
+  if(node.blockRole === 'input' && path.length > 0 && !isUnfedBlockInput(ctx.canvasById, path, canvas, node)){
     const hop = path[path.length - 1];
     const outerCanvas = ctx.canvasById[hop.canvasId];
     const edge = outerCanvas && outerCanvas.edges.find(e => e.to === hop.nodeId && e.toPort === blockInputPortIndex(canvas, node));
