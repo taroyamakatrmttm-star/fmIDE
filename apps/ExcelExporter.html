@@ -918,7 +918,11 @@ function operandRef(canvasId, nodeId, periodIndex, ctx, currentTabName, path, fr
     if(incoming.length !== 1) return '0';
     const offset = (typeof node.shift === 'number') ? node.shift : -1;
     const targetPeriod = periodIndex + offset;
-    if(targetPeriod < 0 || targetPeriod >= ctx.periodCount) return '0';
+    // Outside the timeline. A row whose own formula would read this shows its typed number
+    // or 0 instead (reachesOutsideTimeline in buildCellContent), so this is only reached
+    // inside an iferror's first input — where fmIDE falls back to the second input, so it
+    // must be an error for IFERROR to catch — or through a block's input port.
+    if(targetPeriod < 0 || targetPeriod >= ctx.periodCount) return ctx.iferrorDepth ? 'NA()' : '0';
     // lagDepth > 0 marks every reference reached through a period shift as a prior-/
     // later-period one — only consulted by the row sorter (a corkscrew's shifted link is
     // not a same-period dependency); generation never reads it.
@@ -1046,12 +1050,18 @@ function buildOperatorFormula(canvasId, opNode, periodIndex, ctx, currentTabName
     .sort((a, b) => (a.from.x - b.from.x) || (a.from.y - b.from.y));
   const sym = opNode.text;
   const needsNumeric = sym === 'min' || sym === 'max' || sym === 'ave' || COMPARISON_SYMBOLS.has(sym);
-  const operandStrs = incoming.map(x => {
-    const ref = operandRef(canvasId, x.from.id, periodIndex, ctx, currentTabName, path, x.edge.fromPort);
+  const operandStrs = incoming.map((x, i) => {
+    // An iferror's first input is where a failure is caught (see the period-shift branch of operandRef).
+    const catches = sym === 'iferror' && i === 0;
+    if(catches) ctx.iferrorDepth = (ctx.iferrorDepth || 0) + 1;
+    let ref;
+    try{ ref = operandRef(canvasId, x.from.id, periodIndex, ctx, currentTabName, path, x.edge.fromPort); }
+    finally{ if(catches) ctx.iferrorDepth--; }
     return (needsNumeric && ref !== '0' && isLogicalValued(canvasId, x.from.id, ctx, path, x.edge.fromPort)) ? 'N(' + ref + ')' : ref;
   });
   if(operandStrs.length === 0) return '0';
-  if(sym === 'abs') return 'ABS(' + operandStrs[0] + ')';
+  // An error, as fmIDE shows "?": abs takes exactly one input, a comparison at least two.
+  if(sym === 'abs') return operandStrs.length === 1 ? 'ABS(' + operandStrs[0] + ')' : 'NA()';
   if(sym === 'min') return 'MIN(' + operandStrs.join(',') + ')';
   if(sym === 'max') return 'MAX(' + operandStrs.join(',') + ')';
   if(sym === 'ave') return 'AVERAGE(' + operandStrs.join(',') + ')';
@@ -1064,6 +1074,7 @@ function buildOperatorFormula(canvasId, opNode, periodIndex, ctx, currentTabName
     // Native TRUE/FALSE. Parenthesized so it stays a single operand wherever it's
     // inlined into a bigger formula; buildCellContent strips nothing, and Excel shows
     // =(A<=B) identically to =A<=B.
+    if(operandStrs.length === 1) return 'NA()';
     if(operandStrs.length === 2) return '(' + operandStrs[0] + cmp + operandStrs[1] + ')';
     const pairs = operandStrs.slice(0, -1).map((s, i) => s + cmp + operandStrs[i + 1]);
     return 'AND(' + pairs.join(',') + ')';
@@ -1094,6 +1105,13 @@ function buildCellContent(canvasId, node, periodIndex, ctx, currentTabName, path
       // src can be an operator, an alias, a period-shift node, a block instance, or
       // another value rectangle — operandRef inlines through all of them uniformly.
       const src = ctx.nodeById[canvasId + '|' + incoming[0].from];
+      // Where the source would need a period outside the timeline (a corkscrew's opening
+      // balance in period 1), the rectangle's own typed number applies, or 0 — the shared
+      // rule fmIDE follows too.
+      if(src && reachesOutsideTimeline(id => ctx.canvasById[id], canvasId, src.id, periodIndex, ctx.periodCount)){
+        const lit = effectiveLiteral(node, periodIndex);
+        return { isFormula: false, value: lit !== null ? lit : 0 };
+      }
       if(src) return { isFormula: true, formula: operandRef(canvasId, src.id, periodIndex, ctx, currentTabName, path, incoming[0].fromPort) };
       return { isFormula: false, value: null };
     }
@@ -1139,6 +1157,42 @@ function isInputRectangle(canvas, node){
   const inc = canvas.edges.filter(e => e.to === node.id);
   if(inc.length === 0) return true;
   return inc.length === 1 && feedsNothing(canvas, inc[0].from, new Set());
+}
+
+// ---------- reaching outside the timeline (shared: src/shared/input-rule.js) ----------
+// True if what feeds `nodeId` at `period` needs a period before the first or after the last,
+// through a period shift (e.g. a corkscrew's opening balance in period 1). A rectangle fed
+// this way shows its own typed number there, or 0 — in fmIDE and in Excel alike. The walk
+// follows what both apps compute in one step — operators, period shifts and aliases — and
+// stops at rectangles and block instances, which settle their own value. An iferror with a
+// fallback only fails when both of its first two inputs fail; with one input it gives 0.
+// `canvasOf(id)` returns a canvas { nodes, edges }; inputs are in left-to-right order.
+function reachesOutsideTimeline(canvasOf, canvasId, nodeId, period, periodCount, visiting){
+  visiting = visiting || new Set();
+  const key = canvasId + '|' + nodeId + '|' + period;
+  if(visiting.has(key)) return false;
+  visiting.add(key);
+  const canvas = canvasOf(canvasId);
+  const n = canvas && canvas.nodes.find(x => x.id === nodeId);
+  if(!n) return false;
+  const reach = (cid, id, p) => reachesOutsideTimeline(canvasOf, cid, id, p, periodCount, visiting);
+  if(n.type === 'alias'){
+    return !!(n.sourceCanvasId && n.sourceNodeId) && reach(n.sourceCanvasId, n.sourceNodeId, period);
+  }
+  const incoming = canvas.edges.filter(e => e.to === nodeId);
+  if(n.type === 'periodShift'){
+    if(incoming.length !== 1) return false;
+    const target = period + ((typeof n.shift === 'number') ? n.shift : -1);
+    if(target < 0 || target >= periodCount) return true;
+    return reach(canvasId, incoming[0].from, target);
+  }
+  if(n.type !== 'operator') return false;
+  const inputs = incoming.map(e => canvas.nodes.find(x => x.id === e.from)).filter(Boolean)
+    .sort((a, b) => (a.x - b.x) || (a.y - b.y));
+  if(n.text === 'iferror'){
+    return inputs.length >= 2 && reach(canvasId, inputs[0].id, period) && reach(canvasId, inputs[1].id, period);
+  }
+  return inputs.some(src => reach(canvasId, src.id, period));
 }
 
 function classifyNode(canvas, node){

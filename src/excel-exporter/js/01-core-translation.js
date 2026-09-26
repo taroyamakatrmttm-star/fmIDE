@@ -336,7 +336,11 @@ function operandRef(canvasId, nodeId, periodIndex, ctx, currentTabName, path, fr
     if(incoming.length !== 1) return '0';
     const offset = (typeof node.shift === 'number') ? node.shift : -1;
     const targetPeriod = periodIndex + offset;
-    if(targetPeriod < 0 || targetPeriod >= ctx.periodCount) return '0';
+    // Outside the timeline. A row whose own formula would read this shows its typed number
+    // or 0 instead (reachesOutsideTimeline in buildCellContent), so this is only reached
+    // inside an iferror's first input — where fmIDE falls back to the second input, so it
+    // must be an error for IFERROR to catch — or through a block's input port.
+    if(targetPeriod < 0 || targetPeriod >= ctx.periodCount) return ctx.iferrorDepth ? 'NA()' : '0';
     // lagDepth > 0 marks every reference reached through a period shift as a prior-/
     // later-period one — only consulted by the row sorter (a corkscrew's shifted link is
     // not a same-period dependency); generation never reads it.
@@ -464,12 +468,18 @@ function buildOperatorFormula(canvasId, opNode, periodIndex, ctx, currentTabName
     .sort((a, b) => (a.from.x - b.from.x) || (a.from.y - b.from.y));
   const sym = opNode.text;
   const needsNumeric = sym === 'min' || sym === 'max' || sym === 'ave' || COMPARISON_SYMBOLS.has(sym);
-  const operandStrs = incoming.map(x => {
-    const ref = operandRef(canvasId, x.from.id, periodIndex, ctx, currentTabName, path, x.edge.fromPort);
+  const operandStrs = incoming.map((x, i) => {
+    // An iferror's first input is where a failure is caught (see the period-shift branch of operandRef).
+    const catches = sym === 'iferror' && i === 0;
+    if(catches) ctx.iferrorDepth = (ctx.iferrorDepth || 0) + 1;
+    let ref;
+    try{ ref = operandRef(canvasId, x.from.id, periodIndex, ctx, currentTabName, path, x.edge.fromPort); }
+    finally{ if(catches) ctx.iferrorDepth--; }
     return (needsNumeric && ref !== '0' && isLogicalValued(canvasId, x.from.id, ctx, path, x.edge.fromPort)) ? 'N(' + ref + ')' : ref;
   });
   if(operandStrs.length === 0) return '0';
-  if(sym === 'abs') return 'ABS(' + operandStrs[0] + ')';
+  // An error, as fmIDE shows "?": abs takes exactly one input, a comparison at least two.
+  if(sym === 'abs') return operandStrs.length === 1 ? 'ABS(' + operandStrs[0] + ')' : 'NA()';
   if(sym === 'min') return 'MIN(' + operandStrs.join(',') + ')';
   if(sym === 'max') return 'MAX(' + operandStrs.join(',') + ')';
   if(sym === 'ave') return 'AVERAGE(' + operandStrs.join(',') + ')';
@@ -482,6 +492,7 @@ function buildOperatorFormula(canvasId, opNode, periodIndex, ctx, currentTabName
     // Native TRUE/FALSE. Parenthesized so it stays a single operand wherever it's
     // inlined into a bigger formula; buildCellContent strips nothing, and Excel shows
     // =(A<=B) identically to =A<=B.
+    if(operandStrs.length === 1) return 'NA()';
     if(operandStrs.length === 2) return '(' + operandStrs[0] + cmp + operandStrs[1] + ')';
     const pairs = operandStrs.slice(0, -1).map((s, i) => s + cmp + operandStrs[i + 1]);
     return 'AND(' + pairs.join(',') + ')';
@@ -512,6 +523,13 @@ function buildCellContent(canvasId, node, periodIndex, ctx, currentTabName, path
       // src can be an operator, an alias, a period-shift node, a block instance, or
       // another value rectangle — operandRef inlines through all of them uniformly.
       const src = ctx.nodeById[canvasId + '|' + incoming[0].from];
+      // Where the source would need a period outside the timeline (a corkscrew's opening
+      // balance in period 1), the rectangle's own typed number applies, or 0 — the shared
+      // rule fmIDE follows too.
+      if(src && reachesOutsideTimeline(id => ctx.canvasById[id], canvasId, src.id, periodIndex, ctx.periodCount)){
+        const lit = effectiveLiteral(node, periodIndex);
+        return { isFormula: false, value: lit !== null ? lit : 0 };
+      }
       if(src) return { isFormula: true, formula: operandRef(canvasId, src.id, periodIndex, ctx, currentTabName, path, incoming[0].fromPort) };
       return { isFormula: false, value: null };
     }

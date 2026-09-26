@@ -21,7 +21,7 @@ Workflow since step 3a: edit `src/` → `npm run build` → `npm test` (the file
 4. Storage for the web app: IndexedDB plus explicit open/save of `.fmide` files ✅ — 4a IndexedDB underneath, 4b `.fmide` documents (Open, Save, Save As, Recent, recovery), 4c Preferences file (see `docs/step4-storage.md`). Double-clicking a `.fmide` file to open it (PWA file association; PWA = installable web app) belongs to step 5.
 5. Publish the web app (see `docs/step5-publish.md`) ✅ — 5a installable web app (PWA): offline, updates, install, double-click `.fmide`, one app with ExcelExporter inside; 5b licences (decision 3) and automatic publishing to Cloudflare Pages on every merge, with a preview address for each pull request.
 6. Template management ✅ — families and versions, canvases linked to their template ("Update this canvas"), recipe templates, and a warning when more than one plug feeds a socket (see `docs/file-formats.md`)
-7. Formula IR and plugins (next; chosen by the owner, September 2026)
+7. Formula IR and plugins (chosen by the owner, September 2026; in progress — see `docs/step7-formula-ir.md`): A agreement tests and fixes ✅
 8. Community library
 9. Touch support
 

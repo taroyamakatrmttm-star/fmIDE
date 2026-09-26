@@ -23,3 +23,39 @@ function isInputRectangle(canvas, node){
   if(inc.length === 0) return true;
   return inc.length === 1 && feedsNothing(canvas, inc[0].from, new Set());
 }
+
+// ---------- reaching outside the timeline (shared: src/shared/input-rule.js) ----------
+// True if what feeds `nodeId` at `period` needs a period before the first or after the last,
+// through a period shift (e.g. a corkscrew's opening balance in period 1). A rectangle fed
+// this way shows its own typed number there, or 0 — in fmIDE and in Excel alike. The walk
+// follows what both apps compute in one step — operators, period shifts and aliases — and
+// stops at rectangles and block instances, which settle their own value. An iferror with a
+// fallback only fails when both of its first two inputs fail; with one input it gives 0.
+// `canvasOf(id)` returns a canvas { nodes, edges }; inputs are in left-to-right order.
+function reachesOutsideTimeline(canvasOf, canvasId, nodeId, period, periodCount, visiting){
+  visiting = visiting || new Set();
+  const key = canvasId + '|' + nodeId + '|' + period;
+  if(visiting.has(key)) return false;
+  visiting.add(key);
+  const canvas = canvasOf(canvasId);
+  const n = canvas && canvas.nodes.find(x => x.id === nodeId);
+  if(!n) return false;
+  const reach = (cid, id, p) => reachesOutsideTimeline(canvasOf, cid, id, p, periodCount, visiting);
+  if(n.type === 'alias'){
+    return !!(n.sourceCanvasId && n.sourceNodeId) && reach(n.sourceCanvasId, n.sourceNodeId, period);
+  }
+  const incoming = canvas.edges.filter(e => e.to === nodeId);
+  if(n.type === 'periodShift'){
+    if(incoming.length !== 1) return false;
+    const target = period + ((typeof n.shift === 'number') ? n.shift : -1);
+    if(target < 0 || target >= periodCount) return true;
+    return reach(canvasId, incoming[0].from, target);
+  }
+  if(n.type !== 'operator') return false;
+  const inputs = incoming.map(e => canvas.nodes.find(x => x.id === e.from)).filter(Boolean)
+    .sort((a, b) => (a.x - b.x) || (a.y - b.y));
+  if(n.text === 'iferror'){
+    return inputs.length >= 2 && reach(canvasId, inputs[0].id, period) && reach(canvasId, inputs[1].id, period);
+  }
+  return inputs.some(src => reach(canvasId, src.id, period));
+}

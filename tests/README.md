@@ -24,6 +24,7 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | `npm run test:ui` | UI flows, both apps |
 | `npm run test:snapshots` | formula/value snapshots only |
 | `npm run test:web-app` | the installable web app (site build, service worker, offline, updates) |
+| `npm run test:agreement` | fmIDE's values against the recalculated workbooks (needs LibreOffice) |
 | `npx playwright test -g "Tree view"` | tests whose name matches |
 
 After a failure, `npx playwright show-report` opens the report, with a trace for each failed test.
@@ -45,7 +46,7 @@ Review the snapshot diff before committing: it is the record of what the change 
 ## Layout
 
 ```
-0-smoke.spec.js … 16-recipes.spec.js    one file per group in SPEC.md (6 and 7 split per app)
+0-smoke.spec.js … 17-agreement.spec.js    one file per group in SPEC.md (6 and 7 split per app)
 helpers/apps.js       the offline fixture: serves the apps, blocks and counts other requests
 helpers/excel.js      load a model, toggle options, capture the workbook (window.__wb + real .xlsx bytes)
 helpers/soffice.js    find LibreOffice, recalculate workbooks, read values

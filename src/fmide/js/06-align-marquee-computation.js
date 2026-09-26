@@ -133,8 +133,13 @@
     return computeValue(canvasId, edge.from, period, scope, visiting, memo, errors);
   }
 
+  // The memo/error key of one node in one period and scope. It carries the canvas id:
+  // node ids are unique within a canvas, but a file may repeat them on other canvases.
+  function valueKey(period, canvasId, scope, nodeId){ return period + '|' + canvasId + '|' + scope.prefix + nodeId; }
+  function canvasById(id){ return canvases.find(c => c.id === id); }
+
   function computeValue(canvasId, nodeId, period, scope, visiting, memo, errors){
-    const key = period + '|' + scope.prefix + nodeId;
+    const key = valueKey(period, canvasId, scope, nodeId);
     if(memo.hasOwnProperty(key)) return memo[key];
     if(visiting.has(key)){ errors[key] = 'cycle'; memo[key] = null; return null; }
     const n = nodeIn(canvasId, nodeId);
@@ -197,35 +202,30 @@
         }
       } else {
         const incoming = edgesOf(canvasId).filter(e => e.to === nodeId);
-        if(incoming.length === 0){
-          // True input (nothing wired in): driven purely by its own number, defaulting to zero.
+        const typed = parseNode(n).literal;
+        if(incoming.length === 0 || isInputRectangle(canvasById(canvasId), n)){
+          // An input (nothing wired in, or only an operator that nothing feeds — the shared
+          // input rule): driven purely by its own number, defaulting to zero.
           const literal = effectiveLiteral(n, period);
           result = (literal !== null) ? literal : 0;
+        } else if(incoming.length === 1 && Array.isArray(n.literalPeriods) && n.literalPeriods.includes(period) && typed !== null){
+          // A period ticked under "Which periods use this rectangle's own number?" uses it,
+          // wired or not (ExcelExporter writes the typed number there too).
+          result = typed;
         } else if(incoming.length === 1){
-          // Not an input — always follow the wired source when it can produce a value.
-          // Its own typed number, if any, is only a fallback for periods the source can't
-          // reach (e.g. a corkscrew's first period, before a period-shift has anything to read).
+          // Not an input — follow the wired source. Where the source needs a period outside
+          // the timeline (e.g. a corkscrew's opening balance in period 1, read through a
+          // period shift), the rectangle's own typed number applies, or 0 — the same shared
+          // rule ExcelExporter follows. Any other failure (a broken link, a loop, a divide
+          // by zero) shows as "?", as it shows as an error in Excel.
           const edgeVal = resolveEdgeValue(canvasId, incoming[0], period, scope, visiting, memo, errors);
           if(edgeVal !== null && edgeVal !== undefined && !Number.isNaN(edgeVal)){
             result = edgeVal;
-          } else {
+          } else if(reachesOutsideTimeline(canvasById, canvasId, incoming[0].from, period, periods.length)){
             const literal = effectiveLiteral(n, period);
-            if(literal !== null){
-              result = literal;
-            } else {
-              // A period-shift wired straight into this rectangle couldn't reach a prior
-              // period (e.g. a corkscrew's period-0 opening balance) and the rectangle has
-              // no typed number/curve of its own — default to zero instead of erroring,
-              // the same "default to zero" rule true-input rectangles already get. Other
-              // failure reasons (broken links, cycles, math errors) still surface as "?".
-              const srcNode = nodeIn(canvasId, incoming[0].from);
-              const srcKey = period + '|' + scope.prefix + incoming[0].from;
-              if(srcNode && srcNode.type === 'periodShift' && errors[srcKey] === 'period-out-of-range'){
-                result = 0;
-              } else if(!errors[key]){
-                errors[key] = 'missing-input';
-              }
-            }
+            result = (literal !== null) ? literal : 0;
+          } else if(!errors[key]){
+            errors[key] = 'missing-input';
           }
         } else {
           errors[key] = 'ambiguous';
@@ -251,8 +251,10 @@
       const incomingEdges = sortedIncomingIn(canvasId, nodeId).filter(e => nodeIn(canvasId, e.from));
 
       if(n.text === 'iferror'){
+        // Excel's IFERROR(first, second): with no second input the fallback is 0, and an
+        // iferror with nothing wired in gives 0 too (ExcelExporter writes IFERROR(x,0) / 0).
         if(incomingEdges.length === 0){
-          errors[key] = 'no-input';
+          result = 0;
         } else {
           const primary = resolveEdgeValue(canvasId, incomingEdges[0], period, scope, visiting, memo, errors);
           const primaryBad = (primary === null || primary === undefined || Number.isNaN(primary));
@@ -266,7 +268,7 @@
               result = fallback;
             }
           } else {
-            errors[key] = 'missing-input';
+            result = 0;
           }
         }
       } else if(incomingEdges.length === 0){
@@ -284,6 +286,13 @@
           result = Math.max(...values);
         } else if(n.text === 'ave'){
           result = values.reduce((a,b) => a+b, 0) / values.length;
+        } else if(['≤', '≥', '<', '>'].includes(n.text)){
+          // A chain a < b < c means a < b and b < c (Excel: AND(a<b, b<c)); 1 = true, 0 = false.
+          if(values.length < 2){ errors[key] = 'needs-two'; }
+          else {
+            const holds = (a, b) => n.text === '≤' ? a <= b : n.text === '≥' ? a >= b : n.text === '<' ? a < b : a > b;
+            result = values.slice(1).every((v, i) => holds(values[i], v)) ? 1 : 0;
+          }
         } else {
           result = values.reduce((acc, v, idx) => {
             if(idx === 0) return v;
@@ -293,11 +302,8 @@
               case '×': return acc * v;
               case '÷': return v === 0 ? NaN : acc / v;
               case '^': return Math.pow(acc, v);
-              case '%': return v === 0 ? NaN : acc % v;
-              case '≤': return (acc <= v) ? 1 : 0;
-              case '≥': return (acc >= v) ? 1 : 0;
-              case '<': return (acc < v) ? 1 : 0;
-              case '>': return (acc > v) ? 1 : 0;
+              // Excel's MOD: the result takes the divisor's sign (MOD(-7,3) = 2).
+              case '%': return v === 0 ? NaN : acc - v * Math.floor(acc / v);
               default: return acc;
             }
           });
@@ -312,7 +318,7 @@
   }
 
   function computeBlockInstanceOutput(outerCanvasId, instanceNode, outputIndex, period, outerScope, visiting, memo, errors){
-    const key = period + '|' + outerScope.prefix + instanceNode.id + '::out' + outputIndex;
+    const key = valueKey(period, outerCanvasId, outerScope, instanceNode.id + '::out' + outputIndex);
     if(memo.hasOwnProperty(key)) return memo[key];
 
     const def = canvases.find(c => c.id === instanceNode.blockDefCanvasId);
@@ -331,14 +337,14 @@
 
     const bindings = singleInstanceBindings(def, outerCanvasId, instanceNode);
 
-    const innerScope = { prefix: outerScope.prefix + instanceNode.id + '::', bindings, outerCanvasId, outerScope };
+    const innerScope = { prefix: outerScope.prefix + outerCanvasId + '/' + instanceNode.id + '::', bindings, outerCanvasId, outerScope };
     visiting.add(blockCycleKey);
     const result = computeValue(def.id, outNode.id, period, innerScope, visiting, memo, errors);
     visiting.delete(blockCycleKey);
 
     memo[key] = result;
     if(result === null && !errors[key]){
-      errors[key] = errors[period + '|' + innerScope.prefix + outNode.id] || 'missing-input';
+      errors[key] = errors[valueKey(period, def.id, innerScope, outNode.id)] || 'missing-input';
     }
     return result;
   }
@@ -385,7 +391,7 @@
       });
       if(indexNode) bindings[indexNode.id] = { edge: null, fixedPeriod: null, literal: i + 1 };
 
-      const innerScope = { prefix: outerScope.prefix + instanceNode.id + '::v' + i + '::', bindings, outerCanvasId, outerScope };
+      const innerScope = { prefix: outerScope.prefix + outerCanvasId + '/' + instanceNode.id + '::v' + i + '::', bindings, outerCanvasId, outerScope };
       visiting.add(blockCycleKey);
       const r = computeValue(def.id, outNode.id, period, innerScope, visiting, memo, errors);
       visiting.delete(blockCycleKey);
@@ -460,7 +466,7 @@
             const vals = [], errs = [];
             let insts = null;
             outputs.forEach((_, i) => {
-              const k = p + '|' + n.id + '::out' + i;
+              const k = valueKey(p, c.id, TOP(), n.id + '::out' + i);
               vals.push(memo.hasOwnProperty(k) ? memo[k] : null);
               errs.push(errors[k] || null);
               if(n.vertical){
@@ -471,7 +477,7 @@
             pv[n.id] = vals; pe[n.id] = errs;
             if(insts) pin[n.id] = insts;
           } else {
-            const k = p + '|' + n.id;
+            const k = valueKey(p, c.id, TOP(), n.id);
             if(memo.hasOwnProperty(k) && memo[k] !== null) cv[n.id] = memo[k];
             if(errors[k]) ce[n.id] = errors[k];
           }
