@@ -1,19 +1,7 @@
   // ---------- plug / socket ----------
-  // A rectangle's plug names (system v3: a list, `plugs`). Tolerates a node still holding
-  // the older single `plug` text and drops anything that isn't a non-empty name; names
-  // match case-insensitively, so a name appears once.
-  function plugsOf(n){
-    if(!n) return [];
-    const raw = Array.isArray(n.plugs) ? n.plugs : (typeof n.plug === 'string' ? [n.plug] : []);
-    const out = [], seen = new Set();
-    raw.forEach(p => {
-      if(typeof p !== 'string') return;
-      const t = p.trim(), k = t.toLowerCase();
-      if(t && !seen.has(k)){ seen.add(k); out.push(t); }
-    });
-    return out;
-  }
-
+  // plugsOf (a rectangle's plug names) and plugLinks (which links plugs make) are shared
+  // (src/shared/ir.js): the calculation works the links out itself from the names, and the
+  // automatic aliases and arrows drawn here are exactly those links.
   function syncAutoConnections(){
     syncActiveIntoRegistry();
     invalidateIR();
@@ -25,43 +13,23 @@
       c.edges = c.edges.filter(e => !e.auto && !autoAliasIds.has(e.from) && !autoAliasIds.has(e.to));
     });
 
-    // every plugged rectangle, system-wide, tagged with which canvas (and its order) it lives on
-    const plugSources = [];
-    canvases.forEach((c, idx) => {
-      c.nodes.forEach(n => {
-        if(n.type !== 'value') return;
-        const keys = new Set(plugsOf(n).map(p => p.toLowerCase()));
-        if(keys.size) plugSources.push({ canvasId: c.id, canvasIndex: idx, node: n, keys });
+    // each plugged rectangle is connected at most once to each socket: an arrow on the same
+    // canvas, an alias from another canvas
+    const links = plugLinks(canvases);
+    canvases.forEach((c, ci) => links[ci].forEach(l => {
+      if(!l.alias){
+        c.edges.push({ id: uid('e'), from: l.from, to: l.to, auto: true });
+        return;
+      }
+      const aliasId = uid('n');
+      c.nodes.push({
+        id: aliasId, type: 'alias', auto: true,
+        x: l.alias.x, y: l.alias.y,
+        w: 170, h: 64,
+        sourceCanvasId: l.alias.sourceCanvasId, sourceNodeId: l.alias.sourceNodeId, plugs: []
       });
-    });
-
-    canvases.forEach(c => {
-      c.nodes.filter(n => n.type === 'operator' && n.socket && n.socket.trim() !== '').forEach(op => {
-        const key = op.socket.trim().toLowerCase();
-        // each plugged rectangle is connected at most once to this socket
-        const matches = plugSources.filter(p => p.keys.has(key));
-        const sameCanvas = matches.filter(p => p.canvasId === c.id);
-        const cross = matches
-          .filter(p => p.canvasId !== c.id)
-          .sort((a,b) => (a.canvasIndex - b.canvasIndex) || (a.node.x - b.node.x) || (a.node.y - b.node.y));
-
-        sameCanvas.forEach(p => {
-          const already = c.edges.find(e => e.from === p.node.id && e.to === op.id);
-          if(!already) c.edges.push({ id: uid('e'), from: p.node.id, to: op.id, auto: true });
-        });
-
-        cross.forEach((p, i) => {
-          const aliasId = uid('n');
-          c.nodes.push({
-            id: aliasId, type: 'alias', auto: true,
-            x: Math.max(0, op.x - 200 + i * 2), y: op.y + i * 74,
-            w: 170, h: 64,
-            sourceCanvasId: p.canvasId, sourceNodeId: p.node.id, plugs: []
-          });
-          c.edges.push({ id: uid('e'), from: aliasId, to: op.id, auto: true });
-        });
-      });
-    });
+      c.edges.push({ id: uid('e'), from: aliasId, to: l.to, auto: true });
+    }));
 
     loadCanvasState(canvases.find(cc => cc.id === activeCanvasId));
   }

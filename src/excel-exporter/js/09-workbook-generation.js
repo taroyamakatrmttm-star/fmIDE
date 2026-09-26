@@ -20,9 +20,7 @@ function periodLabels(){
 }
 
 function buildCtx(){
-  const canvasById = {}; model.canvases.forEach(c => canvasById[c.id] = c);
-  const nodeById = {};
-  model.canvases.forEach(c => c.nodes.forEach(n => { nodeById[c.id + '|' + n.id] = n; }));
+  const canvasById = {}; model.canvases.forEach(c => { if(!canvasById[c.id]) canvasById[c.id] = c; });
   const tabById = {}; mapping.tabs.forEach(t => tabById[t.id] = t);
   // Row ids (canvasId|nodeId, same key shape operandRef uses) flagged to be spliced
   // directly into referencing formulas as a literal instead of getting their own row.
@@ -61,7 +59,7 @@ function buildCtx(){
       });
     }
   });
-  return { canvasById, nodeById, cellPos, periodCount: model.periods.length, rowsByTabOrdered, tabById, inlineConstantIds, scenarioBlocks };
+  return { canvasById, cellPos, periodCount: model.periods.length, rowsByTabOrdered, tabById, inlineConstantIds, scenarioBlocks };
 }
 
 // Scenario rows sit directly above their variable's own row on the Inputs tab.
@@ -117,8 +115,6 @@ function generateWorkbook(){
   const nPeriods = model.periods.length;
   const fallbackFmt = mapping.cfg.fallbackFormat || 'General';
   const wb = XLSX.utils.book_new();
-  const uomVisitingBase = () => new Set();
-  const uomMemo = {};
 
   const sortedTabs = mapping.tabs.slice().sort((a, b) => a.order - b.order);
   sortedTabs.forEach(tab => {
@@ -195,7 +191,7 @@ function generateWorkbook(){
       }
 
       const canvas = ctx.canvasById[row.canvasId];
-      const node = canvas.nodes.find(n => n.id === row.nodeId);
+      const node = irNode(row.canvasId, row.nodeId).node;
       const own = node.style || null; // the rectangle's own 🎨 format from fmIDE, if any
       // An input row whose numbers live on the Inputs tab becomes a link to it.
       const linkPos = (!row.isInputMirror && ctx.cellPos[mirrorIdFor(row.id)]) || null;
@@ -232,7 +228,7 @@ function generateWorkbook(){
       const rowRole = scnBlock ? 'Calculations'
         : row.isInputMirror ? 'Inputs'
         : linkPos ? 'Links'
-        : isInputRectangle(canvas, node) ? 'Inputs'
+        : isInputNode(canvas, node) ? 'Inputs'
         : (contents.length && contents.every(c => c.isFormula && PURE_LINK.test(c.formula))) ? 'Links'
         : 'Calculations';
       const rowStyleObj = composeStyle(rowRole, own);
@@ -269,7 +265,7 @@ function generateWorkbook(){
       }
 
       setCell('A' + excelRow, textCell(row.label, cellStyle));
-      const uom = computeUomForRow(canvas, node, ctx, uomVisitingBase, uomMemo, row.path);
+      const uom = rowUnit(canvas, node, row.path);
       setCell('B' + excelRow, textCell(uom || '', cellStyle));
 
       // Column C: the vintage number of a vertical-block vintage row; for a scenario
@@ -396,11 +392,13 @@ function generateWorkbook(){
   }finally{ helperColCount = 0; }
 }
 
-function computeUomForRow(canvas, node, ctx, visitingFactory, memo, path){
+// A row's unit: the rectangle's own typed unit, else the one the IR works out for it in
+// this row's block instance (unitOf — the unit fmIDE shows).
+function rowUnit(canvas, node, path){
   if(!node) return '';
-  const parsed = parseNodeText(node.text);
+  const parsed = parseRectText(node.text);
   if(parsed.uom) return parsed.uom;
-  const auto = computeNodeUOM(canvas.id, node.id, ctx, visitingFactory(), memo, path);
+  const auto = unitOf(modelIR, canvas.id, node.id, irPath(path));
   return auto ? formatUOM(auto) : '';
 }
 

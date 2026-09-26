@@ -1,0 +1,39 @@
+{
+ "Case1": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Revenue"},
+  "A7": {"v":"CALCULATIONS"},
+  "A8": {"v":"COGS"},
+  "A10": {"v":"OUTPUTS"},
+  "A11": {"v":"Gross Profit"}
+ },
+ "Case2": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Revenue"},
+  "A7": {"v":"CALCULATIONS"},
+  "A8": {"v":"COGS"},
+  "A10": {"v":"OUTPUTS"},
+  "A11": {"v":"Gross Profit"}
+ },
+ "Negatizer": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Inputs"},
+  "A6": {"v":"Negative one"},
+  "A8": {"v":"OUTPUTS"},
+  "A9": {"v":"Output"}
+ },
+ "Negatizer (instance 1)": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Inputs"},
+  "A6": {"v":"Negative one"},
+  "A8": {"v":"OUTPUTS"},
+  "A9": {"v":"Output"}
+ },
+ "Negatizer (instance 2)": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Inputs"},
+  "A6": {"v":"Negative one"},
+  "A8": {"v":"OUTPUTS"},
+  "A9": {"v":"Output"}
+ }
+}

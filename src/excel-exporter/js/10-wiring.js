@@ -189,7 +189,7 @@ watchForUpdates({
 });
 
 $('btnClearAll').addEventListener('click', () => {
-  model = null; mapping = null; mappingKey = null;
+  model = null; modelIR = null; mapping = null; mappingKey = null;
   $('fileInput').value = '';
   $('afterLoad').classList.add('hidden');
   $('pasteArea').value = '';

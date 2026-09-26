@@ -1,0 +1,23 @@
+{
+ "BS": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Cash"},
+  "A6": {"v":"Inventory"},
+  "A7": {"v":"AR outstanding rate"},
+  "A8": {"v":"Volume"},
+  "A9": {"v":"Unit Price"},
+  "A11": {"v":"CALCULATIONS"},
+  "A12": {"v":"Revenue"},
+  "A13": {"v":"Accounts Receivable"},
+  "A15": {"v":"OUTPUTS"},
+  "A16": {"v":"Total Assets"}
+ },
+ "Corkscrew": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Additions"},
+  "A6": {"v":"Subtractions"},
+  "A8": {"v":"CALCULATIONS"},
+  "A9": {"v":"Ending Balance"},
+  "A10": {"v":"Beginning Balance"}
+ }
+}

@@ -1,0 +1,9 @@
+{
+ "Canvas 1": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Unit Price"},
+  "A6": {"v":"Volume"},
+  "A8": {"v":"OUTPUTS"},
+  "A9": {"v":"Revenue"}
+ }
+}

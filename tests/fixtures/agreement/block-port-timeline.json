@@ -1,0 +1,253 @@
+{
+ "version": 4,
+ "kind": "system",
+ "nextId": 900,
+ "nextCanvasId": 10,
+ "activeCanvasId": "cT",
+ "periods": [
+  "P1",
+  "P2",
+  "P3"
+ ],
+ "currentPeriod": 0,
+ "canvases": [
+  {
+   "id": "cT",
+   "name": "Top",
+   "nodes": [
+    {
+     "id": "sales",
+     "type": "value",
+     "x": 40,
+     "y": 40,
+     "w": 170,
+     "h": 64,
+     "text": "Sales\n100",
+     "periodValues": [
+      100,
+      110,
+      121
+     ]
+    },
+    {
+     "id": "sh",
+     "type": "periodShift",
+     "x": 200,
+     "y": 40,
+     "w": 56,
+     "h": 56,
+     "shift": -1
+    },
+    {
+     "id": "b1",
+     "type": "blockInstance",
+     "x": 320,
+     "y": 40,
+     "w": 170,
+     "h": 90,
+     "blockDefCanvasId": "cB"
+    },
+    {
+     "id": "r1",
+     "type": "value",
+     "x": 560,
+     "y": 40,
+     "w": 170,
+     "h": 64,
+     "text": "Prior sales plus one"
+    },
+    {
+     "id": "a",
+     "type": "value",
+     "x": 40,
+     "y": 200,
+     "w": 170,
+     "h": 64,
+     "text": "A\n1"
+    },
+    {
+     "id": "z",
+     "type": "value",
+     "x": 40,
+     "y": 300,
+     "w": 170,
+     "h": 64,
+     "text": "Zero\n0"
+    },
+    {
+     "id": "dv",
+     "type": "operator",
+     "x": 200,
+     "y": 240,
+     "w": 56,
+     "h": 56,
+     "text": "÷"
+    },
+    {
+     "id": "b2",
+     "type": "blockInstance",
+     "x": 320,
+     "y": 240,
+     "w": 170,
+     "h": 90,
+     "blockDefCanvasId": "cB"
+    },
+    {
+     "id": "r2",
+     "type": "value",
+     "x": 560,
+     "y": 240,
+     "w": 170,
+     "h": 64,
+     "text": "From a failing source"
+    },
+    {
+     "id": "sh2",
+     "type": "periodShift",
+     "x": 200,
+     "y": 400,
+     "w": 56,
+     "h": 56,
+     "shift": 1
+    },
+    {
+     "id": "b3",
+     "type": "blockInstance",
+     "x": 320,
+     "y": 400,
+     "w": 170,
+     "h": 90,
+     "blockDefCanvasId": "cB"
+    },
+    {
+     "id": "r3",
+     "type": "value",
+     "x": 560,
+     "y": 400,
+     "w": 170,
+     "h": 64,
+     "text": "Next sales plus one"
+    }
+   ],
+   "edges": [
+    {
+     "id": "t1",
+     "from": "sales",
+     "to": "sh"
+    },
+    {
+     "id": "t2",
+     "from": "sh",
+     "to": "b1",
+     "toPort": 0
+    },
+    {
+     "id": "t3",
+     "from": "b1",
+     "to": "r1",
+     "fromPort": 0
+    },
+    {
+     "id": "t4",
+     "from": "a",
+     "to": "dv"
+    },
+    {
+     "id": "t5",
+     "from": "z",
+     "to": "dv"
+    },
+    {
+     "id": "t6",
+     "from": "dv",
+     "to": "b2",
+     "toPort": 0
+    },
+    {
+     "id": "t7",
+     "from": "b2",
+     "to": "r2",
+     "fromPort": 0
+    },
+    {
+     "id": "t8",
+     "from": "sales",
+     "to": "sh2"
+    },
+    {
+     "id": "t9",
+     "from": "sh2",
+     "to": "b3",
+     "toPort": 0
+    },
+    {
+     "id": "t10",
+     "from": "b3",
+     "to": "r3",
+     "fromPort": 0
+    }
+   ]
+  },
+  {
+   "id": "cB",
+   "name": "PlusOne",
+   "nodes": [
+    {
+     "id": "bin",
+     "type": "value",
+     "x": 40,
+     "y": 40,
+     "w": 170,
+     "h": 64,
+     "text": "In\n7",
+     "blockRole": "input"
+    },
+    {
+     "id": "one",
+     "type": "value",
+     "x": 40,
+     "y": 160,
+     "w": 170,
+     "h": 64,
+     "text": "One\n1"
+    },
+    {
+     "id": "bp",
+     "type": "operator",
+     "x": 220,
+     "y": 100,
+     "w": 56,
+     "h": 56,
+     "text": "+"
+    },
+    {
+     "id": "bout",
+     "type": "value",
+     "x": 380,
+     "y": 100,
+     "w": 170,
+     "h": 64,
+     "text": "Out",
+     "blockRole": "output"
+    }
+   ],
+   "edges": [
+    {
+     "id": "b1e",
+     "from": "bin",
+     "to": "bp"
+    },
+    {
+     "id": "b2e",
+     "from": "one",
+     "to": "bp"
+    },
+    {
+     "id": "b3e",
+     "from": "bp",
+     "to": "bout"
+    }
+   ]
+  }
+ ]
+}

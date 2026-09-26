@@ -23,7 +23,7 @@
 
 - **A — Agreement tests and the agreed fixes** ✅ (below)
 - **B — The shared IR, and fmIDE running on it** ✅ (below). `src/shared/operators.js` (operator catalogue by stable id) and `src/shared/ir.js` (`compileModel(system)`, a pure function of the file). fmIDE's evaluator runs the IR; error codes stay the same. UOM (unit of measure) comes from the IR in fmIDE (ExcelExporter in phase C).
-- **C — ExcelExporter writes formulas from the IR.** Layout stays in ExcelExporter. The snapshots must not change. Its units come from the IR too. `compileModel` works out plug-to-socket connections itself, in both apps at once (decided in phase B). Ends with the "fmIDE shows ? here" list before download.
+- **C — ExcelExporter writes formulas from the IR** ✅ (below). Layout stays in ExcelExporter. The snapshots must not change. Its units come from the IR too. `compileModel` works out plug-to-socket connections itself, in both apps at once (decided in phase B). Ends with the "fmIDE shows ? here" list before download.
 - **D — Function plugins.** Families and versions like templates, carried inside system and workspace files (`system` v5, `fmIDE-workspace` v4, new `fmIDE-functions` v1).
 - **E — New built-in operators** (e.g. IF, ROUND, LN, EXP) through the catalogue (optional).
 
@@ -79,3 +79,69 @@ Found along the way (not changed):
 - An operator with unknown text (only a hand-edited file has one) passes its first input through, with no error. Kept; for phase E.
 - ExcelExporter gives a block's Input port the unit of what feeds that instance; fmIDE does not. Phase C must add that rule to the IR (written from fmIDE's side) so the workbooks don't change.
 
+
+## Phase C — how it turned out
+
+Decisions taken at the start of the phase (September 2026):
+
+1. **fmIDE shows units through blocks too.** A rectangle fed by a block shows the unit worked out through that instance, as the workbook already did.
+2. **The "differs from fmIDE" list is a panel next to Generate**, filled when the model loads and after every layout change. It never blocks the download.
+3. **The list also covers two places where fmIDE shows a number but Excel reads 0**: an operator fmIDE doesn't know (only a hand-edited file has one) and a row left out of the layout that other rows read.
+4. **A block input port whose source fails** for any reason other than running out of timeline (or nothing feeding it) shows "?" in fmIDE, as a wired rectangle does since phase A.
+5. **ExcelExporter's saved-layout key leaves out the automatic plug links.** A layout saved under the older key is still found.
+
+What was built:
+
+- **`src/shared/ir.js`**
+  - **Plug-to-socket links:** `plugsOf` and `plugLinks` (moved from fmIDE) work out every link from the plug and socket names. `compileModel` sets aside the automatic links saved in the file and uses these. It keeps a saved link's id where it still matches, so fmIDE's drawn aliases still show values. An alias always sits where fmIDE draws it, 200 px left of its socket and 74 px lower per extra plug; that place decides the order an operator reads it in. fmIDE draws its automatic links from the same `plugLinks`, so the two cannot drift apart.
+  - **Units through blocks:** `unitOf(ir, canvas, node, path)` takes the block-instance path. A fed Input port takes the unit of what feeds that instance's port, and an arrow from a block reads its Output rectangle's unit in that instance. A block inside itself has no unit.
+  - **Block ports:** a port uses its typed number where nothing feeds it or its source needs a period outside the timeline; any other failure is "?" (decision 4).
+  - **`evaluateModel(ir, { trace, instances })`:** optional, both off for fmIDE. `trace` records where each "?" starts (the node and its error code). `instances` also returns every rectangle's value inside every block instance.
+  - **For ExcelExporter:** each compiled node keeps its saved node (`node`) and its outgoing arrows, and each canvas keeps its calculation-view `raw` { id, name, nodes, edges }.
+- **ExcelExporter**
+  - **Reading the model:** `loadModel` compiles the IR once. `model.canvases` are the IR's canvases, so the layout lists the plug links as the calculation sees them.
+  - **Formulas:** `operandRef`, `buildOperatorFormula`, `buildCellContent`, the vertical-block helpers and the TRUE/FALSE check read the IR (inputs in the IR's order, ports, the input rule, port feeds) instead of scanning the graph.
+  - **Operator spellings:** in `src/excel-exporter/js/01b-operator-spellings.js` (`EXCEL_SPELLINGS`, keyed by catalogue id).
+  - **Units:** column B comes from `unitOf`. ExcelExporter's own copies of the unit code and the rectangle-text reader are gone; the shared ones are used instead.
+  - **Loops and self-containing blocks:** a loop of operators, aliases or period shifts with no row to break it, and a block inside itself, now read 0 instead of recursing forever.
+  - **Ports outside the timeline:** a port whose source needs a period outside the timeline writes the port's typed number, as fmIDE does.
+- **The check before download** (`src/excel-exporter/js/09b-differences.js`, panel `#differencesPanel`):
+  - A quick look at the IR decides whether anything could make fmIDE show "?" where Excel writes 0 or a blank: an alias to nothing, a missing canvas or rectangle, two arrows into a rectangle, a period shift without one input, an operator with no inputs, a missing block or block output, a block inside itself, an arrow from a missing node, or a loop (found by a search that doesn't count period shifts to another period).
+  - Only if it finds something does it run fmIDE's calculation with `trace` and `instances`.
+  - It then lists every row (block-instance rows included) where fmIDE shows "?" because of one of those, with the periods, where it starts, and whether Excel writes 0 or leaves the cell blank. Errors Excel shows too (a divide by zero) are not listed.
+  - Text from the file is shown with `textContent`.
+
+How it was checked:
+
+- **Before switching**, a new test group 19 pinned ExcelExporter's unit column for every sample, since no model sample had a unit, so the workbook snapshots could not show a unit change. A new sample `ir/block-units.json` (units through blocks: nested, vertical, a port nothing feeds, an alias of a port) was pinned on the old build as well.
+- **After the switch:**
+  - Every workbook snapshot and every pinned unit column is unchanged.
+  - fmIDE's pinned values are unchanged. Its units changed only in `fmide-values--ir--block-units.json`, deliberately (decision 1): six rectangles fed by blocks now show $k, $k, $/t, $k, $ and $k, the units the workbook already had.
+- **Two new agreement samples**, both failing on the old build and passing now:
+  - `agreement/stale-plug-links.json`: saved plug links out of date, missing and extra. The old ExcelExporter gave Net 889 and Total income 10, where fmIDE showed −125 and 7.
+  - `agreement/block-port-timeline.json`: the old ExcelExporter wrote 1 where fmIDE showed 8, and fmIDE showed 8 where Excel had #DIV/0!.
+- **Group 17 now compares the rows inside block-instance tabs** too, against the IR's per-instance values in Node: 36 to 48 readings per sample with blocks.
+- **The whole suite passes:** 353 tests, LibreOffice included.
+- **Speed** (`npm run bench`, now timing ExcelExporter's Generate too; median of 15, same machine, old and new builds run back to back):
+
+  | | Before | After |
+  |---|---|---|
+  | Generate, biggest sample (`combined-bs-corkscrew-block.json`) | 2.4 ms | 1.9 ms |
+  | Generate, large model (1,865 nodes, 24 periods) | 607 ms | 408 ms |
+  | fmIDE `fm.evaluate`, large model (three alternating pairs) | 1,206 / 1,200 / 1,220 ms | 1,199 / 1,173 / 1,182 ms |
+
+  The check before download costs nothing on a healthy model. With a broken link in the large model it adds one calculation when the model loads (about a second).
+
+Phase A's remaining differences:
+
+- **A block input port whose outer source reaches outside the timeline:** closed. Both apps use the port's typed number, or 0.
+- **A vertical-block vintage row removed from the layout:** listed before download ("left out of the layout, but other rows read it"), together with any other row left out that formulas read. The workbook itself is unchanged: those formulas read 0, and the reducer skips the missing vintage.
+- **Rows inside block-instance tabs not compared:** closed (group 17, against the IR in Node).
+- **A broken alias, a loop, or a rectangle with two arrows in** (decision 6): listed before download.
+
+Found along the way (not changed):
+
+- **ExcelExporter could not generate `ir/error-cases.json`** ("Maximum call stack size exceeded": a block that contains itself made the formula writer recurse forever). Fixed here; its unit pin was recorded after the fix.
+- **Loading a large model into ExcelExporter is slow:** about 10–13 s for the 1,865-node model, before and after this phase. Almost all of it is drawing the rows list (thousands of drop-downs, and reading scroll positions between them), not the calculation. Worth its own change.
+- **fmIDE's automatic aliases are remade at the rule's place on every redraw,** so dragging one only lasts until the next change to plugs. The calculation now always uses the rule's place, so the order an operator reads its inputs in no longer depends on when fmIDE last redrew them.
+- **An operator with an arrow from a node that no longer exists** (only a hand-edited file has one) is read in the order fmIDE uses. ExcelExporter used a slightly different order before, but only in that case.

@@ -129,6 +129,47 @@ test.describe('ExcelExporter', () => {
     return entries;
   }
 
+  // The key a layout is saved under, as ExcelExporter works it out (canvas and node ids,
+  // hashed), with or without the aliases plugs make (marked `auto`).
+  function layoutKey(system, withAutoLinks){
+    const parts = [];
+    system.canvases.forEach(c => { parts.push(c.id); c.nodes.forEach(n => { if(withAutoLinks || !(n.type === 'alias' && n.auto)) parts.push(n.id); }); });
+    const text = parts.join('|');
+    let h = 0;
+    for(let i = 0; i < text.length; i++){ h = ((h << 5) - h + text.charCodeAt(i)) | 0; }
+    return PREFIX + (h >>> 0).toString(36);
+  }
+
+  test('a layout is saved under a key without the automatic plug links, and one saved under the older key is still found', async ({ page }) => {
+    const { fixture } = require('./helpers/apps');
+    const file = fixture('agreement', 'stale-plug-links.json');
+    const system = JSON.parse(require('fs').readFileSync(file, 'utf8'));
+    const newKey = layoutKey(system, false), oldKey = layoutKey(system, true);
+    expect(newKey).not.toBe(oldKey);
+    await X.openExporter(page);
+    await X.loadModelFile(page, file);
+    await renameFirstTab(page, 'Kept Tab');
+    await expect.poll(async () => Object.keys(await S.storedEntries(page, 'ExcelExporter', PREFIX))).toEqual([newKey]);
+    // Move it to the older key, as an earlier ExcelExporter saved it.
+    const saved = (await S.storedEntries(page, 'ExcelExporter', PREFIX))[newKey];
+    await page.evaluate(({ oldKey, newKey, saved }) => new Promise((resolve, reject) => {
+      const req = indexedDB.open('fmIDE-ExcelExporter');
+      req.onsuccess = () => {
+        const tx = req.result.transaction('kv', 'readwrite');
+        tx.objectStore('kv').delete(newKey);
+        tx.objectStore('kv').put(saved, oldKey);
+        tx.oncomplete = () => { req.result.close(); resolve(); };
+        tx.onerror = () => reject(tx.error);
+      };
+      req.onerror = () => reject(req.error);
+    }), { oldKey, newKey, saved });
+    await page.reload();
+    await X.loadModelFile(page, file);
+    expect(await tabNames(page)).toContain('Kept Tab');
+    await renameFirstTab(page, 'Kept Tab 2');
+    await expect.poll(async () => (await S.storedEntries(page, 'ExcelExporter', PREFIX))[newKey] || '').toContain('Kept Tab 2');
+  });
+
   test('a layout left in localStorage by an older ExcelExporter appears, and is kept there', async ({ page }) => {
     const entries = await makeLegacyLayout(page);
     await reloadWithModel(page);

@@ -29,10 +29,7 @@ function isTrueInputRow(row){
   const n = c && c.nodes.find(x => x.id === row.nodeId);
   if(!n || n.type !== 'value' || n.blockRole === 'index') return false;
   if(n.blockRole === 'input'){
-    if(row.path && row.path.length){
-      const canvasById = {}; model.canvases.forEach(x => canvasById[x.id] = x);
-      return isUnfedBlockInput(canvasById, row.path, c, n);
-    }
+    if(row.path && row.path.length) return isUnfedBlockInput(row.path, c, n);
     if(isUsedAsBlock(c.id)) return false;
   }
   return isInputRectangle(c, n);

@@ -1,0 +1,10 @@
+{
+ "Revenue Model": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Unit Price"},
+  "A6": {"v":"Volume"},
+  "A7": {"v":"Cash"},
+  "A9": {"v":"OUTPUTS"},
+  "A10": {"v":"Revenue"}
+ }
+}

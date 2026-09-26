@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-// Times fmIDE's calculation (fm.evaluate: every canvas, every period, then one redraw) on the
-// biggest sample model and on a large generated one, so a change to the calculation can be
-// checked for speed before and after. Uses the dev-only Playwright from `npm install`; the
+// Times fmIDE's calculation (fm.evaluate: every canvas, every period, then one redraw) and
+// ExcelExporter's Generate (the whole workbook, zipped, without the download) on the biggest
+// sample model and on a large generated one, so a change to the calculation or to the
+// formula writer can be checked for speed before and after. Uses the dev-only Playwright from `npm install`; the
 // app is opened straight from apps/fmIDE.html, offline.
 //   node tools/bench-calc.js [runs]        (npm run bench)
 // Prints the median and fastest time per model. Timings vary between machines: compare
@@ -115,6 +116,37 @@ async function timeModel(page, file){
   }, RUNS);
 }
 
+// ExcelExporter: load the file, then click Generate `runs` times (the download is replaced by
+// writing the .xlsx bytes in memory, as the tests do).
+async function timeGenerate(page, file){
+  await page.goto(pathToFileURL(path.join(ROOT, 'apps', 'ExcelExporter.html')).href);
+  // Loading, timed once per run (from choosing the file to the layout on screen).
+  const loads = [];
+  for(let i = 0; i < Math.min(RUNS, 5); i++){
+    await page.evaluate(() => { const s = document.querySelector('#loadStatus'); if(s) s.textContent = ''; });
+    const t = Date.now();
+    await page.setInputFiles('#fileInput', file);
+    await page.waitForSelector('#loadStatus .status.ok');
+    loads.push(Date.now() - t);
+  }
+  loads.sort((a, b) => a - b);
+  const load = loads[Math.floor(loads.length / 2)];
+  return page.evaluate(([runs, load]) => {
+    XLSX.writeFile = (wb) => { XLSX.write(wb); };
+    const btn = document.getElementById('btnGenerate');
+    btn.click(); // warm up
+    const times = [];
+    for(let i = 0; i < runs; i++){
+      const t = performance.now();
+      btn.click();
+      times.push(performance.now() - t);
+    }
+    if(!document.querySelector('#genStatus .status.ok')) throw new Error('Generate failed: ' + document.getElementById('genStatus').textContent);
+    times.sort((a, b) => a - b);
+    return { median: times[Math.floor(times.length / 2)], fastest: times[0], load };
+  }, [RUNS, load]);
+}
+
 async function main(){
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'fmide-bench-'));
   const large = path.join(tmp, 'large-model.json');
@@ -134,6 +166,11 @@ async function main(){
     for(const [label, file] of cases){
       const r = await timeModel(page, file);
       console.log(`  ${label}: median ${r.median.toFixed(2)} ms, fastest ${r.fastest.toFixed(2)} ms`);
+    }
+    console.log(`ExcelExporter Generate, ${RUNS} runs each:`);
+    for(const [label, file] of cases){
+      const r = await timeGenerate(page, file);
+      console.log(`  ${label}: median ${r.median.toFixed(2)} ms, fastest ${r.fastest.toFixed(2)} ms (loading the file: about ${r.load} ms)`);
     }
   } finally {
     await browser.close();

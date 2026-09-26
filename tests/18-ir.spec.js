@@ -111,6 +111,9 @@ for(const [dir, model] of CASES){
     system.canvases.forEach((c, ci) => {
       const r = results[ci];
       (c.nodes || []).forEach(n => {
+        // An automatic alias saved in the file is fmIDE's drawing of a plug link: fmIDE redraws
+        // it (new id) on opening, and compileModel works the links out from the names itself.
+        if(n.type === 'alias' && n.auto) return;
         const shown = pinned[c.name][n.id];
         shown.values.forEach((v, p) => {
           const where = `${c.name} ${n.id} period ${p + 1}`;

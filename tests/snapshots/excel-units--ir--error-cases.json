@@ -1,0 +1,111 @@
+{
+ "Errors": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"A"},
+  "A6": {"v":"B"},
+  "A7": {"v":"Zero"},
+  "A8": {"v":"Neg"},
+  "A9": {"v":"Curve"},
+  "A10": {"v":"Curve out"},
+  "A12": {"v":"CALCULATIONS"},
+  "A13": {"v":"Loop 1"},
+  "A14": {"v":"Loop 2"},
+  "A15": {"v":"Div zero"},
+  "A17": {"v":"OUTPUTS"},
+  "A18": {"v":"From missing block"},
+  "A19": {"v":"Two in"},
+  "A20": {"v":"Far future"},
+  "A21": {"v":"Uses div"},
+  "A22": {"v":"Ticked P2"},
+  "A23": {"v":"From self block"},
+  "A24": {"v":"Via unset alias"},
+  "A25": {"v":"Next A"},
+  "A26": {"v":"Bad port"},
+  "A27": {"v":"Via missing canvas"},
+  "A28": {"v":"Prev B"},
+  "A29": {"v":"Index sum"},
+  "A30": {"v":"Nested"},
+  "A31": {"v":"Vertical max"}
+ },
+ "Other": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Other value"}
+ },
+ "SelfBlock": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"In"},
+  "A7": {"v":"OUTPUTS"},
+  "A8": {"v":"Out"}
+ },
+ "IdxBlock": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"X In"},
+  "A7": {"v":"CALCULATIONS"},
+  "A8": {"v":"Prev X"},
+  "A10": {"v":"OUTPUTS"},
+  "A11": {"v":"X Out"},
+  "A12": {"v":"Alias of in"}
+ },
+ "OuterBlock": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"O In"},
+  "A7": {"v":"OUTPUTS"},
+  "A8": {"v":"O Out"}
+ },
+ "InnerBlock": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"I In"},
+  "A6": {"v":"Ten"},
+  "A8": {"v":"CALCULATIONS"},
+  "A9": {"v":"I Out"},
+  "A10": {"v":"I Prev"}
+ },
+ "SelfBlock (instance 1)": {
+  "A4": {"v":"OUTPUTS"},
+  "A5": {"v":"Out"}
+ },
+ "IdxBlock (instance 1)": {
+  "A4": {"v":"CALCULATIONS"},
+  "A5": {"v":"Prev X — Vintage 1"},
+  "A6": {"v":"Prev X — Vintage 2"},
+  "A7": {"v":"Prev X — Vintage 3"},
+  "A9": {"v":"OUTPUTS"},
+  "A10": {"v":"X Out — Vintage 1"},
+  "A11": {"v":"X Out — Vintage 2"},
+  "A12": {"v":"X Out — Vintage 3"},
+  "A13": {"v":"X Out (Total)"},
+  "A14": {"v":"Alias of in — Vintage 1"},
+  "A15": {"v":"Alias of in — Vintage 2"},
+  "A16": {"v":"Alias of in — Vintage 3"}
+ },
+ "OuterBlock (instance 1)": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Ten"},
+  "A7": {"v":"CALCULATIONS"},
+  "A8": {"v":"I Out"},
+  "A9": {"v":"I Prev"},
+  "A11": {"v":"OUTPUTS"},
+  "A12": {"v":"O Out"}
+ },
+ "IdxBlock (instance 2)": {
+  "A4": {"v":"CALCULATIONS"},
+  "A5": {"v":"Prev X (shared)"},
+  "A7": {"v":"OUTPUTS"},
+  "A8": {"v":"Alias of in (shared)"},
+  "A9": {"v":"X Out — Vintage 1"},
+  "A10": {"v":"X Out — Vintage 2"},
+  "A11": {"v":"X Out — Vintage 3"},
+  "A12": {"v":"X Out (Total)"}
+ },
+ "SelfBlock (instance 2)": {
+  "A4": {"v":"OUTPUTS"},
+  "A5": {"v":"Out"}
+ },
+ "InnerBlock (instance 1)": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Ten"},
+  "A7": {"v":"CALCULATIONS"},
+  "A8": {"v":"I Out"},
+  "A9": {"v":"I Prev"}
+ }
+}

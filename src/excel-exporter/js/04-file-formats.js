@@ -69,19 +69,27 @@ async function loadModel(m){
   if(!systemData || !Array.isArray(systemData.canvases) || systemData.canvases.length === 0){
     throw new Error('Expected a system export (or a workspace export containing one) with a non-empty "canvases" array.');
   }
-  const loaded = {
-    periods: Array.isArray(systemData.periods) && systemData.periods.length ? systemData.periods : ['Period 1'],
-    canvases: systemData.canvases,
-    formatPresets
-  };
-  const key = signatureOf(loaded);
+  const periods = Array.isArray(systemData.periods) && systemData.periods.length ? systemData.periods : ['Period 1'];
+  // The calculation, read once (the shared IR). Its canvases — with the plug-to-socket
+  // links worked out from the names, not taken from the file — are what the layout lists.
+  const ir = compileModel({ periods, canvases: systemData.canvases });
+  const loaded = { periods, canvases: ir.order.map(c => c.raw), formatPresets };
+  // The saved layout's key leaves out the automatic links (fmIDE gives them new ids each
+  // time it redraws them); a layout saved under the older key, which counted them, is
+  // still found.
+  const key = signatureOf(systemData, true);
   let restored = null;
   try{
     await layoutsMigrated;
-    const raw = await layoutStore.get(key);
+    let raw = await layoutStore.get(key);
+    if(!(typeof raw === 'string' && raw)){
+      const older = signatureOf(systemData, false);
+      if(older !== key) raw = await layoutStore.get(older);
+    }
     if(typeof raw === 'string' && raw) restored = JSON.parse(raw);
   }catch(err){ /* ignore */ }
   model = loaded;
+  modelIR = ir;
   mappingKey = key;
   mapping = restored || buildDefaultMapping(model);
   // reconcile: drop rows/tabs referencing nodes/canvases no longer present, add rows for new nodes
@@ -96,7 +104,7 @@ function reconcileMapping(){
   const allInstances = findAllBlockInstances(model);
   allInstances.forEach(({ hostCanvasId, hostNode }) => {
     if(!hostNode.blockDefCanvasId) return;
-    collectInstanceRows(canvasById, [], hostCanvasId, hostNode, new Set(), model.periods.length)
+    collectInstanceRows([], hostCanvasId, hostNode, new Set(), model.periods.length)
       .forEach(u => validRowIds.add(pathKey(u.path, u.canvasId, u.nodeId)));
   });
   mapping.rows = mapping.rows.filter(r => validRowIds.has(r.id));

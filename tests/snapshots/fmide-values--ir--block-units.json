@@ -1,0 +1,38 @@
+{
+ "Top": {
+  "price": {"values":[10,10,10],"unit":"$/t"},
+  "vol": {"values":[5,5,5],"unit":"kt"},
+  "cost": {"values":[3,3,3],"unit":"$k"},
+  "b1": {"values":[[50],[50],[50]]},
+  "rev": {"values":[50,50,50],"unit":"$k (auto)"},
+  "b2": {"values":[[3],[3],[3]]},
+  "passed": {"values":[3,3,3],"unit":"$k (auto)"},
+  "b3": {"values":[[10],[10],[10]]},
+  "nested": {"values":[10,10,10],"unit":"$/t (auto)"},
+  "b4": {"values":[[150],[150],[150]]},
+  "vsum": {"values":[150,150,150],"unit":"$k (auto)"},
+  "b5": {"values":[[20],[20],[20]]},
+  "unfed": {"values":[20,20,20],"unit":"$ (auto)"},
+  "pl": {"values":[53,53,53]},
+  "tot": {"values":[53,53,53],"unit":"$k (auto)"}
+ },
+ "MulBlock": {
+  "mIn": {"values":[1,1,1],"unit":"EUR/t"},
+  "mQty": {"values":[2,2,2],"unit":"t"},
+  "mx": {"values":[2,2,2]},
+  "mOut": {"values":[2,2,2],"unit":"EUR (auto)"},
+  "mCopy": {"values":[1,1,1],"unit":"EUR/t (auto)"}
+ },
+ "PassBlock": {
+  "pIn": {"values":[0,0,0]},
+  "pp": {"values":[0,0,0]},
+  "pOut": {"values":[0,0,0]},
+  "pal": {"values":[0,0,0]},
+  "pSeen": {"values":[0,0,0]}
+ },
+ "OuterBlock": {
+  "oIn": {"values":[0,0,0]},
+  "oInst": {"values":[[0],[0],[0]]},
+  "oOut": {"values":[0,0,0]}
+ }
+}
