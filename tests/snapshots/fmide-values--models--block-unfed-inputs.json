@@ -1,0 +1,25 @@
+{
+ "Case1": {
+  "n182": {"values":[0,0,0]},
+  "n183": {"values":[-4,-4,-4]},
+  "n184": {"values":[-4,-4,-4]},
+  "n196": {"values":[-4,-4,-4]},
+  "n201": {"values":["error: operator + has no value: This operator has nothing connected to it..","error: operator + has no value: This operator has nothing connected to it..","error: operator + has no value: This operator has nothing connected to it.."]},
+  "n202": {"values":["error: operator + has no value: This operator has nothing connected to it..","error: operator + has no value: This operator has nothing connected to it..","error: operator + has no value: This operator has nothing connected to it.."]},
+  "n244": {"values":[[-4],[-4],[-4]]}
+ },
+ "Case2": {
+  "n262": {"values":[0,0,0]},
+  "n263": {"values":[-4,-4,-4]},
+  "n264": {"values":[-4,-4,-4]},
+  "n265": {"values":[-4,-4,-4]},
+  "n266": {"values":["error: operator + has no value: This operator has nothing connected to it..","error: operator + has no value: This operator has nothing connected to it..","error: operator + has no value: This operator has nothing connected to it.."]},
+  "n268": {"values":[[-4],[-4],[-4]]}
+ },
+ "Negatizer": {
+  "n237": {"values":[-4,-4,-4]},
+  "n238": {"values":[-1,-1,-1]},
+  "n239": {"values":[4,4,4]},
+  "n240": {"values":[-4,-4,-4]}
+ }
+}

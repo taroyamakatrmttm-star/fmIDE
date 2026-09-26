@@ -104,10 +104,12 @@
   viewport.addEventListener('contextmenu', (e) => { e.preventDefault(); });
 
   // ---------- computation ----------
-  function nodesOf(canvasId){ const c = canvases.find(c => c.id === canvasId); return c ? c.nodes : []; }
-  function edgesOf(canvasId){ const c = canvases.find(c => c.id === canvasId); return c ? c.edges : []; }
-  function nodeIn(canvasId, nodeId){ return nodesOf(canvasId).find(n => n.id === nodeId); }
+  // The calculation runs on the shared IR (src/shared/ir.js): compileModel reads the model,
+  // evaluateModel calculates it, with the operators of src/shared/operators.js (included in
+  // 01-setup-commands-keys.js, where the palette is built from it).
+  // build:include shared/ir.js
 
+  // The active canvas's incoming arrows of a node, its sources left to right (used to draw them).
   function sortedIncoming(nodeId){
     return edges.filter(e => e.to === nodeId).slice().sort((a,b) => {
       const na = getNode(a.from), nb = getNode(b.from);
@@ -116,309 +118,19 @@
     });
   }
 
-  function sortedIncomingIn(canvasId, nodeId){
-    return edgesOf(canvasId).filter(e => e.to === nodeId).slice().sort((a,b) => {
-      const na = nodeIn(canvasId, a.from), nb = nodeIn(canvasId, b.from);
-      if(!na || !nb) return 0;
-      return (na.x - nb.x) || (na.y - nb.y);
-    });
-  }
-
-  function resolveEdgeValue(canvasId, edge, period, scope, visiting, memo, errors){
-    const srcNode = nodeIn(canvasId, edge.from);
-    if(!srcNode) return null;
-    if(srcNode.type === 'blockInstance'){
-      return computeBlockInstanceOutput(canvasId, srcNode, edge.fromPort || 0, period, scope, visiting, memo, errors);
+  // The IR of the model as it is now, compiled when first needed after a change (units on
+  // the canvas read it); invalidateIR() is called wherever the model may change.
+  let modelIR = null;
+  function invalidateIR(){ modelIR = null; }
+  function currentIR(){
+    if(!modelIR){
+      syncActiveIntoRegistry();
+      modelIR = compileModel({ periods, canvases });
     }
-    return computeValue(canvasId, edge.from, period, scope, visiting, memo, errors);
+    return modelIR;
   }
-
-  // The memo/error key of one node in one period and scope. It carries the canvas id:
-  // node ids are unique within a canvas, but a file may repeat them on other canvases.
-  function valueKey(period, canvasId, scope, nodeId){ return period + '|' + canvasId + '|' + scope.prefix + nodeId; }
-  function canvasById(id){ return canvases.find(c => c.id === id); }
-
-  function computeValue(canvasId, nodeId, period, scope, visiting, memo, errors){
-    const key = valueKey(period, canvasId, scope, nodeId);
-    if(memo.hasOwnProperty(key)) return memo[key];
-    if(visiting.has(key)){ errors[key] = 'cycle'; memo[key] = null; return null; }
-    const n = nodeIn(canvasId, nodeId);
-    if(!n) return null;
-    visiting.add(key);
-    let result = null;
-
-    if(n.type === 'alias'){
-      if(!n.sourceCanvasId || !n.sourceNodeId){
-        errors[key] = 'alias-unset';
-      } else {
-        const srcCanvasExists = canvases.some(c => c.id === n.sourceCanvasId);
-        if(!srcCanvasExists){
-          errors[key] = 'alias-missing-canvas';
-        } else {
-          const srcNode = nodeIn(n.sourceCanvasId, n.sourceNodeId);
-          if(!srcNode){
-            errors[key] = 'alias-missing-node';
-          } else {
-            // An alias that points back into the SAME canvas it lives in is just a local
-            // routing jump (e.g. re-exposing an internal subtotal as a block output) — it
-            // must stay inside the current evaluation scope so it still sees the current
-            // block instance's bound inputs. An alias into a genuinely different canvas
-            // has no such scope to inherit, so it evaluates that canvas fresh, as top-level.
-            const aliasScope = (n.sourceCanvasId === canvasId) ? scope : { prefix:'', bindings:{} };
-            result = computeValue(n.sourceCanvasId, srcNode.id, period, aliasScope, visiting, memo, errors);
-            if(result === null && !errors[key]) errors[key] = 'missing-input';
-          }
-        }
-      }
-    } else if(n.type === 'blockInstance'){
-      // has no single scalar value; callers should resolve a specific output via resolveEdgeValue instead
-      errors[key] = 'no-input';
-    } else if(n.type === 'value'){
-      if(scope.bindings.hasOwnProperty(nodeId)){
-        // A block input port's binding is the OUTER edge feeding it, resolved fresh at
-        // whatever period is actually being asked for here — not the value at the period
-        // the block instance's output was originally requested at. This matters whenever
-        // the block definition looks at another period internally (a corkscrew reaching
-        // back via a period-shift node): each historical period along that chain must see
-        // its own period's input values, not the value frozen from the outermost call.
-        //
-        // A binding is {edge, fixedPeriod, literal}: normally fixedPeriod is null and the
-        // edge resolves at the current `period` (broadcast — today's only behavior, still
-        // the default). A Vertical Block instance (see computeVerticalBlockInstanceOutput)
-        // can instead pin an "indexed" input's edge to a fixed period (that instance's own
-        // vertical index) regardless of which period is being asked for, or, for the
-        // block's Vertical Index rectangle, skip the edge entirely and hand back a literal.
-        const binding = scope.bindings[nodeId];
-        if(binding && typeof binding.literal === 'number'){
-          result = binding.literal;
-        } else {
-          const inEdge = binding ? binding.edge : null;
-          const bindPeriod = (binding && typeof binding.fixedPeriod === 'number') ? binding.fixedPeriod : period;
-          const bound = inEdge ? resolveEdgeValue(scope.outerCanvasId, inEdge, bindPeriod, scope.outerScope, visiting, memo, errors) : null;
-          if(bound === null || bound === undefined || (typeof bound === 'number' && Number.isNaN(bound))){
-            const literal = effectiveLiteral(n, period);
-            result = (literal !== null) ? literal : 0;
-          } else result = bound;
-        }
-      } else {
-        const incoming = edgesOf(canvasId).filter(e => e.to === nodeId);
-        const typed = parseNode(n).literal;
-        if(incoming.length === 0 || isInputRectangle(canvasById(canvasId), n)){
-          // An input (nothing wired in, or only an operator that nothing feeds — the shared
-          // input rule): driven purely by its own number, defaulting to zero.
-          const literal = effectiveLiteral(n, period);
-          result = (literal !== null) ? literal : 0;
-        } else if(incoming.length === 1 && Array.isArray(n.literalPeriods) && n.literalPeriods.includes(period) && typed !== null){
-          // A period ticked under "Which periods use this rectangle's own number?" uses it,
-          // wired or not (ExcelExporter writes the typed number there too).
-          result = typed;
-        } else if(incoming.length === 1){
-          // Not an input — follow the wired source. Where the source needs a period outside
-          // the timeline (e.g. a corkscrew's opening balance in period 1, read through a
-          // period shift), the rectangle's own typed number applies, or 0 — the same shared
-          // rule ExcelExporter follows. Any other failure (a broken link, a loop, a divide
-          // by zero) shows as "?", as it shows as an error in Excel.
-          const edgeVal = resolveEdgeValue(canvasId, incoming[0], period, scope, visiting, memo, errors);
-          if(edgeVal !== null && edgeVal !== undefined && !Number.isNaN(edgeVal)){
-            result = edgeVal;
-          } else if(reachesOutsideTimeline(canvasById, canvasId, incoming[0].from, period, periods.length)){
-            const literal = effectiveLiteral(n, period);
-            result = (literal !== null) ? literal : 0;
-          } else if(!errors[key]){
-            errors[key] = 'missing-input';
-          }
-        } else {
-          errors[key] = 'ambiguous';
-        }
-      }
-    } else if(n.type === 'periodShift'){
-      const incoming = edgesOf(canvasId).filter(e => e.to === nodeId);
-      if(incoming.length === 0){
-        errors[key] = 'no-input';
-      } else if(incoming.length > 1){
-        errors[key] = 'ambiguous';
-      } else {
-        const offset = (typeof n.shift === 'number') ? n.shift : -1;
-        const targetPeriod = period + offset;
-        if(targetPeriod < 0 || targetPeriod >= periods.length){
-          errors[key] = 'period-out-of-range';
-        } else {
-          result = resolveEdgeValue(canvasId, incoming[0], targetPeriod, scope, visiting, memo, errors);
-          if(result === null && !errors[key]) errors[key] = 'missing-input';
-        }
-      }
-    } else {
-      const incomingEdges = sortedIncomingIn(canvasId, nodeId).filter(e => nodeIn(canvasId, e.from));
-
-      if(n.text === 'iferror'){
-        // Excel's IFERROR(first, second): with no second input the fallback is 0, and an
-        // iferror with nothing wired in gives 0 too (ExcelExporter writes IFERROR(x,0) / 0).
-        if(incomingEdges.length === 0){
-          result = 0;
-        } else {
-          const primary = resolveEdgeValue(canvasId, incomingEdges[0], period, scope, visiting, memo, errors);
-          const primaryBad = (primary === null || primary === undefined || Number.isNaN(primary));
-          if(!primaryBad){
-            result = primary;
-          } else if(incomingEdges.length >= 2){
-            const fallback = resolveEdgeValue(canvasId, incomingEdges[1], period, scope, visiting, memo, errors);
-            if(fallback === null || fallback === undefined || Number.isNaN(fallback)){
-              errors[key] = 'missing-input';
-            } else {
-              result = fallback;
-            }
-          } else {
-            result = 0;
-          }
-        }
-      } else if(incomingEdges.length === 0){
-        errors[key] = 'no-input';
-      } else {
-        const values = incomingEdges.map(e => resolveEdgeValue(canvasId, e, period, scope, visiting, memo, errors));
-        if(values.some(v => v === null || v === undefined || Number.isNaN(v))){
-          errors[key] = 'missing-input';
-        } else if(n.text === 'abs'){
-          if(values.length !== 1){ errors[key] = 'unary-only'; }
-          else result = Math.abs(values[0]);
-        } else if(n.text === 'min'){
-          result = Math.min(...values);
-        } else if(n.text === 'max'){
-          result = Math.max(...values);
-        } else if(n.text === 'ave'){
-          result = values.reduce((a,b) => a+b, 0) / values.length;
-        } else if(['≤', '≥', '<', '>'].includes(n.text)){
-          // A chain a < b < c means a < b and b < c (Excel: AND(a<b, b<c)); 1 = true, 0 = false.
-          if(values.length < 2){ errors[key] = 'needs-two'; }
-          else {
-            const holds = (a, b) => n.text === '≤' ? a <= b : n.text === '≥' ? a >= b : n.text === '<' ? a < b : a > b;
-            result = values.slice(1).every((v, i) => holds(values[i], v)) ? 1 : 0;
-          }
-        } else {
-          result = values.reduce((acc, v, idx) => {
-            if(idx === 0) return v;
-            switch(n.text){
-              case '+': return acc + v;
-              case '−': return acc - v;
-              case '×': return acc * v;
-              case '÷': return v === 0 ? NaN : acc / v;
-              case '^': return Math.pow(acc, v);
-              // Excel's MOD: the result takes the divisor's sign (MOD(-7,3) = 2).
-              case '%': return v === 0 ? NaN : acc - v * Math.floor(acc / v);
-              default: return acc;
-            }
-          });
-          if(Number.isNaN(result)){ errors[key] = 'math-error'; result = null; }
-        }
-      }
-    }
-
-    visiting.delete(key);
-    memo[key] = result;
-    return result;
-  }
-
-  function computeBlockInstanceOutput(outerCanvasId, instanceNode, outputIndex, period, outerScope, visiting, memo, errors){
-    const key = valueKey(period, outerCanvasId, outerScope, instanceNode.id + '::out' + outputIndex);
-    if(memo.hasOwnProperty(key)) return memo[key];
-
-    const def = canvases.find(c => c.id === instanceNode.blockDefCanvasId);
-    if(!def){ errors[key] = 'block-missing-def'; memo[key] = null; return null; }
-
-    if(instanceNode.vertical){
-      return computeVerticalBlockInstanceOutput(outerCanvasId, instanceNode, outputIndex, period, outerScope, visiting, memo, errors, def, key);
-    }
-
-    const blockCycleKey = period + '|#block#' + def.id;
-    if(visiting.has(blockCycleKey)){ errors[key] = 'block-cycle'; memo[key] = null; return null; }
-
-    const { outputs } = blockPortsOf(def);
-    const outNode = outputs[outputIndex];
-    if(!outNode){ errors[key] = 'block-missing-output'; memo[key] = null; return null; }
-
-    const bindings = singleInstanceBindings(def, outerCanvasId, instanceNode);
-
-    const innerScope = { prefix: outerScope.prefix + outerCanvasId + '/' + instanceNode.id + '::', bindings, outerCanvasId, outerScope };
-    visiting.add(blockCycleKey);
-    const result = computeValue(def.id, outNode.id, period, innerScope, visiting, memo, errors);
-    visiting.delete(blockCycleKey);
-
-    memo[key] = result;
-    if(result === null && !errors[key]){
-      errors[key] = errors[valueKey(period, def.id, innerScope, outNode.id)] || 'missing-input';
-    }
-    return result;
-  }
-
-  // Bind each declared Input port to the outer EDGE feeding it (not a precomputed value at
-  // this call's period) — see the matching comment in computeValue's 'value' branch for why:
-  // the block definition may need each bound input re-evaluated at other periods too. This is
-  // the ordinary "broadcast" binding shared by a ordinary (non-vertical) instance and by every
-  // vertical instance's non-indexed inputs.
-  function singleInstanceBindings(def, outerCanvasId, instanceNode){
-    const { inputs } = blockPortsOf(def);
-    const bindings = {};
-    inputs.forEach((inp, i) => {
-      const inEdge = edgesOf(outerCanvasId).find(e => e.to === instanceNode.id && e.toPort === i);
-      bindings[inp.id] = { edge: inEdge || null, fixedPeriod: null };
-    });
-    return bindings;
-  }
-
-  // A Vertical Block instance runs the SAME block definition once per period (the vertical
-  // "instance index" i = 0..periods.length-1, exposed 1-based inside the definition via its
-  // Vertical Index rectangle, if any), then folds the N independent results together with the
-  // output rectangle's chosen reducer. An input port's edge is "indexed" (edge.verticalIndexed)
-  // when it should read its outer source at that FIXED instance period i — e.g. a per-period
-  // Capex row becoming "this vintage's own capex" — instead of the period actually being asked
-  // for; every other input keeps today's broadcast behavior (same value resolved fresh at
-  // whichever period the definition's internal formulas are looking at).
-  function computeVerticalBlockInstanceOutput(outerCanvasId, instanceNode, outputIndex, period, outerScope, visiting, memo, errors, def, key){
-    const { inputs, outputs, indexNode } = blockPortsOf(def);
-    const outNode = outputs[outputIndex];
-    if(!outNode){ errors[key] = 'block-missing-output'; memo[key] = null; return null; }
-
-    const N = periods.length;
-    const results = [];
-    for(let i = 0; i < N; i++){
-      const blockCycleKey = period + '|#block#' + def.id + '#v' + instanceNode.id + '#' + i;
-      if(visiting.has(blockCycleKey)){ errors[key] = 'block-cycle'; results.push(null); continue; }
-
-      const bindings = {};
-      inputs.forEach((inp, portIdx) => {
-        const inEdge = edgesOf(outerCanvasId).find(e => e.to === instanceNode.id && e.toPort === portIdx);
-        const indexed = !!(inEdge && inEdge.verticalIndexed);
-        bindings[inp.id] = { edge: inEdge || null, fixedPeriod: indexed ? i : null };
-      });
-      if(indexNode) bindings[indexNode.id] = { edge: null, fixedPeriod: null, literal: i + 1 };
-
-      const innerScope = { prefix: outerScope.prefix + outerCanvasId + '/' + instanceNode.id + '::v' + i + '::', bindings, outerCanvasId, outerScope };
-      visiting.add(blockCycleKey);
-      const r = computeValue(def.id, outNode.id, period, innerScope, visiting, memo, errors);
-      visiting.delete(blockCycleKey);
-      results.push(r);
-    }
-
-    let result = null;
-    if(results.length === 0){
-      errors[key] = 'no-input';
-    } else if(results.some(v => v === null || v === undefined || Number.isNaN(v))){
-      errors[key] = 'missing-input';
-    } else {
-      const mode = outNode.verticalReducer || 'sum';
-      if(mode === 'max') result = Math.max(...results);
-      else if(mode === 'min') result = Math.min(...results);
-      else if(mode === 'ave') result = results.reduce((a,b) => a+b, 0) / results.length;
-      else if(mode === 'product') result = results.reduce((a,b) => a*b, 1);
-      else result = results.reduce((a,b) => a+b, 0); // 'sum' (default)
-    }
-
-    memo[key] = result;
-    // Stashed alongside the reduced result so evaluateAll can surface the per-instance
-    // breakdown (see c.periodPortInstances) without recomputing it — used only by the
-    // "view instances" table on a vertical block instance, never by the graph itself.
-    memo[key + '::instances'] = results.slice();
-    return result;
-  }
+  // A node's unit of measure ({scale, dims}) from the IR, or null.
+  function nodeUOM(canvasId, nodeId){ return unitOf(currentIR(), canvasId, nodeId); }
 
   // Evaluates every period, for every canvas, and keeps a full per-period
   // snapshot on each canvas (c.periodComputedValues[p], etc.) so switching the
@@ -432,61 +144,16 @@
 
   function evaluateAllNow(){
     syncActiveIntoRegistry();
-    const TOP = () => ({ prefix:'', bindings:{} });
-
-    canvases.forEach(c => {
-      c.periodComputedValues = [];
-      c.periodComputeErrors = [];
-      c.periodPortValues = [];
-      c.periodPortErrors = [];
-      c.periodPortInstances = [];
+    const ir = compileModel({ periods, canvases });
+    const results = evaluateModel(ir);
+    canvases.forEach((c, i) => {
+      const r = results[i];
+      c.periodComputedValues = r.values;
+      c.periodComputeErrors = r.errors;
+      c.periodPortValues = r.portValues;
+      c.periodPortErrors = r.portErrors;
+      c.periodPortInstances = r.portInstances;
     });
-
-    for(let p = 0; p < periods.length; p++){
-      const memo = {}, errors = {};
-
-      canvases.forEach(c => {
-        c.nodes.forEach(n => {
-          if(n.type === 'blockInstance'){
-            const def = canvases.find(cc => cc.id === n.blockDefCanvasId);
-            const { outputs } = blockPortsOf(def);
-            outputs.forEach((_, i) => computeBlockInstanceOutput(c.id, n, i, p, TOP(), new Set(), memo, errors));
-          } else {
-            computeValue(c.id, n.id, p, TOP(), new Set(), memo, errors);
-          }
-        });
-      });
-
-      canvases.forEach(c => {
-        const cv = {}, ce = {}, pv = {}, pe = {}, pin = {};
-        c.nodes.forEach(n => {
-          if(n.type === 'blockInstance'){
-            const def = canvases.find(cc => cc.id === n.blockDefCanvasId);
-            const { outputs } = blockPortsOf(def);
-            const vals = [], errs = [];
-            let insts = null;
-            outputs.forEach((_, i) => {
-              const k = valueKey(p, c.id, TOP(), n.id + '::out' + i);
-              vals.push(memo.hasOwnProperty(k) ? memo[k] : null);
-              errs.push(errors[k] || null);
-              if(n.vertical){
-                if(!insts) insts = [];
-                insts.push(memo.hasOwnProperty(k + '::instances') ? memo[k + '::instances'] : []);
-              }
-            });
-            pv[n.id] = vals; pe[n.id] = errs;
-            if(insts) pin[n.id] = insts;
-          } else {
-            const k = valueKey(p, c.id, TOP(), n.id);
-            if(memo.hasOwnProperty(k) && memo[k] !== null) cv[n.id] = memo[k];
-            if(errors[k]) ce[n.id] = errors[k];
-          }
-        });
-        c.periodComputedValues[p] = cv; c.periodComputeErrors[p] = ce;
-        c.periodPortValues[p] = pv; c.periodPortErrors[p] = pe;
-        c.periodPortInstances[p] = pin;
-      });
-    }
 
     canvases.forEach(c => {
       c.computedValues = c.periodComputedValues[currentPeriod] || {};
@@ -495,6 +162,7 @@
       c.portErrors = c.periodPortErrors[currentPeriod] || {};
     });
     loadCanvasState(canvases.find(c => c.id === activeCanvasId));
+    modelIR = ir;
     renderPeriodControls();
     render();
   }

@@ -1,0 +1,17 @@
+{
+ "Audit": {
+  "a": {"values":[100,100,100]},
+  "l": {"values":[100,100,100]},
+  "minus": {"values":[0,0,0]},
+  "diff": {"values":[0,0,0]},
+  "abs": {"values":[0,0,0]},
+  "tol": {"values":[0.001,0.001,0.001]},
+  "le": {"values":[1,1,1]},
+  "chk": {"values":[1,1,1]},
+  "one": {"values":[1,1,1]},
+  "mn": {"values":[1,1,1]},
+  "minprobe": {"values":[1,1,1]},
+  "ge": {"values":[1,1,1]},
+  "geprobe": {"values":[1,1,1]}
+ }
+}

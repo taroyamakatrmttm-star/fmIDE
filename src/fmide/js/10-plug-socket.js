@@ -16,6 +16,7 @@
 
   function syncAutoConnections(){
     syncActiveIntoRegistry();
+    invalidateIR();
 
     // wipe everything auto-generated from a previous sync, everywhere
     canvases.forEach(c => {

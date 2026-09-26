@@ -1,0 +1,43 @@
+{
+ "BS": {
+  "ta": {"values":[60,60,60]},
+  "cash": {"values":[30,30,30]},
+  "inv": {"values":[20,20,20]},
+  "ar": {"values":[10,10,10]},
+  "rev": {"values":[50,50,50]},
+  "rate": {"values":[0.2,0.2,0.2]},
+  "vol": {"values":[10,10,10]},
+  "up": {"values":[5,5,5]},
+  "plus": {"values":[60,60,60]},
+  "m1": {"values":[50,50,50]},
+  "m2": {"values":[10,10,10]}
+ },
+ "Corkscrew": {
+  "eb": {"values":[105,110,115]},
+  "sub": {"values":[5,5,5]},
+  "add": {"values":[10,10,10]},
+  "bb": {"values":[100,105,110]},
+  "ps": {"values":["error: period shift t−1 has no value: There's no period that far back/forward for this shifter to read — it's fine at the timeline's edge..",105,110]},
+  "o1": {"values":[110,115,120]},
+  "o2": {"values":[105,110,115]}
+ },
+ "Capex": {
+  "capex": {"values":[100,100,100]},
+  "lifeH": {"values":[5,5,5]},
+  "inst": {"values":[[18],[18],[18]]},
+  "tot": {"values":[18,18,18]},
+  "al": {"values":[18,18,18]},
+  "plus": {"values":[19,19,19]},
+  "other": {"values":[1,1,1]},
+  "grand": {"values":[19,19,19]}
+ },
+ "DepBlock": {
+  "cap": {"values":[0,0,0]},
+  "life": {"values":[0,0,0]},
+  "div": {"values":["error: operator ÷ has no value: Invalid result (e.g. divide by zero)..","error: operator ÷ has no value: Invalid result (e.g. divide by zero)..","error: operator ÷ has no value: Invalid result (e.g. divide by zero).."]},
+  "ann": {"values":["error: \"Annual Dep\" has no value: One of this operator's inputs could not be computed..","error: \"Annual Dep\" has no value: One of this operator's inputs could not be computed..","error: \"Annual Dep\" has no value: One of this operator's inputs could not be computed.."]},
+  "rate": {"values":[0.3,0.3,0.3]},
+  "mul": {"values":["error: operator × has no value: One of this operator's inputs could not be computed..","error: operator × has no value: One of this operator's inputs could not be computed..","error: operator × has no value: One of this operator's inputs could not be computed.."]},
+  "out": {"values":["error: \"Tax Shield\" has no value: One of this operator's inputs could not be computed..","error: \"Tax Shield\" has no value: One of this operator's inputs could not be computed..","error: \"Tax Shield\" has no value: One of this operator's inputs could not be computed.."]}
+ }
+}

@@ -12,8 +12,10 @@
   const SVGNS = 'http://www.w3.org/2000/svg';
   const SNAP_THRESHOLD = 6;
 
-  const OPS = ['+', '−', '×', '÷', '^', '%', '≤', '≥', '<', '>', 'abs', 'min', 'max', 'ave', 'iferror'];
-  const WORD_OPS = ['abs', 'min', 'max', 'ave', 'iferror'];
+  // build:include shared/operators.js
+  // The operators, in palette order, from the shared catalogue.
+  const OPS = OPERATORS.map(op => op.symbol);
+  const WORD_OPS = OPERATORS.filter(op => op.fn).map(op => op.symbol);
 
   function operatorSize(sym){
     if(WORD_OPS.includes(sym)){
@@ -134,8 +136,7 @@
   ];
   // Symbol operators show the symbol as the icon and a word as the label ("+ Add");
   // function operators show ƒ plus their name ("ƒ max"), so nothing is printed twice.
-  const OP_NAMES = { '+':'Add', '−':'Subtract', '×':'Multiply', '÷':'Divide', '^':'Power', '%':'Modulo',
-    '≤':'At most', '≥':'At least', '<':'Less than', '>':'Greater than' };
+  const OP_NAMES = Object.fromEntries(OPERATORS.filter(op => op.word).map(op => [op.symbol, op.word]));
   OPS.forEach((sym, i) => {
     const word = OP_NAMES[sym];
     COMMANDS.push({ id:'insertOp' + i, label:'Insert Operator ' + sym + (word ? ' (' + word + ')' : ''), short: word || sym,
@@ -261,20 +262,8 @@
   function uid(prefix){ return prefix + (nextId++); }
   function getNode(id){ return nodes.find(n => n.id === id); }
 
-  function parseNode(n){
-    const raw = n.text || '';
-    const lines = raw.split('\n');
-    if(lines.length === 1){
-      const t = lines[0].trim();
-      if(t !== '' && !isNaN(Number(t))) return { name: '', literal: Number(t), uom: null };
-      return { name: lines[0], literal: null, uom: null };
-    }
-    const name = lines[0];
-    const second = lines[1].trim();
-    const literal = (second !== '' && !isNaN(Number(second))) ? Number(second) : null;
-    const uom = (lines.length >= 3 && lines[2].trim() !== '') ? lines[2].trim() : null;
-    return { name, literal, uom };
-  }
+  // A value rectangle's name, typed number and unit (parseRectText: src/shared/ir.js).
+  function parseNode(n){ return parseRectText(n.text); }
 
   function formatNum(v){
     if(v === null || v === undefined || !isFinite(v)) return '?';

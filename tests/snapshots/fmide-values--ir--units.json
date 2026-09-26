@@ -1,0 +1,42 @@
+{
+ "Units": {
+  "price": {"values":[10,10,10],"unit":"$/t"},
+  "vol": {"values":[5,5,5],"unit":"kt"},
+  "cost": {"values":[3,3,3],"unit":"$k"},
+  "pct": {"values":[0.1,0.1,0.1],"unit":"%"},
+  "bn": {"values":[2,2,2],"unit":"$bn"},
+  "mul": {"values":[50,50,50]},
+  "rev": {"values":[50,50,50],"unit":"$k (auto)"},
+  "dv": {"values":[0.1,0.1,0.1]},
+  "back": {"values":[0.1,0.1,0.1],"unit":"t/$ (auto)"},
+  "pl": {"values":[53,53,53]},
+  "tot": {"values":[53,53,53],"unit":"$k (auto)"},
+  "bad": {"values":[15,15,15]},
+  "mism": {"values":[15,15,15]},
+  "sh": {"values":["error: period shift t−1 has no value: There's no period that far back/forward for this shifter to read — it's fine at the timeline's edge..",50,50]},
+  "prior": {"values":[0,50,50],"unit":"$k (auto)"},
+  "mul2": {"values":[50,50,50]},
+  "typed": {"values":[50,50,50],"unit":"USD"},
+  "pw": {"values":[3125,3125,3125]},
+  "pow": {"values":[3125,3125,3125]},
+  "mx": {"values":[50,50,50]},
+  "mxr": {"values":[50,50,50],"unit":"$k (auto)"},
+  "mul3": {"values":[0.2,0.2,0.2]},
+  "scaled": {"values":[0.2,0.2,0.2],"unit":"$ (auto)"},
+  "dv2": {"values":[1,1,1]},
+  "per": {"values":[1,1,1]},
+  "bi": {"values":[[100],[100],[100]]},
+  "bout": {"values":[100,100,100]}
+ },
+ "Linked": {
+  "la": {"values":[50,50,50],"unit":"$k (auto)"},
+  "lr": {"values":[50,50,50],"unit":"$k (auto)"},
+  "lb": {"values":[10,10,10],"unit":"$/t (auto)"}
+ },
+ "UnitBlock": {
+  "bin": {"values":[0,0,0]},
+  "bm": {"values":[0,0,0]},
+  "two": {"values":[2,2,2]},
+  "bo": {"values":[0,0,0]}
+ }
+}

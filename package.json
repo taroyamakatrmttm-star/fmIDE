@@ -7,14 +7,16 @@
     "build:check": "node tools/build.js --check",
     "serve": "node tools/serve.js",
     "test": "playwright test",
-    "test:update-snapshots": "playwright test tests/7-ui-fmide.spec.js tests/8-snapshots.spec.js --update-snapshots",
+    "test:update-snapshots": "playwright test tests/7-ui-fmide.spec.js tests/8-snapshots.spec.js tests/18-ir.spec.js --update-snapshots",
     "test:excel": "playwright test tests/1-excel-structure.spec.js tests/2-excel-values.spec.js tests/3-excel-layout.spec.js tests/4-format-roles.spec.js",
     "test:security": "playwright test tests/5-security.spec.js",
     "test:formats": "playwright test tests/6-formats",
     "test:ui": "playwright test tests/7-ui",
     "test:snapshots": "playwright test tests/8-snapshots.spec.js",
     "test:web-app": "playwright test tests/12-web-app.spec.js",
-    "test:agreement": "playwright test tests/17-agreement.spec.js"
+    "test:agreement": "playwright test tests/17-agreement.spec.js",
+    "test:ir": "playwright test tests/18-ir.spec.js",
+    "bench": "node tools/bench-calc.js"
   },
   "devDependencies": {
     "@playwright/test": "1.56.1",
