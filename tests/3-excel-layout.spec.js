@@ -232,4 +232,22 @@ test.describe('Inputs tab', () => {
     wb = (await X.generate(page)).wb;
     expect(describe(inputsLayout(wb))).toEqual(alpha([...BS_SHEET, ...CORK_SHEET]));
   });
+
+  test('Block Input rectangles on their own canvas are gathered and linked', async ({ page }) => {
+    // Volume and DSO are marked Block Input in fmIDE; on their own canvas they are typed inputs.
+    const wb = await generateFor(page, 'block-input-rectangles.json', { inputs: true });
+    const inputs = wb.Sheets['Inputs'];
+    const gathered = inputsLayout(wb).filter(x => !x.header).map(x => x.label);
+    expect(gathered).toEqual(expect.arrayContaining(['Volume', 'DSO', 'Unit Price']));
+    const ws = wb.Sheets['Revenue AR'], p1 = X.periodOneCol(ws);
+    for(const label of ['Volume', 'DSO']){
+      const rows = X.findRow(ws, label);
+      expect(rows.length, `"${label}" row on Revenue AR`).toBe(1);
+      const f = X.formulaOf(ws[X.numToCol(p1) + rows[0]]) || '';
+      const m = /^'?Inputs'?!\$?([A-Z]+)\$?(\d+)$/.exec(f);
+      expect(m, `${label} links to the Inputs tab (got ${JSON.stringify(f)})`).not.toBeNull();
+      expect(X.text(inputs, 'A' + m[2])).toBe(label);
+    }
+    expect(X.findRow(inputs, 'DSO').map(r => inputs[X.numToCol(X.periodOneCol(inputs)) + r].v)).toEqual([0.08]);
+  });
 });
