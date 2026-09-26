@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "kind": "fmIDE-templates",
+  "templates": [
+    {
+      "name": "Income Statement",
+      "group": "Financial Statement",
+      "description": "Revenue to Net Income",
+      "kind": "module",
+      "data": {
+        "version": 1,
+        "kind": "module",
+        "nodes": [
+          {
+            "id": "n1",
+            "type": "value",
+            "x": 50,
+            "y": 50,
+            "w": 170,
+            "h": 64,
+            "text": "IS Rect\n7"
+          }
+        ],
+        "edges": []
+      }
+    },
+    {
+      "name": "Cash flow statement",
+      "group": "Financial Statement",
+      "description": "Simple CFO + CFI + CFF",
+      "kind": "module",
+      "data": {
+        "version": 1,
+        "kind": "module",
+        "nodes": [
+          {
+            "id": "n1",
+            "type": "value",
+            "x": 50,
+            "y": 50,
+            "w": 170,
+            "h": 64,
+            "text": "CF Rect\n7"
+          }
+        ],
+        "edges": []
+      }
+    },
+    {
+      "name": "Depreciation schedule",
+      "group": "Assets",
+      "description": "Straight-line depreciation",
+      "kind": "module",
+      "data": {
+        "version": 1,
+        "kind": "module",
+        "nodes": [
+          {
+            "id": "n1",
+            "type": "value",
+            "x": 50,
+            "y": 50,
+            "w": 170,
+            "h": 64,
+            "text": "Dep Rect\n7"
+          }
+        ],
+        "edges": []
+      }
+    },
+    {
+      "name": "Audit BS",
+      "group": "Utilities",
+      "description": "Balance sheet check",
+      "kind": "system",
+      "data": {
+        "version": 2,
+        "kind": "system",
+        "canvases": [
+          {
+            "id": "c1",
+            "name": "Audit",
+            "nodes": [
+              {
+                "id": "n1",
+                "type": "value",
+                "x": 50,
+                "y": 50,
+                "w": 170,
+                "h": 64,
+                "text": "Audit Rect\n1"
+              }
+            ],
+            "edges": []
+          }
+        ]
+      }
+    }
+  ]
+}

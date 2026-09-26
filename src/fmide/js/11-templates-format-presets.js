@@ -399,7 +399,7 @@
     box.className = 'modal-box template-box';
     overlay.appendChild(box);
     document.body.appendChild(overlay);
-    function close(){ overlay.remove(); }
+    function close(){ overlay.remove(); document.removeEventListener('keydown', onKey, true); }
     overlay.addEventListener('mousedown', (ev) => { if(ev.target === overlay) close(); });
 
     const title = document.createElement('p');
@@ -452,9 +452,23 @@
     layout.className = 'template-layout';
     box.appendChild(layout);
 
+    // Search box over the list, as in the Command Launcher (Ctrl+K): the same fuzzy match,
+    // best match first; ↑↓ select, Enter runs the selected template's main button, Esc closes.
+    const listCol = document.createElement('div');
+    listCol.className = 'template-list-col';
+    layout.appendChild(listCol);
+    const search = document.createElement('input');
+    search.type = 'search';
+    search.className = 'template-search';
+    search.placeholder = 'Search templates…';
+    search.setAttribute('autocomplete', 'off');
+    search.spellcheck = false;
+    listCol.appendChild(search);
+
     const list = document.createElement('div');
     list.className = 'template-list';
-    layout.appendChild(list);
+    listCol.appendChild(list);
+    let shown = []; // templates in the list, in display order
 
     const detail = document.createElement('div');
     detail.className = 'template-detail';
@@ -469,6 +483,19 @@
     saveSystemBtn.addEventListener('click', () => {
       saveCurrentSystemAsTemplate((newTpl) => { selected = newTpl; previewCanvasIdx = 0; renderList(); renderDetail(); });
     });
+
+    // The selected template's main (blue) button: Add to current canvas / Add System.
+    function runMain(){
+      const t = selected;
+      if(!t) return;
+      close();
+      if(t.kind === 'module'){ guarded(() => fm.insertTemplate(t.id, 'here')); return; }
+      const collisions = (t.data.canvases || [])
+        .filter(c => canvases.some(ec => ec.name.trim().toLowerCase() === (c.name || '').trim().toLowerCase()))
+        .map(c => ({ name: c.name || 'Canvas' }));
+      if(collisions.length === 0) guarded(() => fm.insertTemplate(t.id, 'add'));
+      else showCanvasMergeDecisionModal(collisions, (decisions) => guarded(() => fm.insertTemplate({ template: t.id, mode: 'add', decisions })));
+    }
 
     function renderDetail(){
       detail.innerHTML = '';
@@ -518,7 +545,7 @@
         const addBtn = document.createElement('button');
         addBtn.className = 'primary';
         addBtn.textContent = 'Add to current canvas';
-        addBtn.addEventListener('click', () => { close(); guarded(() => fm.insertTemplate(selected.id, 'here')); });
+        addBtn.addEventListener('click', runMain);
         const addNewCanvasBtn = document.createElement('button');
         addNewCanvasBtn.textContent = 'Add to new canvas';
         addNewCanvasBtn.addEventListener('click', () => { close(); guarded(() => fm.insertTemplate(selected.id, 'newCanvas')); });
@@ -535,15 +562,7 @@
         const addSysBtn = document.createElement('button');
         addSysBtn.className = 'primary';
         addSysBtn.textContent = 'Add System';
-        addSysBtn.addEventListener('click', () => {
-          close();
-          const data = selected.data;
-          const collisions = (data.canvases || [])
-            .filter(c => canvases.some(ec => ec.name.trim().toLowerCase() === (c.name || '').trim().toLowerCase()))
-            .map(c => ({ name: c.name || 'Canvas' }));
-          if(collisions.length === 0) guarded(() => fm.insertTemplate(selected.id, 'add'));
-          else showCanvasMergeDecisionModal(collisions, (decisions) => guarded(() => fm.insertTemplate({ template: selected.id, mode: 'add', decisions })));
-        });
+        addSysBtn.addEventListener('click', runMain);
         actionsRow.appendChild(replaceBtn);
         actionsRow.appendChild(addSysBtn);
       }
@@ -562,13 +581,53 @@
       detail.appendChild(actionsRow);
     }
 
+    function templateButton(t, idx, groupName){
+      const b = document.createElement('button');
+      b.className = (selected && t.id === selected.id) ? 'active' : '';
+      b.appendChild(idx ? highlightLabel(t.name, idx) : document.createTextNode(t.name));
+      b.appendChild(document.createElement('br'));
+      const kind = t.kind === 'system' ? 'system' : 'module';
+      const tag = document.createElement('span');
+      tag.className = 'kind-tag ' + kind;
+      tag.textContent = kind;
+      b.appendChild(tag);
+      if(groupName){
+        const g = document.createElement('span');
+        g.className = 'template-group-tag';
+        g.textContent = groupName;
+        b.appendChild(g);
+      }
+      b.addEventListener('click', () => { selected = t; previewCanvasIdx = 0; renderList(); renderDetail(); });
+      list.appendChild(b);
+    }
+
     function renderList(){
       list.innerHTML = '';
+      shown = [];
       if(TEMPLATES.length === 0){
         const empty = document.createElement('p');
         empty.className = 'template-desc';
         empty.textContent = 'No templates yet — use "+ Save Canvas as Template" / "+ Save System as Template" above, or import some.';
         list.appendChild(empty);
+        return;
+      }
+      const q = search.value.trim();
+      if(q){
+        // Name first; group and description only when the name doesn't match.
+        const hits = TEMPLATES.map(t => {
+          const onName = fuzzyMatch(q, t.name || '');
+          if(onName) return { t, score: onName.score + 500, idx: onName.idx };
+          const other = fuzzyMatch(q, t.group || '') || fuzzyMatch(q, t.description || '');
+          return other ? { t, score: other.score, idx: [] } : null;
+        }).filter(Boolean).sort((a, b) => b.score - a.score);
+        if(hits.length === 0){
+          const none = document.createElement('p');
+          none.className = 'template-desc';
+          none.textContent = 'No matching templates';
+          list.appendChild(none);
+          return;
+        }
+        hits.forEach(h => { shown.push(h.t); templateButton(h.t, h.idx, h.t.group || 'Ungrouped'); });
         return;
       }
       const groups = {};
@@ -581,16 +640,39 @@
         header.textContent = g;
         header.style.cssText = 'font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.4px;margin:8px 0 2px;';
         list.appendChild(header);
-        groups[g].forEach(t => {
-          const b = document.createElement('button');
-          b.className = (selected && t.id === selected.id) ? 'active' : '';
-          const kind = t.kind === 'system' ? 'system' : 'module';
-          b.innerHTML = `${escapeXml(t.name)}<br><span class="kind-tag ${kind}">${kind}</span>`;
-          b.addEventListener('click', () => { selected = t; previewCanvasIdx = 0; renderList(); renderDetail(); });
-          list.appendChild(b);
-        });
+        groups[g].forEach(t => { shown.push(t); templateButton(t, null, null); });
       });
     }
+
+    function selectShown(i){
+      if(!shown.length) return;
+      selected = shown[Math.max(0, Math.min(shown.length - 1, i))];
+      previewCanvasIdx = 0;
+      renderList(); renderDetail();
+      const b = list.querySelector('button.active');
+      if(b) b.scrollIntoView({ block: 'nearest' });
+    }
+    search.addEventListener('input', () => {
+      renderList();
+      if(search.value.trim() && shown.length && shown[0] !== selected) selectShown(0);
+    });
+    // Keys act only while this window is on top (not under a confirm or edit dialog).
+    function onKey(ev){
+      const overlays = document.querySelectorAll('.modal-overlay');
+      if(overlays[overlays.length - 1] !== overlay) return;
+      if(ev.key === 'Escape'){ ev.preventDefault(); ev.stopPropagation(); close(); return; }
+      if(document.activeElement !== search && !list.contains(document.activeElement)) return;
+      if(ev.key === 'ArrowDown' || ev.key === 'ArrowUp'){
+        ev.preventDefault();
+        const i = shown.indexOf(selected);
+        selectShown(i < 0 ? 0 : i + (ev.key === 'ArrowDown' ? 1 : -1));
+        search.focus();
+      } else if(ev.key === 'Enter' && document.activeElement === search){
+        ev.preventDefault(); ev.stopPropagation();
+        if(selected && shown.includes(selected)) runMain();
+      }
+    }
+    document.addEventListener('keydown', onKey, true);
 
     renderList();
     renderDetail();
@@ -602,5 +684,6 @@
     closeBtn.addEventListener('click', close);
     actions.appendChild(closeBtn);
     box.appendChild(actions);
+    search.focus();
   }
 

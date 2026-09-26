@@ -16,6 +16,8 @@ Both are single self-contained HTML files with no external dependencies: open th
 
 **Online, as an installable app:** fmIDE is published at **https://fmide.pages.dev** (Cloudflare Pages), updated automatically each time a change is merged. Open it in Chrome or Edge and use the browser's install button (or **File → Install fmIDE**). Every pull request also gets a preview address, posted on the pull request, to try the change before it is merged. To try the web version locally: `npm run build`, then `npm run serve`, and open `http://localhost:8080/`. Installed, fmIDE gets its own window and icon, works offline, opens `.fmide` files you double-click, and tells you when a new version is ready. **File → Open ExcelExporter** opens ExcelExporter from inside fmIDE.
 
+**File → Templates** opens with the cursor in a search box: type part of a template's name (or its group or description), move with ↑ ↓, and press Enter to add it, as in the Command Launcher (Ctrl/Cmd+K). Esc closes the window.
+
 Opening someone else's `.fmide` never replaces your own setup: their templates and macros are added to yours, and your shortcuts and ribbon stay as they are.
 
 Your own settings (keyboard shortcuts, ribbon layout, Quick Access Toolbar and KeyTips key) travel separately: **File → Export Preferences…** saves them to `fmIDE-preferences.json`, and **File → Import Preferences…** on another computer (or for a colleague) replaces theirs with yours. Your macros' own shortcuts are kept.
