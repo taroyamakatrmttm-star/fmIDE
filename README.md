@@ -18,7 +18,7 @@ Both are single self-contained HTML files with no external dependencies: open th
 
 **File → Templates** opens with the cursor in a search box: type part of a template's name (or its group or description), move with ↑ ↓, and press Enter to add it, as in the Command Launcher (Ctrl/Cmd+K). Esc closes the window.
 
-Importing templates (or a workspace) never adds a template you already have (same name and content); if copies built up before, **File → Templates → Remove duplicates** clears them.
+Importing templates (or a workspace) never adds a template you already have (same name and content); if copies built up before, **File → Templates → Remove duplicates** clears them (one of each is kept), and **Clear all templates** empties the library after asking.
 
 Opening someone else's `.fmide` never replaces your own setup: their templates and macros are added to yours, and your shortcuts and ribbon stay as they are.
 

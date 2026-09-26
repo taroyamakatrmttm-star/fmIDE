@@ -41,10 +41,21 @@
     if(fromImport) addMissingTemplates((Array.isArray(data.templates) ? data.templates : [])
       .map(t => (t && typeof t === 'object') ? Object.assign({}, t, { kind: t.kind === 'system' ? 'system' : 'module' }) : t));
     else if(Array.isArray(data.templates)){
+      // Every template keeps its own id: new ids continue after the highest saved "usrN"
+      // (the counter used to restart at 1, reusing a saved id), and a template whose id is
+      // missing or already taken — copies an older Import Workspace added with the file's
+      // ids — gets a fresh one, so Delete and Remove duplicates act on that template alone.
+      data.templates.forEach(t => {
+        const m = t && typeof t.id === 'string' && /^usr(\d+)$/.exec(t.id);
+        if(m) nextTemplateId = Math.max(nextTemplateId, Number(m[1]) + 1);
+      });
+      const taken = new Set(TEMPLATES.map(x => x.id));
       data.templates.forEach(t => {
         if(!t || typeof t.name !== 'string' || !t.data) return;
+        const id = (typeof t.id === 'string' && t.id && !taken.has(t.id)) ? t.id : ('usr' + (nextTemplateId++));
+        taken.add(id);
         TEMPLATES.push({
-          id: t.id || ('usr' + (nextTemplateId++)), name: t.name, description: t.description || '',
+          id, name: t.name, description: t.description || '',
           group: t.group || 'My Templates', kind: t.kind === 'system' ? 'system' : 'module',
           builtin: false, data: t.data
         });
