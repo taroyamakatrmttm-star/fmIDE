@@ -1,0 +1,365 @@
+{
+  "version": 2,
+  "kind": "system",
+  "nextId": 103,
+  "nextCanvasId": 3,
+  "activeCanvasId": "c2",
+  "periods": [
+    "Period 1",
+    "Period 2",
+    "Period 3",
+    "Period 4",
+    "Period 5"
+  ],
+  "currentPeriod": 0,
+  "canvases": [
+    {
+      "id": "c2",
+      "name": "Revenue AR",
+      "nodes": [
+        {
+          "id": "n63",
+          "type": "value",
+          "x": 372,
+          "y": 56,
+          "w": 170,
+          "h": 64,
+          "text": "Volume\n100",
+          "plug": "",
+          "blockRole": "input"
+        },
+        {
+          "id": "n64",
+          "type": "value",
+          "x": 164,
+          "y": 56,
+          "w": 170,
+          "h": 64,
+          "text": "Unit Price\n10",
+          "plug": "",
+          "blockRole": null
+        },
+        {
+          "id": "n65",
+          "type": "value",
+          "x": 269,
+          "y": 228,
+          "w": 170,
+          "h": 64,
+          "text": "Revenue\n0",
+          "plug": "",
+          "blockRole": "output"
+        },
+        {
+          "id": "n66",
+          "type": "operator",
+          "x": 326,
+          "y": 130,
+          "w": 56,
+          "h": 56,
+          "text": "×",
+          "socket": ""
+        },
+        {
+          "id": "n67",
+          "type": "value",
+          "x": 578,
+          "y": 382,
+          "w": 170,
+          "h": 64,
+          "text": "DSO",
+          "plug": "",
+          "periodValues": [
+            0.08,
+            0.08,
+            0.08,
+            0.08,
+            0.08
+          ],
+          "periodValuesRange": {
+            "min": 0,
+            "max": 1
+          },
+          "blockRole": "input"
+        },
+        {
+          "id": "n68",
+          "type": "alias",
+          "x": 779,
+          "y": 382,
+          "w": 170,
+          "h": 64,
+          "sourceCanvasId": "c2",
+          "sourceNodeId": "n65",
+          "plug": ""
+        },
+        {
+          "id": "n69",
+          "type": "value",
+          "x": 199,
+          "y": 376,
+          "w": 170,
+          "h": 64,
+          "text": "Beginning Balance",
+          "plug": "",
+          "blockRole": null
+        },
+        {
+          "id": "n70",
+          "type": "value",
+          "x": 199,
+          "y": 613,
+          "w": 170,
+          "h": 64,
+          "text": "AR Ending Balance",
+          "plug": "",
+          "blockRole": null
+        },
+        {
+          "id": "n71",
+          "type": "value",
+          "x": 403,
+          "y": 456.33333333333337,
+          "w": 170,
+          "h": 64,
+          "text": "Increase",
+          "plug": "",
+          "blockRole": null
+        },
+        {
+          "id": "n72",
+          "type": "value",
+          "x": 403,
+          "y": 532.6666666666667,
+          "w": 170,
+          "h": 64,
+          "text": "Decrease",
+          "plug": "",
+          "blockRole": null
+        },
+        {
+          "id": "n73",
+          "type": "operator",
+          "x": 256,
+          "y": 498.5,
+          "w": 56,
+          "h": 56,
+          "text": "+",
+          "socket": ""
+        },
+        {
+          "id": "n74",
+          "type": "periodShift",
+          "x": 154,
+          "y": 498.5,
+          "w": 56,
+          "h": 56,
+          "shift": -1
+        },
+        {
+          "id": "n75",
+          "type": "operator",
+          "x": 735.5,
+          "y": 460.33333333333337,
+          "w": 56,
+          "h": 56,
+          "text": "×",
+          "socket": ""
+        },
+        {
+          "id": "n76",
+          "type": "alias",
+          "x": 578,
+          "y": 631.6666666666667,
+          "w": 170,
+          "h": 64,
+          "sourceCanvasId": "c2",
+          "sourceNodeId": "n69",
+          "plug": ""
+        },
+        {
+          "id": "n77",
+          "type": "operator",
+          "x": 735.5,
+          "y": 536.6666666666667,
+          "w": 56,
+          "h": 56,
+          "text": "×",
+          "socket": ""
+        },
+        {
+          "id": "n78",
+          "type": "value",
+          "x": 779,
+          "y": 631.6666666666667,
+          "w": 170,
+          "h": 64,
+          "text": "-1\n-1",
+          "plug": "",
+          "periodValues": [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          "periodValuesRange": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        {
+          "id": "n79",
+          "type": "value",
+          "x": 199,
+          "y": 773,
+          "w": 170,
+          "h": 64,
+          "text": "Account Receivable",
+          "plug": "",
+          "blockRole": "output"
+        },
+        {
+          "id": "n80",
+          "type": "value",
+          "x": 199,
+          "y": 900,
+          "w": 170,
+          "h": 64,
+          "text": "delta AR",
+          "plug": "",
+          "blockRole": "output"
+        },
+        {
+          "id": "n81",
+          "type": "alias",
+          "x": 509,
+          "y": 822,
+          "w": 170,
+          "h": 64,
+          "sourceCanvasId": "c2",
+          "sourceNodeId": "n71",
+          "plug": ""
+        },
+        {
+          "id": "n82",
+          "type": "alias",
+          "x": 509,
+          "y": 900,
+          "w": 170,
+          "h": 64,
+          "sourceCanvasId": "c2",
+          "sourceNodeId": "n72",
+          "plug": ""
+        },
+        {
+          "id": "n83",
+          "type": "operator",
+          "x": 414,
+          "y": 904,
+          "w": 56,
+          "h": 56,
+          "text": "+",
+          "socket": ""
+        }
+      ],
+      "edges": [
+        {
+          "id": "e84",
+          "from": "n64",
+          "to": "n66"
+        },
+        {
+          "id": "e85",
+          "from": "n63",
+          "to": "n66"
+        },
+        {
+          "id": "e86",
+          "from": "n66",
+          "to": "n65"
+        },
+        {
+          "id": "e87",
+          "from": "n69",
+          "to": "n73"
+        },
+        {
+          "id": "e88",
+          "from": "n71",
+          "to": "n73"
+        },
+        {
+          "id": "e89",
+          "from": "n70",
+          "to": "n74"
+        },
+        {
+          "id": "e90",
+          "from": "n74",
+          "to": "n69"
+        },
+        {
+          "id": "e91",
+          "from": "n67",
+          "to": "n75"
+        },
+        {
+          "id": "e92",
+          "from": "n68",
+          "to": "n75"
+        },
+        {
+          "id": "e93",
+          "from": "n75",
+          "to": "n71"
+        },
+        {
+          "id": "e94",
+          "from": "n76",
+          "to": "n77"
+        },
+        {
+          "id": "e95",
+          "from": "n78",
+          "to": "n77"
+        },
+        {
+          "id": "e96",
+          "from": "n77",
+          "to": "n72"
+        },
+        {
+          "id": "e97",
+          "from": "n72",
+          "to": "n73"
+        },
+        {
+          "id": "e98",
+          "from": "n73",
+          "to": "n70"
+        },
+        {
+          "id": "e99",
+          "from": "n70",
+          "to": "n79"
+        },
+        {
+          "id": "e100",
+          "from": "n81",
+          "to": "n83"
+        },
+        {
+          "id": "e101",
+          "from": "n82",
+          "to": "n83"
+        },
+        {
+          "id": "e102",
+          "from": "n83",
+          "to": "n80"
+        }
+      ]
+    }
+  ]
+}

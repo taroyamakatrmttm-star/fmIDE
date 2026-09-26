@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Inputs tab gathers Block Input rectangles
+- ExcelExporter: "Gather inputs on a separate tab" now also gathers rectangles marked **Block Input** in fmIDE (for example Volume and DSO), when their canvas is not used as a block anywhere. Before, they stayed on their own tab as typed numbers. Block Inputs of a canvas that is used as a block are still left alone: each instance feeds them.
+
 ## Published online (build step 5b, part 2)
 - fmIDE is published automatically to Cloudflare Pages (`https://fmide.pages.dev`) each time a change is merged and the tests pass; each pull request gets its own preview address. People who have it open or installed see the update notice.
 - The published site has a strict security policy: each page runs only its own scripts and connects only to the site itself, so nothing can be loaded from or sent to another site, and a script smuggled in through a file is refused.
