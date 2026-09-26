@@ -177,6 +177,7 @@ Commands `exportPreferences` (download `fmIDE-preferences.json`) and `importPref
 - The plug editor (🔌): one chip per plug; ✕ removes one; Enter adds the typed name; Escape drops a typed name; a click elsewhere adds it. The rectangle shows "🔌 to Income Tax expense · to CF Income Tax paid".
 - A plug name with markup from a file is shown as text and never runs.
 - ExcelExporter: the saved v3 system loads; with the Inputs tab off, both rows are formulas (fed), not typed numbers.
+- Deleting a canvas that held one of two plugs feeding a socket (30 + 12 = 42): the other still feeds it (30), because the automatic connections are rebuilt.
 
 ### 14. Template families and versions (fmIDE)
 "Revenue plan" is saved from a canvas whose Revenue is 10 (v1, note "first"), then saved again at 20 with **⤴ Save as new version** (v2, note "price up"). The library is read from an exported workspace.
@@ -219,6 +220,7 @@ The library comes from `templates-v2.json` (a version 2 templates file, which al
 - Export Templates writes version 3 with the recipe; a reload keeps it; a recipe with no valid parts is skipped on import; a part name with markup is shown as text and never runs.
 - A saved workspace is version 3; a version 4 workspace asks first. ExcelExporter loads a version 3 workspace holding a recipe (group 6).
 - A macro records the build as `insertTemplate({ template: 'Three Statements', mode: 'add' })`.
+- The same plug twice: building the recipe next to an Income Statement canvas that is already there gives "Sockets fed by more than one plug (their values are added): “to Net Income” (Balance Sheet) ← Income Statement::Net Income, Income Statement::Net Income." Retained Earnings is 80, and the socket shows "⚡ to Net Income ×2" (class `multi`, with the plugs in its title). After one Income Statement canvas is deleted, it shows "⚡ to Net Income" and 40. A recipe with Income Statement twice shows the same line in its check, and `multiFedSockets` in the build result.
 
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.

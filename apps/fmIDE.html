@@ -705,6 +705,12 @@
   .recipe-check.warn{ color:#92400e; background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:6px 8px; }
   .recipe-detail-parts{ margin:4px 0 8px 18px; padding:0; font-size:13px; }
   .recipe-detail-parts li{ margin-bottom:3px; }
+
+  /* A socket fed by more than one plug: their values are added (maybe by accident) */
+  .socket-chip.multi{ background:#fef3c7; color:#92400e; border-color:#f59e0b; pointer-events:auto; cursor:help; }
+  .recipe-check{ white-space:pre-line; }
+  /* Messages and questions keep the line breaks they are written with */
+  .modal-box > p:first-child{ white-space:pre-line; }
 </style>
 </head>
 <body>
@@ -3245,6 +3251,7 @@
     canvas.querySelectorAll('.node').forEach(el => existing.set(el.dataset.id, el));
     const uomVisiting = new Set();
     const uomMemo = {};
+    let plugMap = null; // plug name → rectangles carrying it (built once, when a socket needs it)
 
     nodes.forEach(n => {
       let el = existing.get(n.id);
@@ -3291,7 +3298,11 @@
         if(sym) sym.textContent = n.text;
         const chip = el.querySelector('.socket-chip');
         if(chip){
-          if(n.socket){ chip.textContent = '⚡ ' + n.socket; chip.style.display = 'block'; }
+          // More than one plug feeding the socket: their values are added — say so.
+          const from = n.socket ? (plugMap || (plugMap = plugSourcesIn(liveCanvasList()))).get(n.socket.trim().toLowerCase()) || [] : [];
+          chip.classList.toggle('multi', from.length > 1);
+          chip.title = from.length > 1 ? `Fed by ${from.length} plugs, added together: ${from.join(', ')}. If one was added by mistake, remove its plug.` : '';
+          if(n.socket){ chip.textContent = '⚡ ' + n.socket + (from.length > 1 ? ' ×' + from.length : ''); chip.style.display = 'block'; }
           else chip.style.display = 'none';
         }
         const res = el.querySelector('.op-result');
@@ -4915,6 +4926,45 @@
     return out;
   }
 
+  // Every plug name (lower case) → the rectangles carrying it, as "Canvas::Name", across
+  // `list`'s canvases ({ name, nodes }).
+  function plugSourcesIn(list){
+    const map = new Map();
+    list.forEach(c => (c.nodes || []).forEach(n => {
+      if(!n || n.type !== 'value') return;
+      plugsOf(n).forEach(p => {
+        const k = p.toLowerCase();
+        if(!map.has(k)) map.set(k, []);
+        map.get(k).push((c.name || 'Canvas') + '::' + ((parseNode(n).name || '').trim() || '(unnamed)'));
+      });
+    }));
+    return map;
+  }
+  // Sockets fed by more than one plug: their values are added together, which can double a
+  // number by accident (the same template added twice). Returns [{ canvas, socket, sources }],
+  // each socket once per canvas.
+  function multiFedSocketsIn(list){
+    const sources = plugSourcesIn(list);
+    const out = [], seen = new Set();
+    list.forEach(c => (c.nodes || []).forEach(n => {
+      if(!n || n.type !== 'operator' || typeof n.socket !== 'string' || !n.socket.trim()) return;
+      const k = n.socket.trim().toLowerCase(), key = c.name + '\u0000' + k;
+      const from = sources.get(k) || [];
+      if(from.length < 2 || seen.has(key)) return;
+      seen.add(key);
+      out.push({ canvas: c.name, socket: n.socket.trim(), sources: from.slice() });
+    }));
+    return out;
+  }
+  function multiFedSocketsText(list){
+    return 'Sockets fed by more than one plug (their values are added): '
+      + list.map(m => `“${m.socket}” (${m.canvas}) ← ${m.sources.join(', ')}`).join('; ') + '.';
+  }
+  // The canvases as they are now ({ name, nodes }), the one on screen included.
+  function liveCanvasList(){
+    return canvases.map(c => ({ name: c.name, nodes: c.id === activeCanvasId ? nodes : c.nodes }));
+  }
+
   function collectAllTagNames(){
     const values = new Set();
     canvases.forEach(c => {
@@ -6155,11 +6205,21 @@
     if(part.versionId && t.versionId !== part.versionId) return { part, template: t, state: 'differs', label: `${shown} v${part.version} — yours differs from the one this recipe was made with` };
     return { part, template: t, state: 'ok', label: `${shown} v${part.version}` };
   }
-  // Sockets nothing feeds among the versions a recipe would use.
-  function recipeUnfedSockets(parts){
-    const list = parts.map(recipePartStatus).filter(st => st.template)
+  // The versions a recipe would use, as canvases ({ name, nodes }).
+  function recipeCanvasList(parts){
+    return parts.map(recipePartStatus).filter(st => st.template)
       .map(st => ({ name: st.template.name, nodes: st.template.data.nodes || [] }));
-    return unfedSocketsIn(list);
+  }
+  // Sockets nothing feeds among the versions a recipe would use.
+  function recipeUnfedSockets(parts){ return unfedSocketsIn(recipeCanvasList(parts)); }
+  // The socket check shown for a recipe: unfed sockets, and sockets more than one plug feeds.
+  function recipeCheckText(parts){
+    const list = recipeCanvasList(parts);
+    const unfed = unfedSocketsIn(list), multi = multiFedSocketsIn(list);
+    const lines = [];
+    if(unfed.length) lines.push(unfedSocketsText(unfed));
+    if(multi.length) lines.push(multiFedSocketsText(multi));
+    return { warn: lines.length > 0, text: lines.length ? lines.join('\n') : 'Every socket is fed by a plug in these parts.' };
   }
   function unfedSocketsText(list){
     return 'Sockets nothing feeds: ' + list.map(u => `“${u.socket}” (${u.canvas})`).join(', ') + '.';
@@ -6183,13 +6243,19 @@
     clearComputed();
     evaluateAll();
     syncActiveIntoRegistry();
-    const unfed = unfedSocketsIn(canvases.map(c => ({ name: c.name, nodes: c.nodes })));
-    return { canvases: made, warnings, unfedSockets: unfed };
+    const all = canvases.map(c => ({ name: c.name, nodes: c.nodes }));
+    const unfed = unfedSocketsIn(all);
+    // Sockets more than one plug feeds, where the build is involved (the socket or a plug
+    // is on a canvas it added) — e.g. a part whose canvas was already in the model.
+    const newNames = new Set(made.map(id => canvases.find(c => c.id === id).name));
+    const multi = multiFedSocketsIn(all).filter(m => newNames.has(m.canvas) || m.sources.some(s => newNames.has(s.split('::')[0])));
+    return { canvases: made, warnings, unfedSockets: unfed, multiFedSockets: multi };
   }
   function recipeBuildSummary(t, r){
     const lines = [`Built ${t.name}: ${r.canvases.length} canvas${r.canvases.length === 1 ? '' : 'es'}.`];
     r.warnings.forEach(w => lines.push(w));
     if(r.unfedSockets.length) lines.push(unfedSocketsText(r.unfedSockets));
+    if(r.multiFedSockets && r.multiFedSockets.length) lines.push(multiFedSocketsText(r.multiFedSockets));
     return lines.join('\n');
   }
 
@@ -6300,9 +6366,9 @@
       });
       if(!parts.length){ const p = document.createElement('p'); p.className = 'template-desc'; p.textContent = 'No parts yet.'; list.appendChild(p); }
       addBtn.disabled = !modules().length || parts.length >= RECIPE_MAX_PARTS;
-      const unfed = recipeUnfedSockets(parts);
-      check.classList.toggle('warn', unfed.length > 0);
-      check.textContent = !parts.length ? '' : (unfed.length ? unfedSocketsText(unfed) : 'Every socket is fed by a plug in these parts.');
+      const chk = recipeCheckText(parts);
+      check.classList.toggle('warn', parts.length > 0 && chk.warn);
+      check.textContent = !parts.length ? '' : chk.text;
       saveBtn.disabled = !parts.length;
     }
     addBtn.addEventListener('click', () => {
@@ -6938,10 +7004,10 @@
         ul.appendChild(li);
       });
       detail.appendChild(ul);
-      const unfed = recipeUnfedSockets(selected.data.parts);
+      const chk = recipeCheckText(selected.data.parts);
       const check = document.createElement('p');
-      check.className = 'recipe-check' + (unfed.length ? ' warn' : '');
-      check.textContent = unfed.length ? unfedSocketsText(unfed) : 'Every socket is fed by a plug in these parts.';
+      check.className = 'recipe-check' + (chk.warn ? ' warn' : '');
+      check.textContent = chk.text;
       detail.appendChild(check);
       const actionsRow = document.createElement('div');
       actionsRow.className = 'template-import-actions';
@@ -8639,6 +8705,11 @@
         loadCanvasState(next);
         selectedNodeIds.clear(); selectedEdgeId = null;
       }
+      // Plugs on the deleted canvas no longer feed sockets elsewhere: rebuild the automatic
+      // connections (otherwise their aliases are left pointing at nothing) and recalculate.
+      syncAutoConnections();
+      clearComputed();
+      evaluateAll();
     } });
 
   defineAction({ name:'moveCanvas', label:'Move Canvas (reorder tabs)', category:'Canvas', icon:'⇄',

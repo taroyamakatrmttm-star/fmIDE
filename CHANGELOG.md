@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Warning when more than one plug feeds a socket; fix for deleting a canvas with plugs
+- fmIDE: plugs feeding the same socket are added together. When there is more than one, the socket shows **⚡ name ×2** in amber, and hovering lists the plugs (for example, the same Net Income added twice by building a recipe next to the canvas the template was made from). Building a recipe and the recipe check list such sockets too. Nothing is blocked, because adding several plugs can be intended.
+- Fix: deleting a canvas left behind the automatic connections from its plugs, so a socket that other plugs still fed could show 0 until the next change. Deleting a canvas now rebuilds the connections and recalculates.
+
 ## Recipes: templates made of templates
 - fmIDE: a **recipe** lists canvas templates to add together, each at its latest version or a fixed one, for example Three Statements = Income Statement (latest) + Balance Sheet (v2) + Cash Flow (latest). **Templates → + New Recipe…** picks the parts, their versions and order, with a live check for sockets that no plug in the parts feeds.
 - **Build (add canvases)** adds one canvas per part, each linked to its template (so "Update this canvas" works on it), and plugs and sockets connect them by name. It warns when a fixed version in your library differs from the one the recipe was made with, skips parts you don't have, and lists sockets nothing feeds. Undo removes the whole build. Recipes have versions like other templates (**Edit as new version…**).

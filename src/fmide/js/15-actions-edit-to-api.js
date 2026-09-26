@@ -379,6 +379,11 @@
         loadCanvasState(next);
         selectedNodeIds.clear(); selectedEdgeId = null;
       }
+      // Plugs on the deleted canvas no longer feed sockets elsewhere: rebuild the automatic
+      // connections (otherwise their aliases are left pointing at nothing) and recalculate.
+      syncAutoConnections();
+      clearComputed();
+      evaluateAll();
     } });
 
   defineAction({ name:'moveCanvas', label:'Move Canvas (reorder tabs)', category:'Canvas', icon:'⇄',

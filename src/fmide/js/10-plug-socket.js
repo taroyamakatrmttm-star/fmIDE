@@ -82,6 +82,45 @@
     return out;
   }
 
+  // Every plug name (lower case) → the rectangles carrying it, as "Canvas::Name", across
+  // `list`'s canvases ({ name, nodes }).
+  function plugSourcesIn(list){
+    const map = new Map();
+    list.forEach(c => (c.nodes || []).forEach(n => {
+      if(!n || n.type !== 'value') return;
+      plugsOf(n).forEach(p => {
+        const k = p.toLowerCase();
+        if(!map.has(k)) map.set(k, []);
+        map.get(k).push((c.name || 'Canvas') + '::' + ((parseNode(n).name || '').trim() || '(unnamed)'));
+      });
+    }));
+    return map;
+  }
+  // Sockets fed by more than one plug: their values are added together, which can double a
+  // number by accident (the same template added twice). Returns [{ canvas, socket, sources }],
+  // each socket once per canvas.
+  function multiFedSocketsIn(list){
+    const sources = plugSourcesIn(list);
+    const out = [], seen = new Set();
+    list.forEach(c => (c.nodes || []).forEach(n => {
+      if(!n || n.type !== 'operator' || typeof n.socket !== 'string' || !n.socket.trim()) return;
+      const k = n.socket.trim().toLowerCase(), key = c.name + '\u0000' + k;
+      const from = sources.get(k) || [];
+      if(from.length < 2 || seen.has(key)) return;
+      seen.add(key);
+      out.push({ canvas: c.name, socket: n.socket.trim(), sources: from.slice() });
+    }));
+    return out;
+  }
+  function multiFedSocketsText(list){
+    return 'Sockets fed by more than one plug (their values are added): '
+      + list.map(m => `“${m.socket}” (${m.canvas}) ← ${m.sources.join(', ')}`).join('; ') + '.';
+  }
+  // The canvases as they are now ({ name, nodes }), the one on screen included.
+  function liveCanvasList(){
+    return canvases.map(c => ({ name: c.name, nodes: c.id === activeCanvasId ? nodes : c.nodes }));
+  }
+
   function collectAllTagNames(){
     const values = new Set();
     canvases.forEach(c => {

@@ -162,3 +162,29 @@ test('ExcelExporter: a rectangle with two plugs feeds both sockets in the workbo
   }
   expect(problems, problems.join('\n')).toEqual([]);
 });
+
+test('deleting a canvas that held one of two plugs: the other still feeds the socket', async ({ page }) => {
+  await F.openFmIDE(page);
+  const total = await page.evaluate(() => {
+    fm.clearAll();
+    fm.renameCanvas({ canvas: '@current', name: 'Summary' });
+    const op = fm.createOperator({ x: 300, y: 120, op: '+' });
+    fm.setSocket(op, 'to Total');
+    fm.connect(op, fm.createRect({ x: 420, y: 110, name: 'Total', value: '0' }));
+    fm.addCanvas({ name: 'Part A' });
+    fm.switchCanvas('Part A');
+    fm.addPlug(fm.createRect({ x: 60, y: 60, name: 'A', value: '30' }), 'to Total');
+    fm.addCanvas({ name: 'Part B' });
+    fm.switchCanvas('Part B');
+    fm.addPlug(fm.createRect({ x: 60, y: 60, name: 'B', value: '12' }), 'to Total');
+    fm.switchCanvas('Summary');
+    return fm.getValue({ node: 'Total' });
+  });
+  expect(total).toBe(42);
+  const after = await page.evaluate(() => {
+    fm.deleteCanvas(fm.canvases().find(c => c.name === 'Part B').id);
+    fm.switchCanvas('Summary');
+    return fm.getValue({ node: 'Total' });
+  });
+  expect(after).toBe(30);
+});
