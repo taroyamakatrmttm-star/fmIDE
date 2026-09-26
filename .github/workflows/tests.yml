@@ -126,8 +126,11 @@ jobs:
         with:
           script: |
             const marker = '<!-- fmide-preview -->';
-            const body = marker + '\n**Preview of this pull request:** ' + process.env.PREVIEW +
-              '\n\nThis version (' + context.payload.pull_request.head.sha.slice(0, 7) + '): ' + process.env.THIS_VERSION +
+            // The per-version address is new for every push, so no copy the browser saved
+            // earlier (the offline copy) can stand in for it; the branch address can.
+            const body = marker + '\n**Try this version (' + context.payload.pull_request.head.sha.slice(0, 7) + '):** ' + process.env.THIS_VERSION +
+              '\n\nAlways the latest of this pull request: ' + process.env.PREVIEW +
+              ' (if it shows an older version, use Reload on its "new version" notice)' +
               '\n\nThe live site changes only when this pull request is merged.';
             const { owner, repo } = context.repo;
             const issue_number = context.payload.pull_request.number;

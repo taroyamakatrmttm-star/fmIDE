@@ -166,7 +166,7 @@ function writeMapping(){
   let text;
   try{ text = JSON.stringify(mapping); }
   catch(err){ onMappingSaveFailed(err); return; }
-  layoutStore.put(mappingKey, text).then(() => {
+  return layoutStore.put(mappingKey, text).then(() => {
     if(mappingSaveFailing){ mappingSaveFailing = false; $('storageWarn').classList.add('hidden'); }
   }, onMappingSaveFailed);
 }
