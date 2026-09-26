@@ -1,0 +1,454 @@
+{
+ "kind": "system",
+ "version": 4,
+ "periods": [
+  "P1",
+  "P2",
+  "P3"
+ ],
+ "canvases": [
+  {
+   "id": "cUn",
+   "name": "Units",
+   "nodes": [
+    {
+     "id": "price",
+     "type": "value",
+     "x": 0,
+     "y": 0,
+     "text": "Unit price\n10\n$/t"
+    },
+    {
+     "id": "vol",
+     "type": "value",
+     "x": 0,
+     "y": 100,
+     "text": "Volume\n5\nkt"
+    },
+    {
+     "id": "cost",
+     "type": "value",
+     "x": 0,
+     "y": 200,
+     "text": "Cost\n3\n$k"
+    },
+    {
+     "id": "pct",
+     "type": "value",
+     "x": 0,
+     "y": 300,
+     "text": "Rate\n0.1\n%"
+    },
+    {
+     "id": "bn",
+     "type": "value",
+     "x": 0,
+     "y": 400,
+     "text": "Big\n2\n$bn"
+    },
+    {
+     "id": "mul",
+     "type": "operator",
+     "x": 150,
+     "y": 50,
+     "text": "×"
+    },
+    {
+     "id": "rev",
+     "type": "value",
+     "x": 250,
+     "y": 50,
+     "text": "Revenue"
+    },
+    {
+     "id": "dv",
+     "type": "operator",
+     "x": 350,
+     "y": 50,
+     "text": "÷"
+    },
+    {
+     "id": "back",
+     "type": "value",
+     "x": 450,
+     "y": 50,
+     "text": "Price back"
+    },
+    {
+     "id": "pl",
+     "type": "operator",
+     "x": 350,
+     "y": 150,
+     "text": "+"
+    },
+    {
+     "id": "tot",
+     "type": "value",
+     "x": 450,
+     "y": 150,
+     "text": "Revenue plus cost"
+    },
+    {
+     "id": "bad",
+     "type": "operator",
+     "x": 150,
+     "y": 250,
+     "text": "+"
+    },
+    {
+     "id": "mism",
+     "type": "value",
+     "x": 250,
+     "y": 250,
+     "text": "Mismatched"
+    },
+    {
+     "id": "sh",
+     "type": "periodShift",
+     "x": 350,
+     "y": 250,
+     "shift": -1
+    },
+    {
+     "id": "prior",
+     "type": "value",
+     "x": 450,
+     "y": 250,
+     "text": "Prior revenue\n0"
+    },
+    {
+     "id": "mul2",
+     "type": "operator",
+     "x": 150,
+     "y": 350,
+     "text": "×"
+    },
+    {
+     "id": "typed",
+     "type": "value",
+     "x": 250,
+     "y": 350,
+     "text": "Typed over\n\nUSD"
+    },
+    {
+     "id": "pw",
+     "type": "operator",
+     "x": 150,
+     "y": 450,
+     "text": "^"
+    },
+    {
+     "id": "pow",
+     "type": "value",
+     "x": 250,
+     "y": 450,
+     "text": "Power"
+    },
+    {
+     "id": "mx",
+     "type": "operator",
+     "x": 350,
+     "y": 350,
+     "text": "max"
+    },
+    {
+     "id": "mxr",
+     "type": "value",
+     "x": 450,
+     "y": 350,
+     "text": "Max of cost"
+    },
+    {
+     "id": "mul3",
+     "type": "operator",
+     "x": 350,
+     "y": 450,
+     "text": "×"
+    },
+    {
+     "id": "scaled",
+     "type": "value",
+     "x": 450,
+     "y": 450,
+     "text": "Scaled"
+    },
+    {
+     "id": "dv2",
+     "type": "operator",
+     "x": 550,
+     "y": 50,
+     "text": "÷"
+    },
+    {
+     "id": "per",
+     "type": "value",
+     "x": 650,
+     "y": 50,
+     "text": "Per unit"
+    },
+    {
+     "id": "bi",
+     "type": "blockInstance",
+     "x": 550,
+     "y": 250,
+     "blockDefCanvasId": "cB"
+    },
+    {
+     "id": "bout",
+     "type": "value",
+     "x": 700,
+     "y": 250,
+     "text": "Block result"
+    }
+   ],
+   "edges": [
+    {
+     "id": "u1",
+     "from": "price",
+     "to": "mul"
+    },
+    {
+     "id": "u2",
+     "from": "vol",
+     "to": "mul"
+    },
+    {
+     "id": "u3",
+     "from": "mul",
+     "to": "rev"
+    },
+    {
+     "id": "u4",
+     "from": "rev",
+     "to": "dv"
+    },
+    {
+     "id": "u5",
+     "from": "vol",
+     "to": "dv"
+    },
+    {
+     "id": "u6",
+     "from": "dv",
+     "to": "back"
+    },
+    {
+     "id": "u7",
+     "from": "rev",
+     "to": "pl"
+    },
+    {
+     "id": "u8",
+     "from": "cost",
+     "to": "pl"
+    },
+    {
+     "id": "u9",
+     "from": "pl",
+     "to": "tot"
+    },
+    {
+     "id": "u10",
+     "from": "price",
+     "to": "bad"
+    },
+    {
+     "id": "u11",
+     "from": "vol",
+     "to": "bad"
+    },
+    {
+     "id": "u12",
+     "from": "bad",
+     "to": "mism"
+    },
+    {
+     "id": "u13",
+     "from": "rev",
+     "to": "sh"
+    },
+    {
+     "id": "u14",
+     "from": "sh",
+     "to": "prior"
+    },
+    {
+     "id": "u15",
+     "from": "price",
+     "to": "mul2"
+    },
+    {
+     "id": "u16",
+     "from": "vol",
+     "to": "mul2"
+    },
+    {
+     "id": "u17",
+     "from": "mul2",
+     "to": "typed"
+    },
+    {
+     "id": "u18",
+     "from": "vol",
+     "to": "pw"
+    },
+    {
+     "id": "u19",
+     "from": "vol",
+     "to": "pw"
+    },
+    {
+     "id": "u20",
+     "from": "pw",
+     "to": "pow"
+    },
+    {
+     "id": "u21",
+     "from": "cost",
+     "to": "mx"
+    },
+    {
+     "id": "u22",
+     "from": "rev",
+     "to": "mx"
+    },
+    {
+     "id": "u23",
+     "from": "mx",
+     "to": "mxr"
+    },
+    {
+     "id": "u24",
+     "from": "bn",
+     "to": "mul3"
+    },
+    {
+     "id": "u25",
+     "from": "pct",
+     "to": "mul3"
+    },
+    {
+     "id": "u26",
+     "from": "mul3",
+     "to": "scaled"
+    },
+    {
+     "id": "u27",
+     "from": "rev",
+     "to": "dv2"
+    },
+    {
+     "id": "u28",
+     "from": "rev",
+     "to": "dv2"
+    },
+    {
+     "id": "u29",
+     "from": "dv2",
+     "to": "per"
+    },
+    {
+     "id": "u30",
+     "from": "rev",
+     "to": "bi",
+     "toPort": 0
+    },
+    {
+     "id": "u31",
+     "from": "bi",
+     "to": "bout",
+     "fromPort": 0
+    }
+   ]
+  },
+  {
+   "id": "cL",
+   "name": "Linked",
+   "nodes": [
+    {
+     "id": "la",
+     "type": "alias",
+     "x": 0,
+     "y": 0,
+     "sourceCanvasId": "cUn",
+     "sourceNodeId": "rev"
+    },
+    {
+     "id": "lr",
+     "type": "value",
+     "x": 200,
+     "y": 0,
+     "text": "Linked revenue"
+    },
+    {
+     "id": "lb",
+     "type": "alias",
+     "x": 0,
+     "y": 100,
+     "sourceCanvasId": "cUn",
+     "sourceNodeId": "price"
+    }
+   ],
+   "edges": [
+    {
+     "id": "l1",
+     "from": "la",
+     "to": "lr"
+    }
+   ]
+  },
+  {
+   "id": "cB",
+   "name": "UnitBlock",
+   "nodes": [
+    {
+     "id": "bin",
+     "type": "value",
+     "x": 0,
+     "y": 0,
+     "text": "B In",
+     "blockRole": "input"
+    },
+    {
+     "id": "bm",
+     "type": "operator",
+     "x": 100,
+     "y": 0,
+     "text": "×"
+    },
+    {
+     "id": "two",
+     "type": "value",
+     "x": 0,
+     "y": 100,
+     "text": "Two\n2"
+    },
+    {
+     "id": "bo",
+     "type": "value",
+     "x": 200,
+     "y": 0,
+     "text": "B Out",
+     "blockRole": "output"
+    }
+   ],
+   "edges": [
+    {
+     "id": "b1",
+     "from": "bin",
+     "to": "bm"
+    },
+    {
+     "id": "b2",
+     "from": "two",
+     "to": "bm"
+    },
+    {
+     "id": "b3",
+     "from": "bm",
+     "to": "bo"
+    }
+   ]
+  }
+ ]
+}

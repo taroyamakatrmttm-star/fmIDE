@@ -1,0 +1,21 @@
+{
+ "Capex": {
+  "capex": {"values":[100,100,100]},
+  "lifeH": {"values":[5,5,5]},
+  "inst": {"values":[[18],[18],[18]]},
+  "tot": {"values":[18,18,18]},
+  "al": {"values":[18,18,18]},
+  "plus": {"values":[19,19,19]},
+  "other": {"values":[1,1,1]},
+  "grand": {"values":[19,19,19]}
+ },
+ "DepBlock": {
+  "cap": {"values":[0,0,0]},
+  "life": {"values":[0,0,0]},
+  "div": {"values":["error: operator ÷ has no value: Invalid result (e.g. divide by zero)..","error: operator ÷ has no value: Invalid result (e.g. divide by zero)..","error: operator ÷ has no value: Invalid result (e.g. divide by zero).."]},
+  "ann": {"values":["error: \"Annual Dep\" has no value: One of this operator's inputs could not be computed..","error: \"Annual Dep\" has no value: One of this operator's inputs could not be computed..","error: \"Annual Dep\" has no value: One of this operator's inputs could not be computed.."]},
+  "rate": {"values":[0.3,0.3,0.3]},
+  "mul": {"values":["error: operator × has no value: One of this operator's inputs could not be computed..","error: operator × has no value: One of this operator's inputs could not be computed..","error: operator × has no value: One of this operator's inputs could not be computed.."]},
+  "out": {"values":["error: \"Tax Shield\" has no value: One of this operator's inputs could not be computed..","error: \"Tax Shield\" has no value: One of this operator's inputs could not be computed..","error: \"Tax Shield\" has no value: One of this operator's inputs could not be computed.."]}
+ }
+}

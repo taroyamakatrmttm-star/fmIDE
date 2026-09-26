@@ -1,0 +1,1116 @@
+{
+ "kind": "system",
+ "version": 4,
+ "periods": [
+  "P1",
+  "P2",
+  "P3"
+ ],
+ "canvases": [
+  {
+   "id": "cE",
+   "name": "Errors",
+   "nodes": [
+    {
+     "id": "a",
+     "type": "value",
+     "x": 0,
+     "y": 0,
+     "text": "A\n1"
+    },
+    {
+     "id": "b",
+     "type": "value",
+     "x": 0,
+     "y": 80,
+     "text": "B\n2"
+    },
+    {
+     "id": "z",
+     "type": "value",
+     "x": 0,
+     "y": 160,
+     "text": "Zero\n0"
+    },
+    {
+     "id": "neg",
+     "type": "value",
+     "x": 0,
+     "y": 240,
+     "text": "Neg\n-7"
+    },
+    {
+     "id": "c1",
+     "type": "operator",
+     "x": 200,
+     "y": 0,
+     "text": "+"
+    },
+    {
+     "id": "l1",
+     "type": "value",
+     "x": 300,
+     "y": 0,
+     "text": "Loop 1"
+    },
+    {
+     "id": "c2",
+     "type": "operator",
+     "x": 400,
+     "y": 0,
+     "text": "+"
+    },
+    {
+     "id": "l2",
+     "type": "value",
+     "x": 500,
+     "y": 0,
+     "text": "Loop 2"
+    },
+    {
+     "id": "two",
+     "type": "value",
+     "x": 200,
+     "y": 100,
+     "text": "Two in\n9"
+    },
+    {
+     "id": "lonely",
+     "type": "operator",
+     "x": 200,
+     "y": 200,
+     "text": "×"
+    },
+    {
+     "id": "al1",
+     "type": "alias",
+     "x": 200,
+     "y": 300
+    },
+    {
+     "id": "al2",
+     "type": "alias",
+     "x": 200,
+     "y": 380,
+     "sourceCanvasId": "nope",
+     "sourceNodeId": "a"
+    },
+    {
+     "id": "al3",
+     "type": "alias",
+     "x": 200,
+     "y": 460,
+     "sourceCanvasId": "cE",
+     "sourceNodeId": "ghost"
+    },
+    {
+     "id": "al4",
+     "type": "alias",
+     "x": 200,
+     "y": 540,
+     "sourceCanvasId": "cU",
+     "sourceNodeId": "u1"
+    },
+    {
+     "id": "viaAl1",
+     "type": "value",
+     "x": 400,
+     "y": 300,
+     "text": "Via unset alias\n4"
+    },
+    {
+     "id": "viaAl2",
+     "type": "value",
+     "x": 400,
+     "y": 380,
+     "text": "Via missing canvas"
+    },
+    {
+     "id": "ps1",
+     "type": "periodShift",
+     "x": 600,
+     "y": 0,
+     "shift": -1
+    },
+    {
+     "id": "ps2",
+     "type": "periodShift",
+     "x": 600,
+     "y": 100,
+     "shift": 5
+    },
+    {
+     "id": "ps3",
+     "type": "periodShift",
+     "x": 600,
+     "y": 200,
+     "shift": -1
+    },
+    {
+     "id": "ps4",
+     "type": "periodShift",
+     "x": 600,
+     "y": 300,
+     "shift": 1
+    },
+    {
+     "id": "ps5",
+     "type": "periodShift",
+     "x": 600,
+     "y": 400
+    },
+    {
+     "id": "far",
+     "type": "value",
+     "x": 700,
+     "y": 100,
+     "text": "Far future\n3"
+    },
+    {
+     "id": "next",
+     "type": "value",
+     "x": 700,
+     "y": 300,
+     "text": "Next A"
+    },
+    {
+     "id": "prevB",
+     "type": "value",
+     "x": 700,
+     "y": 400,
+     "text": "Prev B"
+    },
+    {
+     "id": "div0",
+     "type": "operator",
+     "x": 900,
+     "y": 0,
+     "text": "÷"
+    },
+    {
+     "id": "abs2",
+     "type": "operator",
+     "x": 900,
+     "y": 60,
+     "text": "abs"
+    },
+    {
+     "id": "absneg",
+     "type": "operator",
+     "x": 900,
+     "y": 120,
+     "text": "abs"
+    },
+    {
+     "id": "lt1",
+     "type": "operator",
+     "x": 900,
+     "y": 180,
+     "text": "<"
+    },
+    {
+     "id": "mn",
+     "type": "operator",
+     "x": 900,
+     "y": 240,
+     "text": "min"
+    },
+    {
+     "id": "mx",
+     "type": "operator",
+     "x": 900,
+     "y": 300,
+     "text": "max"
+    },
+    {
+     "id": "av",
+     "type": "operator",
+     "x": 900,
+     "y": 360,
+     "text": "ave"
+    },
+    {
+     "id": "pw",
+     "type": "operator",
+     "x": 900,
+     "y": 420,
+     "text": "^"
+    },
+    {
+     "id": "md",
+     "type": "operator",
+     "x": 900,
+     "y": 480,
+     "text": "%"
+    },
+    {
+     "id": "le",
+     "type": "operator",
+     "x": 900,
+     "y": 540,
+     "text": "≤"
+    },
+    {
+     "id": "ge",
+     "type": "operator",
+     "x": 900,
+     "y": 600,
+     "text": "≥"
+    },
+    {
+     "id": "gt",
+     "type": "operator",
+     "x": 900,
+     "y": 660,
+     "text": ">"
+    },
+    {
+     "id": "sub",
+     "type": "operator",
+     "x": 900,
+     "y": 720,
+     "text": "−"
+    },
+    {
+     "id": "unk",
+     "type": "operator",
+     "x": 900,
+     "y": 780,
+     "text": "foo"
+    },
+    {
+     "id": "ie0",
+     "type": "operator",
+     "x": 900,
+     "y": 840,
+     "text": "iferror"
+    },
+    {
+     "id": "ie1",
+     "type": "operator",
+     "x": 900,
+     "y": 900,
+     "text": "iferror"
+    },
+    {
+     "id": "ie2",
+     "type": "operator",
+     "x": 900,
+     "y": 960,
+     "text": "iferror"
+    },
+    {
+     "id": "ie3",
+     "type": "operator",
+     "x": 900,
+     "y": 1020,
+     "text": "iferror"
+    },
+    {
+     "id": "div0r",
+     "type": "value",
+     "x": 1000,
+     "y": 0,
+     "text": "Div zero\n5"
+    },
+    {
+     "id": "usesDiv",
+     "type": "value",
+     "x": 1100,
+     "y": 100,
+     "text": "Uses div"
+    },
+    {
+     "id": "pl",
+     "type": "operator",
+     "x": 1050,
+     "y": 100,
+     "text": "+"
+    },
+    {
+     "id": "lp",
+     "type": "value",
+     "x": 1100,
+     "y": 200,
+     "text": "Ticked P2\n42",
+     "literalPeriods": [
+      1
+     ]
+    },
+    {
+     "id": "pv",
+     "type": "value",
+     "x": 1100,
+     "y": 300,
+     "text": "Curve",
+     "periodValues": [
+      1,
+      4,
+      9
+     ]
+    },
+    {
+     "id": "bMiss",
+     "type": "blockInstance",
+     "x": 1200,
+     "y": 0,
+     "blockDefCanvasId": "nope"
+    },
+    {
+     "id": "bSelf",
+     "type": "blockInstance",
+     "x": 1200,
+     "y": 200,
+     "blockDefCanvasId": "cSelf"
+    },
+    {
+     "id": "bIdx",
+     "type": "blockInstance",
+     "x": 1200,
+     "y": 400,
+     "blockDefCanvasId": "cIdx",
+     "vertical": true
+    },
+    {
+     "id": "bNest",
+     "type": "blockInstance",
+     "x": 1200,
+     "y": 600,
+     "blockDefCanvasId": "cOuter"
+    },
+    {
+     "id": "bVmax",
+     "type": "blockInstance",
+     "x": 1200,
+     "y": 800,
+     "blockDefCanvasId": "cIdx",
+     "vertical": true
+    },
+    {
+     "id": "fromMiss",
+     "type": "value",
+     "x": 1400,
+     "y": 0,
+     "text": "From missing block"
+    },
+    {
+     "id": "fromSelf",
+     "type": "value",
+     "x": 1400,
+     "y": 200,
+     "text": "From self block"
+    },
+    {
+     "id": "badPort",
+     "type": "value",
+     "x": 1400,
+     "y": 300,
+     "text": "Bad port"
+    },
+    {
+     "id": "idxSum",
+     "type": "value",
+     "x": 1400,
+     "y": 400,
+     "text": "Index sum"
+    },
+    {
+     "id": "nested",
+     "type": "value",
+     "x": 1400,
+     "y": 600,
+     "text": "Nested"
+    },
+    {
+     "id": "vmax",
+     "type": "value",
+     "x": 1400,
+     "y": 800,
+     "text": "Vertical max"
+    },
+    {
+     "id": "pvOut",
+     "type": "value",
+     "x": 1400,
+     "y": 900,
+     "text": "Curve out"
+    }
+   ],
+   "edges": [
+    {
+     "id": "e1",
+     "from": "a",
+     "to": "c1"
+    },
+    {
+     "id": "e2",
+     "from": "l1",
+     "to": "c2"
+    },
+    {
+     "id": "e3",
+     "from": "c1",
+     "to": "l1"
+    },
+    {
+     "id": "e4",
+     "from": "c2",
+     "to": "l2"
+    },
+    {
+     "id": "e5",
+     "from": "l2",
+     "to": "c1"
+    },
+    {
+     "id": "e6",
+     "from": "a",
+     "to": "two"
+    },
+    {
+     "id": "e7",
+     "from": "b",
+     "to": "two"
+    },
+    {
+     "id": "e8",
+     "from": "al1",
+     "to": "viaAl1"
+    },
+    {
+     "id": "e9",
+     "from": "al2",
+     "to": "viaAl2"
+    },
+    {
+     "id": "e10",
+     "from": "a",
+     "to": "ps2"
+    },
+    {
+     "id": "e11",
+     "from": "ps2",
+     "to": "far"
+    },
+    {
+     "id": "e12",
+     "from": "a",
+     "to": "ps3"
+    },
+    {
+     "id": "e13",
+     "from": "b",
+     "to": "ps3"
+    },
+    {
+     "id": "e14",
+     "from": "a",
+     "to": "ps4"
+    },
+    {
+     "id": "e15",
+     "from": "ps4",
+     "to": "next"
+    },
+    {
+     "id": "e16",
+     "from": "b",
+     "to": "ps5"
+    },
+    {
+     "id": "e17",
+     "from": "ps5",
+     "to": "prevB"
+    },
+    {
+     "id": "e18",
+     "from": "a",
+     "to": "div0"
+    },
+    {
+     "id": "e19",
+     "from": "z",
+     "to": "div0"
+    },
+    {
+     "id": "e20",
+     "from": "a",
+     "to": "abs2"
+    },
+    {
+     "id": "e21",
+     "from": "b",
+     "to": "abs2"
+    },
+    {
+     "id": "e22",
+     "from": "neg",
+     "to": "absneg"
+    },
+    {
+     "id": "e23",
+     "from": "a",
+     "to": "lt1"
+    },
+    {
+     "id": "e24",
+     "from": "a",
+     "to": "mn"
+    },
+    {
+     "id": "e25",
+     "from": "b",
+     "to": "mn"
+    },
+    {
+     "id": "e26",
+     "from": "neg",
+     "to": "mn"
+    },
+    {
+     "id": "e27",
+     "from": "a",
+     "to": "mx"
+    },
+    {
+     "id": "e28",
+     "from": "b",
+     "to": "mx"
+    },
+    {
+     "id": "e29",
+     "from": "a",
+     "to": "av"
+    },
+    {
+     "id": "e30",
+     "from": "b",
+     "to": "av"
+    },
+    {
+     "id": "e31",
+     "from": "neg",
+     "to": "av"
+    },
+    {
+     "id": "e32",
+     "from": "b",
+     "to": "pw"
+    },
+    {
+     "id": "e33",
+     "from": "b",
+     "to": "pw"
+    },
+    {
+     "id": "e34",
+     "from": "neg",
+     "to": "md"
+    },
+    {
+     "id": "e35",
+     "from": "b",
+     "to": "md"
+    },
+    {
+     "id": "e36",
+     "from": "a",
+     "to": "le"
+    },
+    {
+     "id": "e37",
+     "from": "a",
+     "to": "le"
+    },
+    {
+     "id": "e38",
+     "from": "b",
+     "to": "le"
+    },
+    {
+     "id": "e39",
+     "from": "b",
+     "to": "ge"
+    },
+    {
+     "id": "e40",
+     "from": "a",
+     "to": "ge"
+    },
+    {
+     "id": "e41",
+     "from": "a",
+     "to": "gt"
+    },
+    {
+     "id": "e42",
+     "from": "b",
+     "to": "gt"
+    },
+    {
+     "id": "e43",
+     "from": "a",
+     "to": "sub"
+    },
+    {
+     "id": "e44",
+     "from": "b",
+     "to": "sub"
+    },
+    {
+     "id": "e45",
+     "from": "neg",
+     "to": "sub"
+    },
+    {
+     "id": "e46",
+     "from": "b",
+     "to": "unk"
+    },
+    {
+     "id": "e47",
+     "from": "a",
+     "to": "unk"
+    },
+    {
+     "id": "e48",
+     "from": "div0r",
+     "to": "ie1"
+    },
+    {
+     "id": "e49",
+     "from": "div0r",
+     "to": "ie2"
+    },
+    {
+     "id": "e50",
+     "from": "div0r",
+     "to": "ie2"
+    },
+    {
+     "id": "e51",
+     "from": "div0r",
+     "to": "ie3"
+    },
+    {
+     "id": "e52",
+     "from": "b",
+     "to": "ie3"
+    },
+    {
+     "id": "e53",
+     "from": "div0",
+     "to": "div0r"
+    },
+    {
+     "id": "e54",
+     "from": "div0r",
+     "to": "pl"
+    },
+    {
+     "id": "e55",
+     "from": "a",
+     "to": "pl"
+    },
+    {
+     "id": "e56",
+     "from": "pl",
+     "to": "usesDiv"
+    },
+    {
+     "id": "e57",
+     "from": "mx",
+     "to": "lp"
+    },
+    {
+     "id": "e58",
+     "from": "bMiss",
+     "to": "fromMiss",
+     "fromPort": 0
+    },
+    {
+     "id": "e59",
+     "from": "a",
+     "to": "bSelf",
+     "toPort": 0
+    },
+    {
+     "id": "e60",
+     "from": "bSelf",
+     "to": "fromSelf",
+     "fromPort": 0
+    },
+    {
+     "id": "e61",
+     "from": "bSelf",
+     "to": "badPort",
+     "fromPort": 3
+    },
+    {
+     "id": "e62",
+     "from": "pv",
+     "to": "bIdx",
+     "toPort": 0,
+     "verticalIndexed": true
+    },
+    {
+     "id": "e63",
+     "from": "bIdx",
+     "to": "idxSum",
+     "fromPort": 0
+    },
+    {
+     "id": "e64",
+     "from": "b",
+     "to": "bNest",
+     "toPort": 0
+    },
+    {
+     "id": "e65",
+     "from": "bNest",
+     "to": "nested",
+     "fromPort": 0
+    },
+    {
+     "id": "e66",
+     "from": "pv",
+     "to": "bVmax",
+     "toPort": 0
+    },
+    {
+     "id": "e67",
+     "from": "bVmax",
+     "to": "vmax",
+     "fromPort": 0
+    }
+   ]
+  },
+  {
+   "id": "cU",
+   "name": "Other",
+   "nodes": [
+    {
+     "id": "u1",
+     "type": "value",
+     "x": 0,
+     "y": 0,
+     "text": "Other value\n11"
+    }
+   ],
+   "edges": []
+  },
+  {
+   "id": "cSelf",
+   "name": "SelfBlock",
+   "nodes": [
+    {
+     "id": "sin",
+     "type": "value",
+     "x": 0,
+     "y": 0,
+     "text": "In",
+     "blockRole": "input"
+    },
+    {
+     "id": "sp",
+     "type": "operator",
+     "x": 100,
+     "y": 0,
+     "text": "+"
+    },
+    {
+     "id": "sout",
+     "type": "value",
+     "x": 200,
+     "y": 0,
+     "text": "Out",
+     "blockRole": "output"
+    },
+    {
+     "id": "sinst",
+     "type": "blockInstance",
+     "x": 0,
+     "y": 100,
+     "blockDefCanvasId": "cSelf"
+    }
+   ],
+   "edges": [
+    {
+     "id": "s1",
+     "from": "sin",
+     "to": "sp"
+    },
+    {
+     "id": "s2",
+     "from": "sinst",
+     "to": "sp",
+     "fromPort": 0
+    },
+    {
+     "id": "s3",
+     "from": "sp",
+     "to": "sout"
+    },
+    {
+     "id": "s4",
+     "from": "sin",
+     "to": "sinst",
+     "toPort": 0
+    }
+   ]
+  },
+  {
+   "id": "cIdx",
+   "name": "IdxBlock",
+   "nodes": [
+    {
+     "id": "xin",
+     "type": "value",
+     "x": 0,
+     "y": 0,
+     "text": "X In",
+     "blockRole": "input"
+    },
+    {
+     "id": "xi",
+     "type": "value",
+     "x": 0,
+     "y": 100,
+     "text": "Index\n0",
+     "blockRole": "index"
+    },
+    {
+     "id": "xm",
+     "type": "operator",
+     "x": 100,
+     "y": 50,
+     "text": "×"
+    },
+    {
+     "id": "xps",
+     "type": "periodShift",
+     "x": 150,
+     "y": 150,
+     "shift": -1
+    },
+    {
+     "id": "xprev",
+     "type": "value",
+     "x": 250,
+     "y": 150,
+     "text": "Prev X\n0"
+    },
+    {
+     "id": "xp",
+     "type": "operator",
+     "x": 300,
+     "y": 50,
+     "text": "+"
+    },
+    {
+     "id": "xout",
+     "type": "value",
+     "x": 400,
+     "y": 50,
+     "text": "X Out",
+     "blockRole": "output",
+     "verticalReducer": "max"
+    },
+    {
+     "id": "xal",
+     "type": "alias",
+     "x": 400,
+     "y": 200,
+     "sourceCanvasId": "cIdx",
+     "sourceNodeId": "xin"
+    },
+    {
+     "id": "xalv",
+     "type": "value",
+     "x": 500,
+     "y": 200,
+     "text": "Alias of in"
+    }
+   ],
+   "edges": [
+    {
+     "id": "x1",
+     "from": "xin",
+     "to": "xm"
+    },
+    {
+     "id": "x2",
+     "from": "xi",
+     "to": "xm"
+    },
+    {
+     "id": "x3",
+     "from": "xin",
+     "to": "xps"
+    },
+    {
+     "id": "x4",
+     "from": "xps",
+     "to": "xprev"
+    },
+    {
+     "id": "x5",
+     "from": "xm",
+     "to": "xp"
+    },
+    {
+     "id": "x6",
+     "from": "xprev",
+     "to": "xp"
+    },
+    {
+     "id": "x7",
+     "from": "xp",
+     "to": "xout"
+    },
+    {
+     "id": "x8",
+     "from": "xal",
+     "to": "xalv"
+    }
+   ]
+  },
+  {
+   "id": "cOuter",
+   "name": "OuterBlock",
+   "nodes": [
+    {
+     "id": "oin",
+     "type": "value",
+     "x": 0,
+     "y": 0,
+     "text": "O In",
+     "blockRole": "input"
+    },
+    {
+     "id": "oinst",
+     "type": "blockInstance",
+     "x": 100,
+     "y": 0,
+     "blockDefCanvasId": "cInner"
+    },
+    {
+     "id": "oout",
+     "type": "value",
+     "x": 300,
+     "y": 0,
+     "text": "O Out",
+     "blockRole": "output"
+    }
+   ],
+   "edges": [
+    {
+     "id": "o1",
+     "from": "oin",
+     "to": "oinst",
+     "toPort": 0
+    },
+    {
+     "id": "o2",
+     "from": "oinst",
+     "to": "oout",
+     "fromPort": 0
+    }
+   ]
+  },
+  {
+   "id": "cInner",
+   "name": "InnerBlock",
+   "nodes": [
+    {
+     "id": "iin",
+     "type": "value",
+     "x": 0,
+     "y": 0,
+     "text": "I In\n100",
+     "blockRole": "input"
+    },
+    {
+     "id": "ten",
+     "type": "value",
+     "x": 0,
+     "y": 100,
+     "text": "Ten\n10"
+    },
+    {
+     "id": "im",
+     "type": "operator",
+     "x": 100,
+     "y": 50,
+     "text": "×"
+    },
+    {
+     "id": "ips",
+     "type": "periodShift",
+     "x": 150,
+     "y": 100,
+     "shift": -1
+    },
+    {
+     "id": "iprev",
+     "type": "value",
+     "x": 200,
+     "y": 100,
+     "text": "I Prev\n1"
+    },
+    {
+     "id": "ia",
+     "type": "operator",
+     "x": 250,
+     "y": 50,
+     "text": "+"
+    },
+    {
+     "id": "iout",
+     "type": "value",
+     "x": 300,
+     "y": 50,
+     "text": "I Out",
+     "blockRole": "output"
+    }
+   ],
+   "edges": [
+    {
+     "id": "i1",
+     "from": "iin",
+     "to": "im"
+    },
+    {
+     "id": "i2",
+     "from": "ten",
+     "to": "im"
+    },
+    {
+     "id": "i3",
+     "from": "iout",
+     "to": "ips"
+    },
+    {
+     "id": "i4",
+     "from": "ips",
+     "to": "iprev"
+    },
+    {
+     "id": "i5",
+     "from": "im",
+     "to": "ia"
+    },
+    {
+     "id": "i6",
+     "from": "iprev",
+     "to": "ia"
+    },
+    {
+     "id": "i7",
+     "from": "ia",
+     "to": "iout"
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,24 @@
+{
+ "BS": {
+  "ta": {"values":[60,60,60,60]},
+  "cash": {"values":[30,30,30,30]},
+  "inv": {"values":[20,20,20,20]},
+  "ar": {"values":[10,10,10,10]},
+  "rev": {"values":[50,50,50,50]},
+  "rate": {"values":[0.2,0.2,0.2,0.2]},
+  "vol": {"values":[10,10,10,10]},
+  "up": {"values":[5,5,5,5]},
+  "plus": {"values":[60,60,60,60]},
+  "m1": {"values":[50,50,50,50]},
+  "m2": {"values":[10,10,10,10]}
+ },
+ "Corkscrew": {
+  "eb": {"values":[105,110,115,120]},
+  "sub": {"values":[5,5,5,5]},
+  "add": {"values":[10,10,10,10]},
+  "bb": {"values":[100,105,110,115]},
+  "ps": {"values":["error: period shift t−1 has no value: There's no period that far back/forward for this shifter to read — it's fine at the timeline's edge..",105,110,115]},
+  "o1": {"values":[110,115,120,125]},
+  "o2": {"values":[105,110,115,120]}
+ }
+}
