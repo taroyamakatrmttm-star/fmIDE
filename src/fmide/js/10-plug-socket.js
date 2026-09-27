@@ -154,7 +154,7 @@
         rm.textContent = '✕';
         rm.title = 'Remove this plug';
         rm.addEventListener('mousedown', (ev) => ev.stopPropagation());
-        rm.addEventListener('click', () => { guarded(() => fm.removePlug(node.id, name)); render(); refreshList(); input.focus(); });
+        rm.addEventListener('click', () => { guarded(() => fm.removePlug('#' + node.id, name)); render(); refreshList(); input.focus(); });
         chip.appendChild(txt);
         chip.appendChild(rm);
         list.appendChild(chip);
@@ -165,7 +165,7 @@
     function addTyped(){
       const v = input.value.trim();
       if(!v) return;
-      guarded(() => fm.addPlug(node.id, v));
+      guarded(() => fm.addPlug('#' + node.id, v));
       input.value = '';
       render();
       refreshList();
@@ -198,7 +198,7 @@
     });
     [addBtn, clearBtn].forEach(b => b.addEventListener('mousedown', (ev) => ev.stopPropagation()));
     addBtn.addEventListener('click', () => { addTyped(); input.focus(); });
-    clearBtn.addEventListener('click', () => { input.value = ''; guarded(() => fm.setPlugs(node.id, [])); finish(false); });
+    clearBtn.addEventListener('click', () => { input.value = ''; guarded(() => fm.setPlugs('#' + node.id, [])); finish(false); });
 
     setTimeout(() => {
       docListener = (ev) => { if(!popup.contains(ev.target)) finish(true); };
@@ -240,7 +240,7 @@
       if(docListener) document.removeEventListener('mousedown', docListener);
       if(commit){
         const trimmed = input.value.trim();
-        if(trimmed !== (node.socket || '')) guarded(() => fm.setSocket(node.id, trimmed));
+        if(trimmed !== (node.socket || '')) guarded(() => fm.setSocket('#' + node.id, trimmed));
       }
       closePicker();
       render();
@@ -281,7 +281,7 @@
       b.addEventListener('mousedown', (ev) => ev.stopPropagation());
       b.addEventListener('click', () => {
         closePicker();
-        guarded(() => fm.setRole(node.id, opt.value || 'none'));
+        guarded(() => fm.setRole('#' + node.id, opt.value || 'none'));
       });
       picker.appendChild(b);
     });
@@ -311,7 +311,7 @@
       close();
       guarded(() => {
         if(existingNode){
-          fm.relinkAlias(existingNode.id, '#' + nodeId, canvasId);
+          fm.relinkAlias('#' + existingNode.id, '#' + nodeId, canvasId);
         } else {
           const {x, y} = spawnPoint();
           const id = fm.createAlias({ x, y, source: '#' + nodeId, sourceCanvas: canvasId });
@@ -446,8 +446,8 @@
         guarded(() => {
           if(existingInstance){
             fm.batch(() => {
-              fm.relinkBlock(existingInstance.id, c.id);
-              fm.setVertical(existingInstance.id, vertCb.checked);
+              fm.relinkBlock('#' + existingInstance.id, c.id);
+              fm.setVertical('#' + existingInstance.id, vertCb.checked);
             });
           } else {
             const {x, y} = spawnPoint();
