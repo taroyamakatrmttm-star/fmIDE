@@ -62,6 +62,18 @@ test.describe('the parser', () => {
     ['Fx_1.b(a_1, b.2) = a_1 + b.2', [1, 2], 3],
     ['Marge(Chiffre, Coût) = Chiffre - Coût', [10, 4], 6],                         // letters of any language
     ['F(__proto__, constructor) = __proto__ + constructor', [1, 2], 3],
+    // Phase E1 (these were rejected before).
+    ['F(a, b) = a = b', [0.1 + 0.2, 0.3], 1],                                       // "=" compares, as Excel does
+    ['F(a, b) = a <> b', [1, 2], 1],
+    ['F(a, b) = a ≠ b', [2, 2], 0],
+    ['F(a) = IF(a, 1, 2)', [0], 2],
+    ['F(a, b) = IF(b = 0, 0, a / b)', [1, 0], 0],                                   // the branch not taken may fail
+    ['F(a, b) = IF(a > 0, a, b)', [1], 1],                                          // …or be missing
+    ['F(a, b) = IF(a < 0, a, b)', [1], { error: 'function-input-unwired' }],     // …but not when taken
+    ['F(a, b) = AND(a, b) + OR(a, 0) * 10 + NOT(b) * 100', [2, 0], 110],
+    ['F(x) = ROUND(x, 2) + ROUNDUP(x, 0) * 10 + ROUNDDOWN(x, -1) * 100', [2.675, 0], 32.68],
+    ['F() = PERIOD()', [], 1],                                                      // the first period, here
+    ['F(period) = period * 2', [4], 8],                                             // an input may be called Period
   ];
   for(const [text, args, expected] of ACCEPTED){
     test(`accepts ${text}`, () => {
@@ -98,12 +110,14 @@ test.describe('the parser', () => {
     ['F(x) = x)', /no "\(" for it to close/, 8],
     ['F(x) = x x', /Unexpected "x"/, 9],
     ['F(a, b) = a < b < a', /can't be chained/, 16],
-    ['F(a, b) = a = b', /"=" can only follow the inputs/, 12],
-    ['F(a, b) = a <> b', /"<>" isn't supported/, 12],
+    ['F(a, b) = a = b = a', /can't be chained/, 16],
     ['F(a) = a%', /"%" isn't supported/, 8],
     ['F(a) = a & "x"', /"&" can't be used/, 9],
     ['F(a) = "a"', /a quote/, 7],
-    ['F(a) = IF(a, 1, 2)', /IF isn't available in functions yet/, 7],
+    ['F(a) = SUM(a, 1, 2)', /SUM isn't available in functions yet/, 7],
+    ['F(a) = IF(a, 1)', /IF takes exactly 3 inputs/, 7],
+    ['F(a) = PERIOD(a)', /PERIOD takes exactly 0 inputs/, 7],
+    ['Period(a) = a', /name of a built-in Excel function/, 0],
     ['F(a) = ABS(a, a)', /ABS takes exactly 1 input/, 7],
     ['F(a) = MOD(a)', /MOD takes exactly 2 inputs/, 7],
     ['F(a) = IFERROR(a)', /IFERROR takes exactly 2 inputs/, 7],
@@ -355,10 +369,10 @@ test('fmIDE calculates a call written several times, 16 levels deep, at once', a
   expect(await fmideValues(page, 'Repeat', ['Big'], 2)).toEqual({ Big: [4 ** 16, 2 * 4 ** 16] });
 });
 
-test('Save System carries the functions the model uses (system v5); the saved file calculates the same', async ({ page }, testInfo) => {
+test('Save System carries the functions the model uses (system v5, now v6); the saved file calculates the same', async ({ page }, testInfo) => {
   await openSample(page, 'basic');
   const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.command('saveSystem')));
-  expect(data.version).toBe(5);
+  expect(data.version).toBe(6);
   const all = sample('basic').functions;
   expect(data.functions).toEqual(all.filter(d => d.family !== 'family-unused'));
   const saved = testInfo.outputPath('saved.json');
@@ -369,11 +383,11 @@ test('Save System carries the functions the model uses (system v5); the saved fi
   expect(await fmideValues(page, 'Functions', Object.keys(BASIC), 3)).toEqual(BASIC);
 });
 
-test('the workspace carries the function library (v4), and the autosave keeps it', async ({ page }) => {
+test('the workspace carries the function library (v4, now v5), and the autosave keeps it', async ({ page }) => {
   await openSample(page, 'basic');
   const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
-  expect(data.version).toBe(4);
-  expect(data.system.version).toBe(5);
+  expect(data.version).toBe(5);
+  expect(data.system.version).toBe(6);
   // The library holds every version the file brought, the unused one too.
   expect(data.functions.map(d => d.family + '@' + d.version)).toEqual(sample('basic').functions.map(d => d.family + '@' + d.version));
   expect(data.system.functions.map(d => d.family)).not.toContain('family-unused');
@@ -385,11 +399,11 @@ test('the workspace carries the function library (v4), and the autosave keeps it
   expect(again.data.functions).toEqual(data.functions);
 });
 
-test('Save Module carries its canvas\'s functions (module v3); loading it brings them along', async ({ page }, testInfo) => {
+test('Save Module carries its canvas\'s functions (module v3, now v4); loading it brings them along', async ({ page }, testInfo) => {
   await openSample(page, 'basic');
   await page.evaluate(() => fm.switchCanvas('Margin Block'));
   const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.command('saveModule')));
-  expect(data.version).toBe(3);
+  expect(data.version).toBe(4);
   expect(data.functions.map(d => d.family + '@' + d.version)).toEqual(['family-margin@1']);
   const saved = testInfo.outputPath('module.json');
   fs.writeFileSync(saved, JSON.stringify(data));

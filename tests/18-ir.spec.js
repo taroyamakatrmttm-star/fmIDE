@@ -140,10 +140,12 @@ for(const [dir, model] of CASES){
 // The catalogue's ids are lasting: plugins and saved references will use them.
 test('the operator catalogue: lasting ids, one symbol each, in palette order', () => {
   const IR = loadIR();
-  expect(IR.OPERATORS.map(op => op.id)).toEqual(['add', 'subtract', 'multiply', 'divide', 'power', 'mod', 'le', 'ge', 'lt', 'gt', 'abs', 'min', 'max', 'average', 'iferror']);
-  expect(IR.OPERATORS.map(op => op.symbol)).toEqual(['+', '−', '×', '÷', '^', '%', '≤', '≥', '<', '>', 'abs', 'min', 'max', 'ave', 'iferror']);
+  expect(IR.OPERATORS.map(op => op.id)).toEqual(['add', 'subtract', 'multiply', 'divide', 'power', 'mod', 'le', 'ge', 'lt', 'gt', 'abs', 'min', 'max', 'average', 'iferror',
+    'period', 'if', 'eq', 'ne', 'and', 'or', 'not', 'round', 'roundup', 'rounddown']); // phase E1 added the second line, at the end
+  expect(IR.OPERATORS.map(op => op.symbol)).toEqual(['+', '−', '×', '÷', '^', '%', '≤', '≥', '<', '>', 'abs', 'min', 'max', 'ave', 'iferror',
+    'period', 'if', '=', '≠', 'and', 'or', 'not', 'round', 'roundup', 'rounddown']);
   IR.OPERATORS.forEach(op => {
-    const kinds = ['fold', 'all', 'unary', 'compare', 'fallback'].filter(k => op[k]);
+    const kinds = ['fold', 'all', 'unary', 'compare', 'fallback', 'period', 'branches', 'apply'].filter(k => op[k]);
     expect(kinds, op.id).toHaveLength(1);
     expect(IR.operatorById(op.id)).toBe(op);
     expect(IR.operatorForSymbol(op.symbol)).toBe(op);
@@ -155,5 +157,103 @@ test('the operator catalogue: lasting ids, one symbol each, in palette order', (
   expect(apply('abs', [1, 2])).toEqual({ error: 'unary-only' });
   expect(apply('lt', [1])).toEqual({ error: 'needs-two' });
   expect(apply('lt', [1, 3, 2])).toEqual({ value: 0 });
-  expect(IR.applyOperator(null, [4, 5])).toEqual({ value: 4 }); // unknown: first input
+  // Phase E1: an unknown operator is an error (it passed its first input through before).
+  expect(IR.applyOperator(null, [4, 5])).toEqual({ error: 'operator-unknown' });
+  expect(apply('eq', [0.1 + 0.2, 0.3])).toEqual({ value: 1 });               // equal as Excel compares
+  expect(apply('lt', [0.3, 0.1 + 0.2])).toEqual({ value: 0 });
+  expect(apply('ne', [1, 2])).toEqual({ value: 1 });
+  expect(apply('and', [1, 2, 0])).toEqual({ value: 0 });
+  expect(apply('or', [0, 0, -3])).toEqual({ value: 1 });
+  expect(apply('not', [0])).toEqual({ value: 1 });
+  expect(apply('not', [1, 2])).toEqual({ error: 'unary-only' });
+  expect(apply('round', [2.675, 2])).toEqual({ value: 2.68 });
+  expect(apply('round', [-1250, -2])).toEqual({ value: -1300 });
+  expect(apply('roundup', [1.21, 1])).toEqual({ value: 1.3 });
+  expect(apply('rounddown', [-1.29, 1])).toEqual({ value: -1.2 });
+  expect(apply('round', [1, Infinity])).toEqual({ error: 'math-error' });
+  expect(IR.operatorById('if').ports).toEqual(['condition', 'then', 'else']);
+  expect(IR.operatorById('round').ports).toEqual(['value', 'digits']);
+});
+
+// ---- phase E1 in fmIDE, through window.fm (the canvas drawing of named inputs is E1b) ----
+const F = require('./helpers/fmide');
+test.describe('phase E1 operators in fmIDE', () => {
+  // A small model built through fm: Period → flag; IF(flag, Revenue, Cost); ROUND.
+  async function build(page){
+    await openFmIDE(page);
+    return page.evaluate(() => {
+      fm.clearCanvas();
+      fm.setPeriodCount(3);
+      const rev = fm.createRect({ x: 0, y: 0, name: 'Revenue', value: 100.456, uom: '$k' });
+      const cost = fm.createRect({ x: 0, y: 100, name: 'Cost', value: 60, uom: '$k' });
+      const two = fm.createRect({ x: 200, y: 200, name: 'Two', value: 2 });
+      const per = fm.createOperator({ x: 0, y: 200, op: 'period' });
+      const p = fm.createRect({ x: 100, y: 200, name: 'Period' });
+      fm.connect('#' + per, '#' + p);
+      const ge = fm.createOperator({ x: 300, y: 200, op: '≥' });
+      fm.connect('#' + p, '#' + ge); fm.connect('#' + two, '#' + ge);
+      const iff = fm.createOperator({ x: 400, y: 100, op: 'if' });
+      fm.connect('#' + ge, '#' + iff, '', 'condition');
+      fm.connect('#' + rev, '#' + iff, '', 'Then');      // any capitals
+      fm.connect('#' + cost, '#' + iff, '', '3');        // or the number, from 1
+      const pick = fm.createRect({ x: 500, y: 100, name: 'Picked' });
+      fm.connect('#' + iff, '#' + pick);
+      const digits = fm.createRect({ x: 400, y: 300, name: 'Digits', value: 1 });
+      const rnd = fm.createOperator({ x: 550, y: 200, op: 'round' });
+      fm.connect('#' + pick, '#' + rnd, '', 'value'); fm.connect('#' + digits, '#' + rnd, '', 'digits');
+      const out = fm.createRect({ x: 650, y: 200, name: 'Rounded' });
+      fm.connect('#' + rnd, '#' + out);
+      return { iff, rnd };
+    });
+  }
+  const values = (page, name) => page.evaluate((n) => [1, 2, 3].map(p => { try{ return fm.getValue(n, p); }catch(e){ return 'error: ' + e.message; } }), name);
+
+  test('fm creates them and wires IF and ROUND by input name or number; values and units', async ({ page }) => {
+    await build(page);
+    expect(await values(page, 'Period')).toEqual([1, 2, 3]);
+    expect(await values(page, 'Picked')).toEqual([60, 100.456, 100.456]);
+    expect(await values(page, 'Rounded')).toEqual([60, 100.5, 100.5]);
+    // A wrong input name says which ones there are.
+    const err = await page.evaluate(({ rnd }) => { try{ fm.connect('Revenue', '#' + rnd, '', 'places'); }catch(e){ return e.message; } }, await page.evaluate(() => ({ rnd: fm.nodes().find(n => n.text === 'round').id })));
+    expect(err).toMatch(/has no input called "places" \(its inputs: value, digits\)/);
+    const none = await page.evaluate(() => { try{ fm.connect('Revenue', '#' + fm.nodes().find(n => n.text === 'if').id); }catch(e){ return e.message; } });
+    expect(none).toMatch(/takes each input by name — say which one \(condition, then, else\)/);
+  });
+
+  test('saved as system v6 with toPort; loading it again calculates the same; deleting an input by name', async ({ page }) => {
+    await build(page);
+    const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.command('saveSystem')));
+    expect(data.version).toBe(6);
+    const iff = data.canvases[0].nodes.find(n => n.text === 'if');
+    expect(data.canvases[0].edges.filter(e => e.to === iff.id).map(e => e.toPort).sort()).toEqual([0, 1, 2]);
+    await page.evaluate(() => fm.clearCanvas());
+    const file = test.info().outputPath('e1.json');
+    fs.writeFileSync(file, JSON.stringify(data));
+    await importViaCommand(page, 'loadSystem', file);
+    await acceptAll(page);
+    expect(await values(page, 'Rounded')).toEqual([60, 100.5, 100.5]);
+    await page.evaluate(() => fm.deleteEdge('Cost', '#' + fm.nodes().find(n => n.text === 'if').id, 'else'));
+    expect(await values(page, 'Picked')).toEqual([expect.stringMatching(/could not be computed/), 100.456, 100.456]);
+    const ifId = await page.evaluate(() => '#' + fm.nodes().find(n => n.text === 'if').id);
+    expect(await values(page, ifId)).toEqual([expect.stringMatching(/An input this operator reads isn't connected/), 100.456, 100.456]);
+  });
+
+  test('a macro records the inputs by name; the palette keeps its 15 operators until E1b', async ({ page }) => {
+    await openFmIDE(page);
+    await page.evaluate(() => fm.command('toggleRecord'));
+    await page.locator('.modal-box button.primary', { hasText: 'Start recording' }).click();
+    await page.evaluate(() => {
+      const a = fm.createRect({ x: 0, y: 0, name: 'A', value: 1 });
+      const iff = fm.createOperator({ x: 200, y: 0, op: 'if' });
+      fm.connect('#' + a, '#' + iff, '', '2');
+    });
+    await page.evaluate(() => fm.command('toggleRecord'));
+    const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
+    const steps = data.macros[data.macros.length - 1].steps;
+    expect(steps.map(s => s.action)).toEqual(['createRect', 'createOperator', 'connect']);
+    expect(steps[2].args.toPort).toBe('then');
+    const insertOps = await page.evaluate(() => fm.commands().filter(c => /^insertOp\d+$/.test(c.id)).map(c => c.label));
+    expect(insertOps).toHaveLength(15);
+    expect(insertOps.some(l => /Operator (if|round|period)\b/.test(l))).toBe(false);
+  });
 });

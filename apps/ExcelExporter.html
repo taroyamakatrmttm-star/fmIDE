@@ -609,8 +609,16 @@ var XLSX = (function(){
 // - compare: a chain a < b < c means a < b and b < c; 1 = true, 0 = false (needs two inputs:
 //   otherwise 'needs-two');
 // - fallback (iferror): its first input, or when that fails its second, or 0.
+// - period (phase E): no inputs; the period being calculated, counted from 1.
+// - ports (phase E): named inputs, each arrow into one by its `toPort` (counted from 0), as
+//   into a function node; `apply` takes them in that order. `branches` (if): the first is
+//   the condition, and only the input it picks (then when it isn't 0, else otherwise) is
+//   read. An input read with no arrow is 'operator-input-unwired'.
+// Comparisons treat two numbers as equal when they differ only in the last few binary
+// digits (approxEqual), as Excel and LibreOffice do: 0.1 + 0.2 = 0.3.
 // `unit` is how the unit of measure passes through: 'multiply', 'divide', 'same' (every
-// input must have the same unit, which the result takes), or null (no unit).
+// input must have the same unit, which the result takes), 'first' (the first input's),
+// 'branches' (then and else must have the same unit, which the result takes), or null.
 // How each operator is spelled in Excel lives in ExcelExporter, not here.
 const OPERATORS = [
   { id: 'add',      symbol: '+',       word: 'Add',          fold: (a, b) => a + b, unit: 'same' },
@@ -620,16 +628,62 @@ const OPERATORS = [
   { id: 'power',    symbol: '^',       word: 'Power',        fold: (a, b) => Math.pow(a, b), unit: null },
   // Excel's MOD: the result takes the divisor's sign (MOD(-7,3) = 2).
   { id: 'mod',      symbol: '%',       word: 'Modulo',       fold: (a, b) => b === 0 ? NaN : a - b * Math.floor(a / b), unit: null },
-  { id: 'le',       symbol: '≤',       word: 'At most',      compare: (a, b) => a <= b, unit: null },
-  { id: 'ge',       symbol: '≥',       word: 'At least',     compare: (a, b) => a >= b, unit: null },
-  { id: 'lt',       symbol: '<',       word: 'Less than',    compare: (a, b) => a < b, unit: null },
-  { id: 'gt',       symbol: '>',       word: 'Greater than', compare: (a, b) => a > b, unit: null },
+  { id: 'le',       symbol: '≤',       word: 'At most',      compare: (a, b) => a < b || approxEqual(a, b), unit: null },
+  { id: 'ge',       symbol: '≥',       word: 'At least',     compare: (a, b) => a > b || approxEqual(a, b), unit: null },
+  { id: 'lt',       symbol: '<',       word: 'Less than',    compare: (a, b) => a < b && !approxEqual(a, b), unit: null },
+  { id: 'gt',       symbol: '>',       word: 'Greater than', compare: (a, b) => a > b && !approxEqual(a, b), unit: null },
   { id: 'abs',      symbol: 'abs',     fn: true, unary: (a) => Math.abs(a), unit: 'same' },
   { id: 'min',      symbol: 'min',     fn: true, all: (vs) => Math.min(...vs), unit: 'same' },
   { id: 'max',      symbol: 'max',     fn: true, all: (vs) => Math.max(...vs), unit: 'same' },
   { id: 'average',  symbol: 'ave',     fn: true, all: (vs) => vs.reduce((a, b) => a + b, 0) / vs.length, unit: 'same' },
   { id: 'iferror',  symbol: 'iferror', fn: true, fallback: true, unit: 'same' },
+  // Phase E1: timing, conditions and rounding.
+  { id: 'period',    symbol: 'period',    fn: true, period: true, unit: null },
+  { id: 'if',        symbol: 'if',        fn: true, ports: ['condition', 'then', 'else'], branches: true, unit: 'branches' },
+  { id: 'eq',        symbol: '=',         word: 'Equal',     compare: (a, b) => approxEqual(a, b), unit: null },
+  { id: 'ne',        symbol: '≠',         word: 'Not equal', compare: (a, b) => !approxEqual(a, b), unit: null },
+  { id: 'and',       symbol: 'and',       fn: true, all: (vs) => vs.every(v => v !== 0) ? 1 : 0, unit: null },
+  { id: 'or',        symbol: 'or',        fn: true, all: (vs) => vs.some(v => v !== 0) ? 1 : 0, unit: null },
+  { id: 'not',       symbol: 'not',       fn: true, unary: (a) => a === 0 ? 1 : 0, unit: null },
+  { id: 'round',     symbol: 'round',     fn: true, ports: ['value', 'digits'], apply: (v, d) => roundLikeExcel(v, d, 'half'), unit: 'first' },
+  { id: 'roundup',   symbol: 'roundup',   fn: true, ports: ['value', 'digits'], apply: (v, d) => roundLikeExcel(v, d, 'up'), unit: 'first' },
+  { id: 'rounddown', symbol: 'rounddown', fn: true, ports: ['value', 'digits'], apply: (v, d) => roundLikeExcel(v, d, 'down'), unit: 'first' },
 ];
+// The operators of the first catalogue, before phase E1 (fmIDE's palette shows these until
+// the new ones can be drawn with their named inputs, phase E1b).
+const OPERATORS_BEFORE_E1 = 15;
+
+// Equal but for the last few binary digits, as Excel and LibreOffice compare numbers.
+function approxEqual(a, b){
+  if(a === b) return true;
+  const d = Math.abs(a - b);
+  return isFinite(d) && d < Math.max(Math.abs(a), Math.abs(b)) * 3.552713678800501e-15; // 2^-48
+}
+
+// Excel's ROUND, ROUNDUP and ROUNDDOWN: `value` to `digits` places after the point (a
+// negative number rounds to tens, hundreds…; a fraction is cut to a whole number), halves
+// away from zero ('half'), away from zero ('up') or towards zero ('down'). Worked out on the
+// number's 15 significant digits, as Excel shows it, so ROUND(2.675, 2) is 2.68 although
+// 2.675 is stored as a little less. Returns NaN for a value or digits that isn't finite.
+function roundLikeExcel(value, digits, mode){
+  if(!isFinite(value) || !isFinite(digits)) return NaN;
+  const d = Math.trunc(digits);
+  if(value === 0) return 0;
+  const sign = value < 0 ? -1 : 1;
+  const parts = Math.abs(value).toPrecision(15).split('e');
+  const exponent = Number(parts[1] || 0) + d;
+  if(exponent > 300) return value;         // far more places than the number has
+  if(exponent < -300) return mode === 'up' ? sign * Math.pow(10, -d) : 0;
+  const shifted = Number(parts[0] + 'e' + exponent);
+  let whole;
+  if(shifted >= 4503599627370496) whole = shifted; // 2^52: already a whole number
+  else if(mode === 'half') whole = Math.floor(shifted + 0.5);
+  else if(mode === 'up') whole = Math.ceil(shifted);
+  else whole = Math.floor(shifted);
+  if(whole === 0) return 0;
+  const result = d > 0 ? (d <= 22 ? whole / Math.pow(10, d) : Number(whole + 'e-' + d)) : whole * Math.pow(10, -d);
+  return sign * result;
+}
 const OPERATOR_BY_SYMBOL = new Map(OPERATORS.map(op => [op.symbol, op]));
 const OPERATOR_BY_ID = new Map(OPERATORS.map(op => [op.id, op]));
 
@@ -637,11 +691,15 @@ const OPERATOR_BY_ID = new Map(OPERATORS.map(op => [op.id, op]));
 function operatorForSymbol(symbol){ return OPERATOR_BY_SYMBOL.get(symbol) || null; }
 function operatorById(id){ return OPERATOR_BY_ID.get(id) || null; }
 
-// Applies an operator to its inputs' values (every one a number; iferror is handled by the
-// evaluator, which reads its inputs one at a time). Returns { value } or { error: code }.
-// An unknown operator (only a hand-edited file has one) passes its first input through.
+// Applies an operator to its inputs' values (every one a number; iferror, if and period are
+// handled by the evaluator, which reads their inputs one at a time). Returns { value } or
+// { error: code }. An unknown operator (only a hand-edited file has one) is an error.
 function applyOperator(op, values){
-  if(!op) return { value: values[0] };
+  if(!op) return { error: 'operator-unknown' };
+  if(op.apply){
+    const r = op.apply(...values);
+    return isFinite(r) ? { value: r } : { error: 'math-error' };
+  }
   if(op.unary){
     return values.length === 1 ? { value: op.unary(values[0]) } : { error: 'unary-only' };
   }
@@ -741,13 +799,14 @@ function uomDimsEqual(a, b){
 // True if nothing actually feeds `nodeId`: an operator (or period shift) whose every input
 // is itself fed by nothing — including one with no inputs at all, like a socket operator
 // with nothing plugged into it. Aliases, rectangles and block instances always count as a
-// real source.
+// real source; so does the period number (phase E1), which has no inputs but gives a value.
 function feedsNothing(canvas, nodeId, visiting){
   if(visiting.has(nodeId)) return false;
   visiting.add(nodeId);
   const n = canvas.nodes.find(x => x.id === nodeId);
   if(!n) return true;
   if(n.type !== 'operator' && n.type !== 'periodShift') return false;
+  if(n.type === 'operator' && n.text === 'period') return false;
   return canvas.edges.filter(e => e.to === nodeId).every(e => feedsNothing(canvas, e.from, visiting));
 }
 // An input rectangle: a value rectangle with no incoming arrow, or whose single incoming
@@ -768,8 +827,12 @@ function isInputRectangle(canvas, node){
 // this way shows its own typed number there, or 0 — in fmIDE and in Excel alike. The walk
 // follows what both apps compute in one step — operators, period shifts and aliases — and
 // stops at rectangles and block instances, which settle their own value. An iferror with a
-// fallback only fails when both of its first two inputs fail; with one input it gives 0. A
-// function node (functions.js) is followed like an operator: through any of its inputs.
+// fallback only fails when both of its first two inputs fail; with one input it gives 0. An
+// if (phase E1) needs a period outside the timeline when its condition does, or when both of
+// its branches do: a branch it may not take doesn't count (inside a branch, such a read is an
+// error instead). A function node (functions.js) is followed through its formula: only the
+// inputs it must read count (functionNeedsOutsideTimeline), when the canvas carries its
+// compiled definition (`canvas.calls`, set by the IR); otherwise through any of its inputs.
 // `canvasOf(id)` returns a canvas { nodes, edges }; inputs are in left-to-right order.
 function reachesOutsideTimeline(canvasOf, canvasId, nodeId, period, periodCount, visiting){
   visiting = visiting || new Set();
@@ -791,8 +854,20 @@ function reachesOutsideTimeline(canvasOf, canvasId, nodeId, period, periodCount,
     return reach(canvasId, incoming[0].from, target);
   }
   if(n.type !== 'operator' && n.type !== 'function') return false;
+  const call = n.type === 'function' && canvas.calls ? canvas.calls.get(nodeId) : null;
+  if(call && !call.status){
+    return functionNeedsOutsideTimeline(call, (i) => {
+      const e = incoming.find(x => x.toPort === i);
+      return !!e && reachesOutsideTimeline(canvasOf, canvasId, e.from, period, periodCount, new Set(visiting));
+    });
+  }
   const inputs = incoming.map(e => canvas.nodes.find(x => x.id === e.from)).filter(Boolean)
     .sort((a, b) => (a.x - b.x) || (a.y - b.y));
+  if(n.type === 'operator' && n.text === 'if'){
+    // Each branch is walked on its own, so a source both branches read counts for both.
+    const port = (i) => { const e = incoming.find(x => x.toPort === i); return !!e && reachesOutsideTimeline(canvasOf, canvasId, e.from, period, periodCount, new Set(visiting)); };
+    return port(0) || (port(1) && port(2));
+  }
   if(n.type === 'operator' && n.text === 'iferror'){
     return inputs.length >= 2 && reach(canvasId, inputs[0].id, period) && reach(canvasId, inputs[1].id, period);
   }
@@ -832,19 +907,31 @@ const FUNCTION_BUILTINS = Object.assign(Object.create(null), {
   ABS:     { id: 'abs',     min: 1, max: 1 },
   MOD:     { id: 'mod',     min: 2, max: 2 },
   IFERROR: { id: 'iferror', min: 2, max: 2 },
+  // Phase E1.
+  IF:        { id: 'if',        min: 3, max: 3 },
+  AND:       { id: 'and',       min: 1, max: Infinity },
+  OR:        { id: 'or',        min: 1, max: Infinity },
+  NOT:       { id: 'not',       min: 1, max: 1 },
+  ROUND:     { id: 'round',     min: 2, max: 2 },
+  ROUNDUP:   { id: 'roundup',   min: 2, max: 2 },
+  ROUNDDOWN: { id: 'rounddown', min: 2, max: 2 },
+  PERIOD:    { id: 'period',    min: 0, max: 0 },
 });
+// Built-in names an input may still have (they came after functions did, so a definition
+// may already use them for an input): read as the input unless followed by "(".
+const FUNCTION_INPUT_NAMES_ALLOWED = new Set(['PERIOD']);
 // Names kept back: Excel functions that are not available (yet), so a formula using one
 // says so instead of looking for a function of that name.
-const FUNCTION_RESERVED = new Set(['IF', 'IFS', 'AND', 'OR', 'NOT', 'XOR', 'SUM', 'PRODUCT', 'ROUND', 'ROUNDUP',
-  'ROUNDDOWN', 'INT', 'TRUNC', 'LN', 'LOG', 'LOG10', 'EXP', 'SQRT', 'POWER', 'SIGN', 'COUNT', 'LET', 'LAMBDA',
+const FUNCTION_RESERVED = new Set(['IFS', 'XOR', 'SUM', 'PRODUCT', 'INT', 'TRUNC', 'LN', 'LOG', 'LOG10', 'EXP', 'SQRT', 'POWER', 'SIGN', 'COUNT', 'LET', 'LAMBDA',
   'CHOOSE', 'INDEX', 'NA', 'TRUE', 'FALSE', 'PI', 'CEILING', 'FLOOR', 'MEDIAN', 'SUMPRODUCT']);
 // Symbols and the catalogue operator each one is. The typographic signs fmIDE shows on its
 // operators are accepted too.
 const FUNCTION_SYMBOLS = Object.assign(Object.create(null), {
   '+': 'add', '-': 'subtract', '−': 'subtract', '*': 'multiply', '×': 'multiply', '/': 'divide', '÷': 'divide',
   '^': 'power', '<': 'lt', '<=': 'le', '≤': 'le', '>': 'gt', '>=': 'ge', '≥': 'ge',
+  '<>': 'ne', '≠': 'ne',
 });
-const FUNCTION_COMPARISONS = new Set(['lt', 'le', 'gt', 'ge']);
+const FUNCTION_COMPARISONS = new Set(['lt', 'le', 'gt', 'ge', 'eq', 'ne']);
 
 // ---- the parser ----
 // Returns { ok: true, name, params, body, calls } or { ok: false, error: { message, at, length } }
@@ -885,7 +972,7 @@ function parseFunctionText(text){
         const p = expect('name', undefined, 'Expected the name of an input.');
         const key = p.value.toLowerCase();
         const upper = p.value.toUpperCase();
-        if(FUNCTION_BUILTINS[upper] || FUNCTION_RESERVED.has(upper)) fail(`"${p.value}" is the name of a built-in Excel function and can't be an input's name.`, p.at, p.text.length);
+        if((FUNCTION_BUILTINS[upper] && !FUNCTION_INPUT_NAMES_ALLOWED.has(upper)) || FUNCTION_RESERVED.has(upper)) fail(`"${p.value}" is the name of a built-in Excel function and can't be an input's name.`, p.at, p.text.length);
         if(key === name.toLowerCase()) fail(`An input can't have the function's own name, "${p.value}".`, p.at, p.text.length);
         if(paramIndex.has(key)) fail(`Two inputs are both called "${p.value}".`, p.at, p.text.length);
         if(params.length >= FUNCTION_LIMITS.inputs) fail(`A function can have at most ${FUNCTION_LIMITS.inputs} inputs.`, p.at, p.text.length);
@@ -904,16 +991,25 @@ function parseFunctionText(text){
     const enter = () => { if(++depth > FUNCTION_LIMITS.nesting) fail(`The formula is nested too deeply (at most ${FUNCTION_LIMITS.nesting} levels).`, at(), 1); };
     const leave = () => { depth--; };
     const isOp = (ids) => { const tok = peek(); return !!tok && tok.type === 'op' && ids.includes(tok.value); };
+    // In the formula, "=" compares (equal), as in Excel; "<>" and "≠" are not equal.
+    const comparisonAhead = () => {
+      const tok = peek();
+      if(!tok) return null;
+      if(tok.type === 'op' && FUNCTION_COMPARISONS.has(tok.value)) return tok.value;
+      if(tok.type === 'punct' && tok.value === '=') return 'eq';
+      return null;
+    };
 
     function comparison(){
       const left = additive();
-      if(peek() && peek().type === 'op' && FUNCTION_COMPARISONS.has(peek().value)){
-        const op = next();
+      const id = comparisonAhead();
+      if(id){
+        next();
         const right = additive();
-        if(peek() && peek().type === 'op' && FUNCTION_COMPARISONS.has(peek().value)){
+        if(comparisonAhead()){
           fail('Comparisons can\'t be chained (a < b < c): compare two values at a time.', peek().at, peek().text.length);
         }
-        return { t: 'op', id: op.value, args: [left, right] };
+        return { t: 'op', id, args: [left, right] };
       }
       return left;
     }
@@ -994,7 +1090,6 @@ function parseFunctionText(text){
         return { t: 'call', name: tok.value, key, args };
       }
       if(tok.type === 'punct' && tok.value === ')') fail('Unexpected ")".', tok.at, 1);
-      if(tok.type === 'punct' && tok.value === '=') fail('"=" can only follow the inputs. To compare, use <, <=, > or >=.', tok.at, 1);
       fail(`Expected a number, an input or "(" here, not "${tok.text}".`, tok.at, tok.text.length);
     }
 
@@ -1002,7 +1097,6 @@ function parseFunctionText(text){
     if(peek()){
       const tok = peek();
       if(tok.type === 'punct' && tok.value === ')') fail('Unexpected ")": there is no "(" for it to close.', tok.at, 1);
-      if(tok.type === 'punct' && tok.value === '=') fail('"=" can only follow the inputs. To compare, use <, <=, > or >=.', tok.at, 1);
       fail(`Unexpected "${tok.text}": expected an operator such as + or *.`, tok.at, tok.text.length);
     }
     return { ok: true, name, params, body, calls };
@@ -1042,8 +1136,7 @@ function tokenizeFunctionText(src, fail){
       continue;
     }
     const two = src.slice(i, i + 2);
-    if(two === '<=' || two === '>='){ tokens.push({ type: 'op', value: FUNCTION_SYMBOLS[two], text: two, at: start }); i += 2; continue; }
-    if(two === '<>') fail('"<>" isn\'t supported: comparisons are <, <=, > and >=.', start, 2);
+    if(two === '<=' || two === '>=' || two === '<>'){ tokens.push({ type: 'op', value: FUNCTION_SYMBOLS[two], text: two, at: start }); i += 2; continue; }
     if(FUNCTION_SYMBOLS[ch]){ tokens.push({ type: 'op', value: FUNCTION_SYMBOLS[ch], text: ch, at: start }); i++; continue; }
     if(ch === '(' || ch === ')' || ch === ',' || ch === '='){ tokens.push({ type: 'punct', value: ch, text: ch, at: start }); i++; continue; }
     if(ch === '%') fail('"%" isn\'t supported: use MOD(a, b) for a remainder, or / 100 for a percentage.', start, 1);
@@ -1170,23 +1263,25 @@ function compileFunctions(list){
 // ---- calculating a call ----
 // `fn` is a compiled function whose status is null; `input(i)` returns input i's result,
 // { value } or { error, edge? }, and is asked only for inputs the formula actually reads
-// (so IFERROR inside a function catches a failing input, as Excel does). Returns { value }
-// or { error, edge? }: a failing input's own result, or { error: 'math-error' } for a result
-// that isn't a finite number (a divide by zero; Excel shows #DIV/0! or #NUM!).
-function runFunction(fn, input){
+// (so IFERROR inside a function catches a failing input, as Excel does, and IF reads only
+// the branch it takes). `period` is the period being calculated, from 0 (PERIOD() gives it
+// counted from 1). Returns { value } or { error, edge? }: a failing input's own result, or
+// { error: 'math-error' } for a result that isn't a finite number (a divide by zero; Excel
+// shows #DIV/0! or #NUM!).
+function runFunction(fn, input, period){
   const memo = [];
   const arg = (i) => {
     if(!memo[i]) memo[i] = i < fn.params.length ? input(i) : { error: 'function-input-unwired' };
     return memo[i];
   };
-  return evalFunctionExpr(fn, fn.body, arg);
+  return evalFunctionExpr(fn, fn.body, arg, period || 0);
 }
-function evalFunctionExpr(fn, x, arg){
+function evalFunctionExpr(fn, x, arg, period){
   switch(x.t){
     case 'num': return { value: x.v };
     case 'param': return arg(x.i);
     case 'neg': {
-      const r = evalFunctionExpr(fn, x.a, arg);
+      const r = evalFunctionExpr(fn, x.a, arg, period);
       return r.error ? r : { value: -r.value };
     }
     case 'call': {
@@ -1199,22 +1294,28 @@ function evalFunctionExpr(fn, x, arg){
       const target = fn.targets.get(x.key);
       const memo = [];
       const inner = (i) => {
-        if(!memo[i]) memo[i] = i < x.args.length ? evalFunctionExpr(fn, x.args[i], arg) : { error: 'function-input-unwired' };
+        if(!memo[i]) memo[i] = i < x.args.length ? evalFunctionExpr(fn, x.args[i], arg, period) : { error: 'function-input-unwired' };
         return memo[i];
       };
-      const r = runFunctionWith(target, inner);
+      const r = runFunctionWith(target, inner, period);
       cache.set(key, r);
       return r;
     }
     case 'op': {
       const op = operatorById(x.id);
       if(op.fallback){
-        const first = evalFunctionExpr(fn, x.args[0], arg);
-        return first.error ? evalFunctionExpr(fn, x.args[1], arg) : first;
+        const first = evalFunctionExpr(fn, x.args[0], arg, period);
+        return first.error ? evalFunctionExpr(fn, x.args[1], arg, period) : first;
+      }
+      if(op.period) return { value: period + 1 };
+      if(op.branches){
+        // IF(condition, then, else): only the branch it takes is read.
+        const c = evalFunctionExpr(fn, x.args[0], arg, period);
+        return c.error ? c : evalFunctionExpr(fn, x.args[c.value !== 0 ? 1 : 2], arg, period);
       }
       const values = [];
       for(const a of x.args){
-        const r = evalFunctionExpr(fn, a, arg);
+        const r = evalFunctionExpr(fn, a, arg, period);
         if(r.error) return r;
         values.push(r.value);
       }
@@ -1226,8 +1327,8 @@ function evalFunctionExpr(fn, x, arg){
   return { error: 'function-unreadable' };
 }
 // A call inside a formula: the callee's formula, with its inputs read from the caller.
-function runFunctionWith(target, input){
-  return evalFunctionExpr(target, target.body, input);
+function runFunctionWith(target, input, period){
+  return evalFunctionExpr(target, target.body, input, period);
 }
 
 // Remembered calls, per set of inputs (`arg`, one for each formula being worked out): a call
@@ -1259,6 +1360,44 @@ function functionExprKey(x){
     case 'call': return functionCallKey(x);
   }
   return '?';
+}
+
+// ---- reaching outside the timeline ----
+// True if a call to `fn` (status null) must fail because an input it reads needs a period
+// outside the timeline, where `inputReaches(i)` says whether input i does (input-rule.js,
+// reachesOutsideTimeline). Only what the formula must read counts: IFERROR fails only when
+// both of its inputs do, IF when its condition does or both of its branches do, and an input
+// the formula doesn't read never counts — as the calculation reads them.
+function functionNeedsOutsideTimeline(fn, inputReaches){
+  const memo = [];
+  const arg = (i) => { if(!(i in memo)) memo[i] = !!inputReaches(i); return memo[i]; };
+  return functionExprNeedsOutside(fn, fn.body, arg);
+}
+function functionExprNeedsOutside(fn, x, arg){
+  switch(x.t){
+    case 'num': return false;
+    case 'param': return arg(x.i);
+    case 'neg': return functionExprNeedsOutside(fn, x.a, arg);
+    case 'call': {
+      const cache = functionCallCache(arg);
+      const key = 'reach:' + functionCallKey(x);
+      if(cache.has(key)) return cache.get(key);
+      const target = fn.targets.get(x.key);
+      const memo = [];
+      const inner = (i) => { if(!(i in memo)) memo[i] = i < x.args.length && functionExprNeedsOutside(fn, x.args[i], arg); return memo[i]; };
+      const r = functionExprNeedsOutside(target, target.body, inner);
+      cache.set(key, r);
+      return r;
+    }
+    case 'op': {
+      const op = operatorById(x.id);
+      const r = (i) => functionExprNeedsOutside(fn, x.args[i], arg);
+      if(op.fallback) return r(0) && r(1);
+      if(op.branches) return r(0) || (r(1) && r(2));
+      return x.args.some((_, i) => r(i));
+    }
+  }
+  return false;
 }
 
 // ---- units ----
@@ -1293,6 +1432,16 @@ function functionExprUnit(fn, x, arg){
     }
     case 'op': {
       const rule = operatorById(x.id).unit;
+      // Named inputs (phase E1): ROUND keeps its value's unit; IF takes then's and else's
+      // when they agree (the condition's doesn't count).
+      if(rule === 'first') return functionExprUnit(fn, x.args[0], arg);
+      if(rule === 'branches'){
+        const a = functionExprUnit(fn, x.args[1], arg), b = functionExprUnit(fn, x.args[2], arg);
+        if(a === null || b === null) return null;
+        if(a === FUNCTION_UNIT_NUMBER) return b;
+        if(b === FUNCTION_UNIT_NUMBER) return a;
+        return uomDimsEqual(a, b) ? a : null;
+      }
       const units = x.args.map(a => functionExprUnit(fn, a, arg));
       if(units.some(u => u === null)) return null;
       if(rule === 'multiply' || rule === 'divide'){
@@ -1548,11 +1697,23 @@ function compileCanvas(c, functions){
       }).filter(e => rawById.has(e.from));
       // The same, in the order units read them (sources checked first, then sorted).
       out.unitInputs = inc.filter(e => rawById.has(e.from)).sort((a, b) => irByPosition(rawById.get(a.from), rawById.get(b.from)));
+      // An operator with named inputs (phase E1: if, round…): the arrow into each, by its
+      // `toPort`, or null (the first arrow into a port counts, as for a function node).
+      if(out.op && out.op.ports){
+        const ports = portEdges.get(n.id);
+        out.portInputs = out.op.ports.map((_, i) => {
+          const e = ports ? ports.get(i) : undefined;
+          return e && rawById.has(e.from) ? e : null;
+        });
+      }
     }
     return out;
   };
 
   const list = nodes.map(compileNode);
+  // The compiled definition of each function node, for the timeline rule (input-rule.js),
+  // which reads the canvas as saved.
+  raw.calls = new Map(list.filter(n => n.type === 'function').map(n => [n.id, n.call]));
   const byId = new Map();
   list.forEach(n => { if(!byId.has(n.id)) byId.set(n.id, n); });
   // A block's ports: its Input and Output rectangles, left to right, and its Vertical Index.
@@ -1668,6 +1829,15 @@ function irUnit(ir, canvasId, nodeId, path, visiting){
   } else if(n.type === 'function'){
     // Worked out from the function's formula, with the units of what feeds its inputs.
     if(n.call && !n.call.status) result = functionUnit(n.call, (i) => irEdgeUnit(ir, canvasId, irPortEdge(ir, canvasId, n.id, i), path, visiting));
+  } else if(n.type === 'operator' && n.op && n.op.ports){
+    // Named inputs: 'first' is the value's unit (round); 'branches' is then's and else's
+    // when they agree (if).
+    const unitOfPort = (i) => n.portInputs[i] ? fromEdge(n.portInputs[i]) : null;
+    if(n.op.unit === 'first') result = unitOfPort(0);
+    else if(n.op.unit === 'branches'){
+      const a = unitOfPort(1), b = unitOfPort(2);
+      result = a && b && uomDimsEqual(a, b) ? a : null;
+    }
   } else if(n.type === 'operator'){
     const units = n.unitInputs.map(fromEdge);
     const rule = n.op ? n.op.unit : null;
@@ -1707,7 +1877,9 @@ function irEdgeUnit(ir, canvasId, edge, path, visiting){
 //
 // Error codes: cycle, alias-unset, alias-missing-canvas, alias-missing-node, no-input,
 // ambiguous, missing-input, period-out-of-range, math-error, unary-only, needs-two,
-// block-missing-def, block-missing-output, block-cycle; for function nodes also
+// block-missing-def, block-missing-output, block-cycle, operator-unknown (an operator's text
+// isn't in the catalogue), operator-input-unwired (a named input it reads has no arrow); for
+// function nodes also
 // function-missing, function-unreadable, function-cycle, function-too-deep,
 // function-arguments (compileFunctions) and function-input-unwired.
 //
@@ -1879,12 +2051,39 @@ function evaluateModel(ir, options){
           if(!edge) return { error: 'function-input-unwired' };
           const v = resolveEdge(canvasId, edge, period, scope, visiting);
           return bad(v) ? { error: 'missing-input', edge } : { value: v };
-        });
+        }, period);
         if(r.error){
           errors[key] = r.error;
           if(trace && r.edge) failedFrom(key, canvasId, r.edge, period, scope);
         } else result = r.value;
       }
+    } else if(!n.op){
+      // An operator fmIDE doesn't know (only a hand-edited file has one).
+      errors[key] = 'operator-unknown';
+    } else if(n.op.period){
+      // The period number, counted from 1.
+      result = period + 1;
+    } else if(n.op.ports){
+      // Named inputs (if, round…), each read only when needed. An if reads its condition,
+      // then only the branch it picks.
+      const read = (i) => {
+        const edge = n.portInputs[i];
+        if(!edge) return { error: 'operator-input-unwired' };
+        const v = resolveEdge(canvasId, edge, period, scope, visiting);
+        return bad(v) ? { error: 'missing-input', edge } : { value: v };
+      };
+      let r;
+      if(n.op.branches){
+        const c = read(0);
+        r = c.error ? c : read(c.value !== 0 ? 1 : 2);
+      } else {
+        const got = n.op.ports.map((_, i) => read(i));
+        r = got.find(g => g.error) || applyOperator(n.op, got.map(g => g.value));
+      }
+      if(r.error){
+        errors[key] = r.error;
+        if(trace && r.edge) failedFrom(key, canvasId, r.edge, period, scope);
+      } else result = r.value;
     } else {
       const inputs = n.inputs;
       if(n.op && n.op.fallback){
@@ -2304,7 +2503,9 @@ function operandRef(canvasId, nodeId, periodIndex, ctx, currentTabName, path, fr
       // Outside the timeline. A row whose own formula would read this shows its typed number
       // or 0 instead (reachesOutsideTimeline in buildCellContent; a block's input port does
       // the same), so this is only reached inside an iferror's first input — where fmIDE
-      // falls back to the second input, so it must be an error for IFERROR to catch.
+      // falls back to the second input, so it must be an error for IFERROR to catch — or
+      // inside an if's branch, where fmIDE shows "?" if the branch is taken (ctx.iferrorDepth
+      // counts both).
       if(targetPeriod < 0 || targetPeriod >= ctx.periodCount) return ctx.iferrorDepth ? 'NA()' : '0';
       // lagDepth > 0 marks every reference reached through a period shift as a prior-/
       // later-period one — only consulted by the row sorter (a corkscrew's shifted link is
@@ -2397,7 +2598,7 @@ function irRawCanvas(canvasId){ const c = irCanvas(canvasId); return c ? c.raw :
 //     (min/max/ave operators here, and a vertical block's reducer row);
 //   - a comparison ranks any logical value above every number (TRUE > 1000 is TRUE).
 // Plain arithmetic (+ − × ÷ ^ MOD ABS) already treats TRUE as 1, so it's left alone.
-function isComparison(n){ return !!(n && n.op && EXCEL_SPELLINGS[n.op.id] && EXCEL_SPELLINGS[n.op.id].compare); }
+function isComparison(n){ return !!(n && n.op && EXCEL_SPELLINGS[n.op.id] && (EXCEL_SPELLINGS[n.op.id].compare || EXCEL_SPELLINGS[n.op.id].logical)); }
 
 // True if what an edge from nodeId reads is a comparison's TRUE/FALSE — looking through
 // value rectangles fed by a single edge, aliases, period shifts, and block ports, the
@@ -2412,7 +2613,11 @@ function isLogicalValued(canvasId, nodeId, ctx, path, fromPort, visiting){
   visiting.add(vKey);
   const n = irNode(canvasId, nodeId);
   if(!n) return false;
-  if(n.type === 'operator') return isComparison(n);
+  if(n.type === 'operator'){
+    // An IF gives what its branches give: TRUE/FALSE when either does.
+    if(n.op && n.op.branches) return [1, 2].some(i => !!n.portInputs[i] && isLogicalValued(canvasId, n.portInputs[i].from, ctx, path, n.portInputs[i].fromPort, visiting));
+    return isComparison(n);
+  }
   if(n.type === 'alias'){
     if(!n.sourceCanvasId || !n.sourceNodeId) return false;
     return isLogicalValued(n.sourceCanvasId, n.sourceNodeId, ctx, n.sourceCanvasId === canvasId ? path : [], undefined, visiting);
@@ -2438,24 +2643,31 @@ function isLogicalValued(canvasId, nodeId, ctx, path, fromPort, visiting){
   return inc.length === 1 && isLogicalValued(canvasId, inc[0].from, ctx, path, inc[0].fromPort, visiting);
 }
 
-// An operator's formula: its inputs left to right (the IR's order), spelled as
-// EXCEL_SPELLINGS says for its catalogue id. An operator the catalogue doesn't know (only a
-// hand-edited file has one) is written as 0; the check before download lists it.
+// An operator's formula: its inputs left to right (the IR's order), or by name for one with
+// named inputs (if, round…), spelled as EXCEL_SPELLINGS says for its catalogue id. An
+// operator the catalogue doesn't know (only a hand-edited file has one) is NA(), as fmIDE
+// shows "?"; the check before download lists it.
 function buildOperatorFormula(canvasId, opNode, periodIndex, ctx, currentTabName, path){
   path = path || [];
   const spell = opNode.op ? EXCEL_SPELLINGS[opNode.op.id] : null;
-  const inputs = opNode.inputs;
-  const needsNumeric = !!(spell && (spell.numeric || spell.compare));
+  if(!spell) return 'NA()';
+  // The period number: this column's cell in the "Period #" row every sheet has (row 3).
+  if(spell.period) return colLetter(periodCol(periodIndex)) + '$3';
+  const inputs = spell.ports ? opNode.portInputs : opNode.inputs;
+  const needsNumeric = !!(spell.numeric || spell.compare);
   const operandStrs = inputs.map((edge, i) => {
-    // An iferror's first input is where a failure is caught (see the period-shift branch of operandRef).
-    const catches = !!(spell && spell.fallback) && i === 0;
+    // A named input with no arrow: an error where it is read (IF reads one branch only).
+    if(!edge) return 'NA()';
+    // An iferror's first input is where a failure is caught, and an if's branches are where
+    // one only counts when taken (see the period-shift branch of operandRef).
+    const catches = (!!spell.fallback && i === 0) || (!!spell.branches && i > 0);
     if(catches) ctx.iferrorDepth = (ctx.iferrorDepth || 0) + 1;
     let ref;
     try{ ref = operandRef(canvasId, edge.from, periodIndex, ctx, currentTabName, path, edge.fromPort); }
     finally{ if(catches) ctx.iferrorDepth--; }
     return (needsNumeric && ref !== '0' && isLogicalValued(canvasId, edge.from, ctx, path, edge.fromPort)) ? 'N(' + ref + ')' : ref;
   });
-  if(operandStrs.length === 0 || !spell) return '0';
+  if(operandStrs.length === 0) return '0';
   return spellOperator(spell, operandStrs);
 }
 
@@ -2501,7 +2713,7 @@ function buildCellContent(canvasId, node, periodIndex, ctx, currentTabName, path
       const src = irNode(canvasId, incoming[0].from);
       // Where the source would need a period outside the timeline (a corkscrew's opening
       // balance in period 1), the rectangle's own typed number applies, or 0 — the shared
-      // rule fmIDE follows too.
+      // rule fmIDE follows too (an if needs it only through its condition, or both branches).
       if(src && reachesOutsideTimeline(irRawCanvas, canvasId, src.id, periodIndex, ctx.periodCount)){
         const lit = effectiveLiteral(n.node, periodIndex);
         return { isFormula: false, value: lit !== null ? lit : 0 };
@@ -2561,6 +2773,10 @@ function classifyNode(canvas, node){
 //   one:     exactly one input (ABS); otherwise an error, as fmIDE's "?"
 //   numeric: a TRUE/FALSE read from a cell is turned into 1/0 first (N())
 //   fallback: IFERROR(first, second), or IFERROR(first, 0) with one input
+//   period:  the period number: the "Period #" cell (row 3) of the formula's own sheet
+//   ports:   the inputs by name (toPort), in the catalogue's order; one with no arrow is NA()
+//   branches: IF — inside then and else, a period outside the timeline is an error (NA())
+//   logical: the result is Excel's TRUE/FALSE (AND, OR, NOT), like a comparison's
 // This file holds nothing but the table (the test reads it on its own, in Node).
 // ============================================================
 const EXCEL_SPELLINGS = {
@@ -2579,6 +2795,17 @@ const EXCEL_SPELLINGS = {
   max:      { fn: 'MAX', numeric: true },
   average:  { fn: 'AVERAGE', numeric: true },
   iferror:  { fn: 'IFERROR', fallback: true },
+  // Phase E1.
+  period:    { period: 'Period #' },
+  if:        { fn: 'IF', ports: true, branches: true },
+  eq:        { compare: '=' },
+  ne:        { compare: '<>' },
+  and:       { fn: 'AND', logical: true },
+  or:        { fn: 'OR', logical: true },
+  not:       { fn: 'NOT', one: true, logical: true },
+  round:     { fn: 'ROUND', ports: true, numeric: true },
+  roundup:   { fn: 'ROUNDUP', ports: true, numeric: true },
+  rounddown: { fn: 'ROUNDDOWN', ports: true, numeric: true },
 };
 // ============================================================
 // Function calls (function plugins, step 7 phase D3): a call is written out in full inside
@@ -2642,7 +2869,12 @@ function buildFunctionCallFormula(canvasId, n, periodIndex, ctx, currentTabName,
     cache.set(k, e);
     return e;
   };
-  return fnAtom(fnNumeric(writeFunctionExpr(n.call, n.call.body, input, false, ctx)));
+  // PERIOD() reads this column's "Period #" cell (a call reached through a period shift is
+  // written for another column, so the column is kept for the call and put back after).
+  const savedPeriod = ctx.fnPeriodIndex;
+  ctx.fnPeriodIndex = periodIndex;
+  try{ return fnAtom(fnNumeric(writeFunctionExpr(n.call, n.call.body, input, false, ctx))); }
+  finally{ ctx.fnPeriodIndex = savedPeriod; }
 }
 
 // A piece of formula text: how tightly it binds, and whether it is a TRUE/FALSE.
@@ -2690,7 +2922,19 @@ function writeFunctionExpr(fn, x, input, caught, ctx){
         const second = fnNumeric(writeFunctionExpr(fn, x.args[1], input, caught, ctx));
         return fnPiece(spell.fn + '(' + first.s + ',' + second.s + ')', FN_LEVEL.atom, false);
       }
+      // PERIOD(): the "Period #" cell (row 3) of the formula's own sheet, in this column.
+      if(spell.period) return fnPiece(colLetter(periodCol(ctx.fnPeriodIndex || 0)) + '$3', FN_LEVEL.atom, false);
+      if(spell.branches){
+        // IF(condition, then, else): only the branch taken counts, so inside either one a
+        // period outside the timeline is an error (NA()), as for IFERROR's first input.
+        const c = writeFunctionExpr(fn, x.args[0], input, caught, ctx);
+        const t = fnNumeric(writeFunctionExpr(fn, x.args[1], input, true, ctx));
+        const e = fnNumeric(writeFunctionExpr(fn, x.args[2], input, true, ctx));
+        return fnPiece(spell.fn + '(' + c.s + ',' + t.s + ',' + e.s + ')', FN_LEVEL.atom, false);
+      }
       const args = x.args.map(a => writeFunctionExpr(fn, a, input, caught, ctx));
+      // AND, OR, NOT: Excel's TRUE/FALSE, which N() turns into 1/0 where needed.
+      if(spell.logical) return fnPiece(spell.fn + '(' + args.map(p => p.s).join(',') + ')', FN_LEVEL.atom, true);
       if(spell.infix){
         const level = FN_LEVEL[x.id];
         const left = args[0].level >= level ? args[0].s : '(' + args[0].s + ')';
@@ -3463,7 +3707,7 @@ function buildDefaultMapping(m){
 // (docs/file-formats.md). To change one of these formats: raise its version here and add
 // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
 // exactly one version.
-const SHARED_FILE_VERSIONS = { 'system': 5, 'fmIDE-workspace': 4 };
+const SHARED_FILE_VERSIONS = { 'system': 6, 'fmIDE-workspace': 5 };
 // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
 // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
 function upgradeNodePlugs(nodes){
@@ -3505,7 +3749,10 @@ const SHARED_FILE_MIGRATIONS = {
     2: () => {},
     // v3 → v4: a workspace may carry a library of functions (`functions`); older ones have
     // none.
-    3: () => {}
+    3: () => {},
+    // v4 → v5: its system (v6) and templates (v5) may use the operators of phase E1; older
+    // ones don't.
+    4: () => {}
   },
   'system': {
     // v1 systems were accepted with fields the loader already defaults (periods, ids…);
@@ -3525,7 +3772,12 @@ const SHARED_FILE_MIGRATIONS = {
     3: () => {},
     // v4 → v5: a system may carry the function definitions its function nodes use
     // (`functions`, src/shared/functions.js); older systems have none.
-    4: () => {}
+    4: () => {},
+    // v5 → v6: the operators of phase E1 (period, if, =, ≠, and, or, not, round, roundup,
+    // rounddown; arrows into if and round name their input with `toPort`). Older systems
+    // have none, so nothing changes; an older app asks before opening a v6 file instead of
+    // calculating those operators as ones it doesn't know.
+    5: () => {}
   }
 };
 // A file's kind: its "kind" field, or — for files saved before kinds were written — its
@@ -6363,9 +6615,8 @@ function rowUnit(canvas, node, path){
 // broken: an alias that points nowhere, two arrows into one rectangle, a period shift with
 // no input, a missing block or block output, a block inside itself, a loop. The panel next
 // to Generate lists the rows where that happens, with the periods and where it starts —
-// worked out with fmIDE's own calculation (the shared IR). It also lists two places where
-// fmIDE shows a number but the formula reads 0: an operator Excel has no spelling for (only
-// a hand-edited file has one) and a row left out of the layout that other rows read.
+// worked out with fmIDE's own calculation (the shared IR). It also lists a row left out of
+// the layout that other rows read (fmIDE shows a number, the formula reads 0).
 // Function calls (step 7 phase D3): a call fmIDE can't calculate is #N/A in Excel, and a
 // formula a call makes too long or too deeply nested for Excel is written as #N/A; both are
 // listed too. It never stops the download.
@@ -6395,6 +6646,9 @@ const NA_IN_EXCEL = {
   'function-too-deep': 'its function’s calls are nested more than 16 deep',
   'function-arguments': 'its function calls another with the wrong number of inputs',
   'function-input-unwired': 'an input its function reads has no arrow',
+  // Phase E1.
+  'operator-unknown': 'an operator there isn’t one fmIDE knows',
+  'operator-input-unwired': 'an input its operator reads has no arrow',
 };
 
 // Quick look at the IR for anything that can make fmIDE show "?" where Excel writes 0 or a
@@ -6411,7 +6665,10 @@ function mayDifferFromFmide(ir){
     else if(n.type === 'blockInstance'){
       const def = ir.canvases.get(n.blockDefCanvasId);
       found = !def || n.outgoing.some(e => !def.ports.outputs[e.fromPort || 0]) || blockContainsItself(ir, def.id, new Set());
-    } else if(n.type === 'operator') found = n.inputs.length === 0 && !(n.op && n.op.fallback);
+    } else if(n.type === 'operator'){
+      found = !n.op
+        || (n.op.ports ? n.portInputs.some(e => !e) : (n.inputs.length === 0 && !n.op.fallback && !n.op.period));
+    }
     else if(n.type === 'function') found = !n.call || !!n.call.status || n.call.params.some((p, i) => !irPortEdge(ir, c.id, n.id, i));
   }));
   return found || hasLoop(ir);
@@ -6612,12 +6869,6 @@ function differenceLines(){
     lines.push('“' + t.row.label + '” (tab “' + t.tabName + '”): the formula in ' + where + ' writes out a function call that '
       + why + ', so Excel shows #N/A there, where fmIDE shows its value. Putting a rectangle between the function and what feeds it breaks the formula up.');
   });
-  // Operators Excel has no spelling for: fmIDE passes the first input through.
-  modelIR.order.forEach(c => c.list.forEach(n => {
-    if(n.type !== 'operator' || (n.op && EXCEL_SPELLINGS[n.op.id])) return;
-    lines.push('An operator “' + String(n.symbol == null ? '' : n.symbol) + '” on “' + (c.name || c.id)
-      + '” is not one fmIDE knows: fmIDE passes its first input through; Excel writes 0.');
-  }));
   // Rows left out of the layout that other rows' formulas read.
   const aliasTargets = new Set();
   modelIR.order.forEach(c => c.list.forEach(n => { if(n.type === 'alias' && n.sourceCanvasId) aliasTargets.add(n.sourceCanvasId + '|' + n.sourceNodeId); }));

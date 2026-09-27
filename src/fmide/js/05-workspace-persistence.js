@@ -321,8 +321,10 @@
       });
 
       // Pass 3: operators & block instances — identity is symbol/definition + resolved incoming sources.
-      // Iterated to a fixed point since one operator's output can feed another.
-      function existingOpSig(exId){ return target.edges.filter(e => e.to === exId).map(e => e.from).sort().join(','); }
+      // Iterated to a fixed point since one operator's output can feed another. An arrow into a
+      // named input (if, round…) counts with its input, so swapped branches don't match.
+      const portTag = (e) => e.toPort != null ? '@' + e.toPort : '';
+      function existingOpSig(exId){ return target.edges.filter(e => e.to === exId).map(e => e.from + portTag(e)).sort().join(','); }
       function existingBlockSig(exId, portCount){
         const arr = [];
         for(let i=0;i<portCount;i++){ const e = target.edges.find(e2 => e2.to === exId && e2.toPort === i); arr.push(e ? e.from : ''); }
@@ -349,7 +351,7 @@
             const incoming = srcEdges.filter(e => e.to === n.id);
             const resolved = [];
             let ok = true;
-            incoming.forEach(e => { if(nodeIdMap[e.from] !== undefined) resolved.push(nodeIdMap[e.from]); else ok = false; });
+            incoming.forEach(e => { if(nodeIdMap[e.from] !== undefined) resolved.push(nodeIdMap[e.from] + portTag(e)); else ok = false; });
             if(!ok){ next.push(n); return; }
             const sig = n.text + '|' + resolved.sort().join(',');
             if(existingOpIndex[sig] !== undefined){

@@ -13,8 +13,12 @@
   const SNAP_THRESHOLD = 6;
 
   // build:include shared/operators.js
-  // The operators, in palette order, from the shared catalogue.
-  const OPS = OPERATORS.map(op => op.symbol);
+  // The operators, in palette order, from the shared catalogue. The palette, the operator
+  // picker and the Insert Operator commands show those before phase E1 (OPERATORS_BEFORE_E1)
+  // until the new ones can be drawn with their named inputs (phase E1b); `window.fm` takes
+  // every one (ALL_OPS).
+  const ALL_OPS = OPERATORS.map(op => op.symbol);
+  const OPS = ALL_OPS.slice(0, OPERATORS_BEFORE_E1);
   const WORD_OPS = OPERATORS.filter(op => op.fn).map(op => op.symbol);
 
   function operatorSize(sym){

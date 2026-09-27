@@ -28,19 +28,19 @@ for(const name of ['sys-current', 'sys-legacy']){
   });
 }
 
-// A newer system is v6 since system v5 (function definitions) became current.
-test('sys-newer-v6 asks first: Cancel keeps the current canvases, OK opens it', async ({ page }) => {
-  await F.importViaCommand(page, 'loadSystem', file('sys-newer-v6'));
+// A newer system is v7 since system v6 (the operators of phase E1) became current.
+test('sys-newer-v7 asks first: Cancel keeps the current canvases, OK opens it', async ({ page }) => {
+  await F.importViaCommand(page, 'loadSystem', file('sys-newer-v7'));
   const text = await F.dialogText(page);
   expect(text).toContain('newer version');
-  expect(text).toContain('format version 6');
+  expect(text).toContain('format version 7');
   await F.cancelDialog(page);
   await expect(page.locator('.modal-box')).toHaveCount(0);
   expect(await canvasNames(page)).toEqual(['Before load']);
 
-  await F.importViaCommand(page, 'loadSystem', file('sys-newer-v6'));
+  await F.importViaCommand(page, 'loadSystem', file('sys-newer-v7'));
   const seen = await F.acceptAll(page);
-  expect(seen[0]).toContain('format version 6');
+  expect(seen[0]).toContain('format version 7');
   expect(seen[1]).toMatch(/^Load this system\?/);
   expect(await canvasNames(page)).toEqual(['Revenue Model']);
 });
@@ -97,45 +97,54 @@ test('macros-bare (a bare array) imports', async ({ page }) => {
   await expect(builder).toContainText('Bare List Macro');
 });
 
-test('sys-newer-v5 is now a current file: no question before "Load this system?"', async ({ page }) => {
-  await F.importViaCommand(page, 'loadSystem', file('sys-newer-v5'));
-  const seen = await F.acceptAll(page);
-  expect(seen[0]).toMatch(/^Load this system\?/);
-  expect(await canvasNames(page)).toEqual(['Revenue Model']);
-});
+for(const name of ['sys-newer-v5', 'sys-newer-v6']){
+  test(`${name} is now a current file: no question before "Load this system?"`, async ({ page }) => {
+    await F.importViaCommand(page, 'loadSystem', file(name));
+    const seen = await F.acceptAll(page);
+    expect(seen[0]).toMatch(/^Load this system\?/);
+    expect(await canvasNames(page)).toEqual(['Revenue Model']);
+  });
+}
 
-// Files from before function definitions (workspace v3, module v2, templates v3) still open,
-// and are saved in the current versions.
-test('ws-v3 imports, with its v4 system and its templates, and exports as v4', async ({ page }) => {
-  await F.importViaCommand(page, 'importWorkspace', file('ws-v3'));
+// Files from before function definitions (workspace v3, module v2, templates v3) and from
+// before the operators of phase E1 (workspace v4, module v3, templates v4) still open, and
+// are saved in the current versions (workspace v5, system v6, module v4).
+for(const [name, sys] of [['ws-v3', 'v4'], ['ws-v4', 'v5']]){
+test(`${name} imports, with its ${sys} system and its templates, and exports as v5`, async ({ page }) => {
+  await F.importViaCommand(page, 'importWorkspace', file(name));
   const seen = await F.acceptAll(page);
   expect(seen[0]).toMatch(/^Import this workspace\?/);
   expect(await canvasNames(page)).toEqual(['Revenue Model']);
   const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
-  expect(data.version).toBe(4);
-  expect(data.system.version).toBe(5);
+  expect(data.version).toBe(5);
+  expect(data.system.version).toBe(6);
   expect(data.functions).toEqual([]);
   expect(data.system).not.toHaveProperty('functions');
   expect(data.templates.map(t => t.name)).toEqual(expect.arrayContaining(['Income Statement', 'Balance Sheet']));
 });
+}
 
-test('module-v2 loads and calculates; saved again it is a v3 module', async ({ page }) => {
+for(const name of ['module-v2', 'module-v3']){
+test(`${name} loads and calculates; saved again it is a v4 module`, async ({ page }) => {
   await page.evaluate(() => fm.clearCanvas());
-  await F.importViaCommand(page, 'loadModule', file('module-v2'));
+  await F.importViaCommand(page, 'loadModule', file(name));
   await F.acceptAll(page);
   expect(await page.evaluate(() => fm.getValue('Profit'))).toBe(40);
   const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.command('saveModule')));
-  expect(data.version).toBe(3);
+  expect(data.version).toBe(4);
   expect(data).not.toHaveProperty('functions');
 });
+}
 
-test('templates-v3 imports through the Templates window', async ({ page }) => {
-  await F.importViaDialog(page, 'openTemplates', '⇧ Import Templates', file('templates-v3'));
+for(const name of ['templates-v3', 'templates-v4']){
+test(`${name} imports through the Templates window`, async ({ page }) => {
+  await F.importViaDialog(page, 'openTemplates', '⇧ Import Templates', file(name));
   await expect(page.locator('.modal-box .template-list button', { hasText: 'Income Statement' })).toHaveCount(1);
 });
+}
 
-test('ws-nested-newer-v6: one question up front, then the normal import confirm', async ({ page }) => {
-  await F.importViaCommand(page, 'importWorkspace', file('ws-nested-newer-v6'));
+test('ws-nested-newer-v7: one question up front, then the normal import confirm', async ({ page }) => {
+  await F.importViaCommand(page, 'importWorkspace', file('ws-nested-newer-v7'));
   const seen = await F.acceptAll(page);
   expect(seen[0]).toMatch(/^Its system was saved by a newer fmIDE/);
   expect(seen[1]).toMatch(/^Import this workspace\?/);
@@ -193,7 +202,7 @@ test.describe('plugs: files from before a rectangle could have several', () => {
     expect(await valueOn(page, 'Income Statement', 'Income Tax expense')).toBe(30);
 
     const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.command('saveSystem')));
-    expect(data.version).toBe(5);
+    expect(data.version).toBe(6);
     const tax = data.canvases.find(c => c.name === 'Tax').nodes.find(n => /^Income Tax/.test(n.text));
     expect(tax.plugs).toEqual(['Income Tax']);
     expect(tax).not.toHaveProperty('plug');

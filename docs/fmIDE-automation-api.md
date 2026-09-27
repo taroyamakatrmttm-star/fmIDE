@@ -17,7 +17,7 @@ Every canvas interaction is an action. The Ribbon, shortcuts, Command Launcher (
 
 ### Insert
 - **createRect**(x="(auto)", y="(auto)", name="New Node", value="0", uom="", w=170, h=64) — Create Rectangle. Adds a value rectangle at x, y. Its three text lines are name / value / unit of measure.
-- **createOperator**(x="(auto)", y="(auto)", op="+") — Create Operator. Adds an operator node. For − ÷ ^ % and comparisons, inputs are taken left-to-right by x position.
+- **createOperator**(x="(auto)", y="(auto)", op="+") — Create Operator. Adds an operator node. For − ÷ ^ % and comparisons, inputs are taken left-to-right by x position; if and round take each input by name (fm.connect's toPort).
 - **createPeriodShift**(x="(auto)", y="(auto)", shift=-1) — Create Period Shift. Adds a period-shift connector: its output at period p is its input at period p + shift (e.g. −1 = prior period).
 - **createAlias**(x="(auto)", y="(auto)", sourceCanvas="@current", source) — Create Alias. Adds an alias that shows another rectangle (on this or another canvas).
 - **createBlock**(x="(auto)", y="(auto)", block, vertical=false) — Create Block Instance. Inserts an instance of a Block (a canvas with Output rectangles).
@@ -40,7 +40,7 @@ Every canvas interaction is an action. The Ribbon, shortcuts, Command Launcher (
 - **addFunctionDefinition**(node) — Add Function Definition from Library. For a function node whose definition is missing from the model, copies that exact version (the same versionId) from your library into the model, with what it calls.
 
 ### Connect
-- **connect**(from, to, fromPort="", toPort="") — Connect. Draws an arrow from one node to another. Block instances and function nodes take a port: its name or 1-based number (a function node's input by the name the definition gives it).
+- **connect**(from, to, fromPort="", toPort="") — Connect. Draws an arrow from one node to another. Block instances, function nodes and the operators with named inputs (if: condition, then, else; round, roundup, rounddown: value, digits) take a port: its name or 1-based number (a function node's input by the name the definition gives it).
 - **deleteEdge**(from, to, toPort="") — Delete Connection.
 
 ### Edit

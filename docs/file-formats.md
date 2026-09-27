@@ -20,16 +20,40 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 
 | `kind` | Version | What it is | Opened with |
 |---|---|---|---|
-| `system` | 5 | A whole model (all canvases, periods); v4: a canvas may remember the canvas template it came from; v5: the function definitions its function nodes use | fmIDE: File → Load System · ExcelExporter |
-| `module` | 3 | One canvas; v3: the function definitions it uses | fmIDE: File → Load Module |
-| `fmIDE-workspace` | 4 | Everything: system + templates, format presets, shortcuts, macros; v4: the function library. A **`.fmide` document** is exactly this, with the `.fmide` extension | fmIDE: File → Open… (a document) or Import Workspace (a full replace) · ExcelExporter |
-| `fmIDE-templates` | 4 | Saved templates (each holds a module, a system or a recipe), with their families and versions; v4: a template's model may carry function definitions | fmIDE: Templates → Import Templates |
+| `system` | 6 | A whole model (all canvases, periods); v4: a canvas may remember the canvas template it came from; v5: the function definitions its function nodes use; v6: the operators of phase E1 (below) | fmIDE: File → Load System · ExcelExporter |
+| `module` | 4 | One canvas; v3: the function definitions it uses; v4: the operators of phase E1 | fmIDE: File → Load Module |
+| `fmIDE-workspace` | 5 | Everything: system + templates, format presets, shortcuts, macros; v4: the function library; v5: its system and templates may use the operators of phase E1. A **`.fmide` document** is exactly this, with the `.fmide` extension | fmIDE: File → Open… (a document) or Import Workspace (a full replace) · ExcelExporter |
+| `fmIDE-templates` | 5 | Saved templates (each holds a module, a system or a recipe), with their families and versions; v4: a template's model may carry function definitions; v5: it may use the operators of phase E1 | fmIDE: Templates → Import Templates |
 | `fmIDE-functions` | 1 | Function definitions (a library of functions) | fmIDE: Functions → Import Functions (coming with the Functions manager) |
 | `fmIDE-format-presets` | 1 | Format presets, including the format roles | fmIDE: Format Presets → Import Presets |
 | `fmIDE-shortcuts` | 2 | Keyboard shortcut bindings | fmIDE: Keyboard Shortcuts → Import Shortcuts |
 | `fmIDE-macros` | 1 | Macros | fmIDE: Macro Builder → Import |
 | `fmIDE-preferences` | 1 | Personal settings: shortcut bindings for built-in commands, ribbon layout and Quick Access Toolbar, ribbon collapsed state, KeyTips trigger (fmIDE only) | fmIDE: File → Import Preferences (or Customize Ribbon) |
 | `fmIDE-excel-mapping` | 1 | ExcelExporter's tab/row layout for one model | ExcelExporter: Import Mapping JSON |
+
+## Operators (`system` 6, `module` 4, `fmIDE-workspace` 5, `fmIDE-templates` 5)
+
+An operator node saves its symbol in `text`: `{ "id": "n3", "type": "operator", "x": 300, "y": 120, "text": "×", "socket": "" }`.
+
+| `text` | Operator | Inputs |
+|---|---|---|
+| `+` `−` `×` `÷` `^` `%` | add, subtract, multiply, divide, power, modulo (like Excel's MOD) | two or more, left to right by position |
+| `≤` `≥` `<` `>` | comparisons: 1 (true) or 0 (false); `a < b < c` means `a < b` and `b < c` | two or more, left to right |
+| `abs` `min` `max` `ave` `iferror` | ABS (one input), MIN, MAX, AVERAGE, IFERROR (the first input, or when it fails the second, or 0) | left to right |
+| `period` | the period being calculated, counted from 1 (system 6) | none |
+| `if` | IF: *then* where *condition* isn't 0, otherwise *else*; only the input it takes is read (system 6) | named: `condition`, `then`, `else` |
+| `=` `≠` | equal, not equal, like the comparisons (system 6) | two or more, left to right |
+| `and` `or` `not` | AND, OR (any number of inputs), NOT (one): 1 or 0; an input that isn't 0 counts as true (system 6) | left to right |
+| `round` `roundup` `rounddown` | Excel's ROUND, ROUNDUP, ROUNDDOWN to *digits* places (negative: tens, hundreds…) (system 6) | named: `value`, `digits` |
+
+- **Named inputs** (`if`, `round`, `roundup`, `rounddown`): each arrow into one carries `toPort`, the input it feeds, counted from 0 in the order above (`condition` is 0, `then` 1, `else` 2), as an arrow into a function node does. An input the operator reads with no arrow is an error ("?" in fmIDE, `#N/A` in Excel); IF reads only the branch it takes, so a branch not taken may be left unconnected.
+- **Comparisons** treat two numbers as equal when they differ only in their last few binary digits, as Excel and LibreOffice do (`0.1 + 0.2 = 0.3` is true; before system 6 the comparisons were exact).
+- **Rounding** works on the number's 15 significant digits, as Excel shows it: `round(2.675, 2)` is 2.68 although 2.675 is stored as slightly less; halves round away from zero.
+- **The period number** in Excel is the formula's own sheet's "Period #" cell (row 3).
+- **The timeline:** a rectangle fed through a period shift that needs a period outside the timeline (a corkscrew's opening balance in period 1) shows its own typed number, or 0. An `if` needs such a period when its condition does, or both of its branches do; a branch it may not take doesn't count, so `if(period = 1, Opening, previous Closing)` shows *Opening* in period 1. Inside a branch taken, such a read is an error.
+- **An operator whose `text` isn't one of these** (only a hand-edited file has one) is an error: "?" in fmIDE and `#N/A` in Excel (before system 6, fmIDE passed its first input through).
+- **Units:** `+ − min max ave abs iferror` keep a unit all their inputs share; `×` and `÷` combine them; `if` takes the unit *then* and *else* share; `round`, `roundup`, `rounddown` keep *value*'s; the others give none.
+- **Older and newer files:** older files (`system` 1–5, `module` 1–3, `fmIDE-workspace` 1–4, `fmIDE-templates` 1–4) have none of the phase E1 operators; the upgrade steps change nothing. An older app asks before opening a newer file; without that, it would calculate the new operators as ones it doesn't know.
 
 ## Functions (`system` 5, `module` 3, `fmIDE-workspace` 4, `fmIDE-templates` 4, `fmIDE-functions` 1)
 
@@ -87,16 +111,16 @@ power      := unary { "^" unary }               from the left: 2^3^2 = 64
 unary      := ("-" | "+") unary | item          -2^2 = 4, as in Excel
 item       := number | input | call | "(" formula ")"
 call       := name "(" [ formula { "," formula } ] ")"
-comparison := "<" | "<=" | ">" | ">="
+comparison := "<" | "<=" | ">" | ">=" | "=" | "<>"
 ```
 
-- **Names** (the function's and its inputs'): a letter (of any language) or `_`, then letters, digits, `_` and `.`; at most 64 characters; capitals don't matter (`revenue` is `Revenue`). Two inputs can't share a name, an input can't have the function's name, and neither can be the name of a built-in or kept-back function (below).
+- **Names** (the function's and its inputs'): a letter (of any language) or `_`, then letters, digits, `_` and `.`; at most 64 characters; capitals don't matter (`revenue` is `Revenue`). Two inputs can't share a name, an input can't have the function's name, and neither can be the name of a built-in or kept-back function (below) — except that an input may be called `Period` (it came before `PERIOD()`; the input is read without brackets, the built-in with them).
 - **Numbers**: `12`, `0.5`, `.5`, `1.5e3`. There are no negative numbers as such: `-3` is a minus applied to 3.
-- **Signs**: `+ - * / ^` and `< <= > >=`. fmIDE's own signs `− × ÷ ≤ ≥` mean the same.
+- **Signs**: `+ - * / ^` and `< <= > >= = <>` (in the formula, `=` compares, as in Excel). fmIDE's own signs `− × ÷ ≤ ≥ ≠` mean the same.
 - **Precedence**, as in Excel: a leading minus first (`-2^2` is 4), then `^` (from the left), then `*` and `/`, then `+` and `-`, then a comparison. A comparison gives 1 (true) or 0 (false).
-- **Built-in functions**, with Excel's numbers of inputs: `MIN(a, …)`, `MAX(a, …)`, `AVERAGE(a, …)` (at least one input), `ABS(a)`, `MOD(a, b)` (the result takes the divisor's sign, like Excel's MOD), `IFERROR(a, b)` (a, or b when a fails).
+- **Built-in functions**, with Excel's numbers of inputs: `MIN(a, …)`, `MAX(a, …)`, `AVERAGE(a, …)` (at least one input), `ABS(a)`, `MOD(a, b)` (the result takes the divisor's sign, like Excel's MOD), `IFERROR(a, b)` (a, or b when a fails); since phase E1: `IF(c, a, b)` (a where c isn't 0, otherwise b; only the one taken is read), `AND(a, …)`, `OR(a, …)`, `NOT(a)`, `ROUND(x, d)`, `ROUNDUP(x, d)`, `ROUNDDOWN(x, d)` and `PERIOD()` (the period number, from 1), as the operators above.
 - **Calls** to other functions: `Margin(Revenue, Cost)`, with exactly as many inputs as that function has. A function can't call itself.
-- **Not accepted** (each with its own message): a chain of comparisons (`a < b < c`), `=` or `<>` in the formula, `%`, `&`, text in quotes, `;`, and these Excel names, kept back for later: `IF IFS AND OR NOT XOR SUM PRODUCT ROUND ROUNDUP ROUNDDOWN INT TRUNC LN LOG LOG10 EXP SQRT POWER SIGN COUNT LET LAMBDA CHOOSE INDEX NA TRUE FALSE PI CEILING FLOOR MEDIAN SUMPRODUCT`.
+- **Not accepted** (each with its own message): a chain of comparisons (`a < b < c`, `a = b = c`), `%`, `&`, text in quotes, `;`, and these Excel names, kept back for later: `IFS XOR SUM PRODUCT INT TRUNC LN LOG LOG10 EXP SQRT POWER SIGN COUNT LET LAMBDA CHOOSE INDEX NA TRUE FALSE PI CEILING FLOOR MEDIAN SUMPRODUCT`. (`=`, `<>`, `IF`, `AND`, `OR`, `NOT`, `ROUND`, `ROUNDUP` and `ROUNDDOWN` were refused before phase E1; a function named `Period` can't be read since then.)
 - **Limits**: a definition of at most 4,000 characters, 32 inputs, 64 levels of brackets and signs, calls nested at most 16 functions deep, and at most 64 different functions called from one.
 - A parse error gives a message and the place in the text where it was found.
 
@@ -106,7 +130,7 @@ comparison := "<" | "<=" | ">" | ">="
 - A result that isn't a finite number (a divide by zero, `(-4)^0.5`, a result too large) is an error, as in Excel (`#DIV/0!`, `#NUM!`).
 - **Errors** of a function node: the definition isn't in the file, or has another `versionId` (`function-missing`, also when a function it calls is missing); its text can't be read (`function-unreadable`); functions call each other in a loop (`function-cycle`, only possible in a hand-edited file); calls nested more than 16 deep (`function-too-deep`); a call with the wrong number of inputs (`function-arguments`); an input the formula reads isn't connected (`function-input-unwired`); an input fails (`missing-input`).
 - **Units** are worked out from the formula with the operators' rules, using the units of what feeds each input. A number in the formula has no unit of its own: it counts as a plain number for `*` and `/` (`Revenue * 1.1` keeps Revenue's unit) and is left out where the units must match (`Revenue + 100` keeps it too). `^`, `MOD` and comparisons give no unit.
-- A rectangle fed by a function whose input needs a period outside the timeline (a corkscrew's opening balance in period 1) shows its own typed number, or 0, as with an operator.
+- A rectangle fed by a function whose formula must read an input that needs a period outside the timeline (a corkscrew's opening balance in period 1) shows its own typed number, or 0, as with an operator. Only what the formula must read counts: `IFERROR` needs such a period only when both of its inputs do, `IF` when its condition does or both of its branches do, and an input it doesn't read never counts (before phase E1 any input counted, and ExcelExporter could write the typed number where fmIDE showed what `IFERROR` caught).
 - **In Excel**, ExcelExporter writes a call out in full inside each formula that reads it (no `LAMBDA` or named function): the formula with each input replaced by the cell its arrow reads, the built-in functions as Excel's own, Excel's order of operations, and a comparison as 1 or 0. A call that can't be calculated, or an input the formula reads with no arrow, is `#N/A`; so is a formula a call would make longer or more deeply nested than Excel allows.
 
 ### Older and newer files

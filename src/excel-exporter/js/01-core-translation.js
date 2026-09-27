@@ -211,7 +211,9 @@ function operandRef(canvasId, nodeId, periodIndex, ctx, currentTabName, path, fr
       // Outside the timeline. A row whose own formula would read this shows its typed number
       // or 0 instead (reachesOutsideTimeline in buildCellContent; a block's input port does
       // the same), so this is only reached inside an iferror's first input — where fmIDE
-      // falls back to the second input, so it must be an error for IFERROR to catch.
+      // falls back to the second input, so it must be an error for IFERROR to catch — or
+      // inside an if's branch, where fmIDE shows "?" if the branch is taken (ctx.iferrorDepth
+      // counts both).
       if(targetPeriod < 0 || targetPeriod >= ctx.periodCount) return ctx.iferrorDepth ? 'NA()' : '0';
       // lagDepth > 0 marks every reference reached through a period shift as a prior-/
       // later-period one — only consulted by the row sorter (a corkscrew's shifted link is
@@ -304,7 +306,7 @@ function irRawCanvas(canvasId){ const c = irCanvas(canvasId); return c ? c.raw :
 //     (min/max/ave operators here, and a vertical block's reducer row);
 //   - a comparison ranks any logical value above every number (TRUE > 1000 is TRUE).
 // Plain arithmetic (+ − × ÷ ^ MOD ABS) already treats TRUE as 1, so it's left alone.
-function isComparison(n){ return !!(n && n.op && EXCEL_SPELLINGS[n.op.id] && EXCEL_SPELLINGS[n.op.id].compare); }
+function isComparison(n){ return !!(n && n.op && EXCEL_SPELLINGS[n.op.id] && (EXCEL_SPELLINGS[n.op.id].compare || EXCEL_SPELLINGS[n.op.id].logical)); }
 
 // True if what an edge from nodeId reads is a comparison's TRUE/FALSE — looking through
 // value rectangles fed by a single edge, aliases, period shifts, and block ports, the
@@ -319,7 +321,11 @@ function isLogicalValued(canvasId, nodeId, ctx, path, fromPort, visiting){
   visiting.add(vKey);
   const n = irNode(canvasId, nodeId);
   if(!n) return false;
-  if(n.type === 'operator') return isComparison(n);
+  if(n.type === 'operator'){
+    // An IF gives what its branches give: TRUE/FALSE when either does.
+    if(n.op && n.op.branches) return [1, 2].some(i => !!n.portInputs[i] && isLogicalValued(canvasId, n.portInputs[i].from, ctx, path, n.portInputs[i].fromPort, visiting));
+    return isComparison(n);
+  }
   if(n.type === 'alias'){
     if(!n.sourceCanvasId || !n.sourceNodeId) return false;
     return isLogicalValued(n.sourceCanvasId, n.sourceNodeId, ctx, n.sourceCanvasId === canvasId ? path : [], undefined, visiting);
@@ -345,24 +351,31 @@ function isLogicalValued(canvasId, nodeId, ctx, path, fromPort, visiting){
   return inc.length === 1 && isLogicalValued(canvasId, inc[0].from, ctx, path, inc[0].fromPort, visiting);
 }
 
-// An operator's formula: its inputs left to right (the IR's order), spelled as
-// EXCEL_SPELLINGS says for its catalogue id. An operator the catalogue doesn't know (only a
-// hand-edited file has one) is written as 0; the check before download lists it.
+// An operator's formula: its inputs left to right (the IR's order), or by name for one with
+// named inputs (if, round…), spelled as EXCEL_SPELLINGS says for its catalogue id. An
+// operator the catalogue doesn't know (only a hand-edited file has one) is NA(), as fmIDE
+// shows "?"; the check before download lists it.
 function buildOperatorFormula(canvasId, opNode, periodIndex, ctx, currentTabName, path){
   path = path || [];
   const spell = opNode.op ? EXCEL_SPELLINGS[opNode.op.id] : null;
-  const inputs = opNode.inputs;
-  const needsNumeric = !!(spell && (spell.numeric || spell.compare));
+  if(!spell) return 'NA()';
+  // The period number: this column's cell in the "Period #" row every sheet has (row 3).
+  if(spell.period) return colLetter(periodCol(periodIndex)) + '$3';
+  const inputs = spell.ports ? opNode.portInputs : opNode.inputs;
+  const needsNumeric = !!(spell.numeric || spell.compare);
   const operandStrs = inputs.map((edge, i) => {
-    // An iferror's first input is where a failure is caught (see the period-shift branch of operandRef).
-    const catches = !!(spell && spell.fallback) && i === 0;
+    // A named input with no arrow: an error where it is read (IF reads one branch only).
+    if(!edge) return 'NA()';
+    // An iferror's first input is where a failure is caught, and an if's branches are where
+    // one only counts when taken (see the period-shift branch of operandRef).
+    const catches = (!!spell.fallback && i === 0) || (!!spell.branches && i > 0);
     if(catches) ctx.iferrorDepth = (ctx.iferrorDepth || 0) + 1;
     let ref;
     try{ ref = operandRef(canvasId, edge.from, periodIndex, ctx, currentTabName, path, edge.fromPort); }
     finally{ if(catches) ctx.iferrorDepth--; }
     return (needsNumeric && ref !== '0' && isLogicalValued(canvasId, edge.from, ctx, path, edge.fromPort)) ? 'N(' + ref + ')' : ref;
   });
-  if(operandStrs.length === 0 || !spell) return '0';
+  if(operandStrs.length === 0) return '0';
   return spellOperator(spell, operandStrs);
 }
 
@@ -408,7 +421,7 @@ function buildCellContent(canvasId, node, periodIndex, ctx, currentTabName, path
       const src = irNode(canvasId, incoming[0].from);
       // Where the source would need a period outside the timeline (a corkscrew's opening
       // balance in period 1), the rectangle's own typed number applies, or 0 — the shared
-      // rule fmIDE follows too.
+      // rule fmIDE follows too (an if needs it only through its condition, or both branches).
       if(src && reachesOutsideTimeline(irRawCanvas, canvasId, src.id, periodIndex, ctx.periodCount)){
         const lit = effectiveLiteral(n.node, periodIndex);
         return { isFormula: false, value: lit !== null ? lit : 0 };

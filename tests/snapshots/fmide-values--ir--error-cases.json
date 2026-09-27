@@ -37,7 +37,7 @@
   "ge": {"values":[0,0,0]},
   "gt": {"values":[0,0,0]},
   "sub": {"values":[6,6,6]},
-  "unk": {"values":[1,1,1]},
+  "unk": {"values":["error: operator foo has no value: fmIDE doesn't know this operator (only a hand-edited file has one)..","error: operator foo has no value: fmIDE doesn't know this operator (only a hand-edited file has one)..","error: operator foo has no value: fmIDE doesn't know this operator (only a hand-edited file has one).."]},
   "ie0": {"values":[0,0,0]},
   "ie1": {"values":[0,0,0]},
   "ie2": {"values":["error: operator iferror has no value: One of this operator's inputs could not be computed..","error: operator iferror has no value: One of this operator's inputs could not be computed..","error: operator iferror has no value: One of this operator's inputs could not be computed.."]},

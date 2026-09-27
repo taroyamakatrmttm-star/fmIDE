@@ -56,16 +56,20 @@ test('every operator in the catalogue has an Excel spelling, and only those do',
   const { OPERATORS, EXCEL_SPELLINGS } = loadSpellings();
   const ids = OPERATORS.map(op => op.id);
   expect(Object.keys(EXCEL_SPELLINGS).sort()).toEqual(ids.slice().sort());
-  const shapes = ['infix', 'fold', 'compare', 'fn'];
+  const shapes = ['infix', 'fold', 'compare', 'fn', 'period']; // period (phase E1): the "Period #" cell
   for(const id of ids){
     const s = EXCEL_SPELLINGS[id];
     expect(shapes.filter(k => typeof s[k] === 'string' && s[k] !== ''), `${id}: exactly one way to write it`).toHaveLength(1);
   }
-  // The sample every operator is in, so the workbook tests (units above, agreement in 17)
-  // write each spelling at least once.
-  const system = JSON.parse(fs.readFileSync(fixture('ir', 'error-cases.json'), 'utf8'));
-  const used = new Set((system.system || system).canvases.flatMap(c => c.nodes.filter(n => n.type === 'operator').map(n => n.text)));
-  for(const op of OPERATORS) expect(used.has(op.symbol), `${op.id} is in ir/error-cases.json`).toBe(true);
+  // The samples every operator is in, so the workbook tests (units above, agreement in 17)
+  // write each spelling at least once: ir/error-cases.json, and for those of phase E1
+  // agreement/operators-e1.json.
+  const used = new Set();
+  [['ir', 'error-cases.json'], ['agreement', 'operators-e1.json']].forEach(([dir, name]) => {
+    const system = JSON.parse(fs.readFileSync(fixture(dir, name), 'utf8'));
+    (system.system || system).canvases.forEach(c => c.nodes.forEach(n => { if(n.type === 'operator') used.add(n.text); }));
+  });
+  for(const op of OPERATORS) expect(used.has(op.symbol), `${op.id} is in ir/error-cases.json or agreement/operators-e1.json`).toBe(true);
 });
 
 // ---- where the workbook will differ from fmIDE (the panel next to Generate) ----
@@ -99,7 +103,9 @@ test('broken links: the rows where fmIDE shows "?" are listed before download, a
   expect(line('From missing block')).toContain('definition canvas no longer exists');
   expect(line('Bad port')).toContain('a block output that no longer exists');
   expect(line('From self block')).toContain('a block there contains itself');
-  expect(lines.some(l => l.includes('“foo”') && l.includes('passes its first input through'))).toBe(true);
+  // An operator fmIDE doesn't know is "?" there and #N/A in Excel since phase E1; nothing
+  // reads it in this sample, so no row is listed for it.
+  expect(lines.some(l => l.includes('passes its first input through'))).toBe(false);
   // Errors Excel shows too (a divide by zero) are not listed.
   expect(line('Uses div')).toBe('');
   const { wb } = await X.generate(page);
@@ -311,4 +317,75 @@ test('a formula too long or too deeply nested for Excel is #N/A and listed; writ
   // Each call's own grouping is kept (a+(b+c)): with fractions, the order of adding can change
   // the last digit, and fmIDE adds in this order.
   expect(f['Small']).toBe('({x}+{x}+{x}+{x}+({x}+{x}+{x}+{x})+({x}+{x}+{x}+{x})+({x}+{x}+{x}+{x}))');
+});
+
+// ---- the operators of phase E1: timing, conditions and rounding ----
+// Period 1's formulas, each cell written as its row's label (`P` is period 1's column).
+async function formulasOf(page, dir, model, sheet){
+  await X.openExporter(page);
+  await X.loadModelFile(page, fixture(dir, model));
+  await X.setInputsTab(page, false);
+  const { wb } = await X.generate(page);
+  const P = X.numToCol(X.periodOneCol(wb.Sheets[sheet]));
+  return { f: periodOneFormulas(wb, sheet), P, page };
+}
+
+test('phase E1 operators on the canvas: the Period # cell, IF and ROUND by their named inputs, =, <>, AND, OR, NOT', async ({ page }) => {
+  const { f, P } = await formulasOf(page, 'agreement', 'operators-e1.json', 'Operators');
+  expect(f['Period']).toBe(P + '$3');                                  // the sheet's own "Period #" row
+  expect(f['After start']).toBe('({Period}>={Start})');
+  expect(f['In window']).toBe('AND({After start},{Before end})');
+  expect(f['Outside window']).toBe('NOT({In window})');
+  expect(f['First or last']).toBe('OR({Is first},{Is last})');
+  expect(f['Is first']).toBe('({Period}={One})');
+  expect(f['Not first']).toBe('({Period}<>{One})');
+  expect(f['Profit if positive']).toBe('IF({Revenue positive},{Revenue},{Zero})');
+  expect(f['Safe ratio']).toBe('IF({Revenue is zero},{Zero},{Cost ratio})');
+  // A named input with no arrow is NA(), where it is read.
+  expect(f['Missing else']).toBe('IF({Revenue positive},{Revenue},NA())');
+  expect(f['Rounded no digits']).toBe('ROUND({x},NA())');
+  // Inside a branch, a period outside the timeline is an error, so only a taken one counts.
+  expect(f['Opening']).toBe('IF({Is first},{Opening input},NA())');
+  expect(f['Previous flow when first']).toBe('IF({Not first},{Flow},NA())');
+  expect(f['Rounded']).toBe('ROUND({x},{Digits})');
+  expect(f['Rounded up']).toBe('ROUNDUP({x},{Digits})');
+  expect(f['Rounded down']).toBe('ROUNDDOWN({x},{Digits})');
+  // An operator fmIDE doesn't know is #N/A (it wrote 0 before, where fmIDE passed its input on).
+  expect(f['Unknown']).toBe('NA()');
+  // Both branches off the timeline: the rectangle's own typed number, as fmIDE shows.
+  expect(f['Both branches back']).toBeUndefined();
+});
+
+test('phase E1 operators in functions, blocks and vertical blocks', async ({ page }) => {
+  const { f, P } = await formulasOf(page, 'agreement', 'operators-e1-blocks.json', 'Host');
+  const p3 = P + '$3';
+  expect(f['In window']).toBe(`N(AND(${p3}>={Start},${p3}<={End}))`);
+  expect(f['Escalated']).toBe(`({Base}*(1+{g})^(${p3}-1))`);
+  expect(f['Rounds']).toBe('(ROUND({X},2)+ROUNDUP({X},0)*10-ROUNDDOWN({X},-1))');
+  expect(f['Safe']).toBe('IF({B}=0,0,{A}/{B})');
+  expect(f['Picked']).toBe('IF({A}<>0,{Base},{Seed})');
+  expect(f['Flags']).toBe('(AND({A}>0,{B}>0)+OR({A}>0,{B}>0)*10+NOT({A}>0)*100+({A}={B})*1000)');
+  // A corkscrew through IF(PERIOD() = 1, first, previous): the branch not taken may leave the
+  // timeline (the function's formula decides, not "any input").
+  expect(f['Opening']).toBe(`IF(${p3}=1,{Seed},NA())`);
+  // The function's own IFERROR catches a period outside the timeline.
+  expect(f['Previous flow or nine']).toBe('IFERROR(NA(),{Nine})');
+});
+
+test('phase E1: an unknown operator and an unwired named input are listed before download as #N/A', async ({ page }) => {
+  const system = JSON.parse(fs.readFileSync(fixture('agreement', 'operators-e1.json'), 'utf8'));
+  system.canvases[0].nodes.find(n => n.text === 'mystery').text = '<img src=x onerror="window.__hacked=1">';
+  const file = test.info().outputPath('operators-hostile.json');
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify(system));
+  await X.openExporter(page);
+  await X.loadModelFile(page, file);
+  const lines = await differences(page);
+  expect(lines).toEqual([
+    '“Missing else” (tab “Operators”): fmIDE shows ? in periods 2, 4 because an input its operator reads has no arrow (an operator (if) on “Operators”); Excel shows #N/A there.',
+    '“Rounded no digits” (tab “Operators”): fmIDE shows ? in periods 1–6 because an input its operator reads has no arrow (an operator (round) on “Operators”); Excel shows #N/A there.',
+    '“Unknown” (tab “Operators”): fmIDE shows ? in periods 1–6 because an operator there isn’t one fmIDE knows (an operator (<img src=x onerror="window.__hacked=1">) on “Operators”); Excel shows #N/A there.',
+  ]);
+  expect(await page.locator('#differencesPanel img').count()).toBe(0);
+  expect(await page.evaluate(() => window.__hacked)).toBeUndefined();
 });

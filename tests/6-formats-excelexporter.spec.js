@@ -40,18 +40,18 @@ for(const name of ['sys-current', 'sys-legacy']){
   });
 }
 
-// A newer system is v6 since system v5 (function definitions) became current: sys-newer-v5
-// is now an ordinary file.
-test('sys-newer-v6 asks: Cancel → "Not loaded.", Open Anyway → loads', async ({ page }) => {
-  await page.setInputFiles('#fileInput', file('sys-newer-v6'));
+// A newer system is v7 since system v6 (the operators of phase E1) became current:
+// sys-newer-v5 and sys-newer-v6 are now ordinary files.
+test('sys-newer-v7 asks: Cancel → "Not loaded.", Open Anyway → loads', async ({ page }) => {
+  await page.setInputFiles('#fileInput', file('sys-newer-v7'));
   await expect(page.locator('#confirmModal')).toBeVisible();
-  await expect(page.locator('#confirmMessage')).toContainText('format version 6');
+  await expect(page.locator('#confirmMessage')).toContainText('format version 7');
   await page.click('#confirmCancel');
   await expect(page.locator('#confirmModal')).toBeHidden();
   await expect(loadStatus(page)).toHaveText('Not loaded.');
   await expect(page.locator('#afterLoad')).toBeHidden();
 
-  await page.setInputFiles('#fileInput', file('sys-newer-v6'));
+  await page.setInputFiles('#fileInput', file('sys-newer-v7'));
   await expect(page.locator('#confirmModal')).toBeVisible();
   await expect(page.locator('#confirmOk')).toHaveText('Open Anyway');
   await page.click('#confirmOk');
@@ -59,16 +59,16 @@ test('sys-newer-v6 asks: Cancel → "Not loaded.", Open Anyway → loads', async
   await expect(page.locator('#afterLoad')).toBeVisible();
 });
 
-test('sys-newer-v5 and ws-nested-newer (a v5 system inside) are now current files: no question', async ({ page }) => {
-  for(const name of ['sys-newer-v5', 'ws-nested-newer', 'ws-v3']){
+test('sys-newer-v5, sys-newer-v6 and the workspaces with a v5 or v6 system inside are now current files: no question', async ({ page }) => {
+  for(const name of ['sys-newer-v5', 'sys-newer-v6', 'ws-nested-newer', 'ws-nested-newer-v6', 'ws-v3', 'ws-v4']){
     await page.setInputFiles('#fileInput', file(name));
     await expect(loadStatus(page)).toHaveClass(/ok/);
     await expect(page.locator('#confirmModal')).toBeHidden();
   }
 });
 
-test('ws-nested-newer-v6: the confirm mentions its system', async ({ page }) => {
-  await page.setInputFiles('#fileInput', file('ws-nested-newer-v6'));
+test('ws-nested-newer-v7: the confirm mentions its system', async ({ page }) => {
+  await page.setInputFiles('#fileInput', file('ws-nested-newer-v7'));
   await expect(page.locator('#confirmModal')).toBeVisible();
   await expect(page.locator('#confirmMessage')).toContainText('its system');
   await page.click('#confirmOk');

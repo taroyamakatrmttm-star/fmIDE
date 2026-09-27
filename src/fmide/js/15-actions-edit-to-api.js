@@ -27,7 +27,7 @@
   defineAction({ name:'setUOM', label:'Set Unit of Measure', category:'Edit', icon:'㎏',
     params:[ P('node','node'), P('uom','string') ], run(a){ return editValueText(a.node, p => { p.uom = a.uom; }); } });
   defineAction({ name:'setOperator', label:'Set Operator Symbol', category:'Edit', icon:'±',
-    params:[ P('node','node'), P('op','enum',{ options: OPS }) ],
+    params:[ P('node','node'), P('op','enum',{ options: ALL_OPS }) ],
     run(a){
       requireType(a.node, ['operator'], 'an operator');
       if(a.node.text === a.op) return NOOP;
@@ -239,6 +239,7 @@
         let toPort = '';
         if(to && to.type === 'blockInstance' && e.toPort != null) toPort = String(e.toPort + 1);
         if(to && to.type === 'function' && e.toPort != null) toPort = functionPortName(to, e.toPort) || String(e.toPort + 1);
+        if(operatorPortsOf(to) && e.toPort != null) toPort = operatorPortsOf(to)[e.toPort] || String(e.toPort + 1);
         return { name:'deleteEdge', args:{ from: getNode(e.from), to, toPort } };
       }
       return { name:'deleteNodes', args:{ nodes: selectedNodesList() } };

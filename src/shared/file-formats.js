@@ -5,7 +5,7 @@
 // (docs/file-formats.md). To change one of these formats: raise its version here and add
 // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
 // exactly one version.
-const SHARED_FILE_VERSIONS = { 'system': 5, 'fmIDE-workspace': 4 };
+const SHARED_FILE_VERSIONS = { 'system': 6, 'fmIDE-workspace': 5 };
 // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
 // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
 function upgradeNodePlugs(nodes){
@@ -47,7 +47,10 @@ const SHARED_FILE_MIGRATIONS = {
     2: () => {},
     // v3 → v4: a workspace may carry a library of functions (`functions`); older ones have
     // none.
-    3: () => {}
+    3: () => {},
+    // v4 → v5: its system (v6) and templates (v5) may use the operators of phase E1; older
+    // ones don't.
+    4: () => {}
   },
   'system': {
     // v1 systems were accepted with fields the loader already defaults (periods, ids…);
@@ -67,7 +70,12 @@ const SHARED_FILE_MIGRATIONS = {
     3: () => {},
     // v4 → v5: a system may carry the function definitions its function nodes use
     // (`functions`, src/shared/functions.js); older systems have none.
-    4: () => {}
+    4: () => {},
+    // v5 → v6: the operators of phase E1 (period, if, =, ≠, and, or, not, round, roundup,
+    // rounddown; arrows into if and round name their input with `toPort`). Older systems
+    // have none, so nothing changes; an older app asks before opening a v6 file instead of
+    // calculating those operators as ones it doesn't know.
+    5: () => {}
   }
 };
 // A file's kind: its "kind" field, or — for files saved before kinds were written — its

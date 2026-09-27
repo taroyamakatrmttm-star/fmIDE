@@ -322,3 +322,60 @@ The problem found in D3: `runFunction` and `functionUnit` (`src/shared/functions
 - ExcelExporter's writer was already bounded (it stops at Excel's formula length) and is unchanged; its unit column gets the fix through `unitOf`.
 - **Tests (group 20):** 11 levels calculate in under a second in Node, with the right values and unit (9.8 s before the fix); fmIDE calculates 16 levels at once (before the fix the page hangs and the test times out); an identical call gives the identical result, including a caught error read again outside `IFERROR`, different arguments staying different calls, and a missing input read only where needed. Every other test, snapshot and pinned value is unchanged; no file format changed.
 
+
+## Phase E — new built-in operators
+
+Chosen with the owner (September 2026): a hard-coded operator is worth adding only where a function (phase D) can't do the job. **E1** (timing, conditions, rounding) comes first, in two pull requests: **E1a** the calculation in both apps, **E1b** fmIDE's canvas. E2 (LN, EXP, SQRT, INT, TRUNC, CHOOSE) may follow. Operators that read a whole row of periods (NPV, IRR, running totals) and lookups are a larger change of their own, not phase E.
+
+Decisions taken at the start of E1 (the owner chose the recommendation each time):
+
+1. **The operators:** the period number (`period`), `if` (condition, then, else), equal and not equal (`=`, `≠`), `and`, `or`, `not`, and `round`, `roundup`, `rounddown` (value, digits) — on the canvas and in functions (`PERIOD() IF AND OR NOT ROUND ROUNDUP ROUNDDOWN`, `=`, `<>`).
+2. **Named inputs** for `if` and the rounding operators, like a function node's (`toPort`); the others read their inputs left to right as before.
+3. **Comparisons** give TRUE/FALSE on the canvas in Excel, as before, and 1/0 inside functions (D3).
+4. **An unknown operator** is "?" and `#N/A` (it passed its first input through before).
+5. **File versions raised** (`system` 6, `module` 4, `fmIDE-workspace` 5, `fmIDE-templates` 5), so an older app asks before opening a file that uses the new operators rather than calculating them as unknown ones.
+6. **Symbols:** `=` and `≠`; the words `period`, `if`, `and`, `or`, `not`, `round`, `roundup`, `rounddown`, shown with ƒ like `min`.
+
+### E1a — the calculation in both apps ✅
+
+What was built:
+
+- **`src/shared/operators.js`:** the ten operators at the end of the catalogue (lasting ids `period if eq ne and or not round roundup rounddown`), with `ports` (named inputs), `branches` (if), `period`, `apply` and the unit rules `first` (round keeps its value's unit) and `branches` (if takes the unit its branches share). `roundLikeExcel` rounds on the number's 15 significant digits, halves away from zero, so `ROUND(2.675, 2)` is 2.68 as in Excel. `approxEqual`: every comparison treats numbers that differ only in their last few binary digits (2^-48, as LibreOffice) as equal, so `0.1 + 0.2 = 0.3`. `applyOperator(null)` is `operator-unknown`. `OPERATORS_BEFORE_E1` (15) is what fmIDE's palette shows until E1b.
+- **`src/shared/ir.js`:** an operator with named inputs gets `portInputs` (the arrow into each, by `toPort`); `if` reads its condition and then only the branch it takes; `period` gives the period from 1; new error codes `operator-unknown` and `operator-input-unwired`. Units for named inputs.
+- **`src/shared/input-rule.js`:**
+  - the period number is a real source (a rectangle fed by it is not an input);
+  - an `if` needs a period outside the timeline only through its condition, or both branches (each walked on its own);
+  - **a function node is followed through its formula** (`functionNeedsOutsideTimeline` in `functions.js`, with the compiled definitions the IR puts on each canvas, `raw.calls`): only what the formula must read counts, IFERROR when both inputs do, IF when its condition or both branches do.
+- **`src/shared/functions.js`:** the parser reads `IF AND OR NOT ROUND ROUNDUP ROUNDDOWN PERIOD`, `=` (in the formula) and `<>`/`≠`; an input may still be called `Period`. `runFunction(fn, input, period)` knows the period; IF reads one branch. Units for IF and ROUND.
+- **File formats:** the four versions raised; each upgrade step changes nothing.
+- **fmIDE:** calculates the new operators from files and through `window.fm` (`createOperator` / `setOperator` take every operator; `fm.connect` / `deleteEdge` take an `if` or `round` input by name or number, and macros record the name). The palette, the operator picker and the Insert Operator commands keep today's 15 until E1b. Error messages for the new codes. Merging models (Add System) matches an operator's arrows with their inputs, so two IFs with swapped branches don't merge.
+- **ExcelExporter:** spellings (`01b-operator-spellings.js`): `IF`, `AND`, `OR`, `NOT`, `=`, `<>`, `ROUND`, `ROUNDUP`, `ROUNDDOWN`, and the period number as the sheet's `Period #` cell (`E$3`). IF and ROUND are written by their named inputs; a named input with no arrow is `NA()`, an unknown operator is `NA()` (0 before). Inside IF's branches a period outside the timeline is `NA()` (as inside IFERROR's first input). AND, OR and NOT are TRUE/FALSE like comparisons (an IF gives what its branches give), so operators reading them get `N()` where Excel needs it. The function writer does the same inside functions. The check before download lists an unknown operator and an unwired named input as `#N/A` (the old "passes its first input through" line is gone).
+
+How it was checked:
+
+- **Agreement (group 17):** two new samples, both matching the recalculated workbooks:
+  - `agreement/operators-e1.json` (six periods): timing flags from the period number, AND, OR and NOT of them, `=` and `≠`, `0.1 + 0.2 = 0.3`, escalation `(1 + g)^(Period − 1)`, IF with an error in the branch not taken, an unwired branch taken and not taken, the IF corkscrew, a taken branch off the timeline, both branches off it, ROUND / ROUNDUP / ROUNDDOWN at 2.675, 1.005, −2.675, 0.125, 1234.5678 (digits −2) and −0.5, a missing digits input, an unknown operator.
+  - `agreement/operators-e1-blocks.json` (four periods): the same inside a block used twice and a vertical block, and in functions (`PERIOD()`, IF, AND, OR, NOT, ROUND…, a corkscrew through `IF(PERIOD() = 1, first, previous)`, and a function whose own IFERROR catches a period outside the timeline).
+- Turning off the function timeline rule makes the second sample fail (fmIDE 50, Excel 0 in the corkscrew).
+- **Group 18:** the catalogue's new ids, symbols and results (`approxEqual`, rounding, NOT of two inputs, an unknown operator); fmIDE through `window.fm`: creating and wiring by input name or number, values, the messages for a wrong or missing input name, Save System v6 with `toPort` and loading it back, deleting an input by name, a macro recording the input's name, and the palette still at 15.
+- **Group 19:** the exact formulas for every new operator on the canvas and in functions, blocks and vertical blocks; the list before download (with an operator whose text is markup, shown as text); every operator has a spelling.
+- **Group 20:** the parser accepts `=`, `<>`, `≠`, IF (also with a branch not taken failing or missing), AND, OR, NOT, the rounding functions, `PERIOD()` and an input called `period`; it rejects `a = b = a`, IF with two inputs, `PERIOD(a)` and a function called `Period`.
+- **Group 6 and others:** old-version samples `module-v3.json`, `ws-v4.json`, `templates-v4.json` open and are saved in the new versions; `sys-newer-v7.json` and `ws-nested-newer-v7.json` take over the "asks first" tests; tests pinning version numbers were raised by one (groups 6, 13, 14, 15, 16 and 20).
+- **Snapshots:** only `fmide-values--ir--error-cases.json` changed, one line: the unknown operator "foo" shows "?" where it showed 1 (decision 4). New snapshots were added for the two new samples.
+- The whole suite passes: 531 tests, LibreOffice included, none skipped.
+- **Speed** (`npm run bench`, same machine, `main` and E1a back to back):
+
+  | | `main` | E1a |
+  |---|---|---|
+  | fmIDE `fm.evaluate`, large model (1,865 nodes, 24 periods) | 1,158 / 1,171 ms | 1,136 / 1,115 ms |
+  | fmIDE `fm.evaluate`, biggest sample | 1.2 / 2.3 ms | 2.3 / 1.2 ms |
+  | ExcelExporter Generate, large model | 342 / 342 ms | 313 / 358 ms |
+  | ExcelExporter Generate, biggest sample | 1.6 / 1.9 ms | 1.9 / 1.9 ms |
+
+  A model without the new operators runs the same code as before, but for one check per operator; the differences are within what repeated runs of the same build show.
+
+Found along the way:
+
+- **(D3, fixed here)** A function whose own IFERROR catches a period outside the timeline, feeding a rectangle straight, showed what IFERROR caught in fmIDE, but ExcelExporter wrote the rectangle's typed number (the timeline rule counted any input of a function). The rule now follows the function's formula.
+- **(Before E1, fixed here)** The comparisons were exact in fmIDE but approximate in Excel and LibreOffice, so `0.3 < 0.1 + 0.2` could differ. All comparisons now use the same tolerance.
+- **(Not changed)** In the canvas's IF corkscrew, units don't pass through the loop: Opening's unit depends on Closing's, which depends on Opening's, so neither gets one (the same holds for a corkscrew through a period shift).

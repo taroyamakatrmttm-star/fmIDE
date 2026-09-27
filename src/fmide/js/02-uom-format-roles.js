@@ -108,6 +108,8 @@
       case 'function-too-deep': return 'This function calls other functions nested too deeply.';
       case 'function-arguments': return 'This function calls another function with the wrong number of inputs.';
       case 'function-input-unwired': return "One of this function's inputs isn't connected.";
+      case 'operator-unknown': return "fmIDE doesn't know this operator (only a hand-edited file has one).";
+      case 'operator-input-unwired': return "An input this operator reads isn't connected.";
       default: return 'Could not compute.';
     }
   }
