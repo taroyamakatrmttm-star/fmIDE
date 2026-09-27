@@ -213,7 +213,7 @@
   }
 
   function startConnection(fromId, downEvent, fromPortIndex){
-    downEvent.preventDefault();
+    pressDefault(downEvent);
     downEvent.stopPropagation();
     document.body.classList.add('dragging');
 
@@ -232,11 +232,10 @@
         : borderPoint(rectOf(a), pt.x, pt.y);
       temp.setAttribute('d', `M ${p1.x} ${p1.y} L ${pt.x} ${pt.y}`);
     }
-    function onUp(ev){
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
+    function onUp(ev, cancelled){
       document.body.classList.remove('dragging');
       temp.remove();
+      if(cancelled){ render(); return; }
 
       const target = document.elementFromPoint(ev.clientX, ev.clientY);
       const targetPortEl = target ? target.closest('.io-port') : null;
@@ -270,8 +269,7 @@
         if(edgeId) selectEdgeOnly(edgeId); else render();
       });
     }
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
+    followPointer(downEvent, onMove, onUp);
   }
 
 

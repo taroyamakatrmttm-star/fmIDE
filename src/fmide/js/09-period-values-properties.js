@@ -11,8 +11,7 @@
     document.body.appendChild(overlay);
 
     function cleanup(){
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
+      stopDrawing();
       document.removeEventListener('keydown', onKey);
       overlay.remove();
     }
@@ -215,15 +214,17 @@
     });
 
     // ---- drag-to-draw interaction ----
-    let drawing = false, lastIdx = null;
+    let drawing = false, lastIdx = null, stopDrawing = () => {};
     function svgPointFromEvent(ev){
       const rect = svg.getBoundingClientRect();
       return { x: ev.clientX - rect.left, y: ev.clientY - rect.top };
     }
     function nearestIndex(x){ return Math.max(0, Math.min(periods.length - 1, Math.round((x - padL) / stepX))); }
     function onDown(ev){
-      ev.preventDefault();
+      pressDefault(ev);
+      stopDrawing();
       drawing = true;
+      stopDrawing = followPointer(ev, onMove, onUp);
       const p = svgPointFromEvent(ev);
       const idx = nearestIndex(p.x);
       curValues[idx] = valueFromY(p.y);
@@ -247,10 +248,8 @@
       lastIdx = idx;
       redraw(); syncNumberInputs();
     }
-    function onUp(){ drawing = false; lastIdx = null; }
-    svg.addEventListener('mousedown', onDown);
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
+    function onUp(){ drawing = false; lastIdx = null; stopDrawing = () => {}; }
+    onPress(svg, onDown);
 
     // ---- actions ----
     const actions = document.createElement('div');
