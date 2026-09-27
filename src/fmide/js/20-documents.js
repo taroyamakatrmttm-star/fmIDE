@@ -272,6 +272,7 @@
     ensureDefaultFormatPresets();
     if(kind === 'fmIDE-workspace'){
       addMissingTemplates(data.templates);
+      addMissingFunctions(data.functions);
       addMissingMacros(data.macros);
       syncMacroCommands();
     }

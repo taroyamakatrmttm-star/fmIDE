@@ -113,7 +113,7 @@ function isVintageVarying(hostCanvasId, hostNode, canvasId, nodeId, visiting){
   if(!n) return true;
   if(n.blockRole === 'index') return true;
   const nextVisiting = new Set(visiting); nextVisiting.add(key);
-  if(n.type === 'operator' || n.type === 'periodShift'){
+  if(n.type === 'operator' || n.type === 'periodShift' || n.type === 'function'){
     return n.incoming.some(e => isVintageVarying(hostCanvasId, hostNode, canvasId, e.from, nextVisiting));
   }
   if(n.type === 'alias'){

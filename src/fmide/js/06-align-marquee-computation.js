@@ -107,6 +107,7 @@
   // The calculation runs on the shared IR (src/shared/ir.js): compileModel reads the model,
   // evaluateModel calculates it, with the operators of src/shared/operators.js (included in
   // 01-setup-commands-keys.js, where the palette is built from it).
+  // build:include shared/functions.js
   // build:include shared/ir.js
 
   // The active canvas's incoming arrows of a node, its sources left to right (used to draw them).
@@ -122,10 +123,12 @@
   // the canvas read it); invalidateIR() is called wherever the model may change.
   let modelIR = null;
   function invalidateIR(){ modelIR = null; }
+  // The function definitions the open model carries (11b-functions.js).
+  let modelFunctions = [];
   function currentIR(){
     if(!modelIR){
       syncActiveIntoRegistry();
-      modelIR = compileModel({ periods, canvases });
+      modelIR = compileModel({ periods, canvases, functions: modelFunctions });
     }
     return modelIR;
   }
@@ -144,7 +147,7 @@
 
   function evaluateAllNow(){
     syncActiveIntoRegistry();
-    const ir = compileModel({ periods, canvases });
+    const ir = compileModel({ periods, canvases, functions: modelFunctions });
     const results = evaluateModel(ir);
     canvases.forEach((c, i) => {
       const r = results[i];

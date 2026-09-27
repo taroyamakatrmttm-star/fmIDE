@@ -18,15 +18,94 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 
 | `kind` | Version | What it is | Opened with |
 |---|---|---|---|
-| `system` | 4 | A whole model (all canvases, periods); v4: a canvas may remember the canvas template it came from | fmIDE: File → Load System · ExcelExporter |
-| `module` | 2 | One canvas | fmIDE: File → Load Module |
-| `fmIDE-workspace` | 3 | Everything: system + templates, format presets, shortcuts, macros. A **`.fmide` document** is exactly this, with the `.fmide` extension | fmIDE: File → Open… (a document) or Import Workspace (a full replace) · ExcelExporter |
-| `fmIDE-templates` | 3 | Saved templates (each holds a module, a system or a recipe), with their families and versions | fmIDE: Templates → Import Templates |
+| `system` | 5 | A whole model (all canvases, periods); v4: a canvas may remember the canvas template it came from; v5: the function definitions its function nodes use | fmIDE: File → Load System · ExcelExporter |
+| `module` | 3 | One canvas; v3: the function definitions it uses | fmIDE: File → Load Module |
+| `fmIDE-workspace` | 4 | Everything: system + templates, format presets, shortcuts, macros; v4: the function library. A **`.fmide` document** is exactly this, with the `.fmide` extension | fmIDE: File → Open… (a document) or Import Workspace (a full replace) · ExcelExporter |
+| `fmIDE-templates` | 4 | Saved templates (each holds a module, a system or a recipe), with their families and versions; v4: a template's model may carry function definitions | fmIDE: Templates → Import Templates |
+| `fmIDE-functions` | 1 | Function definitions (a library of functions) | fmIDE: Functions → Import Functions (coming with the Functions manager) |
 | `fmIDE-format-presets` | 1 | Format presets, including the format roles | fmIDE: Format Presets → Import Presets |
 | `fmIDE-shortcuts` | 2 | Keyboard shortcut bindings | fmIDE: Keyboard Shortcuts → Import Shortcuts |
 | `fmIDE-macros` | 1 | Macros | fmIDE: Macro Builder → Import |
 | `fmIDE-preferences` | 1 | Personal settings: shortcut bindings for built-in commands, ribbon layout and Quick Access Toolbar, ribbon collapsed state, KeyTips trigger (fmIDE only) | fmIDE: File → Import Preferences (or Customize Ribbon) |
 | `fmIDE-excel-mapping` | 1 | ExcelExporter's tab/row layout for one model | ExcelExporter: Import Mapping JSON |
+
+## Functions (`system` 5, `module` 3, `fmIDE-workspace` 4, `fmIDE-templates` 4, `fmIDE-functions` 1)
+
+A **function** is a formula written with the built-in operators, held in a file and used in a model like an operator, for example:
+
+```
+Margin(Revenue, Cost) = (Revenue - Cost) / Revenue
+```
+
+Functions are formulas, never code: the apps read them with their own parser (`parseFunctionText` in `src/shared/functions.js`) and never run text from a file.
+
+### A definition
+
+```json
+{ "family": "0c6f…", "version": 2, "versionId": "a91e…",
+  "text": "Profit(Revenue, Cost) = Margin(Revenue, Cost) * Revenue",
+  "description": "What is left of revenue, in money.", "note": "Uses Margin v1",
+  "calls": [ { "name": "Margin", "family": "7d2b…", "version": 1, "versionId": "5e40…" } ] }
+```
+
+- `family`, `version`, `versionId`: like templates (below). The family is a random id and never the name; versions are 1, 2, 3…; `versionId` is a random id for this one version. Ids are 8–64 letters, digits and dashes: a definition whose family or version isn't is left out when read, and a malformed `versionId` counts as unknown. A function is always referred to by its family and version, and its `versionId` when known — never by its name.
+- `text`: the whole definition — the function's name, its inputs, and its formula (the syntax below). The name and inputs are read from it.
+- `description` (at most 2,000 characters) and `note` (a change note, at most 500): plain text.
+- `calls`: for each other function the formula calls, the name it is written with and the version it means. A call is followed through this list, never by name alone, so a function keeps calling the version it was written against.
+
+### Where definitions are carried
+
+- A **system** (v5) and a **module** (v3) carry, in `functions`, every definition their function nodes use, and every function those call. Files whose model uses no functions have no `functions` list.
+- A **workspace** (v4) also carries the person's whole library in its own `functions`; its system carries the model's.
+- An **`fmIDE-functions`** file (v1) is `{ "kind": "fmIDE-functions", "version": 1, "functions": [ … ] }`.
+- A template's model (a module or system inside a templates file, v4) carries its own, like any module or system.
+- Opening a file adds any definitions the library doesn't have (the same family and `versionId`).
+- The calculation reads only the definitions the model's file carries, not the library: a model calculates the same wherever it is opened.
+
+### A function node
+
+```json
+{ "id": "n7", "type": "function", "x": 300, "y": 120, "w": 150, "h": 80,
+  "fn": { "family": "7d2b…", "version": 1, "versionId": "5e40…", "name": "Margin" } }
+```
+
+An arrow into it carries `toPort`, the input it feeds, counted from 0 in the order the definition lists its inputs (`Revenue` is 0 and `Cost` is 1 above). `fn.name` is only for display. The node's value is the formula with each input read from the arrow into its port.
+
+### Syntax
+
+```
+definition := name "(" [ name { "," name } ] ")" "=" formula
+formula    := sum [ comparison sum ]            one comparison at most
+sum        := product { ("+" | "-") product }
+product    := power { ("*" | "/") power }
+power      := unary { "^" unary }               from the left: 2^3^2 = 64
+unary      := ("-" | "+") unary | item          -2^2 = 4, as in Excel
+item       := number | input | call | "(" formula ")"
+call       := name "(" [ formula { "," formula } ] ")"
+comparison := "<" | "<=" | ">" | ">="
+```
+
+- **Names** (the function's and its inputs'): a letter (of any language) or `_`, then letters, digits, `_` and `.`; at most 64 characters; capitals don't matter (`revenue` is `Revenue`). Two inputs can't share a name, an input can't have the function's name, and neither can be the name of a built-in or kept-back function (below).
+- **Numbers**: `12`, `0.5`, `.5`, `1.5e3`. There are no negative numbers as such: `-3` is a minus applied to 3.
+- **Signs**: `+ - * / ^` and `< <= > >=`. fmIDE's own signs `− × ÷ ≤ ≥` mean the same.
+- **Precedence**, as in Excel: a leading minus first (`-2^2` is 4), then `^` (from the left), then `*` and `/`, then `+` and `-`, then a comparison. A comparison gives 1 (true) or 0 (false).
+- **Built-in functions**, with Excel's numbers of inputs: `MIN(a, …)`, `MAX(a, …)`, `AVERAGE(a, …)` (at least one input), `ABS(a)`, `MOD(a, b)` (the result takes the divisor's sign, like Excel's MOD), `IFERROR(a, b)` (a, or b when a fails).
+- **Calls** to other functions: `Margin(Revenue, Cost)`, with exactly as many inputs as that function has. A function can't call itself.
+- **Not accepted** (each with its own message): a chain of comparisons (`a < b < c`), `=` or `<>` in the formula, `%`, `&`, text in quotes, `;`, and these Excel names, kept back for later: `IF IFS AND OR NOT XOR SUM PRODUCT ROUND ROUNDUP ROUNDDOWN INT TRUNC LN LOG LOG10 EXP SQRT POWER SIGN COUNT LET LAMBDA CHOOSE INDEX NA TRUE FALSE PI CEILING FLOOR MEDIAN SUMPRODUCT`.
+- **Limits**: a definition of at most 4,000 characters, 32 inputs, 64 levels of brackets and signs, calls nested at most 16 functions deep, and at most 64 different functions called from one.
+- A parse error gives a message and the place in the text where it was found.
+
+### Calculating
+
+- An input is read only when the formula needs it, so `IFERROR(x, 0)` catches a failing input, as Excel does, and an input the formula doesn't read may be left unconnected.
+- A result that isn't a finite number (a divide by zero, `(-4)^0.5`, a result too large) is an error, as in Excel (`#DIV/0!`, `#NUM!`).
+- **Errors** of a function node: the definition isn't in the file, or has another `versionId` (`function-missing`, also when a function it calls is missing); its text can't be read (`function-unreadable`); functions call each other in a loop (`function-cycle`, only possible in a hand-edited file); calls nested more than 16 deep (`function-too-deep`); a call with the wrong number of inputs (`function-arguments`); an input the formula reads isn't connected (`function-input-unwired`); an input fails (`missing-input`).
+- **Units** are worked out from the formula with the operators' rules, using the units of what feeds each input. A number in the formula has no unit of its own: it counts as a plain number for `*` and `/` (`Revenue * 1.1` keeps Revenue's unit) and is left out where the units must match (`Revenue + 100` keeps it too). `^`, `MOD` and comparisons give no unit.
+- A rectangle fed by a function whose input needs a period outside the timeline (a corkscrew's opening balance in period 1) shows its own typed number, or 0, as with an operator.
+
+### Older and newer files
+
+Older files (`system` 1–4, `module` 1–2, `fmIDE-workspace` 1–3, `fmIDE-templates` 1–3) have no functions; the upgrade steps change nothing. An older app asks before opening a newer file; without that, it would calculate a function node as an operator it doesn't know.
 
 ## Plugs (`system` 3, `module` 2)
 

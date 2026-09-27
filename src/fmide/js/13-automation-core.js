@@ -101,6 +101,7 @@
   function describeNode(n){
     const nm = refNameOf(n);
     if(n.type === 'operator') return `operator ${n.text}`;
+    if(n.type === 'function') return `function ${n.fn && typeof n.fn.name === 'string' ? n.fn.name : '(unnamed)'}`;
     if(n.type === 'periodShift') return `period shift ${shiftLabel(typeof n.shift === 'number' ? n.shift : -1)}`;
     return nm ? `"${nm}"` : `#${n.id}`;
   }

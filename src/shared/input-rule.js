@@ -30,7 +30,8 @@ function isInputRectangle(canvas, node){
 // this way shows its own typed number there, or 0 — in fmIDE and in Excel alike. The walk
 // follows what both apps compute in one step — operators, period shifts and aliases — and
 // stops at rectangles and block instances, which settle their own value. An iferror with a
-// fallback only fails when both of its first two inputs fail; with one input it gives 0.
+// fallback only fails when both of its first two inputs fail; with one input it gives 0. A
+// function node (functions.js) is followed like an operator: through any of its inputs.
 // `canvasOf(id)` returns a canvas { nodes, edges }; inputs are in left-to-right order.
 function reachesOutsideTimeline(canvasOf, canvasId, nodeId, period, periodCount, visiting){
   visiting = visiting || new Set();
@@ -51,10 +52,10 @@ function reachesOutsideTimeline(canvasOf, canvasId, nodeId, period, periodCount,
     if(target < 0 || target >= periodCount) return true;
     return reach(canvasId, incoming[0].from, target);
   }
-  if(n.type !== 'operator') return false;
+  if(n.type !== 'operator' && n.type !== 'function') return false;
   const inputs = incoming.map(e => canvas.nodes.find(x => x.id === e.from)).filter(Boolean)
     .sort((a, b) => (a.x - b.x) || (a.y - b.y));
-  if(n.text === 'iferror'){
+  if(n.type === 'operator' && n.text === 'iferror'){
     return inputs.length >= 2 && reach(canvasId, inputs[0].id, period) && reach(canvasId, inputs[1].id, period);
   }
   return inputs.some(src => reach(canvasId, src.id, period));

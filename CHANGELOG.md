@@ -2,6 +2,12 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Function plugins, part 1: the formula reader and the file formats (phase D1)
+- The groundwork for **functions**: formulas you write once, such as `Margin(Revenue, Cost) = (Revenue - Cost) / Revenue`, and use in a model like a built-in operator. This part adds the reader for them (our own parser, which never runs text as code), their calculation in both apps, and the files that carry them. Creating and placing functions in fmIDE comes next (the Functions manager); ExcelExporter writes them out in full after that.
+- The syntax is Excel-like and written down in `docs/file-formats.md`: inputs by name, numbers, brackets, `+ - * / ^`, one comparison, `MIN MAX AVERAGE ABS MOD IFERROR`, and calls to other functions, with Excel's order of operations (`-2^2` is 4).
+- File formats: system 5, module 3, workspace 4 and templates file 4 can carry function definitions, and there is a new functions file (version 1). A model takes the functions it uses with it in every file. Older files open as before, and an older copy of the apps asks before opening a newer file.
+- Until ExcelExporter writes function calls out (phase D3), a cell that reads one shows `#N/A` in Excel, never a wrong number.
+
 ## ExcelExporter writes its formulas from the shared formula IR (phase C)
 - ExcelExporter now reads the model through the same shared calculation description fmIDE calculates on (the IR). Workbooks are unchanged for every sample model; Generate is faster on large models (about a third less time on a model of about 1,900 nodes).
 - Plugs and sockets: both apps now work out which plug feeds which socket from the names themselves, instead of trusting the connections saved in the file. A file whose saved connections were out of date (a plug renamed or removed after saving) used to give ExcelExporter different numbers from fmIDE's.

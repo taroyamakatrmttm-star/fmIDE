@@ -15,9 +15,10 @@
   // build:include shared/file-formats.js
   const FILE_FORMATS = {
     'system':               { current: SHARED_FILE_VERSIONS['system'], label: 'system', where: 'File → Load System' },
-    'module':               { current: 2, label: 'module',              where: 'File → Load Module' },
+    'module':               { current: 3, label: 'module',              where: 'File → Load Module' },
     'fmIDE-workspace':      { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'workspace', where: 'File → Import Workspace' },
-    'fmIDE-templates':      { current: 3, label: 'templates file',      where: 'Templates → Import Templates' },
+    'fmIDE-templates':      { current: 4, label: 'templates file',      where: 'Templates → Import Templates' },
+    'fmIDE-functions':      { current: 1, label: 'functions file',      where: 'Functions → Import Functions' },
     'fmIDE-format-presets': { current: 1, label: 'format presets file', where: 'Format Presets → Import Presets' },
     'fmIDE-shortcuts':      { current: 2, label: 'shortcuts file',      where: 'Keyboard Shortcuts → Import Shortcuts' },
     'fmIDE-macros':         { current: 1, label: 'macros file',         where: 'Macro Builder → Import' },
@@ -26,13 +27,19 @@
   const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
     // v1 → v2: one plug name per rectangle becomes a list of plug names (as system v2 → v3).
     'module': {
-      1: d => upgradeNodePlugs(d.nodes)
+      1: d => upgradeNodePlugs(d.nodes),
+      // v2 → v3: a module may carry the function definitions it uses (`functions`); older
+      // modules have none.
+      2: () => {}
     },
     // v1 → v2: templates get a family, a version number, a change note and a version id.
     'fmIDE-templates': {
       1: d => upgradeTemplateEntries(d.templates),
       // v2 → v3: templates may be recipes (kind "recipe"); older files have none.
-      2: () => {}
+      2: () => {},
+      // v3 → v4: a template's module or system may carry function definitions; older ones
+      // have none.
+      3: () => {}
     },
     // v1 shortcut files stored combos in the old notation.
     'fmIDE-shortcuts': {
@@ -119,17 +126,18 @@
 
   function timestamp(){ return new Date().toISOString().replace(/[:.]/g,'-'); }
 
-  // Whole system: every canvas, replaces everything on load.
+  // Whole system: every canvas, replaces everything on load. It carries the function
+  // definitions its canvases use (11b-functions.js).
   function buildSystemPayload(){
     syncActiveIntoRegistry();
-    return {
+    return withFunctions({
       version: SHARED_FILE_VERSIONS['system'], kind: 'system',
       nextId, nextCanvasId, activeCanvasId,
       periods, currentPeriod,
       canvases: canvases.map(c => Object.assign({ id:c.id, name:c.name, nodes:c.nodes, edges:c.edges }, c.template ? { template: c.template } : {})),
       // format roles/presets ride along so ExcelExporter formats a plain system export too
       formatPresets: FORMAT_PRESETS.map(p => ({ id: p.id, name: p.name, style: p.style }))
-    };
+    }, canvases);
   }
 
   function saveSystemToFile(){

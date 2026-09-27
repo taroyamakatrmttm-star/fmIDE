@@ -147,9 +147,9 @@
   function openModelAsTemplateData(kind, name){
     syncActiveIntoRegistry();
     const payload = kind === 'module'
-      ? { version: FILE_FORMATS['module'].current, kind:'module', name, selfCanvasId: activeCanvasId, nextId, nodes, edges }
-      : { version: SHARED_FILE_VERSIONS['system'], kind:'system', nextId, nextCanvasId, activeCanvasId,
-          canvases: canvases.map(c => ({ id:c.id, name:c.name, nodes:c.nodes, edges:c.edges })) };
+      ? withFunctions({ version: FILE_FORMATS['module'].current, kind:'module', name, selfCanvasId: activeCanvasId, nextId, nodes, edges }, [{ nodes }])
+      : withFunctions({ version: SHARED_FILE_VERSIONS['system'], kind:'system', nextId, nextCanvasId, activeCanvasId,
+          canvases: canvases.map(c => ({ id:c.id, name:c.name, nodes:c.nodes, edges:c.edges })) }, canvases);
     return cloneData(payload);
   }
 
