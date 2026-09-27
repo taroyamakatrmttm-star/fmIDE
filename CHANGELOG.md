@@ -2,6 +2,12 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## New operators, part 2: on the canvas (phase E1b)
+- The new operators are in the palette, the operator picker, the Command Launcher (Insert Operator period, if, =, ≠, and, or, not, round, roundup, rounddown) and on the ribbon: Insert → Compare has = and ≠, Insert → Excel Functions the others. A ribbon you customised gets them once, in the groups where you keep the comparisons and the Excel functions.
+- **if** and **round** (and roundup, rounddown) show a labelled dot for each input — condition, then, else; value, digits. Drop an arrow on the dot you mean, or on the box for the first input without one. The period number takes no arrows in.
+- Changing an operator into if or round gives its arrows the inputs left to right; changing it back takes them away (one undo).
+- The existing Insert Operator commands keep their numbers, so your shortcuts and macros still work.
+
 ## New operators, part 1: the calculation (phase E1a)
 - **New operators**, calculated alike in fmIDE and in Excel: the **period number** (1, 2, 3… — in Excel the sheet's "Period #" cell), **if** (condition, then, else; only the branch taken is calculated), **=** and **≠**, **and**, **or**, **not**, and **round**, **roundup**, **rounddown** (value, digits; like Excel, `round(2.675, 2)` is 2.68). Functions can use them too: `PERIOD()`, `IF`, `AND`, `OR`, `NOT`, `ROUND`, `ROUNDUP`, `ROUNDDOWN`, `=` and `<>`.
 - For now they can be used through files and `window.fm` (`fm.createOperator`, and `fm.connect` taking an if's or round's input by name). Placing and wiring them on the canvas comes in phase E1b; the palette keeps its 15 operators until then.

@@ -302,7 +302,8 @@
       dedupeMatch: Object.assign({}, dedupeMatch),
       documentGroupAdded: true, // the default ribbon has it; a customised one got it once
       functionsGroupAdded: true,
-      functionCommandsAdded: true // D2b: Insert Function… and Update Function… in My Functions
+      functionCommandsAdded: true, // D2b: Insert Function… and Update Function… in My Functions
+      operatorsE1Added: true // E1b: the new operators in the Compare and Excel Functions groups
     };
   }
   // One-time update of a ribbon customised before the Document group existed: add it at
@@ -337,6 +338,20 @@
       });
     }));
   }
+  // One-time update (E1b) of a customised ribbon: = and ≠ join the group holding the
+  // comparisons, and if, and, or, not, the rounding operators and the period number the group
+  // holding the Excel functions (min, max…), wherever the person moved them. A ribbon without
+  // such a group is left alone (the Command Launcher has every operator); an operator removed
+  // afterwards stays removed (this runs once).
+  function addE1OperatorsToRibbon(){
+    const groups = [];
+    ribbonState.config.tabs.forEach(t => (t && Array.isArray(t.groups) ? t.groups : []).forEach(g => { if(g && Array.isArray(g.items)) groups.push(g); }));
+    const holding = (i) => groups.find(g => g.items.some(it => it && it.cmd === 'insertOp' + i));
+    [[holding(6), E1_COMPARE_OPS], [holding(11), E1_FUNCTION_OPS]].forEach(([g, list]) => {
+      if(!g) return;
+      list.forEach(i => { if(!g.items.some(it => it && it.cmd === 'insertOp' + i)) g.items.push({ cmd: 'insertOp' + i }); });
+    });
+  }
   function applyUiPayload(ui){
     if(!ui || typeof ui !== 'object') return;
     const fileRibbon = ui.ribbonCustomized ? cleanRibbonConfig(ui.ribbon) : null;
@@ -346,6 +361,7 @@
       if(ui.documentGroupAdded !== true) addDocumentGroupToRibbon();
       if(ui.functionsGroupAdded !== true) addFunctionsGroupToRibbon();
       if(ui.functionCommandsAdded !== true) addFunctionCommandsToRibbon();
+      if(ui.operatorsE1Added !== true) addE1OperatorsToRibbon();
     }
     if(typeof ui.ribbonCollapsed === 'boolean') ribbonState.collapsed = ui.ribbonCollapsed;
     if(typeof ui.activeTab === 'string') ribbonState.activeTab = ui.activeTab;

@@ -53,9 +53,6 @@ const OPERATORS = [
   { id: 'roundup',   symbol: 'roundup',   fn: true, ports: ['value', 'digits'], apply: (v, d) => roundLikeExcel(v, d, 'up'), unit: 'first' },
   { id: 'rounddown', symbol: 'rounddown', fn: true, ports: ['value', 'digits'], apply: (v, d) => roundLikeExcel(v, d, 'down'), unit: 'first' },
 ];
-// The operators of the first catalogue, before phase E1 (fmIDE's palette shows these until
-// the new ones can be drawn with their named inputs, phase E1b).
-const OPERATORS_BEFORE_E1 = 15;
 
 // Equal but for the last few binary digits, as Excel and LibreOffice compare numbers.
 function approxEqual(a, b){

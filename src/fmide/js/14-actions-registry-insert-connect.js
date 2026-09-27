@@ -360,6 +360,16 @@
     const op = n && n.type === 'operator' ? operatorForSymbol(n.text) : null;
     return op && op.ports ? op.ports : null;
   }
+  // Where an arrow dropped on the body of an operator with named inputs goes: its first input
+  // with no arrow.
+  function firstFreeOperatorPort(n){
+    const ps = operatorPortsOf(n);
+    const i = ps.findIndex((p, k) => !edges.some(e => e.to === n.id && e.toPort === k));
+    if(i < 0) return { error: `Every input of ${describeNode(n)} already has an arrow — drop the arrow on the input you want to replace.` };
+    return { index: i };
+  }
+  // True for the period number, which takes no arrows in.
+  function isPeriodOperator(n){ return !!n && n.type === 'operator' && n.text === 'period'; }
   // An operator's named input from an fm reference: its name (any capitals) or its number
   // counted from 1.
   function resolveOperatorPort(n, ref){
@@ -383,6 +393,7 @@
     run(a){
       const A = onActiveCanvas(a.from), B = onActiveCanvas(a.to);
       if(A === B) fail('A node cannot be connected to itself.');
+      if(isPeriodOperator(B)) fail('The period number takes no inputs: it gives 1, 2, 3… by itself.');
       let fp = null, tp = null;
       if(A.type === 'blockInstance') fp = resolvePort(A, a.fromPort, 'out');
       else if(a.fromPort !== '') fail(`${describeNode(A)} has no output ports — leave "from port" empty.`);
