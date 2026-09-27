@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Fix: nodes from files without a size
+- A node in a system or module file without a width or height (or with one that isn't a positive number), as in hand-written files such as some of the samples, now gets the usual size for its type. Before, it drew at the wrong size and its arrows were drawn to nowhere. Nothing in the calculation changes.
+
 ## Fix: editing nodes in models from hand-written files
 - In a model whose node ids came from a file rather than from fmIDE (such as the sample files), editing a node on the canvas failed with "There is no rectangle named …", or could change a different rectangle whose name happened to match the id. This affected typing a rectangle's text, choosing an operator symbol or period shift, plugs, sockets, block roles, formats, per-period values, the reducer chip and the vertical block's port toggle. The canvas now always refers to the node by its id.
 - A vertical block's broadcast/indexed toggle couldn't be clicked with the mouse (the output rows covered it, and pressing on it redrew the block). It works again.

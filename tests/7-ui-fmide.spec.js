@@ -445,3 +445,38 @@ test('on-canvas edits work on nodes whose ids came from a file', async ({ page }
   await noMessage();
   await expect(nodeEl(page, 'out').locator('.reducer-chip')).not.toHaveText(before);
 });
+
+// A node from a file without a size (or with one that isn't a positive number) gets the size a
+// new node of its type gets, so it draws and its arrows meet it (before, arrows had "NaN" ends).
+test('nodes from files without a usable width or height get their type\'s size, and their arrows draw', async ({ page }, testInfo) => {
+  const fs = require('fs');
+  const { fixture } = require('./helpers/apps');
+  await F.openFmIDE(page);
+  await F.importViaCommand(page, 'loadSystem', fixture('models', 'combined-bs-corkscrew-block.json'));
+  await F.acceptAll(page);
+  const sizes = () => page.evaluate(() => Object.fromEntries(fm.nodes().map(n => [n.id, [n.w, n.h]])));
+  const badPaths = () => page.locator('svg#edges path').evaluateAll(ps => ps.filter(p => /NaN/.test(p.getAttribute('d') || '')).length);
+  let s = await sizes();
+  expect(s.cash).toEqual([170, 64]);
+  expect(s.plus).toEqual([56, 56]);
+  expect(await badPaths()).toBe(0);
+  await page.evaluate(() => fm.switchCanvas('Corkscrew'));
+  expect((await sizes()).ps).toEqual([56, 56]);
+  expect(await badPaths()).toBe(0);
+  // A module with sizes that are text, negative, zero or a number written as text.
+  const mod = { kind: 'module', version: 3, name: 'Odd sizes', selfCanvasId: 'x', nodes: [
+    { id: 'a', type: 'value', x: 0, y: 0, w: '<b>wide</b>', h: -5, text: 'A\n1' },
+    { id: 'b', type: 'value', x: 0, y: 120, w: '200', h: 0, text: 'B\n2' },
+    { id: 'o', type: 'operator', x: 250, y: 60, text: '+' },
+    { id: 'c', type: 'value', x: 400, y: 60, w: 180, h: 70, text: 'C' } ],
+    edges: [{ id: 'e1', from: 'a', to: 'o' }, { id: 'e2', from: 'b', to: 'o' }, { id: 'e3', from: 'o', to: 'c' }] };
+  const file = testInfo.outputPath('odd-sizes.json');
+  fs.writeFileSync(file, JSON.stringify(mod));
+  await page.evaluate(() => fm.clearCanvas());
+  await F.importViaCommand(page, 'loadModule', file);
+  await F.acceptAll(page);
+  s = await page.evaluate(() => fm.nodes().map(n => [n.name || n.type, n.w, n.h]));
+  expect(s).toEqual([['A', 170, 64], ['B', 200, 64], ['operator', 56, 56], ['C', 180, 70]]);
+  expect(await badPaths()).toBe(0);
+  expect(await page.evaluate(() => fm.getValue('C'))).toBe(3);
+});
