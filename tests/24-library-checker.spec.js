@@ -108,6 +108,25 @@ test.describe('a whole library', () => {
     expect(all(r, 'warnings').join('\n')).toMatch(/extra\.md: The library doesn't use this file/);
   });
 
+  test('a pack outside packs/ is refused, even from a maintainer (it would never be checked)', ({}, testInfo) => {
+    // As in the library's first real pull request: the file uploaded at the top.
+    const base = library(testInfo, 'base', lib => lib.withoutBob());
+    const head = library(testInfo, 'head', lib => {
+      lib.withoutBob();
+      fs.copyFileSync(path.join(SAMPLE, 'packs', BOB_PACK + '.fmide-pack.json'), path.join(lib.dir, 'Markups.fmide-pack.json'));
+      fs.mkdirSync(path.join(lib.dir, '.github'));
+      fs.copyFileSync(path.join(SAMPLE, 'packs', BOB_PACK + '.fmide-pack.json'), path.join(lib.dir, '.github', 'renamed.json'));
+    });
+    for(const account of [BOB, MAINTAINER]){
+      const r = pr(head, base, account);
+      expectError(r, /^Markups\.fmide-pack\.json: It is a library pack outside the packs folder\. Every pack goes in packs\/, named after its pack id/);
+      expectError(r, /^\.github\/renamed\.json: It is a library pack outside the packs folder/);
+    }
+    // Other JSON files there are not packs.
+    const other = checkLibrary(library(testInfo, 'other', lib => lib.write('.github/settings.json', { kind: 'something-else' })));
+    expect(all(other).join('\n')).not.toMatch(/settings\.json/);
+  });
+
   test('a pack that fails the one-pack check fails the library', ({}, testInfo) => {
     const dir = library(testInfo, 'lib', lib => { const p = lib.pack(BOB_PACK); p.pack.licence = 'MIT'; lib.putPack(p); });
     expectError(checkLibrary(dir), /licence/);

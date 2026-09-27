@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## The community library is set up (step 8, phase 8c-2, part 2)
+- The library repository `fmide-library` (private for now) has its README, draft submission terms, licences, records, pull-request and report templates, and a check that runs fmIDE's pack checker on every pull request and posts its report. The first pack (the owner's) went through it.
+- **Fix:** the checker now refuses a library pack placed outside the library's `packs/` folder. Before, it passed one with only a warning, without checking it as a pack.
+
 ## The library's rules (step 8, phase 8c-2, part 1)
 - **`tools/check-pack.js --library`** checks the whole community library, and what a pull request changes in it: only a family's owner (the GitHub account of its first pack) adds versions; someone else's version is shared again only as an exact copy with its origin; pack and version ids are never used again, even after a takedown; the author name matches the submitting account; approved packs are never edited and the library's records are only ever added to. `--write-records` adds the records a new pack needs; `--markdown` gives the report for a pull request, with every text from a pack kept where it can't render.
 - No app changed; no file format of the apps changed. The library's own record files are described in `docs/file-formats.md`.

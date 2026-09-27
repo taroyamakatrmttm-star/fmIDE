@@ -185,6 +185,11 @@ function checkLibrary(headDir, opts){
   files.forEach((buf, p) => {
     if(buf === null) return out.error(p, 'It isn\'t an ordinary file (a link or the like); the library holds only files.');
     const top = p.split('/')[0];
+    // A pack anywhere else would never be checked as one: named like a pack, or a JSON file
+    // that says it is one.
+    if(top !== PACKS_DIR && (p.toLowerCase().endsWith(PACK_SUFFIX) || looksLikePack(p, buf))) {
+      return out.error(p, `It is a library pack outside the ${PACKS_DIR} folder. Every pack goes in ${PACKS_DIR}/, named after its pack id (${PACKS_DIR}/<pack id>${PACK_SUFFIX}), where it is checked.`);
+    }
     if(p.includes('/')){
       if(!KNOWN_TOP_DIRS.has(top)) out.warning(p, 'The library doesn\'t use this folder.');
       else if(top === PACKS_DIR && !isPackPath(p)) out.error(p, `The ${PACKS_DIR} folder holds only packs, each named after its pack id (<pack id>${PACK_SUFFIX}).`);
@@ -404,6 +409,11 @@ function checkLibrary(headDir, opts){
     report.recordsToAdd = { families: sortedObject(toAdd.families), authors: sortedObject(toAdd.authors), packs: sortedObject(toAdd.packs) };
   }
   return done();
+}
+// A .json file whose "kind" says it is a library pack (the start of the file is enough).
+function looksLikePack(p, buf){
+  if(!p.toLowerCase().endsWith('.json')) return false;
+  return /"kind"\s*:\s*"fmIDE-library-pack"/.test(buf.subarray(0, 4096).toString('utf8'));
 }
 function isPackPath(p){
   const m = /^packs\/([^/]+)\.fmide-pack\.json$/.exec(p);
