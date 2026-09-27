@@ -16,6 +16,8 @@ Both are single self-contained HTML files with no external dependencies: open th
 
 **Online, as an installable app:** fmIDE is published at **https://fmide.pages.dev** (Cloudflare Pages), updated automatically each time a change is merged. Open it in Chrome or Edge and use the browser's install button (or **File → Install fmIDE**). Every pull request also gets a preview, posted on the pull request, to try the change before it is merged: use its "Try this version" link. To try the web version locally: `npm run build`, then `npm run serve`, and open `http://localhost:8080/`. Installed, fmIDE gets its own window and icon, works offline, opens `.fmide` files you double-click, and tells you when a new version is ready (ExcelExporter does too; press **Reload** on the notice). **File → Open ExcelExporter** opens ExcelExporter from inside fmIDE.
 
+**On a touchscreen** (tablets, touchscreen laptops): drag nodes with a finger, draw an arrow from a node's dot (tap the node first to show its dots), resize by the corner, drag canvas tabs, and draw in the curve editor. One finger on empty canvas scrolls. Work in progress (step 9, see `docs/step9-touch.md`): right-drag, Alt-drag, Ctrl-drag, adding to a selection and the selection box still need a mouse or keyboard for now.
+
 **File → Templates** opens with the cursor in a search box: type part of a template's name (or its group or description), move with ↑ ↓, and press Enter to add it, as in the Command Launcher (Ctrl/Cmd+K). Esc closes the window.
 
 **Templates have versions.** To update a template, select it in **File → Templates** and click **⤴ Save as new version**: the open canvas (or, for a system template, the whole system) becomes its next version, with a short note on what changed. The list shows each template once, at its latest version (`v3`); **▸ older versions** underneath lists the earlier ones, newest first, and any of them can be previewed and added. Saving a template under a new name starts a new template; under a name you already use, fmIDE asks whether you meant a new version. **✎ Edit info** renames a template with all its versions. Older versions can be deleted one at a time; the latest goes only with the whole template. In macros and the Command Launcher, `Income Statement@2` means version 2 and `Income Statement` (or `Income Statement@latest`) the latest. Templates saved before this each become version 1 of their own template.
@@ -74,6 +76,7 @@ The script pieces are plain fragments of one wrapped function — no `import`/`e
 
 - [`docs/tutorial-step7.md`](docs/tutorial-step7.md) — step-by-step tutorial for everything new since pull request #23: functions, the new operators, and the "differs from fmIDE" list
 - [`docs/decisions.md`](docs/decisions.md) — agreed and open product decisions, and the build order
+- [`docs/step9-touch.md`](docs/step9-touch.md) — touch support: what was decided, the phases, and how each turned out
 - [`docs/file-formats.md`](docs/file-formats.md) — every JSON file type, its version, and how to change a format safely
 - [`docs/format-roles.md`](docs/format-roles.md) — how cell and rectangle formatting is defined in one place
 - [`docs/fmIDE-automation-api.md`](docs/fmIDE-automation-api.md) — the `window.fm` actions used by the ribbon, shortcuts and macros

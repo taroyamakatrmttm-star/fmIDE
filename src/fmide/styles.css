@@ -501,6 +501,9 @@
     display:flex; align-items:center; justify-content:center;
     padding:6px 10px; cursor:grab; user-select:none;
   }
+  /* A finger on a node, a canvas tab or the curve editor moves it rather than scrolling the
+     page (step 9a); a finger on empty canvas still scrolls. */
+  .node, .canvas-tab, .period-values-box svg{ touch-action:none; }
   .node:active{cursor:grabbing;}
   .node.selected{ border-color:var(--node-selected); box-shadow:0 0 0 3px rgba(99,102,241,.18); }
 

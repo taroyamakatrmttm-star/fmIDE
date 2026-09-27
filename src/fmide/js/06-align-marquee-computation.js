@@ -82,8 +82,6 @@
       box.style.left = x+'px'; box.style.top = y+'px'; box.style.width = w+'px'; box.style.height = h+'px';
     }
     function onUp(){
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
       document.body.classList.remove('dragging');
       box.remove();
       if(last.w > 3 || last.h > 3){
@@ -91,10 +89,11 @@
         render();
       }
     }
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
+    followPointer(downEvent, onMove, onUp);
   }
 
+  // Mouse only: a finger on empty canvas scrolls it, and a tap's copied mouse events still
+  // reach here, so a tap on empty canvas clears the selection as before.
   viewport.addEventListener('mousedown', (e) => {
     if(e.button === 2) return; // right button is reserved for arrow-drawing, started from a node
     if(e.target === viewport || e.target === canvas || e.target === svg){

@@ -1,13 +1,13 @@
   // ---------- node interaction ----------
   function attachNodeEvents(el){
     el.addEventListener('contextmenu', (ev) => { ev.preventDefault(); });
-    el.addEventListener('mousedown', (ev) => {
+    onPress(el, (ev) => {
       const id = el.dataset.id;
       // The small buttons, and a vertical block's broadcast/indexed toggle: no select or drag
       // (which redraws a block's body and would replace the toggle before its click lands).
-      if(ev.target.classList.contains('tag-btn') || ev.target.classList.contains('vindex-toggle')){ ev.stopPropagation(); ev.preventDefault(); return; }
+      if(ev.target.classList.contains('tag-btn') || ev.target.classList.contains('vindex-toggle')){ ev.stopPropagation(); pressDefault(ev); return; }
       if(ev.target.classList.contains('io-port')){
-        ev.stopPropagation(); ev.preventDefault();
+        ev.stopPropagation(); pressDefault(ev);
         // A function node's one output has no port number (its arrows carry no fromPort).
         if(ev.target.classList.contains('fn-out-port')) startConnection(id, ev);
         else if(ev.target.dataset.portDir === 'out'){
@@ -24,7 +24,7 @@
       // the small port hitbox. Works from any node type onto any node type.
       if(ev.button === 2){
         ev.stopPropagation();
-        ev.preventDefault();
+        pressDefault(ev);
         startConnection(id, ev);
         return;
       }
@@ -141,8 +141,7 @@
       const dist = Math.hypot(ev.clientX - startX, ev.clientY - startY);
       if(dist > 3){
         committed = true;
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
+        stopFollowing();
         if(!selectedNodeIds.has(id) || selectedEdgeId){
           selectNodesOnly([id]);
         }
@@ -150,16 +149,13 @@
       }
     }
     function onUp(){
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
       if(!committed) toggleNodeSelection(id);
     }
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
+    const stopFollowing = followPointer(downEvent, onMove, onUp);
   }
 
   function startDrag(id, downEvent){
-    downEvent.preventDefault();
+    pressDefault(downEvent);
     let workingIds = selectedNodeIds.size ? Array.from(selectedNodeIds) : [id];
     let workingStartPositions = {};
     workingIds.forEach(nid => { const nd = getNode(nid); if(nd) workingStartPositions[nid] = {x:nd.x, y:nd.y}; });
@@ -220,8 +216,6 @@
       render();
     }
     function onUp(){
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
       document.body.classList.remove('dragging');
       hideGuides();
       if(duplicated){ syncAutoConnections(); clearComputed(); render(); }
@@ -232,8 +226,7 @@
         else if(dx || dy) recorder.add('move', { nodes: workingIds.map(getNode).filter(Boolean), dx, dy });
       }
     }
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
+    followPointer(downEvent, onMove, onUp);
   }
 
   // Alt+drag: gatekeeper. Resolves which nodes would be dragged (mirrors the
@@ -243,7 +236,7 @@
   function startAliasDragInit(id, downEvent){
     const prospectiveIds = (selectedNodeIds.has(id) && !selectedEdgeId) ? Array.from(selectedNodeIds) : [id];
     const allRects = prospectiveIds.length > 0 && prospectiveIds.every(nid => { const nd = getNode(nid); return nd && nd.type === 'value'; });
-    if(!allRects){ downEvent.preventDefault(); return; }
+    if(!allRects){ pressDefault(downEvent); return; }
     if(!selectedNodeIds.has(id) || selectedEdgeId){
       selectNodesOnly([id]);
     }
@@ -256,7 +249,7 @@
   // exactly like a normal node drag, leaving the source rectangles untouched.
   // A plain alt+click with no movement creates nothing.
   function startAliasDrag(sourceIds, downEvent){
-    downEvent.preventDefault();
+    pressDefault(downEvent);
     const sourceNodes = sourceIds.map(getNode).filter(Boolean);
     if(sourceNodes.length === 0) return;
     const startX = downEvent.clientX, startY = downEvent.clientY;
@@ -303,8 +296,6 @@
       render();
     }
     function onUp(){
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
       document.body.classList.remove('dragging');
       hideGuides();
       if(created){
@@ -316,12 +307,11 @@
       }
     }
     document.body.classList.add('dragging');
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
+    followPointer(downEvent, onMove, onUp);
   }
 
   function startResize(id, downEvent){
-    downEvent.preventDefault();
+    pressDefault(downEvent);
     downEvent.stopPropagation();
     selectNodesOnly([id]);
     const n = getNode(id);
@@ -337,13 +327,10 @@
       render();
     }
     function onUp(){
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
       document.body.classList.remove('dragging');
       if(historyPushed && recorder.active) recorder.add('resize', { node: n, w: n.w, h: n.h });
     }
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
+    followPointer(downEvent, onMove, onUp);
   }
 
   function startEdit(id, selectAll){
