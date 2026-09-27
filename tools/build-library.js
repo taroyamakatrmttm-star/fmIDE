@@ -53,7 +53,11 @@ function buildLibrary(dir){
   if(!report.ok) throw new LibraryError('The library in ' + path.relative(ROOT, dir) + ' fails its check, so nothing is published:\n' + formatLibraryReport(report));
 
   const records = JSON.parse(fs.readFileSync(path.join(dir, 'packs.json'), 'utf8')).packs;
-  const packs = fs.readdirSync(path.join(dir, 'packs')).sort().map(name => {
+  // No packs/ folder: every pack was taken down (Git keeps no empty folder). The catalogue
+  // then lists none.
+  const packsDir = path.join(dir, 'packs');
+  const names = fs.existsSync(packsDir) ? fs.readdirSync(packsDir).sort() : [];
+  const packs = names.map(name => {
     const bytes = fs.readFileSync(path.join(dir, 'packs', name));
     const raw = JSON.parse(bytes.toString('utf8'));
     const record = records[raw.pack.id];
