@@ -2,6 +2,12 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Library packs: sharing templates, recipes and functions (step 8, phase 8a)
+- **File → Save as Library Pack…** writes one file of templates, recipes and functions to share, with a title, author, description, tags and the licence (CC BY 4.0). A recipe takes its parts along and a function the functions it calls.
+- **File → Open Library Pack…** shows who made a pack and its licence, and what each item would do to your library (new, already there, a new version of one of yours, or a name you already use) before anything is added; untick what you don't want. Nothing of yours is replaced. A pack without an author or with another licence is refused.
+- New file kind `fmIDE-library-pack` version 1. No other file format changed.
+- **Fix: files nested very deeply or very large.** Opening a file nested thousands of levels deep stopped both apps' readers with no message (a stack overflow). Every file opened is now refused, with a message, when it is over 50 MB, nested more than 100 levels or holds more than 5 million values — far beyond any real model. The autosave is never refused.
+
 ## New operators, part 2: on the canvas (phase E1b)
 - The new operators are in the palette, the operator picker, the Command Launcher (Insert Operator period, if, =, ≠, and, or, not, round, roundup, rounddown) and on the ribbon: Insert → Compare has = and ≠, Insert → Excel Functions the others. A ribbon you customised gets them once, in the groups where you keep the comparisons and the Excel functions.
 - **if** and **round** (and roundup, rounddown) show a labelled dot for each input — condition, then, else; value, digits. Drop an arrow on the dot you mean, or on the box for the first input without one. The period number takes no arrows in.

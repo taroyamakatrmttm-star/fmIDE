@@ -21,7 +21,7 @@
         { label:'Workspace', items:[ { cmd:'exportWorkspace' }, { cmd:'importWorkspace' } ] },
         { label:'Preferences', items:[ { cmd:'exportPreferences' }, { cmd:'importPreferences' } ] },
         { label:'App', items:[ { cmd:'openExcelExporter', size:'large' }, { cmd:'installApp' } ] },
-        { label:'Library', items:[ { cmd:'openTemplates', size:'large' }, { cmd:'openFunctions', size:'large' }, { cmd:'openFormats', size:'large' } ] },
+        { label:'Library', items:[ { cmd:'openTemplates', size:'large' }, { cmd:'openFunctions', size:'large' }, { cmd:'openFormats', size:'large' }, { cmd:'openLibraryPack' }, { cmd:'saveLibraryPack' } ] },
       ]},
       { id:'home', label:'Home', keytip:'H', groups:[
         { label:'Clipboard', items:[ { cmd:'paste', size:'large' }, { cmd:'cut' }, { cmd:'copy' } ] },

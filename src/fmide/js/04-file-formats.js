@@ -22,7 +22,8 @@
     'fmIDE-format-presets': { current: 1, label: 'format presets file', where: 'Format Presets → Import Presets' },
     'fmIDE-shortcuts':      { current: 2, label: 'shortcuts file',      where: 'Keyboard Shortcuts → Import Shortcuts' },
     'fmIDE-macros':         { current: 1, label: 'macros file',         where: 'Macro Builder → Import' },
-    'fmIDE-preferences':    { current: 1, label: 'preferences file',    where: 'File → Import Preferences' }
+    'fmIDE-preferences':    { current: 1, label: 'preferences file',    where: 'File → Import Preferences' },
+    'fmIDE-library-pack':   { current: 1, label: 'library pack',        where: 'File → Open Library Pack' }
   };
   const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
     // v1 → v2: one plug name per rectangle becomes a list of plug names (as system v2 → v3).
@@ -92,14 +93,19 @@
         data.shortcutBindingsVersion = 2;
       }
     }
-    if(kind === 'fmIDE-templates') data.templates = nestedTemplates(data.templates);
+    if(kind === 'fmIDE-templates' || kind === 'fmIDE-library-pack') data.templates = nestedTemplates(data.templates);
     return { kind, data, fromVersion: version, newer, warnings };
   }
   // UI wrapper: parse → read → (warn if newer) → onOk(data, result). Returns nothing.
+  // A file that is too large or nested too deep is refused first (FILE_LIMITS).
   function openFmFileText(text, accept, onOk){
+    const tooBig = fileTextProblem(text);
+    if(tooBig){ showMessage(tooBig); return; }
     let raw;
     try{ raw = JSON.parse(text); }
     catch(err){ showMessage('That file is not valid JSON.'); return; }
+    const shape = fileDataProblem(raw);
+    if(shape){ showMessage(shape); return; }
     const r = readFmFile(raw, accept);
     if(r.error){ showMessage(r.error); return; }
     const go = () => onOk(r.data, r);

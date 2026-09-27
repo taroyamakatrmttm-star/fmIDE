@@ -7,6 +7,7 @@
 | 3 | Open source or not | Agreed (25 Sep 2026) | **Open core**, one repository with two licences (see `LICENSING.md`): fmIDE, the shared code, tools and tests under the **Apache License 2.0**; the file-format documentation under **CC BY 4.0**; **ExcelExporter proprietary** — free to use, including at work, but not to copy, modify or redistribute. Copyright 2026 Taro Yamaka. |
 | 4 | Where the web app is hosted | Agreed (25 Sep 2026) | Cloudflare Pages, on its free address for now (both can change later) |
 | 5 | One app or two | Agreed (24 Sep 2026) | One installable app: fmIDE, with ExcelExporter opening from inside it |
+| 6 | The community library (step 8) | Agreed (27 Sep 2026) | Shared as files (library packs), no network calls and no change to the security policy. Packs live in a separate public GitHub repository, submitted by pull request, checked automatically and approved by the owner; the catalogue is published on the Cloudflare site under `/library`. Items are licensed CC BY 4.0, with short submission terms. Templates, recipes and functions are shared — not macros. A preview before anything is added, size limits on every file, a record of where items came from, only a family's first author may add versions, a takedown process. A free-text author name, checked against the submitter's GitHub account. Browsing inside fmIDE is decided later. See `docs/step8-community-library.md`. |
 
 Why decision 3: an open editor and an open, documented file format build trust and let a community and other tools grow around fmIDE ("the ecosystem is the most"); ExcelExporter is where Pro / Enterprise / Marketplace editions can build later. Licences can be loosened later (ExcelExporter could be opened), but a version once published as open source stays open. The licence texts should be reviewed by a lawyer before the repository is made public. Before accepting outside contributions, a contributor licence agreement (CLA) is needed (`CONTRIBUTING.md`). Making the repository public is a separate step, taken by the owner when ready.
 
@@ -21,8 +22,8 @@ Workflow since step 3a: edit `src/` → `npm run build` → `npm test` (the file
 4. Storage for the web app: IndexedDB plus explicit open/save of `.fmide` files ✅ — 4a IndexedDB underneath, 4b `.fmide` documents (Open, Save, Save As, Recent, recovery), 4c Preferences file (see `docs/step4-storage.md`). Double-clicking a `.fmide` file to open it (PWA file association; PWA = installable web app) belongs to step 5.
 5. Publish the web app (see `docs/step5-publish.md`) ✅ — 5a installable web app (PWA): offline, updates, install, double-click `.fmide`, one app with ExcelExporter inside; 5b licences (decision 3) and automatic publishing to Cloudflare Pages on every merge, with a preview address for each pull request.
 6. Template management ✅ — families and versions, canvases linked to their template ("Update this canvas"), recipe templates, and a warning when more than one plug feeds a socket (see `docs/file-formats.md`)
-7. Formula IR and plugins (chosen by the owner, September 2026; in progress — see `docs/step7-formula-ir.md`): A agreement tests and fixes ✅
-8. Community library
+7. Formula IR and plugins (chosen by the owner, September 2026; see `docs/step7-formula-ir.md`): A agreement tests and fixes ✅, B shared IR ✅, C ExcelExporter on the IR ✅, D function plugins ✅, E1 new operators ✅; E2 optional, not started
+8. Community library (see `docs/step8-community-library.md`) — in progress: 8a library pack files ✅; 8b where items came from; 8c checker and catalogue; 8d browsing inside fmIDE (optional)
 9. Touch support
 
 ## Phase 0 (hardening) — status

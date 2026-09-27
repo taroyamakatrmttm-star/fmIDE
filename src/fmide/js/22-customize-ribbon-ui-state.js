@@ -303,7 +303,9 @@
       documentGroupAdded: true, // the default ribbon has it; a customised one got it once
       functionsGroupAdded: true,
       functionCommandsAdded: true, // D2b: Insert Function… and Update Function… in My Functions
-      operatorsE1Added: true // E1b: the new operators in the Compare and Excel Functions groups
+      operatorsE1Added: true, // E1b: the new operators in the Compare and Excel Functions groups
+      libraryPacksAdded: true, // 8a: Open Library Pack… and Save as Library Pack… in the File tab's Library group
+      libraryAuthor
     };
   }
   // One-time update of a ribbon customised before the Document group existed: add it at
@@ -352,7 +354,19 @@
       list.forEach(i => { if(!g.items.some(it => it && it.cmd === 'insertOp' + i)) g.items.push({ cmd: 'insertOp' + i }); });
     });
   }
-  function applyUiPayload(ui){
+  // One-time update (8a) of a customised ribbon: Open Library Pack… and Save as Library
+  // Pack… join the group holding Format Presets (the File tab's Library group), wherever the
+  // person moved it. A ribbon without it is left alone (the Command Launcher has both); a
+  // command removed afterwards stays removed (this runs once).
+  function addLibraryPackCommandsToRibbon(){
+    ribbonState.config.tabs.forEach(t => (t && Array.isArray(t.groups) ? t.groups : []).forEach(g => {
+      if(!g || !Array.isArray(g.items) || !g.items.some(it => it && it.cmd === 'openFormats')) return;
+      ['openLibraryPack', 'saveLibraryPack'].forEach(cmd => { if(!g.items.some(it => it && it.cmd === cmd)) g.items.push({ cmd }); });
+    }));
+  }
+  // fromImport: a workspace file (maybe someone else's) — its author name for library packs
+  // is not taken over; only your own autosave remembers yours.
+  function applyUiPayload(ui, fromImport){
     if(!ui || typeof ui !== 'object') return;
     const fileRibbon = ui.ribbonCustomized ? cleanRibbonConfig(ui.ribbon) : null;
     if(fileRibbon){
@@ -362,7 +376,9 @@
       if(ui.functionsGroupAdded !== true) addFunctionsGroupToRibbon();
       if(ui.functionCommandsAdded !== true) addFunctionCommandsToRibbon();
       if(ui.operatorsE1Added !== true) addE1OperatorsToRibbon();
+      if(ui.libraryPacksAdded !== true) addLibraryPackCommandsToRibbon();
     }
+    if(!fromImport && typeof ui.libraryAuthor === 'string') libraryAuthor = ui.libraryAuthor.slice(0, LIBRARY_PACK_LIMITS.author);
     if(typeof ui.ribbonCollapsed === 'boolean') ribbonState.collapsed = ui.ribbonCollapsed;
     if(typeof ui.activeTab === 'string') ribbonState.activeTab = ui.activeTab;
     if(ui.keytipTrigger && (ui.keytipTrigger.type === 'tap' && ui.keytipTrigger.key || ui.keytipTrigger.type === 'combo' && ui.keytipTrigger.combo)){

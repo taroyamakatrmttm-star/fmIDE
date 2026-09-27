@@ -1,10 +1,19 @@
 // ============================================================
 // Wiring
 // ============================================================
-async function tryLoad(jsonText, label){
+// A file that is too large or nested too deep is refused first (FILE_LIMITS, shared).
+function parseFileText(text){
+  const tooBig = fileTextProblem(text);
+  if(tooBig) return { error: tooBig };
   let parsed;
-  try{ parsed = JSON.parse(jsonText); }
-  catch(err){ setStatus($('loadStatus'), 'That is not valid JSON.', 'err'); return; }
+  try{ parsed = JSON.parse(text); }
+  catch(err){ return { error: 'That is not valid JSON.' }; }
+  const shape = fileDataProblem(parsed);
+  return shape ? { error: shape } : { parsed };
+}
+async function tryLoad(jsonText, label){
+  const { parsed, error } = parseFileText(jsonText);
+  if(error){ setStatus($('loadStatus'), error, 'err'); return; }
   const r = readKnownFile(parsed, ['system', 'fmIDE-workspace']);
   if(r.error){ setStatus($('loadStatus'), r.error, 'err'); return; }
   if(!(await confirmNewerFile(r))){ setStatus($('loadStatus'), 'Not loaded.', 'info'); return; }
@@ -103,9 +112,8 @@ $('mappingFileInput').addEventListener('change', () => {
   if(!file) return;
   const reader = new FileReader();
   reader.onload = async () => {
-    let parsed;
-    try{ parsed = JSON.parse(reader.result); }
-    catch(err){ setStatus($('genStatus'), 'That is not valid JSON.', 'err'); return; }
+    const { parsed, error } = parseFileText(reader.result);
+    if(error){ setStatus($('genStatus'), error, 'err'); return; }
     const r = readKnownFile(parsed, ['fmIDE-excel-mapping']);
     if(r.error){ setStatus($('genStatus'), r.error, 'err'); return; }
     if(!(await confirmNewerFile(r))){ setStatus($('genStatus'), 'Mapping not imported.', 'info'); return; }

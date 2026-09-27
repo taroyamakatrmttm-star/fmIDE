@@ -19,6 +19,7 @@
     "test:excel-ir": "playwright test tests/19-excel-ir.spec.js",
     "test:functions": "playwright test tests/20-functions.spec.js",
     "test:functions-fmide": "playwright test tests/21-functions-fmide.spec.js",
+    "test:library-packs": "playwright test tests/22-library-packs.spec.js",
     "bench": "node tools/bench-calc.js"
   },
   "devDependencies": {

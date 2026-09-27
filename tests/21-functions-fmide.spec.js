@@ -336,7 +336,7 @@ test.describe('the ribbon', () => {
   test('the Insert tab has My Functions; the operators are "Excel Functions"; File → Library has Functions', async ({ page }) => {
     expect(await insertGroups(page)).toEqual(['Nodes', 'Arithmetic', 'Compare', 'Excel Functions', 'My Functions', 'Library']);
     const library = await page.evaluate(() => __fmIDE.getRibbonConfig().tabs.find(t => t.id === 'file').groups.find(g => g.label === 'Library').items.map(i => i.cmd));
-    expect(library).toEqual(['openTemplates', 'openFunctions', 'openFormats']);
+    expect(library).toEqual(['openTemplates', 'openFunctions', 'openFormats', 'openLibraryPack', 'saveLibraryPack']); // library packs since 8a (group 22)
     const commands = await page.evaluate(() => fm.commands().filter(c => /Functions/.test(c.id)));
     expect(commands).toEqual([
       { id: 'openFunctions', label: 'Functions', category: 'File', shortcut: null },

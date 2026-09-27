@@ -367,6 +367,18 @@
   // Returns { added, present, renumbered } (present: skipped because already there;
   // renumbered: added under a new number because theirs was taken).
   function templateFingerprint(name, kind, data){ return name + '\u0000' + kind + '\u0000' + JSON.stringify(data); }
+  // Whether a template from a file (`t`, read into the entry `e`) is already in the library,
+  // by the rules above: the same content in its family (under the same number or version
+  // id), or — for a family not here — the same name, kind and content.
+  function templateAlreadyHere(e, t){
+    if(TEMPLATES.some(x => x.family === e.family && x.kind === e.kind)){
+      const data = JSON.stringify(e.data);
+      return TEMPLATES.some(x => x.family === e.family && (x.version === e.version || x.versionId === t.versionId)
+        && JSON.stringify(x.data) === data);
+    }
+    const key = templateFingerprint(e.name, e.kind, e.data);
+    return TEMPLATES.some(x => templateFingerprint(x.name, x.kind, x.data) === key);
+  }
   function addMissingTemplates(list){
     let added = 0, present = 0, renumbered = 0;
     const clashes = [];
@@ -384,16 +396,9 @@
       const e = templateEntryFrom(t);
       if(!e) return;
       const known = TEMPLATES.some(x => x.family === e.family && x.kind === e.kind);
-      if(known){
-        // Already here: the same content under the same number, or under the number it
-        // was given when an earlier import found its number taken (same version id).
-        const data = JSON.stringify(e.data);
-        if(TEMPLATES.some(x => x.family === e.family && (x.version === e.version || x.versionId === t.versionId)
-          && JSON.stringify(x.data) === data)){ present++; return; }
-      } else {
-        const key = templateFingerprint(e.name, e.kind, e.data);
-        if(TEMPLATES.some(x => templateFingerprint(x.name, x.kind, x.data) === key)){ present++; return; }
-      }
+      // Already here: the same content under the same number, or under the number it was
+      // given when an earlier import found its number taken (same version id).
+      if(templateAlreadyHere(e, t)){ present++; return; }
       // A taken number waits until the file's other versions are in, so those keep theirs.
       if(known && TEMPLATES.some(x => x.family === e.family && x.version === e.version)){ clashes.push(e); return; }
       add(e);

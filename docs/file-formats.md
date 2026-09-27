@@ -29,7 +29,38 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 | `fmIDE-shortcuts` | 2 | Keyboard shortcut bindings | fmIDE: Keyboard Shortcuts → Import Shortcuts |
 | `fmIDE-macros` | 1 | Macros | fmIDE: Macro Builder → Import |
 | `fmIDE-preferences` | 1 | Personal settings: shortcut bindings for built-in commands, ribbon layout and Quick Access Toolbar, ribbon collapsed state, KeyTips trigger (fmIDE only) | fmIDE: File → Import Preferences (or Customize Ribbon) |
+| `fmIDE-library-pack` | 1 | Templates, recipes and functions to share with other people, with who made them and their licence (below) | fmIDE: File → Open Library Pack… |
 | `fmIDE-excel-mapping` | 1 | ExcelExporter's tab/row layout for one model | ExcelExporter: Import Mapping JSON |
+
+## Limits on a file that is opened
+
+A file someone opens (any kind, in either app) is refused, with a plain message, before anything else reads it, when it is:
+
+- longer than 50 MB of text ("That file is too large to open (51 MB; the limit is 50 MB).");
+- nested more than 100 levels deep ("That file is nested too deeply to open…") — real files are under 10;
+- holding more than 5,000,000 values in all.
+
+The limits (`FILE_LIMITS`, `fileTextProblem`, `fileDataProblem` in `src/shared/file-formats.js`) keep a hostile file from freezing or crashing the page; before them, a deeply nested file stopped the reader with a stack overflow and no message. The autosave is not checked: it is the person's own work. No format changed.
+
+## Library packs (`fmIDE-library-pack` 1)
+
+A **library pack** is one file of templates, recipes and functions to share with other people (step 8, `docs/step8-community-library.md`). fmIDE writes one with **File → Save as Library Pack…** and reads one with **File → Open Library Pack…**, which shows what it holds before adding anything.
+
+```json
+{ "kind": "fmIDE-library-pack", "version": 1,
+  "pack": { "id": "5d0e…", "title": "Three statements starter", "author": "Ann Example",
+            "licence": "CC-BY-4.0", "description": "…", "tags": ["statements", "tax"], "created": "2026-09-27" },
+  "templates": [ { "name": "Income Statement", "kind": "module", "family": "…", "version": 1, "versionId": "…", "note": "", "group": "…", "description": "…", "data": { … } } ],
+  "functions": [ { "family": "…", "version": 1, "versionId": "…", "text": "Margin(Revenue, Cost) = …", "description": "", "note": "", "calls": [] } ] }
+```
+
+- `pack` says what the pack is and who made it. `id` is a random id (8–64 letters, digits and dashes), new for every pack saved. `title` (at most 120 characters, one line) and `author` (at most 120) are required. `licence` is required and, for now, must be `"CC-BY-4.0"` (Creative Commons Attribution 4.0 International: anyone may use, change and share the items, including commercially, with credit to the author). `description` (at most 2,000 characters), `tags` (at most 10, each at most 40 characters, kept in lower case without duplicates) and `created` (a date, `YYYY-MM-DD`) are optional. The checks live in `src/shared/library-pack.js` (`cleanLibraryPackInfo`).
+- `templates` are template versions exactly as in a templates file (families and versions, recipes; each model is read and upgraded like a templates file's). `functions` are function definitions exactly as in an `fmIDE-functions` file. At most 500 of each are read.
+- **What a pack carries:** each template, recipe or function picked goes in as the version picked (the latest by default), together with what it needs: the template versions a recipe builds with (a `"latest"` part as the library's latest when the pack is saved) and every function a function calls, at the version it calls. A template's model carries its own functions, as always. A recipe whose part isn't in the library can't be put in a pack.
+- **Reading a pack:** a pack without valid `pack` details (no id, no title, no author, no licence or another licence) is refused and nothing in it is added. Each item is shown with what adding it would do: *new*; *already in your library* (not offered); *adds a version to your …* (its family is one you have — canvases linked to that template will then offer it as an update); or *you have a different … called …* (both are kept). Adding follows the usual import rules for templates and functions: nothing of yours is replaced, and a version whose number your library already uses for something else is added under the next number. Ticking an item also adds what it needs from the pack.
+- Every text in a pack is someone else's and is only ever shown as plain text.
+- The file name fmIDE suggests is the title with `.fmide-pack.json` (for example `Three-statements-starter.fmide-pack.json`); it is an ordinary JSON file.
+- ExcelExporter doesn't read packs: it says to open them in fmIDE.
 
 ## Operators (`system` 6, `module` 4, `fmIDE-workspace` 5, `fmIDE-templates` 5)
 

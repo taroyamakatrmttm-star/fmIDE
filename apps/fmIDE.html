@@ -410,6 +410,18 @@
   .function-editor button.fn-editor-save:disabled{ opacity:.45; cursor:not-allowed; }
   .fn-editor-use-latest{ font-size:11px; padding:2px 7px; }
   .function-export-row{ display:block; font-size:13px; margin:3px 0; }
+  .library-pack-save, .library-pack-preview{ min-width:480px; max-width:640px; max-height:86vh; overflow-y:auto; }
+  .modal-box p.library-pack-heading{ font-weight:600; font-size:13px; margin:12px 0 4px; }
+  .modal-box p.library-pack-licence, .modal-box p.library-pack-by, .modal-box p.library-pack-tags{ font-size:12px; color:#475569; margin:6px 0; }
+  .modal-box p.library-pack-title{ font-size:16px; font-weight:700; margin:0 0 2px; }
+  .modal-box p.library-pack-description{ font-size:13px; white-space:pre-wrap; margin:6px 0; }
+  .modal-box p.library-pack-caution{ font-size:12px; color:#92400e; background:#fef3c7; border-radius:6px; padding:6px 9px; margin:8px 0; }
+  .library-pack-item{ display:grid; grid-template-columns:auto 1fr; column-gap:8px; font-size:13px; margin:5px 0; }
+  .library-pack-item input{ grid-row:span 3; margin-top:3px; }
+  .library-pack-item-status{ grid-column:2; font-size:11.5px; color:#475569; }
+  .library-pack-item.new-version .library-pack-item-status{ color:#b45309; }
+  .library-pack-item.present{ color:#9ca3af; }
+  .library-pack-item-detail{ grid-column:2; font-size:11.5px; color:#6b7280; white-space:pre-wrap; overflow-wrap:anywhere; }
   .template-preview-tabs{ display:flex; gap:4px; margin-bottom:6px; flex-wrap:wrap; }
   .template-preview-tabs button{
     font-size:11px; padding:3px 9px; border-radius:6px; border:1px solid #d1d5db; background:#fff; cursor:pointer; color:var(--text);
@@ -1036,6 +1048,8 @@
     { id:'openTemplates',label:'Templates',            icon:'📚', category:'File', defaultShortcut:null, action:() => showTemplatesPicker() },
     { id:'openFunctions', label:'Functions',            icon:'ƒ', category:'File', defaultShortcut:null, action:() => showFunctionsManager() },
     { id:'importFunctions', label:'Import Functions…',  icon:'⇧', category:'File', defaultShortcut:null, action:() => pickFunctionsFile() },
+    { id:'openLibraryPack', label:'Open Library Pack…', icon:'📦', category:'File', defaultShortcut:null, action:() => pickLibraryPackFile() },
+    { id:'saveLibraryPack', label:'Save as Library Pack…', icon:'📦', category:'File', defaultShortcut:null, action:() => showSaveLibraryPack() },
     { id:'insertFunction', label:'Insert Function…',    icon:'ƒ', category:'Insert', defaultShortcut:null, action:() => showFunctionPicker(null) },
     { id:'updateFunction', label:'Update Function…',    icon:'⬆', category:'Insert', defaultShortcut:null, action:() => updateFunctionCommand() },
     { id:'removeDuplicateTemplates', label:'Remove Duplicate Templates…', icon:'🧹', category:'File', defaultShortcut:null, enabled:() => templateFamilies().length > 1, action:() => showRemoveDuplicatesDialog() },
@@ -2095,6 +2109,32 @@
     data.kind = kind;
     return { fromVersion: version, newer };
   }
+  // Limits on a file someone opens (step 8, phase 8a). Files may come from other people, so a
+  // hostile one must not freeze the page: too many characters, JSON nested too deep (which
+  // would overflow the stack of code that walks it) or too many values are refused with a
+  // plain message before anything else reads the file. The autosave is never checked: it is
+  // the person's own work. Generous for real models (the largest sample is 60 kB, 5 deep).
+  const FILE_LIMITS = { chars: 50 * 1024 * 1024, depth: 100, values: 5000000 };
+  // A message when a file's text is too long to open, else null.
+  function fileTextProblem(text){
+    if(typeof text !== 'string' || text.length <= FILE_LIMITS.chars) return null;
+    return 'That file is too large to open (' + Math.ceil(text.length / 1048576) + ' MB; the limit is ' + (FILE_LIMITS.chars / 1048576) + ' MB).';
+  }
+  // A message when parsed data is nested too deep or holds too many values, else null.
+  // Walks without recursion, so a deep file can't overflow the stack here either.
+  function fileDataProblem(raw){
+    const stack = [[raw, 1]];
+    let values = 0;
+    while(stack.length){
+      const [v, depth] = stack.pop();
+      if(++values > FILE_LIMITS.values) return 'That file holds too much data to open (more than ' + FILE_LIMITS.values.toLocaleString('en-US') + ' values).';
+      if(!v || typeof v !== 'object') continue;
+      if(depth > FILE_LIMITS.depth) return 'That file is nested too deeply to open (more than ' + FILE_LIMITS.depth + ' levels).';
+      const items = Array.isArray(v) ? v : Object.values(v);
+      for(let i = 0; i < items.length; i++) stack.push([items[i], depth + 1]);
+    }
+    return null;
+  }
   const FILE_FORMATS = {
     'system':               { current: SHARED_FILE_VERSIONS['system'], label: 'system', where: 'File → Load System' },
     'module':               { current: 4, label: 'module',              where: 'File → Load Module' },
@@ -2104,7 +2144,8 @@
     'fmIDE-format-presets': { current: 1, label: 'format presets file', where: 'Format Presets → Import Presets' },
     'fmIDE-shortcuts':      { current: 2, label: 'shortcuts file',      where: 'Keyboard Shortcuts → Import Shortcuts' },
     'fmIDE-macros':         { current: 1, label: 'macros file',         where: 'Macro Builder → Import' },
-    'fmIDE-preferences':    { current: 1, label: 'preferences file',    where: 'File → Import Preferences' }
+    'fmIDE-preferences':    { current: 1, label: 'preferences file',    where: 'File → Import Preferences' },
+    'fmIDE-library-pack':   { current: 1, label: 'library pack',        where: 'File → Open Library Pack' }
   };
   const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
     // v1 → v2: one plug name per rectangle becomes a list of plug names (as system v2 → v3).
@@ -2174,14 +2215,19 @@
         data.shortcutBindingsVersion = 2;
       }
     }
-    if(kind === 'fmIDE-templates') data.templates = nestedTemplates(data.templates);
+    if(kind === 'fmIDE-templates' || kind === 'fmIDE-library-pack') data.templates = nestedTemplates(data.templates);
     return { kind, data, fromVersion: version, newer, warnings };
   }
   // UI wrapper: parse → read → (warn if newer) → onOk(data, result). Returns nothing.
+  // A file that is too large or nested too deep is refused first (FILE_LIMITS).
   function openFmFileText(text, accept, onOk){
+    const tooBig = fileTextProblem(text);
+    if(tooBig){ showMessage(tooBig); return; }
     let raw;
     try{ raw = JSON.parse(text); }
     catch(err){ showMessage('That file is not valid JSON.'); return; }
+    const shape = fileDataProblem(raw);
+    if(shape){ showMessage(shape); return; }
     const r = readFmFile(raw, accept);
     if(r.error){ showMessage(r.error); return; }
     const go = () => onOk(r.data, r);
@@ -2409,7 +2455,7 @@
     if(Array.isArray(data.formatPresets)) mergeFormatPresets(data.formatPresets);
     // ribbon/KeyTips settings, then macros (so macro commands exist before their
     // shortcut bindings are applied below); syncMacroCommands re-renders the ribbon
-    if(data.ui) applyUiPayload(data.ui);
+    if(data.ui) applyUiPayload(data.ui, fromImport);
     if(Array.isArray(data.macros)) importMacros(data.macros, 'replace');
     if(data.ui || Array.isArray(data.macros)) syncMacroCommands();
     if(data.shortcutBindings && typeof data.shortcutBindings === 'object'){
@@ -7191,6 +7237,18 @@
   // Returns { added, present, renumbered } (present: skipped because already there;
   // renumbered: added under a new number because theirs was taken).
   function templateFingerprint(name, kind, data){ return name + '\u0000' + kind + '\u0000' + JSON.stringify(data); }
+  // Whether a template from a file (`t`, read into the entry `e`) is already in the library,
+  // by the rules above: the same content in its family (under the same number or version
+  // id), or — for a family not here — the same name, kind and content.
+  function templateAlreadyHere(e, t){
+    if(TEMPLATES.some(x => x.family === e.family && x.kind === e.kind)){
+      const data = JSON.stringify(e.data);
+      return TEMPLATES.some(x => x.family === e.family && (x.version === e.version || x.versionId === t.versionId)
+        && JSON.stringify(x.data) === data);
+    }
+    const key = templateFingerprint(e.name, e.kind, e.data);
+    return TEMPLATES.some(x => templateFingerprint(x.name, x.kind, x.data) === key);
+  }
   function addMissingTemplates(list){
     let added = 0, present = 0, renumbered = 0;
     const clashes = [];
@@ -7208,16 +7266,9 @@
       const e = templateEntryFrom(t);
       if(!e) return;
       const known = TEMPLATES.some(x => x.family === e.family && x.kind === e.kind);
-      if(known){
-        // Already here: the same content under the same number, or under the number it
-        // was given when an earlier import found its number taken (same version id).
-        const data = JSON.stringify(e.data);
-        if(TEMPLATES.some(x => x.family === e.family && (x.version === e.version || x.versionId === t.versionId)
-          && JSON.stringify(x.data) === data)){ present++; return; }
-      } else {
-        const key = templateFingerprint(e.name, e.kind, e.data);
-        if(TEMPLATES.some(x => templateFingerprint(x.name, x.kind, x.data) === key)){ present++; return; }
-      }
+      // Already here: the same content under the same number, or under the number it was
+      // given when an earlier import found its number taken (same version id).
+      if(templateAlreadyHere(e, t)){ present++; return; }
       // A taken number waits until the file's other versions are in, so those keep theirs.
       if(known && TEMPLATES.some(x => x.family === e.family && x.version === e.version)){ clashes.push(e); return; }
       add(e);
@@ -8677,11 +8728,15 @@
   //    other versions, as the family's next number, keeping its versionId, with a note
   //    saying so. Calls to it in the library follow it (they match by versionId).
   // Returns { added, present, renumbered }.
+  // Whether a definition from a file is already in the library (the rule above).
+  function functionAlreadyHere(d){
+    return FUNCTIONS.some(f => sameFunctionVersion(f, d))
+      || (!d.versionId && FUNCTIONS.some(f => f.family === d.family && f.text === d.text));
+  }
   function addMissingFunctions(list){
     let added = 0, present = 0, renumbered = 0;
     const clashes = [], moved = [];
-    const here = (d) => FUNCTIONS.some(f => sameFunctionVersion(f, d))
-      || (!d.versionId && FUNCTIONS.some(f => f.family === d.family && f.text === d.text));
+    const here = functionAlreadyHere;
     cleanFunctionDefinitions(list).forEach(d => {
       if(here(d)){ present++; return; }
       if(FUNCTIONS.some(f => f.family === d.family && f.version === d.version)){ clashes.push(d); return; }
@@ -10156,6 +10211,378 @@
     if(d.note) ui.p('Note: ' + d.note, 'template-desc');
     ui.button(ui.actions(), 'Close', '', ui.close);
   }
+  // ---------- library packs (step 8, phase 8a; docs/file-formats.md) ----------
+  // A library pack is a file of templates, recipes and functions to share. Save as Library
+  // Pack… writes one from your library, with what each item needs (a recipe's parts, the
+  // functions a function calls). Open Library Pack… shows what a pack holds, who made it and
+  // its licence, and adds only what you tick, by the usual import rules (addMissingTemplates,
+  // addMissingFunctions): nothing of yours is replaced. Everything in a pack is someone
+  // else's text, shown with textContent only and never run.
+  // ---------- library packs (shared: src/shared/library-pack.js; step 8, phase 8a) ----------
+  // A library pack is one file of templates, recipes and functions to share with other people
+  // (kind "fmIDE-library-pack", docs/file-formats.md). Its `pack` object says what it is and
+  // who made it. Everything in it comes from someone else, so it is checked here and only ever
+  // shown as plain text. Pure functions: fmIDE reads packs with them, and the library's
+  // checker (phase 8c) can run them in Node.
+
+  // The licences a shared item may carry (decision: CC BY 4.0 only, for now).
+  const LIBRARY_PACK_LICENCES = {
+    'CC-BY-4.0': { short: 'CC BY 4.0', name: 'Creative Commons Attribution 4.0 International',
+      summary: 'anyone may use, change and share it, including commercially, with credit to the author' }
+  };
+  const LIBRARY_PACK_LIMITS = { title: 120, author: 120, description: 2000, tags: 10, tag: 40, items: 500 };
+
+  // Text a person typed or a file holds: trimmed, one line (or not), at most `max` characters.
+  function packText(v, max, multiline){
+    if(typeof v !== 'string') return '';
+    let s = v.replace(/\r\n?/g, '\n');
+    if(!multiline) s = s.replace(/\s+/g, ' ');
+    return s.trim().slice(0, max);
+  }
+  // Tags: a list (or comma-separated text), lower case, no duplicates, at most 10 of 40
+  // characters each.
+  function packTags(v){
+    const list = Array.isArray(v) ? v : (typeof v === 'string' ? v.split(',') : []);
+    const out = [];
+    list.forEach(t => {
+      const s = packText(t, LIBRARY_PACK_LIMITS.tag).toLowerCase();
+      if(s && !out.includes(s) && out.length < LIBRARY_PACK_LIMITS.tags) out.push(s);
+    });
+    return out;
+  }
+
+  // A pack's `pack` object read from a file (or typed when saving). Returns { info } with only
+  // the known fields, cleaned, or { error } saying what is missing.
+  function cleanLibraryPackInfo(p){
+    if(!p || typeof p !== 'object' || Array.isArray(p)) return { error: "This library pack doesn't say what it is (it has no \"pack\" details)." };
+    const id = typeof p.id === 'string' && /^[A-Za-z0-9-]{8,64}$/.test(p.id) ? p.id : null;
+    if(!id) return { error: "This library pack has no valid id." };
+    const title = packText(p.title, LIBRARY_PACK_LIMITS.title);
+    if(!title) return { error: 'This library pack has no title.' };
+    const author = packText(p.author, LIBRARY_PACK_LIMITS.author);
+    if(!author) return { error: 'This library pack doesn\'t say who made it (no author).' };
+    const licence = typeof p.licence === 'string' ? p.licence.trim() : '';
+    if(!Object.prototype.hasOwnProperty.call(LIBRARY_PACK_LICENCES, licence)) {
+      return { error: licence
+        ? `This library pack's licence ("${licence.slice(0, 40)}") isn't one fmIDE accepts for shared items (only CC BY 4.0).`
+        : 'This library pack has no licence, so nobody may use what is in it.' };
+    }
+    const info = { id, title, author, licence,
+      description: packText(p.description, LIBRARY_PACK_LIMITS.description, true),
+      tags: packTags(p.tags) };
+    if(typeof p.created === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(p.created)) info.created = p.created;
+    return { info };
+  }
+
+  // ---------- writing a pack ----------
+  // The versions a pack needs for `templates` and `functions` (library entries): each
+  // recipe's parts (the version the recipe would build with) and every function a function
+  // calls. A recipe part that isn't in the library fails: the pack would be broken.
+  function libraryPackContents(templates, functions){
+    const tList = [], fList = [];
+    const addT = (t) => { if(!tList.includes(t)) tList.push(t); };
+    templates.forEach(t => {
+      addT(t);
+      if(t.kind !== 'recipe') return;
+      t.data.parts.forEach(part => {
+        const st = recipePartStatus(part);
+        if(!st.template) fail(`The recipe "${t.name}" needs a part your library doesn't have (${st.label}), so it can't be shared.`);
+        addT(st.template);
+      });
+    });
+    functions.forEach(d => functionWithCallees(d).forEach(x => { if(!fList.includes(x)) fList.push(x); }));
+    return { templates: tList, functions: fList };
+  }
+  // The file: { kind, version, pack, templates, functions }. `info` is what the person typed
+  // (title, author, description, tags); the pack gets a new random id and today's date.
+  function libraryPackPayload(info, templates, functions){
+    const today = new Date();
+    const created = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    if(!packText(info.title, LIBRARY_PACK_LIMITS.title)) fail('Give the pack a title.');
+    if(!packText(info.author, LIBRARY_PACK_LIMITS.author)) fail('Give your name as the author.');
+    const read = cleanLibraryPackInfo(Object.assign({}, info, { id: newRandomId(), licence: 'CC-BY-4.0', created }));
+    const c = libraryPackContents(templates, functions);
+    if(!c.templates.length && !c.functions.length) fail('Choose at least one template, recipe or function to put in the pack.');
+    return { kind: 'fmIDE-library-pack', version: FILE_FORMATS['fmIDE-library-pack'].current, pack: read.info,
+      templates: c.templates.map(t => cloneData(templateRecord(t, false))), functions: cloneData(c.functions) };
+  }
+  // A file name from the pack's title: "Three Statements" → "Three-Statements.fmide-pack.json".
+  function libraryPackFileName(title){
+    const base = String(title).replace(/[^A-Za-z0-9 _-]+/g, '').trim().replace(/\s+/g, '-').slice(0, 60);
+    return (base || 'library-pack') + '.fmide-pack.json';
+  }
+
+  // ---------- reading a pack ----------
+  // A pack file (parsed JSON) read and checked: { pack, templates, functions, newer } or
+  // fails with a message for people.
+  function readLibraryPack(raw){
+    const shape = fileDataProblem(raw);
+    if(shape) fail(shape);
+    const r = readFmFile(raw, ['fmIDE-library-pack']);
+    if(r.error) fail(r.error);
+    const info = cleanLibraryPackInfo(r.data.pack);
+    if(info.error) fail(info.error);
+    const templates = (Array.isArray(r.data.templates) ? r.data.templates : []).slice(0, LIBRARY_PACK_LIMITS.items);
+    const functions = cleanFunctionDefinitions(Array.isArray(r.data.functions) ? r.data.functions.slice(0, LIBRARY_PACK_LIMITS.items) : []);
+    return { pack: info.info, templates, functions, newer: r.newer, fromVersion: r.fromVersion, warnings: r.warnings };
+  }
+  const TEMPLATE_KIND_WORDS = { module: 'canvas template', system: 'system template', recipe: 'recipe' };
+  // What each item in a pack would do to your library: [{ key ('t0', 'f1' — the order in the
+  // file), type ('template' | 'function'), kind, name, version, description, note, status,
+  // statusText, needs (keys of the items it brings along) }]. status: 'present' (already in
+  // your library), 'new-version' (adds a version to a template or function you have), 'same-name'
+  // (a different one of yours has this name; both are kept), 'new'.
+  function libraryPackItems(read){
+    const items = [];
+    const tEntries = read.templates.map(t => ({ t, e: templateEntryFrom(t) }));
+    tEntries.forEach(({ t, e }, i) => {
+      if(!e) return;
+      const item = { key: 't' + i, type: 'template', kind: e.kind, name: e.name, version: e.version,
+        description: e.description, note: e.note, group: e.group, needs: [] };
+      const mine = latestOfFamily(e.family);
+      if(templateAlreadyHere(e, t)){ item.status = 'present'; item.statusText = 'Already in your library'; }
+      else if(mine && mine.kind === e.kind){
+        item.status = 'new-version';
+        item.statusText = `Adds a version to your “${mine.name}” (you have up to v${mine.version})` + (mine.name !== e.name ? ` — the pack calls it “${e.name}”` : '');
+      } else if(familiesNamed(e.name, e.kind).length){
+        item.status = 'same-name'; item.statusText = `You have a different ${TEMPLATE_KIND_WORDS[e.kind]} called “${e.name}” — both will be kept`;
+      } else { item.status = 'new'; item.statusText = 'New'; }
+      if(e.kind === 'recipe') e.data.parts.forEach(part => {
+        // The part's version in the pack: the one pinned (by version id, else number), or its latest.
+        const hits = tEntries.map((x, j) => ({ x, j })).filter(({ x }) => x.e && x.e.family === part.family);
+        let hit = null;
+        if(part.version === 'latest') hit = hits.sort((a, b) => b.x.e.version - a.x.e.version)[0];
+        else hit = hits.find(({ x }) => part.versionId && x.t.versionId === part.versionId) || hits.find(({ x }) => x.e.version === part.version);
+        if(hit && !item.needs.includes('t' + hit.j)) item.needs.push('t' + hit.j);
+      });
+      items.push(item);
+    });
+    read.functions.forEach((d, i) => {
+      const name = functionLabel(d);
+      const item = { key: 'f' + i, type: 'function', kind: 'function', name, version: d.version,
+        description: d.description, note: d.note, text: d.text, needs: [] };
+      const mine = latestFunctionOf(d.family);
+      if(functionAlreadyHere(d)){ item.status = 'present'; item.statusText = 'Already in your library'; }
+      else if(mine){
+        item.status = 'new-version';
+        item.statusText = `Adds a version to your ${functionLabel(mine)} (you have up to v${mine.version})`;
+      } else if(functionFamiliesNamed(name).length){
+        item.status = 'same-name'; item.statusText = `You have a different function called ${name} — both will be kept`;
+      } else { item.status = 'new'; item.statusText = 'New'; }
+      d.calls.forEach(c => {
+        const j = read.functions.findIndex(x => x.family === c.family && (c.versionId ? x.versionId === c.versionId : x.version === c.version));
+        if(j >= 0 && !item.needs.includes('f' + j)) item.needs.push('f' + j);
+      });
+      items.push(item);
+    });
+    return items;
+  }
+  // `keys` and everything they need, directly or not.
+  function libraryPackWithNeeds(items, keys){
+    const byKey = new Map(items.map(it => [it.key, it]));
+    const out = new Set();
+    const visit = (k) => { const it = byKey.get(k); if(!it || out.has(k)) return; out.add(k); it.needs.forEach(visit); };
+    keys.forEach(visit);
+    return out;
+  }
+  // Adds the chosen items (keys; null for all) and what they need to the library. Returns
+  // { templates: { added, present, renumbered }, functions: { … } }.
+  function addFromLibraryPack(read, keys){
+    const items = libraryPackItems(read);
+    const known = new Set(items.map(it => it.key));
+    (keys || []).forEach(k => { if(!known.has(k)) fail(`This pack has no item "${String(k).slice(0, 40)}" (its items are ${items.map(it => it.key).join(', ')}).`); });
+    const chosen = libraryPackWithNeeds(items, keys || items.map(it => it.key));
+    const templates = read.templates.filter((t, i) => chosen.has('t' + i));
+    const functions = read.functions.filter((d, i) => chosen.has('f' + i));
+    const out = { templates: addMissingTemplates(templates), functions: addMissingFunctions(functions) };
+    saveWorkspaceSoon();
+    return out;
+  }
+
+  // ---------- Save as Library Pack… ----------
+  let libraryAuthor = '';   // remembered in the UI settings, so the name is typed once
+  function packField(box, label, el){
+    const l = document.createElement('label');
+    l.className = 'fn-editor-label';
+    l.textContent = label;
+    box.append(l, el);
+    return el;
+  }
+  function showSaveLibraryPack(){
+    const families = templateFamilies(), fnFamilies = functionFamilies();
+    if(!families.length && !fnFamilies.length){ showMessage("Your library has no templates or functions to share yet."); return; }
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const box = document.createElement('div');
+    box.className = 'modal-box library-pack-save';
+    const intro = document.createElement('p');
+    intro.textContent = 'Save as Library Pack — one file of templates, recipes and functions to share. What they need comes along: a recipe\'s parts and the functions a function calls. Each goes in as its latest version.';
+    box.appendChild(intro);
+    const input = (cls, value) => { const i = document.createElement('input'); i.type = 'text'; i.className = 'fn-editor-note ' + cls; i.value = value || ''; return i; };
+    const title = packField(box, 'Title', input('pack-title'));
+    title.maxLength = LIBRARY_PACK_LIMITS.title;
+    const author = packField(box, 'Author (your name, as others will see it)', input('pack-author', libraryAuthor));
+    author.maxLength = LIBRARY_PACK_LIMITS.author;
+    const desc = document.createElement('textarea');
+    desc.className = 'fn-editor-description pack-description';
+    desc.rows = 3;
+    desc.maxLength = LIBRARY_PACK_LIMITS.description;
+    packField(box, 'Description', desc);
+    const tags = packField(box, 'Tags (separated by commas, e.g. statements, tax)', input('pack-tags'));
+    const lic = LIBRARY_PACK_LICENCES['CC-BY-4.0'];
+    const licence = document.createElement('p');
+    licence.className = 'library-pack-licence';
+    licence.textContent = `Licence: ${lic.short} (${lic.name}) — ${lic.summary}. Share only what is yours to share.`;
+    box.appendChild(licence);
+    const ticks = [];
+    const list = (heading, entries, labelOf) => {
+      if(!entries.length) return;
+      const h = document.createElement('p');
+      h.className = 'library-pack-heading';
+      h.textContent = heading;
+      box.appendChild(h);
+      entries.forEach(x => {
+        const row = document.createElement('label');
+        row.className = 'function-export-row library-pack-pick';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        row.append(cb, document.createTextNode(' ' + labelOf(x)));
+        box.appendChild(row);
+        ticks.push({ x, cb });
+      });
+    };
+    list('Templates and recipes', families, t => `${t.name} (${TEMPLATE_KIND_WORDS[t.kind]}, v${t.version})`);
+    list('Functions', fnFamilies, f => `${functionLabel(f)} (v${f.version})`);
+    const actions = document.createElement('div');
+    actions.className = 'modal-actions';
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    const okBtn = document.createElement('button');
+    okBtn.className = 'primary';
+    okBtn.textContent = 'Save Pack';
+    actions.append(cancelBtn, okBtn);
+    box.appendChild(actions);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    const close = () => overlay.remove();
+    cancelBtn.addEventListener('click', close);
+    okBtn.addEventListener('click', () => {
+      const picked = ticks.filter(t => t.cb.checked).map(t => t.x);
+      const ref = (x) => x.family + '@' + x.version;
+      const out = guarded(() => fm.saveLibraryPack({ title: title.value, author: author.value, description: desc.value, tags: packTags(tags.value),
+        templates: picked.filter(x => TEMPLATES.includes(x)).map(ref), functions: picked.filter(x => FUNCTIONS.includes(x)).map(ref) }));
+      if(out) close();
+    });
+    title.focus();
+  }
+
+  // ---------- Open Library Pack… ----------
+  function pickLibraryPackFile(){
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json,.json';
+    input.style.display = 'none';
+    input.className = 'library-pack-file-input';
+    document.body.appendChild(input);
+    input.addEventListener('change', () => {
+      const file = input.files && input.files[0];
+      input.remove();
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = () => openFmFileText(String(reader.result), ['fmIDE-library-pack'], (data) => {
+        const read = guarded(() => readLibraryPack(data));
+        if(read) showLibraryPackPreview(read, data);
+      });
+      reader.onerror = () => showMessage('Could not read that file.');
+      reader.readAsText(file);
+    });
+    input.click();
+  }
+  // The preview: who made the pack, its licence, and each item with what adding it would do.
+  // Nothing is added until "Add to My Library".
+  function showLibraryPackPreview(read, file){
+    const items = libraryPackItems(read);
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const box = document.createElement('div');
+    box.className = 'modal-box library-pack-preview';
+    const para = (cls, text) => { const p = document.createElement('p'); p.className = cls; p.textContent = text; box.appendChild(p); return p; };
+    para('library-pack-title', read.pack.title);
+    const lic = LIBRARY_PACK_LICENCES[read.pack.licence];
+    para('library-pack-by', `By ${read.pack.author} · ${lic.short}` + (read.pack.created ? ` · ${read.pack.created}` : ''));
+    if(read.pack.description) para('library-pack-description', read.pack.description);
+    if(read.pack.tags.length) para('library-pack-tags', 'Tags: ' + read.pack.tags.join(', '));
+    para('library-pack-licence', `Licence: ${lic.name} — ${lic.summary}. Credit: ${read.pack.author}.`);
+    if(items.some(it => it.status === 'new-version')) {
+      para('library-pack-caution', 'Some items add a version to a template or function you already have. Canvases made from those templates will then offer it as an update — add them only if you trust where this pack came from.');
+    }
+    if(!items.length) para('library-pack-empty', 'This pack has nothing fmIDE could read.');
+    const rows = new Map();
+    const section = (heading, list) => {
+      if(!list.length) return;
+      para('library-pack-heading', heading);
+      list.forEach(it => {
+        const row = document.createElement('label');
+        row.className = 'library-pack-item ' + it.status;
+        row.dataset.key = it.key;
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = it.status !== 'present';
+        cb.disabled = it.status === 'present';
+        const name = document.createElement('span');
+        name.className = 'library-pack-item-name';
+        name.textContent = `${it.name} v${it.version}` + (it.type === 'template' ? ` — ${TEMPLATE_KIND_WORDS[it.kind]}` : '');
+        const status = document.createElement('span');
+        status.className = 'library-pack-item-status';
+        status.textContent = it.statusText + (it.needs.length ? ` · brings ${it.needs.length} item${it.needs.length === 1 ? '' : 's'} it needs` : '');
+        row.append(cb, name, status);
+        const detail = it.type === 'function' ? it.text : it.description;
+        if(detail){
+          const d = document.createElement('span');
+          d.className = 'library-pack-item-detail';
+          d.textContent = detail;
+          row.appendChild(d);
+        }
+        box.appendChild(row);
+        rows.set(it.key, cb);
+      });
+    };
+    section('Templates and recipes', items.filter(it => it.type === 'template'));
+    section('Functions', items.filter(it => it.type === 'function'));
+    const actions = document.createElement('div');
+    actions.className = 'modal-actions';
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    const okBtn = document.createElement('button');
+    okBtn.className = 'primary';
+    okBtn.textContent = 'Add to My Library';
+    actions.append(cancelBtn, okBtn);
+    box.appendChild(actions);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    const close = () => overlay.remove();
+    cancelBtn.addEventListener('click', close);
+    okBtn.addEventListener('click', () => {
+      const keys = items.filter(it => rows.get(it.key).checked && !rows.get(it.key).disabled).map(it => it.key);
+      if(!keys.length){ close(); return; }
+      const out = guarded(() => fm.openLibraryPack({ file, items: keys, allowNewer: true }));
+      if(!out) return;
+      close();
+      showMessage(libraryPackResultText(out));
+    });
+    okBtn.focus();
+  }
+  function libraryPackResultText(out){
+    const part = (r, one, many) => {
+      if(!r.added && !r.present) return '';
+      let s = r.added ? `${r.added} ${r.added === 1 ? one : many} added` : `no ${many} added`;
+      if(r.present) s += ` (${r.present} already there)`;
+      if(r.renumbered) s += `, ${r.renumbered} under a new version number because ${r.renumbered === 1 ? 'its number was' : 'their numbers were'} taken`;
+      return s;
+    };
+    const parts = [part(out.templates, 'template', 'templates'), part(out.functions, 'function version', 'function versions')].filter(Boolean);
+    return parts.length ? 'From the library pack: ' + parts.join('; ') + '.' : 'Nothing was added.';
+  }
   // ---------- keyboard shortcuts settings ----------
   function exportShortcutsToFile(){
     const payload = { version: 2, kind: 'fmIDE-shortcuts', bindings: {} };
@@ -11479,6 +11906,54 @@
       clearComputed();
       evaluateAll();
     } });
+  // ---------------------------------- Library packs (step 8, phase 8a) ----------------------------------
+  // Sharing templates, recipes and functions as one file (11e-library-packs.js). The windows
+  // use these actions too. They change the library, never the open model, so they are not
+  // undo steps; they aren't recorded in macros (a pack is a whole file).
+
+  defineAction({ name:'saveLibraryPack', label:'Save as Library Pack', category:'File', icon:'📦', returns:'value', mutates:false, tx:false, record:false,
+    desc:'Writes a library pack: a file of templates, recipes and functions to share, licensed CC BY 4.0. templates and functions are lists of references ("Name" for the latest version, "Name@2", or the family id); a recipe brings its parts and a function the functions it calls. title and author are required. Downloads it unless download is false; returns the file\'s content.',
+    params:[ P('title','string'), P('author','string'), P('description','text',{ def:'' }),
+      P('tags','json',{ optional:true, help:'a list like ["statements", "tax"]' }),
+      P('templates','json',{ optional:true, help:'list of template references' }),
+      P('functions','json',{ optional:true, help:'list of function references' }),
+      P('download','bool',{ def:true }) ],
+    run(a){
+      const list = (v, what) => {
+        if(v == null) return [];
+        if(!Array.isArray(v)) fail(`${what} must be a list, like ["Income Statement", "Margin@2"].`);
+        return v;
+      };
+      const templates = list(a.templates, 'templates').map(ref => resolveTemplateRef(ref));
+      const functions = list(a.functions, 'functions').map(ref => resolveFunctionRef(ref));
+      const payload = libraryPackPayload({ title: a.title, author: a.author, description: a.description, tags: a.tags },
+        templates, functions);
+      libraryAuthor = payload.pack.author;
+      saveWorkspaceSoon();
+      if(a.download) downloadJSON(payload, libraryPackFileName(payload.pack.title));
+      return payload;
+    } });
+
+  defineAction({ name:'previewLibraryPack', label:'Preview Library Pack', category:'File', icon:'📦', returns:'value', mutates:false, tx:false, record:false,
+    desc:'Reads a library pack (its JSON) without adding anything: { pack: { id, title, author, licence, description, tags, created }, items: [{ key, type, kind, name, version, status, statusText, needs }] }. status is "new", "present" (already in your library), "new-version" (adds a version to one you have) or "same-name" (a different one of yours has this name).',
+    params:[ P('file','json') ],
+    run(a){
+      unwrapFileArgs(a);
+      const read = readLibraryPack(a.file);
+      return { pack: cloneData(read.pack), items: libraryPackItems(read).map(it => ({ key: it.key, type: it.type, kind: it.kind,
+        name: it.name, version: it.version, status: it.status, statusText: it.statusText, needs: it.needs.slice() })) };
+    } });
+
+  defineAction({ name:'openLibraryPack', label:'Open Library Pack', category:'File', icon:'📦', returns:'value', tx:false, record:false,
+    desc:'Adds a library pack\'s items to your library, by the usual import rules (nothing of yours is replaced; a version whose number is taken is added under the next number). items: the keys previewLibraryPack gives (default: all); each brings what it needs. A pack from a newer fmIDE fails unless allowNewer is true. Returns { templates: { added, present, renumbered }, functions: { … } }.',
+    params:[ P('file','json'), P('items','json',{ optional:true, help:'item keys, like ["t0", "f1"]' }), P('allowNewer','bool',{ def:false }) ],
+    run(a){
+      unwrapFileArgs(a);
+      if(a.items != null && !Array.isArray(a.items)) fail('items must be a list of item keys, like ["t0", "f1"].');
+      const read = readLibraryPack(a.file);
+      if(read.newer && !a.allowNewer) fail(`This library pack was saved by a newer version of fmIDE (format version ${read.fromVersion}). Pass allowNewer: true to read it anyway.`);
+      return addFromLibraryPack(read, a.items);
+    } });
   // ---------------------------------- Edit ----------------------------------
   function editValueText(n, mutate){
     requireType(n, ['value'], 'a rectangle');
@@ -12036,7 +12511,7 @@
         { label:'Workspace', items:[ { cmd:'exportWorkspace' }, { cmd:'importWorkspace' } ] },
         { label:'Preferences', items:[ { cmd:'exportPreferences' }, { cmd:'importPreferences' } ] },
         { label:'App', items:[ { cmd:'openExcelExporter', size:'large' }, { cmd:'installApp' } ] },
-        { label:'Library', items:[ { cmd:'openTemplates', size:'large' }, { cmd:'openFunctions', size:'large' }, { cmd:'openFormats', size:'large' } ] },
+        { label:'Library', items:[ { cmd:'openTemplates', size:'large' }, { cmd:'openFunctions', size:'large' }, { cmd:'openFormats', size:'large' }, { cmd:'openLibraryPack' }, { cmd:'saveLibraryPack' } ] },
       ]},
       { id:'home', label:'Home', keytip:'H', groups:[
         { label:'Clipboard', items:[ { cmd:'paste', size:'large' }, { cmd:'cut' }, { cmd:'copy' } ] },
@@ -14712,7 +15187,9 @@
       documentGroupAdded: true, // the default ribbon has it; a customised one got it once
       functionsGroupAdded: true,
       functionCommandsAdded: true, // D2b: Insert Function… and Update Function… in My Functions
-      operatorsE1Added: true // E1b: the new operators in the Compare and Excel Functions groups
+      operatorsE1Added: true, // E1b: the new operators in the Compare and Excel Functions groups
+      libraryPacksAdded: true, // 8a: Open Library Pack… and Save as Library Pack… in the File tab's Library group
+      libraryAuthor
     };
   }
   // One-time update of a ribbon customised before the Document group existed: add it at
@@ -14761,7 +15238,19 @@
       list.forEach(i => { if(!g.items.some(it => it && it.cmd === 'insertOp' + i)) g.items.push({ cmd: 'insertOp' + i }); });
     });
   }
-  function applyUiPayload(ui){
+  // One-time update (8a) of a customised ribbon: Open Library Pack… and Save as Library
+  // Pack… join the group holding Format Presets (the File tab's Library group), wherever the
+  // person moved it. A ribbon without it is left alone (the Command Launcher has both); a
+  // command removed afterwards stays removed (this runs once).
+  function addLibraryPackCommandsToRibbon(){
+    ribbonState.config.tabs.forEach(t => (t && Array.isArray(t.groups) ? t.groups : []).forEach(g => {
+      if(!g || !Array.isArray(g.items) || !g.items.some(it => it && it.cmd === 'openFormats')) return;
+      ['openLibraryPack', 'saveLibraryPack'].forEach(cmd => { if(!g.items.some(it => it && it.cmd === cmd)) g.items.push({ cmd }); });
+    }));
+  }
+  // fromImport: a workspace file (maybe someone else's) — its author name for library packs
+  // is not taken over; only your own autosave remembers yours.
+  function applyUiPayload(ui, fromImport){
     if(!ui || typeof ui !== 'object') return;
     const fileRibbon = ui.ribbonCustomized ? cleanRibbonConfig(ui.ribbon) : null;
     if(fileRibbon){
@@ -14771,7 +15260,9 @@
       if(ui.functionsGroupAdded !== true) addFunctionsGroupToRibbon();
       if(ui.functionCommandsAdded !== true) addFunctionCommandsToRibbon();
       if(ui.operatorsE1Added !== true) addE1OperatorsToRibbon();
+      if(ui.libraryPacksAdded !== true) addLibraryPackCommandsToRibbon();
     }
+    if(!fromImport && typeof ui.libraryAuthor === 'string') libraryAuthor = ui.libraryAuthor.slice(0, LIBRARY_PACK_LIMITS.author);
     if(typeof ui.ribbonCollapsed === 'boolean') ribbonState.collapsed = ui.ribbonCollapsed;
     if(typeof ui.activeTab === 'string') ribbonState.activeTab = ui.activeTab;
     if(ui.keytipTrigger && (ui.keytipTrigger.type === 'tap' && ui.keytipTrigger.key || ui.keytipTrigger.type === 'combo' && ui.keytipTrigger.combo)){

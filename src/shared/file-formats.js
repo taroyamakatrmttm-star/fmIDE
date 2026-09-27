@@ -110,3 +110,29 @@ function upgradeFileData(data, kind, formats, migrations){
   data.kind = kind;
   return { fromVersion: version, newer };
 }
+// Limits on a file someone opens (step 8, phase 8a). Files may come from other people, so a
+// hostile one must not freeze the page: too many characters, JSON nested too deep (which
+// would overflow the stack of code that walks it) or too many values are refused with a
+// plain message before anything else reads the file. The autosave is never checked: it is
+// the person's own work. Generous for real models (the largest sample is 60 kB, 5 deep).
+const FILE_LIMITS = { chars: 50 * 1024 * 1024, depth: 100, values: 5000000 };
+// A message when a file's text is too long to open, else null.
+function fileTextProblem(text){
+  if(typeof text !== 'string' || text.length <= FILE_LIMITS.chars) return null;
+  return 'That file is too large to open (' + Math.ceil(text.length / 1048576) + ' MB; the limit is ' + (FILE_LIMITS.chars / 1048576) + ' MB).';
+}
+// A message when parsed data is nested too deep or holds too many values, else null.
+// Walks without recursion, so a deep file can't overflow the stack here either.
+function fileDataProblem(raw){
+  const stack = [[raw, 1]];
+  let values = 0;
+  while(stack.length){
+    const [v, depth] = stack.pop();
+    if(++values > FILE_LIMITS.values) return 'That file holds too much data to open (more than ' + FILE_LIMITS.values.toLocaleString('en-US') + ' values).';
+    if(!v || typeof v !== 'object') continue;
+    if(depth > FILE_LIMITS.depth) return 'That file is nested too deeply to open (more than ' + FILE_LIMITS.depth + ' levels).';
+    const items = Array.isArray(v) ? v : Object.values(v);
+    for(let i = 0; i < items.length; i++) stack.push([items[i], depth + 1]);
+  }
+  return null;
+}
