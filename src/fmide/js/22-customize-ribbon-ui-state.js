@@ -300,7 +300,8 @@
       ribbonCollapsed: ribbonState.collapsed, activeTab: ribbonState.activeTab,
       keytipTrigger: Object.assign({}, keytipTrigger), comboVersion: 2, launcherRecent: launcherRecent.slice(), lastRunMacroId,
       dedupeMatch: Object.assign({}, dedupeMatch),
-      documentGroupAdded: true // the default ribbon has it; a customised one got it once
+      documentGroupAdded: true, // the default ribbon has it; a customised one got it once
+      functionsGroupAdded: true
     };
   }
   // One-time update of a ribbon customised before the Document group existed: add it at
@@ -312,6 +313,17 @@
     if(!Array.isArray(tab.groups)) tab.groups = [];
     tab.groups.unshift(cloneData(DOCUMENT_RIBBON_GROUP));
   }
+  // One-time update of a ribbon customised before your own functions existed: the My
+  // Functions group joins the Insert tab (before its Library group), or the first tab.
+  function addFunctionsGroupToRibbon(){
+    const tabs = ribbonState.config.tabs;
+    const tab = tabs.find(t => t && t.id === 'insert') || tabs[0];
+    if(!tab) return;
+    if(!Array.isArray(tab.groups)) tab.groups = [];
+    if(tab.groups.some(g => g && g.id === 'myFunctions')) return;
+    const lib = tab.groups.findIndex(g => g && g.label === 'Library');
+    tab.groups.splice(lib < 0 ? tab.groups.length : lib, 0, cloneData(FUNCTIONS_RIBBON_GROUP));
+  }
   function applyUiPayload(ui){
     if(!ui || typeof ui !== 'object') return;
     const fileRibbon = ui.ribbonCustomized ? cleanRibbonConfig(ui.ribbon) : null;
@@ -319,6 +331,7 @@
       ribbonState.config = fileRibbon;
       ribbonState.customized = true;
       if(ui.documentGroupAdded !== true) addDocumentGroupToRibbon();
+      if(ui.functionsGroupAdded !== true) addFunctionsGroupToRibbon();
     }
     if(typeof ui.ribbonCollapsed === 'boolean') ribbonState.collapsed = ui.ribbonCollapsed;
     if(typeof ui.activeTab === 'string') ribbonState.activeTab = ui.activeTab;

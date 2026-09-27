@@ -9,6 +9,7 @@ Every canvas interaction is an action. The Ribbon, shortcuts, Command Launcher (
 - `#n12` — node by id · `@sel`, `@sel[0]` — selection (in a macro: as it was when the macro started) · `@cur` live selection · `@all` every node
 - `$r1`, `$r1[0]` — macro variables · `Canvas::Name` — rectangle on another canvas
 - Templates: `Income Statement` (latest version) · `Income Statement@latest` · `Income Statement@3` (version 3) · the same with the family id instead of the name (`3f2a…@2`, needed when two families share a name) · `#usr4` (one exact entry, this session only)
+- Functions: `Margin` (latest version) · `Margin@latest` · `Margin@2` (version 2) · the same with the family id (needed when two functions share a name) · or `{ family, version, versionId }`
 - Numbers accept expressions: `100 + $i*80`, `$periods`, `round($x/2)`. Text accepts `${var}`.
 
 ## Actions
@@ -25,6 +26,11 @@ Every canvas interaction is an action. The Ribbon, shortcuts, Command Launcher (
 - **saveRecipe**(name="", parts, group="My Templates", description="", note="", newVersionOf="") — Save Recipe. Saves a recipe: canvas templates added together, each "Name" / "Name@latest" (follows the latest version) or "Name@2" (that version). A name already in use fails unless newVersionOf names that recipe. Returns the recipe as "Name@version".
 - **updateCanvasFromTemplate**(canvas="@current", version="latest") — Update Canvas from Template. Rebuilds a canvas made from a canvas template from another version of it ("latest", or a number). Input values typed on the canvas are kept (matched by rectangle name); everything else comes from that version. Returns { version, kept, lostAliases }.
 - **unlinkCanvasFromTemplate**(canvas="@current") — Unlink Canvas from Template. Makes a canvas forget the canvas template it was made from (no more update notices). Its content stays.
+- **saveFunction**(text, description="", note="", newVersionOf="", calls?) — Save Function. Saves a function to your library: text is the whole definition, like "Margin(Revenue, Cost) = (Revenue - Cost) / Revenue". A name already used fails unless newVersionOf names that function (its next version). calls pins the functions it calls, like {"Margin": "Margin@1"}; without it a new version keeps the pins of the latest version, and a name one function has takes its latest version. Returns "Name@version".
+- **listFunctions**(of="library") — List Functions. Returns your function library, one entry per function: { family, name, latest, versions: [{ version, versionId, name, inputs, text, description, note, calls }] }, newest version first. of: "model" lists instead the definitions the open model carries (the ones it calculates with), one entry per version.
+- **getFunction**(function) — Get Function. Returns one version from your library: { family, version, versionId, name, inputs, text, description, note, calls, latest }.
+- **setFunctionInfo**(function, description="", note="") — Edit Function Description. Changes the description and change note of one version in your library (neither changes the calculation).
+- **deleteFunction**(function, whole=false) — Delete Function. Deletes from your library: "Name" (or whole: true) the whole function with every version; "Name@2" one older version. The latest version goes only with the whole function, so its number is never used again. The open model keeps its own copy. Returns how many versions were deleted.
 
 ### Connect
 - **connect**(from, to, fromPort="", toPort="") — Connect. Draws an arrow from one node to another. Block instances take a port: its name or 1-based number.
@@ -98,6 +104,8 @@ Every canvas interaction is an action. The Ribbon, shortcuts, Command Launcher (
 - **saveSystem**() — Save System (download).
 - **saveModule**() — Save Module (download).
 - **exportWorkspace**() — Export Workspace (download).
+- **importFunctions**(file, allowNewer=false) — Import Functions. Adds the functions in an fmIDE-functions file (its JSON) to your library, following the template rules: versions already there are skipped, a version whose number is taken is added under the next number. A file from a newer fmIDE fails unless allowNewer is true. Returns { added, present, renumbered }.
+- **exportFunctions**(download=true, functions?) — Export Functions. Writes an fmIDE-functions file: the functions named in functions (each with all its versions), or the whole library, and every function they call. Downloads it unless download is false; returns the file's content.
 
 ### Macros
 - **message**(text) — Show Message. Shows a message box (useful in macros). ${var} inserts a variable.

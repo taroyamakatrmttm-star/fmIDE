@@ -192,3 +192,35 @@ How it was checked:
   | ExcelExporter Generate, biggest sample | 1.7 / 1.7 ms | 1.7 / 1.8 ms |
 
   The differences are within what repeated runs of the same build show.
+
+### D2 — fmIDE: the Functions manager, the node, updating
+
+Decisions taken at the start of D2 (September 2026; the owner chose the recommendation each time):
+
+1. **Where:** a new Insert-tab group **My Functions**; **Functions** also in File → Library (next to Templates), and Insert Function… in Home → Insert (D2b). The built-in operators' group is renamed **Excel Functions**. A customised ribbon gets My Functions once (`ui.functionsGroupAdded`); a removed group stays removed. No default shortcuts.
+2. **Calls in the editor:** a new version keeps what the previous version pinned (with an offer to move to the latest); otherwise a name one family has takes its latest version; a name several families share must be chosen (Save stays off); a name no family has blocks Save ("create it first").
+3. **Deleting a function the open model uses** warns and never refuses: the model carries its own copy.
+4. **The model's definitions (`modelFunctions`) join undo history** (the undo snapshot).
+5. **"Update every use"** (D2b): a window listing every node of the family, those older than the target ticked except the ones marked "Not now"; nodes already on the target or newer left out; the arrows each would lose listed; one undo step.
+6. **"Not now"** (D2b) remembers the declined version (`fn.skipped`); ⬆ returns when a newer one appears.
+7. **Import clash** (same family and number, different content): the template rule — the next number, with a note, keeping its `versionId`; library lookups go by `versionId` first.
+8. **Nested calls show no ⬆**: a function calling an older version is marked "calls an older version" in the manager; saving a new version moves it.
+9. **Two pull requests:** D2a (the library and the manager), then D2b (the node, updating, copy and paste).
+
+#### D2a — how it turned out ✅
+
+What was built:
+
+- **The library** (`src/fmide/js/11b-functions.js`): families and versions like templates (`functionFamilies`, `functionFamilyVersions`, `latestFunctionOf`, `nextFunctionVersion`); `libraryFunctionFor(ref)` finds a version by its `versionId` first, so a version renumbered on import is still found; `planFunctionCalls` and `checkFunctionDraft` decide how a formula's calls are pinned (decision 2) and whether it can be saved, using the shared parser and `compileFunctions` (loops, depth, numbers of inputs); `resolveFunctionRef` reads `Name`, `Name@latest`, `Name@2` and `<family>@2`.
+- **Importing** (`addMissingFunctions`, used by Open, Import Workspace, Load System / Module and Import Functions) follows the template rules (decision 7) and returns `{ added, present, renumbered }`.
+- **The Functions manager and editor** (`src/fmide/js/11c-functions-manager.js`, new): the list by family with older versions, "in this model" and "⚠ calls an older version" tags, and the family id when two share a name; the selected version's note, description, formula, inputs, calls and uses; + New Function…, Edit as new version…, ✎ Edit description, Delete (with the warning of decision 3), ⇩ Export Functions (tick which) and ⇧ Import Functions. The editor reads the definition as it is typed: name and inputs, the error with its place marked in a copy of the text, a choice for each call, and Save off until everything reads. Everything from a definition is shown with `textContent`.
+- **`window.fm`** (`src/fmide/js/14b-actions-functions.js`, new): `saveFunction`, `listFunctions` (`of: 'model'` lists the model's own definitions), `getFunction`, `setFunctionInfo`, `deleteFunction`, `importFunctions` (a newer file needs `allowNewer`), `exportFunctions`. The manager acts through them, so macros record what it does.
+- **Undo:** the snapshot carries `modelFunctions` (decision 4).
+- **Commands and ribbon:** Functions and Import Functions… (the command the "wrong file" message has pointed to since D1), the My Functions group, the renamed Excel Functions group, File → Library.
+- **Fix of a D1 problem:** the library could take two different versions under one number (a model carrying someone else's "v2" of a function you also have a v2 of). It now renumbers its copy; the model keeps its own.
+- No file format changed.
+
+How it was checked:
+
+- New test group 21 (`tests/21-functions-fmide.spec.js`, 21 tests) with new samples in `tests/fixtures/functions/` (`library.json`, `library-fork.json`, `library-other-margin.json`, `library-newer-v2.json`); the fix's test fails without it. A new security test (group 5, `tests/fixtures/security/evil-functions.json`): markup in a formula, description, notes and a call's name is shown as text and nothing runs.
+- Every other test, the workbook snapshots and fmIDE's pinned values are unchanged.

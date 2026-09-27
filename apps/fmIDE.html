@@ -380,6 +380,36 @@
   .template-detail{ flex:1; display:flex; flex-direction:column; min-width:0; }
   .template-detail h4{ margin:0 0 4px; font-size:15px; color:var(--text); }
   .template-desc{ font-size:12px; color:#6b7280; margin:0 0 10px; line-height:1.4; }
+  /* Functions manager and editor (step 7, phase D2) */
+  .function-detail-text, .fn-editor-where{
+    font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; white-space:pre-wrap; word-break:break-word;
+    background:#f8fafc; border:1px solid #e5e7eb; border-radius:6px; padding:7px 9px; margin:0 0 8px; color:var(--text);
+  }
+  .fn-editor-where mark{ background:#fecaca; color:#991b1b; border-bottom:2px solid #dc2626; }
+  .template-list button .function-family-id{ margin-left:6px; font-size:10.5px; color:#9ca3af; }
+  .modal-box p.function-detail-inputs, .modal-box p.function-detail-call, .modal-box p.function-detail-uses{ font-size:12px; color:#374151; margin:0 0 4px; }
+  .modal-box p.function-detail-call.older{ color:#b45309; }
+  .modal-box p.function-detail-call.missing, .modal-box p.function-detail-problem{ font-size:12px; color:#b91c1c; margin:0 0 4px; }
+  .template-list button .function-in-model-tag{ margin-left:6px; font-size:10.5px; color:#0f766e; }
+  .template-list button .function-older-calls-tag{ display:block; font-size:10.5px; color:#b45309; }
+  .function-editor{ min-width:480px; max-width:640px; }
+  .fn-editor-label{ display:block; font-size:12px; color:#6b7280; margin:8px 0 4px; }
+  .fn-editor-text, .fn-editor-description, .fn-editor-note{
+    width:100%; font-size:13px; padding:7px 9px; border-radius:6px; border:1px solid #d1d5db; box-sizing:border-box; font-family:inherit;
+  }
+  .fn-editor-text{ font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; resize:vertical; }
+  .fn-editor-description{ resize:vertical; }
+  .modal-box p.fn-editor-parsed{ font-size:12px; color:#374151; margin:6px 0 4px; min-height:1em; }
+  .modal-box p.fn-editor-error{ font-size:12px; color:#b91c1c; margin:0 0 6px; min-height:1em; }
+  .modal-box p.fn-editor-error.ok{ color:#15803d; }
+  .fn-editor-call{ font-size:12px; display:flex; align-items:center; gap:6px; margin:3px 0; }
+  .fn-editor-call select{ flex:1; min-width:0; }
+  .fn-editor-call.missing{ color:#b91c1c; }
+  .fn-editor-call select{ font-size:12px; }
+  .function-editor .modal-actions{ margin-top:14px; }
+  .function-editor button.fn-editor-save:disabled{ opacity:.45; cursor:not-allowed; }
+  .fn-editor-use-latest{ font-size:11px; padding:2px 7px; }
+  .function-export-row{ display:block; font-size:13px; margin:3px 0; }
   .template-preview-tabs{ display:flex; gap:4px; margin-bottom:6px; flex-wrap:wrap; }
   .template-preview-tabs button{
     font-size:11px; padding:3px 9px; border-radius:6px; border:1px solid #d1d5db; background:#fff; cursor:pointer; color:var(--text);
@@ -903,6 +933,8 @@
     { id:'exportPreferences', label:'Export Preferences…', icon:'⚙', category:'File', defaultShortcut:null, action:() => exportPreferencesToFile() },
     { id:'importPreferences', label:'Import Preferences…', icon:'⚙', category:'File', defaultShortcut:null, action:() => importPreferencesInteractive() },
     { id:'openTemplates',label:'Templates',            icon:'📚', category:'File', defaultShortcut:null, action:() => showTemplatesPicker() },
+    { id:'openFunctions', label:'Functions',            icon:'ƒ', category:'File', defaultShortcut:null, action:() => showFunctionsManager() },
+    { id:'importFunctions', label:'Import Functions…',  icon:'⇧', category:'File', defaultShortcut:null, action:() => pickFunctionsFile() },
     { id:'removeDuplicateTemplates', label:'Remove Duplicate Templates…', icon:'🧹', category:'File', defaultShortcut:null, enabled:() => templateFamilies().length > 1, action:() => showRemoveDuplicatesDialog() },
     { id:'clearAllTemplates', label:'Clear All Templates', icon:'🗑', category:'File', defaultShortcut:null, enabled:() => TEMPLATES.length > 0, action:() => clearAllTemplates() },
     { id:'updateCanvasTemplate', label:'Update Canvas from Template…', icon:'⬆', category:'File', defaultShortcut:null, enabled:() => { const c = canvases.find(x => x.id === activeCanvasId); return !!(c && c.template); }, action:() => showUpdateCanvasDialog() },
@@ -1381,7 +1413,9 @@
 
   function snapshot(){
     syncActiveIntoRegistry();
-    return JSON.stringify({ canvases, activeCanvasId, nextId, nextCanvasId, periods, currentPeriod });
+    // The model's function definitions are part of it (undoing an insert takes back the
+    // definitions it brought).
+    return JSON.stringify({ canvases, activeCanvasId, nextId, nextCanvasId, periods, currentPeriod, modelFunctions });
   }
 
   function pushHistory(){
@@ -1405,6 +1439,7 @@
     nextCanvasId = data.nextCanvasId;
     periods = Array.isArray(data.periods) && data.periods.length ? data.periods : ['Period 1'];
     currentPeriod = (typeof data.currentPeriod === 'number') ? Math.max(0, Math.min(periods.length - 1, data.currentPeriod)) : 0;
+    modelFunctions = Array.isArray(data.modelFunctions) ? data.modelFunctions : [];
     const active = canvases.find(c => c.id === activeCanvasId) || canvases[0];
     activeCanvasId = active.id;
     loadCanvasState(active);
@@ -8251,13 +8286,39 @@
     if(a.family !== b.family) return false;
     return (a.versionId || b.versionId) ? a.versionId === b.versionId : a.version === b.version;
   }
-  // Adds to the library the definitions in `list` it doesn't have yet. Returns how many.
+  // Definitions from a file (Open, Import Workspace, Import Functions, a model's own) join
+  // the library. Nothing of the person's is replaced or removed, as for templates:
+  //  - a version already here (the same family and versionId, or — without a versionId —
+  //    the same family and text) is skipped;
+  //  - a version whose number is free in its family is added as it is;
+  //  - a version whose number is taken by a different version is added after the file's
+  //    other versions, as the family's next number, keeping its versionId, with a note
+  //    saying so. Calls to it in the library follow it (they match by versionId).
+  // Returns { added, present, renumbered }.
   function addMissingFunctions(list){
-    let added = 0;
+    let added = 0, present = 0, renumbered = 0;
+    const clashes = [], moved = [];
+    const here = (d) => FUNCTIONS.some(f => sameFunctionVersion(f, d))
+      || (!d.versionId && FUNCTIONS.some(f => f.family === d.family && f.text === d.text));
     cleanFunctionDefinitions(list).forEach(d => {
-      if(!FUNCTIONS.some(f => sameFunctionVersion(f, d))){ FUNCTIONS.push(d); added++; }
+      if(here(d)){ present++; return; }
+      if(FUNCTIONS.some(f => f.family === d.family && f.version === d.version)){ clashes.push(d); return; }
+      FUNCTIONS.push(d); added++;
     });
-    return added;
+    clashes.forEach(d => {
+      if(here(d)){ present++; return; } // the same version twice in one file
+      const was = d.version;
+      d.version = nextFunctionVersion(d.family);
+      if(!d.versionId) d.versionId = newRandomId();
+      d.note = (`Imported — was v${was} in the file` + (d.note ? ': ' + d.note : '')).slice(0, FUNCTION_LIMITS.note);
+      moved.push(d);
+      FUNCTIONS.push(d); added++; renumbered++;
+    });
+    if(moved.length) FUNCTIONS.forEach(f => f.calls.forEach(c => {
+      const m = c.versionId && moved.find(d => d.family === c.family && d.versionId === c.versionId);
+      if(m) c.version = m.version;
+    }));
+    return { added, present, renumbered };
   }
   // The library as saved in the autosave.
   function restoreFunctions(list){ FUNCTIONS = cleanFunctionDefinitions(list); }
@@ -8291,6 +8352,802 @@
     const list = functionsForFile(canvasList);
     if(list.length) payload.functions = list;
     return payload;
+  }
+
+  // ---------- the library: families and versions (step 7, phase D2) ----------
+  // FUNCTIONS holds one entry per version, like TEMPLATES: versions of one function share a
+  // `family` (a lasting random id) and are numbered 1, 2, 3…, each with its own `versionId`,
+  // `note` and `description`. The family's name is its latest version's function name (read
+  // from its text). "Save as new version" is the only way to add a version; the latest is
+  // deleted only with its whole family, so a number is never used twice.
+  function functionFamilyVersions(family){
+    return FUNCTIONS.filter(f => f.family === family).sort((a, b) => b.version - a.version);
+  }
+  function latestFunctionOf(family){ return functionFamilyVersions(family)[0] || null; }
+  function isLatestFunction(d){ return latestFunctionOf(d.family) === d; }
+  function nextFunctionVersion(family){
+    return FUNCTIONS.reduce((m, f) => (f.family === family ? Math.max(m, f.version) : m), 0) + 1;
+  }
+  // One entry per family (its latest version), in the order the families first appear.
+  function functionFamilies(){
+    const seen = new Set(), out = [];
+    FUNCTIONS.forEach(f => { if(!seen.has(f.family)){ seen.add(f.family); out.push(latestFunctionOf(f.family)); } });
+    return out;
+  }
+  // A definition's function name, for showing (it may be unreadable).
+  function functionLabel(d){ return functionNameOf(d) || '(unreadable)'; }
+  // Families whose latest version is called `name` (capitals don't matter, as in formulas).
+  function functionFamiliesNamed(name){
+    const k = String(name || '').trim().toLowerCase();
+    return functionFamilies().filter(f => functionNameOf(f).toLowerCase() === k);
+  }
+  // The library entry a reference (a node's `fn`, an entry of `calls`) means: the one with
+  // its versionId (a version renumbered on import keeps it), else — without a versionId —
+  // the family and number. Null when the library doesn't have it.
+  function libraryFunctionFor(ref){
+    const r = cleanFunctionRef(ref);
+    if(!r) return null;
+    if(r.versionId){
+      const hit = FUNCTIONS.find(f => f.family === r.family && f.versionId === r.versionId);
+      if(hit) return hit;
+    }
+    return FUNCTIONS.find(f => f.family === r.family && f.version === r.version && (!r.versionId || !f.versionId)) || null;
+  }
+  // `d` and every library function it calls, directly or not (each once, callees after).
+  function functionWithCallees(d){
+    const out = [];
+    const visit = (x) => {
+      if(!x || out.includes(x)) return;
+      out.push(x);
+      x.calls.forEach(c => visit(libraryFunctionFor(c)));
+    };
+    visit(d);
+    return out;
+  }
+  // Library functions that call `d` (any version of them).
+  function functionCallersOf(d){
+    return FUNCTIONS.filter(f => f !== d && f.calls.some(c => libraryFunctionFor(c) === d));
+  }
+  // Function nodes of the open model that use `family` (a version of it when `version` is given).
+  function functionNodesUsing(family, version){
+    syncActiveIntoRegistry();
+    const out = [];
+    canvases.forEach(c => (c.nodes || []).forEach(n => {
+      if(n.type === 'function' && n.fn && n.fn.family === family && (version == null || n.fn.version === version)) out.push({ canvas: c, node: n });
+    }));
+    return out;
+  }
+  // A call the function makes to an older version than the library's latest of that family.
+  function olderCallsOf(d){
+    return d.calls.map(c => {
+      const target = libraryFunctionFor(c);
+      const latest = target && latestFunctionOf(target.family);
+      return (target && latest !== target) ? { name: c.name, version: target.version, latest: latest.version } : null;
+    }).filter(Boolean);
+  }
+
+  // The name each called function is written with in a parsed formula, by its lower-case key.
+  function writtenCallNames(body){
+    const out = Object.create(null);
+    const walk = (x) => {
+      if(!x || typeof x !== 'object') return;
+      if(x.t === 'call' && !(x.key in out)) out[x.key] = x.name;
+      if(x.a) walk(x.a);
+      if(Array.isArray(x.args)) x.args.forEach(walk);
+    };
+    walk(body);
+    return out;
+  }
+
+  // How a definition being saved pins each function it calls (decided September 2026):
+  //  - one the person picked (`picks`, by lower-case name: a library entry) is used;
+  //  - a new version keeps what the version it starts from pinned (while the library has it);
+  //  - otherwise a name that one family has takes that family's latest version;
+  //  - a name several families have must be picked ('choose'); a name no family has can't be
+  //    saved ('missing').
+  // Returns { calls: [{ key, name, chosen, options, state, latest }], ok }: `options` are the
+  // versions the person can choose from, newest first.
+  function planFunctionCalls(parsed, base, picks){
+    const names = writtenCallNames(parsed.body);
+    const calls = parsed.calls.map(key => {
+      const name = names[key] || key;
+      const pinned = base && base.calls.find(c => c.name.toLowerCase() === key);
+      const pinnedEntry = pinned ? libraryFunctionFor(pinned) : null;
+      const families = functionFamiliesNamed(name).map(f => f.family);
+      if(pinnedEntry && !families.includes(pinnedEntry.family)) families.unshift(pinnedEntry.family);
+      const options = [];
+      families.forEach(fam => functionFamilyVersions(fam).forEach(v => options.push(v)));
+      let chosen = picks && picks[key] && FUNCTIONS.includes(picks[key]) ? picks[key] : null;
+      if(chosen && !options.includes(chosen)) options.unshift(chosen);
+      if(!chosen && pinnedEntry) chosen = pinnedEntry;
+      if(!chosen && families.length === 1) chosen = latestFunctionOf(families[0]);
+      const state = chosen ? 'ok' : (families.length ? 'choose' : 'missing');
+      return { key, name, chosen, options, state, latest: chosen ? latestFunctionOf(chosen.family) : null };
+    });
+    return { calls, ok: calls.every(c => c.state === 'ok') };
+  }
+
+  // What a formula typed in the editor (or given to fm.saveFunction) would save as, and what
+  // stops it: { parsed, plan, draft, problem } — `problem` is { message, at?, length? } or
+  // null. `base` is the version it follows (a new version) or null (a new function).
+  function checkFunctionDraft(text, base, picks){
+    const parsed = parseFunctionText(text);
+    if(!parsed.ok) return { parsed, plan: null, draft: null, problem: parsed.error };
+    if(base){
+      const famName = functionNameOf(latestFunctionOf(base.family) || base);
+      if(famName && parsed.name.toLowerCase() !== famName.toLowerCase()){
+        return { parsed, plan: null, draft: null, problem: { message: `A new version keeps the name ${famName}. To make a function with another name, use “+ New Function”.`, at: 0, length: parsed.name.length } };
+      }
+    }
+    const plan = planFunctionCalls(parsed, base, picks);
+    const draft = { family: base ? base.family : 'draft-function', version: base ? nextFunctionVersion(base.family) : 1, versionId: 'draft-version',
+      text, description: '', note: '',
+      calls: plan.calls.filter(c => c.chosen).map(c => ({ name: c.name, family: c.chosen.family, version: c.chosen.version, versionId: c.chosen.versionId })) };
+    const missing = plan.calls.find(c => c.state === 'missing');
+    if(missing) return { parsed, plan, draft, problem: { message: `${missing.name} isn't in your library — create it first.` } };
+    const choose = plan.calls.find(c => c.state === 'choose');
+    if(choose) return { parsed, plan, draft, problem: { message: `More than one function in your library is called ${choose.name}: choose which one this function calls.` } };
+    // The whole chain calculates: inputs counted, no loop, not too deep.
+    const callees = [];
+    plan.calls.forEach(c => functionWithCallees(c.chosen).forEach(x => { if(!callees.includes(x)) callees.push(x); }));
+    const compiled = compileFunctions([draft].concat(callees)).resolve(draft);
+    if(compiled && compiled.status){
+      const wrong = plan.calls.find(c => {
+        const t = compiled.targets.get(c.key);
+        return t && t.params.length !== countCallArgs(parsed.body, c.key);
+      });
+      const message = wrong
+        ? `${wrong.name} v${wrong.chosen.version} takes ${compiled.targets.get(wrong.key).params.length} input${compiled.targets.get(wrong.key).params.length === 1 ? '' : 's'}; here it is given ${countCallArgs(parsed.body, wrong.key)}.`
+        : (FUNCTION_DRAFT_PROBLEMS[compiled.status] || 'This function can\'t be calculated.');
+      return { parsed, plan, draft, problem: { message } };
+    }
+    return { parsed, plan, draft, problem: null };
+  }
+  const FUNCTION_DRAFT_PROBLEMS = {
+    'function-missing': 'A function it calls uses another function that isn\'t in your library.',
+    'function-unreadable': 'A function it calls can\'t be read.',
+    'function-cycle': 'Its functions call each other in a loop.',
+    'function-too-deep': `Its calls are nested more than ${FUNCTION_LIMITS.callDepth} functions deep.`,
+    'function-arguments': 'A function it calls gives another function the wrong number of inputs.',
+  };
+  // How many inputs the first call to `key` in a parsed formula is given (-1: none).
+  function countCallArgs(body, key){
+    let n = -1;
+    const walk = (x) => {
+      if(n >= 0 || !x || typeof x !== 'object') return;
+      if(x.t === 'call' && x.key === key){ n = x.args.length; return; }
+      if(x.a) walk(x.a);
+      if(Array.isArray(x.args)) x.args.forEach(walk);
+    };
+    walk(body);
+    return n;
+  }
+
+  // Saves a checked draft as a new family (base null) or the next version of base's family.
+  function saveFunctionDraft(check, base, description, note){
+    const d = cleanFunctionDefinition({
+      family: base ? base.family : newRandomId(), version: base ? nextFunctionVersion(base.family) : 1, versionId: newRandomId(),
+      text: check.draft.text, description: String(description || '').trim(), note: String(note || '').trim(), calls: check.draft.calls });
+    FUNCTIONS.push(d);
+    saveWorkspaceSoon();
+    return d;
+  }
+
+  // Deletes one version, or (for the latest) the whole family. Returns how many versions went.
+  function deleteLibraryFunction(d){
+    const before = FUNCTIONS.length;
+    FUNCTIONS = isLatestFunction(d) ? FUNCTIONS.filter(f => f.family !== d.family) : FUNCTIONS.filter(f => f !== d);
+    saveWorkspaceSoon();
+    return before - FUNCTIONS.length;
+  }
+
+  // An fmIDE-functions file holding `families` (all when null): every version of each, and
+  // every function those call, in the library's order.
+  function functionsFilePayload(families){
+    const picked = new Set();
+    FUNCTIONS.forEach(f => { if(!families || families.includes(f.family)) functionWithCallees(f).forEach(x => picked.add(x)); });
+    return { version: FILE_FORMATS['fmIDE-functions'].current, kind: 'fmIDE-functions',
+      functions: cloneData(FUNCTIONS.filter(f => picked.has(f))) };
+  }
+
+  // A function reference as typed in fm actions and macros: "Name" (the latest version),
+  // "Name@latest", "Name@3", the same with the family id, or an object { family, version }.
+  function resolveFunctionRef(ref){
+    if(ref && typeof ref === 'object'){
+      const hit = libraryFunctionFor(ref);
+      if(!hit) fail('That function version isn\'t in your library.');
+      return hit;
+    }
+    const s = String(ref == null ? '' : ref).trim();
+    if(!s) fail('Name a function, like "Margin" or "Margin@2".');
+    const family = (text) => {
+      if(FUNCTIONS.some(f => f.family === text)) return latestFunctionOf(text);
+      const named = functionFamiliesNamed(text);
+      if(named.length > 1) fail(`More than one function in your library is called "${text}" — refer to it by its family ID.`);
+      return named[0] || null;
+    };
+    const m = /^(.*?)\s*@\s*(latest|\d+)$/i.exec(s);
+    const base = family(m ? m[1] : s);
+    if(!base) fail(`There is no function called "${m ? m[1] : s}" in your library.`);
+    if(!m || m[2].toLowerCase() === 'latest') return base;
+    const all = functionFamilyVersions(base.family);
+    const v = all.find(f => f.version === Number(m[2]));
+    if(!v) fail(`There is no version ${m[2]} of ${functionLabel(base)} (it has version${all.length === 1 ? '' : 's'} ${all.map(f => f.version).reverse().join(', ')}).`);
+    return v;
+  }
+  // How a recorded macro refers to a version: by name when one family has it, else by family id.
+  function functionRefText(d){
+    const name = functionNameOf(d);
+    const head = (name && functionFamiliesNamed(name).length === 1) ? name : d.family;
+    return isLatestFunction(d) ? head : head + '@' + d.version;
+  }
+  // ---------- the Functions manager (step 7, phase D2) ----------
+  // A window in the style of the Templates window: the library by family, each family's
+  // versions and notes, and New Function / Edit as new version / Delete / Import / Export.
+  // Everything shown from a definition (name, formula, description, note) is text from a
+  // file: it goes in with textContent only. The buttons act through fm actions, so a macro
+  // being recorded records them.
+
+  // The editor: the whole definition in one box, read as it is typed. It shows the name and
+  // inputs, a parse error at its place in the text, and how each call to another function
+  // is pinned; Save stays off until the formula reads and every call is settled.
+  // `base`: the version a new version starts from (null for a new function).
+  function showFunctionEditor(base, onSaved){
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const box = document.createElement('div');
+    box.className = 'modal-box function-editor';
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    function close(){ overlay.remove(); document.removeEventListener('keydown', onKey, true); }
+    function onKey(ev){
+      const overlays = document.querySelectorAll('.modal-overlay');
+      if(overlays[overlays.length - 1] !== overlay) return;
+      if(ev.key === 'Escape'){ ev.preventDefault(); ev.stopPropagation(); close(); }
+    }
+    document.addEventListener('keydown', onKey, true);
+
+    const latest = base ? latestFunctionOf(base.family) : null;
+    const title = document.createElement('p');
+    title.textContent = base
+      ? `New version of ${functionLabel(latest || base)} (version ${nextFunctionVersion(base.family)})`
+      : 'New Function';
+    box.appendChild(title);
+
+    const label = (text) => { const l = document.createElement('label'); l.className = 'fn-editor-label'; l.textContent = text; box.appendChild(l); return l; };
+    label('Definition — name, inputs and formula');
+    const textBox = document.createElement('textarea');
+    textBox.className = 'fn-editor-text';
+    textBox.rows = 4;
+    textBox.spellcheck = false;
+    textBox.maxLength = FUNCTION_LIMITS.text + 1;
+    textBox.placeholder = 'Margin(Revenue, Cost) = (Revenue - Cost) / Revenue';
+    textBox.value = base ? base.text : '';
+    box.appendChild(textBox);
+
+    const parsedLine = document.createElement('p');
+    parsedLine.className = 'fn-editor-parsed';
+    box.appendChild(parsedLine);
+    const where = document.createElement('pre');
+    where.className = 'fn-editor-where';
+    box.appendChild(where);
+    const errorLine = document.createElement('p');
+    errorLine.className = 'fn-editor-error';
+    box.appendChild(errorLine);
+    const callsBox = document.createElement('div');
+    callsBox.className = 'fn-editor-calls';
+    box.appendChild(callsBox);
+
+    label('Description');
+    const descBox = document.createElement('textarea');
+    descBox.className = 'fn-editor-description';
+    descBox.rows = 2;
+    descBox.maxLength = FUNCTION_LIMITS.description;
+    descBox.value = base ? base.description : '';
+    box.appendChild(descBox);
+    label(base ? 'Change note' : 'Note (optional)');
+    const noteBox = document.createElement('input');
+    noteBox.type = 'text';
+    noteBox.className = 'fn-editor-note';
+    noteBox.maxLength = FUNCTION_LIMITS.note;
+    noteBox.placeholder = 'What changed (optional)';
+    box.appendChild(noteBox);
+
+    const actions = document.createElement('div');
+    actions.className = 'modal-actions';
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.addEventListener('click', close);
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'primary fn-editor-save';
+    saveBtn.textContent = base ? `Save version ${nextFunctionVersion(base.family)}` : 'Save Function';
+    actions.append(cancelBtn, saveBtn);
+    box.appendChild(actions);
+
+    const picks = Object.create(null); // the person's choices, by lower-case call name
+    let check = null;
+
+    function optionText(v){
+      const bits = [`${functionLabel(v)} v${v.version}`];
+      if(isLatestFunction(v)) bits.push('(latest)');
+      if(v.description) bits.push('— ' + v.description.slice(0, 60));
+      if(functionFamiliesNamed(functionLabel(v)).length > 1) bits.push(`[family ${v.family.slice(0, 8)}]`);
+      return bits.join(' ');
+    }
+    function renderCalls(){
+      callsBox.innerHTML = '';
+      if(!check || !check.plan || !check.plan.calls.length) return;
+      const head = document.createElement('div');
+      head.className = 'fn-editor-label';
+      head.textContent = 'Calls to other functions';
+      callsBox.appendChild(head);
+      check.plan.calls.forEach(c => {
+        const row = document.createElement('div');
+        row.className = 'fn-editor-call ' + c.state;
+        row.dataset.call = c.key;
+        const name = document.createElement('b');
+        name.textContent = c.name;
+        row.appendChild(name);
+        row.appendChild(document.createTextNode(' → '));
+        if(c.state === 'missing'){
+          row.appendChild(document.createTextNode('not in your library'));
+        } else {
+          const sel = document.createElement('select');
+          sel.className = 'fn-editor-call-pick';
+          if(!c.chosen){
+            const o = document.createElement('option');
+            o.value = ''; o.textContent = 'Choose which function…';
+            sel.appendChild(o);
+          }
+          c.options.forEach((v, i) => {
+            const o = document.createElement('option');
+            o.value = String(i);
+            o.textContent = optionText(v);
+            if(v === c.chosen) o.selected = true;
+            sel.appendChild(o);
+          });
+          sel.addEventListener('change', () => {
+            const v = c.options[Number(sel.value)];
+            if(v) picks[c.key] = v;
+            refresh();
+          });
+          row.appendChild(sel);
+          if(c.chosen && c.latest && c.latest !== c.chosen){
+            const hint = document.createElement('button');
+            hint.type = 'button';
+            hint.className = 'fn-editor-use-latest';
+            hint.textContent = `Use the latest (v${c.latest.version})`;
+            hint.addEventListener('click', () => { picks[c.key] = c.latest; refresh(); });
+            row.appendChild(hint);
+          }
+        }
+        callsBox.appendChild(row);
+      });
+    }
+    function refresh(){
+      check = checkFunctionDraft(textBox.value, base, picks);
+      const p = check.problem;
+      if(check.parsed.ok){
+        const params = check.parsed.params;
+        parsedLine.textContent = `${check.parsed.name} — ${params.length ? 'inputs: ' + params.join(', ') : 'no inputs'}`;
+      } else parsedLine.textContent = '';
+      errorLine.textContent = p ? '⚠ ' + p.message : (textBox.value.trim() ? '✓ The formula reads.' : '');
+      errorLine.classList.toggle('ok', !p);
+      // The place of the error, marked in a copy of the text.
+      where.innerHTML = '';
+      if(p && typeof p.at === 'number' && textBox.value){
+        const text = textBox.value;
+        const at = Math.max(0, Math.min(text.length, p.at));
+        const mark = document.createElement('mark');
+        mark.textContent = text.slice(at, at + (p.length || 1)) || ' ';
+        where.append(document.createTextNode(text.slice(0, at)), mark, document.createTextNode(text.slice(at + (p.length || 1))));
+        where.style.display = '';
+      } else where.style.display = 'none';
+      renderCalls();
+      saveBtn.disabled = !!p || !textBox.value.trim();
+    }
+    textBox.addEventListener('input', refresh);
+
+    function save(newVersionOf){
+      const calls = {};
+      check.plan.calls.forEach(c => { calls[c.name] = c.chosen.family + '@' + c.chosen.version; });
+      const ref = guarded(() => fm.saveFunction({ text: textBox.value, description: descBox.value, note: noteBox.value,
+        newVersionOf: newVersionOf || '', calls }));
+      if(ref === undefined) return;
+      close();
+      if(onSaved) onSaved(FUNCTIONS[FUNCTIONS.length - 1]);
+    }
+    saveBtn.addEventListener('click', () => {
+      refresh();
+      if(saveBtn.disabled) return;
+      if(base){ save(functionRefText(latest)); return; }
+      const taken = functionFamiliesNamed(check.parsed.name)[0];
+      if(!taken){ save(''); return; }
+      askFunctionNameTaken(taken, () => {
+        // As the family's next version: its pins and its name rule apply.
+        base = taken;
+        const again = checkFunctionDraft(textBox.value, base, picks);
+        if(again.problem){ showMessage(again.problem.message); base = null; refresh(); return; }
+        check = again;
+        save(functionRefText(taken));
+      }, () => textBox.focus());
+    });
+
+    refresh();
+    textBox.focus();
+  }
+
+  // Saving a new function under a name one of the person's families already has: its next
+  // version only when they choose it; otherwise they change the name.
+  function askFunctionNameTaken(fam, onNewVersion, onRename){
+    showChoice(`There is already a function called ${functionLabel(fam)} (version ${fam.version}). Save this as its next version, or change the name?`,
+      [{ label: 'Change the name', run: onRename }, { label: `Save as new version of ${functionLabel(fam)}`, primary: true, run: onNewVersion }], 'function-name-taken');
+  }
+  // A message with a row of buttons (the last is the default); Escape runs the first.
+  function showChoice(message, buttons, className){
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const box = document.createElement('div');
+    box.className = 'modal-box' + (className ? ' ' + className : '');
+    const p = document.createElement('p');
+    p.textContent = message;
+    const actions = document.createElement('div');
+    actions.className = 'modal-actions';
+    function close(){ overlay.remove(); document.removeEventListener('keydown', onKey, true); }
+    function onKey(ev){ if(ev.key === 'Escape'){ ev.preventDefault(); ev.stopPropagation(); close(); buttons[0].run(); } }
+    const els = buttons.map(b => {
+      const el = document.createElement('button');
+      el.textContent = b.label;
+      if(b.primary) el.className = 'primary';
+      if(b.danger) el.className = 'danger';
+      el.addEventListener('click', () => { close(); b.run(); });
+      actions.appendChild(el);
+      return el;
+    });
+    box.append(p, actions);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    document.addEventListener('keydown', onKey, true);
+    els[els.length - 1].focus();
+  }
+
+  // What deleting `d` means (decided September 2026: a warning, never a refusal — the open
+  // model carries its own copy, so its nodes keep calculating).
+  function functionDeleteMessage(d){
+    const whole = isLatestFunction(d);
+    const all = functionFamilyVersions(d.family);
+    const name = functionLabel(d);
+    const lines = [whole
+      ? `Delete the function ${name}` + (all.length > 1 ? ` and all ${all.length} of its versions` : '') + '?'
+      : `Delete version ${d.version} of ${name}? The other versions stay.`];
+    const uses = functionNodesUsing(d.family, whole ? null : d.version).length;
+    if(uses) lines.push(`${uses} node${uses === 1 ? '' : 's'} in the open model use${uses === 1 ? 's' : ''} it. ${uses === 1 ? 'It keeps' : 'They keep'} working — the model carries its own copy — but ${uses === 1 ? 'it' : 'they'} won't be offered updates from the library.`);
+    const going = whole ? all : [d];
+    const callers = [];
+    going.forEach(g => functionCallersOf(g).forEach(c => { if(!going.includes(c) && !callers.includes(c)) callers.push(c); }));
+    if(callers.length) lines.push(`${callers.map(c => functionLabel(c) + ' v' + c.version).join(', ')} call${callers.length === 1 ? 's' : ''} it: inserting ${callers.length === 1 ? 'that' : 'those'} from the library will leave the call missing.`);
+    lines.push("This can't be undone — use ⇩ Export Functions first if you might want it back.");
+    return lines.join('\n\n');
+  }
+
+  function exportFunctionsInteractive(){
+    const families = functionFamilies();
+    if(!families.length){ showMessage("You don't have any functions to export."); return; }
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const box = document.createElement('div');
+    box.className = 'modal-box function-export';
+    const p = document.createElement('p');
+    p.textContent = 'Export functions — each ticked function goes with all its versions, and every function they call.';
+    box.appendChild(p);
+    const ticks = families.map(f => {
+      const row = document.createElement('label');
+      row.className = 'function-export-row';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.checked = true;
+      row.append(cb, document.createTextNode(` ${functionLabel(f)} (v${f.version})`));
+      box.appendChild(row);
+      return { f, cb };
+    });
+    const actions = document.createElement('div');
+    actions.className = 'modal-actions';
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    const okBtn = document.createElement('button');
+    okBtn.className = 'primary';
+    okBtn.textContent = 'Export';
+    actions.append(cancelBtn, okBtn);
+    box.appendChild(actions);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    const close = () => overlay.remove();
+    cancelBtn.addEventListener('click', close);
+    okBtn.addEventListener('click', () => {
+      const picked = ticks.filter(t => t.cb.checked).map(t => t.f.family);
+      if(!picked.length) return;
+      close();
+      guarded(() => fm.exportFunctions({ download: true, functions: picked.length === families.length ? null : picked }));
+    });
+    okBtn.focus();
+  }
+
+  // Import Functions: an fmIDE-functions file joins the library (a file from a newer fmIDE
+  // asks first, through openFmFileText).
+  function importFunctionsFromFile(file, onDone){
+    const reader = new FileReader();
+    reader.onload = () => openFmFileText(reader.result, ['fmIDE-functions'], (data) => {
+      const r = guarded(() => fm.importFunctions({ file: data, allowNewer: true }));
+      if(!r) return;
+      const { added, present, renumbered } = r;
+      if(added === 0 && present === 0) showMessage("That file didn't contain any functions fmIDE could read.");
+      else if(added === 0) showMessage(`All ${present} function version${present === 1 ? ' in that file is' : 's in that file are'} already in your library.`);
+      else showMessage(`Imported ${added} function version${added === 1 ? '' : 's'}` + (present ? ` (${present} ${present === 1 ? 'was' : 'were'} already there).` : '.')
+        + (renumbered ? ` ${renumbered} ${renumbered === 1 ? 'was' : 'were'} added under a new version number because ${renumbered === 1 ? 'its number was' : 'their numbers were'} already taken by a different version.` : ''));
+      if(onDone) onDone(added);
+    });
+    reader.onerror = () => showMessage('Could not read that file.');
+    reader.readAsText(file);
+  }
+  function pickFunctionsFile(onDone){
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json,.json';
+    input.style.display = 'none';
+    input.className = 'function-file-input';
+    document.body.appendChild(input);
+    input.addEventListener('change', () => {
+      const file = input.files && input.files[0];
+      input.remove();
+      if(file) importFunctionsFromFile(file, onDone);
+    });
+    input.click();
+  }
+
+  function showFunctionsManager(){
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const box = document.createElement('div');
+    box.className = 'modal-box template-box function-box';
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    function close(){ overlay.remove(); document.removeEventListener('keydown', onKey, true); }
+    overlay.addEventListener('mousedown', (ev) => { if(ev.target === overlay) close(); });
+
+    const title = document.createElement('p');
+    title.textContent = 'Functions';
+    box.appendChild(title);
+
+    const topRow = document.createElement('div');
+    topRow.className = 'template-import-actions';
+    topRow.style.marginBottom = '12px';
+    const newBtn = document.createElement('button');
+    newBtn.className = 'function-new';
+    newBtn.textContent = '+ New Function…';
+    const exportBtn = document.createElement('button');
+    exportBtn.textContent = '⇩ Export Functions';
+    const importBtn = document.createElement('button');
+    importBtn.textContent = '⇧ Import Functions';
+    topRow.append(newBtn, exportBtn, importBtn);
+    box.appendChild(topRow);
+
+    const layout = document.createElement('div');
+    layout.className = 'template-layout';
+    box.appendChild(layout);
+    const listCol = document.createElement('div');
+    listCol.className = 'template-list-col';
+    layout.appendChild(listCol);
+    const search = document.createElement('input');
+    search.type = 'search';
+    search.className = 'template-search';
+    search.placeholder = 'Search functions…';
+    search.setAttribute('autocomplete', 'off');
+    search.spellcheck = false;
+    listCol.appendChild(search);
+    const list = document.createElement('div');
+    list.className = 'template-list function-list';
+    listCol.appendChild(list);
+    const detail = document.createElement('div');
+    detail.className = 'template-detail function-detail';
+    layout.appendChild(detail);
+
+    let selected = functionFamilies()[0] || null;
+    let shown = [];
+    const expanded = new Set();
+    const reselect = (d) => { selected = d || (selected && FUNCTIONS.includes(selected) ? selected : (selected && latestFunctionOf(selected.family))) || functionFamilies()[0] || null; renderList(); renderDetail(); };
+
+    newBtn.addEventListener('click', () => showFunctionEditor(null, reselect));
+    exportBtn.addEventListener('click', exportFunctionsInteractive);
+    importBtn.addEventListener('click', () => pickFunctionsFile(() => reselect()));
+
+    const para = (cls, text) => { const p = document.createElement('p'); p.className = cls; p.textContent = text; detail.appendChild(p); return p; };
+    function renderDetail(){
+      detail.innerHTML = '';
+      if(!selected){ para('template-desc', 'No function selected.'); return; }
+      const d = selected;
+      const h = document.createElement('h4');
+      h.textContent = functionLabel(d);
+      detail.appendChild(h);
+      const all = functionFamilyVersions(d.family);
+      const ver = para('template-version-info', '');
+      const verLabel = document.createElement('b');
+      verLabel.textContent = `Version ${d.version}` + (all.length > 1 ? ` of ${all[0].version}` : '');
+      ver.appendChild(verLabel);
+      if(!isLatestFunction(d)) ver.appendChild(document.createTextNode(' (an older version)'));
+      if(d.note){ const n = document.createElement('span'); n.className = 'template-note'; n.textContent = ' — ' + d.note; ver.appendChild(n); }
+      para('template-desc', d.description || '(no description)');
+      const pre = document.createElement('pre');
+      pre.className = 'function-detail-text';
+      pre.textContent = d.text;
+      detail.appendChild(pre);
+      const parsed = parseFunctionText(d.text);
+      if(parsed.ok) para('function-detail-inputs', parsed.params.length ? 'Inputs: ' + parsed.params.join(', ') : 'No inputs');
+      else para('function-detail-problem', "⚠ This formula can't be read: " + parsed.error.message);
+      d.calls.forEach(c => {
+        const target = libraryFunctionFor(c);
+        const latest = target && latestFunctionOf(target.family);
+        para('function-detail-call' + (target ? '' : ' missing') + (target && latest !== target ? ' older' : ''),
+          `Calls ${c.name} v${target ? target.version : c.version}` + (!target ? ' — not in your library' : (latest !== target ? ` (the latest is v${latest.version}: save a new version to use it)` : '')));
+      });
+      const uses = functionNodesUsing(d.family, d.version).length;
+      if(uses) para('function-detail-uses', `Used by ${uses} node${uses === 1 ? '' : 's'} in the open model.`);
+
+      const actionsRow = document.createElement('div');
+      actionsRow.className = 'template-import-actions';
+      const versionBtn = document.createElement('button');
+      versionBtn.className = 'function-new-version';
+      versionBtn.textContent = 'Edit as new version…';
+      versionBtn.title = `Starts from version ${d.version}; saves version ${nextFunctionVersion(d.family)}`;
+      versionBtn.addEventListener('click', () => showFunctionEditor(d, reselect));
+      const infoBtn = document.createElement('button');
+      infoBtn.className = 'function-edit-info';
+      infoBtn.textContent = '✎ Edit description';
+      infoBtn.addEventListener('click', () => editFunctionInfo(d, () => reselect(d)));
+      const delBtn = document.createElement('button');
+      delBtn.className = 'function-delete';
+      delBtn.textContent = !isLatestFunction(d) ? `🗑 Delete version ${d.version}` : (all.length > 1 ? `🗑 Delete (all ${all.length} versions)` : '🗑 Delete');
+      if(isLatestFunction(d) && all.length > 1) delBtn.title = 'The latest version can only be deleted with the whole function, so its number is never used again. Older versions can be deleted one by one.';
+      delBtn.addEventListener('click', () => showConfirm(functionDeleteMessage(d), () => {
+        const family = d.family;
+        if(guarded(() => fm.deleteFunction({ function: functionRefText(d), whole: isLatestFunction(d) })) === undefined) return;
+        reselect(latestFunctionOf(family));
+      }));
+      actionsRow.append(versionBtn, infoBtn, delBtn);
+      detail.appendChild(actionsRow);
+    }
+
+    function entryButton(d, idx){
+      const b = document.createElement('button');
+      b.className = 'template-family function-family' + (selected === d ? ' active' : '');
+      const name = functionLabel(d);
+      b.appendChild(idx ? highlightLabel(name, idx) : document.createTextNode(name));
+      b.appendChild(document.createElement('br'));
+      const v = document.createElement('span');
+      v.className = 'template-version-tag';
+      v.textContent = 'v' + d.version;
+      b.appendChild(v);
+      // Two families of one name (from imports) are told apart by their family ids.
+      if(functionFamiliesNamed(name).length > 1){
+        const t = document.createElement('span');
+        t.className = 'function-family-id';
+        t.textContent = 'family ' + d.family.slice(0, 8);
+        t.title = d.description || '';
+        b.appendChild(t);
+      }
+      if(functionNodesUsing(d.family).length){
+        const t = document.createElement('span');
+        t.className = 'function-in-model-tag';
+        t.textContent = 'in this model';
+        b.appendChild(t);
+      }
+      if(olderCallsOf(d).length){
+        const t = document.createElement('span');
+        t.className = 'function-older-calls-tag';
+        t.textContent = '⚠ calls an older version';
+        t.title = olderCallsOf(d).map(c => `${c.name} v${c.version} (latest v${c.latest})`).join(', ');
+        b.appendChild(t);
+      }
+      b.addEventListener('click', () => { selected = d; renderList(); renderDetail(); });
+      list.appendChild(b);
+      shown.push(d);
+      const older = functionFamilyVersions(d.family).slice(1);
+      if(!older.length) return;
+      const open = expanded.has(d.family) || (selected && selected.family === d.family && selected !== d);
+      const toggle = document.createElement('button');
+      toggle.className = 'template-versions-toggle';
+      toggle.textContent = (open ? '▾ ' : '▸ ') + older.length + ' older version' + (older.length === 1 ? '' : 's');
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.addEventListener('click', () => {
+        if(open){ expanded.delete(d.family); if(selected && selected.family === d.family) selected = d; }
+        else expanded.add(d.family);
+        renderList(); renderDetail();
+      });
+      list.appendChild(toggle);
+      if(!open) return;
+      older.forEach(o => {
+        const ob = document.createElement('button');
+        ob.className = 'template-version' + (selected === o ? ' active' : '');
+        const l = document.createElement('b');
+        l.textContent = 'v' + o.version;
+        ob.appendChild(l);
+        if(o.note) ob.appendChild(document.createTextNode(' — ' + o.note));
+        ob.addEventListener('click', () => { selected = o; expanded.add(d.family); renderList(); renderDetail(); });
+        list.appendChild(ob);
+        shown.push(o);
+      });
+    }
+    function renderList(){
+      list.innerHTML = '';
+      shown = [];
+      const families = functionFamilies();
+      if(!families.length){
+        const empty = document.createElement('p');
+        empty.className = 'template-desc';
+        empty.textContent = 'No functions yet — use "+ New Function…" above, or import some.';
+        list.appendChild(empty);
+        return;
+      }
+      const q = search.value.trim();
+      if(!q){ families.forEach(d => entryButton(d, null)); return; }
+      const hits = families.map(d => {
+        const onName = fuzzyMatch(q, functionLabel(d));
+        if(onName) return { d, score: onName.score + 500, idx: onName.idx };
+        const other = fuzzyMatch(q, d.description || '');
+        return other ? { d, score: other.score, idx: [] } : null;
+      }).filter(Boolean).sort((a, b) => b.score - a.score);
+      if(!hits.length){
+        const none = document.createElement('p');
+        none.className = 'template-desc';
+        none.textContent = 'No matching functions';
+        list.appendChild(none);
+        return;
+      }
+      hits.forEach(h => entryButton(h.d, h.idx));
+    }
+    search.addEventListener('input', () => {
+      renderList();
+      if(search.value.trim() && shown.length && shown[0] !== selected){ selected = shown[0]; renderList(); renderDetail(); }
+    });
+    function onKey(ev){
+      const overlays = document.querySelectorAll('.modal-overlay');
+      if(overlays[overlays.length - 1] !== overlay) return;
+      if(ev.key === 'Escape'){ ev.preventDefault(); ev.stopPropagation(); close(); return; }
+      if(document.activeElement !== search && !list.contains(document.activeElement)) return;
+      if(ev.key === 'ArrowDown' || ev.key === 'ArrowUp'){
+        ev.preventDefault();
+        if(!shown.length) return;
+        const i = shown.indexOf(selected);
+        selected = shown[Math.max(0, Math.min(shown.length - 1, i < 0 ? 0 : i + (ev.key === 'ArrowDown' ? 1 : -1)))];
+        renderList(); renderDetail();
+        search.focus();
+      }
+    }
+    document.addEventListener('keydown', onKey, true);
+
+    renderList();
+    renderDetail();
+    const actions = document.createElement('div');
+    actions.className = 'modal-actions';
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = 'Close';
+    closeBtn.addEventListener('click', close);
+    actions.appendChild(closeBtn);
+    box.appendChild(actions);
+    search.focus();
+  }
+
+  // Description and note of one version (library only; neither changes the calculation).
+  function editFunctionInfo(d, onDone){
+    showTemplateForm({
+      title: `Edit ${functionLabel(d)} v${d.version}`,
+      fields: ['description', 'note'],
+      initialDescription: d.description, initialNote: d.note,
+      noteLabel: `Change note (version ${d.version})`,
+      submitLabel: 'Save Changes',
+      onSubmit: ({ description, note }) => {
+        if(guarded(() => fm.setFunctionInfo({ function: functionRefText(d), description, note })) === undefined) return false;
+        onDone();
+      }
+    });
   }
   // ---------- keyboard shortcuts settings ----------
   function exportShortcutsToFile(){
@@ -9327,6 +10184,114 @@
       clearComputed();
     } });
 
+  // ---------------------------------- Functions (step 7, phase D2) ----------------------------------
+  // The function library through fm actions (the Functions manager uses them too, so macros
+  // record what it does). References are "Name" (the latest version), "Name@latest",
+  // "Name@3", the same with the family id, or { family, version, versionId }.
+
+  // A definition as the actions return it (a copy; the text is data, never run).
+  function functionInfo(d){
+    const parsed = parseFunctionText(d.text);
+    return { family: d.family, version: d.version, versionId: d.versionId, name: functionNameOf(d),
+      inputs: parsed.ok ? parsed.params.slice() : [], readable: parsed.ok, text: d.text,
+      description: d.description, note: d.note, latest: isLatestFunction(d),
+      calls: d.calls.map(c => ({ name: c.name, family: c.family, version: c.version, versionId: c.versionId })) };
+  }
+  // fm actions that take a file object as their first input also accept { file, … } (the fm
+  // wrapper passes a lone object as the first input when that input is JSON).
+  function unwrapFileArgs(a){
+    if(a.file && typeof a.file === 'object' && !a.file.kind && !Array.isArray(a.file.functions) && a.file.file) Object.assign(a, a.file);
+    return a;
+  }
+
+  defineAction({ name:'saveFunction', label:'Save Function', category:'Insert', icon:'ƒ', returns:'value', tx:false,
+    desc:'Saves a function to your library: text is the whole definition, like "Margin(Revenue, Cost) = (Revenue - Cost) / Revenue". A name already used fails unless newVersionOf names that function (its next version). calls pins the functions it calls, like {"Margin": "Margin@1"}; without it a new version keeps the pins of the latest version, and a name one function has takes its latest version. Returns "Name@version".',
+    params:[ P('text','text'), P('description','string',{ def:'' }), P('note','string',{ def:'' }),
+      P('newVersionOf','string',{ def:'', help:'a function to save the next version of' }),
+      P('calls','json',{ optional:true, help:'{"Name": "Name@version"} for each function it calls' }) ],
+    run(a){
+      const base = a.newVersionOf.trim() ? latestFunctionOf(resolveFunctionRef(a.newVersionOf).family) : null;
+      const picks = Object.create(null);
+      if(a.calls != null){
+        if(typeof a.calls !== 'object' || Array.isArray(a.calls)) fail('calls must be like {"Margin": "Margin@1"}.');
+        Object.keys(a.calls).forEach(k => { picks[k.trim().toLowerCase()] = resolveFunctionRef(a.calls[k]); });
+      }
+      const check = checkFunctionDraft(a.text, base, picks);
+      if(check.problem) fail(check.problem.message + (typeof check.problem.at === 'number' && !check.parsed.ok ? ` (at character ${check.problem.at + 1})` : ''));
+      if(!base){
+        const taken = functionFamiliesNamed(check.parsed.name)[0];
+        if(taken) fail(`There is already a function called ${functionLabel(taken)}. Choose another name, or use newVersionOf to save its next version.`);
+      }
+      const d = saveFunctionDraft(check, base, a.description, a.note);
+      return functionRefText(d).replace(/@\d+$/, '') + '@' + d.version;
+    } });
+
+  defineAction({ name:'listFunctions', label:'List Functions', category:'Insert', icon:'ƒ', returns:'value', mutates:false, tx:false, record:false,
+    desc:'Returns your function library, one entry per function: { family, name, latest, versions: [{ version, versionId, name, inputs, text, description, note, calls }] }, newest version first. of: "model" lists instead the definitions the open model carries (the ones it calculates with), one entry per version.',
+    params:[ P('of','enum',{ options:['library','model'], def:'library' }) ],
+    run(a){
+      if(a.of === 'model') return modelFunctions.map(d => {
+        const parsed = parseFunctionText(d.text);
+        return { family: d.family, version: d.version, versionId: d.versionId, name: functionNameOf(d),
+          inputs: parsed.ok ? parsed.params.slice() : [], readable: parsed.ok, text: d.text, description: d.description, note: d.note,
+          calls: d.calls.map(c => ({ name: c.name, family: c.family, version: c.version, versionId: c.versionId })) };
+      });
+      return functionFamilies().map(f => ({ family: f.family, name: functionNameOf(f), latest: f.version,
+        versions: functionFamilyVersions(f.family).map(functionInfo) }));
+    } });
+
+  defineAction({ name:'getFunction', label:'Get Function', category:'Insert', icon:'ƒ', returns:'value', mutates:false, tx:false, record:false,
+    desc:'Returns one version from your library: { family, version, versionId, name, inputs, text, description, note, calls, latest }.',
+    params:[ P('function','string') ],
+    run(a){ return functionInfo(resolveFunctionRef(a.function)); } });
+
+  defineAction({ name:'setFunctionInfo', label:'Edit Function Description', category:'Insert', icon:'✎', tx:false,
+    desc:'Changes the description and change note of one version in your library (neither changes the calculation).',
+    params:[ P('function','string'), P('description','string',{ def:'' }), P('note','string',{ def:'' }) ],
+    run(a){
+      const d = resolveFunctionRef(a.function);
+      d.description = String(a.description).trim().slice(0, FUNCTION_LIMITS.description);
+      d.note = String(a.note).trim().slice(0, FUNCTION_LIMITS.note);
+      saveWorkspaceSoon();
+    } });
+
+  defineAction({ name:'deleteFunction', label:'Delete Function', category:'Insert', icon:'🗑', returns:'value', tx:false,
+    desc:'Deletes from your library: "Name" (or whole: true) the whole function with every version; "Name@2" one older version. The latest version goes only with the whole function, so its number is never used again. The open model keeps its own copy. Returns how many versions were deleted.',
+    params:[ P('function','string'), P('whole','bool',{ def:false, help:'every version' }) ],
+    run(a){
+      const s = String(a.function).trim();
+      const d = resolveFunctionRef(s);
+      const pinned = /@\s*\d+$/.test(s);
+      if(!a.whole && pinned && isLatestFunction(d)) fail(`Version ${d.version} is the latest version of ${functionLabel(d)}: it can only be deleted with the whole function (whole: true, or "${functionLabel(d)}").`);
+      return deleteLibraryFunction(a.whole || !pinned ? latestFunctionOf(d.family) : d);
+    } });
+
+  defineAction({ name:'importFunctions', label:'Import Functions', category:'File', icon:'⇧', returns:'value', tx:false,
+    desc:'Adds the functions in an fmIDE-functions file (its JSON) to your library, following the template rules: versions already there are skipped, a version whose number is taken is added under the next number. A file from a newer fmIDE fails unless allowNewer is true. Returns { added, present, renumbered }.',
+    params:[ P('file','json'), P('allowNewer','bool',{ def:false }) ],
+    run(a){
+      unwrapFileArgs(a);
+      const r = readFmFile(a.file, ['fmIDE-functions']);
+      if(r.error) fail(r.error);
+      if(r.newer && !a.allowNewer) fail(`This functions file was saved by a newer version of fmIDE (format version ${r.fromVersion}). Pass allowNewer: true to read it anyway.`);
+      const out = addMissingFunctions(r.data.functions);
+      saveWorkspaceSoon();
+      return out;
+    } });
+
+  defineAction({ name:'exportFunctions', label:'Export Functions', category:'File', icon:'⇩', returns:'value', mutates:false, tx:false,
+    desc:'Writes an fmIDE-functions file: the functions named in functions (each with all its versions), or the whole library, and every function they call. Downloads it unless download is false; returns the file\'s content.',
+    params:[ P('download','bool',{ def:true }), P('functions','json',{ optional:true, help:'list of function references' }) ],
+    run(a){
+      let families = null;
+      if(a.functions != null){
+        if(!Array.isArray(a.functions)) fail('functions must be a list, like ["Margin", "Profit"].');
+        families = a.functions.map(ref => resolveFunctionRef(ref).family);
+      }
+      const payload = functionsFilePayload(families);
+      if(a.download) downloadJSON(payload, `fmIDE-functions-${timestamp()}.json`);
+      return payload;
+    } });
   // ---------------------------------- Edit ----------------------------------
   function editValueText(n, mutate){
     requireType(n, ['value'], 'a rectangle');
@@ -9845,6 +10810,9 @@
   // (addDocumentGroupToRibbon, 21); removing it afterwards is respected.
   const DOCUMENT_RIBBON_GROUP = { id:'document', label:'Document', items:[
     { cmd:'saveDocument', size:'large' }, { cmd:'newDocument' }, { cmd:'openDocument' }, { cmd:'saveDocumentAs' }, { cmd:'openRecent' } ] };
+  // Your own functions (step 7, phase D2), on the Insert tab.
+  const FUNCTIONS_RIBBON_GROUP = { id:'myFunctions', label:'My Functions', items:[
+    { cmd:'openFunctions', size:'large' }, { cmd:'importFunctions' } ] };
   const DEFAULT_RIBBON = {
     qat: ['undo', 'redo', 'evaluate', 'openLauncher'],
     tabs: [
@@ -9855,7 +10823,7 @@
         { label:'Workspace', items:[ { cmd:'exportWorkspace' }, { cmd:'importWorkspace' } ] },
         { label:'Preferences', items:[ { cmd:'exportPreferences' }, { cmd:'importPreferences' } ] },
         { label:'App', items:[ { cmd:'openExcelExporter', size:'large' }, { cmd:'installApp' } ] },
-        { label:'Library', items:[ { cmd:'openTemplates', size:'large' }, { cmd:'openFormats', size:'large' } ] },
+        { label:'Library', items:[ { cmd:'openTemplates', size:'large' }, { cmd:'openFunctions', size:'large' }, { cmd:'openFormats', size:'large' } ] },
       ]},
       { id:'home', label:'Home', keytip:'H', groups:[
         { label:'Clipboard', items:[ { cmd:'paste', size:'large' }, { cmd:'cut' }, { cmd:'copy' } ] },
@@ -9868,7 +10836,8 @@
         { label:'Nodes', items:[ { cmd:'addRect', size:'large' }, { cmd:'addAlias', size:'large' }, { cmd:'addBlock', size:'large' }, { cmd:'addPeriodShift', size:'large' } ] },
         { label:'Arithmetic', items:[0,1,2,3,4,5].map(i => ({ cmd:'insertOp' + i })) },
         { label:'Compare', items:[6,7,8,9].map(i => ({ cmd:'insertOp' + i })) },
-        { label:'Functions', items:[10,11,12,13,14].map(i => ({ cmd:'insertOp' + i })) },
+        { label:'Excel Functions', items:[10,11,12,13,14].map(i => ({ cmd:'insertOp' + i })) },
+        cloneData(FUNCTIONS_RIBBON_GROUP),
         { label:'Library', items:[ { cmd:'openTemplates', size:'large' }, { cmd:'updateCanvasTemplate' }, { cmd:'unlinkCanvasTemplate' } ] },
       ]},
       { id:'arrange', label:'Arrange', keytip:'A', groups:[
@@ -12527,7 +13496,8 @@
       ribbonCollapsed: ribbonState.collapsed, activeTab: ribbonState.activeTab,
       keytipTrigger: Object.assign({}, keytipTrigger), comboVersion: 2, launcherRecent: launcherRecent.slice(), lastRunMacroId,
       dedupeMatch: Object.assign({}, dedupeMatch),
-      documentGroupAdded: true // the default ribbon has it; a customised one got it once
+      documentGroupAdded: true, // the default ribbon has it; a customised one got it once
+      functionsGroupAdded: true
     };
   }
   // One-time update of a ribbon customised before the Document group existed: add it at
@@ -12539,6 +13509,17 @@
     if(!Array.isArray(tab.groups)) tab.groups = [];
     tab.groups.unshift(cloneData(DOCUMENT_RIBBON_GROUP));
   }
+  // One-time update of a ribbon customised before your own functions existed: the My
+  // Functions group joins the Insert tab (before its Library group), or the first tab.
+  function addFunctionsGroupToRibbon(){
+    const tabs = ribbonState.config.tabs;
+    const tab = tabs.find(t => t && t.id === 'insert') || tabs[0];
+    if(!tab) return;
+    if(!Array.isArray(tab.groups)) tab.groups = [];
+    if(tab.groups.some(g => g && g.id === 'myFunctions')) return;
+    const lib = tab.groups.findIndex(g => g && g.label === 'Library');
+    tab.groups.splice(lib < 0 ? tab.groups.length : lib, 0, cloneData(FUNCTIONS_RIBBON_GROUP));
+  }
   function applyUiPayload(ui){
     if(!ui || typeof ui !== 'object') return;
     const fileRibbon = ui.ribbonCustomized ? cleanRibbonConfig(ui.ribbon) : null;
@@ -12546,6 +13527,7 @@
       ribbonState.config = fileRibbon;
       ribbonState.customized = true;
       if(ui.documentGroupAdded !== true) addDocumentGroupToRibbon();
+      if(ui.functionsGroupAdded !== true) addFunctionsGroupToRibbon();
     }
     if(typeof ui.ribbonCollapsed === 'boolean') ribbonState.collapsed = ui.ribbonCollapsed;
     if(typeof ui.activeTab === 'string') ribbonState.activeTab = ui.activeTab;

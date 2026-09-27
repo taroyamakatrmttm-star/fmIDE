@@ -22,7 +22,9 @@
 
   function snapshot(){
     syncActiveIntoRegistry();
-    return JSON.stringify({ canvases, activeCanvasId, nextId, nextCanvasId, periods, currentPeriod });
+    // The model's function definitions are part of it (undoing an insert takes back the
+    // definitions it brought).
+    return JSON.stringify({ canvases, activeCanvasId, nextId, nextCanvasId, periods, currentPeriod, modelFunctions });
   }
 
   function pushHistory(){
@@ -46,6 +48,7 @@
     nextCanvasId = data.nextCanvasId;
     periods = Array.isArray(data.periods) && data.periods.length ? data.periods : ['Period 1'];
     currentPeriod = (typeof data.currentPeriod === 'number') ? Math.max(0, Math.min(periods.length - 1, data.currentPeriod)) : 0;
+    modelFunctions = Array.isArray(data.modelFunctions) ? data.modelFunctions : [];
     const active = canvases.find(c => c.id === activeCanvasId) || canvases[0];
     activeCanvasId = active.id;
     loadCanvasState(active);
