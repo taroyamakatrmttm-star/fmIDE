@@ -144,10 +144,10 @@
       const c = canvasOfTab(tab);
       if(c) startRenameCanvasTab(tab, c, tab.querySelector('.name'));
     });
-    tab.addEventListener('mousedown', (ev) => {
+    onPress(tab, (ev) => {
       if(ev.target === closeX || ev.target.tagName === 'INPUT' || tab.dataset.renaming) return;
       // no text selection on tabs: a selected tab name would turn a drag into a native text drag
-      ev.preventDefault();
+      pressDefault(ev);
       if(ev.button !== 0) return;
       startCanvasTabDrag(ev, tab.dataset.id, tab);
     });
@@ -212,9 +212,7 @@
       tabEl.style.transform = `translateX(${dx}px)`;
       targetPos = computeTarget(ev.clientX);
     }
-    function onUp(){
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
+    function onUp(ev, cancelled){
       if(!dragging) return;
       tabEl.classList.remove('tab-dragging');
       tabEl.style.transform = '';
@@ -222,10 +220,9 @@
       if(marker) marker.remove();
       tabDragJustEnded = true;
       setTimeout(() => { tabDragJustEnded = false; }, 0);
-      if(targetPos) guarded(() => fm.moveCanvas(canvasId, targetPos));
+      if(targetPos && !cancelled) guarded(() => fm.moveCanvas(canvasId, targetPos));
     }
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
+    followPointer(downEv, onMove, onUp);
   }
 
   function startRenameCanvasTab(tab, c, nameSpan){

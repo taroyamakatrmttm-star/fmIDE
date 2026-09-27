@@ -396,6 +396,17 @@ File → Browse Library… on the site built with a sample library (`W.startSite
 - In Node: the shared reader (`readLibraryIndexData`) reads the build's own `index.json` for both samples with nothing left out; a list without packs fails, an empty one reads.
 - The ribbon: Browse Library… in the File tab's Library group before Open Library Pack…, no shortcut. The single file (`apps/fmIDE.html`, the offline fixture): the command says where the library is (with its address) and opens no window, the actions fail the same way, and no request is made; a ribbon customised before 8d gets Browse Library… once, before Open Library Pack…, and not again once removed.
 
+### 27. Touch (`tests/27-touch.spec.js`; step 9)
+fmIDE in Chromium with a touchscreen at 1024 × 768 (`hasTouch`). Each touch is real touch input sent through the Chrome DevTools Protocol (`Input.dispatchTouchEvent`: start, moves, end), not a mouse event; the tests that drag check every `pointerdown` the page saw was `touch`. The mouse is covered, unchanged, by every other group.
+- A finger drags a node (Price, from 60, 60 by 150, 80 — within the snap distance of 210, 140); one Undo puts it back. A tap then selects just that node, doesn't move it, and leaves nothing half-dragged.
+- Only the first finger acts: with a finger dragging Price, a second finger dragging Revenue moves nothing.
+- A finger draws an arrow from a dot (tap to select, then from the east dot onto Revenue): exactly one arrow, Price → Revenue, and no leftover line; lifted over empty canvas, no arrow.
+- A finger resizes a node by its corner (+60, +30).
+- A finger drags the canvas tab "One" past "Three": the order becomes Two, Three, One.
+- A finger draws in the curve editor (opened by tapping the node, then 📈; six periods), from high on the left to low on the right: the values change and the first is greater than the last.
+- One finger on empty canvas scrolls it (a rectangle far away makes it scrollable): no selection box, nothing selected.
+- A tap on empty canvas clears the selection; a tap on a node closes an open operator picker (the mouse events the browser copies from a tap still reach the page).
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.

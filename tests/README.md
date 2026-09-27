@@ -34,6 +34,7 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | `npm run test:library-checker` | the library's rules: the checker's library mode (`--library`), pull requests, `--write-records`, the Markdown report (Node only) |
 | `npm run test:library-catalogue` | the library's catalogue the build writes under `/library` (pages, downloads, `index.json`, escaping, its security policy) |
 | `npm run test:library-browse` | browsing the library inside fmIDE (Browse Library…, its checks of the list and packs, offline, the single file, `window.fm`) |
+| `npm run test:touch` | fmIDE's canvas by finger: real touch input on an emulated touchscreen (drag, arrows, resize, tabs, the curve editor, scrolling) |
 | `npx playwright test -g "Tree view"` | tests whose name matches |
 
 After a failure, `npx playwright show-report` opens the report, with a trace for each failed test.
@@ -59,7 +60,7 @@ Review the snapshot diff before committing: it is the record of what the change 
 ## Layout
 
 ```
-0-smoke.spec.js … 26-library-browse.spec.js     one file per group in SPEC.md (6 and 7 split per app)
+0-smoke.spec.js … 27-touch.spec.js     one file per group in SPEC.md (6 and 7 split per app)
 helpers/apps.js       the offline fixture: serves the apps, blocks and counts other requests
 helpers/excel.js      load a model, toggle options, capture the workbook (window.__wb + real .xlsx bytes)
 helpers/soffice.js    find LibreOffice, recalculate workbooks, read values
