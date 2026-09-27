@@ -193,7 +193,7 @@ How it was checked:
 
   The differences are within what repeated runs of the same build show.
 
-### D2 — fmIDE: the Functions manager, the node, updating
+### D2 — fmIDE: the Functions manager, the node, updating ✅
 
 Decisions taken at the start of D2 (September 2026; the owner chose the recommendation each time):
 
@@ -226,3 +226,46 @@ How it was checked:
 - Every other test, the workbook snapshots and fmIDE's pinned values are unchanged.
 - The whole suite passes: 457 tests, LibreOffice included.
 - **Speed** (`npm run bench`, same machine, `main` and D2a run back to back): the calculation code is unchanged, and a model without functions is no slower. `fm.evaluate` on the large model (1,865 nodes, 24 periods): medians 1,904–2,035 ms before, 1,854–2,043 ms after (five runs each); on the biggest sample, 60 runs, three times: 4.4–4.9 ms before, 4.2–4.3 ms after. ExcelExporter is untouched by D2a (about 610 ms to generate the large model).
+
+#### D2b — how it turned out ✅
+
+Decisions taken at the start of D2b (September 2026; the owner chose the recommendation each time):
+
+1. **Look:** the block instance's box in teal (blocks are purple): "ƒ Name vN" with ⬆ beside the ⋯ button, inputs on the left, the value with its unit under it on the right. **Double-click** shows the definition (the Functions manager at that version, or the model's own copy, read only, when the library doesn't have it).
+2. **Change in place:** "⋯ → Change function or version…", like a block's "⋯ Change block", through the same machinery as Update (older versions too).
+3. **Updating one node** asks first only when arrows would be dropped; the `fm` actions never ask and return what they dropped.
+4. **Pasting a different version under a number the model already uses:** it comes in under the family's next free number in the model (keeping its `versionId`, with a note) and the pasted nodes follow — the library's import rule, applied to the model. The same now applies to modules, Add System and templates.
+5. **Unused definitions** leave the model as soon as the last node using them goes, in the same undo step.
+6. **An arrow dropped on the box** goes into its first input without one. **A missing definition the library has exactly** (same `versionId`) can be added back from the node's menu.
+
+What was built:
+
+- **The node** (`src/fmide/js/11d-function-nodes.js`, new): `functionNodeState` works out a node's definition (from `modelFunctions` only, compiled once per change: `modelFunctionTable`), its inputs, the library's matching version (by `versionId`, `libraryFunctionFor`), whether a newer one is waiting (and not declined), and whether a missing definition can be added back. `renderFunctionNodeBody` draws it; a missing or unreadable definition draws a warning, "?" with the reason, and numbered ports for the arrows it has. Everything from a definition or from `fn` is set with `textContent`; a `fn.name` that isn't text shows "(unnamed)".
+- **Wiring:** `fm.connect` / `fm.deleteEdge` take a function node's input by name (any capitals) or number from 1 (`resolveFunctionPort`); macros record the name. Dragging onto an input's dot wires it; onto the box, the first free input (`firstFreeFunctionPort`); from the output dot, an arrow out (no `fromPort`).
+- **The model's definitions:** `addFunctionsToModel(list, onClash)` in `11b-functions.js` is the one way in: `'refuse'` (Insert: "already uses a different version 2 of Margin… update its nodes first"), `'renumber'` (paste, modules, Add System, templates, updates and adding a missing definition back), `'check'` (refuse without adding). It returns a `remap` the incoming nodes follow (`remapFunctionNodes`). `trimModelFunctions` runs where nodes or canvases go (Delete, Cut, Clear Canvas, Delete Canvas, Clear All, updates).
+- **Updating:** `functionNodeUpdatePlan` matches each arrow to the new inputs by name (without a readable old definition, by position while the new version has that many inputs); `applyFunctionNodeUpdates` copies the target versions (and what they call) into the model, moves the arrows, drops the rest and trims — one undo step for any number of nodes, on any canvases. The ⋯ / ⬆ menu (Update to vN, Not now, Update every use…, Add the definition from your library, Change function or version…, Show definition), the "Update every use" window (every node of the family; ticked when older, unticked for "Not now" and for a version the library doesn't have; nodes on the target or newer left out; the arrows each would lose), and the command Update Function… (the selected node's function, or a choice among those with a newer version).
+- **Copy and paste:** a copy keeps its nodes as deep copies (the shallow copy shared `fn` with the original) and the definitions they use (`clipboard.functions`); pasting brings them into the model and the library.
+- **`window.fm`** (`14b-actions-functions.js`): `insertFunction`, `updateFunctionNode`, `changeFunction`, `updateFunctionUses`, `skipFunctionUpdate`, `addFunctionDefinition`; `fm.nodes()` shows `fn`. The windows act through them, so macros record what they do.
+- **Ribbon and commands:** Insert Function… and Update Function… (no shortcuts) in My Functions, Insert Function… in Home → Insert; a customised ribbon's My Functions group gets them once (`ui.functionCommandsAdded`). The Functions manager has "ƒ Insert vN".
+- **Files:** no format changed. `fn.skipped` is an optional field older apps ignore (`docs/file-formats.md`).
+
+Problems found and fixed on the way:
+
+- (D1) Loading a module, adding a system or inserting a template that carried a *different* version under a number the model already used kept the model's own and left the incoming nodes on "?" (function-missing). Decision 4 fixes it.
+- (Earlier than step 7) Dragging an arrow passed node ids as bare words, which the automation layer reads as names unless they look like `n12`; in a model from a hand-written file (the function samples: `rev`, `fm1`) dragging failed. The drag now passes `#id`. Other on-canvas edits still pass bare ids (typing a rectangle's text, choosing an operator symbol, the reducer chip, the vertical port toggle); they fail the same way on such files and are left for a separate change.
+
+How it was checked:
+
+- Group 21 grows by 20 tests (41 in all); group 5 gets one more (`tests/fixtures/security/evil-function-nodes.json`).
+- Every other test, the workbook snapshots and fmIDE's pinned values are unchanged; `tests/snapshots/` didn't change.
+- The whole suite passes: 478 tests, LibreOffice included (the session's LibreOffice lacked Calc at first, which skips the 27 recalculation tests; with Calc installed they ran and passed).
+- **Speed** (`npm run bench`, same machine, `main` and D2b run back to back, twice; medians of 15). Nothing new runs for a model without function nodes (trimming, copying and pasting stop at once when the model carries no definitions):
+
+  | | `main` | D2b |
+  |---|---|---|
+  | fmIDE `fm.evaluate`, large model (1,865 nodes, 24 periods) | 1,125 / 1,222 ms | 1,189 / 1,204 ms |
+  | fmIDE `fm.evaluate`, biggest sample | 3.0 / 3.8 ms | 2.9 / 2.4 ms |
+  | ExcelExporter Generate, large model (unchanged by D2b) | 419 / 376 ms | 373 / 370 ms |
+
+  The differences are within what repeated runs of the same build show.
+

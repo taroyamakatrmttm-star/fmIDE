@@ -252,10 +252,16 @@
         // block instances require dropping precisely on one of their input dots
         render();
         return;
+      } else if(toNode && toNode.type === 'function'){
+        // Dropped on a function node's body: its first input with no arrow (decided in D2b).
+        const free = firstFreeFunctionPort(toNode);
+        if(free.error){ render(); showMessage(free.error); return; }
+        toPort = free.index;
       }
 
       guarded(() => {
-        const edgeId = fm.connect(fromId, toId, fromPortIndex != null ? String(fromPortIndex + 1) : '', toPort !== null ? String(toPort + 1) : '');
+        // By '#id': a node from a file may have any id, which as a bare word would be read as a name.
+        const edgeId = fm.connect('#' + fromId, '#' + toId, fromPortIndex != null ? String(fromPortIndex + 1) : '', toPort !== null ? String(toPort + 1) : '');
         if(edgeId) selectEdgeOnly(edgeId); else render();
       });
     }

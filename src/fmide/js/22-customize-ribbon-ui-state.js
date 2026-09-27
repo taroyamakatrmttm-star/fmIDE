@@ -301,7 +301,8 @@
       keytipTrigger: Object.assign({}, keytipTrigger), comboVersion: 2, launcherRecent: launcherRecent.slice(), lastRunMacroId,
       dedupeMatch: Object.assign({}, dedupeMatch),
       documentGroupAdded: true, // the default ribbon has it; a customised one got it once
-      functionsGroupAdded: true
+      functionsGroupAdded: true,
+      functionCommandsAdded: true // D2b: Insert Function… and Update Function… in My Functions
     };
   }
   // One-time update of a ribbon customised before the Document group existed: add it at
@@ -324,6 +325,18 @@
     const lib = tab.groups.findIndex(g => g && g.label === 'Library');
     tab.groups.splice(lib < 0 ? tab.groups.length : lib, 0, cloneData(FUNCTIONS_RIBBON_GROUP));
   }
+  // One-time update (D2b) of a customised ribbon's My Functions group: Insert Function… and
+  // Update Function… join it, wherever the person moved the group. A ribbon without the group
+  // is left alone; a command removed afterwards stays removed (this runs once).
+  function addFunctionCommandsToRibbon(){
+    ribbonState.config.tabs.forEach(t => (t && Array.isArray(t.groups) ? t.groups : []).forEach(g => {
+      if(!g || g.id !== 'myFunctions') return;
+      if(!Array.isArray(g.items)) g.items = [];
+      ['insertFunction', 'updateFunction'].forEach((cmd, i) => {
+        if(!g.items.some(it => it && it.cmd === cmd)) g.items.splice(Math.min(g.items.length, 1 + i), 0, { cmd });
+      });
+    }));
+  }
   function applyUiPayload(ui){
     if(!ui || typeof ui !== 'object') return;
     const fileRibbon = ui.ribbonCustomized ? cleanRibbonConfig(ui.ribbon) : null;
@@ -332,6 +345,7 @@
       ribbonState.customized = true;
       if(ui.documentGroupAdded !== true) addDocumentGroupToRibbon();
       if(ui.functionsGroupAdded !== true) addFunctionsGroupToRibbon();
+      if(ui.functionCommandsAdded !== true) addFunctionCommandsToRibbon();
     }
     if(typeof ui.ribbonCollapsed === 'boolean') ribbonState.collapsed = ui.ribbonCollapsed;
     if(typeof ui.activeTab === 'string') ribbonState.activeTab = ui.activeTab;

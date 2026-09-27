@@ -215,7 +215,10 @@
 
   function performAddSystem(data, decisions){
     pushHistory();
-    mergeModelFunctions(data.functions);
+    // A different version under a number the model already uses comes in renumbered; its
+    // nodes follow.
+    const remap = mergeModelFunctions(data.functions);
+    data = Object.assign({}, data, { canvases: data.canvases.map(c => (c && Array.isArray(c.nodes)) ? Object.assign({}, c, { nodes: remapFunctionNodes(c.nodes, remap) }) : c) });
     const canvasIdMap = {};
     const nodeIdMap = {};
     const mergeTargets = {};
@@ -508,9 +511,9 @@
   // to the current canvas and when adding to a freshly created one. No history/validation.
   // keepIds (optional): Map of a module node id → the id it should keep (Update this canvas).
   function applyModuleDataDirect(data, keepIds){
-    mergeModelFunctions(data.functions);
+    const remap = mergeModelFunctions(data.functions);
     const idMap = {};
-    const newNodes = data.nodes.map(n => {
+    const newNodes = remapFunctionNodes(data.nodes, remap).map(n => {
       const newId = (keepIds && keepIds.get(n.id)) || uid('n');
       idMap[n.id] = newId;
       return Object.assign({}, n, { id: newId });

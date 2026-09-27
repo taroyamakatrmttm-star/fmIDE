@@ -9,6 +9,7 @@ Every canvas interaction is an action. The Ribbon, shortcuts, Command Launcher (
 - `#n12` — node by id · `@sel`, `@sel[0]` — selection (in a macro: as it was when the macro started) · `@cur` live selection · `@all` every node
 - `$r1`, `$r1[0]` — macro variables · `Canvas::Name` — rectangle on another canvas
 - Templates: `Income Statement` (latest version) · `Income Statement@latest` · `Income Statement@3` (version 3) · the same with the family id instead of the name (`3f2a…@2`, needed when two families share a name) · `#usr4` (one exact entry, this session only)
+- Function nodes: by id (`#n12`), like other nodes; their inputs by name (`Revenue`, capitals don't matter) or number from 1 (the file counts `toPort` from 0). `fm.nodes()` shows a function node's `fn` (`{ family, version, versionId, name, skipped? }`).
 - Functions: `Margin` (latest version) · `Margin@latest` · `Margin@2` (version 2) · the same with the family id (needed when two functions share a name) · or `{ family, version, versionId }`
 - Numbers accept expressions: `100 + $i*80`, `$periods`, `round($x/2)`. Text accepts `${var}`.
 
@@ -31,9 +32,15 @@ Every canvas interaction is an action. The Ribbon, shortcuts, Command Launcher (
 - **getFunction**(function) — Get Function. Returns one version from your library: { family, version, versionId, name, inputs, text, description, note, calls, latest }.
 - **setFunctionInfo**(function, description="", note="") — Edit Function Description. Changes the description and change note of one version in your library (neither changes the calculation).
 - **deleteFunction**(function, whole=false) — Delete Function. Deletes from your library: "Name" (or whole: true) the whole function with every version; "Name@2" one older version. The latest version goes only with the whole function, so its number is never used again. The open model keeps its own copy. Returns how many versions were deleted.
+- **insertFunction**(function, x="(auto)", y="(auto)") — Insert Function. Adds a function node for a version in your library: "Name" (the latest version), "Name@latest", "Name@2", or the same with the family id. The version, and every function it calls, is copied into the model. Fails when the model already carries a different version under the same number (update its nodes first).
+- **updateFunctionNode**(node, version="latest") — Update Function Node. Moves one function node to another version of its function in your library ("latest", or a number). Arrows follow their inputs by name; an arrow into an input the new version doesn't have is dropped. Returns { version, dropped: [{ node, canvas, input, from }] }.
+- **changeFunction**(node, function) — Change Function. Switches a function node to another function or version from your library ("Name", "Name@2", …), like a block's "Change block". Arrows follow their inputs by name; the others are dropped. Returns { dropped: [{ node, canvas, input, from }] }.
+- **updateFunctionUses**(function, nodes?) — Update Every Use of a Function. Moves the model's nodes of a function to a version in your library ("Name" = the latest, "Name@3"). Without nodes: every node on an older version, except those marked "Not now" for it or a newer one; nodes on that version or newer are left alone. nodes names the ones to update ("#id" or "Canvas::#id"). One undo step. Returns { updated, dropped: [{ node, canvas, input, from }] }.
+- **skipFunctionUpdate**(node) — Not Now (Function Update). Declines the newer version of a function node's function for now: its ⬆ goes away until an even newer version appears (the node remembers the version it declined, fn.skipped).
+- **addFunctionDefinition**(node) — Add Function Definition from Library. For a function node whose definition is missing from the model, copies that exact version (the same versionId) from your library into the model, with what it calls.
 
 ### Connect
-- **connect**(from, to, fromPort="", toPort="") — Connect. Draws an arrow from one node to another. Block instances take a port: its name or 1-based number.
+- **connect**(from, to, fromPort="", toPort="") — Connect. Draws an arrow from one node to another. Block instances and function nodes take a port: its name or 1-based number (a function node's input by the name the definition gives it).
 - **deleteEdge**(from, to, toPort="") — Delete Connection.
 
 ### Edit

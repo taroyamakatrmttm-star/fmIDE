@@ -6,7 +6,9 @@
       if(ev.target.classList.contains('tag-btn')){ ev.stopPropagation(); ev.preventDefault(); return; }
       if(ev.target.classList.contains('io-port')){
         ev.stopPropagation(); ev.preventDefault();
-        if(ev.target.dataset.portDir === 'out'){
+        // A function node's one output has no port number (its arrows carry no fromPort).
+        if(ev.target.classList.contains('fn-out-port')) startConnection(id, ev);
+        else if(ev.target.dataset.portDir === 'out'){
           startConnection(id, ev, parseInt(ev.target.dataset.portIndex, 10));
         }
         return;
@@ -59,6 +61,7 @@
       }
       if(ev.target.classList.contains('io-btn')){ showRolePicker(n); }
       if(ev.target.classList.contains('block-relink')){ showBlockPicker(n); }
+      if(ev.target.classList.contains('fn-menu-btn') || ev.target.classList.contains('fn-update-btn')){ showFunctionNodeMenu(n); }
       if(ev.target.classList.contains('vrows-btn')){ showVerticalInstancesViewer(n); }
       if(ev.target.classList.contains('props-btn')){ showPropertiesEditor(n); }
       if(ev.target.classList.contains('period-btn')){ showLiteralPeriodsPicker(n); }
@@ -85,6 +88,7 @@
         else showAliasPicker(n);
       }
       else if(n.type === 'blockInstance') showBlockPicker(n);
+      else if(n.type === 'function'){ if(!ev.target.classList.contains('tag-btn')) showFunctionDefinition(n); }
       else startEdit(n.id);
     });
   }

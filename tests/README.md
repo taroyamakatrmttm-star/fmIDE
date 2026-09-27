@@ -28,7 +28,7 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | `npm run test:ir` | the shared IR: fmIDE's pinned values, errors and units; the IR alone in Node |
 | `npm run test:excel-ir` | ExcelExporter on the IR: pinned units, operator spellings, the "differs from fmIDE" panel |
 | `npm run test:functions` | function plugins: the parser, the samples in `fixtures/functions/`, files carrying their definitions |
-| `npm run test:functions-fmide` | functions in fmIDE: the library, the Functions manager and editor, the `fmIDE-functions` file, undo, ribbon, macros |
+| `npm run test:functions-fmide` | functions in fmIDE: the library, the Functions manager and editor, the `fmIDE-functions` file, function nodes on the canvas (insert, drawing, wiring, updating, copy and paste), undo, ribbon, macros |
 | `npx playwright test -g "Tree view"` | tests whose name matches |
 
 After a failure, `npx playwright show-report` opens the report, with a trace for each failed test.

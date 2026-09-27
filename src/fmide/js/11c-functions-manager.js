@@ -320,7 +320,8 @@
     input.click();
   }
 
-  function showFunctionsManager(){
+  // `initial`: the library version to show first (double-clicking a function node).
+  function showFunctionsManager(initial){
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
@@ -367,9 +368,10 @@
     detail.className = 'template-detail function-detail';
     layout.appendChild(detail);
 
-    let selected = functionFamilies()[0] || null;
+    let selected = (initial && FUNCTIONS.includes(initial)) ? initial : (functionFamilies()[0] || null);
     let shown = [];
     const expanded = new Set();
+    if(selected && !isLatestFunction(selected)) expanded.add(selected.family);
     const reselect = (d) => { selected = d || (selected && FUNCTIONS.includes(selected) ? selected : (selected && latestFunctionOf(selected.family))) || functionFamilies()[0] || null; renderList(); renderDetail(); };
 
     newBtn.addEventListener('click', () => showFunctionEditor(null, reselect));
@@ -428,7 +430,19 @@
         if(guarded(() => fm.deleteFunction({ function: functionRefText(d), whole: isLatestFunction(d) })) === undefined) return;
         reselect(latestFunctionOf(family));
       }));
-      actionsRow.append(versionBtn, infoBtn, delBtn);
+      const insertBtn = document.createElement('button');
+      insertBtn.className = 'function-insert';
+      insertBtn.textContent = `ƒ Insert v${d.version}`;
+      insertBtn.title = 'Adds a node for this version to the canvas';
+      insertBtn.disabled = !parsed.ok;
+      insertBtn.addEventListener('click', () => {
+        const {x, y} = spawnPoint();
+        const id = guarded(() => fm.insertFunction({ function: functionRefText(d), x, y }));
+        if(id === undefined) return;
+        close();
+        selectNodesOnly([id]);
+      });
+      actionsRow.append(insertBtn, versionBtn, infoBtn, delBtn);
       detail.appendChild(actionsRow);
     }
 
