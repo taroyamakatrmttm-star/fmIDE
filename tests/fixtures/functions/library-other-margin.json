@@ -1,0 +1,15 @@
+{
+  "kind": "fmIDE-functions",
+  "version": 1,
+  "functions": [
+    {
+      "family": "family-margin-other",
+      "version": 1,
+      "versionId": "version-margin-other-1",
+      "text": "Margin(a, b) = a - b",
+      "description": "Someone else's Margin.",
+      "note": "",
+      "calls": []
+    }
+  ]
+}

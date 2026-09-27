@@ -28,6 +28,7 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | `npm run test:ir` | the shared IR: fmIDE's pinned values, errors and units; the IR alone in Node |
 | `npm run test:excel-ir` | ExcelExporter on the IR: pinned units, operator spellings, the "differs from fmIDE" panel |
 | `npm run test:functions` | function plugins: the parser, the samples in `fixtures/functions/`, files carrying their definitions |
+| `npm run test:functions-fmide` | functions in fmIDE: the library, the Functions manager and editor, the `fmIDE-functions` file, undo, ribbon, macros |
 | `npx playwright test -g "Tree view"` | tests whose name matches |
 
 After a failure, `npx playwright show-report` opens the report, with a trace for each failed test.
@@ -53,7 +54,7 @@ Review the snapshot diff before committing: it is the record of what the change 
 ## Layout
 
 ```
-0-smoke.spec.js … 20-functions.spec.js   one file per group in SPEC.md (6 and 7 split per app)
+0-smoke.spec.js … 21-functions-fmide.spec.js   one file per group in SPEC.md (6 and 7 split per app)
 helpers/apps.js       the offline fixture: serves the apps, blocks and counts other requests
 helpers/excel.js      load a model, toggle options, capture the workbook (window.__wb + real .xlsx bytes)
 helpers/soffice.js    find LibreOffice, recalculate workbooks, read values

@@ -2,6 +2,15 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Function plugins, part 2a: the Functions manager (phase D2a)
+- fmIDE has a **Functions manager** (File → Functions, or Insert → My Functions): your function library, listed by function with each one's versions, notes, formula and inputs. **+ New Function…** opens an editor that reads the definition as you type, shows where a mistake is, and keeps Save off until the formula reads. Calls to your other functions are tied to one version; when two functions share a name, the editor asks which one you mean.
+- Versions work as for templates: **Edit as new version…**, change notes, older versions deleted one at a time and the latest only with the whole function. Deleting a function the open model uses warns but doesn't refuse: the model carries its own copy.
+- **Import Functions** and **Export Functions** read and write the functions file (version 1, unchanged). Importing never replaces your functions; a version whose number you already use for a different version is added under the next number, and calls to it follow it.
+- Fix (from phase D1): opening a model that carries a different version under a number your library already uses no longer puts two "version 2"s in the library; the library's copy is renumbered, and the model keeps and calculates with its own.
+- Undo now also covers the function definitions a model carries.
+- The Insert tab's group of built-in operators MIN, MAX, AVERAGE, ABS and MOD is now called **Excel Functions**, next to the new **My Functions** group. A ribbon you customised gets My Functions once, on its Insert tab.
+- `window.fm`: `saveFunction`, `listFunctions`, `getFunction`, `setFunctionInfo`, `deleteFunction`, `importFunctions`, `exportFunctions`; macros record them. Placing functions on the canvas (phase D2b) comes next.
+
 ## Function plugins, part 1: the formula reader and the file formats (phase D1)
 - The groundwork for **functions**: formulas you write once, such as `Margin(Revenue, Cost) = (Revenue - Cost) / Revenue`, and use in a model like a built-in operator. This part adds the reader for them (our own parser, which never runs text as code), their calculation in both apps, and the files that carry them. Creating and placing functions in fmIDE comes next (the Functions manager); ExcelExporter writes them out in full after that.
 - The syntax is Excel-like and written down in `docs/file-formats.md`: inputs by name, numbers, brackets, `+ - * / ^`, one comparison, `MIN MAX AVERAGE ABS MOD IFERROR`, and calls to other functions, with Excel's order of operations (`-2^2` is 4).

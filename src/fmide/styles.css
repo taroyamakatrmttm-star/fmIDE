@@ -372,6 +372,36 @@
   .template-detail{ flex:1; display:flex; flex-direction:column; min-width:0; }
   .template-detail h4{ margin:0 0 4px; font-size:15px; color:var(--text); }
   .template-desc{ font-size:12px; color:#6b7280; margin:0 0 10px; line-height:1.4; }
+  /* Functions manager and editor (step 7, phase D2) */
+  .function-detail-text, .fn-editor-where{
+    font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; white-space:pre-wrap; word-break:break-word;
+    background:#f8fafc; border:1px solid #e5e7eb; border-radius:6px; padding:7px 9px; margin:0 0 8px; color:var(--text);
+  }
+  .fn-editor-where mark{ background:#fecaca; color:#991b1b; border-bottom:2px solid #dc2626; }
+  .template-list button .function-family-id{ margin-left:6px; font-size:10.5px; color:#9ca3af; }
+  .modal-box p.function-detail-inputs, .modal-box p.function-detail-call, .modal-box p.function-detail-uses{ font-size:12px; color:#374151; margin:0 0 4px; }
+  .modal-box p.function-detail-call.older{ color:#b45309; }
+  .modal-box p.function-detail-call.missing, .modal-box p.function-detail-problem{ font-size:12px; color:#b91c1c; margin:0 0 4px; }
+  .template-list button .function-in-model-tag{ margin-left:6px; font-size:10.5px; color:#0f766e; }
+  .template-list button .function-older-calls-tag{ display:block; font-size:10.5px; color:#b45309; }
+  .function-editor{ min-width:480px; max-width:640px; }
+  .fn-editor-label{ display:block; font-size:12px; color:#6b7280; margin:8px 0 4px; }
+  .fn-editor-text, .fn-editor-description, .fn-editor-note{
+    width:100%; font-size:13px; padding:7px 9px; border-radius:6px; border:1px solid #d1d5db; box-sizing:border-box; font-family:inherit;
+  }
+  .fn-editor-text{ font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; resize:vertical; }
+  .fn-editor-description{ resize:vertical; }
+  .modal-box p.fn-editor-parsed{ font-size:12px; color:#374151; margin:6px 0 4px; min-height:1em; }
+  .modal-box p.fn-editor-error{ font-size:12px; color:#b91c1c; margin:0 0 6px; min-height:1em; }
+  .modal-box p.fn-editor-error.ok{ color:#15803d; }
+  .fn-editor-call{ font-size:12px; display:flex; align-items:center; gap:6px; margin:3px 0; }
+  .fn-editor-call select{ flex:1; min-width:0; }
+  .fn-editor-call.missing{ color:#b91c1c; }
+  .fn-editor-call select{ font-size:12px; }
+  .function-editor .modal-actions{ margin-top:14px; }
+  .function-editor button.fn-editor-save:disabled{ opacity:.45; cursor:not-allowed; }
+  .fn-editor-use-latest{ font-size:11px; padding:2px 7px; }
+  .function-export-row{ display:block; font-size:13px; margin:3px 0; }
   .template-preview-tabs{ display:flex; gap:4px; margin-bottom:6px; flex-wrap:wrap; }
   .template-preview-tabs button{
     font-size:11px; padding:3px 9px; border-radius:6px; border:1px solid #d1d5db; background:#fff; cursor:pointer; color:var(--text);

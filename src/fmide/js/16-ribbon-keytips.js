@@ -8,6 +8,9 @@
   // (addDocumentGroupToRibbon, 21); removing it afterwards is respected.
   const DOCUMENT_RIBBON_GROUP = { id:'document', label:'Document', items:[
     { cmd:'saveDocument', size:'large' }, { cmd:'newDocument' }, { cmd:'openDocument' }, { cmd:'saveDocumentAs' }, { cmd:'openRecent' } ] };
+  // Your own functions (step 7, phase D2), on the Insert tab.
+  const FUNCTIONS_RIBBON_GROUP = { id:'myFunctions', label:'My Functions', items:[
+    { cmd:'openFunctions', size:'large' }, { cmd:'importFunctions' } ] };
   const DEFAULT_RIBBON = {
     qat: ['undo', 'redo', 'evaluate', 'openLauncher'],
     tabs: [
@@ -18,7 +21,7 @@
         { label:'Workspace', items:[ { cmd:'exportWorkspace' }, { cmd:'importWorkspace' } ] },
         { label:'Preferences', items:[ { cmd:'exportPreferences' }, { cmd:'importPreferences' } ] },
         { label:'App', items:[ { cmd:'openExcelExporter', size:'large' }, { cmd:'installApp' } ] },
-        { label:'Library', items:[ { cmd:'openTemplates', size:'large' }, { cmd:'openFormats', size:'large' } ] },
+        { label:'Library', items:[ { cmd:'openTemplates', size:'large' }, { cmd:'openFunctions', size:'large' }, { cmd:'openFormats', size:'large' } ] },
       ]},
       { id:'home', label:'Home', keytip:'H', groups:[
         { label:'Clipboard', items:[ { cmd:'paste', size:'large' }, { cmd:'cut' }, { cmd:'copy' } ] },
@@ -31,7 +34,8 @@
         { label:'Nodes', items:[ { cmd:'addRect', size:'large' }, { cmd:'addAlias', size:'large' }, { cmd:'addBlock', size:'large' }, { cmd:'addPeriodShift', size:'large' } ] },
         { label:'Arithmetic', items:[0,1,2,3,4,5].map(i => ({ cmd:'insertOp' + i })) },
         { label:'Compare', items:[6,7,8,9].map(i => ({ cmd:'insertOp' + i })) },
-        { label:'Functions', items:[10,11,12,13,14].map(i => ({ cmd:'insertOp' + i })) },
+        { label:'Excel Functions', items:[10,11,12,13,14].map(i => ({ cmd:'insertOp' + i })) },
+        cloneData(FUNCTIONS_RIBBON_GROUP),
         { label:'Library', items:[ { cmd:'openTemplates', size:'large' }, { cmd:'updateCanvasTemplate' }, { cmd:'unlinkCanvasTemplate' } ] },
       ]},
       { id:'arrange', label:'Arrange', keytip:'A', groups:[

@@ -59,7 +59,7 @@ Functions are formulas, never code: the apps read them with their own parser (`p
 - A **workspace** (v4) also carries the person's whole library in its own `functions`; its system carries the model's.
 - An **`fmIDE-functions`** file (v1) is `{ "kind": "fmIDE-functions", "version": 1, "functions": [ … ] }`.
 - A template's model (a module or system inside a templates file, v4) carries its own, like any module or system.
-- Opening a file adds any definitions the library doesn't have (the same family and `versionId`).
+- Opening a file adds to the library any definitions it doesn't have (the same family and `versionId`; without a `versionId`, the same family and text). A version whose number the library already uses for a different version is added under the family's next number, keeping its `versionId`, with a note saying so; calls in the library that name it by its `versionId` follow it to the new number. The model that carried it keeps its own copy under its own number.
 - The calculation reads only the definitions the model's file carries, not the library: a model calculates the same wherever it is opened.
 
 ### A function node

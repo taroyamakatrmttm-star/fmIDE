@@ -87,3 +87,39 @@ test('fmIDE: evil system through Load System', async ({ page }) => {
   expect(await page.evaluate(() => fm.nodes().length)).toBeGreaterThan(0);
   await expectSafe(page);
 });
+
+test('fmIDE: a functions file with markup in its formula, description, note and calls is shown as text', async ({ page }) => {
+  await F.openFmIDE(page);
+  await F.importViaCommand(page, 'importFunctions', fixture('security', 'evil-functions.json'));
+  expect(await F.dialogText(page)).toBe('Imported 2 function versions.');
+  await F.dismissMessage(page);
+  await page.evaluate(() => fm.command('openFunctions'));
+  const box = page.locator('.modal-box.function-box');
+  await expect(box).toBeVisible();
+  // The latest version: its note and its call's name, as text.
+  await expect(box.locator('.template-note')).toHaveText(/<svg onload=/);
+  await expect(box.locator('.function-detail-call')).toHaveText(/^Calls <img src=x onerror=.* — not in your library$/);
+  // The older one: its formula (unreadable), description and note, as text.
+  await box.locator('button.template-versions-toggle').click();
+  await box.locator('button.template-version').click();
+  await expect(box.locator('.function-detail-text')).toHaveText(/^Evil\(x\) = x <img src=x onerror=/);
+  await expect(box.locator('.template-desc')).toHaveText(/^<img src=x onerror=.*<b>bold<\/b>$/);
+  await expect(box.locator('.template-note')).toHaveText(/<script>/);
+  await expect(box.locator('.function-detail-problem')).toBeVisible();
+  // The editor shows the formula and its error place as text too.
+  await box.locator('button.function-new-version').click();
+  const editor = page.locator('.modal-box.function-editor');
+  await expect(editor.locator('.fn-editor-where')).toHaveText(/^Evil\(x\) = x <img src=x onerror=/);
+  await expect(editor.locator('.fn-editor-where mark')).toHaveText('"');
+  await expect(editor.locator('.fn-editor-description')).toHaveValue(/<img src=x/);
+  await editor.locator('button', { hasText: 'Cancel' }).click();
+  // Delete's warning, and the export list.
+  await box.locator('button.function-delete').click();
+  await F.cancelDialog(page);
+  await box.locator('button', { hasText: '⇩ Export Functions' }).click();
+  await expect(page.locator('.modal-box.function-export label')).toHaveText([' Evil (v2)']);
+  expect(await page.locator('.modal-box img, .modal-box script, .modal-box svg').count()).toBe(0);
+  expect(await page.locator('.modal-box b', { hasText: 'bold' }).count()).toBe(0);
+  await settle(page);
+  await expectSafe(page);
+});

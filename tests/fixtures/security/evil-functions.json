@@ -1,0 +1,31 @@
+{
+  "kind": "fmIDE-functions",
+  "version": 1,
+  "functions": [
+    {
+      "family": "family-evil",
+      "version": 1,
+      "versionId": "version-evil-1",
+      "text": "Evil(x) = x <img src=x onerror=\"(window.__pwned=window.__pwned||[]).push('fn-text')\">",
+      "description": "<img src=x onerror=\"(window.__pwned=window.__pwned||[]).push('fn-desc')\"><b>bold</b>",
+      "note": "<script>(window.__pwned=window.__pwned||[]).push('fn-note')</script>",
+      "calls": []
+    },
+    {
+      "family": "family-evil",
+      "version": 2,
+      "versionId": "version-evil-2",
+      "text": "Evil(x) = Helper(x)",
+      "description": "",
+      "note": "<svg onload=\"(window.__pwned=window.__pwned||[]).push('fn-note2')\">",
+      "calls": [
+        {
+          "name": "<img src=x onerror=\"(window.__pwned=window.__pwned||[]).push('fn-call')\">",
+          "family": "family-gone",
+          "version": 1,
+          "versionId": "version-gone-1"
+        }
+      ]
+    }
+  ]
+}

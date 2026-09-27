@@ -1,0 +1,31 @@
+{
+  "kind": "fmIDE-functions",
+  "version": 1,
+  "functions": [
+    {
+      "family": "family-margin",
+      "version": 2,
+      "versionId": "version-margin-theirs",
+      "text": "Margin(Revenue, Cost) = 1 - Cost / Revenue",
+      "description": "Theirs.",
+      "note": "Their v2",
+      "calls": []
+    },
+    {
+      "family": "family-net",
+      "version": 1,
+      "versionId": "version-net-1",
+      "text": "Net(Revenue, Cost) = Margin(Revenue, Cost) * Revenue - 1",
+      "description": "",
+      "note": "",
+      "calls": [
+        {
+          "name": "Margin",
+          "family": "family-margin",
+          "version": 2,
+          "versionId": "version-margin-theirs"
+        }
+      ]
+    }
+  ]
+}
