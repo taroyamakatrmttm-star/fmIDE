@@ -66,6 +66,8 @@
     }
     raw = raw || {};
     const out = {};
+    // Which parameters took their default (not enumerable, so never recorded or listed).
+    Object.defineProperty(out, 'defaulted', { value: new Set(), enumerable: false });
     const isNodeType = p => p.type === 'node' || p.type === 'nodes';
     // node references are resolved last, since they may depend on a canvas argument
     [false, true].forEach(nodePass => {
@@ -83,6 +85,7 @@
             fail(`${def.label}: "${p.label}" is required.`);
           }
         }
+        if(missing) out.defaulted.add(p.name);
         out[p.name] = coerceParam(p, v, out, missing);
       });
     });
@@ -165,7 +168,7 @@
 
   // ---------------------------------- Insert ----------------------------------
   defineAction({ name:'createRect', label:'Create Rectangle', category:'Insert', icon:'▭', returns:'node',
-    desc:'Adds a value rectangle at x, y. Its three text lines are name / value / unit of measure.',
+    desc:'Adds a value rectangle at x, y (left out: near the middle of the view, where it overlaps nothing). Its three text lines are name / value / unit of measure.',
     params:[ PX, PY, P('name','string',{ def:'New Node' }), P('value','numstr',{ def:'0', help:'number, expression, or blank' }),
       P('uom','string',{ def:'', help:'unit, e.g. kt or $/t' }), P('w','number',{ def:170, min:40 }), P('h','number',{ def:64, min:30 }) ],
     run(a){
@@ -227,7 +230,7 @@
     } });
 
   defineAction({ name:'duplicate', label:'Duplicate Nodes', category:'Insert', icon:'⧉', returns:'nodes',
-    desc:'Copies nodes (and the connections between them) offset by dx, dy — like Ctrl+drag.',
+    desc:'Copies nodes (and the connections between them) offset by dx, dy — like Ctrl+drag. With the default offset, the copies move together to the nearest place where they overlap nothing.',
     params:[ SEL_NODES(), P('dx','number',{ def:24 }), P('dy','number',{ def:24 }) ],
     run(a){
       const list = a.nodes.map(onActiveCanvas);
@@ -239,6 +242,8 @@
         idMap[orig.id] = newId;
         return Object.assign(cloneData(orig), { id: newId, x: clampPos(orig.x + a.dx), y: clampPos(orig.y + a.dy) });
       });
+      // With the default offset, the copies move together to the nearest free space.
+      if(a.defaulted.has('dx') && a.defaulted.has('dy')) moveGroupToFreeSpot(clones, nodes);
       const clonedEdges = edges
         .filter(e => !e.auto && idMap[e.from] !== undefined && idMap[e.to] !== undefined)
         .map(e => Object.assign({}, e, { id: uid('e'), from: idMap[e.from], to: idMap[e.to] }));
@@ -250,7 +255,7 @@
     } });
 
   defineAction({ name:'aliasOf', label:'Create Aliases Of', category:'Insert', icon:'🔗', returns:'nodes',
-    desc:'Creates an alias of each rectangle, offset by dx, dy — like Alt+drag.',
+    desc:'Creates an alias of each rectangle, offset by dx, dy — like Alt+drag. With the default offset, the aliases move together to the nearest place where they overlap nothing.',
     params:[ SEL_NODES(), P('dx','number',{ def:30 }), P('dy','number',{ def:30 }) ],
     run(a){
       const list = a.nodes.map(onActiveCanvas);
@@ -261,6 +266,8 @@
         id: uid('n'), type:'alias', x: clampPos(sn.x + a.dx), y: clampPos(sn.y + a.dy), w: sn.w, h: sn.h,
         sourceCanvasId: activeCanvasId, sourceNodeId: sn.id, plugs:[]
       }));
+      // With the default offset, the aliases move together to the nearest free space.
+      if(a.defaulted.has('dx') && a.defaulted.has('dy')) moveGroupToFreeSpot(newNodes, nodes);
       nodes = nodes.concat(newNodes);
       clearComputed();
       evaluateAll();

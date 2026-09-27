@@ -12,17 +12,18 @@ Every canvas interaction is an action. The Ribbon, shortcuts, Command Launcher (
 - Function nodes: by id (`#n12`), like other nodes; their inputs by name (`Revenue`, capitals don't matter) or number from 1 (the file counts `toPort` from 0). `fm.nodes()` shows a function node's `fn` (`{ family, version, versionId, name, skipped? }`).
 - Functions: `Margin` (latest version) · `Margin@latest` · `Margin@2` (version 2) · the same with the family id (needed when two functions share a name) · or `{ family, version, versionId }`
 - Numbers accept expressions: `100 + $i*80`, `$periods`, `round($x/2)`. Text accepts `${var}`.
+- Position: an `x`, `y` left out ("(auto)") means near the middle of the view, in the nearest free space — a new node never lands on another. Given `x`, `y` are kept exactly.
 
 ## Actions
 
 ### Insert
-- **createRect**(x="(auto)", y="(auto)", name="New Node", value="0", uom="", w=170, h=64) — Create Rectangle. Adds a value rectangle at x, y. Its three text lines are name / value / unit of measure.
+- **createRect**(x="(auto)", y="(auto)", name="New Node", value="0", uom="", w=170, h=64) — Create Rectangle. Adds a value rectangle at x, y (left out: near the middle of the view, where it overlaps nothing). Its three text lines are name / value / unit of measure.
 - **createOperator**(x="(auto)", y="(auto)", op="+") — Create Operator. Adds an operator node. For − ÷ ^ % and comparisons, inputs are taken left-to-right by x position; if and round take each input by name (fm.connect's toPort).
 - **createPeriodShift**(x="(auto)", y="(auto)", shift=-1) — Create Period Shift. Adds a period-shift connector: its output at period p is its input at period p + shift (e.g. −1 = prior period).
 - **createAlias**(x="(auto)", y="(auto)", sourceCanvas="@current", source) — Create Alias. Adds an alias that shows another rectangle (on this or another canvas).
 - **createBlock**(x="(auto)", y="(auto)", block, vertical=false) — Create Block Instance. Inserts an instance of a Block (a canvas with Output rectangles).
-- **duplicate**(nodes="@sel", dx=24, dy=24) — Duplicate Nodes. Copies nodes (and the connections between them) offset by dx, dy — like Ctrl+drag.
-- **aliasOf**(nodes="@sel", dx=30, dy=30) — Create Aliases Of. Creates an alias of each rectangle, offset by dx, dy — like Alt+drag.
+- **duplicate**(nodes="@sel", dx=24, dy=24) — Duplicate Nodes. Copies nodes (and the connections between them) offset by dx, dy — like Ctrl+drag. With the default offset, the copies move together to the nearest place where they overlap nothing.
+- **aliasOf**(nodes="@sel", dx=30, dy=30) — Create Aliases Of. Creates an alias of each rectangle, offset by dx, dy — like Alt+drag. With the default offset, the aliases move together to the nearest place where they overlap nothing.
 - **insertTemplate**(template, mode="auto", onCollision="merge", decisions?) — Insert Template. Inserts a saved template: its name (the latest version), "Name@latest", "Name@3" (version 3), the same with its family id, or "#id". Modules: "here" (this canvas) or "newCanvas". Systems: "add" (merge alongside) or "replace". Recipes: "add" builds one canvas per part and returns { canvases, warnings, unfedSockets }.
 - **saveRecipe**(name="", parts, group="My Templates", description="", note="", newVersionOf="") — Save Recipe. Saves a recipe: canvas templates added together, each "Name" / "Name@latest" (follows the latest version) or "Name@2" (that version). A name already in use fails unless newVersionOf names that recipe. Returns the recipe as "Name@version".
 - **updateCanvasFromTemplate**(canvas="@current", version="latest") — Update Canvas from Template. Rebuilds a canvas made from a canvas template from another version of it ("latest", or a number). Input values typed on the canvas are kept (matched by rectangle name); everything else comes from that version. Returns { version, kept, lostAliases }.

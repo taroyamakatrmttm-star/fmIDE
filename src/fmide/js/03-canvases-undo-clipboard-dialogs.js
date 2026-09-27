@@ -384,22 +384,26 @@
     startEdit(id, true);
   }
   function addOperatorInteractive(sym){
-    const {x,y} = spawnPoint();
+    const size = operatorSize(sym || '+');
+    const {x,y} = spawnPoint(size.w, size.h);
     const id = fm.createOperator(sym ? { x, y, op: sym } : { x, y });
     selectNodesOnly([id]);
     if(!sym) showOpPicker(id);
   }
   function addPeriodShiftInteractive(){
-    const {x,y} = spawnPoint();
+    const {x,y} = spawnPoint(56, 56);
     const id = fm.createPeriodShift({ x, y });
     selectNodesOnly([id]);
   }
   function renderPeriodControls(){ refreshCommandStates(); }
 
-  function spawnPoint(){
-    const x = viewport.scrollLeft + viewport.clientWidth/2 - 60 + (nodes.length % 5) * 14;
-    const y = viewport.scrollTop + viewport.clientHeight/2 - 30 + (nodes.length % 5) * 14;
-    return { x: Math.max(10,x), y: Math.max(10,y) };
+  // Where a new w × h node goes: centred in the view, or the nearest free space to that, so
+  // it never lands on another node (findFreeSpot). Default size: a rectangle's.
+  function spawnPoint(w, h){
+    w = w || 170; h = h || 64;
+    const x = Math.max(10, viewport.scrollLeft + viewport.clientWidth/2 - w/2);
+    const y = Math.max(10, viewport.scrollTop + viewport.clientHeight/2 - h/2);
+    return findFreeSpot(nodes, w, h, x, y);
   }
 
   // ---------- in-page dialogs (native confirm/alert are blocked in many embedded previews) ----------

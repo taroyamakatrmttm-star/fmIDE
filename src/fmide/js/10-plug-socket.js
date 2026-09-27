@@ -22,9 +22,12 @@
         return;
       }
       const aliasId = uid('n');
+      // Near where the shared links suggest (left of the socket), in free space — each one
+      // avoiding the canvas's nodes and the aliases placed before it.
+      const spot = findFreeSpot(c.nodes, 170, 64, l.alias.x, l.alias.y);
       c.nodes.push({
         id: aliasId, type: 'alias', auto: true,
-        x: l.alias.x, y: l.alias.y,
+        x: spot.x, y: spot.y,
         w: 170, h: 64,
         sourceCanvasId: l.alias.sourceCanvasId, sourceNodeId: l.alias.sourceNodeId, plugs: []
       });
@@ -450,7 +453,7 @@
               fm.setVertical('#' + existingInstance.id, vertCb.checked);
             });
           } else {
-            const {x, y} = spawnPoint();
+            const {x, y} = spawnPoint(190, 80);
             const id = fm.createBlock({ x, y, block: c.id, vertical: vertCb.checked });
             selectNodesOnly([id]);
           }

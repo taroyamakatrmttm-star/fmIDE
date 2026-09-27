@@ -2119,22 +2119,26 @@
     startEdit(id, true);
   }
   function addOperatorInteractive(sym){
-    const {x,y} = spawnPoint();
+    const size = operatorSize(sym || '+');
+    const {x,y} = spawnPoint(size.w, size.h);
     const id = fm.createOperator(sym ? { x, y, op: sym } : { x, y });
     selectNodesOnly([id]);
     if(!sym) showOpPicker(id);
   }
   function addPeriodShiftInteractive(){
-    const {x,y} = spawnPoint();
+    const {x,y} = spawnPoint(56, 56);
     const id = fm.createPeriodShift({ x, y });
     selectNodesOnly([id]);
   }
   function renderPeriodControls(){ refreshCommandStates(); }
 
-  function spawnPoint(){
-    const x = viewport.scrollLeft + viewport.clientWidth/2 - 60 + (nodes.length % 5) * 14;
-    const y = viewport.scrollTop + viewport.clientHeight/2 - 30 + (nodes.length % 5) * 14;
-    return { x: Math.max(10,x), y: Math.max(10,y) };
+  // Where a new w × h node goes: centred in the view, or the nearest free space to that, so
+  // it never lands on another node (findFreeSpot). Default size: a rectangle's.
+  function spawnPoint(w, h){
+    w = w || 170; h = h || 64;
+    const x = Math.max(10, viewport.scrollLeft + viewport.clientWidth/2 - w/2);
+    const y = Math.max(10, viewport.scrollTop + viewport.clientHeight/2 - h/2);
+    return findFreeSpot(nodes, w, h, x, y);
   }
 
   // ---------- in-page dialogs (native confirm/alert are blocked in many embedded previews) ----------
@@ -3384,6 +3388,45 @@
       minY: Math.min(...list.map(n => n.y)),
       maxY: Math.max(...list.map(n => n.y + n.h)),
     };
+  }
+
+  // ---------- free space for a new node ----------
+  // The nearest spot to (x, y) where a w × h box, with a 12px gap around it, meets none of
+  // `list`'s nodes: searched in rings of 20px steps outward from (x, y); if none is free
+  // within 30 rings, (x, y) itself. Never left of or above the canvas's edge.
+  const FREE_GAP = 12, FREE_STEP = 20, FREE_RINGS = 30;
+  function findFreeSpot(list, w, h, x, y){
+    x = Math.max(0, Math.round(x)); y = Math.max(0, Math.round(y));
+    const boxes = (list || []).map(n => {
+      const s = (n.w > 0 && n.h > 0) ? n : defaultNodeSize(n);
+      return { x: n.x, y: n.y, w: s.w, h: s.h };
+    }).filter(b => isFinite(b.x) && isFinite(b.y));
+    const free = (px, py) => boxes.every(b =>
+      px + w + FREE_GAP <= b.x || b.x + b.w + FREE_GAP <= px || py + h + FREE_GAP <= b.y || b.y + b.h + FREE_GAP <= py);
+    if(free(x, y)) return { x, y };
+    for(let r = 1; r <= FREE_RINGS; r++){
+      let best = null, bestD = Infinity;
+      for(let i = -r; i <= r; i++){
+        for(let j = -r; j <= r; j++){
+          if(Math.max(Math.abs(i), Math.abs(j)) !== r) continue;
+          const px = x + i * FREE_STEP, py = y + j * FREE_STEP;
+          if(px < 0 || py < 0) continue;
+          const d = i * i + j * j;
+          if(d < bestD && free(px, py)){ best = { x: px, y: py }; bestD = d; }
+        }
+      }
+      if(best) return best;
+    }
+    return { x, y };
+  }
+  // Moves `group` (nodes not yet on `others`) as one, keeping their layout, to the nearest
+  // free spot for their bounding box.
+  function moveGroupToFreeSpot(group, others){
+    if(!group.length) return;
+    const bb = boundingBoxOf(group);
+    const spot = findFreeSpot(others, bb.maxX - bb.minX, bb.maxY - bb.minY, bb.minX, bb.minY);
+    const dx = spot.x - bb.minX, dy = spot.y - bb.minY;
+    group.forEach(n => { n.x += dx; n.y += dy; });
   }
 
   function alignSelected(mode, list){
@@ -6802,9 +6845,12 @@
         return;
       }
       const aliasId = uid('n');
+      // Near where the shared links suggest (left of the socket), in free space — each one
+      // avoiding the canvas's nodes and the aliases placed before it.
+      const spot = findFreeSpot(c.nodes, 170, 64, l.alias.x, l.alias.y);
       c.nodes.push({
         id: aliasId, type: 'alias', auto: true,
-        x: l.alias.x, y: l.alias.y,
+        x: spot.x, y: spot.y,
         w: 170, h: 64,
         sourceCanvasId: l.alias.sourceCanvasId, sourceNodeId: l.alias.sourceNodeId, plugs: []
       });
@@ -7230,7 +7276,7 @@
               fm.setVertical('#' + existingInstance.id, vertCb.checked);
             });
           } else {
-            const {x, y} = spawnPoint();
+            const {x, y} = spawnPoint(190, 80);
             const id = fm.createBlock({ x, y, block: c.id, vertical: vertCb.checked });
             selectNodesOnly([id]);
           }
@@ -10013,7 +10059,7 @@
       insertBtn.title = 'Adds a node for this version to the canvas';
       insertBtn.disabled = !parsed.ok;
       insertBtn.addEventListener('click', () => {
-        const {x, y} = spawnPoint();
+        const {x, y} = spawnPoint(190, 110);
         const id = guarded(() => fm.insertFunction({ function: functionRefText(d), x, y }));
         if(id === undefined) return;
         close();
@@ -10545,7 +10591,7 @@
       const ref = functionRefText(version);
       if(!node){
         ui.close();
-        const {x, y} = spawnPoint();
+        const {x, y} = spawnPoint(190, 110);
         const id = guarded(() => fm.insertFunction({ function: ref, x, y }));
         if(id) selectNodesOnly([id]);
         return;
@@ -12239,6 +12285,8 @@
     }
     raw = raw || {};
     const out = {};
+    // Which parameters took their default (not enumerable, so never recorded or listed).
+    Object.defineProperty(out, 'defaulted', { value: new Set(), enumerable: false });
     const isNodeType = p => p.type === 'node' || p.type === 'nodes';
     // node references are resolved last, since they may depend on a canvas argument
     [false, true].forEach(nodePass => {
@@ -12256,6 +12304,7 @@
             fail(`${def.label}: "${p.label}" is required.`);
           }
         }
+        if(missing) out.defaulted.add(p.name);
         out[p.name] = coerceParam(p, v, out, missing);
       });
     });
@@ -12338,7 +12387,7 @@
 
   // ---------------------------------- Insert ----------------------------------
   defineAction({ name:'createRect', label:'Create Rectangle', category:'Insert', icon:'▭', returns:'node',
-    desc:'Adds a value rectangle at x, y. Its three text lines are name / value / unit of measure.',
+    desc:'Adds a value rectangle at x, y (left out: near the middle of the view, where it overlaps nothing). Its three text lines are name / value / unit of measure.',
     params:[ PX, PY, P('name','string',{ def:'New Node' }), P('value','numstr',{ def:'0', help:'number, expression, or blank' }),
       P('uom','string',{ def:'', help:'unit, e.g. kt or $/t' }), P('w','number',{ def:170, min:40 }), P('h','number',{ def:64, min:30 }) ],
     run(a){
@@ -12400,7 +12449,7 @@
     } });
 
   defineAction({ name:'duplicate', label:'Duplicate Nodes', category:'Insert', icon:'⧉', returns:'nodes',
-    desc:'Copies nodes (and the connections between them) offset by dx, dy — like Ctrl+drag.',
+    desc:'Copies nodes (and the connections between them) offset by dx, dy — like Ctrl+drag. With the default offset, the copies move together to the nearest place where they overlap nothing.',
     params:[ SEL_NODES(), P('dx','number',{ def:24 }), P('dy','number',{ def:24 }) ],
     run(a){
       const list = a.nodes.map(onActiveCanvas);
@@ -12412,6 +12461,8 @@
         idMap[orig.id] = newId;
         return Object.assign(cloneData(orig), { id: newId, x: clampPos(orig.x + a.dx), y: clampPos(orig.y + a.dy) });
       });
+      // With the default offset, the copies move together to the nearest free space.
+      if(a.defaulted.has('dx') && a.defaulted.has('dy')) moveGroupToFreeSpot(clones, nodes);
       const clonedEdges = edges
         .filter(e => !e.auto && idMap[e.from] !== undefined && idMap[e.to] !== undefined)
         .map(e => Object.assign({}, e, { id: uid('e'), from: idMap[e.from], to: idMap[e.to] }));
@@ -12423,7 +12474,7 @@
     } });
 
   defineAction({ name:'aliasOf', label:'Create Aliases Of', category:'Insert', icon:'🔗', returns:'nodes',
-    desc:'Creates an alias of each rectangle, offset by dx, dy — like Alt+drag.',
+    desc:'Creates an alias of each rectangle, offset by dx, dy — like Alt+drag. With the default offset, the aliases move together to the nearest place where they overlap nothing.',
     params:[ SEL_NODES(), P('dx','number',{ def:30 }), P('dy','number',{ def:30 }) ],
     run(a){
       const list = a.nodes.map(onActiveCanvas);
@@ -12434,6 +12485,8 @@
         id: uid('n'), type:'alias', x: clampPos(sn.x + a.dx), y: clampPos(sn.y + a.dy), w: sn.w, h: sn.h,
         sourceCanvasId: activeCanvasId, sourceNodeId: sn.id, plugs:[]
       }));
+      // With the default offset, the aliases move together to the nearest free space.
+      if(a.defaulted.has('dx') && a.defaulted.has('dy')) moveGroupToFreeSpot(newNodes, nodes);
       nodes = nodes.concat(newNodes);
       clearComputed();
       evaluateAll();
@@ -15142,6 +15195,22 @@
     ev.stopPropagation();
   }
 
+  // The step after `id` in tree order, skipping what is inside it: its next sibling, or its
+  // parent's next sibling, and so on up. The container it lands in is opened so it shows.
+  function mbNextStepAfter(steps, id){
+    let f = findStep(steps, id);
+    while(f){
+      if(f.index + 1 < f.arr.length){
+        const next = f.arr[f.index + 1];
+        let p = f.parent;
+        while(p){ mb.collapsed.delete(p.id); const pf = findStep(steps, p.id); p = pf ? pf.parent : null; }
+        return next;
+      }
+      f = f.parent ? findStep(steps, f.parent.id) : null;
+    }
+    return null;
+  }
+
   function renderMBFoot(){
     const foot = mb.els.foot;
     foot.innerHTML = '';
@@ -15159,7 +15228,16 @@
     runSel.addEventListener('click', () => {
       if(!mb.selStepId){ mbSetStatus('Select a step first.', 'err'); return; }
       mb.errorStepId = null;
-      if(runMacroInteractive(m.id, [mb.selStepId])){ renderMBTree(); mbSetStatus('Step ran.', 'ok'); }
+      const ranId = mb.selStepId;
+      if(runMacroInteractive(m.id, [ranId])){
+        // Move on to the step after it (and after anything inside it), so the next click runs that.
+        const next = mbNextStepAfter(m.steps, ranId);
+        if(next) mb.selStepId = next.id;
+        renderMBTree(); renderMBProps();
+        const row = next && mb.els.tree && [...mb.els.tree.querySelectorAll('.mrow')].find(r => r.dataset.id === next.id);
+        if(row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest' });
+        mbSetStatus(next ? 'Step ran. The next step is selected.' : 'Step ran. It was the last step.', 'ok');
+      }
     });
     const runBtn = el('button', 'mbtn primary', '▶ Run macro');
     runBtn.disabled = !m;

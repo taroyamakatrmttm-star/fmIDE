@@ -502,6 +502,22 @@
     ev.stopPropagation();
   }
 
+  // The step after `id` in tree order, skipping what is inside it: its next sibling, or its
+  // parent's next sibling, and so on up. The container it lands in is opened so it shows.
+  function mbNextStepAfter(steps, id){
+    let f = findStep(steps, id);
+    while(f){
+      if(f.index + 1 < f.arr.length){
+        const next = f.arr[f.index + 1];
+        let p = f.parent;
+        while(p){ mb.collapsed.delete(p.id); const pf = findStep(steps, p.id); p = pf ? pf.parent : null; }
+        return next;
+      }
+      f = f.parent ? findStep(steps, f.parent.id) : null;
+    }
+    return null;
+  }
+
   function renderMBFoot(){
     const foot = mb.els.foot;
     foot.innerHTML = '';
@@ -519,7 +535,16 @@
     runSel.addEventListener('click', () => {
       if(!mb.selStepId){ mbSetStatus('Select a step first.', 'err'); return; }
       mb.errorStepId = null;
-      if(runMacroInteractive(m.id, [mb.selStepId])){ renderMBTree(); mbSetStatus('Step ran.', 'ok'); }
+      const ranId = mb.selStepId;
+      if(runMacroInteractive(m.id, [ranId])){
+        // Move on to the step after it (and after anything inside it), so the next click runs that.
+        const next = mbNextStepAfter(m.steps, ranId);
+        if(next) mb.selStepId = next.id;
+        renderMBTree(); renderMBProps();
+        const row = next && mb.els.tree && [...mb.els.tree.querySelectorAll('.mrow')].find(r => r.dataset.id === next.id);
+        if(row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest' });
+        mbSetStatus(next ? 'Step ran. The next step is selected.' : 'Step ran. It was the last step.', 'ok');
+      }
     });
     const runBtn = el('button', 'mbtn primary', '▶ Run macro');
     runBtn.disabled = !m;

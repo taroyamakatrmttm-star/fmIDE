@@ -306,11 +306,10 @@ test('Make alias, Duplicate and Delete from the menu: one undo step each, record
   await menuItem(page, 'Duplicate').tap();
   await expect.poll(() => page.evaluate(() => fm.nodes().filter(n => n.type === 'value').length)).toBe(3);
 
-  // The copy sits 24 pixels down and right, over b's middle: hold b's top-left part (with
-  // nothing selected, so no larger touch area of the copy's reaches there).
+  // The copy goes to free space next to b (not on top of it), so b is held by its middle,
+  // with nothing selected.
   await page.evaluate(() => fm.select([]));
-  const bBox = await box(nodeEl(page, b));
-  await f.hold({ x: bBox.x + 16, y: bBox.y + 16 });
+  await holdNode(page, f, b);
   await menuItem(page, 'Delete').tap();
   await expect.poll(() => page.evaluate((b) => fm.nodes().some(n => n.id === b), b)).toBe(false);
 
