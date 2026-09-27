@@ -213,6 +213,28 @@
     box.appendChild(actions);
   }
 
+  // A node from a file may lack a size, or carry one that isn't a positive number (files
+  // written by hand, or by someone else): it gets the size a new node of its type gets, so
+  // it draws, and its arrows meet it, where it is. A number written as text is read as one.
+  // Nothing in the calculation reads a node's size.
+  function defaultNodeSize(n){
+    if(n.type === 'operator') return operatorSize(n.text);
+    if(n.type === 'periodShift') return { w: 56, h: 56 };
+    if(n.type === 'blockInstance' || n.type === 'function') return { w: 190, h: 80 };
+    return { w: 170, h: 64 };
+  }
+  function withNodeSize(n){
+    if(!n || typeof n !== 'object') return n;
+    const size = (v) => {
+      const x = typeof v === 'number' ? v : (typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN);
+      return isFinite(x) && x > 0 ? x : null;
+    };
+    const w = size(n.w), h = size(n.h);
+    if(w === null || h === null){ const def = defaultNodeSize(n); n.w = w === null ? def.w : w; n.h = h === null ? def.h : h; }
+    else { n.w = w; n.h = h; }
+    return n;
+  }
+
   function performAddSystem(data, decisions){
     pushHistory();
     // A different version under a number the model already uses comes in renumbered; its
@@ -245,7 +267,7 @@
         const newId = uid('n');
         localNodeMap[n.id] = newId;
         nodeIdMap[n.id] = newId;
-        nodesToAdd.push(Object.assign({}, n, overrides || {}, { id: newId }));
+        nodesToAdd.push(withNodeSize(Object.assign({}, n, overrides || {}, { id: newId })));
       }
 
       if(!target){
@@ -457,7 +479,7 @@
     canvases = data.canvases.map(c => withTemplateLink({
       id: c.id || ('c' + (nextCanvasId++)),
       name: (c.name || 'Canvas').toString(),
-      nodes: Array.isArray(c.nodes) ? c.nodes : [],
+      nodes: Array.isArray(c.nodes) ? c.nodes.map(withNodeSize) : [],
       edges: Array.isArray(c.edges) ? c.edges : [],
       computedValues: {}, computeErrors: {}, portValues: {}, portErrors: {}
     }, c.template));
@@ -516,7 +538,7 @@
     const newNodes = remapFunctionNodes(data.nodes, remap).map(n => {
       const newId = (keepIds && keepIds.get(n.id)) || uid('n');
       idMap[n.id] = newId;
-      return Object.assign({}, n, { id: newId });
+      return withNodeSize(Object.assign({}, n, { id: newId }));
     });
     newNodes.forEach(n => {
       if(n.type === 'alias' && n.sourceCanvasId === data.selfCanvasId && idMap[n.sourceNodeId] !== undefined){

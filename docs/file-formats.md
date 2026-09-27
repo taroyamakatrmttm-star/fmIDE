@@ -10,6 +10,8 @@ Every JSON file the apps write carries a `kind` and a `version`. Every file they
 
 The part both apps share lives once in `src/shared/file-formats.js`: the versions and upgrade steps of the two kinds both apps read (`SHARED_FILE_VERSIONS`, `SHARED_FILE_MIGRATIONS` for `system` and `fmIDE-workspace`), kind inference (`inferFileKind`) and the version check with step-by-step upgrades (`upgradeFileData`). Each app's `FILE_FORMATS` / `FILE_MIGRATIONS` are built from those plus its own kinds; the messages and nested-content handling stay in each app's reader.
 
+**A node's size** (`w`, `h`): a node in a system or module file that has no size, or one that isn't a positive number, is given the size a new node of its type gets in fmIDE (rectangles and aliases 170 × 64, operators 56 × 56 — wider for word operators, period shifts 56 × 56, block instances and function nodes 190 × 80, whose height fmIDE then fits to their ports). A number written as text (`"200"`) is read as that number. Nothing in the calculation reads a node's size. Older files are unaffected, and no version changed.
+
 ## Documents (`.fmide`)
 
 A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same reader) saved with the `.fmide` extension by fmIDE's **File → Save / Save As**. There is no separate format. Opening one with **File → Open…** loads the model and its format presets/roles, adds its templates and macros when not already there, and ignores its shortcuts and ribbon/KeyTips settings. **Import Workspace** of the same file replaces everything, as before. The workspace's `ui` part may carry `documentGroupAdded: true` (a customised ribbon already got the Document group once); older readers ignore it.
