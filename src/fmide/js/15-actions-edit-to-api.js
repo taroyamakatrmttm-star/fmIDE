@@ -32,6 +32,22 @@
       requireType(a.node, ['operator'], 'an operator');
       if(a.node.text === a.op) return NOOP;
       pushHistory();
+      // Arrows follow the change (phase E1b): into an operator with named inputs, they take its
+      // inputs in their left-to-right order (extra ones keep none, and don't count); into one
+      // without, they lose their input names. Into the period number, they are removed.
+      const newOp = operatorForSymbol(a.op);
+      const into = edges.filter(e => e.to === a.node.id);
+      if(newOp && newOp.period){
+        edges = edges.filter(e => e.to !== a.node.id);
+      } else if(newOp && newOp.ports){
+        const byPlace = into.slice().sort((x, y) => {
+          const p = getNode(x.from), q = getNode(y.from);
+          return (p && q) ? ((p.x - q.x) || (p.y - q.y)) : 0;
+        });
+        byPlace.forEach((e, i) => { if(i < newOp.ports.length) e.toPort = i; else delete e.toPort; });
+      } else {
+        into.forEach(e => { delete e.toPort; });
+      }
       a.node.text = a.op;
       const size = operatorSize(a.op);
       a.node.w = size.w; a.node.h = size.h;

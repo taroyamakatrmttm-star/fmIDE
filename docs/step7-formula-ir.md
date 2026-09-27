@@ -379,3 +379,17 @@ Found along the way:
 - **(D3, fixed here)** A function whose own IFERROR catches a period outside the timeline, feeding a rectangle straight, showed what IFERROR caught in fmIDE, but ExcelExporter wrote the rectangle's typed number (the timeline rule counted any input of a function). The rule now follows the function's formula.
 - **(Before E1, fixed here)** The comparisons were exact in fmIDE but approximate in Excel and LibreOffice, so `0.3 < 0.1 + 0.2` could differ. All comparisons now use the same tolerance.
 - **(Not changed)** In the canvas's IF corkscrew, units don't pass through the loop: Opening's unit depends on Closing's, which depends on Opening's, so neither gets one (the same holds for a corkscrew through a period shift).
+
+### E1b — the canvas ✅
+
+What was built (fmIDE only; nothing in the calculation, the file formats or ExcelExporter changed):
+
+- **Drawing:** `if`, `round`, `roundup` and `rounddown` draw as an operator box (`.portop`, the operators' amber) with "ƒ if" on top and a labelled dot per input (condition, then, else; value, digits), sized by `operatorSize`. An arrow into one ends on its input's dot, and shows no order badge (the input is named, not ordered). The period number draws as a word operator.
+- **Wiring:** an arrow dropped on an input's dot takes that input; one dropped on the body takes the first input with no arrow (`firstFreeOperatorPort`), or says every input already has one. The period number takes no arrows in (`fm.connect` refuses: "The period number takes no inputs").
+- **Changing the symbol** (`fm.setOperator`, the operator picker): changing an operator into `if` or a rounding one gives its arrows the named inputs, left to right; changing it back takes them away; changing it into the period number removes its arrows. One undo step.
+- **Palette, picker, commands:** every operator now; the ten new ones are `insertOp15`–`insertOp24`, after the first 15, whose numbers stay (shortcuts and macros made for them keep working). `OPERATORS_BEFORE_E1` is gone.
+- **Ribbon:** Insert → Compare gets = and ≠; Insert → Excel Functions gets if, and, or, not, round, roundup, rounddown and period. A ribbon customised before gets them once, in the groups holding the comparisons and the Excel functions wherever they were moved (`ui.operatorsE1Added`); one without such groups is left alone.
+- **Merging** (Add System) already told named inputs apart since E1a.
+
+How it was checked: new tests in group 18 — the drawing (labels, dots, each arrow ending on its own input's dot, no badge), dragging onto a dot and onto the body (and the message when every input is taken, and none into the period number), changing a symbol both ways with undo, the Insert Operator commands 0–24, the default ribbon, and a customised ribbon getting the operators once. The E1a test that pinned "15 operators until E1b" now pins the 25 commands. The whole suite passes: 535 tests, LibreOffice included, none skipped. Nothing in the calculation changed, so the snapshots and `npm run bench` are unaffected (fmIDE's calculation code is untouched; the drawing adds a row per named input).
+

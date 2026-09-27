@@ -517,7 +517,7 @@
   .op-picker{
     position:absolute; z-index:50; background:#111827; border:1px solid #374151;
     border-radius:8px; padding:6px; display:flex; flex-wrap:wrap; gap:4px;
-    max-width:250px; box-shadow:0 6px 20px rgba(0,0,0,.25);
+    max-width:320px; box-shadow:0 6px 20px rgba(0,0,0,.25);
   }
   .op-picker button{
     min-width:30px; height:30px; padding:0 8px; border-radius:6px; border:1px solid #374151;
@@ -527,6 +527,12 @@
   .op-picker button:hover{background:var(--accent);border-color:var(--accent);}
 
   .node.operator.wordop .opsym{ font-size:13px; font-weight:800; letter-spacing:.2px; }
+  /* an operator with named inputs (if, round…, phase E1b): its symbol on top, a row per input */
+  .node.operator.portop{ display:block; }
+  .node.operator.portop .opsym{ position:absolute; top:0; left:0; right:0; height:26px; line-height:26px; text-align:center; }
+  .node.operator.portop .opsym::before{ content:'ƒ '; font-weight:400; }
+  .node.operator.portop .io-port{ border-color:var(--op-border); }
+  .node.operator.portop .op-in .io-label{ color:var(--op-text); padding-left:8px; }
 
   /* plug / socket */
   .plug-chip, .socket-chip{

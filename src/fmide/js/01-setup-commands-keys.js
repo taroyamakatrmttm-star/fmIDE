@@ -13,20 +13,27 @@
   const SNAP_THRESHOLD = 6;
 
   // build:include shared/operators.js
-  // The operators, in palette order, from the shared catalogue. The palette, the operator
-  // picker and the Insert Operator commands show those before phase E1 (OPERATORS_BEFORE_E1)
-  // until the new ones can be drawn with their named inputs (phase E1b); `window.fm` takes
-  // every one (ALL_OPS).
-  const ALL_OPS = OPERATORS.map(op => op.symbol);
-  const OPS = ALL_OPS.slice(0, OPERATORS_BEFORE_E1);
+  // The operators, in palette order, from the shared catalogue (the ones phase E1 added come
+  // last, so the Insert Operator commands of the others keep their numbers).
+  const OPS = OPERATORS.map(op => op.symbol);
+  const ALL_OPS = OPS;
   const WORD_OPS = OPERATORS.filter(op => op.fn).map(op => op.symbol);
 
   function operatorSize(sym){
+    // An operator with named inputs (if, round…): a box with one labelled input per row.
+    const op = operatorForSymbol(sym);
+    if(op && op.ports) return { w: 120, h: operatorPortsHeight(op.ports.length) };
     if(WORD_OPS.includes(sym)){
       return { w: Math.max(56, 24 + sym.length * 10), h: 40 };
     }
     return { w: 56, h: 56 };
   }
+  // The Insert Operator commands of phase E1's operators (numbered by catalogue order), as
+  // the ribbon groups them: = and ≠ with the comparisons; the others with the Excel functions.
+  const E1_COMPARE_OPS = ['=', '≠'].map(sym => OPS.indexOf(sym));
+  const E1_FUNCTION_OPS = ['if', 'and', 'or', 'not', 'round', 'roundup', 'rounddown', 'period'].map(sym => OPS.indexOf(sym));
+  // Height of an operator box with `count` named inputs: its symbol, then a row per input.
+  function operatorPortsHeight(count){ return 26 + count * 20 + 6; }
 
   // ---------- built-in templates ----------
   let TEMPLATES = []; // built-in starter templates removed by request — this now holds only user-saved templates

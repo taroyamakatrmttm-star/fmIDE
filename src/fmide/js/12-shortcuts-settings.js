@@ -257,6 +257,11 @@
         const free = firstFreeFunctionPort(toNode);
         if(free.error){ render(); showMessage(free.error); return; }
         toPort = free.index;
+      } else if(toNode && operatorPortsOf(toNode)){
+        // Dropped on the body of an operator with named inputs (if, round…): the same rule.
+        const free = firstFreeOperatorPort(toNode);
+        if(free.error){ render(); showMessage(free.error); return; }
+        toPort = free.index;
       }
 
       guarded(() => {

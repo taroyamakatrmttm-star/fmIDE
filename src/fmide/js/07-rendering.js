@@ -21,15 +21,20 @@
       } else {
         existing.delete(n.id);
       }
-      el.className = 'node' + (isOperator ? ' operator' : '') + (isAlias ? ' alias' : '') + (isBlockInstance || isFunction ? ' blockInstance' : '') + (isFunction ? ' functionNode' : '') + (isBlockInstance && n.vertical ? ' vertical' : '') + (isPeriodShift ? ' periodshift' : '') + (isOperator && WORD_OPS.includes(n.text) ? ' wordop' : '');
+      // An operator with named inputs (if, round…) draws a labelled dot per input (phase E1b).
+      const opPorts = isOperator ? operatorPortsOf(n) : null;
+      el.className = 'node' + (isOperator ? ' operator' : '') + (opPorts ? ' portop' : '') + (isAlias ? ' alias' : '') + (isBlockInstance || isFunction ? ' blockInstance' : '') + (isFunction ? ' functionNode' : '') + (isBlockInstance && n.vertical ? ' vertical' : '') + (isPeriodShift ? ' periodshift' : '') + (isOperator && WORD_OPS.includes(n.text) ? ' wordop' : '');
 
       if(isBlockInstance){
         renderBlockInstanceBody(el, n);
       } else if(isFunction){
         renderFunctionNodeBody(el, n); // 11d-function-nodes.js
         el._built = null;
-      } else if(el._built !== n.type){
-        if(isOperator){
+      } else if(el._built !== (opPorts ? 'portop' : n.type)){
+        if(opPorts){
+          // No west dot: the inputs have their own dots along the left edge.
+          el.innerHTML = '<div class="port n" data-side="n"></div><div class="port s" data-side="s"></div><div class="port e" data-side="e"></div><button type="button" class="tag-btn socket-btn" title="Set socket">⚡</button><div class="socket-chip"></div><div class="opsym"></div><div class="op-inputs"></div><div class="op-result"></div>';
+        } else if(isOperator){
           el.innerHTML = '<div class="port n" data-side="n"></div><div class="port s" data-side="s"></div><div class="port e" data-side="e"></div><div class="port w" data-side="w"></div><button type="button" class="tag-btn socket-btn" title="Set socket">⚡</button><div class="socket-chip"></div><div class="opsym"></div><div class="op-result"></div>';
         } else if(isPeriodShift){
           el.innerHTML = '<div class="port n" data-side="n"></div><div class="port s" data-side="s"></div><div class="port e" data-side="e"></div><div class="port w" data-side="w"></div><div class="ps-label"></div><div class="op-result"></div>';
@@ -38,7 +43,31 @@
         } else {
           el.innerHTML = '<div class="port n" data-side="n"></div><div class="port s" data-side="s"></div><div class="port e" data-side="e"></div><div class="port w" data-side="w"></div><button type="button" class="tag-btn plug-btn" title="Set plug">🔌</button><div class="plug-chip"></div><button type="button" class="tag-btn io-btn" title="Mark as block input/output">⇄</button><div class="io-role-chip"></div><button type="button" class="tag-btn props-btn" title="Format rectangle (number/border/font/fill)">🎨</button><button type="button" class="tag-btn period-btn" title="Choose which periods use this rectangle\'s own number">🕒</button><button type="button" class="tag-btn curve-btn" title="Draw this rectangle\'s value across periods">📈</button><div class="label"><div class="line-name"></div><div class="line-value"></div><div class="line-uom"></div></div><div class="resize-handle"></div>';
         }
-        el._built = n.type;
+        el._built = opPorts ? 'portop' : n.type;
+      }
+      if(opPorts){
+        // Its size follows its inputs (a file may carry another), and one row per input.
+        n.h = operatorPortsHeight(opPorts.length);
+        if(!n.w || n.w < 100) n.w = 120;
+        const box = el.querySelector('.op-inputs');
+        if(box && box.dataset.for !== n.text){
+          box.dataset.for = n.text;
+          box.textContent = '';
+          opPorts.forEach((name, i) => {
+            const row = document.createElement('div');
+            row.className = 'io-row io-row-in op-in';
+            row.style.top = (26 + i * 20) + 'px';
+            const dot = document.createElement('div');
+            dot.className = 'io-port';
+            dot.dataset.portIndex = i;
+            dot.dataset.portDir = 'in';
+            const label = document.createElement('span');
+            label.className = 'io-label';
+            label.textContent = name;
+            row.append(dot, label);
+            box.appendChild(row);
+          });
+        }
       }
 
       el.style.left = n.x + 'px';
@@ -392,7 +421,8 @@
       g.appendChild(hitPath); g.appendChild(linePath);
       if(isAuto) g.setAttribute('title', 'Auto-connected via plug/socket match');
 
-      if(b.type === 'operator'){
+      // The order an operator reads its inputs in (not for named inputs, which order doesn't set).
+      if(b.type === 'operator' && !operatorPortsOf(b)){
         const siblings = sortedIncoming(b.id);
         if(siblings.length > 1){
           const idx = siblings.findIndex(s => s.id === e.id) + 1;

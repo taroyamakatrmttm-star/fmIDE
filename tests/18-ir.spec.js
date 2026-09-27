@@ -238,7 +238,7 @@ test.describe('phase E1 operators in fmIDE', () => {
     expect(await values(page, ifId)).toEqual([expect.stringMatching(/An input this operator reads isn't connected/), 100.456, 100.456]);
   });
 
-  test('a macro records the inputs by name; the palette keeps its 15 operators until E1b', async ({ page }) => {
+  test('a macro records the inputs by name; every operator has an Insert Operator command (E1b)', async ({ page }) => {
     await openFmIDE(page);
     await page.evaluate(() => fm.command('toggleRecord'));
     await page.locator('.modal-box button.primary', { hasText: 'Start recording' }).click();
@@ -252,8 +252,125 @@ test.describe('phase E1 operators in fmIDE', () => {
     const steps = data.macros[data.macros.length - 1].steps;
     expect(steps.map(s => s.action)).toEqual(['createRect', 'createOperator', 'connect']);
     expect(steps[2].args.toPort).toBe('then');
-    const insertOps = await page.evaluate(() => fm.commands().filter(c => /^insertOp\d+$/.test(c.id)).map(c => c.label));
-    expect(insertOps).toHaveLength(15);
-    expect(insertOps.some(l => /Operator (if|round|period)\b/.test(l))).toBe(false);
+    // Since E1b the new operators follow the first 15, whose numbers stay the same.
+    const insertOps = await page.evaluate(() => fm.commands().filter(c => /^insertOp\d+$/.test(c.id)).map(c => c.id + ' ' + c.label));
+    expect(insertOps).toHaveLength(25);
+    expect(insertOps[0]).toBe('insertOp0 Insert Operator + (Add)');
+    expect(insertOps[14]).toBe('insertOp14 Insert Operator iferror');
+    expect(insertOps.slice(15)).toEqual(['insertOp15 Insert Operator period', 'insertOp16 Insert Operator if', 'insertOp17 Insert Operator = (Equal)',
+      'insertOp18 Insert Operator ≠ (Not equal)', 'insertOp19 Insert Operator and', 'insertOp20 Insert Operator or', 'insertOp21 Insert Operator not',
+      'insertOp22 Insert Operator round', 'insertOp23 Insert Operator roundup', 'insertOp24 Insert Operator rounddown']);
+  });
+
+  // ---- E1b: the canvas ----
+  const opNode = (page, id) => page.locator(`.node[data-id="${id}"]`);
+  const edgesInto = (page, id) => page.evaluate((id) => fm.edges().filter(e => e.to === id).map(e => fm.nodes().find(n => n.id === e.from).text.split('\n')[0] + '→' + e.toPort).sort(), id);
+
+  test('if and round draw a labelled dot per input; the period number and the others draw as before', async ({ page }) => {
+    const { iff, rnd } = await build(page);
+    await expect(opNode(page, iff)).toHaveClass(/portop/);
+    await expect(opNode(page, iff).locator('.opsym')).toHaveText('if');
+    await expect(opNode(page, iff).locator('.op-in .io-label')).toHaveText(['condition', 'then', 'else']);
+    await expect(opNode(page, iff).locator('.io-port[data-port-dir="in"]')).toHaveCount(3);
+    await expect(opNode(page, rnd).locator('.op-in .io-label')).toHaveText(['value', 'digits']);
+    const per = await page.evaluate(() => fm.nodes().find(n => n.text === 'period').id);
+    await expect(opNode(page, per)).not.toHaveClass(/portop/);
+    await expect(opNode(page, per).locator('.io-port')).toHaveCount(0);
+    // Each arrow ends on its own input's dot, with no order badge (order doesn't set the input).
+    const ends = await page.evaluate((iff) => {
+      const canvasRect = document.getElementById('canvas').getBoundingClientRect();
+      return fm.edges().filter(e => e.to === iff).map(e => {
+        const g = document.querySelector(`g.edge[data-id="${e.id}"]`);
+        const end = g.querySelector('path').getAttribute('d').trim().split(/\s+/).slice(-2).map(Number);
+        const dot = document.querySelector(`.node[data-id="${iff}"] .io-port[data-port-index="${e.toPort}"]`).getBoundingClientRect();
+        return { port: e.toPort, dx: Math.round(end[0] - (dot.left + dot.width / 2 - canvasRect.left)), dy: Math.round(end[1] - (dot.top + dot.height / 2 - canvasRect.top)), badge: !!g.querySelector('.order-badge') };
+      }).sort((a, b) => a.port - b.port);
+    }, iff);
+    expect(ends).toEqual([0, 1, 2].map(port => ({ port, dx: 0, dy: 0, badge: false })));
+    // The picker offers every operator.
+    await page.evaluate(() => fm.command('insertOp16'));
+    const added = await page.evaluate(() => fm.nodes().filter(n => n.text === 'if').length);
+    expect(added).toBe(2);
+  });
+
+  test('dragging an arrow onto an input\'s dot, or onto the body (its first free input); none into the period number', async ({ page }) => {
+    await openFmIDE(page);
+    const ids = await page.evaluate(() => {
+      fm.clearCanvas();
+      const a = fm.createRect({ x: 40, y: 40, name: 'Flag', value: 1 });
+      const b = fm.createRect({ x: 40, y: 160, name: 'Yes', value: 10 });
+      const c = fm.createRect({ x: 40, y: 280, name: 'No', value: 20 });
+      const iff = fm.createOperator({ x: 400, y: 140, op: 'if' });
+      const per = fm.createOperator({ x: 400, y: 320, op: 'period' });
+      return { a, b, c, iff, per };
+    });
+    const drag = async (fromId, target) => {
+      const a = await page.locator(`.node[data-id="${fromId}"] .label`).boundingBox();
+      const b = await target.boundingBox();
+      await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+      await page.mouse.down({ button: 'right' });
+      await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 5 });
+      await page.mouse.up({ button: 'right' });
+    };
+    await drag(ids.c, opNode(page, ids.iff).locator('.io-port[data-port-dir="in"][data-port-index="2"]'));
+    expect(await edgesInto(page, ids.iff)).toEqual(['No→2']);
+    await drag(ids.a, opNode(page, ids.iff).locator('.opsym'));
+    await drag(ids.b, opNode(page, ids.iff).locator('.opsym'));
+    expect(await edgesInto(page, ids.iff)).toEqual(['Flag→0', 'No→2', 'Yes→1']);
+    await drag(ids.b, opNode(page, ids.iff).locator('.opsym'));
+    expect(await F.dialogText(page)).toMatch(/Every input of .* already has an arrow/);
+    await F.dismissMessage(page);
+    expect(await page.evaluate((iff) => fm.getValue('#' + iff), ids.iff)).toBe(10);
+    await drag(ids.a, opNode(page, ids.per));
+    expect(await F.dialogText(page)).toMatch(/The period number takes no inputs/);
+    await F.dismissMessage(page);
+    expect(await edgesInto(page, ids.per)).toEqual([]);
+  });
+
+  test('changing an operator\'s symbol: its arrows take the named inputs left to right, and give them up again', async ({ page }) => {
+    await openFmIDE(page);
+    const ids = await page.evaluate(() => {
+      fm.clearCanvas();
+      const c = fm.createRect({ x: 40, y: 40, name: 'Cond', value: 0 });
+      const t = fm.createRect({ x: 60, y: 160, name: 'Then', value: 1 });
+      const e = fm.createRect({ x: 80, y: 280, name: 'Else', value: 2 });
+      const op = fm.createOperator({ x: 400, y: 140, op: '+' });
+      ['Cond', 'Then', 'Else'].forEach(n => fm.connect(n, '#' + op));
+      return { op };
+    });
+    await page.evaluate((op) => fm.setOperator('#' + op, 'if'), ids.op);
+    expect(await edgesInto(page, ids.op)).toEqual(['Cond→0', 'Else→2', 'Then→1']);
+    expect(await page.evaluate((op) => fm.getValue('#' + op), ids.op)).toBe(2);
+    await expect(opNode(page, ids.op)).toHaveClass(/portop/);
+    await page.evaluate((op) => fm.setOperator('#' + op, 'round'), ids.op);
+    expect(await edgesInto(page, ids.op)).toEqual(['Cond→0', 'Else→undefined', 'Then→1']);
+    await expect(opNode(page, ids.op).locator('.op-in .io-label')).toHaveText(['value', 'digits']);
+    await page.evaluate((op) => fm.setOperator('#' + op, '+'), ids.op);
+    expect(await edgesInto(page, ids.op)).toEqual(['Cond→undefined', 'Else→undefined', 'Then→undefined']);
+    expect(await page.evaluate((op) => fm.getValue('#' + op), ids.op)).toBe(3);
+    await expect(opNode(page, ids.op)).not.toHaveClass(/portop/);
+    // Undo brings the named inputs back.
+    await page.evaluate(() => fm.command('undo'));
+    expect(await edgesInto(page, ids.op)).toEqual(['Cond→0', 'Else→undefined', 'Then→1']);
+  });
+
+  test('the ribbon: = and ≠ with the comparisons, the others with the Excel functions; a customised ribbon gets them once', async ({ page }) => {
+    await openFmIDE(page);
+    const groups = await page.evaluate(() => __fmIDE.getRibbonConfig().tabs.find(t => t.id === 'insert').groups.map(g => g.label + ':' + g.items.map(i => i.cmd.replace('insertOp', '')).join(',')));
+    expect(groups).toContain('Compare:6,7,8,9,17,18');
+    expect(groups).toContain('Excel Functions:10,11,12,13,14,16,19,20,21,22,23,24,15');
+    // A ribbon customised before E1b (saved without the flag): its groups get them once.
+    const file = test.info().outputPath('old-ribbon.json');
+    const ws = { kind: 'fmIDE-workspace', version: 4, system: { kind: 'system', version: 5, periods: ['P1'], activeCanvasId: 'c1', canvases: [{ id: 'c1', name: 'Model', nodes: [], edges: [] }] },
+      ui: { ribbonCustomized: true, documentGroupAdded: true, functionsGroupAdded: true, functionCommandsAdded: true,
+        ribbon: { tabs: [{ id: 'mine', label: 'Mine', groups: [{ label: 'My maths', items: [{ cmd: 'insertOp0' }, { cmd: 'insertOp11' }] }, { label: 'Tests', items: [{ cmd: 'insertOp6' }] }] }] } } };
+    fs.writeFileSync(file, JSON.stringify(ws));
+    await importViaCommand(page, 'importWorkspace', file);
+    await acceptAll(page);
+    const mine = await page.evaluate(() => __fmIDE.getRibbonConfig().tabs[0].groups.map(g => g.label + ':' + g.items.map(i => i.cmd.replace('insertOp', '')).join(',')));
+    expect(mine).toEqual(['My maths:0,11,16,19,20,21,22,23,24,15', 'Tests:6,17,18']);
+    // Once only: saved again, it carries the flag, and a removed operator stays removed.
+    const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
+    expect(data.ui.operatorsE1Added).toBe(true);
   });
 });
