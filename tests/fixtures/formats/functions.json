@@ -1,0 +1,40 @@
+{
+ "kind": "fmIDE-functions",
+ "version": 1,
+ "functions": [
+  {
+   "family": "family-margin",
+   "version": 1,
+   "versionId": "version-margin-1",
+   "text": "Margin(Revenue, Cost) = (Revenue - Cost) / Revenue",
+   "description": "The share of revenue left after cost.",
+   "note": "First version",
+   "calls": []
+  },
+  {
+   "family": "family-margin",
+   "version": 2,
+   "versionId": "version-margin-2",
+   "text": "Margin(Revenue, Cost) = (Revenue - Cost) / Revenue * 100",
+   "description": "",
+   "note": "As a percentage",
+   "calls": []
+  },
+  {
+   "family": "family-profit",
+   "version": 1,
+   "versionId": "version-profit-1",
+   "text": "Profit(Revenue, Cost) = Margin(Revenue, Cost) * Revenue",
+   "description": "",
+   "note": "",
+   "calls": [
+    {
+     "name": "Margin",
+     "family": "family-margin",
+     "version": 1,
+     "versionId": "version-margin-1"
+    }
+   ]
+  }
+ ]
+}

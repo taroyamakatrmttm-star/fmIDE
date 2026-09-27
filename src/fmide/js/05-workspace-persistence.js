@@ -14,6 +14,7 @@
       shortcutBindings: Object.assign({}, shortcutBindings),
       shortcutBindingsVersion: 2,
       macros: cloneData(MACROS),
+      functions: cloneData(FUNCTIONS),
       ui: buildUiPayload()
     };
   }
@@ -32,6 +33,9 @@
   // fromImport: File → Import Workspace, where the file's templates join the library only
   // when not already there (addMissingTemplates). Restoring the autosave keeps them as saved.
   function applyWorkspacePayload(data, fromImport){
+    // The function library first: the system's own definitions then join it.
+    if(fromImport) addMissingFunctions(data.functions);
+    else restoreFunctions(data.functions);
     if(data.system && Array.isArray(data.system.canvases) && data.system.canvases.length){
       applySystemDataDirect(data.system);
     }
@@ -211,6 +215,7 @@
 
   function performAddSystem(data, decisions){
     pushHistory();
+    mergeModelFunctions(data.functions);
     const canvasIdMap = {};
     const nodeIdMap = {};
     const mergeTargets = {};
@@ -454,6 +459,7 @@
       computedValues: {}, computeErrors: {}, portValues: {}, portErrors: {}
     }, c.template));
     nextId = Math.max(nextId, maxId + 1, typeof data.nextId === 'number' ? data.nextId : 0);
+    setModelFunctions(data.functions);
     activeCanvasId = (typeof data.activeCanvasId === 'string' && canvases.some(c => c.id === data.activeCanvasId))
       ? data.activeCanvasId : canvases[0].id;
     periods = Array.isArray(data.periods) && data.periods.length ? data.periods.map(String) : ['Period 1'];
@@ -478,12 +484,12 @@
   // Single canvas as a reusable module; loading adds it into the current canvas.
   function saveModuleToFile(){
     const active = canvases.find(c => c.id === activeCanvasId);
-    const payload = {
+    const payload = withFunctions({
       version: FILE_FORMATS['module'].current, kind: 'module',
       name: active ? active.name : 'Canvas',
       selfCanvasId: activeCanvasId,
       nextId, nodes, edges
-    };
+    }, [{ nodes }]);
     const safeName = (active ? active.name : 'canvas').replace(/[^a-z0-9\-_]+/gi, '_');
     downloadJSON(payload, `fmIDE-module-${safeName}-${timestamp()}.json`);
   }
@@ -502,6 +508,7 @@
   // to the current canvas and when adding to a freshly created one. No history/validation.
   // keepIds (optional): Map of a module node id → the id it should keep (Update this canvas).
   function applyModuleDataDirect(data, keepIds){
+    mergeModelFunctions(data.functions);
     const idMap = {};
     const newNodes = data.nodes.map(n => {
       const newId = (keepIds && keepIds.get(n.id)) || uid('n');

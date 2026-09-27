@@ -4,7 +4,8 @@
 // (never saved). compileModel(system) is a pure function of that object: it reads nothing
 // else, and changes nothing in it. evaluateModel(ir) calculates every rectangle in every
 // period; unitOf(ir, canvasId, nodeId) gives a rectangle's unit of measure.
-// Uses operators.js (the operator catalogue), uom.js (units) and input-rule.js.
+// Uses operators.js (the operator catalogue), uom.js (units), input-rule.js and
+// functions.js (function plugins: the definitions a system carries in `functions`).
 //
 // Lookups follow the file as it is: where a file repeats an id, the first canvas (or the
 // first node on a canvas) with that id is the one used.
@@ -144,8 +145,9 @@ function withPlugLinks(c, links){
   };
 }
 
-// `c` is { id, name, nodes, edges } as the calculation sees it (withPlugLinks).
-function compileCanvas(c){
+// `c` is { id, name, nodes, edges } as the calculation sees it (withPlugLinks); `functions`
+// is the model's compiled function definitions (compileFunctions).
+function compileCanvas(c, functions){
   const nodes = c.nodes, edges = c.edges;
   // The canvas as the calculation sees it, for rules that read a whole canvas (the input
   // rule, reaching outside the timeline) and for ExcelExporter's layout.
@@ -189,6 +191,11 @@ function compileCanvas(c){
     } else if(n.type === 'blockInstance'){
       out.blockDefCanvasId = n.blockDefCanvasId;
       out.vertical = !!n.vertical;
+    } else if(n.type === 'function'){
+      // A call to one version of a function: `call` is its compiled definition, or null when
+      // the file doesn't carry it. Its inputs are the arrows into its ports (portEdges).
+      out.fn = cleanFunctionRef(n.fn);
+      out.call = out.fn ? functions.resolve(out.fn) : null;
     } else {
       // An operator — or any other type, which calculates the same way.
       out.symbol = n.text;
@@ -216,9 +223,11 @@ function compileCanvas(c){
     ports: { inputs: byRole('input'), outputs: byRole('output'), indexNode } };
 }
 
-// Reads { periods, canvases } and nothing else. Plug-to-socket links are worked out here,
-// from the plug and socket names (plugLinks); the automatic links saved in the file are
-// only reused where they still match.
+// Reads { periods, canvases, functions } and nothing else. Plug-to-socket links are worked
+// out here, from the plug and socket names (plugLinks); the automatic links saved in the file
+// are only reused where they still match. `functions` are the function definitions the
+// model carries (functions.js); a model without any reads none.
+const IR_NO_FUNCTIONS = { resolve: () => null, list: [] };
 function compileModel(system){
   const periods = system && Array.isArray(system.periods) ? system.periods : [];
   const source = system && Array.isArray(system.canvases) ? system.canvases : [];
@@ -234,10 +243,11 @@ function compileModel(system){
       nodes: c.nodes.filter(n => !(n.type === 'alias' && n.auto)),
       edges: c.edges.filter(e => !e.auto && !autoAliasIds.has(e.from) && !autoAliasIds.has(e.to)) };
   }));
-  const order = saved.map((c, i) => compileCanvas(withPlugLinks(c, links[i])));
+  const functions = system && Array.isArray(system.functions) && system.functions.length ? compileFunctions(system.functions) : IR_NO_FUNCTIONS;
+  const order = saved.map((c, i) => compileCanvas(withPlugLinks(c, links[i]), functions));
   const canvases = new Map();
   order.forEach(c => { if(!canvases.has(c.id)) canvases.set(c.id, c); });
-  return { periodCount: periods.length, order, canvases, units: new Map() };
+  return { periodCount: periods.length, order, canvases, units: new Map(), functions };
 }
 
 function irNodeIn(ir, canvasId, nodeId){
@@ -316,6 +326,9 @@ function irUnit(ir, canvasId, nodeId, path, visiting){
     if(n.sourceCanvasId && n.sourceNodeId) result = irUnit(ir, n.sourceCanvasId, n.sourceNodeId, n.sourceCanvasId === canvasId ? path : [], visiting);
   } else if(n.type === 'periodShift'){
     if(n.incoming.length === 1) result = fromEdge(n.incoming[0]);
+  } else if(n.type === 'function'){
+    // Worked out from the function's formula, with the units of what feeds its inputs.
+    if(n.call && !n.call.status) result = functionUnit(n.call, (i) => irEdgeUnit(ir, canvasId, irPortEdge(ir, canvasId, n.id, i), path, visiting));
   } else if(n.type === 'operator'){
     const units = n.unitInputs.map(fromEdge);
     const rule = n.op ? n.op.unit : null;
@@ -355,7 +368,9 @@ function irEdgeUnit(ir, canvasId, edge, path, visiting){
 //
 // Error codes: cycle, alias-unset, alias-missing-canvas, alias-missing-node, no-input,
 // ambiguous, missing-input, period-out-of-range, math-error, unary-only, needs-two,
-// block-missing-def, block-missing-output, block-cycle.
+// block-missing-def, block-missing-output, block-cycle; for function nodes also
+// function-missing, function-unreadable, function-cycle, function-too-deep,
+// function-arguments (compileFunctions) and function-input-unwired.
 //
 // `options` (both off unless asked for; fmIDE asks for neither):
 // - trace: each entry also carries origins[p], mapping a node id with an error to where
@@ -511,6 +526,25 @@ function evaluateModel(ir, options){
             if(trace) failedFrom(key, canvasId, incoming[0], targetPeriod, scope);
           }
         }
+      }
+    } else if(n.type === 'function'){
+      // A call: the function's formula, reading only the inputs it needs. Each input is the
+      // arrow into its port; one with no arrow is an error where the formula reads it.
+      if(!n.call){
+        errors[key] = 'function-missing';
+      } else if(n.call.status){
+        errors[key] = n.call.status;
+      } else {
+        const r = runFunction(n.call, (i) => {
+          const edge = irPortEdge(ir, canvasId, n.id, i);
+          if(!edge) return { error: 'function-input-unwired' };
+          const v = resolveEdge(canvasId, edge, period, scope, visiting);
+          return bad(v) ? { error: 'missing-input', edge } : { value: v };
+        });
+        if(r.error){
+          errors[key] = r.error;
+          if(trace && r.edge) failedFrom(key, canvasId, r.edge, period, scope);
+        } else result = r.value;
       }
     } else {
       const inputs = n.inputs;

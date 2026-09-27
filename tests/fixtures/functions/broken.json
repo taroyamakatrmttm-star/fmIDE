@@ -1,0 +1,891 @@
+{
+ "version": 5,
+ "kind": "system",
+ "nextId": 100,
+ "nextCanvasId": 2,
+ "activeCanvasId": "cB",
+ "periods": [
+  "P1",
+  "P2"
+ ],
+ "currentPeriod": 0,
+ "canvases": [
+  {
+   "id": "cB",
+   "name": "Broken",
+   "nodes": [
+    {
+     "id": "r",
+     "type": "value",
+     "x": 0,
+     "y": 0,
+     "w": 170,
+     "h": 64,
+     "text": "Revenue\n100"
+    },
+    {
+     "id": "c",
+     "type": "value",
+     "x": 0,
+     "y": 100,
+     "w": 170,
+     "h": 64,
+     "text": "Cost\n60"
+    },
+    {
+     "id": "z",
+     "type": "value",
+     "x": 0,
+     "y": 200,
+     "w": 170,
+     "h": 64,
+     "text": "Zero\n0"
+    },
+    {
+     "id": "fmiss",
+     "type": "function",
+     "x": 250,
+     "y": 0,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-not-here",
+      "version": 1,
+      "versionId": "x",
+      "name": "Gone"
+     }
+    },
+    {
+     "id": "miss",
+     "type": "value",
+     "x": 450,
+     "y": 0,
+     "w": 170,
+     "h": 64,
+     "text": "Missing"
+    },
+    {
+     "id": "fvid",
+     "type": "function",
+     "x": 250,
+     "y": 100,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-margin",
+      "version": 1,
+      "versionId": "someone-else",
+      "name": "Margin"
+     }
+    },
+    {
+     "id": "vid",
+     "type": "value",
+     "x": 450,
+     "y": 100,
+     "w": 170,
+     "h": 64,
+     "text": "Other versionId"
+    },
+    {
+     "id": "fbad",
+     "type": "function",
+     "x": 250,
+     "y": 200,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-bad",
+      "version": 1,
+      "versionId": "version-bad-1",
+      "name": "Bad"
+     }
+    },
+    {
+     "id": "bad",
+     "type": "value",
+     "x": 450,
+     "y": 200,
+     "w": 170,
+     "h": 64,
+     "text": "Unreadable"
+    },
+    {
+     "id": "floop",
+     "type": "function",
+     "x": 250,
+     "y": 300,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-la",
+      "version": 1,
+      "versionId": "version-la-1",
+      "name": "LoopA"
+     }
+    },
+    {
+     "id": "loop",
+     "type": "value",
+     "x": 450,
+     "y": 300,
+     "w": 170,
+     "h": 64,
+     "text": "Loop"
+    },
+    {
+     "id": "fnocall",
+     "type": "function",
+     "x": 250,
+     "y": 400,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-nocall",
+      "version": 1,
+      "versionId": "version-nocall-1",
+      "name": "NoCall"
+     }
+    },
+    {
+     "id": "nocall",
+     "type": "value",
+     "x": 450,
+     "y": 400,
+     "w": 170,
+     "h": 64,
+     "text": "Missing call"
+    },
+    {
+     "id": "farity",
+     "type": "function",
+     "x": 250,
+     "y": 500,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-arity",
+      "version": 1,
+      "versionId": "version-arity-1",
+      "name": "OneOnly"
+     }
+    },
+    {
+     "id": "arity",
+     "type": "value",
+     "x": 450,
+     "y": 500,
+     "w": 170,
+     "h": 64,
+     "text": "Wrong count"
+    },
+    {
+     "id": "fdeep",
+     "type": "function",
+     "x": 250,
+     "y": 600,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-l0",
+      "version": 1,
+      "versionId": "version-l0",
+      "name": "L0"
+     }
+    },
+    {
+     "id": "deep",
+     "type": "value",
+     "x": 450,
+     "y": 600,
+     "w": 170,
+     "h": 64,
+     "text": "Too deep"
+    },
+    {
+     "id": "fok",
+     "type": "function",
+     "x": 250,
+     "y": 700,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-l1",
+      "version": 1,
+      "versionId": "version-l1",
+      "name": "L1"
+     }
+    },
+    {
+     "id": "ok",
+     "type": "value",
+     "x": 450,
+     "y": 700,
+     "w": 170,
+     "h": 64,
+     "text": "Deep enough"
+    },
+    {
+     "id": "funw",
+     "type": "function",
+     "x": 250,
+     "y": 800,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-margin",
+      "version": 1,
+      "versionId": "version-margin-1",
+      "name": "Margin"
+     }
+    },
+    {
+     "id": "unw",
+     "type": "value",
+     "x": 450,
+     "y": 800,
+     "w": 170,
+     "h": 64,
+     "text": "Unwired used"
+    },
+    {
+     "id": "fign",
+     "type": "function",
+     "x": 250,
+     "y": 900,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-ign",
+      "version": 1,
+      "versionId": "version-ign-1",
+      "name": "IgnoreSecond"
+     }
+    },
+    {
+     "id": "ign",
+     "type": "value",
+     "x": 450,
+     "y": 900,
+     "w": 170,
+     "h": 64,
+     "text": "Unwired unused"
+    },
+    {
+     "id": "fcu",
+     "type": "function",
+     "x": 250,
+     "y": 1000,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-cu",
+      "version": 1,
+      "versionId": "version-cu-1",
+      "name": "CatchUnwired"
+     }
+    },
+    {
+     "id": "cu",
+     "type": "value",
+     "x": 450,
+     "y": 1000,
+     "w": 170,
+     "h": 64,
+     "text": "Unwired caught"
+    },
+    {
+     "id": "dz",
+     "type": "operator",
+     "x": 150,
+     "y": 1100,
+     "w": 56,
+     "h": 56,
+     "text": "÷",
+     "socket": ""
+    },
+    {
+     "id": "fails",
+     "type": "value",
+     "x": 300,
+     "y": 1100,
+     "w": 170,
+     "h": 64,
+     "text": "Fails"
+    },
+    {
+     "id": "ffail",
+     "type": "function",
+     "x": 450,
+     "y": 1100,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-margin",
+      "version": 1,
+      "versionId": "version-margin-1",
+      "name": "Margin"
+     }
+    },
+    {
+     "id": "fail",
+     "type": "value",
+     "x": 650,
+     "y": 1100,
+     "w": 170,
+     "h": 64,
+     "text": "Input fails"
+    },
+    {
+     "id": "fself",
+     "type": "function",
+     "x": 250,
+     "y": 1200,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-ign",
+      "version": 1,
+      "versionId": "version-ign-1",
+      "name": "IgnoreSecond"
+     }
+    },
+    {
+     "id": "self",
+     "type": "value",
+     "x": 450,
+     "y": 1200,
+     "w": 170,
+     "h": 64,
+     "text": "Self loop\n5"
+    }
+   ],
+   "edges": [
+    {
+     "id": "b1",
+     "from": "fmiss",
+     "to": "miss"
+    },
+    {
+     "id": "b2",
+     "from": "r",
+     "to": "fvid",
+     "toPort": 0
+    },
+    {
+     "id": "b3",
+     "from": "c",
+     "to": "fvid",
+     "toPort": 1
+    },
+    {
+     "id": "b4",
+     "from": "fvid",
+     "to": "vid"
+    },
+    {
+     "id": "b5",
+     "from": "r",
+     "to": "fbad",
+     "toPort": 0
+    },
+    {
+     "id": "b6",
+     "from": "fbad",
+     "to": "bad"
+    },
+    {
+     "id": "b7",
+     "from": "r",
+     "to": "floop",
+     "toPort": 0
+    },
+    {
+     "id": "b8",
+     "from": "floop",
+     "to": "loop"
+    },
+    {
+     "id": "b9",
+     "from": "r",
+     "to": "fnocall",
+     "toPort": 0
+    },
+    {
+     "id": "b10",
+     "from": "fnocall",
+     "to": "nocall"
+    },
+    {
+     "id": "b11",
+     "from": "r",
+     "to": "farity",
+     "toPort": 0
+    },
+    {
+     "id": "b12",
+     "from": "farity",
+     "to": "arity"
+    },
+    {
+     "id": "b13",
+     "from": "r",
+     "to": "fdeep",
+     "toPort": 0
+    },
+    {
+     "id": "b14",
+     "from": "fdeep",
+     "to": "deep"
+    },
+    {
+     "id": "b15",
+     "from": "r",
+     "to": "fok",
+     "toPort": 0
+    },
+    {
+     "id": "b16",
+     "from": "fok",
+     "to": "ok"
+    },
+    {
+     "id": "b17",
+     "from": "r",
+     "to": "funw",
+     "toPort": 0
+    },
+    {
+     "id": "b18",
+     "from": "funw",
+     "to": "unw"
+    },
+    {
+     "id": "b19",
+     "from": "r",
+     "to": "fign",
+     "toPort": 0
+    },
+    {
+     "id": "b20",
+     "from": "fign",
+     "to": "ign"
+    },
+    {
+     "id": "b21",
+     "from": "r",
+     "to": "fcu",
+     "toPort": 0
+    },
+    {
+     "id": "b22",
+     "from": "fcu",
+     "to": "cu"
+    },
+    {
+     "id": "b23",
+     "from": "r",
+     "to": "dz"
+    },
+    {
+     "id": "b24",
+     "from": "z",
+     "to": "dz"
+    },
+    {
+     "id": "b25",
+     "from": "dz",
+     "to": "fails"
+    },
+    {
+     "id": "b26",
+     "from": "r",
+     "to": "ffail",
+     "toPort": 0
+    },
+    {
+     "id": "b27",
+     "from": "fails",
+     "to": "ffail",
+     "toPort": 1
+    },
+    {
+     "id": "b28",
+     "from": "ffail",
+     "to": "fail"
+    },
+    {
+     "id": "b29",
+     "from": "self",
+     "to": "fself",
+     "toPort": 0
+    },
+    {
+     "id": "b30",
+     "from": "fself",
+     "to": "self"
+    }
+   ]
+  }
+ ],
+ "functions": [
+  {
+   "family": "family-margin",
+   "version": 1,
+   "versionId": "version-margin-1",
+   "text": "Margin(Revenue, Cost) = (Revenue - Cost) / Revenue",
+   "description": "The share of revenue left after cost.",
+   "note": "First version",
+   "calls": []
+  },
+  {
+   "family": "family-bad",
+   "version": 1,
+   "versionId": "version-bad-1",
+   "text": "Bad(x) = x +",
+   "description": "",
+   "note": "",
+   "calls": []
+  },
+  {
+   "family": "family-la",
+   "version": 1,
+   "versionId": "version-la-1",
+   "text": "LoopA(x) = LoopB(x) + 1",
+   "description": "",
+   "note": "",
+   "calls": [
+    {
+     "name": "LoopB",
+     "family": "family-lb",
+     "version": 1,
+     "versionId": "version-lb-1"
+    }
+   ]
+  },
+  {
+   "family": "family-lb",
+   "version": 1,
+   "versionId": "version-lb-1",
+   "text": "LoopB(x) = LoopA(x) + 1",
+   "description": "",
+   "note": "",
+   "calls": [
+    {
+     "name": "LoopA",
+     "family": "family-la",
+     "version": 1,
+     "versionId": "version-la-1"
+    }
+   ]
+  },
+  {
+   "family": "family-nocall",
+   "version": 1,
+   "versionId": "version-nocall-1",
+   "text": "NoCall(x) = Other(x) * 2",
+   "description": "",
+   "note": "",
+   "calls": []
+  },
+  {
+   "family": "family-arity",
+   "version": 1,
+   "versionId": "version-arity-1",
+   "text": "OneOnly(x) = Margin(x)",
+   "description": "",
+   "note": "",
+   "calls": [
+    {
+     "name": "Margin",
+     "family": "family-margin",
+     "version": 1,
+     "versionId": "version-margin-1"
+    }
+   ]
+  },
+  {
+   "family": "family-ign",
+   "version": 1,
+   "versionId": "version-ign-1",
+   "text": "IgnoreSecond(a, b) = a * 2",
+   "description": "",
+   "note": "",
+   "calls": []
+  },
+  {
+   "family": "family-cu",
+   "version": 1,
+   "versionId": "version-cu-1",
+   "text": "CatchUnwired(a, b) = IFERROR(b, a)",
+   "description": "",
+   "note": "",
+   "calls": []
+  },
+  {
+   "family": "family-l0",
+   "version": 1,
+   "versionId": "version-l0",
+   "text": "L0(x) = L1(x) + 1",
+   "description": "",
+   "note": "",
+   "calls": [
+    {
+     "name": "L1",
+     "family": "family-l1",
+     "version": 1,
+     "versionId": "version-l1"
+    }
+   ]
+  },
+  {
+   "family": "family-l1",
+   "version": 1,
+   "versionId": "version-l1",
+   "text": "L1(x) = L2(x) + 1",
+   "description": "",
+   "note": "",
+   "calls": [
+    {
+     "name": "L2",
+     "family": "family-l2",
+     "version": 1,
+     "versionId": "version-l2"
+    }
+   ]
+  },
+  {
+   "family": "family-l2",
+   "version": 1,
+   "versionId": "version-l2",
+   "text": "L2(x) = L3(x) + 1",
+   "description": "",
+   "note": "",
+   "calls": [
+    {
+     "name": "L3",
+     "family": "family-l3",
+     "version": 1,
+     "versionId": "version-l3"
+    }
+   ]
+  },
+  {
+   "family": "family-l3",
+   "version": 1,
+   "versionId": "version-l3",
+   "text": "L3(x) = L4(x) + 1",
+   "description": "",
+   "note": "",
+   "calls": [
+    {
+     "name": "L4",
+     "family": "family-l4",
+     "version": 1,
+     "versionId": "version-l4"
+    }
+   ]
+  },
+  {
+   "family": "family-l4",
+   "version": 1,
+   "versionId": "version-l4",
+   "text": "L4(x) = L5(x) + 1",
+   "description": "",
+   "note": "",
+   "calls": [
+    {
+     "name": "L5",
+     "family": "family-l5",
+     "version": 1,
+     "versionId": "version-l5"
+    }
+   ]
+  },
+  {
+   "family": "family-l5",
+   "version": 1,
+   "versionId": "version-l5",
+   "text": "L5(x) = L6(x) + 1",
+   "description": "",
+   "note": "",
+   "calls": [
+    {
+     "name": "L6",
+     "family": "family-l6",
+     "version": 1,
+     "versionId": "version-l6"
+    }
+   ]
+  },
+  {
+   "family": "family-l6",
+   "version": 1,
+   "versionId": "version-l6",
+   "text": "L6(x) = L7(x) + 1",
+   "description": "",
+   "note": "",
+   "calls": [
+    {
+     "name": "L7",
+     "family": "family-l7",
+     "version": 1,
+     "versionId": "version-l7"
+    }
+   ]
+  },
+  {
+   "family": "family-l7",
+   "version": 1,
+   "versionId": "version-l7",
+   "text": "L7(x) = L8(x) + 1",
+   "description": "",
+   "note": "",
+   "calls": [
+    {
+     "name": "L8",
+     "family": "family-l8",
+     "version": 1,
+     "versionId": "version-l8"
+    }
+   ]
+  },
+  {
+   "family": "family-l8",
+   "version": 1,
+   "versionId": "version-l8",
+   "text": "L8(x) = L9(x) + 1",
+   "description": "",
+   "note": "",
+   "calls": [
+    {
+     "name": "L9",
+     "family": "family-l9",
+     "version": 1,
+     "versionId": "version-l9"
+    }
+   ]
+  },
+  {
+   "family": "family-l9",
+   "version": 1,
+   "versionId": "version-l9",
+   "text": "L9(x) = L10(x) + 1",
+   "description": "",
+   "note": "",
+   "calls": [
+    {
+     "name": "L10",
+     "family": "family-l10",
+     "version": 1,
+     "versionId": "version-l10"
+    }
+   ]
+  },
+  {
+   "family": "family-l10",
+   "version": 1,
+   "versionId": "version-l10",
+   "text": "L10(x) = L11(x) + 1",
+   "description": "",
+   "note": "",
+   "calls": [
+    {
+     "name": "L11",
+     "family": "family-l11",
+     "version": 1,
+     "versionId": "version-l11"
+    }
+   ]
+  },
+  {
+   "family": "family-l11",
+   "version": 1,
+   "versionId": "version-l11",
+   "text": "L11(x) = L12(x) + 1",
+   "description": "",
+   "note": "",
+   "calls": [
+    {
+     "name": "L12",
+     "family": "family-l12",
+     "version": 1,
+     "versionId": "version-l12"
+    }
+   ]
+  },
+  {
+   "family": "family-l12",
+   "version": 1,
+   "versionId": "version-l12",
+   "text": "L12(x) = L13(x) + 1",
+   "description": "",
+   "note": "",
+   "calls": [
+    {
+     "name": "L13",
+     "family": "family-l13",
+     "version": 1,
+     "versionId": "version-l13"
+    }
+   ]
+  },
+  {
+   "family": "family-l13",
+   "version": 1,
+   "versionId": "version-l13",
+   "text": "L13(x) = L14(x) + 1",
+   "description": "",
+   "note": "",
+   "calls": [
+    {
+     "name": "L14",
+     "family": "family-l14",
+     "version": 1,
+     "versionId": "version-l14"
+    }
+   ]
+  },
+  {
+   "family": "family-l14",
+   "version": 1,
+   "versionId": "version-l14",
+   "text": "L14(x) = L15(x) + 1",
+   "description": "",
+   "note": "",
+   "calls": [
+    {
+     "name": "L15",
+     "family": "family-l15",
+     "version": 1,
+     "versionId": "version-l15"
+    }
+   ]
+  },
+  {
+   "family": "family-l15",
+   "version": 1,
+   "versionId": "version-l15",
+   "text": "L15(x) = L16(x) + 1",
+   "description": "",
+   "note": "",
+   "calls": [
+    {
+     "name": "L16",
+     "family": "family-l16",
+     "version": 1,
+     "versionId": "version-l16"
+    }
+   ]
+  },
+  {
+   "family": "family-l16",
+   "version": 1,
+   "versionId": "version-l16",
+   "text": "L16(x) = x",
+   "description": "",
+   "note": "",
+   "calls": []
+  }
+ ]
+}

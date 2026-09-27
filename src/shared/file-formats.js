@@ -5,7 +5,7 @@
 // (docs/file-formats.md). To change one of these formats: raise its version here and add
 // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
 // exactly one version.
-const SHARED_FILE_VERSIONS = { 'system': 4, 'fmIDE-workspace': 3 };
+const SHARED_FILE_VERSIONS = { 'system': 5, 'fmIDE-workspace': 4 };
 // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
 // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
 function upgradeNodePlugs(nodes){
@@ -44,7 +44,10 @@ const SHARED_FILE_MIGRATIONS = {
   'fmIDE-workspace': {
     1: d => upgradeTemplateEntries(d.templates),
     // v2 → v3: templates may be recipes (kind "recipe"); older files have none.
-    2: () => {}
+    2: () => {},
+    // v3 → v4: a workspace may carry a library of functions (`functions`); older ones have
+    // none.
+    3: () => {}
   },
   'system': {
     // v1 systems were accepted with fields the loader already defaults (periods, ids…);
@@ -61,7 +64,10 @@ const SHARED_FILE_MIGRATIONS = {
     2: d => { (Array.isArray(d.canvases) ? d.canvases : []).forEach(c => { if(c) upgradeNodePlugs(c.nodes); }); },
     // v3 → v4: a canvas may remember the canvas template it came from (`template`). Older
     // systems have no such links, so there is nothing to change.
-    3: () => {}
+    3: () => {},
+    // v4 → v5: a system may carry the function definitions its function nodes use
+    // (`functions`, src/shared/functions.js); older systems have none.
+    4: () => {}
   }
 };
 // A file's kind: its "kind" field, or — for files saved before kinds were written — its

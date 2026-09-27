@@ -10,6 +10,7 @@
 // build:include shared/operators.js
 // build:include shared/uom.js
 // build:include shared/input-rule.js
+// build:include shared/functions.js
 // build:include shared/ir.js
 
 // The loaded model's IR (compileModel), set by loadModel. Every question about the graph —
@@ -181,6 +182,9 @@ function operandRef(canvasId, nodeId, periodIndex, ctx, currentTabName, path, fr
     const lit = effectiveLiteral(node, periodIndex);
     return lit !== null ? formatLiteralForFormula(lit) : '0';
   }
+  // A function call (function plugins, step 7 phase D) is written as #N/A for now: an error
+  // in Excel, where fmIDE shows its value — never a wrong number.
+  if(n.type === 'function') return 'NA()';
   // Operators, aliases and period shifts are written inline. A loop made only of them (no
   // rectangle with a row of its own to break it) would never end: it reads 0 instead —
   // fmIDE shows "?" (a loop), and the check before download lists it.
@@ -443,7 +447,7 @@ function classifyNode(canvas, node){
   // Operators, block instances, aliases, and period-shift nodes never get their own row:
   // operators and now aliases/period-shift nodes are always inlined into the formula of
   // whatever references them (see operandRef) instead of occupying a row of their own.
-  if(node.type === 'operator' || node.type === 'blockInstance' || node.type === 'alias' || node.type === 'periodShift') return null;
+  if(node.type === 'operator' || node.type === 'function' || node.type === 'blockInstance' || node.type === 'alias' || node.type === 'periodShift') return null;
   // A block's "Vertical Index" rectangle never gets a row either: inside a vertical
   // instance it's the row's own Vintage cell (column C); anywhere else it resolves to
   // the literal 1 (see operandRef), so a row of its own would only show a misleading value.

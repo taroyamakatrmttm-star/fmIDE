@@ -102,6 +102,12 @@
       case 'block-cycle': return 'This Block contains an instance of itself, directly or indirectly.';
       case 'cycle': return 'This is part of a circular reference.';
       case 'period-out-of-range': return "There's no period that far back/forward for this shifter to read — it's fine at the timeline's edge.";
+      case 'function-missing': return "This function's definition isn't in the model (or a function it calls is missing).";
+      case 'function-unreadable': return "This function's formula can't be read.";
+      case 'function-cycle': return 'This function calls itself through other functions, in a loop.';
+      case 'function-too-deep': return 'This function calls other functions nested too deeply.';
+      case 'function-arguments': return 'This function calls another function with the wrong number of inputs.';
+      case 'function-input-unwired': return "One of this function's inputs isn't connected.";
       default: return 'Could not compute.';
     }
   }

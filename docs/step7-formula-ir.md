@@ -24,7 +24,7 @@
 - **A — Agreement tests and the agreed fixes** ✅ (below)
 - **B — The shared IR, and fmIDE running on it** ✅ (below). `src/shared/operators.js` (operator catalogue by stable id) and `src/shared/ir.js` (`compileModel(system)`, a pure function of the file). fmIDE's evaluator runs the IR; error codes stay the same. UOM (unit of measure) comes from the IR in fmIDE (ExcelExporter in phase C).
 - **C — ExcelExporter writes formulas from the IR** ✅ (below). Layout stays in ExcelExporter. The snapshots must not change. Its units come from the IR too. `compileModel` works out plug-to-socket connections itself, in both apps at once (decided in phase B). Ends with the "fmIDE shows ? here" list before download.
-- **D — Function plugins.** Families and versions like templates, carried inside system and workspace files (`system` v5, `fmIDE-workspace` v4, new `fmIDE-functions` v1).
+- **D — Function plugins** (in progress, below). Families and versions like templates, carried inside system and workspace files (`system` v5, `fmIDE-workspace` v4, new `fmIDE-functions` v1). Three pull requests: D1 the shared core and file formats ✅, D2 fmIDE (Functions manager, function nodes, `window.fm`), D3 ExcelExporter and agreement.
 - **E — New built-in operators** (e.g. IF, ROUND, LN, EXP) through the catalogue (optional).
 
 Things to keep in mind for later phases and for the community library (step 8): plugins are referred to by family id and version, never by name; their definitions travel with the model; `compileModel` must not read fmIDE's global state; plug connections could be worked out by the IR instead of relying on the automatic aliases saved in files; evaluation must not get slower.
@@ -145,3 +145,50 @@ Found along the way (not changed):
 - **Loading a large model into ExcelExporter is slow:** about 10–13 s for the 1,865-node model, before and after this phase. Almost all of it is drawing the rows list (thousands of drop-downs, and reading scroll positions between them), not the calculation. Worth its own change.
 - **fmIDE's automatic aliases are remade at the rule's place on every redraw,** so dragging one only lasts until the next change to plugs. The calculation now always uses the rule's place, so the order an operator reads its inputs in no longer depends on when fmIDE last redrew them.
 - **An operator with an arrow from a node that no longer exists** (only a hand-edited file has one) is read in the order fmIDE uses. ExcelExporter used a slightly different order before, but only in that case.
+
+
+## Phase D — function plugins
+
+Decisions taken at the start of the phase (September 2026; the owner chose the recommendation each time):
+
+1. **A function node looks like a block instance:** a box titled "ƒ Margin v2", with one labelled port per input on the left and one output. Each arrow goes into a named port (`toPort`, counted from 0 in the definition's order). An input with no arrow is an error where the formula reads it: "?" in fmIDE, `#N/A` in Excel.
+2. **Functions may call functions,** pinned to the version they were saved with (the definition's `calls` list, never the name alone). A loop is possible only in a hand-edited file: "?" and `#N/A`, listed before download. Calls nest at most 16 deep.
+3. **Units are worked out from the formula** with the catalogue's rules. A number in the formula counts as a plain number for × and ÷ and is left out where units must match.
+4. **Versions follow the template approach:** a node is pinned to its version; a newer version in the library shows ⬆ and offers "Update" (one node, or every use), matching ports by input name; "Not now" is remembered. A definition missing from the file is "?" and `#N/A`, listed before download.
+5. **Syntax in Phase D:** inputs by name, numbers, brackets, a leading minus, `+ - * / ^` (and `− × ÷`), one comparison `< <= > >=`, and today's operators by their Excel names with Excel's numbers of inputs (`MIN MAX AVERAGE ABS MOD IFERROR`), plus calls to other functions. Excel's precedence (`-2^2` = 4). Rejected with a message: chained comparisons, `%`, and Excel functions kept back for phase E (`IF`, `ROUND`…). Parse errors show where they are; the editor keeps Save off until the formula reads.
+6. **The whole syntax is written down** in `docs/file-formats.md` (CC BY 4.0), so others can write functions for the community library.
+7. **Modules and templates carry functions too:** `module` v3 and `fmIDE-templates` v4.
+
+Phase C's open items stay separate changes: loading a large model into ExcelExporter (drawing the rows list), calculating each period from scratch (best done soon after D, since functions add work in every period), and an operator with unknown text passing its first input through (phase E). A function node never passes an input through: an unknown function is always "?".
+
+### D1 — the shared core and the file formats ✅
+
+What was built:
+
+- **`src/shared/functions.js`** (new, from fmIDE's side, Apache):
+  - `parseFunctionText(text)`: a hand-written reader, no `eval` and nothing like it. It returns the name, the inputs and a small tree of plain objects (numbers, inputs, a minus, catalogue operators by id, calls), or a message with the place of the error. Limits: 4,000 characters, 32 inputs, 64 levels, 64-character names. Its lookup tables have no prototype, so a name like `constructor` is only a name.
+  - `cleanFunctionDefinitions(list)`: keeps only well-formed definitions from a file, and only the fields listed in `docs/file-formats.md`.
+  - `compileFunctions(list)`: parses the definitions a model carries, links each call to its version through `calls`, and marks what can't be calculated (unreadable, missing, a loop, too deep, a wrong number of inputs).
+  - `runFunction(fn, input)`: calculates a call, reading each input only when the formula needs it. `functionUnit(fn, inputUnit)`: its unit. `functionsUsedBy(canvases, list)`: the definitions a file must carry.
+- **`src/shared/ir.js`:** `compileModel` also reads the system's `functions` (a model without any compiles none, so it costs nothing). A node of type `function` is compiled against them; `evaluateModel` and `unitOf` calculate it. New error codes: `function-missing`, `function-unreadable`, `function-cycle`, `function-too-deep`, `function-arguments`, `function-input-unwired`. Tracing (for ExcelExporter's list) follows a failing input to where it starts.
+- **`src/shared/input-rule.js`:** reaching outside the timeline follows a function node through its inputs, like an operator, so a corkscrew through a function shows its typed opening balance in period 1.
+- **File formats:** `system` v5, `module` v3, `fmIDE-workspace` v4, `fmIDE-templates` v4, and the new `fmIDE-functions` v1; every upgrade step changes nothing (older files have no functions).
+- **fmIDE** (`src/fmide/js/11b-functions.js`, new): keeps the library (`FUNCTIONS`, saved in the workspace and the autosave) and the definitions the open model carries (`modelFunctions`), and calculates with the latter. Save System, Save Module, templates made from the open model, Export Workspace and `.fmide` documents carry the definitions they use; opening any of them brings the definitions along and adds them to the library. Error messages for the new codes.
+- **ExcelExporter:** reads the definitions, calculates function nodes for the "differs from fmIDE" check, and gives function nodes no row of their own. Until D3 writes calls out in full, a cell that reads a function call gets `=NA()`, an error in Excel rather than a wrong number.
+
+How it was checked:
+
+- New test group 20 (`tests/20-functions.spec.js`, 75 tests): the parser's accepted and rejected text (message and place), its limits, and hostile text; the samples `tests/fixtures/functions/basic.json` and `broken.json` with known answers and units in Node and the same values in fmIDE; each file carrying its definitions (Save System, Save Module, Export Workspace, the autosave, a template).
+- New old-version samples `ws-v3.json`, `module-v2.json`, `templates-v3.json` open and are saved in the current versions. `sys-newer-v5.json` and `ws-nested-newer.json` are ordinary files now; `sys-newer-v6.json` and `ws-nested-newer-v6.json` take over the "asks first" tests. Tests that pin the current version numbers were raised by one (groups 6, 13, 14, 15 and 16).
+- Every other test, the workbook snapshots and fmIDE's pinned values are unchanged.
+- The whole suite passes: 435 tests, LibreOffice included.
+- **Speed** (`npm run bench`, median of 15, same machine; old and new builds run back to back, twice). A model without functions is no slower:
+
+  | | Before | After |
+  |---|---|---|
+  | fmIDE `fm.evaluate`, large model (1,865 nodes, 24 periods) | 1,110 / 1,094 ms | 1,108 / 1,128 ms |
+  | ExcelExporter Generate, large model | 332 / 330 ms | 338 / 342 ms |
+  | fmIDE `fm.evaluate`, biggest sample | 4.8 / 4.9 ms | 3.0 / 2.9 ms |
+  | ExcelExporter Generate, biggest sample | 1.7 / 1.7 ms | 1.7 / 1.8 ms |
+
+  The differences are within what repeated runs of the same build show.

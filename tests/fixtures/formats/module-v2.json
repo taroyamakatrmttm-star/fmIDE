@@ -1,0 +1,66 @@
+{
+ "version": 2,
+ "kind": "module",
+ "name": "Profit",
+ "selfCanvasId": "c1",
+ "nextId": 10,
+ "nodes": [
+  {
+   "id": "n1",
+   "type": "value",
+   "x": 60,
+   "y": 60,
+   "w": 170,
+   "h": 64,
+   "text": "Revenue\n100",
+   "plugs": []
+  },
+  {
+   "id": "n2",
+   "type": "value",
+   "x": 60,
+   "y": 180,
+   "w": 170,
+   "h": 64,
+   "text": "Cost\n60",
+   "plugs": []
+  },
+  {
+   "id": "n3",
+   "type": "operator",
+   "x": 300,
+   "y": 120,
+   "w": 56,
+   "h": 56,
+   "text": "\u2212",
+   "socket": ""
+  },
+  {
+   "id": "n4",
+   "type": "value",
+   "x": 420,
+   "y": 110,
+   "w": 170,
+   "h": 64,
+   "text": "Profit\n0",
+   "plugs": []
+  }
+ ],
+ "edges": [
+  {
+   "id": "e5",
+   "from": "n1",
+   "to": "n3"
+  },
+  {
+   "id": "e6",
+   "from": "n2",
+   "to": "n3"
+  },
+  {
+   "id": "e7",
+   "from": "n3",
+   "to": "n4"
+  }
+ ]
+}

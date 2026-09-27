@@ -19,6 +19,7 @@ const OTHER_FMIDE_KINDS = {
   'fmIDE-format-presets': 'an fmIDE format presets file — import it in fmIDE (a workspace or system export already carries your formats)',
   'fmIDE-shortcuts': 'an fmIDE shortcuts file — import it in fmIDE',
   'fmIDE-macros': 'an fmIDE macros file — import it in fmIDE',
+  'fmIDE-functions': 'an fmIDE functions file — import it in fmIDE (a system or workspace export already carries the functions its model uses)',
   'fmIDE-preferences': 'an fmIDE preferences file (shortcuts, ribbon and KeyTips) — import it in fmIDE with File → Import Preferences'
 };
 // The mapping file has had no upgrades yet.
@@ -72,7 +73,7 @@ async function loadModel(m){
   const periods = Array.isArray(systemData.periods) && systemData.periods.length ? systemData.periods : ['Period 1'];
   // The calculation, read once (the shared IR). Its canvases — with the plug-to-socket
   // links worked out from the names, not taken from the file — are what the layout lists.
-  const ir = compileModel({ periods, canvases: systemData.canvases });
+  const ir = compileModel({ periods, canvases: systemData.canvases, functions: systemData.functions });
   const loaded = { periods, canvases: ir.order.map(c => c.raw), formatPresets };
   // The saved layout's key leaves out the automatic links (fmIDE gives them new ids each
   // time it redraws them); a layout saved under the older key, which counted them, is
