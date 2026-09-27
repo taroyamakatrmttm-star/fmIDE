@@ -2,6 +2,12 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## The library's catalogue (step 8, phase 8c-3)
+- The published site has a **catalogue of the community library** at `/library`: every approved pack, with a page each listing its templates, recipes and functions (plugs and sockets, formulas), a download of the pack, the credit CC BY 4.0 asks for, and a "Report this pack" link. Plain pages with no JavaScript, under their own strict security policy; everything from a pack is shown as plain text.
+- The library repository is a git submodule of fmIDE, `library/`, pinned to one commit; moving the pointer publishes new packs. The build checks every pack again and publishes nothing if one fails.
+- A new pack never makes fmIDE say "a new version is ready": the catalogue is not part of the app's offline copy or its version. `/library/index.json` lists the packs for browsing inside fmIDE later.
+- No app changed; no file format of the apps changed.
+
 ## The community library is set up (step 8, phase 8c-2, part 2)
 - The library repository `fmide-library` (private for now) has its README, draft submission terms, licences, records, pull-request and report templates, and a check that runs fmIDE's pack checker on every pull request and posts its report. The first pack (the owner's) went through it.
 - **Fix:** the checker now refuses a library pack placed outside the library's `packs/` folder. Before, it passed one with only a warning, without checking it as a pack.

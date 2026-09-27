@@ -90,6 +90,26 @@ The community library (a GitHub repository of packs, `docs/step8-community-libra
 - The records are only ever added to: an entry, once approved, is never changed or removed (a change of owner is a maintainer's own pull request). A pack taken down leaves its entries, so its ids are never used again.
 - `author` follows a pack's author rules (one line, at most 120 characters, no extra spaces); no two accounts share a name (ignoring capitals and spaces).
 
+## The catalogue's list (`fmIDE-library-index` 1, step 8, phase 8c-3)
+
+The build writes the community library's catalogue into the published site (`/library`, `tools/build-library.js`), and with it `/library/index.json`: every approved pack and what it holds, for browsing the library inside fmIDE later (phase 8d). No app reads it yet.
+
+```json
+{ "kind": "fmIDE-library-index", "version": 1,
+  "packs": [ { "id": "<pack id>", "title": "…", "author": "…", "licence": "CC-BY-4.0", "description": "…", "tags": ["…"],
+               "created": "2026-09-28", "added": "2026-09-27",
+               "page": "<pack id>", "file": "packs/<pack id>.fmide-pack.json", "bytes": 51658, "sha256": "…", "packVersion": 2,
+               "counts": { "templates": 4, "recipes": 1, "functions": 2 },
+               "items": [ { "type": "template", "kind": "recipe", "name": "…", "family": "…", "version": 1, "versionId": "…",
+                            "group": "…", "description": "…", "note": "…" },
+                          { "type": "function", "name": "Margin", "family": "…", "version": 1, "versionId": "…", "description": "",
+                            "origin": { "packId": "…", "packTitle": "…", "author": "…", "licence": "CC-BY-4.0" } } ] } ] }
+```
+
+- Packs newest approved first (`added`, from `packs.json`), then by title. `created` is the pack's own date (`null` if it has none). `page` and `file` are relative to `/library/`; `bytes` and `sha256` are the pack file's, which is served byte for byte.
+- Items grouped as recipes, canvas templates (`module`), system templates, functions, each group in the pack's order. `group` and `note` appear only when the item has them; `origin` only when the item carries one (an item shared again from another pack has that pack's).
+- Every text comes from the packs: anything reading this file must treat it as untrusted, like a pack. The file holds no build date or account, so the same library always gives the same file.
+
 ## Where items came from (`fmIDE-templates` 6, `fmIDE-workspace` 6, `fmIDE-functions` 2, `fmIDE-library-pack` 2)
 
 A template version or function version added from a library pack remembers the pack in an optional `origin`:

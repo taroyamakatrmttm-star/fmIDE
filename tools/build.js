@@ -5,12 +5,21 @@
 //   node tools/build.js              write apps/fmIDE.html, apps/ExcelExporter.html and site/
 //   node tools/build.js --check      build in memory; exit 1 if apps/ differs from src/
 //   node tools/build.js --site DIR   write only the site, into DIR
+// Options for the site: --library DIR (the community library's folder; default library/, the
+// git submodule) and --require-library (stop when there is none; the deploy uses it).
 //
 // site/ is not committed (it is rebuilt wherever it is needed): index.html (fmIDE, with the
 // lines of its <!-- build:site-head --> marker, which is empty in apps/), ExcelExporter.html,
 // the files of src/site/ (manifest, icons), the licence files (LICENSE.txt, NOTICE.txt,
 // ExcelExporter-LICENSE.txt), plus sw.js with its version and file list
 // filled in. The version is a hash of the site's files, so any change gives a new version.
+//
+// When the community library's folder is there (library/, a git submodule pinned to one
+// commit; empty until it is fetched), the site also gets its catalogue, /library
+// (tools/build-library.js): checked again first, and nothing is built if it fails. The
+// catalogue is added after the version is worked out and is not in the offline copy, so a
+// new pack never makes the app say that a new version is ready. The build never fetches
+// anything: without the folder, the site simply has no catalogue.
 //
 // Each app has a page, src/<app>/index.html, in which a line consisting only of a marker
 // is replaced by content:
@@ -44,6 +53,7 @@ const SITE_HEAD = [
   '<link rel="icon" href="icons/icon.svg" type="image/svg+xml">',
   '<link rel="apple-touch-icon" href="icons/icon-192.png">',
 ].join('\n') + '\n';
+const LIBRARY = require('./build-library.js');
 const INCLUDE = /^([ \t]*)\/\/ build:include ([A-Za-z0-9._\/-]+)\r?$/;
 
 function fail(msg){
@@ -115,7 +125,15 @@ function listFiles(dir, base){
 }
 
 // Writes the whole site into outDir (created; files already there are replaced).
-function buildSite(outDir){
+// opts.library: the community library's folder (default library/; null for none);
+// opts.requireLibrary: throw when there is no library. Throws a LibraryError, writing
+// nothing, when the library fails its check.
+function buildSite(outDir, opts){
+  opts = opts || {};
+  const libraryDir = LIBRARY.findLibrary(opts.library === undefined ? path.join(ROOT, 'library') : opts.library);
+  if(!libraryDir && opts.requireLibrary) throw new LIBRARY.LibraryError('There is no community library (the library/ folder is missing or empty: fetch it with git submodule update --init library).');
+  // Checked before anything is written.
+  const catalogue = libraryDir ? LIBRARY.buildLibrary(libraryDir) : null;
   const files = new Map(); // site path → Buffer
   files.set('index.html', Buffer.from(buildApp(APPS[0], true), 'utf8'));
   files.set('ExcelExporter.html', Buffer.from(buildApp(APPS[1], true), 'utf8'));
@@ -134,12 +152,14 @@ function buildSite(outDir){
     .replace("'__VERSION__'", JSON.stringify(version))
     .replace('__FILES__', JSON.stringify(['./'].concat(names.filter(n => n !== '_headers'))));
   files.set('sw.js', Buffer.from(sw, 'utf8'));
+  // The catalogue: after the version and the offline copy's list, so it is part of neither.
+  if(catalogue) catalogue.files.forEach((data, name) => files.set(name, data));
   for(const [name, data] of files){
     const target = path.join(outDir, ...name.split('/'));
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, data);
   }
-  return { version, files: [...files.keys()].sort() };
+  return { version, files: [...files.keys()].sort(), library: catalogue ? { packs: catalogue.packs } : null };
 }
 
 // The site's HTTP headers, in Cloudflare Pages' _headers format (tools/pages-server.js
@@ -165,20 +185,38 @@ function siteHeaders(files){
     block(['/', '/index.html'], ['Content-Security-Policy: ' + policy('index.html')]),
     block(['/ExcelExporter', '/ExcelExporter.html'], ['Content-Security-Policy: ' + policy('ExcelExporter.html')]),
     block(['/sw.js'], ["Content-Security-Policy: default-src 'self'", 'Cache-Control: no-cache']),
+    // The catalogue's own rules, always there (so the version is the same with or without it).
+    ...LIBRARY.LIBRARY_HEADERS.map(b => block(b.paths, b.headers)),
     ''
   ].join('\n');
 }
 
-module.exports = { buildSite, siteHeaders };
+module.exports = { buildSite, siteHeaders, LibraryError: LIBRARY.LibraryError };
 if(require.main === module) main();
 
+// Builds the site, reporting a library that fails (or is missing when required) and exiting.
+function siteOrFail(dir, opts){
+  try{ return buildSite(dir, opts); }
+  catch(e){
+    if(e instanceof LIBRARY.LibraryError) fail(e.message);
+    throw e;
+  }
+}
+function libraryNote(r){
+  return r.library ? '; the library: ' + r.library.packs + ' pack' + (r.library.packs === 1 ? '' : 's')
+    : '; no library/ folder, so no catalogue';
+}
+
 function main(){
-  const siteArg = process.argv.indexOf('--site');
-  if(siteArg >= 0){
-    const dir = process.argv[siteArg + 1];
-    if(!dir) fail('--site needs a folder');
-    const { version } = buildSite(path.resolve(dir));
-    console.log('built site ' + dir + ' (version ' + version + ')');
+  const argv = process.argv.slice(2);
+  const valueOf = (name) => { const i = argv.indexOf(name); if(i < 0) return undefined; if(!argv[i + 1] || argv[i + 1].startsWith('--')) fail(name + ' needs a folder'); return argv[i + 1]; };
+  const libraryArg = valueOf('--library');
+  const siteOpts = { requireLibrary: argv.includes('--require-library') };
+  if(libraryArg !== undefined) siteOpts.library = path.resolve(libraryArg);
+  const siteArg = valueOf('--site');
+  if(siteArg !== undefined){
+    const r = siteOrFail(path.resolve(siteArg), siteOpts);
+    console.log('built site ' + siteArg + ' (version ' + r.version + libraryNote(r) + ')');
     return;
   }
   const check = process.argv.includes('--check');
@@ -202,8 +240,12 @@ function main(){
   if(stale) process.exit(1);
   if(!check){
     const siteDir = path.join(ROOT, 'site');
+    // Checked first: a library that fails leaves the old site/ as it was.
+    const tmp = fs.mkdtempSync(path.join(require('os').tmpdir(), 'fmide-site-'));
+    const r = siteOrFail(tmp, siteOpts);
     fs.rmSync(siteDir, { recursive: true, force: true });
-    const { version } = buildSite(siteDir);
-    console.log('built site/ (version ' + version + ')');
+    fs.cpSync(tmp, siteDir, { recursive: true });
+    fs.rmSync(tmp, { recursive: true, force: true });
+    console.log('built site/ (version ' + r.version + libraryNote(r) + ')');
   }
 }

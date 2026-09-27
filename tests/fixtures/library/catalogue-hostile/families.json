@@ -1,0 +1,36 @@
+{
+  "kind": "fmIDE-library-families",
+  "version": 1,
+  "families": {
+    "56df3776-7abc-4328-8296-9afe03837509": {
+      "type": "function",
+      "accountId": 1004,
+      "account": "eve-sample",
+      "firstPack": "fb017b0c-78e5-4579-a9c8-f454ff365690",
+      "added": "2026-10-01"
+    },
+    "7cec8cc7-72a7-4415-8d4e-df36a1a9f806": {
+      "type": "template",
+      "kind": "recipe",
+      "accountId": 1004,
+      "account": "eve-sample",
+      "firstPack": "fb017b0c-78e5-4579-a9c8-f454ff365690",
+      "added": "2026-10-01"
+    },
+    "e109af59-adce-4b72-b475-dcaf60348970": {
+      "type": "function",
+      "accountId": 1004,
+      "account": "eve-sample",
+      "firstPack": "fb017b0c-78e5-4579-a9c8-f454ff365690",
+      "added": "2026-10-01"
+    },
+    "fam-hostile-canvas": {
+      "type": "template",
+      "kind": "module",
+      "accountId": 1004,
+      "account": "eve-sample",
+      "firstPack": "fb017b0c-78e5-4579-a9c8-f454ff365690",
+      "added": "2026-10-01"
+    }
+  }
+}

@@ -11,10 +11,11 @@ const { startPagesServer } = require('../../tools/pages-server.js');
 
 const APPS = path.resolve(__dirname, '..', '..', 'apps');
 
-// Resolves { origin, dir, version, close() }.
-async function startSiteServer(){
+// Resolves { origin, dir, version, close() }. opts.library: a community library folder to
+// build the catalogue from (default none, so the tests never depend on the library/ submodule).
+async function startSiteServer(opts){
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fmide-site-'));
-  const { version } = buildSite(dir);
+  const { version } = buildSite(dir, { library: (opts && opts.library) || null });
   const extra = (urlPath) => urlPath.startsWith('/apps/') ? path.join(APPS, path.basename(urlPath)) : null;
   const { origin, close } = await startPagesServer(dir, { extra });
   return { origin, dir, version, close };
