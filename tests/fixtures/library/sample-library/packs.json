@@ -1,0 +1,30 @@
+{
+  "kind": "fmIDE-library-packs",
+  "version": 1,
+  "packs": {
+    "06f097dd-fa44-4104-94ec-b29789a2b900": {
+      "accountId": 1002,
+      "account": "bob-sample",
+      "added": "2026-09-28",
+      "sha256": "54187b11d96422003fe0c31fe3d0c5c8c3b14d305e113ccb62ffd0570802613e",
+      "versions": [
+        "380e3c9f-7ceb-4ef2-839e-20e510730d7a",
+        "version-margin-1"
+      ]
+    },
+    "pack-checker-good-1": {
+      "accountId": 1001,
+      "account": "ann-example",
+      "added": "2026-09-27",
+      "sha256": "f0ac712cd5bb47605156b124f4ec58768054b3222fa028c68de078a6e1164d4e",
+      "versions": [
+        "df32eb24-ef1e-4af7-a88f-12c92ece45a0",
+        "vid-income-v1",
+        "vid-balance-v1",
+        "vid-margins-model-1",
+        "version-profit-1",
+        "version-margin-1"
+      ]
+    }
+  }
+}

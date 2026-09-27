@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## The library's rules (step 8, phase 8c-2, part 1)
+- **`tools/check-pack.js --library`** checks the whole community library, and what a pull request changes in it: only a family's owner (the GitHub account of its first pack) adds versions; someone else's version is shared again only as an exact copy with its origin; pack and version ids are never used again, even after a takedown; the author name matches the submitting account; approved packs are never edited and the library's records are only ever added to. `--write-records` adds the records a new pack needs; `--markdown` gives the report for a pull request, with every text from a pack kept where it can't render.
+- No app changed; no file format of the apps changed. The library's own record files are described in `docs/file-formats.md`.
+
 ## The library's pack checker (step 8, phase 8c-1)
 - **`tools/check-pack.js`** (`npm run check-pack -- FILE`) checks a library pack before it joins the community library: the file (at most 5 MB), the details and licence, every template, recipe and function, and characters that hide or reverse text. It reads packs with fmIDE's own code and is stricter: anything fmIDE would quietly leave out or tidy is an error. It prints a report (or JSON) and fails with exit code 1.
 - fmIDE's file reader moved into shared code (`src/shared/fmide-files.js`) so the checker can use it; fmIDE reads every file exactly as before. No file format changed.

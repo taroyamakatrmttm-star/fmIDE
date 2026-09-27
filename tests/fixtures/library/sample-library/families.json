@@ -1,0 +1,59 @@
+{
+  "kind": "fmIDE-library-families",
+  "version": 1,
+  "families": {
+    "27ba4bf7-abd0-46ab-8138-0cb706a638e1": {
+      "type": "function",
+      "accountId": 1002,
+      "account": "bob-sample",
+      "firstPack": "06f097dd-fa44-4104-94ec-b29789a2b900",
+      "added": "2026-09-28"
+    },
+    "5120504d-d580-48ae-9014-255f6089c950": {
+      "type": "template",
+      "kind": "recipe",
+      "accountId": 1001,
+      "account": "ann-example",
+      "firstPack": "pack-checker-good-1",
+      "added": "2026-09-27"
+    },
+    "fam-balance-sheet": {
+      "type": "template",
+      "kind": "module",
+      "accountId": 1001,
+      "account": "ann-example",
+      "firstPack": "pack-checker-good-1",
+      "added": "2026-09-27"
+    },
+    "fam-income-statement": {
+      "type": "template",
+      "kind": "module",
+      "accountId": 1001,
+      "account": "ann-example",
+      "firstPack": "pack-checker-good-1",
+      "added": "2026-09-27"
+    },
+    "fam-margins-model": {
+      "type": "template",
+      "kind": "system",
+      "accountId": 1001,
+      "account": "ann-example",
+      "firstPack": "pack-checker-good-1",
+      "added": "2026-09-27"
+    },
+    "family-margin": {
+      "type": "function",
+      "accountId": 1001,
+      "account": "ann-example",
+      "firstPack": "pack-checker-good-1",
+      "added": "2026-09-27"
+    },
+    "family-profit": {
+      "type": "function",
+      "accountId": 1001,
+      "account": "ann-example",
+      "firstPack": "pack-checker-good-1",
+      "added": "2026-09-27"
+    }
+  }
+}

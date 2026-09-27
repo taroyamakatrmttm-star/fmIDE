@@ -1,0 +1,49 @@
+{
+  "kind": "fmIDE-library-pack",
+  "version": 2,
+  "pack": {
+    "id": "06f097dd-fa44-4104-94ec-b29789a2b900",
+    "title": "Markups",
+    "author": "Bob Sample",
+    "licence": "CC-BY-4.0",
+    "description": "A function that builds on Ann's Margin.",
+    "tags": [
+      "pricing"
+    ],
+    "created": "2026-09-27"
+  },
+  "templates": [],
+  "functions": [
+    {
+      "family": "27ba4bf7-abd0-46ab-8138-0cb706a638e1",
+      "version": 1,
+      "versionId": "380e3c9f-7ceb-4ef2-839e-20e510730d7a",
+      "text": "Markup(Revenue, Cost) = Margin(Revenue, Cost) / (1 - Margin(Revenue, Cost))",
+      "description": "Markup on cost, from the margin.",
+      "note": "",
+      "calls": [
+        {
+          "name": "Margin",
+          "family": "family-margin",
+          "version": 1,
+          "versionId": "version-margin-1"
+        }
+      ]
+    },
+    {
+      "family": "family-margin",
+      "version": 1,
+      "versionId": "version-margin-1",
+      "text": "Margin(Revenue, Cost) = (Revenue - Cost) / Revenue",
+      "description": "The share of revenue left after cost.",
+      "note": "First version",
+      "calls": [],
+      "origin": {
+        "packId": "pack-checker-good-1",
+        "packTitle": "Checker sample",
+        "author": "Ann Example",
+        "licence": "CC-BY-4.0"
+      }
+    }
+  ]
+}

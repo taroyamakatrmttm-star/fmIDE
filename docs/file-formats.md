@@ -64,6 +64,32 @@ A **library pack** is one file of templates, recipes and functions to share with
 - **The community library's checker** (`tools/check-pack.js`) reads a pack with the same code as fmIDE (`src/shared/fmide-files.js`) and is stricter: whatever fmIDE would leave out or tidy (a malformed id, a recipe part it would drop, a title with extra spaces, tags not in lower case) is an error there, and so are characters that hide or reverse text. A library pack is at most 5 MB.
 - **Version 2** (step 8, phase 8b): an item that came from someone else's pack carries its `origin` (below) into a pack of yours, so its author keeps the credit CC BY 4.0 asks for. Version 1 packs had none; they open as before, and every item they add is recorded as the pack's.
 
+## The community library's records (step 8, phase 8c-2)
+
+The community library (a GitHub repository of packs, `docs/step8-community-library.md`) keeps, next to `packs/<pack id>.fmide-pack.json`, four JSON files that the library's checker reads (`tools/check-pack.js --library`). They are not files the apps open. Accounts are GitHub's numeric user ids (`accountId`), with the login (`account`) beside them for people; dates are `YYYY-MM-DD`; entries are kept sorted by id.
+
+```json
+// families.json — who owns each template or function family: the account of its first approved pack
+{ "kind": "fmIDE-library-families", "version": 1,
+  "families": { "<family id>": { "type": "template", "kind": "module", "accountId": 1001, "account": "ann-example",
+                                 "firstPack": "<pack id>", "added": "2026-09-27" } } }
+// authors.json — the author name each account shares under
+{ "kind": "fmIDE-library-authors", "version": 1,
+  "authors": { "1001": { "account": "ann-example", "author": "Ann Example", "added": "2026-09-27" } } }
+// packs.json — every approved pack, kept when it is taken down
+{ "kind": "fmIDE-library-packs", "version": 1,
+  "packs": { "<pack id>": { "accountId": 1001, "account": "ann-example", "added": "2026-09-27",
+                            "sha256": "<the file's SHA-256>", "versions": ["<version id of each item, in the pack's order>"] } } }
+// checker.json — which fmIDE commit checks the library, and its maintainers
+{ "kind": "fmIDE-library-checker", "version": 1,
+  "fmide": { "repository": "owner/fmide", "commit": "<full 40-character commit id>" },
+  "maintainers": [ { "accountId": 1000, "account": "…" } ] }
+```
+
+- `type` is `"template"` (with `kind`: `"module"`, `"system"` or `"recipe"`) or `"function"` (no `kind`).
+- The records are only ever added to: an entry, once approved, is never changed or removed (a change of owner is a maintainer's own pull request). A pack taken down leaves its entries, so its ids are never used again.
+- `author` follows a pack's author rules (one line, at most 120 characters, no extra spaces); no two accounts share a name (ignoring capitals and spaces).
+
 ## Where items came from (`fmIDE-templates` 6, `fmIDE-workspace` 6, `fmIDE-functions` 2, `fmIDE-library-pack` 2)
 
 A template version or function version added from a library pack remembers the pack in an optional `origin`:
