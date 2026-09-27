@@ -24,7 +24,7 @@
 - **A — Agreement tests and the agreed fixes** ✅ (below)
 - **B — The shared IR, and fmIDE running on it** ✅ (below). `src/shared/operators.js` (operator catalogue by stable id) and `src/shared/ir.js` (`compileModel(system)`, a pure function of the file). fmIDE's evaluator runs the IR; error codes stay the same. UOM (unit of measure) comes from the IR in fmIDE (ExcelExporter in phase C).
 - **C — ExcelExporter writes formulas from the IR** ✅ (below). Layout stays in ExcelExporter. The snapshots must not change. Its units come from the IR too. `compileModel` works out plug-to-socket connections itself, in both apps at once (decided in phase B). Ends with the "fmIDE shows ? here" list before download.
-- **D — Function plugins** (in progress, below). Families and versions like templates, carried inside system and workspace files (`system` v5, `fmIDE-workspace` v4, new `fmIDE-functions` v1). Three pull requests: D1 the shared core and file formats ✅, D2 fmIDE (Functions manager, function nodes, `window.fm`), D3 ExcelExporter and agreement.
+- **D — Function plugins** ✅ (below). Families and versions like templates, carried inside system and workspace files (`system` v5, `fmIDE-workspace` v4, new `fmIDE-functions` v1). Three pull requests: D1 the shared core and file formats ✅, D2 fmIDE (Functions manager, function nodes, `window.fm`) ✅, D3 ExcelExporter and agreement ✅.
 - **E — New built-in operators** (e.g. IF, ROUND, LN, EXP) through the catalogue (optional).
 
 Things to keep in mind for later phases and for the community library (step 8): plugins are referred to by family id and version, never by name; their definitions travel with the model; `compileModel` must not read fmIDE's global state; plug connections could be worked out by the IR instead of relying on the automatic aliases saved in files; evaluation must not get slower.
@@ -147,7 +147,7 @@ Found along the way (not changed):
 - **An operator with an arrow from a node that no longer exists** (only a hand-edited file has one) is read in the order fmIDE uses. ExcelExporter used a slightly different order before, but only in that case.
 
 
-## Phase D — function plugins
+## Phase D — function plugins ✅
 
 Decisions taken at the start of the phase (September 2026; the owner chose the recommendation each time):
 
@@ -269,3 +269,46 @@ How it was checked:
 
   The differences are within what repeated runs of the same build show.
 
+### D3 — ExcelExporter writes function calls ✅
+
+Decisions taken at the start of D3 (September 2026; the owner chose the recommendation each time):
+
+1. **Formulas too long or too deeply nested for Excel** (8,192 characters with the `=`, 64 levels): that cell gets `=NA()` and the check before download lists it, with the advice to put a rectangle in between. Every bracket counts toward the 64 (the stricter reading of Excel's limit). Never a wrong number, and never a blocked download.
+2. **An input used several times is repeated in full.** Usually it is a cell reference, so this costs almost nothing; it only grows when a port is fed straight from an operator or another function, and decision 1 catches the extreme cases. No helper rows, no `LET` (Excel 2021/365 only).
+3. **A Functions tab**, last in the workbook, written only when formulas write out a call: one row per function version with its name, version, definition, description, note and the rows that use it (all plain text from the file, escaped by the writer). The cells hold only the formula.
+4. **A comparison inside a function is 1/0**, as in fmIDE: a function's result is always a number. A comparison *operator* on the canvas still writes TRUE/FALSE, as before.
+5. **A loop of arrows through a function node** follows the loop rule of Phase C: the formula reads 0, and the check before download lists it. The `#N/A` cases are the function's own failures (a missing or unreadable definition, functions calling each other in a loop, calls nested too deep, a wrong number of inputs, an input the formula reads with no arrow).
+
+What was built:
+
+- **`src/excel-exporter/js/01c-function-calls.js`** (new, ExcelExporter only): `buildFunctionCallFormula` writes a call from the parser's tree (the IR's compiled definition). Each input is `operandRef` of the arrow into its port, so blocks, vertical-block vintages, aliases, period shifts, inlined constants and the Inputs tab work as for an operator. Nested calls are written inside one another. `MIN MAX AVERAGE ABS MOD IFERROR` and the signs come from `EXCEL_SPELLINGS`; there is no second table. Brackets follow Excel's order (a leading minus, `^`, `* /`, `+ -`, one comparison) and appear only where needed; a call's own grouping is kept (`a+(b+c)`), since with fractions the order of adding can change the last digit. A right-hand side that starts with a minus is bracketed to read clearly (`a+(-b)`). Numbers are written as Excel reads them (`1500`, `0.5`, `1E-7`).
+  - **TRUE/FALSE:** a comparison read by anything other than arithmetic, and a call's result, get `N()`; so does an input read from a TRUE/FALSE cell (Excel's `MAX` skips TRUE in a cell and ranks TRUE above every number).
+  - **Errors:** a call that can't be calculated is `NA()`; an input with no arrow is `NA()` where the formula reads it, so the function's own `IFERROR` still catches it. Inside the function's `IFERROR`, a period outside the timeline is `NA()` too (`ctx.iferrorDepth`, as for the iferror operator).
+  - **Limits:** writing stops (`ExcelFormulaTooLong`) as soon as a call's text passes 8,192 characters; `excelFormulaProblem` checks the length and bracket depth of every finished formula that writes out a call. Formulas without a call are not checked, as before.
+- **`01-core-translation.js`:** `operandRef` writes a function node through `buildFunctionCallFormula`, inside the same loop guard as operators.
+- **`09-workbook-generation.js`:** `buildWorkbook()` builds the workbook without downloading it and returns `{ wb, tooLong }`; `generateWorkbook()` downloads what it builds. Each cell goes through `fitted`, which writes `NA()` and records the cell where a formula with a call doesn't fit. `appendFunctionsSheet` writes the Functions tab (named `Functions`, or the next free name).
+- **`09b-differences.js`:** a second kind of line, "Excel shows #N/A there", for the function error codes (`NA_IN_EXCEL`); the quick look runs fmIDE's calculation when a function node has a missing or failing definition or an input with no arrow. Lines for formulas too long or too deep come from `buildWorkbook()`'s `tooLong`, worked out only when the model writes out a call and remembered until the model or the layout changes. A function's name from the file is shown as text.
+- No file format changed; nothing moved into `src/shared/`.
+
+How it was checked:
+
+- **Agreement (group 17):** two new samples, `agreement/functions-calls.json` (nested calls; an input used twice, fed straight by an operator and by another function; `IFERROR` catching a divide by zero, an input with no arrow, and a period outside the timeline under the iferror operator's second input; comparisons; a TRUE/FALSE row; numbers; precedence; `MOD`, `AVERAGE`, `ABS`) and `agreement/functions-blocks.json` (a corkscrew through a function, one straight through a function's input, a block with a corkscrew of functions inside used twice, a vertical block with a function inside, functions fed by block outputs). The function samples `functions/basic.json` and `functions/broken.json` are compared too: every broken case is `#N/A` in Excel and "?" in fmIDE, which counts as agreeing. All four fail on the old build.
+- Turning off the `IFERROR` timeline rule makes the agreement test fail. Turning off `N()` doesn't: LibreOffice keeps TRUE as the number 1, so it can't show what Excel would. Group 19 therefore pins the formula text.
+- **Group 19:** the exact formulas for each kind of call; numbers read back as the same number (in Node); a call inside a block instance; the Functions tab; every broken case listed as `#N/A` and written as `NA()`, with a function's name from the file shown as text; a formula too long (a call repeating its input four times, ten deep) and one nested 80 deep written as `NA()` and listed, and generation staying quick. Units pinned for the new samples and the two function samples.
+- Every existing snapshot is unchanged: no model sample had a function call.
+- The whole suite passes: 497 tests, LibreOffice included (Calc installed in this session; none skipped).
+- **Speed** (`npm run bench`, same machine, `main` and D3 run back to back; medians of 15). A model without function calls runs no new code except a type check:
+
+  | | `main` | D3 |
+  |---|---|---|
+  | ExcelExporter Generate, large model (1,865 nodes, 24 periods) | 339 / 358 ms | 345 / 349 ms |
+  | ExcelExporter Generate, biggest sample | 2.1 / 1.8 ms | 1.7 / 1.8 ms |
+  | fmIDE `fm.evaluate`, large model (fmIDE unchanged by D3) | 1,147 / 1,167 ms | 1,195 / 1,192 ms |
+  | fmIDE `fm.evaluate`, biggest sample | 1.7 / 1.8 ms | 1.9 / 2.4 ms |
+
+  fmIDE's file is the same in both builds, so its rows show what repeated runs of one build give; the differences are within that.
+
+Found along the way (not changed):
+
+- **fmIDE's calculation of nested calls grows four-fold per level when an input is used four times** (`runFunction` in `src/shared/functions.js` works out each call separately, even when two calls are the same). A function reading its input four times, nested 10 deep, takes 0.7 s to calculate and 0.3 s for its unit; 11 deep, 2.7 s and 1.5 s; the allowed 16 deep would take hours. A file from someone else could hang fmIDE (and ExcelExporter, which works out units the same way). Remembering a call's result for the same inputs would fix it; it is shared code, so it belongs in its own change with its own tests.
+- LibreOffice can't check how Excel treats TRUE/FALSE (see above); the formula text is pinned instead.

@@ -1,0 +1,39 @@
+{
+ "Host": {
+  "capex": {"values":[100,50,0,20],"unit":"$k"},
+  "life": {"values":[4,4,4,4]},
+  "rate": {"values":[0.1,0.1,0.1,0.1]},
+  "flow": {"values":[10,20,30,40]},
+  "bal2": {"values":[500,500,500,500]},
+  "shc": {"values":["error: period shift t−1 has no value: There's no period that far back/forward for this shifter to read — it's fine at the timeline's edge..",110,130,160]},
+  "open": {"values":[100,110,130,160]},
+  "f_add": {"values":[110,130,160,200]},
+  "close": {"values":[110,130,160,200]},
+  "shb": {"values":["error: period shift t−1 has no value: There's no period that far back/forward for this shifter to read — it's fine at the timeline's edge..",50,55.00000000000001,60.500000000000014]},
+  "f_grow": {"values":["error: function Grow has no value: One of this operator's inputs could not be computed..",55.00000000000001,60.500000000000014,66.55000000000003]},
+  "bal": {"values":[50,55.00000000000001,60.500000000000014,66.55000000000003]},
+  "inst1": {"values":[[0],[13],[29],[49]]},
+  "acc1": {"values":[0,13,29,49]},
+  "inst2": {"values":[[0],[50],[100],[150]]},
+  "f_dbl": {"values":[0,100,200,300]},
+  "acc2": {"values":[0,100,200,300]},
+  "vinst": {"values":[[42.5],[42.5],[42.5],[42.5]]},
+  "f_dbl2": {"values":[85,85,85,85]},
+  "dep2": {"values":[85,85,85,85]}
+ },
+ "Interest block": {
+  "bin": {"values":[0,0,0,0]},
+  "brate": {"values":[0,0,0,0]},
+  "bf_int": {"values":[0,0,0,0]},
+  "bint": {"values":[0,0,0,0]},
+  "bsh": {"values":["error: period shift t−1 has no value: There's no period that far back/forward for this shifter to read — it's fine at the timeline's edge..",0,0,0]},
+  "bf_acc": {"values":["error: function Accrue has no value: One of this operator's inputs could not be computed..",0,0,0]},
+  "bout": {"values":[0,0,0,0]}
+ },
+ "Dep block": {
+  "vcap": {"values":[0,0,0,0]},
+  "vlife": {"values":[0,0,0,0]},
+  "vf": {"values":[0,0,0,0]},
+  "vout": {"values":[0,0,0,0]}
+ }
+}

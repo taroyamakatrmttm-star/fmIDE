@@ -1,0 +1,602 @@
+{
+ "kind": "system",
+ "version": 5,
+ "nextId": 1000,
+ "nextCanvasId": 10,
+ "activeCanvasId": "cHost",
+ "periods": [
+  "P1",
+  "P2",
+  "P3",
+  "P4"
+ ],
+ "currentPeriod": 0,
+ "canvases": [
+  {
+   "id": "cHost",
+   "name": "Host",
+   "nodes": [
+    {
+     "id": "capex",
+     "type": "value",
+     "x": 0,
+     "y": 0,
+     "w": 170,
+     "h": 64,
+     "text": "Capex\n0\n$k",
+     "periodValues": [
+      100,
+      50,
+      0,
+      20
+     ]
+    },
+    {
+     "id": "life",
+     "type": "value",
+     "x": 0,
+     "y": 100,
+     "w": 170,
+     "h": 64,
+     "text": "Life\n4"
+    },
+    {
+     "id": "rate",
+     "type": "value",
+     "x": 0,
+     "y": 200,
+     "w": 170,
+     "h": 64,
+     "text": "Rate\n0.1"
+    },
+    {
+     "id": "flow",
+     "type": "value",
+     "x": 0,
+     "y": 300,
+     "w": 170,
+     "h": 64,
+     "text": "Flow\n0",
+     "periodValues": [
+      10,
+      20,
+      30,
+      40
+     ]
+    },
+    {
+     "id": "bal2",
+     "type": "value",
+     "x": 0,
+     "y": 400,
+     "w": 170,
+     "h": 64,
+     "text": "Other balance\n500"
+    },
+    {
+     "id": "shc",
+     "type": "periodShift",
+     "x": 300,
+     "y": 600,
+     "w": 56,
+     "h": 56,
+     "shift": -1
+    },
+    {
+     "id": "open",
+     "type": "value",
+     "x": 400,
+     "y": 600,
+     "w": 170,
+     "h": 64,
+     "text": "Opening\n100"
+    },
+    {
+     "id": "f_add",
+     "type": "function",
+     "x": 550,
+     "y": 600,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-addflow",
+      "version": 1,
+      "versionId": "version-addflow-1",
+      "name": "AddFlow"
+     }
+    },
+    {
+     "id": "close",
+     "type": "value",
+     "x": 750,
+     "y": 600,
+     "w": 170,
+     "h": 64,
+     "text": "Closing"
+    },
+    {
+     "id": "shb",
+     "type": "periodShift",
+     "x": 300,
+     "y": 750,
+     "w": 56,
+     "h": 56,
+     "shift": -1
+    },
+    {
+     "id": "f_grow",
+     "type": "function",
+     "x": 450,
+     "y": 750,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-grow",
+      "version": 1,
+      "versionId": "version-grow-1",
+      "name": "Grow"
+     }
+    },
+    {
+     "id": "bal",
+     "type": "value",
+     "x": 650,
+     "y": 750,
+     "w": 170,
+     "h": 64,
+     "text": "Balance\n50"
+    },
+    {
+     "id": "inst1",
+     "type": "blockInstance",
+     "x": 300,
+     "y": 900,
+     "w": 190,
+     "h": 80,
+     "blockDefCanvasId": "cInt"
+    },
+    {
+     "id": "acc1",
+     "type": "value",
+     "x": 600,
+     "y": 900,
+     "w": 170,
+     "h": 64,
+     "text": "Accrued on closing"
+    },
+    {
+     "id": "inst2",
+     "type": "blockInstance",
+     "x": 300,
+     "y": 1050,
+     "w": 190,
+     "h": 80,
+     "blockDefCanvasId": "cInt"
+    },
+    {
+     "id": "f_dbl",
+     "type": "function",
+     "x": 550,
+     "y": 1050,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-double",
+      "version": 1,
+      "versionId": "version-double-1",
+      "name": "Double"
+     }
+    },
+    {
+     "id": "acc2",
+     "type": "value",
+     "x": 750,
+     "y": 1050,
+     "w": 170,
+     "h": 64,
+     "text": "Accrued doubled"
+    },
+    {
+     "id": "vinst",
+     "type": "blockInstance",
+     "x": 300,
+     "y": 1200,
+     "w": 190,
+     "h": 80,
+     "blockDefCanvasId": "cDep",
+     "vertical": true
+    },
+    {
+     "id": "f_dbl2",
+     "type": "function",
+     "x": 550,
+     "y": 1200,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-double",
+      "version": 1,
+      "versionId": "version-double-1",
+      "name": "Double"
+     }
+    },
+    {
+     "id": "dep2",
+     "type": "value",
+     "x": 750,
+     "y": 1200,
+     "w": 170,
+     "h": 64,
+     "text": "Depreciation doubled"
+    }
+   ],
+   "edges": [
+    {
+     "id": "e1",
+     "from": "shc",
+     "to": "open"
+    },
+    {
+     "id": "e2",
+     "from": "open",
+     "to": "f_add",
+     "toPort": 0
+    },
+    {
+     "id": "e3",
+     "from": "flow",
+     "to": "f_add",
+     "toPort": 1
+    },
+    {
+     "id": "e4",
+     "from": "f_add",
+     "to": "close"
+    },
+    {
+     "id": "e5",
+     "from": "close",
+     "to": "shc"
+    },
+    {
+     "id": "e6",
+     "from": "shb",
+     "to": "f_grow",
+     "toPort": 0
+    },
+    {
+     "id": "e7",
+     "from": "rate",
+     "to": "f_grow",
+     "toPort": 1
+    },
+    {
+     "id": "e8",
+     "from": "f_grow",
+     "to": "bal"
+    },
+    {
+     "id": "e9",
+     "from": "bal",
+     "to": "shb"
+    },
+    {
+     "id": "e10",
+     "from": "close",
+     "to": "inst1",
+     "toPort": 0
+    },
+    {
+     "id": "e11",
+     "from": "rate",
+     "to": "inst1",
+     "toPort": 1
+    },
+    {
+     "id": "e12",
+     "from": "inst1",
+     "to": "acc1",
+     "fromPort": 0
+    },
+    {
+     "id": "e13",
+     "from": "bal2",
+     "to": "inst2",
+     "toPort": 0
+    },
+    {
+     "id": "e14",
+     "from": "rate",
+     "to": "inst2",
+     "toPort": 1
+    },
+    {
+     "id": "e15",
+     "from": "inst2",
+     "to": "f_dbl",
+     "fromPort": 0,
+     "toPort": 0
+    },
+    {
+     "id": "e16",
+     "from": "f_dbl",
+     "to": "acc2"
+    },
+    {
+     "id": "e17",
+     "from": "capex",
+     "to": "vinst",
+     "toPort": 0,
+     "verticalIndexed": true
+    },
+    {
+     "id": "e18",
+     "from": "life",
+     "to": "vinst",
+     "toPort": 1
+    },
+    {
+     "id": "e19",
+     "from": "vinst",
+     "to": "f_dbl2",
+     "fromPort": 0,
+     "toPort": 0
+    },
+    {
+     "id": "e20",
+     "from": "f_dbl2",
+     "to": "dep2"
+    }
+   ]
+  },
+  {
+   "id": "cInt",
+   "name": "Interest block",
+   "nodes": [
+    {
+     "id": "bin",
+     "type": "value",
+     "x": 0,
+     "y": 0,
+     "w": 170,
+     "h": 64,
+     "text": "In balance",
+     "blockRole": "input"
+    },
+    {
+     "id": "brate",
+     "type": "value",
+     "x": 0,
+     "y": 100,
+     "w": 170,
+     "h": 64,
+     "text": "In rate",
+     "blockRole": "input"
+    },
+    {
+     "id": "bf_int",
+     "type": "function",
+     "x": 200,
+     "y": 50,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-interest",
+      "version": 1,
+      "versionId": "version-interest-1",
+      "name": "Interest"
+     }
+    },
+    {
+     "id": "bint",
+     "type": "value",
+     "x": 350,
+     "y": 50,
+     "w": 170,
+     "h": 64,
+     "text": "Interest"
+    },
+    {
+     "id": "bsh",
+     "type": "periodShift",
+     "x": 350,
+     "y": 200,
+     "w": 56,
+     "h": 56,
+     "shift": -1
+    },
+    {
+     "id": "bf_acc",
+     "type": "function",
+     "x": 500,
+     "y": 150,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-accrue",
+      "version": 1,
+      "versionId": "version-accrue-1",
+      "name": "Accrue"
+     }
+    },
+    {
+     "id": "bout",
+     "type": "value",
+     "x": 700,
+     "y": 150,
+     "w": 170,
+     "h": 64,
+     "text": "Accrued\n0",
+     "blockRole": "output"
+    }
+   ],
+   "edges": [
+    {
+     "id": "e1",
+     "from": "bin",
+     "to": "bf_int",
+     "toPort": 0
+    },
+    {
+     "id": "e2",
+     "from": "brate",
+     "to": "bf_int",
+     "toPort": 1
+    },
+    {
+     "id": "e3",
+     "from": "bf_int",
+     "to": "bint"
+    },
+    {
+     "id": "e4",
+     "from": "bsh",
+     "to": "bf_acc",
+     "toPort": 0
+    },
+    {
+     "id": "e5",
+     "from": "bint",
+     "to": "bf_acc",
+     "toPort": 1
+    },
+    {
+     "id": "e6",
+     "from": "bf_acc",
+     "to": "bout"
+    },
+    {
+     "id": "e7",
+     "from": "bout",
+     "to": "bsh"
+    }
+   ]
+  },
+  {
+   "id": "cDep",
+   "name": "Dep block",
+   "nodes": [
+    {
+     "id": "vcap",
+     "type": "value",
+     "x": 0,
+     "y": 0,
+     "w": 170,
+     "h": 64,
+     "text": "Capex in",
+     "blockRole": "input"
+    },
+    {
+     "id": "vlife",
+     "type": "value",
+     "x": 0,
+     "y": 100,
+     "w": 170,
+     "h": 64,
+     "text": "Life in",
+     "blockRole": "input"
+    },
+    {
+     "id": "vf",
+     "type": "function",
+     "x": 200,
+     "y": 50,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-dep",
+      "version": 1,
+      "versionId": "version-dep-1",
+      "name": "Dep"
+     }
+    },
+    {
+     "id": "vout",
+     "type": "value",
+     "x": 400,
+     "y": 50,
+     "w": 170,
+     "h": 64,
+     "text": "Depreciation",
+     "blockRole": "output",
+     "verticalReducer": "sum"
+    }
+   ],
+   "edges": [
+    {
+     "id": "e1",
+     "from": "vcap",
+     "to": "vf",
+     "toPort": 0
+    },
+    {
+     "id": "e2",
+     "from": "vlife",
+     "to": "vf",
+     "toPort": 1
+    },
+    {
+     "id": "e3",
+     "from": "vf",
+     "to": "vout"
+    }
+   ]
+  }
+ ],
+ "functions": [
+  {
+   "family": "family-addflow",
+   "version": 1,
+   "versionId": "version-addflow-1",
+   "text": "AddFlow(Opening, Flow) = Opening + Flow",
+   "description": "",
+   "note": "",
+   "calls": []
+  },
+  {
+   "family": "family-grow",
+   "version": 1,
+   "versionId": "version-grow-1",
+   "text": "Grow(Opening, Rate) = Opening * (1 + Rate)",
+   "description": "",
+   "note": "",
+   "calls": []
+  },
+  {
+   "family": "family-interest",
+   "version": 1,
+   "versionId": "version-interest-1",
+   "text": "Interest(Balance, Rate) = Balance * Rate",
+   "description": "",
+   "note": "",
+   "calls": []
+  },
+  {
+   "family": "family-accrue",
+   "version": 1,
+   "versionId": "version-accrue-1",
+   "text": "Accrue(Previous, Add) = Previous + Add",
+   "description": "",
+   "note": "",
+   "calls": []
+  },
+  {
+   "family": "family-dep",
+   "version": 1,
+   "versionId": "version-dep-1",
+   "text": "Dep(Capex, Life) = IFERROR(Capex / Life, 0)",
+   "description": "",
+   "note": "",
+   "calls": []
+  },
+  {
+   "family": "family-double",
+   "version": 1,
+   "versionId": "version-double-1",
+   "text": "Double(x) = x * 2",
+   "description": "",
+   "note": "",
+   "calls": []
+  }
+ ]
+}

@@ -24,9 +24,9 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | `npm run test:ui` | UI flows, both apps |
 | `npm run test:snapshots` | formula/value snapshots only |
 | `npm run test:web-app` | the installable web app (site build, service worker, offline, updates) |
-| `npm run test:agreement` | fmIDE's values against the recalculated workbooks (needs LibreOffice) |
+| `npm run test:agreement` | fmIDE's values against the recalculated workbooks (needs LibreOffice), function calls included |
 | `npm run test:ir` | the shared IR: fmIDE's pinned values, errors and units; the IR alone in Node |
-| `npm run test:excel-ir` | ExcelExporter on the IR: pinned units, operator spellings, the "differs from fmIDE" panel |
+| `npm run test:excel-ir` | ExcelExporter on the IR: pinned units, operator spellings, the "differs from fmIDE" panel, function calls written out in full, the Functions tab, Excel's formula limits |
 | `npm run test:functions` | function plugins: the parser, the samples in `fixtures/functions/`, files carrying their definitions |
 | `npm run test:functions-fmide` | functions in fmIDE: the library, the Functions manager and editor, the `fmIDE-functions` file, function nodes on the canvas (insert, drawing, wiring, updating, copy and paste), undo, ribbon, macros |
 | `npx playwright test -g "Tree view"` | tests whose name matches |

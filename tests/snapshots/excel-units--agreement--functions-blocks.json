@@ -1,0 +1,68 @@
+{
+ "Host": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Capex"},
+  "B5": {"v":"$k"},
+  "A6": {"v":"Life"},
+  "A7": {"v":"Rate"},
+  "A8": {"v":"Flow"},
+  "A9": {"v":"Other balance"},
+  "A11": {"v":"CALCULATIONS"},
+  "A12": {"v":"Opening"},
+  "A13": {"v":"Closing"},
+  "A14": {"v":"Balance"},
+  "A16": {"v":"OUTPUTS"},
+  "A17": {"v":"Accrued on closing"},
+  "A18": {"v":"Accrued doubled"},
+  "A19": {"v":"Depreciation doubled"}
+ },
+ "Interest block": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"In balance"},
+  "A6": {"v":"In rate"},
+  "A8": {"v":"CALCULATIONS"},
+  "A9": {"v":"Interest"},
+  "A10": {"v":"Accrued"}
+ },
+ "Dep block": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Capex in"},
+  "A6": {"v":"Life in"},
+  "A8": {"v":"OUTPUTS"},
+  "A9": {"v":"Depreciation"}
+ },
+ "Interest block (instance 1)": {
+  "A4": {"v":"CALCULATIONS"},
+  "A5": {"v":"Interest"},
+  "A6": {"v":"Accrued"}
+ },
+ "Interest block (instance 2)": {
+  "A4": {"v":"CALCULATIONS"},
+  "A5": {"v":"Interest"},
+  "A6": {"v":"Accrued"}
+ },
+ "Dep block (instance 1)": {
+  "A4": {"v":"OUTPUTS"},
+  "A5": {"v":"Depreciation — Vintage 1"},
+  "A6": {"v":"Depreciation — Vintage 2"},
+  "A7": {"v":"Depreciation — Vintage 3"},
+  "A8": {"v":"Depreciation — Vintage 4"},
+  "A9": {"v":"Depreciation (Total)"}
+ },
+ "Functions": {
+  "A4": {"v":"Function"},
+  "B4": {"v":"Version"},
+  "A5": {"v":"Accrue"},
+  "B5": {"v":"1"},
+  "A6": {"v":"AddFlow"},
+  "B6": {"v":"1"},
+  "A7": {"v":"Dep"},
+  "B7": {"v":"1"},
+  "A8": {"v":"Double"},
+  "B8": {"v":"1"},
+  "A9": {"v":"Grow"},
+  "B9": {"v":"1"},
+  "A10": {"v":"Interest"},
+  "B10": {"v":"1"}
+ }
+}

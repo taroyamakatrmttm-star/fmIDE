@@ -1,0 +1,1162 @@
+{
+ "kind": "system",
+ "version": 5,
+ "nextId": 1000,
+ "nextCanvasId": 10,
+ "activeCanvasId": "cCalls",
+ "periods": [
+  "2027",
+  "2028",
+  "2029",
+  "2030"
+ ],
+ "currentPeriod": 0,
+ "canvases": [
+  {
+   "id": "cCalls",
+   "name": "Calls",
+   "nodes": [
+    {
+     "id": "rev",
+     "type": "value",
+     "x": 0,
+     "y": 0,
+     "w": 170,
+     "h": 64,
+     "text": "Revenue\n100\n$k",
+     "periodValues": [
+      100,
+      200,
+      50,
+      80
+     ]
+    },
+    {
+     "id": "cost",
+     "type": "value",
+     "x": 0,
+     "y": 100,
+     "w": 170,
+     "h": 64,
+     "text": "Cost\n60\n$k"
+    },
+    {
+     "id": "k",
+     "type": "value",
+     "x": 0,
+     "y": 200,
+     "w": 170,
+     "h": 64,
+     "text": "k\n3"
+    },
+    {
+     "id": "div",
+     "type": "value",
+     "x": 0,
+     "y": 300,
+     "w": 170,
+     "h": 64,
+     "text": "Divisor\n0",
+     "periodValues": [
+      0,
+      2,
+      0,
+      4
+     ]
+    },
+    {
+     "id": "fb",
+     "type": "value",
+     "x": 0,
+     "y": 400,
+     "w": 170,
+     "h": 64,
+     "text": "Fallback\n7"
+    },
+    {
+     "id": "nine",
+     "type": "value",
+     "x": 0,
+     "y": 500,
+     "w": 170,
+     "h": 64,
+     "text": "Nine\n9"
+    },
+    {
+     "id": "a",
+     "type": "value",
+     "x": 0,
+     "y": 600,
+     "w": 170,
+     "h": 64,
+     "text": "a\n-7"
+    },
+    {
+     "id": "b",
+     "type": "value",
+     "x": 0,
+     "y": 700,
+     "w": 170,
+     "h": 64,
+     "text": "b\n3"
+    },
+    {
+     "id": "x",
+     "type": "value",
+     "x": 0,
+     "y": 800,
+     "w": 170,
+     "h": 64,
+     "text": "x\n1.5"
+    },
+    {
+     "id": "half",
+     "type": "value",
+     "x": 0,
+     "y": 900,
+     "w": 170,
+     "h": 64,
+     "text": "Half\n0.5"
+    },
+    {
+     "id": "f_margin",
+     "type": "function",
+     "x": 400,
+     "y": 120,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-margin",
+      "version": 1,
+      "versionId": "version-margin-1",
+      "name": "Margin"
+     }
+    },
+    {
+     "id": "r_margin",
+     "type": "value",
+     "x": 650,
+     "y": 120,
+     "w": 170,
+     "h": 64,
+     "text": "Margin"
+    },
+    {
+     "id": "f_profit",
+     "type": "function",
+     "x": 400,
+     "y": 240,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-profit",
+      "version": 1,
+      "versionId": "version-profit-1",
+      "name": "Profit"
+     }
+    },
+    {
+     "id": "r_profit",
+     "type": "value",
+     "x": 650,
+     "y": 240,
+     "w": 170,
+     "h": 64,
+     "text": "Profit"
+    },
+    {
+     "id": "f_scaled",
+     "type": "function",
+     "x": 400,
+     "y": 360,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-scaled",
+      "version": 1,
+      "versionId": "version-scaled-1",
+      "name": "Scaled"
+     }
+    },
+    {
+     "id": "r_scaled",
+     "type": "value",
+     "x": 650,
+     "y": 360,
+     "w": 170,
+     "h": 64,
+     "text": "Scaled"
+    },
+    {
+     "id": "opsum",
+     "type": "operator",
+     "x": 250,
+     "y": 480,
+     "w": 56,
+     "h": 56,
+     "text": "+",
+     "socket": ""
+    },
+    {
+     "id": "f_sq_sum",
+     "type": "function",
+     "x": 400,
+     "y": 480,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-square",
+      "version": 1,
+      "versionId": "version-square-1",
+      "name": "Square"
+     }
+    },
+    {
+     "id": "r_sq_sum",
+     "type": "value",
+     "x": 650,
+     "y": 480,
+     "w": 170,
+     "h": 64,
+     "text": "Square of sum"
+    },
+    {
+     "id": "f_prof2",
+     "type": "function",
+     "x": 250,
+     "y": 600,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-profit",
+      "version": 1,
+      "versionId": "version-profit-1",
+      "name": "Profit"
+     }
+    },
+    {
+     "id": "f_sq_prof",
+     "type": "function",
+     "x": 400,
+     "y": 600,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-square",
+      "version": 1,
+      "versionId": "version-square-1",
+      "name": "Square"
+     }
+    },
+    {
+     "id": "r_sq_prof",
+     "type": "value",
+     "x": 650,
+     "y": 600,
+     "w": 170,
+     "h": 64,
+     "text": "Profit squared"
+    },
+    {
+     "id": "f_twice",
+     "type": "function",
+     "x": 400,
+     "y": 720,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-twice",
+      "version": 1,
+      "versionId": "version-twice-1",
+      "name": "Twice"
+     }
+    },
+    {
+     "id": "r_twice",
+     "type": "value",
+     "x": 650,
+     "y": 720,
+     "w": 170,
+     "h": 64,
+     "text": "Twice"
+    },
+    {
+     "id": "f_safe",
+     "type": "function",
+     "x": 400,
+     "y": 840,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-safe",
+      "version": 1,
+      "versionId": "version-safe-1",
+      "name": "Safe"
+     }
+    },
+    {
+     "id": "r_safe",
+     "type": "value",
+     "x": 650,
+     "y": 840,
+     "w": 170,
+     "h": 64,
+     "text": "Safe"
+    },
+    {
+     "id": "opdiv",
+     "type": "operator",
+     "x": 250,
+     "y": 960,
+     "w": 56,
+     "h": 56,
+     "text": "÷",
+     "socket": ""
+    },
+    {
+     "id": "f_caught",
+     "type": "function",
+     "x": 400,
+     "y": 960,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-prior",
+      "version": 1,
+      "versionId": "version-prior-1",
+      "name": "Prior"
+     }
+    },
+    {
+     "id": "r_caught",
+     "type": "value",
+     "x": 650,
+     "y": 960,
+     "w": 170,
+     "h": 64,
+     "text": "Caught divide"
+    },
+    {
+     "id": "f_catch_unwired",
+     "type": "function",
+     "x": 400,
+     "y": 1080,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-catchunwired",
+      "version": 1,
+      "versionId": "version-catchunwired-1",
+      "name": "CatchUnwired"
+     }
+    },
+    {
+     "id": "r_catch_unwired",
+     "type": "value",
+     "x": 650,
+     "y": 1080,
+     "w": 170,
+     "h": 64,
+     "text": "Catch unwired"
+    },
+    {
+     "id": "opdiv2",
+     "type": "operator",
+     "x": 150,
+     "y": 1200,
+     "w": 56,
+     "h": 56,
+     "text": "÷",
+     "socket": ""
+    },
+    {
+     "id": "shr",
+     "type": "periodShift",
+     "x": 150,
+     "y": 1260,
+     "w": 56,
+     "h": 56,
+     "shift": -1
+    },
+    {
+     "id": "f_prior",
+     "type": "function",
+     "x": 250,
+     "y": 1240,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-prior",
+      "version": 1,
+      "versionId": "version-prior-1",
+      "name": "Prior"
+     }
+    },
+    {
+     "id": "opif",
+     "type": "operator",
+     "x": 450,
+     "y": 1200,
+     "w": 56,
+     "h": 56,
+     "text": "iferror",
+     "socket": ""
+    },
+    {
+     "id": "r_prior",
+     "type": "value",
+     "x": 650,
+     "y": 1200,
+     "w": 170,
+     "h": 64,
+     "text": "Prior fallback"
+    },
+    {
+     "id": "f_flag",
+     "type": "function",
+     "x": 400,
+     "y": 1320,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-flag",
+      "version": 1,
+      "versionId": "version-flag-1",
+      "name": "Flag"
+     }
+    },
+    {
+     "id": "r_flag",
+     "type": "value",
+     "x": 650,
+     "y": 1320,
+     "w": 170,
+     "h": 64,
+     "text": "Flag"
+    },
+    {
+     "id": "f_flag_of_flag",
+     "type": "function",
+     "x": 400,
+     "y": 1440,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-flagofflag",
+      "version": 1,
+      "versionId": "version-flagofflag-1",
+      "name": "FlagOfFlag"
+     }
+    },
+    {
+     "id": "r_flag_of_flag",
+     "type": "value",
+     "x": 650,
+     "y": 1440,
+     "w": 170,
+     "h": 64,
+     "text": "Flag of flag"
+    },
+    {
+     "id": "f_min_flag",
+     "type": "function",
+     "x": 400,
+     "y": 1560,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-minflag",
+      "version": 1,
+      "versionId": "version-minflag-1",
+      "name": "MinFlag"
+     }
+    },
+    {
+     "id": "r_min_flag",
+     "type": "value",
+     "x": 650,
+     "y": 1560,
+     "w": 170,
+     "h": 64,
+     "text": "Min flag"
+    },
+    {
+     "id": "opgt",
+     "type": "operator",
+     "x": 150,
+     "y": 1680,
+     "w": 56,
+     "h": 56,
+     "text": ">",
+     "socket": ""
+    },
+    {
+     "id": "r_above",
+     "type": "value",
+     "x": 250,
+     "y": 1680,
+     "w": 170,
+     "h": 64,
+     "text": "Rev above cost"
+    },
+    {
+     "id": "f_bigger",
+     "type": "function",
+     "x": 450,
+     "y": 1680,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-bigger",
+      "version": 1,
+      "versionId": "version-bigger-1",
+      "name": "Bigger"
+     }
+    },
+    {
+     "id": "r_bigger",
+     "type": "value",
+     "x": 650,
+     "y": 1680,
+     "w": 170,
+     "h": 64,
+     "text": "Bigger"
+    },
+    {
+     "id": "f_numbers",
+     "type": "function",
+     "x": 400,
+     "y": 1800,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-nums",
+      "version": 1,
+      "versionId": "version-nums-1",
+      "name": "Nums"
+     }
+    },
+    {
+     "id": "r_numbers",
+     "type": "value",
+     "x": 650,
+     "y": 1800,
+     "w": 170,
+     "h": 64,
+     "text": "Numbers"
+    },
+    {
+     "id": "f_precedence",
+     "type": "function",
+     "x": 400,
+     "y": 1920,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-prec",
+      "version": 1,
+      "versionId": "version-prec-1",
+      "name": "Prec"
+     }
+    },
+    {
+     "id": "r_precedence",
+     "type": "value",
+     "x": 650,
+     "y": 1920,
+     "w": 170,
+     "h": 64,
+     "text": "Precedence"
+    },
+    {
+     "id": "f_mods",
+     "type": "function",
+     "x": 400,
+     "y": 2040,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-mods",
+      "version": 1,
+      "versionId": "version-mods-1",
+      "name": "Mods"
+     }
+    },
+    {
+     "id": "r_mods",
+     "type": "value",
+     "x": 650,
+     "y": 2040,
+     "w": 170,
+     "h": 64,
+     "text": "Mods"
+    },
+    {
+     "id": "f_wrapped",
+     "type": "function",
+     "x": 400,
+     "y": 2160,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-wrap",
+      "version": 1,
+      "versionId": "version-wrap-1",
+      "name": "Wrap"
+     }
+    },
+    {
+     "id": "r_wrapped",
+     "type": "value",
+     "x": 650,
+     "y": 2160,
+     "w": 170,
+     "h": 64,
+     "text": "Wrapped"
+    }
+   ],
+   "edges": [
+    {
+     "id": "e1",
+     "from": "rev",
+     "to": "f_margin",
+     "toPort": 0
+    },
+    {
+     "id": "e2",
+     "from": "cost",
+     "to": "f_margin",
+     "toPort": 1
+    },
+    {
+     "id": "e3",
+     "from": "f_margin",
+     "to": "r_margin"
+    },
+    {
+     "id": "e4",
+     "from": "rev",
+     "to": "f_profit",
+     "toPort": 0
+    },
+    {
+     "id": "e5",
+     "from": "cost",
+     "to": "f_profit",
+     "toPort": 1
+    },
+    {
+     "id": "e6",
+     "from": "f_profit",
+     "to": "r_profit"
+    },
+    {
+     "id": "e7",
+     "from": "rev",
+     "to": "f_scaled",
+     "toPort": 0
+    },
+    {
+     "id": "e8",
+     "from": "cost",
+     "to": "f_scaled",
+     "toPort": 1
+    },
+    {
+     "id": "e9",
+     "from": "k",
+     "to": "f_scaled",
+     "toPort": 2
+    },
+    {
+     "id": "e10",
+     "from": "f_scaled",
+     "to": "r_scaled"
+    },
+    {
+     "id": "e11",
+     "from": "rev",
+     "to": "opsum"
+    },
+    {
+     "id": "e12",
+     "from": "k",
+     "to": "opsum"
+    },
+    {
+     "id": "e13",
+     "from": "opsum",
+     "to": "f_sq_sum",
+     "toPort": 0
+    },
+    {
+     "id": "e14",
+     "from": "f_sq_sum",
+     "to": "r_sq_sum"
+    },
+    {
+     "id": "e15",
+     "from": "rev",
+     "to": "f_prof2",
+     "toPort": 0
+    },
+    {
+     "id": "e16",
+     "from": "cost",
+     "to": "f_prof2",
+     "toPort": 1
+    },
+    {
+     "id": "e17",
+     "from": "f_prof2",
+     "to": "f_sq_prof",
+     "toPort": 0
+    },
+    {
+     "id": "e18",
+     "from": "f_sq_prof",
+     "to": "r_sq_prof"
+    },
+    {
+     "id": "e19",
+     "from": "x",
+     "to": "f_twice",
+     "toPort": 0
+    },
+    {
+     "id": "e20",
+     "from": "f_twice",
+     "to": "r_twice"
+    },
+    {
+     "id": "e21",
+     "from": "rev",
+     "to": "f_safe",
+     "toPort": 0
+    },
+    {
+     "id": "e22",
+     "from": "div",
+     "to": "f_safe",
+     "toPort": 1
+    },
+    {
+     "id": "e23",
+     "from": "f_safe",
+     "to": "r_safe"
+    },
+    {
+     "id": "e24",
+     "from": "rev",
+     "to": "opdiv"
+    },
+    {
+     "id": "e25",
+     "from": "div",
+     "to": "opdiv"
+    },
+    {
+     "id": "e26",
+     "from": "opdiv",
+     "to": "f_caught",
+     "toPort": 0
+    },
+    {
+     "id": "e27",
+     "from": "fb",
+     "to": "f_caught",
+     "toPort": 1
+    },
+    {
+     "id": "e28",
+     "from": "f_caught",
+     "to": "r_caught"
+    },
+    {
+     "id": "e29",
+     "from": "rev",
+     "to": "f_catch_unwired",
+     "toPort": 0
+    },
+    {
+     "id": "e30",
+     "from": "f_catch_unwired",
+     "to": "r_catch_unwired"
+    },
+    {
+     "id": "e31",
+     "from": "rev",
+     "to": "opdiv2"
+    },
+    {
+     "id": "e32",
+     "from": "div",
+     "to": "opdiv2"
+    },
+    {
+     "id": "e33",
+     "from": "rev",
+     "to": "shr"
+    },
+    {
+     "id": "e34",
+     "from": "shr",
+     "to": "f_prior",
+     "toPort": 0
+    },
+    {
+     "id": "e35",
+     "from": "nine",
+     "to": "f_prior",
+     "toPort": 1
+    },
+    {
+     "id": "e36",
+     "from": "opdiv2",
+     "to": "opif"
+    },
+    {
+     "id": "e37",
+     "from": "f_prior",
+     "to": "opif"
+    },
+    {
+     "id": "e38",
+     "from": "opif",
+     "to": "r_prior"
+    },
+    {
+     "id": "e39",
+     "from": "rev",
+     "to": "f_flag",
+     "toPort": 0
+    },
+    {
+     "id": "e40",
+     "from": "cost",
+     "to": "f_flag",
+     "toPort": 1
+    },
+    {
+     "id": "e41",
+     "from": "f_flag",
+     "to": "r_flag"
+    },
+    {
+     "id": "e42",
+     "from": "rev",
+     "to": "f_flag_of_flag",
+     "toPort": 0
+    },
+    {
+     "id": "e43",
+     "from": "cost",
+     "to": "f_flag_of_flag",
+     "toPort": 1
+    },
+    {
+     "id": "e44",
+     "from": "half",
+     "to": "f_flag_of_flag",
+     "toPort": 2
+    },
+    {
+     "id": "e45",
+     "from": "f_flag_of_flag",
+     "to": "r_flag_of_flag"
+    },
+    {
+     "id": "e46",
+     "from": "rev",
+     "to": "f_min_flag",
+     "toPort": 0
+    },
+    {
+     "id": "e47",
+     "from": "cost",
+     "to": "f_min_flag",
+     "toPort": 1
+    },
+    {
+     "id": "e48",
+     "from": "f_min_flag",
+     "to": "r_min_flag"
+    },
+    {
+     "id": "e49",
+     "from": "rev",
+     "to": "opgt"
+    },
+    {
+     "id": "e50",
+     "from": "cost",
+     "to": "opgt"
+    },
+    {
+     "id": "e51",
+     "from": "opgt",
+     "to": "r_above"
+    },
+    {
+     "id": "e52",
+     "from": "r_above",
+     "to": "f_bigger",
+     "toPort": 0
+    },
+    {
+     "id": "e53",
+     "from": "f_bigger",
+     "to": "r_bigger"
+    },
+    {
+     "id": "e54",
+     "from": "x",
+     "to": "f_numbers",
+     "toPort": 0
+    },
+    {
+     "id": "e55",
+     "from": "f_numbers",
+     "to": "r_numbers"
+    },
+    {
+     "id": "e56",
+     "from": "a",
+     "to": "f_precedence",
+     "toPort": 0
+    },
+    {
+     "id": "e57",
+     "from": "b",
+     "to": "f_precedence",
+     "toPort": 1
+    },
+    {
+     "id": "e58",
+     "from": "x",
+     "to": "f_precedence",
+     "toPort": 2
+    },
+    {
+     "id": "e59",
+     "from": "f_precedence",
+     "to": "r_precedence"
+    },
+    {
+     "id": "e60",
+     "from": "a",
+     "to": "f_mods",
+     "toPort": 0
+    },
+    {
+     "id": "e61",
+     "from": "b",
+     "to": "f_mods",
+     "toPort": 1
+    },
+    {
+     "id": "e62",
+     "from": "f_mods",
+     "to": "r_mods"
+    },
+    {
+     "id": "e63",
+     "from": "rev",
+     "to": "f_wrapped",
+     "toPort": 0
+    },
+    {
+     "id": "e64",
+     "from": "cost",
+     "to": "f_wrapped",
+     "toPort": 1
+    },
+    {
+     "id": "e65",
+     "from": "f_wrapped",
+     "to": "r_wrapped"
+    }
+   ]
+  }
+ ],
+ "functions": [
+  {
+   "family": "family-margin",
+   "version": 1,
+   "versionId": "version-margin-1",
+   "text": "Margin(Revenue, Cost) = (Revenue - Cost) / Revenue",
+   "description": "",
+   "note": "",
+   "calls": []
+  },
+  {
+   "family": "family-profit",
+   "version": 1,
+   "versionId": "version-profit-1",
+   "text": "Profit(Revenue, Cost) = Margin(Revenue, Cost) * Revenue",
+   "description": "",
+   "note": "",
+   "calls": [
+    {
+     "name": "Margin",
+     "family": "family-margin",
+     "version": 1,
+     "versionId": "version-margin-1"
+    }
+   ]
+  },
+  {
+   "family": "family-scaled",
+   "version": 1,
+   "versionId": "version-scaled-1",
+   "text": "Scaled(Revenue, Cost, k) = Profit(Revenue, Cost) * k - Margin(Revenue, Cost)",
+   "description": "",
+   "note": "",
+   "calls": [
+    {
+     "name": "Margin",
+     "family": "family-margin",
+     "version": 1,
+     "versionId": "version-margin-1"
+    },
+    {
+     "name": "Profit",
+     "family": "family-profit",
+     "version": 1,
+     "versionId": "version-profit-1"
+    }
+   ]
+  },
+  {
+   "family": "family-square",
+   "version": 1,
+   "versionId": "version-square-1",
+   "text": "Square(x) = x * x + x",
+   "description": "",
+   "note": "",
+   "calls": []
+  },
+  {
+   "family": "family-twice",
+   "version": 1,
+   "versionId": "version-twice-1",
+   "text": "Twice(x) = Square(Square(x))",
+   "description": "",
+   "note": "",
+   "calls": [
+    {
+     "name": "Square",
+     "family": "family-square",
+     "version": 1,
+     "versionId": "version-square-1"
+    }
+   ]
+  },
+  {
+   "family": "family-safe",
+   "version": 1,
+   "versionId": "version-safe-1",
+   "text": "Safe(a, b) = IFERROR(a / b, -1)",
+   "description": "",
+   "note": "",
+   "calls": []
+  },
+  {
+   "family": "family-catchunwired",
+   "version": 1,
+   "versionId": "version-catchunwired-1",
+   "text": "CatchUnwired(a, b) = IFERROR(b, a)",
+   "description": "",
+   "note": "",
+   "calls": []
+  },
+  {
+   "family": "family-prior",
+   "version": 1,
+   "versionId": "version-prior-1",
+   "text": "Prior(x, fallback) = IFERROR(x, fallback)",
+   "description": "",
+   "note": "",
+   "calls": []
+  },
+  {
+   "family": "family-flag",
+   "version": 1,
+   "versionId": "version-flag-1",
+   "text": "Flag(a, b) = a > b",
+   "description": "",
+   "note": "",
+   "calls": []
+  },
+  {
+   "family": "family-flagofflag",
+   "version": 1,
+   "versionId": "version-flagofflag-1",
+   "text": "FlagOfFlag(a, b, c) = (a < b) < c",
+   "description": "",
+   "note": "",
+   "calls": []
+  },
+  {
+   "family": "family-minflag",
+   "version": 1,
+   "versionId": "version-minflag-1",
+   "text": "MinFlag(a, b) = MIN(a < b, 5) + MAX(a >= b, -5) + IFERROR(a <= b, 9)",
+   "description": "",
+   "note": "",
+   "calls": []
+  },
+  {
+   "family": "family-bigger",
+   "version": 1,
+   "versionId": "version-bigger-1",
+   "text": "Bigger(x) = MAX(x, 0.5)",
+   "description": "",
+   "note": "",
+   "calls": []
+  },
+  {
+   "family": "family-nums",
+   "version": 1,
+   "versionId": "version-nums-1",
+   "text": "Nums(x) = x * 1.5e3 + .5 + 1e-7 * 1e7 + 2.5E+2",
+   "description": "",
+   "note": "",
+   "calls": []
+  },
+  {
+   "family": "family-prec",
+   "version": 1,
+   "versionId": "version-prec-1",
+   "text": "Prec(a, b, c) = 2^3^2 - (a - (b - c)) + -(a^2) - -(-b) + -a^2 / 4 - c * -b",
+   "description": "",
+   "note": "",
+   "calls": []
+  },
+  {
+   "family": "family-mods",
+   "version": 1,
+   "versionId": "version-mods-1",
+   "text": "Mods(a, b) = MOD(a, b) + MOD(-a, b) * 10 + AVERAGE(a, b, 1) + ABS(a)",
+   "description": "",
+   "note": "",
+   "calls": []
+  },
+  {
+   "family": "family-wrap",
+   "version": 1,
+   "versionId": "version-wrap-1",
+   "text": "Wrap(Revenue, Cost) = IFERROR(Scaled(Revenue, Cost, 2) / (Revenue - 200), 0)",
+   "description": "",
+   "note": "",
+   "calls": [
+    {
+     "name": "Scaled",
+     "family": "family-scaled",
+     "version": 1,
+     "versionId": "version-scaled-1"
+    }
+   ]
+  }
+ ]
+}

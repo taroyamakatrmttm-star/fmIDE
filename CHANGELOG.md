@@ -2,6 +2,13 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Function plugins, part 3: functions in Excel (phase D3)
+- **ExcelExporter writes function calls out in full.** A cell that reads a function now holds the function's formula, with each input replaced by the cell it reads: `Margin(Revenue, Cost)` becomes `=((E5-E6)/E5)`. Calls inside calls are written out inside one another, `MIN`, `MAX`, `AVERAGE`, `ABS`, `MOD` and `IFERROR` use Excel's own functions, and brackets follow Excel's order of operations. This works on every tab, inside block instances and vertical blocks, and with the Inputs tab. Before, such a cell showed `#N/A`.
+- A comparison inside a function gives 1 or 0 in Excel, as in fmIDE (not TRUE/FALSE).
+- **A new Functions tab** (last in the workbook, only when the model uses functions) lists each function version the formulas write out: name, version, definition, description, note and the rows that use it.
+- **Before download**, the "differs from fmIDE" list now also names every function case fmIDE shows "?" for (a missing or unreadable definition, functions calling each other in a loop, calls nested too deep, a wrong number of inputs, an input the formula reads with no arrow); Excel shows `#N/A` there.
+- A formula that a function call would make longer than Excel allows (8,192 characters) or nest deeper than 64 levels is written as `#N/A` and listed before download, with the advice to put a rectangle in between. Writing such a call stops as soon as it is too long, so a file that repeats inputs over and over can't freeze the page.
+
 ## Fix: nodes from files without a size
 - A node in a system or module file without a width or height (or with one that isn't a positive number), as in hand-written files such as some of the samples, now gets the usual size for its type. Before, it drew at the wrong size and its arrows were drawn to nowhere. Nothing in the calculation changes.
 

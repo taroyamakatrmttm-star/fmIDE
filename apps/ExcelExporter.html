@@ -2230,13 +2230,10 @@ function operandRef(canvasId, nodeId, periodIndex, ctx, currentTabName, path, fr
     const lit = effectiveLiteral(node, periodIndex);
     return lit !== null ? formatLiteralForFormula(lit) : '0';
   }
-  // A function call (function plugins, step 7 phase D) is written as #N/A for now: an error
-  // in Excel, where fmIDE shows its value — never a wrong number.
-  if(n.type === 'function') return 'NA()';
-  // Operators, aliases and period shifts are written inline. A loop made only of them (no
-  // rectangle with a row of its own to break it) would never end: it reads 0 instead —
-  // fmIDE shows "?" (a loop), and the check before download lists it.
-  const inline = n.type === 'operator' || n.type === 'alias' || n.type === 'periodShift';
+  // Operators, function calls, aliases and period shifts are written inline. A loop made
+  // only of them (no rectangle with a row of its own to break it) would never end: it reads
+  // 0 instead — fmIDE shows "?" (a loop), and the check before download lists it.
+  const inline = n.type === 'operator' || n.type === 'function' || n.type === 'alias' || n.type === 'periodShift';
   const loopKey = inline ? key + '@' + periodIndex : null;
   if(inline){
     if(!ctx.inlining) ctx.inlining = new Set();
@@ -2245,6 +2242,8 @@ function operandRef(canvasId, nodeId, periodIndex, ctx, currentTabName, path, fr
   }
   try{
     if(n.type === 'operator') return buildOperatorFormula(canvasId, n, periodIndex, ctx, currentTabName, path);
+    // A function call, written out in full (01c-function-calls.js).
+    if(n.type === 'function') return buildFunctionCallFormula(canvasId, n, periodIndex, ctx, currentTabName, path);
     if(n.type === 'alias'){
       if(!n.sourceCanvasId || !n.sourceNodeId) return '0';
       // An alias source on the SAME canvas as the current context stays inside the
@@ -2536,6 +2535,152 @@ const EXCEL_SPELLINGS = {
   average:  { fn: 'AVERAGE', numeric: true },
   iferror:  { fn: 'IFERROR', fallback: true },
 };
+// ============================================================
+// Function calls (function plugins, step 7 phase D3): a call is written out in full inside
+// each formula that reads it (step 7 decision 5) — no LAMBDA, no named function. The
+// function's formula comes from the shared parser's tree (parseFunctionText, through the
+// IR's compiled definitions); each input is replaced by what the arrow into its port reads
+// (operandRef, so blocks, vintages, aliases, period shifts and the Inputs tab work as for
+// an operator), and the built-in functions are spelled as EXCEL_SPELLINGS says.
+//
+// - Brackets only where Excel's order of operations needs them: a leading minus first, then
+//   ^, then * and /, then + and -, then one comparison — the parser's own order, so the
+//   tree reads the same in Excel (-x^2 is (-x)^2 in both).
+// - A comparison gives Excel's TRUE/FALSE; wherever something other than + - * / ^ reads
+//   it, and as the call's result, it is turned into 1/0 with N(), so a function's result
+//   is always a number, as in fmIDE. An input read from a TRUE/FALSE cell gets N() too.
+// - Errors, as fmIDE's "?": a call that can't be calculated (missing or unreadable
+//   definition, a loop of functions, nested too deep, a wrong number of inputs) is NA(); so
+//   is an input with no arrow, only where the formula reads it, so an IFERROR in the
+//   function still catches it. Inside an IFERROR's first input, a period outside the
+//   timeline is NA() too (ctx.iferrorDepth, as for the iferror operator).
+// - Excel's limits: a formula of at most 8,192 characters and 64 levels. Writing a call
+//   stops as soon as its text passes the length (a file that repeats inputs over and over
+//   can't freeze the page); the row loop then writes NA() and the check before download
+//   lists the cell.
+// ============================================================
+
+const EXCEL_LIMITS = { length: 8192, nesting: 64 };
+// Thrown while writing a call whose text is already too long for Excel.
+function ExcelFormulaTooLong(){ this.excelTooLong = true; }
+
+// Binding strength, as Excel reads it (higher binds tighter).
+const FN_LEVEL = { compare: 1, add: 2, subtract: 2, multiply: 3, divide: 3, power: 4, neg: 5, atom: 6 };
+
+// A number from a formula, as Excel reads it: 1500, 0.5, 1E-7, 1E+21. (The parser gives
+// only numbers of 0 or more; a minus is its own step.)
+function excelNumber(v){
+  return String(v).replace('e', 'E');
+}
+
+// The call a function node makes, written out in full: formula text that can stand anywhere
+// another formula reads it (a cell reference, a bracketed expression or a function call).
+function buildFunctionCallFormula(canvasId, n, periodIndex, ctx, currentTabName, path){
+  if(!n.call || n.call.status) return 'NA()';
+  ctx.fnWrites = (ctx.fnWrites || 0) + 1;
+  if(ctx.onFunction) ctx.onFunction(n.call);
+  // Input i, read by the arrow into port i; `caught` when inside an IFERROR's first input.
+  const cache = new Map();
+  const input = (i, caught) => {
+    const k = caught ? 'c' + i : String(i);
+    if(cache.has(k)) return cache.get(k);
+    const edge = irPortEdge(modelIR, canvasId, n.id, i);
+    let s;
+    if(!edge) s = 'NA()';
+    else {
+      if(caught) ctx.iferrorDepth = (ctx.iferrorDepth || 0) + 1;
+      try{ s = operandRef(canvasId, edge.from, periodIndex, ctx, currentTabName, path, edge.fromPort); }
+      finally{ if(caught) ctx.iferrorDepth--; }
+      if(s !== '0' && isLogicalValued(canvasId, edge.from, ctx, path, edge.fromPort)) s = 'N(' + s + ')';
+    }
+    const e = fnPiece(s, FN_LEVEL.atom, false);
+    cache.set(k, e);
+    return e;
+  };
+  return fnAtom(fnNumeric(writeFunctionExpr(n.call, n.call.body, input, false, ctx)));
+}
+
+// A piece of formula text: how tightly it binds, and whether it is a TRUE/FALSE.
+function fnPiece(s, level, logical){
+  if(s.length > EXCEL_LIMITS.length) throw new ExcelFormulaTooLong();
+  return { s, level, logical };
+}
+// As a number: a comparison's TRUE/FALSE becomes 1/0.
+function fnNumeric(p){ return p.logical ? fnPiece('N(' + p.s + ')', FN_LEVEL.atom, false) : p; }
+// As one item that can go anywhere.
+function fnAtom(p){ return p.level === FN_LEVEL.atom ? p.s : '(' + p.s + ')'; }
+
+// The formula text of expression `x` of compiled function `fn`, where `input(i, caught)` is
+// input i's text.
+function writeFunctionExpr(fn, x, input, caught, ctx){
+  switch(x.t){
+    case 'num': return fnPiece(excelNumber(x.v), FN_LEVEL.atom, false);
+    case 'param': return input(x.i, caught);
+    case 'neg': {
+      const a = writeFunctionExpr(fn, x.a, input, caught, ctx);
+      // Another minus, or anything looser than a minus, goes in brackets: -(-x), -(x^2).
+      return fnPiece('-' + (a.level > FN_LEVEL.neg ? a.s : '(' + a.s + ')'), FN_LEVEL.neg, false);
+    }
+    case 'call': {
+      const target = fn.targets.get(x.key);
+      if(ctx.onFunction) ctx.onFunction(target);
+      // The callee's inputs are this call's arguments, written where the callee reads them.
+      const memo = new Map();
+      const inner = (i, innerCaught) => {
+        const k = innerCaught ? 'c' + i : String(i);
+        if(memo.has(k)) return memo.get(k);
+        const e = i < x.args.length
+          ? fnPiece(fnAtom(fnNumeric(writeFunctionExpr(fn, x.args[i], input, innerCaught, ctx))), FN_LEVEL.atom, false)
+          : fnPiece('NA()', FN_LEVEL.atom, false);
+        memo.set(k, e);
+        return e;
+      };
+      return writeFunctionExpr(target, target.body, inner, caught, ctx);
+    }
+    case 'op': {
+      const spell = EXCEL_SPELLINGS[x.id];
+      if(spell.fallback){
+        // IFERROR(first, second): a failure inside the first input is caught.
+        const first = fnNumeric(writeFunctionExpr(fn, x.args[0], input, true, ctx));
+        const second = fnNumeric(writeFunctionExpr(fn, x.args[1], input, caught, ctx));
+        return fnPiece(spell.fn + '(' + first.s + ',' + second.s + ')', FN_LEVEL.atom, false);
+      }
+      const args = x.args.map(a => writeFunctionExpr(fn, a, input, caught, ctx));
+      if(spell.infix){
+        const level = FN_LEVEL[x.id];
+        const left = args[0].level >= level ? args[0].s : '(' + args[0].s + ')';
+        // The right side binds tighter (a-(b-c)); one that starts with a minus is bracketed
+        // to read clearly (a+(-b), a+(-b^2/4)).
+        const right = (args[1].level > level && args[1].s.charAt(0) !== '-') ? args[1].s : '(' + args[1].s + ')';
+        return fnPiece(left + spell.infix + right, level, false);
+      }
+      const nums = args.map(fnNumeric);
+      if(spell.compare){
+        const side = (p) => p.level > FN_LEVEL.compare && p.s.charAt(0) !== '-' ? p.s : '(' + p.s + ')';
+        return fnPiece(side(nums[0]) + spell.compare + side(nums[1]), FN_LEVEL.compare, true);
+      }
+      const name = spell.fn || spell.fold;
+      return fnPiece(name + '(' + nums.map(p => p.s).join(',') + ')', FN_LEVEL.atom, false);
+    }
+  }
+  return fnPiece('NA()', FN_LEVEL.atom, false);
+}
+
+// Why `formula` can't go into Excel, or null: longer than 8,192 characters (with its "="),
+// or brackets nested deeper than 64 (every bracket counts, the stricter reading of Excel's
+// limit; brackets inside a quoted sheet name don't).
+function excelFormulaProblem(formula){
+  if(formula.length + 1 > EXCEL_LIMITS.length) return { kind: 'length', size: formula.length + 1 };
+  let depth = 0, most = 0, quoted = false;
+  for(let i = 0; i < formula.length; i++){
+    const ch = formula.charCodeAt(i);
+    if(ch === 39) quoted = !quoted; // ' ('' inside a name toggles twice)
+    else if(quoted) continue;
+    else if(ch === 40){ if(++depth > most) most = depth; }
+    else if(ch === 41) depth--;
+  }
+  return most > EXCEL_LIMITS.nesting ? { kind: 'nesting', size: most } : null;
+}
 // ============================================================
 // Block-instance unpacking
 //
@@ -5756,11 +5901,30 @@ function reserveScenarioRows(row, r, scenarioBlocks){
   return r + n;
 }
 
+// Builds the workbook and downloads it.
 function generateWorkbook(){
+  const built = buildWorkbook();
+  XLSX.writeFile(built.wb, (mapping.cfg.fileName || 'fmIDE-export').replace(/\.xlsx$/i, '') + '.xlsx');
+}
+
+// Builds the workbook without downloading it: { wb, tooLong }, where `tooLong` lists the
+// cells whose formula (with a function call written out in full) goes past Excel's limits
+// and is written as NA() instead: [{ row, tabName, periods: [1-based], problem }] (the
+// check before download reads it too).
+function buildWorkbook(){
   if(typeof XLSX === 'undefined'){
     throw new Error('The built-in Excel writer is missing — this copy of ExcelExporter looks damaged.');
   }
   const ctx = buildCtx();
+  const tooLong = [];
+  // Function versions whose calls are written out: key -> { fn, rows: Set of "label (tab)" }.
+  const functionUses = new Map();
+  let functionUseRow = null;
+  ctx.onFunction = (fn) => {
+    const key = fn.family + '@' + fn.version;
+    if(!functionUses.has(key)) functionUses.set(key, { fn, rows: new Set() });
+    if(functionUseRow) functionUses.get(key).rows.add(functionUseRow);
+  };
   const labels = periodLabels();
   // Helper-column plan: one slot per indexed input of each vertical instance whose
   // vintage rows are written; the workbook gets as many helper columns as the widest
@@ -5892,6 +6056,26 @@ function generateWorkbook(){
       ctx.currentRowVintage = rowVintage;
       ctx.currentRowHopsKey = pathKey(row.path || [], '', '');
       ctx.currentHelper = plan;
+      functionUseRow = '“' + row.label + '” (' + tab.name + ')';
+      // A cell's content, or NA() where a function call written out in full makes its
+      // formula too long or too deeply nested for Excel (listed in `tooLong`). Formulas
+      // without a call are written as before.
+      const rowTooLong = [];
+      const fitted = (build, p) => {
+        const before = ctx.fnWrites || 0;
+        const saved = [ctx.currentRow, ctx.currentRowVintage, ctx.currentHelper, ctx.currentRowHopsKey];
+        let content, problem = null;
+        try{ content = build(); }
+        catch(err){
+          if(!err || !err.excelTooLong) throw err;
+          [ctx.currentRow, ctx.currentRowVintage, ctx.currentHelper, ctx.currentRowHopsKey] = saved;
+          problem = { kind: 'length', size: null };
+        }
+        if(!problem && content.isFormula && (ctx.fnWrites || 0) !== before) problem = excelFormulaProblem(content.formula);
+        if(!problem) return content;
+        rowTooLong.push({ period: p, problem });
+        return { isFormula: true, formula: 'NA()' };
+      };
 
       // Period contents first — the row's role depends on what it holds.
       const contents = [];
@@ -5905,8 +6089,8 @@ function generateWorkbook(){
           : linkPos
           ? { isFormula: true, formula: sheetRef(linkPos.tabName, col, linkPos.row, tab.name) }
           : row.verticalCombined
-            ? { isFormula: true, formula: buildVerticalCombinedFormula(row.canvasId, node, p, ctx, tab.name, row.path) }
-            : buildCellContent(row.canvasId, node, p, ctx, tab.name, row.path));
+            ? fitted(() => ({ isFormula: true, formula: buildVerticalCombinedFormula(row.canvasId, node, p, ctx, tab.name, row.path) }), p)
+            : fitted(() => buildCellContent(row.canvasId, node, p, ctx, tab.name, row.path), p));
       }
       // Role of the row: Inputs (typed numbers) · Links (every cell only pulls one cell
       // from another sheet) · Calculations (any other formula).
@@ -5937,7 +6121,7 @@ function generateWorkbook(){
             const col = colLetter(periodCol(p));
             let cell;
             if(k === 1){
-              const content = buildCellContent(row.canvasId, node, p, ctx, tab.name, row.path);
+              const content = fitted(() => buildCellContent(row.canvasId, node, p, ctx, tab.name, row.path), p);
               cell = content.isFormula ? { t: 'n', f: content.formula, v: 0, z: inFmt }
                 : content.value !== null ? { t: 'n', v: content.value, z: inFmt } : blankCell(null, inFmt);
             } else {
@@ -5967,7 +6151,7 @@ function generateWorkbook(){
       for(let k = 0; k < helperColCount; k++){
         const port = plan && plan.ports[k];
         const hc = port
-          ? { t: 'n', f: helperCellFormula(ctx, lastHop, row.path.slice(0, -1), port, excelRow, tab.name), v: 0, z: numFmt }
+          ? { t: 'n', f: fitted(() => ({ isFormula: true, formula: helperCellFormula(ctx, lastHop, row.path.slice(0, -1), port, excelRow, tab.name) }), null).formula, v: 0, z: numFmt }
           : blankCell(null);
         if(cellStyle) hc.s = cellStyle;
         setCell(helperCol(k) + excelRow, hc);
@@ -5984,6 +6168,12 @@ function generateWorkbook(){
       });
 
       ctx.currentRow = null; ctx.currentRowVintage = null; ctx.currentHelper = null; ctx.currentRowHopsKey = null;
+      functionUseRow = null;
+      if(rowTooLong.length){
+        // The scenario row repeats period 1..N of the same formula: each period once.
+        const periods = [...new Set(rowTooLong.filter(t => t.period !== null).map(t => t.period + 1))].sort((a, b) => a - b);
+        tooLong.push({ row, tabName: tab.name, periods, problem: rowTooLong[0].problem });
+      }
       lastRow = Math.max(lastRow, excelRow);
     });
 
@@ -5998,6 +6188,9 @@ function generateWorkbook(){
   if(wb.SheetNames.length === 0){
     throw new Error('Nothing to export — every row is excluded, or every tab is empty.');
   }
+
+  // Functions tab (last): every function version whose calls the formulas write out.
+  if(functionUses.size) appendFunctionsSheet(wb, functionUses, HDR);
 
   // Scenarios tab (first sheet).
   // With global cases (nCases > 0), following the layout of the workbook it was designed from:
@@ -6074,8 +6267,38 @@ function generateWorkbook(){
     XLSX.utils.book_append_sheet(wb, ws, scenarioSheetName);
     wb.SheetNames.unshift(wb.SheetNames.pop()); // Scenarios first
   }
-  XLSX.writeFile(wb, (mapping.cfg.fileName || 'fmIDE-export').replace(/\.xlsx$/i, '') + '.xlsx');
+  return { wb, tooLong };
   }finally{ helperColCount = 0; }
+}
+
+// The Functions tab: one row per function version the formulas write out, so a reader can
+// see what each written-out call is — name, version, its definition, description and note
+// (all from the file, written as plain text) and the rows that use it.
+function appendFunctionsSheet(wb, functionUses, HDR){
+  const ws = {};
+  const name = uniqueTabName('Functions', null).name;
+  const cap = (s) => { s = String(s == null ? '' : s); return s.length > 32000 ? s.slice(0, 32000) + '…' : s; };
+  const noteStyle = roleCellStyle('Notes');
+  const labelStyle = roleCellStyle('Labels');
+  ws.A1 = { t: 's', v: name, s: mergeXlStyle({ font: (roleCellStyle('Headers') || {}).font || {} }, { font: { sz: 13 } }) };
+  ws.A2 = textCell('Each call to one of these functions is written out in full inside the formulas that use it.', noteStyle);
+  const heads = ['Function', 'Version', 'Definition', 'Description', 'Note', 'Used in'];
+  heads.forEach((h, i) => { ws[colLetter(i + 1) + '4'] = { t: 's', v: h, s: HDR() }; });
+  const list = [...functionUses.values()].sort((a, b) =>
+    String(a.fn.name).localeCompare(String(b.fn.name)) || (a.fn.version - b.fn.version));
+  list.forEach((u, i) => {
+    const r = 5 + i;
+    const def = u.fn.def || {};
+    ws['A' + r] = textCell(cap(u.fn.name || '(unnamed)'), labelStyle);
+    ws['B' + r] = { t: 'n', v: u.fn.version };
+    ws['C' + r] = textCell(cap(def.text));
+    ws['D' + r] = textCell(cap(def.description));
+    ws['E' + r] = textCell(cap(def.note));
+    ws['F' + r] = textCell(cap([...u.rows].join(', ')));
+  });
+  ws['!ref'] = 'A1:F' + Math.max(4, 4 + list.length);
+  ws['!cols'] = [{ wch: 20 }, { wch: 8 }, { wch: 50 }, { wch: 40 }, { wch: 30 }, { wch: 40 }];
+  XLSX.utils.book_append_sheet(wb, ws, name);
 }
 
 // A row's unit: the rectangle's own typed unit, else the one the IR works out for it in
@@ -6098,7 +6321,9 @@ function rowUnit(canvas, node, path){
 // worked out with fmIDE's own calculation (the shared IR). It also lists two places where
 // fmIDE shows a number but the formula reads 0: an operator Excel has no spelling for (only
 // a hand-edited file has one) and a row left out of the layout that other rows read.
-// It never stops the download.
+// Function calls (step 7 phase D3): a call fmIDE can't calculate is #N/A in Excel, and a
+// formula a call makes too long or too deeply nested for Excel is written as #N/A; both are
+// listed too. It never stops the download.
 // ============================================================
 
 // Where a "?" starts (the IR's error codes) that Excel writes as 0 or a blank cell. The
@@ -6117,6 +6342,16 @@ const SILENT_IN_EXCEL = {
   'block-cycle': 'a block there contains itself',
 };
 
+// Where a "?" starts in a function call (the IR's error codes); Excel shows #N/A there.
+const NA_IN_EXCEL = {
+  'function-missing': 'its function’s definition, or one it calls, isn’t in the file (or is another version)',
+  'function-unreadable': 'its function’s definition can’t be read',
+  'function-cycle': 'its function calls itself through other functions',
+  'function-too-deep': 'its function’s calls are nested more than 16 deep',
+  'function-arguments': 'its function calls another with the wrong number of inputs',
+  'function-input-unwired': 'an input its function reads has no arrow',
+};
+
 // Quick look at the IR for anything that can make fmIDE show "?" where Excel writes 0 or a
 // blank. Only when there is something does the check run fmIDE's calculation (a healthy
 // model costs nothing extra).
@@ -6132,6 +6367,7 @@ function mayDifferFromFmide(ir){
       const def = ir.canvases.get(n.blockDefCanvasId);
       found = !def || n.outgoing.some(e => !def.ports.outputs[e.fromPort || 0]) || blockContainsItself(ir, def.id, new Set());
     } else if(n.type === 'operator') found = n.inputs.length === 0 && !(n.op && n.op.fallback);
+    else if(n.type === 'function') found = !n.call || !!n.call.status || n.call.params.some((p, i) => !irPortEdge(ir, c.id, n.id, i));
   }));
   return found || hasLoop(ir);
 }
@@ -6242,12 +6478,12 @@ function fmideQuestionMarkRows(){
       const periods = [];
       let first = null;
       found.forEach((e, p) => {
-        if(!e || !e.error || !e.origin || !SILENT_IN_EXCEL[e.origin.code]) return;
+        if(!e || !e.error || !e.origin || !(SILENT_IN_EXCEL[e.origin.code] || NA_IN_EXCEL[e.origin.code])) return;
         periods.push(p + 1);
         if(!first) first = e;
       });
       if(!first) return;
-      rows.push({ row, periods, code: first.origin.code, where: first.origin, blank: first.error === 'ambiguous' });
+      rows.push({ row, periods, code: first.origin.code, where: first.origin, blank: first.error === 'ambiguous', na: !!NA_IN_EXCEL[first.origin.code] });
     });
   }
   fmideDifferenceCache = { ir, rows };
@@ -6278,10 +6514,36 @@ function describeOrigin(o){
     else if(n.type === 'alias') what = 'an alias';
     else if(n.type === 'periodShift') what = 'a period shift';
     else if(n.type === 'blockInstance') what = 'a block';
+    else if(n.type === 'function') what = 'the function ' + functionNodeLabel(n);
     else what = 'an operator (' + String(n.symbol == null ? '' : n.symbol) + ')';
   }
   const inBlock = o.path && o.path.length ? ' inside a block' : '';
   return what + ' on “' + canvasName + '”' + inBlock;
+}
+
+// "“Margin” v2" for a function node — its name as the file gives it (plain text, shown with
+// textContent), or its definition's name.
+function functionNodeLabel(n){
+  const fn = n.node && n.node.fn;
+  const raw = n.call ? n.call.name : (fn && typeof fn.name === 'string' ? fn.name : '');
+  const name = String(raw || '').slice(0, 64) || '(unnamed)';
+  return '“' + name + '”' + (n.fn ? ' v' + n.fn.version : '');
+}
+
+// The cells whose formula a function call makes too long or too deeply nested for Excel
+// (buildWorkbook's `tooLong`). Worked out by building the workbook without downloading it,
+// only when the model writes out a call; remembered until the model or the layout changes.
+let tooLongCache = null; // { ir, layout, list }
+function tooLongCells(){
+  const ir = modelIR;
+  const writes = ir && ir.order.some(c => c.list.some(n => n.type === 'function' && n.call && !n.call.status));
+  if(!writes) return [];
+  const layout = JSON.stringify(mapping);
+  if(tooLongCache && tooLongCache.ir === ir && tooLongCache.layout === layout) return tooLongCache.list;
+  let list = [];
+  try{ list = buildWorkbook().tooLong; }catch(err){ /* nothing to export yet */ }
+  tooLongCache = { ir, layout, list };
+  return list;
 }
 
 // Every place the workbook will differ from fmIDE, as lines of plain text.
@@ -6293,8 +6555,17 @@ function differenceLines(){
     if(!d.row.include && !d.row.inlineConstant) return;
     const period = d.periods.length === 1 ? 'period ' : 'periods ';
     lines.push('“' + d.row.label + '” (tab “' + tabName(d.row.tabId) + '”): fmIDE shows ? in ' + period + periodRanges(d.periods)
-      + ' because ' + SILENT_IN_EXCEL[d.code] + ' (' + describeOrigin(d.where) + '); Excel '
-      + (d.blank ? 'leaves the cell blank.' : 'writes 0 there.'));
+      + ' because ' + (d.na ? NA_IN_EXCEL[d.code] : SILENT_IN_EXCEL[d.code]) + ' (' + describeOrigin(d.where) + '); Excel '
+      + (d.na ? 'shows #N/A there.' : d.blank ? 'leaves the cell blank.' : 'writes 0 there.'));
+  });
+  // Formulas a function call makes too long for Excel.
+  tooLongCells().forEach(t => {
+    const where = t.periods.length ? (t.periods.length === 1 ? 'period ' : 'periods ') + periodRanges(t.periods) : 'its helper cell';
+    const why = t.problem.kind === 'nesting'
+      ? 'nests brackets ' + t.problem.size + ' deep (Excel allows ' + EXCEL_LIMITS.nesting + ')'
+      : 'would be ' + (t.problem.size ? t.problem.size.toLocaleString('en-US') + ' characters' : 'longer than Excel allows') + ' (Excel allows ' + EXCEL_LIMITS.length.toLocaleString('en-US') + ')';
+    lines.push('“' + t.row.label + '” (tab “' + t.tabName + '”): the formula in ' + where + ' writes out a function call that '
+      + why + ', so Excel shows #N/A there, where fmIDE shows its value. Putting a rectangle between the function and what feeds it breaks the formula up.');
   });
   // Operators Excel has no spelling for: fmIDE passes the first input through.
   modelIR.order.forEach(c => c.list.forEach(n => {
