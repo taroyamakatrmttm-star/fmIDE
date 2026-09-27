@@ -75,6 +75,7 @@
       el.style.width = n.w + 'px';
       el.style.height = n.h + 'px';
       el.classList.toggle('selected', selectedNodeIds.has(n.id));
+      el.classList.toggle('arrow-source', !!tapArrow && tapArrow.fromId === n.id); // 08b-touch-menu.js
 
       if(isBlockInstance || isFunction){
         // content fully handled by renderBlockInstanceBody() / renderFunctionNodeBody() above

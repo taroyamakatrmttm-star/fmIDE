@@ -504,6 +504,20 @@
   /* A finger on a node, a canvas tab or the curve editor moves it rather than scrolling the
      page (step 9a); a finger on empty canvas still scrolls. */
   .node, .canvas-tab, .period-values-box svg{ touch-action:none; }
+  /* Step 9b: a finger swipes the canvas tab strip along (a hold, then a drag, moves a tab),
+     scrolls the text of a node being edited, and a press and hold shows no copy menu. */
+  .canvas-tab{ touch-action:pan-x; }
+  .node textarea{ touch-action:pan-x pan-y; }
+  #viewport, #canvasTabs{ -webkit-touch-callout:none; }
+  .canvas-tab.tab-lifted{ background:#374151; color:#fff; box-shadow:0 4px 14px rgba(0,0,0,.35); }
+  /* Larger invisible touch areas for the dots, the resize corner and the node buttons, when a
+     finger is in use (body.touch-input, 02b-pointer-input.js); nothing visible changes. On a
+     selected node, where these show; a block's or function's input and output dots always. The
+     resize corner grows over the node, the buttons all round, as they overlap for the mouse. */
+  body.touch-input .node.selected .port::after{ content:''; position:absolute; inset:-11px; border-radius:50%; }
+  body.touch-input .node.selected .tag-btn::after{ content:''; position:absolute; inset:-8px; border-radius:8px; }
+  body.touch-input .node.selected .resize-handle::after{ content:''; position:absolute; left:-18px; top:-18px; right:-2px; bottom:-2px; }
+  body.touch-input .io-port::after{ content:''; position:absolute; inset:-9px; border-radius:50%; }
   .node:active{cursor:grabbing;}
   .node.selected{ border-color:var(--node-selected); box-shadow:0 0 0 3px rgba(99,102,241,.18); }
 
@@ -809,3 +823,27 @@
   .recipe-check{ white-space:pre-line; }
   /* Messages and questions keep the line breaks they are written with */
   .modal-box > p:first-child{ white-space:pre-line; }
+
+  /* touch: a node's press-and-hold menu, and drawing an arrow by taps (step 9b) */
+  .touch-menu{
+    position:fixed; z-index:120; min-width:190px; max-width:320px; background:#111827; border:1px solid #374151;
+    border-radius:10px; padding:6px; display:flex; flex-direction:column; gap:2px; box-shadow:0 8px 24px rgba(0,0,0,.3);
+  }
+  .touch-menu button{
+    text-align:left; font:inherit; font-size:14px; padding:10px 12px; border-radius:7px; border:none;
+    background:transparent; color:#e5e7eb; cursor:pointer;
+  }
+  .touch-menu button:hover:not(:disabled), .touch-menu button:active:not(:disabled){ background:#1f2937; }
+  .touch-menu button:disabled{ color:#6b7280; cursor:default; }
+  .touch-menu button.danger{ color:#fca5a5; }
+  .touch-menu-info{
+    font-size:12.5px; line-height:1.35; color:#fde68a; background:#1f2937; border-radius:7px;
+    padding:8px 10px; margin-bottom:4px; white-space:pre-wrap; word-break:break-word;
+  }
+  #tapArrowBanner{
+    position:fixed; z-index:120; left:50%; top:12px; transform:translateX(-50%); max-width:calc(100vw - 32px);
+    display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:10px;
+    background:#1e1b4b; color:#e0e7ff; font-size:14px; box-shadow:0 8px 24px rgba(0,0,0,.3);
+  }
+  #tapArrowBanner button{ flex:none; padding:7px 12px; border-radius:7px; border:1px solid #6366f1; background:#312e81; color:#fff; cursor:pointer; font:inherit; font-size:13px; }
+  .node.arrow-source{ box-shadow:0 0 0 3px var(--accent); }

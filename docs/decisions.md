@@ -25,7 +25,7 @@ Workflow since step 3a: edit `src/` → `npm run build` → `npm test` (the file
 6. Template management ✅ — families and versions, canvases linked to their template ("Update this canvas"), recipe templates, and a warning when more than one plug feeds a socket (see `docs/file-formats.md`)
 7. Formula IR and plugins (chosen by the owner, September 2026; see `docs/step7-formula-ir.md`): A agreement tests and fixes ✅, B shared IR ✅, C ExcelExporter on the IR ✅, D function plugins ✅, E1 new operators ✅; E2 optional, not started
 8. Community library (see `docs/step8-community-library.md`) ✅: 8a library pack files ✅; 8b where items came from ✅; 8c checker and catalogue (8c-1 the checker for one pack ✅, 8c-2 the library's rules and repository ✅, 8c-3 the catalogue ✅); 8d browsing inside fmIDE ✅
-9. Touch support (see `docs/step9-touch.md`) — in progress: 9a one input path for mouse, touch and pen ✅; 9b touch replacements for the mouse-only gestures; 9c the screen and ExcelExporter
+9. Touch support (see `docs/step9-touch.md`) — in progress: 9a one input path for mouse, touch and pen ✅; 9b touch replacements for the mouse-only gestures ✅; 9c the screen and ExcelExporter
 
 ## Phase 0 (hardening) — status
 

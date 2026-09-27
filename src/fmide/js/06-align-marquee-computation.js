@@ -92,12 +92,21 @@
     followPointer(downEvent, onMove, onUp);
   }
 
-  // Mouse only: a finger on empty canvas scrolls it, and a tap's copied mouse events still
-  // reach here, so a tap on empty canvas clears the selection as before.
+  // The mouse: a tap's copied mouse events also reach here, so a tap on empty canvas clears the
+  // selection as before.
   viewport.addEventListener('mousedown', (e) => {
     if(e.button === 2) return; // right button is reserved for arrow-drawing, started from a node
     if(e.target === viewport || e.target === canvas || e.target === svg){
       startMarquee(e);
+    }
+  });
+  // A finger on empty canvas scrolls it; held still first, then dragged, it draws the box
+  // (step 9b), which replaces the selection like a plain mouse box.
+  blockScrollWhileHolding(viewport);
+  viewport.addEventListener('pointerdown', (e) => {
+    if(e.pointerType === 'mouse' || touchPointersDown.size !== 1) return;
+    if(e.target === viewport || e.target === canvas || e.target === svg){
+      waitForHold(e, { onHold: () => { holdBlocksScrolling(); startMarquee(e); } });
     }
   });
   viewport.addEventListener('contextmenu', (e) => { e.preventDefault(); });

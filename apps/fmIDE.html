@@ -512,6 +512,20 @@
   /* A finger on a node, a canvas tab or the curve editor moves it rather than scrolling the
      page (step 9a); a finger on empty canvas still scrolls. */
   .node, .canvas-tab, .period-values-box svg{ touch-action:none; }
+  /* Step 9b: a finger swipes the canvas tab strip along (a hold, then a drag, moves a tab),
+     scrolls the text of a node being edited, and a press and hold shows no copy menu. */
+  .canvas-tab{ touch-action:pan-x; }
+  .node textarea{ touch-action:pan-x pan-y; }
+  #viewport, #canvasTabs{ -webkit-touch-callout:none; }
+  .canvas-tab.tab-lifted{ background:#374151; color:#fff; box-shadow:0 4px 14px rgba(0,0,0,.35); }
+  /* Larger invisible touch areas for the dots, the resize corner and the node buttons, when a
+     finger is in use (body.touch-input, 02b-pointer-input.js); nothing visible changes. On a
+     selected node, where these show; a block's or function's input and output dots always. The
+     resize corner grows over the node, the buttons all round, as they overlap for the mouse. */
+  body.touch-input .node.selected .port::after{ content:''; position:absolute; inset:-11px; border-radius:50%; }
+  body.touch-input .node.selected .tag-btn::after{ content:''; position:absolute; inset:-8px; border-radius:8px; }
+  body.touch-input .node.selected .resize-handle::after{ content:''; position:absolute; left:-18px; top:-18px; right:-2px; bottom:-2px; }
+  body.touch-input .io-port::after{ content:''; position:absolute; inset:-9px; border-radius:50%; }
   .node:active{cursor:grabbing;}
   .node.selected{ border-color:var(--node-selected); box-shadow:0 0 0 3px rgba(99,102,241,.18); }
 
@@ -817,6 +831,30 @@
   .recipe-check{ white-space:pre-line; }
   /* Messages and questions keep the line breaks they are written with */
   .modal-box > p:first-child{ white-space:pre-line; }
+
+  /* touch: a node's press-and-hold menu, and drawing an arrow by taps (step 9b) */
+  .touch-menu{
+    position:fixed; z-index:120; min-width:190px; max-width:320px; background:#111827; border:1px solid #374151;
+    border-radius:10px; padding:6px; display:flex; flex-direction:column; gap:2px; box-shadow:0 8px 24px rgba(0,0,0,.3);
+  }
+  .touch-menu button{
+    text-align:left; font:inherit; font-size:14px; padding:10px 12px; border-radius:7px; border:none;
+    background:transparent; color:#e5e7eb; cursor:pointer;
+  }
+  .touch-menu button:hover:not(:disabled), .touch-menu button:active:not(:disabled){ background:#1f2937; }
+  .touch-menu button:disabled{ color:#6b7280; cursor:default; }
+  .touch-menu button.danger{ color:#fca5a5; }
+  .touch-menu-info{
+    font-size:12.5px; line-height:1.35; color:#fde68a; background:#1f2937; border-radius:7px;
+    padding:8px 10px; margin-bottom:4px; white-space:pre-wrap; word-break:break-word;
+  }
+  #tapArrowBanner{
+    position:fixed; z-index:120; left:50%; top:12px; transform:translateX(-50%); max-width:calc(100vw - 32px);
+    display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:10px;
+    background:#1e1b4b; color:#e0e7ff; font-size:14px; box-shadow:0 8px 24px rgba(0,0,0,.3);
+  }
+  #tapArrowBanner button{ flex:none; padding:7px 12px; border-radius:7px; border:1px solid #6366f1; background:#312e81; color:#fff; cursor:pointer; font:inherit; font-size:13px; }
+  .node.arrow-source{ box-shadow:0 0 0 3px var(--accent); }
 </style>
 </head>
 <body>
@@ -1620,6 +1658,81 @@
     document.addEventListener('pointercancel', cancel);
     return stop;
   }
+
+  // ---------- touch replacements for the mouse-only gestures (step 9b) ----------
+  let tapArrow = null;    // drawing an arrow by taps (08b-touch-menu.js): { fromId, banner }
+  const HOLD_MS = 500;    // a press this long, with the finger kept still, is a hold
+  const HOLD_SLOP = 10;   // pixels a finger may wander and still be holding (or tapping)
+
+  // Follow a finger's press on something that also has a hold: onMoveFirst(ev) if the finger
+  // moves before HOLD_MS (the caller then starts its drag from downEvent), onHold() once it has
+  // been still that long, onRelease(ev, cancelled) if it lifts first (a tap).
+  function waitForHold(downEvent, { onHold, onMoveFirst, onRelease }){
+    const x0 = downEvent.clientX, y0 = downEvent.clientY;
+    let settled = false;
+    const timer = setTimeout(() => { if(settle()) onHold(); }, HOLD_MS);
+    const stop = followPointer(downEvent, (ev) => {
+      if(Math.hypot(ev.clientX - x0, ev.clientY - y0) > HOLD_SLOP && settle() && onMoveFirst) onMoveFirst(ev);
+    }, (ev, cancelled) => {
+      if(settle(true) && onRelease) onRelease(ev, cancelled);
+    });
+    function settle(lifted){
+      if(settled) return false;
+      settled = true;
+      clearTimeout(timer);
+      if(!lifted) stop();
+      return true;
+    }
+  }
+
+  // While a hold turns a finger's drag into an action (a selection box, moving a canvas tab),
+  // the browser must not scroll under it. Scrolling can only be stopped from touchmove, so the
+  // places that scroll by finger listen for it (blockScrollWhileHolding) and cancel it while
+  // touchScrollBlocked is set; followPointer's lift clears it.
+  let touchScrollBlocked = false;
+  function blockScrollWhileHolding(el){
+    el.addEventListener('touchmove', (ev) => { if(touchScrollBlocked && ev.cancelable) ev.preventDefault(); }, { passive:false });
+  }
+  function holdBlocksScrolling(){ touchScrollBlocked = true; }
+  window.addEventListener('pointerup', () => { if(!touchPointersDown.size) touchScrollBlocked = false; });
+  window.addEventListener('pointercancel', () => { if(!touchPointersDown.size) touchScrollBlocked = false; });
+
+  // Double-tap: two quick taps in about the same place send a double-click to what is under the
+  // finger, everywhere in the page. The browser's own copy of one (some browsers send it) is
+  // dropped, so nothing happens twice. A tap: the finger lifts within HOLD_MS, near where it went down.
+  const DOUBLE_TAP_MS = 400, DOUBLE_TAP_SLOP = 25;
+  const touchDownAt = new Map(); // pointerId -> { x, y, time }
+  let lastTap = null;
+  window.addEventListener('pointerdown', (ev) => {
+    if(ev.pointerType !== 'mouse') touchDownAt.set(ev.pointerId, { x: ev.clientX, y: ev.clientY, time: performance.now() });
+  }, true);
+  window.addEventListener('pointercancel', (ev) => { touchDownAt.delete(ev.pointerId); lastTap = null; });
+  window.addEventListener('pointerup', (ev) => {
+    if(ev.pointerType === 'mouse') return;
+    const down = touchDownAt.get(ev.pointerId);
+    touchDownAt.delete(ev.pointerId);
+    const now = performance.now();
+    if(!down || now - down.time > HOLD_MS || Math.hypot(ev.clientX - down.x, ev.clientY - down.y) > HOLD_SLOP){ lastTap = null; return; }
+    const prev = lastTap;
+    if(prev && now - prev.time < DOUBLE_TAP_MS && Math.hypot(ev.clientX - prev.x, ev.clientY - prev.y) < DOUBLE_TAP_SLOP){
+      lastTap = null;
+      const target = document.elementFromPoint(ev.clientX, ev.clientY);
+      if(target) target.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true, composed: true, detail: 2, clientX: ev.clientX, clientY: ev.clientY, view: window }));
+    } else {
+      lastTap = { x: ev.clientX, y: ev.clientY, time: now };
+    }
+  });
+  window.addEventListener('dblclick', (ev) => {
+    if(ev.isTrusted && isEmulatedMouse(ev)){ ev.stopImmediatePropagation(); ev.preventDefault(); }
+  }, true);
+
+  // Larger invisible touch areas (styles.css, body.touch-input): on a touchscreen (pointer:
+  // coarse) always; elsewhere (a touchscreen laptop) from the first touch until a mouse is used.
+  const coarsePointer = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  function setTouchInput(on){ if(document.body && document.body.classList.contains('touch-input') !== on) document.body.classList.toggle('touch-input', on); }
+  if(coarsePointer) setTouchInput(true);
+  window.addEventListener('pointerdown', (ev) => { setTouchInput(ev.pointerType !== 'mouse' || coarsePointer); }, true);
+  window.addEventListener('pointermove', (ev) => { if(ev.pointerType === 'mouse' && !coarsePointer) setTouchInput(false); }, true);
   // ---------- canvases + whole-system undo/redo ----------
   const MAX_HISTORY = 80;
   let history = [];
@@ -1771,8 +1884,15 @@
       // no text selection on tabs: a selected tab name would turn a drag into a native text drag
       pressDefault(ev);
       if(ev.button !== 0) return;
+      // A finger swipes the tab strip along; held still first, it moves the tab (step 9b).
+      if(ev.type === 'pointerdown'){
+        waitForHold(ev, { onHold: () => { holdBlocksScrolling(); startCanvasTabDrag(ev, tab.dataset.id, tab, true); } });
+        return;
+      }
       startCanvasTabDrag(ev, tab.dataset.id, tab);
     });
+    // A finger's press and hold makes the browser's own menu; the hold moves the tab instead.
+    tab.addEventListener('contextmenu', (ev) => { if(isEmulatedMouse(ev)) ev.preventDefault(); });
     tab.addEventListener('dragstart', (ev) => ev.preventDefault());
     closeX.addEventListener('click', (ev) => {
       ev.stopPropagation();
@@ -1806,9 +1926,11 @@
   // Drag a canvas tab left/right to reorder canvases: the tab follows the pointer and a
   // marker shows the drop slot; the drop runs fm.moveCanvas (one undo step, recordable).
   let tabDragJustEnded = false;
-  function startCanvasTabDrag(downEv, canvasId, tabEl){
+  // lifted: a finger's hold has already picked the tab up, before it moves.
+  function startCanvasTabDrag(downEv, canvasId, tabEl, lifted){
     const startX = downEv.clientX;
     let dragging = false, marker = null, targetPos = null;
+    if(lifted) tabEl.classList.add('tab-lifted');
     function computeTarget(clientX){
       const others = Array.from(canvasTabsEl.querySelectorAll('.canvas-tab')).filter(t => t !== tabEl);
       let idx = 0;
@@ -1835,6 +1957,7 @@
       targetPos = computeTarget(ev.clientX);
     }
     function onUp(ev, cancelled){
+      tabEl.classList.remove('tab-lifted');
       if(!dragging) return;
       tabEl.classList.remove('tab-dragging');
       tabEl.style.transform = '';
@@ -1877,6 +2000,7 @@
   }
 
   btnAddCanvas.addEventListener('click', () => fm.addCanvas());
+  blockScrollWhileHolding(canvasTabsEl);
 
   function deleteSelected(){
     if(selectedEdgeId){
@@ -3344,12 +3468,21 @@
     followPointer(downEvent, onMove, onUp);
   }
 
-  // Mouse only: a finger on empty canvas scrolls it, and a tap's copied mouse events still
-  // reach here, so a tap on empty canvas clears the selection as before.
+  // The mouse: a tap's copied mouse events also reach here, so a tap on empty canvas clears the
+  // selection as before.
   viewport.addEventListener('mousedown', (e) => {
     if(e.button === 2) return; // right button is reserved for arrow-drawing, started from a node
     if(e.target === viewport || e.target === canvas || e.target === svg){
       startMarquee(e);
+    }
+  });
+  // A finger on empty canvas scrolls it; held still first, then dragged, it draws the box
+  // (step 9b), which replaces the selection like a plain mouse box.
+  blockScrollWhileHolding(viewport);
+  viewport.addEventListener('pointerdown', (e) => {
+    if(e.pointerType === 'mouse' || touchPointersDown.size !== 1) return;
+    if(e.target === viewport || e.target === canvas || e.target === svg){
+      waitForHold(e, { onHold: () => { holdBlocksScrolling(); startMarquee(e); } });
     }
   });
   viewport.addEventListener('contextmenu', (e) => { e.preventDefault(); });
@@ -4943,6 +5076,7 @@
       el.style.width = n.w + 'px';
       el.style.height = n.h + 'px';
       el.classList.toggle('selected', selectedNodeIds.has(n.id));
+      el.classList.toggle('arrow-source', !!tapArrow && tapArrow.fromId === n.id); // 08b-touch-menu.js
 
       if(isBlockInstance || isFunction){
         // content fully handled by renderBlockInstanceBody() / renderFunctionNodeBody() above
@@ -5364,9 +5498,19 @@
         startModifiedInteraction(id, ev);
         return;
       }
-      if(!selectedNodeIds.has(id) || selectedEdgeId){
-        selectNodesOnly([id]);
+      const selectJustThis = () => { if(!selectedNodeIds.has(id) || selectedEdgeId) selectNodesOnly([id]); };
+      // A finger or pen: a tap selects and moving drags, as the mouse does; held still, it opens
+      // the node's menu (the touch way to the mouse-only gestures above, step 9b) and leaves the
+      // selection as it was, for the menu's "Add to selection".
+      if(ev.type === 'pointerdown'){
+        waitForHold(ev, {
+          onMoveFirst: () => { selectJustThis(); startDrag(id, ev); },
+          onRelease: (up, cancelled) => { if(!cancelled) selectJustThis(); },
+          onHold: () => showNodeTouchMenu(id, ev.clientX, ev.clientY),
+        });
+        return;
       }
+      selectJustThis();
       startDrag(id, ev);
     });
     el.addEventListener('click', (ev) => {
@@ -5400,16 +5544,22 @@
       if(ev.target.tagName === 'TEXTAREA') return;
       const n = getNode(el.dataset.id);
       if(!n) return;
-      if(n.type === 'operator') showOpPicker(n.id);
-      else if(n.type === 'periodShift') showShiftPicker(n);
-      else if(n.type === 'alias'){
-        if(n.auto) showMessage("This alias was auto-created by a Plug/Socket match on another canvas. It regenerates automatically — to change it, edit the Plug or Socket name instead.");
-        else showAliasPicker(n);
-      }
-      else if(n.type === 'blockInstance') showBlockPicker(n);
-      else if(n.type === 'function'){ if(!ev.target.classList.contains('tag-btn')) showFunctionDefinition(n); }
-      else startEdit(n.id);
+      if(n.type === 'function' && ev.target.classList.contains('tag-btn')) return;
+      editNode(n);
     });
+  }
+
+  // What a double-click on a node does (also the touch menu's Edit).
+  function editNode(n){
+    if(n.type === 'operator') showOpPicker(n.id);
+    else if(n.type === 'periodShift') showShiftPicker(n);
+    else if(n.type === 'alias'){
+      if(n.auto) showMessage("This alias was auto-created by a Plug/Socket match on another canvas. It regenerates automatically — to change it, edit the Plug or Socket name instead.");
+      else showAliasPicker(n);
+    }
+    else if(n.type === 'blockInstance') showBlockPicker(n);
+    else if(n.type === 'function') showFunctionDefinition(n);
+    else startEdit(n.id);
   }
 
   function computeSnap(movingNode, x, y, excludeIds){
@@ -5935,6 +6085,145 @@
     box.appendChild(actions);
   }
 
+  // ---------- touch: a node's menu, and drawing an arrow by two taps (step 9b) ----------
+  // Pressing and holding a node with a finger or pen opens this menu: the mouse-only gestures
+  // (right-drag, Alt-drag, Ctrl-drag, Shift-click), what a double-click and the 🎨 button do,
+  // Delete, and what hovering would show. Text from the model goes in only as textContent.
+  let touchMenu = null;
+  function closeTouchMenu(){
+    if(!touchMenu) return;
+    touchMenu.remove();
+    touchMenu = null;
+    document.removeEventListener('pointerdown', onTouchMenuOutside, true);
+    document.removeEventListener('keydown', onTouchMenuKey, true);
+  }
+  function onTouchMenuOutside(ev){ if(touchMenu && !touchMenu.contains(ev.target)) closeTouchMenu(); }
+  function onTouchMenuKey(ev){ if(ev.key === 'Escape'){ ev.stopPropagation(); closeTouchMenu(); } }
+
+  // What hovering over a node's parts shows: calculation errors, the plugs feeding a
+  // "⚡ ×N" socket, a function node's problem. Button tooltips only name the button.
+  function nodeHoverTexts(el){
+    const out = [];
+    el.querySelectorAll('[title]').forEach(x => {
+      if(x.closest('button, .tag-btn, .vindex-toggle, .reducer-chip, textarea')) return;
+      const t = (x.title || '').trim();
+      if(t && !out.includes(t)) out.push(t);
+    });
+    return out;
+  }
+
+  function showNodeTouchMenu(id, clientX, clientY){
+    closeTouchMenu();
+    closePicker();
+    const n = getNode(id);
+    const el = canvas.querySelector(`.node[data-id="${id}"]`);
+    if(!n || !el) return;
+    // The menu acts on the whole selection when the node is part of it (as a drag does).
+    const inSelection = selectedNodeIds.has(id) && !selectedEdgeId;
+    const targets = () => (inSelection ? Array.from(selectedNodeIds) : [id]).map(getNode).filter(Boolean);
+    const refs = () => targets().map(x => '#' + x.id);
+    const several = inSelection && selectedNodeIds.size > 1;
+
+    const menu = document.createElement('div');
+    menu.className = 'touch-menu';
+    menu.setAttribute('role', 'menu');
+    nodeHoverTexts(el).forEach(t => {
+      const p = document.createElement('div');
+      p.className = 'touch-menu-info';
+      p.textContent = t;
+      menu.appendChild(p);
+    });
+    function item(label, run, disabled){
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.setAttribute('role', 'menuitem');
+      b.textContent = label;
+      if(disabled) b.disabled = true;
+      b.addEventListener('click', () => { closeTouchMenu(); run(); });
+      menu.appendChild(b);
+      return b;
+    }
+    item('Draw arrow from here', () => startTapConnection(id));
+    const allRects = targets().every(x => x.type === 'value');
+    item(several ? 'Make aliases' : 'Make alias', () => {
+      const made = guarded(() => fm.aliasOf(refs()));
+      if(Array.isArray(made) && made.length) selectNodesOnly(made);
+    }, !allRects);
+    item(several ? 'Duplicate selection' : 'Duplicate', () => {
+      const made = guarded(() => fm.duplicate(refs()));
+      if(Array.isArray(made) && made.length) selectNodesOnly(made);
+    });
+    item(inSelection ? 'Remove from selection' : 'Add to selection', () => toggleNodeSelection(id));
+    item('Edit…', () => { const m = getNode(id); if(m) editNode(m); });
+    if(n.type === 'value') item('Properties…', () => { const m = getNode(id); if(m) showPropertiesEditor(m); });
+    item(several ? 'Delete selection' : 'Delete', () => guarded(() => fm.deleteNodes(refs()))).classList.add('danger');
+
+    document.body.appendChild(menu);
+    touchMenu = menu;
+    // Beside the finger rather than under it, kept on screen.
+    const r = menu.getBoundingClientRect();
+    const left = clientX + 24 + r.width <= window.innerWidth - 8 ? clientX + 24 : Math.max(8, clientX - 24 - r.width);
+    const top = Math.min(Math.max(8, clientY - r.height / 2), Math.max(8, window.innerHeight - r.height - 8));
+    menu.style.left = left + 'px';
+    menu.style.top = top + 'px';
+    document.addEventListener('pointerdown', onTouchMenuOutside, true);
+    document.addEventListener('keydown', onTouchMenuKey, true);
+  }
+
+  // "Draw arrow from here": the next tap on a node, or on one of its input dots, draws the arrow
+  // there, by the same rules as dropping one (connectOnto). A tap anywhere else, Escape or
+  // Cancel stops. The tap does nothing else (no selection, no drag, no button).
+  // tapArrow ({ fromId, banner } while waiting for the tap) is declared in 02b-pointer-input.js,
+  // before the first render reads it.
+  function startTapConnection(fromId){
+    endTapConnection();
+    const banner = document.createElement('div');
+    banner.id = 'tapArrowBanner';
+    const text = document.createElement('span');
+    text.textContent = 'Tap the node to draw the arrow to, or one of its input dots.';
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.textContent = 'Cancel';
+    cancel.addEventListener('click', endTapConnection);
+    banner.appendChild(text);
+    banner.appendChild(cancel);
+    document.body.appendChild(banner);
+    tapArrow = { fromId, banner };
+    render();
+    document.addEventListener('pointerdown', onTapArrowPress, true);
+    document.addEventListener('keydown', onTapArrowKey, true);
+  }
+  function endTapConnection(){
+    if(!tapArrow) return;
+    tapArrow.banner.remove();
+    tapArrow = null;
+    canvas.querySelectorAll('.node.arrow-source').forEach(x => x.classList.remove('arrow-source'));
+    document.removeEventListener('pointerdown', onTapArrowPress, true);
+    document.removeEventListener('keydown', onTapArrowKey, true);
+  }
+  function onTapArrowKey(ev){ if(ev.key === 'Escape'){ ev.stopPropagation(); endTapConnection(); } }
+  function onTapArrowPress(ev){
+    if(!tapArrow || tapArrow.banner.contains(ev.target)) return;
+    // The tap is this mode's alone: no mouse events copied from it, and its click is dropped.
+    ev.stopPropagation();
+    ev.preventDefault();
+    const swallowClick = (c) => { c.stopPropagation(); c.preventDefault(); };
+    document.addEventListener('click', swallowClick, true);
+    setTimeout(() => document.removeEventListener('click', swallowClick, true), 800);
+
+    const fromId = tapArrow.fromId;
+    const target = ev.target;
+    const nodeEl = target.closest ? target.closest('#canvas .node') : null;
+    const toNode = nodeEl ? getNode(nodeEl.dataset.id) : null;
+    // A block takes an arrow only on one of its input dots: say so and keep waiting.
+    if(toNode && toNode.type === 'blockInstance' && nodeEl.dataset.id !== fromId && !(target.closest('.io-port') && target.closest('.io-port').dataset.portDir === 'in')){
+      toast('Tap one of the block’s input dots.');
+      return;
+    }
+    endTapConnection();
+    if(!getNode(fromId) || !toNode) { render(); return; }
+    connectOnto(fromId, null, target);
+  }
   // Hand-drawn per-period value editor. Only meaningful for value rectangles with no
   // incoming edge (i.e. inputs, not formula-driven) — the render()/curve-btn visibility
   // logic already restricts when this can be opened.
@@ -11479,39 +11768,45 @@
       temp.remove();
       if(cancelled){ render(); return; }
 
-      const target = document.elementFromPoint(ev.clientX, ev.clientY);
-      const targetPortEl = target ? target.closest('.io-port') : null;
-      const targetNodeEl = target ? target.closest('.node') : null;
-      if(!targetNodeEl || targetNodeEl.dataset.id === fromId){ render(); return; }
-      const toId = targetNodeEl.dataset.id;
-      const toNode = getNode(toId);
-
-      let toPort = null;
-      if(targetPortEl && targetPortEl.dataset.portDir === 'in'){
-        toPort = parseInt(targetPortEl.dataset.portIndex, 10);
-      } else if(toNode && toNode.type === 'blockInstance'){
-        // block instances require dropping precisely on one of their input dots
-        render();
-        return;
-      } else if(toNode && toNode.type === 'function'){
-        // Dropped on a function node's body: its first input with no arrow (decided in D2b).
-        const free = firstFreeFunctionPort(toNode);
-        if(free.error){ render(); showMessage(free.error); return; }
-        toPort = free.index;
-      } else if(toNode && operatorPortsOf(toNode)){
-        // Dropped on the body of an operator with named inputs (if, round…): the same rule.
-        const free = firstFreeOperatorPort(toNode);
-        if(free.error){ render(); showMessage(free.error); return; }
-        toPort = free.index;
-      }
-
-      guarded(() => {
-        // By '#id': a node from a file may have any id, which as a bare word would be read as a name.
-        const edgeId = fm.connect('#' + fromId, '#' + toId, fromPortIndex != null ? String(fromPortIndex + 1) : '', toPort !== null ? String(toPort + 1) : '');
-        if(edgeId) selectEdgeOnly(edgeId); else render();
-      });
+      connectOnto(fromId, fromPortIndex, document.elementFromPoint(ev.clientX, ev.clientY));
     }
     followPointer(downEvent, onMove, onUp);
+  }
+
+  // An arrow from fromId (its output port fromPortIndex, if any) dropped on target, the element
+  // under the finger or mouse: onto a node's body or one of its input dots. Shared by drawing an
+  // arrow and by the touch menu's "Draw arrow from here" (a tap on the target).
+  function connectOnto(fromId, fromPortIndex, target){
+    const targetPortEl = target ? target.closest('.io-port') : null;
+    const targetNodeEl = target ? target.closest('.node') : null;
+    if(!targetNodeEl || targetNodeEl.dataset.id === fromId){ render(); return; }
+    const toId = targetNodeEl.dataset.id;
+    const toNode = getNode(toId);
+
+    let toPort = null;
+    if(targetPortEl && targetPortEl.dataset.portDir === 'in'){
+      toPort = parseInt(targetPortEl.dataset.portIndex, 10);
+    } else if(toNode && toNode.type === 'blockInstance'){
+      // block instances require dropping precisely on one of their input dots
+      render();
+      return;
+    } else if(toNode && toNode.type === 'function'){
+      // Dropped on a function node's body: its first input with no arrow (decided in D2b).
+      const free = firstFreeFunctionPort(toNode);
+      if(free.error){ render(); showMessage(free.error); return; }
+      toPort = free.index;
+    } else if(toNode && operatorPortsOf(toNode)){
+      // Dropped on the body of an operator with named inputs (if, round…): the same rule.
+      const free = firstFreeOperatorPort(toNode);
+      if(free.error){ render(); showMessage(free.error); return; }
+      toPort = free.index;
+    }
+
+    guarded(() => {
+      // By '#id': a node from a file may have any id, which as a bare word would be read as a name.
+      const edgeId = fm.connect('#' + fromId, '#' + toId, fromPortIndex != null ? String(fromPortIndex + 1) : '', toPort !== null ? String(toPort + 1) : '');
+      if(edgeId) selectEdgeOnly(edgeId); else render();
+    });
   }
 
 

@@ -149,8 +149,15 @@
       // no text selection on tabs: a selected tab name would turn a drag into a native text drag
       pressDefault(ev);
       if(ev.button !== 0) return;
+      // A finger swipes the tab strip along; held still first, it moves the tab (step 9b).
+      if(ev.type === 'pointerdown'){
+        waitForHold(ev, { onHold: () => { holdBlocksScrolling(); startCanvasTabDrag(ev, tab.dataset.id, tab, true); } });
+        return;
+      }
       startCanvasTabDrag(ev, tab.dataset.id, tab);
     });
+    // A finger's press and hold makes the browser's own menu; the hold moves the tab instead.
+    tab.addEventListener('contextmenu', (ev) => { if(isEmulatedMouse(ev)) ev.preventDefault(); });
     tab.addEventListener('dragstart', (ev) => ev.preventDefault());
     closeX.addEventListener('click', (ev) => {
       ev.stopPropagation();
@@ -184,9 +191,11 @@
   // Drag a canvas tab left/right to reorder canvases: the tab follows the pointer and a
   // marker shows the drop slot; the drop runs fm.moveCanvas (one undo step, recordable).
   let tabDragJustEnded = false;
-  function startCanvasTabDrag(downEv, canvasId, tabEl){
+  // lifted: a finger's hold has already picked the tab up, before it moves.
+  function startCanvasTabDrag(downEv, canvasId, tabEl, lifted){
     const startX = downEv.clientX;
     let dragging = false, marker = null, targetPos = null;
+    if(lifted) tabEl.classList.add('tab-lifted');
     function computeTarget(clientX){
       const others = Array.from(canvasTabsEl.querySelectorAll('.canvas-tab')).filter(t => t !== tabEl);
       let idx = 0;
@@ -213,6 +222,7 @@
       targetPos = computeTarget(ev.clientX);
     }
     function onUp(ev, cancelled){
+      tabEl.classList.remove('tab-lifted');
       if(!dragging) return;
       tabEl.classList.remove('tab-dragging');
       tabEl.style.transform = '';
@@ -255,6 +265,7 @@
   }
 
   btnAddCanvas.addEventListener('click', () => fm.addCanvas());
+  blockScrollWhileHolding(canvasTabsEl);
 
   function deleteSelected(){
     if(selectedEdgeId){
