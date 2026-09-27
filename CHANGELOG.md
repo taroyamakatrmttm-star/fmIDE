@@ -7,6 +7,15 @@ Notable changes before this repository existed (recorded from the development hi
 - One finger on empty canvas still scrolls it, and a tap there still clears the selection.
 - The mouse works exactly as before. What still needs a mouse or keyboard (right-drag, Alt-drag, Ctrl-drag, adding to a selection, the selection box) comes to touch in the next phase.
 - No file format changed.
+## ExcelExporter: tidier formulas and new defaults
+- **Brackets only where Excel needs them.** A formula like `=(F4*(1-F5))` is now written `=F4*(1-F5)`. Brackets stay where Excel's order of operations needs them, and around the right-hand side of an equal level (`A1-(B1-C1)`, `A1+(B1+C1)`), so Excel adds in the same order as fmIDE. The values don't change; the agreement tests check this.
+- **Links before Inputs.** A rectangle that only pulls a value from another sheet, through a plug or an alias, used to be written `=(Sales!E7)` and coloured as a Calculation. It is now written `=Sales!E7` and gets the **Links** format.
+- **New defaults for a new layout** (a saved layout keeps your settings):
+  - "Enforce Input / Calc / Output sections" is off.
+  - "Order within group" is formula order.
+  - The group headers on the gathered Inputs tab show the period labels.
+- No file format changed.
+
 ## Taking down the library's last pack
 - **Fix:** when every pack in the community library has been taken down, the site's build stopped with an error (the library has no `packs/` folder then), so the removal could not be published. It now publishes an empty catalogue, and Browse Library says the library has no packs yet.
 

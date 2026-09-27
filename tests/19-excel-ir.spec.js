@@ -35,6 +35,7 @@ for(const [dir, model] of CASES){
     await X.openExporter(page);
     await X.loadModelFile(page, fixture(dir, model));
     await X.setInputsTab(page, false);
+    await X.setSections(page, true); // the layout the snapshots were pinned with
     const { wb } = await X.generate(page);
     matchSnapshot(testInfo, 'excel-units--' + dir + '--' + model.replace(/\.json$/, ''), unitColumn(wb));
   });
@@ -170,30 +171,55 @@ test('function calls are written out in full, in Excel\'s order of operations', 
   const { wb } = await X.generate(page);
   const f = periodOneFormulas(wb, 'Calls');
   // Nested calls, written out inside one another.
-  expect(f['Margin']).toBe('(({Revenue}-{Cost})/{Revenue})');
-  expect(f['Profit']).toBe('(({Revenue}-{Cost})/{Revenue}*{Revenue})');
-  expect(f['Scaled']).toBe('(({Revenue}-{Cost})/{Revenue}*{Revenue}*{k}-({Revenue}-{Cost})/{Revenue})');
+  expect(f['Margin']).toBe('({Revenue}-{Cost})/{Revenue}');
+  expect(f['Profit']).toBe('({Revenue}-{Cost})/{Revenue}*{Revenue}');
+  expect(f['Scaled']).toBe('({Revenue}-{Cost})/{Revenue}*{Revenue}*{k}-({Revenue}-{Cost})/{Revenue}');
   // An input used twice is repeated in full: an operator's formula, another function's call.
-  expect(f['Square of sum']).toBe('(({Revenue}+{k})*({Revenue}+{k})+({Revenue}+{k}))');
-  expect(f['Profit squared']).toBe('((({Revenue}-{Cost})/{Revenue}*{Revenue})*(({Revenue}-{Cost})/{Revenue}*{Revenue})+(({Revenue}-{Cost})/{Revenue}*{Revenue}))');
+  expect(f['Square of sum']).toBe('({Revenue}+{k})*({Revenue}+{k})+({Revenue}+{k})');
+  expect(f['Profit squared']).toBe('({Revenue}-{Cost})/{Revenue}*{Revenue}*(({Revenue}-{Cost})/{Revenue}*{Revenue})+({Revenue}-{Cost})/{Revenue}*{Revenue}');
   // IFERROR, MIN, MAX, AVERAGE, ABS and MOD with the operators' Excel spellings.
   expect(f['Safe']).toBe('IFERROR({Revenue}/{Divisor},-1)');
-  expect(f['Mods']).toBe('(MOD({a},{b})+MOD(-{a},{b})*10+AVERAGE({a},{b},1)+ABS({a}))');
+  expect(f['Mods']).toBe('MOD({a},{b})+MOD(-{a},{b})*10+AVERAGE({a},{b},1)+ABS({a})');
   // An input with no arrow is NA(), where the formula reads it: IFERROR still catches it.
   expect(f['Catch unwired']).toBe('IFERROR(NA(),{Revenue})');
   // Inside the function's own IFERROR, a period outside the timeline is an error to catch.
-  expect(f['Prior fallback']).toBe('IFERROR(({Revenue}/{Divisor}),IFERROR(NA(),{Nine}))');
+  expect(f['Prior fallback']).toBe('IFERROR({Revenue}/{Divisor},IFERROR(NA(),{Nine}))');
   // Excel's order: a leading minus first (-x^2 is (-x)^2 in both apps), ^ from the left.
-  expect(f['Precedence']).toBe('(2^3^2-({a}-({b}-{x}))+(-({a}^2))-(-(-{b}))+(-{a}^2/4)-{x}*(-{b}))');
+  expect(f['Precedence']).toBe('2^3^2-({a}-({b}-{x}))+(-({a}^2))-(-(-{b}))+(-{a}^2/4)-{x}*(-{b})');
   // Numbers as Excel reads them.
-  expect(f['Numbers']).toBe('({x}*1500+0.5+1E-7*10000000+250)');
+  expect(f['Numbers']).toBe('{x}*1500+0.5+1E-7*10000000+250');
   // A comparison is 1/0 wherever something other than arithmetic reads it, and as the result;
   // so is a TRUE/FALSE read from a cell (Excel's MAX skips TRUE in a cell, and ranks TRUE above
   // every number: LibreOffice can't show either, so the formula text is pinned here).
   expect(f['Flag']).toBe('N({Revenue}>{Cost})');
   expect(f['Flag of flag']).toBe('N(N({Revenue}<{Cost})<{Half})');
-  expect(f['Min flag']).toBe('(MIN(N({Revenue}<{Cost}),5)+MAX(N({Revenue}>={Cost}),-5)+IFERROR(N({Revenue}<={Cost}),9))');
+  expect(f['Min flag']).toBe('MIN(N({Revenue}<{Cost}),5)+MAX(N({Revenue}>={Cost}),-5)+IFERROR(N({Revenue}<={Cost}),9)');
   expect(f['Bigger']).toBe('MAX(N({Rev above cost}),0.5)');
+});
+
+test('an operator\'s formula keeps only the brackets Excel\'s order of operations needs', () => {
+  const code = fs.readFileSync(path.join(ROOT, 'src', 'excel-exporter', 'js', '01-core-translation.js'), 'utf8');
+  const from = code.indexOf('function spellOperator('), to = code.indexOf('function buildCellContent(');
+  const FN = 'const FN_LEVEL = { compare: 1, add: 2, subtract: 2, multiply: 3, divide: 3, power: 4, neg: 5, atom: 6 };\n';
+  const { spellOperator, formulaTop } = vm.runInContext(FN + code.slice(from, to) + '\n;({ spellOperator, formulaTop })', vm.createContext({}));
+  const op = (infix) => (...a) => spellOperator({ infix }, a);
+  const [add, sub, mul, div, pow] = ['+', '-', '*', '/', '^'].map(op);
+  const le = (...a) => spellOperator({ compare: '<=' }, a);
+  const min = (...a) => spellOperator({ fn: 'MIN' }, a);
+  const top = formulaTop;
+  expect(top(mul('F4', sub('1', 'F5')))).toBe('F4*(1-F5)');
+  expect(top(sub(sub('A1', 'B1'), 'C1'))).toBe('A1-B1-C1');
+  expect(top(sub('A1', sub('B1', 'C1')))).toBe('A1-(B1-C1)');          // the right side keeps its grouping
+  expect(top(add('A1', add('B1', 'C1')))).toBe('A1+(B1+C1)');          // …even for +, so fmIDE's adding order stays
+  expect(top(div('A1', mul('B1', 'C1')))).toBe('A1/(B1*C1)');
+  expect(top(pow(add('A1', 'B1'), '2'))).toBe('(A1+B1)^2');
+  expect(top(add('A1', '(-5)'))).toBe('A1+(-5)');                      // a minus on the right stays bracketed
+  expect(top(mul('1E-7', 'A1'))).toBe('1E-7*A1');
+  expect(top(le(add('A1', 'B1'), "'Tab (1)'!C3"))).toBe("A1+B1<='Tab (1)'!C3");
+  expect(top(mul(le('A1', 'B1'), '2'))).toBe('(A1<=B1)*2');
+  expect(top(min(add('A1', 'B1'), 'C1'))).toBe('MIN(A1+B1,C1)');
+  expect(top(add("'O''Brien (x)'!E5"))).toBe("'O''Brien (x)'!E5");      // one input: a plain link
+  expect(top("('a)'!A1)+('b('!B1)")).toBe("('a)'!A1)+('b('!B1)");       // not one bracketed whole
 });
 
 test('the numbers in a function are written so Excel reads the same number', () => {
@@ -212,7 +238,7 @@ test('function calls work inside block instances, and the Functions tab lists th
   await expect(page.locator('#differencesPanel')).toBeHidden();
   const { wb } = await X.generate(page);
   // A block instance's row writes the call with the host's cells.
-  expect(periodOneFormulas(wb, 'Margin Block (instance 1)')['Out margin']).toBe("(('Functions'!E5-'Functions'!E6)/'Functions'!E5)");
+  expect(periodOneFormulas(wb, 'Margin Block (instance 1)')['Out margin']).toBe("('Functions'!E4-'Functions'!E5)/'Functions'!E4");
   // The canvas is called "Functions", so the list gets the next free name, last.
   expect(wb.SheetNames[wb.SheetNames.length - 1]).toBe('Functions 2');
   const ws = wb.Sheets['Functions 2'];
@@ -265,7 +291,7 @@ test('every function case fmIDE shows "?" for is #N/A in Excel and listed before
   const { wb } = await X.generate(page);
   const f = periodOneFormulas(wb, 'Broken');
   for(const label of ['Missing', 'Other versionId', 'Unreadable', 'Loop', 'Missing call', 'Wrong count', 'Too deep']) expect(f[label], label).toBe('NA()');
-  expect(f['Unwired used']).toBe('(({Revenue}-NA())/{Revenue})');
+  expect(f['Unwired used']).toBe('({Revenue}-NA())/{Revenue}');
 });
 
 // A model whose call, written out, is too big for Excel: each function reads its input four
@@ -316,7 +342,7 @@ test('a formula too long or too deeply nested for Excel is #N/A and listed; writ
   expect(f['Deep']).toBe('NA()');
   // Each call's own grouping is kept (a+(b+c)): with fractions, the order of adding can change
   // the last digit, and fmIDE adds in this order.
-  expect(f['Small']).toBe('({x}+{x}+{x}+{x}+({x}+{x}+{x}+{x})+({x}+{x}+{x}+{x})+({x}+{x}+{x}+{x}))');
+  expect(f['Small']).toBe('{x}+{x}+{x}+{x}+({x}+{x}+{x}+{x})+({x}+{x}+{x}+{x})+({x}+{x}+{x}+{x})');
 });
 
 // ---- the operators of phase E1: timing, conditions and rounding ----
@@ -333,12 +359,12 @@ async function formulasOf(page, dir, model, sheet){
 test('phase E1 operators on the canvas: the Period # cell, IF and ROUND by their named inputs, =, <>, AND, OR, NOT', async ({ page }) => {
   const { f, P } = await formulasOf(page, 'agreement', 'operators-e1.json', 'Operators');
   expect(f['Period']).toBe(P + '$3');                                  // the sheet's own "Period #" row
-  expect(f['After start']).toBe('({Period}>={Start})');
+  expect(f['After start']).toBe('{Period}>={Start}');
   expect(f['In window']).toBe('AND({After start},{Before end})');
   expect(f['Outside window']).toBe('NOT({In window})');
   expect(f['First or last']).toBe('OR({Is first},{Is last})');
-  expect(f['Is first']).toBe('({Period}={One})');
-  expect(f['Not first']).toBe('({Period}<>{One})');
+  expect(f['Is first']).toBe('{Period}={One}');
+  expect(f['Not first']).toBe('{Period}<>{One}');
   expect(f['Profit if positive']).toBe('IF({Revenue positive},{Revenue},{Zero})');
   expect(f['Safe ratio']).toBe('IF({Revenue is zero},{Zero},{Cost ratio})');
   // A named input with no arrow is NA(), where it is read.
@@ -360,11 +386,11 @@ test('phase E1 operators in functions, blocks and vertical blocks', async ({ pag
   const { f, P } = await formulasOf(page, 'agreement', 'operators-e1-blocks.json', 'Host');
   const p3 = P + '$3';
   expect(f['In window']).toBe(`N(AND(${p3}>={Start},${p3}<={End}))`);
-  expect(f['Escalated']).toBe(`({Base}*(1+{g})^(${p3}-1))`);
-  expect(f['Rounds']).toBe('(ROUND({X},2)+ROUNDUP({X},0)*10-ROUNDDOWN({X},-1))');
+  expect(f['Escalated']).toBe(`{Base}*(1+{g})^(${p3}-1)`);
+  expect(f['Rounds']).toBe('ROUND({X},2)+ROUNDUP({X},0)*10-ROUNDDOWN({X},-1)');
   expect(f['Safe']).toBe('IF({B}=0,0,{A}/{B})');
   expect(f['Picked']).toBe('IF({A}<>0,{Base},{Seed})');
-  expect(f['Flags']).toBe('(AND({A}>0,{B}>0)+OR({A}>0,{B}>0)*10+NOT({A}>0)*100+({A}={B})*1000)');
+  expect(f['Flags']).toBe('AND({A}>0,{B}>0)+OR({A}>0,{B}>0)*10+NOT({A}>0)*100+({A}={B})*1000');
   // A corkscrew through IF(PERIOD() = 1, first, previous): the branch not taken may leave the
   // timeline (the function's formula decides, not "any input").
   expect(f['Opening']).toBe(`IF(${p3}=1,{Seed},NA())`);

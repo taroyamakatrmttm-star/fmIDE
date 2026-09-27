@@ -12,6 +12,7 @@ for(const model of MODELS){
       await X.openExporter(page);
       await X.loadFixtureModel(page, model);
       await X.setInputsTab(page, inputsOn);
+      await X.setSections(page, true); // the layout these snapshots pin (off is the default since phase A)
       const { wb } = await X.generate(page);
       matchSnapshot(testInfo, variantName(model, inputsOn), X.formulasAndValues(wb));
     });

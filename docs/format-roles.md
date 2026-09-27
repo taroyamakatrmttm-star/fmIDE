@@ -6,7 +6,7 @@ All formatting — on fmIDE's canvas and in the Excel workbook — is defined in
 |---|---|---|
 | Inputs | Canvas + Excel | Hard-coded numbers: input rectangles, scenario values, and the cells you type on the Scenarios tab. |
 | Calculations | Canvas + Excel | Formulas: rectangles fed by an arrow, and every calculated cell in Excel. Blank by default (the normal rectangle look). |
-| Links | Excel | Formulas that only pull a value from another sheet (e.g. a row linked to the Inputs tab). |
+| Links | Excel | Formulas that only pull a value from another sheet (e.g. a row linked to the Inputs tab, or a rectangle fed through a plug or an alias from another canvas). Link comes before Inputs: an input row whose numbers live on the Inputs tab is a Link on its own tab. |
 | Headers | Excel | Each sheet's title and column-header row. |
 | Section Headers | Excel | The INPUTS / CALCULATIONS / OUTPUTS bands. |
 | Labels | Excel | Custom / label rows and group headers (unless the row has its own format in ExcelExporter). |

@@ -64,6 +64,25 @@ async function sort(page, method, within, scope){
 }
 
 // ---------- Start Over / Reset Mapping ----------
+test('a new layout: sections off, formula order within groups, Periods on the Inputs tab\'s group headers', async ({ page }) => {
+  await open(page);
+  await expect(page.locator('#cfgSectionsEnabled')).not.toBeChecked();
+  await expect(page.locator('#sortWithin')).toHaveValue('formula');
+  await X.setInputsTab(page, true);
+  const { wb } = await X.generate(page);
+  for(const name of wb.SheetNames){
+    const ws = wb.Sheets[name];
+    for(const band of ['INPUTS', 'CALCULATIONS', 'OUTPUTS']) expect(X.findRow(ws, band), `${name}: no ${band} band`).toEqual([]);
+  }
+  // Each group header on the Inputs tab (one per source tab) shows the period labels.
+  const ws = wb.Sheets['Inputs'], p1 = X.numToCol(X.periodOneCol(ws));
+  for(const group of ['BS', 'Corkscrew']){
+    const [header] = X.findRow(ws, group);
+    expect(header, `the "${group}" group header`).toBeTruthy();
+    expect(X.text(ws, p1 + header), `${group} header, period 1`).toBe('2027');
+  }
+});
+
 test.describe('Start Over and Reset Mapping', () => {
   test('Start Over keeps the saved layout; re-picking the same file loads it', async ({ page }) => {
     await open(page);
