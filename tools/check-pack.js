@@ -31,7 +31,7 @@ const vm = require('vm');
 const SHARED = path.join(__dirname, '..', 'src', 'shared');
 const SHARED_FILES = ['file-formats.js', 'operators.js', 'uom.js', 'input-rule.js', 'functions.js', 'ir.js', 'library-pack.js', 'fmide-files.js'];
 const SHARED_NAMES = ['FILE_FORMATS', 'FILE_LIMITS', 'fileTextProblem', 'fileDataProblem', 'readFmData', 'FMIDE_FILE_MIGRATIONS',
-  'readLibraryPackData', 'cleanLibraryPackInfo', 'cleanItemOrigin', 'sameAuthorName', 'LIBRARY_PACK_LIMITS', 'LIBRARY_PACK_LICENCES',
+  'readLibraryPackData', 'readLibraryIndexData', 'LIBRARY_INDEX_LIMITS', 'cleanLibraryPackInfo', 'cleanItemOrigin', 'sameAuthorName', 'LIBRARY_PACK_LIMITS', 'LIBRARY_PACK_LICENCES',
   'isTemplateUid', 'cleanTemplateNote', 'TEMPLATE_NOTE_MAX', 'cleanRecipeData', 'RECIPE_MAX_PARTS',
   'cleanFunctionDefinition', 'parseFunctionText', 'compileFunctions', 'functionNameOf', 'FUNCTION_LIMITS',
   'compileModel', 'evaluateModel'];

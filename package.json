@@ -23,6 +23,7 @@
     "test:pack-checker": "playwright test tests/23-pack-checker.spec.js",
     "test:library-checker": "playwright test tests/24-library-checker.spec.js",
     "test:library-catalogue": "playwright test tests/25-library-catalogue.spec.js",
+    "test:library-browse": "playwright test tests/26-library-browse.spec.js",
     "check-pack": "node tools/check-pack.js",
     "bench": "node tools/bench-calc.js"
   },

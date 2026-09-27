@@ -84,3 +84,62 @@ function originText(o){
   const lic = LIBRARY_PACK_LICENCES[o.licence];
   return `From the library pack “${o.packTitle}” by ${o.author}` + (lic ? ` · ${lic.short}` : '');
 }
+
+// ---------- the library's list (phase 8d) ----------
+// /library/index.json (kind "fmIDE-library-index", docs/file-formats.md), written by the
+// site's build (tools/build-library.js) and read by fmIDE's Browse Library. Every text in it
+// comes from the packs, so it is checked like a pack: an entry that fails any check is left
+// out whole (the rest are still shown), and what is kept is only ever shown as plain text.
+// Addresses are never taken from it: fmIDE builds a pack's address from its id alone.
+const LIBRARY_INDEX_LIMITS = { bytes: 10 * 1024 * 1024, packs: 5000, packBytes: 5 * 1024 * 1024 };
+// Characters that make text look different from what it is (the same ones the library's
+// checker refuses, tools/check-pack.js): they change the direction of text, are invisible,
+// or are control characters (a line break is allowed where text may have several lines).
+const LIBRARY_HIDDEN_CHARACTERS = /[\u061C\u200E\u200F\u202A-\u202E\u2066-\u2069\u00AD\u180E\u200B-\u200D\u2060-\u2064\uFEFF\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u2028\u2029]/;
+function hasHiddenCharacter(text){ return typeof text === 'string' && LIBRARY_HIDDEN_CHARACTERS.test(text); }
+const LIBRARY_INDEX_KINDS = ['module', 'system', 'recipe'];
+// One entry of the list, checked. Returns { entry } (only the known fields, cleaned) or
+// { error } (a short reason, for the count of packs that could not be shown).
+function cleanLibraryIndexEntry(e){
+  if(!e || typeof e !== 'object' || Array.isArray(e)) return { error: 'not an entry' };
+  const info = cleanLibraryPackInfo(e);
+  if(info.error) return { error: info.error };
+  const id = info.info.id;
+  const texts = [e.title, e.author, e.description].concat(Array.isArray(e.tags) ? e.tags : []);
+  if(texts.some(hasHiddenCharacter)) return { error: 'hidden characters in its details' };
+  if(e.page !== id || e.file !== 'packs/' + id + '.fmide-pack.json') return { error: 'its addresses are not its own' };
+  if(!Number.isInteger(e.bytes) || e.bytes < 1 || e.bytes > LIBRARY_INDEX_LIMITS.packBytes) return { error: 'its size is wrong' };
+  if(typeof e.sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(e.sha256)) return { error: 'no fingerprint' };
+  if(!Number.isInteger(e.packVersion) || e.packVersion < 1) return { error: 'no pack version' };
+  const date = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null;
+  if(!Array.isArray(e.items) || e.items.length > 2 * LIBRARY_PACK_LIMITS.items) return { error: 'no items' };
+  const uid = (v) => typeof v === 'string' && /^[A-Za-z0-9-]{8,64}$/.test(v);
+  const items = [];
+  for(const it of e.items){
+    if(!it || typeof it !== 'object' || Array.isArray(it)) return { error: 'an item is not an item' };
+    if(it.type !== 'template' && it.type !== 'function') return { error: 'an item of an unknown type' };
+    if(it.type === 'template' && !LIBRARY_INDEX_KINDS.includes(it.kind)) return { error: 'a template of an unknown kind' };
+    if(!uid(it.family) || !uid(it.versionId) || !Number.isInteger(it.version) || it.version < 1) return { error: 'an item without its ids' };
+    if([it.name, it.group, it.note, it.description].some(hasHiddenCharacter)) return { error: 'hidden characters in an item' };
+    const name = packText(it.name, 200);
+    if(!name) return { error: 'an item without a name' };
+    const item = { type: it.type, kind: it.type === 'function' ? 'function' : it.kind, name, family: it.family, version: it.version,
+      versionId: it.versionId, group: packText(it.group, 80), description: packText(it.description, LIBRARY_PACK_LIMITS.description, true),
+      note: packText(it.note, 200), origin: null };
+    if(it.origin !== undefined){
+      const o = it.origin;
+      if(o && typeof o === 'object' && [o.packTitle, o.author].some(hasHiddenCharacter)) return { error: 'hidden characters in an item' };
+      item.origin = cleanItemOrigin(o);
+      if(!item.origin) return { error: 'an item with a bad origin' };
+    }
+    items.push(item);
+  }
+  const n = (k) => items.filter(it => it.kind === k).length;
+  const c = e.counts;
+  if(!c || typeof c !== 'object' || c.templates !== n('module') + n('system') || c.recipes !== n('recipe') || c.functions !== n('function'))
+    return { error: 'its counts do not match its items' };
+  const entry = Object.assign({}, info.info, { added: date(e.added), bytes: e.bytes, sha256: e.sha256, packVersion: e.packVersion,
+    counts: { templates: c.templates, recipes: c.recipes, functions: c.functions }, items });
+  if(!entry.created) entry.created = null;
+  return { entry };
+}

@@ -122,6 +122,7 @@
     { id:'openTemplates',label:'Templates',            icon:'📚', category:'File', defaultShortcut:null, action:() => showTemplatesPicker() },
     { id:'openFunctions', label:'Functions',            icon:'ƒ', category:'File', defaultShortcut:null, action:() => showFunctionsManager() },
     { id:'importFunctions', label:'Import Functions…',  icon:'⇧', category:'File', defaultShortcut:null, action:() => pickFunctionsFile() },
+    { id:'browseLibrary', label:'Browse Library…', icon:'📚', category:'File', defaultShortcut:null, action:() => showLibraryBrowser() },
     { id:'openLibraryPack', label:'Open Library Pack…', icon:'📦', category:'File', defaultShortcut:null, action:() => pickLibraryPackFile() },
     { id:'saveLibraryPack', label:'Save as Library Pack…', icon:'📦', category:'File', defaultShortcut:null, action:() => showSaveLibraryPack() },
     { id:'insertFunction', label:'Insert Function…',    icon:'ƒ', category:'Insert', defaultShortcut:null, action:() => showFunctionPicker(null) },

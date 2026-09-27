@@ -286,7 +286,7 @@ test.describe('the ribbon', () => {
   test('Open Library Pack… and Save as Library Pack… in the File tab\'s Library group, no shortcuts', async ({ page }) => {
     const cfg = await page.evaluate(() => __fmIDE.getRibbonConfig());
     const lib = cfg.tabs.find(t => t.id === 'file').groups.find(g => g.label === 'Library').items.map(i => i.cmd);
-    expect(lib).toEqual(['openTemplates', 'openFunctions', 'openFormats', 'openLibraryPack', 'saveLibraryPack']);
+    expect(lib).toEqual(['openTemplates', 'openFunctions', 'openFormats', 'browseLibrary', 'openLibraryPack', 'saveLibraryPack']);
     expect(await page.evaluate(() => fm.commands().filter(c => /LibraryPack$/.test(c.id)))).toEqual([
       { id: 'openLibraryPack', label: 'Open Library Pack…', category: 'File', shortcut: null },
       { id: 'saveLibraryPack', label: 'Save as Library Pack…', category: 'File', shortcut: null },
@@ -297,13 +297,13 @@ test.describe('the ribbon', () => {
     const ws = (flag, groups) => {
       const system = readFixture('formats', 'sys-current.json');
       return JSON.stringify({ kind: 'fmIDE-workspace', version: 5, system, ui: { ribbonCustomized: true, documentGroupAdded: true, functionsGroupAdded: true,
-        functionCommandsAdded: true, operatorsE1Added: true, libraryPacksAdded: flag, libraryAuthor: 'Someone Else',
+        functionCommandsAdded: true, operatorsE1Added: true, libraryPacksAdded: flag, libraryBrowseAdded: flag, libraryAuthor: 'Someone Else',
         ribbon: { qat: [], tabs: [{ id: 'mine', label: 'Mine', groups }] } } });
     };
     const items = () => page.evaluate(() => __fmIDE.getRibbonConfig().tabs[0].groups.map(g => g.label + ':' + g.items.map(i => i.cmd).join(',')));
     await F.importViaCommand(page, 'importWorkspace', writeFile(testInfo, 'old.json', ws(undefined, [{ label: 'Stuff', items: [{ cmd: 'openFormats' }] }, { label: 'Other', items: [{ cmd: 'addRect' }] }])));
     await F.acceptAll(page);
-    expect(await items()).toEqual(['Stuff:openFormats,openLibraryPack,saveLibraryPack', 'Other:addRect']);
+    expect(await items()).toEqual(['Stuff:openFormats,browseLibrary,openLibraryPack,saveLibraryPack', 'Other:addRect']); // Browse Library… since 8d
     await F.importViaCommand(page, 'importWorkspace', writeFile(testInfo, 'removed.json', ws(true, [{ label: 'Stuff', items: [{ cmd: 'openFormats' }] }])));
     await F.acceptAll(page);
     expect(await items()).toEqual(['Stuff:openFormats']);

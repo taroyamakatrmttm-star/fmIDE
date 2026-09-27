@@ -92,7 +92,7 @@ The community library (a GitHub repository of packs, `docs/step8-community-libra
 
 ## The catalogue's list (`fmIDE-library-index` 1, step 8, phase 8c-3)
 
-The build writes the community library's catalogue into the published site (`/library`, `tools/build-library.js`), and with it `/library/index.json`: every approved pack and what it holds, for browsing the library inside fmIDE later (phase 8d). No app reads it yet.
+The build writes the community library's catalogue into the published site (`/library`, `tools/build-library.js`), and with it `/library/index.json`: every approved pack and what it holds. fmIDE's **Browse Library…** (phase 8d) reads it from its own site; it is never opened as a file (opened by hand, fmIDE says where it belongs).
 
 ```json
 { "kind": "fmIDE-library-index", "version": 1,
@@ -109,6 +109,7 @@ The build writes the community library's catalogue into the published site (`/li
 - Packs newest approved first (`added`, from `packs.json`), then by title. `created` is the pack's own date (`null` if it has none). `page` and `file` are relative to `/library/`; `bytes` and `sha256` are the pack file's, which is served byte for byte.
 - Items grouped as recipes, canvas templates (`module`), system templates, functions, each group in the pack's order. `group` and `note` appear only when the item has them; `origin` only when the item carries one (an item shared again from another pack has that pack's).
 - Every text comes from the packs: anything reading this file must treat it as untrusted, like a pack. The file holds no build date or account, so the same library always gives the same file.
+- **How fmIDE reads it** (`readLibraryIndexData`, `cleanLibraryIndexEntry`): at most 10 MB and 5,000 packs. An entry is left out whole when its details fail the pack rules (`cleanLibraryPackInfo`), `page` isn't its id or `file` isn't `packs/<id>.fmide-pack.json`, `bytes` isn't a whole number from 1 to 5 MB, `sha256` isn't 64 lower-case hex digits, `packVersion` isn't a whole number, an item has an unknown type or kind, no ids, no name or a bad `origin`, `counts` don't match the items, a text holds a hidden character (one that changes the direction of text, is invisible or is a control character), or its id came earlier in the list. The address of a pack is always built from its id, never taken from `file`. The pack fetched must have exactly `bytes` bytes and this `sha256`, and carry this `id`. The build reads its own file the same way and stops if any pack would be left out.
 
 ## Where items came from (`fmIDE-templates` 6, `fmIDE-workspace` 6, `fmIDE-functions` 2, `fmIDE-library-pack` 2)
 

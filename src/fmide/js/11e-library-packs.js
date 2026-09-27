@@ -283,8 +283,9 @@
     input.click();
   }
   // The preview: who made the pack, its licence, and each item with what adding it would do.
-  // Nothing is added until "Add to My Library".
-  function showLibraryPackPreview(read, file){
+  // Nothing is added until "Add to My Library". onAdded (optional): called after adding
+  // (Browse Library refreshes its "In your library" marks).
+  function showLibraryPackPreview(read, file, onAdded){
     const items = libraryPackItems(read);
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
@@ -370,6 +371,7 @@
       if(!out) return;
       close();
       showMessage(libraryPackResultText(out));
+      if(onAdded) onAdded(out);
     });
     okBtn.focus();
   }

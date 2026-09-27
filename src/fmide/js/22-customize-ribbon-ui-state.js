@@ -305,6 +305,7 @@
       functionCommandsAdded: true, // D2b: Insert Function… and Update Function… in My Functions
       operatorsE1Added: true, // E1b: the new operators in the Compare and Excel Functions groups
       libraryPacksAdded: true, // 8a: Open Library Pack… and Save as Library Pack… in the File tab's Library group
+      libraryBrowseAdded: true, // 8d: Browse Library… in the same group
       libraryAuthor
     };
   }
@@ -364,6 +365,20 @@
       ['openLibraryPack', 'saveLibraryPack'].forEach(cmd => { if(!g.items.some(it => it && it.cmd === cmd)) g.items.push({ cmd }); });
     }));
   }
+  // One-time update (8d) of a customised ribbon: Browse Library… joins the group holding Open
+  // Library Pack… (or else Format Presets), just before Open Library Pack…, wherever the
+  // person moved it. A ribbon without either is left alone (the Command Launcher has it); a
+  // command removed afterwards stays removed (this runs once).
+  function addLibraryBrowseCommandToRibbon(){
+    const groups = [];
+    ribbonState.config.tabs.forEach(t => (t && Array.isArray(t.groups) ? t.groups : []).forEach(g => { if(g && Array.isArray(g.items)) groups.push(g); }));
+    const has = (g, cmd) => g.items.some(it => it && it.cmd === cmd);
+    if(groups.some(g => has(g, 'browseLibrary'))) return;
+    const g = groups.find(x => has(x, 'openLibraryPack')) || groups.find(x => has(x, 'openFormats'));
+    if(!g) return;
+    const at = g.items.findIndex(it => it && it.cmd === 'openLibraryPack');
+    g.items.splice(at < 0 ? g.items.length : at, 0, { cmd: 'browseLibrary' });
+  }
   // fromImport: a workspace file (maybe someone else's) — its author name for library packs
   // is not taken over; only your own autosave remembers yours.
   function applyUiPayload(ui, fromImport){
@@ -377,6 +392,7 @@
       if(ui.functionCommandsAdded !== true) addFunctionCommandsToRibbon();
       if(ui.operatorsE1Added !== true) addE1OperatorsToRibbon();
       if(ui.libraryPacksAdded !== true) addLibraryPackCommandsToRibbon();
+      if(ui.libraryBrowseAdded !== true) addLibraryBrowseCommandToRibbon();
     }
     if(!fromImport && typeof ui.libraryAuthor === 'string') libraryAuthor = ui.libraryAuthor.slice(0, LIBRARY_PACK_LIMITS.author);
     if(typeof ui.ribbonCollapsed === 'boolean') ribbonState.collapsed = ui.ribbonCollapsed;

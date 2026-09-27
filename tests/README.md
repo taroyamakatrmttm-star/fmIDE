@@ -32,11 +32,13 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | `npm run test:library-packs` | library packs (save, preview, open; packs from other people; where items came from and the family-rule warnings) and the size limits on every file opened, both apps |
 | `npm run test:pack-checker` | the library's pack checker, `tools/check-pack.js` (mostly in Node; one check against fmIDE) |
 | `npm run test:library-checker` | the library's rules: the checker's library mode (`--library`), pull requests, `--write-records`, the Markdown report (Node only) |
+| `npm run test:library-catalogue` | the library's catalogue the build writes under `/library` (pages, downloads, `index.json`, escaping, its security policy) |
+| `npm run test:library-browse` | browsing the library inside fmIDE (Browse Library…, its checks of the list and packs, offline, the single file, `window.fm`) |
 | `npx playwright test -g "Tree view"` | tests whose name matches |
 
 After a failure, `npx playwright show-report` opens the report, with a trace for each failed test.
 
-Every test runs offline. Each app is served from a fake origin (`http://local.test/`), every other request is blocked, and a test fails if an app tried to reach the network.
+Every test runs offline. Each app is served from a fake origin (`http://local.test/`), every other request is blocked, and a test fails if an app tried to reach the network. The site's tests (groups 12, 25, 26) serve a freshly built site from this machine and fail if a page reaches any other address.
 
 ## Snapshots
 
@@ -57,14 +59,14 @@ Review the snapshot diff before committing: it is the record of what the change 
 ## Layout
 
 ```
-0-smoke.spec.js … 25-library-catalogue.spec.js   one file per group in SPEC.md (6 and 7 split per app)
+0-smoke.spec.js … 26-library-browse.spec.js     one file per group in SPEC.md (6 and 7 split per app)
 helpers/apps.js       the offline fixture: serves the apps, blocks and counts other requests
 helpers/excel.js      load a model, toggle options, capture the workbook (window.__wb + real .xlsx bytes)
 helpers/soffice.js    find LibreOffice, recalculate workbooks, read values
 helpers/fmide.js      fmIDE file choosers, dialogs, downloads
 helpers/storage.js    read the apps' IndexedDB, make its writes fail, hide the page
 helpers/documents.js  fake file pickers (File System Access API) for fmIDE documents
-helpers/site.js       builds the installable site and serves it from this machine (groups 12, 25; without the
+helpers/site.js       builds the installable site and serves it from this machine (groups 12, 25, 26; without the
                       library/ submodule unless a test passes a library folder)
 helpers/snapshot.js   JSON snapshots
 fixtures/             sample files (do not edit; add new ones alongside)

@@ -1,13 +1,13 @@
 // Writes the community library's catalogue (step 8, phase 8c-3; docs/step8-community-library.md)
 // into the site: plain HTML pages with no JavaScript, the pack files to download, and
-// index.json for browsing inside fmIDE later (8d). Called by tools/build.js when the library
+// index.json for browsing inside fmIDE (8d, Browse Library). Called by tools/build.js when the library
 // folder is there (the git submodule library/, pinned to one commit). Node only, no packages,
 // no network.
 //
 //   library/index.html                     /library/            every pack
 //   library/<pack id>.html                 /library/<pack id>   one pack: its items and credit
 //   library/packs/<pack id>.fmide-pack.json                     the pack, byte for byte
-//   library/index.json                                          the list, for 8d
+//   library/index.json                                          the list, for Browse Library (8d)
 //   library/style.css                                           from src/library/style.css
 //   library/LICENSE-CC-BY-4.0.txt                               the licence of every item
 //
@@ -70,7 +70,12 @@ function buildLibrary(dir){
     files.set('library/' + p.id + '.html', Buffer.from(packPage(p, byId), 'utf8'));
     files.set('library/packs/' + p.id + '.fmide-pack.json', p.bytes);
   });
-  files.set('library/index.json', Buffer.from(JSON.stringify(indexJson(packs), null, 2) + '\n', 'utf8'));
+  const index = indexJson(packs);
+  // fmIDE's Browse Library reads the list with the shared reader, leaving out any entry that
+  // fails its checks: every pack the catalogue publishes must pass it.
+  const read = S.readLibraryIndexData(JSON.parse(JSON.stringify(index)));
+  if(read.error || read.dropped || read.packs.length !== packs.length) throw new LibraryError('The library\'s list (index.json) would not read in fmIDE' + (read.error ? ': ' + read.error : ' (' + (read.dropped || packs.length - read.packs.length) + ' pack(s) left out)') + ', so nothing is published.');
+  files.set('library/index.json', Buffer.from(JSON.stringify(index, null, 2) + '\n', 'utf8'));
   files.set('library/style.css', fs.readFileSync(path.join(ROOT, 'src', 'library', 'style.css')));
   files.set('library/LICENSE-CC-BY-4.0.txt', fs.readFileSync(path.join(ROOT, 'docs', 'LICENSE-CC-BY-4.0.txt')));
   return { files, packs: packs.length };

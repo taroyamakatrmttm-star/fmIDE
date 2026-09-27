@@ -313,7 +313,8 @@
       props.appendChild(el('h5', '', 'Action step'));
       const sel = el('select');
       const cats = {};
-      ACTION_LIST.filter(d => d.name !== 'getValue' || true).forEach(d => { (cats[d.category] = cats[d.category] || []).push(d); });
+      // Actions a macro can't run (the library's, which wait for the network) aren't offered.
+      ACTION_LIST.filter(d => d.macro !== false).forEach(d => { (cats[d.category] = cats[d.category] || []).push(d); });
       Object.keys(cats).sort((a, b) => (ACTION_CATEGORY_ORDER.indexOf(a) + 100) % 100 - (ACTION_CATEGORY_ORDER.indexOf(b) + 100) % 100).forEach(cat => {
         const og = el('optgroup'); og.label = cat;
         cats[cat].forEach(d => { const o = el('option', '', `${d.label}  (${d.name})`); o.value = d.name; og.appendChild(o); });
