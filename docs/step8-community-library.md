@@ -73,6 +73,7 @@ The owner approved the recommendations of the 8c-3 plan (27 September 2026): a p
 - **`/library/index.json`** (kind `fmIDE-library-index` 1, `docs/file-formats.md`), read by Browse Library since 8d.
 - **The deploy job** checks out the submodule at its pinned commit (the library is public, so GitHub's normal token reads it) and builds with `--require-library`. The test job doesn't fetch it: the tests use samples.
 - `tools/pages-server.js` (the local copy of Cloudflare) learned folder addresses: `/library` → `/library/`, `/library/index.html` → `/library/`, `/library/` serves `library/index.html`; and `.css` files.
+- **Fixed later:** taking down the library's last pack removes the `packs/` folder (Git keeps no empty folder). The checker passed that, but the build stopped with an error, so the deploy would have failed and the old catalogue stayed live. The build now treats a missing `packs/` as a library with no packs (group 25).
 - Tests: group 25 (`tests/25-library-catalogue.spec.js`, `npm run test:library-catalogue`), samples `tests/fixtures/library/sample-library/` and `tests/fixtures/library/catalogue-hostile/` (a pack saved by fmIDE with markup in every text shown). The site tests (group 12) now build without a library, so they never depend on the submodule.
 
 ## Phase 8c-2 — agreed choices (27 September 2026)

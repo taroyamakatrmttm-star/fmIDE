@@ -7,6 +7,8 @@ Notable changes before this repository existed (recorded from the development hi
 - One finger on empty canvas still scrolls it, and a tap there still clears the selection.
 - The mouse works exactly as before. What still needs a mouse or keyboard (right-drag, Alt-drag, Ctrl-drag, adding to a selection, the selection box) comes to touch in the next phase.
 - No file format changed.
+## Taking down the library's last pack
+- **Fix:** when every pack in the community library has been taken down, the site's build stopped with an error (the library has no `packs/` folder then), so the removal could not be published. It now publishes an empty catalogue, and Browse Library says the library has no packs yet.
 
 ## Browsing the library inside fmIDE (step 8, phase 8d)
 - **File → Browse Library…** (on the published site) lists the community library's packs: search, filter by tag or by what a pack holds, sort, and see a pack's items, licence and credit, with the items you already have marked. **Preview and add…** opens the usual Open Library Pack preview; nothing is added without it.
