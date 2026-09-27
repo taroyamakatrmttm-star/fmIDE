@@ -224,3 +224,5 @@ How it was checked:
 
 - New test group 21 (`tests/21-functions-fmide.spec.js`, 21 tests) with new samples in `tests/fixtures/functions/` (`library.json`, `library-fork.json`, `library-other-margin.json`, `library-newer-v2.json`); the fix's test fails without it. A new security test (group 5, `tests/fixtures/security/evil-functions.json`): markup in a formula, description, notes and a call's name is shown as text and nothing runs.
 - Every other test, the workbook snapshots and fmIDE's pinned values are unchanged.
+- The whole suite passes: 456 tests, LibreOffice included.
+- **Speed** (`npm run bench`, same machine, `main` and D2a run back to back): the calculation code is unchanged, and a model without functions is no slower. `fm.evaluate` on the large model (1,865 nodes, 24 periods): medians 1,904–2,035 ms before, 1,854–2,043 ms after (five runs each); on the biggest sample, 60 runs, three times: 4.4–4.9 ms before, 4.2–4.3 ms after. ExcelExporter is untouched by D2a (about 610 ms to generate the large model).
