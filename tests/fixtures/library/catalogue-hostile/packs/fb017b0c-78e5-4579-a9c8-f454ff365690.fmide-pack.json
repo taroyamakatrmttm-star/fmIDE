@@ -1,0 +1,107 @@
+{
+  "kind": "fmIDE-library-pack",
+  "version": 2,
+  "pack": {
+    "id": "fb017b0c-78e5-4579-a9c8-f454ff365690",
+    "title": "Hostile </title><script>alert(6)</script> & \"pack\"",
+    "author": "Eve <script>alert(7)</script>",
+    "licence": "CC-BY-4.0",
+    "description": "First line <script>alert(\"x\")</script> & 'quotes' \"><img src=x onerror=alert(1)>\nSecond <b>line</b>",
+    "tags": [
+      "<script>",
+      "a&b",
+      "\"quoted\""
+    ],
+    "created": "2026-09-27"
+  },
+  "templates": [
+    {
+      "name": "Recipe \"><script>alert(5)</script>",
+      "description": "<script>alert(\"x\")</script> & 'quotes' \"><img src=x onerror=alert(1)>",
+      "group": "<u>g</u>",
+      "kind": "recipe",
+      "family": "7cec8cc7-72a7-4415-8d4e-df36a1a9f806",
+      "version": 1,
+      "note": "<script>alert(\"x\")</script> & 'quotes' \"><img src=x onerror=alert(1)>",
+      "versionId": "f9f3bedc-613d-42e5-a43e-9e181665f8af",
+      "data": {
+        "kind": "recipe",
+        "parts": [
+          {
+            "family": "fam-hostile-canvas",
+            "version": "latest",
+            "name": "Evil </title><script>alert(1)</script>"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Evil </title><script>alert(1)</script>",
+      "description": "Line 1 <script>alert(\"x\")</script> & 'quotes' \"><img src=x onerror=alert(1)>\nLine 2 <a href=\"javascript:alert(1)\">click</a>",
+      "group": "<b>Group</b> & co",
+      "kind": "module",
+      "family": "fam-hostile-canvas",
+      "version": 1,
+      "note": "note <script>alert(\"x\")</script> & 'quotes' \"><img src=x onerror=alert(1)>",
+      "versionId": "vid-hostile-canvas-1",
+      "data": {
+        "version": 4,
+        "kind": "module",
+        "name": "<i>Canvas</i>",
+        "selfCanvasId": "c1",
+        "nextId": 20,
+        "nodes": [
+          {
+            "id": "n1",
+            "type": "value",
+            "x": 60,
+            "y": 60,
+            "w": 170,
+            "h": 64,
+            "text": "<svg onload=alert(1)>\n40",
+            "plugs": [
+              "<img src=x onerror=alert(2)>",
+              "to \"Total\" & more"
+            ]
+          },
+          {
+            "id": "n2",
+            "type": "operator",
+            "x": 300,
+            "y": 60,
+            "text": "+",
+            "socket": "</code><script>alert(3)</script>"
+          }
+        ],
+        "edges": []
+      }
+    }
+  ],
+  "functions": [
+    {
+      "family": "56df3776-7abc-4328-8296-9afe03837509",
+      "version": 1,
+      "versionId": "f73c3ccf-22d8-4991-9899-3bfe9855ee9c",
+      "text": "Worse(A) = Evil(A, A) * 2",
+      "description": "</pre></code><script>alert(4)</script>",
+      "note": "",
+      "calls": [
+        {
+          "name": "Evil",
+          "family": "e109af59-adce-4b72-b475-dcaf60348970",
+          "version": 1,
+          "versionId": "eada829c-7541-4353-a914-06545047031d"
+        }
+      ]
+    },
+    {
+      "family": "e109af59-adce-4b72-b475-dcaf60348970",
+      "version": 1,
+      "versionId": "eada829c-7541-4353-a914-06545047031d",
+      "text": "Evil(A, B) = A + B",
+      "description": "Adds. <script>alert(\"x\")</script> & 'quotes' \"><img src=x onerror=alert(1)>",
+      "note": "v1 <script>alert(\"x\")</script> & 'quotes' \"><img src=x onerror=alert(1)>",
+      "calls": []
+    }
+  ]
+}

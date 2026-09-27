@@ -50,6 +50,10 @@ jobs:
   # address, posted on the pull request. Needs the repository secrets CLOUDFLARE_API_TOKEN
   # (a token with the Cloudflare Pages: Edit permission) and CLOUDFLARE_ACCOUNT_ID; without
   # them the job only notes that it skipped. See docs/step5-publish.md.
+  # The site includes the community library's catalogue (/library), built from the library/
+  # submodule at the commit this repository pins; the library is public, so GitHub's normal
+  # token fetches it. The build checks it again and publishes nothing if a pack fails, or if
+  # the library is missing (a site without it would take the live catalogue down).
   deploy:
     needs: test
     if: >-
@@ -80,6 +84,9 @@ jobs:
 
       - uses: actions/checkout@v4
         if: steps.secrets.outputs.ready == 'true'
+        with:
+          submodules: true   # library/, the community library, at its pinned commit
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         if: steps.secrets.outputs.ready == 'true'
@@ -88,7 +95,7 @@ jobs:
 
       - name: Build the site
         if: steps.secrets.outputs.ready == 'true'
-        run: node tools/build.js --site site
+        run: node tools/build.js --site site --require-library
 
       - name: Create the Pages project (first time only)
         if: steps.secrets.outputs.ready == 'true'

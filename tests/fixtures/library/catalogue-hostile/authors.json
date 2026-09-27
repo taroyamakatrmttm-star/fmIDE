@@ -1,0 +1,11 @@
+{
+  "kind": "fmIDE-library-authors",
+  "version": 1,
+  "authors": {
+    "1004": {
+      "account": "eve-sample",
+      "author": "Eve <script>alert(7)</script>",
+      "added": "2026-10-01"
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "kind": "fmIDE-library-packs",
+  "version": 1,
+  "packs": {
+    "fb017b0c-78e5-4579-a9c8-f454ff365690": {
+      "accountId": 1004,
+      "account": "eve-sample",
+      "added": "2026-10-01",
+      "sha256": "74fc7e7a01c10efe95b61630ff92c41c52a91cdb1aa936f4358cb7c246f3f0af",
+      "versions": [
+        "f9f3bedc-613d-42e5-a43e-9e181665f8af",
+        "vid-hostile-canvas-1",
+        "f73c3ccf-22d8-4991-9899-3bfe9855ee9c",
+        "eada829c-7541-4353-a914-06545047031d"
+      ]
+    }
+  }
+}

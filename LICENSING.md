@@ -4,7 +4,7 @@ fmIDE is **open core**: the editor and the file format are open, so anyone can u
 
 | What | Where | Licence | In short |
 |---|---|---|---|
-| **fmIDE** (the editor) | `src/fmide/`, `apps/fmIDE.html`, `src/site/` | [Apache License 2.0](LICENSE) | Use, change and share it freely, commercially too; keep the copyright and licence notices ([NOTICE](NOTICE)). |
+| **fmIDE** (the editor) | `src/fmide/`, `apps/fmIDE.html`, `src/site/`, `src/library/` (the catalogue's styling) | [Apache License 2.0](LICENSE) | Use, change and share it freely, commercially too; keep the copyright and licence notices ([NOTICE](NOTICE)). |
 | **Shared code** | `src/shared/` | [Apache License 2.0](LICENSE) | Same. ExcelExporter includes it, and it stays Apache-licensed there. |
 | **Build tools, tests** | `tools/`, `tests/`, `package.json`, `.github/` | [Apache License 2.0](LICENSE) | Same. |
 | **ExcelExporter** | `src/excel-exporter/`, `apps/ExcelExporter.html` | [ExcelExporter Licence](src/excel-exporter/LICENSE) (proprietary) | Free to use for any purpose, including at work; the workbooks you make are yours. You may not copy, redistribute, sell or modify ExcelExporter itself. |
@@ -13,7 +13,7 @@ fmIDE is **open core**: the editor and the file format are open, so anyone can u
 
 The published web app contains both parts; it ships these licence files alongside them.
 
-**Items shared in library packs** (templates, recipes and functions people share with each other, `docs/step8-community-library.md`) are not part of this repository: each pack says who made it, and its items are licensed by their author under [CC BY 4.0](docs/LICENSE-CC-BY-4.0.txt). Submission terms for the community library are to be reviewed with the other licence texts.
+**Items shared in library packs** (templates, recipes and functions people share with each other, `docs/step8-community-library.md`) are not part of this repository: each pack says who made it, and its items are licensed by their author under [CC BY 4.0](docs/LICENSE-CC-BY-4.0.txt). The library is its own repository, included here as the `library/` submodule; the published site's catalogue (`/library`) shows each pack with its author and licence. Submission terms for the community library are to be reviewed with the other licence texts.
 
 **Why this split:** an open editor and an open, documented file format let a community — and other tools — grow around fmIDE, and let people trust that their models will stay readable; ExcelExporter, which turns a model into a professional Excel workbook, is where paid editions may build later. See decision 3 in [docs/decisions.md](docs/decisions.md).
 
