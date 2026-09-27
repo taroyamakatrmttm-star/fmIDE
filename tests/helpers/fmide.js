@@ -18,12 +18,19 @@ async function importViaCommand(page, command, file){
 }
 
 // Open a dialog with `openCommand`, then click its import button (label) and pick `file`.
-async function importViaDialog(page, openCommand, buttonLabel, file){
+// The app's answer is a new message or question on top, which this waits for; pass
+// { newBox: false } where the answer shows inside the same window (the Macro Builder).
+async function importViaDialog(page, openCommand, buttonLabel, file, { newBox = true } = {}){
   await page.evaluate((c) => fm.command(c), openCommand);
   const button = page.locator('.modal-box button', { hasText: buttonLabel }).first();
   await expect(button).toBeVisible();
+  const boxes = page.locator('.modal-box');
+  const before = await boxes.count();
   const [chooser] = await Promise.all([page.waitForEvent('filechooser'), button.click()]);
   await chooser.setFiles(file);
+  // The file is read asynchronously: wait for the app's answer (a message or a question)
+  // to open on top, so the next step doesn't read the window the button was in.
+  if(newBox) await expect.poll(() => boxes.count()).toBeGreaterThan(before);
 }
 
 // The topmost in-page dialog.

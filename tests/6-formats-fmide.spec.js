@@ -91,7 +91,7 @@ test('shortcuts-v1: old combos are upgraded', async ({ page }) => {
 });
 
 test('macros-bare (a bare array) imports', async ({ page }) => {
-  await F.importViaDialog(page, 'openMacros', '⇧ Import', file('macros-bare'));
+  await F.importViaDialog(page, 'openMacros', '⇧ Import', file('macros-bare'), { newBox: false });
   const builder = page.locator('.modal-box.macro-box');
   await expect(builder).toContainText('Imported 1 macro.');
   await expect(builder).toContainText('Bare List Macro');
