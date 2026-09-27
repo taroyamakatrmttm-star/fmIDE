@@ -1,5 +1,5 @@
 // 4. Format roles: the legend, and role formatting as it lands in the real .xlsx file.
-const { test, expect } = require('./helpers/apps');
+const { test, expect, fixture } = require('./helpers/apps');
 const X = require('./helpers/excel');
 
 const ROLES = ['Inputs', 'Calculations', 'Links', 'Headers', 'Section Headers', 'Labels', 'Notes'];
@@ -98,4 +98,16 @@ test('sides: Revenue has only a bottom border; inputs without saved sides get al
     });
   }
   expect(inputCells).toBeGreaterThan(0);
+});
+
+test('a row that only pulls a value from another sheet through a plug is a Link, not a Calculation', async ({ page }) => {
+  await X.openExporter(page);
+  await X.loadModelFile(page, fixture('agreement', 'stale-plug-links.json'));
+  await X.setInputsTab(page, false);
+  const { cells } = await periodCells(page, 'Total income');
+  for(const { addr, cell } of cells){
+    // Written without brackets (it was =(Sales!E7)), so it reads as a plain link.
+    expect(cell.formula || '', `Total income ${addr}`).toMatch(/^'?Sales'?!\$?[A-Z]+\$?\d+$/);
+    expect(fontColorOf(cell), `Total income ${addr} font`).toBe('FF008000');
+  }
 });

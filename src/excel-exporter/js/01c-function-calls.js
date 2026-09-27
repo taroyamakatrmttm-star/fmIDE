@@ -56,7 +56,11 @@ function buildFunctionCallFormula(canvasId, n, periodIndex, ctx, currentTabName,
       finally{ if(caught) ctx.iferrorDepth--; }
       if(s !== '0' && isLogicalValued(canvasId, edge.from, ctx, path, edge.fromPort)) s = 'N(' + s + ')';
     }
-    const e = fnPiece(s, FN_LEVEL.atom, false);
+    // An operator's bracketed piece counts at its own level, so it keeps only the brackets
+    // the function's formula needs around it.
+    const inner = isWrapped(s) ? s.slice(1, -1) : null;
+    const level = inner !== null ? formulaLevel(inner) : FN_LEVEL.atom;
+    const e = level >= FN_LEVEL.compare && level < FN_LEVEL.atom ? fnPiece(inner, level, false) : fnPiece(s, FN_LEVEL.atom, false);
     cache.set(k, e);
     return e;
   };

@@ -234,7 +234,10 @@ function buildWorkbook(){
         const before = ctx.fnWrites || 0;
         const saved = [ctx.currentRow, ctx.currentRowVintage, ctx.currentHelper, ctx.currentRowHopsKey];
         let content, problem = null;
-        try{ content = build(); }
+        try{
+          content = build();
+          if(content && content.isFormula) content = { isFormula: true, formula: formulaTop(content.formula) };
+        }
         catch(err){
           if(!err || !err.excelTooLong) throw err;
           [ctx.currentRow, ctx.currentRowVintage, ctx.currentHelper, ctx.currentRowHopsKey] = saved;

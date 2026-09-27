@@ -516,7 +516,7 @@ var XLSX = (function(){
         <button id="viewByTab" class="tbtn-toggle">Group by Excel Tab</button>
         <button id="viewByTree" class="tbtn-toggle">Tree View</button>
         <label style="display:flex; align-items:center; gap:5px; font-size:12.5px; color:var(--muted); margin-left:8px;" title="When off, Input/Calc/Output stops being a layout partition — it's kept only as an informational tag, and rows in a tab are one freely-ordered flat list.">
-          <input type="checkbox" id="cfgSectionsEnabled" checked>
+          <input type="checkbox" id="cfgSectionsEnabled">
           Enforce Input / Calc / Output sections
         </label>
         <span style="flex:1 1 auto;"></span>
@@ -2668,23 +2668,106 @@ function buildOperatorFormula(canvasId, opNode, periodIndex, ctx, currentTabName
   return spellOperator(spell, operandStrs);
 }
 
-// One operator applied to its operands' formula text (at least one), as `spell` says.
+// One operator applied to its operands' formula text (at least one), as `spell` says. An
+// infix operator or a comparison comes back in brackets, so it stays one item wherever it is
+// inlined; inside, an operand keeps its own brackets only where Excel's order of operations
+// needs them (operandIn), and a cell's formula loses the outer ones (formulaTop).
 function spellOperator(spell, operandStrs){
   // An error, as fmIDE shows "?": abs takes exactly one input, a comparison at least two.
-  if(spell.one) return operandStrs.length === 1 ? spell.fn + '(' + operandStrs[0] + ')' : 'NA()';
-  if(spell.fallback) return spell.fn + '(' + operandStrs[0] + ',' + (operandStrs[1] !== undefined ? operandStrs[1] : '0') + ')';
-  if(spell.fn) return spell.fn + '(' + operandStrs.join(',') + ')';
-  if(spell.infix) return '(' + operandStrs.reduce((acc, s, i) => i === 0 ? s : acc + spell.infix + s) + ')';
-  if(spell.fold) return operandStrs.reduce((acc, s, i) => i === 0 ? s : spell.fold + '(' + acc + ',' + s + ')');
+  const args = () => operandStrs.map(s => operandIn(s, 0, false));
+  if(spell.one) return operandStrs.length === 1 ? spell.fn + '(' + args()[0] + ')' : 'NA()';
+  if(spell.fallback){
+    const a = args();
+    return spell.fn + '(' + a[0] + ',' + (a[1] !== undefined ? a[1] : '0') + ')';
+  }
+  if(spell.fn) return spell.fn + '(' + args().join(',') + ')';
+  if(spell.infix){
+    const level = INFIX_LEVEL[spell.infix];
+    return '(' + operandStrs.reduce((acc, s, i) => i === 0 ? operandIn(s, level, false) : acc + spell.infix + operandIn(s, level, true), '') + ')';
+  }
+  if(spell.fold) return args().reduce((acc, s, i) => i === 0 ? s : spell.fold + '(' + acc + ',' + s + ')');
   if(spell.compare){
     // Native TRUE/FALSE. Parenthesized so it stays a single operand wherever it's
     // inlined into a bigger formula; Excel shows =(A<=B) identically to =A<=B.
     if(operandStrs.length === 1) return 'NA()';
-    if(operandStrs.length === 2) return '(' + operandStrs[0] + spell.compare + operandStrs[1] + ')';
-    const pairs = operandStrs.slice(0, -1).map((s, i) => s + spell.compare + operandStrs[i + 1]);
+    const sides = operandStrs.map(s => operandIn(s, FN_LEVEL.compare, true));
+    if(operandStrs.length === 2) return '(' + sides[0] + spell.compare + sides[1] + ')';
+    const pairs = sides.slice(0, -1).map((s, i) => s + spell.compare + sides[i + 1]);
     return 'AND(' + pairs.join(',') + ')';
   }
   return '0';
+}
+
+// ---------- brackets only where Excel needs them ----------
+// Formula text is built from pieces; an operator's piece comes in brackets. These drop the
+// ones Excel's order of operations doesn't need, by the rules function calls follow
+// (01c-function-calls.js): a leading minus binds tightest, then ^, then * and /, then + and
+// -, then a comparison; the right side of an equal level keeps its brackets (a-(b-c)), and
+// so does a piece that starts with a minus there (a+(-b)).
+const INFIX_LEVEL = { '+': 2, '-': 2, '*': 3, '/': 3, '^': 4 };
+
+// True if `s` is one whole bracketed expression "(…)" (brackets inside a quoted sheet name
+// or a text don't count).
+function isWrapped(s){
+  if(s.length < 2 || s.charAt(0) !== '(' || s.charAt(s.length - 1) !== ')') return false;
+  let depth = 0;
+  for(let i = 0; i < s.length; i++){
+    const c = s.charAt(i);
+    if(c === "'" || c === '"'){ i = s.indexOf(c, i + 1); if(i < 0) return false; continue; } // '' and "" reopen at once
+    if(c === '(') depth++;
+    else if(c === ')'){ depth--; if(depth === 0 && i < s.length - 1) return false; }
+  }
+  return depth === 0;
+}
+
+// How tightly formula text `s` binds, as FN_LEVEL: its loosest operator outside brackets;
+// a leading minus alone is `neg`; a reference, number or function call is `atom`. Text it
+// can't read (a quote left open) is -1, and keeps its brackets.
+function formulaLevel(s){
+  let level = FN_LEVEL.atom, depth = 0, prev = '';
+  for(let i = 0; i < s.length; i++){
+    const c = s.charAt(i);
+    if(c === "'" || c === '"'){
+      const j = s.indexOf(c, i + 1);
+      if(j < 0) return -1;
+      i = j; prev = 'x'; continue;
+    }
+    if(c === '('){ depth++; prev = '('; continue; }
+    if(c === ')'){ depth--; prev = 'x'; continue; }
+    if(depth > 0 || c === ' ') continue;
+    let op = 0;
+    if(c === '<' || c === '>' || c === '=' || c === '&') op = FN_LEVEL.compare;
+    else if(c === '*' || c === '/') op = FN_LEVEL.multiply;
+    else if(c === '^') op = FN_LEVEL.power;
+    else if(c === '+' || c === '-'){
+      const unary = prev === '' || prev === '(' || prev === ',' || prev === 'op';
+      // The sign of a number's exponent (1E-7) is part of the number.
+      const exponent = (prev === 'x') && /(^|[^A-Za-z0-9_$.])[0-9.]+[Ee]$/.test(s.slice(0, i));
+      if(exponent){ prev = 'x'; continue; }
+      if(unary){ if(i === 0) level = Math.min(level, FN_LEVEL.neg); prev = 'op'; continue; }
+      op = FN_LEVEL.add;
+    }
+    if(op){ level = Math.min(level, op); prev = 'op'; }
+    else prev = (c === ',') ? ',' : 'x';
+  }
+  return level;
+}
+
+// Operand text `s` placed under an operator of level `parent` (0: a function's argument),
+// on its right side or not: without its outer brackets where Excel reads it the same.
+function operandIn(s, parent, right){
+  if(!isWrapped(s)) return s;
+  const inner = s.slice(1, -1);
+  const level = formulaLevel(inner);
+  if(level < FN_LEVEL.compare) return s;
+  const drop = right ? (level > parent && inner.charAt(0) !== '-') : level >= parent;
+  return drop ? inner : s;
+}
+
+// A cell's whole formula: without brackets around all of it (=(A+B) is =A+B).
+function formulaTop(s){
+  while(isWrapped(s) && formulaLevel(s.slice(1, -1)) >= FN_LEVEL.compare) s = s.slice(1, -1);
+  return s;
 }
 
 function buildCellContent(canvasId, node, periodIndex, ctx, currentTabName, path){
@@ -2862,7 +2945,11 @@ function buildFunctionCallFormula(canvasId, n, periodIndex, ctx, currentTabName,
       finally{ if(caught) ctx.iferrorDepth--; }
       if(s !== '0' && isLogicalValued(canvasId, edge.from, ctx, path, edge.fromPort)) s = 'N(' + s + ')';
     }
-    const e = fnPiece(s, FN_LEVEL.atom, false);
+    // An operator's bracketed piece counts at its own level, so it keeps only the brackets
+    // the function's formula needs around it.
+    const inner = isWrapped(s) ? s.slice(1, -1) : null;
+    const level = inner !== null ? formulaLevel(inner) : FN_LEVEL.atom;
+    const e = level >= FN_LEVEL.compare && level < FN_LEVEL.atom ? fnPiece(inner, level, false) : fnPiece(s, FN_LEVEL.atom, false);
     cache.set(k, e);
     return e;
   };
@@ -3685,7 +3772,7 @@ function buildDefaultMapping(m){
   return {
     tabs, rows,
     customRows: [],
-    cfg: { startLabel: '2027', frequency: 'annual', fallbackFormat: '#,##0', fileName: 'fmIDE-export', sectionsEnabled: true }
+    cfg: { startLabel: '2027', frequency: 'annual', fallbackFormat: '#,##0', fileName: 'fmIDE-export', sectionsEnabled: false }
   };
 }
 
@@ -4112,7 +4199,7 @@ function inputGroupOf(mirror, mode){
 
 function makeGroupHeader(g){
   return { id: 'custom_inpgrp_' + g.key.replace(/[^A-Za-z0-9_:-]/g, '_'), isCustom: true, autoInputsGroup: g.key,
-           tabId: INPUTS_TAB_ID, section: 'input', label: g.name, style: null, showPeriodLabels: false };
+           tabId: INPUTS_TAB_ID, section: 'input', label: g.name, style: null, showPeriodLabels: true };
 }
 
 // Writes `seq` (every row on the Inputs tab, in the wanted order) into both order
@@ -4980,7 +5067,7 @@ function refreshSortControls(){
     SORT_WITHIN.forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; wSel.appendChild(o); });
   }
   mSel.value = mapping.cfg.sortMethod || 'calcUp';
-  wSel.value = mapping.cfg.sortWithin || 'alpha';
+  wSel.value = mapping.cfg.sortWithin || 'formula';
   wSel.classList.toggle('hidden', !(mSel.value === 'calcUp' || mSel.value === 'calcDown'));
   const prev = sSel.value;
   sSel.innerHTML = '';
@@ -6389,7 +6476,10 @@ function buildWorkbook(){
         const before = ctx.fnWrites || 0;
         const saved = [ctx.currentRow, ctx.currentRowVintage, ctx.currentHelper, ctx.currentRowHopsKey];
         let content, problem = null;
-        try{ content = build(); }
+        try{
+          content = build();
+          if(content && content.isFormula) content = { isFormula: true, formula: formulaTop(content.formula) };
+        }
         catch(err){
           if(!err || !err.excelTooLong) throw err;
           [ctx.currentRow, ctx.currentRowVintage, ctx.currentHelper, ctx.currentRowHopsKey] = saved;

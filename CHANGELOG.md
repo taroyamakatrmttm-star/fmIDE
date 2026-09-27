@@ -2,6 +2,15 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: tidier formulas and new defaults
+- **Brackets only where Excel needs them.** A formula like `=(F4*(1-F5))` is now written `=F4*(1-F5)`. Brackets stay where Excel's order of operations needs them, and around the right-hand side of an equal level (`A1-(B1-C1)`, `A1+(B1+C1)`), so Excel adds in the same order as fmIDE. The values don't change; the agreement tests check this.
+- **Links before Inputs.** A rectangle that only pulls a value from another sheet, through a plug or an alias, used to be written `=(Sales!E7)` and coloured as a Calculation. It is now written `=Sales!E7` and gets the **Links** format.
+- **New defaults for a new layout** (a saved layout keeps your settings):
+  - "Enforce Input / Calc / Output sections" is off.
+  - "Order within group" is formula order.
+  - The group headers on the gathered Inputs tab show the period labels.
+- No file format changed.
+
 ## Browsing the library inside fmIDE (step 8, phase 8d)
 - **File → Browse Library…** (on the published site) lists the community library's packs: search, filter by tag or by what a pack holds, sort, and see a pack's items, licence and credit, with the items you already have marked. **Preview and add…** opens the usual Open Library Pack preview; nothing is added without it.
 - Every pack is checked against the catalogue's list — exact size and SHA-256 fingerprint, and its id — before it is read; list entries that fail fmIDE's checks are left out and counted; everything is shown as plain text.

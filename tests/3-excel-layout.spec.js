@@ -134,9 +134,9 @@ test('comparisons export as native TRUE/FALSE', async ({ page }) => {
     }
   }
   expect(Object.keys(found).sort()).toEqual(['BS check', 'GE probe', 'Min probe']);
-  for(const f of found['BS check']){ expect(f).toMatch(/^\(ABS\(.+\)<=.+\)$/); expect(f).not.toMatch(/IF\(/); }
+  for(const f of found['BS check']){ expect(f).toMatch(/^ABS\(.+\)<=.+$/); expect(f).not.toMatch(/IF\(/); }
   for(const f of found['Min probe']) expect(f).toMatch(/^MIN\(N\(.+\),.+\)$/);
-  for(const f of found['GE probe']) expect(f).toMatch(/^\(N\(.+\)>=.+\)$/);
+  for(const f of found['GE probe']) expect(f).toMatch(/^N\(.+\)>=.+$/);
 });
 
 test.describe('Inputs tab', () => {

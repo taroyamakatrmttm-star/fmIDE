@@ -404,7 +404,7 @@ function refreshSortControls(){
     SORT_WITHIN.forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; wSel.appendChild(o); });
   }
   mSel.value = mapping.cfg.sortMethod || 'calcUp';
-  wSel.value = mapping.cfg.sortWithin || 'alpha';
+  wSel.value = mapping.cfg.sortWithin || 'formula';
   wSel.classList.toggle('hidden', !(mSel.value === 'calcUp' || mSel.value === 'calcDown'));
   const prev = sSel.value;
   sSel.innerHTML = '';

@@ -9,6 +9,7 @@
   "E3": {"v":1},
   "A4": {"v":"INPUTS"},
   "A5": {"v":"Revenue Model"},
+  "E5": {"v":"2027"},
   "A6": {"v":"Unit Price"},
   "E6": {"v":10},
   "A7": {"v":"Volume"},
@@ -28,6 +29,6 @@
   "E6": {"f":"'Inputs'!E7"},
   "A8": {"v":"OUTPUTS"},
   "A9": {"v":"Revenue"},
-  "E9": {"f":"(E5*E6)"}
+  "E9": {"f":"E5*E6"}
  }
 }
