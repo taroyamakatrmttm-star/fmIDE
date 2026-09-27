@@ -1,0 +1,1322 @@
+{
+ "kind": "system",
+ "version": 6,
+ "nextId": 1000,
+ "nextCanvasId": 10,
+ "activeCanvasId": "cOps",
+ "periods": [
+  "P1",
+  "P2",
+  "P3",
+  "P4",
+  "P5",
+  "P6"
+ ],
+ "currentPeriod": 0,
+ "canvases": [
+  {
+   "id": "cOps",
+   "name": "Operators",
+   "nodes": [
+    {
+     "id": "per",
+     "type": "operator",
+     "x": -250,
+     "y": 0,
+     "w": 56,
+     "h": 56,
+     "text": "period",
+     "socket": ""
+    },
+    {
+     "id": "Period",
+     "type": "value",
+     "x": -100,
+     "y": 0,
+     "w": 170,
+     "h": 64,
+     "text": "Period"
+    },
+    {
+     "id": "Start",
+     "type": "value",
+     "x": 0,
+     "y": 90,
+     "w": 170,
+     "h": 64,
+     "text": "Start\n2"
+    },
+    {
+     "id": "End",
+     "type": "value",
+     "x": 0,
+     "y": 180,
+     "w": 170,
+     "h": 64,
+     "text": "End\n4"
+    },
+    {
+     "id": "o_After_start",
+     "type": "operator",
+     "x": 400,
+     "y": 400,
+     "w": 56,
+     "h": 56,
+     "text": "≥",
+     "socket": ""
+    },
+    {
+     "id": "r_After_start",
+     "type": "value",
+     "x": 600,
+     "y": 400,
+     "w": 170,
+     "h": 64,
+     "text": "After start"
+    },
+    {
+     "id": "o_Before_end",
+     "type": "operator",
+     "x": 400,
+     "y": 500,
+     "w": 56,
+     "h": 56,
+     "text": "≤",
+     "socket": ""
+    },
+    {
+     "id": "r_Before_end",
+     "type": "value",
+     "x": 600,
+     "y": 500,
+     "w": 170,
+     "h": 64,
+     "text": "Before end"
+    },
+    {
+     "id": "o_In_window",
+     "type": "operator",
+     "x": 400,
+     "y": 600,
+     "w": 56,
+     "h": 56,
+     "text": "and",
+     "socket": ""
+    },
+    {
+     "id": "r_In_window",
+     "type": "value",
+     "x": 600,
+     "y": 600,
+     "w": 170,
+     "h": 64,
+     "text": "In window"
+    },
+    {
+     "id": "o_Outside_window",
+     "type": "operator",
+     "x": 400,
+     "y": 700,
+     "w": 56,
+     "h": 56,
+     "text": "not",
+     "socket": ""
+    },
+    {
+     "id": "r_Outside_window",
+     "type": "value",
+     "x": 600,
+     "y": 700,
+     "w": 170,
+     "h": 64,
+     "text": "Outside window"
+    },
+    {
+     "id": "One",
+     "type": "value",
+     "x": 0,
+     "y": 270,
+     "w": 170,
+     "h": 64,
+     "text": "One\n1"
+    },
+    {
+     "id": "Six",
+     "type": "value",
+     "x": 0,
+     "y": 360,
+     "w": 170,
+     "h": 64,
+     "text": "Six\n6"
+    },
+    {
+     "id": "o_Is_first",
+     "type": "operator",
+     "x": 400,
+     "y": 900,
+     "w": 56,
+     "h": 56,
+     "text": "=",
+     "socket": ""
+    },
+    {
+     "id": "r_Is_first",
+     "type": "value",
+     "x": 600,
+     "y": 900,
+     "w": 170,
+     "h": 64,
+     "text": "Is first"
+    },
+    {
+     "id": "o_Is_last",
+     "type": "operator",
+     "x": 400,
+     "y": 1000,
+     "w": 56,
+     "h": 56,
+     "text": "=",
+     "socket": ""
+    },
+    {
+     "id": "r_Is_last",
+     "type": "value",
+     "x": 600,
+     "y": 1000,
+     "w": 170,
+     "h": 64,
+     "text": "Is last"
+    },
+    {
+     "id": "o_First_or_last",
+     "type": "operator",
+     "x": 400,
+     "y": 1100,
+     "w": 56,
+     "h": 56,
+     "text": "or",
+     "socket": ""
+    },
+    {
+     "id": "r_First_or_last",
+     "type": "value",
+     "x": 600,
+     "y": 1100,
+     "w": 170,
+     "h": 64,
+     "text": "First or last"
+    },
+    {
+     "id": "o_Not_first",
+     "type": "operator",
+     "x": 400,
+     "y": 1200,
+     "w": 56,
+     "h": 56,
+     "text": "≠",
+     "socket": ""
+    },
+    {
+     "id": "r_Not_first",
+     "type": "value",
+     "x": 600,
+     "y": 1200,
+     "w": 170,
+     "h": 64,
+     "text": "Not first"
+    },
+    {
+     "id": "Tenth",
+     "type": "value",
+     "x": 0,
+     "y": 450,
+     "w": 170,
+     "h": 64,
+     "text": "Tenth\n0.1"
+    },
+    {
+     "id": "Fifth",
+     "type": "value",
+     "x": 0,
+     "y": 540,
+     "w": 170,
+     "h": 64,
+     "text": "Fifth\n0.2"
+    },
+    {
+     "id": "Three tenths",
+     "type": "value",
+     "x": 0,
+     "y": 630,
+     "w": 170,
+     "h": 64,
+     "text": "Three tenths\n0.3"
+    },
+    {
+     "id": "o_Tenth_plus_fifth",
+     "type": "operator",
+     "x": 400,
+     "y": 1300,
+     "w": 56,
+     "h": 56,
+     "text": "+",
+     "socket": ""
+    },
+    {
+     "id": "r_Tenth_plus_fifth",
+     "type": "value",
+     "x": 600,
+     "y": 1300,
+     "w": 170,
+     "h": 64,
+     "text": "Tenth plus fifth"
+    },
+    {
+     "id": "o_Sum_equals",
+     "type": "operator",
+     "x": 400,
+     "y": 1400,
+     "w": 56,
+     "h": 56,
+     "text": "=",
+     "socket": ""
+    },
+    {
+     "id": "r_Sum_equals",
+     "type": "value",
+     "x": 600,
+     "y": 1400,
+     "w": 170,
+     "h": 64,
+     "text": "Sum equals"
+    },
+    {
+     "id": "o_Sum_below",
+     "type": "operator",
+     "x": 400,
+     "y": 1500,
+     "w": 56,
+     "h": 56,
+     "text": "<",
+     "socket": ""
+    },
+    {
+     "id": "r_Sum_below",
+     "type": "value",
+     "x": 600,
+     "y": 1500,
+     "w": 170,
+     "h": 64,
+     "text": "Sum below"
+    },
+    {
+     "id": "Base",
+     "type": "value",
+     "x": 0,
+     "y": 720,
+     "w": 170,
+     "h": 64,
+     "text": "Base\n100\n$k"
+    },
+    {
+     "id": "Growth",
+     "type": "value",
+     "x": 0,
+     "y": 810,
+     "w": 170,
+     "h": 64,
+     "text": "Growth\n0.05"
+    },
+    {
+     "id": "o_One_plus_growth",
+     "type": "operator",
+     "x": 400,
+     "y": 1600,
+     "w": 56,
+     "h": 56,
+     "text": "+",
+     "socket": ""
+    },
+    {
+     "id": "r_One_plus_growth",
+     "type": "value",
+     "x": 600,
+     "y": 1600,
+     "w": 170,
+     "h": 64,
+     "text": "One plus growth"
+    },
+    {
+     "id": "o_Periods_elapsed",
+     "type": "operator",
+     "x": 400,
+     "y": 1700,
+     "w": 56,
+     "h": 56,
+     "text": "−",
+     "socket": ""
+    },
+    {
+     "id": "r_Periods_elapsed",
+     "type": "value",
+     "x": 600,
+     "y": 1700,
+     "w": 170,
+     "h": 64,
+     "text": "Periods elapsed"
+    },
+    {
+     "id": "o_Factor",
+     "type": "operator",
+     "x": 400,
+     "y": 1800,
+     "w": 56,
+     "h": 56,
+     "text": "^",
+     "socket": ""
+    },
+    {
+     "id": "r_Factor",
+     "type": "value",
+     "x": 600,
+     "y": 1800,
+     "w": 170,
+     "h": 64,
+     "text": "Factor"
+    },
+    {
+     "id": "o_Escalated",
+     "type": "operator",
+     "x": 400,
+     "y": 1900,
+     "w": 56,
+     "h": 56,
+     "text": "×",
+     "socket": ""
+    },
+    {
+     "id": "r_Escalated",
+     "type": "value",
+     "x": 600,
+     "y": 1900,
+     "w": 170,
+     "h": 64,
+     "text": "Escalated"
+    },
+    {
+     "id": "Revenue",
+     "type": "value",
+     "x": 0,
+     "y": 900,
+     "w": 170,
+     "h": 64,
+     "text": "Revenue\n0\n$k",
+     "periodValues": [
+      100,
+      -20,
+      50,
+      0,
+      70,
+      30
+     ]
+    },
+    {
+     "id": "Cost",
+     "type": "value",
+     "x": -50,
+     "y": 990,
+     "w": 170,
+     "h": 64,
+     "text": "Cost\n40\n$k"
+    },
+    {
+     "id": "Zero",
+     "type": "value",
+     "x": 0,
+     "y": 1080,
+     "w": 170,
+     "h": 64,
+     "text": "Zero\n0\n$k"
+    },
+    {
+     "id": "o_Revenue_positive",
+     "type": "operator",
+     "x": 400,
+     "y": 2000,
+     "w": 56,
+     "h": 56,
+     "text": ">",
+     "socket": ""
+    },
+    {
+     "id": "r_Revenue_positive",
+     "type": "value",
+     "x": 600,
+     "y": 2000,
+     "w": 170,
+     "h": 64,
+     "text": "Revenue positive"
+    },
+    {
+     "id": "o_Profit_if_positive",
+     "type": "operator",
+     "x": 400,
+     "y": 2100,
+     "w": 56,
+     "h": 56,
+     "text": "if",
+     "socket": ""
+    },
+    {
+     "id": "r_Profit_if_positive",
+     "type": "value",
+     "x": 600,
+     "y": 2100,
+     "w": 170,
+     "h": 64,
+     "text": "Profit if positive"
+    },
+    {
+     "id": "o_Revenue_is_zero",
+     "type": "operator",
+     "x": 400,
+     "y": 2200,
+     "w": 56,
+     "h": 56,
+     "text": "=",
+     "socket": ""
+    },
+    {
+     "id": "r_Revenue_is_zero",
+     "type": "value",
+     "x": 600,
+     "y": 2200,
+     "w": 170,
+     "h": 64,
+     "text": "Revenue is zero"
+    },
+    {
+     "id": "o_Cost_ratio",
+     "type": "operator",
+     "x": 400,
+     "y": 2300,
+     "w": 56,
+     "h": 56,
+     "text": "÷",
+     "socket": ""
+    },
+    {
+     "id": "r_Cost_ratio",
+     "type": "value",
+     "x": 600,
+     "y": 2300,
+     "w": 170,
+     "h": 64,
+     "text": "Cost ratio"
+    },
+    {
+     "id": "o_Safe_ratio",
+     "type": "operator",
+     "x": 400,
+     "y": 2400,
+     "w": 56,
+     "h": 56,
+     "text": "if",
+     "socket": ""
+    },
+    {
+     "id": "r_Safe_ratio",
+     "type": "value",
+     "x": 600,
+     "y": 2400,
+     "w": 170,
+     "h": 64,
+     "text": "Safe ratio"
+    },
+    {
+     "id": "o_Missing_else",
+     "type": "operator",
+     "x": 400,
+     "y": 2500,
+     "w": 56,
+     "h": 56,
+     "text": "if",
+     "socket": ""
+    },
+    {
+     "id": "r_Missing_else",
+     "type": "value",
+     "x": 600,
+     "y": 2500,
+     "w": 170,
+     "h": 64,
+     "text": "Missing else"
+    },
+    {
+     "id": "Opening input",
+     "type": "value",
+     "x": 0,
+     "y": 1170,
+     "w": 170,
+     "h": 64,
+     "text": "Opening input\n500\n$k"
+    },
+    {
+     "id": "Flow",
+     "type": "value",
+     "x": 0,
+     "y": 1260,
+     "w": 170,
+     "h": 64,
+     "text": "Flow\n0\n$k",
+     "periodValues": [
+      10,
+      20,
+      30,
+      40,
+      50,
+      60
+     ]
+    },
+    {
+     "id": "shClose",
+     "type": "periodShift",
+     "x": 300,
+     "y": 2640,
+     "w": 56,
+     "h": 56,
+     "shift": -1
+    },
+    {
+     "id": "o_open",
+     "type": "operator",
+     "x": 400,
+     "y": 2600,
+     "w": 56,
+     "h": 56,
+     "text": "if",
+     "socket": ""
+    },
+    {
+     "id": "r_Opening",
+     "type": "value",
+     "x": 600,
+     "y": 2600,
+     "w": 170,
+     "h": 64,
+     "text": "Opening"
+    },
+    {
+     "id": "o_Closing",
+     "type": "operator",
+     "x": 400,
+     "y": 2700,
+     "w": 56,
+     "h": 56,
+     "text": "+",
+     "socket": ""
+    },
+    {
+     "id": "r_Closing",
+     "type": "value",
+     "x": 600,
+     "y": 2700,
+     "w": 170,
+     "h": 64,
+     "text": "Closing"
+    },
+    {
+     "id": "shFlow",
+     "type": "periodShift",
+     "x": 300,
+     "y": 2840,
+     "w": 56,
+     "h": 56,
+     "shift": -1
+    },
+    {
+     "id": "o_prev",
+     "type": "operator",
+     "x": 400,
+     "y": 2800,
+     "w": 56,
+     "h": 56,
+     "text": "if",
+     "socket": ""
+    },
+    {
+     "id": "r_Prev_flow",
+     "type": "value",
+     "x": 600,
+     "y": 2800,
+     "w": 170,
+     "h": 64,
+     "text": "Previous flow when first"
+    },
+    {
+     "id": "shFlow2",
+     "type": "periodShift",
+     "x": 300,
+     "y": 2940,
+     "w": 56,
+     "h": 56,
+     "shift": -1
+    },
+    {
+     "id": "o_both",
+     "type": "operator",
+     "x": 400,
+     "y": 2900,
+     "w": 56,
+     "h": 56,
+     "text": "if",
+     "socket": ""
+    },
+    {
+     "id": "r_Both",
+     "type": "value",
+     "x": 600,
+     "y": 2900,
+     "w": 170,
+     "h": 64,
+     "text": "Both branches back\n7"
+    },
+    {
+     "id": "x",
+     "type": "value",
+     "x": 0,
+     "y": 1350,
+     "w": 170,
+     "h": 64,
+     "text": "x\n0",
+     "periodValues": [
+      2.675,
+      1.005,
+      -2.675,
+      0.125,
+      1234.5678,
+      -0.5
+     ]
+    },
+    {
+     "id": "Digits",
+     "type": "value",
+     "x": 0,
+     "y": 1440,
+     "w": 170,
+     "h": 64,
+     "text": "Digits\n2",
+     "periodValues": [
+      2,
+      2,
+      2,
+      2,
+      -2,
+      0
+     ]
+    },
+    {
+     "id": "o_Rounded",
+     "type": "operator",
+     "x": 400,
+     "y": 3000,
+     "w": 56,
+     "h": 56,
+     "text": "round",
+     "socket": ""
+    },
+    {
+     "id": "r_Rounded",
+     "type": "value",
+     "x": 600,
+     "y": 3000,
+     "w": 170,
+     "h": 64,
+     "text": "Rounded"
+    },
+    {
+     "id": "o_Rounded_up",
+     "type": "operator",
+     "x": 400,
+     "y": 3100,
+     "w": 56,
+     "h": 56,
+     "text": "roundup",
+     "socket": ""
+    },
+    {
+     "id": "r_Rounded_up",
+     "type": "value",
+     "x": 600,
+     "y": 3100,
+     "w": 170,
+     "h": 64,
+     "text": "Rounded up"
+    },
+    {
+     "id": "o_Rounded_down",
+     "type": "operator",
+     "x": 400,
+     "y": 3200,
+     "w": 56,
+     "h": 56,
+     "text": "rounddown",
+     "socket": ""
+    },
+    {
+     "id": "r_Rounded_down",
+     "type": "value",
+     "x": 600,
+     "y": 3200,
+     "w": 170,
+     "h": 64,
+     "text": "Rounded down"
+    },
+    {
+     "id": "o_Rounded_no_digits",
+     "type": "operator",
+     "x": 400,
+     "y": 3300,
+     "w": 56,
+     "h": 56,
+     "text": "round",
+     "socket": ""
+    },
+    {
+     "id": "r_Rounded_no_digits",
+     "type": "value",
+     "x": 600,
+     "y": 3300,
+     "w": 170,
+     "h": 64,
+     "text": "Rounded no digits"
+    },
+    {
+     "id": "o_Unknown",
+     "type": "operator",
+     "x": 400,
+     "y": 3400,
+     "w": 56,
+     "h": 56,
+     "text": "mystery",
+     "socket": ""
+    },
+    {
+     "id": "r_Unknown",
+     "type": "value",
+     "x": 600,
+     "y": 3400,
+     "w": 170,
+     "h": 64,
+     "text": "Unknown"
+    }
+   ],
+   "edges": [
+    {
+     "id": "e1",
+     "from": "per",
+     "to": "Period"
+    },
+    {
+     "id": "e2",
+     "from": "Period",
+     "to": "o_After_start"
+    },
+    {
+     "id": "e3",
+     "from": "Start",
+     "to": "o_After_start"
+    },
+    {
+     "id": "e4",
+     "from": "o_After_start",
+     "to": "r_After_start"
+    },
+    {
+     "id": "e5",
+     "from": "Period",
+     "to": "o_Before_end"
+    },
+    {
+     "id": "e6",
+     "from": "End",
+     "to": "o_Before_end"
+    },
+    {
+     "id": "e7",
+     "from": "o_Before_end",
+     "to": "r_Before_end"
+    },
+    {
+     "id": "e8",
+     "from": "r_After_start",
+     "to": "o_In_window"
+    },
+    {
+     "id": "e9",
+     "from": "r_Before_end",
+     "to": "o_In_window"
+    },
+    {
+     "id": "e10",
+     "from": "o_In_window",
+     "to": "r_In_window"
+    },
+    {
+     "id": "e11",
+     "from": "r_In_window",
+     "to": "o_Outside_window"
+    },
+    {
+     "id": "e12",
+     "from": "o_Outside_window",
+     "to": "r_Outside_window"
+    },
+    {
+     "id": "e13",
+     "from": "Period",
+     "to": "o_Is_first"
+    },
+    {
+     "id": "e14",
+     "from": "One",
+     "to": "o_Is_first"
+    },
+    {
+     "id": "e15",
+     "from": "o_Is_first",
+     "to": "r_Is_first"
+    },
+    {
+     "id": "e16",
+     "from": "Period",
+     "to": "o_Is_last"
+    },
+    {
+     "id": "e17",
+     "from": "Six",
+     "to": "o_Is_last"
+    },
+    {
+     "id": "e18",
+     "from": "o_Is_last",
+     "to": "r_Is_last"
+    },
+    {
+     "id": "e19",
+     "from": "r_Is_first",
+     "to": "o_First_or_last"
+    },
+    {
+     "id": "e20",
+     "from": "r_Is_last",
+     "to": "o_First_or_last"
+    },
+    {
+     "id": "e21",
+     "from": "o_First_or_last",
+     "to": "r_First_or_last"
+    },
+    {
+     "id": "e22",
+     "from": "Period",
+     "to": "o_Not_first"
+    },
+    {
+     "id": "e23",
+     "from": "One",
+     "to": "o_Not_first"
+    },
+    {
+     "id": "e24",
+     "from": "o_Not_first",
+     "to": "r_Not_first"
+    },
+    {
+     "id": "e25",
+     "from": "Tenth",
+     "to": "o_Tenth_plus_fifth"
+    },
+    {
+     "id": "e26",
+     "from": "Fifth",
+     "to": "o_Tenth_plus_fifth"
+    },
+    {
+     "id": "e27",
+     "from": "o_Tenth_plus_fifth",
+     "to": "r_Tenth_plus_fifth"
+    },
+    {
+     "id": "e28",
+     "from": "r_Tenth_plus_fifth",
+     "to": "o_Sum_equals"
+    },
+    {
+     "id": "e29",
+     "from": "Three tenths",
+     "to": "o_Sum_equals"
+    },
+    {
+     "id": "e30",
+     "from": "o_Sum_equals",
+     "to": "r_Sum_equals"
+    },
+    {
+     "id": "e31",
+     "from": "r_Tenth_plus_fifth",
+     "to": "o_Sum_below"
+    },
+    {
+     "id": "e32",
+     "from": "Three tenths",
+     "to": "o_Sum_below"
+    },
+    {
+     "id": "e33",
+     "from": "o_Sum_below",
+     "to": "r_Sum_below"
+    },
+    {
+     "id": "e34",
+     "from": "One",
+     "to": "o_One_plus_growth"
+    },
+    {
+     "id": "e35",
+     "from": "Growth",
+     "to": "o_One_plus_growth"
+    },
+    {
+     "id": "e36",
+     "from": "o_One_plus_growth",
+     "to": "r_One_plus_growth"
+    },
+    {
+     "id": "e37",
+     "from": "Period",
+     "to": "o_Periods_elapsed"
+    },
+    {
+     "id": "e38",
+     "from": "One",
+     "to": "o_Periods_elapsed"
+    },
+    {
+     "id": "e39",
+     "from": "o_Periods_elapsed",
+     "to": "r_Periods_elapsed"
+    },
+    {
+     "id": "e40",
+     "from": "r_One_plus_growth",
+     "to": "o_Factor"
+    },
+    {
+     "id": "e41",
+     "from": "r_Periods_elapsed",
+     "to": "o_Factor"
+    },
+    {
+     "id": "e42",
+     "from": "o_Factor",
+     "to": "r_Factor"
+    },
+    {
+     "id": "e43",
+     "from": "Base",
+     "to": "o_Escalated"
+    },
+    {
+     "id": "e44",
+     "from": "r_Factor",
+     "to": "o_Escalated"
+    },
+    {
+     "id": "e45",
+     "from": "o_Escalated",
+     "to": "r_Escalated"
+    },
+    {
+     "id": "e46",
+     "from": "Revenue",
+     "to": "o_Revenue_positive"
+    },
+    {
+     "id": "e47",
+     "from": "Zero",
+     "to": "o_Revenue_positive"
+    },
+    {
+     "id": "e48",
+     "from": "o_Revenue_positive",
+     "to": "r_Revenue_positive"
+    },
+    {
+     "id": "e49",
+     "from": "r_Revenue_positive",
+     "to": "o_Profit_if_positive",
+     "toPort": 0
+    },
+    {
+     "id": "e50",
+     "from": "Revenue",
+     "to": "o_Profit_if_positive",
+     "toPort": 1
+    },
+    {
+     "id": "e51",
+     "from": "Zero",
+     "to": "o_Profit_if_positive",
+     "toPort": 2
+    },
+    {
+     "id": "e52",
+     "from": "o_Profit_if_positive",
+     "to": "r_Profit_if_positive"
+    },
+    {
+     "id": "e53",
+     "from": "Revenue",
+     "to": "o_Revenue_is_zero"
+    },
+    {
+     "id": "e54",
+     "from": "Zero",
+     "to": "o_Revenue_is_zero"
+    },
+    {
+     "id": "e55",
+     "from": "o_Revenue_is_zero",
+     "to": "r_Revenue_is_zero"
+    },
+    {
+     "id": "e56",
+     "from": "Cost",
+     "to": "o_Cost_ratio"
+    },
+    {
+     "id": "e57",
+     "from": "Revenue",
+     "to": "o_Cost_ratio"
+    },
+    {
+     "id": "e58",
+     "from": "o_Cost_ratio",
+     "to": "r_Cost_ratio"
+    },
+    {
+     "id": "e59",
+     "from": "r_Revenue_is_zero",
+     "to": "o_Safe_ratio",
+     "toPort": 0
+    },
+    {
+     "id": "e60",
+     "from": "Zero",
+     "to": "o_Safe_ratio",
+     "toPort": 1
+    },
+    {
+     "id": "e61",
+     "from": "r_Cost_ratio",
+     "to": "o_Safe_ratio",
+     "toPort": 2
+    },
+    {
+     "id": "e62",
+     "from": "o_Safe_ratio",
+     "to": "r_Safe_ratio"
+    },
+    {
+     "id": "e63",
+     "from": "r_Revenue_positive",
+     "to": "o_Missing_else",
+     "toPort": 0
+    },
+    {
+     "id": "e64",
+     "from": "Revenue",
+     "to": "o_Missing_else",
+     "toPort": 1
+    },
+    {
+     "id": "e65",
+     "from": "o_Missing_else",
+     "to": "r_Missing_else"
+    },
+    {
+     "id": "e66",
+     "from": "r_Is_first",
+     "to": "o_open",
+     "toPort": 0
+    },
+    {
+     "id": "e67",
+     "from": "Opening input",
+     "to": "o_open",
+     "toPort": 1
+    },
+    {
+     "id": "e68",
+     "from": "shClose",
+     "to": "o_open",
+     "toPort": 2
+    },
+    {
+     "id": "e69",
+     "from": "o_open",
+     "to": "r_Opening"
+    },
+    {
+     "id": "e70",
+     "from": "r_Opening",
+     "to": "o_Closing"
+    },
+    {
+     "id": "e71",
+     "from": "Flow",
+     "to": "o_Closing"
+    },
+    {
+     "id": "e72",
+     "from": "o_Closing",
+     "to": "r_Closing"
+    },
+    {
+     "id": "e73",
+     "from": "r_Closing",
+     "to": "shClose"
+    },
+    {
+     "id": "e74",
+     "from": "Flow",
+     "to": "shFlow"
+    },
+    {
+     "id": "e75",
+     "from": "r_Not_first",
+     "to": "o_prev",
+     "toPort": 0
+    },
+    {
+     "id": "e76",
+     "from": "Flow",
+     "to": "o_prev",
+     "toPort": 1
+    },
+    {
+     "id": "e77",
+     "from": "shFlow",
+     "to": "o_prev",
+     "toPort": 2
+    },
+    {
+     "id": "e78",
+     "from": "o_prev",
+     "to": "r_Prev_flow"
+    },
+    {
+     "id": "e79",
+     "from": "Flow",
+     "to": "shFlow2"
+    },
+    {
+     "id": "e80",
+     "from": "r_Is_first",
+     "to": "o_both",
+     "toPort": 0
+    },
+    {
+     "id": "e81",
+     "from": "shFlow2",
+     "to": "o_both",
+     "toPort": 1
+    },
+    {
+     "id": "e82",
+     "from": "shFlow2",
+     "to": "o_both",
+     "toPort": 2
+    },
+    {
+     "id": "e83",
+     "from": "o_both",
+     "to": "r_Both"
+    },
+    {
+     "id": "e84",
+     "from": "x",
+     "to": "o_Rounded",
+     "toPort": 0
+    },
+    {
+     "id": "e85",
+     "from": "Digits",
+     "to": "o_Rounded",
+     "toPort": 1
+    },
+    {
+     "id": "e86",
+     "from": "o_Rounded",
+     "to": "r_Rounded"
+    },
+    {
+     "id": "e87",
+     "from": "x",
+     "to": "o_Rounded_up",
+     "toPort": 0
+    },
+    {
+     "id": "e88",
+     "from": "Digits",
+     "to": "o_Rounded_up",
+     "toPort": 1
+    },
+    {
+     "id": "e89",
+     "from": "o_Rounded_up",
+     "to": "r_Rounded_up"
+    },
+    {
+     "id": "e90",
+     "from": "x",
+     "to": "o_Rounded_down",
+     "toPort": 0
+    },
+    {
+     "id": "e91",
+     "from": "Digits",
+     "to": "o_Rounded_down",
+     "toPort": 1
+    },
+    {
+     "id": "e92",
+     "from": "o_Rounded_down",
+     "to": "r_Rounded_down"
+    },
+    {
+     "id": "e93",
+     "from": "x",
+     "to": "o_Rounded_no_digits",
+     "toPort": 0
+    },
+    {
+     "id": "e94",
+     "from": "o_Rounded_no_digits",
+     "to": "r_Rounded_no_digits"
+    },
+    {
+     "id": "e95",
+     "from": "x",
+     "to": "o_Unknown"
+    },
+    {
+     "id": "e96",
+     "from": "o_Unknown",
+     "to": "r_Unknown"
+    }
+   ]
+  }
+ ]
+}

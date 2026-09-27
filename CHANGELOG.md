@@ -2,6 +2,14 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## New operators, part 1: the calculation (phase E1a)
+- **New operators**, calculated alike in fmIDE and in Excel: the **period number** (1, 2, 3… — in Excel the sheet's "Period #" cell), **if** (condition, then, else; only the branch taken is calculated), **=** and **≠**, **and**, **or**, **not**, and **round**, **roundup**, **rounddown** (value, digits; like Excel, `round(2.675, 2)` is 2.68). Functions can use them too: `PERIOD()`, `IF`, `AND`, `OR`, `NOT`, `ROUND`, `ROUNDUP`, `ROUNDDOWN`, `=` and `<>`.
+- For now they can be used through files and `window.fm` (`fm.createOperator`, and `fm.connect` taking an if's or round's input by name). Placing and wiring them on the canvas comes in phase E1b; the palette keeps its 15 operators until then.
+- A corkscrew can now be written `if(period = 1, Opening, previous Closing)`: the branch not taken may reach before the first period.
+- **Files:** system version 6, module 4, workspace 5, templates 5. Older files open as before; an older fmIDE or ExcelExporter asks before opening a newer file.
+- **Changed:** an operator fmIDE doesn't know (only a hand-edited file has one) now shows "?" and `#N/A`; before, it passed its first input through. Comparisons now treat numbers that differ only in their last few binary digits as equal, as Excel does (`0.1 + 0.2 = 0.3`).
+- **Fix (from phase D3):** a function whose own IFERROR catches a period before the first, feeding a rectangle directly, could show a different number in Excel than in fmIDE. Both now follow the function's formula.
+
 ## Fix: nested function calls calculated slowly
 - A function that uses its input several times, nested inside others of the same kind, took four times as long for each level: seconds at 11 levels, hours at the 16 allowed, so such a file could make fmIDE (and ExcelExporter's unit column) stop responding. The same call written several times in one formula is now worked out once; 16 levels calculate at once. Values and units are unchanged.
 

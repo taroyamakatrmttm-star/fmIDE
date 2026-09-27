@@ -209,11 +209,23 @@ function compileCanvas(c, functions){
       }).filter(e => rawById.has(e.from));
       // The same, in the order units read them (sources checked first, then sorted).
       out.unitInputs = inc.filter(e => rawById.has(e.from)).sort((a, b) => irByPosition(rawById.get(a.from), rawById.get(b.from)));
+      // An operator with named inputs (phase E1: if, round…): the arrow into each, by its
+      // `toPort`, or null (the first arrow into a port counts, as for a function node).
+      if(out.op && out.op.ports){
+        const ports = portEdges.get(n.id);
+        out.portInputs = out.op.ports.map((_, i) => {
+          const e = ports ? ports.get(i) : undefined;
+          return e && rawById.has(e.from) ? e : null;
+        });
+      }
     }
     return out;
   };
 
   const list = nodes.map(compileNode);
+  // The compiled definition of each function node, for the timeline rule (input-rule.js),
+  // which reads the canvas as saved.
+  raw.calls = new Map(list.filter(n => n.type === 'function').map(n => [n.id, n.call]));
   const byId = new Map();
   list.forEach(n => { if(!byId.has(n.id)) byId.set(n.id, n); });
   // A block's ports: its Input and Output rectangles, left to right, and its Vertical Index.
@@ -329,6 +341,15 @@ function irUnit(ir, canvasId, nodeId, path, visiting){
   } else if(n.type === 'function'){
     // Worked out from the function's formula, with the units of what feeds its inputs.
     if(n.call && !n.call.status) result = functionUnit(n.call, (i) => irEdgeUnit(ir, canvasId, irPortEdge(ir, canvasId, n.id, i), path, visiting));
+  } else if(n.type === 'operator' && n.op && n.op.ports){
+    // Named inputs: 'first' is the value's unit (round); 'branches' is then's and else's
+    // when they agree (if).
+    const unitOfPort = (i) => n.portInputs[i] ? fromEdge(n.portInputs[i]) : null;
+    if(n.op.unit === 'first') result = unitOfPort(0);
+    else if(n.op.unit === 'branches'){
+      const a = unitOfPort(1), b = unitOfPort(2);
+      result = a && b && uomDimsEqual(a, b) ? a : null;
+    }
   } else if(n.type === 'operator'){
     const units = n.unitInputs.map(fromEdge);
     const rule = n.op ? n.op.unit : null;
@@ -368,7 +389,9 @@ function irEdgeUnit(ir, canvasId, edge, path, visiting){
 //
 // Error codes: cycle, alias-unset, alias-missing-canvas, alias-missing-node, no-input,
 // ambiguous, missing-input, period-out-of-range, math-error, unary-only, needs-two,
-// block-missing-def, block-missing-output, block-cycle; for function nodes also
+// block-missing-def, block-missing-output, block-cycle, operator-unknown (an operator's text
+// isn't in the catalogue), operator-input-unwired (a named input it reads has no arrow); for
+// function nodes also
 // function-missing, function-unreadable, function-cycle, function-too-deep,
 // function-arguments (compileFunctions) and function-input-unwired.
 //
@@ -540,12 +563,39 @@ function evaluateModel(ir, options){
           if(!edge) return { error: 'function-input-unwired' };
           const v = resolveEdge(canvasId, edge, period, scope, visiting);
           return bad(v) ? { error: 'missing-input', edge } : { value: v };
-        });
+        }, period);
         if(r.error){
           errors[key] = r.error;
           if(trace && r.edge) failedFrom(key, canvasId, r.edge, period, scope);
         } else result = r.value;
       }
+    } else if(!n.op){
+      // An operator fmIDE doesn't know (only a hand-edited file has one).
+      errors[key] = 'operator-unknown';
+    } else if(n.op.period){
+      // The period number, counted from 1.
+      result = period + 1;
+    } else if(n.op.ports){
+      // Named inputs (if, round…), each read only when needed. An if reads its condition,
+      // then only the branch it picks.
+      const read = (i) => {
+        const edge = n.portInputs[i];
+        if(!edge) return { error: 'operator-input-unwired' };
+        const v = resolveEdge(canvasId, edge, period, scope, visiting);
+        return bad(v) ? { error: 'missing-input', edge } : { value: v };
+      };
+      let r;
+      if(n.op.branches){
+        const c = read(0);
+        r = c.error ? c : read(c.value !== 0 ? 1 : 2);
+      } else {
+        const got = n.op.ports.map((_, i) => read(i));
+        r = got.find(g => g.error) || applyOperator(n.op, got.map(g => g.value));
+      }
+      if(r.error){
+        errors[key] = r.error;
+        if(trace && r.edge) failedFrom(key, canvasId, r.edge, period, scope);
+      } else result = r.value;
     } else {
       const inputs = n.inputs;
       if(n.op && n.op.fallback){

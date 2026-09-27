@@ -32,19 +32,31 @@ const FUNCTION_BUILTINS = Object.assign(Object.create(null), {
   ABS:     { id: 'abs',     min: 1, max: 1 },
   MOD:     { id: 'mod',     min: 2, max: 2 },
   IFERROR: { id: 'iferror', min: 2, max: 2 },
+  // Phase E1.
+  IF:        { id: 'if',        min: 3, max: 3 },
+  AND:       { id: 'and',       min: 1, max: Infinity },
+  OR:        { id: 'or',        min: 1, max: Infinity },
+  NOT:       { id: 'not',       min: 1, max: 1 },
+  ROUND:     { id: 'round',     min: 2, max: 2 },
+  ROUNDUP:   { id: 'roundup',   min: 2, max: 2 },
+  ROUNDDOWN: { id: 'rounddown', min: 2, max: 2 },
+  PERIOD:    { id: 'period',    min: 0, max: 0 },
 });
+// Built-in names an input may still have (they came after functions did, so a definition
+// may already use them for an input): read as the input unless followed by "(".
+const FUNCTION_INPUT_NAMES_ALLOWED = new Set(['PERIOD']);
 // Names kept back: Excel functions that are not available (yet), so a formula using one
 // says so instead of looking for a function of that name.
-const FUNCTION_RESERVED = new Set(['IF', 'IFS', 'AND', 'OR', 'NOT', 'XOR', 'SUM', 'PRODUCT', 'ROUND', 'ROUNDUP',
-  'ROUNDDOWN', 'INT', 'TRUNC', 'LN', 'LOG', 'LOG10', 'EXP', 'SQRT', 'POWER', 'SIGN', 'COUNT', 'LET', 'LAMBDA',
+const FUNCTION_RESERVED = new Set(['IFS', 'XOR', 'SUM', 'PRODUCT', 'INT', 'TRUNC', 'LN', 'LOG', 'LOG10', 'EXP', 'SQRT', 'POWER', 'SIGN', 'COUNT', 'LET', 'LAMBDA',
   'CHOOSE', 'INDEX', 'NA', 'TRUE', 'FALSE', 'PI', 'CEILING', 'FLOOR', 'MEDIAN', 'SUMPRODUCT']);
 // Symbols and the catalogue operator each one is. The typographic signs fmIDE shows on its
 // operators are accepted too.
 const FUNCTION_SYMBOLS = Object.assign(Object.create(null), {
   '+': 'add', '-': 'subtract', '−': 'subtract', '*': 'multiply', '×': 'multiply', '/': 'divide', '÷': 'divide',
   '^': 'power', '<': 'lt', '<=': 'le', '≤': 'le', '>': 'gt', '>=': 'ge', '≥': 'ge',
+  '<>': 'ne', '≠': 'ne',
 });
-const FUNCTION_COMPARISONS = new Set(['lt', 'le', 'gt', 'ge']);
+const FUNCTION_COMPARISONS = new Set(['lt', 'le', 'gt', 'ge', 'eq', 'ne']);
 
 // ---- the parser ----
 // Returns { ok: true, name, params, body, calls } or { ok: false, error: { message, at, length } }
@@ -85,7 +97,7 @@ function parseFunctionText(text){
         const p = expect('name', undefined, 'Expected the name of an input.');
         const key = p.value.toLowerCase();
         const upper = p.value.toUpperCase();
-        if(FUNCTION_BUILTINS[upper] || FUNCTION_RESERVED.has(upper)) fail(`"${p.value}" is the name of a built-in Excel function and can't be an input's name.`, p.at, p.text.length);
+        if((FUNCTION_BUILTINS[upper] && !FUNCTION_INPUT_NAMES_ALLOWED.has(upper)) || FUNCTION_RESERVED.has(upper)) fail(`"${p.value}" is the name of a built-in Excel function and can't be an input's name.`, p.at, p.text.length);
         if(key === name.toLowerCase()) fail(`An input can't have the function's own name, "${p.value}".`, p.at, p.text.length);
         if(paramIndex.has(key)) fail(`Two inputs are both called "${p.value}".`, p.at, p.text.length);
         if(params.length >= FUNCTION_LIMITS.inputs) fail(`A function can have at most ${FUNCTION_LIMITS.inputs} inputs.`, p.at, p.text.length);
@@ -104,16 +116,25 @@ function parseFunctionText(text){
     const enter = () => { if(++depth > FUNCTION_LIMITS.nesting) fail(`The formula is nested too deeply (at most ${FUNCTION_LIMITS.nesting} levels).`, at(), 1); };
     const leave = () => { depth--; };
     const isOp = (ids) => { const tok = peek(); return !!tok && tok.type === 'op' && ids.includes(tok.value); };
+    // In the formula, "=" compares (equal), as in Excel; "<>" and "≠" are not equal.
+    const comparisonAhead = () => {
+      const tok = peek();
+      if(!tok) return null;
+      if(tok.type === 'op' && FUNCTION_COMPARISONS.has(tok.value)) return tok.value;
+      if(tok.type === 'punct' && tok.value === '=') return 'eq';
+      return null;
+    };
 
     function comparison(){
       const left = additive();
-      if(peek() && peek().type === 'op' && FUNCTION_COMPARISONS.has(peek().value)){
-        const op = next();
+      const id = comparisonAhead();
+      if(id){
+        next();
         const right = additive();
-        if(peek() && peek().type === 'op' && FUNCTION_COMPARISONS.has(peek().value)){
+        if(comparisonAhead()){
           fail('Comparisons can\'t be chained (a < b < c): compare two values at a time.', peek().at, peek().text.length);
         }
-        return { t: 'op', id: op.value, args: [left, right] };
+        return { t: 'op', id, args: [left, right] };
       }
       return left;
     }
@@ -194,7 +215,6 @@ function parseFunctionText(text){
         return { t: 'call', name: tok.value, key, args };
       }
       if(tok.type === 'punct' && tok.value === ')') fail('Unexpected ")".', tok.at, 1);
-      if(tok.type === 'punct' && tok.value === '=') fail('"=" can only follow the inputs. To compare, use <, <=, > or >=.', tok.at, 1);
       fail(`Expected a number, an input or "(" here, not "${tok.text}".`, tok.at, tok.text.length);
     }
 
@@ -202,7 +222,6 @@ function parseFunctionText(text){
     if(peek()){
       const tok = peek();
       if(tok.type === 'punct' && tok.value === ')') fail('Unexpected ")": there is no "(" for it to close.', tok.at, 1);
-      if(tok.type === 'punct' && tok.value === '=') fail('"=" can only follow the inputs. To compare, use <, <=, > or >=.', tok.at, 1);
       fail(`Unexpected "${tok.text}": expected an operator such as + or *.`, tok.at, tok.text.length);
     }
     return { ok: true, name, params, body, calls };
@@ -242,8 +261,7 @@ function tokenizeFunctionText(src, fail){
       continue;
     }
     const two = src.slice(i, i + 2);
-    if(two === '<=' || two === '>='){ tokens.push({ type: 'op', value: FUNCTION_SYMBOLS[two], text: two, at: start }); i += 2; continue; }
-    if(two === '<>') fail('"<>" isn\'t supported: comparisons are <, <=, > and >=.', start, 2);
+    if(two === '<=' || two === '>=' || two === '<>'){ tokens.push({ type: 'op', value: FUNCTION_SYMBOLS[two], text: two, at: start }); i += 2; continue; }
     if(FUNCTION_SYMBOLS[ch]){ tokens.push({ type: 'op', value: FUNCTION_SYMBOLS[ch], text: ch, at: start }); i++; continue; }
     if(ch === '(' || ch === ')' || ch === ',' || ch === '='){ tokens.push({ type: 'punct', value: ch, text: ch, at: start }); i++; continue; }
     if(ch === '%') fail('"%" isn\'t supported: use MOD(a, b) for a remainder, or / 100 for a percentage.', start, 1);
@@ -370,23 +388,25 @@ function compileFunctions(list){
 // ---- calculating a call ----
 // `fn` is a compiled function whose status is null; `input(i)` returns input i's result,
 // { value } or { error, edge? }, and is asked only for inputs the formula actually reads
-// (so IFERROR inside a function catches a failing input, as Excel does). Returns { value }
-// or { error, edge? }: a failing input's own result, or { error: 'math-error' } for a result
-// that isn't a finite number (a divide by zero; Excel shows #DIV/0! or #NUM!).
-function runFunction(fn, input){
+// (so IFERROR inside a function catches a failing input, as Excel does, and IF reads only
+// the branch it takes). `period` is the period being calculated, from 0 (PERIOD() gives it
+// counted from 1). Returns { value } or { error, edge? }: a failing input's own result, or
+// { error: 'math-error' } for a result that isn't a finite number (a divide by zero; Excel
+// shows #DIV/0! or #NUM!).
+function runFunction(fn, input, period){
   const memo = [];
   const arg = (i) => {
     if(!memo[i]) memo[i] = i < fn.params.length ? input(i) : { error: 'function-input-unwired' };
     return memo[i];
   };
-  return evalFunctionExpr(fn, fn.body, arg);
+  return evalFunctionExpr(fn, fn.body, arg, period || 0);
 }
-function evalFunctionExpr(fn, x, arg){
+function evalFunctionExpr(fn, x, arg, period){
   switch(x.t){
     case 'num': return { value: x.v };
     case 'param': return arg(x.i);
     case 'neg': {
-      const r = evalFunctionExpr(fn, x.a, arg);
+      const r = evalFunctionExpr(fn, x.a, arg, period);
       return r.error ? r : { value: -r.value };
     }
     case 'call': {
@@ -399,22 +419,28 @@ function evalFunctionExpr(fn, x, arg){
       const target = fn.targets.get(x.key);
       const memo = [];
       const inner = (i) => {
-        if(!memo[i]) memo[i] = i < x.args.length ? evalFunctionExpr(fn, x.args[i], arg) : { error: 'function-input-unwired' };
+        if(!memo[i]) memo[i] = i < x.args.length ? evalFunctionExpr(fn, x.args[i], arg, period) : { error: 'function-input-unwired' };
         return memo[i];
       };
-      const r = runFunctionWith(target, inner);
+      const r = runFunctionWith(target, inner, period);
       cache.set(key, r);
       return r;
     }
     case 'op': {
       const op = operatorById(x.id);
       if(op.fallback){
-        const first = evalFunctionExpr(fn, x.args[0], arg);
-        return first.error ? evalFunctionExpr(fn, x.args[1], arg) : first;
+        const first = evalFunctionExpr(fn, x.args[0], arg, period);
+        return first.error ? evalFunctionExpr(fn, x.args[1], arg, period) : first;
+      }
+      if(op.period) return { value: period + 1 };
+      if(op.branches){
+        // IF(condition, then, else): only the branch it takes is read.
+        const c = evalFunctionExpr(fn, x.args[0], arg, period);
+        return c.error ? c : evalFunctionExpr(fn, x.args[c.value !== 0 ? 1 : 2], arg, period);
       }
       const values = [];
       for(const a of x.args){
-        const r = evalFunctionExpr(fn, a, arg);
+        const r = evalFunctionExpr(fn, a, arg, period);
         if(r.error) return r;
         values.push(r.value);
       }
@@ -426,8 +452,8 @@ function evalFunctionExpr(fn, x, arg){
   return { error: 'function-unreadable' };
 }
 // A call inside a formula: the callee's formula, with its inputs read from the caller.
-function runFunctionWith(target, input){
-  return evalFunctionExpr(target, target.body, input);
+function runFunctionWith(target, input, period){
+  return evalFunctionExpr(target, target.body, input, period);
 }
 
 // Remembered calls, per set of inputs (`arg`, one for each formula being worked out): a call
@@ -459,6 +485,44 @@ function functionExprKey(x){
     case 'call': return functionCallKey(x);
   }
   return '?';
+}
+
+// ---- reaching outside the timeline ----
+// True if a call to `fn` (status null) must fail because an input it reads needs a period
+// outside the timeline, where `inputReaches(i)` says whether input i does (input-rule.js,
+// reachesOutsideTimeline). Only what the formula must read counts: IFERROR fails only when
+// both of its inputs do, IF when its condition does or both of its branches do, and an input
+// the formula doesn't read never counts — as the calculation reads them.
+function functionNeedsOutsideTimeline(fn, inputReaches){
+  const memo = [];
+  const arg = (i) => { if(!(i in memo)) memo[i] = !!inputReaches(i); return memo[i]; };
+  return functionExprNeedsOutside(fn, fn.body, arg);
+}
+function functionExprNeedsOutside(fn, x, arg){
+  switch(x.t){
+    case 'num': return false;
+    case 'param': return arg(x.i);
+    case 'neg': return functionExprNeedsOutside(fn, x.a, arg);
+    case 'call': {
+      const cache = functionCallCache(arg);
+      const key = 'reach:' + functionCallKey(x);
+      if(cache.has(key)) return cache.get(key);
+      const target = fn.targets.get(x.key);
+      const memo = [];
+      const inner = (i) => { if(!(i in memo)) memo[i] = i < x.args.length && functionExprNeedsOutside(fn, x.args[i], arg); return memo[i]; };
+      const r = functionExprNeedsOutside(target, target.body, inner);
+      cache.set(key, r);
+      return r;
+    }
+    case 'op': {
+      const op = operatorById(x.id);
+      const r = (i) => functionExprNeedsOutside(fn, x.args[i], arg);
+      if(op.fallback) return r(0) && r(1);
+      if(op.branches) return r(0) || (r(1) && r(2));
+      return x.args.some((_, i) => r(i));
+    }
+  }
+  return false;
 }
 
 // ---- units ----
@@ -493,6 +557,16 @@ function functionExprUnit(fn, x, arg){
     }
     case 'op': {
       const rule = operatorById(x.id).unit;
+      // Named inputs (phase E1): ROUND keeps its value's unit; IF takes then's and else's
+      // when they agree (the condition's doesn't count).
+      if(rule === 'first') return functionExprUnit(fn, x.args[0], arg);
+      if(rule === 'branches'){
+        const a = functionExprUnit(fn, x.args[1], arg), b = functionExprUnit(fn, x.args[2], arg);
+        if(a === null || b === null) return null;
+        if(a === FUNCTION_UNIT_NUMBER) return b;
+        if(b === FUNCTION_UNIT_NUMBER) return a;
+        return uomDimsEqual(a, b) ? a : null;
+      }
       const units = x.args.map(a => functionExprUnit(fn, a, arg));
       if(units.some(u => u === null)) return null;
       if(rule === 'multiply' || rule === 'divide'){

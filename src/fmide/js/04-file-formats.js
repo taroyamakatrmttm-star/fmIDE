@@ -15,9 +15,9 @@
   // build:include shared/file-formats.js
   const FILE_FORMATS = {
     'system':               { current: SHARED_FILE_VERSIONS['system'], label: 'system', where: 'File → Load System' },
-    'module':               { current: 3, label: 'module',              where: 'File → Load Module' },
+    'module':               { current: 4, label: 'module',              where: 'File → Load Module' },
     'fmIDE-workspace':      { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'workspace', where: 'File → Import Workspace' },
-    'fmIDE-templates':      { current: 4, label: 'templates file',      where: 'Templates → Import Templates' },
+    'fmIDE-templates':      { current: 5, label: 'templates file',      where: 'Templates → Import Templates' },
     'fmIDE-functions':      { current: 1, label: 'functions file',      where: 'Functions → Import Functions' },
     'fmIDE-format-presets': { current: 1, label: 'format presets file', where: 'Format Presets → Import Presets' },
     'fmIDE-shortcuts':      { current: 2, label: 'shortcuts file',      where: 'Keyboard Shortcuts → Import Shortcuts' },
@@ -30,7 +30,9 @@
       1: d => upgradeNodePlugs(d.nodes),
       // v2 → v3: a module may carry the function definitions it uses (`functions`); older
       // modules have none.
-      2: () => {}
+      2: () => {},
+      // v3 → v4: the operators of phase E1, as system v5 → v6; older modules have none.
+      3: () => {}
     },
     // v1 → v2: templates get a family, a version number, a change note and a version id.
     'fmIDE-templates': {
@@ -39,7 +41,10 @@
       2: () => {},
       // v3 → v4: a template's module or system may carry function definitions; older ones
       // have none.
-      3: () => {}
+      3: () => {},
+      // v4 → v5: a template's module or system may use the operators of phase E1; older ones
+      // don't.
+      4: () => {}
     },
     // v1 shortcut files stored combos in the old notation.
     'fmIDE-shortcuts': {

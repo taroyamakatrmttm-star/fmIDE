@@ -5,9 +5,8 @@
 // broken: an alias that points nowhere, two arrows into one rectangle, a period shift with
 // no input, a missing block or block output, a block inside itself, a loop. The panel next
 // to Generate lists the rows where that happens, with the periods and where it starts —
-// worked out with fmIDE's own calculation (the shared IR). It also lists two places where
-// fmIDE shows a number but the formula reads 0: an operator Excel has no spelling for (only
-// a hand-edited file has one) and a row left out of the layout that other rows read.
+// worked out with fmIDE's own calculation (the shared IR). It also lists a row left out of
+// the layout that other rows read (fmIDE shows a number, the formula reads 0).
 // Function calls (step 7 phase D3): a call fmIDE can't calculate is #N/A in Excel, and a
 // formula a call makes too long or too deeply nested for Excel is written as #N/A; both are
 // listed too. It never stops the download.
@@ -37,6 +36,9 @@ const NA_IN_EXCEL = {
   'function-too-deep': 'its function’s calls are nested more than 16 deep',
   'function-arguments': 'its function calls another with the wrong number of inputs',
   'function-input-unwired': 'an input its function reads has no arrow',
+  // Phase E1.
+  'operator-unknown': 'an operator there isn’t one fmIDE knows',
+  'operator-input-unwired': 'an input its operator reads has no arrow',
 };
 
 // Quick look at the IR for anything that can make fmIDE show "?" where Excel writes 0 or a
@@ -53,7 +55,10 @@ function mayDifferFromFmide(ir){
     else if(n.type === 'blockInstance'){
       const def = ir.canvases.get(n.blockDefCanvasId);
       found = !def || n.outgoing.some(e => !def.ports.outputs[e.fromPort || 0]) || blockContainsItself(ir, def.id, new Set());
-    } else if(n.type === 'operator') found = n.inputs.length === 0 && !(n.op && n.op.fallback);
+    } else if(n.type === 'operator'){
+      found = !n.op
+        || (n.op.ports ? n.portInputs.some(e => !e) : (n.inputs.length === 0 && !n.op.fallback && !n.op.period));
+    }
     else if(n.type === 'function') found = !n.call || !!n.call.status || n.call.params.some((p, i) => !irPortEdge(ir, c.id, n.id, i));
   }));
   return found || hasLoop(ir);
@@ -254,12 +259,6 @@ function differenceLines(){
     lines.push('“' + t.row.label + '” (tab “' + t.tabName + '”): the formula in ' + where + ' writes out a function call that '
       + why + ', so Excel shows #N/A there, where fmIDE shows its value. Putting a rectangle between the function and what feeds it breaks the formula up.');
   });
-  // Operators Excel has no spelling for: fmIDE passes the first input through.
-  modelIR.order.forEach(c => c.list.forEach(n => {
-    if(n.type !== 'operator' || (n.op && EXCEL_SPELLINGS[n.op.id])) return;
-    lines.push('An operator “' + String(n.symbol == null ? '' : n.symbol) + '” on “' + (c.name || c.id)
-      + '” is not one fmIDE knows: fmIDE passes its first input through; Excel writes 0.');
-  }));
   // Rows left out of the layout that other rows' formulas read.
   const aliasTargets = new Set();
   modelIR.order.forEach(c => c.list.forEach(n => { if(n.type === 'alias' && n.sourceCanvasId) aliasTargets.add(n.sourceCanvasId + '|' + n.sourceNodeId); }));

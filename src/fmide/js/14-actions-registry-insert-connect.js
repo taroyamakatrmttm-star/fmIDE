@@ -177,8 +177,8 @@
     } });
 
   defineAction({ name:'createOperator', label:'Create Operator', category:'Insert', icon:'±', returns:'node',
-    desc:'Adds an operator node. For − ÷ ^ % and comparisons, inputs are taken left-to-right by x position.',
-    params:[ PX, PY, P('op','enum',{ options: OPS, def:'+' }) ],
+    desc:'Adds an operator node. For − ÷ ^ % and comparisons, inputs are taken left-to-right by x position; if and round take each input by name (fm.connect\'s toPort).',
+    params:[ PX, PY, P('op','enum',{ options: ALL_OPS, def:'+' }) ],
     run(a){
       pushHistory();
       const size = operatorSize(a.op);
@@ -355,10 +355,31 @@
     } });
 
   // ---------------------------------- Connect ----------------------------------
+  // The named inputs of an operator (phase E1: if, round, roundup, rounddown), or null.
+  function operatorPortsOf(n){
+    const op = n && n.type === 'operator' ? operatorForSymbol(n.text) : null;
+    return op && op.ports ? op.ports : null;
+  }
+  // An operator's named input from an fm reference: its name (any capitals) or its number
+  // counted from 1.
+  function resolveOperatorPort(n, ref){
+    const ps = operatorPortsOf(n);
+    const s = ref == null ? '' : String(ref).trim();
+    if(s === '') fail(`${describeNode(n)} takes each input by name — say which one (${ps.join(', ')}).`);
+    if(/^\d+$/.test(s)){
+      const i = Number(s) - 1;
+      if(i < 0 || i >= ps.length) fail(`${describeNode(n)} has no input #${s} (it has ${ps.length}).`);
+      return i;
+    }
+    const i = ps.findIndex(p => p === s.toLowerCase());
+    if(i < 0) fail(`${describeNode(n)} has no input called "${s}" (its inputs: ${ps.join(', ')}).`);
+    return i;
+  }
+
   defineAction({ name:'connect', label:'Connect', category:'Connect', icon:'→', returns:'edge',
-    desc:'Draws an arrow from one node to another. Block instances and function nodes take a port: its name or 1-based number (a function node\'s input by the name the definition gives it).',
+    desc:'Draws an arrow from one node to another. Block instances, function nodes and the operators with named inputs (if: condition, then, else; round, roundup, rounddown: value, digits) take a port: its name or 1-based number (a function node\'s input by the name the definition gives it).',
     params:[ P('from','node'), P('to','node'), P('fromPort','string',{ def:'', label:'from port', help:'block outputs only' }),
-      P('toPort','string',{ def:'', label:'to port', help:'block or function inputs only' }) ],
+      P('toPort','string',{ def:'', label:'to port', help:'block, function, if or round inputs only' }) ],
     run(a){
       const A = onActiveCanvas(a.from), B = onActiveCanvas(a.to);
       if(A === B) fail('A node cannot be connected to itself.');
@@ -367,6 +388,7 @@
       else if(a.fromPort !== '') fail(`${describeNode(A)} has no output ports — leave "from port" empty.`);
       if(B.type === 'blockInstance') tp = resolvePort(B, a.toPort, 'in');
       else if(B.type === 'function') tp = resolveFunctionPort(B, a.toPort);
+      else if(operatorPortsOf(B)) tp = resolveOperatorPort(B, a.toPort);
       else if(a.toPort !== '') fail(`${describeNode(B)} has no input ports — leave "to port" empty.`);
       if(tp === null){
         const dup = edges.find(e => e.from === A.id && e.to === B.id && (fp == null ? e.fromPort == null : e.fromPort === fp) && e.toPort == null);
@@ -387,6 +409,8 @@
         const nm = functionPortName(a.to, Number(a.toPort) - 1);
         if(nm) out.toPort = nm;
       }
+      const opPorts = operatorPortsOf(a.to);
+      if(opPorts && /^\d+$/.test(String(a.toPort)) && opPorts[Number(a.toPort) - 1]) out.toPort = opPorts[Number(a.toPort) - 1];
       [['fromPort', a.from, 'out'], ['toPort', a.to, 'in']].forEach(([k, n, dir]) => {
         if(n.type !== 'blockInstance' || !/^\d+$/.test(String(a[k]))) return;
         const def = canvases.find(c => c.id === n.blockDefCanvasId);
@@ -404,6 +428,7 @@
       let tp = null;
       if(a.to.type === 'blockInstance' && a.toPort !== '') tp = resolvePort(a.to, a.toPort, 'in');
       if(a.to.type === 'function' && a.toPort !== '') tp = resolveFunctionPort(a.to, a.toPort);
+      if(operatorPortsOf(a.to) && a.toPort !== '') tp = resolveOperatorPort(a.to, a.toPort);
       const e = edges.find(x => !x.auto && x.from === a.from.id && x.to === a.to.id && (tp === null || x.toPort === tp));
       if(!e) fail(`There is no arrow from ${describeNode(a.from)} to ${describeNode(a.to)}.`);
       pushHistory();

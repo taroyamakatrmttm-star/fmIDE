@@ -60,7 +60,12 @@ function buildFunctionCallFormula(canvasId, n, periodIndex, ctx, currentTabName,
     cache.set(k, e);
     return e;
   };
-  return fnAtom(fnNumeric(writeFunctionExpr(n.call, n.call.body, input, false, ctx)));
+  // PERIOD() reads this column's "Period #" cell (a call reached through a period shift is
+  // written for another column, so the column is kept for the call and put back after).
+  const savedPeriod = ctx.fnPeriodIndex;
+  ctx.fnPeriodIndex = periodIndex;
+  try{ return fnAtom(fnNumeric(writeFunctionExpr(n.call, n.call.body, input, false, ctx))); }
+  finally{ ctx.fnPeriodIndex = savedPeriod; }
 }
 
 // A piece of formula text: how tightly it binds, and whether it is a TRUE/FALSE.
@@ -108,7 +113,19 @@ function writeFunctionExpr(fn, x, input, caught, ctx){
         const second = fnNumeric(writeFunctionExpr(fn, x.args[1], input, caught, ctx));
         return fnPiece(spell.fn + '(' + first.s + ',' + second.s + ')', FN_LEVEL.atom, false);
       }
+      // PERIOD(): the "Period #" cell (row 3) of the formula's own sheet, in this column.
+      if(spell.period) return fnPiece(colLetter(periodCol(ctx.fnPeriodIndex || 0)) + '$3', FN_LEVEL.atom, false);
+      if(spell.branches){
+        // IF(condition, then, else): only the branch taken counts, so inside either one a
+        // period outside the timeline is an error (NA()), as for IFERROR's first input.
+        const c = writeFunctionExpr(fn, x.args[0], input, caught, ctx);
+        const t = fnNumeric(writeFunctionExpr(fn, x.args[1], input, true, ctx));
+        const e = fnNumeric(writeFunctionExpr(fn, x.args[2], input, true, ctx));
+        return fnPiece(spell.fn + '(' + c.s + ',' + t.s + ',' + e.s + ')', FN_LEVEL.atom, false);
+      }
       const args = x.args.map(a => writeFunctionExpr(fn, a, input, caught, ctx));
+      // AND, OR, NOT: Excel's TRUE/FALSE, which N() turns into 1/0 where needed.
+      if(spell.logical) return fnPiece(spell.fn + '(' + args.map(p => p.s).join(',') + ')', FN_LEVEL.atom, true);
       if(spell.infix){
         const level = FN_LEVEL[x.id];
         const left = args[0].level >= level ? args[0].s : '(' + args[0].s + ')';
