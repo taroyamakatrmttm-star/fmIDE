@@ -13,7 +13,10 @@ const { requireSoffice, recalc, valueOf } = require('./helpers/soffice');
 const { MODELS } = require('./helpers/models');
 
 const AGREEMENT = fs.readdirSync(path.join(FIXTURES, 'agreement')).filter(f => f.endsWith('.json')).sort();
-const CASES = MODELS.map(m => ['models', m]).concat(AGREEMENT.map(m => ['agreement', m]));
+// The function samples of test group 20 too (step 7 phase D3): every function case fmIDE
+// shows "?" for is #N/A in Excel, which counts as agreeing.
+const FUNCTION_SAMPLES = ['basic.json', 'broken.json'];
+const CASES = MODELS.map(m => ['models', m]).concat(AGREEMENT.map(m => ['agreement', m]), FUNCTION_SAMPLES.map(m => ['functions', m]));
 
 // fmIDE's value of every value rectangle, per canvas: { canvas: [{ name, values[] }] }
 // (a value is a number, or 'error' when fmIDE shows "?").
@@ -50,7 +53,7 @@ async function fmideValues(page, file){
 const vm = require('vm');
 function loadIR(){
   const dir = path.join(__dirname, '..', 'src', 'shared');
-  const code = ['operators.js', 'uom.js', 'input-rule.js', 'ir.js'].map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
+  const code = ['operators.js', 'uom.js', 'input-rule.js', 'functions.js', 'ir.js'].map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
   return vm.runInContext(code + '\n;({ compileModel, evaluateModel, parseRectText })', vm.createContext({}));
 }
 function instanceValues(system){

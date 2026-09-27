@@ -182,13 +182,10 @@ function operandRef(canvasId, nodeId, periodIndex, ctx, currentTabName, path, fr
     const lit = effectiveLiteral(node, periodIndex);
     return lit !== null ? formatLiteralForFormula(lit) : '0';
   }
-  // A function call (function plugins, step 7 phase D) is written as #N/A for now: an error
-  // in Excel, where fmIDE shows its value — never a wrong number.
-  if(n.type === 'function') return 'NA()';
-  // Operators, aliases and period shifts are written inline. A loop made only of them (no
-  // rectangle with a row of its own to break it) would never end: it reads 0 instead —
-  // fmIDE shows "?" (a loop), and the check before download lists it.
-  const inline = n.type === 'operator' || n.type === 'alias' || n.type === 'periodShift';
+  // Operators, function calls, aliases and period shifts are written inline. A loop made
+  // only of them (no rectangle with a row of its own to break it) would never end: it reads
+  // 0 instead — fmIDE shows "?" (a loop), and the check before download lists it.
+  const inline = n.type === 'operator' || n.type === 'function' || n.type === 'alias' || n.type === 'periodShift';
   const loopKey = inline ? key + '@' + periodIndex : null;
   if(inline){
     if(!ctx.inlining) ctx.inlining = new Set();
@@ -197,6 +194,8 @@ function operandRef(canvasId, nodeId, periodIndex, ctx, currentTabName, path, fr
   }
   try{
     if(n.type === 'operator') return buildOperatorFormula(canvasId, n, periodIndex, ctx, currentTabName, path);
+    // A function call, written out in full (01c-function-calls.js).
+    if(n.type === 'function') return buildFunctionCallFormula(canvasId, n, periodIndex, ctx, currentTabName, path);
     if(n.type === 'alias'){
       if(!n.sourceCanvasId || !n.sourceNodeId) return '0';
       // An alias source on the SAME canvas as the current context stays inside the

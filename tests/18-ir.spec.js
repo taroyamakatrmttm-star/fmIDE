@@ -87,11 +87,11 @@ test('units follow an edit and its undo straight away', async ({ page }) => {
 
 // ---- the shared IR on its own, in Node: no browser, no app ----
 // Loaded into an empty context, so compileModel can only use what the shared files define:
-// any use of fmIDE's own state would fail here.
+// any use of fmIDE's own state would fail here. (functions.js too: samples may carry functions.)
 const vm = require('vm');
 const SHARED = path.join(__dirname, '..', 'src', 'shared');
 function loadIR(){
-  const code = ['operators.js', 'uom.js', 'input-rule.js', 'ir.js'].map(f => fs.readFileSync(path.join(SHARED, f), 'utf8')).join('\n');
+  const code = ['operators.js', 'uom.js', 'input-rule.js', 'functions.js', 'ir.js'].map(f => fs.readFileSync(path.join(SHARED, f), 'utf8')).join('\n');
   const ctx = vm.createContext({});
   return vm.runInContext(code + '\n;({ compileModel, evaluateModel, unitOf, formatUOM, OPERATORS, operatorForSymbol, operatorById, applyOperator })', ctx);
 }

@@ -70,11 +70,30 @@ function reserveScenarioRows(row, r, scenarioBlocks){
   return r + n;
 }
 
+// Builds the workbook and downloads it.
 function generateWorkbook(){
+  const built = buildWorkbook();
+  XLSX.writeFile(built.wb, (mapping.cfg.fileName || 'fmIDE-export').replace(/\.xlsx$/i, '') + '.xlsx');
+}
+
+// Builds the workbook without downloading it: { wb, tooLong }, where `tooLong` lists the
+// cells whose formula (with a function call written out in full) goes past Excel's limits
+// and is written as NA() instead: [{ row, tabName, periods: [1-based], problem }] (the
+// check before download reads it too).
+function buildWorkbook(){
   if(typeof XLSX === 'undefined'){
     throw new Error('The built-in Excel writer is missing — this copy of ExcelExporter looks damaged.');
   }
   const ctx = buildCtx();
+  const tooLong = [];
+  // Function versions whose calls are written out: key -> { fn, rows: Set of "label (tab)" }.
+  const functionUses = new Map();
+  let functionUseRow = null;
+  ctx.onFunction = (fn) => {
+    const key = fn.family + '@' + fn.version;
+    if(!functionUses.has(key)) functionUses.set(key, { fn, rows: new Set() });
+    if(functionUseRow) functionUses.get(key).rows.add(functionUseRow);
+  };
   const labels = periodLabels();
   // Helper-column plan: one slot per indexed input of each vertical instance whose
   // vintage rows are written; the workbook gets as many helper columns as the widest
@@ -206,6 +225,26 @@ function generateWorkbook(){
       ctx.currentRowVintage = rowVintage;
       ctx.currentRowHopsKey = pathKey(row.path || [], '', '');
       ctx.currentHelper = plan;
+      functionUseRow = '“' + row.label + '” (' + tab.name + ')';
+      // A cell's content, or NA() where a function call written out in full makes its
+      // formula too long or too deeply nested for Excel (listed in `tooLong`). Formulas
+      // without a call are written as before.
+      const rowTooLong = [];
+      const fitted = (build, p) => {
+        const before = ctx.fnWrites || 0;
+        const saved = [ctx.currentRow, ctx.currentRowVintage, ctx.currentHelper, ctx.currentRowHopsKey];
+        let content, problem = null;
+        try{ content = build(); }
+        catch(err){
+          if(!err || !err.excelTooLong) throw err;
+          [ctx.currentRow, ctx.currentRowVintage, ctx.currentHelper, ctx.currentRowHopsKey] = saved;
+          problem = { kind: 'length', size: null };
+        }
+        if(!problem && content.isFormula && (ctx.fnWrites || 0) !== before) problem = excelFormulaProblem(content.formula);
+        if(!problem) return content;
+        rowTooLong.push({ period: p, problem });
+        return { isFormula: true, formula: 'NA()' };
+      };
 
       // Period contents first — the row's role depends on what it holds.
       const contents = [];
@@ -219,8 +258,8 @@ function generateWorkbook(){
           : linkPos
           ? { isFormula: true, formula: sheetRef(linkPos.tabName, col, linkPos.row, tab.name) }
           : row.verticalCombined
-            ? { isFormula: true, formula: buildVerticalCombinedFormula(row.canvasId, node, p, ctx, tab.name, row.path) }
-            : buildCellContent(row.canvasId, node, p, ctx, tab.name, row.path));
+            ? fitted(() => ({ isFormula: true, formula: buildVerticalCombinedFormula(row.canvasId, node, p, ctx, tab.name, row.path) }), p)
+            : fitted(() => buildCellContent(row.canvasId, node, p, ctx, tab.name, row.path), p));
       }
       // Role of the row: Inputs (typed numbers) · Links (every cell only pulls one cell
       // from another sheet) · Calculations (any other formula).
@@ -251,7 +290,7 @@ function generateWorkbook(){
             const col = colLetter(periodCol(p));
             let cell;
             if(k === 1){
-              const content = buildCellContent(row.canvasId, node, p, ctx, tab.name, row.path);
+              const content = fitted(() => buildCellContent(row.canvasId, node, p, ctx, tab.name, row.path), p);
               cell = content.isFormula ? { t: 'n', f: content.formula, v: 0, z: inFmt }
                 : content.value !== null ? { t: 'n', v: content.value, z: inFmt } : blankCell(null, inFmt);
             } else {
@@ -281,7 +320,7 @@ function generateWorkbook(){
       for(let k = 0; k < helperColCount; k++){
         const port = plan && plan.ports[k];
         const hc = port
-          ? { t: 'n', f: helperCellFormula(ctx, lastHop, row.path.slice(0, -1), port, excelRow, tab.name), v: 0, z: numFmt }
+          ? { t: 'n', f: fitted(() => ({ isFormula: true, formula: helperCellFormula(ctx, lastHop, row.path.slice(0, -1), port, excelRow, tab.name) }), null).formula, v: 0, z: numFmt }
           : blankCell(null);
         if(cellStyle) hc.s = cellStyle;
         setCell(helperCol(k) + excelRow, hc);
@@ -298,6 +337,12 @@ function generateWorkbook(){
       });
 
       ctx.currentRow = null; ctx.currentRowVintage = null; ctx.currentHelper = null; ctx.currentRowHopsKey = null;
+      functionUseRow = null;
+      if(rowTooLong.length){
+        // The scenario row repeats period 1..N of the same formula: each period once.
+        const periods = [...new Set(rowTooLong.filter(t => t.period !== null).map(t => t.period + 1))].sort((a, b) => a - b);
+        tooLong.push({ row, tabName: tab.name, periods, problem: rowTooLong[0].problem });
+      }
       lastRow = Math.max(lastRow, excelRow);
     });
 
@@ -312,6 +357,9 @@ function generateWorkbook(){
   if(wb.SheetNames.length === 0){
     throw new Error('Nothing to export — every row is excluded, or every tab is empty.');
   }
+
+  // Functions tab (last): every function version whose calls the formulas write out.
+  if(functionUses.size) appendFunctionsSheet(wb, functionUses, HDR);
 
   // Scenarios tab (first sheet).
   // With global cases (nCases > 0), following the layout of the workbook it was designed from:
@@ -388,8 +436,38 @@ function generateWorkbook(){
     XLSX.utils.book_append_sheet(wb, ws, scenarioSheetName);
     wb.SheetNames.unshift(wb.SheetNames.pop()); // Scenarios first
   }
-  XLSX.writeFile(wb, (mapping.cfg.fileName || 'fmIDE-export').replace(/\.xlsx$/i, '') + '.xlsx');
+  return { wb, tooLong };
   }finally{ helperColCount = 0; }
+}
+
+// The Functions tab: one row per function version the formulas write out, so a reader can
+// see what each written-out call is — name, version, its definition, description and note
+// (all from the file, written as plain text) and the rows that use it.
+function appendFunctionsSheet(wb, functionUses, HDR){
+  const ws = {};
+  const name = uniqueTabName('Functions', null).name;
+  const cap = (s) => { s = String(s == null ? '' : s); return s.length > 32000 ? s.slice(0, 32000) + '…' : s; };
+  const noteStyle = roleCellStyle('Notes');
+  const labelStyle = roleCellStyle('Labels');
+  ws.A1 = { t: 's', v: name, s: mergeXlStyle({ font: (roleCellStyle('Headers') || {}).font || {} }, { font: { sz: 13 } }) };
+  ws.A2 = textCell('Each call to one of these functions is written out in full inside the formulas that use it.', noteStyle);
+  const heads = ['Function', 'Version', 'Definition', 'Description', 'Note', 'Used in'];
+  heads.forEach((h, i) => { ws[colLetter(i + 1) + '4'] = { t: 's', v: h, s: HDR() }; });
+  const list = [...functionUses.values()].sort((a, b) =>
+    String(a.fn.name).localeCompare(String(b.fn.name)) || (a.fn.version - b.fn.version));
+  list.forEach((u, i) => {
+    const r = 5 + i;
+    const def = u.fn.def || {};
+    ws['A' + r] = textCell(cap(u.fn.name || '(unnamed)'), labelStyle);
+    ws['B' + r] = { t: 'n', v: u.fn.version };
+    ws['C' + r] = textCell(cap(def.text));
+    ws['D' + r] = textCell(cap(def.description));
+    ws['E' + r] = textCell(cap(def.note));
+    ws['F' + r] = textCell(cap([...u.rows].join(', ')));
+  });
+  ws['!ref'] = 'A1:F' + Math.max(4, 4 + list.length);
+  ws['!cols'] = [{ wch: 20 }, { wch: 8 }, { wch: 50 }, { wch: 40 }, { wch: 30 }, { wch: 40 }];
+  XLSX.utils.book_append_sheet(wb, ws, name);
 }
 
 // A row's unit: the rectangle's own typed unit, else the one the IR works out for it in

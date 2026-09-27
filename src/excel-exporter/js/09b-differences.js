@@ -8,7 +8,9 @@
 // worked out with fmIDE's own calculation (the shared IR). It also lists two places where
 // fmIDE shows a number but the formula reads 0: an operator Excel has no spelling for (only
 // a hand-edited file has one) and a row left out of the layout that other rows read.
-// It never stops the download.
+// Function calls (step 7 phase D3): a call fmIDE can't calculate is #N/A in Excel, and a
+// formula a call makes too long or too deeply nested for Excel is written as #N/A; both are
+// listed too. It never stops the download.
 // ============================================================
 
 // Where a "?" starts (the IR's error codes) that Excel writes as 0 or a blank cell. The
@@ -27,6 +29,16 @@ const SILENT_IN_EXCEL = {
   'block-cycle': 'a block there contains itself',
 };
 
+// Where a "?" starts in a function call (the IR's error codes); Excel shows #N/A there.
+const NA_IN_EXCEL = {
+  'function-missing': 'its function’s definition, or one it calls, isn’t in the file (or is another version)',
+  'function-unreadable': 'its function’s definition can’t be read',
+  'function-cycle': 'its function calls itself through other functions',
+  'function-too-deep': 'its function’s calls are nested more than 16 deep',
+  'function-arguments': 'its function calls another with the wrong number of inputs',
+  'function-input-unwired': 'an input its function reads has no arrow',
+};
+
 // Quick look at the IR for anything that can make fmIDE show "?" where Excel writes 0 or a
 // blank. Only when there is something does the check run fmIDE's calculation (a healthy
 // model costs nothing extra).
@@ -42,6 +54,7 @@ function mayDifferFromFmide(ir){
       const def = ir.canvases.get(n.blockDefCanvasId);
       found = !def || n.outgoing.some(e => !def.ports.outputs[e.fromPort || 0]) || blockContainsItself(ir, def.id, new Set());
     } else if(n.type === 'operator') found = n.inputs.length === 0 && !(n.op && n.op.fallback);
+    else if(n.type === 'function') found = !n.call || !!n.call.status || n.call.params.some((p, i) => !irPortEdge(ir, c.id, n.id, i));
   }));
   return found || hasLoop(ir);
 }
@@ -152,12 +165,12 @@ function fmideQuestionMarkRows(){
       const periods = [];
       let first = null;
       found.forEach((e, p) => {
-        if(!e || !e.error || !e.origin || !SILENT_IN_EXCEL[e.origin.code]) return;
+        if(!e || !e.error || !e.origin || !(SILENT_IN_EXCEL[e.origin.code] || NA_IN_EXCEL[e.origin.code])) return;
         periods.push(p + 1);
         if(!first) first = e;
       });
       if(!first) return;
-      rows.push({ row, periods, code: first.origin.code, where: first.origin, blank: first.error === 'ambiguous' });
+      rows.push({ row, periods, code: first.origin.code, where: first.origin, blank: first.error === 'ambiguous', na: !!NA_IN_EXCEL[first.origin.code] });
     });
   }
   fmideDifferenceCache = { ir, rows };
@@ -188,10 +201,36 @@ function describeOrigin(o){
     else if(n.type === 'alias') what = 'an alias';
     else if(n.type === 'periodShift') what = 'a period shift';
     else if(n.type === 'blockInstance') what = 'a block';
+    else if(n.type === 'function') what = 'the function ' + functionNodeLabel(n);
     else what = 'an operator (' + String(n.symbol == null ? '' : n.symbol) + ')';
   }
   const inBlock = o.path && o.path.length ? ' inside a block' : '';
   return what + ' on “' + canvasName + '”' + inBlock;
+}
+
+// "“Margin” v2" for a function node — its name as the file gives it (plain text, shown with
+// textContent), or its definition's name.
+function functionNodeLabel(n){
+  const fn = n.node && n.node.fn;
+  const raw = n.call ? n.call.name : (fn && typeof fn.name === 'string' ? fn.name : '');
+  const name = String(raw || '').slice(0, 64) || '(unnamed)';
+  return '“' + name + '”' + (n.fn ? ' v' + n.fn.version : '');
+}
+
+// The cells whose formula a function call makes too long or too deeply nested for Excel
+// (buildWorkbook's `tooLong`). Worked out by building the workbook without downloading it,
+// only when the model writes out a call; remembered until the model or the layout changes.
+let tooLongCache = null; // { ir, layout, list }
+function tooLongCells(){
+  const ir = modelIR;
+  const writes = ir && ir.order.some(c => c.list.some(n => n.type === 'function' && n.call && !n.call.status));
+  if(!writes) return [];
+  const layout = JSON.stringify(mapping);
+  if(tooLongCache && tooLongCache.ir === ir && tooLongCache.layout === layout) return tooLongCache.list;
+  let list = [];
+  try{ list = buildWorkbook().tooLong; }catch(err){ /* nothing to export yet */ }
+  tooLongCache = { ir, layout, list };
+  return list;
 }
 
 // Every place the workbook will differ from fmIDE, as lines of plain text.
@@ -203,8 +242,17 @@ function differenceLines(){
     if(!d.row.include && !d.row.inlineConstant) return;
     const period = d.periods.length === 1 ? 'period ' : 'periods ';
     lines.push('“' + d.row.label + '” (tab “' + tabName(d.row.tabId) + '”): fmIDE shows ? in ' + period + periodRanges(d.periods)
-      + ' because ' + SILENT_IN_EXCEL[d.code] + ' (' + describeOrigin(d.where) + '); Excel '
-      + (d.blank ? 'leaves the cell blank.' : 'writes 0 there.'));
+      + ' because ' + (d.na ? NA_IN_EXCEL[d.code] : SILENT_IN_EXCEL[d.code]) + ' (' + describeOrigin(d.where) + '); Excel '
+      + (d.na ? 'shows #N/A there.' : d.blank ? 'leaves the cell blank.' : 'writes 0 there.'));
+  });
+  // Formulas a function call makes too long for Excel.
+  tooLongCells().forEach(t => {
+    const where = t.periods.length ? (t.periods.length === 1 ? 'period ' : 'periods ') + periodRanges(t.periods) : 'its helper cell';
+    const why = t.problem.kind === 'nesting'
+      ? 'nests brackets ' + t.problem.size + ' deep (Excel allows ' + EXCEL_LIMITS.nesting + ')'
+      : 'would be ' + (t.problem.size ? t.problem.size.toLocaleString('en-US') + ' characters' : 'longer than Excel allows') + ' (Excel allows ' + EXCEL_LIMITS.length.toLocaleString('en-US') + ')';
+    lines.push('“' + t.row.label + '” (tab “' + t.tabName + '”): the formula in ' + where + ' writes out a function call that '
+      + why + ', so Excel shows #N/A there, where fmIDE shows its value. Putting a rectangle between the function and what feeds it breaks the formula up.');
   });
   // Operators Excel has no spelling for: fmIDE passes the first input through.
   modelIR.order.forEach(c => c.list.forEach(n => {
