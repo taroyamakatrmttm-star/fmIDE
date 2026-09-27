@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Taking down the library's last pack
+- **Fix:** when every pack in the community library has been taken down, the site's build stopped with an error (the library has no `packs/` folder then), so the removal could not be published. It now publishes an empty catalogue, and Browse Library says the library has no packs yet.
+
 ## Browsing the library inside fmIDE (step 8, phase 8d)
 - **File → Browse Library…** (on the published site) lists the community library's packs: search, filter by tag or by what a pack holds, sort, and see a pack's items, licence and credit, with the items you already have marked. **Preview and add…** opens the usual Open Library Pack preview; nothing is added without it.
 - Every pack is checked against the catalogue's list — exact size and SHA-256 fingerprint, and its id — before it is read; list entries that fail fmIDE's checks are left out and counted; everything is shown as plain text.

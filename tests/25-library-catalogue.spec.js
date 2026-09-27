@@ -296,6 +296,24 @@ test.describe('checking the library when building', () => {
     }
     expect(fs.existsSync(testInfo.outputPath('refused'))).toBe(false);
   });
+
+  // Every pack taken down: Git keeps no empty folder, so packs/ is gone while the records stay.
+  test('a library whose every pack was taken down (no packs/ folder) publishes an empty catalogue', async ({ page, served }, testInfo) => {
+    const lib = sampleCopy(testInfo, (dir) => fs.rmSync(path.join(dir, 'packs'), { recursive: true }));
+    const out = testInfo.outputPath('site-empty');
+    const r = run(['--site', out, '--library', lib, '--require-library']);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout).toContain('the library: 0 packs');
+    expect(fs.readFileSync(path.join(out, 'library', 'index.html'), 'utf8')).toContain('<h2>Packs (0)</h2>\n<p>No packs yet.</p>');
+    expect(readJson(out, 'library', 'index.json')).toEqual({ kind: 'fmIDE-library-index', version: 1, packs: [] });
+    expect(fs.existsSync(path.join(out, 'library', 'packs'))).toBe(false);
+    // fmIDE's Browse Library says so.
+    const site = await served(lib);
+    await W.openSite(page, site.origin);
+    await page.evaluate(() => fm.command('browseLibrary'));
+    await expect(page.locator('.modal-box.library-browse .library-browse-status')).toHaveText('The library has no packs yet.');
+    expect(await page.evaluate(() => fm.listLibrary())).toEqual({ packs: [], dropped: 0 });
+  });
 });
 
 test.describe('the catalogue stays out of the app', () => {
