@@ -252,7 +252,7 @@ What was built:
 Problems found and fixed on the way:
 
 - (D1) Loading a module, adding a system or inserting a template that carried a *different* version under a number the model already used kept the model's own and left the incoming nodes on "?" (function-missing). Decision 4 fixes it.
-- (Earlier than step 7) Dragging an arrow passed node ids as bare words, which the automation layer reads as names unless they look like `n12`; in a model from a hand-written file (the function samples: `rev`, `fm1`) dragging failed. The drag now passes `#id`. Other on-canvas edits still pass bare ids (typing a rectangle's text, choosing an operator symbol, the reducer chip, the vertical port toggle); they fail the same way on such files and are left for a separate change.
+- (Earlier than step 7) Dragging an arrow passed node ids as bare words, which the automation layer reads as names unless they look like `n12`; in a model from a hand-written file (the function samples: `rev`, `fm1`) dragging failed. The drag now passes `#id`. Other on-canvas edits passed bare ids the same way (typing a rectangle's text, choosing an operator symbol, the reducer chip, the vertical port toggle, plugs, sockets, roles, period shifts, formats, per-period values); fixed in a separate change right after D2b, which also made the vertical port toggle clickable again (it sat under the output rows, and a click on it redrew the block before landing).
 
 How it was checked:
 

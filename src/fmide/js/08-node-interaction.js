@@ -3,7 +3,9 @@
     el.addEventListener('contextmenu', (ev) => { ev.preventDefault(); });
     el.addEventListener('mousedown', (ev) => {
       const id = el.dataset.id;
-      if(ev.target.classList.contains('tag-btn')){ ev.stopPropagation(); ev.preventDefault(); return; }
+      // The small buttons, and a vertical block's broadcast/indexed toggle: no select or drag
+      // (which redraws a block's body and would replace the toggle before its click lands).
+      if(ev.target.classList.contains('tag-btn') || ev.target.classList.contains('vindex-toggle')){ ev.stopPropagation(); ev.preventDefault(); return; }
       if(ev.target.classList.contains('io-port')){
         ev.stopPropagation(); ev.preventDefault();
         // A function node's one output has no port number (its arrows carry no fromPort).
@@ -69,12 +71,12 @@
       if(ev.target.classList.contains('reducer-chip')){
         const order = REDUCERS;
         const cur = order.includes(n.verticalReducer) ? n.verticalReducer : 'sum';
-        guarded(() => fm.setReducer(n.id, order[(order.indexOf(cur) + 1) % order.length]));
+        guarded(() => fm.setReducer('#' + n.id, order[(order.indexOf(cur) + 1) % order.length]));
       }
       if(ev.target.classList.contains('vindex-toggle')){
         const portIdx = parseInt(ev.target.dataset.portIndex, 10);
         const inEdge = edges.find(e => e.to === n.id && e.toPort === portIdx);
-        if(inEdge) guarded(() => fm.setPortMode(n.id, String(portIdx + 1), !inEdge.verticalIndexed));
+        if(inEdge) guarded(() => fm.setPortMode('#' + n.id, String(portIdx + 1), !inEdge.verticalIndexed));
       }
     });
     el.addEventListener('dblclick', (ev) => {
@@ -363,7 +365,7 @@
       newLbl.className = 'label';
       newLbl.innerHTML = '<div class="line-name"></div><div class="line-value"></div><div class="line-uom"></div>';
       if(ta.parentNode) ta.replaceWith(newLbl);
-      if(newText !== n.text && nodes.includes(n)) guarded(() => fm.setText(n.id, newText));
+      if(newText !== n.text && nodes.includes(n)) guarded(() => fm.setText('#' + n.id, newText));
       clearComputed();
       render();
     }
@@ -392,7 +394,7 @@
       b.addEventListener('mousedown', (ev) => ev.stopPropagation());
       b.addEventListener('click', () => {
         closePicker();
-        guarded(() => fm.setOperator(n.id, sym));
+        guarded(() => fm.setOperator('#' + n.id, sym));
       });
       picker.appendChild(b);
     });
@@ -422,7 +424,7 @@
       b.addEventListener('mousedown', ev => ev.stopPropagation());
       b.addEventListener('click', () => {
         closePicker();
-        guarded(() => fm.setShift(node.id, off));
+        guarded(() => fm.setShift('#' + node.id, off));
       });
       picker.appendChild(b);
     });
@@ -455,7 +457,7 @@
       const v = parseInt(input.value, 10);
       if(!Number.isFinite(v)) return;
       closePicker();
-      guarded(() => fm.setShift(node.id, v));
+      guarded(() => fm.setShift('#' + node.id, v));
     }
     customWrap.appendChild(input);
     customWrap.appendChild(okBtn);
@@ -621,7 +623,7 @@
     saveBtn.addEventListener('click', () => {
       const chosen = checks.map((cb,i) => cb.checked ? i + 1 : null).filter(i => i !== null);
       close();
-      guarded(() => fm.setLiteralPeriods(node.id, chosen.length === periods.length ? 'all' : chosen.join(',')));
+      guarded(() => fm.setLiteralPeriods('#' + node.id, chosen.length === periods.length ? 'all' : chosen.join(',')));
     });
     actions.appendChild(allBtn);
     actions.appendChild(firstBtn);

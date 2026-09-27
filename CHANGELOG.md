@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Fix: editing nodes in models from hand-written files
+- In a model whose node ids came from a file rather than from fmIDE (such as the sample files), editing a node on the canvas failed with "There is no rectangle named …", or could change a different rectangle whose name happened to match the id. This affected typing a rectangle's text, choosing an operator symbol or period shift, plugs, sockets, block roles, formats, per-period values, the reducer chip and the vertical block's port toggle. The canvas now always refers to the node by its id.
+- A vertical block's broadcast/indexed toggle couldn't be clicked with the mouse (the output rows covered it, and pressing on it redrew the block). It works again.
+
 ## Function plugins, part 2b: functions on the canvas (phase D2b)
 - **Insert Function…** (Home → Insert and Insert → My Functions, or the Functions manager's **ƒ Insert**) places a function from your library as a box: "ƒ Name v1", one labelled input per input, and its value and unit. Arrows go into a named input (dragged onto its dot, or onto the box for the first empty one). A box whose function is missing from the model, or can't be read, still draws, with a warning and "?" explaining why.
 - **Updating:** a box on an older version than your library's latest shows **⬆**. Update one box, or **Update every use…** in a window that lists every box using that function (the "Not now" ones unticked) and the arrows each would lose. Arrows follow their inputs by name; lost ones are listed first; one undo reverses it all. **Not now** is remembered on the box (`fn.skipped`, an optional field older versions ignore; no file format changed). **Update Function…** is also a command. **⋯ → Change function or version…** swaps a box in place.

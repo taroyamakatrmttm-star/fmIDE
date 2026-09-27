@@ -267,12 +267,12 @@
 
     clearBtn.addEventListener('click', () => {
       cleanup();
-      guarded(() => fm.setPeriodValues(node.id, ''));
+      guarded(() => fm.setPeriodValues('#' + node.id, ''));
     });
     cancelBtn.addEventListener('click', cleanup);
     saveBtn.addEventListener('click', () => {
       cleanup();
-      guarded(() => fm.setPeriodValues(node.id, curValues.join(','), rangeMin, rangeMax));
+      guarded(() => fm.setPeriodValues('#' + node.id, curValues.join(','), rangeMin, rangeMax));
     });
   }
 
@@ -470,12 +470,12 @@
 
     resetBtn.addEventListener('click', () => {
       close();
-      guarded(() => fm.setStyle(node.id, null));
+      guarded(() => fm.setStyle('#' + node.id, null));
     });
     cancelBtn.addEventListener('click', close);
     saveBtn.addEventListener('click', () => {
       close();
-      guarded(() => fm.setStyle(node.id, fields.readStyle()));
+      guarded(() => fm.setStyle('#' + node.id, fields.readStyle()));
     });
   }
 

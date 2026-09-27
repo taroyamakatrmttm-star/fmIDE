@@ -394,3 +394,54 @@ test.describe('Templates duplicates', () => {
     expect(await page.evaluate(() => fm.commands().some(c => c.id === 'clearAllTemplates'))).toBe(true);
   });
 });
+
+// Nodes in files may have any id (`cash`, `plus`, `ps`); the canvas must edit them by id, not
+// as names (found in step 7 phase D2b: only ids like "n12" worked).
+test('on-canvas edits work on nodes whose ids came from a file', async ({ page }) => {
+  const { fixture } = require('./helpers/apps');
+  await F.openFmIDE(page);
+  await F.importViaCommand(page, 'loadSystem', fixture('models', 'combined-bs-corkscrew-block.json'));
+  await F.acceptAll(page);
+  const noMessage = async () => expect(page.locator('.modal-box')).toHaveCount(0);
+  const pick = (label) => page.locator('.op-picker button', { hasText: label }).first().click();
+  // Typing a rectangle's text. (Before the fix this step worked only by chance: the id "cash"
+  // was read as a name and matched the rectangle named "Cash".)
+  await nodeEl(page, 'cash').dblclick();
+  await nodeEl(page, 'cash').locator('textarea').fill('Cash\n45');
+  await page.keyboard.press('Enter');
+  await noMessage();
+  expect(await page.evaluate(() => fm.nodes().find(n => n.id === 'cash').text)).toBe('Cash\n45');
+  // Choosing an operator's symbol.
+  await nodeEl(page, 'plus').dblclick();
+  await pick('−');
+  await noMessage();
+  await expect(nodeEl(page, 'plus').locator('.opsym')).toHaveText('−');
+  // A rectangle's plug and role.
+  await nodeEl(page, 'inv').locator('.plug-btn').click({ force: true });
+  await page.locator('.plug-editor input').fill('Stock');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter');
+  await noMessage();
+  await expect(nodeEl(page, 'inv').locator('.plug-chip')).toHaveText('🔌 Stock');
+  await nodeEl(page, 'inv').locator('.io-btn').click({ force: true });
+  await pick('Output');
+  await noMessage();
+  await expect(nodeEl(page, 'inv').locator('.io-role-chip')).toHaveText('OUT →');
+  // A period shift.
+  await page.evaluate(() => fm.switchCanvas('Corkscrew'));
+  await nodeEl(page, 'ps').dblclick();
+  await pick('t−2');
+  await noMessage();
+  await expect(nodeEl(page, 'ps').locator('.ps-label')).toHaveText('t−2');
+  // A vertical block's port mode and an output's reducer.
+  // (A real click: the toggle used to be redrawn under the mouse before its click landed.)
+  await page.evaluate(() => fm.switchCanvas('Capex'));
+  await nodeEl(page, 'inst').locator('.vindex-toggle[data-port-index="1"]').click();
+  await noMessage();
+  await expect(nodeEl(page, 'inst').locator('.vindex-toggle[data-port-index="1"]')).toHaveText('indexed');
+  await page.evaluate(() => fm.switchCanvas('DepBlock'));
+  const before = await nodeEl(page, 'out').locator('.reducer-chip').textContent();
+  await nodeEl(page, 'out').locator('.reducer-chip').click();
+  await noMessage();
+  await expect(nodeEl(page, 'out').locator('.reducer-chip')).not.toHaveText(before);
+});
