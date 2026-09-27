@@ -34,7 +34,7 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | `npm run test:library-checker` | the library's rules: the checker's library mode (`--library`), pull requests, `--write-records`, the Markdown report (Node only) |
 | `npm run test:library-catalogue` | the library's catalogue the build writes under `/library` (pages, downloads, `index.json`, escaping, its security policy) |
 | `npm run test:library-browse` | browsing the library inside fmIDE (Browse Library…, its checks of the list and packs, offline, the single file, `window.fm`) |
-| `npm run test:touch` | fmIDE's canvas by finger: real touch input on an emulated touchscreen (drag, arrows, resize, tabs, the curve editor, scrolling) |
+| `npm run test:touch` | fmIDE's canvas by finger: real touch input on an emulated touchscreen (drag, arrows, resize, tabs, the curve editor, scrolling; press and hold, the node menu, the selection box, double-tap, larger touch areas) |
 | `npx playwright test -g "Tree view"` | tests whose name matches |
 
 After a failure, `npx playwright show-report` opens the report, with a trace for each failed test.

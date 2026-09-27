@@ -47,9 +47,19 @@
         startModifiedInteraction(id, ev);
         return;
       }
-      if(!selectedNodeIds.has(id) || selectedEdgeId){
-        selectNodesOnly([id]);
+      const selectJustThis = () => { if(!selectedNodeIds.has(id) || selectedEdgeId) selectNodesOnly([id]); };
+      // A finger or pen: a tap selects and moving drags, as the mouse does; held still, it opens
+      // the node's menu (the touch way to the mouse-only gestures above, step 9b) and leaves the
+      // selection as it was, for the menu's "Add to selection".
+      if(ev.type === 'pointerdown'){
+        waitForHold(ev, {
+          onMoveFirst: () => { selectJustThis(); startDrag(id, ev); },
+          onRelease: (up, cancelled) => { if(!cancelled) selectJustThis(); },
+          onHold: () => showNodeTouchMenu(id, ev.clientX, ev.clientY),
+        });
+        return;
       }
+      selectJustThis();
       startDrag(id, ev);
     });
     el.addEventListener('click', (ev) => {
@@ -83,16 +93,22 @@
       if(ev.target.tagName === 'TEXTAREA') return;
       const n = getNode(el.dataset.id);
       if(!n) return;
-      if(n.type === 'operator') showOpPicker(n.id);
-      else if(n.type === 'periodShift') showShiftPicker(n);
-      else if(n.type === 'alias'){
-        if(n.auto) showMessage("This alias was auto-created by a Plug/Socket match on another canvas. It regenerates automatically — to change it, edit the Plug or Socket name instead.");
-        else showAliasPicker(n);
-      }
-      else if(n.type === 'blockInstance') showBlockPicker(n);
-      else if(n.type === 'function'){ if(!ev.target.classList.contains('tag-btn')) showFunctionDefinition(n); }
-      else startEdit(n.id);
+      if(n.type === 'function' && ev.target.classList.contains('tag-btn')) return;
+      editNode(n);
     });
+  }
+
+  // What a double-click on a node does (also the touch menu's Edit).
+  function editNode(n){
+    if(n.type === 'operator') showOpPicker(n.id);
+    else if(n.type === 'periodShift') showShiftPicker(n);
+    else if(n.type === 'alias'){
+      if(n.auto) showMessage("This alias was auto-created by a Plug/Socket match on another canvas. It regenerates automatically — to change it, edit the Plug or Socket name instead.");
+      else showAliasPicker(n);
+    }
+    else if(n.type === 'blockInstance') showBlockPicker(n);
+    else if(n.type === 'function') showFunctionDefinition(n);
+    else startEdit(n.id);
   }
 
   function computeSnap(movingNode, x, y, excludeIds){

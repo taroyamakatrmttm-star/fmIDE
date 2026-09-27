@@ -406,10 +406,20 @@ fmIDE in Chromium with a touchscreen at 1024 × 768 (`hasTouch`). Each touch is 
 - Only the first finger acts: with a finger dragging Price, a second finger dragging Revenue moves nothing.
 - A finger draws an arrow from a dot (tap to select, then from the east dot onto Revenue): exactly one arrow, Price → Revenue, and no leftover line; lifted over empty canvas, no arrow.
 - A finger resizes a node by its corner (+60, +30).
-- A finger drags the canvas tab "One" past "Three": the order becomes Two, Three, One.
+- A finger holds the canvas tab "One", then drags it past "Three": the order becomes Two, Three, One (9b: before, it dragged straight away). A quick swipe over the tabs (fourteen canvases) scrolls the strip and moves no tab.
 - A finger draws in the curve editor (opened by tapping the node, then 📈; six periods), from high on the left to low on the right: the values change and the first is greater than the last.
 - One finger on empty canvas scrolls it (a rectangle far away makes it scrollable): no selection box, nothing selected.
 - A tap on empty canvas clears the selection; a tap on a node closes an open operator picker (the mouse events the browser copies from a tap still reach the page).
+- Step 9b. Holding a node (0.7 s, still) opens its menu — Draw arrow from here, Make alias, Duplicate, Add to selection, Edit…, Properties…, Delete — without moving it or changing the selection; Escape, or a tap on empty canvas, closes it.
+- The menu's Add to selection adds Revenue to Price; held again, it offers "Duplicate selection" and Remove from selection takes Revenue out.
+- Draw arrow from here: a banner, the node marked; a tap on Revenue draws Price → Revenue, ends the mode, and selects nothing; a tap on empty canvas, or Cancel, stops without an arrow. A tap on an `if`'s second input dot takes that input.
+- Make alias (an alias of Price, selected), Duplicate (a third rectangle) and Delete (Revenue): recorded in a macro as `aliasOf`, `duplicate`, `deleteNodes` (plus the test's own `select`), and each one Undo.
+- On an operator, Make alias is disabled and there is no Properties…; Edit… opens the operator picker. On a rectangle, Edit… starts editing and Properties… opens its window.
+- The menu shows the hover texts as plain text: "Fed by 2 plugs, added together" with the rectangles' names `<b>One</b>` and `<i>Two</i>` as text (no markup made), and a ÷ by zero's error.
+- Holding on empty canvas, then dragging over Price and Revenue, selects exactly those two (replacing the selection) and doesn't scroll.
+- A double-tap edits a rectangle, opens the operator picker (one picker, and two double-clicks in all for the two double-taps), and renames a canvas tab; two taps on different nodes, or 0.6 s apart, edit nothing.
+- Larger touch areas (`body.touch-input`): on a selected node, a finger 9 pixels beyond the east dot draws an arrow, and 12 pixels inside the resize corner resizes without moving; a mouse moving takes the class away (on a screen whose main pointer is fine).
+- A finger scrolls the text of a node being edited (thirty lines).
 
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.

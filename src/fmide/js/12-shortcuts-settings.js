@@ -237,39 +237,45 @@
       temp.remove();
       if(cancelled){ render(); return; }
 
-      const target = document.elementFromPoint(ev.clientX, ev.clientY);
-      const targetPortEl = target ? target.closest('.io-port') : null;
-      const targetNodeEl = target ? target.closest('.node') : null;
-      if(!targetNodeEl || targetNodeEl.dataset.id === fromId){ render(); return; }
-      const toId = targetNodeEl.dataset.id;
-      const toNode = getNode(toId);
-
-      let toPort = null;
-      if(targetPortEl && targetPortEl.dataset.portDir === 'in'){
-        toPort = parseInt(targetPortEl.dataset.portIndex, 10);
-      } else if(toNode && toNode.type === 'blockInstance'){
-        // block instances require dropping precisely on one of their input dots
-        render();
-        return;
-      } else if(toNode && toNode.type === 'function'){
-        // Dropped on a function node's body: its first input with no arrow (decided in D2b).
-        const free = firstFreeFunctionPort(toNode);
-        if(free.error){ render(); showMessage(free.error); return; }
-        toPort = free.index;
-      } else if(toNode && operatorPortsOf(toNode)){
-        // Dropped on the body of an operator with named inputs (if, round…): the same rule.
-        const free = firstFreeOperatorPort(toNode);
-        if(free.error){ render(); showMessage(free.error); return; }
-        toPort = free.index;
-      }
-
-      guarded(() => {
-        // By '#id': a node from a file may have any id, which as a bare word would be read as a name.
-        const edgeId = fm.connect('#' + fromId, '#' + toId, fromPortIndex != null ? String(fromPortIndex + 1) : '', toPort !== null ? String(toPort + 1) : '');
-        if(edgeId) selectEdgeOnly(edgeId); else render();
-      });
+      connectOnto(fromId, fromPortIndex, document.elementFromPoint(ev.clientX, ev.clientY));
     }
     followPointer(downEvent, onMove, onUp);
+  }
+
+  // An arrow from fromId (its output port fromPortIndex, if any) dropped on target, the element
+  // under the finger or mouse: onto a node's body or one of its input dots. Shared by drawing an
+  // arrow and by the touch menu's "Draw arrow from here" (a tap on the target).
+  function connectOnto(fromId, fromPortIndex, target){
+    const targetPortEl = target ? target.closest('.io-port') : null;
+    const targetNodeEl = target ? target.closest('.node') : null;
+    if(!targetNodeEl || targetNodeEl.dataset.id === fromId){ render(); return; }
+    const toId = targetNodeEl.dataset.id;
+    const toNode = getNode(toId);
+
+    let toPort = null;
+    if(targetPortEl && targetPortEl.dataset.portDir === 'in'){
+      toPort = parseInt(targetPortEl.dataset.portIndex, 10);
+    } else if(toNode && toNode.type === 'blockInstance'){
+      // block instances require dropping precisely on one of their input dots
+      render();
+      return;
+    } else if(toNode && toNode.type === 'function'){
+      // Dropped on a function node's body: its first input with no arrow (decided in D2b).
+      const free = firstFreeFunctionPort(toNode);
+      if(free.error){ render(); showMessage(free.error); return; }
+      toPort = free.index;
+    } else if(toNode && operatorPortsOf(toNode)){
+      // Dropped on the body of an operator with named inputs (if, round…): the same rule.
+      const free = firstFreeOperatorPort(toNode);
+      if(free.error){ render(); showMessage(free.error); return; }
+      toPort = free.index;
+    }
+
+    guarded(() => {
+      // By '#id': a node from a file may have any id, which as a bare word would be read as a name.
+      const edgeId = fm.connect('#' + fromId, '#' + toId, fromPortIndex != null ? String(fromPortIndex + 1) : '', toPort !== null ? String(toPort + 1) : '');
+      if(edgeId) selectEdgeOnly(edgeId); else render();
+    });
   }
 
 

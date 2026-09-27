@@ -2,6 +2,13 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Touch, second part (step 9, phase 9b)
+- **Press and hold a node** (about half a second, finger still) for a menu: **Draw arrow from here** (then tap the node, or its input dot, the arrow goes to), **Make alias**, **Duplicate**, **Add to / Remove from selection**, **Edit…** (what a double-click does), **Properties…** (the 🎨 format window), **Delete**. With the node in a selection, it acts on the whole selection. The menu also shows what hovering would: a calculation error, or the plugs feeding a "⚡ ×N" socket.
+- **Press and hold on empty canvas, then drag,** to select with a box. A quick swipe still scrolls.
+- **Double-tap** does what a double-click does, everywhere in fmIDE (edit a rectangle, the operator picker, rename a canvas tab…).
+- **The canvas tab strip scrolls with a swipe**; to move a tab, press and hold it, then drag. A finger can also scroll the text of a node being edited.
+- **Larger invisible touch areas** for the dots, the resize corner and the node buttons when you use a finger; nothing looks different, and the mouse doesn't get them.
+- The mouse works exactly as before. No file format changed.
 ## ExcelExporter: a row's own format, indent, and a full right-click menu in the Tree View
 - **🎨 on every row**, not just custom rows: give a row its own fill, font colour, bold, border and number format in Excel, over what fmIDE's format roles give it. With several rows selected, a change applies to all of them. **Reset to fmIDE's format** takes it off.
 - **Indent**: **Alt+Shift+→ / ←** (or Indent / Outdent in the selection bar and the menu) indents the selected rows' labels in Excel, like Excel's Increase Indent (Alt+H+6), up to 15 steps.
