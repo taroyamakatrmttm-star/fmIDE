@@ -2,6 +2,13 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Browsing the library inside fmIDE (step 8, phase 8d)
+- **File → Browse Library…** (on the published site) lists the community library's packs: search, filter by tag or by what a pack holds, sort, and see a pack's items, licence and credit, with the items you already have marked. **Preview and add…** opens the usual Open Library Pack preview; nothing is added without it.
+- Every pack is checked against the catalogue's list — exact size and SHA-256 fingerprint, and its id — before it is read; list entries that fail fmIDE's checks are left out and counted; everything is shown as plain text.
+- fmIDE reads only from its own site, and only when you browse; nothing is sent. The single file (`apps/fmIDE.html`) makes no network request at all: there the command says where the library is. Offline, the library says it can't be reached; nothing of it is stored.
+- `window.fm`: `listLibrary`, `previewLibraryPackFromLibrary`, `addFromLibrary` (they answer later, so they can't be used in macros).
+- The site's build now reads its own `index.json` the way fmIDE does, and stops if any pack would be left out. No file format of the apps changed; the security policy didn't change.
+
 ## The library's catalogue (step 8, phase 8c-3)
 - The published site has a **catalogue of the community library** at `/library`: every approved pack, with a page each listing its templates, recipes and functions (plugs and sockets, formulas), a download of the pack, the credit CC BY 4.0 asks for, and a "Report this pack" link. Plain pages with no JavaScript, under their own strict security policy; everything from a pack is shown as plain text.
 - The library repository is a git submodule of fmIDE, `library/`, pinned to one commit; moving the pointer publishes new packs. The build checks every pack again and publishes nothing if one fails.

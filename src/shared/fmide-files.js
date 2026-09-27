@@ -17,7 +17,10 @@ const FILE_FORMATS = {
   'fmIDE-shortcuts':      { current: 2, label: 'shortcuts file',      where: 'Keyboard Shortcuts → Import Shortcuts' },
   'fmIDE-macros':         { current: 1, label: 'macros file',         where: 'Macro Builder → Import' },
   'fmIDE-preferences':    { current: 1, label: 'preferences file',    where: 'File → Import Preferences' },
-  'fmIDE-library-pack':   { current: 2, label: 'library pack',        where: 'File → Open Library Pack' }
+  'fmIDE-library-pack':   { current: 2, label: 'library pack',        where: 'File → Open Library Pack' },
+  // The library's list, /library/index.json: written by the site's build, read from the site by
+  // Browse Library (phase 8d); never opened as a file.
+  'fmIDE-library-index':  { current: 1, label: 'library list',        where: 'File → Browse Library (fmIDE reads it from its website)' }
 };
 // The upgrade steps of the kinds above, except the shortcuts file's (its step reads fmIDE's
 // key names, so fmIDE adds it: js/04-file-formats.js).
@@ -162,4 +165,24 @@ function readLibraryPackData(raw){
   const templates = (Array.isArray(r.data.templates) ? r.data.templates : []).slice(0, LIBRARY_PACK_LIMITS.items);
   const functions = cleanLibraryFunctions(Array.isArray(r.data.functions) ? r.data.functions.slice(0, LIBRARY_PACK_LIMITS.items) : []);
   return { pack: info.info, templates, functions, newer: r.newer, fromVersion: r.fromVersion, warnings: r.warnings };
+}
+
+// ---------- the library's list (phase 8d) ----------
+// /library/index.json (parsed JSON) read and checked: { error } or { packs (cleaned entries,
+// cleanLibraryIndexEntry, each id once, in the list's order), dropped (how many entries
+// could not be shown), newer, fromVersion }. At most LIBRARY_INDEX_LIMITS.packs are read.
+function readLibraryIndexData(raw){
+  const shape = fileDataProblem(raw);
+  if(shape) return { error: shape };
+  const r = readFmData(raw, ['fmIDE-library-index'], FMIDE_FILE_MIGRATIONS);
+  if(r.error) return { error: r.error };
+  if(!Array.isArray(r.data.packs)) return { error: 'The library\'s list has no packs in it.' };
+  const packs = [];
+  let dropped = Math.max(0, r.data.packs.length - LIBRARY_INDEX_LIMITS.packs);
+  r.data.packs.slice(0, LIBRARY_INDEX_LIMITS.packs).forEach(e => {
+    const c = cleanLibraryIndexEntry(e);
+    if(c.error || packs.some(p => p.id === c.entry.id)) dropped++;
+    else packs.push(c.entry);
+  });
+  return { packs, dropped, newer: r.newer, fromVersion: r.fromVersion };
 }

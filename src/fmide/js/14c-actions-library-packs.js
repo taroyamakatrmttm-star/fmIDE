@@ -47,3 +47,37 @@
       if(read.newer && !a.allowNewer) fail(`This library pack was saved by a newer version of fmIDE (format version ${read.fromVersion}). Pass allowNewer: true to read it anyway.`);
       return addFromLibraryPack(read, a.items);
     } });
+
+  // ---------------------------------- Browsing the library (step 8, phase 8d) ----------------------------------
+  // The library published on fmIDE's own site (11f-library-browse.js). These answer later
+  // (they return a Promise), so a macro can't run them (macro: false): they are not offered
+  // in the Macro Builder or the Command Launcher, and fail inside a macro. Never recorded.
+  // In the single file (apps/) they fail without making any request.
+  const LIBRARY_NOT_IN_MACROS = 'The community library can\'t be used in a macro: browsing it waits for the network. Use File → Browse Library….';
+
+  defineAction({ name:'listLibrary', label:'List the Library', category:'File', icon:'📚', returns:'value', mutates:false, tx:false, record:false, macro:false,
+    desc:'Reads the community library\'s list from fmIDE\'s own site (/library/index.json) and returns a Promise of { packs: [{ id, title, author, licence, description, tags, created, added, bytes, sha256, packVersion, counts, items: [{ type, kind, name, family, version, versionId, group, description, note, origin, here }] }], dropped }. here: that version is already in your library. dropped: entries that failed fmIDE\'s checks and are left out. Only on the published site; not in macros.',
+    run(){
+      if(runCtx) fail(LIBRARY_NOT_IN_MACROS);
+      return loadLibraryIndex().then(index => ({
+        packs: index.packs.map(p => Object.assign(cloneData(p), { items: p.items.map(it => Object.assign(cloneData(it), { here: libraryItemHere(it) })) })),
+        dropped: index.dropped }));
+    } });
+
+  defineAction({ name:'previewLibraryPackFromLibrary', label:'Preview a Pack from the Library', category:'File', icon:'📚', returns:'value', mutates:false, tx:false, record:false, macro:false,
+    desc:'Fetches a pack of the community library by its id, checks it against the library\'s list (size and SHA-256 fingerprint) and returns a Promise of what previewLibraryPack returns, without adding anything. Only on the published site; not in macros.',
+    params:[ P('id','string') ],
+    run(a){
+      if(runCtx) fail(LIBRARY_NOT_IN_MACROS);
+      return libraryEntry(a.id).then(entry => fetchLibraryPack(entry).then(text => callAction('previewLibraryPack', { file: readLibraryPackText(text, entry).file })));
+    } });
+
+  defineAction({ name:'addFromLibrary', label:'Add from the Library', category:'File', icon:'📚', returns:'value', tx:false, record:false, macro:false,
+    desc:'Fetches a pack of the community library by its id, checks it against the library\'s list (size and SHA-256 fingerprint) and adds its items as openLibraryPack does (items: the keys previewLibraryPackFromLibrary gives; default all). Returns a Promise of openLibraryPack\'s result. Only on the published site; not in macros.',
+    params:[ P('id','string'), P('items','json',{ optional:true, help:'item keys, like ["t0", "f1"]' }), P('allowNewer','bool',{ def:false }) ],
+    run(a){
+      if(runCtx) fail(LIBRARY_NOT_IN_MACROS);
+      if(a.items != null && !Array.isArray(a.items)) fail('items must be a list of item keys, like ["t0", "f1"].');
+      return libraryEntry(a.id).then(entry => fetchLibraryPack(entry).then(text =>
+        callAction('openLibraryPack', { file: readLibraryPackText(text, entry).file, items: a.items, allowNewer: a.allowNewer })));
+    } });

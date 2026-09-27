@@ -419,6 +419,27 @@
   .library-pack-item input{ grid-row:span 5; }
   .template-origin{ font-size:12px; color:#475569; margin:4px 0; }
   .library-pack-item-detail{ grid-column:2; font-size:11.5px; color:#6b7280; white-space:pre-wrap; overflow-wrap:anywhere; }
+  .library-browse{ width:min(920px, 94vw); max-height:88vh; display:flex; flex-direction:column; }
+  .modal-box p.library-browse-intro{ font-size:12px; color:#475569; margin:4px 0 8px; }
+  .library-browse-filters{ display:flex; gap:6px; flex-wrap:wrap; }
+  .library-browse-search{ flex:1 1 220px; font-size:13px; padding:4px 7px; }
+  .library-browse-filters select{ font-size:12px; }
+  .modal-box p.library-browse-status{ font-size:12px; color:#475569; margin:6px 0; }
+  .modal-box p.library-browse-status.library-browse-error{ color:#991b1b; background:#fee2e2; border-radius:6px; padding:6px 9px; }
+  .library-browse-panes{ display:grid; grid-template-columns:minmax(220px, 2fr) 3fr; gap:10px; min-height:260px; flex:1 1 auto; overflow:hidden; }
+  .library-browse-list, .library-browse-details{ overflow-y:auto; border:1px solid #e5e7eb; border-radius:6px; padding:6px; }
+  .library-browse-pack{ display:flex; flex-direction:column; align-items:flex-start; gap:1px; width:100%; text-align:left; background:none; border:1px solid transparent;
+    border-radius:6px; padding:6px 7px; cursor:pointer; color:var(--text); font:inherit; }
+  .library-browse-pack:hover{ background:#f1f5f9; }
+  .library-browse-pack.chosen{ background:#e0f2fe; border-color:#7dd3fc; }
+  .library-browse-pack-title{ font-weight:600; font-size:13px; overflow-wrap:anywhere; }
+  .library-browse-pack-by, .library-browse-pack-counts, .library-browse-pack-tags{ font-size:11.5px; color:#475569; overflow-wrap:anywhere; }
+  .library-browse-pack-description{ font-size:11.5px; color:#6b7280; overflow-wrap:anywhere; }
+  .library-browse-none, .library-browse-hint{ font-size:12px; color:#6b7280; }
+  .library-browse-details p{ overflow-wrap:anywhere; }
+  .library-browse-item{ display:flex; flex-direction:column; font-size:13px; margin:5px 0; overflow-wrap:anywhere; }
+  .library-browse-item-here{ font-size:11px; color:#166534; }
+  .modal-box p.library-browse-link{ font-size:12px; margin:10px 0 2px; }
   .template-preview-tabs{ display:flex; gap:4px; margin-bottom:6px; flex-wrap:wrap; }
   .template-preview-tabs button{
     font-size:11px; padding:3px 9px; border-radius:6px; border:1px solid #d1d5db; background:#fff; cursor:pointer; color:var(--text);

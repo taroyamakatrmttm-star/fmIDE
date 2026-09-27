@@ -126,6 +126,7 @@
     });
     ACTION_LIST.forEach(d => {
       if(d.params.length === 0) return; // zero-argument actions are already covered by commands
+      if(d.macro === false) return; // scripting only (the library's actions answer later); the command covers people
       items.push({ key:'act:' + d.name, icon: d.icon || 'ƒ', label: d.label + '…', search: d.label + ' ' + d.name + ' ' + d.category,
         category: 'Action · ' + d.category, enabled: true, action: d });
     });
