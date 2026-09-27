@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Fix: nested function calls calculated slowly
+- A function that uses its input several times, nested inside others of the same kind, took four times as long for each level: seconds at 11 levels, hours at the 16 allowed, so such a file could make fmIDE (and ExcelExporter's unit column) stop responding. The same call written several times in one formula is now worked out once; 16 levels calculate at once. Values and units are unchanged.
+
 ## Function plugins, part 3: functions in Excel (phase D3)
 - **ExcelExporter writes function calls out in full.** A cell that reads a function now holds the function's formula, with each input replaced by the cell it reads: `Margin(Revenue, Cost)` becomes `=((E5-E6)/E5)`. Calls inside calls are written out inside one another, `MIN`, `MAX`, `AVERAGE`, `ABS`, `MOD` and `IFERROR` use Excel's own functions, and brackets follow Excel's order of operations. This works on every tab, inside block instances and vertical blocks, and with the Inputs tab. Before, such a cell showed `#N/A`.
 - A comparison inside a function gives 1 or 0 in Excel, as in fmIDE (not TRUE/FALSE).

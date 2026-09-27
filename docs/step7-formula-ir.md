@@ -310,5 +310,15 @@ How it was checked:
 
 Found along the way (not changed):
 
-- **fmIDE's calculation of nested calls grows four-fold per level when an input is used four times** (`runFunction` in `src/shared/functions.js` works out each call separately, even when two calls are the same). A function reading its input four times, nested 10 deep, takes 0.7 s to calculate and 0.3 s for its unit; 11 deep, 2.7 s and 1.5 s; the allowed 16 deep would take hours. A file from someone else could hang fmIDE (and ExcelExporter, which works out units the same way). Remembering a call's result for the same inputs would fix it; it is shared code, so it belongs in its own change with its own tests.
+- **fmIDE's calculation of nested calls grows four-fold per level when an input is used four times** (`runFunction` in `src/shared/functions.js` works out each call separately, even when two calls are the same). A function reading its input four times, nested 10 deep, takes 0.7 s to calculate and 0.3 s for its unit; 11 deep, 2.7 s and 1.5 s; the allowed 16 deep would take hours. A file from someone else could hang fmIDE (and ExcelExporter, which works out units the same way). Remembering a call's result for the same inputs would fix it; it is shared code, so it belongs in its own change with its own tests. **Fixed right after D3** (below).
 - LibreOffice can't check how Excel treats TRUE/FALSE (see above); the formula text is pinned instead.
+
+### After D3: an identical call is worked out once ✅
+
+The problem found in D3: `runFunction` and `functionUnit` (`src/shared/functions.js`) worked out every call in a formula on its own, so a function using its input four times, nested, took four times as long for each level (0.7 s at 10 levels, 2.7 s at 11; the allowed 16 would take hours). A file from someone else could hang fmIDE, and ExcelExporter's unit column.
+
+- **The fix:** within one formula being worked out, a call to the same function with the same arguments (the same text, read from the same inputs) gives the same result, so it is worked out once and remembered (`functionCallCache`, keyed by `functionCallKey`, the call's name and argument trees as text). Values and units both. A call reads nothing but its function and its arguments, so the result is the same one: the same value, the same error and the same failing arrow for the check before download. An input is still read only where the first such call needed it, so `IFERROR` catches as before.
+- **Speed:** the same model now takes a few milliseconds at 11 levels, and 16 levels (4^16 calls one by one) calculate at once in fmIDE.
+- ExcelExporter's writer was already bounded (it stops at Excel's formula length) and is unchanged; its unit column gets the fix through `unitOf`.
+- **Tests (group 20):** 11 levels calculate in under a second in Node, with the right values and unit (9.8 s before the fix); fmIDE calculates 16 levels at once (before the fix the page hangs and the test times out); an identical call gives the identical result, including a caught error read again outside `IFERROR`, different arguments staying different calls, and a missing input read only where needed. Every other test, snapshot and pinned value is unchanged; no file format changed.
+

@@ -3376,13 +3376,21 @@
         return r.error ? r : { value: -r.value };
       }
       case 'call': {
+        // The same call written twice in one formula (the same function, the same arguments,
+        // read from the same inputs) is worked out once: otherwise a function using its input
+        // several times, nested, would take four times as long for each level.
+        const cache = functionCallCache(arg);
+        const key = functionCallKey(x);
+        if(cache.has(key)) return cache.get(key);
         const target = fn.targets.get(x.key);
         const memo = [];
         const inner = (i) => {
           if(!memo[i]) memo[i] = i < x.args.length ? evalFunctionExpr(fn, x.args[i], arg) : { error: 'function-input-unwired' };
           return memo[i];
         };
-        return runFunctionWith(target, inner);
+        const r = runFunctionWith(target, inner);
+        cache.set(key, r);
+        return r;
       }
       case 'op': {
         const op = operatorById(x.id);
@@ -3408,6 +3416,37 @@
     return evalFunctionExpr(target, target.body, input);
   }
 
+  // Remembered calls, per set of inputs (`arg`, one for each formula being worked out): a call
+  // reads nothing but its function and its arguments, and its arguments read nothing but
+  // these inputs, so an identical call gives the identical result — the same value, the same
+  // error, the same failing arrow. Only inputs the first one read are read at all.
+  const FUNCTION_CALL_CACHES = new WeakMap();
+  function functionCallCache(arg){
+    let cache = FUNCTION_CALL_CACHES.get(arg);
+    if(!cache){ cache = new Map(); FUNCTION_CALL_CACHES.set(arg, cache); }
+    return cache;
+  }
+  // A call as text — the called name and its argument trees — worked out once per call.
+  const FUNCTION_CALL_KEYS = new WeakMap();
+  function functionCallKey(x){
+    let key = FUNCTION_CALL_KEYS.get(x);
+    if(key === undefined){
+      key = x.key + '(' + x.args.map(functionExprKey).join(',') + ')';
+      FUNCTION_CALL_KEYS.set(x, key);
+    }
+    return key;
+  }
+  function functionExprKey(x){
+    switch(x.t){
+      case 'num': return '#' + x.v;
+      case 'param': return '$' + x.i;
+      case 'neg': return '-' + functionExprKey(x.a);
+      case 'op': return x.id + '(' + x.args.map(functionExprKey).join(',') + ')';
+      case 'call': return functionCallKey(x);
+    }
+    return '?';
+  }
+
   // ---- units ----
   // The unit of a call to `fn` (status null), where `inputUnit(i)` is input i's unit (or null).
   // Worked out from the formula with the catalogue's unit rules. A number written in the
@@ -3427,10 +3466,16 @@
       case 'param': return arg(x.i) || null;
       case 'neg': return functionExprUnit(fn, x.a, arg);
       case 'call': {
+        // As for values: an identical call in one formula has the identical unit.
+        const cache = functionCallCache(arg);
+        const key = functionCallKey(x);
+        if(cache.has(key)) return cache.get(key);
         const target = fn.targets.get(x.key);
         const memo = [];
         const inner = (i) => { if(!(i in memo)) memo[i] = i < x.args.length ? functionExprUnit(fn, x.args[i], arg) : null; return memo[i]; };
-        return functionExprUnit(target, target.body, inner);
+        const u = functionExprUnit(target, target.body, inner);
+        cache.set(key, u);
+        return u;
       }
       case 'op': {
         const rule = operatorById(x.id).unit;
