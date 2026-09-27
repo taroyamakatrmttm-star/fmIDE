@@ -8,106 +8,34 @@
   //   4. flags a file saved by a NEWER fmIDE (version above what this build reads), so the
   //      caller can warn before a best-effort open,
   //   5. does the same for nested content (a workspace's system, each template's model).
-  // To change a format: bump its "current" here, and add FILE_MIGRATIONS[kind][oldVersion]
-  // that upgrades a copy of an old payload by exactly one version. The system and
-  // workspace formats are shared with ExcelExporter: change those in src/shared/file-formats.js.
+  // The kinds, versions, upgrade steps and the reader itself are in src/shared/fmide-files.js
+  // (the library's checker reads files with them too). To change a format: bump its
+  // "current" there, and add FMIDE_FILE_MIGRATIONS[kind][oldVersion] that upgrades a copy of
+  // an old payload by exactly one version. The system and workspace formats are shared with
+  // ExcelExporter: change those in src/shared/file-formats.js.
   // ============================================================
   // build:include shared/file-formats.js
-  const FILE_FORMATS = {
-    'system':               { current: SHARED_FILE_VERSIONS['system'], label: 'system', where: 'File → Load System' },
-    'module':               { current: 4, label: 'module',              where: 'File → Load Module' },
-    'fmIDE-workspace':      { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'workspace', where: 'File → Import Workspace' },
-    'fmIDE-templates':      { current: 6, label: 'templates file',      where: 'Templates → Import Templates' },
-    'fmIDE-functions':      { current: 2, label: 'functions file',      where: 'Functions → Import Functions' },
-    'fmIDE-format-presets': { current: 1, label: 'format presets file', where: 'Format Presets → Import Presets' },
-    'fmIDE-shortcuts':      { current: 2, label: 'shortcuts file',      where: 'Keyboard Shortcuts → Import Shortcuts' },
-    'fmIDE-macros':         { current: 1, label: 'macros file',         where: 'Macro Builder → Import' },
-    'fmIDE-preferences':    { current: 1, label: 'preferences file',    where: 'File → Import Preferences' },
-    'fmIDE-library-pack':   { current: 2, label: 'library pack',        where: 'File → Open Library Pack' }
-  };
-  const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
-    // v1 → v2: one plug name per rectangle becomes a list of plug names (as system v2 → v3).
-    'module': {
-      1: d => upgradeNodePlugs(d.nodes),
-      // v2 → v3: a module may carry the function definitions it uses (`functions`); older
-      // modules have none.
-      2: () => {},
-      // v3 → v4: the operators of phase E1, as system v5 → v6; older modules have none.
-      3: () => {}
-    },
-    // v1 → v2: templates get a family, a version number, a change note and a version id.
-    'fmIDE-templates': {
-      1: d => upgradeTemplateEntries(d.templates),
-      // v2 → v3: templates may be recipes (kind "recipe"); older files have none.
-      2: () => {},
-      // v3 → v4: a template's module or system may carry function definitions; older ones
-      // have none.
-      3: () => {},
-      // v4 → v5: a template's module or system may use the operators of phase E1; older ones
-      // don't.
-      4: () => {},
-      // v5 → v6: a template may say which library pack it came from (`origin`, phase 8b);
-      // older ones have no such record.
-      5: () => {}
-    },
-    // v1 → v2: an item in a pack may say which pack it came from before (`origin`, phase 8b),
-    // so re-sharing keeps its author's credit; older packs have no such record.
-    'fmIDE-library-pack': {
-      1: () => {}
-    },
-    // v1 → v2: a definition may say which library pack it came from (`origin`, phase 8b);
-    // older ones have no such record.
-    'fmIDE-functions': {
-      1: () => {}
-    },
+  // build:include shared/fmide-files.js
+  // fmIDE's upgrade steps: the shared ones, plus the shortcuts file's.
+  const FILE_MIGRATIONS = Object.assign({}, FMIDE_FILE_MIGRATIONS, {
     // v1 shortcut files stored combos in the old notation.
     'fmIDE-shortcuts': {
       1: d => { Object.keys(d.bindings || {}).forEach(k => { d.bindings[k] = canonicalCombo(d.bindings[k], true); }); }
     }
   });
-  function fileKindLabel(kind){ return FILE_FORMATS[kind] ? FILE_FORMATS[kind].label : 'file'; }
-  // Returns { error } or { kind, data (a migrated copy), fromVersion, newer, warnings }.
+  // Returns { error } or { kind, data (a migrated copy), fromVersion, newer, warnings }
+  // (readFmData in src/shared/fmide-files.js). A workspace's own shortcuts may still use
+  // the old combo notation (a v1 workspace).
   function readFmFile(raw, accept){
-    if(!raw || typeof raw !== 'object') return { error: "That file doesn't contain fmIDE data." };
-    const kind = inferFileKind(raw);
-    const fmt = kind && FILE_FORMATS[kind];
-    if(!fmt){
-      return { error: kind === 'fmIDE-excel-mapping'
-        ? 'That is an ExcelExporter mapping file — open it in ExcelExporter (Import Mapping JSON).'
-        : "That file isn't an fmIDE file this version recognises" + (kind ? ` (kind "${String(kind).slice(0, 40)}")` : '') + '.' };
-    }
-    if(!accept.includes(kind)){
-      const wanted = accept.map(fileKindLabel);
-      return { error: `That is an fmIDE ${fmt.label}, not a ${wanted.join(' or ')}. Open it with ${fmt.where}.` };
-    }
-    let data = cloneData(Array.isArray(raw) ? { kind, version: 1, macros: raw } : raw);
-    const { fromVersion: version, newer } = upgradeFileData(data, kind, FILE_FORMATS, FILE_MIGRATIONS);
-    const warnings = [];
-    // Nested content.
-    const nestedTemplates = (list) => (list || []).map(t => {
-      // A recipe holds no model (only its parts, checked when it joins the library).
-      if(!t || !t.data || (t.kind !== 'module' && t.kind !== 'system')) return t;
-      const r = readFmFile(t.data, [t.kind]);
-      if(r.error){ warnings.push(`Template "${String(t.name || '').slice(0, 60)}" was skipped: ${r.error}`); return null; }
-      if(r.newer) warnings.push(`Template "${String(t.name || '').slice(0, 60)}" was saved by a newer fmIDE and may not load completely.`);
-      return Object.assign({}, t, { data: r.data });
-    }).filter(Boolean);
-    if(kind === 'fmIDE-workspace'){
-      if(data.system){
-        const r = readFmFile(data.system, ['system']);
-        if(r.error) return { error: 'The workspace\'s system is unreadable: ' + r.error };
-        data.system = r.data;
-        if(r.newer) warnings.push('Its system was saved by a newer fmIDE and may not load completely.');
-      }
-      data.templates = nestedTemplates(data.templates);
-      // shortcuts embedded in a v1 workspace may still use the old combo notation
+    const r = readFmData(raw, accept, FILE_MIGRATIONS);
+    if(!r.error && r.kind === 'fmIDE-workspace'){
+      const data = r.data;
       if(data.shortcutBindings && typeof data.shortcutBindings === 'object' && !(data.shortcutBindingsVersion >= 2)){
         Object.keys(data.shortcutBindings).forEach(k => { data.shortcutBindings[k] = canonicalCombo(data.shortcutBindings[k], true); });
         data.shortcutBindingsVersion = 2;
       }
     }
-    if(kind === 'fmIDE-templates' || kind === 'fmIDE-library-pack') data.templates = nestedTemplates(data.templates);
-    return { kind, data, fromVersion: version, newer, warnings };
+    return r;
   }
   // UI wrapper: parse → read → (warn if newer) → onOk(data, result). Returns nothing.
   // A file that is too large or nested too deep is refused first (FILE_LIMITS).

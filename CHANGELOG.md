@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## The library's pack checker (step 8, phase 8c-1)
+- **`tools/check-pack.js`** (`npm run check-pack -- FILE`) checks a library pack before it joins the community library: the file (at most 5 MB), the details and licence, every template, recipe and function, and characters that hide or reverse text. It reads packs with fmIDE's own code and is stricter: anything fmIDE would quietly leave out or tidy is an error. It prints a report (or JSON) and fails with exit code 1.
+- fmIDE's file reader moved into shared code (`src/shared/fmide-files.js`) so the checker can use it; fmIDE reads every file exactly as before. No file format changed.
+
 ## Where items came from (step 8, phase 8b)
 - Templates and functions added from a library pack now remember the pack and its author. The **Templates window** and the **Functions manager** show "From the library pack "…" by … · CC BY 4.0", and which versions of a template came from where; **Update this canvas** says where the new version came from.
 - **The family rule:** when a pack would add a version to a template or function that came from another author — or that you made yourself — the preview says so in red and leaves it unticked. Authors are compared by the pack's author, not by what its items claim.

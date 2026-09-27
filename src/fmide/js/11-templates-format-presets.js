@@ -290,9 +290,8 @@
   // Name, group, description and kind belong to the family: every version carries the
   // same ones, and Edit info changes them all. `id` ("usrN") is local and reassigned on
   // import and restore; nothing lasting may refer to it.
-  const TEMPLATE_NOTE_MAX = 200;
-  const isTemplateUid = (v) => typeof v === 'string' && /^[A-Za-z0-9-]{8,64}$/.test(v);
-  const cleanTemplateNote = (v) => (typeof v === 'string' ? v.trim().slice(0, TEMPLATE_NOTE_MAX) : '');
+  // Family and version ids and change notes are checked by isTemplateUid and
+  // cleanTemplateNote (src/shared/fmide-files.js).
   // A family's versions, newest first.
   function familyVersions(family){
     return TEMPLATES.filter(t => t.family === family).sort((a, b) => b.version - a.version);
@@ -716,24 +715,9 @@
   // id it was made with; `name` is only shown when the family isn't in the library. Building
   // adds one canvas per part (each linked to its template, like Add to new canvas); plugs and
   // sockets then connect them by name (syncAutoConnections).
-  const RECIPE_MAX_PARTS = 50;
-  // The kinds a template can be. A workspace has always read an unknown kind as a canvas template.
-  function templateKindOf(k){ return k === 'system' || k === 'recipe' ? k : 'module'; }
-  // A recipe's data read from a file (untrusted): bad parts are dropped; null when none is left.
-  function cleanRecipeData(d){
-    if(!d || typeof d !== 'object' || !Array.isArray(d.parts)) return null;
-    const parts = [];
-    d.parts.slice(0, RECIPE_MAX_PARTS).forEach(p => {
-      if(!p || typeof p !== 'object' || !isTemplateUid(p.family)) return;
-      const n = Number(p.version);
-      const version = p.version === 'latest' ? 'latest' : (Number.isInteger(n) && n >= 1 ? n : null);
-      if(version === null) return;
-      const part = { family: p.family, version, name: typeof p.name === 'string' ? p.name.slice(0, 200) : '' };
-      if(version !== 'latest' && isTemplateUid(p.versionId)) part.versionId = p.versionId;
-      parts.push(part);
-    });
-    return parts.length ? { kind: 'recipe', parts } : null;
-  }
+  // RECIPE_MAX_PARTS, templateKindOf and cleanRecipeData (reading recipes from files) are in
+  // src/shared/fmide-files.js.
+
   // A part for the recipe from a library version: pinned to it, or following the latest.
   function recipePartOf(t, pinned){
     const part = { family: t.family, version: pinned ? t.version : 'latest', name: t.name };

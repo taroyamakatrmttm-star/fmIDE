@@ -24,8 +24,40 @@ What is shared: templates (canvas and system), recipes and functions. **Macros a
 
 - **8a — The library pack file (fmIDE)** ✅ (below).
 - **8b — Where items came from** ✅ (below): `origin` (pack, author, licence) on templates and functions, shown in the Templates and Functions windows; the preview warns when a pack adds versions to a family that came from a different author. Format versions raised, with old-version samples and tests.
-- **8c — Checker and catalogue:** `tools/check-pack.js` (Node only, using the shared reader and the function parser: structure, limits, licence, family ownership); the library repository's layout, submission template and CI; the build writes the `/library` catalogue pages from the approved packs, all text escaped, under the same security policy. Needs the library repository to be public.
+- **8c — Checker and catalogue**, in three phases (below): `tools/check-pack.js` (Node only, using the shared reader and the function parser: structure, limits, licence, family ownership); the library repository's layout, submission template and CI; the build writes the `/library` catalogue pages from the approved packs, all text escaped, under the same security policy. All of it can be built and tested before the library repository is public (with a sample library in the tests); only submissions from other people, and the report-an-item issues, need it public.
+  - **8c-1 — The shared pack reader and the checker for one pack** ✅ (below).
+  - **8c-2 — The library's rules and repository:** family ownership, authors, pack and version ids never reused, the repository's files (README, submission terms, pull-request template, report template, CI workflow).
+  - **8c-3 — The catalogue:** `npm run build` writes `/library` from the approved packs; its own security policy; the deploy publishes it.
 - **8d (optional, decision 3)** — Browse the library inside fmIDE.
+
+## Phase 8c — agreed choices (27 September 2026)
+
+The owner approved the recommendations of the 8c plan:
+
+1. **Three phases**, 8c-1, 8c-2, 8c-3, one pull request each.
+2. **Who owns a family:** the GitHub account of the first approved pack that holds it, recorded in the library repository's `families.json` (family id → template or function, owning account, first pack, date), next to `authors.json` (GitHub account → the author name its packs use). A submission's pull request adds its entries (the checker can write them), so the owner sees each claim when approving; CI refuses a change to an existing entry. A takedown removes the pack, never the ownership. Changing an owner is a separate, deliberate pull request by the owner.
+3. **How the site gets the approved packs:** the library repository is a git submodule of fmIDE, `library/`, pinned to one commit; a small fmIDE pull request moves the pointer to publish new packs. GitHub checks it out in CI; `tools/build.js` only reads the folder when it is there, and stays offline. The build checks every pack again and refuses to publish one that fails.
+4. **How the library's CI gets the checker:** it checks out fmIDE at the commit named in the library's `checker.json`.
+5. **Sharing someone else's item again:** only a byte-for-byte copy of a version approved in that person's pack, carrying its `origin`; a new version in someone else's family is refused.
+6. **Approved packs are never edited:** a new version of your work goes in a new pack (downloaded copies name the pack in their `origin`).
+7. **Size:** a library pack is at most 5 MB (fmIDE opens files up to 50 MB).
+8. **The repository:** `fmide-library`; packs under CC BY 4.0, its tooling under the Apache License 2.0; the submission terms drafted for the lawyer review.
+9. **A "report this item" link** on catalogue pages to the library's issues, once the repository is public; until then the takedown steps as text.
+10. **The catalogue** is plain HTML with no JavaScript, left out of the app's offline copy and its version (so a new pack doesn't make fmIDE say "a new version is ready"), plus `/library/index.json` for 8d.
+
+## Phase 8c-1 — how it turned out
+
+- **The shared reader.** fmIDE's file reader and what it uses to read packs moved, unchanged, from fmIDE's own code into `src/shared/fmide-files.js`: `FILE_FORMATS` (every kind fmIDE reads), `FMIDE_FILE_MIGRATIONS` (the upgrade steps of fmIDE's kinds; the shortcuts file's step, which needs fmIDE's key names, stays in fmIDE), `readFmData` (the reader; fmIDE's `readFmFile` adds the workspace's shortcut notation), `isTemplateUid`, `cleanTemplateNote`, `cleanRecipeData`, `cleanLibraryFunctions` and `readLibraryPackData` (fmIDE's `readLibraryPack` without the message box). fmIDE includes it; ExcelExporter doesn't. The existing tests pass unchanged, which shows fmIDE reads files exactly as before.
+- **`tools/check-pack.js`** loads the shared files into an empty Node context (so it can use nothing of fmIDE's page) and checks each pack. `node tools/check-pack.js PACK…` (or `npm run check-pack -- PACK…`) prints a report of errors, warnings and notes; `--json` gives it for machines; exit code 0 passed, 1 failed, 2 can't read. **The rule:** fmIDE is forgiving, so anything it would drop or repair is an error here.
+  - The file: at most 5 MB, UTF-8 without a byte-order mark, JSON, fmIDE's limits, a library pack, not from a newer fmIDE (an older one is a warning).
+  - The details: `cleanLibraryPackInfo`, then exactly as written (no extra spaces, tags in lower case, a real date); no date is a warning.
+  - Templates: ids, version, kind, note; each model read and upgraded by the shared reader, its canvases, nodes (known types, positions) and arrows checked, the functions it carries readable and every function node's definition carried, and the calculation tried (12 periods at most). Recipes: every part survives `cleanRecipeData`, and is in the pack as the version it was made with.
+  - Functions: ids, formula (`parseFunctionText`), limits, every call carried in the pack, and each one calculable (no loops, the right number of inputs).
+  - Within the pack: a version once, a version id once, a family one kind. An `origin` must pass `cleanItemOrigin` exactly; one from another author is a note (8c-2 matches it with the library).
+  - Hidden characters — ones that change the direction of text, invisible ones and control characters — are errors in every text shown (names, titles, tags, notes, formulas, rectangles' text, plugs and sockets).
+  - Last, fmIDE's own reader (`readLibraryPackData`) must read every item.
+- **Reports** quote pack text through `JSON.stringify`, cut to 60 characters, with every hidden character written as `\uXXXX`, so a hostile name can't make the report read differently. Found while testing: `JSON.stringify` leaves a text-reversing character as it is, and the function parser's messages quote the formula; both are now escaped.
+- Tests: group 23 (`tests/23-pack-checker.spec.js`, `npm run test:pack-checker`), sample `tests/fixtures/library/check/pack-checker-good-1.fmide-pack.json`, saved by fmIDE.
 
 ## Phase 8a — how it turned out
 
