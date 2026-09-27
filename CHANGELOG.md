@@ -2,6 +2,12 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Where items came from (step 8, phase 8b)
+- Templates and functions added from a library pack now remember the pack and its author. The **Templates window** and the **Functions manager** show "From the library pack "…" by … · CC BY 4.0", and which versions of a template came from where; **Update this canvas** says where the new version came from.
+- **The family rule:** when a pack would add a version to a template or function that came from another author — or that you made yourself — the preview says so in red and leaves it unticked. Authors are compared by the pack's author, not by what its items claim.
+- Sharing someone's item again keeps their name on it (the credit CC BY 4.0 asks for); a new version you save is yours.
+- **Files:** templates version 6, workspace 6, functions 2, library pack 2. Older files open as before; an older fmIDE or ExcelExporter asks before opening a newer one. Models (systems, modules) are unchanged and never carry the record.
+
 ## Library packs: sharing templates, recipes and functions (step 8, phase 8a)
 - **File → Save as Library Pack…** writes one file of templates, recipes and functions to share, with a title, author, description, tags and the licence (CC BY 4.0). A recipe takes its parts along and a function the functions it calls.
 - **File → Open Library Pack…** shows who made a pack and its licence, and what each item would do to your library (new, already there, a new version of one of yours, or a name you already use) before anything is added; untick what you don't want. Nothing of yours is replaced. A pack without an author or with another licence is refused.

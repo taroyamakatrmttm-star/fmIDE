@@ -181,3 +181,39 @@ test('a version 3 workspace (with a recipe template) loads', async ({ page }, te
   await expect(loadStatus(page)).toHaveClass(/ok/);
   await expect(loadStatus(page)).toContainText('Loaded v3.fmide');
 });
+
+// Workspace v6 (step 8, phase 8b): templates and library functions may say which library pack
+// they came from (`origin`). ExcelExporter ignores both, so a v5 and a v6 workspace open the
+// same, and write the same workbook; a v7 one asks first.
+test.describe('workspace v6 (origins)', () => {
+  const withOrigins = () => {
+    const ws = JSON.parse(fs.readFileSync(file('ws-v5'), 'utf8'));
+    ws.version = 6;
+    const origin = { packId: 'pack-sample-0001', packTitle: '<b>Sample</b> pack', author: '<img src=x onerror="window.__pwned=1">', licence: 'CC-BY-4.0' };
+    ws.templates.forEach(t => { t.origin = origin; });
+    ws.functions.forEach(d => { d.origin = origin; });
+    return ws;
+  };
+  test('ws-v5 and a v6 workspace with origins load without a question and give the same workbook', async ({ page, pageErrors }, testInfo) => {
+    const sheets = [];
+    for(const p of [file('ws-v5'), (() => { const q = testInfo.outputPath('ws-v6-origins.json'); fs.writeFileSync(q, JSON.stringify(withOrigins())); return q; })()]){
+      await page.setInputFiles('#fileInput', p);
+      await expect(loadStatus(page)).toHaveClass(/ok/);
+      await expect(page.locator('#confirmModal')).toBeHidden();
+      const { wb } = await X.generate(page);
+      sheets.push(JSON.stringify(wb));
+    }
+    expect(sheets[1]).toBe(sheets[0]);
+    expect(await page.evaluate(() => window.__pwned)).toBeUndefined();
+    expect(pageErrors).toEqual([]);
+  });
+  test('a v7 workspace asks first', async ({ page }, testInfo) => {
+    const ws = withOrigins();
+    ws.version = 7;
+    const p = testInfo.outputPath('ws-v7.json');
+    fs.writeFileSync(p, JSON.stringify(ws));
+    await page.setInputFiles('#fileInput', p);
+    await expect(page.locator('#confirmModal')).toBeVisible();
+    await expect(page.locator('#confirmMessage')).toContainText('format version 7');
+  });
+});

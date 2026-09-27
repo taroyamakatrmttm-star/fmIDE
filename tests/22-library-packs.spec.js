@@ -51,7 +51,7 @@ test.describe('saving a pack', () => {
     await fillLibrary(page);
     const pack = await page.evaluate((info) => fm.saveLibraryPack(Object.assign({}, info, { templates: ['Statements'], functions: ['Profit'], download: false })), PACK_INFO);
     expect(pack.kind).toBe('fmIDE-library-pack');
-    expect(pack.version).toBe(1);
+    expect(pack.version).toBe(2);
     expect(pack.pack).toMatchObject({ title: 'Three statements starter', author: 'Ann Example', licence: 'CC-BY-4.0',
       description: 'Line one\nLine two', tags: ['statements', 'tax'] });
     expect(pack.pack.id).toMatch(/^[A-Za-z0-9-]{8,64}$/);
@@ -237,8 +237,8 @@ test.describe('packs from other people', () => {
     await F.dismissMessage(page);
     await page.locator('.modal-box.template-box .modal-actions button', { hasText: /^Close$/ }).click();
     // A pack from a newer fmIDE: the action refuses without allowNewer; the window asks.
-    const newer = Object.assign(readFixture('library', 'pack-v1.json'), { version: 2 });
-    expect(await err(page, (f) => fm.openLibraryPack(f), newer)).toMatch(/newer version of fmIDE \(format version 2\)/);
+    const newer = Object.assign(readFixture('library', 'pack-v1.json'), { version: 3 });
+    expect(await err(page, (f) => fm.openLibraryPack(f), newer)).toMatch(/newer version of fmIDE \(format version 3\)/);
     await F.importViaCommand(page, 'openLibraryPack', writeFile(testInfo, 'newer.json', newer));
     expect(await F.dialogText(page)).toMatch(/saved by a newer version of fmIDE/);
     await F.confirmDanger(page);
@@ -311,5 +311,214 @@ test.describe('the ribbon', () => {
     await page.evaluate(() => fm.saveFunction({ text: 'One(a) = a' }));
     await page.evaluate(() => fm.command('saveLibraryPack'));
     await expect(page.locator('.modal-box.library-pack-save input.pack-author')).toHaveValue('');
+  });
+});
+
+// Phase 8b: where items came from. A template or function version added from a pack remembers
+// the pack (`origin`: packId, packTitle, author, licence); the windows show it; the preview
+// warns when a pack adds a version to a family from another author or of your own.
+const SAM = { packId: 'pack-sample-0001', packTitle: 'Sample pack', author: 'Sam Sample', licence: 'CC-BY-4.0' };
+async function templateOrigins(page){
+  const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
+  const out = {};
+  data.templates.forEach(t => { out[`${t.name}@${t.version}`] = t.origin || null; });
+  return out;
+}
+const functionOrigins = (page) => page.evaluate(() => {
+  const out = {};
+  fm.listFunctions().forEach(f => f.versions.forEach(v => { out[`${v.name}@${v.version}`] = v.origin; }));
+  return out;
+});
+// SAMPLE with other pack details (and a fresh Balance Sheet v4, so there is always a new version).
+function otherPack(over, itemOrigin){
+  const pack = readFixture('library', 'pack-v1.json');
+  Object.assign(pack.pack, over);
+  const bs = pack.templates.find(t => t.name === 'Balance Sheet');
+  Object.assign(bs, { version: 4, versionId: 'vid-balance-v4-other', note: 'Fourth' });
+  bs.data = JSON.parse(JSON.stringify(bs.data).replace('Balance Sheet', 'Balance Sheet (v4)'));
+  if(itemOrigin) pack.templates.concat(pack.functions).forEach(x => { x.origin = itemOrigin; });
+  return pack;
+}
+
+test.describe('where items came from (origin)', () => {
+  test('items added from a pack remember it; it survives the autosave and every export; new versions of yours have none', async ({ page }) => {
+    await page.evaluate((file) => fm.openLibraryPack(file), readFixture('library', 'pack-v1.json'));
+    expect(await templateOrigins(page)).toEqual({ 'Income Statement@1': SAM, 'Balance Sheet@3': SAM, 'Cash Flow@1': SAM });
+    expect(await functionOrigins(page)).toEqual({ 'Margin@3': SAM, 'Growth@1': SAM });
+    expect((await page.evaluate(() => fm.getFunction('Growth'))).origin).toEqual(SAM);
+    // The functions file and the templates file carry it.
+    const fnFile = await page.evaluate(() => fm.exportFunctions({ download: false }));
+    expect(fnFile.version).toBe(2);
+    expect(fnFile.functions.map(d => d.origin)).toEqual([SAM, SAM]);
+    await page.evaluate(() => fm.command('openTemplates'));
+    const { data: tFile } = await F.downloadJson(page, () => page.locator('.modal-box.template-box button', { hasText: '⇩ Export Templates' }).click());
+    expect(tFile.templates.map(t => t.origin)).toEqual([SAM, SAM, SAM]);
+    await page.locator('.modal-box.template-box .modal-actions button', { hasText: /^Close$/ }).click();
+    // After a reload (the autosave), still there.
+    await page.waitForTimeout(2500);
+    await page.reload();
+    await page.waitForFunction(() => window.fm && typeof window.fm.nodes === 'function');
+    expect(await functionOrigins(page)).toEqual({ 'Margin@3': SAM, 'Growth@1': SAM });
+    expect((await templateOrigins(page))['Cash Flow@1']).toEqual(SAM);
+    // A new version you save is yours: no origin; the older one keeps its own.
+    await page.evaluate(() => fm.saveFunction({ text: 'Growth(Now, Before) = Now - Before', newVersionOf: 'Growth' }));
+    expect(await functionOrigins(page)).toEqual({ 'Margin@3': SAM, 'Growth@1': SAM, 'Growth@2': null });
+    await page.evaluate(() => fm.saveRecipe({ name: 'Two', parts: ['Income Statement', 'Cash Flow'] }));
+    expect((await templateOrigins(page))['Two@1']).toBeNull();
+    // Changing a description keeps it.
+    await page.evaluate(() => fm.setFunctionInfo({ function: 'Growth@1', description: 'Changed', note: '' }));
+    expect((await page.evaluate(() => fm.getFunction('Growth@1'))).origin).toEqual(SAM);
+  });
+
+  test('a model never carries an origin: a function node\'s definition in a saved system has none', async ({ page }) => {
+    await page.evaluate((file) => fm.openLibraryPack(file), readFixture('library', 'pack-v1.json'));
+    await page.evaluate(() => fm.insertFunction({ function: 'Growth', x: 300, y: 200 }));
+    const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.command('saveSystem')));
+    expect(data.functions.map(d => d.family + '@' + d.version)).toEqual(['family-growth@1', 'family-margin@3']);
+    expect(JSON.stringify(data)).not.toContain('"origin"');
+    expect(JSON.stringify(await page.evaluate(() => fm.listFunctions({ of: 'model' })))).not.toContain('origin');
+    // The library keeps its own.
+    expect((await functionOrigins(page))['Growth@1']).toEqual(SAM);
+  });
+
+  test('a renumbered item keeps its origin; one already in your library is left as it was', async ({ page }) => {
+    await fillLibrary(page);   // Income Statement v1 (the pack's too), Margin v1–v2 — yours
+    const pack = readFixture('library', 'pack-v1.json');
+    pack.functions[0].version = 2;   // Margin "v2" from the pack: its number is taken here
+    const out = await page.evaluate((file) => fm.openLibraryPack(file), pack);
+    expect(out.functions).toEqual({ added: 2, present: 0, renumbered: 1 });
+    expect(await functionOrigins(page)).toMatchObject({ 'Margin@1': null, 'Margin@2': null, 'Margin@3': SAM, 'Growth@1': SAM });
+    expect((await templateOrigins(page))['Income Statement@1']).toBeNull();
+  });
+
+  test('the Templates window and the Functions manager say where a version came from', async ({ page }) => {
+    await importTemplates(page);   // Balance Sheet v1–v2, yours
+    await page.evaluate((file) => fm.openLibraryPack({ file, items: ['t1', 'f1'] }), readFixture('library', 'pack-v1.json'));
+    await page.evaluate(() => fm.command('openTemplates'));
+    const box = page.locator('.modal-box.template-box');
+    await box.locator('.template-list button', { hasText: 'Balance Sheet' }).first().click();
+    await expect(box.locator('.template-origin')).toHaveText([
+      'From the library pack “Sample pack” by Sam Sample · CC BY 4.0.',
+      'Versions: v1, v2 yours · v3 from “Sample pack” by Sam Sample.']);
+    await box.locator('.template-list button', { hasText: 'Income Statement' }).first().click();
+    await expect(box.locator('.template-origin')).toHaveCount(0);
+    await box.locator('.modal-actions button', { hasText: /^Close$/ }).click();
+    await page.evaluate(() => fm.command('openFunctions'));
+    const fns = page.locator('.modal-box').last();
+    await fns.locator('button', { hasText: /^Growth/ }).first().click();
+    await expect(fns.locator('.template-origin')).toHaveText(['From the library pack “Sample pack” by Sam Sample · CC BY 4.0.']);
+  });
+
+  test('"Update this canvas" says where the version came from', async ({ page }) => {
+    await importTemplates(page);
+    await page.evaluate(() => fm.insertTemplate('Balance Sheet@1', 'newCanvas'));
+    await page.evaluate((file) => fm.openLibraryPack({ file, items: ['t1'] }), readFixture('library', 'pack-v1.json'));
+    await page.evaluate(() => fm.command('updateCanvasTemplate'));
+    const box = page.locator('.modal-box.template-update-box');
+    await expect(box.locator('.template-update-origin')).toHaveText('v3: From the library pack “Sample pack” by Sam Sample · CC BY 4.0.');
+    await box.locator('select').selectOption('2');
+    await expect(box.locator('.template-update-origin')).toHaveCount(0);
+  });
+
+  test('the family rule: a warning when a pack adds a version to your own work or to another author\'s', async ({ page }) => {
+    // Your own (no record): Balance Sheet and Margin came from ordinary files.
+    await fillLibrary(page);
+    let items = (await page.evaluate((file) => fm.previewLibraryPack(file), readFixture('library', 'pack-v1.json'))).items;
+    const byName = (list, n) => list.find(i => i.name === n);
+    expect(byName(items, 'Balance Sheet')).toMatchObject({ status: 'new-version', warningKind: 'own' });
+    expect(byName(items, 'Balance Sheet').warning).toBe('Your “Balance Sheet” is your own (or has no record of where it came from); this pack by Sam Sample would add a version to it.');
+    expect(byName(items, 'Margin')).toMatchObject({ status: 'new-version', warningKind: 'own' });
+    expect(byName(items, 'Growth')).toMatchObject({ status: 'new', warning: null, warningKind: null });
+    expect(byName(items, 'Cash Flow').warning).toBeNull();
+  });
+
+  test('the family rule: the same author adds versions quietly; another author is warned about, whatever the items claim', async ({ page }) => {
+    await page.evaluate((file) => fm.openLibraryPack(file), readFixture('library', 'pack-v1.json'));   // all from Sam
+    const preview = (pack) => page.evaluate((file) => fm.previewLibraryPack(file), pack).then(r => r.items.find(i => i.name === 'Balance Sheet'));
+    // Sam again (capitals and spaces don't count), in another pack.
+    expect(await preview(otherPack({ id: 'pack-sample-0002', author: '  sam   SAMPLE ' }))).toMatchObject({ status: 'new-version', warning: null });
+    // Someone else.
+    const mallory = await preview(otherPack({ id: 'pack-mallory-001', author: 'Mallory' }));
+    expect(mallory.warningKind).toBe('other-author');
+    expect(mallory.warning).toBe('Your “Balance Sheet” came from Sam Sample (the pack “Sample pack”); this pack is by Mallory.');
+    // Someone else whose items claim to be Sam's: still warned (the pack's author counts).
+    const claims = await preview(otherPack({ id: 'pack-mallory-002', author: 'Mallory' }, SAM));
+    expect(claims.warningKind).toBe('other-author');
+    expect(claims.origin).toEqual(SAM);
+  });
+
+  test('the preview window: warned items start unticked, say why, and a ticked item that needs one says so', async ({ page }) => {
+    await fillLibrary(page);
+    await F.importViaCommand(page, 'openLibraryPack', SAMPLE);
+    const box = page.locator('.modal-box.library-pack-preview');
+    await expect(box.locator('.library-pack-warning')).toContainText('someone other than Sam Sample, or that you made. They are not ticked');
+    const bs = box.locator('.library-pack-item[data-key="t1"]');
+    await expect(bs.locator('input')).not.toBeChecked();
+    await expect(bs.locator('.library-pack-item-warning')).toHaveText('⚠ Your “Balance Sheet” is your own (or has no record of where it came from); this pack by Sam Sample would add a version to it.');
+    await expect(box.locator('.library-pack-item[data-key="f0"] input')).not.toBeChecked();   // Margin v3
+    await expect(box.locator('.library-pack-item[data-key="t2"] input')).toBeChecked();       // Cash Flow (same name, no warning)
+    const growth = box.locator('.library-pack-item[data-key="f1"]');
+    await expect(growth.locator('input')).toBeChecked();
+    await expect(growth.locator('.library-pack-item-status')).toContainText('brings 1 item it needs (one has a warning ⚠ — it comes along when this is ticked)');
+  });
+
+  test('sharing someone\'s item again keeps their credit: it arrives as theirs, and the preview says so', async ({ page, browser }) => {
+    await page.evaluate((file) => fm.openLibraryPack(file), readFixture('library', 'pack-v1.json'));
+    // The Save window names where it came from.
+    await page.evaluate(() => fm.command('saveLibraryPack'));
+    await expect(page.locator('.modal-box.library-pack-save label.library-pack-pick', { hasText: /^ Growth/ })).toContainText("from Sam Sample's pack “Sample pack”");
+    await F.cancelDialog(page);
+    const pack = await page.evaluate(() => fm.saveLibraryPack({ title: 'Bob re-shares', author: 'Bob', functions: ['Growth'], download: false }));
+    expect(pack.version).toBe(2);
+    expect(pack.functions.map(d => d.origin)).toEqual([SAM, SAM]);
+    const ctx = await browser.newContext();
+    await ctx.route('**/*', (route) => route.request().url() === ORIGIN + 'fmIDE.html'
+      ? route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: fs.readFileSync(path.join(ROOT, 'apps', 'fmIDE.html')) })
+      : route.abort('blockedbyclient'));
+    const other = await ctx.newPage();
+    try{
+      await F.openFmIDE(other);
+      expect((await other.evaluate((file) => fm.previewLibraryPack(file), pack)).items.map(i => i.origin)).toEqual([SAM, SAM]);
+      await other.evaluate((file) => fm.openLibraryPack(file), pack);
+      expect(await functionOrigins(other)).toEqual({ 'Growth@1': SAM, 'Margin@3': SAM });
+      // An item without one takes the pack's.
+      const own = await other.evaluate(() => { fm.saveFunction({ text: 'Mine(a) = a * 3' }); return fm.saveLibraryPack({ title: 'Bob own', author: 'Bob', functions: ['Mine'], download: false }); });
+      expect(own.functions[0]).not.toHaveProperty('origin');
+      await F.importViaCommand(other, 'openLibraryPack', writeFile(test.info(), 'reshared.json', pack));
+      await expect(other.locator('.modal-box.library-pack-preview .library-pack-item-origin').first()).toHaveText('Shared before: From the library pack “Sample pack” by Sam Sample · CC BY 4.0');
+    }finally{ await ctx.close(); }
+  });
+
+  test('an origin read from a file is checked: bad ones are dropped, text is shown as text', async ({ page, pageErrors }, testInfo) => {
+    const html = '<img src=x onerror="window.__pwned=1"><b>bold</b>';
+    const good = { packId: 'pack-hostile-01', packTitle: html, author: html + ' '.repeat(3) + 'x'.repeat(300), licence: 'CC-BY-4.0', extra: 'dropped' };
+    const bad = [
+      null, 'Sam', ['x'], { packId: 'no', packTitle: 'T', author: 'A', licence: 'CC-BY-4.0' },
+      { packId: 'pack-hostile-02', packTitle: '', author: 'A', licence: 'CC-BY-4.0' },
+      { packId: 'pack-hostile-03', packTitle: 'T', author: 42, licence: 'CC-BY-4.0' },
+      { packId: 'pack-hostile-04', packTitle: 'T', author: 'A', licence: 'All rights reserved' },
+    ];
+    const tpl = readFixture('formats', 'templates-v5.json');
+    const templates = [Object.assign({}, tpl.templates[0], { version: 6, origin: good })];
+    bad.forEach((o, i) => templates.push(Object.assign({}, tpl.templates[0], { name: 'Bad ' + i, family: 'fam-bad-origin-' + i, versionId: 'vid-bad-origin-' + i, origin: o })));
+    await F.importViaDialog(page, 'openTemplates', '⇧ Import Templates', writeFile(testInfo, 'origins.json', { kind: 'fmIDE-templates', version: 6, templates }));
+    await F.dismissMessage(page);
+    await page.locator('.modal-box.template-box .modal-actions button', { hasText: /^Close$/ }).click();
+    const origins = await templateOrigins(page);
+    expect(origins['Income Statement@6']).toEqual({ packId: 'pack-hostile-01', packTitle: html, author: (html + ' x' + 'x'.repeat(299)).slice(0, 120), licence: 'CC-BY-4.0' });
+    bad.forEach((o, i) => expect(origins[`Bad ${i}@1`]).toBeNull());
+    // Functions: the same check.
+    await page.evaluate((file) => fm.importFunctions(file), { kind: 'fmIDE-functions', version: 2, functions: [
+      { family: 'family-hostile', version: 1, versionId: 'version-hostile-1', text: 'H(a) = a', description: '', note: '', calls: [], origin: good },
+      { family: 'family-hostile', version: 2, versionId: 'version-hostile-2', text: 'H(a) = a * 2', description: '', note: '', calls: [], origin: bad[6] }] });
+    expect(await functionOrigins(page)).toEqual({ 'H@1': origins['Income Statement@6'], 'H@2': null });
+    // Shown as text.
+    await page.evaluate(() => fm.command('openTemplates'));
+    const box = page.locator('.modal-box.template-box');
+    await box.locator('.template-list button', { hasText: 'Income Statement' }).first().click();
+    await expect(box.locator('.template-origin').first()).toContainText(html);
+    expect(await box.locator('.template-origin img, .template-origin b').count()).toBe(0);
+    expect(await page.evaluate(() => window.__pwned)).toBeUndefined();
+    expect(pageErrors).toEqual([]);
   });
 });

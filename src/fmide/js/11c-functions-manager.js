@@ -393,6 +393,7 @@
       ver.appendChild(verLabel);
       if(!isLatestFunction(d)) ver.appendChild(document.createTextNode(' (an older version)'));
       if(d.note){ const n = document.createElement('span'); n.className = 'template-note'; n.textContent = ' — ' + d.note; ver.appendChild(n); }
+      appendOriginLines(detail, d, all);
       para('template-desc', d.description || '(no description)');
       const pre = document.createElement('pre');
       pre.className = 'function-detail-text';

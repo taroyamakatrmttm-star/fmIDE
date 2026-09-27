@@ -413,6 +413,11 @@
   .library-pack-item-status{ grid-column:2; font-size:11.5px; color:#475569; }
   .library-pack-item.new-version .library-pack-item-status{ color:#b45309; }
   .library-pack-item.present{ color:#9ca3af; }
+  .modal-box p.library-pack-warning{ font-size:12px; color:#991b1b; background:#fee2e2; border-radius:6px; padding:6px 9px; margin:8px 0; }
+  .library-pack-item-warning{ grid-column:2; font-size:11.5px; color:#b91c1c; }
+  .library-pack-item-origin{ grid-column:2; font-size:11.5px; color:#475569; font-style:italic; }
+  .library-pack-item input{ grid-row:span 5; }
+  .template-origin{ font-size:12px; color:#475569; margin:4px 0; }
   .library-pack-item-detail{ grid-column:2; font-size:11.5px; color:#6b7280; white-space:pre-wrap; overflow-wrap:anywhere; }
   .template-preview-tabs{ display:flex; gap:4px; margin-bottom:6px; flex-wrap:wrap; }
   .template-preview-tabs button{

@@ -29,7 +29,7 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | `npm run test:excel-ir` | ExcelExporter on the IR: pinned units, operator spellings, the "differs from fmIDE" panel, function calls written out in full, the Functions tab, Excel's formula limits, the phase E1 operators' formulas |
 | `npm run test:functions` | function plugins: the parser, the samples in `fixtures/functions/`, files carrying their definitions |
 | `npm run test:functions-fmide` | functions in fmIDE: the library, the Functions manager and editor, the `fmIDE-functions` file, function nodes on the canvas (insert, drawing, wiring, updating, copy and paste), undo, ribbon, macros |
-| `npm run test:library-packs` | library packs (save, preview, open; packs from other people) and the size limits on every file opened, both apps |
+| `npm run test:library-packs` | library packs (save, preview, open; packs from other people; where items came from and the family-rule warnings) and the size limits on every file opened, both apps |
 | `npx playwright test -g "Tree view"` | tests whose name matches |
 
 After a failure, `npx playwright show-report` opens the report, with a trace for each failed test.

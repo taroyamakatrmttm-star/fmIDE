@@ -23,7 +23,7 @@ What is shared: templates (canvas and system), recipes and functions. **Macros a
 ## Phases (one pull request each)
 
 - **8a — The library pack file (fmIDE)** ✅ (below).
-- **8b — Where items came from:** `origin` (pack, author, licence) on templates and functions, shown in the Templates and Functions windows; the preview warns when a pack adds versions to a family that came from a different author. Format versions raised, with old-version samples and tests.
+- **8b — Where items came from** ✅ (below): `origin` (pack, author, licence) on templates and functions, shown in the Templates and Functions windows; the preview warns when a pack adds versions to a family that came from a different author. Format versions raised, with old-version samples and tests.
 - **8c — Checker and catalogue:** `tools/check-pack.js` (Node only, using the shared reader and the function parser: structure, limits, licence, family ownership); the library repository's layout, submission template and CI; the build writes the `/library` catalogue pages from the approved packs, all text escaped, under the same security policy. Needs the library repository to be public.
 - **8d (optional, decision 3)** — Browse the library inside fmIDE.
 
@@ -37,3 +37,15 @@ What is shared: templates (canvas and system), recipes and functions. **Macros a
 - The ribbon's File → Library group has both commands; a customised ribbon got them once (`ui.libraryPacksAdded`) in the group holding Format Presets. Neither has a shortcut. The actions are not recorded in macros (a pack is a whole file).
 - ExcelExporter says a pack belongs in fmIDE.
 - Code: `src/shared/library-pack.js` (the pack details and their checks, pure, so the checker in 8c can use them), `src/fmide/js/11e-library-packs.js` (writing, reading, the two windows), `src/fmide/js/14c-actions-library-packs.js` (the actions). Tests: group 22 (`tests/22-library-packs.spec.js`, `npm run test:library-packs`), sample `tests/fixtures/library/pack-v1.json`.
+
+## Phase 8b — how it turned out
+
+The owner approved the recommendations (27 September 2026): an item shared again keeps its original author (so packs became version 2); warned items start unticked; "Update this canvas" shows where a version came from; origins are kept when they arrive in ordinary files too (a forged one gains nothing a pack with any author name couldn't).
+
+- **What is recorded:** `origin: { packId, packTitle, author, licence }` on each template version and function version added from a pack — the one the item carries (shared before, in another pack), otherwise the pack's own. It is per version: a new version you save has none, so a family can hold Ann's v1–v3 and your v4. Checked when read like the pack details (`cleanItemOrigin` in `src/shared/library-pack.js`); a bad one is dropped whole. Details in `docs/file-formats.md`, "Where items came from".
+- **Where it travels:** autosave, documents, workspace exports, templates and functions files, and packs keep it. Models never carry it: a function copied into a model, or written into a system or module, has none (`system` and `module` are unchanged).
+- **Shown:** the Templates window and the Functions manager give "From the library pack "…" by … · CC BY 4.0" (the credit CC BY asks for) and, when versions came from different places, which came from where; "Update this canvas" names the chosen version's pack; Save as Library Pack shows "from Ann's pack "…"" beside an item that came from someone else; the preview shows "Shared before: …" for an item re-shared by a different author. `fm.getFunction` / `fm.listFunctions` return `origin`; `fm.previewLibraryPack` returns `origin`, `warning` and `warningKind` for each item.
+- **The family rule in fmIDE:** a pack adding a version to a family you have gets a red warning when any version of that family came from another author ("Your "Balance Sheet" came from Ann Example (the pack "…"); this pack is by Bob.") or has no origin ("…is your own (or has no record of where it came from)…"). Author names are compared ignoring capitals and spaces, and always with the pack's author — never an author the items claim, which a pack could fake. Warned items start unticked; an item that needs a warned one says so. `fm.openLibraryPack` without a list still adds everything.
+- **Formats:** `fmIDE-templates` 6, `fmIDE-workspace` 6, `fmIDE-functions` 2, `fmIDE-library-pack` 2; every upgrade step changes nothing. ExcelExporter reads workspace 6 and ignores origins.
+- **Limits of the record:** an origin is what a file says, not proof. A function that reaches your library only inside someone's model arrives without one (it looks like your own). Items added before 8b have none.
+- Tests: group 6 (samples `formats/ws-v5.json`, `formats/templates-v5.json`; the v1 `formats/functions.json`; `functions/library-newer-v3.json` as the new "newer" sample) and group 22 ("where items came from").

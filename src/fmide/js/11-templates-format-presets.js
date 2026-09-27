@@ -313,18 +313,22 @@
     const k = String(name || '').trim().toLowerCase();
     return templateFamilies().filter(t => t.name.trim().toLowerCase() === k && (!kind || t.kind === kind));
   }
-  // How a template is written to a file (workspace, templates file).
+  // How a template is written to a file (workspace, templates file, library pack). `origin`
+  // (the library pack a version came from, phase 8b) only when it has one.
   function templateRecord(t, withId){
     const r = withId ? { id: t.id } : {};
-    return Object.assign(r, { name: t.name, description: t.description, group: t.group, kind: t.kind,
+    Object.assign(r, { name: t.name, description: t.description, group: t.group, kind: t.kind,
       family: t.family, version: t.version, note: t.note, versionId: t.versionId, data: t.data });
+    if(t.origin) r.origin = Object.assign({}, t.origin);
+    return r;
   }
 
   // A library entry from a template read from a file (or the autosave), with its family
   // fields checked: text from files is untrusted. A missing or malformed family or version
   // id gets a fresh one, a version that isn't a whole number ≥ 1 becomes 1. `family`,
-  // `version` and `versionId` in `over` replace the file's (after checking). Returns null
-  // for something that isn't a template. The caller gives it an id.
+  // `version` and `versionId` in `over` replace the file's (after checking). An `origin`
+  // (phase 8b) is kept only when it passes cleanItemOrigin. Returns null for something that
+  // isn't a template. The caller gives it an id.
   function templateEntryFrom(t, over){
     if(!t || typeof t !== 'object' || typeof t.name !== 'string' || !t.name.trim() || !t.data || typeof t.data !== 'object') return null;
     if(t.kind !== 'module' && t.kind !== 'system' && t.kind !== 'recipe') return null;
@@ -332,7 +336,7 @@
     if(!data) return null;
     const o = Object.assign({}, t, over || {});
     const version = Number(o.version);
-    return {
+    const e = {
       id: null, name: t.name.trim(),
       description: typeof t.description === 'string' ? t.description : '',
       group: (typeof t.group === 'string' && t.group.trim()) ? t.group.trim() : 'My Templates',
@@ -343,6 +347,9 @@
       versionId: isTemplateUid(o.versionId) && !TEMPLATES.some(x => x.versionId === o.versionId) ? o.versionId : newRandomId(),
       data
     };
+    const origin = cleanItemOrigin(o.origin);
+    if(origin) e.origin = origin;
+    return e;
   }
   // Makes a new entry fit the library: a family already holding the other kind can't take
   // it (it starts a family of its own); a version number already taken in its family moves
@@ -1198,6 +1205,8 @@
       body.innerHTML = '';
       const plan = planCanvasUpdate(c, target);
       const fromV = st.source ? st.source.version : st.link.version;
+      // Where the chosen version came from (phase 8b): a version from someone's library pack says so.
+      if(target.origin) line(`v${target.version}: ${originText(target.origin)}.`, 'template-origin template-update-origin');
       const between = versions.filter(v => v.version > Math.min(fromV, target.version) && v.version <= Math.max(fromV, target.version) && v.note);
       if(between.length){
         const ul = document.createElement('ul');
@@ -1603,6 +1612,7 @@
         ver.appendChild(note);
       }
       detail.appendChild(ver);
+      appendOriginLines(detail, selected, all);
       const desc = document.createElement('p');
       desc.className = 'template-desc';
       desc.textContent = selected.description || '(no description)';
