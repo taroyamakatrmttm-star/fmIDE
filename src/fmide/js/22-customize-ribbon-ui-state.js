@@ -314,10 +314,10 @@
     tab.groups.unshift(cloneData(DOCUMENT_RIBBON_GROUP));
   }
   // One-time update of a ribbon customised before your own functions existed: the My
-  // Functions group joins the Insert tab (before its Library group), or the first tab.
+  // Functions group joins the Insert tab (before its Library group). A ribbon without an
+  // Insert tab is left as its owner made it (Functions is still in the Command Launcher).
   function addFunctionsGroupToRibbon(){
-    const tabs = ribbonState.config.tabs;
-    const tab = tabs.find(t => t && t.id === 'insert') || tabs[0];
+    const tab = ribbonState.config.tabs.find(t => t && t.id === 'insert');
     if(!tab) return;
     if(!Array.isArray(tab.groups)) tab.groups = [];
     if(tab.groups.some(g => g && g.id === 'myFunctions')) return;

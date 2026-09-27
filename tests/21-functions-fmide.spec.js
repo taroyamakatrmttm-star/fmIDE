@@ -344,7 +344,7 @@ test.describe('the ribbon', () => {
     ]);
   });
 
-  test('a ribbon customised before it existed gets My Functions once; removing it is respected', async ({ page }, testInfo) => {
+  test('a ribbon customised before it existed gets My Functions once (on its Insert tab only); removing it is respected', async ({ page }, testInfo) => {
     const ws = (flag, groups) => {
       const system = JSON.parse(fs.readFileSync(fixture('formats', 'sys-current.json'), 'utf8'));
       return JSON.stringify({ kind: 'fmIDE-workspace', version: 4, system, ui: { ribbonCustomized: true, documentGroupAdded: true, functionsGroupAdded: flag,
@@ -357,6 +357,12 @@ test.describe('the ribbon', () => {
     await F.importViaCommand(page, 'importWorkspace', file('removed.json', ws(true, [{ label: 'Mine', items: [{ cmd: 'addRect' }] }])));
     await F.acceptAll(page);
     expect(await insertGroups(page)).toEqual(['Mine']);
+    // A ribbon without an Insert tab gets no group anywhere else.
+    const noInsert = JSON.parse(ws(undefined, []));
+    noInsert.ui.ribbon.tabs = [{ id: 'file', label: 'File', groups: [{ label: 'Only Mine', items: [{ cmd: 'saveSystem' }] }] }];
+    await F.importViaCommand(page, 'importWorkspace', file('no-insert.json', JSON.stringify(noInsert)));
+    await F.acceptAll(page);
+    expect(await page.evaluate(() => __fmIDE.getRibbonConfig().tabs.map(t => t.id + ':' + t.groups.map(g => g.label).join(',')))).toEqual(['file:Only Mine']);
   });
 });
 
