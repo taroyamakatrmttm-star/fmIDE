@@ -70,6 +70,7 @@ The script pieces are plain fragments of one wrapped function — no `import`/`e
 
 ## Docs
 
+- [`docs/tutorial-step7.md`](docs/tutorial-step7.md) — step-by-step tutorial for everything new since pull request #23: functions, the new operators, and the "differs from fmIDE" list
 - [`docs/decisions.md`](docs/decisions.md) — agreed and open product decisions, and the build order
 - [`docs/file-formats.md`](docs/file-formats.md) — every JSON file type, its version, and how to change a format safely
 - [`docs/format-roles.md`](docs/format-roles.md) — how cell and rectangle formatting is defined in one place
