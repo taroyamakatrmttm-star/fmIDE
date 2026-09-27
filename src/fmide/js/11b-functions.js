@@ -8,6 +8,22 @@
   // Definitions from files are cleaned (cleanFunctionDefinitions) and never run as code.
   let FUNCTIONS = [];
 
+  // Library definitions from a file (a workspace, an fmIDE-functions file, a library pack, the
+  // autosave): cleaned like any definition, keeping an `origin` (the library pack a version
+  // came from, phase 8b) that passes cleanItemOrigin. A model's own definitions never carry
+  // one: cleanFunctionDefinitions drops it, so an origin never reaches a system or module.
+  function cleanLibraryFunctions(list){
+    const out = [];
+    (Array.isArray(list) ? list : []).forEach(raw => {
+      const d = cleanFunctionDefinition(raw);
+      if(!d) return;
+      const origin = cleanItemOrigin(raw.origin);
+      if(origin) d.origin = origin;
+      out.push(d);
+    });
+    return out;
+  }
+
   // Same version: the same family and versionId (or, for a definition without a versionId,
   // the same family and version number).
   function sameFunctionVersion(a, b){
@@ -32,7 +48,7 @@
     let added = 0, present = 0, renumbered = 0;
     const clashes = [], moved = [];
     const here = functionAlreadyHere;
-    cleanFunctionDefinitions(list).forEach(d => {
+    cleanLibraryFunctions(list).forEach(d => {
       if(here(d)){ present++; return; }
       if(FUNCTIONS.some(f => f.family === d.family && f.version === d.version)){ clashes.push(d); return; }
       FUNCTIONS.push(d); added++;
@@ -53,7 +69,7 @@
     return { added, present, renumbered };
   }
   // The library as saved in the autosave.
-  function restoreFunctions(list){ FUNCTIONS = cleanFunctionDefinitions(list); }
+  function restoreFunctions(list){ FUNCTIONS = cleanLibraryFunctions(list); }
 
   // A model's definitions replace the open model's (a system replaces everything).
   function setModelFunctions(list){

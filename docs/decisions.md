@@ -23,7 +23,7 @@ Workflow since step 3a: edit `src/` → `npm run build` → `npm test` (the file
 5. Publish the web app (see `docs/step5-publish.md`) ✅ — 5a installable web app (PWA): offline, updates, install, double-click `.fmide`, one app with ExcelExporter inside; 5b licences (decision 3) and automatic publishing to Cloudflare Pages on every merge, with a preview address for each pull request.
 6. Template management ✅ — families and versions, canvases linked to their template ("Update this canvas"), recipe templates, and a warning when more than one plug feeds a socket (see `docs/file-formats.md`)
 7. Formula IR and plugins (chosen by the owner, September 2026; see `docs/step7-formula-ir.md`): A agreement tests and fixes ✅, B shared IR ✅, C ExcelExporter on the IR ✅, D function plugins ✅, E1 new operators ✅; E2 optional, not started
-8. Community library (see `docs/step8-community-library.md`) — in progress: 8a library pack files ✅; 8b where items came from; 8c checker and catalogue; 8d browsing inside fmIDE (optional)
+8. Community library (see `docs/step8-community-library.md`) — in progress: 8a library pack files ✅; 8b where items came from ✅; 8c checker and catalogue; 8d browsing inside fmIDE (optional)
 9. Touch support
 
 ## Phase 0 (hardening) — status

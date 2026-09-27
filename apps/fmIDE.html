@@ -421,6 +421,11 @@
   .library-pack-item-status{ grid-column:2; font-size:11.5px; color:#475569; }
   .library-pack-item.new-version .library-pack-item-status{ color:#b45309; }
   .library-pack-item.present{ color:#9ca3af; }
+  .modal-box p.library-pack-warning{ font-size:12px; color:#991b1b; background:#fee2e2; border-radius:6px; padding:6px 9px; margin:8px 0; }
+  .library-pack-item-warning{ grid-column:2; font-size:11.5px; color:#b91c1c; }
+  .library-pack-item-origin{ grid-column:2; font-size:11.5px; color:#475569; font-style:italic; }
+  .library-pack-item input{ grid-row:span 5; }
+  .template-origin{ font-size:12px; color:#475569; margin:4px 0; }
   .library-pack-item-detail{ grid-column:2; font-size:11.5px; color:#6b7280; white-space:pre-wrap; overflow-wrap:anywhere; }
   .template-preview-tabs{ display:flex; gap:4px; margin-bottom:6px; flex-wrap:wrap; }
   .template-preview-tabs button{
@@ -2004,7 +2009,7 @@
   // (docs/file-formats.md). To change one of these formats: raise its version here and add
   // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
   // exactly one version.
-  const SHARED_FILE_VERSIONS = { 'system': 6, 'fmIDE-workspace': 5 };
+  const SHARED_FILE_VERSIONS = { 'system': 6, 'fmIDE-workspace': 6 };
   // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
   // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
   function upgradeNodePlugs(nodes){
@@ -2049,7 +2054,10 @@
       3: () => {},
       // v4 → v5: its system (v6) and templates (v5) may use the operators of phase E1; older
       // ones don't.
-      4: () => {}
+      4: () => {},
+      // v5 → v6: its templates and library functions may say which library pack they came
+      // from (`origin`, step 8 phase 8b); older ones have no such record.
+      5: () => {}
     },
     'system': {
       // v1 systems were accepted with fields the loader already defaults (periods, ids…);
@@ -2139,13 +2147,13 @@
     'system':               { current: SHARED_FILE_VERSIONS['system'], label: 'system', where: 'File → Load System' },
     'module':               { current: 4, label: 'module',              where: 'File → Load Module' },
     'fmIDE-workspace':      { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'workspace', where: 'File → Import Workspace' },
-    'fmIDE-templates':      { current: 5, label: 'templates file',      where: 'Templates → Import Templates' },
-    'fmIDE-functions':      { current: 1, label: 'functions file',      where: 'Functions → Import Functions' },
+    'fmIDE-templates':      { current: 6, label: 'templates file',      where: 'Templates → Import Templates' },
+    'fmIDE-functions':      { current: 2, label: 'functions file',      where: 'Functions → Import Functions' },
     'fmIDE-format-presets': { current: 1, label: 'format presets file', where: 'Format Presets → Import Presets' },
     'fmIDE-shortcuts':      { current: 2, label: 'shortcuts file',      where: 'Keyboard Shortcuts → Import Shortcuts' },
     'fmIDE-macros':         { current: 1, label: 'macros file',         where: 'Macro Builder → Import' },
     'fmIDE-preferences':    { current: 1, label: 'preferences file',    where: 'File → Import Preferences' },
-    'fmIDE-library-pack':   { current: 1, label: 'library pack',        where: 'File → Open Library Pack' }
+    'fmIDE-library-pack':   { current: 2, label: 'library pack',        where: 'File → Open Library Pack' }
   };
   const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
     // v1 → v2: one plug name per rectangle becomes a list of plug names (as system v2 → v3).
@@ -2167,7 +2175,20 @@
       3: () => {},
       // v4 → v5: a template's module or system may use the operators of phase E1; older ones
       // don't.
-      4: () => {}
+      4: () => {},
+      // v5 → v6: a template may say which library pack it came from (`origin`, phase 8b);
+      // older ones have no such record.
+      5: () => {}
+    },
+    // v1 → v2: an item in a pack may say which pack it came from before (`origin`, phase 8b),
+    // so re-sharing keeps its author's credit; older packs have no such record.
+    'fmIDE-library-pack': {
+      1: () => {}
+    },
+    // v1 → v2: a definition may say which library pack it came from (`origin`, phase 8b);
+    // older ones have no such record.
+    'fmIDE-functions': {
+      1: () => {}
     },
     // v1 shortcut files stored combos in the old notation.
     'fmIDE-shortcuts': {
@@ -7183,18 +7204,22 @@
     const k = String(name || '').trim().toLowerCase();
     return templateFamilies().filter(t => t.name.trim().toLowerCase() === k && (!kind || t.kind === kind));
   }
-  // How a template is written to a file (workspace, templates file).
+  // How a template is written to a file (workspace, templates file, library pack). `origin`
+  // (the library pack a version came from, phase 8b) only when it has one.
   function templateRecord(t, withId){
     const r = withId ? { id: t.id } : {};
-    return Object.assign(r, { name: t.name, description: t.description, group: t.group, kind: t.kind,
+    Object.assign(r, { name: t.name, description: t.description, group: t.group, kind: t.kind,
       family: t.family, version: t.version, note: t.note, versionId: t.versionId, data: t.data });
+    if(t.origin) r.origin = Object.assign({}, t.origin);
+    return r;
   }
 
   // A library entry from a template read from a file (or the autosave), with its family
   // fields checked: text from files is untrusted. A missing or malformed family or version
   // id gets a fresh one, a version that isn't a whole number ≥ 1 becomes 1. `family`,
-  // `version` and `versionId` in `over` replace the file's (after checking). Returns null
-  // for something that isn't a template. The caller gives it an id.
+  // `version` and `versionId` in `over` replace the file's (after checking). An `origin`
+  // (phase 8b) is kept only when it passes cleanItemOrigin. Returns null for something that
+  // isn't a template. The caller gives it an id.
   function templateEntryFrom(t, over){
     if(!t || typeof t !== 'object' || typeof t.name !== 'string' || !t.name.trim() || !t.data || typeof t.data !== 'object') return null;
     if(t.kind !== 'module' && t.kind !== 'system' && t.kind !== 'recipe') return null;
@@ -7202,7 +7227,7 @@
     if(!data) return null;
     const o = Object.assign({}, t, over || {});
     const version = Number(o.version);
-    return {
+    const e = {
       id: null, name: t.name.trim(),
       description: typeof t.description === 'string' ? t.description : '',
       group: (typeof t.group === 'string' && t.group.trim()) ? t.group.trim() : 'My Templates',
@@ -7213,6 +7238,9 @@
       versionId: isTemplateUid(o.versionId) && !TEMPLATES.some(x => x.versionId === o.versionId) ? o.versionId : newRandomId(),
       data
     };
+    const origin = cleanItemOrigin(o.origin);
+    if(origin) e.origin = origin;
+    return e;
   }
   // Makes a new entry fit the library: a family already holding the other kind can't take
   // it (it starts a family of its own); a version number already taken in its family moves
@@ -8068,6 +8096,8 @@
       body.innerHTML = '';
       const plan = planCanvasUpdate(c, target);
       const fromV = st.source ? st.source.version : st.link.version;
+      // Where the chosen version came from (phase 8b): a version from someone's library pack says so.
+      if(target.origin) line(`v${target.version}: ${originText(target.origin)}.`, 'template-origin template-update-origin');
       const between = versions.filter(v => v.version > Math.min(fromV, target.version) && v.version <= Math.max(fromV, target.version) && v.note);
       if(between.length){
         const ul = document.createElement('ul');
@@ -8473,6 +8503,7 @@
         ver.appendChild(note);
       }
       detail.appendChild(ver);
+      appendOriginLines(detail, selected, all);
       const desc = document.createElement('p');
       desc.className = 'template-desc';
       desc.textContent = selected.description || '(no description)';
@@ -8713,6 +8744,22 @@
   // Definitions from files are cleaned (cleanFunctionDefinitions) and never run as code.
   let FUNCTIONS = [];
 
+  // Library definitions from a file (a workspace, an fmIDE-functions file, a library pack, the
+  // autosave): cleaned like any definition, keeping an `origin` (the library pack a version
+  // came from, phase 8b) that passes cleanItemOrigin. A model's own definitions never carry
+  // one: cleanFunctionDefinitions drops it, so an origin never reaches a system or module.
+  function cleanLibraryFunctions(list){
+    const out = [];
+    (Array.isArray(list) ? list : []).forEach(raw => {
+      const d = cleanFunctionDefinition(raw);
+      if(!d) return;
+      const origin = cleanItemOrigin(raw.origin);
+      if(origin) d.origin = origin;
+      out.push(d);
+    });
+    return out;
+  }
+
   // Same version: the same family and versionId (or, for a definition without a versionId,
   // the same family and version number).
   function sameFunctionVersion(a, b){
@@ -8737,7 +8784,7 @@
     let added = 0, present = 0, renumbered = 0;
     const clashes = [], moved = [];
     const here = functionAlreadyHere;
-    cleanFunctionDefinitions(list).forEach(d => {
+    cleanLibraryFunctions(list).forEach(d => {
       if(here(d)){ present++; return; }
       if(FUNCTIONS.some(f => f.family === d.family && f.version === d.version)){ clashes.push(d); return; }
       FUNCTIONS.push(d); added++;
@@ -8758,7 +8805,7 @@
     return { added, present, renumbered };
   }
   // The library as saved in the autosave.
-  function restoreFunctions(list){ FUNCTIONS = cleanFunctionDefinitions(list); }
+  function restoreFunctions(list){ FUNCTIONS = cleanLibraryFunctions(list); }
 
   // A model's definitions replace the open model's (a system replaces everything).
   function setModelFunctions(list){
@@ -9476,6 +9523,7 @@
       ver.appendChild(verLabel);
       if(!isLatestFunction(d)) ver.appendChild(document.createTextNode(' (an older version)'));
       if(d.note){ const n = document.createElement('span'); n.className = 'template-note'; n.textContent = ' — ' + d.note; ver.appendChild(n); }
+      appendOriginLines(detail, d, all);
       para('template-desc', d.description || '(no description)');
       const pre = document.createElement('pre');
       pre.className = 'function-detail-text';
@@ -10274,6 +10322,65 @@
     return { info };
   }
 
+  // ---------- where an item came from (phase 8b) ----------
+  // A template or function version added from a library pack remembers the pack:
+  // `origin: { packId, packTitle, author, licence }` (docs/file-formats.md). It is a record of
+  // what the pack said, not proof. Read from a file it is untrusted like everything else: the
+  // same rules as the pack details; anything else is dropped. Returns a clean copy or null
+  // (then the item simply has no origin).
+  function cleanItemOrigin(o){
+    if(!o || typeof o !== 'object' || Array.isArray(o)) return null;
+    const packId = typeof o.packId === 'string' && /^[A-Za-z0-9-]{8,64}$/.test(o.packId) ? o.packId : null;
+    const packTitle = packText(o.packTitle, LIBRARY_PACK_LIMITS.title);
+    const author = packText(o.author, LIBRARY_PACK_LIMITS.author);
+    const licence = typeof o.licence === 'string' ? o.licence.trim() : '';
+    if(!packId || !packTitle || !author || !Object.prototype.hasOwnProperty.call(LIBRARY_PACK_LICENCES, licence)) return null;
+    return { packId, packTitle, author, licence };
+  }
+  // The origin an item gets from the pack (cleaned `pack` details) it is added from.
+  function originFromPack(info){
+    return { packId: info.id, packTitle: info.title, author: info.author, licence: info.licence };
+  }
+  // Whether two author names are the same person's, as far as fmIDE can tell: capitals and
+  // spaces don't count.
+  function sameAuthorName(a, b){
+    const k = (s) => String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    return !!k(a) && k(a) === k(b);
+  }
+  // One line for people: 'From the library pack "…" by … · CC BY 4.0'.
+  function originText(o){
+    const lic = LIBRARY_PACK_LICENCES[o.licence];
+    return `From the library pack “${o.packTitle}” by ${o.author}` + (lic ? ` · ${lic.short}` : '');
+  }
+
+  // ---------- where items came from (phase 8b) ----------
+  // The lines the Templates window and the Functions manager show for `selected` (a template
+  // or function version) among `versions` (its family): where this version came from, and —
+  // when the family's versions came from different places — where each did. Plain text.
+  function originLines(selected, versions){
+    const lines = [];
+    if(selected.origin) lines.push(originText(selected.origin) + '.');
+    const key = (v) => v.origin ? v.origin.packId + '\u0000' + v.origin.author : '';
+    if(new Set(versions.map(key)).size > 1){
+      const groups = [];
+      versions.slice().sort((a, b) => a.version - b.version).forEach(v => {
+        const g = groups.find(x => x.key === key(v));
+        if(g) g.versions.push(v.version); else groups.push({ key: key(v), origin: v.origin, versions: [v.version] });
+      });
+      lines.push('Versions: ' + groups.map(g => g.versions.map(n => 'v' + n).join(', ') + ' '
+        + (g.origin ? `from “${g.origin.packTitle}” by ${g.origin.author}` : 'yours')).join(' · ') + '.');
+    }
+    return lines;
+  }
+  function appendOriginLines(box, selected, versions){
+    originLines(selected, versions).forEach(text => {
+      const p = document.createElement('p');
+      p.className = 'template-origin';
+      p.textContent = text;
+      box.appendChild(p);
+    });
+  }
+
   // ---------- writing a pack ----------
   // The versions a pack needs for `templates` and `functions` (library entries): each
   // recipe's parts (the version the recipe would build with) and every function a function
@@ -10323,27 +10430,51 @@
     const info = cleanLibraryPackInfo(r.data.pack);
     if(info.error) fail(info.error);
     const templates = (Array.isArray(r.data.templates) ? r.data.templates : []).slice(0, LIBRARY_PACK_LIMITS.items);
-    const functions = cleanFunctionDefinitions(Array.isArray(r.data.functions) ? r.data.functions.slice(0, LIBRARY_PACK_LIMITS.items) : []);
+    const functions = cleanLibraryFunctions(Array.isArray(r.data.functions) ? r.data.functions.slice(0, LIBRARY_PACK_LIMITS.items) : []);
     return { pack: info.info, templates, functions, newer: r.newer, fromVersion: r.fromVersion, warnings: r.warnings };
   }
   const TEMPLATE_KIND_WORDS = { module: 'canvas template', system: 'system template', recipe: 'recipe' };
+  // The family rule (phase 8b): a pack adding a version to a family you have is warned about
+  // when any version of that family came from another author, or has no record of where it
+  // came from (your own work, or added before fmIDE kept records). Always compared with the
+  // pack's author, never with an author an item in the pack claims — a pack could otherwise
+  // label its items with the family's author. `versions`: your versions of the family;
+  // `label`: how to name it (“Income Statement”). Returns { warning, warningKind } or null.
+  function familyAuthorWarning(versions, pack, label){
+    const others = [];
+    versions.forEach(v => { if(v.origin && !sameAuthorName(v.origin.author, pack.author) && !others.some(o => sameAuthorName(o.author, v.origin.author))) others.push(v.origin); });
+    if(others.length){
+      const from = others.map(o => `${o.author} (the pack “${o.packTitle}”)`).join(' and ');
+      return { warningKind: 'other-author', warning: `Your ${label} came from ${from}; this pack is by ${pack.author}.` };
+    }
+    if(versions.some(v => !v.origin)){
+      return { warningKind: 'own', warning: `Your ${label} is your own (or has no record of where it came from); this pack by ${pack.author} would add a version to it.` };
+    }
+    return null;
+  }
+  // The origin an item gets when added from a pack: the one it carries (it was shared before,
+  // in another pack — keeping its author's credit) or else this pack's.
+  function packItemOrigin(raw, pack){ return cleanItemOrigin(raw && raw.origin) || originFromPack(pack); }
   // What each item in a pack would do to your library: [{ key ('t0', 'f1' — the order in the
   // file), type ('template' | 'function'), kind, name, version, description, note, status,
   // statusText, needs (keys of the items it brings along) }]. status: 'present' (already in
   // your library), 'new-version' (adds a version to a template or function you have), 'same-name'
-  // (a different one of yours has this name; both are kept), 'new'.
+  // (a different one of yours has this name; both are kept), 'new'. origin: where the item
+  // came from before this pack (an item shared again), else null. warning / warningKind
+  // ('other-author' | 'own'): the family rule (familyAuthorWarning), for 'new-version' only.
   function libraryPackItems(read){
     const items = [];
     const tEntries = read.templates.map(t => ({ t, e: templateEntryFrom(t) }));
     tEntries.forEach(({ t, e }, i) => {
       if(!e) return;
       const item = { key: 't' + i, type: 'template', kind: e.kind, name: e.name, version: e.version,
-        description: e.description, note: e.note, group: e.group, needs: [] };
+        description: e.description, note: e.note, group: e.group, needs: [], origin: e.origin || null, warning: null, warningKind: null };
       const mine = latestOfFamily(e.family);
       if(templateAlreadyHere(e, t)){ item.status = 'present'; item.statusText = 'Already in your library'; }
       else if(mine && mine.kind === e.kind){
         item.status = 'new-version';
         item.statusText = `Adds a version to your “${mine.name}” (you have up to v${mine.version})` + (mine.name !== e.name ? ` — the pack calls it “${e.name}”` : '');
+        Object.assign(item, familyAuthorWarning(familyVersions(e.family), read.pack, `“${mine.name}”`));
       } else if(familiesNamed(e.name, e.kind).length){
         item.status = 'same-name'; item.statusText = `You have a different ${TEMPLATE_KIND_WORDS[e.kind]} called “${e.name}” — both will be kept`;
       } else { item.status = 'new'; item.statusText = 'New'; }
@@ -10360,12 +10491,13 @@
     read.functions.forEach((d, i) => {
       const name = functionLabel(d);
       const item = { key: 'f' + i, type: 'function', kind: 'function', name, version: d.version,
-        description: d.description, note: d.note, text: d.text, needs: [] };
+        description: d.description, note: d.note, text: d.text, needs: [], origin: d.origin || null, warning: null, warningKind: null };
       const mine = latestFunctionOf(d.family);
       if(functionAlreadyHere(d)){ item.status = 'present'; item.statusText = 'Already in your library'; }
       else if(mine){
         item.status = 'new-version';
         item.statusText = `Adds a version to your ${functionLabel(mine)} (you have up to v${mine.version})`;
+        Object.assign(item, familyAuthorWarning(functionFamilyVersions(d.family), read.pack, functionLabel(mine)));
       } else if(functionFamiliesNamed(name).length){
         item.status = 'same-name'; item.statusText = `You have a different function called ${name} — both will be kept`;
       } else { item.status = 'new'; item.statusText = 'New'; }
@@ -10385,15 +10517,16 @@
     keys.forEach(visit);
     return out;
   }
-  // Adds the chosen items (keys; null for all) and what they need to the library. Returns
+  // Adds the chosen items (keys; null for all) and what they need to the library, each
+  // remembering where it came from (packItemOrigin). Returns
   // { templates: { added, present, renumbered }, functions: { … } }.
   function addFromLibraryPack(read, keys){
     const items = libraryPackItems(read);
     const known = new Set(items.map(it => it.key));
     (keys || []).forEach(k => { if(!known.has(k)) fail(`This pack has no item "${String(k).slice(0, 40)}" (its items are ${items.map(it => it.key).join(', ')}).`); });
     const chosen = libraryPackWithNeeds(items, keys || items.map(it => it.key));
-    const templates = read.templates.filter((t, i) => chosen.has('t' + i));
-    const functions = read.functions.filter((d, i) => chosen.has('f' + i));
+    const templates = read.templates.filter((t, i) => chosen.has('t' + i)).map(t => Object.assign({}, t, { origin: packItemOrigin(t, read.pack) }));
+    const functions = read.functions.filter((d, i) => chosen.has('f' + i)).map(d => Object.assign({}, d, { origin: packItemOrigin(d, read.pack) }));
     const out = { templates: addMissingTemplates(templates), functions: addMissingFunctions(functions) };
     saveWorkspaceSoon();
     return out;
@@ -10451,8 +10584,10 @@
         ticks.push({ x, cb });
       });
     };
-    list('Templates and recipes', families, t => `${t.name} (${TEMPLATE_KIND_WORDS[t.kind]}, v${t.version})`);
-    list('Functions', fnFamilies, f => `${functionLabel(f)} (v${f.version})`);
+    // A version that came from someone's pack says so: it keeps that credit in your pack.
+    const from = (x) => x.origin ? ` — from ${x.origin.author}'s pack “${x.origin.packTitle}”` : '';
+    list('Templates and recipes', families, t => `${t.name} (${TEMPLATE_KIND_WORDS[t.kind]}, v${t.version})` + from(t));
+    list('Functions', fnFamilies, f => `${functionLabel(f)} (v${f.version})` + from(f));
     const actions = document.createElement('div');
     actions.className = 'modal-actions';
     const cancelBtn = document.createElement('button');
@@ -10516,6 +10651,9 @@
     if(items.some(it => it.status === 'new-version')) {
       para('library-pack-caution', 'Some items add a version to a template or function you already have. Canvases made from those templates will then offer it as an update — add them only if you trust where this pack came from.');
     }
+    if(items.some(it => it.warning)) {
+      para('library-pack-warning', `⚠ Some items would add a version to a template or function that came from someone other than ${read.pack.author}, or that you made. They are not ticked: tick them only if you trust this pack.`);
+    }
     if(!items.length) para('library-pack-empty', 'This pack has nothing fmIDE could read.');
     const rows = new Map();
     const section = (heading, list) => {
@@ -10527,15 +10665,29 @@
         row.dataset.key = it.key;
         const cb = document.createElement('input');
         cb.type = 'checkbox';
-        cb.checked = it.status !== 'present';
+        cb.checked = it.status !== 'present' && !it.warning;
         cb.disabled = it.status === 'present';
         const name = document.createElement('span');
         name.className = 'library-pack-item-name';
         name.textContent = `${it.name} v${it.version}` + (it.type === 'template' ? ` — ${TEMPLATE_KIND_WORDS[it.kind]}` : '');
         const status = document.createElement('span');
         status.className = 'library-pack-item-status';
-        status.textContent = it.statusText + (it.needs.length ? ` · brings ${it.needs.length} item${it.needs.length === 1 ? '' : 's'} it needs` : '');
+        const warnedNeeds = it.needs.filter(k => items.some(x => x.key === k && x.warning)).length;
+        status.textContent = it.statusText + (it.needs.length ? ` · brings ${it.needs.length} item${it.needs.length === 1 ? '' : 's'} it needs` : '')
+          + (warnedNeeds ? ` (${warnedNeeds === 1 ? 'one has' : warnedNeeds + ' have'} a warning ⚠ — it comes along when this is ticked)` : '');
         row.append(cb, name, status);
+        if(it.warning){
+          const w = document.createElement('span');
+          w.className = 'library-pack-item-warning';
+          w.textContent = '⚠ ' + it.warning;
+          row.appendChild(w);
+        }
+        if(it.origin && !sameAuthorName(it.origin.author, read.pack.author)){
+          const o = document.createElement('span');
+          o.className = 'library-pack-item-origin';
+          o.textContent = `Shared before: ${originText(it.origin)}`;
+          row.appendChild(o);
+        }
         const detail = it.type === 'function' ? it.text : it.description;
         if(detail){
           const d = document.createElement('span');
@@ -11682,7 +11834,8 @@
     return { family: d.family, version: d.version, versionId: d.versionId, name: functionNameOf(d),
       inputs: parsed.ok ? parsed.params.slice() : [], readable: parsed.ok, text: d.text,
       description: d.description, note: d.note, latest: isLatestFunction(d),
-      calls: d.calls.map(c => ({ name: c.name, family: c.family, version: c.version, versionId: c.versionId })) };
+      calls: d.calls.map(c => ({ name: c.name, family: c.family, version: c.version, versionId: c.versionId })),
+      origin: d.origin ? Object.assign({}, d.origin) : null };
   }
   // fm actions that take a file object as their first input also accept { file, … } (the fm
   // wrapper passes a lone object as the first input when that input is JSON).
@@ -11714,7 +11867,7 @@
     } });
 
   defineAction({ name:'listFunctions', label:'List Functions', category:'Insert', icon:'ƒ', returns:'value', mutates:false, tx:false, record:false,
-    desc:'Returns your function library, one entry per function: { family, name, latest, versions: [{ version, versionId, name, inputs, text, description, note, calls }] }, newest version first. of: "model" lists instead the definitions the open model carries (the ones it calculates with), one entry per version.',
+    desc:'Returns your function library, one entry per function: { family, name, latest, versions: [{ version, versionId, name, inputs, text, description, note, calls, origin }] }, newest version first. of: "model" lists instead the definitions the open model carries (the ones it calculates with), one entry per version.',
     params:[ P('of','enum',{ options:['library','model'], def:'library' }) ],
     run(a){
       if(a.of === 'model') return modelFunctions.map(d => {
@@ -11728,7 +11881,7 @@
     } });
 
   defineAction({ name:'getFunction', label:'Get Function', category:'Insert', icon:'ƒ', returns:'value', mutates:false, tx:false, record:false,
-    desc:'Returns one version from your library: { family, version, versionId, name, inputs, text, description, note, calls, latest }.',
+    desc:'Returns one version from your library: { family, version, versionId, name, inputs, text, description, note, calls, latest, origin } (origin: the library pack it came from, { packId, packTitle, author, licence }, or null).',
     params:[ P('function','string') ],
     run(a){ return functionInfo(resolveFunctionRef(a.function)); } });
 
@@ -11935,17 +12088,18 @@
     } });
 
   defineAction({ name:'previewLibraryPack', label:'Preview Library Pack', category:'File', icon:'📦', returns:'value', mutates:false, tx:false, record:false,
-    desc:'Reads a library pack (its JSON) without adding anything: { pack: { id, title, author, licence, description, tags, created }, items: [{ key, type, kind, name, version, status, statusText, needs }] }. status is "new", "present" (already in your library), "new-version" (adds a version to one you have) or "same-name" (a different one of yours has this name).',
+    desc:'Reads a library pack (its JSON) without adding anything: { pack: { id, title, author, licence, description, tags, created }, items: [{ key, type, kind, name, version, status, statusText, needs, origin, warning, warningKind }] }. status is "new", "present" (already in your library), "new-version" (adds a version to one you have) or "same-name" (a different one of yours has this name). origin: where an item shared again came from before (else null). warning: for a "new-version" item whose family came from another author (warningKind "other-author") or is your own ("own"), else null.',
     params:[ P('file','json') ],
     run(a){
       unwrapFileArgs(a);
       const read = readLibraryPack(a.file);
       return { pack: cloneData(read.pack), items: libraryPackItems(read).map(it => ({ key: it.key, type: it.type, kind: it.kind,
-        name: it.name, version: it.version, status: it.status, statusText: it.statusText, needs: it.needs.slice() })) };
+        name: it.name, version: it.version, status: it.status, statusText: it.statusText, needs: it.needs.slice(),
+        origin: it.origin ? Object.assign({}, it.origin) : null, warning: it.warning, warningKind: it.warningKind })) };
     } });
 
   defineAction({ name:'openLibraryPack', label:'Open Library Pack', category:'File', icon:'📦', returns:'value', tx:false, record:false,
-    desc:'Adds a library pack\'s items to your library, by the usual import rules (nothing of yours is replaced; a version whose number is taken is added under the next number). items: the keys previewLibraryPack gives (default: all); each brings what it needs. A pack from a newer fmIDE fails unless allowNewer is true. Returns { templates: { added, present, renumbered }, functions: { … } }.',
+    desc:'Adds a library pack\'s items to your library, by the usual import rules (nothing of yours is replaced; a version whose number is taken is added under the next number). items: the keys previewLibraryPack gives (default: all); each brings what it needs. Each item added remembers where it came from (origin: this pack, or the pack it was shared in before). A pack from a newer fmIDE fails unless allowNewer is true. Returns { templates: { added, present, renumbered }, functions: { … } }.',
     params:[ P('file','json'), P('items','json',{ optional:true, help:'item keys, like ["t0", "f1"]' }), P('allowNewer','bool',{ def:false }) ],
     run(a){
       unwrapFileArgs(a);

@@ -17,13 +17,13 @@
     'system':               { current: SHARED_FILE_VERSIONS['system'], label: 'system', where: 'File → Load System' },
     'module':               { current: 4, label: 'module',              where: 'File → Load Module' },
     'fmIDE-workspace':      { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'workspace', where: 'File → Import Workspace' },
-    'fmIDE-templates':      { current: 5, label: 'templates file',      where: 'Templates → Import Templates' },
-    'fmIDE-functions':      { current: 1, label: 'functions file',      where: 'Functions → Import Functions' },
+    'fmIDE-templates':      { current: 6, label: 'templates file',      where: 'Templates → Import Templates' },
+    'fmIDE-functions':      { current: 2, label: 'functions file',      where: 'Functions → Import Functions' },
     'fmIDE-format-presets': { current: 1, label: 'format presets file', where: 'Format Presets → Import Presets' },
     'fmIDE-shortcuts':      { current: 2, label: 'shortcuts file',      where: 'Keyboard Shortcuts → Import Shortcuts' },
     'fmIDE-macros':         { current: 1, label: 'macros file',         where: 'Macro Builder → Import' },
     'fmIDE-preferences':    { current: 1, label: 'preferences file',    where: 'File → Import Preferences' },
-    'fmIDE-library-pack':   { current: 1, label: 'library pack',        where: 'File → Open Library Pack' }
+    'fmIDE-library-pack':   { current: 2, label: 'library pack',        where: 'File → Open Library Pack' }
   };
   const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
     // v1 → v2: one plug name per rectangle becomes a list of plug names (as system v2 → v3).
@@ -45,7 +45,20 @@
       3: () => {},
       // v4 → v5: a template's module or system may use the operators of phase E1; older ones
       // don't.
-      4: () => {}
+      4: () => {},
+      // v5 → v6: a template may say which library pack it came from (`origin`, phase 8b);
+      // older ones have no such record.
+      5: () => {}
+    },
+    // v1 → v2: an item in a pack may say which pack it came from before (`origin`, phase 8b),
+    // so re-sharing keeps its author's credit; older packs have no such record.
+    'fmIDE-library-pack': {
+      1: () => {}
+    },
+    // v1 → v2: a definition may say which library pack it came from (`origin`, phase 8b);
+    // older ones have no such record.
+    'fmIDE-functions': {
+      1: () => {}
     },
     // v1 shortcut files stored combos in the old notation.
     'fmIDE-shortcuts': {

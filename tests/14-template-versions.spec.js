@@ -164,7 +164,7 @@ test('import: a version with a taken number but different content becomes the ne
   const [chosen] = await Promise.all([page.waitForEvent('download'), picker(page).locator('button', { hasText: '⇩ Export Templates' }).click()]);
   const exported = JSON.parse(fs.readFileSync(await chosen.path(), 'utf8'));
   expect(exported.kind).toBe('fmIDE-templates');
-  expect(exported.version).toBe(5);
+  expect(exported.version).toBe(6);
   await closeTemplates(page);
   // Their v2 holds something else; their v3 is new here.
   const theirs = JSON.parse(JSON.stringify(exported));
@@ -268,23 +268,23 @@ test('a v1 templates file: each template becomes a family of its own, version 1'
   expect(await messageText(page)).toBe('All 2 templates in that file are already in your library.');
 });
 
-test('a v1 workspace: its templates become families, and it saves as the current version (5)', async ({ page }) => {
+test('a v1 workspace: its templates become families, and it saves as the current version (6)', async ({ page }) => {
   await F.importViaCommand(page, 'importWorkspace', fixture('formats', 'ws-v1-templates.json'));
   await F.acceptAll(page);
   const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
-  expect(data.version).toBe(5);
+  expect(data.version).toBe(6);
   expect(data.templates.map(t => [t.name, t.version, t.note])).toEqual([['Old Revenue', 1, ''], ['Old Costs', 1, '']]);
   data.templates.forEach(t => expect(t.family).toMatch(UID));
   expect(await insertedRevenue(page, 'Old Revenue@1')).toBe(100);
 });
 
-test('a workspace from a newer fmIDE (version 6) asks before opening', async ({ page }, testInfo) => {
+test('a workspace from a newer fmIDE (version 7) asks before opening', async ({ page }, testInfo) => {
   const path = testInfo.outputPath('newer.json');
   const ws = JSON.parse(fs.readFileSync(fixture('formats', 'ws-v1-templates.json'), 'utf8'));
-  ws.version = 6;
+  ws.version = 7;
   fs.writeFileSync(path, JSON.stringify(ws));
   await F.importViaCommand(page, 'importWorkspace', path);
-  expect(await F.dialogText(page)).toMatch(/^This workspace was saved by a newer version of fmIDE \(format version 6; this fmIDE reads up to version 5\)/);
+  expect(await F.dialogText(page)).toMatch(/^This workspace was saved by a newer version of fmIDE \(format version 7; this fmIDE reads up to version 6\)/);
 });
 
 // ---------- untrusted text ----------

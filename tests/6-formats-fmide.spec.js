@@ -108,15 +108,15 @@ for(const name of ['sys-newer-v5', 'sys-newer-v6']){
 
 // Files from before function definitions (workspace v3, module v2, templates v3) and from
 // before the operators of phase E1 (workspace v4, module v3, templates v4) still open, and
-// are saved in the current versions (workspace v5, system v6, module v4).
+// are saved in the current versions (workspace v6, system v6, module v4).
 for(const [name, sys] of [['ws-v3', 'v4'], ['ws-v4', 'v5']]){
-test(`${name} imports, with its ${sys} system and its templates, and exports as v5`, async ({ page }) => {
+test(`${name} imports, with its ${sys} system and its templates, and exports as v6`, async ({ page }) => {
   await F.importViaCommand(page, 'importWorkspace', file(name));
   const seen = await F.acceptAll(page);
   expect(seen[0]).toMatch(/^Import this workspace\?/);
   expect(await canvasNames(page)).toEqual(['Revenue Model']);
   const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
-  expect(data.version).toBe(5);
+  expect(data.version).toBe(6);
   expect(data.system.version).toBe(6);
   expect(data.functions).toEqual([]);
   expect(data.system).not.toHaveProperty('functions');
@@ -229,5 +229,56 @@ test.describe('plugs: files from before a rectangle could have several', () => {
     await page.evaluate(() => { fm.clearCanvas(); fm.insertTemplate('Revenue lines', 'here'); });
     const canvas = await page.evaluate(() => fm.canvases().find(c => c.active).name);
     expect(await plugsOfNode(page, canvas + '::Gold Revenue')).toEqual(['Revenue']);
+  });
+});
+
+// Where items came from (step 8, phase 8b): templates v6, workspace v6 and functions v2 may
+// carry `origin`. Files from before (templates v5, workspace v5, functions v1) had none: they
+// open without a question, change nothing, and save in the new versions without an origin.
+test.describe('origin: files from before templates v6, workspace v6 and functions v2', () => {
+  test('ws-v5 imports with its templates and function library, and exports as v6 without origins', async ({ page }) => {
+    await F.importViaCommand(page, 'importWorkspace', file('ws-v5'));
+    const seen = await F.acceptAll(page);
+    expect(seen[0]).toMatch(/^Import this workspace\?/);
+    expect(await canvasNames(page)).toEqual(['Revenue Model']);
+    const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
+    expect(data.version).toBe(6);
+    expect(data.functions.map(d => d.family + '@' + d.version)).toEqual(['family-margin@1', 'family-margin@2', 'family-profit@1']);
+    expect(data.templates.map(t => t.name)).toEqual(expect.arrayContaining(['Income Statement', 'Balance Sheet', 'Cash Flow']));
+    expect(JSON.stringify(data)).not.toContain('"origin"');
+  });
+
+  test('templates-v5 imports; the Templates window exports it as v6, the same templates, without origins', async ({ page }) => {
+    await F.importViaDialog(page, 'openTemplates', '⇧ Import Templates', file('templates-v5'));
+    await F.dismissMessage(page);
+    const { data } = await F.downloadJson(page, () => page.locator('.modal-box.template-box button', { hasText: '⇩ Export Templates' }).click());
+    expect(data.kind).toBe('fmIDE-templates');
+    expect(data.version).toBe(6);
+    const was = readFixture('formats', 'templates-v5.json').templates;
+    expect(data.templates.map(t => [t.name, t.family, t.version, t.versionId])).toEqual(was.map(t => [t.name, t.family, t.version, t.versionId]));
+    expect(JSON.stringify(data)).not.toContain('"origin"');
+  });
+
+  test('a v1 functions file imports without a question and exports as v2, unchanged, without origins', async ({ page }) => {
+    const v1 = readFixture('formats', 'functions.json');
+    expect(v1.version).toBe(1);
+    expect(await page.evaluate((f) => fm.importFunctions(f), v1)).toEqual({ added: 3, present: 0, renumbered: 0 });
+    const out = await page.evaluate(() => fm.exportFunctions({ download: false }));
+    expect(out.version).toBe(2);
+    expect(out.functions).toEqual(v1.functions);
+    expect((await page.evaluate(() => fm.getFunction('Margin@1'))).origin).toBeNull();
+  });
+
+  test('a v2 functions file (what "newer" meant before) is now a current file: no question', async ({ page }) => {
+    await F.importViaDialog(page, 'openFunctions', '⇧ Import Functions', fixture('functions', 'library-newer-v2.json'));
+    expect(await F.dialogText(page)).toBe('Imported 3 function versions.');
+  });
+
+  test('a templates file from a newer fmIDE (version 7) asks first', async ({ page }, testInfo) => {
+    const newer = Object.assign(readFixture('formats', 'templates-v5.json'), { version: 7 });
+    const p = testInfo.outputPath('templates-v7.json');
+    fs.writeFileSync(p, JSON.stringify(newer));
+    await F.importViaDialog(page, 'openTemplates', '⇧ Import Templates', p);
+    expect(await F.dialogText(page)).toMatch(/^This templates file was saved by a newer version of fmIDE \(format version 7; this fmIDE reads up to version 6\)/);
   });
 });

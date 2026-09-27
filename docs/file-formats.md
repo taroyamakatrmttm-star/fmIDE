@@ -22,14 +22,14 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 |---|---|---|---|
 | `system` | 6 | A whole model (all canvases, periods); v4: a canvas may remember the canvas template it came from; v5: the function definitions its function nodes use; v6: the operators of phase E1 (below) | fmIDE: File → Load System · ExcelExporter |
 | `module` | 4 | One canvas; v3: the function definitions it uses; v4: the operators of phase E1 | fmIDE: File → Load Module |
-| `fmIDE-workspace` | 5 | Everything: system + templates, format presets, shortcuts, macros; v4: the function library; v5: its system and templates may use the operators of phase E1. A **`.fmide` document** is exactly this, with the `.fmide` extension | fmIDE: File → Open… (a document) or Import Workspace (a full replace) · ExcelExporter |
-| `fmIDE-templates` | 5 | Saved templates (each holds a module, a system or a recipe), with their families and versions; v4: a template's model may carry function definitions; v5: it may use the operators of phase E1 | fmIDE: Templates → Import Templates |
-| `fmIDE-functions` | 1 | Function definitions (a library of functions) | fmIDE: Functions → Import Functions (coming with the Functions manager) |
+| `fmIDE-workspace` | 6 | Everything: system + templates, format presets, shortcuts, macros; v4: the function library; v5: its system and templates may use the operators of phase E1; v6: its templates and library functions may say which library pack they came from (`origin`, below). A **`.fmide` document** is exactly this, with the `.fmide` extension | fmIDE: File → Open… (a document) or Import Workspace (a full replace) · ExcelExporter |
+| `fmIDE-templates` | 6 | Saved templates (each holds a module, a system or a recipe), with their families and versions; v4: a template's model may carry function definitions; v5: it may use the operators of phase E1; v6: a template may carry `origin` | fmIDE: Templates → Import Templates |
+| `fmIDE-functions` | 2 | Function definitions (a library of functions); v2: a definition may carry `origin` | fmIDE: Functions → Import Functions |
 | `fmIDE-format-presets` | 1 | Format presets, including the format roles | fmIDE: Format Presets → Import Presets |
 | `fmIDE-shortcuts` | 2 | Keyboard shortcut bindings | fmIDE: Keyboard Shortcuts → Import Shortcuts |
 | `fmIDE-macros` | 1 | Macros | fmIDE: Macro Builder → Import |
 | `fmIDE-preferences` | 1 | Personal settings: shortcut bindings for built-in commands, ribbon layout and Quick Access Toolbar, ribbon collapsed state, KeyTips trigger (fmIDE only) | fmIDE: File → Import Preferences (or Customize Ribbon) |
-| `fmIDE-library-pack` | 1 | Templates, recipes and functions to share with other people, with who made them and their licence (below) | fmIDE: File → Open Library Pack… |
+| `fmIDE-library-pack` | 2 | Templates, recipes and functions to share with other people, with who made them and their licence (below); v2: an item shared again carries the `origin` it came with | fmIDE: File → Open Library Pack… |
 | `fmIDE-excel-mapping` | 1 | ExcelExporter's tab/row layout for one model | ExcelExporter: Import Mapping JSON |
 
 ## Limits on a file that is opened
@@ -42,12 +42,12 @@ A file someone opens (any kind, in either app) is refused, with a plain message,
 
 The limits (`FILE_LIMITS`, `fileTextProblem`, `fileDataProblem` in `src/shared/file-formats.js`) keep a hostile file from freezing or crashing the page; before them, a deeply nested file stopped the reader with a stack overflow and no message. The autosave is not checked: it is the person's own work. No format changed.
 
-## Library packs (`fmIDE-library-pack` 1)
+## Library packs (`fmIDE-library-pack` 2)
 
 A **library pack** is one file of templates, recipes and functions to share with other people (step 8, `docs/step8-community-library.md`). fmIDE writes one with **File → Save as Library Pack…** and reads one with **File → Open Library Pack…**, which shows what it holds before adding anything.
 
 ```json
-{ "kind": "fmIDE-library-pack", "version": 1,
+{ "kind": "fmIDE-library-pack", "version": 2,
   "pack": { "id": "5d0e…", "title": "Three statements starter", "author": "Ann Example",
             "licence": "CC-BY-4.0", "description": "…", "tags": ["statements", "tax"], "created": "2026-09-27" },
   "templates": [ { "name": "Income Statement", "kind": "module", "family": "…", "version": 1, "versionId": "…", "note": "", "group": "…", "description": "…", "data": { … } } ],
@@ -61,6 +61,25 @@ A **library pack** is one file of templates, recipes and functions to share with
 - Every text in a pack is someone else's and is only ever shown as plain text.
 - The file name fmIDE suggests is the title with `.fmide-pack.json` (for example `Three-statements-starter.fmide-pack.json`); it is an ordinary JSON file.
 - ExcelExporter doesn't read packs: it says to open them in fmIDE.
+- **Version 2** (step 8, phase 8b): an item that came from someone else's pack carries its `origin` (below) into a pack of yours, so its author keeps the credit CC BY 4.0 asks for. Version 1 packs had none; they open as before, and every item they add is recorded as the pack's.
+
+## Where items came from (`fmIDE-templates` 6, `fmIDE-workspace` 6, `fmIDE-functions` 2, `fmIDE-library-pack` 2)
+
+A template version or function version added from a library pack remembers the pack in an optional `origin`:
+
+```json
+{ "name": "Balance Sheet", "family": "…", "version": 3, "versionId": "…", …,
+  "origin": { "packId": "5d0e…", "packTitle": "Three statements starter", "author": "Ann Example", "licence": "CC-BY-4.0" } }
+```
+
+- `packId`, `packTitle`, `author`, `licence`: the pack's `id`, `title`, `author` and `licence`, as the pack said them. It is a record of what a file claims, not proof: anyone can write any author into a pack.
+- **Reading** (`cleanItemOrigin` in `src/shared/library-pack.js`): the same rules as a pack's details — `packId` 8–64 letters, digits and dashes; `packTitle` and `author` required, one line, at most 120 characters; `licence` an accepted one (`"CC-BY-4.0"`). Any other field is dropped. An origin that fails any check is dropped whole; the template or function is still read, with no origin. It is only ever shown as plain text.
+- **Where it is set:** only by opening a library pack. Each item added gets the `origin` it carries (it was shared before, in another pack), or else the pack's own. A version that is renumbered because its number is taken keeps it; a version already in your library is left as it was.
+- **Where it travels:** it is kept in the autosave, documents, workspace exports, templates files, functions files and packs, and read back from all of them. A new version you save (Save as new version, Edit as new version, a new function version) has none: it is your work; the older versions keep theirs. Changing a name or description keeps it.
+- **Never in a model:** a system's or module's `functions`, and a canvas's `template` link, never carry an origin (`system` and `module` did not change). A function copied from the library into a model loses it; a definition that reaches the library only inside someone's model arrives without one.
+- **Shown:** the Templates window and the Functions manager show "From the library pack "…" by … · CC BY 4.0" for a version with an origin, and — when a family's versions came from different places — which came from where ("v1, v2 yours · v3 from "…" by …"). "Update this canvas" says where the chosen version came from.
+- **The family rule** (docs/step8-community-library.md): when a pack adds a version to a family you have, the preview warns if any of your versions came from another author, or has no origin (your own work, or added before origins were recorded). Author names are compared ignoring capitals and extra spaces, and always with the **pack's** author, never with an author an item in the pack claims. Warned items start unticked.
+- **Older files** (templates 5, workspace 5, functions 1, packs 1) have no origins; their upgrade steps change nothing. An older fmIDE asks before opening a newer file. ExcelExporter reads workspace 6 and ignores templates and the function library, so origins don't affect it.
 
 ## Operators (`system` 6, `module` 4, `fmIDE-workspace` 5, `fmIDE-templates` 5)
 
@@ -114,7 +133,7 @@ Functions are formulas, never code: the apps read them with their own parser (`p
 
 - A **system** (v5) and a **module** (v3) carry, in `functions`, every definition their function nodes use, and every function those call. Files whose model uses no functions have no `functions` list.
 - A **workspace** (v4) also carries the person's whole library in its own `functions`; its system carries the model's.
-- An **`fmIDE-functions`** file (v1) is `{ "kind": "fmIDE-functions", "version": 1, "functions": [ … ] }`.
+- An **`fmIDE-functions`** file (v2) is `{ "kind": "fmIDE-functions", "version": 2, "functions": [ … ] }`; since v2 a definition in it (and in a workspace's library) may carry `origin` (see "Where items came from").
 - A template's model (a module or system inside a templates file, v4) carries its own, like any module or system.
 - Opening a file adds to the library any definitions it doesn't have (the same family and `versionId`; without a `versionId`, the same family and text). A version whose number the library already uses for a different version is added under the family's next number, keeping its `versionId`, with a note saying so; calls in the library that name it by its `versionId` follow it to the new number. The model that carried it keeps its own copy under its own number.
 - Content added to an open model (a module, a system added alongside, a template, pasted nodes) brings its definitions into the model's own list. A model holds one definition per family and number, so a different version under a number the model already uses is added under the family's next free number in the model, keeping its `versionId`, with a note; the nodes that came with it (and calls to it) follow the new number. The library then adds it by its own rule above.

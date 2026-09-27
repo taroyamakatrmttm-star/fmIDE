@@ -9,7 +9,8 @@
     return { family: d.family, version: d.version, versionId: d.versionId, name: functionNameOf(d),
       inputs: parsed.ok ? parsed.params.slice() : [], readable: parsed.ok, text: d.text,
       description: d.description, note: d.note, latest: isLatestFunction(d),
-      calls: d.calls.map(c => ({ name: c.name, family: c.family, version: c.version, versionId: c.versionId })) };
+      calls: d.calls.map(c => ({ name: c.name, family: c.family, version: c.version, versionId: c.versionId })),
+      origin: d.origin ? Object.assign({}, d.origin) : null };
   }
   // fm actions that take a file object as their first input also accept { file, … } (the fm
   // wrapper passes a lone object as the first input when that input is JSON).
@@ -41,7 +42,7 @@
     } });
 
   defineAction({ name:'listFunctions', label:'List Functions', category:'Insert', icon:'ƒ', returns:'value', mutates:false, tx:false, record:false,
-    desc:'Returns your function library, one entry per function: { family, name, latest, versions: [{ version, versionId, name, inputs, text, description, note, calls }] }, newest version first. of: "model" lists instead the definitions the open model carries (the ones it calculates with), one entry per version.',
+    desc:'Returns your function library, one entry per function: { family, name, latest, versions: [{ version, versionId, name, inputs, text, description, note, calls, origin }] }, newest version first. of: "model" lists instead the definitions the open model carries (the ones it calculates with), one entry per version.',
     params:[ P('of','enum',{ options:['library','model'], def:'library' }) ],
     run(a){
       if(a.of === 'model') return modelFunctions.map(d => {
@@ -55,7 +56,7 @@
     } });
 
   defineAction({ name:'getFunction', label:'Get Function', category:'Insert', icon:'ƒ', returns:'value', mutates:false, tx:false, record:false,
-    desc:'Returns one version from your library: { family, version, versionId, name, inputs, text, description, note, calls, latest }.',
+    desc:'Returns one version from your library: { family, version, versionId, name, inputs, text, description, note, calls, latest, origin } (origin: the library pack it came from, { packId, packTitle, author, licence }, or null).',
     params:[ P('function','string') ],
     run(a){ return functionInfo(resolveFunctionRef(a.function)); } });
 

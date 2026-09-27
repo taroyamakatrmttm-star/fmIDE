@@ -27,17 +27,18 @@
     } });
 
   defineAction({ name:'previewLibraryPack', label:'Preview Library Pack', category:'File', icon:'📦', returns:'value', mutates:false, tx:false, record:false,
-    desc:'Reads a library pack (its JSON) without adding anything: { pack: { id, title, author, licence, description, tags, created }, items: [{ key, type, kind, name, version, status, statusText, needs }] }. status is "new", "present" (already in your library), "new-version" (adds a version to one you have) or "same-name" (a different one of yours has this name).',
+    desc:'Reads a library pack (its JSON) without adding anything: { pack: { id, title, author, licence, description, tags, created }, items: [{ key, type, kind, name, version, status, statusText, needs, origin, warning, warningKind }] }. status is "new", "present" (already in your library), "new-version" (adds a version to one you have) or "same-name" (a different one of yours has this name). origin: where an item shared again came from before (else null). warning: for a "new-version" item whose family came from another author (warningKind "other-author") or is your own ("own"), else null.',
     params:[ P('file','json') ],
     run(a){
       unwrapFileArgs(a);
       const read = readLibraryPack(a.file);
       return { pack: cloneData(read.pack), items: libraryPackItems(read).map(it => ({ key: it.key, type: it.type, kind: it.kind,
-        name: it.name, version: it.version, status: it.status, statusText: it.statusText, needs: it.needs.slice() })) };
+        name: it.name, version: it.version, status: it.status, statusText: it.statusText, needs: it.needs.slice(),
+        origin: it.origin ? Object.assign({}, it.origin) : null, warning: it.warning, warningKind: it.warningKind })) };
     } });
 
   defineAction({ name:'openLibraryPack', label:'Open Library Pack', category:'File', icon:'📦', returns:'value', tx:false, record:false,
-    desc:'Adds a library pack\'s items to your library, by the usual import rules (nothing of yours is replaced; a version whose number is taken is added under the next number). items: the keys previewLibraryPack gives (default: all); each brings what it needs. A pack from a newer fmIDE fails unless allowNewer is true. Returns { templates: { added, present, renumbered }, functions: { … } }.',
+    desc:'Adds a library pack\'s items to your library, by the usual import rules (nothing of yours is replaced; a version whose number is taken is added under the next number). items: the keys previewLibraryPack gives (default: all); each brings what it needs. Each item added remembers where it came from (origin: this pack, or the pack it was shared in before). A pack from a newer fmIDE fails unless allowNewer is true. Returns { templates: { added, present, renumbered }, functions: { … } }.',
     params:[ P('file','json'), P('items','json',{ optional:true, help:'item keys, like ["t0", "f1"]' }), P('allowNewer','bool',{ def:false }) ],
     run(a){
       unwrapFileArgs(a);

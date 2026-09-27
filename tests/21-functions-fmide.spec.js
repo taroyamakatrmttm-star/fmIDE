@@ -126,7 +126,7 @@ test.describe('the fmIDE-functions file', () => {
     await importFile(page, 'library');
     const all = await page.evaluate(() => fm.exportFunctions({ download: false }));
     expect(all.kind).toBe('fmIDE-functions');
-    expect(all.version).toBe(1);
+    expect(all.version).toBe(2);
     expect(all.functions).toEqual(read('library').functions);
     const some = await page.evaluate(() => fm.exportFunctions({ download: false, functions: ['Profit'] }));
     expect(some.functions.map(d => d.family + '@' + d.version)).toEqual(['family-margin@1', 'family-profit@1']);
@@ -168,18 +168,18 @@ test.describe('the fmIDE-functions file', () => {
   test('the wrong kind of file, and a file from a newer fmIDE', async ({ page }) => {
     expect(await err(page, () => fm.importFunctions({ kind: 'fmIDE-macros', version: 1, macros: [] }))).toMatch(/not a functions file/);
     expect(await err(page, () => fm.importFunctions({ kind: 'fmIDE-workspace', version: 4, system: null }))).toMatch(/Open it with File → Import Workspace/);
-    expect(await importFile(page, 'library-newer-v2').then(() => null, e => e.message)).toMatch(/newer version of fmIDE.*allowNewer/);
+    expect(await importFile(page, 'library-newer-v3').then(() => null, e => e.message)).toMatch(/newer version of fmIDE.*allowNewer/);
     expect(await lib(page)).toEqual([]);
-    expect(await importFile(page, 'library-newer-v2', { allowNewer: true })).toEqual({ added: 3, present: 0, renumbered: 0 });
+    expect(await importFile(page, 'library-newer-v3', { allowNewer: true })).toEqual({ added: 3, present: 0, renumbered: 0 });
   });
 
   test('Import Functions in the manager: a newer file asks first', async ({ page }) => {
-    await F.importViaDialog(page, 'openFunctions', '⇧ Import Functions', fixture('functions', 'library-newer-v2.json'));
-    expect(await F.dialogText(page)).toMatch(/This functions file was saved by a newer version of fmIDE \(format version 2; this fmIDE reads up to version 1\)/);
+    await F.importViaDialog(page, 'openFunctions', '⇧ Import Functions', fixture('functions', 'library-newer-v3.json'));
+    expect(await F.dialogText(page)).toMatch(/This functions file was saved by a newer version of fmIDE \(format version 3; this fmIDE reads up to version 2\)/);
     await F.cancelDialog(page);
     expect(await lib(page)).toEqual([]);
     const [chooser] = await Promise.all([page.waitForEvent('filechooser'), manager(page).locator('button', { hasText: '⇧ Import Functions' }).click()]);
-    await chooser.setFiles(fixture('functions', 'library-newer-v2.json'));
+    await chooser.setFiles(fixture('functions', 'library-newer-v3.json'));
     await F.confirmDanger(page);
     expect(await F.dialogText(page)).toBe('Imported 3 function versions.');
     await F.dismissMessage(page);

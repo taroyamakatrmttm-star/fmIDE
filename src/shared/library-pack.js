@@ -53,3 +53,34 @@ function cleanLibraryPackInfo(p){
   if(typeof p.created === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(p.created)) info.created = p.created;
   return { info };
 }
+
+// ---------- where an item came from (phase 8b) ----------
+// A template or function version added from a library pack remembers the pack:
+// `origin: { packId, packTitle, author, licence }` (docs/file-formats.md). It is a record of
+// what the pack said, not proof. Read from a file it is untrusted like everything else: the
+// same rules as the pack details; anything else is dropped. Returns a clean copy or null
+// (then the item simply has no origin).
+function cleanItemOrigin(o){
+  if(!o || typeof o !== 'object' || Array.isArray(o)) return null;
+  const packId = typeof o.packId === 'string' && /^[A-Za-z0-9-]{8,64}$/.test(o.packId) ? o.packId : null;
+  const packTitle = packText(o.packTitle, LIBRARY_PACK_LIMITS.title);
+  const author = packText(o.author, LIBRARY_PACK_LIMITS.author);
+  const licence = typeof o.licence === 'string' ? o.licence.trim() : '';
+  if(!packId || !packTitle || !author || !Object.prototype.hasOwnProperty.call(LIBRARY_PACK_LICENCES, licence)) return null;
+  return { packId, packTitle, author, licence };
+}
+// The origin an item gets from the pack (cleaned `pack` details) it is added from.
+function originFromPack(info){
+  return { packId: info.id, packTitle: info.title, author: info.author, licence: info.licence };
+}
+// Whether two author names are the same person's, as far as fmIDE can tell: capitals and
+// spaces don't count.
+function sameAuthorName(a, b){
+  const k = (s) => String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+  return !!k(a) && k(a) === k(b);
+}
+// One line for people: 'From the library pack "…" by … · CC BY 4.0'.
+function originText(o){
+  const lic = LIBRARY_PACK_LICENCES[o.licence];
+  return `From the library pack “${o.packTitle}” by ${o.author}` + (lic ? ` · ${lic.short}` : '');
+}
