@@ -280,6 +280,150 @@ test.describe('Tree view', () => {
 });
 
 // ---------- Inputs tab ----------
+test.describe('Tree view: a row\'s own format, indent and the right-click commands', () => {
+  const menuItem = (page, name) => page.locator('#treeCtxMenu').getByRole('menuitem', { name, exact: true });
+  // Set a colour input the way a person picking a colour does (Playwright can't type into one).
+  async function pickColour(locator, value){
+    await locator.evaluate((el, v) => { el.value = v; el.dispatchEvent(new Event('change', { bubbles: true })); }, value);
+  }
+  // Period cells and the label cell of `label` on `sheet`, from the real .xlsx file.
+  async function cellsOf(page, sheet, label){
+    const { wb, bytes } = await X.generate(page);
+    const book = await X.readBack(bytes);
+    const ws = wb.Sheets[sheet], p1 = X.periodOneCol(ws);
+    const [r] = X.findRow(ws, label);
+    expect(r, `"${label}" on ${sheet}`).toBeTruthy();
+    const out = [];
+    for(let c = p1; ws[X.numToCol(c) + 3]; c++) out.push(book.getWorksheet(sheet).getCell(X.numToCol(c) + r));
+    return { label: book.getWorksheet(sheet).getCell('A' + r), periods: out };
+  }
+  const fillOf = (c) => (c.fill && c.fill.type === 'pattern' && c.fill.fgColor) ? c.fill.fgColor.argb : null;
+
+  test('a rectangle row takes its own fill, bold and number format in Excel, and Reset gives fmIDE\'s back', async ({ page }) => {
+    await open(page, { sections: false });
+    await page.click('#viewByTree');
+    const row = treeRow(page, 'Revenue');
+    await row.locator('.tree-fmt-btn').click();
+    const ed = row.locator('.tree-style-editor');
+    await pickColour(ed.locator('.fmt-fill'), '#fde68a');
+    await ed.locator('.fmt-nofill').uncheck();
+    await ed.locator('.fmt-bold').check();
+    await ed.locator('.fmt-numkind').selectOption('percent');
+    await ed.locator('.fmt-decimals').fill('1');
+    await ed.locator('.fmt-decimals').dispatchEvent('change');
+    await expect(row.locator('.tree-fmt-btn')).toHaveClass(/\bon\b/);
+    let { label, periods } = await cellsOf(page, 'BS', 'Revenue');
+    for(const c of periods.concat([label])){
+      expect(fillOf(c), `${c.address} fill`).toBe('FFFDE68A');
+      expect(c.font && c.font.bold, `${c.address} bold`).toBe(true);
+    }
+    for(const c of periods) expect(c.numFmt, `${c.address} number format`).toBe('0.0%');
+
+    await ed.locator('.fmt-reset').click();
+    await expect(treeRow(page, 'Revenue').locator('.tree-fmt-btn')).not.toHaveClass(/\bon\b/);
+    ({ label, periods } = await cellsOf(page, 'BS', 'Revenue'));
+    for(const c of periods) expect(fillOf(c), `${c.address} fill after Reset`).toBe(null); // Calculations: no fill
+  });
+
+  test('Alt+Shift+→/← and the menu indent the selected labels; the indent reaches Excel and is kept', async ({ page }) => {
+    await open(page, { sections: false });
+    await page.click('#viewByTree');
+    await treeRow(page, 'Cash').click();
+    await treeRow(page, 'Inventory').click({ modifiers: ['ControlOrMeta'] });
+    await page.keyboard.press('Alt+Shift+ArrowRight');
+    await page.keyboard.press('Alt+Shift+ArrowRight');
+    await page.keyboard.press('Alt+Shift+ArrowRight');
+    await treeRow(page, 'Cash').click({ button: 'right' });
+    await menuItem(page, '⇤ Decrease Indent').click();
+    for(const l of ['Cash', 'Inventory']) await expect(treeRow(page, l).locator('.tree-row-label')).toHaveAttribute('data-indent', '2');
+    for(const l of ['Cash', 'Inventory']){
+      const { label, periods } = await cellsOf(page, 'BS', l);
+      expect(label.alignment && label.alignment.indent, `${l} label indent`).toBe(2);
+      expect(label.alignment && label.alignment.horizontal).toBe('left');
+      for(const c of periods) expect(c.alignment && c.alignment.indent, `${c.address}: only the label is indented`).toBeFalsy();
+    }
+    // A custom row takes an indent too.
+    await treeRow(page, 'Cash').click({ button: 'right' });
+    await menuItem(page, 'Insert custom row above').click();
+    await page.locator('.tree-row-label-input').fill('Working capital');
+    await page.locator('.tree-row-label-input').press('Enter');
+    await treeRow(page, 'Working capital').click();
+    await page.keyboard.press('Alt+Shift+ArrowRight');
+    expect((await cellsOf(page, 'BS', 'Working capital')).label.alignment.indent).toBe(1);
+    // Kept: the saved layout comes back after a reload.
+    await page.reload();
+    await X.loadFixtureModel(page, 'revenue-bs-corkscrew.json');
+    await page.click('#viewByTree');
+    await expect(treeRow(page, 'Cash').locator('.tree-row-label')).toHaveAttribute('data-indent', '2');
+    // The menu's Reset takes the indent off.
+    await treeRow(page, 'Cash').click({ button: 'right' });
+    await menuItem(page, 'Reset to fmIDE\'s format').click();
+    await expect(treeRow(page, 'Cash').locator('.tree-row-label')).not.toHaveAttribute('data-indent', /./);
+  });
+
+  test('the right-click menu runs the selection bar\'s commands on every selected row', async ({ page }) => {
+    await open(page, { sections: false });
+    await page.click('#viewByTree');
+    const bs0 = (await tree(page))['BS'];
+    await treeRow(page, 'Cash').click();
+    await treeRow(page, 'Inventory').click({ modifiers: ['ControlOrMeta'] });
+    await treeRow(page, 'Inventory').click({ button: 'right' });
+    for(const name of ['▲ Move Up', '▼ Move Down', '⤒ Move to Top', '⤓ Move to Bottom', '☑ Include', '☐ Exclude', '◆ Mark Constant',
+      '◇ Unmark Constant', '⇥ Increase Indent', '⇤ Decrease Indent', '🎨 Format 2 rows…', 'Reset to fmIDE\'s format']){
+      await expect(menuItem(page, name), name).toBeVisible();
+    }
+    await menuItem(page, '⤒ Move to Top').click();
+    let bs = (await tree(page))['BS'];
+    expect(bs.slice(0, 2)).toEqual(bs0.filter(l => l === 'Cash' || l === 'Inventory'));
+    await treeRow(page, 'Cash').click({ button: 'right' }); // inside the selection: both stay selected
+    await menuItem(page, '☐ Exclude').click();
+    for(const l of ['Cash', 'Inventory']) await expect(treeRow(page, l)).toHaveClass(/excluded/);
+    await treeRow(page, 'Cash').click({ button: 'right' });
+    await menuItem(page, '◆ Mark Constant').click();
+    for(const l of ['Cash', 'Inventory']) await expect(treeRow(page, l).locator('.const-tag')).toBeVisible();
+    // Move to another tab, at its bottom.
+    await treeRow(page, 'Cash').click({ button: 'right' });
+    await page.locator('#treeCtxMenu .ctx-sub select').first().selectOption({ label: 'Corkscrew' });
+    await page.locator('#treeCtxMenu .ctx-sub button', { hasText: 'at bottom' }).click();
+    const t = await tree(page);
+    expect(t['Corkscrew'].slice(-2)).toEqual(['Cash', 'Inventory']);
+    expect(t['BS']).not.toContain('Cash');
+    // Formatting two rows at once: the editor's change applies to both.
+    await treeRow(page, 'Cash').click();
+    await treeRow(page, 'Inventory').click({ modifiers: ['ControlOrMeta'] });
+    await treeRow(page, 'Cash').click({ button: 'right' });
+    await menuItem(page, '🎨 Format 2 rows…').click();
+    await treeRow(page, 'Cash').locator('.tree-style-editor .fmt-bold').check();
+    for(const l of ['Cash', 'Inventory']) await expect(treeRow(page, l).locator('.tree-fmt-btn')).toHaveClass(/\bon\b/);
+  });
+
+  test('a row format or indent from a mapping file is checked before use', async ({ page }, testInfo) => {
+    await open(page, { sections: false });
+    const [download] = await Promise.all([page.waitForEvent('download'), page.click('#btnExportMapping')]);
+    const m = JSON.parse(require('fs').readFileSync(await download.path(), 'utf8'));
+    const rev = m.rows.find(r => r.label === 'Revenue'), cash = m.rows.find(r => r.label === 'Cash');
+    rev.style = { fill: 'red;"><img src=x onerror="window.__hacked=1">', font: { color: 'javascript:1', weight: 'bold' },
+      border: { style: 'solid', color: '#12345' }, numberFormat: { kind: 'currency', decimals: 1e9, currencySymbol: '"&"' } };
+    rev.indent = 'lots';
+    cash.indent = 999;
+    const file = testInfo.outputPath('hostile-mapping.json');
+    require('fs').writeFileSync(file, JSON.stringify(m));
+    await page.setInputFiles('#mappingFileInput', file);
+    await expect(page.locator('#genStatus .status')).toHaveText('Mapping imported.');
+    await page.click('#viewByTree');
+    await expect(treeRow(page, 'Cash').locator('.tree-row-label')).toHaveAttribute('data-indent', '15');
+    const r = await cellsOf(page, 'BS', 'Revenue');
+    expect(r.label.alignment && r.label.alignment.indent).toBeFalsy();
+    for(const c of r.periods){
+      expect(fillOf(c)).toBe(null);              // the bad colour is dropped: no fill
+      expect(c.font && c.font.bold).toBe(true);
+      expect(c.numFmt).toBe('"$"#,##0.0000000000'); // at most 10 decimals, the symbol fixed
+    }
+    expect((await cellsOf(page, 'BS', 'Cash')).label.alignment.indent).toBe(15);
+    expect(await page.evaluate(() => window.__hacked)).toBeUndefined();
+  });
+});
+
 test.describe('Inputs tab', () => {
   test('renaming an Inputs-tab row renames its source', async ({ page }) => {
     await open(page, { inputs: true });

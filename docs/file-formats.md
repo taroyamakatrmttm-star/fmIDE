@@ -30,7 +30,16 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 | `fmIDE-macros` | 1 | Macros | fmIDE: Macro Builder → Import |
 | `fmIDE-preferences` | 1 | Personal settings: shortcut bindings for built-in commands, ribbon layout and Quick Access Toolbar, ribbon collapsed state, KeyTips trigger (fmIDE only) | fmIDE: File → Import Preferences (or Customize Ribbon) |
 | `fmIDE-library-pack` | 2 | Templates, recipes and functions to share with other people, with who made them and their licence (below); v2: an item shared again carries the `origin` it came with | fmIDE: File → Open Library Pack… |
-| `fmIDE-excel-mapping` | 1 | ExcelExporter's tab/row layout for one model | ExcelExporter: Import Mapping JSON |
+| `fmIDE-excel-mapping` | 2 | ExcelExporter's tab/row layout for one model; v2: any row may carry its own format (`style`) and an `indent` (below) | ExcelExporter: Import Mapping JSON |
+
+## A row's own format and indent (`fmIDE-excel-mapping` 2)
+
+Set in ExcelExporter's Tree view (🎨, the right-click menu, Alt+Shift+→ / ←). Any row — a rectangle row, a custom row or an Inputs-tab row — may carry:
+
+- `style`: `{ fill, font: { color, weight }, border: { style, color }, numberFormat? }`. Colours are `#rrggbb` (anything else is dropped: no fill, or the default colour); `weight` is `"700"` or `"normal"`; `border.style` is `"solid"` or `"none"`; `numberFormat` (rectangle rows only) is `{ kind: "number" | "percent" | "currency", decimals }`, `decimals` a whole number 0–10, currency always `$`. On a custom row it is the row's whole look (as before); on a rectangle row it replaces the fill, font colour, weight and border the format role gives it, and the number format when it has one.
+- `indent`: a whole number 1–15, the label cell's (column A) indent in Excel, as Excel's Increase Indent makes it. Anything else is read as no indent, and more than 15 as 15.
+
+A version 1 file has neither and opens unchanged.
 
 ## Limits on a file that is opened
 

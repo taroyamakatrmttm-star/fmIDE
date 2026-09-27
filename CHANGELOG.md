@@ -2,6 +2,12 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: a row's own format, indent, and a full right-click menu in the Tree View
+- **🎨 on every row**, not just custom rows: give a row its own fill, font colour, bold, border and number format in Excel, over what fmIDE's format roles give it. With several rows selected, a change applies to all of them. **Reset to fmIDE's format** takes it off.
+- **Indent**: **Alt+Shift+→ / ←** (or Indent / Outdent in the selection bar and the menu) indents the selected rows' labels in Excel, like Excel's Increase Indent (Alt+H+6), up to 15 steps.
+- **Right-click** on rows now has every command of the selection bar — Move Up/Down/Top/Bottom, Include/Exclude, Mark/Unmark Constant, Add/Remove Scenarios, Indent, Format, Reset, Move to another tab — so there is no need to scroll back up to the bar.
+- The mapping file is version 2 (a row may carry its own format and indent); version 1 files open unchanged, and an older ExcelExporter asks before opening a version 2 file. Formats and indents from a file are checked: colours must be real colours, numbers are bounded.
+
 ## Touch, first part (step 9, phase 9a)
 - **On a touchscreen, a finger now works on the canvas:** move nodes (several at once when they are selected), draw an arrow from a node's dot onto another node, resize a node by its corner, drag a canvas tab to reorder, and draw in the curve editor (📈). A pen works the same way. The page no longer scrolls while your finger is on a node, a tab or the curve.
 - One finger on empty canvas still scrolls it, and a tap there still clears the selection.

@@ -159,6 +159,7 @@ function buildCanvasViewRowTR(r, definitionCanvas, sortedTabs){
 
   const tdLabel = document.createElement('td');
   const labelInput = document.createElement('input'); labelInput.type = 'text'; labelInput.value = r.label;
+  if(rowIndent(r)) labelInput.style.textIndent = rowIndent(r) + 'em'; // the label's indent in Excel (set in the Tree view)
   labelInput.addEventListener('change', () => { r.label = labelInput.value; saveMapping(); });
   tdLabel.appendChild(labelInput);
   tr.appendChild(tdLabel);
@@ -327,6 +328,7 @@ function renderCustomRows(){
 
     const tdLabel = document.createElement('td');
     const labelInput = document.createElement('input'); labelInput.type = 'text'; labelInput.value = row.label;
+    if(rowIndent(row)) labelInput.style.textIndent = rowIndent(row) + 'em'; // the label's indent in Excel (set in the Tree view)
     labelInput.addEventListener('change', () => { row.label = labelInput.value; saveMapping(); });
     tdLabel.appendChild(labelInput);
     tr.appendChild(tdLabel);

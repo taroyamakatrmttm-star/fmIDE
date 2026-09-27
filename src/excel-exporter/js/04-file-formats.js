@@ -10,7 +10,7 @@
 const FILE_FORMATS = {
   'system':              { current: SHARED_FILE_VERSIONS['system'], label: 'fmIDE system' },
   'fmIDE-workspace':     { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'fmIDE workspace' },
-  'fmIDE-excel-mapping': { current: 1, label: 'ExcelExporter mapping file' }
+  'fmIDE-excel-mapping': { current: 2, label: 'ExcelExporter mapping file' }
 };
 // Kinds that are fmIDE files but not something ExcelExporter reads — say where they belong.
 const OTHER_FMIDE_KINDS = {
@@ -23,8 +23,11 @@ const OTHER_FMIDE_KINDS = {
   'fmIDE-preferences': 'an fmIDE preferences file (shortcuts, ribbon and KeyTips) — import it in fmIDE with File → Import Preferences',
   'fmIDE-library-pack': 'an fmIDE library pack (templates and functions to share) — open it in fmIDE with File → Open Library Pack'
 };
-// The mapping file has had no upgrades yet.
-const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS);
+// The mapping file's upgrades. v2: any row may carry its own format (`style`) and an
+// `indent`; a v1 file has neither, so it reads as it is.
+const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
+  'fmIDE-excel-mapping': { 1: (d) => { d.version = 2; return d; } }
+});
 // Returns { error } or { kind, data (migrated copy), fromVersion, newer, newerParts }.
 function readKnownFile(raw, accept){
   if(!raw || typeof raw !== 'object') return { error: "That file doesn't contain fmIDE data." };
@@ -153,6 +156,11 @@ function reconcileMapping(){
     const node = c && c.nodes.find(n => n.id === r.nodeId);
     if(!node || !isInputRectangle(c, node)) r.inlineConstant = false;
   });
+  // A row's own format and indent come from a saved layout or a mapping file: checked here.
+  [mapping.rows, mapping.customRows, mapping.inputRows].forEach(list => list.forEach(r => {
+    if(r.style !== undefined) r.style = cleanRowFormat(r.style);
+    if(r.indent !== undefined){ const n = rowIndent(r); if(n) r.indent = n; else delete r.indent; }
+  }));
   syncInputMirrors(); // add/drop Inputs-tab rows for inputs that appeared/disappeared in fmIDE
   // Keep both order dimensions clean and fully populated regardless of which one is
   // currently "live" (sectioned `order` vs. flat `flatOrder`, see sectionsEnabled()) —
