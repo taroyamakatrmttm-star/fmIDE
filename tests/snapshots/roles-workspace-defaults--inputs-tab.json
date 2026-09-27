@@ -10,12 +10,12 @@
   "A4": {"v":"INPUTS"},
   "A5": {"v":"Revenue Model"},
   "E5": {"v":"2027"},
-  "A6": {"v":"Unit Price"},
-  "E6": {"v":10},
-  "A7": {"v":"Volume"},
-  "E7": {"v":5},
-  "A8": {"v":"Cash"},
-  "E8": {"v":0}
+  "A6": {"v":"Cash"},
+  "E6": {"v":0},
+  "A7": {"v":"Unit Price"},
+  "E7": {"v":10},
+  "A8": {"v":"Volume"},
+  "E8": {"v":5}
  },
  "Revenue Model": {
   "A1": {"v":"Revenue Model"},
@@ -25,14 +25,14 @@
   "A3": {"v":"Period #"},
   "E3": {"v":1},
   "A4": {"v":"INPUTS"},
-  "A5": {"v":"Unit Price"},
+  "A5": {"v":"Cash"},
   "E5": {"f":"'Inputs'!E6"},
-  "A6": {"v":"Volume"},
+  "A6": {"v":"Unit Price"},
   "E6": {"f":"'Inputs'!E7"},
-  "A7": {"v":"Cash"},
+  "A7": {"v":"Volume"},
   "E7": {"f":"'Inputs'!E8"},
   "A9": {"v":"OUTPUTS"},
   "A10": {"v":"Revenue"},
-  "E10": {"f":"E5*E6"}
+  "E10": {"f":"E6*E7"}
  }
 }

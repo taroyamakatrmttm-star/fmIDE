@@ -1,12 +1,12 @@
 {
  "Broken": {
   "A4": {"v":"INPUTS"},
-  "A5": {"v":"Revenue"},
-  "A6": {"v":"Cost"},
+  "A5": {"v":"Cost"},
+  "A6": {"v":"Revenue"},
   "A7": {"v":"Zero"},
   "A9": {"v":"CALCULATIONS"},
-  "A10": {"v":"Fails"},
-  "A11": {"v":"Self loop"},
+  "A10": {"v":"Self loop"},
+  "A11": {"v":"Fails"},
   "A13": {"v":"OUTPUTS"},
   "A14": {"v":"Missing"},
   "A15": {"v":"Other versionId"},

@@ -1,11 +1,11 @@
 {
  "BS": {
   "A4": {"v":"INPUTS"},
-  "A5": {"v":"Cash"},
-  "A6": {"v":"Inventory"},
+  "A5": {"v":"Volume"},
+  "A6": {"v":"Unit Price"},
   "A7": {"v":"AR outstanding rate"},
-  "A8": {"v":"Volume"},
-  "A9": {"v":"Unit Price"},
+  "A8": {"v":"Cash"},
+  "A9": {"v":"Inventory"},
   "A11": {"v":"CALCULATIONS"},
   "A12": {"v":"Revenue"},
   "A13": {"v":"Accounts Receivable"},
@@ -17,13 +17,13 @@
   "A5": {"v":"Additions"},
   "A6": {"v":"Subtractions"},
   "A8": {"v":"CALCULATIONS"},
-  "A9": {"v":"Ending Balance"},
-  "A10": {"v":"Beginning Balance"}
+  "A9": {"v":"Beginning Balance"},
+  "A10": {"v":"Ending Balance"}
  },
  "Capex": {
   "A4": {"v":"INPUTS"},
-  "A5": {"v":"Asset Life"},
-  "A6": {"v":"Capex"},
+  "A5": {"v":"Capex"},
+  "A6": {"v":"Asset Life"},
   "A7": {"v":"Other"},
   "A9": {"v":"OUTPUTS"},
   "A10": {"v":"Total Tax Shield"},

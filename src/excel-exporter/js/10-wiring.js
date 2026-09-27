@@ -169,6 +169,7 @@ async function resetMappingToDefaults(){
   try{ await layoutStore.remove(mappingKey); }catch(err){ /* ignore */ }
   mapping = buildDefaultMapping(model);
   reconcileMapping();
+  sortNewLayout();
   renderAll();
 }
 

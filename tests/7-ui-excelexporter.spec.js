@@ -83,6 +83,25 @@ test('a new layout: sections off, formula order within groups, Periods on the In
   }
 });
 
+test('a new layout starts sorted in calculation order, formula order within groups; a saved one keeps its order', async ({ page }) => {
+  await open(page);
+  await page.click('#viewByTree');
+  const before = await tree(page);
+  // Applying that same sort again changes nothing.
+  await sort(page, 'calcUp', 'formula', 'all');
+  await expect(page.locator('#sortStatus')).toContainText('already in that order');
+  expect(await tree(page)).toEqual(before);
+  // Reorder by hand: the saved layout keeps it after a reload (no sort on a saved layout).
+  await treeRow(page, before['BS'][before['BS'].length - 1]).click();
+  await page.locator('#bulkMoveBar button', { hasText: 'Move to Top' }).click();
+  const moved = (await tree(page))['BS'];
+  expect(moved[0]).toBe(before['BS'][before['BS'].length - 1]);
+  await page.reload();
+  await X.loadFixtureModel(page, 'revenue-bs-corkscrew.json');
+  await page.click('#viewByTree');
+  expect((await tree(page))['BS']).toEqual(moved);
+});
+
 test.describe('Start Over and Reset Mapping', () => {
   test('Start Over keeps the saved layout; re-picking the same file loads it', async ({ page }) => {
     await open(page);

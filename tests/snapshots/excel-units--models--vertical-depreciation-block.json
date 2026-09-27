@@ -1,8 +1,8 @@
 {
  "Capex": {
   "A4": {"v":"INPUTS"},
-  "A5": {"v":"Asset Life"},
-  "A6": {"v":"Capex"},
+  "A5": {"v":"Capex"},
+  "A6": {"v":"Asset Life"},
   "A7": {"v":"Other"},
   "A9": {"v":"OUTPUTS"},
   "A10": {"v":"Total Tax Shield"},

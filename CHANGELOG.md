@@ -2,6 +2,14 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## New nodes never land on others; the Macro Builder moves on; ExcelExporter starts in formula order
+- **fmIDE: new nodes go into free space.** Add Rectangle, Add Operator, Add Period Shift, the Alias, Block and Function pickers, and `fm.create…` without coordinates put the new node near the middle of the view, in the nearest spot where it overlaps nothing. Duplicate and aliases made with the default offset move together to free space, keeping their layout. The automatic aliases a socket gets from other canvases no longer pile on top of each other or of other nodes. Coordinates given explicitly (in a macro or a script) are kept exactly, so recorded macros replay as before.
+- **Macro Builder: "▶ Run selected step" selects the next step** (after what is inside a group, repeat or for-each), so pressing it again steps through the macro; on the last step it says so.
+- **ExcelExporter: a new layout starts sorted** by calculation order, inputs first, formula order within each group (as "Apply sort" with those choices would); a saved layout keeps its order.
+- **Fix (ExcelExporter):** sorting by calculation order or A→Z could split a vertical block's Vintage 1…N and Total rows apart; they now stay together in vintage order.
+- **Fix (ExcelExporter):** double-clicking a Tree View row to rename it could miss when the selection bar appearing pushed the list down under the second click; the row just clicked is now renamed.
+- No file format changed.
+
 ## Touch, second part (step 9, phase 9b)
 - **Press and hold a node** (about half a second, finger still) for a menu: **Draw arrow from here** (then tap the node, or its input dot, the arrow goes to), **Make alias**, **Duplicate**, **Add to / Remove from selection**, **Edit…** (what a double-click does), **Properties…** (the 🎨 format window), **Delete**. With the node in a selection, it acts on the whole selection. The menu also shows what hovering would: a calculation error, or the plugs feeding a "⚡ ×N" socket.
 - **Press and hold on empty canvas, then drag,** to select with a box. A quick swipe still scrolls.

@@ -238,7 +238,7 @@ test('function calls work inside block instances, and the Functions tab lists th
   await expect(page.locator('#differencesPanel')).toBeHidden();
   const { wb } = await X.generate(page);
   // A block instance's row writes the call with the host's cells.
-  expect(periodOneFormulas(wb, 'Margin Block (instance 1)')['Out margin']).toBe("('Functions'!E4-'Functions'!E5)/'Functions'!E4");
+  expect(periodOneFormulas(wb, 'Margin Block (instance 1)')['Out margin']).toBe("('Functions'!E6-'Functions'!E7)/'Functions'!E6");
   // The canvas is called "Functions", so the list gets the next free name, last.
   expect(wb.SheetNames[wb.SheetNames.length - 1]).toBe('Functions 2');
   const ws = wb.Sheets['Functions 2'];

@@ -698,6 +698,22 @@ function applyTreeSelectionHighlight(){
 }
 
 let treeClickHistory = []; // last two plain row clicks {id, time} — see the dblclick handler
+// The first click of a double-click selects a row, and the selection bar appearing above
+// the tree pushes the list down, so the second click may land on no row at all — the bar
+// itself, a group header, the gap between tabs. A double-click there (not on a button or a
+// field) still renames the row that was just clicked.
+document.addEventListener('dblclick', (ev) => {
+  const t = ev.target;
+  if(!t || !t.closest || !(t.closest('#rowGroupsTree') || t.closest('#bulkMoveBar'))) return;
+  if(t.closest('.tree-row') || t.closest('input, button, select, label')) return;
+  const last = treeClickHistory[treeClickHistory.length - 1];
+  if(!last || Date.now() - last.time > 800) return;
+  const target = treeRowElements.find(e => e.id === last.id);
+  const targetRow = findRowById(last.id);
+  if(!target || !targetRow) return;
+  ev.preventDefault();
+  startTreeRowRename(target.el, target.el.querySelector('.tree-row-label'), targetRow);
+});
 function handleTreeRowClick(ev, flatIndex){
   const entry = treeVisibleRows[flatIndex];
   if(!entry) return;
