@@ -89,7 +89,7 @@ function inputGroupOf(mirror, mode){
 
 function makeGroupHeader(g){
   return { id: 'custom_inpgrp_' + g.key.replace(/[^A-Za-z0-9_:-]/g, '_'), isCustom: true, autoInputsGroup: g.key,
-           tabId: INPUTS_TAB_ID, section: 'input', label: g.name, style: null, showPeriodLabels: false };
+           tabId: INPUTS_TAB_ID, section: 'input', label: g.name, style: null, showPeriodLabels: true };
 }
 
 // Writes `seq` (every row on the Inputs tab, in the wanted order) into both order

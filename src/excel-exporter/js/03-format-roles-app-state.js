@@ -279,7 +279,7 @@ function buildDefaultMapping(m){
   return {
     tabs, rows,
     customRows: [],
-    cfg: { startLabel: '2027', frequency: 'annual', fallbackFormat: '#,##0', fileName: 'fmIDE-export', sectionsEnabled: true }
+    cfg: { startLabel: '2027', frequency: 'annual', fallbackFormat: '#,##0', fileName: 'fmIDE-export', sectionsEnabled: false }
   };
 }
 
