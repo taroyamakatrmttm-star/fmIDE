@@ -250,6 +250,50 @@ test('functionsUsedBy: what a file carries — the versions in use, and what the
   expect(S.functionsUsedBy([{ nodes: [] }], sys.functions)).toEqual([]);
 });
 
+// ---- the same call written several times ----
+// A function reading its input four times, nested `levels` deep (at most 16 are allowed):
+// R0(x) = R1(x) + R1(x) + R1(x) + R1(x), …, the last one x + x + x + x. Worked out call by
+// call, that is 4^levels calls — hours at 16 levels; an identical call in one formula is
+// worked out once.
+function repeatedCalls(levels){
+  const fam = (i) => 'family-rep-' + String(i).padStart(3, '0');
+  const functions = [];
+  for(let i = 0; i < levels; i++){
+    const next = i + 1 < levels ? 'R' + (i + 1) + '(x)' : 'x';
+    functions.push({ family: fam(i), version: 1, versionId: 'version-rep-' + i, text: 'R' + i + '(x) = ' + [next, next, next, next].join(' + '),
+      calls: i + 1 < levels ? [{ name: 'R' + (i + 1), family: fam(i + 1), version: 1, versionId: 'version-rep-' + (i + 1) }] : [] });
+  }
+  return { kind: 'system', version: 5, periods: ['P1', 'P2'], functions, canvases: [{ id: 'cRep', name: 'Repeat', nodes: [
+    { id: 'x', type: 'value', x: 0, y: 0, text: 'x\n1\n$k', periodValues: [1, 2] },
+    { id: 'f', type: 'function', x: 200, y: 0, fn: { family: fam(0), version: 1, versionId: 'version-rep-0', name: 'R0' } },
+    { id: 'big', type: 'value', x: 400, y: 0, text: 'Big' },
+  ], edges: [{ id: 'e1', from: 'x', to: 'f', toPort: 0 }, { id: 'e2', from: 'f', to: 'big' }] }] };
+}
+
+// 11 levels here: call by call, about 4 s (so a return of the problem fails instead of
+// stopping the test run for hours, as 16 would in Node); fmIDE below has 16.
+test('a call written several times in one formula is worked out once: 11 levels calculate at once', () => {
+  const started = Date.now();
+  const ir = S.compileModel(repeatedCalls(11));
+  const [r] = S.evaluateModel(ir);
+  expect(r.values[0].big).toBe(4 ** 11);
+  expect(r.values[1].big).toBe(2 * 4 ** 11);
+  expect(S.formatUOM(S.unitOf(ir, 'cRep', 'big'))).toBe('$k');
+  expect(Date.now() - started).toBeLessThan(1000);
+});
+
+test('an identical call gives the identical result, errors and IFERROR included', () => {
+  const others = [{ name: 'Inv', text: 'Inv(x) = 1 / x' }];
+  // Caught by one IFERROR, then read again under another: the same error both times.
+  expect(run('F(x) = IFERROR(Inv(x), 5) + IFERROR(Inv(x), 6)', [0], others)).toEqual({ value: 11 });
+  expect(run('F(x) = IFERROR(Inv(x), 5) + Inv(x)', [0], others)).toEqual({ error: 'math-error' });
+  expect(run('F(x) = Inv(x) + Inv(x) * 2', [4], others)).toEqual({ value: 0.75 });
+  // Different arguments are different calls.
+  expect(run('F(x, y) = Inv(x) + Inv(y) + Inv(x + 0) + Inv(-x)', [2, 4], others)).toEqual({ value: 0.75 });
+  // A missing input is read only where a call needs it, however often the call is written.
+  expect(run('F(a, b) = IFERROR(Inv(b), a) + IFERROR(Inv(b), a)', [5], others)).toEqual({ value: 10 });
+});
+
 // ---- fmIDE ----
 async function openSample(page, name){
   await F.openFmIDE(page);
@@ -298,6 +342,17 @@ test('fmIDE says what is wrong with a function node', async ({ page }) => {
   ]);
   expect(await fmideValues(page, 'Broken', ['Deep enough', 'Unwired unused', 'Unwired caught'], 2))
     .toEqual({ 'Deep enough': [115, 115], 'Unwired unused': [200, 200], 'Unwired caught': [100, 100] });
+});
+
+test('fmIDE calculates a call written several times, 16 levels deep, at once', async ({ page }, testInfo) => {
+  const file = testInfo.outputPath('repeated-calls.json');
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify(repeatedCalls(16)));
+  await F.openFmIDE(page);
+  await F.importViaCommand(page, 'loadSystem', file);
+  await F.acceptAll(page);
+  await page.waitForFunction(() => fm.canvases().some(c => c.name === 'Repeat'));
+  expect(await fmideValues(page, 'Repeat', ['Big'], 2)).toEqual({ Big: [4 ** 16, 2 * 4 ** 16] });
 });
 
 test('Save System carries the functions the model uses (system v5); the saved file calculates the same', async ({ page }, testInfo) => {

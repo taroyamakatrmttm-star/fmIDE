@@ -150,7 +150,7 @@ Build order — work in this sequence and don't jump ahead unless asked:
 8. Community library
 9. Touch support
 
-Phase 0 hardening done: escaping text from files, built-in Excel writer, file-format versions and migrations, autosave-failure warning, storage (step 4). Now: step 7, formula IR and plugins (the owner's chosen order: 7, 8, 9); phases A, B, C and D done. Next: phase E (optional) or step 8, the owner's choice; also open, from D3: fmIDE's calculation of nested function calls grows four-fold per level when an input is used four times (`docs/step7-formula-ir.md`, "D3 — Found along the way").
+Phase 0 hardening done: escaping text from files, built-in Excel writer, file-format versions and migrations, autosave-failure warning, storage (step 4). Now: step 7, formula IR and plugins (the owner's chosen order: 7, 8, 9); phases A, B, C and D done. The D3 finding (nested calls growing four-fold per level) is fixed: an identical call in one formula is worked out once. Next: phase E (optional) or step 8, the owner's choice.
 
 ## Checking a change
 
