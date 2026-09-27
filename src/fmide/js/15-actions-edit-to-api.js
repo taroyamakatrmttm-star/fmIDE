@@ -223,6 +223,7 @@
       nodes = nodes.filter(n => !ids.has(n.id));
       edges = edges.filter(e => !ids.has(e.from) && !ids.has(e.to));
       ids.forEach(id => selectedNodeIds.delete(id));
+      trimModelFunctions();
       clearComputed();
     } });
   defineAction({ name:'deleteSelected', label:'Delete Selected', category:'Edit', icon:'🗑',
@@ -237,6 +238,7 @@
         const to = getNode(e.to);
         let toPort = '';
         if(to && to.type === 'blockInstance' && e.toPort != null) toPort = String(e.toPort + 1);
+        if(to && to.type === 'function' && e.toPort != null) toPort = functionPortName(to, e.toPort) || String(e.toPort + 1);
         return { name:'deleteEdge', args:{ from: getNode(e.from), to, toPort } };
       }
       return { name:'deleteNodes', args:{ nodes: selectedNodesList() } };
@@ -248,6 +250,7 @@
       pushHistory();
       nodes = []; edges = [];
       selectedNodeIds.clear(); selectedEdgeId = null;
+      trimModelFunctions();
       clearComputed();
     } });
   defineAction({ name:'copy', label:'Copy', category:'Edit', icon:'⧉', mutates:false, params:[ SEL_NODES() ],
@@ -379,6 +382,7 @@
         loadCanvasState(next);
         selectedNodeIds.clear(); selectedEdgeId = null;
       }
+      trimModelFunctions();
       // Plugs on the deleted canvas no longer feed sockets elsewhere: rebuild the automatic
       // connections (otherwise their aliases are left pointing at nothing) and recalculate.
       syncAutoConnections();
@@ -409,6 +413,7 @@
       loadCanvasState(c);
       selectedNodeIds.clear(); selectedEdgeId = null;
       closePicker();
+      trimModelFunctions();
       clearComputed();
     } });
 
@@ -493,7 +498,11 @@
   fm.actions = () => ACTION_LIST.map(d => ({ name: d.name, label: d.label, category: d.category, description: d.desc || '',
     params: d.params.map(p => ({ name: p.name, type: p.type, default: typeof p.def === 'function' ? '(auto)' : p.def, optional: !!p.optional, options: p.type === 'enum' ? paramOptions(p) : undefined })) }));
   fm.find = (ref) => { const n = resolveOneNode(ref); return n.id; };
-  fm.nodes = () => nodes.map(n => ({ id: n.id, type: n.type, name: refNameOf(n), x: n.x, y: n.y, w: n.w, h: n.h, text: n.text }));
+  fm.nodes = () => nodes.map(n => {
+    const out = { id: n.id, type: n.type, name: refNameOf(n), x: n.x, y: n.y, w: n.w, h: n.h, text: n.text };
+    if(n.type === 'function') out.fn = n.fn && typeof n.fn === 'object' ? cloneData(n.fn) : null;
+    return out;
+  });
   fm.edges = () => edges.map(e => Object.assign({}, e));
   fm.selection = () => Array.from(selectedNodeIds);
   fm.canvases = () => canvases.map(c => {

@@ -673,6 +673,34 @@
   .io-row-in .io-port{ left:-6px; }
   .io-row-out .io-port{ right:-6px; }
 
+  /* function node (step 7, phase D2b): a block instance's box in teal */
+  .node.blockInstance.functionNode{ border-color:#0f766e; }
+  .node.blockInstance.functionNode.selected{ box-shadow:0 0 0 3px rgba(15,118,110,.25); }
+  .node.functionNode.fn-problem{ border-style:dashed; border-color:#b45309; }
+  .functionNode .fn-header{ background:#f0fdfa; border-bottom-color:#99f6e4; color:#115e59; padding:0 44px 0 24px; }
+  .functionNode .io-port{ border-color:#0f766e; }
+  .functionNode .fn-in{ right:45%; }
+  .tag-btn.fn-menu-btn{ top:2px; right:2px; left:auto; bottom:auto; width:18px; height:18px; }
+  .tag-btn.fn-update-btn{ top:2px; right:22px; left:auto; bottom:auto; width:18px; height:18px; color:#1d4ed8; border-color:#93c5fd; background:#eff6ff; }
+  .fn-warning{ position:absolute; left:8px; right:8px; height:20px; line-height:20px; font-size:10.5px; color:#b45309; cursor:help;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .fn-output{ position:absolute; right:8px; width:45%; height:40px; text-align:right; font-size:11px; }
+  .fn-output .fn-value{ display:block; font-size:11px; line-height:20px; padding-right:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .fn-output .fn-unit{ display:block; font-size:10px; line-height:16px; color:#64748b; padding-right:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .fn-output .io-port{ right:-6px; }
+  .function-picker{ min-width:340px; max-width:440px; }
+  .function-picker .picker-row.active{ background:#f0fdfa; border-color:#5eead4; }
+  .function-picker-list{ max-height:40vh; overflow:auto; }
+  .function-picker-version-row{ display:block; font-size:13px; margin:8px 0 6px; }
+  .modal-box .function-picker-detail{ font-size:12px; color:#475569; }
+  .function-node-menu{ min-width:280px; }
+  .function-uses{ min-width:380px; max-width:520px; }
+  .function-uses-list{ max-height:50vh; overflow:auto; margin:0 0 14px; }
+  .function-use-row{ display:block; font-size:13px; padding:6px 0; border-bottom:1px solid #f1f5f9; cursor:pointer; }
+  .function-use-row input{ margin-right:6px; }
+  .function-use-lost{ font-size:12px; color:#b45309; margin:3px 0 0 22px; }
+  .function-definition-view{ max-width:480px; }
+
   svg#edges g.edge.auto{ pointer-events:none; }
   svg#edges g.edge.auto path.line{ stroke:#8b5cf6; stroke-dasharray:6 4; }
 
@@ -935,6 +963,8 @@
     { id:'openTemplates',label:'Templates',            icon:'📚', category:'File', defaultShortcut:null, action:() => showTemplatesPicker() },
     { id:'openFunctions', label:'Functions',            icon:'ƒ', category:'File', defaultShortcut:null, action:() => showFunctionsManager() },
     { id:'importFunctions', label:'Import Functions…',  icon:'⇧', category:'File', defaultShortcut:null, action:() => pickFunctionsFile() },
+    { id:'insertFunction', label:'Insert Function…',    icon:'ƒ', category:'Insert', defaultShortcut:null, action:() => showFunctionPicker(null) },
+    { id:'updateFunction', label:'Update Function…',    icon:'⬆', category:'Insert', defaultShortcut:null, action:() => updateFunctionCommand() },
     { id:'removeDuplicateTemplates', label:'Remove Duplicate Templates…', icon:'🧹', category:'File', defaultShortcut:null, enabled:() => templateFamilies().length > 1, action:() => showRemoveDuplicatesDialog() },
     { id:'clearAllTemplates', label:'Clear All Templates', icon:'🗑', category:'File', defaultShortcut:null, enabled:() => TEMPLATES.length > 0, action:() => clearAllTemplates() },
     { id:'updateCanvasTemplate', label:'Update Canvas from Template…', icon:'⬆', category:'File', defaultShortcut:null, enabled:() => { const c = canvases.find(x => x.id === activeCanvasId); return !!(c && c.template); }, action:() => showUpdateCanvasDialog() },
@@ -1660,6 +1690,7 @@
       nodes = nodes.filter(n => !selectedNodeIds.has(n.id));
       edges = edges.filter(e => !selectedNodeIds.has(e.from) && !selectedNodeIds.has(e.to));
       selectedNodeIds.clear();
+      trimModelFunctions();
     } else {
       return;
     }
@@ -1668,7 +1699,7 @@
   }
 
   // ---------- clipboard: copy / cut / paste ----------
-  let clipboard = null;       // { nodes:[...], edges:[...], originCanvasId }
+  let clipboard = null;       // { nodes:[...], edges:[...], originCanvasId, functions:[...] }
   let clipboardPasteCount = 0;
 
   function copySelection(){ copyNodeIds(Array.from(selectedNodeIds)); }
@@ -1677,10 +1708,14 @@
   function copyNodeIds(ids){
     if(!ids || ids.length === 0) return;
     const idSet = new Set(ids);
+    const copied = ids.map(id => getNode(id)).filter(Boolean).map(n => cloneData(n));
     clipboard = {
-      nodes: ids.map(id => getNode(id)).filter(Boolean).map(n => Object.assign({}, n)),
+      nodes: copied,
       edges: edges.filter(e => !e.auto && idSet.has(e.from) && idSet.has(e.to)).map(e => Object.assign({}, e)),
-      originCanvasId: activeCanvasId
+      originCanvasId: activeCanvasId,
+      // The definitions its function nodes use (and what those call), so pasting into
+      // another document still calculates.
+      functions: functionsUsedBy([{ nodes: copied }], modelFunctions)
     };
     clipboardPasteCount = 0;
     updateClipboardButtons();
@@ -1691,11 +1726,14 @@
     pushHistory();
     clipboardPasteCount++;
     const offset = clipboardPasteCount * 24;
+    // The definitions join the model (and the library); a different version under a number
+    // the model already uses comes in renumbered, and the pasted nodes follow.
+    const remap = mergeModelFunctions(clipboard.functions);
     const idMap = {};
-    const newNodes = clipboard.nodes.map(n => {
+    const newNodes = remapFunctionNodes(clipboard.nodes, remap).map(n => {
       const newId = uid('n');
       idMap[n.id] = newId;
-      return Object.assign({}, n, { id: newId, x: n.x + offset, y: n.y + offset });
+      return Object.assign(cloneData(n), { id: newId, x: n.x + offset, y: n.y + offset });
     });
     newNodes.forEach(n => {
       if(n.type === 'alias' && n.sourceCanvasId === clipboard.originCanvasId && idMap[n.sourceNodeId] !== undefined){
@@ -2435,7 +2473,10 @@
 
   function performAddSystem(data, decisions){
     pushHistory();
-    mergeModelFunctions(data.functions);
+    // A different version under a number the model already uses comes in renumbered; its
+    // nodes follow.
+    const remap = mergeModelFunctions(data.functions);
+    data = Object.assign({}, data, { canvases: data.canvases.map(c => (c && Array.isArray(c.nodes)) ? Object.assign({}, c, { nodes: remapFunctionNodes(c.nodes, remap) }) : c) });
     const canvasIdMap = {};
     const nodeIdMap = {};
     const mergeTargets = {};
@@ -2728,9 +2769,9 @@
   // to the current canvas and when adding to a freshly created one. No history/validation.
   // keepIds (optional): Map of a module node id → the id it should keep (Update this canvas).
   function applyModuleDataDirect(data, keepIds){
-    mergeModelFunctions(data.functions);
+    const remap = mergeModelFunctions(data.functions);
     const idMap = {};
-    const newNodes = data.nodes.map(n => {
+    const newNodes = remapFunctionNodes(data.nodes, remap).map(n => {
       const newId = (keepIds && keepIds.get(n.id)) || uid('n');
       idMap[n.id] = newId;
       return Object.assign({}, n, { id: newId });
@@ -4195,9 +4236,11 @@
   // The IR of the model as it is now, compiled when first needed after a change (units on
   // the canvas read it); invalidateIR() is called wherever the model may change.
   let modelIR = null;
-  function invalidateIR(){ modelIR = null; }
-  // The function definitions the open model carries (11b-functions.js).
+  function invalidateIR(){ modelIR = null; modelFunctionCache = null; }
+  // The function definitions the open model carries (11b-functions.js), and the same compiled
+  // for drawing function nodes (their names and inputs: modelFunctionTable, 11d-function-nodes.js).
   let modelFunctions = [];
+  let modelFunctionCache = null;
   function currentIR(){
     if(!modelIR){
       syncActiveIntoRegistry();
@@ -4270,6 +4313,7 @@
       const isAlias = n.type === 'alias';
       const isBlockInstance = n.type === 'blockInstance';
       const isPeriodShift = n.type === 'periodShift';
+      const isFunction = n.type === 'function';
       if(!el){
         el = document.createElement('div');
         el.dataset.id = n.id;
@@ -4279,10 +4323,13 @@
       } else {
         existing.delete(n.id);
       }
-      el.className = 'node' + (isOperator ? ' operator' : '') + (isAlias ? ' alias' : '') + (isBlockInstance ? ' blockInstance' : '') + (isBlockInstance && n.vertical ? ' vertical' : '') + (isPeriodShift ? ' periodshift' : '') + (isOperator && WORD_OPS.includes(n.text) ? ' wordop' : '');
+      el.className = 'node' + (isOperator ? ' operator' : '') + (isAlias ? ' alias' : '') + (isBlockInstance || isFunction ? ' blockInstance' : '') + (isFunction ? ' functionNode' : '') + (isBlockInstance && n.vertical ? ' vertical' : '') + (isPeriodShift ? ' periodshift' : '') + (isOperator && WORD_OPS.includes(n.text) ? ' wordop' : '');
 
       if(isBlockInstance){
         renderBlockInstanceBody(el, n);
+      } else if(isFunction){
+        renderFunctionNodeBody(el, n); // 11d-function-nodes.js
+        el._built = null;
       } else if(el._built !== n.type){
         if(isOperator){
           el.innerHTML = '<div class="port n" data-side="n"></div><div class="port s" data-side="s"></div><div class="port e" data-side="e"></div><div class="port w" data-side="w"></div><button type="button" class="tag-btn socket-btn" title="Set socket">⚡</button><div class="socket-chip"></div><div class="opsym"></div><div class="op-result"></div>';
@@ -4302,8 +4349,8 @@
       el.style.height = n.h + 'px';
       el.classList.toggle('selected', selectedNodeIds.has(n.id));
 
-      if(isBlockInstance){
-        // content fully handled by renderBlockInstanceBody() above
+      if(isBlockInstance || isFunction){
+        // content fully handled by renderBlockInstanceBody() / renderFunctionNodeBody() above
       } else if(isOperator){
         const sym = el.querySelector('.opsym');
         if(sym) sym.textContent = n.text;
@@ -4622,15 +4669,16 @@
       const a = getNode(e.from), b = getNode(e.to);
       if(!a || !b) return;
       let {p1, p2, d} = edgePath(rectOf(a), rectOf(b));
-      if(e.fromPort != null){
-        const pp = getPortCanvasPos(e.from, e.fromPort, 'out');
+      if(e.fromPort != null || a.type === 'function'){
+        // A function node's one output has no port number: its arrows leave from its dot.
+        const pp = getPortCanvasPos(e.from, e.fromPort != null ? e.fromPort : 0, 'out');
         if(pp) p1 = pp;
       }
       if(e.toPort != null){
         const pp = getPortCanvasPos(e.to, e.toPort, 'in');
         if(pp) p2 = pp;
       }
-      if(e.fromPort != null || e.toPort != null) d = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
+      if(e.fromPort != null || e.toPort != null || a.type === 'function') d = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
       const isSel = selectedEdgeId === e.id;
       const isAuto = !!e.auto;
       const g = document.createElementNS(SVGNS,'g');
@@ -4679,7 +4727,9 @@
       if(ev.target.classList.contains('tag-btn')){ ev.stopPropagation(); ev.preventDefault(); return; }
       if(ev.target.classList.contains('io-port')){
         ev.stopPropagation(); ev.preventDefault();
-        if(ev.target.dataset.portDir === 'out'){
+        // A function node's one output has no port number (its arrows carry no fromPort).
+        if(ev.target.classList.contains('fn-out-port')) startConnection(id, ev);
+        else if(ev.target.dataset.portDir === 'out'){
           startConnection(id, ev, parseInt(ev.target.dataset.portIndex, 10));
         }
         return;
@@ -4732,6 +4782,7 @@
       }
       if(ev.target.classList.contains('io-btn')){ showRolePicker(n); }
       if(ev.target.classList.contains('block-relink')){ showBlockPicker(n); }
+      if(ev.target.classList.contains('fn-menu-btn') || ev.target.classList.contains('fn-update-btn')){ showFunctionNodeMenu(n); }
       if(ev.target.classList.contains('vrows-btn')){ showVerticalInstancesViewer(n); }
       if(ev.target.classList.contains('props-btn')){ showPropertiesEditor(n); }
       if(ev.target.classList.contains('period-btn')){ showLiteralPeriodsPicker(n); }
@@ -4758,6 +4809,7 @@
         else showAliasPicker(n);
       }
       else if(n.type === 'blockInstance') showBlockPicker(n);
+      else if(n.type === 'function'){ if(!ev.target.classList.contains('tag-btn')) showFunctionDefinition(n); }
       else startEdit(n.id);
     });
   }
@@ -8330,16 +8382,79 @@
     invalidateIR();
   }
   // Definitions of content added to the open model (a module, a system added to it, a
-  // template): each family and version the model doesn't carry yet joins it. One it already
-  // carries stays as it is — the model's nodes already use it.
-  function mergeModelFunctions(list){
+  // template, pasted nodes): each version the model doesn't carry yet joins it, and the
+  // library (addMissingFunctions). Returns remapFunctionRef — see addFunctionsToModel.
+  function mergeModelFunctions(list){ return addFunctionsToModel(list, 'renumber'); }
+
+  // Adds definitions to the model's own (decided September 2026, D2b):
+  //  - a version the model already carries (the same family and versionId; without a
+  //    versionId, the same family, number and text) is not added again;
+  //  - a version whose number is free in the model's copy of its family is added as it is;
+  //  - a different version under a number the model already uses: onClash 'refuse' fails
+  //    (Insert Function, which points to Update; 'check' only checks, adding nothing);
+  //    'renumber' adds it under the family's next
+  //    free number in the model, keeping its versionId, with a note (the library's own import
+  //    rule). Calls among the added definitions follow the new numbers.
+  // Returns remap(ref): the { family, version, versionId } a node's `fn` (or a call) means in
+  // the model now, or null when its number didn't change.
+  function addFunctionsToModel(list, onClash, what){
     const defs = cleanFunctionDefinitions(list);
-    if(!defs.length) return;
+    const moved = []; // { family, versionId, from, to }
+    const remap = (ref) => {
+      const r = cleanFunctionRef(ref);
+      const m = r && moved.find(x => x.family === r.family && x.from === r.version && (!r.versionId || !x.versionId || x.versionId === r.versionId));
+      return (m && m.to !== m.from) ? { family: r.family, version: m.to, versionId: r.versionId } : null;
+    };
+    if(!defs.length) return remap;
+    const added = [], clashes = [];
+    const pool = () => modelFunctions.concat(added);
     defs.forEach(d => {
-      if(!modelFunctions.some(f => f.family === d.family && f.version === d.version)) modelFunctions.push(d);
+      const same = d.versionId && pool().find(m => m.family === d.family && m.versionId === d.versionId);
+      if(same){ moved.push({ family: d.family, versionId: d.versionId, from: d.version, to: same.version }); return; }
+      const there = pool().find(m => m.family === d.family && m.version === d.version);
+      if(!there){ added.push(d); return; }
+      if(!there.versionId && !d.versionId && there.text === d.text) return;
+      if(onClash === 'refuse' || onClash === 'check'){
+        const name = functionLabel(d);
+        fail(`This model already uses a different version ${d.version} of ${name}` + (what && what !== d ? ` (which ${functionLabel(what)} calls)` : '')
+          + `. To use this one, first update the model's ${name} nodes to another version (⋯ → Update, or Update Function…).`);
+      }
+      clashes.push(d);
     });
-    addMissingFunctions(defs);
-    invalidateIR();
+    if(onClash === 'check') return remap;
+    clashes.forEach(d => {
+      const same = d.versionId && pool().find(m => m.family === d.family && m.versionId === d.versionId);
+      if(same){ moved.push({ family: d.family, versionId: d.versionId, from: d.version, to: same.version }); return; }
+      const to = pool().reduce((mx, m) => (m.family === d.family ? Math.max(mx, m.version) : mx), 0) + 1;
+      moved.push({ family: d.family, versionId: d.versionId, from: d.version, to });
+      d.note = (`Was v${d.version} where it came from; this model already had a different v${d.version}` + (d.note ? ': ' + d.note : '')).slice(0, FUNCTION_LIMITS.note);
+      d.version = to;
+      added.push(d);
+    });
+    added.forEach(d => d.calls.forEach(c => { const r = remap(c); if(r) c.version = r.version; }));
+    if(added.length){
+      modelFunctions = modelFunctions.concat(added);
+      addMissingFunctions(added);
+      invalidateIR();
+    }
+    return remap;
+  }
+  // Points function nodes at the numbers `remap` (addFunctionsToModel) gave their versions.
+  // Returns the list with changed nodes copied (the originals are left alone).
+  function remapFunctionNodes(list, remap){
+    return list.map(n => {
+      if(!n || n.type !== 'function' || !n.fn) return n;
+      const r = remap(n.fn);
+      return r ? Object.assign({}, n, { fn: Object.assign({}, n.fn, { version: r.version }) }) : n;
+    });
+  }
+  // Drops the definitions nothing in the model uses any more (a definition another one calls
+  // stays). Called where nodes or canvases go, in the same undo step (decided in D2b).
+  function trimModelFunctions(){
+    if(!modelFunctions.length) return;
+    syncActiveIntoRegistry();
+    const keep = functionsUsedBy(canvases, modelFunctions);
+    if(keep.length !== modelFunctions.length){ modelFunctions = keep; invalidateIR(); }
   }
   // What a file written from `canvasList` carries: the definitions its function nodes use,
   // and every function those call (the model's own first, then the library's).
@@ -8903,7 +9018,8 @@
     input.click();
   }
 
-  function showFunctionsManager(){
+  // `initial`: the library version to show first (double-clicking a function node).
+  function showFunctionsManager(initial){
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
@@ -8950,9 +9066,10 @@
     detail.className = 'template-detail function-detail';
     layout.appendChild(detail);
 
-    let selected = functionFamilies()[0] || null;
+    let selected = (initial && FUNCTIONS.includes(initial)) ? initial : (functionFamilies()[0] || null);
     let shown = [];
     const expanded = new Set();
+    if(selected && !isLatestFunction(selected)) expanded.add(selected.family);
     const reselect = (d) => { selected = d || (selected && FUNCTIONS.includes(selected) ? selected : (selected && latestFunctionOf(selected.family))) || functionFamilies()[0] || null; renderList(); renderDetail(); };
 
     newBtn.addEventListener('click', () => showFunctionEditor(null, reselect));
@@ -9011,7 +9128,19 @@
         if(guarded(() => fm.deleteFunction({ function: functionRefText(d), whole: isLatestFunction(d) })) === undefined) return;
         reselect(latestFunctionOf(family));
       }));
-      actionsRow.append(versionBtn, infoBtn, delBtn);
+      const insertBtn = document.createElement('button');
+      insertBtn.className = 'function-insert';
+      insertBtn.textContent = `ƒ Insert v${d.version}`;
+      insertBtn.title = 'Adds a node for this version to the canvas';
+      insertBtn.disabled = !parsed.ok;
+      insertBtn.addEventListener('click', () => {
+        const {x, y} = spawnPoint();
+        const id = guarded(() => fm.insertFunction({ function: functionRefText(d), x, y }));
+        if(id === undefined) return;
+        close();
+        selectNodesOnly([id]);
+      });
+      actionsRow.append(insertBtn, versionBtn, infoBtn, delBtn);
       detail.appendChild(actionsRow);
     }
 
@@ -9148,6 +9277,554 @@
         onDone();
       }
     });
+  }
+  // ---------- function nodes on the canvas (step 7, phase D2b) ----------
+  // A function node is { type: 'function', fn: { family, version, versionId, name, skipped? } }:
+  // one call to one version of a function the model carries (modelFunctions). It is drawn
+  // like a block instance — "ƒ Name vN", one labelled input port per input in the
+  // definition's order, one output — and each arrow into it carries `toPort` (from 0).
+  // Its inputs come from the model's own definition, never from the library; the library
+  // only says whether a newer version exists (⬆). Everything shown from a definition or from
+  // `fn` (names, formulas, notes) is text from a file: it goes in with textContent only.
+
+  // The model's definitions, compiled once per change of the model (for names and inputs).
+  function modelFunctionTable(){
+    if(!modelFunctionCache || modelFunctionCache.list !== modelFunctions || modelFunctionCache.length !== modelFunctions.length){
+      modelFunctionCache = { list: modelFunctions, length: modelFunctions.length, table: compileFunctions(modelFunctions) };
+    }
+    return modelFunctionCache.table;
+  }
+
+  // A function node's name for showing: its definition's, else the name its `fn` carries
+  // (from a file: only ever text, and cut to the longest a function name can be).
+  function functionNodeName(n, compiled){
+    const own = compiled && typeof compiled.name === 'string' ? compiled.name : '';
+    const carried = n && n.fn && typeof n.fn.name === 'string' ? n.fn.name.trim() : '';
+    return (own || carried).slice(0, FUNCTION_LIMITS.name) || '(unnamed)';
+  }
+
+  // Everything about a function node the canvas and the menus need:
+  //  ref       its { family, version, versionId }, or null when `fn` is malformed
+  //  compiled  the model's definition it calls (compiled), or null when the model lacks it
+  //  problem   'missing' | 'unreadable' | null;  params  its inputs (null with a problem)
+  //  lib       the library's entry for this exact version (by versionId first), or null
+  //  newer     the library's latest version when it is newer and not declined ("Not now")
+  //  repair    the library's entry when the model lacks the definition but the library has
+  //            exactly this version (same versionId): "Add the definition from your library"
+  function functionNodeState(n){
+    const ref = cleanFunctionRef(n && n.fn);
+    const compiled = ref ? modelFunctionTable().resolve(ref) : null;
+    const problem = !compiled ? 'missing' : (compiled.parseError ? 'unreadable' : null);
+    const params = problem ? null : compiled.params;
+    const lib = ref ? libraryFunctionFor(ref) : null;
+    const latest = lib ? latestFunctionOf(lib.family) : null;
+    const skipped = n && n.fn && Number.isInteger(n.fn.skipped) ? n.fn.skipped : 0;
+    const newer = (lib && latest && latest !== lib && latest.version > lib.version && latest.version > skipped) ? latest : null;
+    const repair = (problem === 'missing' && ref && ref.versionId && lib && lib.versionId === ref.versionId) ? lib : null;
+    return { ref, compiled, problem, params, lib, latest, newer, repair, name: functionNodeName(n, compiled) };
+  }
+  function functionNodeTitle(n, st){
+    st = st || functionNodeState(n);
+    return 'ƒ ' + st.name + ' v' + (st.ref ? st.ref.version : '?');
+  }
+  function functionProblemText(st){
+    if(st.problem === 'unreadable') return "This function's formula can't be read.";
+    if(st.problem === 'missing') return "This function's definition isn't in the model." + (st.repair ? ' Your library has this exact version: ⋯ → Add the definition from your library.' : '');
+    return '';
+  }
+
+  // The arrows of a canvas (the active one's live list, else the saved one).
+  function edgesOfCanvas(c){ return c.id === activeCanvasId ? edges : (Array.isArray(c.edges) ? c.edges : []); }
+  function setEdgesOfCanvas(c, list){ if(c.id === activeCanvasId) edges = list; c.edges = list; }
+
+  // The input ports drawn on a node: the definition's inputs, or — without a readable
+  // definition — one numbered port for each port its arrows use, so they still land somewhere.
+  function functionNodePorts(n, st){
+    if(st.params) return st.params.slice();
+    let count = 0;
+    edges.forEach(e => { if(e.to === n.id && Number.isInteger(e.toPort) && e.toPort >= 0 && e.toPort < FUNCTION_LIMITS.inputs) count = Math.max(count, e.toPort + 1); });
+    const out = [];
+    for(let i = 0; i < count; i++) out.push('#' + (i + 1));
+    return out;
+  }
+  // Size of a function node with `inputs` input rows (and a warning row).
+  function functionNodeHeight(inputs, warn){ return 26 + (warn ? 20 : 0) + Math.max(inputs, 2) * 20 + 8; }
+
+  function renderFunctionNodeBody(el, n){
+    const st = functionNodeState(n);
+    const ports = functionNodePorts(n, st);
+    const warn = !!st.problem;
+    const rowH = 20, headerH = 26;
+    n.h = functionNodeHeight(ports.length, warn);
+    if(!n.w || n.w < 150) n.w = 190;
+    el.innerHTML = '';
+    el.classList.toggle('fn-problem', warn);
+
+    const header = document.createElement('div');
+    header.className = 'block-header fn-header';
+    header.textContent = functionNodeTitle(n, st);
+    el.appendChild(header);
+    el.title = functionNodeTitle(n, st);
+
+    if(st.newer){
+      const up = document.createElement('button');
+      up.type = 'button';
+      up.className = 'tag-btn fn-update-btn';
+      up.textContent = '⬆';
+      up.title = `Version ${st.newer.version} of ${st.name} is in your library — click to update`;
+      el.appendChild(up);
+    }
+    const menuBtn = document.createElement('button');
+    menuBtn.type = 'button';
+    menuBtn.className = 'tag-btn fn-menu-btn';
+    menuBtn.textContent = '⋯';
+    menuBtn.title = 'Update, change function or version, show the definition';
+    el.appendChild(menuBtn);
+
+    let top = headerH;
+    if(warn){
+      const w = document.createElement('div');
+      w.className = 'fn-warning';
+      w.style.top = top + 'px';
+      w.textContent = st.problem === 'unreadable' ? "⚠ Formula can't be read" : '⚠ Definition missing';
+      w.title = functionProblemText(st);
+      el.appendChild(w);
+      top += rowH;
+    }
+
+    ports.forEach((name, i) => {
+      const row = document.createElement('div');
+      row.className = 'io-row io-row-in fn-in';
+      row.style.top = (top + i * rowH) + 'px';
+      const dot = document.createElement('div');
+      dot.className = 'io-port';
+      dot.dataset.portIndex = i;
+      dot.dataset.portDir = 'in';
+      const label = document.createElement('span');
+      label.className = 'io-label';
+      label.textContent = name;
+      label.title = name;
+      row.append(dot, label);
+      el.appendChild(row);
+    });
+
+    // The output: its value (or "?" with the reason on hover) and its unit, then the dot.
+    const out = document.createElement('div');
+    out.className = 'fn-output';
+    out.style.top = top + 'px';
+    const val = document.createElement('span');
+    val.className = 'io-value fn-value';
+    const v = computedValues[n.id];
+    if(v !== undefined && v !== null){ val.textContent = '= ' + formatNum(v); val.classList.add('computed'); }
+    else if(computeErrors[n.id]){ val.textContent = '?'; val.classList.add('error'); val.title = errorTitle(computeErrors[n.id]); }
+    else if(warn){ val.textContent = '?'; val.classList.add('error'); val.title = functionProblemText(st); }
+    const unit = document.createElement('span');
+    unit.className = 'fn-unit';
+    const u = st.problem ? null : nodeUOM(activeCanvasId, n.id);
+    unit.textContent = u ? formatUOM(u) : '';
+    const dot = document.createElement('div');
+    dot.className = 'io-port fn-out-port';
+    dot.dataset.portIndex = 0;
+    dot.dataset.portDir = 'out';
+    out.append(val, unit, dot);
+    el.appendChild(out);
+  }
+
+  // A function node's input port from an fm reference: its input name (capitals don't
+  // matter) or its number counted from 1, like a block's ports. Empty: its only input.
+  function resolveFunctionPort(n, ref){
+    const st = functionNodeState(n);
+    if(!st.params) fail(`ƒ ${st.name} can't take arrows: ` + (st.problem === 'unreadable' ? "its formula can't be read." : "its definition isn't in the model."));
+    const ps = st.params;
+    if(!ps.length) fail(`ƒ ${st.name} has no inputs.`);
+    const s = ref == null ? '' : String(ref).trim();
+    if(s === ''){
+      if(ps.length === 1) return 0;
+      fail(`ƒ ${st.name} has ${ps.length} inputs — say which one (${ps.join(', ')}).`);
+    }
+    if(/^\d+$/.test(s)){
+      const i = Number(s) - 1;
+      if(i < 0 || i >= ps.length) fail(`ƒ ${st.name} has no input #${s} (it has ${ps.length}).`);
+      return i;
+    }
+    const i = ps.findIndex(p => p.toLowerCase() === s.toLowerCase());
+    if(i < 0) fail(`ƒ ${st.name} has no input called "${s}" (its inputs: ${ps.join(', ')}).`);
+    return i;
+  }
+  // The name a recorded macro uses for port `i` of a function node ('' when it has none).
+  function functionPortName(n, i){
+    const st = functionNodeState(n);
+    return st.params && st.params[i] != null ? st.params[i] : '';
+  }
+  // Where an arrow dropped on a function node's body goes: its first input with no arrow.
+  function firstFreeFunctionPort(n){
+    const st = functionNodeState(n);
+    if(!st.params) return { error: `ƒ ${st.name} can't take arrows: ` + (st.problem === 'unreadable' ? "its formula can't be read." : "its definition isn't in the model.") };
+    if(!st.params.length) return { error: `ƒ ${st.name} has no inputs.` };
+    const i = st.params.findIndex((p, k) => !edges.some(e => e.to === n.id && e.toPort === k));
+    if(i < 0) return { error: `Every input of ƒ ${st.name} already has an arrow — drop the arrow on the input you want to replace.` };
+    return { index: i };
+  }
+
+  // ---------- updating and changing a node ----------
+  // What moving node `n` (on canvas `c`) to library version `target` does to its arrows:
+  // each is matched to the new version's inputs by its input's name (capitals don't matter);
+  // an arrow into an input the new version doesn't have is dropped. Without a readable
+  // definition the old inputs' names are unknown, so arrows keep their port number while the
+  // new version has that many inputs.
+  function functionNodeUpdatePlan(c, n, target){
+    const st = functionNodeState(n);
+    const parsed = parseFunctionText(target.text);
+    if(!parsed.ok) fail(`${functionLabel(target)} v${target.version} can't be read, so nothing can use it: ${parsed.error.message}`);
+    const newParams = parsed.params;
+    const pool = nodesIn(c);
+    const moves = [], dropped = [];
+    edgesOfCanvas(c).forEach(e => {
+      if(e.to !== n.id) return;
+      const p = e.toPort;
+      let to = -1, input = '(no input)';
+      if(Number.isInteger(p)){
+        if(st.params){
+          input = st.params[p] != null ? st.params[p] : '#' + (p + 1);
+          if(st.params[p] != null) to = newParams.findIndex(x => x.toLowerCase() === st.params[p].toLowerCase());
+        } else {
+          input = '#' + (p + 1);
+          if(p >= 0 && p < newParams.length) to = p;
+        }
+      }
+      const from = pool.find(x => x.id === e.from);
+      if(to < 0) dropped.push({ edge: e, input, from: from ? describeNode(from) : '#' + e.from });
+      else moves.push({ edge: e, to });
+    });
+    return { canvas: c, node: n, target, moves, dropped, params: newParams };
+  }
+  // Carries out plans (after pushHistory): the target versions (and what they call) join the
+  // model — a different version under a taken number comes in renumbered — then each node
+  // points at its version, its arrows move to their inputs, and the dropped ones go.
+  // Returns the dropped arrows as { node, canvas, input, from }.
+  function applyFunctionNodeUpdates(plans){
+    const out = [];
+    const targets = [];
+    plans.forEach(p => functionWithCallees(p.target).forEach(x => { if(!targets.includes(x)) targets.push(x); }));
+    const remap = addFunctionsToModel(targets, 'renumber');
+    plans.forEach(p => {
+      const { canvas: c, node: n, target } = p;
+      const drop = new Set(p.dropped.map(d => d.edge.id));
+      p.moves.forEach(m => { m.edge.toPort = m.to; });
+      if(drop.size) setEdgesOfCanvas(c, edgesOfCanvas(c).filter(e => !drop.has(e.id)));
+      const r = remap(target);
+      n.fn = { family: target.family, version: r ? r.version : target.version, versionId: target.versionId, name: functionNameOf(target) };
+      n.h = functionNodeHeight(p.params.length, false);
+      p.dropped.forEach(d => out.push({ node: n.id, canvas: c.name, input: d.input, from: d.from }));
+    });
+    trimModelFunctions();
+    clearComputed();
+    evaluateAll();
+    return out;
+  }
+  function droppedArrowsText(list){
+    return list.map(d => `• the arrow from ${d.from} into “${d.input}”`).join('\n');
+  }
+
+  // The function nodes of the model using `family`, with what "Update every use" does to
+  // each for library version `target`: nodes already on the target or a newer version are
+  // left out; the others are ticked unless their version isn't in the library (can't tell
+  // if it is older) or "Not now" declined the target or a newer one.
+  function functionUsesPlan(family, target){
+    const out = [];
+    functionNodesUsing(family).forEach(({ canvas: c, node: n }) => {
+      const st = functionNodeState(n);
+      if(st.lib && (st.lib === target || st.lib.version >= target.version)) return;
+      const skipped = Number.isInteger(n.fn.skipped) && n.fn.skipped >= target.version;
+      const plan = functionNodeUpdatePlan(c, n, target);
+      out.push({ canvas: c, node: n, state: st, plan, tick: !!st.lib && !skipped,
+        why: !st.lib ? 'this version isn’t in your library' : (skipped ? '“Not now”' : '') });
+    });
+    return out;
+  }
+
+  // ---------- the windows ----------
+  function modalShell(className){
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const box = document.createElement('div');
+    box.className = 'modal-box ' + className;
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    function close(){ overlay.remove(); document.removeEventListener('keydown', onKey, true); }
+    function onKey(ev){
+      const overlays = document.querySelectorAll('.modal-overlay');
+      if(overlays[overlays.length - 1] !== overlay) return;
+      if(ev.key === 'Escape'){ ev.preventDefault(); ev.stopPropagation(); close(); }
+    }
+    document.addEventListener('keydown', onKey, true);
+    overlay.addEventListener('mousedown', (ev) => { if(ev.target === overlay) close(); });
+    const p = (text, cls) => { const el = document.createElement('p'); if(cls) el.className = cls; el.textContent = text; box.appendChild(el); return el; };
+    const actions = () => { const a = document.createElement('div'); a.className = 'modal-actions'; box.appendChild(a); return a; };
+    const button = (parent, label, cls, run) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = label; if(cls) b.className = cls; b.addEventListener('click', run); parent.appendChild(b); return b; };
+    return { overlay, box, close, p, actions, button };
+  }
+
+  // Insert Function… (node null), or "Change function or version…" for node `node`: the
+  // library's families, searchable, with a version to pick (the latest by default).
+  function showFunctionPicker(node){
+    const families = functionFamilies();
+    if(!families.length){
+      showMessage('Your function library is empty. Create a function first (File → Functions → + New Function…), or import some.');
+      return;
+    }
+    const ui = modalShell('function-picker');
+    const nodeSt = node ? functionNodeState(node) : null;
+    ui.p(node ? `Change ${functionNodeTitle(node, nodeSt)} to another function or version` : 'Insert Function');
+    const search = document.createElement('input');
+    search.type = 'search';
+    search.className = 'template-search function-picker-search';
+    search.placeholder = 'Search functions…';
+    search.setAttribute('autocomplete', 'off');
+    search.spellcheck = false;
+    ui.box.appendChild(search);
+    const list = document.createElement('div');
+    list.className = 'picker-list function-picker-list';
+    ui.box.appendChild(list);
+    const verRow = document.createElement('label');
+    verRow.className = 'function-picker-version-row';
+    verRow.textContent = 'Version ';
+    const verSel = document.createElement('select');
+    verSel.className = 'function-picker-version';
+    verRow.appendChild(verSel);
+    ui.box.appendChild(verRow);
+    const detail = ui.p('', 'function-picker-detail');
+    const acts = ui.actions();
+    ui.button(acts, 'Cancel', '', ui.close);
+    const okBtn = ui.button(acts, node ? 'Change' : 'Insert', 'primary function-picker-ok', () => choose());
+
+    let selected = (nodeSt && nodeSt.lib) ? latestFunctionOf(nodeSt.lib.family) : families[0];
+    let version = (nodeSt && nodeSt.lib) ? nodeSt.lib : null;
+    let shown = [];
+    function renderVersions(){
+      verSel.innerHTML = '';
+      if(!selected) return;
+      const all = functionFamilyVersions(selected.family);
+      if(!version || version.family !== selected.family) version = all[0];
+      all.forEach((v, i) => {
+        const o = document.createElement('option');
+        o.value = String(i);
+        o.textContent = 'v' + v.version + (i === 0 ? ' (latest)' : '') + (v.note ? ' — ' + v.note.slice(0, 60) : '');
+        if(v === version) o.selected = true;
+        verSel.appendChild(o);
+      });
+      const parsed = parseFunctionText(version.text);
+      detail.textContent = (parsed.ok ? (parsed.params.length ? 'Inputs: ' + parsed.params.join(', ') : 'No inputs') : "⚠ This formula can't be read.")
+        + (version.description ? ' — ' + version.description : '');
+      okBtn.disabled = !parsed.ok;
+    }
+    function renderList(){
+      list.innerHTML = '';
+      shown = [];
+      const q = search.value.trim();
+      const hits = !q ? families.map(d => ({ d, idx: null })) : families.map(d => {
+        const onName = fuzzyMatch(q, functionLabel(d));
+        if(onName) return { d, score: onName.score + 500, idx: onName.idx };
+        const other = fuzzyMatch(q, d.description || '');
+        return other ? { d, score: other.score, idx: [] } : null;
+      }).filter(Boolean).sort((a, b) => b.score - a.score);
+      if(!hits.length){ const none = document.createElement('p'); none.className = 'template-desc'; none.textContent = 'No matching functions'; list.appendChild(none); }
+      hits.forEach(({ d, idx }) => {
+        const row = document.createElement('button');
+        row.type = 'button';
+        row.className = 'picker-row function-picker-row' + (selected === d ? ' active' : '');
+        const main = document.createElement('span');
+        const name = functionLabel(d);
+        main.appendChild(idx && idx.length ? highlightLabel(name, idx) : document.createTextNode(name));
+        const sub = document.createElement('span');
+        sub.className = 'sub';
+        const bits = ['v' + d.version];
+        if(functionFamiliesNamed(name).length > 1) bits.push('family ' + d.family);
+        if(d.description) bits.push(d.description.slice(0, 80));
+        sub.textContent = bits.join(' · ');
+        row.append(main, sub);
+        row.addEventListener('click', () => { selected = d; version = null; renderList(); renderVersions(); });
+        row.addEventListener('dblclick', () => { selected = d; version = null; renderVersions(); choose(); });
+        list.appendChild(row);
+        shown.push(d);
+      });
+    }
+    verSel.addEventListener('change', () => { version = functionFamilyVersions(selected.family)[Number(verSel.value)] || null; renderVersions(); });
+    search.addEventListener('input', () => { renderList(); if(shown.length && !shown.includes(selected)){ selected = shown[0]; version = null; renderList(); } renderVersions(); });
+    search.addEventListener('keydown', (ev) => {
+      if(ev.key === 'Enter'){ ev.preventDefault(); choose(); }
+      if(ev.key === 'ArrowDown' || ev.key === 'ArrowUp'){
+        ev.preventDefault();
+        if(!shown.length) return;
+        const i = shown.indexOf(selected);
+        selected = shown[Math.max(0, Math.min(shown.length - 1, i < 0 ? 0 : i + (ev.key === 'ArrowDown' ? 1 : -1)))];
+        version = null; renderList(); renderVersions();
+      }
+    });
+    function choose(){
+      if(!selected || !version || okBtn.disabled) return;
+      const ref = functionRefText(version);
+      if(!node){
+        ui.close();
+        const {x, y} = spawnPoint();
+        const id = guarded(() => fm.insertFunction({ function: ref, x, y }));
+        if(id) selectNodesOnly([id]);
+        return;
+      }
+      const c = canvasOfNode(node);
+      const plan = guarded(() => functionNodeUpdatePlan(c, node, version));
+      if(!plan) return;
+      ui.close();
+      const go = () => { const r = guarded(() => fm.changeFunction({ node: '#' + node.id, function: ref })); if(r && r.dropped.length) toast(`Dropped ${r.dropped.length} arrow${r.dropped.length === 1 ? '' : 's'} (undo puts ${r.dropped.length === 1 ? 'it' : 'them'} back).`, 3500); };
+      if(plan.dropped.length) showConfirm(`Changing to ${functionLabel(version)} v${version.version} drops ${plan.dropped.length === 1 ? 'this arrow' : 'these arrows'} (the new version has no input of that name):\n\n${droppedArrowsText(plan.dropped)}`, go);
+      else go();
+    }
+    renderList();
+    renderVersions();
+    search.focus();
+  }
+
+  // The ⋯ menu (and the ⬆ badge) of a function node.
+  function showFunctionNodeMenu(n){
+    const st = functionNodeState(n);
+    const ui = modalShell('function-node-menu');
+    ui.p(functionNodeTitle(n, st));
+    if(st.problem) ui.p('⚠ ' + functionProblemText(st), 'function-node-problem');
+    else if(st.newer) ui.p(`Version ${st.newer.version} is in your library.` + (st.newer.note ? ' — ' + st.newer.note : ''), 'function-node-newer');
+    else if(!st.lib) ui.p('This version isn’t in your function library, so no updates are offered.', 'template-desc');
+    const list = document.createElement('div');
+    list.className = 'picker-list';
+    ui.box.appendChild(list);
+    const item = (label, cls, run) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'picker-row ' + cls;
+      b.textContent = label;
+      b.addEventListener('click', () => { ui.close(); run(); });
+      list.appendChild(b);
+    };
+    if(st.newer){
+      item(`⬆ Update to v${st.newer.version}`, 'fn-menu-update', () => updateOneFunctionNode(n));
+      item('Not now', 'fn-menu-skip', () => guarded(() => fm.skipFunctionUpdate({ node: '#' + n.id })));
+    }
+    if(st.latest) item('Update every use…', 'fn-menu-update-all', () => showUpdateUsesWindow(st.latest.family));
+    if(st.repair) item('Add the definition from your library', 'fn-menu-repair', () => guarded(() => fm.addFunctionDefinition({ node: '#' + n.id })));
+    item('Change function or version…', 'fn-menu-change', () => showFunctionPicker(n));
+    item('Show definition', 'fn-menu-show', () => showFunctionDefinition(n));
+    const acts = ui.actions();
+    ui.button(acts, 'Cancel', '', ui.close);
+  }
+
+  // "Update" for one node: asks first only when arrows would be dropped (decided in D2b).
+  function updateOneFunctionNode(n){
+    const st = functionNodeState(n);
+    if(!st.newer) return;
+    const plan = guarded(() => functionNodeUpdatePlan(canvasOfNode(n), n, st.newer));
+    if(!plan) return;
+    const go = () => guarded(() => fm.updateFunctionNode({ node: '#' + n.id }));
+    if(plan.dropped.length) showConfirm(`Version ${st.newer.version} of ${st.name} has no input for ${plan.dropped.length === 1 ? 'this arrow' : 'these arrows'}, so updating drops ${plan.dropped.length === 1 ? 'it' : 'them'}:\n\n${droppedArrowsText(plan.dropped)}\n\nUpdate anyway? (Undo puts ${plan.dropped.length === 1 ? 'it' : 'them'} back.)`, go);
+    else go();
+  }
+
+  // "Update every use…": every node of the family, ticked as functionUsesPlan says, with the
+  // arrows each would lose; one undo step.
+  function showUpdateUsesWindow(family){
+    const target = latestFunctionOf(family);
+    if(!target){ showMessage('That function isn’t in your library any more.'); return; }
+    const rows = guarded(() => functionUsesPlan(family, target));
+    if(!rows) return;
+    const name = functionLabel(target);
+    if(!rows.length){ showMessage(`Every ${name} node in this model is already on version ${target.version} (or newer).`); return; }
+    const ui = modalShell('function-uses');
+    ui.p(`Update ${name} to version ${target.version}` + (target.note ? ' — ' + target.note : ''));
+    const list = document.createElement('div');
+    list.className = 'function-uses-list';
+    ui.box.appendChild(list);
+    const ticks = rows.map(r => {
+      const row = document.createElement('label');
+      row.className = 'function-use-row';
+      row.dataset.node = r.node.id;
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = r.tick;
+      const text = document.createElement('span');
+      text.textContent = `${r.canvas.name} — ${functionNodeTitle(r.node, r.state)}` + (r.why ? ` (${r.why})` : '');
+      row.append(cb, text);
+      if(r.plan.dropped.length){
+        const lost = document.createElement('div');
+        lost.className = 'function-use-lost';
+        lost.textContent = 'Loses ' + r.plan.dropped.map(d => `the arrow from ${d.from} into “${d.input}”`).join('; ');
+        row.appendChild(lost);
+      }
+      list.appendChild(row);
+      return cb;
+    });
+    const acts = ui.actions();
+    ui.button(acts, 'Cancel', '', ui.close);
+    const ok = ui.button(acts, 'Update', 'primary function-uses-update', () => {
+      const chosen = rows.filter((r, i) => ticks[i].checked);
+      if(!chosen.length) return;
+      ui.close();
+      const same = rows.every((r, i) => ticks[i].checked === r.tick);
+      const args = { function: functionRefText(target) };
+      if(!same) args.nodes = chosen.map(r => r.canvas.id + '::#' + r.node.id);
+      const res = guarded(() => fm.updateFunctionUses(args));
+      if(res) toast(`Updated ${res.updated} node${res.updated === 1 ? '' : 's'}` + (res.dropped.length ? `; dropped ${res.dropped.length} arrow${res.dropped.length === 1 ? '' : 's'}` : '') + '.', 3500);
+    });
+    const sync = () => { ok.disabled = !ticks.some(t => t.checked); };
+    ticks.forEach(t => t.addEventListener('change', sync));
+    sync();
+  }
+
+  // The command Update Function…: the selected function node's family, or a choice among the
+  // model's functions that have a newer version in the library.
+  function updateFunctionCommand(){
+    const sel = Array.from(selectedNodeIds).map(getNode).filter(n => n && n.type === 'function');
+    const selSt = sel.length === 1 ? functionNodeState(sel[0]) : null;
+    if(selSt && selSt.latest){ showUpdateUsesWindow(selSt.latest.family); return; }
+    syncActiveIntoRegistry();
+    const families = [];
+    canvases.forEach(c => (c.nodes || []).forEach(n => {
+      if(n.type !== 'function') return;
+      const st = functionNodeState(n);
+      if(st.lib && st.latest && st.lib !== st.latest && !families.includes(st.latest)) families.push(st.latest);
+    }));
+    if(!families.length){ showMessage('Every function node in this model is on the latest version in your library.'); return; }
+    if(families.length === 1){ showUpdateUsesWindow(families[0].family); return; }
+    const ui = modalShell('function-update-choose');
+    ui.p('Which function do you want to update?');
+    const list = document.createElement('div');
+    list.className = 'picker-list';
+    ui.box.appendChild(list);
+    families.forEach(f => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'picker-row';
+      b.textContent = `${functionLabel(f)} → v${f.version}`;
+      b.addEventListener('click', () => { ui.close(); showUpdateUsesWindow(f.family); });
+      list.appendChild(b);
+    });
+    ui.button(ui.actions(), 'Cancel', '', ui.close);
+  }
+
+  // Double-click: the definition — in the Functions manager when the library has this exact
+  // version, else the model's own copy (read only).
+  function showFunctionDefinition(n){
+    const st = functionNodeState(n);
+    if(st.lib && (!st.ref.versionId || st.lib.versionId === st.ref.versionId)){ showFunctionsManager(st.lib); return; }
+    if(!st.compiled){ showMessage(functionNodeTitle(n, st) + ': ' + functionProblemText(st)); return; }
+    const d = st.compiled.def;
+    const ui = modalShell('function-definition-view');
+    ui.p(functionNodeTitle(n, st) + ' — the model’s own copy (not in your library)');
+    const pre = document.createElement('pre');
+    pre.className = 'function-detail-text';
+    pre.textContent = d.text;
+    ui.box.appendChild(pre);
+    if(st.params) ui.p(st.params.length ? 'Inputs: ' + st.params.join(', ') : 'No inputs', 'function-detail-inputs');
+    else ui.p('⚠ ' + functionProblemText(st), 'function-detail-problem');
+    if(d.description) ui.p(d.description, 'template-desc');
+    if(d.note) ui.p('Note: ' + d.note, 'template-desc');
+    ui.button(ui.actions(), 'Close', '', ui.close);
   }
   // ---------- keyboard shortcuts settings ----------
   function exportShortcutsToFile(){
@@ -9403,10 +10080,16 @@
         // block instances require dropping precisely on one of their input dots
         render();
         return;
+      } else if(toNode && toNode.type === 'function'){
+        // Dropped on a function node's body: its first input with no arrow (decided in D2b).
+        const free = firstFreeFunctionPort(toNode);
+        if(free.error){ render(); showMessage(free.error); return; }
+        toPort = free.index;
       }
 
       guarded(() => {
-        const edgeId = fm.connect(fromId, toId, fromPortIndex != null ? String(fromPortIndex + 1) : '', toPort !== null ? String(toPort + 1) : '');
+        // By '#id': a node from a file may have any id, which as a bare word would be read as a name.
+        const edgeId = fm.connect('#' + fromId, '#' + toId, fromPortIndex != null ? String(fromPortIndex + 1) : '', toPort !== null ? String(toPort + 1) : '');
         if(edgeId) selectEdgeOnly(edgeId); else render();
       });
     }
@@ -10134,9 +10817,9 @@
 
   // ---------------------------------- Connect ----------------------------------
   defineAction({ name:'connect', label:'Connect', category:'Connect', icon:'→', returns:'edge',
-    desc:'Draws an arrow from one node to another. Block instances take a port: its name or 1-based number.',
+    desc:'Draws an arrow from one node to another. Block instances and function nodes take a port: its name or 1-based number (a function node\'s input by the name the definition gives it).',
     params:[ P('from','node'), P('to','node'), P('fromPort','string',{ def:'', label:'from port', help:'block outputs only' }),
-      P('toPort','string',{ def:'', label:'to port', help:'block inputs only' }) ],
+      P('toPort','string',{ def:'', label:'to port', help:'block or function inputs only' }) ],
     run(a){
       const A = onActiveCanvas(a.from), B = onActiveCanvas(a.to);
       if(A === B) fail('A node cannot be connected to itself.');
@@ -10144,6 +10827,7 @@
       if(A.type === 'blockInstance') fp = resolvePort(A, a.fromPort, 'out');
       else if(a.fromPort !== '') fail(`${describeNode(A)} has no output ports — leave "from port" empty.`);
       if(B.type === 'blockInstance') tp = resolvePort(B, a.toPort, 'in');
+      else if(B.type === 'function') tp = resolveFunctionPort(B, a.toPort);
       else if(a.toPort !== '') fail(`${describeNode(B)} has no input ports — leave "to port" empty.`);
       if(tp === null){
         const dup = edges.find(e => e.from === A.id && e.to === B.id && (fp == null ? e.fromPort == null : e.fromPort === fp) && e.toPort == null);
@@ -10160,6 +10844,10 @@
     },
     recordAs(a){
       const out = Object.assign({}, a);
+      if(a.to.type === 'function' && /^\d+$/.test(String(a.toPort))){
+        const nm = functionPortName(a.to, Number(a.toPort) - 1);
+        if(nm) out.toPort = nm;
+      }
       [['fromPort', a.from, 'out'], ['toPort', a.to, 'in']].forEach(([k, n, dir]) => {
         if(n.type !== 'blockInstance' || !/^\d+$/.test(String(a[k]))) return;
         const def = canvases.find(c => c.id === n.blockDefCanvasId);
@@ -10176,6 +10864,7 @@
     run(a){
       let tp = null;
       if(a.to.type === 'blockInstance' && a.toPort !== '') tp = resolvePort(a.to, a.toPort, 'in');
+      if(a.to.type === 'function' && a.toPort !== '') tp = resolveFunctionPort(a.to, a.toPort);
       const e = edges.find(x => !x.auto && x.from === a.from.id && x.to === a.to.id && (tp === null || x.toPort === tp));
       if(!e) fail(`There is no arrow from ${describeNode(a.from)} to ${describeNode(a.to)}.`);
       pushHistory();
@@ -10291,6 +10980,133 @@
       const payload = functionsFilePayload(families);
       if(a.download) downloadJSON(payload, `fmIDE-functions-${timestamp()}.json`);
       return payload;
+    } });
+
+  // ---------- function nodes (step 7, phase D2b) ----------
+  // A node's `fn` points at one version the model carries (modelFunctions). Inserting a
+  // version copies it, and every function it calls, from the library into the model;
+  // updating and changing move a node to another version, matching its arrows to the new
+  // inputs by name. Each is one undo step, definitions included.
+  function requireFunctionNode(n){ return requireType(n, ['function'], 'a function node'); }
+  // Nodes named in updateFunctionUses: "Canvas::#id" or "#id" / "id" on any canvas.
+  function functionNodesFromRefs(list){
+    if(!Array.isArray(list)) fail('nodes must be a list of node references, like ["#n12", "Canvas 2::#n7"].');
+    syncActiveIntoRegistry();
+    return list.map(ref => {
+      const s = String(ref == null ? '' : ref).trim();
+      if(s.includes('::')){ const [n] = resolveNodes(s); return { canvas: canvasOfNode(n), node: n }; }
+      const id = s.replace(/^#/, '');
+      const hits = [];
+      canvases.forEach(c => nodesIn(c).forEach(n => { if(n.id === id) hits.push({ canvas: c, node: n }); }));
+      if(hits.length !== 1) fail(hits.length ? `More than one canvas has a node #${id} — write it as "Canvas::#${id}".` : `There is no node #${id}.`);
+      return hits[0];
+    });
+  }
+
+  defineAction({ name:'insertFunction', label:'Insert Function', category:'Insert', icon:'ƒ', returns:'node',
+    desc:'Adds a function node for a version in your library: "Name" (the latest version), "Name@latest", "Name@2", or the same with the family id. The version, and every function it calls, is copied into the model. Fails when the model already carries a different version under the same number (update its nodes first).',
+    params:[ P('function','string'), PX, PY ],
+    run(a){
+      const d = resolveFunctionRef(a.function);
+      const parsed = parseFunctionText(d.text);
+      if(!parsed.ok) fail(`${functionLabel(d)} v${d.version} can't be read, so it can't be inserted: ${parsed.error.message}`);
+      const list = functionWithCallees(d);
+      addFunctionsToModel(list, 'check', d);
+      pushHistory();
+      addFunctionsToModel(list, 'refuse', d);
+      const n = { id: uid('n'), type:'function', x: clampPos(a.x), y: clampPos(a.y), w:190, h: functionNodeHeight(parsed.params.length, false),
+        fn: { family: d.family, version: d.version, versionId: d.versionId, name: functionNameOf(d) } };
+      nodes.push(n);
+      clearComputed();
+      evaluateAll();
+      return n.id;
+    } });
+
+  // The library version `version` ("latest" or a number) of node n's family.
+  function functionTargetFor(n, version){
+    const st = functionNodeState(n);
+    const fam = st.lib ? st.lib.family : (st.ref && FUNCTIONS.some(f => f.family === st.ref.family) ? st.ref.family : null);
+    if(!fam) fail(`${functionNodeTitle(n, st)} isn't in your function library, so there is nothing to update it to.`);
+    const want = String(version == null ? 'latest' : version).trim().toLowerCase();
+    const all = functionFamilyVersions(fam);
+    const t = (want === '' || want === 'latest') ? all[0] : all.find(v => String(v.version) === want);
+    if(!t) fail(`There is no version ${want} of ${functionLabel(all[0])} (it has version${all.length === 1 ? '' : 's'} ${all.map(v => v.version).reverse().join(', ')}).`);
+    return { st, target: t };
+  }
+
+  defineAction({ name:'updateFunctionNode', label:'Update Function Node', category:'Insert', icon:'⬆', returns:'value',
+    desc:'Moves one function node to another version of its function in your library ("latest", or a number). Arrows follow their inputs by name; an arrow into an input the new version doesn\'t have is dropped. Returns { version, dropped: [{ node, canvas, input, from }] }.',
+    params:[ P('node','node'), P('version','string',{ def:'latest', help:'"latest" or a version number' }) ],
+    run(a){
+      requireFunctionNode(a.node);
+      const { st, target } = functionTargetFor(a.node, a.version);
+      if(st.lib === target && !st.problem) return { version: target.version, dropped: [] };
+      const plan = functionNodeUpdatePlan(canvasOfNode(a.node), a.node, target);
+      pushHistory();
+      return { version: target.version, dropped: applyFunctionNodeUpdates([plan]) };
+    } });
+
+  defineAction({ name:'changeFunction', label:'Change Function', category:'Insert', icon:'ƒ', returns:'value',
+    desc:'Switches a function node to another function or version from your library ("Name", "Name@2", …), like a block\'s "Change block". Arrows follow their inputs by name; the others are dropped. Returns { dropped: [{ node, canvas, input, from }] }.',
+    params:[ P('node','node'), P('function','string') ],
+    run(a){
+      requireFunctionNode(a.node);
+      const target = resolveFunctionRef(a.function);
+      const st = functionNodeState(a.node);
+      if(st.lib === target && !st.problem) return { dropped: [] };
+      const plan = functionNodeUpdatePlan(canvasOfNode(a.node), a.node, target);
+      pushHistory();
+      return { dropped: applyFunctionNodeUpdates([plan]) };
+    } });
+
+  defineAction({ name:'updateFunctionUses', label:'Update Every Use of a Function', category:'Insert', icon:'⬆', returns:'value',
+    desc:'Moves the model\'s nodes of a function to a version in your library ("Name" = the latest, "Name@3"). Without nodes: every node on an older version, except those marked "Not now" for it or a newer one; nodes on that version or newer are left alone. nodes names the ones to update ("#id" or "Canvas::#id"). One undo step. Returns { updated, dropped: [{ node, canvas, input, from }] }.',
+    params:[ P('function','string'), P('nodes','json',{ optional:true, help:'list of node references' }) ],
+    run(a){
+      const target = resolveFunctionRef(a.function);
+      let picked;
+      if(a.nodes == null){
+        picked = functionUsesPlan(target.family, target).filter(r => r.tick);
+      } else {
+        picked = functionNodesFromRefs(a.nodes).map(({ canvas, node }) => {
+          requireFunctionNode(node);
+          const st = functionNodeState(node);
+          if(!st.ref || st.ref.family !== target.family) fail(`${functionNodeTitle(node, st)} isn't a node of ${functionLabel(target)}.`);
+          return { canvas, node };
+        });
+      }
+      if(!picked.length) return { updated: 0, dropped: [] };
+      const plans = picked.map(r => functionNodeUpdatePlan(r.canvas, r.node, target));
+      pushHistory();
+      return { updated: plans.length, dropped: applyFunctionNodeUpdates(plans) };
+    } });
+
+  defineAction({ name:'skipFunctionUpdate', label:'Not Now (Function Update)', category:'Insert', icon:'⏸',
+    desc:'Declines the newer version of a function node\'s function for now: its ⬆ goes away until an even newer version appears (the node remembers the version it declined, fn.skipped).',
+    params:[ P('node','node') ],
+    run(a){
+      requireFunctionNode(a.node);
+      const st = functionNodeState(a.node);
+      if(!st.newer) return NOOP;
+      pushHistory();
+      a.node.fn = Object.assign({}, a.node.fn, { skipped: st.newer.version });
+    } });
+
+  defineAction({ name:'addFunctionDefinition', label:'Add Function Definition from Library', category:'Insert', icon:'ƒ',
+    desc:'For a function node whose definition is missing from the model, copies that exact version (the same versionId) from your library into the model, with what it calls.',
+    params:[ P('node','node') ],
+    run(a){
+      requireFunctionNode(a.node);
+      const st = functionNodeState(a.node);
+      if(!st.problem) return NOOP;
+      if(!st.repair) fail(`Your library doesn't have this exact version of ${st.name}, so its definition can't be added.`);
+      pushHistory();
+      // The model may use this version's number for another version: it comes in renumbered.
+      const remap = addFunctionsToModel(functionWithCallees(st.repair), 'renumber');
+      const r = remap(st.repair);
+      if(r) a.node.fn = Object.assign({}, a.node.fn, { version: r.version });
+      clearComputed();
+      evaluateAll();
     } });
   // ---------------------------------- Edit ----------------------------------
   function editValueText(n, mutate){
@@ -10517,6 +11333,7 @@
       nodes = nodes.filter(n => !ids.has(n.id));
       edges = edges.filter(e => !ids.has(e.from) && !ids.has(e.to));
       ids.forEach(id => selectedNodeIds.delete(id));
+      trimModelFunctions();
       clearComputed();
     } });
   defineAction({ name:'deleteSelected', label:'Delete Selected', category:'Edit', icon:'🗑',
@@ -10531,6 +11348,7 @@
         const to = getNode(e.to);
         let toPort = '';
         if(to && to.type === 'blockInstance' && e.toPort != null) toPort = String(e.toPort + 1);
+        if(to && to.type === 'function' && e.toPort != null) toPort = functionPortName(to, e.toPort) || String(e.toPort + 1);
         return { name:'deleteEdge', args:{ from: getNode(e.from), to, toPort } };
       }
       return { name:'deleteNodes', args:{ nodes: selectedNodesList() } };
@@ -10542,6 +11360,7 @@
       pushHistory();
       nodes = []; edges = [];
       selectedNodeIds.clear(); selectedEdgeId = null;
+      trimModelFunctions();
       clearComputed();
     } });
   defineAction({ name:'copy', label:'Copy', category:'Edit', icon:'⧉', mutates:false, params:[ SEL_NODES() ],
@@ -10673,6 +11492,7 @@
         loadCanvasState(next);
         selectedNodeIds.clear(); selectedEdgeId = null;
       }
+      trimModelFunctions();
       // Plugs on the deleted canvas no longer feed sockets elsewhere: rebuild the automatic
       // connections (otherwise their aliases are left pointing at nothing) and recalculate.
       syncAutoConnections();
@@ -10703,6 +11523,7 @@
       loadCanvasState(c);
       selectedNodeIds.clear(); selectedEdgeId = null;
       closePicker();
+      trimModelFunctions();
       clearComputed();
     } });
 
@@ -10787,7 +11608,11 @@
   fm.actions = () => ACTION_LIST.map(d => ({ name: d.name, label: d.label, category: d.category, description: d.desc || '',
     params: d.params.map(p => ({ name: p.name, type: p.type, default: typeof p.def === 'function' ? '(auto)' : p.def, optional: !!p.optional, options: p.type === 'enum' ? paramOptions(p) : undefined })) }));
   fm.find = (ref) => { const n = resolveOneNode(ref); return n.id; };
-  fm.nodes = () => nodes.map(n => ({ id: n.id, type: n.type, name: refNameOf(n), x: n.x, y: n.y, w: n.w, h: n.h, text: n.text }));
+  fm.nodes = () => nodes.map(n => {
+    const out = { id: n.id, type: n.type, name: refNameOf(n), x: n.x, y: n.y, w: n.w, h: n.h, text: n.text };
+    if(n.type === 'function') out.fn = n.fn && typeof n.fn === 'object' ? cloneData(n.fn) : null;
+    return out;
+  });
   fm.edges = () => edges.map(e => Object.assign({}, e));
   fm.selection = () => Array.from(selectedNodeIds);
   fm.canvases = () => canvases.map(c => {
@@ -10812,7 +11637,7 @@
     { cmd:'saveDocument', size:'large' }, { cmd:'newDocument' }, { cmd:'openDocument' }, { cmd:'saveDocumentAs' }, { cmd:'openRecent' } ] };
   // Your own functions (step 7, phase D2), on the Insert tab.
   const FUNCTIONS_RIBBON_GROUP = { id:'myFunctions', label:'My Functions', items:[
-    { cmd:'openFunctions', size:'large' }, { cmd:'importFunctions' } ] };
+    { cmd:'openFunctions', size:'large' }, { cmd:'insertFunction' }, { cmd:'updateFunction' }, { cmd:'importFunctions' } ] };
   const DEFAULT_RIBBON = {
     qat: ['undo', 'redo', 'evaluate', 'openLauncher'],
     tabs: [
@@ -10827,7 +11652,7 @@
       ]},
       { id:'home', label:'Home', keytip:'H', groups:[
         { label:'Clipboard', items:[ { cmd:'paste', size:'large' }, { cmd:'cut' }, { cmd:'copy' } ] },
-        { label:'Insert', items:[ { cmd:'addRect', size:'large' }, { cmd:'addOperator', size:'large' }, { cmd:'addAlias' }, { cmd:'addBlock' }, { cmd:'addPeriodShift' } ] },
+        { label:'Insert', items:[ { cmd:'addRect', size:'large' }, { cmd:'addOperator', size:'large' }, { cmd:'addAlias' }, { cmd:'addBlock' }, { cmd:'insertFunction' }, { cmd:'addPeriodShift' } ] },
         { label:'Edit', items:[ { cmd:'undo' }, { cmd:'redo' }, { cmd:'deleteSel' }, { cmd:'selectAll' }, { cmd:'deselect' } ] },
         { label:'Arrange', items:[ { cmd:'alignLeft' }, { cmd:'alignCenterH' }, { cmd:'alignRight' }, { cmd:'alignTop' }, { cmd:'alignCenterV' }, { cmd:'alignBottom' } ] },
         { label:'Compute', items:[ { cmd:'evaluate', size:'large' }, { cmd:'prevPeriod' }, { cmd:'managePeriods' }, { cmd:'nextPeriod' } ] },
@@ -13497,7 +14322,8 @@
       keytipTrigger: Object.assign({}, keytipTrigger), comboVersion: 2, launcherRecent: launcherRecent.slice(), lastRunMacroId,
       dedupeMatch: Object.assign({}, dedupeMatch),
       documentGroupAdded: true, // the default ribbon has it; a customised one got it once
-      functionsGroupAdded: true
+      functionsGroupAdded: true,
+      functionCommandsAdded: true // D2b: Insert Function… and Update Function… in My Functions
     };
   }
   // One-time update of a ribbon customised before the Document group existed: add it at
@@ -13520,6 +14346,18 @@
     const lib = tab.groups.findIndex(g => g && g.label === 'Library');
     tab.groups.splice(lib < 0 ? tab.groups.length : lib, 0, cloneData(FUNCTIONS_RIBBON_GROUP));
   }
+  // One-time update (D2b) of a customised ribbon's My Functions group: Insert Function… and
+  // Update Function… join it, wherever the person moved the group. A ribbon without the group
+  // is left alone; a command removed afterwards stays removed (this runs once).
+  function addFunctionCommandsToRibbon(){
+    ribbonState.config.tabs.forEach(t => (t && Array.isArray(t.groups) ? t.groups : []).forEach(g => {
+      if(!g || g.id !== 'myFunctions') return;
+      if(!Array.isArray(g.items)) g.items = [];
+      ['insertFunction', 'updateFunction'].forEach((cmd, i) => {
+        if(!g.items.some(it => it && it.cmd === cmd)) g.items.splice(Math.min(g.items.length, 1 + i), 0, { cmd });
+      });
+    }));
+  }
   function applyUiPayload(ui){
     if(!ui || typeof ui !== 'object') return;
     const fileRibbon = ui.ribbonCustomized ? cleanRibbonConfig(ui.ribbon) : null;
@@ -13528,6 +14366,7 @@
       ribbonState.customized = true;
       if(ui.documentGroupAdded !== true) addDocumentGroupToRibbon();
       if(ui.functionsGroupAdded !== true) addFunctionsGroupToRibbon();
+      if(ui.functionCommandsAdded !== true) addFunctionCommandsToRibbon();
     }
     if(typeof ui.ribbonCollapsed === 'boolean') ribbonState.collapsed = ui.ribbonCollapsed;
     if(typeof ui.activeTab === 'string') ribbonState.activeTab = ui.activeTab;

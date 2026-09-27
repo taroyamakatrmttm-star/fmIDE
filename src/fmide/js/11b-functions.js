@@ -58,16 +58,79 @@
     invalidateIR();
   }
   // Definitions of content added to the open model (a module, a system added to it, a
-  // template): each family and version the model doesn't carry yet joins it. One it already
-  // carries stays as it is — the model's nodes already use it.
-  function mergeModelFunctions(list){
+  // template, pasted nodes): each version the model doesn't carry yet joins it, and the
+  // library (addMissingFunctions). Returns remapFunctionRef — see addFunctionsToModel.
+  function mergeModelFunctions(list){ return addFunctionsToModel(list, 'renumber'); }
+
+  // Adds definitions to the model's own (decided September 2026, D2b):
+  //  - a version the model already carries (the same family and versionId; without a
+  //    versionId, the same family, number and text) is not added again;
+  //  - a version whose number is free in the model's copy of its family is added as it is;
+  //  - a different version under a number the model already uses: onClash 'refuse' fails
+  //    (Insert Function, which points to Update; 'check' only checks, adding nothing);
+  //    'renumber' adds it under the family's next
+  //    free number in the model, keeping its versionId, with a note (the library's own import
+  //    rule). Calls among the added definitions follow the new numbers.
+  // Returns remap(ref): the { family, version, versionId } a node's `fn` (or a call) means in
+  // the model now, or null when its number didn't change.
+  function addFunctionsToModel(list, onClash, what){
     const defs = cleanFunctionDefinitions(list);
-    if(!defs.length) return;
+    const moved = []; // { family, versionId, from, to }
+    const remap = (ref) => {
+      const r = cleanFunctionRef(ref);
+      const m = r && moved.find(x => x.family === r.family && x.from === r.version && (!r.versionId || !x.versionId || x.versionId === r.versionId));
+      return (m && m.to !== m.from) ? { family: r.family, version: m.to, versionId: r.versionId } : null;
+    };
+    if(!defs.length) return remap;
+    const added = [], clashes = [];
+    const pool = () => modelFunctions.concat(added);
     defs.forEach(d => {
-      if(!modelFunctions.some(f => f.family === d.family && f.version === d.version)) modelFunctions.push(d);
+      const same = d.versionId && pool().find(m => m.family === d.family && m.versionId === d.versionId);
+      if(same){ moved.push({ family: d.family, versionId: d.versionId, from: d.version, to: same.version }); return; }
+      const there = pool().find(m => m.family === d.family && m.version === d.version);
+      if(!there){ added.push(d); return; }
+      if(!there.versionId && !d.versionId && there.text === d.text) return;
+      if(onClash === 'refuse' || onClash === 'check'){
+        const name = functionLabel(d);
+        fail(`This model already uses a different version ${d.version} of ${name}` + (what && what !== d ? ` (which ${functionLabel(what)} calls)` : '')
+          + `. To use this one, first update the model's ${name} nodes to another version (⋯ → Update, or Update Function…).`);
+      }
+      clashes.push(d);
     });
-    addMissingFunctions(defs);
-    invalidateIR();
+    if(onClash === 'check') return remap;
+    clashes.forEach(d => {
+      const same = d.versionId && pool().find(m => m.family === d.family && m.versionId === d.versionId);
+      if(same){ moved.push({ family: d.family, versionId: d.versionId, from: d.version, to: same.version }); return; }
+      const to = pool().reduce((mx, m) => (m.family === d.family ? Math.max(mx, m.version) : mx), 0) + 1;
+      moved.push({ family: d.family, versionId: d.versionId, from: d.version, to });
+      d.note = (`Was v${d.version} where it came from; this model already had a different v${d.version}` + (d.note ? ': ' + d.note : '')).slice(0, FUNCTION_LIMITS.note);
+      d.version = to;
+      added.push(d);
+    });
+    added.forEach(d => d.calls.forEach(c => { const r = remap(c); if(r) c.version = r.version; }));
+    if(added.length){
+      modelFunctions = modelFunctions.concat(added);
+      addMissingFunctions(added);
+      invalidateIR();
+    }
+    return remap;
+  }
+  // Points function nodes at the numbers `remap` (addFunctionsToModel) gave their versions.
+  // Returns the list with changed nodes copied (the originals are left alone).
+  function remapFunctionNodes(list, remap){
+    return list.map(n => {
+      if(!n || n.type !== 'function' || !n.fn) return n;
+      const r = remap(n.fn);
+      return r ? Object.assign({}, n, { fn: Object.assign({}, n.fn, { version: r.version }) }) : n;
+    });
+  }
+  // Drops the definitions nothing in the model uses any more (a definition another one calls
+  // stays). Called where nodes or canvases go, in the same undo step (decided in D2b).
+  function trimModelFunctions(){
+    if(!modelFunctions.length) return;
+    syncActiveIntoRegistry();
+    const keep = functionsUsedBy(canvases, modelFunctions);
+    if(keep.length !== modelFunctions.length){ modelFunctions = keep; invalidateIR(); }
   }
   // What a file written from `canvasList` carries: the definitions its function nodes use,
   // and every function those call (the model's own first, then the library's).

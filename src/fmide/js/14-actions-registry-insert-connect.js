@@ -356,9 +356,9 @@
 
   // ---------------------------------- Connect ----------------------------------
   defineAction({ name:'connect', label:'Connect', category:'Connect', icon:'→', returns:'edge',
-    desc:'Draws an arrow from one node to another. Block instances take a port: its name or 1-based number.',
+    desc:'Draws an arrow from one node to another. Block instances and function nodes take a port: its name or 1-based number (a function node\'s input by the name the definition gives it).',
     params:[ P('from','node'), P('to','node'), P('fromPort','string',{ def:'', label:'from port', help:'block outputs only' }),
-      P('toPort','string',{ def:'', label:'to port', help:'block inputs only' }) ],
+      P('toPort','string',{ def:'', label:'to port', help:'block or function inputs only' }) ],
     run(a){
       const A = onActiveCanvas(a.from), B = onActiveCanvas(a.to);
       if(A === B) fail('A node cannot be connected to itself.');
@@ -366,6 +366,7 @@
       if(A.type === 'blockInstance') fp = resolvePort(A, a.fromPort, 'out');
       else if(a.fromPort !== '') fail(`${describeNode(A)} has no output ports — leave "from port" empty.`);
       if(B.type === 'blockInstance') tp = resolvePort(B, a.toPort, 'in');
+      else if(B.type === 'function') tp = resolveFunctionPort(B, a.toPort);
       else if(a.toPort !== '') fail(`${describeNode(B)} has no input ports — leave "to port" empty.`);
       if(tp === null){
         const dup = edges.find(e => e.from === A.id && e.to === B.id && (fp == null ? e.fromPort == null : e.fromPort === fp) && e.toPort == null);
@@ -382,6 +383,10 @@
     },
     recordAs(a){
       const out = Object.assign({}, a);
+      if(a.to.type === 'function' && /^\d+$/.test(String(a.toPort))){
+        const nm = functionPortName(a.to, Number(a.toPort) - 1);
+        if(nm) out.toPort = nm;
+      }
       [['fromPort', a.from, 'out'], ['toPort', a.to, 'in']].forEach(([k, n, dir]) => {
         if(n.type !== 'blockInstance' || !/^\d+$/.test(String(a[k]))) return;
         const def = canvases.find(c => c.id === n.blockDefCanvasId);
@@ -398,6 +403,7 @@
     run(a){
       let tp = null;
       if(a.to.type === 'blockInstance' && a.toPort !== '') tp = resolvePort(a.to, a.toPort, 'in');
+      if(a.to.type === 'function' && a.toPort !== '') tp = resolveFunctionPort(a.to, a.toPort);
       const e = edges.find(x => !x.auto && x.from === a.from.id && x.to === a.to.id && (tp === null || x.toPort === tp));
       if(!e) fail(`There is no arrow from ${describeNode(a.from)} to ${describeNode(a.to)}.`);
       pushHistory();

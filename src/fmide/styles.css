@@ -665,6 +665,34 @@
   .io-row-in .io-port{ left:-6px; }
   .io-row-out .io-port{ right:-6px; }
 
+  /* function node (step 7, phase D2b): a block instance's box in teal */
+  .node.blockInstance.functionNode{ border-color:#0f766e; }
+  .node.blockInstance.functionNode.selected{ box-shadow:0 0 0 3px rgba(15,118,110,.25); }
+  .node.functionNode.fn-problem{ border-style:dashed; border-color:#b45309; }
+  .functionNode .fn-header{ background:#f0fdfa; border-bottom-color:#99f6e4; color:#115e59; padding:0 44px 0 24px; }
+  .functionNode .io-port{ border-color:#0f766e; }
+  .functionNode .fn-in{ right:45%; }
+  .tag-btn.fn-menu-btn{ top:2px; right:2px; left:auto; bottom:auto; width:18px; height:18px; }
+  .tag-btn.fn-update-btn{ top:2px; right:22px; left:auto; bottom:auto; width:18px; height:18px; color:#1d4ed8; border-color:#93c5fd; background:#eff6ff; }
+  .fn-warning{ position:absolute; left:8px; right:8px; height:20px; line-height:20px; font-size:10.5px; color:#b45309; cursor:help;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .fn-output{ position:absolute; right:8px; width:45%; height:40px; text-align:right; font-size:11px; }
+  .fn-output .fn-value{ display:block; font-size:11px; line-height:20px; padding-right:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .fn-output .fn-unit{ display:block; font-size:10px; line-height:16px; color:#64748b; padding-right:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .fn-output .io-port{ right:-6px; }
+  .function-picker{ min-width:340px; max-width:440px; }
+  .function-picker .picker-row.active{ background:#f0fdfa; border-color:#5eead4; }
+  .function-picker-list{ max-height:40vh; overflow:auto; }
+  .function-picker-version-row{ display:block; font-size:13px; margin:8px 0 6px; }
+  .modal-box .function-picker-detail{ font-size:12px; color:#475569; }
+  .function-node-menu{ min-width:280px; }
+  .function-uses{ min-width:380px; max-width:520px; }
+  .function-uses-list{ max-height:50vh; overflow:auto; margin:0 0 14px; }
+  .function-use-row{ display:block; font-size:13px; padding:6px 0; border-bottom:1px solid #f1f5f9; cursor:pointer; }
+  .function-use-row input{ margin-right:6px; }
+  .function-use-lost{ font-size:12px; color:#b45309; margin:3px 0 0 22px; }
+  .function-definition-view{ max-width:480px; }
+
   svg#edges g.edge.auto{ pointer-events:none; }
   svg#edges g.edge.auto path.line{ stroke:#8b5cf6; stroke-dasharray:6 4; }
 

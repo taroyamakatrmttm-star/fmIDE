@@ -123,3 +123,44 @@ test('fmIDE: a functions file with markup in its formula, description, note and 
   await settle(page);
   await expectSafe(page);
 });
+
+test('fmIDE: function nodes whose name or definition carries markup are shown as text', async ({ page }) => {
+  await F.openFmIDE(page);
+  await F.importViaCommand(page, 'loadSystem', fixture('security', 'evil-function-nodes.json'));
+  await F.acceptAll(page);
+  const node = (id) => page.locator(`.node.functionNode[data-id="${id}"]`);
+  // A node's own name (its definition is missing): as text, cut to a function name's length.
+  await expect(node('fname').locator('.fn-header')).toHaveText(/^ƒ <img src=x onerror=.* v1$/);
+  await expect(node('fname').locator('.fn-warning')).toHaveText('⚠ Definition missing');
+  // A name that isn't text at all.
+  await expect(node('fobj').locator('.fn-header')).toHaveText('ƒ (unnamed) v2');
+  // A definition that can't be read, and a readable one (whose name wins over the node's).
+  await expect(node('fdef').locator('.fn-warning')).toHaveText("⚠ Formula can't be read");
+  await expect(node('fok').locator('.fn-header')).toHaveText('ƒ Fine v1');
+  expect(await page.locator('.node img, .node script, .node svg, .node b').count()).toBe(0);
+  // The menu and the definition windows show them as text too.
+  await node('fname').locator('.fn-menu-btn').click();
+  await expect(page.locator('.modal-box.function-node-menu p').first()).toHaveText(/^ƒ <img src=x/);
+  await page.keyboard.press('Escape');
+  // The model's own copy (the library no longer has it): formula, description and note.
+  await page.evaluate(() => fm.deleteFunction('family-evil-node'));
+  await node('fdef').locator('.fn-header').dblclick({ force: true });
+  const view = page.locator('.modal-box.function-definition-view');
+  await expect(view.locator('.function-detail-text')).toHaveText(/^Evil\(x\) = x <img src=x onerror=/);
+  await expect(view.locator('.template-desc').first()).toHaveText(/^<img src=x .*<b>bold<\/b>$/);
+  await expect(view.locator('.template-desc').last()).toHaveText(/^Note: <script>/);
+  expect(await page.locator('.modal-box img, .modal-box script, .modal-box svg, .modal-box b').count()).toBe(0);
+  await page.keyboard.press('Escape');
+  // In the Functions manager (from the library, via double-click).
+  await node('fok').locator('.fn-header').dblclick({ force: true });
+  await expect(page.locator('.modal-box.function-box .template-note')).toHaveText(/<svg onload=/);
+  expect(await page.locator('.modal-box img, .modal-box script, .modal-box svg').count()).toBe(0);
+  await page.keyboard.press('Escape');
+  // Copying and pasting them, and the picker listing the library.
+  await page.evaluate(() => { fm.copy('@all'); fm.paste(); });
+  await page.evaluate(() => fm.command('insertFunction'));
+  await expect(page.locator('.modal-box.function-picker .sub').first()).toHaveText(/<img src=x/);
+  expect(await page.locator('.modal-box img, .node img, .node svg, .node script').count()).toBe(0);
+  await settle(page);
+  await expectSafe(page);
+});

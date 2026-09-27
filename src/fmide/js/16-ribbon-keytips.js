@@ -10,7 +10,7 @@
     { cmd:'saveDocument', size:'large' }, { cmd:'newDocument' }, { cmd:'openDocument' }, { cmd:'saveDocumentAs' }, { cmd:'openRecent' } ] };
   // Your own functions (step 7, phase D2), on the Insert tab.
   const FUNCTIONS_RIBBON_GROUP = { id:'myFunctions', label:'My Functions', items:[
-    { cmd:'openFunctions', size:'large' }, { cmd:'importFunctions' } ] };
+    { cmd:'openFunctions', size:'large' }, { cmd:'insertFunction' }, { cmd:'updateFunction' }, { cmd:'importFunctions' } ] };
   const DEFAULT_RIBBON = {
     qat: ['undo', 'redo', 'evaluate', 'openLauncher'],
     tabs: [
@@ -25,7 +25,7 @@
       ]},
       { id:'home', label:'Home', keytip:'H', groups:[
         { label:'Clipboard', items:[ { cmd:'paste', size:'large' }, { cmd:'cut' }, { cmd:'copy' } ] },
-        { label:'Insert', items:[ { cmd:'addRect', size:'large' }, { cmd:'addOperator', size:'large' }, { cmd:'addAlias' }, { cmd:'addBlock' }, { cmd:'addPeriodShift' } ] },
+        { label:'Insert', items:[ { cmd:'addRect', size:'large' }, { cmd:'addOperator', size:'large' }, { cmd:'addAlias' }, { cmd:'addBlock' }, { cmd:'insertFunction' }, { cmd:'addPeriodShift' } ] },
         { label:'Edit', items:[ { cmd:'undo' }, { cmd:'redo' }, { cmd:'deleteSel' }, { cmd:'selectAll' }, { cmd:'deselect' } ] },
         { label:'Arrange', items:[ { cmd:'alignLeft' }, { cmd:'alignCenterH' }, { cmd:'alignRight' }, { cmd:'alignTop' }, { cmd:'alignCenterV' }, { cmd:'alignBottom' } ] },
         { label:'Compute', items:[ { cmd:'evaluate', size:'large' }, { cmd:'prevPeriod' }, { cmd:'managePeriods' }, { cmd:'nextPeriod' } ] },

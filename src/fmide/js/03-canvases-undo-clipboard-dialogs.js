@@ -269,6 +269,7 @@
       nodes = nodes.filter(n => !selectedNodeIds.has(n.id));
       edges = edges.filter(e => !selectedNodeIds.has(e.from) && !selectedNodeIds.has(e.to));
       selectedNodeIds.clear();
+      trimModelFunctions();
     } else {
       return;
     }
@@ -277,7 +278,7 @@
   }
 
   // ---------- clipboard: copy / cut / paste ----------
-  let clipboard = null;       // { nodes:[...], edges:[...], originCanvasId }
+  let clipboard = null;       // { nodes:[...], edges:[...], originCanvasId, functions:[...] }
   let clipboardPasteCount = 0;
 
   function copySelection(){ copyNodeIds(Array.from(selectedNodeIds)); }
@@ -286,10 +287,14 @@
   function copyNodeIds(ids){
     if(!ids || ids.length === 0) return;
     const idSet = new Set(ids);
+    const copied = ids.map(id => getNode(id)).filter(Boolean).map(n => cloneData(n));
     clipboard = {
-      nodes: ids.map(id => getNode(id)).filter(Boolean).map(n => Object.assign({}, n)),
+      nodes: copied,
       edges: edges.filter(e => !e.auto && idSet.has(e.from) && idSet.has(e.to)).map(e => Object.assign({}, e)),
-      originCanvasId: activeCanvasId
+      originCanvasId: activeCanvasId,
+      // The definitions its function nodes use (and what those call), so pasting into
+      // another document still calculates.
+      functions: functionsUsedBy([{ nodes: copied }], modelFunctions)
     };
     clipboardPasteCount = 0;
     updateClipboardButtons();
@@ -300,11 +305,14 @@
     pushHistory();
     clipboardPasteCount++;
     const offset = clipboardPasteCount * 24;
+    // The definitions join the model (and the library); a different version under a number
+    // the model already uses comes in renumbered, and the pasted nodes follow.
+    const remap = mergeModelFunctions(clipboard.functions);
     const idMap = {};
-    const newNodes = clipboard.nodes.map(n => {
+    const newNodes = remapFunctionNodes(clipboard.nodes, remap).map(n => {
       const newId = uid('n');
       idMap[n.id] = newId;
-      return Object.assign({}, n, { id: newId, x: n.x + offset, y: n.y + offset });
+      return Object.assign(cloneData(n), { id: newId, x: n.x + offset, y: n.y + offset });
     });
     newNodes.forEach(n => {
       if(n.type === 'alias' && n.sourceCanvasId === clipboard.originCanvasId && idMap[n.sourceNodeId] !== undefined){

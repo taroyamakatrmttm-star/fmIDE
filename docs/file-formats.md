@@ -60,6 +60,7 @@ Functions are formulas, never code: the apps read them with their own parser (`p
 - An **`fmIDE-functions`** file (v1) is `{ "kind": "fmIDE-functions", "version": 1, "functions": [ … ] }`.
 - A template's model (a module or system inside a templates file, v4) carries its own, like any module or system.
 - Opening a file adds to the library any definitions it doesn't have (the same family and `versionId`; without a `versionId`, the same family and text). A version whose number the library already uses for a different version is added under the family's next number, keeping its `versionId`, with a note saying so; calls in the library that name it by its `versionId` follow it to the new number. The model that carried it keeps its own copy under its own number.
+- Content added to an open model (a module, a system added alongside, a template, pasted nodes) brings its definitions into the model's own list. A model holds one definition per family and number, so a different version under a number the model already uses is added under the family's next free number in the model, keeping its `versionId`, with a note; the nodes that came with it (and calls to it) follow the new number. The library then adds it by its own rule above.
 - The calculation reads only the definitions the model's file carries, not the library: a model calculates the same wherever it is opened.
 
 ### A function node
@@ -70,6 +71,8 @@ Functions are formulas, never code: the apps read them with their own parser (`p
 ```
 
 An arrow into it carries `toPort`, the input it feeds, counted from 0 in the order the definition lists its inputs (`Revenue` is 0 and `Cost` is 1 above). `fn.name` is only for display. The node's value is the formula with each input read from the arrow into its port.
+
+- `fn.skipped` (optional, a version number): the person chose "Not now" for that version of the function in their library, so the app doesn't offer it again until a newer one exists. It changes nothing in the calculation. Apps that don't know it ignore it, so it needs no new format version (added by fmIDE in step 7 phase D2b; the files are still `system` 5 and `module` 3).
 
 ### Syntax
 

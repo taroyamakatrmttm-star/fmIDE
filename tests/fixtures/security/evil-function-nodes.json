@@ -1,0 +1,122 @@
+{
+  "kind": "system",
+  "version": 5,
+  "periods": [
+    "P1"
+  ],
+  "activeCanvasId": "c1",
+  "canvases": [
+    {
+      "id": "c1",
+      "name": "Evil nodes",
+      "nodes": [
+        {
+          "id": "x",
+          "type": "value",
+          "x": 0,
+          "y": 0,
+          "w": 170,
+          "h": 64,
+          "text": "X\n1"
+        },
+        {
+          "id": "fname",
+          "type": "function",
+          "x": 250,
+          "y": 0,
+          "w": 190,
+          "h": 80,
+          "fn": {
+            "family": "family-not-here",
+            "version": 1,
+            "versionId": "version-not-here",
+            "name": "<img src=x onerror=\"(window.__pwned=window.__pwned||[]).push('node-name')\">"
+          }
+        },
+        {
+          "id": "fobj",
+          "type": "function",
+          "x": 250,
+          "y": 120,
+          "w": 190,
+          "h": 80,
+          "fn": {
+            "family": "family-not-here",
+            "version": 2,
+            "name": {
+              "toString": "<img src=x onerror=\"(window.__pwned=window.__pwned||[]).push('node-name-object')\">"
+            }
+          }
+        },
+        {
+          "id": "fdef",
+          "type": "function",
+          "x": 250,
+          "y": 240,
+          "w": 190,
+          "h": 80,
+          "fn": {
+            "family": "family-evil-node",
+            "version": 1,
+            "versionId": "version-evil-node-1",
+            "name": "Evil"
+          }
+        },
+        {
+          "id": "fok",
+          "type": "function",
+          "x": 250,
+          "y": 360,
+          "w": 190,
+          "h": 80,
+          "fn": {
+            "family": "family-evil-ok",
+            "version": 1,
+            "versionId": "version-evil-ok-1",
+            "name": "<img src=x onerror=\"(window.__pwned=window.__pwned||[]).push('ignored-name')\">"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "e1",
+          "from": "x",
+          "to": "fname",
+          "toPort": 0
+        },
+        {
+          "id": "e2",
+          "from": "x",
+          "to": "fdef",
+          "toPort": 0
+        },
+        {
+          "id": "e3",
+          "from": "x",
+          "to": "fok",
+          "toPort": 0
+        }
+      ]
+    }
+  ],
+  "functions": [
+    {
+      "family": "family-evil-node",
+      "version": 1,
+      "versionId": "version-evil-node-1",
+      "text": "Evil(x) = x <img src=x onerror=\"(window.__pwned=window.__pwned||[]).push('def-text')\">",
+      "description": "<img src=x onerror=\"(window.__pwned=window.__pwned||[]).push('def-desc')\"><b>bold</b>",
+      "note": "<script>(window.__pwned=window.__pwned||[]).push('def-note')</script>",
+      "calls": []
+    },
+    {
+      "family": "family-evil-ok",
+      "version": 1,
+      "versionId": "version-evil-ok-1",
+      "text": "Fine(x) = x * 2",
+      "description": "<img src=x onerror=\"(window.__pwned=window.__pwned||[]).push('ok-desc')\">",
+      "note": "<svg onload=\"(window.__pwned=window.__pwned||[]).push('ok-note')\">",
+      "calls": []
+    }
+  ]
+}

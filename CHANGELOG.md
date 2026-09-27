@@ -2,6 +2,15 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Function plugins, part 2b: functions on the canvas (phase D2b)
+- **Insert Function…** (Home → Insert and Insert → My Functions, or the Functions manager's **ƒ Insert**) places a function from your library as a box: "ƒ Name v1", one labelled input per input, and its value and unit. Arrows go into a named input (dragged onto its dot, or onto the box for the first empty one). A box whose function is missing from the model, or can't be read, still draws, with a warning and "?" explaining why.
+- **Updating:** a box on an older version than your library's latest shows **⬆**. Update one box, or **Update every use…** in a window that lists every box using that function (the "Not now" ones unticked) and the arrows each would lose. Arrows follow their inputs by name; lost ones are listed first; one undo reverses it all. **Not now** is remembered on the box (`fn.skipped`, an optional field older versions ignore; no file format changed). **Update Function…** is also a command. **⋯ → Change function or version…** swaps a box in place.
+- **Copy and paste** take the functions along, into another document too, and add them to your library. Deleting the last box that uses a function removes it from the model, in the same undo step.
+- Fix (from phase D1): bringing in a module, a system or a template, or pasting, where the model already had a *different* version under the same number made the incoming boxes show "?". That version now comes in under the next free number in the model, and its boxes follow it.
+- Fix: dragging an arrow didn't work in a model whose node ids came from a hand-written file (such as the function samples).
+- `window.fm`: `insertFunction`, `updateFunctionNode`, `changeFunction`, `updateFunctionUses`, `skipFunctionUpdate`, `addFunctionDefinition`; `fm.connect` takes a function's input by name or number; `fm.nodes()` shows a function node's `fn`. Macros record them. A ribbon you customised gets Insert Function… and Update Function… in its My Functions group once.
+- ExcelExporter still writes `#N/A` for a function call until phase D3.
+
 ## Function plugins, part 2a: the Functions manager (phase D2a)
 - fmIDE has a **Functions manager** (File → Functions, or Insert → My Functions): your function library, listed by function with each one's versions, notes, formula and inputs. **+ New Function…** opens an editor that reads the definition as you type, shows where a mistake is, and keeps Save off until the formula reads. Calls to your other functions are tied to one version; when two functions share a name, the editor asks which one you mean.
 - Versions work as for templates: **Edit as new version…**, change notes, older versions deleted one at a time and the latest only with the whole function. Deleting a function the open model uses warns but doesn't refuse: the model carries its own copy.

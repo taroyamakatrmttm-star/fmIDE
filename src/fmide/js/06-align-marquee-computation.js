@@ -122,9 +122,11 @@
   // The IR of the model as it is now, compiled when first needed after a change (units on
   // the canvas read it); invalidateIR() is called wherever the model may change.
   let modelIR = null;
-  function invalidateIR(){ modelIR = null; }
-  // The function definitions the open model carries (11b-functions.js).
+  function invalidateIR(){ modelIR = null; modelFunctionCache = null; }
+  // The function definitions the open model carries (11b-functions.js), and the same compiled
+  // for drawing function nodes (their names and inputs: modelFunctionTable, 11d-function-nodes.js).
   let modelFunctions = [];
+  let modelFunctionCache = null;
   function currentIR(){
     if(!modelIR){
       syncActiveIntoRegistry();

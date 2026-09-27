@@ -11,6 +11,7 @@
       const isAlias = n.type === 'alias';
       const isBlockInstance = n.type === 'blockInstance';
       const isPeriodShift = n.type === 'periodShift';
+      const isFunction = n.type === 'function';
       if(!el){
         el = document.createElement('div');
         el.dataset.id = n.id;
@@ -20,10 +21,13 @@
       } else {
         existing.delete(n.id);
       }
-      el.className = 'node' + (isOperator ? ' operator' : '') + (isAlias ? ' alias' : '') + (isBlockInstance ? ' blockInstance' : '') + (isBlockInstance && n.vertical ? ' vertical' : '') + (isPeriodShift ? ' periodshift' : '') + (isOperator && WORD_OPS.includes(n.text) ? ' wordop' : '');
+      el.className = 'node' + (isOperator ? ' operator' : '') + (isAlias ? ' alias' : '') + (isBlockInstance || isFunction ? ' blockInstance' : '') + (isFunction ? ' functionNode' : '') + (isBlockInstance && n.vertical ? ' vertical' : '') + (isPeriodShift ? ' periodshift' : '') + (isOperator && WORD_OPS.includes(n.text) ? ' wordop' : '');
 
       if(isBlockInstance){
         renderBlockInstanceBody(el, n);
+      } else if(isFunction){
+        renderFunctionNodeBody(el, n); // 11d-function-nodes.js
+        el._built = null;
       } else if(el._built !== n.type){
         if(isOperator){
           el.innerHTML = '<div class="port n" data-side="n"></div><div class="port s" data-side="s"></div><div class="port e" data-side="e"></div><div class="port w" data-side="w"></div><button type="button" class="tag-btn socket-btn" title="Set socket">⚡</button><div class="socket-chip"></div><div class="opsym"></div><div class="op-result"></div>';
@@ -43,8 +47,8 @@
       el.style.height = n.h + 'px';
       el.classList.toggle('selected', selectedNodeIds.has(n.id));
 
-      if(isBlockInstance){
-        // content fully handled by renderBlockInstanceBody() above
+      if(isBlockInstance || isFunction){
+        // content fully handled by renderBlockInstanceBody() / renderFunctionNodeBody() above
       } else if(isOperator){
         const sym = el.querySelector('.opsym');
         if(sym) sym.textContent = n.text;
@@ -363,15 +367,16 @@
       const a = getNode(e.from), b = getNode(e.to);
       if(!a || !b) return;
       let {p1, p2, d} = edgePath(rectOf(a), rectOf(b));
-      if(e.fromPort != null){
-        const pp = getPortCanvasPos(e.from, e.fromPort, 'out');
+      if(e.fromPort != null || a.type === 'function'){
+        // A function node's one output has no port number: its arrows leave from its dot.
+        const pp = getPortCanvasPos(e.from, e.fromPort != null ? e.fromPort : 0, 'out');
         if(pp) p1 = pp;
       }
       if(e.toPort != null){
         const pp = getPortCanvasPos(e.to, e.toPort, 'in');
         if(pp) p2 = pp;
       }
-      if(e.fromPort != null || e.toPort != null) d = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
+      if(e.fromPort != null || e.toPort != null || a.type === 'function') d = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
       const isSel = selectedEdgeId === e.id;
       const isAuto = !!e.auto;
       const g = document.createElementNS(SVGNS,'g');
