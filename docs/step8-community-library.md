@@ -26,7 +26,7 @@ What is shared: templates (canvas and system), recipes and functions. **Macros a
 - **8b — Where items came from** ✅ (below): `origin` (pack, author, licence) on templates and functions, shown in the Templates and Functions windows; the preview warns when a pack adds versions to a family that came from a different author. Format versions raised, with old-version samples and tests.
 - **8c — Checker and catalogue**, in three phases (below): `tools/check-pack.js` (Node only, using the shared reader and the function parser: structure, limits, licence, family ownership); the library repository's layout, submission template and CI; the build writes the `/library` catalogue pages from the approved packs, all text escaped, under the same security policy. All of it can be built and tested before the library repository is public (with a sample library in the tests); only submissions from other people, and the report-an-item issues, need it public.
   - **8c-1 — The shared pack reader and the checker for one pack** ✅ (below).
-  - **8c-2 — The library's rules and repository:** family ownership, authors, pack and version ids never reused, the repository's files (README, submission terms, pull-request template, report template, CI workflow).
+  - **8c-2 — The library's rules and repository** ✅ (below): family ownership, authors, pack and version ids never reused, the repository's files (README, submission terms, pull-request template, report template, CI workflow).
   - **8c-3 — The catalogue:** `npm run build` writes `/library` from the approved packs; its own security policy; the deploy publishes it.
 - **8d (optional, decision 3)** — Browse the library inside fmIDE.
 
@@ -57,6 +57,15 @@ The owner approved the recommendations of the 8c-2 plan:
 - **E.** While fmIDE is private, the library's CI reads it with a **read-only deploy key**.
 - **F.** Submitters agree to the submission terms with a **tick box in the pull-request template**, which CI checks.
 - **Approval stays manual** for every submission (decision 2). Merging automatically the green pull requests of known authors that only add versions to their own families was discussed and left for later (it needs branch protection, which a free private repository doesn't have).
+
+## Phase 8c-2 — how it turned out (part 2: the library repository)
+
+- **The repository:** `taroyamakatrmttm-star/fmide-library`, private for now (27 September 2026). It holds `README.md` (using and sharing packs, the rules, the records, takedowns, the maintainer's steps), `SUBMITTING.md` (submission terms version 1, marked as a draft for the lawyer review), `LICENSING.md` with the CC BY 4.0 and Apache 2.0 texts, the three records, `checker.json`, `.gitattributes` (packs kept byte for byte), `.github/CODEOWNERS`, the pull-request template with the terms tick box, the report-an-item form and the check workflow.
+- **The check** (`.github/workflows/check.yml`) runs on `pull_request_target`, so the workflow and `checker.json` always come from `main`. It checks out fmIDE at the commit `checker.json` names (only `tools/` and `src/shared/`) and the pull request's files as data only, without credentials. It runs the checker with the account that opened the pull request (from GitHub's event data, through environment variables), requires the terms box ticked when packs are added, and posts one comment, updated in place. On `main` it checks the whole library.
+- **Reading private fmIDE:** a read-only deploy key on fmIDE, its private half in the library's secret `FMIDE_DEPLOY_KEY`. Not needed once fmIDE is public.
+- **The first submission** (the library's pull request #2, the owner's "First Pack": a recipe with four canvas templates and two functions) went through the whole route: the check posted its report, the records were written by `--write-records`, the check passed, and the owner merged it.
+- **Found on that first run:** the pack was uploaded at the top of the repository, not in `packs/`, and the check passed it with only a warning ("The library doesn't use this file"): a pack anywhere else was never checked as one, and the terms tick box is required only for packs in `packs/`. Now any file named `….fmide-pack.json`, or any JSON file whose `kind` is `fmIDE-library-pack`, outside `packs/` is an error for everyone, maintainers included (test group 24).
+- **Moving the checker:** the library runs the checker of the fmIDE commit in its `checker.json`; after a change to the checker merges into fmIDE, a library pull request by the maintainer moves that pointer.
 
 ## Phase 8c-2 — how it turned out (part 1: the checker's library mode)
 
