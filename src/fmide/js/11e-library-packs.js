@@ -74,18 +74,13 @@
   }
 
   // ---------- reading a pack ----------
-  // A pack file (parsed JSON) read and checked: { pack, templates, functions, newer } or
-  // fails with a message for people.
+  // A pack file (parsed JSON) read and checked (readLibraryPackData, src/shared/fmide-files.js,
+  // which the library's checker uses too): { pack, templates, functions, newer } or fails
+  // with a message for people.
   function readLibraryPack(raw){
-    const shape = fileDataProblem(raw);
-    if(shape) fail(shape);
-    const r = readFmFile(raw, ['fmIDE-library-pack']);
+    const r = readLibraryPackData(raw);
     if(r.error) fail(r.error);
-    const info = cleanLibraryPackInfo(r.data.pack);
-    if(info.error) fail(info.error);
-    const templates = (Array.isArray(r.data.templates) ? r.data.templates : []).slice(0, LIBRARY_PACK_LIMITS.items);
-    const functions = cleanLibraryFunctions(Array.isArray(r.data.functions) ? r.data.functions.slice(0, LIBRARY_PACK_LIMITS.items) : []);
-    return { pack: info.info, templates, functions, newer: r.newer, fromVersion: r.fromVersion, warnings: r.warnings };
+    return r;
   }
   const TEMPLATE_KIND_WORDS = { module: 'canvas template', system: 'system template', recipe: 'recipe' };
   // The family rule (phase 8b): a pack adding a version to a family you have is warned about

@@ -1,0 +1,165 @@
+// ---------- fmIDE's files (shared: src/shared/fmide-files.js; step 8, phase 8c) ----------
+// The kinds of file fmIDE reads, their current versions and upgrade steps, the reader that
+// identifies, checks and upgrades them (readFmData), and the checks on the templates,
+// recipes and library functions they hold. Pure functions: fmIDE reads its files with them,
+// and so does the library's checker (tools/check-pack.js, in Node), so both read a file
+// exactly alike. fmIDE only: ExcelExporter reads its own kinds (its js/04-file-formats.js).
+// Uses file-formats.js (the kinds both apps read), functions.js and library-pack.js.
+
+// Every kind fmIDE knows: its current version, what people call it, and where it is opened.
+const FILE_FORMATS = {
+  'system':               { current: SHARED_FILE_VERSIONS['system'], label: 'system', where: 'File → Load System' },
+  'module':               { current: 4, label: 'module',              where: 'File → Load Module' },
+  'fmIDE-workspace':      { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'workspace', where: 'File → Import Workspace' },
+  'fmIDE-templates':      { current: 6, label: 'templates file',      where: 'Templates → Import Templates' },
+  'fmIDE-functions':      { current: 2, label: 'functions file',      where: 'Functions → Import Functions' },
+  'fmIDE-format-presets': { current: 1, label: 'format presets file', where: 'Format Presets → Import Presets' },
+  'fmIDE-shortcuts':      { current: 2, label: 'shortcuts file',      where: 'Keyboard Shortcuts → Import Shortcuts' },
+  'fmIDE-macros':         { current: 1, label: 'macros file',         where: 'Macro Builder → Import' },
+  'fmIDE-preferences':    { current: 1, label: 'preferences file',    where: 'File → Import Preferences' },
+  'fmIDE-library-pack':   { current: 2, label: 'library pack',        where: 'File → Open Library Pack' }
+};
+// The upgrade steps of the kinds above, except the shortcuts file's (its step reads fmIDE's
+// key names, so fmIDE adds it: js/04-file-formats.js).
+const FMIDE_FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
+  // v1 → v2: one plug name per rectangle becomes a list of plug names (as system v2 → v3).
+  'module': {
+    1: d => upgradeNodePlugs(d.nodes),
+    // v2 → v3: a module may carry the function definitions it uses (`functions`); older
+    // modules have none.
+    2: () => {},
+    // v3 → v4: the operators of phase E1, as system v5 → v6; older modules have none.
+    3: () => {}
+  },
+  // v1 → v2: templates get a family, a version number, a change note and a version id.
+  'fmIDE-templates': {
+    1: d => upgradeTemplateEntries(d.templates),
+    // v2 → v3: templates may be recipes (kind "recipe"); older files have none.
+    2: () => {},
+    // v3 → v4: a template's module or system may carry function definitions; older ones
+    // have none.
+    3: () => {},
+    // v4 → v5: a template's module or system may use the operators of phase E1; older ones
+    // don't.
+    4: () => {},
+    // v5 → v6: a template may say which library pack it came from (`origin`, phase 8b);
+    // older ones have no such record.
+    5: () => {}
+  },
+  // v1 → v2: an item in a pack may say which pack it came from before (`origin`, phase 8b),
+  // so re-sharing keeps its author's credit; older packs have no such record.
+  'fmIDE-library-pack': {
+    1: () => {}
+  },
+  // v1 → v2: a definition may say which library pack it came from (`origin`, phase 8b);
+  // older ones have no such record.
+  'fmIDE-functions': {
+    1: () => {}
+  }
+});
+function fileKindLabel(kind){ return FILE_FORMATS[kind] ? FILE_FORMATS[kind].label : 'file'; }
+
+// Reads a parsed file of one of the kinds in `accept`: identifies its kind (older files
+// without "kind" by their shape), refuses the wrong kind with a message saying where it
+// belongs, upgrades a copy one version at a time (`migrations`: FMIDE_FILE_MIGRATIONS, or
+// fmIDE's own list, which adds the shortcuts file's step), and does the same for nested
+// content (a workspace's system, each template's model). A file from a NEWER version is
+// flagged (`newer`), not refused, so the caller can ask first.
+// Returns { error } or { kind, data (the upgraded copy), fromVersion, newer, warnings }.
+function readFmData(raw, accept, migrations){
+  if(!raw || typeof raw !== 'object') return { error: "That file doesn't contain fmIDE data." };
+  const kind = inferFileKind(raw);
+  const fmt = kind && FILE_FORMATS[kind];
+  if(!fmt){
+    return { error: kind === 'fmIDE-excel-mapping'
+      ? 'That is an ExcelExporter mapping file — open it in ExcelExporter (Import Mapping JSON).'
+      : "That file isn't an fmIDE file this version recognises" + (kind ? ` (kind "${String(kind).slice(0, 40)}")` : '') + '.' };
+  }
+  if(!accept.includes(kind)){
+    const wanted = accept.map(fileKindLabel);
+    return { error: `That is an fmIDE ${fmt.label}, not a ${wanted.join(' or ')}. Open it with ${fmt.where}.` };
+  }
+  const data = JSON.parse(JSON.stringify(Array.isArray(raw) ? { kind, version: 1, macros: raw } : raw));
+  const { fromVersion: version, newer } = upgradeFileData(data, kind, FILE_FORMATS, migrations);
+  const warnings = [];
+  // Nested content.
+  const nestedTemplates = (list) => (list || []).map(t => {
+    // A recipe holds no model (only its parts, checked when it joins the library).
+    if(!t || !t.data || (t.kind !== 'module' && t.kind !== 'system')) return t;
+    const r = readFmData(t.data, [t.kind], migrations);
+    if(r.error){ warnings.push(`Template "${String(t.name || '').slice(0, 60)}" was skipped: ${r.error}`); return null; }
+    if(r.newer) warnings.push(`Template "${String(t.name || '').slice(0, 60)}" was saved by a newer fmIDE and may not load completely.`);
+    return Object.assign({}, t, { data: r.data });
+  }).filter(Boolean);
+  if(kind === 'fmIDE-workspace'){
+    if(data.system){
+      const r = readFmData(data.system, ['system'], migrations);
+      if(r.error) return { error: 'The workspace\'s system is unreadable: ' + r.error };
+      data.system = r.data;
+      if(r.newer) warnings.push('Its system was saved by a newer fmIDE and may not load completely.');
+    }
+    data.templates = nestedTemplates(data.templates);
+  }
+  if(kind === 'fmIDE-templates' || kind === 'fmIDE-library-pack') data.templates = nestedTemplates(data.templates);
+  return { kind, data, fromVersion: version, newer, warnings };
+}
+
+// ---------- templates and recipes from files ----------
+// A template family's id and a version id: 8–64 letters, digits and dashes (new ones are
+// random, newRandomId). A change note: one line of at most 200 characters.
+const TEMPLATE_NOTE_MAX = 200;
+function isTemplateUid(v){ return typeof v === 'string' && /^[A-Za-z0-9-]{8,64}$/.test(v); }
+function cleanTemplateNote(v){ return typeof v === 'string' ? v.trim().slice(0, TEMPLATE_NOTE_MAX) : ''; }
+// A recipe holds at most this many parts.
+const RECIPE_MAX_PARTS = 50;
+// The kinds a template can be. A workspace has always read an unknown kind as a canvas template.
+function templateKindOf(k){ return k === 'system' || k === 'recipe' ? k : 'module'; }
+// A recipe's data read from a file (untrusted): bad parts are dropped; null when none is left.
+function cleanRecipeData(d){
+  if(!d || typeof d !== 'object' || !Array.isArray(d.parts)) return null;
+  const parts = [];
+  d.parts.slice(0, RECIPE_MAX_PARTS).forEach(p => {
+    if(!p || typeof p !== 'object' || !isTemplateUid(p.family)) return;
+    const n = Number(p.version);
+    const version = p.version === 'latest' ? 'latest' : (Number.isInteger(n) && n >= 1 ? n : null);
+    if(version === null) return;
+    const part = { family: p.family, version, name: typeof p.name === 'string' ? p.name.slice(0, 200) : '' };
+    if(version !== 'latest' && isTemplateUid(p.versionId)) part.versionId = p.versionId;
+    parts.push(part);
+  });
+  return parts.length ? { kind: 'recipe', parts } : null;
+}
+
+// ---------- the function library from files ----------
+// Library definitions from a file (a workspace, an fmIDE-functions file, a library pack, the
+// autosave): cleaned like any definition, keeping an `origin` (the library pack a version
+// came from, phase 8b) that passes cleanItemOrigin. A model's own definitions never carry
+// one: cleanFunctionDefinitions drops it, so an origin never reaches a system or module.
+function cleanLibraryFunctions(list){
+  const out = [];
+  (Array.isArray(list) ? list : []).forEach(raw => {
+    const d = cleanFunctionDefinition(raw);
+    if(!d) return;
+    const origin = cleanItemOrigin(raw.origin);
+    if(origin) d.origin = origin;
+    out.push(d);
+  });
+  return out;
+}
+
+// ---------- library packs from files ----------
+// A pack file (parsed JSON) read and checked. Returns { error } (a message for people) or
+// { pack (its cleaned details), templates (as the file holds them, models upgraded),
+// functions (cleaned), newer, fromVersion, warnings }. At most LIBRARY_PACK_LIMITS.items of
+// each are read.
+function readLibraryPackData(raw){
+  const shape = fileDataProblem(raw);
+  if(shape) return { error: shape };
+  const r = readFmData(raw, ['fmIDE-library-pack'], FMIDE_FILE_MIGRATIONS);
+  if(r.error) return { error: r.error };
+  const info = cleanLibraryPackInfo(r.data.pack);
+  if(info.error) return { error: info.error };
+  const templates = (Array.isArray(r.data.templates) ? r.data.templates : []).slice(0, LIBRARY_PACK_LIMITS.items);
+  const functions = cleanLibraryFunctions(Array.isArray(r.data.functions) ? r.data.functions.slice(0, LIBRARY_PACK_LIMITS.items) : []);
+  return { pack: info.info, templates, functions, newer: r.newer, fromVersion: r.fromVersion, warnings: r.warnings };
+}

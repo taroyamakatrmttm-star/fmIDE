@@ -61,6 +61,7 @@ A **library pack** is one file of templates, recipes and functions to share with
 - Every text in a pack is someone else's and is only ever shown as plain text.
 - The file name fmIDE suggests is the title with `.fmide-pack.json` (for example `Three-statements-starter.fmide-pack.json`); it is an ordinary JSON file.
 - ExcelExporter doesn't read packs: it says to open them in fmIDE.
+- **The community library's checker** (`tools/check-pack.js`) reads a pack with the same code as fmIDE (`src/shared/fmide-files.js`) and is stricter: whatever fmIDE would leave out or tidy (a malformed id, a recipe part it would drop, a title with extra spaces, tags not in lower case) is an error there, and so are characters that hide or reverse text. A library pack is at most 5 MB.
 - **Version 2** (step 8, phase 8b): an item that came from someone else's pack carries its `origin` (below) into a pack of yours, so its author keeps the credit CC BY 4.0 asks for. Version 1 packs had none; they open as before, and every item they add is recorded as the pack's.
 
 ## Where items came from (`fmIDE-templates` 6, `fmIDE-workspace` 6, `fmIDE-functions` 2, `fmIDE-library-pack` 2)

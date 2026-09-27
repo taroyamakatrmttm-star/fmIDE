@@ -20,6 +20,8 @@
     "test:functions": "playwright test tests/20-functions.spec.js",
     "test:functions-fmide": "playwright test tests/21-functions-fmide.spec.js",
     "test:library-packs": "playwright test tests/22-library-packs.spec.js",
+    "test:pack-checker": "playwright test tests/23-pack-checker.spec.js",
+    "check-pack": "node tools/check-pack.js",
     "bench": "node tools/bench-calc.js"
   },
   "devDependencies": {

@@ -30,6 +30,7 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | `npm run test:functions` | function plugins: the parser, the samples in `fixtures/functions/`, files carrying their definitions |
 | `npm run test:functions-fmide` | functions in fmIDE: the library, the Functions manager and editor, the `fmIDE-functions` file, function nodes on the canvas (insert, drawing, wiring, updating, copy and paste), undo, ribbon, macros |
 | `npm run test:library-packs` | library packs (save, preview, open; packs from other people; where items came from and the family-rule warnings) and the size limits on every file opened, both apps |
+| `npm run test:pack-checker` | the library's pack checker, `tools/check-pack.js` (mostly in Node; one check against fmIDE) |
 | `npx playwright test -g "Tree view"` | tests whose name matches |
 
 After a failure, `npx playwright show-report` opens the report, with a trace for each failed test.
@@ -55,7 +56,7 @@ Review the snapshot diff before committing: it is the record of what the change 
 ## Layout
 
 ```
-0-smoke.spec.js … 22-library-packs.spec.js     one file per group in SPEC.md (6 and 7 split per app)
+0-smoke.spec.js … 23-pack-checker.spec.js      one file per group in SPEC.md (6 and 7 split per app)
 helpers/apps.js       the offline fixture: serves the apps, blocks and counts other requests
 helpers/excel.js      load a model, toggle options, capture the workbook (window.__wb + real .xlsx bytes)
 helpers/soffice.js    find LibreOffice, recalculate workbooks, read values
