@@ -2,6 +2,12 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: a row's own format, indent, and a full right-click menu in the Tree View
+- **🎨 on every row**, not just custom rows: give a row its own fill, font colour, bold, border and number format in Excel, over what fmIDE's format roles give it. With several rows selected, a change applies to all of them. **Reset to fmIDE's format** takes it off.
+- **Indent**: **Alt+Shift+→ / ←** (or Indent / Outdent in the selection bar and the menu) indents the selected rows' labels in Excel, like Excel's Increase Indent (Alt+H+6), up to 15 steps.
+- **Right-click** on rows now has every command of the selection bar — Move Up/Down/Top/Bottom, Include/Exclude, Mark/Unmark Constant, Add/Remove Scenarios, Indent, Format, Reset, Move to another tab — so there is no need to scroll back up to the bar.
+- The mapping file is version 2 (a row may carry its own format and indent); version 1 files open unchanged, and an older ExcelExporter asks before opening a version 2 file. Formats and indents from a file are checked: colours must be real colours, numbers are bounded.
+
 ## ExcelExporter: tidier formulas and new defaults
 - **Brackets only where Excel needs them.** A formula like `=(F4*(1-F5))` is now written `=F4*(1-F5)`. Brackets stay where Excel's order of operations needs them, and around the right-hand side of an equal level (`A1-(B1-C1)`, `A1+(B1+C1)`), so Excel adds in the same order as fmIDE. The values don't change; the agreement tests check this.
 - **Links before Inputs.** A rectangle that only pulls a value from another sheet, through a plug or an alias, used to be written `=(Sales!E7)` and coloured as a Calculation. It is now written `=Sales!E7` and gets the **Links** format.

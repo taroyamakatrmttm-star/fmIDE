@@ -76,6 +76,11 @@ var XLSX = (function(){
       if(H.includes(a.horizontal)) at += ' horizontal="' + a.horizontal + '"';
       if(V.includes(a.vertical)) at += ' vertical="' + a.vertical + '"';
       if(a.wrapText) at += ' wrapText="1"';
+      // Indent (Excel's Increase Indent): a whole number of steps, with left alignment.
+      if(Number.isInteger(a.indent) && a.indent > 0 && a.indent <= 250){
+        if(!H.includes(a.horizontal)) at += ' horizontal="left"';
+        at += ' indent="' + a.indent + '"';
+      }
       return at ? '<alignment' + at + '/>' : '';
     }
     // Style index for a cell's (style, number format) pair; 0 = default.

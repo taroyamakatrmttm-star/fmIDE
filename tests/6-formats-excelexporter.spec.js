@@ -102,7 +102,7 @@ test.describe('mapping files', () => {
     const [download] = await Promise.all([page.waitForEvent('download'), page.click('#btnExportMapping')]);
     const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
     expect(exported.kind).toBe('fmIDE-excel-mapping');
-    expect(exported.version).toBe(1);
+    expect(exported.version).toBe(2); // v2: a row may carry its own format and indent
     expect(exported.tabs.map(t => t.name)).toContain('Exported Tab');
     await renameFirstTab(page, 'Changed Since');
     const saved = testInfo.outputPath('exported-mapping.json');

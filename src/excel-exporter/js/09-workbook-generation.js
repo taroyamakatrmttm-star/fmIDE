@@ -188,7 +188,7 @@ function buildWorkbook(){
         // A custom row's own format (set in this tool) is its whole look — it has no
         // semantic colour to protect; otherwise the Labels role.
         const cellStyle = nodeStyleToExcelCellStyle(row.style) || roleCellStyle('Labels');
-        setCell('A' + excelRow, textCell(row.label, cellStyle));
+        setCell('A' + excelRow, textCell(row.label, withIndent(cellStyle, row)));
         setCell('B' + excelRow, blankCell(cellStyle));
         setCell(VINTAGE_COL + excelRow, blankCell(cellStyle));
         for(let k = 0; k < helperColCount; k++) setCell(helperCol(k) + excelRow, blankCell(cellStyle));
@@ -273,13 +273,14 @@ function buildWorkbook(){
         : isInputNode(canvas, node) ? 'Inputs'
         : (contents.length && contents.every(c => c.isFormula && PURE_LINK.test(c.formula))) ? 'Links'
         : 'Calculations';
-      const rowStyleObj = composeStyle(rowRole, own);
+      // The row's own format (Tree view 🎨) goes over the role and the rectangle's format.
+      const rowStyleObj = withRowFormat(composeStyle(rowRole, own), row.style);
       const cellStyle = nodeStyleToExcelCellStyle(rowStyleObj);
       const numFmt = numberFormatToExcel(rowStyleObj, fallbackFmt);
 
       if(scnBlock){
         // Scenario rows: the hard-coded numbers (Inputs role); numbering in C (Notes).
-        const inObj = composeStyle('Inputs', own);
+        const inObj = withRowFormat(composeStyle('Inputs', own), row.style);
         const inStyle = nodeStyleToExcelCellStyle(inObj);
         const inFmt = numberFormatToExcel(inObj, fallbackFmt);
         const numStyle = roleCellStyle('Notes', CENTER);
@@ -306,7 +307,7 @@ function buildWorkbook(){
         }
       }
 
-      setCell('A' + excelRow, textCell(row.label, cellStyle));
+      setCell('A' + excelRow, textCell(row.label, withIndent(cellStyle, row)));
       const uom = rowUnit(canvas, node, row.path);
       setCell('B' + excelRow, textCell(uom || '', cellStyle));
 

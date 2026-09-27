@@ -285,10 +285,13 @@ function buildTreeRowEl(row, flatIndex){
   const el = document.createElement('div');
   const isExcluded = !row.isCustom && !row.include && !row.inlineConstant;
   el.className = 'tree-row' + (isRowSelected(row.id) ? ' selected' : '') + (isExcluded ? ' excluded' : '');
+  if(row.isCustom) el.dataset.custom = '1';
   el.title = isExcluded ? 'Excluded — not written to the sheet. Select it and use "Include" in the bar above to bring it back.' : '';
 
   const label = document.createElement('span'); label.className = 'tree-row-label';
   label.textContent = row.label;
+  const indent = rowIndent(row);
+  if(indent){ label.style.paddingLeft = (indent * 14) + 'px'; label.dataset.indent = String(indent); }
   el.appendChild(label);
 
   if(row.inlineConstant){
@@ -332,18 +335,22 @@ function buildTreeRowEl(row, flatIndex){
     });
     el.appendChild(periodsBtn);
 
-    // Format and delete — the last two capabilities the Canvas/Tab views had that the
-    // tree lacked for custom rows. Both stopPropagation so they never also select the row.
-    const fmtBtn = document.createElement('button'); fmtBtn.className = 'icon tree-fmt-btn'; fmtBtn.textContent = '🎨';
-    fmtBtn.title = 'Edit this row\'s fill, font, and border';
-    fmtBtn.addEventListener('click', (ev) => { ev.stopPropagation(); toggleTreeRowStyleEditor(el, row); });
-    el.appendChild(fmtBtn);
-
+    // Delete — stopPropagation so it never also selects the row.
     const delBtn = document.createElement('button'); delBtn.className = 'icon danger tree-del-btn'; delBtn.textContent = '🗑';
     delBtn.title = 'Delete this custom row';
     delBtn.addEventListener('click', (ev) => { ev.stopPropagation(); deleteCustomRow(row); });
     el.appendChild(delBtn);
   }
+
+  // Format (every row): overrides the look fmIDE's roles give it in Excel. Highlighted when
+  // the row has a format of its own.
+  const fmtBtn = document.createElement('button');
+  fmtBtn.className = 'icon tree-fmt-btn' + (!row.isCustom && row.style ? ' on' : '');
+  fmtBtn.textContent = '🎨';
+  fmtBtn.title = row.isCustom ? 'Edit this row\'s fill, font, and border'
+    : (row.style ? 'This row has its own format in Excel — click to edit or reset it' : 'Give this row its own fill, font, border and number format in Excel');
+  fmtBtn.addEventListener('click', (ev) => { ev.stopPropagation(); toggleTreeRowStyleEditor(el, row); });
+  el.appendChild(fmtBtn);
 
   el.addEventListener('click', (ev) => handleTreeRowClick(ev, flatIndex));
   el.addEventListener('contextmenu', (ev) => {
@@ -398,6 +405,57 @@ function openTreeContextMenu(x, y, row, rowEl, labelSpan){
     b.addEventListener('click', () => { closeTreeContextMenu(); onClick(); });
     menu.appendChild(b);
   };
+  const hr = () => menu.appendChild(document.createElement('hr'));
+  const n = sel.length || 1;
+  const rows = sel.length ? sel : [row];
+  // Every command of the selection bar, on the selection (right-clicking outside it
+  // selected just that row first).
+  item('▲ Move Up', () => bulkNudgeSelected(-1));
+  item('▼ Move Down', () => bulkNudgeSelected(1));
+  item('⤒ Move to Top', () => bulkMoveSelected('top'));
+  item('⤓ Move to Bottom', () => bulkMoveSelected('bottom'));
+  hr();
+  const reals = rows.filter(r => !r.isCustom);
+  item('☑ Include', () => bulkSetInclude(true), reals.length ? null : { disabled: true, title: 'Custom rows are always written' });
+  item('☐ Exclude', () => bulkSetInclude(false), reals.length ? null : { disabled: true, title: 'Custom rows are always written' });
+  item('◆ Mark Constant', () => bulkSetInlineConstant(true), reals.length ? null : { disabled: true });
+  item('◇ Unmark Constant', () => bulkSetInlineConstant(false), reals.length ? null : { disabled: true });
+  if(rows.some(r => r.isInputMirror)){
+    item('≡ Add Scenarios', () => bulkSetScenarios(true));
+    item('Remove Scenarios', () => bulkSetScenarios(false));
+  }
+  hr();
+  item('⇥ Increase Indent', () => bulkIndentSelected(1), rows.every(r => rowIndent(r) >= ROW_INDENT_MAX) ? { disabled: true } : null);
+  item('⇤ Decrease Indent', () => bulkIndentSelected(-1), rows.every(r => rowIndent(r) === 0) ? { disabled: true } : null);
+  item(n > 1 ? `🎨 Format ${n} rows…` : '🎨 Format…', () => toggleTreeRowStyleEditor(rowEl, row));
+  item('Reset to fmIDE\'s format', () => bulkResetFormatSelected(),
+    rows.some(r => r.style || rowIndent(r)) ? null : { disabled: true, title: 'No row here has a format or indent of its own' });
+  hr();
+  // Move to another tab (and section, when sections are enforced), at its top or bottom.
+  const tabs = mapping.tabs.slice().sort((a, b) => a.order - b.order);
+  const sections = sectionsEnabled() ? [['input', 'Input'], ['calc', 'Calc'], ['output', 'Output']] : [[null, null]];
+  const moveMenu = document.createElement('div'); moveMenu.className = 'ctx-sub';
+  const moveHead = document.createElement('div'); moveHead.className = 'ctx-sub-head'; moveHead.textContent = 'Move to';
+  moveMenu.appendChild(moveHead);
+  const tabSel = document.createElement('select'); tabSel.setAttribute('aria-label', 'Tab');
+  tabs.forEach(t => { const o = document.createElement('option'); o.value = t.id; o.textContent = t.name; tabSel.appendChild(o); });
+  tabSel.value = row.tabId && tabs.some(t => t.id === row.tabId) ? row.tabId : (tabs[0] && tabs[0].id);
+  moveMenu.appendChild(tabSel);
+  let secSel = null;
+  if(sections[0][0]){
+    secSel = document.createElement('select'); secSel.setAttribute('aria-label', 'Section');
+    sections.forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; secSel.appendChild(o); });
+    if(row.section && sections.some(s => s[0] === row.section)) secSel.value = row.section;
+    moveMenu.appendChild(secSel);
+  }
+  [['top', 'at top'], ['bottom', 'at bottom']].forEach(([edge, text]) => {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = text; b.className = 'ctx-inline';
+    b.addEventListener('click', () => { closeTreeContextMenu(); moveSelectedToDestination(tabSel.value, secSel ? secSel.value : null, edge); });
+    moveMenu.appendChild(b);
+  });
+  moveMenu.addEventListener('mousedown', (ev) => ev.stopPropagation());
+  menu.appendChild(moveMenu);
+  hr();
   item('Insert custom row above', () => insertCustomRowNear(first, 'above'));
   item('Insert custom row below', () => insertCustomRowNear(last, 'below'));
   menu.appendChild(document.createElement('hr'));
@@ -427,13 +485,13 @@ window.addEventListener('wheel', closeTreeContextMenu, { capture: true, passive:
 window.addEventListener('touchmove', closeTreeContextMenu, { capture: true, passive: true });
 window.addEventListener('resize', closeTreeContextMenu);
 
-// Tree-view equivalent of toggleCustomRowStyleEditor (Canvas/Tab views), for a custom row
-// only — same fields (fill, font color, bold, border, border color), same `row.style`
-// shape, just laid out as a flex block appended INSIDE the row's own div instead of a
-// sibling <tr> (the tree isn't a table). Appending it as a child of `el` — the very
-// element `handleTreeRowClick`'s listener is bound to — would let a click inside the
-// editor bubble up and reset the selection to just this row, so the editor container
-// itself stops that one bit of propagation.
+// A row's format editor in the Tree view, laid out as a flex block appended INSIDE the
+// row's own div (the tree isn't a table). A custom row's format is its whole look (fill,
+// font colour, bold, border — the same `row.style` shape as the Canvas/Tab views); a
+// rectangle row's overrides what fmIDE's roles and the rectangle give it in Excel, and
+// can also set the number format. With the row among several selected, a change applies
+// to all of them. "Reset to fmIDE's format" drops the rows' own formats and indents.
+// A click inside the editor must not bubble up to the row and reset the selection.
 function toggleTreeRowStyleEditor(rowEl, row){
   const last = rowEl.children[rowEl.children.length - 1];
   if(last && last.classList && last.classList.contains('tree-style-editor')){
@@ -446,10 +504,16 @@ function toggleTreeRowStyleEditor(rowEl, row){
     if(lastChild && lastChild.classList && lastChild.classList.contains('tree-style-editor')) lastChild.remove();
   });
 
-  const st = row.style || {};
+  const targets = () => {
+    if(!selectedRowIds.has(row.id)) return [row];
+    return [...selectedRowIds].map(findRowById).filter(Boolean);
+  };
+  // What the editor starts from: the row's own format, else the look it gets today.
+  const st = row.style || (row.isCustom ? {} : treeRowCurrentLook(row));
   const editor = document.createElement('div');
   editor.className = 'tree-style-editor style-fields';
   editor.addEventListener('click', (ev) => ev.stopPropagation());
+  editor.addEventListener('dblclick', (ev) => ev.stopPropagation());
 
   function labeled(labelText, inputEl){
     const lab = document.createElement('label');
@@ -458,12 +522,13 @@ function toggleTreeRowStyleEditor(rowEl, row){
     return lab;
   }
 
-  const fillInput = document.createElement('input'); fillInput.type = 'color'; fillInput.value = st.fill || '#f8fafc';
-  const fillNone = document.createElement('input'); fillNone.type = 'checkbox'; fillNone.checked = !st.fill;
-  const fontColor = document.createElement('input'); fontColor.type = 'color'; fontColor.value = (st.font && st.font.color) || '#475569';
+  const fillInput = document.createElement('input'); fillInput.type = 'color'; fillInput.value = cleanHexColor(st.fill) || '#f8fafc';
+  const fillNone = document.createElement('input'); fillNone.type = 'checkbox'; fillNone.checked = !cleanHexColor(st.fill);
+  const fontColor = document.createElement('input'); fontColor.type = 'color'; fontColor.value = cleanHexColor(st.font && st.font.color) || '#475569';
   const boldChk = document.createElement('input'); boldChk.type = 'checkbox'; boldChk.checked = !!(st.font && (st.font.weight === '700' || st.font.weight === 'bold'));
   const borderChk = document.createElement('input'); borderChk.type = 'checkbox'; borderChk.checked = !!(st.border && st.border.style && st.border.style !== 'none');
-  const borderColor = document.createElement('input'); borderColor.type = 'color'; borderColor.value = (st.border && st.border.color) || '#94a3b8';
+  const borderColor = document.createElement('input'); borderColor.type = 'color'; borderColor.value = cleanHexColor(st.border && st.border.color) || '#94a3b8';
+  [fillInput, fillNone, fontColor, boldChk, borderChk, borderColor].forEach((x, i) => x.className = 'fmt-' + ['fill', 'nofill', 'font', 'bold', 'border', 'bordercolor'][i]);
 
   editor.appendChild(labeled('Fill', fillInput));
   editor.appendChild(labeled('No fill', fillNone));
@@ -472,18 +537,111 @@ function toggleTreeRowStyleEditor(rowEl, row){
   editor.appendChild(labeled('Border', borderChk));
   editor.appendChild(labeled('Border color', borderColor));
 
+  // Number format: rectangle rows only (a custom row has no numbers).
+  let nfKind = null, nfDec = null;
+  if(!row.isCustom){
+    nfKind = document.createElement('select'); nfKind.className = 'fmt-numkind';
+    [['', 'fmIDE\'s'], ['number', 'Number'], ['percent', 'Percent'], ['currency', 'Currency ($)']].forEach(([v, l]) => {
+      const o = document.createElement('option'); o.value = v; o.textContent = l; nfKind.appendChild(o);
+    });
+    const own = row.style && row.style.numberFormat;
+    nfKind.value = own && own.kind !== 'general' ? own.kind : '';
+    nfDec = document.createElement('input'); nfDec.type = 'number'; nfDec.min = '0'; nfDec.max = '10'; nfDec.className = 'fmt-decimals';
+    nfDec.value = String(own ? own.decimals : 0);
+    nfDec.disabled = !nfKind.value;
+    editor.appendChild(labeled('Number format', nfKind));
+    editor.appendChild(labeled('Decimals', nfDec));
+  }
+
   function commit(){
-    row.style = {
+    const fmt = {
       fill: fillNone.checked ? null : fillInput.value,
       font: { color: fontColor.value, weight: boldChk.checked ? '700' : 'normal' },
       border: borderChk.checked ? { color: borderColor.value, style: 'solid' } : { style: 'none' }
     };
+    if(nfKind){
+      nfDec.disabled = !nfKind.value;
+      if(nfKind.value) fmt.numberFormat = { kind: nfKind.value, decimals: nfDec.value };
+    }
+    const changed = targets();
+    changed.forEach(r => {
+      const own = cleanRowFormat(fmt);
+      // A custom row has no numbers; a rectangle row keeps its own number format when the
+      // editor says "fmIDE's".
+      if(r.isCustom) delete own.numberFormat;
+      r.style = own;
+    });
     saveMapping();
+    // Mark each changed rectangle row's 🎨 (the tree isn't redrawn, so the editor stays open).
+    changed.forEach(r => {
+      const entry = !r.isCustom && treeRowElements.find(e => e.id === r.id);
+      const btn = entry && entry.el.querySelector('.tree-fmt-btn');
+      if(btn) btn.classList.add('on');
+    });
   }
-  [fillInput, fillNone, fontColor, boldChk, borderChk, borderColor].forEach(fieldEl => fieldEl.addEventListener('change', commit));
+  [fillInput, fillNone, fontColor, boldChk, borderChk, borderColor].concat(nfKind ? [nfKind, nfDec] : [])
+    .forEach(fieldEl => fieldEl.addEventListener('change', commit));
+
+  const reset = document.createElement('button'); reset.type = 'button'; reset.className = 'icon fmt-reset';
+  reset.textContent = 'Reset to fmIDE\'s format';
+  reset.title = 'Drop this row\'s own format and indent, so it looks as fmIDE\'s roles say';
+  reset.addEventListener('click', () => { resetRowFormats(targets()); });
+  editor.appendChild(reset);
 
   rowEl.appendChild(editor);
 }
+
+// The look a rectangle row gets from its role and rectangle today — where the editor
+// starts. (The workbook decides Links vs Calculations from the formulas it writes; this
+// is only the starting point, from the same rules.)
+function treeRowCurrentLook(row){
+  const canvas = model.canvases.find(c => c.id === row.canvasId);
+  const node = canvas && canvas.nodes.find(n => n.id === row.nodeId);
+  const role = row.isInputMirror ? 'Inputs'
+    : (inputsEnabled() && inputMirrorRows().some(m => m.sourceRowId === row.id)) ? 'Links'
+    : (canvas && node && isInputNode(canvas, node)) ? 'Inputs' : 'Calculations';
+  return composeStyle(role, node && node.style);
+}
+
+// Indent the selected rows' labels by `delta` steps (bounded 0..ROW_INDENT_MAX).
+function bulkIndentSelected(delta){
+  [...selectedRowIds].map(findRowById).filter(Boolean).forEach(r => {
+    const n = Math.max(0, Math.min(ROW_INDENT_MAX, rowIndent(r) + delta));
+    if(n) r.indent = n; else delete r.indent;
+  });
+  saveMapping();
+  renderRows();
+  renderCustomRows();
+  renderBulkBar();
+}
+
+// Back to fmIDE's format: no own format, no indent.
+function resetRowFormats(list){
+  list.forEach(r => {
+    if(r.isCustom) r.style = null; else delete r.style;
+    delete r.indent;
+  });
+  saveMapping();
+  renderRows();
+  renderCustomRows();
+  renderBulkBar();
+}
+function bulkResetFormatSelected(){
+  resetRowFormats([...selectedRowIds].map(findRowById).filter(Boolean));
+}
+
+// Alt+Shift+→ / ← in the Tree view: indent / outdent the selection (Excel's Alt+H+6 / 5
+// belong to the browser here).
+document.addEventListener('keydown', (ev) => {
+  if(!ev.altKey || !ev.shiftKey || ev.ctrlKey || ev.metaKey) return;
+  if(ev.key !== 'ArrowRight' && ev.key !== 'ArrowLeft') return;
+  const t = ev.target;
+  if(t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  const tree = $('rowGroupsTree');
+  if(!mapping || !selectedRowIds.size || !tree || tree.offsetParent === null) return;
+  ev.preventDefault();
+  bulkIndentSelected(ev.key === 'ArrowRight' ? 1 : -1);
+});
 
 // Double-click a row's label to rename just that one row in place — the only label edit
 // the Tree view supports (renaming several rows to the same text at once isn't useful the

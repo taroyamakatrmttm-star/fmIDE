@@ -107,7 +107,7 @@ Current versions:
 | `fmIDE-macros` | 1 | Macros |
 | `fmIDE-preferences` | 1 | Shortcuts, ribbon and Quick Access Toolbar, KeyTips trigger (fmIDE only; Export / Import Preferences) |
 | `fmIDE-library-pack` | 2 | Templates, recipes and functions to share, with title, author and licence (fmIDE only; Save as / Open Library Pack); v2: an item shared again keeps its `origin` |
-| `fmIDE-excel-mapping` | 1 | ExcelExporter's tab/row layout for one model |
+| `fmIDE-excel-mapping` | 2 | ExcelExporter's tab/row layout for one model; v2: a row's own format (`style`) and `indent` |
 | `fmIDE-library-index` | 1 | The catalogue's list of packs, `/library/index.json`, written by the build; read from the site by fmIDE's Browse Library (`readLibraryIndexData`), never opened as a file |
 
 To change a format:
@@ -119,7 +119,7 @@ To change a format:
 
 ## Format roles (`docs/format-roles.md`)
 
-All formatting — on the canvas and in Excel — is defined in one place: **format roles** in fmIDE's Formats manager (File → Format Presets). Each role is a format preset with a reserved name; roles can be edited but not deleted, and they travel inside system and workspace exports, which is how ExcelExporter reads them. Files without them get the built-in defaults (`FORMAT_ROLES` in `src/shared/format-roles.js`). Do not add a second place where formatting is defined.
+All formatting — on the canvas and in Excel — is defined in one place: **format roles** in fmIDE's Formats manager (File → Format Presets). Each role is a format preset with a reserved name; roles can be edited but not deleted, and they travel inside system and workspace exports, which is how ExcelExporter reads them. Files without them get the built-in defaults (`FORMAT_ROLES` in `src/shared/format-roles.js`). Do not add a second place where formatting is defined. The one exception, by the owner's decision: ExcelExporter's Tree view can give a row its own format and label indent for that layout (`row.style`, `row.indent`, mapping file v2; read through `cleanRowFormat` / `rowIndent`), laid over the roles with `withRowFormat`, with Reset to fmIDE's format.
 
 | Role | Used on | Covers |
 |---|---|---|

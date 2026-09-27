@@ -19,6 +19,8 @@ All formatting — on fmIDE's canvas and in the Excel workbook — is defined in
 | Fill, font colour, border | Role — or the rectangle's own if **"Use this fill, font colour & border in Excel too"** is ticked | Role |
 | Number format, weight, font size | Rectangle's own | Role |
 
+**A row's own format in ExcelExporter** (the owner's decision, an exception to "one place"): in ExcelExporter's Tree view, 🎨 on a row gives that row, in that workbook layout only, its own fill, font colour, bold, border and optionally number format. It goes over everything above for that row, and **Reset to fmIDE's format** takes it off. It is saved with the ExcelExporter layout (mapping file version 2), never in the model; the roles stay the one place a model's formatting is defined. The label's indent is set there too.
+
 **Excel-only settings of a style:** *Excel border sides* (Top / Bottom / Left / Right; none ticked = no border in Excel — the canvas always draws the full outline) and *Use Excel's default font size*.
 
 **Input rectangle** (one rule for both apps, in `src/shared/input-rule.js`): no incoming arrow, or a single incoming arrow from an operator or period shift that nothing feeds (e.g. a socket operator with nothing plugged in).

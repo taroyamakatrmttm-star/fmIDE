@@ -489,6 +489,16 @@ function renderBulkBar(){
     bar.appendChild(sOff);
   }
 
+  const dvIndent = document.createElement('span'); dvIndent.className = 'bulk-divider'; bar.appendChild(dvIndent);
+  const indBtn = document.createElement('button'); indBtn.className = 'icon'; indBtn.textContent = '⇥ Indent';
+  indBtn.title = 'Indent the selected rows\' labels one step in Excel, like Excel\'s Increase Indent (Alt+Shift+→ here)';
+  indBtn.addEventListener('click', () => bulkIndentSelected(1));
+  bar.appendChild(indBtn);
+  const outBtn = document.createElement('button'); outBtn.className = 'icon'; outBtn.textContent = '⇤ Outdent';
+  outBtn.title = 'Take one step of indent off the selected rows\' labels (Alt+Shift+← here)';
+  outBtn.addEventListener('click', () => bulkIndentSelected(-1));
+  bar.appendChild(outBtn);
+
   const divider2 = document.createElement('span'); divider2.className = 'bulk-divider';
   bar.appendChild(divider2);
 

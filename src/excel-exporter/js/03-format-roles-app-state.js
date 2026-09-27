@@ -66,6 +66,50 @@ function mergeXlStyle(base, extra){
 }
 const CENTER = { alignment: { horizontal: 'center' } };
 
+// ---------- A row's own format and indent (set in the Tree view) ----------
+// row.style on a custom row is its whole look; on a rectangle row it overrides what the
+// role and the rectangle give it: fill, font colour, bold, border, and (optionally) the
+// number format. row.indent: how many steps the label (column A) is indented, like Excel's
+// Increase Indent (Alt+H+6). Both come from saved layouts and mapping files, so they are
+// read through cleanRowFormat / rowIndent: colours checked, numbers forced and bounded.
+const ROW_INDENT_MAX = 15;
+const ROW_NUMBER_KINDS = ['general', 'number', 'percent', 'currency'];
+function cleanHexColor(v){ return typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v) ? v.toLowerCase() : null; }
+function cleanRowFormat(st){
+  if(!st || typeof st !== 'object' || Array.isArray(st)) return null;
+  const out = { fill: cleanHexColor(st.fill) };
+  const f = st.font && typeof st.font === 'object' ? st.font : {};
+  out.font = { color: cleanHexColor(f.color) || '#1e293b', weight: (f.weight === '700' || f.weight === 'bold') ? '700' : 'normal' };
+  const b = st.border && typeof st.border === 'object' ? st.border : {};
+  out.border = b.style && b.style !== 'none' ? { color: cleanHexColor(b.color) || '#94a3b8', style: 'solid' } : { style: 'none' };
+  const nf = st.numberFormat;
+  if(nf && typeof nf === 'object' && ROW_NUMBER_KINDS.includes(nf.kind)){
+    const d = Math.round(Number(nf.decimals));
+    out.numberFormat = { kind: nf.kind, decimals: Number.isFinite(d) ? Math.max(0, Math.min(10, d)) : 2 };
+    if(nf.kind === 'currency') out.numberFormat.currencySymbol = '$';
+  }
+  return out;
+}
+function rowIndent(row){
+  const n = Math.round(Number(row && row.indent));
+  return Number.isFinite(n) ? Math.max(0, Math.min(ROW_INDENT_MAX, n)) : 0;
+}
+// A rectangle row's style (fmIDE-style object) with the row's own format laid over it.
+function withRowFormat(base, fmt){
+  if(!fmt) return base;
+  const out = JSON.parse(JSON.stringify(base || {}));
+  out.fill = fmt.fill || null;
+  out.font = Object.assign({}, out.font || {}, { color: fmt.font.color, weight: fmt.font.weight });
+  out.border = fmt.border.style === 'none' ? { style: 'none' } : { color: fmt.border.color, style: 'solid' };
+  if(fmt.numberFormat) out.numberFormat = fmt.numberFormat;
+  return out;
+}
+// The label cell's Excel style: the row's style plus its indent.
+function withIndent(cellStyle, row){
+  const n = rowIndent(row);
+  return n ? mergeXlStyle(cellStyle, { alignment: { horizontal: 'left', indent: n } }) : cellStyle;
+}
+
 // Read-only legend: each role's look and whether it came from the file or the default.
 function renderRolesLegend(){
   const el = $('rolesLegend'); if(!el) return;
