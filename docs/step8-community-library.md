@@ -45,6 +45,32 @@ The owner approved the recommendations of the 8c plan:
 9. **A "report this item" link** on catalogue pages to the library's issues, once the repository is public; until then the takedown steps as text.
 10. **The catalogue** is plain HTML with no JavaScript, left out of the app's offline copy and its version (so a new pack doesn't make fmIDE say "a new version is ready"), plus `/library/index.json` for 8d.
 
+## Phase 8c-2 — agreed choices (27 September 2026)
+
+The owner approved the recommendations of the 8c-2 plan:
+
+- **Two pull requests:** first fmIDE's (the checker's library mode, a sample library, tests), then the `fmide-library` repository's own files, whose `checker.json` names the fmIDE commit that merged the first.
+- **A. Accounts** are recorded by GitHub's numeric user id, with the login beside it for people: a login can be renamed, and a freed login taken by someone else.
+- **B. A third record, `packs.json`:** every approved pack's account, date, hash and version ids. It stays when a pack is taken down, so its pack id and version ids are never used again, and it pins each pack's content.
+- **C. Records of a submission** are added by the submitter; CI lists the exact entries, and a maintainer can instead run `--write-records` and push them to the pull request.
+- **D. Maintainers** are listed in `checker.json` (read from `main`, never from the pull request): a maintainer's pull request that changes records and adds no pack (an ownership change) gets warnings, not errors.
+- **E.** While fmIDE is private, the library's CI reads it with a **read-only deploy key**.
+- **F.** Submitters agree to the submission terms with a **tick box in the pull-request template**, which CI checks.
+- **Approval stays manual** for every submission (decision 2). Merging automatically the green pull requests of known authors that only add versions to their own families was discussed and left for later (it needs branch protection, which a free private repository doesn't have).
+
+## Phase 8c-2 — how it turned out (part 1: the checker's library mode)
+
+- **`node tools/check-pack.js --library DIR`** (code in `tools/check-library.js`, Node only, no git, no network) checks a whole library folder: `packs/` holds only `<pack id>.fmide-pack.json` files, each passing the one-pack check; the records (`families.json`, `authors.json`, `packs.json`, `checker.json`, described in `docs/file-formats.md`) are well-formed and match the packs (hash, version ids, accounts, first packs).
+  - **The family rule:** an item without an `origin` is the submitter's own work, so its family must be the pack's account's (or new, and then it becomes theirs).
+  - **Sharing again:** an item whose `origin` names another pack must be an exact copy (its JSON apart from `origin`, key order included) of the version that pack holds as its own, and the origin's title, author and licence must be that pack's. fmIDE writes a version shared again exactly as it read it, so real saves pass.
+  - **Ids:** a version id is one version everywhere (same family, number and content); a family's version number is one version id; a family is one kind. A version of a pack taken down can't go into a new pack unless an approved pack still holds it as its owner's. The owner repeating one of their approved versions in a new pack (a part a recipe needs) is a note.
+  - **Authors:** the pack's author matches its account's name in `authors.json` (compared like fmIDE compares, ignoring capitals and spaces), and no two accounts share a name.
+- **`--base DIR`** (the library before the pull request) with **`--account LOGIN --account-id N`** (the account that opened it): changed or removed record entries, edited packs, new entries naming another account or a pack the pull request doesn't add, a pack id used before (even by a pack taken down), and a submitter changing anything but `packs/` and the three records are errors. Removing a pack is a takedown (a warning), and an error when the same pull request adds packs. The maintainers come from the base's `checker.json`.
+- **`--write-records`** adds exactly the missing entries (sorted by id; nothing existing is changed) and refuses when anything else is wrong. The sample library's records were written by it.
+- **Reports:** a summary in the checker's own words (the account, new packs, families claimed, new authors, items shared again, takedowns — numbers, ids and logins, never pack text), then the errors, warnings, notes, the records to add, and each pack's report. `--json` for machines; `--markdown` for the pull request, with the whole report inside one fenced block (backticks and tildes written as `\u0060` and `\u007e`, hidden characters escaped), so nothing in it can render, mention someone, link or close the block; cut to 60,000 characters.
+- Found while building: a pack taken down listed, among its version ids, a version it had shared again from someone else — a first draft then refused the original. Only a new pack is now checked against the ids of packs taken down, and not when an approved pack still holds the version as its own.
+- Tests: group 24 (`tests/24-library-checker.spec.js`, `npm run test:library-checker`), sample `tests/fixtures/library/sample-library/`.
+
 ## Phase 8c-1 — how it turned out
 
 - **The shared reader.** fmIDE's file reader and what it uses to read packs moved, unchanged, from fmIDE's own code into `src/shared/fmide-files.js`: `FILE_FORMATS` (every kind fmIDE reads), `FMIDE_FILE_MIGRATIONS` (the upgrade steps of fmIDE's kinds; the shortcuts file's step, which needs fmIDE's key names, stays in fmIDE), `readFmData` (the reader; fmIDE's `readFmFile` adds the workspace's shortcut notation), `isTemplateUid`, `cleanTemplateNote`, `cleanRecipeData`, `cleanLibraryFunctions` and `readLibraryPackData` (fmIDE's `readLibraryPack` without the message box). fmIDE includes it; ExcelExporter doesn't. The existing tests pass unchanged, which shows fmIDE reads files exactly as before.

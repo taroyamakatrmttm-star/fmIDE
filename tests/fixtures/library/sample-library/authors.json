@@ -1,0 +1,16 @@
+{
+  "kind": "fmIDE-library-authors",
+  "version": 1,
+  "authors": {
+    "1001": {
+      "account": "ann-example",
+      "author": "Ann Example",
+      "added": "2026-09-27"
+    },
+    "1002": {
+      "account": "bob-sample",
+      "author": "Bob Sample",
+      "added": "2026-09-28"
+    }
+  }
+}

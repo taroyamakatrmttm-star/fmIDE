@@ -7,6 +7,9 @@
 //
 //   node tools/check-pack.js PACK.json [PACK.json …]      a report for people
 //   node tools/check-pack.js --json PACK.json [ … ]       the same, as JSON
+//   node tools/check-pack.js --library DIR [--base DIR] [--account LOGIN --account-id N]
+//        [--date YYYY-MM-DD] [--write-records] [--json | --markdown]
+//                                     a whole library, or a pull request to it (check-library.js)
 //
 // The rule: fmIDE is forgiving so that people's files still open — it quietly drops or
 // repairs what it can't use. The library only takes clean files, so anything fmIDE would
@@ -468,6 +471,7 @@ function formatReport(r){
 
 function main(argv){
   const args = argv.slice(2);
+  if(args.includes('--library')) return mainLibrary(args);
   const json = args.includes('--json');
   const files = args.filter(a => a !== '--json');
   const unknown = files.filter(a => a.startsWith('--'));
@@ -487,6 +491,47 @@ function main(argv){
   return reports.every(r => r.ok) ? 0 : 1;
 }
 
+// The library mode (check-library.js): options with a value, and flags.
+const LIBRARY_OPTIONS = ['--library', '--base', '--account', '--account-id', '--date'];
+const LIBRARY_FLAGS = ['--write-records', '--json', '--markdown'];
+function mainLibrary(args){
+  const L = require('./check-library');
+  const usage = 'Usage: node tools/check-pack.js --library DIR [--base DIR] [--account LOGIN --account-id N] [--date YYYY-MM-DD] [--write-records] [--json | --markdown]\n';
+  const o = {};
+  for(let i = 0; i < args.length; i++){
+    const a = args[i];
+    if(LIBRARY_FLAGS.includes(a)) o[a] = true;
+    else if(LIBRARY_OPTIONS.includes(a) && i + 1 < args.length && !args[i + 1].startsWith('--')) o[a] = args[++i];
+    else { process.stderr.write(`Unknown or incomplete option ${a}.\n` + usage); return 2; }
+  }
+  if(!o['--library'] || (o['--json'] && o['--markdown'])){ process.stderr.write(usage); return 2; }
+  if(!!o['--account'] !== !!o['--account-id']){ process.stderr.write('--account and --account-id go together (the GitHub login and its numeric id).\n'); return 2; }
+  let account = null;
+  if(o['--account']){
+    const id = Number(o['--account-id']);
+    if(!L.LOGIN.test(o['--account']) || !/^[1-9][0-9]{0,15}$/.test(o['--account-id']) || !Number.isSafeInteger(id)){ process.stderr.write('That isn\'t a GitHub login and account id.\n'); return 2; }
+    account = { login: o['--account'], id };
+  }
+  if(o['--date'] && !(/^\d{4}-\d{2}-\d{2}$/.test(o['--date']) && realDate(o['--date']))){ process.stderr.write('--date must be a real date, YYYY-MM-DD.\n'); return 2; }
+  for(const d of [o['--library'], o['--base']].filter(Boolean)){
+    if(!fs.existsSync(d) || !fs.statSync(d).isDirectory()){ process.stderr.write(`Can't read the folder ${d}.\n`); return 2; }
+  }
+  const opts = { baseDir: o['--base'] || null, account, date: o['--date'] };
+  let report;
+  if(o['--write-records']){
+    if(opts.baseDir){ process.stderr.write('--write-records works on one folder; leave out --base.\n'); return 2; }
+    const w = L.writeRecords(o['--library'], opts);
+    if(!w.written) process.stderr.write(w.reason + '\n');
+    else process.stderr.write('Added records to ' + w.files.join(', ') + '.\n');
+    if(!w.report) return 2;
+    report = w.report;
+  } else report = L.checkLibrary(o['--library'], opts);
+  if(o['--json']) process.stdout.write(JSON.stringify(report, null, 2) + '\n');
+  else if(o['--markdown']) process.stdout.write(L.formatMarkdown(report));
+  else process.stdout.write(L.formatLibraryReport(report) + '\n');
+  return report.ok ? 0 : 1;
+}
+
 // `shared`: the shared code as the checker loaded it (the tests compare it with fmIDE).
-module.exports = { checkPack, formatReport, hiddenCharacter, CHECK_LIMITS, shared: S };
+module.exports = { checkPack, formatReport, hiddenCharacter, quote, CHECK_LIMITS, shared: S };
 if(require.main === module) process.exitCode = main(process.argv);
