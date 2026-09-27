@@ -23,11 +23,15 @@
   //    other versions, as the family's next number, keeping its versionId, with a note
   //    saying so. Calls to it in the library follow it (they match by versionId).
   // Returns { added, present, renumbered }.
+  // Whether a definition from a file is already in the library (the rule above).
+  function functionAlreadyHere(d){
+    return FUNCTIONS.some(f => sameFunctionVersion(f, d))
+      || (!d.versionId && FUNCTIONS.some(f => f.family === d.family && f.text === d.text));
+  }
   function addMissingFunctions(list){
     let added = 0, present = 0, renumbered = 0;
     const clashes = [], moved = [];
-    const here = (d) => FUNCTIONS.some(f => sameFunctionVersion(f, d))
-      || (!d.versionId && FUNCTIONS.some(f => f.family === d.family && f.text === d.text));
+    const here = functionAlreadyHere;
     cleanFunctionDefinitions(list).forEach(d => {
       if(here(d)){ present++; return; }
       if(FUNCTIONS.some(f => f.family === d.family && f.version === d.version)){ clashes.push(d); return; }

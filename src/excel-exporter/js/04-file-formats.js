@@ -20,7 +20,8 @@ const OTHER_FMIDE_KINDS = {
   'fmIDE-shortcuts': 'an fmIDE shortcuts file — import it in fmIDE',
   'fmIDE-macros': 'an fmIDE macros file — import it in fmIDE',
   'fmIDE-functions': 'an fmIDE functions file — import it in fmIDE (a system or workspace export already carries the functions its model uses)',
-  'fmIDE-preferences': 'an fmIDE preferences file (shortcuts, ribbon and KeyTips) — import it in fmIDE with File → Import Preferences'
+  'fmIDE-preferences': 'an fmIDE preferences file (shortcuts, ribbon and KeyTips) — import it in fmIDE with File → Import Preferences',
+  'fmIDE-library-pack': 'an fmIDE library pack (templates and functions to share) — open it in fmIDE with File → Open Library Pack'
 };
 // The mapping file has had no upgrades yet.
 const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS);

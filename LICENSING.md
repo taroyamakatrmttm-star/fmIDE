@@ -13,6 +13,8 @@ fmIDE is **open core**: the editor and the file format are open, so anyone can u
 
 The published web app contains both parts; it ships these licence files alongside them.
 
+**Items shared in library packs** (templates, recipes and functions people share with each other, `docs/step8-community-library.md`) are not part of this repository: each pack says who made it, and its items are licensed by their author under [CC BY 4.0](docs/LICENSE-CC-BY-4.0.txt). Submission terms for the community library are to be reviewed with the other licence texts.
+
 **Why this split:** an open editor and an open, documented file format let a community — and other tools — grow around fmIDE, and let people trust that their models will stay readable; ExcelExporter, which turns a model into a professional Excel workbook, is where paid editions may build later. See decision 3 in [docs/decisions.md](docs/decisions.md).
 
 The name "fmIDE" is not licensed by any of the above.

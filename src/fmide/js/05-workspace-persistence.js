@@ -46,7 +46,7 @@
     if(Array.isArray(data.formatPresets)) mergeFormatPresets(data.formatPresets);
     // ribbon/KeyTips settings, then macros (so macro commands exist before their
     // shortcut bindings are applied below); syncMacroCommands re-renders the ribbon
-    if(data.ui) applyUiPayload(data.ui);
+    if(data.ui) applyUiPayload(data.ui, fromImport);
     if(Array.isArray(data.macros)) importMacros(data.macros, 'replace');
     if(data.ui || Array.isArray(data.macros)) syncMacroCommands();
     if(data.shortcutBindings && typeof data.shortcutBindings === 'object'){

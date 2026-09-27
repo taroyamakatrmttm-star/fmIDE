@@ -3809,6 +3809,32 @@ function upgradeFileData(data, kind, formats, migrations){
   data.kind = kind;
   return { fromVersion: version, newer };
 }
+// Limits on a file someone opens (step 8, phase 8a). Files may come from other people, so a
+// hostile one must not freeze the page: too many characters, JSON nested too deep (which
+// would overflow the stack of code that walks it) or too many values are refused with a
+// plain message before anything else reads the file. The autosave is never checked: it is
+// the person's own work. Generous for real models (the largest sample is 60 kB, 5 deep).
+const FILE_LIMITS = { chars: 50 * 1024 * 1024, depth: 100, values: 5000000 };
+// A message when a file's text is too long to open, else null.
+function fileTextProblem(text){
+  if(typeof text !== 'string' || text.length <= FILE_LIMITS.chars) return null;
+  return 'That file is too large to open (' + Math.ceil(text.length / 1048576) + ' MB; the limit is ' + (FILE_LIMITS.chars / 1048576) + ' MB).';
+}
+// A message when parsed data is nested too deep or holds too many values, else null.
+// Walks without recursion, so a deep file can't overflow the stack here either.
+function fileDataProblem(raw){
+  const stack = [[raw, 1]];
+  let values = 0;
+  while(stack.length){
+    const [v, depth] = stack.pop();
+    if(++values > FILE_LIMITS.values) return 'That file holds too much data to open (more than ' + FILE_LIMITS.values.toLocaleString('en-US') + ' values).';
+    if(!v || typeof v !== 'object') continue;
+    if(depth > FILE_LIMITS.depth) return 'That file is nested too deeply to open (more than ' + FILE_LIMITS.depth + ' levels).';
+    const items = Array.isArray(v) ? v : Object.values(v);
+    for(let i = 0; i < items.length; i++) stack.push([items[i], depth + 1]);
+  }
+  return null;
+}
 const FILE_FORMATS = {
   'system':              { current: SHARED_FILE_VERSIONS['system'], label: 'fmIDE system' },
   'fmIDE-workspace':     { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'fmIDE workspace' },
@@ -3822,7 +3848,8 @@ const OTHER_FMIDE_KINDS = {
   'fmIDE-shortcuts': 'an fmIDE shortcuts file — import it in fmIDE',
   'fmIDE-macros': 'an fmIDE macros file — import it in fmIDE',
   'fmIDE-functions': 'an fmIDE functions file — import it in fmIDE (a system or workspace export already carries the functions its model uses)',
-  'fmIDE-preferences': 'an fmIDE preferences file (shortcuts, ribbon and KeyTips) — import it in fmIDE with File → Import Preferences'
+  'fmIDE-preferences': 'an fmIDE preferences file (shortcuts, ribbon and KeyTips) — import it in fmIDE with File → Import Preferences',
+  'fmIDE-library-pack': 'an fmIDE library pack (templates and functions to share) — open it in fmIDE with File → Open Library Pack'
 };
 // The mapping file has had no upgrades yet.
 const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS);
@@ -6912,10 +6939,19 @@ function renderDifferences(){
 // ============================================================
 // Wiring
 // ============================================================
-async function tryLoad(jsonText, label){
+// A file that is too large or nested too deep is refused first (FILE_LIMITS, shared).
+function parseFileText(text){
+  const tooBig = fileTextProblem(text);
+  if(tooBig) return { error: tooBig };
   let parsed;
-  try{ parsed = JSON.parse(jsonText); }
-  catch(err){ setStatus($('loadStatus'), 'That is not valid JSON.', 'err'); return; }
+  try{ parsed = JSON.parse(text); }
+  catch(err){ return { error: 'That is not valid JSON.' }; }
+  const shape = fileDataProblem(parsed);
+  return shape ? { error: shape } : { parsed };
+}
+async function tryLoad(jsonText, label){
+  const { parsed, error } = parseFileText(jsonText);
+  if(error){ setStatus($('loadStatus'), error, 'err'); return; }
   const r = readKnownFile(parsed, ['system', 'fmIDE-workspace']);
   if(r.error){ setStatus($('loadStatus'), r.error, 'err'); return; }
   if(!(await confirmNewerFile(r))){ setStatus($('loadStatus'), 'Not loaded.', 'info'); return; }
@@ -7014,9 +7050,8 @@ $('mappingFileInput').addEventListener('change', () => {
   if(!file) return;
   const reader = new FileReader();
   reader.onload = async () => {
-    let parsed;
-    try{ parsed = JSON.parse(reader.result); }
-    catch(err){ setStatus($('genStatus'), 'That is not valid JSON.', 'err'); return; }
+    const { parsed, error } = parseFileText(reader.result);
+    if(error){ setStatus($('genStatus'), error, 'err'); return; }
     const r = readKnownFile(parsed, ['fmIDE-excel-mapping']);
     if(r.error){ setStatus($('genStatus'), r.error, 'err'); return; }
     if(!(await confirmNewerFile(r))){ setStatus($('genStatus'), 'Mapping not imported.', 'info'); return; }
