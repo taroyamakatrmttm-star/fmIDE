@@ -1,9 +1,9 @@
 // 27. Touch — fmIDE's canvas by finger (step 9a: one input path; step 9b: press and hold,
 // double-tap, larger touch areas; step 9c: the screen — the viewport line, the ribbon, dialogs,
-// the on-screen keyboard; ExcelExporter's Tree view is group 29). Chromium with a touchscreen at tablet size; the touches are
-// real touch input sent through the Chrome DevTools Protocol (Input.dispatchTouchEvent), not
-// mouse events, and each test checks the page saw them as touch. The mouse is covered,
-// unchanged, by every other group.
+// the on-screen keyboard; ExcelExporter's Tree view is group 30). Chromium with a touchscreen
+// at tablet size; the touches are real touch input sent through the Chrome DevTools Protocol
+// (Input.dispatchTouchEvent), not mouse events, and each test checks the page saw them as
+// touch. The mouse is covered, unchanged, by every other group.
 const { test, expect } = require('./helpers/apps');
 const F = require('./helpers/fmide');
 

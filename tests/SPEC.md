@@ -328,6 +328,7 @@ Samples in `tests/fixtures/functions/`: `library.json` (an `fmIDE-functions` fil
 - Load Module with a different Margin v2 than the model's: it comes in as v3, its node follows and calculates (0.4) — before D2b it showed "?".
 - The ribbon: My Functions holds Functions, Insert Function…, Update Function…, Import Functions…; Home → Insert has Insert Function…; neither new command has a shortcut. A customised ribbon's My Functions group (wherever it is) gets the two commands once (`ui.functionCommandsAdded`); a group saved without them afterwards stays so; a ribbon without the group gets nothing.
 - A macro records `insertFunction` (`Margin@1`), `connect` with the input names Revenue and Cost (given as numbers), `insertFunction`, `skipFunctionUpdate`, `updateFunctionNode` and `changeFunction`; replayed on a fresh canvas it builds Margin v2 and Profit v1.
+
 ### 22. Library packs (`tests/22-library-packs.spec.js`; step 8 phases 8a and 8b)
 Sample `tests/fixtures/library/pack-v1.json` (Sam Sample's "Sample pack": Income Statement v1 as in `formats/templates-v2.json`, Balance Sheet v3 in that file's family, a different Cash Flow family, Margin v3 in `functions/library.json`'s family, and Growth v1 calling Margin v3). Most tests start from a library holding `templates-v2.json`, `functions/library.json` and a recipe Statements (Income Statement latest, Balance Sheet v1).
 - `fm.saveLibraryPack` with Statements and Profit: kind and version 2 (version 1 until 8b); title, author, licence `CC-BY-4.0`, description with its line break, tags lower case without duplicates, a random id and today's date; the recipe brings Income Statement v1 and Balance Sheet v1, Profit brings Margin v1 (not the latest); the download is named `Three-statements-starter.fmide-pack.json`.
@@ -440,14 +441,6 @@ Two boxes "overlap" when they share any area.
 - A "Revenue" socket on Summary, two rectangles where its automatic aliases would go, and four rectangles plugged "Revenue" on Sales: four automatic aliases on Summary, nothing overlapping.
 - Macro Builder, a macro One · group (Two, Three) · Four: selecting One and "▶ Run selected step" selects the group; running the group selects Four (skipping what is inside it); running Four says "It was the last step." and keeps it selected; the canvas holds One, Two, Three, Four in that order; running Three (last in its group) selects Four.
 
-### 29. ExcelExporter by touch (`tests/29-touch-excel.spec.js`; step 9c)
-ExcelExporter's Tree view in Chromium with a touchscreen at 1024 × 768, sample `revenue-bs-corkscrew.json`; real touch input as in group 27 (`tests/helpers/touch.js`), and the tests check the page saw `touch`. The mouse is covered, unchanged, by group 7.
-- A tap selects just that row. Holding another row (0.7 s) opens its menu beside the finger, still open after the finger lifts, with the selection unchanged; it starts with "☑ Add to selection" and "⇕ Select from the last row to here".
-- Add to selection adds the held row; held on a selected row, "☐ Remove from selection" takes it out; Select from the last row to here selects from the row last added or removed to the held row (five rows; the selection bar says so).
-- Held on the last row of a tab, outside the selection, Move to Top moves just that row and leaves it selected.
-- With no row tapped yet, Select from the last row to here is disabled.
-- A double-tap on a row opens its rename box (focused, 16px text); typing and Enter rename it. A double-tap with nothing selected renames the row its first tap selected, although the selection bar that appears moves the list under the finger.
-- A right-click opens the menu at once, selects just that row, and has no Add to selection / Select from the last row items.
 ### 29. Resizable windows and the Templates tree (`tests/29-windows.spec.js`)
 fmIDE at 1400 × 900.
 - Templates, Functions, Macro Builder and Customize Ribbon: each window's CSS `resize` is `both`; set to 700 × 520 (as dragging the corner does), the autosave's `ui.windowSizes` holds it; after a reload the window opens at 700 × 520; a double-click on its corner puts it back to its own size and the saved size is gone.
@@ -456,6 +449,15 @@ fmIDE at 1400 × 900.
 - A workspace file carrying `ui.windowSizes` (333 × 444) and closed groups, imported: the window doesn't take that size.
 - The Templates tree (`templates/search.json`): the Financial Statement heading (a `div`, role button, "▾ Name (count)") closes on a click and hides exactly its templates; still closed after a reload (`ui.templateGroupsClosed`); a search finds templates inside it; Enter on the focused heading opens it again.
 - Group 26: the Browse Library window is resizable, at least 1000 px wide on a 1400 px screen, and opens again at the size it was given.
+
+### 30. ExcelExporter by touch (`tests/30-touch-excel.spec.js`; step 9c)
+ExcelExporter's Tree view in Chromium with a touchscreen at 1024 × 768, sample `revenue-bs-corkscrew.json`; real touch input as in group 27 (`tests/helpers/touch.js`), and the tests check the page saw `touch`. The mouse is covered, unchanged, by group 7.
+- A tap selects just that row. Holding another row (0.7 s) opens its menu beside the finger, still open after the finger lifts, with the selection unchanged; it starts with "☑ Add to selection" and "⇕ Select from the last row to here".
+- Add to selection adds the held row; held on a selected row, "☐ Remove from selection" takes it out; Select from the last row to here selects from the row last added or removed to the held row (five rows; the selection bar says so).
+- Held on the last row of a tab, outside the selection, Move to Top moves just that row and leaves it selected.
+- With no row tapped yet, Select from the last row to here is disabled.
+- A double-tap on a row opens its rename box (focused, 16px text); typing and Enter rename it. A double-tap with nothing selected renames the row its first tap selected, although the selection bar that appears moves the list under the finger.
+- A right-click opens the menu at once, selects just that row, and has no Add to selection / Select from the last row items.
 
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.

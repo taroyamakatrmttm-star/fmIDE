@@ -1,4 +1,4 @@
-// 29. Touch — ExcelExporter's Tree view by finger (step 9c): press and hold a row for its menu,
+// 30. Touch — ExcelExporter's Tree view by finger (step 9c): press and hold a row for its menu,
 // which then also offers what Ctrl- and Shift-click do; double-tap a row to rename it. Chromium
 // with a touchscreen at tablet size; real touch input through the Chrome DevTools Protocol, and
 // each test checks the page saw touch, not a mouse. The mouse is covered, unchanged, by group 7.
