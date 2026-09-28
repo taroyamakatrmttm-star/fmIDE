@@ -234,7 +234,7 @@ function buildVerticalCombinedFormula(canvasId, node, periodIndex, ctx, currentT
     const vHop = Object.assign({}, lastHop, { vIndex: v });
     const key = pathKey(outerPath.concat([vHop]), canvasId, node.id);
     if(ctx.onRef) ctx.onRef(key, !!ctx.lagDepth);
-    const pos = ctx.cellPos[key];
+    const pos = rowPosFor(key, currentTabName, ctx);
     if(!pos) continue;
     const r = sheetRef(pos.tabName, col, pos.row, currentTabName);
     positions.push(pos);

@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: inputs read from another tab come straight from the Inputs tab
+- With the Inputs tab, a formula that reads an input from **another tab** (through an alias, a plug, a block port or a period shift) now points at the input's cell on the **Inputs tab**, where its numbers live, not at the input's own row (which only links to the Inputs tab). Example: Inventory's "Days in a period" is now `='Inputs'!E15`, not `='Days in a Period'!E4`.
+- On the input's own tab, formulas still read its row there. The values don't change.
+
 ## Resizable windows and the Templates tree
 - **Resize the large windows** from their bottom-right corner: Templates, Functions, Format Presets, Browse Library, the Library pack preview, the Macro Builder and Customize Ribbon. Each keeps the size you give it (in your own settings, like the ribbon; never taken from someone else's file, and never larger than the screen); a double-click on the corner puts it back to its own size. Lists and previews grow with the window.
 - **Browse Library** and **Templates** open larger than before, so their text is easier to read.

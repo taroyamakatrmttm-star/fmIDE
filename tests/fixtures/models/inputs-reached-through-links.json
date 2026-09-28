@@ -1,0 +1,49 @@
+{
+  "kind": "system",
+  "version": 6,
+  "periods": ["P1", "P2", "P3"],
+  "canvases": [
+    {
+      "id": "cDays",
+      "name": "Days in a Period",
+      "nodes": [
+        { "id": "days", "type": "value", "x": 40, "y": 40, "w": 170, "h": 64, "text": "Days in a Period\n365", "plugs": ["to Days in a Period"] }
+      ],
+      "edges": []
+    },
+    {
+      "id": "cInv",
+      "name": "Inventory",
+      "nodes": [
+        { "id": "dio", "type": "value", "x": 40, "y": 40, "w": 170, "h": 64, "text": "DIO\n30" },
+        { "id": "sock", "type": "operator", "x": 260, "y": 160, "w": 56, "h": 56, "text": "+", "socket": "to Days in a Period" },
+        { "id": "invDays", "type": "value", "x": 380, "y": 160, "w": 170, "h": 64, "text": "Days in a period" },
+        { "id": "div", "type": "operator", "x": 600, "y": 80, "w": 56, "h": 56, "text": "÷" },
+        { "id": "out", "type": "value", "x": 720, "y": 80, "w": 170, "h": 64, "text": "Inv outstanding" }
+      ],
+      "edges": [
+        { "id": "i1", "from": "sock", "to": "invDays" },
+        { "id": "i2", "from": "dio", "to": "div" },
+        { "id": "i3", "from": "invDays", "to": "div" },
+        { "id": "i4", "from": "div", "to": "out" }
+      ]
+    },
+    {
+      "id": "cAP",
+      "name": "AP",
+      "nodes": [
+        { "id": "al", "type": "alias", "x": 40, "y": 40, "w": 170, "h": 64, "sourceCanvasId": "cDays", "sourceNodeId": "days" },
+        { "id": "apDays", "type": "value", "x": 260, "y": 40, "w": 170, "h": 64, "text": "Days in a period" },
+        { "id": "dpo", "type": "value", "x": 40, "y": 160, "w": 170, "h": 64, "text": "DPO\n45" },
+        { "id": "div2", "type": "operator", "x": 480, "y": 100, "w": 56, "h": 56, "text": "÷" },
+        { "id": "out2", "type": "value", "x": 600, "y": 100, "w": 170, "h": 64, "text": "AP outstanding" }
+      ],
+      "edges": [
+        { "id": "a1", "from": "al", "to": "apDays" },
+        { "id": "a2", "from": "dpo", "to": "div2" },
+        { "id": "a3", "from": "apDays", "to": "div2" },
+        { "id": "a4", "from": "div2", "to": "out2" }
+      ]
+    }
+  ]
+}

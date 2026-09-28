@@ -284,3 +284,36 @@ test.describe('unfed block inputs', () => {
     expect(problems, problems.join('\n')).toEqual([]);
   });
 });
+
+test.describe('an input read from another tab', () => {
+  // "Days in a Period" is an input on its own canvas; Inventory reads it through a plug, AP
+  // through an alias; DIO and DPO are inputs on the tabs that use them.
+  const MODEL = 'inputs-reached-through-links.json';
+  const firstFormula = (wb, sheet, label) => {
+    // Below the title and header rows (a sheet's title can carry the same name).
+    const ws = wb.Sheets[sheet], [r] = X.findRow(ws, label).filter(r => r > 3);
+    expect(r, `"${label}" on ${sheet}`).toBeTruthy();
+    return X.formulaOf(ws[X.numToCol(X.periodOneCol(ws)) + r]);
+  };
+
+  test('with the Inputs tab, the rows reading it point straight at the Inputs tab; the same tab stays local', async ({ page }) => {
+    const wb = await generateFor(page, MODEL, { inputs: true });
+    const inputs = wb.Sheets['Inputs'];
+    // The input's row (the group heading above it carries the same name).
+    const daysRow = Math.max(...X.findRow(inputs, 'Days in a Period'));
+    const daysCell = X.numToCol(X.periodOneCol(inputs)) + daysRow;
+    // Through a plug (Inventory) and through an alias (AP): the Inputs tab, not the input's own tab.
+    expect(firstFormula(wb, 'Inventory', 'Days in a period')).toBe("'Inputs'!" + daysCell);
+    expect(firstFormula(wb, 'AP', 'Days in a period')).toBe("'Inputs'!" + daysCell);
+    // The input's own row is still a link to the Inputs tab.
+    expect(firstFormula(wb, 'Days in a Period', 'Days in a Period')).toBe("'Inputs'!" + daysCell);
+    // A gathered input on the same tab (DIO) is read from its row right there.
+    expect(firstFormula(wb, 'Inventory', 'Inv outstanding')).toMatch(/^[A-Z]+\d+\/[A-Z]+\d+$/);
+  });
+
+  test('without the Inputs tab, they point at the input\'s own tab', async ({ page }) => {
+    const wb = await generateFor(page, MODEL, { inputs: false });
+    expect(firstFormula(wb, 'Inventory', 'Days in a period')).toMatch(/^'Days in a Period'!E\d+$/);
+    expect(firstFormula(wb, 'AP', 'Days in a period')).toMatch(/^'Days in a Period'!E\d+$/);
+  });
+});

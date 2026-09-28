@@ -1,0 +1,22 @@
+{
+ "Days in a Period": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Days in a Period"}
+ },
+ "Inventory": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"DIO"},
+  "A7": {"v":"CALCULATIONS"},
+  "A8": {"v":"Days in a period"},
+  "A10": {"v":"OUTPUTS"},
+  "A11": {"v":"Inv outstanding"}
+ },
+ "AP": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"DPO"},
+  "A7": {"v":"CALCULATIONS"},
+  "A8": {"v":"Days in a period"},
+  "A10": {"v":"OUTPUTS"},
+  "A11": {"v":"AP outstanding"}
+ }
+}
