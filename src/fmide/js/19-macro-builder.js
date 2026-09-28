@@ -22,6 +22,7 @@
     const overlay = el('div', 'modal-overlay');
     overlay.style.background = 'rgba(15,23,42,.22)';
     const box = el('div', 'modal-box macro-box');
+    makeResizableWindow(box, 'macroBuilder');
     overlay.appendChild(box);
     document.body.appendChild(overlay);
     mb.overlay = overlay;

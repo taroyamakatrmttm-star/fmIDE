@@ -311,7 +311,9 @@ test.describe('Templates duplicates', () => {
     await expect(dedupe(page).locator('.dedupe-row', { hasText: 'G-A' }).locator('.dedupe-fate')).toHaveText('remove');
     await dedupe(page).locator('.modal-actions button.danger', { hasText: 'Remove 3 templates' }).click();
     await expect(dedupe(page)).toHaveCount(0);
-    const groups = await picker(page).locator('.template-list > div').allInnerTexts();
+    // The group headings of the tree (▾ Name (count)).
+    const groups = (await picker(page).locator('.template-list > .template-group-toggle').allInnerTexts())
+      .map(g => g.replace(/^[▾▸]\s*/, '').replace(/\s*\(\d+\)$/, ''));
     expect(groups.map(g => g.toUpperCase()).sort()).toEqual(['FINANCIAL STATEMENT', 'G-B', 'G-MOVED', 'G-OTHER']);
     expect((await listNames(page)).length).toBe(4);
   });

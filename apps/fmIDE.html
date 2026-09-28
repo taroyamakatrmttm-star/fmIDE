@@ -448,6 +448,28 @@
   .library-browse-item{ display:flex; flex-direction:column; font-size:13px; margin:5px 0; overflow-wrap:anywhere; }
   .library-browse-item-here{ font-size:11px; color:#166534; }
   .modal-box p.library-browse-link{ font-size:12px; margin:10px 0 2px; }
+  /* Resizable windows (makeResizableWindow): a corner to drag, never larger than the screen;
+     the part holding lists and previews grows with the window. */
+  .modal-box.resizable-window{ resize:both; overflow:auto; display:flex; flex-direction:column; box-sizing:border-box;
+    min-width:360px; min-height:220px; max-width:98vw; max-height:96vh; }
+  .modal-box.resizable-window > *{ flex-shrink:0; }
+  .modal-box.resizable-window > .template-layout, .modal-box.resizable-window > .library-browse-panes,
+  .modal-box.resizable-window > .macro-layout, .modal-box.resizable-window > .rbc-layout{ flex:1 1 auto; flex-shrink:1; min-height:0; }
+  .template-box.resizable-window{ width:min(960px, 96vw); height:min(700px, 92vh); }
+  .template-box.format-presets-box.resizable-window{ width:min(760px, 96vw); height:auto; }
+  .resizable-window .template-layout{ min-height:0; margin-bottom:10px; }
+  .resizable-window .template-list-col{ width:270px; min-height:0; }
+  .resizable-window .template-list{ flex:1 1 auto; max-height:none; min-height:0; }
+  .resizable-window .template-detail{ overflow-y:auto; min-height:0; }
+  .resizable-window .template-preview{ flex:1 0 230px; height:auto; min-height:230px; }
+  .library-browse.resizable-window{ width:min(1100px, 96vw); height:min(760px, 90vh); max-height:96vh; }
+  .library-pack-preview.resizable-window{ width:min(720px, 96vw); max-width:98vw; max-height:96vh; }
+  /* The Templates list as a tree: groups (open or closed), then templates, then versions. */
+  .template-list .template-group-toggle{ display:flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:#6b7280;
+    text-transform:uppercase; letter-spacing:.4px; margin:8px 0 2px; cursor:pointer; user-select:none; border-radius:5px; padding:2px 4px; }
+  .template-list .template-group-toggle:hover, .template-list .template-group-toggle:focus-visible{ background:#f3f4f6; color:var(--text); outline:none; }
+  .template-list .template-group-count{ font-weight:400; color:#9ca3af; text-transform:none; letter-spacing:0; }
+  .template-list .template-group-items{ display:flex; flex-direction:column; gap:6px; padding-left:10px; border-left:1px solid #e5e7eb; margin-left:6px; }
   .template-preview-tabs{ display:flex; gap:4px; margin-bottom:6px; flex-wrap:wrap; }
   .template-preview-tabs button{
     font-size:11px; padding:3px 9px; border-radius:6px; border:1px solid #d1d5db; background:#fff; cursor:pointer; color:var(--text);
@@ -2139,6 +2161,55 @@
     const x = Math.max(10, viewport.scrollLeft + viewport.clientWidth/2 - w/2);
     const y = Math.max(10, viewport.scrollTop + viewport.clientHeight/2 - h/2);
     return findFreeSpot(nodes, w, h, x, y);
+  }
+
+  // ---------- resizable windows ----------
+  // A large window gets a resize corner (bottom right; CSS resize), keeps the size it is
+  // dragged to in the UI settings (ui.windowSizes, saved with the workspace, never in a
+  // Preferences file: a size belongs to one screen), comes back at that size (never larger
+  // than the screen) and goes back to its own size on a double-click on the corner.
+  const WINDOW_SIZE_KEYS = ['templates', 'functions', 'formatPresets', 'libraryBrowse', 'libraryPack', 'macroBuilder', 'ribbon'];
+  let windowSizes = {};
+  let templateGroupsClosed = []; // the Templates window's groups the person closed
+  function cleanWindowSizes(v){
+    const out = {};
+    if(!v || typeof v !== 'object') return out;
+    WINDOW_SIZE_KEYS.forEach(k => {
+      const s = v[k];
+      const w = s && Math.round(Number(s.w)), h = s && Math.round(Number(s.h));
+      if(isFinite(w) && isFinite(h) && w >= 200 && h >= 150 && w <= 10000 && h <= 10000) out[k] = { w, h };
+    });
+    return out;
+  }
+  function makeResizableWindow(box, key){
+    box.classList.add('resizable-window');
+    box.dataset.windowKey = key;
+    const s = windowSizes[key];
+    if(s){
+      box.style.width = Math.min(s.w, Math.floor(window.innerWidth * 0.98)) + 'px';
+      box.style.height = Math.min(s.h, Math.floor(window.innerHeight * 0.96)) + 'px';
+    }
+    // Dragging the corner writes the new size into the box's style: remember it.
+    let timer = null;
+    new MutationObserver(() => {
+      const w = Math.round(parseFloat(box.style.width)), h = Math.round(parseFloat(box.style.height));
+      if(!(w > 0 && h > 0)) return;
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const cur = windowSizes[key];
+        if(cur && cur.w === w && cur.h === h) return;
+        windowSizes[key] = { w, h };
+        saveWorkspaceSoon();
+      }, 200);
+    }).observe(box, { attributes: true, attributeFilter: ['style'] });
+    box.addEventListener('dblclick', (ev) => {
+      const r = box.getBoundingClientRect();
+      if(ev.clientX < r.right - 20 || ev.clientY < r.bottom - 20) return;
+      clearTimeout(timer);
+      box.style.width = ''; box.style.height = '';
+      delete windowSizes[key];
+      saveWorkspaceSoon();
+    });
   }
 
   // ---------- in-page dialogs (native confirm/alert are blocked in many embedded previews) ----------
@@ -8701,7 +8772,8 @@
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
-    box.className = 'modal-box template-box';
+    box.className = 'modal-box template-box format-presets-box';
+    makeResizableWindow(box, 'formatPresets');
     overlay.appendChild(box);
     document.body.appendChild(overlay);
     function close(){ overlay.remove(); }
@@ -8819,6 +8891,7 @@
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
     box.className = 'modal-box template-box';
+    makeResizableWindow(box, 'templates');
     overlay.appendChild(box);
     document.body.appendChild(overlay);
     function close(){ overlay.remove(); document.removeEventListener('keydown', onKey, true); }
@@ -9098,7 +9171,8 @@
 
     // One entry per family (its latest version); a family with older versions gets a
     // "▸ N older versions" toggle, and when open, one entry per older version, newest first.
-    function templateButton(t, idx, groupName){
+    function templateButton(t, idx, groupName, into){
+      into = into || list;
       const b = document.createElement('button');
       b.className = 'template-family' + (selected === t ? ' active' : '');
       b.appendChild(idx ? highlightLabel(t.name, idx) : document.createTextNode(t.name));
@@ -9119,7 +9193,7 @@
         b.appendChild(g);
       }
       b.addEventListener('click', () => { selected = t; previewCanvasIdx = 0; renderList(); renderDetail(); });
-      list.appendChild(b);
+      into.appendChild(b);
       shown.push(t);
       const older = familyVersions(t.family).slice(1);
       if(!older.length) return;
@@ -9135,7 +9209,7 @@
         } else expanded.add(t.family);
         renderList(); renderDetail();
       });
-      list.appendChild(toggle);
+      into.appendChild(toggle);
       if(!open) return;
       older.forEach(o => {
         const ob = document.createElement('button');
@@ -9145,7 +9219,7 @@
         ob.appendChild(label);
         if(o.note) ob.appendChild(document.createTextNode(' — ' + o.note));
         ob.addEventListener('click', () => { selected = o; expanded.add(t.family); previewCanvasIdx = 0; renderList(); renderDetail(); });
-        list.appendChild(ob);
+        into.appendChild(ob);
         shown.push(o);
       });
     }
@@ -9188,12 +9262,33 @@
         const g = t.group || 'Ungrouped';
         (groups[g] = groups[g] || []).push(t);
       });
+      // A tree: each group opens and closes (remembered in the UI settings); its templates
+      // sit under it. A search shows every match, whatever is closed.
       Object.keys(groups).forEach(g => {
+        const closed = templateGroupsClosed.includes(g);
         const header = document.createElement('div');
-        header.textContent = g;
-        header.style.cssText = 'font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.4px;margin:8px 0 2px;';
+        header.className = 'template-group-toggle';
+        header.setAttribute('role', 'button');
+        header.tabIndex = 0;
+        header.setAttribute('aria-expanded', String(!closed));
+        header.appendChild(document.createTextNode((closed ? '▸ ' : '▾ ') + g));
+        const count = document.createElement('span');
+        count.className = 'template-group-count';
+        count.textContent = '(' + groups[g].length + ')';
+        header.appendChild(count);
+        const toggleGroup = () => {
+          templateGroupsClosed = closed ? templateGroupsClosed.filter(x => x !== g) : templateGroupsClosed.concat([g]);
+          saveWorkspaceSoon();
+          renderList();
+        };
+        header.addEventListener('click', toggleGroup);
+        header.addEventListener('keydown', (ev) => { if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); toggleGroup(); } });
         list.appendChild(header);
-        groups[g].forEach(t => templateButton(t, null, null));
+        if(closed) return;
+        const items = document.createElement('div');
+        items.className = 'template-group-items';
+        list.appendChild(items);
+        groups[g].forEach(t => templateButton(t, null, null, items));
       });
     }
 
@@ -9948,6 +10043,7 @@
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
     box.className = 'modal-box template-box function-box';
+    makeResizableWindow(box, 'functions');
     overlay.appendChild(box);
     document.body.appendChild(overlay);
     function close(){ overlay.remove(); document.removeEventListener('keydown', onKey, true); }
@@ -11188,6 +11284,7 @@
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
     box.className = 'modal-box library-pack-preview';
+    makeResizableWindow(box, 'libraryPack');
     const para = (cls, text) => { const p = document.createElement('p'); p.className = cls; p.textContent = text; box.appendChild(p); return p; };
     para('library-pack-title', read.pack.title);
     const lic = LIBRARY_PACK_LICENCES[read.pack.licence];
@@ -11434,6 +11531,7 @@
     const mk = (tag, cls, text) => { const e = document.createElement(tag); if(cls) e.className = cls; if(text != null) e.textContent = text; return e; };
     const overlay = mk('div', 'modal-overlay');
     const box = mk('div', 'modal-box library-browse');
+    makeResizableWindow(box, 'libraryBrowse');
     box.appendChild(mk('p', 'library-pack-title', 'Community library'));
     box.appendChild(mk('p', 'library-browse-intro', 'Packs of templates, recipes and functions shared by fmIDE users, each licensed CC BY 4.0. Choose one to see what it holds; nothing is added until you tick items in its preview and press Add to My Library.'));
     const filters = mk('div', 'library-browse-filters');
@@ -14715,6 +14813,7 @@
     const overlay = el('div', 'modal-overlay');
     overlay.style.background = 'rgba(15,23,42,.22)';
     const box = el('div', 'modal-box macro-box');
+    makeResizableWindow(box, 'macroBuilder');
     overlay.appendChild(box);
     document.body.appendChild(overlay);
     mb.overlay = overlay;
@@ -15956,6 +16055,7 @@
     const cfgAtOpen = JSON.stringify(cfg);
     const overlay = el('div', 'modal-overlay');
     const box = el('div', 'modal-box rbc-box');
+    makeResizableWindow(box, 'ribbon');
     overlay.appendChild(box);
     document.body.appendChild(overlay);
     const close = () => {
@@ -16256,7 +16356,8 @@
       operatorsE1Added: true, // E1b: the new operators in the Compare and Excel Functions groups
       libraryPacksAdded: true, // 8a: Open Library Pack… and Save as Library Pack… in the File tab's Library group
       libraryBrowseAdded: true, // 8d: Browse Library… in the same group
-      libraryAuthor
+      libraryAuthor,
+      windowSizes: cleanWindowSizes(windowSizes), templateGroupsClosed: templateGroupsClosed.slice(0, 200)
     };
   }
   // One-time update of a ribbon customised before the Document group existed: add it at
@@ -16345,6 +16446,12 @@
       if(ui.libraryBrowseAdded !== true) addLibraryBrowseCommandToRibbon();
     }
     if(!fromImport && typeof ui.libraryAuthor === 'string') libraryAuthor = ui.libraryAuthor.slice(0, LIBRARY_PACK_LIMITS.author);
+    // Window sizes and closed template groups belong to this screen and person: never from
+    // someone else's file.
+    if(!fromImport){
+      windowSizes = cleanWindowSizes(ui.windowSizes);
+      if(Array.isArray(ui.templateGroupsClosed)) templateGroupsClosed = ui.templateGroupsClosed.filter(g => typeof g === 'string').map(g => g.slice(0, 200)).slice(0, 200);
+    }
     if(typeof ui.ribbonCollapsed === 'boolean') ribbonState.collapsed = ui.ribbonCollapsed;
     if(typeof ui.activeTab === 'string') ribbonState.activeTab = ui.activeTab;
     if(ui.keytipTrigger && (ui.keytipTrigger.type === 'tap' && ui.keytipTrigger.key || ui.keytipTrigger.type === 'combo' && ui.keytipTrigger.combo)){

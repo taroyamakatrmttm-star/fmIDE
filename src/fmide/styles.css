@@ -440,6 +440,28 @@
   .library-browse-item{ display:flex; flex-direction:column; font-size:13px; margin:5px 0; overflow-wrap:anywhere; }
   .library-browse-item-here{ font-size:11px; color:#166534; }
   .modal-box p.library-browse-link{ font-size:12px; margin:10px 0 2px; }
+  /* Resizable windows (makeResizableWindow): a corner to drag, never larger than the screen;
+     the part holding lists and previews grows with the window. */
+  .modal-box.resizable-window{ resize:both; overflow:auto; display:flex; flex-direction:column; box-sizing:border-box;
+    min-width:360px; min-height:220px; max-width:98vw; max-height:96vh; }
+  .modal-box.resizable-window > *{ flex-shrink:0; }
+  .modal-box.resizable-window > .template-layout, .modal-box.resizable-window > .library-browse-panes,
+  .modal-box.resizable-window > .macro-layout, .modal-box.resizable-window > .rbc-layout{ flex:1 1 auto; flex-shrink:1; min-height:0; }
+  .template-box.resizable-window{ width:min(960px, 96vw); height:min(700px, 92vh); }
+  .template-box.format-presets-box.resizable-window{ width:min(760px, 96vw); height:auto; }
+  .resizable-window .template-layout{ min-height:0; margin-bottom:10px; }
+  .resizable-window .template-list-col{ width:270px; min-height:0; }
+  .resizable-window .template-list{ flex:1 1 auto; max-height:none; min-height:0; }
+  .resizable-window .template-detail{ overflow-y:auto; min-height:0; }
+  .resizable-window .template-preview{ flex:1 0 230px; height:auto; min-height:230px; }
+  .library-browse.resizable-window{ width:min(1100px, 96vw); height:min(760px, 90vh); max-height:96vh; }
+  .library-pack-preview.resizable-window{ width:min(720px, 96vw); max-width:98vw; max-height:96vh; }
+  /* The Templates list as a tree: groups (open or closed), then templates, then versions. */
+  .template-list .template-group-toggle{ display:flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:#6b7280;
+    text-transform:uppercase; letter-spacing:.4px; margin:8px 0 2px; cursor:pointer; user-select:none; border-radius:5px; padding:2px 4px; }
+  .template-list .template-group-toggle:hover, .template-list .template-group-toggle:focus-visible{ background:#f3f4f6; color:var(--text); outline:none; }
+  .template-list .template-group-count{ font-weight:400; color:#9ca3af; text-transform:none; letter-spacing:0; }
+  .template-list .template-group-items{ display:flex; flex-direction:column; gap:6px; padding-left:10px; border-left:1px solid #e5e7eb; margin-left:6px; }
   .template-preview-tabs{ display:flex; gap:4px; margin-bottom:6px; flex-wrap:wrap; }
   .template-preview-tabs button{
     font-size:11px; padding:3px 9px; border-radius:6px; border:1px solid #d1d5db; background:#fff; cursor:pointer; color:var(--text);

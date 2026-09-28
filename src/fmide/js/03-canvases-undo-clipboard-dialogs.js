@@ -406,6 +406,55 @@
     return findFreeSpot(nodes, w, h, x, y);
   }
 
+  // ---------- resizable windows ----------
+  // A large window gets a resize corner (bottom right; CSS resize), keeps the size it is
+  // dragged to in the UI settings (ui.windowSizes, saved with the workspace, never in a
+  // Preferences file: a size belongs to one screen), comes back at that size (never larger
+  // than the screen) and goes back to its own size on a double-click on the corner.
+  const WINDOW_SIZE_KEYS = ['templates', 'functions', 'formatPresets', 'libraryBrowse', 'libraryPack', 'macroBuilder', 'ribbon'];
+  let windowSizes = {};
+  let templateGroupsClosed = []; // the Templates window's groups the person closed
+  function cleanWindowSizes(v){
+    const out = {};
+    if(!v || typeof v !== 'object') return out;
+    WINDOW_SIZE_KEYS.forEach(k => {
+      const s = v[k];
+      const w = s && Math.round(Number(s.w)), h = s && Math.round(Number(s.h));
+      if(isFinite(w) && isFinite(h) && w >= 200 && h >= 150 && w <= 10000 && h <= 10000) out[k] = { w, h };
+    });
+    return out;
+  }
+  function makeResizableWindow(box, key){
+    box.classList.add('resizable-window');
+    box.dataset.windowKey = key;
+    const s = windowSizes[key];
+    if(s){
+      box.style.width = Math.min(s.w, Math.floor(window.innerWidth * 0.98)) + 'px';
+      box.style.height = Math.min(s.h, Math.floor(window.innerHeight * 0.96)) + 'px';
+    }
+    // Dragging the corner writes the new size into the box's style: remember it.
+    let timer = null;
+    new MutationObserver(() => {
+      const w = Math.round(parseFloat(box.style.width)), h = Math.round(parseFloat(box.style.height));
+      if(!(w > 0 && h > 0)) return;
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const cur = windowSizes[key];
+        if(cur && cur.w === w && cur.h === h) return;
+        windowSizes[key] = { w, h };
+        saveWorkspaceSoon();
+      }, 200);
+    }).observe(box, { attributes: true, attributeFilter: ['style'] });
+    box.addEventListener('dblclick', (ev) => {
+      const r = box.getBoundingClientRect();
+      if(ev.clientX < r.right - 20 || ev.clientY < r.bottom - 20) return;
+      clearTimeout(timer);
+      box.style.width = ''; box.style.height = '';
+      delete windowSizes[key];
+      saveWorkspaceSoon();
+    });
+  }
+
   // ---------- in-page dialogs (native confirm/alert are blocked in many embedded previews) ----------
   function showConfirm(message, onConfirm){
     const overlay = document.createElement('div');
