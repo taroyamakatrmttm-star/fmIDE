@@ -4,6 +4,13 @@
     --danger:#dc2626;
   }
   *{box-sizing:border-box;}
+  /* By finger (step 9c): a double-tap is the app's own (shared pointer-input.js: a double-click),
+     never the browser's zoom; two fingers still zoom the page. Text boxes of 16px or more don't
+     make a tablet's browser zoom in when tapped. A held Tree row opens its menu, not the copy menu. */
+  *{ touch-action:manipulation; }
+  body.touch-input input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]):not([type=button]),
+  body.touch-input textarea, body.touch-input select{ font-size:16px !important; }
+  .tree-row{ -webkit-touch-callout:none; }
   body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:var(--bg); color:var(--text); }
   header{ background:#111827; color:#fff; padding:16px 24px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
   header h1{ font-size:18px; margin:0; font-weight:700; }

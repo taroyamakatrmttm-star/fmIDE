@@ -329,6 +329,7 @@ Samples in `tests/fixtures/functions/`: `library.json` (an `fmIDE-functions` fil
 - Load Module with a different Margin v2 than the model's: it comes in as v3, its node follows and calculates (0.4) — before D2b it showed "?".
 - The ribbon: My Functions holds Functions, Insert Function…, Update Function…, Import Functions…; Home → Insert has Insert Function…; neither new command has a shortcut. A customised ribbon's My Functions group (wherever it is) gets the two commands once (`ui.functionCommandsAdded`); a group saved without them afterwards stays so; a ribbon without the group gets nothing.
 - A macro records `insertFunction` (`Margin@1`), `connect` with the input names Revenue and Cost (given as numbers), `insertFunction`, `skipFunctionUpdate`, `updateFunctionNode` and `changeFunction`; replayed on a fresh canvas it builds Margin v2 and Profit v1.
+
 ### 22. Library packs (`tests/22-library-packs.spec.js`; step 8 phases 8a and 8b)
 Sample `tests/fixtures/library/pack-v1.json` (Sam Sample's "Sample pack": Income Statement v1 as in `formats/templates-v2.json`, Balance Sheet v3 in that file's family, a different Cash Flow family, Margin v3 in `functions/library.json`'s family, and Growth v1 calling Margin v3). Most tests start from a library holding `templates-v2.json`, `functions/library.json` and a recipe Statements (Income Statement latest, Balance Sheet v1).
 - `fm.saveLibraryPack` with Statements and Profit: kind and version 2 (version 1 until 8b); title, author, licence `CC-BY-4.0`, description with its line break, tags lower case without duplicates, a random id and today's date; the recipe brings Income Statement v1 and Balance Sheet v1, Profit brings Margin v1 (not the latest); the download is named `Three-statements-starter.fmide-pack.json`.
@@ -422,6 +423,16 @@ fmIDE in Chromium with a touchscreen at 1024 × 768 (`hasTouch`). Each touch is 
 - A double-tap edits a rectangle, opens the operator picker (one picker, and two double-clicks in all for the two double-taps), and renames a canvas tab; two taps on different nodes, or 0.6 s apart, edit nothing.
 - Larger touch areas (`body.touch-input`): on a selected node, a finger 9 pixels beyond the east dot draws an arrow, and 12 pixels inside the resize corner resizes without moving; a mouse moving takes the class away (on a screen whose main pointer is fine).
 - A finger scrolls the text of a node being edited (thirty lines).
+- Step 9c, the screen. On an emulated tablet (`isMobile`, 768 × 1024), fmIDE and ExcelExporter carry the viewport line (`width=device-width, initial-scale=1, interactive-widget=resizes-content`) and are laid out 768 wide (not shrunk from 980).
+- `touch-action`: `manipulation` on the page and the ribbon (no double-tap zoom), `pan-x pan-y` on the canvas (two fingers don't zoom it); a node stays `none`, a canvas tab `pan-x`.
+- A text box a finger types in (Manage Periods) has 16px text.
+- The ribbon's Home tab is wider than the screen: an arrow shows at the right end only; taps on it scroll the ribbon along (showing the left arrow) until the end, where the last button is on the screen and clear of the left arrow; taps on the left arrow go back to the start.
+- On a touchscreen (`pointer: coarse`) the ribbon's small buttons are at least 28 pixels tall, and the canvas tabs and canvas start right below the ribbon.
+- At 1024 × 768 and 768 × 1024, the ribbon's top row fits: the search box, the collapse button and the last ribbon tab are on the screen, and a tap on the search (just its 🔎 at 768) opens the Command Launcher.
+- At 1024 × 768 and 768 × 1024, each of Manage Periods, Templates, Functions, Format Presets, Keyboard Shortcuts, Customize Ribbon, Macro Builder, the Command Launcher, Browse Library, Open Recent, Insert Function, Add Block and Add Alias opens entirely on the screen.
+- The visible screen shrinking to 420 pixels (as the on-screen keyboard does) while a rectangle low on the canvas is being edited: the canvas scrolls so its text box is above 420 and below the canvas's top; typing still reaches the rectangle.
+- The same with Keyboard Shortcuts open: the dialog fits in 420 pixels and scrolls inside; the last box in it, focused, is scrolled into sight.
+- With a mouse (no touchscreen), none of it shows: no ribbon arrows, small buttons under 24 pixels, the text box's own size, and dialogs over the whole window.
 
 ### 28. Where new nodes go, and the Macro Builder's next step (`tests/28-placement.spec.js`)
 Two boxes "overlap" when they share any area.
@@ -439,6 +450,15 @@ fmIDE at 1400 × 900.
 - A workspace file carrying `ui.windowSizes` (333 × 444) and closed groups, imported: the window doesn't take that size.
 - The Templates tree (`templates/search.json`): the Financial Statement heading (a `div`, role button, "▾ Name (count)") closes on a click and hides exactly its templates; still closed after a reload (`ui.templateGroupsClosed`); a search finds templates inside it; Enter on the focused heading opens it again.
 - Group 26: the Browse Library window is resizable, at least 1000 px wide on a 1400 px screen, and opens again at the size it was given.
+
+### 30. ExcelExporter by touch (`tests/30-touch-excel.spec.js`; step 9c)
+ExcelExporter's Tree view in Chromium with a touchscreen at 1024 × 768, sample `revenue-bs-corkscrew.json`; real touch input as in group 27 (`tests/helpers/touch.js`), and the tests check the page saw `touch`. The mouse is covered, unchanged, by group 7.
+- A tap selects just that row. Holding another row (0.7 s) opens its menu beside the finger, still open after the finger lifts, with the selection unchanged; it starts with "☑ Add to selection" and "⇕ Select from the last row to here".
+- Add to selection adds the held row; held on a selected row, "☐ Remove from selection" takes it out; Select from the last row to here selects from the row last added or removed to the held row (five rows; the selection bar says so).
+- Held on the last row of a tab, outside the selection, Move to Top moves just that row and leaves it selected.
+- With no row tapped yet, Select from the last row to here is disabled.
+- A double-tap on a row opens its rename box (focused, 16px text); typing and Enter rename it. A double-tap with nothing selected renames the row its first tap selected, although the selection bar that appears moves the list under the finger.
+- A right-click opens the menu at once, selects just that row, and has no Add to selection / Select from the last row items.
 
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.

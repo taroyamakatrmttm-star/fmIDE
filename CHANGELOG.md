@@ -5,6 +5,12 @@ Notable changes before this repository existed (recorded from the development hi
 ## ExcelExporter: inputs read from another tab come straight from the Inputs tab
 - With the Inputs tab, a formula that reads an input from **another tab** (through an alias, a plug, a block port or a period shift) now points at the input's cell on the **Inputs tab**, where its numbers live, not at the input's own row (which only links to the Inputs tab). Example: Inventory's "Days in a period" is now `='Inputs'!E15`, not `='Days in a Period'!E4`.
 - On the input's own tab, formulas still read its row there. The values don't change.
+## Touch, third part: the screen (step 9, phase 9c)
+- **fmIDE fits a tablet's screen.** It used to be drawn 980 pixels wide and shrunk on a tablet held upright; now it uses the screen's own width, like ExcelExporter. A double-tap never zooms the page, and two fingers on the canvas don't zoom it (zoom is a later step); elsewhere two fingers still zoom the page.
+- **The ribbon by finger:** arrows at its ends show there is more to swipe to (tap one to scroll); on a touchscreen its buttons are taller. In a window under 900 pixels wide the command search shrinks to its 🔎, so the top row (and the collapse button) fits.
+- **Typing on a tablet:** text boxes are large enough that the browser doesn't zoom in on them, and dialogs and the text being typed stay above the on-screen keyboard.
+- **ExcelExporter's Tree view by touch:** press and hold a row for its menu, which also offers **Add to / Remove from selection** and **Select from the last row to here** (what Ctrl- and Shift-click do); double-tap a row to rename it.
+- The mouse works exactly as before. No file format changed.
 
 ## Resizable windows and the Templates tree
 - **Resize the large windows** from their bottom-right corner: Templates, Functions, Format Presets, Browse Library, the Library pack preview, the Macro Builder and Customize Ribbon. Each keeps the size you give it (in your own settings, like the ribbon; never taken from someone else's file, and never larger than the screen); a double-click on the corner puts it back to its own size. Lists and previews grow with the window.
@@ -27,6 +33,7 @@ Notable changes before this repository existed (recorded from the development hi
 - **The canvas tab strip scrolls with a swipe**; to move a tab, press and hold it, then drag. A finger can also scroll the text of a node being edited.
 - **Larger invisible touch areas** for the dots, the resize corner and the node buttons when you use a finger; nothing looks different, and the mouse doesn't get them.
 - The mouse works exactly as before. No file format changed.
+
 ## ExcelExporter: a row's own format, indent, and a full right-click menu in the Tree View
 - **🎨 on every row**, not just custom rows: give a row its own fill, font colour, bold, border and number format in Excel, over what fmIDE's format roles give it. With several rows selected, a change applies to all of them. **Reset to fmIDE's format** takes it off.
 - **Indent**: **Alt+Shift+→ / ←** (or Indent / Outdent in the selection bar and the menu) indents the selected rows' labels in Excel, like Excel's Increase Indent (Alt+H+6), up to 15 steps.
@@ -38,6 +45,7 @@ Notable changes before this repository existed (recorded from the development hi
 - One finger on empty canvas still scrolls it, and a tap there still clears the selection.
 - The mouse works exactly as before. What still needs a mouse or keyboard (right-drag, Alt-drag, Ctrl-drag, adding to a selection, the selection box) comes to touch in the next phase.
 - No file format changed.
+
 ## ExcelExporter: tidier formulas and new defaults
 - **Brackets only where Excel needs them.** A formula like `=(F4*(1-F5))` is now written `=F4*(1-F5)`. Brackets stay where Excel's order of operations needs them, and around the right-hand side of an equal level (`A1-(B1-C1)`, `A1+(B1+C1)`), so Excel adds in the same order as fmIDE. The values don't change; the agreement tests check this.
 - **Links before Inputs.** A rectangle that only pulls a value from another sheet, through a plug or an alias, used to be written `=(Sales!E7)` and coloured as a Calculation. It is now written `=Sales!E7` and gets the **Links** format.
