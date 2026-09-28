@@ -279,7 +279,7 @@ function operandRef(canvasId, nodeId, periodIndex, ctx, currentTabName, path, fr
     return ref;
   }
   if(ctx.onRef) ctx.onRef(key, !!ctx.lagDepth); // dependency tracing for row sorting (see rowDependencyTracer)
-  const pos = ctx.cellPos[key];
+  const pos = rowPosFor(key, currentTabName, ctx);
   if(!pos){
     // A rectangle whose row was left out of the layout: the formula reads 0 (the check
     // before download lists it).
@@ -293,6 +293,14 @@ function operandRef(canvasId, nodeId, periodIndex, ctx, currentTabName, path, fr
   // an absolute row, so the formula is identical all the way down the vintage block.
   const absRow = ctx.currentRowVintage != null && pathKey(rowPath, '', '') !== ctx.currentRowHopsKey;
   return sheetRef(pos.tabName, col, pos.row, currentTabName, absRow);
+}
+// Where a formula on `currentTabName` reads the row `key`: its own row, except that an input
+// gathered on the Inputs tab and sitting on another tab is read from the Inputs tab, where
+// its numbers live (its own row there is only a link to it). On its own tab it stays local.
+function rowPosFor(key, currentTabName, ctx){
+  const own = ctx.cellPos[key];
+  const gathered = ctx.cellPos[mirrorIdFor(key)];
+  return (gathered && (!own || own.tabName !== currentTabName)) ? gathered : own;
 }
 // A canvas as the calculation sees it ({ nodes, edges }), for the shared rules that read a
 // whole canvas.

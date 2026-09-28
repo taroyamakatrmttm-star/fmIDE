@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: inputs read from another tab come straight from the Inputs tab
+- With the Inputs tab, a formula that reads an input from **another tab** (through an alias, a plug, a block port or a period shift) now points at the input's cell on the **Inputs tab**, where its numbers live, not at the input's own row (which only links to the Inputs tab). Example: Inventory's "Days in a period" is now `='Inputs'!E15`, not `='Days in a Period'!E4`.
+- On the input's own tab, formulas still read its row there. The values don't change.
 ## Touch, third part: the screen (step 9, phase 9c)
 - **fmIDE fits a tablet's screen.** It used to be drawn 980 pixels wide and shrunk on a tablet held upright; now it uses the screen's own width, like ExcelExporter. A double-tap never zooms the page, and two fingers on the canvas don't zoom it (zoom is a later step); elsewhere two fingers still zoom the page.
 - **The ribbon by finger:** arrows at its ends show there is more to swipe to (tap one to scroll); on a touchscreen its buttons are taller. In a window under 900 pixels wide the command search shrinks to its 🔎, so the top row (and the collapse button) fits.
