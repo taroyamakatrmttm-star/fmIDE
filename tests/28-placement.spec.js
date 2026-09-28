@@ -118,3 +118,20 @@ test('"Run selected step" runs it and selects the next step', async ({ page }) =
   await run.click();
   await expect(selected()).toContainText('Four');
 });
+
+test('pasting a group twice puts each copy in free space and keeps its layout', async ({ page }) => {
+  const ids = await page.evaluate(() => [fm.createRect({ x: 100, y: 100, name: 'A' }), fm.createRect({ x: 100, y: 220, name: 'B' })]);
+  await page.evaluate((ids) => fm.select(ids), ids);
+  await page.evaluate(() => fm.command('copy'));
+  await page.evaluate(() => fm.command('paste'));
+  await page.evaluate(() => fm.command('paste'));
+  const nodes = await page.evaluate(() => fm.nodes());
+  expect(nodes.length).toBe(6);
+  expect(await overlaps(page)).toEqual([]);
+  // Each copy keeps B 120 px under A.
+  const as = nodes.filter(n => n.name === 'A').sort((p, q) => p.x - q.x || p.y - q.y);
+  for(const a of as){
+    const b = nodes.find(n => n.name === 'B' && n.x === a.x && n.y === a.y + 120);
+    expect(b, `a B under the A at ${a.x}, ${a.y}`).toBeTruthy();
+  }
+});

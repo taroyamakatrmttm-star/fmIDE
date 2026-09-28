@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Paste into free space; a recipe skips parts already built
+- **Paste** puts the copied nodes, keeping their layout, in the nearest free space next to where they were, so pasting again and again no longer piles copies on top of each other or of the original.
+- **Recipes:** a part whose template is already in the model (built by another recipe, or added by you), or that comes twice in one recipe, shows **Skip — already here as canvas “…”** in the Templates window, ticked. Build then uses that canvas (plugs and sockets connect to it by name) instead of adding a duplicate, and says what it skipped. Untick it to add the part again.
+- `fm.insertTemplate` gains `skip` (part numbers not to build) and `skipExisting`; without them it behaves as before, so scripts and recorded macros don't change.
+
 ## ExcelExporter: inputs read from another tab come straight from the Inputs tab
 - With the Inputs tab, a formula that reads an input from **another tab** (through an alias, a plug, a block port or a period shift) now points at the input's cell on the **Inputs tab**, where its numbers live, not at the input's own row (which only links to the Inputs tab). Example: Inventory's "Days in a period" is now `='Inputs'!E15`, not `='Days in a Period'!E4`.
 - On the input's own tab, formulas still read its row there. The values don't change.
