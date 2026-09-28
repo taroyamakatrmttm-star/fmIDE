@@ -36,6 +36,7 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | `npm run test:library-browse` | browsing the library inside fmIDE (Browse Library…, its checks of the list and packs, offline, the single file, `window.fm`) |
 | `npm run test:touch` | fmIDE by finger: real touch input on an emulated touchscreen (drag, arrows, resize, tabs, the curve editor, scrolling; press and hold, the node menu, the selection box, double-tap, larger touch areas; the viewport line, the ribbon's arrows, dialogs at tablet sizes, the on-screen keyboard) |
 | `npm run test:placement` | where new nodes go (never on top of others) and the Macro Builder's "Run selected step" moving on |
+| `npm run test:windows` | resizable windows (the size kept in your own settings, never taken from a file) and the Templates list as a tree |
 | `npm run test:touch-excel` | ExcelExporter's Tree view by finger: the row menu by press and hold, choosing several rows, double-tap to rename |
 | `npx playwright test -g "Tree view"` | tests whose name matches |
 
@@ -62,14 +63,14 @@ Review the snapshot diff before committing: it is the record of what the change 
 ## Layout
 
 ```
-0-smoke.spec.js … 29-touch-excel.spec.js     one file per group in SPEC.md (6 and 7 split per app)
+0-smoke.spec.js … 30-touch-excel.spec.js     one file per group in SPEC.md (6 and 7 split per app)
 helpers/apps.js       the offline fixture: serves the apps, blocks and counts other requests
 helpers/excel.js      load a model, toggle options, capture the workbook (window.__wb + real .xlsx bytes)
 helpers/soffice.js    find LibreOffice, recalculate workbooks, read values
 helpers/fmide.js      fmIDE file choosers, dialogs, downloads
 helpers/storage.js    read the apps' IndexedDB, make its writes fail, hide the page
 helpers/documents.js  fake file pickers (File System Access API) for fmIDE documents
-helpers/touch.js      a finger: real touch input through the Chrome DevTools Protocol (group 29)
+helpers/touch.js      a finger: real touch input through the Chrome DevTools Protocol (group 30)
 helpers/site.js       builds the installable site and serves it from this machine (groups 12, 25, 26; without the
                       library/ submodule unless a test passes a library folder)
 helpers/snapshot.js   JSON snapshots
