@@ -40,6 +40,8 @@ Importing templates (or a workspace) never adds a template you already have (sam
 
 A rectangle can have **several plugs**: click its 🔌 button to see one chip per plug name, ✕ to remove one, and type a name and press Enter to add another. Each name feeds the rectangle into every operator whose socket has that name, on any canvas — so "Income Tax" can feed both "to Income Tax expense" and "to CF Income Tax paid". Files saved before this open as before (their one plug becomes a list of one); older copies of fmIDE ask before opening a file saved by this version.
 
+The large windows (Templates, Functions, Browse Library, Macro Builder, Customize Ribbon and others) can be resized from their bottom-right corner and remember their size; double-click the corner to put one back. The Templates list is a tree of groups you can open and close.
+
 New rectangles, operators, aliases and other nodes go near the middle of the view, into free space, so they never land on top of what is already there; the aliases a socket gets from other canvases are placed the same way. In the Macro Builder, **▶ Run selected step** moves on to the next step, so pressing it again steps through a macro.
 
 Opening someone else's `.fmide` never replaces your own setup: their templates and macros are added to yours, and your shortcuts and ribbon stay as they are.

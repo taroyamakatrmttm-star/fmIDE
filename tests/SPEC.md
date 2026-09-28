@@ -448,6 +448,14 @@ ExcelExporter's Tree view in Chromium with a touchscreen at 1024 × 768, sample 
 - With no row tapped yet, Select from the last row to here is disabled.
 - A double-tap on a row opens its rename box (focused, 16px text); typing and Enter rename it. A double-tap with nothing selected renames the row its first tap selected, although the selection bar that appears moves the list under the finger.
 - A right-click opens the menu at once, selects just that row, and has no Add to selection / Select from the last row items.
+### 29. Resizable windows and the Templates tree (`tests/29-windows.spec.js`)
+fmIDE at 1400 × 900.
+- Templates, Functions, Macro Builder and Customize Ribbon: each window's CSS `resize` is `both`; set to 700 × 520 (as dragging the corner does), the autosave's `ui.windowSizes` holds it; after a reload the window opens at 700 × 520; a double-click on its corner puts it back to its own size and the saved size is gone.
+- A real mouse drag on the Templates window's corner (+96, +76) makes it wider and taller, and the size is saved.
+- A saved 3000 × 2000 opens at most 98 % × 96 % of the screen.
+- A workspace file carrying `ui.windowSizes` (333 × 444) and closed groups, imported: the window doesn't take that size.
+- The Templates tree (`templates/search.json`): the Financial Statement heading (a `div`, role button, "▾ Name (count)") closes on a click and hides exactly its templates; still closed after a reload (`ui.templateGroupsClosed`); a search finds templates inside it; Enter on the focused heading opens it again.
+- Group 26: the Browse Library window is resizable, at least 1000 px wide on a 1400 px screen, and opens again at the size it was given.
 
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.

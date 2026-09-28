@@ -99,6 +99,23 @@ test.describe('the window', () => {
     expect(events.errors).toEqual([]);
   });
 
+  test('the window is wide, resizable from its corner, and keeps its size when opened again', async ({ page, served }) => {
+    const site = await served(SAMPLE);
+    await page.setViewportSize({ width: 1400, height: 900 });
+    await W.openSite(page, site.origin);
+    let box = await openBrowser(page);
+    await expect(box).toBeVisible();
+    expect(await box.evaluate(el => getComputedStyle(el).resize)).toBe('both');
+    expect((await box.boundingBox()).width).toBeGreaterThanOrEqual(1000);
+    await box.evaluate(el => { el.style.width = '1200px'; el.style.height = '700px'; });
+    await page.waitForTimeout(400); // the size is remembered a moment after the drag
+    await page.keyboard.press('Escape');
+    await expect(box).toHaveCount(0);
+    box = await openBrowser(page);
+    const r = await box.boundingBox();
+    expect([Math.round(r.width), Math.round(r.height)]).toEqual([1200, 700]);
+  });
+
   test('a pack\'s details, and Preview and add opens the usual preview: nothing is added without it', async ({ page, served }) => {
     const site = await served(SAMPLE);
     await W.openSite(page, site.origin);
