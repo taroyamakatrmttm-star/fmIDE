@@ -114,6 +114,7 @@
     return commandLabel(c) + (sc ? `  (${prettyCombo(sc)})` : '');
   }
 
+  let ribbonArrowsUpdate = null; // addRibbonScrollArrows' update, while the ribbon is open
   function renderRibbon(){
     const cfg = ribbonState.config;
     if(!cfg.tabs.some(t => t.id === ribbonState.activeTab)) ribbonState.activeTab = cfg.tabs[0] ? cfg.tabs[0].id : null;
@@ -220,9 +221,37 @@
       });
     }
     ribbonEl.appendChild(body);
+    ribbonArrowsUpdate = ribbonState.collapsed ? null : addRibbonScrollArrows(body);
     updateRibbonHeight();
     refreshCommandStatesNow();
     if(keytips.active) keytipsRedraw();
+  }
+
+  // Arrows at the ends of the ribbon while a finger is in use (styles.css, .rb-more): each shows
+  // when there is more of the ribbon that way, and a tap scrolls it most of a screen along.
+  // Returns the function that shows or hides them (kept in ribbonArrowsUpdate).
+  function addRibbonScrollArrows(body){
+    const arrows = ['left', 'right'].map(side => {
+      const a = el('button', 'rb-more ' + side, side === 'left' ? '‹' : '›');
+      a.type = 'button';
+      a.title = side === 'left' ? 'More of the ribbon to the left' : 'More of the ribbon to the right';
+      a.setAttribute('aria-label', a.title);
+      a.addEventListener('mousedown', (ev) => ev.preventDefault());
+      // To a place worked out from where the ribbon is now (a scroll still under way included).
+      a.addEventListener('click', () => {
+        const step = (side === 'left' ? -1 : 1) * Math.max(120, body.clientWidth * 0.6);
+        body.scrollTo({ left: Math.max(0, Math.min(body.scrollWidth - body.clientWidth, body.scrollLeft + step)), behavior: 'smooth' });
+      });
+      ribbonEl.appendChild(a);
+      return a;
+    });
+    const update = () => {
+      arrows[0].classList.toggle('show', body.scrollLeft > 1);
+      arrows[1].classList.toggle('show', body.scrollLeft + body.clientWidth < body.scrollWidth - 1);
+    };
+    body.addEventListener('scroll', update, { passive: true });
+    update();
+    return update;
   }
 
   function updateRibbonHeight(){
@@ -242,7 +271,7 @@
   document.addEventListener('mousedown', (ev) => {
     if(ribbonState.collapsed && ribbonState.flyout && !ribbonEl.contains(ev.target)) closeRibbonFlyout();
   });
-  window.addEventListener('resize', () => { updateRibbonHeight(); if(keytips.active) keytipsRedraw(); });
+  window.addEventListener('resize', () => { updateRibbonHeight(); if(ribbonArrowsUpdate) ribbonArrowsUpdate(); if(keytips.active) keytipsRedraw(); });
 
   let refreshQueued = false;
   function refreshCommandStates(){

@@ -2,6 +2,12 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Touch, third part: the screen (step 9, phase 9c)
+- **fmIDE fits a tablet's screen.** It used to be drawn 980 pixels wide and shrunk on a tablet held upright; now it uses the screen's own width, like ExcelExporter. A double-tap never zooms the page, and two fingers on the canvas don't zoom it (zoom is a later step); elsewhere two fingers still zoom the page.
+- **The ribbon by finger:** arrows at its ends show there is more to swipe to (tap one to scroll); on a touchscreen its buttons are taller. In a window under 900 pixels wide the command search shrinks to its 🔎, so the top row (and the collapse button) fits.
+- **Typing on a tablet:** text boxes are large enough that the browser doesn't zoom in on them, and dialogs and the text being typed stay above the on-screen keyboard.
+- **ExcelExporter's Tree view by touch:** press and hold a row for its menu, which also offers **Add to / Remove from selection** and **Select from the last row to here** (what Ctrl- and Shift-click do); double-tap a row to rename it.
+- The mouse works exactly as before. No file format changed.
 ## Resizable windows and the Templates tree
 - **Resize the large windows** from their bottom-right corner: Templates, Functions, Format Presets, Browse Library, the Library pack preview, the Macro Builder and Customize Ribbon. Each keeps the size you give it (in your own settings, like the ribbon; never taken from someone else's file, and never larger than the screen); a double-click on the corner puts it back to its own size. Lists and previews grow with the window.
 - **Browse Library** and **Templates** open larger than before, so their text is easier to read.

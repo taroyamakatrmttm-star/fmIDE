@@ -1,5 +1,6 @@
 // 27. Touch — fmIDE's canvas by finger (step 9a: one input path; step 9b: press and hold,
-// double-tap, larger touch areas). Chromium with a touchscreen at tablet size; the touches are
+// double-tap, larger touch areas; step 9c: the screen — the viewport line, the ribbon, dialogs,
+// the on-screen keyboard; ExcelExporter's Tree view is group 29). Chromium with a touchscreen at tablet size; the touches are
 // real touch input sent through the Chrome DevTools Protocol (Input.dispatchTouchEvent), not
 // mouse events, and each test checks the page saw them as touch. The mouse is covered,
 // unchanged, by every other group.
@@ -470,4 +471,196 @@ test('a finger scrolls the text of a node being edited', async ({ page, pageErro
   await f.drag({ x: c.x, y: c.y + 15 }, { x: c.x, y: c.y - 25 }, { steps: 8 });
   await expect.poll(() => ta.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
   expect(pageErrors).toEqual([]);
+});
+
+// ---------- Step 9c: the screen ----------
+
+// The commands that open a dialog (or the Command Launcher); each must fit on a tablet's screen.
+const DIALOG_COMMANDS = ['managePeriods', 'openTemplates', 'openFunctions', 'openFormats', 'openShortcuts',
+  'customizeRibbon', 'openMacros', 'openLauncher', 'browseLibrary', 'openRecent', 'insertFunction', 'addBlock', 'addAlias'];
+const DIALOGS = '.modal-box, .launcher';
+
+test.describe('9c: the viewport line, on a tablet', () => {
+  test.use({ isMobile: true, viewport: { width: 768, height: 1024 } });
+  for(const app of ['fmIDE', 'ExcelExporter']){
+    test(`${app} is laid out at the tablet's own width, not shrunk from a desktop one`, async ({ page, pageErrors }) => {
+      const { openApp } = require('./helpers/apps');
+      await openApp(page, app);
+      const meta = await page.locator('meta[name="viewport"]').getAttribute('content');
+      expect(meta).toContain('width=device-width');
+      expect(meta).toContain('initial-scale=1');
+      expect(meta).toContain('interactive-widget=resizes-content');
+      expect(await page.evaluate(() => [window.innerWidth, document.documentElement.scrollWidth])).toEqual([768, 768]);
+      expect(pageErrors).toEqual([]);
+    });
+  }
+});
+
+test('9c: a double-tap is fmIDE\'s own, never the browser\'s zoom; two fingers on the canvas don\'t zoom the page', async ({ page, pageErrors }) => {
+  const { a } = await setup(page);
+  const touchAction = (sel) => page.locator(sel).first().evaluate(el => getComputedStyle(el).touchAction);
+  expect(await touchAction('body')).toBe('manipulation');
+  expect(await touchAction('#ribbon .rb-btn')).toBe('manipulation');
+  expect(await touchAction('#viewport')).toBe('pan-x pan-y');
+  // What 9a and 9b set stays.
+  expect(await touchAction(`.node[data-id="${a}"]`)).toBe('none');
+  expect(await touchAction('.canvas-tab')).toBe('pan-x');
+  expect(pageErrors).toEqual([]);
+});
+
+test('9c: a text box a finger types in has 16px text, so the browser doesn\'t zoom in on it', async ({ page, pageErrors }) => {
+  await setup(page);
+  await page.evaluate(() => fm.command('managePeriods'));
+  const input = page.locator('.modal-box input[type=text]').first();
+  await expect(input).toBeVisible();
+  expect(await input.evaluate(el => getComputedStyle(el).fontSize)).toBe('16px');
+  expect(pageErrors).toEqual([]);
+});
+
+test('9c: arrows at the ends of the ribbon show there is more, and a tap scrolls it; every button can be reached', async ({ page, pageErrors }) => {
+  await setup(page);
+  const types = await watchPointerTypes(page);
+  const f = await finger(page);
+  const left = page.locator('.rb-more.left'), right = page.locator('.rb-more.right');
+  const body = page.locator('.rb-body');
+  expect(await body.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true);
+  // Wait until the ribbon has stopped gliding (the scroll is smooth); returns where it is.
+  const settle = async () => {
+    let prev = null;
+    await expect.poll(async () => { const v = await body.evaluate(el => el.scrollLeft); const still = v === prev; prev = v; return still; }, { intervals: [100] }).toBe(true);
+    return prev;
+  };
+  await expect(right).toBeVisible();
+  await expect(left).toBeHidden();
+  for(let i = 0; i < 10 && await right.isVisible(); i++){
+    const before = await settle();
+    await f.tap(centre(await box(right)));
+    expect(await settle()).toBeGreaterThan(before);
+    await expect(left).toBeVisible();
+  }
+  await expect(right).toBeHidden();
+  // At the end, the last button is on the screen, clear of the arrow on the left.
+  const last = await box(page.locator('.rb-body .rb-btn').last());
+  const arrow = await box(left);
+  expect(last.x + last.width).toBeLessThanOrEqual(1024);
+  expect(last.x).toBeGreaterThanOrEqual(arrow.x + arrow.width - 1);
+  expect(await types()).toEqual(['touch']);
+  // Back to the start.
+  for(let i = 0; i < 10 && await left.isVisible(); i++){
+    const before = await settle();
+    await f.tap(centre(await box(left)));
+    expect(await settle()).toBeLessThan(before);
+  }
+  expect(await body.evaluate(el => el.scrollLeft)).toBe(0);
+  await expect(right).toBeVisible();
+  expect(pageErrors).toEqual([]);
+});
+
+test('9c: on a touchscreen the ribbon\'s buttons are taller, and the canvas starts below them', async ({ page, pageErrors }) => {
+  await setup(page);
+  expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true);
+  const small = await box(page.locator('.rb-body .rb-btn.small').first());
+  expect(small.height).toBeGreaterThanOrEqual(28);
+  const ribbon = await box(page.locator('#ribbon'));
+  const tabs = await box(page.locator('#canvasTabs'));
+  const canvas = await box(page.locator('#viewport'));
+  expect(Math.abs(tabs.y - (ribbon.y + ribbon.height))).toBeLessThanOrEqual(1);
+  expect(Math.abs(canvas.y - (tabs.y + tabs.height))).toBeLessThanOrEqual(1);
+  expect(pageErrors).toEqual([]);
+});
+
+for(const [width, height] of [[1024, 768], [768, 1024]]){
+  test(`9c: the ribbon's top row fits a ${width} × ${height} screen: the search and the collapse button are on it`, async ({ page, pageErrors }) => {
+    await page.setViewportSize({ width, height });
+    await F.openFmIDE(page);
+    for(const sel of ['.rb-search', '.rb-right .rb-iconbtn', '.rb-tab >> nth=-1']){
+      const b = await box(page.locator('#ribbon ' + sel).first());
+      expect(b.x, sel).toBeGreaterThanOrEqual(0);
+      expect(b.x + b.width, sel).toBeLessThanOrEqual(width);
+    }
+    // The search, even as just its 🔎, still opens the Command Launcher.
+    const f = await finger(page);
+    await f.tap(centre(await box(page.locator('#ribbon .rb-search'))));
+    await expect(page.locator('.launcher')).toBeVisible();
+    expect(pageErrors).toEqual([]);
+  });
+}
+
+for(const [width, height] of [[1024, 768], [768, 1024]]){
+  test(`9c: every dialog fits on a ${width} × ${height} screen`, async ({ page, pageErrors }) => {
+    await page.setViewportSize({ width, height });
+    for(const cmd of DIALOG_COMMANDS){
+      await F.openFmIDE(page);
+      await page.evaluate((cmd) => fm.command(cmd), cmd);
+      const dialog = page.locator(DIALOGS).last();
+      await expect(dialog, cmd).toBeVisible();
+      const b = await box(dialog);
+      expect(b.x, cmd).toBeGreaterThanOrEqual(0);
+      expect(b.y, cmd).toBeGreaterThanOrEqual(0);
+      expect(b.x + b.width, cmd).toBeLessThanOrEqual(width);
+      expect(b.y + b.height, cmd).toBeLessThanOrEqual(height);
+    }
+    expect(pageErrors).toEqual([]);
+  });
+}
+
+test('9c: when the visible screen shrinks (the on-screen keyboard), the node being edited stays in sight', async ({ page, pageErrors }) => {
+  await F.openFmIDE(page);
+  const low = await page.evaluate(() => { fm.clearAll(); return fm.createRect({ x: 300, y: 500, name: 'Low', value: '1' }); });
+  const f = await finger(page);
+  const node = nodeEl(page, low);
+  const nb = await box(node);
+  expect(nb.y + nb.height).toBeLessThan(768);
+  expect(nb.y).toBeGreaterThan(420);
+  await f.doubleTap(centre(nb));
+  const ta = node.locator('textarea');
+  await expect(ta).toBeFocused();
+  // The keyboard takes the lower part of the screen.
+  await page.setViewportSize({ width: 1024, height: 420 });
+  await expect.poll(async () => { const b = await ta.boundingBox(); return b && b.y + b.height; }).toBeLessThanOrEqual(420);
+  const t = await box(ta);
+  const canvas = await box(page.locator('#viewport'));
+  expect(t.y).toBeGreaterThanOrEqual(canvas.y);
+  await expect(ta).toBeFocused();
+  // Typing still ends up on the node.
+  await page.keyboard.press('Control+A');
+  await page.keyboard.type('Lower');
+  await page.keyboard.press('Enter');
+  await expect.poll(() => nodeOf(page, low).then(n => n.name)).toBe('Lower');
+  expect(pageErrors).toEqual([]);
+});
+
+test('9c: when the visible screen shrinks, a dialog stays inside it and scrolls, and the box being typed in stays in sight', async ({ page, pageErrors }) => {
+  await F.openFmIDE(page);
+  await page.evaluate(() => fm.command('openShortcuts'));
+  const dialog = page.locator('.modal-box').last();
+  await expect(dialog).toBeVisible();
+  await page.setViewportSize({ width: 1024, height: 420 });
+  await expect.poll(async () => { const b = await dialog.boundingBox(); return b && b.y + b.height; }).toBeLessThanOrEqual(420);
+  expect((await box(dialog)).y).toBeGreaterThanOrEqual(0);
+  expect(await dialog.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
+  // A box at the bottom of the dialog, focused: scrolled into sight.
+  const field = dialog.locator('input:not([type=checkbox]), select, button').last();
+  await field.focus();
+  await expect.poll(async () => { const b = await field.boundingBox(); return b && b.y + b.height; }).toBeLessThanOrEqual(420);
+  expect(pageErrors).toEqual([]);
+});
+
+test.describe('9c: with a mouse, nothing of it shows', () => {
+  test.use({ hasTouch: false });
+  test('no ribbon arrows, the usual text sizes, button heights and dialogs', async ({ page, pageErrors }) => {
+    await F.openFmIDE(page);
+    await page.mouse.move(400, 400);
+    await expect(page.locator('body')).not.toHaveClass(/touch-input/);
+    expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(false);
+    await expect(page.locator('.rb-more.right')).toBeHidden();
+    await expect(page.locator('.rb-more.left')).toBeHidden();
+    expect((await box(page.locator('.rb-body .rb-btn.small').first())).height).toBeLessThan(24);
+    await page.evaluate(() => fm.command('managePeriods'));
+    const input = page.locator('.modal-box input[type=text]').first();
+    await expect(input).toBeVisible();
+    expect(await input.evaluate(el => getComputedStyle(el).fontSize)).not.toBe('16px');
+    expect(await page.locator('.modal-overlay').last().evaluate(el => { const s = getComputedStyle(el); return [s.top, s.bottom]; })).toEqual(['0px', '0px']);
+    expect(pageErrors).toEqual([]);
+  });
 });
