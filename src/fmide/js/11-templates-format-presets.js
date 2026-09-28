@@ -761,9 +761,32 @@
 
   // Builds recipe `t` into the open system (the caller is an action: one undo step).
   // Returns { canvases: [ids], warnings: [text], unfedSockets: [{ canvas, socket }] }.
-  function buildRecipe(t){
-    const made = [], warnings = [];
-    t.data.parts.forEach(part => {
+  // For each part of a recipe, whether it is already here: { canvas } — a canvas of the
+  // model built from the same template family (canvas.template), or an earlier part of the
+  // same recipe with that family — else null.
+  function recipePartsAlreadyHere(parts){
+    const seen = new Map(); // family → the name its earlier part will have
+    return parts.map(part => {
+      const onCanvas = canvases.find(c => c.template && c.template.family === part.family);
+      const hit = onCanvas ? { canvas: onCanvas.name, version: onCanvas.template.version }
+        : seen.has(part.family) ? { canvas: seen.get(part.family), inRecipe: true } : null;
+      if(!seen.has(part.family)){ const st = recipePartStatus(part); seen.set(part.family, st.template ? st.template.name : (part.name || 'that part')); }
+      return hit;
+    });
+  }
+  // `opts.skip`: the part indexes (from 0) not to build — parts already here, whose canvas
+  // the new ones connect to through their plugs and sockets, by name, as ever.
+  function buildRecipe(t, opts){
+    const skip = (opts && opts.skip) || new Set();
+    const made = [], warnings = [], skipped = [];
+    const here = recipePartsAlreadyHere(t.data.parts);
+    t.data.parts.forEach((part, i) => {
+      if(skip.has(i)){
+        const st = recipePartStatus(part);
+        const name = (st.template && st.template.name) || part.name || 'A part';
+        skipped.push(here[i] ? `Skipped ${name} — already here as canvas “${here[i].canvas}”.` : `Skipped ${name}.`);
+        return;
+      }
       const st = recipePartStatus(part);
       if(!st.template){ warnings.push(`Skipped ${st.label}.`); return; }
       if(st.state === 'differs') warnings.push(`${st.template.name} v${st.template.version} in your library isn't the one this recipe was made with — built with yours.`);
@@ -772,7 +795,8 @@
       setCanvasTemplateLink(c, st.template);
       made.push(c.id);
     });
-    if(!made.length) fail(`Nothing to build: none of the parts of "${t.name}" is in your library.`);
+    if(!made.length && !skipped.length) fail(`Nothing to build: none of the parts of "${t.name}" is in your library.`);
+    if(!made.length) return { canvases: [], warnings, skipped, unfedSockets: [], multiFedSockets: [] };
     syncAutoConnections();
     clearComputed();
     evaluateAll();
@@ -783,10 +807,12 @@
     // is on a canvas it added) — e.g. a part whose canvas was already in the model.
     const newNames = new Set(made.map(id => canvases.find(c => c.id === id).name));
     const multi = multiFedSocketsIn(all).filter(m => newNames.has(m.canvas) || m.sources.some(s => newNames.has(s.split('::')[0])));
-    return { canvases: made, warnings, unfedSockets: unfed, multiFedSockets: multi };
+    return { canvases: made, warnings, skipped, unfedSockets: unfed, multiFedSockets: multi };
   }
   function recipeBuildSummary(t, r){
-    const lines = [`Built ${t.name}: ${r.canvases.length} canvas${r.canvases.length === 1 ? '' : 'es'}.`];
+    const lines = [r.canvases.length ? `Built ${t.name}: ${r.canvases.length} canvas${r.canvases.length === 1 ? '' : 'es'}.`
+      : `Nothing new to add for ${t.name}: every part is already here.`];
+    (r.skipped || []).forEach(s => lines.push(s));
     r.warnings.forEach(w => lines.push(w));
     if(r.unfedSockets.length) lines.push(unfedSocketsText(r.unfedSockets));
     if(r.multiFedSockets && r.multiFedSockets.length) lines.push(multiFedSocketsText(r.multiFedSockets));
@@ -1501,6 +1527,7 @@
     let selected = templateFamilies()[0] || null;
     let previewCanvasIdx = 0;
     const expanded = new Set(); // families whose older versions are showing
+    let recipeSkip = new Set(), recipeSkipFor = null; // the recipe parts ticked "Skip" (indexes from 0)
 
     saveCanvasBtn.addEventListener('click', () => {
       saveCurrentCanvasAsTemplate((newTpl) => { selected = newTpl; previewCanvasIdx = 0; renderList(); renderDetail(); });
@@ -1519,7 +1546,8 @@
       close();
       if(t.kind === 'module'){ guarded(() => fm.insertTemplate(t.id, 'here')); return; }
       if(t.kind === 'recipe'){
-        guarded(() => { const r = fm.insertTemplate(t.id, 'add'); if(r) showMessage(recipeBuildSummary(t, r)); });
+        const skip = recipeSkipFor === t ? [...recipeSkip].map(i => i + 1) : [];
+        guarded(() => { const r = fm.insertTemplate(Object.assign({ template: t.id, mode: 'add' }, skip.length ? { skip } : {})); if(r) showMessage(recipeBuildSummary(t, r)); });
         return;
       }
       const collisions = (t.data.canvases || [])
@@ -1534,11 +1562,27 @@
     function renderRecipeDetail(all){
       const ul = document.createElement('ul');
       ul.className = 'recipe-detail-parts';
-      selected.data.parts.forEach(part => {
+      const here = recipePartsAlreadyHere(selected.data.parts);
+      if(recipeSkipFor !== selected){ recipeSkipFor = selected; recipeSkip = new Set(here.map((h, i) => h ? i : -1).filter(i => i >= 0)); }
+      selected.data.parts.forEach((part, i) => {
         const st = recipePartStatus(part);
         const li = document.createElement('li');
         li.className = 'recipe-part-state ' + st.state;
         li.textContent = (st.state === 'ok' ? '✓ ' : '⚠ ') + st.label;
+        // A part already here: skip it (ticked by default) rather than add it again.
+        if(here[i]){
+          const lab = document.createElement('label');
+          lab.className = 'recipe-part-skip';
+          const box = document.createElement('input');
+          box.type = 'checkbox';
+          box.checked = recipeSkip.has(i);
+          box.addEventListener('change', () => { if(box.checked) recipeSkip.add(i); else recipeSkip.delete(i); });
+          lab.appendChild(box);
+          const differs = !here[i].inRecipe && st.template && here[i].version !== st.template.version;
+          lab.appendChild(document.createTextNode(' Skip — already here as canvas “' + here[i].canvas + '”'
+            + (differs ? ` (v${here[i].version}; this recipe uses v${st.template.version})` : '')));
+          li.appendChild(lab);
+        }
         ul.appendChild(li);
       });
       detail.appendChild(ul);

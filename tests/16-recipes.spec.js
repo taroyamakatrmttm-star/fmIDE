@@ -239,6 +239,8 @@ test('building next to a canvas that already has the plug: warns, and the socket
   await page.evaluate(() => fm.insertTemplate('Income Statement', 'newCanvas'));   // already in the model
   await page.evaluate(() => fm.command('openTemplates'));
   await picker(page).locator('.template-list button.template-family', { hasText: 'Three Statements' }).click();
+  // Income Statement is already here, so it is offered as Skip (ticked): add it anyway.
+  await picker(page).locator('.recipe-part-skip input').uncheck();
   await picker(page).locator('button.recipe-build').click();
   expect(await messageText(page)).toBe('Built Three Statements: 2 canvases.\n'
     + 'Sockets nothing feeds: “to Cash” (Balance Sheet).\n'
@@ -267,4 +269,50 @@ test('the recipe check lists a socket that two parts plug into', async ({ page }
   await closeTemplates(page);
   const r = await build(page, 'Doubled');
   expect(r.multiFedSockets).toEqual([{ canvas: 'Balance Sheet', socket: 'to Net Income', sources: ['Income Statement::Net Income', 'Income Statement::Net Income'] }]);
+});
+
+// Two recipes sharing a part: the second offers to skip the part already here (ticked by
+// default), so its canvas isn't added twice; the shared canvas still feeds the new sockets.
+test('a part already here is offered as "Skip" (ticked) and not added again; unticked, it is', async ({ page }) => {
+  expect(await saveRecipe(page, { name: 'Income only', parts: ['Income Statement@latest'] })).toBe('Income only@1');
+  expect(await saveRecipe(page, { name: 'Income and BS', parts: ['Income Statement@latest', 'Balance Sheet@2'] })).toBe('Income and BS@1');
+  const first = await build(page, { template: 'Income only', mode: 'add' });
+  expect(first.canvases.length).toBe(1);
+  const before = await canvasNames(page);
+  // The window: the shared part shows a ticked Skip; Build adds only the Balance Sheet.
+  await page.evaluate(() => fm.command('openTemplates'));
+  await picker(page).locator('.template-list button.template-family', { hasText: 'Income and BS' }).click();
+  const skip = picker(page).locator('.recipe-part-skip');
+  await expect(skip).toHaveCount(1);
+  await expect(skip).toContainText('Skip — already here as canvas “Income Statement”');
+  await expect(skip.locator('input')).toBeChecked();
+  await picker(page).locator('button.recipe-build').click();
+  expect(await messageText(page)).toContain('Skipped Income Statement — already here as canvas “Income Statement”.');
+  await F.dismissMessage(page);
+  const after = await canvasNames(page);
+  expect(after.length).toBe(before.length + 1);
+  expect(after.filter(n => /^Income Statement/.test(n)).length).toBe(1);
+  // The existing Income Statement feeds the new Balance Sheet's "to Net Income" socket.
+  expect(await valueOn(page, 'Balance Sheet', 'Retained Earnings')).toBe(40);
+  // Unticked: the part is added again.
+  await page.evaluate(() => fm.command('openTemplates'));
+  await picker(page).locator('.template-list button.template-family', { hasText: 'Income and BS' }).click();
+  await picker(page).locator('.recipe-part-skip input').first().uncheck();
+  await picker(page).locator('button.recipe-build').click();
+  await F.dismissMessage(page);
+  expect((await canvasNames(page)).filter(n => /^Income Statement/.test(n)).length).toBe(2);
+});
+
+test('fm.insertTemplate skips only when asked: skip (part numbers) and skipExisting', async ({ page }) => {
+  expect(await saveRecipe(page, { name: 'Income only', parts: ['Income Statement@latest'] })).toBe('Income only@1');
+  await build(page, { template: 'Income only', mode: 'add' });
+  // As before: without either option, the part is added again.
+  expect((await build(page, { template: 'Income only', mode: 'add' })).canvases.length).toBe(1);
+  // skipExisting: nothing new, and it says what was skipped.
+  const r = await build(page, { template: 'Income only', mode: 'add', skipExisting: true });
+  expect(r.canvases).toEqual([]);
+  expect(r.skipped).toEqual(['Skipped Income Statement — already here as canvas “Income Statement”.']);
+  // skip by part number.
+  expect((await build(page, { template: 'Income only', mode: 'add', skip: [1] })).canvases).toEqual([]);
+  expect(await build(page, { template: 'Income only', mode: 'add', skip: { part: 1 } })).toBe('Error: skip must be a list of part numbers, e.g. [2].');
 });

@@ -328,6 +328,9 @@
         n.sourceCanvasId = activeCanvasId;
       }
     });
+    // The pasted nodes move together to the nearest free space, keeping their layout, so a
+    // paste never lands on what is already on the canvas (the original, earlier pastes).
+    moveGroupToFreeSpot(newNodes, nodes);
     const newEdges = clipboard.edges.map(e => Object.assign({}, e, { id: uid('e'), from: idMap[e.from], to: idMap[e.to] }));
     nodes = nodes.concat(newNodes);
     edges = edges.concat(newEdges);

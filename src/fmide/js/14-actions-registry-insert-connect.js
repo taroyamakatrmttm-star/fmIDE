@@ -275,15 +275,23 @@
     } });
 
   defineAction({ name:'insertTemplate', label:'Insert Template', category:'Insert', icon:'📚',
-    desc:'Inserts a saved template: its name (the latest version), "Name@latest", "Name@3" (version 3), the same with its family id, or "#id". Modules: "here" (this canvas) or "newCanvas". Systems: "add" (merge alongside) or "replace". Recipes: "add" builds one canvas per part and returns { canvases, warnings, unfedSockets }.',
+    desc:'Inserts a saved template: its name (the latest version), "Name@latest", "Name@3" (version 3), the same with its family id, or "#id". Modules: "here" (this canvas) or "newCanvas". Systems: "add" (merge alongside) or "replace". Recipes: "add" builds one canvas per part and returns { canvases, warnings, skipped, unfedSockets }; skip lists part numbers (from 1) not to build, and skipExisting skips every part already here (a canvas of the same template, or an earlier part of the recipe).',
     params:[ P('template','template'), P('mode','enum',{ options:['auto','here','newCanvas','add','replace'], def:'auto' }),
       P('onCollision','enum',{ options:['merge','keep'], def:'merge', label:'same-name canvases', help:'systems added alongside' }),
-      P('decisions','json',{ optional:true, help:'per-canvas {"Name":"merge"|"keep"}' }) ],
+      P('decisions','json',{ optional:true, help:'per-canvas {"Name":"merge"|"keep"}' }),
+      P('skip','json',{ optional:true, help:'recipes: part numbers (from 1) not to build, e.g. [2]' }),
+      P('skipExisting','bool',{ def:false, help:'recipes: skip every part already here' }) ],
     run(a){
       const t = a.template;
       if(t.kind === 'recipe'){
         if(a.mode !== 'auto' && a.mode !== 'add') fail(`"${t.name}" is a recipe — use mode "add" (it adds one canvas per part).`);
-        return buildRecipe(t);
+        const skip = new Set();
+        if(a.skip != null){
+          if(!Array.isArray(a.skip)) fail('skip must be a list of part numbers, e.g. [2].');
+          a.skip.forEach(v => { const k = Math.round(Number(v)); if(k >= 1 && k <= t.data.parts.length) skip.add(k - 1); });
+        }
+        if(a.skipExisting) recipePartsAlreadyHere(t.data.parts).forEach((h, i) => { if(h) skip.add(i); });
+        return buildRecipe(t, { skip });
       }
       const data = cloneData(t.data);
       const mode = a.mode === 'auto' ? (t.kind === 'system' ? 'add' : 'here') : a.mode;
