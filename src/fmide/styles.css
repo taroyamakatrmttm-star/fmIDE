@@ -133,6 +133,36 @@
   .rb-btn.small .ic{ width:18px; text-align:center; font-size:13px; }
   .rb-btn.active-choice{ background:#4338ca; border-color:#6366f1; }
   .rb-empty-note{ font-size:11px; color:#6b7280; padding:8px 6px; max-width:180px; white-space:normal; }
+  /* The ribbon by finger (step 9c). Arrows at the ends show there is more of the ribbon to swipe to
+     (a tap on one scrolls it); only while a finger is in use. On a touchscreen (pointer: coarse)
+     its buttons are taller; the canvas moves down to fit (updateRibbonHeight). */
+  .rb-more{ display:none; }
+  body.touch-input .rb-more.show{
+    display:flex; position:absolute; bottom:0; height:var(--rb-body-h, 94px); width:34px; z-index:1; align-items:center;
+    border:none; padding:0; font-size:20px; color:#e5e7eb; cursor:pointer;
+  }
+  .rb-more.left{ left:0; justify-content:flex-start; padding-left:4px; background:linear-gradient(to right, #1f2937 45%, rgba(31,41,55,0)); }
+  .rb-more.right{ right:0; justify-content:flex-end; padding-right:4px; background:linear-gradient(to left, #1f2937 45%, rgba(31,41,55,0)); }
+  /* A narrow window (a tablet held upright): the search box shrinks to its 🔎 (a tap still opens
+     the Command Launcher), and the top row scrolls sideways if it still doesn't fit. */
+  @media (max-width: 900px){
+    .rb-search{ min-width:0; }
+    .rb-search > span:not(:first-child){ display:none; }
+    .rb-strip .rb-tab{ padding:0 10px; }
+    .rb-strip{ overflow-x:auto; overflow-y:hidden; scrollbar-width:none; }
+    .rb-strip::-webkit-scrollbar{ display:none; }
+  }
+  @media (pointer: coarse){
+    .rb-strip{ height:38px; }
+    .rb-qat button, .rb-iconbtn{ width:34px; height:30px; }
+    .rb-search{ height:30px; }
+    .rb-tab{ padding:0 16px; }
+    .rb-body{ height:113px; }
+    #ribbon{ --rb-body-h:113px; }
+    #ribbon.collapsed.flyout .rb-body{ top:38px; }
+    .rb-btn.large{ height:85px; min-width:60px; }
+    .rb-btn.small{ height:28px; }
+  }
 
   /* ---------- KeyTips ---------- */
   #keytipLayer{ position:fixed; inset:0; pointer-events:none; z-index:400; }
@@ -518,6 +548,20 @@
   body.touch-input .node.selected .tag-btn::after{ content:''; position:absolute; inset:-8px; border-radius:8px; }
   body.touch-input .node.selected .resize-handle::after{ content:''; position:absolute; left:-18px; top:-18px; right:-2px; bottom:-2px; }
   body.touch-input .io-port::after{ content:''; position:absolute; inset:-9px; border-radius:50%; }
+  /* Step 9c, the screen. A finger's double-tap is fmIDE's own (02b-pointer-input.js), never the
+     browser's zoom; two fingers on the canvas do nothing (kept for fmIDE's own zoom later), while
+     elsewhere they still zoom the page. Nothing here changes anything for a mouse. */
+  *{ touch-action:manipulation; }
+  #viewport{ touch-action:pan-x pan-y; }
+  /* Text boxes of 16px or more don't make a tablet's browser zoom in when one is tapped. */
+  body.touch-input input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]):not([type=button]),
+  body.touch-input textarea, body.touch-input select{ font-size:16px !important; }
+  /* Dialogs stay inside the part of the screen the on-screen keyboard leaves visible (--vv-top,
+     --vv-h: 02c-visible-screen.js) and scroll inside themselves. */
+  body.touch-input .modal-overlay{ top:var(--vv-top, 0px); height:var(--vv-h, 100%); bottom:auto; }
+  body.touch-input .modal-box{ max-height:calc(var(--vv-h, 100vh) - 16px); overflow-y:auto; }
+  body.touch-input .launcher{ top:calc(var(--vv-top, 0px) + min(84px, 8vh)); }
+  body.touch-input .launcher .lres{ max-height:min(420px, calc(var(--vv-h, 100vh) - 200px)); }
   .node:active{cursor:grabbing;}
   .node.selected{ border-color:var(--node-selected); box-shadow:0 0 0 3px rgba(99,102,241,.18); }
 

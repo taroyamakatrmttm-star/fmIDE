@@ -1,3 +1,27 @@
+// Mouse, finger and pen (step 9c): following a press, holds, double-tap, body.touch-input —
+// shared with fmIDE.
+// build:include shared/pointer-input.js
+
+// After a finger's hold has opened the row menu, or its double-tap has started a rename, the
+// mouse events the browser still copies from that touch (mousedown, mouseup, click) are
+// dropped: they would close the menu, select the row again or take focus from the rename box.
+// Until the next touch goes down, or a second after the finger lifts.
+let droppingTapCopies = false, tapCopiesTimer = null;
+function dropTapCopies(){
+  droppingTapCopies = true;
+  clearTimeout(tapCopiesTimer);
+  tapCopiesTimer = null;
+}
+['mousedown', 'mouseup', 'click'].forEach(type => document.addEventListener(type, (ev) => {
+  if(droppingTapCopies && isEmulatedMouse(ev)){ ev.preventDefault(); ev.stopImmediatePropagation(); }
+}, true));
+window.addEventListener('pointerdown', (ev) => { if(ev.pointerType !== 'mouse') droppingTapCopies = false; }, true);
+window.addEventListener('pointerup', (ev) => {
+  if(ev.pointerType === 'mouse' || !droppingTapCopies) return;
+  clearTimeout(tapCopiesTimer);
+  tapCopiesTimer = setTimeout(() => { droppingTapCopies = false; }, 1000);
+});
+
 // ---------- Rows grouped by Excel tab (a live preview of the actual sheet layout) ----------
 // Builds one editable <tr> for either a real row or a custom row, sharing the same
 // column set so both kinds can sit in the same table, ordered exactly as they will be
@@ -353,8 +377,16 @@ function buildTreeRowEl(row, flatIndex){
   el.appendChild(fmtBtn);
 
   el.addEventListener('click', (ev) => handleTreeRowClick(ev, flatIndex));
+  // By finger (step 9c): press and hold a row for its menu, which then also offers what Ctrl- and
+  // Shift-click do. A long press's own contextmenu (some browsers send one) is dropped.
+  el.addEventListener('pointerdown', (ev) => {
+    if(ev.pointerType === 'mouse' || touchPointersDown.size !== 1) return;
+    if(ev.target.closest('button, input, select, textarea, .tree-style-editor')) return;
+    waitForHold(ev, { onHold: () => { dropTapCopies(); openTreeContextMenu(ev.clientX + 12, ev.clientY + 12, row, el, label, { touch: true }); } });
+  });
   el.addEventListener('contextmenu', (ev) => {
     ev.preventDefault();
+    if(isEmulatedMouse(ev)) return;
     // Standard file-manager behavior: right-clicking a row outside the selection selects
     // just that row; right-clicking inside it keeps the whole selection.
     if(!selectedRowIds.has(row.id)){
@@ -370,9 +402,12 @@ function buildTreeRowEl(row, flatIndex){
     ev.preventDefault();
     // The first click of a double-click selects a row, which can make the selection bar
     // appear and push the list down — so the second click may land on a different row.
-    // Always rename the row the first click actually selected.
-    const first = treeClickHistory[treeClickHistory.length - 2];
-    const last = treeClickHistory[treeClickHistory.length - 1];
+    // Always rename the row the first click actually selected. A finger's double-tap (the
+    // double-click pointer-input.js sends, before the second tap's click) has had one click.
+    const tapped = !ev.isTrusted;
+    if(tapped) dropTapCopies();
+    const first = treeClickHistory[treeClickHistory.length - (tapped ? 1 : 2)];
+    const last = tapped ? { id: row.id, time: Date.now() } : treeClickHistory[treeClickHistory.length - 1];
     if(first && last && last.id === row.id && first.id !== row.id && last.time - first.time < 800){
       const target = treeRowElements.find(e => e.id === first.id);
       const targetRow = findRowById(first.id);
@@ -391,12 +426,26 @@ function buildTreeRowEl(row, flatIndex){
 
 // Right-click menu for a Tree row. With several rows selected, "above" means above the
 // first selected row and "below" means below the last (in sheet order).
-function openTreeContextMenu(x, y, row, rowEl, labelSpan){
+// Opened by a finger's hold ({ touch: true }), the selection is left as it is: the menu starts
+// with Add to / Remove from selection and Select from the last row to here (what Ctrl- and
+// Shift-click do), and the other commands, on a row outside the selection, first select just
+// that row — as a right-click does straight away.
+function openTreeContextMenu(x, y, row, rowEl, labelSpan, opts){
+  const touch = !!(opts && opts.touch);
   const menu = $('treeCtxMenu');
   menu.innerHTML = '';
-  const sel = selectionInSheetOrder();
+  const outside = touch && !selectedRowIds.has(row.id);
+  const sel = outside ? [row] : selectionInSheetOrder();
   const first = sel[0] || row, last = sel[sel.length - 1] || row;
-  const item = (text, onClick, opts) => {
+  const selectJustThisRow = () => {
+    if(!outside) return;
+    selectedRowIds.clear();
+    selectedRowIds.add(row.id);
+    treeAnchorIndex = treeVisibleRows.findIndex(e => e.id === row.id);
+    applyTreeSelectionHighlight();
+    renderBulkBar();
+  };
+  const addItem = (text, onClick, opts) => {
     const b = document.createElement('button');
     b.textContent = text;
     b.setAttribute('role', 'menuitem');
@@ -405,7 +454,26 @@ function openTreeContextMenu(x, y, row, rowEl, labelSpan){
     b.addEventListener('click', () => { closeTreeContextMenu(); onClick(); });
     menu.appendChild(b);
   };
+  const item = (text, onClick, opts) => addItem(text, () => { selectJustThisRow(); onClick(); }, opts);
   const hr = () => menu.appendChild(document.createElement('hr'));
+  if(touch){
+    const here = treeVisibleRows.findIndex(e => e.id === row.id);
+    addItem(outside ? '☑ Add to selection' : '☐ Remove from selection', () => {
+      if(outside) selectedRowIds.add(row.id); else selectedRowIds.delete(row.id);
+      treeAnchorIndex = here;
+      applyTreeSelectionHighlight();
+      renderBulkBar();
+    });
+    const anchor = treeAnchorIndex !== null && treeVisibleRows[treeAnchorIndex] && treeAnchorIndex !== here ? treeAnchorIndex : null;
+    addItem('⇕ Select from the last row to here', () => {
+      selectedRowIds.clear();
+      const lo = Math.min(anchor, here), hi = Math.max(anchor, here);
+      for(let i = lo; i <= hi; i++){ if(treeVisibleRows[i]) selectedRowIds.add(treeVisibleRows[i].id); }
+      applyTreeSelectionHighlight();
+      renderBulkBar();
+    }, anchor === null ? { disabled: true, title: 'Tap a row first, then hold the row at the other end' } : null);
+    hr();
+  }
   const n = sel.length || 1;
   const rows = sel.length ? sel : [row];
   // Every command of the selection bar, on the selection (right-clicking outside it
@@ -450,7 +518,7 @@ function openTreeContextMenu(x, y, row, rowEl, labelSpan){
   }
   [['top', 'at top'], ['bottom', 'at bottom']].forEach(([edge, text]) => {
     const b = document.createElement('button'); b.type = 'button'; b.textContent = text; b.className = 'ctx-inline';
-    b.addEventListener('click', () => { closeTreeContextMenu(); moveSelectedToDestination(tabSel.value, secSel ? secSel.value : null, edge); });
+    b.addEventListener('click', () => { closeTreeContextMenu(); selectJustThisRow(); moveSelectedToDestination(tabSel.value, secSel ? secSel.value : null, edge); });
     moveMenu.appendChild(b);
   });
   moveMenu.addEventListener('mousedown', (ev) => ev.stopPropagation());

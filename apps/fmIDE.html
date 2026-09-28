@@ -4,6 +4,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
 <title>fmIDE — Visual Logic Builder</title>
 <style>
   :root{
@@ -141,6 +142,36 @@
   .rb-btn.small .ic{ width:18px; text-align:center; font-size:13px; }
   .rb-btn.active-choice{ background:#4338ca; border-color:#6366f1; }
   .rb-empty-note{ font-size:11px; color:#6b7280; padding:8px 6px; max-width:180px; white-space:normal; }
+  /* The ribbon by finger (step 9c). Arrows at the ends show there is more of the ribbon to swipe to
+     (a tap on one scrolls it); only while a finger is in use. On a touchscreen (pointer: coarse)
+     its buttons are taller; the canvas moves down to fit (updateRibbonHeight). */
+  .rb-more{ display:none; }
+  body.touch-input .rb-more.show{
+    display:flex; position:absolute; bottom:0; height:var(--rb-body-h, 94px); width:34px; z-index:1; align-items:center;
+    border:none; padding:0; font-size:20px; color:#e5e7eb; cursor:pointer;
+  }
+  .rb-more.left{ left:0; justify-content:flex-start; padding-left:4px; background:linear-gradient(to right, #1f2937 45%, rgba(31,41,55,0)); }
+  .rb-more.right{ right:0; justify-content:flex-end; padding-right:4px; background:linear-gradient(to left, #1f2937 45%, rgba(31,41,55,0)); }
+  /* A narrow window (a tablet held upright): the search box shrinks to its 🔎 (a tap still opens
+     the Command Launcher), and the top row scrolls sideways if it still doesn't fit. */
+  @media (max-width: 900px){
+    .rb-search{ min-width:0; }
+    .rb-search > span:not(:first-child){ display:none; }
+    .rb-strip .rb-tab{ padding:0 10px; }
+    .rb-strip{ overflow-x:auto; overflow-y:hidden; scrollbar-width:none; }
+    .rb-strip::-webkit-scrollbar{ display:none; }
+  }
+  @media (pointer: coarse){
+    .rb-strip{ height:38px; }
+    .rb-qat button, .rb-iconbtn{ width:34px; height:30px; }
+    .rb-search{ height:30px; }
+    .rb-tab{ padding:0 16px; }
+    .rb-body{ height:113px; }
+    #ribbon{ --rb-body-h:113px; }
+    #ribbon.collapsed.flyout .rb-body{ top:38px; }
+    .rb-btn.large{ height:85px; min-width:60px; }
+    .rb-btn.small{ height:28px; }
+  }
 
   /* ---------- KeyTips ---------- */
   #keytipLayer{ position:fixed; inset:0; pointer-events:none; z-index:400; }
@@ -526,6 +557,20 @@
   body.touch-input .node.selected .tag-btn::after{ content:''; position:absolute; inset:-8px; border-radius:8px; }
   body.touch-input .node.selected .resize-handle::after{ content:''; position:absolute; left:-18px; top:-18px; right:-2px; bottom:-2px; }
   body.touch-input .io-port::after{ content:''; position:absolute; inset:-9px; border-radius:50%; }
+  /* Step 9c, the screen. A finger's double-tap is fmIDE's own (02b-pointer-input.js), never the
+     browser's zoom; two fingers on the canvas do nothing (kept for fmIDE's own zoom later), while
+     elsewhere they still zoom the page. Nothing here changes anything for a mouse. */
+  *{ touch-action:manipulation; }
+  #viewport{ touch-action:pan-x pan-y; }
+  /* Text boxes of 16px or more don't make a tablet's browser zoom in when one is tapped. */
+  body.touch-input input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]):not([type=button]),
+  body.touch-input textarea, body.touch-input select{ font-size:16px !important; }
+  /* Dialogs stay inside the part of the screen the on-screen keyboard leaves visible (--vv-top,
+     --vv-h: 02c-visible-screen.js) and scroll inside themselves. */
+  body.touch-input .modal-overlay{ top:var(--vv-top, 0px); height:var(--vv-h, 100%); bottom:auto; }
+  body.touch-input .modal-box{ max-height:calc(var(--vv-h, 100vh) - 16px); overflow-y:auto; }
+  body.touch-input .launcher{ top:calc(var(--vv-top, 0px) + min(84px, 8vh)); }
+  body.touch-input .launcher .lres{ max-height:min(420px, calc(var(--vv-h, 100vh) - 200px)); }
   .node:active{cursor:grabbing;}
   .node.selected{ border-color:var(--node-selected); box-shadow:0 0 0 3px rgba(99,102,241,.18); }
 
@@ -1594,11 +1639,18 @@
   function clearComputed(){ invalidateIR(); computedValues = {}; computeErrors = {}; portValues = {}; portErrors = {}; }
 
   // ---------- pointer input: mouse, touch and pen (step 9a) ----------
-  // A mouse keeps the mouse events it always had: an action starts on mousedown and follows
-  // mousemove / mouseup. A finger or pen starts the same action on pointerdown and follows
-  // that one pointer (pointermove / pointerup / pointercancel). After a tap the browser also
-  // sends copies of it as mouse events; the canvas ignores those (isEmulatedMouse), while
-  // everything else (closing a pop-up on a tap elsewhere) still sees them as before.
+  // Following a mouse, finger or pen (onPress, followPointer, pressDefault, isEmulatedMouse),
+  // holds (waitForHold, HOLD_MS, HOLD_SLOP), double-tap and body.touch-input are shared with
+  // ExcelExporter (step 9c):
+  // ---------- pointer input: mouse, touch and pen (shared: src/shared/pointer-input.js, used by both apps) ----------
+  // Step 9 (docs/step9-touch.md). A mouse keeps the mouse events it always had: an action starts
+  // on mousedown and follows mousemove / mouseup. A finger or pen starts the same action on
+  // pointerdown and follows that one pointer (pointermove / pointerup / pointercancel). After a
+  // tap the browser also sends copies of it as mouse events; code that acts on a press ignores
+  // those (isEmulatedMouse), while everything else (closing a pop-up on a tap elsewhere) still
+  // sees them as before. Also here: telling a hold from a drag or a tap (waitForHold), double-tap
+  // sending a double-click, and body.touch-input (larger touch areas, text boxes that don't make
+  // the browser zoom).
   const touchPointersDown = new Set();
   let lastTouchLift = null; // { x, y, time } where the last finger or pen lifted
   window.addEventListener('pointerdown', (ev) => { if(ev.pointerType !== 'mouse') touchPointersDown.add(ev.pointerId); }, true);
@@ -1659,8 +1711,6 @@
     return stop;
   }
 
-  // ---------- touch replacements for the mouse-only gestures (step 9b) ----------
-  let tapArrow = null;    // drawing an arrow by taps (08b-touch-menu.js): { fromId, banner }
   const HOLD_MS = 500;    // a press this long, with the finger kept still, is a hold
   const HOLD_SLOP = 10;   // pixels a finger may wander and still be holding (or tapping)
 
@@ -1684,18 +1734,6 @@
       return true;
     }
   }
-
-  // While a hold turns a finger's drag into an action (a selection box, moving a canvas tab),
-  // the browser must not scroll under it. Scrolling can only be stopped from touchmove, so the
-  // places that scroll by finger listen for it (blockScrollWhileHolding) and cancel it while
-  // touchScrollBlocked is set; followPointer's lift clears it.
-  let touchScrollBlocked = false;
-  function blockScrollWhileHolding(el){
-    el.addEventListener('touchmove', (ev) => { if(touchScrollBlocked && ev.cancelable) ev.preventDefault(); }, { passive:false });
-  }
-  function holdBlocksScrolling(){ touchScrollBlocked = true; }
-  window.addEventListener('pointerup', () => { if(!touchPointersDown.size) touchScrollBlocked = false; });
-  window.addEventListener('pointercancel', () => { if(!touchPointersDown.size) touchScrollBlocked = false; });
 
   // Double-tap: two quick taps in about the same place send a double-click to what is under the
   // finger, everywhere in the page. The browser's own copy of one (some browsers send it) is
@@ -1733,6 +1771,67 @@
   if(coarsePointer) setTouchInput(true);
   window.addEventListener('pointerdown', (ev) => { setTouchInput(ev.pointerType !== 'mouse' || coarsePointer); }, true);
   window.addEventListener('pointermove', (ev) => { if(ev.pointerType === 'mouse' && !coarsePointer) setTouchInput(false); }, true);
+
+  // ---------- touch replacements for the mouse-only gestures (step 9b) ----------
+  let tapArrow = null;    // drawing an arrow by taps (08b-touch-menu.js): { fromId, banner }
+
+  // While a hold turns a finger's drag into an action (a selection box, moving a canvas tab),
+  // the browser must not scroll under it. Scrolling can only be stopped from touchmove, so the
+  // places that scroll by finger listen for it (blockScrollWhileHolding) and cancel it while
+  // touchScrollBlocked is set; followPointer's lift clears it.
+  let touchScrollBlocked = false;
+  function blockScrollWhileHolding(el){
+    el.addEventListener('touchmove', (ev) => { if(touchScrollBlocked && ev.cancelable) ev.preventDefault(); }, { passive:false });
+  }
+  function holdBlocksScrolling(){ touchScrollBlocked = true; }
+  window.addEventListener('pointerup', () => { if(!touchPointersDown.size) touchScrollBlocked = false; });
+  window.addEventListener('pointercancel', () => { if(!touchPointersDown.size) touchScrollBlocked = false; });
+  // ---------- the visible screen and the on-screen keyboard (step 9c) ----------
+  // A tablet's on-screen keyboard covers part of the page without always making the page
+  // smaller. visualViewport says which part is still visible: its top and height go into
+  // --vv-top and --vv-h, which keep dialogs inside it while a finger is in use (styles.css,
+  // body.touch-input). The text box being typed in is scrolled into that part too, by scrolling
+  // the canvas or the dialog it sits in (never the page itself, whose layout is fixed).
+  // Nothing changes for a mouse.
+  const visibleScreen = window.visualViewport || null;
+  const KEEP_VISIBLE_MARGIN = 8;
+
+  function fitToVisibleScreen(){
+    if(!visibleScreen) return;
+    const root = document.documentElement.style;
+    root.setProperty('--vv-top', Math.round(visibleScreen.offsetTop) + 'px');
+    root.setProperty('--vv-h', Math.round(visibleScreen.height) + 'px');
+    keepTypingVisible();
+  }
+
+  // Scroll the focused text box into view: into the part of each box around it that scrolls (the
+  // canvas, a dialog, a list), nearest first, that is also on the visible part of the screen.
+  function keepTypingVisible(){
+    if(!document.body || !document.body.classList.contains('touch-input')) return;
+    const field = document.activeElement;
+    if(!field || !field.matches || !field.matches('input, textarea, select, [contenteditable="true"]')) return;
+    const screenTop = visibleScreen ? visibleScreen.offsetTop : 0;
+    const screenBottom = visibleScreen ? visibleScreen.offsetTop + visibleScreen.height : window.innerHeight;
+    for(let box = field.parentElement; box && box !== document.body; box = box.parentElement){
+      const overflow = getComputedStyle(box).overflowY;
+      if((overflow !== 'auto' && overflow !== 'scroll') || box.scrollHeight <= box.clientHeight) continue;
+      const b = box.getBoundingClientRect();
+      const top = Math.max(screenTop, b.top) + KEEP_VISIBLE_MARGIN;
+      const bottom = Math.min(screenBottom, b.top + box.clientHeight) - KEEP_VISIBLE_MARGIN;
+      const r = field.getBoundingClientRect();
+      // Too tall to fit: show its top.
+      const delta = (r.top < top || r.height > bottom - top) ? r.top - top : (r.bottom > bottom ? r.bottom - bottom : 0);
+      if(Math.abs(delta) >= 1) box.scrollTop += delta;
+    }
+  }
+
+  if(visibleScreen){
+    visibleScreen.addEventListener('resize', fitToVisibleScreen);
+    visibleScreen.addEventListener('scroll', fitToVisibleScreen);
+    fitToVisibleScreen();
+  }
+  // A box just focused (the keyboard may already be up): after the browser's own scrolling.
+  document.addEventListener('focusin', () => { setTimeout(keepTypingVisible, 0); });
   // ---------- canvases + whole-system undo/redo ----------
   const MAX_HISTORY = 80;
   let history = [];
@@ -13643,6 +13742,7 @@
     return commandLabel(c) + (sc ? `  (${prettyCombo(sc)})` : '');
   }
 
+  let ribbonArrowsUpdate = null; // addRibbonScrollArrows' update, while the ribbon is open
   function renderRibbon(){
     const cfg = ribbonState.config;
     if(!cfg.tabs.some(t => t.id === ribbonState.activeTab)) ribbonState.activeTab = cfg.tabs[0] ? cfg.tabs[0].id : null;
@@ -13749,9 +13849,37 @@
       });
     }
     ribbonEl.appendChild(body);
+    ribbonArrowsUpdate = ribbonState.collapsed ? null : addRibbonScrollArrows(body);
     updateRibbonHeight();
     refreshCommandStatesNow();
     if(keytips.active) keytipsRedraw();
+  }
+
+  // Arrows at the ends of the ribbon while a finger is in use (styles.css, .rb-more): each shows
+  // when there is more of the ribbon that way, and a tap scrolls it most of a screen along.
+  // Returns the function that shows or hides them (kept in ribbonArrowsUpdate).
+  function addRibbonScrollArrows(body){
+    const arrows = ['left', 'right'].map(side => {
+      const a = el('button', 'rb-more ' + side, side === 'left' ? '‹' : '›');
+      a.type = 'button';
+      a.title = side === 'left' ? 'More of the ribbon to the left' : 'More of the ribbon to the right';
+      a.setAttribute('aria-label', a.title);
+      a.addEventListener('mousedown', (ev) => ev.preventDefault());
+      // To a place worked out from where the ribbon is now (a scroll still under way included).
+      a.addEventListener('click', () => {
+        const step = (side === 'left' ? -1 : 1) * Math.max(120, body.clientWidth * 0.6);
+        body.scrollTo({ left: Math.max(0, Math.min(body.scrollWidth - body.clientWidth, body.scrollLeft + step)), behavior: 'smooth' });
+      });
+      ribbonEl.appendChild(a);
+      return a;
+    });
+    const update = () => {
+      arrows[0].classList.toggle('show', body.scrollLeft > 1);
+      arrows[1].classList.toggle('show', body.scrollLeft + body.clientWidth < body.scrollWidth - 1);
+    };
+    body.addEventListener('scroll', update, { passive: true });
+    update();
+    return update;
   }
 
   function updateRibbonHeight(){
@@ -13771,7 +13899,7 @@
   document.addEventListener('mousedown', (ev) => {
     if(ribbonState.collapsed && ribbonState.flyout && !ribbonEl.contains(ev.target)) closeRibbonFlyout();
   });
-  window.addEventListener('resize', () => { updateRibbonHeight(); if(keytips.active) keytipsRedraw(); });
+  window.addEventListener('resize', () => { updateRibbonHeight(); if(ribbonArrowsUpdate) ribbonArrowsUpdate(); if(keytips.active) keytipsRedraw(); });
 
   let refreshQueued = false;
   function refreshCommandStates(){
