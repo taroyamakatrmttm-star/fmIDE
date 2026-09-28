@@ -114,6 +114,7 @@ Load `tests/fixtures/security/evil-workspace.json` and `evil-system.json`:
 
 ### 7. UI flows
 **ExcelExporter**
+- A new layout starts sorted by calculation order, inputs first, formula order within each group: applying that sort again says "already in that order" and changes nothing; a row moved to the top by hand stays there after a reload (a saved layout is never re-sorted).
 - A new layout: "Enforce Input / Calc / Output sections" is off (no INPUTS/CALCULATIONS/OUTPUTS bands), "Order within group" is formula order, and the Inputs tab's group headers show the period labels.
 - Start Over keeps the saved layout; Reset Mapping to Defaults (confirm → OK) discards it; Cancel / Escape / backdrop click keep it. Re-picking the same file after Start Over loads it.
 - Sort (`revenue-bs-corkscrew.json`, sections off): "Calculation order: inputs first", A→Z, all tabs → BS tab order Unit Price, Volume, AR outstanding rate, Revenue, Accounts Receivable, Cash, Inventory, Total Assets. With formula order, the Corkscrew tab reads Beginning Balance, Additions, Subtractions, Ending Balance. Undo restores the previous order. Custom rows keep their slots. With sections on, the Input band is ordered Unit Price, Volume, AR outstanding rate, Cash, Inventory. The Inputs tab is never sorted and never offered in the scope list.
@@ -134,7 +135,7 @@ Load `tests/fixtures/security/evil-workspace.json` and `evil-system.json`:
 - Nodes from files without a usable size: loading `models/combined-bs-corkscrew-block.json` (no `w`/`h` anywhere) gives rectangles 170 × 64, operators and the period shift 56 × 56, and no arrow path contains "NaN"; a module whose sizes are markup text, negative, zero or `"200"` loads as 170 × 64, 200 × 64, 56 × 56 and its own 180 × 70, its arrows draw, and C = 3.
 
 ### 8. Snapshots
-For each fixture in `tests/fixtures/models/` (Inputs tab off and on, sections on — the layout the snapshots pin): store every sheet's formulas and values (not styles) as JSON under `tests/snapshots/`. A test fails on any difference and prints the changed cells. `npm run test:update-snapshots` rewrites them — only after a deliberate change.
+For each fixture in `tests/fixtures/models/` (Inputs tab off and on, sections on — the layout the snapshots pin; rows in a new layout's order, calculation order with formula order within groups): store every sheet's formulas and values (not styles) as JSON under `tests/snapshots/`. A test fails on any difference and prints the changed cells. `npm run test:update-snapshots` rewrites them — only after a deliberate change.
 
 ### 9. Storage
 **fmIDE**
@@ -262,7 +263,7 @@ New samples in `tests/fixtures/ir/`: `error-cases.json` (every error code and op
 - Function calls (step 7 phase D3), on `agreement/functions-calls.json` with the Inputs tab off, period 1's formulas with each cell written as its row's label: Margin `({Revenue}-{Cost})/{Revenue}`; Profit and Scaled with Margin written out inside; an input used twice repeated in full (`({Revenue}+{k})*({Revenue}+{k})+({Revenue}+{k})`, and a whole call when a function feeds another); `IFERROR({Revenue}/{Divisor},-1)`; `MOD`, `AVERAGE`, `ABS`; an input with no arrow `IFERROR(NA(),{Revenue})`; `IFERROR({Revenue}/{Divisor},IFERROR(NA(),{Nine}))` for a period outside the timeline inside the function's IFERROR; precedence `2^3^2-({a}-({b}-{x}))+(-({a}^2))-(-(-{b}))+(-{a}^2/4)-{x}*(-{b})`; numbers `1500 0.5 1E-7 10000000 250`; comparisons as 1/0 with `N()` (Flag, a comparison of a comparison, MIN/MAX/IFERROR of comparisons, a TRUE/FALSE row read by MAX) — LibreOffice keeps TRUE as 1, so only the text shows what Excel would do.
 - In Node, brackets: an operator's formula keeps only the brackets Excel's order of operations needs — `F4*(1-F5)`, `A1-B1-C1` but `A1-(B1-C1)` and `A1+(B1+C1)` (the right side keeps its grouping, so the adding order stays fmIDE's), `(A1+B1)^2`, `A1+(-5)`, `1E-7*A1`, `(A1<=B1)*2`, `MIN(A1+B1,C1)`; brackets inside quoted sheet names (`'Tab (1)'!C3`, `'O''Brien (x)'!E5`) don't count.
 - In Node: numbers from 0 to `Number.MAX_VALUE`, `5e-324`, `1e21` and `0.1 + 0.2` are written as digits with an optional `E+`/`E-` exponent and read back as the same number.
-- `functions/basic.json`: a block instance's row writes the call with the host's cells (`'Functions'!E4`…); the Functions tab, last and named "Functions 2" because a canvas is called Functions, lists each version with its definition, description, note and the rows that use it ("Margin v1" by its own row, by Profit's call and in the block and its instance; not the unused function). A model without functions has no Functions tab.
+- `functions/basic.json`: a block instance's row writes the call with the host's cells (`'Functions'!E6`…); the Functions tab, last and named "Functions 2" because a canvas is called Functions, lists each version with its definition, description, note and the rows that use it ("Margin v1" by its own row, by Profit's call and in the block and its instance; not the unused function). A model without functions has no Functions tab.
 - `functions/broken.json` (with a function name made of markup): the panel lists Missing, Other versionId, Unreadable, Loop, Missing call, Wrong count, Too deep and Unwired used, each "fmIDE shows ? in periods 1–2 because …" with its reason and "Excel shows #N/A there"; Self loop as a loop; not the unwired input nothing reads, the one IFERROR catches, the deepest call allowed or a divide by zero. The name is shown as text and nothing runs. Their cells are `NA()`; Unwired used is `({Revenue}-NA())/{Revenue}`.
 - Excel's limits: a call reading its input four times, nested ten deep, is too long — the cell is `NA()` and the panel says "would be longer than Excel allows (Excel allows 8,192)"; one nested 80 brackets deep says "nests brackets 80 deep (Excel allows 64)"; two levels fit (each call's grouping kept); loading and generating take under 10 seconds.
 
@@ -420,6 +421,14 @@ fmIDE in Chromium with a touchscreen at 1024 × 768 (`hasTouch`). Each touch is 
 - A double-tap edits a rectangle, opens the operator picker (one picker, and two double-clicks in all for the two double-taps), and renames a canvas tab; two taps on different nodes, or 0.6 s apart, edit nothing.
 - Larger touch areas (`body.touch-input`): on a selected node, a finger 9 pixels beyond the east dot draws an arrow, and 12 pixels inside the resize corner resizes without moving; a mouse moving takes the class away (on a screen whose main pointer is fine).
 - A finger scrolls the text of a node being edited (thirty lines).
+
+### 28. Where new nodes go, and the Macro Builder's next step (`tests/28-placement.spec.js`)
+Two boxes "overlap" when they share any area.
+- Four rounds of Add Rectangle, Insert Operator + and Add Period Shift (the commands): 12 nodes, no two overlapping; the first rectangle is centred on the view.
+- `fm.createRect` ×5, `createOperator` and `createAlias` without x/y: none overlapping; `createRect` at 50, 60 twice: both exactly there (the only overlap — coordinates given are kept).
+- `fm.duplicate` and `fm.aliasOf` of A and B (100 apart) with the default offset, where a node sits at each default spot: nothing new overlaps anything, and each pair keeps B 100 px under A; `duplicate` with dx = dy = 5: exactly 5 px off.
+- A "Revenue" socket on Summary, two rectangles where its automatic aliases would go, and four rectangles plugged "Revenue" on Sales: four automatic aliases on Summary, nothing overlapping.
+- Macro Builder, a macro One · group (Two, Three) · Four: selecting One and "▶ Run selected step" selects the group; running the group selects Four (skipping what is inside it); running Four says "It was the last step." and keeps it selected; the canvas holds One, Two, Three, Four in that order; running Three (last in its group) selects Four.
 
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.

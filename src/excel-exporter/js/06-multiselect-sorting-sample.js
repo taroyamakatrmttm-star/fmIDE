@@ -253,7 +253,7 @@ function rowNodeOf(row){
 function sortTargetRows(targets, method, within, depsOf, universe){
   const curIndex = new Map(targets.map((r, i) => [r.id, i]));
   if(method === 'alpha'){
-    return targets.slice().sort((a, b) => labelCollator.compare(a.label || '', b.label || '') || (curIndex.get(a.id) - curIndex.get(b.id)));
+    return keepVintageRunsTogether(targets.slice().sort((a, b) => labelCollator.compare(a.label || '', b.label || '') || (curIndex.get(a.id) - curIndex.get(b.id))));
   }
   if(method === 'posYX' || method === 'posXY'){
     const pos = new Map(targets.map(r => { const n = rowNodeOf(r); return [r.id, n ? { x: n.x, y: n.y } : { x: Infinity, y: Infinity }]; }));
@@ -272,8 +272,28 @@ function sortTargetRows(targets, method, within, depsOf, universe){
   // --- Calculation order ---
   const seq = calcSequence(universe || targets, method, within, depsOf);
   const rank = new Map(seq.map((r, i) => [r.id, i]));
-  return targets.slice().sort((a, b) =>
-    ((rank.has(a.id) ? rank.get(a.id) : Infinity) - (rank.has(b.id) ? rank.get(b.id) : Infinity)) || (curIndex.get(a.id) - curIndex.get(b.id)));
+  return keepVintageRunsTogether(targets.slice().sort((a, b) =>
+    ((rank.has(a.id) ? rank.get(a.id) : Infinity) - (rank.has(b.id) ? rank.get(b.id) : Infinity)) || (curIndex.get(a.id) - curIndex.get(b.id))));
+}
+
+// A vertical block's line item is one run of rows — Vintage 1..N, then its Total — and must
+// stay one run in the sheet: each run goes where its first row landed, in vintage order.
+function keepVintageRunsTogether(sorted){
+  const runKey = r => (typeof r.verticalVintage === 'number' || r.verticalCombined)
+    ? r.canvasId + '|' + r.nodeId + '|' + (r.path || []).map(h => h.canvasId + '/' + h.nodeId).join('>') : null;
+  const vint = r => r.verticalCombined ? Infinity : r.verticalVintage;
+  const runs = new Map();
+  sorted.forEach(r => { const k = runKey(r); if(k){ if(!runs.has(k)) runs.set(k, []); runs.get(k).push(r); } });
+  runs.forEach(list => list.sort((a, b) => vint(a) - vint(b)));
+  const out = [], placed = new Set();
+  sorted.forEach(r => {
+    const k = runKey(r);
+    if(!k){ out.push(r); return; }
+    if(placed.has(k)) return;
+    placed.add(k);
+    out.push(...runs.get(k));
+  });
+  return out;
 }
 
 function calcSequence(targets, method, within, depsOf){
@@ -332,6 +352,31 @@ function calcSequence(targets, method, within, depsOf){
 
 // scope: 'all' | 'tab:<tabId>' | 'selection'
 function applyRowSort(method, within, scope){
+  const { snapshot, moved, sortedCount } = sortRows(method, within, scope);
+  const methodLabel = (SORT_METHODS.find(m => m[0] === method) || [, method])[1];
+  lastSortUndo = { snapshot };
+  saveMapping();
+  renderRows(); renderCustomRows(); renderBulkBar();
+  const msg = sortedCount === 0 ? 'Nothing to sort in that scope.'
+    : `Sorted ${sortedCount} row${sortedCount === 1 ? '' : 's'} — ${methodLabel}${moved === 0 ? ' (already in that order)' : ''}.`;
+  renderSortStatus(msg, sortedCount > 0 && moved > 0);
+}
+
+// A new layout (never saved for this model, or just reset) starts in calculation order,
+// inputs first, formula order within each group — the sort a person would otherwise apply
+// first. Nothing is saved: as before, the first real edit saves the layout.
+const NEW_LAYOUT_SORT = ['calcUp', 'formula', 'all'];
+// Both orders are sorted (with sections and without), so switching sections on or off later
+// keeps the same reading order.
+function sortNewLayout(){
+  const was = mapping.cfg.sectionsEnabled;
+  [true, false].forEach(on => { mapping.cfg.sectionsEnabled = on; sortRows(...NEW_LAYOUT_SORT); });
+  mapping.cfg.sectionsEnabled = was;
+}
+
+// The sort itself: rewrites the order of the rows in scope and returns
+// { snapshot (the orders before), moved, sortedCount }. No saving, no drawing.
+function sortRows(method, within, scope){
   const sectioned = sectionsEnabled();
   const tabIds = scope === 'all' ? mapping.tabs.filter(t => t.id !== INPUTS_TAB_ID).map(t => t.id)
     : scope.startsWith('tab:') ? [scope.slice(4)]
@@ -357,13 +402,7 @@ function applyRowSort(method, within, scope){
       sortedCount += targets.length;
     });
   });
-  const methodLabel = (SORT_METHODS.find(m => m[0] === method) || [, method])[1];
-  lastSortUndo = { snapshot };
-  saveMapping();
-  renderRows(); renderCustomRows(); renderBulkBar();
-  const msg = sortedCount === 0 ? 'Nothing to sort in that scope.'
-    : `Sorted ${sortedCount} row${sortedCount === 1 ? '' : 's'} — ${methodLabel}${moved === 0 ? ' (already in that order)' : ''}.`;
-  renderSortStatus(msg, sortedCount > 0 && moved > 0);
+  return { snapshot, moved, sortedCount };
 }
 
 function undoLastSort(){

@@ -10,6 +10,45 @@
     };
   }
 
+  // ---------- free space for a new node ----------
+  // The nearest spot to (x, y) where a w × h box, with a 12px gap around it, meets none of
+  // `list`'s nodes: searched in rings of 20px steps outward from (x, y); if none is free
+  // within 30 rings, (x, y) itself. Never left of or above the canvas's edge.
+  const FREE_GAP = 12, FREE_STEP = 20, FREE_RINGS = 30;
+  function findFreeSpot(list, w, h, x, y){
+    x = Math.max(0, Math.round(x)); y = Math.max(0, Math.round(y));
+    const boxes = (list || []).map(n => {
+      const s = (n.w > 0 && n.h > 0) ? n : defaultNodeSize(n);
+      return { x: n.x, y: n.y, w: s.w, h: s.h };
+    }).filter(b => isFinite(b.x) && isFinite(b.y));
+    const free = (px, py) => boxes.every(b =>
+      px + w + FREE_GAP <= b.x || b.x + b.w + FREE_GAP <= px || py + h + FREE_GAP <= b.y || b.y + b.h + FREE_GAP <= py);
+    if(free(x, y)) return { x, y };
+    for(let r = 1; r <= FREE_RINGS; r++){
+      let best = null, bestD = Infinity;
+      for(let i = -r; i <= r; i++){
+        for(let j = -r; j <= r; j++){
+          if(Math.max(Math.abs(i), Math.abs(j)) !== r) continue;
+          const px = x + i * FREE_STEP, py = y + j * FREE_STEP;
+          if(px < 0 || py < 0) continue;
+          const d = i * i + j * j;
+          if(d < bestD && free(px, py)){ best = { x: px, y: py }; bestD = d; }
+        }
+      }
+      if(best) return best;
+    }
+    return { x, y };
+  }
+  // Moves `group` (nodes not yet on `others`) as one, keeping their layout, to the nearest
+  // free spot for their bounding box.
+  function moveGroupToFreeSpot(group, others){
+    if(!group.length) return;
+    const bb = boundingBoxOf(group);
+    const spot = findFreeSpot(others, bb.maxX - bb.minX, bb.maxY - bb.minY, bb.minX, bb.minY);
+    const dx = spot.x - bb.minX, dy = spot.y - bb.minY;
+    group.forEach(n => { n.x += dx; n.y += dy; });
+  }
+
   function alignSelected(mode, list){
     list = list || selectedNodesList();
     if(list.length < 2) return;

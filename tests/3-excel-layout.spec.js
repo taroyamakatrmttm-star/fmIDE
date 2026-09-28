@@ -208,7 +208,8 @@ test.describe('Inputs tab', () => {
     }
     expect(renamed, 'renamed tab BS').toBe(true);
 
-    const BS_SHEET = ['Cash', 'Inventory', 'AR outstanding rate', 'Volume', 'Unit Price'];
+    // The BS sheet's inputs in its order: a new layout starts in calculation order (inputs first, formula order).
+    const BS_SHEET = ['Volume', 'Unit Price', 'AR outstanding rate', 'Cash', 'Inventory'];
     const CORK_SHEET = ['Additions', 'Subtractions'];
     const alpha = (xs) => xs.slice().sort((a, b) => a.localeCompare(b));
 

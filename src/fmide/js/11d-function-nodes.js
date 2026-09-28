@@ -386,7 +386,7 @@
       const ref = functionRefText(version);
       if(!node){
         ui.close();
-        const {x, y} = spawnPoint();
+        const {x, y} = spawnPoint(190, 110);
         const id = guarded(() => fm.insertFunction({ function: ref, x, y }));
         if(id) selectNodesOnly([id]);
         return;

@@ -99,6 +99,7 @@ async function loadModel(m){
   mapping = restored || buildDefaultMapping(model);
   // reconcile: drop rows/tabs referencing nodes/canvases no longer present, add rows for new nodes
   reconcileMapping();
+  if(!restored) sortNewLayout();
   renderAll();
 }
 

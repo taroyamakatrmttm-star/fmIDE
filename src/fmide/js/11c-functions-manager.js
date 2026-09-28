@@ -437,7 +437,7 @@
       insertBtn.title = 'Adds a node for this version to the canvas';
       insertBtn.disabled = !parsed.ok;
       insertBtn.addEventListener('click', () => {
-        const {x, y} = spawnPoint();
+        const {x, y} = spawnPoint(190, 110);
         const id = guarded(() => fm.insertFunction({ function: functionRefText(d), x, y }));
         if(id === undefined) return;
         close();

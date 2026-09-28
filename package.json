@@ -25,6 +25,7 @@
     "test:library-catalogue": "playwright test tests/25-library-catalogue.spec.js",
     "test:library-browse": "playwright test tests/26-library-browse.spec.js",
     "test:touch": "playwright test tests/27-touch.spec.js",
+    "test:placement": "playwright test tests/28-placement.spec.js",
     "check-pack": "node tools/check-pack.js",
     "bench": "node tools/bench-calc.js"
   },

@@ -1,16 +1,16 @@
 {
  "Errors": {
   "A4": {"v":"INPUTS"},
-  "A5": {"v":"A"},
-  "A6": {"v":"B"},
-  "A7": {"v":"Zero"},
-  "A8": {"v":"Neg"},
-  "A9": {"v":"Curve"},
-  "A10": {"v":"Curve out"},
+  "A5": {"v":"Neg"},
+  "A6": {"v":"Curve out"},
+  "A7": {"v":"A"},
+  "A8": {"v":"Zero"},
+  "A9": {"v":"B"},
+  "A10": {"v":"Curve"},
   "A12": {"v":"CALCULATIONS"},
-  "A13": {"v":"Loop 1"},
-  "A14": {"v":"Loop 2"},
-  "A15": {"v":"Div zero"},
+  "A13": {"v":"Div zero"},
+  "A14": {"v":"Loop 1"},
+  "A15": {"v":"Loop 2"},
   "A17": {"v":"OUTPUTS"},
   "A18": {"v":"From missing block"},
   "A19": {"v":"Two in"},
@@ -57,8 +57,8 @@
   "A5": {"v":"I In"},
   "A6": {"v":"Ten"},
   "A8": {"v":"CALCULATIONS"},
-  "A9": {"v":"I Out"},
-  "A10": {"v":"I Prev"}
+  "A9": {"v":"I Prev"},
+  "A10": {"v":"I Out"}
  },
  "SelfBlock (instance 1)": {
   "A4": {"v":"OUTPUTS"},
@@ -82,8 +82,8 @@
   "A4": {"v":"INPUTS"},
   "A5": {"v":"Ten"},
   "A7": {"v":"CALCULATIONS"},
-  "A8": {"v":"I Out"},
-  "A9": {"v":"I Prev"},
+  "A8": {"v":"I Prev"},
+  "A9": {"v":"I Out"},
   "A11": {"v":"OUTPUTS"},
   "A12": {"v":"O Out"}
  },
@@ -105,7 +105,7 @@
   "A4": {"v":"INPUTS"},
   "A5": {"v":"Ten"},
   "A7": {"v":"CALCULATIONS"},
-  "A8": {"v":"I Out"},
-  "A9": {"v":"I Prev"}
+  "A8": {"v":"I Prev"},
+  "A9": {"v":"I Out"}
  }
 }
