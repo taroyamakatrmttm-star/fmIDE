@@ -2,6 +2,12 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Resizable windows and the Templates tree
+- **Resize the large windows** from their bottom-right corner: Templates, Functions, Format Presets, Browse Library, the Library pack preview, the Macro Builder and Customize Ribbon. Each keeps the size you give it (in your own settings, like the ribbon; never taken from someone else's file, and never larger than the screen); a double-click on the corner puts it back to its own size. Lists and previews grow with the window.
+- **Browse Library** and **Templates** open larger than before, so their text is easier to read.
+- **The Templates list is a tree**: each group opens and closes (▾ / ▸, with how many templates it holds), and stays as you left it. Search still finds every template, whatever group is closed; ↑ ↓ and Enter work as before.
+- No file format changed (the sizes and closed groups are part of the UI settings saved with your workspace).
+
 ## New nodes never land on others; the Macro Builder moves on; ExcelExporter starts in formula order
 - **fmIDE: new nodes go into free space.** Add Rectangle, Add Operator, Add Period Shift, the Alias, Block and Function pickers, and `fm.create…` without coordinates put the new node near the middle of the view, in the nearest spot where it overlaps nothing. Duplicate and aliases made with the default offset move together to free space, keeping their layout. The automatic aliases a socket gets from other canvases no longer pile on top of each other or of other nodes. Coordinates given explicitly (in a macro or a script) are kept exactly, so recorded macros replay as before.
 - **Macro Builder: "▶ Run selected step" selects the next step** (after what is inside a group, repeat or for-each), so pressing it again steps through the macro; on the last step it says so.

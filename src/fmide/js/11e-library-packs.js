@@ -291,6 +291,7 @@
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
     box.className = 'modal-box library-pack-preview';
+    makeResizableWindow(box, 'libraryPack');
     const para = (cls, text) => { const p = document.createElement('p'); p.className = cls; p.textContent = text; box.appendChild(p); return p; };
     para('library-pack-title', read.pack.title);
     const lic = LIBRARY_PACK_LICENCES[read.pack.licence];

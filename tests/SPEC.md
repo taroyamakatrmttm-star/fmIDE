@@ -430,6 +430,15 @@ Two boxes "overlap" when they share any area.
 - A "Revenue" socket on Summary, two rectangles where its automatic aliases would go, and four rectangles plugged "Revenue" on Sales: four automatic aliases on Summary, nothing overlapping.
 - Macro Builder, a macro One · group (Two, Three) · Four: selecting One and "▶ Run selected step" selects the group; running the group selects Four (skipping what is inside it); running Four says "It was the last step." and keeps it selected; the canvas holds One, Two, Three, Four in that order; running Three (last in its group) selects Four.
 
+### 29. Resizable windows and the Templates tree (`tests/29-windows.spec.js`)
+fmIDE at 1400 × 900.
+- Templates, Functions, Macro Builder and Customize Ribbon: each window's CSS `resize` is `both`; set to 700 × 520 (as dragging the corner does), the autosave's `ui.windowSizes` holds it; after a reload the window opens at 700 × 520; a double-click on its corner puts it back to its own size and the saved size is gone.
+- A real mouse drag on the Templates window's corner (+96, +76) makes it wider and taller, and the size is saved.
+- A saved 3000 × 2000 opens at most 98 % × 96 % of the screen.
+- A workspace file carrying `ui.windowSizes` (333 × 444) and closed groups, imported: the window doesn't take that size.
+- The Templates tree (`templates/search.json`): the Financial Statement heading (a `div`, role button, "▾ Name (count)") closes on a click and hides exactly its templates; still closed after a reload (`ui.templateGroupsClosed`); a search finds templates inside it; Enter on the focused heading opens it again.
+- Group 26: the Browse Library window is resizable, at least 1000 px wide on a 1400 px screen, and opens again at the size it was given.
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.

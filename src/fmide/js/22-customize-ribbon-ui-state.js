@@ -6,6 +6,7 @@
     const cfgAtOpen = JSON.stringify(cfg);
     const overlay = el('div', 'modal-overlay');
     const box = el('div', 'modal-box rbc-box');
+    makeResizableWindow(box, 'ribbon');
     overlay.appendChild(box);
     document.body.appendChild(overlay);
     const close = () => {
@@ -306,7 +307,8 @@
       operatorsE1Added: true, // E1b: the new operators in the Compare and Excel Functions groups
       libraryPacksAdded: true, // 8a: Open Library Pack… and Save as Library Pack… in the File tab's Library group
       libraryBrowseAdded: true, // 8d: Browse Library… in the same group
-      libraryAuthor
+      libraryAuthor,
+      windowSizes: cleanWindowSizes(windowSizes), templateGroupsClosed: templateGroupsClosed.slice(0, 200)
     };
   }
   // One-time update of a ribbon customised before the Document group existed: add it at
@@ -395,6 +397,12 @@
       if(ui.libraryBrowseAdded !== true) addLibraryBrowseCommandToRibbon();
     }
     if(!fromImport && typeof ui.libraryAuthor === 'string') libraryAuthor = ui.libraryAuthor.slice(0, LIBRARY_PACK_LIMITS.author);
+    // Window sizes and closed template groups belong to this screen and person: never from
+    // someone else's file.
+    if(!fromImport){
+      windowSizes = cleanWindowSizes(ui.windowSizes);
+      if(Array.isArray(ui.templateGroupsClosed)) templateGroupsClosed = ui.templateGroupsClosed.filter(g => typeof g === 'string').map(g => g.slice(0, 200)).slice(0, 200);
+    }
     if(typeof ui.ribbonCollapsed === 'boolean') ribbonState.collapsed = ui.ribbonCollapsed;
     if(typeof ui.activeTab === 'string') ribbonState.activeTab = ui.activeTab;
     if(ui.keytipTrigger && (ui.keytipTrigger.type === 'tap' && ui.keytipTrigger.key || ui.keytipTrigger.type === 'combo' && ui.keytipTrigger.combo)){

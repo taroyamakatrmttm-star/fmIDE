@@ -1288,7 +1288,8 @@
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
-    box.className = 'modal-box template-box';
+    box.className = 'modal-box template-box format-presets-box';
+    makeResizableWindow(box, 'formatPresets');
     overlay.appendChild(box);
     document.body.appendChild(overlay);
     function close(){ overlay.remove(); }
@@ -1406,6 +1407,7 @@
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
     box.className = 'modal-box template-box';
+    makeResizableWindow(box, 'templates');
     overlay.appendChild(box);
     document.body.appendChild(overlay);
     function close(){ overlay.remove(); document.removeEventListener('keydown', onKey, true); }
@@ -1685,7 +1687,8 @@
 
     // One entry per family (its latest version); a family with older versions gets a
     // "▸ N older versions" toggle, and when open, one entry per older version, newest first.
-    function templateButton(t, idx, groupName){
+    function templateButton(t, idx, groupName, into){
+      into = into || list;
       const b = document.createElement('button');
       b.className = 'template-family' + (selected === t ? ' active' : '');
       b.appendChild(idx ? highlightLabel(t.name, idx) : document.createTextNode(t.name));
@@ -1706,7 +1709,7 @@
         b.appendChild(g);
       }
       b.addEventListener('click', () => { selected = t; previewCanvasIdx = 0; renderList(); renderDetail(); });
-      list.appendChild(b);
+      into.appendChild(b);
       shown.push(t);
       const older = familyVersions(t.family).slice(1);
       if(!older.length) return;
@@ -1722,7 +1725,7 @@
         } else expanded.add(t.family);
         renderList(); renderDetail();
       });
-      list.appendChild(toggle);
+      into.appendChild(toggle);
       if(!open) return;
       older.forEach(o => {
         const ob = document.createElement('button');
@@ -1732,7 +1735,7 @@
         ob.appendChild(label);
         if(o.note) ob.appendChild(document.createTextNode(' — ' + o.note));
         ob.addEventListener('click', () => { selected = o; expanded.add(t.family); previewCanvasIdx = 0; renderList(); renderDetail(); });
-        list.appendChild(ob);
+        into.appendChild(ob);
         shown.push(o);
       });
     }
@@ -1775,12 +1778,33 @@
         const g = t.group || 'Ungrouped';
         (groups[g] = groups[g] || []).push(t);
       });
+      // A tree: each group opens and closes (remembered in the UI settings); its templates
+      // sit under it. A search shows every match, whatever is closed.
       Object.keys(groups).forEach(g => {
+        const closed = templateGroupsClosed.includes(g);
         const header = document.createElement('div');
-        header.textContent = g;
-        header.style.cssText = 'font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.4px;margin:8px 0 2px;';
+        header.className = 'template-group-toggle';
+        header.setAttribute('role', 'button');
+        header.tabIndex = 0;
+        header.setAttribute('aria-expanded', String(!closed));
+        header.appendChild(document.createTextNode((closed ? '▸ ' : '▾ ') + g));
+        const count = document.createElement('span');
+        count.className = 'template-group-count';
+        count.textContent = '(' + groups[g].length + ')';
+        header.appendChild(count);
+        const toggleGroup = () => {
+          templateGroupsClosed = closed ? templateGroupsClosed.filter(x => x !== g) : templateGroupsClosed.concat([g]);
+          saveWorkspaceSoon();
+          renderList();
+        };
+        header.addEventListener('click', toggleGroup);
+        header.addEventListener('keydown', (ev) => { if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); toggleGroup(); } });
         list.appendChild(header);
-        groups[g].forEach(t => templateButton(t, null, null));
+        if(closed) return;
+        const items = document.createElement('div');
+        items.className = 'template-group-items';
+        list.appendChild(items);
+        groups[g].forEach(t => templateButton(t, null, null, items));
       });
     }
 
