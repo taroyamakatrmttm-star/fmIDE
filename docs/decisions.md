@@ -27,7 +27,7 @@ Workflow since step 3a: edit `src/` → `npm run build` → `npm test` (the file
 7. Formula IR and plugins (chosen by the owner, September 2026; see `docs/step7-formula-ir.md`): A agreement tests and fixes ✅, B shared IR ✅, C ExcelExporter on the IR ✅, D function plugins ✅, E1 new operators ✅; E2 optional, not started
 8. Community library (see `docs/step8-community-library.md`) ✅: 8a library pack files ✅; 8b where items came from ✅; 8c checker and catalogue (8c-1 the checker for one pack ✅, 8c-2 the library's rules and repository ✅, 8c-3 the catalogue ✅); 8d browsing inside fmIDE ✅
 9. Touch support (see `docs/step9-touch.md`) ✅: 9a one input path for mouse, touch and pen ✅; 9b touch replacements for the mouse-only gestures ✅; 9c the screen and ExcelExporter ✅
-10. Help inside the apps (see `docs/step10-help.md`, decision 8) — in progress: H1 help panel, search and a sentence per command; H2 help where you are (tooltips, "?" on windows, ExcelExporter); H3 tutorials and a welcome screen; H4 help pages on the site and videos
+10. Help inside the apps (see `docs/step10-help.md`, decision 8) — in progress: H1 help panel, search and a sentence per command ✅; H2 help where you are (tooltips, "?" on windows, ExcelExporter); H3 tutorials and a welcome screen; H4 help pages on the site and videos
 
 ## Phase 0 (hardening) — status
 

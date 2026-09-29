@@ -9,6 +9,7 @@ fmIDE is **open core**: the editor and the file format are open, so anyone can u
 | **Build tools, tests** | `tools/`, `tests/`, `package.json`, `.github/` | [Apache License 2.0](LICENSE) | Same. |
 | **ExcelExporter** | `src/excel-exporter/`, `apps/ExcelExporter.html` | [ExcelExporter Licence](src/excel-exporter/LICENSE) (proprietary) | Free to use for any purpose, including at work; the workbooks you make are yours. You may not copy, redistribute, sell or modify ExcelExporter itself. |
 | **File-format documentation** | `docs/file-formats.md`, `docs/format-roles.md` | [CC BY 4.0](docs/LICENSE-CC-BY-4.0.txt) | Anyone may use it to build tools that read or write `.fmide` and other fmIDE files, with credit. |
+| **fmIDE's help text** | `src/help/` (built into fmIDE's Help panel) | [CC BY 4.0](docs/LICENSE-CC-BY-4.0.txt) | Anyone may reuse and adapt it — in guides, courses, translations — with credit. ExcelExporter's help text stays with ExcelExporter. |
 | **Other documentation** | the rest of `docs/`, `README.md`, `CLAUDE.md`, … | [Apache License 2.0](LICENSE) | Same as the code. |
 
 The published web app contains both parts; it ships these licence files alongside them.

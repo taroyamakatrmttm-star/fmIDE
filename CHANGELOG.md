@@ -2,6 +2,13 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Help inside fmIDE (step 10, phase H1)
+- **Press F1** (or ❓ at the top right, or **View → Help**) for the new **Help panel**: about 30 plain-English guides to every part of fmIDE — your first model, operators, arrows, periods and period shifts, blocks, plugs and sockets, templates and recipes, functions, library packs, files, formats, going to Excel, shortcuts, macros and touch — grouped, with a search box. It sits beside the canvas rather than over it, so you can follow the steps while you work, and shortcuts keep working. A command named in a guide is a button that runs it; searching also lists matching commands, each with ▶ to run it.
+- **Every ribbon button says what it does:** pointing at one shows its name, its shortcut and one plain sentence.
+- **The Command Launcher (Ctrl/Cmd+K) finds help topics** as well as commands.
+- A ribbon you customised gets the new Help group once, at the end of the View tab; ❓ is always there.
+- Works offline and in the single file; nothing is fetched. No file format changed.
+
 ## ExcelExporter: ← Back to fmIDE
 - **ExcelExporter has a "← Back to fmIDE" button** at the top left. On a computer, where ExcelExporter opens in its own window, it closes that window, which shows fmIDE again as you left it; if a model is loaded it asks first (your layout is kept; the file is loaded again next time). With fmIDE added to an iPad's home screen, where ExcelExporter takes fmIDE's place, it goes back to fmIDE, as swiping in from the left edge does. Opened on its own, it opens fmIDE.
 - **Fix:** Open ExcelExporter while ExcelExporter's window is already open brings that window to the front; it used to load it again, losing the model loaded there.
