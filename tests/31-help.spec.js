@@ -107,8 +107,9 @@ test.describe('the help text', () => {
     // Every group has a topic, and the panel lists every topic under its group.
     expect(groups.filter(g => !H.HELP_TOPICS.some(t => t.group === g))).toEqual([]);
     await page.keyboard.press('F1');
-    await expect(page.locator('#helpPanel .help-topic-link')).toHaveCount(H.HELP_TOPICS.length);
-    await expect(page.locator('#helpPanel .help-group')).toHaveText(H.HELP_GROUPS.map(g => g.title), { ignoreCase: true });
+    // (H3 put the Tutorials group, and a link to the welcome card, above the topics: group 33.)
+    await expect(page.locator('#helpPanel .help-topic-link:not(.help-show-welcome)')).toHaveCount(H.HELP_TOPICS.length);
+    await expect(page.locator('#helpPanel .help-group')).toHaveText(['Tutorials'].concat(H.HELP_GROUPS.map(g => g.title)), { ignoreCase: true });
   });
 
   test('a topic shows its steps as text, and a command in it runs', async ({ page }) => {

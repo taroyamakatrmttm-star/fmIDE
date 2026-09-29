@@ -471,7 +471,7 @@ fmIDE at 1400 × 900. The help text (`src/help/fmide-help.js`) is also read on i
 - F1 (from the canvas, and again from the panel's search box), ❓ beside the ribbon's search box (`#rbHelp`), View → Help and `fm.command('openHelp')` open and close `#helpPanel`; Esc closes it from inside; the search box has the focus when it opens; the command's shortcut is F1.
 - It is no dialog (no `.modal-overlay`); the canvas narrows beside it; a rectangle can be added and Ctrl+Z undoes it with the panel open.
 - Every command (the Insert Operator ones through their operator's sentence) has a plain sentence; `COMMAND_HELP` and `OPERATOR_HELP` name nothing that doesn't exist.
-- Topic ids are unique, every topic has a known group, a title, a summary and a body; every `{cmd:…}` names a command and every "see" a topic; every group has a topic; the panel lists every topic under its group's heading.
+- Topic ids are unique, every topic has a known group, a title, a summary and a body; every `{cmd:…}` names a command and every "see" a topic; every group has a topic; the panel lists every topic under its group's heading, after the Tutorials group (H3).
 - A topic shows its numbered steps as text (no `{cmd:` markers); its Add Rectangle button adds a rectangle; See also opens another topic and Back returns, twice back to the list.
 - Search: "period shift" puts that topic first; "template" finds the Templates topic and the Templates command with its sentence; Align Left's ▶ is off with nothing selected and on with everything selected; New Canvas's ▶ adds a canvas; a search with no match says so; clearing it shows the list.
 - The Command Launcher's placeholder names help topics; "period shift" shows the topic in category Help; choosing it closes the launcher and opens the panel at that topic.
@@ -492,6 +492,18 @@ fmIDE at 1400 × 900 (the touch test at 1024 × 768 with a touchscreen), ExcelEx
 - The "?" beside each panel's heading (load, periods, tabs, rows, custom rows, generate) and beside "Gather inputs on a separate tab" opens its topic; search "scenario" puts Scenarios first; its See also opens "The Inputs tab".
 - ExcelExporter's topics: unique ids, known groups, a title, summary and body each, See also links that exist, no `{cmd:}`; every group has a topic.
 - No request while ExcelExporter's Help is opened, searched, read and closed.
+
+### 33. Tutorials and the welcome card (`tests/33-tutorials.spec.js`; step 10, phase H3a)
+fmIDE at 1400 × 900. The tutorials (`src/help/fmide-tutorials.js`) are also read on their own in Node.
+- There are at least two tutorials, each with steps, and this test has an action (`ACTIONS`) for every step of every one.
+- Each tutorial, started from the Help panel after adding a rectangle of your own: a "Practice" canvas with nothing on it; at every step the card shows that step and "Step i of n" with no `{cmd:` left; a step that points at something shows the ring; the step's action — real clicks on ribbon buttons, typing a rectangle's three lines, choosing an operator, right-button drags for arrows, the Periods window, 🕒 → First period only → Save, Evaluate, Next Period — moves it on; Finish removes the card and ring; the canvases, rectangles, periods and title are as before, and Undo takes back your own rectangle.
+- The 🕒 button of a selected rectangle is what is under its centre (as are the resize corner and the bottom dot under theirs), and a click opens "Which periods use this rectangle's own number?".
+- With the Help panel open, a change to the model (which refreshes the ribbon and the panel's commands) leaves every tutorial's ▶ enabled, while Align Left's ▶ still follows the selection.
+- Practice mode: started from the Command Launcher; the title says Practice; Save is refused with "Finish or exit the tutorial first"; Skip and Back move between steps; Exit puts everything back.
+- A reload mid-tutorial (after time for an autosave) brings back the canvas renamed before starting, with no card.
+- The last step's Download what I built downloads `practice.fmide`, a workspace holding what was built.
+- The welcome card shows on the first start, bottom-right, with no dialog backdrop; a window opened over it is above it; F1 still works; the first change to the model closes it; after an autosave and a reload it doesn't show; Help's "Show the welcome card" brings it back.
+- Its choices: the tour starts "Your first model" and closes the card (Exit returns the sample); Explore closes it; Open Help opens the panel; Start blank leaves an empty canvas.
 
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.

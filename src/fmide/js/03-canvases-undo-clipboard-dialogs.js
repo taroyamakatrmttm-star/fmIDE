@@ -38,6 +38,7 @@
     updateHistoryButtons();
     requestStoragePersistence();
     markDocDirty();
+    hideWelcomeCard(); // the welcome card steps aside once you start building (01c)
   }
 
   function restore(snap){
