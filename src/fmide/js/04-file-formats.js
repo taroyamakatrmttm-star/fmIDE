@@ -65,6 +65,7 @@
   }
 
   function downloadJSON(payload, filename){
+    if(inPractice()) practice.downloaded = true; // a tutorial's "downloaded" check (01c)
     const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

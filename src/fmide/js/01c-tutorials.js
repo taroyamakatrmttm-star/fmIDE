@@ -35,8 +35,12 @@
     if(document.activeElement && document.activeElement.blur) document.activeElement.blur(); // commits a text being typed
     closePicker();
     saveWorkspace(); // your own work, as it is now, is the saved copy while you practise
-    practice = { tutorial: t, step: 0, saved: { snap: snapshot(), history: history.slice(), future: future.slice(), doc: Object.assign({}, currentDoc) } };
-    applySystemDataDirect({ canvases: [{ id: 'c' + nextCanvasId, name: 'Practice', nodes: [], edges: [] }], periods: ['Period 1'], currentPeriod: 0 });
+    // The library (templates, functions) is kept as it is too: what a tutorial saves in it goes
+    // back out at the end, unless the last step's Keep is ticked (H3b).
+    practice = { tutorial: t, step: 0, keepLibrary: false, downloaded: false, openedExcel: false,
+      saved: { snap: snapshot(), history: history.slice(), future: future.slice(), doc: Object.assign({}, currentDoc),
+        templates: TEMPLATES.slice(), functions: FUNCTIONS.slice() } };
+    applySystemDataDirect(practiceStartModel(t));
     render();
     clearUndoHistory();
     Object.assign(currentDoc, { name: 'Practice — ' + t.title, dirty: false });
@@ -47,10 +51,33 @@
     return true;
   }
 
-  // Puts your own model, undo history and document back exactly as they were.
+  // The model a tutorial starts from: its start (data only, from fmide-tutorials.js), or one
+  // empty canvas. Ids are the tutorial's own, prefixed so they never look like fmIDE's.
+  function practiceStartModel(t){
+    const start = t.start && Array.isArray(t.start.canvases) && t.start.canvases.length ? t.start : null;
+    const count = start && Number.isInteger(start.periods) && start.periods > 0 ? Math.min(start.periods, 60) : 1;
+    const list = start ? start.canvases : [{ name: 'Practice', nodes: [], edges: [] }];
+    return {
+      canvases: list.map((c, i) => ({
+        id: 'c' + (nextCanvasId + i), name: String(c.name || 'Practice'),
+        nodes: (c.nodes || []).map(n => Object.assign({}, n, { id: 'tut-' + n.id })),
+        edges: (c.edges || []).map((e, k) => ({ id: 'tut-e' + k, from: 'tut-' + e.from, to: 'tut-' + e.to })),
+      })),
+      periods: Array.from({ length: count }, (_, i) => 'Period ' + (i + 1)), currentPeriod: 0,
+    };
+  }
+  // What this tutorial saved in the library (templates and functions not there at the start).
+  function practiceLibraryAdded(){
+    if(!practice) return { templates: [], functions: [] };
+    return { templates: TEMPLATES.filter(x => !practice.saved.templates.includes(x)), functions: FUNCTIONS.filter(x => !practice.saved.functions.includes(x)) };
+  }
+
+  // Puts your own model, undo history and document back exactly as they were, and the library
+  // too unless Keep was ticked.
   function endTutorial(){
     if(!practice) return;
     const saved = practice.saved;
+    const keep = practice.keepLibrary;
     clearInterval(practice.timer);
     practice = null;
     closePicker();
@@ -62,12 +89,15 @@
     history = saved.history;
     future = saved.future;
     Object.assign(currentDoc, saved.doc);
+    if(!keep){ TEMPLATES = saved.templates; FUNCTIONS = saved.functions; }
     clearSelection();
     render();
     renderCanvasTabs();
     evaluateAll();
     updateHistoryButtons();
     updateDocTitle();
+    refreshCommandStates();
+    saveWorkspace(); // your own work again (with anything kept in the library)
   }
 
   function downloadPractice(){
@@ -78,8 +108,15 @@
   // ---------- the checks (data from fmide-tutorials.js) ----------
   const sameName = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
   function rectInfo(n){ return n.type === 'value' ? parseRectText(n.text) : null; }
-  // The nodes a reference means: a rectangle's name, { op: '×' } or { shift: -1 }.
+  // The nodes a reference means: a rectangle's name, { op: '×' }, { shift: -1 }, { block: 'Tax' }
+  // (a block of the canvas named Tax) or { fn: 'Margin' } (a box of that function).
   function nodesFor(ref){
+    if(ref && typeof ref === 'object' && ref.block !== undefined) return nodes.filter(n => {
+      if(n.type !== 'blockInstance') return false;
+      const def = canvases.find(c => c.id === n.blockDefCanvasId);
+      return !!def && sameName(def.name, ref.block);
+    });
+    if(ref && typeof ref === 'object' && ref.fn !== undefined) return nodes.filter(n => n.type === 'function' && sameName(functionNodeState(n).name, ref.fn));
     if(ref && typeof ref === 'object' && ref.op !== undefined) return nodes.filter(n => n.type === 'operator' && n.text === ref.op);
     if(ref && typeof ref === 'object' && ref.shift !== undefined) return nodes.filter(n => n.type === 'periodShift' && Number(n.shift) === Number(ref.shift));
     return nodes.filter(n => n.type === 'value' && sameName(rectInfo(n).name, ref));
@@ -97,8 +134,15 @@
     if(c.operator !== undefined) return nodesFor({ op: c.operator }).length > 0;
     if(c.periodShift !== undefined) return nodesFor({ shift: c.periodShift }).length > 0;
     if(c.arrow){
-      const from = nodesFor(c.arrow.from).map(n => n.id), to = nodesFor(c.arrow.to).map(n => n.id);
-      return edges.some(e => from.includes(e.from) && to.includes(e.to));
+      const from = nodesFor(c.arrow.from).map(n => n.id), to = nodesFor(c.arrow.to);
+      // Into a function's input by name: the arrow's toPort is that input's place.
+      const port = c.arrow.to && typeof c.arrow.to === 'object' && c.arrow.to.port !== undefined ? c.arrow.to.port : null;
+      return edges.some(e => from.includes(e.from) && to.some(n => {
+        if(n.id !== e.to) return false;
+        if(port === null) return true;
+        const params = functionNodeState(n).params || [];
+        return params.findIndex(p => sameName(p, port)) === e.toPort;
+      }));
     }
     if(c.value){
       // Only once worked out on the canvas (Evaluate), so the step asks for what it says.
@@ -110,6 +154,19 @@
     }
     if(c.periods !== undefined) return periods.length >= Number(c.periods);
     if(c.viewing !== undefined) return currentPeriod + 1 === Number(c.viewing);
+    if(c.canvas) return canvases.some(cv => sameName(cv.name, c.canvas.name) && (c.canvas.active === undefined || (cv.id === activeCanvasId) === !!c.canvas.active));
+    if(c.canvases !== undefined) return canvases.length >= Number(c.canvases);
+    if(c.role){
+      syncActiveIntoRegistry();
+      return canvases.some(cv => (cv.nodes || []).some(n => n.type === 'value' && sameName(parseRectText(n.text).name, c.role.name) && n.blockRole === c.role.role));
+    }
+    if(c.block !== undefined) return nodesFor({ block: c.block }).length > 0;
+    if(c.linkedTo !== undefined){ const cv = canvases.find(x => x.id === activeCanvasId); return !!(cv && cv.template && sameName(cv.template.name, c.linkedTo)); }
+    if(c.template !== undefined) return practiceLibraryAdded().templates.some(x => sameName(x.name, c.template));
+    if(c.fn !== undefined) return practiceLibraryAdded().functions.some(x => sameName(functionNameOf(x), c.fn));
+    if(c.functionNode !== undefined) return nodesFor({ fn: c.functionNode }).length > 0;
+    if(c.downloaded) return !!practice.downloaded;
+    if(c.openedExcel) return !!practice.openedExcel;
     if(c.ownNumberIn) return nodesFor(c.ownNumberIn.name).some(n => {
       const want = c.ownNumberIn.periods.map(p => p - 1);
       return Array.isArray(n.literalPeriods) && n.literalPeriods.length === want.length && want.every(p => n.literalPeriods.includes(p));
@@ -150,6 +207,20 @@
     card.appendChild(bar);
     card.appendChild(help.richText('p', 'tutorial-text', step.text));
     if(step.done) card.appendChild(el('p', 'tutorial-waiting', 'Moves on by itself when that is done.'));
+    // The last step: keep in your library what this tutorial saved there (off by default).
+    const added = practiceLibraryAdded();
+    const addedCount = added.templates.length + added.functions.length;
+    if(last && addedCount){
+      const label = el('label', 'tutorial-keep');
+      const box = el('input');
+      box.type = 'checkbox';
+      box.checked = practice.keepLibrary;
+      box.addEventListener('change', () => { if(practice) practice.keepLibrary = box.checked; });
+      label.appendChild(box);
+      const names = added.templates.map(x => 'template "' + x.name + '"').concat(added.functions.map(x => 'function "' + functionNameOf(x) + '"'));
+      label.appendChild(el('span', '', 'Keep what I saved in my library: ' + names.join(', ')));
+      card.appendChild(label);
+    }
     const actions = el('div', 'tutorial-actions');
     const button = (label, cls, run) => { const b = el('button', cls, label); b.type = 'button'; b.addEventListener('click', run); actions.appendChild(b); return b; };
     if(i > 0) button('‹ Back', 'tutorial-back', () => goToStep(i - 1));

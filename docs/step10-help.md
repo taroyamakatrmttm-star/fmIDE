@@ -19,7 +19,7 @@ One pull request each, each approved before the next.
 
 - **H1 — help panel, search, a sentence per command.** F1 (or ❓ next to the ribbon's search box, or View → Help) opens a Help panel beside the canvas. It doesn't block the canvas: you can follow the steps while you work, and shortcuts keep working. It has a search box, the topics by group, and a topic view with numbered steps; a command named in a topic is a button that runs it. Every ribbon command gets one plain sentence, shown in its tooltip and found by the search. Help topics also appear in the Command Launcher.
 - **H2 — help where you are.** A richer tooltip on each ribbon button (the sentence, the shortcut and "Learn more" to its topic); a "?" in the corner of each window (Templates, Functions, Format Presets, Periods…) that opens its topic; "Help" in the touch menu; the same help panel in ExcelExporter, with its own topics (load, arrange, the Tree view, scenarios, the "differs from fmIDE" list, generate). Decided (29 Sep 2026, the owner): the panel's code moves into `src/shared/` (Apache in both apps); ExcelExporter's help text stays ExcelExporter's.
-- **H3 — tutorials and a welcome screen.** Short guided lessons (3–5 minutes) that point at the right button and wait until each step is done, in a separate practice document so your own work is never touched. A welcome screen on first start ("Take the 5-minute tour", "Open a sample model", "Start blank"), reopened from Help. Each tutorial also runs as a test. Decided (29 Sep 2026, the owner): split into **H3a** (the tutorial engine, practice mode, the welcome card, and the tutorials "Your first model" and "Time") and **H3b** (blocks, templates, functions, to Excel); the welcome is a **card in a corner** that blocks nothing, not a centred window.
+- **H3 — tutorials and a welcome screen.** Short guided lessons (3–5 minutes) that point at the right button and wait until each step is done, in a separate practice document so your own work is never touched. A welcome screen on first start ("Take the 5-minute tour", "Open a sample model", "Start blank"), reopened from Help. Each tutorial also runs as a test. **Done: H3a and H3b.** Decided (29 Sep 2026, the owner): split into **H3a** (the tutorial engine, practice mode, the welcome card, and the tutorials "Your first model" and "Time") and **H3b** (blocks, templates, functions, to Excel); the welcome is a **card in a corner** that blocks nothing, not a centred window.
 - **H4 — help on the site and videos.** The same topics as plain pages on the published site (`/help`, no JavaScript, like `/library`); video scripts made from the tutorials; screen recordings made automatically by running the tutorials (so they can be recorded again when the screen changes); the voice-over and uploading to YouTube are the owner's; the links then go into the topics.
 
 ## Done (H1) — how it turned out
@@ -81,6 +81,28 @@ One pull request each, each approved before the next.
 - **Found along the way:** a rectangle's 🕒 button sat under its own resize corner, so clicking its middle started a resize. The "Time" tutorial's test caught it. 🕒 now sits on the bottom edge, left of the resize corner: clear of the corner, the bottom dot and, on a touchscreen, the corner's larger touch area. A test checks all three can be reached.
 - **Found on CI:** the shared panel's refresh of its commands' ▶ buttons also greyed out the tutorials' ▶ (they share the button style but aren't commands), so after any change with Help open, a tutorial couldn't be started. The refresh now touches only command rows; a test checks it.
 - **Checked:** group 33 plays both tutorials step by step with real clicks, typing and right-button drags. A step without an action in the test fails it. The group also covers practice mode (exit, reload, refused commands, download) and the welcome card. Then the whole suite.
+
+## Done (H3b) — how it turned out
+
+- **Four more tutorials** in `src/help/fmide-tutorials.js`, six in all.
+  - **Blocks: build once, use many times** (14 steps): a Tax canvas with an input and an output, used as a block on a second canvas (1000 × 0.3 = 300).
+  - **Templates: save a canvas and reuse it** (4 steps): save a revenue canvas as a template, add it to a new canvas, which remembers its template and already shows Revenue = 50.
+  - **Your own functions** (7 steps): write `Margin(Revenue, Cost)`, put it on the canvas, wire its two inputs, 0.4.
+  - **From fmIDE to Excel** (6 steps): Save System (a download, allowed while practising), Open ExcelExporter, then what to do there.
+- **Decided (29 Sep 2026, the owner):**
+  - What a tutorial saves in the library is taken back out at the end, unless the last step's **Keep what I saved in my library** is ticked (off by default). Exiting early always takes it out.
+  - The To Excel card stays in fmIDE. Its last steps say what to do in ExcelExporter, and the test does exactly that there: it loads the downloaded file, generates the workbook, and checks for a real formula.
+- **The engine (`01c-tutorials.js`) gained:**
+  - `start`: a tutorial can begin from a small model given as data (canvases, rectangles, operators, arrows; ids prefixed `tut-`).
+  - Checks: `canvas`, `canvases`, `role`, `block`, `linkedTo`, `template`, `fn`, `functionNode`, `downloaded`, `openedExcel`.
+  - Arrow ends `{ block: 'Tax' }` and `{ fn: 'Margin', port: 'Revenue' }`.
+  - Practice mode keeps a copy of `TEMPLATES` and `FUNCTIONS` and puts it back at the end, unless Keep is ticked.
+- **Checked:** group 33 (17 tests) plays all six tutorials step by step. It also covers the library (taken out without the tick, kept with it, taken out on Exit) and a start model. Then the whole suite.
+- **Found on CI:**
+  - **The flaw:** the Templates tutorial had a "Press Evaluate" step after Add to new canvas. Adding the template already works out the values, so that step was done the moment it appeared and flashed by.
+  - **The fix:** the step was removed, and its check joined the step before.
+  - **A new guard:** the play-through test now fails any step that is already done when it appears. The step must still be showing 0.7 s later, before the person acts.
+  - **Proof:** the guard was checked against the old tutorial and caught it.
 
 ## Topics (H1)
 
