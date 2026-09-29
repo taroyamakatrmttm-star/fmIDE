@@ -36,6 +36,7 @@
       run: (c) => runCommand(c.id),
     },
     toast: (msg) => toast(msg),
+    homeTop: (body, make) => renderTutorialList(body, make), // 01c: tutorials and the welcome card
   });
   function openHelp(topicId){ hideCommandTip(); help.open(topicId); }
   function closeHelp(){ help.close(); }

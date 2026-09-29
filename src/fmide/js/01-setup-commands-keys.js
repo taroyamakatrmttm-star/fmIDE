@@ -168,6 +168,7 @@
   function runCommand(id){
     const c = getCommand(id);
     if(!c || !commandEnabled(c)) return false;
+    if(practiceBlocks(id)) return false; // 01c: not while practising in a tutorial
     try{ c.action(); }
     catch(err){ reportError(err); }
     return true;

@@ -130,6 +130,11 @@
       items.push({ key:'act:' + d.name, icon: d.icon || 'ƒ', label: d.label + '…', search: d.label + ' ' + d.name + ' ' + d.category,
         category: 'Action · ' + d.category, enabled: true, action: d });
     });
+    // Tutorials (step 10, H3): choosing one starts it on a practice canvas.
+    TUTORIALS.forEach(t => {
+      items.push({ key:'tut:' + t.id, icon:'🎓', label: 'Tutorial: ' + t.title, search: 'tutorial tour learn ' + t.title + ' ' + t.summary,
+        category:'Help', enabled: true, run: () => startTutorial(t.id) });
+    });
     // Help topics (step 10): choosing one opens the Help panel at it.
     HELP_TOPICS.forEach(t => {
       items.push({ key:'help:' + t.id, icon:'📖', label: t.title, search: 'help ' + t.title + ' ' + (t.keywords || '') + ' ' + (t.summary || ''),

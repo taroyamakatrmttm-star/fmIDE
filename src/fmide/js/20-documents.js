@@ -115,7 +115,8 @@
   // skipLeaveWarning: set for fmIDE's own reload onto a new version, after an autosave.
   let skipLeaveWarning = false;
   window.addEventListener('beforeunload', (ev) => {
-    if(!currentDoc.dirty || skipLeaveWarning) return;
+    // While practising (01c), what counts is your own document, set aside until the tutorial ends.
+    if(!(inPractice() ? practiceSavedDirty() : currentDoc.dirty) || skipLeaveWarning) return;
     ev.preventDefault();
     ev.returnValue = '';
   });

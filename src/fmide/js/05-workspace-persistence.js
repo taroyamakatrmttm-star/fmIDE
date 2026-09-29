@@ -68,6 +68,7 @@
   // Returns a promise that settles once the save has been written (or has failed).
   function saveWorkspace(){
     if(!workspaceRestored) return Promise.resolve();
+    if(inPractice()) return Promise.resolve(); // a tutorial's practice canvas is never saved over your work (01c)
     let text;
     try{ text = JSON.stringify(buildWorkspacePayload()); }
     catch(err){ onAutosaveFailed(err); return Promise.resolve(); }

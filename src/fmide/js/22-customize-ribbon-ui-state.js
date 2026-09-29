@@ -595,6 +595,7 @@
     workspaceRestored = true;
     updateDocTitle();
     showRecoveryNotice();
+    if(!restoredFromWorkspace) showWelcomeCard(); // the very first start (step 10, H3)
     startWebApp();
     setInterval(saveWorkspace, 8000);
     document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') saveWorkspace(); });

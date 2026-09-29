@@ -199,6 +199,44 @@
     body.help-open #viewport, body.help-open #templateUpdateBanner{ right:0; }
     body.help-open .modal-overlay{ right:0; }
   }
+  /* ---------- Tutorials and the welcome card (step 10, H3) ---------- */
+  /* Above the canvas and its banners, below every window (.modal-overlay, 200): a window opened
+     during a tutorial or over the welcome card is never covered. The ring goes on top. */
+  .tutorial-card, .welcome-card{
+    position:fixed; z-index:150; width:340px; max-width:calc(100vw - 32px); background:#fff; color:#1e293b;
+    border:1px solid #c7d2fe; border-radius:12px; box-shadow:0 16px 40px rgba(15,23,42,.28); padding:12px 14px; font-size:13px; line-height:1.5;
+  }
+  .tutorial-card{ left:16px; bottom:16px; }
+  .welcome-card{ right:16px; bottom:16px; }
+  body.help-open .welcome-card{ right:calc(var(--help-w) + 16px); }
+  .tutorial-head{ display:flex; align-items:baseline; gap:8px; }
+  .tutorial-title{ flex:1; font-weight:700; color:#3730a3; }
+  .tutorial-count{ font-size:11.5px; color:#64748b; }
+  .tutorial-progress{ height:4px; background:#e0e7ff; border-radius:2px; margin:6px 0 8px; overflow:hidden; }
+  .tutorial-progress-fill{ height:100%; background:#6366f1; transition:width .3s; }
+  .tutorial-text{ margin:0 0 6px; }
+  .tutorial-waiting{ margin:0 0 8px; font-size:11.5px; color:#64748b; font-style:italic; }
+  .tutorial-actions{ display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }
+  .tutorial-actions button, .welcome-choice{
+    border:1px solid #cbd5e1; background:#fff; border-radius:7px; padding:5px 10px; font:inherit; font-size:12.5px; cursor:pointer; color:#1e293b;
+  }
+  .tutorial-actions button.primary{ background:#4f46e5; border-color:#4f46e5; color:#fff; font-weight:600; }
+  .tutorial-pointer{
+    position:fixed; z-index:225; pointer-events:none; border:3px solid #f59e0b; border-radius:10px;
+    box-shadow:0 0 0 4px rgba(245,158,11,.25); animation:tutorial-pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes tutorial-pulse{ 0%,100%{ box-shadow:0 0 0 3px rgba(245,158,11,.35); } 50%{ box-shadow:0 0 0 9px rgba(245,158,11,.08); } }
+  @media (prefers-reduced-motion: reduce){ .tutorial-pointer{ animation:none; } }
+  .welcome-title{ font-size:16px; margin:0 0 4px; color:#0f172a; }
+  .welcome-text{ margin:0 0 10px; color:#475569; }
+  .welcome-close{ position:absolute; top:6px; right:8px; border:none; background:none; font-size:18px; cursor:pointer; color:#64748b; }
+  .welcome-choice{ display:block; width:100%; text-align:left; margin-bottom:6px; padding:7px 10px; }
+  .welcome-choice:hover{ background:#eef2ff; border-color:#c7d2fe; }
+  .welcome-tour{ border-color:#6366f1; background:#eef2ff; }
+  .welcome-choice-label{ display:block; font-weight:600; color:#3730a3; }
+  .welcome-choice-sub{ display:block; font-size:11.5px; color:#64748b; }
+  .help-tutorial{ display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid #f1f5f9; }
+
   /* A window's "?" (top-right corner) */
   .modal-box.has-window-help{ position:relative; }
   .window-help{
@@ -744,7 +782,9 @@
   /* rectangle formatting tag buttons */
   .tag-btn.props-btn{ left:auto; right:-9px; top:-9px; background:#fef9c3; border-color:#fde047; color:#854d0e; }
   .tag-btn.props-btn:hover{ background:#fef08a; }
-  .tag-btn.period-btn{ left:auto; right:-9px; top:auto; bottom:-9px; background:#e0e7ff; border-color:#a5b4fc; color:#3730a3; }
+  /* On the bottom edge, left of the resize handle (which used to cover it in the corner), clear
+     of the bottom dot in the middle and, on a touchscreen, of the handle's larger touch area. */
+  .tag-btn.period-btn{ left:auto; right:24px; top:auto; bottom:-9px; background:#e0e7ff; border-color:#a5b4fc; color:#3730a3; }
   .tag-btn.period-btn:hover{ background:#c7d2fe; }
   .tag-btn.curve-btn{ left:50%; top:-9px; transform:translateX(-50%); background:#dcfce7; border-color:#86efac; color:#166534; }
   .tag-btn.curve-btn:hover{ background:#bbf7d0; }
@@ -1312,6 +1352,7 @@
   function runCommand(id){
     const c = getCommand(id);
     if(!c || !commandEnabled(c)) return false;
+    if(practiceBlocks(id)) return false; // 01c: not while practising in a tutorial
     try{ c.action(); }
     catch(err){ reportError(err); }
     return true;
@@ -1964,6 +2005,8 @@
   //   options.commands (optional) — { get(id), list(), label(c), icon(c), sentence(c),
   //                      shortcut(c) (text, or ''), enabled(c), run(c) }
   //   options.toast (optional) — shows a short message (a command that can't run now)
+  //   options.homeTop (optional) — (body, make) adds the app's own things above the topics
+  //   richText(tag, cls, text) is returned too: the same {cmd:id} buttons, for the app's own cards.
   //   The styles are src/shared/help-panel.css; each app sets --help-top (where the panel
   //   starts) and makes room for it under body.help-open.
   function createHelpPanel(options){
@@ -2109,6 +2152,7 @@
     }
     function renderHome(body){
       if(options.intro) body.appendChild(make('p', 'help-intro', options.intro));
+      if(options.homeTop) options.homeTop(body, make);
       groups.forEach(g => {
         const list = topics.filter(t => t.group === g.id);
         if(!list.length) return;
@@ -2216,7 +2260,7 @@
       });
     }
 
-    return { open, close, toggle, isOpen, showTopic, refresh, search, topic, topicText, topicCommands, topicForCommand,
+    return { open, close, toggle, isOpen, showTopic, refresh, search, topic, topicText, topicCommands, topicForCommand, richText, render,
       element: () => panel };
   }
 
@@ -2246,6 +2290,7 @@
       run: (c) => runCommand(c.id),
     },
     toast: (msg) => toast(msg),
+    homeTop: (body, make) => renderTutorialList(body, make), // 01c: tutorials and the welcome card
   });
   function openHelp(topicId){ hideCommandTip(); help.open(topicId); }
   function closeHelp(){ help.close(); }
@@ -2367,6 +2412,342 @@
     new MutationObserver(() => { if(b.parentNode !== box) box.appendChild(b); }).observe(box, { childList: true });
   }
   function helpTopicForWindow(topicId){ return help.topic(topicId); }
+  // =====================================================================================
+  // ---------- Tutorials and the welcome card (build step 10, phase H3; docs/step10-help.md) ----------
+  // =====================================================================================
+  // A tutorial runs in practice mode: the model, its undo history and the document's state are
+  // set aside in memory, a clean practice canvas takes their place, and the autosave pauses
+  // (the saved copy stays your own work, even after a crash). Finishing or exiting puts
+  // everything back exactly as it was. A coach card (#tutorialCard) shows one step at a time,
+  // a pulsing ring points at what to press, and a step moves on by itself once what it asks for
+  // is true of the model (checks in src/help/fmide-tutorials.js, data only). Nothing is done
+  // for the person.
+  // The welcome card (#welcomeCard) appears on the very first start (no autosave yet), in a
+  // corner over the sample model: it blocks nothing, and steps aside at the first change to the
+  // model (pushHistory), so it never stays over a canvas someone is working on.
+  // =====================================================================================
+  // fmIDE's tutorials (build step 10, phase H3; docs/step10-help.md).
+  // Copyright 2026 Taro Yamaka. Licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/,
+  // docs/LICENSE-CC-BY-4.0.txt), unlike the code around it.
+  // =====================================================================================
+  // Plain data, run by src/fmide/js/01c-tutorials.js in practice mode (your own model is set
+  // aside and comes back unchanged). Each step moves on by itself once what it asks for is
+  // done; nothing is done for you.
+  //
+  //   TUTORIALS — { id, title, minutes, summary, topic, steps }
+  //     step: { id, text, point?, done? }
+  //       text  — plain English; {cmd:id} shows that command as a button (as in the help topics)
+  //       point — what to point at: { cmd: id } a ribbon button (or its tab first),
+  //               { node: 'Name' } a rectangle, { nodeButton: ['Name', 'period-btn'] } one of its buttons
+  //       done  — what must be true to move on (all of the listed checks):
+  //               { rect: { name, value?, uom? } }       a rectangle (name matched ignoring capitals)
+  //               { operator: '×' }                      an operator with that symbol
+  //               { periodShift: -1 }                    a period shift with that shift
+  //               { arrow: { from, to } }                an arrow; from/to: a rectangle's name,
+  //                                                      { op: '×' }, or { shift: -1 }
+  //               { value: { name, equals, period? } }   a rectangle's worked-out value (period from 1)
+  //               { periods: n }                         at least n periods
+  //               { viewing: n }                         the canvas shows period n (from 1)
+  //               { ownNumberIn: { name, periods: [1] } } the periods using the rectangle's own number
+  //       A step without done is read and moved on from with Next.
+  //   The test group 33 plays every step of every tutorial as a person would; a step it has no
+  //   action for fails the test, so a tutorial can't change without its test.
+  const TUTORIALS = [
+    { id: 'first-model', title: 'Your first model', minutes: 5, topic: 'first-model',
+      summary: 'Price × quantity = revenue: three rectangles, one operator, three arrows.',
+      steps: [
+        { id: 'intro',
+          text: 'This tutorial builds Revenue = Price × Quantity. It runs on a practice canvas: your own model is put aside and comes back, untouched, when you finish or exit. Press Next to start.' },
+        { id: 'price', point: { cmd: 'addRect' }, done: [{ rect: { name: 'Price', value: 10 } }],
+          text: 'Press {cmd:addRect}. A rectangle appears, ready to type in. Type Price, press Shift+Enter, type 10, press Shift+Enter, type $/t, then press Enter. The three lines are its name, value and unit.' },
+        { id: 'quantity', point: { cmd: 'addRect' }, done: [{ rect: { name: 'Quantity', value: 5 } }],
+          text: 'Add a second rectangle the same way: Quantity, then 5, then t.' },
+        { id: 'revenue', point: { cmd: 'addRect' }, done: [{ rect: { name: 'Revenue' } }],
+          text: 'Add a third rectangle and type just its name, Revenue, then press Enter. It gets no value of its own: it will be worked out.' },
+        { id: 'multiply', point: { cmd: 'addOperator' }, done: [{ operator: '×' }],
+          text: 'Press {cmd:addOperator} and choose × in the list that opens. An operator combines the values of the arrows coming into it.' },
+        { id: 'arrow-price', point: { node: 'Price' }, done: [{ arrow: { from: 'Price', to: { op: '×' } } }],
+          text: 'Draw an arrow from Price to the ×. Point at Price: small dots appear on its edges. Drag from a dot and drop on the ×. (With a mouse you can also drag with the right button from anywhere on Price.)' },
+        { id: 'arrow-quantity', point: { node: 'Quantity' }, done: [{ arrow: { from: 'Quantity', to: { op: '×' } } }],
+          text: 'Now draw an arrow from Quantity to the ×.' },
+        { id: 'arrow-revenue', done: [{ arrow: { from: { op: '×' }, to: 'Revenue' } }],
+          text: 'Draw an arrow from the × to Revenue.' },
+        { id: 'evaluate', point: { cmd: 'evaluate' }, done: [{ value: { name: 'Revenue', equals: 50 } }],
+          text: 'Press {cmd:evaluate} (or F9). Revenue shows = 50, and its unit, $, is worked out for you. After any change, press Evaluate again to see the new numbers.' },
+        { id: 'done',
+          text: 'Well done: that is a whole model. Next, try the tutorial "Time" to make values change from period to period. Finish returns you to your own model.' },
+      ] },
+    { id: 'time', title: 'Time: periods and last period', minutes: 7, topic: 'period-shifts',
+      summary: 'A balance that carries forward: opening + additions = closing, period after period.',
+      steps: [
+        { id: 'intro',
+          text: 'A closing balance becomes next period\'s opening balance. This tutorial builds that "corkscrew" over five periods, on a practice canvas. Press Next to start.' },
+        { id: 'periods', point: { cmd: 'managePeriods' }, done: [{ periods: 5 }],
+          text: 'Open {cmd:managePeriods}, type 5 as the Number of periods, press Set, then Done. Every canvas shares this timeline, and each period becomes a column in Excel.' },
+        { id: 'opening', point: { cmd: 'addRect' }, done: [{ rect: { name: 'Opening', value: 100 } }],
+          text: 'Press {cmd:addRect} and type Opening, Shift+Enter, 100, then Enter.' },
+        { id: 'additions', point: { cmd: 'addRect' }, done: [{ rect: { name: 'Additions', value: 20 } }],
+          text: 'Add another rectangle: Additions, then 20. It keeps 20 in every period.' },
+        { id: 'closing', point: { cmd: 'addRect' }, done: [{ rect: { name: 'Closing' } }],
+          text: 'Add a rectangle named just Closing.' },
+        { id: 'plus', point: { cmd: 'addOperator' }, done: [{ operator: '+' }],
+          text: 'Press {cmd:addOperator} and choose +.' },
+        { id: 'wire', done: [{ arrow: { from: 'Opening', to: { op: '+' } } }, { arrow: { from: 'Additions', to: { op: '+' } } }, { arrow: { from: { op: '+' }, to: 'Closing' } }],
+          text: 'Draw three arrows: Opening to the +, Additions to the +, and the + to Closing.' },
+        { id: 'first-value', point: { cmd: 'evaluate' }, done: [{ value: { name: 'Closing', equals: 120, period: 1 } }],
+          text: 'Press {cmd:evaluate}. Closing shows 120 in period 1.' },
+        { id: 'shift', point: { cmd: 'addPeriodShift' }, done: [{ periodShift: -1 }],
+          text: 'Now carry Closing forward. Press {cmd:addPeriodShift}: it passes on a value from the period before (−1).' },
+        { id: 'shift-wire', done: [{ arrow: { from: 'Closing', to: { shift: -1 } } }, { arrow: { from: { shift: -1 }, to: 'Opening' } }],
+          text: 'Draw an arrow from Closing to the period shift, and one from the period shift to Opening.' },
+        { id: 'own-number', point: { nodeButton: ['Opening', 'period-btn'] }, done: [{ ownNumberIn: { name: 'Opening', periods: [1] } }],
+          text: 'Opening should use its own 100 only in the first period, and last period\'s Closing after that. Click Opening, then its 🕒 button, press First period only, then Save.' },
+        { id: 'later', point: { cmd: 'nextPeriod' }, done: [{ value: { name: 'Closing', equals: 160, period: 3 } }, { viewing: 3 }],
+          text: 'Press {cmd:evaluate}, then {cmd:nextPeriod} twice to see period 3. Closing is 160: 100 + 20 + 20 + 20.' },
+        { id: 'done',
+          text: 'That is a corkscrew: each closing balance opens the next period. The if operator can do the first-period part too: see "Timing, conditions and rounding" in Help. Finish returns you to your own model.' },
+      ] },
+  ];
+
+  let practice = null;          // { tutorial, step, saved: { snap, history, future, doc }, timer }
+  function inPractice(){ return !!practice; }
+  function practiceSavedDirty(){ return !!(practice && practice.saved.doc.dirty); }
+  // Commands that would read or write your own files or document: not while practising.
+  const PRACTICE_BLOCKED = new Set(['newDocument', 'openDocument', 'saveDocument', 'saveDocumentAs', 'openRecent',
+    'loadSystem', 'addSystem', 'importWorkspace']);
+  function practiceBlocks(id){
+    if(!practice || !PRACTICE_BLOCKED.has(id)) return false;
+    toast('Finish or exit the tutorial first: practice never touches your files.', 3200);
+    return true;
+  }
+  function tutorial(id){ return TUTORIALS.find(t => t.id === id) || null; }
+
+  function startTutorial(id){
+    const t = tutorial(id);
+    if(!t) return false;
+    if(practice) endTutorial();
+    hideWelcomeCard();
+    closeHelp();
+    if(document.activeElement && document.activeElement.blur) document.activeElement.blur(); // commits a text being typed
+    closePicker();
+    saveWorkspace(); // your own work, as it is now, is the saved copy while you practise
+    practice = { tutorial: t, step: 0, saved: { snap: snapshot(), history: history.slice(), future: future.slice(), doc: Object.assign({}, currentDoc) } };
+    applySystemDataDirect({ canvases: [{ id: 'c' + nextCanvasId, name: 'Practice', nodes: [], edges: [] }], periods: ['Period 1'], currentPeriod: 0 });
+    render();
+    clearUndoHistory();
+    Object.assign(currentDoc, { name: 'Practice — ' + t.title, dirty: false });
+    updateDocTitle();
+    document.body.classList.add('practising');
+    renderTutorialCard();
+    practice.timer = setInterval(tutorialTick, 300);
+    return true;
+  }
+
+  // Puts your own model, undo history and document back exactly as they were.
+  function endTutorial(){
+    if(!practice) return;
+    const saved = practice.saved;
+    clearInterval(practice.timer);
+    practice = null;
+    closePicker();
+    const card = document.getElementById('tutorialCard');
+    if(card) card.remove();
+    hidePointer();
+    document.body.classList.remove('practising');
+    restore(saved.snap);
+    history = saved.history;
+    future = saved.future;
+    Object.assign(currentDoc, saved.doc);
+    clearSelection();
+    render();
+    renderCanvasTabs();
+    evaluateAll();
+    updateHistoryButtons();
+    updateDocTitle();
+  }
+
+  function downloadPractice(){
+    if(!practice) return;
+    downloadJSON(buildWorkspacePayload(), 'practice.fmide');
+  }
+
+  // ---------- the checks (data from fmide-tutorials.js) ----------
+  const sameName = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
+  function rectInfo(n){ return n.type === 'value' ? parseRectText(n.text) : null; }
+  // The nodes a reference means: a rectangle's name, { op: '×' } or { shift: -1 }.
+  function nodesFor(ref){
+    if(ref && typeof ref === 'object' && ref.op !== undefined) return nodes.filter(n => n.type === 'operator' && n.text === ref.op);
+    if(ref && typeof ref === 'object' && ref.shift !== undefined) return nodes.filter(n => n.type === 'periodShift' && Number(n.shift) === Number(ref.shift));
+    return nodes.filter(n => n.type === 'value' && sameName(rectInfo(n).name, ref));
+  }
+  function valueAt(n, period){
+    try{ return fm.getValue('#' + n.id, period); }catch(err){ return null; }
+  }
+  function checkPasses(c){
+    if(c.rect) return nodesFor(c.rect.name).some(n => {
+      const r = rectInfo(n);
+      if(c.rect.value !== undefined && r.literal !== Number(c.rect.value)) return false;
+      if(c.rect.uom !== undefined && !sameName(r.uom, c.rect.uom)) return false;
+      return true;
+    });
+    if(c.operator !== undefined) return nodesFor({ op: c.operator }).length > 0;
+    if(c.periodShift !== undefined) return nodesFor({ shift: c.periodShift }).length > 0;
+    if(c.arrow){
+      const from = nodesFor(c.arrow.from).map(n => n.id), to = nodesFor(c.arrow.to).map(n => n.id);
+      return edges.some(e => from.includes(e.from) && to.includes(e.to));
+    }
+    if(c.value){
+      // Only once worked out on the canvas (Evaluate), so the step asks for what it says.
+      return nodesFor(c.value.name).some(n => {
+        if(!(n.id in computedValues)) return false;
+        const v = valueAt(n, c.value.period || currentPeriod + 1);
+        return typeof v === 'number' && Math.abs(v - Number(c.value.equals)) < 1e-9;
+      });
+    }
+    if(c.periods !== undefined) return periods.length >= Number(c.periods);
+    if(c.viewing !== undefined) return currentPeriod + 1 === Number(c.viewing);
+    if(c.ownNumberIn) return nodesFor(c.ownNumberIn.name).some(n => {
+      const want = c.ownNumberIn.periods.map(p => p - 1);
+      return Array.isArray(n.literalPeriods) && n.literalPeriods.length === want.length && want.every(p => n.literalPeriods.includes(p));
+    });
+    return false;
+  }
+  function stepDone(step){ return Array.isArray(step.done) && step.done.length > 0 && step.done.every(checkPasses); }
+
+  function tutorialTick(){
+    if(!practice) return;
+    const step = practice.tutorial.steps[practice.step];
+    if(step && step.done && stepDone(step)) goToStep(practice.step + 1);
+    else placePointer(step);
+  }
+  function goToStep(i){
+    if(!practice) return;
+    practice.step = Math.max(0, Math.min(practice.tutorial.steps.length - 1, i));
+    renderTutorialCard();
+  }
+
+  // ---------- the coach card ----------
+  function renderTutorialCard(){
+    if(!practice) return;
+    const t = practice.tutorial, i = practice.step, step = t.steps[i], last = i === t.steps.length - 1;
+    let card = document.getElementById('tutorialCard');
+    if(!card){ card = el('div', 'tutorial-card'); card.id = 'tutorialCard'; card.setAttribute('role', 'dialog'); card.setAttribute('aria-label', 'Tutorial'); document.body.appendChild(card); }
+    card.textContent = '';
+    card.dataset.tutorial = t.id;
+    card.dataset.step = step.id;
+    const head = el('div', 'tutorial-head');
+    head.appendChild(el('span', 'tutorial-title', '🎓 ' + t.title));
+    head.appendChild(el('span', 'tutorial-count', 'Step ' + (i + 1) + ' of ' + t.steps.length));
+    card.appendChild(head);
+    const bar = el('div', 'tutorial-progress');
+    const fill = el('div', 'tutorial-progress-fill');
+    fill.style.width = Math.round((i + 1) / t.steps.length * 100) + '%';
+    bar.appendChild(fill);
+    card.appendChild(bar);
+    card.appendChild(help.richText('p', 'tutorial-text', step.text));
+    if(step.done) card.appendChild(el('p', 'tutorial-waiting', 'Moves on by itself when that is done.'));
+    const actions = el('div', 'tutorial-actions');
+    const button = (label, cls, run) => { const b = el('button', cls, label); b.type = 'button'; b.addEventListener('click', run); actions.appendChild(b); return b; };
+    if(i > 0) button('‹ Back', 'tutorial-back', () => goToStep(i - 1));
+    if(last){
+      button('Download what I built', 'tutorial-download', () => downloadPractice());
+      button('Finish', 'tutorial-finish primary', () => endTutorial());
+    } else {
+      if(!step.done) button('Next ›', 'tutorial-next primary', () => goToStep(i + 1));
+      else button('Skip step', 'tutorial-skip', () => goToStep(i + 1));
+      button('Exit tutorial', 'tutorial-exit', () => endTutorial());
+    }
+    card.appendChild(actions);
+    placePointer(step);
+  }
+
+  // ---------- pointing at what to press ----------
+  // A ribbon button (or, when it is on another tab, that tab), a rectangle, or one of its buttons.
+  function pointerTarget(point){
+    if(!point) return null;
+    const visible = (e) => { if(!e) return false; const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+    if(point.cmd){
+      const b = Array.from(document.querySelectorAll('#ribbon [data-tip-cmd="' + point.cmd + '"]')).find(visible);
+      if(b) return b;
+      const tab = ribbonState.config.tabs.find(t => (t.groups || []).some(g => (g.items || []).some(it => it && it.cmd === point.cmd)));
+      const tabEl = tab && ribbonTabEls.find(x => x.tab === tab);
+      return tabEl && visible(tabEl.el) ? tabEl.el : null;
+    }
+    const nodeEl = (name) => { const n = nodesFor(name)[0]; return n ? canvas.querySelector('.node[data-id="' + n.id + '"]') : null; };
+    if(point.node) return nodeEl(point.node);
+    if(point.nodeButton){
+      const e = nodeEl(point.nodeButton[0]);
+      const b = e && e.querySelector('.' + point.nodeButton[1]);
+      return b && visible(b) && getComputedStyle(b).display !== 'none' && getComputedStyle(b).visibility !== 'hidden' ? b : e;
+    }
+    return null;
+  }
+  function placePointer(step){
+    const target = pointerTarget(step && step.point);
+    let ring = document.getElementById('tutorialPointer');
+    if(!target){ if(ring) ring.remove(); return; }
+    if(!ring){ ring = el('div', 'tutorial-pointer'); ring.id = 'tutorialPointer'; document.body.appendChild(ring); }
+    const r = target.getBoundingClientRect();
+    ring.style.left = (r.left - 4) + 'px';
+    ring.style.top = (r.top - 4) + 'px';
+    ring.style.width = (r.width + 8) + 'px';
+    ring.style.height = (r.height + 8) + 'px';
+  }
+  function hidePointer(){ const ring = document.getElementById('tutorialPointer'); if(ring) ring.remove(); }
+
+  // ---------- where tutorials are found: the top of the Help panel ----------
+  function renderTutorialList(body, make){
+    body.appendChild(make('h3', 'help-group', 'Tutorials'));
+    TUTORIALS.forEach(t => {
+      const row = make('div', 'help-tutorial');
+      row.dataset.tutorial = t.id;
+      const text = make('div', 'help-command-text');
+      text.appendChild(make('div', 'help-command-name', '🎓 ' + t.title + ' · ' + t.minutes + ' min'));
+      text.appendChild(make('div', 'help-command-sentence', t.summary));
+      row.appendChild(text);
+      const go = make('button', 'help-run help-tutorial-start', '▶');
+      go.type = 'button';
+      go.title = 'Start this tutorial (on a practice canvas; your model comes back untouched)';
+      go.addEventListener('click', () => startTutorial(t.id));
+      row.appendChild(go);
+      body.appendChild(row);
+    });
+    const again = make('button', 'help-topic-link help-show-welcome');
+    again.type = 'button';
+    again.appendChild(make('span', 'help-topic-link-title', 'Show the welcome card'));
+    again.addEventListener('click', () => { closeHelp(); showWelcomeCard(); });
+    body.appendChild(again);
+  }
+
+  // ---------- the welcome card ----------
+  function showWelcomeCard(){
+    if(document.getElementById('welcomeCard') || practice) return;
+    const card = el('div', 'welcome-card');
+    card.id = 'welcomeCard';
+    card.setAttribute('role', 'dialog');
+    card.setAttribute('aria-label', 'Welcome to fmIDE');
+    const x = el('button', 'welcome-close', '×');
+    x.type = 'button';
+    x.title = 'Close';
+    x.addEventListener('click', () => hideWelcomeCard());
+    card.appendChild(x);
+    card.appendChild(el('h2', 'welcome-title', 'Welcome to fmIDE'));
+    card.appendChild(el('p', 'welcome-text', 'Build a financial model as boxes and arrows, then turn it into a live Excel workbook. Behind this card is a small sample model to look around.'));
+    const choice = (label, sub, cls, run) => {
+      const b = el('button', 'welcome-choice ' + cls);
+      b.type = 'button';
+      b.appendChild(el('span', 'welcome-choice-label', label));
+      b.appendChild(el('span', 'welcome-choice-sub', sub));
+      b.addEventListener('click', run);
+      card.appendChild(b);
+    };
+    choice('▶ Take the 5-minute tour', 'Build your first model, step by step', 'welcome-tour', () => startTutorial('first-model'));
+    choice('Explore the sample model', 'It is already open behind this card', 'welcome-sample', () => hideWelcomeCard());
+    choice('Start blank', 'An empty canvas', 'welcome-blank', () => { hideWelcomeCard(); runCommand('newDocument'); });
+    choice('❓ Open Help', 'Guides to every feature (F1, any time)', 'welcome-help', () => { hideWelcomeCard(); openHelp(); });
+    document.body.appendChild(card);
+  }
+  function hideWelcomeCard(){ const c = document.getElementById('welcomeCard'); if(c) c.remove(); }
   // ---------- Unit of measure (UOM) ----------
   // Parsing and unit arithmetic are shared (src/shared/uom.js); a node's unit comes from the
   // IR (nodeUOM, in 06-align-marquee-computation.js).
@@ -2912,6 +3293,7 @@
     updateHistoryButtons();
     requestStoragePersistence();
     markDocDirty();
+    hideWelcomeCard(); // the welcome card steps aside once you start building (01c)
   }
 
   function restore(snap){
@@ -4019,6 +4401,7 @@
   // Returns a promise that settles once the save has been written (or has failed).
   function saveWorkspace(){
     if(!workspaceRestored) return Promise.resolve();
+    if(inPractice()) return Promise.resolve(); // a tutorial's practice canvas is never saved over your work (01c)
     let text;
     try{ text = JSON.stringify(buildWorkspacePayload()); }
     catch(err){ onAutosaveFailed(err); return Promise.resolve(); }
@@ -15458,6 +15841,11 @@
       items.push({ key:'act:' + d.name, icon: d.icon || 'ƒ', label: d.label + '…', search: d.label + ' ' + d.name + ' ' + d.category,
         category: 'Action · ' + d.category, enabled: true, action: d });
     });
+    // Tutorials (step 10, H3): choosing one starts it on a practice canvas.
+    TUTORIALS.forEach(t => {
+      items.push({ key:'tut:' + t.id, icon:'🎓', label: 'Tutorial: ' + t.title, search: 'tutorial tour learn ' + t.title + ' ' + t.summary,
+        category:'Help', enabled: true, run: () => startTutorial(t.id) });
+    });
     // Help topics (step 10): choosing one opens the Help panel at it.
     HELP_TOPICS.forEach(t => {
       items.push({ key:'help:' + t.id, icon:'📖', label: t.title, search: 'help ' + t.title + ' ' + (t.keywords || '') + ' ' + (t.summary || ''),
@@ -16748,7 +17136,8 @@
   // skipLeaveWarning: set for fmIDE's own reload onto a new version, after an autosave.
   let skipLeaveWarning = false;
   window.addEventListener('beforeunload', (ev) => {
-    if(!currentDoc.dirty || skipLeaveWarning) return;
+    // While practising (01c), what counts is your own document, set aside until the tutorial ends.
+    if(!(inPractice() ? practiceSavedDirty() : currentDoc.dirty) || skipLeaveWarning) return;
     ev.preventDefault();
     ev.returnValue = '';
   });
@@ -17892,6 +18281,7 @@
     workspaceRestored = true;
     updateDocTitle();
     showRecoveryNotice();
+    if(!restoredFromWorkspace) showWelcomeCard(); // the very first start (step 10, H3)
     startWebApp();
     setInterval(saveWorkspace, 8000);
     document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') saveWorkspace(); });

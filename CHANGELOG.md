@@ -2,6 +2,13 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Tutorials and a welcome card (step 10, phase H3a)
+- **Guided tutorials:** *Your first model* (price × quantity = revenue) and *Time: periods and last period* (a balance carried forward over five periods). A card in the corner shows one step at a time, a pulsing ring shows what to press, and each step moves on by itself once you have done it. Start them from the top of the Help panel (F1) or the Command Launcher.
+- **Your work is never touched:** a tutorial runs on a practice canvas. Your model, undo history and document are set aside and come back exactly as they were when you finish or exit, and autosave pauses meanwhile, so even a crash brings back your own work. Save, Open and the like are refused while practising; the last step offers **Download what I built**.
+- **Welcome card** on the very first start, in the corner over the sample model: take the 5-minute tour, explore the sample, start blank, or open Help. It blocks nothing; bring it back from the Help panel.
+- **Fix:** a rectangle's 🕒 button sat under its resize corner, so clicking it could start a resize instead. It now sits on the bottom edge, just left of the corner.
+- No file format changed.
+
 ## Help where you are (step 10, phase H2)
 - **Ribbon buttons have a proper tip:** pause over a button to see its name, shortcut and what it does (even when it is greyed out, with why), and **Learn more** for the full guide; pressing **F1** while the tip shows opens that guide.
 - **Every window has a ?** in its top-right corner (Templates, Functions, Format Presets, Periods, the Macro Builder and the others): it opens that window's guide in the Help panel beside it, with the window still open.

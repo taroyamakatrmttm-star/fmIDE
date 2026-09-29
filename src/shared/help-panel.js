@@ -16,6 +16,8 @@
 //   options.commands (optional) — { get(id), list(), label(c), icon(c), sentence(c),
 //                      shortcut(c) (text, or ''), enabled(c), run(c) }
 //   options.toast (optional) — shows a short message (a command that can't run now)
+//   options.homeTop (optional) — (body, make) adds the app's own things above the topics
+//   richText(tag, cls, text) is returned too: the same {cmd:id} buttons, for the app's own cards.
 //   The styles are src/shared/help-panel.css; each app sets --help-top (where the panel
 //   starts) and makes room for it under body.help-open.
 function createHelpPanel(options){
@@ -161,6 +163,7 @@ function createHelpPanel(options){
   }
   function renderHome(body){
     if(options.intro) body.appendChild(make('p', 'help-intro', options.intro));
+    if(options.homeTop) options.homeTop(body, make);
     groups.forEach(g => {
       const list = topics.filter(t => t.group === g.id);
       if(!list.length) return;
@@ -268,6 +271,6 @@ function createHelpPanel(options){
     });
   }
 
-  return { open, close, toggle, isOpen, showTopic, refresh, search, topic, topicText, topicCommands, topicForCommand,
+  return { open, close, toggle, isOpen, showTopic, refresh, search, topic, topicText, topicCommands, topicForCommand, richText, render,
     element: () => panel };
 }
