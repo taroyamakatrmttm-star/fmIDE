@@ -1,0 +1,27 @@
+/* The site's help pages (/help, written by tools/build-help.js): their own rules, on top of the
+   site's look (src/library/style.css, served as help/style.css). Plain HTML with no JavaScript;
+   the pages' security policy allows styles from the site itself and nothing inline. */
+header.top nav { display: flex; gap: 16px; flex-wrap: wrap; }
+.back, .crumb, .links { color: var(--muted); }
+.crumb { margin: 16px 0 0; font-size: 14px; }
+.crumb + h1 { margin-top: 4px; }
+ul.topics { list-style: none; padding: 0; margin: 0; }
+ul.topics li {
+  background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+  padding: 10px 14px; margin: 0 0 8px;
+}
+ul.topics li a { font-weight: 600; }
+ul.topics .summary, ul.topics .minutes { display: block; color: var(--muted); font-size: 15px; }
+ol.steps { padding-left: 1.6em; }
+ol.steps li { margin: 6px 0; }
+.tip { background: var(--card); border-left: 4px solid var(--accent); padding: 8px 12px; border-radius: 0 6px 6px 0; }
+.cmd-name { white-space: nowrap; }
+.cmd-where { color: var(--muted); font-size: 15px; }
+article.topic { margin-bottom: 8px; }
+section.group > article.topic { border-top: 1px solid var(--line); padding-top: 4px; }
+nav.toc ul { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.how, .start { color: var(--fg); }
+@media print {
+  header.top, footer, nav.toc, .back { display: none; }
+  ul.topics li, .tip { border-color: #999; background: none; }
+}

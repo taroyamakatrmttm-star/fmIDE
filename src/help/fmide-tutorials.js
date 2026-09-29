@@ -5,7 +5,8 @@
 // =====================================================================================
 // Plain data, run by src/fmide/js/01c-tutorials.js in practice mode (your own model is set
 // aside and comes back unchanged). Each step moves on by itself once what it asks for is
-// done; nothing is done for you.
+// done; nothing is done for you. Each tutorial is also written out, step by step, on the
+// site's help pages (/help/tutorials/<id>, tools/build-help.js); ids are letters, digits and dashes.
 //
 //   TUTORIALS — { id, title, minutes, summary, topic, start?, steps }
 //     start — the practice model to begin from (left out: one empty canvas):
