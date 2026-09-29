@@ -86,7 +86,7 @@ One pull request each, each approved before the next.
 
 - **Four more tutorials** in `src/help/fmide-tutorials.js`, six in all.
   - **Blocks: build once, use many times** (14 steps): a Tax canvas with an input and an output, used as a block on a second canvas (1000 × 0.3 = 300).
-  - **Templates: save a canvas and reuse it** (5 steps): save a revenue canvas as a template, add it to a new canvas, which remembers its template.
+  - **Templates: save a canvas and reuse it** (4 steps): save a revenue canvas as a template, add it to a new canvas, which remembers its template and already shows Revenue = 50.
   - **Your own functions** (7 steps): write `Margin(Revenue, Cost)`, put it on the canvas, wire its two inputs, 0.4.
   - **From fmIDE to Excel** (6 steps): Save System (a download, allowed while practising), Open ExcelExporter, then what to do there.
 - **Decided (29 Sep 2026, the owner):**
@@ -98,6 +98,11 @@ One pull request each, each approved before the next.
   - Arrow ends `{ block: 'Tax' }` and `{ fn: 'Margin', port: 'Revenue' }`.
   - Practice mode keeps a copy of `TEMPLATES` and `FUNCTIONS` and puts it back at the end, unless Keep is ticked.
 - **Checked:** group 33 (17 tests) plays all six tutorials step by step. It also covers the library (taken out without the tick, kept with it, taken out on Exit) and a start model. Then the whole suite.
+- **Found on CI:**
+  - **The flaw:** the Templates tutorial had a "Press Evaluate" step after Add to new canvas. Adding the template already works out the values, so that step was done the moment it appeared and flashed by.
+  - **The fix:** the step was removed, and its check joined the step before.
+  - **A new guard:** the play-through test now fails any step that is already done when it appears. The step must still be showing 0.7 s later, before the person acts.
+  - **Proof:** the guard was checked against the old tutorial and caught it.
 
 ## Topics (H1)
 

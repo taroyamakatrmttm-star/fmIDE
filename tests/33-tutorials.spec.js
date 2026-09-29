@@ -190,7 +190,6 @@ const ACTIONS = {
       await F.topDialog(page).locator('button', { hasText: /^Save Template$/ }).click();
     },
     'add': async (page) => { await F.topDialog(page).locator('button', { hasText: /^Add to new canvas$/ }).click(); },
-    'evaluate': evaluate,
     'done': finish,
   },
   'functions': {
@@ -285,6 +284,12 @@ for(const t of T){
       await expect(card(page).locator('.tutorial-count')).toHaveText(`Step ${i + 1} of ${t.steps.length}`);
       await expect(card(page).locator('.tutorial-text')).not.toContainText('{cmd:');
       if(s.point) await expect(page.locator('#tutorialPointer'), `${t.id}/${s.id} points at something on screen`).toBeVisible();
+      // A step that asks for something is not already done when it appears: it is still showing
+      // after more than two of the engine's checks (0.3 s each), before the person acts.
+      if(s.done){
+        await page.waitForTimeout(700);
+        expect(await card(page).getAttribute('data-step'), `${t.id}/${s.id} was already done when it appeared`).toBe(s.id);
+      }
       await ACTIONS[t.id][s.id](page);
       if(i < t.steps.length - 1) await expect(card(page), `${t.id}/${s.id} moves on`).toHaveAttribute('data-step', t.steps[i + 1].id);
     }
