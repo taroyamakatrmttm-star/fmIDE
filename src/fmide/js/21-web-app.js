@@ -32,6 +32,7 @@
   let excelWindow = null;
   window.addEventListener('pageshow', (ev) => { if(ev.persisted) excelWindow = null; });
   function openExcelExporter(){
+    if(inPractice()) practice.openedExcel = true; // a tutorial's "openedExcel" check (01c)
     try {
       if(excelWindow && excelWindow !== window && !excelWindow.closed && excelWindow.opener === window){
         excelWindow.focus();

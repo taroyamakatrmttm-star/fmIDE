@@ -27,8 +27,43 @@ const nodeOfType = (page, type, text) => page.evaluate(([type, text]) => {
   return n ? n.id : null;
 }, [type, text]);
 const ribbon = (page, cmd) => page.locator(`#ribbon [data-tip-cmd="${cmd}"]`).first();
+// A ribbon command, going to its tab first when it is on another one (as the pointer shows).
+async function command(page, cmd){
+  const b = page.locator(`#ribbon [data-tip-cmd="${cmd}"]:visible`).first();
+  if(!await b.count()){
+    const label = await page.evaluate((cmd) => __fmIDE.getRibbonConfig().tabs.find(t => t.groups.some(g => g.items.some(i => i.cmd === cmd))).label, cmd);
+    await page.locator('.rb-tab', { hasText: new RegExp('^' + label + '$') }).click();
+  }
+  await page.locator(`#ribbon [data-tip-cmd="${cmd}"]:visible`).first().click();
+}
+const nodeOf = async (page, type) => page.evaluate((type) => { const n = fm.nodes().find(n => n.type === type); return n ? n.id : null; }, type);
+// Drag with the right button from one element to another (an arrow).
+async function dragArrow(page, from, to){
+  const a = await from.boundingBox(), b = await to.boundingBox();
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+  await page.mouse.down({ button: 'right' });
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 6 });
+  await page.mouse.up({ button: 'right' });
+}
+// Drag with the left button from a dot (an output dot starts an arrow).
+async function dragFromDot(page, dot, to){
+  const a = await dot.boundingBox(), b = await to.boundingBox();
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 6 });
+  await page.mouse.up();
+}
+const nodeEl = (page, id) => page.locator(`.node[data-id="${id}"]`);
+async function setRole(page, name, role){
+  const id = await nodeByName(page, name);
+  await nodeEl(page, id).click();
+  await nodeEl(page, id).locator('.io-btn').click();
+  await page.locator('.op-picker button', { hasText: new RegExp('^' + role + '$') }).click();
+}
+// What the To Excel tutorial downloads and opens, shared between its steps.
+const excelTrip = {};
 async function addRect(page, lines){
-  await ribbon(page, 'addRect').click();
+  await command(page, 'addRect');
   const ta = page.locator('#canvas textarea');
   await expect(ta).toBeFocused();
   for(let i = 0; i < lines.length; i++){
@@ -38,7 +73,7 @@ async function addRect(page, lines){
   await page.keyboard.press('Enter');
 }
 async function addOperator(page, sym){
-  await ribbon(page, 'addOperator').click();
+  await command(page, 'addOperator');
   await page.locator('.op-picker button').filter({ hasText: new RegExp('^' + sym.replace(/[+*]/g, '\\$&') + '$') }).first().click();
 }
 async function drawArrow(page, fromId, toId){
@@ -56,7 +91,7 @@ const arrowByNames = (from, to) => async (page) => {
 };
 const next = async (page) => { await card(page).locator('.tutorial-next').click(); };
 const finish = async (page) => { await card(page).locator('.tutorial-finish').click(); };
-const evaluate = async (page) => { await ribbon(page, 'evaluate').click(); };
+const evaluate = async (page) => { await command(page, 'evaluate'); };
 
 // What a person does at each step, by tutorial and step id.
 const ACTIONS = {
@@ -111,6 +146,109 @@ const ACTIONS = {
     },
     'done': finish,
   },
+  'blocks': {
+    'intro': next,
+    'rename': async (page) => {
+      await command(page, 'renameCanvas');
+      const input = page.locator('#canvasTabs input');
+      await input.fill('Tax');
+      await input.press('Enter');
+    },
+    'profit': (page) => addRect(page, ['Profit', '100']),
+    'rate': (page) => addRect(page, ['Tax rate', '0.3']),
+    'tax': (page) => addRect(page, ['Tax']),
+    'multiply': async (page) => { await command(page, 'addOperator'); await page.locator('.op-picker button').filter({ hasText: /^×$/ }).first().click(); },
+    'wire': async (page) => {
+      await arrowByNames('Profit', { op: '×' })(page);
+      await arrowByNames('Tax rate', { op: '×' })(page);
+      await arrowByNames({ op: '×' }, 'Tax')(page);
+    },
+    'roles': async (page) => { await setRole(page, 'Profit', 'Input'); await setRole(page, 'Tax', 'Output'); },
+    'company': (page) => command(page, 'newCanvas'),
+    'add-block': async (page) => {
+      await command(page, 'addBlock');
+      await F.topDialog(page).locator('.picker-row', { hasText: 'Tax' }).first().click();
+    },
+    'feed': async (page) => {
+      await addRect(page, ['Company profit', '1000']);
+      const inst = await nodeOf(page, 'blockInstance');
+      await dragArrow(page, nodeEl(page, await nodeByName(page, 'Company profit')), nodeEl(page, inst).locator('.io-port[data-port-dir="in"]').first());
+    },
+    'result': async (page) => {
+      await addRect(page, ['Company tax']);
+      const inst = await nodeOf(page, 'blockInstance');
+      await dragFromDot(page, nodeEl(page, inst).locator('.io-port[data-port-dir="out"]').first(), nodeEl(page, await nodeByName(page, 'Company tax')));
+    },
+    'evaluate': evaluate,
+    'done': finish,
+  },
+  'templates': {
+    'intro': next,
+    'save': async (page) => {
+      await command(page, 'openTemplates');
+      await F.topDialog(page).locator('button', { hasText: '+ Save Canvas as Template' }).click();
+      await F.topDialog(page).locator('button', { hasText: /^Save Template$/ }).click();
+    },
+    'add': async (page) => { await F.topDialog(page).locator('button', { hasText: /^Add to new canvas$/ }).click(); },
+    'evaluate': evaluate,
+    'done': finish,
+  },
+  'functions': {
+    'intro': next,
+    'write': async (page) => {
+      await command(page, 'openFunctions');
+      await F.topDialog(page).locator('button', { hasText: '+ New Function…' }).click();
+      await F.topDialog(page).locator('textarea').first().fill('Margin(Revenue, Cost) = (Revenue - Cost) / Revenue');
+      await F.topDialog(page).locator('.fn-editor-save').click();
+      await F.topDialog(page).locator('button', { hasText: /^Close$/ }).click();
+    },
+    'insert': async (page) => {
+      await command(page, 'insertFunction');
+      await F.topDialog(page).locator('.function-picker-ok').click();
+    },
+    'wire': async (page) => {
+      const fn = await nodeOf(page, 'function');
+      await dragArrow(page, nodeEl(page, await nodeByName(page, 'Revenue')), nodeEl(page, fn).locator('.io-port[data-port-dir="in"][data-port-index="0"]'));
+      await dragArrow(page, nodeEl(page, await nodeByName(page, 'Cost')), nodeEl(page, fn).locator('.io-port[data-port-dir="in"][data-port-index="1"]'));
+    },
+    'result': async (page) => {
+      await addRect(page, ['Margin %']);
+      const fn = await nodeOf(page, 'function');
+      await dragFromDot(page, nodeEl(page, fn).locator('.fn-out-port'), nodeEl(page, await nodeByName(page, 'Margin %')));
+    },
+    'evaluate': evaluate,
+    'done': finish,
+  },
+  'to-excel': {
+    'intro': next,
+    'save': async (page) => {
+      const [dl] = await Promise.all([page.waitForEvent('download'), command(page, 'saveSystem')]);
+      excelTrip.file = await dl.path();
+    },
+    'open': async (page) => {
+      const [popup] = await Promise.all([page.waitForEvent('popup'), command(page, 'openExcelExporter')]);
+      await popup.waitForLoadState();
+      excelTrip.popup = popup;
+    },
+    // What the card says to do in ExcelExporter, done for real: load the file, then Generate.
+    'load': async (page) => {
+      const popup = excelTrip.popup;
+      await popup.locator('#fileInput').setInputFiles(excelTrip.file);
+      await expect(popup.locator('#afterLoad')).toBeVisible();
+      await next(page);
+    },
+    'generate': async (page) => {
+      const popup = excelTrip.popup;
+      const [dl] = await Promise.all([popup.waitForEvent('download'), popup.locator('#btnGenerate').click()]);
+      const JSZip = require('jszip');
+      const zip = await JSZip.loadAsync(fs.readFileSync(await dl.path()));
+      const sheets = Object.keys(zip.files).filter(f => /^xl\/worksheets\/sheet\d+\.xml$/.test(f));
+      const xml = (await Promise.all(sheets.map(f => zip.file(f).async('string')))).join('');
+      expect(xml).toMatch(/<f>[^<]*\*[^<]*<\/f>/);                 // Revenue is a live formula, a product
+      await next(page);
+    },
+    'done': finish,
+  },
 };
 
 test.beforeEach(async ({ page }) => { await page.setViewportSize({ width: 1400, height: 900 }); await F.openFmIDE(page); });
@@ -138,8 +276,9 @@ for(const t of T){
     await page.locator(`#helpPanel .help-tutorial[data-tutorial="${t.id}"] .help-tutorial-start`).click();
     await expect(card(page)).toBeVisible();
     await expect(page.locator('#helpPanel')).toBeHidden();
-    expect(await page.evaluate(() => fm.canvases().map(c => c.name))).toEqual(['Practice']);
-    expect(await page.evaluate(() => fm.nodes().length)).toBe(0);
+    // A practice model: the tutorial's start (H3b), or one empty canvas.
+    expect(await page.evaluate(() => fm.canvases().map(c => c.name))).toEqual(t.start ? t.start.canvases.map(c => c.name) : ['Practice']);
+    expect(await page.evaluate(() => fm.nodes().length)).toBe(t.start ? t.start.canvases[0].nodes.length : 0);
     for(let i = 0; i < t.steps.length; i++){
       const s = t.steps[i];
       await expect(card(page)).toHaveAttribute('data-step', s.id);
@@ -200,6 +339,48 @@ test('the tutorials\' ▶ stay enabled when the Help panel refreshes its command
   await page.locator('#helpPanel .help-search').fill('align left');
   await page.evaluate(() => fm.select('@all'));
   await expect(run).toBeEnabled();                                  // commands still follow what can run
+});
+
+test.describe('your library after a tutorial', () => {
+  const lib = (page) => page.evaluate(() => ({ functions: fm.listFunctions().map(f => f.name) }));
+  async function writeMargin(page, keep){
+    await page.keyboard.press('F1');
+    await page.locator('#helpPanel .help-tutorial[data-tutorial="functions"] .help-tutorial-start').click();
+    await next(page);
+    await ACTIONS.functions.write(page);
+    await expect(card(page)).toHaveAttribute('data-step', 'insert');
+    for(let i = 0; i < 10 && await card(page).locator('.tutorial-skip').count(); i++) await card(page).locator('.tutorial-skip').click();
+    const box = card(page).locator('.tutorial-keep input');
+    await expect(card(page).locator('.tutorial-keep')).toContainText('function "Margin"');
+    await expect(box).not.toBeChecked();
+    if(keep) await box.check();
+    await finish(page);
+  }
+  test('what a tutorial saved is taken out of your library at the end, unless Keep is ticked', async ({ page }) => {
+    expect((await lib(page)).functions).toEqual([]);
+    await writeMargin(page, false);
+    expect((await lib(page)).functions).toEqual([]);
+    await writeMargin(page, true);
+    expect((await lib(page)).functions).toEqual(['Margin']);
+  });
+  test('exiting early always takes it back out', async ({ page }) => {
+    await page.keyboard.press('F1');
+    await page.locator('#helpPanel .help-tutorial[data-tutorial="templates"] .help-tutorial-start').click();
+    await next(page);
+    await ACTIONS.templates.save(page);
+    await expect(card(page)).toHaveAttribute('data-step', 'add');
+    await F.topDialog(page).locator('button', { hasText: /^Close$/ }).click();
+    await card(page).locator('.tutorial-exit').click();
+    await page.evaluate(() => fm.command('openTemplates'));
+    await expect(F.topDialog(page)).toContainText('No templates yet');
+  });
+  test('a tutorial with a start model begins from it', async ({ page }) => {
+    await page.keyboard.press('F1');
+    await page.locator('#helpPanel .help-tutorial[data-tutorial="functions"] .help-tutorial-start').click();
+    expect(await page.evaluate(() => fm.canvases().map(c => c.name))).toEqual(['Practice']);
+    expect(await page.evaluate(() => fm.nodes().map(n => n.text).sort())).toEqual(['Cost\n60', 'Revenue\n100']);
+    await card(page).locator('.tutorial-exit').click();
+  });
 });
 
 test.describe('practice mode', () => {

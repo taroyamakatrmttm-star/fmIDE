@@ -2,6 +2,13 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Four more tutorials (step 10, phase H3b)
+- **Blocks: build once, use many times**, **Templates: save a canvas and reuse it**, **Your own functions** and **From fmIDE to Excel** join the first two, in the Help panel's Tutorials group and the Command Launcher.
+- Some tutorials start from a small ready-made model.
+- **Your library is looked after:** a template or function a tutorial saves is taken back out when you finish, unless you tick **Keep what I saved in my library** on the last step (exiting early always takes it out).
+- The To Excel tutorial downloads the practice model, opens ExcelExporter and says what to do there.
+- No file format changed.
+
 ## Tutorials and a welcome card (step 10, phase H3a)
 - **Guided tutorials:** *Your first model* (price × quantity = revenue) and *Time: periods and last period* (a balance carried forward over five periods). A card in the corner shows one step at a time, a pulsing ring shows what to press, and each step moves on by itself once you have done it. Start them from the top of the Help panel (F1) or the Command Launcher.
 - **Your work is never touched:** a tutorial runs on a practice canvas. Your model, undo history and document are set aside and come back exactly as they were when you finish or exit, and autosave pauses meanwhile, so even a crash brings back your own work. Save, Open and the like are refused while practising; the last step offers **Download what I built**.
