@@ -21,6 +21,11 @@
 // new pack never makes the app say that a new version is ready. The build never fetches
 // anything: without the folder, the site simply has no catalogue.
 //
+// Every site also gets its help pages, /help (tools/build-help.js; step 10, phase H4a): the
+// apps' help topics and tutorials as plain pages with no JavaScript. Like the catalogue, they
+// are added after the version is worked out and are not in the offline copy (the apps carry
+// their own help); a topic naming a command or topic that doesn't exist stops the build.
+//
 // Each app has a page, src/<app>/index.html, in which a line consisting only of a marker
 // is replaced by content:
 //   <!-- build:css styles.css -->   the contents of that file
@@ -28,8 +33,9 @@
 //   <!-- build:fmide-address -->    a <meta name="fmide-address"> giving fmIDE's address
 //                                   next to the page: fmIDE.html in apps/, the site's
 //                                   front page (./) in site/ (ExcelExporter's "Back to fmIDE")
-// Inside a .js piece, a line consisting only of an include marker pulls in shared code
-// that both apps use (src/shared/, path relative to src/):
+// Inside a .js piece, a line consisting only of an include marker pulls in another file,
+// path relative to src/: shared code that both apps use (src/shared/), or an app's help text
+// (src/help/, src/excel-exporter/help/):
 //   <indent>// build:include shared/escaping.js
 // The file replaces that line, with <indent> added in front of each non-empty line, so
 // the same shared file sits at the right depth in either app's wrapped function.
@@ -59,6 +65,7 @@ const SITE_HEAD = [
 const FMIDE_ADDRESS_MARKER = /^<!-- build:fmide-address -->\r?$/;
 const fmideAddressMeta = (forSite) => '<meta name="fmide-address" content="' + (forSite ? './' : 'fmIDE.html') + '">\n';
 const LIBRARY = require('./build-library.js');
+const HELP = require('./build-help.js');
 const INCLUDE = /^([ \t]*)\/\/ build:include ([A-Za-z0-9._\/-]+)\r?$/;
 
 function fail(msg){
@@ -134,13 +141,15 @@ function listFiles(dir, base){
 // Writes the whole site into outDir (created; files already there are replaced).
 // opts.library: the community library's folder (default library/; null for none);
 // opts.requireLibrary: throw when there is no library. Throws a LibraryError, writing
-// nothing, when the library fails its check.
+// nothing, when the library fails its check, and a HelpError when the help text names a
+// command or topic that doesn't exist.
 function buildSite(outDir, opts){
   opts = opts || {};
   const libraryDir = LIBRARY.findLibrary(opts.library === undefined ? path.join(ROOT, 'library') : opts.library);
   if(!libraryDir && opts.requireLibrary) throw new LIBRARY.LibraryError('There is no community library (the library/ folder is missing or empty: fetch it with git submodule update --init library).');
   // Checked before anything is written.
   const catalogue = libraryDir ? LIBRARY.buildLibrary(libraryDir) : null;
+  const help = HELP.buildHelp();
   const files = new Map(); // site path → Buffer
   files.set('index.html', Buffer.from(buildApp(APPS[0], true), 'utf8'));
   files.set('ExcelExporter.html', Buffer.from(buildApp(APPS[1], true), 'utf8'));
@@ -159,8 +168,10 @@ function buildSite(outDir, opts){
     .replace("'__VERSION__'", JSON.stringify(version))
     .replace('__FILES__', JSON.stringify(['./'].concat(names.filter(n => n !== '_headers'))));
   files.set('sw.js', Buffer.from(sw, 'utf8'));
-  // The catalogue: after the version and the offline copy's list, so it is part of neither.
+  // The catalogue and the help pages: after the version and the offline copy's list, so they
+  // are part of neither.
   if(catalogue) catalogue.files.forEach((data, name) => files.set(name, data));
+  help.files.forEach((data, name) => files.set(name, data));
   for(const [name, data] of files){
     const target = path.join(outDir, ...name.split('/'));
     fs.mkdirSync(path.dirname(target), { recursive: true });
@@ -194,18 +205,20 @@ function siteHeaders(files){
     block(['/sw.js'], ["Content-Security-Policy: default-src 'self'", 'Cache-Control: no-cache']),
     // The catalogue's own rules, always there (so the version is the same with or without it).
     ...LIBRARY.LIBRARY_HEADERS.map(b => block(b.paths, b.headers)),
+    // The help pages' own rules.
+    ...HELP.HELP_HEADERS.map(b => block(b.paths, b.headers)),
     ''
   ].join('\n');
 }
 
-module.exports = { buildSite, siteHeaders, LibraryError: LIBRARY.LibraryError };
+module.exports = { buildSite, siteHeaders, LibraryError: LIBRARY.LibraryError, HelpError: HELP.HelpError };
 if(require.main === module) main();
 
 // Builds the site, reporting a library that fails (or is missing when required) and exiting.
 function siteOrFail(dir, opts){
   try{ return buildSite(dir, opts); }
   catch(e){
-    if(e instanceof LIBRARY.LibraryError) fail(e.message);
+    if(e instanceof LIBRARY.LibraryError || e instanceof HELP.HelpError) fail(e.message);
     throw e;
   }
 }

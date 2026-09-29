@@ -3,8 +3,10 @@
 // Copyright 2026 Taro Yamaka. Licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/,
 // docs/LICENSE-CC-BY-4.0.txt), unlike the code around it.
 // =====================================================================================
-// Plain data, shown by the Help panel (src/fmide/js/23-help.js) and found by its search and
-// the Command Launcher. Written for people who use fmIDE, in plain English.
+// Plain data, shown by the Help panel (src/fmide/js/01b-help.js) and found by its search and
+// the Command Launcher, and published as the site's help pages, /help (tools/build-help.js).
+// Written for people who use fmIDE, in plain English. Topic and group ids are letters, digits
+// and dashes (they become page addresses).
 //
 //   HELP_GROUPS   — the groups the topics are listed under, in order.
 //   HELP_TOPICS   — { id, group, title, keywords, summary, body }. body is a list of blocks:

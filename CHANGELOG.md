@@ -2,6 +2,13 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Help pages on the site (step 10, phase H4a)
+- The published site has **help pages at `/help`**: every fmIDE help topic, grouped as in the Help panel, each tutorial written out step by step, and every topic on one page (to search with Ctrl+F, or print). ExcelExporter's help is at `/help/excel/`.
+- They are made from the same text as the apps' Help panels, so they can't drift apart. Where a guide names a command, the page says where it is on the ribbon, for example **▭ Add Rectangle (Home tab)**.
+- Plain pages with no JavaScript, under their own strict security policy, like the library's catalogue. They are not part of the app's offline copy, since the apps carry their own help.
+- fmIDE's help text is shared under CC BY 4.0; ExcelExporter's stays ExcelExporter's, and its pages say so.
+- No file format changed.
+
 ## Four more tutorials (step 10, phase H3b)
 - **Blocks: build once, use many times**, **Templates: save a canvas and reuse it**, **Your own functions** and **From fmIDE to Excel** join the first two, in the Help panel's Tutorials group and the Command Launcher.
 - Some tutorials start from a small ready-made model.

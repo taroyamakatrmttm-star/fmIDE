@@ -507,6 +507,20 @@ fmIDE at 1400 × 900. The tutorials (`src/help/fmide-tutorials.js`) are also rea
 - The welcome card shows on the first start, bottom-right, with no dialog backdrop; a window opened over it is above it; F1 still works; the first change to the model closes it; after an autosave and a reload it doesn't show; Help's "Show the welcome card" brings it back.
 - Its choices: the tour starts "Your first model" and closes the card (Exit returns the sample); Explore closes it; Open Help opens the panel; Start blank leaves an empty canvas.
 
+### 34. The site's help pages (`tests/34-help-site.spec.js`; step 10, phase H4a)
+What the build writes under `/help` (`tools/build-help.js`) from the apps' help text, in one site built without a library and served by `tools/pages-server.js`. The help text is also read on its own in Node (`loadHelpSources`), and `buildHelp` is given changed copies of it.
+- The index: "Tutorials", then each group's heading in order; the tutorials' titles and minutes; every topic's title in group order, with its summary; exactly one page per topic and tutorial, plus `all`, `tutorials/`, and ExcelExporter's `excel/`, `excel/all` and a page per topic. A topic's link opens its page. No policy violation.
+- A topic page ("Your first model in five minutes"): its title (`— fmIDE help`), description, summary, as many numbered steps as the topic, `{cmd:addRect}` as "▭ Add Rectangle (Home tab)", the tip with 💡, no `{cmd:` left, the way back to all topics and its group, See also in order (a link opens that topic), Try it linking to its tutorial. A command on no ribbon tab (Remove Duplicate Templates) says "(Command Launcher)".
+- A tutorial page ("Templates"): title, "Tutorial · about 5 minutes", one list item per step in order (`data-step`), commands with their tab, what its practice canvas starts with, how to take it, its topic. A tutorial without a start model says nothing about one; `tutorials/` lists them all.
+- `all`: one article per topic in group order, See also as `#id` links that each find their article.
+- ExcelExporter's help: reached from fmIDE's help; its topics by group; its footer says "All rights reserved" and links its licence, with no CC BY link; a topic page; Open ExcelExporter and fmIDE help lead to them. fmIDE's pages carry the CC BY link and the licence's full text.
+- Every `href` and `src` on every help page answers 200 (the only other site: the CC BY licence).
+- Commands: the command list read from fmIDE's source equals `fm.commands()` (ids and labels); the first ribbon tab holding each command, read from `DEFAULT_RIBBON`, equals what fmIDE draws, tab by tab; Add Rectangle's icon is the ribbon's.
+- Hostile help text (a topic's title, summary, paragraph, tip and step, a group's title, a tutorial's title, summary, minutes, step and start canvas, an ExcelExporter title, each holding `<script>`, `<img onerror>`, quotes and `&`): no script, image, frame or SVG in any page, no handler outside a quoted value, only the build's own links; in the browser the text shows exactly as written.
+- A topic naming a missing command or topic, a topic id `all` or `Bad Id`, a missing group, a tutorial naming a missing topic or command, a `{cmd:}` in ExcelExporter's text, and a repeated ExcelExporter id: `HelpError`, every problem listed, "nothing is published". The real text builds.
+- The security policy: `/help/`, a topic, `all`, `tutorials/`, a tutorial, `excel/`, an ExcelExporter topic, both style sheets and the licence carry exactly the help pages' policy and `nosniff`; `/help` redirects to `/help/`, `/help/aliases.html` to `/help/aliases`; the app's policy is unchanged. A script put into a help page is blocked; the style sheets apply.
+- Out of the app: no help file in the service worker's list; at 390 px wide no help page scrolls sideways.
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.

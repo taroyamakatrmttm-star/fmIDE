@@ -15,9 +15,8 @@ const { finger, watchPointerTypes, centre } = require('./helpers/touch');
 const SRC = path.join(__dirname, '..', 'src');
 const read = (...p) => fs.readFileSync(path.join(SRC, ...p), 'utf8');
 const FM = vm.runInContext(read('shared', 'operators.js') + read('help', 'fmide-help.js') + '\n;({ HELP_TOPICS })', vm.createContext({}));
-// ExcelExporter's topics: the two lists at the top of its help piece.
-const eeSource = read('excel-exporter', 'js', '09d-help.js');
-const EE = vm.runInContext(eeSource.slice(eeSource.indexOf('const EXCEL_HELP_GROUPS'), eeSource.indexOf('const excelHelp'))
+// ExcelExporter's topics: its help text, data of its own (src/excel-exporter/help/, since H4a).
+const EE = vm.runInContext(read('excel-exporter', 'help', 'excel-help.js')
   + '\n;({ groups: EXCEL_HELP_GROUPS, topics: EXCEL_HELP_TOPICS })', vm.createContext({}));
 const tip = (page) => page.locator('#commandTip');
 const panel = (page) => page.locator('#helpPanel');

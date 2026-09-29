@@ -7684,8 +7684,8 @@ backLink.addEventListener('click', (ev) => {
 // ============================================================
 // The same Help panel as fmIDE (src/shared/help-panel.js), with ExcelExporter's own topics:
 // ❓ Help at the top right, F1, or the "?" beside each panel's heading, which opens that
-// panel's topic. ExcelExporter has no command list, so its topics name buttons in words.
-// This text belongs to ExcelExporter (its licence), unlike fmIDE's help text.
+// panel's topic. The topics are data in src/excel-exporter/help/excel-help.js (ExcelExporter's
+// own, under its licence, unlike fmIDE's help text), also published as the site's /help/excel/.
 // =====================================================================================
 // The Help panel (build step 10; docs/step10-help.md) — shared by fmIDE and ExcelExporter.
 // =====================================================================================
@@ -7964,6 +7964,19 @@ function createHelpPanel(options){
     element: () => panel };
 }
 
+// =====================================================================================
+// ExcelExporter's help text (build step 10, phases H2 and H4; docs/step10-help.md).
+// Copyright (c) 2026 Taro Yamaka. All rights reserved. Part of ExcelExporter and under its
+// licence (src/excel-exporter/LICENSE), unlike fmIDE's help text (src/help/, CC BY 4.0).
+// =====================================================================================
+// Plain data, shown by ExcelExporter's Help panel (js/09d-help.js, which pulls it in with
+// build:include) and published as the site's help pages under /help/excel/ (tools/build-help.js).
+// ExcelExporter has no command list, so its topics name buttons in words.
+//
+//   EXCEL_HELP_GROUPS — the groups the topics are listed under, in order.
+//   EXCEL_HELP_TOPICS — { id, group, title, keywords, summary, body }, as fmIDE's topics:
+//                       { p } a paragraph · { steps: [...] } numbered · { tip } · { see: [ids] }.
+//                       Topic ids are letters, digits and dashes (they become page addresses).
 const EXCEL_HELP_GROUPS = [
   { id: 'start',    title: 'Getting started' },
   { id: 'layout',   title: 'Arranging the workbook' },

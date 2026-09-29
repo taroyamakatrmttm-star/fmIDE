@@ -38,12 +38,13 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | `npm run test:placement` | where new nodes go (never on top of others) and the Macro Builder's "Run selected step" moving on |
 | `npm run test:windows` | resizable windows (the size kept in your own settings, never taken from a file) and the Templates list as a tree |
 | `npm run test:touch-excel` | ExcelExporter's Tree view by finger: the row menu by press and hold, choosing several rows, double-tap to rename; a tap on "← Back to fmIDE" |
-| `npm run test:help` | Help (step 10): groups 31, 32 and 33 — the panel, a sentence for every command, topics and their links, search, the Command Launcher, the ribbon's tips, the "?" on windows, Help in the touch menu, ExcelExporter's Help panel, every tutorial played through, practice mode, the welcome card, tablet size, no network |
+| `npm run test:help` | Help (step 10): groups 31 to 34 — the panel, a sentence for every command, topics and their links, search, the Command Launcher, the ribbon's tips, the "?" on windows, Help in the touch menu, ExcelExporter's Help panel, every tutorial played through, practice mode, the welcome card, tablet size, no network, and the site's help pages |
+| `npm run test:help-site` | the site's help pages the build writes under `/help` (pages, links, command names and tabs against fmIDE, escaping, their security policy) |
 | `npx playwright test -g "Tree view"` | tests whose name matches |
 
 After a failure, `npx playwright show-report` opens the report, with a trace for each failed test.
 
-Every test runs offline. Each app is served from a fake origin (`http://local.test/`), every other request is blocked, and a test fails if an app tried to reach the network. The site's tests (groups 12, 25, 26) serve a freshly built site from this machine and fail if a page reaches any other address.
+Every test runs offline. Each app is served from a fake origin (`http://local.test/`), every other request is blocked, and a test fails if an app tried to reach the network. The site's tests (groups 12, 25, 26, 34) serve a freshly built site from this machine and fail if a page reaches any other address.
 
 ## Snapshots
 
@@ -64,7 +65,7 @@ Review the snapshot diff before committing: it is the record of what the change 
 ## Layout
 
 ```
-0-smoke.spec.js … 33-tutorials.spec.js     one file per group in SPEC.md (6 and 7 split per app)
+0-smoke.spec.js … 34-help-site.spec.js    one file per group in SPEC.md (6 and 7 split per app)
 helpers/apps.js       the offline fixture: serves the apps, blocks and counts other requests
 helpers/excel.js      load a model, toggle options, capture the workbook (window.__wb + real .xlsx bytes)
 helpers/soffice.js    find LibreOffice, recalculate workbooks, read values
