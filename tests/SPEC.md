@@ -466,6 +466,20 @@ ExcelExporter's Tree view in Chromium with a touchscreen at 1024 × 768, sample 
 - A right-click opens the menu at once, selects just that row, and has no Add to selection / Select from the last row items.
 - A tap on "← Back to fmIDE" in the window fmIDE opened closes that window (the tap seen as `touch`); fmIDE stays open.
 
+### 31. Help (`tests/31-help.spec.js`; step 10, phase H1)
+fmIDE at 1400 × 900. The help text (`src/help/fmide-help.js`) is also read on its own in Node, with the operator catalogue, to check it against the app's commands (`fm.commands()`).
+- F1 (from the canvas, and again from the panel's search box), ❓ beside the ribbon's search box (`#rbHelp`), View → Help and `fm.command('openHelp')` open and close `#helpPanel`; Esc closes it from inside; the search box has the focus when it opens; the command's shortcut is F1.
+- It is no dialog (no `.modal-overlay`); the canvas narrows beside it; a rectangle can be added and Ctrl+Z undoes it with the panel open.
+- Every command (the Insert Operator ones through their operator's sentence) has a plain sentence; `COMMAND_HELP` and `OPERATOR_HELP` name nothing that doesn't exist.
+- Topic ids are unique, every topic has a known group, a title, a summary and a body; every `{cmd:…}` names a command and every "see" a topic; every group has a topic; the panel lists every topic under its group's heading.
+- A topic shows its numbered steps as text (no `{cmd:` markers); its Add Rectangle button adds a rectangle; See also opens another topic and Back returns, twice back to the list.
+- Search: "period shift" puts that topic first; "template" finds the Templates topic and the Templates command with its sentence; Align Left's ▶ is off with nothing selected and on with everything selected; New Canvas's ▶ adds a canvas; a search with no match says so; clearing it shows the list.
+- The Command Launcher's placeholder names help topics; "period shift" shows the topic in category Help; choosing it closes the launcher and opens the panel at that topic.
+- Add Rectangle's tooltip is its name, then its sentence on the next line; exactly one Insert-tab button ends with the if operator's sentence.
+- A customised ribbon (workspace without `helpAdded`) gets the Help group after the group holding Keyboard Shortcuts; with `helpAdded: true` it doesn't; ❓ is still there.
+- At 1024 × 768 the panel fits the screen and the canvas keeps more than 500 px; in a 600 px window the panel takes the full width.
+- No request is made while the panel is opened, searched, a topic read and closed.
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.

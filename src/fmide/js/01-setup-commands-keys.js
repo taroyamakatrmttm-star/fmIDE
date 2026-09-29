@@ -146,6 +146,7 @@
     { id:'openShortcuts',label:'Keyboard Shortcuts',   icon:'⌨', category:'View', defaultShortcut:null, action:() => showShortcutsPicker() },
     { id:'toggleRibbon',label:'Collapse / Expand Ribbon', icon:'⌃', category:'View', defaultShortcut:'Mod+F1', action:() => setRibbonCollapsed(!ribbonState.collapsed) },
     { id:'customizeRibbon',label:'Customize Ribbon & KeyTips', icon:'⚙', category:'View', defaultShortcut:null, action:() => showCustomizeRibbon() },
+    { id:'openHelp',    label:'Help',                  icon:'❓', category:'View', defaultShortcut:'F1', action:() => toggleHelp() },
 
     { id:'openMacros',  label:'Macro Builder',         icon:'🧩', category:'Macros', defaultShortcut:null, action:() => showMacroBuilder() },
     { id:'toggleRecord',label:'Record Macro',          icon:'⏺', category:'Macros', defaultShortcut:null,

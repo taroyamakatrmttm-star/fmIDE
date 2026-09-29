@@ -130,6 +130,11 @@
       items.push({ key:'act:' + d.name, icon: d.icon || 'ƒ', label: d.label + '…', search: d.label + ' ' + d.name + ' ' + d.category,
         category: 'Action · ' + d.category, enabled: true, action: d });
     });
+    // Help topics (step 10): choosing one opens the Help panel at it.
+    HELP_TOPICS.forEach(t => {
+      items.push({ key:'help:' + t.id, icon:'📖', label: t.title, search: 'help ' + t.title + ' ' + (t.keywords || '') + ' ' + (t.summary || ''),
+        category:'Help', enabled: true, run: () => openHelp(t.id) });
+    });
     MACROS.forEach(m => {
       items.push({ key:'mac:' + m.id, icon:'⚡', label: m.name, search: 'macro ' + m.name + ' ' + (m.description || ''),
         category:'Macro', shortcut: shortcutBindings['macro:' + m.id] || '', enabled: true,
@@ -206,7 +211,7 @@
     overlay.addEventListener('mousedown', ev => { if(ev.target === overlay) close(); });
 
     const input = el('input', 'lq');
-    input.placeholder = 'Type a command, action or macro…';
+    input.placeholder = 'Type a command, action, macro or help topic…';
     input.setAttribute('autocomplete', 'off');
     input.spellcheck = false;
     const res = el('div', 'lres');
@@ -229,7 +234,7 @@
       if(!q){
         const recent = launcherRecent.map(k => all.find(i => i.key === k)).filter(Boolean);
         const rest = all.filter(i => !recent.includes(i));
-        const catRank = c => { const base = c.replace(/^Action · /, ''); const r = CATEGORY_ORDER.indexOf(base); return (c.startsWith('Action') ? 100 : 0) + (c === 'Macro' ? 50 : 0) + (r < 0 ? 40 : r); };
+        const catRank = c => { const base = c.replace(/^Action · /, ''); const r = CATEGORY_ORDER.indexOf(base); return (c.startsWith('Action') ? 100 : 0) + (c === 'Macro' ? 50 : 0) + (c === 'Help' ? 60 : 0) + (r < 0 ? 40 : r); };
         rest.sort((a, b) => catRank(a.category) - catRank(b.category));
         shown = recent.concat(rest).map(i => ({ item: i, idx: [] }));
         if(recent.length) res.appendChild(el('div', 'lsec', 'Recently used'));
@@ -246,7 +251,7 @@
           const onLabel = fuzzyMatch(q, i.label);
           return { item: i, score: m.score + (i.enabled ? 0 : -300) + (launcherRecent.includes(i.key) ? 30 : 0), idx: onLabel ? onLabel.idx : [] };
         }).filter(Boolean).sort((a, b) => b.score - a.score);
-        if(shown.length === 0) res.appendChild(el('div', 'lsec', 'No matching commands'));
+        if(shown.length === 0) res.appendChild(el('div', 'lsec', 'No matching commands or help topics'));
         shown.forEach((s, k) => res.appendChild(rowEl(s, k)));
       }
       selIdx = Math.min(selIdx, Math.max(0, shown.length - 1));

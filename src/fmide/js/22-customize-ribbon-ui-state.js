@@ -307,6 +307,7 @@
       operatorsE1Added: true, // E1b: the new operators in the Compare and Excel Functions groups
       libraryPacksAdded: true, // 8a: Open Library Pack… and Save as Library Pack… in the File tab's Library group
       libraryBrowseAdded: true, // 8d: Browse Library… in the same group
+      helpAdded: true, // step 10: the Help group at the end of the View tab
       libraryAuthor,
       windowSizes: cleanWindowSizes(windowSizes), templateGroupsClosed: templateGroupsClosed.slice(0, 200)
     };
@@ -381,6 +382,18 @@
     const at = g.items.findIndex(it => it && it.cmd === 'openLibraryPack');
     g.items.splice(at < 0 ? g.items.length : at, 0, { cmd: 'browseLibrary' });
   }
+  // One-time update (step 10) of a customised ribbon: the Help group joins the end of the tab
+  // holding Keyboard Shortcuts (the View tab), or else the View tab. A ribbon with neither, or
+  // that already has Help, is left alone (❓ beside the search box and F1 still open it); a
+  // group removed afterwards stays removed (this runs once).
+  function addHelpGroupToRibbon(){
+    const tabs = ribbonState.config.tabs.filter(t => t && Array.isArray(t.groups));
+    if(tabs.some(t => t.groups.some(g => g && Array.isArray(g.items) && g.items.some(it => it && it.cmd === 'openHelp')))) return;
+    const tab = tabs.find(t => t.groups.some(g => g && Array.isArray(g.items) && g.items.some(it => it && it.cmd === 'openShortcuts')))
+      || tabs.find(t => t.id === 'view');
+    if(!tab) return;
+    tab.groups.push(cloneData(HELP_RIBBON_GROUP));
+  }
   // fromImport: a workspace file (maybe someone else's) — its author name for library packs
   // is not taken over; only your own autosave remembers yours.
   function applyUiPayload(ui, fromImport){
@@ -395,6 +408,7 @@
       if(ui.operatorsE1Added !== true) addE1OperatorsToRibbon();
       if(ui.libraryPacksAdded !== true) addLibraryPackCommandsToRibbon();
       if(ui.libraryBrowseAdded !== true) addLibraryBrowseCommandToRibbon();
+      if(ui.helpAdded !== true) addHelpGroupToRibbon();
     }
     if(!fromImport && typeof ui.libraryAuthor === 'string') libraryAuthor = ui.libraryAuthor.slice(0, LIBRARY_PACK_LIMITS.author);
     // Window sizes and closed template groups belong to this screen and person: never from

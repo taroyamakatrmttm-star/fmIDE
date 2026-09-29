@@ -38,6 +38,7 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | `npm run test:placement` | where new nodes go (never on top of others) and the Macro Builder's "Run selected step" moving on |
 | `npm run test:windows` | resizable windows (the size kept in your own settings, never taken from a file) and the Templates list as a tree |
 | `npm run test:touch-excel` | ExcelExporter's Tree view by finger: the row menu by press and hold, choosing several rows, double-tap to rename; a tap on "← Back to fmIDE" |
+| `npm run test:help` | The Help panel (step 10): opening and closing, a sentence for every command, topics and their links, search, the Command Launcher, tooltips, the ribbon, tablet size, no network |
 | `npx playwright test -g "Tree view"` | tests whose name matches |
 
 After a failure, `npx playwright show-report` opens the report, with a trace for each failed test.
@@ -63,7 +64,7 @@ Review the snapshot diff before committing: it is the record of what the change 
 ## Layout
 
 ```
-0-smoke.spec.js … 30-touch-excel.spec.js     one file per group in SPEC.md (6 and 7 split per app)
+0-smoke.spec.js … 31-help.spec.js     one file per group in SPEC.md (6 and 7 split per app)
 helpers/apps.js       the offline fixture: serves the apps, blocks and counts other requests
 helpers/excel.js      load a model, toggle options, capture the workbook (window.__wb + real .xlsx bytes)
 helpers/soffice.js    find LibreOffice, recalculate workbooks, read values

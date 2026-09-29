@@ -178,6 +178,59 @@
     font-size:12px; padding:6px 12px; border-radius:8px; pointer-events:none; box-shadow:0 6px 20px rgba(0,0,0,.35);
   }
 
+  /* ---------- Help panel (step 10) ---------- */
+  /* Docked on the right, beside the canvas (which narrows), not over it: you can keep working. */
+  :root{ --help-w: 380px; }
+  .help-panel{
+    display:none; position:fixed; top:calc(var(--ribbon-h) + 40px); right:0; bottom:0; width:var(--help-w); z-index:60;
+    flex-direction:column; background:#fff; border-left:1px solid #d1d5db; box-shadow:-6px 0 18px rgba(15,23,42,.08); color:#1e293b;
+  }
+  .help-panel.open{ display:flex; }
+  body.help-open #viewport, body.help-open #templateUpdateBanner{ right:var(--help-w); }
+  .help-head{ display:flex; align-items:center; padding:8px 10px 6px 14px; }
+  .help-title{ flex:1; font-weight:700; font-size:14px; }
+  .help-close{ border:none; background:none; font-size:20px; line-height:1; width:30px; height:30px; border-radius:6px; cursor:pointer; color:#475569; }
+  .help-close:hover{ background:#f1f5f9; }
+  .help-search{ margin:0 12px 8px; padding:7px 10px; border:1px solid #cbd5e1; border-radius:8px; font:inherit; font-size:13px; }
+  .help-search:focus{ outline:2px solid #a5b4fc; border-color:#6366f1; }
+  .help-body{ flex:1; overflow-y:auto; padding:2px 14px 18px; font-size:13px; line-height:1.5; }
+  .help-intro, .help-empty{ color:#475569; margin:4px 0 8px; }
+  .help-group{ font-size:10.5px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin:14px 0 4px; }
+  .help-topic-link{
+    display:block; width:100%; text-align:left; border:1px solid transparent; background:none; border-radius:8px;
+    padding:6px 8px; margin:0 -8px; cursor:pointer; font:inherit; color:inherit; box-sizing:content-box;
+  }
+  .help-topic-link:hover, .help-topic-link:focus-visible{ background:#eef2ff; border-color:#c7d2fe; }
+  .help-topic-link-title{ display:block; font-weight:600; color:#3730a3; }
+  .help-topic-link-summary{ display:block; font-size:12px; color:#64748b; }
+  .help-nav{ display:flex; align-items:center; gap:8px; margin:2px 0 6px; }
+  .help-back{ border:1px solid #cbd5e1; background:#fff; border-radius:6px; padding:3px 9px; cursor:pointer; font:inherit; font-size:12px; }
+  .help-back:hover{ background:#f8fafc; }
+  .help-crumb{ font-size:11.5px; color:#64748b; }
+  .help-topic-title{ font-size:17px; margin:4px 0 2px; color:#0f172a; }
+  .help-summary{ color:#475569; margin:0 0 8px; font-style:italic; }
+  .help-p{ margin:0 0 8px; }
+  .help-steps{ margin:0 0 10px; padding-left:22px; }
+  .help-steps li{ margin-bottom:5px; }
+  .help-tip{ background:#fefce8; border:1px solid #fde68a; border-radius:8px; padding:6px 9px; margin:0 0 10px; }
+  .help-cmd{
+    display:inline-flex; align-items:center; gap:4px; border:1px solid #c7d2fe; background:#eef2ff; color:#3730a3; border-radius:6px;
+    padding:0 6px; margin:0 1px; font:inherit; font-size:12.5px; font-weight:600; cursor:pointer; vertical-align:baseline;
+  }
+  .help-cmd:hover{ background:#e0e7ff; }
+  .help-command{ display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid #f1f5f9; }
+  .help-command-text{ flex:1; min-width:0; }
+  .help-command-name{ display:flex; align-items:center; gap:6px; font-weight:600; }
+  .help-command-sentence{ font-size:12px; color:#64748b; }
+  .help-kbd{ margin-left:auto; font-family:Menlo,Consolas,monospace; font-size:10.5px; color:#6b7280; background:#f3f4f6; border:1px solid #e5e7eb; border-radius:5px; padding:0 5px; font-weight:400; }
+  .help-run{ flex:none; width:30px; height:28px; border:1px solid #c7d2fe; background:#eef2ff; color:#3730a3; border-radius:6px; cursor:pointer; }
+  .help-run:disabled{ opacity:.4; cursor:default; }
+  /* A narrow window: the panel covers the canvas instead of squeezing it. */
+  @media (max-width: 700px){
+    .help-panel{ width:100%; border-left:none; }
+    body.help-open #viewport, body.help-open #templateUpdateBanner{ right:0; }
+  }
+
   /* ---------- Command Launcher ---------- */
   .launcher-overlay{ position:fixed; inset:0; z-index:250; background:rgba(15,23,42,.25); }
   .launcher{

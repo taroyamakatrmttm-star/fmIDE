@@ -327,7 +327,9 @@ apps.test.describe('Back to fmIDE', () => {
   apps.test('in its own window, it closes that window and fmIDE is as it was', async ({ page, pageErrors }) => {
     const popup = await openFromFmide(page);
     await expect(back(popup)).toHaveText('← Back to fmIDE');
-    await Promise.all([popup.waitForEvent('close'), back(popup).click()]);
+    // The window closes inside the click, sometimes before Playwright's click has finished its
+    // own steps: that click then rejects with "closed". The window closing is what is checked.
+    await Promise.all([popup.waitForEvent('close'), back(popup).click().catch(e => { if(!/closed/i.test(e.message)) throw e; })]);
     expect(await rectNames(page)).toEqual(['Kept']);
     expect(pageErrors).toEqual([]);
   });

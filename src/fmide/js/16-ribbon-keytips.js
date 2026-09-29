@@ -11,6 +11,8 @@
   // Your own functions (step 7, phase D2), on the Insert tab.
   const FUNCTIONS_RIBBON_GROUP = { id:'myFunctions', label:'My Functions', items:[
     { cmd:'openFunctions', size:'large' }, { cmd:'insertFunction' }, { cmd:'updateFunction' }, { cmd:'importFunctions' } ] };
+  // Help (step 10), at the end of the View tab.
+  const HELP_RIBBON_GROUP = { id:'help', label:'Help', items:[ { cmd:'openHelp', size:'large' } ] };
   const DEFAULT_RIBBON = {
     qat: ['undo', 'redo', 'evaluate', 'openLauncher'],
     tabs: [
@@ -52,6 +54,7 @@
       { id:'view', label:'View', keytip:'W', groups:[
         { label:'Commands', items:[ { cmd:'openLauncher', size:'large' }, { cmd:'openShortcuts', size:'large' } ] },
         { label:'Ribbon', items:[ { cmd:'toggleRibbon' }, { cmd:'customizeRibbon' } ] },
+        cloneData(HELP_RIBBON_GROUP),
       ]},
       { id:'macros', label:'Macros', keytip:'X', groups:[
         { label:'Macros', items:[ { cmd:'openMacros', size:'large' }, { cmd:'toggleRecord', size:'large' }, { cmd:'runLastMacro' } ] },
@@ -109,9 +112,11 @@
     return e;
   }
 
+  // Name and shortcut, then the command's plain sentence (step 10) on the next line.
   function commandTitle(c){
     const sc = shortcutBindings[c.id];
-    return commandLabel(c) + (sc ? `  (${prettyCombo(sc)})` : '');
+    const sentence = commandHelpText(c);
+    return commandLabel(c) + (sc ? `  (${prettyCombo(sc)})` : '') + (sentence ? '\n' + sentence : '');
   }
 
   let ribbonArrowsUpdate = null; // addRibbonScrollArrows' update, while the ribbon is open
@@ -175,6 +180,12 @@
     search.title = 'Command Launcher — type a command name and press Enter';
     search.addEventListener('click', () => openLauncher());
     right.appendChild(search);
+    const helpBtn = el('button', 'rb-iconbtn rb-help', '❓');
+    helpBtn.type = 'button';
+    helpBtn.id = 'rbHelp';
+    helpBtn.title = 'Help' + (shortcutBindings.openHelp ? ` (${prettyCombo(shortcutBindings.openHelp)})` : '') + '\nPlain-English guides and a help search';
+    helpBtn.addEventListener('click', () => { closeRibbonFlyout(); toggleHelp(); });
+    right.appendChild(helpBtn);
     const colBtn = el('button', 'rb-iconbtn', ribbonState.collapsed ? '⌄' : '⌃');
     colBtn.type = 'button';
     colBtn.title = (ribbonState.collapsed ? 'Pin the ribbon open' : 'Collapse the ribbon') + (shortcutBindings.toggleRibbon ? ` (${prettyCombo(shortcutBindings.toggleRibbon)})` : '');
@@ -292,6 +303,7 @@
       if(c.dynLabel) rb.el.title = commandTitle(c);
       rb.el.classList.toggle('active-choice', c.id === 'toggleRecord' && recorder.active);
     });
+    refreshHelpCommands();
     const pill = document.getElementById('rbRecPill');
     if(pill){
       pill.classList.toggle('show', recorder.active);

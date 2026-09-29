@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- Generated from src/ by `npm run build` — edit src/, not this file. -->
-<!-- fmIDE — Copyright 2026 Taro Yamaka. Licensed under the Apache License 2.0: see LICENSE and NOTICE (LICENSE.txt, NOTICE.txt in the web app). -->
+<!-- fmIDE — Copyright 2026 Taro Yamaka. Licensed under the Apache License 2.0: see LICENSE and NOTICE (LICENSE.txt, NOTICE.txt in the web app). Its help text (src/help/) is licensed under CC BY 4.0, https://creativecommons.org/licenses/by/4.0/ -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -185,6 +185,59 @@
   .keytip-hint{
     position:fixed; left:50%; bottom:18px; transform:translateX(-50%); background:rgba(17,24,39,.94); color:#e5e7eb;
     font-size:12px; padding:6px 12px; border-radius:8px; pointer-events:none; box-shadow:0 6px 20px rgba(0,0,0,.35);
+  }
+
+  /* ---------- Help panel (step 10) ---------- */
+  /* Docked on the right, beside the canvas (which narrows), not over it: you can keep working. */
+  :root{ --help-w: 380px; }
+  .help-panel{
+    display:none; position:fixed; top:calc(var(--ribbon-h) + 40px); right:0; bottom:0; width:var(--help-w); z-index:60;
+    flex-direction:column; background:#fff; border-left:1px solid #d1d5db; box-shadow:-6px 0 18px rgba(15,23,42,.08); color:#1e293b;
+  }
+  .help-panel.open{ display:flex; }
+  body.help-open #viewport, body.help-open #templateUpdateBanner{ right:var(--help-w); }
+  .help-head{ display:flex; align-items:center; padding:8px 10px 6px 14px; }
+  .help-title{ flex:1; font-weight:700; font-size:14px; }
+  .help-close{ border:none; background:none; font-size:20px; line-height:1; width:30px; height:30px; border-radius:6px; cursor:pointer; color:#475569; }
+  .help-close:hover{ background:#f1f5f9; }
+  .help-search{ margin:0 12px 8px; padding:7px 10px; border:1px solid #cbd5e1; border-radius:8px; font:inherit; font-size:13px; }
+  .help-search:focus{ outline:2px solid #a5b4fc; border-color:#6366f1; }
+  .help-body{ flex:1; overflow-y:auto; padding:2px 14px 18px; font-size:13px; line-height:1.5; }
+  .help-intro, .help-empty{ color:#475569; margin:4px 0 8px; }
+  .help-group{ font-size:10.5px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin:14px 0 4px; }
+  .help-topic-link{
+    display:block; width:100%; text-align:left; border:1px solid transparent; background:none; border-radius:8px;
+    padding:6px 8px; margin:0 -8px; cursor:pointer; font:inherit; color:inherit; box-sizing:content-box;
+  }
+  .help-topic-link:hover, .help-topic-link:focus-visible{ background:#eef2ff; border-color:#c7d2fe; }
+  .help-topic-link-title{ display:block; font-weight:600; color:#3730a3; }
+  .help-topic-link-summary{ display:block; font-size:12px; color:#64748b; }
+  .help-nav{ display:flex; align-items:center; gap:8px; margin:2px 0 6px; }
+  .help-back{ border:1px solid #cbd5e1; background:#fff; border-radius:6px; padding:3px 9px; cursor:pointer; font:inherit; font-size:12px; }
+  .help-back:hover{ background:#f8fafc; }
+  .help-crumb{ font-size:11.5px; color:#64748b; }
+  .help-topic-title{ font-size:17px; margin:4px 0 2px; color:#0f172a; }
+  .help-summary{ color:#475569; margin:0 0 8px; font-style:italic; }
+  .help-p{ margin:0 0 8px; }
+  .help-steps{ margin:0 0 10px; padding-left:22px; }
+  .help-steps li{ margin-bottom:5px; }
+  .help-tip{ background:#fefce8; border:1px solid #fde68a; border-radius:8px; padding:6px 9px; margin:0 0 10px; }
+  .help-cmd{
+    display:inline-flex; align-items:center; gap:4px; border:1px solid #c7d2fe; background:#eef2ff; color:#3730a3; border-radius:6px;
+    padding:0 6px; margin:0 1px; font:inherit; font-size:12.5px; font-weight:600; cursor:pointer; vertical-align:baseline;
+  }
+  .help-cmd:hover{ background:#e0e7ff; }
+  .help-command{ display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid #f1f5f9; }
+  .help-command-text{ flex:1; min-width:0; }
+  .help-command-name{ display:flex; align-items:center; gap:6px; font-weight:600; }
+  .help-command-sentence{ font-size:12px; color:#64748b; }
+  .help-kbd{ margin-left:auto; font-family:Menlo,Consolas,monospace; font-size:10.5px; color:#6b7280; background:#f3f4f6; border:1px solid #e5e7eb; border-radius:5px; padding:0 5px; font-weight:400; }
+  .help-run{ flex:none; width:30px; height:28px; border:1px solid #c7d2fe; background:#eef2ff; color:#3730a3; border-radius:6px; cursor:pointer; }
+  .help-run:disabled{ opacity:.4; cursor:default; }
+  /* A narrow window: the panel covers the canvas instead of squeezing it. */
+  @media (max-width: 700px){
+    .help-panel{ width:100%; border-left:none; }
+    body.help-open #viewport, body.help-open #templateUpdateBanner{ right:0; }
   }
 
   /* ---------- Command Launcher ---------- */
@@ -1207,6 +1260,7 @@
     { id:'openShortcuts',label:'Keyboard Shortcuts',   icon:'⌨', category:'View', defaultShortcut:null, action:() => showShortcutsPicker() },
     { id:'toggleRibbon',label:'Collapse / Expand Ribbon', icon:'⌃', category:'View', defaultShortcut:'Mod+F1', action:() => setRibbonCollapsed(!ribbonState.collapsed) },
     { id:'customizeRibbon',label:'Customize Ribbon & KeyTips', icon:'⚙', category:'View', defaultShortcut:null, action:() => showCustomizeRibbon() },
+    { id:'openHelp',    label:'Help',                  icon:'❓', category:'View', defaultShortcut:'F1', action:() => toggleHelp() },
 
     { id:'openMacros',  label:'Macro Builder',         icon:'🧩', category:'Macros', defaultShortcut:null, action:() => showMacroBuilder() },
     { id:'toggleRecord',label:'Record Macro',          icon:'⏺', category:'Macros', defaultShortcut:null,
@@ -1350,6 +1404,781 @@
     return r.toString();
   }
 
+  // =====================================================================================
+  // ---------- Help panel (build step 10, phase H1; docs/step10-help.md) ----------
+  // =====================================================================================
+  // F1, ❓ beside the ribbon's search box, or View → Help: a panel docked on the right, beside
+  // the canvas rather than over it, so you can follow the steps while you work. It is not a
+  // dialog (.modal-overlay), so shortcuts keep working. The text is data (src/help/, CC BY 4.0),
+  // shown through textContent only; a {cmd:id} in it becomes a button that runs that command.
+  // =====================================================================================
+  // fmIDE's help text (build step 10, docs/step10-help.md).
+  // Copyright 2026 Taro Yamaka. Licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/,
+  // docs/LICENSE-CC-BY-4.0.txt), unlike the code around it.
+  // =====================================================================================
+  // Plain data, shown by the Help panel (src/fmide/js/23-help.js) and found by its search and
+  // the Command Launcher. Written for people who use fmIDE, in plain English.
+  //
+  //   HELP_GROUPS   — the groups the topics are listed under, in order.
+  //   HELP_TOPICS   — { id, group, title, keywords, summary, body }. body is a list of blocks:
+  //                   { p: text } a paragraph · { steps: [text…] } numbered steps ·
+  //                   { tip: text } a tip · { see: [topic ids] } related topics.
+  //                   In any text, {cmd:commandId} shows that command as a button that runs it.
+  //   COMMAND_HELP  — one plain sentence for every command (a test checks none is missing).
+  //   OPERATOR_HELP — one sentence per operator, by its catalogue id (src/shared/operators.js),
+  //                   for the Insert Operator commands.
+  // When a feature changes, change its topic here in the same pull request.
+  const HELP_GROUPS = [
+    { id: 'start',     title: 'Getting started' },
+    { id: 'build',     title: 'Building a model' },
+    { id: 'time',      title: 'Periods and time' },
+    { id: 'canvases',  title: 'Canvases, blocks, plugs' },
+    { id: 'templates', title: 'Templates and recipes' },
+    { id: 'functions', title: 'Functions' },
+    { id: 'sharing',   title: 'Sharing and the library' },
+    { id: 'files',     title: 'Files and saving' },
+    { id: 'format',    title: 'Formatting' },
+    { id: 'excel',     title: 'To Excel' },
+    { id: 'faster',    title: 'Working faster' },
+    { id: 'touch',     title: 'Touch' },
+  ];
+
+  const HELP_TOPICS = [
+    // ---------- Getting started ----------
+    { id: 'what-is-fmide', group: 'start', title: 'What fmIDE is',
+      keywords: 'introduction overview about start begin model graph',
+      summary: 'Build a financial model as a picture of boxes and arrows, then turn it into a live Excel workbook.',
+      body: [
+        { p: 'In fmIDE a model is a drawing. Each number is a box, called a rectangle. Arrows show where numbers come from, and small boxes called operators (+ − × ÷ and more) combine them. fmIDE works out every value for you, for every period of your timeline.' },
+        { p: 'Because the logic is a drawing, you can see at a glance how a result is made, check it, and reuse parts of it as templates.' },
+        { p: 'When the model is ready, ExcelExporter turns it into an Excel workbook with real formulas that calculate exactly as fmIDE does.' },
+        { p: 'Everything stays on your computer: nothing is uploaded, and fmIDE works offline.' },
+        { see: ['first-model', 'finding-your-way', 'to-excel'] },
+      ] },
+    { id: 'first-model', group: 'start', title: 'Your first model in five minutes',
+      keywords: 'tutorial quick start example price quantity revenue multiply beginner',
+      summary: 'Price × quantity = revenue: three rectangles, one operator, three arrows.',
+      body: [
+        { p: 'This builds Revenue = Price × Quantity.' },
+        { steps: [
+          'Press {cmd:addRect}. A rectangle appears with its text ready to type. Type Price, press Shift+Enter, type 10, press Shift+Enter, type $/t, then press Enter. The three lines are the name, the value and the unit.',
+          'Add a second rectangle the same way: Quantity, 5, t.',
+          'Add a third: Revenue, with no value (just the name, then Enter).',
+          'Press {cmd:addOperator} and choose × in the list that opens.',
+          'Draw an arrow from Price to the × operator: point at Price, then drag from one of the small dots on its edges onto the operator. With a mouse, you can also drag with the right button from anywhere on Price.',
+          'Draw an arrow from Quantity to the operator, and one from the operator to Revenue.',
+          'Press {cmd:evaluate} (F9). Revenue shows = 50, and its unit, $, is worked out for you.',
+        ] },
+        { tip: 'Values are worked out when you press Evaluate (F9). After a change, press it again to see the new numbers.' },
+        { see: ['rectangles', 'operators', 'arrows', 'periods'] },
+      ] },
+    { id: 'finding-your-way', group: 'start', title: 'Finding your way around',
+      keywords: 'ribbon tabs canvas tabs screen layout interface help search launcher',
+      summary: 'The ribbon at the top, the canvas tabs, the canvas, the Command Launcher and this Help panel.',
+      body: [
+        { p: 'The ribbon at the top holds every command, in tabs: File (documents, templates, the library), Home (the everyday commands), Insert (rectangles, operators, functions), Arrange, Model (periods and canvases), View and Macros. Point at a button to see what it does.' },
+        { p: 'Below the ribbon are the canvas tabs. A model can have several canvases, like the sheets of a workbook; + adds one.' },
+        { p: 'The big area is the canvas, where you build. Scroll it to move around.' },
+        { p: 'To find a command by name, press {cmd:openLauncher} (Ctrl+K, or Cmd+K on a Mac), type part of its name and press Enter. Help topics are found there too.' },
+        { p: 'This Help panel opens with F1, with ❓ at the top right, or with {cmd:openHelp}. You can keep working while it is open.' },
+        { see: ['launcher-shortcuts', 'canvases'] },
+      ] },
+
+    // ---------- Building a model ----------
+    { id: 'rectangles', group: 'build', title: 'Rectangles: name, value and unit',
+      keywords: 'rectangle node box value input calculation name unit uom edit text',
+      summary: 'A rectangle holds one number: typed in (an input) or worked out from its arrows (a calculation).',
+      body: [
+        { p: 'A rectangle has three lines: its name, its value and its unit of measure (for example t, $ or $/t). Double-click a rectangle to change them. Press Shift+Enter for the next line and Enter when you are done.' },
+        { p: 'A rectangle with no arrow coming in is an input: you type its value. A rectangle fed by an arrow is a calculation: its value comes from the arrow, and fmIDE shows it after {cmd:evaluate}.' },
+        { p: 'Units are worked out for you. $/t × t gives $, and adding t to $ is flagged.' },
+        { p: 'The small buttons on a selected rectangle:' },
+        { steps: [
+          '🔌 plugs: feed this rectangle to operators on other canvases by name.',
+          '⇄ marks the rectangle as a block input or output.',
+          '🎨 gives it its own format.',
+          '🕒 chooses which periods use its own number.',
+          '📈 draws its value across periods.',
+        ] },
+        { see: ['operators', 'arrows', 'values-over-time', 'plugs-sockets', 'formats'] },
+      ] },
+    { id: 'operators', group: 'build', title: 'Operators',
+      keywords: 'operator add subtract multiply divide plus minus times sum min max average abs iferror power modulo',
+      summary: 'Small boxes that combine the values of the arrows coming in: + − × ÷ and more.',
+      body: [
+        { p: '{cmd:addOperator} adds one and asks which. The Insert tab has every operator as its own button, in the groups Arithmetic, Compare and Excel Functions. Double-click an operator to change it.' },
+        { p: '+ and × take any number of arrows. For − ÷ ^ and %, the order counts: inputs are taken from left to right by where they sit on the canvas, and a small number on each arrow shows its place.' },
+        { p: 'min, max, ave (average) and abs work like their Excel functions. iferror uses its first input, or the second one where the first has an error.' },
+        { p: 'Draw the operator\'s result into a rectangle, so it has a name and appears in Excel.' },
+        { see: ['arrows', 'timing-conditions', 'functions'] },
+      ] },
+    { id: 'arrows', group: 'build', title: 'Drawing arrows',
+      keywords: 'arrow connect connection edge link wire draw delete',
+      summary: 'Arrows carry values from one box to the next.',
+      body: [
+        { steps: [
+          'Point at a box, or select it: small dots appear on its edges.',
+          'Drag from a dot and drop on the box that should receive the value.',
+        ] },
+        { p: 'With a mouse, dragging with the right button from anywhere on a box does the same.' },
+        { p: 'To delete an arrow, click it and press Delete.' },
+        { p: 'Some boxes have named inputs, such as if (condition, then, else), round (value, digits) and your own functions. Drop the arrow on the dot you mean, or on the box to fill the first empty input.' },
+        { see: ['operators', 'touch'] },
+      ] },
+    { id: 'aliases', group: 'build', title: 'Aliases',
+      keywords: 'alias link reference copy show another rectangle reuse',
+      summary: 'An alias shows another rectangle\'s value somewhere else, without a long arrow.',
+      body: [
+        { p: 'An alias is a stand-in for a rectangle on this canvas or on another one. It always shows the same value, and arrows can start from it.' },
+        { p: '{cmd:addAlias} asks which rectangle it should show. With a mouse, you can also drag a rectangle while holding Alt (Option on a Mac) to make an alias of it.' },
+        { p: '🔗 on an alias changes the rectangle it shows.' },
+        { see: ['canvases', 'plugs-sockets'] },
+      ] },
+    { id: 'arranging', group: 'build', title: 'Moving, copying and arranging',
+      keywords: 'move drag select selection copy paste duplicate align distribute undo redo delete',
+      summary: 'Select, move, copy, line up and undo.',
+      body: [
+        { p: 'Drag a box to move it. To select several, drag a box around them on empty canvas, or hold Shift or Ctrl while you click.' },
+        { p: '{cmd:copy} and {cmd:paste} copy boxes with the arrows between them. With a mouse, you can also drag while holding Ctrl to duplicate. Pasted boxes land in free space.' },
+        { p: 'The Arrange tab lines up the selection ({cmd:alignLeft}, {cmd:alignTop} and others) and spaces it evenly ({cmd:distH}, {cmd:distV}).' },
+        { p: '{cmd:undo} and {cmd:redo} step back and forward through your changes.' },
+      ] },
+
+    // ---------- Periods and time ----------
+    { id: 'periods', group: 'time', title: 'Periods and the timeline',
+      keywords: 'period periods timeline year month quarter column time manage',
+      summary: 'One timeline shared by every canvas: the model is worked out for each period.',
+      body: [
+        { p: 'A model runs over a timeline of periods (for example FY25, FY26, FY27), shared by every canvas. In Excel each period becomes a column.' },
+        { steps: [
+          'Open {cmd:managePeriods} to add periods, remove the last one, or rename them.',
+          'The canvas shows one period at a time. Move between them with {cmd:prevPeriod} and {cmd:nextPeriod}.',
+        ] },
+        { p: 'An input keeps the same value in every period unless you give it values per period.' },
+        { see: ['period-shifts', 'values-over-time'] },
+      ] },
+    { id: 'period-shifts', group: 'time', title: 'Period shifts: last period and next period',
+      keywords: 'period shift prior previous last next period lag opening closing balance corkscrew',
+      summary: 'Read a value from an earlier (or later) period, for example last year\'s closing balance.',
+      body: [
+        { p: 'A period shift passes on a value from another period. Set to −1, which is the usual choice, it passes on the previous period\'s value.' },
+        { steps: [
+          'Press {cmd:addPeriodShift}.',
+          'Draw an arrow from the rectangle you want last period\'s value of (for example Closing balance) into the shift.',
+          'Draw an arrow from the shift to where it is used (for example Opening balance).',
+          'Double-click the shift to change how many periods it moves.',
+        ] },
+        { p: 'In the first period there is no earlier value. Give the opening balance its own number there: its 🕒 button chooses which periods use the typed number, and the others take the arrow. Or use if(period = 1, …), see Timing, conditions and rounding.' },
+        { see: ['periods', 'timing-conditions'] },
+      ] },
+    { id: 'values-over-time', group: 'time', title: 'A value that changes over time',
+      keywords: 'per period values curve draw growth series 📈 🕒 own number',
+      summary: 'Give an input a different value in each period, or use its own number only in some periods.',
+      body: [
+        { p: '📈 on an input rectangle opens a small chart. Draw the values across the periods, or type them separated by commas.' },
+        { p: '🕒 chooses the periods where the rectangle uses its own typed number. In the other periods it takes what its arrow brings in, for example a balance carried forward.' },
+        { see: ['periods', 'period-shifts'] },
+      ] },
+    { id: 'timing-conditions', group: 'time', title: 'Timing, conditions and rounding',
+      keywords: 'period number if condition then else equal not equal and or not round roundup rounddown compare',
+      summary: 'The period number, if, comparisons, and, or, not, and the three kinds of rounding.',
+      body: [
+        { p: 'period gives the period number: 1, 2, 3 and so on.' },
+        { p: 'if takes three inputs: condition, then and else. Only the branch taken is worked out.' },
+        { p: 'For example, a closing balance that starts from an opening number:' },
+        { steps: [
+          'Make Opening, typed in.',
+          'Make an if.',
+          'Feed its condition from period = 1.',
+          'Feed then from Opening, and else from last period\'s Closing (through a period shift).',
+        ] },
+        { p: '= ≠ < > ≤ ≥ compare two values and give 1 (true) or 0 (false). and, or and not combine them.' },
+        { p: 'round, roundup and rounddown take a value and a number of digits, like Excel\'s ROUND.' },
+        { p: 'if and round show a labelled dot for each input. Drop an arrow on the one you mean.' },
+        { see: ['operators', 'period-shifts'] },
+      ] },
+
+    // ---------- Canvases, blocks, plugs ----------
+    { id: 'canvases', group: 'canvases', title: 'Canvases',
+      keywords: 'canvas tab sheet page new rename delete move',
+      summary: 'Split a model into canvases, like the sheets of a workbook.',
+      body: [
+        { p: 'Each canvas is a tab above the canvas area, and becomes its own tab in Excel.' },
+        { p: '{cmd:newCanvas} (or + at the end of the tabs) adds one. Double-click a tab to rename it, and drag it to move it.' },
+        { p: 'The Model tab also has {cmd:renameCanvas}, {cmd:deleteCanvas} and {cmd:clearCanvas}.' },
+        { p: 'Values can travel between canvases through aliases, or plugs and sockets.' },
+        { see: ['aliases', 'plugs-sockets', 'blocks'] },
+      ] },
+    { id: 'blocks', group: 'canvases', title: 'Blocks: a canvas used as a building block',
+      keywords: 'block instance input output reuse vertical vintage reducer sum index',
+      summary: 'Build a calculation once on its own canvas, then use it many times as a single box.',
+      body: [
+        { p: 'Any canvas can become a block: mark its rectangles as inputs and outputs with their ⇄ button. On another canvas, {cmd:addBlock} adds the block as one box, with its inputs on the left and its outputs on the right. Draw arrows into its inputs and out of its outputs.' },
+        { p: 'Vertical blocks run once per period, for example one per year of capital spending, each depreciating on its own. Their results are combined into each output: added up by default, or max, min, average or product, chosen with the output rectangle\'s Σ chip.' },
+        { p: 'To make a block vertical, tick Vertical when you add it (or through 🔗 Change block).' },
+        { p: 'On a vertical block, each input is either the same for every instance or read at that instance\'s own period.' },
+        { see: ['canvases', 'templates'] },
+      ] },
+    { id: 'plugs-sockets', group: 'canvases', title: 'Plugs and sockets',
+      keywords: 'plug socket connect across canvases name automatic alias ⚡ 🔌',
+      summary: 'Connect canvases by name: a rectangle\'s plug feeds every operator whose socket has that name.',
+      body: [
+        { steps: [
+          'On the rectangle that gives the value, click 🔌 and type a name, for example Income Tax.',
+          'On the operator that should receive it (on any canvas), click ⚡ and type the same name.',
+        ] },
+        { p: 'fmIDE connects them for you, drawing an automatic alias on the socket\'s canvas.' },
+        { p: 'A rectangle can have several plugs.' },
+        { p: 'When more than one plug feeds a socket, their values are added together. The socket shows ⚡ name ×2 in amber as a warning, since that can double a number by accident.' },
+        { p: 'Plugs and sockets are how the canvases built by a recipe connect.' },
+        { see: ['canvases', 'recipes'] },
+      ] },
+
+    // ---------- Templates and recipes ----------
+    { id: 'templates', group: 'templates', title: 'Templates',
+      keywords: 'template save reuse insert add canvas module system library',
+      summary: 'Save a canvas (or the whole model) to reuse it, and add it again in one click.',
+      body: [
+        { p: '{cmd:openTemplates} lists your templates, with a search box: type part of a name, then press Enter to add it.' },
+        { p: 'To save one, use + Save Canvas as Template (the canvas you are on) or + Save System as Template (the whole model) in the same window. Give it a name, a group and a short description.' },
+        { p: 'A canvas template can be added to a new canvas or to the current one. A system template adds its canvases alongside yours, or replaces the model.' },
+        { p: 'Templates are kept in fmIDE and travel inside your documents.' },
+        { p: '{cmd:removeDuplicateTemplates} tidies up copies that built up over time.' },
+        { see: ['template-versions', 'recipes', 'library-packs'] },
+      ] },
+    { id: 'template-versions', group: 'templates', title: 'Template versions and updating a canvas',
+      keywords: 'version update new version canvas linked ⬆ not now older unlink',
+      summary: 'Improve a template as new versions; canvases made from it offer the update.',
+      body: [
+        { p: 'In {cmd:openTemplates}, select a template and choose ⤴ Save as new version: the open canvas becomes its next version, with a short note on what changed.' },
+        { p: 'A canvas made from a template remembers it. When a newer version exists, a bar above the canvas says so and its tab shows ⬆.' },
+        { p: 'Update this canvas… rebuilds it from the new version and keeps the input values you typed. Not now hides the bar until an even newer version appears.' },
+        { p: '{cmd:updateCanvasTemplate} can also go back to an older version. {cmd:unlinkCanvasTemplate} makes a canvas forget its template.' },
+        { see: ['templates', 'recipes'] },
+      ] },
+    { id: 'recipes', group: 'templates', title: 'Recipes',
+      keywords: 'recipe build parts three statements combine templates together',
+      summary: 'Several canvas templates put together, built in one go.',
+      body: [
+        { p: 'A recipe lists canvas templates to build together, for example Income Statement + Balance Sheet + Cash Flow. In {cmd:openTemplates}, choose + New Recipe…, pick the parts, and choose the latest or a fixed version of each.' },
+        { p: 'Build adds one canvas per part, and plugs and sockets connect them by name. A part already in your model is skipped, ticked by default.' },
+        { p: 'Build warns about sockets that nothing feeds.' },
+        { see: ['templates', 'plugs-sockets'] },
+      ] },
+
+    // ---------- Functions ----------
+    { id: 'functions', group: 'functions', title: 'Your own functions',
+      keywords: 'function formula write define margin library version',
+      summary: 'Write a formula once, like Margin(Revenue, Cost) = (Revenue - Cost) / Revenue, and reuse it.',
+      body: [
+        { steps: [
+          'Open {cmd:openFunctions} and choose + New Function….',
+          'Type the whole definition: the name, the inputs in brackets, = and the formula. The editor checks it as you type.',
+          'Save. The function joins your library.',
+        ] },
+        { p: 'Formulas can use + − * / ^, brackets, comparisons, MIN MAX AVERAGE ABS MOD IFERROR IF AND OR NOT ROUND and PERIOD(), and your other functions.' },
+        { p: 'Functions have versions, like templates: Edit as new version… saves a change.' },
+        { see: ['function-nodes', 'library-packs'] },
+      ] },
+    { id: 'function-nodes', group: 'functions', title: 'Using a function on the canvas',
+      keywords: 'function node insert update ⬆ inputs box',
+      summary: 'Put a function on the canvas as a box with one input per argument.',
+      body: [
+        { p: '{cmd:insertFunction} adds a box titled ƒ Name, with its inputs on the left and its result on the right. Draw arrows onto the inputs.' },
+        { p: 'The model keeps its own copy of the function, so it works the same for anyone you send it to.' },
+        { p: 'When your library has a newer version, the box shows ⬆: click it to update this box or every use. {cmd:updateFunction} does the same for the selected box.' },
+        { see: ['functions'] },
+      ] },
+
+    // ---------- Sharing and the library ----------
+    { id: 'library-packs', group: 'sharing', title: 'Library packs',
+      keywords: 'library pack share export import author licence CC BY',
+      summary: 'Share templates, recipes and functions with other people as one file.',
+      body: [
+        { p: '{cmd:saveLibraryPack} puts the templates, recipes and functions you pick into one file, with a title and your name. Everything in a pack is shared under the CC BY 4.0 licence, so share only what is yours.' },
+        { p: '{cmd:openLibraryPack} shows a pack before anything is added: who made it, and for each item whether it is new or already in your library. Untick what you don\'t want. Nothing of yours is replaced.' },
+        { see: ['browse-library', 'templates', 'functions'] },
+      ] },
+    { id: 'browse-library', group: 'sharing', title: 'Browsing the library',
+      keywords: 'browse library community catalogue download online',
+      summary: 'Find packs other people shared, on fmIDE\'s website.',
+      body: [
+        { p: 'On fmIDE\'s website, {cmd:browseLibrary} lists the community\'s packs, with a search box and filters. Preview and add… opens the usual preview before anything is added.' },
+        { p: 'It needs a connection. fmIDE opened from a file on your computer never connects to anything: download packs from the website\'s /library page instead, and open them with {cmd:openLibraryPack}.' },
+        { see: ['library-packs'] },
+      ] },
+
+    // ---------- Files and saving ----------
+    { id: 'documents', group: 'files', title: 'Saving and opening documents',
+      keywords: 'save open new recent document file fmide autosave recover',
+      summary: 'Your work is a .fmide document: New, Open, Save, Save As and Open Recent.',
+      body: [
+        { p: '{cmd:saveDocument} (Ctrl+S, or Cmd+S on a Mac) saves your model as a .fmide file, and {cmd:openDocument} (Ctrl+O) opens one. {cmd:openRecent} lists the last ten.' },
+        { p: 'In Chrome and Edge, Save writes straight back to the file. Other browsers download a copy each time.' },
+        { p: 'fmIDE also saves your work in the browser as you go. After a crash it comes back with your changes and offers to save them.' },
+        { p: 'A • in the window title means there are unsaved changes.' },
+        { see: ['other-files'] },
+      ] },
+    { id: 'other-files', group: 'files', title: 'Other files: systems, modules, workspaces, preferences',
+      keywords: 'system module workspace export import preferences json file',
+      summary: 'The other files fmIDE reads and writes, and what each is for.',
+      body: [
+        { p: 'A system file ({cmd:saveSystem}) is the whole model, without your templates. {cmd:loadSystem} replaces the model with one, and {cmd:addSystem} adds one alongside.' },
+        { p: 'A module ({cmd:saveModule}) is one canvas; {cmd:loadModule} adds its boxes to the current canvas.' },
+        { p: 'A workspace ({cmd:exportWorkspace}) is the model with your templates, formats and macros; {cmd:importWorkspace} opens one.' },
+        { p: 'Preferences ({cmd:exportPreferences}) are your shortcuts and ribbon, to take to another computer.' },
+        { p: 'ExcelExporter reads a document, a system or a workspace.' },
+        { see: ['documents', 'to-excel'] },
+      ] },
+
+    // ---------- Formatting ----------
+    { id: 'formats', group: 'format', title: 'Formats and format roles',
+      keywords: 'format colour color fill font border number format preset role style 🎨',
+      summary: 'How rectangles and Excel cells look: one place for all formatting.',
+      body: [
+        { p: '{cmd:openFormats} holds format presets. Seven of them are roles, used everywhere:' },
+        { steps: [
+          'Inputs: numbers you type, on the canvas and in Excel.',
+          'Calculations: rectangles fed by an arrow, and every calculated Excel cell.',
+          'Links: Excel formulas that only pull a value from another tab.',
+          'Headers: each Excel tab\'s title and column headings.',
+          'Section Headers: the INPUTS, CALCULATIONS and OUTPUTS bands in Excel.',
+          'Labels: label rows and group headings in Excel.',
+          'Notes: notes and other helper text in Excel.',
+        ] },
+        { p: 'Change a role and every rectangle, and the Excel workbook, follows.' },
+        { p: '🎨 on a rectangle gives it its own look. Its number format, weight and size go to Excel too; its fill, font colour and border only when you tick "Use this fill, font colour & border in Excel too".' },
+        { see: ['to-excel'] },
+      ] },
+
+    // ---------- To Excel ----------
+    { id: 'to-excel', group: 'excel', title: 'From fmIDE to Excel',
+      keywords: 'excel export exporter workbook xlsx formulas generate download',
+      summary: 'Turn the model into an Excel workbook with live formulas.',
+      body: [
+        { steps: [
+          'Save your model ({cmd:saveDocument}).',
+          'Open {cmd:openExcelExporter}.',
+          'In ExcelExporter, load the .fmide file.',
+          'Arrange the tabs and rows if you like.',
+          'Press Generate & Download .xlsx.',
+        ] },
+        { p: 'The workbook calculates exactly as fmIDE does. Where it can\'t (for example a loop, or an alias to a rectangle that was deleted), a yellow list above the Generate button says where, before you download.' },
+        { see: ['formats', 'other-files'] },
+      ] },
+
+    // ---------- Working faster ----------
+    { id: 'launcher-shortcuts', group: 'faster', title: 'Command Launcher and keyboard shortcuts',
+      keywords: 'launcher search command keyboard shortcut keys ctrl+k keytips alt',
+      summary: 'Run any command by typing its name, give commands your own keys, and use KeyTips.',
+      body: [
+        { p: '{cmd:openLauncher} (Ctrl+K, or Cmd+K on a Mac) finds any command, action, macro or help topic as you type. Press Enter to run it.' },
+        { p: '{cmd:openShortcuts} lets you give any command its own keys.' },
+        { p: 'Tap Alt to show KeyTips: a letter on every ribbon tab and button, so you can press the letters instead of clicking.' },
+        { see: ['customize-ribbon', 'macros'] },
+      ] },
+    { id: 'customize-ribbon', group: 'faster', title: 'Customising the ribbon',
+      keywords: 'ribbon customize tabs groups quick access toolbar qat collapse keytips',
+      summary: 'Arrange the ribbon\'s tabs, groups and buttons your way.',
+      body: [
+        { p: '{cmd:customizeRibbon} adds, removes and moves tabs, groups and buttons, including your macros, and the Quick Access Toolbar at the top left. It also sets the KeyTips key.' },
+        { p: '{cmd:toggleRibbon} (Ctrl+F1) folds the ribbon away to make room.' },
+        { see: ['launcher-shortcuts'] },
+      ] },
+    { id: 'macros', group: 'faster', title: 'Macros',
+      keywords: 'macro record automate repeat steps builder run script',
+      summary: 'Record or build a series of steps and run it again with one click.',
+      body: [
+        { p: '{cmd:toggleRecord} records what you do. Press it again to stop, and the steps become a macro.' },
+        { p: '{cmd:openMacros} shows your macros step by step: change them, add steps, give them a shortcut or a ribbon button.' },
+        { p: '{cmd:runLastMacro} runs the last one again.' },
+        { see: ['launcher-shortcuts', 'customize-ribbon'] },
+      ] },
+
+    // ---------- Touch ----------
+    { id: 'touch', group: 'touch', title: 'Using fmIDE on a tablet',
+      keywords: 'touch tablet ipad finger pen hold press tap double-tap menu',
+      summary: 'Drag with a finger; press and hold for a menu; double-tap to edit.',
+      body: [
+        { p: 'Drag boxes with a finger. Tap a box to show its dots, then drag from a dot to draw an arrow.' },
+        { p: 'Press and hold a box for its menu, which has:' },
+        { steps: [
+          'Draw an arrow from here (then tap the target).',
+          'Make an alias.',
+          'Duplicate.',
+          'Add to or remove from the selection.',
+          'Edit, Properties and Delete.',
+        ] },
+        { p: 'One finger on empty canvas scrolls. Press and hold there, then drag, to select with a box.' },
+        { p: 'Double-tap does what a double-click does.' },
+        { see: ['arrows', 'arranging'] },
+      ] },
+  ];
+
+  const COMMAND_HELP = {
+    undo: 'Takes back your last change.',
+    redo: 'Puts back the change you just undid.',
+    copy: 'Copies the selected boxes, with the arrows between them.',
+    cut: 'Copies the selected boxes and removes them.',
+    paste: 'Pastes what you copied into free space on this canvas.',
+    deleteSel: 'Deletes the selected boxes or arrow.',
+    selectAll: 'Selects every box on this canvas.',
+    deselect: 'Clears the selection and closes any open picker.',
+    addRect: 'Adds a rectangle, ready to type its name, value and unit.',
+    addOperator: 'Adds an operator and asks which one: + − × ÷ and more.',
+    addAlias: 'Adds an alias: a stand-in that shows another rectangle\'s value.',
+    addBlock: 'Adds another canvas as a block: one box with its inputs and outputs.',
+    addPeriodShift: 'Adds a period shift, which passes on a value from another period (last period by default).',
+    newCanvas: 'Adds a new, empty canvas tab.',
+    renameCanvas: 'Renames the current canvas.',
+    deleteCanvas: 'Deletes the current canvas and everything on it.',
+    clearCanvas: 'Removes every box and arrow on the current canvas.',
+    clearAll: 'Removes every canvas, leaving one empty canvas.',
+    moveCanvasLeft: 'Moves the current canvas tab one place to the left.',
+    moveCanvasRight: 'Moves the current canvas tab one place to the right.',
+    alignLeft: 'Lines up the selected boxes on their left edges.',
+    alignCenterH: 'Lines up the selected boxes on their centres, left to right.',
+    alignRight: 'Lines up the selected boxes on their right edges.',
+    alignTop: 'Lines up the selected boxes on their top edges.',
+    alignCenterV: 'Lines up the selected boxes on their middles, top to bottom.',
+    alignBottom: 'Lines up the selected boxes on their bottom edges.',
+    distH: 'Spaces three or more selected boxes evenly from left to right.',
+    distV: 'Spaces three or more selected boxes evenly from top to bottom.',
+    evaluate: 'Works out every value in the model for the period shown.',
+    prevPeriod: 'Shows the previous period.',
+    nextPeriod: 'Shows the next period.',
+    managePeriods: 'Adds, removes or renames the periods of the timeline.',
+    saveSystem: 'Downloads the whole model as a system file (without your templates).',
+    loadSystem: 'Replaces the model with one from a system file.',
+    addSystem: 'Adds the canvases of a system file alongside the model.',
+    saveModule: 'Downloads the current canvas as a module file.',
+    loadModule: 'Adds the boxes of a module file to the current canvas.',
+    exportWorkspace: 'Downloads the model with your templates, formats and macros.',
+    importWorkspace: 'Replaces the model with a workspace file\'s, and adds its templates you don\'t have.',
+    exportPreferences: 'Saves your shortcuts and ribbon to a file, for another computer.',
+    importPreferences: 'Replaces your shortcuts and ribbon with those in a preferences file.',
+    openTemplates: 'Opens your templates: search, add, save and manage them.',
+    openFunctions: 'Opens your functions: write, change and manage them.',
+    importFunctions: 'Adds the functions in a functions file to your library.',
+    browseLibrary: 'Lists the packs people shared on fmIDE\'s website (needs a connection).',
+    openLibraryPack: 'Previews a library pack file and adds the items you choose.',
+    saveLibraryPack: 'Saves templates, recipes and functions you pick as a pack to share.',
+    insertFunction: 'Adds one of your functions to the canvas as a box.',
+    updateFunction: 'Moves function boxes on an older version of their function to the latest one.',
+    removeDuplicateTemplates: 'Finds templates that are copies of each other and lets you keep one of each.',
+    clearAllTemplates: 'Deletes every template in your library, after asking.',
+    updateCanvasTemplate: 'Rebuilds this canvas from another version of its template, keeping your inputs.',
+    unlinkCanvasTemplate: 'Makes this canvas forget the template it came from.',
+    openFormats: 'Opens the format presets and roles that decide how things look.',
+    newDocument: 'Starts a new, empty document.',
+    openDocument: 'Opens a .fmide document.',
+    saveDocument: 'Saves the document.',
+    saveDocumentAs: 'Saves the document under a new name.',
+    openRecent: 'Lists the documents you opened lately.',
+    openExcelExporter: 'Opens ExcelExporter, which turns your model into an Excel workbook.',
+    installApp: 'Installs fmIDE as an app with its own window, working offline.',
+    openLauncher: 'Finds any command, macro or help topic as you type its name.',
+    openShortcuts: 'Shows every keyboard shortcut and lets you change them.',
+    toggleRibbon: 'Folds the ribbon away, or opens it again.',
+    customizeRibbon: 'Arranges the ribbon\'s tabs, groups and buttons, and the KeyTips key.',
+    openHelp: 'Opens this Help panel: search, topics and step-by-step guides.',
+    openMacros: 'Opens the Macro Builder, to make and change macros.',
+    toggleRecord: 'Records what you do as a macro; press again to stop.',
+    runLastMacro: 'Runs the last macro you ran again.',
+  };
+
+  const OPERATOR_HELP = {
+    add: 'adds up all its inputs.',
+    subtract: 'subtracts, left to right: the first input minus the others.',
+    multiply: 'multiplies all its inputs.',
+    divide: 'divides, left to right: the first input by the others.',
+    power: 'raises the first input to the power of the second.',
+    mod: 'gives the remainder of the first input divided by the second.',
+    le: 'gives 1 when the first input is at most the second, otherwise 0.',
+    ge: 'gives 1 when the first input is at least the second, otherwise 0.',
+    lt: 'gives 1 when the first input is less than the second, otherwise 0.',
+    gt: 'gives 1 when the first input is greater than the second, otherwise 0.',
+    abs: 'gives the value without its sign.',
+    min: 'gives the smallest of its inputs.',
+    max: 'gives the largest of its inputs.',
+    average: 'gives the average of its inputs.',
+    iferror: 'gives its first input, or its second where the first has an error.',
+    period: 'gives the period number: 1, 2, 3…',
+    if: 'gives "then" when the condition is not 0, otherwise "else".',
+    eq: 'gives 1 when its two inputs are equal, otherwise 0.',
+    ne: 'gives 1 when its two inputs differ, otherwise 0.',
+    and: 'gives 1 when all its inputs are not 0, otherwise 0.',
+    or: 'gives 1 when any of its inputs is not 0, otherwise 0.',
+    not: 'gives 1 for 0, and 0 for anything else.',
+    round: 'rounds a value to a number of digits, like Excel\'s ROUND.',
+    roundup: 'rounds a value away from zero, like Excel\'s ROUNDUP.',
+    rounddown: 'rounds a value towards zero, like Excel\'s ROUNDDOWN.',
+  };
+
+  // One plain sentence per command: COMMAND_HELP, or for an Insert Operator command the
+  // sentence of its operator (OPERATOR_HELP, by catalogue id).
+  function commandHelpText(c){
+    if(!c) return '';
+    if(COMMAND_HELP[c.id]) return COMMAND_HELP[c.id];
+    const m = /^insertOp(\d+)$/.exec(c.id);
+    const op = m ? OPERATORS[+m[1]] : null;
+    if(op && OPERATOR_HELP[op.id]) return 'Adds the ' + op.symbol + ' operator, which ' + OPERATOR_HELP[op.id];
+    return '';
+  }
+  function helpTopic(id){ return HELP_TOPICS.find(t => t.id === id) || null; }
+
+  // Every text of a topic, for searching (the {cmd:id} markers read as the commands' labels).
+  function helpTopicText(t){
+    const texts = [t.title, t.keywords || '', t.summary || ''];
+    (t.body || []).forEach(b => {
+      if(b.p) texts.push(b.p);
+      if(b.tip) texts.push(b.tip);
+      if(Array.isArray(b.steps)) b.steps.forEach(s => texts.push(s));
+    });
+    return texts.join(' ').replace(/\{cmd:([A-Za-z0-9_:]+)\}/g, (all, id) => { const c = getCommand(id); return c ? c.label : ''; });
+  }
+  // The commands a topic names, in order of first mention (a test checks each exists).
+  function helpTopicCommands(t){
+    const ids = [];
+    (t.body || []).forEach(b => [b.p, b.tip].concat(Array.isArray(b.steps) ? b.steps : []).forEach(s => {
+      if(typeof s !== 'string') return;
+      s.replace(/\{cmd:([A-Za-z0-9_:]+)\}/g, (all, id) => { if(!ids.includes(id)) ids.push(id); return all; });
+    }));
+    return ids;
+  }
+
+  // Search: every word typed must appear; a word in the title counts most, then the keywords
+  // and summary, then the body. Commands match on their label and sentence.
+  function helpSearch(q){
+    const words = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
+    if(!words.length) return { topics: [], commands: [] };
+    const has = (text, w) => text.toLowerCase().includes(w);
+    const topics = HELP_TOPICS.map(t => {
+      const all = helpTopicText(t);
+      if(!words.every(w => has(all, w))) return null;
+      let score = 0;
+      words.forEach(w => {
+        if(has(t.title, w)) score += 10;
+        if(has(t.keywords || '', w)) score += 5;
+        if(has(t.summary || '', w)) score += 3;
+      });
+      if(has(t.title, words.join(' '))) score += 20;
+      return { topic: t, score };
+    }).filter(Boolean).sort((a, b) => b.score - a.score).map(r => r.topic);
+    const commands = COMMANDS.filter(c => !c.id.startsWith('macro:')).map(c => {
+      const label = c.label + ' ' + (c.short || '');
+      const all = label + ' ' + commandHelpText(c);
+      if(!words.every(w => has(all, w))) return null;
+      return { cmd: c, score: words.filter(w => has(label, w)).length };
+    }).filter(Boolean).sort((a, b) => b.score - a.score).map(r => r.cmd);
+    return { topics, commands };
+  }
+
+  let helpPanel = null;
+  const helpState = { view: 'home', topicId: null, query: '', back: [] };
+
+  function isHelpOpen(){ return !!(helpPanel && helpPanel.classList.contains('open')); }
+  function toggleHelp(){ if(isHelpOpen()) closeHelp(); else openHelp(); }
+  // topicId (optional): open at that topic.
+  function openHelp(topicId){
+    if(!helpPanel) buildHelpPanel();
+    helpPanel.classList.add('open');
+    document.body.classList.add('help-open');
+    if(topicId && helpTopic(topicId)) showHelpTopic(topicId, true);
+    else renderHelp();
+    const search = helpPanel.querySelector('.help-search');
+    if(search && !topicId) search.focus();
+  }
+  function closeHelp(){
+    if(!helpPanel) return;
+    const hadFocus = helpPanel.contains(document.activeElement);
+    helpPanel.classList.remove('open');
+    document.body.classList.remove('help-open');
+    if(hadFocus) document.activeElement.blur();
+  }
+  function showHelpTopic(id, fresh){
+    if(fresh) helpState.back = [];
+    else if(helpState.view !== 'topic' || helpState.topicId !== id) helpState.back.push({ view: helpState.view, topicId: helpState.topicId });
+    helpState.view = 'topic';
+    helpState.topicId = id;
+    renderHelp();
+    const body = helpPanel.querySelector('.help-body');
+    if(body) body.scrollTop = 0;
+  }
+  function helpGoBack(){
+    const prev = helpState.back.pop();
+    if(prev){ helpState.view = prev.view; helpState.topicId = prev.topicId; }
+    else helpState.view = helpState.query.trim() ? 'search' : 'home';
+    renderHelp();
+  }
+
+  function buildHelpPanel(){
+    helpPanel = el('aside', 'help-panel');
+    helpPanel.id = 'helpPanel';
+    helpPanel.setAttribute('aria-label', 'Help');
+    const head = el('div', 'help-head');
+    head.appendChild(el('span', 'help-title', '❓ Help'));
+    const close = el('button', 'help-close', '×');
+    close.type = 'button';
+    close.title = 'Close Help (F1 or Esc)';
+    close.addEventListener('click', () => closeHelp());
+    head.appendChild(close);
+    helpPanel.appendChild(head);
+    const search = el('input', 'help-search');
+    search.type = 'search';
+    search.placeholder = 'Search help — e.g. "last period" or "templates"';
+    search.setAttribute('autocomplete', 'off');
+    search.spellcheck = false;
+    search.addEventListener('input', () => {
+      helpState.query = search.value;
+      helpState.view = search.value.trim() ? 'search' : 'home';
+      helpState.back = [];
+      renderHelp();
+    });
+    helpPanel.appendChild(search);
+    helpPanel.appendChild(el('div', 'help-body'));
+    // F1 closes it and Esc closes it while you are in it (the page's own shortcut handler
+    // skips key presses in a text box, like the search box).
+    helpPanel.addEventListener('keydown', (ev) => {
+      if(ev.key === 'Escape' || (ev.key === 'F1' && !ev.ctrlKey && !ev.metaKey && !ev.altKey && !ev.shiftKey)){
+        ev.preventDefault(); ev.stopPropagation(); closeHelp();
+      }
+    });
+    document.body.appendChild(helpPanel);
+  }
+
+  function renderHelp(){
+    if(!helpPanel) return;
+    const body = helpPanel.querySelector('.help-body');
+    body.innerHTML = '';
+    if(helpState.view === 'topic' && helpTopic(helpState.topicId)) renderHelpTopic(body, helpTopic(helpState.topicId));
+    else if(helpState.view === 'search' && helpState.query.trim()) renderHelpSearch(body, helpState.query);
+    else renderHelpHome(body);
+  }
+
+  function helpTopicLink(t){
+    const a = el('button', 'help-topic-link');
+    a.type = 'button';
+    a.dataset.topic = t.id;
+    a.appendChild(el('span', 'help-topic-link-title', t.title));
+    if(t.summary) a.appendChild(el('span', 'help-topic-link-summary', t.summary));
+    a.addEventListener('click', () => showHelpTopic(t.id));
+    return a;
+  }
+
+  function renderHelpHome(body){
+    body.appendChild(el('p', 'help-intro', 'Plain-English guides to everything in fmIDE. Pick a topic, or search above. You can keep working while this panel is open.'));
+    HELP_GROUPS.forEach(g => {
+      const list = HELP_TOPICS.filter(t => t.group === g.id);
+      if(!list.length) return;
+      body.appendChild(el('h3', 'help-group', g.title));
+      list.forEach(t => body.appendChild(helpTopicLink(t)));
+    });
+  }
+
+  function renderHelpSearch(body, q){
+    const found = helpSearch(q);
+    if(!found.topics.length && !found.commands.length){
+      body.appendChild(el('p', 'help-empty', 'Nothing matches "' + q.trim() + '". Try fewer or different words.'));
+      return;
+    }
+    if(found.topics.length){
+      body.appendChild(el('h3', 'help-group', 'Topics'));
+      found.topics.forEach(t => body.appendChild(helpTopicLink(t)));
+    }
+    if(found.commands.length){
+      body.appendChild(el('h3', 'help-group', 'Commands'));
+      found.commands.forEach(c => body.appendChild(helpCommandRow(c)));
+    }
+  }
+
+  // A command with its sentence and ▶ to run it (off while the command can't run).
+  function helpCommandRow(c){
+    const row = el('div', 'help-command');
+    row.dataset.cmd = c.id;
+    const text = el('div', 'help-command-text');
+    const name = el('div', 'help-command-name');
+    name.appendChild(el('span', 'help-command-icon', c.icon || '•'));
+    name.appendChild(el('span', '', commandLabel(c)));
+    const sc = shortcutBindings[c.id];
+    if(sc) name.appendChild(el('span', 'help-kbd', prettyCombo(sc)));
+    text.appendChild(name);
+    const sentence = commandHelpText(c);
+    if(sentence) text.appendChild(el('div', 'help-command-sentence', sentence));
+    row.appendChild(text);
+    const run = el('button', 'help-run', '▶');
+    run.type = 'button';
+    run.title = 'Run ' + commandLabel(c);
+    run.disabled = !commandEnabled(c);
+    run.addEventListener('click', () => runCommand(c.id));
+    row.appendChild(run);
+    return row;
+  }
+
+  // Text with {cmd:id} markers: plain text, and a button for each command it names.
+  function helpRichText(tag, cls, text){
+    const out = el(tag, cls);
+    String(text).split(/(\{cmd:[A-Za-z0-9_:]+\})/).forEach(part => {
+      const m = /^\{cmd:([A-Za-z0-9_:]+)\}$/.exec(part);
+      if(!m){ if(part) out.appendChild(document.createTextNode(part)); return; }
+      const c = getCommand(m[1]);
+      if(!c){ out.appendChild(document.createTextNode(m[1])); return; }
+      const b = el('button', 'help-cmd');
+      b.type = 'button';
+      b.dataset.cmd = c.id;
+      b.appendChild(el('span', 'help-command-icon', c.icon || '•'));
+      b.appendChild(el('span', '', commandLabel(c)));
+      const sc = shortcutBindings[c.id];
+      b.title = [commandHelpText(c), sc ? 'Shortcut: ' + prettyCombo(sc) : '', 'Click to run it.'].filter(Boolean).join('\n');
+      b.addEventListener('click', () => {
+        if(!commandEnabled(c)){ toast('"' + commandLabel(c) + '" isn\'t available right now.'); return; }
+        runCommand(c.id);
+      });
+      out.appendChild(b);
+    });
+    return out;
+  }
+
+  function renderHelpTopic(body, t){
+    const nav = el('div', 'help-nav');
+    const back = el('button', 'help-back', '‹ Back');
+    back.type = 'button';
+    back.addEventListener('click', () => helpGoBack());
+    nav.appendChild(back);
+    const group = HELP_GROUPS.find(g => g.id === t.group);
+    if(group) nav.appendChild(el('span', 'help-crumb', group.title));
+    body.appendChild(nav);
+    const art = el('article', 'help-topic');
+    art.dataset.topic = t.id;
+    art.appendChild(el('h2', 'help-topic-title', t.title));
+    if(t.summary) art.appendChild(el('p', 'help-summary', t.summary));
+    (t.body || []).forEach(b => {
+      if(b.p) art.appendChild(helpRichText('p', 'help-p', b.p));
+      if(b.tip) art.appendChild(helpRichText('p', 'help-tip', '💡 ' + b.tip));
+      if(Array.isArray(b.steps)){
+        const ol = el('ol', 'help-steps');
+        b.steps.forEach(s => ol.appendChild(helpRichText('li', '', s)));
+        art.appendChild(ol);
+      }
+      if(Array.isArray(b.see)){
+        const list = b.see.map(helpTopic).filter(Boolean);
+        if(list.length){
+          art.appendChild(el('h3', 'help-group', 'See also'));
+          list.forEach(x => art.appendChild(helpTopicLink(x)));
+        }
+      }
+    });
+    body.appendChild(art);
+  }
+
+  // The panel's command buttons follow what can run now (a selection, the period…).
+  function refreshHelpCommands(){
+    if(!isHelpOpen()) return;
+    helpPanel.querySelectorAll('.help-run').forEach(b => {
+      const c = getCommand(b.parentNode.dataset.cmd);
+      b.disabled = !c || !commandEnabled(c);
+    });
+  }
   // ---------- Unit of measure (UOM) ----------
   // Parsing and unit arithmetic are shared (src/shared/uom.js); a node's unit comes from the
   // IR (nodeUOM, in 06-align-marquee-computation.js).
@@ -13793,6 +14622,8 @@
   // Your own functions (step 7, phase D2), on the Insert tab.
   const FUNCTIONS_RIBBON_GROUP = { id:'myFunctions', label:'My Functions', items:[
     { cmd:'openFunctions', size:'large' }, { cmd:'insertFunction' }, { cmd:'updateFunction' }, { cmd:'importFunctions' } ] };
+  // Help (step 10), at the end of the View tab.
+  const HELP_RIBBON_GROUP = { id:'help', label:'Help', items:[ { cmd:'openHelp', size:'large' } ] };
   const DEFAULT_RIBBON = {
     qat: ['undo', 'redo', 'evaluate', 'openLauncher'],
     tabs: [
@@ -13834,6 +14665,7 @@
       { id:'view', label:'View', keytip:'W', groups:[
         { label:'Commands', items:[ { cmd:'openLauncher', size:'large' }, { cmd:'openShortcuts', size:'large' } ] },
         { label:'Ribbon', items:[ { cmd:'toggleRibbon' }, { cmd:'customizeRibbon' } ] },
+        cloneData(HELP_RIBBON_GROUP),
       ]},
       { id:'macros', label:'Macros', keytip:'X', groups:[
         { label:'Macros', items:[ { cmd:'openMacros', size:'large' }, { cmd:'toggleRecord', size:'large' }, { cmd:'runLastMacro' } ] },
@@ -13891,9 +14723,11 @@
     return e;
   }
 
+  // Name and shortcut, then the command's plain sentence (step 10) on the next line.
   function commandTitle(c){
     const sc = shortcutBindings[c.id];
-    return commandLabel(c) + (sc ? `  (${prettyCombo(sc)})` : '');
+    const sentence = commandHelpText(c);
+    return commandLabel(c) + (sc ? `  (${prettyCombo(sc)})` : '') + (sentence ? '\n' + sentence : '');
   }
 
   let ribbonArrowsUpdate = null; // addRibbonScrollArrows' update, while the ribbon is open
@@ -13957,6 +14791,12 @@
     search.title = 'Command Launcher — type a command name and press Enter';
     search.addEventListener('click', () => openLauncher());
     right.appendChild(search);
+    const helpBtn = el('button', 'rb-iconbtn rb-help', '❓');
+    helpBtn.type = 'button';
+    helpBtn.id = 'rbHelp';
+    helpBtn.title = 'Help' + (shortcutBindings.openHelp ? ` (${prettyCombo(shortcutBindings.openHelp)})` : '') + '\nPlain-English guides and a help search';
+    helpBtn.addEventListener('click', () => { closeRibbonFlyout(); toggleHelp(); });
+    right.appendChild(helpBtn);
     const colBtn = el('button', 'rb-iconbtn', ribbonState.collapsed ? '⌄' : '⌃');
     colBtn.type = 'button';
     colBtn.title = (ribbonState.collapsed ? 'Pin the ribbon open' : 'Collapse the ribbon') + (shortcutBindings.toggleRibbon ? ` (${prettyCombo(shortcutBindings.toggleRibbon)})` : '');
@@ -14074,6 +14914,7 @@
       if(c.dynLabel) rb.el.title = commandTitle(c);
       rb.el.classList.toggle('active-choice', c.id === 'toggleRecord' && recorder.active);
     });
+    refreshHelpCommands();
     const pill = document.getElementById('rbRecPill');
     if(pill){
       pill.classList.toggle('show', recorder.active);
@@ -14415,6 +15256,11 @@
       items.push({ key:'act:' + d.name, icon: d.icon || 'ƒ', label: d.label + '…', search: d.label + ' ' + d.name + ' ' + d.category,
         category: 'Action · ' + d.category, enabled: true, action: d });
     });
+    // Help topics (step 10): choosing one opens the Help panel at it.
+    HELP_TOPICS.forEach(t => {
+      items.push({ key:'help:' + t.id, icon:'📖', label: t.title, search: 'help ' + t.title + ' ' + (t.keywords || '') + ' ' + (t.summary || ''),
+        category:'Help', enabled: true, run: () => openHelp(t.id) });
+    });
     MACROS.forEach(m => {
       items.push({ key:'mac:' + m.id, icon:'⚡', label: m.name, search: 'macro ' + m.name + ' ' + (m.description || ''),
         category:'Macro', shortcut: shortcutBindings['macro:' + m.id] || '', enabled: true,
@@ -14491,7 +15337,7 @@
     overlay.addEventListener('mousedown', ev => { if(ev.target === overlay) close(); });
 
     const input = el('input', 'lq');
-    input.placeholder = 'Type a command, action or macro…';
+    input.placeholder = 'Type a command, action, macro or help topic…';
     input.setAttribute('autocomplete', 'off');
     input.spellcheck = false;
     const res = el('div', 'lres');
@@ -14514,7 +15360,7 @@
       if(!q){
         const recent = launcherRecent.map(k => all.find(i => i.key === k)).filter(Boolean);
         const rest = all.filter(i => !recent.includes(i));
-        const catRank = c => { const base = c.replace(/^Action · /, ''); const r = CATEGORY_ORDER.indexOf(base); return (c.startsWith('Action') ? 100 : 0) + (c === 'Macro' ? 50 : 0) + (r < 0 ? 40 : r); };
+        const catRank = c => { const base = c.replace(/^Action · /, ''); const r = CATEGORY_ORDER.indexOf(base); return (c.startsWith('Action') ? 100 : 0) + (c === 'Macro' ? 50 : 0) + (c === 'Help' ? 60 : 0) + (r < 0 ? 40 : r); };
         rest.sort((a, b) => catRank(a.category) - catRank(b.category));
         shown = recent.concat(rest).map(i => ({ item: i, idx: [] }));
         if(recent.length) res.appendChild(el('div', 'lsec', 'Recently used'));
@@ -14531,7 +15377,7 @@
           const onLabel = fuzzyMatch(q, i.label);
           return { item: i, score: m.score + (i.enabled ? 0 : -300) + (launcherRecent.includes(i.key) ? 30 : 0), idx: onLabel ? onLabel.idx : [] };
         }).filter(Boolean).sort((a, b) => b.score - a.score);
-        if(shown.length === 0) res.appendChild(el('div', 'lsec', 'No matching commands'));
+        if(shown.length === 0) res.appendChild(el('div', 'lsec', 'No matching commands or help topics'));
         shown.forEach((s, k) => res.appendChild(rowEl(s, k)));
       }
       selIdx = Math.min(selIdx, Math.max(0, shown.length - 1));
@@ -16554,6 +17400,7 @@
       operatorsE1Added: true, // E1b: the new operators in the Compare and Excel Functions groups
       libraryPacksAdded: true, // 8a: Open Library Pack… and Save as Library Pack… in the File tab's Library group
       libraryBrowseAdded: true, // 8d: Browse Library… in the same group
+      helpAdded: true, // step 10: the Help group at the end of the View tab
       libraryAuthor,
       windowSizes: cleanWindowSizes(windowSizes), templateGroupsClosed: templateGroupsClosed.slice(0, 200)
     };
@@ -16628,6 +17475,18 @@
     const at = g.items.findIndex(it => it && it.cmd === 'openLibraryPack');
     g.items.splice(at < 0 ? g.items.length : at, 0, { cmd: 'browseLibrary' });
   }
+  // One-time update (step 10) of a customised ribbon: the Help group joins the end of the tab
+  // holding Keyboard Shortcuts (the View tab), or else the View tab. A ribbon with neither, or
+  // that already has Help, is left alone (❓ beside the search box and F1 still open it); a
+  // group removed afterwards stays removed (this runs once).
+  function addHelpGroupToRibbon(){
+    const tabs = ribbonState.config.tabs.filter(t => t && Array.isArray(t.groups));
+    if(tabs.some(t => t.groups.some(g => g && Array.isArray(g.items) && g.items.some(it => it && it.cmd === 'openHelp')))) return;
+    const tab = tabs.find(t => t.groups.some(g => g && Array.isArray(g.items) && g.items.some(it => it && it.cmd === 'openShortcuts')))
+      || tabs.find(t => t.id === 'view');
+    if(!tab) return;
+    tab.groups.push(cloneData(HELP_RIBBON_GROUP));
+  }
   // fromImport: a workspace file (maybe someone else's) — its author name for library packs
   // is not taken over; only your own autosave remembers yours.
   function applyUiPayload(ui, fromImport){
@@ -16642,6 +17501,7 @@
       if(ui.operatorsE1Added !== true) addE1OperatorsToRibbon();
       if(ui.libraryPacksAdded !== true) addLibraryPackCommandsToRibbon();
       if(ui.libraryBrowseAdded !== true) addLibraryBrowseCommandToRibbon();
+      if(ui.helpAdded !== true) addHelpGroupToRibbon();
     }
     if(!fromImport && typeof ui.libraryAuthor === 'string') libraryAuthor = ui.libraryAuthor.slice(0, LIBRARY_PACK_LIMITS.author);
     // Window sizes and closed template groups belong to this screen and person: never from
