@@ -183,6 +183,25 @@ test('a rectangle\'s 🕒 button is on top where it is drawn, and opens its wind
   await expect(F.topDialog(page)).toContainText("Which periods use this rectangle's own number?");
 });
 
+// Found on CI: a refresh of the ribbon (after any change) turned the tutorials' ▶ grey, as if
+// they were commands that can't run.
+test('the tutorials\' ▶ stay enabled when the Help panel refreshes its commands', async ({ page }) => {
+  await page.keyboard.press('F1');
+  await page.locator('#helpPanel .help-search').fill('align left');
+  const run = page.locator('#helpPanel .help-command[data-cmd="alignLeft"] .help-run');
+  await page.evaluate(() => fm.clearSelection());
+  await expect(run).toBeDisabled();
+  await page.locator('#helpPanel .help-search').fill('');
+  await page.evaluate(() => fm.createRect({ name: 'A change' }));   // the ribbon, and the panel, refresh
+  await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+  const starts = page.locator('#helpPanel .help-tutorial-start');
+  await expect(starts).toHaveCount(T.length);
+  for(let i = 0; i < T.length; i++) await expect(starts.nth(i)).toBeEnabled();
+  await page.locator('#helpPanel .help-search').fill('align left');
+  await page.evaluate(() => fm.select('@all'));
+  await expect(run).toBeEnabled();                                  // commands still follow what can run
+});
+
 test.describe('practice mode', () => {
   test('Exit puts everything back; files and documents are refused while practising', async ({ page }) => {
     const before = await ownModel(page);

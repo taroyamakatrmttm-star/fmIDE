@@ -7950,10 +7950,11 @@ function createHelpPanel(options){
     });
     body.appendChild(art);
   }
-  // The ▶ buttons follow what can run now (call when the app's state changes).
+  // The commands' ▶ buttons follow what can run now (call when the app's state changes). Only
+  // command rows: an app's own ▶ buttons (homeTop, e.g. fmIDE's tutorials) are its own.
   function refresh(){
     if(!isOpen() || !cmds) return;
-    panel.querySelectorAll('.help-run').forEach(b => {
+    panel.querySelectorAll('.help-command[data-cmd] .help-run').forEach(b => {
       const c = cmds.get(b.parentNode.dataset.cmd);
       b.disabled = !c || !cmds.enabled(c);
     });

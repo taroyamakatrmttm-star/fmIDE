@@ -79,6 +79,7 @@ One pull request each, each approved before the next.
   - Its choices: Take the 5-minute tour, Explore the sample model, Start blank, Open Help.
 - **The shared panel** (`src/shared/help-panel.js`) gained two things: `homeTop`, for an app's own things above the topics, and `richText`, used by the coach card.
 - **Found along the way:** a rectangle's 🕒 button sat under its own resize corner, so clicking its middle started a resize. The "Time" tutorial's test caught it. 🕒 now sits on the bottom edge, left of the resize corner: clear of the corner, the bottom dot and, on a touchscreen, the corner's larger touch area. A test checks all three can be reached.
+- **Found on CI:** the shared panel's refresh of its commands' ▶ buttons also greyed out the tutorials' ▶ (they share the button style but aren't commands), so after any change with Help open, a tutorial couldn't be started. The refresh now touches only command rows; a test checks it.
 - **Checked:** group 33 plays both tutorials step by step with real clicks, typing and right-button drags. A step without an action in the test fails it. The group also covers practice mode (exit, reload, refused commands, download) and the welcome card. Then the whole suite.
 
 ## Topics (H1)
