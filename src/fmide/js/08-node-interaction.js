@@ -482,6 +482,7 @@
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
     box.className = 'modal-box';
+    addWindowHelp(box, 'periods');
     box.style.minWidth = '360px';
     overlay.appendChild(box);
     document.body.appendChild(overlay);
@@ -578,6 +579,7 @@
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
     box.className = 'modal-box';
+    addWindowHelp(box, 'values-over-time');
     box.style.minWidth = '300px';
     overlay.appendChild(box);
     document.body.appendChild(overlay);

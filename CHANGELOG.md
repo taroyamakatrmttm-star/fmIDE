@@ -2,6 +2,13 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Help where you are (step 10, phase H2)
+- **Ribbon buttons have a proper tip:** pause over a button to see its name, shortcut and what it does (even when it is greyed out, with why), and **Learn more** for the full guide; pressing **F1** while the tip shows opens that guide.
+- **Every window has a ?** in its top-right corner (Templates, Functions, Format Presets, Periods, the Macro Builder and the others): it opens that window's guide in the Help panel beside it, with the window still open.
+- **On a tablet**, holding a box offers **Help** for that kind of box.
+- **ExcelExporter has a Help panel too**, with 14 plain-English guides (loading a model, tabs, rows, the Tree View, blocks, the Inputs tab, scenarios, formatting, the "differs from fmIDE" list, generating): **❓ Help** at the top right, **F1**, or the **?** beside each panel's heading. The page narrows beside it.
+- The panel is now one piece of code shared by both apps. No file format changed.
+
 ## Help inside fmIDE (step 10, phase H1)
 - **Press F1** (or ❓ at the top right, or **View → Help**) for the new **Help panel**: about 30 plain-English guides to every part of fmIDE — your first model, operators, arrows, periods and period shifts, blocks, plugs and sockets, templates and recipes, functions, library packs, files, formats, going to Excel, shortcuts, macros and touch — grouped, with a search box. It sits beside the canvas rather than over it, so you can follow the steps while you work, and shortcuts keep working. A command named in a guide is a button that runs it; searching also lists matching commands, each with ▶ to run it.
 - **Every ribbon button says what it does:** pointing at one shows its name, its shortcut and one plain sentence.

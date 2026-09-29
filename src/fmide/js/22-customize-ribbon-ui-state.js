@@ -6,6 +6,7 @@
     const cfgAtOpen = JSON.stringify(cfg);
     const overlay = el('div', 'modal-overlay');
     const box = el('div', 'modal-box rbc-box');
+    addWindowHelp(box, 'customize-ribbon');
     makeResizableWindow(box, 'ribbon');
     overlay.appendChild(box);
     document.body.appendChild(overlay);

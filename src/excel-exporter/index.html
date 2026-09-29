@@ -12,6 +12,7 @@
 </script>
 <style>
 <!-- build:css styles.css -->
+<!-- build:css ../shared/help-panel.css -->
 </style>
 </head>
 <body>
@@ -25,6 +26,7 @@
     </div>
   </div>
   <div class="row">
+    <button id="btnHelp" class="help-btn" title="Help (F1): plain-English guides to ExcelExporter">❓ Help</button>
     <button id="btnClearAll" class="danger" title="Clears the current session. Saved layouts are kept — use &quot;Reset Mapping to Defaults&quot; to discard one.">Start Over</button>
   </div>
 </header>
@@ -51,7 +53,7 @@
 
   <div id="afterLoad" class="hidden">
 
-    <section class="panel">
+    <section class="panel" id="periodsPanel">
       <h2>2. Period columns &amp; output</h2>
       <p class="hint">The number of columns is fixed by fmIDE's own timeline (<span id="periodCountLabel">0</span> periods) — this just controls how the header row labels them.</p>
       <div class="row">
@@ -82,7 +84,7 @@
       </div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="tabsPanel">
       <h2>3. Tabs</h2>
       <p class="hint">One tab per fmIDE canvas by default. Rename, reorder, add, or delete tabs — rows are assigned to tabs below.</p>
       <table class="tabs-table">
@@ -112,7 +114,7 @@
       </div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="rowsPanel">
       <h2>4. Rows</h2>
       <p class="hint">Every value rectangle becomes one labeled row. Operators, aliases, and period-shift nodes are inlined into formulas automatically — they don't get their own row (a rectangle fed through an alias points straight at the alias's source; a rectangle fed through a period-shift points straight at the shifted source, in the shifted period's column). A Block instance is <strong>unpacked</strong>: its definition canvas's own rectangles each get a row too, once per instance (a separate "Block instance —" group below, one per instance, since two instances of the same block compute independently and need independent cells) — a rectangle marked as a Block Input port inside the block is itself inlined, resolving straight to whatever's wired into that instance's port (or to 0 if the port is left unwired), the same way an alias is inlined. Assign each row's tab, section, order, and label; uncheck "Include" to skip a rectangle entirely. For a true input rectangle that's really just formula plumbing (a sign flip, a unit-scale factor like ×1000) rather than a labeled assumption, check "Constant" to splice its value directly into every formula that references it instead of giving it a row of its own — this works inside an unpacked block instance too. A rectangle marked as a Block Input or Block Output in fmIDE's Block feature shows a small "Block In" / "Block Out" tag next to its type, so you can see fmIDE's own port role — this is separate from the Input/Calc/Output section below, which is just this tool's own edge-based placement. To reorder many rows at once, or move a batch to a different tab or section, check the leftmost box on each row you want and use the bar that appears above the table — "Move Up/Down" nudges the whole selection by one slot, "Move to Top/Bottom" sends it to the edge of its group, and "Move to" relocates the whole selection to any tab (and section, if sections are enforced) you pick. Uncheck "Enforce Input / Calc / Output sections" below to stop treating those as hard bands in the generated sheet — a row's section then stays as an informational tag only, and rows in a tab are freely ordered as one flat list; use a Custom / Label row for any banner you still want. "Tree View" shows every row assigned to each tab — including an excluded or "Constant" one, dimmed, so it stays reachable — as one flat, clickable list: click to select a row, Ctrl/Cmd-click to add or remove one, Shift-click to select a range. From there, the bar above the list can set Include or Constant for every row in the selection at once (custom rows and ineligible rows are skipped automatically), and double-clicking a single row's label lets you rename just that one row in place.</p>
       <div class="row" style="margin-bottom:14px;">
@@ -151,7 +153,7 @@
       </table></div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="generatePanel">
       <h2>5. Generate</h2>
       <div class="limits">
         <strong>Known limitations:</strong> a block instance's own compact node never gets a row — it's fully unpacked into its own "Block instance —" group instead (see the Rows panel above), so map/rename/reorder its rows there like any other. A <strong>vertical</strong> block instance (fmIDE's Vertical Block feature) is unpacked once per vintage/run — a "V1", "V2", … tagged copy of every internal row per period in the timeline — plus one "Σ Total"-tagged row per output port that reduces all those vintages back into the single value the rest of the model sees, via SUM/MAX/MIN/AVERAGE/PRODUCT matching that output's reducer (default sum); this is exactly a vintage/waterfall schedule with a Total row underneath, so with many periods a vertical block can add a lot of rows — reorder, rename, or exclude them like any other row. A block that instantiates itself, directly or indirectly, is skipped (avoids an infinite unpack). Formulas, number formats, and cell fill/border/font all carry through reliably. Excel recalculates formulas automatically when the file opens.

@@ -226,7 +226,7 @@ test('holding a node opens its menu and leaves the selection alone; Escape or a 
   const f = await finger(page);
   await holdNode(page, f, b);
   expect(await page.evaluate(() => fm.selection())).toEqual([a]);
-  expect(await menu(page).locator('button').allTextContents()).toEqual(['Draw arrow from here', 'Make alias', 'Duplicate', 'Add to selection', 'Edit…', 'Properties…', 'Delete']);
+  expect(await menu(page).locator('button').allTextContents()).toEqual(['Draw arrow from here', 'Make alias', 'Duplicate', 'Add to selection', 'Edit…', 'Properties…', 'Help', 'Delete']);
   // Holding moved nothing.
   expect(await nodeOf(page, b)).toMatchObject({ x: 420, y: 240 });
   await page.keyboard.press('Escape');

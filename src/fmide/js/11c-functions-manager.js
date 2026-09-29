@@ -14,6 +14,7 @@
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
     box.className = 'modal-box function-editor';
+    addWindowHelp(box, 'functions');
     overlay.appendChild(box);
     document.body.appendChild(overlay);
     function close(){ overlay.remove(); document.removeEventListener('keydown', onKey, true); }
@@ -326,6 +327,7 @@
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
     box.className = 'modal-box template-box function-box';
+    addWindowHelp(box, 'functions');
     makeResizableWindow(box, 'functions');
     overlay.appendChild(box);
     document.body.appendChild(overlay);

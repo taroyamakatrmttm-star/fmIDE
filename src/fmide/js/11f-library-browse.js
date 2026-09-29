@@ -149,6 +149,7 @@
     const mk = (tag, cls, text) => { const e = document.createElement(tag); if(cls) e.className = cls; if(text != null) e.textContent = text; return e; };
     const overlay = mk('div', 'modal-overlay');
     const box = mk('div', 'modal-box library-browse');
+    addWindowHelp(box, 'browse-library');
     makeResizableWindow(box, 'libraryBrowse');
     box.appendChild(mk('p', 'library-pack-title', 'Community library'));
     box.appendChild(mk('p', 'library-browse-intro', 'Packs of templates, recipes and functions shared by fmIDE users, each licensed CC BY 4.0. Choose one to see what it holds; nothing is added until you tick items in its preview and press Add to My Library.'));

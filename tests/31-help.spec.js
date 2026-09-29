@@ -176,15 +176,19 @@ test.describe('search', () => {
 });
 
 test.describe('tooltips and the ribbon', () => {
-  test('a ribbon button\'s tooltip carries its sentence', async ({ page }) => {
+  // H2 replaced the browser's own tooltip with a tip of fmIDE's own (group 32 covers the tip);
+  // the sentence stays on the button for screen readers.
+  test('a ribbon button carries its sentence', async ({ page }) => {
     await page.locator('.rb-tab', { hasText: 'Home' }).click();
     const b = page.locator('.rb-btn', { hasText: 'Add Rectangle' });
-    await expect(b).toHaveAttribute('title', 'Add Rectangle\n' + H.COMMAND_HELP.addRect);
+    await expect(b).toHaveAttribute('aria-description', H.COMMAND_HELP.addRect);
+    await expect(b).toHaveAttribute('aria-label', 'Add Rectangle');
+    await expect(b).not.toHaveAttribute('title', /./);
     // An Insert Operator button: its operator's sentence.
     await page.locator('.rb-tab', { hasText: 'Insert' }).click();
     const expected = 'Adds the if operator, which ' + H.OPERATOR_HELP.if;
-    const titles = await page.locator('.rb-btn').evaluateAll(bs => bs.map(b => b.title));
-    expect(titles.filter(t => t.endsWith('\n' + expected))).toHaveLength(1);
+    const texts = await page.locator('.rb-btn').evaluateAll(bs => bs.map(b => b.getAttribute('aria-description')));
+    expect(texts.filter(t => t === expected)).toHaveLength(1);
   });
 
   test('a customised ribbon gets the Help group once; removed, it stays removed', async ({ page }, testInfo) => {

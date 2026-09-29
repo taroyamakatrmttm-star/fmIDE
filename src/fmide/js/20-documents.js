@@ -454,6 +454,7 @@
       overlay.className = 'modal-overlay';
       const box = document.createElement('div');
       box.className = 'modal-box';
+      addWindowHelp(box, 'documents');
       box.id = 'openRecentDialog';
       box.style.minWidth = '380px';
       const h = document.createElement('p');

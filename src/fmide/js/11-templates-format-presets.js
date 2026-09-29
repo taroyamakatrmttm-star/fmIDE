@@ -532,6 +532,7 @@
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
     box.className = 'modal-box dedupe-box';
+    addWindowHelp(box, 'templates');
     overlay.appendChild(box);
     document.body.appendChild(overlay);
     function close(){ overlay.remove(); document.removeEventListener('keydown', onKey, true); }
@@ -844,6 +845,7 @@
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
     box.className = 'modal-box recipe-editor';
+    addWindowHelp(box, 'recipes');
     overlay.appendChild(box);
     document.body.appendChild(overlay);
     function close(){ overlay.remove(); document.removeEventListener('keydown', onKey, true); }
@@ -1170,6 +1172,7 @@
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
     box.className = 'modal-box template-update-box';
+    addWindowHelp(box, 'template-versions');
     overlay.appendChild(box);
     document.body.appendChild(overlay);
     function close(){ overlay.remove(); document.removeEventListener('keydown', onKey, true); }
@@ -1315,6 +1318,7 @@
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
     box.className = 'modal-box template-box format-presets-box';
+    addWindowHelp(box, 'formats');
     makeResizableWindow(box, 'formatPresets');
     overlay.appendChild(box);
     document.body.appendChild(overlay);
@@ -1433,6 +1437,7 @@
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
     box.className = 'modal-box template-box';
+    addWindowHelp(box, 'templates');
     makeResizableWindow(box, 'templates');
     overlay.appendChild(box);
     document.body.appendChild(overlay);
