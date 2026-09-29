@@ -304,6 +304,7 @@
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
     box.className = 'modal-box alias-picker-box';
+    addWindowHelp(box, 'aliases');
     overlay.appendChild(box);
     document.body.appendChild(overlay);
 
@@ -396,6 +397,7 @@
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
     box.className = 'modal-box alias-picker-box';
+    addWindowHelp(box, 'blocks');
     overlay.appendChild(box);
     document.body.appendChild(overlay);
 

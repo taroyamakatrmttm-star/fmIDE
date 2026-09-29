@@ -35,6 +35,7 @@
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
     box.className = 'modal-box shortcuts-box';
+    addWindowHelp(box, 'launcher-shortcuts');
     overlay.appendChild(box);
     document.body.appendChild(overlay);
     function close(){ overlay.remove(); renderRibbon(); saveWorkspaceSoon(); }

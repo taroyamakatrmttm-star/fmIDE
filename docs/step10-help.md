@@ -18,7 +18,7 @@
 One pull request each, each approved before the next.
 
 - **H1 — help panel, search, a sentence per command.** F1 (or ❓ next to the ribbon's search box, or View → Help) opens a Help panel beside the canvas. It doesn't block the canvas: you can follow the steps while you work, and shortcuts keep working. It has a search box, the topics by group, and a topic view with numbered steps; a command named in a topic is a button that runs it. Every ribbon command gets one plain sentence, shown in its tooltip and found by the search. Help topics also appear in the Command Launcher.
-- **H2 — help where you are.** A richer tooltip on each ribbon button (the sentence, the shortcut and "Learn more" to its topic); a "?" in the corner of each window (Templates, Functions, Format Presets, Periods…) that opens its topic; "Help" in the touch menu; the same help panel in ExcelExporter, with its own topics (load, arrange, the Tree view, scenarios, the "differs from fmIDE" list, generate). To decide then: whether the panel's code moves into `src/shared/` (Apache in both apps) or ExcelExporter gets its own copy.
+- **H2 — help where you are.** A richer tooltip on each ribbon button (the sentence, the shortcut and "Learn more" to its topic); a "?" in the corner of each window (Templates, Functions, Format Presets, Periods…) that opens its topic; "Help" in the touch menu; the same help panel in ExcelExporter, with its own topics (load, arrange, the Tree view, scenarios, the "differs from fmIDE" list, generate). Decided (29 Sep 2026, the owner): the panel's code moves into `src/shared/` (Apache in both apps); ExcelExporter's help text stays ExcelExporter's.
 - **H3 — tutorials and a welcome screen.** Short guided lessons (3–5 minutes) that point at the right button and wait until each step is done, in a separate practice document so your own work is never touched. A welcome screen on first start ("Take the 5-minute tour", "Open a sample model", "Start blank"), reopened from Help. Each tutorial also runs as a test.
 - **H4 — help on the site and videos.** The same topics as plain pages on the published site (`/help`, no JavaScript, like `/library`); video scripts made from the tutorials; screen recordings made automatically by running the tutorials (so they can be recorded again when the screen changes); the voice-over and uploading to YouTube are the owner's; the links then go into the topics.
 
@@ -33,6 +33,25 @@ One pull request each, each approved before the next.
 - **Found along the way:**
   - Values are shown only after Evaluate (F9) once something changes, so "Your first model" says so.
   - Load Module adds a module's boxes to the current canvas, not as a new canvas; the sentence says so.
+
+## Done (H2) — how it turned out
+
+- **One panel for both apps.** The Help panel's code moved from fmIDE into `src/shared/help-panel.js` (`createHelpPanel`), and its styles into `src/shared/help-panel.css`. Both pages pull the styles in with a second `build:css` line, so the build needed no change. fmIDE hands it its commands, so `{cmd:…}` buttons and ▶ keep working. ExcelExporter has no command list, so its topics name buttons in words.
+- **Ribbon tips** (fmIDE, `01b-help.js`). A tip of fmIDE's own replaces the browser's tooltip on every ribbon and Quick Access Toolbar button:
+  - It shows the name, the shortcut and the sentence, plus "Not available right now" on a disabled button, and "Learn more (F1)" when a topic names the command. Insert Operator buttons go to Operators, or to "Timing, conditions and rounding".
+  - It appears after a short pause with a mouse, including over disabled buttons, since it is watched on the page. It stays while the pointer is on it.
+  - F1 while a tip shows opens that topic.
+  - The button keeps its name and sentence for screen readers (`aria-label`, `aria-description`).
+- **"?" on 22 windows** (`addWindowHelp(box, topic)`): among them Templates, recipes, Functions, the function editor and picker, Format Presets, properties, Periods, the per-period values, blocks, aliases, the library windows, the Macro Builder, Customize Ribbon, Shortcuts, Update Canvas, Remove Duplicates and Open Recent.
+  - While Help is open, the panel sits above a window's dimmed backdrop, and the backdrop leaves the panel's side clear, so the window and its topic can be read side by side.
+  - Windows that empty themselves between steps (the alias and block pickers) get their "?" back.
+- **Touch menu:** holding a node now offers Help, for that kind of node's topic.
+- **ExcelExporter** (`src/excel-exporter/js/09d-help.js`, its own licence): 14 topics in 5 groups (getting started, arranging the workbook, inputs and scenarios, formatting, making the workbook).
+  - It opens from ❓ Help in the header or with F1.
+  - A "?" beside each panel's heading, and beside "Gather inputs on a separate tab", opens that part's topic.
+  - The page narrows beside the panel.
+- **Checked:** group 32 (18 tests), groups 31 and 27 updated, then the whole suite. Screenshots of a tip, a window's "?" with its topic, and ExcelExporter's panel.
+- **Found along the way:** the alias and block pickers rebuild their window at each step, which would have removed the "?". A test caught it, and the "?" now comes back.
 
 ## Topics (H1)
 
@@ -64,4 +83,5 @@ Groups, in order, with their topics:
 
 ## Tests
 
+- **H2 — group 32** (`tests/32-help-context.spec.js`, also in `npm run test:help`): the ribbon tip (name, shortcut, sentence, Learn more, F1 while it shows, a disabled button, an operator's topic); the "?" on nine windows, opening its topic above the backdrop with the window still open; every `addWindowHelp` names a topic that exists; Help in the touch menu (real touch input); ExcelExporter's ❓ Help and F1, the page narrowing, the "?" beside its headings, its topics and See also links, no request.
 - **H1 — group 31** (`tests/31-help.spec.js`, `npm run test:help`): opening and closing (F1, ❓, the ribbon, `fm.command('openHelp')`, Esc); shortcuts still working with the panel open; every command has a sentence and no sentence names a missing command; every command and topic a topic names exists; search finds topics and commands, and a command's ▶ runs it (disabled when the command is); help topics in the Command Launcher; a customised ribbon gets the Help group once; tooltips carry the sentence; the panel at tablet size; no network request.

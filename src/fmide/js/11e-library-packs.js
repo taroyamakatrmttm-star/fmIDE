@@ -197,6 +197,7 @@
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
     box.className = 'modal-box library-pack-save';
+    addWindowHelp(box, 'library-packs');
     const intro = document.createElement('p');
     intro.textContent = 'Save as Library Pack — one file of templates, recipes and functions to share. What they need comes along: a recipe\'s parts and the functions a function calls. Each goes in as its latest version.';
     box.appendChild(intro);
@@ -291,6 +292,7 @@
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
     box.className = 'modal-box library-pack-preview';
+    addWindowHelp(box, 'library-packs');
     makeResizableWindow(box, 'libraryPack');
     const para = (cls, text) => { const p = document.createElement('p'); p.className = cls; p.textContent = text; box.appendChild(p); return p; };
     para('library-pack-title', read.pack.title);

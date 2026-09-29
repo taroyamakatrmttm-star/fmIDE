@@ -475,10 +475,23 @@ fmIDE at 1400 × 900. The help text (`src/help/fmide-help.js`) is also read on i
 - A topic shows its numbered steps as text (no `{cmd:` markers); its Add Rectangle button adds a rectangle; See also opens another topic and Back returns, twice back to the list.
 - Search: "period shift" puts that topic first; "template" finds the Templates topic and the Templates command with its sentence; Align Left's ▶ is off with nothing selected and on with everything selected; New Canvas's ▶ adds a canvas; a search with no match says so; clearing it shows the list.
 - The Command Launcher's placeholder names help topics; "period shift" shows the topic in category Help; choosing it closes the launcher and opens the panel at that topic.
-- Add Rectangle's tooltip is its name, then its sentence on the next line; exactly one Insert-tab button ends with the if operator's sentence.
+- Add Rectangle carries its sentence as `aria-description` and its name as `aria-label`, with no `title` (the tip itself: group 32); exactly one Insert-tab button carries the if operator's sentence.
 - A customised ribbon (workspace without `helpAdded`) gets the Help group after the group holding Keyboard Shortcuts; with `helpAdded: true` it doesn't; ❓ is still there.
 - At 1024 × 768 the panel fits the screen and the canvas keeps more than 500 px; in a 600 px window the panel takes the full width.
 - No request is made while the panel is opened, searched, a topic read and closed.
+
+### 32. Help where you are (`tests/32-help-context.spec.js`; step 10, phase H2)
+fmIDE at 1400 × 900 (the touch test at 1024 × 768 with a touchscreen), ExcelExporter at 1400 × 900. fmIDE's help text and ExcelExporter's topic lists are also read on their own in Node.
+- Pausing over Add Period Shift shows `#commandTip` with its name, sentence and "Learn more (F1)"; moving away hides it; Evaluate's tip shows F9.
+- F1 while the tip shows opens "Period shifts…" and hides the tip; Learn more on Templates' tip opens "Templates"; F1 with no tip closes the panel.
+- The disabled Align Left's tip says "Not available right now."; the round operator's Learn more opens "Timing, conditions and rounding".
+- For Templates, Functions, Format Presets, Periods, Macro Builder, Customize Ribbon, Keyboard Shortcuts, Open Recent and the alias picker: the window's "?" opens its topic; the window stays open; a point in the panel belongs to the panel (above the backdrop).
+- Every `addWindowHelp(…, 'id')` in fmIDE's source names a topic that exists (at least 20 of them).
+- Holding an operator (real touch input) and tapping Help opens "Operators"; the page saw only touch.
+- ExcelExporter: ❓ Help opens the panel with every topic listed; the page's content ends left of the panel; F1 from the search box closes it and F1 from the page opens it; Esc closes it.
+- The "?" beside each panel's heading (load, periods, tabs, rows, custom rows, generate) and beside "Gather inputs on a separate tab" opens its topic; search "scenario" puts Scenarios first; its See also opens "The Inputs tab".
+- ExcelExporter's topics: unique ids, known groups, a title, summary and body each, See also links that exist, no `{cmd:}`; every group has a topic.
+- No request while ExcelExporter's Help is opened, searched, read and closed.
 
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.

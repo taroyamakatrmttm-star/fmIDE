@@ -112,12 +112,6 @@
     return e;
   }
 
-  // Name and shortcut, then the command's plain sentence (step 10) on the next line.
-  function commandTitle(c){
-    const sc = shortcutBindings[c.id];
-    const sentence = commandHelpText(c);
-    return commandLabel(c) + (sc ? `  (${prettyCombo(sc)})` : '') + (sentence ? '\n' + sentence : '');
-  }
 
   let ribbonArrowsUpdate = null; // addRibbonScrollArrows' update, while the ribbon is open
   function renderRibbon(){
@@ -139,7 +133,7 @@
       const b = el('button');
       b.type = 'button';
       b.textContent = c.icon || '•';
-      b.title = commandTitle(c);
+      setCommandTip(b, c);
       b.addEventListener('click', () => { closeRibbonFlyout(); runCommand(c.id); });
       qat.appendChild(b);
       ribbonButtons.push({ el: b, cmdId: c.id, scope:'qat' });
@@ -209,7 +203,7 @@
           b.type = 'button';
           b.appendChild(el('span', 'ic', c.icon || '•'));
           b.appendChild(el('span', 'lb', it.label || c.short || commandLabel(c)));
-          b.title = commandTitle(c);
+          setCommandTip(b, c);
           b.addEventListener('mousedown', (ev) => ev.preventDefault());
           b.addEventListener('click', () => { closeRibbonFlyout(); runCommand(c.id); });
           if(large){
@@ -300,7 +294,7 @@
         const text = rb.item.label || c.short || commandLabel(c);
         if(lb && lb.textContent !== text) lb.textContent = text;
       }
-      if(c.dynLabel) rb.el.title = commandTitle(c);
+      if(c.dynLabel) setCommandTip(rb.el, c);
       rb.el.classList.toggle('active-choice', c.id === 'toggleRecord' && recorder.active);
     });
     refreshHelpCommands();

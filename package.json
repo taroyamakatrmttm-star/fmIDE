@@ -28,7 +28,7 @@
     "test:placement": "playwright test tests/28-placement.spec.js",
     "test:windows": "playwright test tests/29-windows.spec.js",
     "test:touch-excel": "playwright test tests/30-touch-excel.spec.js",
-    "test:help": "playwright test tests/31-help.spec.js",
+    "test:help": "playwright test tests/31-help.spec.js tests/32-help-context.spec.js",
     "check-pack": "node tools/check-pack.js",
     "bench": "node tools/bench-calc.js"
   },

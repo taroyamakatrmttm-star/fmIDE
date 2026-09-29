@@ -294,6 +294,7 @@
       return;
     }
     const ui = modalShell('function-picker');
+    addWindowHelp(ui.box, 'function-nodes');
     const nodeSt = node ? functionNodeState(node) : null;
     ui.p(node ? `Change ${functionNodeTitle(node, nodeSt)} to another function or version` : 'Insert Function');
     const search = document.createElement('input');
@@ -456,6 +457,7 @@
     const name = functionLabel(target);
     if(!rows.length){ showMessage(`Every ${name} node in this model is already on version ${target.version} (or newer).`); return; }
     const ui = modalShell('function-uses');
+    addWindowHelp(ui.box, 'function-nodes');
     ui.p(`Update ${name} to version ${target.version}` + (target.note ? ' — ' + target.note : ''));
     const list = document.createElement('div');
     list.className = 'function-uses-list';
