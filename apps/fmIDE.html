@@ -16125,9 +16125,23 @@
     Promise.resolve(offer.prompt()).catch(() => {}).then(() => refreshCommandStates());
   }
 
-  // ExcelExporter sits next to fmIDE (site/ and apps/ alike) and opens in its own window.
+  // ExcelExporter sits next to fmIDE (site/ and apps/ alike) and opens in its own window —
+  // or, in an iPad's home-screen app, in fmIDE's place. The mark in this tab's
+  // sessionStorage tells ExcelExporter's "Back to fmIDE" that fmIDE is the page before it
+  // (the site sends no referrer). A window this page already opened is brought to the front,
+  // not loaded again (which would lose the model loaded there).
+  let excelWindow = null;
+  window.addEventListener('pageshow', (ev) => { if(ev.persisted) excelWindow = null; });
   function openExcelExporter(){
+    try {
+      if(excelWindow && excelWindow !== window && !excelWindow.closed && excelWindow.opener === window){
+        excelWindow.focus();
+        return;
+      }
+    } catch(e){ /* a window we can't ask about: open it again */ }
+    try { sessionStorage.setItem('fmIDE-opened-ExcelExporter', '1'); } catch(e){ /* storage off: Back opens fmIDE instead */ }
     const w = window.open('ExcelExporter.html', 'fmIDE-ExcelExporter');
+    excelWindow = w || null;
     if(!w) showMessage('The browser blocked the ExcelExporter window. Allow pop-ups for fmIDE, or open ExcelExporter.html from the same folder as fmIDE.');
   }
 

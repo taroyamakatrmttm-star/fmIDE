@@ -6,6 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
 <title>ExcelExporter — fmIDE → Live Excel Model</title>
+<meta name="fmide-address" content="fmIDE.html">
 <script>
 // ============================================================
 // Built-in .xlsx writer — replaces the external xlsx-js-style library (no CDN, works
@@ -311,6 +312,9 @@ var XLSX = (function(){
   header{ background:#111827; color:#fff; padding:16px 24px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
   header h1{ font-size:18px; margin:0; font-weight:700; }
   header .sub{ font-size:12px; color:#9ca3af; margin-top:2px; }
+  header .head-left{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  a.back-link{ color:#fff; text-decoration:none; font-size:14px; padding:7px 13px; border:1px solid #4b5563; border-radius:7px; white-space:nowrap; }
+  a.back-link:hover, a.back-link:focus-visible{ background:#1f2937; }
   main{ max-width:1180px; margin:0 auto; padding:20px; display:flex; flex-direction:column; gap:18px; }
   .panel{ background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px 20px; }
   .panel h2{ font-size:15px; margin:0 0 4px; }
@@ -436,9 +440,12 @@ var XLSX = (function(){
 <body>
 
 <header>
-  <div>
-    <h1>ExcelExporter</h1>
-    <div class="sub">fmIDE → a live-formula Excel workbook</div>
+  <div class="head-left">
+    <a id="btnBackToFmide" class="back-link" href="fmIDE.html">← Back to fmIDE</a>
+    <div>
+      <h1>ExcelExporter</h1>
+      <div class="sub">fmIDE → a live-formula Excel workbook</div>
+    </div>
   </div>
   <div class="row">
     <button id="btnClearAll" class="danger" title="Clears the current session. Saved layouts are kept — use &quot;Reset Mapping to Defaults&quot; to discard one.">Start Over</button>
@@ -7532,6 +7539,81 @@ function renderDifferences(){
   note.textContent = 'You can still download the workbook. Fixing these in fmIDE (or including the rows) makes both give the same numbers.';
   panel.appendChild(note);
 }
+// ============================================================
+// "← Back to fmIDE" (top bar). How ExcelExporter was opened decides what it does:
+//   1. in its own window, by fmIDE (Open ExcelExporter names the window fmIDE-ExcelExporter;
+//      fmIDE is still open behind it — Chrome, Edge, Firefox on a computer): close this
+//      window, asking first when a model is loaded (it has to be loaded again next time;
+//      the layout is kept). A page can't reliably bring another window to the front.
+//   2. in fmIDE's place, in the same window (an iPad's home-screen app): go back a page,
+//      like the swipe from the left edge. fmIDE marks this tab (sessionStorage) just before
+//      opening ExcelExporter; the site sends no referrer, so the mark is how we know.
+//   3. anything else (a bookmark, a file opened from disk): the link itself — fmIDE's page
+//      in this window, restoring its autosave.
+// fmIDE's address comes from the build (<meta name="fmide-address">), never from a file.
+// ============================================================
+const EXCEL_WINDOW_NAME = 'fmIDE-ExcelExporter';
+const OPENED_FROM_FMIDE_KEY = 'fmIDE-opened-ExcelExporter';
+
+// Read once, and cleared, so a reload or a later visit in this tab doesn't count.
+const openedFromFmide = (() => {
+  try {
+    const mark = sessionStorage.getItem(OPENED_FROM_FMIDE_KEY) === '1';
+    sessionStorage.removeItem(OPENED_FROM_FMIDE_KEY);
+    return mark;
+  } catch(e){ return false; }
+})();
+
+function fmideAddress(){
+  const meta = document.querySelector('meta[name="fmide-address"]');
+  return (meta && meta.getAttribute('content')) || 'fmIDE.html';
+}
+
+function fmideWindowBehind(){
+  try {
+    const op = window.opener;
+    return !!op && op !== window && !op.closed && window.name === EXCEL_WINDOW_NAME;
+  } catch(e){ return false; }
+}
+
+async function backToFmide(ev){
+  if(fmideWindowBehind()){
+    ev.preventDefault();
+    if(model && !(await showConfirm('Close ExcelExporter?',
+      'fmIDE is open in its own window. Your layout is kept; you\'ll load your file again next time you open ExcelExporter.',
+      'Close'))) return;
+    writeMapping();
+    window.close();
+    // Closing is refused only in rare cases: then go back a page if fmIDE is there, or say so.
+    setTimeout(() => {
+      if(window.closed) return;
+      if(openedFromFmide && history.length > 1) goBackToFmide();
+      else setStatus($('loadStatus'), 'This window can\'t close itself: switch to fmIDE\'s window or tab.', 'info');
+    }, 500);
+    return;
+  }
+  if(openedFromFmide && history.length > 1){
+    ev.preventDefault();
+    writeMapping();
+    goBackToFmide();
+    return;
+  }
+  writeMapping(); // case 3: the link navigates
+}
+
+function goBackToFmide(){
+  // If going back doesn't leave this page, open fmIDE instead.
+  const fallback = setTimeout(() => { location.href = backLink.href; }, 1000);
+  window.addEventListener('pagehide', () => clearTimeout(fallback), { once: true });
+  history.back();
+}
+
+const backLink = $('btnBackToFmide');
+backLink.setAttribute('href', fmideAddress());
+backLink.addEventListener('click', (ev) => {
+  if(ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return; // a new tab or window: the link as it is
+  backToFmide(ev);
+});
 // ============================================================
 // Wiring
 // ============================================================

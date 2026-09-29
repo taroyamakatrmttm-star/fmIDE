@@ -25,6 +25,9 @@
 // is replaced by content:
 //   <!-- build:css styles.css -->   the contents of that file
 //   <!-- build:js js -->            every .js file in that folder, in file-name order
+//   <!-- build:fmide-address -->    a <meta name="fmide-address"> giving fmIDE's address
+//                                   next to the page: fmIDE.html in apps/, the site's
+//                                   front page (./) in site/ (ExcelExporter's "Back to fmIDE")
 // Inside a .js piece, a line consisting only of an include marker pulls in shared code
 // that both apps use (src/shared/, path relative to src/):
 //   <indent>// build:include shared/escaping.js
@@ -53,6 +56,8 @@ const SITE_HEAD = [
   '<link rel="icon" href="icons/icon.svg" type="image/svg+xml">',
   '<link rel="apple-touch-icon" href="icons/icon-192.png">',
 ].join('\n') + '\n';
+const FMIDE_ADDRESS_MARKER = /^<!-- build:fmide-address -->\r?$/;
+const fmideAddressMeta = (forSite) => '<meta name="fmide-address" content="' + (forSite ? './' : 'fmIDE.html') + '">\n';
 const LIBRARY = require('./build-library.js');
 const INCLUDE = /^([ \t]*)\/\/ build:include ([A-Za-z0-9._\/-]+)\r?$/;
 
@@ -90,7 +95,8 @@ function expandIncludes(text){
   }).join('\n');
 }
 
-// forSite: the site's version of the page (the site-head marker filled in).
+// forSite: the site's version of the page (the site-head marker filled in, fmIDE's address
+// the site's front page).
 function buildApp(app, forSite){
   const page = readPiece(path.join(app.src, 'index.html'));
   const lines = page.split('\n');
@@ -98,6 +104,7 @@ function buildApp(app, forSite){
   lines.forEach((line, i) => {
     const last = i === lines.length - 1;
     if(SITE_HEAD_MARKER.test(line)){ if(forSite) out += SITE_HEAD; return; }
+    if(FMIDE_ADDRESS_MARKER.test(line)){ out += fmideAddressMeta(forSite); return; }
     const m = MARKER.exec(line);
     if(!m){
       out += last ? line : line + '\n';

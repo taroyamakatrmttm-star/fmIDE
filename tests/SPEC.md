@@ -181,6 +181,8 @@ Commands `exportPreferences` (download `fmIDE-preferences.json`) and `importPref
 - Under the security policy (the page's `Content-Security-Policy` lists script hashes): a whole workflow — build a rectangle, Save As a `.fmide` download, Open ExcelExporter (from the offline copy), load the sample, generate an `.xlsx` — records no policy violations in either window; a script injected into fmIDE or ExcelExporter is blocked and never runs.
 - Short addresses: `/ExcelExporter.html` → `/ExcelExporter`, `/index.html` → `/`; `_headers` is not served.
 - `apps/fmIDE.html` links no manifest and registers no service worker, even on a secure origin.
+- ExcelExporter's "← Back to fmIDE" on the site links to the front page (`./`) and opens fmIDE; in `apps/` it links to `fmIDE.html`.
+- Anywhere, "← Back to fmIDE": in the window fmIDE opened, it closes that window and fmIDE is unchanged; with a model loaded it first asks "Close ExcelExporter?" ("Your layout is kept"), and Cancel keeps the window and its model. Open ExcelExporter again while that window is open brings it forward: no new window, not loaded again. In fmIDE's place (as an iPad's home-screen app does: `window.open` faked to load in the same window), it goes back a page (the history does not grow) to fmIDE with its model. Opened on its own, or after a reload, it opens `fmIDE.html` in that window.
 - Anywhere: Open ExcelExporter opens `ExcelExporter.html` next to fmIDE in its own window; Install fmIDE is disabled until the browser offers it, then prompts once; a `.fmide` handed over through a (faked) `launchQueue` opens as a document, asking Save / Don't save / Cancel first when there are unsaved changes.
 
 ### 13. Plugs (fmIDE, and ExcelExporter reading the result)
@@ -462,6 +464,7 @@ ExcelExporter's Tree view in Chromium with a touchscreen at 1024 × 768, sample 
 - With no row tapped yet, Select from the last row to here is disabled.
 - A double-tap on a row opens its rename box (focused, 16px text); typing and Enter rename it. A double-tap with nothing selected renames the row its first tap selected, although the selection bar that appears moves the list under the finger.
 - A right-click opens the menu at once, selects just that row, and has no Add to selection / Select from the last row items.
+- A tap on "← Back to fmIDE" in the window fmIDE opened closes that window (the tap seen as `touch`); fmIDE stays open.
 
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
