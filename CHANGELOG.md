@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: ← Back to fmIDE
+- **ExcelExporter has a "← Back to fmIDE" button** at the top left. On a computer, where ExcelExporter opens in its own window, it closes that window, which shows fmIDE again as you left it; if a model is loaded it asks first (your layout is kept; the file is loaded again next time). With fmIDE added to an iPad's home screen, where ExcelExporter takes fmIDE's place, it goes back to fmIDE, as swiping in from the left edge does. Opened on its own, it opens fmIDE.
+- **Fix:** Open ExcelExporter while ExcelExporter's window is already open brings that window to the front; it used to load it again, losing the model loaded there.
+- No file format changed.
+
 ## Paste into free space; a recipe skips parts already built
 - **Paste** puts the copied nodes, keeping their layout, in the nearest free space next to where they were, so pasting again and again no longer piles copies on top of each other or of the original.
 - **Recipes:** a part whose template is already in the model (built by another recipe, or added by you), or that comes twice in one recipe, shows **Skip — already here as canvas “…”** in the Templates window, ticked. Build then uses that canvas (plugs and sockets connect to it by name) instead of adding a duplicate, and says what it skipped. Untick it to add the part again.

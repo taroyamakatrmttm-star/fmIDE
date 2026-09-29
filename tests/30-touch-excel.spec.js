@@ -5,6 +5,7 @@
 const { test, expect } = require('./helpers/apps');
 const X = require('./helpers/excel');
 const { finger, watchPointerTypes, centre } = require('./helpers/touch');
+const F = require('./helpers/fmide');
 
 test.use({ hasTouch: true, viewport: { width: 1024, height: 768 } });
 
@@ -139,5 +140,20 @@ test('a right-click still opens the menu straight away, without the finger\'s it
   const items = await menu(page).locator('button[role=menuitem]').allTextContents();
   expect(items[0]).toBe('▲ Move Up');
   expect(items.some(t => /selection|last row/.test(t))).toBe(false);
+  expect(pageErrors).toEqual([]);
+});
+
+test('a tap on Back to fmIDE closes ExcelExporter\'s own window, leaving fmIDE open', async ({ page, pageErrors }) => {
+  await F.openFmIDE(page);
+  const [popup] = await Promise.all([page.waitForEvent('popup'), page.evaluate(() => fm.command('openExcelExporter'))]);
+  await popup.waitForLoadState();
+  await expect(popup.locator('#dropZone')).toBeVisible();
+  // The window closes, so what it saw (touch, not a mouse) is noted in fmIDE's window.
+  await popup.evaluate(() => window.addEventListener('pointerdown', (ev) => { window.opener.__backPointer = ev.pointerType; }, true));
+  const f = await finger(popup);
+  const at = await spot(popup.locator('#btnBackToFmide'));
+  await Promise.all([popup.waitForEvent('close'), f.tap(at).catch(() => {})]); // the lift may outlive the window
+  expect(await page.evaluate(() => window.__backPointer)).toBe('touch');
+  expect(await page.evaluate(() => typeof fm.canvases)).toBe('function');
   expect(pageErrors).toEqual([]);
 });

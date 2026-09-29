@@ -23,7 +23,7 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | `npm run test:formats` | file formats, both apps |
 | `npm run test:ui` | UI flows, both apps |
 | `npm run test:snapshots` | formula/value snapshots only |
-| `npm run test:web-app` | the installable web app (site build, service worker, offline, updates) |
+| `npm run test:web-app` | the installable web app (site build, service worker, offline, updates), Open ExcelExporter and ExcelExporter's "← Back to fmIDE" |
 | `npm run test:agreement` | fmIDE's values against the recalculated workbooks (needs LibreOffice), function calls included |
 | `npm run test:ir` | the shared IR: fmIDE's pinned values, errors and units; the IR alone in Node; the operator catalogue; the phase E1 operators in fmIDE through `window.fm` and on the canvas (drawing, dragging, the ribbon) |
 | `npm run test:excel-ir` | ExcelExporter on the IR: pinned units, operator spellings, the "differs from fmIDE" panel, function calls written out in full, the Functions tab, Excel's formula limits, the phase E1 operators' formulas |
@@ -37,7 +37,7 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | `npm run test:touch` | fmIDE by finger: real touch input on an emulated touchscreen (drag, arrows, resize, tabs, the curve editor, scrolling; press and hold, the node menu, the selection box, double-tap, larger touch areas; the viewport line, the ribbon's arrows, dialogs at tablet sizes, the on-screen keyboard) |
 | `npm run test:placement` | where new nodes go (never on top of others) and the Macro Builder's "Run selected step" moving on |
 | `npm run test:windows` | resizable windows (the size kept in your own settings, never taken from a file) and the Templates list as a tree |
-| `npm run test:touch-excel` | ExcelExporter's Tree view by finger: the row menu by press and hold, choosing several rows, double-tap to rename |
+| `npm run test:touch-excel` | ExcelExporter's Tree view by finger: the row menu by press and hold, choosing several rows, double-tap to rename; a tap on "← Back to fmIDE" |
 | `npx playwright test -g "Tree view"` | tests whose name matches |
 
 After a failure, `npx playwright show-report` opens the report, with a trace for each failed test.
