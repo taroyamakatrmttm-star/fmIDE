@@ -83,6 +83,7 @@ const NOT_A_MODEL = [
   ['preferences', /preferences file.*File → Import Preferences/],
   ['functions', /functions file.*import it in fmIDE/],
   ['excel-style', /Excel style file.*Import Excel Style/],
+  ['module-layouts', /module layouts file.*Import Module Layouts/],
 ];
 for(const [name, message] of NOT_A_MODEL){
   test(`${name} loaded as a model says what it is and where it belongs`, async ({ page }) => {

@@ -12,7 +12,9 @@ const FILE_FORMATS = {
   'fmIDE-workspace':     { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'fmIDE workspace' },
   'fmIDE-excel-mapping': { current: 2, label: 'ExcelExporter mapping file' },
   // The person's own Excel style (step 11a): how every cell looks, by role.
-  'fmIDE-excel-style':   { current: 1, label: 'ExcelExporter Excel style file' }
+  'fmIDE-excel-style':   { current: 1, label: 'ExcelExporter Excel style file' },
+  // The layouts remembered per module (step 11b).
+  'fmIDE-excel-module-layouts': { current: 1, label: 'ExcelExporter module layouts file' }
 };
 // Kinds that are fmIDE files but not something ExcelExporter reads — say where they belong.
 const OTHER_FMIDE_KINDS = {
@@ -42,6 +44,7 @@ function readKnownFile(raw, accept){
     return { error: 'That is an ' + FILE_FORMATS[kind].label + ', not ' + accept.map(k => 'an ' + FILE_FORMATS[k].label).join(' or ') + '.' +
       (kind === 'fmIDE-excel-mapping' ? ' Use "Import Mapping JSON" after loading the model.'
         : kind === 'fmIDE-excel-style' ? ' Use "Import Excel Style" in section 2 after loading a model.'
+        : kind === 'fmIDE-excel-module-layouts' ? ' Use "Import Module Layouts" in section 3 after loading a model.'
         : ' Load it with the file picker in section 1.') };
   }
   const data = JSON.parse(JSON.stringify(raw));
@@ -89,6 +92,7 @@ async function loadModel(m){
   const key = signatureOf(systemData, true);
   let restored = null;
   await excelStyleLoaded; // the person's Excel style, read from this browser once
+  await moduleLayoutsLoaded; // and the layouts remembered per module (04b-module-layouts.js)
   try{
     await layoutsMigrated;
     let raw = await layoutStore.get(key);
@@ -100,11 +104,14 @@ async function loadModel(m){
   }catch(err){ /* ignore */ }
   model = loaded;
   modelIR = ir;
+  canvasModules = readCanvasModules(systemData);
   mappingKey = key;
   mapping = restored || buildDefaultMapping(model);
   // reconcile: drop rows/tabs referencing nodes/canvases no longer present, add rows for new nodes
   reconcileMapping();
-  if(!restored) sortNewLayout();
+  moduleLayoutsApplied = [];
+  if(!restored){ sortNewLayout(); applyModuleLayouts(); }
+  resetModuleBaselines();
   renderAll();
 }
 
@@ -184,6 +191,7 @@ function saveMapping(){
   if(!mappingKey) return;
   layoutStore.requestPersistence(); // once, ever — on the first change, not at start-up
   writeMapping();
+  rememberModuleLayouts(); // a module tab that changed is remembered for that module
 }
 function writeMapping(){
   if(!mappingKey) return;

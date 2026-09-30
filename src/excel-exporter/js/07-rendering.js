@@ -10,6 +10,7 @@ function renderAll(){
   $('cfgFileName').value = mapping.cfg.fileName;
   $('cfgSectionsEnabled').checked = sectionsEnabled();
   renderExcelStyle();
+  renderModuleLayoutsInfo();
   selectedRowIds.clear(); // a freshly (re)loaded model invalidates any prior selection
   treeCollapsedTabIds.clear();
   treeAnchorIndex = null;
@@ -46,6 +47,8 @@ function renderTabs(){
       tab.name = sanitizeSheetName(nameInput.value); nameInput.value = tab.name; saveMapping(); renderRows();
     });
     tdName.appendChild(nameInput);
+    const modTag = moduleTabTag(tab);
+    if(modTag) tdName.appendChild(modTag);
     tr.appendChild(tdName);
 
     const tdCount = document.createElement('td'); tdCount.textContent = rowCount + ' row' + (rowCount === 1 ? '' : 's');

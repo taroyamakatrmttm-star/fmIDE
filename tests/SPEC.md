@@ -534,6 +534,17 @@ The scripts and captions (`tools/video-scripts.js`) in Node, for every tutorial;
 - `npm run video-scripts -- --out DIR` writes each tutorial's script (title, "Step 1 of n", the CC BY credit, no times); an unknown id exits 1 with "no tutorial nope".
 - Recording To Excel: exactly the two videos, two caption files and the script; each line starts after the one before ends and lasts at least its reading time; the captions check as above; ExcelExporter's captions hold the lines from when its window opened (the drop-the-file line, not the first step's); the script has a time for every line, in order, and ExcelExporter's time on Step 4; both videos are WebM files that play in Chromium for over 5 s, fmIDE's for at least the recording and at most 10 s more.
 
+### 36. Module layouts (`tests/36-module-layouts.spec.js`; step 11, phase 11b)
+Samples `tests/fixtures/module-layouts/`: `model-a` (Sales, a canvas linked to template family `fam-sales-module-0001`, + Summary), `model-b` (other ids; the module on "Sales (Gold)" with Discount and Net revenue added; + Overview), `model-twice` (the module on Gold and Silver).
+- The module's tab shows "🧩 Sales" (no Forget); loading and renaming another tab store nothing; renaming the module's tab stores `fmide-excel-module-layouts` (`kind: "fmIDE-excel-module-layouts"`, version 1, the family, `tabName`) and the tag says "layout remembered".
+- Arranged in A (tab renamed "Sales plan", Profit moved to the top, a label row "Top line" above Revenue, Costs excluded, Price indented, Volume renamed "Units sold"), B is laid out the same: tab "Sales plan", its sheet's labels without Discount and Net revenue equal A's, both new ones present, Price's indent 1, "1 tab laid out from its module' remembered layout: 5 rows matched, 2 new."
+- Sections on: moving a row to the top of the Input band in A → B (sections on) has the same bands.
+- A whole-model layout wins: after B renames its tab "Gold only", A and B reload with their own layouts (no status line); after a reload, `model-twice` lays out both canvases as remembered, tabs "Gold only" and "Silver" (a name used once).
+- Reset Mapping (its question mentions the module's layout) starts from the remembered layout; Forget → "Forgot the layout remembered for "Sales".", nothing stored; Reset then gives the plain default.
+- Export Module Layouts → the file; Forget; Import → "Imported 1 module layout…", and B is laid out as remembered again.
+- A hostile file (a bad family, a non-object, markup in the name, tab name, labels and colours, 1e9 indent, a duplicate name, bad references): one entry kept; the tab name a valid sheet name; the markup shown only as text (twice in the sheet), indent at most 15, nothing runs, no `<img>`; what is stored holds one row name, `profit`, and no `javascript`.
+- The file loaded as a model: "…Import Module Layouts…". In fmIDE (group 6): Load System → "That is an ExcelExporter module layouts file — import it in ExcelExporter…".
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.

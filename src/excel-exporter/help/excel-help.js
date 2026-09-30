@@ -69,7 +69,21 @@ const EXCEL_HELP_TOPICS = [
     body: [
       { p: 'Panel 3 lists the workbook\'s tabs. Each fmIDE canvas starts as its own tab. Rename a tab by typing its name, move it with ↑ and ↓, add one with + Add Tab, or delete one with 🗑 Delete (its rows move to the first remaining tab).' },
       { p: 'Which rows go on which tab is set in panel 4.' },
-      { see: ['rows', 'inputs-tab'] },
+      { see: ['rows', 'module-layouts', 'inputs-tab'] },
+    ] },
+  { id: 'module-layouts', group: 'layout', title: 'Modules remember their layout',
+    keywords: 'module template reuse remember layout forget export import recipe repeat',
+    summary: 'Arrange a module\'s tab once: every model that uses the module starts with the same layout.',
+    body: [
+      { p: 'A tab marked 🧩 comes from a module: a canvas you added from a template in fmIDE (recipes build them too). When you change such a tab — its name, the order of its rows, labels, blank or label rows, Include, formats, indents — ExcelExporter remembers that layout for the module.' },
+      { steps: [
+        'The next model with the same module, laid out here for the first time, starts with that layout. Rows are matched by rectangle name; rectangles the layout doesn\'t know go where the automatic sort puts them.',
+        'A model you have already arranged keeps its own layout.',
+        'Forget, on the tab, stops the module\'s layout being used for new models.',
+        'Export Module Layouts saves them all as a file; Import Module Layouts reads one, for example on another computer.',
+      ] },
+      { tip: 'Rows you move to another tab stay in the module\'s own tab when the layout is used again.' },
+      { see: ['tabs', 'tree-view'] },
     ] },
   { id: 'rows', group: 'layout', title: 'Rows: what goes where',
     keywords: 'rows order include constant section label move sort custom row group by canvas tab',

@@ -1,0 +1,156 @@
+{
+ "version": 7,
+ "kind": "system",
+ "nextId": 100,
+ "nextCanvasId": 10,
+ "activeCanvasId": "ca1",
+ "periods": [
+  "P1",
+  "P2",
+  "P3"
+ ],
+ "currentPeriod": 0,
+ "canvases": [
+  {
+   "id": "ca1",
+   "name": "Sales",
+   "nodes": [
+    {
+     "id": "a1",
+     "type": "value",
+     "x": 60,
+     "y": 60,
+     "w": 170,
+     "h": 64,
+     "text": "Price\n10",
+     "plugs": []
+    },
+    {
+     "id": "a2",
+     "type": "value",
+     "x": 60,
+     "y": 180,
+     "w": 170,
+     "h": 64,
+     "text": "Volume\n5",
+     "plugs": []
+    },
+    {
+     "id": "a3",
+     "type": "operator",
+     "x": 300,
+     "y": 120,
+     "w": 56,
+     "h": 56,
+     "text": "\u00d7",
+     "socket": ""
+    },
+    {
+     "id": "a4",
+     "type": "value",
+     "x": 420,
+     "y": 110,
+     "w": 170,
+     "h": 64,
+     "text": "Revenue\n0",
+     "plugs": []
+    },
+    {
+     "id": "a5",
+     "type": "value",
+     "x": 60,
+     "y": 300,
+     "w": 170,
+     "h": 64,
+     "text": "Costs\n20",
+     "plugs": []
+    },
+    {
+     "id": "a6",
+     "type": "operator",
+     "x": 300,
+     "y": 300,
+     "w": 56,
+     "h": 56,
+     "text": "\u2212",
+     "socket": ""
+    },
+    {
+     "id": "a7",
+     "type": "value",
+     "x": 420,
+     "y": 300,
+     "w": 170,
+     "h": 64,
+     "text": "Profit\n0",
+     "plugs": []
+    }
+   ],
+   "edges": [
+    {
+     "id": "ae1",
+     "from": "a1",
+     "to": "a3"
+    },
+    {
+     "id": "ae2",
+     "from": "a2",
+     "to": "a3"
+    },
+    {
+     "id": "ae3",
+     "from": "a3",
+     "to": "a4"
+    },
+    {
+     "id": "ae4",
+     "from": "a4",
+     "to": "a6"
+    },
+    {
+     "id": "ae5",
+     "from": "a5",
+     "to": "a6"
+    },
+    {
+     "id": "ae6",
+     "from": "a6",
+     "to": "a7"
+    }
+   ],
+   "template": {
+    "family": "fam-sales-module-0001",
+    "version": 1,
+    "versionId": "vid-sales-module-0001",
+    "name": "Sales"
+   }
+  },
+  {
+   "id": "ca2",
+   "name": "Summary",
+   "nodes": [
+    {
+     "id": "s1",
+     "type": "value",
+     "x": 60,
+     "y": 60,
+     "w": 170,
+     "h": 64,
+     "text": "Tax rate\n0.3",
+     "plugs": []
+    },
+    {
+     "id": "s2",
+     "type": "value",
+     "x": 60,
+     "y": 180,
+     "w": 170,
+     "h": 64,
+     "text": "Headcount\n12",
+     "plugs": []
+    }
+   ],
+   "edges": []
+  }
+ ]
+}

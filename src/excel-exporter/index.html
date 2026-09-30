@@ -101,7 +101,15 @@
         <thead><tr><th style="width:36px;"></th><th>Tab name</th><th style="width:90px;">Rows</th><th style="width:110px;"></th></tr></thead>
         <tbody id="tabsBody"></tbody>
       </table>
-      <div class="row" style="margin-top:10px;"><button id="btnAddTab">+ Add Tab</button></div>
+      <div class="row" style="margin-top:10px;">
+        <button id="btnAddTab">+ Add Tab</button>
+        <span style="flex:1 1 auto;"></span>
+        <button id="btnExportModuleLayouts" title="Save the layouts remembered for your modules to a file, e.g. to use them on another computer">Export Module Layouts</button>
+        <button id="btnImportModuleLayouts" title="Read module layouts from a file saved by Export Module Layouts">Import Module Layouts</button>
+        <input type="file" id="moduleLayoutsFileInput" accept="application/json,.json" style="display:none;">
+      </div>
+      <p class="hint" style="margin:8px 0 0;">A tab marked 🧩 comes from a module (a canvas added from a template in fmIDE). Its layout — tab name, row order, labels, blank and label rows, formats — is remembered for that module and used again wherever the module turns up in a model laid out here for the first time.</p>
+      <div id="moduleLayoutsStatus" style="margin-top:8px;"></div>
       <div class="inputs-settings">
         <label style="display:flex; align-items:center; gap:6px; font-weight:600; font-size:13px;">
           <input type="checkbox" id="cfgInputsEnabled"> Gather inputs on a separate tab

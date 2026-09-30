@@ -40,6 +40,7 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | `npm run test:touch-excel` | ExcelExporter's Tree view by finger: the row menu by press and hold, choosing several rows, double-tap to rename; a tap on "← Back to fmIDE" |
 | `npm run test:help` | Help (step 10): groups 31 to 35 — the panel, a sentence for every command, topics and their links, search, the Command Launcher, the ribbon's tips, the "?" on windows, Help in the touch menu, ExcelExporter's Help panel, every tutorial played through, practice mode, the welcome card, tablet size, no network, the site's help pages, and the tutorial videos' scripts and recording |
 | `npm run test:videos` | the tutorial videos' scripts and captions, and one real recording (To Excel, about 2 minutes) |
+| `npm run test:module-layouts` | ExcelExporter remembering each module's layout (step 11b) |
 | `npm run test:help-site` | the site's help pages the build writes under `/help` (pages, links, command names and tabs against fmIDE, escaping, their security policy) |
 | `npx playwright test -g "Tree view"` | tests whose name matches |
 

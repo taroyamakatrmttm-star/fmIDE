@@ -54,6 +54,7 @@ const WRONG_KIND = [
   ['loadSystem', 'preferences', /^That is an fmIDE preferences file, not a system\. Open it with File → Import Preferences\.$/],
   ['loadSystem', 'functions', /^That is an fmIDE functions file, not a system\. Open it with Functions → Import Functions\.$/],
   ['loadSystem', 'excel-style', /^That is an ExcelExporter Excel style file — import it in ExcelExporter/],
+  ['loadSystem', 'module-layouts', /^That is an ExcelExporter module layouts file — import it in ExcelExporter/],
 ];
 for(const [command, name, message] of WRONG_KIND){
   test(`${name} via ${command} is rejected with a message`, async ({ page }) => {
