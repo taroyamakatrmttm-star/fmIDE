@@ -495,7 +495,7 @@ fmIDE at 1400 × 900 (the touch test at 1024 × 768 with a touchscreen), ExcelEx
 
 ### 33. Tutorials and the welcome card (`tests/33-tutorials.spec.js`; step 10, phase H3a)
 fmIDE at 1400 × 900. The tutorials (`src/help/fmide-tutorials.js`) are also read on their own in Node.
-- There are at least two tutorials (six since H3b), each with steps, and this test has an action (`ACTIONS`) for every step of every one. Ribbon commands are clicked on their tab, going to it first when it isn't shown.
+- There are at least two tutorials (six since H3b), each with steps, and there is an action for every step of every one (`tests/helpers/tutorial-actions.js` since H4b, shared with the video recorder; the tests use its instant pace). Ribbon commands are clicked on their tab, going to it first when it isn't shown.
 - Each tutorial, started from the Help panel after adding a rectangle of your own: its start model's canvases and rectangles (H3b), or a "Practice" canvas with nothing on it; at every step the card shows that step and "Step i of n" with no `{cmd:` left; a step that points at something shows the ring; a step with a check is still showing 0.7 s after it appears (it was not already done: H3b); the step's action — real clicks on ribbon buttons, typing a rectangle's three lines, choosing an operator, right-button drags for arrows, the Periods window, 🕒 → First period only → Save, Evaluate, Next Period — moves it on; Finish removes the card and ring; the canvases, rectangles, periods and title are as before, and Undo takes back your own rectangle.
 - The 🕒 button of a selected rectangle is what is under its centre (as are the resize corner and the bottom dot under theirs), and a click opens "Which periods use this rectangle's own number?".
 - With the Help panel open, a change to the model (which refreshes the ribbon and the panel's commands) leaves every tutorial's ▶ enabled, while Align Left's ▶ still follows the selection.
@@ -520,6 +520,16 @@ What the build writes under `/help` (`tools/build-help.js`) from the apps' help 
 - A topic naming a missing command or topic, a topic id `all` or `Bad Id`, a missing group, a tutorial naming a missing topic or command, a `{cmd:}` in ExcelExporter's text, and a repeated ExcelExporter id: `HelpError`, every problem listed, "nothing is published". The real text builds.
 - The security policy: `/help/`, a topic, `all`, `tutorials/`, a tutorial, `excel/`, an ExcelExporter topic, both style sheets and the licence carry exactly the help pages' policy and `nosniff`; `/help` redirects to `/help/`, `/help/aliases.html` to `/help/aliases`; the app's policy is unchanged. A script put into a help page is blocked; the style sheets apply.
 - Out of the app: no help file in the service worker's list; at 390 px wide no help page scrolls sideways.
+
+### 35. Video scripts and recordings (`tests/35-video-scripts.spec.js`; step 10, phase H4b)
+The scripts and captions (`tools/video-scripts.js`) in Node, for every tutorial; one real recording (`tools/record-tutorials.js`) of the To Excel tutorial.
+- Six tutorials; each script is the opening line (the title, the summary, where to find it), a line per step labelled "Step i of n", and the closing line; no line is empty or holds `{cmd:`, `{title}` or the like.
+- Commands are read by name ("Press Add Rectangle. A rectangle appears…", "Press Evaluate (or F9)…"); a step's `say` is its line and its card text is kept as `shows`; a step without one has no `shows`; a missing command throws.
+- No spoken line says "Press Next", "Next when", "Finish" or "Keep below"; every `say` differs from its card; at least twelve steps have one.
+- Reading time: 2.5 s at least; 50 words take 20.8 s; longer lines take longer.
+- Captions for every tutorial (made-up times): numbered from 1, each ending after it starts and not before the one before, one or two lines of at most about 42 characters, each within its line's time, and every word of every line in order. `srtTime(3723456)` is `01:02:03,456`; the opening's last sentence splits evenly in two.
+- `npm run video-scripts -- --out DIR` writes each tutorial's script (title, "Step 1 of n", the CC BY credit, no times); an unknown id exits 1 with "no tutorial nope".
+- Recording To Excel: exactly the two videos, two caption files and the script; each line starts after the one before ends and lasts at least its reading time; the captions check as above; ExcelExporter's captions hold the lines from when its window opened (the drop-the-file line, not the first step's); the script has a time for every line, in order, and ExcelExporter's time on Step 4; both videos are WebM files that play in Chromium for over 5 s, fmIDE's for at least the recording and at most 10 s more.
 
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.

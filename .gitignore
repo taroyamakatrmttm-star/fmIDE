@@ -20,3 +20,7 @@ tests/output/
 
 # The installable web app, built by `npm run build` (never committed)
 /site/
+
+# Tutorial videos, scripts and captions, made by `npm run video-scripts` and
+# `npm run record-tutorials` (step 10 H4b; never committed)
+/videos/

@@ -38,7 +38,8 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | `npm run test:placement` | where new nodes go (never on top of others) and the Macro Builder's "Run selected step" moving on |
 | `npm run test:windows` | resizable windows (the size kept in your own settings, never taken from a file) and the Templates list as a tree |
 | `npm run test:touch-excel` | ExcelExporter's Tree view by finger: the row menu by press and hold, choosing several rows, double-tap to rename; a tap on "← Back to fmIDE" |
-| `npm run test:help` | Help (step 10): groups 31 to 34 — the panel, a sentence for every command, topics and their links, search, the Command Launcher, the ribbon's tips, the "?" on windows, Help in the touch menu, ExcelExporter's Help panel, every tutorial played through, practice mode, the welcome card, tablet size, no network, and the site's help pages |
+| `npm run test:help` | Help (step 10): groups 31 to 35 — the panel, a sentence for every command, topics and their links, search, the Command Launcher, the ribbon's tips, the "?" on windows, Help in the touch menu, ExcelExporter's Help panel, every tutorial played through, practice mode, the welcome card, tablet size, no network, the site's help pages, and the tutorial videos' scripts and recording |
+| `npm run test:videos` | the tutorial videos' scripts and captions, and one real recording (To Excel, about 2 minutes) |
 | `npm run test:help-site` | the site's help pages the build writes under `/help` (pages, links, command names and tabs against fmIDE, escaping, their security policy) |
 | `npx playwright test -g "Tree view"` | tests whose name matches |
 
@@ -65,7 +66,7 @@ Review the snapshot diff before committing: it is the record of what the change 
 ## Layout
 
 ```
-0-smoke.spec.js … 34-help-site.spec.js    one file per group in SPEC.md (6 and 7 split per app)
+0-smoke.spec.js … 35-video-scripts.spec.js one file per group in SPEC.md (6 and 7 split per app)
 helpers/apps.js       the offline fixture: serves the apps, blocks and counts other requests
 helpers/excel.js      load a model, toggle options, capture the workbook (window.__wb + real .xlsx bytes)
 helpers/soffice.js    find LibreOffice, recalculate workbooks, read values
@@ -73,6 +74,7 @@ helpers/fmide.js      fmIDE file choosers, dialogs, downloads
 helpers/storage.js    read the apps' IndexedDB, make its writes fail, hide the page
 helpers/documents.js  fake file pickers (File System Access API) for fmIDE documents
 helpers/touch.js      a finger: real touch input through the Chrome DevTools Protocol (group 30)
+helpers/tutorial-actions.js  what a person does at each tutorial step (group 33, and the video recorder at its own pace)
 helpers/site.js       builds the installable site and serves it from this machine (groups 12, 25, 26; without the
                       library/ submodule unless a test passes a library folder)
 helpers/snapshot.js   JSON snapshots
