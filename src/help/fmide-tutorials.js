@@ -11,8 +11,11 @@
 //   TUTORIALS — { id, title, minutes, summary, topic, start?, steps }
 //     start — the practice model to begin from (left out: one empty canvas):
 //             { periods: n, canvases: [{ name, nodes: [{ id, type, x, y, text, … }], edges: [{ from, to }] }] }
-//     step: { id, text, point?, done? }
+//     step: { id, text, say?, point?, done? }
 //       text  — plain English; {cmd:id} shows that command as a button (as in the help topics)
+//       say   — what the video's voice-over says instead of text, where the card's words don't
+//               read well aloud ("Press Next to start"); the video scripts use text otherwise
+//               (H4b, tools/video-scripts.js). The app never shows it.
 //       point — what to point at: { cmd: id } a ribbon button (or its tab first),
 //               { node: 'Name' } a rectangle, { nodeButton: ['Name', 'period-btn'] } one of its buttons
 //       done  — what must be true to move on (all of the listed checks):
@@ -42,11 +45,19 @@
 //       A step without done is read and moved on from with Next.
 //   The test group 33 plays every step of every tutorial as a person would; a step it has no
 //   action for fails the test, so a tutorial can't change without its test.
+// The words every tutorial video opens and closes with (H4b, tools/video-scripts.js):
+// {title}, {summary} and {minutes} are the tutorial's own.
+const TUTORIAL_VIDEO = {
+  intro: '{title}. {summary} To follow along, open Help in fmIDE with F1 and choose this tutorial under Tutorials.',
+  outro: 'That is the end of "{title}". Every tutorial is in fmIDE\'s Help, under Tutorials.',
+};
+
 const TUTORIALS = [
   { id: 'first-model', title: 'Your first model', minutes: 5, topic: 'first-model',
     summary: 'Price × quantity = revenue: three rectangles, one operator, three arrows.',
     steps: [
       { id: 'intro',
+        say: 'This builds Revenue = Price × Quantity, on a practice canvas: your own model is put aside and comes back untouched.',
         text: 'This tutorial builds Revenue = Price × Quantity. It runs on a practice canvas: your own model is put aside and comes back, untouched, when you finish or exit. Press Next to start.' },
       { id: 'price', point: { cmd: 'addRect' }, done: [{ rect: { name: 'Price', value: 10 } }],
         text: 'Press {cmd:addRect}. A rectangle appears, ready to type in. Type Price, press Shift+Enter, type 10, press Shift+Enter, type $/t, then press Enter. The three lines are its name, value and unit.' },
@@ -65,12 +76,14 @@ const TUTORIALS = [
       { id: 'evaluate', point: { cmd: 'evaluate' }, done: [{ value: { name: 'Revenue', equals: 50 } }],
         text: 'Press {cmd:evaluate} (or F9). Revenue shows = 50, and its unit, $, is worked out for you. After any change, press Evaluate again to see the new numbers.' },
       { id: 'done',
+        say: 'Well done: that is a whole model. Next, try the tutorial "Time" to make values change from period to period.',
         text: 'Well done: that is a whole model. Next, try the tutorial "Time" to make values change from period to period. Finish returns you to your own model.' },
     ] },
   { id: 'time', title: 'Time: periods and last period', minutes: 7, topic: 'period-shifts',
     summary: 'A balance that carries forward: opening + additions = closing, period after period.',
     steps: [
       { id: 'intro',
+        say: 'A closing balance becomes next period\'s opening balance. We\'ll build that "corkscrew" over five periods, on a practice canvas.',
         text: 'A closing balance becomes next period\'s opening balance. This tutorial builds that "corkscrew" over five periods, on a practice canvas. Press Next to start.' },
       { id: 'periods', point: { cmd: 'managePeriods' }, done: [{ periods: 5 }],
         text: 'Open {cmd:managePeriods}, type 5 as the Number of periods, press Set, then Done. Every canvas shares this timeline, and each period becomes a column in Excel.' },
@@ -95,12 +108,14 @@ const TUTORIALS = [
       { id: 'later', point: { cmd: 'nextPeriod' }, done: [{ value: { name: 'Closing', equals: 160, period: 3 } }, { viewing: 3 }],
         text: 'Press {cmd:evaluate}, then {cmd:nextPeriod} twice to see period 3. Closing is 160: 100 + 20 + 20 + 20.' },
       { id: 'done',
+        say: 'That is a corkscrew: each closing balance opens the next period. The if operator can do the first-period part too: see "Timing, conditions and rounding" in Help.',
         text: 'That is a corkscrew: each closing balance opens the next period. The if operator can do the first-period part too: see "Timing, conditions and rounding" in Help. Finish returns you to your own model.' },
     ] },
   { id: 'blocks', title: 'Blocks: build once, use many times', minutes: 8, topic: 'blocks',
     summary: 'Turn a canvas into a building block with inputs and outputs, then use it on another canvas.',
     steps: [
       { id: 'intro',
+        say: 'A block is a canvas used as one box somewhere else. We\'ll build a small tax calculation, make it a block, and use it.',
         text: 'A block is a canvas used as one box somewhere else. You will build a small tax calculation, make it a block, and use it. Press Next to start.' },
       { id: 'rename', point: { cmd: 'renameCanvas' }, done: [{ canvas: { name: 'Tax', active: true } }],
         text: 'This canvas will be the block. Press {cmd:renameCanvas} (or double-click its tab), type Tax, and press Enter.' },
@@ -127,6 +142,7 @@ const TUTORIALS = [
       { id: 'evaluate', point: { cmd: 'evaluate' }, done: [{ value: { name: 'Company tax', equals: 300 } }],
         text: 'Press {cmd:evaluate}. Company tax is 300: the block worked out 1000 × 0.3. Use the same block again with other inputs, as often as you like.' },
       { id: 'done',
+        say: 'Well done. Blocks can also run once per period ("Vertical"), for example one per year of spending: see Blocks in Help.',
         text: 'Well done. Blocks can also run once per period ("Vertical"), for example one per year of spending: see Blocks in Help. Finish returns you to your own model.' },
     ] },
   { id: 'templates', title: 'Templates: save a canvas and reuse it', minutes: 5, topic: 'templates',
@@ -139,12 +155,14 @@ const TUTORIALS = [
     ], edges: [{ from: 'p', to: 'm' }, { from: 'q', to: 'm' }, { from: 'm', to: 'r' }] }] },
     steps: [
       { id: 'intro',
+        say: 'This practice canvas holds a small revenue calculation. We\'ll save it as a template and add it again.',
         text: 'This practice canvas holds a small revenue calculation. You will save it as a template and add it again. Press Next to start.' },
       { id: 'save', point: { cmd: 'openTemplates' }, done: [{ template: 'Revenue' }],
         text: 'Open {cmd:openTemplates} and press + Save Canvas as Template. Keep the name Revenue, give it a group if you like, and press Save Template.' },
       { id: 'add', done: [{ canvases: 2 }, { linkedTo: 'Revenue' }, { value: { name: 'Revenue', equals: 50 } }],
         text: 'Revenue is now in the list. With it selected, press Add to new canvas. A new canvas appears with the same calculation, already showing Revenue = 50, and it remembers which template it came from.' },
       { id: 'done',
+        say: 'When you improve a template, save it with ⤴ Save as new version: canvases made from it then offer "Update this canvas".',
         text: 'When you improve a template, save it with ⤴ Save as new version: canvases made from it then offer "Update this canvas". What you saved goes back out of your library when you finish, unless you tick Keep below.' },
     ] },
   { id: 'functions', title: 'Your own functions', minutes: 6, topic: 'functions',
@@ -155,6 +173,7 @@ const TUTORIALS = [
     ], edges: [] }] },
     steps: [
       { id: 'intro',
+        say: 'A function is a formula with a name, kept in your library, like Margin(Revenue, Cost). We\'ll write one and use it.',
         text: 'A function is a formula with a name, kept in your library, like Margin(Revenue, Cost). You will write one and use it. Press Next to start.' },
       { id: 'write', point: { cmd: 'openFunctions' }, done: [{ fn: 'Margin' }],
         text: 'Open {cmd:openFunctions} and press + New Function…. Type: Margin(Revenue, Cost) = (Revenue - Cost) / Revenue. The editor checks it as you type. Press Save Function, then close the window.' },
@@ -167,6 +186,7 @@ const TUTORIALS = [
       { id: 'evaluate', point: { cmd: 'evaluate' }, done: [{ value: { name: 'Margin %', equals: 0.4 } }],
         text: 'Press {cmd:evaluate}. Margin % is 0.4: (100 − 60) ÷ 100.' },
       { id: 'done',
+        say: 'Functions travel inside your model, so it works the same for anyone you send it to, and ExcelExporter writes them out in full in each formula.',
         text: 'Functions travel inside your model, so it works the same for anyone you send it to, and ExcelExporter writes them out in full in each formula. What you saved goes back out of your library when you finish, unless you tick Keep below.' },
     ] },
   { id: 'to-excel', title: 'From fmIDE to Excel', minutes: 5, topic: 'to-excel',
@@ -179,16 +199,20 @@ const TUTORIALS = [
     ], edges: [{ from: 'p', to: 'm' }, { from: 'q', to: 'm' }, { from: 'm', to: 'r' }] }] },
     steps: [
       { id: 'intro',
+        say: 'This practice canvas holds a small revenue model. We\'ll send it to ExcelExporter, which writes an Excel workbook with real formulas.',
         text: 'This practice canvas holds a small revenue model. You will send it to ExcelExporter, which writes an Excel workbook with real formulas. Press Next to start.' },
       { id: 'save', point: { cmd: 'saveSystem' }, done: [{ downloaded: true }],
         text: 'Press {cmd:saveSystem}. It downloads the model as a file (fmIDE-system-….json). With your own work you would use Save instead: here, practice keeps your files untouched.' },
       { id: 'open', point: { cmd: 'openExcelExporter' }, done: [{ openedExcel: true }],
         text: 'Press {cmd:openExcelExporter}. It opens in its own window (or tab).' },
       { id: 'load',
+        say: 'In ExcelExporter, drop the file you just downloaded on the box in panel 1, "Load an fmIDE model", or click the box to choose it. The panels below fill in: one tab per canvas, one row per rectangle.',
         text: 'In ExcelExporter, drop the file you just downloaded on the box in panel 1, "Load an fmIDE model", or click the box to choose it. The panels below fill in: one tab per canvas, one row per rectangle. Press Next when it has loaded.' },
       { id: 'generate',
+        say: 'Scroll to panel 5 and press Generate & Download .xlsx. In the workbook, Revenue\'s cells hold a formula multiplying Price by Quantity, so changing Price in Excel changes Revenue.',
         text: 'Scroll to panel 5 and press Generate & Download .xlsx. Open the workbook: Revenue\'s cells hold a formula multiplying Price by Quantity, so changing Price in Excel changes Revenue. Press Next.' },
       { id: 'done',
+        say: 'That is the whole trip. ExcelExporter remembers your layout for each model, and its own Help (F1) explains tabs, rows, scenarios and formatting.',
         text: 'That is the whole trip. ExcelExporter remembers your layout for each model, and its own Help (❓ at its top right, or F1) explains tabs, rows, scenarios and formatting. Back to fmIDE returns here; Finish returns you to your own model.' },
     ] },
 ];

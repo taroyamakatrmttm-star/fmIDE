@@ -28,10 +28,13 @@
     "test:placement": "playwright test tests/28-placement.spec.js",
     "test:windows": "playwright test tests/29-windows.spec.js",
     "test:touch-excel": "playwright test tests/30-touch-excel.spec.js",
-    "test:help": "playwright test tests/31-help.spec.js tests/32-help-context.spec.js tests/33-tutorials.spec.js tests/34-help-site.spec.js",
+    "test:help": "playwright test tests/31-help.spec.js tests/32-help-context.spec.js tests/33-tutorials.spec.js tests/34-help-site.spec.js tests/35-video-scripts.spec.js",
     "test:help-site": "playwright test tests/34-help-site.spec.js",
+    "test:videos": "playwright test tests/35-video-scripts.spec.js",
     "check-pack": "node tools/check-pack.js",
-    "bench": "node tools/bench-calc.js"
+    "bench": "node tools/bench-calc.js",
+    "video-scripts": "node tools/video-scripts.js",
+    "record-tutorials": "node tools/record-tutorials.js"
   },
   "devDependencies": {
     "@playwright/test": "1.56.1",

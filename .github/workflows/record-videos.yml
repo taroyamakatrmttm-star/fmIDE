@@ -1,0 +1,53 @@
+# Records the tutorial videos (step 10, phase H4b; docs/step10-help.md), when started by hand:
+# Actions → "Record tutorial videos" → Run workflow. Optionally name tutorials (ids separated by
+# spaces, for example "first-model time"); empty records all of them. The videos, captions and
+# timed scripts are offered as a download on the run's page ("tutorial-videos"). Nothing is
+# committed or published.
+name: Record tutorial videos
+
+on:
+  workflow_dispatch:
+    inputs:
+      tutorials:
+        description: Tutorial ids to record, separated by spaces (empty = all)
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build the apps
+        run: npm run build
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Record
+        env:
+          TUTORIALS: ${{ inputs.tutorials }}
+        run: |
+          # Only tutorial ids (letters, digits, dashes) are passed on.
+          ids=$(printf '%s' "$TUTORIALS" | tr -cs 'a-z0-9-' ' ')
+          npm run record-tutorials -- $ids
+
+      - name: Upload the videos
+        uses: actions/upload-artifact@v4
+        with:
+          name: tutorial-videos
+          path: videos/
+          retention-days: 30
