@@ -5,7 +5,7 @@
 // (docs/file-formats.md). To change one of these formats: raise its version here and add
 // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
 // exactly one version.
-const SHARED_FILE_VERSIONS = { 'system': 6, 'fmIDE-workspace': 6 };
+const SHARED_FILE_VERSIONS = { 'system': 7, 'fmIDE-workspace': 7 };
 // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
 // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
 function upgradeNodePlugs(nodes){
@@ -39,6 +39,32 @@ function upgradeTemplateEntries(list){
     if(t.versionId === undefined) t.versionId = newRandomId();
   });
 }
+// Step 11a (decision 9): the Excel look belongs to ExcelExporter, which keeps the person's own
+// Excel style. Files from before it carried Excel-only settings in fmIDE's formats: the five
+// Excel-only role presets, and in any style "Use this fill, font colour & border in Excel too"
+// (`keepColours`), Excel border sides (`border.sides`) and "Use Excel's default font size"
+// (`font.excelDefaultSize`). The upgrade drops them; everything else stays.
+const EXCEL_ONLY_ROLE_NAMES = ['Links', 'Headers', 'Section Headers', 'Labels', 'Notes'];
+function dropExcelOnlyStyle(st){
+  if(!st || typeof st !== 'object' || Array.isArray(st)) return;
+  delete st.keepColours;
+  if(st.border && typeof st.border === 'object') delete st.border.sides;
+  if(st.font && typeof st.font === 'object') delete st.font.excelDefaultSize;
+}
+// A list of format presets upgraded in place: the Excel-only roles go, every style is cleaned.
+function dropExcelOnlyPresets(list){
+  if(!Array.isArray(list)) return list;
+  for(let i = list.length - 1; i >= 0; i--){
+    const p = list[i];
+    if(p && typeof p === 'object' && EXCEL_ONLY_ROLE_NAMES.includes(p.name)) list.splice(i, 1);
+    else if(p && typeof p === 'object') dropExcelOnlyStyle(p.style);
+  }
+  return list;
+}
+// Every node's own style in a list of nodes.
+function dropExcelOnlyNodeStyles(nodes){
+  (Array.isArray(nodes) ? nodes : []).forEach(n => { if(n && typeof n === 'object') dropExcelOnlyStyle(n.style); });
+}
 const SHARED_FILE_MIGRATIONS = {
   // v1 → v2: templates get a family, a version number, a change note and a version id.
   'fmIDE-workspace': {
@@ -53,7 +79,10 @@ const SHARED_FILE_MIGRATIONS = {
     4: () => {},
     // v5 → v6: its templates and library functions may say which library pack they came
     // from (`origin`, step 8 phase 8b); older ones have no such record.
-    5: () => {}
+    5: () => {},
+    // v6 → v7: the Excel look moved to ExcelExporter (step 11a): the Excel-only format roles
+    // and style settings are dropped. Its system and templates upgrade on their own.
+    6: d => { dropExcelOnlyPresets(d.formatPresets); }
   },
   'system': {
     // v1 systems were accepted with fields the loader already defaults (periods, ids…);
@@ -78,7 +107,13 @@ const SHARED_FILE_MIGRATIONS = {
     // rounddown; arrows into if and round name their input with `toPort`). Older systems
     // have none, so nothing changes; an older app asks before opening a v6 file instead of
     // calculating those operators as ones it doesn't know.
-    5: () => {}
+    5: () => {},
+    // v6 → v7: the Excel look moved to ExcelExporter (step 11a): the Excel-only format roles
+    // and every rectangle's Excel-only style settings are dropped.
+    6: d => {
+      dropExcelOnlyPresets(d.formatPresets);
+      (Array.isArray(d.canvases) ? d.canvases : []).forEach(c => { if(c) dropExcelOnlyNodeStyles(c.nodes); });
+    }
   }
 };
 // A file's kind: its "kind" field, or — for files saved before kinds were written — its

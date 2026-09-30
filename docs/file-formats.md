@@ -20,17 +20,18 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 
 | `kind` | Version | What it is | Opened with |
 |---|---|---|---|
-| `system` | 6 | A whole model (all canvases, periods); v4: a canvas may remember the canvas template it came from; v5: the function definitions its function nodes use; v6: the operators of phase E1 (below) | fmIDE: File → Load System · ExcelExporter |
-| `module` | 4 | One canvas; v3: the function definitions it uses; v4: the operators of phase E1 | fmIDE: File → Load Module |
-| `fmIDE-workspace` | 6 | Everything: system + templates, format presets, shortcuts, macros; v4: the function library; v5: its system and templates may use the operators of phase E1; v6: its templates and library functions may say which library pack they came from (`origin`, below). A **`.fmide` document** is exactly this, with the `.fmide` extension | fmIDE: File → Open… (a document) or Import Workspace (a full replace) · ExcelExporter |
+| `system` | 7 | A whole model (all canvases, periods); v4: a canvas may remember the canvas template it came from; v5: the function definitions its function nodes use; v6: the operators of phase E1 (below); v7: no Excel-only format settings (step 11a, below) | fmIDE: File → Load System · ExcelExporter |
+| `module` | 5 | One canvas; v3: the function definitions it uses; v4: the operators of phase E1; v5: no Excel-only format settings | fmIDE: File → Load Module |
+| `fmIDE-workspace` | 6 | Everything: system + templates, format presets, shortcuts, macros; v4: the function library; v5: its system and templates may use the operators of phase E1; v6: its templates and library functions may say which library pack they came from (`origin`, below); v7: no Excel-only format roles or settings. A **`.fmide` document** is exactly this, with the `.fmide` extension | fmIDE: File → Open… (a document) or Import Workspace (a full replace) · ExcelExporter |
 | `fmIDE-templates` | 6 | Saved templates (each holds a module, a system or a recipe), with their families and versions; v4: a template's model may carry function definitions; v5: it may use the operators of phase E1; v6: a template may carry `origin` | fmIDE: Templates → Import Templates |
 | `fmIDE-functions` | 2 | Function definitions (a library of functions); v2: a definition may carry `origin` | fmIDE: Functions → Import Functions |
-| `fmIDE-format-presets` | 1 | Format presets, including the format roles | fmIDE: Format Presets → Import Presets |
+| `fmIDE-format-presets` | 2 | Format presets, including the canvas format roles; v2: no Excel-only roles or settings | fmIDE: Format Presets → Import Presets |
 | `fmIDE-shortcuts` | 2 | Keyboard shortcut bindings | fmIDE: Keyboard Shortcuts → Import Shortcuts |
 | `fmIDE-macros` | 1 | Macros | fmIDE: Macro Builder → Import |
 | `fmIDE-preferences` | 1 | Personal settings: shortcut bindings for built-in commands, ribbon layout and Quick Access Toolbar, ribbon collapsed state, KeyTips trigger (fmIDE only) | fmIDE: File → Import Preferences (or Customize Ribbon) |
 | `fmIDE-library-pack` | 2 | Templates, recipes and functions to share with other people, with who made them and their licence (below); v2: an item shared again carries the `origin` it came with | fmIDE: File → Open Library Pack… |
 | `fmIDE-excel-mapping` | 2 | ExcelExporter's tab/row layout for one model; v2: any row may carry its own format (`style`) and an `indent` (below) | ExcelExporter: Import Mapping JSON |
+| `fmIDE-excel-style` | 1 | ExcelExporter's Excel style: how every cell in the workbook looks, by role (step 11a, below) | ExcelExporter: Import Excel Style |
 
 ## A row's own format and indent (`fmIDE-excel-mapping` 2)
 
@@ -40,6 +41,26 @@ Set in ExcelExporter's Tree view (🎨, the right-click menu, Alt+Shift+→ / �
 - `indent`: a whole number 1–15, the label cell's (column A) indent in Excel, as Excel's Increase Indent makes it. Anything else is read as no indent, and more than 15 as 15.
 
 A version 1 file has neither and opens unchanged.
+
+## The Excel look moved to ExcelExporter (`system` 7, `module` 5, `fmIDE-workspace` 7, `fmIDE-format-presets` 2, `fmIDE-excel-style` 1)
+
+Step 11a (decision 9 in `docs/decisions.md`; `docs/format-roles.md`): fmIDE's formats are the canvas look and the number formats; how cells look in Excel is ExcelExporter's own **Excel style**.
+
+- **What older files carried, and what the upgrade drops.** Five Excel-only role presets (`Links`, `Headers`, `Section Headers`, `Labels`, `Notes`), and in any style (a preset's or a rectangle's own): `keepColours` ("Use this fill, font colour & border in Excel too"), `border.sides` (Excel border sides) and `font.excelDefaultSize` ("Use Excel's default font size"). The upgrade step (system v6 → v7, workspace v6 → v7, module v4 → v5, format presets v1 → v2; `dropExcelOnlyPresets` / `dropExcelOnlyNodeStyles` in `src/shared/file-formats.js`) removes exactly those. Everything else in a style stays: `numberFormat`, `fill`, `border` (colour, width, style), `font` (family, size, weight, colour). The templates file and library packs keep their versions: each template's model carries its own version and is upgraded on its own.
+- **The format roles** in a file are now `Inputs` and `Calculations` (plus any presets of the person's own). Their number formats still reach Excel.
+- **`fmIDE-excel-style` 1**, written by ExcelExporter's **Export Excel Style** and kept in its browser storage under `fmide-excel-style`:
+
+```json
+{ "kind": "fmIDE-excel-style", "version": 1,
+  "roles": {
+    "Inputs": { "fill": "#eff6ff", "font": { "color": "#1e3a8a", "weight": "normal", "size": null },
+                "border": { "style": "solid", "color": "#93c5fd", "sides": ["top", "bottom", "left", "right"] } },
+    "Links":  { "fill": null, "font": { "color": "#008000", "weight": "normal", "size": null },
+                "border": { "style": "none", "color": "#94a3b8", "sides": ["top", "bottom", "left", "right"] } }
+  } }
+```
+
+  `roles` holds up to seven entries, by role name: `Inputs`, `Calculations`, `Links`, `Headers`, `Section Headers`, `Labels`, `Notes`. For each: `fill` (`#rrggbb`, or `null` for none), `font.color` (`#rrggbb`, or `null` for Excel's automatic colour), `font.weight` (`"700"` bold or `"normal"`), `font.size` (a whole number of points, 6–72, or `null` for the workbook's default), `border.style` (`"none"`, `"solid"`, `"dashed"` or `"dotted"`), `border.color` (`#rrggbb`) and `border.sides` (any of `"top"`, `"bottom"`, `"left"`, `"right"`; an empty list draws no border). A value that is missing or not one of these takes ExcelExporter's default for that role; a role that is missing takes its defaults; other names are ignored.
 
 ## Limits on a file that is opened
 

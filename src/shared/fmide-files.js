@@ -9,11 +9,11 @@
 // Every kind fmIDE knows: its current version, what people call it, and where it is opened.
 const FILE_FORMATS = {
   'system':               { current: SHARED_FILE_VERSIONS['system'], label: 'system', where: 'File → Load System' },
-  'module':               { current: 4, label: 'module',              where: 'File → Load Module' },
+  'module':               { current: 5, label: 'module',              where: 'File → Load Module' },
   'fmIDE-workspace':      { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'workspace', where: 'File → Import Workspace' },
   'fmIDE-templates':      { current: 6, label: 'templates file',      where: 'Templates → Import Templates' },
   'fmIDE-functions':      { current: 2, label: 'functions file',      where: 'Functions → Import Functions' },
-  'fmIDE-format-presets': { current: 1, label: 'format presets file', where: 'Format Presets → Import Presets' },
+  'fmIDE-format-presets': { current: 2, label: 'format presets file', where: 'Format Presets → Import Presets' },
   'fmIDE-shortcuts':      { current: 2, label: 'shortcuts file',      where: 'Keyboard Shortcuts → Import Shortcuts' },
   'fmIDE-macros':         { current: 1, label: 'macros file',         where: 'Macro Builder → Import' },
   'fmIDE-preferences':    { current: 1, label: 'preferences file',    where: 'File → Import Preferences' },
@@ -32,7 +32,15 @@ const FMIDE_FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
     // modules have none.
     2: () => {},
     // v3 → v4: the operators of phase E1, as system v5 → v6; older modules have none.
-    3: () => {}
+    3: () => {},
+    // v4 → v5: the Excel look moved to ExcelExporter (step 11a), as system v6 → v7: every
+    // rectangle's Excel-only style settings are dropped.
+    4: d => { dropExcelOnlyNodeStyles(d.nodes); dropExcelOnlyPresets(d.formatPresets); }
+  },
+  // v1 → v2: the Excel look moved to ExcelExporter (step 11a): the Excel-only format roles
+  // and style settings are dropped.
+  'fmIDE-format-presets': {
+    1: d => { dropExcelOnlyPresets(d.presets); }
   },
   // v1 → v2: templates get a family, a version number, a change note and a version id.
   'fmIDE-templates': {
@@ -76,6 +84,8 @@ function readFmData(raw, accept, migrations){
   if(!fmt){
     return { error: kind === 'fmIDE-excel-mapping'
       ? 'That is an ExcelExporter mapping file — open it in ExcelExporter (Import Mapping JSON).'
+      : kind === 'fmIDE-excel-style'
+      ? 'That is an ExcelExporter Excel style file — import it in ExcelExporter (Import Excel Style).'
       : "That file isn't an fmIDE file this version recognises" + (kind ? ` (kind "${String(kind).slice(0, 40)}")` : '') + '.' };
   }
   if(!accept.includes(kind)){

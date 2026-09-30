@@ -376,7 +376,7 @@ test.describe('Tree view: a row\'s own format, indent and the right-click comman
     await expect(treeRow(page, 'Cash').locator('.tree-row-label')).toHaveAttribute('data-indent', '2');
     // The menu's Reset takes the indent off.
     await treeRow(page, 'Cash').click({ button: 'right' });
-    await menuItem(page, 'Reset to fmIDE\'s format').click();
+    await menuItem(page, 'Reset to the Excel style').click();
     await expect(treeRow(page, 'Cash').locator('.tree-row-label')).not.toHaveAttribute('data-indent', /./);
   });
 
@@ -388,7 +388,7 @@ test.describe('Tree view: a row\'s own format, indent and the right-click comman
     await treeRow(page, 'Inventory').click({ modifiers: ['ControlOrMeta'] });
     await treeRow(page, 'Inventory').click({ button: 'right' });
     for(const name of ['▲ Move Up', '▼ Move Down', '⤒ Move to Top', '⤓ Move to Bottom', '☑ Include', '☐ Exclude', '◆ Mark Constant',
-      '◇ Unmark Constant', '⇥ Increase Indent', '⇤ Decrease Indent', '🎨 Format 2 rows…', 'Reset to fmIDE\'s format']){
+      '◇ Unmark Constant', '⇥ Increase Indent', '⇤ Decrease Indent', '🎨 Format 2 rows…', 'Reset to the Excel style']){
       await expect(menuItem(page, name), name).toBeVisible();
     }
     await menuItem(page, '⤒ Move to Top').click();

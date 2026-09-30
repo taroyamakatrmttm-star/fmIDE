@@ -1,53 +1,108 @@
-// A rectangle's effective formatting, mirroring fmIDE exactly: an explicit per-node
-// style always wins; otherwise an input rectangle (no incoming edge) falls back to the
-// shared "Inputs" format preset, when one was included in the loaded export (only a
-// full "Export Workspace" JSON carries formatPresets — a plain "Save System" export
-// won't have one, in which case rows just get Excel's default look).
 // ============================================================
-// Format roles — the ONE place cell formatting comes from. Every cell this tool writes
-// has a role; each role is a format preset of that name in fmIDE (Formats manager),
-// read from the loaded JSON. A role missing from the file (an older export) falls back
-// to the built-in default — the same table fmIDE seeds its role presets from
-// (src/shared/format-roles.js).
-// Rule for rectangle rows: the ROLE owns fill, font colour and border — so the look
-// always says what kind of cell it is — and the rectangle's own 🎨 format owns number
-// format, weight and size. A rectangle whose format has "Use this fill, font colour &
-// border in Excel too" (style.keepColours) keeps its own fill, colour and border as well.
-// Excel-only style settings: border.sides (which cell sides get the border; absent = all
-// four, [] = none) and font.excelDefaultSize (leave the size to the workbook default).
+// The Excel style — how every cell in the workbook looks (step 11a, decision 9 in
+// docs/decisions.md). It is ExcelExporter's and the person's own: seven roles, each with a
+// fill, font colour, bold, font size (blank = Excel's default) and a border (style, colour,
+// which sides). Edited in section 2 (03b-excel-style.js), saved in this browser, and moved
+// between computers as an fmIDE-excel-style file. fmIDE says only what a rectangle is (an
+// input or a calculation, by the shared input rule) and its number format; its canvas
+// colours, fonts and borders never reach Excel. The Excel-only settings older fmIDE files
+// carried are dropped when they are read (src/shared/file-formats.js).
+// A rectangle row gets its role's look plus fmIDE's number format; a row's own format
+// (Tree view 🎨) goes over both.
 // ============================================================
-// build:include shared/format-roles.js
-// The seven roles' default styles by name (the fallback for a role missing from the file).
-const DEFAULT_ROLE_STYLES = Object.fromEntries(FORMAT_ROLES.map(r => [r.name, r.style]));
-const ROLE_NAMES = Object.keys(DEFAULT_ROLE_STYLES);
+const EXCEL_ROLES = [
+  { name: 'Inputs', desc: 'Hard-coded numbers: input rows, scenario values, and the cells you type on the Scenarios tab.',
+    style: { fill: '#eff6ff', font: { color: '#1e3a8a', weight: 'normal', size: null }, border: { style: 'solid', color: '#93c5fd', sides: ['top', 'bottom', 'left', 'right'] } } },
+  { name: 'Calculations', desc: 'Formulas: every calculated cell. Blank by default.',
+    style: { fill: null, font: { color: null, weight: 'normal', size: null }, border: { style: 'none', color: '#94a3b8', sides: ['top', 'bottom', 'left', 'right'] } } },
+  { name: 'Links', desc: 'Formulas that only pull a value from another sheet (a row linked to the Inputs tab, or fed through a plug or alias from another canvas).',
+    style: { fill: null, font: { color: '#008000', weight: 'normal', size: null }, border: { style: 'none', color: '#94a3b8', sides: ['top', 'bottom', 'left', 'right'] } } },
+  { name: 'Headers', desc: 'Each sheet\'s title and column-header row.',
+    style: { fill: '#f1f5f9', font: { color: null, weight: '700', size: null }, border: { style: 'none', color: '#94a3b8', sides: ['top', 'bottom', 'left', 'right'] } } },
+  { name: 'Section Headers', desc: 'The INPUTS / CALCULATIONS / OUTPUTS bands.',
+    style: { fill: '#f8fafc', font: { color: '#475569', weight: '700', size: null }, border: { style: 'none', color: '#94a3b8', sides: ['top', 'bottom', 'left', 'right'] } } },
+  { name: 'Labels', desc: 'Custom / label rows and group headers (unless the row has its own format).',
+    style: { fill: null, font: { color: '#475569', weight: '700', size: null }, border: { style: 'none', color: '#94a3b8', sides: ['top', 'bottom', 'left', 'right'] } } },
+  { name: 'Notes', desc: 'Notes, the Period # counter, scenario numbering and other helper text.',
+    style: { fill: null, font: { color: '#94a3b8', weight: 'normal', size: 9 }, border: { style: 'none', color: '#94a3b8', sides: ['top', 'bottom', 'left', 'right'] } } }
+];
+const EXCEL_BORDER_STYLES = ['none', 'solid', 'dashed', 'dotted'];
+const EXCEL_SIDES = ['top', 'bottom', 'left', 'right'];
+const EXCEL_FONT_SIZE_MIN = 6, EXCEL_FONT_SIZE_MAX = 72;
+const EXCEL_STYLE_KEY = 'fmide-excel-style';
+function defaultExcelStyle(){
+  const out = {};
+  EXCEL_ROLES.forEach(r => { out[r.name] = JSON.parse(JSON.stringify(r.style)); });
+  return out;
+}
+// One role's style from storage or a file (untrusted): colours checked, sizes bounded, the
+// border style and sides from their lists; anything missing or wrong takes the default's.
+function cleanExcelRoleStyle(raw, dflt){
+  const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const f = src.font && typeof src.font === 'object' ? src.font : {};
+  const b = src.border && typeof src.border === 'object' ? src.border : {};
+  const out = { fill: 'fill' in src ? cleanHexColor(src.fill) : dflt.fill };
+  const size = Math.round(Number(f.size));
+  out.font = {
+    color: 'color' in f ? cleanHexColor(f.color) : dflt.font.color,
+    weight: 'weight' in f ? (f.weight === '700' || f.weight === 'bold' ? '700' : 'normal') : dflt.font.weight,
+    size: 'size' in f ? (f.size !== null && Number.isFinite(size) ? Math.max(EXCEL_FONT_SIZE_MIN, Math.min(EXCEL_FONT_SIZE_MAX, size)) : null) : dflt.font.size
+  };
+  out.border = {
+    style: EXCEL_BORDER_STYLES.includes(b.style) ? b.style : dflt.border.style,
+    color: cleanHexColor(b.color) || dflt.border.color,
+    sides: Array.isArray(b.sides) ? EXCEL_SIDES.filter(k => b.sides.includes(k)) : dflt.border.sides.slice()
+  };
+  return out;
+}
+// A whole Excel style ({ roleName: style }) read from storage or a file.
+function cleanExcelStyle(roles){
+  const src = roles && typeof roles === 'object' && !Array.isArray(roles) ? roles : {};
+  const out = {};
+  EXCEL_ROLES.forEach(r => { out[r.name] = cleanExcelRoleStyle(Object.prototype.hasOwnProperty.call(src, r.name) ? src[r.name] : null, r.style); });
+  return out;
+}
+function excelStylePayload(){
+  return { kind: 'fmIDE-excel-style', version: FILE_FORMATS['fmIDE-excel-style'].current, roles: JSON.parse(JSON.stringify(excelStyle)) };
+}
+let excelStyle = defaultExcelStyle();
 
-// The role's style (fmIDE-style object): from the file's presets, else the default.
-function roleStyle(name){
-  const p = model && (model.formatPresets || []).find(x => x && x.name === name && x.style);
-  return p ? p.style : DEFAULT_ROLE_STYLES[name];
+// A role's style (the shape fmIDE's styles have, which nodeStyleToExcelCellStyle reads).
+function roleStyle(name){ return excelStyle[name] || null; }
+// The number format fmIDE gives a rectangle — the one part of its look that goes to Excel:
+// its own 🎨 format's if it has one, else its canvas role's (Inputs or Calculations, as the
+// file's presets say). Read from the file, so checked: a known kind, 0–10 decimals, a short
+// currency symbol without quotes. The two roles' formats are worked out once per model.
+function cleanModelNumberFormat(nf){
+  if(!nf || typeof nf !== 'object' || !['number', 'percent', 'currency'].includes(nf.kind)) return null;
+  const d = Math.round(Number(nf.decimals));
+  const out = { kind: nf.kind, decimals: Number.isFinite(d) ? Math.max(0, Math.min(10, d)) : 2 };
+  if(nf.kind === 'currency') out.currencySymbol = typeof nf.currencySymbol === 'string' && /^[^"\\]{1,5}$/.test(nf.currencySymbol) ? nf.currencySymbol : '$';
+  return out;
 }
-function roleSource(name){
-  return model && (model.formatPresets || []).some(x => x && x.name === name && x.style) ? 'fmIDE' : 'default';
-}
-// Role colours + the rectangle's own look (see the rule above). Returns an fmIDE-style object.
-function composeStyle(roleName, own){
-  const role = roleStyle(roleName) || {};
-  const out = JSON.parse(JSON.stringify(role));
-  if(own){
-    if(own.numberFormat && own.numberFormat.kind && own.numberFormat.kind !== 'general') out.numberFormat = own.numberFormat;
-    if(own.font){
-      out.font = Object.assign({}, out.font || {});
-      ['family', 'weight'].forEach(k => { if(own.font[k]) out.font[k] = own.font[k]; });
-      // size: the rectangle's own (or its "Excel default size" choice) wins over the role's
-      if(own.font.excelDefaultSize){ out.font.size = null; out.font.excelDefaultSize = true; }
-      else if(own.font.size){ out.font.size = own.font.size; delete out.font.excelDefaultSize; }
-    }
-    if(own.keepColours){
-      out.fill = own.fill || null;
-      out.font = Object.assign({}, out.font || {}, { color: (own.font && own.font.color) || null });
-      out.border = own.border || null;
-    }
+const roleNumberFormats = new WeakMap(); // model → { Inputs, Calculations }
+function roleNumberFormat(role){
+  if(!model) return null;
+  let byRole = roleNumberFormats.get(model);
+  if(!byRole){
+    byRole = {};
+    ['Inputs', 'Calculations'].forEach(r => {
+      const p = (model.formatPresets || []).find(x => x && x.name === r && x.style);
+      byRole[r] = cleanModelNumberFormat(p && p.style.numberFormat);
+    });
+    roleNumberFormats.set(model, byRole);
   }
+  return byRole[role];
+}
+function modelNumberFormat(canvas, node){
+  if(node && node.style) return cleanModelNumberFormat(node.style.numberFormat);
+  // isInputNode: the shared input rule, as the IR already worked it out for this node.
+  return roleNumberFormat(canvas && node && isInputNode(canvas, node) ? 'Inputs' : 'Calculations');
+}
+// A rectangle row's look: its role's style plus fmIDE's number format.
+function composeStyle(roleName, numberFormat){
+  const out = JSON.parse(JSON.stringify(roleStyle(roleName) || {}));
+  if(numberFormat) out.numberFormat = numberFormat;
   return out;
 }
 // Excel cell style for a structural cell of a role, plus layout-only extras (alignment,
@@ -110,35 +165,6 @@ function withIndent(cellStyle, row){
   return n ? mergeXlStyle(cellStyle, { alignment: { horizontal: 'left', indent: n } }) : cellStyle;
 }
 
-// Read-only legend: each role's look and whether it came from the file or the default.
-function renderRolesLegend(){
-  const el = $('rolesLegend'); if(!el) return;
-  el.innerHTML = '';
-  ROLE_NAMES.forEach(name => {
-    const st = roleStyle(name) || {};
-    const chip = document.createElement('span');
-    chip.className = 'role-chip';
-    chip.textContent = name;
-    chip.style.background = st.fill || '#fff';
-    chip.style.color = (st.font && st.font.color) || '#1e293b';
-    chip.style.fontWeight = (st.font && st.font.weight) || 'normal';
-    chip.style.border = (st.border && st.border.style && st.border.style !== 'none') ? `1px ${st.border.style} ${st.border.color || '#94a3b8'}` : '1px solid #e2e8f0';
-    const src = roleSource(name);
-    chip.title = name + (src === 'fmIDE' ? ' — from this file (fmIDE preset)' : ' — built-in default (this file has no "' + name + '" preset)');
-    if(src !== 'fmIDE'){ const d = document.createElement('span'); d.className = 'role-default'; d.textContent = 'default'; chip.appendChild(d); }
-    el.appendChild(chip);
-  });
-}
-
-function resolveNodeStyle(canvas, node, formatPresets){
-  if(node.style) return node.style;
-  if(node.type === 'value' && isInputRectangle(canvas, node)){
-    const preset = (formatPresets || []).find(p => p.name === 'Inputs');
-    if(preset) return preset.style;
-  }
-  return null;
-}
-
 function styleColorToRgbHex(hex){
   if(!hex || typeof hex !== 'string') return null;
   const h = hex.replace('#', '').toUpperCase();
@@ -155,7 +181,7 @@ function nodeStyleToExcelCellStyle(style){
     const f = {};
     const color = styleColorToRgbHex(style.font.color);
     if(color) f.color = { rgb: color };
-    if(style.font.size && !style.font.excelDefaultSize) f.sz = style.font.size; // else: workbook default
+    if(style.font.size) f.sz = style.font.size; // else: the workbook's default size
     if(style.font.weight === '700' || style.font.weight === 'bold' || style.font.weight === '600') f.bold = true;
     if(Object.keys(f).length) s.font = f;
   }
@@ -167,7 +193,7 @@ function nodeStyleToExcelCellStyle(style){
     const excelStyle = { solid: 'thin', dashed: 'dashed', dotted: 'dotted' }[style.border.style] || 'thin';
     const color = styleColorToRgbHex(style.border.color) || '94A3B8';
     const edge = { style: excelStyle, color: { rgb: color } };
-    // Only the sides the style asks for (older styles without "sides" = all four).
+    // Only the sides the style asks for (a row's own format has no "sides": all four).
     const sides = Array.isArray(style.border.sides) ? style.border.sides : ['top', 'bottom', 'left', 'right'];
     const b = {};
     sides.forEach(k => { if(['top', 'bottom', 'left', 'right'].includes(k)) b[k] = edge; });

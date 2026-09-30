@@ -40,18 +40,18 @@ for(const name of ['sys-current', 'sys-legacy']){
   });
 }
 
-// A newer system is v7 since system v6 (the operators of phase E1) became current:
-// sys-newer-v5 and sys-newer-v6 are now ordinary files.
-test('sys-newer-v7 asks: Cancel → "Not loaded.", Open Anyway → loads', async ({ page }) => {
-  await page.setInputFiles('#fileInput', file('sys-newer-v7'));
+// A newer system is v8 since system v7 (step 11a, the Excel look moved to ExcelExporter)
+// became current: sys-newer-v5, -v6 and -v7 are now ordinary files.
+test('sys-newer-v8 asks: Cancel → "Not loaded.", Open Anyway → loads', async ({ page }) => {
+  await page.setInputFiles('#fileInput', file('sys-newer-v8'));
   await expect(page.locator('#confirmModal')).toBeVisible();
-  await expect(page.locator('#confirmMessage')).toContainText('format version 7');
+  await expect(page.locator('#confirmMessage')).toContainText('format version 8');
   await page.click('#confirmCancel');
   await expect(page.locator('#confirmModal')).toBeHidden();
   await expect(loadStatus(page)).toHaveText('Not loaded.');
   await expect(page.locator('#afterLoad')).toBeHidden();
 
-  await page.setInputFiles('#fileInput', file('sys-newer-v7'));
+  await page.setInputFiles('#fileInput', file('sys-newer-v8'));
   await expect(page.locator('#confirmModal')).toBeVisible();
   await expect(page.locator('#confirmOk')).toHaveText('Open Anyway');
   await page.click('#confirmOk');
@@ -59,16 +59,17 @@ test('sys-newer-v7 asks: Cancel → "Not loaded.", Open Anyway → loads', async
   await expect(page.locator('#afterLoad')).toBeVisible();
 });
 
-test('sys-newer-v5, sys-newer-v6 and the workspaces with a v5 or v6 system inside are now current files: no question', async ({ page }) => {
-  for(const name of ['sys-newer-v5', 'sys-newer-v6', 'ws-nested-newer', 'ws-nested-newer-v6', 'ws-v3', 'ws-v4']){
+test('sys-newer-v5 to -v7, the workspaces with a v5 to v7 system inside, and the v6 files with Excel settings are now current files: no question', async ({ page }) => {
+  for(const name of ['sys-newer-v5', 'sys-newer-v6', 'sys-newer-v7', 'ws-nested-newer', 'ws-nested-newer-v6', 'ws-nested-newer-v7', 'ws-v3', 'ws-v4',
+    'sys-v6-excel-settings', 'ws-v6-excel-settings']){
     await page.setInputFiles('#fileInput', file(name));
     await expect(loadStatus(page)).toHaveClass(/ok/);
     await expect(page.locator('#confirmModal')).toBeHidden();
   }
 });
 
-test('ws-nested-newer-v7: the confirm mentions its system', async ({ page }) => {
-  await page.setInputFiles('#fileInput', file('ws-nested-newer-v7'));
+test('ws-nested-newer-v8: the confirm mentions its system', async ({ page }) => {
+  await page.setInputFiles('#fileInput', file('ws-nested-newer-v8'));
   await expect(page.locator('#confirmModal')).toBeVisible();
   await expect(page.locator('#confirmMessage')).toContainText('its system');
   await page.click('#confirmOk');
@@ -81,6 +82,7 @@ const NOT_A_MODEL = [
   ['mapping', /mapping file.*Import Mapping JSON/],
   ['preferences', /preferences file.*File → Import Preferences/],
   ['functions', /functions file.*import it in fmIDE/],
+  ['excel-style', /Excel style file.*Import Excel Style/],
 ];
 for(const [name, message] of NOT_A_MODEL){
   test(`${name} loaded as a model says what it is and where it belongs`, async ({ page }) => {
@@ -207,13 +209,14 @@ test.describe('workspace v6 (origins)', () => {
     expect(await page.evaluate(() => window.__pwned)).toBeUndefined();
     expect(pageErrors).toEqual([]);
   });
-  test('a v7 workspace asks first', async ({ page }, testInfo) => {
+  // Workspace v7 is current since step 11a: a newer one is v8.
+  test('a v8 workspace asks first', async ({ page }, testInfo) => {
     const ws = withOrigins();
-    ws.version = 7;
-    const p = testInfo.outputPath('ws-v7.json');
+    ws.version = 8;
+    const p = testInfo.outputPath('ws-v8.json');
     fs.writeFileSync(p, JSON.stringify(ws));
     await page.setInputFiles('#fileInput', p);
     await expect(page.locator('#confirmModal')).toBeVisible();
-    await expect(page.locator('#confirmMessage')).toContainText('format version 7');
+    await expect(page.locator('#confirmMessage')).toContainText('format version 8');
   });
 });

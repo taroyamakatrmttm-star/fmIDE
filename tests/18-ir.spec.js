@@ -220,10 +220,10 @@ test.describe('phase E1 operators in fmIDE', () => {
     expect(none).toMatch(/takes each input by name — say which one \(condition, then, else\)/);
   });
 
-  test('saved as system v6 with toPort; loading it again calculates the same; deleting an input by name', async ({ page }) => {
+  test('saved as system v7 (v6 brought toPort) with toPort; loading it again calculates the same; deleting an input by name', async ({ page }) => {
     await build(page);
     const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.command('saveSystem')));
-    expect(data.version).toBe(6);
+    expect(data.version).toBe(7);
     const iff = data.canvases[0].nodes.find(n => n.text === 'if');
     expect(data.canvases[0].edges.filter(e => e.to === iff.id).map(e => e.toPort).sort()).toEqual([0, 1, 2]);
     await page.evaluate(() => fm.clearCanvas());

@@ -72,7 +72,7 @@ Every canvas interaction is an action. The Ribbon, shortcuts, Command Launcher (
 - **paste**() — Paste.
 
 ### Format
-- **setStyle**(node, style?) — Set Rectangle Format. Per-rectangle format as JSON {numberFormat, fill, border, font, keepColours}; blank resets to the rectangle's format role ("Inputs" or "Calculations").
+- **setStyle**(node, style?) — Set Rectangle Format. Per-rectangle format as JSON {numberFormat, fill, border, font}; blank resets to the rectangle's format role ("Inputs" or "Calculations"). How it looks in Excel is ExcelExporter's; only the number format goes there.
 - **applyFormat**(nodes="@sel", preset) — Apply Format Preset.
 
 ### Arrange

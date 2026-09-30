@@ -429,9 +429,17 @@ var XLSX = (function(){
   .scn-ctl.on{ color:#1e3a8a; border-style:solid; border-color:#bfdbfe; background:#eff6ff; }
   .scn-ctl input[type=number]{ width:44px; padding:1px 4px; font-size:11px; }
   .roles-block{ margin-top:14px; padding-top:12px; border-top:1px solid var(--border); }
-  .roles-legend{ display:flex; flex-wrap:wrap; gap:6px; }
-  .role-chip{ display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:3px 10px; border-radius:5px; }
-  .role-default{ font-size:9px; font-weight:600; text-transform:uppercase; color:#64748b; background:#f1f5f9; border-radius:3px; padding:0 4px; }
+  .excel-style-table{ border-collapse:collapse; font-size:12px; width:100%; }
+  .excel-style-table th{ text-align:left; font-weight:600; color:var(--muted); padding:4px 6px; border-bottom:1px solid var(--border); white-space:nowrap; }
+  .excel-style-table td{ padding:5px 6px; border-bottom:1px solid #f1f5f9; vertical-align:middle; white-space:nowrap; }
+  .excel-style-table td:first-child{ white-space:normal; min-width:180px; max-width:280px; }
+  .excel-style-table input[type=color]{ width:34px; height:24px; padding:0; border:1px solid var(--border); vertical-align:middle; }
+  .excel-style-table input[type=number]{ width:80px; }
+  .xs-name{ font-weight:600; }
+  .xs-desc{ font-size:11px; color:var(--muted); }
+  .xs-swatch{ display:inline-block; padding:2px 10px; border-radius:2px; }
+  .xs-check{ display:inline-flex; align-items:center; gap:3px; margin-left:4px; font-size:11.5px; }
+  .xs-sides{ display:inline-flex; gap:2px; margin-left:4px; }
   .limits{ font-size:12px; color:var(--muted); background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:10px 14px; line-height:1.6; }
   .limits strong{ color:#92400e; }
   footer{ text-align:center; color:var(--muted); font-size:11px; padding:24px; }
@@ -521,7 +529,7 @@ var XLSX = (function(){
 
   <section class="panel" id="loadPanel">
     <h2>1. Load an fmIDE model</h2>
-    <p class="hint">Save a document in fmIDE (File → Save, a <code>.fmide</code> file), or export a system ("Save System" or "Export Workspace"), and load it here — or try the built-in sample to see how the tool works. Use "Export Workspace" (not just "Save System") if you want rectangles using fmIDE's shared "Inputs" format to carry that formatting into Excel.</p>
+    <p class="hint">Save a document in fmIDE (File → Save, a <code>.fmide</code> file), or export a system ("Save System" or "Export Workspace"), and load it here — or try the built-in sample to see how the tool works. Number formats set in fmIDE come across; how cells look is your own Excel style (section 2).</p>
     <div class="drop" id="dropZone">
       Drop an fmIDE file (.fmide or .json) here, or click to choose one
       <input type="file" id="fileInput" accept="application/json,.json,.fmide">
@@ -563,10 +571,20 @@ var XLSX = (function(){
         </label>
         <label class="field"><span>Output file name</span><input type="text" id="cfgFileName" value="fmIDE-export" style="width:180px;"></label>
       </div>
-      <div class="roles-block">
-        <div style="font-size:12.5px; font-weight:600; margin-bottom:4px;">Format roles</div>
-        <p class="hint" style="margin:0 0 8px;">Every cell in the workbook takes its fill, font colour and border from one of these roles. Edit them in fmIDE's Formats manager (they travel in the exported JSON) — including which cell sides get a border and whether to use Excel's default font size. A rectangle's own 🎨 format still sets its number format, weight and size.</p>
-        <div id="rolesLegend" class="roles-legend"></div>
+      <div class="roles-block" id="excelStyleBlock">
+        <div style="font-size:12.5px; font-weight:600; margin-bottom:4px;">Excel style</div>
+        <p class="hint" style="margin:0 0 8px;">How every cell in the workbook looks, by role. This is your own style: it is kept in this browser and used for every model you load. fmIDE decides only the number formats (a rectangle's own, or its Inputs / Calculations format); its canvas colours and fonts stay on the canvas. A row's own format (Tree view 🎨) goes over this.</p>
+        <div class="rows-scroll"><table class="excel-style-table" id="excelStyleTable">
+          <thead><tr><th>Role</th><th>Looks like</th><th>Fill</th><th>Font colour</th><th>Bold</th><th>Size (pt)</th><th>Border</th></tr></thead>
+          <tbody id="excelStyleBody"></tbody>
+        </table></div>
+        <div class="row" style="margin-top:10px;">
+          <button id="btnExportStyle">Export Excel Style</button>
+          <button id="btnImportStyle">Import Excel Style</button>
+          <input type="file" id="excelStyleFileInput" accept="application/json,.json" style="display:none;">
+          <button id="btnResetStyle" class="danger" title="Put every role back to ExcelExporter's built-in look">Reset to Defaults</button>
+        </div>
+        <div id="excelStyleStatus" style="margin-top:8px;"></div>
       </div>
     </section>
 
@@ -3428,89 +3446,111 @@ function numberFormatToExcel(style, fallback){
   return fallback || 'General';
 }
 
-// A rectangle's effective formatting, mirroring fmIDE exactly: an explicit per-node
-// style always wins; otherwise an input rectangle (no incoming edge) falls back to the
-// shared "Inputs" format preset, when one was included in the loaded export (only a
-// full "Export Workspace" JSON carries formatPresets — a plain "Save System" export
-// won't have one, in which case rows just get Excel's default look).
 // ============================================================
-// Format roles — the ONE place cell formatting comes from. Every cell this tool writes
-// has a role; each role is a format preset of that name in fmIDE (Formats manager),
-// read from the loaded JSON. A role missing from the file (an older export) falls back
-// to the built-in default — the same table fmIDE seeds its role presets from
-// (src/shared/format-roles.js).
-// Rule for rectangle rows: the ROLE owns fill, font colour and border — so the look
-// always says what kind of cell it is — and the rectangle's own 🎨 format owns number
-// format, weight and size. A rectangle whose format has "Use this fill, font colour &
-// border in Excel too" (style.keepColours) keeps its own fill, colour and border as well.
-// Excel-only style settings: border.sides (which cell sides get the border; absent = all
-// four, [] = none) and font.excelDefaultSize (leave the size to the workbook default).
+// The Excel style — how every cell in the workbook looks (step 11a, decision 9 in
+// docs/decisions.md). It is ExcelExporter's and the person's own: seven roles, each with a
+// fill, font colour, bold, font size (blank = Excel's default) and a border (style, colour,
+// which sides). Edited in section 2 (03b-excel-style.js), saved in this browser, and moved
+// between computers as an fmIDE-excel-style file. fmIDE says only what a rectangle is (an
+// input or a calculation, by the shared input rule) and its number format; its canvas
+// colours, fonts and borders never reach Excel. The Excel-only settings older fmIDE files
+// carried are dropped when they are read (src/shared/file-formats.js).
+// A rectangle row gets its role's look plus fmIDE's number format; a row's own format
+// (Tree view 🎨) goes over both.
 // ============================================================
-// ---------- format roles (shared: src/shared/format-roles.js, used by both apps) ----------
-// One place defines how every kind of cell looks — on the canvas AND in the Excel file
-// ExcelExporter writes. Each role is an ordinary format preset with a reserved name
-// (edit it in the Formats manager); ExcelExporter reads these presets from the saved
-// workspace/system JSON. "Inputs" and "Calculations" also style canvas rectangles; the
-// rest only exist in the spreadsheet. A rectangle's own 🎨 format sets how it looks
-// (number format, weight, size, border); the ROLE owns the colours (fill, font colour)
-// (and border) in Excel unless the rectangle's format has "Use this fill, font colour &
-// border in Excel too" ticked. Border sides and "Use Excel's default font size" are
-// Excel-only settings of a style.
-const FORMAT_ROLES = [
-  { name: 'Inputs', where: 'Canvas + Excel',
-    desc: 'Hard-coded numbers: input rectangles, scenario values, and the cells you type on the Scenarios tab.',
-    style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: '#eff6ff',
-             border: { color: '#93c5fd', width: 1.5, style: 'solid' }, font: { family: '', size: 14, weight: 'normal', color: '#1e3a8a' } } },
-  { name: 'Calculations', where: 'Canvas + Excel',
-    desc: 'Formulas: rectangles fed by an arrow, and every calculated cell in Excel. Blank by default (the normal rectangle look).',
-    style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: null, border: null, font: { family: '', size: null, weight: 'normal', color: null } } },
-  { name: 'Links', where: 'Excel',
-    desc: 'Formulas that only pull a value from another sheet (e.g. a row linked to the Inputs tab).',
-    style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: null, border: null, font: { family: '', size: null, weight: 'normal', color: '#008000' } } },
-  { name: 'Headers', where: 'Excel',
-    desc: 'Each sheet\'s title and column-header row.',
-    style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: '#f1f5f9', border: null, font: { family: '', size: null, weight: '700', color: null } } },
-  { name: 'Section Headers', where: 'Excel',
-    desc: 'The INPUTS / CALCULATIONS / OUTPUTS bands.',
-    style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: '#f8fafc', border: null, font: { family: '', size: null, weight: '700', color: '#475569' } } },
-  { name: 'Labels', where: 'Excel',
-    desc: 'Custom / label rows and group headers (unless the row has its own format in ExcelExporter).',
-    style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: null, border: null, font: { family: '', size: null, weight: '700', color: '#475569' } } },
-  { name: 'Notes', where: 'Excel',
-    desc: 'Notes, the Period # counter, scenario numbering and other helper text.',
-    style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: null, border: null, font: { family: '', size: 9, weight: 'normal', color: '#94a3b8' } } }
+const EXCEL_ROLES = [
+  { name: 'Inputs', desc: 'Hard-coded numbers: input rows, scenario values, and the cells you type on the Scenarios tab.',
+    style: { fill: '#eff6ff', font: { color: '#1e3a8a', weight: 'normal', size: null }, border: { style: 'solid', color: '#93c5fd', sides: ['top', 'bottom', 'left', 'right'] } } },
+  { name: 'Calculations', desc: 'Formulas: every calculated cell. Blank by default.',
+    style: { fill: null, font: { color: null, weight: 'normal', size: null }, border: { style: 'none', color: '#94a3b8', sides: ['top', 'bottom', 'left', 'right'] } } },
+  { name: 'Links', desc: 'Formulas that only pull a value from another sheet (a row linked to the Inputs tab, or fed through a plug or alias from another canvas).',
+    style: { fill: null, font: { color: '#008000', weight: 'normal', size: null }, border: { style: 'none', color: '#94a3b8', sides: ['top', 'bottom', 'left', 'right'] } } },
+  { name: 'Headers', desc: 'Each sheet\'s title and column-header row.',
+    style: { fill: '#f1f5f9', font: { color: null, weight: '700', size: null }, border: { style: 'none', color: '#94a3b8', sides: ['top', 'bottom', 'left', 'right'] } } },
+  { name: 'Section Headers', desc: 'The INPUTS / CALCULATIONS / OUTPUTS bands.',
+    style: { fill: '#f8fafc', font: { color: '#475569', weight: '700', size: null }, border: { style: 'none', color: '#94a3b8', sides: ['top', 'bottom', 'left', 'right'] } } },
+  { name: 'Labels', desc: 'Custom / label rows and group headers (unless the row has its own format).',
+    style: { fill: null, font: { color: '#475569', weight: '700', size: null }, border: { style: 'none', color: '#94a3b8', sides: ['top', 'bottom', 'left', 'right'] } } },
+  { name: 'Notes', desc: 'Notes, the Period # counter, scenario numbering and other helper text.',
+    style: { fill: null, font: { color: '#94a3b8', weight: 'normal', size: 9 }, border: { style: 'none', color: '#94a3b8', sides: ['top', 'bottom', 'left', 'right'] } } }
 ];
-// The seven roles' default styles by name (the fallback for a role missing from the file).
-const DEFAULT_ROLE_STYLES = Object.fromEntries(FORMAT_ROLES.map(r => [r.name, r.style]));
-const ROLE_NAMES = Object.keys(DEFAULT_ROLE_STYLES);
+const EXCEL_BORDER_STYLES = ['none', 'solid', 'dashed', 'dotted'];
+const EXCEL_SIDES = ['top', 'bottom', 'left', 'right'];
+const EXCEL_FONT_SIZE_MIN = 6, EXCEL_FONT_SIZE_MAX = 72;
+const EXCEL_STYLE_KEY = 'fmide-excel-style';
+function defaultExcelStyle(){
+  const out = {};
+  EXCEL_ROLES.forEach(r => { out[r.name] = JSON.parse(JSON.stringify(r.style)); });
+  return out;
+}
+// One role's style from storage or a file (untrusted): colours checked, sizes bounded, the
+// border style and sides from their lists; anything missing or wrong takes the default's.
+function cleanExcelRoleStyle(raw, dflt){
+  const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const f = src.font && typeof src.font === 'object' ? src.font : {};
+  const b = src.border && typeof src.border === 'object' ? src.border : {};
+  const out = { fill: 'fill' in src ? cleanHexColor(src.fill) : dflt.fill };
+  const size = Math.round(Number(f.size));
+  out.font = {
+    color: 'color' in f ? cleanHexColor(f.color) : dflt.font.color,
+    weight: 'weight' in f ? (f.weight === '700' || f.weight === 'bold' ? '700' : 'normal') : dflt.font.weight,
+    size: 'size' in f ? (f.size !== null && Number.isFinite(size) ? Math.max(EXCEL_FONT_SIZE_MIN, Math.min(EXCEL_FONT_SIZE_MAX, size)) : null) : dflt.font.size
+  };
+  out.border = {
+    style: EXCEL_BORDER_STYLES.includes(b.style) ? b.style : dflt.border.style,
+    color: cleanHexColor(b.color) || dflt.border.color,
+    sides: Array.isArray(b.sides) ? EXCEL_SIDES.filter(k => b.sides.includes(k)) : dflt.border.sides.slice()
+  };
+  return out;
+}
+// A whole Excel style ({ roleName: style }) read from storage or a file.
+function cleanExcelStyle(roles){
+  const src = roles && typeof roles === 'object' && !Array.isArray(roles) ? roles : {};
+  const out = {};
+  EXCEL_ROLES.forEach(r => { out[r.name] = cleanExcelRoleStyle(Object.prototype.hasOwnProperty.call(src, r.name) ? src[r.name] : null, r.style); });
+  return out;
+}
+function excelStylePayload(){
+  return { kind: 'fmIDE-excel-style', version: FILE_FORMATS['fmIDE-excel-style'].current, roles: JSON.parse(JSON.stringify(excelStyle)) };
+}
+let excelStyle = defaultExcelStyle();
 
-// The role's style (fmIDE-style object): from the file's presets, else the default.
-function roleStyle(name){
-  const p = model && (model.formatPresets || []).find(x => x && x.name === name && x.style);
-  return p ? p.style : DEFAULT_ROLE_STYLES[name];
+// A role's style (the shape fmIDE's styles have, which nodeStyleToExcelCellStyle reads).
+function roleStyle(name){ return excelStyle[name] || null; }
+// The number format fmIDE gives a rectangle — the one part of its look that goes to Excel:
+// its own 🎨 format's if it has one, else its canvas role's (Inputs or Calculations, as the
+// file's presets say). Read from the file, so checked: a known kind, 0–10 decimals, a short
+// currency symbol without quotes. The two roles' formats are worked out once per model.
+function cleanModelNumberFormat(nf){
+  if(!nf || typeof nf !== 'object' || !['number', 'percent', 'currency'].includes(nf.kind)) return null;
+  const d = Math.round(Number(nf.decimals));
+  const out = { kind: nf.kind, decimals: Number.isFinite(d) ? Math.max(0, Math.min(10, d)) : 2 };
+  if(nf.kind === 'currency') out.currencySymbol = typeof nf.currencySymbol === 'string' && /^[^"\\]{1,5}$/.test(nf.currencySymbol) ? nf.currencySymbol : '$';
+  return out;
 }
-function roleSource(name){
-  return model && (model.formatPresets || []).some(x => x && x.name === name && x.style) ? 'fmIDE' : 'default';
-}
-// Role colours + the rectangle's own look (see the rule above). Returns an fmIDE-style object.
-function composeStyle(roleName, own){
-  const role = roleStyle(roleName) || {};
-  const out = JSON.parse(JSON.stringify(role));
-  if(own){
-    if(own.numberFormat && own.numberFormat.kind && own.numberFormat.kind !== 'general') out.numberFormat = own.numberFormat;
-    if(own.font){
-      out.font = Object.assign({}, out.font || {});
-      ['family', 'weight'].forEach(k => { if(own.font[k]) out.font[k] = own.font[k]; });
-      // size: the rectangle's own (or its "Excel default size" choice) wins over the role's
-      if(own.font.excelDefaultSize){ out.font.size = null; out.font.excelDefaultSize = true; }
-      else if(own.font.size){ out.font.size = own.font.size; delete out.font.excelDefaultSize; }
-    }
-    if(own.keepColours){
-      out.fill = own.fill || null;
-      out.font = Object.assign({}, out.font || {}, { color: (own.font && own.font.color) || null });
-      out.border = own.border || null;
-    }
+const roleNumberFormats = new WeakMap(); // model → { Inputs, Calculations }
+function roleNumberFormat(role){
+  if(!model) return null;
+  let byRole = roleNumberFormats.get(model);
+  if(!byRole){
+    byRole = {};
+    ['Inputs', 'Calculations'].forEach(r => {
+      const p = (model.formatPresets || []).find(x => x && x.name === r && x.style);
+      byRole[r] = cleanModelNumberFormat(p && p.style.numberFormat);
+    });
+    roleNumberFormats.set(model, byRole);
   }
+  return byRole[role];
+}
+function modelNumberFormat(canvas, node){
+  if(node && node.style) return cleanModelNumberFormat(node.style.numberFormat);
+  // isInputNode: the shared input rule, as the IR already worked it out for this node.
+  return roleNumberFormat(canvas && node && isInputNode(canvas, node) ? 'Inputs' : 'Calculations');
+}
+// A rectangle row's look: its role's style plus fmIDE's number format.
+function composeStyle(roleName, numberFormat){
+  const out = JSON.parse(JSON.stringify(roleStyle(roleName) || {}));
+  if(numberFormat) out.numberFormat = numberFormat;
   return out;
 }
 // Excel cell style for a structural cell of a role, plus layout-only extras (alignment,
@@ -3573,35 +3613,6 @@ function withIndent(cellStyle, row){
   return n ? mergeXlStyle(cellStyle, { alignment: { horizontal: 'left', indent: n } }) : cellStyle;
 }
 
-// Read-only legend: each role's look and whether it came from the file or the default.
-function renderRolesLegend(){
-  const el = $('rolesLegend'); if(!el) return;
-  el.innerHTML = '';
-  ROLE_NAMES.forEach(name => {
-    const st = roleStyle(name) || {};
-    const chip = document.createElement('span');
-    chip.className = 'role-chip';
-    chip.textContent = name;
-    chip.style.background = st.fill || '#fff';
-    chip.style.color = (st.font && st.font.color) || '#1e293b';
-    chip.style.fontWeight = (st.font && st.font.weight) || 'normal';
-    chip.style.border = (st.border && st.border.style && st.border.style !== 'none') ? `1px ${st.border.style} ${st.border.color || '#94a3b8'}` : '1px solid #e2e8f0';
-    const src = roleSource(name);
-    chip.title = name + (src === 'fmIDE' ? ' — from this file (fmIDE preset)' : ' — built-in default (this file has no "' + name + '" preset)');
-    if(src !== 'fmIDE'){ const d = document.createElement('span'); d.className = 'role-default'; d.textContent = 'default'; chip.appendChild(d); }
-    el.appendChild(chip);
-  });
-}
-
-function resolveNodeStyle(canvas, node, formatPresets){
-  if(node.style) return node.style;
-  if(node.type === 'value' && isInputRectangle(canvas, node)){
-    const preset = (formatPresets || []).find(p => p.name === 'Inputs');
-    if(preset) return preset.style;
-  }
-  return null;
-}
-
 function styleColorToRgbHex(hex){
   if(!hex || typeof hex !== 'string') return null;
   const h = hex.replace('#', '').toUpperCase();
@@ -3618,7 +3629,7 @@ function nodeStyleToExcelCellStyle(style){
     const f = {};
     const color = styleColorToRgbHex(style.font.color);
     if(color) f.color = { rgb: color };
-    if(style.font.size && !style.font.excelDefaultSize) f.sz = style.font.size; // else: workbook default
+    if(style.font.size) f.sz = style.font.size; // else: the workbook's default size
     if(style.font.weight === '700' || style.font.weight === 'bold' || style.font.weight === '600') f.bold = true;
     if(Object.keys(f).length) s.font = f;
   }
@@ -3630,7 +3641,7 @@ function nodeStyleToExcelCellStyle(style){
     const excelStyle = { solid: 'thin', dashed: 'dashed', dotted: 'dotted' }[style.border.style] || 'thin';
     const color = styleColorToRgbHex(style.border.color) || '94A3B8';
     const edge = { style: excelStyle, color: { rgb: color } };
-    // Only the sides the style asks for (older styles without "sides" = all four).
+    // Only the sides the style asks for (a row's own format has no "sides": all four).
     const sides = Array.isArray(style.border.sides) ? style.border.sides : ['top', 'bottom', 'left', 'right'];
     const b = {};
     sides.forEach(k => { if(['top', 'bottom', 'left', 'right'].includes(k)) b[k] = edge; });
@@ -3921,6 +3932,164 @@ function buildDefaultMapping(m){
 }
 
 // ============================================================
+// The Excel style panel (section 2) — the person's own look for every cell in the workbook
+// (step 11a). Saved in this browser under EXCEL_STYLE_KEY (the same fmIDE-excel-style JSON
+// text Export Excel Style writes), so it applies to every model loaded here; Export / Import
+// moves it between computers; Reset to Defaults brings back EXCEL_ROLES' styles. Everything
+// from storage or a file goes through readKnownFile and cleanExcelStyle.
+// ============================================================
+function readExcelStyleData(parsed){
+  const r = readKnownFile(parsed, ['fmIDE-excel-style']);
+  if(r.error) return r;
+  return Object.assign(r, { style: cleanExcelStyle(r.data.roles) });
+}
+const excelStyleLoaded = layoutsMigrated.then(() => layoutStore.get(EXCEL_STYLE_KEY)).then(raw => {
+  if(typeof raw !== 'string' || !raw) return;
+  try{
+    const r = readExcelStyleData(JSON.parse(raw));
+    if(!r.error) excelStyle = r.style; // a newer version's style: read as far as this one can
+  }catch(err){ /* unreadable: keep the defaults */ }
+}, () => {});
+
+let excelStyleSaveFailing = false;
+function saveExcelStyle(){
+  layoutStore.requestPersistence();
+  let text;
+  try{ text = JSON.stringify(excelStylePayload()); }
+  catch(err){ onExcelStyleSaveFailed(err); return Promise.resolve(); }
+  return layoutStore.put(EXCEL_STYLE_KEY, text).then(() => {
+    if(excelStyleSaveFailing){ excelStyleSaveFailing = false; $('storageWarn').classList.add('hidden'); }
+  }, onExcelStyleSaveFailed);
+}
+function onExcelStyleSaveFailed(err){
+  if(excelStyleSaveFailing) return;
+  excelStyleSaveFailing = true;
+  const full = err && (err.name === 'QuotaExceededError' || err.code === 22 || err.code === 1014);
+  $('storageWarn').textContent = (full ? "Saving your Excel style failed: the browser's storage is full." : 'Saving your Excel style failed: this browser is not letting ExcelExporter store data.') +
+    ' It works for now but will be lost on reload — use "Export Excel Style" to keep it.';
+  $('storageWarn').classList.remove('hidden');
+}
+
+// A small "Aa 1,234" sample of a role's look (validated values only).
+function paintExcelStyleSwatch(el, st){
+  el.style.background = st.fill || '#ffffff';
+  el.style.color = st.font.color || '#1e293b';
+  el.style.fontWeight = st.font.weight === '700' ? '700' : 'normal';
+  el.style.fontSize = st.font.size ? Math.min(st.font.size, 16) + 'px' : '12px';
+  const line = st.border.style === 'none' ? 'none' : '1px ' + st.border.style + ' ' + st.border.color;
+  EXCEL_SIDES.forEach(k => {
+    const prop = 'border' + k[0].toUpperCase() + k.slice(1);
+    el.style[prop] = line !== 'none' && st.border.sides.includes(k) ? line : '1px solid transparent';
+  });
+}
+
+function renderExcelStyle(){
+  const body = $('excelStyleBody');
+  if(!body) return;
+  body.innerHTML = '';
+  EXCEL_ROLES.forEach(role => {
+    const st = excelStyle[role.name];
+    const tr = document.createElement('tr');
+    tr.dataset.role = role.name;
+    const field = (name, el) => { el.dataset.field = name; return el; };
+    const input = (type, name) => { const el = document.createElement('input'); el.type = type; return field(name, el); };
+    const labelled = (el, text) => { const l = document.createElement('label'); l.className = 'xs-check'; l.append(el, document.createTextNode(text)); return l; };
+    const cell = (...els) => { const td = document.createElement('td'); els.forEach(e => td.appendChild(e)); tr.appendChild(td); return td; };
+
+    const name = document.createElement('div'); name.className = 'xs-name'; name.textContent = role.name;
+    const desc = document.createElement('div'); desc.className = 'xs-desc'; desc.textContent = role.desc;
+    cell(name, desc);
+    const swatch = document.createElement('span'); swatch.className = 'xs-swatch'; swatch.textContent = 'Aa 1,234';
+    paintExcelStyleSwatch(swatch, st);
+    cell(swatch);
+
+    const fill = input('color', 'fill'); fill.value = st.fill || '#ffffff'; fill.title = 'Fill colour';
+    const fillNone = input('checkbox', 'fillNone'); fillNone.checked = !st.fill;
+    cell(fill, labelled(fillNone, 'None'));
+
+    const fontColor = input('color', 'fontColor'); fontColor.value = st.font.color || '#000000'; fontColor.title = 'Font colour';
+    const fontAuto = input('checkbox', 'fontAuto'); fontAuto.checked = !st.font.color; fontAuto.title = "Excel's automatic font colour (black)";
+    cell(fontColor, labelled(fontAuto, 'Auto'));
+
+    const bold = input('checkbox', 'bold'); bold.checked = st.font.weight === '700';
+    cell(labelled(bold, 'Bold'));
+
+    const size = input('number', 'size'); size.min = String(EXCEL_FONT_SIZE_MIN); size.max = String(EXCEL_FONT_SIZE_MAX);
+    size.placeholder = 'default'; size.title = "Font size in points; leave blank for the workbook's default (normally 11)";
+    size.value = st.font.size ? String(st.font.size) : '';
+    cell(size);
+
+    const bStyle = field('borderStyle', document.createElement('select'));
+    EXCEL_BORDER_STYLES.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v === 'none' ? 'No border' : v; bStyle.appendChild(o); });
+    bStyle.value = st.border.style;
+    const bColor = input('color', 'borderColor'); bColor.value = st.border.color; bColor.title = 'Border colour';
+    const sides = document.createElement('span'); sides.className = 'xs-sides';
+    const sideBoxes = {};
+    EXCEL_SIDES.forEach(k => {
+      const cb = input('checkbox', 'side-' + k); cb.checked = st.border.sides.includes(k);
+      sideBoxes[k] = cb;
+      sides.appendChild(labelled(cb, k[0].toUpperCase() + k.slice(1)));
+    });
+    cell(bStyle, bColor, sides);
+
+    const commit = () => {
+      const n = Math.round(Number(size.value));
+      excelStyle[role.name] = cleanExcelRoleStyle({
+        fill: fillNone.checked ? null : fill.value,
+        font: { color: fontAuto.checked ? null : fontColor.value, weight: bold.checked ? '700' : 'normal',
+                size: size.value.trim() && Number.isFinite(n) ? n : null },
+        border: { style: bStyle.value, color: bColor.value, sides: EXCEL_SIDES.filter(k => sideBoxes[k].checked) }
+      }, role.style);
+      const now = excelStyle[role.name];
+      if(now.font.size && String(now.font.size) !== size.value) size.value = String(now.font.size);
+      paintExcelStyleSwatch(swatch, now);
+      saveExcelStyle();
+    };
+    // Picking a colour switches its "None" / "Auto" off.
+    fill.addEventListener('input', () => { fillNone.checked = false; });
+    fontColor.addEventListener('input', () => { fontAuto.checked = false; });
+    tr.querySelectorAll('input, select').forEach(el => el.addEventListener('change', commit));
+    body.appendChild(tr);
+  });
+}
+
+$('btnExportStyle').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(excelStylePayload(), null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'excelexporter-style.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+$('btnImportStyle').addEventListener('click', () => $('excelStyleFileInput').click());
+$('excelStyleFileInput').addEventListener('change', () => {
+  const file = $('excelStyleFileInput').files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    const { parsed, error } = parseFileText(reader.result);
+    if(error){ setStatus($('excelStyleStatus'), error, 'err'); return; }
+    const r = readExcelStyleData(parsed);
+    if(r.error){ setStatus($('excelStyleStatus'), r.error, 'err'); return; }
+    if(!(await confirmNewerFile(r))){ setStatus($('excelStyleStatus'), 'Excel style not imported.', 'info'); return; }
+    excelStyle = r.style;
+    saveExcelStyle();
+    renderExcelStyle();
+    setStatus($('excelStyleStatus'), 'Excel style imported.', 'ok');
+  };
+  reader.readAsText(file);
+  $('excelStyleFileInput').value = '';
+});
+$('btnResetStyle').addEventListener('click', async () => {
+  const ok = await showConfirm('Reset the Excel style?',
+    'This puts every role back to ExcelExporter\'s built-in look, for every model you load here. Use "Export Excel Style" first if you might want yours back.',
+    'Reset Style');
+  if(!ok) return;
+  excelStyle = defaultExcelStyle();
+  saveExcelStyle();
+  renderExcelStyle();
+  setStatus($('excelStyleStatus'), 'Excel style reset to the defaults.', 'ok');
+});
+// ============================================================
 // File formats — the two kinds ExcelExporter reads from fmIDE (system, workspace; their
 // versions and upgrades are shared with fmIDE in src/shared/file-formats.js) plus its own
 // mapping file. Every loaded file goes through
@@ -3935,7 +4104,7 @@ function buildDefaultMapping(m){
 // (docs/file-formats.md). To change one of these formats: raise its version here and add
 // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
 // exactly one version.
-const SHARED_FILE_VERSIONS = { 'system': 6, 'fmIDE-workspace': 6 };
+const SHARED_FILE_VERSIONS = { 'system': 7, 'fmIDE-workspace': 7 };
 // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
 // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
 function upgradeNodePlugs(nodes){
@@ -3969,6 +4138,32 @@ function upgradeTemplateEntries(list){
     if(t.versionId === undefined) t.versionId = newRandomId();
   });
 }
+// Step 11a (decision 9): the Excel look belongs to ExcelExporter, which keeps the person's own
+// Excel style. Files from before it carried Excel-only settings in fmIDE's formats: the five
+// Excel-only role presets, and in any style "Use this fill, font colour & border in Excel too"
+// (`keepColours`), Excel border sides (`border.sides`) and "Use Excel's default font size"
+// (`font.excelDefaultSize`). The upgrade drops them; everything else stays.
+const EXCEL_ONLY_ROLE_NAMES = ['Links', 'Headers', 'Section Headers', 'Labels', 'Notes'];
+function dropExcelOnlyStyle(st){
+  if(!st || typeof st !== 'object' || Array.isArray(st)) return;
+  delete st.keepColours;
+  if(st.border && typeof st.border === 'object') delete st.border.sides;
+  if(st.font && typeof st.font === 'object') delete st.font.excelDefaultSize;
+}
+// A list of format presets upgraded in place: the Excel-only roles go, every style is cleaned.
+function dropExcelOnlyPresets(list){
+  if(!Array.isArray(list)) return list;
+  for(let i = list.length - 1; i >= 0; i--){
+    const p = list[i];
+    if(p && typeof p === 'object' && EXCEL_ONLY_ROLE_NAMES.includes(p.name)) list.splice(i, 1);
+    else if(p && typeof p === 'object') dropExcelOnlyStyle(p.style);
+  }
+  return list;
+}
+// Every node's own style in a list of nodes.
+function dropExcelOnlyNodeStyles(nodes){
+  (Array.isArray(nodes) ? nodes : []).forEach(n => { if(n && typeof n === 'object') dropExcelOnlyStyle(n.style); });
+}
 const SHARED_FILE_MIGRATIONS = {
   // v1 → v2: templates get a family, a version number, a change note and a version id.
   'fmIDE-workspace': {
@@ -3983,7 +4178,10 @@ const SHARED_FILE_MIGRATIONS = {
     4: () => {},
     // v5 → v6: its templates and library functions may say which library pack they came
     // from (`origin`, step 8 phase 8b); older ones have no such record.
-    5: () => {}
+    5: () => {},
+    // v6 → v7: the Excel look moved to ExcelExporter (step 11a): the Excel-only format roles
+    // and style settings are dropped. Its system and templates upgrade on their own.
+    6: d => { dropExcelOnlyPresets(d.formatPresets); }
   },
   'system': {
     // v1 systems were accepted with fields the loader already defaults (periods, ids…);
@@ -4008,7 +4206,13 @@ const SHARED_FILE_MIGRATIONS = {
     // rounddown; arrows into if and round name their input with `toPort`). Older systems
     // have none, so nothing changes; an older app asks before opening a v6 file instead of
     // calculating those operators as ones it doesn't know.
-    5: () => {}
+    5: () => {},
+    // v6 → v7: the Excel look moved to ExcelExporter (step 11a): the Excel-only format roles
+    // and every rectangle's Excel-only style settings are dropped.
+    6: d => {
+      dropExcelOnlyPresets(d.formatPresets);
+      (Array.isArray(d.canvases) ? d.canvases : []).forEach(c => { if(c) dropExcelOnlyNodeStyles(c.nodes); });
+    }
   }
 };
 // A file's kind: its "kind" field, or — for files saved before kinds were written — its
@@ -4072,7 +4276,9 @@ function fileDataProblem(raw){
 const FILE_FORMATS = {
   'system':              { current: SHARED_FILE_VERSIONS['system'], label: 'fmIDE system' },
   'fmIDE-workspace':     { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'fmIDE workspace' },
-  'fmIDE-excel-mapping': { current: 2, label: 'ExcelExporter mapping file' }
+  'fmIDE-excel-mapping': { current: 2, label: 'ExcelExporter mapping file' },
+  // The person's own Excel style (step 11a): how every cell looks, by role.
+  'fmIDE-excel-style':   { current: 1, label: 'ExcelExporter Excel style file' }
 };
 // Kinds that are fmIDE files but not something ExcelExporter reads — say where they belong.
 const OTHER_FMIDE_KINDS = {
@@ -4100,7 +4306,9 @@ function readKnownFile(raw, accept){
   }
   if(!accept.includes(kind)){
     return { error: 'That is an ' + FILE_FORMATS[kind].label + ', not ' + accept.map(k => 'an ' + FILE_FORMATS[k].label).join(' or ') + '.' +
-      (kind === 'fmIDE-excel-mapping' ? ' Use "Import Mapping JSON" after loading the model.' : ' Load it with the file picker in section 1.') };
+      (kind === 'fmIDE-excel-mapping' ? ' Use "Import Mapping JSON" after loading the model.'
+        : kind === 'fmIDE-excel-style' ? ' Use "Import Excel Style" in section 2 after loading a model.'
+        : ' Load it with the file picker in section 1.') };
   }
   const data = JSON.parse(JSON.stringify(raw));
   const { fromVersion: version, newer } = upgradeFileData(data, kind, FILE_FORMATS, FILE_MIGRATIONS);
@@ -4146,6 +4354,7 @@ async function loadModel(m){
   // still found.
   const key = signatureOf(systemData, true);
   let restored = null;
+  await excelStyleLoaded; // the person's Excel style, read from this browser once
   try{
     await layoutsMigrated;
     let raw = await layoutStore.get(key);
@@ -5455,7 +5664,7 @@ function renderAll(){
   $('cfgFallbackFormat').value = mapping.cfg.fallbackFormat;
   $('cfgFileName').value = mapping.cfg.fileName;
   $('cfgSectionsEnabled').checked = sectionsEnabled();
-  renderRolesLegend();
+  renderExcelStyle();
   selectedRowIds.clear(); // a freshly (re)loaded model invalidates any prior selection
   treeCollapsedTabIds.clear();
   treeAnchorIndex = null;
@@ -6508,7 +6717,7 @@ function openTreeContextMenu(x, y, row, rowEl, labelSpan, opts){
   item('⇥ Increase Indent', () => bulkIndentSelected(1), rows.every(r => rowIndent(r) >= ROW_INDENT_MAX) ? { disabled: true } : null);
   item('⇤ Decrease Indent', () => bulkIndentSelected(-1), rows.every(r => rowIndent(r) === 0) ? { disabled: true } : null);
   item(n > 1 ? `🎨 Format ${n} rows…` : '🎨 Format…', () => toggleTreeRowStyleEditor(rowEl, row));
-  item('Reset to fmIDE\'s format', () => bulkResetFormatSelected(),
+  item('Reset to the Excel style', () => bulkResetFormatSelected(),
     rows.some(r => r.style || rowIndent(r)) ? null : { disabled: true, title: 'No row here has a format or indent of its own' });
   hr();
   // Move to another tab (and section, when sections are enforced), at its top or bottom.
@@ -6570,7 +6779,7 @@ window.addEventListener('resize', closeTreeContextMenu);
 // font colour, bold, border — the same `row.style` shape as the Canvas/Tab views); a
 // rectangle row's overrides what fmIDE's roles and the rectangle give it in Excel, and
 // can also set the number format. With the row among several selected, a change applies
-// to all of them. "Reset to fmIDE's format" drops the rows' own formats and indents.
+// to all of them. "Reset to the Excel style" drops the rows' own formats and indents.
 // A click inside the editor must not bubble up to the row and reset the selection.
 function toggleTreeRowStyleEditor(rowEl, row){
   const last = rowEl.children[rowEl.children.length - 1];
@@ -6663,15 +6872,15 @@ function toggleTreeRowStyleEditor(rowEl, row){
     .forEach(fieldEl => fieldEl.addEventListener('change', commit));
 
   const reset = document.createElement('button'); reset.type = 'button'; reset.className = 'icon fmt-reset';
-  reset.textContent = 'Reset to fmIDE\'s format';
-  reset.title = 'Drop this row\'s own format and indent, so it looks as fmIDE\'s roles say';
+  reset.textContent = 'Reset to the Excel style';
+  reset.title = 'Drop this row\'s own format and indent, so it looks as the Excel style (section 2) says';
   reset.addEventListener('click', () => { resetRowFormats(targets()); });
   editor.appendChild(reset);
 
   rowEl.appendChild(editor);
 }
 
-// The look a rectangle row gets from its role and rectangle today — where the editor
+// The look a rectangle row gets from its role (the Excel style) and fmIDE's number format today — where the editor
 // starts. (The workbook decides Links vs Calculations from the formulas it writes; this
 // is only the starting point, from the same rules.)
 function treeRowCurrentLook(row){
@@ -6680,7 +6889,7 @@ function treeRowCurrentLook(row){
   const role = row.isInputMirror ? 'Inputs'
     : (inputsEnabled() && inputMirrorRows().some(m => m.sourceRowId === row.id)) ? 'Links'
     : (canvas && node && isInputNode(canvas, node)) ? 'Inputs' : 'Calculations';
-  return composeStyle(role, node && node.style);
+  return composeStyle(role, modelNumberFormat(canvas, node));
 }
 
 // Indent the selected rows' labels by `delta` steps (bounded 0..ROW_INDENT_MAX).
@@ -6695,7 +6904,7 @@ function bulkIndentSelected(delta){
   renderBulkBar();
 }
 
-// Back to fmIDE's format: no own format, no indent.
+// Back to the Excel style: no own format, no indent.
 function resetRowFormats(list){
   list.forEach(r => {
     if(r.isCustom) r.style = null; else delete r.style;
@@ -7027,7 +7236,7 @@ function buildWorkbook(){
 
       const canvas = ctx.canvasById[row.canvasId];
       const node = irNode(row.canvasId, row.nodeId).node;
-      const own = node.style || null; // the rectangle's own 🎨 format from fmIDE, if any
+      const modelFmt = modelNumberFormat(canvas, node); // fmIDE's number format: the one part of its look that goes to Excel
       // An input row whose numbers live on the Inputs tab becomes a link to it.
       const linkPos = (!row.isInputMirror && ctx.cellPos[mirrorIdFor(row.id)]) || null;
       // A scenario variable (Inputs tab): N scenario rows above this row, then this row
@@ -7089,14 +7298,14 @@ function buildWorkbook(){
         : isInputNode(canvas, node) ? 'Inputs'
         : (contents.length && contents.every(c => c.isFormula && PURE_LINK.test(c.formula))) ? 'Links'
         : 'Calculations';
-      // The row's own format (Tree view 🎨) goes over the role and the rectangle's format.
-      const rowStyleObj = withRowFormat(composeStyle(rowRole, own), row.style);
+      // The row's own format (Tree view 🎨) goes over the role's look and fmIDE's number format.
+      const rowStyleObj = withRowFormat(composeStyle(rowRole, modelFmt), row.style);
       const cellStyle = nodeStyleToExcelCellStyle(rowStyleObj);
       const numFmt = numberFormatToExcel(rowStyleObj, fallbackFmt);
 
       if(scnBlock){
         // Scenario rows: the hard-coded numbers (Inputs role); numbering in C (Notes).
-        const inObj = withRowFormat(composeStyle('Inputs', own), row.style);
+        const inObj = withRowFormat(composeStyle('Inputs', modelFmt), row.style);
         const inStyle = nodeStyleToExcelCellStyle(inObj);
         const inFmt = numberFormatToExcel(inObj, fallbackFmt);
         const numStyle = roleCellStyle('Notes', CENTER);
@@ -8008,7 +8217,7 @@ const EXCEL_HELP_TOPICS = [
         'In fmIDE, save your model (File → Save gives a .fmide file).',
         'Here, drop the file on the box in panel 1, or click the box to choose it.',
       ] },
-      { p: 'A system file (Save System) or a workspace (Export Workspace) works too. A workspace, or a .fmide document, also carries fmIDE\'s format roles, so the workbook looks the way you set it up.' },
+      { p: 'A system file (Save System) or a workspace (Export Workspace) works too. The number formats you set in fmIDE come across; how cells look is your own Excel style (panel 2).' },
       { p: 'To see how it works first, press ▶ Load Sample Model.' },
       { p: 'Your layout (tabs, rows, names, order) is remembered in this browser for each model, so loading the same model again brings it back.' },
       { see: ['what-is-excelexporter', 'back-to-fmide'] },
@@ -8064,7 +8273,7 @@ const EXCEL_HELP_TOPICS = [
         'Double-click a row\'s label to rename it.',
         'Right-click rows for every command: move, include, constant, scenarios, indent, format, move to another tab.',
         'Alt+Shift+→ and Alt+Shift+← indent the selected labels, like Excel\'s Increase Indent.',
-        '🎨 on a row gives it its own fill, font colour, bold, border and number format in Excel. Reset to fmIDE\'s format takes it off.',
+        '🎨 on a row gives it its own fill, font colour, bold, border and number format in Excel. Reset to the Excel style takes it off.',
       ] },
       { p: 'On a tablet, press and hold a row for its menu, and double-tap to rename.' },
       { see: ['rows', 'formats'] },
@@ -8098,11 +8307,17 @@ const EXCEL_HELP_TOPICS = [
       { see: ['inputs-tab'] },
     ] },
   { id: 'formats', group: 'format', title: 'How the workbook looks',
-    keywords: 'format role colour fill font border number format style row',
-    summary: 'Formatting comes from fmIDE\'s format roles, with a row\'s own format on top.',
+    keywords: 'format role colour fill font border sides size bold number format style excel style export import reset row',
+    summary: 'Your own Excel style sets how every cell looks; fmIDE sets the number formats.',
     body: [
-      { p: 'Every cell takes its fill, font colour and border from one of fmIDE\'s seven format roles: Inputs, Calculations, Links, Headers, Section Headers, Labels and Notes. Change them in fmIDE (File → Format Presets); they travel inside the file you load here. Panel 2 shows them.' },
-      { p: 'A rectangle\'s own 🎨 format in fmIDE sets its number format, weight and size here too.' },
+      { p: 'Every cell takes its look from one of seven roles in your Excel style (panel 2): Inputs, Calculations, Links, Headers, Section Headers, Labels and Notes.' },
+      { steps: [
+        'For each role, pick the fill, the font colour, bold, the font size (blank uses Excel\'s default) and the border: its style, colour and which sides.',
+        'Changes are saved in this browser and used for every model you load here.',
+        'Export Excel Style saves it as a file; Import Excel Style reads one, for example on another computer.',
+        'Reset to Defaults puts every role back to ExcelExporter\'s built-in look.',
+      ] },
+      { p: 'Number formats come from fmIDE: a rectangle\'s own 🎨 number format, or its Inputs or Calculations format. Its canvas colours and fonts stay in fmIDE.' },
       { p: 'In the Tree View, 🎨 on a row gives just that row its own look in this workbook.' },
       { see: ['tree-view', 'periods-output'] },
     ] },
