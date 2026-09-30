@@ -10,7 +10,9 @@
 const FILE_FORMATS = {
   'system':              { current: SHARED_FILE_VERSIONS['system'], label: 'fmIDE system' },
   'fmIDE-workspace':     { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'fmIDE workspace' },
-  'fmIDE-excel-mapping': { current: 2, label: 'ExcelExporter mapping file' }
+  'fmIDE-excel-mapping': { current: 2, label: 'ExcelExporter mapping file' },
+  // The person's own Excel style (step 11a): how every cell looks, by role.
+  'fmIDE-excel-style':   { current: 1, label: 'ExcelExporter Excel style file' }
 };
 // Kinds that are fmIDE files but not something ExcelExporter reads — say where they belong.
 const OTHER_FMIDE_KINDS = {
@@ -38,7 +40,9 @@ function readKnownFile(raw, accept){
   }
   if(!accept.includes(kind)){
     return { error: 'That is an ' + FILE_FORMATS[kind].label + ', not ' + accept.map(k => 'an ' + FILE_FORMATS[k].label).join(' or ') + '.' +
-      (kind === 'fmIDE-excel-mapping' ? ' Use "Import Mapping JSON" after loading the model.' : ' Load it with the file picker in section 1.') };
+      (kind === 'fmIDE-excel-mapping' ? ' Use "Import Mapping JSON" after loading the model.'
+        : kind === 'fmIDE-excel-style' ? ' Use "Import Excel Style" in section 2 after loading a model.'
+        : ' Load it with the file picker in section 1.') };
   }
   const data = JSON.parse(JSON.stringify(raw));
   const { fromVersion: version, newer } = upgradeFileData(data, kind, FILE_FORMATS, FILE_MIGRATIONS);
@@ -84,6 +88,7 @@ async function loadModel(m){
   // still found.
   const key = signatureOf(systemData, true);
   let restored = null;
+  await excelStyleLoaded; // the person's Excel style, read from this browser once
   try{
     await layoutsMigrated;
     let raw = await layoutStore.get(key);

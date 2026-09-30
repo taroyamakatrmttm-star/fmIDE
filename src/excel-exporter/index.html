@@ -35,7 +35,7 @@
 
   <section class="panel" id="loadPanel">
     <h2>1. Load an fmIDE model</h2>
-    <p class="hint">Save a document in fmIDE (File → Save, a <code>.fmide</code> file), or export a system ("Save System" or "Export Workspace"), and load it here — or try the built-in sample to see how the tool works. Use "Export Workspace" (not just "Save System") if you want rectangles using fmIDE's shared "Inputs" format to carry that formatting into Excel.</p>
+    <p class="hint">Save a document in fmIDE (File → Save, a <code>.fmide</code> file), or export a system ("Save System" or "Export Workspace"), and load it here — or try the built-in sample to see how the tool works. Number formats set in fmIDE come across; how cells look is your own Excel style (section 2).</p>
     <div class="drop" id="dropZone">
       Drop an fmIDE file (.fmide or .json) here, or click to choose one
       <input type="file" id="fileInput" accept="application/json,.json,.fmide">
@@ -77,10 +77,20 @@
         </label>
         <label class="field"><span>Output file name</span><input type="text" id="cfgFileName" value="fmIDE-export" style="width:180px;"></label>
       </div>
-      <div class="roles-block">
-        <div style="font-size:12.5px; font-weight:600; margin-bottom:4px;">Format roles</div>
-        <p class="hint" style="margin:0 0 8px;">Every cell in the workbook takes its fill, font colour and border from one of these roles. Edit them in fmIDE's Formats manager (they travel in the exported JSON) — including which cell sides get a border and whether to use Excel's default font size. A rectangle's own 🎨 format still sets its number format, weight and size.</p>
-        <div id="rolesLegend" class="roles-legend"></div>
+      <div class="roles-block" id="excelStyleBlock">
+        <div style="font-size:12.5px; font-weight:600; margin-bottom:4px;">Excel style</div>
+        <p class="hint" style="margin:0 0 8px;">How every cell in the workbook looks, by role. This is your own style: it is kept in this browser and used for every model you load. fmIDE decides only the number formats (a rectangle's own, or its Inputs / Calculations format); its canvas colours and fonts stay on the canvas. A row's own format (Tree view 🎨) goes over this.</p>
+        <div class="rows-scroll"><table class="excel-style-table" id="excelStyleTable">
+          <thead><tr><th>Role</th><th>Looks like</th><th>Fill</th><th>Font colour</th><th>Bold</th><th>Size (pt)</th><th>Border</th></tr></thead>
+          <tbody id="excelStyleBody"></tbody>
+        </table></div>
+        <div class="row" style="margin-top:10px;">
+          <button id="btnExportStyle">Export Excel Style</button>
+          <button id="btnImportStyle">Import Excel Style</button>
+          <input type="file" id="excelStyleFileInput" accept="application/json,.json" style="display:none;">
+          <button id="btnResetStyle" class="danger" title="Put every role back to ExcelExporter's built-in look">Reset to Defaults</button>
+        </div>
+        <div id="excelStyleStatus" style="margin-top:8px;"></div>
       </div>
     </section>
 

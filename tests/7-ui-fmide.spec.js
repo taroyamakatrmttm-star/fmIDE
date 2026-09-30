@@ -3,7 +3,7 @@ const { test, expect } = require('./helpers/apps');
 const F = require('./helpers/fmide');
 const S = require('./helpers/storage');
 
-const ROLES = ['Inputs', 'Calculations', 'Links', 'Headers', 'Section Headers', 'Labels', 'Notes'];
+const ROLES = ['Inputs', 'Calculations']; // the canvas roles (step 11a)
 const nodeEl = (page, id) => page.locator(`.node[data-id="${id}"]`);
 const look = (loc) => loc.evaluate(e => { const s = getComputedStyle(e); return { background: s.backgroundColor, border: s.borderTopColor, borderWidth: s.borderTopWidth, color: s.color }; });
 
@@ -51,26 +51,31 @@ test.describe('canvas', () => {
 });
 
 test.describe('format dialogs', () => {
-  test('the Formats manager lists the 7 roles first, with delete disabled', async ({ page }) => {
+  // Since step 11a the roles are the canvas's: Inputs and Calculations. The Excel look is
+  // ExcelExporter's (group 4).
+  test('the Formats manager lists the 2 canvas roles first, with delete disabled, and says where the Excel look is set', async ({ page }) => {
     await F.openFmIDE(page);
     await page.evaluate(() => fm.command('openFormats'));
     const rows = page.locator('.modal-box .picker-row');
     await expect(rows.first()).toBeVisible();
     const names = await rows.locator('strong').allTextContents();
-    expect(names.slice(0, 7)).toEqual(ROLES);
-    for(let i = 0; i < 7; i++) await expect(rows.nth(i).locator('button', { hasText: '🗑' })).toBeDisabled();
+    expect(names.slice(0, ROLES.length)).toEqual(ROLES);
+    for(const excelOnly of ['Links', 'Headers', 'Section Headers', 'Labels', 'Notes']) expect(names).not.toContain(excelOnly);
+    for(let i = 0; i < ROLES.length; i++) await expect(rows.nth(i).locator('button', { hasText: '🗑' })).toBeDisabled();
+    await expect(page.locator('.modal-box .excel-look-note')).toContainText('ExcelExporter');
   });
 
-  test('the rectangle format dialog has the Excel settings', async ({ page }) => {
+  test('the rectangle format dialog has no Excel settings, and says only the number format goes to Excel', async ({ page }) => {
     await F.openFmIDE(page);
     const ids = await buildRevenue(page);
     const node = nodeEl(page, ids.rev);
     await node.hover();
     await node.locator('.props-btn').click();
     const dialog = F.topDialog(page);
-    await expect(dialog).toContainText('Use this fill, font colour & border in Excel too');
-    await expect(dialog).toContainText('Excel border sides');
-    await expect(dialog).toContainText("Use Excel's default font size");
+    await expect(dialog.locator('.excel-look-note')).toContainText('Only its number format goes to Excel');
+    await expect(dialog).not.toContainText('Use this fill, font colour & border in Excel too');
+    await expect(dialog).not.toContainText('Excel border sides');
+    await expect(dialog).not.toContainText("Use Excel's default font size");
   });
 });
 

@@ -9,7 +9,7 @@ function renderAll(){
   $('cfgFallbackFormat').value = mapping.cfg.fallbackFormat;
   $('cfgFileName').value = mapping.cfg.fileName;
   $('cfgSectionsEnabled').checked = sectionsEnabled();
-  renderRolesLegend();
+  renderExcelStyle();
   selectedRowIds.clear(); // a freshly (re)loaded model invalidates any prior selection
   treeCollapsedTabIds.clear();
   treeAnchorIndex = null;

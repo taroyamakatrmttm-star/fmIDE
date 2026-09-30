@@ -211,7 +211,7 @@ function buildWorkbook(){
 
       const canvas = ctx.canvasById[row.canvasId];
       const node = irNode(row.canvasId, row.nodeId).node;
-      const own = node.style || null; // the rectangle's own 🎨 format from fmIDE, if any
+      const modelFmt = modelNumberFormat(canvas, node); // fmIDE's number format: the one part of its look that goes to Excel
       // An input row whose numbers live on the Inputs tab becomes a link to it.
       const linkPos = (!row.isInputMirror && ctx.cellPos[mirrorIdFor(row.id)]) || null;
       // A scenario variable (Inputs tab): N scenario rows above this row, then this row
@@ -273,14 +273,14 @@ function buildWorkbook(){
         : isInputNode(canvas, node) ? 'Inputs'
         : (contents.length && contents.every(c => c.isFormula && PURE_LINK.test(c.formula))) ? 'Links'
         : 'Calculations';
-      // The row's own format (Tree view 🎨) goes over the role and the rectangle's format.
-      const rowStyleObj = withRowFormat(composeStyle(rowRole, own), row.style);
+      // The row's own format (Tree view 🎨) goes over the role's look and fmIDE's number format.
+      const rowStyleObj = withRowFormat(composeStyle(rowRole, modelFmt), row.style);
       const cellStyle = nodeStyleToExcelCellStyle(rowStyleObj);
       const numFmt = numberFormatToExcel(rowStyleObj, fallbackFmt);
 
       if(scnBlock){
         // Scenario rows: the hard-coded numbers (Inputs role); numbering in C (Notes).
-        const inObj = withRowFormat(composeStyle('Inputs', own), row.style);
+        const inObj = withRowFormat(composeStyle('Inputs', modelFmt), row.style);
         const inStyle = nodeStyleToExcelCellStyle(inObj);
         const inFmt = numberFormatToExcel(inObj, fallbackFmt);
         const numStyle = roleCellStyle('Notes', CENTER);

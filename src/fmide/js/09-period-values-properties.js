@@ -280,7 +280,7 @@
   // formatting dialog and the format-preset editor. Appends fields into `box` (before
   // any element already in it — callers add their own rows/actions after calling this)
   // and returns a readStyle() to collect the current field values into a style object.
-  function buildStyleFieldsUI(box, st, opts){
+  function buildStyleFieldsUI(box, st){
     function fieldRow(labelText, inputEl){
       const row = document.createElement('div');
       row.style.display = 'flex'; row.style.alignItems = 'center'; row.style.gap = '8px'; row.style.marginBottom = '8px';
@@ -330,23 +330,6 @@
     ['solid','dashed','dotted','none'].forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; borderStyle.appendChild(o); });
     borderStyle.value = (st.border && st.border.style) || 'solid';
     box.appendChild(fieldRow('Border style', borderStyle));
-    // Excel only: which sides of each cell get the border. The canvas always draws the
-    // whole outline. No sides ticked = no border in Excel. Saved as border.sides
-    // (absent in older styles = all four).
-    const SIDES = [['top', 'Top'], ['bottom', 'Bottom'], ['left', 'Left'], ['right', 'Right']];
-    const savedSides = (st.border && Array.isArray(st.border.sides)) ? st.border.sides : ['top', 'bottom', 'left', 'right'];
-    const sidesWrap = document.createElement('span');
-    sidesWrap.style.cssText = 'display:inline-flex; gap:10px; font-size:12px;';
-    const sideBoxes = {};
-    SIDES.forEach(([key, lab]) => {
-      const l = document.createElement('label'); l.style.cssText = 'display:inline-flex; align-items:center; gap:3px;';
-      const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = savedSides.includes(key);
-      sideBoxes[key] = cb; l.append(cb, document.createTextNode(lab)); sidesWrap.appendChild(l);
-    });
-    const sidesRow = fieldRow('Excel border sides', sidesWrap);
-    sidesRow.title = 'Which sides of each Excel cell get this border. The canvas always shows the full outline. Untick all for no border in Excel.';
-    box.appendChild(sidesRow);
-
     const fontFamily = document.createElement('select');
     [['','Default'],['Arial, sans-serif','Arial'],['Georgia, serif','Georgia'],['Menlo, Consolas, monospace','Monospace'],['"Times New Roman", serif','Times New Roman']].forEach(([v,l]) => {
       const o = document.createElement('option'); o.value = v; o.textContent = l; fontFamily.appendChild(o);
@@ -357,13 +340,6 @@
     fontSize.type = 'number'; fontSize.min = '9'; fontSize.max = '36'; fontSize.style.width = '60px';
     fontSize.value = (st.font && st.font.size) || 14;
     box.appendChild(fieldRow('Font size (px)', fontSize));
-    // Excel only: leave the cell's size to the workbook default (normally 11pt) instead
-    // of carrying this canvas size across.
-    const excelDefaultSize = document.createElement('input');
-    excelDefaultSize.type = 'checkbox'; excelDefaultSize.checked = !!(st.font && st.font.excelDefaultSize);
-    const sizeRow = fieldRow("Use Excel's default font size", excelDefaultSize);
-    sizeRow.title = 'In Excel, give these cells no font size of their own, so they use the workbook default (normally 11pt). The canvas keeps the size above.';
-    box.appendChild(sizeRow);
     const fontWeight = document.createElement('select');
     [['normal','Normal'],['600','Semibold'],['700','Bold']].forEach(([v,l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; fontWeight.appendChild(o); });
     fontWeight.value = (st.font && st.font.weight) || 'normal';
@@ -372,29 +348,14 @@
     fontColor.type = 'color'; fontColor.value = (st.font && st.font.color) || '#1e2937';
     box.appendChild(fieldRow('Name color', fontColor));
 
-    // Per-rectangle only: in Excel the format ROLE (Inputs / Calculations / Links …)
-    // decides fill and font colour, so colour always says what kind of cell it is; tick
-    // this to keep this rectangle's own colours there too (e.g. a deliberate highlight).
-    let keepColours = null;
-    if(opts && opts.showKeepColours){
-      keepColours = document.createElement('input');
-      keepColours.type = 'checkbox'; keepColours.checked = !!st.keepColours;
-      const row = fieldRow('Use this fill, font colour & border in Excel too', keepColours);
-      row.title = 'In Excel, a cell\'s fill, font colour and border normally come from its format role (Inputs, Calculations, Links …). Tick to keep this rectangle\'s own instead (e.g. a deliberate highlight).';
-      box.appendChild(row);
-    }
-
     return {
       readStyle(){
         const out = {
           numberFormat: { kind: nfKind.value, decimals: parseInt(nfDecimals.value, 10) || 0, currencySymbol: nfCurrency.value || '$' },
           fill: fillNone.checked ? null : fillInput.value,
-          border: { color: borderColor.value, width: parseFloat(borderWidth.value) || 0, style: borderStyle.value,
-                    sides: SIDES.map(([k]) => k).filter(k => sideBoxes[k].checked) },
+          border: { color: borderColor.value, width: parseFloat(borderWidth.value) || 0, style: borderStyle.value },
           font: { family: fontFamily.value, size: parseInt(fontSize.value, 10) || 14, weight: fontWeight.value, color: fontColor.value }
         };
-        if(excelDefaultSize.checked) out.font.excelDefaultSize = true;
-        if(keepColours && keepColours.checked) out.keepColours = true;
         return out;
       }
     };
@@ -421,10 +382,15 @@
     const title = document.createElement('p');
     title.textContent = 'Rectangle formatting';
     box.appendChild(title);
+    // Step 11a: this is the canvas look; Excel's look is ExcelExporter's own Excel style.
+    const excelNote = document.createElement('p');
+    excelNote.className = 'template-desc excel-look-note';
+    excelNote.textContent = 'This is how the rectangle looks on the canvas. Only its number format goes to Excel — how cells look there is set in ExcelExporter (Excel style).';
+    box.appendChild(excelNote);
     if(usingSharedInputs){
       const note = document.createElement('p');
       note.className = 'template-desc';
-      note.innerHTML = `This rectangle is currently using the shared <strong>"${escapeXml(sharedRole)}"</strong> format role. Editing below and saving will give it its own look; to restyle every ${sharedRole === 'Inputs' ? 'input' : 'calculated'} rectangle at once (on the canvas and in Excel), edit the "${sharedRole}" preset instead.`;
+      note.innerHTML = `This rectangle is currently using the shared <strong>"${escapeXml(sharedRole)}"</strong> format role. Editing below and saving will give it its own look; to restyle every ${sharedRole === 'Inputs' ? 'input' : 'calculated'} rectangle at once, edit the "${sharedRole}" preset instead.`;
       box.appendChild(note);
       const editSharedBtn = document.createElement('button');
       editSharedBtn.textContent = `🎨 Edit the shared "${sharedRole}" preset`;
@@ -438,7 +404,7 @@
       box.appendChild(editSharedBtn);
     }
 
-    const fields = buildStyleFieldsUI(box, st, { showKeepColours: true });
+    const fields = buildStyleFieldsUI(box, st);
 
     const presetRow = document.createElement('div');
     presetRow.style.cssText = 'display:flex; gap:8px; margin-bottom:14px; padding-top:10px; border-top:1px solid #e5e7eb;';
@@ -502,8 +468,7 @@
     if(role){
       const note = document.createElement('p');
       note.className = 'template-desc';
-      note.textContent = `Format role (${role.where}). ${role.desc} Changes here apply to all of them at once.` +
-        (role.where === 'Excel' ? ' Only the colours, weight, size, border and number format matter in Excel.' : '');
+      note.textContent = `Format role (${role.where}). ${role.desc} Changes here apply to all of them at once.`;
       box.appendChild(note);
     }
 

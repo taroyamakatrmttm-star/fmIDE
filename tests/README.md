@@ -18,7 +18,7 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | Command | What it runs |
 |---|---|
 | `npm test` | everything |
-| `npm run test:excel` | Excel output: structure, LibreOffice values, layout, format roles |
+| `npm run test:excel` | Excel output: structure, LibreOffice values, layout, the Excel style (group 4) |
 | `npm run test:security` | the malicious-file checks, both apps |
 | `npm run test:formats` | file formats, both apps |
 | `npm run test:ui` | UI flows, both apps |

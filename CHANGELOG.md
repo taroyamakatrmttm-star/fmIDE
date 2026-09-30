@@ -2,6 +2,15 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## The Excel look belongs to ExcelExporter (step 11, phase 11a)
+- **ExcelExporter has your own Excel style** (section 2): for each of the seven roles — Inputs, Calculations, Links, Headers, Section Headers, Labels, Notes — pick the fill, font colour, bold, font size (blank uses Excel's default) and border (style, colour, which sides). It is kept in the browser and used for every model you load, whoever made it. **Export Excel Style** / **Import Excel Style** move it to another computer; **Reset to Defaults** brings back the built-in look.
+- **fmIDE's formats are the canvas look.** The Formats manager keeps the two canvas roles, Inputs and Calculations; the five Excel-only roles are gone from it. The rectangle format window no longer has "Use this fill, font colour & border in Excel too", "Excel border sides" or "Use Excel's default font size".
+- **Only number formats go from fmIDE to Excel**: a rectangle's own, or its Inputs / Calculations format. A rectangle's canvas colours, bold and size stay on the canvas; to highlight a row in Excel, use 🎨 on that row in ExcelExporter's Tree view (its **Reset to the Excel style** takes it off).
+- **Older files still open.** Their Excel-only roles and settings are dropped as they are read; everything else — the calculation, the canvas look, templates, functions, number formats — comes through unchanged. A workbook from an older file uses your Excel style, not the file's old settings.
+- In the default Excel style, input cells use Excel's default font size (before, the canvas's 14 was carried across as 14 pt).
+- File formats: system 7, workspace 7, module 5 and format presets 2 (no Excel-only settings); new `fmIDE-excel-style` 1. An older fmIDE or ExcelExporter asks before opening the new versions.
+- Fix found along the way: a number format read from a file could hold a huge number of decimals, which could freeze ExcelExporter while writing the workbook; decimals are now kept to 0–10 and the currency symbol to a short text.
+
 ## Help pages on the site (step 10, phase H4a)
 - The published site has **help pages at `/help`**: every fmIDE help topic, grouped as in the Help panel, each tutorial written out step by step, and every topic on one page (to search with Ctrl+F, or print). ExcelExporter's help is at `/help/excel/`.
 - They are made from the same text as the apps' Help panels, so they can't drift apart. Where a guide names a command, the page says where it is on the ribbon, for example **▭ Add Rectangle (Home tab)**.

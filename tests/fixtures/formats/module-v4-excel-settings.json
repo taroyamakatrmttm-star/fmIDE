@@ -1,0 +1,116 @@
+{
+ "version": 4,
+ "kind": "module",
+ "name": "Revenue Model",
+ "nextId": 29,
+ "nodes": [
+  {
+   "id": "n19",
+   "type": "value",
+   "x": 60,
+   "y": 60,
+   "w": 170,
+   "h": 64,
+   "text": "Unit Price\n10",
+   "plugs": []
+  },
+  {
+   "id": "n20",
+   "type": "value",
+   "x": 60,
+   "y": 180,
+   "w": 170,
+   "h": 64,
+   "text": "Volume\n5",
+   "plugs": []
+  },
+  {
+   "id": "n21",
+   "type": "operator",
+   "x": 300,
+   "y": 120,
+   "w": 56,
+   "h": 56,
+   "text": "\u00d7",
+   "socket": "",
+   "plugs": []
+  },
+  {
+   "id": "n22",
+   "type": "value",
+   "x": 420,
+   "y": 110,
+   "w": 170,
+   "h": 64,
+   "text": "Revenue\n0",
+   "plugs": [],
+   "style": {
+    "numberFormat": {
+     "kind": "currency",
+     "decimals": 2,
+     "currencySymbol": "$"
+    },
+    "fill": "#fde68a",
+    "border": {
+     "color": "#b45309",
+     "width": 2,
+     "style": "solid",
+     "sides": [
+      "bottom"
+     ]
+    },
+    "font": {
+     "family": "",
+     "size": 16,
+     "weight": "700",
+     "color": "#7c2d12",
+     "excelDefaultSize": true
+    },
+    "keepColours": true
+   }
+  },
+  {
+   "id": "n26",
+   "type": "operator",
+   "x": 300,
+   "y": 320,
+   "w": 56,
+   "h": 56,
+   "text": "+",
+   "socket": "",
+   "plugs": []
+  },
+  {
+   "id": "n27",
+   "type": "value",
+   "x": 420,
+   "y": 310,
+   "w": 170,
+   "h": 64,
+   "text": "Cash\n0",
+   "plugs": []
+  }
+ ],
+ "edges": [
+  {
+   "id": "e23",
+   "from": "n19",
+   "to": "n21"
+  },
+  {
+   "id": "e24",
+   "from": "n20",
+   "to": "n21"
+  },
+  {
+   "id": "e25",
+   "from": "n21",
+   "to": "n22"
+  },
+  {
+   "id": "e28",
+   "from": "n26",
+   "to": "n27"
+  }
+ ]
+}

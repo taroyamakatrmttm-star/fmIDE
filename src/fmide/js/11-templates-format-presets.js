@@ -1285,7 +1285,7 @@
 
   function exportFormatPresetsToFile(){
     if(FORMAT_PRESETS.length === 0){ showMessage("You don't have any format presets to export."); return; }
-    const payload = { version: 1, kind: 'fmIDE-format-presets', presets: FORMAT_PRESETS.map(p => ({ name: p.name, style: p.style })) };
+    const payload = { version: FILE_FORMATS['fmIDE-format-presets'].current, kind: 'fmIDE-format-presets', presets: FORMAT_PRESETS.map(p => ({ name: p.name, style: p.style })) };
     downloadJSON(payload, `fmIDE-formats-${timestamp()}.json`);
   }
 
@@ -1328,6 +1328,10 @@
     const title = document.createElement('p');
     title.textContent = 'Format Presets & Roles';
     box.appendChild(title);
+    const excelNote = document.createElement('p');
+    excelNote.className = 'template-desc excel-look-note';
+    excelNote.textContent = 'These set how rectangles look on the canvas. Only number formats go to Excel — how cells look there is set in ExcelExporter (Excel style).';
+    box.appendChild(excelNote);
 
     const ioRow = document.createElement('div');
     ioRow.className = 'template-import-actions';

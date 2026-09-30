@@ -322,21 +322,16 @@ const HELP_TOPICS = [
 
   // ---------- Formatting ----------
   { id: 'formats', group: 'format', title: 'Formats and format roles',
-    keywords: 'format colour color fill font border number format preset role style 🎨',
-    summary: 'How rectangles and Excel cells look: one place for all formatting.',
+    keywords: 'format colour color fill font border number format preset role style 🎨 excel style',
+    summary: 'How rectangles look on the canvas, and the number formats that go to Excel.',
     body: [
-      { p: '{cmd:openFormats} holds format presets. Seven of them are roles, used everywhere:' },
+      { p: '{cmd:openFormats} holds format presets. Two of them are roles:' },
       { steps: [
-        'Inputs: numbers you type, on the canvas and in Excel.',
-        'Calculations: rectangles fed by an arrow, and every calculated Excel cell.',
-        'Links: Excel formulas that only pull a value from another tab.',
-        'Headers: each Excel tab\'s title and column headings.',
-        'Section Headers: the INPUTS, CALCULATIONS and OUTPUTS bands in Excel.',
-        'Labels: label rows and group headings in Excel.',
-        'Notes: notes and other helper text in Excel.',
+        'Inputs: every input rectangle (the numbers you type).',
+        'Calculations: every rectangle fed by an arrow.',
       ] },
-      { p: 'Change a role and every rectangle, and the Excel workbook, follows.' },
-      { p: '🎨 on a rectangle gives it its own look. Its number format, weight and size go to Excel too; its fill, font colour and border only when you tick "Use this fill, font colour & border in Excel too".' },
+      { p: 'Change a role and every rectangle in it follows. 🎨 on a rectangle gives it its own look instead.' },
+      { p: 'Only number formats go to Excel: a rectangle\'s own, or its role\'s. How cells look in Excel (fills, fonts, borders) is set in ExcelExporter, under Excel style, and is kept there for every model you export.' },
       { see: ['to-excel'] },
     ] },
 
@@ -458,7 +453,7 @@ const COMMAND_HELP = {
   clearAllTemplates: 'Deletes every template in your library, after asking.',
   updateCanvasTemplate: 'Rebuilds this canvas from another version of its template, keeping your inputs.',
   unlinkCanvasTemplate: 'Makes this canvas forget the template it came from.',
-  openFormats: 'Opens the format presets and roles that decide how things look.',
+  openFormats: 'Opens the format presets and roles that decide how rectangles look on the canvas.',
   newDocument: 'Starts a new, empty document.',
   openDocument: 'Opens a .fmide document.',
   saveDocument: 'Saves the document.',

@@ -286,7 +286,7 @@
 
   // ---------------------------------- Format ----------------------------------
   defineAction({ name:'setStyle', label:'Set Rectangle Format', category:'Format', icon:'🎨',
-    desc:'Per-rectangle format as JSON {numberFormat, fill, border, font, keepColours}; blank resets to the rectangle\'s format role ("Inputs" or "Calculations").',
+    desc:'Per-rectangle format as JSON {numberFormat, fill, border, font}; blank resets to the rectangle\'s format role ("Inputs" or "Calculations"). How it looks in Excel is ExcelExporter\'s; only the number format goes there.',
     params:[ P('node','node'), P('style','json',{ optional:true }) ],
     run(a){
       requireType(a.node, ['value'], 'a rectangle');
@@ -295,9 +295,12 @@
         pushHistory();
         delete a.node.style;
       } else {
-        if(JSON.stringify(a.node.style || null) === JSON.stringify(a.style)) return NOOP;
+        // The Excel-only settings of older styles are ExcelExporter's now (step 11a): dropped.
+        const style = cloneData(a.style);
+        dropExcelOnlyStyle(style);
+        if(JSON.stringify(a.node.style || null) === JSON.stringify(style)) return NOOP;
         pushHistory();
-        a.node.style = cloneData(a.style);
+        a.node.style = style;
       }
     } });
   defineAction({ name:'applyFormat', label:'Apply Format Preset', category:'Format', icon:'🎨',

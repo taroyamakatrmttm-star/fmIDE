@@ -1809,21 +1809,16 @@
 
     // ---------- Formatting ----------
     { id: 'formats', group: 'format', title: 'Formats and format roles',
-      keywords: 'format colour color fill font border number format preset role style 🎨',
-      summary: 'How rectangles and Excel cells look: one place for all formatting.',
+      keywords: 'format colour color fill font border number format preset role style 🎨 excel style',
+      summary: 'How rectangles look on the canvas, and the number formats that go to Excel.',
       body: [
-        { p: '{cmd:openFormats} holds format presets. Seven of them are roles, used everywhere:' },
+        { p: '{cmd:openFormats} holds format presets. Two of them are roles:' },
         { steps: [
-          'Inputs: numbers you type, on the canvas and in Excel.',
-          'Calculations: rectangles fed by an arrow, and every calculated Excel cell.',
-          'Links: Excel formulas that only pull a value from another tab.',
-          'Headers: each Excel tab\'s title and column headings.',
-          'Section Headers: the INPUTS, CALCULATIONS and OUTPUTS bands in Excel.',
-          'Labels: label rows and group headings in Excel.',
-          'Notes: notes and other helper text in Excel.',
+          'Inputs: every input rectangle (the numbers you type).',
+          'Calculations: every rectangle fed by an arrow.',
         ] },
-        { p: 'Change a role and every rectangle, and the Excel workbook, follows.' },
-        { p: '🎨 on a rectangle gives it its own look. Its number format, weight and size go to Excel too; its fill, font colour and border only when you tick "Use this fill, font colour & border in Excel too".' },
+        { p: 'Change a role and every rectangle in it follows. 🎨 on a rectangle gives it its own look instead.' },
+        { p: 'Only number formats go to Excel: a rectangle\'s own, or its role\'s. How cells look in Excel (fills, fonts, borders) is set in ExcelExporter, under Excel style, and is kept there for every model you export.' },
         { see: ['to-excel'] },
       ] },
 
@@ -1945,7 +1940,7 @@
     clearAllTemplates: 'Deletes every template in your library, after asking.',
     updateCanvasTemplate: 'Rebuilds this canvas from another version of its template, keeping your inputs.',
     unlinkCanvasTemplate: 'Makes this canvas forget the template it came from.',
-    openFormats: 'Opens the format presets and roles that decide how things look.',
+    openFormats: 'Opens the format presets and roles that decide how rectangles look on the canvas.',
     newDocument: 'Starts a new, empty document.',
     openDocument: 'Opens a .fmide document.',
     saveDocument: 'Saves the document.',
@@ -3069,39 +3064,22 @@
     if(active) loadCanvasState(active);
   }
 
-  // ---------- format roles (shared: src/shared/format-roles.js, used by both apps) ----------
-  // One place defines how every kind of cell looks — on the canvas AND in the Excel file
-  // ExcelExporter writes. Each role is an ordinary format preset with a reserved name
-  // (edit it in the Formats manager); ExcelExporter reads these presets from the saved
-  // workspace/system JSON. "Inputs" and "Calculations" also style canvas rectangles; the
-  // rest only exist in the spreadsheet. A rectangle's own 🎨 format sets how it looks
-  // (number format, weight, size, border); the ROLE owns the colours (fill, font colour)
-  // (and border) in Excel unless the rectangle's format has "Use this fill, font colour &
-  // border in Excel too" ticked. Border sides and "Use Excel's default font size" are
-  // Excel-only settings of a style.
+  // ---------- format roles (src/shared/format-roles.js; fmIDE only since step 11a) ----------
+  // How rectangles look on fmIDE's canvas. Each role is an ordinary format preset with a
+  // reserved name (edit it in the Formats manager): "Inputs" styles every input rectangle,
+  // "Calculations" every rectangle fed by an arrow, unless a rectangle has its own 🎨 format.
+  // Only the number format also reaches Excel: how cells look there is ExcelExporter's own
+  // Excel style (step 11a, decision 9 in docs/decisions.md). The Excel-only roles and style
+  // settings older files carry are dropped when they are read (dropExcelOnlyPresets in
+  // src/shared/file-formats.js).
   const FORMAT_ROLES = [
-    { name: 'Inputs', where: 'Canvas + Excel',
-      desc: 'Hard-coded numbers: input rectangles, scenario values, and the cells you type on the Scenarios tab.',
+    { name: 'Inputs', where: 'Canvas',
+      desc: 'Input rectangles: the numbers you type. Their number format is used in Excel too.',
       style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: '#eff6ff',
                border: { color: '#93c5fd', width: 1.5, style: 'solid' }, font: { family: '', size: 14, weight: 'normal', color: '#1e3a8a' } } },
-    { name: 'Calculations', where: 'Canvas + Excel',
-      desc: 'Formulas: rectangles fed by an arrow, and every calculated cell in Excel. Blank by default (the normal rectangle look).',
-      style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: null, border: null, font: { family: '', size: null, weight: 'normal', color: null } } },
-    { name: 'Links', where: 'Excel',
-      desc: 'Formulas that only pull a value from another sheet (e.g. a row linked to the Inputs tab).',
-      style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: null, border: null, font: { family: '', size: null, weight: 'normal', color: '#008000' } } },
-    { name: 'Headers', where: 'Excel',
-      desc: 'Each sheet\'s title and column-header row.',
-      style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: '#f1f5f9', border: null, font: { family: '', size: null, weight: '700', color: null } } },
-    { name: 'Section Headers', where: 'Excel',
-      desc: 'The INPUTS / CALCULATIONS / OUTPUTS bands.',
-      style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: '#f8fafc', border: null, font: { family: '', size: null, weight: '700', color: '#475569' } } },
-    { name: 'Labels', where: 'Excel',
-      desc: 'Custom / label rows and group headers (unless the row has its own format in ExcelExporter).',
-      style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: null, border: null, font: { family: '', size: null, weight: '700', color: '#475569' } } },
-    { name: 'Notes', where: 'Excel',
-      desc: 'Notes, the Period # counter, scenario numbering and other helper text.',
-      style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: null, border: null, font: { family: '', size: 9, weight: 'normal', color: '#94a3b8' } } }
+    { name: 'Calculations', where: 'Canvas',
+      desc: 'Rectangles fed by an arrow. Blank by default (the normal rectangle look). Their number format is used in Excel too.',
+      style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: null, border: null, font: { family: '', size: null, weight: 'normal', color: null } } }
   ];
   function formatRoleOf(name){ return FORMAT_ROLES.find(r => r.name === name) || null; }
   function rolePresetStyle(name){
@@ -4009,7 +3987,7 @@
   // (docs/file-formats.md). To change one of these formats: raise its version here and add
   // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
   // exactly one version.
-  const SHARED_FILE_VERSIONS = { 'system': 6, 'fmIDE-workspace': 6 };
+  const SHARED_FILE_VERSIONS = { 'system': 7, 'fmIDE-workspace': 7 };
   // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
   // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
   function upgradeNodePlugs(nodes){
@@ -4043,6 +4021,32 @@
       if(t.versionId === undefined) t.versionId = newRandomId();
     });
   }
+  // Step 11a (decision 9): the Excel look belongs to ExcelExporter, which keeps the person's own
+  // Excel style. Files from before it carried Excel-only settings in fmIDE's formats: the five
+  // Excel-only role presets, and in any style "Use this fill, font colour & border in Excel too"
+  // (`keepColours`), Excel border sides (`border.sides`) and "Use Excel's default font size"
+  // (`font.excelDefaultSize`). The upgrade drops them; everything else stays.
+  const EXCEL_ONLY_ROLE_NAMES = ['Links', 'Headers', 'Section Headers', 'Labels', 'Notes'];
+  function dropExcelOnlyStyle(st){
+    if(!st || typeof st !== 'object' || Array.isArray(st)) return;
+    delete st.keepColours;
+    if(st.border && typeof st.border === 'object') delete st.border.sides;
+    if(st.font && typeof st.font === 'object') delete st.font.excelDefaultSize;
+  }
+  // A list of format presets upgraded in place: the Excel-only roles go, every style is cleaned.
+  function dropExcelOnlyPresets(list){
+    if(!Array.isArray(list)) return list;
+    for(let i = list.length - 1; i >= 0; i--){
+      const p = list[i];
+      if(p && typeof p === 'object' && EXCEL_ONLY_ROLE_NAMES.includes(p.name)) list.splice(i, 1);
+      else if(p && typeof p === 'object') dropExcelOnlyStyle(p.style);
+    }
+    return list;
+  }
+  // Every node's own style in a list of nodes.
+  function dropExcelOnlyNodeStyles(nodes){
+    (Array.isArray(nodes) ? nodes : []).forEach(n => { if(n && typeof n === 'object') dropExcelOnlyStyle(n.style); });
+  }
   const SHARED_FILE_MIGRATIONS = {
     // v1 → v2: templates get a family, a version number, a change note and a version id.
     'fmIDE-workspace': {
@@ -4057,7 +4061,10 @@
       4: () => {},
       // v5 → v6: its templates and library functions may say which library pack they came
       // from (`origin`, step 8 phase 8b); older ones have no such record.
-      5: () => {}
+      5: () => {},
+      // v6 → v7: the Excel look moved to ExcelExporter (step 11a): the Excel-only format roles
+      // and style settings are dropped. Its system and templates upgrade on their own.
+      6: d => { dropExcelOnlyPresets(d.formatPresets); }
     },
     'system': {
       // v1 systems were accepted with fields the loader already defaults (periods, ids…);
@@ -4082,7 +4089,13 @@
       // rounddown; arrows into if and round name their input with `toPort`). Older systems
       // have none, so nothing changes; an older app asks before opening a v6 file instead of
       // calculating those operators as ones it doesn't know.
-      5: () => {}
+      5: () => {},
+      // v6 → v7: the Excel look moved to ExcelExporter (step 11a): the Excel-only format roles
+      // and every rectangle's Excel-only style settings are dropped.
+      6: d => {
+        dropExcelOnlyPresets(d.formatPresets);
+        (Array.isArray(d.canvases) ? d.canvases : []).forEach(c => { if(c) dropExcelOnlyNodeStyles(c.nodes); });
+      }
     }
   };
   // A file's kind: its "kind" field, or — for files saved before kinds were written — its
@@ -4154,11 +4167,11 @@
   // Every kind fmIDE knows: its current version, what people call it, and where it is opened.
   const FILE_FORMATS = {
     'system':               { current: SHARED_FILE_VERSIONS['system'], label: 'system', where: 'File → Load System' },
-    'module':               { current: 4, label: 'module',              where: 'File → Load Module' },
+    'module':               { current: 5, label: 'module',              where: 'File → Load Module' },
     'fmIDE-workspace':      { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'workspace', where: 'File → Import Workspace' },
     'fmIDE-templates':      { current: 6, label: 'templates file',      where: 'Templates → Import Templates' },
     'fmIDE-functions':      { current: 2, label: 'functions file',      where: 'Functions → Import Functions' },
-    'fmIDE-format-presets': { current: 1, label: 'format presets file', where: 'Format Presets → Import Presets' },
+    'fmIDE-format-presets': { current: 2, label: 'format presets file', where: 'Format Presets → Import Presets' },
     'fmIDE-shortcuts':      { current: 2, label: 'shortcuts file',      where: 'Keyboard Shortcuts → Import Shortcuts' },
     'fmIDE-macros':         { current: 1, label: 'macros file',         where: 'Macro Builder → Import' },
     'fmIDE-preferences':    { current: 1, label: 'preferences file',    where: 'File → Import Preferences' },
@@ -4177,7 +4190,15 @@
       // modules have none.
       2: () => {},
       // v3 → v4: the operators of phase E1, as system v5 → v6; older modules have none.
-      3: () => {}
+      3: () => {},
+      // v4 → v5: the Excel look moved to ExcelExporter (step 11a), as system v6 → v7: every
+      // rectangle's Excel-only style settings are dropped.
+      4: d => { dropExcelOnlyNodeStyles(d.nodes); dropExcelOnlyPresets(d.formatPresets); }
+    },
+    // v1 → v2: the Excel look moved to ExcelExporter (step 11a): the Excel-only format roles
+    // and style settings are dropped.
+    'fmIDE-format-presets': {
+      1: d => { dropExcelOnlyPresets(d.presets); }
     },
     // v1 → v2: templates get a family, a version number, a change note and a version id.
     'fmIDE-templates': {
@@ -4221,6 +4242,8 @@
     if(!fmt){
       return { error: kind === 'fmIDE-excel-mapping'
         ? 'That is an ExcelExporter mapping file — open it in ExcelExporter (Import Mapping JSON).'
+        : kind === 'fmIDE-excel-style'
+        ? 'That is an ExcelExporter Excel style file — import it in ExcelExporter (Import Excel Style).'
         : "That file isn't an fmIDE file this version recognises" + (kind ? ` (kind "${String(kind).slice(0, 40)}")` : '') + '.' };
     }
     if(!accept.includes(kind)){
@@ -8337,7 +8360,7 @@
   // formatting dialog and the format-preset editor. Appends fields into `box` (before
   // any element already in it — callers add their own rows/actions after calling this)
   // and returns a readStyle() to collect the current field values into a style object.
-  function buildStyleFieldsUI(box, st, opts){
+  function buildStyleFieldsUI(box, st){
     function fieldRow(labelText, inputEl){
       const row = document.createElement('div');
       row.style.display = 'flex'; row.style.alignItems = 'center'; row.style.gap = '8px'; row.style.marginBottom = '8px';
@@ -8387,23 +8410,6 @@
     ['solid','dashed','dotted','none'].forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; borderStyle.appendChild(o); });
     borderStyle.value = (st.border && st.border.style) || 'solid';
     box.appendChild(fieldRow('Border style', borderStyle));
-    // Excel only: which sides of each cell get the border. The canvas always draws the
-    // whole outline. No sides ticked = no border in Excel. Saved as border.sides
-    // (absent in older styles = all four).
-    const SIDES = [['top', 'Top'], ['bottom', 'Bottom'], ['left', 'Left'], ['right', 'Right']];
-    const savedSides = (st.border && Array.isArray(st.border.sides)) ? st.border.sides : ['top', 'bottom', 'left', 'right'];
-    const sidesWrap = document.createElement('span');
-    sidesWrap.style.cssText = 'display:inline-flex; gap:10px; font-size:12px;';
-    const sideBoxes = {};
-    SIDES.forEach(([key, lab]) => {
-      const l = document.createElement('label'); l.style.cssText = 'display:inline-flex; align-items:center; gap:3px;';
-      const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = savedSides.includes(key);
-      sideBoxes[key] = cb; l.append(cb, document.createTextNode(lab)); sidesWrap.appendChild(l);
-    });
-    const sidesRow = fieldRow('Excel border sides', sidesWrap);
-    sidesRow.title = 'Which sides of each Excel cell get this border. The canvas always shows the full outline. Untick all for no border in Excel.';
-    box.appendChild(sidesRow);
-
     const fontFamily = document.createElement('select');
     [['','Default'],['Arial, sans-serif','Arial'],['Georgia, serif','Georgia'],['Menlo, Consolas, monospace','Monospace'],['"Times New Roman", serif','Times New Roman']].forEach(([v,l]) => {
       const o = document.createElement('option'); o.value = v; o.textContent = l; fontFamily.appendChild(o);
@@ -8414,13 +8420,6 @@
     fontSize.type = 'number'; fontSize.min = '9'; fontSize.max = '36'; fontSize.style.width = '60px';
     fontSize.value = (st.font && st.font.size) || 14;
     box.appendChild(fieldRow('Font size (px)', fontSize));
-    // Excel only: leave the cell's size to the workbook default (normally 11pt) instead
-    // of carrying this canvas size across.
-    const excelDefaultSize = document.createElement('input');
-    excelDefaultSize.type = 'checkbox'; excelDefaultSize.checked = !!(st.font && st.font.excelDefaultSize);
-    const sizeRow = fieldRow("Use Excel's default font size", excelDefaultSize);
-    sizeRow.title = 'In Excel, give these cells no font size of their own, so they use the workbook default (normally 11pt). The canvas keeps the size above.';
-    box.appendChild(sizeRow);
     const fontWeight = document.createElement('select');
     [['normal','Normal'],['600','Semibold'],['700','Bold']].forEach(([v,l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; fontWeight.appendChild(o); });
     fontWeight.value = (st.font && st.font.weight) || 'normal';
@@ -8429,29 +8428,14 @@
     fontColor.type = 'color'; fontColor.value = (st.font && st.font.color) || '#1e2937';
     box.appendChild(fieldRow('Name color', fontColor));
 
-    // Per-rectangle only: in Excel the format ROLE (Inputs / Calculations / Links …)
-    // decides fill and font colour, so colour always says what kind of cell it is; tick
-    // this to keep this rectangle's own colours there too (e.g. a deliberate highlight).
-    let keepColours = null;
-    if(opts && opts.showKeepColours){
-      keepColours = document.createElement('input');
-      keepColours.type = 'checkbox'; keepColours.checked = !!st.keepColours;
-      const row = fieldRow('Use this fill, font colour & border in Excel too', keepColours);
-      row.title = 'In Excel, a cell\'s fill, font colour and border normally come from its format role (Inputs, Calculations, Links …). Tick to keep this rectangle\'s own instead (e.g. a deliberate highlight).';
-      box.appendChild(row);
-    }
-
     return {
       readStyle(){
         const out = {
           numberFormat: { kind: nfKind.value, decimals: parseInt(nfDecimals.value, 10) || 0, currencySymbol: nfCurrency.value || '$' },
           fill: fillNone.checked ? null : fillInput.value,
-          border: { color: borderColor.value, width: parseFloat(borderWidth.value) || 0, style: borderStyle.value,
-                    sides: SIDES.map(([k]) => k).filter(k => sideBoxes[k].checked) },
+          border: { color: borderColor.value, width: parseFloat(borderWidth.value) || 0, style: borderStyle.value },
           font: { family: fontFamily.value, size: parseInt(fontSize.value, 10) || 14, weight: fontWeight.value, color: fontColor.value }
         };
-        if(excelDefaultSize.checked) out.font.excelDefaultSize = true;
-        if(keepColours && keepColours.checked) out.keepColours = true;
         return out;
       }
     };
@@ -8478,10 +8462,15 @@
     const title = document.createElement('p');
     title.textContent = 'Rectangle formatting';
     box.appendChild(title);
+    // Step 11a: this is the canvas look; Excel's look is ExcelExporter's own Excel style.
+    const excelNote = document.createElement('p');
+    excelNote.className = 'template-desc excel-look-note';
+    excelNote.textContent = 'This is how the rectangle looks on the canvas. Only its number format goes to Excel — how cells look there is set in ExcelExporter (Excel style).';
+    box.appendChild(excelNote);
     if(usingSharedInputs){
       const note = document.createElement('p');
       note.className = 'template-desc';
-      note.innerHTML = `This rectangle is currently using the shared <strong>"${escapeXml(sharedRole)}"</strong> format role. Editing below and saving will give it its own look; to restyle every ${sharedRole === 'Inputs' ? 'input' : 'calculated'} rectangle at once (on the canvas and in Excel), edit the "${sharedRole}" preset instead.`;
+      note.innerHTML = `This rectangle is currently using the shared <strong>"${escapeXml(sharedRole)}"</strong> format role. Editing below and saving will give it its own look; to restyle every ${sharedRole === 'Inputs' ? 'input' : 'calculated'} rectangle at once, edit the "${sharedRole}" preset instead.`;
       box.appendChild(note);
       const editSharedBtn = document.createElement('button');
       editSharedBtn.textContent = `🎨 Edit the shared "${sharedRole}" preset`;
@@ -8495,7 +8484,7 @@
       box.appendChild(editSharedBtn);
     }
 
-    const fields = buildStyleFieldsUI(box, st, { showKeepColours: true });
+    const fields = buildStyleFieldsUI(box, st);
 
     const presetRow = document.createElement('div');
     presetRow.style.cssText = 'display:flex; gap:8px; margin-bottom:14px; padding-top:10px; border-top:1px solid #e5e7eb;';
@@ -8559,8 +8548,7 @@
     if(role){
       const note = document.createElement('p');
       note.className = 'template-desc';
-      note.textContent = `Format role (${role.where}). ${role.desc} Changes here apply to all of them at once.` +
-        (role.where === 'Excel' ? ' Only the colours, weight, size, border and number format matter in Excel.' : '');
+      note.textContent = `Format role (${role.where}). ${role.desc} Changes here apply to all of them at once.`;
       box.appendChild(note);
     }
 
@@ -10490,7 +10478,7 @@
 
   function exportFormatPresetsToFile(){
     if(FORMAT_PRESETS.length === 0){ showMessage("You don't have any format presets to export."); return; }
-    const payload = { version: 1, kind: 'fmIDE-format-presets', presets: FORMAT_PRESETS.map(p => ({ name: p.name, style: p.style })) };
+    const payload = { version: FILE_FORMATS['fmIDE-format-presets'].current, kind: 'fmIDE-format-presets', presets: FORMAT_PRESETS.map(p => ({ name: p.name, style: p.style })) };
     downloadJSON(payload, `fmIDE-formats-${timestamp()}.json`);
   }
 
@@ -10533,6 +10521,10 @@
     const title = document.createElement('p');
     title.textContent = 'Format Presets & Roles';
     box.appendChild(title);
+    const excelNote = document.createElement('p');
+    excelNote.className = 'template-desc excel-look-note';
+    excelNote.textContent = 'These set how rectangles look on the canvas. Only number formats go to Excel — how cells look there is set in ExcelExporter (Excel style).';
+    box.appendChild(excelNote);
 
     const ioRow = document.createElement('div');
     ioRow.className = 'template-import-actions';
@@ -15165,7 +15157,7 @@
 
   // ---------------------------------- Format ----------------------------------
   defineAction({ name:'setStyle', label:'Set Rectangle Format', category:'Format', icon:'🎨',
-    desc:'Per-rectangle format as JSON {numberFormat, fill, border, font, keepColours}; blank resets to the rectangle\'s format role ("Inputs" or "Calculations").',
+    desc:'Per-rectangle format as JSON {numberFormat, fill, border, font}; blank resets to the rectangle\'s format role ("Inputs" or "Calculations"). How it looks in Excel is ExcelExporter\'s; only the number format goes there.',
     params:[ P('node','node'), P('style','json',{ optional:true }) ],
     run(a){
       requireType(a.node, ['value'], 'a rectangle');
@@ -15174,9 +15166,12 @@
         pushHistory();
         delete a.node.style;
       } else {
-        if(JSON.stringify(a.node.style || null) === JSON.stringify(a.style)) return NOOP;
+        // The Excel-only settings of older styles are ExcelExporter's now (step 11a): dropped.
+        const style = cloneData(a.style);
+        dropExcelOnlyStyle(style);
+        if(JSON.stringify(a.node.style || null) === JSON.stringify(style)) return NOOP;
         pushHistory();
-        a.node.style = cloneData(a.style);
+        a.node.style = style;
       }
     } });
   defineAction({ name:'applyFormat', label:'Apply Format Preset', category:'Format', icon:'🎨',

@@ -1,0 +1,11 @@
+{
+ "kind": "fmIDE-excel-style",
+ "version": 1,
+ "roles": {
+  "Links": {
+   "font": {
+    "color": "#dc2626"
+   }
+  }
+ }
+}

@@ -1,0 +1,168 @@
+{
+ "version": 1,
+ "kind": "fmIDE-format-presets",
+ "presets": [
+  {
+   "name": "Inputs",
+   "style": {
+    "numberFormat": {
+     "kind": "number",
+     "decimals": 1,
+     "currencySymbol": "$"
+    },
+    "fill": "#eff6ff",
+    "border": {
+     "color": "#93c5fd",
+     "width": 1.5,
+     "style": "solid",
+     "sides": [
+      "bottom"
+     ]
+    },
+    "font": {
+     "family": "",
+     "size": 14,
+     "weight": "normal",
+     "color": "#1e3a8a",
+     "excelDefaultSize": true
+    }
+   }
+  },
+  {
+   "name": "Calculations",
+   "style": {
+    "numberFormat": {
+     "kind": "general",
+     "decimals": 2,
+     "currencySymbol": "$"
+    },
+    "fill": null,
+    "border": null,
+    "font": {
+     "family": "",
+     "size": null,
+     "weight": "normal",
+     "color": null
+    }
+   }
+  },
+  {
+   "name": "Links",
+   "style": {
+    "numberFormat": {
+     "kind": "general",
+     "decimals": 2,
+     "currencySymbol": "$"
+    },
+    "fill": null,
+    "border": null,
+    "font": {
+     "family": "",
+     "size": null,
+     "weight": "normal",
+     "color": "#dc2626"
+    }
+   }
+  },
+  {
+   "name": "Headers",
+   "style": {
+    "numberFormat": {
+     "kind": "general",
+     "decimals": 2,
+     "currencySymbol": "$"
+    },
+    "fill": "#f1f5f9",
+    "border": null,
+    "font": {
+     "family": "",
+     "size": null,
+     "weight": "700",
+     "color": null
+    }
+   }
+  },
+  {
+   "name": "Section Headers",
+   "style": {
+    "numberFormat": {
+     "kind": "general",
+     "decimals": 2,
+     "currencySymbol": "$"
+    },
+    "fill": "#f8fafc",
+    "border": null,
+    "font": {
+     "family": "",
+     "size": null,
+     "weight": "700",
+     "color": "#475569"
+    }
+   }
+  },
+  {
+   "name": "Labels",
+   "style": {
+    "numberFormat": {
+     "kind": "general",
+     "decimals": 2,
+     "currencySymbol": "$"
+    },
+    "fill": null,
+    "border": null,
+    "font": {
+     "family": "",
+     "size": null,
+     "weight": "700",
+     "color": "#475569"
+    }
+   }
+  },
+  {
+   "name": "Notes",
+   "style": {
+    "numberFormat": {
+     "kind": "general",
+     "decimals": 2,
+     "currencySymbol": "$"
+    },
+    "fill": null,
+    "border": null,
+    "font": {
+     "family": "",
+     "size": 9,
+     "weight": "normal",
+     "color": "#94a3b8"
+    }
+   }
+  },
+  {
+   "name": "Highlight",
+   "style": {
+    "numberFormat": {
+     "kind": "percent",
+     "decimals": 1,
+     "currencySymbol": "$"
+    },
+    "fill": "#fde68a",
+    "border": {
+     "color": "#b45309",
+     "width": 2,
+     "style": "solid",
+     "sides": [
+      "top",
+      "bottom"
+     ]
+    },
+    "font": {
+     "family": "",
+     "size": 16,
+     "weight": "700",
+     "color": "#7c2d12",
+     "excelDefaultSize": true
+    },
+    "keepColours": true
+   }
+  }
+ ]
+}

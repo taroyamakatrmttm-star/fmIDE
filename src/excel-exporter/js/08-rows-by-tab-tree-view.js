@@ -496,7 +496,7 @@ function openTreeContextMenu(x, y, row, rowEl, labelSpan, opts){
   item('⇥ Increase Indent', () => bulkIndentSelected(1), rows.every(r => rowIndent(r) >= ROW_INDENT_MAX) ? { disabled: true } : null);
   item('⇤ Decrease Indent', () => bulkIndentSelected(-1), rows.every(r => rowIndent(r) === 0) ? { disabled: true } : null);
   item(n > 1 ? `🎨 Format ${n} rows…` : '🎨 Format…', () => toggleTreeRowStyleEditor(rowEl, row));
-  item('Reset to fmIDE\'s format', () => bulkResetFormatSelected(),
+  item('Reset to the Excel style', () => bulkResetFormatSelected(),
     rows.some(r => r.style || rowIndent(r)) ? null : { disabled: true, title: 'No row here has a format or indent of its own' });
   hr();
   // Move to another tab (and section, when sections are enforced), at its top or bottom.
@@ -558,7 +558,7 @@ window.addEventListener('resize', closeTreeContextMenu);
 // font colour, bold, border — the same `row.style` shape as the Canvas/Tab views); a
 // rectangle row's overrides what fmIDE's roles and the rectangle give it in Excel, and
 // can also set the number format. With the row among several selected, a change applies
-// to all of them. "Reset to fmIDE's format" drops the rows' own formats and indents.
+// to all of them. "Reset to the Excel style" drops the rows' own formats and indents.
 // A click inside the editor must not bubble up to the row and reset the selection.
 function toggleTreeRowStyleEditor(rowEl, row){
   const last = rowEl.children[rowEl.children.length - 1];
@@ -651,15 +651,15 @@ function toggleTreeRowStyleEditor(rowEl, row){
     .forEach(fieldEl => fieldEl.addEventListener('change', commit));
 
   const reset = document.createElement('button'); reset.type = 'button'; reset.className = 'icon fmt-reset';
-  reset.textContent = 'Reset to fmIDE\'s format';
-  reset.title = 'Drop this row\'s own format and indent, so it looks as fmIDE\'s roles say';
+  reset.textContent = 'Reset to the Excel style';
+  reset.title = 'Drop this row\'s own format and indent, so it looks as the Excel style (section 2) says';
   reset.addEventListener('click', () => { resetRowFormats(targets()); });
   editor.appendChild(reset);
 
   rowEl.appendChild(editor);
 }
 
-// The look a rectangle row gets from its role and rectangle today — where the editor
+// The look a rectangle row gets from its role (the Excel style) and fmIDE's number format today — where the editor
 // starts. (The workbook decides Links vs Calculations from the formulas it writes; this
 // is only the starting point, from the same rules.)
 function treeRowCurrentLook(row){
@@ -668,7 +668,7 @@ function treeRowCurrentLook(row){
   const role = row.isInputMirror ? 'Inputs'
     : (inputsEnabled() && inputMirrorRows().some(m => m.sourceRowId === row.id)) ? 'Links'
     : (canvas && node && isInputNode(canvas, node)) ? 'Inputs' : 'Calculations';
-  return composeStyle(role, node && node.style);
+  return composeStyle(role, modelNumberFormat(canvas, node));
 }
 
 // Indent the selected rows' labels by `delta` steps (bounded 0..ROW_INDENT_MAX).
@@ -683,7 +683,7 @@ function bulkIndentSelected(delta){
   renderBulkBar();
 }
 
-// Back to fmIDE's format: no own format, no indent.
+// Back to the Excel style: no own format, no indent.
 function resetRowFormats(list){
   list.forEach(r => {
     if(r.isCustom) r.style = null; else delete r.style;

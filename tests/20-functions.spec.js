@@ -369,10 +369,10 @@ test('fmIDE calculates a call written several times, 16 levels deep, at once', a
   expect(await fmideValues(page, 'Repeat', ['Big'], 2)).toEqual({ Big: [4 ** 16, 2 * 4 ** 16] });
 });
 
-test('Save System carries the functions the model uses (system v5, now v6); the saved file calculates the same', async ({ page }, testInfo) => {
+test('Save System carries the functions the model uses (system v5, now v7); the saved file calculates the same', async ({ page }, testInfo) => {
   await openSample(page, 'basic');
   const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.command('saveSystem')));
-  expect(data.version).toBe(6);
+  expect(data.version).toBe(7);
   const all = sample('basic').functions;
   expect(data.functions).toEqual(all.filter(d => d.family !== 'family-unused'));
   const saved = testInfo.outputPath('saved.json');
@@ -383,11 +383,11 @@ test('Save System carries the functions the model uses (system v5, now v6); the 
   expect(await fmideValues(page, 'Functions', Object.keys(BASIC), 3)).toEqual(BASIC);
 });
 
-test('the workspace carries the function library (v4, now v6), and the autosave keeps it', async ({ page }) => {
+test('the workspace carries the function library (v4, now v7), and the autosave keeps it', async ({ page }) => {
   await openSample(page, 'basic');
   const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
-  expect(data.version).toBe(6);
-  expect(data.system.version).toBe(6);
+  expect(data.version).toBe(7);
+  expect(data.system.version).toBe(7);
   // The library holds every version the file brought, the unused one too.
   expect(data.functions.map(d => d.family + '@' + d.version)).toEqual(sample('basic').functions.map(d => d.family + '@' + d.version));
   expect(data.system.functions.map(d => d.family)).not.toContain('family-unused');
@@ -399,11 +399,11 @@ test('the workspace carries the function library (v4, now v6), and the autosave 
   expect(again.data.functions).toEqual(data.functions);
 });
 
-test('Save Module carries its canvas\'s functions (module v3, now v4); loading it brings them along', async ({ page }, testInfo) => {
+test('Save Module carries its canvas\'s functions (module v3, now v5); loading it brings them along', async ({ page }, testInfo) => {
   await openSample(page, 'basic');
   await page.evaluate(() => fm.switchCanvas('Margin Block'));
   const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.command('saveModule')));
-  expect(data.version).toBe(4);
+  expect(data.version).toBe(5);
   expect(data.functions.map(d => d.family + '@' + d.version)).toEqual(['family-margin@1']);
   const saved = testInfo.outputPath('module.json');
   fs.writeFileSync(saved, JSON.stringify(data));
