@@ -23,6 +23,11 @@ let moduleLayouts = {};     // family → remembered layout
 let canvasModules = {};     // canvas id → { family, name } for the loaded model's module canvases
 let moduleBaselines = {};   // canvas id → the module tab's layout (JSON text) as last loaded or remembered
 let moduleLayoutsApplied = []; // what the last new layout took from remembered modules, for the Tabs panel
+// Step 11c-2: the layouts attached to the loaded document's canvas templates (fmIDE's
+// "Attach Excel layout…"), by family: [{ versionId, version, layout }], each layout cleaned.
+// Used for a module you have no remembered layout of your own for.
+let templateLayouts = {};
+let canvasLayoutFromTemplate = {}; // canvas id → true when its tab was laid out from its template's layout
 
 function isModuleFamily(v){ return typeof v === 'string' && /^[A-Za-z0-9-]{8,64}$/.test(v); }
 function shortText(v, max){ return typeof v === 'string' ? v.slice(0, max || MODULE_LAYOUT_LIMITS.text) : ''; }
@@ -99,10 +104,39 @@ function readCanvasModules(systemData){
   (systemData.canvases || []).forEach(c => {
     const t = c && c.template;
     if(c && typeof c.id === 'string' && t && typeof t === 'object' && isModuleFamily(t.family)){
-      out[c.id] = { family: t.family, name: shortText(t.name, 200) || shortText(c.name, 200) };
+      out[c.id] = { family: t.family, name: shortText(t.name, 200) || shortText(c.name, 200),
+        versionId: isModuleFamily(t.versionId) ? t.versionId : null };
     }
   });
   return out;
+}
+
+// The Excel layouts attached to the loaded file's canvas templates (a workspace or .fmide
+// document carries its templates; a system file doesn't). Everything is someone else's data:
+// each goes through cleanModuleLayout, and must be made for its template's own family.
+const TEMPLATE_LAYOUT_LIMIT = 2000;
+function readTemplateLayouts(file){
+  const out = {};
+  const list = file && Array.isArray(file.templates) ? file.templates.slice(0, TEMPLATE_LAYOUT_LIMIT) : [];
+  list.forEach(t => {
+    if(!t || typeof t !== 'object' || t.kind !== 'module' || !isModuleFamily(t.family)) return;
+    const a = t.attachments && typeof t.attachments === 'object' ? t.attachments.excel : null;
+    if(!a || typeof a !== 'object' || a.family !== t.family) return;
+    const layout = cleanModuleLayout(a);
+    if(!layout) return;
+    const version = Math.round(Number(t.version));
+    (out[t.family] = out[t.family] || []).push({ versionId: isModuleFamily(t.versionId) ? t.versionId : null,
+      version: Number.isFinite(version) ? version : 0, layout });
+  });
+  return out;
+}
+// The attached layout for a module canvas: the one on the version the canvas was made from,
+// else the newest version of its template that has one.
+function templateLayoutFor(mod){
+  const list = templateLayouts[mod.family];
+  if(!list || !list.length) return null;
+  const same = mod.versionId && list.find(x => x.versionId === mod.versionId);
+  return (same || list.slice().sort((a, b) => b.version - a.version)[0]).layout;
 }
 
 // A canvas's rectangle rows by name key; names used more than once are left out.
@@ -247,15 +281,21 @@ function applyModuleLayout(canvas, m){
   return { matched, added: autoFlat.length - matched };
 }
 
-// A new layout: every module canvas with a remembered layout gets it.
+// A new layout: every module canvas with a remembered layout gets it; one without, the
+// layout attached to its template, if the loaded document carries one (step 11c-2).
 function applyModuleLayouts(){
   moduleLayoutsApplied = [];
+  canvasLayoutFromTemplate = {};
   model.canvases.forEach(c => {
     const mod = canvasModules[c.id];
-    const m = mod && moduleLayouts[mod.family];
+    if(!mod) return;
+    const own = moduleLayouts[mod.family];
+    const m = own || templateLayoutFor(mod);
     if(!m) return;
     const r = applyModuleLayout(c, m);
-    if(r) moduleLayoutsApplied.push(Object.assign({ canvas: c.name, module: mod.name }, r));
+    if(!r) return;
+    if(!own) canvasLayoutFromTemplate[c.id] = true;
+    moduleLayoutsApplied.push(Object.assign({ canvas: c.name, module: mod.name, fromTemplate: !own }, r));
   });
 }
 
@@ -267,7 +307,11 @@ function renderModuleLayoutsInfo(){
   const rows = moduleLayoutsApplied.reduce((n, a) => n + a.matched, 0);
   const added = moduleLayoutsApplied.reduce((n, a) => n + a.added, 0);
   const tabs = moduleLayoutsApplied.length;
-  setStatus(el, `${tabs} tab${tabs === 1 ? '' : 's'} laid out from ${tabs === 1 ? 'its module' : 'their modules'}' remembered layout: ` +
+  const fromTemplate = moduleLayoutsApplied.filter(a => a.fromTemplate).length;
+  const where = fromTemplate === 0 ? `${tabs === 1 ? 'its module' : 'their modules'}' remembered layout`
+    : fromTemplate === tabs ? `${tabs === 1 ? 'its template\'s' : 'their templates\''} layout`
+    : `remembered layouts (${tabs - fromTemplate}) and templates' layouts (${fromTemplate})`;
+  setStatus(el, `${tabs} tab${tabs === 1 ? '' : 's'} laid out from ${where}: ` +
     `${rows} row${rows === 1 ? '' : 's'} matched, ${added} new.`, 'info');
 }
 
@@ -282,9 +326,12 @@ function moduleTabTag(tab){
   wrap.dataset.family = mod.family;
   const label = document.createElement('span');
   const remembered = !!moduleLayouts[mod.family];
-  label.textContent = '🧩 ' + (mod.name || 'module') + (remembered ? ' · layout remembered' : '');
+  const fromTemplate = !remembered && !!canvasLayoutFromTemplate[canvasId];
+  label.textContent = '🧩 ' + (mod.name || 'module') + (remembered ? ' · layout remembered' : fromTemplate ? ' · layout from the template' : '');
   label.title = remembered
     ? 'This tab comes from the module "' + mod.name + '". Its layout is remembered, and used wherever the module turns up in a model laid out here for the first time.'
+    : fromTemplate
+    ? 'This tab comes from the module "' + mod.name + '", laid out with the Excel layout attached to its template. Change it and your own layout is remembered instead.'
     : 'This tab comes from the module "' + mod.name + '". Change its layout and it is remembered for the next model with this module.';
   wrap.appendChild(label);
   if(remembered){

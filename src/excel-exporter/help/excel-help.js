@@ -82,6 +82,7 @@ const EXCEL_HELP_TOPICS = [
         'Forget, on the tab, stops the module\'s layout being used for new models.',
         'Export Module Layouts saves them all as a file; Import Module Layouts reads one, for example on another computer.',
       ] },
+      { p: 'A module\'s template can also carry a layout, attached in fmIDE (📎 Attach Excel layout…) or brought by a library pack. When you load a .fmide document or workspace and have no remembered layout of your own for a module, its template\'s layout is used, and the tab says "layout from the template". Change the tab and it becomes your own.' },
       { tip: 'Rows you move to another tab stay in the module\'s own tab when the layout is used again.' },
       { see: ['tabs', 'tree-view'] },
     ] },

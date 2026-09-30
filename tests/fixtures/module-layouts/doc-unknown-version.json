@@ -1,0 +1,618 @@
+{
+ "version": 8,
+ "kind": "fmIDE-workspace",
+ "system": {
+  "version": 7,
+  "kind": "system",
+  "nextId": 100,
+  "nextCanvasId": 10,
+  "activeCanvasId": "cb0",
+  "periods": [
+   "P1",
+   "P2",
+   "P3"
+  ],
+  "currentPeriod": 0,
+  "canvases": [
+   {
+    "id": "cb0",
+    "name": "Overview",
+    "nodes": [
+     {
+      "id": "o1",
+      "type": "value",
+      "x": 60,
+      "y": 60,
+      "w": 170,
+      "h": 64,
+      "text": "Tax rate\n0.3",
+      "plugs": []
+     },
+     {
+      "id": "o2",
+      "type": "value",
+      "x": 60,
+      "y": 180,
+      "w": 170,
+      "h": 64,
+      "text": "Headcount\n12",
+      "plugs": []
+     }
+    ],
+    "edges": []
+   },
+   {
+    "id": "cb1",
+    "name": "Sales (Gold)",
+    "nodes": [
+     {
+      "id": "b1",
+      "type": "value",
+      "x": 60,
+      "y": 60,
+      "w": 170,
+      "h": 64,
+      "text": "Price\n10",
+      "plugs": []
+     },
+     {
+      "id": "b2",
+      "type": "value",
+      "x": 60,
+      "y": 180,
+      "w": 170,
+      "h": 64,
+      "text": "Volume\n5",
+      "plugs": []
+     },
+     {
+      "id": "b3",
+      "type": "operator",
+      "x": 300,
+      "y": 120,
+      "w": 56,
+      "h": 56,
+      "text": "\u00d7",
+      "socket": ""
+     },
+     {
+      "id": "b4",
+      "type": "value",
+      "x": 420,
+      "y": 110,
+      "w": 170,
+      "h": 64,
+      "text": "Revenue\n0",
+      "plugs": []
+     },
+     {
+      "id": "b5",
+      "type": "value",
+      "x": 60,
+      "y": 300,
+      "w": 170,
+      "h": 64,
+      "text": "Costs\n20",
+      "plugs": []
+     },
+     {
+      "id": "b6",
+      "type": "operator",
+      "x": 300,
+      "y": 300,
+      "w": 56,
+      "h": 56,
+      "text": "\u2212",
+      "socket": ""
+     },
+     {
+      "id": "b7",
+      "type": "value",
+      "x": 420,
+      "y": 300,
+      "w": 170,
+      "h": 64,
+      "text": "Profit\n0",
+      "plugs": []
+     },
+     {
+      "id": "b8",
+      "type": "value",
+      "x": 60,
+      "y": 420,
+      "w": 170,
+      "h": 64,
+      "text": "Discount\n2",
+      "plugs": []
+     },
+     {
+      "id": "b9",
+      "type": "operator",
+      "x": 300,
+      "y": 420,
+      "w": 56,
+      "h": 56,
+      "text": "\u2212",
+      "socket": ""
+     },
+     {
+      "id": "b10",
+      "type": "value",
+      "x": 420,
+      "y": 420,
+      "w": 170,
+      "h": 64,
+      "text": "Net revenue\n0",
+      "plugs": []
+     }
+    ],
+    "edges": [
+     {
+      "id": "be1",
+      "from": "b1",
+      "to": "b3"
+     },
+     {
+      "id": "be2",
+      "from": "b2",
+      "to": "b3"
+     },
+     {
+      "id": "be3",
+      "from": "b3",
+      "to": "b4"
+     },
+     {
+      "id": "be4",
+      "from": "b4",
+      "to": "b6"
+     },
+     {
+      "id": "be5",
+      "from": "b5",
+      "to": "b6"
+     },
+     {
+      "id": "be6",
+      "from": "b6",
+      "to": "b7"
+     },
+     {
+      "id": "be7",
+      "from": "b4",
+      "to": "b9"
+     },
+     {
+      "id": "be8",
+      "from": "b8",
+      "to": "b9"
+     },
+     {
+      "id": "be9",
+      "from": "b9",
+      "to": "b10"
+     }
+    ],
+    "template": {
+     "family": "fam-sales-module-0001",
+     "version": 1,
+     "versionId": "vid-sales-module-0099",
+     "name": "Sales"
+    }
+   }
+  ]
+ },
+ "templates": [
+  {
+   "name": "Sales",
+   "kind": "module",
+   "group": "Mine",
+   "description": "",
+   "family": "fam-sales-module-0001",
+   "version": 1,
+   "note": "",
+   "versionId": "vid-sales-module-0001",
+   "data": {
+    "version": 5,
+    "kind": "module",
+    "name": "Sales",
+    "nodes": [
+     {
+      "id": "b1",
+      "type": "value",
+      "x": 60,
+      "y": 60,
+      "w": 170,
+      "h": 64,
+      "text": "Price\n10",
+      "plugs": []
+     },
+     {
+      "id": "b2",
+      "type": "value",
+      "x": 60,
+      "y": 180,
+      "w": 170,
+      "h": 64,
+      "text": "Volume\n5",
+      "plugs": []
+     },
+     {
+      "id": "b3",
+      "type": "operator",
+      "x": 300,
+      "y": 120,
+      "w": 56,
+      "h": 56,
+      "text": "\u00d7",
+      "socket": ""
+     },
+     {
+      "id": "b4",
+      "type": "value",
+      "x": 420,
+      "y": 110,
+      "w": 170,
+      "h": 64,
+      "text": "Revenue\n0",
+      "plugs": []
+     },
+     {
+      "id": "b5",
+      "type": "value",
+      "x": 60,
+      "y": 300,
+      "w": 170,
+      "h": 64,
+      "text": "Costs\n20",
+      "plugs": []
+     },
+     {
+      "id": "b6",
+      "type": "operator",
+      "x": 300,
+      "y": 300,
+      "w": 56,
+      "h": 56,
+      "text": "\u2212",
+      "socket": ""
+     },
+     {
+      "id": "b7",
+      "type": "value",
+      "x": 420,
+      "y": 300,
+      "w": 170,
+      "h": 64,
+      "text": "Profit\n0",
+      "plugs": []
+     },
+     {
+      "id": "b8",
+      "type": "value",
+      "x": 60,
+      "y": 420,
+      "w": 170,
+      "h": 64,
+      "text": "Discount\n2",
+      "plugs": []
+     },
+     {
+      "id": "b9",
+      "type": "operator",
+      "x": 300,
+      "y": 420,
+      "w": 56,
+      "h": 56,
+      "text": "\u2212",
+      "socket": ""
+     },
+     {
+      "id": "b10",
+      "type": "value",
+      "x": 420,
+      "y": 420,
+      "w": 170,
+      "h": 64,
+      "text": "Net revenue\n0",
+      "plugs": []
+     }
+    ],
+    "edges": [
+     {
+      "id": "be1",
+      "from": "b1",
+      "to": "b3"
+     },
+     {
+      "id": "be2",
+      "from": "b2",
+      "to": "b3"
+     },
+     {
+      "id": "be3",
+      "from": "b3",
+      "to": "b4"
+     },
+     {
+      "id": "be4",
+      "from": "b4",
+      "to": "b6"
+     },
+     {
+      "id": "be5",
+      "from": "b5",
+      "to": "b6"
+     },
+     {
+      "id": "be6",
+      "from": "b6",
+      "to": "b7"
+     },
+     {
+      "id": "be7",
+      "from": "b4",
+      "to": "b9"
+     },
+     {
+      "id": "be8",
+      "from": "b8",
+      "to": "b9"
+     },
+     {
+      "id": "be9",
+      "from": "b9",
+      "to": "b10"
+     }
+    ]
+   },
+   "attachments": {
+    "excel": {
+     "family": "fam-sales-module-0001",
+     "name": "Sales",
+     "tabName": "Sales from v1",
+     "rows": [
+      {
+       "name": "profit",
+       "section": "calc",
+       "include": true,
+       "constant": false
+      },
+      {
+       "name": "volume",
+       "section": "input",
+       "include": true,
+       "constant": false,
+       "label": "Units sold"
+      }
+     ],
+     "customs": [
+      {
+       "label": "Top line",
+       "section": "calc",
+       "showPeriodLabels": false
+      }
+     ],
+     "sectioned": [
+      "r1",
+      "c0",
+      "r0"
+     ],
+     "flat": [
+      "r1",
+      "c0",
+      "r0"
+     ]
+    }
+   }
+  },
+  {
+   "name": "Sales",
+   "kind": "module",
+   "group": "Mine",
+   "description": "",
+   "family": "fam-sales-module-0001",
+   "version": 2,
+   "note": "",
+   "versionId": "vid-sales-module-0002",
+   "data": {
+    "version": 5,
+    "kind": "module",
+    "name": "Sales",
+    "nodes": [
+     {
+      "id": "b1",
+      "type": "value",
+      "x": 60,
+      "y": 60,
+      "w": 170,
+      "h": 64,
+      "text": "Price\n10",
+      "plugs": []
+     },
+     {
+      "id": "b2",
+      "type": "value",
+      "x": 60,
+      "y": 180,
+      "w": 170,
+      "h": 64,
+      "text": "Volume\n5",
+      "plugs": []
+     },
+     {
+      "id": "b3",
+      "type": "operator",
+      "x": 300,
+      "y": 120,
+      "w": 56,
+      "h": 56,
+      "text": "\u00d7",
+      "socket": ""
+     },
+     {
+      "id": "b4",
+      "type": "value",
+      "x": 420,
+      "y": 110,
+      "w": 170,
+      "h": 64,
+      "text": "Revenue\n0",
+      "plugs": []
+     },
+     {
+      "id": "b5",
+      "type": "value",
+      "x": 60,
+      "y": 300,
+      "w": 170,
+      "h": 64,
+      "text": "Costs\n20",
+      "plugs": []
+     },
+     {
+      "id": "b6",
+      "type": "operator",
+      "x": 300,
+      "y": 300,
+      "w": 56,
+      "h": 56,
+      "text": "\u2212",
+      "socket": ""
+     },
+     {
+      "id": "b7",
+      "type": "value",
+      "x": 420,
+      "y": 300,
+      "w": 170,
+      "h": 64,
+      "text": "Profit\n0",
+      "plugs": []
+     },
+     {
+      "id": "b8",
+      "type": "value",
+      "x": 60,
+      "y": 420,
+      "w": 170,
+      "h": 64,
+      "text": "Discount\n2",
+      "plugs": []
+     },
+     {
+      "id": "b9",
+      "type": "operator",
+      "x": 300,
+      "y": 420,
+      "w": 56,
+      "h": 56,
+      "text": "\u2212",
+      "socket": ""
+     },
+     {
+      "id": "b10",
+      "type": "value",
+      "x": 420,
+      "y": 420,
+      "w": 170,
+      "h": 64,
+      "text": "Net revenue\n0",
+      "plugs": []
+     }
+    ],
+    "edges": [
+     {
+      "id": "be1",
+      "from": "b1",
+      "to": "b3"
+     },
+     {
+      "id": "be2",
+      "from": "b2",
+      "to": "b3"
+     },
+     {
+      "id": "be3",
+      "from": "b3",
+      "to": "b4"
+     },
+     {
+      "id": "be4",
+      "from": "b4",
+      "to": "b6"
+     },
+     {
+      "id": "be5",
+      "from": "b5",
+      "to": "b6"
+     },
+     {
+      "id": "be6",
+      "from": "b6",
+      "to": "b7"
+     },
+     {
+      "id": "be7",
+      "from": "b4",
+      "to": "b9"
+     },
+     {
+      "id": "be8",
+      "from": "b8",
+      "to": "b9"
+     },
+     {
+      "id": "be9",
+      "from": "b9",
+      "to": "b10"
+     }
+    ]
+   },
+   "attachments": {
+    "excel": {
+     "family": "fam-sales-module-0001",
+     "name": "Sales",
+     "tabName": "Sales from v2",
+     "rows": [
+      {
+       "name": "profit",
+       "section": "calc",
+       "include": true,
+       "constant": false
+      },
+      {
+       "name": "volume",
+       "section": "input",
+       "include": true,
+       "constant": false,
+       "label": "Units sold"
+      }
+     ],
+     "customs": [
+      {
+       "label": "Top line",
+       "section": "calc",
+       "showPeriodLabels": false
+      }
+     ],
+     "sectioned": [
+      "r1",
+      "c0",
+      "r0"
+     ],
+     "flat": [
+      "r1",
+      "c0",
+      "r0"
+     ]
+    }
+   }
+  }
+ ],
+ "formatPresets": [],
+ "shortcutBindings": {},
+ "shortcutBindingsVersion": 2,
+ "macros": [],
+ "functions": []
+}

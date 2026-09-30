@@ -42,6 +42,7 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | `npm run test:videos` | the tutorial videos' scripts and captions, and one real recording (To Excel, about 2 minutes) |
 | `npm run test:module-layouts` | ExcelExporter remembering each module's layout (step 11b) |
 | `npm run test:template-attachments` | a template's Excel layout carried by fmIDE, packs and the checker (step 11c-1) |
+| `npm run test:template-layouts` | ExcelExporter using a template's attached layout (step 11c-2) |
 | `npm run test:help-site` | the site's help pages the build writes under `/help` (pages, links, command names and tabs against fmIDE, escaping, their security policy) |
 | `npx playwright test -g "Tree view"` | tests whose name matches |
 
