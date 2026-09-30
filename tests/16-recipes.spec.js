@@ -187,7 +187,7 @@ test('recipes travel in templates files and the autosave; bad ones are skipped; 
   const [dl] = await Promise.all([page.waitForEvent('download'), picker(page).locator('button', { hasText: '⇩ Export Templates' }).click()]);
   const exported = JSON.parse(fs.readFileSync(await dl.path(), 'utf8'));
   await closeTemplates(page);
-  expect(exported.version).toBe(6);
+  expect(exported.version).toBe(7);
   expect(exported.templates.find(t => t.kind === 'recipe').name).toBe('Three Statements');
   // After a reload the recipe is still there and builds.
   await page.waitForTimeout(1500);
@@ -208,15 +208,15 @@ test('recipes travel in templates files and the autosave; bad ones are skipped; 
   expect(await page.evaluate(() => window.__pwned)).toBeUndefined();
 });
 
-test('saved workspaces are version 7; a version 8 workspace asks first', async ({ page }, testInfo) => {
+test('saved workspaces are version 8; a version 9 workspace asks first', async ({ page }, testInfo) => {
   await saveRecipe(page, { name: 'Three Statements', parts: ['Income Statement'] });
   const ws = await library(page);
-  expect(ws.version).toBe(7);
-  ws.version = 8;
+  expect(ws.version).toBe(8);
+  ws.version = 9;
   const path = testInfo.outputPath('newer.json');
   fs.writeFileSync(path, JSON.stringify(ws));
   await F.importViaCommand(page, 'importWorkspace', path);
-  expect(await F.dialogText(page)).toMatch(/^This workspace was saved by a newer version of fmIDE \(format version 8; this fmIDE reads up to version 7\)/);
+  expect(await F.dialogText(page)).toMatch(/^This workspace was saved by a newer version of fmIDE \(format version 9; this fmIDE reads up to version 8\)/);
 });
 
 test('a macro records building a recipe', async ({ page }) => {

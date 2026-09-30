@@ -117,9 +117,14 @@
     tEntries.forEach(({ t, e }, i) => {
       if(!e) return;
       const item = { key: 't' + i, type: 'template', kind: e.kind, name: e.name, version: e.version,
-        description: e.description, note: e.note, group: e.group, needs: [], origin: e.origin || null, warning: null, warningKind: null };
+        description: e.description, note: e.note, group: e.group, needs: [], origin: e.origin || null, warning: null, warningKind: null,
+        excelLayout: !!(e.attachments && e.attachments.excel) };
       const mine = latestOfFamily(e.family);
-      if(templateAlreadyHere(e, t)){ item.status = 'present'; item.statusText = 'Already in your library'; }
+      if(templateAlreadyHere(e, t)){
+        // Already here, but the pack's copy has an Excel layout ours lacks: offered for that.
+        if(attachmentsToAdd(e, t)){ item.status = 'attachment'; item.statusText = 'Already in your library — adds its Excel layout'; }
+        else { item.status = 'present'; item.statusText = 'Already in your library'; }
+      }
       else if(mine && mine.kind === e.kind){
         item.status = 'new-version';
         item.statusText = `Adds a version to your “${mine.name}” (you have up to v${mine.version})` + (mine.name !== e.name ? ` — the pack calls it “${e.name}”` : '');
@@ -322,7 +327,8 @@
         cb.disabled = it.status === 'present';
         const name = document.createElement('span');
         name.className = 'library-pack-item-name';
-        name.textContent = `${it.name} v${it.version}` + (it.type === 'template' ? ` — ${TEMPLATE_KIND_WORDS[it.kind]}` : '');
+        name.textContent = `${it.name} v${it.version}` + (it.type === 'template' ? ` — ${TEMPLATE_KIND_WORDS[it.kind]}` : '')
+          + (it.excelLayout ? ' · 📎 Excel layout' : '');
         const status = document.createElement('span');
         status.className = 'library-pack-item-status';
         const warnedNeeds = it.needs.filter(k => items.some(x => x.key === k && x.warning)).length;

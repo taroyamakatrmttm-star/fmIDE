@@ -5,7 +5,7 @@
 // (docs/file-formats.md). To change one of these formats: raise its version here and add
 // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
 // exactly one version.
-const SHARED_FILE_VERSIONS = { 'system': 7, 'fmIDE-workspace': 7 };
+const SHARED_FILE_VERSIONS = { 'system': 7, 'fmIDE-workspace': 8 };
 // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
 // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
 function upgradeNodePlugs(nodes){
@@ -82,7 +82,10 @@ const SHARED_FILE_MIGRATIONS = {
     5: () => {},
     // v6 → v7: the Excel look moved to ExcelExporter (step 11a): the Excel-only format roles
     // and style settings are dropped. Its system and templates upgrade on their own.
-    6: d => { dropExcelOnlyPresets(d.formatPresets); }
+    6: d => { dropExcelOnlyPresets(d.formatPresets); },
+    // v7 → v8: its templates may carry attachments for other outputs (`attachments`, step
+    // 11c); older ones have none.
+    7: () => {}
   },
   'system': {
     // v1 systems were accepted with fields the loader already defaults (periods, ids…);

@@ -2,6 +2,13 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## A template carries its Excel layout (step 11, phase 11c-1)
+- In fmIDE's Templates window, a canvas template can have its **Excel layout attached**: **📎 Attach Excel layout…** takes it from a file ExcelExporter's Export Module Layouts saved; **Remove** takes it off. fmIDE only carries it — it never reads or changes it.
+- It goes wherever the template goes: your documents, templates files, the next version you save, and **library packs you share**. Opening a pack shows which templates have one ("📎 Excel layout"), and if you already have the template without it, the pack offers just the layout.
+- The library's checker checks attachments too, and no longer asks for version 2 packs to be saved again.
+- ExcelExporter using the attached layout comes in the next phase (11c-2).
+- File formats: templates file 7, workspace 8, library pack 3; older files open unchanged.
+
 ## Modules remember their Excel layout (step 11, phase 11b)
 - **Arrange a module's tab once.** When you change the tab of a module — a canvas you added from a template in fmIDE, recipes included — ExcelExporter remembers its layout: the tab's name, the order of its rows, labels, blank and label rows, Include / Constant, formats and indents.
 - **Every model with that module starts with it**, the first time it is laid out here (or after Reset Mapping to Defaults). Rows are matched by rectangle name; rectangles the layout doesn't know go where the automatic sort puts them. A model you have already arranged keeps its own layout.

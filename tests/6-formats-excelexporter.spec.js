@@ -210,14 +210,14 @@ test.describe('workspace v6 (origins)', () => {
     expect(await page.evaluate(() => window.__pwned)).toBeUndefined();
     expect(pageErrors).toEqual([]);
   });
-  // Workspace v7 is current since step 11a: a newer one is v8.
-  test('a v8 workspace asks first', async ({ page }, testInfo) => {
+  // Workspace v8 is current since step 11c: a newer one is v9.
+  test('a v9 workspace asks first', async ({ page }, testInfo) => {
     const ws = withOrigins();
-    ws.version = 8;
-    const p = testInfo.outputPath('ws-v8.json');
+    ws.version = 9;
+    const p = testInfo.outputPath('ws-v9.json');
     fs.writeFileSync(p, JSON.stringify(ws));
     await page.setInputFiles('#fileInput', p);
     await expect(page.locator('#confirmModal')).toBeVisible();
-    await expect(page.locator('#confirmMessage')).toContainText('format version 8');
+    await expect(page.locator('#confirmMessage')).toContainText('format version 9');
   });
 });
