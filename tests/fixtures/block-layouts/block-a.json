@@ -1,0 +1,213 @@
+{
+ "version": 7,
+ "kind": "system",
+ "nextId": 500,
+ "nextCanvasId": 50,
+ "activeCanvasId": "acm",
+ "periods": [
+  "P1",
+  "P2",
+  "P3"
+ ],
+ "currentPeriod": 0,
+ "canvases": [
+  {
+   "id": "acm",
+   "name": "Main",
+   "nodes": [
+    {
+     "id": "am1",
+     "type": "value",
+     "x": 0,
+     "y": 0,
+     "w": 170,
+     "h": 64,
+     "text": "Debt\n100",
+     "plugs": []
+    },
+    {
+     "id": "am2",
+     "type": "value",
+     "x": 0,
+     "y": 100,
+     "w": 170,
+     "h": 64,
+     "text": "Rate\n0.05",
+     "plugs": []
+    },
+    {
+     "id": "am3",
+     "type": "value",
+     "x": 0,
+     "y": 200,
+     "w": 170,
+     "h": 64,
+     "text": "Debt B\n50",
+     "plugs": []
+    },
+    {
+     "id": "ai1",
+     "type": "blockInstance",
+     "x": 300,
+     "y": 0,
+     "w": 190,
+     "h": 80,
+     "blockDefCanvasId": "acl"
+    },
+    {
+     "id": "ai2",
+     "type": "blockInstance",
+     "x": 300,
+     "y": 200,
+     "w": 190,
+     "h": 80,
+     "blockDefCanvasId": "acl"
+    }
+   ],
+   "edges": [
+    {
+     "id": "ae1",
+     "from": "am1",
+     "to": "ai1",
+     "toPort": 0
+    },
+    {
+     "id": "ae2",
+     "from": "am2",
+     "to": "ai1",
+     "toPort": 1
+    },
+    {
+     "id": "ae3",
+     "from": "am3",
+     "to": "ai2",
+     "toPort": 0
+    },
+    {
+     "id": "ae4",
+     "from": "am2",
+     "to": "ai2",
+     "toPort": 1
+    }
+   ]
+  },
+  {
+   "id": "acl",
+   "name": "Loan",
+   "nodes": [
+    {
+     "id": "ali1",
+     "type": "value",
+     "x": 0,
+     "y": 0,
+     "w": 170,
+     "h": 64,
+     "text": "Balance in",
+     "plugs": [],
+     "blockRole": "input"
+    },
+    {
+     "id": "ali2",
+     "type": "value",
+     "x": 0,
+     "y": 100,
+     "w": 170,
+     "h": 64,
+     "text": "Rate in",
+     "plugs": [],
+     "blockRole": "input"
+    },
+    {
+     "id": "alx",
+     "type": "operator",
+     "x": 200,
+     "y": 50,
+     "w": 56,
+     "h": 56,
+     "text": "×",
+     "socket": ""
+    },
+    {
+     "id": "alint",
+     "type": "value",
+     "x": 300,
+     "y": 50,
+     "w": 170,
+     "h": 64,
+     "text": "Interest\n0",
+     "plugs": []
+    },
+    {
+     "id": "alfee",
+     "type": "value",
+     "x": 300,
+     "y": 200,
+     "w": 170,
+     "h": 64,
+     "text": "Fee\n2",
+     "plugs": []
+    },
+    {
+     "id": "alp",
+     "type": "operator",
+     "x": 450,
+     "y": 120,
+     "w": 56,
+     "h": 56,
+     "text": "+",
+     "socket": ""
+    },
+    {
+     "id": "alout",
+     "type": "value",
+     "x": 550,
+     "y": 120,
+     "w": 170,
+     "h": 64,
+     "text": "Total cost\n0",
+     "plugs": [],
+     "blockRole": "output",
+     "verticalReducer": "sum"
+    }
+   ],
+   "edges": [
+    {
+     "id": "ale1",
+     "from": "ali1",
+     "to": "alx"
+    },
+    {
+     "id": "ale2",
+     "from": "ali2",
+     "to": "alx"
+    },
+    {
+     "id": "ale3",
+     "from": "alx",
+     "to": "alint"
+    },
+    {
+     "id": "ale4",
+     "from": "alint",
+     "to": "alp"
+    },
+    {
+     "id": "ale5",
+     "from": "alfee",
+     "to": "alp"
+    },
+    {
+     "id": "ale6",
+     "from": "alp",
+     "to": "alout"
+    }
+   ],
+   "template": {
+    "family": "fam-loan-block-0001",
+    "version": 1,
+    "versionId": "vid-loan-block-0001",
+    "name": "Loan"
+   }
+  }
+ ]
+}

@@ -2,6 +2,12 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Block instances remember their Excel layout (step 11, phase 11d)
+- **Arrange a block's instance tab once.** For a block added from a template in fmIDE, ExcelExporter remembers how you arranged an instance tab — row order, labels, blank and label rows, Include / Constant, formats and indents — and every model with that block starts its instance tabs that way, the first time it is laid out. Vertical blocks match their rows by vintage, Total and shared row; extra vintages go after the last one.
+- **"Lay out the other instances like this"**, on an instance tab in the Tabs panel, gives the block's other instances in the model the same layout (their tab names are kept) — for any block, from a template or not.
+- Forget on an instance tab forgets only the instances' layout. The layout travels with a template's attached Excel layout too.
+- File format: module layouts file 2 (adds `instance`); version 1 files open unchanged, and fmIDE's Attach Excel layout… reads both.
+
 ## ExcelExporter uses a template's Excel layout (step 11, phase 11c-2)
 - Load a `.fmide` document (or workspace) in ExcelExporter: a module whose template has an Excel layout attached — yours, or one that came in a library pack — is laid out with it, the first time the model is laid out here. The tab says "layout from the template".
 - Your own remembered layout for a module always wins; change a tab laid out from the template and it becomes your own.

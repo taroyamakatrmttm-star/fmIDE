@@ -64,13 +64,24 @@ test('Attach Excel layout… takes this family\'s entry from an ExcelExporter fi
   expect((await library(page)).templates.find(t => t.name === 'Sales').attachments).toEqual({ excel: LAYOUT });
 });
 
+test('a version 2 layouts file (step 11d) attaches too, its block instances\' layout included', async ({ page }, testInfo) => {
+  await importTemplates(page, testInfo, [salesTemplate()]);
+  await selectSales(page);
+  const withInstance = Object.assign({}, LAYOUT, { instance: { rows: [{ name: 'profit', copy: 'total', section: 'calc', include: true, constant: false }],
+    customs: [], sectioned: ['r0'], flat: ['r0'] } });
+  await attach(page, await writeJson(testInfo, 'layouts-v2.json', layoutsFile([withInstance], { version: 2 })));
+  expect(await F.dialogText(page)).toBe('Excel layout attached to version 1 of "Sales".');
+  await F.dismissMessage(page);
+  expect((await library(page)).templates.find(t => t.name === 'Sales').attachments).toEqual({ excel: withInstance });
+});
+
 test('files that can\'t be attached say why, and attach nothing', async ({ page }, testInfo) => {
   await importTemplates(page, testInfo, [salesTemplate()]);
   await selectSales(page);
   const cases = [
     [{ kind: 'system', version: 7, canvases: [] }, /isn't a file of module layouts/],
     [layoutsFile([Object.assign({}, LAYOUT, { family: 'fam-someone-else-01' })]), /has no layout for this template/],
-    [layoutsFile([LAYOUT], { version: 2 }), /saved by a newer ExcelExporter/],
+    [layoutsFile([LAYOUT], { version: 3 }), /saved by a newer ExcelExporter/],
     [layoutsFile([Object.assign({}, LAYOUT, { big: 'x'.repeat(300 * 1024) })]), /too large or not plain data/],
   ];
   for(const [data, message] of cases){

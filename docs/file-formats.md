@@ -32,7 +32,7 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 | `fmIDE-library-pack` | 3 | Templates, recipes and functions to share with other people, with who made them and their licence (below); v2: an item shared again carries the `origin` it came with; v3: a canvas template may carry `attachments` | fmIDE: File → Open Library Pack… |
 | `fmIDE-excel-mapping` | 2 | ExcelExporter's tab/row layout for one model; v2: any row may carry its own format (`style`) and an `indent` (below) | ExcelExporter: Import Mapping JSON |
 | `fmIDE-excel-style` | 1 | ExcelExporter's Excel style: how every cell in the workbook looks, by role (step 11a, below) | ExcelExporter: Import Excel Style |
-| `fmIDE-excel-module-layouts` | 1 | ExcelExporter's layouts remembered per module (step 11b, below) | ExcelExporter: Import Module Layouts |
+| `fmIDE-excel-module-layouts` | 2 | ExcelExporter's layouts remembered per module (step 11b, below); v2: the layout of a module's block instances, `instance` (step 11d) | ExcelExporter: Import Module Layouts |
 
 ## A row's own format and indent (`fmIDE-excel-mapping` 2)
 
@@ -63,12 +63,12 @@ Step 11a (decision 9 in `docs/decisions.md`; `docs/format-roles.md`): fmIDE's fo
 
   `roles` holds up to seven entries, by role name: `Inputs`, `Calculations`, `Links`, `Headers`, `Section Headers`, `Labels`, `Notes`. For each: `fill` (`#rrggbb`, or `null` for none), `font.color` (`#rrggbb`, or `null` for Excel's automatic colour), `font.weight` (`"700"` bold or `"normal"`), `font.size` (a whole number of points, 6–72, or `null` for the workbook's default), `border.style` (`"none"`, `"solid"`, `"dashed"` or `"dotted"`), `border.color` (`#rrggbb`) and `border.sides` (any of `"top"`, `"bottom"`, `"left"`, `"right"`; an empty list draws no border). A value that is missing or not one of these takes ExcelExporter's default for that role; a role that is missing takes its defaults; other names are ignored.
 
-## Module layouts (`fmIDE-excel-module-layouts` 1, step 11b)
+## Module layouts (`fmIDE-excel-module-layouts` 2, steps 11b and 11d)
 
 ExcelExporter remembers the layout of a module's tab — a canvas added from a canvas template, known by its template family — and uses it again for new layouts of any model holding that module (`docs/step11-excel-output.md`). **Export Module Layouts** writes them all; they are also kept in its browser storage under `fmide-excel-module-layouts`:
 
 ```json
-{ "kind": "fmIDE-excel-module-layouts", "version": 1,
+{ "kind": "fmIDE-excel-module-layouts", "version": 2,
   "modules": [
     { "family": "3f2a9c1e-7b4d-4e0a-9c3b-5d8e1f2a6b7c", "name": "Sales", "tabName": "Sales plan",
       "rows": [ { "name": "profit", "section": "output", "include": true, "constant": false },
@@ -82,6 +82,8 @@ ExcelExporter remembers the layout of a module's tab — a canvas added from a c
 - `rows` (at most 2,000): one per rectangle, by `name` — the rectangle's name in lower case without outer spaces; a name given twice is ignored. `section` is `input`, `calc` or `output` (anything else is `calc`); `include` (false leaves the row out) and `constant` (used only if the rectangle is an input); optional `label` (the row's own label, at most 500 characters), `style` and `indent` as a row's own format in a mapping file (read through the same checks).
 - `customs` (at most 500): the custom rows — `label`, `section`, `showPeriodLabels`, optional `style` and `indent`.
 - `sectioned` and `flat`: the tab's order with sections on and off, as references to `rows` (`r<index>`) and `customs` (`c<index>`); a reference to nothing, or given twice, is ignored.
+- `instance` (version 2, step 11d; optional): the layout of the tabs of the module's **block instances** — the module used as a block. It holds `rows`, `customs`, `sectioned` and `flat` as above, without `tabName`; each row may carry `copy`, which copy of the rectangle it is in a vertical instance: a vintage (a whole number from 1 to 10,000), `"total"` or `"shared"` (absent for the only copy). A row is known by its name and `copy` together; an unknown `copy` drops the row. An entry made by an instance tab alone has empty `rows`, `customs`, `sectioned` and `flat`: it lays out no module tab.
+- Version 1 files open unchanged (the upgrade only raises the number); fmIDE's Attach Excel layout… reads both versions.
 - Everything in the file is someone else's text: labels and names are only ever shown as text.
 
 ## Template attachments (`fmIDE-templates` 7, `fmIDE-workspace` 8, `fmIDE-library-pack` 3, step 11c)
