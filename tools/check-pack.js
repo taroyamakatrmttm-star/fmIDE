@@ -32,7 +32,7 @@ const SHARED = path.join(__dirname, '..', 'src', 'shared');
 const SHARED_FILES = ['file-formats.js', 'operators.js', 'uom.js', 'input-rule.js', 'functions.js', 'ir.js', 'library-pack.js', 'fmide-files.js'];
 const SHARED_NAMES = ['FILE_FORMATS', 'FILE_LIMITS', 'fileTextProblem', 'fileDataProblem', 'readFmData', 'FMIDE_FILE_MIGRATIONS',
   'readLibraryPackData', 'readLibraryIndexData', 'LIBRARY_INDEX_LIMITS', 'cleanLibraryPackInfo', 'cleanItemOrigin', 'sameAuthorName', 'LIBRARY_PACK_LIMITS', 'LIBRARY_PACK_LICENCES',
-  'isTemplateUid', 'cleanTemplateNote', 'TEMPLATE_NOTE_MAX', 'cleanRecipeData', 'RECIPE_MAX_PARTS',
+  'isTemplateUid', 'cleanTemplateNote', 'TEMPLATE_NOTE_MAX', 'cleanRecipeData', 'RECIPE_MAX_PARTS', 'cleanTemplateAttachments', 'TEMPLATE_ATTACHMENT_LIMITS',
   'cleanFunctionDefinition', 'parseFunctionText', 'compileFunctions', 'functionNameOf', 'FUNCTION_LIMITS',
   'compileModel', 'evaluateModel'];
 // The shared files, loaded into a context of their own: they can use only what they define
@@ -46,13 +46,15 @@ const S = loadShared();
 
 // Limits of the library, on top of fmIDE's own (FILE_LIMITS): a pack is at most 5 MB.
 const CHECK_LIMITS = { bytes: 5 * 1024 * 1024 };
+// Packs older than this get a warning to save them again (see checkPack).
+const PACK_VERSION_WORTH_RESAVING = 2;
 // Periods calculated when a template's model is tried out: enough to reach every rule that
 // looks at other periods, without letting a file ask for millions.
 const TRY_PERIODS = 12;
 const NODE_TYPES = new Set(['value', 'operator', 'alias', 'periodShift', 'blockInstance', 'function']);
 const PACK_FIELDS = ['kind', 'version', 'pack', 'templates', 'functions'];
 const PACK_INFO_FIELDS = ['id', 'title', 'author', 'licence', 'description', 'tags', 'created'];
-const TEMPLATE_FIELDS = ['name', 'description', 'group', 'kind', 'family', 'version', 'note', 'versionId', 'data', 'origin'];
+const TEMPLATE_FIELDS = ['name', 'description', 'group', 'kind', 'family', 'version', 'note', 'versionId', 'data', 'origin', 'attachments'];
 const FUNCTION_FIELDS = ['family', 'version', 'versionId', 'text', 'description', 'note', 'calls', 'origin'];
 const ORIGIN_FIELDS = ['packId', 'packTitle', 'author', 'licence'];
 const FUNCTION_STATUS = {
@@ -131,7 +133,9 @@ function checkPack(content, fileName){
     error('file', `It was saved by a newer fmIDE (library pack version ${raw.version}; this checker reads up to version ${current}). The checker has to be updated first.`);
     return done();
   }
-  if(raw.version < current) warning('file', `It was saved by an older fmIDE (library pack version ${raw.version}; the current version is ${current}). It opens, but saving it again from a current fmIDE is better.`);
+  // Version 1 packs lose the credit of an item shared again (origin, v2); what later versions
+  // add is optional (v3: a template's Excel layout), so only those are worth saving again.
+  if(raw.version < PACK_VERSION_WORTH_RESAVING) warning('file', `It was saved by an older fmIDE (library pack version ${raw.version}; the current version is ${current}). It opens, but saving it again from a current fmIDE is better.`);
   const extra = extraFields(raw, PACK_FIELDS);
   if(extra.length) warning('file', `fmIDE ignores its fields ${extra.map(quote).join(', ')}.`);
 
@@ -216,6 +220,25 @@ function checkOrigin(o, where, out, pack){
   out.note(where, `It says it was shared before: in the pack ${quote(o.packTitle)} (${o.packId}) by ${quote(o.author)}. It must be exactly a version approved in that pack.`);
 }
 
+// A template's attachments (step 11c): fmIDE keeps them only when they pass its general
+// checks exactly (a canvas template, known outputs, plain data, not too large or deep, made
+// for the template's own family); anything it would drop is an error. What is inside is
+// ExcelExporter's to check when it uses it; here only that no text hides characters.
+function checkAttachments(t, where, out){
+  if(t.attachments === undefined) return;
+  const clean = S.cleanTemplateAttachments(t.attachments, t.family, t.kind);
+  if(!clean || JSON.stringify(clean) !== JSON.stringify(t.attachments)){
+    out.error(where, `Its attachments ("attachments") aren't what fmIDE keeps: only a canvas template's Excel layout, made for this template's family, as plain data of at most ${S.TEMPLATE_ATTACHMENT_LIMITS.bytes / 1024} KB. fmIDE would drop them.`);
+    return;
+  }
+  const texts = [];
+  const walk = (v) => { if(typeof v === 'string') texts.push(v); else if(v && typeof v === 'object') Object.keys(v).forEach(k => { texts.push(k); walk(v[k]); }); };
+  walk(t.attachments);
+  const hidden = texts.map(hiddenCharacter).find(Boolean);
+  if(hidden) out.error(where, `A text in its Excel layout contains a hidden character (${hidden}).`);
+  out.note(where, 'It carries an Excel layout for ExcelExporter (checked there when it is used).');
+}
+
 // ---- templates and recipes ----
 // Returns the templates that passed their own checks, as { i, raw, where, kind, family,
 // version, versionId, name }.
@@ -244,6 +267,7 @@ function checkTemplates(list, packVersion, out, pack){
     checkHidden(out.error, where, { name: t.name, group: t.group, 'change note': t.note });
     checkHidden(out.error, where, { description: t.description }, true);
     checkOrigin(t.origin, where, out, pack);
+    checkAttachments(t, where, out);
     if(bad) return;
     if(t.kind === 'recipe') checkRecipe(t, where, err);
     else checkTemplateModel(t, where, err, out);

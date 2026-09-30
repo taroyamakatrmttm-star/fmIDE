@@ -225,7 +225,7 @@ const HELP_TOPICS = [
 
   // ---------- Templates and recipes ----------
   { id: 'templates', group: 'templates', title: 'Templates',
-    keywords: 'template save reuse insert add canvas module system library',
+    keywords: 'template save reuse insert add canvas module system library excel layout attach attachment',
     summary: 'Save a canvas (or the whole model) to reuse it, and add it again in one click.',
     body: [
       { p: '{cmd:openTemplates} lists your templates, with a search box: type part of a name, then press Enter to add it.' },
@@ -233,6 +233,7 @@ const HELP_TOPICS = [
       { p: 'A canvas template can be added to a new canvas or to the current one. A system template adds its canvases alongside yours, or replaces the model.' },
       { p: 'Templates are kept in fmIDE and travel inside your documents.' },
       { p: '{cmd:removeDuplicateTemplates} tidies up copies that built up over time.' },
+      { p: 'A canvas template can carry its Excel layout: select it and choose 📎 Attach Excel layout…, then pick a file saved by ExcelExporter\'s Export Module Layouts. The layout then goes wherever the template goes — your documents, new versions and packs you share — and ExcelExporter uses it for that module\'s tab unless you have arranged the tab yourself. fmIDE only carries it; Remove takes it off.' },
       { see: ['template-versions', 'recipes', 'library-packs'] },
     ] },
   { id: 'template-versions', group: 'templates', title: 'Template versions and updating a canvas',

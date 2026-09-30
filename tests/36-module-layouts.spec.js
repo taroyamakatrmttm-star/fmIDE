@@ -160,7 +160,8 @@ test('Reset Mapping to Defaults starts from the remembered layout; Forget stops 
   await page.click('#btnResetMapping');
   await expect(page.locator('#confirmMessage')).toContainText('remembered for that module');
   await page.click('#confirmOk');
-  expect(await tabNames(page)).toEqual(['Overview', 'Sales plan']);
+  // Reset finishes after the stored layout is removed (asynchronous): wait for it.
+  await expect.poll(() => tabNames(page)).toEqual(['Overview', 'Sales plan']);
 
   const tagRow = page.locator('#tabsBody tr', { has: page.locator('.module-tag') });
   await tagRow.locator('.module-forget').click();
@@ -169,7 +170,7 @@ test('Reset Mapping to Defaults starts from the remembered layout; Forget stops 
   expect((await stored(page)).modules).toEqual([]);
   await page.click('#btnResetMapping');
   await page.click('#confirmOk');
-  expect(await tabNames(page)).toEqual(['Overview', 'Sales (Gold)']);
+  await expect.poll(() => tabNames(page)).toEqual(['Overview', 'Sales (Gold)']);
   const fresh = await sheet(page, 'Sales (Gold)');
   expect(fresh.labels).toEqual(expect.arrayContaining(['Costs', 'Volume', 'Revenue']));
   expect(fresh.labels).not.toContain('Top line');

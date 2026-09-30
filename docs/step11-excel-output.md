@@ -1,6 +1,6 @@
 # Build step 11 — the Excel look and layout belong to ExcelExporter
 
-**Status:** in progress — 11a and 11b done. Started before H4c (step 10's video links, which wait on the owner's recordings), by the owner's decision (30 Sep 2026). Each phase gets its own plan, approved by the owner before any change.
+**Status:** in progress — 11a, 11b and 11c-1 done; 11c-2 next. Started before H4c (step 10's video links, which wait on the owner's recordings), by the owner's decision (30 Sep 2026). Each phase gets its own plan, approved by the owner before any change.
 
 **Goal:** stop setting up the same Excel layout again and again when modules are reused, and keep a clean line between the two apps: **fmIDE says what things are** (this is an input, a calculation, a percentage); **ExcelExporter decides how they look and where they sit in Excel**.
 
@@ -49,3 +49,15 @@ Decided when the plan was approved (30 Sep 2026, the owner): layouts are **remem
 - **What you see**: the Tabs panel marks a module's tab "🧩 *name*", then "· layout remembered" with **Forget**; after loading, a line says what was used ("1 tab laid out from its module' remembered layout: 5 rows matched, 2 new."); **Export Module Layouts** / **Import Module Layouts** (new file kind `fmIDE-excel-module-layouts` 1; an import adds to or replaces by family). ExcelExporter's help has a new topic, "Modules remember their layout".
 - **Not changed**: fmIDE, the model files, the mapping file, formulas. A model's own layout is still keyed as before (by its canvas and rectangle ids), so a model changed in fmIDE still gets a new layout — which now starts from its modules' remembered layouts.
 - **Tests**: group 36 (`tests/36-module-layouts.spec.js`, samples `tests/fixtures/module-layouts/`); group 6 gained the module layouts file opened in the wrong place in both apps.
+
+## Done (11c-1) — how it turned out
+
+Decided when the plan was approved (30 Sep 2026, the owner): **layouts only** (no suggested Excel styles — the style stays the person's own); ExcelExporter will find attachments in **`.fmide` documents and workspaces**, which carry templates (not in system files); **Save as new version carries** the attachment forward; two pull requests.
+
+- **The attachment**: a canvas template version's `attachments.excel`, exactly one entry of an `fmIDE-excel-module-layouts` file. fmIDE never reads what is inside: `cleanTemplateAttachments` (`src/shared/fmide-files.js`) keeps it only on a canvas template, under a known output name, as plain data at most 12 deep and 256 KB, made for the template's own family. It is carried by `templateRecord` / `templateEntryFrom` everywhere a template goes; a template moved to a new family loses it.
+- **Attaching**: the Templates window's detail pane shows "📎 An Excel layout is attached…" with Remove, or **📎 Attach Excel layout…**, which reads a file from ExcelExporter's Export Module Layouts and takes this family's entry (`excelLayoutForFamily`: only the file's kind, version and each entry's family are read); messages for a file that isn't one, has no entry for the family, is newer, or is too large.
+- **Carrying**: Save as new version copies it; an import that finds the template already here adds an attachment it lacks; a pack offers such an item ("Already in your library — adds its Excel layout") and marks items with one ("· 📎 Excel layout").
+- **File formats**: templates file 7, workspace 8, library pack 3 — each only allows attachments; older files open unchanged.
+- **The checker** refuses attachments fmIDE would drop and hidden characters in a layout's text, and notes a pack that carries one. It now warns only about version 1 packs (which lose the credit of items shared again): a version 2 pack is as good as a version 3 one, so the library's existing packs don't start warning.
+- **Found along the way**: `docs/file-formats.md` still gave the workspace as version 6 after 11a (the note for v7 was added, the number not); corrected.
+- **Tests**: group 37 (`tests/37-template-attachments.spec.js`); version numbers updated in groups 6, 14, 16, 20, 22 and 23.

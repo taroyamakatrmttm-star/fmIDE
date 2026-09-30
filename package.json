@@ -32,6 +32,7 @@
     "test:help-site": "playwright test tests/34-help-site.spec.js",
     "test:videos": "playwright test tests/35-video-scripts.spec.js",
     "test:module-layouts": "playwright test tests/36-module-layouts.spec.js",
+    "test:template-attachments": "playwright test tests/37-template-attachments.spec.js",
     "check-pack": "node tools/check-pack.js",
     "bench": "node tools/bench-calc.js",
     "video-scripts": "node tools/video-scripts.js",

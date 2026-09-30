@@ -51,7 +51,7 @@ test.describe('saving a pack', () => {
     await fillLibrary(page);
     const pack = await page.evaluate((info) => fm.saveLibraryPack(Object.assign({}, info, { templates: ['Statements'], functions: ['Profit'], download: false })), PACK_INFO);
     expect(pack.kind).toBe('fmIDE-library-pack');
-    expect(pack.version).toBe(2);
+    expect(pack.version).toBe(3);
     expect(pack.pack).toMatchObject({ title: 'Three statements starter', author: 'Ann Example', licence: 'CC-BY-4.0',
       description: 'Line one\nLine two', tags: ['statements', 'tax'] });
     expect(pack.pack.id).toMatch(/^[A-Za-z0-9-]{8,64}$/);
@@ -237,8 +237,8 @@ test.describe('packs from other people', () => {
     await F.dismissMessage(page);
     await page.locator('.modal-box.template-box .modal-actions button', { hasText: /^Close$/ }).click();
     // A pack from a newer fmIDE: the action refuses without allowNewer; the window asks.
-    const newer = Object.assign(readFixture('library', 'pack-v1.json'), { version: 3 });
-    expect(await err(page, (f) => fm.openLibraryPack(f), newer)).toMatch(/newer version of fmIDE \(format version 3\)/);
+    const newer = Object.assign(readFixture('library', 'pack-v1.json'), { version: 4 }); // v3 is current since step 11c
+    expect(await err(page, (f) => fm.openLibraryPack(f), newer)).toMatch(/newer version of fmIDE \(format version 4\)/);
     await F.importViaCommand(page, 'openLibraryPack', writeFile(testInfo, 'newer.json', newer));
     expect(await F.dialogText(page)).toMatch(/saved by a newer version of fmIDE/);
     await F.confirmDanger(page);
@@ -469,7 +469,7 @@ test.describe('where items came from (origin)', () => {
     await expect(page.locator('.modal-box.library-pack-save label.library-pack-pick', { hasText: /^ Growth/ })).toContainText("from Sam Sample's pack “Sample pack”");
     await F.cancelDialog(page);
     const pack = await page.evaluate(() => fm.saveLibraryPack({ title: 'Bob re-shares', author: 'Bob', functions: ['Growth'], download: false }));
-    expect(pack.version).toBe(2);
+    expect(pack.version).toBe(3);
     expect(pack.functions.map(d => d.origin)).toEqual([SAM, SAM]);
     const ctx = await browser.newContext();
     await ctx.route('**/*', (route) => route.request().url() === ORIGIN + 'fmIDE.html'

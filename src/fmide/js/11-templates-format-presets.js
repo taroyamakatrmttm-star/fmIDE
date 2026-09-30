@@ -161,6 +161,9 @@
       kind: latest.kind, builtin: false, family: latest.family, version: nextVersionNumber(latest.family),
       note: cleanTemplateNote(note), versionId: newRandomId(), data: openModelAsTemplateData(latest.kind, latest.name)
     };
+    // An Excel layout attached to the latest version goes on to the new one (step 11c):
+    // layouts match rows by name, so they usually still fit.
+    if(latest.attachments) t.attachments = cloneData(latest.attachments);
     TEMPLATES.push(t);
     if(t.kind === 'module') linkActiveCanvasTo(t);
     saveWorkspaceSoon();
@@ -319,7 +322,63 @@
     Object.assign(r, { name: t.name, description: t.description, group: t.group, kind: t.kind,
       family: t.family, version: t.version, note: t.note, versionId: t.versionId, data: t.data });
     if(t.origin) r.origin = Object.assign({}, t.origin);
+    if(t.attachments) r.attachments = cloneData(t.attachments); // step 11c: kept, never read
     return r;
+  }
+
+  // The Templates window's line about a canvas template version's Excel layout (step 11c):
+  // attached (with Remove) or not (with Attach Excel layout…, which takes this family's entry
+  // from a file ExcelExporter's Export Module Layouts saved). fmIDE never shows or reads the
+  // layout itself; ExcelExporter uses it for a new layout of a tab from this module.
+  function appendAttachmentLine(box, t, onChange){
+    const row = document.createElement('p');
+    row.className = 'template-attachment';
+    if(t.attachments && t.attachments.excel){
+      const s = document.createElement('span');
+      s.textContent = '📎 An Excel layout is attached to this version: ExcelExporter lays out this module\'s tab with it, unless you have arranged that tab yourself. It goes along in packs you share.';
+      const rm = document.createElement('button');
+      rm.className = 'template-attachment-remove';
+      rm.textContent = 'Remove';
+      rm.addEventListener('click', () => {
+        delete t.attachments.excel;
+        if(!Object.keys(t.attachments).length) delete t.attachments;
+        saveWorkspaceSoon();
+        onChange();
+      });
+      row.append(s, ' ', rm);
+    } else {
+      const attach = document.createElement('button');
+      attach.className = 'template-attach-excel';
+      attach.textContent = '📎 Attach Excel layout…';
+      attach.title = 'Attach the layout ExcelExporter remembers for this module (a file from its Export Module Layouts), so it goes along when you share this template';
+      const input = document.createElement('input');
+      input.type = 'file'; input.accept = 'application/json,.json'; input.style.display = 'none';
+      attach.addEventListener('click', () => input.click());
+      input.addEventListener('change', () => {
+        const file = input.files && input.files[0];
+        input.value = '';
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          const text = String(reader.result);
+          const tooBig = fileTextProblem(text);
+          if(tooBig){ showMessage(tooBig); return; }
+          let raw;
+          try{ raw = JSON.parse(text); }catch(err){ showMessage('That file is not valid JSON.'); return; }
+          const shape = fileDataProblem(raw);
+          if(shape){ showMessage(shape); return; }
+          const r = excelLayoutForFamily(raw, t.family);
+          if(r.error){ showMessage(r.error); return; }
+          t.attachments = Object.assign({}, t.attachments || {}, { excel: r.attachment });
+          saveWorkspaceSoon();
+          onChange();
+          showMessage(`Excel layout attached to version ${t.version} of "${t.name}".`);
+        };
+        reader.readAsText(file);
+      });
+      row.append(attach, input);
+    }
+    box.appendChild(row);
   }
 
   // A library entry from a template read from a file (or the autosave), with its family
@@ -348,6 +407,10 @@
     };
     const origin = cleanItemOrigin(o.origin);
     if(origin) e.origin = origin;
+    // Attachments for other outputs (step 11c): kept when they pass the general checks and
+    // belong to this family.
+    const attachments = cleanTemplateAttachments(o.attachments, e.family, e.kind);
+    if(attachments) e.attachments = attachments;
     return e;
   }
   // Makes a new entry fit the library: a family already holding the other kind can't take
@@ -355,7 +418,8 @@
   // to the next free one. Returns true when the number was moved.
   function fitTemplateEntry(e){
     const fam = latestOfFamily(e.family);
-    if(fam && fam.kind !== e.kind){ e.family = newRandomId(); return false; }
+    // A new family: an attachment made for the old one no longer belongs to it.
+    if(fam && fam.kind !== e.kind){ e.family = newRandomId(); delete e.attachments; return false; }
     if(fam){ e.name = fam.name; e.description = fam.description; e.group = fam.group; }
     if(TEMPLATES.some(x => x.family === e.family && x.version === e.version)){ e.version = nextVersionNumber(e.family); return true; }
     return false;
@@ -376,14 +440,24 @@
   // Whether a template from a file (`t`, read into the entry `e`) is already in the library,
   // by the rules above: the same content in its family (under the same number or version
   // id), or — for a family not here — the same name, kind and content.
-  function templateAlreadyHere(e, t){
+  function templateHere(e, t){
     if(TEMPLATES.some(x => x.family === e.family && x.kind === e.kind)){
       const data = JSON.stringify(e.data);
-      return TEMPLATES.some(x => x.family === e.family && (x.version === e.version || x.versionId === t.versionId)
-        && JSON.stringify(x.data) === data);
+      return TEMPLATES.find(x => x.family === e.family && (x.version === e.version || x.versionId === t.versionId)
+        && JSON.stringify(x.data) === data) || null;
     }
     const key = templateFingerprint(e.name, e.kind, e.data);
-    return TEMPLATES.some(x => templateFingerprint(x.name, x.kind, x.data) === key);
+    return TEMPLATES.find(x => templateFingerprint(x.name, x.kind, x.data) === key) || null;
+  }
+  function templateAlreadyHere(e, t){ return !!templateHere(e, t); }
+  // A template already here that lacks an attachment the file's copy has (step 11c): the
+  // attachment it would gain, or null. Only for the same family (an attachment is made for it).
+  function attachmentsToAdd(e, t){
+    const mine = templateHere(e, t);
+    if(!mine || !e.attachments || mine.family !== e.family) return null;
+    const add = {};
+    Object.keys(e.attachments).forEach(k => { if(!(mine.attachments && mine.attachments[k])) add[k] = e.attachments[k]; });
+    return Object.keys(add).length ? { mine, add } : null;
   }
   function addMissingTemplates(list){
     let added = 0, present = 0, renumbered = 0;
@@ -403,8 +477,14 @@
       if(!e) return;
       const known = TEMPLATES.some(x => x.family === e.family && x.kind === e.kind);
       // Already here: the same content under the same number, or under the number it was
-      // given when an earlier import found its number taken (same version id).
-      if(templateAlreadyHere(e, t)){ present++; return; }
+      // given when an earlier import found its number taken (same version id). An attachment
+      // the file's copy has and ours lacks is added to ours (step 11c).
+      if(templateAlreadyHere(e, t)){
+        const more = attachmentsToAdd(e, t);
+        if(more) more.mine.attachments = Object.assign({}, more.mine.attachments || {}, more.add);
+        present++;
+        return;
+      }
       // A taken number waits until the file's other versions are in, so those keep theirs.
       if(known && TEMPLATES.some(x => x.family === e.family && x.version === e.version)){ clashes.push(e); return; }
       add(e);
@@ -1652,6 +1732,7 @@
       }
       detail.appendChild(ver);
       appendOriginLines(detail, selected, all);
+      if(selected.kind === 'module') appendAttachmentLine(detail, selected, () => renderDetail());
       const desc = document.createElement('p');
       desc.className = 'template-desc';
       desc.textContent = selected.description || '(no description)';

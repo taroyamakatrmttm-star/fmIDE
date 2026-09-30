@@ -22,14 +22,14 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 |---|---|---|---|
 | `system` | 7 | A whole model (all canvases, periods); v4: a canvas may remember the canvas template it came from; v5: the function definitions its function nodes use; v6: the operators of phase E1 (below); v7: no Excel-only format settings (step 11a, below) | fmIDE: File → Load System · ExcelExporter |
 | `module` | 5 | One canvas; v3: the function definitions it uses; v4: the operators of phase E1; v5: no Excel-only format settings | fmIDE: File → Load Module |
-| `fmIDE-workspace` | 6 | Everything: system + templates, format presets, shortcuts, macros; v4: the function library; v5: its system and templates may use the operators of phase E1; v6: its templates and library functions may say which library pack they came from (`origin`, below); v7: no Excel-only format roles or settings. A **`.fmide` document** is exactly this, with the `.fmide` extension | fmIDE: File → Open… (a document) or Import Workspace (a full replace) · ExcelExporter |
-| `fmIDE-templates` | 6 | Saved templates (each holds a module, a system or a recipe), with their families and versions; v4: a template's model may carry function definitions; v5: it may use the operators of phase E1; v6: a template may carry `origin` | fmIDE: Templates → Import Templates |
+| `fmIDE-workspace` | 8 | Everything: system + templates, format presets, shortcuts, macros; v4: the function library; v5: its system and templates may use the operators of phase E1; v6: its templates and library functions may say which library pack they came from (`origin`, below); v7: no Excel-only format roles or settings; v8: its templates may carry `attachments` (below). A **`.fmide` document** is exactly this, with the `.fmide` extension | fmIDE: File → Open… (a document) or Import Workspace (a full replace) · ExcelExporter |
+| `fmIDE-templates` | 7 | Saved templates (each holds a module, a system or a recipe), with their families and versions; v4: a template's model may carry function definitions; v5: it may use the operators of phase E1; v6: a template may carry `origin`; v7: a canvas template may carry `attachments` (below) | fmIDE: Templates → Import Templates |
 | `fmIDE-functions` | 2 | Function definitions (a library of functions); v2: a definition may carry `origin` | fmIDE: Functions → Import Functions |
 | `fmIDE-format-presets` | 2 | Format presets, including the canvas format roles; v2: no Excel-only roles or settings | fmIDE: Format Presets → Import Presets |
 | `fmIDE-shortcuts` | 2 | Keyboard shortcut bindings | fmIDE: Keyboard Shortcuts → Import Shortcuts |
 | `fmIDE-macros` | 1 | Macros | fmIDE: Macro Builder → Import |
 | `fmIDE-preferences` | 1 | Personal settings: shortcut bindings for built-in commands, ribbon layout and Quick Access Toolbar, ribbon collapsed state, KeyTips trigger (fmIDE only) | fmIDE: File → Import Preferences (or Customize Ribbon) |
-| `fmIDE-library-pack` | 2 | Templates, recipes and functions to share with other people, with who made them and their licence (below); v2: an item shared again carries the `origin` it came with | fmIDE: File → Open Library Pack… |
+| `fmIDE-library-pack` | 3 | Templates, recipes and functions to share with other people, with who made them and their licence (below); v2: an item shared again carries the `origin` it came with; v3: a canvas template may carry `attachments` | fmIDE: File → Open Library Pack… |
 | `fmIDE-excel-mapping` | 2 | ExcelExporter's tab/row layout for one model; v2: any row may carry its own format (`style`) and an `indent` (below) | ExcelExporter: Import Mapping JSON |
 | `fmIDE-excel-style` | 1 | ExcelExporter's Excel style: how every cell in the workbook looks, by role (step 11a, below) | ExcelExporter: Import Excel Style |
 | `fmIDE-excel-module-layouts` | 1 | ExcelExporter's layouts remembered per module (step 11b, below) | ExcelExporter: Import Module Layouts |
@@ -84,6 +84,20 @@ ExcelExporter remembers the layout of a module's tab — a canvas added from a c
 - `sectioned` and `flat`: the tab's order with sections on and off, as references to `rows` (`r<index>`) and `customs` (`c<index>`); a reference to nothing, or given twice, is ignored.
 - Everything in the file is someone else's text: labels and names are only ever shown as text.
 
+## Template attachments (`fmIDE-templates` 7, `fmIDE-workspace` 8, `fmIDE-library-pack` 3, step 11c)
+
+A canvas template version may carry **attachments**: data for an output other than fmIDE, which fmIDE keeps with the template but never reads. Today there is one, `excel` — the layout ExcelExporter remembers for that module, exactly one entry of an `fmIDE-excel-module-layouts` file (above):
+
+```json
+{ "name": "Sales", "kind": "module", "family": "3f2a9c1e-…", "version": 2, "versionId": "…", "note": "", "data": { … },
+  "attachments": { "excel": { "family": "3f2a9c1e-…", "name": "Sales", "tabName": "Sales plan", "rows": [ … ], "customs": [ … ], "sectioned": [ … ], "flat": [ … ] } } }
+```
+
+- fmIDE keeps an attachment only on a canvas template (`kind: "module"`), under a name it knows (`excel`), when it is plain data (objects, lists, text, numbers, `true` / `false` / `null`), nested at most 12 deep, at most 256 KB written out, and its `family` is the template's own. Anything else is dropped when the file is read (`cleanTemplateAttachments` in `src/shared/fmide-files.js`); the library's checker refuses a pack holding what fmIDE would drop, and any text in it with a hidden character. A version 2 pack is as good as a version 3 one and gets no warning; a version 1 pack is warned about (it lost the credit of items shared again).
+- It goes wherever the template goes: workspaces and `.fmide` documents, templates files, library packs, and the next version (Save as new version copies it). A template read into a new family (its family was taken by another kind) loses it. A template already in the library gains the attachment of an imported copy that has one and it lacks. A model (system, module) never carries one.
+- fmIDE adds one with **📎 Attach Excel layout…** in the Templates window, from a file ExcelExporter's Export Module Layouts saved: it reads that file's `kind`, `version` and each entry's `family`, and takes the entry of the template's family. ExcelExporter checks the layout itself (`cleanModuleLayout`) when it uses it.
+- Older files have none, and open unchanged; an older fmIDE asks before opening the new versions.
+
 ## Limits on a file that is opened
 
 A file someone opens (any kind, in either app) is refused, with a plain message, before anything else reads it, when it is:
@@ -94,7 +108,7 @@ A file someone opens (any kind, in either app) is refused, with a plain message,
 
 The limits (`FILE_LIMITS`, `fileTextProblem`, `fileDataProblem` in `src/shared/file-formats.js`) keep a hostile file from freezing or crashing the page; before them, a deeply nested file stopped the reader with a stack overflow and no message. The autosave is not checked: it is the person's own work. No format changed.
 
-## Library packs (`fmIDE-library-pack` 2)
+## Library packs (`fmIDE-library-pack` 3)
 
 A **library pack** is one file of templates, recipes and functions to share with other people (step 8, `docs/step8-community-library.md`). fmIDE writes one with **File → Save as Library Pack…** and reads one with **File → Open Library Pack…**, which shows what it holds before adding anything.
 
