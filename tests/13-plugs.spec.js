@@ -143,7 +143,7 @@ test('ExcelExporter: a rectangle with two plugs feeds both sockets in the workbo
   await F.openFmIDE(page);
   await buildTaxModel(page);
   const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.command('saveSystem')));
-  expect(data.version).toBe(7);
+  expect(data.version).toBe(8);
   const path = testInfo.outputPath('two-plugs.json');
   fs.writeFileSync(path, JSON.stringify(data));
 

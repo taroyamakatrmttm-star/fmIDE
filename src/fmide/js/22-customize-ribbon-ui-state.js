@@ -306,6 +306,7 @@
       functionsGroupAdded: true,
       functionCommandsAdded: true, // D2b: Insert Function… and Update Function… in My Functions
       operatorsE1Added: true, // E1b: the new operators in the Compare and Excel Functions groups
+      operatorsE2Added: true, // E2a: ln, exp, sqrt, int and trunc in the Excel Functions group
       libraryPacksAdded: true, // 8a: Open Library Pack… and Save as Library Pack… in the File tab's Library group
       libraryBrowseAdded: true, // 8d: Browse Library… in the same group
       helpAdded: true, // step 10: the Help group at the end of the View tab
@@ -359,6 +360,15 @@
       list.forEach(i => { if(!g.items.some(it => it && it.cmd === 'insertOp' + i)) g.items.push({ cmd: 'insertOp' + i }); });
     });
   }
+  // One-time update (E2a) of a customised ribbon: ln, exp, sqrt, int and trunc join the group
+  // holding the Excel functions (min…), wherever the person moved it, as in E1b.
+  function addE2OperatorsToRibbon(){
+    const groups = [];
+    ribbonState.config.tabs.forEach(t => (t && Array.isArray(t.groups) ? t.groups : []).forEach(g => { if(g && Array.isArray(g.items)) groups.push(g); }));
+    const g = groups.find(x => x.items.some(it => it && it.cmd === 'insertOp11'));
+    if(!g) return;
+    E2_FUNCTION_OPS.forEach(i => { if(!g.items.some(it => it && it.cmd === 'insertOp' + i)) g.items.push({ cmd: 'insertOp' + i }); });
+  }
   // One-time update (8a) of a customised ribbon: Open Library Pack… and Save as Library
   // Pack… join the group holding Format Presets (the File tab's Library group), wherever the
   // person moved it. A ribbon without it is left alone (the Command Launcher has both); a
@@ -407,6 +417,7 @@
       if(ui.functionsGroupAdded !== true) addFunctionsGroupToRibbon();
       if(ui.functionCommandsAdded !== true) addFunctionCommandsToRibbon();
       if(ui.operatorsE1Added !== true) addE1OperatorsToRibbon();
+      if(ui.operatorsE2Added !== true) addE2OperatorsToRibbon();
       if(ui.libraryPacksAdded !== true) addLibraryPackCommandsToRibbon();
       if(ui.libraryBrowseAdded !== true) addLibraryBrowseCommandToRibbon();
       if(ui.helpAdded !== true) addHelpGroupToRibbon();

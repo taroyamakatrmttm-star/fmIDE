@@ -63,14 +63,14 @@ test('every operator in the catalogue has an Excel spelling, and only those do',
     expect(shapes.filter(k => typeof s[k] === 'string' && s[k] !== ''), `${id}: exactly one way to write it`).toHaveLength(1);
   }
   // The samples every operator is in, so the workbook tests (units above, agreement in 17)
-  // write each spelling at least once: ir/error-cases.json, and for those of phase E1
-  // agreement/operators-e1.json.
+  // write each spelling at least once: ir/error-cases.json, and for those of phases E1 and
+  // E2a agreement/operators-e1.json and agreement/operators-e2a.json.
   const used = new Set();
-  [['ir', 'error-cases.json'], ['agreement', 'operators-e1.json']].forEach(([dir, name]) => {
+  [['ir', 'error-cases.json'], ['agreement', 'operators-e1.json'], ['agreement', 'operators-e2a.json']].forEach(([dir, name]) => {
     const system = JSON.parse(fs.readFileSync(fixture(dir, name), 'utf8'));
     (system.system || system).canvases.forEach(c => c.nodes.forEach(n => { if(n.type === 'operator') used.add(n.text); }));
   });
-  for(const op of OPERATORS) expect(used.has(op.symbol), `${op.id} is in ir/error-cases.json or agreement/operators-e1.json`).toBe(true);
+  for(const op of OPERATORS) expect(used.has(op.symbol), `${op.id} is in ir/error-cases.json or agreement/operators-e1.json or -e2a.json`).toBe(true);
 });
 
 // ---- where the workbook will differ from fmIDE (the panel next to Generate) ----
@@ -414,4 +414,21 @@ test('phase E1: an unknown operator and an unwired named input are listed before
   ]);
   expect(await page.locator('#differencesPanel img').count()).toBe(0);
   expect(await page.evaluate(() => window.__hacked)).toBeUndefined();
+});
+
+// ---- the operators of phase E2a: ln, exp, sqrt, int, trunc ----
+test('phase E2a operators: LN, EXP, SQRT, INT and TRUNC on the canvas and in functions', async ({ page }) => {
+  const { f } = await formulasOf(page, 'agreement', 'operators-e2a.json', 'Operators');
+  expect(f['Ln of X']).toBe('LN({X})');
+  expect(f['Ln of Period']).toBe('LN({Period})');
+  expect(f['Exp of Big']).toBe('EXP({Big})');
+  expect(f['Sqrt of Minus4']).toBe('SQRT({Minus4})');
+  expect(f['Int of Neg']).toBe('INT({Neg})');
+  expect(f['Trunc of Half']).toBe('TRUNC({Half})');
+  expect(f['Ln of exp of X']).toBe('LN({Exp of X again})');
+  // One input only, as fmIDE's "?".
+  expect(f['Ln of two inputs']).toBe('NA()');
+  // In functions: written out in full.
+  expect(f['Mix of X']).toBe('SQRT({X})+INT({X})+TRUNC(-{X})+EXP(LN({X}))');
+  expect(f['SafeLn of Zero']).toBe('IFERROR(LN({Zero}),-1)');
 });

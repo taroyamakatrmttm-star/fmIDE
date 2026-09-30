@@ -52,6 +52,16 @@ const OPERATORS = [
   { id: 'round',     symbol: 'round',     fn: true, ports: ['value', 'digits'], apply: (v, d) => roundLikeExcel(v, d, 'half'), unit: 'first' },
   { id: 'roundup',   symbol: 'roundup',   fn: true, ports: ['value', 'digits'], apply: (v, d) => roundLikeExcel(v, d, 'up'), unit: 'first' },
   { id: 'rounddown', symbol: 'rounddown', fn: true, ports: ['value', 'digits'], apply: (v, d) => roundLikeExcel(v, d, 'down'), unit: 'first' },
+  // Phase E2a: one-input Excel functions. A result that isn't a finite number (the log of 0
+  // or less, the root of a negative, e to a power too large) is a 'math-error', as Excel's
+  // #NUM!. The log, e and root have no unit; int and trunc keep their input's. INT goes down
+  // (towards minus infinity) and TRUNC towards zero, on the number as stored, as Excel does:
+  // INT((0.1 + 0.7) * 10) is 7 (LibreOffice, which rounds first, says 8).
+  { id: 'ln',        symbol: 'ln',        fn: true, unary: (a) => a > 0 ? Math.log(a) : NaN, unit: null },
+  { id: 'exp',       symbol: 'exp',       fn: true, unary: (a) => Math.exp(a), unit: null },
+  { id: 'sqrt',      symbol: 'sqrt',      fn: true, unary: (a) => a >= 0 ? Math.sqrt(a) : NaN, unit: null },
+  { id: 'int',       symbol: 'int',       fn: true, unary: (a) => Math.floor(a) + 0, unit: 'same' }, // + 0: never −0, which Excel doesn't have
+  { id: 'trunc',     symbol: 'trunc',     fn: true, unary: (a) => Math.trunc(a) + 0, unit: 'same' },
 ];
 
 // Equal but for the last few binary digits, as Excel and LibreOffice compare numbers.
@@ -102,7 +112,9 @@ function applyOperator(op, values){
     return isFinite(r) ? { value: r } : { error: 'math-error' };
   }
   if(op.unary){
-    return values.length === 1 ? { value: op.unary(values[0]) } : { error: 'unary-only' };
+    if(values.length !== 1) return { error: 'unary-only' };
+    const r = op.unary(values[0]);
+    return isFinite(r) ? { value: r } : { error: 'math-error' };
   }
   if(op.compare){
     if(values.length < 2) return { error: 'needs-two' };

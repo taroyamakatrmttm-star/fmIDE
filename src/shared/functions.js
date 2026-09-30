@@ -41,13 +41,19 @@ const FUNCTION_BUILTINS = Object.assign(Object.create(null), {
   ROUNDUP:   { id: 'roundup',   min: 2, max: 2 },
   ROUNDDOWN: { id: 'rounddown', min: 2, max: 2 },
   PERIOD:    { id: 'period',    min: 0, max: 0 },
+  // Phase E2a.
+  LN:        { id: 'ln',        min: 1, max: 1 },
+  EXP:       { id: 'exp',       min: 1, max: 1 },
+  SQRT:      { id: 'sqrt',      min: 1, max: 1 },
+  INT:       { id: 'int',       min: 1, max: 1 },
+  TRUNC:     { id: 'trunc',     min: 1, max: 1 },
 });
 // Built-in names an input may still have (they came after functions did, so a definition
 // may already use them for an input): read as the input unless followed by "(".
 const FUNCTION_INPUT_NAMES_ALLOWED = new Set(['PERIOD']);
 // Names kept back: Excel functions that are not available (yet), so a formula using one
 // says so instead of looking for a function of that name.
-const FUNCTION_RESERVED = new Set(['IFS', 'XOR', 'SUM', 'PRODUCT', 'INT', 'TRUNC', 'LN', 'LOG', 'LOG10', 'EXP', 'SQRT', 'POWER', 'SIGN', 'COUNT', 'LET', 'LAMBDA',
+const FUNCTION_RESERVED = new Set(['IFS', 'XOR', 'SUM', 'PRODUCT', 'LOG', 'LOG10', 'POWER', 'SIGN', 'COUNT', 'LET', 'LAMBDA',
   'CHOOSE', 'INDEX', 'NA', 'TRUE', 'FALSE', 'PI', 'CEILING', 'FLOOR', 'MEDIAN', 'SUMPRODUCT']);
 // Symbols and the catalogue operator each one is. The typographic signs fmIDE shows on its
 // operators are accepted too.

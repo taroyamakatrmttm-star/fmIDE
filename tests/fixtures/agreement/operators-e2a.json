@@ -1,0 +1,1185 @@
+{
+ "kind": "system",
+ "version": 8,
+ "nextId": 1000,
+ "nextCanvasId": 10,
+ "activeCanvasId": "cOps",
+ "periods": [
+  "P1",
+  "P2",
+  "P3",
+  "P4"
+ ],
+ "currentPeriod": 0,
+ "functions": [
+  {
+   "family": "family-e2a-mix",
+   "version": 1,
+   "versionId": "version-e2a-mix-1",
+   "text": "Mix(x) = SQRT(x) + INT(x) + TRUNC(-x) + EXP(LN(x))",
+   "description": "",
+   "note": "",
+   "calls": []
+  },
+  {
+   "family": "family-e2a-safe",
+   "version": 1,
+   "versionId": "version-e2a-safe-1",
+   "text": "SafeLn(x) = IFERROR(LN(x), -1)",
+   "description": "",
+   "note": "",
+   "calls": []
+  }
+ ],
+ "canvases": [
+  {
+   "id": "cOps",
+   "name": "Operators",
+   "nodes": [
+    {
+     "id": "per",
+     "type": "operator",
+     "x": -250,
+     "y": 0,
+     "w": 56,
+     "h": 56,
+     "text": "period",
+     "socket": ""
+    },
+    {
+     "id": "Period",
+     "type": "value",
+     "x": -100,
+     "y": 0,
+     "w": 170,
+     "h": 64,
+     "text": "Period"
+    },
+    {
+     "id": "X",
+     "type": "value",
+     "x": 0,
+     "y": 100,
+     "w": 170,
+     "h": 64,
+     "text": "X\n2.5"
+    },
+    {
+     "id": "Neg",
+     "type": "value",
+     "x": 0,
+     "y": 190,
+     "w": 170,
+     "h": 64,
+     "text": "Neg\n-2.5"
+    },
+    {
+     "id": "Zero",
+     "type": "value",
+     "x": 0,
+     "y": 280,
+     "w": 170,
+     "h": 64,
+     "text": "Zero\n0"
+    },
+    {
+     "id": "Minus4",
+     "type": "value",
+     "x": 0,
+     "y": 370,
+     "w": 170,
+     "h": 64,
+     "text": "Minus4\n-4"
+    },
+    {
+     "id": "Big",
+     "type": "value",
+     "x": 0,
+     "y": 460,
+     "w": 170,
+     "h": 64,
+     "text": "Big\n1000"
+    },
+    {
+     "id": "Tiny",
+     "type": "value",
+     "x": 0,
+     "y": 550,
+     "w": 170,
+     "h": 64,
+     "text": "Tiny\n0.000001"
+    },
+    {
+     "id": "Half",
+     "type": "value",
+     "x": 0,
+     "y": 640,
+     "w": 170,
+     "h": 64,
+     "text": "Half\n-0.5"
+    },
+    {
+     "id": "Whole",
+     "type": "value",
+     "x": 0,
+     "y": 730,
+     "w": 170,
+     "h": 64,
+     "text": "Whole\n7"
+    },
+    {
+     "id": "o_Ln_of_X",
+     "type": "operator",
+     "x": 400,
+     "y": 90,
+     "w": 56,
+     "h": 56,
+     "text": "ln",
+     "socket": ""
+    },
+    {
+     "id": "r_Ln_of_X",
+     "type": "value",
+     "x": 600,
+     "y": 90,
+     "w": 170,
+     "h": 64,
+     "text": "Ln of X"
+    },
+    {
+     "id": "o_Ln_of_Zero",
+     "type": "operator",
+     "x": 400,
+     "y": 180,
+     "w": 56,
+     "h": 56,
+     "text": "ln",
+     "socket": ""
+    },
+    {
+     "id": "r_Ln_of_Zero",
+     "type": "value",
+     "x": 600,
+     "y": 180,
+     "w": 170,
+     "h": 64,
+     "text": "Ln of Zero"
+    },
+    {
+     "id": "o_Ln_of_Neg",
+     "type": "operator",
+     "x": 400,
+     "y": 270,
+     "w": 56,
+     "h": 56,
+     "text": "ln",
+     "socket": ""
+    },
+    {
+     "id": "r_Ln_of_Neg",
+     "type": "value",
+     "x": 600,
+     "y": 270,
+     "w": 170,
+     "h": 64,
+     "text": "Ln of Neg"
+    },
+    {
+     "id": "o_Ln_of_Tiny",
+     "type": "operator",
+     "x": 400,
+     "y": 360,
+     "w": 56,
+     "h": 56,
+     "text": "ln",
+     "socket": ""
+    },
+    {
+     "id": "r_Ln_of_Tiny",
+     "type": "value",
+     "x": 600,
+     "y": 360,
+     "w": 170,
+     "h": 64,
+     "text": "Ln of Tiny"
+    },
+    {
+     "id": "o_Ln_of_Period",
+     "type": "operator",
+     "x": 400,
+     "y": 450,
+     "w": 56,
+     "h": 56,
+     "text": "ln",
+     "socket": ""
+    },
+    {
+     "id": "r_Ln_of_Period",
+     "type": "value",
+     "x": 600,
+     "y": 450,
+     "w": 170,
+     "h": 64,
+     "text": "Ln of Period"
+    },
+    {
+     "id": "o_Exp_of_X",
+     "type": "operator",
+     "x": 400,
+     "y": 540,
+     "w": 56,
+     "h": 56,
+     "text": "exp",
+     "socket": ""
+    },
+    {
+     "id": "r_Exp_of_X",
+     "type": "value",
+     "x": 600,
+     "y": 540,
+     "w": 170,
+     "h": 64,
+     "text": "Exp of X"
+    },
+    {
+     "id": "o_Exp_of_Neg",
+     "type": "operator",
+     "x": 400,
+     "y": 630,
+     "w": 56,
+     "h": 56,
+     "text": "exp",
+     "socket": ""
+    },
+    {
+     "id": "r_Exp_of_Neg",
+     "type": "value",
+     "x": 600,
+     "y": 630,
+     "w": 170,
+     "h": 64,
+     "text": "Exp of Neg"
+    },
+    {
+     "id": "o_Exp_of_Big",
+     "type": "operator",
+     "x": 400,
+     "y": 720,
+     "w": 56,
+     "h": 56,
+     "text": "exp",
+     "socket": ""
+    },
+    {
+     "id": "r_Exp_of_Big",
+     "type": "value",
+     "x": 600,
+     "y": 720,
+     "w": 170,
+     "h": 64,
+     "text": "Exp of Big"
+    },
+    {
+     "id": "o_Exp_of_Zero",
+     "type": "operator",
+     "x": 400,
+     "y": 810,
+     "w": 56,
+     "h": 56,
+     "text": "exp",
+     "socket": ""
+    },
+    {
+     "id": "r_Exp_of_Zero",
+     "type": "value",
+     "x": 600,
+     "y": 810,
+     "w": 170,
+     "h": 64,
+     "text": "Exp of Zero"
+    },
+    {
+     "id": "o_Exp_of_Period",
+     "type": "operator",
+     "x": 400,
+     "y": 900,
+     "w": 56,
+     "h": 56,
+     "text": "exp",
+     "socket": ""
+    },
+    {
+     "id": "r_Exp_of_Period",
+     "type": "value",
+     "x": 600,
+     "y": 900,
+     "w": 170,
+     "h": 64,
+     "text": "Exp of Period"
+    },
+    {
+     "id": "o_Sqrt_of_X",
+     "type": "operator",
+     "x": 400,
+     "y": 990,
+     "w": 56,
+     "h": 56,
+     "text": "sqrt",
+     "socket": ""
+    },
+    {
+     "id": "r_Sqrt_of_X",
+     "type": "value",
+     "x": 600,
+     "y": 990,
+     "w": 170,
+     "h": 64,
+     "text": "Sqrt of X"
+    },
+    {
+     "id": "o_Sqrt_of_Zero",
+     "type": "operator",
+     "x": 400,
+     "y": 1080,
+     "w": 56,
+     "h": 56,
+     "text": "sqrt",
+     "socket": ""
+    },
+    {
+     "id": "r_Sqrt_of_Zero",
+     "type": "value",
+     "x": 600,
+     "y": 1080,
+     "w": 170,
+     "h": 64,
+     "text": "Sqrt of Zero"
+    },
+    {
+     "id": "o_Sqrt_of_Minus4",
+     "type": "operator",
+     "x": 400,
+     "y": 1170,
+     "w": 56,
+     "h": 56,
+     "text": "sqrt",
+     "socket": ""
+    },
+    {
+     "id": "r_Sqrt_of_Minus4",
+     "type": "value",
+     "x": 600,
+     "y": 1170,
+     "w": 170,
+     "h": 64,
+     "text": "Sqrt of Minus4"
+    },
+    {
+     "id": "o_Sqrt_of_Period",
+     "type": "operator",
+     "x": 400,
+     "y": 1260,
+     "w": 56,
+     "h": 56,
+     "text": "sqrt",
+     "socket": ""
+    },
+    {
+     "id": "r_Sqrt_of_Period",
+     "type": "value",
+     "x": 600,
+     "y": 1260,
+     "w": 170,
+     "h": 64,
+     "text": "Sqrt of Period"
+    },
+    {
+     "id": "o_Int_of_X",
+     "type": "operator",
+     "x": 400,
+     "y": 1350,
+     "w": 56,
+     "h": 56,
+     "text": "int",
+     "socket": ""
+    },
+    {
+     "id": "r_Int_of_X",
+     "type": "value",
+     "x": 600,
+     "y": 1350,
+     "w": 170,
+     "h": 64,
+     "text": "Int of X"
+    },
+    {
+     "id": "o_Int_of_Neg",
+     "type": "operator",
+     "x": 400,
+     "y": 1440,
+     "w": 56,
+     "h": 56,
+     "text": "int",
+     "socket": ""
+    },
+    {
+     "id": "r_Int_of_Neg",
+     "type": "value",
+     "x": 600,
+     "y": 1440,
+     "w": 170,
+     "h": 64,
+     "text": "Int of Neg"
+    },
+    {
+     "id": "o_Int_of_Half",
+     "type": "operator",
+     "x": 400,
+     "y": 1530,
+     "w": 56,
+     "h": 56,
+     "text": "int",
+     "socket": ""
+    },
+    {
+     "id": "r_Int_of_Half",
+     "type": "value",
+     "x": 600,
+     "y": 1530,
+     "w": 170,
+     "h": 64,
+     "text": "Int of Half"
+    },
+    {
+     "id": "o_Int_of_Whole",
+     "type": "operator",
+     "x": 400,
+     "y": 1620,
+     "w": 56,
+     "h": 56,
+     "text": "int",
+     "socket": ""
+    },
+    {
+     "id": "r_Int_of_Whole",
+     "type": "value",
+     "x": 600,
+     "y": 1620,
+     "w": 170,
+     "h": 64,
+     "text": "Int of Whole"
+    },
+    {
+     "id": "o_Int_of_Minus4",
+     "type": "operator",
+     "x": 400,
+     "y": 1710,
+     "w": 56,
+     "h": 56,
+     "text": "int",
+     "socket": ""
+    },
+    {
+     "id": "r_Int_of_Minus4",
+     "type": "value",
+     "x": 600,
+     "y": 1710,
+     "w": 170,
+     "h": 64,
+     "text": "Int of Minus4"
+    },
+    {
+     "id": "o_Trunc_of_X",
+     "type": "operator",
+     "x": 400,
+     "y": 1800,
+     "w": 56,
+     "h": 56,
+     "text": "trunc",
+     "socket": ""
+    },
+    {
+     "id": "r_Trunc_of_X",
+     "type": "value",
+     "x": 600,
+     "y": 1800,
+     "w": 170,
+     "h": 64,
+     "text": "Trunc of X"
+    },
+    {
+     "id": "o_Trunc_of_Neg",
+     "type": "operator",
+     "x": 400,
+     "y": 1890,
+     "w": 56,
+     "h": 56,
+     "text": "trunc",
+     "socket": ""
+    },
+    {
+     "id": "r_Trunc_of_Neg",
+     "type": "value",
+     "x": 600,
+     "y": 1890,
+     "w": 170,
+     "h": 64,
+     "text": "Trunc of Neg"
+    },
+    {
+     "id": "o_Trunc_of_Half",
+     "type": "operator",
+     "x": 400,
+     "y": 1980,
+     "w": 56,
+     "h": 56,
+     "text": "trunc",
+     "socket": ""
+    },
+    {
+     "id": "r_Trunc_of_Half",
+     "type": "value",
+     "x": 600,
+     "y": 1980,
+     "w": 170,
+     "h": 64,
+     "text": "Trunc of Half"
+    },
+    {
+     "id": "o_Trunc_of_Whole",
+     "type": "operator",
+     "x": 400,
+     "y": 2070,
+     "w": 56,
+     "h": 56,
+     "text": "trunc",
+     "socket": ""
+    },
+    {
+     "id": "r_Trunc_of_Whole",
+     "type": "value",
+     "x": 600,
+     "y": 2070,
+     "w": 170,
+     "h": 64,
+     "text": "Trunc of Whole"
+    },
+    {
+     "id": "o_Exp_of_X_again",
+     "type": "operator",
+     "x": 400,
+     "y": 2160,
+     "w": 56,
+     "h": 56,
+     "text": "exp",
+     "socket": ""
+    },
+    {
+     "id": "r_Exp_of_X_again",
+     "type": "value",
+     "x": 600,
+     "y": 2160,
+     "w": 170,
+     "h": 64,
+     "text": "Exp of X again"
+    },
+    {
+     "id": "o_Ln_of_exp_of_X",
+     "type": "operator",
+     "x": 400,
+     "y": 2250,
+     "w": 56,
+     "h": 56,
+     "text": "ln",
+     "socket": ""
+    },
+    {
+     "id": "r_Ln_of_exp_of_X",
+     "type": "value",
+     "x": 600,
+     "y": 2250,
+     "w": 170,
+     "h": 64,
+     "text": "Ln of exp of X"
+    },
+    {
+     "id": "o_Ln_of_Zero_again",
+     "type": "operator",
+     "x": 400,
+     "y": 2340,
+     "w": 56,
+     "h": 56,
+     "text": "ln",
+     "socket": ""
+    },
+    {
+     "id": "r_Ln_of_Zero_again",
+     "type": "value",
+     "x": 600,
+     "y": 2340,
+     "w": 170,
+     "h": 64,
+     "text": "Ln of Zero again"
+    },
+    {
+     "id": "o_Sqrt_of_an_error",
+     "type": "operator",
+     "x": 400,
+     "y": 2430,
+     "w": 56,
+     "h": 56,
+     "text": "sqrt",
+     "socket": ""
+    },
+    {
+     "id": "r_Sqrt_of_an_error",
+     "type": "value",
+     "x": 600,
+     "y": 2430,
+     "w": 170,
+     "h": 64,
+     "text": "Sqrt of an error"
+    },
+    {
+     "id": "o_Sqrt_of_Period_again",
+     "type": "operator",
+     "x": 400,
+     "y": 2520,
+     "w": 56,
+     "h": 56,
+     "text": "sqrt",
+     "socket": ""
+    },
+    {
+     "id": "r_Sqrt_of_Period_again",
+     "type": "value",
+     "x": 600,
+     "y": 2520,
+     "w": 170,
+     "h": 64,
+     "text": "Sqrt of Period again"
+    },
+    {
+     "id": "o_Int_of_sqrt_of_Period",
+     "type": "operator",
+     "x": 400,
+     "y": 2610,
+     "w": 56,
+     "h": 56,
+     "text": "int",
+     "socket": ""
+    },
+    {
+     "id": "r_Int_of_sqrt_of_Period",
+     "type": "value",
+     "x": 600,
+     "y": 2610,
+     "w": 170,
+     "h": 64,
+     "text": "Int of sqrt of Period"
+    },
+    {
+     "id": "o_two",
+     "type": "operator",
+     "x": 400,
+     "y": 2700,
+     "w": 56,
+     "h": 56,
+     "text": "ln",
+     "socket": ""
+    },
+    {
+     "id": "r_two",
+     "type": "value",
+     "x": 600,
+     "y": 2700,
+     "w": 170,
+     "h": 64,
+     "text": "Ln of two inputs"
+    },
+    {
+     "id": "f_Mix_of_X",
+     "type": "function",
+     "x": 400,
+     "y": 2790,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-e2a-mix",
+      "version": 1,
+      "versionId": "version-e2a-mix-1",
+      "name": "Mix"
+     }
+    },
+    {
+     "id": "r_Mix_of_X",
+     "type": "value",
+     "x": 600,
+     "y": 2790,
+     "w": 170,
+     "h": 64,
+     "text": "Mix of X"
+    },
+    {
+     "id": "f_Mix_of_Period",
+     "type": "function",
+     "x": 400,
+     "y": 2880,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-e2a-mix",
+      "version": 1,
+      "versionId": "version-e2a-mix-1",
+      "name": "Mix"
+     }
+    },
+    {
+     "id": "r_Mix_of_Period",
+     "type": "value",
+     "x": 600,
+     "y": 2880,
+     "w": 170,
+     "h": 64,
+     "text": "Mix of Period"
+    },
+    {
+     "id": "f_Mix_of_Neg",
+     "type": "function",
+     "x": 400,
+     "y": 2970,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-e2a-mix",
+      "version": 1,
+      "versionId": "version-e2a-mix-1",
+      "name": "Mix"
+     }
+    },
+    {
+     "id": "r_Mix_of_Neg",
+     "type": "value",
+     "x": 600,
+     "y": 2970,
+     "w": 170,
+     "h": 64,
+     "text": "Mix of Neg"
+    },
+    {
+     "id": "f_SafeLn_of_Zero",
+     "type": "function",
+     "x": 400,
+     "y": 3060,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-e2a-safe",
+      "version": 1,
+      "versionId": "version-e2a-safe-1",
+      "name": "SafeLn"
+     }
+    },
+    {
+     "id": "r_SafeLn_of_Zero",
+     "type": "value",
+     "x": 600,
+     "y": 3060,
+     "w": 170,
+     "h": 64,
+     "text": "SafeLn of Zero"
+    },
+    {
+     "id": "f_SafeLn_of_X",
+     "type": "function",
+     "x": 400,
+     "y": 3150,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-e2a-safe",
+      "version": 1,
+      "versionId": "version-e2a-safe-1",
+      "name": "SafeLn"
+     }
+    },
+    {
+     "id": "r_SafeLn_of_X",
+     "type": "value",
+     "x": 600,
+     "y": 3150,
+     "w": 170,
+     "h": 64,
+     "text": "SafeLn of X"
+    }
+   ],
+   "edges": [
+    {
+     "id": "e1",
+     "from": "per",
+     "to": "Period"
+    },
+    {
+     "id": "e2",
+     "from": "X",
+     "to": "o_Ln_of_X"
+    },
+    {
+     "id": "e3",
+     "from": "o_Ln_of_X",
+     "to": "r_Ln_of_X"
+    },
+    {
+     "id": "e4",
+     "from": "Zero",
+     "to": "o_Ln_of_Zero"
+    },
+    {
+     "id": "e5",
+     "from": "o_Ln_of_Zero",
+     "to": "r_Ln_of_Zero"
+    },
+    {
+     "id": "e6",
+     "from": "Neg",
+     "to": "o_Ln_of_Neg"
+    },
+    {
+     "id": "e7",
+     "from": "o_Ln_of_Neg",
+     "to": "r_Ln_of_Neg"
+    },
+    {
+     "id": "e8",
+     "from": "Tiny",
+     "to": "o_Ln_of_Tiny"
+    },
+    {
+     "id": "e9",
+     "from": "o_Ln_of_Tiny",
+     "to": "r_Ln_of_Tiny"
+    },
+    {
+     "id": "e10",
+     "from": "Period",
+     "to": "o_Ln_of_Period"
+    },
+    {
+     "id": "e11",
+     "from": "o_Ln_of_Period",
+     "to": "r_Ln_of_Period"
+    },
+    {
+     "id": "e12",
+     "from": "X",
+     "to": "o_Exp_of_X"
+    },
+    {
+     "id": "e13",
+     "from": "o_Exp_of_X",
+     "to": "r_Exp_of_X"
+    },
+    {
+     "id": "e14",
+     "from": "Neg",
+     "to": "o_Exp_of_Neg"
+    },
+    {
+     "id": "e15",
+     "from": "o_Exp_of_Neg",
+     "to": "r_Exp_of_Neg"
+    },
+    {
+     "id": "e16",
+     "from": "Big",
+     "to": "o_Exp_of_Big"
+    },
+    {
+     "id": "e17",
+     "from": "o_Exp_of_Big",
+     "to": "r_Exp_of_Big"
+    },
+    {
+     "id": "e18",
+     "from": "Zero",
+     "to": "o_Exp_of_Zero"
+    },
+    {
+     "id": "e19",
+     "from": "o_Exp_of_Zero",
+     "to": "r_Exp_of_Zero"
+    },
+    {
+     "id": "e20",
+     "from": "Period",
+     "to": "o_Exp_of_Period"
+    },
+    {
+     "id": "e21",
+     "from": "o_Exp_of_Period",
+     "to": "r_Exp_of_Period"
+    },
+    {
+     "id": "e22",
+     "from": "X",
+     "to": "o_Sqrt_of_X"
+    },
+    {
+     "id": "e23",
+     "from": "o_Sqrt_of_X",
+     "to": "r_Sqrt_of_X"
+    },
+    {
+     "id": "e24",
+     "from": "Zero",
+     "to": "o_Sqrt_of_Zero"
+    },
+    {
+     "id": "e25",
+     "from": "o_Sqrt_of_Zero",
+     "to": "r_Sqrt_of_Zero"
+    },
+    {
+     "id": "e26",
+     "from": "Minus4",
+     "to": "o_Sqrt_of_Minus4"
+    },
+    {
+     "id": "e27",
+     "from": "o_Sqrt_of_Minus4",
+     "to": "r_Sqrt_of_Minus4"
+    },
+    {
+     "id": "e28",
+     "from": "Period",
+     "to": "o_Sqrt_of_Period"
+    },
+    {
+     "id": "e29",
+     "from": "o_Sqrt_of_Period",
+     "to": "r_Sqrt_of_Period"
+    },
+    {
+     "id": "e30",
+     "from": "X",
+     "to": "o_Int_of_X"
+    },
+    {
+     "id": "e31",
+     "from": "o_Int_of_X",
+     "to": "r_Int_of_X"
+    },
+    {
+     "id": "e32",
+     "from": "Neg",
+     "to": "o_Int_of_Neg"
+    },
+    {
+     "id": "e33",
+     "from": "o_Int_of_Neg",
+     "to": "r_Int_of_Neg"
+    },
+    {
+     "id": "e34",
+     "from": "Half",
+     "to": "o_Int_of_Half"
+    },
+    {
+     "id": "e35",
+     "from": "o_Int_of_Half",
+     "to": "r_Int_of_Half"
+    },
+    {
+     "id": "e36",
+     "from": "Whole",
+     "to": "o_Int_of_Whole"
+    },
+    {
+     "id": "e37",
+     "from": "o_Int_of_Whole",
+     "to": "r_Int_of_Whole"
+    },
+    {
+     "id": "e38",
+     "from": "Minus4",
+     "to": "o_Int_of_Minus4"
+    },
+    {
+     "id": "e39",
+     "from": "o_Int_of_Minus4",
+     "to": "r_Int_of_Minus4"
+    },
+    {
+     "id": "e40",
+     "from": "X",
+     "to": "o_Trunc_of_X"
+    },
+    {
+     "id": "e41",
+     "from": "o_Trunc_of_X",
+     "to": "r_Trunc_of_X"
+    },
+    {
+     "id": "e42",
+     "from": "Neg",
+     "to": "o_Trunc_of_Neg"
+    },
+    {
+     "id": "e43",
+     "from": "o_Trunc_of_Neg",
+     "to": "r_Trunc_of_Neg"
+    },
+    {
+     "id": "e44",
+     "from": "Half",
+     "to": "o_Trunc_of_Half"
+    },
+    {
+     "id": "e45",
+     "from": "o_Trunc_of_Half",
+     "to": "r_Trunc_of_Half"
+    },
+    {
+     "id": "e46",
+     "from": "Whole",
+     "to": "o_Trunc_of_Whole"
+    },
+    {
+     "id": "e47",
+     "from": "o_Trunc_of_Whole",
+     "to": "r_Trunc_of_Whole"
+    },
+    {
+     "id": "e48",
+     "from": "X",
+     "to": "o_Exp_of_X_again"
+    },
+    {
+     "id": "e49",
+     "from": "o_Exp_of_X_again",
+     "to": "r_Exp_of_X_again"
+    },
+    {
+     "id": "e50",
+     "from": "r_Exp_of_X_again",
+     "to": "o_Ln_of_exp_of_X"
+    },
+    {
+     "id": "e51",
+     "from": "o_Ln_of_exp_of_X",
+     "to": "r_Ln_of_exp_of_X"
+    },
+    {
+     "id": "e52",
+     "from": "Zero",
+     "to": "o_Ln_of_Zero_again"
+    },
+    {
+     "id": "e53",
+     "from": "o_Ln_of_Zero_again",
+     "to": "r_Ln_of_Zero_again"
+    },
+    {
+     "id": "e54",
+     "from": "r_Ln_of_Zero_again",
+     "to": "o_Sqrt_of_an_error"
+    },
+    {
+     "id": "e55",
+     "from": "o_Sqrt_of_an_error",
+     "to": "r_Sqrt_of_an_error"
+    },
+    {
+     "id": "e56",
+     "from": "Period",
+     "to": "o_Sqrt_of_Period_again"
+    },
+    {
+     "id": "e57",
+     "from": "o_Sqrt_of_Period_again",
+     "to": "r_Sqrt_of_Period_again"
+    },
+    {
+     "id": "e58",
+     "from": "r_Sqrt_of_Period_again",
+     "to": "o_Int_of_sqrt_of_Period"
+    },
+    {
+     "id": "e59",
+     "from": "o_Int_of_sqrt_of_Period",
+     "to": "r_Int_of_sqrt_of_Period"
+    },
+    {
+     "id": "e60",
+     "from": "X",
+     "to": "o_two"
+    },
+    {
+     "id": "e61",
+     "from": "Whole",
+     "to": "o_two"
+    },
+    {
+     "id": "e62",
+     "from": "o_two",
+     "to": "r_two"
+    },
+    {
+     "id": "e63",
+     "from": "X",
+     "to": "f_Mix_of_X",
+     "toPort": 0
+    },
+    {
+     "id": "e64",
+     "from": "f_Mix_of_X",
+     "to": "r_Mix_of_X"
+    },
+    {
+     "id": "e65",
+     "from": "Period",
+     "to": "f_Mix_of_Period",
+     "toPort": 0
+    },
+    {
+     "id": "e66",
+     "from": "f_Mix_of_Period",
+     "to": "r_Mix_of_Period"
+    },
+    {
+     "id": "e67",
+     "from": "Neg",
+     "to": "f_Mix_of_Neg",
+     "toPort": 0
+    },
+    {
+     "id": "e68",
+     "from": "f_Mix_of_Neg",
+     "to": "r_Mix_of_Neg"
+    },
+    {
+     "id": "e69",
+     "from": "Zero",
+     "to": "f_SafeLn_of_Zero",
+     "toPort": 0
+    },
+    {
+     "id": "e70",
+     "from": "f_SafeLn_of_Zero",
+     "to": "r_SafeLn_of_Zero"
+    },
+    {
+     "id": "e71",
+     "from": "X",
+     "to": "f_SafeLn_of_X",
+     "toPort": 0
+    },
+    {
+     "id": "e72",
+     "from": "f_SafeLn_of_X",
+     "to": "r_SafeLn_of_X"
+    }
+   ]
+  }
+ ]
+}

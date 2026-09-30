@@ -32,6 +32,8 @@
   // the ribbon groups them: = and ≠ with the comparisons; the others with the Excel functions.
   const E1_COMPARE_OPS = ['=', '≠'].map(sym => OPS.indexOf(sym));
   const E1_FUNCTION_OPS = ['if', 'and', 'or', 'not', 'round', 'roundup', 'rounddown', 'period'].map(sym => OPS.indexOf(sym));
+  // Phase E2a's, with the Excel functions too.
+  const E2_FUNCTION_OPS = ['ln', 'exp', 'sqrt', 'int', 'trunc'].map(sym => OPS.indexOf(sym));
   // Height of an operator box with `count` named inputs: its symbol, then a row per input.
   function operatorPortsHeight(count){ return 26 + count * 20 + 6; }
 

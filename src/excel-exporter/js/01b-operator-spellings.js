@@ -40,4 +40,10 @@ const EXCEL_SPELLINGS = {
   round:     { fn: 'ROUND', ports: true, numeric: true },
   roundup:   { fn: 'ROUNDUP', ports: true, numeric: true },
   rounddown: { fn: 'ROUNDDOWN', ports: true, numeric: true },
+  // Phase E2a.
+  ln:        { fn: 'LN', one: true, numeric: true },
+  exp:       { fn: 'EXP', one: true, numeric: true },
+  sqrt:      { fn: 'SQRT', one: true, numeric: true },
+  int:       { fn: 'INT', one: true, numeric: true },
+  trunc:     { fn: 'TRUNC', one: true, numeric: true },
 };

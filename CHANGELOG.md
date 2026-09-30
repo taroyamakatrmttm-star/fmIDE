@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Five more Excel functions as operators (step 7, phase E2a)
+- **ln**, **exp**, **sqrt**, **int** and **trunc** calculate the same in fmIDE and Excel (LN, EXP, SQRT, INT, TRUNC). Each takes one input. The log of 0 or less, the square root of a negative number and e to a power too large show "?" (Excel's #NUM!). **int** rounds down (−2.5 gives −3); **trunc** cuts the fraction off (−2.5 gives −2; for digits, use rounddown). The results of ln, exp and sqrt have no unit; int and trunc keep their input's.
+- They are in the palette, the Command Launcher (Insert Operator ln … trunc, commands 25–29) and on the ribbon's Insert → Excel Functions; a customised ribbon gets them once. Functions can use them too: `LN(x)`, `EXP(x)`, `SQRT(x)`, `INT(x)`, `TRUNC(x)`.
+- File formats: system 8, module 6, workspace 9, templates file 8, so an older fmIDE or ExcelExporter asks before opening a file that may use them. Older files open unchanged.
+
 ## Block instances remember their Excel layout (step 11, phase 11d)
 - **Arrange a block's instance tab once.** For a block added from a template in fmIDE, ExcelExporter remembers how you arranged an instance tab — row order, labels, blank and label rows, Include / Constant, formats and indents — and every model with that block starts its instance tabs that way, the first time it is laid out. Vertical blocks match their rows by vintage, Total and shared row; extra vintages go after the last one.
 - **"Lay out the other instances like this"**, on an instance tab in the Tabs panel, gives the block's other instances in the model the same layout (their tab names are kept) — for any block, from a template or not.
