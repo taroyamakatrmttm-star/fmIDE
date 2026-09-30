@@ -325,7 +325,7 @@ The problem found in D3: `runFunction` and `functionUnit` (`src/shared/functions
 
 ## Phase E — new built-in operators
 
-Chosen with the owner (September 2026): a hard-coded operator is worth adding only where a function (phase D) can't do the job. **E1** (timing, conditions, rounding) comes first, in two pull requests: **E1a** the calculation in both apps, **E1b** fmIDE's canvas. E2 (LN, EXP, SQRT, INT, TRUNC, CHOOSE) may follow. Operators that read a whole row of periods (NPV, IRR, running totals) and lookups are a larger change of their own, not phase E.
+Chosen with the owner (September 2026): a hard-coded operator is worth adding only where a function (phase D) can't do the job. **E1** (timing, conditions, rounding) comes first, in two pull requests: **E1a** the calculation in both apps, **E1b** fmIDE's canvas. E2 (LN, EXP, SQRT, INT, TRUNC, CHOOSE) may follow — the owner chose to do it in September 2026: E2a (below) and E2b (CHOOSE, its own plan). Operators that read a whole row of periods (NPV, IRR, running totals) and lookups are a larger change of their own, not phase E.
 
 Decisions taken at the start of E1 (the owner chose the recommendation each time):
 
@@ -393,3 +393,24 @@ What was built (fmIDE only; nothing in the calculation, the file formats or Exce
 
 How it was checked: new tests in group 18 — the drawing (labels, dots, each arrow ending on its own input's dot, no badge), dragging onto a dot and onto the body (and the message when every input is taken, and none into the period number), changing a symbol both ways with undo, the Insert Operator commands 0–24, the default ribbon, and a customised ribbon getting the operators once. The E1a test that pinned "15 operators until E1b" now pins the 25 commands. The whole suite passes: 535 tests, LibreOffice included, none skipped. Nothing in the calculation changed, so the snapshots and `npm run bench` are unaffected (fmIDE's calculation code is untouched; the drawing adds a row per named input).
 
+### E2a — ln, exp, sqrt, int, trunc ✅
+
+Decided when the plan was approved (30 Sep 2026, the owner chose each recommendation): E2 in two phases — **E2a** the five one-input functions, fully (calculation, both apps, canvas, functions), then **E2b** CHOOSE with its own plan; **TRUNC takes one input** (TRUNC with digits is what `rounddown` already does); **the results of LN, EXP and SQRT have no unit** (INT and TRUNC keep their input's).
+
+What was built:
+
+- **`src/shared/operators.js`:** five `unary` operators at the end of the catalogue (lasting ids and symbols `ln exp sqrt int trunc`, shown with ƒ). A one-input operator whose result isn't a finite number is now a `math-error` (Excel's #NUM!): the log of 0 or less, the root of a negative, e to a power too large. INT goes down and TRUNC towards zero on the number as stored, as Excel does (`int((0.1 + 0.7) × 10)` is 7; LibreOffice, which rounds first, says 8 — so the agreement samples avoid numbers a hair below a whole one); neither gives −0.
+- **`src/shared/functions.js`:** `LN EXP SQRT INT TRUNC` are built-in functions of one input (they were kept back before, so no function or input can have had one of those names).
+- **File formats:** `system` 8, `module` 6, `fmIDE-workspace` 9, `fmIDE-templates` 8; each upgrade step changes nothing, so an older app asks before opening a file that may use the new operators.
+- **ExcelExporter:** spellings `LN`, `EXP`, `SQRT`, `INT`, `TRUNC` (one input, else `NA()`; a TRUE/FALSE read is turned into 1/0 first).
+- **fmIDE:** the palette, the operator picker, the Insert Operator commands `insertOp25`–`insertOp29` (after the first 25, whose numbers stay), the ribbon's Insert → Excel Functions; a ribbon customised before gets them once in the group holding the Excel functions (`ui.operatorsE2Added`). A help sentence each; the Operators help topic says what they do. `tools/build-help.js` reads the new ribbon list (`E2_FUNCTION_OPS`).
+
+How it was checked:
+
+- **Agreement (group 17):** new sample `agreement/operators-e2a.json` (four periods): each operator on a positive, a negative, zero, a tiny and a large number and on the period number; chains (`ln(exp(x))`, an error passed on, `int(sqrt(period))`); two arrows into `ln`; a function using all five and one catching `LN(0)` with IFERROR. fmIDE and the workbook recalculated by LibreOffice agree, and a new test pins Excel's answers (for example `int(−2.5)` −3, `trunc(−2.5)` −2, `ln(0)` an error).
+- **Group 18:** the catalogue's new ids, symbols, results, errors and units; the 30 Insert Operator commands; the default ribbon; a ribbon customised before E1b gets both phases' operators, one customised after E1b gets E2a's once; the operators wired and calculated through `window.fm`.
+- **Group 19:** the exact formulas on the canvas and in functions; every operator has a spelling and is in a sample.
+- **Group 20:** the parser accepts the five (any capitals) and refuses a second input (`TRUNC(a, 2)`) and their names as a function's or an input's.
+- **Group 6:** new old-version samples `module-v5.json`, `ws-v8.json`, `templates-v7.json` (and `sys-newer-v7.json`, now an ordinary file) open without a question and save in the new versions; new "newer" samples `sys-newer-v9.json`, `ws-nested-newer-v9.json`. Tests pinning version numbers were raised by one (groups 6, 13, 14, 15, 16, 18 and 20).
+- **Snapshots:** new ones for the new sample; no existing snapshot changed.
+- **Speed** (`npm run bench 30`, the large model, `main` and E2a alternating on the same machine): fmIDE's `fm.evaluate` medians 1,629 / 1,788 ms on `main` against 1,578 / 1,695 ms with E2a; ExcelExporter's Generate 585 / 546 ms against 536 / 529 ms (15 runs) — within what repeated runs show.

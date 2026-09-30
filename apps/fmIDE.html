@@ -1140,6 +1140,16 @@
     { id: 'round',     symbol: 'round',     fn: true, ports: ['value', 'digits'], apply: (v, d) => roundLikeExcel(v, d, 'half'), unit: 'first' },
     { id: 'roundup',   symbol: 'roundup',   fn: true, ports: ['value', 'digits'], apply: (v, d) => roundLikeExcel(v, d, 'up'), unit: 'first' },
     { id: 'rounddown', symbol: 'rounddown', fn: true, ports: ['value', 'digits'], apply: (v, d) => roundLikeExcel(v, d, 'down'), unit: 'first' },
+    // Phase E2a: one-input Excel functions. A result that isn't a finite number (the log of 0
+    // or less, the root of a negative, e to a power too large) is a 'math-error', as Excel's
+    // #NUM!. The log, e and root have no unit; int and trunc keep their input's. INT goes down
+    // (towards minus infinity) and TRUNC towards zero, on the number as stored, as Excel does:
+    // INT((0.1 + 0.7) * 10) is 7 (LibreOffice, which rounds first, says 8).
+    { id: 'ln',        symbol: 'ln',        fn: true, unary: (a) => a > 0 ? Math.log(a) : NaN, unit: null },
+    { id: 'exp',       symbol: 'exp',       fn: true, unary: (a) => Math.exp(a), unit: null },
+    { id: 'sqrt',      symbol: 'sqrt',      fn: true, unary: (a) => a >= 0 ? Math.sqrt(a) : NaN, unit: null },
+    { id: 'int',       symbol: 'int',       fn: true, unary: (a) => Math.floor(a) + 0, unit: 'same' }, // + 0: never −0, which Excel doesn't have
+    { id: 'trunc',     symbol: 'trunc',     fn: true, unary: (a) => Math.trunc(a) + 0, unit: 'same' },
   ];
 
   // Equal but for the last few binary digits, as Excel and LibreOffice compare numbers.
@@ -1190,7 +1200,9 @@
       return isFinite(r) ? { value: r } : { error: 'math-error' };
     }
     if(op.unary){
-      return values.length === 1 ? { value: op.unary(values[0]) } : { error: 'unary-only' };
+      if(values.length !== 1) return { error: 'unary-only' };
+      const r = op.unary(values[0]);
+      return isFinite(r) ? { value: r } : { error: 'math-error' };
     }
     if(op.compare){
       if(values.length < 2) return { error: 'needs-two' };
@@ -1219,6 +1231,8 @@
   // the ribbon groups them: = and ≠ with the comparisons; the others with the Excel functions.
   const E1_COMPARE_OPS = ['=', '≠'].map(sym => OPS.indexOf(sym));
   const E1_FUNCTION_OPS = ['if', 'and', 'or', 'not', 'round', 'roundup', 'rounddown', 'period'].map(sym => OPS.indexOf(sym));
+  // Phase E2a's, with the Excel functions too.
+  const E2_FUNCTION_OPS = ['ln', 'exp', 'sqrt', 'int', 'trunc'].map(sym => OPS.indexOf(sym));
   // Height of an operator box with `count` named inputs: its symbol, then a row per input.
   function operatorPortsHeight(count){ return 26 + count * 20 + 6; }
 
@@ -1581,12 +1595,13 @@
         { see: ['operators', 'arrows', 'values-over-time', 'plugs-sockets', 'formats'] },
       ] },
     { id: 'operators', group: 'build', title: 'Operators',
-      keywords: 'operator add subtract multiply divide plus minus times sum min max average abs iferror power modulo',
+      keywords: 'operator add subtract multiply divide plus minus times sum min max average abs iferror power modulo ln log logarithm exp exponential sqrt square root int trunc whole number',
       summary: 'Small boxes that combine the values of the arrows coming in: + − × ÷ and more.',
       body: [
         { p: '{cmd:addOperator} adds one and asks which. The Insert tab has every operator as its own button, in the groups Arithmetic, Compare and Excel Functions. Double-click an operator to change it.' },
         { p: '+ and × take any number of arrows. For − ÷ ^ and %, the order counts: inputs are taken from left to right by where they sit on the canvas, and a small number on each arrow shows its place.' },
         { p: 'min, max, ave (average) and abs work like their Excel functions. iferror uses its first input, or the second one where the first has an error.' },
+        { p: 'ln, exp, sqrt, int and trunc take one input each, like Excel\'s LN, EXP, SQRT, INT and TRUNC. The log of 0 or less and the square root of a negative number are errors ("?"). int rounds down (−2.5 gives −3), trunc cuts the fraction off (−2.5 gives −2). The results of ln, exp and sqrt have no unit.' },
         { p: 'Draw the operator\'s result into a rectangle, so it has a name and appears in Excel.' },
         { see: ['arrows', 'timing-conditions', 'functions'] },
       ] },
@@ -1987,6 +2002,11 @@
     round: 'rounds a value to a number of digits, like Excel\'s ROUND.',
     roundup: 'rounds a value away from zero, like Excel\'s ROUNDUP.',
     rounddown: 'rounds a value towards zero, like Excel\'s ROUNDDOWN.',
+    ln: 'gives the natural logarithm of its input, like Excel\'s LN.',
+    exp: 'gives e raised to the power of its input, like Excel\'s EXP.',
+    sqrt: 'gives the square root of its input, like Excel\'s SQRT.',
+    int: 'rounds its input down to a whole number, like Excel\'s INT.',
+    trunc: 'cuts the fraction off its input, like Excel\'s TRUNC.',
   };
   // =====================================================================================
   // The Help panel (build step 10; docs/step10-help.md) — shared by fmIDE and ExcelExporter.
@@ -3990,7 +4010,7 @@
   // (docs/file-formats.md). To change one of these formats: raise its version here and add
   // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
   // exactly one version.
-  const SHARED_FILE_VERSIONS = { 'system': 7, 'fmIDE-workspace': 8 };
+  const SHARED_FILE_VERSIONS = { 'system': 8, 'fmIDE-workspace': 9 };
   // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
   // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
   function upgradeNodePlugs(nodes){
@@ -4070,7 +4090,10 @@
       6: d => { dropExcelOnlyPresets(d.formatPresets); },
       // v7 → v8: its templates may carry attachments for other outputs (`attachments`, step
       // 11c); older ones have none.
-      7: () => {}
+      7: () => {},
+      // v8 → v9: its system (v8) and templates (v8) may use the operators of phase E2a; older
+      // ones don't.
+      8: () => {}
     },
     'system': {
       // v1 systems were accepted with fields the loader already defaults (periods, ids…);
@@ -4101,7 +4124,11 @@
       6: d => {
         dropExcelOnlyPresets(d.formatPresets);
         (Array.isArray(d.canvases) ? d.canvases : []).forEach(c => { if(c) dropExcelOnlyNodeStyles(c.nodes); });
-      }
+      },
+      // v7 → v8: the operators of phase E2a (ln, exp, sqrt, int, trunc). Older systems have
+      // none, so nothing changes; an older app asks before opening a v8 file instead of
+      // calculating those operators as ones it doesn't know.
+      7: () => {}
     }
   };
   // A file's kind: its "kind" field, or — for files saved before kinds were written — its
@@ -4173,9 +4200,9 @@
   // Every kind fmIDE knows: its current version, what people call it, and where it is opened.
   const FILE_FORMATS = {
     'system':               { current: SHARED_FILE_VERSIONS['system'], label: 'system', where: 'File → Load System' },
-    'module':               { current: 5, label: 'module',              where: 'File → Load Module' },
+    'module':               { current: 6, label: 'module',              where: 'File → Load Module' },
     'fmIDE-workspace':      { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'workspace', where: 'File → Import Workspace' },
-    'fmIDE-templates':      { current: 7, label: 'templates file',      where: 'Templates → Import Templates' },
+    'fmIDE-templates':      { current: 8, label: 'templates file',      where: 'Templates → Import Templates' },
     'fmIDE-functions':      { current: 2, label: 'functions file',      where: 'Functions → Import Functions' },
     'fmIDE-format-presets': { current: 2, label: 'format presets file', where: 'Format Presets → Import Presets' },
     'fmIDE-shortcuts':      { current: 2, label: 'shortcuts file',      where: 'Keyboard Shortcuts → Import Shortcuts' },
@@ -4199,7 +4226,9 @@
       3: () => {},
       // v4 → v5: the Excel look moved to ExcelExporter (step 11a), as system v6 → v7: every
       // rectangle's Excel-only style settings are dropped.
-      4: d => { dropExcelOnlyNodeStyles(d.nodes); dropExcelOnlyPresets(d.formatPresets); }
+      4: d => { dropExcelOnlyNodeStyles(d.nodes); dropExcelOnlyPresets(d.formatPresets); },
+      // v5 → v6: the operators of phase E2a, as system v7 → v8; older modules have none.
+      5: () => {}
     },
     // v1 → v2: the Excel look moved to ExcelExporter (step 11a): the Excel-only format roles
     // and style settings are dropped.
@@ -4222,7 +4251,10 @@
       5: () => {},
       // v6 → v7: a canvas template may carry attachments for other outputs (`attachments`,
       // step 11c: its Excel layout); older ones have none.
-      6: () => {}
+      6: () => {},
+      // v7 → v8: a template's module or system may use the operators of phase E2a; older ones
+      // don't.
+      7: () => {}
     },
     // v1 → v2: an item in a pack may say which pack it came from before (`origin`, phase 8b),
     // so re-sharing keeps its author's credit; older packs have no such record.
@@ -5449,13 +5481,19 @@
     ROUNDUP:   { id: 'roundup',   min: 2, max: 2 },
     ROUNDDOWN: { id: 'rounddown', min: 2, max: 2 },
     PERIOD:    { id: 'period',    min: 0, max: 0 },
+    // Phase E2a.
+    LN:        { id: 'ln',        min: 1, max: 1 },
+    EXP:       { id: 'exp',       min: 1, max: 1 },
+    SQRT:      { id: 'sqrt',      min: 1, max: 1 },
+    INT:       { id: 'int',       min: 1, max: 1 },
+    TRUNC:     { id: 'trunc',     min: 1, max: 1 },
   });
   // Built-in names an input may still have (they came after functions did, so a definition
   // may already use them for an input): read as the input unless followed by "(".
   const FUNCTION_INPUT_NAMES_ALLOWED = new Set(['PERIOD']);
   // Names kept back: Excel functions that are not available (yet), so a formula using one
   // says so instead of looking for a function of that name.
-  const FUNCTION_RESERVED = new Set(['IFS', 'XOR', 'SUM', 'PRODUCT', 'INT', 'TRUNC', 'LN', 'LOG', 'LOG10', 'EXP', 'SQRT', 'POWER', 'SIGN', 'COUNT', 'LET', 'LAMBDA',
+  const FUNCTION_RESERVED = new Set(['IFS', 'XOR', 'SUM', 'PRODUCT', 'LOG', 'LOG10', 'POWER', 'SIGN', 'COUNT', 'LET', 'LAMBDA',
     'CHOOSE', 'INDEX', 'NA', 'TRUE', 'FALSE', 'PI', 'CEILING', 'FLOOR', 'MEDIAN', 'SUMPRODUCT']);
   // Symbols and the catalogue operator each one is. The typographic signs fmIDE shows on its
   // operators are accepted too.
@@ -15595,7 +15633,7 @@
         { label:'Nodes', items:[ { cmd:'addRect', size:'large' }, { cmd:'addAlias', size:'large' }, { cmd:'addBlock', size:'large' }, { cmd:'addPeriodShift', size:'large' } ] },
         { label:'Arithmetic', items:[0,1,2,3,4,5].map(i => ({ cmd:'insertOp' + i })) },
         { label:'Compare', items:[6,7,8,9].concat(E1_COMPARE_OPS).map(i => ({ cmd:'insertOp' + i })) },
-        { label:'Excel Functions', items:[10,11,12,13,14].concat(E1_FUNCTION_OPS).map(i => ({ cmd:'insertOp' + i })) },
+        { label:'Excel Functions', items:[10,11,12,13,14].concat(E1_FUNCTION_OPS, E2_FUNCTION_OPS).map(i => ({ cmd:'insertOp' + i })) },
         cloneData(FUNCTIONS_RIBBON_GROUP),
         { label:'Library', items:[ { cmd:'openTemplates', size:'large' }, { cmd:'updateCanvasTemplate' }, { cmd:'unlinkCanvasTemplate' } ] },
       ]},
@@ -18350,6 +18388,7 @@
       functionsGroupAdded: true,
       functionCommandsAdded: true, // D2b: Insert Function… and Update Function… in My Functions
       operatorsE1Added: true, // E1b: the new operators in the Compare and Excel Functions groups
+      operatorsE2Added: true, // E2a: ln, exp, sqrt, int and trunc in the Excel Functions group
       libraryPacksAdded: true, // 8a: Open Library Pack… and Save as Library Pack… in the File tab's Library group
       libraryBrowseAdded: true, // 8d: Browse Library… in the same group
       helpAdded: true, // step 10: the Help group at the end of the View tab
@@ -18403,6 +18442,15 @@
       list.forEach(i => { if(!g.items.some(it => it && it.cmd === 'insertOp' + i)) g.items.push({ cmd: 'insertOp' + i }); });
     });
   }
+  // One-time update (E2a) of a customised ribbon: ln, exp, sqrt, int and trunc join the group
+  // holding the Excel functions (min…), wherever the person moved it, as in E1b.
+  function addE2OperatorsToRibbon(){
+    const groups = [];
+    ribbonState.config.tabs.forEach(t => (t && Array.isArray(t.groups) ? t.groups : []).forEach(g => { if(g && Array.isArray(g.items)) groups.push(g); }));
+    const g = groups.find(x => x.items.some(it => it && it.cmd === 'insertOp11'));
+    if(!g) return;
+    E2_FUNCTION_OPS.forEach(i => { if(!g.items.some(it => it && it.cmd === 'insertOp' + i)) g.items.push({ cmd: 'insertOp' + i }); });
+  }
   // One-time update (8a) of a customised ribbon: Open Library Pack… and Save as Library
   // Pack… join the group holding Format Presets (the File tab's Library group), wherever the
   // person moved it. A ribbon without it is left alone (the Command Launcher has both); a
@@ -18451,6 +18499,7 @@
       if(ui.functionsGroupAdded !== true) addFunctionsGroupToRibbon();
       if(ui.functionCommandsAdded !== true) addFunctionCommandsToRibbon();
       if(ui.operatorsE1Added !== true) addE1OperatorsToRibbon();
+      if(ui.operatorsE2Added !== true) addE2OperatorsToRibbon();
       if(ui.libraryPacksAdded !== true) addLibraryPackCommandsToRibbon();
       if(ui.libraryBrowseAdded !== true) addLibraryBrowseCommandToRibbon();
       if(ui.helpAdded !== true) addHelpGroupToRibbon();

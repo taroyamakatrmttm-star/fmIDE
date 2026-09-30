@@ -195,6 +195,40 @@ test('edge cases: fmIDE gives the agreed answers', async ({ page }) => {
   expect(v['Fed by empty iferror']).toEqual([5, 5, 5]);
 });
 
+// Phase E2a: ln, exp, sqrt, int and trunc, on the canvas and inside functions — the known
+// answers (Excel's), besides agreeing with the recalculated workbook above.
+test('phase E2a operators: fmIDE gives Excel\'s answers', async ({ page }) => {
+  const fm = await fmideValues(page, fixture('agreement', 'operators-e2a.json'));
+  const v = Object.fromEntries(fm['Operators'].map(r => [r.name, r.values]));
+  const each = (x) => [x, x, x, x];
+  const close = (name, want) => want.forEach((w, i) => expect(v[name][i], name + ' in period ' + (i + 1)).toBeCloseTo(w, 12));
+  close('Ln of X', each(Math.log(2.5)));
+  close('Ln of Period', [0, Math.log(2), Math.log(3), Math.log(4)]);
+  close('Ln of Tiny', each(Math.log(0.000001)));
+  expect(v['Ln of Zero']).toEqual(each('error'));        // #NUM! in Excel
+  expect(v['Ln of Neg']).toEqual(each('error'));
+  close('Exp of X', each(Math.exp(2.5)));
+  expect(v['Exp of Zero']).toEqual(each(1));
+  expect(v['Exp of Big']).toEqual(each('error'));        // too large: #NUM!
+  expect(v['Sqrt of Zero']).toEqual(each(0));
+  close('Sqrt of Period', [1, Math.SQRT2, Math.sqrt(3), 2]);
+  expect(v['Sqrt of Minus4']).toEqual(each('error'));
+  expect(v['Int of X']).toEqual(each(2));
+  expect(v['Int of Neg']).toEqual(each(-3));             // down, towards minus infinity
+  expect(v['Int of Half']).toEqual(each(-1));
+  expect(v['Int of Whole']).toEqual(each(7));
+  expect(v['Trunc of Neg']).toEqual(each(-2));           // towards zero
+  expect(v['Trunc of Half']).toEqual(each(0));
+  close('Ln of exp of X', each(2.5));
+  expect(v['Sqrt of an error']).toEqual(each('error'));
+  expect(v['Int of sqrt of Period']).toEqual([1, 1, 1, 2]);
+  expect(v['Ln of two inputs']).toEqual(each('error'));  // one input only
+  close('Mix of X', each(Math.sqrt(2.5) + 2 - 2 + 2.5));
+  expect(v['Mix of Neg']).toEqual(each('error'));        // SQRT and LN of a negative
+  expect(v['SafeLn of Zero']).toEqual(each(-1));
+  close('SafeLn of X', each(Math.log(2.5)));
+});
+
 // A file may use the same node id on two canvases (ids made inside fmIDE never repeat, but a
 // file from elsewhere can): each canvas still shows its own numbers. Here "rate" is AR
 // outstanding rate (0.2) on BS and Tax rate (0.3) on DepBlock; "plus" is on BS and Capex.

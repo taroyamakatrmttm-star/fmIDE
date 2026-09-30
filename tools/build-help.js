@@ -77,7 +77,7 @@ function readCommands(OPERATORS){
 // fmIDE's ribbon as it is before anyone customises it (DEFAULT_RIBBON), run on its own.
 function readRibbon(OPERATORS){
   const setup = read('fmide', 'js', '01-setup-commands-keys.js');
-  const lines = ['OPS', 'E1_COMPARE_OPS', 'E1_FUNCTION_OPS'].map(name => {
+  const lines = ['OPS', 'E1_COMPARE_OPS', 'E1_FUNCTION_OPS', 'E2_FUNCTION_OPS'].map(name => {
     const m = new RegExp('^ *const ' + name + ' = [^\\n]*;$', 'm').exec(setup);
     if(!m) throw new HelpError('build-help: ' + name + ' was not found in 01-setup-commands-keys.js.');
     return m[0];

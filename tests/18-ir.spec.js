@@ -141,9 +141,11 @@ for(const [dir, model] of CASES){
 test('the operator catalogue: lasting ids, one symbol each, in palette order', () => {
   const IR = loadIR();
   expect(IR.OPERATORS.map(op => op.id)).toEqual(['add', 'subtract', 'multiply', 'divide', 'power', 'mod', 'le', 'ge', 'lt', 'gt', 'abs', 'min', 'max', 'average', 'iferror',
-    'period', 'if', 'eq', 'ne', 'and', 'or', 'not', 'round', 'roundup', 'rounddown']); // phase E1 added the second line, at the end
+    'period', 'if', 'eq', 'ne', 'and', 'or', 'not', 'round', 'roundup', 'rounddown', // phase E1 added the second line, at the end
+    'ln', 'exp', 'sqrt', 'int', 'trunc']); // and phase E2a the third
   expect(IR.OPERATORS.map(op => op.symbol)).toEqual(['+', '−', '×', '÷', '^', '%', '≤', '≥', '<', '>', 'abs', 'min', 'max', 'ave', 'iferror',
-    'period', 'if', '=', '≠', 'and', 'or', 'not', 'round', 'roundup', 'rounddown']);
+    'period', 'if', '=', '≠', 'and', 'or', 'not', 'round', 'roundup', 'rounddown',
+    'ln', 'exp', 'sqrt', 'int', 'trunc']);
   IR.OPERATORS.forEach(op => {
     const kinds = ['fold', 'all', 'unary', 'compare', 'fallback', 'period', 'branches', 'apply'].filter(k => op[k]);
     expect(kinds, op.id).toHaveLength(1);
@@ -173,6 +175,20 @@ test('the operator catalogue: lasting ids, one symbol each, in palette order', (
   expect(apply('round', [1, Infinity])).toEqual({ error: 'math-error' });
   expect(IR.operatorById('if').ports).toEqual(['condition', 'then', 'else']);
   expect(IR.operatorById('round').ports).toEqual(['value', 'digits']);
+  // Phase E2a: one input each; what Excel calls #NUM! is a math error.
+  expect(apply('ln', [Math.E])).toEqual({ value: 1 });
+  expect(apply('ln', [0])).toEqual({ error: 'math-error' });
+  expect(apply('ln', [-1])).toEqual({ error: 'math-error' });
+  expect(apply('exp', [0])).toEqual({ value: 1 });
+  expect(apply('exp', [1000])).toEqual({ error: 'math-error' });
+  expect(apply('sqrt', [9])).toEqual({ value: 3 });
+  expect(apply('sqrt', [-4])).toEqual({ error: 'math-error' });
+  expect(apply('int', [-2.5])).toEqual({ value: -3 });
+  expect(apply('trunc', [-2.5])).toEqual({ value: -2 });
+  expect(Object.is(apply('trunc', [-0.5]).value, 0)).toBe(true); // never −0
+  expect(apply('int', [(0.1 + 0.7) * 10])).toEqual({ value: 7 }); // as Excel: on the number as stored
+  expect(apply('sqrt', [4, 9])).toEqual({ error: 'unary-only' });
+  expect(['ln', 'exp', 'sqrt', 'int', 'trunc'].map(id => IR.operatorById(id).unit)).toEqual([null, null, null, 'same', 'same']);
 });
 
 // ---- phase E1 in fmIDE, through window.fm (the canvas drawing of named inputs is E1b) ----
@@ -220,10 +236,10 @@ test.describe('phase E1 operators in fmIDE', () => {
     expect(none).toMatch(/takes each input by name — say which one \(condition, then, else\)/);
   });
 
-  test('saved as system v7 (v6 brought toPort) with toPort; loading it again calculates the same; deleting an input by name', async ({ page }) => {
+  test('saved as system v8 (v6 brought toPort) with toPort; loading it again calculates the same; deleting an input by name', async ({ page }) => {
     await build(page);
     const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.command('saveSystem')));
-    expect(data.version).toBe(7);
+    expect(data.version).toBe(8);
     const iff = data.canvases[0].nodes.find(n => n.text === 'if');
     expect(data.canvases[0].edges.filter(e => e.to === iff.id).map(e => e.toPort).sort()).toEqual([0, 1, 2]);
     await page.evaluate(() => fm.clearCanvas());
@@ -254,12 +270,15 @@ test.describe('phase E1 operators in fmIDE', () => {
     expect(steps[2].args.toPort).toBe('then');
     // Since E1b the new operators follow the first 15, whose numbers stay the same.
     const insertOps = await page.evaluate(() => fm.commands().filter(c => /^insertOp\d+$/.test(c.id)).map(c => c.id + ' ' + c.label));
-    expect(insertOps).toHaveLength(25);
+    expect(insertOps).toHaveLength(30);
     expect(insertOps[0]).toBe('insertOp0 Insert Operator + (Add)');
     expect(insertOps[14]).toBe('insertOp14 Insert Operator iferror');
     expect(insertOps.slice(15)).toEqual(['insertOp15 Insert Operator period', 'insertOp16 Insert Operator if', 'insertOp17 Insert Operator = (Equal)',
       'insertOp18 Insert Operator ≠ (Not equal)', 'insertOp19 Insert Operator and', 'insertOp20 Insert Operator or', 'insertOp21 Insert Operator not',
-      'insertOp22 Insert Operator round', 'insertOp23 Insert Operator roundup', 'insertOp24 Insert Operator rounddown']);
+      'insertOp22 Insert Operator round', 'insertOp23 Insert Operator roundup', 'insertOp24 Insert Operator rounddown',
+      // Phase E2a's after those.
+      'insertOp25 Insert Operator ln', 'insertOp26 Insert Operator exp', 'insertOp27 Insert Operator sqrt', 'insertOp28 Insert Operator int',
+      'insertOp29 Insert Operator trunc']);
   });
 
   // ---- E1b: the canvas ----
@@ -358,7 +377,7 @@ test.describe('phase E1 operators in fmIDE', () => {
     await openFmIDE(page);
     const groups = await page.evaluate(() => __fmIDE.getRibbonConfig().tabs.find(t => t.id === 'insert').groups.map(g => g.label + ':' + g.items.map(i => i.cmd.replace('insertOp', '')).join(',')));
     expect(groups).toContain('Compare:6,7,8,9,17,18');
-    expect(groups).toContain('Excel Functions:10,11,12,13,14,16,19,20,21,22,23,24,15');
+    expect(groups).toContain('Excel Functions:10,11,12,13,14,16,19,20,21,22,23,24,15,25,26,27,28,29');
     // A ribbon customised before E1b (saved without the flag): its groups get them once.
     const file = test.info().outputPath('old-ribbon.json');
     const ws = { kind: 'fmIDE-workspace', version: 4, system: { kind: 'system', version: 5, periods: ['P1'], activeCanvasId: 'c1', canvases: [{ id: 'c1', name: 'Model', nodes: [], edges: [] }] },
@@ -368,9 +387,42 @@ test.describe('phase E1 operators in fmIDE', () => {
     await importViaCommand(page, 'importWorkspace', file);
     await acceptAll(page);
     const mine = await page.evaluate(() => __fmIDE.getRibbonConfig().tabs[0].groups.map(g => g.label + ':' + g.items.map(i => i.cmd.replace('insertOp', '')).join(',')));
-    expect(mine).toEqual(['My maths:0,11,16,19,20,21,22,23,24,15', 'Tests:6,17,18']);
+    expect(mine).toEqual(['My maths:0,11,16,19,20,21,22,23,24,15,25,26,27,28,29', 'Tests:6,17,18']);
     // Once only: saved again, it carries the flag, and a removed operator stays removed.
     const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
     expect(data.ui.operatorsE1Added).toBe(true);
+    expect(data.ui.operatorsE2Added).toBe(true);
+  });
+
+  test('phase E2a: a ribbon customised after E1b gets ln, exp, sqrt, int and trunc once, in the Excel functions\' group', async ({ page }) => {
+    await openFmIDE(page);
+    const file = test.info().outputPath('e1-ribbon.json');
+    const ws = { kind: 'fmIDE-workspace', version: 8, system: { kind: 'system', version: 7, periods: ['P1'], activeCanvasId: 'c1', canvases: [{ id: 'c1', name: 'Model', nodes: [], edges: [] }] },
+      ui: { ribbonCustomized: true, documentGroupAdded: true, functionsGroupAdded: true, functionCommandsAdded: true, operatorsE1Added: true,
+        ribbon: { tabs: [{ id: 'mine', label: 'Mine', groups: [{ label: 'Excel', items: [{ cmd: 'insertOp11' }, { cmd: 'insertOp27' }] }, { label: 'Other', items: [{ cmd: 'insertOp0' }] }] }] } } };
+    fs.writeFileSync(file, JSON.stringify(ws));
+    await importViaCommand(page, 'importWorkspace', file);
+    await acceptAll(page);
+    const mine = await page.evaluate(() => __fmIDE.getRibbonConfig().tabs[0].groups.map(g => g.label + ':' + g.items.map(i => i.cmd.replace('insertOp', '')).join(',')));
+    expect(mine).toEqual(['Excel:11,27,25,26,28,29', 'Other:0']); // sqrt was there already
+    // Drawn as word operators with one input, calculated on the canvas.
+    const got = await page.evaluate(() => {
+      fm.clearCanvas();
+      const a = fm.createRect({ x: 0, y: 0, name: 'A', value: 16 });
+      const out = {};
+      ['ln', 'exp', 'sqrt', 'int', 'trunc'].forEach((op, i) => {
+        const o = fm.createOperator({ x: 250, y: i * 100, op });
+        const r = fm.createRect({ x: 450, y: i * 100, name: 'R ' + op });
+        fm.connect('#' + a, '#' + o); fm.connect('#' + o, '#' + r);
+      });
+      fm.evaluate();
+      ['ln', 'exp', 'sqrt', 'int', 'trunc'].forEach(op => { out[op] = fm.getValue('R ' + op); });
+      return out;
+    });
+    expect(got.sqrt).toBe(4);
+    expect(got.int).toBe(16);
+    expect(got.trunc).toBe(16);
+    expect(got.ln).toBeCloseTo(Math.log(16), 12);
+    expect(got.exp).toBeCloseTo(Math.exp(16), 3);
   });
 });

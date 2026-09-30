@@ -9,9 +9,9 @@
 // Every kind fmIDE knows: its current version, what people call it, and where it is opened.
 const FILE_FORMATS = {
   'system':               { current: SHARED_FILE_VERSIONS['system'], label: 'system', where: 'File → Load System' },
-  'module':               { current: 5, label: 'module',              where: 'File → Load Module' },
+  'module':               { current: 6, label: 'module',              where: 'File → Load Module' },
   'fmIDE-workspace':      { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'workspace', where: 'File → Import Workspace' },
-  'fmIDE-templates':      { current: 7, label: 'templates file',      where: 'Templates → Import Templates' },
+  'fmIDE-templates':      { current: 8, label: 'templates file',      where: 'Templates → Import Templates' },
   'fmIDE-functions':      { current: 2, label: 'functions file',      where: 'Functions → Import Functions' },
   'fmIDE-format-presets': { current: 2, label: 'format presets file', where: 'Format Presets → Import Presets' },
   'fmIDE-shortcuts':      { current: 2, label: 'shortcuts file',      where: 'Keyboard Shortcuts → Import Shortcuts' },
@@ -35,7 +35,9 @@ const FMIDE_FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
     3: () => {},
     // v4 → v5: the Excel look moved to ExcelExporter (step 11a), as system v6 → v7: every
     // rectangle's Excel-only style settings are dropped.
-    4: d => { dropExcelOnlyNodeStyles(d.nodes); dropExcelOnlyPresets(d.formatPresets); }
+    4: d => { dropExcelOnlyNodeStyles(d.nodes); dropExcelOnlyPresets(d.formatPresets); },
+    // v5 → v6: the operators of phase E2a, as system v7 → v8; older modules have none.
+    5: () => {}
   },
   // v1 → v2: the Excel look moved to ExcelExporter (step 11a): the Excel-only format roles
   // and style settings are dropped.
@@ -58,7 +60,10 @@ const FMIDE_FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
     5: () => {},
     // v6 → v7: a canvas template may carry attachments for other outputs (`attachments`,
     // step 11c: its Excel layout); older ones have none.
-    6: () => {}
+    6: () => {},
+    // v7 → v8: a template's module or system may use the operators of phase E2a; older ones
+    // don't.
+    7: () => {}
   },
   // v1 → v2: an item in a pack may say which pack it came from before (`origin`, phase 8b),
   // so re-sharing keeps its author's credit; older packs have no such record.

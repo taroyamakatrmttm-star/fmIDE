@@ -5,7 +5,7 @@
 // (docs/file-formats.md). To change one of these formats: raise its version here and add
 // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
 // exactly one version.
-const SHARED_FILE_VERSIONS = { 'system': 7, 'fmIDE-workspace': 8 };
+const SHARED_FILE_VERSIONS = { 'system': 8, 'fmIDE-workspace': 9 };
 // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
 // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
 function upgradeNodePlugs(nodes){
@@ -85,7 +85,10 @@ const SHARED_FILE_MIGRATIONS = {
     6: d => { dropExcelOnlyPresets(d.formatPresets); },
     // v7 → v8: its templates may carry attachments for other outputs (`attachments`, step
     // 11c); older ones have none.
-    7: () => {}
+    7: () => {},
+    // v8 → v9: its system (v8) and templates (v8) may use the operators of phase E2a; older
+    // ones don't.
+    8: () => {}
   },
   'system': {
     // v1 systems were accepted with fields the loader already defaults (periods, ids…);
@@ -116,7 +119,11 @@ const SHARED_FILE_MIGRATIONS = {
     6: d => {
       dropExcelOnlyPresets(d.formatPresets);
       (Array.isArray(d.canvases) ? d.canvases : []).forEach(c => { if(c) dropExcelOnlyNodeStyles(c.nodes); });
-    }
+    },
+    // v7 → v8: the operators of phase E2a (ln, exp, sqrt, int, trunc). Older systems have
+    // none, so nothing changes; an older app asks before opening a v8 file instead of
+    // calculating those operators as ones it doesn't know.
+    7: () => {}
   }
 };
 // A file's kind: its "kind" field, or — for files saved before kinds were written — its
