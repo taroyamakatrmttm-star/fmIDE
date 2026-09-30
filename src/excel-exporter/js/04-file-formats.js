@@ -105,6 +105,7 @@ async function loadModel(m){
   model = loaded;
   modelIR = ir;
   canvasModules = readCanvasModules(systemData);
+  templateLayouts = readTemplateLayouts(m && m.kind === 'fmIDE-workspace' ? m : null); // step 11c-2
   mappingKey = key;
   mapping = restored || buildDefaultMapping(model);
   // reconcile: drop rows/tabs referencing nodes/canvases no longer present, add rows for new nodes

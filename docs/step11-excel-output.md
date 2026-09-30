@@ -1,6 +1,6 @@
 # Build step 11 — the Excel look and layout belong to ExcelExporter
 
-**Status:** in progress — 11a, 11b and 11c-1 done; 11c-2 next. Started before H4c (step 10's video links, which wait on the owner's recordings), by the owner's decision (30 Sep 2026). Each phase gets its own plan, approved by the owner before any change.
+**Status:** done — 11a, 11b, 11c-1 and 11c-2. Started before H4c (step 10's video links, which wait on the owner's recordings), by the owner's decision (30 Sep 2026). Each phase gets its own plan, approved by the owner before any change.
 
 **Goal:** stop setting up the same Excel layout again and again when modules are reused, and keep a clean line between the two apps: **fmIDE says what things are** (this is an input, a calculation, a percentage); **ExcelExporter decides how they look and where they sit in Excel**.
 
@@ -61,3 +61,14 @@ Decided when the plan was approved (30 Sep 2026, the owner): **layouts only** (n
 - **The checker** refuses attachments fmIDE would drop and hidden characters in a layout's text, and notes a pack that carries one. It now warns only about version 1 packs (which lose the credit of items shared again): a version 2 pack is as good as a version 3 one, so the library's existing packs don't start warning.
 - **Found along the way**: `docs/file-formats.md` still gave the workspace as version 6 after 11a (the note for v7 was added, the number not); corrected.
 - **Tests**: group 37 (`tests/37-template-attachments.spec.js`); version numbers updated in groups 6, 14, 16, 20, 22 and 23.
+
+## Done (11c-2) — how it turned out
+
+- **Where** (`src/excel-exporter/js/04b-module-layouts.js`): loading a workspace or `.fmide` document reads the `attachments.excel` of its canvas templates (`readTemplateLayouts`), each through the same checks as a layouts file (`cleanModuleLayout`) and only when made for its template's own family. A system file carries no templates, so nothing changes for it.
+- **Which one**: the layout on the template version the canvas was made from (`canvas.template.versionId`), else the newest version of that template with one (`templateLayoutFor`).
+- **When**: in a new layout (a model laid out here for the first time, or Reset), for a module with **no remembered layout of your own** — yours always wins, and a whole-model layout wins over both.
+- **What you see**: the tab's tag says "🧩 *name* · layout from the template", the status line "1 tab laid out from its template's layout: …". Changing the tab makes it your own remembered layout (the automatic remembering of 11b), and the tag says so. Loading remembers nothing.
+- ExcelExporter's help topic "Modules remember their layout" says where a template's layout comes from.
+- **Tests**: group 38 (`tests/38-template-layouts-excel.spec.js`, samples `tests/fixtures/module-layouts/doc-with-layouts.json` and `doc-unknown-version.json`).
+
+Step 11 is complete. Left for later, by the owner's choices: block instance tabs remembering their layout; a template carrying a suggested Excel style.

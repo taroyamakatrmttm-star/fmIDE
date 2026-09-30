@@ -555,6 +555,15 @@ A canvas template "Sales" (family `fam-sales-module-0001`) and an Excel layout f
 - The checker: an attachment for another family or an unknown output → "aren't what fmIDE keeps"; a hidden character in a layout's text → error.
 - Group 23 also: a version 2 pack gets no warning to save it again (version 1 still does, now "the current version is 3").
 
+### 38. ExcelExporter uses a template's layout (`tests/38-template-layouts-excel.spec.js`; step 11, phase 11c-2)
+Samples `tests/fixtures/module-layouts/doc-with-layouts.json` (model-b as a workspace; Sales made from template version 1; versions 1 and 2 carry layouts naming the tab "Sales from v1" / "Sales from v2", with "Units sold" for Volume and a "Top line" row above Profit) and `doc-unknown-version.json` (the canvas made from a version not in the document).
+- doc-with-layouts: tabs Overview, "Sales from v1"; the tag "🧩 Sales · layout from the template"; "1 tab laid out from its template's layout: 2 rows matched, 5 new."; the sheet has "Units sold", not "Volume", and "Top line" right above Profit; nothing stored.
+- doc-unknown-version: "Sales from v2" (the newest with a layout).
+- A remembered layout (model-a's tab renamed "My sales") wins: "My sales", the tag says remembered.
+- Renaming the tab laid out from the template stores it as your own ("Sales, mine"), with the template's "Top line" row.
+- model-b (a system file): "Sales (Gold)", the plain tag, no status line.
+- A hostile document: version 1's layout made for another family is ignored; version 2's hostile tab name becomes a valid sheet name; its markup appears only as text (twice in the sheet); nothing runs, no `<img>`.
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.

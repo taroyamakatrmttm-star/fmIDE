@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter uses a template's Excel layout (step 11, phase 11c-2)
+- Load a `.fmide` document (or workspace) in ExcelExporter: a module whose template has an Excel layout attached — yours, or one that came in a library pack — is laid out with it, the first time the model is laid out here. The tab says "layout from the template".
+- Your own remembered layout for a module always wins; change a tab laid out from the template and it becomes your own.
+- A system file (Save System) carries no templates, so nothing changes for it. No file format changed.
+
 ## A template carries its Excel layout (step 11, phase 11c-1)
 - In fmIDE's Templates window, a canvas template can have its **Excel layout attached**: **📎 Attach Excel layout…** takes it from a file ExcelExporter's Export Module Layouts saved; **Remove** takes it off. fmIDE only carries it — it never reads or changes it.
 - It goes wherever the template goes: your documents, templates files, the next version you save, and **library packs you share**. Opening a pack shows which templates have one ("📎 Excel layout"), and if you already have the template without it, the pack offers just the layout.
