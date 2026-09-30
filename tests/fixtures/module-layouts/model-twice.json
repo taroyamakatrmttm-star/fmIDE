@@ -1,0 +1,243 @@
+{
+ "version": 7,
+ "kind": "system",
+ "nextId": 100,
+ "nextCanvasId": 10,
+ "activeCanvasId": "cc1",
+ "periods": [
+  "P1",
+  "P2",
+  "P3"
+ ],
+ "currentPeriod": 0,
+ "canvases": [
+  {
+   "id": "cc1",
+   "name": "Gold",
+   "nodes": [
+    {
+     "id": "g1",
+     "type": "value",
+     "x": 60,
+     "y": 60,
+     "w": 170,
+     "h": 64,
+     "text": "Price\n10",
+     "plugs": []
+    },
+    {
+     "id": "g2",
+     "type": "value",
+     "x": 60,
+     "y": 180,
+     "w": 170,
+     "h": 64,
+     "text": "Volume\n5",
+     "plugs": []
+    },
+    {
+     "id": "g3",
+     "type": "operator",
+     "x": 300,
+     "y": 120,
+     "w": 56,
+     "h": 56,
+     "text": "\u00d7",
+     "socket": ""
+    },
+    {
+     "id": "g4",
+     "type": "value",
+     "x": 420,
+     "y": 110,
+     "w": 170,
+     "h": 64,
+     "text": "Revenue\n0",
+     "plugs": []
+    },
+    {
+     "id": "g5",
+     "type": "value",
+     "x": 60,
+     "y": 300,
+     "w": 170,
+     "h": 64,
+     "text": "Costs\n20",
+     "plugs": []
+    },
+    {
+     "id": "g6",
+     "type": "operator",
+     "x": 300,
+     "y": 300,
+     "w": 56,
+     "h": 56,
+     "text": "\u2212",
+     "socket": ""
+    },
+    {
+     "id": "g7",
+     "type": "value",
+     "x": 420,
+     "y": 300,
+     "w": 170,
+     "h": 64,
+     "text": "Profit\n0",
+     "plugs": []
+    }
+   ],
+   "edges": [
+    {
+     "id": "ge1",
+     "from": "g1",
+     "to": "g3"
+    },
+    {
+     "id": "ge2",
+     "from": "g2",
+     "to": "g3"
+    },
+    {
+     "id": "ge3",
+     "from": "g3",
+     "to": "g4"
+    },
+    {
+     "id": "ge4",
+     "from": "g4",
+     "to": "g6"
+    },
+    {
+     "id": "ge5",
+     "from": "g5",
+     "to": "g6"
+    },
+    {
+     "id": "ge6",
+     "from": "g6",
+     "to": "g7"
+    }
+   ],
+   "template": {
+    "family": "fam-sales-module-0001",
+    "version": 1,
+    "versionId": "vid-sales-module-0001",
+    "name": "Sales"
+   }
+  },
+  {
+   "id": "cc2",
+   "name": "Silver",
+   "nodes": [
+    {
+     "id": "v1",
+     "type": "value",
+     "x": 60,
+     "y": 60,
+     "w": 170,
+     "h": 64,
+     "text": "Price\n10",
+     "plugs": []
+    },
+    {
+     "id": "v2",
+     "type": "value",
+     "x": 60,
+     "y": 180,
+     "w": 170,
+     "h": 64,
+     "text": "Volume\n5",
+     "plugs": []
+    },
+    {
+     "id": "v3",
+     "type": "operator",
+     "x": 300,
+     "y": 120,
+     "w": 56,
+     "h": 56,
+     "text": "\u00d7",
+     "socket": ""
+    },
+    {
+     "id": "v4",
+     "type": "value",
+     "x": 420,
+     "y": 110,
+     "w": 170,
+     "h": 64,
+     "text": "Revenue\n0",
+     "plugs": []
+    },
+    {
+     "id": "v5",
+     "type": "value",
+     "x": 60,
+     "y": 300,
+     "w": 170,
+     "h": 64,
+     "text": "Costs\n20",
+     "plugs": []
+    },
+    {
+     "id": "v6",
+     "type": "operator",
+     "x": 300,
+     "y": 300,
+     "w": 56,
+     "h": 56,
+     "text": "\u2212",
+     "socket": ""
+    },
+    {
+     "id": "v7",
+     "type": "value",
+     "x": 420,
+     "y": 300,
+     "w": 170,
+     "h": 64,
+     "text": "Profit\n0",
+     "plugs": []
+    }
+   ],
+   "edges": [
+    {
+     "id": "ve1",
+     "from": "v1",
+     "to": "v3"
+    },
+    {
+     "id": "ve2",
+     "from": "v2",
+     "to": "v3"
+    },
+    {
+     "id": "ve3",
+     "from": "v3",
+     "to": "v4"
+    },
+    {
+     "id": "ve4",
+     "from": "v4",
+     "to": "v6"
+    },
+    {
+     "id": "ve5",
+     "from": "v5",
+     "to": "v6"
+    },
+    {
+     "id": "ve6",
+     "from": "v6",
+     "to": "v7"
+    }
+   ],
+   "template": {
+    "family": "fam-sales-module-0001",
+    "version": 1,
+    "versionId": "vid-sales-module-0001",
+    "name": "Sales"
+   }
+  }
+ ]
+}

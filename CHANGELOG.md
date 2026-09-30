@@ -2,6 +2,12 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Modules remember their Excel layout (step 11, phase 11b)
+- **Arrange a module's tab once.** When you change the tab of a module — a canvas you added from a template in fmIDE, recipes included — ExcelExporter remembers its layout: the tab's name, the order of its rows, labels, blank and label rows, Include / Constant, formats and indents.
+- **Every model with that module starts with it**, the first time it is laid out here (or after Reset Mapping to Defaults). Rows are matched by rectangle name; rectangles the layout doesn't know go where the automatic sort puts them. A model you have already arranged keeps its own layout.
+- The Tabs panel marks a module's tab 🧩, with **Forget**; **Export Module Layouts** / **Import Module Layouts** move them to another computer.
+- fmIDE and its files don't change. New ExcelExporter file: `fmIDE-excel-module-layouts` 1.
+
 ## The Excel look belongs to ExcelExporter (step 11, phase 11a)
 - **ExcelExporter has your own Excel style** (section 2): for each of the seven roles — Inputs, Calculations, Links, Headers, Section Headers, Labels, Notes — pick the fill, font colour, bold, font size (blank uses Excel's default) and border (style, colour, which sides). It is kept in the browser and used for every model you load, whoever made it. **Export Excel Style** / **Import Excel Style** move it to another computer; **Reset to Defaults** brings back the built-in look.
 - **fmIDE's formats are the canvas look.** The Formats manager keeps the two canvas roles, Inputs and Calculations; the five Excel-only roles are gone from it. The rectangle format window no longer has "Use this fill, font colour & border in Excel too", "Excel border sides" or "Use Excel's default font size".

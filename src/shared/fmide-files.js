@@ -86,6 +86,8 @@ function readFmData(raw, accept, migrations){
       ? 'That is an ExcelExporter mapping file — open it in ExcelExporter (Import Mapping JSON).'
       : kind === 'fmIDE-excel-style'
       ? 'That is an ExcelExporter Excel style file — import it in ExcelExporter (Import Excel Style).'
+      : kind === 'fmIDE-excel-module-layouts'
+      ? 'That is an ExcelExporter module layouts file — import it in ExcelExporter (Import Module Layouts).'
       : "That file isn't an fmIDE file this version recognises" + (kind ? ` (kind "${String(kind).slice(0, 40)}")` : '') + '.' };
   }
   if(!accept.includes(kind)){

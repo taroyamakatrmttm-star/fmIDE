@@ -170,6 +170,8 @@ async function resetMappingToDefaults(){
   mapping = buildDefaultMapping(model);
   reconcileMapping();
   sortNewLayout();
+  applyModuleLayouts(); // a new layout starts from the modules' remembered layouts
+  resetModuleBaselines();
   renderAll();
 }
 
@@ -177,7 +179,7 @@ $('btnResetMapping').addEventListener('click', async () => {
   if(!model) return;
   const ok = await showConfirm(
     'Reset mapping to defaults?',
-    'This discards every tab, row order, label, custom row, Include/Constant choice and export setting you have made for this model, and rebuilds the default layout. This cannot be undone — use "Export Mapping JSON" first if you might want it back.',
+    'This discards every tab, row order, label, custom row, Include/Constant choice and export setting you have made for this model, and rebuilds the default layout (a module\'s tab starts from the layout remembered for that module). This cannot be undone — use "Export Mapping JSON" first if you might want it back.',
     'Reset Mapping'
   );
   if(!ok) return;
@@ -199,6 +201,7 @@ watchForUpdates({
 
 $('btnClearAll').addEventListener('click', () => {
   model = null; modelIR = null; mapping = null; mappingKey = null;
+  canvasModules = {}; moduleBaselines = {}; moduleLayoutsApplied = [];
   $('fileInput').value = '';
   $('afterLoad').classList.add('hidden');
   $('pasteArea').value = '';

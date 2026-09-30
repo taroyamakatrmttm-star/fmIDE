@@ -158,3 +158,5 @@
     font-size:12px; font-weight:700; line-height:1; padding:0; cursor:pointer; vertical-align:middle;
   }
   .panel-help:hover{ background:#e0e7ff; }
+  .module-tag{ display:inline-flex; align-items:center; gap:6px; margin-left:8px; font-size:11.5px; color:#1e3a8a; background:#eef2ff; border-radius:4px; padding:1px 6px; white-space:nowrap; }
+  .module-tag .module-forget{ font-size:11px; padding:0 6px; }
