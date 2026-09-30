@@ -1,0 +1,15 @@
+{
+ "kind": "fmIDE-excel-module-layouts",
+ "version": 1,
+ "modules": [
+  {
+   "family": "fam-loan-block-0001",
+   "name": "Loan",
+   "tabName": "Loan v1",
+   "rows": [{ "name": "total cost", "section": "calc", "include": true, "constant": false }],
+   "customs": [],
+   "sectioned": ["r0"],
+   "flat": ["r0"]
+  }
+ ]
+}

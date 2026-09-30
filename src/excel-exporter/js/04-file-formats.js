@@ -13,8 +13,8 @@ const FILE_FORMATS = {
   'fmIDE-excel-mapping': { current: 2, label: 'ExcelExporter mapping file' },
   // The person's own Excel style (step 11a): how every cell looks, by role.
   'fmIDE-excel-style':   { current: 1, label: 'ExcelExporter Excel style file' },
-  // The layouts remembered per module (step 11b).
-  'fmIDE-excel-module-layouts': { current: 1, label: 'ExcelExporter module layouts file' }
+  // The layouts remembered per module (step 11b); v2: a module's block instances' layout, `instance` (step 11d).
+  'fmIDE-excel-module-layouts': { current: 2, label: 'ExcelExporter module layouts file' }
 };
 // Kinds that are fmIDE files but not something ExcelExporter reads — say where they belong.
 const OTHER_FMIDE_KINDS = {
@@ -28,9 +28,11 @@ const OTHER_FMIDE_KINDS = {
   'fmIDE-library-pack': 'an fmIDE library pack (templates and functions to share) — open it in fmIDE with File → Open Library Pack'
 };
 // The mapping file's upgrades. v2: any row may carry its own format (`style`) and an
-// `indent`; a v1 file has neither, so it reads as it is.
+// `indent`; a v1 file has neither, so it reads as it is. The module layouts file's v2 adds
+// `instance` (step 11d); a v1 file has none, so it too reads as it is.
 const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
-  'fmIDE-excel-mapping': { 1: (d) => { d.version = 2; return d; } }
+  'fmIDE-excel-mapping': { 1: (d) => { d.version = 2; return d; } },
+  'fmIDE-excel-module-layouts': { 1: (d) => { d.version = 2; return d; } }
 });
 // Returns { error } or { kind, data (migrated copy), fromVersion, newer, newerParts }.
 function readKnownFile(raw, accept){

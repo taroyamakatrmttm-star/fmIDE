@@ -186,7 +186,7 @@ function cleanTemplateAttachments(raw, family, kind){
 // The Excel layout for one template family out of a file ExcelExporter's Export Module
 // Layouts saved (parsed JSON). fmIDE reads only the file's kind, version and each entry's
 // family. Returns { attachment } or { error }.
-const EXCEL_MODULE_LAYOUTS_VERSION = 1;
+const EXCEL_MODULE_LAYOUTS_VERSION = 2; // v2 (step 11d): an entry may carry its block instances' layout
 function excelLayoutForFamily(raw, family){
   if(!raw || typeof raw !== 'object' || raw.kind !== 'fmIDE-excel-module-layouts' || !Array.isArray(raw.modules)) {
     return { error: 'That isn\'t a file of module layouts. In ExcelExporter, use Export Module Layouts (section 3) to save one.' };

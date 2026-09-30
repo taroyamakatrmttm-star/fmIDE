@@ -536,7 +536,7 @@ The scripts and captions (`tools/video-scripts.js`) in Node, for every tutorial;
 
 ### 36. Module layouts (`tests/36-module-layouts.spec.js`; step 11, phase 11b)
 Samples `tests/fixtures/module-layouts/`: `model-a` (Sales, a canvas linked to template family `fam-sales-module-0001`, + Summary), `model-b` (other ids; the module on "Sales (Gold)" with Discount and Net revenue added; + Overview), `model-twice` (the module on Gold and Silver).
-- The module's tab shows "🧩 Sales" (no Forget); loading and renaming another tab store nothing; renaming the module's tab stores `fmide-excel-module-layouts` (`kind: "fmIDE-excel-module-layouts"`, version 1, the family, `tabName`) and the tag says "layout remembered".
+- The module's tab shows "🧩 Sales" (no Forget); loading and renaming another tab store nothing; renaming the module's tab stores `fmide-excel-module-layouts` (`kind: "fmIDE-excel-module-layouts"`, version 2 since step 11d, the family, `tabName`) and the tag says "layout remembered".
 - Arranged in A (tab renamed "Sales plan", Profit moved to the top, a label row "Top line" above Revenue, Costs excluded, Price indented, Volume renamed "Units sold"), B is laid out the same: tab "Sales plan", its sheet's labels without Discount and Net revenue equal A's, both new ones present, Price's indent 1, "1 tab laid out from its module' remembered layout: 5 rows matched, 2 new."
 - Sections on: moving a row to the top of the Input band in A → B (sections on) has the same bands.
 - A whole-model layout wins: after B renames its tab "Gold only", A and B reload with their own layouts (no status line); after a reload, `model-twice` lays out both canvases as remembered, tabs "Gold only" and "Silver" (a name used once).
@@ -548,7 +548,8 @@ Samples `tests/fixtures/module-layouts/`: `model-a` (Sales, a canvas linked to t
 ### 37. Template attachments (`tests/37-template-attachments.spec.js`; step 11, phase 11c-1)
 A canvas template "Sales" (family `fam-sales-module-0001`) and an Excel layout for it, as ExcelExporter's Export Module Layouts writes one.
 - 📎 Attach Excel layout… with a file holding another family's entry and this one's: "Excel layout attached to version 1 of "Sales"."; the detail pane says a layout is attached; the workspace (version 8) and ⇩ Export Templates (version 7) carry exactly that entry as `attachments.excel`; so does the autosave after a reload.
-- Files that can't be attached say why and attach nothing: not a layouts file, no entry for this family, a newer version, too large, not JSON.
+- Files that can't be attached say why and attach nothing: not a layouts file, no entry for this family, a newer version (3), too large, not JSON.
+- A version 2 layouts file (step 11d) whose entry carries `instance` attaches, and the attachment carries it whole.
 - Save as new version carries it to version 2; Remove on version 2 leaves version 1's.
 - From a templates file: an attachment for another family, one nested too deep, one too large, one that isn't an object, one on a system template are dropped; unknown outputs (`python`) are dropped and `excel` kept.
 - A pack (version 3) with the layout: previewed as new, added with it; with the same template already here but without a layout, the preview says "Already in your library — adds its Excel layout" (status `attachment`) and opening it adds the layout (added 0, present 1). Save as Library Pack writes version 3 with the layout; the checker passes it with a note. The preview window marks the item "· 📎 Excel layout".
@@ -563,6 +564,17 @@ Samples `tests/fixtures/module-layouts/doc-with-layouts.json` (model-b as a work
 - Renaming the tab laid out from the template stores it as your own ("Sales, mine"), with the template's "Top line" row.
 - model-b (a system file): "Sales (Gold)", the plain tag, no status line.
 - A hostile document: version 1's layout made for another family is ignored; version 2's hostile tab name becomes a valid sheet name; its markup appears only as text (twice in the sheet); nothing runs, no `<img>`.
+
+### 39. Block instance layouts (`tests/39-block-instance-layouts.spec.js`; step 11, phase 11d)
+Samples `tests/fixtures/block-layouts/`: `block-a` (the Loan block — a canvas linked to template family `fam-loan-block-0001`, with Interest, Fee and the output Total cost — used twice on Main), `block-b` (other ids; the block with Arrangement added; used once), `block-v` and `block-v4` (the block used vertically, three periods and, with other ids, four); `tests/fixtures/formats/module-layouts-v1.json` (a version 1 file).
+- The instance tabs show "🧩 Loan" and "Lay out the other instances like this", no Forget; loading stores nothing. Arranging instance 1 (Total cost to the top, a label row "Loan costs" above Interest, Fee renamed "Fee paid") changes only that sheet; its tag says "instance layout remembered", the block's own tab stays plain; the stored file (version 2) has one entry with empty own rows and the three rows and the custom row under `instance`.
+- block-b: its instance tab is laid out the same, Arrangement placed by the sort; "1 tab laid out from its module' remembered layout: 3 rows matched, 1 new."; the block's own tab keeps its default.
+- Lay out the other instances like this (the question names the block; Cancel changes nothing): the other tab gets the layout and keeps its name ("Second loan"), still so after a reload.
+- A block not from a template: only the button shows; it works; nothing is stored.
+- Vertical: Total cost (Total) moved to the top and Interest — Vintage 2 excluded; stored copies include 1, 2, 3, `total`, `shared`; block-v4 is laid out the same with Interest — Vintage 4 and Total cost — Vintage 4 after the third.
+- Forget on an instance tab keeps the block's own tab name and drops `instance`; Forget on the own tab then leaves nothing; forgetting the own tab first keeps the instances' layout.
+- A workspace whose Loan template carries an instance layout: both instance tabs laid out by it, tagged "instance layout from the template", "2 tabs laid out from their templates' layout: 6 rows matched, 0 new.", the own tab plain, nothing stored. A hostile instance layout (bad copies, duplicates, markup, bad references): markup shown only as text (twice), nothing runs, no `<img>`.
+- A version 1 layouts file imports ("Imported 1 module layout…") and Reset lays the module's own tab out with it.
 
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.

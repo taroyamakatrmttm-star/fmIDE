@@ -85,7 +85,7 @@ test('a module\'s tab is marked, and its layout is remembered once it changes â€
     .toEqual([['fam-sales-module-0001', 'Sales plan']]);
   const s = await stored(page);
   expect(s.kind).toBe('fmIDE-excel-module-layouts');
-  expect(s.version).toBe(1);
+  expect(s.version).toBe(2);
 });
 
 test('another model with the module is laid out as remembered; its new rectangles go where the sort puts them', async ({ page }) => {
@@ -182,7 +182,7 @@ test('Export Module Layouts, Forget, then Import brings the layout back', async 
   const [download] = await Promise.all([page.waitForEvent('download'), page.click('#btnExportModuleLayouts')]);
   const file = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
   expect(file.kind).toBe('fmIDE-excel-module-layouts');
-  expect(file.version).toBe(1);
+  expect(file.version).toBe(2);
   expect(file.modules.map(m => m.family)).toEqual(['fam-sales-module-0001']);
   const path = testInfo.outputPath('layouts.json');
   fs.writeFileSync(path, JSON.stringify(file));

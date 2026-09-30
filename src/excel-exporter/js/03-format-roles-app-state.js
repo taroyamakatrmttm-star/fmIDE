@@ -269,6 +269,16 @@ function nodeDisplayName(canvasById, node){
   return name || '(unnamed)';
 }
 
+// The default label of a block instance's row: the rectangle's name, and which copy it is
+// in a vertical instance (a vintage, the Total, or the row shared by every vintage).
+function unpackedRowLabel(canvasById, node, u){
+  const name = nodeDisplayName(canvasById, node);
+  if(u.verticalCombined) return name + ' (Total)';
+  if(u.verticalShared) return name + ' (shared)';
+  if(typeof u.verticalVintage === 'number') return name + ' — Vintage ' + u.verticalVintage;
+  return name;
+}
+
 // One default tab per block instance, holding its unpacked internal rows (and, for
 // a block that itself contains a nested block instance, that nested instance's rows
 // too — collectUnpackedRows already folds those in under the same top-level tab).
@@ -313,14 +323,10 @@ function buildBlockInstanceTabsAndRows(m, canvasById, tabs, rows){
     });
     let order = 0;
     unpacked.forEach(({ u, node }) => {
-      let label = nodeDisplayName(canvasById, node);
-      if(u.verticalCombined) label += ' (Total)';
-      else if(u.verticalShared) label += ' (shared)';
-      else if(typeof u.verticalVintage === 'number') label += ' — Vintage ' + u.verticalVintage;
       rows.push({
         id: pathKey(u.path, u.canvasId, u.nodeId), canvasId: u.canvasId, nodeId: u.nodeId, path: u.path,
         tabId, section: u.section, order: order++,
-        label, include: true, inlineConstant: false,
+        label: unpackedRowLabel(canvasById, node, u), include: true, inlineConstant: false,
         verticalCombined: !!u.verticalCombined,
         verticalShared: !!u.verticalShared,
         verticalVintage: typeof u.verticalVintage === 'number' ? u.verticalVintage : undefined

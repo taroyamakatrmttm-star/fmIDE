@@ -1,6 +1,6 @@
 # Build step 11 — the Excel look and layout belong to ExcelExporter
 
-**Status:** done — 11a, 11b, 11c-1 and 11c-2. Started before H4c (step 10's video links, which wait on the owner's recordings), by the owner's decision (30 Sep 2026). Each phase gets its own plan, approved by the owner before any change.
+**Status:** done — 11a, 11b, 11c-1, 11c-2 and the follow-up 11d. Started before H4c (step 10's video links, which wait on the owner's recordings), by the owner's decision (30 Sep 2026). Each phase gets its own plan, approved by the owner before any change.
 
 **Goal:** stop setting up the same Excel layout again and again when modules are reused, and keep a clean line between the two apps: **fmIDE says what things are** (this is an input, a calculation, a percentage); **ExcelExporter decides how they look and where they sit in Excel**.
 
@@ -71,4 +71,15 @@ Decided when the plan was approved (30 Sep 2026, the owner): **layouts only** (n
 - ExcelExporter's help topic "Modules remember their layout" says where a template's layout comes from.
 - **Tests**: group 38 (`tests/38-template-layouts-excel.spec.js`, samples `tests/fixtures/module-layouts/doc-with-layouts.json` and `doc-unknown-version.json`).
 
-Step 11 is complete. Left for later, by the owner's choices: block instance tabs remembering their layout; a template carrying a suggested Excel style.
+## Done (11d, block instance tabs) — how it turned out
+
+Decided when the plan was approved (30 Sep 2026, the owner): only blocks **added from a template** are remembered (by their template family — a name would be fragile); an instance tab gets **"Lay out the other instances like this"**; instance tab names are **not remembered** (several instances would clash); rows of a **block inside the block are not matched**.
+
+- **Where** (`src/excel-exporter/js/04b-module-layouts.js`): an instance tab (`tab_blk_<host canvas>_<node>`) of a block whose canvas is a module is remembered under that module's family, as `instance` in the same entry: rows, custom rows and both orders, as for a module tab, without a tab name. Its rows are matched by the rectangle's name and, in a vertical instance, by which copy they are (`copy`: a vintage number, `total`, `shared`). The code that captures and lays out a tab is now shared by module tabs and instance tabs (`captureTabLayout`, `applyTabLayout`, over a "spec" of the tab, its matchable rows and its own rows); the default label of an instance row moved into `unpackedRowLabel`.
+- **Remembering and using** follow 11b: remembered when an instance tab changes, used in a new layout for every instance of the block; your own wins over a template's; a whole-model layout wins over both. Rows of a block inside the block, and extra vintages of a longer timeline, go where the automatic sort put them (after the row they followed).
+- **What you see**: an instance tab's tag "🧩 *block* · instance layout remembered" (or "from the template") with **Forget**, which forgets only the instances' layout (and Forget on the block's own tab only its own). **Lay out the other instances like this** asks first, then gives the block's other instance tabs in the model this tab's layout, keeping their names; it works for any block, from a template or not (nothing is remembered for one that isn't).
+- **File format**: `fmIDE-excel-module-layouts` 2 (adds `instance`); version 1 opens unchanged. fmIDE's Attach Excel layout… now accepts version 2 (its only change), so a template's attached layout carries the instances' layout too; the checker needed no change (it never reads inside).
+- **Help**: ExcelExporter's topics "Modules remember their layout" and "Blocks in the workbook".
+- **Tests**: group 39 (`tests/39-block-instance-layouts.spec.js`, samples `tests/fixtures/block-layouts/`, `tests/fixtures/formats/module-layouts-v1.json`); groups 36 and 37 follow the new version.
+
+Step 11 is complete. Left for later, by the owner's choices: a template carrying a suggested Excel style.

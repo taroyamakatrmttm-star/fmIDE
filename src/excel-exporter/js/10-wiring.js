@@ -201,7 +201,7 @@ watchForUpdates({
 
 $('btnClearAll').addEventListener('click', () => {
   model = null; modelIR = null; mapping = null; mappingKey = null;
-  canvasModules = {}; moduleBaselines = {}; moduleLayoutsApplied = []; templateLayouts = {}; canvasLayoutFromTemplate = {};
+  canvasModules = {}; moduleBaselines = {}; moduleLayoutsApplied = []; templateLayouts = {}; tabLayoutFromTemplate = {};
   $('fileInput').value = '';
   $('afterLoad').classList.add('hidden');
   $('pasteArea').value = '';
