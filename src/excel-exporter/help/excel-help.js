@@ -32,6 +32,7 @@ const EXCEL_HELP_TOPICS = [
         'Press Generate & Download .xlsx (panel 5).',
       ] },
       { p: 'Everything happens in your browser: nothing is uploaded, and it works offline.' },
+      { p: 'What\'s new, at the top of this Help panel, lists every update to ExcelExporter, newest first, each with what changed, why and how to use it. A dot on ❓ Help means there is something you haven\'t seen yet.' },
       { p: 'This Help panel opens with ❓ or F1. Press ⤢ at its top for a wider reading view (⤡ brings it back), or drag its left edge to any width; it remembers the width.' },
       { see: ['load-model', 'generate'] },
     ] },

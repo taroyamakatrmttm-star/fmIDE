@@ -127,7 +127,7 @@ test.describe('ExcelExporter', () => {
     const before = (await page.locator('main').boundingBox()).width;
     await page.click('#btnHelp');
     await expect(panel(page)).toBeVisible();
-    await expect(panel(page).locator('.help-topic-link')).toHaveCount(EE.topics.length);
+    await expect(panel(page).locator('.help-topic-link[data-topic]')).toHaveCount(EE.topics.length); // (What's new above them: group 43)
     const hp = await panel(page).boundingBox();
     const main = await page.locator('main').boundingBox();
     expect(main.x + main.width).toBeLessThanOrEqual(hp.x + 1);

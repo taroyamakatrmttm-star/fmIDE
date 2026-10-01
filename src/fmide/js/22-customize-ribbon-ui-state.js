@@ -311,10 +311,12 @@
       libraryPacksAdded: true, // 8a: Open Library Pack… and Save as Library Pack… in the File tab's Library group
       libraryBrowseAdded: true, // 8d: Browse Library… in the same group
       helpAdded: true, // step 10: the Help group at the end of the View tab
+      whatsNewAdded: true, // H5b: What's New beside Help
       addManyRectsAdded: true, // 12b: Add Many Rectangles… after Add Rectangle
       libraryAuthor,
       windowSizes: cleanWindowSizes(windowSizes), templateGroupsClosed: templateGroupsClosed.slice(0, 200),
-      helpSize: cleanHelpSize(helpPanelSize)
+      helpSize: cleanHelpSize(helpPanelSize),
+      whatsNewSeen: cleanNewsSeen(whatsNewSeen)
     };
   }
   // One-time update of a ribbon customised before the Document group existed: add it at
@@ -420,6 +422,16 @@
     if(!tab) return;
     tab.groups.push(cloneData(HELP_RIBBON_GROUP));
   }
+  // One-time update (H5b): What's New goes right after Help, wherever Help is; a ribbon
+  // without Help gets none.
+  function addWhatsNewToRibbon(){
+    const groups = [];
+    ribbonState.config.tabs.forEach(t => { if(t && Array.isArray(t.groups)) t.groups.forEach(g => { if(g && Array.isArray(g.items)) groups.push(g); }); });
+    if(groups.some(g => g.items.some(it => it && it.cmd === 'openWhatsNew'))) return;
+    const g = groups.find(g => g.items.some(it => it && it.cmd === 'openHelp'));
+    if(!g) return;
+    g.items.splice(g.items.findIndex(it => it && it.cmd === 'openHelp') + 1, 0, { cmd: 'openWhatsNew' });
+  }
   // fromImport: a workspace file (maybe someone else's) — its author name for library packs
   // is not taken over; only your own autosave remembers yours.
   function applyUiPayload(ui, fromImport){
@@ -437,14 +449,17 @@
       if(ui.libraryPacksAdded !== true) addLibraryPackCommandsToRibbon();
       if(ui.libraryBrowseAdded !== true) addLibraryBrowseCommandToRibbon();
       if(ui.helpAdded !== true) addHelpGroupToRibbon();
+      if(ui.whatsNewAdded !== true) addWhatsNewToRibbon();
       if(ui.addManyRectsAdded !== true) addManyRectsCommandToRibbon();
     }
     if(!fromImport && typeof ui.libraryAuthor === 'string') libraryAuthor = ui.libraryAuthor.slice(0, LIBRARY_PACK_LIMITS.author);
-    // Window sizes, closed template groups and the Help panel's width belong to this screen and person: never from
+    // Window sizes, closed template groups, the Help panel's width and the updates seen belong to this screen and person: never from
     // someone else's file.
     if(!fromImport){
       windowSizes = cleanWindowSizes(ui.windowSizes);
       helpPanelSize = cleanHelpSize(ui.helpSize);
+      whatsNewSeen = cleanNewsSeen(ui.whatsNewSeen);
+      syncHelpNewsDot();
       if(Array.isArray(ui.templateGroupsClosed)) templateGroupsClosed = ui.templateGroupsClosed.filter(g => typeof g === 'string').map(g => g.slice(0, 200)).slice(0, 200);
     }
     if(typeof ui.ribbonCollapsed === 'boolean') ribbonState.collapsed = ui.ribbonCollapsed;

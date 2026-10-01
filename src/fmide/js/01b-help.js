@@ -8,8 +8,10 @@
   // more"; F1 while it shows opens that topic), a "?" in the corner of each window, and Help
   // in a node's touch menu.
   // build:include help/fmide-help.js
+  // build:include help/fmide-whats-new.js
   // build:include shared/help-panel.js
   let helpPanelSize = {}; // H5a: { width, narrow } — ui.helpSize
+  let whatsNewSeen = '';  // H5b: the date of the newest update seen — ui.whatsNewSeen
 
   // One plain sentence per command: COMMAND_HELP, or for an Insert Operator command the
   // sentence of its operator (OPERATOR_HELP, by catalogue id).
@@ -41,7 +43,22 @@
     // H5a: the panel's width, in the person's own UI settings (ui.helpSize, saved with the
     // workspace; never from an imported file, never in a Preferences file).
     size: { get: () => helpPanelSize, set: (v) => { helpPanelSize = cleanHelpSize(v); saveWorkspaceSoon(); } },
+    // H5b: What's new (src/help/fmide-whats-new.js). The date seen is the person's own UI
+    // setting (ui.whatsNewSeen), like the width.
+    whatsNew: { entries: WHATS_NEW,
+      seen: { get: () => whatsNewSeen, set: (d) => { whatsNewSeen = cleanNewsSeen(d); saveWorkspaceSoon(); } },
+      onSeen: () => syncHelpNewsDot() },
   });
+  // ❓ beside the ribbon's search box carries a dot while there are updates not yet seen.
+  function syncHelpNewsDot(){
+    const b = document.getElementById('rbHelp');
+    if(!b) return;
+    const n = help.unseenCount();
+    b.classList.toggle('has-news', n > 0);
+    b.dataset.news = String(n);
+  }
+  // The What's New command: the list of every update.
+  function openWhatsNew(){ hideCommandTip(); help.open(); help.showNews(); }
   function openHelp(topicId){ hideCommandTip(); help.open(topicId); }
   function closeHelp(){ help.close(); }
   function isHelpOpen(){ return help.isOpen(); }

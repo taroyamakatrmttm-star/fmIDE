@@ -20,6 +20,12 @@
 //   options.size (optional) — { get() → saved size, set(size) } where the app keeps the
 //                      panel's width ({ width, narrow }, read through cleanHelpSize); without
 //                      it the width lasts until the page closes; loadSize(size) gives one read later
+//   options.whatsNew (optional) — What's new (H5b): { entries, seen: { get(), set(date) },
+//                      onSeen() }. entries, newest first: { id, date ('YYYY-MM-DD'), title,
+//                      summary, what: [texts], why, how: [steps], notes: [texts], see: [topic
+//                      ids] } (texts may hold {cmd:id}); seen.get() is asked each time. An entry dated after the date seen is
+//                      new; with none seen yet, the ones from the last NEWS_FRESH_DAYS days of
+//                      the newest. Opening the list of every update marks them all seen.
 //   richText(tag, cls, text) is returned too: the same {cmd:id} buttons, for the app's own cards.
 //   The styles are src/shared/help-panel.css; each app sets --help-top (where the panel
 //   starts) and makes room for it under body.help-open, using --help-w (the panel's width).
@@ -28,6 +34,16 @@
 // to the usual width), and ⤢ in the header widens it to a reading view, two thirds of the
 // window, and back. From HELP_WIDE_AT pixels the panel reads as a page (.wide: larger text, a
 // reading column). It always leaves HELP_KEEP_FREE pixels of the app beside it.
+const NEWS_FRESH_DAYS = 14, NEWS_ON_HOME = 3;
+// A date seen, from storage: 'YYYY-MM-DD', or ''.
+function cleanNewsSeen(v){ return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : ''; }
+// '2026-10-01' → '1 October 2026' (no time zones: the date is written as it is).
+function newsDateText(d){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(d || ''));
+  if(!m) return '';
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  return Number(m[3]) + ' ' + (months[Number(m[2]) - 1] || '') + ' ' + m[1];
+}
 const HELP_DEFAULT_W = 380, HELP_MIN_W = 300, HELP_WIDE_AT = 600, HELP_KEEP_FREE = 200;
 // A saved size (the person's own setting, but read from storage): numbers in range, or left out.
 function cleanHelpSize(v){
@@ -47,6 +63,57 @@ function createHelpPanel(options){
   const state = { view: 'home', topicId: null, query: '', back: [] };
   let panel = null;
   let size = null; // { width, narrow }: read from the app when first needed
+  const news = options.whatsNew && Array.isArray(options.whatsNew.entries) ? options.whatsNew : null;
+  const newsEntries = news ? news.entries : [];
+
+  // ---- What's new ----
+  // The date seen is the app's: asked each time (it may arrive from storage later).
+  function seenDate(){ return cleanNewsSeen(news && news.seen && news.seen.get ? news.seen.get() : ''); }
+  function freshFrom(){
+    const newest = newsEntries.length ? newsEntries[0].date : '';
+    const t = Date.parse(newest + 'T00:00:00Z');
+    if(!isFinite(t)) return '';
+    return new Date(t - NEWS_FRESH_DAYS * 86400000).toISOString().slice(0, 10);
+  }
+  function isNew(e){
+    const seen = seenDate();
+    return seen ? e.date > seen : e.date > freshFrom();
+  }
+  function unseenCount(){ return newsEntries.filter(isNew).length; }
+  function newsEntry(id){ return newsEntries.find(e => e.id === id) || null; }
+  function markNewsSeen(){
+    if(!newsEntries.length) return;
+    const newest = newsEntries[0].date;
+    if(seenDate() === newest) return;
+    if(news.seen && news.seen.set) news.seen.set(newest);
+    if(news.onSeen) news.onSeen();
+  }
+  // The app read the date seen later (from storage that answers asynchronously): show it.
+  function newsSeenChanged(){
+    if(news && news.onSeen) news.onSeen();
+    if(isOpen() && state.view === 'home') render();
+  }
+  function entryText(e){
+    const texts = [e.title, e.summary || '', e.why || ''].concat(e.what || [], e.how || [], e.notes || []);
+    return texts.join(' ').replace(CMD, (all, id) => { const c = cmds && cmds.get(id); return c ? cmds.label(c) : ''; });
+  }
+  function showNews(){
+    if(!panel) build();
+    state.back.push({ view: state.view, topicId: state.topicId });
+    state.view = 'news';
+    render();
+    panel.querySelector('.help-body').scrollTop = 0;
+    markNewsSeen();
+  }
+  function showNewsItem(id, fresh){
+    if(!panel) build();
+    if(fresh) state.back = [];
+    else state.back.push({ view: state.view, topicId: state.topicId });
+    state.view = 'newsItem';
+    state.topicId = id;
+    render();
+    panel.querySelector('.help-body').scrollTop = 0;
+  }
 
   // ---- width ----
   function savedSize(){
@@ -166,7 +233,11 @@ function createHelpPanel(options){
       if(!words.every(w => has(label + ' ' + cmds.sentence(c), w))) return null;
       return { c, score: words.filter(w => has(label, w)).length };
     }).filter(Boolean).sort((a, b) => b.score - a.score).map(r => r.c);
-    return { topics: foundTopics, commands: foundCommands };
+    const foundNews = newsEntries.map(e => {
+      if(!words.every(w => has(entryText(e), w))) return null;
+      return { e, score: words.filter(w => has(e.title, w)).length };
+    }).filter(Boolean).sort((a, b) => b.score - a.score).map(r => r.e);
+    return { topics: foundTopics, commands: foundCommands, news: foundNews };
   }
 
   function isOpen(){ return !!(panel && panel.classList.contains('open')); }
@@ -252,6 +323,8 @@ function createHelpPanel(options){
     const body = panel.querySelector('.help-body');
     body.textContent = '';
     if(state.view === 'topic' && topic(state.topicId)) renderTopic(body, topic(state.topicId));
+    else if(state.view === 'news' && news) renderNews(body);
+    else if(state.view === 'newsItem' && newsEntry(state.topicId)) renderNewsItem(body, newsEntry(state.topicId));
     else if(state.view === 'search' && state.query.trim()) renderSearch(body, state.query);
     else renderHome(body);
   }
@@ -265,8 +338,79 @@ function createHelpPanel(options){
     a.addEventListener('click', () => showTopic(t.id));
     return a;
   }
+  // An update in a list: its title, date, summary and a New mark.
+  function newsLink(e){
+    const a = make('button', 'help-topic-link help-news-link');
+    a.type = 'button';
+    a.dataset.news = e.id;
+    const title = make('span', 'help-topic-link-title', e.title);
+    if(isNew(e)) title.appendChild(make('span', 'help-new', 'New'));
+    a.appendChild(title);
+    a.appendChild(make('span', 'help-topic-link-summary', e.summary || ''));
+    a.addEventListener('click', () => showNewsItem(e.id));
+    return a;
+  }
+  function newsHeading(body){
+    const h = make('h3', 'help-group help-news-heading', '✨ What\'s new');
+    const n = unseenCount();
+    if(n) h.appendChild(make('span', 'help-new-count', String(n)));
+    body.appendChild(h);
+  }
+  function renderNewsHome(body){
+    if(!newsEntries.length) return;
+    newsHeading(body);
+    newsEntries.slice(0, NEWS_ON_HOME).forEach(e => body.appendChild(newsLink(e)));
+    const all = make('button', 'help-topic-link help-news-all');
+    all.type = 'button';
+    all.appendChild(make('span', 'help-topic-link-title', 'Every update (' + newsEntries.length + ') ›'));
+    all.addEventListener('click', () => showNews());
+    body.appendChild(all);
+  }
+  function backButton(){
+    const back = make('button', 'help-back', '‹ Back');
+    back.type = 'button';
+    back.addEventListener('click', () => goBack());
+    return back;
+  }
+  // Every update, newest first, under the day it came.
+  function renderNews(body){
+    const nav = make('div', 'help-nav');
+    nav.appendChild(backButton());
+    body.appendChild(nav);
+    body.appendChild(make('h2', 'help-topic-title', '✨ What\'s new'));
+    body.appendChild(make('p', 'help-summary', options.whatsNew.intro || 'Every update so far, newest first: what changed, why, and how to use it.'));
+    let day = null;
+    newsEntries.forEach(e => {
+      if(e.date !== day){ day = e.date; body.appendChild(make('h3', 'help-group help-news-day', newsDateText(day))); }
+      body.appendChild(newsLink(e));
+    });
+  }
+  function renderNewsItem(body, e){
+    const nav = make('div', 'help-nav');
+    nav.appendChild(backButton());
+    nav.appendChild(make('span', 'help-crumb', '✨ What\'s new · ' + newsDateText(e.date)));
+    body.appendChild(nav);
+    const art = make('article', 'help-topic help-news-item');
+    art.dataset.news = e.id;
+    art.appendChild(make('h2', 'help-topic-title', e.title));
+    if(e.summary) art.appendChild(make('p', 'help-summary', e.summary));
+    const section = (title) => art.appendChild(make('h3', 'help-group', title));
+    if(Array.isArray(e.what) && e.what.length){ section('What changed'); e.what.forEach(t => art.appendChild(richText('p', 'help-p', t))); }
+    if(e.why){ section('Why'); art.appendChild(richText('p', 'help-p', e.why)); }
+    if(Array.isArray(e.how) && e.how.length){
+      section('How to use it');
+      const ol = make('ol', 'help-steps');
+      e.how.forEach(t => ol.appendChild(richText('li', '', t)));
+      art.appendChild(ol);
+    }
+    if(Array.isArray(e.notes) && e.notes.length){ section('Good to know'); e.notes.forEach(t => art.appendChild(richText('p', 'help-tip', '💡 ' + t))); }
+    const list = (Array.isArray(e.see) ? e.see : []).map(topic).filter(Boolean);
+    if(list.length){ section('Read more'); list.forEach(x => art.appendChild(topicLink(x))); }
+    body.appendChild(art);
+  }
   function renderHome(body){
     if(options.intro) body.appendChild(make('p', 'help-intro', options.intro));
+    renderNewsHome(body);
     if(options.homeTop) options.homeTop(body, make);
     groups.forEach(g => {
       const list = topics.filter(t => t.group === g.id);
@@ -277,7 +421,7 @@ function createHelpPanel(options){
   }
   function renderSearch(body, q){
     const found = search(q);
-    if(!found.topics.length && !found.commands.length){
+    if(!found.topics.length && !found.commands.length && !found.news.length){
       body.appendChild(make('p', 'help-empty', 'Nothing matches "' + q.trim() + '". Try fewer or different words.'));
       return;
     }
@@ -288,6 +432,10 @@ function createHelpPanel(options){
     if(found.commands.length){
       body.appendChild(make('h3', 'help-group', 'Commands'));
       found.commands.forEach(c => body.appendChild(commandRow(c)));
+    }
+    if(found.news.length){
+      body.appendChild(make('h3', 'help-group', 'What\'s new'));
+      found.news.forEach(e => body.appendChild(newsLink(e)));
     }
   }
   // A command with its sentence and ▶ to run it (off while it can't run).
@@ -377,5 +525,5 @@ function createHelpPanel(options){
   }
 
   return { open, close, toggle, isOpen, showTopic, refresh, search, topic, topicText, topicCommands, topicForCommand, richText, render,
-    toggleWide, setWidth, loadSize, element: () => panel };
+    toggleWide, setWidth, loadSize, showNews, showNewsItem, unseenCount, newsSeenChanged, newsEntry, element: () => panel };
 }

@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## What's new, inside Help
+- **The Help panel opens with What's new** (fmIDE and ExcelExporter): the newest updates, and **Every update** for the whole list, newest first. Each update has its own page: what changed, why, how to use it, and a link to the full guide; a command named there is a button that runs it.
+- Updates you haven't seen are marked **New**, and ❓ carries a small dot until you have opened the list. The search box finds updates too. In fmIDE, **View → What's New** (also in the Command Launcher) opens the list.
+- Each app shows its own updates; changes only developers see are left out.
+
 ## A wider Help panel
 - **⤢** at the top of the Help panel (fmIDE and ExcelExporter) widens it to a reading view, two thirds of the window, with larger text; **⤡** brings it back.
 - Or drag the panel's **left edge** to any width — by mouse or finger. A double-click on the edge goes back to the usual width.
