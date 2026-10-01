@@ -166,6 +166,7 @@ const HELP_TOPICS = [
     summary: 'Give an input a different value in each period, or use its own number only in some periods.',
     body: [
       { p: '📈 on an input rectangle opens a small chart. Draw the values across the periods, or type them separated by commas.' },
+      { p: 'The chart shows every period at once. Drag the window\'s bottom-right corner to make it bigger and the chart grows with it; with many periods, type exact values in the boxes below the chart.' },
       { p: '🕒 chooses the periods where the rectangle uses its own typed number. In the other periods it takes what its arrow brings in, for example a balance carried forward.' },
       { see: ['periods', 'period-shifts'] },
     ] },

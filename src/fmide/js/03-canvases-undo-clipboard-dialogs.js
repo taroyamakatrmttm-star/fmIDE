@@ -415,7 +415,7 @@
   // dragged to in the UI settings (ui.windowSizes, saved with the workspace, never in a
   // Preferences file: a size belongs to one screen), comes back at that size (never larger
   // than the screen) and goes back to its own size on a double-click on the corner.
-  const WINDOW_SIZE_KEYS = ['templates', 'functions', 'formatPresets', 'libraryBrowse', 'libraryPack', 'macroBuilder', 'ribbon'];
+  const WINDOW_SIZE_KEYS = ['templates', 'functions', 'formatPresets', 'libraryBrowse', 'libraryPack', 'macroBuilder', 'ribbon', 'periodValues'];
   let windowSizes = {};
   let templateGroupsClosed = []; // the Templates window's groups the person closed
   function cleanWindowSizes(v){
