@@ -7,6 +7,23 @@ Notable changes before this repository existed (recorded from the development hi
 - A new topic, **A template's attached layout**: how to attach a module's layout in fmIDE, where it travels, and exactly when ExcelExporter uses it.
 - **How the workbook looks** now lists which format wins, for the cell's look and for its number format.
 
+## Snap to equal spacing (step 12, phase 12a)
+- While you drag a box, it snaps where it is evenly spaced with the boxes in its row (or column): after two boxes side by side, with the same gap, before them, or halfway between them. Pink bars mark the equal gaps while it snaps. It works with lining up as before: whichever is nearer wins, and a box can be evenly spaced across and lined up down at once.
+- Hold **Alt** after you start dragging to move a box freely, without any snapping. (Alt before pressing still makes an alias, which snaps like any drag.)
+
+## Add many rectangles at once (step 12, phase 12b)
+- **Add Many Rectangles…** (Home → Insert, Insert → Nodes) opens a window with a row per rectangle: type a name and press Enter for the next (value and unit are optional), or paste a list — one name per line, or columns copied from Excel. Choose a column, a row or a grid and the gap between them; they are added in one step, where they overlap nothing, and selected so you can drag them into place. A name already on the canvas is marked, but still allowed.
+- **Ctrl+Enter** (Cmd+Enter on a Mac) while typing in a rectangle saves it and starts a new one just below, with the same gap as the one above it, so a list can be typed straight down the canvas.
+- For macros and scripts, `fm.createRects` adds many rectangles in one step.
+
+## Faster calculation on long timelines
+- Each period is now worked out once. Before, a period that reads an earlier one (through a period shift) worked out every earlier period again, so the time grew with the square of the number of periods. On a large model (1,865 rectangles and operators) fmIDE's calculation takes 0.19 s instead of 1.3 s at 24 periods, and 0.76 s instead of 19.5 s at 60. ExcelExporter's check before download gets faster too.
+- Results are unchanged, except in a model with a loop (a circular reference): there a period shift now always shows the value shown for the period it reads.
+
+## The 📈 chart shows every period
+- The chart that draws an input's values across periods (📈 on a rectangle) now shows every period at once, however many there are, so a curve can be drawn from the first period to the last without scrolling. With many periods the numbers along the bottom thin out (every 2nd, 5th, 10th…), the dots get smaller and the values above them are left out; the boxes below the chart still show each value.
+- Its window can be resized from its bottom-right corner, and the chart grows or shrinks with it. The size is remembered (a double-click on the corner puts it back), like the Templates window's.
+
 ## choose: a scenario switch (step 7, phase E2b)
 - **choose** gives the choice its index picks, like Excel's CHOOSE: an index of 2 gives choice 2 (2.7 counts as 2). It suits a scenario switch — 1 base, 2 upside, 3 downside. Only the choice picked is worked out, so an error, or last period's value in period 1, in a choice not picked doesn't matter. An index below 1 or past the last choice shows "?" (Excel's #VALUE!).
 - On the canvas it shows an **index** dot and a dot per choice, always with one empty choice at the end: drop an arrow on the dot you mean, or on the box for the next empty one. It is in the palette, the Command Launcher (Insert Operator choose, command 30) and Insert → Excel Functions; a customised ribbon gets it once. Changing an operator into choose makes its arrows the index and the choices, left to right. Functions can use `CHOOSE(i, a, b, …)`.

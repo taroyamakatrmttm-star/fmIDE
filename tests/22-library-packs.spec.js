@@ -303,7 +303,7 @@ test.describe('the ribbon', () => {
     const items = () => page.evaluate(() => __fmIDE.getRibbonConfig().tabs[0].groups.map(g => g.label + ':' + g.items.map(i => i.cmd).join(',')));
     await F.importViaCommand(page, 'importWorkspace', writeFile(testInfo, 'old.json', ws(undefined, [{ label: 'Stuff', items: [{ cmd: 'openFormats' }] }, { label: 'Other', items: [{ cmd: 'addRect' }] }])));
     await F.acceptAll(page);
-    expect(await items()).toEqual(['Stuff:openFormats,browseLibrary,openLibraryPack,saveLibraryPack', 'Other:addRect']); // Browse Library… since 8d
+    expect(await items()).toEqual(['Stuff:openFormats,browseLibrary,openLibraryPack,saveLibraryPack', 'Other:addRect,addManyRects']); // Browse Library… since 8d; Add Many Rectangles… since 12b
     await F.importViaCommand(page, 'importWorkspace', writeFile(testInfo, 'removed.json', ws(true, [{ label: 'Stuff', items: [{ cmd: 'openFormats' }] }])));
     await F.acceptAll(page);
     expect(await items()).toEqual(['Stuff:openFormats']);

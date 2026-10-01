@@ -133,3 +133,99 @@ test.describe('the Templates tree', () => {
     expect((await names(box)).length).toBe(all.length);
   });
 });
+
+test.describe('the 📈 chart (values across periods)', () => {
+  // A rectangle and its 📈 window open, with `count` periods.
+  async function openChart(page, count){
+    const id = await page.evaluate((count) => {
+      fm.clearAll();
+      fm.setPeriodCount(count);
+      const id = fm.createRect({ x: 80, y: 80, name: 'Price', value: '10' });
+      fm.select(['#' + id]);
+      return id;
+    }, count);
+    const node = page.locator(`.node[data-id="${id}"]`);
+    await node.hover();
+    await node.locator('.curve-btn').click();
+    const box = page.locator('.modal-box.period-values-box');
+    await expect(box).toBeVisible();
+    return box;
+  }
+  // What the chart shows: its size, its space, its dots and the period numbers along the bottom.
+  const chartState = (box) => box.evaluate(el => {
+    const wrap = el.querySelector('.period-values-chart');
+    const svg = wrap.querySelector('svg');
+    const dots = [...svg.querySelectorAll('circle')].map(c => Number(c.getAttribute('cx')) + Number(c.getAttribute('r')));
+    return {
+      svgW: Number(svg.getAttribute('width')), svgH: Number(svg.getAttribute('height')),
+      wrapW: wrap.clientWidth, wrapH: wrap.clientHeight,
+      wrapScrolls: wrap.scrollWidth > wrap.clientWidth, boxScrolls: el.scrollWidth > el.clientWidth,
+      dots: dots.length, rightmostDot: Math.max(...dots),
+      labels: [...svg.querySelectorAll('text')].map(t => t.textContent),
+    };
+  });
+  const values = (box) => box.locator('input[type="number"]').evaluateAll(els => els.slice(2).map(e => Number(e.value)));
+
+  for(const count of [6, 24, 120]){
+    test(`${count} periods: every period fits on the chart with no scrolling, and drawing reaches the first and last`, async ({ page, pageErrors }) => {
+      const box = await openChart(page, count);
+      const s = await chartState(box);
+      expect(s.dots).toBe(count);
+      expect(s.svgW).toBeLessThanOrEqual(s.wrapW);
+      expect(s.rightmostDot).toBeLessThanOrEqual(s.svgW);
+      expect(s.wrapScrolls).toBe(false);
+      expect(s.boxScrolls).toBe(false);
+      // The first and last period are numbered along the bottom.
+      expect(s.labels).toContain('1');
+      expect(s.labels).toContain(String(count));
+      // Draw from high on the left to low on the right, edge to edge.
+      const before = await values(box);
+      const plot = await box.locator('.period-values-chart svg').boundingBox();
+      await page.mouse.move(plot.x + 54, plot.y + plot.height * 0.2);
+      await page.mouse.down();
+      await page.mouse.move(plot.x + plot.width - 20, plot.y + plot.height * 0.8, { steps: 20 });
+      await page.mouse.up();
+      const after = await values(box);
+      expect(after.length).toBe(count);
+      expect(after[0]).not.toBe(before[0]);
+      expect(after[count - 1]).not.toBe(before[count - 1]);
+      expect(after[0]).toBeGreaterThan(after[count - 1]);
+      expect(pageErrors).toEqual([]);
+    });
+  }
+
+  test('resizing the window resizes the chart; the size is kept after a reload', async ({ page, pageErrors }) => {
+    let box = await openChart(page, 24);
+    expect(await box.evaluate(el => getComputedStyle(el).resize)).toBe('both');
+    const before = await chartState(box);
+    await resizeTo(box, 1200, 700);
+    await expect.poll(() => chartState(box).then(s => s.svgW)).toBeGreaterThan(before.svgW);
+    let s = await chartState(box);
+    expect(s.svgH).toBeGreaterThan(before.svgH);
+    expect(s.wrapScrolls).toBe(false);
+    await resizeTo(box, 500, 500);
+    await expect.poll(() => chartState(box).then(s => s.svgW)).toBeLessThan(before.svgW);
+    s = await chartState(box);
+    expect(s.dots).toBe(24);
+    expect(s.rightmostDot).toBeLessThanOrEqual(s.svgW);
+    expect(s.wrapScrolls).toBe(false);
+    expect(s.boxScrolls).toBe(false);
+    await expect.poll(() => savedUi(page).then(ui => ui.windowSizes && ui.windowSizes.periodValues), { timeout: 5000 }).toEqual({ w: 500, h: 500 });
+    await page.reload();
+    await page.waitForFunction(() => window.fm && typeof window.fm.nodes === 'function');
+    box = await openChart(page, 24);
+    expect(await sizeOf(box)).toEqual({ w: 500, h: 500 });
+    expect(pageErrors).toEqual([]);
+  });
+
+  test('a smaller browser window makes the chart smaller, still with every period', async ({ page }) => {
+    const box = await openChart(page, 60);
+    const before = await chartState(box);
+    await page.setViewportSize({ width: 700, height: 700 });
+    await expect.poll(() => chartState(box).then(s => s.svgW)).toBeLessThan(before.svgW);
+    const s = await chartState(box);
+    expect(s.dots).toBe(60);
+    expect(s.rightmostDot).toBeLessThanOrEqual(s.svgW);
+    expect(s.boxScrolls).toBe(false);
+  });
+});

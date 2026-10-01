@@ -806,7 +806,7 @@ test.describe('the ribbon (D2b)', () => {
     // Without the group, nothing is added.
     await F.importViaCommand(page, 'importWorkspace', file('none.json', ws(undefined, [{ label: 'Other', items: [{ cmd: 'addRect' }] }])));
     await F.acceptAll(page);
-    expect(await items()).toEqual(['Other:addRect']);
+    expect(await items()).toEqual(['Other:addRect,addManyRects']); // Add Many Rectangles… joins Add Rectangle once (step 12b)
   });
 });
 

@@ -513,3 +513,83 @@ test.describe('phase E1 operators in fmIDE', () => {
     expect(await page.evaluate(() => fm.getValue('R'))).toBe(2);
   });
 });
+
+// ---- each period is worked out once (results kept across periods), in Node ----
+test.describe('results kept across periods', () => {
+  // A model whose work should grow with the number of periods: a corkscrew (Opening is last
+  // period's Closing) on the top level, fed into a block that has a corkscrew of its own.
+  function corkscrewModel(periods){
+    return { periods: Array.from({ length: periods }, (_, i) => 'P' + (i + 1)), canvases: [
+      { id: 'main', name: 'Main', nodes: [
+        { id: 'flow', type: 'value', text: 'Flow\n5' }, { id: 'open', type: 'value', text: 'Opening\n100' },
+        { id: 'add', type: 'operator', text: '+' }, { id: 'close', type: 'value', text: 'Closing' },
+        { id: 'sh', type: 'periodShift', shift: -1 },
+        { id: 'inst', type: 'blockInstance', blockDefCanvasId: 'blk' }, { id: 'res', type: 'value', text: 'Result' },
+      ], edges: [
+        { id: 'e1', from: 'flow', to: 'add' }, { id: 'e2', from: 'open', to: 'add' }, { id: 'e3', from: 'add', to: 'close' },
+        { id: 'e4', from: 'close', to: 'sh' }, { id: 'e5', from: 'sh', to: 'open' },
+        { id: 'e6', from: 'close', to: 'inst', toPort: 0 }, { id: 'e7', from: 'inst', to: 'res', fromPort: 0 },
+      ] },
+      { id: 'blk', name: 'Block', nodes: [
+        { id: 'bi', type: 'value', text: 'In', blockRole: 'input' }, { id: 'bo', type: 'value', text: 'Out', blockRole: 'output' },
+        { id: 'bopen', type: 'value', text: 'Before\n0' }, { id: 'bs', type: 'periodShift', shift: -1 }, { id: 'bp', type: 'operator', text: '+' },
+      ], edges: [
+        { id: 'x1', from: 'bi', to: 'bp' }, { id: 'x2', from: 'bopen', to: 'bp' }, { id: 'x3', from: 'bp', to: 'bo' },
+        { id: 'x4', from: 'bo', to: 'bs' }, { id: 'x5', from: 'bs', to: 'bopen' },
+      ] },
+    ] };
+  }
+  // How much work a calculation does: every node looked up goes through ir.canvases.get.
+  function workFor(IR, periods){
+    const ir = IR.compileModel(corkscrewModel(periods));
+    let lookups = 0;
+    const get = ir.canvases.get.bind(ir.canvases);
+    ir.canvases.get = (id) => { lookups++; return get(id); };
+    const results = IR.evaluateModel(ir);
+    return { lookups, results };
+  }
+
+  test('twice the periods is about twice the work, not four times; the values are right', () => {
+    const IR = loadIR();
+    const small = workFor(IR, 24), big = workFor(IR, 48);
+    // Before, each period worked every earlier one out again: the ratio was about 4.
+    expect(big.lookups / small.lookups).toBeLessThan(2.5);
+    // Closing = 100 + 5 in period 1, then 5 more each period; the block adds Closing up.
+    const r = big.results[0];
+    expect(r.values[0].close).toBe(105);
+    expect(r.values[47].close).toBe(100 + 5 * 48);
+    const closings = Array.from({ length: 48 }, (_, p) => 100 + 5 * (p + 1));
+    expect(r.values[47].res).toBe(closings.reduce((a, b) => a + b, 0));
+    // The same in every period, with and without tracing.
+    const traced = IR.evaluateModel(IR.compileModel(corkscrewModel(48)), { trace: true })[0];
+    expect(traced.values).toEqual(r.values);
+  });
+
+  test('in a loop, a period shift shows the value shown for the period it reads', () => {
+    const IR = loadIR();
+    // Result comes out of a block (Out = In + its own last Out); In is Fed back, which is
+    // Result again: a loop. Shift reads Result two periods back.
+    const system = { periods: ['P1', 'P2', 'P3'], canvases: [
+      { id: 'main', name: 'Main', nodes: [
+        { id: 'fed', type: 'value', text: 'Fed back\n1' }, { id: 'result', type: 'value', text: 'Result\n3' },
+        { id: 'shift', type: 'periodShift', shift: -2 }, { id: 'inst', type: 'blockInstance', blockDefCanvasId: 'blk' },
+      ], edges: [
+        { id: 'e1', from: 'result', to: 'shift' }, { id: 'e2', from: 'result', to: 'fed' },
+        { id: 'e3', from: 'fed', to: 'inst', toPort: 0 }, { id: 'e4', from: 'inst', to: 'result', fromPort: 0 },
+      ] },
+      { id: 'blk', name: 'Block', nodes: [
+        { id: 'bi', type: 'value', text: 'In', blockRole: 'input' }, { id: 'bo', type: 'value', text: 'Out', blockRole: 'output' },
+        { id: 'bs', type: 'periodShift', shift: -1 }, { id: 'bp', type: 'operator', text: '+' },
+      ], edges: [
+        { id: 'x1', from: 'bi', to: 'bp' }, { id: 'x2', from: 'bs', to: 'bp' }, { id: 'x3', from: 'bp', to: 'bo' }, { id: 'x4', from: 'bo', to: 'bs' },
+      ] },
+    ] };
+    const r = IR.evaluateModel(IR.compileModel(system))[0];
+    expect(r.errors[0].fed).toBe('cycle');
+    // Result shows 0 in period 1, so the shift shows 0 in period 3 (before, it worked period 1
+    // out again by another way into the loop and showed "?").
+    expect(r.values[0].result).toBe(0);
+    expect(r.values[2].shift).toBe(0);
+    expect(r.errors[2].shift).toBeUndefined();
+  });
+});

@@ -265,6 +265,7 @@ New samples in `tests/fixtures/ir/`: `error-cases.json` (every error code and op
 - Phase E1 in fmIDE through `window.fm`: Period → 1, 2, 3; an IF wired by input name (any capitals) or number gives Cost in period 1 and Revenue after; ROUND to 1 digit; a wrong input name lists the inputs, a missing one asks which; Save System is v6 with `toPort` 0, 1, 2 and loads back the same; `fm.deleteEdge` by input name leaves the IF "An input this operator reads isn't connected" in period 1; a macro records `toPort: 'then'`.
 - Phase E2a: the catalogue's ids and symbols end `… rounddown ln exp sqrt int trunc`; ln e = 1, ln 0 and ln −1, exp 1000, sqrt −4 are `math-error`; int −2.5 = −3, trunc −2.5 = −2, trunc −0.5 is 0 (not −0), int((0.1 + 0.7) × 10) = 7; two inputs `unary-only`; units null, null, null, same, same. 30 Insert Operator commands (`insertOp25`–`insertOp29` ln … trunc); the default Excel Functions group ends `…,15,25,26,27,28,29`; a ribbon customised before E1b gets both phases' operators, and saved again carries `operatorsE2Added`; one customised after E1b (sqrt already there) gets the other four once; the five wired and calculated through `window.fm` on 16.
 - Phase E2b: `pick` of choose for 2, 2.7, 1, 3 → 2, 2, 1, 3 and 0, 0.9, −1, 4, NaN → 0; `operatorPortNames(choose, 3)` = index, choice 1–3, at most 255 names; `chooseChoiceCount` the highest choice wired; 31 Insert Operator commands (`insertOp30 Insert Operator choose`), the Excel Functions group ending `…,29,30`, customised ribbons getting it once (`operatorsE2bAdded`). In fmIDE: a new choose shows index and choice 1; wired by `Index`, `choice 1` and `3`, it shows choices 1–3 and picks Upside (120); an arrow dropped on its body takes choice 3 and a choice 4 dot appears; index 3 → 80; index 5 → "The index picks no choice"; `choice 255` refused; Save System v9 with toPorts 0–3, loaded back → 100. `min` changed into `choose`: arrows I→0, A→1, B→2, value 7; undo → 2.
+- Results kept across periods (in Node): a corkscrew feeding a block with a corkscrew of its own, at 24 and 48 periods: the node look-ups (`ir.canvases.get`, counted) grow less than 2.5 times (about 3.9 when every period worked the earlier ones out again); Closing is 105 in period 1 and 340 in period 48, the block's sum of every Closing so far, the same when tracing. In a loop (Result comes out of a block whose input is Result again), Fed back is `cycle`; Result shows 0 in period 1 and a shift of −2 shows 0, with no error, in period 3.
 - Units through blocks (`ir/block-units.json`, phase C): a rectangle fed by a block shows the unit worked out through that instance — its Input ports take the unit of what feeds them there ($/t × kt → $k out of a block; a port nothing feeds keeps its own). Automatic aliases saved in a file are skipped by the Node check (fmIDE redraws them with new ids).
 
 ### 19. ExcelExporter on the shared IR (`tests/19-excel-ir.spec.js`)
@@ -465,6 +466,7 @@ fmIDE at 1400 × 900.
 - A saved 3000 × 2000 opens at most 98 % × 96 % of the screen.
 - A workspace file carrying `ui.windowSizes` (333 × 444) and closed groups, imported: the window doesn't take that size.
 - The Templates tree (`templates/search.json`): the Financial Statement heading (a `div`, role button, "▾ Name (count)") closes on a click and hides exactly its templates; still closed after a reload (`ui.templateGroupsClosed`); a search finds templates inside it; Enter on the focused heading opens it again.
+- The 📈 chart (values across periods), opened from a rectangle's 📈 button: with 6, 24 and 120 periods there is a dot for every period, the chart is no wider than its space, the rightmost dot is inside it, neither the chart nor the window scrolls sideways, periods 1 and the last are numbered along the bottom, and a mouse drag from high on the left to low on the right changes the first and last values (first above last). Its window is resizable: at 1200 × 700 the chart is wider and taller, at 500 × 500 narrower with all 24 dots inside and no sideways scroll; `ui.windowSizes.periodValues` holds 500 × 500 and the window opens at that size after a reload. With 60 periods, shrinking the browser to 700 × 700 shrinks the chart, all 60 dots still inside.
 - Group 26: the Browse Library window is resizable, at least 1000 px wide on a 1400 px screen, and opens again at the size it was given.
 
 ### 30. ExcelExporter by touch (`tests/30-touch-excel.spec.js`; step 9c)
@@ -584,6 +586,36 @@ Samples `tests/fixtures/block-layouts/`: `block-a` (the Loan block — a canvas 
 - A workspace whose Loan template carries an instance layout: both instance tabs laid out by it, tagged "instance layout from the template", "2 tabs laid out from their templates' layout: 6 rows matched, 0 new.", the own tab plain, nothing stored. A hostile instance layout (bad copies, duplicates, markup, bad references): markup shown only as text (twice), nothing runs, no `<img>`.
 - A version 1 layouts file imports ("Imported 1 module layout…") and Reset lays the module's own tab out with it.
 
+### 40. Add Many Rectangles… and the quick chain (`tests/40-add-many-rectangles.spec.js`; step 12, phase 12b)
+fmIDE at 1400 × 900 (the touch test at 1024 × 768 with a touchscreen), an empty canvas.
+- Typing Revenue (Tab 100, Tab $m), Cost of sales, Gross margin with Enter: 10 rows, focus moves to the next row's Name; "3 of 10 rows filled — 3 rectangles will be added.", the button "Add 3"; added in a column (same x, 22 pixels apart), selected; one undo takes all three away.
+- How many 2, then three names typed with Enter: rows 3 and 4 added, How many 4; Escape closes and adds nothing. Mod+Enter in the window adds.
+- How many: 12 keeps what was typed; 6 (only empty rows dropped) asks nothing; 3 would drop a named row: "Remove the last 3 rows? 1 of them has a name." — Cancel keeps six rows, OK leaves three.
+- Pasting into a Name box: lines (a blank one in the middle, a final newline) fill that row and the ones below; columns copied from Excel (tab-separated name, value, unit) from row 9 add two rows; blank rows are skipped (6 of 11).
+- A grid of two across with a gap of 40 (A B / C D / E), a row with the usual 22 (Across hidden); nothing overlaps a rectangle already in the middle of the view.
+- A name already on the canvas (capitals and outer spaces ignored) is marked "already on this canvas", a second use in the list "also in row 2"; both are still added.
+- A name with markup stays plain text: no element made, nothing run.
+- `fm.createRects`: items (objects or plain names, a blank one skipped) at x, y exactly, 86 pixels apart; names one per line as a row with a gap of 10; no names, 201 names and a value that can't be read are refused with nothing added; in the window, the bad value's message is shown and the window stays.
+- Recording the window gives one `createRects` step with the names; played back on an empty canvas, it makes them again.
+- Mod+Enter in a rectangle's editor (Top at y 100, Second at 200): Third at 300 and Fourth at 400, same x, each already editing; two undos take Fourth away. A rectangle with nothing above: the next one 22 pixels below.
+- The ribbon: Add Many Rectangles… right after Add Rectangle on the Home and Insert tabs; a ribbon customised before 12b gets it after its own Add Rectangle once (`ui.addManyRectsAdded`), and a ribbon that later removed it stays without it.
+- By touch: a finger opens the window, the Name box is 16 pixels, two names typed, a tap on Add adds them; the page saw only touch.
+
+### 41. Snap to equal spacing (`tests/41-equal-spacing-snap.spec.js`; step 12, phase 12a)
+fmIDE at 1400 × 900 (the touch test at 1024 × 768 with a touchscreen); rectangles 170 × 64 placed with `fm.createRect`, then dragged with a real mouse, the button released after a pause.
+- A at x 100 and B at 300 (gap 30): C dropped at 503, 102 lands at 500, 100 (the top lines up with A's); while the button is down there are two pink markers, each 30 pixels wide; none after.
+- Before the first: A 400, B 600 — C dropped at 196 lands at 200. Halfway: A 100, B 500 (gap 230) — C dropped at 304 lands at 300, markers 30 and 30.
+- Down a column: A at y 100, B at 200 (gap 36) — C dropped at 101, 297 lands at 100, 300, two vertical markers of 36.
+- Different sizes: A 100 wide at 100, B 250 wide at 230 — C dropped at 513 lands at 510 (equal gaps between edges). A run of three (100, 300, 500) extended: 696 → 700.
+- At y 400 C shares no height with A and B: dropped at 503, it stays at 503; no markers.
+- With E's left edge at 504 in another row: dropped at 501 → 500 (equal spacing nearer), at 503 → 504 (alignment nearer), at 502 → 504 (a tie goes to alignment); dropped at 499, 104 → 500, 100 (equal spacing across, lined up down).
+- A selection of C and D (150 below it): C dropped at 503, 101 lands at 500, 100 and D at 500, 250.
+- Alt held from the start: an alias of C lands at 500, 100, C stays. Alt pressed after the drag has started: C dropped at 503, 102 stays at 503, 102.
+- Recorded as one `move` step of −100, −400; exported at 500, 100; one undo puts it back at 600, 500.
+- 400 rectangles (two calls of `fm.createRects`, grids of 20 across), one dragged across them in 30 moves: under 15 seconds, and it moved.
+- By touch: a finger drag of C to 503, 101 lands at 500, 100; the page saw only touch.
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.
+

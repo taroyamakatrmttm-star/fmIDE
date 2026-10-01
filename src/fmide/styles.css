@@ -433,7 +433,13 @@
   .dedupe-row .dedupe-fate{ margin-left:auto; font-size:11px; font-weight:700; color:#15803d; }
   .dedupe-row.remove .dedupe-name{ text-decoration:line-through; color:#9ca3af; }
   .dedupe-row.remove .dedupe-fate{ color:#b91c1c; }
-  .period-values-box{ min-width:640px; max-width:92vw; }
+  /* The 📈 window: resizable (makeResizableWindow); the chart fills what the window gives it
+     and shows every period, so it never scrolls sideways. */
+  .period-values-box.resizable-window{ width:min(960px, 96vw); min-width:420px; }
+  .period-values-chart{ position:relative; overflow:hidden; height:240px; min-height:140px;
+    border:1px solid #e5e7eb; border-radius:8px; background:#fafafa; margin-bottom:10px; }
+  .modal-box.resizable-window > .period-values-chart{ flex:1 1 240px; flex-shrink:1; height:auto; }
+  .period-values-chart svg{ position:absolute; left:0; top:0; display:block; }
   .template-layout{ display:flex; gap:16px; margin-bottom:14px; }
   .template-list-col{ width:190px; flex-shrink:0; display:flex; flex-direction:column; gap:6px; }
   .template-search{
@@ -615,6 +621,11 @@
   .guide-v{ width:1px; top:0; height:2400px; }
   .guide-h{ height:1px; left:0; width:3600px; }
   .guide.show{ display:block; }
+  /* Step 12a: while a drag snaps to equal spacing, each equal gap gets a bar with end caps. */
+  #gapMarks{ position:absolute; left:0; top:0; width:0; height:0; pointer-events:none; z-index:46; }
+  .gap-mark{ position:absolute; pointer-events:none; border-color:#db2777; border-style:solid; box-sizing:border-box; }
+  .gap-mark-h{ height:9px; margin-top:-4px; border-width:0 2px; background:linear-gradient(#db2777, #db2777) center / 100% 2px no-repeat; }
+  .gap-mark-v{ width:9px; margin-left:-4px; border-width:2px 0; background:linear-gradient(#db2777, #db2777) center / 2px 100% no-repeat; }
 
   .node{
     position:absolute;
@@ -988,3 +999,20 @@
   }
   #tapArrowBanner button{ flex:none; padding:7px 12px; border-radius:7px; border:1px solid #6366f1; background:#312e81; color:#fff; cursor:pointer; font:inherit; font-size:13px; }
   .node.arrow-source{ box-shadow:0 0 0 3px var(--accent); }
+
+  /* Add Many Rectangles… (step 12b): a resizable window; the rows scroll. */
+  .add-many-box.resizable-window{ width:min(640px, 96vw); height:min(640px, 92vh); }
+  .add-many-count{ display:flex; align-items:center; gap:6px; font-size:13px; margin-bottom:8px; }
+  .add-many-count input{ width:70px; font-size:13px; padding:4px 6px; border-radius:6px; border:1px solid #d1d5db; }
+  .modal-box.resizable-window > .add-many-rows{ flex:1 1 auto; flex-shrink:1; min-height:120px; }
+  .add-many-rows{ overflow-y:auto; border:1px solid #e5e7eb; border-radius:8px; padding:4px 6px; margin-bottom:10px; }
+  .add-many-row{ display:grid; grid-template-columns:28px minmax(120px, 1fr) 90px 70px minmax(0, 150px); gap:6px; align-items:center; padding:2px 0; }
+  .add-many-head{ font-size:11px; font-weight:700; color:#6b7280; position:sticky; top:0; background:#fff; z-index:1; }
+  .add-many-num{ font-size:11px; color:#9ca3af; text-align:right; }
+  .add-many-row input{ min-width:0; font-size:13px; padding:4px 6px; border-radius:6px; border:1px solid #d1d5db; }
+  .add-many-note{ font-size:11px; color:#b45309; overflow-wrap:anywhere; }
+  .add-many-warn .add-many-name{ border-color:#f59e0b; }
+  .add-many-arrange{ display:flex; flex-wrap:wrap; align-items:center; gap:12px; font-size:13px; margin-bottom:8px; }
+  .add-many-arrange input[type=number]{ width:60px; font-size:13px; padding:4px 6px; border-radius:6px; border:1px solid #d1d5db; }
+  .modal-box p.add-many-status{ font-size:12px; color:#374151; margin:4px 0 10px; }
+  .modal-box p.add-many-status.add-many-error{ color:#b91c1c; }

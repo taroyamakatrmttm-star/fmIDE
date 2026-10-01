@@ -311,6 +311,7 @@
       libraryPacksAdded: true, // 8a: Open Library Pack… and Save as Library Pack… in the File tab's Library group
       libraryBrowseAdded: true, // 8d: Browse Library… in the same group
       helpAdded: true, // step 10: the Help group at the end of the View tab
+      addManyRectsAdded: true, // 12b: Add Many Rectangles… after Add Rectangle
       libraryAuthor,
       windowSizes: cleanWindowSizes(windowSizes), templateGroupsClosed: templateGroupsClosed.slice(0, 200)
     };
@@ -395,6 +396,17 @@
     const at = g.items.findIndex(it => it && it.cmd === 'openLibraryPack');
     g.items.splice(at < 0 ? g.items.length : at, 0, { cmd: 'browseLibrary' });
   }
+  // One-time update (step 12b) of a customised ribbon: Add Many Rectangles… right after every
+  // Add Rectangle it has (none: left alone; already there: left alone).
+  function addManyRectsCommandToRibbon(){
+    const groups = [];
+    ribbonState.config.tabs.forEach(t => (t && Array.isArray(t.groups) ? t.groups : []).forEach(g => { if(g && Array.isArray(g.items)) groups.push(g); }));
+    if(groups.some(g => g.items.some(it => it && it.cmd === 'addManyRects'))) return;
+    groups.forEach(g => {
+      const at = g.items.findIndex(it => it && it.cmd === 'addRect');
+      if(at >= 0) g.items.splice(at + 1, 0, { cmd: 'addManyRects' });
+    });
+  }
   // One-time update (step 10) of a customised ribbon: the Help group joins the end of the tab
   // holding Keyboard Shortcuts (the View tab), or else the View tab. A ribbon with neither, or
   // that already has Help, is left alone (❓ beside the search box and F1 still open it); a
@@ -424,6 +436,7 @@
       if(ui.libraryPacksAdded !== true) addLibraryPackCommandsToRibbon();
       if(ui.libraryBrowseAdded !== true) addLibraryBrowseCommandToRibbon();
       if(ui.helpAdded !== true) addHelpGroupToRibbon();
+      if(ui.addManyRectsAdded !== true) addManyRectsCommandToRibbon();
     }
     if(!fromImport && typeof ui.libraryAuthor === 'string') libraryAuthor = ui.libraryAuthor.slice(0, LIBRARY_PACK_LIMITS.author);
     // Window sizes and closed template groups belong to this screen and person: never from
