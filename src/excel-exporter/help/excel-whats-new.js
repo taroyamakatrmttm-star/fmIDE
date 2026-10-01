@@ -22,7 +22,7 @@ const EXCEL_WHATS_NEW = [
       'Press ❓ Help (or F1) and look at What\'s new at the top.',
       'Pick an update to read its page; Back returns to the list.',
     ],
-    notes: ['Opening the list of every update marks them all as seen.'],
+    notes: ['Opening the list of every update marks them all as seen.', 'The same pages are on fmIDE\'s website too, at /help/excel/whats-new/.'],
     see: ['what-is-excelexporter'] },
 
   { id: 'wider-help', date: '2026-10-02', title: 'A wider Help panel',

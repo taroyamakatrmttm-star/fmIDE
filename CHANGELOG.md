@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## What's new on the website
+- The What's new pages are on the published site too: `/help/whats-new/` for fmIDE and `/help/excel/whats-new/` for ExcelExporter, a list of every update and a page each, linked from the help index. Plain pages with no JavaScript, made from the same text as the apps, like the other help pages.
+
 ## What's new, inside Help
 - **The Help panel opens with What's new** (fmIDE and ExcelExporter): the newest updates, and **Every update** for the whole list, newest first. Each update has its own page: what changed, why, how to use it, and a link to the full guide; a command named there is a button that runs it.
 - Updates you haven't seen are marked **New**, and ❓ carries a small dot until you have opened the list. The search box finds updates too. In fmIDE, **View → What's New** (also in the Command Launcher) opens the list.

@@ -124,6 +124,14 @@ One pull request each, each approved before the next.
 - **Found along the way:** the heading comment of `src/help/fmide-help.js` named the panel's code as `23-help.js`; it is `01b-help.js`, and now says so.
   - **H5 — more room to read, and What's new** (decided 1 Oct 2026, the owner; three phases, one pull request each): **H5a** the Help panel widens — ⤢ for a reading view, its left edge drags to any width — in both apps (a side panel, not a pop-up: the owner's choice); **H5b** What's new, a page per feature (not per pull request) with what changed, why and how to use it, newest first, a "New" badge on what you haven't seen, every past feature written in full, each app its own entries, developer-only changes left out; **H5c** the What's new pages on the site.
 
+## Done (H5c) — how it turned out
+
+- **The pages** (`tools/build-help.js`): `/help/whats-new/` lists fmIDE's updates under a heading per day, newest first; `/help/whats-new/<id>` is one update — its day, What changed, Why, How to use it, Good to know and Read more (its guides), commands shown by name and ribbon tab as on the other pages. ExcelExporter's are at `/help/excel/whats-new/`, under its licence. Each index links to them ("What's new"). Made from the same data as the apps' panels (`fmide-whats-new.js`, `excel-whats-new.js`).
+- **Checked at build time**, like the topics: update ids letters, digits and dashes; real dates, newest first; every command and topic named exists — otherwise nothing is published (`HelpError`). `whats-new` joined the names no topic may take.
+- ExcelExporter's header links are now relative to the help's root, so they also work one folder deeper.
+- **Checked:** test group 34 — the pages list, the two lists and an update's page in each app, the links, hostile text in updates, the build stopping on bad updates, the policy and a phone's width.
+- README now mentions the wider panel and What's new (missed in H5a and H5b).
+
 ## Done (H5b) — how it turned out
 
 - **The data:** `src/help/fmide-whats-new.js` (`WHATS_NEW`, CC BY 4.0, 35 updates) and `src/excel-exporter/help/excel-whats-new.js` (`EXCEL_WHATS_NEW`, ExcelExporter's licence, 22 updates), each `{ id, date, title, summary, what, why, how, notes, see }`, newest first. Written from `CHANGELOG.md` and the pull requests, one entry per feature a person would notice (the touch phases are one entry, the function phases one, the template-tidying changes one). Left out as developer-only: the test suite, the source split, shared code, browser storage moving to IndexedDB, the pack checker and the library's rules and repository, a pack taken down, the licences, and fixes only hand-written sample files could meet. The formula IR's phases are one entry, "The canvas and Excel give the same numbers". Dates are the day each was merged.
