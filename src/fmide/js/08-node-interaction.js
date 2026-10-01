@@ -374,6 +374,10 @@
     }
     ta.addEventListener('blur', commit);
     ta.addEventListener('keydown', (ev) => {
+      // Mod+Enter on a rectangle: save it and start the next one just below (step 12b).
+      if(ev.key === 'Enter' && !ev.shiftKey && (ev.ctrlKey || ev.metaKey) && n.type === 'value'){
+        ev.preventDefault(); ta.blur(); chainRectangleBelow(n); return;
+      }
       if(ev.key === 'Enter' && !ev.shiftKey){ ev.preventDefault(); ta.blur(); }
       if(ev.key === 'Escape'){ ta.value = n.text; ta.blur(); }
     });

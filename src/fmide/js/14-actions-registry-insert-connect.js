@@ -179,6 +179,60 @@
       return n.id;
     } });
 
+  // Step 12b: many rectangles at once, laid out with one gap (Add Many Rectangles… calls it).
+  const CREATE_RECTS_MAX = 200;
+  const RECT_W = 170, RECT_H = 64;
+  defineAction({ name:'createRects', label:'Create Rectangles', category:'Insert', icon:'▤', returns:'nodes',
+    desc:'Adds many rectangles at once, one undo step: names is one name per line, or items a list of { name, value, uom } (or plain names); blank names are skipped (at most ' + CREATE_RECTS_MAX + '). Laid out in a column, a row or a grid (across per row) with gap pixels between them, from x, y (left out: near the middle of the view, where the group overlaps nothing).',
+    params:[ P('names','text',{ optional:true, help:'one name per line' }),
+      P('items','json',{ optional:true, help:'[{"name":"Revenue","value":"100","uom":"$m"}, …] or ["Revenue", …]' }),
+      P('layout','enum',{ options:['column','row','grid'], def:'column' }), P('across','int',{ def:4, min:1 }),
+      P('gap','number',{ def:22, min:0 }),
+      P('x','number',{ coord:'x', optional:true, help:'canvas x (px); left out: near the middle of the view' }),
+      P('y','number',{ coord:'y', optional:true, help:'canvas y (px)' }) ],
+    run(a){
+      const raw = [];
+      if(a.items != null){
+        if(!Array.isArray(a.items)) fail('Create Rectangles: items must be a list.');
+        a.items.forEach(it => raw.push(typeof it === 'string' ? { name: it } : (it && typeof it === 'object' ? it : { name: it == null ? '' : String(it) })));
+      }
+      if(a.names) String(a.names).split(/\r?\n/).forEach(s => raw.push({ name: s }));
+      const VALUE = P('value', 'numstr'), UOM = P('uom', 'string');
+      const list = [];
+      raw.forEach((it, i) => {
+        const name = it.name == null ? '' : String(it.name).trim();
+        if(name === '') return;
+        VALUE.label = 'value of "' + name + '"';
+        list.push({ name, value: it.value == null || it.value === '' ? '' : coerceParam(VALUE, it.value, {}, false),
+          uom: it.uom == null ? '' : coerceParam(UOM, it.uom, {}, false).trim() });
+      });
+      if(list.length === 0) fail('Create Rectangles: no names given.');
+      if(list.length > CREATE_RECTS_MAX) fail(`Create Rectangles: at most ${CREATE_RECTS_MAX} at once (got ${list.length}).`);
+      const across = a.layout === 'column' ? 1 : a.layout === 'row' ? list.length : a.across;
+      const placeAt = (i) => ({ x: (i % across) * (RECT_W + a.gap), y: Math.floor(i / across) * (RECT_H + a.gap) });
+      const given = a.x != null && a.y != null;
+      let x0, y0;
+      if(given){ x0 = a.x; y0 = a.y; }
+      else {
+        // The group's top left, so the group is centred in the view; then the nearest free spot.
+        const last = placeAt(list.length - 1);
+        const cols = Math.min(across, list.length);
+        const w = cols * RECT_W + (cols - 1) * a.gap, h = last.y + RECT_H;
+        x0 = Math.max(10, viewport.scrollLeft + viewport.clientWidth / 2 - w / 2);
+        y0 = Math.max(10, viewport.scrollTop + viewport.clientHeight / 2 - h / 2);
+      }
+      pushHistory();
+      const made = list.map((it, i) => {
+        const p = placeAt(i);
+        return { id: uid('n'), type:'value', x: clampPos(x0 + p.x), y: clampPos(y0 + p.y), w: RECT_W, h: RECT_H,
+          text: composeText({ name: it.name, value: it.value, uom: it.uom }), plugs:[] };
+      });
+      if(!given) moveGroupToFreeSpot(made, nodes);
+      nodes = nodes.concat(made);
+      clearComputed();
+      return made.map(n => n.id);
+    } });
+
   defineAction({ name:'createOperator', label:'Create Operator', category:'Insert', icon:'±', returns:'node',
     desc:'Adds an operator node. For − ÷ ^ % and comparisons, inputs are taken left-to-right by x position; if and round take each input by name (fm.connect\'s toPort).',
     params:[ PX, PY, P('op','enum',{ options: ALL_OPS, def:'+' }) ],

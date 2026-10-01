@@ -83,6 +83,7 @@
     { id:'deselect',    label:'Deselect / Cancel',     icon:'⎋', category:'Edit', defaultShortcut:'Escape',       action:() => { closePicker(); if(selectedEdgeId || selectedNodeIds.size) clearSelection(); } },
 
     { id:'addRect',     label:'Add Rectangle',         icon:'▭', category:'Insert', defaultShortcut:null, action:() => addRectangleInteractive() },
+    { id:'addManyRects', label:'Add Many Rectangles…', icon:'▤', category:'Insert', defaultShortcut:null, action:() => showAddManyRectangles() },
     { id:'addOperator', label:'Add Operator',          icon:'±', category:'Insert', defaultShortcut:null, action:() => addOperatorInteractive() },
     { id:'addAlias',    label:'Add Alias',             icon:'🔗', category:'Insert', defaultShortcut:null, action:() => showAliasPicker(null) },
     { id:'addBlock',    label:'Add Block',             icon:'▣', category:'Insert', defaultShortcut:null, action:() => showBlockPicker(null) },

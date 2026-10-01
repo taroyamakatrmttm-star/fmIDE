@@ -586,6 +586,22 @@ Samples `tests/fixtures/block-layouts/`: `block-a` (the Loan block — a canvas 
 - A workspace whose Loan template carries an instance layout: both instance tabs laid out by it, tagged "instance layout from the template", "2 tabs laid out from their templates' layout: 6 rows matched, 0 new.", the own tab plain, nothing stored. A hostile instance layout (bad copies, duplicates, markup, bad references): markup shown only as text (twice), nothing runs, no `<img>`.
 - A version 1 layouts file imports ("Imported 1 module layout…") and Reset lays the module's own tab out with it.
 
+### 40. Add Many Rectangles… and the quick chain (`tests/40-add-many-rectangles.spec.js`; step 12, phase 12b)
+fmIDE at 1400 × 900 (the touch test at 1024 × 768 with a touchscreen), an empty canvas.
+- Typing Revenue (Tab 100, Tab $m), Cost of sales, Gross margin with Enter: 10 rows, focus moves to the next row's Name; "3 of 10 rows filled — 3 rectangles will be added.", the button "Add 3"; added in a column (same x, 22 pixels apart), selected; one undo takes all three away.
+- How many 2, then three names typed with Enter: rows 3 and 4 added, How many 4; Escape closes and adds nothing. Mod+Enter in the window adds.
+- How many: 12 keeps what was typed; 6 (only empty rows dropped) asks nothing; 3 would drop a named row: "Remove the last 3 rows? 1 of them has a name." — Cancel keeps six rows, OK leaves three.
+- Pasting into a Name box: lines (a blank one in the middle, a final newline) fill that row and the ones below; columns copied from Excel (tab-separated name, value, unit) from row 9 add two rows; blank rows are skipped (6 of 11).
+- A grid of two across with a gap of 40 (A B / C D / E), a row with the usual 22 (Across hidden); nothing overlaps a rectangle already in the middle of the view.
+- A name already on the canvas (capitals and outer spaces ignored) is marked "already on this canvas", a second use in the list "also in row 2"; both are still added.
+- A name with markup stays plain text: no element made, nothing run.
+- `fm.createRects`: items (objects or plain names, a blank one skipped) at x, y exactly, 86 pixels apart; names one per line as a row with a gap of 10; no names, 201 names and a value that can't be read are refused with nothing added; in the window, the bad value's message is shown and the window stays.
+- Recording the window gives one `createRects` step with the names; played back on an empty canvas, it makes them again.
+- Mod+Enter in a rectangle's editor (Top at y 100, Second at 200): Third at 300 and Fourth at 400, same x, each already editing; two undos take Fourth away. A rectangle with nothing above: the next one 22 pixels below.
+- The ribbon: Add Many Rectangles… right after Add Rectangle on the Home and Insert tabs; a ribbon customised before 12b gets it after its own Add Rectangle once (`ui.addManyRectsAdded`), and a ribbon that later removed it stays without it.
+- By touch: a finger opens the window, the Name box is 16 pixels, two names typed, a tap on Add adds them; the page saw only touch.
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.
+

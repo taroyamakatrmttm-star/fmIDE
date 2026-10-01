@@ -1,6 +1,6 @@
 # Build step 12 — faster canvas building
 
-**Status:** proposed (1 Oct 2026), not started. Two independent phases, **12a** and **12b**; either can go first. Each phase gets its own plan, approved by the owner before any change, and its own pull request. The choices marked **Owner's choice** below are open: the recommendation is a starting point, not a decision.
+**Status:** 12b done (1 Oct 2026); 12a not started. Two independent phases, **12a** and **12b**; 12b went first (the owner's choice). Each phase gets its own plan, approved by the owner before any change, and its own pull request. The choices marked **Owner's choice** below are open: the recommendation is a starting point, not a decision.
 
 **Goal:** fewer clicks to lay out a model. Two requests from the owner:
 
@@ -107,6 +107,21 @@ and the same up and down, for nodes one above the other. "Evenly spaced" means *
 **Help and tests:** a sentence for the new command, the `rectangles` help topic updated; a tutorial step is not needed. New test group (next free number after 12a's): typing a list with Enter through the rows, How many growing and shrinking (rows typed are kept when it grows; it asks before dropping filled rows when it shrinks), pasting lines and Excel columns, blank rows skipped, each arrangement and the gap, nothing overlapped, one undo step, the selection, the duplicate-name warning, hostile text in names kept as plain text, `fm.createRects` and its macro step, a finger and the on-screen keyboard (group 27's helpers), and Mod+Enter on the canvas (if 2a).
 
 ---
+
+### 12b — how it turned out
+
+Decided when the work started (1 Oct 2026, the owner): **12b first**; **rows** (choice 1a); **the quick chain on the canvas, in this phase** (2a); and the simple window — **no Width / Height box and no numbering** (3a, 4a).
+
+What was built:
+
+- **Add Many Rectangles…** (command `addManyRects`, `src/fmide/js/03b-add-many-rectangles.js`): the window as drawn above. How many (1 to 200, 10 to start) sets the rows; Enter moves to the next row's Name (on the last row it adds one); Tab moves across; Mod+Enter adds; Escape closes. Pasting several lines into a Name box fills that row and the ones below, adding rows as needed; tab-separated columns from Excel fill Name, Value and Unit. Fewer rows ask first when named rows would go. A name already on the canvas is marked "already on this canvas", one used twice in the list "also in row N" — warnings only. Column, row or grid (with its number across), one gap for all (22 pixels to start), "Select them when added" (on). The line at the bottom counts the rectangles, and the Add button carries the number; a value that can't be read is shown there and the window stays open. It has a "?" (the `rectangles` topic) and a resize corner (`addManyRects` in `WINDOW_SIZE_KEYS`).
+- **`fm.createRects`** (`14-actions-registry-insert-connect.js`): `names` (one per line) or `items` (`{ name, value, uom }` or plain names), `layout`, `across`, `gap`, `x`, `y`; blank names skipped, at most 200 (`CREATE_RECTS_MAX`); each value read like `createRect`'s; one undo step; returns the ids. With x and y left out, the group goes near the middle of the view where it overlaps nothing (`moveGroupToFreeSpot`); given, they are kept exactly. `names` comes first among its parameters, so `fm.createRects({ … })` takes named arguments and `fm.createRects('A\nB')` works too. The window calls it, so the macro recorder records one step.
+- **The quick chain**: in a rectangle's editor, **Mod+Enter** saves it and starts a new rectangle just below, already editing (`chainRectangleBelow`). The gap is the one between this rectangle and the one above it in its column (same x, at most 200 pixels apart), else 22; if that place is taken, the nearest free one. Each new rectangle is its own undo step.
+- **Ribbon**: after Add Rectangle on the Home tab's Insert group and the Insert tab's Nodes group; a customised ribbon gets it after its own Add Rectangle once (`ui.addManyRectsAdded`).
+- **Help**: a sentence for the command; the `rectangles` topic has two new paragraphs (the window, and Ctrl+Enter / Cmd+Enter).
+- **Files**: nothing changed — the rectangles are ordinary rectangles.
+
+How it was checked: test group 40 (`tests/40-add-many-rectangles.spec.js`, `npm run test:add-many`, 13 tests, listed in `tests/SPEC.md`), with a real mouse and keyboard and one by touch; then the whole suite.
 
 ## Order
 

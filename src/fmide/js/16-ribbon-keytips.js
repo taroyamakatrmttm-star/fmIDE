@@ -27,13 +27,13 @@
       ]},
       { id:'home', label:'Home', keytip:'H', groups:[
         { label:'Clipboard', items:[ { cmd:'paste', size:'large' }, { cmd:'cut' }, { cmd:'copy' } ] },
-        { label:'Insert', items:[ { cmd:'addRect', size:'large' }, { cmd:'addOperator', size:'large' }, { cmd:'addAlias' }, { cmd:'addBlock' }, { cmd:'insertFunction' }, { cmd:'addPeriodShift' } ] },
+        { label:'Insert', items:[ { cmd:'addRect', size:'large' }, { cmd:'addManyRects' }, { cmd:'addOperator', size:'large' }, { cmd:'addAlias' }, { cmd:'addBlock' }, { cmd:'insertFunction' }, { cmd:'addPeriodShift' } ] },
         { label:'Edit', items:[ { cmd:'undo' }, { cmd:'redo' }, { cmd:'deleteSel' }, { cmd:'selectAll' }, { cmd:'deselect' } ] },
         { label:'Arrange', items:[ { cmd:'alignLeft' }, { cmd:'alignCenterH' }, { cmd:'alignRight' }, { cmd:'alignTop' }, { cmd:'alignCenterV' }, { cmd:'alignBottom' } ] },
         { label:'Compute', items:[ { cmd:'evaluate', size:'large' }, { cmd:'prevPeriod' }, { cmd:'managePeriods' }, { cmd:'nextPeriod' } ] },
       ]},
       { id:'insert', label:'Insert', keytip:'N', groups:[
-        { label:'Nodes', items:[ { cmd:'addRect', size:'large' }, { cmd:'addAlias', size:'large' }, { cmd:'addBlock', size:'large' }, { cmd:'addPeriodShift', size:'large' } ] },
+        { label:'Nodes', items:[ { cmd:'addRect', size:'large' }, { cmd:'addManyRects', size:'large' }, { cmd:'addAlias', size:'large' }, { cmd:'addBlock', size:'large' }, { cmd:'addPeriodShift', size:'large' } ] },
         { label:'Arithmetic', items:[0,1,2,3,4,5].map(i => ({ cmd:'insertOp' + i })) },
         { label:'Compare', items:[6,7,8,9].concat(E1_COMPARE_OPS).map(i => ({ cmd:'insertOp' + i })) },
         { label:'Excel Functions', items:[10,11,12,13,14].concat(E1_FUNCTION_OPS, E2_FUNCTION_OPS, E2B_FUNCTION_OPS).map(i => ({ cmd:'insertOp' + i })) },

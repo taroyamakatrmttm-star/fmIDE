@@ -18,6 +18,7 @@ Every canvas interaction is an action. The Ribbon, shortcuts, Command Launcher (
 
 ### Insert
 - **createRect**(x="(auto)", y="(auto)", name="New Node", value="0", uom="", w=170, h=64) — Create Rectangle. Adds a value rectangle at x, y (left out: near the middle of the view, where it overlaps nothing). Its three text lines are name / value / unit of measure.
+- **createRects**(names?, items?, layout="column", across=4, gap=22, x?, y?) — Create Rectangles. Adds many rectangles at once, one undo step: names is one name per line, or items a list of { name, value, uom } (or plain names); blank names are skipped (at most 200). Laid out in a column, a row or a grid (across per row) with gap pixels between them, from x, y (left out: near the middle of the view, where the group overlaps nothing). Returns the new ids. Example: `fm.createRects({ items: [{ name: 'Price', value: 10, uom: '$/t' }, 'Volume'], layout: 'row' })`.
 - **createOperator**(x="(auto)", y="(auto)", op="+") — Create Operator. Adds an operator node. For − ÷ ^ % and comparisons, inputs are taken left-to-right by x position; if and round take each input by name (fm.connect's toPort).
 - **createPeriodShift**(x="(auto)", y="(auto)", shift=-1) — Create Period Shift. Adds a period-shift connector: its output at period p is its input at period p + shift (e.g. −1 = prior period).
 - **createAlias**(x="(auto)", y="(auto)", sourceCanvas="@current", source) — Create Alias. Adds an alias that shows another rectangle (on this or another canvas).
