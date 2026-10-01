@@ -40,18 +40,18 @@ for(const name of ['sys-current', 'sys-legacy']){
   });
 }
 
-// A newer system is v9 since system v8 (phase E2a, the operators ln, exp, sqrt, int, trunc)
-// became current: sys-newer-v5 to -v8 are now ordinary files.
-test('sys-newer-v9 asks: Cancel → "Not loaded.", Open Anyway → loads', async ({ page }) => {
-  await page.setInputFiles('#fileInput', file('sys-newer-v9'));
+// A newer system is v10 since system v9 (phase E2b, the operator choose)
+// became current: sys-newer-v5 to -v9 are now ordinary files.
+test('sys-newer-v10 asks: Cancel → "Not loaded.", Open Anyway → loads', async ({ page }) => {
+  await page.setInputFiles('#fileInput', file('sys-newer-v10'));
   await expect(page.locator('#confirmModal')).toBeVisible();
-  await expect(page.locator('#confirmMessage')).toContainText('format version 9');
+  await expect(page.locator('#confirmMessage')).toContainText('format version 10');
   await page.click('#confirmCancel');
   await expect(page.locator('#confirmModal')).toBeHidden();
   await expect(loadStatus(page)).toHaveText('Not loaded.');
   await expect(page.locator('#afterLoad')).toBeHidden();
 
-  await page.setInputFiles('#fileInput', file('sys-newer-v9'));
+  await page.setInputFiles('#fileInput', file('sys-newer-v10'));
   await expect(page.locator('#confirmModal')).toBeVisible();
   await expect(page.locator('#confirmOk')).toHaveText('Open Anyway');
   await page.click('#confirmOk');
@@ -59,8 +59,8 @@ test('sys-newer-v9 asks: Cancel → "Not loaded.", Open Anyway → loads', async
   await expect(page.locator('#afterLoad')).toBeVisible();
 });
 
-test('sys-newer-v5 to -v8, the workspaces with a v5 to v8 system inside, and the v6 files with Excel settings are now current files: no question', async ({ page }) => {
-  for(const name of ['sys-newer-v5', 'sys-newer-v6', 'sys-newer-v7', 'sys-newer-v8', 'ws-nested-newer', 'ws-nested-newer-v6', 'ws-nested-newer-v7', 'ws-nested-newer-v8', 'ws-v3', 'ws-v4',
+test('sys-newer-v5 to -v9, the workspaces with a v5 to v9 system inside, and the v6 files with Excel settings are now current files: no question', async ({ page }) => {
+  for(const name of ['sys-newer-v5', 'sys-newer-v6', 'sys-newer-v7', 'sys-newer-v8', 'sys-newer-v9', 'ws-nested-newer', 'ws-nested-newer-v6', 'ws-nested-newer-v7', 'ws-nested-newer-v8', 'ws-nested-newer-v9', 'ws-v3', 'ws-v4',
     'sys-v6-excel-settings', 'ws-v6-excel-settings']){
     await page.setInputFiles('#fileInput', file(name));
     await expect(loadStatus(page)).toHaveClass(/ok/);
@@ -68,8 +68,8 @@ test('sys-newer-v5 to -v8, the workspaces with a v5 to v8 system inside, and the
   }
 });
 
-test('ws-nested-newer-v9: the confirm mentions its system', async ({ page }) => {
-  await page.setInputFiles('#fileInput', file('ws-nested-newer-v9'));
+test('ws-nested-newer-v10: the confirm mentions its system', async ({ page }) => {
+  await page.setInputFiles('#fileInput', file('ws-nested-newer-v10'));
   await expect(page.locator('#confirmModal')).toBeVisible();
   await expect(page.locator('#confirmMessage')).toContainText('its system');
   await page.click('#confirmOk');
@@ -210,14 +210,14 @@ test.describe('workspace v6 (origins)', () => {
     expect(await page.evaluate(() => window.__pwned)).toBeUndefined();
     expect(pageErrors).toEqual([]);
   });
-  // Workspace v9 is current since phase E2a: a newer one is v10.
-  test('a v10 workspace asks first', async ({ page }, testInfo) => {
+  // Workspace v10 is current since phase E2b: a newer one is v11.
+  test('a v11 workspace asks first', async ({ page }, testInfo) => {
     const ws = withOrigins();
-    ws.version = 10;
-    const p = testInfo.outputPath('ws-v10.json');
+    ws.version = 11;
+    const p = testInfo.outputPath('ws-v11.json');
     fs.writeFileSync(p, JSON.stringify(ws));
     await page.setInputFiles('#fileInput', p);
     await expect(page.locator('#confirmModal')).toBeVisible();
-    await expect(page.locator('#confirmMessage')).toContainText('format version 10');
+    await expect(page.locator('#confirmMessage')).toContainText('format version 11');
   });
 });

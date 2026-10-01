@@ -2,6 +2,12 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## choose: a scenario switch (step 7, phase E2b)
+- **choose** gives the choice its index picks, like Excel's CHOOSE: an index of 2 gives choice 2 (2.7 counts as 2). It suits a scenario switch — 1 base, 2 upside, 3 downside. Only the choice picked is worked out, so an error, or last period's value in period 1, in a choice not picked doesn't matter. An index below 1 or past the last choice shows "?" (Excel's #VALUE!).
+- On the canvas it shows an **index** dot and a dot per choice, always with one empty choice at the end: drop an arrow on the dot you mean, or on the box for the next empty one. It is in the palette, the Command Launcher (Insert Operator choose, command 30) and Insert → Excel Functions; a customised ribbon gets it once. Changing an operator into choose makes its arrows the index and the choices, left to right. Functions can use `CHOOSE(i, a, b, …)`.
+- The choices' unit, when they share one, is the result's.
+- File formats: system 9, module 7, workspace 10, templates file 9, so an older fmIDE or ExcelExporter asks before opening a file that may use it. Older files open unchanged.
+
 ## Five more Excel functions as operators (step 7, phase E2a)
 - **ln**, **exp**, **sqrt**, **int** and **trunc** calculate the same in fmIDE and Excel (LN, EXP, SQRT, INT, TRUNC). Each takes one input. The log of 0 or less, the square root of a negative number and e to a power too large show "?" (Excel's #NUM!). **int** rounds down (−2.5 gives −3); **trunc** cuts the fraction off (−2.5 gives −2; for digits, use rounddown). The results of ln, exp and sqrt have no unit; int and trunc keep their input's.
 - They are in the palette, the Command Launcher (Insert Operator ln … trunc, commands 25–29) and on the ribbon's Insert → Excel Functions; a customised ribbon gets them once. Functions can use them too: `LN(x)`, `EXP(x)`, `SQRT(x)`, `INT(x)`, `TRUNC(x)`.

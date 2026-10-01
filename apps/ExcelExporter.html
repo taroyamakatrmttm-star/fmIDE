@@ -731,14 +731,16 @@ var XLSX = (function(){
 // - fallback (iferror): its first input, or when that fails its second, or 0.
 // - period (phase E): no inputs; the period being calculated, counted from 1.
 // - ports (phase E): named inputs, each arrow into one by its `toPort` (counted from 0), as
-//   into a function node; `apply` takes them in that order. `branches` (if): the first is
-//   the condition, and only the input it picks (then when it isn't 0, else otherwise) is
-//   read. An input read with no arrow is 'operator-input-unwired'.
+//   into a function node; `apply` takes them in that order. `branches` (if, choose): the
+//   first input picks one of the others (`pick`), and only that one is read — if: then when
+//   the condition isn't 0, else otherwise; choose (phase E2b): choice n for index n. An input
+//   read with no arrow is 'operator-input-unwired'. `choices` (choose): after its fixed named
+//   inputs come "choice 1", "choice 2"… — as many as its arrows reach (operatorPortNames).
 // Comparisons treat two numbers as equal when they differ only in the last few binary
 // digits (approxEqual), as Excel and LibreOffice do: 0.1 + 0.2 = 0.3.
 // `unit` is how the unit of measure passes through: 'multiply', 'divide', 'same' (every
 // input must have the same unit, which the result takes), 'first' (the first input's),
-// 'branches' (then and else must have the same unit, which the result takes), or null.
+// 'branches' (the inputs it may pick must have the same unit, which the result takes), or null.
 // How each operator is spelled in Excel lives in ExcelExporter, not here.
 const OPERATORS = [
   { id: 'add',      symbol: '+',       word: 'Add',          fold: (a, b) => a + b, unit: 'same' },
@@ -759,7 +761,7 @@ const OPERATORS = [
   { id: 'iferror',  symbol: 'iferror', fn: true, fallback: true, unit: 'same' },
   // Phase E1: timing, conditions and rounding.
   { id: 'period',    symbol: 'period',    fn: true, period: true, unit: null },
-  { id: 'if',        symbol: 'if',        fn: true, ports: ['condition', 'then', 'else'], branches: true, unit: 'branches' },
+  { id: 'if',        symbol: 'if',        fn: true, ports: ['condition', 'then', 'else'], branches: true, pick: (c) => c !== 0 ? 1 : 2, unit: 'branches' },
   { id: 'eq',        symbol: '=',         word: 'Equal',     compare: (a, b) => approxEqual(a, b), unit: null },
   { id: 'ne',        symbol: '≠',         word: 'Not equal', compare: (a, b) => !approxEqual(a, b), unit: null },
   { id: 'and',       symbol: 'and',       fn: true, all: (vs) => vs.every(v => v !== 0) ? 1 : 0, unit: null },
@@ -778,7 +780,35 @@ const OPERATORS = [
   { id: 'sqrt',      symbol: 'sqrt',      fn: true, unary: (a) => a >= 0 ? Math.sqrt(a) : NaN, unit: null },
   { id: 'int',       symbol: 'int',       fn: true, unary: (a) => Math.floor(a) + 0, unit: 'same' }, // + 0: never −0, which Excel doesn't have
   { id: 'trunc',     symbol: 'trunc',     fn: true, unary: (a) => Math.trunc(a) + 0, unit: 'same' },
+  // Phase E2b: CHOOSE(index, choice 1, choice 2, …), as Excel: the index cut to a whole
+  // number picks a choice; below 1 or past the last choice it is 'choose-out-of-range' (Excel's
+  // #VALUE!). Only the choice picked is read.
+  { id: 'choose',    symbol: 'choose',    fn: true, ports: ['index'], choices: true, branches: true, pick: (c, n) => chooseIndex(c, n), unit: 'branches' },
 ];
+
+// CHOOSE takes at most 254 choices, as Excel does.
+const CHOOSE_MAX_CHOICES = 254;
+// The choice an index picks among `n` (1…n), or 0 when it picks none.
+function chooseIndex(index, n){
+  const i = Math.trunc(index);
+  return i >= 1 && i <= n ? i : 0;
+}
+// An operator's named inputs, or null. For choose, `choiceCount` choices after the index.
+function operatorPortNames(op, choiceCount){
+  if(!op || !op.ports) return null;
+  if(!op.choices) return op.ports;
+  const n = Math.max(0, Math.min(CHOOSE_MAX_CHOICES, choiceCount | 0));
+  const out = op.ports.slice();
+  for(let i = 1; i <= n; i++) out.push('choice ' + i);
+  return out;
+}
+// How many choices a choose has: as many as its highest-numbered arrow reaches (`toPorts`, the
+// `toPort` of each arrow into it; choice n is toPort n), at most CHOOSE_MAX_CHOICES.
+function chooseChoiceCount(toPorts){
+  let most = 0;
+  toPorts.forEach(p => { if(Number.isInteger(p) && p >= 1 && p <= CHOOSE_MAX_CHOICES && p > most) most = p; });
+  return most;
+}
 
 // Equal but for the last few binary digits, as Excel and LibreOffice compare numbers.
 function approxEqual(a, b){
@@ -959,9 +989,10 @@ function isInputRectangle(canvas, node){
 // fallback only fails when both of its first two inputs fail; with one input it gives 0. An
 // if (phase E1) needs a period outside the timeline when its condition does, or when both of
 // its branches do: a branch it may not take doesn't count (inside a branch, such a read is an
-// error instead). A function node (functions.js) is followed through its formula: only the
-// inputs it must read count (functionNeedsOutsideTimeline), when the canvas carries its
-// compiled definition (`canvas.calls`, set by the IR); otherwise through any of its inputs.
+// error instead); a choose (phase E2b) likewise, when its index does or every choice does. A
+// function node (functions.js) is followed through its formula: only the inputs it must read
+// count (functionNeedsOutsideTimeline), when the canvas carries its compiled definition
+// (`canvas.calls`, set by the IR); otherwise through any of its inputs.
 // `canvasOf(id)` returns a canvas { nodes, edges }; inputs are in left-to-right order.
 function reachesOutsideTimeline(canvasOf, canvasId, nodeId, period, periodCount, visiting){
   visiting = visiting || new Set();
@@ -992,10 +1023,14 @@ function reachesOutsideTimeline(canvasOf, canvasId, nodeId, period, periodCount,
   }
   const inputs = incoming.map(e => canvas.nodes.find(x => x.id === e.from)).filter(Boolean)
     .sort((a, b) => (a.x - b.x) || (a.y - b.y));
-  if(n.type === 'operator' && n.text === 'if'){
+  if(n.type === 'operator' && (n.text === 'if' || n.text === 'choose')){
     // Each branch is walked on its own, so a source both branches read counts for both.
     const port = (i) => { const e = incoming.find(x => x.toPort === i); return !!e && reachesOutsideTimeline(canvasOf, canvasId, e.from, period, periodCount, new Set(visiting)); };
-    return port(0) || (port(1) && port(2));
+    const count = n.text === 'if' ? 2 : chooseChoiceCount(incoming.map(e => e.toPort));
+    if(port(0)) return true;
+    if(count === 0) return false;
+    for(let i = 1; i <= count; i++) if(!port(i)) return false;
+    return true;
   }
   if(n.type === 'operator' && n.text === 'iferror'){
     return inputs.length >= 2 && reach(canvasId, inputs[0].id, period) && reach(canvasId, inputs[1].id, period);
@@ -1051,6 +1086,8 @@ const FUNCTION_BUILTINS = Object.assign(Object.create(null), {
   SQRT:      { id: 'sqrt',      min: 1, max: 1 },
   INT:       { id: 'int',       min: 1, max: 1 },
   TRUNC:     { id: 'trunc',     min: 1, max: 1 },
+  // Phase E2b: the index and at least one choice, at most 254 (Excel's limit).
+  CHOOSE:    { id: 'choose',    min: 2, max: 255 },
 });
 // Built-in names an input may still have (they came after functions did, so a definition
 // may already use them for an input): read as the input unless followed by "(".
@@ -1058,7 +1095,7 @@ const FUNCTION_INPUT_NAMES_ALLOWED = new Set(['PERIOD']);
 // Names kept back: Excel functions that are not available (yet), so a formula using one
 // says so instead of looking for a function of that name.
 const FUNCTION_RESERVED = new Set(['IFS', 'XOR', 'SUM', 'PRODUCT', 'LOG', 'LOG10', 'POWER', 'SIGN', 'COUNT', 'LET', 'LAMBDA',
-  'CHOOSE', 'INDEX', 'NA', 'TRUE', 'FALSE', 'PI', 'CEILING', 'FLOOR', 'MEDIAN', 'SUMPRODUCT']);
+  'INDEX', 'NA', 'TRUE', 'FALSE', 'PI', 'CEILING', 'FLOOR', 'MEDIAN', 'SUMPRODUCT']);
 // Symbols and the catalogue operator each one is. The typographic signs fmIDE shows on its
 // operators are accepted too.
 const FUNCTION_SYMBOLS = Object.assign(Object.create(null), {
@@ -1444,9 +1481,11 @@ function evalFunctionExpr(fn, x, arg, period){
       }
       if(op.period) return { value: period + 1 };
       if(op.branches){
-        // IF(condition, then, else): only the branch it takes is read.
+        // IF(condition, then, else), CHOOSE(index, …): only the input it picks is read.
         const c = evalFunctionExpr(fn, x.args[0], arg, period);
-        return c.error ? c : evalFunctionExpr(fn, x.args[c.value !== 0 ? 1 : 2], arg, period);
+        if(c.error) return c;
+        const k = op.pick(c.value, x.args.length - 1);
+        return k ? evalFunctionExpr(fn, x.args[k], arg, period) : { error: 'choose-out-of-range' };
       }
       const values = [];
       for(const a of x.args){
@@ -1528,7 +1567,7 @@ function functionExprNeedsOutside(fn, x, arg){
       const op = operatorById(x.id);
       const r = (i) => functionExprNeedsOutside(fn, x.args[i], arg);
       if(op.fallback) return r(0) && r(1);
-      if(op.branches) return r(0) || (r(1) && r(2));
+      if(op.branches) return r(0) || x.args.slice(1).every((_, i) => r(i + 1));
       return x.args.some((_, i) => r(i));
     }
   }
@@ -1568,14 +1607,15 @@ function functionExprUnit(fn, x, arg){
     case 'op': {
       const rule = operatorById(x.id).unit;
       // Named inputs (phase E1): ROUND keeps its value's unit; IF takes then's and else's
-      // when they agree (the condition's doesn't count).
+      // when they agree, and CHOOSE every choice's (the condition's or index's doesn't count;
+      // a number written in the formula has none of its own).
       if(rule === 'first') return functionExprUnit(fn, x.args[0], arg);
       if(rule === 'branches'){
-        const a = functionExprUnit(fn, x.args[1], arg), b = functionExprUnit(fn, x.args[2], arg);
-        if(a === null || b === null) return null;
-        if(a === FUNCTION_UNIT_NUMBER) return b;
-        if(b === FUNCTION_UNIT_NUMBER) return a;
-        return uomDimsEqual(a, b) ? a : null;
+        const us = x.args.slice(1).map(a => functionExprUnit(fn, a, arg));
+        if(us.some(u => u === null)) return null;
+        const real = us.filter(u => u !== FUNCTION_UNIT_NUMBER);
+        if(!real.length) return FUNCTION_UNIT_NUMBER;
+        return real.every(u => uomDimsEqual(u, real[0])) ? real[0] : null;
       }
       const units = x.args.map(a => functionExprUnit(fn, a, arg));
       if(units.some(u => u === null)) return null;
@@ -1834,9 +1874,11 @@ function compileCanvas(c, functions){
       out.unitInputs = inc.filter(e => rawById.has(e.from)).sort((a, b) => irByPosition(rawById.get(a.from), rawById.get(b.from)));
       // An operator with named inputs (phase E1: if, round…): the arrow into each, by its
       // `toPort`, or null (the first arrow into a port counts, as for a function node).
+      // A choose (phase E2b) has as many choices as its arrows reach.
       if(out.op && out.op.ports){
         const ports = portEdges.get(n.id);
-        out.portInputs = out.op.ports.map((_, i) => {
+        const names = operatorPortNames(out.op, out.op.choices && ports ? chooseChoiceCount([...ports.keys()]) : 0);
+        out.portInputs = names.map((_, i) => {
           const e = ports ? ports.get(i) : undefined;
           return e && rawById.has(e.from) ? e : null;
         });
@@ -1965,13 +2007,13 @@ function irUnit(ir, canvasId, nodeId, path, visiting){
     // Worked out from the function's formula, with the units of what feeds its inputs.
     if(n.call && !n.call.status) result = functionUnit(n.call, (i) => irEdgeUnit(ir, canvasId, irPortEdge(ir, canvasId, n.id, i), path, visiting));
   } else if(n.type === 'operator' && n.op && n.op.ports){
-    // Named inputs: 'first' is the value's unit (round); 'branches' is then's and else's
-    // when they agree (if).
+    // Named inputs: 'first' is the value's unit (round); 'branches' is the unit every input
+    // it may pick shares (if: then and else; choose: every choice).
     const unitOfPort = (i) => n.portInputs[i] ? fromEdge(n.portInputs[i]) : null;
     if(n.op.unit === 'first') result = unitOfPort(0);
     else if(n.op.unit === 'branches'){
-      const a = unitOfPort(1), b = unitOfPort(2);
-      result = a && b && uomDimsEqual(a, b) ? a : null;
+      const us = n.portInputs.slice(1).map((_, i) => unitOfPort(i + 1));
+      result = us.length && us.every(u => u && uomDimsEqual(u, us[0])) ? us[0] : null;
     }
   } else if(n.type === 'operator'){
     const units = n.unitInputs.map(fromEdge);
@@ -2013,7 +2055,8 @@ function irEdgeUnit(ir, canvasId, edge, path, visiting){
 // Error codes: cycle, alias-unset, alias-missing-canvas, alias-missing-node, no-input,
 // ambiguous, missing-input, period-out-of-range, math-error, unary-only, needs-two,
 // block-missing-def, block-missing-output, block-cycle, operator-unknown (an operator's text
-// isn't in the catalogue), operator-input-unwired (a named input it reads has no arrow); for
+// isn't in the catalogue), operator-input-unwired (a named input it reads has no arrow),
+// choose-out-of-range (a choose's index picks no choice: below 1 or past the last); for
 // function nodes also
 // function-missing, function-unreadable, function-cycle, function-too-deep,
 // function-arguments (compileFunctions) and function-input-unwired.
@@ -2200,7 +2243,7 @@ function evaluateModel(ir, options){
       result = period + 1;
     } else if(n.op.ports){
       // Named inputs (if, round…), each read only when needed. An if reads its condition,
-      // then only the branch it picks.
+      // then only the branch it picks; a choose its index, then only the choice it picks.
       const read = (i) => {
         const edge = n.portInputs[i];
         if(!edge) return { error: 'operator-input-unwired' };
@@ -2210,7 +2253,8 @@ function evaluateModel(ir, options){
       let r;
       if(n.op.branches){
         const c = read(0);
-        r = c.error ? c : read(c.value !== 0 ? 1 : 2);
+        const k = c.error ? 0 : n.op.pick(c.value, n.portInputs.length - 1);
+        r = c.error ? c : k ? read(k) : { error: 'choose-out-of-range' };
       } else {
         const got = n.op.ports.map((_, i) => read(i));
         r = got.find(g => g.error) || applyOperator(n.op, got.map(g => g.value));
@@ -2757,8 +2801,8 @@ function isLogicalValued(canvasId, nodeId, ctx, path, fromPort, visiting){
   const n = irNode(canvasId, nodeId);
   if(!n) return false;
   if(n.type === 'operator'){
-    // An IF gives what its branches give: TRUE/FALSE when either does.
-    if(n.op && n.op.branches) return [1, 2].some(i => !!n.portInputs[i] && isLogicalValued(canvasId, n.portInputs[i].from, ctx, path, n.portInputs[i].fromPort, visiting));
+    // An IF gives what its branches give: TRUE/FALSE when either does (a CHOOSE: any choice).
+    if(n.op && n.op.branches) return n.portInputs.slice(1).some(e => !!e && isLogicalValued(canvasId, e.from, ctx, path, e.fromPort, visiting));
     return isComparison(n);
   }
   if(n.type === 'alias'){
@@ -2797,8 +2841,11 @@ function buildOperatorFormula(canvasId, opNode, periodIndex, ctx, currentTabName
   // The period number: this column's cell in the "Period #" row every sheet has (row 3).
   if(spell.period) return colLetter(periodCol(periodIndex)) + '$3';
   const inputs = spell.ports ? opNode.portInputs : opNode.inputs;
-  const needsNumeric = !!(spell.numeric || spell.compare);
+  // A CHOOSE with no choice: Excel needs at least one; fmIDE shows "?".
+  if(spell.branches && inputs.length < 2) return 'NA()';
+  const allNumeric = !!(spell.numeric || spell.compare);
   const operandStrs = inputs.map((edge, i) => {
+    const needsNumeric = allNumeric || (!!spell.index && i === 0); // CHOOSE's index
     // A named input with no arrow: an error where it is read (IF reads one branch only).
     if(!edge) return 'NA()';
     // An iferror's first input is where a failure is caught, and an if's branches are where
@@ -3001,7 +3048,8 @@ function classifyNode(canvas, node){
 //   fallback: IFERROR(first, second), or IFERROR(first, 0) with one input
 //   period:  the period number: the "Period #" cell (row 3) of the formula's own sheet
 //   ports:   the inputs by name (toPort), in the catalogue's order; one with no arrow is NA()
-//   branches: IF — inside then and else, a period outside the timeline is an error (NA())
+//   branches: IF, CHOOSE — inside the inputs it may pick, a period outside the timeline is
+//            an error (NA()); `index`: its first input is a number (a TRUE/FALSE read gets N())
 //   logical: the result is Excel's TRUE/FALSE (AND, OR, NOT), like a comparison's
 // This file holds nothing but the table (the test reads it on its own, in Node).
 // ============================================================
@@ -3038,6 +3086,8 @@ const EXCEL_SPELLINGS = {
   sqrt:      { fn: 'SQRT', one: true, numeric: true },
   int:       { fn: 'INT', one: true, numeric: true },
   trunc:     { fn: 'TRUNC', one: true, numeric: true },
+  // Phase E2b: CHOOSE(index, choice 1, …); with no choice it is NA(), as fmIDE's "?".
+  choose:    { fn: 'CHOOSE', ports: true, branches: true, index: true },
 };
 // ============================================================
 // Function calls (function plugins, step 7 phase D3): a call is written out in full inside
@@ -3161,12 +3211,12 @@ function writeFunctionExpr(fn, x, input, caught, ctx){
       // PERIOD(): the "Period #" cell (row 3) of the formula's own sheet, in this column.
       if(spell.period) return fnPiece(colLetter(periodCol(ctx.fnPeriodIndex || 0)) + '$3', FN_LEVEL.atom, false);
       if(spell.branches){
-        // IF(condition, then, else): only the branch taken counts, so inside either one a
-        // period outside the timeline is an error (NA()), as for IFERROR's first input.
+        // IF(condition, then, else), CHOOSE(index, choice…): only the input picked counts, so
+        // inside each one it may pick a period outside the timeline is an error (NA()), as for
+        // IFERROR's first input. CHOOSE's index is a number (N() of a TRUE/FALSE).
         const c = writeFunctionExpr(fn, x.args[0], input, caught, ctx);
-        const t = fnNumeric(writeFunctionExpr(fn, x.args[1], input, true, ctx));
-        const e = fnNumeric(writeFunctionExpr(fn, x.args[2], input, true, ctx));
-        return fnPiece(spell.fn + '(' + c.s + ',' + t.s + ',' + e.s + ')', FN_LEVEL.atom, false);
+        const picks = x.args.slice(1).map(a => fnNumeric(writeFunctionExpr(fn, a, input, true, ctx)).s);
+        return fnPiece(spell.fn + '(' + (spell.index ? fnNumeric(c) : c).s + ',' + picks.join(',') + ')', FN_LEVEL.atom, false);
       }
       const args = x.args.map(a => writeFunctionExpr(fn, a, input, caught, ctx));
       // AND, OR, NOT: Excel's TRUE/FALSE, which N() turns into 1/0 where needed.
@@ -4144,7 +4194,7 @@ $('btnResetStyle').addEventListener('click', async () => {
 // (docs/file-formats.md). To change one of these formats: raise its version here and add
 // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
 // exactly one version.
-const SHARED_FILE_VERSIONS = { 'system': 8, 'fmIDE-workspace': 9 };
+const SHARED_FILE_VERSIONS = { 'system': 9, 'fmIDE-workspace': 10 };
 // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
 // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
 function upgradeNodePlugs(nodes){
@@ -4227,7 +4277,9 @@ const SHARED_FILE_MIGRATIONS = {
     7: () => {},
     // v8 → v9: its system (v8) and templates (v8) may use the operators of phase E2a; older
     // ones don't.
-    8: () => {}
+    8: () => {},
+    // v9 → v10: its system (v9) and templates (v9) may use choose (phase E2b); older ones don't.
+    9: () => {}
   },
   'system': {
     // v1 systems were accepted with fields the loader already defaults (periods, ids…);
@@ -4262,7 +4314,10 @@ const SHARED_FILE_MIGRATIONS = {
     // v7 → v8: the operators of phase E2a (ln, exp, sqrt, int, trunc). Older systems have
     // none, so nothing changes; an older app asks before opening a v8 file instead of
     // calculating those operators as ones it doesn't know.
-    7: () => {}
+    7: () => {},
+    // v8 → v9: choose (phase E2b; arrows into it name their input with `toPort`: 0 the index,
+    // n choice n). Older systems have none, so nothing changes.
+    8: () => {}
   }
 };
 // A file's kind: its "kind" field, or — for files saved before kinds were written — its

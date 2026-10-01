@@ -93,7 +93,7 @@ const SHARED = path.join(__dirname, '..', 'src', 'shared');
 function loadIR(){
   const code = ['operators.js', 'uom.js', 'input-rule.js', 'functions.js', 'ir.js'].map(f => fs.readFileSync(path.join(SHARED, f), 'utf8')).join('\n');
   const ctx = vm.createContext({});
-  return vm.runInContext(code + '\n;({ compileModel, evaluateModel, unitOf, formatUOM, OPERATORS, operatorForSymbol, operatorById, applyOperator })', ctx);
+  return vm.runInContext(code + '\n;({ compileModel, evaluateModel, unitOf, formatUOM, OPERATORS, operatorForSymbol, operatorById, applyOperator, operatorPortNames, chooseChoiceCount })', ctx);
 }
 const SNAPSHOTS = path.join(__dirname, 'snapshots');
 
@@ -142,10 +142,10 @@ test('the operator catalogue: lasting ids, one symbol each, in palette order', (
   const IR = loadIR();
   expect(IR.OPERATORS.map(op => op.id)).toEqual(['add', 'subtract', 'multiply', 'divide', 'power', 'mod', 'le', 'ge', 'lt', 'gt', 'abs', 'min', 'max', 'average', 'iferror',
     'period', 'if', 'eq', 'ne', 'and', 'or', 'not', 'round', 'roundup', 'rounddown', // phase E1 added the second line, at the end
-    'ln', 'exp', 'sqrt', 'int', 'trunc']); // and phase E2a the third
+    'ln', 'exp', 'sqrt', 'int', 'trunc', 'choose']); // and phases E2a and E2b the third
   expect(IR.OPERATORS.map(op => op.symbol)).toEqual(['+', '−', '×', '÷', '^', '%', '≤', '≥', '<', '>', 'abs', 'min', 'max', 'ave', 'iferror',
     'period', 'if', '=', '≠', 'and', 'or', 'not', 'round', 'roundup', 'rounddown',
-    'ln', 'exp', 'sqrt', 'int', 'trunc']);
+    'ln', 'exp', 'sqrt', 'int', 'trunc', 'choose']);
   IR.OPERATORS.forEach(op => {
     const kinds = ['fold', 'all', 'unary', 'compare', 'fallback', 'period', 'branches', 'apply'].filter(k => op[k]);
     expect(kinds, op.id).toHaveLength(1);
@@ -189,6 +189,13 @@ test('the operator catalogue: lasting ids, one symbol each, in palette order', (
   expect(apply('int', [(0.1 + 0.7) * 10])).toEqual({ value: 7 }); // as Excel: on the number as stored
   expect(apply('sqrt', [4, 9])).toEqual({ error: 'unary-only' });
   expect(['ln', 'exp', 'sqrt', 'int', 'trunc'].map(id => IR.operatorById(id).unit)).toEqual([null, null, null, 'same', 'same']);
+  // Phase E2b: choose's index picks a choice (cut to a whole number), or none.
+  const choose = IR.operatorById('choose');
+  expect([2, 2.7, 1, 3, 0, 0.9, -1, 4, NaN].map(i => choose.pick(i, 3))).toEqual([2, 2, 1, 3, 0, 0, 0, 0, 0]);
+  expect(IR.operatorPortNames(choose, 3)).toEqual(['index', 'choice 1', 'choice 2', 'choice 3']);
+  expect(IR.operatorPortNames(choose, 999)).toHaveLength(255);                 // Excel's 254 choices
+  expect(IR.chooseChoiceCount([0, 1, 3, undefined, 'x', 300])).toBe(3);        // the highest choice wired
+  expect(IR.operatorPortNames(IR.operatorById('if'), 7)).toEqual(['condition', 'then', 'else']);
 });
 
 // ---- phase E1 in fmIDE, through window.fm (the canvas drawing of named inputs is E1b) ----
@@ -236,10 +243,10 @@ test.describe('phase E1 operators in fmIDE', () => {
     expect(none).toMatch(/takes each input by name — say which one \(condition, then, else\)/);
   });
 
-  test('saved as system v8 (v6 brought toPort) with toPort; loading it again calculates the same; deleting an input by name', async ({ page }) => {
+  test('saved as system v9 (v6 brought toPort) with toPort; loading it again calculates the same; deleting an input by name', async ({ page }) => {
     await build(page);
     const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.command('saveSystem')));
-    expect(data.version).toBe(8);
+    expect(data.version).toBe(9);
     const iff = data.canvases[0].nodes.find(n => n.text === 'if');
     expect(data.canvases[0].edges.filter(e => e.to === iff.id).map(e => e.toPort).sort()).toEqual([0, 1, 2]);
     await page.evaluate(() => fm.clearCanvas());
@@ -270,7 +277,7 @@ test.describe('phase E1 operators in fmIDE', () => {
     expect(steps[2].args.toPort).toBe('then');
     // Since E1b the new operators follow the first 15, whose numbers stay the same.
     const insertOps = await page.evaluate(() => fm.commands().filter(c => /^insertOp\d+$/.test(c.id)).map(c => c.id + ' ' + c.label));
-    expect(insertOps).toHaveLength(30);
+    expect(insertOps).toHaveLength(31);
     expect(insertOps[0]).toBe('insertOp0 Insert Operator + (Add)');
     expect(insertOps[14]).toBe('insertOp14 Insert Operator iferror');
     expect(insertOps.slice(15)).toEqual(['insertOp15 Insert Operator period', 'insertOp16 Insert Operator if', 'insertOp17 Insert Operator = (Equal)',
@@ -278,7 +285,7 @@ test.describe('phase E1 operators in fmIDE', () => {
       'insertOp22 Insert Operator round', 'insertOp23 Insert Operator roundup', 'insertOp24 Insert Operator rounddown',
       // Phase E2a's after those.
       'insertOp25 Insert Operator ln', 'insertOp26 Insert Operator exp', 'insertOp27 Insert Operator sqrt', 'insertOp28 Insert Operator int',
-      'insertOp29 Insert Operator trunc']);
+      'insertOp29 Insert Operator trunc', 'insertOp30 Insert Operator choose']);
   });
 
   // ---- E1b: the canvas ----
@@ -377,7 +384,7 @@ test.describe('phase E1 operators in fmIDE', () => {
     await openFmIDE(page);
     const groups = await page.evaluate(() => __fmIDE.getRibbonConfig().tabs.find(t => t.id === 'insert').groups.map(g => g.label + ':' + g.items.map(i => i.cmd.replace('insertOp', '')).join(',')));
     expect(groups).toContain('Compare:6,7,8,9,17,18');
-    expect(groups).toContain('Excel Functions:10,11,12,13,14,16,19,20,21,22,23,24,15,25,26,27,28,29');
+    expect(groups).toContain('Excel Functions:10,11,12,13,14,16,19,20,21,22,23,24,15,25,26,27,28,29,30');
     // A ribbon customised before E1b (saved without the flag): its groups get them once.
     const file = test.info().outputPath('old-ribbon.json');
     const ws = { kind: 'fmIDE-workspace', version: 4, system: { kind: 'system', version: 5, periods: ['P1'], activeCanvasId: 'c1', canvases: [{ id: 'c1', name: 'Model', nodes: [], edges: [] }] },
@@ -387,11 +394,12 @@ test.describe('phase E1 operators in fmIDE', () => {
     await importViaCommand(page, 'importWorkspace', file);
     await acceptAll(page);
     const mine = await page.evaluate(() => __fmIDE.getRibbonConfig().tabs[0].groups.map(g => g.label + ':' + g.items.map(i => i.cmd.replace('insertOp', '')).join(',')));
-    expect(mine).toEqual(['My maths:0,11,16,19,20,21,22,23,24,15,25,26,27,28,29', 'Tests:6,17,18']);
+    expect(mine).toEqual(['My maths:0,11,16,19,20,21,22,23,24,15,25,26,27,28,29,30', 'Tests:6,17,18']);
     // Once only: saved again, it carries the flag, and a removed operator stays removed.
     const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
     expect(data.ui.operatorsE1Added).toBe(true);
     expect(data.ui.operatorsE2Added).toBe(true);
+    expect(data.ui.operatorsE2bAdded).toBe(true);
   });
 
   test('phase E2a: a ribbon customised after E1b gets ln, exp, sqrt, int and trunc once, in the Excel functions\' group', async ({ page }) => {
@@ -404,7 +412,7 @@ test.describe('phase E1 operators in fmIDE', () => {
     await importViaCommand(page, 'importWorkspace', file);
     await acceptAll(page);
     const mine = await page.evaluate(() => __fmIDE.getRibbonConfig().tabs[0].groups.map(g => g.label + ':' + g.items.map(i => i.cmd.replace('insertOp', '')).join(',')));
-    expect(mine).toEqual(['Excel:11,27,25,26,28,29', 'Other:0']); // sqrt was there already
+    expect(mine).toEqual(['Excel:11,27,25,26,28,29,30', 'Other:0']); // sqrt was there already; E2b's choose too
     // Drawn as word operators with one input, calculated on the canvas.
     const got = await page.evaluate(() => {
       fm.clearCanvas();
@@ -424,5 +432,84 @@ test.describe('phase E1 operators in fmIDE', () => {
     expect(got.trunc).toBe(16);
     expect(got.ln).toBeCloseTo(Math.log(16), 12);
     expect(got.exp).toBeCloseTo(Math.exp(16), 3);
+  });
+
+  // ---- E2b: choose ----
+  test('choose: wired by name or number, it picks a choice; its dots grow with its arrows, and an arrow dropped on it takes the next choice', async ({ page }) => {
+    await openFmIDE(page);
+    const ids = await page.evaluate(() => {
+      fm.clearCanvas();
+      const s = fm.createRect({ x: 40, y: 40, name: 'Scenario', value: 2 });
+      const a = fm.createRect({ x: 40, y: 160, name: 'Base', value: 100 });
+      const b = fm.createRect({ x: 40, y: 280, name: 'Upside', value: 120 });
+      const c = fm.createRect({ x: 40, y: 400, name: 'Downside', value: 80 });
+      const ch = fm.createOperator({ x: 400, y: 140, op: 'choose' });
+      const r = fm.createRect({ x: 650, y: 140, name: 'Picked' });
+      fm.connect('#' + ch, '#' + r);
+      return { s, a, b, c, ch };
+    });
+    // A new choose: its index and one empty choice.
+    await expect(opNode(page, ids.ch)).toHaveClass(/portop/);
+    await expect(opNode(page, ids.ch).locator('.op-in .io-label')).toHaveText(['index', 'choice 1']);
+    await page.evaluate((ids) => {
+      fm.connect('#' + ids.s, '#' + ids.ch, '', 'Index');
+      fm.connect('#' + ids.a, '#' + ids.ch, '', 'choice 1');
+      fm.connect('#' + ids.b, '#' + ids.ch, '', '3');                // the 3rd input: choice 2
+    }, ids);
+    await expect(opNode(page, ids.ch).locator('.op-in .io-label')).toHaveText(['index', 'choice 1', 'choice 2', 'choice 3']);
+    expect(await page.evaluate(() => fm.getValue('Picked'))).toBe(120);
+    // An arrow dropped on the body takes the first empty choice.
+    const drag = async (fromId, target) => {
+      const a = await page.locator(`.node[data-id="${fromId}"] .label`).boundingBox();
+      const t = await target.boundingBox();
+      await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+      await page.mouse.down({ button: 'right' });
+      await page.mouse.move(t.x + t.width / 2, t.y + t.height / 2, { steps: 5 });
+      await page.mouse.up({ button: 'right' });
+    };
+    await drag(ids.c, opNode(page, ids.ch).locator('.opsym'));
+    expect(await edgesInto(page, ids.ch)).toEqual(['Base→1', 'Downside→3', 'Scenario→0', 'Upside→2']);
+    await expect(opNode(page, ids.ch).locator('.op-in .io-label')).toHaveText(['index', 'choice 1', 'choice 2', 'choice 3', 'choice 4']);
+    // The index picks; out of range is "?" with its own message.
+    await page.evaluate(() => fm.setValue('Scenario', 3));
+    expect(await page.evaluate(() => fm.getValue('Picked'))).toBe(80);
+    await page.evaluate(() => fm.setValue('Scenario', 5));
+    const err = await page.evaluate((ch) => { try{ return fm.getValue('#' + ch); }catch(e){ return e.message; } }, ids.ch);
+    expect(err).toMatch(/The index picks no choice/);
+    // A choice by a name it doesn't take.
+    const bad = await page.evaluate((ids) => { try{ fm.connect('#' + ids.a, '#' + ids.ch, '', 'choice 255'); }catch(e){ return e.message; } }, ids);
+    expect(bad).toMatch(/takes choices 1 to 254/);
+    // Saved with toPort and loaded back, it calculates the same.
+    await page.evaluate(() => fm.setValue('Scenario', 1));
+    const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.command('saveSystem')));
+    expect(data.version).toBe(9);
+    const ch = data.canvases[0].nodes.find(n => n.text === 'choose');
+    expect(data.canvases[0].edges.filter(e => e.to === ch.id).map(e => e.toPort).sort()).toEqual([0, 1, 2, 3]);
+    await page.evaluate(() => fm.clearCanvas());
+    const file = test.info().outputPath('choose.json');
+    fs.writeFileSync(file, JSON.stringify(data));
+    await importViaCommand(page, 'loadSystem', file);
+    await acceptAll(page);
+    expect(await page.evaluate(() => fm.getValue('Picked'))).toBe(100);
+  });
+
+  test('changing an operator into choose: its arrows become the index and the choices, left to right', async ({ page }) => {
+    await openFmIDE(page);
+    const op = await page.evaluate(() => {
+      fm.clearCanvas();
+      const i = fm.createRect({ x: 40, y: 40, name: 'I', value: 2 });
+      const a = fm.createRect({ x: 60, y: 160, name: 'A', value: 5 });
+      const b = fm.createRect({ x: 80, y: 280, name: 'B', value: 7 });
+      const o = fm.createOperator({ x: 400, y: 140, op: 'min' });
+      [i, a, b].forEach(x => fm.connect('#' + x, '#' + o));
+      const r = fm.createRect({ x: 650, y: 140, name: 'R' });
+      fm.connect('#' + o, '#' + r);
+      fm.setOperator('#' + o, 'choose');
+      return o;
+    });
+    expect(await edgesInto(page, op)).toEqual(['A→1', 'B→2', 'I→0']);
+    expect(await page.evaluate(() => fm.getValue('R'))).toBe(7);
+    await page.evaluate(() => fm.command('undo'));
+    expect(await page.evaluate(() => fm.getValue('R'))).toBe(2);
   });
 });

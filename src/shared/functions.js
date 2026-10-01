@@ -47,6 +47,8 @@ const FUNCTION_BUILTINS = Object.assign(Object.create(null), {
   SQRT:      { id: 'sqrt',      min: 1, max: 1 },
   INT:       { id: 'int',       min: 1, max: 1 },
   TRUNC:     { id: 'trunc',     min: 1, max: 1 },
+  // Phase E2b: the index and at least one choice, at most 254 (Excel's limit).
+  CHOOSE:    { id: 'choose',    min: 2, max: 255 },
 });
 // Built-in names an input may still have (they came after functions did, so a definition
 // may already use them for an input): read as the input unless followed by "(".
@@ -54,7 +56,7 @@ const FUNCTION_INPUT_NAMES_ALLOWED = new Set(['PERIOD']);
 // Names kept back: Excel functions that are not available (yet), so a formula using one
 // says so instead of looking for a function of that name.
 const FUNCTION_RESERVED = new Set(['IFS', 'XOR', 'SUM', 'PRODUCT', 'LOG', 'LOG10', 'POWER', 'SIGN', 'COUNT', 'LET', 'LAMBDA',
-  'CHOOSE', 'INDEX', 'NA', 'TRUE', 'FALSE', 'PI', 'CEILING', 'FLOOR', 'MEDIAN', 'SUMPRODUCT']);
+  'INDEX', 'NA', 'TRUE', 'FALSE', 'PI', 'CEILING', 'FLOOR', 'MEDIAN', 'SUMPRODUCT']);
 // Symbols and the catalogue operator each one is. The typographic signs fmIDE shows on its
 // operators are accepted too.
 const FUNCTION_SYMBOLS = Object.assign(Object.create(null), {
@@ -440,9 +442,11 @@ function evalFunctionExpr(fn, x, arg, period){
       }
       if(op.period) return { value: period + 1 };
       if(op.branches){
-        // IF(condition, then, else): only the branch it takes is read.
+        // IF(condition, then, else), CHOOSE(index, …): only the input it picks is read.
         const c = evalFunctionExpr(fn, x.args[0], arg, period);
-        return c.error ? c : evalFunctionExpr(fn, x.args[c.value !== 0 ? 1 : 2], arg, period);
+        if(c.error) return c;
+        const k = op.pick(c.value, x.args.length - 1);
+        return k ? evalFunctionExpr(fn, x.args[k], arg, period) : { error: 'choose-out-of-range' };
       }
       const values = [];
       for(const a of x.args){
@@ -524,7 +528,7 @@ function functionExprNeedsOutside(fn, x, arg){
       const op = operatorById(x.id);
       const r = (i) => functionExprNeedsOutside(fn, x.args[i], arg);
       if(op.fallback) return r(0) && r(1);
-      if(op.branches) return r(0) || (r(1) && r(2));
+      if(op.branches) return r(0) || x.args.slice(1).every((_, i) => r(i + 1));
       return x.args.some((_, i) => r(i));
     }
   }
@@ -564,14 +568,15 @@ function functionExprUnit(fn, x, arg){
     case 'op': {
       const rule = operatorById(x.id).unit;
       // Named inputs (phase E1): ROUND keeps its value's unit; IF takes then's and else's
-      // when they agree (the condition's doesn't count).
+      // when they agree, and CHOOSE every choice's (the condition's or index's doesn't count;
+      // a number written in the formula has none of its own).
       if(rule === 'first') return functionExprUnit(fn, x.args[0], arg);
       if(rule === 'branches'){
-        const a = functionExprUnit(fn, x.args[1], arg), b = functionExprUnit(fn, x.args[2], arg);
-        if(a === null || b === null) return null;
-        if(a === FUNCTION_UNIT_NUMBER) return b;
-        if(b === FUNCTION_UNIT_NUMBER) return a;
-        return uomDimsEqual(a, b) ? a : null;
+        const us = x.args.slice(1).map(a => functionExprUnit(fn, a, arg));
+        if(us.some(u => u === null)) return null;
+        const real = us.filter(u => u !== FUNCTION_UNIT_NUMBER);
+        if(!real.length) return FUNCTION_UNIT_NUMBER;
+        return real.every(u => uomDimsEqual(u, real[0])) ? real[0] : null;
       }
       const units = x.args.map(a => functionExprUnit(fn, a, arg));
       if(units.some(u => u === null)) return null;

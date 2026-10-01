@@ -1,0 +1,1141 @@
+{
+ "kind": "system",
+ "version": 9,
+ "nextId": 1000,
+ "nextCanvasId": 10,
+ "activeCanvasId": "cOps",
+ "periods": [
+  "P1",
+  "P2",
+  "P3",
+  "P4"
+ ],
+ "currentPeriod": 0,
+ "functions": [
+  {
+   "family": "family-e2b-pick",
+   "version": 1,
+   "versionId": "version-e2b-pick-1",
+   "text": "Pick(i, a, b, c) = CHOOSE(i, a, b, c)",
+   "description": "",
+   "note": "",
+   "calls": []
+  },
+  {
+   "family": "family-e2b-safe",
+   "version": 1,
+   "versionId": "version-e2b-safe-1",
+   "text": "SafePick(i, a) = IFERROR(CHOOSE(i, a, a * 2), -1)",
+   "description": "",
+   "note": "",
+   "calls": []
+  },
+  {
+   "family": "family-e2b-cmp",
+   "version": 1,
+   "versionId": "version-e2b-cmp-1",
+   "text": "Flagged(p, a) = CHOOSE(p > 1, a, a / 0) + CHOOSE(2, a / 0, a)",
+   "description": "",
+   "note": "",
+   "calls": []
+  }
+ ],
+ "canvases": [
+  {
+   "id": "cOps",
+   "name": "Operators",
+   "nodes": [
+    {
+     "id": "per",
+     "type": "operator",
+     "x": -250,
+     "y": 0,
+     "w": 56,
+     "h": 56,
+     "text": "period",
+     "socket": ""
+    },
+    {
+     "id": "Period",
+     "type": "value",
+     "x": -100,
+     "y": 0,
+     "w": 170,
+     "h": 64,
+     "text": "Period"
+    },
+    {
+     "id": "Base",
+     "type": "value",
+     "x": 0,
+     "y": 100,
+     "w": 170,
+     "h": 64,
+     "text": "Base\n100"
+    },
+    {
+     "id": "Upside",
+     "type": "value",
+     "x": 0,
+     "y": 190,
+     "w": 170,
+     "h": 64,
+     "text": "Upside\n120"
+    },
+    {
+     "id": "Downside",
+     "type": "value",
+     "x": 0,
+     "y": 280,
+     "w": 170,
+     "h": 64,
+     "text": "Downside\n80"
+    },
+    {
+     "id": "Scenario",
+     "type": "value",
+     "x": 0,
+     "y": 370,
+     "w": 170,
+     "h": 64,
+     "text": "Scenario\n2"
+    },
+    {
+     "id": "Frac",
+     "type": "value",
+     "x": 0,
+     "y": 460,
+     "w": 170,
+     "h": 64,
+     "text": "Frac\n2.7"
+    },
+    {
+     "id": "Zero",
+     "type": "value",
+     "x": 0,
+     "y": 550,
+     "w": 170,
+     "h": 64,
+     "text": "Zero\n0"
+    },
+    {
+     "id": "MinusOne",
+     "type": "value",
+     "x": 0,
+     "y": 640,
+     "w": 170,
+     "h": 64,
+     "text": "MinusOne\n-1"
+    },
+    {
+     "id": "One",
+     "type": "value",
+     "x": 0,
+     "y": 730,
+     "w": 170,
+     "h": 64,
+     "text": "One\n1"
+    },
+    {
+     "id": "Two",
+     "type": "value",
+     "x": 0,
+     "y": 820,
+     "w": 170,
+     "h": 64,
+     "text": "Two\n2"
+    },
+    {
+     "id": "Three",
+     "type": "value",
+     "x": 0,
+     "y": 910,
+     "w": 170,
+     "h": 64,
+     "text": "Three\n3"
+    },
+    {
+     "id": "OpeningInput",
+     "type": "value",
+     "x": 0,
+     "y": 1000,
+     "w": 170,
+     "h": 64,
+     "text": "OpeningInput\n50"
+    },
+    {
+     "id": "Flow",
+     "type": "value",
+     "x": 0,
+     "y": 1090,
+     "w": 170,
+     "h": 64,
+     "text": "Flow\n10"
+    },
+    {
+     "id": "o_div",
+     "type": "operator",
+     "x": 200,
+     "y": 1300,
+     "w": 56,
+     "h": 56,
+     "text": "÷",
+     "socket": ""
+    },
+    {
+     "id": "DivZero",
+     "type": "value",
+     "x": 300,
+     "y": 1300,
+     "w": 170,
+     "h": 64,
+     "text": "DivZero"
+    },
+    {
+     "id": "c_Picked_by_scenario",
+     "type": "operator",
+     "x": 400,
+     "y": 1510,
+     "w": 120,
+     "h": 90,
+     "text": "choose",
+     "socket": ""
+    },
+    {
+     "id": "r_Picked_by_scenario",
+     "type": "value",
+     "x": 600,
+     "y": 1510,
+     "w": 170,
+     "h": 64,
+     "text": "Picked by scenario"
+    },
+    {
+     "id": "c_Picked_by_period",
+     "type": "operator",
+     "x": 400,
+     "y": 1620,
+     "w": 120,
+     "h": 90,
+     "text": "choose",
+     "socket": ""
+    },
+    {
+     "id": "r_Picked_by_period",
+     "type": "value",
+     "x": 600,
+     "y": 1620,
+     "w": 170,
+     "h": 64,
+     "text": "Picked by period"
+    },
+    {
+     "id": "c_Fraction_index",
+     "type": "operator",
+     "x": 400,
+     "y": 1730,
+     "w": 120,
+     "h": 90,
+     "text": "choose",
+     "socket": ""
+    },
+    {
+     "id": "r_Fraction_index",
+     "type": "value",
+     "x": 600,
+     "y": 1730,
+     "w": 170,
+     "h": 64,
+     "text": "Fraction index"
+    },
+    {
+     "id": "c_Zero_index",
+     "type": "operator",
+     "x": 400,
+     "y": 1840,
+     "w": 120,
+     "h": 90,
+     "text": "choose",
+     "socket": ""
+    },
+    {
+     "id": "r_Zero_index",
+     "type": "value",
+     "x": 600,
+     "y": 1840,
+     "w": 170,
+     "h": 64,
+     "text": "Zero index"
+    },
+    {
+     "id": "c_Negative_index",
+     "type": "operator",
+     "x": 400,
+     "y": 1950,
+     "w": 120,
+     "h": 90,
+     "text": "choose",
+     "socket": ""
+    },
+    {
+     "id": "r_Negative_index",
+     "type": "value",
+     "x": 600,
+     "y": 1950,
+     "w": 170,
+     "h": 64,
+     "text": "Negative index"
+    },
+    {
+     "id": "c_Error_not_taken",
+     "type": "operator",
+     "x": 400,
+     "y": 2060,
+     "w": 120,
+     "h": 90,
+     "text": "choose",
+     "socket": ""
+    },
+    {
+     "id": "r_Error_not_taken",
+     "type": "value",
+     "x": 600,
+     "y": 2060,
+     "w": 170,
+     "h": 64,
+     "text": "Error not taken"
+    },
+    {
+     "id": "c_Error_taken",
+     "type": "operator",
+     "x": 400,
+     "y": 2170,
+     "w": 120,
+     "h": 90,
+     "text": "choose",
+     "socket": ""
+    },
+    {
+     "id": "r_Error_taken",
+     "type": "value",
+     "x": 600,
+     "y": 2170,
+     "w": 170,
+     "h": 64,
+     "text": "Error taken"
+    },
+    {
+     "id": "c_Gap_not_taken",
+     "type": "operator",
+     "x": 400,
+     "y": 2280,
+     "w": 120,
+     "h": 90,
+     "text": "choose",
+     "socket": ""
+    },
+    {
+     "id": "r_Gap_not_taken",
+     "type": "value",
+     "x": 600,
+     "y": 2280,
+     "w": 170,
+     "h": 64,
+     "text": "Gap not taken"
+    },
+    {
+     "id": "c_Gap_past_it",
+     "type": "operator",
+     "x": 400,
+     "y": 2390,
+     "w": 120,
+     "h": 90,
+     "text": "choose",
+     "socket": ""
+    },
+    {
+     "id": "r_Gap_past_it",
+     "type": "value",
+     "x": 600,
+     "y": 2390,
+     "w": 170,
+     "h": 64,
+     "text": "Gap past it"
+    },
+    {
+     "id": "c_Gap_taken",
+     "type": "operator",
+     "x": 400,
+     "y": 2500,
+     "w": 120,
+     "h": 90,
+     "text": "choose",
+     "socket": ""
+    },
+    {
+     "id": "r_Gap_taken",
+     "type": "value",
+     "x": 600,
+     "y": 2500,
+     "w": 170,
+     "h": 64,
+     "text": "Gap taken"
+    },
+    {
+     "id": "c_No_choices",
+     "type": "operator",
+     "x": 400,
+     "y": 2610,
+     "w": 120,
+     "h": 90,
+     "text": "choose",
+     "socket": ""
+    },
+    {
+     "id": "r_No_choices",
+     "type": "value",
+     "x": 600,
+     "y": 2610,
+     "w": 170,
+     "h": 64,
+     "text": "No choices"
+    },
+    {
+     "id": "c_No_index",
+     "type": "operator",
+     "x": 400,
+     "y": 2720,
+     "w": 120,
+     "h": 90,
+     "text": "choose",
+     "socket": ""
+    },
+    {
+     "id": "r_No_index",
+     "type": "value",
+     "x": 600,
+     "y": 2720,
+     "w": 170,
+     "h": 64,
+     "text": "No index"
+    },
+    {
+     "id": "o_gt",
+     "type": "operator",
+     "x": 200,
+     "y": 2920,
+     "w": 56,
+     "h": 56,
+     "text": ">",
+     "socket": ""
+    },
+    {
+     "id": "After first",
+     "type": "value",
+     "x": 300,
+     "y": 2920,
+     "w": 170,
+     "h": 64,
+     "text": "After first"
+    },
+    {
+     "id": "c_Picked_by_a_comparison",
+     "type": "operator",
+     "x": 400,
+     "y": 3030,
+     "w": 120,
+     "h": 90,
+     "text": "choose",
+     "socket": ""
+    },
+    {
+     "id": "r_Picked_by_a_comparison",
+     "type": "value",
+     "x": 600,
+     "y": 3030,
+     "w": 170,
+     "h": 64,
+     "text": "Picked by a comparison"
+    },
+    {
+     "id": "o_min",
+     "type": "operator",
+     "x": 200,
+     "y": 3180,
+     "w": 56,
+     "h": 56,
+     "text": "min",
+     "socket": ""
+    },
+    {
+     "id": "Step",
+     "type": "value",
+     "x": 300,
+     "y": 3180,
+     "w": 170,
+     "h": 64,
+     "text": "Step"
+    },
+    {
+     "id": "c_open",
+     "type": "operator",
+     "x": 400,
+     "y": 3290,
+     "w": 120,
+     "h": 90,
+     "text": "choose",
+     "socket": ""
+    },
+    {
+     "id": "Opening",
+     "type": "value",
+     "x": 600,
+     "y": 3290,
+     "w": 170,
+     "h": 64,
+     "text": "Opening"
+    },
+    {
+     "id": "ps",
+     "type": "periodShift",
+     "x": 300,
+     "y": 3350,
+     "w": 56,
+     "h": 56,
+     "shift": -1
+    },
+    {
+     "id": "o_add",
+     "type": "operator",
+     "x": 800,
+     "y": 3290,
+     "w": 56,
+     "h": 56,
+     "text": "+",
+     "socket": ""
+    },
+    {
+     "id": "Closing",
+     "type": "value",
+     "x": 900,
+     "y": 3290,
+     "w": 170,
+     "h": 64,
+     "text": "Closing"
+    },
+    {
+     "id": "f_Pick_by_scenario",
+     "type": "function",
+     "x": 400,
+     "y": 3400,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-e2b-pick",
+      "version": 1,
+      "versionId": "version-e2b-pick-1",
+      "name": "Pick"
+     }
+    },
+    {
+     "id": "r_Pick_by_scenario",
+     "type": "value",
+     "x": 600,
+     "y": 3400,
+     "w": 170,
+     "h": 64,
+     "text": "Pick by scenario"
+    },
+    {
+     "id": "f_Pick_by_period",
+     "type": "function",
+     "x": 400,
+     "y": 3510,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-e2b-pick",
+      "version": 1,
+      "versionId": "version-e2b-pick-1",
+      "name": "Pick"
+     }
+    },
+    {
+     "id": "r_Pick_by_period",
+     "type": "value",
+     "x": 600,
+     "y": 3510,
+     "w": 170,
+     "h": 64,
+     "text": "Pick by period"
+    },
+    {
+     "id": "f_SafePick_of_three",
+     "type": "function",
+     "x": 400,
+     "y": 3620,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-e2b-safe",
+      "version": 1,
+      "versionId": "version-e2b-safe-1",
+      "name": "SafePick"
+     }
+    },
+    {
+     "id": "r_SafePick_of_three",
+     "type": "value",
+     "x": 600,
+     "y": 3620,
+     "w": 170,
+     "h": 64,
+     "text": "SafePick of three"
+    },
+    {
+     "id": "f_SafePick_of_two",
+     "type": "function",
+     "x": 400,
+     "y": 3730,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-e2b-safe",
+      "version": 1,
+      "versionId": "version-e2b-safe-1",
+      "name": "SafePick"
+     }
+    },
+    {
+     "id": "r_SafePick_of_two",
+     "type": "value",
+     "x": 600,
+     "y": 3730,
+     "w": 170,
+     "h": 64,
+     "text": "SafePick of two"
+    },
+    {
+     "id": "f_Flagged",
+     "type": "function",
+     "x": 400,
+     "y": 3840,
+     "w": 150,
+     "h": 80,
+     "fn": {
+      "family": "family-e2b-cmp",
+      "version": 1,
+      "versionId": "version-e2b-cmp-1",
+      "name": "Flagged"
+     }
+    },
+    {
+     "id": "r_Flagged",
+     "type": "value",
+     "x": 600,
+     "y": 3840,
+     "w": 170,
+     "h": 64,
+     "text": "Flagged"
+    }
+   ],
+   "edges": [
+    {
+     "id": "e1",
+     "from": "per",
+     "to": "Period"
+    },
+    {
+     "id": "e2",
+     "from": "Base",
+     "to": "o_div"
+    },
+    {
+     "id": "e3",
+     "from": "Zero",
+     "to": "o_div"
+    },
+    {
+     "id": "e4",
+     "from": "o_div",
+     "to": "DivZero"
+    },
+    {
+     "id": "e5",
+     "from": "c_Picked_by_scenario",
+     "to": "r_Picked_by_scenario"
+    },
+    {
+     "id": "e6",
+     "from": "Scenario",
+     "to": "c_Picked_by_scenario",
+     "toPort": 0
+    },
+    {
+     "id": "e7",
+     "from": "Base",
+     "to": "c_Picked_by_scenario",
+     "toPort": 1
+    },
+    {
+     "id": "e8",
+     "from": "Upside",
+     "to": "c_Picked_by_scenario",
+     "toPort": 2
+    },
+    {
+     "id": "e9",
+     "from": "Downside",
+     "to": "c_Picked_by_scenario",
+     "toPort": 3
+    },
+    {
+     "id": "e10",
+     "from": "c_Picked_by_period",
+     "to": "r_Picked_by_period"
+    },
+    {
+     "id": "e11",
+     "from": "Period",
+     "to": "c_Picked_by_period",
+     "toPort": 0
+    },
+    {
+     "id": "e12",
+     "from": "Base",
+     "to": "c_Picked_by_period",
+     "toPort": 1
+    },
+    {
+     "id": "e13",
+     "from": "Upside",
+     "to": "c_Picked_by_period",
+     "toPort": 2
+    },
+    {
+     "id": "e14",
+     "from": "Downside",
+     "to": "c_Picked_by_period",
+     "toPort": 3
+    },
+    {
+     "id": "e15",
+     "from": "c_Fraction_index",
+     "to": "r_Fraction_index"
+    },
+    {
+     "id": "e16",
+     "from": "Frac",
+     "to": "c_Fraction_index",
+     "toPort": 0
+    },
+    {
+     "id": "e17",
+     "from": "Base",
+     "to": "c_Fraction_index",
+     "toPort": 1
+    },
+    {
+     "id": "e18",
+     "from": "Upside",
+     "to": "c_Fraction_index",
+     "toPort": 2
+    },
+    {
+     "id": "e19",
+     "from": "Downside",
+     "to": "c_Fraction_index",
+     "toPort": 3
+    },
+    {
+     "id": "e20",
+     "from": "c_Zero_index",
+     "to": "r_Zero_index"
+    },
+    {
+     "id": "e21",
+     "from": "Zero",
+     "to": "c_Zero_index",
+     "toPort": 0
+    },
+    {
+     "id": "e22",
+     "from": "Base",
+     "to": "c_Zero_index",
+     "toPort": 1
+    },
+    {
+     "id": "e23",
+     "from": "Upside",
+     "to": "c_Zero_index",
+     "toPort": 2
+    },
+    {
+     "id": "e24",
+     "from": "c_Negative_index",
+     "to": "r_Negative_index"
+    },
+    {
+     "id": "e25",
+     "from": "MinusOne",
+     "to": "c_Negative_index",
+     "toPort": 0
+    },
+    {
+     "id": "e26",
+     "from": "Base",
+     "to": "c_Negative_index",
+     "toPort": 1
+    },
+    {
+     "id": "e27",
+     "from": "Upside",
+     "to": "c_Negative_index",
+     "toPort": 2
+    },
+    {
+     "id": "e28",
+     "from": "c_Error_not_taken",
+     "to": "r_Error_not_taken"
+    },
+    {
+     "id": "e29",
+     "from": "One",
+     "to": "c_Error_not_taken",
+     "toPort": 0
+    },
+    {
+     "id": "e30",
+     "from": "Base",
+     "to": "c_Error_not_taken",
+     "toPort": 1
+    },
+    {
+     "id": "e31",
+     "from": "DivZero",
+     "to": "c_Error_not_taken",
+     "toPort": 2
+    },
+    {
+     "id": "e32",
+     "from": "c_Error_taken",
+     "to": "r_Error_taken"
+    },
+    {
+     "id": "e33",
+     "from": "Two",
+     "to": "c_Error_taken",
+     "toPort": 0
+    },
+    {
+     "id": "e34",
+     "from": "Base",
+     "to": "c_Error_taken",
+     "toPort": 1
+    },
+    {
+     "id": "e35",
+     "from": "DivZero",
+     "to": "c_Error_taken",
+     "toPort": 2
+    },
+    {
+     "id": "e36",
+     "from": "c_Gap_not_taken",
+     "to": "r_Gap_not_taken"
+    },
+    {
+     "id": "e37",
+     "from": "One",
+     "to": "c_Gap_not_taken",
+     "toPort": 0
+    },
+    {
+     "id": "e38",
+     "from": "Base",
+     "to": "c_Gap_not_taken",
+     "toPort": 1
+    },
+    {
+     "id": "e39",
+     "from": "Downside",
+     "to": "c_Gap_not_taken",
+     "toPort": 3
+    },
+    {
+     "id": "e40",
+     "from": "c_Gap_past_it",
+     "to": "r_Gap_past_it"
+    },
+    {
+     "id": "e41",
+     "from": "Three",
+     "to": "c_Gap_past_it",
+     "toPort": 0
+    },
+    {
+     "id": "e42",
+     "from": "Base",
+     "to": "c_Gap_past_it",
+     "toPort": 1
+    },
+    {
+     "id": "e43",
+     "from": "Downside",
+     "to": "c_Gap_past_it",
+     "toPort": 3
+    },
+    {
+     "id": "e44",
+     "from": "c_Gap_taken",
+     "to": "r_Gap_taken"
+    },
+    {
+     "id": "e45",
+     "from": "Two",
+     "to": "c_Gap_taken",
+     "toPort": 0
+    },
+    {
+     "id": "e46",
+     "from": "Base",
+     "to": "c_Gap_taken",
+     "toPort": 1
+    },
+    {
+     "id": "e47",
+     "from": "Downside",
+     "to": "c_Gap_taken",
+     "toPort": 3
+    },
+    {
+     "id": "e48",
+     "from": "c_No_choices",
+     "to": "r_No_choices"
+    },
+    {
+     "id": "e49",
+     "from": "One",
+     "to": "c_No_choices",
+     "toPort": 0
+    },
+    {
+     "id": "e50",
+     "from": "c_No_index",
+     "to": "r_No_index"
+    },
+    {
+     "id": "e51",
+     "from": "Base",
+     "to": "c_No_index",
+     "toPort": 1
+    },
+    {
+     "id": "e52",
+     "from": "Upside",
+     "to": "c_No_index",
+     "toPort": 2
+    },
+    {
+     "id": "e53",
+     "from": "Period",
+     "to": "o_gt"
+    },
+    {
+     "id": "e54",
+     "from": "One",
+     "to": "o_gt"
+    },
+    {
+     "id": "e55",
+     "from": "o_gt",
+     "to": "After first"
+    },
+    {
+     "id": "e56",
+     "from": "c_Picked_by_a_comparison",
+     "to": "r_Picked_by_a_comparison"
+    },
+    {
+     "id": "e57",
+     "from": "After first",
+     "to": "c_Picked_by_a_comparison",
+     "toPort": 0
+    },
+    {
+     "id": "e58",
+     "from": "Upside",
+     "to": "c_Picked_by_a_comparison",
+     "toPort": 1
+    },
+    {
+     "id": "e59",
+     "from": "Period",
+     "to": "o_min"
+    },
+    {
+     "id": "e60",
+     "from": "Two",
+     "to": "o_min"
+    },
+    {
+     "id": "e61",
+     "from": "o_min",
+     "to": "Step"
+    },
+    {
+     "id": "e62",
+     "from": "c_open",
+     "to": "Opening"
+    },
+    {
+     "id": "e63",
+     "from": "Step",
+     "to": "c_open",
+     "toPort": 0
+    },
+    {
+     "id": "e64",
+     "from": "OpeningInput",
+     "to": "c_open",
+     "toPort": 1
+    },
+    {
+     "id": "e65",
+     "from": "Opening",
+     "to": "o_add"
+    },
+    {
+     "id": "e66",
+     "from": "Flow",
+     "to": "o_add"
+    },
+    {
+     "id": "e67",
+     "from": "o_add",
+     "to": "Closing"
+    },
+    {
+     "id": "e68",
+     "from": "Closing",
+     "to": "ps"
+    },
+    {
+     "id": "e69",
+     "from": "ps",
+     "to": "c_open",
+     "toPort": 2
+    },
+    {
+     "id": "e70",
+     "from": "f_Pick_by_scenario",
+     "to": "r_Pick_by_scenario"
+    },
+    {
+     "id": "e71",
+     "from": "Scenario",
+     "to": "f_Pick_by_scenario",
+     "toPort": 0
+    },
+    {
+     "id": "e72",
+     "from": "Base",
+     "to": "f_Pick_by_scenario",
+     "toPort": 1
+    },
+    {
+     "id": "e73",
+     "from": "Upside",
+     "to": "f_Pick_by_scenario",
+     "toPort": 2
+    },
+    {
+     "id": "e74",
+     "from": "Downside",
+     "to": "f_Pick_by_scenario",
+     "toPort": 3
+    },
+    {
+     "id": "e75",
+     "from": "f_Pick_by_period",
+     "to": "r_Pick_by_period"
+    },
+    {
+     "id": "e76",
+     "from": "Period",
+     "to": "f_Pick_by_period",
+     "toPort": 0
+    },
+    {
+     "id": "e77",
+     "from": "Base",
+     "to": "f_Pick_by_period",
+     "toPort": 1
+    },
+    {
+     "id": "e78",
+     "from": "Upside",
+     "to": "f_Pick_by_period",
+     "toPort": 2
+    },
+    {
+     "id": "e79",
+     "from": "Downside",
+     "to": "f_Pick_by_period",
+     "toPort": 3
+    },
+    {
+     "id": "e80",
+     "from": "f_SafePick_of_three",
+     "to": "r_SafePick_of_three"
+    },
+    {
+     "id": "e81",
+     "from": "Three",
+     "to": "f_SafePick_of_three",
+     "toPort": 0
+    },
+    {
+     "id": "e82",
+     "from": "Base",
+     "to": "f_SafePick_of_three",
+     "toPort": 1
+    },
+    {
+     "id": "e83",
+     "from": "f_SafePick_of_two",
+     "to": "r_SafePick_of_two"
+    },
+    {
+     "id": "e84",
+     "from": "Two",
+     "to": "f_SafePick_of_two",
+     "toPort": 0
+    },
+    {
+     "id": "e85",
+     "from": "Base",
+     "to": "f_SafePick_of_two",
+     "toPort": 1
+    },
+    {
+     "id": "e86",
+     "from": "f_Flagged",
+     "to": "r_Flagged"
+    },
+    {
+     "id": "e87",
+     "from": "Period",
+     "to": "f_Flagged",
+     "toPort": 0
+    },
+    {
+     "id": "e88",
+     "from": "Base",
+     "to": "f_Flagged",
+     "toPort": 1
+    }
+   ]
+  }
+ ]
+}

@@ -81,6 +81,14 @@ test.describe('the parser', () => {
     ['F(x) = SQRT(x)', [-1], { error: 'math-error' }],
     ['F(x) = IFERROR(LN(x), 0)', [-1], 0],
     ['F(x) = ln(x) + Sqrt(4)', [1], 2],                                             // any capitals, as Excel
+    // Phase E2b.
+    ['F(i, a, b, c) = CHOOSE(i, a, b, c)', [2, 10, 20, 30], 20],
+    ['F(i, a, b) = CHOOSE(i, a, b)', [2.9, 10, 20], 20],                            // the index is cut to a whole number
+    ['F(j, a, b) = CHOOSE(j, a, b)', [3, 10, 20], { error: 'choose-out-of-range' }], // Excel: #VALUE!
+    ['F(i, a) = CHOOSE(i, a, a / 0)', [1, 10], 10],                                 // only the choice picked is read
+    ['F(k, a, b) = CHOOSE(k, a, b)', [1, 10], 10],                                  // …so one not picked may be missing
+    ['F(i, a) = IFERROR(CHOOSE(i, a), -1)', [0, 10], -1],
+    ['F(a, b) = choose(a > b, a, b) + 1', [2, 1], 3],
   ];
   for(const [text, args, expected] of ACCEPTED){
     test(`accepts ${text}`, () => {
@@ -130,6 +138,8 @@ test.describe('the parser', () => {
     ['F(a) = TRUNC(a, 2)', /TRUNC takes exactly 1 input/, 7],                         // ROUNDDOWN takes digits
     ['Sqrt(a) = a', /name of a built-in Excel function/, 0],
     ['F(Int) = Int', /"Int" is the name of a built-in Excel function/, 2],
+    ['F(a) = CHOOSE(a)', /CHOOSE takes at least 2 inputs/, 7],
+    ['Choose(a) = a', /name of a built-in Excel function/, 0],
     ['F(a) = MOD(a)', /MOD takes exactly 2 inputs/, 7],
     ['F(a) = IFERROR(a)', /IFERROR takes exactly 2 inputs/, 7],
     ['F(a) = MIN()', /MIN takes at least 1 input/, 7],
@@ -380,10 +390,10 @@ test('fmIDE calculates a call written several times, 16 levels deep, at once', a
   expect(await fmideValues(page, 'Repeat', ['Big'], 2)).toEqual({ Big: [4 ** 16, 2 * 4 ** 16] });
 });
 
-test('Save System carries the functions the model uses (system v5, now v8); the saved file calculates the same', async ({ page }, testInfo) => {
+test('Save System carries the functions the model uses (system v5, now v9); the saved file calculates the same', async ({ page }, testInfo) => {
   await openSample(page, 'basic');
   const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.command('saveSystem')));
-  expect(data.version).toBe(8);
+  expect(data.version).toBe(9);
   const all = sample('basic').functions;
   expect(data.functions).toEqual(all.filter(d => d.family !== 'family-unused'));
   const saved = testInfo.outputPath('saved.json');
@@ -394,11 +404,11 @@ test('Save System carries the functions the model uses (system v5, now v8); the 
   expect(await fmideValues(page, 'Functions', Object.keys(BASIC), 3)).toEqual(BASIC);
 });
 
-test('the workspace carries the function library (v4, now v9), and the autosave keeps it', async ({ page }) => {
+test('the workspace carries the function library (v4, now v10), and the autosave keeps it', async ({ page }) => {
   await openSample(page, 'basic');
   const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
-  expect(data.version).toBe(9);
-  expect(data.system.version).toBe(8);
+  expect(data.version).toBe(10);
+  expect(data.system.version).toBe(9);
   // The library holds every version the file brought, the unused one too.
   expect(data.functions.map(d => d.family + '@' + d.version)).toEqual(sample('basic').functions.map(d => d.family + '@' + d.version));
   expect(data.system.functions.map(d => d.family)).not.toContain('family-unused');
@@ -410,11 +420,11 @@ test('the workspace carries the function library (v4, now v9), and the autosave 
   expect(again.data.functions).toEqual(data.functions);
 });
 
-test('Save Module carries its canvas\'s functions (module v3, now v6); loading it brings them along', async ({ page }, testInfo) => {
+test('Save Module carries its canvas\'s functions (module v3, now v7); loading it brings them along', async ({ page }, testInfo) => {
   await openSample(page, 'basic');
   await page.evaluate(() => fm.switchCanvas('Margin Block'));
   const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.command('saveModule')));
-  expect(data.version).toBe(6);
+  expect(data.version).toBe(7);
   expect(data.functions.map(d => d.family + '@' + d.version)).toEqual(['family-margin@1']);
   const saved = testInfo.outputPath('module.json');
   fs.writeFileSync(saved, JSON.stringify(data));

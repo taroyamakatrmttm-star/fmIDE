@@ -1,0 +1,550 @@
+{
+ "version": 9,
+ "kind": "fmIDE-workspace",
+ "system": {
+  "version": 8,
+  "kind": "system",
+  "nextId": 29,
+  "nextCanvasId": 2,
+  "activeCanvasId": "c1",
+  "periods": [
+   "Period 1"
+  ],
+  "currentPeriod": 0,
+  "canvases": [
+   {
+    "id": "c1",
+    "name": "Revenue Model",
+    "nodes": [
+     {
+      "id": "n19",
+      "type": "value",
+      "x": 60,
+      "y": 60,
+      "w": 170,
+      "h": 64,
+      "text": "Unit Price\n10",
+      "plug": ""
+     },
+     {
+      "id": "n20",
+      "type": "value",
+      "x": 60,
+      "y": 180,
+      "w": 170,
+      "h": 64,
+      "text": "Volume\n5",
+      "plug": ""
+     },
+     {
+      "id": "n21",
+      "type": "operator",
+      "x": 300,
+      "y": 120,
+      "w": 56,
+      "h": 56,
+      "text": "×",
+      "socket": ""
+     },
+     {
+      "id": "n22",
+      "type": "value",
+      "x": 420,
+      "y": 110,
+      "w": 170,
+      "h": 64,
+      "text": "Revenue\n0",
+      "plug": ""
+     },
+     {
+      "id": "n26",
+      "type": "operator",
+      "x": 300,
+      "y": 320,
+      "w": 56,
+      "h": 56,
+      "text": "+",
+      "socket": ""
+     },
+     {
+      "id": "n27",
+      "type": "value",
+      "x": 420,
+      "y": 310,
+      "w": 170,
+      "h": 64,
+      "text": "Cash\n0",
+      "plug": ""
+     }
+    ],
+    "edges": [
+     {
+      "id": "e23",
+      "from": "n19",
+      "to": "n21"
+     },
+     {
+      "id": "e24",
+      "from": "n20",
+      "to": "n21"
+     },
+     {
+      "id": "e25",
+      "from": "n21",
+      "to": "n22"
+     },
+     {
+      "id": "e28",
+      "from": "n26",
+      "to": "n27"
+     }
+    ]
+   }
+  ],
+  "formatPresets": [
+   {
+    "id": "fmt-role-inputs",
+    "name": "Inputs",
+    "style": {
+     "numberFormat": {
+      "kind": "general",
+      "decimals": 2,
+      "currencySymbol": "$"
+     },
+     "fill": "#eff6ff",
+     "border": {
+      "color": "#93c5fd",
+      "width": 1.5,
+      "style": "solid"
+     },
+     "font": {
+      "family": "",
+      "size": 14,
+      "weight": "normal",
+      "color": "#1e3a8a"
+     }
+    }
+   },
+   {
+    "id": "fmt-role-calculations",
+    "name": "Calculations",
+    "style": {
+     "numberFormat": {
+      "kind": "general",
+      "decimals": 2,
+      "currencySymbol": "$"
+     },
+     "fill": null,
+     "border": null,
+     "font": {
+      "family": "",
+      "size": null,
+      "weight": "normal",
+      "color": null
+     }
+    }
+   },
+   {
+    "id": "fmt-role-links",
+    "name": "Links",
+    "style": {
+     "numberFormat": {
+      "kind": "general",
+      "decimals": 2,
+      "currencySymbol": "$"
+     },
+     "fill": null,
+     "border": null,
+     "font": {
+      "family": "",
+      "size": null,
+      "weight": "normal",
+      "color": "#008000"
+     }
+    }
+   },
+   {
+    "id": "fmt-role-headers",
+    "name": "Headers",
+    "style": {
+     "numberFormat": {
+      "kind": "general",
+      "decimals": 2,
+      "currencySymbol": "$"
+     },
+     "fill": "#f1f5f9",
+     "border": null,
+     "font": {
+      "family": "",
+      "size": null,
+      "weight": "700",
+      "color": null
+     }
+    }
+   },
+   {
+    "id": "fmt-role-section-headers",
+    "name": "Section Headers",
+    "style": {
+     "numberFormat": {
+      "kind": "general",
+      "decimals": 2,
+      "currencySymbol": "$"
+     },
+     "fill": "#f8fafc",
+     "border": null,
+     "font": {
+      "family": "",
+      "size": null,
+      "weight": "700",
+      "color": "#475569"
+     }
+    }
+   },
+   {
+    "id": "fmt-role-labels",
+    "name": "Labels",
+    "style": {
+     "numberFormat": {
+      "kind": "general",
+      "decimals": 2,
+      "currencySymbol": "$"
+     },
+     "fill": null,
+     "border": null,
+     "font": {
+      "family": "",
+      "size": null,
+      "weight": "700",
+      "color": "#475569"
+     }
+    }
+   },
+   {
+    "id": "fmt-role-notes",
+    "name": "Notes",
+    "style": {
+     "numberFormat": {
+      "kind": "general",
+      "decimals": 2,
+      "currencySymbol": "$"
+     },
+     "fill": null,
+     "border": null,
+     "font": {
+      "family": "",
+      "size": 9,
+      "weight": "normal",
+      "color": "#94a3b8"
+     }
+    }
+   }
+  ]
+ },
+ "templates": [
+  {
+   "name": "Income Statement",
+   "description": "",
+   "group": "Statements",
+   "kind": "module",
+   "family": "fam-income-statement",
+   "version": 1,
+   "note": "",
+   "versionId": "vid-income-v1",
+   "data": {
+    "version": 6,
+    "kind": "module",
+    "name": "Income Statement",
+    "selfCanvasId": "c1",
+    "nextId": 20,
+    "nodes": [
+     {
+      "id": "n1",
+      "type": "value",
+      "x": 60,
+      "y": 60,
+      "w": 170,
+      "h": 64,
+      "text": "Net Income\n40",
+      "plugs": [
+       "to Net Income"
+      ]
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "name": "Balance Sheet",
+   "description": "",
+   "group": "Statements",
+   "kind": "module",
+   "family": "fam-balance-sheet",
+   "version": 1,
+   "note": "",
+   "versionId": "vid-balance-v1",
+   "data": {
+    "version": 6,
+    "kind": "module",
+    "name": "Balance Sheet",
+    "selfCanvasId": "c1",
+    "nextId": 20,
+    "nodes": [
+     {
+      "id": "n1",
+      "type": "value",
+      "x": 60,
+      "y": 60,
+      "w": 170,
+      "h": 64,
+      "text": "Opening RE\n10"
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "name": "Balance Sheet",
+   "description": "",
+   "group": "Statements",
+   "kind": "module",
+   "family": "fam-balance-sheet",
+   "version": 2,
+   "note": "linked to the income statement and cash",
+   "versionId": "vid-balance-v2",
+   "data": {
+    "version": 6,
+    "kind": "module",
+    "name": "Balance Sheet",
+    "selfCanvasId": "c1",
+    "nextId": 20,
+    "nodes": [
+     {
+      "id": "n1",
+      "type": "operator",
+      "x": 200,
+      "y": 60,
+      "w": 56,
+      "h": 56,
+      "text": "+",
+      "socket": "to Net Income"
+     },
+     {
+      "id": "n2",
+      "type": "value",
+      "x": 320,
+      "y": 56,
+      "w": 170,
+      "h": 64,
+      "text": "Retained Earnings\n0"
+     },
+     {
+      "id": "n3",
+      "type": "operator",
+      "x": 200,
+      "y": 200,
+      "w": 56,
+      "h": 56,
+      "text": "+",
+      "socket": "to Cash"
+     },
+     {
+      "id": "n4",
+      "type": "value",
+      "x": 320,
+      "y": 196,
+      "w": 170,
+      "h": 64,
+      "text": "Cash balance\n0"
+     }
+    ],
+    "edges": [
+     {
+      "id": "e1",
+      "from": "n1",
+      "to": "n2"
+     },
+     {
+      "id": "e2",
+      "from": "n3",
+      "to": "n4"
+     }
+    ]
+   }
+  },
+  {
+   "name": "Cash Flow",
+   "description": "",
+   "group": "Statements",
+   "kind": "module",
+   "family": "fam-cash-flow",
+   "version": 1,
+   "note": "",
+   "versionId": "vid-cash-v1",
+   "data": {
+    "version": 6,
+    "kind": "module",
+    "name": "Cash Flow",
+    "selfCanvasId": "c1",
+    "nextId": 20,
+    "nodes": [
+     {
+      "id": "n1",
+      "type": "value",
+      "x": 60,
+      "y": 60,
+      "w": 170,
+      "h": 64,
+      "text": "Cash\n25",
+      "plugs": [
+       "to Cash"
+      ]
+     }
+    ],
+    "edges": []
+   }
+  }
+ ],
+ "formatPresets": [
+  {
+   "id": "fmt-role-inputs",
+   "name": "Inputs",
+   "style": {
+    "numberFormat": {
+     "kind": "general",
+     "decimals": 2,
+     "currencySymbol": "$"
+    },
+    "fill": "#eff6ff",
+    "border": {
+     "color": "#93c5fd",
+     "width": 1.5,
+     "style": "solid"
+    },
+    "font": {
+     "family": "",
+     "size": 14,
+     "weight": "normal",
+     "color": "#1e3a8a"
+    }
+   }
+  },
+  {
+   "id": "fmt-role-calculations",
+   "name": "Calculations",
+   "style": {
+    "numberFormat": {
+     "kind": "general",
+     "decimals": 2,
+     "currencySymbol": "$"
+    },
+    "fill": null,
+    "border": null,
+    "font": {
+     "family": "",
+     "size": null,
+     "weight": "normal",
+     "color": null
+    }
+   }
+  },
+  {
+   "id": "fmt-role-links",
+   "name": "Links",
+   "style": {
+    "numberFormat": {
+     "kind": "general",
+     "decimals": 2,
+     "currencySymbol": "$"
+    },
+    "fill": null,
+    "border": null,
+    "font": {
+     "family": "",
+     "size": null,
+     "weight": "normal",
+     "color": "#008000"
+    }
+   }
+  },
+  {
+   "id": "fmt-role-headers",
+   "name": "Headers",
+   "style": {
+    "numberFormat": {
+     "kind": "general",
+     "decimals": 2,
+     "currencySymbol": "$"
+    },
+    "fill": "#f1f5f9",
+    "border": null,
+    "font": {
+     "family": "",
+     "size": null,
+     "weight": "700",
+     "color": null
+    }
+   }
+  },
+  {
+   "id": "fmt-role-section-headers",
+   "name": "Section Headers",
+   "style": {
+    "numberFormat": {
+     "kind": "general",
+     "decimals": 2,
+     "currencySymbol": "$"
+    },
+    "fill": "#f8fafc",
+    "border": null,
+    "font": {
+     "family": "",
+     "size": null,
+     "weight": "700",
+     "color": "#475569"
+    }
+   }
+  },
+  {
+   "id": "fmt-role-labels",
+   "name": "Labels",
+   "style": {
+    "numberFormat": {
+     "kind": "general",
+     "decimals": 2,
+     "currencySymbol": "$"
+    },
+    "fill": null,
+    "border": null,
+    "font": {
+     "family": "",
+     "size": null,
+     "weight": "700",
+     "color": "#475569"
+    }
+   }
+  },
+  {
+   "id": "fmt-role-notes",
+   "name": "Notes",
+   "style": {
+    "numberFormat": {
+     "kind": "general",
+     "decimals": 2,
+     "currencySymbol": "$"
+    },
+    "fill": null,
+    "border": null,
+    "font": {
+     "family": "",
+     "size": 9,
+     "weight": "normal",
+     "color": "#94a3b8"
+    }
+   }
+  }
+ ],
+ "shortcutBindings": {},
+ "shortcutBindingsVersion": 2,
+ "macros": []
+}

@@ -34,9 +34,10 @@ function isInputRectangle(canvas, node){
 // fallback only fails when both of its first two inputs fail; with one input it gives 0. An
 // if (phase E1) needs a period outside the timeline when its condition does, or when both of
 // its branches do: a branch it may not take doesn't count (inside a branch, such a read is an
-// error instead). A function node (functions.js) is followed through its formula: only the
-// inputs it must read count (functionNeedsOutsideTimeline), when the canvas carries its
-// compiled definition (`canvas.calls`, set by the IR); otherwise through any of its inputs.
+// error instead); a choose (phase E2b) likewise, when its index does or every choice does. A
+// function node (functions.js) is followed through its formula: only the inputs it must read
+// count (functionNeedsOutsideTimeline), when the canvas carries its compiled definition
+// (`canvas.calls`, set by the IR); otherwise through any of its inputs.
 // `canvasOf(id)` returns a canvas { nodes, edges }; inputs are in left-to-right order.
 function reachesOutsideTimeline(canvasOf, canvasId, nodeId, period, periodCount, visiting){
   visiting = visiting || new Set();
@@ -67,10 +68,14 @@ function reachesOutsideTimeline(canvasOf, canvasId, nodeId, period, periodCount,
   }
   const inputs = incoming.map(e => canvas.nodes.find(x => x.id === e.from)).filter(Boolean)
     .sort((a, b) => (a.x - b.x) || (a.y - b.y));
-  if(n.type === 'operator' && n.text === 'if'){
+  if(n.type === 'operator' && (n.text === 'if' || n.text === 'choose')){
     // Each branch is walked on its own, so a source both branches read counts for both.
     const port = (i) => { const e = incoming.find(x => x.toPort === i); return !!e && reachesOutsideTimeline(canvasOf, canvasId, e.from, period, periodCount, new Set(visiting)); };
-    return port(0) || (port(1) && port(2));
+    const count = n.text === 'if' ? 2 : chooseChoiceCount(incoming.map(e => e.toPort));
+    if(port(0)) return true;
+    if(count === 0) return false;
+    for(let i = 1; i <= count; i++) if(!port(i)) return false;
+    return true;
   }
   if(n.type === 'operator' && n.text === 'iferror'){
     return inputs.length >= 2 && reach(canvasId, inputs[0].id, period) && reach(canvasId, inputs[1].id, period);

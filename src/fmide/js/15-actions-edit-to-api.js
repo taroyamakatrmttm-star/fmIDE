@@ -44,7 +44,8 @@
           const p = getNode(x.from), q = getNode(y.from);
           return (p && q) ? ((p.x - q.x) || (p.y - q.y)) : 0;
         });
-        byPlace.forEach((e, i) => { if(i < newOp.ports.length) e.toPort = i; else delete e.toPort; });
+        const most = newOp.choices ? newOp.ports.length + CHOOSE_MAX_CHOICES : newOp.ports.length;
+        byPlace.forEach((e, i) => { if(i < most) e.toPort = i; else delete e.toPort; });
       } else {
         into.forEach(e => { delete e.toPort; });
       }

@@ -9,7 +9,8 @@
 //   fallback: IFERROR(first, second), or IFERROR(first, 0) with one input
 //   period:  the period number: the "Period #" cell (row 3) of the formula's own sheet
 //   ports:   the inputs by name (toPort), in the catalogue's order; one with no arrow is NA()
-//   branches: IF — inside then and else, a period outside the timeline is an error (NA())
+//   branches: IF, CHOOSE — inside the inputs it may pick, a period outside the timeline is
+//            an error (NA()); `index`: its first input is a number (a TRUE/FALSE read gets N())
 //   logical: the result is Excel's TRUE/FALSE (AND, OR, NOT), like a comparison's
 // This file holds nothing but the table (the test reads it on its own, in Node).
 // ============================================================
@@ -46,4 +47,6 @@ const EXCEL_SPELLINGS = {
   sqrt:      { fn: 'SQRT', one: true, numeric: true },
   int:       { fn: 'INT', one: true, numeric: true },
   trunc:     { fn: 'TRUNC', one: true, numeric: true },
+  // Phase E2b: CHOOSE(index, choice 1, …); with no choice it is NA(), as fmIDE's "?".
+  choose:    { fn: 'CHOOSE', ports: true, branches: true, index: true },
 };

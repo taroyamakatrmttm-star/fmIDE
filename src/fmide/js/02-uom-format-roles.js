@@ -110,6 +110,7 @@
       case 'function-input-unwired': return "One of this function's inputs isn't connected.";
       case 'operator-unknown': return "fmIDE doesn't know this operator (only a hand-edited file has one).";
       case 'operator-input-unwired': return "An input this operator reads isn't connected.";
+      case 'choose-out-of-range': return 'The index picks no choice: it is below 1 or past the last choice.';
       default: return 'Could not compute.';
     }
   }

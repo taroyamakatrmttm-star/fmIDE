@@ -5,7 +5,7 @@
 // (docs/file-formats.md). To change one of these formats: raise its version here and add
 // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
 // exactly one version.
-const SHARED_FILE_VERSIONS = { 'system': 8, 'fmIDE-workspace': 9 };
+const SHARED_FILE_VERSIONS = { 'system': 9, 'fmIDE-workspace': 10 };
 // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
 // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
 function upgradeNodePlugs(nodes){
@@ -88,7 +88,9 @@ const SHARED_FILE_MIGRATIONS = {
     7: () => {},
     // v8 → v9: its system (v8) and templates (v8) may use the operators of phase E2a; older
     // ones don't.
-    8: () => {}
+    8: () => {},
+    // v9 → v10: its system (v9) and templates (v9) may use choose (phase E2b); older ones don't.
+    9: () => {}
   },
   'system': {
     // v1 systems were accepted with fields the loader already defaults (periods, ids…);
@@ -123,7 +125,10 @@ const SHARED_FILE_MIGRATIONS = {
     // v7 → v8: the operators of phase E2a (ln, exp, sqrt, int, trunc). Older systems have
     // none, so nothing changes; an older app asks before opening a v8 file instead of
     // calculating those operators as ones it doesn't know.
-    7: () => {}
+    7: () => {},
+    // v8 → v9: choose (phase E2b; arrows into it name their input with `toPort`: 0 the index,
+    // n choice n). Older systems have none, so nothing changes.
+    8: () => {}
   }
 };
 // A file's kind: its "kind" field, or — for files saved before kinds were written — its
