@@ -111,9 +111,24 @@
     else startEdit(n.id);
   }
 
-  function computeSnap(movingNode, x, y, excludeIds){
+  // The other nodes a drag snaps to, as boxes: worked out once when a drag starts (and again
+  // after Ctrl turns it into a copy), not on every pointer move.
+  function snapBoxes(excludeIds){
+    return nodes.filter(n => !excludeIds.includes(n.id)).map(n => {
+      const s = (n.w > 0 && n.h > 0) ? n : defaultNodeSize(n);
+      return { x: n.x, y: n.y, w: s.w, h: s.h };
+    }).filter(b => isFinite(b.x) && isFinite(b.y));
+  }
+
+  // Where a node dragged to x, y snaps. Each direction on its own: lining up an edge or the
+  // middle with another node (the blue guides), or equal spacing with the nodes in its row
+  // (horizontally) or column (vertically) — step 12a: after the last of a run, before the
+  // first, or halfway between two neighbours, with the gaps between edges equal (the same rule
+  // as Distribute). The nearer snap wins, alignment on a tie; nothing further than
+  // SNAP_THRESHOLD. `gaps` are the equal gaps to mark while it snaps.
+  function computeSnap(movingNode, x, y, excludeIds, boxes){
     const w = movingNode.w, h = movingNode.h;
-    const others = nodes.filter(n => !excludeIds.includes(n.id));
+    const others = boxes || snapBoxes(excludeIds);
     let bestX = x, bestXDist = SNAP_THRESHOLD, guideX = null;
     let bestY = y, bestYDist = SNAP_THRESHOLD, guideY = null;
     const me = { left:x, right:x+w, centerX:x+w/2 };
@@ -139,14 +154,77 @@
         }
       });
     });
-    return { x: Math.max(0,bestX), y: Math.max(0,bestY), guideX, guideY };
+
+    const gaps = [];
+    const ex = equalSpacingSnap(others, x, y, w, h, 'x');
+    if(ex && ex.dist < bestXDist){ bestX = ex.pos; guideX = null; gaps.push(...ex.gaps); }
+    const ey = equalSpacingSnap(others, x, y, w, h, 'y');
+    if(ey && ey.dist < bestYDist){ bestY = ey.pos; guideY = null; gaps.push(...ey.gaps); }
+    return { x: Math.max(0,bestX), y: Math.max(0,bestY), guideX, guideY, gaps };
+  }
+
+  // Equal spacing along one axis ('x': a row, 'y': a column) for a w × h node at x, y: the
+  // nearest place within SNAP_THRESHOLD, or null. `gaps` lists each equal gap as
+  // { axis, from, to, at } (from/to along the axis, `at` across it).
+  function equalSpacingSnap(boxes, x, y, w, h, axis){
+    const X = axis === 'x';
+    const pos = X ? x : y, len = X ? w : h;
+    const crossA = X ? y : x, crossB = crossA + (X ? h : w);
+    const lo = b => X ? b.x : b.y, hi = b => X ? b.x + b.w : b.y + b.h;
+    const cLo = b => X ? b.y : b.x, cHi = b => X ? b.y + b.h : b.x + b.w;
+    // The row (or column): nodes overlapping the dragged node across the axis, in order.
+    const line = boxes.filter(b => cLo(b) < crossB && cHi(b) > crossA).sort((p, q) => lo(p) - lo(q) || hi(p) - hi(q));
+    if(line.length < 2) return null;
+    const free = (a, b) => line.every(o => hi(o) <= a || lo(o) >= b);
+    // Where the gap between two boxes is marked across the axis: the middle of what they share
+    // across it, or the dragged node's middle.
+    const at = (p, q) => {
+      const a = Math.max(cLo(p), cLo(q)), b = Math.min(cHi(p), cHi(q));
+      return a < b ? (a + b) / 2 : (crossA + crossB) / 2;
+    };
+    const me = (p) => X ? { x: p, y, w, h } : { x, y: p, w, h };
+    let best = null;
+    const consider = (p, gapList) => {
+      const dist = Math.abs(p - pos);
+      if(p >= 0 && dist < SNAP_THRESHOLD && (!best || dist < best.dist)) best = { pos: p, dist, gaps: gapList };
+    };
+    const mark = (p, q) => ({ axis, from: hi(p), to: lo(q), at: at(p, q) });
+    for(let i = 0; i + 1 < line.length; i++){
+      const A = line[i], B = line[i + 1];
+      const g = lo(B) - hi(A);
+      if(g < 0 || !free(hi(A), lo(B))) continue; // overlapping, or not neighbours
+      // After B: [A] g [B] g [C]
+      const after = hi(B) + g;
+      if(free(hi(B), after + len)){ const C = me(after); consider(after, [mark(A, B), mark(B, C)]); }
+      // Before A: [C] g [A] g [B]
+      const before = lo(A) - g - len;
+      if(free(before, lo(A))){ const C = me(before); consider(before, [mark(C, A), mark(A, B)]); }
+      // Halfway between A and B: [A] e [C] e [B]
+      if(g >= len){ const mid = hi(A) + (g - len) / 2; const C = me(mid); consider(mid, [mark(A, C), mark(C, B)]); }
+    }
+    return best;
+  }
+
+  // The equal-gap markers (⟷ / ↕) shown while a drag snaps to equal spacing.
+  function showGapMarks(gaps){
+    const box = document.getElementById('gapMarks');
+    if(!box) return;
+    box.textContent = '';
+    (gaps || []).forEach(g => {
+      const m = document.createElement('div');
+      m.className = 'gap-mark ' + (g.axis === 'x' ? 'gap-mark-h' : 'gap-mark-v');
+      const len = Math.max(0, g.to - g.from);
+      if(g.axis === 'x'){ m.style.left = g.from + 'px'; m.style.top = g.at + 'px'; m.style.width = len + 'px'; }
+      else { m.style.top = g.from + 'px'; m.style.left = g.at + 'px'; m.style.height = len + 'px'; }
+      box.appendChild(m);
+    });
   }
 
   function updateGuides(gx, gy){
     if(gx !== null){ guideV.style.left = gx+'px'; guideV.classList.add('show'); } else guideV.classList.remove('show');
     if(gy !== null){ guideH.style.top = gy+'px'; guideH.classList.add('show'); } else guideH.classList.remove('show');
   }
-  function hideGuides(){ guideV.classList.remove('show'); guideH.classList.remove('show'); }
+  function hideGuides(){ guideV.classList.remove('show'); guideH.classList.remove('show'); showGapMarks([]); }
 
   function startModifiedInteraction(id, downEvent){
     const startX = downEvent.clientX, startY = downEvent.clientY;
@@ -184,6 +262,7 @@
     const originalIds = workingIds.slice();
     // references are taken before anything changes (a duplicate would make names ambiguous)
     const originalRefs = recorder.active ? recorder.refsOf(originalIds.map(getNode).filter(Boolean)) : null;
+    let boxes = snapBoxes(workingIds);
 
     function onMove(ev){
       if(!historyPushed){ pushHistory(); historyPushed = true; }
@@ -210,6 +289,7 @@
         workingPrimaryId = idMap[workingPrimaryId];
         workingPrimaryStart = newStart[workingPrimaryId];
         selectedNodeIds = new Set(workingIds);
+        boxes = snapBoxes(workingIds); // the originals stay where they were, to snap to
       }
 
       let dx = ev.clientX - startX, dy = ev.clientY - startY;
@@ -219,7 +299,9 @@
       const tentX = Math.max(0, workingPrimaryStart.x + dx);
       const tentY = Math.max(0, workingPrimaryStart.y + dy);
       const workingPrimaryNode = getNode(workingPrimaryId);
-      const snap = computeSnap(workingPrimaryNode, tentX, tentY, workingIds);
+      // Alt held during the drag: no snapping for this move (Alt before pressing makes an alias).
+      const snap = ev.altKey ? { x: tentX, y: tentY, guideX: null, guideY: null, gaps: [] }
+        : computeSnap(workingPrimaryNode, tentX, tentY, workingIds, boxes);
       const appliedDX = snap.x - workingPrimaryStart.x;
       const appliedDY = snap.y - workingPrimaryStart.y;
       workingIds.forEach(nid => {
@@ -229,6 +311,7 @@
         nd.y = Math.max(0, sp.y + appliedDY);
       });
       updateGuides(snap.guideX, snap.guideY);
+      showGapMarks(snap.gaps);
       render();
     }
     function onUp(){
@@ -274,6 +357,7 @@
     let aliasIds = [];
     let aliasStartPositions = {};
     let primaryId = null;
+    let aliasBoxes = null;
 
     function createAliases(){
       if(!historyPushed){ pushHistory(); historyPushed = true; }
@@ -299,7 +383,8 @@
       const primaryNode = getNode(primaryId);
       const tentX = Math.max(0, primaryStart.x + dx);
       const tentY = Math.max(0, primaryStart.y + dy);
-      const snap = computeSnap(primaryNode, tentX, tentY, aliasIds);
+      if(!aliasBoxes) aliasBoxes = snapBoxes(aliasIds);
+      const snap = computeSnap(primaryNode, tentX, tentY, aliasIds, aliasBoxes);
       const appliedDX = snap.x - primaryStart.x;
       const appliedDY = snap.y - primaryStart.y;
       aliasIds.forEach(nid => {
@@ -309,6 +394,7 @@
         nd.y = Math.max(0, sp.y + appliedDY);
       });
       updateGuides(snap.guideX, snap.guideY);
+      showGapMarks(snap.gaps);
       render();
     }
     function onUp(){

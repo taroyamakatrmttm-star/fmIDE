@@ -45,6 +45,7 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | `npm run test:template-layouts` | ExcelExporter using a template's attached layout (step 11c-2) |
 | `npm run test:block-layouts` | block instance tabs remembering their layout, and "Lay out the other instances like this" (step 11d) |
 | `npm run test:add-many` | Add Many Rectangles…, `fm.createRects` and the Mod+Enter quick chain (step 12b) |
+| `npm run test:equal-spacing` | a dragged node snapping to equal spacing, with gap markers (step 12a) |
 | `npm run test:help-site` | the site's help pages the build writes under `/help` (pages, links, command names and tabs against fmIDE, escaping, their security policy) |
 | `npx playwright test -g "Tree view"` | tests whose name matches |
 

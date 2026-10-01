@@ -1,6 +1,6 @@
 # Build step 12 — faster canvas building
 
-**Status:** 12b done (1 Oct 2026); 12a not started. Two independent phases, **12a** and **12b**; 12b went first (the owner's choice). Each phase gets its own plan, approved by the owner before any change, and its own pull request. The choices marked **Owner's choice** below are open: the recommendation is a starting point, not a decision.
+**Status:** done — 12b and 12a (1 Oct 2026). Two independent phases, **12a** and **12b**; 12b went first (the owner's choice). Each phase gets its own plan, approved by the owner before any change, and its own pull request. The choices marked **Owner's choice** below are open: the recommendation is a starting point, not a decision.
 
 **Goal:** fewer clicks to lay out a model. Two requests from the owner:
 
@@ -122,6 +122,21 @@ What was built:
 - **Files**: nothing changed — the rectangles are ordinary rectangles.
 
 How it was checked: test group 40 (`tests/40-add-many-rectangles.spec.js`, `npm run test:add-many`, 13 tests, listed in `tests/SPEC.md`), with a real mouse and keyboard and one by touch; then the whole suite.
+
+### 12a — how it turned out
+
+Decided when the work started (1 Oct 2026, the owner chose each recommendation): **always on** (1a); **the nearer snap wins, alignment on a tie** (2a); **only nodes in the dragged node's row or column** (3a); **Alt held after the drag starts turns snapping off** (4a); **resizing does not snap** (5a).
+
+What was built (`src/fmide/js/08-node-interaction.js`):
+
+- **`computeSnap`** now also asks **`equalSpacingSnap`**, once per direction: the nodes whose span across the axis overlaps the dragged node's (its row, or its column), in order; for each pair of neighbours with a gap between them, three places — after the second with the same gap, before the first with the same gap, and halfway between them when the dragged node fits. The nearest within `SNAP_THRESHOLD` (6 pixels) wins over the alignment snap only when it is nearer (a tie goes to alignment); each direction on its own, so a node can be evenly spaced across and lined up down at once. A place is taken only where nothing in the row sits between the node and its neighbour, or under it.
+- **`snapBoxes`**: the other nodes, as boxes, worked out once when a drag starts (again after Ctrl turns it into a copy, so the originals count), not on every move. Timing a drag across a 600-node canvas showed the same time before and after (most of it is redrawing the canvas on each move, which was already so).
+- **Gap markers**: `#gapMarks` on the canvas (beside the blue guides) holds a pink bar with end caps for each equal gap (`showGapMarks`), cleared with the guides when the drag ends.
+- **Alt**: held during a plain drag (`startDrag`), that move doesn't snap at all; Alt before pressing still makes an alias, whose drag snaps as before (`startAliasDrag`).
+- The selection moves with the grabbed node; a finger or pen drags through the same code (step 9); the move is one undo step and is recorded (`move`) at its snapped place. Positions are ordinary numbers: no file format changed, and no command was added.
+- **Help**: the `arranging` topic has a paragraph on snapping, the pink bars and Alt.
+
+How it was checked: test group 41 (`tests/41-equal-spacing-snap.spec.js`, `npm run test:equal-spacing`, 11 tests, listed in `tests/SPEC.md`), with a real mouse and one finger; then the whole suite.
 
 ## Order
 
