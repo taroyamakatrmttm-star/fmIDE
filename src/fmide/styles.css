@@ -621,6 +621,11 @@
   .guide-v{ width:1px; top:0; height:2400px; }
   .guide-h{ height:1px; left:0; width:3600px; }
   .guide.show{ display:block; }
+  /* Step 12a: while a drag snaps to equal spacing, each equal gap gets a bar with end caps. */
+  #gapMarks{ position:absolute; left:0; top:0; width:0; height:0; pointer-events:none; z-index:46; }
+  .gap-mark{ position:absolute; pointer-events:none; border-color:#db2777; border-style:solid; box-sizing:border-box; }
+  .gap-mark-h{ height:9px; margin-top:-4px; border-width:0 2px; background:linear-gradient(#db2777, #db2777) center / 100% 2px no-repeat; }
+  .gap-mark-v{ width:9px; margin-left:-4px; border-width:2px 0; background:linear-gradient(#db2777, #db2777) center / 2px 100% no-repeat; }
 
   .node{
     position:absolute;

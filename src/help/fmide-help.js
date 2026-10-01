@@ -127,11 +127,12 @@ const HELP_TOPICS = [
       { see: ['canvases', 'plugs-sockets'] },
     ] },
   { id: 'arranging', group: 'build', title: 'Moving, copying and arranging',
-    keywords: 'move drag select selection copy paste duplicate align distribute undo redo delete',
+    keywords: 'move drag select selection copy paste duplicate align distribute undo redo delete snap equal spacing gap even guide',
     summary: 'Select, move, copy, line up and undo.',
     body: [
       { p: 'Drag a box to move it. To select several, drag a box around them on empty canvas, or hold Shift or Ctrl while you click.' },
       { p: '{cmd:copy} and {cmd:paste} copy boxes with the arrows between them. With a mouse, you can also drag while holding Ctrl to duplicate. Pasted boxes land in free space.' },
+      { p: 'While you drag, a box snaps into line with the boxes around it (a blue line shows which edge or middle lines up), and to equal spacing: next to two boxes side by side, or one above the other, it snaps where the gaps are equal, after them, before them or halfway between them. Pink bars mark the equal gaps. Only the boxes in its row or column count. Hold Alt after you start dragging to move it freely, without snapping.' },
       { p: 'The Arrange tab lines up the selection ({cmd:alignLeft}, {cmd:alignTop} and others) and spaces it evenly ({cmd:distH}, {cmd:distV}).' },
       { p: '{cmd:undo} and {cmd:redo} step back and forward through your changes.' },
     ] },

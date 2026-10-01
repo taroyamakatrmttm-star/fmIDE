@@ -601,6 +601,20 @@ fmIDE at 1400 × 900 (the touch test at 1024 × 768 with a touchscreen), an empt
 - The ribbon: Add Many Rectangles… right after Add Rectangle on the Home and Insert tabs; a ribbon customised before 12b gets it after its own Add Rectangle once (`ui.addManyRectsAdded`), and a ribbon that later removed it stays without it.
 - By touch: a finger opens the window, the Name box is 16 pixels, two names typed, a tap on Add adds them; the page saw only touch.
 
+### 41. Snap to equal spacing (`tests/41-equal-spacing-snap.spec.js`; step 12, phase 12a)
+fmIDE at 1400 × 900 (the touch test at 1024 × 768 with a touchscreen); rectangles 170 × 64 placed with `fm.createRect`, then dragged with a real mouse, the button released after a pause.
+- A at x 100 and B at 300 (gap 30): C dropped at 503, 102 lands at 500, 100 (the top lines up with A's); while the button is down there are two pink markers, each 30 pixels wide; none after.
+- Before the first: A 400, B 600 — C dropped at 196 lands at 200. Halfway: A 100, B 500 (gap 230) — C dropped at 304 lands at 300, markers 30 and 30.
+- Down a column: A at y 100, B at 200 (gap 36) — C dropped at 101, 297 lands at 100, 300, two vertical markers of 36.
+- Different sizes: A 100 wide at 100, B 250 wide at 230 — C dropped at 513 lands at 510 (equal gaps between edges). A run of three (100, 300, 500) extended: 696 → 700.
+- At y 400 C shares no height with A and B: dropped at 503, it stays at 503; no markers.
+- With E's left edge at 504 in another row: dropped at 501 → 500 (equal spacing nearer), at 503 → 504 (alignment nearer), at 502 → 504 (a tie goes to alignment); dropped at 499, 104 → 500, 100 (equal spacing across, lined up down).
+- A selection of C and D (150 below it): C dropped at 503, 101 lands at 500, 100 and D at 500, 250.
+- Alt held from the start: an alias of C lands at 500, 100, C stays. Alt pressed after the drag has started: C dropped at 503, 102 stays at 503, 102.
+- Recorded as one `move` step of −100, −400; exported at 500, 100; one undo puts it back at 600, 500.
+- 400 rectangles (two calls of `fm.createRects`, grids of 20 across), one dragged across them in 30 moves: under 15 seconds, and it moved.
+- By touch: a finger drag of C to 503, 101 lands at 500, 100; the page saw only touch.
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.

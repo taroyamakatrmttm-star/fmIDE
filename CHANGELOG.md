@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Snap to equal spacing (step 12, phase 12a)
+- While you drag a box, it snaps where it is evenly spaced with the boxes in its row (or column): after two boxes side by side, with the same gap, before them, or halfway between them. Pink bars mark the equal gaps while it snaps. It works with lining up as before: whichever is nearer wins, and a box can be evenly spaced across and lined up down at once.
+- Hold **Alt** after you start dragging to move a box freely, without any snapping. (Alt before pressing still makes an alias, which snaps like any drag.)
+
 ## Add many rectangles at once (step 12, phase 12b)
 - **Add Many Rectangles…** (Home → Insert, Insert → Nodes) opens a window with a row per rectangle: type a name and press Enter for the next (value and unit are optional), or paste a list — one name per line, or columns copied from Excel. Choose a column, a row or a grid and the gap between them; they are added in one step, where they overlap nothing, and selected so you can drag them into place. A name already on the canvas is marked, but still allowed.
 - **Ctrl+Enter** (Cmd+Enter on a Mac) while typing in a rectangle saves it and starts a new one just below, with the same gap as the one above it, so a list can be typed straight down the canvas.

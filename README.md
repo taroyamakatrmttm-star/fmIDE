@@ -42,6 +42,8 @@ Importing templates (or a workspace) never adds a template you already have (sam
 
 A rectangle can have **several plugs**: click its 🔌 button to see one chip per plug name, ✕ to remove one, and type a name and press Enter to add another. Each name feeds the rectangle into every operator whose socket has that name, on any canvas — so "Income Tax" can feed both "to Income Tax expense" and "to CF Income Tax paid". Files saved before this open as before (their one plug becomes a list of one); older copies of fmIDE ask before opening a file saved by this version.
 
+**Snapping:** a box you drag snaps into line with the boxes around it, and to equal spacing with the boxes in its row or column — pink bars show the equal gaps. Hold **Alt** after you start dragging to move it freely.
+
 **Many rectangles at once:** **Add Many Rectangles…** (Home → Insert, or Insert → Nodes) lists one row per rectangle — type a name and press Enter for the next, or paste a list (one name per line, or columns copied from Excel: name, value, unit). Choose a column, a row or a grid and the gap; they are added in one step and selected, ready to drag into place. While typing in a rectangle, **Ctrl+Enter** (Cmd+Enter on a Mac) saves it and starts the next one just below.
 
 The large windows (Templates, Functions, Browse Library, Macro Builder, Customize Ribbon, Add Many Rectangles and others) can be resized from their bottom-right corner and remember their size; double-click the corner to put one back. The Templates list is a tree of groups you can open and close.
