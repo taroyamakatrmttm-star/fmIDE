@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## The 📈 chart shows every period
+- The chart that draws an input's values across periods (📈 on a rectangle) now shows every period at once, however many there are, so a curve can be drawn from the first period to the last without scrolling. With many periods the numbers along the bottom thin out (every 2nd, 5th, 10th…), the dots get smaller and the values above them are left out; the boxes below the chart still show each value.
+- Its window can be resized from its bottom-right corner, and the chart grows or shrinks with it. The size is remembered (a double-click on the corner puts it back), like the Templates window's.
+
 ## choose: a scenario switch (step 7, phase E2b)
 - **choose** gives the choice its index picks, like Excel's CHOOSE: an index of 2 gives choice 2 (2.7 counts as 2). It suits a scenario switch — 1 base, 2 upside, 3 downside. Only the choice picked is worked out, so an error, or last period's value in period 1, in a choice not picked doesn't matter. An index below 1 or past the last choice shows "?" (Excel's #VALUE!).
 - On the canvas it shows an **index** dot and a dot per choice, always with one empty choice at the end: drop an arrow on the dot you mean, or on the box for the next empty one. It is in the palette, the Command Launcher (Insert Operator choose, command 30) and Insert → Excel Functions; a customised ribbon gets it once. Changing an operator into choose makes its arrows the index and the choices, left to right. Functions can use `CHOOSE(i, a, b, …)`.

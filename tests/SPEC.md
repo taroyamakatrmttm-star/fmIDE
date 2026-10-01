@@ -465,6 +465,7 @@ fmIDE at 1400 × 900.
 - A saved 3000 × 2000 opens at most 98 % × 96 % of the screen.
 - A workspace file carrying `ui.windowSizes` (333 × 444) and closed groups, imported: the window doesn't take that size.
 - The Templates tree (`templates/search.json`): the Financial Statement heading (a `div`, role button, "▾ Name (count)") closes on a click and hides exactly its templates; still closed after a reload (`ui.templateGroupsClosed`); a search finds templates inside it; Enter on the focused heading opens it again.
+- The 📈 chart (values across periods), opened from a rectangle's 📈 button: with 6, 24 and 120 periods there is a dot for every period, the chart is no wider than its space, the rightmost dot is inside it, neither the chart nor the window scrolls sideways, periods 1 and the last are numbered along the bottom, and a mouse drag from high on the left to low on the right changes the first and last values (first above last). Its window is resizable: at 1200 × 700 the chart is wider and taller, at 500 × 500 narrower with all 24 dots inside and no sideways scroll; `ui.windowSizes.periodValues` holds 500 × 500 and the window opens at that size after a reload. With 60 periods, shrinking the browser to 700 × 700 shrinks the chart, all 60 dots still inside.
 - Group 26: the Browse Library window is resizable, at least 1000 px wide on a 1400 px screen, and opens again at the size it was given.
 
 ### 30. ExcelExporter by touch (`tests/30-touch-excel.spec.js`; step 9c)

@@ -8,11 +8,13 @@
     const box = document.createElement('div');
     box.className = 'modal-box period-values-box';
     addWindowHelp(box, 'values-over-time');
+    makeResizableWindow(box, 'periodValues');
     overlay.appendChild(box);
     document.body.appendChild(overlay);
 
     function cleanup(){
       stopDrawing();
+      chartResize.disconnect();
       document.removeEventListener('keydown', onKey);
       overlay.remove();
     }
@@ -71,24 +73,42 @@
     box.appendChild(rangeRow);
 
     // ---- chart ----
+    // Every period is always on the chart, however many there are: the chart fills the
+    // space the window gives it (the window can be resized from its corner, and the chart
+    // follows), shared out evenly across the periods. Labels and dots thin out or shrink
+    // when the periods get close together; the number boxes below always show each value.
     const chartWrap = document.createElement('div');
-    chartWrap.style.cssText = 'overflow-x:auto; border:1px solid #e5e7eb; border-radius:8px; background:#fafafa; margin-bottom:10px;';
+    chartWrap.className = 'period-values-chart';
     box.appendChild(chartWrap);
 
     const padL = 54, padR = 20, padT = 16, padB = 26;
-    const stepX = Math.max(46, Math.min(90, Math.floor(760 / Math.max(periods.length, 1))));
-    const plotW = stepX * Math.max(periods.length - 1, 1);
-    const svgW = padL + plotW + padR;
-    const svgH = 240;
-    const plotH = svgH - padT - padB;
+    let svgW = 0, svgH = 0, plotW = 0, plotH = 0, stepX = 0;
 
     const svgNS = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(svgNS, 'svg');
-    svg.setAttribute('width', svgW);
-    svg.setAttribute('height', svgH);
-    svg.style.display = 'block';
     svg.style.cursor = 'crosshair';
     chartWrap.appendChild(svg);
+
+    // Fits the chart to its space; false when nothing changed.
+    function layoutChart(){
+      const w = Math.max(padL + padR + 40, Math.floor(chartWrap.clientWidth));
+      const h = Math.max(padT + padB + 60, Math.floor(chartWrap.clientHeight));
+      if(w === svgW && h === svgH) return false;
+      svgW = w; svgH = h;
+      plotW = svgW - padL - padR;
+      plotH = svgH - padT - padB;
+      stepX = plotW / Math.max(periods.length - 1, 1);
+      svg.setAttribute('width', svgW);
+      svg.setAttribute('height', svgH);
+      return true;
+    }
+    // The period numbers along the bottom: every one, or every 2nd, 5th, 10th… so they don't overlap.
+    function periodLabelEvery(){
+      const steps = [1, 2, 5];
+      for(let k = 1; ; k *= 10){
+        for(const s of steps){ if(stepX * s * k >= 24) return s * k; }
+      }
+    }
 
     function yFor(v){
       const t = (v - rangeMin) / (rangeMax - rangeMin);
@@ -102,6 +122,7 @@
     function xFor(i){ return padL + i * stepX; }
 
     function redraw(){
+      layoutChart();
       svg.innerHTML = '';
       const gl = document.createElementNS(svgNS, 'g');
       [0, 0.25, 0.5, 0.75, 1].forEach(t => {
@@ -118,13 +139,23 @@
         lbl.textContent = formatNum(rangeMin + t * (rangeMax - rangeMin));
         gl.appendChild(lbl);
       });
+      const every = periodLabelEvery();
+      const last = periods.length - 1;
+      // A period is labelled when it is the first, a multiple of `every`, or the last one
+      // with room left after the label before it.
+      const labelled = (i) => i === 0 || (i + 1) % every === 0 ||
+        (i === last && (last - Math.max(0, Math.floor((last + 1) / every) * every - 1)) * stepX >= 24);
       periods.forEach((label, i) => {
         const x = xFor(i);
-        const vline = document.createElementNS(svgNS, 'line');
-        vline.setAttribute('x1', x); vline.setAttribute('x2', x);
-        vline.setAttribute('y1', padT); vline.setAttribute('y2', padT + plotH);
-        vline.setAttribute('stroke', '#eef2f7');
-        gl.appendChild(vline);
+        const shown = labelled(i);
+        if(stepX >= 8 || shown){
+          const vline = document.createElementNS(svgNS, 'line');
+          vline.setAttribute('x1', x); vline.setAttribute('x2', x);
+          vline.setAttribute('y1', padT); vline.setAttribute('y2', padT + plotH);
+          vline.setAttribute('stroke', '#eef2f7');
+          gl.appendChild(vline);
+        }
+        if(!shown) return;
         const xlbl = document.createElementNS(svgNS, 'text');
         xlbl.setAttribute('x', x); xlbl.setAttribute('y', svgH - 8);
         xlbl.setAttribute('text-anchor', 'middle'); xlbl.setAttribute('font-size', '9'); xlbl.setAttribute('fill', '#94a3b8');
@@ -142,15 +173,19 @@
       path.setAttribute('stroke-width', '2');
       svg.appendChild(path);
 
+      // Dots shrink and their numbers go when the periods are close together.
+      const r = Math.max(2, Math.min(6, stepX / 3));
+      const showValues = stepX >= 36;
       curValues.forEach((v, i) => {
         const c = document.createElementNS(svgNS, 'circle');
         c.setAttribute('cx', xFor(i)); c.setAttribute('cy', yFor(v));
-        c.setAttribute('r', 6);
+        c.setAttribute('r', r);
         c.setAttribute('fill', '#fff');
         c.setAttribute('stroke', '#4f46e5');
-        c.setAttribute('stroke-width', '2');
+        c.setAttribute('stroke-width', r >= 4 ? '2' : '1.5');
         c.style.cursor = 'ns-resize';
         svg.appendChild(c);
+        if(!showValues) return;
         const vlbl = document.createElementNS(svgNS, 'text');
         vlbl.setAttribute('x', xFor(i)); vlbl.setAttribute('y', yFor(v) - 10);
         vlbl.setAttribute('text-anchor', 'middle'); vlbl.setAttribute('font-size', '10'); vlbl.setAttribute('fill', '#374151');
@@ -190,6 +225,9 @@
     function syncNumberInputs(){ numberInputs.forEach((inp, i) => { inp.value = curValues[i]; }); }
     buildNumberInputs();
     redraw();
+    // Resizing the window (or the browser) resizes the chart.
+    const chartResize = new ResizeObserver(() => { if(layoutChart()) redraw(); });
+    chartResize.observe(chartWrap);
 
     minField.inp.addEventListener('change', () => {
       const v = parseFloat(minField.inp.value);

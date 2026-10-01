@@ -433,7 +433,13 @@
   .dedupe-row .dedupe-fate{ margin-left:auto; font-size:11px; font-weight:700; color:#15803d; }
   .dedupe-row.remove .dedupe-name{ text-decoration:line-through; color:#9ca3af; }
   .dedupe-row.remove .dedupe-fate{ color:#b91c1c; }
-  .period-values-box{ min-width:640px; max-width:92vw; }
+  /* The 📈 window: resizable (makeResizableWindow); the chart fills what the window gives it
+     and shows every period, so it never scrolls sideways. */
+  .period-values-box.resizable-window{ width:min(960px, 96vw); min-width:420px; }
+  .period-values-chart{ position:relative; overflow:hidden; height:240px; min-height:140px;
+    border:1px solid #e5e7eb; border-radius:8px; background:#fafafa; margin-bottom:10px; }
+  .modal-box.resizable-window > .period-values-chart{ flex:1 1 240px; flex-shrink:1; height:auto; }
+  .period-values-chart svg{ position:absolute; left:0; top:0; display:block; }
   .template-layout{ display:flex; gap:16px; margin-bottom:14px; }
   .template-list-col{ width:190px; flex-shrink:0; display:flex; flex-direction:column; gap:6px; }
   .template-search{
