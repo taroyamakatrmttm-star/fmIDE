@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter's help explains what it remembers
+- A new help topic, **What is remembered, and which layout wins**: the three things kept in the browser (each model's layout, each module's layout, the Excel style), that Start Over keeps them all, and the order a layout is taken from when a file loads (the model's saved layout, then your module layout, then the template's attached layout, then the automatic sort). It also says how Export Mapping JSON and Export Module Layouts differ.
+- A new topic, **A template's attached layout**: how to attach a module's layout in fmIDE, where it travels, and exactly when ExcelExporter uses it.
+- **How the workbook looks** now lists which format wins, for the cell's look and for its number format.
+
 ## choose: a scenario switch (step 7, phase E2b)
 - **choose** gives the choice its index picks, like Excel's CHOOSE: an index of 2 gives choice 2 (2.7 counts as 2). It suits a scenario switch — 1 base, 2 upside, 3 downside. Only the choice picked is worked out, so an error, or last period's value in period 1, in a choice not picked doesn't matter. An index below 1 or past the last choice shows "?" (Excel's #VALUE!).
 - On the canvas it shows an **index** dot and a dot per choice, always with one empty choice at the end: drop an arrow on the dot you mean, or on the box for the next empty one. It is in the palette, the Command Launcher (Insert Operator choose, command 30) and Insert → Excel Functions; a customised ribbon gets it once. Changing an operator into choose makes its arrows the index and the choices, left to right. Functions can use `CHOOSE(i, a, b, …)`.
