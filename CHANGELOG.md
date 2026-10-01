@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Add many rectangles at once (step 12, phase 12b)
+- **Add Many Rectangles…** (Home → Insert, Insert → Nodes) opens a window with a row per rectangle: type a name and press Enter for the next (value and unit are optional), or paste a list — one name per line, or columns copied from Excel. Choose a column, a row or a grid and the gap between them; they are added in one step, where they overlap nothing, and selected so you can drag them into place. A name already on the canvas is marked, but still allowed.
+- **Ctrl+Enter** (Cmd+Enter on a Mac) while typing in a rectangle saves it and starts a new one just below, with the same gap as the one above it, so a list can be typed straight down the canvas.
+- For macros and scripts, `fm.createRects` adds many rectangles in one step.
+
 ## Faster calculation on long timelines
 - Each period is now worked out once. Before, a period that reads an earlier one (through a period shift) worked out every earlier period again, so the time grew with the square of the number of periods. On a large model (1,865 rectangles and operators) fmIDE's calculation takes 0.19 s instead of 1.3 s at 24 periods, and 0.76 s instead of 19.5 s at 60. ExcelExporter's check before download gets faster too.
 - Results are unchanged, except in a model with a loop (a circular reference): there a period shift now always shows the value shown for the period it reads.

@@ -75,10 +75,12 @@ const HELP_TOPICS = [
 
   // ---------- Building a model ----------
   { id: 'rectangles', group: 'build', title: 'Rectangles: name, value and unit',
-    keywords: 'rectangle node box value input calculation name unit uom edit text',
+    keywords: 'rectangle node box value input calculation name unit uom edit text many list several paste add many chain',
     summary: 'A rectangle holds one number: typed in (an input) or worked out from its arrows (a calculation).',
     body: [
       { p: 'A rectangle has three lines: its name, its value and its unit of measure (for example t, $ or $/t). Double-click a rectangle to change them. Press Shift+Enter for the next line and Enter when you are done.' },
+      { p: 'To add several at once, use {cmd:addManyRects}: type a name in each row and press Enter for the next (value and unit are optional), or paste a list, one name per line, or columns copied from Excel. Choose a column, a row or a grid and the gap between them; they are added in one step, and selected so you can drag them into place. A name already on the canvas is marked, but still allowed.' },
+      { p: 'While typing in a rectangle, Ctrl+Enter (Cmd+Enter on a Mac) saves it and starts a new one just below, with the same gap as the one above it, so you can type a list straight down the canvas.' },
       { p: 'A rectangle with no arrow coming in is an input: you type its value. A rectangle fed by an arrow is a calculation: its value comes from the arrow, and fmIDE shows it after {cmd:evaluate}.' },
       { p: 'Units are worked out for you. $/t × t gives $, and adding t to $ is flagged.' },
       { p: 'The small buttons on a selected rectangle:' },
@@ -413,6 +415,7 @@ const COMMAND_HELP = {
   selectAll: 'Selects every box on this canvas.',
   deselect: 'Clears the selection and closes any open picker.',
   addRect: 'Adds a rectangle, ready to type its name, value and unit.',
+  addManyRects: 'Adds many rectangles at once: type or paste a list of names, one rectangle each, laid out evenly.',
   addOperator: 'Adds an operator and asks which one: + − × ÷ and more.',
   addAlias: 'Adds an alias: a stand-in that shows another rectangle\'s value.',
   addBlock: 'Adds another canvas as a block: one box with its inputs and outputs.',
