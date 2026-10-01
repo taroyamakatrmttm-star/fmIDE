@@ -330,8 +330,8 @@ function isLogicalValued(canvasId, nodeId, ctx, path, fromPort, visiting){
   const n = irNode(canvasId, nodeId);
   if(!n) return false;
   if(n.type === 'operator'){
-    // An IF gives what its branches give: TRUE/FALSE when either does.
-    if(n.op && n.op.branches) return [1, 2].some(i => !!n.portInputs[i] && isLogicalValued(canvasId, n.portInputs[i].from, ctx, path, n.portInputs[i].fromPort, visiting));
+    // An IF gives what its branches give: TRUE/FALSE when either does (a CHOOSE: any choice).
+    if(n.op && n.op.branches) return n.portInputs.slice(1).some(e => !!e && isLogicalValued(canvasId, e.from, ctx, path, e.fromPort, visiting));
     return isComparison(n);
   }
   if(n.type === 'alias'){
@@ -370,8 +370,11 @@ function buildOperatorFormula(canvasId, opNode, periodIndex, ctx, currentTabName
   // The period number: this column's cell in the "Period #" row every sheet has (row 3).
   if(spell.period) return colLetter(periodCol(periodIndex)) + '$3';
   const inputs = spell.ports ? opNode.portInputs : opNode.inputs;
-  const needsNumeric = !!(spell.numeric || spell.compare);
+  // A CHOOSE with no choice: Excel needs at least one; fmIDE shows "?".
+  if(spell.branches && inputs.length < 2) return 'NA()';
+  const allNumeric = !!(spell.numeric || spell.compare);
   const operandStrs = inputs.map((edge, i) => {
+    const needsNumeric = allNumeric || (!!spell.index && i === 0); // CHOOSE's index
     // A named input with no arrow: an error where it is read (IF reads one branch only).
     if(!edge) return 'NA()';
     // An iferror's first input is where a failure is caught, and an if's branches are where

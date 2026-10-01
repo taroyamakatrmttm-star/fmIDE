@@ -73,7 +73,7 @@ test('a canvas added from a canvas template remembers it — and after a reload'
   // The canvas it was saved from is linked too.
   expect((await canvasInfo(page, 'Author')).template).toMatchObject({ version: 1, status: 'current' });
   const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.command('saveSystem')));
-  expect(data.version).toBe(8);
+  expect(data.version).toBe(9);
   expect(data.canvases.find(c => c.name === 'Sales').template).toMatchObject({ family: sales.template.family, version: 1, name: 'Sales' });
   await page.waitForTimeout(2500);  // the autosave
   await page.reload();

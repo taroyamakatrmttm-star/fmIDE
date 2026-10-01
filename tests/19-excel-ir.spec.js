@@ -63,14 +63,14 @@ test('every operator in the catalogue has an Excel spelling, and only those do',
     expect(shapes.filter(k => typeof s[k] === 'string' && s[k] !== ''), `${id}: exactly one way to write it`).toHaveLength(1);
   }
   // The samples every operator is in, so the workbook tests (units above, agreement in 17)
-  // write each spelling at least once: ir/error-cases.json, and for those of phases E1 and
-  // E2a agreement/operators-e1.json and agreement/operators-e2a.json.
+  // write each spelling at least once: ir/error-cases.json, and for those of phases E1, E2a
+  // and E2b agreement/operators-e1.json, -e2a.json and -e2b.json.
   const used = new Set();
-  [['ir', 'error-cases.json'], ['agreement', 'operators-e1.json'], ['agreement', 'operators-e2a.json']].forEach(([dir, name]) => {
+  [['ir', 'error-cases.json'], ['agreement', 'operators-e1.json'], ['agreement', 'operators-e2a.json'], ['agreement', 'operators-e2b.json']].forEach(([dir, name]) => {
     const system = JSON.parse(fs.readFileSync(fixture(dir, name), 'utf8'));
     (system.system || system).canvases.forEach(c => c.nodes.forEach(n => { if(n.type === 'operator') used.add(n.text); }));
   });
-  for(const op of OPERATORS) expect(used.has(op.symbol), `${op.id} is in ir/error-cases.json or agreement/operators-e1.json or -e2a.json`).toBe(true);
+  for(const op of OPERATORS) expect(used.has(op.symbol), `${op.id} is in ir/error-cases.json or agreement/operators-e1.json, -e2a.json or -e2b.json`).toBe(true);
 });
 
 // ---- where the workbook will differ from fmIDE (the panel next to Generate) ----
@@ -431,4 +431,23 @@ test('phase E2a operators: LN, EXP, SQRT, INT and TRUNC on the canvas and in fun
   // In functions: written out in full.
   expect(f['Mix of X']).toBe('SQRT({X})+INT({X})+TRUNC(-{X})+EXP(LN({X}))');
   expect(f['SafeLn of Zero']).toBe('IFERROR(LN({Zero}),-1)');
+});
+
+// ---- the operator of phase E2b: choose ----
+test('phase E2b: CHOOSE by its named inputs on the canvas and in functions', async ({ page }) => {
+  const { f } = await formulasOf(page, 'agreement', 'operators-e2b.json', 'Operators');
+  expect(f['Picked by scenario']).toBe('CHOOSE({Scenario},{Base},{Upside},{Downside})');
+  expect(f['Fraction index']).toBe('CHOOSE({Frac},{Base},{Upside},{Downside})');
+  // A choice with no arrow is NA(), where it is read; past the last arrow there is no choice.
+  expect(f['Gap not taken']).toBe('CHOOSE({One},{Base},NA(),{Downside})');
+  // No choice at all, or no index: #N/A, as fmIDE's "?".
+  expect(f['No choices']).toBe('NA()');
+  expect(f['No index']).toBe('CHOOSE(NA(),{Base},{Upside})');
+  // A TRUE/FALSE index is turned into 1/0.
+  expect(f['Picked by a comparison']).toBe('CHOOSE(N({After first}),{Upside})');
+  // The corkscrew: the choice reaching before the first period is #N/A inside CHOOSE.
+  expect(f['Opening']).toBe('CHOOSE({Step},{OpeningInput},NA())');
+  // In functions: written out in full.
+  expect(f['Pick by scenario']).toBe('CHOOSE({Scenario},{Base},{Upside},{Downside})');
+  expect(f['SafePick of three']).toBe('IFERROR(CHOOSE({Three},{Base},{Base}*2),-1)');
 });

@@ -22,7 +22,8 @@
   function operatorSize(sym){
     // An operator with named inputs (if, round…): a box with one labelled input per row.
     const op = operatorForSymbol(sym);
-    if(op && op.ports) return { w: 120, h: operatorPortsHeight(op.ports.length) };
+    // A choose starts with its index and one empty choice; it grows with its arrows.
+    if(op && op.ports) return { w: 120, h: operatorPortsHeight(op.ports.length + (op.choices ? 1 : 0)) };
     if(WORD_OPS.includes(sym)){
       return { w: Math.max(56, 24 + sym.length * 10), h: 40 };
     }
@@ -34,6 +35,8 @@
   const E1_FUNCTION_OPS = ['if', 'and', 'or', 'not', 'round', 'roundup', 'rounddown', 'period'].map(sym => OPS.indexOf(sym));
   // Phase E2a's, with the Excel functions too.
   const E2_FUNCTION_OPS = ['ln', 'exp', 'sqrt', 'int', 'trunc'].map(sym => OPS.indexOf(sym));
+  // Phase E2b's choose, with them.
+  const E2B_FUNCTION_OPS = ['choose'].map(sym => OPS.indexOf(sym));
   // Height of an operator box with `count` named inputs: its symbol, then a row per input.
   function operatorPortsHeight(count){ return 26 + count * 20 + 6; }
 

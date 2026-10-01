@@ -370,10 +370,15 @@
     } });
 
   // ---------------------------------- Connect ----------------------------------
-  // The named inputs of an operator (phase E1: if, round, roundup, rounddown), or null.
+  // The named inputs of an operator (phase E1: if, round, roundup, rounddown), or null. A
+  // choose (phase E2b) has its index, a choice for each its arrows reach, and one empty
+  // choice after them for the next arrow (up to 254).
   function operatorPortsOf(n){
     const op = n && n.type === 'operator' ? operatorForSymbol(n.text) : null;
-    return op && op.ports ? op.ports : null;
+    if(!op || !op.ports) return null;
+    if(!op.choices) return op.ports;
+    const count = chooseChoiceCount(edges.filter(e => e.to === n.id).map(e => e.toPort));
+    return operatorPortNames(op, count + 1);
   }
   // Where an arrow dropped on the body of an operator with named inputs goes: its first input
   // with no arrow.
@@ -391,10 +396,19 @@
     const ps = operatorPortsOf(n);
     const s = ref == null ? '' : String(ref).trim();
     if(s === '') fail(`${describeNode(n)} takes each input by name — say which one (${ps.join(', ')}).`);
+    // A choose takes any choice up to the 254th, beyond the ones it has so far.
+    const op = operatorForSymbol(n.text);
+    const most = op && op.choices ? op.ports.length + CHOOSE_MAX_CHOICES : ps.length;
     if(/^\d+$/.test(s)){
       const i = Number(s) - 1;
-      if(i < 0 || i >= ps.length) fail(`${describeNode(n)} has no input #${s} (it has ${ps.length}).`);
+      if(i < 0 || i >= most) fail(`${describeNode(n)} has no input #${s} (it has ${op && op.choices ? 'an index and up to ' + CHOOSE_MAX_CHOICES + ' choices' : ps.length}).`);
       return i;
+    }
+    const m = op && op.choices ? /^choice\s*(\d+)$/i.exec(s) : null;
+    if(m){
+      const k = Number(m[1]);
+      if(k < 1 || k > CHOOSE_MAX_CHOICES) fail(`${describeNode(n)} takes choices 1 to ${CHOOSE_MAX_CHOICES}.`);
+      return op.ports.length - 1 + k;
     }
     const i = ps.findIndex(p => p === s.toLowerCase());
     if(i < 0) fail(`${describeNode(n)} has no input called "${s}" (its inputs: ${ps.join(', ')}).`);
@@ -402,9 +416,9 @@
   }
 
   defineAction({ name:'connect', label:'Connect', category:'Connect', icon:'→', returns:'edge',
-    desc:'Draws an arrow from one node to another. Block instances, function nodes and the operators with named inputs (if: condition, then, else; round, roundup, rounddown: value, digits) take a port: its name or 1-based number (a function node\'s input by the name the definition gives it).',
+    desc:'Draws an arrow from one node to another. Block instances, function nodes and the operators with named inputs (if: condition, then, else; round, roundup, rounddown: value, digits; choose: index, choice 1, choice 2…) take a port: its name or 1-based number (a function node\'s input by the name the definition gives it).',
     params:[ P('from','node'), P('to','node'), P('fromPort','string',{ def:'', label:'from port', help:'block outputs only' }),
-      P('toPort','string',{ def:'', label:'to port', help:'block, function, if or round inputs only' }) ],
+      P('toPort','string',{ def:'', label:'to port', help:'block, function, if, round or choose inputs only' }) ],
     run(a){
       const A = onActiveCanvas(a.from), B = onActiveCanvas(a.to);
       if(A === B) fail('A node cannot be connected to itself.');

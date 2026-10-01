@@ -36,7 +36,7 @@
         { label:'Nodes', items:[ { cmd:'addRect', size:'large' }, { cmd:'addAlias', size:'large' }, { cmd:'addBlock', size:'large' }, { cmd:'addPeriodShift', size:'large' } ] },
         { label:'Arithmetic', items:[0,1,2,3,4,5].map(i => ({ cmd:'insertOp' + i })) },
         { label:'Compare', items:[6,7,8,9].concat(E1_COMPARE_OPS).map(i => ({ cmd:'insertOp' + i })) },
-        { label:'Excel Functions', items:[10,11,12,13,14].concat(E1_FUNCTION_OPS, E2_FUNCTION_OPS).map(i => ({ cmd:'insertOp' + i })) },
+        { label:'Excel Functions', items:[10,11,12,13,14].concat(E1_FUNCTION_OPS, E2_FUNCTION_OPS, E2B_FUNCTION_OPS).map(i => ({ cmd:'insertOp' + i })) },
         cloneData(FUNCTIONS_RIBBON_GROUP),
         { label:'Library', items:[ { cmd:'openTemplates', size:'large' }, { cmd:'updateCanvasTemplate' }, { cmd:'unlinkCanvasTemplate' } ] },
       ]},

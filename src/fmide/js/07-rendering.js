@@ -50,8 +50,8 @@
         n.h = operatorPortsHeight(opPorts.length);
         if(!n.w || n.w < 100) n.w = 120;
         const box = el.querySelector('.op-inputs');
-        if(box && box.dataset.for !== n.text){
-          box.dataset.for = n.text;
+        if(box && box.dataset.for !== n.text + ':' + opPorts.length){
+          box.dataset.for = n.text + ':' + opPorts.length; // a choose grows with its arrows
           box.textContent = '';
           opPorts.forEach((name, i) => {
             const row = document.createElement('div');

@@ -170,8 +170,8 @@ const HELP_TOPICS = [
       { see: ['periods', 'period-shifts'] },
     ] },
   { id: 'timing-conditions', group: 'time', title: 'Timing, conditions and rounding',
-    keywords: 'period number if condition then else equal not equal and or not round roundup rounddown compare',
-    summary: 'The period number, if, comparisons, and, or, not, and the three kinds of rounding.',
+    keywords: 'period number if condition then else equal not equal and or not round roundup rounddown compare choose scenario switch case index',
+    summary: 'The period number, if, choose, comparisons, and, or, not, and the three kinds of rounding.',
     body: [
       { p: 'period gives the period number: 1, 2, 3 and so on.' },
       { p: 'if takes three inputs: condition, then and else. Only the branch taken is worked out.' },
@@ -184,7 +184,8 @@ const HELP_TOPICS = [
       ] },
       { p: '= ≠ < > ≤ ≥ compare two values and give 1 (true) or 0 (false). and, or and not combine them.' },
       { p: 'round, roundup and rounddown take a value and a number of digits, like Excel\'s ROUND.' },
-      { p: 'if and round show a labelled dot for each input. Drop an arrow on the one you mean.' },
+      { p: 'choose picks one of several values by a number, like Excel\'s CHOOSE: an index of 2 gives choice 2. It suits a scenario switch (1 base, 2 upside, 3 downside). Only the choice picked is worked out; an index below 1 or past the last choice is an error ("?").' },
+      { p: 'if, round and choose show a labelled dot for each input. Drop an arrow on the one you mean. choose always shows one empty choice at the end for the next arrow.' },
       { see: ['operators', 'period-shifts'] },
     ] },
 
@@ -504,4 +505,5 @@ const OPERATOR_HELP = {
   sqrt: 'gives the square root of its input, like Excel\'s SQRT.',
   int: 'rounds its input down to a whole number, like Excel\'s INT.',
   trunc: 'cuts the fraction off its input, like Excel\'s TRUNC.',
+  choose: 'gives the choice its index picks (2 gives choice 2), like Excel\'s CHOOSE.',
 };

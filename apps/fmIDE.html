@@ -1103,14 +1103,16 @@
   // - fallback (iferror): its first input, or when that fails its second, or 0.
   // - period (phase E): no inputs; the period being calculated, counted from 1.
   // - ports (phase E): named inputs, each arrow into one by its `toPort` (counted from 0), as
-  //   into a function node; `apply` takes them in that order. `branches` (if): the first is
-  //   the condition, and only the input it picks (then when it isn't 0, else otherwise) is
-  //   read. An input read with no arrow is 'operator-input-unwired'.
+  //   into a function node; `apply` takes them in that order. `branches` (if, choose): the
+  //   first input picks one of the others (`pick`), and only that one is read — if: then when
+  //   the condition isn't 0, else otherwise; choose (phase E2b): choice n for index n. An input
+  //   read with no arrow is 'operator-input-unwired'. `choices` (choose): after its fixed named
+  //   inputs come "choice 1", "choice 2"… — as many as its arrows reach (operatorPortNames).
   // Comparisons treat two numbers as equal when they differ only in the last few binary
   // digits (approxEqual), as Excel and LibreOffice do: 0.1 + 0.2 = 0.3.
   // `unit` is how the unit of measure passes through: 'multiply', 'divide', 'same' (every
   // input must have the same unit, which the result takes), 'first' (the first input's),
-  // 'branches' (then and else must have the same unit, which the result takes), or null.
+  // 'branches' (the inputs it may pick must have the same unit, which the result takes), or null.
   // How each operator is spelled in Excel lives in ExcelExporter, not here.
   const OPERATORS = [
     { id: 'add',      symbol: '+',       word: 'Add',          fold: (a, b) => a + b, unit: 'same' },
@@ -1131,7 +1133,7 @@
     { id: 'iferror',  symbol: 'iferror', fn: true, fallback: true, unit: 'same' },
     // Phase E1: timing, conditions and rounding.
     { id: 'period',    symbol: 'period',    fn: true, period: true, unit: null },
-    { id: 'if',        symbol: 'if',        fn: true, ports: ['condition', 'then', 'else'], branches: true, unit: 'branches' },
+    { id: 'if',        symbol: 'if',        fn: true, ports: ['condition', 'then', 'else'], branches: true, pick: (c) => c !== 0 ? 1 : 2, unit: 'branches' },
     { id: 'eq',        symbol: '=',         word: 'Equal',     compare: (a, b) => approxEqual(a, b), unit: null },
     { id: 'ne',        symbol: '≠',         word: 'Not equal', compare: (a, b) => !approxEqual(a, b), unit: null },
     { id: 'and',       symbol: 'and',       fn: true, all: (vs) => vs.every(v => v !== 0) ? 1 : 0, unit: null },
@@ -1150,7 +1152,35 @@
     { id: 'sqrt',      symbol: 'sqrt',      fn: true, unary: (a) => a >= 0 ? Math.sqrt(a) : NaN, unit: null },
     { id: 'int',       symbol: 'int',       fn: true, unary: (a) => Math.floor(a) + 0, unit: 'same' }, // + 0: never −0, which Excel doesn't have
     { id: 'trunc',     symbol: 'trunc',     fn: true, unary: (a) => Math.trunc(a) + 0, unit: 'same' },
+    // Phase E2b: CHOOSE(index, choice 1, choice 2, …), as Excel: the index cut to a whole
+    // number picks a choice; below 1 or past the last choice it is 'choose-out-of-range' (Excel's
+    // #VALUE!). Only the choice picked is read.
+    { id: 'choose',    symbol: 'choose',    fn: true, ports: ['index'], choices: true, branches: true, pick: (c, n) => chooseIndex(c, n), unit: 'branches' },
   ];
+
+  // CHOOSE takes at most 254 choices, as Excel does.
+  const CHOOSE_MAX_CHOICES = 254;
+  // The choice an index picks among `n` (1…n), or 0 when it picks none.
+  function chooseIndex(index, n){
+    const i = Math.trunc(index);
+    return i >= 1 && i <= n ? i : 0;
+  }
+  // An operator's named inputs, or null. For choose, `choiceCount` choices after the index.
+  function operatorPortNames(op, choiceCount){
+    if(!op || !op.ports) return null;
+    if(!op.choices) return op.ports;
+    const n = Math.max(0, Math.min(CHOOSE_MAX_CHOICES, choiceCount | 0));
+    const out = op.ports.slice();
+    for(let i = 1; i <= n; i++) out.push('choice ' + i);
+    return out;
+  }
+  // How many choices a choose has: as many as its highest-numbered arrow reaches (`toPorts`, the
+  // `toPort` of each arrow into it; choice n is toPort n), at most CHOOSE_MAX_CHOICES.
+  function chooseChoiceCount(toPorts){
+    let most = 0;
+    toPorts.forEach(p => { if(Number.isInteger(p) && p >= 1 && p <= CHOOSE_MAX_CHOICES && p > most) most = p; });
+    return most;
+  }
 
   // Equal but for the last few binary digits, as Excel and LibreOffice compare numbers.
   function approxEqual(a, b){
@@ -1221,7 +1251,8 @@
   function operatorSize(sym){
     // An operator with named inputs (if, round…): a box with one labelled input per row.
     const op = operatorForSymbol(sym);
-    if(op && op.ports) return { w: 120, h: operatorPortsHeight(op.ports.length) };
+    // A choose starts with its index and one empty choice; it grows with its arrows.
+    if(op && op.ports) return { w: 120, h: operatorPortsHeight(op.ports.length + (op.choices ? 1 : 0)) };
     if(WORD_OPS.includes(sym)){
       return { w: Math.max(56, 24 + sym.length * 10), h: 40 };
     }
@@ -1233,6 +1264,8 @@
   const E1_FUNCTION_OPS = ['if', 'and', 'or', 'not', 'round', 'roundup', 'rounddown', 'period'].map(sym => OPS.indexOf(sym));
   // Phase E2a's, with the Excel functions too.
   const E2_FUNCTION_OPS = ['ln', 'exp', 'sqrt', 'int', 'trunc'].map(sym => OPS.indexOf(sym));
+  // Phase E2b's choose, with them.
+  const E2B_FUNCTION_OPS = ['choose'].map(sym => OPS.indexOf(sym));
   // Height of an operator box with `count` named inputs: its symbol, then a row per input.
   function operatorPortsHeight(count){ return 26 + count * 20 + 6; }
 
@@ -1673,8 +1706,8 @@
         { see: ['periods', 'period-shifts'] },
       ] },
     { id: 'timing-conditions', group: 'time', title: 'Timing, conditions and rounding',
-      keywords: 'period number if condition then else equal not equal and or not round roundup rounddown compare',
-      summary: 'The period number, if, comparisons, and, or, not, and the three kinds of rounding.',
+      keywords: 'period number if condition then else equal not equal and or not round roundup rounddown compare choose scenario switch case index',
+      summary: 'The period number, if, choose, comparisons, and, or, not, and the three kinds of rounding.',
       body: [
         { p: 'period gives the period number: 1, 2, 3 and so on.' },
         { p: 'if takes three inputs: condition, then and else. Only the branch taken is worked out.' },
@@ -1687,7 +1720,8 @@
         ] },
         { p: '= ≠ < > ≤ ≥ compare two values and give 1 (true) or 0 (false). and, or and not combine them.' },
         { p: 'round, roundup and rounddown take a value and a number of digits, like Excel\'s ROUND.' },
-        { p: 'if and round show a labelled dot for each input. Drop an arrow on the one you mean.' },
+        { p: 'choose picks one of several values by a number, like Excel\'s CHOOSE: an index of 2 gives choice 2. It suits a scenario switch (1 base, 2 upside, 3 downside). Only the choice picked is worked out; an index below 1 or past the last choice is an error ("?").' },
+        { p: 'if, round and choose show a labelled dot for each input. Drop an arrow on the one you mean. choose always shows one empty choice at the end for the next arrow.' },
         { see: ['operators', 'period-shifts'] },
       ] },
 
@@ -2007,6 +2041,7 @@
     sqrt: 'gives the square root of its input, like Excel\'s SQRT.',
     int: 'rounds its input down to a whole number, like Excel\'s INT.',
     trunc: 'cuts the fraction off its input, like Excel\'s TRUNC.',
+    choose: 'gives the choice its index picks (2 gives choice 2), like Excel\'s CHOOSE.',
   };
   // =====================================================================================
   // The Help panel (build step 10; docs/step10-help.md) — shared by fmIDE and ExcelExporter.
@@ -2333,7 +2368,7 @@
     const m = /^insertOp(\d+)$/.exec(id);
     if(m){
       const op = OPERATORS[+m[1]];
-      return op && ['period', 'if', 'eq', 'ne', 'and', 'or', 'not', 'round', 'roundup', 'rounddown'].includes(op.id) ? 'timing-conditions' : 'operators';
+      return op && ['period', 'if', 'eq', 'ne', 'and', 'or', 'not', 'round', 'roundup', 'rounddown', 'choose'].includes(op.id) ? 'timing-conditions' : 'operators';
     }
     const t = help.topicForCommand(id);
     return t ? t.id : null;
@@ -2344,7 +2379,7 @@
       blockInstance: 'blocks', function: 'function-nodes' };
     if(n && n.type === 'operator'){
       const op = operatorForSymbol(n.op);
-      if(op && ['period', 'if', 'eq', 'ne', 'and', 'or', 'not', 'round', 'roundup', 'rounddown'].includes(op.id)) return 'timing-conditions';
+      if(op && ['period', 'if', 'eq', 'ne', 'and', 'or', 'not', 'round', 'roundup', 'rounddown', 'choose'].includes(op.id)) return 'timing-conditions';
     }
     return (n && byType[n.type]) || 'what-is-fmide';
   }
@@ -3148,9 +3183,10 @@
   // fallback only fails when both of its first two inputs fail; with one input it gives 0. An
   // if (phase E1) needs a period outside the timeline when its condition does, or when both of
   // its branches do: a branch it may not take doesn't count (inside a branch, such a read is an
-  // error instead). A function node (functions.js) is followed through its formula: only the
-  // inputs it must read count (functionNeedsOutsideTimeline), when the canvas carries its
-  // compiled definition (`canvas.calls`, set by the IR); otherwise through any of its inputs.
+  // error instead); a choose (phase E2b) likewise, when its index does or every choice does. A
+  // function node (functions.js) is followed through its formula: only the inputs it must read
+  // count (functionNeedsOutsideTimeline), when the canvas carries its compiled definition
+  // (`canvas.calls`, set by the IR); otherwise through any of its inputs.
   // `canvasOf(id)` returns a canvas { nodes, edges }; inputs are in left-to-right order.
   function reachesOutsideTimeline(canvasOf, canvasId, nodeId, period, periodCount, visiting){
     visiting = visiting || new Set();
@@ -3181,10 +3217,14 @@
     }
     const inputs = incoming.map(e => canvas.nodes.find(x => x.id === e.from)).filter(Boolean)
       .sort((a, b) => (a.x - b.x) || (a.y - b.y));
-    if(n.type === 'operator' && n.text === 'if'){
+    if(n.type === 'operator' && (n.text === 'if' || n.text === 'choose')){
       // Each branch is walked on its own, so a source both branches read counts for both.
       const port = (i) => { const e = incoming.find(x => x.toPort === i); return !!e && reachesOutsideTimeline(canvasOf, canvasId, e.from, period, periodCount, new Set(visiting)); };
-      return port(0) || (port(1) && port(2));
+      const count = n.text === 'if' ? 2 : chooseChoiceCount(incoming.map(e => e.toPort));
+      if(port(0)) return true;
+      if(count === 0) return false;
+      for(let i = 1; i <= count; i++) if(!port(i)) return false;
+      return true;
     }
     if(n.type === 'operator' && n.text === 'iferror'){
       return inputs.length >= 2 && reach(canvasId, inputs[0].id, period) && reach(canvasId, inputs[1].id, period);
@@ -3264,6 +3304,7 @@
       case 'function-input-unwired': return "One of this function's inputs isn't connected.";
       case 'operator-unknown': return "fmIDE doesn't know this operator (only a hand-edited file has one).";
       case 'operator-input-unwired': return "An input this operator reads isn't connected.";
+      case 'choose-out-of-range': return 'The index picks no choice: it is below 1 or past the last choice.';
       default: return 'Could not compute.';
     }
   }
@@ -4010,7 +4051,7 @@
   // (docs/file-formats.md). To change one of these formats: raise its version here and add
   // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
   // exactly one version.
-  const SHARED_FILE_VERSIONS = { 'system': 8, 'fmIDE-workspace': 9 };
+  const SHARED_FILE_VERSIONS = { 'system': 9, 'fmIDE-workspace': 10 };
   // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
   // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
   function upgradeNodePlugs(nodes){
@@ -4093,7 +4134,9 @@
       7: () => {},
       // v8 → v9: its system (v8) and templates (v8) may use the operators of phase E2a; older
       // ones don't.
-      8: () => {}
+      8: () => {},
+      // v9 → v10: its system (v9) and templates (v9) may use choose (phase E2b); older ones don't.
+      9: () => {}
     },
     'system': {
       // v1 systems were accepted with fields the loader already defaults (periods, ids…);
@@ -4128,7 +4171,10 @@
       // v7 → v8: the operators of phase E2a (ln, exp, sqrt, int, trunc). Older systems have
       // none, so nothing changes; an older app asks before opening a v8 file instead of
       // calculating those operators as ones it doesn't know.
-      7: () => {}
+      7: () => {},
+      // v8 → v9: choose (phase E2b; arrows into it name their input with `toPort`: 0 the index,
+      // n choice n). Older systems have none, so nothing changes.
+      8: () => {}
     }
   };
   // A file's kind: its "kind" field, or — for files saved before kinds were written — its
@@ -4200,9 +4246,9 @@
   // Every kind fmIDE knows: its current version, what people call it, and where it is opened.
   const FILE_FORMATS = {
     'system':               { current: SHARED_FILE_VERSIONS['system'], label: 'system', where: 'File → Load System' },
-    'module':               { current: 6, label: 'module',              where: 'File → Load Module' },
+    'module':               { current: 7, label: 'module',              where: 'File → Load Module' },
     'fmIDE-workspace':      { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'workspace', where: 'File → Import Workspace' },
-    'fmIDE-templates':      { current: 8, label: 'templates file',      where: 'Templates → Import Templates' },
+    'fmIDE-templates':      { current: 9, label: 'templates file',      where: 'Templates → Import Templates' },
     'fmIDE-functions':      { current: 2, label: 'functions file',      where: 'Functions → Import Functions' },
     'fmIDE-format-presets': { current: 2, label: 'format presets file', where: 'Format Presets → Import Presets' },
     'fmIDE-shortcuts':      { current: 2, label: 'shortcuts file',      where: 'Keyboard Shortcuts → Import Shortcuts' },
@@ -4228,7 +4274,9 @@
       // rectangle's Excel-only style settings are dropped.
       4: d => { dropExcelOnlyNodeStyles(d.nodes); dropExcelOnlyPresets(d.formatPresets); },
       // v5 → v6: the operators of phase E2a, as system v7 → v8; older modules have none.
-      5: () => {}
+      5: () => {},
+      // v6 → v7: choose (phase E2b), as system v8 → v9; older modules have none.
+      6: () => {}
     },
     // v1 → v2: the Excel look moved to ExcelExporter (step 11a): the Excel-only format roles
     // and style settings are dropped.
@@ -4254,7 +4302,9 @@
       6: () => {},
       // v7 → v8: a template's module or system may use the operators of phase E2a; older ones
       // don't.
-      7: () => {}
+      7: () => {},
+      // v8 → v9: a template's module or system may use choose (phase E2b); older ones don't.
+      8: () => {}
     },
     // v1 → v2: an item in a pack may say which pack it came from before (`origin`, phase 8b),
     // so re-sharing keeps its author's credit; older packs have no such record.
@@ -5487,6 +5537,8 @@
     SQRT:      { id: 'sqrt',      min: 1, max: 1 },
     INT:       { id: 'int',       min: 1, max: 1 },
     TRUNC:     { id: 'trunc',     min: 1, max: 1 },
+    // Phase E2b: the index and at least one choice, at most 254 (Excel's limit).
+    CHOOSE:    { id: 'choose',    min: 2, max: 255 },
   });
   // Built-in names an input may still have (they came after functions did, so a definition
   // may already use them for an input): read as the input unless followed by "(".
@@ -5494,7 +5546,7 @@
   // Names kept back: Excel functions that are not available (yet), so a formula using one
   // says so instead of looking for a function of that name.
   const FUNCTION_RESERVED = new Set(['IFS', 'XOR', 'SUM', 'PRODUCT', 'LOG', 'LOG10', 'POWER', 'SIGN', 'COUNT', 'LET', 'LAMBDA',
-    'CHOOSE', 'INDEX', 'NA', 'TRUE', 'FALSE', 'PI', 'CEILING', 'FLOOR', 'MEDIAN', 'SUMPRODUCT']);
+    'INDEX', 'NA', 'TRUE', 'FALSE', 'PI', 'CEILING', 'FLOOR', 'MEDIAN', 'SUMPRODUCT']);
   // Symbols and the catalogue operator each one is. The typographic signs fmIDE shows on its
   // operators are accepted too.
   const FUNCTION_SYMBOLS = Object.assign(Object.create(null), {
@@ -5880,9 +5932,11 @@
         }
         if(op.period) return { value: period + 1 };
         if(op.branches){
-          // IF(condition, then, else): only the branch it takes is read.
+          // IF(condition, then, else), CHOOSE(index, …): only the input it picks is read.
           const c = evalFunctionExpr(fn, x.args[0], arg, period);
-          return c.error ? c : evalFunctionExpr(fn, x.args[c.value !== 0 ? 1 : 2], arg, period);
+          if(c.error) return c;
+          const k = op.pick(c.value, x.args.length - 1);
+          return k ? evalFunctionExpr(fn, x.args[k], arg, period) : { error: 'choose-out-of-range' };
         }
         const values = [];
         for(const a of x.args){
@@ -5964,7 +6018,7 @@
         const op = operatorById(x.id);
         const r = (i) => functionExprNeedsOutside(fn, x.args[i], arg);
         if(op.fallback) return r(0) && r(1);
-        if(op.branches) return r(0) || (r(1) && r(2));
+        if(op.branches) return r(0) || x.args.slice(1).every((_, i) => r(i + 1));
         return x.args.some((_, i) => r(i));
       }
     }
@@ -6004,14 +6058,15 @@
       case 'op': {
         const rule = operatorById(x.id).unit;
         // Named inputs (phase E1): ROUND keeps its value's unit; IF takes then's and else's
-        // when they agree (the condition's doesn't count).
+        // when they agree, and CHOOSE every choice's (the condition's or index's doesn't count;
+        // a number written in the formula has none of its own).
         if(rule === 'first') return functionExprUnit(fn, x.args[0], arg);
         if(rule === 'branches'){
-          const a = functionExprUnit(fn, x.args[1], arg), b = functionExprUnit(fn, x.args[2], arg);
-          if(a === null || b === null) return null;
-          if(a === FUNCTION_UNIT_NUMBER) return b;
-          if(b === FUNCTION_UNIT_NUMBER) return a;
-          return uomDimsEqual(a, b) ? a : null;
+          const us = x.args.slice(1).map(a => functionExprUnit(fn, a, arg));
+          if(us.some(u => u === null)) return null;
+          const real = us.filter(u => u !== FUNCTION_UNIT_NUMBER);
+          if(!real.length) return FUNCTION_UNIT_NUMBER;
+          return real.every(u => uomDimsEqual(u, real[0])) ? real[0] : null;
         }
         const units = x.args.map(a => functionExprUnit(fn, a, arg));
         if(units.some(u => u === null)) return null;
@@ -6270,9 +6325,11 @@
         out.unitInputs = inc.filter(e => rawById.has(e.from)).sort((a, b) => irByPosition(rawById.get(a.from), rawById.get(b.from)));
         // An operator with named inputs (phase E1: if, round…): the arrow into each, by its
         // `toPort`, or null (the first arrow into a port counts, as for a function node).
+        // A choose (phase E2b) has as many choices as its arrows reach.
         if(out.op && out.op.ports){
           const ports = portEdges.get(n.id);
-          out.portInputs = out.op.ports.map((_, i) => {
+          const names = operatorPortNames(out.op, out.op.choices && ports ? chooseChoiceCount([...ports.keys()]) : 0);
+          out.portInputs = names.map((_, i) => {
             const e = ports ? ports.get(i) : undefined;
             return e && rawById.has(e.from) ? e : null;
           });
@@ -6401,13 +6458,13 @@
       // Worked out from the function's formula, with the units of what feeds its inputs.
       if(n.call && !n.call.status) result = functionUnit(n.call, (i) => irEdgeUnit(ir, canvasId, irPortEdge(ir, canvasId, n.id, i), path, visiting));
     } else if(n.type === 'operator' && n.op && n.op.ports){
-      // Named inputs: 'first' is the value's unit (round); 'branches' is then's and else's
-      // when they agree (if).
+      // Named inputs: 'first' is the value's unit (round); 'branches' is the unit every input
+      // it may pick shares (if: then and else; choose: every choice).
       const unitOfPort = (i) => n.portInputs[i] ? fromEdge(n.portInputs[i]) : null;
       if(n.op.unit === 'first') result = unitOfPort(0);
       else if(n.op.unit === 'branches'){
-        const a = unitOfPort(1), b = unitOfPort(2);
-        result = a && b && uomDimsEqual(a, b) ? a : null;
+        const us = n.portInputs.slice(1).map((_, i) => unitOfPort(i + 1));
+        result = us.length && us.every(u => u && uomDimsEqual(u, us[0])) ? us[0] : null;
       }
     } else if(n.type === 'operator'){
       const units = n.unitInputs.map(fromEdge);
@@ -6449,7 +6506,8 @@
   // Error codes: cycle, alias-unset, alias-missing-canvas, alias-missing-node, no-input,
   // ambiguous, missing-input, period-out-of-range, math-error, unary-only, needs-two,
   // block-missing-def, block-missing-output, block-cycle, operator-unknown (an operator's text
-  // isn't in the catalogue), operator-input-unwired (a named input it reads has no arrow); for
+  // isn't in the catalogue), operator-input-unwired (a named input it reads has no arrow),
+  // choose-out-of-range (a choose's index picks no choice: below 1 or past the last); for
   // function nodes also
   // function-missing, function-unreadable, function-cycle, function-too-deep,
   // function-arguments (compileFunctions) and function-input-unwired.
@@ -6636,7 +6694,7 @@
         result = period + 1;
       } else if(n.op.ports){
         // Named inputs (if, round…), each read only when needed. An if reads its condition,
-        // then only the branch it picks.
+        // then only the branch it picks; a choose its index, then only the choice it picks.
         const read = (i) => {
           const edge = n.portInputs[i];
           if(!edge) return { error: 'operator-input-unwired' };
@@ -6646,7 +6704,8 @@
         let r;
         if(n.op.branches){
           const c = read(0);
-          r = c.error ? c : read(c.value !== 0 ? 1 : 2);
+          const k = c.error ? 0 : n.op.pick(c.value, n.portInputs.length - 1);
+          r = c.error ? c : k ? read(k) : { error: 'choose-out-of-range' };
         } else {
           const got = n.op.ports.map((_, i) => read(i));
           r = got.find(g => g.error) || applyOperator(n.op, got.map(g => g.value));
@@ -7004,8 +7063,8 @@
         n.h = operatorPortsHeight(opPorts.length);
         if(!n.w || n.w < 100) n.w = 120;
         const box = el.querySelector('.op-inputs');
-        if(box && box.dataset.for !== n.text){
-          box.dataset.for = n.text;
+        if(box && box.dataset.for !== n.text + ':' + opPorts.length){
+          box.dataset.for = n.text + ':' + opPorts.length; // a choose grows with its arrows
           box.textContent = '';
           opPorts.forEach((name, i) => {
             const row = document.createElement('div');
@@ -14646,10 +14705,15 @@
     } });
 
   // ---------------------------------- Connect ----------------------------------
-  // The named inputs of an operator (phase E1: if, round, roundup, rounddown), or null.
+  // The named inputs of an operator (phase E1: if, round, roundup, rounddown), or null. A
+  // choose (phase E2b) has its index, a choice for each its arrows reach, and one empty
+  // choice after them for the next arrow (up to 254).
   function operatorPortsOf(n){
     const op = n && n.type === 'operator' ? operatorForSymbol(n.text) : null;
-    return op && op.ports ? op.ports : null;
+    if(!op || !op.ports) return null;
+    if(!op.choices) return op.ports;
+    const count = chooseChoiceCount(edges.filter(e => e.to === n.id).map(e => e.toPort));
+    return operatorPortNames(op, count + 1);
   }
   // Where an arrow dropped on the body of an operator with named inputs goes: its first input
   // with no arrow.
@@ -14667,10 +14731,19 @@
     const ps = operatorPortsOf(n);
     const s = ref == null ? '' : String(ref).trim();
     if(s === '') fail(`${describeNode(n)} takes each input by name — say which one (${ps.join(', ')}).`);
+    // A choose takes any choice up to the 254th, beyond the ones it has so far.
+    const op = operatorForSymbol(n.text);
+    const most = op && op.choices ? op.ports.length + CHOOSE_MAX_CHOICES : ps.length;
     if(/^\d+$/.test(s)){
       const i = Number(s) - 1;
-      if(i < 0 || i >= ps.length) fail(`${describeNode(n)} has no input #${s} (it has ${ps.length}).`);
+      if(i < 0 || i >= most) fail(`${describeNode(n)} has no input #${s} (it has ${op && op.choices ? 'an index and up to ' + CHOOSE_MAX_CHOICES + ' choices' : ps.length}).`);
       return i;
+    }
+    const m = op && op.choices ? /^choice\s*(\d+)$/i.exec(s) : null;
+    if(m){
+      const k = Number(m[1]);
+      if(k < 1 || k > CHOOSE_MAX_CHOICES) fail(`${describeNode(n)} takes choices 1 to ${CHOOSE_MAX_CHOICES}.`);
+      return op.ports.length - 1 + k;
     }
     const i = ps.findIndex(p => p === s.toLowerCase());
     if(i < 0) fail(`${describeNode(n)} has no input called "${s}" (its inputs: ${ps.join(', ')}).`);
@@ -14678,9 +14751,9 @@
   }
 
   defineAction({ name:'connect', label:'Connect', category:'Connect', icon:'→', returns:'edge',
-    desc:'Draws an arrow from one node to another. Block instances, function nodes and the operators with named inputs (if: condition, then, else; round, roundup, rounddown: value, digits) take a port: its name or 1-based number (a function node\'s input by the name the definition gives it).',
+    desc:'Draws an arrow from one node to another. Block instances, function nodes and the operators with named inputs (if: condition, then, else; round, roundup, rounddown: value, digits; choose: index, choice 1, choice 2…) take a port: its name or 1-based number (a function node\'s input by the name the definition gives it).',
     params:[ P('from','node'), P('to','node'), P('fromPort','string',{ def:'', label:'from port', help:'block outputs only' }),
-      P('toPort','string',{ def:'', label:'to port', help:'block, function, if or round inputs only' }) ],
+      P('toPort','string',{ def:'', label:'to port', help:'block, function, if, round or choose inputs only' }) ],
     run(a){
       const A = onActiveCanvas(a.from), B = onActiveCanvas(a.to);
       if(A === B) fail('A node cannot be connected to itself.');
@@ -15104,7 +15177,8 @@
           const p = getNode(x.from), q = getNode(y.from);
           return (p && q) ? ((p.x - q.x) || (p.y - q.y)) : 0;
         });
-        byPlace.forEach((e, i) => { if(i < newOp.ports.length) e.toPort = i; else delete e.toPort; });
+        const most = newOp.choices ? newOp.ports.length + CHOOSE_MAX_CHOICES : newOp.ports.length;
+        byPlace.forEach((e, i) => { if(i < most) e.toPort = i; else delete e.toPort; });
       } else {
         into.forEach(e => { delete e.toPort; });
       }
@@ -15633,7 +15707,7 @@
         { label:'Nodes', items:[ { cmd:'addRect', size:'large' }, { cmd:'addAlias', size:'large' }, { cmd:'addBlock', size:'large' }, { cmd:'addPeriodShift', size:'large' } ] },
         { label:'Arithmetic', items:[0,1,2,3,4,5].map(i => ({ cmd:'insertOp' + i })) },
         { label:'Compare', items:[6,7,8,9].concat(E1_COMPARE_OPS).map(i => ({ cmd:'insertOp' + i })) },
-        { label:'Excel Functions', items:[10,11,12,13,14].concat(E1_FUNCTION_OPS, E2_FUNCTION_OPS).map(i => ({ cmd:'insertOp' + i })) },
+        { label:'Excel Functions', items:[10,11,12,13,14].concat(E1_FUNCTION_OPS, E2_FUNCTION_OPS, E2B_FUNCTION_OPS).map(i => ({ cmd:'insertOp' + i })) },
         cloneData(FUNCTIONS_RIBBON_GROUP),
         { label:'Library', items:[ { cmd:'openTemplates', size:'large' }, { cmd:'updateCanvasTemplate' }, { cmd:'unlinkCanvasTemplate' } ] },
       ]},
@@ -18389,6 +18463,7 @@
       functionCommandsAdded: true, // D2b: Insert Function… and Update Function… in My Functions
       operatorsE1Added: true, // E1b: the new operators in the Compare and Excel Functions groups
       operatorsE2Added: true, // E2a: ln, exp, sqrt, int and trunc in the Excel Functions group
+      operatorsE2bAdded: true, // E2b: choose in the same group
       libraryPacksAdded: true, // 8a: Open Library Pack… and Save as Library Pack… in the File tab's Library group
       libraryBrowseAdded: true, // 8d: Browse Library… in the same group
       helpAdded: true, // step 10: the Help group at the end of the View tab
@@ -18442,14 +18517,15 @@
       list.forEach(i => { if(!g.items.some(it => it && it.cmd === 'insertOp' + i)) g.items.push({ cmd: 'insertOp' + i }); });
     });
   }
-  // One-time update (E2a) of a customised ribbon: ln, exp, sqrt, int and trunc join the group
-  // holding the Excel functions (min…), wherever the person moved it, as in E1b.
-  function addE2OperatorsToRibbon(){
+  // One-time update (E2a, and E2b for choose) of a customised ribbon: ln, exp, sqrt, int and
+  // trunc (`list`) join the group holding the Excel functions (min…), wherever the person
+  // moved it, as in E1b.
+  function addE2OperatorsToRibbon(list){
     const groups = [];
     ribbonState.config.tabs.forEach(t => (t && Array.isArray(t.groups) ? t.groups : []).forEach(g => { if(g && Array.isArray(g.items)) groups.push(g); }));
     const g = groups.find(x => x.items.some(it => it && it.cmd === 'insertOp11'));
     if(!g) return;
-    E2_FUNCTION_OPS.forEach(i => { if(!g.items.some(it => it && it.cmd === 'insertOp' + i)) g.items.push({ cmd: 'insertOp' + i }); });
+    list.forEach(i => { if(!g.items.some(it => it && it.cmd === 'insertOp' + i)) g.items.push({ cmd: 'insertOp' + i }); });
   }
   // One-time update (8a) of a customised ribbon: Open Library Pack… and Save as Library
   // Pack… join the group holding Format Presets (the File tab's Library group), wherever the
@@ -18499,7 +18575,8 @@
       if(ui.functionsGroupAdded !== true) addFunctionsGroupToRibbon();
       if(ui.functionCommandsAdded !== true) addFunctionCommandsToRibbon();
       if(ui.operatorsE1Added !== true) addE1OperatorsToRibbon();
-      if(ui.operatorsE2Added !== true) addE2OperatorsToRibbon();
+      if(ui.operatorsE2Added !== true) addE2OperatorsToRibbon(E2_FUNCTION_OPS);
+      if(ui.operatorsE2bAdded !== true) addE2OperatorsToRibbon(E2B_FUNCTION_OPS);
       if(ui.libraryPacksAdded !== true) addLibraryPackCommandsToRibbon();
       if(ui.libraryBrowseAdded !== true) addLibraryBrowseCommandToRibbon();
       if(ui.helpAdded !== true) addHelpGroupToRibbon();

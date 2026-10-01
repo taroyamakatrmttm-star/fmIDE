@@ -15,14 +15,16 @@
 // - fallback (iferror): its first input, or when that fails its second, or 0.
 // - period (phase E): no inputs; the period being calculated, counted from 1.
 // - ports (phase E): named inputs, each arrow into one by its `toPort` (counted from 0), as
-//   into a function node; `apply` takes them in that order. `branches` (if): the first is
-//   the condition, and only the input it picks (then when it isn't 0, else otherwise) is
-//   read. An input read with no arrow is 'operator-input-unwired'.
+//   into a function node; `apply` takes them in that order. `branches` (if, choose): the
+//   first input picks one of the others (`pick`), and only that one is read — if: then when
+//   the condition isn't 0, else otherwise; choose (phase E2b): choice n for index n. An input
+//   read with no arrow is 'operator-input-unwired'. `choices` (choose): after its fixed named
+//   inputs come "choice 1", "choice 2"… — as many as its arrows reach (operatorPortNames).
 // Comparisons treat two numbers as equal when they differ only in the last few binary
 // digits (approxEqual), as Excel and LibreOffice do: 0.1 + 0.2 = 0.3.
 // `unit` is how the unit of measure passes through: 'multiply', 'divide', 'same' (every
 // input must have the same unit, which the result takes), 'first' (the first input's),
-// 'branches' (then and else must have the same unit, which the result takes), or null.
+// 'branches' (the inputs it may pick must have the same unit, which the result takes), or null.
 // How each operator is spelled in Excel lives in ExcelExporter, not here.
 const OPERATORS = [
   { id: 'add',      symbol: '+',       word: 'Add',          fold: (a, b) => a + b, unit: 'same' },
@@ -43,7 +45,7 @@ const OPERATORS = [
   { id: 'iferror',  symbol: 'iferror', fn: true, fallback: true, unit: 'same' },
   // Phase E1: timing, conditions and rounding.
   { id: 'period',    symbol: 'period',    fn: true, period: true, unit: null },
-  { id: 'if',        symbol: 'if',        fn: true, ports: ['condition', 'then', 'else'], branches: true, unit: 'branches' },
+  { id: 'if',        symbol: 'if',        fn: true, ports: ['condition', 'then', 'else'], branches: true, pick: (c) => c !== 0 ? 1 : 2, unit: 'branches' },
   { id: 'eq',        symbol: '=',         word: 'Equal',     compare: (a, b) => approxEqual(a, b), unit: null },
   { id: 'ne',        symbol: '≠',         word: 'Not equal', compare: (a, b) => !approxEqual(a, b), unit: null },
   { id: 'and',       symbol: 'and',       fn: true, all: (vs) => vs.every(v => v !== 0) ? 1 : 0, unit: null },
@@ -62,7 +64,35 @@ const OPERATORS = [
   { id: 'sqrt',      symbol: 'sqrt',      fn: true, unary: (a) => a >= 0 ? Math.sqrt(a) : NaN, unit: null },
   { id: 'int',       symbol: 'int',       fn: true, unary: (a) => Math.floor(a) + 0, unit: 'same' }, // + 0: never −0, which Excel doesn't have
   { id: 'trunc',     symbol: 'trunc',     fn: true, unary: (a) => Math.trunc(a) + 0, unit: 'same' },
+  // Phase E2b: CHOOSE(index, choice 1, choice 2, …), as Excel: the index cut to a whole
+  // number picks a choice; below 1 or past the last choice it is 'choose-out-of-range' (Excel's
+  // #VALUE!). Only the choice picked is read.
+  { id: 'choose',    symbol: 'choose',    fn: true, ports: ['index'], choices: true, branches: true, pick: (c, n) => chooseIndex(c, n), unit: 'branches' },
 ];
+
+// CHOOSE takes at most 254 choices, as Excel does.
+const CHOOSE_MAX_CHOICES = 254;
+// The choice an index picks among `n` (1…n), or 0 when it picks none.
+function chooseIndex(index, n){
+  const i = Math.trunc(index);
+  return i >= 1 && i <= n ? i : 0;
+}
+// An operator's named inputs, or null. For choose, `choiceCount` choices after the index.
+function operatorPortNames(op, choiceCount){
+  if(!op || !op.ports) return null;
+  if(!op.choices) return op.ports;
+  const n = Math.max(0, Math.min(CHOOSE_MAX_CHOICES, choiceCount | 0));
+  const out = op.ports.slice();
+  for(let i = 1; i <= n; i++) out.push('choice ' + i);
+  return out;
+}
+// How many choices a choose has: as many as its highest-numbered arrow reaches (`toPorts`, the
+// `toPort` of each arrow into it; choice n is toPort n), at most CHOOSE_MAX_CHOICES.
+function chooseChoiceCount(toPorts){
+  let most = 0;
+  toPorts.forEach(p => { if(Number.isInteger(p) && p >= 1 && p <= CHOOSE_MAX_CHOICES && p > most) most = p; });
+  return most;
+}
 
 // Equal but for the last few binary digits, as Excel and LibreOffice compare numbers.
 function approxEqual(a, b){

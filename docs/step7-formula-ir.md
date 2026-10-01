@@ -325,7 +325,7 @@ The problem found in D3: `runFunction` and `functionUnit` (`src/shared/functions
 
 ## Phase E — new built-in operators
 
-Chosen with the owner (September 2026): a hard-coded operator is worth adding only where a function (phase D) can't do the job. **E1** (timing, conditions, rounding) comes first, in two pull requests: **E1a** the calculation in both apps, **E1b** fmIDE's canvas. E2 (LN, EXP, SQRT, INT, TRUNC, CHOOSE) may follow — the owner chose to do it in September 2026: E2a (below) and E2b (CHOOSE, its own plan). Operators that read a whole row of periods (NPV, IRR, running totals) and lookups are a larger change of their own, not phase E.
+Chosen with the owner (September 2026): a hard-coded operator is worth adding only where a function (phase D) can't do the job. **E1** (timing, conditions, rounding) comes first, in two pull requests: **E1a** the calculation in both apps, **E1b** fmIDE's canvas. E2 (LN, EXP, SQRT, INT, TRUNC, CHOOSE) may follow — the owner chose to do it in September 2026: E2a and E2b (CHOOSE), both below. Operators that read a whole row of periods (NPV, IRR, running totals) and lookups are a larger change of their own, not phase E.
 
 Decisions taken at the start of E1 (the owner chose the recommendation each time):
 
@@ -414,3 +414,27 @@ How it was checked:
 - **Group 6:** new old-version samples `module-v5.json`, `ws-v8.json`, `templates-v7.json` (and `sys-newer-v7.json`, now an ordinary file) open without a question and save in the new versions; new "newer" samples `sys-newer-v9.json`, `ws-nested-newer-v9.json`. Tests pinning version numbers were raised by one (groups 6, 13, 14, 15, 16, 18 and 20).
 - **Snapshots:** new ones for the new sample; no existing snapshot changed.
 - **Speed** (`npm run bench 30`, the large model, `main` and E2a alternating on the same machine): fmIDE's `fm.evaluate` medians 1,629 / 1,788 ms on `main` against 1,578 / 1,695 ms with E2a; ExcelExporter's Generate 585 / 546 ms against 536 / 529 ms (15 runs) — within what repeated runs show.
+
+### E2b — choose ✅
+
+Decided when the plan was approved (1 Oct 2026, the owner chose each recommendation): **named dots**, as `if` — an *index* dot, then *choice 1*, *choice 2*…, with one empty choice at the end for the next arrow; two pull requests, calculation then canvas. Building it showed that E1b's canvas code (dots, dropping arrows, `fm.connect` by name, changing the symbol) already works for any list of named inputs once that list can grow with the arrows, so the canvas came with the calculation in **one pull request**; the planned second one was not needed.
+
+What was built:
+
+- **`src/shared/operators.js`:** `choose` at the end of the catalogue: `ports: ['index']`, `choices` (its choices follow the index: `operatorPortNames(op, n)` gives `index, choice 1 … choice n`; `chooseChoiceCount` counts them from the arrows' `toPort`, the highest one wired, at most `CHOOSE_MAX_CHOICES` = 254, Excel's limit), `branches` with `pick` (shared with `if`, whose `pick` is "then when the condition isn't 0, else otherwise"), unit rule `branches` (every choice's unit). `chooseIndex` cuts the index to a whole number, as Excel does, and picks nothing below 1 or past the last choice.
+- **`src/shared/ir.js`:** a choose's `portInputs` reach its highest choice; it reads its index and then only the choice it picks; picking nothing is the new error `choose-out-of-range` (Excel's #VALUE!, so it isn't on the "differs from fmIDE" list). Units: the unit every choice shares.
+- **`src/shared/input-rule.js`:** a choose needs a period outside the timeline when its index does, or every choice does (as `if`).
+- **`src/shared/functions.js`:** `CHOOSE(i, a, …)` with 1 to 254 choices (it was kept back before), read lazily, its unit every choice's, the timeline rule as on the canvas.
+- **File formats:** `system` 9, `module` 7, `fmIDE-workspace` 10, `fmIDE-templates` 9; the upgrade steps change nothing.
+- **ExcelExporter:** `CHOOSE(index, choice…)` by its named inputs (`01b-operator-spellings.js`: `ports`, `branches`, `index`): a TRUE/FALSE index gets `N()`, a choice with no arrow is `NA()`, inside a choice a period outside the timeline is `NA()` (as inside IF's branches), no choice at all is `NA()`. The function writer does the same.
+- **fmIDE:** `operatorPortsOf` gives a choose its index, a choice for each its arrows reach and one empty choice (so an arrow dropped on its body always has a place, up to 254); the box grows with them; `fm.connect` / `deleteEdge` take `index`, `choice n` (up to 254, beyond the ones it has) or a number; `fm.setOperator` into choose makes the arrows the index and the choices, left to right; the message for an index that picks nothing; `insertOp30`, the ribbon's Excel Functions (a customised ribbon gets it once, `ui.operatorsE2bAdded`), a help sentence and the Timing, conditions and rounding topic.
+
+How it was checked:
+
+- **Agreement (group 17):** new sample `agreement/operators-e2b.json` (four periods): picked by a scenario number and by the period (out of range in period 4), a fractional, zero and negative index, an error in a choice not taken and taken, a gap (a choice with no arrow) not taken, past it and taken, no choices, no index, a comparison as the index, a corkscrew `choose(min(period, 2); Opening input, previous Closing)`, and functions (`CHOOSE` by scenario and period, `IFERROR(CHOOSE(…), -1)`, a comparison as the index and an error in the choice not taken). fmIDE and the workbook recalculated by LibreOffice agree, and a test pins Excel's answers.
+- **Group 18:** `pick`, `operatorPortNames`, `chooseChoiceCount`; the 31 Insert Operator commands and the ribbons (default, customised before E1b, after E1b); a choose wired by name and number (its dots growing: index and choice 1, then up to choice 4), an arrow dropped on its body taking the next choice, the index picking, the out-of-range message, a choice past 254 refused, Save System v9 with `toPort` and loading it back; changing `min` into `choose` and undoing it.
+- **Group 19:** the exact formulas: `CHOOSE({Scenario},{Base},{Upside},{Downside})`, a gap as `NA()`, no choices `NA()`, no index `CHOOSE(NA(),…)`, `N()` around a comparison index, the corkscrew `CHOOSE({Step},{OpeningInput},NA())`, and in functions; every operator in a sample.
+- **Group 20:** the parser accepts CHOOSE (a fractional index, out of range, an error or a missing input not picked, inside IFERROR, a comparison as index) and refuses `CHOOSE(a)` and `Choose` as a function's name.
+- **Group 6:** new samples `module-v6.json`, `ws-v9.json`, `templates-v8.json` (and `sys-newer-v8.json`, now an ordinary file) open without a question and save in the new versions; new "newer" samples `sys-newer-v10.json`, `ws-nested-newer-v10.json`. Tests pinning version numbers were raised by one (groups 6, 13, 14, 15, 16, 18, 20 and 37).
+- **Snapshots:** new ones for the new sample; no existing snapshot changed.
+

@@ -229,6 +229,31 @@ test('phase E2a operators: fmIDE gives Excel\'s answers', async ({ page }) => {
   close('SafeLn of X', each(Math.log(2.5)));
 });
 
+// Phase E2b: choose — Excel's answers, besides agreeing with the recalculated workbook.
+test('phase E2b choose: fmIDE gives Excel\'s answers', async ({ page }) => {
+  const fm = await fmideValues(page, fixture('agreement', 'operators-e2b.json'));
+  const v = Object.fromEntries(fm['Operators'].map(r => [r.name, r.values]));
+  const each = (x) => [x, x, x, x];
+  expect(v['Picked by scenario']).toEqual(each(120));
+  expect(v['Picked by period']).toEqual([100, 120, 80, 'error']);  // index 4 of three: #VALUE!
+  expect(v['Fraction index']).toEqual(each(120));                  // 2.7 is cut to 2
+  expect(v['Zero index']).toEqual(each('error'));
+  expect(v['Negative index']).toEqual(each('error'));
+  expect(v['Error not taken']).toEqual(each(100));                 // only the choice picked is read
+  expect(v['Error taken']).toEqual(each('error'));
+  expect(v['Gap not taken']).toEqual(each(100));
+  expect(v['Gap past it']).toEqual(each(80));
+  expect(v['Gap taken']).toEqual(each('error'));
+  expect(v['No choices']).toEqual(each('error'));
+  expect(v['No index']).toEqual(each('error'));
+  expect(v['Picked by a comparison']).toEqual(['error', 120, 120, 120]);
+  expect(v['Opening']).toEqual([50, 60, 70, 80]);                  // a corkscrew through choose
+  expect(v['Pick by period']).toEqual([100, 120, 80, 'error']);
+  expect(v['SafePick of three']).toEqual(each(-1));
+  expect(v['SafePick of two']).toEqual(each(200));
+  expect(v['Flagged']).toEqual(['error', 200, 200, 200]);
+});
+
 // A file may use the same node id on two canvases (ids made inside fmIDE never repeat, but a
 // file from elsewhere can): each canvas still shows its own numbers. Here "rate" is AR
 // outstanding rate (0.2) on BS and Tax rate (0.3) on DepBlock; "plus" is on BS and Capex.

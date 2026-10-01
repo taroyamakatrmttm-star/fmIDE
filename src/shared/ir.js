@@ -211,9 +211,11 @@ function compileCanvas(c, functions){
       out.unitInputs = inc.filter(e => rawById.has(e.from)).sort((a, b) => irByPosition(rawById.get(a.from), rawById.get(b.from)));
       // An operator with named inputs (phase E1: if, round…): the arrow into each, by its
       // `toPort`, or null (the first arrow into a port counts, as for a function node).
+      // A choose (phase E2b) has as many choices as its arrows reach.
       if(out.op && out.op.ports){
         const ports = portEdges.get(n.id);
-        out.portInputs = out.op.ports.map((_, i) => {
+        const names = operatorPortNames(out.op, out.op.choices && ports ? chooseChoiceCount([...ports.keys()]) : 0);
+        out.portInputs = names.map((_, i) => {
           const e = ports ? ports.get(i) : undefined;
           return e && rawById.has(e.from) ? e : null;
         });
@@ -342,13 +344,13 @@ function irUnit(ir, canvasId, nodeId, path, visiting){
     // Worked out from the function's formula, with the units of what feeds its inputs.
     if(n.call && !n.call.status) result = functionUnit(n.call, (i) => irEdgeUnit(ir, canvasId, irPortEdge(ir, canvasId, n.id, i), path, visiting));
   } else if(n.type === 'operator' && n.op && n.op.ports){
-    // Named inputs: 'first' is the value's unit (round); 'branches' is then's and else's
-    // when they agree (if).
+    // Named inputs: 'first' is the value's unit (round); 'branches' is the unit every input
+    // it may pick shares (if: then and else; choose: every choice).
     const unitOfPort = (i) => n.portInputs[i] ? fromEdge(n.portInputs[i]) : null;
     if(n.op.unit === 'first') result = unitOfPort(0);
     else if(n.op.unit === 'branches'){
-      const a = unitOfPort(1), b = unitOfPort(2);
-      result = a && b && uomDimsEqual(a, b) ? a : null;
+      const us = n.portInputs.slice(1).map((_, i) => unitOfPort(i + 1));
+      result = us.length && us.every(u => u && uomDimsEqual(u, us[0])) ? us[0] : null;
     }
   } else if(n.type === 'operator'){
     const units = n.unitInputs.map(fromEdge);
@@ -390,7 +392,8 @@ function irEdgeUnit(ir, canvasId, edge, path, visiting){
 // Error codes: cycle, alias-unset, alias-missing-canvas, alias-missing-node, no-input,
 // ambiguous, missing-input, period-out-of-range, math-error, unary-only, needs-two,
 // block-missing-def, block-missing-output, block-cycle, operator-unknown (an operator's text
-// isn't in the catalogue), operator-input-unwired (a named input it reads has no arrow); for
+// isn't in the catalogue), operator-input-unwired (a named input it reads has no arrow),
+// choose-out-of-range (a choose's index picks no choice: below 1 or past the last); for
 // function nodes also
 // function-missing, function-unreadable, function-cycle, function-too-deep,
 // function-arguments (compileFunctions) and function-input-unwired.
@@ -577,7 +580,7 @@ function evaluateModel(ir, options){
       result = period + 1;
     } else if(n.op.ports){
       // Named inputs (if, round…), each read only when needed. An if reads its condition,
-      // then only the branch it picks.
+      // then only the branch it picks; a choose its index, then only the choice it picks.
       const read = (i) => {
         const edge = n.portInputs[i];
         if(!edge) return { error: 'operator-input-unwired' };
@@ -587,7 +590,8 @@ function evaluateModel(ir, options){
       let r;
       if(n.op.branches){
         const c = read(0);
-        r = c.error ? c : read(c.value !== 0 ? 1 : 2);
+        const k = c.error ? 0 : n.op.pick(c.value, n.portInputs.length - 1);
+        r = c.error ? c : k ? read(k) : { error: 'choose-out-of-range' };
       } else {
         const got = n.op.ports.map((_, i) => read(i));
         r = got.find(g => g.error) || applyOperator(n.op, got.map(g => g.value));

@@ -112,9 +112,9 @@ A **function** is a formula you write once and use like an operator, for example
 | Inputs | By name; capitals don't matter (`revenue` = `Revenue`) |
 | Numbers and arithmetic | `+ - * / ^` (also `− × ÷`), brackets, a leading minus. Excel's order of operations: `-2^2` is 4 |
 | One comparison | `<`, `<=`, `>`, `>=`, `=`, `<>` (or `≠`) — gives 1 or 0 |
-| Built-in functions | `MIN`, `MAX`, `AVERAGE`, `ABS`, `MOD`, `IFERROR`; and since #33 `IF`, `AND`, `OR`, `NOT`, `ROUND`, `ROUNDUP`, `ROUNDDOWN`, `PERIOD()`; and since phase E2a `LN`, `EXP`, `SQRT`, `INT`, `TRUNC` |
+| Built-in functions | `MIN`, `MAX`, `AVERAGE`, `ABS`, `MOD`, `IFERROR`; and since #33 `IF`, `AND`, `OR`, `NOT`, `ROUND`, `ROUNDUP`, `ROUNDDOWN`, `PERIOD()`; and since phase E2a `LN`, `EXP`, `SQRT`, `INT`, `TRUNC`, since E2b `CHOOSE` |
 | Your other functions | `Margin(Revenue, Cost)` — see lesson 7 |
-| Not accepted (with a message) | chains like `a < b < c`, `%`, text in quotes, and Excel names kept back for later (`SUM`, `LOG`, `CHOOSE`, …) |
+| Not accepted (with a message) | chains like `a < b < c`, `%`, text in quotes, and Excel names kept back for later (`SUM`, `LOG`, `INDEX`, …) |
 | Limits | 4,000 characters, 32 inputs, 64 levels of brackets, calls nested 16 deep |
 
 The full syntax is in [`docs/file-formats.md`](file-formats.md) (section *Functions*).

@@ -57,7 +57,7 @@
     const m = /^insertOp(\d+)$/.exec(id);
     if(m){
       const op = OPERATORS[+m[1]];
-      return op && ['period', 'if', 'eq', 'ne', 'and', 'or', 'not', 'round', 'roundup', 'rounddown'].includes(op.id) ? 'timing-conditions' : 'operators';
+      return op && ['period', 'if', 'eq', 'ne', 'and', 'or', 'not', 'round', 'roundup', 'rounddown', 'choose'].includes(op.id) ? 'timing-conditions' : 'operators';
     }
     const t = help.topicForCommand(id);
     return t ? t.id : null;
@@ -68,7 +68,7 @@
       blockInstance: 'blocks', function: 'function-nodes' };
     if(n && n.type === 'operator'){
       const op = operatorForSymbol(n.op);
-      if(op && ['period', 'if', 'eq', 'ne', 'and', 'or', 'not', 'round', 'roundup', 'rounddown'].includes(op.id)) return 'timing-conditions';
+      if(op && ['period', 'if', 'eq', 'ne', 'and', 'or', 'not', 'round', 'roundup', 'rounddown', 'choose'].includes(op.id)) return 'timing-conditions';
     }
     return (n && byType[n.type]) || 'what-is-fmide';
   }

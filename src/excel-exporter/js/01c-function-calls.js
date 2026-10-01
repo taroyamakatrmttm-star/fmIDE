@@ -120,12 +120,12 @@ function writeFunctionExpr(fn, x, input, caught, ctx){
       // PERIOD(): the "Period #" cell (row 3) of the formula's own sheet, in this column.
       if(spell.period) return fnPiece(colLetter(periodCol(ctx.fnPeriodIndex || 0)) + '$3', FN_LEVEL.atom, false);
       if(spell.branches){
-        // IF(condition, then, else): only the branch taken counts, so inside either one a
-        // period outside the timeline is an error (NA()), as for IFERROR's first input.
+        // IF(condition, then, else), CHOOSE(index, choice…): only the input picked counts, so
+        // inside each one it may pick a period outside the timeline is an error (NA()), as for
+        // IFERROR's first input. CHOOSE's index is a number (N() of a TRUE/FALSE).
         const c = writeFunctionExpr(fn, x.args[0], input, caught, ctx);
-        const t = fnNumeric(writeFunctionExpr(fn, x.args[1], input, true, ctx));
-        const e = fnNumeric(writeFunctionExpr(fn, x.args[2], input, true, ctx));
-        return fnPiece(spell.fn + '(' + c.s + ',' + t.s + ',' + e.s + ')', FN_LEVEL.atom, false);
+        const picks = x.args.slice(1).map(a => fnNumeric(writeFunctionExpr(fn, a, input, true, ctx)).s);
+        return fnPiece(spell.fn + '(' + (spell.index ? fnNumeric(c) : c).s + ',' + picks.join(',') + ')', FN_LEVEL.atom, false);
       }
       const args = x.args.map(a => writeFunctionExpr(fn, a, input, caught, ctx));
       // AND, OR, NOT: Excel's TRUE/FALSE, which N() turns into 1/0 where needed.
