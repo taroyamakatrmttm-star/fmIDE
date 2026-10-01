@@ -73,7 +73,7 @@ How it was checked:
 
 Found along the way (not changed):
 
-- **Each period is calculated from scratch.** A corkscrew in period 24 recalculates periods 23, 22, … 1, so the time grows with the square of the period count, and with vertical blocks with its cube (the large model takes 0.65 s at 12 periods and minutes at 60). Keeping the results across periods would fix it; in models with a loop it could change which rectangle reports the loop, so it is a separate change with its own tests.
+- **Each period is calculated from scratch.** A corkscrew in period 24 recalculates periods 23, 22, … 1, so the time grows with the square of the period count, and with vertical blocks with its cube (the large model takes 0.65 s at 12 periods and minutes at 60). Keeping the results across periods would fix it; in models with a loop it could change which rectangle reports the loop, so it is a separate change with its own tests. **Done (1 Oct 2026)** — see "Results kept across periods" at the end.
 - In a loop, fmIDE reports "One of this operator's inputs could not be computed" rather than "This is part of a circular reference" on the loop's rectangles: the loop is detected, but when the calculation returns to the rectangle where it started, "missing input" replaces the loop code. Pinned as it is.
 - `fm.getValue`'s error messages end with two full stops ("…computed..").
 - An operator with unknown text (only a hand-edited file has one) passes its first input through, with no error. Kept; for phase E.
@@ -438,3 +438,29 @@ How it was checked:
 - **Group 6:** new samples `module-v6.json`, `ws-v9.json`, `templates-v8.json` (and `sys-newer-v8.json`, now an ordinary file) open without a question and save in the new versions; new "newer" samples `sys-newer-v10.json`, `ws-nested-newer-v10.json`. Tests pinning version numbers were raised by one (groups 6, 13, 14, 15, 16, 18, 20 and 37).
 - **Snapshots:** new ones for the new sample; no existing snapshot changed.
 
+
+## Results kept across periods ✅ (1 Oct 2026)
+
+The open item from phase B ("each period is calculated from scratch"), done as its own change after step 11. Decided when the plan was approved (the owner chose the recommendation): **in a model with a loop, a period shift shows the value shown for the period it reads**, even where the old way gave something else.
+
+What was changed:
+
+- **`src/shared/ir.js`, `evaluateModel`:** the memory of results (and, when tracing, where each failure starts and the block-instance scopes met) is kept for the whole calculation instead of being emptied at the start of every period. Its keys already carried the period, so a period that reads an earlier one through a period shift takes the result already worked out — the one shown for that period. Both apps get it: fmIDE's values, and ExcelExporter's "differs from fmIDE" check. No file format, nothing on screen and no Excel formula changed.
+- **Loops:** before, a shift into a loop-affected period worked that period out again, entering the loop another way, so its answer could differ from the one shown for that period (a "?" where 0 is shown, or "circular reference" where "could not be computed" is shown). Now it always agrees with what is shown. Models without a loop give exactly the same results.
+
+How it was checked:
+
+- **Every sample** in `tests/fixtures/` (plain, traced and with instances) and **3,000 random small models** (values, operators, shifts of −2 to +2, loops, blocks with a corkscrew inside, vertical or not) compared old against new: no sample differed; 18 random models did, every one of them with a loop.
+- **Groups 17, 18 and 19** (fmIDE's pinned values and errors, agreement with Excel, ExcelExporter's formulas) passed unchanged.
+- **Group 18, two new tests in Node** (both fail on the old code): twice the periods is about twice the work (counted as node look-ups, not timed: 3.9 times before, under 2.5 now) with the right values; and in a loop, the shift shows the value shown for the period it reads.
+- **Speed** (`npm run bench`, the large generated model, 1,865 nodes, same machine; `BENCH_PERIODS` set):
+
+  | Periods | fmIDE `fm.evaluate` before | after |
+  |---|---|---|
+  | 12 | 202 ms | 64 ms |
+  | 24 | 1,320 ms | 188 ms |
+  | 36 | 4,607 ms | 375 ms |
+  | 60 | 19,488 ms | 758 ms |
+
+  ExcelExporter's Generate gets a little faster too (it calculates the model for its check): 719 → 506 ms at 24 periods. The rest of its time, and what is left of fmIDE's growth, is the vertical blocks, which really do run once per period inside every period.
+- **Memory:** the results of every period are kept until the calculation ends — about half a million small entries for the large model at 60 periods.

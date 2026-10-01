@@ -407,10 +407,14 @@ function irEdgeUnit(ir, canvasId, edge, path, visiting){
 //   from 1, is one run of a vertical instance). A vertical instance's combined output is
 //   listed once more with its hop's vintage left out and `combined: true`.
 //
-// Each period starts with a fresh memory of results. A value is remembered per period,
-// canvas, block-instance scope and node: `scope` is { prefix, bindings, outerCanvasId,
-// outerScope, hops } inside a block instance, where `bindings` maps each Input port to the
-// outer arrow feeding it.
+// Results are remembered for the whole calculation, per period, canvas, block-instance
+// scope and node, so a period that reads an earlier one (a period shift) takes the result
+// already worked out for it — the one shown for that period — instead of working it out
+// again: the time grows with the number of periods, not with its square. (Before, each
+// period started with an empty memory; in a loop that could give a shift a different
+// answer from the one shown for the period it reads.)
+// Inside a block instance, `scope` is { prefix, bindings, outerCanvasId, outerScope, hops },
+// where `bindings` maps each Input port to the outer arrow feeding it.
 function evaluateModel(ir, options){
   const periodCount = ir.periodCount;
   const trace = !!(options && (options.trace || options.instances));
@@ -421,10 +425,10 @@ function evaluateModel(ir, options){
   const bad = (v) => v === null || v === undefined || Number.isNaN(v);
   const has = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
   const valueKey = (period, canvasId, scope, nodeId) => period + '|' + canvasId + '|' + scope.prefix + nodeId;
-  let memo = {}, errors = {};
+  const memo = {}, errors = {};
   // Tracing only: where each failure starts (a key, or '!missing-source' for an arrow from a
   // node that doesn't exist), what each key is, and every block-instance scope met.
-  let origins = {}, keyInfo = {}, scopesSeen = new Map();
+  const origins = {}, keyInfo = {}, scopesSeen = new Map();
 
   // The memory key of what `edge` reads (null when its source doesn't exist).
   function edgeKey(canvasId, edge, period, scope){
@@ -742,8 +746,6 @@ function evaluateModel(ir, options){
   const out = ir.order.map(() => ({ values: [], errors: [], portValues: [], portErrors: [], portInstances: [], origins: trace ? [] : undefined }));
   const instances = wantInstances ? [] : undefined;
   for(let p = 0; p < periodCount; p++){
-    memo = {}; errors = {};
-    if(trace){ origins = {}; keyInfo = {}; scopesSeen = new Map(); }
     ir.order.forEach(c => c.list.forEach(n => {
       if(n.type === 'blockInstance'){
         irBlockPorts(ir, n.blockDefCanvasId).outputs.forEach((_, i) => blockOutput(c.id, n, i, p, TOP(), new Set()));

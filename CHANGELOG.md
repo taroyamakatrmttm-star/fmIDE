@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Faster calculation on long timelines
+- Each period is now worked out once. Before, a period that reads an earlier one (through a period shift) worked out every earlier period again, so the time grew with the square of the number of periods. On a large model (1,865 rectangles and operators) fmIDE's calculation takes 0.19 s instead of 1.3 s at 24 periods, and 0.76 s instead of 19.5 s at 60. ExcelExporter's check before download gets faster too.
+- Results are unchanged, except in a model with a loop (a circular reference): there a period shift now always shows the value shown for the period it reads.
+
 ## The 📈 chart shows every period
 - The chart that draws an input's values across periods (📈 on a rectangle) now shows every period at once, however many there are, so a curve can be drawn from the first period to the last without scrolling. With many periods the numbers along the bottom thin out (every 2nd, 5th, 10th…), the dots get smaller and the values above them are left out; the boxes below the chart still show each value.
 - Its window can be resized from its bottom-right corner, and the chart grows or shrinks with it. The size is remembered (a double-click on the corner puts it back), like the Templates window's.
