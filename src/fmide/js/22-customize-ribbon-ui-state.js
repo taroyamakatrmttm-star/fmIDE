@@ -313,7 +313,8 @@
       helpAdded: true, // step 10: the Help group at the end of the View tab
       addManyRectsAdded: true, // 12b: Add Many Rectangles… after Add Rectangle
       libraryAuthor,
-      windowSizes: cleanWindowSizes(windowSizes), templateGroupsClosed: templateGroupsClosed.slice(0, 200)
+      windowSizes: cleanWindowSizes(windowSizes), templateGroupsClosed: templateGroupsClosed.slice(0, 200),
+      helpSize: cleanHelpSize(helpPanelSize)
     };
   }
   // One-time update of a ribbon customised before the Document group existed: add it at
@@ -439,10 +440,11 @@
       if(ui.addManyRectsAdded !== true) addManyRectsCommandToRibbon();
     }
     if(!fromImport && typeof ui.libraryAuthor === 'string') libraryAuthor = ui.libraryAuthor.slice(0, LIBRARY_PACK_LIMITS.author);
-    // Window sizes and closed template groups belong to this screen and person: never from
+    // Window sizes, closed template groups and the Help panel's width belong to this screen and person: never from
     // someone else's file.
     if(!fromImport){
       windowSizes = cleanWindowSizes(ui.windowSizes);
+      helpPanelSize = cleanHelpSize(ui.helpSize);
       if(Array.isArray(ui.templateGroupsClosed)) templateGroupsClosed = ui.templateGroupsClosed.filter(g => typeof g === 'string').map(g => g.slice(0, 200)).slice(0, 200);
     }
     if(typeof ui.ribbonCollapsed === 'boolean') ribbonState.collapsed = ui.ribbonCollapsed;

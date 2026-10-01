@@ -9,6 +9,7 @@
   // in a node's touch menu.
   // build:include help/fmide-help.js
   // build:include shared/help-panel.js
+  let helpPanelSize = {}; // H5a: { width, narrow } — ui.helpSize
 
   // One plain sentence per command: COMMAND_HELP, or for an Insert Operator command the
   // sentence of its operator (OPERATOR_HELP, by catalogue id).
@@ -37,6 +38,9 @@
     },
     toast: (msg) => toast(msg),
     homeTop: (body, make) => renderTutorialList(body, make), // 01c: tutorials and the welcome card
+    // H5a: the panel's width, in the person's own UI settings (ui.helpSize, saved with the
+    // workspace; never from an imported file, never in a Preferences file).
+    size: { get: () => helpPanelSize, set: (v) => { helpPanelSize = cleanHelpSize(v); saveWorkspaceSoon(); } },
   });
   function openHelp(topicId){ hideCommandTip(); help.open(topicId); }
   function closeHelp(){ help.close(); }

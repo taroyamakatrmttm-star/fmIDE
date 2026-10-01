@@ -122,6 +122,14 @@ One pull request each, each approved before the next.
 - **ExcelExporter's help text** moved from `src/excel-exporter/js/09d-help.js` into `src/excel-exporter/help/excel-help.js` (still ExcelExporter's, under its licence), pulled in by `build:include`; the built ExcelExporter changed only in its comments.
 - **Checked:** group 34 (11 tests), then the whole suite. Screenshots of the index, a topic, a tutorial, an ExcelExporter topic, and a topic at phone width (no sideways scrolling).
 - **Found along the way:** the heading comment of `src/help/fmide-help.js` named the panel's code as `23-help.js`; it is `01b-help.js`, and now says so.
+  - **H5 — more room to read, and What's new** (decided 1 Oct 2026, the owner; three phases, one pull request each): **H5a** the Help panel widens — ⤢ for a reading view, its left edge drags to any width — in both apps (a side panel, not a pop-up: the owner's choice); **H5b** What's new, a page per feature (not per pull request) with what changed, why and how to use it, newest first, a "New" badge on what you haven't seen, every past feature written in full, each app its own entries, developer-only changes left out; **H5c** the What's new pages on the site.
+
+## Done (H5a) — how it turned out
+
+- **The reading view:** ⤢ in the panel's header widens Help to two thirds of the window (at least 600 pixels); ⤡ brings it back to the width it had. From 600 pixels wide the panel reads as a page (`.wide`): larger text in a column at most 760 pixels wide, the topic titles larger.
+- **Any width:** the panel's left edge (`.help-resize`) drags by mouse, finger or pen (pointer events, captured by the edge); a double-click on it goes back to the usual 380. The panel is never narrower than 300 pixels and always leaves 200 pixels of the app beside it, also when the window gets smaller. Under 700 pixels it still covers the app, without ⤢ or the edge.
+- **Kept:** in the shared panel (`src/shared/help-panel.js`: `options.size`, `cleanHelpSize`, `loadSize`), the apps keep the width — fmIDE in the person's own UI settings (`ui.helpSize`, saved with the workspace, never from an imported file, never in a Preferences file), ExcelExporter in its browser storage (`fmide-excel-help-size`). The width is the CSS variable `--help-w` the apps already made room with, so the canvas (fmIDE) and the page (ExcelExporter) stay beside the panel.
+- **Checked:** test group 42 (8 tests), then the whole suite.
 
 ## Done (H4b) — how it turned out
 

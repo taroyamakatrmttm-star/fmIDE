@@ -615,6 +615,17 @@ fmIDE at 1400 × 900 (the touch test at 1024 × 768 with a touchscreen); rectang
 - 400 rectangles (two calls of `fm.createRects`, grids of 20 across), one dragged across them in 30 moves: under 15 seconds, and it moved.
 - By touch: a finger drag of C to 503, 101 lands at 500, 100; the page saw only touch.
 
+### 42. The Help panel's width (`tests/42-help-width.spec.js`; step 10, phase H5a)
+fmIDE and ExcelExporter at 1400 × 900 (the touch test at 1024 × 768 with a touchscreen); edges dragged with a real mouse.
+- fmIDE: Help opens 380 wide with ⤢; ⤢ makes it 933 (two thirds), marked wide (larger text), ⤡, `aria-pressed`, the canvas ends at 467; the autosave's `ui.helpSize` is `{ width: 933 }`; still 933 after a reload; ⤡ goes back to 380 and the saved size is `{}`.
+- The left edge dragged to 500 wide: saved `{ width: 500 }`; ⤢ then ⤡ come back to 500; kept after a reload; dragged to 700 it reads as a page (wide, ⤡); a double-click on the edge: 380, saved `{}`.
+- Limits: dragged far right, 300; far left, 1200 (200 left for the app); in a window 1000 wide that 1200 shows as 800, and 1200 again at 1400.
+- Wide, a topic opens, Back returns to the list, Esc closes the panel.
+- A workspace file whose `ui.helpSize` is 777, imported: Help still opens at 380; a Preferences file has no `helpSize`.
+- In a window 600 wide the panel covers it (600), with no ⤢ and no edge.
+- By touch: a finger drags the edge to 500 wide; the page saw only touch.
+- ExcelExporter: 380, ⤢ 933 (wide; the page's right margin 933), the edge dragged to 450; its storage's `fmide-excel-help-size` holds `{"width":450}`; 450 again after a reload.
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.

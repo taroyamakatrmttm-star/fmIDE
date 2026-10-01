@@ -9,8 +9,8 @@
 .help-panel.open{ display:flex; }
 .help-head{ display:flex; align-items:center; padding:8px 10px 6px 14px; }
 .help-title{ flex:1; font-weight:700; font-size:14px; }
-.help-close{ border:none; background:none; font-size:20px; line-height:1; width:30px; height:30px; border-radius:6px; cursor:pointer; color:#475569; }
-.help-close:hover{ background:#f1f5f9; }
+.help-close, .help-expand{ border:none; background:none; font-size:20px; line-height:1; width:30px; height:30px; border-radius:6px; cursor:pointer; color:#475569; }
+.help-close:hover, .help-expand:hover{ background:#f1f5f9; }
 .help-search{ margin:0 12px 8px; padding:7px 10px; border:1px solid #cbd5e1; border-radius:8px; font:inherit; font-size:13px; }
 .help-search:focus{ outline:2px solid #a5b4fc; border-color:#6366f1; }
 .help-body{ flex:1; overflow-y:auto; padding:2px 14px 18px; font-size:13px; line-height:1.5; }
@@ -45,8 +45,19 @@
 .help-kbd{ margin-left:auto; font-family:Menlo,Consolas,monospace; font-size:10.5px; color:#6b7280; background:#f3f4f6; border:1px solid #e5e7eb; border-radius:5px; padding:0 5px; font-weight:400; }
 .help-run{ flex:none; width:30px; height:28px; border:1px solid #c7d2fe; background:#eef2ff; color:#3730a3; border-radius:6px; cursor:pointer; }
 .help-run:disabled{ opacity:.4; cursor:default; }
+/* The width (H5a): the left edge drags; ⤢ is the reading view. */
+.help-expand{ font-size:17px; margin-right:2px; }
+.help-resize{ position:absolute; left:-4px; top:0; bottom:0; width:9px; cursor:ew-resize; touch-action:none; user-select:none; z-index:1; }
+.help-resize:hover, body.help-resizing .help-resize{ background:linear-gradient(to right, transparent 3px, #a5b4fc 3px, #a5b4fc 6px, transparent 6px); }
+body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew-resize !important; }
+/* Wide enough to read as a page: larger text in a column of comfortable length. */
+.help-panel.wide .help-body{ font-size:14.5px; line-height:1.6; padding:4px max(24px, calc((100% - 760px) / 2)) 28px; }
+.help-panel.wide .help-search{ margin-left:max(24px, calc((100% - 760px) / 2)); margin-right:max(24px, calc((100% - 760px) / 2)); font-size:14px; }
+.help-panel.wide .help-topic-title{ font-size:22px; }
+.help-panel.wide .help-topic-link-summary, .help-panel.wide .help-command-sentence{ font-size:13px; }
 /* A narrow window: the panel covers the canvas instead of squeezing it. */
 @media (max-width: 700px){
   .help-panel{ width:100%; border-left:none; }
+  .help-resize, .help-expand{ display:none; }
 }
 
