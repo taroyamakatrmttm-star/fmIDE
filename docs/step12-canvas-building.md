@@ -4,51 +4,55 @@
 
 **Goal:** fewer clicks to lay out a model. Two requests from the owner:
 
-1. Shapes snap to evenly spaced points, horizontally and vertically (a grid), so a canvas lines up neatly without dragging by eye.
+1. While a shape is dragged, it snaps to the places that make it evenly spaced with the shapes beside it (horizontally) or above and below it (vertically) — no more selecting three shapes and using Distribute afterwards.
 2. Type a list of names and get that many rectangles at once, instead of adding a rectangle, double-clicking it and typing its name ten times over.
 
 Neither changes the calculation, ExcelExporter or any file format (see each phase).
 
 ---
 
-## 12a — snap to grid
+## 12a — snap to equal spacing
 
 **What is there today:**
 
-- The canvas already draws a dot every 22 pixels (`#canvas` in `src/fmide/styles.css`: `background-size: 22px 22px`), but nothing snaps to it.
-- Dragging a node snaps only to *other nodes* (`computeSnap` in `src/fmide/js/08-node-interaction.js`: left, right and centre edges within `SNAP_THRESHOLD`, 6 pixels, shown by the blue guide lines). Alias drags use the same snap.
-- Resizing (`startResize`), Distribute Horizontally / Vertically (`distributeSelected` in `06-align-marquee-computation.js`) and where new nodes go (`spawnPoint` → `findFreeSpot`) ignore any grid.
-- Modifier keys on a node are already taken: Alt+drag makes an alias, Shift restricts to one axis, Ctrl / Cmd adds to the selection.
+- Dragging a node snaps only to *other nodes' edges* (`computeSnap` in `src/fmide/js/08-node-interaction.js`): its left, right or centre lines up with another node's within `SNAP_THRESHOLD` (6 pixels), shown by one blue vertical and one blue horizontal guide (`guideV`, `guideH`). Alias drags (Alt+drag) use the same snap; resizing does not snap.
+- Even spacing is possible only after the fact: select three or more nodes and use **Distribute Horizontally / Vertically** (`distributeSelected` in `06-align-marquee-computation.js`), which makes the *gaps* between neighbours equal while keeping the first and last in place.
 
-**Proposed:**
+**Proposed:** while you drag a node C, it also snaps to the places that would make it **evenly spaced** with the nodes around it, horizontally and vertically — as PowerPoint's smart guides do. With rectangles A and B side by side, C snaps:
 
-- **Snap to Grid** — a new on/off command (Arrange tab, in a new Grid group with Snap Selection to Grid; also in the Command Launcher). When on, a dragged node's top-left corner lands on the nearest grid point, horizontally and vertically, for one node or a whole selection (the selection keeps its shape: the node you grabbed snaps, the rest move with it). Works the same with a finger or pen (step 9's drag path is shared).
-- **Grid spacing** — the dots and the snap always agree: the dots are drawn at the grid's spacing.
-- **New nodes** (Add Rectangle, pickers, paste, `fm.create…` without x / y) land on a grid point while snapping is on; coordinates given explicitly (a macro, `fm.createRect({x, y})`) are kept exactly, as today.
-- **Snap Selection to Grid** — a command that moves the selected nodes (or the whole canvas when nothing is selected) onto the grid, one undo step, to tidy a canvas drawn before snapping was turned on.
-- **Hold Alt during a drag to place freely** (Alt pressed *after* the drag has started; Alt *before* pressing still makes an alias, as today).
-- **Nothing changes in the model or in files.** Positions are ordinary numbers; a model drawn with snapping opens anywhere. The on/off state and the spacing are the person's own UI settings (`ui.snapToGrid`, `ui.gridSize`, saved with the workspace's UI settings, never taken from an imported file), so no file-format version changes. A customised ribbon gets the new commands once (`ui.snapGridAdded`).
+```
+ after B:     [A]  gap  [B]  gap  [C]
+ before A:    [C]  gap  [A]  gap  [B]
+ between:     [A]  gap  [C]  gap  [B]      (C exactly halfway)
+```
+
+and the same up and down, for nodes one above the other. "Evenly spaced" means **equal gaps between edges** — the same rule as Distribute, so the two always agree (for nodes of one size it is also equal spacing of their centres).
+
+- **Which nodes count:** for horizontal spacing, the nodes in C's row — those whose top-to-bottom span overlaps C's at the place it would snap to; for vertical spacing, those in C's column. Within a row, the candidates are the gaps between neighbouring nodes there: C can extend a run at either end with that gap, or sit halfway between two neighbours. A longer evenly spaced run (A, B, D already equal) is extended the same way.
+- **What you see:** while it snaps, each equal gap is marked by a short double-headed bar (⟷ / ↕) in a contrasting colour, so you can see *which* gaps are equal; they disappear when you let go. The blue alignment guides stay as they are.
+- **With the alignment snap:** each direction snaps on its own — C can snap to even horizontal spacing and, at the same time, line up its top with A and B. Within one direction, the nearest snap within 6 pixels wins (see choice 2).
+- **Same everywhere a drag snaps today:** one node or a whole selection (the node you grabbed decides, the rest move with it, as now), Alt+drag aliases, mouse, finger or pen (step 9's drag path is shared). Nodes being dragged are never counted as A or B.
+- **Speed:** the candidate gaps are worked out once when the drag starts (from the other nodes on the canvas), not on every pointer move, so a canvas with hundreds of nodes still drags smoothly; checked with a large sample in the tests.
+- **Nothing changes in the model or in files.** Positions are ordinary numbers; no file-format version changes. No new command is needed if it is always on (choice 1).
 
 **Owner's choices:**
 
-1. **Which snap wins** when a node is near both a grid point and another node's edge?
-   - (a) **Recommended:** the other node's edge wins when it is within the 6-pixel threshold (the blue guide shows), the grid otherwise — centres of different-sized nodes still line up.
-   - (b) Grid only while snapping is on; node-to-node guides only when it is off.
-2. **Spacing:**
-   - (a) **Recommended:** a choice of 11, 22 (default — today's dots) or 44 pixels.
-   - (b) Fixed at 22 pixels.
-   - (c) Any number the person types (between 5 and 100).
-3. **Resizing:**
-   - (a) **Recommended:** while snapping is on, the bottom-right corner snaps to the grid too, so widths and heights become whole grid steps (today's default rectangle, 170 × 64, is not; existing nodes keep their size until resized).
-   - (b) Resizing never snaps.
-4. **On or off for a new person:** (a) **Recommended:** off, so nothing moves differently until the person asks; (b) on.
-5. **Equal-spacing guides** (as in PowerPoint: while dragging a node between or beside others, a marker shows when the gaps are equal, and the node snaps there):
-   - (a) **Recommended:** a later, separate phase (12c) if wanted after using the grid — the grid already gives even spacing for most layouts.
-   - (b) Part of 12a.
-   - (c) Not needed.
-6. **In the Preferences file?** (a) **Recommended:** no — the person's own UI setting, like window sizes (no format change); (b) yes — `fmIDE-preferences` would carry it (a new optional field; version and upgrade per the file-format rules).
+1. **On or off:**
+   - (a) **Recommended:** always on, like the alignment snap today — nothing to find or switch.
+   - (b) A **Snap to Equal Spacing** on/off command (Arrange tab, Distribute group), remembered as the person's own UI setting (`ui.snapEqualSpacing`; never taken from an imported file; a customised ribbon gets it once).
+2. **When the alignment snap and the equal-spacing snap both apply in the same direction** (e.g. C's left edge is 4 pixels from lining up with something above, and 3 pixels from equal spacing):
+   - (a) **Recommended:** the nearer one wins; on a tie, alignment.
+   - (b) Equal spacing always wins.
+   - (c) Alignment always wins.
+3. **Which nodes count as neighbours:**
+   - (a) **Recommended:** only nodes in C's row (or column), as described above — few, predictable snaps.
+   - (b) Any two nodes on the canvas with the same gap, wherever they are (PowerPoint also matches a gap seen elsewhere on the slide) — more snaps, but more surprising ones on a busy canvas.
+4. **A way to drag without snapping** (there is none today):
+   - (a) **Recommended:** holding Alt *after* the drag has started turns all snapping off for that move (Alt *before* pressing still makes an alias, as today).
+   - (b) None, as today.
+5. **Resizing:** (a) **Recommended:** not in 12a — resizing keeps not snapping; (b) a resized node snaps its width or height to match a neighbour's.
 
-**Help and tests:** a sentence per new command (`COMMAND_HELP`), the `arranging` help topic updated. New test group (next free number, 40): dragging one node and a selection onto the grid, the Alt-during-drag escape, node edges winning (if 1a), resizing (if 3a), new nodes and paste on the grid, explicit coordinates kept, Snap Selection to Grid as one undo step, the setting kept after a reload and not taken from an imported workspace, a finger drag (group 27's helpers), and a model saved with snapping opening unchanged.
+**Help and tests:** the `arranging` help topic gains a paragraph (and a sentence for the command if 1b). New test group (next free number, 40), with a real mouse: C snapping after B, before A and halfway between them, horizontally and vertically; the gap bars shown while snapping and gone after; nodes of different sizes (equal gaps, not centres); a run of three extended; nodes outside C's row ignored (if 3a); alignment and equal spacing together in the two directions, and the tie rule; a selection and an Alt+drag alias snapping; the Alt-during-drag escape (if 4a); the move as one undo step and recorded by the macro recorder at its snapped position; a finger drag (group 27's helpers); a large canvas staying quick; a model saved after snapping opening unchanged.
 
 ---
 
@@ -80,7 +84,7 @@ Neither changes the calculation, ExcelExporter or any file format (see each phas
 - **How many** sets the number of rows (1 to 200). The cursor starts in row 1's Name. **Enter** moves to the next row's Name (on the last row it adds a row and raises How many), so a list is typed straight through: *Revenue ⏎ Cost of sales ⏎ Gross margin ⏎ …*. **Tab** moves across to Value and Unit for anyone who wants them; both are optional. **Mod+Enter** adds.
 - **Paste a list** into any Name box — several lines, from a text file or a column in Excel — and it fills that row and the ones below, adding rows as needed. Columns copied from Excel (tab-separated) fill Name, Value and Unit in turn.
 - **Blank rows are skipped**; the line at the bottom always says how many rectangles will be added, and the Add button carries the number.
-- **Arrange** them in a column (the usual way down a calculation), a row, or a grid with a number across; **Gap** between them (defaults to the grid spacing when 12a exists). The group goes where it overlaps nothing near the middle of the view (`findFreeSpot` for the whole block, as paste does with `moveGroupToFreeSpot`), on grid points when snapping is on.
+- **Arrange** them in a column (the usual way down a calculation), a row, or a grid with a number across; **Gap** between them (one gap for all, so they come out evenly spaced). The group goes where it overlaps nothing near the middle of the view (`findFreeSpot` for the whole block, as paste does with `moveGroupToFreeSpot`).
 - **One undo step** for the lot. **Selected when added** (default on), so the new group can be dragged into place at once.
 - **A name already on this canvas** is marked in its row ("already on this canvas") — a warning, never a block, as two rectangles with one name matter for plugs and sockets, "Update this canvas" and ExcelExporter's module layouts.
 - **Automation:** a new action `fm.createRects({ items: [{ name, value?, uom? }…] | names: [...], layout: 'column' | 'row' | 'grid', across?, gap?, x?, y? })` returning the new ids, recorded by the macro recorder as one step and listed in the Macro Builder; the window calls it. `docs/fmIDE-automation-api.md` gains it.
@@ -93,11 +97,11 @@ Neither changes the calculation, ExcelExporter or any file format (see each phas
    - (a) **Recommended:** the rows above — How many, then one box per rectangle (Name, with optional Value and Unit).
    - (b) One large text box, one rectangle per line (`Name`, or `Name | value | unit`); the count follows the lines. Simplest to paste into, but no separate count and less guidance.
    - (c) Both: rows, with a "Paste as text…" switch to (b).
-2. **Also a quick chain on the canvas?** In a rectangle's inline editor, **Mod+Enter** saves it and starts a new rectangle just below (one grid step down), already in edit mode — so a list can also be typed directly on the canvas without the window.
+2. **Also a quick chain on the canvas?** In a rectangle's inline editor, **Mod+Enter** saves it and starts a new rectangle just below, with the same gap as the last two (so the chain stays evenly spaced), already in edit mode — so a list can also be typed directly on the canvas without the window.
    - (a) **Recommended:** yes, as a small extra in the same phase (it shares the placement code).
    - (b) No, the window only.
    - (c) Later, separately.
-3. **Size of the rectangles:** (a) **Recommended:** today's default (170 × 64), or the grid-rounded size when 12a's resize snapping exists; (b) a Width / Height box in the window.
+3. **Size of the rectangles:** (a) **Recommended:** today's default (170 × 64); (b) a Width / Height box in the window.
 4. **Name prefix and numbering** (e.g. "Product 1 … Product 10" without typing each): (a) **Recommended:** not in 12b — a name box left blank is skipped, which keeps the window simple; (b) a "Fill with: [Product] 1…N" button.
 
 **Help and tests:** a sentence for the new command, the `rectangles` help topic updated; a tutorial step is not needed. New test group (next free number after 12a's): typing a list with Enter through the rows, How many growing and shrinking (rows typed are kept when it grows; it asks before dropping filled rows when it shrinks), pasting lines and Excel columns, blank rows skipped, each arrangement and the gap, nothing overlapped, one undo step, the selection, the duplicate-name warning, hostile text in names kept as plain text, `fm.createRects` and its macro step, a finger and the on-screen keyboard (group 27's helpers), and Mod+Enter on the canvas (if 2a).
@@ -106,4 +110,4 @@ Neither changes the calculation, ExcelExporter or any file format (see each phas
 
 ## Order
 
-12a and 12b do not depend on each other. If 12a comes first, 12b's gap and placement use the grid; if 12b comes first, 12a later makes them snap. **Recommended:** 12b first — it saves the most typing — then 12a.
+12a and 12b do not depend on each other. Either way they fit together: 12b lays its rectangles out with equal gaps, and with 12a, dragging one more next to them snaps into the same spacing. **Recommended:** 12b first — it saves the most typing — then 12a.
