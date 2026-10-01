@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter's help explains what it remembers
+- A new help topic, **What is remembered, and which layout wins**: the three things kept in the browser (each model's layout, each module's layout, the Excel style), that Start Over keeps them all, and the order a layout is taken from when a file loads (the model's saved layout, then your module layout, then the template's attached layout, then the automatic sort). It also says how Export Mapping JSON and Export Module Layouts differ.
+- A new topic, **A template's attached layout**: how to attach a module's layout in fmIDE, where it travels, and exactly when ExcelExporter uses it.
+- **How the workbook looks** now lists which format wins, for the cell's look and for its number format.
+
 ## Snap to equal spacing (step 12, phase 12a)
 - While you drag a box, it snaps where it is evenly spaced with the boxes in its row (or column): after two boxes side by side, with the same gap, before them, or halfway between them. Pink bars mark the equal gaps while it snaps. It works with lining up as before: whichever is nearer wins, and a box can be evenly spaced across and lined up down at once.
 - Hold **Alt** after you start dragging to move a box freely, without any snapping. (Alt before pressing still makes an alias, which snaps like any drag.)
