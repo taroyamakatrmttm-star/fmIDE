@@ -38,7 +38,7 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | `npm run test:placement` | where new nodes go (never on top of others) and the Macro Builder's "Run selected step" moving on |
 | `npm run test:windows` | resizable windows (the size kept in your own settings, never taken from a file) and the Templates list as a tree |
 | `npm run test:touch-excel` | ExcelExporter's Tree view by finger: the row menu by press and hold, choosing several rows, double-tap to rename; a tap on "← Back to fmIDE" |
-| `npm run test:help` | Help (step 10): groups 31 to 35 — the panel, a sentence for every command, topics and their links, search, the Command Launcher, the ribbon's tips, the "?" on windows, Help in the touch menu, ExcelExporter's Help panel, every tutorial played through, practice mode, the welcome card, tablet size, no network, the site's help pages, and the tutorial videos' scripts and recording |
+| `npm run test:help` | Help (step 10): groups 31 to 35 — the panel, a sentence for every command, topics and their links, search, the Command Launcher, the ribbon's tips, the "?" on windows, Help in the touch menu, ExcelExporter's Help panel, every tutorial played through, practice mode, the welcome card, tablet size, no network, the site's help pages, the tutorial videos' scripts and recording, and the panel's width (group 42) |
 | `npm run test:videos` | the tutorial videos' scripts and captions, and one real recording (To Excel, about 2 minutes) |
 | `npm run test:module-layouts` | ExcelExporter remembering each module's layout (step 11b) |
 | `npm run test:template-attachments` | a template's Excel layout carried by fmIDE, packs and the checker (step 11c-1) |
@@ -46,6 +46,7 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | `npm run test:block-layouts` | block instance tabs remembering their layout, and "Lay out the other instances like this" (step 11d) |
 | `npm run test:add-many` | Add Many Rectangles…, `fm.createRects` and the Mod+Enter quick chain (step 12b) |
 | `npm run test:equal-spacing` | a dragged node snapping to equal spacing, with gap markers (step 12a) |
+| `npm run test:help-width` | the Help panel's width: the reading view, dragging its edge, kept per app (step 10, H5a) |
 | `npm run test:help-site` | the site's help pages the build writes under `/help` (pages, links, command names and tabs against fmIDE, escaping, their security policy) |
 | `npx playwright test -g "Tree view"` | tests whose name matches |
 

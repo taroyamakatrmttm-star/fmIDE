@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## A wider Help panel
+- **⤢** at the top of the Help panel (fmIDE and ExcelExporter) widens it to a reading view, two thirds of the window, with larger text; **⤡** brings it back.
+- Or drag the panel's **left edge** to any width — by mouse or finger. A double-click on the edge goes back to the usual width.
+- Help remembers the width. The canvas, or ExcelExporter's page, stays beside it.
+
 ## ExcelExporter's help explains what it remembers
 - A new help topic, **What is remembered, and which layout wins**: the three things kept in the browser (each model's layout, each module's layout, the Excel style), that Start Over keeps them all, and the order a layout is taken from when a file loads (the model's saved layout, then your module layout, then the template's attached layout, then the automatic sort). It also says how Export Mapping JSON and Export Module Layouts differ.
 - A new topic, **A template's attached layout**: how to attach a module's layout in fmIDE, where it travels, and exactly when ExcelExporter uses it.

@@ -13,7 +13,15 @@ const excelHelp = createHelpPanel({
   groups: EXCEL_HELP_GROUPS, topics: EXCEL_HELP_TOPICS,
   intro: 'Plain-English guides to ExcelExporter. Pick a topic, or search above. The "?" beside each panel\'s heading opens its topic.',
   placeholder: 'Search help — e.g. "scenarios" or "tree view"',
+  // H5a: the panel's width, kept in this browser (HELP_SIZE_KEY) for every model.
+  size: { get: () => ({}), set: (v) => { layoutStore.put(HELP_SIZE_KEY, JSON.stringify(cleanHelpSize(v))).catch(() => {}); } },
 });
+// The width saved before: read once (the store answers later); a bad value is ignored.
+const HELP_SIZE_KEY = 'fmide-excel-help-size';
+layoutsMigrated.then(() => layoutStore.get(HELP_SIZE_KEY)).then(raw => {
+  if(typeof raw !== 'string' || !raw) return;
+  try{ excelHelp.loadSize(JSON.parse(raw)); }catch(err){ /* unreadable: the usual width */ }
+}, () => {});
 
 (function wireHelp(){
   const btn = $('btnHelp');

@@ -17,9 +17,28 @@
 //                      shortcut(c) (text, or ''), enabled(c), run(c) }
 //   options.toast (optional) — shows a short message (a command that can't run now)
 //   options.homeTop (optional) — (body, make) adds the app's own things above the topics
+//   options.size (optional) — { get() → saved size, set(size) } where the app keeps the
+//                      panel's width ({ width, narrow }, read through cleanHelpSize); without
+//                      it the width lasts until the page closes; loadSize(size) gives one read later
 //   richText(tag, cls, text) is returned too: the same {cmd:id} buttons, for the app's own cards.
 //   The styles are src/shared/help-panel.css; each app sets --help-top (where the panel
-//   starts) and makes room for it under body.help-open.
+//   starts) and makes room for it under body.help-open, using --help-w (the panel's width).
+//
+// Width (step 10, phase H5a): the left edge drags to any width (a double-click on it goes back
+// to the usual width), and ⤢ in the header widens it to a reading view, two thirds of the
+// window, and back. From HELP_WIDE_AT pixels the panel reads as a page (.wide: larger text, a
+// reading column). It always leaves HELP_KEEP_FREE pixels of the app beside it.
+const HELP_DEFAULT_W = 380, HELP_MIN_W = 300, HELP_WIDE_AT = 600, HELP_KEEP_FREE = 200;
+// A saved size (the person's own setting, but read from storage): numbers in range, or left out.
+function cleanHelpSize(v){
+  const out = {};
+  if(!v || typeof v !== 'object') return out;
+  ['width', 'narrow'].forEach(k => {
+    const n = Math.round(Number(v[k]));
+    if(isFinite(n) && n >= HELP_MIN_W && n <= 10000) out[k] = n;
+  });
+  return out;
+}
 function createHelpPanel(options){
   const groups = options.groups || [];
   const topics = options.topics || [];
@@ -27,6 +46,81 @@ function createHelpPanel(options){
   const CMD = /\{cmd:([A-Za-z0-9_:]+)\}/g;
   const state = { view: 'home', topicId: null, query: '', back: [] };
   let panel = null;
+  let size = null; // { width, narrow }: read from the app when first needed
+
+  // ---- width ----
+  function savedSize(){
+    if(!size) size = cleanHelpSize(options.size && options.size.get ? options.size.get() : null);
+    return size;
+  }
+  function maxWidth(){ return Math.max(HELP_MIN_W, window.innerWidth - HELP_KEEP_FREE); }
+  function fit(w){ return Math.max(HELP_MIN_W, Math.min(maxWidth(), Math.round(w))); }
+  function readingWidth(){ return fit(Math.max(HELP_WIDE_AT, window.innerWidth * 2 / 3)); }
+  function currentWidth(){ return fit(savedSize().width || HELP_DEFAULT_W); }
+  // Shows the panel at the saved width (fitted to this window).
+  function applyWidth(){
+    const w = currentWidth();
+    document.documentElement.style.setProperty('--help-w', w + 'px');
+    if(!panel) return;
+    const wide = w >= HELP_WIDE_AT;
+    panel.classList.toggle('wide', wide);
+    const b = panel.querySelector('.help-expand');
+    if(b){
+      b.textContent = wide ? '⤡' : '⤢';
+      b.title = wide ? 'Narrower: back to the side panel' : 'Wider: a reading view';
+      b.setAttribute('aria-pressed', wide ? 'true' : 'false');
+    }
+  }
+  function storeSize(){ if(options.size && options.size.set) options.size.set(Object.assign({}, size)); }
+  function setWidth(w, keep){
+    size = Object.assign({}, savedSize(), { width: fit(w) });
+    applyWidth();
+    if(keep !== false) storeSize();
+  }
+  function toggleWide(){
+    const s = savedSize();
+    if(currentWidth() >= HELP_WIDE_AT){
+      size = Object.assign({}, s, { width: s.narrow || HELP_DEFAULT_W });
+      delete size.narrow;
+      if(size.width === HELP_DEFAULT_W) delete size.width;
+    } else {
+      size = { narrow: currentWidth(), width: readingWidth() };
+      if(size.narrow === HELP_DEFAULT_W) delete size.narrow;
+    }
+    applyWidth();
+    storeSize();
+  }
+  function resetWidth(){
+    size = {};
+    applyWidth();
+    storeSize();
+  }
+  // Dragging the left edge: by mouse, finger or pen (pointer events, captured by the edge).
+  function wireResize(edge){
+    edge.addEventListener('pointerdown', (ev) => {
+      if(ev.button !== 0) return;
+      try{ edge.setPointerCapture(ev.pointerId); }catch(err){ /* still follows while over the edge */ }
+      document.body.classList.add('help-resizing');
+      const move = (e) => { if(e.pointerId === ev.pointerId) setWidth(window.innerWidth - e.clientX, false); };
+      const up = (e) => {
+        if(e.pointerId !== ev.pointerId) return;
+        edge.removeEventListener('pointermove', move);
+        edge.removeEventListener('pointerup', up);
+        edge.removeEventListener('pointercancel', up);
+        document.body.classList.remove('help-resizing');
+        const s = savedSize();
+        if(s.width && s.width < HELP_WIDE_AT) delete s.narrow; // dragged narrow: ⤢ starts from here
+        storeSize();
+      };
+      edge.addEventListener('pointermove', move);
+      edge.addEventListener('pointerup', up);
+      edge.addEventListener('pointercancel', up);
+    });
+    edge.addEventListener('dblclick', () => resetWidth());
+  }
+  window.addEventListener('resize', () => { if(isOpen()) applyWidth(); });
+  // A size the app read later (from storage that answers asynchronously): used, not stored again.
+  function loadSize(v){ size = cleanHelpSize(v); if(isOpen()) applyWidth(); }
 
   function make(tag, cls, text){
     const e = document.createElement(tag);
@@ -78,6 +172,7 @@ function createHelpPanel(options){
   function isOpen(){ return !!(panel && panel.classList.contains('open')); }
   function open(topicId){
     if(!panel) build();
+    applyWidth();
     panel.classList.add('open');
     document.body.classList.add('help-open');
     if(topicId && topic(topicId)) showTopic(topicId, true);
@@ -115,6 +210,10 @@ function createHelpPanel(options){
     panel.setAttribute('aria-label', 'Help');
     const head = make('div', 'help-head');
     head.appendChild(make('span', 'help-title', '❓ Help'));
+    const wide = make('button', 'help-expand', '⤢');
+    wide.type = 'button';
+    wide.addEventListener('click', () => toggleWide());
+    head.appendChild(wide);
     const x = make('button', 'help-close', '×');
     x.type = 'button';
     x.title = 'Close Help (F1 or Esc)';
@@ -134,6 +233,11 @@ function createHelpPanel(options){
     });
     panel.appendChild(box);
     panel.appendChild(make('div', 'help-body'));
+    const edge = make('div', 'help-resize');
+    edge.title = 'Drag to make Help wider or narrower (double-click: the usual width)';
+    edge.setAttribute('aria-hidden', 'true');
+    wireResize(edge);
+    panel.appendChild(edge);
     // F1 and Esc close it from inside (apps skip their own shortcuts in a text box).
     panel.addEventListener('keydown', (ev) => {
       if(ev.key === 'Escape' || (ev.key === 'F1' && !ev.ctrlKey && !ev.metaKey && !ev.altKey && !ev.shiftKey)){
@@ -273,5 +377,5 @@ function createHelpPanel(options){
   }
 
   return { open, close, toggle, isOpen, showTopic, refresh, search, topic, topicText, topicCommands, topicForCommand, richText, render,
-    element: () => panel };
+    toggleWide, setWidth, loadSize, element: () => panel };
 }

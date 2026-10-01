@@ -32,6 +32,7 @@ const EXCEL_HELP_TOPICS = [
         'Press Generate & Download .xlsx (panel 5).',
       ] },
       { p: 'Everything happens in your browser: nothing is uploaded, and it works offline.' },
+      { p: 'This Help panel opens with ❓ or F1. Press ⤢ at its top for a wider reading view (⤡ brings it back), or drag its left edge to any width; it remembers the width.' },
       { see: ['load-model', 'generate'] },
     ] },
   { id: 'load-model', group: 'start', title: 'Loading a model',

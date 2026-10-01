@@ -70,6 +70,7 @@ const HELP_TOPICS = [
       { p: 'The big area is the canvas, where you build. Scroll it to move around.' },
       { p: 'To find a command by name, press {cmd:openLauncher} (Ctrl+K, or Cmd+K on a Mac), type part of its name and press Enter. Help topics are found there too.' },
       { p: 'This Help panel opens with F1, with ❓ at the top right, or with {cmd:openHelp}. You can keep working while it is open.' },
+      { p: 'To read more comfortably, press ⤢ at the top of the panel: it widens to a reading view, and ⤡ brings it back. Or drag its left edge to any width; a double-click on the edge goes back to the usual width. Help remembers the width.' },
       { see: ['launcher-shortcuts', 'canvases'] },
     ] },
 
