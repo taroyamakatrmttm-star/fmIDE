@@ -626,6 +626,17 @@ fmIDE and ExcelExporter at 1400 × 900 (the touch test at 1024 × 768 with a tou
 - By touch: a finger drags the edge to 500 wide; the page saw only touch.
 - ExcelExporter: 380, ⤢ 933 (wide; the page's right margin 933), the edge dragged to 450; its storage's `fmide-excel-help-size` holds `{"width":450}`; 450 again after a reload.
 
+### 43. What's new (`tests/43-whats-new.spec.js`; step 10, phase H5b)
+fmIDE and ExcelExporter at 1400 × 900; the data read in Node.
+- The data: fmIDE has more than 30 updates, ExcelExporter more than 15; ids unique (letters, digits, dashes), dates `YYYY-MM-DD`, newest first; each has a title, summary, why, what, how and at least one topic to read more, every one of which exists; every `{cmd:…}` names one of `fm.commands()`; ExcelExporter's name none.
+- The shared panel alone, with three made-up updates (2 Oct, 29 Sep, 1 Sep): nothing seen, two are new (the newest's last 14 days); seen 29 Sep, one (only it marked New); Every update shows the days "2 October 2026", "29 September 2026", "1 September 2026" and sets the date seen to 2 Oct, nothing new; a date seen that isn't a date counts as none.
+- fmIDE: ❓ has the dot; Help shows What's new with the three newest, the first marked New; Every update lists them all in order under one heading per day; the dot goes, the autosave's `ui.whatsNewSeen` is the newest date, back on the home no New marks, after a reload no dot.
+- An update's page (Add many rectangles at once): headings What changed, Why, How to use it, Good to know, Read more; the day in the crumb; no `{cmd:` markers; its Add Many Rectangles… button opens the window; its Rectangles guide opens, Back returns.
+- Searching "equal spacing" finds the update; `fm.command('openWhatsNew')` opens the list; the View tab's Help group holds Help and What's New.
+- A workspace file whose `ui.whatsNewSeen` is 2099-01-01, imported: ❓ keeps its dot.
+- ExcelExporter: ❓ Help has the dot; its own updates, in order; an update's page has the same headings; the dot goes and its storage's `fmide-excel-whats-new-seen` is the newest date; no dot after a reload.
+- Groups 31 and 32 count only the topic links (`[data-topic]`) and topic groups (not `.help-news-heading`) now that What's new sits above them; group 31's customised ribbon gets Help and What's New.
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.

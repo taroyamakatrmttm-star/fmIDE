@@ -504,6 +504,14 @@ var XLSX = (function(){
 .help-kbd{ margin-left:auto; font-family:Menlo,Consolas,monospace; font-size:10.5px; color:#6b7280; background:#f3f4f6; border:1px solid #e5e7eb; border-radius:5px; padding:0 5px; font-weight:400; }
 .help-run{ flex:none; width:30px; height:28px; border:1px solid #c7d2fe; background:#eef2ff; color:#3730a3; border-radius:6px; cursor:pointer; }
 .help-run:disabled{ opacity:.4; cursor:default; }
+/* What's new (H5b). */
+.help-new{ display:inline-block; margin-left:6px; padding:0 6px; border-radius:9px; background:#dcfce7; color:#166534; border:1px solid #86efac; font-size:10.5px; font-weight:700; vertical-align:1px; }
+.help-new-count{ display:inline-block; margin-left:6px; min-width:16px; padding:0 5px; border-radius:9px; background:#16a34a; color:#fff; font-size:10px; text-align:center; letter-spacing:0; }
+.help-news-all .help-topic-link-title{ color:#4f46e5; font-weight:600; }
+.help-news-day{ margin-top:16px; }
+/* A dot on an app's Help button while there are updates not yet seen. */
+.has-news{ position:relative; }
+.has-news::after{ content:''; position:absolute; top:3px; right:3px; width:8px; height:8px; border-radius:50%; background:#16a34a; box-shadow:0 0 0 2px #fff; }
 /* The width (H5a): the left edge drags; ⤢ is the reading view. */
 .help-expand{ font-size:17px; margin-right:2px; }
 .help-resize{ position:absolute; left:-4px; top:0; bottom:0; width:9px; cursor:ew-resize; touch-action:none; user-select:none; z-index:1; }
@@ -8603,6 +8611,12 @@ backLink.addEventListener('click', (ev) => {
 //   options.size (optional) — { get() → saved size, set(size) } where the app keeps the
 //                      panel's width ({ width, narrow }, read through cleanHelpSize); without
 //                      it the width lasts until the page closes; loadSize(size) gives one read later
+//   options.whatsNew (optional) — What's new (H5b): { entries, seen: { get(), set(date) },
+//                      onSeen() }. entries, newest first: { id, date ('YYYY-MM-DD'), title,
+//                      summary, what: [texts], why, how: [steps], notes: [texts], see: [topic
+//                      ids] } (texts may hold {cmd:id}); seen.get() is asked each time. An entry dated after the date seen is
+//                      new; with none seen yet, the ones from the last NEWS_FRESH_DAYS days of
+//                      the newest. Opening the list of every update marks them all seen.
 //   richText(tag, cls, text) is returned too: the same {cmd:id} buttons, for the app's own cards.
 //   The styles are src/shared/help-panel.css; each app sets --help-top (where the panel
 //   starts) and makes room for it under body.help-open, using --help-w (the panel's width).
@@ -8611,6 +8625,16 @@ backLink.addEventListener('click', (ev) => {
 // to the usual width), and ⤢ in the header widens it to a reading view, two thirds of the
 // window, and back. From HELP_WIDE_AT pixels the panel reads as a page (.wide: larger text, a
 // reading column). It always leaves HELP_KEEP_FREE pixels of the app beside it.
+const NEWS_FRESH_DAYS = 14, NEWS_ON_HOME = 3;
+// A date seen, from storage: 'YYYY-MM-DD', or ''.
+function cleanNewsSeen(v){ return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : ''; }
+// '2026-10-01' → '1 October 2026' (no time zones: the date is written as it is).
+function newsDateText(d){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(d || ''));
+  if(!m) return '';
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  return Number(m[3]) + ' ' + (months[Number(m[2]) - 1] || '') + ' ' + m[1];
+}
 const HELP_DEFAULT_W = 380, HELP_MIN_W = 300, HELP_WIDE_AT = 600, HELP_KEEP_FREE = 200;
 // A saved size (the person's own setting, but read from storage): numbers in range, or left out.
 function cleanHelpSize(v){
@@ -8630,6 +8654,57 @@ function createHelpPanel(options){
   const state = { view: 'home', topicId: null, query: '', back: [] };
   let panel = null;
   let size = null; // { width, narrow }: read from the app when first needed
+  const news = options.whatsNew && Array.isArray(options.whatsNew.entries) ? options.whatsNew : null;
+  const newsEntries = news ? news.entries : [];
+
+  // ---- What's new ----
+  // The date seen is the app's: asked each time (it may arrive from storage later).
+  function seenDate(){ return cleanNewsSeen(news && news.seen && news.seen.get ? news.seen.get() : ''); }
+  function freshFrom(){
+    const newest = newsEntries.length ? newsEntries[0].date : '';
+    const t = Date.parse(newest + 'T00:00:00Z');
+    if(!isFinite(t)) return '';
+    return new Date(t - NEWS_FRESH_DAYS * 86400000).toISOString().slice(0, 10);
+  }
+  function isNew(e){
+    const seen = seenDate();
+    return seen ? e.date > seen : e.date > freshFrom();
+  }
+  function unseenCount(){ return newsEntries.filter(isNew).length; }
+  function newsEntry(id){ return newsEntries.find(e => e.id === id) || null; }
+  function markNewsSeen(){
+    if(!newsEntries.length) return;
+    const newest = newsEntries[0].date;
+    if(seenDate() === newest) return;
+    if(news.seen && news.seen.set) news.seen.set(newest);
+    if(news.onSeen) news.onSeen();
+  }
+  // The app read the date seen later (from storage that answers asynchronously): show it.
+  function newsSeenChanged(){
+    if(news && news.onSeen) news.onSeen();
+    if(isOpen() && state.view === 'home') render();
+  }
+  function entryText(e){
+    const texts = [e.title, e.summary || '', e.why || ''].concat(e.what || [], e.how || [], e.notes || []);
+    return texts.join(' ').replace(CMD, (all, id) => { const c = cmds && cmds.get(id); return c ? cmds.label(c) : ''; });
+  }
+  function showNews(){
+    if(!panel) build();
+    state.back.push({ view: state.view, topicId: state.topicId });
+    state.view = 'news';
+    render();
+    panel.querySelector('.help-body').scrollTop = 0;
+    markNewsSeen();
+  }
+  function showNewsItem(id, fresh){
+    if(!panel) build();
+    if(fresh) state.back = [];
+    else state.back.push({ view: state.view, topicId: state.topicId });
+    state.view = 'newsItem';
+    state.topicId = id;
+    render();
+    panel.querySelector('.help-body').scrollTop = 0;
+  }
 
   // ---- width ----
   function savedSize(){
@@ -8749,7 +8824,11 @@ function createHelpPanel(options){
       if(!words.every(w => has(label + ' ' + cmds.sentence(c), w))) return null;
       return { c, score: words.filter(w => has(label, w)).length };
     }).filter(Boolean).sort((a, b) => b.score - a.score).map(r => r.c);
-    return { topics: foundTopics, commands: foundCommands };
+    const foundNews = newsEntries.map(e => {
+      if(!words.every(w => has(entryText(e), w))) return null;
+      return { e, score: words.filter(w => has(e.title, w)).length };
+    }).filter(Boolean).sort((a, b) => b.score - a.score).map(r => r.e);
+    return { topics: foundTopics, commands: foundCommands, news: foundNews };
   }
 
   function isOpen(){ return !!(panel && panel.classList.contains('open')); }
@@ -8835,6 +8914,8 @@ function createHelpPanel(options){
     const body = panel.querySelector('.help-body');
     body.textContent = '';
     if(state.view === 'topic' && topic(state.topicId)) renderTopic(body, topic(state.topicId));
+    else if(state.view === 'news' && news) renderNews(body);
+    else if(state.view === 'newsItem' && newsEntry(state.topicId)) renderNewsItem(body, newsEntry(state.topicId));
     else if(state.view === 'search' && state.query.trim()) renderSearch(body, state.query);
     else renderHome(body);
   }
@@ -8848,8 +8929,79 @@ function createHelpPanel(options){
     a.addEventListener('click', () => showTopic(t.id));
     return a;
   }
+  // An update in a list: its title, date, summary and a New mark.
+  function newsLink(e){
+    const a = make('button', 'help-topic-link help-news-link');
+    a.type = 'button';
+    a.dataset.news = e.id;
+    const title = make('span', 'help-topic-link-title', e.title);
+    if(isNew(e)) title.appendChild(make('span', 'help-new', 'New'));
+    a.appendChild(title);
+    a.appendChild(make('span', 'help-topic-link-summary', e.summary || ''));
+    a.addEventListener('click', () => showNewsItem(e.id));
+    return a;
+  }
+  function newsHeading(body){
+    const h = make('h3', 'help-group help-news-heading', '✨ What\'s new');
+    const n = unseenCount();
+    if(n) h.appendChild(make('span', 'help-new-count', String(n)));
+    body.appendChild(h);
+  }
+  function renderNewsHome(body){
+    if(!newsEntries.length) return;
+    newsHeading(body);
+    newsEntries.slice(0, NEWS_ON_HOME).forEach(e => body.appendChild(newsLink(e)));
+    const all = make('button', 'help-topic-link help-news-all');
+    all.type = 'button';
+    all.appendChild(make('span', 'help-topic-link-title', 'Every update (' + newsEntries.length + ') ›'));
+    all.addEventListener('click', () => showNews());
+    body.appendChild(all);
+  }
+  function backButton(){
+    const back = make('button', 'help-back', '‹ Back');
+    back.type = 'button';
+    back.addEventListener('click', () => goBack());
+    return back;
+  }
+  // Every update, newest first, under the day it came.
+  function renderNews(body){
+    const nav = make('div', 'help-nav');
+    nav.appendChild(backButton());
+    body.appendChild(nav);
+    body.appendChild(make('h2', 'help-topic-title', '✨ What\'s new'));
+    body.appendChild(make('p', 'help-summary', options.whatsNew.intro || 'Every update so far, newest first: what changed, why, and how to use it.'));
+    let day = null;
+    newsEntries.forEach(e => {
+      if(e.date !== day){ day = e.date; body.appendChild(make('h3', 'help-group help-news-day', newsDateText(day))); }
+      body.appendChild(newsLink(e));
+    });
+  }
+  function renderNewsItem(body, e){
+    const nav = make('div', 'help-nav');
+    nav.appendChild(backButton());
+    nav.appendChild(make('span', 'help-crumb', '✨ What\'s new · ' + newsDateText(e.date)));
+    body.appendChild(nav);
+    const art = make('article', 'help-topic help-news-item');
+    art.dataset.news = e.id;
+    art.appendChild(make('h2', 'help-topic-title', e.title));
+    if(e.summary) art.appendChild(make('p', 'help-summary', e.summary));
+    const section = (title) => art.appendChild(make('h3', 'help-group', title));
+    if(Array.isArray(e.what) && e.what.length){ section('What changed'); e.what.forEach(t => art.appendChild(richText('p', 'help-p', t))); }
+    if(e.why){ section('Why'); art.appendChild(richText('p', 'help-p', e.why)); }
+    if(Array.isArray(e.how) && e.how.length){
+      section('How to use it');
+      const ol = make('ol', 'help-steps');
+      e.how.forEach(t => ol.appendChild(richText('li', '', t)));
+      art.appendChild(ol);
+    }
+    if(Array.isArray(e.notes) && e.notes.length){ section('Good to know'); e.notes.forEach(t => art.appendChild(richText('p', 'help-tip', '💡 ' + t))); }
+    const list = (Array.isArray(e.see) ? e.see : []).map(topic).filter(Boolean);
+    if(list.length){ section('Read more'); list.forEach(x => art.appendChild(topicLink(x))); }
+    body.appendChild(art);
+  }
   function renderHome(body){
     if(options.intro) body.appendChild(make('p', 'help-intro', options.intro));
+    renderNewsHome(body);
     if(options.homeTop) options.homeTop(body, make);
     groups.forEach(g => {
       const list = topics.filter(t => t.group === g.id);
@@ -8860,7 +9012,7 @@ function createHelpPanel(options){
   }
   function renderSearch(body, q){
     const found = search(q);
-    if(!found.topics.length && !found.commands.length){
+    if(!found.topics.length && !found.commands.length && !found.news.length){
       body.appendChild(make('p', 'help-empty', 'Nothing matches "' + q.trim() + '". Try fewer or different words.'));
       return;
     }
@@ -8871,6 +9023,10 @@ function createHelpPanel(options){
     if(found.commands.length){
       body.appendChild(make('h3', 'help-group', 'Commands'));
       found.commands.forEach(c => body.appendChild(commandRow(c)));
+    }
+    if(found.news.length){
+      body.appendChild(make('h3', 'help-group', 'What\'s new'));
+      found.news.forEach(e => body.appendChild(newsLink(e)));
     }
   }
   // A command with its sentence and ▶ to run it (off while it can't run).
@@ -8960,7 +9116,7 @@ function createHelpPanel(options){
   }
 
   return { open, close, toggle, isOpen, showTopic, refresh, search, topic, topicText, topicCommands, topicForCommand, richText, render,
-    toggleWide, setWidth, loadSize, element: () => panel };
+    toggleWide, setWidth, loadSize, showNews, showNewsItem, unseenCount, newsSeenChanged, newsEntry, element: () => panel };
 }
 
 // =====================================================================================
@@ -8997,6 +9153,7 @@ const EXCEL_HELP_TOPICS = [
         'Press Generate & Download .xlsx (panel 5).',
       ] },
       { p: 'Everything happens in your browser: nothing is uploaded, and it works offline.' },
+      { p: 'What\'s new, at the top of this Help panel, lists every update to ExcelExporter, newest first, each with what changed, why and how to use it. A dot on ❓ Help means there is something you haven\'t seen yet.' },
       { p: 'This Help panel opens with ❓ or F1. Press ⤢ at its top for a wider reading view (⤡ brings it back), or drag its left edge to any width; it remembers the width.' },
       { see: ['load-model', 'generate'] },
     ] },
@@ -9210,13 +9367,280 @@ const EXCEL_HELP_TOPICS = [
     ] },
 ];
 
+// =====================================================================================
+// What's new in ExcelExporter (build step 10, phase H5b; docs/step10-help.md).
+// Copyright (c) 2026 Taro Yamaka. All rights reserved. Part of ExcelExporter and under its
+// licence (src/excel-exporter/LICENSE), like its help text.
+// =====================================================================================
+// Plain data, shown by ExcelExporter's Help panel (js/09d-help.js, options.whatsNew of the
+// shared panel). One entry per feature a person would notice, newest first; changes only
+// developers see are left out. The same shape as fmIDE's (src/help/fmide-whats-new.js):
+//   { id, date: 'YYYY-MM-DD', title, summary,
+//     what: [paragraphs], why, how: [numbered steps], notes: [tips], see: [topic ids] }
+// ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
+// **A change people will notice adds its entry here in the same pull request.**
+const EXCEL_WHATS_NEW = [
+  { id: 'whats-new', date: '2026-10-02', title: 'What\'s new, inside Help',
+    summary: 'Every update to ExcelExporter, newest first: what changed, why, and how to use it.',
+    what: [
+      'The Help panel now opens with What\'s new: the latest updates, and Every update for the whole list. Each update has its own page saying what changed, why, and how to use it.',
+      'Updates you haven\'t seen yet are marked New, and ❓ Help carries a small dot until you have looked.',
+    ],
+    why: 'One place to catch up on what is new, in plain words.',
+    how: [
+      'Press ❓ Help (or F1) and look at What\'s new at the top.',
+      'Pick an update to read its page; Back returns to the list.',
+    ],
+    notes: ['Opening the list of every update marks them all as seen.'],
+    see: ['what-is-excelexporter'] },
+
+  { id: 'wider-help', date: '2026-10-02', title: 'A wider Help panel',
+    summary: 'Widen Help to a reading view with ⤢, or drag its edge to any width.',
+    what: [
+      '⤢ at the top of the Help panel widens it to two thirds of the window, with larger text; ⤡ brings it back. You can also drag its left edge to any width; a double-click on the edge goes back to the usual width.',
+    ],
+    why: 'The narrow panel was cramped for reading longer guides.',
+    how: ['Open Help, then press ⤢ or drag the panel\'s left edge.'],
+    notes: ['Help remembers the width. The page stays beside the panel.'],
+    see: ['what-is-excelexporter'] },
+
+  { id: 'what-is-remembered', date: '2026-10-02', title: 'Help explains what is remembered',
+    summary: 'New guides on what ExcelExporter keeps in your browser, and which layout wins.',
+    what: [
+      'A guide, What is remembered, and which layout wins: the three things kept in this browser (each model\'s layout, each module\'s layout, your Excel style), that Start Over keeps them, and the order a layout comes from when a file loads.',
+      'A guide, A template\'s attached layout: how to attach a module\'s layout in fmIDE, where it travels, and exactly when it is used. How the workbook looks now says which format wins.',
+    ],
+    why: 'What ExcelExporter remembers, and why a layout comes back, was confusing.',
+    how: ['Open Help and read the two guides below.'],
+    see: ['remembered', 'template-layouts', 'formats'] },
+
+  { id: 'new-operators', date: '2026-10-01', title: 'New operators in the workbook',
+    summary: 'if, period, comparisons, rounding, ln, exp, sqrt, int, trunc and choose become Excel formulas.',
+    what: [
+      'The operators fmIDE gained — the period number, if, =, ≠, and, or, not, round, roundup, rounddown, ln, exp, sqrt, int, trunc and choose — are written as Excel\'s own functions (IF, ROUND, LN, CHOOSE and the rest), so the workbook calculates exactly as fmIDE does.',
+      'In Excel, the period number reads the sheet\'s Period # cells.',
+    ],
+    why: 'So models using them still become live, ordinary Excel formulas.',
+    how: ['Nothing to do: load a model that uses them and generate as usual.'],
+    see: ['differences'] },
+
+  { id: 'instance-layouts', date: '2026-10-01', title: 'Block instances remember their layout',
+    summary: 'Arrange a block\'s instance tab once; other instances and models follow.',
+    what: [
+      'For a block added from a template in fmIDE, ExcelExporter remembers how you arranged an instance tab, and every model with that block starts its instance tabs that way the first time it is laid out.',
+      'Lay out the other instances like this, on an instance tab in the Tabs panel, gives the block\'s other instances in the model the same layout — for any block.',
+    ],
+    why: 'A block used many times meant arranging the same tab many times.',
+    how: [
+      'Arrange one instance tab (its rows, labels, formats).',
+      'In the Tabs panel, press Lay out the other instances like this on it.',
+    ],
+    notes: ['Tab names are kept. Forget on an instance tab forgets only the instances\' layout.'],
+    see: ['module-layouts', 'blocks'] },
+
+  { id: 'template-layouts', date: '2026-09-30', title: 'A template\'s Excel layout is used',
+    summary: 'A module whose template carries an Excel layout is laid out with it.',
+    what: [
+      'Load a .fmide document or workspace: a module whose template has an Excel layout attached — yours, or one from a library pack — is laid out with it the first time the model is laid out here. The tab says "layout from the template".',
+    ],
+    why: 'So a module arranged once looks right for everyone who uses its template.',
+    how: [
+      'In fmIDE, attach the layout to the template (📎 Attach Excel layout… in the Templates window).',
+      'Save the document, then load it here.',
+    ],
+    notes: ['Your own remembered layout for a module wins. A system file (Save System) carries no templates.'],
+    see: ['template-layouts', 'remembered'] },
+
+  { id: 'module-layouts', date: '2026-09-30', title: 'Modules remember their layout',
+    summary: 'Arrange a module\'s tab once; every model with that module starts with it.',
+    what: [
+      'When you change the tab of a module — a canvas added from a template in fmIDE — ExcelExporter remembers its layout: tab name, row order, labels, blank and label rows, Include / Constant, formats and indents.',
+      'Every model with that module starts with it the first time it is laid out here. Rows are matched by rectangle name.',
+    ],
+    why: 'The same module appears in many models; arranging it every time was repetitive.',
+    how: [
+      'Arrange a tab marked 🧩.',
+      'Load another model with the same module: its tab is laid out the same way.',
+    ],
+    notes: ['A model you have already arranged keeps its own layout. Export / Import Module Layouts move them to another computer; Forget drops one.'],
+    see: ['module-layouts', 'remembered'] },
+
+  { id: 'excel-style', date: '2026-09-30', title: 'Your own Excel style',
+    summary: 'Set how every cell looks in Excel, once, for every model.',
+    what: [
+      'The Excel style (panel 2) sets, for each of seven roles — Inputs, Calculations, Links, Headers, Section Headers, Labels, Notes — the fill, font colour, bold, font size and border. It is kept in this browser and used for every model.',
+      'Number formats still come from fmIDE; colours and fonts on fmIDE\'s canvas stay on the canvas.',
+    ],
+    why: 'Your workbooks should look like yours, whoever built the model.',
+    how: [
+      'Open the Excel style in panel 2 and change a role.',
+      'Export Excel Style moves it to another computer; Reset to Defaults brings back the built-in look.',
+    ],
+    notes: ['To highlight a single row, use 🎨 on it in the Tree View.'],
+    see: ['formats'] },
+
+  { id: 'help-pages-site', date: '2026-09-30', title: 'Help pages on the website',
+    summary: 'ExcelExporter\'s guides as plain pages at /help/excel/ on fmIDE\'s site.',
+    what: ['Every ExcelExporter guide is also a page on the published site, made from the same text as the Help panel.'],
+    why: 'To read the guides outside the app, share a link, or print them.',
+    how: ['Open the site\'s /help/excel/ address in a browser.'],
+    see: ['what-is-excelexporter'] },
+
+  { id: 'help-panel', date: '2026-09-30', title: 'Help inside ExcelExporter',
+    summary: 'Plain-English guides beside the page: ❓ Help, F1, or ? beside each panel.',
+    what: [
+      'A Help panel with guides to loading a model, tabs, rows, the Tree View, blocks, the Inputs tab, scenarios, formatting, the list of differences and generating. It sits beside the page, so you can follow the steps while you work.',
+    ],
+    why: 'So the answer to "how do I…" is always at hand, even offline.',
+    how: ['Press ❓ Help, F1, or the ? beside a panel\'s heading.'],
+    see: ['what-is-excelexporter'] },
+
+  { id: 'back-to-fmide', date: '2026-09-29', title: '← Back to fmIDE',
+    summary: 'A button at the top left returns to fmIDE.',
+    what: [
+      'On a computer, ← Back to fmIDE closes ExcelExporter\'s window, showing fmIDE again as you left it (it asks first when a model is loaded). On an iPad home-screen app, it goes back to fmIDE.',
+      'fmIDE\'s Open ExcelExporter now brings this window back instead of loading it again, so a model loaded here is not lost.',
+    ],
+    why: 'Going back and forth between building and exporting should be easy and never lose work.',
+    how: ['Press ← Back to fmIDE at the top left.'],
+    notes: ['Your layout is kept; load the file again next time.'],
+    see: ['back-to-fmide'] },
+
+  { id: 'inputs-tab-links', date: '2026-09-28', title: 'Inputs read from another tab come from the Inputs tab',
+    summary: 'With the Inputs tab, formulas point straight at the input\'s cell there.',
+    what: [
+      'With the Inputs tab on, a formula reading an input from another tab now points at the input\'s cell on the Inputs tab, where its numbers live — not at the input\'s own row, which only links there.',
+    ],
+    why: 'Following a formula back to its input now takes one step instead of two.',
+    how: ['Turn on Gather inputs on a separate tab (panel 3) and generate.'],
+    notes: ['The values don\'t change.'],
+    see: ['inputs-tab'] },
+
+  { id: 'touch-tree', date: '2026-09-28', title: 'The Tree View by finger',
+    summary: 'Hold a row for its menu, double-tap to rename, on a tablet.',
+    what: [
+      'On a touchscreen, press and hold a row in the Tree View for its menu, which also offers Add to / Remove from selection and Select from the last row to here. Double-tap a row to rename it.',
+    ],
+    why: 'So a workbook can be arranged on a tablet.',
+    how: ['Open the Tree View and press and hold a row.'],
+    see: ['tree-view'] },
+
+  { id: 'sorted-new-layout', date: '2026-09-28', title: 'A new layout starts in formula order',
+    summary: 'Rows start in calculation order, inputs first; vintages stay together.',
+    what: [
+      'A model laid out for the first time starts sorted by calculation order, inputs first, in formula order within each group. A saved layout keeps its order.',
+      'Sorting no longer splits a vertical block\'s vintage and Total rows apart, and renaming by double-click always hits the row you clicked.',
+    ],
+    why: 'A workbook should read top to bottom in the order things are calculated.',
+    how: ['Load a model; use Sort rows by to re-sort at any time.'],
+    see: ['rows'] },
+
+  { id: 'row-format', date: '2026-09-27', title: 'A row\'s own format, indents and a full right-click menu',
+    summary: 'Give one row its own look, indent labels, and do everything from the right-click menu.',
+    what: [
+      '🎨 on any row in the Tree View gives it its own fill, font colour, bold, border and number format in Excel. Reset to the Excel style takes it off.',
+      'Alt+Shift+→ and ← indent the selected labels, like Excel\'s Increase Indent. Right-click on rows offers every command of the selection bar.',
+    ],
+    why: 'Highlighting a total or indenting sub-items makes a workbook easier to read.',
+    how: [
+      'Select rows in the Tree View.',
+      'Right-click for the menu, or use 🎨 and Alt+Shift+→.',
+    ],
+    see: ['tree-view'] },
+
+  { id: 'tidier-formulas', date: '2026-09-27', title: 'Tidier formulas and new defaults',
+    summary: 'Brackets only where Excel needs them; links shown as links.',
+    what: [
+      'Formulas have brackets only where Excel\'s order of operations needs them: =F4*(1-F5) instead of =(F4*(1-F5)).',
+      'A rectangle that only pulls a value from another sheet is written =Sales!E7 and gets the Links format.',
+      'A new layout starts without enforced sections, in formula order, with period labels on the Inputs tab\'s group headers.',
+    ],
+    why: 'A workbook people will read and audit should look like one a person wrote.',
+    how: ['Nothing to do; the values don\'t change.'],
+    see: ['rows', 'formats'] },
+
+  { id: 'function-calls', date: '2026-09-27', title: 'Your own functions in Excel',
+    summary: 'fmIDE functions are written out as ordinary formulas, listed on a Functions tab.',
+    what: [
+      'A cell that reads one of fmIDE\'s functions holds the function\'s formula with each input replaced by the cell it reads: Margin(Revenue, Cost) becomes =(E5-E6)/E5. A Functions tab lists each function written out.',
+    ],
+    why: 'So a model using functions still becomes a plain workbook anyone can follow, with no macros or add-ins.',
+    how: ['Nothing to do: load a model with functions and generate.'],
+    notes: ['A formula a call would make longer than Excel allows is written as #N/A and listed before download.'],
+    see: ['differences'] },
+
+  { id: 'differences', date: '2026-09-27', title: 'Same numbers as fmIDE, and a list where they differ',
+    summary: 'The workbook calculates as fmIDE does; before download, a list shows any difference.',
+    what: [
+      'ExcelExporter writes its formulas from the same description of the model that fmIDE calculates on, and the two are checked against each other on every sample model.',
+      'Before you download, a yellow list shows where the workbook will differ from fmIDE — usually something broken in the model, such as a loop or an alias to nothing.',
+    ],
+    why: 'A workbook is only trustworthy if it gives exactly the numbers you saw while building.',
+    how: ['Read the yellow list above Generate, fix the model in fmIDE if needed, and download.'],
+    notes: ['The list never blocks the download. Generate is faster on large models.'],
+    see: ['differences'] },
+
+  { id: 'update-notice', date: '2026-09-27', title: 'A notice when a new version is ready',
+    summary: 'On the website, ExcelExporter says when an update is ready, like fmIDE.',
+    what: ['On the web app, ExcelExporter shows "A new version is ready" with Reload (your layout is kept; load your file again) and Later.'],
+    why: 'It used to stay on the old version without saying so.',
+    how: ['Press Reload when the notice appears.'],
+    see: ['load-model'] },
+
+  { id: 'block-inputs', date: '2026-09-27', title: 'Block inputs in the workbook',
+    summary: 'Unconnected block inputs get their own row; Block Input rectangles join the Inputs tab.',
+    what: [
+      'When nothing feeds a block instance\'s input, that input gets its own row on the instance\'s tab, holding the number typed in the block, and the block\'s formulas refer to it.',
+      'Gather inputs on a separate tab also gathers rectangles marked Block Input in fmIDE, when their canvas is not used as a block.',
+    ],
+    why: 'Every number the workbook uses should be visible and changeable in a cell.',
+    how: ['Nothing to do: generate as usual.'],
+    see: ['blocks', 'inputs-tab'] },
+
+  { id: 'fmide-documents', date: '2026-09-27', title: 'Load .fmide documents',
+    summary: 'Open the file fmIDE\'s Save writes, as well as system and workspace files.',
+    what: ['The model picker accepts .fmide documents, the files fmIDE saves with File → Save.'],
+    why: 'So the file you keep is the file you export.',
+    how: ['Drop a .fmide file on panel 1, or click the box to choose it.'],
+    see: ['load-model'] },
+
+  { id: 'foundations', date: '2026-09-26', title: 'Where ExcelExporter started',
+    summary: 'A built-in Excel writer, scenarios, the Inputs tab and vertical blocks.',
+    what: [
+      'ExcelExporter writes .xlsx files itself, offline, with formulas that recalculate when the workbook opens.',
+      'Scenarios per input and global cases on a Scenarios tab; an Inputs tab gathering every input; the same column layout on every tab; vertical blocks with a Vintage column; row sorting and the Tree View.',
+    ],
+    why: 'To turn an fmIDE model into a workbook people can use and audit, entirely on your computer.',
+    how: ['Load a model, arrange it if you like, and press Generate & Download .xlsx.'],
+    see: ['what-is-excelexporter', 'scenarios'] },
+];
+
 const excelHelp = createHelpPanel({
   groups: EXCEL_HELP_GROUPS, topics: EXCEL_HELP_TOPICS,
   intro: 'Plain-English guides to ExcelExporter. Pick a topic, or search above. The "?" beside each panel\'s heading opens its topic.',
   placeholder: 'Search help — e.g. "scenarios" or "tree view"',
   // H5a: the panel's width, kept in this browser (HELP_SIZE_KEY) for every model.
   size: { get: () => ({}), set: (v) => { layoutStore.put(HELP_SIZE_KEY, JSON.stringify(cleanHelpSize(v))).catch(() => {}); } },
+  // H5b: What's new (excel-whats-new.js). The date seen is kept in this browser (NEWS_SEEN_KEY).
+  whatsNew: { entries: EXCEL_WHATS_NEW,
+    intro: 'Every update to ExcelExporter so far, newest first: what changed, why, and how to use it.',
+    seen: { get: () => excelNewsSeen, set: (d) => { excelNewsSeen = cleanNewsSeen(d); layoutStore.put(NEWS_SEEN_KEY, excelNewsSeen).catch(() => {}); } },
+    onSeen: () => syncExcelNewsDot() },
 });
+let excelNewsSeen = '';
+const NEWS_SEEN_KEY = 'fmide-excel-whats-new-seen';
+// ❓ Help carries a dot while there are updates not yet seen.
+function syncExcelNewsDot(){
+  const b = $('btnHelp');
+  if(!b) return;
+  const n = excelHelp.unseenCount();
+  b.classList.toggle('has-news', n > 0);
+  b.dataset.news = String(n);
+}
+layoutsMigrated.then(() => layoutStore.get(NEWS_SEEN_KEY)).then(raw => {
+  excelNewsSeen = cleanNewsSeen(raw);
+  excelHelp.newsSeenChanged();
+}, () => syncExcelNewsDot());
 // The width saved before: read once (the store answers later); a bad value is ignored.
 const HELP_SIZE_KEY = 'fmide-excel-help-size';
 layoutsMigrated.then(() => layoutStore.get(HELP_SIZE_KEY)).then(raw => {

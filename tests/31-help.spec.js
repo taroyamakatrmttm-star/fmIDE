@@ -107,9 +107,10 @@ test.describe('the help text', () => {
     // Every group has a topic, and the panel lists every topic under its group.
     expect(groups.filter(g => !H.HELP_TOPICS.some(t => t.group === g))).toEqual([]);
     await page.keyboard.press('F1');
-    // (H3 put the Tutorials group, and a link to the welcome card, above the topics: group 33.)
-    await expect(page.locator('#helpPanel .help-topic-link:not(.help-show-welcome)')).toHaveCount(H.HELP_TOPICS.length);
-    await expect(page.locator('#helpPanel .help-group')).toHaveText(['Tutorials'].concat(H.HELP_GROUPS.map(g => g.title)), { ignoreCase: true });
+    // (H3 put the Tutorials group, and a link to the welcome card, above the topics: group 33;
+    // H5b What's new above them: group 43.)
+    await expect(page.locator('#helpPanel .help-topic-link[data-topic]')).toHaveCount(H.HELP_TOPICS.length);
+    await expect(page.locator('#helpPanel .help-group:not(.help-news-heading)')).toHaveText(['Tutorials'].concat(H.HELP_GROUPS.map(g => g.title)), { ignoreCase: true });
   });
 
   test('a topic shows its steps as text, and a command in it runs', async ({ page }) => {
@@ -201,7 +202,7 @@ test.describe('tooltips and the ribbon', () => {
     const write = (name, text) => { const f = testInfo.outputPath(name); fs.writeFileSync(f, text); return f; };
     await F.importViaCommand(page, 'importWorkspace', write('old.json', ws(undefined)));
     await F.acceptAll(page);
-    expect(await groups()).toEqual(['Stuff:openShortcuts', 'Help:openHelp']);
+    expect(await groups()).toEqual(['Stuff:openShortcuts', 'Help:openHelp,openWhatsNew']); // H5b: What's New beside Help
     await F.importViaCommand(page, 'importWorkspace', write('removed.json', ws(true)));
     await F.acceptAll(page);
     expect(await groups()).toEqual(['Stuff:openShortcuts']);

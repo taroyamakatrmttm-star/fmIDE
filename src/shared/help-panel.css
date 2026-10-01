@@ -45,6 +45,14 @@
 .help-kbd{ margin-left:auto; font-family:Menlo,Consolas,monospace; font-size:10.5px; color:#6b7280; background:#f3f4f6; border:1px solid #e5e7eb; border-radius:5px; padding:0 5px; font-weight:400; }
 .help-run{ flex:none; width:30px; height:28px; border:1px solid #c7d2fe; background:#eef2ff; color:#3730a3; border-radius:6px; cursor:pointer; }
 .help-run:disabled{ opacity:.4; cursor:default; }
+/* What's new (H5b). */
+.help-new{ display:inline-block; margin-left:6px; padding:0 6px; border-radius:9px; background:#dcfce7; color:#166534; border:1px solid #86efac; font-size:10.5px; font-weight:700; vertical-align:1px; }
+.help-new-count{ display:inline-block; margin-left:6px; min-width:16px; padding:0 5px; border-radius:9px; background:#16a34a; color:#fff; font-size:10px; text-align:center; letter-spacing:0; }
+.help-news-all .help-topic-link-title{ color:#4f46e5; font-weight:600; }
+.help-news-day{ margin-top:16px; }
+/* A dot on an app's Help button while there are updates not yet seen. */
+.has-news{ position:relative; }
+.has-news::after{ content:''; position:absolute; top:3px; right:3px; width:8px; height:8px; border-radius:50%; background:#16a34a; box-shadow:0 0 0 2px #fff; }
 /* The width (H5a): the left edge drags; ⤢ is the reading view. */
 .help-expand{ font-size:17px; margin-right:2px; }
 .help-resize{ position:absolute; left:-4px; top:0; bottom:0; width:9px; cursor:ew-resize; touch-action:none; user-select:none; z-index:1; }

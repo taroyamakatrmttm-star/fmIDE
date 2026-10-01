@@ -12,7 +12,7 @@
   const FUNCTIONS_RIBBON_GROUP = { id:'myFunctions', label:'My Functions', items:[
     { cmd:'openFunctions', size:'large' }, { cmd:'insertFunction' }, { cmd:'updateFunction' }, { cmd:'importFunctions' } ] };
   // Help (step 10), at the end of the View tab.
-  const HELP_RIBBON_GROUP = { id:'help', label:'Help', items:[ { cmd:'openHelp', size:'large' } ] };
+  const HELP_RIBBON_GROUP = { id:'help', label:'Help', items:[ { cmd:'openHelp', size:'large' }, { cmd:'openWhatsNew' } ] };
   const DEFAULT_RIBBON = {
     qat: ['undo', 'redo', 'evaluate', 'openLauncher'],
     tabs: [
@@ -180,6 +180,7 @@
     helpBtn.title = 'Help' + (shortcutBindings.openHelp ? ` (${prettyCombo(shortcutBindings.openHelp)})` : '') + '\nPlain-English guides and a help search';
     helpBtn.addEventListener('click', () => { closeRibbonFlyout(); toggleHelp(); });
     right.appendChild(helpBtn);
+    if(help.unseenCount() > 0){ helpBtn.classList.add('has-news'); helpBtn.dataset.news = String(help.unseenCount()); }
     const colBtn = el('button', 'rb-iconbtn', ribbonState.collapsed ? '⌄' : '⌃');
     colBtn.type = 'button';
     colBtn.title = (ribbonState.collapsed ? 'Pin the ribbon open' : 'Collapse the ribbon') + (shortcutBindings.toggleRibbon ? ` (${prettyCombo(shortcutBindings.toggleRibbon)})` : '');
