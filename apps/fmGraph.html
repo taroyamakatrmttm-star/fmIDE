@@ -3570,6 +3570,7 @@ function removeButton(id, what){
 }
 
 function renderBoard(){
+  rememberOpenEditors(); // (05b-chart-render.js)
   const bars = $('barList'), sliders = $('sliderList');
   bars.textContent = '';
   sliders.textContent = '';
@@ -3878,6 +3879,17 @@ function switchLayout(c, layout){
     Object.assign(c, { layout: 'columns', periods: { mode: 'all' }, groups: [{ name: '', parts: keys }], check: false });
     delete c.steps; delete c.period;
   }
+}
+
+// Which editors are open, read from the page just before it is drawn again: the browser tells
+// the 'toggle' listener a moment after the click, so a redraw in between (a slow machine) would
+// otherwise close an editor just opened.
+function rememberOpenEditors(){
+  document.querySelectorAll('#barList .chart-widget').forEach(el => {
+    const box = el.querySelector('details.chart-edit');
+    if(!box) return;
+    if(box.open) chartsEditing.add(el.dataset.id); else chartsEditing.delete(el.dataset.id);
+  });
 }
 
 function chartEditor(c){

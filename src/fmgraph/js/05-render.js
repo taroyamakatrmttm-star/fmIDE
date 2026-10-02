@@ -101,6 +101,7 @@ function removeButton(id, what){
 }
 
 function renderBoard(){
+  rememberOpenEditors(); // (05b-chart-render.js)
   const bars = $('barList'), sliders = $('sliderList');
   bars.textContent = '';
   sliders.textContent = '';

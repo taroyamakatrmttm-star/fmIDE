@@ -46,6 +46,17 @@ function switchLayout(c, layout){
   }
 }
 
+// Which editors are open, read from the page just before it is drawn again: the browser tells
+// the 'toggle' listener a moment after the click, so a redraw in between (a slow machine) would
+// otherwise close an editor just opened.
+function rememberOpenEditors(){
+  document.querySelectorAll('#barList .chart-widget').forEach(el => {
+    const box = el.querySelector('details.chart-edit');
+    if(!box) return;
+    if(box.open) chartsEditing.add(el.dataset.id); else chartsEditing.delete(el.dataset.id);
+  });
+}
+
 function chartEditor(c){
   const box = make('details', 'chart-edit');
   if(chartsEditing.has(c.id)) box.open = true;

@@ -86,6 +86,19 @@ test('the sample\'s waterfall: each step from the running total, totals checked'
   await expect(chart.locator('.bar-errors li').first()).toHaveText('Gross profit: the steps before it add up to 20,800, not 5,200.');
 });
 
+// Found on CI (G4b): the browser reports an editor opened a moment after the click, so the board
+// drawn again in between closed it. Now the page itself says which editors are open.
+test('an editor just opened stays open when the board is drawn again at once', async ({ page }) => {
+  await openSample(page);
+  const id = await chartId(page, 'Profit');
+  const open = await g(page, (i) => {
+    document.querySelector('.chart-widget[data-id="' + i + '"] .chart-edit > summary').click();
+    fmGraph.setWide(i, false); // draws the board again before the browser reports the click
+    return document.querySelector('.chart-widget[data-id="' + i + '"] .chart-edit').open;
+  }, id);
+  expect(open).toBe(true);
+});
+
 test('columns: below zero stacks downwards; an error shows as ! with its reason; mixed units are pointed out', async ({ page }) => {
   await openApp(page, 'fmGraph');
   await page.waitForFunction(() => !!window.fmGraph);

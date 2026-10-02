@@ -706,6 +706,8 @@ fmGraph (step 15, phase G2) at 1400 × 900, through its page and `window.fmGraph
 - A chart of Overheads and Cost of sales is not lit by Price; the balance sheet and waterfall are.
 - Markup in a title and a group name shown as text (no element made); a role that isn't one is "add"; 20 groups become 12. No page error.
 
+- An editor opened by a click, with the board drawn again before the browser reports it (found on CI in G4b): it stays open.
+
 ### 49. fmGraph's boards (`tests/49-fmgraph-boards.spec.js`; part of `npm run test:fmgraph`)
 fmGraph (step 15, phase G3a), the sample model, through the page and `window.fmGraph`.
 - Tabs: one "Board" (Delete off); + Board adds "Board (2)", shown, empty; a bar added there; renamed "Pricing" by a double-click and Enter; each tab shows its own widgets (4 and 2 sliders, 1); Duplicate adds "Pricing copy"; Delete asks (Cancel keeps it, Delete removes it); after a reload both tabs, Pricing shown. No page error.
@@ -742,8 +744,8 @@ fmGraph (step 15, phase G4b), the sample model unless said, through the page and
 - A = Price 13, then Price reset and Volume +10%: Swap gives 13 and none, the strip "Volume +10%", the boxes 13 and 0; `swapA()` back gives "Price 13" and none, 10; after Reset all, `pinA()` is "the model's own numbers".
 - Pinned: Undo still off; on a new board a Profit bar shows −3,000 … −3,900 from A; two undos keep A; another model clears it (`comparing()` null, `swapA()` refused).
 - Markup as an input's name: the strip shows it as text; no element made, nothing run.
-- A number typed in Price's box: more than 10 bars glide, none after 400 ms, the bar's transform none; two redraws 30 ms apart: the second makes no animation.
-- Reduced motion: neither a slider move nor Reset all makes an animation.
+- A number typed in Price's box: more than 10 bars glide (glides counted as they start), none after 400 ms, the bar's transform none; two redraws 30 ms apart: the second makes no animation.
+- Reduced motion: neither a slider move nor Reset all makes an animation, or starts a glide.
 - By finger (touch, 1024 × 1400): a tap on Pin as A, then on Swap; the page saw only touch.
 
 ## Deliverable

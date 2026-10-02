@@ -112,12 +112,18 @@ test('bars glide to their new values, not while a slider is dragged', async ({ p
   await openSample(page);
   const [price] = await sliders(page);
   await page.waitForTimeout(300);
+  // Counts the glides started (the page's redraw comes on the next frame, so a check straight
+  // after typing could come before it).
+  await page.evaluate(() => {
+    window.__glides = 0;
+    const own = Element.prototype.animate;
+    Element.prototype.animate = function(...a){ if(this.matches('rect[data-anim]')) window.__glides++; return own.apply(this, a); };
+  });
   // A typed number: the bars glide, and end where the value puts them.
   const box = page.locator('.slider-widget').first().locator('input.slider-value');
   await box.fill('14');
   await box.press('Enter');
-  const running = await page.evaluate(() => document.getAnimations().filter(a => a.effect && a.effect.target && a.effect.target.matches('rect[data-anim]')).length);
-  expect(running).toBeGreaterThan(10);
+  await expect.poll(() => page.evaluate(() => window.__glides)).toBeGreaterThan(10);
   await page.waitForTimeout(400);
   expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
   const bar = profitBar(page).locator('rect.b-now').first();
@@ -136,6 +142,11 @@ test('bars glide to their new values, not while a slider is dragged', async ({ p
 test('with reduced motion, nothing glides', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await openSample(page);
+  await page.evaluate(() => {
+    window.__glides = 0;
+    const own = Element.prototype.animate;
+    Element.prototype.animate = function(...a){ if(this.matches('rect[data-anim]')) window.__glides++; return own.apply(this, a); };
+  });
   await page.waitForTimeout(300);
   await page.click('#btnResetAll');
   const [price] = await sliders(page);
@@ -144,7 +155,8 @@ test('with reduced motion, nothing glides', async ({ page }) => {
   expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
   await page.waitForTimeout(300);
   await page.click('#btnResetAll');
-  expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => window.__glides)).toBe(0);
 });
 
 test('by finger: Pin as A and Swap', async ({ browser }) => {
