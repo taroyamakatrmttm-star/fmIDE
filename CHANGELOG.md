@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Pinch to zoom (step 13, phase 13b)
+- **Two fingers on the canvas zoom it on a tablet**, around the point between them, from 25% to 200%; moving both fingers together moves the canvas. One finger scrolls, drags and opens menus as before.
+- A drag the first finger had begun is cancelled when the second finger lands: the box goes back and no undo step is left. A pinch ending within 5% of 100% settles at 100%. Each canvas keeps its own zoom, as with the mouse; macros never record it. No file format changed.
+
 ## Zoom (step 13, phase 13a)
 - **The canvas zooms from 25% to 200%:** Ctrl (Cmd on a Mac) + the mouse wheel, or a trackpad's pinch, around the pointer — a plain wheel still scrolls; **Ctrl + = / − / 0** zoom in, out and back to 100%.
 - **A zoom control** at the bottom-right of the canvas (− 100% +); the percentage opens a menu with every level, **Fit the model** and **Fit the selection**. The same commands are in **View → Zoom** and the Command Launcher; a customised ribbon gets the group once.

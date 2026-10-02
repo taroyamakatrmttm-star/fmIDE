@@ -42,6 +42,15 @@
     hideWelcomeCard(); // the welcome card steps aside once you start building (01c)
   }
 
+  // Takes back a change that began and was cancelled (a drag a pinch interrupted, 07b): the
+  // model as it was before it, and no undo step for it.
+  function dropLastHistory(){
+    if(!history.length) return;
+    restore(history.pop());
+    render();
+    updateHistoryButtons();
+  }
+
   function restore(snap){
     const data = JSON.parse(snap);
     canvases = data.canvases;

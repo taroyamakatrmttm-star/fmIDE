@@ -68,7 +68,7 @@ const HELP_TOPICS = [
       { p: 'The ribbon at the top holds every command, in tabs: File (documents, templates, the library), Home (the everyday commands), Insert (rectangles, operators, functions), Arrange, Model (periods and canvases), View and Macros. Point at a button to see what it does.' },
       { p: 'Below the ribbon are the canvas tabs. A model can have several canvases, like the sheets of a workbook; + adds one.' },
       { p: 'The big area is the canvas, where you build. Scroll it to move around.' },
-      { p: 'To see more or less of it, zoom: hold Ctrl (Cmd on a Mac) and turn the mouse wheel, or pinch on a trackpad; Ctrl + = and Ctrl + − zoom in and out, and Ctrl + 0 goes back to 100%. The control at the bottom-right shows the zoom: − and + step it, and the percentage opens a menu with {cmd:zoomFit} and {cmd:zoomSelection}. Each canvas keeps its own zoom, and everything works the same at any zoom.' },
+      { p: 'To see more or less of it, zoom: hold Ctrl (Cmd on a Mac) and turn the mouse wheel, or pinch on a trackpad (or with two fingers on a tablet); Ctrl + = and Ctrl + − zoom in and out, and Ctrl + 0 goes back to 100%. The control at the bottom-right shows the zoom: − and + step it, and the percentage opens a menu with {cmd:zoomFit} and {cmd:zoomSelection}. Each canvas keeps its own zoom, and everything works the same at any zoom.' },
       { p: 'To find a command by name, press {cmd:openLauncher} (Ctrl+K, or Cmd+K on a Mac), type part of its name and press Enter. Help topics are found there too.' },
       { p: 'This Help panel opens with F1, with ❓ at the top right, or with {cmd:openHelp}. You can keep working while it is open.' },
       { p: 'What\'s new, at the top of the Help panel (or {cmd:openWhatsNew}), lists every update, newest first: what changed, why, and how to use it. A dot on ❓ means there is something you haven\'t seen yet.' },
@@ -391,7 +391,7 @@ const HELP_TOPICS = [
 
   // ---------- Touch ----------
   { id: 'touch', group: 'touch', title: 'Using fmIDE on a tablet',
-    keywords: 'touch tablet ipad finger pen hold press tap double-tap menu',
+    keywords: 'touch tablet ipad finger pen hold press tap double-tap menu pinch zoom',
     summary: 'Drag with a finger; press and hold for a menu; double-tap to edit.',
     body: [
       { p: 'Drag boxes with a finger. Tap a box to show its dots, then drag from a dot to draw an arrow.' },
@@ -404,6 +404,7 @@ const HELP_TOPICS = [
         'Edit, Properties and Delete.',
       ] },
       { p: 'One finger on empty canvas scrolls. Press and hold there, then drag, to select with a box.' },
+      { p: 'Pinch with two fingers to zoom the canvas around the point between them; move both fingers together to move around. A pinch that ends close to 100% settles at 100%.' },
       { p: 'Double-tap does what a double-click does.' },
       { see: ['arrows', 'arranging'] },
     ] },

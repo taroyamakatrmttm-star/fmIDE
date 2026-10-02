@@ -422,7 +422,7 @@ File → Browse Library… on the site built with a sample library (`W.startSite
 ### 27. Touch (`tests/27-touch.spec.js`; step 9)
 fmIDE in Chromium with a touchscreen at 1024 × 768 (`hasTouch`). Each touch is real touch input sent through the Chrome DevTools Protocol (`Input.dispatchTouchEvent`: start, moves, end), not a mouse event; the tests that drag check every `pointerdown` the page saw was `touch`. The mouse is covered, unchanged, by every other group.
 - A finger drags a node (Price, from 60, 60 by 150, 80 — within the snap distance of 210, 140); one Undo puts it back. A tap then selects just that node, doesn't move it, and leaves nothing half-dragged.
-- Only the first finger acts: with a finger dragging Price, a second finger dragging Revenue moves nothing.
+- Two fingers, one on Price and one on Revenue, moved apart: neither moves; they pinch the canvas instead (step 13b, group 45), so the zoom is no longer 100%.
 - A finger draws an arrow from a dot (tap to select, then from the east dot onto Revenue): exactly one arrow, Price → Revenue, and no leftover line; lifted over empty canvas, no arrow.
 - A finger resizes a node by its corner (+60, +30).
 - A finger holds the canvas tab "One", then drags it past "Three": the order becomes Two, Three, One (9b: before, it dragged straight away). A quick swipe over the tabs (fourteen canvases) scrolls the strip and moves no tab.
@@ -440,7 +440,7 @@ fmIDE in Chromium with a touchscreen at 1024 × 768 (`hasTouch`). Each touch is 
 - Larger touch areas (`body.touch-input`): on a selected node, a finger 9 pixels beyond the east dot draws an arrow, and 12 pixels inside the resize corner resizes without moving; a mouse moving takes the class away (on a screen whose main pointer is fine).
 - A finger scrolls the text of a node being edited (thirty lines).
 - Step 9c, the screen. On an emulated tablet (`isMobile`, 768 × 1024), fmIDE and ExcelExporter carry the viewport line (`width=device-width, initial-scale=1, interactive-widget=resizes-content`) and are laid out 768 wide (not shrunk from 980).
-- `touch-action`: `manipulation` on the page and the ribbon (no double-tap zoom), `pan-x pan-y` on the canvas (two fingers don't zoom it); a node stays `none`, a canvas tab `pan-x`.
+- `touch-action`: `manipulation` on the page and the ribbon (no double-tap zoom), `pan-x pan-y` on the canvas (two fingers don't zoom the page there; from step 13b they zoom the canvas, group 45); a node stays `none`, a canvas tab `pan-x`.
 - A text box a finger types in (Manage Periods) has 16px text.
 - The ribbon's Home tab is wider than the screen: an arrow shows at the right end only; taps on it scroll the ribbon along (showing the left arrow) until the end, where the last button is on the screen and clear of the left arrow; taps on the left arrow go back to the start.
 - On a touchscreen (`pointer: coarse`) the ribbon's small buttons are at least 28 pixels tall, and the canvas tabs and canvas start right below the ribbon.
@@ -650,6 +650,17 @@ fmIDE at 1400 × 900, with a real mouse and keyboard.
 - An exported workspace's system has no zoom; a workspace whose `ui.canvasZoom` says 33%, imported: 100%. Recording a macro while zooming (by `fm.setZoom`, the commands and the control) records only the rectangle added.
 - A tutorial: 67% before, 100% inside it, 67% again after Exit.
 - The View tab's Zoom group holds Zoom to Fit, In, Out, 100% and Selection; an old customised ribbon (`zoomGroupAdded` unset) gets it once, after its own groups; with the flag set, not.
+
+### 45. Pinch to zoom (`tests/45-pinch-zoom.spec.js`; step 13, phase 13b)
+fmIDE at 1024 × 768 with a touchscreen; two real fingers through the Chrome DevTools Protocol (`Input.dispatchTouchEvent`, a touch point each, the second landing after the first), the helper `twoFingers` in `tests/helpers/touch.js`. After each test the page has seen only touch.
+- Fingers 200 pixels apart either side of a node, spread to 300: 150%, the control says so, and the point between them stays under them (within 3 pixels); brought from 300 to 100 apart: 50%, the node again in place. The node's position in the model never changes.
+- Both fingers moved 120 left and 90 up, the same distance apart: the canvas scrolls by that, the zoom stays 100%. Spread from 80 to 800 apart: 200%; from 800 to 20: 25%.
+- Ending at 104%: 100% (not `.zoomed`); at 90%: 90%.
+- The first finger already scrolling the canvas when the second lands: the pinch still zooms (over 150%), nothing moves in the model, no page error.
+- A node dragged 90, 60 by the first finger, then a second finger lands: the node is back at its place, the page no longer `.dragging`; the pinch then zooms to 200% (at most); the last undo step is still adding the other node.
+- One finger as before: at 50% it drags a node 100, 60 for 50, 30 on the screen, and on empty canvas it scrolls without zooming.
+- Recording a macro while pinching records only the rectangle added; the exported system has no zoom; the autosave's `ui.canvasZoom` holds 0.5; a new canvas 100%, the first again 50%.
+- One finger on the ribbon and one on the canvas: no zoom.
 
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.

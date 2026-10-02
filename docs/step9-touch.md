@@ -9,7 +9,7 @@
 - **Devices:** tablets and touchscreen laptops. Phones (a separate narrow layout) are a later step.
 - **One finger on empty canvas scrolls it.** Press and hold, then drag, for a selection box.
 - **The mouse-only gestures** are reached through a menu opened by pressing and holding a node.
-- **No pinch to zoom** in step 9: fmIDE has no zoom for the mouse either, so zoom is its own step.
+- **No pinch to zoom** in step 9: fmIDE has no zoom for the mouse either, so zoom is its own step (step 13; the pinch came in 13b, `docs/step13-zoom.md`).
 - **Three phases**, one pull request each, each approved before the next.
 - A virtual on-screen mouse was considered and not chosen: slower than touching things directly; events a page makes itself can't open the on-screen keyboard, the clipboard or file pickers, so direct touch would be needed anyway; and a real mouse or trackpad already works on these devices.
 

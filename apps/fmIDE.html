@@ -1685,7 +1685,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         { p: 'The ribbon at the top holds every command, in tabs: File (documents, templates, the library), Home (the everyday commands), Insert (rectangles, operators, functions), Arrange, Model (periods and canvases), View and Macros. Point at a button to see what it does.' },
         { p: 'Below the ribbon are the canvas tabs. A model can have several canvases, like the sheets of a workbook; + adds one.' },
         { p: 'The big area is the canvas, where you build. Scroll it to move around.' },
-        { p: 'To see more or less of it, zoom: hold Ctrl (Cmd on a Mac) and turn the mouse wheel, or pinch on a trackpad; Ctrl + = and Ctrl + − zoom in and out, and Ctrl + 0 goes back to 100%. The control at the bottom-right shows the zoom: − and + step it, and the percentage opens a menu with {cmd:zoomFit} and {cmd:zoomSelection}. Each canvas keeps its own zoom, and everything works the same at any zoom.' },
+        { p: 'To see more or less of it, zoom: hold Ctrl (Cmd on a Mac) and turn the mouse wheel, or pinch on a trackpad (or with two fingers on a tablet); Ctrl + = and Ctrl + − zoom in and out, and Ctrl + 0 goes back to 100%. The control at the bottom-right shows the zoom: − and + step it, and the percentage opens a menu with {cmd:zoomFit} and {cmd:zoomSelection}. Each canvas keeps its own zoom, and everything works the same at any zoom.' },
         { p: 'To find a command by name, press {cmd:openLauncher} (Ctrl+K, or Cmd+K on a Mac), type part of its name and press Enter. Help topics are found there too.' },
         { p: 'This Help panel opens with F1, with ❓ at the top right, or with {cmd:openHelp}. You can keep working while it is open.' },
         { p: 'What\'s new, at the top of the Help panel (or {cmd:openWhatsNew}), lists every update, newest first: what changed, why, and how to use it. A dot on ❓ means there is something you haven\'t seen yet.' },
@@ -2008,7 +2008,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
 
     // ---------- Touch ----------
     { id: 'touch', group: 'touch', title: 'Using fmIDE on a tablet',
-      keywords: 'touch tablet ipad finger pen hold press tap double-tap menu',
+      keywords: 'touch tablet ipad finger pen hold press tap double-tap menu pinch zoom',
       summary: 'Drag with a finger; press and hold for a menu; double-tap to edit.',
       body: [
         { p: 'Drag boxes with a finger. Tap a box to show its dots, then drag from a dot to draw an arrow.' },
@@ -2021,6 +2021,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
           'Edit, Properties and Delete.',
         ] },
         { p: 'One finger on empty canvas scrolls. Press and hold there, then drag, to select with a box.' },
+        { p: 'Pinch with two fingers to zoom the canvas around the point between them; move both fingers together to move around. A pinch that ends close to 100% settles at 100%.' },
         { p: 'Double-tap does what a double-click does.' },
         { see: ['arrows', 'arranging'] },
       ] },
@@ -2152,6 +2153,24 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // entry: ids, dates in order, commands and topics that exist.
   // **A change people will notice adds its entry here in the same pull request.**
   const WHATS_NEW = [
+    { id: 'pinch-zoom', date: '2026-10-02', title: 'Pinch to zoom on a tablet',
+      summary: 'Two fingers on the canvas zoom it and move it around, as on a map.',
+      what: [
+        'On a tablet, pinch the canvas with two fingers to zoom between 25% and 200%. It zooms around the point between your fingers, so what you are looking at stays under them.',
+        'Moving both fingers together moves the canvas. One finger still scrolls, drags boxes and opens menus as before.',
+      ],
+      why: 'Zoom came first for the mouse and keyboard; on a tablet, two fingers are the natural way to do it.',
+      how: [
+        'Put two fingers on the canvas and spread them apart to zoom in, or bring them together to zoom out.',
+        'Slide both fingers to move around while you zoom.',
+        'Lift your fingers; the control at the bottom-right shows the zoom.',
+      ],
+      notes: [
+        'If one finger was already dragging a box when the second lands, the box goes back where it was and the pinch takes over. Nothing is added to Undo.',
+        'A pinch that ends close to 100% settles at exactly 100%. Each canvas keeps its own zoom, as with the mouse.',
+      ],
+      see: ['touch', 'finding-your-way'] },
+
     { id: 'zoom', date: '2026-10-02', title: 'Zoom the canvas',
       summary: 'See the whole model at once, or zoom in on a detail, from 25% to 200%.',
       what: [
@@ -4217,7 +4236,10 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     const move = (ev) => { if(ev.pointerId !== id) return; last = ev; onMove(ev); };
     const up = (ev) => { if(ev.pointerId !== id) return; stop(); onUp(ev, false); };
     const cancel = (ev) => { if(ev.pointerId !== id) return; stop(); onUp(last, true); };
+    const cancelNow = () => { stop(); onUp(last, true); };
+    fingerActions.add(cancelNow);
     function stop(){
+      fingerActions.delete(cancelNow);
       document.removeEventListener('pointermove', move);
       document.removeEventListener('pointerup', up);
       document.removeEventListener('pointercancel', cancel);
@@ -4226,6 +4248,17 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     document.addEventListener('pointerup', up);
     document.addEventListener('pointercancel', cancel);
     return stop;
+  }
+
+  // What fingers and pens are doing now (followPointer): cancelFingerActions() cancels them all, as
+  // if the browser had taken the fingers over (onUp(last, true)) — a second finger starting a pinch
+  // (fmIDE's zoom, step 13b) undoes the drag the first one began. The fingers down are then no
+  // tap or double-tap either.
+  const fingerActions = new Set();
+  function cancelFingerActions(){
+    Array.from(fingerActions).forEach(cancel => cancel());
+    touchDownAt.clear();
+    lastTap = null;
   }
 
   const HOLD_MS = 500;    // a press this long, with the finger kept still, is a hold
@@ -4391,6 +4424,15 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     requestStoragePersistence();
     markDocDirty();
     hideWelcomeCard(); // the welcome card steps aside once you start building (01c)
+  }
+
+  // Takes back a change that began and was cancelled (a drag a pinch interrupted, 07b): the
+  // model as it was before it, and no undo step for it.
+  function dropLastHistory(){
+    if(!history.length) return;
+    restore(history.pop());
+    render();
+    updateHistoryButtons();
   }
 
   function restore(snap){
@@ -6540,10 +6582,10 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       last = {x,y,w,h};
       box.style.left = x+'px'; box.style.top = y+'px'; box.style.width = w+'px'; box.style.height = h+'px';
     }
-    function onUp(){
+    function onUp(ev, cancelled){
       document.body.classList.remove('dragging');
       box.remove();
-      if(last.w > 3 || last.h > 3){
+      if(!cancelled && (last.w > 3 || last.h > 3)){
         nodes.filter(n => rectsIntersect(last, {x:n.x,y:n.y,w:n.w,h:n.h})).forEach(n => selectedNodeIds.add(n.id));
         render();
       }
@@ -8549,7 +8591,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   }
 
   // =====================================================================================
-  // ---------- Zoom (build step 13, phase 13a; docs/step13-zoom.md) ----------
+  // ---------- Zoom (build step 13, phases 13a and 13b; docs/step13-zoom.md) ----------
   // =====================================================================================
   // The canvas is drawn at a scale, from ZOOM_MIN to ZOOM_MAX: #canvas is scaled (CSS
   // transform, set through --zoom on #viewport) inside #canvasZoom, which is sized to the scaled
@@ -8681,6 +8723,61 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     const factor = Math.exp(-Math.max(-100, Math.min(100, dy)) * 0.0025);
     setZoom(zoom * factor, ev.clientX, ev.clientY);
   }, { passive: false });
+
+  // ---------- two fingers on a tablet (phase 13b) ----------
+  // Two fingers on the canvas pinch to zoom around the point between them, and moving them
+  // together moves the canvas. A drag the first finger had begun is cancelled and undone
+  // (cancelFingerActions, shared pointer input). A pinch ending within 5% of 100% settles at
+  // 100%. Scrolling can only be stopped from touchmove, so the pinch follows touch events: while
+  // the browser lets us cancel them, it moves the canvas itself; once the browser has started
+  // scrolling (the first finger moved before the second landed), the browser moves it and the
+  // pinch only zooms around the point between the fingers. One finger is as before (step 9).
+  const PINCH_SNAP_TO_100 = 0.05;
+  let pinch = null; // { a, b: touch identifiers, d0, z0, mid }
+  function pinchTouches(ev){
+    if(!pinch) return null;
+    const list = Array.from(ev.touches);
+    const a = list.find(t => t.identifier === pinch.a), b = list.find(t => t.identifier === pinch.b);
+    return a && b ? [a, b] : null;
+  }
+  const fingerGap = (a, b) => Math.max(1, Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY));
+  const fingerMid = (a, b) => ({ x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 });
+  // Shows zoom z with the canvas point under client point `from` moved to client point `to`.
+  function zoomMoving(z, from, to){
+    const vr = viewport.getBoundingClientRect();
+    const px = (viewport.scrollLeft + from.x - vr.left) / zoom, py = (viewport.scrollTop + from.y - vr.top) / zoom;
+    showZoom(z);
+    viewport.scrollLeft = Math.max(0, px * zoom - (to.x - vr.left));
+    viewport.scrollTop = Math.max(0, py * zoom - (to.y - vr.top));
+  }
+  viewport.addEventListener('touchstart', (ev) => {
+    if(pinch || ev.touches.length !== 2) return;
+    const [a, b] = Array.from(ev.touches);
+    if(!viewport.contains(a.target) || !viewport.contains(b.target)) return;
+    cancelFingerActions();
+    closeZoomMenu();
+    pinch = { a: a.identifier, b: b.identifier, d0: fingerGap(a, b), z0: zoom, mid: fingerMid(a, b) };
+    if(ev.cancelable) ev.preventDefault();
+  }, { passive: false });
+  // Followed on the document: a finger's events keep going to the element it went down on, which
+  // a redraw may have taken out of the page.
+  document.addEventListener('touchmove', (ev) => {
+    const t = pinchTouches(ev);
+    if(!t) return;
+    const ours = ev.cancelable;
+    if(ours) ev.preventDefault();
+    const mid = fingerMid(t[0], t[1]);
+    zoomMoving(pinch.z0 * fingerGap(t[0], t[1]) / pinch.d0, ours ? pinch.mid : mid, mid);
+    pinch.mid = mid;
+  }, { passive: false });
+  function endPinch(ev){
+    if(!pinch || pinchTouches(ev)) return;
+    if(zoom !== 1 && Math.abs(zoom - 1) < PINCH_SNAP_TO_100) zoomMoving(1, pinch.mid, pinch.mid);
+    pinch = null;
+    rememberZoom();
+  }
+  document.addEventListener('touchend', endPinch);
+  document.addEventListener('touchcancel', endPinch);
 
   // ---------- the zoom control, bottom-right of the canvas ----------
   let zoomControl = null;
@@ -9047,9 +9144,11 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       showGapMarks(snap.gaps);
       render();
     }
-    function onUp(){
+    function onUp(ev, cancelled){
       document.body.classList.remove('dragging');
       hideGuides();
+      // A second finger started a pinch (07b): the drag never happened.
+      if(cancelled && historyPushed){ dropLastHistory(); return; }
       if(duplicated){ syncAutoConnections(); clearComputed(); render(); }
       if(historyPushed && recorder.active){
         const pn = getNode(workingPrimaryId);
@@ -9161,8 +9260,9 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       n.h = Math.max(44, origH + (ev.clientY - startY) / zoom);
       render();
     }
-    function onUp(){
+    function onUp(ev, cancelled){
       document.body.classList.remove('dragging');
+      if(cancelled && historyPushed){ dropLastHistory(); return; } // a pinch began (07b)
       if(historyPushed && recorder.active) recorder.add('resize', { node: n, w: n.w, h: n.h });
     }
     followPointer(downEvent, onMove, onUp);

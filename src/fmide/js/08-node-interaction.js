@@ -315,9 +315,11 @@
       showGapMarks(snap.gaps);
       render();
     }
-    function onUp(){
+    function onUp(ev, cancelled){
       document.body.classList.remove('dragging');
       hideGuides();
+      // A second finger started a pinch (07b): the drag never happened.
+      if(cancelled && historyPushed){ dropLastHistory(); return; }
       if(duplicated){ syncAutoConnections(); clearComputed(); render(); }
       if(historyPushed && recorder.active){
         const pn = getNode(workingPrimaryId);
@@ -429,8 +431,9 @@
       n.h = Math.max(44, origH + (ev.clientY - startY) / zoom);
       render();
     }
-    function onUp(){
+    function onUp(ev, cancelled){
       document.body.classList.remove('dragging');
+      if(cancelled && historyPushed){ dropLastHistory(); return; } // a pinch began (07b)
       if(historyPushed && recorder.active) recorder.add('resize', { node: n, w: n.w, h: n.h });
     }
     followPointer(downEvent, onMove, onUp);

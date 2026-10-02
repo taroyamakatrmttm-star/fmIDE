@@ -83,7 +83,8 @@ test('a finger drags a node, in one undo step, and a tap selects it', async ({ p
   expect(pageErrors).toEqual([]);
 });
 
-test('only the first finger acts: a second finger on another node moves nothing', async ({ page, pageErrors }) => {
+// Since step 13b two fingers on the canvas pinch it (group 45): neither node moves; the canvas zooms.
+test('two fingers on two nodes move neither: they pinch the canvas instead', async ({ page, pageErrors }) => {
   const { a, b } = await setup(page);
   const cdp = await page.context().newCDPSession(page);
   const send = (type, points) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points });
@@ -93,8 +94,9 @@ test('only the first finger acts: a second finger on another node moves nothing'
   await send('touchStart', [{ x: p.x, y: p.y, id: 1 }, { x: q.x, y: q.y, id: 2 }]);
   for(let i = 1; i <= 6; i++) await send('touchMove', [{ x: p.x + i * 15, y: p.y, id: 1 }, { x: q.x, y: q.y + i * 15, id: 2 }]);
   await send('touchEnd', []);
-  expect((await nodeOf(page, a)).x).toBeGreaterThan(100);
+  expect(await nodeOf(page, a)).toMatchObject({ x: 60, y: 60 });
   expect(await nodeOf(page, b)).toMatchObject({ x: 420, y: 240 });
+  expect(await page.evaluate(() => fm.zoom())).not.toBe(1);
   expect(pageErrors).toEqual([]);
 });
 
