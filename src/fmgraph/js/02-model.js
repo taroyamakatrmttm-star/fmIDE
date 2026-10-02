@@ -142,7 +142,7 @@ function reachMap(ir){
     }
   }));
   const cache = new Map();
-  return function reachOf(key){
+  function reachOf(key){
     if(cache.has(key)) return cache.get(key);
     const seen = new Set(), todo = [key];
     while(todo.length){
@@ -153,7 +153,29 @@ function reachMap(ir){
     }
     cache.set(key, seen);
     return seen;
+  }
+  // Trace (G4a): the shortest way along the arrows from one key to another, as the list of
+  // keys passed through (both ends included), or null when `from` doesn't reach `to`.
+  reachOf.path = function(from, to){
+    if(from === to) return [from];
+    const back = new Map([[from, null]]), queue = [from];
+    for(let i = 0; i < queue.length; i++){
+      const outs = next.get(queue[i]);
+      if(!outs) continue;
+      for(const o of outs){
+        if(back.has(o)) continue;
+        back.set(o, queue[i]);
+        if(o === to){
+          const out = [to];
+          for(let k = queue[i]; k !== null; k = back.get(k)) out.unshift(k);
+          return out;
+        }
+        queue.push(o);
+      }
+    }
+    return null;
   };
+  return reachOf;
 }
 
 // A rectangle's result in one period of a calculation: { value } or { error }.

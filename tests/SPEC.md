@@ -725,6 +725,17 @@ fmGraph (step 15, phase G3b) with fmIDE, the sample system `formats/sys-current.
 - Boards sent from a window fmIDE didn't open, a non-board file and text that isn't JSON from fmGraph's window, and a change during a tutorial: none reach the document.
 - ExcelExporter opens a version 11 document with boards.
 
+### 51. fmGraph's exploring (`tests/51-fmgraph-explore.spec.js`; part of `npm run test:fmgraph`)
+fmGraph (step 15, phase G4a), the sample model unless said, through the page and `window.fmGraph`.
+- Trace on the Profit bar: 🔍 pressed; the board tracing; the ways "Price → Revenue → Gross profit → Profit" and "Volume → …"; Unit cost and Overheads with + Slider; both sliders and the bar traced; Undo still off; 🔍 again, × and Esc each clear it. No page error.
+- The balance sheet: inputs Unit cost, Overheads, Equipment, Debt; + Slider on Equipment adds a third slider, now a way (and not an input); the waterfall traced instead (one note): Equipment's slider not traced, faded (opacity 0.45); Undo takes the slider back, and then nothing is left to undo.
+- Closing cash traced; → on Price's slider: the board moving, not tracing; blur: tracing again, two sliders lit. + Board and back: no trace. Traced, then removed: no trace.
+- A bar of Price: its way is just "Price", no inputs; a new board with a Profit bar and no sliders: "There are no sliders on this board yet.", four inputs.
+- Biggest movers: open, empty note before a move; Price at 13: 7 rows, first Profit · Year 1, "1,500 → 4,500 (+3,000 (+200%))", up; Price not listed; Profit's button "On the board" (off); + Bar on Revenue adds its bar (then On the board); `movers(2)`: Profit, Opening equity (6,400 → 16,300, Year 4); Reset all: empty again. No page error.
+- Ten ÷ Split and Ten × Split, the panel closed first: Split at 0 lists nothing; opened: Share first ("was 5, now: …", err), Double "20 → 0 (−20 (−100%))"; `movers()` gives Share's error.
+- Markup as names (an input, the result, the canvas): shown as text in the trace and the movers; no element made, nothing run.
+- By finger (touch, 1024 × 1400): a tap on 🔍 traces; a tap on + Bar in the movers adds the bar; the page saw only touch.
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.

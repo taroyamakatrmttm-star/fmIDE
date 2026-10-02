@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph: Trace and Biggest movers (step 15, phase G4a)
+- **Trace**: 🔍 on a bar or chart lights the sliders that reach it and shows, in words, the way each gets there, plus the inputs that reach it with no slider yet (+ Slider). 🔍 again, × or Esc stops it.
+- **Biggest movers**: the rectangles the sliders change most in the whole model, against the model's own numbers, biggest change in % first, with + Bar.
+
 ## fmGraph boards in documents (step 15, phase G3b)
 - **Boards are kept in the `.fmide` document**: with fmGraph opened from fmIDE, each change to the boards goes back to fmIDE, the document shows unsaved changes, and Save keeps the boards with the model. Opening the document later (in fmIDE, then Open fmGraph, or in fmGraph directly) brings them back, ahead of the boards the browser kept.
 - **File format**: workspace (`.fmide`) version 11 may carry `graphBoards`; older documents open as before. ExcelExporter ignores the boards.

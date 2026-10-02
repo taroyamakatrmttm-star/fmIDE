@@ -173,3 +173,28 @@
   .gbar-pop{ position:absolute; right:0; top:calc(100% + 6px); z-index:40; min-width:200px; background:#fff; color:var(--ink); border:1px solid var(--line); border-radius:9px; padding:5px; box-shadow:0 10px 30px rgba(16,24,40,.18); }
   .gbar-pop button{ display:block; width:100%; text-align:left; border:none; background:none; padding:7px 10px; }
   .gbar-pop button:hover:not(:disabled){ background:var(--brand-soft); }
+
+  /* Exploring (G4a): Trace and Biggest movers */
+  .widget-trace{ border:none; background:none; padding:2px 6px; font-size:14px; opacity:.7; }
+  .widget-trace:hover{ opacity:1; background:none; }
+  .widget-trace[aria-pressed="true"]{ opacity:1; background:#e0f2f1; border-radius:6px; }
+  .board.tracing .slider-widget{ opacity:.45; }
+  .board.tracing .slider-widget.traced{ opacity:1; box-shadow:0 0 0 2px var(--reach); }
+  .board.tracing #barList > .widget.traced{ box-shadow:0 0 0 2px var(--reach); }
+  .trace-note{ margin:6px 0; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:#f8fafc; font-size:13px; }
+  .trace-head{ display:flex; justify-content:space-between; align-items:center; }
+  .trace-close{ border:none; background:none; color:var(--soft-ink); padding:0 6px; font-size:16px; }
+  .trace-paths, .trace-inputs{ margin:4px 0; padding-left:18px; }
+  .trace-inputs li{ display:flex; gap:8px; align-items:baseline; }
+  .trace-canvas{ color:var(--soft-ink); font-size:12px; }
+  .trace-sub, .trace-none{ margin:4px 0; color:var(--soft-ink); }
+  .movers{ margin-top:14px; }
+  .movers > summary{ cursor:pointer; }
+  .movers-list{ margin:6px 0; padding-left:20px; font-size:13px; }
+  .mover{ margin:0 0 6px; }
+  .mover-top{ display:flex; gap:8px; align-items:baseline; flex-wrap:wrap; }
+  .mover-name{ font-weight:600; }
+  .mover-where{ color:var(--soft-ink); font-size:12px; flex:1 1 auto; }
+  .mover-change.up{ color:var(--up); }
+  .mover-change.down{ color:var(--down); }
+  .mover-change.err{ color:var(--down); }

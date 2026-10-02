@@ -85,7 +85,7 @@ Each slider position needs the whole model worked out again (`evaluateModel` on 
 | **G1** ✅ | The app: build, site, licence notice, **Open fmGraph** from fmIDE (File tab, App group), loading a model (file, drop, from fmIDE); one bar and one slider; ghost, difference label, highlighting and dimming; Reset; remembered per model in the browser; the speed measured (live or worked out ahead, as above); Help and What's new; tests, values agreeing with fmIDE |
 | **G2** ✅ | Charts: side by side, stacked with the balance check, waterfall with subtotals; period choices; units; errors; sample balance-sheet and income-statement boards |
 | **G3** ✅ (G3a, G3b) | Editing a board: placing and sizing widgets, titles, colours, undo; the `fmIDE-graph-board` file, Export / Import; boards in `.fmide` documents |
-| **G4** | Exploring: Trace, Biggest movers, animation, the A/B snapshot |
+| **G4** (G4a ✅) | Exploring: G4a Trace and Biggest movers; G4b the A/B snapshot and animation |
 | **G5** | Sharing: `attachments.graph` on templates (system templates too), packs and the checker; Try in fmGraph from Browse Library |
 | **G6** | Tutorials |
 
@@ -138,6 +138,14 @@ The owner chose (2 October 2026): a document's boards win over the ones the brow
 - **fmIDE** (`graphBoards` in `05-workspace-persistence.js`): saved with the document and the autosave; taken from a document opened or a workspace imported; none after opening a system file or New. Open fmGraph sends it with the model (`boards`, the file's text). A change sent back by fmGraph (`fmGraph:boards`, from the window it opened only, on the site from the site only) replaces it and marks the document unsaved — not an undo step in fmIDE (fmGraph has its own undo). During a tutorial nothing goes either way.
 - **fmGraph**: a model from fmIDE or a `.fmide` / workspace file brings its boards; when they show anything for the model they are shown instead of the browser's, and then kept in the browser too. With the model from fmIDE, every change to the boards (the same changes undo counts, and undo and redo themselves) is sent back shortly after; a slider moved or another board shown is not a change. A model from a file keeps its boards in the browser only.
 - A document without boards shows the browser's boards; they reach the document with the first change made to them in fmGraph.
+
+### G4a (Trace and Biggest movers)
+
+The owner chose (2 October 2026): G4 in two pull requests (G4a Trace and Biggest movers, G4b the A/B snapshot and animation); Biggest movers compared with the model's own numbers; animation always on, respecting the device's reduced-motion setting (G4b).
+
+- **Trace** (`05d-explore.js`): 🔍 on a bar or chart (`traceButton`) pins its trace (`traceId`, one at a time). The sliders on the board that reach it get `.traced` (the others fade), the widget too, and a note under its heading (`renderTraceNote`) gives each slider's way there, as rectangle names joined by →, the shortest along the arrows (`model.reach.path`, a breadth-first search over the same links as the lighting; for a chart, to the first of its rectangles reached). It lists the inputs that reach it with no slider (at most 12, then "and N more"), each with + Slider. 🔍 again, × or Esc clears it; another board, or the widget removed, clears it too. A slider being moved shows its own reach meanwhile (`paintReach` before `paintTrace`); the trace comes back when it is still. Not a change: no undo step, nothing saved.
+- **Biggest movers** (`biggestMovers`): every rectangle that isn't an input, compared with the model's own numbers in every period; a change within a millionth of the size (`AGREE_TOLERANCE`) is none; each rectangle's period with the largest change in % (base 0: any change counts as largest), ranked by %, then by amount; a rectangle that can't be worked out now, or could not before, first. The 8 largest show under the sliders (`#moversPanel`, open at first), with + Bar or "On the board". Worked out with each redraw while the panel is open — measured with `npm run bench`: a slider move is as fast as before.
+- `window.fmGraph.trace(id | null)` (returns the ways and inputs), `traced()`, `movers(n)`.
 
 ## Risks
 

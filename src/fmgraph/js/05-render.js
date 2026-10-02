@@ -109,12 +109,15 @@ function renderBoard(){
   board.items.forEach(w => {
     const el = w.kind === 'chart' ? chartWidget(w) : barWidget(w);
     el.classList.toggle('wide', !!w.wide);
-    el.querySelector('.widget-head').prepend(arrangeControls(w, el));
+    const head = el.querySelector('.widget-head');
+    head.prepend(arrangeControls(w, el));
+    head.insertBefore(traceButton(w), head.querySelector('.widget-remove')); // Trace (05d-explore.js)
     bars.appendChild(el);
   });
   board.sliders.forEach(s => { const el = sliders.querySelector('.slider-widget[data-id="' + s.id + '"]'); if(el) el.querySelector('.widget-head').prepend(arrangeControls(s, el)); });
   $('noBars').classList.toggle('hidden', board.items.length > 0);
   $('noSliders').classList.toggle('hidden', board.sliders.length > 0);
+  renderTraceNote();
   updateValues();
 }
 
@@ -263,6 +266,8 @@ function paintReach(){
   const s = board.sliders.find(x => x.id === activeSlider);
   const reached = s ? model.reach(s.key) : null;
   $('board').classList.toggle('moving', !!s);
+  // With no slider being moved, a trace (05d-explore.js) shows instead.
+  if(s || !paintTrace()) clearTracePaint();
   document.querySelectorAll('.slider-widget').forEach(el => el.classList.toggle('active', !!s && el.dataset.id === s.id));
   board.bars.forEach(b => {
     const el = document.querySelector('.bar-widget[data-id="' + b.id + '"]');
@@ -296,6 +301,7 @@ function updateValues(){
       ? 'Model\'s number: ' + fmtNum(baseValue(rect, first))
       : 'Model\'s numbers: ' + fmtNum(baseValue(rect, first)) + ' (' + model.periods[first] + ') to ' + fmtNum(baseValue(rect, last)) + ' (' + model.periods[last] + ')';
   });
+  updateMovers(results);
   paintReach();
 }
 

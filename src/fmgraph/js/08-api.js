@@ -145,6 +145,21 @@ window.fmGraph = Object.freeze({
     saveBoardSoon();
     renderBoard();
   },
+  // Exploring (G4a). trace(id): pin the trace of a bar or chart (null clears it); returns what
+  // reaches it — the sliders' ways there (rectangle names) and the inputs with no slider.
+  trace: (id) => {
+    if(id === null || id === undefined){ setTrace(null); return null; }
+    const w = board.items.find(x => x.id === id);
+    if(!w) throw new Error('There is no bar or chart "' + String(id).slice(0, 40) + '".');
+    setTrace(id);
+    const t = traceOf(w);
+    return { sliders: t.sliders.map(s => ({ id: s.id, path: s.path.slice() })), inputs: t.inputs.map(r => r.name) };
+  },
+  traced: () => traceId,
+  // movers(n): the rectangles the sliders change most (default 8), against the model's own numbers.
+  movers: (n) => biggestMovers(currentResults(), Math.max(1, Math.min(200, Number(n) || MOVERS_SHOWN))).map(m => ({
+    name: m.rect.name, canvas: m.rect.canvasName, period: model.periods[m.p],
+    was: m.was.error ? { error: m.was.error } : m.was.value, now: m.now.error ? { error: m.now.error } : m.now.value })),
   undo: () => undo(),
   redo: () => redo(),
   exportBoards: (all) => exportBoards(!!all),
