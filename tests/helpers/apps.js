@@ -9,7 +9,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const APPS_DIR = path.join(ROOT, 'apps');
 const FIXTURES = path.join(ROOT, 'tests', 'fixtures');
 const ORIGIN = 'http://local.test/';
-const APP_FILES = { ExcelExporter: 'ExcelExporter.html', fmIDE: 'fmIDE.html' };
+const APP_FILES = { ExcelExporter: 'ExcelExporter.html', fmIDE: 'fmIDE.html', fmGraph: 'fmGraph.html' };
 
 function fixture(...parts){ return path.join(FIXTURES, ...parts); }
 function readFixture(...parts){ return JSON.parse(fs.readFileSync(fixture(...parts), 'utf8')); }
