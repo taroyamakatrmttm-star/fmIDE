@@ -34,7 +34,7 @@ const SHARED_NAMES = ['FILE_FORMATS', 'FILE_LIMITS', 'fileTextProblem', 'fileDat
   'readLibraryPackData', 'readLibraryIndexData', 'LIBRARY_INDEX_LIMITS', 'cleanLibraryPackInfo', 'cleanItemOrigin', 'sameAuthorName', 'LIBRARY_PACK_LIMITS', 'LIBRARY_PACK_LICENCES',
   'isTemplateUid', 'cleanTemplateNote', 'TEMPLATE_NOTE_MAX', 'cleanRecipeData', 'RECIPE_MAX_PARTS', 'cleanTemplateAttachments', 'TEMPLATE_ATTACHMENT_LIMITS',
   'cleanFunctionDefinition', 'parseFunctionText', 'compileFunctions', 'functionNameOf', 'FUNCTION_LIMITS',
-  'compileModel', 'evaluateModel'];
+  'compileModel', 'evaluateModel', 'parseRectText'];
 // The shared files, loaded into a context of their own: they can use only what they define
 // (and a random-number source, for the ids an old file's upgrade gives).
 function loadShared(){
@@ -220,23 +220,76 @@ function checkOrigin(o, where, out, pack){
   out.note(where, `It says it was shared before: in the pack ${quote(o.packTitle)} (${o.packId}) by ${quote(o.author)}. It must be exactly a version approved in that pack.`);
 }
 
-// A template's attachments (step 11c): fmIDE keeps them only when they pass its general
-// checks exactly (a canvas template, known outputs, plain data, not too large or deep, made
-// for the template's own family); anything it would drop is an error. What is inside is
-// ExcelExporter's to check when it uses it; here only that no text hides characters.
+// A template's attachments (step 11c; fmGraph's board, step 15 G5a): fmIDE keeps them only when
+// they pass its general checks exactly (known outputs on the kinds of template they belong to,
+// plain data, not too large or deep, made for the template's own family; a board in its
+// template form); anything it would drop is an error. An Excel layout's contents are
+// ExcelExporter's to check when it uses it; a board's are checked here against the template
+// (checkGraphBoard). Here too: no text hides characters.
 function checkAttachments(t, where, out){
   if(t.attachments === undefined) return;
   const clean = S.cleanTemplateAttachments(t.attachments, t.family, t.kind);
   if(!clean || JSON.stringify(clean) !== JSON.stringify(t.attachments)){
-    out.error(where, `Its attachments ("attachments") aren't what fmIDE keeps: only a canvas template's Excel layout, made for this template's family, as plain data of at most ${S.TEMPLATE_ATTACHMENT_LIMITS.bytes / 1024} KB. fmIDE would drop them.`);
+    out.error(where, `Its attachments ("attachments") aren't what fmIDE keeps: only a canvas template's Excel layout and a canvas or system template's fmGraph board (in its template form), made for this template's family, as plain data of at most ${S.TEMPLATE_ATTACHMENT_LIMITS.bytes / 1024} KB. fmIDE would drop them.`);
     return;
   }
   const texts = [];
   const walk = (v) => { if(typeof v === 'string') texts.push(v); else if(v && typeof v === 'object') Object.keys(v).forEach(k => { texts.push(k); walk(v[k]); }); };
   walk(t.attachments);
   const hidden = texts.map(hiddenCharacter).find(Boolean);
-  if(hidden) out.error(where, `A text in its Excel layout contains a hidden character (${hidden}).`);
-  out.note(where, 'It carries an Excel layout for ExcelExporter (checked there when it is used).');
+  if(hidden) out.error(where, `A text in its attachments contains a hidden character (${hidden}).`);
+  if(t.attachments.excel) out.note(where, 'It carries an Excel layout for ExcelExporter (checked there when it is used).');
+  if(t.attachments.graph) out.note(where, 'It carries an fmGraph board.');
+}
+
+// A template's fmGraph board (step 15 G5a), against the template it comes with: every
+// rectangle it names — by name, and for a system template in the canvas of that name — must be
+// in the template exactly once (fmGraph would leave out a widget it can't place, or can't tell
+// apart), and it holds no more than fmGraph shows (20 boards, 40 bars and charts and 40 sliders
+// a board).
+const GRAPH_BOARD_CHECK_LIMITS = { boards: 20, items: 40, sliders: 40 };
+function checkGraphBoard(t, where, out){
+  const a = t.attachments && t.attachments.graph;
+  if(!a) return;
+  const err = (m) => out.error(where, 'Its fmGraph board: ' + m);
+  if(!Array.isArray(a.boards) || !a.boards.length) return err('it holds no boards.');
+  if(a.boards.length > GRAPH_BOARD_CHECK_LIMITS.boards) err(`it holds ${a.boards.length} boards; fmGraph shows at most ${GRAPH_BOARD_CHECK_LIMITS.boards}.`);
+  const system = t.kind === 'system';
+  const canvases = system ? (Array.isArray(t.data.canvases) ? t.data.canvases : []) : [t.data];
+  const lower = (s) => String(s).trim().toLowerCase();
+  const names = new Map();
+  canvases.forEach(c => (isObject(c) && Array.isArray(c.nodes) ? c.nodes : []).forEach(n => {
+    if(!isObject(n) || n.type !== 'value') return;
+    const name = lower(S.parseRectText(n.text).name || '');
+    if(!name) return;
+    const k = (system ? lower(c.name || '') : '') + '\u0000' + name;
+    names.set(k, (names.get(k) || 0) + 1);
+  }));
+  const ref = (r, what) => {
+    if(!isObject(r) || typeof r.name !== 'string' || !r.name.trim()) return err(what + ' names no rectangle.');
+    if(system && (typeof r.canvas !== 'string' || !r.canvas.trim())) return err(what + ' names no canvas.');
+    const shown = (system ? quote(r.canvas) + ' / ' : '') + quote(r.name);
+    const n = names.get((system ? lower(r.canvas) : '') + '\u0000' + lower(r.name));
+    if(!n) err(what + ' names ' + shown + ', which the template doesn\'t have.');
+    else if(n > 1) err(what + ' names ' + shown + ', which the template has more than once, so fmGraph can\'t tell which.');
+  };
+  a.boards.forEach((b, bi) => {
+    const bw = `board ${bi + 1}`;
+    if(!isObject(b)) return err(bw + ' isn\'t a board.');
+    const items = Array.isArray(b.items) ? b.items : [], sliders = Array.isArray(b.sliders) ? b.sliders : [];
+    if(items.length > GRAPH_BOARD_CHECK_LIMITS.items) err(`${bw} holds ${items.length} bars and charts; fmGraph shows at most ${GRAPH_BOARD_CHECK_LIMITS.items}.`);
+    if(sliders.length > GRAPH_BOARD_CHECK_LIMITS.sliders) err(`${bw} holds ${sliders.length} sliders; fmGraph shows at most ${GRAPH_BOARD_CHECK_LIMITS.sliders}.`);
+    items.forEach((w, wi) => {
+      const ww = `${bw}, item ${wi + 1}`;
+      if(!isObject(w) || (w.type !== 'bar' && w.type !== 'chart')) return err(ww + ' isn\'t a bar or a chart.');
+      if(w.type === 'bar') return ref(w, ww);
+      const refs = w.layout === 'flow' ? (Array.isArray(w.steps) ? w.steps : [])
+        : (Array.isArray(w.groups) ? w.groups.flatMap(g => isObject(g) && Array.isArray(g.parts) ? g.parts : []) : []);
+      if(!refs.length) return err(ww + ' shows no rectangles.');
+      refs.forEach((r, ri) => ref(r, `${ww}, rectangle ${ri + 1}`));
+    });
+    sliders.forEach((s, si) => ref(s, `${bw}, slider ${si + 1}`));
+  });
 }
 
 // ---- templates and recipes ----
@@ -272,6 +325,7 @@ function checkTemplates(list, packVersion, out, pack){
     if(t.kind === 'recipe') checkRecipe(t, where, err);
     else checkTemplateModel(t, where, err, out);
     if(bad) return;
+    checkGraphBoard(t, where, out);
     // Within the pack: one family is one kind and one name; a version is there once.
     const fam = byFamily.get(t.family);
     if(fam && fam.kind !== t.kind) { out.error(where, `Its family is also used by ${fam.where}, which is a different kind of template.`); return; }

@@ -11,13 +11,13 @@ const FILE_FORMATS = {
   'system':               { current: SHARED_FILE_VERSIONS['system'], label: 'system', where: 'File → Load System' },
   'module':               { current: 7, label: 'module',              where: 'File → Load Module' },
   'fmIDE-workspace':      { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'workspace', where: 'File → Import Workspace' },
-  'fmIDE-templates':      { current: 9, label: 'templates file',      where: 'Templates → Import Templates' },
+  'fmIDE-templates':      { current: 10, label: 'templates file',      where: 'Templates → Import Templates' },
   'fmIDE-functions':      { current: 2, label: 'functions file',      where: 'Functions → Import Functions' },
   'fmIDE-format-presets': { current: 2, label: 'format presets file', where: 'Format Presets → Import Presets' },
   'fmIDE-shortcuts':      { current: 2, label: 'shortcuts file',      where: 'Keyboard Shortcuts → Import Shortcuts' },
   'fmIDE-macros':         { current: 1, label: 'macros file',         where: 'Macro Builder → Import' },
   'fmIDE-preferences':    { current: 1, label: 'preferences file',    where: 'File → Import Preferences' },
-  'fmIDE-library-pack':   { current: 3, label: 'library pack',        where: 'File → Open Library Pack' },
+  'fmIDE-library-pack':   { current: 4, label: 'library pack',        where: 'File → Open Library Pack' },
   // The library's list, /library/index.json: written by the site's build, read from the site by
   // Browse Library (phase 8d); never opened as a file.
   'fmIDE-library-index':  { current: 1, label: 'library list',        where: 'File → Browse Library (fmIDE reads it from its website)' }
@@ -67,7 +67,10 @@ const FMIDE_FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
     // don't.
     7: () => {},
     // v8 → v9: a template's module or system may use choose (phase E2b); older ones don't.
-    8: () => {}
+    8: () => {},
+    // v9 → v10: a canvas or system template may carry an fmGraph board (`attachments.graph`,
+    // step 15 G5a); older ones have none.
+    9: () => {}
   },
   // v1 → v2: an item in a pack may say which pack it came from before (`origin`, phase 8b),
   // so re-sharing keeps its author's credit; older packs have no such record.
@@ -75,7 +78,10 @@ const FMIDE_FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
     1: () => {},
     // v2 → v3: a canvas template in a pack may carry its Excel layout (`attachments`, step
     // 11c); older packs have none.
-    2: () => {}
+    2: () => {},
+    // v3 → v4: a canvas or system template in a pack may carry an fmGraph board
+    // (`attachments.graph`, step 15 G5a); older packs have none.
+    3: () => {}
   },
   // v1 → v2: a definition may say which library pack it came from (`origin`, phase 8b);
   // older ones have no such record.
@@ -160,15 +166,21 @@ function cleanRecipeData(d){
   return parts.length ? { kind: 'recipe', parts } : null;
 }
 
-// ---------- a template's attachments (step 11c) ----------
-// A canvas template version may carry attachments for outputs other than fmIDE — today one,
-// `excel`: the layout ExcelExporter remembers for that module (one entry of an
-// fmIDE-excel-module-layouts file). fmIDE never reads what is inside: it keeps an attachment
-// with its template (workspace, templates file, library pack, new versions) when it passes
-// these general checks — plain data only (objects, lists, text, numbers, true / false /
-// null), nested at most 12 deep, at most 256 KB as text — and belongs to the template's own
-// family. ExcelExporter checks the layout itself when it uses one. Anything else is dropped.
-const TEMPLATE_ATTACHMENT_OUTPUTS = ['excel'];
+// ---------- a template's attachments (step 11c; fmGraph's, step 15 G5a) ----------
+// A template version may carry attachments for outputs other than fmIDE:
+// - `excel` (canvas templates only): the layout ExcelExporter remembers for that module (one
+//   entry of an fmIDE-excel-module-layouts file);
+// - `graph` (canvas and system templates): an fmGraph board file in its template form
+//   (`form: "template"`, version 2 and later), which names rectangles by their name — and, for
+//   a system template, their canvas's name — since a template gets new ids each time it is used.
+// fmIDE never reads what is inside: it keeps an attachment with its template (workspace,
+// templates file, library pack, new versions) when it passes these general checks — plain data
+// only (objects, lists, text, numbers, true / false / null), nested at most 12 deep, at most
+// 256 KB as text — and belongs to the template's own family (and, for `graph`, says it is that
+// kind of board). ExcelExporter and fmGraph check the contents when they use them. Anything else
+// is dropped.
+const TEMPLATE_ATTACHMENT_OUTPUTS = ['excel', 'graph'];
+const TEMPLATE_ATTACHMENT_KINDS = { excel: ['module'], graph: ['module', 'system'] };
 const TEMPLATE_ATTACHMENT_LIMITS = { bytes: 256 * 1024, depth: 12 };
 function isPlainData(v, depth){
   if(depth > TEMPLATE_ATTACHMENT_LIMITS.depth) return false;
@@ -179,13 +191,20 @@ function isPlainData(v, depth){
   if(typeof v === 'object' && Object.prototype.toString.call(v) === '[object Object]') return Object.keys(v).every(k => isPlainData(v[k], depth + 1));
   return false;
 }
+// Whether an attachment says it is a template's fmGraph board (only these few fields read).
+function isTemplateGraphBoard(a, kind){
+  return a.kind === 'fmIDE-graph-board' && a.form === 'template' && Number(a.version) >= 2
+    && !!a.template && typeof a.template === 'object' && a.template.kind === kind;
+}
 // A template's attachments from a file (untrusted): a copy of the ones that pass, or null.
 function cleanTemplateAttachments(raw, family, kind){
-  if(kind !== 'module' || !raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  if((kind !== 'module' && kind !== 'system') || !raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   const out = {};
   TEMPLATE_ATTACHMENT_OUTPUTS.forEach(k => {
+    if(!TEMPLATE_ATTACHMENT_KINDS[k].includes(kind)) return;
     const a = Object.prototype.hasOwnProperty.call(raw, k) ? raw[k] : undefined;
     if(!a || typeof a !== 'object' || Array.isArray(a) || a.family !== family || !isPlainData(a, 1)) return;
+    if(k === 'graph' && !isTemplateGraphBoard(a, kind)) return;
     const text = JSON.stringify(a);
     if(text.length > TEMPLATE_ATTACHMENT_LIMITS.bytes) return;
     out[k] = JSON.parse(text);
@@ -228,6 +247,35 @@ function excelLayoutForFamily(raw, family){
   const clean = cleanTemplateAttachments({ excel: entry }, family, 'module');
   if(!clean) return { error: 'The layout for this template in that file is too large or not plain data, so it can\'t be attached.' };
   return { attachment: clean.excel };
+}
+
+// An fmGraph board for a template, out of a board file fmGraph's "Export for a template…"
+// saved (parsed JSON; step 15 G5a). fmIDE reads only the file's kind, version, form and which
+// kind of template it was made for (and, for a canvas template, its family). A board for a
+// system template doesn't name one, so it takes the family it is attached to.
+// Returns { attachment } or { error }.
+const GRAPH_BOARD_VERSION = 2; // the board file versions fmIDE knows (v2: the template form)
+function graphBoardForTemplate(raw, family, kind){
+  if(!raw || typeof raw !== 'object' || raw.kind !== 'fmIDE-graph-board') {
+    return { error: 'That isn\'t an fmGraph board file. In fmGraph, use Boards → Export for a template… to save one.' };
+  }
+  if(!(Number(raw.version) >= 1 && Number(raw.version) <= GRAPH_BOARD_VERSION)) {
+    return { error: 'That board file was saved by a newer fmGraph than this fmIDE knows. Update fmIDE, then try again.' };
+  }
+  if(raw.form !== 'template' || !raw.template || typeof raw.template !== 'object') {
+    return { error: 'That board is for one model, not a template. In fmGraph, use Boards → Export for a template… to save one for a template.' };
+  }
+  if(raw.template.kind !== kind) {
+    return { error: kind === 'system'
+      ? 'That board was saved for a canvas template. For a system template, choose "The whole model" in fmGraph\'s Export for a template….'
+      : 'That board was saved for a system template. For a canvas template, choose its canvas in fmGraph\'s Export for a template….' };
+  }
+  if(kind === 'module' && raw.template.family !== family) {
+    return { error: 'That board was saved for another canvas template. In fmGraph, choose a canvas made from this template.' };
+  }
+  const clean = cleanTemplateAttachments({ graph: Object.assign({}, raw, { family }) }, family, kind);
+  if(!clean) return { error: 'That board is too large or not plain data, so it can\'t be attached.' };
+  return { attachment: clean.graph };
 }
 
 // ---------- the function library from files ----------

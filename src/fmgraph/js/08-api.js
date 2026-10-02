@@ -156,6 +156,16 @@ window.fmGraph = Object.freeze({
     return { sliders: t.sliders.map(s => ({ id: s.id, path: s.path.slice() })), inputs: t.inputs.map(r => r.name) };
   },
   traced: () => traceId,
+  // Boards for a template (G5a): templates() lists what Export for a template… offers (its
+  // words); exportForTemplate(i, { onlyShown }) saves the boards for the i-th (from 0) and
+  // returns the file's data and how many widgets were left out, or null when nothing fits.
+  templates: () => templateTargets().map(t => t.label),
+  exportForTemplate: (i, opts) => {
+    const t = templateTargets()[Number(i)];
+    if(!t) throw new Error('There is no template number ' + String(i).slice(0, 20) + '.');
+    const r = exportForTemplate(t, !!(opts && opts.onlyShown));
+    return r ? { data: r.data, left: r.left } : null;
+  },
   // The A/B snapshot (G4b): pinA() keeps where the sliders are as A (returns its words),
   // unpinA(), swapA() (returns the new A's words), comparing() — A's words, or null.
   pinA: () => pinAsA(),

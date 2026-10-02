@@ -118,11 +118,15 @@
       if(!e) return;
       const item = { key: 't' + i, type: 'template', kind: e.kind, name: e.name, version: e.version,
         description: e.description, note: e.note, group: e.group, needs: [], origin: e.origin || null, warning: null, warningKind: null,
-        excelLayout: !!(e.attachments && e.attachments.excel) };
+        excelLayout: !!(e.attachments && e.attachments.excel), graphBoard: !!(e.attachments && e.attachments.graph) };
       const mine = latestOfFamily(e.family);
       if(templateAlreadyHere(e, t)){
         // Already here, but the pack's copy has an Excel layout ours lacks: offered for that.
-        if(attachmentsToAdd(e, t)){ item.status = 'attachment'; item.statusText = 'Already in your library — adds its Excel layout'; }
+        const more = attachmentsToAdd(e, t);
+        if(more){
+          const what = Object.keys(more.add).map(k => k === 'graph' ? 'its fmGraph board' : 'its Excel layout');
+          item.status = 'attachment'; item.statusText = 'Already in your library — adds ' + what.join(' and ');
+        }
         else { item.status = 'present'; item.statusText = 'Already in your library'; }
       }
       else if(mine && mine.kind === e.kind){
@@ -328,7 +332,7 @@
         const name = document.createElement('span');
         name.className = 'library-pack-item-name';
         name.textContent = `${it.name} v${it.version}` + (it.type === 'template' ? ` — ${TEMPLATE_KIND_WORDS[it.kind]}` : '')
-          + (it.excelLayout ? ' · 📎 Excel layout' : '');
+          + (it.excelLayout ? ' · 📎 Excel layout' : '') + (it.graphBoard ? ' · 📈 fmGraph board' : '');
         const status = document.createElement('span');
         status.className = 'library-pack-item-status';
         const warnedNeeds = it.needs.filter(k => items.some(x => x.key === k && x.warning)).length;

@@ -12,6 +12,20 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'template-fmgraph-boards', date: '2026-10-02', title: 'Templates can carry fmGraph boards',
+    summary: 'Attach an fmGraph board to a canvas or system template, and it goes wherever the template goes.',
+    what: [
+      'In the Templates window, a canvas or system template has 📈 Attach fmGraph board…: pick a file saved by fmGraph\'s Boards → Export for a template….',
+      'The board then goes along with the template: in your documents, its new versions and library packs you share. Open Library Pack marks templates that have one (📈 fmGraph board), and offers the board for a template you already have.',
+    ],
+    why: 'So a template can come with the views that show how it works.',
+    how: [
+      'Open {cmd:openFmGraph} on a model built from the template, and use Boards → Export for a template….',
+      'Open {cmd:openTemplates}, select the template, and choose 📈 Attach fmGraph board….',
+    ],
+    notes: ['Library packs, templates files and documents saved now are a new version: an older fmIDE asks before opening them.'],
+    see: ['templates'] },
+
   { id: 'fmgraph-boards-in-documents', date: '2026-10-02', title: 'fmGraph\'s boards are saved in your document',
     summary: 'The bars, charts and sliders you set up in fmGraph are kept in the .fmide file, with the model.',
     what: [

@@ -75,11 +75,12 @@ const FMGRAPH_HELP_TOPICS = [
       { see: ['board-file', 'charts'] },
     ] },
   { id: 'board-file', group: 'board', title: 'Saving and sharing boards',
-    keywords: 'export import file board json share send save',
+    keywords: 'export import file board json share send save template attach pack library',
     summary: 'Boards travel as a file.',
     body: [
       { p: 'Boards ▾ at the top: Export this board, or Export all boards, saves a board file. Import boards… (or dropping a board file on the page) adds its boards as new tabs to the model you have open.' },
       { p: 'A board names its rectangles by canvas, id and name, so it fits the model it was made from, or another one built from the same templates. Anything it shows that isn\'t in this model is left out, and fmGraph says how much.' },
+      { p: 'For a template: Boards ▾ → Export for a template… saves the boards for a template the model was built from — a canvas made from a canvas template (only that canvas\'s rectangles), or the whole model for a system template. It names each rectangle by its name (and its canvas\'s name), since a template gets new ids each time it is used, so a rectangle whose name is used twice on its canvas is left out, and fmGraph says how many. In fmIDE, select the template and choose 📈 Attach fmGraph board…: the board then goes along with the template, in packs too.' },
       { tip: 'Where sliders are set is not saved: a board always opens on the model\'s own numbers.' },
       { see: ['boards', 'board-kept'] },
     ] },

@@ -8,6 +8,21 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'boards-for-templates', date: '2026-10-02', title: 'Boards for templates',
+    summary: 'Save your boards for a template, so they go along with it — in documents and in packs you share.',
+    what: [
+      'Boards ▾ → Export for a template… saves the boards for a template the model was built from: a canvas made from a canvas template (just that canvas), or the whole model for a system template.',
+      'Attach the file to the template in fmIDE (Templates → 📈 Attach fmGraph board…). It then travels with the template — in documents, new versions and library packs.',
+    ],
+    why: 'So someone who uses your template also gets the boards that explain it.',
+    how: [
+      'Open a model built from your template, from fmIDE.',
+      'Boards ▾ → Export for a template…, and choose the template.',
+      'In fmIDE: Templates, select the template, 📈 Attach fmGraph board….',
+    ],
+    notes: ['Using a template\'s boards in fmGraph comes in the next update.'],
+    see: ['board-file'] },
+
   { id: 'compare-a-b', date: '2026-10-02', title: 'Compare two what-ifs, and bars that glide',
     summary: 'Pin where the sliders are as A, try something else, and see the difference; bars now glide to new values.',
     what: [

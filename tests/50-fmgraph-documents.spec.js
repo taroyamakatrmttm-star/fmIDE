@@ -57,7 +57,7 @@ test('a change in fmGraph goes back to the document: unsaved, then saved with it
   await popup.evaluate(() => fmGraph.addBoard('Volumes'));
   await expect.poll(() => D.title(page)).toBe('Plan • — fmIDE');
   let data = await exported(page);
-  expect(data.version).toBe(11);
+  expect(data.version).toBe(12);
   expect(data.graphBoards.kind).toBe('fmIDE-graph-board');
   expect(data.graphBoards.boards.map(b => b.name)).toEqual(['Prices', 'Volumes']);
   // Showing the first board again sends nothing.

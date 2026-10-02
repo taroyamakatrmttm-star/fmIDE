@@ -101,7 +101,15 @@ async function loadModel(system, name, opts){
   const t = performance.now();
   const base = evaluateModel(ir);
   const baseMs = performance.now() - t;
-  const m = { name: typeof name === 'string' && name ? name.slice(0, 120) : 'Model', periods, ir, canvasIndex, rects, byKey,
+  // The canvas template each canvas was made from (G5a; a system file's canvas.template), for
+  // Export for a template….
+  const canvasTemplates = new Map();
+  system.canvases.forEach(c => {
+    const t = c && c.template;
+    if(!c || typeof c.id !== 'string' || !t || typeof t !== 'object' || typeof t.family !== 'string' || !/^[A-Za-z0-9-]{8,64}$/.test(t.family)) return;
+    if(!canvasTemplates.has(c.id)) canvasTemplates.set(c.id, { family: t.family, name: typeof t.name === 'string' && t.name.trim() ? t.name.trim().slice(0, 120) : 'a canvas template' });
+  });
+  const m = { name: typeof name === 'string' && name ? name.slice(0, 120) : 'Model', periods, ir, canvasIndex, rects, byKey, canvasTemplates,
     inputs: rects.filter(r => r.input), base, baseMs, signature: modelSignature(ir), reach: reachMap(ir) };
   model = m;
   linkedToFmide = !!(opts && opts.fromFmide);
