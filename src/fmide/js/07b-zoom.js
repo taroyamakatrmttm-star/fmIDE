@@ -1,5 +1,5 @@
   // =====================================================================================
-  // ---------- Zoom (build step 13, phase 13a; docs/step13-zoom.md) ----------
+  // ---------- Zoom (build step 13, phases 13a and 13b; docs/step13-zoom.md) ----------
   // =====================================================================================
   // The canvas is drawn at a scale, from ZOOM_MIN to ZOOM_MAX: #canvas is scaled (CSS
   // transform, set through --zoom on #viewport) inside #canvasZoom, which is sized to the scaled
@@ -131,6 +131,61 @@
     const factor = Math.exp(-Math.max(-100, Math.min(100, dy)) * 0.0025);
     setZoom(zoom * factor, ev.clientX, ev.clientY);
   }, { passive: false });
+
+  // ---------- two fingers on a tablet (phase 13b) ----------
+  // Two fingers on the canvas pinch to zoom around the point between them, and moving them
+  // together moves the canvas. A drag the first finger had begun is cancelled and undone
+  // (cancelFingerActions, shared pointer input). A pinch ending within 5% of 100% settles at
+  // 100%. Scrolling can only be stopped from touchmove, so the pinch follows touch events: while
+  // the browser lets us cancel them, it moves the canvas itself; once the browser has started
+  // scrolling (the first finger moved before the second landed), the browser moves it and the
+  // pinch only zooms around the point between the fingers. One finger is as before (step 9).
+  const PINCH_SNAP_TO_100 = 0.05;
+  let pinch = null; // { a, b: touch identifiers, d0, z0, mid }
+  function pinchTouches(ev){
+    if(!pinch) return null;
+    const list = Array.from(ev.touches);
+    const a = list.find(t => t.identifier === pinch.a), b = list.find(t => t.identifier === pinch.b);
+    return a && b ? [a, b] : null;
+  }
+  const fingerGap = (a, b) => Math.max(1, Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY));
+  const fingerMid = (a, b) => ({ x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 });
+  // Shows zoom z with the canvas point under client point `from` moved to client point `to`.
+  function zoomMoving(z, from, to){
+    const vr = viewport.getBoundingClientRect();
+    const px = (viewport.scrollLeft + from.x - vr.left) / zoom, py = (viewport.scrollTop + from.y - vr.top) / zoom;
+    showZoom(z);
+    viewport.scrollLeft = Math.max(0, px * zoom - (to.x - vr.left));
+    viewport.scrollTop = Math.max(0, py * zoom - (to.y - vr.top));
+  }
+  viewport.addEventListener('touchstart', (ev) => {
+    if(pinch || ev.touches.length !== 2) return;
+    const [a, b] = Array.from(ev.touches);
+    if(!viewport.contains(a.target) || !viewport.contains(b.target)) return;
+    cancelFingerActions();
+    closeZoomMenu();
+    pinch = { a: a.identifier, b: b.identifier, d0: fingerGap(a, b), z0: zoom, mid: fingerMid(a, b) };
+    if(ev.cancelable) ev.preventDefault();
+  }, { passive: false });
+  // Followed on the document: a finger's events keep going to the element it went down on, which
+  // a redraw may have taken out of the page.
+  document.addEventListener('touchmove', (ev) => {
+    const t = pinchTouches(ev);
+    if(!t) return;
+    const ours = ev.cancelable;
+    if(ours) ev.preventDefault();
+    const mid = fingerMid(t[0], t[1]);
+    zoomMoving(pinch.z0 * fingerGap(t[0], t[1]) / pinch.d0, ours ? pinch.mid : mid, mid);
+    pinch.mid = mid;
+  }, { passive: false });
+  function endPinch(ev){
+    if(!pinch || pinchTouches(ev)) return;
+    if(zoom !== 1 && Math.abs(zoom - 1) < PINCH_SNAP_TO_100) zoomMoving(1, pinch.mid, pinch.mid);
+    pinch = null;
+    rememberZoom();
+  }
+  document.addEventListener('touchend', endPinch);
+  document.addEventListener('touchcancel', endPinch);
 
   // ---------- the zoom control, bottom-right of the canvas ----------
   let zoomControl = null;

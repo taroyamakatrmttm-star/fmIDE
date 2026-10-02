@@ -56,7 +56,10 @@ function followPointer(downEvent, onMove, onUp){
   const move = (ev) => { if(ev.pointerId !== id) return; last = ev; onMove(ev); };
   const up = (ev) => { if(ev.pointerId !== id) return; stop(); onUp(ev, false); };
   const cancel = (ev) => { if(ev.pointerId !== id) return; stop(); onUp(last, true); };
+  const cancelNow = () => { stop(); onUp(last, true); };
+  fingerActions.add(cancelNow);
   function stop(){
+    fingerActions.delete(cancelNow);
     document.removeEventListener('pointermove', move);
     document.removeEventListener('pointerup', up);
     document.removeEventListener('pointercancel', cancel);
@@ -65,6 +68,17 @@ function followPointer(downEvent, onMove, onUp){
   document.addEventListener('pointerup', up);
   document.addEventListener('pointercancel', cancel);
   return stop;
+}
+
+// What fingers and pens are doing now (followPointer): cancelFingerActions() cancels them all, as
+// if the browser had taken the fingers over (onUp(last, true)) — a second finger starting a pinch
+// (fmIDE's zoom, step 13b) undoes the drag the first one began. The fingers down are then no
+// tap or double-tap either.
+const fingerActions = new Set();
+function cancelFingerActions(){
+  Array.from(fingerActions).forEach(cancel => cancel());
+  touchDownAt.clear();
+  lastTap = null;
 }
 
 const HOLD_MS = 500;    // a press this long, with the finger kept still, is a hold

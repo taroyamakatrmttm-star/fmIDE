@@ -12,6 +12,24 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'pinch-zoom', date: '2026-10-02', title: 'Pinch to zoom on a tablet',
+    summary: 'Two fingers on the canvas zoom it and move it around, as on a map.',
+    what: [
+      'On a tablet, pinch the canvas with two fingers to zoom between 25% and 200%. It zooms around the point between your fingers, so what you are looking at stays under them.',
+      'Moving both fingers together moves the canvas. One finger still scrolls, drags boxes and opens menus as before.',
+    ],
+    why: 'Zoom came first for the mouse and keyboard; on a tablet, two fingers are the natural way to do it.',
+    how: [
+      'Put two fingers on the canvas and spread them apart to zoom in, or bring them together to zoom out.',
+      'Slide both fingers to move around while you zoom.',
+      'Lift your fingers; the control at the bottom-right shows the zoom.',
+    ],
+    notes: [
+      'If one finger was already dragging a box when the second lands, the box goes back where it was and the pinch takes over. Nothing is added to Undo.',
+      'A pinch that ends close to 100% settles at exactly 100%. Each canvas keeps its own zoom, as with the mouse.',
+    ],
+    see: ['touch', 'finding-your-way'] },
+
   { id: 'zoom', date: '2026-10-02', title: 'Zoom the canvas',
     summary: 'See the whole model at once, or zoom in on a detail, from 25% to 200%.',
     what: [

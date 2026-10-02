@@ -121,10 +121,10 @@
       last = {x,y,w,h};
       box.style.left = x+'px'; box.style.top = y+'px'; box.style.width = w+'px'; box.style.height = h+'px';
     }
-    function onUp(){
+    function onUp(ev, cancelled){
       document.body.classList.remove('dragging');
       box.remove();
-      if(last.w > 3 || last.h > 3){
+      if(!cancelled && (last.w > 3 || last.h > 3)){
         nodes.filter(n => rectsIntersect(last, {x:n.x,y:n.y,w:n.w,h:n.h})).forEach(n => selectedNodeIds.add(n.id));
         render();
       }

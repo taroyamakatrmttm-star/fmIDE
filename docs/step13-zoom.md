@@ -1,6 +1,6 @@
 # Build step 13 — zoom
 
-**Status:** 13a done (2 Oct 2026); 13b (pinch with two fingers) next. Two phases, one pull request each, each approved by the owner before the next.
+**Status:** done — 13a (2 Oct 2026) and 13b, the pinch (2 Oct 2026). Two phases, one pull request each, each approved by the owner before the next.
 
 **Goal:** large models no longer fit on one screen. Zooming out shows how the parts connect; zooming in makes the details easy to read. Zoom is a view, like scrolling: it changes nothing in the model, its calculation, ExcelExporter or any file format.
 
@@ -27,6 +27,16 @@ fmIDE had no zoom. The canvas is a fixed 3600 × 2400 area that scrolls. Every d
 - **Found along the way:** the welcome card sat on the same corner as the new zoom control; it now sits just above it. The zoom menu opens above the welcome card.
 - **Checked:** test group 44 (10 tests) with a real mouse and keyboard, then the whole suite. Tests that import an old customised ribbon now mark the Zoom group as already added (it has its own test), and the welcome card's test allows its new place.
 
-## 13b — pinch (next)
+## 13b — pinch
 
 Two fingers on the canvas pinch to zoom around the point between them and move the canvas; one finger keeps scrolling and dragging as in step 9.
+
+**Decided (2 Oct 2026, the owner — the recommended options):** a second finger landing while the first drags a box cancels the drag and puts the box back, then pinches; a pinch ending within 5% of 100% settles at 100%; ExcelExporter gets no pinch (it has no zoom; two fingers still zoom its page).
+
+### Done (13b) — how it turned out
+
+- **Touch events** (`07b-zoom.js`): scrolling can only be stopped from `touchmove`, so the pinch follows touch events, not pointer events. It starts on `touchstart` when exactly two fingers are down and both went down inside `#viewport` (a finger on the ribbon or in a window starts nothing); the moves and the lift are followed on the document, since a redraw may take the element a finger went down on out of the page.
+- **Zoom and move together:** the zoom is the start zoom times how far apart the fingers are now over how far they were (so it never drifts), kept to 25%–200%. While the browser lets the page cancel the moves, fmIDE moves the canvas itself: the canvas point under the fingers' previous midpoint goes to their new one. If the first finger had already started the browser scrolling before the second landed, the moves can't be cancelled; the browser then moves the canvas and the pinch only zooms around the point between the fingers. The canvas stays `pan-x pan-y` (step 9c), so the browser never zooms the page there.
+- **A drag cancelled:** `cancelFingerActions()` (shared `pointer-input.js`) cancels everything a finger is following (`followPointer` keeps a list), as if the browser had taken the finger over, and forgets the fingers down as taps. A node drag or resize that was cancelled puts the model back (`dropLastHistory()`: the snapshot it took, with no undo step); a selection box selects nothing; an arrow was already dropped on a cancel; a hold waiting to open the touch menu opens nothing.
+- **Kept:** the zoom is remembered once the fingers lift (`rememberZoom`), the same as the mouse's: each canvas its own, never in a file or a macro. A pinch ending between 95% and 105% settles at 100%.
+- **Checked:** test group 45 (8 tests) with two real fingers through the Chrome DevTools Protocol (`twoFingers` in `tests/helpers/touch.js`); with the pinch turned off, the six that need it fail. Then the whole suite. Safari on an iPad can't run here: the owner tries the preview address on a real tablet.

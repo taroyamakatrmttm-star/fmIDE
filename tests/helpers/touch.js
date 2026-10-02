@@ -12,6 +12,31 @@ async function finger(page){
   };
 }
 
+// Two fingers (step 13b, the pinch): a and b are page coordinates, each finger with its own id.
+// down() puts the first finger down and then the second (a second touchStart, as a hand does);
+// move() moves both; pinch() moves both from where they are to new places in even steps.
+async function twoFingers(page){
+  const cdp = await page.context().newCDPSession(page);
+  const pt = (p, id) => ({ x: p.x, y: p.y, id });
+  let at = null;
+  const api = {
+    async first(a){ await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [pt(a, 1)] }); at = [a]; },
+    async moveFirst(a){ await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [pt(a, 1)] }); at = [a]; },
+    async second(b){ await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [pt(at[0], 1), pt(b, 2)] }); at = [at[0], b]; },
+    async down(a, b){ await api.first(a); await api.second(b); },
+    async move(a, b){ await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [pt(a, 1), pt(b, 2)] }); at = [a, b]; },
+    async pinch(a, b, steps = 8){
+      const [a0, b0] = at;
+      for(let i = 1; i <= steps; i++){
+        const f = i / steps, lerp = (p, q) => ({ x: p.x + (q.x - p.x) * f, y: p.y + (q.y - p.y) * f });
+        await api.move(lerp(a0, a), lerp(b0, b));
+      }
+    },
+    async up(){ await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); at = null; },
+  };
+  return api;
+}
+
 // Every pointerdown the page sees, by type: proves the input was touch, not a mouse.
 async function watchPointerTypes(page){
   await page.evaluate(() => {
@@ -23,4 +48,4 @@ async function watchPointerTypes(page){
 
 const centre = (b) => ({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
 
-module.exports = { finger, watchPointerTypes, centre };
+module.exports = { finger, twoFingers, watchPointerTypes, centre };
