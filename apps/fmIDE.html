@@ -207,7 +207,7 @@
     border:1px solid #c7d2fe; border-radius:12px; box-shadow:0 16px 40px rgba(15,23,42,.28); padding:12px 14px; font-size:13px; line-height:1.5;
   }
   .tutorial-card{ left:16px; bottom:16px; }
-  .welcome-card{ right:16px; bottom:16px; }
+  .welcome-card{ right:16px; bottom:64px; } /* above the zoom control (step 13) */
   body.help-open .welcome-card{ right:calc(var(--help-w) + 16px); }
   .tutorial-head{ display:flex; align-items:baseline; gap:8px; }
   .tutorial-title{ flex:1; font-weight:700; color:#3730a3; }
@@ -608,6 +608,30 @@
 
   /* Canvas */
   #viewport{ position:absolute; top:calc(var(--ribbon-h) + 40px); left:0; right:0; bottom:0; overflow:auto; background:var(--canvas-bg); }
+  /* Zoom (step 13): #canvas is scaled inside #canvasZoom, which takes the scaled size so the
+     viewport scrolls over all of it. At 100% nothing is transformed. */
+  #canvasZoom{ position:relative; width:calc(3600px * var(--zoom, 1)); height:calc(2400px * var(--zoom, 1)); overflow:hidden; }
+  #viewport.zoomed #canvas{ transform:scale(var(--zoom)); transform-origin:0 0; }
+  #viewport.zoomed #canvas > .op-picker, #viewport.zoomed #canvas > .tag-popup{ transform:scale(var(--unzoom)); transform-origin:0 0; }
+  .zoom-control{
+    position:fixed; right:28px; bottom:24px; z-index:90; display:flex; align-items:center; background:#fff; border:1px solid #cbd5e1;
+    border-radius:8px; box-shadow:0 4px 14px rgba(15,23,42,.14); overflow:hidden; user-select:none;
+  }
+  body.help-open .zoom-control{ right:calc(var(--help-w) + 28px); }
+  .zoom-control button{ border:none; background:#fff; color:#1e293b; font:inherit; font-size:14px; height:30px; min-width:32px; cursor:pointer; padding:0 6px; }
+  .zoom-control button:hover:not(:disabled){ background:#eef2ff; }
+  .zoom-control button:disabled{ color:#cbd5e1; cursor:default; }
+  .zoom-control .zoom-level{ min-width:56px; font-size:12.5px; font-variant-numeric:tabular-nums; border-left:1px solid #e2e8f0; border-right:1px solid #e2e8f0; }
+  .zoom-menu{
+    position:fixed; right:28px; bottom:60px; z-index:160; display:flex; flex-direction:column; min-width:150px; padding:4px; background:#fff;
+    border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 10px 28px rgba(15,23,42,.2);
+  }
+  body.help-open .zoom-menu{ right:calc(var(--help-w) + 28px); }
+  .zoom-menu button{ border:none; background:none; text-align:left; font:inherit; font-size:13px; padding:5px 10px; border-radius:6px; cursor:pointer; }
+  .zoom-menu button:hover:not(:disabled){ background:#eef2ff; }
+  .zoom-menu button.current{ font-weight:700; color:#3730a3; }
+  .zoom-menu button:disabled{ color:#94a3b8; cursor:default; }
+  .zoom-menu hr{ border:none; border-top:1px solid #e2e8f0; margin:4px 2px; }
   #canvas{
     position:relative; width:3600px; height:2400px;
     background-image:radial-gradient(var(--dot) 1px, transparent 1px);
@@ -1110,11 +1134,13 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   <input type="file" id="fileInputDocument" accept=".fmide,application/json,.json" style="display:none;">
   <input type="file" id="fileInputPreferences" accept="application/json,.json" style="display:none;">
   <div id="viewport">
+    <div id="canvasZoom">
     <div id="canvas">
       <svg id="edges"></svg>
       <div id="guideV" class="guide guide-v"></div>
       <div id="guideH" class="guide guide-h"></div>
       <div id="gapMarks"></div>
+    </div>
     </div>
   </div>
 </div>
@@ -1431,6 +1457,11 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     { id:'customizeRibbon',label:'Customize Ribbon & KeyTips', icon:'⚙', category:'View', defaultShortcut:null, action:() => showCustomizeRibbon() },
     { id:'openHelp',    label:'Help',                  icon:'❓', category:'View', defaultShortcut:'F1', action:() => toggleHelp() },
     { id:'openWhatsNew', label:'What\'s New',          icon:'✨', category:'View', defaultShortcut:null, action:() => openWhatsNew() },
+    { id:'zoomIn',      label:'Zoom In',               icon:'🔍', category:'View', defaultShortcut:'Mod+=', enabled:() => zoom < ZOOM_MAX - 0.0001, action:() => zoomIn() },
+    { id:'zoomOut',     label:'Zoom Out',              icon:'🔎', category:'View', defaultShortcut:'Mod+-', enabled:() => zoom > ZOOM_MIN + 0.0001, action:() => zoomOut() },
+    { id:'zoomReset',   label:'Zoom to 100%',          icon:'①', category:'View', defaultShortcut:'Mod+0', action:() => zoomReset() },
+    { id:'zoomFit',     label:'Zoom to Fit',           icon:'⛶', category:'View', defaultShortcut:null, action:() => zoomToFit() },
+    { id:'zoomSelection', label:'Zoom to Selection',   icon:'⬚', category:'View', defaultShortcut:null, enabled:() => selectedNodeIds.size > 0, action:() => zoomToSelection() },
 
     { id:'openMacros',  label:'Macro Builder',         icon:'🧩', category:'Macros', defaultShortcut:null, action:() => showMacroBuilder() },
     { id:'toggleRecord',label:'Record Macro',          icon:'⏺', category:'Macros', defaultShortcut:null,
@@ -1654,6 +1685,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         { p: 'The ribbon at the top holds every command, in tabs: File (documents, templates, the library), Home (the everyday commands), Insert (rectangles, operators, functions), Arrange, Model (periods and canvases), View and Macros. Point at a button to see what it does.' },
         { p: 'Below the ribbon are the canvas tabs. A model can have several canvases, like the sheets of a workbook; + adds one.' },
         { p: 'The big area is the canvas, where you build. Scroll it to move around.' },
+        { p: 'To see more or less of it, zoom: hold Ctrl (Cmd on a Mac) and turn the mouse wheel, or pinch on a trackpad; Ctrl + = and Ctrl + − zoom in and out, and Ctrl + 0 goes back to 100%. The control at the bottom-right shows the zoom: − and + step it, and the percentage opens a menu with {cmd:zoomFit} and {cmd:zoomSelection}. Each canvas keeps its own zoom, and everything works the same at any zoom.' },
         { p: 'To find a command by name, press {cmd:openLauncher} (Ctrl+K, or Cmd+K on a Mac), type part of its name and press Enter. Help topics are found there too.' },
         { p: 'This Help panel opens with F1, with ❓ at the top right, or with {cmd:openHelp}. You can keep working while it is open.' },
         { p: 'What\'s new, at the top of the Help panel (or {cmd:openWhatsNew}), lists every update, newest first: what changed, why, and how to use it. A dot on ❓ means there is something you haven\'t seen yet.' },
@@ -2063,6 +2095,11 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     customizeRibbon: 'Arranges the ribbon\'s tabs, groups and buttons, and the KeyTips key.',
     openHelp: 'Opens this Help panel: search, topics and step-by-step guides.',
     openWhatsNew: 'Lists every update to fmIDE, newest first: what changed, why, and how to use it.',
+    zoomIn: 'Zooms the canvas in one step, keeping the middle of the view in place.',
+    zoomOut: 'Zooms the canvas out one step, to see more of the model.',
+    zoomReset: 'Shows the canvas at its real size, 100%.',
+    zoomFit: 'Zooms so that everything on this canvas fits on the screen.',
+    zoomSelection: 'Zooms so that the selected boxes fill the screen.',
     openMacros: 'Opens the Macro Builder, to make and change macros.',
     toggleRecord: 'Records what you do as a macro; press again to stop.',
     runLastMacro: 'Runs the last macro you ran again.',
@@ -2115,6 +2152,22 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // entry: ids, dates in order, commands and topics that exist.
   // **A change people will notice adds its entry here in the same pull request.**
   const WHATS_NEW = [
+    { id: 'zoom', date: '2026-10-02', title: 'Zoom the canvas',
+      summary: 'See the whole model at once, or zoom in on a detail, from 25% to 200%.',
+      what: [
+        'The canvas zooms from 25% to 200%: hold Ctrl (Cmd on a Mac) and turn the mouse wheel, or pinch on a trackpad. Ctrl + = and Ctrl + − zoom in and out, and Ctrl + 0 goes back to 100%.',
+        'A control at the bottom-right shows the zoom: − and + step it, and the percentage opens a menu with every level, Fit the model and Fit the selection. View → Zoom has the same commands.',
+        'Everything works the same at any zoom: moving and resizing boxes, drawing arrows, selecting with a box, snapping, typing.',
+      ],
+      why: 'Large models no longer fit on one screen; zooming out shows how the parts connect, zooming in makes the details easy to read.',
+      how: [
+        'Press {cmd:zoomFit} to see everything on the canvas.',
+        'Hold Ctrl and turn the wheel over the part you want to look at.',
+        'Press Ctrl + 0 to go back to 100%.',
+      ],
+      notes: ['Each canvas keeps its own zoom. It belongs to your screen, not the model: it is never saved in a file, and macros don\'t record it. A tutorial starts at 100% and gives your zoom back at the end.'],
+      see: ['finding-your-way'] },
+
     { id: 'whats-new', date: '2026-10-02', title: 'What\'s new, inside Help',
       summary: 'Every update to fmIDE, newest first: what changed, why, and how to use it.',
       what: [
@@ -3517,7 +3570,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     // back out at the end, unless the last step's Keep is ticked (H3b).
     practice = { tutorial: t, step: 0, keepLibrary: false, downloaded: false, openedExcel: false,
       saved: { snap: snapshot(), history: history.slice(), future: future.slice(), doc: Object.assign({}, currentDoc),
-        templates: TEMPLATES.slice(), functions: FUNCTIONS.slice() } };
+        templates: TEMPLATES.slice(), functions: FUNCTIONS.slice(), zooms: Object.assign({}, canvasZooms) } };
     applySystemDataDirect(practiceStartModel(t));
     render();
     clearUndoHistory();
@@ -3563,6 +3616,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     if(card) card.remove();
     hidePointer();
     document.body.classList.remove('practising');
+    canvasZooms = saved.zooms || {}; // your zoom comes back too (a tutorial starts at 100%)
     restore(saved.snap);
     history = saved.history;
     future = saved.future;
@@ -4315,6 +4369,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     nodes = c.nodes; edges = c.edges;
     computedValues = c.computedValues; computeErrors = c.computeErrors;
     portValues = c.portValues || {}; portErrors = c.portErrors || {};
+    showZoomOfCanvas(c.id); // each canvas its own zoom (07b)
   }
 
   function snapshot(){
@@ -4702,8 +4757,9 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // it never lands on another node (findFreeSpot). Default size: a rectangle's.
   function spawnPoint(w, h){
     w = w || 170; h = h || 64;
-    const x = Math.max(10, viewport.scrollLeft + viewport.clientWidth/2 - w/2);
-    const y = Math.max(10, viewport.scrollTop + viewport.clientHeight/2 - h/2);
+    const c = viewCentre(); // canvas units, at any zoom (07b)
+    const x = Math.max(10, c.x - w/2);
+    const y = Math.max(10, c.y - h/2);
     return findFreeSpot(nodes, w, h, x, y);
   }
 
@@ -6220,6 +6276,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       (c.edges||[]).forEach(e => { const m=/(\d+)$/.exec(e.id||''); if(m) maxId=Math.max(maxId,+m[1]); });
     });
     nextCanvasId = Math.max(nextCanvasId, maxCanvasNum + 1, typeof data.nextCanvasId === 'number' ? data.nextCanvasId : 0);
+    forgetCanvasZooms(); // a model coming in starts at 100% (the autosave's own zooms come back with its UI settings)
     canvases = data.canvases.map(c => withTemplateLink({
       id: c.id || ('c' + (nextCanvasId++)),
       name: (c.name || 'Canvas').toString(),
@@ -6467,8 +6524,8 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   function startMarquee(downEvent){
     const additive = downEvent.shiftKey || downEvent.ctrlKey || downEvent.metaKey;
     if(!additive) clearSelection(); else render();
-    const canvasRect = canvas.getBoundingClientRect();
-    const startX = downEvent.clientX - canvasRect.left, startY = downEvent.clientY - canvasRect.top;
+    const start = canvasPoint(downEvent.clientX, downEvent.clientY); // canvas units, at any zoom (07b)
+    const startX = start.x, startY = start.y;
     const box = document.createElement('div');
     box.className = 'marquee';
     canvas.appendChild(box);
@@ -6476,7 +6533,8 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     let last = {x:startX,y:startY,w:0,h:0};
 
     function onMove(ev){
-      const curX = ev.clientX - canvasRect.left, curY = ev.clientY - canvasRect.top;
+      const cur = canvasPoint(ev.clientX, ev.clientY);
+      const curX = cur.x, curY = cur.y;
       const x = Math.min(startX,curX), y = Math.min(startY,curY);
       const w = Math.abs(curX-startX), h = Math.abs(curY-startY);
       last = {x,y,w,h};
@@ -8420,8 +8478,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     const portEl = canvas.querySelector(sel);
     if(!portEl) return null;
     const portRect = portEl.getBoundingClientRect();
-    const canvasRect = canvas.getBoundingClientRect();
-    return { x: portRect.left + portRect.width/2 - canvasRect.left, y: portRect.top + portRect.height/2 - canvasRect.top };
+    return canvasPoint(portRect.left + portRect.width/2, portRect.top + portRect.height/2);
   }
 
   function renderEdges(){
@@ -8491,6 +8548,188 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     });
   }
 
+  // =====================================================================================
+  // ---------- Zoom (build step 13, phase 13a; docs/step13-zoom.md) ----------
+  // =====================================================================================
+  // The canvas is drawn at a scale, from ZOOM_MIN to ZOOM_MAX: #canvas is scaled (CSS
+  // transform, set through --zoom on #viewport) inside #canvasZoom, which is sized to the scaled
+  // canvas so the viewport scrolls over all of it. Nodes keep their positions in canvas units:
+  // every place that turns the pointer into a canvas position goes through canvasPoint() or
+  // divides a pointer's movement by zoom, so dragging, arrows, resizing, the selection box and
+  // snapping work alike at every zoom. Pickers and popups opened on the canvas are scaled back
+  // (--unzoom) so they stay readable.
+  // Each canvas keeps its own zoom (canvasZooms, by canvas id), the person's own UI setting
+  // (ui.canvasZoom: saved with the autosave, never from an imported file, never in a model file
+  // or a Preferences file). A model that comes in (Open, Load System, …) starts at 100%; undo
+  // never changes the zoom. Zoom is a view, like scrolling: macros don't record it.
+  const ZOOM_STEPS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2];
+  const ZOOM_MIN = 0.25, ZOOM_MAX = 2;
+  const ZOOM_MAX_REMEMBERED = 200;
+  let zoom = 1;
+  let canvasZooms = {}; // canvas id → its zoom (absent: 100%)
+
+  function clampZoom(z){
+    const n = Number(z);
+    if(!isFinite(n)) return 1;
+    return Math.round(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, n)) * 1000) / 1000;
+  }
+  // Saved zooms (the autosave's ui.canvasZoom): canvas ids and zooms in range, at most 200.
+  function cleanCanvasZooms(v){
+    const out = {};
+    if(!v || typeof v !== 'object' || Array.isArray(v)) return out;
+    Object.keys(v).slice(0, ZOOM_MAX_REMEMBERED).forEach(id => {
+      const n = Number(v[id]);
+      if(typeof id === 'string' && id.length <= 64 && isFinite(n) && n >= ZOOM_MIN && n <= ZOOM_MAX && n !== 1) out[id] = clampZoom(n);
+    });
+    return out;
+  }
+  function zoomText(z){ return Math.round((z === undefined ? zoom : z) * 100) + '%'; }
+
+  // A pointer position (client coordinates) as a position on the canvas, in canvas units.
+  function canvasPoint(clientX, clientY){
+    const r = canvas.getBoundingClientRect();
+    return { x: (clientX - r.left) / zoom, y: (clientY - r.top) / zoom };
+  }
+  // The middle of what is in view, in canvas units.
+  function viewCentre(){
+    return { x: (viewport.scrollLeft + viewport.clientWidth / 2) / zoom, y: (viewport.scrollTop + viewport.clientHeight / 2) / zoom };
+  }
+  // What is in view, in canvas units.
+  function viewRect(){
+    return { x: viewport.scrollLeft / zoom, y: viewport.scrollTop / zoom, w: viewport.clientWidth / zoom, h: viewport.clientHeight / zoom };
+  }
+
+  // Draws the canvas at z (no saving): the scale, the scrolling area and the control.
+  function showZoom(z){
+    zoom = clampZoom(z);
+    viewport.style.setProperty('--zoom', String(zoom));
+    viewport.style.setProperty('--unzoom', String(1 / zoom));
+    viewport.classList.toggle('zoomed', zoom !== 1);
+    renderZoomControl();
+  }
+  // Sets the zoom, keeping the canvas point under (clientX, clientY) — the middle of the view
+  // when none is given — where it is on the screen.
+  function setZoom(z, clientX, clientY){
+    const next = clampZoom(z);
+    const vr = viewport.getBoundingClientRect();
+    const ax = clientX === undefined ? viewport.clientWidth / 2 : clientX - vr.left;
+    const ay = clientY === undefined ? viewport.clientHeight / 2 : clientY - vr.top;
+    const px = (viewport.scrollLeft + ax) / zoom, py = (viewport.scrollTop + ay) / zoom;
+    showZoom(next);
+    viewport.scrollLeft = Math.max(0, px * zoom - ax);
+    viewport.scrollTop = Math.max(0, py * zoom - ay);
+    rememberZoom();
+    return zoom;
+  }
+  function rememberZoom(){
+    if(!activeCanvasId) return;
+    if(zoom === 1) delete canvasZooms[activeCanvasId];
+    else canvasZooms[activeCanvasId] = zoom;
+    saveWorkspaceSoon();
+  }
+  // The canvas being shown changed (loadCanvasState): its own zoom.
+  function showZoomOfCanvas(id){
+    const z = canvasZooms[id] || 1;
+    if(z !== zoom) showZoom(z);
+  }
+  // A model came in (applySystemDataDirect): every canvas starts at 100%.
+  function forgetCanvasZooms(){ canvasZooms = {}; }
+
+  function nextZoomStep(dir){
+    const eps = 0.001;
+    if(dir > 0) return ZOOM_STEPS.find(s => s > zoom + eps) || ZOOM_MAX;
+    return ZOOM_STEPS.slice().reverse().find(s => s < zoom - eps) || ZOOM_MIN;
+  }
+  function zoomIn(){ return setZoom(nextZoomStep(1)); }
+  function zoomOut(){ return setZoom(nextZoomStep(-1)); }
+  function zoomReset(){ return setZoom(1); }
+
+  // Shows the box (canvas units) as large as fits, with a margin, centred.
+  function zoomToBox(b){
+    const margin = 40;
+    const z = clampZoom(Math.min((viewport.clientWidth - 2 * margin) / Math.max(1, b.w), (viewport.clientHeight - 2 * margin) / Math.max(1, b.h), ZOOM_MAX));
+    showZoom(z);
+    viewport.scrollLeft = Math.max(0, (b.x + b.w / 2) * zoom - viewport.clientWidth / 2);
+    viewport.scrollTop = Math.max(0, (b.y + b.h / 2) * zoom - viewport.clientHeight / 2);
+    rememberZoom();
+    return zoom;
+  }
+  function boxOfNodes(list){
+    if(!list.length) return null;
+    const x = Math.min(...list.map(n => n.x)), y = Math.min(...list.map(n => n.y));
+    const r = Math.max(...list.map(n => n.x + n.w)), b = Math.max(...list.map(n => n.y + n.h));
+    return { x, y, w: r - x, h: b - y };
+  }
+  // Every node on this canvas in view (an empty canvas: 100%).
+  function zoomToFit(){
+    const b = boxOfNodes(nodes);
+    if(!b){ viewport.scrollLeft = 0; viewport.scrollTop = 0; return setZoom(1); }
+    return zoomToBox(b);
+  }
+  function zoomToSelection(){
+    const b = boxOfNodes(nodes.filter(n => selectedNodeIds.has(n.id)));
+    if(!b) return zoom;
+    return zoomToBox(b);
+  }
+
+  // Ctrl (Cmd on a Mac) + the wheel, or a trackpad's pinch (which the browser sends as a wheel
+  // with Ctrl): zoom around the pointer, smoothly. A plain wheel scrolls, as before.
+  viewport.addEventListener('wheel', (ev) => {
+    if(!(ev.ctrlKey || ev.metaKey)) return;
+    ev.preventDefault();
+    const dy = ev.deltaMode === 1 ? ev.deltaY * 16 : ev.deltaY;
+    const factor = Math.exp(-Math.max(-100, Math.min(100, dy)) * 0.0025);
+    setZoom(zoom * factor, ev.clientX, ev.clientY);
+  }, { passive: false });
+
+  // ---------- the zoom control, bottom-right of the canvas ----------
+  let zoomControl = null;
+  function buildZoomControl(){
+    zoomControl = el('div', 'zoom-control');
+    zoomControl.id = 'zoomControl';
+    const minus = el('button', 'zoom-out', '−');
+    minus.type = 'button';
+    minus.title = 'Zoom out';
+    minus.addEventListener('click', () => runCommand('zoomOut'));
+    const level = el('button', 'zoom-level', '100%');
+    level.type = 'button';
+    level.title = 'Zoom: choose a level, fit the model or the selection';
+    level.addEventListener('click', (ev) => { ev.stopPropagation(); toggleZoomMenu(); });
+    const plus = el('button', 'zoom-in', '+');
+    plus.type = 'button';
+    plus.title = 'Zoom in';
+    plus.addEventListener('click', () => runCommand('zoomIn'));
+    zoomControl.append(minus, level, plus);
+    document.body.appendChild(zoomControl);
+  }
+  function renderZoomControl(){
+    if(!zoomControl) return;
+    zoomControl.querySelector('.zoom-level').textContent = zoomText();
+    zoomControl.querySelector('.zoom-out').disabled = zoom <= ZOOM_MIN + 0.0001;
+    zoomControl.querySelector('.zoom-in').disabled = zoom >= ZOOM_MAX - 0.0001;
+  }
+  function closeZoomMenu(){ const m = document.getElementById('zoomMenu'); if(m) m.remove(); }
+  function toggleZoomMenu(){
+    if(document.getElementById('zoomMenu')){ closeZoomMenu(); return; }
+    const menu = el('div', 'zoom-menu');
+    menu.id = 'zoomMenu';
+    const item = (text, fn, current) => {
+      const b = el('button', current ? 'current' : '', text);
+      b.type = 'button';
+      b.addEventListener('click', () => { closeZoomMenu(); fn(); });
+      menu.appendChild(b);
+      return b;
+    };
+    item('Fit the model', () => runCommand('zoomFit'));
+    const sel = item('Fit the selection', () => runCommand('zoomSelection'));
+    sel.disabled = !selectedNodeIds.size;
+    menu.appendChild(el('hr'));
+    ZOOM_STEPS.slice().reverse().forEach(s => item(zoomText(s), () => setZoom(s), Math.abs(s - zoom) < 0.001));
+    document.body.appendChild(menu);
+    const close = (ev) => { if(!menu.contains(ev.target)){ closeZoomMenu(); document.removeEventListener('mousedown', close, true); } };
+    document.addEventListener('mousedown', close, true);
+  }
+  buildZoomControl();
   // ---------- node interaction ----------
   function attachNodeEvents(el){
     el.addEventListener('contextmenu', (ev) => { ev.preventDefault(); });
@@ -8622,8 +8861,9 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   function computeSnap(movingNode, x, y, excludeIds, boxes){
     const w = movingNode.w, h = movingNode.h;
     const others = boxes || snapBoxes(excludeIds);
-    let bestX = x, bestXDist = SNAP_THRESHOLD, guideX = null;
-    let bestY = y, bestYDist = SNAP_THRESHOLD, guideY = null;
+    // The same distance on the screen at every zoom (07b): 6 pixels.
+    let bestX = x, bestXDist = SNAP_THRESHOLD / zoom, guideX = null;
+    let bestY = y, bestYDist = SNAP_THRESHOLD / zoom, guideY = null;
     const me = { left:x, right:x+w, centerX:x+w/2 };
     const meY = { top:y, bottom:y+h, centerY:y+h/2 };
 
@@ -8679,7 +8919,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     let best = null;
     const consider = (p, gapList) => {
       const dist = Math.abs(p - pos);
-      if(p >= 0 && dist < SNAP_THRESHOLD && (!best || dist < best.dist)) best = { pos: p, dist, gaps: gapList };
+      if(p >= 0 && dist < SNAP_THRESHOLD / zoom && (!best || dist < best.dist)) best = { pos: p, dist, gaps: gapList };
     };
     const mark = (p, q) => ({ axis, from: hi(p), to: lo(q), at: at(p, q) });
     for(let i = 0; i + 1 < line.length; i++){
@@ -8785,7 +9025,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         boxes = snapBoxes(workingIds); // the originals stay where they were, to snap to
       }
 
-      let dx = ev.clientX - startX, dy = ev.clientY - startY;
+      let dx = (ev.clientX - startX) / zoom, dy = (ev.clientY - startY) / zoom; // canvas units (07b)
       if(ev.shiftKey){
         if(Math.abs(dx) >= Math.abs(dy)) dy = 0; else dx = 0;
       }
@@ -8868,7 +9108,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
 
     function onMove(ev){
       if(!created) createAliases();
-      let dx = ev.clientX - startX, dy = ev.clientY - startY;
+      let dx = (ev.clientX - startX) / zoom, dy = (ev.clientY - startY) / zoom; // canvas units (07b)
       if(ev.shiftKey){
         if(Math.abs(dx) >= Math.abs(dy)) dy = 0; else dx = 0;
       }
@@ -8917,8 +9157,8 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
 
     function onMove(ev){
       if(!historyPushed){ pushHistory(); historyPushed = true; }
-      n.w = Math.max(80, origW + (ev.clientX - startX));
-      n.h = Math.max(44, origH + (ev.clientY - startY));
+      n.w = Math.max(80, origW + (ev.clientX - startX) / zoom);
+      n.h = Math.max(44, origH + (ev.clientY - startY) / zoom);
       render();
     }
     function onUp(){
@@ -15072,8 +15312,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     temp.setAttribute('class','temp');
     svg.appendChild(temp);
 
-    const canvasRect = canvas.getBoundingClientRect();
-    function toCanvasCoords(ev){ return { x: ev.clientX - canvasRect.left, y: ev.clientY - canvasRect.top }; }
+    function toCanvasCoords(ev){ return canvasPoint(ev.clientX, ev.clientY); }
 
     function onMove(ev){
       const a = getNode(fromId);
@@ -15711,8 +15950,9 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         const last = placeAt(list.length - 1);
         const cols = Math.min(across, list.length);
         const w = cols * RECT_W + (cols - 1) * a.gap, h = last.y + RECT_H;
-        x0 = Math.max(10, viewport.scrollLeft + viewport.clientWidth / 2 - w / 2);
-        y0 = Math.max(10, viewport.scrollTop + viewport.clientHeight / 2 - h / 2);
+        const c = viewCentre(); // canvas units, at any zoom (07b)
+        x0 = Math.max(10, c.x - w / 2);
+        y0 = Math.max(10, c.y - h / 2);
       }
       pushHistory();
       const made = list.map((it, i) => {
@@ -16871,6 +17111,15 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   });
   fm.edges = () => edges.map(e => Object.assign({}, e));
   fm.selection = () => Array.from(selectedNodeIds);
+  // Zoom (step 13): a view, like scrolling — not an action, so macros never record it.
+  fm.zoom = () => zoom;
+  fm.setZoom = (level) => {
+    if(level === 'fit') return zoomToFit();
+    if(level === 'selection') return zoomToSelection();
+    const n = Number(level);
+    if(!isFinite(n) || n <= 0) fail('setZoom takes a zoom level such as 0.5 or 1.5 (from ' + ZOOM_MIN + ' to ' + ZOOM_MAX + '), or "fit" or "selection".');
+    return setZoom(n);
+  };
   fm.canvases = () => canvases.map(c => {
     const out = { id: c.id, name: c.name, active: c.id === activeCanvasId };
     const st = templateLinkStatus(c);
@@ -16895,6 +17144,8 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   const FUNCTIONS_RIBBON_GROUP = { id:'myFunctions', label:'My Functions', items:[
     { cmd:'openFunctions', size:'large' }, { cmd:'insertFunction' }, { cmd:'updateFunction' }, { cmd:'importFunctions' } ] };
   // Help (step 10), at the end of the View tab.
+  // Zoom (step 13), in the View tab before Help.
+  const ZOOM_RIBBON_GROUP = { id:'zoom', label:'Zoom', items:[ { cmd:'zoomFit', size:'large' }, { cmd:'zoomIn' }, { cmd:'zoomOut' }, { cmd:'zoomReset' }, { cmd:'zoomSelection' } ] };
   const HELP_RIBBON_GROUP = { id:'help', label:'Help', items:[ { cmd:'openHelp', size:'large' }, { cmd:'openWhatsNew' } ] };
   const DEFAULT_RIBBON = {
     qat: ['undo', 'redo', 'evaluate', 'openLauncher'],
@@ -16937,6 +17188,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       { id:'view', label:'View', keytip:'W', groups:[
         { label:'Commands', items:[ { cmd:'openLauncher', size:'large' }, { cmd:'openShortcuts', size:'large' } ] },
         { label:'Ribbon', items:[ { cmd:'toggleRibbon' }, { cmd:'customizeRibbon' } ] },
+        cloneData(ZOOM_RIBBON_GROUP),
         cloneData(HELP_RIBBON_GROUP),
       ]},
       { id:'macros', label:'Macros', keytip:'X', groups:[
@@ -17912,7 +18164,8 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   };
 
   function viewCenter(){
-    return { x: Math.round(viewport.scrollLeft + viewport.clientWidth / 2 - 85), y: Math.round(viewport.scrollTop + viewport.clientHeight / 2 - 32) };
+    const c = viewCentre(); // canvas units, at any zoom (07b)
+    return { x: Math.round(c.x - 85), y: Math.round(c.y - 32) };
   }
   // Origin for relative-coordinate macros: the selection's top-left corner, else the view centre.
   function computeOrigin(){
@@ -19681,11 +19934,13 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       libraryBrowseAdded: true, // 8d: Browse Library… in the same group
       helpAdded: true, // step 10: the Help group at the end of the View tab
       whatsNewAdded: true, // H5b: What's New beside Help
+      zoomGroupAdded: true, // 13a: the View tab's Zoom group
       addManyRectsAdded: true, // 12b: Add Many Rectangles… after Add Rectangle
       libraryAuthor,
       windowSizes: cleanWindowSizes(windowSizes), templateGroupsClosed: templateGroupsClosed.slice(0, 200),
       helpSize: cleanHelpSize(helpPanelSize),
-      whatsNewSeen: cleanNewsSeen(whatsNewSeen)
+      whatsNewSeen: cleanNewsSeen(whatsNewSeen),
+      canvasZoom: inPractice() ? {} : cleanCanvasZooms(canvasZooms)
     };
   }
   // One-time update of a ribbon customised before the Document group existed: add it at
@@ -19791,6 +20046,16 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     if(!tab) return;
     tab.groups.push(cloneData(HELP_RIBBON_GROUP));
   }
+  // One-time update (13a): the Zoom group at the end of the View tab (or the tab holding Help,
+  // or the last tab), unless a zoom command is on the ribbon already.
+  function addZoomGroupToRibbon(){
+    const tabs = ribbonState.config.tabs.filter(t => t && Array.isArray(t.groups));
+    const ZOOM_CMDS = ['zoomIn', 'zoomOut', 'zoomReset', 'zoomFit', 'zoomSelection'];
+    if(tabs.some(t => t.groups.some(g => g && Array.isArray(g.items) && g.items.some(it => it && ZOOM_CMDS.includes(it.cmd))))) return;
+    const tab = tabs.find(t => t.id === 'view') || tabs.find(t => t.groups.some(g => g && Array.isArray(g.items) && g.items.some(it => it && it.cmd === 'openHelp'))) || tabs[tabs.length - 1];
+    if(!tab) return;
+    tab.groups.push(cloneData(ZOOM_RIBBON_GROUP));
+  }
   // One-time update (H5b): What's New goes right after Help, wherever Help is; a ribbon
   // without Help gets none.
   function addWhatsNewToRibbon(){
@@ -19819,15 +20084,18 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       if(ui.libraryBrowseAdded !== true) addLibraryBrowseCommandToRibbon();
       if(ui.helpAdded !== true) addHelpGroupToRibbon();
       if(ui.whatsNewAdded !== true) addWhatsNewToRibbon();
+      if(ui.zoomGroupAdded !== true) addZoomGroupToRibbon();
       if(ui.addManyRectsAdded !== true) addManyRectsCommandToRibbon();
     }
     if(!fromImport && typeof ui.libraryAuthor === 'string') libraryAuthor = ui.libraryAuthor.slice(0, LIBRARY_PACK_LIMITS.author);
-    // Window sizes, closed template groups, the Help panel's width and the updates seen belong to this screen and person: never from
+    // Window sizes, closed template groups, the Help panel's width, the updates seen and the canvases' zoom belong to this screen and person: never from
     // someone else's file.
     if(!fromImport){
       windowSizes = cleanWindowSizes(ui.windowSizes);
       helpPanelSize = cleanHelpSize(ui.helpSize);
       whatsNewSeen = cleanNewsSeen(ui.whatsNewSeen);
+      canvasZooms = cleanCanvasZooms(ui.canvasZoom);
+      if(activeCanvasId) showZoomOfCanvas(activeCanvasId);
       syncHelpNewsDot();
       if(Array.isArray(ui.templateGroupsClosed)) templateGroupsClosed = ui.templateGroupsClosed.filter(g => typeof g === 'string').map(g => g.slice(0, 200)).slice(0, 200);
     }

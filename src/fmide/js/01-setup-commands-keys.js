@@ -154,6 +154,11 @@
     { id:'customizeRibbon',label:'Customize Ribbon & KeyTips', icon:'⚙', category:'View', defaultShortcut:null, action:() => showCustomizeRibbon() },
     { id:'openHelp',    label:'Help',                  icon:'❓', category:'View', defaultShortcut:'F1', action:() => toggleHelp() },
     { id:'openWhatsNew', label:'What\'s New',          icon:'✨', category:'View', defaultShortcut:null, action:() => openWhatsNew() },
+    { id:'zoomIn',      label:'Zoom In',               icon:'🔍', category:'View', defaultShortcut:'Mod+=', enabled:() => zoom < ZOOM_MAX - 0.0001, action:() => zoomIn() },
+    { id:'zoomOut',     label:'Zoom Out',              icon:'🔎', category:'View', defaultShortcut:'Mod+-', enabled:() => zoom > ZOOM_MIN + 0.0001, action:() => zoomOut() },
+    { id:'zoomReset',   label:'Zoom to 100%',          icon:'①', category:'View', defaultShortcut:'Mod+0', action:() => zoomReset() },
+    { id:'zoomFit',     label:'Zoom to Fit',           icon:'⛶', category:'View', defaultShortcut:null, action:() => zoomToFit() },
+    { id:'zoomSelection', label:'Zoom to Selection',   icon:'⬚', category:'View', defaultShortcut:null, enabled:() => selectedNodeIds.size > 0, action:() => zoomToSelection() },
 
     { id:'openMacros',  label:'Macro Builder',         icon:'🧩', category:'Macros', defaultShortcut:null, action:() => showMacroBuilder() },
     { id:'toggleRecord',label:'Record Macro',          icon:'⏺', category:'Macros', defaultShortcut:null,

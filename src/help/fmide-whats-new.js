@@ -12,6 +12,22 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'zoom', date: '2026-10-02', title: 'Zoom the canvas',
+    summary: 'See the whole model at once, or zoom in on a detail, from 25% to 200%.',
+    what: [
+      'The canvas zooms from 25% to 200%: hold Ctrl (Cmd on a Mac) and turn the mouse wheel, or pinch on a trackpad. Ctrl + = and Ctrl + − zoom in and out, and Ctrl + 0 goes back to 100%.',
+      'A control at the bottom-right shows the zoom: − and + step it, and the percentage opens a menu with every level, Fit the model and Fit the selection. View → Zoom has the same commands.',
+      'Everything works the same at any zoom: moving and resizing boxes, drawing arrows, selecting with a box, snapping, typing.',
+    ],
+    why: 'Large models no longer fit on one screen; zooming out shows how the parts connect, zooming in makes the details easy to read.',
+    how: [
+      'Press {cmd:zoomFit} to see everything on the canvas.',
+      'Hold Ctrl and turn the wheel over the part you want to look at.',
+      'Press Ctrl + 0 to go back to 100%.',
+    ],
+    notes: ['Each canvas keeps its own zoom. It belongs to your screen, not the model: it is never saved in a file, and macros don\'t record it. A tutorial starts at 100% and gives your zoom back at the end.'],
+    see: ['finding-your-way'] },
+
   { id: 'whats-new', date: '2026-10-02', title: 'What\'s new, inside Help',
     summary: 'Every update to fmIDE, newest first: what changed, why, and how to use it.',
     what: [

@@ -12,6 +12,8 @@
   const FUNCTIONS_RIBBON_GROUP = { id:'myFunctions', label:'My Functions', items:[
     { cmd:'openFunctions', size:'large' }, { cmd:'insertFunction' }, { cmd:'updateFunction' }, { cmd:'importFunctions' } ] };
   // Help (step 10), at the end of the View tab.
+  // Zoom (step 13), in the View tab before Help.
+  const ZOOM_RIBBON_GROUP = { id:'zoom', label:'Zoom', items:[ { cmd:'zoomFit', size:'large' }, { cmd:'zoomIn' }, { cmd:'zoomOut' }, { cmd:'zoomReset' }, { cmd:'zoomSelection' } ] };
   const HELP_RIBBON_GROUP = { id:'help', label:'Help', items:[ { cmd:'openHelp', size:'large' }, { cmd:'openWhatsNew' } ] };
   const DEFAULT_RIBBON = {
     qat: ['undo', 'redo', 'evaluate', 'openLauncher'],
@@ -54,6 +56,7 @@
       { id:'view', label:'View', keytip:'W', groups:[
         { label:'Commands', items:[ { cmd:'openLauncher', size:'large' }, { cmd:'openShortcuts', size:'large' } ] },
         { label:'Ribbon', items:[ { cmd:'toggleRibbon' }, { cmd:'customizeRibbon' } ] },
+        cloneData(ZOOM_RIBBON_GROUP),
         cloneData(HELP_RIBBON_GROUP),
       ]},
       { id:'macros', label:'Macros', keytip:'X', groups:[

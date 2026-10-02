@@ -639,6 +639,18 @@ fmIDE and ExcelExporter at 1400 × 900; the data read in Node.
 - ExcelExporter: ❓ Help has the dot; its own updates, in order; an update's page has the same headings; the dot goes and its storage's `fmide-excel-whats-new-seen` is the newest date; no dot after a reload.
 - Groups 31 and 32 count only the topic links (`[data-topic]`) and topic groups (not `.help-news-heading`) now that What's new sits above them; group 31's customised ribbon gets Help and What's New.
 
+### 44. Zoom (`tests/44-zoom.spec.js`; step 13, phase 13a)
+fmIDE at 1400 × 900, with a real mouse and keyboard.
+- Ctrl + the wheel over a node at 1500, 1000 (scrolled into view) zooms out below 80%; the control shows it; the node stays under the pointer (within 3 pixels) at its new size; a plain wheel scrolls without zooming. At 100% `#viewport` is not `.zoomed`.
+- Ctrl + = → 110%, Ctrl + − twice → 90%, Ctrl + 0 → 100%; the control's + and − step the same; its menu lists Fit the model, Fit the selection (off with nothing selected) and 200% … 25%, the current level marked; 25% turns − off; 200% turns + off; `fm.setZoom` keeps to 25%–200% and refuses a word that isn't a level.
+- Zoom to Fit with nodes at 100, 2600 and 1300: under 50%, every node inside the viewport; Zoom to Selection on one node: 200%, centred.
+- At 50%: a drag of 100, 50 screen pixels moves a node 200, 100; the resize corner dragged 40 pixels makes it 80 wider; a selection box drawn around a node selects exactly it; an arrow drawn with the right button joins the right nodes; a node dropped near equal spacing snaps (500, 100).
+- At 50%, scrolled: Add Rectangle lands inside the viewport; the operator picker is as wide as at 100%.
+- Each canvas its own zoom: 50% on the first, a new canvas at 100%, 150% there, back to 50% on the first; undo leaves it; the autosave's `ui.canvasZoom` holds 0.5 for the first; after a reload 50%; a new document 100%.
+- An exported workspace's system has no zoom; a workspace whose `ui.canvasZoom` says 33%, imported: 100%. Recording a macro while zooming (by `fm.setZoom`, the commands and the control) records only the rectangle added.
+- A tutorial: 67% before, 100% inside it, 67% again after Exit.
+- The View tab's Zoom group holds Zoom to Fit, In, Out, 100% and Selection; an old customised ribbon (`zoomGroupAdded` unset) gets it once, after its own groups; with the flag set, not.
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.

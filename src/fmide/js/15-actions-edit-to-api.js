@@ -526,6 +526,15 @@
   });
   fm.edges = () => edges.map(e => Object.assign({}, e));
   fm.selection = () => Array.from(selectedNodeIds);
+  // Zoom (step 13): a view, like scrolling — not an action, so macros never record it.
+  fm.zoom = () => zoom;
+  fm.setZoom = (level) => {
+    if(level === 'fit') return zoomToFit();
+    if(level === 'selection') return zoomToSelection();
+    const n = Number(level);
+    if(!isFinite(n) || n <= 0) fail('setZoom takes a zoom level such as 0.5 or 1.5 (from ' + ZOOM_MIN + ' to ' + ZOOM_MAX + '), or "fit" or "selection".');
+    return setZoom(n);
+  };
   fm.canvases = () => canvases.map(c => {
     const out = { id: c.id, name: c.name, active: c.id === activeCanvasId };
     const st = templateLinkStatus(c);

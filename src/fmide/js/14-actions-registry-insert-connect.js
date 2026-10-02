@@ -218,8 +218,9 @@
         const last = placeAt(list.length - 1);
         const cols = Math.min(across, list.length);
         const w = cols * RECT_W + (cols - 1) * a.gap, h = last.y + RECT_H;
-        x0 = Math.max(10, viewport.scrollLeft + viewport.clientWidth / 2 - w / 2);
-        y0 = Math.max(10, viewport.scrollTop + viewport.clientHeight / 2 - h / 2);
+        const c = viewCentre(); // canvas units, at any zoom (07b)
+        x0 = Math.max(10, c.x - w / 2);
+        y0 = Math.max(10, c.y - h / 2);
       }
       pushHistory();
       const made = list.map((it, i) => {

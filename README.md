@@ -44,6 +44,8 @@ A rectangle can have **several plugs**: click its 🔌 button to see one chip pe
 
 **Snapping:** a box you drag snaps into line with the boxes around it, and to equal spacing with the boxes in its row or column — pink bars show the equal gaps. Hold **Alt** after you start dragging to move it freely.
 
+**Zoom:** hold Ctrl (Cmd on a Mac) and turn the mouse wheel over the canvas, or pinch on a trackpad, to zoom from 25% to 200%; **Ctrl + = / − / 0** zoom in, out and back to 100%. The control at the bottom-right of the canvas shows the zoom, and **View → Zoom** has **Zoom to Fit** (the whole canvas on screen) and **Zoom to Selection**. Each canvas keeps its own zoom; it is never saved in your files.
+
 **Many rectangles at once:** **Add Many Rectangles…** (Home → Insert, or Insert → Nodes) lists one row per rectangle — type a name and press Enter for the next, or paste a list (one name per line, or columns copied from Excel: name, value, unit). Choose a column, a row or a grid and the gap; they are added in one step and selected, ready to drag into place. While typing in a rectangle, **Ctrl+Enter** (Cmd+Enter on a Mac) saves it and starts the next one just below.
 
 The large windows (Templates, Functions, Browse Library, Macro Builder, Customize Ribbon, Add Many Rectangles and others) can be resized from their bottom-right corner and remember their size; double-click the corner to put one back. The Templates list is a tree of groups you can open and close.

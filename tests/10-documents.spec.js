@@ -421,7 +421,7 @@ test('New keeps the format presets, templates and macros', async ({ page }) => {
 test.describe('the Document group on the ribbon', () => {
   const fileTabGroups = (page) => page.evaluate(() => (__fmIDE.getRibbonConfig().tabs.find(t => t.id === 'file') || { groups: [] }).groups.map(g => g.label));
   const customRibbon = (flag) => ({
-    ribbonCustomized: true, documentGroupAdded: flag,
+    ribbonCustomized: true, zoomGroupAdded: true, /* (the Zoom group's own test: group 44) */ documentGroupAdded: flag,
     ribbon: { qat: ['undo'], tabs: [{ id: 'file', label: 'File', groups: [{ label: 'Only Mine', items: [{ cmd: 'saveSystem' }] }] }] }
   });
 

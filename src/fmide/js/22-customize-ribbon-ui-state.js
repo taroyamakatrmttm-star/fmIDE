@@ -312,11 +312,13 @@
       libraryBrowseAdded: true, // 8d: Browse Library… in the same group
       helpAdded: true, // step 10: the Help group at the end of the View tab
       whatsNewAdded: true, // H5b: What's New beside Help
+      zoomGroupAdded: true, // 13a: the View tab's Zoom group
       addManyRectsAdded: true, // 12b: Add Many Rectangles… after Add Rectangle
       libraryAuthor,
       windowSizes: cleanWindowSizes(windowSizes), templateGroupsClosed: templateGroupsClosed.slice(0, 200),
       helpSize: cleanHelpSize(helpPanelSize),
-      whatsNewSeen: cleanNewsSeen(whatsNewSeen)
+      whatsNewSeen: cleanNewsSeen(whatsNewSeen),
+      canvasZoom: inPractice() ? {} : cleanCanvasZooms(canvasZooms)
     };
   }
   // One-time update of a ribbon customised before the Document group existed: add it at
@@ -422,6 +424,16 @@
     if(!tab) return;
     tab.groups.push(cloneData(HELP_RIBBON_GROUP));
   }
+  // One-time update (13a): the Zoom group at the end of the View tab (or the tab holding Help,
+  // or the last tab), unless a zoom command is on the ribbon already.
+  function addZoomGroupToRibbon(){
+    const tabs = ribbonState.config.tabs.filter(t => t && Array.isArray(t.groups));
+    const ZOOM_CMDS = ['zoomIn', 'zoomOut', 'zoomReset', 'zoomFit', 'zoomSelection'];
+    if(tabs.some(t => t.groups.some(g => g && Array.isArray(g.items) && g.items.some(it => it && ZOOM_CMDS.includes(it.cmd))))) return;
+    const tab = tabs.find(t => t.id === 'view') || tabs.find(t => t.groups.some(g => g && Array.isArray(g.items) && g.items.some(it => it && it.cmd === 'openHelp'))) || tabs[tabs.length - 1];
+    if(!tab) return;
+    tab.groups.push(cloneData(ZOOM_RIBBON_GROUP));
+  }
   // One-time update (H5b): What's New goes right after Help, wherever Help is; a ribbon
   // without Help gets none.
   function addWhatsNewToRibbon(){
@@ -450,15 +462,18 @@
       if(ui.libraryBrowseAdded !== true) addLibraryBrowseCommandToRibbon();
       if(ui.helpAdded !== true) addHelpGroupToRibbon();
       if(ui.whatsNewAdded !== true) addWhatsNewToRibbon();
+      if(ui.zoomGroupAdded !== true) addZoomGroupToRibbon();
       if(ui.addManyRectsAdded !== true) addManyRectsCommandToRibbon();
     }
     if(!fromImport && typeof ui.libraryAuthor === 'string') libraryAuthor = ui.libraryAuthor.slice(0, LIBRARY_PACK_LIMITS.author);
-    // Window sizes, closed template groups, the Help panel's width and the updates seen belong to this screen and person: never from
+    // Window sizes, closed template groups, the Help panel's width, the updates seen and the canvases' zoom belong to this screen and person: never from
     // someone else's file.
     if(!fromImport){
       windowSizes = cleanWindowSizes(ui.windowSizes);
       helpPanelSize = cleanHelpSize(ui.helpSize);
       whatsNewSeen = cleanNewsSeen(ui.whatsNewSeen);
+      canvasZooms = cleanCanvasZooms(ui.canvasZoom);
+      if(activeCanvasId) showZoomOfCanvas(activeCanvasId);
       syncHelpNewsDot();
       if(Array.isArray(ui.templateGroupsClosed)) templateGroupsClosed = ui.templateGroupsClosed.filter(g => typeof g === 'string').map(g => g.slice(0, 200)).slice(0, 200);
     }

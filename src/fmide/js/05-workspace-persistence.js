@@ -479,6 +479,7 @@
       (c.edges||[]).forEach(e => { const m=/(\d+)$/.exec(e.id||''); if(m) maxId=Math.max(maxId,+m[1]); });
     });
     nextCanvasId = Math.max(nextCanvasId, maxCanvasNum + 1, typeof data.nextCanvasId === 'number' ? data.nextCanvasId : 0);
+    forgetCanvasZooms(); // a model coming in starts at 100% (the autosave's own zooms come back with its UI settings)
     canvases = data.canvases.map(c => withTemplateLink({
       id: c.id || ('c' + (nextCanvasId++)),
       name: (c.name || 'Canvas').toString(),

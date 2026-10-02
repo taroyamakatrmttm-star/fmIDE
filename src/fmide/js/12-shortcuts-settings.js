@@ -222,8 +222,7 @@
     temp.setAttribute('class','temp');
     svg.appendChild(temp);
 
-    const canvasRect = canvas.getBoundingClientRect();
-    function toCanvasCoords(ev){ return { x: ev.clientX - canvasRect.left, y: ev.clientY - canvasRect.top }; }
+    function toCanvasCoords(ev){ return canvasPoint(ev.clientX, ev.clientY); }
 
     function onMove(ev){
       const a = getNode(fromId);

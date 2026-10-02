@@ -129,8 +129,9 @@
   function computeSnap(movingNode, x, y, excludeIds, boxes){
     const w = movingNode.w, h = movingNode.h;
     const others = boxes || snapBoxes(excludeIds);
-    let bestX = x, bestXDist = SNAP_THRESHOLD, guideX = null;
-    let bestY = y, bestYDist = SNAP_THRESHOLD, guideY = null;
+    // The same distance on the screen at every zoom (07b): 6 pixels.
+    let bestX = x, bestXDist = SNAP_THRESHOLD / zoom, guideX = null;
+    let bestY = y, bestYDist = SNAP_THRESHOLD / zoom, guideY = null;
     const me = { left:x, right:x+w, centerX:x+w/2 };
     const meY = { top:y, bottom:y+h, centerY:y+h/2 };
 
@@ -186,7 +187,7 @@
     let best = null;
     const consider = (p, gapList) => {
       const dist = Math.abs(p - pos);
-      if(p >= 0 && dist < SNAP_THRESHOLD && (!best || dist < best.dist)) best = { pos: p, dist, gaps: gapList };
+      if(p >= 0 && dist < SNAP_THRESHOLD / zoom && (!best || dist < best.dist)) best = { pos: p, dist, gaps: gapList };
     };
     const mark = (p, q) => ({ axis, from: hi(p), to: lo(q), at: at(p, q) });
     for(let i = 0; i + 1 < line.length; i++){
@@ -292,7 +293,7 @@
         boxes = snapBoxes(workingIds); // the originals stay where they were, to snap to
       }
 
-      let dx = ev.clientX - startX, dy = ev.clientY - startY;
+      let dx = (ev.clientX - startX) / zoom, dy = (ev.clientY - startY) / zoom; // canvas units (07b)
       if(ev.shiftKey){
         if(Math.abs(dx) >= Math.abs(dy)) dy = 0; else dx = 0;
       }
@@ -375,7 +376,7 @@
 
     function onMove(ev){
       if(!created) createAliases();
-      let dx = ev.clientX - startX, dy = ev.clientY - startY;
+      let dx = (ev.clientX - startX) / zoom, dy = (ev.clientY - startY) / zoom; // canvas units (07b)
       if(ev.shiftKey){
         if(Math.abs(dx) >= Math.abs(dy)) dy = 0; else dx = 0;
       }
@@ -424,8 +425,8 @@
 
     function onMove(ev){
       if(!historyPushed){ pushHistory(); historyPushed = true; }
-      n.w = Math.max(80, origW + (ev.clientX - startX));
-      n.h = Math.max(44, origH + (ev.clientY - startY));
+      n.w = Math.max(80, origW + (ev.clientX - startX) / zoom);
+      n.h = Math.max(44, origH + (ev.clientY - startY) / zoom);
       render();
     }
     function onUp(){

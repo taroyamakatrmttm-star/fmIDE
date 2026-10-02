@@ -388,7 +388,7 @@ test.describe('phase E1 operators in fmIDE', () => {
     // A ribbon customised before E1b (saved without the flag): its groups get them once.
     const file = test.info().outputPath('old-ribbon.json');
     const ws = { kind: 'fmIDE-workspace', version: 4, system: { kind: 'system', version: 5, periods: ['P1'], activeCanvasId: 'c1', canvases: [{ id: 'c1', name: 'Model', nodes: [], edges: [] }] },
-      ui: { ribbonCustomized: true, documentGroupAdded: true, functionsGroupAdded: true, functionCommandsAdded: true,
+      ui: { ribbonCustomized: true, zoomGroupAdded: true, /* (the Zoom group's own test: group 44) */ documentGroupAdded: true, functionsGroupAdded: true, functionCommandsAdded: true,
         ribbon: { tabs: [{ id: 'mine', label: 'Mine', groups: [{ label: 'My maths', items: [{ cmd: 'insertOp0' }, { cmd: 'insertOp11' }] }, { label: 'Tests', items: [{ cmd: 'insertOp6' }] }] }] } } };
     fs.writeFileSync(file, JSON.stringify(ws));
     await importViaCommand(page, 'importWorkspace', file);
@@ -406,7 +406,7 @@ test.describe('phase E1 operators in fmIDE', () => {
     await openFmIDE(page);
     const file = test.info().outputPath('e1-ribbon.json');
     const ws = { kind: 'fmIDE-workspace', version: 8, system: { kind: 'system', version: 7, periods: ['P1'], activeCanvasId: 'c1', canvases: [{ id: 'c1', name: 'Model', nodes: [], edges: [] }] },
-      ui: { ribbonCustomized: true, documentGroupAdded: true, functionsGroupAdded: true, functionCommandsAdded: true, operatorsE1Added: true,
+      ui: { ribbonCustomized: true, zoomGroupAdded: true, /* (the Zoom group's own test: group 44) */ documentGroupAdded: true, functionsGroupAdded: true, functionCommandsAdded: true, operatorsE1Added: true,
         ribbon: { tabs: [{ id: 'mine', label: 'Mine', groups: [{ label: 'Excel', items: [{ cmd: 'insertOp11' }, { cmd: 'insertOp27' }] }, { label: 'Other', items: [{ cmd: 'insertOp0' }] }] }] } } };
     fs.writeFileSync(file, JSON.stringify(ws));
     await importViaCommand(page, 'importWorkspace', file);

@@ -105,8 +105,8 @@
   function startMarquee(downEvent){
     const additive = downEvent.shiftKey || downEvent.ctrlKey || downEvent.metaKey;
     if(!additive) clearSelection(); else render();
-    const canvasRect = canvas.getBoundingClientRect();
-    const startX = downEvent.clientX - canvasRect.left, startY = downEvent.clientY - canvasRect.top;
+    const start = canvasPoint(downEvent.clientX, downEvent.clientY); // canvas units, at any zoom (07b)
+    const startX = start.x, startY = start.y;
     const box = document.createElement('div');
     box.className = 'marquee';
     canvas.appendChild(box);
@@ -114,7 +114,8 @@
     let last = {x:startX,y:startY,w:0,h:0};
 
     function onMove(ev){
-      const curX = ev.clientX - canvasRect.left, curY = ev.clientY - canvasRect.top;
+      const cur = canvasPoint(ev.clientX, ev.clientY);
+      const curX = cur.x, curY = cur.y;
       const x = Math.min(startX,curX), y = Math.min(startY,curY);
       const w = Math.abs(curX-startX), h = Math.abs(curY-startY);
       last = {x,y,w,h};

@@ -2,6 +2,13 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Zoom (step 13, phase 13a)
+- **The canvas zooms from 25% to 200%:** Ctrl (Cmd on a Mac) + the mouse wheel, or a trackpad's pinch, around the pointer — a plain wheel still scrolls; **Ctrl + = / − / 0** zoom in, out and back to 100%.
+- **A zoom control** at the bottom-right of the canvas (− 100% +); the percentage opens a menu with every level, **Fit the model** and **Fit the selection**. The same commands are in **View → Zoom** and the Command Launcher; a customised ribbon gets the group once.
+- **Everything works at any zoom:** moving and resizing boxes, aliases by Alt-drag, drawing arrows, the selection box, snapping (the same distance on screen), new boxes placed in view, and pickers that stay readable.
+- **Each canvas keeps its own zoom**, in your own settings: never in a document or model file, never taken from someone else's file, never recorded in a macro. A model you open starts at 100%; undo leaves the zoom alone; a tutorial starts at 100% and gives your zoom back.
+- The welcome card now sits just above the zoom control. No file format changed.
+
 ## What's new on the website
 - The What's new pages are on the published site too: `/help/whats-new/` for fmIDE and `/help/excel/whats-new/` for ExcelExporter, a list of every update and a page each, linked from the help index. Plain pages with no JavaScript, made from the same text as the apps, like the other help pages.
 

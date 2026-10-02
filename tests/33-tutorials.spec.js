@@ -226,7 +226,7 @@ test.describe('the welcome card', () => {
     await F.topDialog(page).locator('button', { hasText: /^Close$/ }).click();
     const b = await w.boundingBox();
     expect(b.x + b.width).toBeGreaterThan(1400 - 40);           // bottom-right corner
-    expect(b.y + b.height).toBeGreaterThan(900 - 40);
+    expect(b.y + b.height).toBeGreaterThan(900 - 80);         // (step 13: just above the zoom control)
     // Shortcuts still work with it showing.
     await page.mouse.click(300, 500);
     await page.keyboard.press('F1');

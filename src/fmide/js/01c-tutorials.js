@@ -39,7 +39,7 @@
     // back out at the end, unless the last step's Keep is ticked (H3b).
     practice = { tutorial: t, step: 0, keepLibrary: false, downloaded: false, openedExcel: false,
       saved: { snap: snapshot(), history: history.slice(), future: future.slice(), doc: Object.assign({}, currentDoc),
-        templates: TEMPLATES.slice(), functions: FUNCTIONS.slice() } };
+        templates: TEMPLATES.slice(), functions: FUNCTIONS.slice(), zooms: Object.assign({}, canvasZooms) } };
     applySystemDataDirect(practiceStartModel(t));
     render();
     clearUndoHistory();
@@ -85,6 +85,7 @@
     if(card) card.remove();
     hidePointer();
     document.body.classList.remove('practising');
+    canvasZooms = saved.zooms || {}; // your zoom comes back too (a tutorial starts at 100%)
     restore(saved.snap);
     history = saved.history;
     future = saved.future;
