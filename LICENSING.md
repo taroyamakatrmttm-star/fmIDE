@@ -1,15 +1,16 @@
 # Licensing
 
-fmIDE is **open core**: the editor and the file format are open, so anyone can use, study, build on and share them; ExcelExporter is free to use but proprietary. Copyright 2026 Taro Yamaka.
+fmIDE is **open core**: the editor, fmGraph and the file format are open, so anyone can use, study, build on and share them; ExcelExporter is free to use but proprietary. Copyright 2026 Taro Yamaka.
 
 | What | Where | Licence | In short |
 |---|---|---|---|
 | **fmIDE** (the editor) | `src/fmide/`, `apps/fmIDE.html`, `src/site/`, `src/library/` (the catalogue's styling), `src/help-pages/` (the help pages' styling) | [Apache License 2.0](LICENSE) | Use, change and share it freely, commercially too; keep the copyright and licence notices ([NOTICE](NOTICE)). |
+| **fmGraph** (bars and sliders, step 15) | `src/fmgraph/`, `apps/fmGraph.html` | [Apache License 2.0](LICENSE) | Same as fmIDE (decision 10). Its help text is in `src/help/`. |
 | **Shared code** | `src/shared/` | [Apache License 2.0](LICENSE) | Same. ExcelExporter includes it, and it stays Apache-licensed there. |
 | **Build tools, tests** | `tools/`, `tests/`, `package.json`, `.github/` | [Apache License 2.0](LICENSE) | Same. |
 | **ExcelExporter** | `src/excel-exporter/` (its help text too, `src/excel-exporter/help/`, also shown on the site's `/help/excel/`), `apps/ExcelExporter.html` | [ExcelExporter Licence](src/excel-exporter/LICENSE) (proprietary) | Free to use for any purpose, including at work; the workbooks you make are yours. You may not copy, redistribute, sell or modify ExcelExporter itself. |
 | **File-format documentation** | `docs/file-formats.md`, `docs/format-roles.md` | [CC BY 4.0](docs/LICENSE-CC-BY-4.0.txt) | Anyone may use it to build tools that read or write `.fmide` and other fmIDE files, with credit. |
-| **fmIDE's help text** | `src/help/` (built into fmIDE's Help panel, and the site's `/help` pages) | [CC BY 4.0](docs/LICENSE-CC-BY-4.0.txt) | Anyone may reuse and adapt it — in guides, courses, translations — with credit. ExcelExporter's help text stays with ExcelExporter. |
+| **fmIDE's and fmGraph's help text** | `src/help/` (built into their Help panels, and fmIDE's into the site's `/help` pages) | [CC BY 4.0](docs/LICENSE-CC-BY-4.0.txt) | Anyone may reuse and adapt it — in guides, courses, translations — with credit. ExcelExporter's help text stays with ExcelExporter. |
 | **Other documentation** | the rest of `docs/`, `README.md`, `CLAUDE.md`, … | [Apache License 2.0](LICENSE) | Same as the code. |
 
 The published web app contains both parts; it ships these licence files alongside them.

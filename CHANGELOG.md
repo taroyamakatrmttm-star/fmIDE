@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph (step 15, phase G1)
+- **A new app, fmGraph** (`apps/fmGraph.html`, open source like fmIDE): **bars** show a rectangle's value in each period you choose (all, one, or a range); **sliders** change an input rectangle, setting its number or changing it by a percentage, in the periods you choose. Moving a slider moves every bar that depends on that input; the bars it reaches light up; a dashed outline shows the model's own value and a label the difference. Errors show as marked bars with the reason.
+- **Open fmGraph** in fmIDE (File tab, App group; a customised ribbon gets it once) opens fmGraph with the model you have open, without saving a file; **↻ From fmIDE** shows it again after a change. fmGraph also opens `.fmide` documents and system or workspace files (a button, or dropped anywhere), and has a sample model.
+- fmGraph never changes the model; **Reset** and **Reset all** put the numbers back. The bars and sliders are remembered for each model in the browser (not the sliders' positions). On a model too slow to work out on every move, grabbing a slider works out each of its steps ahead. It has its own Help and What's new, works offline and on a tablet, and is part of the published site. No file format changed.
+
 ## ExcelExporter's new look (step 14)
 - **Menus for every file and reset.** The top bar has two menus: **File** (Open Model…, Load Sample Model, Paste JSON…, Start Over) and **Layout** (Import / Export Mapping, Import / Export Module Layouts, Excel Style…, Reset Mapping to Defaults…). The items for this model's layout are off until a model is loaded. The menus work by mouse, keyboard (↓, ↑, Home, End, ← →, Esc) and finger.
 - **⬇ Generate .xlsx is always in the top bar**, beside ⚙ Settings and ❓ Help; the loaded model's name shows beside ExcelExporter's.

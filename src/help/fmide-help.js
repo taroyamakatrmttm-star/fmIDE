@@ -361,6 +361,21 @@ const HELP_TOPICS = [
       { see: ['formats', 'other-files'] },
     ] },
 
+  { id: 'fmgraph', group: 'start', title: 'See how a value moves the model (fmGraph)',
+    keywords: 'fmgraph graph chart bar slider what if impact sensitivity dependency',
+    summary: 'Bars show rectangles; sliders change inputs; the bars move as you slide.',
+    body: [
+      { p: 'fmGraph is a companion to fmIDE. It shows rectangles as bars, one per period, and lets you change input rectangles with sliders. Move a slider and every bar that depends on that input moves with it; the bars it reaches light up.' },
+      { steps: [
+        'Open {cmd:openFmGraph}. It opens in its own window (or tab) with the model you have open — no need to save first.',
+        'Add a slider on an input and a bar on a result (+ Slider, + Bar).',
+        'Move the slider.',
+      ] },
+      { p: 'fmGraph never changes your model: a slider is a "what if", and Reset puts the number back. After changing the model here, press ↻ From fmIDE in fmGraph (or {cmd:openFmGraph} again) to see it as it is now.' },
+      { tip: 'fmGraph can also open a saved .fmide file on its own, and has its own Help (❓).' },
+      { see: ['to-excel'] },
+    ] },
+
   // ---------- Working faster ----------
   { id: 'launcher-shortcuts', group: 'faster', title: 'Command Launcher and keyboard shortcuts',
     keywords: 'launcher search command keyboard shortcut keys ctrl+k keytips alt',
@@ -472,6 +487,7 @@ const COMMAND_HELP = {
   saveDocumentAs: 'Saves the document under a new name.',
   openRecent: 'Lists the documents you opened lately.',
   openExcelExporter: 'Opens ExcelExporter, which turns your model into an Excel workbook.',
+  openFmGraph: 'Opens fmGraph with this model: bars and sliders that show how one value moves the rest.',
   installApp: 'Installs fmIDE as an app with its own window, working offline.',
   openLauncher: 'Finds any command, macro or help topic as you type its name.',
   openShortcuts: 'Shows every keyboard shortcut and lets you change them.',

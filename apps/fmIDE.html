@@ -1449,6 +1449,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     { id:'saveDocumentAs',label:'Save As…',            icon:'📝', category:'File', defaultShortcut:'Mod+Shift+S', action:() => saveDocumentAs() },
     { id:'openRecent',  label:'Open Recent…',          icon:'🕘', category:'File', defaultShortcut:null, action:() => showOpenRecent() },
     { id:'openExcelExporter', label:'Open ExcelExporter', icon:'📊', category:'File', defaultShortcut:null, action:() => openExcelExporter() },
+    { id:'openFmGraph', label:'Open fmGraph',          icon:'📶', category:'File', defaultShortcut:null, action:() => openFmGraph() },
     { id:'installApp',  label:'Install fmIDE',         icon:'⤓', category:'File', defaultShortcut:null, enabled:() => !!installPrompt, action:() => installApp() },
 
     { id:'openLauncher',label:'Command Launcher',      icon:'🔎', category:'View', defaultShortcut:'Mod+K', action:() => openLauncher() },
@@ -1978,6 +1979,21 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         { see: ['formats', 'other-files'] },
       ] },
 
+    { id: 'fmgraph', group: 'start', title: 'See how a value moves the model (fmGraph)',
+      keywords: 'fmgraph graph chart bar slider what if impact sensitivity dependency',
+      summary: 'Bars show rectangles; sliders change inputs; the bars move as you slide.',
+      body: [
+        { p: 'fmGraph is a companion to fmIDE. It shows rectangles as bars, one per period, and lets you change input rectangles with sliders. Move a slider and every bar that depends on that input moves with it; the bars it reaches light up.' },
+        { steps: [
+          'Open {cmd:openFmGraph}. It opens in its own window (or tab) with the model you have open — no need to save first.',
+          'Add a slider on an input and a bar on a result (+ Slider, + Bar).',
+          'Move the slider.',
+        ] },
+        { p: 'fmGraph never changes your model: a slider is a "what if", and Reset puts the number back. After changing the model here, press ↻ From fmIDE in fmGraph (or {cmd:openFmGraph} again) to see it as it is now.' },
+        { tip: 'fmGraph can also open a saved .fmide file on its own, and has its own Help (❓).' },
+        { see: ['to-excel'] },
+      ] },
+
     // ---------- Working faster ----------
     { id: 'launcher-shortcuts', group: 'faster', title: 'Command Launcher and keyboard shortcuts',
       keywords: 'launcher search command keyboard shortcut keys ctrl+k keytips alt',
@@ -2089,6 +2105,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     saveDocumentAs: 'Saves the document under a new name.',
     openRecent: 'Lists the documents you opened lately.',
     openExcelExporter: 'Opens ExcelExporter, which turns your model into an Excel workbook.',
+    openFmGraph: 'Opens fmGraph with this model: bars and sliders that show how one value moves the rest.',
     installApp: 'Installs fmIDE as an app with its own window, working offline.',
     openLauncher: 'Finds any command, macro or help topic as you type its name.',
     openShortcuts: 'Shows every keyboard shortcut and lets you change them.',
@@ -2153,6 +2170,21 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // entry: ids, dates in order, commands and topics that exist.
   // **A change people will notice adds its entry here in the same pull request.**
   const WHATS_NEW = [
+    { id: 'fmgraph', date: '2026-10-02', title: 'fmGraph: see how a value moves your model',
+      summary: 'A new companion app: bars show your rectangles, sliders change your inputs, and the bars move as you slide.',
+      what: [
+        '{cmd:openFmGraph} opens fmGraph with the model you have open, in its own window — no file to save first.',
+        'In fmGraph, a bar shows a rectangle\'s value in the periods you choose, and a slider changes an input rectangle. Move a slider and every bar that depends on that input moves with it; the bars it reaches light up, and a dashed outline shows the model\'s own value.',
+      ],
+      why: 'To see, not just read, how one number affects the rest of a model: for understanding it, checking it, or showing it to others.',
+      how: [
+        'Open {cmd:openFmGraph}.',
+        'Add a slider on an input and a bar on a result.',
+        'Move the slider. Back in fmIDE after a change, press ↻ From fmIDE in fmGraph.',
+      ],
+      notes: ['fmGraph never changes your model.', 'A customised ribbon gets Open fmGraph once, after Open ExcelExporter.'],
+      see: ['fmgraph'] },
+
     { id: 'pinch-zoom', date: '2026-10-02', title: 'Pinch to zoom on a tablet',
       summary: 'Two fingers on the canvas zoom it and move it around, as on a map.',
       what: [
@@ -17256,7 +17288,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         { label:'Module', items:[ { cmd:'saveModule', size:'large' }, { cmd:'loadModule' } ] },
         { label:'Workspace', items:[ { cmd:'exportWorkspace' }, { cmd:'importWorkspace' } ] },
         { label:'Preferences', items:[ { cmd:'exportPreferences' }, { cmd:'importPreferences' } ] },
-        { label:'App', items:[ { cmd:'openExcelExporter', size:'large' }, { cmd:'installApp' } ] },
+        { label:'App', items:[ { cmd:'openExcelExporter', size:'large' }, { cmd:'openFmGraph', size:'large' }, { cmd:'installApp' } ] },
         { label:'Library', items:[ { cmd:'openTemplates', size:'large' }, { cmd:'openFunctions', size:'large' }, { cmd:'openFormats', size:'large' }, { cmd:'browseLibrary' }, { cmd:'openLibraryPack' }, { cmd:'saveLibraryPack' } ] },
       ]},
       { id:'home', label:'Home', keytip:'H', groups:[
@@ -19620,6 +19652,42 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     if(!w) showMessage('The browser blocked the ExcelExporter window. Allow pop-ups for fmIDE, or open ExcelExporter.html from the same folder as fmIDE.');
   }
 
+  // fmGraph (step 15) sits next to fmIDE too and opens the same way, in a window named
+  // fmIDE-fmGraph. It shows the model open here without a file to save first: once loaded it
+  // asks this page for the model ('fmGraph:want-model'), and the answer is the model as Save
+  // System writes it ('fmIDE:model', its JSON text). Only the window this page opened is
+  // answered, and on the site only a page of the site itself; opened from disk (a file:
+  // address, whose origin browsers name differently or not at all), only that same window. Open fmGraph on a window already open
+  // brings it to the front and sends the model as it is now.
+  let graphWindow = null;
+  window.addEventListener('pageshow', (ev) => { if(ev.persisted) graphWindow = null; });
+  const ownOrigin = () => (location.protocol !== 'file:' && location.origin && location.origin !== 'null') ? location.origin : null;
+  function sendModelToGraph(target){
+    const origin = ownOrigin();
+    try{ target.postMessage({ type: 'fmIDE:model', name: docDisplayName(), text: JSON.stringify(buildSystemPayload()) }, origin || '*'); }
+    catch(e){ /* the window went away */ }
+  }
+  window.addEventListener('message', (ev) => {
+    if(!graphWindow || ev.source !== graphWindow) return;
+    const origin = ownOrigin();
+    if(origin && ev.origin !== origin) return;
+    if(!ev.data || typeof ev.data !== 'object' || ev.data.type !== 'fmGraph:want-model') return;
+    sendModelToGraph(graphWindow);
+  });
+  function openFmGraph(){
+    try {
+      if(graphWindow && graphWindow !== window && !graphWindow.closed && graphWindow.opener === window){
+        graphWindow.focus();
+        sendModelToGraph(graphWindow);
+        return;
+      }
+    } catch(e){ /* a window we can't ask about: open it again */ }
+    try { sessionStorage.setItem('fmIDE-opened-fmGraph', '1'); } catch(e){ /* storage off: Back opens fmIDE instead */ }
+    const w = window.open('fmGraph.html', 'fmIDE-fmGraph');
+    graphWindow = w || null;
+    if(!w) showMessage('The browser blocked the fmGraph window. Allow pop-ups for fmIDE, or open fmGraph.html from the same folder as fmIDE.');
+  }
+
   // A .fmide double-clicked in the operating system (installed app, Chrome/Edge desktop):
   // opened like Open…, asking about unsaved changes first.
   function openLaunchedFile(handle){
@@ -20036,6 +20104,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       whatsNewAdded: true, // H5b: What's New beside Help
       zoomGroupAdded: true, // 13a: the View tab's Zoom group
       addManyRectsAdded: true, // 12b: Add Many Rectangles… after Add Rectangle
+      fmGraphAdded: true, // 15 G1: Open fmGraph after Open ExcelExporter
       libraryAuthor,
       windowSizes: cleanWindowSizes(windowSizes), templateGroupsClosed: templateGroupsClosed.slice(0, 200),
       helpSize: cleanHelpSize(helpPanelSize),
@@ -20123,6 +20192,18 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     const at = g.items.findIndex(it => it && it.cmd === 'openLibraryPack');
     g.items.splice(at < 0 ? g.items.length : at, 0, { cmd: 'browseLibrary' });
   }
+  // One-time update (step 15, G1) of a customised ribbon: Open fmGraph right after Open
+  // ExcelExporter (none: left alone; already there: left alone).
+  function addFmGraphCommandToRibbon(){
+    const groups = [];
+    ribbonState.config.tabs.forEach(t => (t && Array.isArray(t.groups) ? t.groups : []).forEach(g => { if(g && Array.isArray(g.items)) groups.push(g); }));
+    if(groups.some(g => g.items.some(it => it && it.cmd === 'openFmGraph'))) return;
+    const g = groups.find(x => x.items.some(it => it && it.cmd === 'openExcelExporter'));
+    if(!g) return;
+    const at = g.items.findIndex(it => it && it.cmd === 'openExcelExporter');
+    g.items.splice(at + 1, 0, { cmd: 'openFmGraph', size: (g.items[at] && g.items[at].size) || undefined });
+    if(g.items[at + 1].size === undefined) delete g.items[at + 1].size;
+  }
   // One-time update (step 12b) of a customised ribbon: Add Many Rectangles… right after every
   // Add Rectangle it has (none: left alone; already there: left alone).
   function addManyRectsCommandToRibbon(){
@@ -20186,6 +20267,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       if(ui.whatsNewAdded !== true) addWhatsNewToRibbon();
       if(ui.zoomGroupAdded !== true) addZoomGroupToRibbon();
       if(ui.addManyRectsAdded !== true) addManyRectsCommandToRibbon();
+      if(ui.fmGraphAdded !== true) addFmGraphCommandToRibbon();
     }
     if(!fromImport && typeof ui.libraryAuthor === 'string') libraryAuthor = ui.libraryAuthor.slice(0, LIBRARY_PACK_LIMITS.author);
     // Window sizes, closed template groups, the Help panel's width, the updates seen and the canvases' zoom belong to this screen and person: never from
