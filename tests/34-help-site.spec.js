@@ -9,6 +9,7 @@
 // - A topic naming a command or topic that doesn't exist, or an id that can't be an address,
 //   stops the build.
 // - Their own security policy (no scripts at all), and out of the app: not in the offline copy.
+// - What's new (H5c): a list of every update per app, and a page per update.
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -74,7 +75,9 @@ test.describe('the pages', () => {
       'help/', 'help/all', 'help/excel/', 'help/excel/all',
       ...SRC.excel.topics.map(t => 'help/excel/' + t.id),
       ...SRC.fmide.topics.map(t => 'help/' + t.id),
-      'help/tutorials/', ...SRC.fmide.tutorials.map(t => 'help/tutorials/' + t.id)
+      'help/tutorials/', ...SRC.fmide.tutorials.map(t => 'help/tutorials/' + t.id),
+      'help/whats-new/', ...SRC.fmide.news.map(e => 'help/whats-new/' + e.id),            // H5c
+      'help/excel/whats-new/', ...SRC.excel.news.map(e => 'help/excel/whats-new/' + e.id)
     ].sort());
     await page.locator('ul.topics > li > a', { hasText: 'Aliases' }).click();
     await expect(page).toHaveURL(site.origin + 'help/aliases');
@@ -192,6 +195,69 @@ test.describe('the pages', () => {
   });
 });
 
+test.describe('What\'s new (H5c)', () => {
+  const dayText = (d) => { const [y, m, day] = d.split('-').map(Number); return day + ' ' + ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][m - 1] + ' ' + y; };
+  const days = (news) => [...new Set(news.map(e => e.date))].map(dayText);
+
+  test('fmIDE\'s list: linked from the index, every update newest first under its day', async ({ page }) => {
+    await watchPolicy(page);
+    await page.goto(site.origin + 'help/');
+    await page.locator('p.links a', { hasText: 'What\'s new' }).click();
+    await expect(page).toHaveURL(site.origin + 'help/whats-new/');
+    await expect(page).toHaveTitle('What\'s new — fmIDE help');
+    await expect(page.locator('h1')).toHaveText('What\'s new in fmIDE');
+    await expect(page.locator('section.news-day > h2')).toHaveText(days(SRC.fmide.news));
+    await expect(page.locator('ul.news > li > a')).toHaveText(SRC.fmide.news.map(e => e.title));
+    await expect(page.locator('ul.news > li .summary').first()).toHaveText(SRC.fmide.news[0].summary);
+    await expect(page.locator('footer a[href="../LICENSE-CC-BY-4.0.txt"]')).toHaveText('the full text');
+    expect(await page.evaluate(() => window.__cspViolations)).toEqual([]);
+  });
+
+  test('an update\'s page: its day, what changed, why, how to use it, good to know, and its guides', async ({ page }) => {
+    await watchPolicy(page);
+    const e = SRC.fmide.news.find(x => x.id === 'add-many-rectangles');
+    await page.goto(site.origin + 'help/whats-new/add-many-rectangles');
+    await expect(page).toHaveTitle(e.title + ' — What\'s new in fmIDE');
+    await expect(page.locator('.crumb')).toHaveText('What\'s new · ' + dayText(e.date));
+    await expect(page.locator('h1')).toHaveText(e.title);
+    await expect(page.locator('main > p.lead')).toHaveText(e.summary);
+    await expect(page.locator('article.news-item h2')).toHaveText(['What changed', 'Why', 'How to use it', 'Good to know', 'Read more']);
+    await expect(page.locator('ol.steps > li')).toHaveCount(e.how.length);
+    await expect(page.locator('ol.steps > li').first()).toHaveText('Press ▤ Add Many Rectangles… (Home tab).');
+    await expect(page.locator('main')).not.toContainText('{cmd:');
+    await expect(page.locator('section.see li > a')).toHaveText(e.see.map(id => SRC.fmide.topics.find(t => t.id === id).title));
+    await page.locator('section.see li > a').first().click();
+    await expect(page).toHaveURL(site.origin + 'help/' + e.see[0]);
+    await page.goBack();
+    await page.locator('.back a', { hasText: 'What\'s new' }).click();
+    await expect(page).toHaveURL(site.origin + 'help/whats-new/');
+    expect(await page.evaluate(() => window.__cspViolations)).toEqual([]);
+  });
+
+  test('ExcelExporter\'s: its own list and pages, under its own licence, its header links working', async ({ page }) => {
+    await watchPolicy(page);
+    await page.goto(site.origin + 'help/excel/');
+    await page.locator('p.links a', { hasText: 'What\'s new' }).click();
+    await expect(page).toHaveURL(site.origin + 'help/excel/whats-new/');
+    await expect(page.locator('h1')).toHaveText('What\'s new in ExcelExporter');
+    await expect(page.locator('section.news-day > h2')).toHaveText(days(SRC.excel.news));
+    await expect(page.locator('ul.news > li > a')).toHaveText(SRC.excel.news.map(e => e.title));
+    await expect(page.locator('footer')).toContainText('All rights reserved');
+    await expect(page.locator('footer a')).toHaveAttribute('href', '../../../ExcelExporter-LICENSE.txt');
+    await page.locator('ul.news > li > a', { hasText: 'Modules remember their layout' }).click();
+    await expect(page).toHaveURL(site.origin + 'help/excel/whats-new/module-layouts');
+    await page.locator('section.see li > a').first().click();
+    await expect(page).toHaveURL(site.origin + 'help/excel/module-layouts');
+    await page.goBack();
+    await page.locator('header a.home').click();
+    await expect(page).toHaveURL(site.origin + 'help/excel/');
+    await page.goto(site.origin + 'help/excel/whats-new/module-layouts');
+    await page.locator('header a', { hasText: 'Open ExcelExporter' }).click();
+    await expect(page).toHaveURL(site.origin + 'ExcelExporter');
+    expect(await page.evaluate(() => window.__cspViolations)).toEqual([]);
+  });
+});
+
 test.describe('the commands named in the text', () => {
   test('their names and ribbon tabs are fmIDE\'s own', async ({ page }) => {
     await page.setViewportSize({ width: 1400, height: 900 });
@@ -231,10 +297,13 @@ test.describe('text from the help files', () => {
       started.start.canvases[0].name = evil;
       started.start.canvases[0].nodes[0].text = evil;
       s.excel.topics[0].title = evil;
+      Object.assign(s.fmide.news[0], { title: evil, summary: evil, why: evil, what: [evil + ' {cmd:addRect}'], how: [evil], notes: [evil] });
+      Object.assign(s.excel.news[0], { title: evil, summary: evil, why: evil, what: [evil], how: [evil], notes: [evil] });
     });
     const { files } = buildHelp(src);
     const dir = testInfo.outputPath('help-evil');
-    const allowed = /^(\.\/|\.\.\/|\.\.\/\.\.\/|#[a-z0-9-]+|\.\/#[a-z0-9-]+|[a-z0-9-]+|(\.\.\/)?excel\/|tutorials\/[a-z0-9-]+|\.\.\/[a-z0-9-]+|(\.\.\/)*(style|help)\.css|(\.\.\/)*icons\/icon\.svg|(\.\.\/)*LICENSE(-CC-BY-4\.0)?\.txt|\.\.\/\.\.\/ExcelExporter(-LICENSE\.txt)?|https:\/\/creativecommons\.org\/licenses\/by\/4\.0\/)$/;
+    // (H5c added the What's new pages: whats-new/, and ExcelExporter's one folder deeper.)
+    const allowed = /^(\.\/|(\.\.\/)+|#[a-z0-9-]+|\.\/#[a-z0-9-]+|[a-z0-9-]+|(\.\.\/)*excel\/|tutorials\/[a-z0-9-]+|whats-new\/|\.\.\/[a-z0-9-]+|(\.\.\/)*(style|help)\.css|(\.\.\/)*icons\/icon\.svg|(\.\.\/)*LICENSE(-CC-BY-4\.0)?\.txt|(\.\.\/)+ExcelExporter(-LICENSE\.txt)?|https:\/\/creativecommons\.org\/licenses\/by\/4\.0\/)$/;
     for(const [name, data] of files){
       if(!name.endsWith('.html')) continue;
       const html = data.toString('utf8');
@@ -262,6 +331,15 @@ test.describe('text from the help files', () => {
     await expect(page.locator('h1')).toHaveText(evil);
     await expect(page.locator('.crumb')).toHaveText('Tutorial · about ' + evil + ' minutes');
     await expect(page.locator('ol.tutorial-steps > li').first()).toHaveText(evil);
+    expect(await page.locator('script, img, iframe, svg, object, embed, form').count()).toBe(0);
+    // An update's page (H5c), in both apps.
+    await page.goto('file://' + path.join(dir, 'help', 'whats-new', src.fmide.news[0].id + '.html'));
+    await expect(page.locator('h1')).toHaveText(evil);
+    await expect(page.locator('article.news-item > p').first()).toHaveText(evil + ' ▭ Add Rectangle (Home tab)');
+    await expect(page.locator('p.tip')).toHaveText('💡 ' + evil);
+    await page.goto('file://' + path.join(dir, 'help', 'excel', 'whats-new', src.excel.news[0].id + '.html'));
+    await expect(page.locator('h1')).toHaveText(evil);
+    await expect(page.locator('ol.steps > li')).toHaveText([evil]);
     expect(await page.locator('script, img, iframe, svg, object, embed, form').count()).toBe(0);
   });
 
@@ -293,12 +371,37 @@ test.describe('text from the help files', () => {
     // The real help text builds.
     expect(buildHelp(sources()).topics).toBe(SRC.fmide.topics.length);
   });
+
+  test('an update with a bad id or date, out of order, or naming what doesn\'t exist stops the build (H5c)', () => {
+    const bad = sources(s => {
+      s.fmide.news[0].id = 'Bad Id';
+      s.fmide.news[1].date = 'yesterday';
+      s.fmide.news[3].date = '2099-01-01';
+      s.fmide.news[4].how = ['Press {cmd:noSuchCommand}.'];
+      s.fmide.news[5].see = ['no-such-topic'];
+      s.excel.news[1].id = s.excel.news[2].id;
+      s.excel.news[3].what = ['{cmd:addRect}'];
+    });
+    let error;
+    try{ buildHelp(bad); } catch(e){ error = e; }
+    expect(error).toBeInstanceOf(HelpError);
+    const m = error.message;
+    expect(m).toContain('fmIDE update id "Bad Id" must be letters, digits and dashes');
+    expect(m).toContain('update ' + bad.fmide.news[1].id + ' has no proper date: "yesterday"');
+    expect(m).toContain('update ' + bad.fmide.news[3].id + ' is newer than the one before it (newest first)');
+    expect(m).toContain('update ' + bad.fmide.news[4].id + ' names a command that doesn\'t exist: noSuchCommand');
+    expect(m).toContain('update ' + bad.fmide.news[5].id + ' sees a topic that doesn\'t exist: no-such-topic');
+    expect(m).toContain('ExcelExporter update ' + bad.excel.news[1].id + ' appears twice');
+    expect(m).toContain('ExcelExporter update ' + bad.excel.news[3].id + ' names a command that doesn\'t exist: addRect');
+    const built = buildHelp(sources());
+    expect([built.news, built.excelNews]).toEqual([SRC.fmide.news.length, SRC.excel.news.length]);
+  });
 });
 
 test.describe('the security policy, and out of the app', () => {
   test('/help has its own policy: no scripts at all', async ({ page }) => {
     const get = (p) => page.request.get(site.origin + p, { maxRedirects: 0 });
-    for(const p of ['help/', 'help/aliases', 'help/all', 'help/tutorials/', 'help/tutorials/time', 'help/excel/', 'help/excel/rows', 'help/style.css', 'help/help.css', 'help/LICENSE-CC-BY-4.0.txt']){
+    for(const p of ['help/', 'help/aliases', 'help/all', 'help/tutorials/', 'help/tutorials/time', 'help/excel/', 'help/excel/rows', 'help/whats-new/', 'help/whats-new/choose', 'help/excel/whats-new/excel-style', 'help/style.css', 'help/help.css', 'help/LICENSE-CC-BY-4.0.txt']){
       const r = await get(p);
       expect(r.status(), p).toBe(200);
       expect(r.headers()['content-security-policy'], p).toBe(HELP_POLICY);
@@ -324,7 +427,7 @@ test.describe('the security policy, and out of the app', () => {
     expect(list.filter(f => f.startsWith('help'))).toEqual([]);
     expect(site.r.files).toContain('help/index.html');
     await page.setViewportSize({ width: 390, height: 844 });
-    for(const p of ['help/', 'help/first-model', 'help/tutorials/blocks', 'help/excel/tree-view', 'help/all']){
+    for(const p of ['help/', 'help/first-model', 'help/tutorials/blocks', 'help/excel/tree-view', 'help/all', 'help/whats-new/', 'help/whats-new/touch']){
       await page.goto(site.origin + p);
       expect(await page.evaluate(() => document.documentElement.scrollWidth), p).toBeLessThanOrEqual(390);
     }

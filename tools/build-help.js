@@ -7,14 +7,16 @@
 //   help/all.html                    /help/all               every topic on one page (Ctrl+F, print)
 //   help/tutorials/index.html        /help/tutorials/        the tutorials
 //   help/tutorials/<id>.html         /help/tutorials/<id>    one tutorial, step by step
-//   help/excel/index.html, <id>.html, all.html               ExcelExporter's help, the same way
+//   help/whats-new/index.html        /help/whats-new/        What's new: every update, newest first (H5b, H5c)
+//   help/whats-new/<id>.html         /help/whats-new/<id>    one update: what changed, why, how to use it
+//   help/excel/index.html, <id>.html, all.html, whats-new/   ExcelExporter's help, the same way
 //   help/style.css                   the site's look (src/library/style.css, as the catalogue's)
 //   help/help.css                    the help pages' own rules (src/help-pages/help.css)
 //   help/LICENSE-CC-BY-4.0.txt       the licence of fmIDE's help text
 //
-// Where the text comes from: fmIDE's help (src/help/fmide-help.js, fmide-tutorials.js; CC BY 4.0)
-// and ExcelExporter's (src/excel-exporter/help/excel-help.js; ExcelExporter's licence), read as
-// data. A {cmd:id} in fmIDE's text becomes the command's name and where it is: its label and
+// Where the text comes from: fmIDE's help (src/help/fmide-help.js, fmide-tutorials.js,
+// fmide-whats-new.js; CC BY 4.0) and ExcelExporter's (src/excel-exporter/help/excel-help.js,
+// excel-whats-new.js; ExcelExporter's licence), read as data. A {cmd:id} in fmIDE's text becomes the command's name and where it is: its label and
 // icon from fmIDE's command list (src/fmide/js/01-setup-commands-keys.js), and
 // the first ribbon tab holding it (DEFAULT_RIBBON, src/fmide/js/16-ribbon-keytips.js). Test
 // group 34 checks both against the app itself, so they can't drift apart.
@@ -40,7 +42,7 @@ class HelpError extends Error {}
 
 const ID = /^[a-z0-9][a-z0-9-]*$/;
 // Names the pages themselves use, so no topic may take them.
-const RESERVED = ['index', 'all', 'tutorials', 'excel', 'style', 'help', 'LICENSE-CC-BY-4.0'];
+const RESERVED = ['index', 'all', 'tutorials', 'excel', 'style', 'help', 'whats-new', 'LICENSE-CC-BY-4.0'];
 const CMD = /\{cmd:([A-Za-z0-9_:]+)\}/g;
 
 // ---------- reading the sources ----------
@@ -92,12 +94,12 @@ function readRibbon(OPERATORS){
 
 // Everything the pages are made from. Tests pass their own (hostile text, missing commands…).
 function loadHelpSources(){
-  const F = runData([['shared', 'operators.js'], ['help', 'fmide-help.js'], ['help', 'fmide-tutorials.js']],
-    ['HELP_GROUPS', 'HELP_TOPICS', 'TUTORIALS', 'OPERATORS']);
-  const E = runData([['excel-exporter', 'help', 'excel-help.js']], ['EXCEL_HELP_GROUPS', 'EXCEL_HELP_TOPICS']);
+  const F = runData([['shared', 'operators.js'], ['help', 'fmide-help.js'], ['help', 'fmide-tutorials.js'], ['help', 'fmide-whats-new.js']],
+    ['HELP_GROUPS', 'HELP_TOPICS', 'TUTORIALS', 'OPERATORS', 'WHATS_NEW']);
+  const E = runData([['excel-exporter', 'help', 'excel-help.js'], ['excel-exporter', 'help', 'excel-whats-new.js']], ['EXCEL_HELP_GROUPS', 'EXCEL_HELP_TOPICS', 'EXCEL_WHATS_NEW']);
   return {
-    fmide: { groups: F.HELP_GROUPS, topics: F.HELP_TOPICS, tutorials: F.TUTORIALS },
-    excel: { groups: E.EXCEL_HELP_GROUPS, topics: E.EXCEL_HELP_TOPICS },
+    fmide: { groups: F.HELP_GROUPS, topics: F.HELP_TOPICS, tutorials: F.TUTORIALS, news: F.WHATS_NEW },
+    excel: { groups: E.EXCEL_HELP_GROUPS, topics: E.EXCEL_HELP_TOPICS, news: E.EXCEL_WHATS_NEW },
     commands: readCommands(F.OPERATORS),
     ribbon: readRibbon(F.OPERATORS),
   };
@@ -112,6 +114,7 @@ function commandPlaces(ribbon){
   return places;
 }
 // ---------- checks ----------
+function newsTexts(e){ return [e.title, e.summary, e.why].concat(e.what || [], e.how || [], e.notes || []).filter(s => typeof s === 'string'); }
 function blockTexts(b){ return [b.p, b.tip].concat(Array.isArray(b.steps) ? b.steps : []).filter(s => typeof s === 'string'); }
 function checkHelp(src){
   const problems = [];
@@ -134,6 +137,18 @@ function checkHelp(src){
         (Array.isArray(b.see) ? b.see : []).forEach(id => { if(!ids.has(id)) problems.push(label + ' topic ' + t.id + ' sees a topic that doesn\'t exist: ' + id); });
       });
     });
+    // What's new: page addresses from the ids (no reserved names needed: the pages are in their
+    // own folder), real dates, newest first, and only commands and topics that exist.
+    const newsIds = new Set();
+    (set.news || []).forEach((e, i) => {
+      if(typeof e.id !== 'string' || !ID.test(e.id) || e.id === 'index') problems.push(label + ' update id ' + JSON.stringify(e.id) + ' must be letters, digits and dashes');
+      if(newsIds.has(e.id)) problems.push(label + ' update ' + e.id + ' appears twice');
+      newsIds.add(e.id);
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(e.date || '') || !isFinite(Date.parse(e.date))) problems.push(label + ' update ' + e.id + ' has no proper date: ' + JSON.stringify(e.date));
+      else if(i > 0 && e.date > set.news[i - 1].date) problems.push(label + ' update ' + e.id + ' is newer than the one before it (newest first)');
+      newsTexts(e).forEach(s => checkText(label + ' update ' + e.id, s));
+      (Array.isArray(e.see) ? e.see : []).forEach(id => { if(!ids.has(id)) problems.push(label + ' update ' + e.id + ' sees a topic that doesn\'t exist: ' + id); });
+    });
     (set.tutorials || []).forEach(tu => {
       idCheck(label + ' tutorial', tu.id);
       if(tu.topic && !ids.has(tu.topic)) problems.push(label + ' tutorial ' + tu.id + ' names a topic that doesn\'t exist: ' + tu.topic);
@@ -148,11 +163,12 @@ function checkHelp(src){
 
 // ---------- pages ----------
 // A page of the fmIDE help (set 'fmide') or ExcelExporter's ('excel'). up: the way from the
-// page's folder up to /help/ ('' for /help/x, '../' for /help/tutorials/x and /help/excel/x).
+// page's folder up to /help/ ('' for /help/x, '../' for /help/tutorials/x and /help/excel/x,
+// '../../' for /help/excel/whats-new/x).
 function page(set, up, title, description, main){
   const site = up + '../';
   const header = set === 'excel'
-    ? '<header class="top"><a class="home" href="./">ExcelExporter help</a><nav><a href="' + up + '">fmIDE help</a><a href="' + site + 'ExcelExporter">Open ExcelExporter</a></nav></header>'
+    ? '<header class="top"><a class="home" href="' + up + 'excel/">ExcelExporter help</a><nav><a href="' + up + '">fmIDE help</a><a href="' + site + 'ExcelExporter">Open ExcelExporter</a></nav></header>'
     : '<header class="top"><a class="home" href="' + (up || './') + '">fmIDE help</a><nav><a href="' + up + 'excel/">ExcelExporter help</a><a href="' + site + '">Open fmIDE</a></nav></header>';
   const footer = set === 'excel'
     ? '<p>ExcelExporter and this help text © 2026 Taro Yamaka. All rights reserved: ExcelExporter is free to use, under <a href="' + site + 'ExcelExporter-LICENSE.txt">its licence</a>. Unlike fmIDE\'s help, this text is not shared under CC BY.</p>'
@@ -224,7 +240,8 @@ function indexPage(set, ctx, intro, withTutorials){
   const out = [];
   out.push('<h1>' + h(set === 'excel' ? 'ExcelExporter help' : 'fmIDE help') + '</h1>');
   out.push('<p class="lead">' + h(intro) + '</p>');
-  out.push('<p class="links"><a href="all">Every topic on one page</a> (to search with Ctrl+F, or print)</p>');
+  out.push('<p class="links"><a href="all">Every topic on one page</a> (to search with Ctrl+F, or print)' +
+    (ctx.set.news && ctx.set.news.length ? ' · <a href="whats-new/">What\'s new</a> (every update, newest first)' : '') + '</p>');
   if(withTutorials && ctx.set.tutorials.length){
     out.push('<section><h2>Tutorials</h2><p>' + h(HOW_TUTORIALS) + '</p>' + tutorialList(ctx.set.tutorials, id => 'tutorials/' + id) + '</section>');
   }
@@ -297,6 +314,48 @@ function tutorialsIndexPage(ctx){
     tutorialList(ctx.set.tutorials, id => id)].join('\n');
 }
 
+// ---------- What's new (H5c) ----------
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+function dateText(d){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(d || ''));
+  return m ? Number(m[3]) + ' ' + MONTHS[Number(m[2]) - 1] + ' ' + m[1] : '';
+}
+function newsIntro(set){
+  return set === 'excel'
+    ? 'Every update to ExcelExporter so far, newest first: what changed, why, and how to use it. The same list is inside ExcelExporter: press ❓ Help.'
+    : 'Every update to fmIDE so far, newest first: what changed, why, and how to use it. The same list is inside fmIDE: press F1 and look at What\'s new.';
+}
+function newsIndexPage(set, ctx){
+  const out = [];
+  out.push('<p class="back"><a href="../">← All topics</a></p>');
+  out.push('<h1>' + h(set === 'excel' ? 'What\'s new in ExcelExporter' : 'What\'s new in fmIDE') + '</h1>');
+  out.push('<p class="lead">' + h(newsIntro(set)) + '</p>');
+  let day = null, items = [];
+  const flush = () => { if(day) out.push('<section class="news-day"><h2>' + h(dateText(day)) + '</h2><ul class="topics news">' + items.join('') + '</ul></section>'); };
+  ctx.set.news.forEach(e => {
+    if(e.date !== day){ flush(); day = e.date; items = []; }
+    items.push('<li><a href="' + e.id + '">' + h(e.title) + '</a>' + (e.summary ? '<span class="summary">' + h(e.summary) + '</span>' : '') + '</li>');
+  });
+  flush();
+  return out.join('\n');
+}
+function newsPage(e, set, ctx){
+  const out = [];
+  out.push('<p class="back"><a href="../">← All topics</a> · <a href="./">What\'s new</a></p>');
+  out.push('<p class="crumb">What\'s new · ' + h(dateText(e.date)) + '</p>');
+  out.push('<h1>' + h(e.title) + '</h1>');
+  if(e.summary) out.push('<p class="lead">' + h(e.summary) + '</p>');
+  const art = [];
+  if(Array.isArray(e.what) && e.what.length) art.push('<h2>What changed</h2>' + e.what.map(t => '<p>' + richText(t, ctx) + '</p>').join(''));
+  if(e.why) art.push('<h2>Why</h2><p>' + richText(e.why, ctx) + '</p>');
+  if(Array.isArray(e.how) && e.how.length) art.push('<h2>How to use it</h2><ol class="steps">' + e.how.map(t => '<li>' + richText(t, ctx) + '</li>').join('') + '</ol>');
+  if(Array.isArray(e.notes) && e.notes.length) art.push('<h2>Good to know</h2>' + e.notes.map(t => '<p class="tip"><span aria-hidden="true">💡 </span>' + richText(t, ctx) + '</p>').join(''));
+  const list = (Array.isArray(e.see) ? e.see : []).map(id => ctx.set.topics.find(x => x.id === id)).filter(Boolean);
+  if(list.length) art.push('<section class="see"><h2>Read more</h2>' + topicList(list, id => '../' + id) + '</section>');
+  out.push('<article class="topic news-item" data-news="' + e.id + '">' + art.join('\n') + '</article>');
+  return out.join('\n');
+}
+
 // The help pages as a Map of site path → Buffer (paths under help/). Throws a HelpError, with
 // every problem found, when the text names something that doesn't exist.
 function buildHelp(src){
@@ -313,6 +372,10 @@ function buildHelp(src){
   src.fmide.topics.forEach(t => put('help/' + t.id + '.html', page('fmide', '', t.title + ' — fmIDE help', t.summary, topicPage(t, f))));
   put('help/tutorials/index.html', page('fmide', '../', 'Tutorials — fmIDE help', 'Guided lessons inside fmIDE.', tutorialsIndexPage(f)));
   src.fmide.tutorials.forEach(tu => put('help/tutorials/' + tu.id + '.html', page('fmide', '../', tu.title + ' — fmIDE tutorial', tu.summary, tutorialPage(tu, f))));
+  if(src.fmide.news && src.fmide.news.length){
+    put('help/whats-new/index.html', page('fmide', '../', 'What\'s new — fmIDE help', 'Every update to fmIDE, newest first.', newsIndexPage('fmide', f)));
+    src.fmide.news.forEach(e => put('help/whats-new/' + e.id + '.html', page('fmide', '../', e.title + ' — What\'s new in fmIDE', e.summary, newsPage(e, 'fmide', f))));
+  }
 
   if(src.excel){
     const e = { set: src.excel, commands: new Map(), places: new Map() };
@@ -320,12 +383,17 @@ function buildHelp(src){
       indexPage('excel', e, 'Plain-English guides to ExcelExporter, which turns an fmIDE model into an Excel workbook with live formulas. The same help is inside ExcelExporter: press F1, or ❓ Help at the top right.', false)));
     put('help/excel/all.html', page('excel', '../', 'Every topic — ExcelExporter help', 'Every ExcelExporter help topic on one page.', allPage('excel', e, false)));
     src.excel.topics.forEach(t => put('help/excel/' + t.id + '.html', page('excel', '../', t.title + ' — ExcelExporter help', t.summary, topicPage(t, e))));
+    if(src.excel.news && src.excel.news.length){
+      put('help/excel/whats-new/index.html', page('excel', '../../', 'What\'s new — ExcelExporter help', 'Every update to ExcelExporter, newest first.', newsIndexPage('excel', e)));
+      src.excel.news.forEach(n => put('help/excel/whats-new/' + n.id + '.html', page('excel', '../../', n.title + ' — What\'s new in ExcelExporter', n.summary, newsPage(n, 'excel', e))));
+    }
   }
 
   files.set('help/style.css', fs.readFileSync(path.join(SRC, 'library', 'style.css')));
   files.set('help/help.css', fs.readFileSync(path.join(SRC, 'help-pages', 'help.css')));
   files.set('help/LICENSE-CC-BY-4.0.txt', fs.readFileSync(path.join(ROOT, 'docs', 'LICENSE-CC-BY-4.0.txt')));
-  return { files, topics: src.fmide.topics.length, tutorials: src.fmide.tutorials.length, excelTopics: src.excel ? src.excel.topics.length : 0 };
+  return { files, topics: src.fmide.topics.length, tutorials: src.fmide.tutorials.length, excelTopics: src.excel ? src.excel.topics.length : 0,
+    news: (src.fmide.news || []).length, excelNews: src.excel ? (src.excel.news || []).length : 0 };
 }
 
 // The help pages' HTTP headers (added to _headers by tools/build.js): no scripts at all, styles

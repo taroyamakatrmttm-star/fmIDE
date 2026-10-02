@@ -24,7 +24,7 @@ const WHATS_NEW = [
       'Pick an update to read its page; Back returns to the list.',
       'The search box finds updates too.',
     ],
-    notes: ['Opening the list of every update marks them all as seen.'],
+    notes: ['Opening the list of every update marks them all as seen.', 'The same pages are on fmIDE\'s website too, at /help/whats-new/, to read or share outside the app.'],
     see: ['finding-your-way'] },
 
   { id: 'wider-help', date: '2026-10-02', title: 'A wider Help panel',
