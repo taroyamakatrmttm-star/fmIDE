@@ -8,6 +8,20 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'trace-and-movers', date: '2026-10-02', title: 'Trace and Biggest movers',
+    summary: 'See what reaches a bar, and which rectangles your sliders change most.',
+    what: [
+      '🔍 on a bar or chart traces it: the sliders that reach it light up, a note shows the way each gets there (Price → Revenue → Profit), and lists the inputs that reach it with no slider yet, with + Slider.',
+      'Biggest movers, under the sliders, lists the rectangles the sliders change most in the whole model — not only on the board — against the model\'s own numbers, biggest change in % first. + Bar puts one on the board.',
+    ],
+    why: 'To find out why a number moves — or doesn\'t — and to spot effects you weren\'t looking at.',
+    how: [
+      'Press 🔍 on a bar.',
+      'Move a slider and read Biggest movers.',
+      'Press Esc to stop tracing.',
+    ],
+    see: ['explore'] },
+
   { id: 'boards-in-documents', date: '2026-10-02', title: 'Boards saved in fmIDE\'s document',
     summary: 'Opened from fmIDE, your boards are kept in the .fmide document, with the model.',
     what: [

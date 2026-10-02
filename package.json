@@ -42,7 +42,7 @@
     "test:add-many": "playwright test tests/40-add-many-rectangles.spec.js",
     "test:equal-spacing": "playwright test tests/41-equal-spacing-snap.spec.js",
     "test:excel-page": "playwright test tests/46-excel-page.spec.js",
-    "test:fmgraph": "playwright test tests/47-fmgraph.spec.js tests/48-fmgraph-charts.spec.js tests/49-fmgraph-boards.spec.js tests/50-fmgraph-documents.spec.js",
+    "test:fmgraph": "playwright test tests/47-fmgraph.spec.js tests/48-fmgraph-charts.spec.js tests/49-fmgraph-boards.spec.js tests/50-fmgraph-documents.spec.js tests/51-fmgraph-explore.spec.js",
     "check-pack": "node tools/check-pack.js",
     "bench": "node tools/bench-calc.js",
     "video-scripts": "node tools/video-scripts.js",

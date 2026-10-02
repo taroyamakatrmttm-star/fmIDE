@@ -355,7 +355,9 @@ test('Help: F1 and ❓ open fmGraph\'s own topics; What\'s new', async ({ page }
   const panel = page.locator('.help-panel');
   await expect(panel).toBeVisible();
   await expect(panel).toContainText('What fmGraph is');
-  await expect(panel).toContainText('Boards saved in fmIDE\'s document'); // the newest update
+  // The newest update (read from the What's new data, so a new entry needs no change here).
+  const newest = require('vm').runInNewContext(fs.readFileSync(path.join(ROOT, 'src', 'help', 'fmgraph-whats-new.js'), 'utf8') + '\n;FMGRAPH_WHATS_NEW[0].title');
+  await expect(panel).toContainText(newest);
   await page.click('#btnHelp');
   await expect(panel).toBeHidden();
 });
