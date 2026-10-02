@@ -268,7 +268,7 @@ function drawFlow(c, results, problems){
       if(prevEnd !== null && (s.role === 'add' || s.role === 'subtract')) g.appendChild(svg('line', { class: 'f-link', x1: x - (slot - bw), x2: x, y1: y(prevEnd), y2: y(prevEnd) }));
       const kind = (s.role === 'start' || s.role === 'total') ? 'f-total' : (f.to >= f.from ? 'f-up' : 'f-down');
       const rect = svg('rect', { class: 'f-bar ' + kind, x, y: Math.min(y(f.from), y(f.to)), width: bw, height: Math.max(1, Math.abs(y(f.to) - y(f.from))) });
-      if(c.colours && c.colours[s.key]) rect.setAttribute('fill', c.colours[s.key]);
+      if(c.colours && c.colours[s.key]) rect.style.fill = c.colours[s.key]; // a style, over the page's colours by direction
       const b = was[i];
       const diff = b && !b.error ? fmtDiff(f.value, b.value) : '';
       rect.appendChild(svg('title', {}, name + ' (' + ROLE_LABELS[s.role].toLowerCase() + '), ' + model.periods[c.period] + ': ' + fmtNum(f.value) + (diff ? ' — was ' + fmtNum(b.value) + ', ' + diff : '')));

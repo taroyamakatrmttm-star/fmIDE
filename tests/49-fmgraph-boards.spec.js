@@ -129,14 +129,16 @@ test('colours: a bar, a chart\'s rectangle, a waterfall step; in the file; a bad
   await openSample(page);
   const bar = page.locator('.bar-widget').first();
   await pickColour(bar.locator('input.colour-pick'), '#ff0000');
-  await expect(bar.locator('.b-now').first()).toHaveAttribute('fill', '#ff0000');
+  // The colour shown on the screen (not only the one recorded).
+  const shown = (loc) => loc.evaluate(el => getComputedStyle(el).fill);
+  await expect.poll(() => shown(bar.locator('.b-now').first())).toBe('rgb(255, 0, 0)');
   const bs = page.locator('.chart-widget').first();
   await pickColour(bs.locator('.chart-key input.key-swatch').first(), '#00ff00');
-  await expect(bs.locator('.c-period').first().locator('.c-part').first()).toHaveAttribute('fill', '#00ff00');
+  await expect.poll(() => shown(bs.locator('.c-period').first().locator('.c-part').first())).toBe('rgb(0, 255, 0)');
   const flow = page.locator('.chart-widget').nth(1);
   await flow.locator('summary').click();
   await pickColour(flow.locator('.step-row').first().locator('input.colour-pick'), '#0000ff');
-  await expect(flow.locator('.f-bar').first()).toHaveAttribute('fill', '#0000ff');
+  await expect.poll(() => shown(flow.locator('.f-bar').first())).toBe('rgb(0, 0, 255)');
   const d = await g(page, () => fmGraph.board());
   expect(d.items[2].colour).toBe('#ff0000');
   expect(d.items[0].groups[0].parts[0].colour).toBe('#00ff00');
@@ -148,7 +150,7 @@ test('colours: a bar, a chart\'s rectangle, a waterfall step; in the file; a bad
     { type: 'bar', canvasId: 'cProfit', nodeId: 'rev', name: 'Revenue', colour: '#12345' }] }] }));
   expect(n).toBe(1);
   expect((await g(page, () => fmGraph.board())).items.map(i => i.colour)).toEqual([undefined, undefined]);
-  await expect(page.locator('.bar-widget .b-now[fill]')).toHaveCount(0);
+  expect(await shown(page.locator('.bar-widget .b-now').first())).toBe('rgb(15, 118, 110)'); // the usual colour
 });
 
 test('undo and redo: every board change, by button and keyboard; a slider move is not one', async ({ page }) => {
