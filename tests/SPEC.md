@@ -696,6 +696,16 @@ fmGraph (step 15, phase G1) at 1400 × 900, through its page and `window.fmGraph
 - Help: ❓ carries the What's new dot; F1 opens fmGraph's topics and What's new; ❓ closes it.
 - The site: fmGraph.html under its own security policy (script hashes), working offline after fmIDE's first visit, ← Back to fmIDE leading to `./`; no policy violation, nothing requested from another site.
 
+### 48. fmGraph's charts (`tests/48-fmgraph-charts.spec.js`; part of `npm run test:fmgraph`)
+fmGraph (step 15, phase G2) at 1400 × 900, through its page and `window.fmGraph` (`addChart`, `chart`).
+- The sample's balance sheet (two groups, the check on): totals 3,000 / 4,900 / 7,200 / 9,900 on both sides, ✓ in every year, 16 parts, the key's groups; Price at 13: 6,000 both sides in Year 1, still ✓, 8 dashed outlines, nothing listed under it.
+- A slider on Equipment at 600: ✗ in every year with a gap of 100, said in its tip and under the chart ("Year 1: the groups' totals differ by 100."); Reset: ✓ again.
+- The sample's waterfall in Year 1: Revenue 10,000 (start), Cost of sales −6,000, Gross profit 4,000 (✓), Overheads −2,500, Profit 1,500 (✓) — three full bars, two down, the labels; in Year 4 through the editor; Cost of sales switched to "add": Gross profit ✗, "the steps before it add up to 20,800, not 5,200."
+- Columns with 5 and −3 in one group: total 2, the positive part ending and the negative starting on the zero line; a rectangle after a ÷ 0: "!" in both periods and its reason; $ and units together: "This chart mixes units ($, units)".
+- With the mouse: + Chart opens its editor; a title, Revenue and Cost of sales, a second group with Gross profit, a group name; the check off with one group, on with two (✗, gap 12,000); Move up reorders; to a waterfall and back the rectangles are kept, roles set, Gross profit ✓; after a reload the chart is there as a waterfall with its roles; Remove.
+- A chart of Overheads and Cost of sales is not lit by Price; the balance sheet and waterfall are.
+- Markup in a title and a group name shown as text (no element made); a role that isn't one is "add"; 20 groups become 12. No page error.
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.

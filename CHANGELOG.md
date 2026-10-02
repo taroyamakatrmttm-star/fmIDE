@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph charts (step 15, phase G2)
+- **+ Chart** adds a chart built from your own rectangles, of two kinds. **Columns**: groups of rectangles stacked into one column per period, side by side (a plain, stacked or balance-sheet chart), with an optional check marking each period ✓ when the groups' totals agree or ✗ with the gap. **Waterfall**: start, add, subtract and total steps in one period (an income statement, a cash bridge), each total checked against the steps before it.
+- Charts move with the sliders like bars (dashed outlines of the model's values, lit up when a slider reaches them), mark values that can't be worked out, and warn when they mix units. Edit a chart's groups, rectangles and steps in **Edit chart**. The sample model has a small balance sheet and both kinds of chart. No file format changed.
+
 ## fmGraph (step 15, phase G1)
 - **A new app, fmGraph** (`apps/fmGraph.html`, open source like fmIDE): **bars** show a rectangle's value in each period you choose (all, one, or a range); **sliders** change an input rectangle, setting its number or changing it by a percentage, in the periods you choose. Moving a slider moves every bar that depends on that input; the bars it reaches light up; a dashed outline shows the model's own value and a label the difference. Errors show as marked bars with the reason.
 - **Open fmGraph** in fmIDE (File tab, App group; a customised ribbon gets it once) opens fmGraph with the model you have open, without saving a file; **↻ From fmIDE** shows it again after a change. fmGraph also opens `.fmide` documents and system or workspace files (a button, or dropped anywhere), and has a sample model.
