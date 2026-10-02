@@ -107,7 +107,7 @@ test.describe('Start Over and Reset Mapping', () => {
     await open(page);
     await renameTab(page, 'BS', 'Balance Sheet');
     await expect.poll(() => savedLayouts(page)).toHaveLength(1);
-    await page.click('#btnClearAll');
+    await X.menuCommand(page, 'btnClearAll');
     await expect(page.locator('#afterLoad')).toBeHidden();
     expect(await savedLayouts(page)).toHaveLength(1);
     await X.loadModelFile(page, MODEL);
@@ -120,7 +120,7 @@ test.describe('Start Over and Reset Mapping', () => {
       await open(page);
       await renameTab(page, 'BS', 'Balance Sheet');
       await expect.poll(() => savedLayouts(page)).toHaveLength(1);
-      await page.click('#btnResetMapping');
+      await X.menuCommand(page, 'btnResetMapping');
       await expect(page.locator('#confirmModal')).toBeVisible();
       if(how === 'Cancel') await page.click('#confirmCancel');
       if(how === 'Escape') await page.keyboard.press('Escape');
@@ -134,13 +134,13 @@ test.describe('Start Over and Reset Mapping', () => {
   test('Reset Mapping: OK discards the saved layout', async ({ page }) => {
     await open(page);
     await renameTab(page, 'BS', 'Balance Sheet');
-    await page.click('#btnResetMapping');
+    await X.menuCommand(page, 'btnResetMapping');
     await page.click('#confirmOk');
     await expect(page.locator('#genStatus')).toContainText('Mapping reset to defaults.');
     expect(await tabNames(page)).toEqual(['BS', 'Corkscrew']);
     expect(await savedLayouts(page)).toHaveLength(0);
     // It stays discarded after Start Over and a reload of the file.
-    await page.click('#btnClearAll');
+    await X.menuCommand(page, 'btnClearAll');
     await X.loadModelFile(page, MODEL);
     expect(await tabNames(page)).toEqual(['BS', 'Corkscrew']);
   });
@@ -418,7 +418,7 @@ test.describe('Tree view: a row\'s own format, indent and the right-click comman
 
   test('a row format or indent from a mapping file is checked before use', async ({ page }, testInfo) => {
     await open(page, { sections: false });
-    const [download] = await Promise.all([page.waitForEvent('download'), page.click('#btnExportMapping')]);
+    const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
     const m = JSON.parse(require('fs').readFileSync(await download.path(), 'utf8'));
     const rev = m.rows.find(r => r.label === 'Revenue'), cash = m.rows.find(r => r.label === 'Cash');
     rev.style = { fill: 'red;"><img src=x onerror="window.__hacked=1">', font: { color: 'javascript:1', weight: 'bold' },

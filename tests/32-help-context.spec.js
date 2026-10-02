@@ -10,6 +10,7 @@ const path = require('path');
 const vm = require('vm');
 const { test, expect, openApp } = require('./helpers/apps');
 const F = require('./helpers/fmide');
+const X = require('./helpers/excel');
 const { finger, watchPointerTypes, centre } = require('./helpers/touch');
 
 const SRC = path.join(__dirname, '..', 'src');
@@ -144,14 +145,25 @@ test.describe('ExcelExporter', () => {
   test('the "?" beside each panel\'s heading opens its topic', async ({ page }) => {
     await page.click('#btnLoadSample');
     await expect(page.locator('#afterLoad')).toBeVisible();
-    const cases = [['#loadPanel', 'Loading a model'], ['#periodsPanel', 'Period columns and the file name'], ['#tabsPanel', 'Tabs'],
-      ['#rowsPanel', 'Rows: what goes where'], ['#customRowsPanel', 'Rows: what goes where'], ['#generatePanel', 'Generating and saving the layout']];
+    const cases = [['#tabsPanel', 'Tabs'], ['#inputsPanel', 'The Inputs tab'], ['#rowsPanel', 'Rows: what goes where']];
     for(const [sel, title] of cases){
-      await page.locator(sel + ' > h2 .panel-help').click();
+      await page.locator(sel + ' h2 .panel-help').click();
       await expect(panel(page).locator('.help-topic-title')).toHaveText(title);
     }
-    await page.locator('#cfgInputsEnabled').locator('xpath=..').locator('.panel-help').click();
-    await expect(panel(page).locator('.help-topic-title')).toHaveText('The Inputs tab');
+    // Settings' two tabs, with Help beside the window.
+    await page.click('#btnSettings');
+    await page.locator('#periodsPanel h2 .panel-help').click();
+    await expect(panel(page).locator('.help-topic-title')).toHaveText('Period columns and the file name');
+    await page.click('#settingsTabStyle');
+    await page.locator('#excelStyleBlock h2 .panel-help').click();
+    await expect(panel(page).locator('.help-topic-title')).toHaveText('How the workbook looks');
+    const box = await page.locator('#settingsModal .modal').boundingBox(), hp = await panel(page).boundingBox();
+    expect(box.x + box.width, 'Settings stays beside Help').toBeLessThanOrEqual(hp.x + 1);
+    await page.click('#settingsDone');
+    // The welcome screen's, after Start Over.
+    await X.menuCommand(page, 'btnClearAll');
+    await page.locator('#loadPanel h2 .panel-help').click();
+    await expect(panel(page).locator('.help-topic-title')).toHaveText('Loading a model');
     // Search, and See also.
     await panel(page).locator('.help-search').fill('scenario');
     await expect(panel(page).locator('.help-topic-link').first()).toHaveAttribute('data-topic', 'scenarios');

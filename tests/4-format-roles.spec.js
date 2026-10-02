@@ -59,6 +59,9 @@ const sidesOf = (c) => ['top', 'bottom', 'left', 'right'].filter(k => c.border &
 
 test('the Excel style lists the seven roles with ExcelExporter\'s own defaults', async ({ page }) => {
   await load(page, 'roles-workspace-defaults.json');
+  await X.openSettings(page, 'style');                  // ⚙ Settings → Excel Style
+  await expect(page.locator('#excelStyleBlock')).toBeVisible();
+  await expect(roleRow(page, 'Links').locator('td').first()).toHaveAttribute('title', /another sheet/); // what it covers: a tooltip
   const roles = await page.locator('#excelStyleBody tr').evaluateAll(trs => trs.map(tr => tr.dataset.role));
   expect(roles).toEqual(ROLES);
   await expect(roleField(page, 'Links', 'fontColor')).toHaveValue('#008000');
@@ -117,6 +120,7 @@ test('fmIDE\'s number formats reach Excel: a rectangle\'s own, else its role\'s;
 
 test('editing the Excel style: the workbook follows, and the style is kept after a reload for every model', async ({ page }) => {
   await load(page, 'roles-workspace-edited.json', { inputs: true });
+  await X.openSettings(page, 'style');
   await roleField(page, 'Links', 'fontColor').fill('#dc2626');
   await expect(roleField(page, 'Links', 'fontAuto')).not.toBeChecked();
   for(const side of ['top', 'left', 'right']) await roleField(page, 'Inputs', 'side-' + side).uncheck();
@@ -147,6 +151,7 @@ test('editing the Excel style: the workbook follows, and the style is kept after
 
 test('Export Excel Style, Reset to Defaults, then Import brings it back', async ({ page }, testInfo) => {
   await load(page, 'roles-workspace-defaults.json');
+  await X.openSettings(page, 'style');
   await roleField(page, 'Headers', 'fill').fill('#fde68a');
   await roleField(page, 'Notes', 'fontAuto').check();
   const [download] = await Promise.all([page.waitForEvent('download'), page.click('#btnExportStyle')]);

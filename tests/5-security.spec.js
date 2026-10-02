@@ -29,6 +29,7 @@ for(const file of EVIL){
       await page.click(view);
       await settle(page);
     }
+    await X.openSettings(page, 'style');
     await page.locator('#excelStyleBody tr').first().hover();
     await X.generate(page);
     await settle(page);

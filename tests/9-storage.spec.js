@@ -183,7 +183,7 @@ test.describe('ExcelExporter', () => {
     const entries = await makeLegacyLayout(page);
     await reloadWithModel(page);
     expect(await tabNames(page)).toContain('Legacy Tab');
-    await page.click('#btnResetMapping');
+    await X.menuCommand(page, 'btnResetMapping');
     await page.click('#confirmOk');
     await expect(page.locator('#genStatus')).toContainText('Mapping reset to defaults.');
     expect(await S.storedKeys(page, 'ExcelExporter', PREFIX)).toEqual([]);
