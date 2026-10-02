@@ -101,10 +101,11 @@ const FMGRAPH_HELP_TOPICS = [
       { see: ['sliders'] },
     ] },
   { id: 'board-kept', group: 'start', title: 'What fmGraph remembers',
-    keywords: 'saved remember board kept browser storage reload',
+    keywords: 'saved remember board kept browser storage reload document fmide save',
     summary: 'Your bars and sliders, for each model, in this browser.',
     body: [
       { p: 'Your boards — their bars, charts and sliders, how they are arranged and coloured — are remembered in this browser for each model, and come back when you open it again — also when the model has changed a little in fmIDE. Sliders always start on the model\'s own numbers. To move boards to another computer or person, export them (Boards ▾).' },
+      { p: 'Opened from fmIDE, your boards are also kept in fmIDE\'s document: each change to them goes back to fmIDE, whose document then has unsaved changes, and saving it there keeps the boards with the model. A document that has boards shows them here instead of the ones this browser remembered — from fmIDE, or a .fmide file opened here.' },
       { p: 'Nothing is sent anywhere: fmGraph works offline and keeps everything on this device.' },
       { see: ['open-model'] },
     ] },

@@ -2137,7 +2137,7 @@ function evaluateModel(ir, options){
 // (docs/file-formats.md). To change one of these formats: raise its version here and add
 // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
 // exactly one version.
-const SHARED_FILE_VERSIONS = { 'system': 9, 'fmIDE-workspace': 10 };
+const SHARED_FILE_VERSIONS = { 'system': 9, 'fmIDE-workspace': 11 };
 // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
 // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
 function upgradeNodePlugs(nodes){
@@ -2222,7 +2222,10 @@ const SHARED_FILE_MIGRATIONS = {
     // ones don't.
     8: () => {},
     // v9 → v10: its system (v9) and templates (v9) may use choose (phase E2b); older ones don't.
-    9: () => {}
+    9: () => {},
+    // v10 → v11: a document may carry the fmGraph boards of its model (`graphBoards`, an
+    // fmIDE-graph-board file; step 15 G3b); older ones have none.
+    10: () => {}
   },
   'system': {
     // v1 systems were accepted with fields the loader already defaults (periods, ids…);
@@ -2730,7 +2733,10 @@ function readModelData(raw){
 }
 
 // Opens a file's text (from the disk, a drop or fmIDE). Resolves true when a model was loaded.
-async function openModelText(text, name){
+// opts.boards: the document's own boards (an fmIDE-graph-board file, parsed or as text) —
+// fmIDE's (step 15 G3b), or a workspace's `graphBoards`; opts.fromFmide: the model came from
+// fmIDE's window, so changes to the boards go back to it (06-page.js).
+async function openModelText(text, name, opts){
   const big = fileTextProblem(text);
   if(big){ notify(big, 'err', 'load'); return false; }
   let raw;
@@ -2745,7 +2751,9 @@ async function openModelText(text, name){
     if(!go) return false;
   }
   try{
-    await loadModel(r.kind === 'fmIDE-workspace' ? r.data.system : r.data, name);
+    const o = opts || {};
+    const docBoards = o.boards !== undefined ? o.boards : (r.kind === 'fmIDE-workspace' ? r.data.graphBoards : null);
+    await loadModel(r.kind === 'fmIDE-workspace' ? r.data.system : r.data, name, { boards: docBoards, fromFmide: !!o.fromFmide });
   }catch(e){
     notify(e && e.message ? e.message : 'That model could not be opened.', 'err', 'load');
     return false;
@@ -2766,7 +2774,7 @@ function rectName(n){
   return (name || '#' + n.id).slice(0, 120);
 }
 
-async function loadModel(system, name){
+async function loadModel(system, name, opts){
   if(!system || !Array.isArray(system.canvases) || system.canvases.length === 0){
     throw new Error('That model has no canvases.');
   }
@@ -2795,8 +2803,9 @@ async function loadModel(system, name){
   const m = { name: typeof name === 'string' && name ? name.slice(0, 120) : 'Model', periods, ir, canvasIndex, rects, byKey,
     inputs: rects.filter(r => r.input), base, baseMs, signature: modelSignature(ir), reach: reachMap(ir) };
   model = m;
+  linkedToFmide = !!(opts && opts.fromFmide);
   clearResultCache();
-  await loadBoardFor(m);
+  await loadBoardFor(m, opts && opts.boards);
   showBoard();
 }
 
@@ -3125,8 +3134,25 @@ function saveBoardNow(){
     .catch(() => notify('This browser could not keep the boards; they will be gone after a reload.', 'err', 'storage'));
 }
 
-async function loadBoardFor(m){
-  let restored = null;
+// The document's own boards (G3b), when it brings any with something on them, win over the
+// ones this browser keeps for the model, and are then kept here too.
+function documentBoards(raw){
+  try{
+    const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if(!data || typeof data !== 'object' || fileDataProblem(data)) return null;
+    const r = cleanBoards(data);
+    return r && r.boards.some(b => b.items.length || b.sliders.length) ? r : null;
+  }catch(e){ return null; }
+}
+async function loadBoardFor(m, docRaw){
+  let restored = docRaw ? documentBoards(docRaw) : null;
+  if(restored){
+    boards = restored.boards;
+    board = boards[restored.active];
+    resetUndo();
+    setTimeout(saveBoardNow, 0);
+    return;
+  }
   try{
     await store.ready;
     let raw = await store.get(BOARD_PREFIX + m.signature);
@@ -3338,6 +3364,7 @@ function noteChange(){
     undoStack.push(lastState);
     if(undoStack.length > UNDO_LIMIT) undoStack.shift();
     redoStack = [];
+    sendBoardsToFmideSoon();
   }
   lastState = now;
   syncUndoButtons();
@@ -3355,6 +3382,7 @@ function restoreState(text){
   lastState = text;
   restoring = true;
   try{ saveBoardNow(); } finally { restoring = false; }
+  sendBoardsToFmideSoon();
   renderAll();
 }
 function undo(){
@@ -4329,7 +4357,7 @@ $('btnAddSlider').addEventListener('click', () => {
 });
 document.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', () => $({ bar: 'btnAddBar', chart: 'btnAddChart', slider: 'btnAddSlider' }[b.dataset.add]).click()));
 $('btnResetAll').addEventListener('click', () => { if(!model) return; board.sliders.forEach(s => { s.value = null; }); renderBoard(); });
-window.addEventListener('pagehide', () => { if(saveTimer) saveBoardNow(); });
+window.addEventListener('pagehide', () => { if(saveTimer) saveBoardNow(); if(sendTimer) sendBoardsToFmide(); });
 
 // ---- fmIDE ----
 // fmIDE's Open fmGraph opens this page in a window named fmIDE-fmGraph and keeps it as the
@@ -4348,6 +4376,23 @@ function fmideOpener(){
 // browsers name differently or not at all): then only the window counts.
 const ownOrigin = () => (location.protocol !== 'file:' && location.origin && location.origin !== 'null') ? location.origin : null;
 const messageTarget = () => ownOrigin() || '*';
+// A model from fmIDE keeps its boards in fmIDE's document (G3b): each change to the boards
+// (not a slider moved, not another board shown) is sent back ('fmGraph:boards', the board
+// file's text), and fmIDE marks the document unsaved. A model opened here from a file keeps
+// its boards in this browser only.
+let linkedToFmide = false, sendTimer = null;
+function sendBoardsToFmideSoon(){
+  if(!linkedToFmide) return;
+  clearTimeout(sendTimer);
+  sendTimer = setTimeout(sendBoardsToFmide, 300);
+}
+function sendBoardsToFmide(){
+  clearTimeout(sendTimer); sendTimer = null;
+  const op = fmideOpener();
+  if(!linkedToFmide || !op || !model) return false;
+  try{ op.postMessage({ type: 'fmGraph:boards', text: JSON.stringify(boardsData()) }, messageTarget()); }catch(e){ return false; }
+  return true;
+}
 function askFmideForModel(){
   const op = fmideOpener();
   if(!op) return false;
@@ -4361,7 +4406,8 @@ window.addEventListener('message', (ev) => {
   const d = ev.data;
   if(!d || typeof d !== 'object' || d.type !== 'fmIDE:model' || typeof d.text !== 'string') return;
   const name = typeof d.name === 'string' && d.name ? d.name.slice(0, 120) : 'fmIDE model';
-  openModelText(d.text, name).then(ok => { if(ok) notify('Showing ' + name + ' from fmIDE.', 'ok', 'load'); });
+  const docBoards = typeof d.boards === 'string' ? d.boards : null;
+  openModelText(d.text, name, { boards: docBoards, fromFmide: true }).then(ok => { if(ok) notify('Showing ' + name + ' from fmIDE.', 'ok', 'load'); });
 });
 $('btnFromFmide').addEventListener('click', () => {
   if(!askFmideForModel()) notify('fmIDE\'s window is closed: open fmGraph from fmIDE again, or open a saved file.', 'info', 'load');
@@ -5125,10 +5171,11 @@ const FMGRAPH_HELP_TOPICS = [
       { see: ['sliders'] },
     ] },
   { id: 'board-kept', group: 'start', title: 'What fmGraph remembers',
-    keywords: 'saved remember board kept browser storage reload',
+    keywords: 'saved remember board kept browser storage reload document fmide save',
     summary: 'Your bars and sliders, for each model, in this browser.',
     body: [
       { p: 'Your boards — their bars, charts and sliders, how they are arranged and coloured — are remembered in this browser for each model, and come back when you open it again — also when the model has changed a little in fmIDE. Sliders always start on the model\'s own numbers. To move boards to another computer or person, export them (Boards ▾).' },
+      { p: 'Opened from fmIDE, your boards are also kept in fmIDE\'s document: each change to them goes back to fmIDE, whose document then has unsaved changes, and saving it there keeps the boards with the model. A document that has boards shows them here instead of the ones this browser remembered — from fmIDE, or a .fmide file opened here.' },
       { p: 'Nothing is sent anywhere: fmGraph works offline and keeps everything on this device.' },
       { see: ['open-model'] },
     ] },
@@ -5144,6 +5191,21 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'boards-in-documents', date: '2026-10-02', title: 'Boards saved in fmIDE\'s document',
+    summary: 'Opened from fmIDE, your boards are kept in the .fmide document, with the model.',
+    what: [
+      'When fmIDE opened fmGraph, each change to the boards goes back to fmIDE: its document shows unsaved changes, and saving it there keeps the boards.',
+      'A document that has boards shows them here, ahead of the ones this browser remembered — whether fmIDE sends it or you open the .fmide file here.',
+    ],
+    why: 'So a model and its boards travel together in one file, to another computer or another person.',
+    how: [
+      'In fmIDE, use Open fmGraph.',
+      'Change the boards here.',
+      'Save the document in fmIDE.',
+    ],
+    notes: ['A model opened here from a file keeps its changes in this browser only: use Boards ▾ to export them.'],
+    see: ['board-kept'] },
+
   { id: 'boards', date: '2026-10-02', title: 'Boards: tabs, arranging, colours, undo, files',
     summary: 'Several boards per model, arranged by dragging, in your colours, with undo — and as files to share.',
     what: [

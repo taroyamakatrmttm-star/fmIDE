@@ -52,7 +52,7 @@ test('Attach Excel layout… takes this family\'s entry from an ExcelExporter fi
   await expect(picker(page).locator('.template-attachment')).toContainText('An Excel layout is attached');
 
   const ws = await library(page);
-  expect(ws.version).toBe(10);
+  expect(ws.version).toBe(11);
   expect(ws.templates.find(t => t.name === 'Sales').attachments).toEqual({ excel: LAYOUT });
   const { data: tf } = await F.downloadJson(page, () => picker(page).locator('button', { hasText: '⇩ Export Templates' }).click());
   expect(tf.version).toBe(9);

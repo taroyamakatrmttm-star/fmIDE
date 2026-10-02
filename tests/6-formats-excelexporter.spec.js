@@ -210,14 +210,14 @@ test.describe('workspace v6 (origins)', () => {
     expect(await page.evaluate(() => window.__pwned)).toBeUndefined();
     expect(pageErrors).toEqual([]);
   });
-  // Workspace v10 is current since phase E2b: a newer one is v11.
-  test('a v11 workspace asks first', async ({ page }, testInfo) => {
+  // Workspace v11 is current since step 15 G3b: a newer one is v12.
+  test('a v12 workspace asks first', async ({ page }, testInfo) => {
     const ws = withOrigins();
-    ws.version = 11;
-    const p = testInfo.outputPath('ws-v11.json');
+    ws.version = 12;
+    const p = testInfo.outputPath('ws-v12.json');
     fs.writeFileSync(p, JSON.stringify(ws));
     await page.setInputFiles('#fileInput', p);
     await expect(page.locator('#confirmModal')).toBeVisible();
-    await expect(page.locator('#confirmMessage')).toContainText('format version 11');
+    await expect(page.locator('#confirmMessage')).toContainText('format version 12');
   });
 });

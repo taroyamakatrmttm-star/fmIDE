@@ -194,6 +194,7 @@
   function newDocument(){
     confirmDiscardChanges(() => {
       applySystemDataDirect({ canvases: [{ id: 'c' + nextCanvasId, name: 'Canvas 1', nodes: [], edges: [] }], periods: ['Period 1'], currentPeriod: 0 });
+      graphBoards = null;
       render();
       Object.assign(currentDoc, { name: null, fileName: null, handle: null, recentId: null, serial: currentDoc.serial + 1 });
       clearUndoHistory();
@@ -267,6 +268,7 @@
   function applyDocumentData(data, kind){
     const system = kind === 'system' ? data : data.system;
     applySystemDataDirect(system);
+    graphBoards = kind === 'fmIDE-workspace' ? cleanGraphBoards(data.graphBoards) : null;
     const presets = (kind === 'fmIDE-workspace' && Array.isArray(data.formatPresets) && data.formatPresets.length)
       ? data.formatPresets : system.formatPresets;
     if(Array.isArray(presets)) mergeFormatPresets(presets);

@@ -192,6 +192,26 @@ function cleanTemplateAttachments(raw, family, kind){
   });
   return Object.keys(out).length ? out : null;
 }
+// A document's fmGraph boards (workspace v11, `graphBoards`; step 15 G3b): an fmIDE-graph-board
+// file that fmGraph wrote, kept with the document. fmIDE never reads what is inside: it keeps
+// it when it is that kind of file, plain data, at most 16 deep and 1 MB as text; anything else
+// is dropped. fmGraph reads it with its own checks (cleanBoards) when it shows the boards.
+const GRAPH_BOARDS_LIMITS = { bytes: 1024 * 1024, depth: 16 };
+function cleanGraphBoards(raw){
+  if(!raw || typeof raw !== 'object' || Array.isArray(raw) || raw.kind !== 'fmIDE-graph-board') return null;
+  const plain = (v, depth) => {
+    if(depth > GRAPH_BOARDS_LIMITS.depth) return false;
+    if(v === null || typeof v === 'string' || typeof v === 'boolean') return true;
+    if(typeof v === 'number') return Number.isFinite(v);
+    if(Array.isArray(v)) return v.every(x => plain(x, depth + 1));
+    if(typeof v === 'object' && Object.prototype.toString.call(v) === '[object Object]') return Object.keys(v).every(k => plain(v[k], depth + 1));
+    return false;
+  };
+  if(!plain(raw, 1)) return null;
+  const text = JSON.stringify(raw);
+  return text.length > GRAPH_BOARDS_LIMITS.bytes ? null : JSON.parse(text);
+}
+
 // The Excel layout for one template family out of a file ExcelExporter's Export Module
 // Layouts saved (parsed JSON). fmIDE reads only the file's kind, version and each entry's
 // family. Returns { attachment } or { error }.

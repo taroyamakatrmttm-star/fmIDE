@@ -52,21 +52,36 @@
   // answered, and on the site only a page of the site itself; opened from disk (a file:
   // address, whose origin browsers name differently or not at all), only that same window. Open fmGraph on a window already open
   // brings it to the front and sends the model as it is now.
+  // The document's boards (G3b) go with the model ('boards', the board file's JSON text, or
+  // null), and win over the ones fmGraph keeps in the browser; fmGraph sends each change to
+  // them back ('fmGraph:boards'), kept with the document, which then has unsaved changes — not
+  // an undo step (fmGraph has its own undo). In a tutorial's practice none go either way.
   let graphWindow = null;
   window.addEventListener('pageshow', (ev) => { if(ev.persisted) graphWindow = null; });
   const ownOrigin = () => (location.protocol !== 'file:' && location.origin && location.origin !== 'null') ? location.origin : null;
   function sendModelToGraph(target){
     const origin = ownOrigin();
-    try{ target.postMessage({ type: 'fmIDE:model', name: docDisplayName(), text: JSON.stringify(buildSystemPayload()) }, origin || '*'); }
+    const boards = (graphBoards && !inPractice()) ? JSON.stringify(graphBoards) : null;
+    try{ target.postMessage({ type: 'fmIDE:model', name: docDisplayName(), text: JSON.stringify(buildSystemPayload()), boards }, origin || '*'); }
     catch(e){ /* the window went away */ }
   }
   window.addEventListener('message', (ev) => {
     if(!graphWindow || ev.source !== graphWindow) return;
     const origin = ownOrigin();
     if(origin && ev.origin !== origin) return;
-    if(!ev.data || typeof ev.data !== 'object' || ev.data.type !== 'fmGraph:want-model') return;
-    sendModelToGraph(graphWindow);
+    if(!ev.data || typeof ev.data !== 'object') return;
+    if(ev.data.type === 'fmGraph:want-model') sendModelToGraph(graphWindow);
+    else if(ev.data.type === 'fmGraph:boards') takeGraphBoards(ev.data.text);
   });
+  function takeGraphBoards(text){
+    if(inPractice() || typeof text !== 'string' || text.length > GRAPH_BOARDS_LIMITS.bytes) return;
+    let raw;
+    try{ raw = JSON.parse(text); } catch(e){ return; }
+    const cleaned = cleanGraphBoards(raw);
+    if(!cleaned || JSON.stringify(cleaned) === JSON.stringify(graphBoards)) return;
+    graphBoards = cleaned;
+    markDocDirty();
+  }
   function openFmGraph(){
     try {
       if(graphWindow && graphWindow !== window && !graphWindow.closed && graphWindow.opener === window){
