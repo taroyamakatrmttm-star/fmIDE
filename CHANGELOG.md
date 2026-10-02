@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Templates carry fmGraph boards (step 15, phase G5a)
+- **fmGraph: Boards ▾ → Export for a template…** saves the boards for a canvas template (just its canvas) or a system template (the whole model), naming rectangles by name.
+- **fmIDE: 📈 Attach fmGraph board…** in the Templates window, on canvas and system templates; the board goes with the template in documents, new versions and library packs, and the pack checker checks it against the template.
+- **File formats**: templates file 10, workspace (`.fmide`) 12, library pack 4, fmGraph board file 2. Older files open as before; an older fmIDE or fmGraph asks before opening the new ones.
+
 ## fmGraph: compare two what-ifs, gliding bars (step 15, phase G4b)
 - **📌 Pin as A**: the dashed outlines, difference labels and Biggest movers compare with where the sliders were when pinned, on every board, until Unpin; **⇄ Swap** flips between A and now. Never saved.
 - **Bars glide** to their new values when they change — not while a slider is dragged, and never with the device's reduced-motion setting.
