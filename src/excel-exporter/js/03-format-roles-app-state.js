@@ -233,6 +233,14 @@ function setStatus(el, msg, kind){
   const d = document.createElement('div');
   d.className = 'status ' + (['ok', 'err', 'info', 'warn'].includes(kind) ? kind : 'info');
   d.textContent = String(msg);
+  // × dismisses it (drawn by the style sheet, so the message's text stays just the message).
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'status-close';
+  close.setAttribute('aria-label', 'Dismiss');
+  close.title = 'Dismiss';
+  close.addEventListener('click', () => d.remove());
+  d.appendChild(close);
   el.appendChild(d);
 }
 

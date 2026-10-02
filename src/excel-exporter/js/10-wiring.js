@@ -11,7 +11,8 @@ function parseFileText(text){
   const shape = fileDataProblem(parsed);
   return shape ? { error: shape } : { parsed };
 }
-async function tryLoad(jsonText, label){
+// `label` names it in messages; `name`, shown in the top bar, defaults to it.
+async function tryLoad(jsonText, label, name){
   const { parsed, error } = parseFileText(jsonText);
   if(error){ setStatus($('loadStatus'), error, 'err'); return; }
   const r = readKnownFile(parsed, ['system', 'fmIDE-workspace']);
@@ -19,6 +20,9 @@ async function tryLoad(jsonText, label){
   if(!(await confirmNewerFile(r))){ setStatus($('loadStatus'), 'Not loaded.', 'info'); return; }
   try{
     await loadModel(r.data);
+    currentModelLabel = name || label; // only once it has loaded: a file that fails leaves the name as it was
+    syncPageState();
+    setStatus($('genStatus'), '', null); // a message about the last model's workbook
     setStatus($('loadStatus'), `Loaded ${label} — ${model.canvases.length} canvas${model.canvases.length === 1 ? '' : 'es'}, ${model.periods.length} periods.`, 'ok');
   }catch(err){
     setStatus($('loadStatus'), 'Could not read that as an fmIDE system export: ' + err.message, 'err');
@@ -45,9 +49,10 @@ function readFile(file){
   reader.readAsText(file);
 }
 
-$('btnLoadSample').addEventListener('click', () => tryLoad(JSON.stringify(sampleModel()), 'the sample model'));
-$('btnTogglePaste').addEventListener('click', () => $('pasteWrap').classList.toggle('hidden'));
-$('btnLoadPasted').addEventListener('click', () => tryLoad($('pasteArea').value, 'pasted JSON'));
+$('btnLoadSample').addEventListener('click', () => tryLoad(JSON.stringify(sampleModel()), 'the sample model', 'Sample model'));
+$('btnTogglePaste').addEventListener('click', () => openPasteDialog());
+$('btnLoadPasted').addEventListener('click', () => { const text = $('pasteArea').value; closePasteDialog(); tryLoad(text, 'pasted JSON', 'Pasted model'); });
+$('dropZone').addEventListener('keydown', (ev) => { if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); $('fileInput').click(); } });
 
 $('cfgStartLabel').addEventListener('change', () => { mapping.cfg.startLabel = $('cfgStartLabel').value; saveMapping(); });
 $('cfgFrequency').addEventListener('change', () => { mapping.cfg.frequency = $('cfgFrequency').value; saveMapping(); });
@@ -64,7 +69,7 @@ $('btnAddCustomRow').addEventListener('click', addCustomRow);
 $('viewByCanvas').addEventListener('click', () => setRowView('canvas'));
 $('viewByTab').addEventListener('click', () => setRowView('tab'));
 $('viewByTree').addEventListener('click', () => setRowView('tree'));
-setRowView('canvas');
+setRowView('tree'); // the Tree is the main row editor
 
 $('cfgInputsEnabled').addEventListener('change', () => setInputsEnabled($('cfgInputsEnabled').checked));
 $('cfgInputsName').addEventListener('change', () => setInputsTabName($('cfgInputsName').value));
@@ -205,9 +210,11 @@ $('btnClearAll').addEventListener('click', () => {
   $('fileInput').value = '';
   $('afterLoad').classList.add('hidden');
   $('pasteArea').value = '';
-  $('pasteWrap').classList.add('hidden');
-  setStatus($('loadStatus'), '', null);
-  setStatus($('genStatus'), '', null);
+  ['loadStatus', 'genStatus', 'moduleLayoutsStatus'].forEach(id => setStatus($(id), '', null));
+  $('differencesPanel').classList.add('hidden');
+  syncPageState();
 });
+
+syncPageState();
 
 })();

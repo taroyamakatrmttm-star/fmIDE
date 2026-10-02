@@ -215,7 +215,7 @@ function renderRowsByTab(){
   restoreScrollTops(container, scrollTops);
 }
 
-let currentRowView = 'canvas';
+let currentRowView = 'tree';
 function setRowView(view){
   currentRowView = view;
   $('viewByCanvas').classList.toggle('active', view === 'canvas');
@@ -225,8 +225,7 @@ function setRowView(view){
   $('blockInstanceGroups').classList.toggle('hidden', view !== 'canvas');
   $('rowGroupsByTab').classList.toggle('hidden', view !== 'tab');
   $('rowGroupsTree').classList.toggle('hidden', view !== 'tree');
-  $('customRowsPanel').classList.toggle('hidden', view !== 'canvas');
-  if(view === 'tree') renderTreeView();
+  if(view === 'tree' && mapping) renderTreeView();
 }
 
 // ---------- Tree view (Tab -> Row, always flat regardless of the section toggle) ----------

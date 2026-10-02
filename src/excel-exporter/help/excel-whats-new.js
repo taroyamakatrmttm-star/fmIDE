@@ -11,6 +11,26 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'new-look', date: '2026-10-02', title: 'A cleaner, simpler ExcelExporter',
+    summary: 'Menus for every file and reset, Generate always at the top, tabs and rows side by side, less text.',
+    what: [
+      'Every file you import or export, and every reset, is now in two menus at the top: File (open a model, the sample, Paste JSON…, Start Over) and Layout (this model\'s mapping, module layouts, your Excel style, Reset Mapping to Defaults…).',
+      '⬇ Generate .xlsx is always at the top right. ⚙ Settings holds the period labels, the file name and your Excel style.',
+      'Once a model is loaded, its tabs and the Inputs tab settings sit on the left and its rows on the right. The rows open in the Tree; By Excel Tab and By Canvas are a click away. A tab\'s row count takes you to its rows.',
+      'The long explanations moved into Help: pointing at a button says what it does, and the "?" beside a heading opens its guide.',
+    ],
+    why: 'The page had grown long and wordy, with import and export buttons scattered across it.',
+    how: [
+      'Drop a model file anywhere on the page (or choose File → Open Model…).',
+      'Arrange the tabs on the left and the rows on the right.',
+      'Press ⬇ Generate .xlsx.',
+    ],
+    notes: [
+      'Nothing about the workbook changed, and your saved layouts and Excel style are kept.',
+      'Label rows are edited where they sit, in the Tree or By Excel Tab, so the separate Custom / Label Rows table is gone.',
+    ],
+    see: ['what-is-excelexporter', 'rows', 'generate'] },
+
   { id: 'whats-new', date: '2026-10-02', title: 'What\'s new, inside Help',
     summary: 'Every update to ExcelExporter, newest first: what changed, why, and how to use it.',
     what: [

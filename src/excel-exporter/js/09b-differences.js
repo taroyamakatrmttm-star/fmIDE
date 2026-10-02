@@ -293,12 +293,19 @@ function renderDifferences(){
   const head = document.createElement('div');
   head.className = 'differences-head';
   head.textContent = 'Where the workbook will differ from fmIDE (' + lines.length + '):';
+  const help = document.createElement('button');
+  help.type = 'button';
+  help.className = 'panel-help';
+  help.textContent = '?';
+  help.title = 'Help: where the workbook differs from fmIDE';
+  help.addEventListener('click', () => excelHelp.open('differences'));
+  head.appendChild(help);
   panel.appendChild(head);
   const ul = document.createElement('ul');
   lines.forEach(t => { const li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
   panel.appendChild(ul);
   const note = document.createElement('div');
   note.className = 'hint';
-  note.textContent = 'You can still download the workbook. Fixing these in fmIDE (or including the rows) makes both give the same numbers.';
+  note.textContent = 'You can still download. Fix these in fmIDE (or include the rows) and both give the same numbers.';
   panel.appendChild(note);
 }

@@ -341,7 +341,7 @@ const HELP_TOPICS = [
         'Calculations: every rectangle fed by an arrow.',
       ] },
       { p: 'Change a role and every rectangle in it follows. 🎨 on a rectangle gives it its own look instead.' },
-      { p: 'Only number formats go to Excel: a rectangle\'s own, or its role\'s. How cells look in Excel (fills, fonts, borders) is set in ExcelExporter, under Excel style, and is kept there for every model you export.' },
+      { p: 'Only number formats go to Excel: a rectangle\'s own, or its role\'s. How cells look in Excel (fills, fonts, borders) is set in ExcelExporter (⚙ Settings → Excel Style), and is kept there for every model you export.' },
       { see: ['to-excel'] },
     ] },
 
@@ -355,7 +355,7 @@ const HELP_TOPICS = [
         'Open {cmd:openExcelExporter}.',
         'In ExcelExporter, load the .fmide file.',
         'Arrange the tabs and rows if you like.',
-        'Press Generate & Download .xlsx.',
+        'Press ⬇ Generate .xlsx, at its top right.',
       ] },
       { p: 'The workbook calculates exactly as fmIDE does. Where it can\'t (for example a loop, or an alias to a rectangle that was deleted), a yellow list above the Generate button says where, before you download.' },
       { see: ['formats', 'other-files'] },

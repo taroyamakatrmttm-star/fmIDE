@@ -296,9 +296,13 @@ var XLSX = (function(){
 </script>
 <style>
   :root{
-    --bg:#f8fafc; --panel:#ffffff; --border:#e2e8f0; --text:#1e293b; --muted:#64748b;
-    --accent:#4f46e5; --accent-soft:#eef2ff; --input:#dbeafe; --calc:#fef9c3; --output:#dcfce7;
-    --danger:#dc2626;
+    --bg:#f5f6fa; --panel:#ffffff; --border:#e4e7ee; --border-strong:#cfd5df; --text:#182033; --muted:#667085;
+    --accent:#4f46e5; --accent-hover:#4338ca; --accent-soft:#eef2ff; --accent-line:#c7d2fe;
+    --input:#dbeafe; --calc:#fef9c3; --output:#dcfce7;
+    --danger:#d92d20; --danger-soft:#fef3f2; --danger-line:#fecdca;
+    --bar:#111827; --bar-hover:#1f2937; --bar-line:#374151; --bar-text:#e5e7eb; --bar-muted:#9ca3af;
+    --radius:10px; --topbar-h:56px;
+    --shadow-sm:0 1px 2px rgba(16,24,40,.06); --shadow-md:0 10px 30px rgba(16,24,40,.16);
   }
   *{box-sizing:border-box;}
   /* By finger (step 9c): a double-tap is the app's own (shared pointer-input.js: a double-click),
@@ -308,59 +312,164 @@ var XLSX = (function(){
   body.touch-input input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]):not([type=button]),
   body.touch-input textarea, body.touch-input select{ font-size:16px !important; }
   .tree-row{ -webkit-touch-callout:none; }
-  body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:var(--bg); color:var(--text); }
-  header{ background:#111827; color:#fff; padding:16px 24px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
-  header h1{ font-size:18px; margin:0; font-weight:700; }
-  header .sub{ font-size:12px; color:#9ca3af; margin-top:2px; }
-  header .head-left{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
-  a.back-link{ color:#fff; text-decoration:none; font-size:14px; padding:7px 13px; border:1px solid #4b5563; border-radius:7px; white-space:nowrap; }
-  a.back-link:hover, a.back-link:focus-visible{ background:#1f2937; }
-  main{ max-width:1180px; margin:0 auto; padding:20px; display:flex; flex-direction:column; gap:18px; }
-  .panel{ background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px 20px; }
-  .panel h2{ font-size:15px; margin:0 0 4px; }
-  .panel .hint{ font-size:12px; color:var(--muted); margin:0 0 14px; line-height:1.5; }
-  .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; font-size:14px; line-height:1.4; background:var(--bg); color:var(--text); }
+  h2, h3{ letter-spacing:-.005em; }
+  .hidden{ display:none !important; }
+  .spacer{ flex:1 1 auto; }
+  .muted-line{ font-size:12px; color:var(--muted); }
+  .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   .row + .row{ margin-top:10px; }
-  button{ font:inherit; padding:7px 13px; border-radius:7px; border:1px solid var(--border); background:#fff; cursor:pointer; color:var(--text); }
-  button:hover{ background:#f3f4f6; }
+
+  /* ---------- Buttons and fields ---------- */
+  button{ font:inherit; font-size:13px; line-height:1.3; padding:6px 12px; border-radius:8px; border:1px solid var(--border-strong); background:#fff; cursor:pointer; color:var(--text); transition:background .12s, border-color .12s, box-shadow .12s; }
+  button:hover{ background:#f3f4f7; }
+  button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, .drop:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
   button.primary{ background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
-  button.primary:hover{ background:#4338ca; }
-  button.danger{ color:var(--danger); border-color:#fecaca; }
-  button.danger:hover{ background:#fef2f2; }
-  button.tbtn-toggle.active{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  button.primary:hover{ background:var(--accent-hover); border-color:var(--accent-hover); }
+  button.danger{ color:var(--danger); border-color:var(--danger-line); }
+  button.danger:hover{ background:var(--danger-soft); }
+  button.danger-solid{ background:var(--danger); border-color:var(--danger); color:#fff; font-weight:600; }
+  button.btn-quiet{ border-color:transparent; background:transparent; color:var(--accent); font-weight:600; }
+  button.btn-quiet:hover{ background:var(--accent-soft); }
   button:disabled{ opacity:.45; cursor:not-allowed; }
-  button.icon{ padding:5px 8px; font-size:13px; }
+  button.icon{ padding:3px 8px; font-size:12.5px; }
+  button.tbtn-toggle.active{ background:var(--accent); border-color:var(--accent); color:#fff; }
   input[type=text], input[type=number], select, textarea{
-    font:inherit; padding:7px 10px; border-radius:7px; border:1px solid var(--border); background:#fff; color:var(--text);
+    font:inherit; font-size:13px; padding:6px 9px; border-radius:8px; border:1px solid var(--border-strong); background:#fff; color:var(--text);
   }
-  textarea{ width:100%; min-height:120px; font-family:Menlo,Consolas,monospace; font-size:12px; resize:vertical; }
-  label.field{ display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--muted); }
+  input[type=text]:focus, input[type=number]:focus, select:focus, textarea:focus{ border-color:var(--accent); outline:2px solid var(--accent-soft); outline-offset:0; }
+  textarea{ width:100%; min-height:220px; font-family:Menlo,Consolas,monospace; font-size:12px; resize:vertical; }
+  label.field{ display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--muted); min-width:0; }
   label.field > span{ font-weight:600; color:var(--text); }
-  .drop{ border:2px dashed var(--border); border-radius:10px; padding:22px; text-align:center; color:var(--muted); font-size:13px; cursor:pointer; }
-  .drop:hover{ border-color:var(--accent); color:var(--accent); }
+  label.field input, label.field select{ width:100%; }
+  label.check-line{ display:flex; align-items:center; gap:7px; font-size:13px; cursor:pointer; }
+  label.check-line input{ margin:0; width:15px; height:15px; accent-color:var(--accent); }
+  .seg{ display:inline-flex; padding:3px; gap:2px; background:#eef0f4; border-radius:9px; }
+  .seg button{ border:none; background:transparent; padding:5px 12px; border-radius:7px; color:var(--muted); font-weight:600; }
+  .seg button:hover{ background:rgba(255,255,255,.6); color:var(--text); }
+  .seg button.active, .seg button.tbtn-toggle.active{ background:#fff; color:var(--accent); box-shadow:var(--shadow-sm), 0 0 0 1px var(--border); }
+
+  /* ---------- The top bar and its menus ---------- */
+  .topbar{ position:sticky; top:0; z-index:40; min-height:var(--topbar-h); background:var(--bar); color:#fff; padding:8px 16px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; box-shadow:0 1px 0 rgba(0,0,0,.2); }
+  .tb-left, .tb-right{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0; }
+  a.back-link{ color:var(--bar-text); text-decoration:none; font-size:13px; padding:6px 11px; border:1px solid var(--bar-line); border-radius:8px; white-space:nowrap; }
+  a.back-link:hover{ background:var(--bar-hover); color:#fff; }
+  .brand{ display:flex; align-items:baseline; gap:10px; min-width:0; margin:0 6px 0 4px; }
+  .brand-name{ font-weight:700; font-size:16px; white-space:nowrap; }
+  .model-name{ font-size:12.5px; color:var(--bar-muted); max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .menubar{ display:flex; gap:2px; padding-left:8px; border-left:1px solid var(--bar-line); }
+  .menu{ position:relative; }
+  .menu-btn, .tb-btn{ background:transparent; border-color:transparent; color:var(--bar-text); font-weight:500; }
+  .menu-btn{ padding:6px 11px; }
+  .menu-btn::after{ content:'▾'; margin-left:6px; font-size:10px; opacity:.7; }
+  .menu-btn:hover, .menu-btn.open, .tb-btn:hover{ background:var(--bar-hover); color:#fff; }
+  .tb-btn{ border-color:var(--bar-line); }
+  .menu-list{ position:absolute; top:calc(100% + 6px); left:0; z-index:45; min-width:250px; padding:6px; background:#fff; color:var(--text); border:1px solid var(--border); border-radius:10px; box-shadow:var(--shadow-md); }
+  .menu-list [role=menuitem]{ display:block; width:100%; text-align:left; border:none; background:none; border-radius:6px; padding:7px 12px; font-size:13.5px; }
+  .menu-list [role=menuitem]:hover:not(:disabled), .menu-list [role=menuitem]:focus-visible{ background:var(--accent-soft); outline:none; }
+  .menu-list [role=menuitem].danger{ color:var(--danger); }
+  .menu-list [role=menuitem].danger:hover:not(:disabled){ background:var(--danger-soft); }
+  .menu-head{ padding:8px 12px 3px; font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .menu-sep{ height:1px; background:var(--border); margin:5px 4px; }
+  #btnGenerate{ padding:7px 16px; font-size:13.5px; box-shadow:0 1px 0 rgba(255,255,255,.12) inset; }
+  #btnGenerate:disabled{ opacity:.35; }
+  body.touch-input .menu-list [role=menuitem]{ padding:11px 14px; }
+
+  /* ---------- Page ---------- */
+  main{ max-width:1480px; margin:0 auto; padding:16px 20px 40px; }
+  .card{ background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:16px 18px; box-shadow:var(--shadow-sm); }
+  .card h2, .settings-pane h2, .welcome h2{ display:flex; align-items:center; gap:2px; margin:0 0 12px; font-size:15px; font-weight:650; }
+
+  /* Messages (setStatus): each one can be dismissed. */
+  .notices{ display:flex; flex-direction:column; gap:8px; }
+  .notices > div:empty{ display:none; }
+  .notices:has(> div:not(:empty):not(.hidden)){ margin-bottom:14px; }
+  .notices > #storageWarn.hidden{ display:none; }
+  .status{ position:relative; font-size:12.5px; padding:9px 36px 9px 12px; border-radius:8px; border:1px solid transparent; }
+  #storageWarn.status{ padding-right:12px; }
+  .status.ok{ background:#ecfdf3; border-color:#abefc6; color:#05603a; }
+  .status.err{ background:var(--danger-soft); border-color:var(--danger-line); color:#912018; }
+  .status.info{ background:var(--accent-soft); border-color:var(--accent-line); color:#3730a3; }
+  .status.warn{ background:#fffaeb; border-color:#fedf89; color:#93370d; }
+  .status-close{ position:absolute; top:5px; right:5px; width:24px; height:24px; padding:0; border:none; background:transparent; border-radius:6px; color:inherit; opacity:.6; }
+  .status-close::before{ content:'×'; font-size:17px; line-height:24px; }
+  .status-close:hover{ opacity:1; background:rgba(0,0,0,.06); }
+  .differences{ font-size:12.5px; padding:10px 14px; border-radius:8px; background:#fffaeb; border:1px solid #fedf89; color:#93370d; }
+  .differences-head{ font-weight:600; display:flex; align-items:center; }
+  .differences ul{ margin:6px 0; padding-left:18px; }
+  .differences .hint{ margin:0; font-size:12px; color:#b54708; }
+
+  /* Before a model is loaded. */
+  .welcome{ max-width:620px; margin:7vh auto 0; text-align:center; background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:34px 36px 26px; box-shadow:var(--shadow-sm); }
+  .welcome h2{ justify-content:center; font-size:20px; margin-bottom:6px; }
+  .welcome .lead{ color:var(--muted); margin:0 0 20px; font-size:14px; }
+  .drop{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; min-height:170px; border:2px dashed var(--border-strong); border-radius:12px; padding:22px; color:var(--muted); font-size:13px; cursor:pointer; background:#fafbfc; transition:border-color .12s, background .12s; }
+  .drop-icon{ font-size:30px; color:var(--accent); line-height:1; margin-bottom:6px; }
+  .drop-main{ font-size:15px; font-weight:600; color:var(--text); }
+  .drop:hover{ border-color:var(--accent); background:var(--accent-soft); }
   .drop.drag{ border-color:var(--accent); background:var(--accent-soft); }
   #fileInput{ display:none; }
-  .status{ font-size:12px; padding:8px 12px; border-radius:7px; }
-  .status.ok{ background:#dcfce7; color:#166534; }
-  .status.err{ background:#fee2e2; color:#991b1b; }
-  .status.info{ background:#eef2ff; color:#3730a3; }
-  .differences{ font-size:12px; padding:8px 12px; border-radius:7px; background:#fef3c7; color:#92400e; margin-bottom:10px; }
-  .differences-head{ font-weight:600; }
-  .differences ul{ margin:6px 0; padding-left:18px; }
-  .differences .hint{ margin:0; }
-  .hidden{ display:none !important; }
+  .welcome-actions{ display:flex; justify-content:center; gap:8px; margin-top:16px; flex-wrap:wrap; }
+  .welcome-foot{ margin:20px 0 0; font-size:12px; color:var(--muted); }
+  body.file-over::after{ content:'Drop to open the model'; position:fixed; inset:10px; z-index:100; pointer-events:none; display:flex; align-items:center; justify-content:center; border:3px dashed var(--accent); border-radius:16px; background:rgba(79,70,229,.07); color:var(--accent); font-size:18px; font-weight:700; }
+
+  /* After: tabs and inputs at the side, the rows beside them. */
+  .workspace{ display:grid; grid-template-columns:330px minmax(0, 1fr); gap:16px; align-items:start; }
+  .sidebar{ position:sticky; top:calc(var(--topbar-h) + 16px); max-height:calc(100vh - var(--topbar-h) - 32px); overflow-y:auto; display:flex; flex-direction:column; gap:14px; padding-bottom:2px; }
+  /* Side by side only where the page itself is wide enough (Help open beside it narrows it). */
+  main{ container-type:inline-size; }
+  @container (max-width: 960px){
+    .workspace{ grid-template-columns:minmax(0, 1fr); }
+    .sidebar{ position:static; max-height:none; overflow:visible; }
+  }
 
   table.tabs-table{ width:100%; border-collapse:collapse; font-size:13px; }
-  table.tabs-table th, table.tabs-table td{ padding:6px 8px; border-bottom:1px solid var(--border); text-align:left; }
-  table.tabs-table th{ color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.03em; }
-  table.tabs-table input[type=text]{ width:100%; }
+  table.tabs-table td{ padding:7px 2px; border-bottom:1px solid #f0f2f5; vertical-align:top; }
+  table.tabs-table tr:last-child td{ border-bottom:none; }
+  table.tabs-table input[type=text]{ width:100%; padding:5px 8px; }
+  .tab-move{ width:26px; }
+  .tab-move button{ display:block; width:22px; height:16px; padding:0; font-size:10px; line-height:1; border-color:transparent; background:transparent; color:var(--muted); }
+  .tab-move button:hover:not(:disabled){ background:#eef0f4; color:var(--text); }
+  .tab-move button:disabled{ opacity:.25; }
+  .tab-name{ min-width:0; }
+  .tab-name-line{ display:flex; align-items:center; gap:6px; }
+  .tab-count{ margin-top:4px; padding:1px 6px; border:none; background:transparent; font-size:11.5px; color:var(--muted); border-radius:5px; }
+  .tab-count:hover{ background:var(--accent-soft); color:var(--accent); }
+  .tab-actions{ width:34px; text-align:right; }
+  .tab-actions button{ border-color:transparent; background:transparent; }
+  .tab-actions button:hover:not(:disabled){ background:var(--danger-soft); }
+  .add-tab{ margin-top:8px; }
+  .module-tag{ display:inline-flex; flex-wrap:wrap; align-items:center; gap:4px 6px; margin:4px 0 0 4px; font-size:11.5px; color:#1e3a8a; background:var(--accent-soft); border-radius:6px; padding:2px 7px; }
+  .module-tag .module-forget, .module-tag .instance-copy{ font-size:11px; padding:1px 7px; }
 
-  .canvas-group{ margin-bottom:18px; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
-  .canvas-group-header{ background:#f1f5f9; padding:8px 12px; font-weight:600; font-size:13px; display:flex; justify-content:space-between; align-items:center; }
+  #inputsPanel .check-line{ margin-bottom:10px; }
+  .stack{ display:flex; flex-direction:column; gap:10px; padding:12px; background:#f8f9fb; border:1px solid var(--border); border-radius:9px; }
+  .stack > button{ align-self:flex-start; }
+  .field-pair{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .muted-block{ opacity:.55; }
+  #inputsStatus:not(:empty){ margin-top:10px; }
+
+  /* The rows. */
+  .rows-head{ display:flex; align-items:center; gap:10px 14px; flex-wrap:wrap; margin-bottom:10px; }
+  .rows-head h2{ margin:0 6px 0 0; }
+  .sortbar{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:7px 10px; margin-bottom:12px; background:#f8f9fb; border:1px solid var(--border); border-radius:9px; }
+  .sortbar-label{ font-size:12.5px; font-weight:600; color:var(--muted); }
+  .sortbar select{ padding:4px 8px; font-size:12.5px; }
+  .sortbar button{ padding:4px 12px; }
+  .bulkbar{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; padding:8px 12px; background:var(--accent-soft); border:1px solid var(--accent-line); border-radius:9px; position:sticky; top:calc(var(--topbar-h) + 6px); z-index:5; box-shadow:var(--shadow-sm); }
+  .bulk-divider{ display:inline-block; width:1px; align-self:stretch; background:var(--accent-line); margin:0 2px; }
+
+  .canvas-group{ margin-bottom:14px; border:1px solid var(--border); border-radius:10px; overflow:hidden; scroll-margin-top:calc(var(--topbar-h) + 60px); }
+  .canvas-group-header{ background:#f6f7fa; padding:8px 12px; font-weight:600; font-size:13px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); }
   .canvas-group-header .count{ font-weight:400; color:var(--muted); font-size:12px; }
+  .canvas-group-header.tree-tab-header{ cursor:pointer; }
+  .canvas-group-header.tree-tab-header:hover{ background:#eef0f4; }
+  .canvas-group.flash{ animation:flash 1.2s ease-out; }
+  @keyframes flash{ 0%{ box-shadow:0 0 0 3px var(--accent-line); } 100%{ box-shadow:0 0 0 3px transparent; } }
   table.rows-table{ width:100%; border-collapse:collapse; font-size:12.5px; }
-  table.rows-table th{ background:#fafafa; color:var(--muted); font-weight:600; font-size:10.5px; text-transform:uppercase; letter-spacing:.03em; padding:6px 8px; border-bottom:1px solid var(--border); text-align:left; position:sticky; top:0; }
-  table.rows-table td{ padding:5px 8px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+  table.rows-table th{ background:#fafbfc; color:var(--muted); font-weight:600; font-size:10.5px; text-transform:uppercase; letter-spacing:.03em; padding:6px 8px; border-bottom:1px solid var(--border); text-align:left; position:sticky; top:0; z-index:1; }
+  table.rows-table td{ padding:5px 8px; border-bottom:1px solid #f1f3f6; vertical-align:middle; }
+  table.rows-table tr:hover td{ background:#fbfbfd; }
   table.rows-table tr.excluded{ opacity:.4; }
   table.rows-table input[type=text]{ width:100%; min-width:110px; padding:4px 6px; font-size:12.5px; }
   table.rows-table select{ padding:4px 6px; font-size:12.5px; }
@@ -376,20 +485,21 @@ var XLSX = (function(){
   .block-role-tag.vertical-shared{ color:#6b7280; border-color:#d1d5db; background:#f9fafb; }
   .order-btns{ display:flex; gap:2px; }
   .order-btns button{ padding:2px 6px; font-size:11px; line-height:1; }
-  .rows-scroll{ max-height:65vh; overflow-y:auto; border:1px solid var(--border); border-radius:8px; }
+  .rows-scroll{ max-height:65vh; overflow-y:auto; }
   .rows-scroll table.rows-table{ margin:0; }
-  tr.style-editor-row td{ background:#fafafa; padding:10px 12px; }
+  tr.style-editor-row td{ background:#fafbfc; padding:10px 12px; }
   .style-fields{ display:flex; gap:14px; align-items:center; flex-wrap:wrap; font-size:12px; color:var(--muted); }
   .style-fields label{ display:flex; align-items:center; gap:5px; }
   .style-fields input[type=color]{ width:32px; height:24px; padding:1px; border-radius:5px; }
 
   .tree-row-list{ display:flex; flex-direction:column; }
-  .tree-row{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:6px 12px; font-size:12.5px; cursor:pointer; user-select:none; border-bottom:1px solid #f1f5f9; }
-  .tree-row:hover{ background:#f8fafc; }
-  .tree-row.selected{ background:var(--accent-soft); }
+  .tree-row{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:6px 12px; font-size:13px; cursor:pointer; user-select:none; border-bottom:1px solid #f1f3f6; }
+  .tree-row:last-child{ border-bottom:none; }
+  .tree-row:hover{ background:#f8f9fc; }
+  .tree-row.selected{ background:var(--accent-soft); box-shadow:inset 3px 0 0 var(--accent); }
   .tree-row.excluded{ opacity:.5; }
   .tree-row-label{ flex:1 1 auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .tree-row-label-input{ flex:1 1 auto; font:inherit; font-size:12.5px; padding:2px 6px; border-radius:5px; border:1px solid var(--accent); }
+  .tree-row-label-input{ flex:1 1 auto; font:inherit; font-size:13px; padding:2px 6px; border-radius:5px; border:1px solid var(--accent); }
   .const-tag{ display:inline-block; font-size:9.5px; font-weight:700; text-transform:uppercase; padding:1px 5px; border-radius:5px; letter-spacing:.03em; border:1.5px solid #fbbf24; background:#fffbeb; color:#92400e; white-space:nowrap; }
   .periods-toggle{ display:inline-block; font-size:9.5px; font-weight:700; text-transform:uppercase; padding:1px 5px; border-radius:5px; letter-spacing:.03em; border:1.5px solid #cbd5e1; background:#f8fafc; color:#64748b; white-space:nowrap; cursor:pointer; }
   .periods-toggle:hover{ border-color:#94a3b8; }
@@ -398,14 +508,17 @@ var XLSX = (function(){
   .tree-row .tree-fmt-btn:not(.on){ opacity:.45; }
   .tree-row .tree-fmt-btn.on{ box-shadow:inset 0 0 0 1px var(--accent); }
   .tree-row[data-custom="1"] .tree-fmt-btn{ opacity:1; box-shadow:none; }
-  .tree-style-editor{ flex:1 1 100%; margin-top:6px; padding:8px 10px; background:#fafafa; border-radius:6px; cursor:default; }
-  .canvas-group-header.tree-tab-header{ cursor:pointer; }
-  .bulk-divider{ display:inline-block; width:1px; align-self:stretch; background:#c7d2fe; margin:0 2px; }
+  .tree-style-editor{ flex:1 1 100%; margin-top:6px; padding:8px 10px; background:#fafbfc; border-radius:6px; cursor:default; }
 
-  .ctx-menu{ position:fixed; z-index:900; min-width:220px; background:#fff; border:1px solid var(--border); border-radius:8px; box-shadow:0 10px 30px rgba(15,23,42,.18); padding:4px; font-size:13px; }
+  .link-tag{ font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; padding:2px 6px; border-radius:4px; background:#dcfce7; color:#166534; white-space:nowrap; }
+  .scn-ctl{ display:inline-flex; align-items:center; gap:4px; font-size:11px; color:var(--muted); margin-left:8px; padding:1px 6px; border:1px dashed var(--border-strong); border-radius:4px; }
+  .scn-ctl.on{ color:#1e3a8a; border-style:solid; border-color:#bfdbfe; background:#eff6ff; }
+  .scn-ctl input[type=number]{ width:44px; padding:1px 4px; font-size:11px; }
+
+  /* ---------- Menus on rows, dialogs ---------- */
+  .ctx-menu{ position:fixed; z-index:900; min-width:220px; max-height:calc(100vh - 8px); overflow-y:auto; background:#fff; border:1px solid var(--border); border-radius:10px; box-shadow:var(--shadow-md); padding:5px; font-size:13px; }
   .ctx-menu.hidden{ display:none; }
-  .ctx-menu{ max-height:calc(100vh - 8px); overflow-y:auto; }
-  .ctx-menu button{ display:block; width:100%; text-align:left; border:none; background:none; padding:5px 12px; border-radius:5px; }
+  .ctx-menu button{ display:block; width:100%; text-align:left; border:none; background:none; padding:6px 12px; border-radius:6px; }
   .ctx-menu .ctx-sub{ display:flex; flex-wrap:wrap; align-items:center; gap:5px; padding:4px 12px; }
   .ctx-menu .ctx-sub-head{ color:var(--muted); font-size:12px; }
   .ctx-menu .ctx-sub select{ font-size:12px; max-width:150px; }
@@ -413,50 +526,58 @@ var XLSX = (function(){
   .ctx-menu button:hover:not(:disabled){ background:var(--accent-soft); }
   .ctx-menu button:disabled{ color:#cbd5e1; cursor:default; }
   .ctx-menu button.danger{ color:var(--danger); }
-  .ctx-menu button.danger:hover{ background:#fef2f2; }
+  .ctx-menu button.danger:hover{ background:var(--danger-soft); }
   .ctx-menu hr{ border:none; border-top:1px solid var(--border); margin:4px 2px; }
-  .modal-backdrop{ position:fixed; inset:0; background:rgba(15,23,42,.45); display:flex; align-items:center; justify-content:center; z-index:1000; }
+
+  .modal-backdrop{ position:fixed; inset:0; background:rgba(15,23,42,.45); display:flex; align-items:center; justify-content:center; z-index:1000; padding:16px; }
+  #settingsModal, #pasteModal{ z-index:50; } /* under the Help panel, which can sit beside them */
   .modal-backdrop.hidden{ display:none; }
-  .modal{ background:var(--panel); border-radius:10px; box-shadow:0 20px 50px rgba(0,0,0,.25); padding:20px 22px; max-width:440px; width:calc(100% - 40px); }
-  .modal h3{ margin:0 0 10px; font-size:15px; }
-  .modal p{ margin:0 0 18px; font-size:13px; line-height:1.55; color:var(--text); }
-  .modal .modal-actions{ display:flex; justify-content:flex-end; gap:8px; }
-  button.danger-solid{ background:var(--danger); border-color:var(--danger); color:#fff; font-weight:600; }
-  .inputs-settings{ margin-top:16px; padding:12px 14px; border:1px solid var(--border); border-radius:8px; background:#fafafa; }
-  .muted-block{ opacity:.55; }
-  .link-tag{ font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; padding:2px 6px; border-radius:4px; background:#dcfce7; color:#166534; }
-  .scn-ctl{ display:inline-flex; align-items:center; gap:4px; font-size:11px; color:var(--muted); margin-left:8px; padding:1px 6px; border:1px dashed var(--border); border-radius:4px; }
-  .scn-ctl.on{ color:#1e3a8a; border-style:solid; border-color:#bfdbfe; background:#eff6ff; }
-  .scn-ctl input[type=number]{ width:44px; padding:1px 4px; font-size:11px; }
-  .roles-block{ margin-top:14px; padding-top:12px; border-top:1px solid var(--border); }
+  .modal{ background:var(--panel); border-radius:14px; box-shadow:0 24px 60px rgba(0,0,0,.28); padding:20px 22px; max-width:440px; width:100%; max-height:calc(100vh - 32px); overflow-y:auto; }
+  .modal-wide{ max-width:1040px; }
+  .modal h3{ margin:0 0 12px; font-size:16px; }
+  .modal p{ margin:0 0 18px; font-size:13.5px; line-height:1.55; color:var(--text); }
+  .modal .modal-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
+  .modal-head{ display:flex; align-items:center; gap:14px; margin-bottom:16px; flex-wrap:wrap; }
+  .modal-head h3{ margin:0; }
+  .modal-close{ width:32px; height:32px; padding:0; border:none; background:transparent; border-radius:8px; color:var(--muted); }
+  .modal-close::before{ content:'×'; font-size:22px; line-height:32px; }
+  .modal-close:hover{ background:#f1f3f6; color:var(--text); }
+  .settings-pane h2{ font-size:14px; margin-bottom:4px; }
+  .settings-pane > .muted-line{ margin:0 0 14px; }
+  .field-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:14px; }
+  .pane-actions{ margin-top:12px; }
+  #excelStyleStatus:not(:empty){ margin-top:10px; }
+  .settings-pane .rows-scroll{ border:1px solid var(--border); border-radius:9px; max-height:55vh; }
+
   .excel-style-table{ border-collapse:collapse; font-size:12px; width:100%; }
-  .excel-style-table th{ text-align:left; font-weight:600; color:var(--muted); padding:4px 6px; border-bottom:1px solid var(--border); white-space:nowrap; }
-  .excel-style-table td{ padding:5px 6px; border-bottom:1px solid #f1f5f9; vertical-align:middle; white-space:nowrap; }
-  .excel-style-table td:first-child{ white-space:normal; min-width:180px; max-width:280px; }
-  .excel-style-table input[type=color]{ width:34px; height:24px; padding:0; border:1px solid var(--border); vertical-align:middle; }
-  .excel-style-table input[type=number]{ width:80px; }
+  .excel-style-table th{ text-align:left; font-weight:600; color:var(--muted); padding:7px 8px; border-bottom:1px solid var(--border); white-space:nowrap; background:#fafbfc; position:sticky; top:0; z-index:1; }
+  .excel-style-table td{ padding:7px 8px; border-bottom:1px solid #f1f3f6; vertical-align:middle; white-space:nowrap; }
+  .excel-style-table td:first-child{ white-space:normal; min-width:120px; cursor:help; }
+  .excel-style-table input[type=color]{ width:34px; height:24px; padding:0; border:1px solid var(--border-strong); border-radius:5px; vertical-align:middle; }
+  .excel-style-table input[type=number]{ width:76px; }
   .xs-name{ font-weight:600; }
-  .xs-desc{ font-size:11px; color:var(--muted); }
   .xs-swatch{ display:inline-block; padding:2px 10px; border-radius:2px; }
   .xs-check{ display:inline-flex; align-items:center; gap:3px; margin-left:4px; font-size:11.5px; }
   .xs-sides{ display:inline-flex; gap:2px; margin-left:4px; }
-  .limits{ font-size:12px; color:var(--muted); background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:10px 14px; line-height:1.6; }
-  .limits strong{ color:#92400e; }
-  footer{ text-align:center; color:var(--muted); font-size:11px; padding:24px; }
 
   /* ---------- Help (step 10; the panel's styles: src/shared/help-panel.css) ---------- */
   /* The page narrows beside the panel (not in a narrow window, where the panel covers it). */
   body.help-open{ margin-right:var(--help-w); }
-  @media (max-width: 700px){ body.help-open{ margin-right:0; } }
-  header .help-btn{ background:#1f2937; color:#e5e7eb; border:1px solid #374151; }
-  header .help-btn:hover{ background:#374151; }
+  body.help-open #settingsModal, body.help-open #pasteModal{ right:var(--help-w); }
+  @media (max-width: 700px){ body.help-open{ margin-right:0; } body.help-open #settingsModal, body.help-open #pasteModal{ right:0; } }
   .panel-help{
-    margin-left:8px; width:20px; height:20px; border-radius:50%; border:1px solid #c7d2fe; background:#eef2ff; color:#3730a3;
-    font-size:12px; font-weight:700; line-height:1; padding:0; cursor:pointer; vertical-align:middle;
+    margin-left:8px; width:20px; height:20px; border-radius:50%; border:1px solid var(--accent-line); background:var(--accent-soft); color:#3730a3;
+    font-size:12px; font-weight:700; line-height:1; padding:0; cursor:pointer; vertical-align:middle; flex:0 0 auto;
   }
   .panel-help:hover{ background:#e0e7ff; }
-  .module-tag{ display:inline-flex; align-items:center; gap:6px; margin-left:8px; font-size:11.5px; color:#1e3a8a; background:#eef2ff; border-radius:4px; padding:1px 6px; white-space:nowrap; }
-  .module-tag .module-forget{ font-size:11px; padding:0 6px; }
+
+  /* A narrow window: the top bar wraps, the model's name goes. */
+  @media (max-width: 760px){
+    .topbar{ padding:8px 10px; }
+    .model-name{ display:none; }
+    main{ padding:12px 12px 32px; }
+    .welcome{ padding:24px 18px; margin-top:3vh; }
+  }
 /* The Help panel (build step 10; docs/step10-help.md), shared by fmIDE and ExcelExporter with
    src/shared/help-panel.js. Each app sets --help-top (where the panel starts) and makes room
    for the panel under body.help-open. */
@@ -532,47 +653,161 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
 </head>
 <body>
 
-<header>
-  <div class="head-left">
+<!-- The top bar: menus for every file and reset, Settings, Help and Generate (09e-menus-and-settings.js). -->
+<header class="topbar">
+  <div class="tb-left">
     <a id="btnBackToFmide" class="back-link" href="fmIDE.html">← Back to fmIDE</a>
-    <div>
-      <h1>ExcelExporter</h1>
-      <div class="sub">fmIDE → a live-formula Excel workbook</div>
+    <div class="brand">
+      <span class="brand-name">ExcelExporter</span>
+      <span id="modelName" class="model-name"></span>
     </div>
+    <nav class="menubar" aria-label="Menus">
+      <div class="menu">
+        <button id="menuFile" class="menu-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="menuFileList">File</button>
+        <div id="menuFileList" class="menu-list hidden" role="menu" aria-labelledby="menuFile">
+          <button type="button" role="menuitem" id="btnOpenModel" title="Open a .fmide document, or a system or workspace file saved by fmIDE">Open Model…</button>
+          <button type="button" role="menuitem" id="btnMenuSample" title="Load a small built-in model to try things out">Load Sample Model</button>
+          <button type="button" role="menuitem" id="btnMenuPaste" title="Paste a model's JSON text">Paste JSON…</button>
+          <div class="menu-sep" role="separator"></div>
+          <button type="button" role="menuitem" id="btnClearAll" class="danger" title="Empties this page. Saved layouts are kept.">Start Over</button>
+        </div>
+      </div>
+      <div class="menu">
+        <button id="menuLayout" class="menu-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="menuLayoutList">Layout</button>
+        <div id="menuLayoutList" class="menu-list hidden" role="menu" aria-labelledby="menuLayout">
+          <div class="menu-head">This model's layout</div>
+          <button type="button" role="menuitem" id="btnImportMapping" class="needs-model" title="Load a layout saved with Export Mapping">Import Mapping…</button>
+          <button type="button" role="menuitem" id="btnExportMapping" class="needs-model" title="Save this model's tabs, rows and settings to a file">Export Mapping</button>
+          <div class="menu-head">Module layouts (every model)</div>
+          <button type="button" role="menuitem" id="btnImportModuleLayouts" title="Read module layouts saved with Export Module Layouts">Import Module Layouts…</button>
+          <button type="button" role="menuitem" id="btnExportModuleLayouts" title="Save the layouts remembered for your modules, e.g. for another computer or fmIDE's Attach Excel layout…">Export Module Layouts</button>
+          <div class="menu-sep" role="separator"></div>
+          <button type="button" role="menuitem" id="btnMenuStyle" title="How cells look in Excel: edit, import, export or reset your Excel style">Excel Style…</button>
+          <div class="menu-sep" role="separator"></div>
+          <button type="button" role="menuitem" id="btnResetMapping" class="danger needs-model" title="Discard this model's saved layout and start again">Reset Mapping to Defaults…</button>
+        </div>
+      </div>
+    </nav>
   </div>
-  <div class="row">
-    <button id="btnHelp" class="help-btn" title="Help (F1): plain-English guides to ExcelExporter">❓ Help</button>
-    <button id="btnClearAll" class="danger" title="Clears the current session. Saved layouts are kept — use &quot;Reset Mapping to Defaults&quot; to discard one.">Start Over</button>
+  <div class="tb-right">
+    <button id="btnSettings" class="tb-btn" title="Period labels, file name and your Excel style">⚙ Settings</button>
+    <button id="btnHelp" class="tb-btn help-btn" title="Help (F1)">❓ Help</button>
+    <button id="btnGenerate" class="primary" disabled title="Write the workbook and download it">⬇ Generate .xlsx</button>
   </div>
 </header>
 
 <main>
 
-  <section class="panel" id="loadPanel">
-    <h2>1. Load an fmIDE model</h2>
-    <p class="hint">Save a document in fmIDE (File → Save, a <code>.fmide</code> file), or export a system ("Save System" or "Export Workspace"), and load it here — or try the built-in sample to see how the tool works. Number formats set in fmIDE come across; how cells look is your own Excel style (section 2).</p>
-    <div class="drop" id="dropZone">
-      Drop an fmIDE file (.fmide or .json) here, or click to choose one
+  <!-- Messages: loading, saving, generating, module layouts, and where the workbook will differ from fmIDE. -->
+  <div id="notices" class="notices" aria-live="polite">
+    <div id="storageWarn" class="status err hidden" role="alert"></div>
+    <div id="loadStatus"></div>
+    <div id="moduleLayoutsStatus"></div>
+    <div id="genStatus"></div>
+    <div id="differencesPanel" class="differences hidden" role="status"></div>
+  </div>
+
+  <section class="welcome" id="loadPanel">
+    <h2>Turn an fmIDE model into a live Excel workbook</h2>
+    <p class="lead">Save your model in fmIDE (File → Save), then open it here.</p>
+    <div class="drop" id="dropZone" role="button" tabindex="0">
+      <span class="drop-icon" aria-hidden="true">⇪</span>
+      <span class="drop-main">Drop a .fmide or .json file here</span>
+      <span class="drop-sub">or click to choose one</span>
       <input type="file" id="fileInput" accept="application/json,.json,.fmide">
     </div>
-    <div class="row" style="margin-top:12px;">
+    <div class="welcome-actions">
       <button id="btnLoadSample">▶ Load Sample Model</button>
-      <button id="btnTogglePaste">Paste JSON instead</button>
+      <button id="btnTogglePaste" class="btn-quiet">Paste JSON…</button>
     </div>
-    <div id="pasteWrap" class="hidden" style="margin-top:12px;">
-      <textarea id="pasteArea" placeholder="Paste fmIDE system JSON here…"></textarea>
-      <div class="row" style="margin-top:8px;"><button id="btnLoadPasted" class="primary">Load Pasted JSON</button></div>
-    </div>
-    <div id="loadStatus" style="margin-top:12px;"></div>
+    <p class="welcome-foot">Nothing is uploaded: everything runs in your browser, offline too.</p>
   </section>
 
-  <div id="afterLoad" class="hidden">
+  <div id="afterLoad" class="workspace hidden">
 
-    <section class="panel" id="periodsPanel">
-      <h2>2. Period columns &amp; output</h2>
-      <p class="hint">The number of columns is fixed by fmIDE's own timeline (<span id="periodCountLabel">0</span> periods) — this just controls how the header row labels them.</p>
-      <div class="row">
-        <label class="field"><span>Start label</span><input type="text" id="cfgStartLabel" value="2027" style="width:100px;"></label>
+    <aside class="sidebar">
+      <section class="card" id="tabsPanel">
+        <h2>Tabs</h2>
+        <table class="tabs-table"><tbody id="tabsBody"></tbody></table>
+        <button id="btnAddTab" class="btn-quiet add-tab">+ Add Tab</button>
+      </section>
+
+      <section class="card" id="inputsPanel">
+        <h2>Inputs &amp; scenarios</h2>
+        <label class="check-line" title="Every input gets a row on its own tab; its original row links there.">
+          <input type="checkbox" id="cfgInputsEnabled"> Gather inputs on a separate tab
+        </label>
+        <div id="inputsOptions" class="stack">
+          <label class="field"><span>Tab name</span><input type="text" id="cfgInputsName"></label>
+          <label class="field"><span>Group by</span>
+            <select id="cfgInputsGroup"><option value="tab">Excel tab</option><option value="canvas">Canvas</option><option value="none">No grouping</option></select>
+          </label>
+          <label class="field"><span>Order within group</span>
+            <select id="cfgInputsOrder"><option value="sheet">Sheet order (top to bottom)</option><option value="alpha">Alphabetical</option></select>
+          </label>
+          <div class="field-pair">
+            <label class="field" title="How many scenarios an input gets when you switch scenarios on for it"><span>Scenarios each</span><input type="number" id="cfgInputsScenarios" min="2" max="20"></label>
+            <label class="field" title="Each global case picks one scenario per input; the Global Case cell picks the case the workbook runs. 0 = none."><span>Global cases</span><input type="number" id="cfgInputsCases" min="0" max="50"></label>
+          </div>
+          <span id="casesHint" class="muted-line"></span>
+          <button id="btnInputsRelayout" class="btn-quiet" title="Rebuild the Inputs tab's grouping and order from these settings (rows you added there yourself stay at the end)">Re-apply layout</button>
+        </div>
+        <div id="inputsStatus"></div>
+      </section>
+    </aside>
+
+    <section class="card rows-card" id="rowsPanel">
+      <div class="rows-head">
+        <h2>Rows</h2>
+        <div class="seg" role="group" aria-label="Show rows">
+          <button id="viewByTree" class="tbtn-toggle" title="Every tab's rows in order: click to select, right-click for every command">Tree</button>
+          <button id="viewByTab" class="tbtn-toggle" title="An editable table per Excel tab, label rows included">By Excel Tab</button>
+          <button id="viewByCanvas" class="tbtn-toggle" title="An editable table per fmIDE canvas and block instance">By Canvas</button>
+        </div>
+        <label class="check-line" title="Give each tab INPUTS, CALCULATIONS and OUTPUTS bands. Off: one free list per tab.">
+          <input type="checkbox" id="cfgSectionsEnabled"> Sections
+        </label>
+        <span class="spacer"></span>
+        <button id="btnAddCustomRow" title="Add a label or blank row below the selected row (or at the end of the first tab)">+ Label Row</button>
+      </div>
+      <div class="sortbar" id="sortBar">
+        <span class="sortbar-label">Sort</span>
+        <select id="sortMethod" title="How to order the rows. Label rows keep their places."></select>
+        <select id="sortWithin" title="Rows feeding the same calculation: alphabetically, or in the order they appear in its formula"></select>
+        <span class="sortbar-label">in</span>
+        <select id="sortScope" title="Which rows to sort"></select>
+        <button id="btnApplySort">Apply</button>
+        <span id="sortStatus" class="muted-line"></span>
+      </div>
+      <div id="bulkMoveBar" class="bulkbar hidden"></div>
+      <div id="rowGroupsTree"></div>
+      <div id="rowGroupsByTab" class="hidden"></div>
+      <div id="rowGroups" class="hidden"></div>
+      <div id="blockInstanceGroups" class="hidden"></div>
+    </section>
+
+  </div>
+
+</main>
+
+<!-- Settings: this model's workbook, and your own Excel style (every model). -->
+<div id="settingsModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <h3 id="settingsTitle">Settings</h3>
+      <div class="seg" role="tablist" aria-label="Settings">
+        <button id="settingsTabWorkbook" role="tab" class="tbtn-toggle" aria-controls="periodsPanel">Workbook</button>
+        <button id="settingsTabStyle" role="tab" class="tbtn-toggle" aria-controls="excelStyleBlock">Excel Style</button>
+      </div>
+      <span class="spacer"></span>
+      <button id="settingsClose" class="modal-close" aria-label="Close" title="Close (Esc)"></button>
+    </div>
+
+    <div id="periodsPanel" class="settings-pane" role="tabpanel">
+      <h2>Workbook</h2>
+      <p class="muted-line">This model's workbook: <span id="periodCountLabel">0</span> period columns, from fmIDE's timeline.</p>
+      <div class="field-grid">
+        <label class="field" title="The first period column's label, e.g. 2027"><span>Start label</span><input type="text" id="cfgStartLabel" value="2027"></label>
         <label class="field"><span>Frequency</span>
           <select id="cfgFrequency">
             <option value="annual">Annual</option>
@@ -580,7 +815,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
             <option value="monthly">Monthly</option>
           </select>
         </label>
-        <label class="field"><span>Fallback number format</span>
+        <label class="field" title="For cells with no number format from fmIDE"><span>Fallback number format</span>
           <select id="cfgFallbackFormat">
             <option value="General">General</option>
             <option value="#,##0" selected>#,##0</option>
@@ -590,123 +825,46 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
             <option value="0.0%">0.0%</option>
           </select>
         </label>
-        <label class="field"><span>Output file name</span><input type="text" id="cfgFileName" value="fmIDE-export" style="width:180px;"></label>
+        <label class="field"><span>File name</span><input type="text" id="cfgFileName" value="fmIDE-export"></label>
       </div>
-      <div class="roles-block" id="excelStyleBlock">
-        <div style="font-size:12.5px; font-weight:600; margin-bottom:4px;">Excel style</div>
-        <p class="hint" style="margin:0 0 8px;">How every cell in the workbook looks, by role. This is your own style: it is kept in this browser and used for every model you load. fmIDE decides only the number formats (a rectangle's own, or its Inputs / Calculations format); its canvas colours and fonts stay on the canvas. A row's own format (Tree view 🎨) goes over this.</p>
-        <div class="rows-scroll"><table class="excel-style-table" id="excelStyleTable">
-          <thead><tr><th>Role</th><th>Looks like</th><th>Fill</th><th>Font colour</th><th>Bold</th><th>Size (pt)</th><th>Border</th></tr></thead>
-          <tbody id="excelStyleBody"></tbody>
-        </table></div>
-        <div class="row" style="margin-top:10px;">
-          <button id="btnExportStyle">Export Excel Style</button>
-          <button id="btnImportStyle">Import Excel Style</button>
-          <input type="file" id="excelStyleFileInput" accept="application/json,.json" style="display:none;">
-          <button id="btnResetStyle" class="danger" title="Put every role back to ExcelExporter's built-in look">Reset to Defaults</button>
-        </div>
-        <div id="excelStyleStatus" style="margin-top:8px;"></div>
-      </div>
-    </section>
+    </div>
 
-    <section class="panel" id="tabsPanel">
-      <h2>3. Tabs</h2>
-      <p class="hint">One tab per fmIDE canvas by default. Rename, reorder, add, or delete tabs — rows are assigned to tabs below.</p>
-      <table class="tabs-table">
-        <thead><tr><th style="width:36px;"></th><th>Tab name</th><th style="width:90px;">Rows</th><th style="width:110px;"></th></tr></thead>
-        <tbody id="tabsBody"></tbody>
-      </table>
-      <div class="row" style="margin-top:10px;">
-        <button id="btnAddTab">+ Add Tab</button>
-        <span style="flex:1 1 auto;"></span>
-        <button id="btnExportModuleLayouts" title="Save the layouts remembered for your modules to a file, e.g. to use them on another computer">Export Module Layouts</button>
-        <button id="btnImportModuleLayouts" title="Read module layouts from a file saved by Export Module Layouts">Import Module Layouts</button>
-        <input type="file" id="moduleLayoutsFileInput" accept="application/json,.json" style="display:none;">
-      </div>
-      <p class="hint" style="margin:8px 0 0;">A tab marked 🧩 comes from a module (a canvas added from a template in fmIDE). Its layout — tab name, row order, labels, blank and label rows, formats — is remembered for that module and used again wherever the module turns up in a model laid out here for the first time.</p>
-      <div id="moduleLayoutsStatus" style="margin-top:8px;"></div>
-      <div class="inputs-settings">
-        <label style="display:flex; align-items:center; gap:6px; font-weight:600; font-size:13px;">
-          <input type="checkbox" id="cfgInputsEnabled"> Gather inputs on a separate tab
-        </label>
-        <p class="hint" style="margin:4px 0 10px;">Every input rectangle (no incoming arrow) gets a row on this tab holding its typed numbers. Its original row stays where it is and links to it (green font). Rename, include/exclude and "Constant" stay in sync between the two. Tick "scenarios" on a row of this tab (Rows panel) to give that input several scenarios; a Scenarios tab then picks which one applies to each.</p>
-        <div id="inputsOptions" class="row">
-          <label class="field"><span>Tab name</span><input type="text" id="cfgInputsName" style="width:140px;"></label>
-          <label class="field"><span>Group by</span>
-            <select id="cfgInputsGroup"><option value="tab">Excel tab</option><option value="canvas">Canvas</option><option value="none">No grouping</option></select>
-          </label>
-          <label class="field"><span>Order within group</span>
-            <select id="cfgInputsOrder"><option value="sheet">Sheet order (top to bottom)</option><option value="alpha">Alphabetical</option></select>
-          </label>
-          <label class="field" title="Number of scenarios a variable gets when you switch scenarios on for it"><span>Scenarios per variable</span><input type="number" id="cfgInputsScenarios" min="2" max="20" style="width:70px;"></label>
-          <label class="field" title="Number of global cases on the Scenarios tab. Each case picks one scenario per variable; the Global Case cell picks the case the whole model runs. 0 = no global case (type each variable's scenario directly)."><span>Global cases</span><input type="number" id="cfgInputsCases" min="0" max="50" style="width:70px;"></label>
-          <span id="casesHint" class="hint" style="align-self:flex-end; margin:0 0 6px;"></span>
-          <button id="btnInputsRelayout" style="align-self:flex-end;" title="Rebuild the inputs tab's grouping and order from these settings (rows you added there yourself are kept at the end)">Re-apply layout</button>
-        </div>
-        <div id="inputsStatus" style="margin-top:8px;"></div>
-      </div>
-    </section>
-
-    <section class="panel" id="rowsPanel">
-      <h2>4. Rows</h2>
-      <p class="hint">Every value rectangle becomes one labeled row. Operators, aliases, and period-shift nodes are inlined into formulas automatically — they don't get their own row (a rectangle fed through an alias points straight at the alias's source; a rectangle fed through a period-shift points straight at the shifted source, in the shifted period's column). A Block instance is <strong>unpacked</strong>: its definition canvas's own rectangles each get a row too, once per instance (a separate "Block instance —" group below, one per instance, since two instances of the same block compute independently and need independent cells) — a rectangle marked as a Block Input port inside the block is itself inlined, resolving straight to whatever's wired into that instance's port (or to 0 if the port is left unwired), the same way an alias is inlined. Assign each row's tab, section, order, and label; uncheck "Include" to skip a rectangle entirely. For a true input rectangle that's really just formula plumbing (a sign flip, a unit-scale factor like ×1000) rather than a labeled assumption, check "Constant" to splice its value directly into every formula that references it instead of giving it a row of its own — this works inside an unpacked block instance too. A rectangle marked as a Block Input or Block Output in fmIDE's Block feature shows a small "Block In" / "Block Out" tag next to its type, so you can see fmIDE's own port role — this is separate from the Input/Calc/Output section below, which is just this tool's own edge-based placement. To reorder many rows at once, or move a batch to a different tab or section, check the leftmost box on each row you want and use the bar that appears above the table — "Move Up/Down" nudges the whole selection by one slot, "Move to Top/Bottom" sends it to the edge of its group, and "Move to" relocates the whole selection to any tab (and section, if sections are enforced) you pick. Uncheck "Enforce Input / Calc / Output sections" below to stop treating those as hard bands in the generated sheet — a row's section then stays as an informational tag only, and rows in a tab are freely ordered as one flat list; use a Custom / Label row for any banner you still want. "Tree View" shows every row assigned to each tab — including an excluded or "Constant" one, dimmed, so it stays reachable — as one flat, clickable list: click to select a row, Ctrl/Cmd-click to add or remove one, Shift-click to select a range. From there, the bar above the list can set Include or Constant for every row in the selection at once (custom rows and ineligible rows are skipped automatically), and double-clicking a single row's label lets you rename just that one row in place.</p>
-      <div class="row" style="margin-bottom:14px;">
-        <button id="viewByCanvas" class="tbtn-toggle">Group by Canvas</button>
-        <button id="viewByTab" class="tbtn-toggle">Group by Excel Tab</button>
-        <button id="viewByTree" class="tbtn-toggle">Tree View</button>
-        <label style="display:flex; align-items:center; gap:5px; font-size:12.5px; color:var(--muted); margin-left:8px;" title="When off, Input/Calc/Output stops being a layout partition — it's kept only as an informational tag, and rows in a tab are one freely-ordered flat list.">
-          <input type="checkbox" id="cfgSectionsEnabled">
-          Enforce Input / Calc / Output sections
-        </label>
-        <span style="flex:1 1 auto;"></span>
-        <button id="btnAddCustomRow" title="Adds a label/divider row — below the selected row(s) if any are selected, otherwise at the bottom of the first tab. In Tree View you can also right-click a row to insert above or below it.">+ Add Custom Row</button>
-      </div>
-      <div class="row" id="sortBar" style="margin-bottom:12px; padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:#fafafa;">
-        <span style="font-size:12.5px; font-weight:600;">Sort rows by</span>
-        <select id="sortMethod" title="How to order rows. Custom / label rows stay in their slots; rectangle rows are re-ordered around them."></select>
-        <select id="sortWithin" title="How rows that feed the same calculation are ordered next to each other: alphabetically, or in the order they appear in the formula (left to right on the canvas — e.g. Revenue before COGS in Revenue − COGS)."></select>
-        <span style="font-size:12px; color:var(--muted);">in</span>
-        <select id="sortScope" title="Which rows to sort. With sections enforced, each Input / Calc / Output band is sorted separately."></select>
-        <button id="btnApplySort" class="primary">Apply</button>
-        <span id="sortStatus" style="font-size:12px; color:var(--muted); display:inline-flex; align-items:center;"></span>
-      </div>
-      <div id="bulkMoveBar" class="row hidden" style="margin-bottom:12px; padding:8px 12px; background:var(--accent-soft); border:1px solid #c7d2fe; border-radius:8px;"></div>
-      <div id="rowGroups"></div>
-      <div id="blockInstanceGroups"></div>
-      <div id="rowGroupsByTab" class="hidden"></div>
-      <div id="rowGroupsTree" class="hidden"></div>
-    </section>
-
-    <section class="panel" id="customRowsPanel">
-      <h2>4b. Custom / Label Rows</h2>
-      <p class="hint">Insert a labeled or divider row anywhere among your rows, for section headers or spacing — these aren't tied to any fmIDE rectangle and don't compute anything. Use their ↑/↓ to position them relative to the real rows above. (Switch to "Group by Excel Tab" above to edit these inline, right where they'll appear.)</p>
-      <div class="rows-scroll"><table class="rows-table" id="customRowsTable">
-        <thead><tr><th>Label</th><th>Tab</th><th>Section</th><th>Order</th><th>Show period labels</th><th>Format</th><th></th></tr></thead>
-        <tbody id="customRowsBody"></tbody>
+    <div id="excelStyleBlock" class="settings-pane hidden" role="tabpanel">
+      <h2>Excel style</h2>
+      <p class="muted-line">How cells look in Excel, by role — yours, for every model. fmIDE sends only number formats.</p>
+      <div class="rows-scroll"><table class="excel-style-table" id="excelStyleTable">
+        <thead><tr><th>Role</th><th>Looks like</th><th>Fill</th><th>Font colour</th><th>Bold</th><th>Size (pt)</th><th>Border</th></tr></thead>
+        <tbody id="excelStyleBody"></tbody>
       </table></div>
-    </section>
-
-    <section class="panel" id="generatePanel">
-      <h2>5. Generate</h2>
-      <div class="limits">
-        <strong>Known limitations:</strong> a block instance's own compact node never gets a row — it's fully unpacked into its own "Block instance —" group instead (see the Rows panel above), so map/rename/reorder its rows there like any other. A <strong>vertical</strong> block instance (fmIDE's Vertical Block feature) is unpacked once per vintage/run — a "V1", "V2", … tagged copy of every internal row per period in the timeline — plus one "Σ Total"-tagged row per output port that reduces all those vintages back into the single value the rest of the model sees, via SUM/MAX/MIN/AVERAGE/PRODUCT matching that output's reducer (default sum); this is exactly a vintage/waterfall schedule with a Total row underneath, so with many periods a vertical block can add a lot of rows — reorder, rename, or exclude them like any other row. A block that instantiates itself, directly or indirectly, is skipped (avoids an infinite unpack). Formulas, number formats, and cell fill/border/font all carry through reliably. Excel recalculates formulas automatically when the file opens.
+      <div class="row pane-actions">
+        <button id="btnImportStyle" title="Read an Excel style saved with Export Excel Style">Import Excel Style…</button>
+        <button id="btnExportStyle" title="Save your Excel style to a file">Export Excel Style</button>
+        <span class="spacer"></span>
+        <button id="btnResetStyle" class="danger" title="Put every role back to ExcelExporter's built-in look">Reset to Defaults…</button>
       </div>
-      <div id="storageWarn" class="status err hidden" role="alert" style="margin-bottom:10px;"></div>
-      <div id="differencesPanel" class="differences hidden" role="status"></div>
-      <div class="row" style="margin-top:14px;">
-        <button id="btnGenerate" class="primary">⬇ Generate &amp; Download .xlsx</button>
-        <button id="btnExportMapping">Export Mapping JSON</button>
-        <button id="btnImportMapping">Import Mapping JSON</button>
-        <input type="file" id="mappingFileInput" accept="application/json,.json" style="display:none;">
-        <button id="btnResetMapping" class="danger" title="Discard the saved layout for this model and rebuild the default mapping">Reset Mapping to Defaults</button>
-      </div>
-      <p class="hint" style="margin:10px 0 0;">Your mapping autosaves in this browser and comes back whenever you load the same model again (even after Start Over). "Reset Mapping to Defaults" discards it for the loaded model — export it first if you might want it back.</p>
-      <div id="genStatus" style="margin-top:12px;"></div>
-    </section>
+      <div id="excelStyleStatus"></div>
+    </div>
 
+    <div class="modal-actions">
+      <button id="settingsDone" class="primary">Done</button>
+    </div>
   </div>
+</div>
 
-</main>
+<div id="pasteModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="pasteTitle">
+  <div class="modal modal-wide">
+    <h3 id="pasteTitle">Paste a model</h3>
+    <textarea id="pasteArea" placeholder="Paste fmIDE system JSON here…"></textarea>
+    <div class="modal-actions">
+      <button id="pasteCancel">Cancel</button>
+      <button id="btnLoadPasted" class="primary">Load</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="mappingFileInput" accept="application/json,.json" hidden>
+<input type="file" id="moduleLayoutsFileInput" accept="application/json,.json" hidden>
+<input type="file" id="excelStyleFileInput" accept="application/json,.json" hidden>
 
 <div id="treeCtxMenu" class="ctx-menu hidden" role="menu"></div>
 
@@ -720,8 +878,6 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     </div>
   </div>
 </div>
-
-<footer>ExcelExporter — a standalone companion to fmIDE. Nothing here is uploaded anywhere; everything runs in your browser.</footer>
 
 <script>
 (function(){
@@ -3916,6 +4072,14 @@ function setStatus(el, msg, kind){
   const d = document.createElement('div');
   d.className = 'status ' + (['ok', 'err', 'info', 'warn'].includes(kind) ? kind : 'info');
   d.textContent = String(msg);
+  // × dismisses it (drawn by the style sheet, so the message's text stays just the message).
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'status-close';
+  close.setAttribute('aria-label', 'Dismiss');
+  close.title = 'Dismiss';
+  close.addEventListener('click', () => d.remove());
+  d.appendChild(close);
   el.appendChild(d);
 }
 
@@ -4107,9 +4271,9 @@ function renderExcelStyle(){
     const labelled = (el, text) => { const l = document.createElement('label'); l.className = 'xs-check'; l.append(el, document.createTextNode(text)); return l; };
     const cell = (...els) => { const td = document.createElement('td'); els.forEach(e => td.appendChild(e)); tr.appendChild(td); return td; };
 
+    // What the role covers is its tooltip (and in Help), keeping the table short.
     const name = document.createElement('div'); name.className = 'xs-name'; name.textContent = role.name;
-    const desc = document.createElement('div'); desc.className = 'xs-desc'; desc.textContent = role.desc;
-    cell(name, desc);
+    cell(name).title = role.desc;
     const swatch = document.createElement('span'); swatch.className = 'xs-swatch'; swatch.textContent = 'Aa 1,234';
     paintExcelStyleSwatch(swatch, st);
     cell(swatch);
@@ -5505,7 +5669,7 @@ function renderInputsSettings(){
   $('cfgInputsCases').value = globalCaseCount();
   renderCasesHint();
   ['cfgInputsName', 'cfgInputsGroup', 'cfgInputsOrder', 'btnInputsRelayout', 'cfgInputsScenarios', 'cfgInputsCases'].forEach(id => { $(id).disabled = !cfg.enabled; });
-  $('inputsOptions').classList.toggle('muted-block', !cfg.enabled);
+  $('inputsOptions').classList.toggle('hidden', !cfg.enabled); // its settings show once it is on
 }
 
 // ---------- Custom / label rows ----------
@@ -5667,7 +5831,7 @@ function insertCustomRowNear(anchor, where){
   return newRow;
 }
 
-// "+ Add Custom Row": with rows selected, inserts just below the last selected row;
+// "+ Label Row": with rows selected, inserts just below the last selected row;
 // with nothing selected, keeps the original behavior (bottom of the first tab).
 function addCustomRow(){
   const sel = selectionInSheetOrder();
@@ -5687,6 +5851,16 @@ function addCustomRow(){
   saveMapping();
   renderCustomRows();
   renderTabs();
+  // Label rows are edited where they sit: from the By Canvas view, show the new one in the Tree.
+  if(currentRowView === 'canvas') setRowView('tree');
+  if(currentRowView === 'tree'){
+    const row = mapping.customRows[mapping.customRows.length - 1];
+    const entry = treeRowElements.find(e => e.id === row.id);
+    if(entry){
+      entry.el.scrollIntoView({ block: 'nearest' });
+      startTreeRowRename(entry.el, entry.el.querySelector('.tree-row-label'), row);
+    }
+  }
 }
 
 function deleteCustomRow(row){
@@ -6349,6 +6523,7 @@ function sampleModel(){
 // ============================================================
 function renderAll(){
   $('afterLoad').classList.remove('hidden');
+  syncPageState();
   $('periodCountLabel').textContent = model.periods.length;
   $('cfgStartLabel').value = mapping.cfg.startLabel;
   $('cfgFrequency').value = mapping.cfg.frequency;
@@ -6376,33 +6551,46 @@ function renderTabs(){
     const rowCount = [...mapping.rows, ...inputMirrorRows()].filter(r => r.tabId === tab.id && r.include).length + mapping.customRows.filter(r => r.tabId === tab.id).length;
     const isInputsTab = tab.id === INPUTS_TAB_ID;
     const tr = document.createElement('tr');
+    tr.dataset.tabId = tab.id;
 
     const tdHandle = document.createElement('td');
-    const upBtn = document.createElement('button'); upBtn.className = 'icon'; upBtn.textContent = '↑'; upBtn.disabled = idx === 0;
-    const dnBtn = document.createElement('button'); dnBtn.className = 'icon'; dnBtn.textContent = '↓'; dnBtn.disabled = idx === arr.length - 1;
+    tdHandle.className = 'tab-move';
+    const upBtn = document.createElement('button'); upBtn.className = 'icon'; upBtn.textContent = '↑'; upBtn.disabled = idx === 0; upBtn.title = 'Move this tab left in the workbook';
+    const dnBtn = document.createElement('button'); dnBtn.className = 'icon'; dnBtn.textContent = '↓'; dnBtn.disabled = idx === arr.length - 1; dnBtn.title = 'Move this tab right in the workbook';
     upBtn.addEventListener('click', () => { swapTabOrder(tab, arr[idx - 1]); });
     dnBtn.addEventListener('click', () => { swapTabOrder(tab, arr[idx + 1]); });
     tdHandle.appendChild(upBtn); tdHandle.appendChild(dnBtn);
     tr.appendChild(tdHandle);
 
     const tdName = document.createElement('td');
+    tdName.className = 'tab-name';
+    const nameLine = document.createElement('div');
+    nameLine.className = 'tab-name-line';
     const nameInput = document.createElement('input');
     nameInput.type = 'text'; nameInput.value = tab.name;
+    nameInput.setAttribute('aria-label', 'Tab name');
     nameInput.addEventListener('change', () => {
       if(isInputsTab){ setInputsTabName(nameInput.value); return; }
       tab.name = sanitizeSheetName(nameInput.value); nameInput.value = tab.name; saveMapping(); renderRows();
     });
-    tdName.appendChild(nameInput);
+    nameLine.appendChild(nameInput);
+    if(isInputsTab){ const tg = document.createElement('span'); tg.className = 'link-tag'; tg.textContent = 'Inputs'; tg.title = 'Gathered input rows — see Inputs & scenarios below'; nameLine.appendChild(tg); }
+    tdName.appendChild(nameLine);
+    // Its row count, which shows the tab's rows (the Tree when the rows are shown by canvas).
+    const count = document.createElement('button');
+    count.className = 'tab-count';
+    count.textContent = rowCount + ' row' + (rowCount === 1 ? '' : 's');
+    count.title = 'Show this tab\'s rows';
+    count.addEventListener('click', () => showTabRows(tab.id));
+    tdName.appendChild(count);
     const modTag = moduleTabTag(tab);
     if(modTag) tdName.appendChild(modTag);
     tr.appendChild(tdName);
 
-    const tdCount = document.createElement('td'); tdCount.textContent = rowCount + ' row' + (rowCount === 1 ? '' : 's');
-    if(isInputsTab){ const tg = document.createElement('span'); tg.className = 'link-tag'; tg.textContent = 'Inputs'; tg.title = 'Gathered input rows — see the settings below'; const wrap = document.createElement('div'); wrap.style.cssText = 'display:flex; align-items:center; gap:8px;'; wrap.appendChild(nameInput); wrap.appendChild(tg); tdName.appendChild(wrap); }
-    tr.appendChild(tdCount);
-
     const tdActions = document.createElement('td');
-    const delBtn = document.createElement('button'); delBtn.className = 'icon danger'; delBtn.textContent = '🗑 Delete';
+    tdActions.className = 'tab-actions';
+    const delBtn = document.createElement('button'); delBtn.className = 'icon danger'; delBtn.textContent = '🗑';
+    delBtn.setAttribute('aria-label', 'Delete tab');
     delBtn.disabled = arr.length <= 1 || isInputsTab;
     delBtn.title = isInputsTab ? 'Turn this tab off with "Gather inputs on a separate tab" below'
       : arr.length <= 1 ? 'At least one tab is required' : 'Delete this tab (its rows move to the first remaining tab)';
@@ -6418,6 +6606,18 @@ function renderTabs(){
 
     body.appendChild(tr);
   });
+}
+
+// Scrolls the rows to one tab's group (the Tree, unless the rows are shown by Excel tab).
+function showTabRows(tabId){
+  if(currentRowView === 'canvas') setRowView('tree');
+  const container = currentRowView === 'tab' ? $('rowGroupsByTab') : $('rowGroupsTree');
+  if(currentRowView === 'tree' && treeCollapsedTabIds.delete(tabId)) renderTreeView();
+  const key = currentRowView === 'tab' ? tabId : 'tree_' + tabId;
+  const group = [...container.querySelectorAll('[data-scroll-key]')].find(g => g.getAttribute('data-scroll-key') === key);
+  if(!group) return;
+  group.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  group.classList.remove('flash'); void group.offsetWidth; group.classList.add('flash');
 }
 
 function swapTabOrder(a, b){
@@ -6668,70 +6868,8 @@ function renderBlockInstanceGroups(){
   restoreScrollTops(container, scrollTops);
 }
 
+// Label (custom) rows are edited where they sit: in the Tree and By Excel Tab views.
 function renderCustomRows(){
-  const body = $('customRowsBody');
-  body.innerHTML = '';
-  const sortedTabs = mapping.tabs.slice().sort((a, b) => a.order - b.order);
-  mapping.customRows.forEach(row => {
-    const tr = document.createElement('tr');
-
-    const tdLabel = document.createElement('td');
-    const labelInput = document.createElement('input'); labelInput.type = 'text'; labelInput.value = row.label;
-    if(rowIndent(row)) labelInput.style.textIndent = rowIndent(row) + 'em'; // the label's indent in Excel (set in the Tree view)
-    labelInput.addEventListener('change', () => { row.label = labelInput.value; saveMapping(); });
-    tdLabel.appendChild(labelInput);
-    tr.appendChild(tdLabel);
-
-    const tdTab = document.createElement('td');
-    const tabSel = document.createElement('select');
-    sortedTabs.forEach(t => { const o = document.createElement('option'); o.value = t.id; o.textContent = t.name; tabSel.appendChild(o); });
-    tabSel.value = row.tabId;
-    tabSel.addEventListener('change', () => { row.tabId = tabSel.value; saveMapping(); renderTabs(); });
-    tdTab.appendChild(tabSel);
-    tr.appendChild(tdTab);
-
-    const tdSection = document.createElement('td');
-    tdSection.style.cssText = 'display:flex; align-items:center; gap:6px;';
-    const secSel = document.createElement('select');
-    [['input', 'Input'], ['calc', 'Calc'], ['output', 'Output']].forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; secSel.appendChild(o); });
-    secSel.value = row.section;
-    secSel.addEventListener('change', () => { row.section = secSel.value; saveMapping(); renderCustomRows(); });
-    const tag = document.createElement('span'); tag.className = 'section-tag ' + row.section; tag.textContent = row.section;
-    tdSection.appendChild(tag);
-    tdSection.appendChild(secSel);
-    tr.appendChild(tdSection);
-
-    const tdOrder = document.createElement('td');
-    const wrap = document.createElement('div'); wrap.className = 'order-btns';
-    const upBtn = document.createElement('button'); upBtn.textContent = '↑';
-    const dnBtn = document.createElement('button'); dnBtn.textContent = '↓';
-    upBtn.addEventListener('click', () => nudgeRowOrder(row, -1));
-    dnBtn.addEventListener('click', () => nudgeRowOrder(row, 1));
-    wrap.appendChild(upBtn); wrap.appendChild(dnBtn);
-    tdOrder.appendChild(wrap);
-    tr.appendChild(tdOrder);
-
-    const tdPeriods = document.createElement('td');
-    const periodsChk = document.createElement('input'); periodsChk.type = 'checkbox'; periodsChk.checked = !!row.showPeriodLabels;
-    periodsChk.title = 'Repeat the period/timeline header labels across this row instead of leaving it blank';
-    periodsChk.addEventListener('change', () => { row.showPeriodLabels = periodsChk.checked; saveMapping(); });
-    tdPeriods.appendChild(periodsChk);
-    tr.appendChild(tdPeriods);
-
-    const tdFormat = document.createElement('td');
-    const fmtBtn = document.createElement('button'); fmtBtn.className = 'icon'; fmtBtn.textContent = '🎨';
-    fmtBtn.addEventListener('click', () => toggleCustomRowStyleEditor(tr, row));
-    tdFormat.appendChild(fmtBtn);
-    tr.appendChild(tdFormat);
-
-    const tdDel = document.createElement('td');
-    const delBtn = document.createElement('button'); delBtn.className = 'icon danger'; delBtn.textContent = '🗑';
-    delBtn.addEventListener('click', () => deleteCustomRow(row));
-    tdDel.appendChild(delBtn);
-    tr.appendChild(tdDel);
-
-    body.appendChild(tr);
-  });
   renderRowsByTab();
   renderTreeView();
 }
@@ -7144,7 +7282,7 @@ function renderRowsByTab(){
   restoreScrollTops(container, scrollTops);
 }
 
-let currentRowView = 'canvas';
+let currentRowView = 'tree';
 function setRowView(view){
   currentRowView = view;
   $('viewByCanvas').classList.toggle('active', view === 'canvas');
@@ -7154,8 +7292,7 @@ function setRowView(view){
   $('blockInstanceGroups').classList.toggle('hidden', view !== 'canvas');
   $('rowGroupsByTab').classList.toggle('hidden', view !== 'tab');
   $('rowGroupsTree').classList.toggle('hidden', view !== 'tree');
-  $('customRowsPanel').classList.toggle('hidden', view !== 'canvas');
-  if(view === 'tree') renderTreeView();
+  if(view === 'tree' && mapping) renderTreeView();
 }
 
 // ---------- Tree view (Tab -> Row, always flat regardless of the section toggle) ----------
@@ -8512,13 +8649,20 @@ function renderDifferences(){
   const head = document.createElement('div');
   head.className = 'differences-head';
   head.textContent = 'Where the workbook will differ from fmIDE (' + lines.length + '):';
+  const help = document.createElement('button');
+  help.type = 'button';
+  help.className = 'panel-help';
+  help.textContent = '?';
+  help.title = 'Help: where the workbook differs from fmIDE';
+  help.addEventListener('click', () => excelHelp.open('differences'));
+  head.appendChild(help);
   panel.appendChild(head);
   const ul = document.createElement('ul');
   lines.forEach(t => { const li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
   panel.appendChild(ul);
   const note = document.createElement('div');
   note.className = 'hint';
-  note.textContent = 'You can still download the workbook. Fixing these in fmIDE (or including the rows) makes both give the same numbers.';
+  note.textContent = 'You can still download. Fix these in fmIDE (or include the rows) and both give the same numbers.';
   panel.appendChild(note);
 }
 // ============================================================
@@ -9161,11 +9305,12 @@ const EXCEL_HELP_TOPICS = [
     body: [
       { p: 'ExcelExporter reads a model you built in fmIDE and writes an Excel workbook (.xlsx) whose cells hold real formulas, so it calculates exactly as fmIDE does and keeps working when you change an input in Excel.' },
       { steps: [
-        'Load the model (panel 1).',
-        'Check the period labels and the file name (panel 2).',
-        'Arrange the tabs and rows, if you like (panels 3 and 4).',
-        'Press Generate & Download .xlsx (panel 5).',
+        'Load the model: drop its file on the page, or choose File → Open Model….',
+        'Check the period labels and the file name (⚙ Settings → Workbook).',
+        'Arrange the tabs (on the left) and the rows (on the right), if you like.',
+        'Press ⬇ Generate .xlsx, at the top right.',
       ] },
+      { p: 'Every file you can import or export, and every reset, is in the two menus at the top: File (the model, Start Over) and Layout (this model\'s layout, module layouts, your Excel style). Pointing at a button or a menu item says what it does.' },
       { p: 'Everything happens in your browser: nothing is uploaded, and it works offline.' },
       { p: 'What\'s new, at the top of this Help panel, lists every update to ExcelExporter, newest first, each with what changed, why and how to use it. A dot on ❓ Help means there is something you haven\'t seen yet.' },
       { p: 'This Help panel opens with ❓ or F1. Press ⤢ at its top for a wider reading view (⤡ brings it back), or drag its left edge to any width; it remembers the width.' },
@@ -9177,10 +9322,10 @@ const EXCEL_HELP_TOPICS = [
     body: [
       { steps: [
         'In fmIDE, save your model (File → Save gives a .fmide file).',
-        'Here, drop the file on the box in panel 1, or click the box to choose it.',
+        'Here, drop the file on the box (or anywhere on the page), or click the box to choose it. Once a model is loaded, File → Open Model… opens another.',
       ] },
-      { p: 'A system file (Save System) or a workspace (Export Workspace) works too. The number formats you set in fmIDE come across; how cells look is your own Excel style (panel 2).' },
-      { p: 'To see how it works first, press ▶ Load Sample Model.' },
+      { p: 'A system file (Save System) or a workspace (Export Workspace) works too, and File → Paste JSON… takes a model\'s text. The number formats you set in fmIDE come across; how cells look is your own Excel style (⚙ Settings → Excel Style).' },
+      { p: 'To see how it works first, press ▶ Load Sample Model (also in the File menu).' },
       { p: 'Your layout (tabs, rows, names, order) is remembered in this browser for each model, so loading the same model again brings it back.' },
       { see: ['what-is-excelexporter', 'remembered', 'back-to-fmide'] },
     ] },
@@ -9189,14 +9334,14 @@ const EXCEL_HELP_TOPICS = [
     summary: '← Back to fmIDE, at the top left.',
     body: [
       { p: '← Back to fmIDE returns to fmIDE. When ExcelExporter has its own window, it closes that window (asking first if a model is loaded; your layout is kept, and you load the file again next time). On an iPad, where ExcelExporter took fmIDE\'s place, it goes back to fmIDE.' },
-      { p: 'Start Over clears the model loaded here. Saved layouts are kept.' },
+      { p: 'File → Start Over clears the model loaded here. Saved layouts are kept.' },
       { see: ['remembered'] },
     ] },
   { id: 'periods-output', group: 'layout', title: 'Period columns and the file name',
     keywords: 'period columns header label year quarter month frequency file name number format',
     summary: 'How the period columns are labelled, the fallback number format and the file name.',
     body: [
-      { p: 'Each period of fmIDE\'s timeline becomes a column. Panel 2 only decides how the columns are labelled: the first label (for example 2027) and the frequency (annual, quarterly or monthly).' },
+      { p: 'Each period of fmIDE\'s timeline becomes a column. ⚙ Settings → Workbook only decides how the columns are labelled: the first label (for example 2027) and the frequency (annual, quarterly or monthly).' },
       { p: 'The fallback number format is used for cells whose rectangle has no number format of its own.' },
       { p: 'The output file name is the name of the downloaded workbook.' },
       { see: ['formats', 'generate'] },
@@ -9205,8 +9350,8 @@ const EXCEL_HELP_TOPICS = [
     keywords: 'tab sheet worksheet rename reorder add delete',
     summary: 'One Excel tab per fmIDE canvas to start with; rename, reorder, add or delete them.',
     body: [
-      { p: 'Panel 3 lists the workbook\'s tabs. Each fmIDE canvas starts as its own tab. Rename a tab by typing its name, move it with ↑ and ↓, add one with + Add Tab, or delete one with 🗑 Delete (its rows move to the first remaining tab).' },
-      { p: 'Which rows go on which tab is set in panel 4.' },
+      { p: 'The Tabs panel, on the left, lists the workbook\'s tabs in order. Each fmIDE canvas starts as its own tab. Rename a tab by typing its name, move it with ↑ and ↓, add one with + Add Tab, or delete one with 🗑 (its rows move to the first remaining tab).' },
+      { p: 'A tab\'s row count (for example "3 rows") takes you to its rows. Which rows go on which tab is set in the Rows panel.' },
       { see: ['rows', 'module-layouts', 'inputs-tab'] },
     ] },
   { id: 'module-layouts', group: 'layout', title: 'Modules remember their layout',
@@ -9218,7 +9363,7 @@ const EXCEL_HELP_TOPICS = [
         'The next model with the same module, laid out here for the first time, starts with that layout. Rows are matched by rectangle name; rectangles the layout doesn\'t know go where the automatic sort puts them.',
         'A model you have already arranged keeps its own layout.',
         'Forget, on the tab, stops the module\'s layout being used for new models.',
-        'Export Module Layouts saves them all as a file; Import Module Layouts reads one, for example on another computer.',
+        'Layout → Export Module Layouts saves them all as a file; Import Module Layouts… reads one, for example on another computer.',
       ] },
       { p: 'Export Module Layouts saves every module remembered in this browser, from every model you have arranged here — not only the model loaded now. Each is named after its template, not after your canvas. That is expected: fmIDE\'s Attach Excel layout… takes just the one for its template.' },
       { see: ['template-layouts', 'remembered'] },
@@ -9233,7 +9378,7 @@ const EXCEL_HELP_TOPICS = [
       { p: 'A canvas template in fmIDE can carry the Excel layout of its module, so that whoever uses the template — another person, or you in another browser — gets the same tab layout here.' },
       { steps: [
         'Here, arrange the module\'s tab (marked 🧩). The layout is remembered.',
-        'Press Export Module Layouts (panel 3). The file holds every remembered module; that is fine.',
+        'Choose Layout → Export Module Layouts. The file holds every remembered module; that is fine.',
         'In fmIDE, open the Templates window, choose that template\'s version and press 📎 Attach Excel layout…, then pick the file. fmIDE takes only the layout for that template.',
       ] },
       { p: 'fmIDE only carries the layout: it never reads or changes it. It goes with the template in workspaces, .fmide documents, template files and library packs; Save as new version carries it on. A model file (Save System) carries no templates, so no attached layout.' },
@@ -9245,7 +9390,7 @@ const EXCEL_HELP_TOPICS = [
         'The layout of the version the canvas was made from, else the newest version that has one.',
       ] },
       { p: 'The tab then says "layout from the template". Change it and your change becomes your own remembered layout.' },
-      { tip: 'On your own computer your remembered layout usually comes first. To see the attached one: press Forget on the module\'s tab, press Reset Mapping to Defaults (panel 5), then load the .fmide document or workspace again.' },
+      { tip: 'On your own computer your remembered layout usually comes first. To see the attached one: press Forget on the module\'s tab, choose Layout → Reset Mapping to Defaults…, then load the .fmide document or workspace again.' },
       { see: ['module-layouts', 'remembered'] },
     ] },
   { id: 'remembered', group: 'layout', title: 'What is remembered, and which layout wins',
@@ -9254,11 +9399,11 @@ const EXCEL_HELP_TOPICS = [
     body: [
       { p: 'ExcelExporter keeps three things in this browser:' },
       { steps: [
-        'A layout for each model you have arranged here — saved as you go. Reset Mapping to Defaults (panel 5) discards it for the loaded model. Export Mapping JSON saves it as a file.',
-        'A layout for each module (a canvas from a template), saved whenever you change that module\'s tab or a block instance\'s tab, in any model. Forget, on the tab, discards it. Export Module Layouts saves them all as a file.',
-        'Your Excel style, the same for every model. Reset to Defaults (panel 2) puts it back.',
+        'A layout for each model you have arranged here — saved as you go. Layout → Reset Mapping to Defaults… discards it for the loaded model. Layout → Export Mapping saves it as a file.',
+        'A layout for each module (a canvas from a template), saved whenever you change that module\'s tab or a block instance\'s tab, in any model. Forget, on the tab, discards it. Layout → Export Module Layouts saves them all as a file.',
+        'Your Excel style, the same for every model. Reset to Defaults… (⚙ Settings → Excel Style) puts it back.',
       ] },
-      { p: 'Start Over only empties this page. It keeps all three, so loading a model you arranged before brings its layout straight back.' },
+      { p: 'File → Start Over only empties this page. It keeps all three, so loading a model you arranged before brings its layout straight back.' },
       { p: 'When you load a file, the layout comes from the first of these that exists:' },
       { steps: [
         'The layout saved for this model. If there is one, it is used as it is, and nothing below is looked at.',
@@ -9267,7 +9412,7 @@ const EXCEL_HELP_TOPICS = [
         '…or, without that, the automatic sort. Tabs not from a module always start from the automatic sort.',
       ] },
       { p: 'Block instance tabs follow the same order, using the module\'s instance layout.' },
-      { tip: 'Export Mapping JSON is one model\'s whole workbook layout (tabs, rows, Inputs tab, scenarios, settings). Export Module Layouts is the per-module layouts, for reuse in other models and for fmIDE\'s Attach Excel layout….' },
+      { tip: 'Export Mapping is one model\'s whole workbook layout (tabs, rows, Inputs tab, scenarios, settings). Export Module Layouts is the per-module layouts, for reuse in other models and for fmIDE\'s Attach Excel layout….' },
       { see: ['module-layouts', 'template-layouts', 'formats', 'generate'] },
     ] },
   { id: 'rows', group: 'layout', title: 'Rows: what goes where',
@@ -9275,23 +9420,24 @@ const EXCEL_HELP_TOPICS = [
     summary: 'Every rectangle becomes a labelled row: choose its tab, place, label, and whether it is included.',
     body: [
       { p: 'Each value rectangle becomes one row. Operators, aliases and period shifts don\'t get rows: they become part of the formulas.' },
-      { p: 'Panel 4 shows the rows grouped by canvas, grouped by Excel tab, or as a Tree View. For each row you can:' },
+      { p: 'The Rows panel shows the rows as a Tree (where it starts), as a table per Excel tab, or as a table per canvas. For each row you can:' },
       { steps: [
         'change its label;',
         'move it to another tab or up and down;',
         'untick Include to leave it out;',
         'tick Constant to put a small fixed number (a sign flip, ×1000) straight into the formulas instead of giving it a row.',
       ] },
-      { p: 'To move several rows at once, tick the box at the left of each and use the bar that appears above the table.' },
-      { p: 'Sort rows by reorders rows: by calculation order (inputs first, or results first), by position on the canvas, or alphabetically; press Apply. + Add Custom Row adds a label or divider row.' },
-      { p: 'With Enforce Input / Calc / Output sections ticked, each tab has INPUTS, CALCULATIONS and OUTPUTS bands. Untick it for one free list per tab.' },
+      { p: 'To move several rows at once, select them — in the Tree click, Ctrl-click or Shift-click; in the tables tick the box at the left of each — and use the bar that appears above them.' },
+      { p: 'Sort reorders rows: by calculation order (inputs first, or results first), by position on the canvas, or alphabetically; press Apply. + Label Row adds a label or blank row below the selected one; edit it in the Tree (double-click to rename, PERIODS to repeat the period labels on it, 🎨, 🗑) or in the By Excel Tab table.' },
+      { p: 'With Sections ticked, each tab has INPUTS, CALCULATIONS and OUTPUTS bands. Untick it for one free list per tab.' },
+      { p: 'A Block In or Block Out tag shows the rectangle\'s port role in fmIDE\'s Block feature. Constant works inside a block too.' },
       { see: ['tree-view', 'blocks', 'tabs'] },
     ] },
   { id: 'tree-view', group: 'layout', title: 'The Tree View',
     keywords: 'tree view select rename right-click menu indent format row shift ctrl',
     summary: 'Every tab\'s rows as one list: select, rename, indent, format and move them.',
     body: [
-      { p: 'Tree View shows every row of each tab in order, including left-out ones (dimmed), as they will appear in Excel.' },
+      { p: 'The Tree, the Rows panel\'s first view, shows every row of each tab in order, including left-out ones (dimmed), as they will appear in Excel. Click a tab\'s name to fold it.' },
       { steps: [
         'Click a row to select it. Ctrl-click (Cmd-click on a Mac) adds or removes one, and Shift-click selects a range.',
         'Double-click a row\'s label to rename it.',
@@ -9307,7 +9453,9 @@ const EXCEL_HELP_TOPICS = [
     summary: 'A block is unpacked into its own rows; a vertical block into one set per period, plus a total.',
     body: [
       { p: 'A block used in fmIDE gets its own group of rows in the workbook ("Block instance —"), once per instance, since each instance calculates on its own.' },
-      { p: 'A vertical block gets a set of rows for each period (V1, V2, …) and a Σ Total row for each output that combines them, as its output does in fmIDE. With many periods that can be many rows: reorder, rename or leave them out like any other.' },
+      { p: 'The block\'s own box never gets a row: its rectangles do. A block input inside it reads whatever is wired into that instance\'s input (0 when nothing is).' },
+      { p: 'A vertical block gets a set of rows for each period (V1, V2, …) and a Σ Total row for each output that combines them with SUM, MAX, MIN, AVERAGE or PRODUCT, as its output does in fmIDE. A row that is the same in every set is written once (Shared). With many periods that can be many rows: reorder, rename or leave them out like any other.' },
+      { p: 'A block that uses itself, directly or through another block, is left out; the yellow list under the Generate button says so.' },
       { p: 'Arrange one instance\'s tab, then use "Lay out the other instances like this" on it (in the Tabs panel) to give the block\'s other instances the same layout. A block added from a template in fmIDE also remembers that layout for the next model.' },
       { see: ['rows', 'module-layouts'] },
     ] },
@@ -9315,7 +9463,7 @@ const EXCEL_HELP_TOPICS = [
     keywords: 'inputs tab gather assumptions separate group order',
     summary: 'Gather every typed-in number on one tab, with the other tabs linking to it.',
     body: [
-      { p: 'Tick Gather inputs on a separate tab (panel 3) to put every input (a rectangle with no arrow in) on its own tab. Its original row stays where it was and links to the Inputs tab, shown in the Links format.' },
+      { p: 'Tick Gather inputs on a separate tab (Inputs & scenarios, on the left) to put every input (a rectangle with no arrow in) on its own tab. Its original row stays where it was and links to the Inputs tab, shown in the Links format.' },
       { p: 'Choose the tab\'s name, how its rows are grouped (by Excel tab, by canvas, or not at all) and their order. Re-apply layout rebuilds the grouping from these settings.' },
       { see: ['scenarios', 'rows'] },
     ] },
@@ -9324,8 +9472,8 @@ const EXCEL_HELP_TOPICS = [
     summary: 'Give an input several values and choose which one the workbook runs.',
     body: [
       { steps: [
-        'Turn on the Inputs tab (panel 3).',
-        'On a row of the Inputs tab (panel 4), tick scenarios — or select several rows and use ≡ Add Scenarios. That input gets several values, one per scenario: the first is fmIDE\'s value, the others start empty for you to fill in Excel. Scenarios per variable sets how many.',
+        'Turn on the Inputs tab (Inputs & scenarios, on the left).',
+        'On a row of the Inputs tab (in the Rows panel), tick scenarios — or select several rows and use ≡ Add Scenarios. That input gets several values, one per scenario: the first is fmIDE\'s value, the others start empty for you to fill in Excel. Scenarios each sets how many.',
         'A Scenarios tab in the workbook picks which scenario each input uses.',
       ] },
       { p: 'With Global cases above 0, each case picks one scenario for every input, and a single Global Case cell chooses the case the whole workbook runs.' },
@@ -9335,12 +9483,13 @@ const EXCEL_HELP_TOPICS = [
     keywords: 'format role colour fill font border sides size bold number format style excel style export import reset row',
     summary: 'Your own Excel style sets how every cell looks; fmIDE sets the number formats.',
     body: [
-      { p: 'Every cell takes its look from one of seven roles in your Excel style (panel 2): Inputs, Calculations, Links, Headers, Section Headers, Labels and Notes.' },
+      { p: 'Every cell takes its look from one of seven roles in your Excel style (⚙ Settings → Excel Style, or Layout → Excel Style…): Inputs, Calculations, Links, Headers, Section Headers, Labels and Notes.' },
       { steps: [
         'For each role, pick the fill, the font colour, bold, the font size (blank uses Excel\'s default) and the border: its style, colour and which sides.',
         'Changes are saved in this browser and used for every model you load here.',
-        'Export Excel Style saves it as a file; Import Excel Style reads one, for example on another computer.',
-        'Reset to Defaults puts every role back to ExcelExporter\'s built-in look.',
+        'Export Excel Style saves it as a file; Import Excel Style… reads one, for example on another computer.',
+        'Reset to Defaults… puts every role back to ExcelExporter\'s built-in look.',
+        'Point at a role\'s name to see which cells it covers.',
       ] },
       { p: 'In the Tree View, 🎨 on a row gives just that row its own look in this workbook.' },
       { p: 'A cell\'s fill, font colour, bold and border come from the first of these that is set:' },
@@ -9354,15 +9503,15 @@ const EXCEL_HELP_TOPICS = [
         'the row\'s own format, if you gave it a number format;',
         'the rectangle\'s own 🎨 format in fmIDE;',
         'fmIDE\'s Inputs or Calculations format, whichever the rectangle is;',
-        'the fallback number format (panel 2).',
+        'the fallback number format (⚙ Settings → Workbook).',
       ] },
       { see: ['tree-view', 'periods-output', 'remembered'] },
     ] },
   { id: 'differences', group: 'generate', title: 'Where the workbook differs from fmIDE',
     keywords: 'differences yellow list warning na n/a error loop broken too long',
-    summary: 'The yellow list above Generate says where Excel can\'t calculate as fmIDE does.',
+    summary: 'The yellow list under Generate says where Excel can\'t calculate as fmIDE does.',
     body: [
-      { p: 'The workbook calculates exactly as fmIDE does. Where it can\'t, a yellow list above the Generate button says where, before you download. For example:' },
+      { p: 'The workbook calculates exactly as fmIDE does. Where it can\'t, a yellow list at the top of the page, under the Generate button, says where, before you download. For example:' },
       { steps: [
         'something broken in the model, such as an alias to a rectangle that was deleted, a loop, or two arrows into one rectangle (fmIDE shows "?");',
         'a row you left out that other rows read;',
@@ -9375,8 +9524,8 @@ const EXCEL_HELP_TOPICS = [
     keywords: 'generate download xlsx mapping export import reset layout',
     summary: 'Download the workbook; save, share or reset the layout.',
     body: [
-      { p: 'Generate & Download .xlsx writes the workbook. Excel works out every formula when it opens the file.' },
-      { p: 'Your layout is saved in this browser as you go. Export Mapping JSON saves this model\'s whole layout to a file (to share it, or keep it safe), and Import Mapping JSON loads one. Reset Mapping to Defaults discards the layout for this model and starts again; module layouts and your Excel style are kept.' },
+      { p: '⬇ Generate .xlsx, at the top right, writes the workbook and downloads it. Excel works out every formula when it opens the file. Formulas, number formats and how cells look all carry through.' },
+      { p: 'Your layout is saved in this browser as you go. In the Layout menu, Export Mapping saves this model\'s whole layout to a file (to share it, or keep it safe), and Import Mapping… loads one. Reset Mapping to Defaults… discards the layout for this model and starts again; module layouts and your Excel style are kept.' },
       { see: ['differences', 'rows', 'remembered'] },
     ] },
 ];
@@ -9394,6 +9543,26 @@ const EXCEL_HELP_TOPICS = [
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'new-look', date: '2026-10-02', title: 'A cleaner, simpler ExcelExporter',
+    summary: 'Menus for every file and reset, Generate always at the top, tabs and rows side by side, less text.',
+    what: [
+      'Every file you import or export, and every reset, is now in two menus at the top: File (open a model, the sample, Paste JSON…, Start Over) and Layout (this model\'s mapping, module layouts, your Excel style, Reset Mapping to Defaults…).',
+      '⬇ Generate .xlsx is always at the top right. ⚙ Settings holds the period labels, the file name and your Excel style.',
+      'Once a model is loaded, its tabs and the Inputs tab settings sit on the left and its rows on the right. The rows open in the Tree; By Excel Tab and By Canvas are a click away. A tab\'s row count takes you to its rows.',
+      'The long explanations moved into Help: pointing at a button says what it does, and the "?" beside a heading opens its guide.',
+    ],
+    why: 'The page had grown long and wordy, with import and export buttons scattered across it.',
+    how: [
+      'Drop a model file anywhere on the page (or choose File → Open Model…).',
+      'Arrange the tabs on the left and the rows on the right.',
+      'Press ⬇ Generate .xlsx.',
+    ],
+    notes: [
+      'Nothing about the workbook changed, and your saved layouts and Excel style are kept.',
+      'Label rows are edited where they sit, in the Tree or By Excel Tab, so the separate Custom / Label Rows table is gone.',
+    ],
+    see: ['what-is-excelexporter', 'rows', 'generate'] },
+
   { id: 'whats-new', date: '2026-10-02', title: 'What\'s new, inside Help',
     summary: 'Every update to ExcelExporter, newest first: what changed, why, and how to use it.',
     what: [
@@ -9631,7 +9800,7 @@ const EXCEL_WHATS_NEW = [
 
 const excelHelp = createHelpPanel({
   groups: EXCEL_HELP_GROUPS, topics: EXCEL_HELP_TOPICS,
-  intro: 'Plain-English guides to ExcelExporter. Pick a topic, or search above. The "?" beside each panel\'s heading opens its topic.',
+  intro: 'Plain-English guides to ExcelExporter. Pick a topic, or search above. The "?" beside a heading opens its topic.',
   placeholder: 'Search help — e.g. "scenarios" or "tree view"',
   // H5a: the panel's width, kept in this browser (HELP_SIZE_KEY) for every model.
   size: { get: () => ({}), set: (v) => { layoutStore.put(HELP_SIZE_KEY, JSON.stringify(cleanHelpSize(v))).catch(() => {}); } },
@@ -9671,14 +9840,13 @@ layoutsMigrated.then(() => layoutStore.get(HELP_SIZE_KEY)).then(raw => {
     ev.preventDefault();
     excelHelp.toggle();
   });
-  // A "?" beside each panel's heading.
+  // A "?" beside each heading: the welcome screen, the Tabs, Inputs and Rows panels, and
+  // Settings' two tabs.
   const PANEL_TOPICS = [
-    ['loadPanel', 'load-model'], ['periodsPanel', 'periods-output'], ['tabsPanel', 'tabs'],
-    ['rowsPanel', 'rows'], ['customRowsPanel', 'rows'], ['generatePanel', 'generate'],
+    ['loadPanel', 'load-model'], ['tabsPanel', 'tabs'], ['inputsPanel', 'inputs-tab'], ['rowsPanel', 'rows'],
+    ['periodsPanel', 'periods-output'], ['excelStyleBlock', 'formats'],
   ];
-  // …and beside "Gather inputs on a separate tab".
-  const inputsLabel = $('cfgInputsEnabled') && $('cfgInputsEnabled').parentNode;
-  const places = PANEL_TOPICS.map(([id, topicId]) => [document.querySelector('#' + id + ' > h2'), topicId]).concat([[inputsLabel, 'inputs-tab']]);
+  const places = PANEL_TOPICS.map(([id, topicId]) => [document.querySelector('#' + id + ' h2'), topicId]);
   places.forEach(([h, topicId]) => {
     if(!h || !excelHelp.topic(topicId)) return;
     const b = document.createElement('button');
@@ -9690,6 +9858,194 @@ layoutsMigrated.then(() => layoutStore.get(HELP_SIZE_KEY)).then(raw => {
     b.addEventListener('click', () => excelHelp.open(topicId));
     h.appendChild(b);
   });
+})();
+// ============================================================
+// The page: top bar menus, Settings, Paste JSON, dropping a file anywhere
+// ============================================================
+// Every file and reset sits in the top bar's two menus (File, Layout); Settings holds this
+// model's workbook settings and your own Excel style; Generate is always in the top bar.
+// The buttons keep their ids, so their own handlers (in the files that own them) are unchanged.
+
+let currentModelLabel = ''; // the loaded model's file name (or "Sample model"), shown in the top bar
+
+// What depends on a model being loaded: the welcome screen, Generate, the menu items for
+// this model's layout, Settings' Workbook tab and the model's name.
+function syncPageState(){
+  const loaded = !!(model && mapping);
+  $('loadPanel').classList.toggle('hidden', loaded);
+  $('btnGenerate').disabled = !loaded;
+  document.querySelectorAll('.menu-list .needs-model').forEach(b => {
+    if(b.dataset.tip === undefined) b.dataset.tip = b.title;
+    b.disabled = !loaded;
+    b.title = loaded ? b.dataset.tip : 'Load a model first';
+  });
+  $('settingsTabWorkbook').disabled = !loaded;
+  $('modelName').textContent = loaded ? currentModelLabel : '';
+  $('modelName').title = loaded ? `${model.canvases.length} canvas${model.canvases.length === 1 ? '' : 'es'}, ${model.periods.length} periods` : '';
+}
+
+// ---------- Menus ----------
+// A menu opens on a click (or tap), Enter, Space or ↓; ↑ ↓ Home End move through its items,
+// ← → go to the next menu, Esc or a click elsewhere closes it, and choosing an item closes it.
+const MENUS = [['menuFile', 'menuFileList'], ['menuLayout', 'menuLayoutList']].map(([b, l]) => ({ btn: $(b), list: $(l) }));
+let openMenuEntry = null;
+function menuItems(m){ return [...m.list.querySelectorAll('[role=menuitem]')].filter(b => !b.disabled); }
+function openMenu(m, focusFirst){
+  if(openMenuEntry && openMenuEntry !== m) closeMenu(false);
+  openMenuEntry = m;
+  m.list.classList.remove('hidden');
+  m.btn.setAttribute('aria-expanded', 'true');
+  m.btn.classList.add('open');
+  if(focusFirst){ const items = menuItems(m); if(items.length) items[0].focus(); }
+}
+function closeMenu(focusButton){
+  const m = openMenuEntry;
+  if(!m) return;
+  openMenuEntry = null;
+  m.list.classList.add('hidden');
+  m.btn.setAttribute('aria-expanded', 'false');
+  m.btn.classList.remove('open');
+  if(focusButton) m.btn.focus();
+}
+let menuHoverOpenedAt = 0;
+MENUS.forEach((m, i) => {
+  m.btn.addEventListener('click', () => {
+    // A click just after pointing at it opened it keeps it open.
+    if(openMenuEntry === m && Date.now() - menuHoverOpenedAt > 400) closeMenu(false);
+    else openMenu(m, false);
+  });
+  // With a menu open, pointing at the other menu's name opens that one (a mouse only).
+  m.btn.addEventListener('mouseenter', () => {
+    if(openMenuEntry && openMenuEntry !== m){ openMenu(m, false); menuHoverOpenedAt = Date.now(); }
+  });
+  m.btn.addEventListener('keydown', (ev) => {
+    if(ev.key === 'ArrowDown' || ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); openMenu(m, true); }
+  });
+  m.list.addEventListener('keydown', (ev) => {
+    const items = menuItems(m);
+    const at = items.indexOf(document.activeElement);
+    const go = (k) => { ev.preventDefault(); if(items.length) items[(k + items.length) % items.length].focus(); };
+    if(ev.key === 'ArrowDown') go(at + 1);
+    else if(ev.key === 'ArrowUp') go(at < 0 ? -1 : at - 1);
+    else if(ev.key === 'Home') go(0);
+    else if(ev.key === 'End') go(-1);
+    else if(ev.key === 'Escape'){ ev.preventDefault(); closeMenu(true); }
+    else if(ev.key === 'Tab') closeMenu(false);
+    else if(ev.key === 'ArrowRight' || ev.key === 'ArrowLeft'){
+      ev.preventDefault();
+      openMenu(MENUS[(i + (ev.key === 'ArrowRight' ? 1 : MENUS.length - 1)) % MENUS.length], true);
+    }
+  });
+  // An item's own handler runs first (it is on the item); then the menu closes.
+  m.list.addEventListener('click', (ev) => { if(ev.target.closest('[role=menuitem]')) closeMenu(false); });
+});
+// Esc closes an open menu wherever the focus is (opened by a click, it stays on the menu's name).
+document.addEventListener('keydown', (ev) => {
+  if(ev.key !== 'Escape' || !openMenuEntry || ev.defaultPrevented) return;
+  ev.preventDefault();
+  closeMenu(true);
+});
+document.addEventListener('pointerdown', (ev) => {
+  if(openMenuEntry && !openMenuEntry.list.contains(ev.target) && !openMenuEntry.btn.contains(ev.target)) closeMenu(false);
+}, true);
+
+$('btnOpenModel').addEventListener('click', () => $('fileInput').click());
+$('btnMenuSample').addEventListener('click', () => $('btnLoadSample').click());
+$('btnMenuPaste').addEventListener('click', () => openPasteDialog());
+$('btnMenuStyle').addEventListener('click', () => openSettings('style'));
+
+// ---------- Dialogs (Settings, Paste JSON) ----------
+// Esc, the backdrop or Close shut them, and the focus goes back where it was.
+function wireDialog(modal, onClose){
+  modal.addEventListener('click', (ev) => { if(ev.target === modal) onClose(); });
+  document.addEventListener('keydown', (ev) => {
+    if(ev.key !== 'Escape' || ev.defaultPrevented || modal.classList.contains('hidden')) return;
+    if(!$('confirmModal').classList.contains('hidden')) return; // the confirmation answers its own Esc
+    const help = document.getElementById('helpPanel');
+    if(help && help.contains(ev.target)) return;                // Esc in Help closes Help
+    ev.preventDefault();
+    onClose();
+  });
+}
+
+let settingsOpener = null;
+function openSettings(which){
+  const loaded = !!(model && mapping);
+  renderExcelStyle(); // your Excel style is there with or without a model
+  showSettingsTab(which === 'style' || !loaded ? 'style' : 'workbook');
+  settingsOpener = document.activeElement;
+  $('settingsModal').classList.remove('hidden');
+  $('settingsDone').focus();
+}
+function closeSettings(){
+  if($('settingsModal').classList.contains('hidden')) return;
+  $('settingsModal').classList.add('hidden');
+  if(settingsOpener && document.contains(settingsOpener) && settingsOpener.focus) settingsOpener.focus();
+  settingsOpener = null;
+}
+function showSettingsTab(which){
+  const style = which === 'style';
+  $('periodsPanel').classList.toggle('hidden', style);
+  $('excelStyleBlock').classList.toggle('hidden', !style);
+  [['settingsTabWorkbook', !style], ['settingsTabStyle', style]].forEach(([id, on]) => {
+    $(id).classList.toggle('active', on);
+    $(id).setAttribute('aria-selected', String(on));
+  });
+}
+$('btnSettings').addEventListener('click', () => openSettings());
+$('settingsTabWorkbook').addEventListener('click', () => showSettingsTab('workbook'));
+$('settingsTabStyle').addEventListener('click', () => showSettingsTab('style'));
+$('settingsClose').addEventListener('click', closeSettings);
+$('settingsDone').addEventListener('click', closeSettings);
+wireDialog($('settingsModal'), closeSettings);
+
+let pasteOpener = null;
+function openPasteDialog(){
+  pasteOpener = document.activeElement;
+  $('pasteModal').classList.remove('hidden');
+  $('pasteArea').focus();
+}
+function closePasteDialog(){
+  if($('pasteModal').classList.contains('hidden')) return;
+  $('pasteModal').classList.add('hidden');
+  if(pasteOpener && document.contains(pasteOpener) && pasteOpener.focus && !pasteOpener.closest('.hidden')) pasteOpener.focus();
+  pasteOpener = null;
+}
+$('pasteCancel').addEventListener('click', closePasteDialog);
+wireDialog($('pasteModal'), closePasteDialog);
+
+// ---------- Dropping a file anywhere on the page ----------
+// The welcome screen's box takes a drop itself (10-wiring.js); elsewhere, a file dropped on the
+// page opens like File → Open Model…, with the whole page outlined while it is held over it.
+function dragHasFiles(ev){ return !!(ev.dataTransfer && [...(ev.dataTransfer.types || [])].includes('Files')); }
+let fileDragDepth = 0;
+document.addEventListener('dragenter', (ev) => {
+  if(!dragHasFiles(ev)) return;
+  fileDragDepth++;
+  document.body.classList.add('file-over');
+});
+document.addEventListener('dragleave', (ev) => {
+  if(!dragHasFiles(ev)) return;
+  fileDragDepth = Math.max(0, fileDragDepth - 1);
+  if(!fileDragDepth) document.body.classList.remove('file-over');
+});
+document.addEventListener('dragover', (ev) => { if(dragHasFiles(ev)) ev.preventDefault(); });
+document.addEventListener('drop', (ev) => {
+  fileDragDepth = 0;
+  document.body.classList.remove('file-over');
+  if(!dragHasFiles(ev)) return;
+  ev.preventDefault();
+  if($('dropZone').contains(ev.target)) return; // the box handles its own drop
+  const file = ev.dataTransfer.files[0];
+  if(file) readFile(file);
+});
+
+// What sticks under the top bar (the sidebar, the selection bar) follows its height, which
+// grows when it wraps onto two lines in a narrow window.
+(function followTopBarHeight(){
+  const bar = document.querySelector('.topbar');
+  if(!bar || typeof ResizeObserver !== 'function') return;
+  new ResizeObserver(() => document.documentElement.style.setProperty('--topbar-h', bar.offsetHeight + 'px')).observe(bar);
 })();
 // ============================================================
 // Wiring
@@ -9704,7 +10060,8 @@ function parseFileText(text){
   const shape = fileDataProblem(parsed);
   return shape ? { error: shape } : { parsed };
 }
-async function tryLoad(jsonText, label){
+// `label` names it in messages; `name`, shown in the top bar, defaults to it.
+async function tryLoad(jsonText, label, name){
   const { parsed, error } = parseFileText(jsonText);
   if(error){ setStatus($('loadStatus'), error, 'err'); return; }
   const r = readKnownFile(parsed, ['system', 'fmIDE-workspace']);
@@ -9712,6 +10069,9 @@ async function tryLoad(jsonText, label){
   if(!(await confirmNewerFile(r))){ setStatus($('loadStatus'), 'Not loaded.', 'info'); return; }
   try{
     await loadModel(r.data);
+    currentModelLabel = name || label; // only once it has loaded: a file that fails leaves the name as it was
+    syncPageState();
+    setStatus($('genStatus'), '', null); // a message about the last model's workbook
     setStatus($('loadStatus'), `Loaded ${label} — ${model.canvases.length} canvas${model.canvases.length === 1 ? '' : 'es'}, ${model.periods.length} periods.`, 'ok');
   }catch(err){
     setStatus($('loadStatus'), 'Could not read that as an fmIDE system export: ' + err.message, 'err');
@@ -9738,9 +10098,10 @@ function readFile(file){
   reader.readAsText(file);
 }
 
-$('btnLoadSample').addEventListener('click', () => tryLoad(JSON.stringify(sampleModel()), 'the sample model'));
-$('btnTogglePaste').addEventListener('click', () => $('pasteWrap').classList.toggle('hidden'));
-$('btnLoadPasted').addEventListener('click', () => tryLoad($('pasteArea').value, 'pasted JSON'));
+$('btnLoadSample').addEventListener('click', () => tryLoad(JSON.stringify(sampleModel()), 'the sample model', 'Sample model'));
+$('btnTogglePaste').addEventListener('click', () => openPasteDialog());
+$('btnLoadPasted').addEventListener('click', () => { const text = $('pasteArea').value; closePasteDialog(); tryLoad(text, 'pasted JSON', 'Pasted model'); });
+$('dropZone').addEventListener('keydown', (ev) => { if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); $('fileInput').click(); } });
 
 $('cfgStartLabel').addEventListener('change', () => { mapping.cfg.startLabel = $('cfgStartLabel').value; saveMapping(); });
 $('cfgFrequency').addEventListener('change', () => { mapping.cfg.frequency = $('cfgFrequency').value; saveMapping(); });
@@ -9757,7 +10118,7 @@ $('btnAddCustomRow').addEventListener('click', addCustomRow);
 $('viewByCanvas').addEventListener('click', () => setRowView('canvas'));
 $('viewByTab').addEventListener('click', () => setRowView('tab'));
 $('viewByTree').addEventListener('click', () => setRowView('tree'));
-setRowView('canvas');
+setRowView('tree'); // the Tree is the main row editor
 
 $('cfgInputsEnabled').addEventListener('change', () => setInputsEnabled($('cfgInputsEnabled').checked));
 $('cfgInputsName').addEventListener('change', () => setInputsTabName($('cfgInputsName').value));
@@ -9971,10 +10332,12 @@ $('btnClearAll').addEventListener('click', () => {
   $('fileInput').value = '';
   $('afterLoad').classList.add('hidden');
   $('pasteArea').value = '';
-  $('pasteWrap').classList.add('hidden');
-  setStatus($('loadStatus'), '', null);
-  setStatus($('genStatus'), '', null);
+  ['loadStatus', 'genStatus', 'moduleLayoutsStatus'].forEach(id => setStatus($(id), '', null));
+  $('differencesPanel').classList.add('hidden');
+  syncPageState();
 });
+
+syncPageState();
 
 })();
 </script>
