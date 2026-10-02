@@ -355,7 +355,7 @@ test('Help: F1 and ❓ open fmGraph\'s own topics; What\'s new', async ({ page }
   const panel = page.locator('.help-panel');
   await expect(panel).toBeVisible();
   await expect(panel).toContainText('What fmGraph is');
-  await expect(panel).toContainText('fmGraph: see how a value moves your model');
+  await expect(panel).toContainText('Boards saved in fmIDE\'s document'); // the newest update
   await page.click('#btnHelp');
   await expect(panel).toBeHidden();
 });

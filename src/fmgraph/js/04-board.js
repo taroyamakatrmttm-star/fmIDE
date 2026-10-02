@@ -161,8 +161,25 @@ function saveBoardNow(){
     .catch(() => notify('This browser could not keep the boards; they will be gone after a reload.', 'err', 'storage'));
 }
 
-async function loadBoardFor(m){
-  let restored = null;
+// The document's own boards (G3b), when it brings any with something on them, win over the
+// ones this browser keeps for the model, and are then kept here too.
+function documentBoards(raw){
+  try{
+    const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if(!data || typeof data !== 'object' || fileDataProblem(data)) return null;
+    const r = cleanBoards(data);
+    return r && r.boards.some(b => b.items.length || b.sliders.length) ? r : null;
+  }catch(e){ return null; }
+}
+async function loadBoardFor(m, docRaw){
+  let restored = docRaw ? documentBoards(docRaw) : null;
+  if(restored){
+    boards = restored.boards;
+    board = boards[restored.active];
+    resetUndo();
+    setTimeout(saveBoardNow, 0);
+    return;
+  }
   try{
     await store.ready;
     let raw = await store.get(BOARD_PREFIX + m.signature);

@@ -12,6 +12,21 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'fmgraph-boards-in-documents', date: '2026-10-02', title: 'fmGraph\'s boards are saved in your document',
+    summary: 'The bars, charts and sliders you set up in fmGraph are kept in the .fmide file, with the model.',
+    what: [
+      'With fmGraph opened from fmIDE, every change to its boards comes back here: the document shows unsaved changes (•), and Save keeps the boards with the model.',
+      'Open the document again — here, then {cmd:openFmGraph}, or in fmGraph itself — and its boards come back, also on another computer or for someone you send the file to.',
+    ],
+    why: 'So a model and the views made of it travel together, in one file.',
+    how: [
+      'Open {cmd:openFmGraph}.',
+      'Add or arrange bars, charts and sliders there.',
+      'Save the document here ({cmd:saveDocument}).',
+    ],
+    notes: ['Moving a slider is a "what if", not a change: it never marks the document unsaved, and where sliders are set is not saved.'],
+    see: ['fmgraph'] },
+
   { id: 'fmgraph', date: '2026-10-02', title: 'fmGraph: see how a value moves your model',
     summary: 'A new companion app: bars show your rectangles, sliders change your inputs, and the bars move as you slide.',
     what: [

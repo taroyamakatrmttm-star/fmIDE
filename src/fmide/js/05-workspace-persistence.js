@@ -4,6 +4,10 @@
   // build:include shared/store.js
   const WORKSPACE_STORAGE_KEY = 'fmIDE-workspace-v1';
   const workspaceStore = createStore('fmIDE');
+  // The open document's fmGraph boards (step 15 G3b): an fmIDE-graph-board file fmGraph sent
+  // ('fmGraph:boards', 21-web-app.js) or the document brought, kept as it came
+  // (cleanGraphBoards), never read here. Saved with the document and the autosave; null: none.
+  let graphBoards = null;
 
   function buildWorkspacePayload(){
     return {
@@ -15,6 +19,7 @@
       shortcutBindingsVersion: 2,
       macros: cloneData(MACROS),
       functions: cloneData(FUNCTIONS),
+      ...(graphBoards ? { graphBoards: cloneData(graphBoards) } : {}),
       ui: buildUiPayload()
     };
   }
@@ -38,6 +43,7 @@
     else restoreFunctions(data.functions);
     if(data.system && Array.isArray(data.system.canvases) && data.system.canvases.length){
       applySystemDataDirect(data.system);
+      graphBoards = cleanGraphBoards(data.graphBoards); // the boards belong to the model
     }
     // (A workspace has always read a kind other than 'system' as a canvas template.)
     if(fromImport) addMissingTemplates((Array.isArray(data.templates) ? data.templates : [])

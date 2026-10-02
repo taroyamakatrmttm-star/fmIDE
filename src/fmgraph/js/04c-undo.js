@@ -24,6 +24,7 @@ function noteChange(){
     undoStack.push(lastState);
     if(undoStack.length > UNDO_LIMIT) undoStack.shift();
     redoStack = [];
+    sendBoardsToFmideSoon();
   }
   lastState = now;
   syncUndoButtons();
@@ -41,6 +42,7 @@ function restoreState(text){
   lastState = text;
   restoring = true;
   try{ saveBoardNow(); } finally { restoring = false; }
+  sendBoardsToFmideSoon();
   renderAll();
 }
 function undo(){

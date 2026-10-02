@@ -130,7 +130,7 @@ $('btnAddSlider').addEventListener('click', () => {
 });
 document.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', () => $({ bar: 'btnAddBar', chart: 'btnAddChart', slider: 'btnAddSlider' }[b.dataset.add]).click()));
 $('btnResetAll').addEventListener('click', () => { if(!model) return; board.sliders.forEach(s => { s.value = null; }); renderBoard(); });
-window.addEventListener('pagehide', () => { if(saveTimer) saveBoardNow(); });
+window.addEventListener('pagehide', () => { if(saveTimer) saveBoardNow(); if(sendTimer) sendBoardsToFmide(); });
 
 // ---- fmIDE ----
 // fmIDE's Open fmGraph opens this page in a window named fmIDE-fmGraph and keeps it as the
@@ -149,6 +149,23 @@ function fmideOpener(){
 // browsers name differently or not at all): then only the window counts.
 const ownOrigin = () => (location.protocol !== 'file:' && location.origin && location.origin !== 'null') ? location.origin : null;
 const messageTarget = () => ownOrigin() || '*';
+// A model from fmIDE keeps its boards in fmIDE's document (G3b): each change to the boards
+// (not a slider moved, not another board shown) is sent back ('fmGraph:boards', the board
+// file's text), and fmIDE marks the document unsaved. A model opened here from a file keeps
+// its boards in this browser only.
+let linkedToFmide = false, sendTimer = null;
+function sendBoardsToFmideSoon(){
+  if(!linkedToFmide) return;
+  clearTimeout(sendTimer);
+  sendTimer = setTimeout(sendBoardsToFmide, 300);
+}
+function sendBoardsToFmide(){
+  clearTimeout(sendTimer); sendTimer = null;
+  const op = fmideOpener();
+  if(!linkedToFmide || !op || !model) return false;
+  try{ op.postMessage({ type: 'fmGraph:boards', text: JSON.stringify(boardsData()) }, messageTarget()); }catch(e){ return false; }
+  return true;
+}
 function askFmideForModel(){
   const op = fmideOpener();
   if(!op) return false;
@@ -162,7 +179,8 @@ window.addEventListener('message', (ev) => {
   const d = ev.data;
   if(!d || typeof d !== 'object' || d.type !== 'fmIDE:model' || typeof d.text !== 'string') return;
   const name = typeof d.name === 'string' && d.name ? d.name.slice(0, 120) : 'fmIDE model';
-  openModelText(d.text, name).then(ok => { if(ok) notify('Showing ' + name + ' from fmIDE.', 'ok', 'load'); });
+  const docBoards = typeof d.boards === 'string' ? d.boards : null;
+  openModelText(d.text, name, { boards: docBoards, fromFmide: true }).then(ok => { if(ok) notify('Showing ' + name + ' from fmIDE.', 'ok', 'load'); });
 });
 $('btnFromFmide').addEventListener('click', () => {
   if(!askFmideForModel()) notify('fmIDE\'s window is closed: open fmGraph from fmIDE again, or open a saved file.', 'info', 'load');

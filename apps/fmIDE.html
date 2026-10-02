@@ -1990,6 +1990,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
           'Move the slider.',
         ] },
         { p: 'fmGraph never changes your model: a slider is a "what if", and Reset puts the number back. After changing the model here, press ↻ From fmIDE in fmGraph (or {cmd:openFmGraph} again) to see it as it is now.' },
+        { p: 'The boards you set up in fmGraph — its bars, charts and sliders — are kept in your document: a change to them there marks the document unsaved here, and {cmd:saveDocument} keeps them with the model. Opening the document brings them back, ahead of the ones fmGraph remembered in the browser. Moving a slider changes nothing.' },
         { tip: 'fmGraph can also open a saved .fmide file on its own, and has its own Help (❓).' },
         { see: ['to-excel'] },
       ] },
@@ -2170,6 +2171,21 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // entry: ids, dates in order, commands and topics that exist.
   // **A change people will notice adds its entry here in the same pull request.**
   const WHATS_NEW = [
+    { id: 'fmgraph-boards-in-documents', date: '2026-10-02', title: 'fmGraph\'s boards are saved in your document',
+      summary: 'The bars, charts and sliders you set up in fmGraph are kept in the .fmide file, with the model.',
+      what: [
+        'With fmGraph opened from fmIDE, every change to its boards comes back here: the document shows unsaved changes (•), and Save keeps the boards with the model.',
+        'Open the document again — here, then {cmd:openFmGraph}, or in fmGraph itself — and its boards come back, also on another computer or for someone you send the file to.',
+      ],
+      why: 'So a model and the views made of it travel together, in one file.',
+      how: [
+        'Open {cmd:openFmGraph}.',
+        'Add or arrange bars, charts and sliders there.',
+        'Save the document here ({cmd:saveDocument}).',
+      ],
+      notes: ['Moving a slider is a "what if", not a change: it never marks the document unsaved, and where sliders are set is not saved.'],
+      see: ['fmgraph'] },
+
     { id: 'fmgraph', date: '2026-10-02', title: 'fmGraph: see how a value moves your model',
       summary: 'A new companion app: bars show your rectangles, sliders change your inputs, and the bars move as you slide.',
       what: [
@@ -5209,7 +5225,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // (docs/file-formats.md). To change one of these formats: raise its version here and add
   // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
   // exactly one version.
-  const SHARED_FILE_VERSIONS = { 'system': 9, 'fmIDE-workspace': 10 };
+  const SHARED_FILE_VERSIONS = { 'system': 9, 'fmIDE-workspace': 11 };
   // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
   // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
   function upgradeNodePlugs(nodes){
@@ -5294,7 +5310,10 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       // ones don't.
       8: () => {},
       // v9 → v10: its system (v9) and templates (v9) may use choose (phase E2b); older ones don't.
-      9: () => {}
+      9: () => {},
+      // v10 → v11: a document may carry the fmGraph boards of its model (`graphBoards`, an
+      // fmIDE-graph-board file; step 15 G3b); older ones have none.
+      10: () => {}
     },
     'system': {
       // v1 systems were accepted with fields the loader already defaults (periods, ids…);
@@ -5587,6 +5606,26 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     });
     return Object.keys(out).length ? out : null;
   }
+  // A document's fmGraph boards (workspace v11, `graphBoards`; step 15 G3b): an fmIDE-graph-board
+  // file that fmGraph wrote, kept with the document. fmIDE never reads what is inside: it keeps
+  // it when it is that kind of file, plain data, at most 16 deep and 1 MB as text; anything else
+  // is dropped. fmGraph reads it with its own checks (cleanBoards) when it shows the boards.
+  const GRAPH_BOARDS_LIMITS = { bytes: 1024 * 1024, depth: 16 };
+  function cleanGraphBoards(raw){
+    if(!raw || typeof raw !== 'object' || Array.isArray(raw) || raw.kind !== 'fmIDE-graph-board') return null;
+    const plain = (v, depth) => {
+      if(depth > GRAPH_BOARDS_LIMITS.depth) return false;
+      if(v === null || typeof v === 'string' || typeof v === 'boolean') return true;
+      if(typeof v === 'number') return Number.isFinite(v);
+      if(Array.isArray(v)) return v.every(x => plain(x, depth + 1));
+      if(typeof v === 'object' && Object.prototype.toString.call(v) === '[object Object]') return Object.keys(v).every(k => plain(v[k], depth + 1));
+      return false;
+    };
+    if(!plain(raw, 1)) return null;
+    const text = JSON.stringify(raw);
+    return text.length > GRAPH_BOARDS_LIMITS.bytes ? null : JSON.parse(text);
+  }
+
   // The Excel layout for one template family out of a file ExcelExporter's Export Module
   // Layouts saved (parsed JSON). fmIDE reads only the file's kind, version and each entry's
   // family. Returns { attachment } or { error }.
@@ -5875,6 +5914,10 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   }
   const WORKSPACE_STORAGE_KEY = 'fmIDE-workspace-v1';
   const workspaceStore = createStore('fmIDE');
+  // The open document's fmGraph boards (step 15 G3b): an fmIDE-graph-board file fmGraph sent
+  // ('fmGraph:boards', 21-web-app.js) or the document brought, kept as it came
+  // (cleanGraphBoards), never read here. Saved with the document and the autosave; null: none.
+  let graphBoards = null;
 
   function buildWorkspacePayload(){
     return {
@@ -5886,6 +5929,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       shortcutBindingsVersion: 2,
       macros: cloneData(MACROS),
       functions: cloneData(FUNCTIONS),
+      ...(graphBoards ? { graphBoards: cloneData(graphBoards) } : {}),
       ui: buildUiPayload()
     };
   }
@@ -5909,6 +5953,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     else restoreFunctions(data.functions);
     if(data.system && Array.isArray(data.system.canvases) && data.system.canvases.length){
       applySystemDataDirect(data.system);
+      graphBoards = cleanGraphBoards(data.graphBoards); // the boards belong to the model
     }
     // (A workspace has always read a kind other than 'system' as a canvas template.)
     if(fromImport) addMissingTemplates((Array.isArray(data.templates) ? data.templates : [])
@@ -19282,6 +19327,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   function newDocument(){
     confirmDiscardChanges(() => {
       applySystemDataDirect({ canvases: [{ id: 'c' + nextCanvasId, name: 'Canvas 1', nodes: [], edges: [] }], periods: ['Period 1'], currentPeriod: 0 });
+      graphBoards = null;
       render();
       Object.assign(currentDoc, { name: null, fileName: null, handle: null, recentId: null, serial: currentDoc.serial + 1 });
       clearUndoHistory();
@@ -19355,6 +19401,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   function applyDocumentData(data, kind){
     const system = kind === 'system' ? data : data.system;
     applySystemDataDirect(system);
+    graphBoards = kind === 'fmIDE-workspace' ? cleanGraphBoards(data.graphBoards) : null;
     const presets = (kind === 'fmIDE-workspace' && Array.isArray(data.formatPresets) && data.formatPresets.length)
       ? data.formatPresets : system.formatPresets;
     if(Array.isArray(presets)) mergeFormatPresets(presets);
@@ -19659,21 +19706,36 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // answered, and on the site only a page of the site itself; opened from disk (a file:
   // address, whose origin browsers name differently or not at all), only that same window. Open fmGraph on a window already open
   // brings it to the front and sends the model as it is now.
+  // The document's boards (G3b) go with the model ('boards', the board file's JSON text, or
+  // null), and win over the ones fmGraph keeps in the browser; fmGraph sends each change to
+  // them back ('fmGraph:boards'), kept with the document, which then has unsaved changes — not
+  // an undo step (fmGraph has its own undo). In a tutorial's practice none go either way.
   let graphWindow = null;
   window.addEventListener('pageshow', (ev) => { if(ev.persisted) graphWindow = null; });
   const ownOrigin = () => (location.protocol !== 'file:' && location.origin && location.origin !== 'null') ? location.origin : null;
   function sendModelToGraph(target){
     const origin = ownOrigin();
-    try{ target.postMessage({ type: 'fmIDE:model', name: docDisplayName(), text: JSON.stringify(buildSystemPayload()) }, origin || '*'); }
+    const boards = (graphBoards && !inPractice()) ? JSON.stringify(graphBoards) : null;
+    try{ target.postMessage({ type: 'fmIDE:model', name: docDisplayName(), text: JSON.stringify(buildSystemPayload()), boards }, origin || '*'); }
     catch(e){ /* the window went away */ }
   }
   window.addEventListener('message', (ev) => {
     if(!graphWindow || ev.source !== graphWindow) return;
     const origin = ownOrigin();
     if(origin && ev.origin !== origin) return;
-    if(!ev.data || typeof ev.data !== 'object' || ev.data.type !== 'fmGraph:want-model') return;
-    sendModelToGraph(graphWindow);
+    if(!ev.data || typeof ev.data !== 'object') return;
+    if(ev.data.type === 'fmGraph:want-model') sendModelToGraph(graphWindow);
+    else if(ev.data.type === 'fmGraph:boards') takeGraphBoards(ev.data.text);
   });
+  function takeGraphBoards(text){
+    if(inPractice() || typeof text !== 'string' || text.length > GRAPH_BOARDS_LIMITS.bytes) return;
+    let raw;
+    try{ raw = JSON.parse(text); } catch(e){ return; }
+    const cleaned = cleanGraphBoards(raw);
+    if(!cleaned || JSON.stringify(cleaned) === JSON.stringify(graphBoards)) return;
+    graphBoards = cleaned;
+    markDocDirty();
+  }
   function openFmGraph(){
     try {
       if(graphWindow && graphWindow !== window && !graphWindow.closed && graphWindow.opener === window){

@@ -84,7 +84,7 @@ Each slider position needs the whole model worked out again (`evaluateModel` on 
 | **G0** | This brief, decision 10, step 15 in the build order ✅ |
 | **G1** ✅ | The app: build, site, licence notice, **Open fmGraph** from fmIDE (File tab, App group), loading a model (file, drop, from fmIDE); one bar and one slider; ghost, difference label, highlighting and dimming; Reset; remembered per model in the browser; the speed measured (live or worked out ahead, as above); Help and What's new; tests, values agreeing with fmIDE |
 | **G2** ✅ | Charts: side by side, stacked with the balance check, waterfall with subtotals; period choices; units; errors; sample balance-sheet and income-statement boards |
-| **G3** (G3a ✅) | Editing a board: placing and sizing widgets, titles, colours, undo; the `fmIDE-graph-board` file, Export / Import; boards in `.fmide` documents |
+| **G3** ✅ (G3a, G3b) | Editing a board: placing and sizing widgets, titles, colours, undo; the `fmIDE-graph-board` file, Export / Import; boards in `.fmide` documents |
 | **G4** | Exploring: Trace, Biggest movers, animation, the A/B snapshot |
 | **G5** | Sharing: `attachments.graph` on templates (system templates too), packs and the checker; Try in fmGraph from Browse Library |
 | **G6** | Tutorials |
@@ -129,6 +129,15 @@ The owner chose (2 October 2026): several boards per model, as tabs; an ordered 
 - **The board file** (`06b-board-files.js`, `fmIDE-graph-board` 1, `docs/file-formats.md`): Boards ▾ → Export this board, Export all boards, Import boards… — or a board file dropped on the page. Imported boards are new tabs ("(2)" for a name already used); widgets on rectangles not in this model are left out and counted, and a board with nothing left isn't added. Read like any file: the size limits, the kind, a newer version asked about, every text as text. The browser keeps each model's boards in the same form, read by the same `cleanBoards`; the form G1 and G2 kept (one board, `bars` / `charts` / `sliders`) still reads, as one board, charts first.
 - Found while testing: a chart whose rectangles were all missing from the model was kept, empty; now it is left out and counted (a chart emptied on purpose is kept).
 - `window.fmGraph`: `boards`, `addBoard`, `showBoard`, `renameBoard`, `duplicateBoard`, `removeBoard`, `move`, `setWide`, `setColour`, `undo`, `redo`, `exportBoards`, `importBoards`.
+
+### G3b (boards inside `.fmide` documents)
+
+The owner chose (2 October 2026): a document's boards win over the ones the browser keeps, and fmGraph's changes go to fmIDE by themselves (the document then has unsaved changes).
+
+- **The file format**: workspace version 11 may carry `graphBoards`, an `fmIDE-graph-board` file (`docs/file-formats.md`). fmIDE never reads inside it: `cleanGraphBoards` (`src/shared/fmide-files.js`) keeps it when it is that kind, plain data, at most 16 deep and 1 MB, and drops it otherwise. Older workspaces open unchanged (an upgrade step that does nothing); ExcelExporter reads version 11 and ignores the boards.
+- **fmIDE** (`graphBoards` in `05-workspace-persistence.js`): saved with the document and the autosave; taken from a document opened or a workspace imported; none after opening a system file or New. Open fmGraph sends it with the model (`boards`, the file's text). A change sent back by fmGraph (`fmGraph:boards`, from the window it opened only, on the site from the site only) replaces it and marks the document unsaved — not an undo step in fmIDE (fmGraph has its own undo). During a tutorial nothing goes either way.
+- **fmGraph**: a model from fmIDE or a `.fmide` / workspace file brings its boards; when they show anything for the model they are shown instead of the browser's, and then kept in the browser too. With the model from fmIDE, every change to the boards (the same changes undo counts, and undo and redo themselves) is sent back shortly after; a slider moved or another board shown is not a change. A model from a file keeps its boards in the browser only.
+- A document without boards shows the browser's boards; they reach the document with the first change made to them in fmGraph.
 
 ## Risks
 

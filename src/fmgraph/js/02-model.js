@@ -34,7 +34,10 @@ function readModelData(raw){
 }
 
 // Opens a file's text (from the disk, a drop or fmIDE). Resolves true when a model was loaded.
-async function openModelText(text, name){
+// opts.boards: the document's own boards (an fmIDE-graph-board file, parsed or as text) —
+// fmIDE's (step 15 G3b), or a workspace's `graphBoards`; opts.fromFmide: the model came from
+// fmIDE's window, so changes to the boards go back to it (06-page.js).
+async function openModelText(text, name, opts){
   const big = fileTextProblem(text);
   if(big){ notify(big, 'err', 'load'); return false; }
   let raw;
@@ -49,7 +52,9 @@ async function openModelText(text, name){
     if(!go) return false;
   }
   try{
-    await loadModel(r.kind === 'fmIDE-workspace' ? r.data.system : r.data, name);
+    const o = opts || {};
+    const docBoards = o.boards !== undefined ? o.boards : (r.kind === 'fmIDE-workspace' ? r.data.graphBoards : null);
+    await loadModel(r.kind === 'fmIDE-workspace' ? r.data.system : r.data, name, { boards: docBoards, fromFmide: !!o.fromFmide });
   }catch(e){
     notify(e && e.message ? e.message : 'That model could not be opened.', 'err', 'load');
     return false;
@@ -70,7 +75,7 @@ function rectName(n){
   return (name || '#' + n.id).slice(0, 120);
 }
 
-async function loadModel(system, name){
+async function loadModel(system, name, opts){
   if(!system || !Array.isArray(system.canvases) || system.canvases.length === 0){
     throw new Error('That model has no canvases.');
   }
@@ -99,8 +104,9 @@ async function loadModel(system, name){
   const m = { name: typeof name === 'string' && name ? name.slice(0, 120) : 'Model', periods, ir, canvasIndex, rects, byKey,
     inputs: rects.filter(r => r.input), base, baseMs, signature: modelSignature(ir), reach: reachMap(ir) };
   model = m;
+  linkedToFmide = !!(opts && opts.fromFmide);
   clearResultCache();
-  await loadBoardFor(m);
+  await loadBoardFor(m, opts && opts.boards);
   showBoard();
 }
 

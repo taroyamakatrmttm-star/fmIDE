@@ -8,6 +8,21 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'boards-in-documents', date: '2026-10-02', title: 'Boards saved in fmIDE\'s document',
+    summary: 'Opened from fmIDE, your boards are kept in the .fmide document, with the model.',
+    what: [
+      'When fmIDE opened fmGraph, each change to the boards goes back to fmIDE: its document shows unsaved changes, and saving it there keeps the boards.',
+      'A document that has boards shows them here, ahead of the ones this browser remembered — whether fmIDE sends it or you open the .fmide file here.',
+    ],
+    why: 'So a model and its boards travel together in one file, to another computer or another person.',
+    how: [
+      'In fmIDE, use Open fmGraph.',
+      'Change the boards here.',
+      'Save the document in fmIDE.',
+    ],
+    notes: ['A model opened here from a file keeps its changes in this browser only: use Boards ▾ to export them.'],
+    see: ['board-kept'] },
+
   { id: 'boards', date: '2026-10-02', title: 'Boards: tabs, arranging, colours, undo, files',
     summary: 'Several boards per model, arranged by dragging, in your colours, with undo — and as files to share.',
     what: [

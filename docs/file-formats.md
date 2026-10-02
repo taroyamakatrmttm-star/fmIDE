@@ -22,7 +22,7 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 |---|---|---|---|
 | `system` | 9 | A whole model (all canvases, periods); v4: a canvas may remember the canvas template it came from; v5: the function definitions its function nodes use; v6: the operators of phase E1 (below); v7: no Excel-only format settings (step 11a, below); v8: the operators of phase E2a (below); v9: `choose` (phase E2b, below) | fmIDE: File → Load System · ExcelExporter |
 | `module` | 7 | One canvas; v3: the function definitions it uses; v4: the operators of phase E1; v5: no Excel-only format settings; v6: the operators of phase E2a; v7: `choose` | fmIDE: File → Load Module |
-| `fmIDE-workspace` | 10 | Everything: system + templates, format presets, shortcuts, macros; v4: the function library; v5: its system and templates may use the operators of phase E1; v6: its templates and library functions may say which library pack they came from (`origin`, below); v7: no Excel-only format roles or settings; v8: its templates may carry `attachments` (below); v9: its system and templates may use the operators of phase E2a; v10: `choose`. A **`.fmide` document** is exactly this, with the `.fmide` extension | fmIDE: File → Open… (a document) or Import Workspace (a full replace) · ExcelExporter |
+| `fmIDE-workspace` | 11 | Everything: system + templates, format presets, shortcuts, macros; v4: the function library; v5: its system and templates may use the operators of phase E1; v6: its templates and library functions may say which library pack they came from (`origin`, below); v7: no Excel-only format roles or settings; v8: its templates may carry `attachments` (below); v9: its system and templates may use the operators of phase E2a; v10: `choose`; v11: `graphBoards`, the model's fmGraph boards (below). A **`.fmide` document** is exactly this, with the `.fmide` extension | fmIDE: File → Open… (a document) or Import Workspace (a full replace) · ExcelExporter |
 | `fmIDE-templates` | 9 | Saved templates (each holds a module, a system or a recipe), with their families and versions; v4: a template's model may carry function definitions; v5: it may use the operators of phase E1; v6: a template may carry `origin`; v7: a canvas template may carry `attachments` (below); v8: it may use the operators of phase E2a; v9: `choose` | fmIDE: Templates → Import Templates |
 | `fmIDE-functions` | 2 | Function definitions (a library of functions); v2: a definition may carry `origin` | fmIDE: Functions → Import Functions |
 | `fmIDE-format-presets` | 2 | Format presets, including the canvas format roles; v2: no Excel-only roles or settings | fmIDE: Format Presets → Import Presets |
@@ -113,6 +113,15 @@ A board is a view of one model in fmGraph: bars, charts and sliders. A file hold
 - A slider's `mode` is `set` (the input's number) or `shift` (a change by %), between `min` and `max` in steps of `step`; it goes only on an input rectangle. Where a slider is set to is never saved: a board always opens on the model's own numbers.
 - At most 20 boards, 40 bars and charts and 40 sliders a board. `active` is the board shown.
 - The form fmGraph kept in the browser before boards had tabs (one board: `bars`, `charts`, `sliders` at the top level, no `boards`) is read as one board, charts first.
+
+### Boards in a document (`fmIDE-workspace` 11, step 15 G3b)
+
+A workspace — and so a `.fmide` document — may carry `graphBoards`: an `fmIDE-graph-board` file (as above, the whole object) holding its model's boards.
+
+- **fmIDE never reads what is inside.** It keeps `graphBoards` as it came when it is an object of kind `fmIDE-graph-board`, plain data (objects, lists, text, finite numbers, true / false, null), at most 16 deep and 1 MB as JSON text (`cleanGraphBoards`, `GRAPH_BOARDS_LIMITS` in `src/shared/fmide-files.js`); anything else is dropped.
+- It belongs to the model: opening a document or importing a workspace takes the file's (or none); opening a system file and New have none; saving and the autosave write it when there is one.
+- fmGraph opened from fmIDE gets it with the model and shows it instead of the boards the browser keeps for that model (when it shows anything for this model); each change to the boards in fmGraph goes back to fmIDE, which keeps it and marks the document unsaved. fmGraph opening a `.fmide` or workspace file shows its `graphBoards` the same way. fmGraph reads it with its own checks (`cleanBoards`), as any board file.
+- Older workspaces (v1–v10) have none; the upgrade step changes nothing. An older fmIDE or ExcelExporter asks before opening a v11 file; ExcelExporter ignores `graphBoards`.
 
 ## Template attachments (`fmIDE-templates` 7, `fmIDE-workspace` 8, `fmIDE-library-pack` 3, step 11c)
 

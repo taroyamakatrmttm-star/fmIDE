@@ -5,7 +5,7 @@
 // (docs/file-formats.md). To change one of these formats: raise its version here and add
 // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
 // exactly one version.
-const SHARED_FILE_VERSIONS = { 'system': 9, 'fmIDE-workspace': 10 };
+const SHARED_FILE_VERSIONS = { 'system': 9, 'fmIDE-workspace': 11 };
 // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
 // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
 function upgradeNodePlugs(nodes){
@@ -90,7 +90,10 @@ const SHARED_FILE_MIGRATIONS = {
     // ones don't.
     8: () => {},
     // v9 → v10: its system (v9) and templates (v9) may use choose (phase E2b); older ones don't.
-    9: () => {}
+    9: () => {},
+    // v10 → v11: a document may carry the fmGraph boards of its model (`graphBoards`, an
+    // fmIDE-graph-board file; step 15 G3b); older ones have none.
+    10: () => {}
   },
   'system': {
     // v1 systems were accepted with fields the loader already defaults (periods, ids…);

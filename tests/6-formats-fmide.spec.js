@@ -112,15 +112,16 @@ for(const name of ['sys-newer-v5', 'sys-newer-v6', 'sys-newer-v7']){
 // Files from before function definitions (workspace v3, module v2, templates v3), from
 // before the operators of phase E1 (workspace v4, module v3, templates v4) and from before
 // those of phase E2a (workspace v8, system v7, module v5, templates v7) or E2b (workspace v9, system v8, module v6, templates v8) still open, and
-// are saved in the current versions (workspace v10, system v9 and module v7 since phase E2b).
-for(const [name, sys] of [['ws-v3', 'v4'], ['ws-v4', 'v5'], ['ws-v8', 'v7'], ['ws-v9', 'v8']]){
-test(`${name} imports, with its ${sys} system and its templates, and exports as v10`, async ({ page }) => {
+// are saved in the current versions (workspace v11 since step 15 G3b, system v9 and module v7 since phase E2b); a
+// workspace v10 (before fmGraph's boards) too.
+for(const [name, sys] of [['ws-v3', 'v4'], ['ws-v4', 'v5'], ['ws-v8', 'v7'], ['ws-v9', 'v8'], ['ws-v10', 'v9']]){
+test(`${name} imports, with its ${sys} system and its templates, and exports as v11`, async ({ page }) => {
   await F.importViaCommand(page, 'importWorkspace', file(name));
   const seen = await F.acceptAll(page);
   expect(seen[0]).toMatch(/^Import this workspace\?/);
   expect(await canvasNames(page)).toEqual(['Revenue Model']);
   const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
-  expect(data.version).toBe(10);
+  expect(data.version).toBe(11);
   expect(data.system.version).toBe(9);
   expect(data.functions).toEqual([]);
   expect(data.system).not.toHaveProperty('functions');
@@ -226,7 +227,7 @@ test('ws-v6-excel-settings: imports; its system, template and presets lose the E
   const seen = await F.acceptAll(page);
   expect(seen[0]).toMatch(/^Import this workspace\?/);
   const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
-  expect(data.version).toBe(10);
+  expect(data.version).toBe(11);
   expect(data.system.version).toBe(9);
   expect(JSON.stringify(data)).not.toMatch(EXCEL_ONLY);
   expectPresetsClean(data.formatPresets);
@@ -350,7 +351,7 @@ test.describe('origin: files from before templates v6, workspace v6 and function
     expect(seen[0]).toMatch(/^Import this workspace\?/);
     expect(await canvasNames(page)).toEqual(['Revenue Model']);
     const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
-    expect(data.version).toBe(10);
+    expect(data.version).toBe(11);
     expect(data.functions.map(d => d.family + '@' + d.version)).toEqual(['family-margin@1', 'family-margin@2', 'family-profit@1']);
     expect(data.templates.map(t => t.name)).toEqual(expect.arrayContaining(['Income Statement', 'Balance Sheet', 'Cash Flow']));
     expect(JSON.stringify(data)).not.toContain('"origin"');
