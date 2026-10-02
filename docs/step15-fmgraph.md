@@ -85,7 +85,7 @@ Each slider position needs the whole model worked out again (`evaluateModel` on 
 | **G1** ✅ | The app: build, site, licence notice, **Open fmGraph** from fmIDE (File tab, App group), loading a model (file, drop, from fmIDE); one bar and one slider; ghost, difference label, highlighting and dimming; Reset; remembered per model in the browser; the speed measured (live or worked out ahead, as above); Help and What's new; tests, values agreeing with fmIDE |
 | **G2** ✅ | Charts: side by side, stacked with the balance check, waterfall with subtotals; period choices; units; errors; sample balance-sheet and income-statement boards |
 | **G3** ✅ (G3a, G3b) | Editing a board: placing and sizing widgets, titles, colours, undo; the `fmIDE-graph-board` file, Export / Import; boards in `.fmide` documents |
-| **G4** (G4a ✅) | Exploring: G4a Trace and Biggest movers; G4b the A/B snapshot and animation |
+| **G4** ✅ (G4a, G4b) | Exploring: G4a Trace and Biggest movers; G4b the A/B snapshot and animation |
 | **G5** | Sharing: `attachments.graph` on templates (system templates too), packs and the checker; Try in fmGraph from Browse Library |
 | **G6** | Tutorials |
 
@@ -146,6 +146,12 @@ The owner chose (2 October 2026): G4 in two pull requests (G4a Trace and Biggest
 - **Trace** (`05d-explore.js`): 🔍 on a bar or chart (`traceButton`) pins its trace (`traceId`, one at a time). The sliders on the board that reach it get `.traced` (the others fade), the widget too, and a note under its heading (`renderTraceNote`) gives each slider's way there, as rectangle names joined by →, the shortest along the arrows (`model.reach.path`, a breadth-first search over the same links as the lighting; for a chart, to the first of its rectangles reached). It lists the inputs that reach it with no slider (at most 12, then "and N more"), each with + Slider. 🔍 again, × or Esc clears it; another board, or the widget removed, clears it too. A slider being moved shows its own reach meanwhile (`paintReach` before `paintTrace`); the trace comes back when it is still. Not a change: no undo step, nothing saved.
 - **Biggest movers** (`biggestMovers`): every rectangle that isn't an input, compared with the model's own numbers in every period; a change within a millionth of the size (`AGREE_TOLERANCE`) is none; each rectangle's period with the largest change in % (base 0: any change counts as largest), ranked by %, then by amount; a rectangle that can't be worked out now, or could not before, first. The 8 largest show under the sliders (`#moversPanel`, open at first), with + Bar or "On the board". Worked out with each redraw while the panel is open — measured with `npm run bench`: a slider move is as fast as before.
 - `window.fmGraph.trace(id | null)` (returns the ways and inputs), `traced()`, `movers(n)`.
+
+### G4b (the A/B snapshot and animation)
+
+- **The A/B snapshot** (`05e-compare.js`): 📌 Pin as A (`#btnPinA`, `pinAsA`) keeps the numbers the sliders lay over the model (`overridesFor`), so A means the same on every board and survives undo, plus the sliders' settings for its words ("Price 13, Volume +10%", or "the model's own numbers") and for Swap. While pinned, `compareResults()` — A's results, through the same result cache — replaces the model's own numbers wherever the board compares: the bars' and charts' dashed outlines and difference labels, and Biggest movers. The strip `#compareBar` says what A is, with ⇄ Swap (`swapWithA`: each slider takes the value A had for the same input, setting and periods, else the model's own number; where they were becomes A) and Unpin. Not an undo step, never saved; opening a model clears it.
+- **Animation**: each bar that can move carries a key (`animKey`: widget and position); after a redraw, `glide` moves it from where that key last was to where it is now with the Web Animations API (a 200 ms transform, `ANIM_MS`), so a widget drawn again also glides. Not when the redraw comes within 150 ms of the last one (`DRAG_GAP_MS`: a slider being dragged follows straight away), and never with `prefers-reduced-motion: reduce`. The bars' attributes are always the final ones; only their look moves.
+- `window.fmGraph.pinA()`, `unpinA()`, `swapA()`, `comparing()`.
 
 ## Risks
 
