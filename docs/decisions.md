@@ -34,7 +34,7 @@ Workflow since step 3a: edit `src/` → `npm run build` → `npm test` (the file
 12. Faster canvas building (see `docs/step12-canvas-building.md`) ✅: 12b ✅ (rows, the Mod+Enter quick chain, no size box or numbering — the owner's choices, 1 Oct 2026); 12a ✅ (always on, the nearer snap wins with alignment on a tie, only the row or column counts, Alt during a drag turns snapping off, resizing doesn't snap — the owner's choices, 1 Oct 2026): 12a snap to equal spacing (a dragged node snaps where it is evenly spaced with its neighbours, horizontally or vertically, as PowerPoint's smart guides); 12b add many rectangles at once (type a list of names, one rectangle each). Independent of each other; recommended order 12b, then 12a.
 13. Zoom (see `docs/step13-zoom.md`) ✅: 13a the canvas zooms 25%–200% ✅; 13b pinch with two fingers on a tablet ✅
 14. ExcelExporter's new look (see `docs/step14-excel-exporter-look.md`) ✅
-15. fmGraph (see `docs/step15-fmgraph.md`, decision 10): G0 the brief ✅; G1 the app, bars and sliders ✅; G2 charts ✅ (two general blocks: columns of groups with a totals check, and a waterfall); G3 editing a board and its file; G4 exploring (trace, biggest movers); G5 sharing (template attachments, packs); G6 tutorials
+15. fmGraph (see `docs/step15-fmgraph.md`, decision 10): G0 the brief ✅; G1 the app, bars and sliders ✅; G2 charts ✅ (two general blocks: columns of groups with a totals check, and a waterfall); G3 boards — G3a tabs, arranging, colours, undo and the board file ✅ (several boards as tabs, an ordered grid — the owner's choices), G3b boards inside `.fmide` documents; G4 exploring (trace, biggest movers); G5 sharing (template attachments, packs); G6 tutorials
 
 ## Phase 0 (hardening) — status
 

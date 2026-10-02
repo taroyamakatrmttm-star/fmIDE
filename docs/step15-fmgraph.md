@@ -84,7 +84,7 @@ Each slider position needs the whole model worked out again (`evaluateModel` on 
 | **G0** | This brief, decision 10, step 15 in the build order ✅ |
 | **G1** ✅ | The app: build, site, licence notice, **Open fmGraph** from fmIDE (File tab, App group), loading a model (file, drop, from fmIDE); one bar and one slider; ghost, difference label, highlighting and dimming; Reset; remembered per model in the browser; the speed measured (live or worked out ahead, as above); Help and What's new; tests, values agreeing with fmIDE |
 | **G2** ✅ | Charts: side by side, stacked with the balance check, waterfall with subtotals; period choices; units; errors; sample balance-sheet and income-statement boards |
-| **G3** | Editing a board: placing and sizing widgets, titles, colours, undo; the `fmIDE-graph-board` file, Export / Import; boards in `.fmide` documents |
+| **G3** (G3a ✅) | Editing a board: placing and sizing widgets, titles, colours, undo; the `fmIDE-graph-board` file, Export / Import; boards in `.fmide` documents |
 | **G4** | Exploring: Trace, Biggest movers, animation, the A/B snapshot |
 | **G5** | Sharing: `attachments.graph` on templates (system templates too), packs and the checker; Try in fmGraph from Browse Library |
 | **G6** | Tutorials |
@@ -117,6 +117,18 @@ The owner asked for general building blocks rather than a design made for the ba
 - Kept in the board (`charts`, still the `fmIDE-graph-board` form, version 1: the board is only in the browser until G3's file, so no file format changed), read back through `cleanChart` (at most 12 groups, 30 rectangles a group, 40 steps; unknown roles become add).
 - The sample model gained a small balance sheet (cash from the Cash canvas, equipment, debt, equity growing by the profit) and starts with a balance-sheet chart and a profit waterfall beside two bars.
 - Not in G2: colours and arranging the board (G3).
+
+### G3a (boards: tabs, arranging, colours, undo, the file)
+
+The owner chose (2 October 2026): several boards per model, as tabs; an ordered grid rather than free placement; boards inside `.fmide` documents in a phase of their own (G3b), since it changes fmIDE's file format.
+
+- **Boards as tabs** (`05c-arrange.js`): + Board, rename (✎ or a double-click on the tab), duplicate (⧉), delete (🗑, asked; the last stays). Each board has its own bars, charts and sliders. At most 20 boards a model.
+- **The grid**: two columns, one on a page under 1,000 pixels. Every widget has a handle (⠿): dragged by mouse, finger or pen (shared `pointer-input.js`; the others make room as it passes; a cancelled drag changes nothing) or moved with the arrow keys on it. ⇔ makes a bar or chart wide (the whole row) or narrow; charts start wide, bars narrow.
+- **Colours**: a bar's colour box; a chart's key swatches are colour boxes; a waterfall step's in Edit chart. Only `#rrggbb` is kept (`cleanColour`, on top of the shared `safeColor`).
+- **Undo / Redo** (`04c-undo.js`; ↶ ↷, Ctrl+Z, Ctrl+Y or Ctrl+Shift+Z, not while typing in a text box): every change to the boards is one step; up to 100. A slider's position and the board shown are not changes; sliders keep their positions through an undo where they are still there.
+- **The board file** (`06b-board-files.js`, `fmIDE-graph-board` 1, `docs/file-formats.md`): Boards ▾ → Export this board, Export all boards, Import boards… — or a board file dropped on the page. Imported boards are new tabs ("(2)" for a name already used); widgets on rectangles not in this model are left out and counted, and a board with nothing left isn't added. Read like any file: the size limits, the kind, a newer version asked about, every text as text. The browser keeps each model's boards in the same form, read by the same `cleanBoards`; the form G1 and G2 kept (one board, `bars` / `charts` / `sliders`) still reads, as one board, charts first.
+- Found while testing: a chart whose rectangles were all missing from the model was kept, empty; now it is left out and counted (a chart emptied on purpose is kept).
+- `window.fmGraph`: `boards`, `addBoard`, `showBoard`, `renameBoard`, `duplicateBoard`, `removeBoard`, `move`, `setWide`, `setColour`, `undo`, `redo`, `exportBoards`, `importBoards`.
 
 ## Risks
 

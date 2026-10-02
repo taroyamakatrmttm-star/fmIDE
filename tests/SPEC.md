@@ -706,6 +706,16 @@ fmGraph (step 15, phase G2) at 1400 × 900, through its page and `window.fmGraph
 - A chart of Overheads and Cost of sales is not lit by Price; the balance sheet and waterfall are.
 - Markup in a title and a group name shown as text (no element made); a role that isn't one is "add"; 20 groups become 12. No page error.
 
+### 49. fmGraph's boards (`tests/49-fmgraph-boards.spec.js`; part of `npm run test:fmgraph`)
+fmGraph (step 15, phase G3a), the sample model, through the page and `window.fmGraph`.
+- Tabs: one "Board" (Delete off); + Board adds "Board (2)", shown, empty; a bar added there; renamed "Pricing" by a double-click and Enter; each tab shows its own widgets (4 and 2 sliders, 1); Duplicate adds "Pricing copy"; Delete asks (Cancel keeps it, Delete removes it); after a reload both tabs, Pricing shown. No page error.
+- Arranging at 1400 × 1800: Closing cash dragged by its handle to the front (`.dragging` meanwhile); → on its handle moves it one later, the handle keeping the focus; ⇔ makes it wide (`aria-pressed`, nearly twice as wide); Volume dragged above Price; after a reload the order and width are kept.
+- By finger (real touch input): Closing cash's handle dragged to the front; the page saw only touch.
+- Colours: a bar's box #ff0000 fills its bars; the balance sheet's first key swatch #00ff00 its first part; a waterfall step's #0000ff its bar; all three in the board's data; `setColour(…, 'red')` refused; a file's "url(…)" and "#12345" ignored (no fill).
+- Undo: off at first and after a slider move; a bar added, undone, redone (buttons), and again by Ctrl+Z / Ctrl+Y; a chart's title and a removed chart undone step by step; a deleted board brought back; the slider still at 12 afterwards.
+- The board file: Export this board downloads "Sample model - Second.board.json" (kind, version 1, one board); Export all two boards, the first's items chart, chart, bar, bar and sliders Price, Volume; imported back as "Board (2)" and "Second (2)" ("Added …"); dropped on the page as "Second (3)"; into a model without its rectangles: nothing added, said; into one with Profit only: one board, "left out" said.
+- Read like any file: not JSON, another kind ("isn't an fmGraph board file"), version 7 asked (Cancel adds nothing), markup in a board's name, title and group shown as text, the G1–G2 form read as one board (charts first, wide; bars narrow), 30 boards stopping at 20 ("at most 20 boards", + Board off).
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.
