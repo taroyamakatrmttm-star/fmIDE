@@ -156,6 +156,12 @@ window.fmGraph = Object.freeze({
     return { sliders: t.sliders.map(s => ({ id: s.id, path: s.path.slice() })), inputs: t.inputs.map(r => r.name) };
   },
   traced: () => traceId,
+  // The A/B snapshot (G4b): pinA() keeps where the sliders are as A (returns its words),
+  // unpinA(), swapA() (returns the new A's words), comparing() — A's words, or null.
+  pinA: () => pinAsA(),
+  unpinA: () => { unpinA(); },
+  swapA: () => { if(!pinA) throw new Error('Nothing is pinned as A.'); return swapWithA(); },
+  comparing: () => pinA ? pinA.label : null,
   // movers(n): the rectangles the sliders change most (default 8), against the model's own numbers.
   movers: (n) => biggestMovers(currentResults(), Math.max(1, Math.min(200, Number(n) || MOVERS_SHOWN))).map(m => ({
     name: m.rect.name, canvas: m.rect.canvasName, period: model.periods[m.p],

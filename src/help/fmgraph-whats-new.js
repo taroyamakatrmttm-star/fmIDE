@@ -8,6 +8,22 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'compare-a-b', date: '2026-10-02', title: 'Compare two what-ifs, and bars that glide',
+    summary: 'Pin where the sliders are as A, try something else, and see the difference; bars now glide to new values.',
+    what: [
+      '📌 Pin as A keeps where the sliders are. The dashed outlines, difference labels and Biggest movers then compare with A instead of the model\'s own numbers, on every board, until you unpin it.',
+      '⇄ Swap flips between A and where the sliders are now.',
+      'Bars glide to their new heights when values change — not while you drag, and never when your device is set to reduce motion.',
+    ],
+    why: 'To weigh one what-if against another, not only against the model as it is.',
+    how: [
+      'Set the sliders for your first idea and press 📌 Pin as A.',
+      'Move the sliders to your second idea and read the differences.',
+      'Press ⇄ Swap to flip between them.',
+    ],
+    notes: ['A is never saved: opening a model starts without one.'],
+    see: ['compare'] },
+
   { id: 'trace-and-movers', date: '2026-10-02', title: 'Trace and Biggest movers',
     summary: 'See what reaches a bar, and which rectangles your sliders change most.',
     what: [

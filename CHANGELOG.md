@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph: compare two what-ifs, gliding bars (step 15, phase G4b)
+- **📌 Pin as A**: the dashed outlines, difference labels and Biggest movers compare with where the sliders were when pinned, on every board, until Unpin; **⇄ Swap** flips between A and now. Never saved.
+- **Bars glide** to their new values when they change — not while a slider is dragged, and never with the device's reduced-motion setting.
+
 ## fmGraph: Trace and Biggest movers (step 15, phase G4a)
 - **Trace**: 🔍 on a bar or chart lights the sliders that reach it and shows, in words, the way each gets there, plus the inputs that reach it with no slider yet (+ Slider). 🔍 again, × or Esc stops it.
 - **Biggest movers**: the rectangles the sliders change most in the whole model, against the model's own numbers, biggest change in % first, with + Bar.

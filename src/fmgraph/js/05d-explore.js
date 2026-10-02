@@ -7,7 +7,8 @@
 //   reach meanwhile, as before; the trace comes back when it is still. Worked out from the
 //   arrows (model.reach, model.reach.path), like the lighting.
 // - Biggest movers: the rectangles whose values the sliders change most, against the model's
-//   own numbers (the owner's choice: the dashed outlines' comparison, steady while dragging),
+//   own numbers (the owner's choice: the dashed outlines' comparison, steady while dragging) —
+//   or against A while one is pinned (G4b, 05e-compare.js),
 //   from the whole model, not only the board. Ranked by the change in % in the period where it
 //   is largest (a rectangle that couldn't be worked out before, or can't now, comes first);
 //   inputs left out (the sliders set them). + Bar puts one on the board. Worked out only while
@@ -137,13 +138,14 @@ function clearTracePaint(){
 // Every rectangle that isn't an input, with the period where it changed most (against the
 // model's own numbers), largest change in % first. Changes within AGREE_TOLERANCE are none.
 function biggestMovers(results, limit){
-  if(results === model.base) return [];
+  const base = compareResults(); // A when pinned (05e-compare.js), else the model's own numbers
+  if(results === base) return [];
   const out = [];
   model.rects.forEach(rect => {
     if(rect.input) return;
     let best = null;
     model.periods.forEach((_, p) => {
-      const now = resultOf(results, rect, p), was = resultOf(model.base, rect, p);
+      const now = resultOf(results, rect, p), was = resultOf(base, rect, p);
       let m = null;
       if(now.error || was.error){
         if(!!now.error !== !!was.error) m = { p, score: Infinity, size: Infinity, now, was };

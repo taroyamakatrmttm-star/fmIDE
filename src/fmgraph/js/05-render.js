@@ -101,6 +101,7 @@ function removeButton(id, what){
 }
 
 function renderBoard(){
+  rememberOpenEditors(); // (05b-chart-render.js)
   const bars = $('barList'), sliders = $('sliderList');
   bars.textContent = '';
   sliders.textContent = '';
@@ -281,6 +282,7 @@ function paintReach(){
 
 function updateValues(){
   if(!model) return;
+  startDraw(); // whether bars glide this time (05e-compare.js)
   const results = currentResults();
   board.bars.forEach(b => {
     const el = document.querySelector('.bar-widget[data-id="' + b.id + '"]');
@@ -310,7 +312,7 @@ function drawBars(el, b, results){
   const rect = model.byKey.get(b.key);
   const ps = periodsOf(b.periods);
   const now = ps.map(p => resultOf(results, rect, p));
-  const base = ps.map(p => resultOf(model.base, rect, p));
+  const base = ps.map(p => resultOf(compareResults(), rect, p)); // A, or the model's own numbers (05e-compare.js)
   const nums = [];
   now.concat(base).forEach(r => { if(!r.error) nums.push(r.value); });
   let lo = Math.min(0, ...nums), hi = Math.max(0, ...nums);
@@ -336,7 +338,7 @@ function drawBars(el, b, results){
       g.appendChild(svg('title', {}, model.periods[p] + ': ' + errorText(r.error)));
     } else {
       const y0 = y(0), y1 = y(r.value);
-      const bar = svg('rect', { class: 'b-now' + (r.value < 0 ? ' neg' : ''), x, y: Math.min(y0, y1), width: bw, height: Math.max(1, Math.abs(y1 - y0)) });
+      const bar = animKey(svg('rect', { class: 'b-now' + (r.value < 0 ? ' neg' : ''), x, y: Math.min(y0, y1), width: bw, height: Math.max(1, Math.abs(y1 - y0)) }), b.id + '|' + p);
       if(b.colour) bar.style.fill = b.colour; // a style, so the page's usual bar colour doesn't paint over it
       g.appendChild(bar);
       if(!was.error && was.value !== r.value){
@@ -357,6 +359,7 @@ function drawBars(el, b, results){
   const host = el.querySelector('.bar-chart-host');
   host.textContent = '';
   host.appendChild(chart);
+  glide(host);
   const list = el.querySelector('.bar-errors');
   list.textContent = '';
   problems.forEach((periods, code) => list.appendChild(make('li', null, periods.join(', ') + ': ' + errorText(code))));
