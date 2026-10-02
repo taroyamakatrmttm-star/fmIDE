@@ -260,7 +260,7 @@ test('the ribbon: after Add Rectangle on the Home and Insert tabs; a customised 
     await F.acceptAll(page);
     return page.evaluate(() => __fmIDE.getRibbonConfig().tabs.map(t => t.groups.map(g => g.label + ':' + g.items.map(i => i.cmd).join(','))));
   };
-  const older = { ribbonCustomized: true, documentGroupAdded: true, functionsGroupAdded: true, functionCommandsAdded: true, operatorsE1Added: true,
+  const older = { ribbonCustomized: true, zoomGroupAdded: true, /* (the Zoom group's own test: group 44) */ documentGroupAdded: true, functionsGroupAdded: true, functionCommandsAdded: true, operatorsE1Added: true,
     operatorsE2Added: true, operatorsE2bAdded: true, libraryPacksAdded: true, libraryBrowseAdded: true, helpAdded: true,
     ribbon: { tabs: [{ id: 'mine', label: 'Mine', groups: [{ label: 'Make', items: [{ cmd: 'addRect' }, { cmd: 'addOperator' }] }, { label: 'Other', items: [{ cmd: 'undo' }] }] }] } };
   expect(await load(older, 'older.json')).toEqual([['Make:addRect,addManyRects,addOperator', 'Other:undo']]);

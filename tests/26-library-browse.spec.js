@@ -396,7 +396,7 @@ A.test.describe('the single file', () => {
     expect(await errorOf(page, (id) => fm.addFromLibrary({ id }), ANN_PACK)).toMatch(/needs fmIDE's website/);
     // A ribbon customised before 8d gets Browse Library… once, before Open Library Pack….
     const ws = (flag) => JSON.stringify({ kind: 'fmIDE-workspace', version: 6, system: A.readFixture('formats', 'sys-current.json'),
-      ui: { ribbonCustomized: true, documentGroupAdded: true, functionsGroupAdded: true, functionCommandsAdded: true, operatorsE1Added: true,
+      ui: { ribbonCustomized: true, zoomGroupAdded: true, /* (the Zoom group's own test: group 44) */ documentGroupAdded: true, functionsGroupAdded: true, functionCommandsAdded: true, operatorsE1Added: true,
         libraryPacksAdded: true, libraryBrowseAdded: flag,
         ribbon: { qat: [], tabs: [{ id: 'mine', label: 'Mine', groups: [{ label: 'Stuff', items: [{ cmd: 'openFormats' }, { cmd: 'openLibraryPack' }] }] }] } } });
     const items = () => page.evaluate(() => __fmIDE.getRibbonConfig().tabs[0].groups.map(g => g.label + ':' + g.items.map(i => i.cmd).join(',')));

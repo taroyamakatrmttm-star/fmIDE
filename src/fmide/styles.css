@@ -198,7 +198,7 @@
     border:1px solid #c7d2fe; border-radius:12px; box-shadow:0 16px 40px rgba(15,23,42,.28); padding:12px 14px; font-size:13px; line-height:1.5;
   }
   .tutorial-card{ left:16px; bottom:16px; }
-  .welcome-card{ right:16px; bottom:16px; }
+  .welcome-card{ right:16px; bottom:64px; } /* above the zoom control (step 13) */
   body.help-open .welcome-card{ right:calc(var(--help-w) + 16px); }
   .tutorial-head{ display:flex; align-items:baseline; gap:8px; }
   .tutorial-title{ flex:1; font-weight:700; color:#3730a3; }
@@ -599,6 +599,30 @@
 
   /* Canvas */
   #viewport{ position:absolute; top:calc(var(--ribbon-h) + 40px); left:0; right:0; bottom:0; overflow:auto; background:var(--canvas-bg); }
+  /* Zoom (step 13): #canvas is scaled inside #canvasZoom, which takes the scaled size so the
+     viewport scrolls over all of it. At 100% nothing is transformed. */
+  #canvasZoom{ position:relative; width:calc(3600px * var(--zoom, 1)); height:calc(2400px * var(--zoom, 1)); overflow:hidden; }
+  #viewport.zoomed #canvas{ transform:scale(var(--zoom)); transform-origin:0 0; }
+  #viewport.zoomed #canvas > .op-picker, #viewport.zoomed #canvas > .tag-popup{ transform:scale(var(--unzoom)); transform-origin:0 0; }
+  .zoom-control{
+    position:fixed; right:28px; bottom:24px; z-index:90; display:flex; align-items:center; background:#fff; border:1px solid #cbd5e1;
+    border-radius:8px; box-shadow:0 4px 14px rgba(15,23,42,.14); overflow:hidden; user-select:none;
+  }
+  body.help-open .zoom-control{ right:calc(var(--help-w) + 28px); }
+  .zoom-control button{ border:none; background:#fff; color:#1e293b; font:inherit; font-size:14px; height:30px; min-width:32px; cursor:pointer; padding:0 6px; }
+  .zoom-control button:hover:not(:disabled){ background:#eef2ff; }
+  .zoom-control button:disabled{ color:#cbd5e1; cursor:default; }
+  .zoom-control .zoom-level{ min-width:56px; font-size:12.5px; font-variant-numeric:tabular-nums; border-left:1px solid #e2e8f0; border-right:1px solid #e2e8f0; }
+  .zoom-menu{
+    position:fixed; right:28px; bottom:60px; z-index:160; display:flex; flex-direction:column; min-width:150px; padding:4px; background:#fff;
+    border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 10px 28px rgba(15,23,42,.2);
+  }
+  body.help-open .zoom-menu{ right:calc(var(--help-w) + 28px); }
+  .zoom-menu button{ border:none; background:none; text-align:left; font:inherit; font-size:13px; padding:5px 10px; border-radius:6px; cursor:pointer; }
+  .zoom-menu button:hover:not(:disabled){ background:#eef2ff; }
+  .zoom-menu button.current{ font-weight:700; color:#3730a3; }
+  .zoom-menu button:disabled{ color:#94a3b8; cursor:default; }
+  .zoom-menu hr{ border:none; border-top:1px solid #e2e8f0; margin:4px 2px; }
   #canvas{
     position:relative; width:3600px; height:2400px;
     background-image:radial-gradient(var(--dot) 1px, transparent 1px);

@@ -296,7 +296,7 @@ test.describe('the ribbon', () => {
   test('a customised ribbon gets them once, in the group holding Format Presets; removing them is respected', async ({ page }, testInfo) => {
     const ws = (flag, groups) => {
       const system = readFixture('formats', 'sys-current.json');
-      return JSON.stringify({ kind: 'fmIDE-workspace', version: 5, system, ui: { ribbonCustomized: true, documentGroupAdded: true, functionsGroupAdded: true,
+      return JSON.stringify({ kind: 'fmIDE-workspace', version: 5, system, ui: { ribbonCustomized: true, zoomGroupAdded: true, /* (the Zoom group's own test: group 44) */ documentGroupAdded: true, functionsGroupAdded: true,
         functionCommandsAdded: true, operatorsE1Added: true, libraryPacksAdded: flag, libraryBrowseAdded: flag, libraryAuthor: 'Someone Else',
         ribbon: { qat: [], tabs: [{ id: 'mine', label: 'Mine', groups }] } } });
     };

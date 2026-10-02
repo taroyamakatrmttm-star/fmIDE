@@ -167,7 +167,8 @@
   };
 
   function viewCenter(){
-    return { x: Math.round(viewport.scrollLeft + viewport.clientWidth / 2 - 85), y: Math.round(viewport.scrollTop + viewport.clientHeight / 2 - 32) };
+    const c = viewCentre(); // canvas units, at any zoom (07b)
+    return { x: Math.round(c.x - 85), y: Math.round(c.y - 32) };
   }
   // Origin for relative-coordinate macros: the selection's top-left corner, else the view centre.
   function computeOrigin(){

@@ -196,7 +196,7 @@ test.describe('tooltips and the ribbon', () => {
   test('a customised ribbon gets the Help group once; removed, it stays removed', async ({ page }, testInfo) => {
     const ws = (flag) => JSON.stringify({ kind: 'fmIDE-workspace', version: 6, system: A.readFixture('formats', 'sys-current.json'),
       ui: { ribbonCustomized: true, documentGroupAdded: true, functionsGroupAdded: true, functionCommandsAdded: true, operatorsE1Added: true,
-        libraryPacksAdded: true, libraryBrowseAdded: true, helpAdded: flag,
+        libraryPacksAdded: true, libraryBrowseAdded: true, helpAdded: flag, zoomGroupAdded: true, // (the Zoom group's own test: group 44)
         ribbon: { qat: [], tabs: [{ id: 'mine', label: 'Mine', groups: [{ label: 'Stuff', items: [{ cmd: 'openShortcuts' }] }] }] } } });
     const groups = () => page.evaluate(() => __fmIDE.getRibbonConfig().tabs[0].groups.map(g => g.label + ':' + g.items.map(i => i.cmd).join(',')));
     const write = (name, text) => { const f = testInfo.outputPath(name); fs.writeFileSync(f, text); return f; };

@@ -18,6 +18,7 @@
     nodes = c.nodes; edges = c.edges;
     computedValues = c.computedValues; computeErrors = c.computeErrors;
     portValues = c.portValues || {}; portErrors = c.portErrors || {};
+    showZoomOfCanvas(c.id); // each canvas its own zoom (07b)
   }
 
   function snapshot(){
@@ -405,8 +406,9 @@
   // it never lands on another node (findFreeSpot). Default size: a rectangle's.
   function spawnPoint(w, h){
     w = w || 170; h = h || 64;
-    const x = Math.max(10, viewport.scrollLeft + viewport.clientWidth/2 - w/2);
-    const y = Math.max(10, viewport.scrollTop + viewport.clientHeight/2 - h/2);
+    const c = viewCentre(); // canvas units, at any zoom (07b)
+    const x = Math.max(10, c.x - w/2);
+    const y = Math.max(10, c.y - h/2);
     return findFreeSpot(nodes, w, h, x, y);
   }
 

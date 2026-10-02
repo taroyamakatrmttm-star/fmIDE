@@ -48,6 +48,7 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | `npm run test:equal-spacing` | a dragged node snapping to equal spacing, with gap markers (step 12a) |
 | `npm run test:help-width` | the Help panel's width: the reading view, dragging its edge, kept per app (step 10, H5a) |
 | `npm run test:whats-new` | What's new in the Help panel: the updates' data, New marks and the dot, the list and an update's page, kept per app (step 10, H5b) |
+| `npm run test:zoom` | zoom (step 13a): the wheel, keys, control and menu, Fit, dragging, arrows, the selection box and snapping when zoomed, each canvas's own zoom, never in files or macros |
 | `npm run test:help-site` | the site's help pages the build writes under `/help` (pages, links, command names and tabs against fmIDE, escaping, their security policy) |
 | `npx playwright test -g "Tree view"` | tests whose name matches |
 

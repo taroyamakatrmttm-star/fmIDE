@@ -377,8 +377,7 @@
     const portEl = canvas.querySelector(sel);
     if(!portEl) return null;
     const portRect = portEl.getBoundingClientRect();
-    const canvasRect = canvas.getBoundingClientRect();
-    return { x: portRect.left + portRect.width/2 - canvasRect.left, y: portRect.top + portRect.height/2 - canvasRect.top };
+    return canvasPoint(portRect.left + portRect.width/2, portRect.top + portRect.height/2);
   }
 
   function renderEdges(){

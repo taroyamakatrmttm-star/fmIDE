@@ -347,7 +347,7 @@ test.describe('the ribbon', () => {
   test('a ribbon customised before it existed gets My Functions once (on its Insert tab only); removing it is respected', async ({ page }, testInfo) => {
     const ws = (flag, groups) => {
       const system = JSON.parse(fs.readFileSync(fixture('formats', 'sys-current.json'), 'utf8'));
-      return JSON.stringify({ kind: 'fmIDE-workspace', version: 4, system, ui: { ribbonCustomized: true, documentGroupAdded: true, functionsGroupAdded: flag,
+      return JSON.stringify({ kind: 'fmIDE-workspace', version: 4, system, ui: { ribbonCustomized: true, zoomGroupAdded: true, /* (the Zoom group's own test: group 44) */ documentGroupAdded: true, functionsGroupAdded: flag,
         ribbon: { qat: [], tabs: [{ id: 'insert', label: 'Insert', groups }] } } });
     };
     const file = (name, text) => { const p = testInfo.outputPath(name); fs.writeFileSync(p, text); return p; };
@@ -792,7 +792,7 @@ test.describe('the ribbon (D2b)', () => {
   test('a customised ribbon\'s My Functions group gets the new commands once, wherever it is; removing them is respected', async ({ page }, testInfo) => {
     const ws = (flag, groups) => {
       const system = JSON.parse(fs.readFileSync(fixture('formats', 'sys-current.json'), 'utf8'));
-      return JSON.stringify({ kind: 'fmIDE-workspace', version: 4, system, ui: { ribbonCustomized: true, documentGroupAdded: true, functionsGroupAdded: true, functionCommandsAdded: flag,
+      return JSON.stringify({ kind: 'fmIDE-workspace', version: 4, system, ui: { ribbonCustomized: true, zoomGroupAdded: true, /* (the Zoom group's own test: group 44) */ documentGroupAdded: true, functionsGroupAdded: true, functionCommandsAdded: flag,
         ribbon: { qat: [], tabs: [{ id: 'mine', label: 'Mine', groups }] } } });
     };
     const file = (name, text) => { const p = testInfo.outputPath(name); fs.writeFileSync(p, text); return p; };
