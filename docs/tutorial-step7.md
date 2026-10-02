@@ -81,7 +81,7 @@ Excel writes 0 or a blank in some places where fmIDE shows "?" because something
 1. In fmIDE, build: rectangle **Revenue** = `100`, rectangle **Cost** = `60`, operator `−`, rectangle **Profit**; wire Revenue and Cost into `−`, and `−` into Profit.
 2. Add a second arrow into **Profit** from Cost (a rectangle with two arrows in is broken). Profit shows "?".
 3. Save (**Ctrl+S**), open ExcelExporter, and load the file.
-4. Above **Generate & Download .xlsx**, a yellow panel reads *"Where the workbook will differ from fmIDE (1):"* and names Profit, the periods, the cause, and whether Excel writes 0 or leaves the cell blank.
+4. Under **⬇ Generate .xlsx**, at the top of the page, a yellow panel reads *"Where the workbook will differ from fmIDE (1):"* and names Profit, the periods, the cause, and whether Excel writes 0 or leaves the cell blank.
 5. You can still download. Remove the extra arrow in fmIDE, save, load again: the panel is gone.
 
 The panel also lists: an alias pointing at nothing, a loop, a missing block, an operator fmIDE doesn't know, a row you left out of the layout that other rows read, and (from lesson 9) every function problem.
@@ -184,7 +184,7 @@ A function can't call itself, and calls can nest at most 16 deep. Deep nesting i
 ## Lesson 9 — Functions in Excel (#31)
 
 1. Save the model from lesson 5 (**Ctrl+S**) and load it in ExcelExporter.
-2. Click **Generate & Download .xlsx** and open the workbook.
+2. Click **⬇ Generate .xlsx** (top right) and open the workbook.
 3. Margin %'s cells hold the function **written out in full**, with each input replaced by the cell it reads: for example `=((E5-E6)/E5)` (v1) or `=ROUND((E5-E6)/E5,2)` (v2); the cell addresses depend on your layout. No macros, no `LAMBDA` — it works in any Excel.
 4. The last tab, **Functions**, lists each function version used: name, version, definition, description, note, and the rows that use it.
 
