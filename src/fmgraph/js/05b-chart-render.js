@@ -78,7 +78,10 @@ function chartEditor(c){
       role.setAttribute('aria-label', 'Step');
       FLOW_ROLES.forEach(v => { const o = make('option', null, ROLE_LABELS[v]); o.value = v; if(s.role === v) o.selected = true; role.appendChild(o); });
       role.addEventListener('change', () => { s.role = role.value; changed(); });
-      r.append(role, rs, rowButtons(c.steps, i));
+      // Its own colour (otherwise by direction: up, down, or a full bar).
+      const own = c.colours && c.colours[s.key];
+      const pick = colourPicker(own || '#334155', 'Colour of this step', (v) => { c.colours = Object.assign({}, c.colours, { [s.key]: v }); changed(); });
+      r.append(role, rs, pick, rowButtons(c.steps, i));
       box.appendChild(r);
     });
     const add = make('button', 'link-btn add-step', '+ Step');
@@ -153,6 +156,7 @@ function drawChart(el, c, results){
 function partColours(c){
   const out = new Map();
   chartKeys(c).forEach(k => { if(!out.has(k)) out.set(k, PART_COLOURS[out.size % PART_COLOURS.length]); });
+  Object.keys(c.colours || {}).forEach(k => { if(out.has(k)) out.set(k, c.colours[k]); });
   return out;
 }
 
@@ -225,9 +229,10 @@ function drawColumns(c, results, problems, key){
     const line = make('div', 'key-line');
     if(ng > 1) line.appendChild(make('span', 'key-group', groupLabel(c, gi) + ':'));
     grp.parts.forEach(k => {
-      const item = make('span', 'key-item');
-      const sw = make('span', 'key-swatch');
-      sw.style.background = colours.get(k);
+      const item = make('label', 'key-item');
+      // The swatch is the colour box: a click picks this rectangle's colour in this chart.
+      const sw = colourPicker(colours.get(k), 'Colour of ' + partLabel(k), (v) => { c.colours = Object.assign({}, c.colours, { [k]: v }); saveBoardSoon(); updateValues(); });
+      sw.classList.add('key-swatch');
       item.append(sw, document.createTextNode(partLabel(k)));
       line.appendChild(item);
     });
@@ -263,6 +268,7 @@ function drawFlow(c, results, problems){
       if(prevEnd !== null && (s.role === 'add' || s.role === 'subtract')) g.appendChild(svg('line', { class: 'f-link', x1: x - (slot - bw), x2: x, y1: y(prevEnd), y2: y(prevEnd) }));
       const kind = (s.role === 'start' || s.role === 'total') ? 'f-total' : (f.to >= f.from ? 'f-up' : 'f-down');
       const rect = svg('rect', { class: 'f-bar ' + kind, x, y: Math.min(y(f.from), y(f.to)), width: bw, height: Math.max(1, Math.abs(y(f.to) - y(f.from))) });
+      if(c.colours && c.colours[s.key]) rect.setAttribute('fill', c.colours[s.key]);
       const b = was[i];
       const diff = b && !b.error ? fmtDiff(f.value, b.value) : '';
       rect.appendChild(svg('title', {}, name + ' (' + ROLE_LABELS[s.role].toLowerCase() + '), ' + model.periods[c.period] + ': ' + fmtNum(f.value) + (diff ? ' — was ' + fmtNum(b.value) + ', ' + diff : '')));

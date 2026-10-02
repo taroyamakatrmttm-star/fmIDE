@@ -87,7 +87,7 @@ async function loadSample(){
 function readFileAndOpen(file){
   if(!file) return;
   const name = String(file.name || 'Model').replace(/\.(fmide|json)$/i, '');
-  file.text().then(text => openModelText(text, name).then(ok => { if(ok) notify('Opened ' + name + '.', 'ok', 'load'); }),
+  file.text().then(text => openAnyText(text, name).then(ok => { if(ok && !/"kind"\s*:\s*"fmIDE-graph-board"/.test(text)) notify('Opened ' + name + '.', 'ok', 'load'); }),
     () => notify('That file could not be read.', 'err', 'load'));
 }
 

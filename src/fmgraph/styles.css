@@ -61,7 +61,10 @@
   .col-head{ margin:0 0 8px; font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--soft-ink); display:flex; align-items:center; gap:8px; }
   .calc-note{ text-transform:none; letter-spacing:0; font-weight:400; font-size:12px; }
   .widget-list{ display:flex; flex-direction:column; gap:10px; }
-  .widget-list.bars{ display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); }
+  /* The grid (G3a): two columns; a wide widget takes both. One column on a narrow page. */
+  .widget-list.bars{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .widget-list.bars > .wide{ grid-column:1 / -1; }
+  @media (max-width: 1000px){ .widget-list.bars{ grid-template-columns:minmax(0, 1fr); } }
   .empty-note{ color:var(--soft-ink); font-size:13px; margin:4px 0; }
   .link-btn{ border:none; background:none; color:var(--brand); padding:0; font-weight:600; }
   .link-btn:hover{ background:none; text-decoration:underline; }
@@ -111,7 +114,6 @@
   .dialog-actions{ display:flex; justify-content:flex-end; gap:8px; }
 
   /* Charts (G2): wider than a bar widget. */
-  .widget-list.bars .chart-widget{ grid-column:1 / -1; }
   .board.moving .chart-widget{ opacity:.38; }
   .board.moving .chart-widget.reached{ opacity:1; box-shadow:0 0 0 2px var(--reach); }
   .chart-title{ flex:1 1 auto; font:inherit; font-weight:600; font-size:14px; padding:4px 6px; border:1px solid transparent; border-radius:6px; background:transparent; color:var(--ink); min-width:0; }
@@ -140,3 +142,34 @@
   .check-row{ cursor:pointer; color:var(--ink); }
   .add-part, .add-step, .add-group{ display:inline-block; margin-top:6px; font-size:12.5px; }
   .chart-widget .widget-head select{ flex:0 0 auto; }
+
+  /* Boards as tabs (G3a). */
+  .board-tabs{ display:flex; flex-wrap:wrap; gap:4px; align-items:center; margin:0 0 12px; border-bottom:1px solid var(--line); padding-bottom:6px; }
+  .board-tab{ border-color:transparent; background:transparent; color:var(--soft-ink); font-weight:600; border-radius:7px 7px 0 0; }
+  .board-tab.active{ background:var(--card); color:var(--ink); border-color:var(--line); box-shadow:inset 0 -2px 0 var(--brand); }
+  .board-tab-name{ font:inherit; font-size:13px; font-weight:600; padding:5px 8px; border:1px solid var(--brand); border-radius:7px; width:14em; }
+  .board-tool{ padding:5px 9px; font-size:12.5px; }
+  .board-tool.danger:not(:disabled):hover{ color:var(--down); background:#fef3f2; }
+
+  /* Moving and sizing widgets. */
+  .arrange{ display:inline-flex; gap:2px; flex:none; }
+  .drag-handle{ cursor:grab; padding:2px 6px; border-color:transparent; background:transparent; color:var(--soft-ink); touch-action:none; font-size:15px; line-height:1; }
+  .drag-handle:hover{ background:#eef1f5; color:var(--ink); }
+  body.widget-dragging, body.widget-dragging *{ cursor:grabbing !important; user-select:none; }
+  .widget.dragging{ opacity:.55; outline:2px dashed var(--brand); }
+  .size-toggle{ padding:2px 6px; border-color:transparent; background:transparent; color:var(--soft-ink); }
+  .size-toggle.on{ color:var(--brand); }
+  body.touch-input .drag-handle, body.touch-input .size-toggle{ padding:8px 10px; }
+
+  /* Colours. */
+  input.colour-pick{ width:26px; height:22px; padding:0 1px; border:1px solid var(--line-strong); border-radius:5px; background:#fff; cursor:pointer; vertical-align:middle; }
+  .chart-key input.key-swatch{ width:16px; height:16px; border-radius:4px; padding:0; border:1px solid var(--line-strong); }
+  .key-item{ cursor:pointer; }
+
+  /* The Boards menu in the top bar. */
+  .gbar-menu{ position:relative; }
+  .gbar-menu summary{ list-style:none; display:inline-block; padding:6px 12px; border-radius:7px; border:1px solid var(--top-line); cursor:pointer; font-size:13px; }
+  .gbar-menu summary::-webkit-details-marker{ display:none; }
+  .gbar-pop{ position:absolute; right:0; top:calc(100% + 6px); z-index:40; min-width:200px; background:#fff; color:var(--ink); border:1px solid var(--line); border-radius:9px; padding:5px; box-shadow:0 10px 30px rgba(16,24,40,.18); }
+  .gbar-pop button{ display:block; width:100%; text-align:left; border:none; background:none; padding:7px 10px; }
+  .gbar-pop button:hover:not(:disabled){ background:var(--brand-soft); }

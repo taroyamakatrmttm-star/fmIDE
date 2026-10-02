@@ -71,7 +71,10 @@
   .col-head{ margin:0 0 8px; font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--soft-ink); display:flex; align-items:center; gap:8px; }
   .calc-note{ text-transform:none; letter-spacing:0; font-weight:400; font-size:12px; }
   .widget-list{ display:flex; flex-direction:column; gap:10px; }
-  .widget-list.bars{ display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); }
+  /* The grid (G3a): two columns; a wide widget takes both. One column on a narrow page. */
+  .widget-list.bars{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .widget-list.bars > .wide{ grid-column:1 / -1; }
+  @media (max-width: 1000px){ .widget-list.bars{ grid-template-columns:minmax(0, 1fr); } }
   .empty-note{ color:var(--soft-ink); font-size:13px; margin:4px 0; }
   .link-btn{ border:none; background:none; color:var(--brand); padding:0; font-weight:600; }
   .link-btn:hover{ background:none; text-decoration:underline; }
@@ -121,7 +124,6 @@
   .dialog-actions{ display:flex; justify-content:flex-end; gap:8px; }
 
   /* Charts (G2): wider than a bar widget. */
-  .widget-list.bars .chart-widget{ grid-column:1 / -1; }
   .board.moving .chart-widget{ opacity:.38; }
   .board.moving .chart-widget.reached{ opacity:1; box-shadow:0 0 0 2px var(--reach); }
   .chart-title{ flex:1 1 auto; font:inherit; font-weight:600; font-size:14px; padding:4px 6px; border:1px solid transparent; border-radius:6px; background:transparent; color:var(--ink); min-width:0; }
@@ -150,6 +152,37 @@
   .check-row{ cursor:pointer; color:var(--ink); }
   .add-part, .add-step, .add-group{ display:inline-block; margin-top:6px; font-size:12.5px; }
   .chart-widget .widget-head select{ flex:0 0 auto; }
+
+  /* Boards as tabs (G3a). */
+  .board-tabs{ display:flex; flex-wrap:wrap; gap:4px; align-items:center; margin:0 0 12px; border-bottom:1px solid var(--line); padding-bottom:6px; }
+  .board-tab{ border-color:transparent; background:transparent; color:var(--soft-ink); font-weight:600; border-radius:7px 7px 0 0; }
+  .board-tab.active{ background:var(--card); color:var(--ink); border-color:var(--line); box-shadow:inset 0 -2px 0 var(--brand); }
+  .board-tab-name{ font:inherit; font-size:13px; font-weight:600; padding:5px 8px; border:1px solid var(--brand); border-radius:7px; width:14em; }
+  .board-tool{ padding:5px 9px; font-size:12.5px; }
+  .board-tool.danger:not(:disabled):hover{ color:var(--down); background:#fef3f2; }
+
+  /* Moving and sizing widgets. */
+  .arrange{ display:inline-flex; gap:2px; flex:none; }
+  .drag-handle{ cursor:grab; padding:2px 6px; border-color:transparent; background:transparent; color:var(--soft-ink); touch-action:none; font-size:15px; line-height:1; }
+  .drag-handle:hover{ background:#eef1f5; color:var(--ink); }
+  body.widget-dragging, body.widget-dragging *{ cursor:grabbing !important; user-select:none; }
+  .widget.dragging{ opacity:.55; outline:2px dashed var(--brand); }
+  .size-toggle{ padding:2px 6px; border-color:transparent; background:transparent; color:var(--soft-ink); }
+  .size-toggle.on{ color:var(--brand); }
+  body.touch-input .drag-handle, body.touch-input .size-toggle{ padding:8px 10px; }
+
+  /* Colours. */
+  input.colour-pick{ width:26px; height:22px; padding:0 1px; border:1px solid var(--line-strong); border-radius:5px; background:#fff; cursor:pointer; vertical-align:middle; }
+  .chart-key input.key-swatch{ width:16px; height:16px; border-radius:4px; padding:0; border:1px solid var(--line-strong); }
+  .key-item{ cursor:pointer; }
+
+  /* The Boards menu in the top bar. */
+  .gbar-menu{ position:relative; }
+  .gbar-menu summary{ list-style:none; display:inline-block; padding:6px 12px; border-radius:7px; border:1px solid var(--top-line); cursor:pointer; font-size:13px; }
+  .gbar-menu summary::-webkit-details-marker{ display:none; }
+  .gbar-pop{ position:absolute; right:0; top:calc(100% + 6px); z-index:40; min-width:200px; background:#fff; color:var(--ink); border:1px solid var(--line); border-radius:9px; padding:5px; box-shadow:0 10px 30px rgba(16,24,40,.18); }
+  .gbar-pop button{ display:block; width:100%; text-align:left; border:none; background:none; padding:7px 10px; }
+  .gbar-pop button:hover:not(:disabled){ background:var(--brand-soft); }
 /* The Help panel (build step 10; docs/step10-help.md), shared by fmIDE and ExcelExporter with
    src/shared/help-panel.js. Each app sets --help-top (where the panel starts) and makes room
    for the panel under body.help-open. */
@@ -238,6 +271,16 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     <button id="btnAddChart" class="gbar-btn needs-model" title="Columns of several rectangles, stacked or side by side, or a waterfall">+ Chart</button>
     <button id="btnAddSlider" class="gbar-btn needs-model" title="Change an input rectangle with a slider">+ Slider</button>
     <button id="btnResetAll" class="gbar-btn needs-model" title="Put every slider back to the model's own numbers">Reset all</button>
+    <button id="btnUndo" class="gbar-btn" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↶</button>
+    <button id="btnRedo" class="gbar-btn" title="Redo (Ctrl+Y)" aria-label="Redo" disabled>↷</button>
+    <details class="gbar-menu">
+      <summary class="gbar-btn" title="Save boards to a file, or add boards from one">Boards ▾</summary>
+      <div class="gbar-pop" role="menu">
+        <button type="button" role="menuitem" id="btnExportBoard" class="needs-model">Export this board</button>
+        <button type="button" role="menuitem" id="btnExportBoards" class="needs-model">Export all boards</button>
+        <button type="button" role="menuitem" id="btnImportBoards" class="needs-model">Import boards…</button>
+      </div>
+    </details>
     <button id="btnHelp" class="gbar-btn" title="Help (F1)">❓ Help</button>
   </div>
 </header>
@@ -257,6 +300,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     </div>
   </section>
 
+  <nav id="boardTabs" class="board-tabs hidden" role="tablist" aria-label="Boards"></nav>
   <section id="board" class="board hidden">
     <div class="board-col">
       <h2 class="col-head">Sliders</h2>
@@ -272,6 +316,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
 </main>
 
 <input type="file" id="fileInput" accept=".fmide,application/json,.json" hidden>
+<input type="file" id="boardFileInput" accept="application/json,.json" hidden>
 
 <div id="confirmBox" class="dialog-back hidden" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
   <div class="dialog">
@@ -2918,27 +2963,35 @@ function workOutAhead(s){
 
 function setCalcNote(text){ const el = $('calcNote'); if(el) el.textContent = text; }
 // ============================================================
-// The board: the bars, charts and sliders on the page.
-//   bar    { id, key, periods }
-//   chart  { id, layout: 'columns' | 'flow', … } (G2; 04b-charts.js)
+// The boards (G3a: several, as tabs, each a view of the model). A board:
+//   { id, name, items: [bar | chart, …] (in the order shown), sliders: [slider, …] }
+//   bar    { id, kind: 'bar', key, periods, wide, colour }
+//   chart  { id, kind: 'chart', wide, layout: 'columns' | 'flow', … } (G2; 04b-charts.js)
 //   slider { id, key, periods, mode: 'set' | 'shift', min, max, step, value }
 // periods: { mode: 'all' } · { mode: 'one', p } · { mode: 'range', from, to } (from 0).
 // A slider's value is null until it moves (the model's own numbers); 'set' gives the input
 // that number in the periods it covers, 'shift' changes them by that many percent.
 //
-// The board is remembered in this browser for each model (fmgraph-board-<signature>), and the
-// last one used is kept too, so a model that has changed a little (a rectangle added in fmIDE)
-// keeps its board. Slider positions are not remembered: a board always opens on the model's
-// own numbers. What is stored is the board's file form (kind fmIDE-graph-board, version 1),
-// and everything read back goes through cleanBoard, like a file. Each widget keeps its
-// rectangle's name too: a widget whose rectangle now has another name is left out, so another
-// model that happens to use the same ids never picks up this board.
+// A wide widget takes a whole row of the grid, a narrow one half of it (charts start wide,
+// bars narrow); colour is a bar's own colour (null: the usual one).
+//
+// The boards are remembered in this browser for each model (fmgraph-board-<signature>), and the
+// last ones used are kept too, so a model that has changed a little (a rectangle added in
+// fmIDE) keeps its boards. Slider positions are not remembered: a board always opens on the
+// model's own numbers. What is stored is the board file's form (kind fmIDE-graph-board,
+// version 1; docs/file-formats.md), and everything read back goes through cleanBoards, like a
+// file — the same reader Import Board uses. Each widget keeps its rectangle's name too: a
+// widget whose rectangle now has another name is left out, so another model that happens to
+// use the same ids never picks up these boards. The form G1 and G2 kept in the browser (one
+// board: bars, charts, sliders) is read as one board.
 // ============================================================
 const store = createStore('fmGraph');
 const BOARD_PREFIX = 'fmgraph-board-';
 const LAST_BOARD_KEY = 'fmgraph-last-board';
-const BOARD_LIMIT = 40; // bars, and sliders, at most
-let board = { bars: [], charts: [], sliders: [] };
+const BOARD_LIMIT = 40; // bars, charts and sliders on a board, each at most
+const BOARDS_LIMIT = 20; // boards for a model
+let boards = [];         // every board of the model
+let board = null;        // the one shown
 let nextWidgetId = 1;
 const newWidgetId = (kind) => kind + (nextWidgetId++);
 
@@ -2980,29 +3033,50 @@ function cleanRange(raw, fallback){
   return { min, max, step };
 }
 
-// Reads a board (from storage, or later a file) against the loaded model: widgets on
-// rectangles that aren't there, or sliders on rectangles that aren't inputs, are left out.
-function cleanBoard(raw){
-  const out = { bars: [], charts: [], sliders: [] };
-  if(!raw || typeof raw !== 'object' || raw.kind !== 'fmIDE-graph-board') return out;
+// A new, empty board. bars and charts are read through its items, in their order.
+function makeBoard(name){
+  return { id: newWidgetId('board'), name: name || 'Board', items: [], sliders: [],
+    get bars(){ return this.items.filter(w => w.kind === 'bar'); },
+    get charts(){ return this.items.filter(w => w.kind === 'chart'); } };
+}
+const cleanColour = (c) => safeColor(c, null) && /^#[0-9a-f]{6}$/i.test(c) ? c.toLowerCase() : null;
+
+// The rectangle a widget names, by canvas id, node id and (when it gives one) name.
+function rectForEntry(w){
+  if(!w || typeof w.canvasId !== 'string' || typeof w.nodeId !== 'string') return null;
+  const r = model.byKey.get(keyOf(w.canvasId, w.nodeId));
+  return r && (typeof w.name !== 'string' || w.name.trim().toLowerCase() === r.name.trim().toLowerCase()) ? r : null;
+}
+
+// One board read against the loaded model: widgets on rectangles that aren't there, or
+// sliders on rectangles that aren't inputs, are left out (and counted in `dropped`).
+function cleanBoard(raw, dropped){
+  const out = makeBoard(cleanText(raw && raw.name, 60) || 'Board');
+  if(!raw || typeof raw !== 'object') return out;
   const count = model.periods.length;
-  const sameName = (a, b) => String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
-  const rectFor = (w) => {
-    if(!w || typeof w.canvasId !== 'string' || typeof w.nodeId !== 'string') return null;
-    const r = model.byKey.get(keyOf(w.canvasId, w.nodeId));
-    return r && (typeof w.name !== 'string' || sameName(w.name, r.name)) ? r : null;
+  const drop = () => { if(dropped) dropped.n++; };
+  const bar = (b) => {
+    const rect = rectForEntry(b);
+    if(!rect){ drop(); return null; }
+    return { id: newWidgetId('b'), kind: 'bar', key: rect.key, periods: cleanPeriods(b.periods, count), wide: b.wide === true, colour: cleanColour(b.colour) };
   };
-  (Array.isArray(raw.bars) ? raw.bars : []).slice(0, BOARD_LIMIT).forEach(b => {
-    const rect = rectFor(b);
-    if(rect) out.bars.push({ id: newWidgetId('b'), key: rect.key, periods: cleanPeriods(b.periods, count) });
-  });
-  (Array.isArray(raw.charts) ? raw.charts : []).slice(0, BOARD_LIMIT).forEach(c => {
-    const chart = cleanChart(c, rectFor, count);
-    if(chart) out.charts.push(chart);
-  });
+  const chart = (c) => {
+    const ch = cleanChart(c, rectForEntry, count);
+    // A chart that named rectangles, none of them in this model, is left out (one emptied
+    // on purpose, naming none, is kept).
+    const named = c && (c.layout === 'flow' ? (Array.isArray(c.steps) ? c.steps.length : 0)
+      : (Array.isArray(c.groups) ? c.groups.reduce((n, gr) => n + (gr && Array.isArray(gr.parts) ? gr.parts.length : 0), 0) : 0));
+    if(!ch || (named > 0 && !chartKeys(ch).length)){ drop(); return null; }
+    ch.wide = c.wide !== false;
+    return ch;
+  };
+  let items;
+  if(Array.isArray(raw.items)) items = raw.items.map(w => w && w.type === 'chart' ? chart(w) : w && w.type === 'bar' ? bar(w) : (drop(), null));
+  else items = (Array.isArray(raw.charts) ? raw.charts.map(chart) : []).concat(Array.isArray(raw.bars) ? raw.bars.map(bar) : []); // G1, G2
+  out.items = items.filter(Boolean).slice(0, BOARD_LIMIT * 2);
   (Array.isArray(raw.sliders) ? raw.sliders : []).slice(0, BOARD_LIMIT).forEach(s => {
-    const rect = rectFor(s);
-    if(!rect || !rect.input) return;
+    const rect = rectForEntry(s);
+    if(!rect || !rect.input){ drop(); return; }
     const periods = cleanPeriods(s.periods, count);
     const mode = s.mode === 'shift' ? 'shift' : 'set';
     out.sliders.push(Object.assign({ id: newWidgetId('s'), key: rect.key, periods, mode, value: null },
@@ -3011,28 +3085,44 @@ function cleanBoard(raw){
   return out;
 }
 
-// The board's file form.
-function boardData(){
+// Every board in a file (or in storage): { boards, active, dropped }, or null when it isn't one.
+function cleanBoards(raw){
+  if(!raw || typeof raw !== 'object' || raw.kind !== 'fmIDE-graph-board') return null;
+  const dropped = { n: 0 };
+  const list = Array.isArray(raw.boards) ? raw.boards.slice(0, BOARDS_LIMIT).map(b => cleanBoard(b, dropped)) : [cleanBoard(raw, dropped)];
+  const a = Math.round(Number(raw.active));
+  return { boards: list, active: Number.isFinite(a) && a >= 0 && a < list.length ? a : 0, dropped: dropped.n };
+}
+
+// A board's file form.
+function boardData(b){
   const at = (key) => { const r = model.byKey.get(key); return { canvasId: r.canvasId, nodeId: r.nodeId, name: r.name }; };
   return {
-    kind: 'fmIDE-graph-board', version: 1,
-    bars: board.bars.map(b => Object.assign(at(b.key), { periods: Object.assign({}, b.periods) })),
-    charts: board.charts.map(c => chartData(c, at)),
-    sliders: board.sliders.map(s => Object.assign(at(s.key), { periods: Object.assign({}, s.periods), mode: s.mode, min: s.min, max: s.max, step: s.step })),
+    name: b.name,
+    items: b.items.map(w => w.kind === 'bar'
+      ? Object.assign({ type: 'bar' }, at(w.key), { periods: Object.assign({}, w.periods), wide: w.wide }, w.colour ? { colour: w.colour } : {})
+      : Object.assign({ type: 'chart', wide: w.wide }, chartData(w, at))),
+    sliders: b.sliders.map(s => Object.assign(at(s.key), { periods: Object.assign({}, s.periods), mode: s.mode, min: s.min, max: s.max, step: s.step })),
   };
+}
+// The file form of these boards (all, or the ones given).
+function boardsData(list){
+  const which = list || boards;
+  return { kind: 'fmIDE-graph-board', version: 1, active: list ? 0 : Math.max(0, boards.indexOf(board)), boards: which.map(boardData) };
 }
 
 let saveTimer = null;
 function saveBoardSoon(){
+  noteChange(); // undo (04c-undo.js)
   clearTimeout(saveTimer);
   saveTimer = setTimeout(saveBoardNow, 300);
 }
 function saveBoardNow(){
   clearTimeout(saveTimer);
   if(!model) return;
-  const text = JSON.stringify(boardData());
+  const text = JSON.stringify(boardsData());
   Promise.all([store.put(BOARD_PREFIX + model.signature, text), store.put(LAST_BOARD_KEY, text)])
-    .catch(() => notify('This browser could not keep the board; it will be gone after a reload.', 'err', 'storage'));
+    .catch(() => notify('This browser could not keep the boards; they will be gone after a reload.', 'err', 'storage'));
 }
 
 async function loadBoardFor(m){
@@ -3043,25 +3133,27 @@ async function loadBoardFor(m){
     let fromLast = false;
     if(typeof raw !== 'string' || !raw){ raw = await store.get(LAST_BOARD_KEY); fromLast = true; }
     if(typeof raw === 'string' && raw){
-      const b = cleanBoard(JSON.parse(raw));
-      if(b.bars.length || b.charts.length || b.sliders.length) restored = b;
-      if(restored && fromLast) saveBoardSoon();
+      const r = cleanBoards(JSON.parse(raw));
+      if(r && r.boards.some(b => b.items.length || b.sliders.length)) restored = r;
+      if(restored && fromLast) setTimeout(saveBoardNow, 0);
     }
   }catch(e){ /* unreadable: start a new board */ }
-  board = restored || startingBoard();
+  boards = restored ? restored.boards : [startingBoard()];
+  board = boards[restored ? restored.active : 0];
+  resetUndo();
 }
 
 // A new model's board: a slider on the first input that reaches a calculated rectangle, and
 // a bar on the last rectangle it reaches, so something moves straight away.
 function startingBoard(){
-  const b = { bars: [], charts: [], sliders: [] };
+  const b = makeBoard('Board');
   for(const input of model.inputs){
     const reached = model.reach(input.key);
     const targets = model.rects.filter(r => !r.input && reached.has(r.key));
     if(!targets.length) continue;
     const periods = { mode: 'all' };
     b.sliders.push(Object.assign({ id: newWidgetId('s'), key: input.key, periods, mode: 'set', value: null }, defaultRange(input, periods, 'set')));
-    b.bars.push({ id: newWidgetId('b'), key: targets[targets.length - 1].key, periods: { mode: 'all' } });
+    b.items.push({ id: newWidgetId('b'), kind: 'bar', key: targets[targets.length - 1].key, periods: { mode: 'all' }, wide: false, colour: null });
     break;
   }
   return b;
@@ -3070,8 +3162,8 @@ function startingBoard(){
 function addBar(key, periods){
   const rect = model.byKey.get(key) || model.rects.find(r => !r.input) || model.rects[0];
   if(!rect || board.bars.length >= BOARD_LIMIT) return null;
-  const bar = { id: newWidgetId('b'), key: rect.key, periods: cleanPeriods(periods, model.periods.length) };
-  board.bars.push(bar);
+  const bar = { id: newWidgetId('b'), kind: 'bar', key: rect.key, periods: cleanPeriods(periods, model.periods.length), wide: false, colour: null };
+  board.items.push(bar);
   saveBoardSoon();
   return bar;
 }
@@ -3086,12 +3178,22 @@ function addSlider(key, periods, mode, range){
   return s;
 }
 function removeWidget(id){
-  const count = () => board.bars.length + board.charts.length + board.sliders.length;
-  const before = count();
-  board.bars = board.bars.filter(b => b.id !== id);
-  board.charts = board.charts.filter(c => c.id !== id);
+  const before = board.items.length + board.sliders.length;
+  board.items = board.items.filter(w => w.id !== id);
   board.sliders = board.sliders.filter(s => s.id !== id);
-  if(count() !== before) saveBoardSoon();
+  if(board.items.length + board.sliders.length !== before) saveBoardSoon();
+}
+// Moves a widget (a bar or chart among the items, or a slider among the sliders) to index `to`.
+function moveWidget(id, to){
+  const list = board.items.some(w => w.id === id) ? board.items : board.sliders;
+  const from = list.findIndex(w => w.id === id);
+  if(from < 0) return false;
+  const at = Math.max(0, Math.min(list.length - 1, to));
+  if(at === from) return false;
+  const [w] = list.splice(from, 1);
+  list.splice(at, 0, w);
+  saveBoardSoon();
+  return true;
 }
 // ============================================================
 // Charts (G2): two general building blocks, made of the same bars as a bar widget. Nothing
@@ -3107,6 +3209,9 @@ function removeWidget(id){
 //            steps up or down from the running total), 'total' (a full bar of that rectangle's
 //            own value, checked against the steps before it; the flow carries on from it).
 //
+// A chart may give any of its rectangles its own colour: colours { key: '#rrggbb' }, kept in the
+// file on that part or step (`colour`).
+//
 // Numbers agree when they differ by less than a millionth of their size (AGREE_TOLERANCE):
 // tiny rounding in the calculation is ignored, any real gap is not.
 // ============================================================
@@ -3121,27 +3226,30 @@ const cleanText = (v, max) => typeof v === 'string' ? v.replace(/[\u0000-\u001f]
 function cleanChart(raw, rectFor, count){
   if(!raw || typeof raw !== 'object') return null;
   const title = cleanText(raw.title, CHART_LIMITS.title);
+  const colours = {};
+  const keep = (entry, r) => { const c = cleanColour(entry && entry.colour); if(c) colours[r.key] = c; return r; };
   if(raw.layout === 'flow'){
     const steps = (Array.isArray(raw.steps) ? raw.steps : []).slice(0, CHART_LIMITS.steps).map(s => {
       const r = rectFor(s);
-      return r ? { key: r.key, role: FLOW_ROLES.includes(s.role) ? s.role : 'add' } : null;
+      return r ? { key: keep(s, r).key, role: FLOW_ROLES.includes(s.role) ? s.role : 'add' } : null;
     }).filter(Boolean);
     const p = Math.round(Number(raw.period));
-    return { id: newWidgetId('c'), layout: 'flow', title, period: Number.isFinite(p) && p >= 0 && p < count ? p : 0, steps };
+    return { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'flow', title, period: Number.isFinite(p) && p >= 0 && p < count ? p : 0, steps, colours };
   }
   const groups = (Array.isArray(raw.groups) ? raw.groups : []).slice(0, CHART_LIMITS.groups).map(g => ({
     name: cleanText(g && g.name, CHART_LIMITS.name),
-    parts: (g && Array.isArray(g.parts) ? g.parts : []).slice(0, CHART_LIMITS.parts).map(rectFor).filter(Boolean).map(r => r.key),
+    parts: (g && Array.isArray(g.parts) ? g.parts : []).slice(0, CHART_LIMITS.parts).map(p => { const r = rectFor(p); return r ? keep(p, r) : null; }).filter(Boolean).map(r => r.key),
   }));
   if(!groups.length) groups.push({ name: '', parts: [] });
-  return { id: newWidgetId('c'), layout: 'columns', title, periods: cleanPeriods(raw.periods, count), groups, check: raw.check === true };
+  return { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'columns', title, periods: cleanPeriods(raw.periods, count), groups, check: raw.check === true, colours };
 }
 
 // A chart's file form; at(key) gives a rectangle's { canvasId, nodeId, name }.
 function chartData(c, at){
-  if(c.layout === 'flow') return { layout: 'flow', title: c.title, period: c.period, steps: c.steps.map(s => Object.assign(at(s.key), { role: s.role })) };
+  const withColour = (key, extra) => Object.assign(at(key), extra || {}, c.colours && c.colours[key] ? { colour: c.colours[key] } : {});
+  if(c.layout === 'flow') return { layout: 'flow', title: c.title, period: c.period, steps: c.steps.map(s => withColour(s.key, { role: s.role })) };
   return { layout: 'columns', title: c.title, periods: Object.assign({}, c.periods), check: c.check,
-    groups: c.groups.map(g => ({ name: g.name, parts: g.parts.map(at) })) };
+    groups: c.groups.map(g => ({ name: g.name, parts: g.parts.map(k => withColour(k)) })) };
 }
 
 // A new chart: columns with one group holding one calculated rectangle, or a flow with one step.
@@ -3149,9 +3257,9 @@ function addChart(layout){
   if(board.charts.length >= BOARD_LIMIT) return null;
   const first = model.rects.find(r => !r.input) || model.rects[0];
   const c = layout === 'flow'
-    ? { id: newWidgetId('c'), layout: 'flow', title: '', period: 0, steps: first ? [{ key: first.key, role: 'start' }] : [] }
-    : { id: newWidgetId('c'), layout: 'columns', title: '', periods: { mode: 'all' }, groups: [{ name: '', parts: first ? [first.key] : [] }], check: false };
-  board.charts.push(c);
+    ? { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'flow', title: '', period: 0, steps: first ? [{ key: first.key, role: 'start' }] : [], colours: {} }
+    : { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'columns', title: '', periods: { mode: 'all' }, groups: [{ name: '', parts: first ? [first.key] : [] }], check: false, colours: {} };
+  board.items.push(c);
   saveBoardSoon();
   return c;
 }
@@ -3205,6 +3313,70 @@ function flowFigures(c, results){
   });
 }
 // ============================================================
+// Undo and Redo (G3a) for every change to the boards: adding, removing, moving, resizing and
+// colouring widgets, editing charts, sliders' settings, boards added, renamed or deleted, a
+// board imported. Each change (saveBoardSoon → noteChange) keeps the boards as they were
+// before it, in their file form; Undo puts that back. Moving a slider is a "what if", not a
+// change, and showing another board is not one either. Sliders keep their positions through an
+// undo where they are still there.
+// ============================================================
+const UNDO_LIMIT = 100;
+let undoStack = [], redoStack = [], lastState = null, restoring = false;
+
+// The boards' state for undo: their file form, without which one is shown.
+function undoState(){ const d = boardsData(); delete d.active; return JSON.stringify(d); }
+
+function resetUndo(){
+  undoStack = []; redoStack = [];
+  lastState = model ? undoState() : null;
+  syncUndoButtons();
+}
+function noteChange(){
+  if(restoring || !model) return;
+  const now = undoState();
+  if(lastState !== null && now !== lastState){
+    undoStack.push(lastState);
+    if(undoStack.length > UNDO_LIMIT) undoStack.shift();
+    redoStack = [];
+  }
+  lastState = now;
+  syncUndoButtons();
+}
+function restoreState(text){
+  const shown = Math.max(0, boards.indexOf(board));
+  // Slider positions, by board, rectangle and setting, to keep them where the slider survives.
+  const positions = new Map();
+  boards.forEach((b, bi) => b.sliders.forEach(s => { if(s.value !== null) positions.set(bi + '|' + s.key + '|' + s.mode, s.value); }));
+  const r = cleanBoards(JSON.parse(text));
+  if(!r || !r.boards.length) return;
+  boards = r.boards;
+  boards.forEach((b, bi) => b.sliders.forEach(s => { const v = positions.get(bi + '|' + s.key + '|' + s.mode); if(v !== undefined) s.value = v; }));
+  board = boards[Math.min(shown, boards.length - 1)];
+  lastState = text;
+  restoring = true;
+  try{ saveBoardNow(); } finally { restoring = false; }
+  renderAll();
+}
+function undo(){
+  if(!undoStack.length) return false;
+  redoStack.push(lastState);
+  restoreState(undoStack.pop());
+  syncUndoButtons();
+  return true;
+}
+function redo(){
+  if(!redoStack.length) return false;
+  undoStack.push(lastState);
+  restoreState(redoStack.pop());
+  syncUndoButtons();
+  return true;
+}
+function syncUndoButtons(){
+  const u = $('btnUndo'), r = $('btnRedo');
+  if(u) u.disabled = !model || !undoStack.length;
+  if(r) r.disabled = !model || !redoStack.length;
+}
+// ============================================================
 // Drawing the board. renderBoard() builds every widget; updateValues() redraws only the
 // numbers and bars (it runs on every slider move). Everything from the model (names, canvas
 // and period labels) goes in as text — textContent, or SVG text nodes — never as markup.
@@ -3224,9 +3396,10 @@ let updatePending = false;
 function showBoard(){
   $('welcome').classList.add('hidden');
   $('board').classList.remove('hidden');
+  $('boardTabs').classList.remove('hidden');
   $('modelName').textContent = model ? model.name : '';
   syncPageState();
-  renderBoard();
+  renderAll();
   if(model && model.baseMs >= SLOW_MS) setCalcNote('');
 }
 
@@ -3284,6 +3457,18 @@ function periodsChooser(spec, onChange){
   return wrap;
 }
 
+// A colour box (the browser's own picker); onChange gets '#rrggbb'.
+const DEFAULT_BAR_COLOUR = '#0f766e';
+function colourPicker(value, label, onChange){
+  const c = make('input', 'colour-pick');
+  c.type = 'color';
+  c.value = cleanColour(value) || DEFAULT_BAR_COLOUR;
+  c.title = label;
+  c.setAttribute('aria-label', label);
+  c.addEventListener('change', () => { const v = cleanColour(c.value); if(v) onChange(v); });
+  return c;
+}
+
 function removeButton(id, what){
   const x = make('button', 'widget-remove', '×');
   x.type = 'button';
@@ -3299,9 +3484,14 @@ function renderBoard(){
   sliders.textContent = '';
   if(!model) return;
   board.sliders.forEach(s => sliders.appendChild(sliderWidget(s)));
-  board.charts.forEach(c => bars.appendChild(chartWidget(c)));
-  board.bars.forEach(b => bars.appendChild(barWidget(b)));
-  $('noBars').classList.toggle('hidden', board.bars.length + board.charts.length > 0);
+  board.items.forEach(w => {
+    const el = w.kind === 'chart' ? chartWidget(w) : barWidget(w);
+    el.classList.toggle('wide', !!w.wide);
+    el.querySelector('.widget-head').prepend(arrangeControls(w, el));
+    bars.appendChild(el);
+  });
+  board.sliders.forEach(s => { const el = sliders.querySelector('.slider-widget[data-id="' + s.id + '"]'); if(el) el.querySelector('.widget-head').prepend(arrangeControls(s, el)); });
+  $('noBars').classList.toggle('hidden', board.items.length > 0);
   $('noSliders').classList.toggle('hidden', board.sliders.length > 0);
   updateValues();
 }
@@ -3315,6 +3505,7 @@ function barWidget(b){
   head.append(sel, removeButton(b.id, 'bar'));
   const row = make('div', 'widget-row');
   row.appendChild(periodsChooser(b.periods, (p) => { b.periods = p; saveBoardSoon(); updateValues(); }));
+  row.appendChild(colourPicker(b.colour || DEFAULT_BAR_COLOUR, 'Bar colour', (c) => { b.colour = c === DEFAULT_BAR_COLOUR ? null : c; saveBoardSoon(); updateValues(); }));
   const rect = model.byKey.get(b.key);
   w.append(head, row);
   if(rect.unit) w.appendChild(make('div', 'widget-unit', 'In ' + rect.unit));
@@ -3517,7 +3708,9 @@ function drawBars(el, b, results){
       g.appendChild(svg('title', {}, model.periods[p] + ': ' + errorText(r.error)));
     } else {
       const y0 = y(0), y1 = y(r.value);
-      g.appendChild(svg('rect', { class: 'b-now' + (r.value < 0 ? ' neg' : ''), x, y: Math.min(y0, y1), width: bw, height: Math.max(1, Math.abs(y1 - y0)) }));
+      const bar = svg('rect', { class: 'b-now' + (r.value < 0 ? ' neg' : ''), x, y: Math.min(y0, y1), width: bw, height: Math.max(1, Math.abs(y1 - y0)) });
+      if(b.colour) bar.setAttribute('fill', b.colour);
+      g.appendChild(bar);
       if(!was.error && was.value !== r.value){
         const yb = y(was.value);
         g.appendChild(svg('rect', { class: 'b-base', x, y: Math.min(y0, yb), width: bw, height: Math.max(1, Math.abs(yb - y0)) }));
@@ -3620,7 +3813,10 @@ function chartEditor(c){
       role.setAttribute('aria-label', 'Step');
       FLOW_ROLES.forEach(v => { const o = make('option', null, ROLE_LABELS[v]); o.value = v; if(s.role === v) o.selected = true; role.appendChild(o); });
       role.addEventListener('change', () => { s.role = role.value; changed(); });
-      r.append(role, rs, rowButtons(c.steps, i));
+      // Its own colour (otherwise by direction: up, down, or a full bar).
+      const own = c.colours && c.colours[s.key];
+      const pick = colourPicker(own || '#334155', 'Colour of this step', (v) => { c.colours = Object.assign({}, c.colours, { [s.key]: v }); changed(); });
+      r.append(role, rs, pick, rowButtons(c.steps, i));
       box.appendChild(r);
     });
     const add = make('button', 'link-btn add-step', '+ Step');
@@ -3695,6 +3891,7 @@ function drawChart(el, c, results){
 function partColours(c){
   const out = new Map();
   chartKeys(c).forEach(k => { if(!out.has(k)) out.set(k, PART_COLOURS[out.size % PART_COLOURS.length]); });
+  Object.keys(c.colours || {}).forEach(k => { if(out.has(k)) out.set(k, c.colours[k]); });
   return out;
 }
 
@@ -3767,9 +3964,10 @@ function drawColumns(c, results, problems, key){
     const line = make('div', 'key-line');
     if(ng > 1) line.appendChild(make('span', 'key-group', groupLabel(c, gi) + ':'));
     grp.parts.forEach(k => {
-      const item = make('span', 'key-item');
-      const sw = make('span', 'key-swatch');
-      sw.style.background = colours.get(k);
+      const item = make('label', 'key-item');
+      // The swatch is the colour box: a click picks this rectangle's colour in this chart.
+      const sw = colourPicker(colours.get(k), 'Colour of ' + partLabel(k), (v) => { c.colours = Object.assign({}, c.colours, { [k]: v }); saveBoardSoon(); updateValues(); });
+      sw.classList.add('key-swatch');
       item.append(sw, document.createTextNode(partLabel(k)));
       line.appendChild(item);
     });
@@ -3805,6 +4003,7 @@ function drawFlow(c, results, problems){
       if(prevEnd !== null && (s.role === 'add' || s.role === 'subtract')) g.appendChild(svg('line', { class: 'f-link', x1: x - (slot - bw), x2: x, y1: y(prevEnd), y2: y(prevEnd) }));
       const kind = (s.role === 'start' || s.role === 'total') ? 'f-total' : (f.to >= f.from ? 'f-up' : 'f-down');
       const rect = svg('rect', { class: 'f-bar ' + kind, x, y: Math.min(y(f.from), y(f.to)), width: bw, height: Math.max(1, Math.abs(y(f.to) - y(f.from))) });
+      if(c.colours && c.colours[s.key]) rect.setAttribute('fill', c.colours[s.key]);
       const b = was[i];
       const diff = b && !b.error ? fmtDiff(f.value, b.value) : '';
       rect.appendChild(svg('title', {}, name + ' (' + ROLE_LABELS[s.role].toLowerCase() + '), ' + model.periods[c.period] + ': ' + fmtNum(f.value) + (diff ? ' — was ' + fmtNum(b.value) + ', ' + diff : '')));
@@ -3835,6 +4034,168 @@ function drawFlow(c, results, problems){
   });
   chart.appendChild(svg('text', { class: 't-period', x: W / 2, y: H - 4, 'text-anchor': 'middle' }, model.periods[c.period]));
   return chart;
+}
+// ============================================================
+// Arranging (G3a): the boards as tabs, and the widgets on a board in an ordered grid.
+// - Tabs above the board: one per board; + Board adds one; the board shown can be renamed
+//   (double-click its tab, or ✎), duplicated or deleted (asked first; the last can't go).
+// - Every widget has a handle (⠿): drag it to move the widget among the others — a bar or
+//   chart among the bars and charts, a slider among the sliders — by mouse, finger or pen
+//   (shared pointer-input.js), or press ← ↑ / → ↓ on it. ⇔ makes a bar or chart wide (the
+//   whole row) or narrow (half). Every change is one undo step.
+// ============================================================
+function renderAll(){ renderTabs(); renderBoard(); syncUndoButtons(); }
+
+function renderTabs(){
+  const strip = $('boardTabs');
+  strip.textContent = '';
+  if(!model) return;
+  boards.forEach((b, i) => {
+    const t = make('button', 'board-tab' + (b === board ? ' active' : ''), b.name);
+    t.type = 'button';
+    t.setAttribute('role', 'tab');
+    t.setAttribute('aria-selected', b === board ? 'true' : 'false');
+    t.dataset.index = String(i);
+    t.addEventListener('click', () => { if(b !== board){ showBoardAt(i); } });
+    t.addEventListener('dblclick', () => { if(b === board) renameBoard(t); });
+    strip.appendChild(t);
+  });
+  const tool = (text, label, fn, cls) => { const x = make('button', 'board-tool' + (cls ? ' ' + cls : ''), text); x.type = 'button'; x.title = label; x.setAttribute('aria-label', label); x.addEventListener('click', fn); strip.appendChild(x); return x; };
+  tool('+ Board', 'Add an empty board', () => addBoard()).disabled = boards.length >= BOARDS_LIMIT;
+  tool('✎', 'Rename this board', () => renameBoard(strip.querySelector('.board-tab.active')));
+  tool('⧉', 'Duplicate this board', () => duplicateBoard()).disabled = boards.length >= BOARDS_LIMIT;
+  tool('🗑', 'Delete this board', () => deleteBoard(), 'danger').disabled = boards.length < 2;
+}
+
+function showBoardAt(i){
+  board = boards[i];
+  activeSlider = null;
+  saveBoardNow();
+  renderAll();
+}
+function freeBoardName(base){
+  const names = new Set(boards.map(b => b.name.toLowerCase()));
+  if(!names.has(base.toLowerCase())) return base;
+  for(let n = 2; ; n++){ const t = base + ' (' + n + ')'; if(!names.has(t.toLowerCase())) return t; }
+}
+function addBoard(name){
+  if(boards.length >= BOARDS_LIMIT) return null;
+  const b = makeBoard(freeBoardName(name || 'Board'));
+  boards.push(b);
+  board = b;
+  saveBoardSoon();
+  renderAll();
+  return b;
+}
+function duplicateBoard(){
+  if(boards.length >= BOARDS_LIMIT) return null;
+  const r = cleanBoards({ kind: 'fmIDE-graph-board', boards: [boardData(board)] });
+  const copy = r.boards[0];
+  copy.name = freeBoardName(board.name + ' copy');
+  boards.splice(boards.indexOf(board) + 1, 0, copy);
+  board = copy;
+  saveBoardSoon();
+  renderAll();
+  return copy;
+}
+async function deleteBoard(){
+  if(boards.length < 2) return false;
+  if(!(await askConfirm('Delete this board?', '"' + board.name + '" and its bars, charts and sliders go. Undo brings it back.', 'Delete'))) return false;
+  removeBoard(board);
+  return true;
+}
+function removeBoard(b){
+  const i = boards.indexOf(b);
+  if(i < 0 || boards.length < 2) return;
+  boards.splice(i, 1);
+  board = boards[Math.min(i, boards.length - 1)];
+  saveBoardSoon();
+  renderAll();
+}
+function setBoardName(b, name){
+  const n = cleanText(name, 60);
+  if(!n || n === b.name) return;
+  b.name = n;
+  saveBoardSoon();
+}
+// The board's tab becomes a text box until Enter, Esc or a click elsewhere.
+function renameBoard(tab){
+  if(!tab) return;
+  const box = make('input', 'board-tab-name');
+  box.type = 'text';
+  box.value = board.name;
+  box.maxLength = 60;
+  box.setAttribute('aria-label', 'Board name');
+  let done = false;
+  const finish = (keep) => { if(done) return; done = true; if(keep) setBoardName(board, box.value); renderAll(); };
+  box.addEventListener('keydown', (ev) => { if(ev.key === 'Enter'){ ev.preventDefault(); finish(true); } else if(ev.key === 'Escape'){ ev.preventDefault(); finish(false); } });
+  box.addEventListener('blur', () => finish(true));
+  tab.replaceWith(box);
+  box.focus();
+  box.select();
+}
+
+// ---- moving widgets ----
+// The handle and, for a bar or chart, the wide / narrow switch, for a widget's head.
+function arrangeControls(w, el){
+  const span = make('span', 'arrange');
+  const handle = make('button', 'drag-handle', '⠿');
+  handle.type = 'button';
+  handle.title = 'Drag to move (or ← → with the keyboard)';
+  handle.setAttribute('aria-label', 'Move');
+  handle.addEventListener('keydown', (ev) => {
+    const list = w.kind ? board.items : board.sliders;
+    const i = list.indexOf(w);
+    const step = (ev.key === 'ArrowLeft' || ev.key === 'ArrowUp') ? -1 : (ev.key === 'ArrowRight' || ev.key === 'ArrowDown') ? 1 : 0;
+    if(!step) return;
+    ev.preventDefault();
+    if(moveWidget(w.id, i + step)){ renderBoard(); const h = document.querySelector('[data-id="' + w.id + '"] .drag-handle'); if(h) h.focus(); }
+  });
+  onPress(handle, (ev) => startDrag(ev, w, el));
+  span.appendChild(handle);
+  if(w.kind){
+    const size = make('button', 'size-toggle' + (w.wide ? ' on' : ''), '⇔');
+    size.type = 'button';
+    size.title = w.wide ? 'Make narrow (half a row)' : 'Make wide (the whole row)';
+    size.setAttribute('aria-label', 'Wide');
+    size.setAttribute('aria-pressed', w.wide ? 'true' : 'false');
+    size.addEventListener('click', () => { w.wide = !w.wide; saveBoardSoon(); renderBoard(); });
+    span.appendChild(size);
+  }
+  return span;
+}
+
+// Dragging by the handle: the widget follows the pointer's place among its neighbours (the
+// others make room as it passes), and is put there when the pointer lifts. A cancelled drag
+// (the browser took the finger over) leaves everything as it was.
+function startDrag(ev, w, el){
+  pressDefault(ev);
+  const box = el.parentNode;
+  const list = w.kind ? board.items : board.sliders;
+  const from = list.indexOf(w);
+  el.classList.add('dragging');
+  document.body.classList.add('widget-dragging');
+  const place = (x, y) => {
+    const others = [...box.children].filter(c => c !== el && c.dataset.id);
+    // The neighbour the pointer is over (or the nearest before it): the widget goes before
+    // it when the pointer is on its first half, after it otherwise.
+    let target = null, after = false, best = Infinity;
+    others.forEach(c => {
+      const r = c.getBoundingClientRect();
+      const inside = x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+      const d = inside ? -1 : Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom));
+      if(d < best){ best = d; target = c; after = (r.width > r.height * 1.6 ? x > r.left + r.width / 2 : y > r.top + r.height / 2) || (!inside && y > r.bottom); }
+    });
+    if(!target) return;
+    if(after) target.after(el); else target.before(el);
+  };
+  followPointer(ev, (mv) => place(mv.clientX, mv.clientY), (up, cancelled) => {
+    el.classList.remove('dragging');
+    document.body.classList.remove('widget-dragging');
+    const to = [...box.children].filter(c => c.dataset.id).indexOf(el);
+    if(!cancelled && to >= 0 && to !== from) moveWidget(w.id, to);
+    renderBoard();
+  });
 }
 // ============================================================
 // The page: opening a model (the file picker, a file dropped anywhere, the sample, or fmIDE),
@@ -3925,7 +4286,7 @@ async function loadSample(){
 function readFileAndOpen(file){
   if(!file) return;
   const name = String(file.name || 'Model').replace(/\.(fmide|json)$/i, '');
-  file.text().then(text => openModelText(text, name).then(ok => { if(ok) notify('Opened ' + name + '.', 'ok', 'load'); }),
+  file.text().then(text => openAnyText(text, name).then(ok => { if(ok && !/"kind"\s*:\s*"fmIDE-graph-board"/.test(text)) notify('Opened ' + name + '.', 'ok', 'load'); }),
     () => notify('That file could not be read.', 'err', 'load'));
 }
 
@@ -4031,6 +4392,100 @@ back.addEventListener('click', (ev) => {
     window.addEventListener('pagehide', () => clearTimeout(fallback), { once: true });
     history.back();
   }
+});
+// ============================================================
+// The board file (G3a; kind fmIDE-graph-board, version 1, docs/file-formats.md): Export this
+// board, Export all boards, Import boards… (Board menu), or a board file dropped on the page.
+// A board file names rectangles by canvas id, node id and name, so it fits the model it was
+// made from — or another one built from the same templates. Importing reads it like any file
+// (size and nesting limits, the kind, a newer version asked about) and through cleanBoards, as
+// the boards kept in the browser are; widgets whose rectangles aren't in this model are left
+// out and counted. Imported boards are added as new tabs (a name already used gets "(2)").
+// ============================================================
+const BOARD_FILE_FORMAT = { 'fmIDE-graph-board': { current: 1, label: 'fmGraph board file' } };
+
+function safeFileName(s){ return String(s).replace(/[^A-Za-z0-9 ._()-]+/g, '_').replace(/\s+/g, ' ').trim().slice(0, 80) || 'board'; }
+
+function downloadText(text, fileName){
+  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+  const a = make('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function exportBoards(all){
+  if(!model) return null;
+  const data = boardsData(all ? null : [board]);
+  const name = safeFileName(model.name + ' - ' + (all ? 'boards' : board.name)) + '.board.json';
+  downloadText(JSON.stringify(data, null, 2), name);
+  return data;
+}
+
+// Reads a board file's text and adds its boards. Resolves the number of boards added.
+async function importBoardsText(text){
+  if(!model){ notify('Open a model first: a board shows a model\'s rectangles.', 'info', 'boards'); return 0; }
+  const big = fileTextProblem(text);
+  if(big){ notify(big, 'err', 'boards'); return 0; }
+  let raw;
+  try{ raw = JSON.parse(text); }catch(e){ notify("That file isn't JSON fmGraph can read.", 'err', 'boards'); return 0; }
+  const deep = fileDataProblem(raw);
+  if(deep){ notify(deep, 'err', 'boards'); return 0; }
+  if(!raw || typeof raw !== 'object' || raw.kind !== 'fmIDE-graph-board'){ notify("That isn't an fmGraph board file.", 'err', 'boards'); return 0; }
+  const data = JSON.parse(JSON.stringify(raw));
+  const { fromVersion, newer } = upgradeFileData(data, 'fmIDE-graph-board', BOARD_FILE_FORMAT, {});
+  if(newer && !(await askConfirm('Saved by a newer version', 'This board file (format version ' + fromVersion + ') was saved by a newer version of fmGraph. Open it anyway? Anything the newer version added may be ignored.', 'Open Anyway'))) return 0;
+  const r = cleanBoards(data);
+  const useful = r ? r.boards.filter(b => b.items.length || b.sliders.length) : [];
+  if(!useful.length){
+    notify('None of the rectangles on that board are in this model, so nothing was added.', 'err', 'boards');
+    return 0;
+  }
+  const room = Math.max(0, BOARDS_LIMIT - boards.length);
+  const adding = useful.slice(0, room);
+  adding.forEach(b => { b.name = freeBoardName(b.name); boards.push(b); });
+  if(adding.length) board = adding[0];
+  saveBoardSoon();
+  renderAll();
+  const left = r.dropped ? ' ' + r.dropped + ' widget' + (r.dropped === 1 ? '' : 's') + ' left out: their rectangles aren\'t in this model.' : '';
+  const full = useful.length > adding.length ? ' ' + (useful.length - adding.length) + ' not added: a model has at most ' + BOARDS_LIMIT + ' boards.' : '';
+  notify('Added ' + adding.map(b => '"' + b.name + '"').join(', ') + '.' + left + full, adding.length ? 'ok' : 'err', 'boards');
+  return adding.length;
+}
+
+// A file opened or dropped: a board file is imported, anything else opened as a model.
+function openAnyText(text, name){
+  let kind = null;
+  try{ const d = JSON.parse(text); kind = d && typeof d === 'object' ? d.kind : null; }catch(e){ /* openModelText says so */ }
+  if(kind === 'fmIDE-graph-board') return importBoardsText(text).then(n => n > 0);
+  return openModelText(text, name);
+}
+
+$('btnExportBoard').addEventListener('click', () => { closeMenus(); exportBoards(false); });
+$('btnExportBoards').addEventListener('click', () => { closeMenus(); exportBoards(true); });
+$('btnImportBoards').addEventListener('click', () => { closeMenus(); $('boardFileInput').click(); });
+$('boardFileInput').addEventListener('change', () => {
+  const f = $('boardFileInput').files && $('boardFileInput').files[0];
+  $('boardFileInput').value = '';
+  if(f) f.text().then(importBoardsText, () => notify('That file could not be read.', 'err', 'boards'));
+});
+function closeMenus(){ document.querySelectorAll('details.gbar-menu[open]').forEach(d => { d.open = false; }); }
+document.addEventListener('click', (ev) => { document.querySelectorAll('details.gbar-menu[open]').forEach(d => { if(!d.contains(ev.target)) d.open = false; }); });
+
+// Undo and Redo: the buttons, and Ctrl/⌘ + Z, Ctrl/⌘ + Y or Ctrl/⌘ + Shift + Z — but not while
+// typing in a text box, where the browser's own undo works on the text.
+$('btnUndo').addEventListener('click', () => undo());
+$('btnRedo').addEventListener('click', () => redo());
+document.addEventListener('keydown', (ev) => {
+  if(!(ev.ctrlKey || ev.metaKey) || ev.altKey) return;
+  const t = ev.target;
+  if(t && (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !['range', 'checkbox', 'color', 'button'].includes(t.type)))) return;
+  const k = ev.key.toLowerCase();
+  if(k === 'z' && !ev.shiftKey){ ev.preventDefault(); undo(); }
+  else if(k === 'y' || (k === 'z' && ev.shiftKey)){ ev.preventDefault(); redo(); }
 });
 // ============================================================
 // Help: the same panel as fmIDE and ExcelExporter (src/shared/help-panel.js), with fmGraph's
@@ -4633,6 +5088,25 @@ const FMGRAPH_HELP_TOPICS = [
       { tip: 'Numbers agree when they differ by less than a millionth of their size, so tiny rounding never shows as ✗. A chart mixing units says so below it.' },
       { see: ['bars', 'reach'] },
     ] },
+  { id: 'boards', group: 'board', title: 'Boards: tabs, arranging, colours, undo',
+    keywords: 'board boards tab tabs arrange move drag order wide narrow colour color undo redo rename duplicate delete',
+    summary: 'Several boards per model, arranged as you like.',
+    body: [
+      { p: 'A model can have several boards — for example one for the statements and one for pricing — shown as tabs above the board. + Board adds an empty one; ✎ (or a double-click on its tab) renames the board shown, ⧉ duplicates it and 🗑 deletes it (after asking; the last board stays). Each board has its own bars, charts and sliders.' },
+      { p: 'Drag a bar, chart or slider by its handle (⠿) to move it among the others — by mouse, by finger, or with the arrow keys on the handle. ⇔ makes a bar or chart wide (the whole row) or narrow (half of it).' },
+      { p: 'Colours: a bar\'s colour box, beside its periods; in a chart, click a rectangle\'s colour in its key; a waterfall step\'s colour is in Edit chart.' },
+      { p: '↶ Undo and ↷ Redo (Ctrl+Z, Ctrl+Y) take back any change to the boards — not where a slider is set, which is a "what if", not a change.' },
+      { see: ['board-file', 'charts'] },
+    ] },
+  { id: 'board-file', group: 'board', title: 'Saving and sharing boards',
+    keywords: 'export import file board json share send save',
+    summary: 'Boards travel as a file.',
+    body: [
+      { p: 'Boards ▾ at the top: Export this board, or Export all boards, saves a board file. Import boards… (or dropping a board file on the page) adds its boards as new tabs to the model you have open.' },
+      { p: 'A board names its rectangles by canvas, id and name, so it fits the model it was made from, or another one built from the same templates. Anything it shows that isn\'t in this model is left out, and fmGraph says how much.' },
+      { tip: 'Where sliders are set is not saved: a board always opens on the model\'s own numbers.' },
+      { see: ['boards', 'board-kept'] },
+    ] },
   { id: 'reach', group: 'board', title: 'What a slider reaches',
     keywords: 'highlight reach depend dependency lit dim impact affected',
     summary: 'The bars a slider can move light up while you use it.',
@@ -4654,7 +5128,7 @@ const FMGRAPH_HELP_TOPICS = [
     keywords: 'saved remember board kept browser storage reload',
     summary: 'Your bars and sliders, for each model, in this browser.',
     body: [
-      { p: 'The bars and sliders you add are remembered in this browser for each model, and come back when you open it again — also when the model has changed a little in fmIDE. Sliders always start on the model\'s own numbers.' },
+      { p: 'Your boards — their bars, charts and sliders, how they are arranged and coloured — are remembered in this browser for each model, and come back when you open it again — also when the model has changed a little in fmIDE. Sliders always start on the model\'s own numbers. To move boards to another computer or person, export them (Boards ▾).' },
       { p: 'Nothing is sent anywhere: fmGraph works offline and keeps everything on this device.' },
       { see: ['open-model'] },
     ] },
@@ -4670,6 +5144,24 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'boards', date: '2026-10-02', title: 'Boards: tabs, arranging, colours, undo, files',
+    summary: 'Several boards per model, arranged by dragging, in your colours, with undo — and as files to share.',
+    what: [
+      'A model can have several boards, as tabs: + Board adds one; each can be renamed, duplicated or deleted.',
+      'Drag a bar, chart or slider by its handle (⠿) to move it — by mouse, finger or the arrow keys — and make a bar or chart wide or narrow (⇔).',
+      'Choose colours: a bar\'s, each rectangle\'s in a chart (click its colour in the key), each waterfall step\'s.',
+      '↶ Undo and ↷ Redo (Ctrl+Z, Ctrl+Y) for every change to the boards.',
+      'Boards ▾ exports a board, or all of them, as a file, and imports boards from one — or drop the file on the page.',
+    ],
+    why: 'To build several views of one model, lay them out the way you read them, and send them to others.',
+    how: [
+      'Press + Board for a new board.',
+      'Drag widgets by ⠿ and widen them with ⇔.',
+      'Boards ▾ → Export this board, and send the file.',
+    ],
+    notes: ['Where sliders are set is never saved: a board always opens on the model\'s own numbers.'],
+    see: ['boards', 'board-file'] },
+
   { id: 'charts', date: '2026-10-02', title: 'Charts: columns and waterfalls',
     summary: 'Stacked or side-by-side columns with an optional totals check, and waterfalls whose totals are checked.',
     what: [
@@ -4747,6 +5239,12 @@ document.addEventListener('keydown', (ev) => {
 //   setSlider(id, value), resetSlider(id), resetAll(), remove(id)
 //   board()        → the board ({ kind: 'fmIDE-graph-board', … }) with each slider's value
 //   reached(id)    → the ids of the bars a slider reaches
+//   boards()       → [{ name, shown }] (G3a); addBoard(name?), showBoard(index or name),
+//   renameBoard(name), duplicateBoard(), removeBoard() (the one shown; the last can't go)
+//   move(id, index) (a bar or chart among the items, a slider among the sliders),
+//   setWide(id, wide), setColour(id, '#rrggbb' or null, rect?) (a bar's, or a chart rectangle's)
+//   undo(), redo() → whether there was one; exportBoards(all?) → the file's data (downloads it)
+//   importBoards(textOrObject) → Promise<number of boards added>
 //   calcTime()     → how long one run of the model takes, in milliseconds
 // ============================================================
 function findRect(rect, canvas){
@@ -4812,7 +5310,7 @@ window.fmGraph = Object.freeze({
       : { layout: 'columns', title: spec.title, periods: periodSpec(spec.periods), check: spec.check === true,
           groups: (spec.groups || []).map(g => ({ name: g.name, parts: (g.parts || []).map(p => at(rectRef(p))) })) };
     const c = cleanChart(raw, (w) => model.byKey.get(keyOf(w.canvasId, w.nodeId)), model.periods.length);
-    board.charts.push(c);
+    board.items.push(c);
     saveBoardSoon();
     renderBoard();
     return c.id;
@@ -4835,12 +5333,44 @@ window.fmGraph = Object.freeze({
   remove: (id) => { removeWidget(id); renderBoard(); },
   board: () => {
     if(!model) return null;
-    const d = boardData();
-    d.bars.forEach((b, i) => { b.id = board.bars[i].id; });
-    d.charts.forEach((c, i) => { c.id = board.charts[i].id; });
+    const d = boardData(board);
+    d.items.forEach((w, i) => { w.id = board.items[i].id; });
     d.sliders.forEach((s, i) => { s.id = board.sliders[i].id; s.value = board.sliders[i].value; });
-    return d;
+    return Object.assign({ kind: 'fmIDE-graph-board', version: 1 }, d,
+      { bars: d.items.filter(w => w.type === 'bar'), charts: d.items.filter(w => w.type === 'chart') });
   },
+  boards: () => boards.map(b => ({ name: b.name, shown: b === board })),
+  addBoard: (name) => { const b = addBoard(typeof name === 'string' ? cleanText(name, 60) : ''); if(!b) throw new Error('No more boards can be added.'); return b.name; },
+  showBoard: (which) => {
+    const i = typeof which === 'number' ? which : boards.findIndex(b => b.name === String(which));
+    if(!boards[i]) throw new Error('There is no board "' + String(which).slice(0, 60) + '".');
+    showBoardAt(i);
+  },
+  renameBoard: (name) => { setBoardName(board, String(name)); renderAll(); return board.name; },
+  duplicateBoard: () => { const b = duplicateBoard(); if(!b) throw new Error('No more boards can be added.'); return b.name; },
+  removeBoard: () => { if(boards.length < 2) throw new Error('The last board can\'t be removed.'); removeBoard(board); },
+  move: (id, index) => { const ok = moveWidget(id, Number(index)); renderBoard(); return ok; },
+  setWide: (id, wide) => { const w = board.items.find(x => x.id === id); if(!w) throw new Error('There is no bar or chart "' + String(id).slice(0, 40) + '".'); w.wide = !!wide; saveBoardSoon(); renderBoard(); },
+  setColour: (id, colour, rect) => {
+    const c = colour === null ? null : cleanColour(colour);
+    if(colour !== null && !c) throw new Error('A colour is written #rrggbb.');
+    const w = board.items.find(x => x.id === id);
+    if(!w) throw new Error('There is no bar or chart "' + String(id).slice(0, 40) + '".');
+    if(w.kind === 'bar') w.colour = c;
+    else {
+      const k = findRect(rect).key;
+      if(!chartKeys(w).includes(k)) throw new Error('That rectangle isn\'t in this chart.');
+      const next = Object.assign({}, w.colours);
+      if(c) next[k] = c; else delete next[k];
+      w.colours = next;
+    }
+    saveBoardSoon();
+    renderBoard();
+  },
+  undo: () => undo(),
+  redo: () => redo(),
+  exportBoards: (all) => exportBoards(!!all),
+  importBoards: (data) => importBoardsText(typeof data === 'string' ? data : JSON.stringify(data)),
   reached: (id) => {
     const s = sliderById(id), reach = model.reach(s.key), hit = (k) => reach.has(k) || k === s.key;
     return board.charts.filter(c => chartKeys(c).some(hit)).map(c => c.id).concat(board.bars.filter(b => hit(b.key)).map(b => b.id));

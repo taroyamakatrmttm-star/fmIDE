@@ -27,6 +27,16 @@
     <button id="btnAddChart" class="gbar-btn needs-model" title="Columns of several rectangles, stacked or side by side, or a waterfall">+ Chart</button>
     <button id="btnAddSlider" class="gbar-btn needs-model" title="Change an input rectangle with a slider">+ Slider</button>
     <button id="btnResetAll" class="gbar-btn needs-model" title="Put every slider back to the model's own numbers">Reset all</button>
+    <button id="btnUndo" class="gbar-btn" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↶</button>
+    <button id="btnRedo" class="gbar-btn" title="Redo (Ctrl+Y)" aria-label="Redo" disabled>↷</button>
+    <details class="gbar-menu">
+      <summary class="gbar-btn" title="Save boards to a file, or add boards from one">Boards ▾</summary>
+      <div class="gbar-pop" role="menu">
+        <button type="button" role="menuitem" id="btnExportBoard" class="needs-model">Export this board</button>
+        <button type="button" role="menuitem" id="btnExportBoards" class="needs-model">Export all boards</button>
+        <button type="button" role="menuitem" id="btnImportBoards" class="needs-model">Import boards…</button>
+      </div>
+    </details>
     <button id="btnHelp" class="gbar-btn" title="Help (F1)">❓ Help</button>
   </div>
 </header>
@@ -46,6 +56,7 @@
     </div>
   </section>
 
+  <nav id="boardTabs" class="board-tabs hidden" role="tablist" aria-label="Boards"></nav>
   <section id="board" class="board hidden">
     <div class="board-col">
       <h2 class="col-head">Sliders</h2>
@@ -61,6 +72,7 @@
 </main>
 
 <input type="file" id="fileInput" accept=".fmide,application/json,.json" hidden>
+<input type="file" id="boardFileInput" accept="application/json,.json" hidden>
 
 <div id="confirmBox" class="dialog-back hidden" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
   <div class="dialog">

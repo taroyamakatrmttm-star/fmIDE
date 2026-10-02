@@ -8,6 +8,24 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'boards', date: '2026-10-02', title: 'Boards: tabs, arranging, colours, undo, files',
+    summary: 'Several boards per model, arranged by dragging, in your colours, with undo — and as files to share.',
+    what: [
+      'A model can have several boards, as tabs: + Board adds one; each can be renamed, duplicated or deleted.',
+      'Drag a bar, chart or slider by its handle (⠿) to move it — by mouse, finger or the arrow keys — and make a bar or chart wide or narrow (⇔).',
+      'Choose colours: a bar\'s, each rectangle\'s in a chart (click its colour in the key), each waterfall step\'s.',
+      '↶ Undo and ↷ Redo (Ctrl+Z, Ctrl+Y) for every change to the boards.',
+      'Boards ▾ exports a board, or all of them, as a file, and imports boards from one — or drop the file on the page.',
+    ],
+    why: 'To build several views of one model, lay them out the way you read them, and send them to others.',
+    how: [
+      'Press + Board for a new board.',
+      'Drag widgets by ⠿ and widen them with ⇔.',
+      'Boards ▾ → Export this board, and send the file.',
+    ],
+    notes: ['Where sliders are set is never saved: a board always opens on the model\'s own numbers.'],
+    see: ['boards', 'board-file'] },
+
   { id: 'charts', date: '2026-10-02', title: 'Charts: columns and waterfalls',
     summary: 'Stacked or side-by-side columns with an optional totals check, and waterfalls whose totals are checked.',
     what: [
