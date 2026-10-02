@@ -145,6 +145,7 @@ function drawChart(el, c, results){
   const problems = [];
   if(c.layout === 'flow') host.appendChild(drawFlow(c, results, problems));
   else host.appendChild(drawColumns(c, results, problems, key));
+  glide(host);
   // Rectangles in different units side by side or stacked don't add up: say so.
   const units = [...new Set(chartKeys(c).map(k => model.byKey.get(k)).filter(r => r && r.unit).map(r => r.unit))];
   if(units.length > 1) problems.push('This chart mixes units (' + units.join(', ') + '): its totals may not mean much.');
@@ -161,7 +162,7 @@ function partColours(c){
 }
 
 function drawColumns(c, results, problems, key){
-  const now = columnsFigures(c, results), was = columnsFigures(c, model.base);
+  const now = columnsFigures(c, results), was = columnsFigures(c, compareResults()); // A, or the model's own numbers
   const colours = partColours(c);
   const n = Math.max(1, now.length), ng = Math.max(1, c.groups.length);
   const labels = n * ng <= 12;
@@ -194,7 +195,7 @@ function drawColumns(c, results, problems, key){
           const k = c.groups[gi].parts[pi], v = r.value;
           const from = v >= 0 ? up : down, to = from + v;
           if(v >= 0) up = to; else down = to;
-          const rect = svg('rect', { class: 'c-part', x, y: Math.min(y(from), y(to)), width: bw, height: Math.max(v === 0 ? 0 : 1, Math.abs(y(to) - y(from))), fill: colours.get(k) });
+          const rect = animKey(svg('rect', { class: 'c-part', x, y: Math.min(y(from), y(to)), width: bw, height: Math.max(v === 0 ? 0 : 1, Math.abs(y(to) - y(from))), fill: colours.get(k) }), c.id + '|' + f.p + '|' + gi + '|' + pi);
           const before = was[i].groups[gi].parts[pi];
           const diff = before && !before.error ? fmtDiff(v, before.value) : '';
           rect.appendChild(svg('title', {}, name + ' · ' + partLabel(k) + ', ' + model.periods[f.p] + ': ' + fmtNum(v) + (diff ? ' — was ' + fmtNum(before.value) + ', ' + diff : '')));
@@ -242,7 +243,7 @@ function drawColumns(c, results, problems, key){
 }
 
 function drawFlow(c, results, problems){
-  const now = flowFigures(c, results), was = flowFigures(c, model.base);
+  const now = flowFigures(c, results), was = flowFigures(c, compareResults());
   const n = Math.max(1, now.length), labels = n <= 12;
   let lo = 0, hi = 0;
   now.concat(was).forEach(f => { if(!f.error){ lo = Math.min(lo, f.from, f.to); hi = Math.max(hi, f.from, f.to); } });
@@ -267,7 +268,7 @@ function drawFlow(c, results, problems){
     } else {
       if(prevEnd !== null && (s.role === 'add' || s.role === 'subtract')) g.appendChild(svg('line', { class: 'f-link', x1: x - (slot - bw), x2: x, y1: y(prevEnd), y2: y(prevEnd) }));
       const kind = (s.role === 'start' || s.role === 'total') ? 'f-total' : (f.to >= f.from ? 'f-up' : 'f-down');
-      const rect = svg('rect', { class: 'f-bar ' + kind, x, y: Math.min(y(f.from), y(f.to)), width: bw, height: Math.max(1, Math.abs(y(f.to) - y(f.from))) });
+      const rect = animKey(svg('rect', { class: 'f-bar ' + kind, x, y: Math.min(y(f.from), y(f.to)), width: bw, height: Math.max(1, Math.abs(y(f.to) - y(f.from))) }), c.id + '|' + i);
       if(c.colours && c.colours[s.key]) rect.style.fill = c.colours[s.key]; // a style, over the page's colours by direction
       const b = was[i];
       const diff = b && !b.error ? fmtDiff(f.value, b.value) : '';

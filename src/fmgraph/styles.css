@@ -198,3 +198,11 @@
   .mover-change.up{ color:var(--up); }
   .mover-change.down{ color:var(--down); }
   .mover-change.err{ color:var(--down); }
+
+  /* Comparing and moving (G4b): the A/B snapshot and gliding bars */
+  .compare-bar{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:0 0 10px; padding:7px 12px; border:1px solid var(--reach); border-radius:9px; background:#fffbeb; font-size:13px; }
+  .compare-mark{ display:inline-grid; place-items:center; width:22px; height:22px; border-radius:50%; background:var(--reach); color:#fff; font-weight:700; }
+  .compare-text{ flex:1 1 auto; }
+  .compare-btn{ padding:3px 10px; }
+  .gbar-btn[aria-pressed="true"]{ background:var(--reach); color:#1b2333; }
+  .bar-chart rect[data-anim]{ transform-box:view-box; transform-origin:0 0; }

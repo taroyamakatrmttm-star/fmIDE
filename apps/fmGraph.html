@@ -208,6 +208,14 @@
   .mover-change.up{ color:var(--up); }
   .mover-change.down{ color:var(--down); }
   .mover-change.err{ color:var(--down); }
+
+  /* Comparing and moving (G4b): the A/B snapshot and gliding bars */
+  .compare-bar{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:0 0 10px; padding:7px 12px; border:1px solid var(--reach); border-radius:9px; background:#fffbeb; font-size:13px; }
+  .compare-mark{ display:inline-grid; place-items:center; width:22px; height:22px; border-radius:50%; background:var(--reach); color:#fff; font-weight:700; }
+  .compare-text{ flex:1 1 auto; }
+  .compare-btn{ padding:3px 10px; }
+  .gbar-btn[aria-pressed="true"]{ background:var(--reach); color:#1b2333; }
+  .bar-chart rect[data-anim]{ transform-box:view-box; transform-origin:0 0; }
 /* The Help panel (build step 10; docs/step10-help.md), shared by fmIDE and ExcelExporter with
    src/shared/help-panel.js. Each app sets --help-top (where the panel starts) and makes room
    for the panel under body.help-open. */
@@ -296,6 +304,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     <button id="btnAddChart" class="gbar-btn needs-model" title="Columns of several rectangles, stacked or side by side, or a waterfall">+ Chart</button>
     <button id="btnAddSlider" class="gbar-btn needs-model" title="Change an input rectangle with a slider">+ Slider</button>
     <button id="btnResetAll" class="gbar-btn needs-model" title="Put every slider back to the model's own numbers">Reset all</button>
+    <button id="btnPinA" class="gbar-btn needs-model" aria-pressed="false" title="Keep where the sliders are now as A, and compare with it">📌 Pin as A</button>
     <button id="btnUndo" class="gbar-btn" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↶</button>
     <button id="btnRedo" class="gbar-btn" title="Redo (Ctrl+Y)" aria-label="Redo" disabled>↷</button>
     <details class="gbar-menu">
@@ -326,6 +335,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   </section>
 
   <nav id="boardTabs" class="board-tabs hidden" role="tablist" aria-label="Boards"></nav>
+  <div id="compareBar" class="compare-bar hidden" role="status"></div>
   <section id="board" class="board hidden">
     <div class="board-col">
       <h2 class="col-head">Sliders</h2>
@@ -2835,6 +2845,7 @@ async function loadModel(system, name, opts){
   model = m;
   linkedToFmide = !!(opts && opts.fromFmide);
   clearResultCache();
+  pinA = null; forgetGeometry(); renderCompareBar(); // a new model: no A, nothing to glide from (05e-compare.js)
   await loadBoardFor(m, opts && opts.boards);
   showBoard();
 }
@@ -3739,6 +3750,7 @@ function paintReach(){
 
 function updateValues(){
   if(!model) return;
+  startDraw(); // whether bars glide this time (05e-compare.js)
   const results = currentResults();
   board.bars.forEach(b => {
     const el = document.querySelector('.bar-widget[data-id="' + b.id + '"]');
@@ -3768,7 +3780,7 @@ function drawBars(el, b, results){
   const rect = model.byKey.get(b.key);
   const ps = periodsOf(b.periods);
   const now = ps.map(p => resultOf(results, rect, p));
-  const base = ps.map(p => resultOf(model.base, rect, p));
+  const base = ps.map(p => resultOf(compareResults(), rect, p)); // A, or the model's own numbers (05e-compare.js)
   const nums = [];
   now.concat(base).forEach(r => { if(!r.error) nums.push(r.value); });
   let lo = Math.min(0, ...nums), hi = Math.max(0, ...nums);
@@ -3794,7 +3806,7 @@ function drawBars(el, b, results){
       g.appendChild(svg('title', {}, model.periods[p] + ': ' + errorText(r.error)));
     } else {
       const y0 = y(0), y1 = y(r.value);
-      const bar = svg('rect', { class: 'b-now' + (r.value < 0 ? ' neg' : ''), x, y: Math.min(y0, y1), width: bw, height: Math.max(1, Math.abs(y1 - y0)) });
+      const bar = animKey(svg('rect', { class: 'b-now' + (r.value < 0 ? ' neg' : ''), x, y: Math.min(y0, y1), width: bw, height: Math.max(1, Math.abs(y1 - y0)) }), b.id + '|' + p);
       if(b.colour) bar.style.fill = b.colour; // a style, so the page's usual bar colour doesn't paint over it
       g.appendChild(bar);
       if(!was.error && was.value !== r.value){
@@ -3815,6 +3827,7 @@ function drawBars(el, b, results){
   const host = el.querySelector('.bar-chart-host');
   host.textContent = '';
   host.appendChild(chart);
+  glide(host);
   const list = el.querySelector('.bar-errors');
   list.textContent = '';
   problems.forEach((periods, code) => list.appendChild(make('li', null, periods.join(', ') + ': ' + errorText(code))));
@@ -3966,6 +3979,7 @@ function drawChart(el, c, results){
   const problems = [];
   if(c.layout === 'flow') host.appendChild(drawFlow(c, results, problems));
   else host.appendChild(drawColumns(c, results, problems, key));
+  glide(host);
   // Rectangles in different units side by side or stacked don't add up: say so.
   const units = [...new Set(chartKeys(c).map(k => model.byKey.get(k)).filter(r => r && r.unit).map(r => r.unit))];
   if(units.length > 1) problems.push('This chart mixes units (' + units.join(', ') + '): its totals may not mean much.');
@@ -3982,7 +3996,7 @@ function partColours(c){
 }
 
 function drawColumns(c, results, problems, key){
-  const now = columnsFigures(c, results), was = columnsFigures(c, model.base);
+  const now = columnsFigures(c, results), was = columnsFigures(c, compareResults()); // A, or the model's own numbers
   const colours = partColours(c);
   const n = Math.max(1, now.length), ng = Math.max(1, c.groups.length);
   const labels = n * ng <= 12;
@@ -4015,7 +4029,7 @@ function drawColumns(c, results, problems, key){
           const k = c.groups[gi].parts[pi], v = r.value;
           const from = v >= 0 ? up : down, to = from + v;
           if(v >= 0) up = to; else down = to;
-          const rect = svg('rect', { class: 'c-part', x, y: Math.min(y(from), y(to)), width: bw, height: Math.max(v === 0 ? 0 : 1, Math.abs(y(to) - y(from))), fill: colours.get(k) });
+          const rect = animKey(svg('rect', { class: 'c-part', x, y: Math.min(y(from), y(to)), width: bw, height: Math.max(v === 0 ? 0 : 1, Math.abs(y(to) - y(from))), fill: colours.get(k) }), c.id + '|' + f.p + '|' + gi + '|' + pi);
           const before = was[i].groups[gi].parts[pi];
           const diff = before && !before.error ? fmtDiff(v, before.value) : '';
           rect.appendChild(svg('title', {}, name + ' · ' + partLabel(k) + ', ' + model.periods[f.p] + ': ' + fmtNum(v) + (diff ? ' — was ' + fmtNum(before.value) + ', ' + diff : '')));
@@ -4063,7 +4077,7 @@ function drawColumns(c, results, problems, key){
 }
 
 function drawFlow(c, results, problems){
-  const now = flowFigures(c, results), was = flowFigures(c, model.base);
+  const now = flowFigures(c, results), was = flowFigures(c, compareResults());
   const n = Math.max(1, now.length), labels = n <= 12;
   let lo = 0, hi = 0;
   now.concat(was).forEach(f => { if(!f.error){ lo = Math.min(lo, f.from, f.to); hi = Math.max(hi, f.from, f.to); } });
@@ -4088,7 +4102,7 @@ function drawFlow(c, results, problems){
     } else {
       if(prevEnd !== null && (s.role === 'add' || s.role === 'subtract')) g.appendChild(svg('line', { class: 'f-link', x1: x - (slot - bw), x2: x, y1: y(prevEnd), y2: y(prevEnd) }));
       const kind = (s.role === 'start' || s.role === 'total') ? 'f-total' : (f.to >= f.from ? 'f-up' : 'f-down');
-      const rect = svg('rect', { class: 'f-bar ' + kind, x, y: Math.min(y(f.from), y(f.to)), width: bw, height: Math.max(1, Math.abs(y(f.to) - y(f.from))) });
+      const rect = animKey(svg('rect', { class: 'f-bar ' + kind, x, y: Math.min(y(f.from), y(f.to)), width: bw, height: Math.max(1, Math.abs(y(f.to) - y(f.from))) }), c.id + '|' + i);
       if(c.colours && c.colours[s.key]) rect.style.fill = c.colours[s.key]; // a style, over the page's colours by direction
       const b = was[i];
       const diff = b && !b.error ? fmtDiff(f.value, b.value) : '';
@@ -4292,7 +4306,8 @@ function startDrag(ev, w, el){
 //   reach meanwhile, as before; the trace comes back when it is still. Worked out from the
 //   arrows (model.reach, model.reach.path), like the lighting.
 // - Biggest movers: the rectangles whose values the sliders change most, against the model's
-//   own numbers (the owner's choice: the dashed outlines' comparison, steady while dragging),
+//   own numbers (the owner's choice: the dashed outlines' comparison, steady while dragging) —
+//   or against A while one is pinned (G4b, 05e-compare.js),
 //   from the whole model, not only the board. Ranked by the change in % in the period where it
 //   is largest (a rectangle that couldn't be worked out before, or can't now, comes first);
 //   inputs left out (the sliders set them). + Bar puts one on the board. Worked out only while
@@ -4422,13 +4437,14 @@ function clearTracePaint(){
 // Every rectangle that isn't an input, with the period where it changed most (against the
 // model's own numbers), largest change in % first. Changes within AGREE_TOLERANCE are none.
 function biggestMovers(results, limit){
-  if(results === model.base) return [];
+  const base = compareResults(); // A when pinned (05e-compare.js), else the model's own numbers
+  if(results === base) return [];
   const out = [];
   model.rects.forEach(rect => {
     if(rect.input) return;
     let best = null;
     model.periods.forEach((_, p) => {
-      const now = resultOf(results, rect, p), was = resultOf(model.base, rect, p);
+      const now = resultOf(results, rect, p), was = resultOf(base, rect, p);
       let m = null;
       if(now.error || was.error){
         if(!!now.error !== !!was.error) m = { p, score: Infinity, size: Infinity, now, was };
@@ -4483,6 +4499,109 @@ document.addEventListener('keydown', (ev) => {
   if(!$('confirmBox').classList.contains('hidden')) return;
   setTrace(null);
 });
+// ============================================================
+// Comparing and moving (G4b).
+// - The A/B snapshot: 📌 Pin as A keeps where the sliders are now (the numbers they lay over
+//   the model, so it holds on every board and through undo). Until it is unpinned, the dashed
+//   outlines, the difference labels and Biggest movers compare with A instead of the model's
+//   own numbers; a strip above the board says what A is. ⇄ Swap puts the sliders where A had
+//   them and keeps where they were as the new A. Like the sliders' positions, A is never
+//   saved; opening a model clears it. Nothing here is an undo step.
+// - Animation: when values change, each bar glides from where it was to where it is (ANIM_MS),
+//   with the Web Animations API on the redrawn SVG. Not while a slider is being dragged (a
+//   redraw within DRAG_GAP_MS of the last one), and never when the device asks for reduced
+//   motion. Where each bar was is kept by widget and position (`lastGeometry`), so a widget
+//   drawn again (a reset, a typed number, undo) glides too.
+// ============================================================
+let pinA = null;   // { overrides, sliders: [{ key, mode, periods, value }], label }
+
+// What the outlines and differences compare with: A, or the model's own numbers.
+function compareResults(){ return pinA ? resultsWith(pinA.overrides) : model.base; }
+
+function sliderSetting(s){ return { key: s.key, mode: s.mode, periods: JSON.stringify(s.periods), value: s.value }; }
+
+// "Price 13, Volume +5%", or the model's own numbers when no slider is moved.
+function settingsLabel(list){
+  const words = list.filter(s => s.value !== null && model.byKey.has(s.key)).map(s => model.byKey.get(s.key).name + ' '
+    + (s.mode === 'shift' ? (s.value >= 0 ? '+' : '−') + fmtNum(Math.abs(s.value)) + '%' : fmtNum(s.value)));
+  return words.length ? words.join(', ') : 'the model\'s own numbers';
+}
+
+function pinAsA(){
+  if(!model) return null;
+  const sliders = board.sliders.map(sliderSetting);
+  pinA = { overrides: overridesFor(board.sliders), sliders, label: settingsLabel(sliders) };
+  renderCompareBar();
+  updateValues();
+  return pinA.label;
+}
+function unpinA(){
+  pinA = null;
+  renderCompareBar();
+  if(model) updateValues();
+}
+// Swap: the sliders go where A had them (a slider A didn't have goes back to the model's own
+// number), and where they were becomes A.
+function swapWithA(){
+  if(!pinA || !model) return null;
+  const old = pinA.sliders.slice();
+  pinAsA();
+  board.sliders.forEach(s => {
+    const me = sliderSetting(s);
+    const i = old.findIndex(o => o.key === me.key && o.mode === me.mode && o.periods === me.periods);
+    s.value = i >= 0 ? old.splice(i, 1)[0].value : null;
+  });
+  renderBoard();
+  return pinA.label;
+}
+
+function renderCompareBar(){
+  const bar = $('compareBar');
+  bar.textContent = '';
+  bar.classList.toggle('hidden', !pinA || !model);
+  $('btnPinA').setAttribute('aria-pressed', pinA ? 'true' : 'false');
+  if(!pinA || !model) return;
+  bar.appendChild(make('span', 'compare-mark', 'A'));
+  const text = make('span', 'compare-text');
+  text.appendChild(make('strong', null, 'Comparing with A: '));
+  text.appendChild(document.createTextNode(pinA.label));
+  bar.appendChild(text);
+  const button = (label, title, fn) => { const b = make('button', 'compare-btn', label); b.type = 'button'; b.title = title; b.addEventListener('click', fn); bar.appendChild(b); return b; };
+  button('⇄ Swap', 'Put the sliders where A had them, and keep where they are now as A', () => swapWithA());
+  button('Unpin', 'Compare with the model\'s own numbers again', () => unpinA());
+}
+
+$('btnPinA').addEventListener('click', () => pinAsA());
+
+// ---- Animation ----
+const ANIM_MS = 200;
+const DRAG_GAP_MS = 150;
+let lastGeometry = new Map();   // anim key → { y, h }
+let lastDrawAt = 0;
+let animateNow = false;
+const reducedMotion = (() => { try{ return window.matchMedia('(prefers-reduced-motion: reduce)'); }catch(e){ return null; } })();
+
+// Called once per redraw, before the widgets draw: whether bars glide this time.
+function startDraw(){
+  const now = performance.now();
+  animateNow = now - lastDrawAt > DRAG_GAP_MS && !(reducedMotion && reducedMotion.matches);
+  lastDrawAt = now;
+}
+// A bar that may glide: its key says which widget and which bar in it.
+function animKey(rect, key){ rect.dataset.anim = key; return rect; }
+// After a widget's SVG is in place: glide each bar from where it was.
+function glide(host){
+  host.querySelectorAll('rect[data-anim]').forEach(r => {
+    const key = r.dataset.anim, y1 = Number(r.getAttribute('y')), h1 = Number(r.getAttribute('height'));
+    const was = lastGeometry.get(key);
+    lastGeometry.set(key, { y: y1, h: h1 });
+    if(!animateNow || !was || h1 < 0.5 || typeof r.animate !== 'function') return;
+    if(Math.abs(was.y - y1) < 0.5 && Math.abs(was.h - h1) < 0.5) return;
+    const a = was.h / h1, b = was.y - a * y1;
+    r.animate([{ transform: 'matrix(1,0,0,' + a + ',0,' + b + ')' }, { transform: 'matrix(1,0,0,1,0,0)' }], { duration: ANIM_MS, easing: 'ease-out' });
+  });
+}
+function forgetGeometry(){ lastGeometry = new Map(); }
 // ============================================================
 // The page: opening a model (the file picker, a file dropped anywhere, the sample, or fmIDE),
 // the top bar's buttons, and ← Back to fmIDE.
@@ -5364,7 +5483,7 @@ const FMGRAPH_HELP_TOPICS = [
     summary: 'A rectangle\'s value in each period you choose.',
     body: [
       { p: 'A bar widget shows one rectangle\'s value as a bar for each period: all periods, one period, or a range of periods. Choose the rectangle at the top of the widget.' },
-      { p: 'When a slider has changed something it reaches, a dashed outline shows the model\'s own value and a label shows the difference, for example +250 (+12%). Point at a bar to read its numbers.' },
+      { p: 'When a slider has changed something it reaches, a dashed outline shows the model\'s own value and a label shows the difference, for example +250 (+12%) — or A\'s value, while one is pinned (see Comparing two what-ifs). Point at a bar to read its numbers.' },
       { p: 'A bar marked ! couldn\'t be worked out in that period (for example a division by zero); the reason is listed below the chart.' },
       { steps: ['Press + Bar at the top.', 'Choose a rectangle from the list.', 'Choose which periods to show.'] },
       { see: ['sliders', 'reach'] },
@@ -5424,9 +5543,19 @@ const FMGRAPH_HELP_TOPICS = [
     summary: 'What reaches a bar, and what a slider changes most.',
     body: [
       { p: 'Trace: press 🔍 on a bar or chart. The sliders that reach it light up (the others fade), and a note under its heading shows the way each one gets there — for example Price → Revenue → Gross profit → Profit. It also lists the inputs that reach it but have no slider yet; + Slider adds one. Press 🔍 again, × on the note, or Esc to stop tracing. While you move a slider, its own reach shows; the trace comes back when you let go.' },
-      { p: 'Biggest movers, under the sliders, lists the rectangles your sliders change most — from the whole model, not only the board — against the model\'s own numbers, the biggest change in % first, each in the period where it changed most. A rectangle that can no longer be worked out (or now can) comes first. + Bar puts one on the board. Close the list to stop it being worked out on a very large model.' },
+      { p: 'Biggest movers, under the sliders, lists the rectangles your sliders change most — from the whole model, not only the board — against the model\'s own numbers (or A, while one is pinned), the biggest change in % first, each in the period where it changed most. A rectangle that can no longer be worked out (or now can) comes first. + Bar puts one on the board. Close the list to stop it being worked out on a very large model.' },
       { tip: 'A rectangle you expected to move but that isn\'t in the list, or a trace that shows no way from an input you thought mattered, often points at a missing or wrong arrow in the model.' },
       { see: ['reach', 'sliders'] },
+    ] },
+  { id: 'compare', group: 'board', title: 'Comparing two what-ifs (A and B)',
+    keywords: 'compare a b snapshot pin swap unpin scenario what if before after difference animation glide motion',
+    summary: 'Pin where the sliders are as A, try something else, and see the difference.',
+    body: [
+      { p: 'Set the sliders, then press 📌 Pin as A. Until you unpin it, the dashed outlines, the difference labels (+700) and Biggest movers compare with A instead of the model\'s own numbers; the strip above the board says what A is, for example "Price 13, Volume +10%".' },
+      { p: '⇄ Swap puts the sliders where A had them, and keeps where they were as the new A — a quick way to flip between two what-ifs. Unpin compares with the model\'s own numbers again. Press 📌 Pin as A again to make where the sliders are now the new A.' },
+      { p: 'A holds on every board of the model, and through undo. Like where the sliders are, it isn\'t saved: opening a model starts without one.' },
+      { p: 'When values change — a reset, a typed number, Swap — the bars glide to their new heights. While you drag a slider they follow it straight away, and if your device is set to reduce motion they never glide.' },
+      { see: ['sliders', 'explore'] },
     ] },
   { id: 'speed', group: 'board', title: 'Large models',
     keywords: 'slow speed large working out ahead fast smooth',
@@ -5458,6 +5587,22 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'compare-a-b', date: '2026-10-02', title: 'Compare two what-ifs, and bars that glide',
+    summary: 'Pin where the sliders are as A, try something else, and see the difference; bars now glide to new values.',
+    what: [
+      '📌 Pin as A keeps where the sliders are. The dashed outlines, difference labels and Biggest movers then compare with A instead of the model\'s own numbers, on every board, until you unpin it.',
+      '⇄ Swap flips between A and where the sliders are now.',
+      'Bars glide to their new heights when values change — not while you drag, and never when your device is set to reduce motion.',
+    ],
+    why: 'To weigh one what-if against another, not only against the model as it is.',
+    how: [
+      'Set the sliders for your first idea and press 📌 Pin as A.',
+      'Move the sliders to your second idea and read the differences.',
+      'Press ⇄ Swap to flip between them.',
+    ],
+    notes: ['A is never saved: opening a model starts without one.'],
+    see: ['compare'] },
+
   { id: 'trace-and-movers', date: '2026-10-02', title: 'Trace and Biggest movers',
     summary: 'See what reaches a bar, and which rectangles your sliders change most.',
     what: [
@@ -5721,6 +5866,12 @@ window.fmGraph = Object.freeze({
     return { sliders: t.sliders.map(s => ({ id: s.id, path: s.path.slice() })), inputs: t.inputs.map(r => r.name) };
   },
   traced: () => traceId,
+  // The A/B snapshot (G4b): pinA() keeps where the sliders are as A (returns its words),
+  // unpinA(), swapA() (returns the new A's words), comparing() — A's words, or null.
+  pinA: () => pinAsA(),
+  unpinA: () => { unpinA(); },
+  swapA: () => { if(!pinA) throw new Error('Nothing is pinned as A.'); return swapWithA(); },
+  comparing: () => pinA ? pinA.label : null,
   // movers(n): the rectangles the sliders change most (default 8), against the model's own numbers.
   movers: (n) => biggestMovers(currentResults(), Math.max(1, Math.min(200, Number(n) || MOVERS_SHOWN))).map(m => ({
     name: m.rect.name, canvas: m.rect.canvasName, period: model.periods[m.p],

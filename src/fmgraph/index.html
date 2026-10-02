@@ -27,6 +27,7 @@
     <button id="btnAddChart" class="gbar-btn needs-model" title="Columns of several rectangles, stacked or side by side, or a waterfall">+ Chart</button>
     <button id="btnAddSlider" class="gbar-btn needs-model" title="Change an input rectangle with a slider">+ Slider</button>
     <button id="btnResetAll" class="gbar-btn needs-model" title="Put every slider back to the model's own numbers">Reset all</button>
+    <button id="btnPinA" class="gbar-btn needs-model" aria-pressed="false" title="Keep where the sliders are now as A, and compare with it">📌 Pin as A</button>
     <button id="btnUndo" class="gbar-btn" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↶</button>
     <button id="btnRedo" class="gbar-btn" title="Redo (Ctrl+Y)" aria-label="Redo" disabled>↷</button>
     <details class="gbar-menu">
@@ -57,6 +58,7 @@
   </section>
 
   <nav id="boardTabs" class="board-tabs hidden" role="tablist" aria-label="Boards"></nav>
+  <div id="compareBar" class="compare-bar hidden" role="status"></div>
   <section id="board" class="board hidden">
     <div class="board-col">
       <h2 class="col-head">Sliders</h2>

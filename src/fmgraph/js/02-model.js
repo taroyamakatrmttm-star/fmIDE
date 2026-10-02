@@ -106,6 +106,7 @@ async function loadModel(system, name, opts){
   model = m;
   linkedToFmide = !!(opts && opts.fromFmide);
   clearResultCache();
+  pinA = null; forgetGeometry(); renderCompareBar(); // a new model: no A, nothing to glide from (05e-compare.js)
   await loadBoardFor(m, opts && opts.boards);
   showBoard();
 }
