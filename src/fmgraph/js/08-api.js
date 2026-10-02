@@ -17,6 +17,12 @@
 //   setSlider(id, value), resetSlider(id), resetAll(), remove(id)
 //   board()        → the board ({ kind: 'fmIDE-graph-board', … }) with each slider's value
 //   reached(id)    → the ids of the bars a slider reaches
+//   boards()       → [{ name, shown }] (G3a); addBoard(name?), showBoard(index or name),
+//   renameBoard(name), duplicateBoard(), removeBoard() (the one shown; the last can't go)
+//   move(id, index) (a bar or chart among the items, a slider among the sliders),
+//   setWide(id, wide), setColour(id, '#rrggbb' or null, rect?) (a bar's, or a chart rectangle's)
+//   undo(), redo() → whether there was one; exportBoards(all?) → the file's data (downloads it)
+//   importBoards(textOrObject) → Promise<number of boards added>
 //   calcTime()     → how long one run of the model takes, in milliseconds
 // ============================================================
 function findRect(rect, canvas){
@@ -82,7 +88,7 @@ window.fmGraph = Object.freeze({
       : { layout: 'columns', title: spec.title, periods: periodSpec(spec.periods), check: spec.check === true,
           groups: (spec.groups || []).map(g => ({ name: g.name, parts: (g.parts || []).map(p => at(rectRef(p))) })) };
     const c = cleanChart(raw, (w) => model.byKey.get(keyOf(w.canvasId, w.nodeId)), model.periods.length);
-    board.charts.push(c);
+    board.items.push(c);
     saveBoardSoon();
     renderBoard();
     return c.id;
@@ -105,12 +111,44 @@ window.fmGraph = Object.freeze({
   remove: (id) => { removeWidget(id); renderBoard(); },
   board: () => {
     if(!model) return null;
-    const d = boardData();
-    d.bars.forEach((b, i) => { b.id = board.bars[i].id; });
-    d.charts.forEach((c, i) => { c.id = board.charts[i].id; });
+    const d = boardData(board);
+    d.items.forEach((w, i) => { w.id = board.items[i].id; });
     d.sliders.forEach((s, i) => { s.id = board.sliders[i].id; s.value = board.sliders[i].value; });
-    return d;
+    return Object.assign({ kind: 'fmIDE-graph-board', version: 1 }, d,
+      { bars: d.items.filter(w => w.type === 'bar'), charts: d.items.filter(w => w.type === 'chart') });
   },
+  boards: () => boards.map(b => ({ name: b.name, shown: b === board })),
+  addBoard: (name) => { const b = addBoard(typeof name === 'string' ? cleanText(name, 60) : ''); if(!b) throw new Error('No more boards can be added.'); return b.name; },
+  showBoard: (which) => {
+    const i = typeof which === 'number' ? which : boards.findIndex(b => b.name === String(which));
+    if(!boards[i]) throw new Error('There is no board "' + String(which).slice(0, 60) + '".');
+    showBoardAt(i);
+  },
+  renameBoard: (name) => { setBoardName(board, String(name)); renderAll(); return board.name; },
+  duplicateBoard: () => { const b = duplicateBoard(); if(!b) throw new Error('No more boards can be added.'); return b.name; },
+  removeBoard: () => { if(boards.length < 2) throw new Error('The last board can\'t be removed.'); removeBoard(board); },
+  move: (id, index) => { const ok = moveWidget(id, Number(index)); renderBoard(); return ok; },
+  setWide: (id, wide) => { const w = board.items.find(x => x.id === id); if(!w) throw new Error('There is no bar or chart "' + String(id).slice(0, 40) + '".'); w.wide = !!wide; saveBoardSoon(); renderBoard(); },
+  setColour: (id, colour, rect) => {
+    const c = colour === null ? null : cleanColour(colour);
+    if(colour !== null && !c) throw new Error('A colour is written #rrggbb.');
+    const w = board.items.find(x => x.id === id);
+    if(!w) throw new Error('There is no bar or chart "' + String(id).slice(0, 40) + '".');
+    if(w.kind === 'bar') w.colour = c;
+    else {
+      const k = findRect(rect).key;
+      if(!chartKeys(w).includes(k)) throw new Error('That rectangle isn\'t in this chart.');
+      const next = Object.assign({}, w.colours);
+      if(c) next[k] = c; else delete next[k];
+      w.colours = next;
+    }
+    saveBoardSoon();
+    renderBoard();
+  },
+  undo: () => undo(),
+  redo: () => redo(),
+  exportBoards: (all) => exportBoards(!!all),
+  importBoards: (data) => importBoardsText(typeof data === 'string' ? data : JSON.stringify(data)),
   reached: (id) => {
     const s = sliderById(id), reach = model.reach(s.key), hit = (k) => reach.has(k) || k === s.key;
     return board.charts.filter(c => chartKeys(c).some(hit)).map(c => c.id).concat(board.bars.filter(b => hit(b.key)).map(b => b.id));

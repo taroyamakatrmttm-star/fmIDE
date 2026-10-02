@@ -18,9 +18,10 @@ let updatePending = false;
 function showBoard(){
   $('welcome').classList.add('hidden');
   $('board').classList.remove('hidden');
+  $('boardTabs').classList.remove('hidden');
   $('modelName').textContent = model ? model.name : '';
   syncPageState();
-  renderBoard();
+  renderAll();
   if(model && model.baseMs >= SLOW_MS) setCalcNote('');
 }
 
@@ -78,6 +79,18 @@ function periodsChooser(spec, onChange){
   return wrap;
 }
 
+// A colour box (the browser's own picker); onChange gets '#rrggbb'.
+const DEFAULT_BAR_COLOUR = '#0f766e';
+function colourPicker(value, label, onChange){
+  const c = make('input', 'colour-pick');
+  c.type = 'color';
+  c.value = cleanColour(value) || DEFAULT_BAR_COLOUR;
+  c.title = label;
+  c.setAttribute('aria-label', label);
+  c.addEventListener('change', () => { const v = cleanColour(c.value); if(v) onChange(v); });
+  return c;
+}
+
 function removeButton(id, what){
   const x = make('button', 'widget-remove', '×');
   x.type = 'button';
@@ -93,9 +106,14 @@ function renderBoard(){
   sliders.textContent = '';
   if(!model) return;
   board.sliders.forEach(s => sliders.appendChild(sliderWidget(s)));
-  board.charts.forEach(c => bars.appendChild(chartWidget(c)));
-  board.bars.forEach(b => bars.appendChild(barWidget(b)));
-  $('noBars').classList.toggle('hidden', board.bars.length + board.charts.length > 0);
+  board.items.forEach(w => {
+    const el = w.kind === 'chart' ? chartWidget(w) : barWidget(w);
+    el.classList.toggle('wide', !!w.wide);
+    el.querySelector('.widget-head').prepend(arrangeControls(w, el));
+    bars.appendChild(el);
+  });
+  board.sliders.forEach(s => { const el = sliders.querySelector('.slider-widget[data-id="' + s.id + '"]'); if(el) el.querySelector('.widget-head').prepend(arrangeControls(s, el)); });
+  $('noBars').classList.toggle('hidden', board.items.length > 0);
   $('noSliders').classList.toggle('hidden', board.sliders.length > 0);
   updateValues();
 }
@@ -109,6 +127,7 @@ function barWidget(b){
   head.append(sel, removeButton(b.id, 'bar'));
   const row = make('div', 'widget-row');
   row.appendChild(periodsChooser(b.periods, (p) => { b.periods = p; saveBoardSoon(); updateValues(); }));
+  row.appendChild(colourPicker(b.colour || DEFAULT_BAR_COLOUR, 'Bar colour', (c) => { b.colour = c === DEFAULT_BAR_COLOUR ? null : c; saveBoardSoon(); updateValues(); }));
   const rect = model.byKey.get(b.key);
   w.append(head, row);
   if(rect.unit) w.appendChild(make('div', 'widget-unit', 'In ' + rect.unit));
@@ -311,7 +330,9 @@ function drawBars(el, b, results){
       g.appendChild(svg('title', {}, model.periods[p] + ': ' + errorText(r.error)));
     } else {
       const y0 = y(0), y1 = y(r.value);
-      g.appendChild(svg('rect', { class: 'b-now' + (r.value < 0 ? ' neg' : ''), x, y: Math.min(y0, y1), width: bw, height: Math.max(1, Math.abs(y1 - y0)) }));
+      const bar = svg('rect', { class: 'b-now' + (r.value < 0 ? ' neg' : ''), x, y: Math.min(y0, y1), width: bw, height: Math.max(1, Math.abs(y1 - y0)) });
+      if(b.colour) bar.setAttribute('fill', b.colour);
+      g.appendChild(bar);
       if(!was.error && was.value !== r.value){
         const yb = y(was.value);
         g.appendChild(svg('rect', { class: 'b-base', x, y: Math.min(y0, yb), width: bw, height: Math.max(1, Math.abs(yb - y0)) }));

@@ -12,6 +12,9 @@
 //            steps up or down from the running total), 'total' (a full bar of that rectangle's
 //            own value, checked against the steps before it; the flow carries on from it).
 //
+// A chart may give any of its rectangles its own colour: colours { key: '#rrggbb' }, kept in the
+// file on that part or step (`colour`).
+//
 // Numbers agree when they differ by less than a millionth of their size (AGREE_TOLERANCE):
 // tiny rounding in the calculation is ignored, any real gap is not.
 // ============================================================
@@ -26,27 +29,30 @@ const cleanText = (v, max) => typeof v === 'string' ? v.replace(/[\u0000-\u001f]
 function cleanChart(raw, rectFor, count){
   if(!raw || typeof raw !== 'object') return null;
   const title = cleanText(raw.title, CHART_LIMITS.title);
+  const colours = {};
+  const keep = (entry, r) => { const c = cleanColour(entry && entry.colour); if(c) colours[r.key] = c; return r; };
   if(raw.layout === 'flow'){
     const steps = (Array.isArray(raw.steps) ? raw.steps : []).slice(0, CHART_LIMITS.steps).map(s => {
       const r = rectFor(s);
-      return r ? { key: r.key, role: FLOW_ROLES.includes(s.role) ? s.role : 'add' } : null;
+      return r ? { key: keep(s, r).key, role: FLOW_ROLES.includes(s.role) ? s.role : 'add' } : null;
     }).filter(Boolean);
     const p = Math.round(Number(raw.period));
-    return { id: newWidgetId('c'), layout: 'flow', title, period: Number.isFinite(p) && p >= 0 && p < count ? p : 0, steps };
+    return { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'flow', title, period: Number.isFinite(p) && p >= 0 && p < count ? p : 0, steps, colours };
   }
   const groups = (Array.isArray(raw.groups) ? raw.groups : []).slice(0, CHART_LIMITS.groups).map(g => ({
     name: cleanText(g && g.name, CHART_LIMITS.name),
-    parts: (g && Array.isArray(g.parts) ? g.parts : []).slice(0, CHART_LIMITS.parts).map(rectFor).filter(Boolean).map(r => r.key),
+    parts: (g && Array.isArray(g.parts) ? g.parts : []).slice(0, CHART_LIMITS.parts).map(p => { const r = rectFor(p); return r ? keep(p, r) : null; }).filter(Boolean).map(r => r.key),
   }));
   if(!groups.length) groups.push({ name: '', parts: [] });
-  return { id: newWidgetId('c'), layout: 'columns', title, periods: cleanPeriods(raw.periods, count), groups, check: raw.check === true };
+  return { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'columns', title, periods: cleanPeriods(raw.periods, count), groups, check: raw.check === true, colours };
 }
 
 // A chart's file form; at(key) gives a rectangle's { canvasId, nodeId, name }.
 function chartData(c, at){
-  if(c.layout === 'flow') return { layout: 'flow', title: c.title, period: c.period, steps: c.steps.map(s => Object.assign(at(s.key), { role: s.role })) };
+  const withColour = (key, extra) => Object.assign(at(key), extra || {}, c.colours && c.colours[key] ? { colour: c.colours[key] } : {});
+  if(c.layout === 'flow') return { layout: 'flow', title: c.title, period: c.period, steps: c.steps.map(s => withColour(s.key, { role: s.role })) };
   return { layout: 'columns', title: c.title, periods: Object.assign({}, c.periods), check: c.check,
-    groups: c.groups.map(g => ({ name: g.name, parts: g.parts.map(at) })) };
+    groups: c.groups.map(g => ({ name: g.name, parts: g.parts.map(k => withColour(k)) })) };
 }
 
 // A new chart: columns with one group holding one calculated rectangle, or a flow with one step.
@@ -54,9 +60,9 @@ function addChart(layout){
   if(board.charts.length >= BOARD_LIMIT) return null;
   const first = model.rects.find(r => !r.input) || model.rects[0];
   const c = layout === 'flow'
-    ? { id: newWidgetId('c'), layout: 'flow', title: '', period: 0, steps: first ? [{ key: first.key, role: 'start' }] : [] }
-    : { id: newWidgetId('c'), layout: 'columns', title: '', periods: { mode: 'all' }, groups: [{ name: '', parts: first ? [first.key] : [] }], check: false };
-  board.charts.push(c);
+    ? { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'flow', title: '', period: 0, steps: first ? [{ key: first.key, role: 'start' }] : [], colours: {} }
+    : { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'columns', title: '', periods: { mode: 'all' }, groups: [{ name: '', parts: first ? [first.key] : [] }], check: false, colours: {} };
+  board.items.push(c);
   saveBoardSoon();
   return c;
 }

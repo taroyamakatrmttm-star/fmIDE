@@ -2,6 +2,13 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph boards (step 15, phase G3a)
+- **Several boards per model, as tabs**: + Board, rename, duplicate, delete (asked). Each has its own bars, charts and sliders.
+- **Arranging**: drag a bar, chart or slider by its handle (⠿) — mouse, finger or the arrow keys — and make bars and charts wide or narrow (⇔), in a two-column grid.
+- **Colours** for bars, a chart's rectangles (click the key) and waterfall steps.
+- **Undo / Redo** (↶ ↷, Ctrl+Z / Ctrl+Y) for every change to the boards; moving a slider is not one.
+- **The board file** (`fmIDE-graph-board` 1): Boards ▾ → Export this board / Export all boards / Import boards…, or drop a board file on the page; widgets on rectangles the model doesn't have are left out and counted. Boards kept by the earlier fmGraph still open.
+
 ## fmGraph charts (step 15, phase G2)
 - **+ Chart** adds a chart built from your own rectangles, of two kinds. **Columns**: groups of rectangles stacked into one column per period, side by side (a plain, stacked or balance-sheet chart), with an optional check marking each period ✓ when the groups' totals agree or ✗ with the gap. **Waterfall**: start, add, subtract and total steps in one period (an income statement, a cash bridge), each total checked against the steps before it.
 - Charts move with the sliders like bars (dashed outlines of the model's values, lit up when a slider reaches them), mark values that can't be worked out, and warn when they mix units. Edit a chart's groups, rectangles and steps in **Edit chart**. The sample model has a small balance sheet and both kinds of chart. No file format changed.

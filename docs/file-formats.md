@@ -33,6 +33,7 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 | `fmIDE-excel-mapping` | 2 | ExcelExporter's tab/row layout for one model; v2: any row may carry its own format (`style`) and an `indent` (below) | ExcelExporter: Import Mapping JSON |
 | `fmIDE-excel-style` | 1 | ExcelExporter's Excel style: how every cell in the workbook looks, by role (step 11a, below) | ExcelExporter: Import Excel Style |
 | `fmIDE-excel-module-layouts` | 2 | ExcelExporter's layouts remembered per module (step 11b, below); v2: the layout of a module's block instances, `instance` (step 11d) | ExcelExporter: Import Module Layouts |
+| `fmIDE-graph-board` | 1 | fmGraph's boards: bars, charts and sliders showing one model (step 15, below) | fmGraph: Boards → Import boards… (or dropped on the page) |
 
 ## A row's own format and indent (`fmIDE-excel-mapping` 2)
 
@@ -85,6 +86,33 @@ ExcelExporter remembers the layout of a module's tab — a canvas added from a c
 - `instance` (version 2, step 11d; optional): the layout of the tabs of the module's **block instances** — the module used as a block. It holds `rows`, `customs`, `sectioned` and `flat` as above, without `tabName`; each row may carry `copy`, which copy of the rectangle it is in a vertical instance: a vintage (a whole number from 1 to 10,000), `"total"` or `"shared"` (absent for the only copy). A row is known by its name and `copy` together; an unknown `copy` drops the row. An entry made by an instance tab alone has empty `rows`, `customs`, `sectioned` and `flat`: it lays out no module tab.
 - Version 1 files open unchanged (the upgrade only raises the number); fmIDE's Attach Excel layout… reads both versions.
 - Everything in the file is someone else's text: labels and names are only ever shown as text.
+
+## fmGraph boards (`fmIDE-graph-board` 1, step 15)
+
+A board is a view of one model in fmGraph: bars, charts and sliders. A file holds one or more boards (**Export this board**, **Export all boards**); fmGraph keeps the boards of each model in the browser in the same form.
+
+```
+{ "kind": "fmIDE-graph-board", "version": 1, "active": 0,
+  "boards": [ { "name": "Board",
+    "items": [
+      { "type": "bar", "canvasId": "cProfit", "nodeId": "profit", "name": "Profit",
+        "periods": { "mode": "all" }, "wide": false, "colour": "#0f766e" },
+      { "type": "chart", "wide": true, "layout": "columns", "title": "Balance sheet",
+        "periods": { "mode": "all" }, "check": true,
+        "groups": [ { "name": "Assets", "parts": [ { "canvasId": "cCash", "nodeId": "close", "name": "Closing cash", "colour": "#2563eb" } ] } ] },
+      { "type": "chart", "wide": true, "layout": "flow", "title": "Profit", "period": 0,
+        "steps": [ { "canvasId": "cProfit", "nodeId": "rev", "name": "Revenue", "role": "start" } ] } ],
+    "sliders": [ { "canvasId": "cProfit", "nodeId": "price", "name": "Price", "periods": { "mode": "all" },
+      "mode": "set", "min": 5, "max": 15, "step": 0.25 } ] } ] }
+```
+
+- A rectangle is named by its canvas id, node id and name (`canvasId`, `nodeId`, `name`): a widget is used only where the open model has that rectangle under that name (capitals and outer spaces ignored), so a board fits the model it was made from, or another built from the same templates. Anything else is left out, and fmGraph says how many.
+- `periods`: `{ "mode": "all" }`, `{ "mode": "one", "p": 2 }` or `{ "mode": "range", "from": 0, "to": 3 }` (periods count from 0); a period the model doesn't have reads as all.
+- `items` are shown in this order; `wide` takes the whole row (charts start wide, bars narrow). `colour` is `#rrggbb`; anything else is ignored.
+- A chart's `layout` is `columns` (`groups` of `parts`, stacked per period, side by side; `check`: whether the groups' totals must agree) or `flow` (a waterfall of `steps` in `period`, each `start`, `add`, `subtract` or `total`; anything else reads as `add`). At most 12 groups, 30 parts a group, 40 steps; titles 80 characters, names 60.
+- A slider's `mode` is `set` (the input's number) or `shift` (a change by %), between `min` and `max` in steps of `step`; it goes only on an input rectangle. Where a slider is set to is never saved: a board always opens on the model's own numbers.
+- At most 20 boards, 40 bars and charts and 40 sliders a board. `active` is the board shown.
+- The form fmGraph kept in the browser before boards had tabs (one board: `bars`, `charts`, `sliders` at the top level, no `boards`) is read as one board, charts first.
 
 ## Template attachments (`fmIDE-templates` 7, `fmIDE-workspace` 8, `fmIDE-library-pack` 3, step 11c)
 
