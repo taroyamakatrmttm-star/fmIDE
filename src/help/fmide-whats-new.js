@@ -12,6 +12,21 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'fmgraph', date: '2026-10-02', title: 'fmGraph: see how a value moves your model',
+    summary: 'A new companion app: bars show your rectangles, sliders change your inputs, and the bars move as you slide.',
+    what: [
+      '{cmd:openFmGraph} opens fmGraph with the model you have open, in its own window — no file to save first.',
+      'In fmGraph, a bar shows a rectangle\'s value in the periods you choose, and a slider changes an input rectangle. Move a slider and every bar that depends on that input moves with it; the bars it reaches light up, and a dashed outline shows the model\'s own value.',
+    ],
+    why: 'To see, not just read, how one number affects the rest of a model: for understanding it, checking it, or showing it to others.',
+    how: [
+      'Open {cmd:openFmGraph}.',
+      'Add a slider on an input and a bar on a result.',
+      'Move the slider. Back in fmIDE after a change, press ↻ From fmIDE in fmGraph.',
+    ],
+    notes: ['fmGraph never changes your model.', 'A customised ribbon gets Open fmGraph once, after Open ExcelExporter.'],
+    see: ['fmgraph'] },
+
   { id: 'pinch-zoom', date: '2026-10-02', title: 'Pinch to zoom on a tablet',
     summary: 'Two fingers on the canvas zoom it and move it around, as on a map.',
     what: [

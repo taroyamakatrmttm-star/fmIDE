@@ -679,6 +679,23 @@ ExcelExporter at 1400 × 900 (a tablet 1024 × 768 where said). What each button
 - At 1024 × 768 the rows are beside the tabs; with Help open they go below them, left of the panel, nothing wider than the page.
 - By finger (real touch input): a tap opens the Layout menu, a tap elsewhere closes it, a tap on Excel Style… opens Settings on the style; the page saw only touch.
 
+### 47. fmGraph (`tests/47-fmgraph.spec.js`; `npm run test:fmgraph`)
+fmGraph (step 15, phase G1) at 1400 × 900, through its page and `window.fmGraph`.
+- The welcome screen: + Bar, + Slider and Reset all off, ↻ From fmIDE hidden (not opened by fmIDE). The sample: "Sample model" in the top bar, 2 sliders and 4 bars; Revenue 10,000 and Profit 1,500 in Year 1, Closing cash 9,400 in Year 4. No page error.
+- For every sample in `models/`, `agreement/` and `ir/`: every rectangle's value in every period is the one fmIDE shows (the snapshots `fmide-values--*` of group 18), an error where fmIDE shows one.
+- The sample's Price set to 12: Revenue 12,000, Profit 3,500, Closing cash 18,600, Cost of sales 6,000; the model's own Price and Profit unchanged; Price reaches Revenue, Profit and Closing cash (through an alias), not Cost of sales; Revenue's bars carry a dashed outline and "+2,000", Cost of sales none. Reset all: back to the model.
+- Dragging Price with the mouse: `#board.moving`, 3 bars `.reached`; the value box and Revenue follow; ← one step; a typed 7; Reset puts back 10.
+- By finger (real touch input, 1024 × 768): the slider moves, Revenue follows; the page saw only touch.
+- Volume +10% in Year 2 only, Unit cost 5 in Years 3–4: Revenue and Cost of sales per year as worked out by hand; a slider on Revenue is refused ("not an input"); a slider's list holds only the inputs; a bar showing one period has one bar, labelled with it.
+- After a reload the sample's board comes back with the added bar and its period, every slider at the model's numbers. Another model using the same ids with other names gets its own starting board (a slider on its first input, a bar on what it reaches).
+- A file with markup in every name: no element made from it, the names shown as text; a templates file refused ("not a whole model"); text that isn't JSON refused; a newer version asked about (Cancel keeps the model open, Open Anyway opens it).
+- A workspace dropped on the page (`body.file-over` while held) opens under the file's name.
+- From fmIDE: Open fmGraph opens fmGraph with fmIDE's model (Pay = 400); after a change in fmIDE, ↻ From fmIDE (500) and Open fmGraph again (600) bring it up to date; a model posted by another window is ignored; fmIDE answers no other window; ← Back to fmIDE closes the window.
+- fmIDE's ribbon: Open fmGraph in the File tab's App group after Open ExcelExporter; a ribbon customised before gets it once after its Open ExcelExporter, and not again once removed.
+- The large generated model of `npm run bench` (when it takes 25 ms or more to work out): grabbing a slider shows "Working out…", which clears; dragging across it then runs nothing new; the slider's value is the one shown.
+- Help: ❓ carries the What's new dot; F1 opens fmGraph's topics and What's new; ❓ closes it.
+- The site: fmGraph.html under its own security policy (script hashes), working offline after fmIDE's first visit, ← Back to fmIDE leading to `./`; no policy violation, nothing requested from another site.
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.

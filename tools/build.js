@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Builds the two single-file apps in apps/ from their sources in src/, and the installable
-// web app (PWA) in site/.
+// Builds the three single-file apps in apps/ (fmIDE, ExcelExporter, fmGraph) from their sources
+// in src/, and the installable web app (PWA) in site/.
 //
-//   node tools/build.js              write apps/fmIDE.html, apps/ExcelExporter.html and site/
+//   node tools/build.js              write apps/fmIDE.html, apps/ExcelExporter.html, apps/fmGraph.html and site/
 //   node tools/build.js --check      build in memory; exit 1 if apps/ differs from src/
 //   node tools/build.js --site DIR   write only the site, into DIR
 // Options for the site: --library DIR (the community library's folder; default library/, the
@@ -10,6 +10,7 @@
 //
 // site/ is not committed (it is rebuilt wherever it is needed): index.html (fmIDE, with the
 // lines of its <!-- build:site-head --> marker, which is empty in apps/), ExcelExporter.html,
+// fmGraph.html (step 15),
 // the files of src/site/ (manifest, icons), the licence files (LICENSE.txt, NOTICE.txt,
 // ExcelExporter-LICENSE.txt), plus sw.js with its version and file list
 // filled in. The version is a hash of the site's files, so any change gives a new version.
@@ -32,7 +33,8 @@
 //   <!-- build:js js -->            every .js file in that folder, in file-name order
 //   <!-- build:fmide-address -->    a <meta name="fmide-address"> giving fmIDE's address
 //                                   next to the page: fmIDE.html in apps/, the site's
-//                                   front page (./) in site/ (ExcelExporter's "Back to fmIDE")
+//                                   front page (./) in site/ ("Back to fmIDE" in ExcelExporter
+//                                   and fmGraph)
 // Inside a .js piece, a line consisting only of an include marker pulls in another file,
 // path relative to src/: shared code that both apps use (src/shared/), or an app's help text
 // (src/help/, src/excel-exporter/help/):
@@ -51,6 +53,7 @@ const ROOT = path.join(__dirname, '..');
 const APPS = [
   { src: path.join(ROOT, 'src', 'fmide'), out: path.join(ROOT, 'apps', 'fmIDE.html') },
   { src: path.join(ROOT, 'src', 'excel-exporter'), out: path.join(ROOT, 'apps', 'ExcelExporter.html') },
+  { src: path.join(ROOT, 'src', 'fmgraph'), out: path.join(ROOT, 'apps', 'fmGraph.html') },
 ];
 const SITE_SRC = path.join(ROOT, 'src', 'site');
 const MARKER = /^<!-- build:(css|js) ([A-Za-z0-9._\/-]+) -->\r?$/; // \r: CRLF checkouts on Windows
@@ -153,6 +156,7 @@ function buildSite(outDir, opts){
   const files = new Map(); // site path → Buffer
   files.set('index.html', Buffer.from(buildApp(APPS[0], true), 'utf8'));
   files.set('ExcelExporter.html', Buffer.from(buildApp(APPS[1], true), 'utf8'));
+  files.set('fmGraph.html', Buffer.from(buildApp(APPS[2], true), 'utf8'));
   listFiles(SITE_SRC).filter(f => f !== 'sw.js').forEach(f => files.set(f, fs.readFileSync(path.join(SITE_SRC, ...f.split('/')))));
   // The licences travel with the published app (see LICENSING.md).
   [['LICENSE.txt', 'LICENSE'], ['NOTICE.txt', 'NOTICE'], ['ExcelExporter-LICENSE.txt', 'src/excel-exporter/LICENSE']]
@@ -202,6 +206,7 @@ function siteHeaders(files){
       'Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()']),
     block(['/', '/index.html'], ['Content-Security-Policy: ' + policy('index.html')]),
     block(['/ExcelExporter', '/ExcelExporter.html'], ['Content-Security-Policy: ' + policy('ExcelExporter.html')]),
+    block(['/fmGraph', '/fmGraph.html'], ['Content-Security-Policy: ' + policy('fmGraph.html')]),
     block(['/sw.js'], ["Content-Security-Policy: default-src 'self'", 'Cache-Control: no-cache']),
     // The catalogue's own rules, always there (so the version is the same with or without it).
     ...LIBRARY.LIBRARY_HEADERS.map(b => block(b.paths, b.headers)),

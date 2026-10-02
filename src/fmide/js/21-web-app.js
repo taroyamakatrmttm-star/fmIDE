@@ -45,6 +45,42 @@
     if(!w) showMessage('The browser blocked the ExcelExporter window. Allow pop-ups for fmIDE, or open ExcelExporter.html from the same folder as fmIDE.');
   }
 
+  // fmGraph (step 15) sits next to fmIDE too and opens the same way, in a window named
+  // fmIDE-fmGraph. It shows the model open here without a file to save first: once loaded it
+  // asks this page for the model ('fmGraph:want-model'), and the answer is the model as Save
+  // System writes it ('fmIDE:model', its JSON text). Only the window this page opened is
+  // answered, and on the site only a page of the site itself; opened from disk (a file:
+  // address, whose origin browsers name differently or not at all), only that same window. Open fmGraph on a window already open
+  // brings it to the front and sends the model as it is now.
+  let graphWindow = null;
+  window.addEventListener('pageshow', (ev) => { if(ev.persisted) graphWindow = null; });
+  const ownOrigin = () => (location.protocol !== 'file:' && location.origin && location.origin !== 'null') ? location.origin : null;
+  function sendModelToGraph(target){
+    const origin = ownOrigin();
+    try{ target.postMessage({ type: 'fmIDE:model', name: docDisplayName(), text: JSON.stringify(buildSystemPayload()) }, origin || '*'); }
+    catch(e){ /* the window went away */ }
+  }
+  window.addEventListener('message', (ev) => {
+    if(!graphWindow || ev.source !== graphWindow) return;
+    const origin = ownOrigin();
+    if(origin && ev.origin !== origin) return;
+    if(!ev.data || typeof ev.data !== 'object' || ev.data.type !== 'fmGraph:want-model') return;
+    sendModelToGraph(graphWindow);
+  });
+  function openFmGraph(){
+    try {
+      if(graphWindow && graphWindow !== window && !graphWindow.closed && graphWindow.opener === window){
+        graphWindow.focus();
+        sendModelToGraph(graphWindow);
+        return;
+      }
+    } catch(e){ /* a window we can't ask about: open it again */ }
+    try { sessionStorage.setItem('fmIDE-opened-fmGraph', '1'); } catch(e){ /* storage off: Back opens fmIDE instead */ }
+    const w = window.open('fmGraph.html', 'fmIDE-fmGraph');
+    graphWindow = w || null;
+    if(!w) showMessage('The browser blocked the fmGraph window. Allow pop-ups for fmIDE, or open fmGraph.html from the same folder as fmIDE.');
+  }
+
   // A .fmide double-clicked in the operating system (installed app, Chrome/Edge desktop):
   // opened like Open…, asking about unsaved changes first.
   function openLaunchedFile(handle){

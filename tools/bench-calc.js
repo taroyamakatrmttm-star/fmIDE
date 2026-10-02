@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Times fmIDE's calculation (fm.evaluate: every canvas, every period, then one redraw) and
-// ExcelExporter's Generate (the whole workbook, zipped, without the download) on the biggest
+// Times fmIDE's calculation (fm.evaluate: every canvas, every period, then one redraw),
+// ExcelExporter's Generate (the whole workbook, zipped, without the download) and a move of an
+// fmGraph slider (the whole model worked out again, then the bars redrawn) on the biggest
 // sample model and on a large generated one, so a change to the calculation or to the
 // formula writer can be checked for speed before and after. Uses the dev-only Playwright from `npm install`; the
 // app is opened straight from apps/fmIDE.html, offline.
@@ -147,6 +148,32 @@ async function timeGenerate(page, file){
   }, [RUNS, load]);
 }
 
+// fmGraph: open the model, put a slider on its first input and a bar on everything it reaches
+// (at most 12), then move the slider `runs` times, each time to a new value (never one already
+// worked out).
+async function timeSlider(page, file){
+  await page.goto(pathToFileURL(path.join(ROOT, 'apps', 'fmGraph.html')).href);
+  await page.waitForFunction(() => !!window.fmGraph);
+  const text = fs.readFileSync(file, 'utf8');
+  return page.evaluate(async ([text, runs]) => {
+    await fmGraph.load(text, 'Bench');
+    fmGraph.board().bars.forEach(b => fmGraph.remove(b.id));
+    fmGraph.board().sliders.forEach(s => fmGraph.remove(s.id));
+    const input = fmGraph.rectangles().find(r => r.input);
+    const id = fmGraph.addSlider('#' + input.id, { canvas: input.canvasId });
+    fmGraph.rectangles().filter(r => !r.input).slice(0, 12).forEach(r => fmGraph.addBar('#' + r.id, 'all', r.canvasId));
+    fmGraph.setSlider(id, 1.5); // warm up
+    const times = [];
+    for(let i = 0; i < runs; i++){
+      const t = performance.now();
+      fmGraph.setSlider(id, 2 + i * 0.37);
+      times.push(performance.now() - t);
+    }
+    times.sort((a, b) => a - b);
+    return { median: times[Math.floor(times.length / 2)], fastest: times[0], calc: fmGraph.calcTime() };
+  }, [text, RUNS]);
+}
+
 async function main(){
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'fmide-bench-'));
   const large = path.join(tmp, 'large-model.json');
@@ -171,6 +198,11 @@ async function main(){
     for(const [label, file] of cases){
       const r = await timeGenerate(page, file);
       console.log(`  ${label}: median ${r.median.toFixed(2)} ms, fastest ${r.fastest.toFixed(2)} ms (loading the file: about ${r.load} ms)`);
+    }
+    console.log(`fmGraph slider move (the model worked out again, the bars redrawn), ${RUNS} runs each:`);
+    for(const [label, file] of cases){
+      const r = await timeSlider(page, file);
+      console.log(`  ${label}: median ${r.median.toFixed(2)} ms, fastest ${r.fastest.toFixed(2)} ms (one run of the model on loading: ${r.calc.toFixed(2)} ms)`);
     }
   } finally {
     await browser.close();

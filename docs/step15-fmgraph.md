@@ -82,7 +82,7 @@ Each slider position needs the whole model worked out again (`evaluateModel` on 
 | Phase | What |
 |---|---|
 | **G0** | This brief, decision 10, step 15 in the build order ✅ |
-| **G1** | The app: build, site, licence notice, **Open fmGraph** from fmIDE (File tab, App group), loading a model (file, drop, from fmIDE); one bar and one slider; ghost, difference label, highlighting and dimming; Reset; remembered per model in the browser; the speed measured (live or worked out ahead, as above); Help and What's new; tests, values agreeing with fmIDE |
+| **G1** ✅ | The app: build, site, licence notice, **Open fmGraph** from fmIDE (File tab, App group), loading a model (file, drop, from fmIDE); one bar and one slider; ghost, difference label, highlighting and dimming; Reset; remembered per model in the browser; the speed measured (live or worked out ahead, as above); Help and What's new; tests, values agreeing with fmIDE |
 | **G2** | Charts: side by side, stacked with the balance check, waterfall with subtotals; period choices; units; errors; sample balance-sheet and income-statement boards |
 | **G3** | Editing a board: placing and sizing widgets, titles, colours, undo; the `fmIDE-graph-board` file, Export / Import; boards in `.fmide` documents |
 | **G4** | Exploring: Trace, Biggest movers, animation, the A/B snapshot |
@@ -90,6 +90,20 @@ Each slider position needs the whole model worked out again (`evaluateModel` on 
 | **G6** | Tutorials |
 
 Later ideas, not in this step: blocks and vintages, line charts, a tornado chart (which inputs matter most), goal seek ("what price keeps cash above zero?"), the live link with fmIDE, phones.
+
+## How it turned out
+
+### G1 (the app, bars and sliders)
+
+- **The app** (`src/fmgraph/` → `apps/fmGraph.html`, and `fmGraph.html` on the site with its own security policy and offline copy). A dark top bar: ← Back to fmIDE, the model's name, Open…, ↻ From fmIDE (only when fmIDE opened it), + Bar, + Slider, Reset all, ❓ Help. Before a model, a welcome screen with a drop box and **Try the sample model** (a small profit model and the cash it builds up, with its own starting board). Sliders on the left, bars on the right (stacked on a narrow page). Its page, styles and Back link are written for fmGraph: nothing is taken from ExcelExporter, which is proprietary.
+- **From fmIDE, without a file.** fmIDE's **Open fmGraph** (File tab, App group, after Open ExcelExporter; a customised ribbon gets it once, `ui.fmGraphAdded`) opens fmGraph in its own window, which asks fmIDE for the model; fmIDE answers that window only, with the model as Save System writes it, and fmGraph reads it like any file. **↻ From fmIDE** (or Open fmGraph again) shows the model as it is now. This is the first half of the "live link": the model follows fmIDE when asked, not by itself yet.
+- **Bars** show one rectangle in all periods, one period or a range; the model's own value as a dashed outline when a slider changed it, the difference above (with % when pointed at); a "!" bar and the reason for a period that can't be worked out; the unit when the model gives one. More than 8 periods: labels only when pointed at.
+- **Sliders** go on input rectangles only (the shared input rule): set the number, or change it by %, in all periods, one or a range; range and step editable, 41 steps around the model's number by default; drag, arrow keys, a typed number, or a finger. **Reset** and **Reset all**.
+- **What a slider reaches** lights up while it is pointed at, focused or moved (the others fade), worked out from the arrows, aliases and block outputs.
+- **The calculation**: a slider lays a number per period over the input for one run of the shared calculation and puts it back — exactly as typing it in fmIDE — so fmGraph's values are fmIDE's (checked for every sample model). One slider move takes about 4 ms on the biggest sample (`npm run bench`, which now times it). On a model slower than 25 ms a run (the large generated model of the bench: about 200 ms), grabbing a slider works out its 41 steps ahead (a few seconds, "Working out this slider's steps…"), then dragging reads them.
+- **Remembered**: the board for each model in this browser (not the sliders' positions); a model that changed a little keeps it (widgets matched by id and rectangle name). The board is kept in the form the G3 file will use (`fmIDE-graph-board`, version 1), and read back through the same checks as a file; the file itself (Export / Import, in documents) comes in G3. No file format changed in G1.
+- **Help**: its own topics and What's new (`src/help/fmgraph-help.js`, `fmgraph-whats-new.js`, CC BY 4.0), the shared panel, F1. fmIDE's help has a topic "See how a value moves the model (fmGraph)" and a What's new entry. fmGraph's help is not yet on the site's `/help` pages (a later phase).
+- **Not in G1**, as planned: charts (G2), editing a board's layout and its file (G3), trace and biggest movers (G4), sharing (G5), tutorials (G6). A rectangle that has its own number only in some periods and is fed in the others (an opening balance) is not an input, so it takes no slider yet.
 
 ## Risks
 

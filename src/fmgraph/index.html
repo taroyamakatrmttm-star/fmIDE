@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<!-- Generated from src/ by `npm run build` — edit src/, not this file. -->
+<!-- fmGraph — Copyright 2026 Taro Yamaka. Licensed under the Apache License 2.0: see LICENSE and NOTICE (LICENSE.txt, NOTICE.txt in the web app). Its help text (src/help/) is licensed under CC BY 4.0, https://creativecommons.org/licenses/by/4.0/ -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
+<title>fmGraph — see how a value moves your model</title>
+<!-- build:fmide-address -->
+<style>
+<!-- build:css styles.css -->
+<!-- build:css ../shared/help-panel.css -->
+</style>
+</head>
+<body>
+
+<header class="gbar">
+  <div class="gbar-side">
+    <a id="backToFmide" class="gbar-back" href="fmIDE.html">← Back to fmIDE</a>
+    <span class="gbar-name">fmGraph</span>
+    <span id="modelName" class="gbar-model"></span>
+  </div>
+  <div class="gbar-side">
+    <button id="btnOpen" class="gbar-btn" title="Open a .fmide document, or a system or workspace file saved by fmIDE">Open…</button>
+    <button id="btnFromFmide" class="gbar-btn hidden" title="Show fmIDE's model as it is now">↻ From fmIDE</button>
+    <button id="btnAddBar" class="gbar-btn needs-model" title="Show a rectangle's value as bars">+ Bar</button>
+    <button id="btnAddSlider" class="gbar-btn needs-model" title="Change an input rectangle with a slider">+ Slider</button>
+    <button id="btnResetAll" class="gbar-btn needs-model" title="Put every slider back to the model's own numbers">Reset all</button>
+    <button id="btnHelp" class="gbar-btn" title="Help (F1)">❓ Help</button>
+  </div>
+</header>
+
+<main>
+  <div id="notices" class="notices" aria-live="polite"></div>
+
+  <section id="welcome" class="welcome">
+    <h2>See how a value moves your model</h2>
+    <p class="welcome-lead">Open a model saved by fmIDE, then add bars and sliders.</p>
+    <div id="dropBox" class="dropbox" role="button" tabindex="0">
+      <span class="dropbox-main">Drop a .fmide or .json file here</span>
+      <span class="dropbox-sub">or click to choose one</span>
+    </div>
+    <div class="welcome-actions">
+      <button id="btnSample" class="primary">Try the sample model</button>
+    </div>
+  </section>
+
+  <section id="board" class="board hidden">
+    <div class="board-col">
+      <h2 class="col-head">Sliders</h2>
+      <div id="sliderList" class="widget-list"></div>
+      <p id="noSliders" class="empty-note">No sliders yet: <button type="button" class="link-btn" data-add="slider">+ Slider</button></p>
+    </div>
+    <div class="board-col board-main">
+      <h2 class="col-head">Bars <span id="calcNote" class="calc-note"></span></h2>
+      <div id="barList" class="widget-list bars"></div>
+      <p id="noBars" class="empty-note">No bars yet: <button type="button" class="link-btn" data-add="bar">+ Bar</button></p>
+    </div>
+  </section>
+</main>
+
+<input type="file" id="fileInput" accept=".fmide,application/json,.json" hidden>
+
+<div id="confirmBox" class="dialog-back hidden" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+  <div class="dialog">
+    <h3 id="confirmTitle"></h3>
+    <p id="confirmText"></p>
+    <div class="dialog-actions">
+      <button id="confirmNo">Cancel</button>
+      <button id="confirmYes" class="primary">OK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+<!-- build:js js -->
+</script>
+</body>
+</html>
