@@ -93,8 +93,9 @@ function renderBoard(){
   sliders.textContent = '';
   if(!model) return;
   board.sliders.forEach(s => sliders.appendChild(sliderWidget(s)));
+  board.charts.forEach(c => bars.appendChild(chartWidget(c)));
   board.bars.forEach(b => bars.appendChild(barWidget(b)));
-  $('noBars').classList.toggle('hidden', board.bars.length > 0);
+  $('noBars').classList.toggle('hidden', board.bars.length + board.charts.length > 0);
   $('noSliders').classList.toggle('hidden', board.sliders.length > 0);
   updateValues();
 }
@@ -248,6 +249,10 @@ function paintReach(){
     const el = document.querySelector('.bar-widget[data-id="' + b.id + '"]');
     if(el) el.classList.toggle('reached', !!reached && (reached.has(b.key) || b.key === s.key));
   });
+  board.charts.forEach(c => {
+    const el = document.querySelector('.chart-widget[data-id="' + c.id + '"]');
+    if(el) el.classList.toggle('reached', !!reached && chartKeys(c).some(k => reached.has(k) || k === s.key));
+  });
 }
 
 function updateValues(){
@@ -256,6 +261,10 @@ function updateValues(){
   board.bars.forEach(b => {
     const el = document.querySelector('.bar-widget[data-id="' + b.id + '"]');
     if(el) drawBars(el, b, results);
+  });
+  board.charts.forEach(c => {
+    const el = document.querySelector('.chart-widget[data-id="' + c.id + '"]');
+    if(el) drawChart(el, c, results);
   });
   board.sliders.forEach(s => {
     const el = document.querySelector('.slider-widget[data-id="' + s.id + '"]');

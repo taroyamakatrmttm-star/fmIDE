@@ -83,7 +83,7 @@ Each slider position needs the whole model worked out again (`evaluateModel` on 
 |---|---|
 | **G0** | This brief, decision 10, step 15 in the build order ✅ |
 | **G1** ✅ | The app: build, site, licence notice, **Open fmGraph** from fmIDE (File tab, App group), loading a model (file, drop, from fmIDE); one bar and one slider; ghost, difference label, highlighting and dimming; Reset; remembered per model in the browser; the speed measured (live or worked out ahead, as above); Help and What's new; tests, values agreeing with fmIDE |
-| **G2** | Charts: side by side, stacked with the balance check, waterfall with subtotals; period choices; units; errors; sample balance-sheet and income-statement boards |
+| **G2** ✅ | Charts: side by side, stacked with the balance check, waterfall with subtotals; period choices; units; errors; sample balance-sheet and income-statement boards |
 | **G3** | Editing a board: placing and sizing widgets, titles, colours, undo; the `fmIDE-graph-board` file, Export / Import; boards in `.fmide` documents |
 | **G4** | Exploring: Trace, Biggest movers, animation, the A/B snapshot |
 | **G5** | Sharing: `attachments.graph` on templates (system templates too), packs and the checker; Try in fmGraph from Browse Library |
@@ -104,6 +104,19 @@ Later ideas, not in this step: blocks and vintages, line charts, a tornado chart
 - **Remembered**: the board for each model in this browser (not the sliders' positions); a model that changed a little keeps it (widgets matched by id and rectangle name). The board is kept in the form the G3 file will use (`fmIDE-graph-board`, version 1), and read back through the same checks as a file; the file itself (Export / Import, in documents) comes in G3. No file format changed in G1.
 - **Help**: its own topics and What's new (`src/help/fmgraph-help.js`, `fmgraph-whats-new.js`, CC BY 4.0), the shared panel, F1. fmIDE's help has a topic "See how a value moves the model (fmGraph)" and a What's new entry. fmGraph's help is not yet on the site's `/help` pages (a later phase).
 - **Not in G1**, as planned: charts (G2), editing a board's layout and its file (G3), trace and biggest movers (G4), sharing (G5), tutorials (G6). A rectangle that has its own number only in some periods and is fed in the others (an opening balance) is not an input, so it takes no slider yet.
+
+### G2 (charts)
+
+The owner asked for general building blocks rather than a design made for the balance sheet (2 October 2026), and chose a waterfall in one period at a time and a check that ignores rounding noise. So there are two blocks, and nothing in fmGraph knows what a balance sheet or an income statement is:
+
+- **Columns** (`04b-charts.js`, drawn by `05b-chart-render.js`): a list of groups, each group a list of rectangles stacked into one column per period (values below zero stack downwards), the groups side by side. One rectangle per group is a plain column chart, one group of several a stacked chart, two groups a balance sheet. An optional check marks each period ✓ when every group's total agrees, or ✗ with the gap (also listed in words under the chart).
+- **Waterfall**: steps in one period, each a rectangle with a role — start, add, subtract, total. A total is a full bar of its rectangle's own value, checked against the running total of the steps before it (✓, or ✗ and what they add up to); the flow carries on from it.
+- Numbers agree when they differ by less than a millionth of their size (`AGREE_TOLERANCE`).
+- A chart works like a bar: the model's own values as dashed outlines (a group's outline, a step's), differences above, lit up when a slider reaches any of its rectangles, "!" and the reason for a value that can't be worked out, a warning when it mixes units. A key gives each rectangle's colour by group.
+- Built with the mouse in **Edit chart** (opened on a new chart): + Rectangle, + Group, ↑ ↓ ×, the group's name, the check, the period; switching between Columns and Waterfall keeps the rectangles. `window.fmGraph.addChart` and `chart(id)` (what it shows) for scripts and tests.
+- Kept in the board (`charts`, still the `fmIDE-graph-board` form, version 1: the board is only in the browser until G3's file, so no file format changed), read back through `cleanChart` (at most 12 groups, 30 rectangles a group, 40 steps; unknown roles become add).
+- The sample model gained a small balance sheet (cash from the Cash canvas, equipment, debt, equity growing by the profit) and starts with a balance-sheet chart and a profit waterfall beside two bars.
+- Not in G2: colours and arranging the board (G3).
 
 ## Risks
 

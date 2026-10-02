@@ -8,6 +8,12 @@
 //   modelValue(rect, period, canvas?) → the model's own number, or { error }
 //   addBar(rect, periods?, canvas?)   → the bar's id
 //   addSlider(rect, { periods, mode: 'set' | 'shift', min, max, step, canvas }?) → the slider's id
+//   addChart({ layout: 'columns', title, periods, check, groups: [{ name, parts: [rect…] }] })
+//   addChart({ layout: 'flow', title, period, steps: [{ rect, role: 'start'|'add'|'subtract'|'total' }] })
+//                  → the chart's id; a rect is a name, '#id', or { rect, canvas }
+//   chart(id)      → what it shows now: columns — per period { period, groups: [{ name, total,
+//                    parts: [value or { error }] }], check: { ok, gap } | null }; flow — per step
+//                    { name, role, value, from, to, check: { ok, expected } | null }
 //   setSlider(id, value), resetSlider(id), resetAll(), remove(id)
 //   board()        → the board ({ kind: 'fmIDE-graph-board', … }) with each slider's value
 //   reached(id)    → the ids of the bars a slider reaches
@@ -38,6 +44,12 @@ function sliderById(id){
   return s;
 }
 const answer = (r) => r.error ? { error: r.error } : r.value;
+const rectRef = (x) => (x && typeof x === 'object') ? findRect(x.rect, x.canvas) : findRect(x);
+function chartById(id){
+  const c = board.charts.find(x => x.id === id);
+  if(!c) throw new Error('There is no chart "' + String(id).slice(0, 40) + '".');
+  return c;
+}
 
 window.fmGraph = Object.freeze({
   load: (data, name) => openModelText(typeof data === 'string' ? data : JSON.stringify(data), name),
@@ -60,6 +72,27 @@ window.fmGraph = Object.freeze({
     renderBoard();
     return s.id;
   },
+  addChart: (spec) => {
+    spec = spec || {};
+    if(board.charts.length >= BOARD_LIMIT) throw new Error('No more charts can be added.');
+    const at = (r) => ({ canvasId: r.canvasId, nodeId: r.nodeId, name: r.name });
+    const raw = spec.layout === 'flow'
+      ? { layout: 'flow', title: spec.title, period: spec.period === undefined ? 0 : periodIndex(spec.period),
+          steps: (spec.steps || []).map(s => Object.assign(at(rectRef(s.rect)), { role: s.role })) }
+      : { layout: 'columns', title: spec.title, periods: periodSpec(spec.periods), check: spec.check === true,
+          groups: (spec.groups || []).map(g => ({ name: g.name, parts: (g.parts || []).map(p => at(rectRef(p))) })) };
+    const c = cleanChart(raw, (w) => model.byKey.get(keyOf(w.canvasId, w.nodeId)), model.periods.length);
+    board.charts.push(c);
+    saveBoardSoon();
+    renderBoard();
+    return c.id;
+  },
+  chart: (id) => {
+    const c = chartById(id), results = currentResults();
+    if(c.layout === 'flow') return flowFigures(c, results).map((f, i) => Object.assign({ name: partLabel(c.steps[i].key) }, f));
+    return columnsFigures(c, results).map(f => ({ period: model.periods[f.p], check: f.check,
+      groups: f.groups.map((g, gi) => ({ name: groupLabel(c, gi), total: g.error ? { error: true } : g.total, parts: g.parts.map(answer) })) }));
+  },
   setSlider: (id, value) => {
     const s = sliderById(id);
     const v = Number(value);
@@ -74,9 +107,13 @@ window.fmGraph = Object.freeze({
     if(!model) return null;
     const d = boardData();
     d.bars.forEach((b, i) => { b.id = board.bars[i].id; });
+    d.charts.forEach((c, i) => { c.id = board.charts[i].id; });
     d.sliders.forEach((s, i) => { s.id = board.sliders[i].id; s.value = board.sliders[i].value; });
     return d;
   },
-  reached: (id) => { const s = sliderById(id); const reach = model.reach(s.key); return board.bars.filter(b => reach.has(b.key) || b.key === s.key).map(b => b.id); },
+  reached: (id) => {
+    const s = sliderById(id), reach = model.reach(s.key), hit = (k) => reach.has(k) || k === s.key;
+    return board.charts.filter(c => chartKeys(c).some(hit)).map(c => c.id).concat(board.bars.filter(b => hit(b.key)).map(b => b.id));
+  },
   calcTime: () => model ? model.baseMs : null,
 });

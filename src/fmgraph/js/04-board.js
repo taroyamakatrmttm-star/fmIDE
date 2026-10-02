@@ -1,6 +1,7 @@
 // ============================================================
-// The board: the bars and sliders on the page.
+// The board: the bars, charts and sliders on the page.
 //   bar    { id, key, periods }
+//   chart  { id, layout: 'columns' | 'flow', … } (G2; 04b-charts.js)
 //   slider { id, key, periods, mode: 'set' | 'shift', min, max, step, value }
 // periods: { mode: 'all' } · { mode: 'one', p } · { mode: 'range', from, to } (from 0).
 // A slider's value is null until it moves (the model's own numbers); 'set' gives the input
@@ -18,7 +19,7 @@ const store = createStore('fmGraph');
 const BOARD_PREFIX = 'fmgraph-board-';
 const LAST_BOARD_KEY = 'fmgraph-last-board';
 const BOARD_LIMIT = 40; // bars, and sliders, at most
-let board = { bars: [], sliders: [] };
+let board = { bars: [], charts: [], sliders: [] };
 let nextWidgetId = 1;
 const newWidgetId = (kind) => kind + (nextWidgetId++);
 
@@ -63,7 +64,7 @@ function cleanRange(raw, fallback){
 // Reads a board (from storage, or later a file) against the loaded model: widgets on
 // rectangles that aren't there, or sliders on rectangles that aren't inputs, are left out.
 function cleanBoard(raw){
-  const out = { bars: [], sliders: [] };
+  const out = { bars: [], charts: [], sliders: [] };
   if(!raw || typeof raw !== 'object' || raw.kind !== 'fmIDE-graph-board') return out;
   const count = model.periods.length;
   const sameName = (a, b) => String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
@@ -75,6 +76,10 @@ function cleanBoard(raw){
   (Array.isArray(raw.bars) ? raw.bars : []).slice(0, BOARD_LIMIT).forEach(b => {
     const rect = rectFor(b);
     if(rect) out.bars.push({ id: newWidgetId('b'), key: rect.key, periods: cleanPeriods(b.periods, count) });
+  });
+  (Array.isArray(raw.charts) ? raw.charts : []).slice(0, BOARD_LIMIT).forEach(c => {
+    const chart = cleanChart(c, rectFor, count);
+    if(chart) out.charts.push(chart);
   });
   (Array.isArray(raw.sliders) ? raw.sliders : []).slice(0, BOARD_LIMIT).forEach(s => {
     const rect = rectFor(s);
@@ -93,6 +98,7 @@ function boardData(){
   return {
     kind: 'fmIDE-graph-board', version: 1,
     bars: board.bars.map(b => Object.assign(at(b.key), { periods: Object.assign({}, b.periods) })),
+    charts: board.charts.map(c => chartData(c, at)),
     sliders: board.sliders.map(s => Object.assign(at(s.key), { periods: Object.assign({}, s.periods), mode: s.mode, min: s.min, max: s.max, step: s.step })),
   };
 }
@@ -119,7 +125,7 @@ async function loadBoardFor(m){
     if(typeof raw !== 'string' || !raw){ raw = await store.get(LAST_BOARD_KEY); fromLast = true; }
     if(typeof raw === 'string' && raw){
       const b = cleanBoard(JSON.parse(raw));
-      if(b.bars.length || b.sliders.length) restored = b;
+      if(b.bars.length || b.charts.length || b.sliders.length) restored = b;
       if(restored && fromLast) saveBoardSoon();
     }
   }catch(e){ /* unreadable: start a new board */ }
@@ -129,7 +135,7 @@ async function loadBoardFor(m){
 // A new model's board: a slider on the first input that reaches a calculated rectangle, and
 // a bar on the last rectangle it reaches, so something moves straight away.
 function startingBoard(){
-  const b = { bars: [], sliders: [] };
+  const b = { bars: [], charts: [], sliders: [] };
   for(const input of model.inputs){
     const reached = model.reach(input.key);
     const targets = model.rects.filter(r => !r.input && reached.has(r.key));
@@ -161,8 +167,10 @@ function addSlider(key, periods, mode, range){
   return s;
 }
 function removeWidget(id){
-  const before = board.bars.length + board.sliders.length;
+  const count = () => board.bars.length + board.charts.length + board.sliders.length;
+  const before = count();
   board.bars = board.bars.filter(b => b.id !== id);
+  board.charts = board.charts.filter(c => c.id !== id);
   board.sliders = board.sliders.filter(s => s.id !== id);
-  if(board.bars.length + board.sliders.length !== before) saveBoardSoon();
+  if(count() !== before) saveBoardSoon();
 }

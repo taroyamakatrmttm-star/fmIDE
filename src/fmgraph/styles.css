@@ -109,3 +109,34 @@
   .dialog h3{ margin:0 0 8px; font-size:16px; }
   .dialog p{ margin:0 0 16px; color:var(--soft-ink); }
   .dialog-actions{ display:flex; justify-content:flex-end; gap:8px; }
+
+  /* Charts (G2): wider than a bar widget. */
+  .widget-list.bars .chart-widget{ grid-column:1 / -1; }
+  .board.moving .chart-widget{ opacity:.38; }
+  .board.moving .chart-widget.reached{ opacity:1; box-shadow:0 0 0 2px var(--reach); }
+  .chart-title{ flex:1 1 auto; font:inherit; font-weight:600; font-size:14px; padding:4px 6px; border:1px solid transparent; border-radius:6px; background:transparent; color:var(--ink); min-width:0; }
+  .chart-title:hover, .chart-title:focus{ border-color:var(--line-strong); background:#fff; }
+  .chart-key{ display:flex; flex-direction:column; gap:3px; margin-top:4px; font-size:12px; color:var(--soft-ink); }
+  .key-line{ display:flex; flex-wrap:wrap; gap:4px 12px; align-items:center; }
+  .key-group{ font-weight:600; color:var(--ink); }
+  .key-item{ display:inline-flex; align-items:center; gap:5px; }
+  .key-swatch{ width:11px; height:11px; border-radius:3px; display:inline-block; }
+  .bar-chart .c-part{ stroke:#fff; stroke-width:.6; }
+  .bar-chart .t-check{ font-size:13px; font-weight:700; }
+  .bar-chart .t-check.ok{ fill:var(--up); }
+  .bar-chart .t-check.bad{ fill:var(--down); }
+  .bar-chart .f-total{ fill:#334155; }
+  .bar-chart .f-up{ fill:var(--up); }
+  .bar-chart .f-down{ fill:var(--down); }
+  .bar-chart .f-link{ stroke:var(--line-strong); stroke-width:1; stroke-dasharray:3 2; }
+  .chart-edit{ margin-top:8px; border-top:1px solid var(--line); padding-top:6px; }
+  .chart-edit summary{ cursor:pointer; font-size:12.5px; color:var(--soft-ink); }
+  .edit-row{ display:flex; gap:6px; align-items:center; margin-top:6px; }
+  .edit-row select{ flex:1 1 auto; }
+  .edit-row .group-name{ flex:1 1 auto; font:inherit; font-size:13px; font-weight:600; padding:4px 6px; border:1px solid var(--line-strong); border-radius:6px; }
+  .group-edit{ border:1px solid var(--line); border-radius:8px; padding:4px 8px 8px; margin:8px 0 0; }
+  .row-buttons{ display:inline-flex; gap:2px; }
+  button.mini{ padding:2px 7px; font-size:12px; }
+  .check-row{ cursor:pointer; color:var(--ink); }
+  .add-part, .add-step, .add-group{ display:inline-block; margin-top:6px; font-size:12.5px; }
+  .chart-widget .widget-head select{ flex:0 0 auto; }

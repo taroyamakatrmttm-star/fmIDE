@@ -23,7 +23,8 @@ async function openSample(page){
   await openGraph(page);
   await page.click('#btnSample');
   await expect(page.locator('#board')).toBeVisible();
-  await expect(page.locator('.bar-widget')).toHaveCount(4);
+  await expect(page.locator('.bar-widget')).toHaveCount(2);
+  await expect(page.locator('.chart-widget')).toHaveCount(2);
 }
 async function loadFile(page, file){
   await page.setInputFiles('#fileInput', file);
@@ -35,12 +36,13 @@ test('the welcome screen: Open, the sample, and nothing else to press yet', asyn
   await openGraph(page);
   await expect(page.locator('#welcome')).toBeVisible();
   await expect(page.locator('#board')).toBeHidden();
-  for(const id of ['btnAddBar', 'btnAddSlider', 'btnResetAll']) await expect(page.locator('#' + id)).toBeDisabled();
+  for(const id of ['btnAddBar', 'btnAddChart', 'btnAddSlider', 'btnResetAll']) await expect(page.locator('#' + id)).toBeDisabled();
   await expect(page.locator('#btnFromFmide')).toBeHidden(); // not opened by fmIDE
   await page.click('#btnSample');
   await expect(page.locator('#modelName')).toHaveText('Sample model');
   await expect(page.locator('.slider-widget')).toHaveCount(2);
-  await expect(page.locator('.bar-widget')).toHaveCount(4);
+  await expect(page.locator('.bar-widget')).toHaveCount(2);
+  await expect(page.locator('.chart-widget')).toHaveCount(2);
   expect(await g(page, () => [fmGraph.value('Revenue', 1), fmGraph.value('Profit', 1), fmGraph.value('Closing cash', 4)])).toEqual([10000, 1500, 9400]);
   expect(pageErrors).toEqual([]);
 });
@@ -78,15 +80,17 @@ for(const [dir, file] of SAMPLES){
 
 test('a slider moves exactly the bars it reaches, and the model is never changed', async ({ page }) => {
   await openSample(page);
+  await g(page, () => { fmGraph.addBar('Revenue'); fmGraph.addBar('Cost of sales'); });
   const s = await g(page, () => fmGraph.board().sliders.find(x => x.name === 'Price').id);
   await g(page, (id) => fmGraph.setSlider(id, 12), s);
   expect(await g(page, () => [fmGraph.value('Revenue', 1), fmGraph.value('Profit', 1), fmGraph.value('Closing cash', 4), fmGraph.value('Cost of sales', 1)]))
     .toEqual([12000, 3500, 1000 + 3500 + 4100 + 4700 + 5300, 6000]);
   // The model's own numbers are untouched.
   expect(await g(page, () => [fmGraph.modelValue('Price', 1), fmGraph.modelValue('Profit', 1)])).toEqual([10, 1500]);
-  // Price reaches Revenue, Profit and Closing cash (through an alias), not Cost of sales.
-  const names = await g(page, (id) => { const b = fmGraph.board(); return fmGraph.reached(id).map(x => b.bars.find(y => y.id === x).name); }, s);
-  expect(names.sort()).toEqual(['Closing cash', 'Profit', 'Revenue']);
+  // Price reaches Revenue, Profit and Closing cash (through an alias), not Cost of sales; and both
+  // charts, which show rectangles it reaches.
+  const names = await g(page, (id) => { const b = fmGraph.board(); return fmGraph.reached(id).map(x => { const bar = b.bars.find(y => y.id === x); return bar ? bar.name : 'chart: ' + b.charts.find(y => y.id === x).title; }); }, s);
+  expect(names.sort()).toEqual(['Closing cash', 'Profit', 'Revenue', 'chart: Balance sheet', 'chart: Profit']);
   // A dashed outline (the model's value) and the difference on the bars that moved.
   const revenue = page.locator('.bar-widget').filter({ has: page.locator('option:checked', { hasText: /^Revenue$/ }) });
   await expect(revenue.locator('.b-base')).toHaveCount(4);
@@ -108,7 +112,8 @@ test('dragging a slider with the mouse: the bars follow, the reached ones light 
   await page.mouse.down();
   await page.mouse.move(box.x + box.width - 2, box.y + box.height / 2, { steps: 6 });
   await expect(page.locator('#board')).toHaveClass(/moving/);
-  await expect(page.locator('.bar-widget.reached')).toHaveCount(3);
+  await expect(page.locator('.bar-widget.reached')).toHaveCount(2);
+  await expect(page.locator('.chart-widget.reached')).toHaveCount(2);
   await page.mouse.up();
   const v = Number(await range.inputValue());
   expect(v).toBeGreaterThan(10);
@@ -167,10 +172,10 @@ test('change by %, one period, a range; sliders only on inputs', async ({ page }
   expect(await g(page, () => [1, 2, 3, 4].map(p => fmGraph.value('Cost of sales', p)))).toEqual([6000, 7260, 6000, 6500]);
   // Only inputs: Revenue is calculated.
   expect(await g(page, () => { try{ fmGraph.addSlider('Revenue'); return 'added'; }catch(e){ return e.message; } })).toMatch(/not an input/);
-  // The list of a slider's rectangles holds inputs only (Opening cash is fed by last year's
-  // closing cash after Year 1, so it isn't one).
+  // The list of a slider's rectangles holds inputs only (Opening cash and Opening equity are fed
+  // by last year's closing figure after Year 1, so they aren't).
   const options = await page.locator('.slider-widget').first().locator('select').first().locator('option').allTextContents();
-  expect(options.sort()).toEqual(['Overheads', 'Price', 'Unit cost', 'Volume']);
+  expect(options.sort()).toEqual(['Debt', 'Equipment', 'Overheads', 'Price', 'Unit cost', 'Volume']);
   // The periods chooser on a widget: one period.
   const bar = page.locator('.bar-widget').first();
   await bar.locator('select[aria-label="Periods"]').selectOption('one');
@@ -187,7 +192,7 @@ test('the board is remembered for the model, the sliders start on the model\'s n
   await page.reload();
   await page.waitForFunction(() => !!window.fmGraph);
   await page.click('#btnSample');
-  await expect(page.locator('.bar-widget')).toHaveCount(5);
+  await expect(page.locator('.bar-widget')).toHaveCount(3);
   const b = await g(page, () => fmGraph.board());
   expect(b.bars.map(x => x.name)).toContain('Gross profit');
   expect(b.bars.find(x => x.name === 'Gross profit').periods).toEqual({ mode: 'one', p: 1 });
@@ -375,7 +380,7 @@ test('on the site: its security policy lets it run, it works offline, Back leads
     await page.goto(site.origin + 'fmGraph.html');
     await page.waitForFunction(() => !!window.fmGraph);
     await page.click('#btnSample');
-    await expect(page.locator('.bar-widget')).toHaveCount(4);
+    await expect(page.locator('.bar-widget')).toHaveCount(2);
     expect(await page.locator('#backToFmide').getAttribute('href')).toBe('./');
     expect(violations).toEqual([]);
     expect(seen.filter(u => !u.startsWith(site.origin))).toEqual([]);
