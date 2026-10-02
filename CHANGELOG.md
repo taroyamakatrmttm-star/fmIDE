@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph boards in documents (step 15, phase G3b)
+- **Boards are kept in the `.fmide` document**: with fmGraph opened from fmIDE, each change to the boards goes back to fmIDE, the document shows unsaved changes, and Save keeps the boards with the model. Opening the document later (in fmIDE, then Open fmGraph, or in fmGraph directly) brings them back, ahead of the boards the browser kept.
+- **File format**: workspace (`.fmide`) version 11 may carry `graphBoards`; older documents open as before. ExcelExporter ignores the boards.
+
 ## fmGraph boards (step 15, phase G3a)
 - **Several boards per model, as tabs**: + Board, rename, duplicate, delete (asked). Each has its own bars, charts and sliders.
 - **Arranging**: drag a bar, chart or slider by its handle (⠿) — mouse, finger or the arrow keys — and make bars and charts wide or narrow (⇔), in a two-column grid.
