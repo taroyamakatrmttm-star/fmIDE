@@ -228,7 +228,7 @@ test('an older (version 1) module layouts file still imports', async ({ page }) 
   await load(page, 'block-a');
   await page.setInputFiles('#moduleLayoutsFileInput', fixture('formats', 'module-layouts-v1.json'));
   await expect(page.locator('#moduleLayoutsStatus .status')).toHaveText('Imported 1 module layout. It is used for models laid out here from now on.');
-  await page.click('#btnResetMapping');
+  await X.menuCommand(page, 'btnResetMapping');
   await page.click('#confirmOk');
   await expect.poll(() => tabNames(page)).toEqual(['Main', 'Loan v1', 'Loan (instance 1)', 'Loan (instance 2)']);
 });

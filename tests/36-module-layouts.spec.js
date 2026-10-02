@@ -157,7 +157,7 @@ test('with sections on, each band keeps its remembered order', async ({ page }) 
 test('Reset Mapping to Defaults starts from the remembered layout; Forget stops that', async ({ page }) => {
   const a = await arrangeA(page);
   await load(page, 'model-b');
-  await page.click('#btnResetMapping');
+  await X.menuCommand(page, 'btnResetMapping');
   await expect(page.locator('#confirmMessage')).toContainText('remembered for that module');
   await page.click('#confirmOk');
   // Reset finishes after the stored layout is removed (asynchronous): wait for it.
@@ -168,7 +168,7 @@ test('Reset Mapping to Defaults starts from the remembered layout; Forget stops 
   await expect(page.locator('#moduleLayoutsStatus .status')).toHaveText('Forgot the layout remembered for "Sales".');
   await expect(tagRow.locator('.module-tag')).toHaveText('🧩 Sales');
   expect((await stored(page)).modules).toEqual([]);
-  await page.click('#btnResetMapping');
+  await X.menuCommand(page, 'btnResetMapping');
   await page.click('#confirmOk');
   await expect.poll(() => tabNames(page)).toEqual(['Overview', 'Sales (Gold)']);
   const fresh = await sheet(page, 'Sales (Gold)');
@@ -179,7 +179,7 @@ test('Reset Mapping to Defaults starts from the remembered layout; Forget stops 
 
 test('Export Module Layouts, Forget, then Import brings the layout back', async ({ page }, testInfo) => {
   const a = await arrangeA(page);
-  const [download] = await Promise.all([page.waitForEvent('download'), page.click('#btnExportModuleLayouts')]);
+  const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportModuleLayouts')]);
   const file = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
   expect(file.kind).toBe('fmIDE-excel-module-layouts');
   expect(file.version).toBe(2);

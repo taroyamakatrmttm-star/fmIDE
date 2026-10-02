@@ -2,6 +2,15 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter's new look (step 14)
+- **Menus for every file and reset.** The top bar has two menus: **File** (Open Model…, Load Sample Model, Paste JSON…, Start Over) and **Layout** (Import / Export Mapping, Import / Export Module Layouts, Excel Style…, Reset Mapping to Defaults…). The items for this model's layout are off until a model is loaded. The menus work by mouse, keyboard (↓, ↑, Home, End, ← →, Esc) and finger.
+- **⬇ Generate .xlsx is always in the top bar**, beside ⚙ Settings and ❓ Help; the loaded model's name shows beside ExcelExporter's.
+- **⚙ Settings** holds this model's workbook settings (period labels, fallback number format, file name) and your own Excel style (with its Import, Export and Reset), on two tabs.
+- **A welcome screen** before a model is loaded; afterwards a file dropped anywhere on the page opens. Paste JSON… opens its own window.
+- **Tabs beside rows:** the Tabs and Inputs & scenarios panels sit on the left, the rows on the right (stacked when the page is narrow, or Help is open on a tablet). A tab's row count takes you to its rows. The rows open in the **Tree**; By Excel Tab and By Canvas are a click away.
+- **Less text:** the long explanations moved into Help and tooltips; the Excel style's role descriptions are tooltips; "Known limitations" is part of the help on blocks. Messages can be dismissed with ×.
+- The separate **Custom / Label Rows** table is gone: label rows are edited where they sit, in the Tree or By Excel Tab (**+ Label Row** from By Canvas switches to the Tree). Nothing about the workbook, the files or what is saved in the browser changed.
+
 ## Pinch to zoom (step 13, phase 13b)
 - **Two fingers on the canvas zoom it on a tablet**, around the point between them, from 25% to 200%; moving both fingers together moves the canvas. One finger scrolls, drags and opens menus as before.
 - A drag the first finger had begun is cancelled when the second finger lands: the box goes back and no undo step is left. A pinch ending within 5% of 100% settles at 100%. Each canvas keeps its own zoom, as with the mouse; macros never record it. No file format changed.

@@ -13,7 +13,7 @@
 
 const excelHelp = createHelpPanel({
   groups: EXCEL_HELP_GROUPS, topics: EXCEL_HELP_TOPICS,
-  intro: 'Plain-English guides to ExcelExporter. Pick a topic, or search above. The "?" beside each panel\'s heading opens its topic.',
+  intro: 'Plain-English guides to ExcelExporter. Pick a topic, or search above. The "?" beside a heading opens its topic.',
   placeholder: 'Search help — e.g. "scenarios" or "tree view"',
   // H5a: the panel's width, kept in this browser (HELP_SIZE_KEY) for every model.
   size: { get: () => ({}), set: (v) => { layoutStore.put(HELP_SIZE_KEY, JSON.stringify(cleanHelpSize(v))).catch(() => {}); } },
@@ -53,14 +53,13 @@ layoutsMigrated.then(() => layoutStore.get(HELP_SIZE_KEY)).then(raw => {
     ev.preventDefault();
     excelHelp.toggle();
   });
-  // A "?" beside each panel's heading.
+  // A "?" beside each heading: the welcome screen, the Tabs, Inputs and Rows panels, and
+  // Settings' two tabs.
   const PANEL_TOPICS = [
-    ['loadPanel', 'load-model'], ['periodsPanel', 'periods-output'], ['tabsPanel', 'tabs'],
-    ['rowsPanel', 'rows'], ['customRowsPanel', 'rows'], ['generatePanel', 'generate'],
+    ['loadPanel', 'load-model'], ['tabsPanel', 'tabs'], ['inputsPanel', 'inputs-tab'], ['rowsPanel', 'rows'],
+    ['periodsPanel', 'periods-output'], ['excelStyleBlock', 'formats'],
   ];
-  // …and beside "Gather inputs on a separate tab".
-  const inputsLabel = $('cfgInputsEnabled') && $('cfgInputsEnabled').parentNode;
-  const places = PANEL_TOPICS.map(([id, topicId]) => [document.querySelector('#' + id + ' > h2'), topicId]).concat([[inputsLabel, 'inputs-tab']]);
+  const places = PANEL_TOPICS.map(([id, topicId]) => [document.querySelector('#' + id + ' h2'), topicId]);
   places.forEach(([h, topicId]) => {
     if(!h || !excelHelp.topic(topicId)) return;
     const b = document.createElement('button');

@@ -22,7 +22,8 @@ This is the brief for building the permanent automated test suite. Until now eve
 **Loading.** Serve each app file to the page (e.g. `page.route` fulfilling a fake origin such as `http://local.test/…` with the file contents), and abort every other request. Count aborted requests — it must stay 0.
 
 **ExcelExporter** (`apps/ExcelExporter.html`)
-- Load a model: `page.setInputFiles('#fileInput', path)`; built-in sample: click `#btnLoadSample`.
+- Load a model: `page.setInputFiles('#fileInput', path)`; built-in sample: click `#btnLoadSample` (on the welcome screen, before a model is loaded).
+- The page (group 46): the top bar's menus `#menuFile` and `#menuLayout` hold every file and reset (`#btnOpenModel`, `#btnMenuSample`, `#btnMenuPaste`, `#btnClearAll`; `#btnImportMapping`, `#btnExportMapping`, `#btnImportModuleLayouts`, `#btnExportModuleLayouts`, `#btnMenuStyle`, `#btnResetMapping`): open the menu first — `menuCommand(page, id)` in `tests/helpers/excel.js`. `#btnGenerate` is in the top bar. ⚙ `#btnSettings` opens `#settingsModal` (tabs `#settingsTabWorkbook` → `#periodsPanel`, `#settingsTabStyle` → `#excelStyleBlock`, the Excel style table and its buttons): `openSettings(page, 'style')`; it covers the page, so `generate`, `setInputsTab` and `setSections` close it first (`closeSettings`). Messages are in `#notices` under the top bar.
 - Capture the workbook without downloading: after load, run in the page
   `XLSX.writeFile = (wb, name) => { window.__wb = wb; window.__bytes = Array.from(XLSX.write(wb)); window.__name = name; }`
   then click `#btnGenerate`. `window.__wb` is the intended workbook object (`SheetNames`, `Sheets[name][addr] = {t, v, f, z, s}`); `window.__bytes` is the real `.xlsx` file. `XLSX` is the app's built-in writer (a global).
@@ -122,7 +123,7 @@ Load `tests/fixtures/security/evil-workspace.json` and `evil-system.json`:
 - A new layout: "Enforce Input / Calc / Output sections" is off (no INPUTS/CALCULATIONS/OUTPUTS bands), "Order within group" is formula order, and the Inputs tab's group headers show the period labels.
 - Start Over keeps the saved layout; Reset Mapping to Defaults (confirm → OK) discards it; Cancel / Escape / backdrop click keep it. Re-picking the same file after Start Over loads it.
 - Sort (`revenue-bs-corkscrew.json`, sections off): "Calculation order: inputs first", A→Z, all tabs → BS tab order Unit Price, Volume, AR outstanding rate, Revenue, Accounts Receivable, Cash, Inventory, Total Assets. With formula order, the Corkscrew tab reads Beginning Balance, Additions, Subtractions, Ending Balance. Undo restores the previous order. Custom rows keep their slots. With sections on, the Input band is ordered Unit Price, Volume, AR outstanding rate, Cash, Inventory. The Inputs tab is never sorted and never offered in the scope list.
-- Tree view: right-click → Insert custom row above/below inserts next to the row (with several selected: above the first / below the last), opens rename, stays in the anchor's section when sections are on; "+ Add Custom Row" inserts below the selection or, with nothing selected, at the bottom of the first tab. Double-clicking a row when nothing was selected renames **that** row (the selection bar appearing must not shift the target).
+- Tree view: right-click → Insert custom row above/below inserts next to the row (with several selected: above the first / below the last), opens rename, stays in the anchor's section when sections are on; "+ Label Row" (`#btnAddCustomRow`) inserts below the selection or, with nothing selected, at the bottom of the first tab. Double-clicking a row when nothing was selected renames **that** row (the selection bar appearing must not shift the target).
 - Tree view, a row's own format (`revenue-bs-corkscrew.json`, sections off): 🎨 on Revenue with a fill, bold and Percent with 1 decimal → its label and period cells in the real file have fill `FDE68A`, bold, number format `0.0%`, and the 🎨 is marked; Reset to the Excel style → no fill again (Calculations). Alt+Shift+→ three times and the menu's Decrease Indent once on Cash and Inventory → indent 2 on their label cells only (horizontal left), shown in the tree; a custom row takes an indent too; the indent is still there after a reload; the menu's Reset removes it. The right-click menu on two selected rows lists every selection-bar command and runs them on both: Move to Top, Exclude, Mark Constant, Move to tab Corkscrew at bottom, and 🎨 Format 2 rows… (bold marks both). A mapping file with a markup fill, a bad font colour, a 5-digit border colour, 1e9 decimals and a quoted currency symbol, an indent "lots" and 999: imported, no fill, bold, `"$"#,##0.0000000000`, no indent on Revenue, 15 on Cash, nothing runs.
 - Inputs tab: renaming an Inputs-tab row renames its source; excluding the source removes it from the Inputs tab; an Inputs-tab row can't be moved to another tab; name clash ("Inputs" already a tab) → "Inputs 2" with a warning.
 - Storage failure: make `IDBObjectStore.prototype.put` throw a `QuotaExceededError` DOMException (`breakStorage`), edit something → `#storageWarn` visible; restore and edit → hidden.
@@ -502,7 +503,7 @@ fmIDE at 1400 × 900 (the touch test at 1024 × 768 with a touchscreen), ExcelEx
 - Every `addWindowHelp(…, 'id')` in fmIDE's source names a topic that exists (at least 20 of them).
 - Holding an operator (real touch input) and tapping Help opens "Operators"; the page saw only touch.
 - ExcelExporter: ❓ Help opens the panel with every topic listed; the page's content ends left of the panel; F1 from the search box closes it and F1 from the page opens it; Esc closes it.
-- The "?" beside each panel's heading (load, periods, tabs, rows, custom rows, generate) and beside "Gather inputs on a separate tab" opens its topic; search "scenario" puts Scenarios first; its See also opens "The Inputs tab".
+- The "?" beside each heading opens its topic: Tabs, Inputs & scenarios ("The Inputs tab"), Rows; in ⚙ Settings, Workbook ("Period columns and the file name") and Excel Style ("How the workbook looks"), the window staying left of the panel; after Start Over, the welcome screen's ("Loading a model"). Search "scenario" puts Scenarios first; its See also opens "The Inputs tab".
 - ExcelExporter's topics: unique ids, known groups, a title, summary and body each, See also links that exist, no `{cmd:}`; every group has a topic.
 - No request while ExcelExporter's Help is opened, searched, read and closed.
 
@@ -661,6 +662,22 @@ fmIDE at 1024 × 768 with a touchscreen; two real fingers through the Chrome Dev
 - One finger as before: at 50% it drags a node 100, 60 for 50, 30 on the screen, and on empty canvas it scrolls without zooming.
 - Recording a macro while pinching records only the rectangle added; the exported system has no zoom; the autosave's `ui.canvasZoom` holds 0.5; a new canvas 100%, the first again 50%.
 - One finger on the ribbon and one on the canvas: no zoom.
+
+### 46. ExcelExporter's page (`tests/46-excel-page.spec.js`; `npm run test:excel-page`)
+ExcelExporter at 1400 × 900 (a tablet 1024 × 768 where said). What each button does stays in the groups that own it (4, 6, 7, 9, 36, 39); this group covers where things are and how the page behaves.
+- Before a model: the welcome screen and `#dropZone`, no `#afterLoad`, Generate disabled, no model name; in the Layout menu Import / Export Mapping and Reset Mapping to Defaults are off ("Load a model first"), the module layouts and Excel Style… on.
+- After loading `revenue-bs-corkscrew.json`: the welcome screen goes, `#modelName` is the file's name, Generate is on, the Tree is shown first, the rows panel is right of the tabs panel; the model's menu items are on with their own tips. File → Start Over: the welcome screen again, Generate off, no name, no message.
+- Menus: a click opens (`aria-expanded`) and closes one; a click elsewhere and Esc close it; with File open, pointing at Layout opens it (File closes) and a click straight after keeps it open; File → Load Sample Model loads it ("Sample model") and closes the menu.
+- By keyboard: ↓ on File opens it on Open Model…; ↓, End, ↓ (round to the top); → opens Layout on its first item that is on; Esc closes it, the focus back on Layout; Enter opens it again.
+- Settings: before a model only the Excel style (7 roles), the Workbook tab disabled; Esc closes it and the focus returns to ⚙; Layout → Excel Style… opens it on the style; the backdrop closes it. With a model it opens on Workbook (`aria-selected`), the period count shown; a file name "Q3 model" → the workbook is "Q3 model.xlsx".
+- A file (`DataTransfer`) dragged over the rows panel outlines the page (`body.file-over`) and, dropped, loads ("dropped.json" in the message and the top bar).
+- Paste JSON… from the File menu and from the welcome screen: Esc and Cancel close it, the text box has the focus; Load loads the pasted text ("Pasted model").
+- The load message is exactly "Loaded revenue-bs-corkscrew.json — N canvases, N periods."; its × removes it.
+- In a 500-pixel-high window, from By Canvas: a tab's row count shows the Tree with that tab's rows in view; + Label Row shows the Tree with the new row's name being typed, "Notes" ending the first tab; there is no `#customRowsPanel`.
+- With the Inputs tab on, in each of the three views: no paragraph on the page over 120 characters; Sections and "Gather inputs on a separate tab" explain themselves in a tooltip.
+- `ir/error-cases.json`: the differences list's "?" opens "Where the workbook differs from fmIDE".
+- At 1024 × 768 the rows are beside the tabs; with Help open they go below them, left of the panel, nothing wider than the page.
+- By finger (real touch input): a tap opens the Layout menu, a tap elsewhere closes it, a tap on Excel Style… opens Settings on the style; the page saw only touch.
 
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.

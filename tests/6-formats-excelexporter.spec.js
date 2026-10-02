@@ -102,7 +102,7 @@ test.describe('mapping files', () => {
 
   test('export has kind and version, and re-importing it works', async ({ page }, testInfo) => {
     await renameFirstTab(page, 'Exported Tab');
-    const [download] = await Promise.all([page.waitForEvent('download'), page.click('#btnExportMapping')]);
+    const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
     const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
     expect(exported.kind).toBe('fmIDE-excel-mapping');
     expect(exported.version).toBe(2); // v2: a row may carry its own format and indent

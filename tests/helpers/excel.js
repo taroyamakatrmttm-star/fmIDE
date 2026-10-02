@@ -20,8 +20,26 @@ async function loadFixtureModel(page, name){
   await expect(page.locator('#afterLoad')).toBeVisible();
 }
 
+// A command in the top bar's menus (File, Layout): open its menu, then choose it.
+async function menuCommand(page, id){
+  await closeSettings(page);
+  const menu = await page.locator('#' + id).evaluate(el => el.closest('.menu').querySelector('.menu-btn').id);
+  await page.click('#' + menu);
+  await page.click('#' + id);
+}
+// ⚙ Settings, on its Workbook or Excel Style tab; and closing it (it covers the page).
+async function openSettings(page, tab = 'workbook'){
+  if(await page.locator('#settingsModal').isHidden()) await page.click('#btnSettings');
+  await page.click(tab === 'style' ? '#settingsTabStyle' : '#settingsTabWorkbook');
+}
+async function closeSettings(page){
+  if(await page.locator('#settingsModal').isVisible()) await page.click('#settingsDone');
+  await expect(page.locator('#settingsModal')).toBeHidden();
+}
+
 // Turn the Inputs tab on or off. Turning it off asks for confirmation.
 async function setInputsTab(page, on){
+  await closeSettings(page);
   const box = page.locator('#cfgInputsEnabled');
   if((await box.isChecked()) === on) return;
   await box.click();
@@ -33,6 +51,7 @@ async function setInputsTab(page, on){
 }
 
 async function setSections(page, on){
+  await closeSettings(page);
   const box = page.locator('#cfgSectionsEnabled');
   if((await box.isChecked()) !== on) await box.click();
   await expect(box).toBeChecked({ checked: on });
@@ -45,6 +64,7 @@ async function generate(page){
     XLSX.writeFile = (wb, name) => { window.__wb = wb; window.__bytes = Array.from(XLSX.write(wb)); window.__name = name; };
     window.__wb = undefined;
   });
+  await closeSettings(page);
   await page.click('#btnGenerate');
   await expect(page.locator('#genStatus .status.ok')).toBeVisible();
   const out = await page.evaluate(() => ({ wb: JSON.parse(JSON.stringify(window.__wb)), bytes: window.__bytes, name: window.__name }));
@@ -133,7 +153,7 @@ function periodOneCol(ws){
   return hits.length ? Math.min(...hits.map(a => splitAddr(a).col)) : null;
 }
 
-module.exports = {
+module.exports = { menuCommand, openSettings, closeSettings,
   openExporter, loadModelFile, loadFixtureModel, setInputsTab, setSections, generate, writeWithApp, readBack, unzip,
   colToNum, numToCol, splitAddr, cellAddrs, formulaOf, toR1C1, formulasAndValues, text, rowsOf, findRow, periodOneCol,
 };

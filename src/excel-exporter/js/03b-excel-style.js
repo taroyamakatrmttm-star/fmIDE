@@ -63,9 +63,9 @@ function renderExcelStyle(){
     const labelled = (el, text) => { const l = document.createElement('label'); l.className = 'xs-check'; l.append(el, document.createTextNode(text)); return l; };
     const cell = (...els) => { const td = document.createElement('td'); els.forEach(e => td.appendChild(e)); tr.appendChild(td); return td; };
 
+    // What the role covers is its tooltip (and in Help), keeping the table short.
     const name = document.createElement('div'); name.className = 'xs-name'; name.textContent = role.name;
-    const desc = document.createElement('div'); desc.className = 'xs-desc'; desc.textContent = role.desc;
-    cell(name, desc);
+    cell(name).title = role.desc;
     const swatch = document.createElement('span'); swatch.className = 'xs-swatch'; swatch.textContent = 'Aa 1,234';
     paintExcelStyleSwatch(swatch, st);
     cell(swatch);

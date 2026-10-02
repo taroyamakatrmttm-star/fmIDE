@@ -3,6 +3,7 @@
 // ============================================================
 function renderAll(){
   $('afterLoad').classList.remove('hidden');
+  syncPageState();
   $('periodCountLabel').textContent = model.periods.length;
   $('cfgStartLabel').value = mapping.cfg.startLabel;
   $('cfgFrequency').value = mapping.cfg.frequency;
@@ -30,33 +31,46 @@ function renderTabs(){
     const rowCount = [...mapping.rows, ...inputMirrorRows()].filter(r => r.tabId === tab.id && r.include).length + mapping.customRows.filter(r => r.tabId === tab.id).length;
     const isInputsTab = tab.id === INPUTS_TAB_ID;
     const tr = document.createElement('tr');
+    tr.dataset.tabId = tab.id;
 
     const tdHandle = document.createElement('td');
-    const upBtn = document.createElement('button'); upBtn.className = 'icon'; upBtn.textContent = '↑'; upBtn.disabled = idx === 0;
-    const dnBtn = document.createElement('button'); dnBtn.className = 'icon'; dnBtn.textContent = '↓'; dnBtn.disabled = idx === arr.length - 1;
+    tdHandle.className = 'tab-move';
+    const upBtn = document.createElement('button'); upBtn.className = 'icon'; upBtn.textContent = '↑'; upBtn.disabled = idx === 0; upBtn.title = 'Move this tab left in the workbook';
+    const dnBtn = document.createElement('button'); dnBtn.className = 'icon'; dnBtn.textContent = '↓'; dnBtn.disabled = idx === arr.length - 1; dnBtn.title = 'Move this tab right in the workbook';
     upBtn.addEventListener('click', () => { swapTabOrder(tab, arr[idx - 1]); });
     dnBtn.addEventListener('click', () => { swapTabOrder(tab, arr[idx + 1]); });
     tdHandle.appendChild(upBtn); tdHandle.appendChild(dnBtn);
     tr.appendChild(tdHandle);
 
     const tdName = document.createElement('td');
+    tdName.className = 'tab-name';
+    const nameLine = document.createElement('div');
+    nameLine.className = 'tab-name-line';
     const nameInput = document.createElement('input');
     nameInput.type = 'text'; nameInput.value = tab.name;
+    nameInput.setAttribute('aria-label', 'Tab name');
     nameInput.addEventListener('change', () => {
       if(isInputsTab){ setInputsTabName(nameInput.value); return; }
       tab.name = sanitizeSheetName(nameInput.value); nameInput.value = tab.name; saveMapping(); renderRows();
     });
-    tdName.appendChild(nameInput);
+    nameLine.appendChild(nameInput);
+    if(isInputsTab){ const tg = document.createElement('span'); tg.className = 'link-tag'; tg.textContent = 'Inputs'; tg.title = 'Gathered input rows — see Inputs & scenarios below'; nameLine.appendChild(tg); }
+    tdName.appendChild(nameLine);
+    // Its row count, which shows the tab's rows (the Tree when the rows are shown by canvas).
+    const count = document.createElement('button');
+    count.className = 'tab-count';
+    count.textContent = rowCount + ' row' + (rowCount === 1 ? '' : 's');
+    count.title = 'Show this tab\'s rows';
+    count.addEventListener('click', () => showTabRows(tab.id));
+    tdName.appendChild(count);
     const modTag = moduleTabTag(tab);
     if(modTag) tdName.appendChild(modTag);
     tr.appendChild(tdName);
 
-    const tdCount = document.createElement('td'); tdCount.textContent = rowCount + ' row' + (rowCount === 1 ? '' : 's');
-    if(isInputsTab){ const tg = document.createElement('span'); tg.className = 'link-tag'; tg.textContent = 'Inputs'; tg.title = 'Gathered input rows — see the settings below'; const wrap = document.createElement('div'); wrap.style.cssText = 'display:flex; align-items:center; gap:8px;'; wrap.appendChild(nameInput); wrap.appendChild(tg); tdName.appendChild(wrap); }
-    tr.appendChild(tdCount);
-
     const tdActions = document.createElement('td');
-    const delBtn = document.createElement('button'); delBtn.className = 'icon danger'; delBtn.textContent = '🗑 Delete';
+    tdActions.className = 'tab-actions';
+    const delBtn = document.createElement('button'); delBtn.className = 'icon danger'; delBtn.textContent = '🗑';
+    delBtn.setAttribute('aria-label', 'Delete tab');
     delBtn.disabled = arr.length <= 1 || isInputsTab;
     delBtn.title = isInputsTab ? 'Turn this tab off with "Gather inputs on a separate tab" below'
       : arr.length <= 1 ? 'At least one tab is required' : 'Delete this tab (its rows move to the first remaining tab)';
@@ -72,6 +86,18 @@ function renderTabs(){
 
     body.appendChild(tr);
   });
+}
+
+// Scrolls the rows to one tab's group (the Tree, unless the rows are shown by Excel tab).
+function showTabRows(tabId){
+  if(currentRowView === 'canvas') setRowView('tree');
+  const container = currentRowView === 'tab' ? $('rowGroupsByTab') : $('rowGroupsTree');
+  if(currentRowView === 'tree' && treeCollapsedTabIds.delete(tabId)) renderTreeView();
+  const key = currentRowView === 'tab' ? tabId : 'tree_' + tabId;
+  const group = [...container.querySelectorAll('[data-scroll-key]')].find(g => g.getAttribute('data-scroll-key') === key);
+  if(!group) return;
+  group.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  group.classList.remove('flash'); void group.offsetWidth; group.classList.add('flash');
 }
 
 function swapTabOrder(a, b){
@@ -322,70 +348,8 @@ function renderBlockInstanceGroups(){
   restoreScrollTops(container, scrollTops);
 }
 
+// Label (custom) rows are edited where they sit: in the Tree and By Excel Tab views.
 function renderCustomRows(){
-  const body = $('customRowsBody');
-  body.innerHTML = '';
-  const sortedTabs = mapping.tabs.slice().sort((a, b) => a.order - b.order);
-  mapping.customRows.forEach(row => {
-    const tr = document.createElement('tr');
-
-    const tdLabel = document.createElement('td');
-    const labelInput = document.createElement('input'); labelInput.type = 'text'; labelInput.value = row.label;
-    if(rowIndent(row)) labelInput.style.textIndent = rowIndent(row) + 'em'; // the label's indent in Excel (set in the Tree view)
-    labelInput.addEventListener('change', () => { row.label = labelInput.value; saveMapping(); });
-    tdLabel.appendChild(labelInput);
-    tr.appendChild(tdLabel);
-
-    const tdTab = document.createElement('td');
-    const tabSel = document.createElement('select');
-    sortedTabs.forEach(t => { const o = document.createElement('option'); o.value = t.id; o.textContent = t.name; tabSel.appendChild(o); });
-    tabSel.value = row.tabId;
-    tabSel.addEventListener('change', () => { row.tabId = tabSel.value; saveMapping(); renderTabs(); });
-    tdTab.appendChild(tabSel);
-    tr.appendChild(tdTab);
-
-    const tdSection = document.createElement('td');
-    tdSection.style.cssText = 'display:flex; align-items:center; gap:6px;';
-    const secSel = document.createElement('select');
-    [['input', 'Input'], ['calc', 'Calc'], ['output', 'Output']].forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; secSel.appendChild(o); });
-    secSel.value = row.section;
-    secSel.addEventListener('change', () => { row.section = secSel.value; saveMapping(); renderCustomRows(); });
-    const tag = document.createElement('span'); tag.className = 'section-tag ' + row.section; tag.textContent = row.section;
-    tdSection.appendChild(tag);
-    tdSection.appendChild(secSel);
-    tr.appendChild(tdSection);
-
-    const tdOrder = document.createElement('td');
-    const wrap = document.createElement('div'); wrap.className = 'order-btns';
-    const upBtn = document.createElement('button'); upBtn.textContent = '↑';
-    const dnBtn = document.createElement('button'); dnBtn.textContent = '↓';
-    upBtn.addEventListener('click', () => nudgeRowOrder(row, -1));
-    dnBtn.addEventListener('click', () => nudgeRowOrder(row, 1));
-    wrap.appendChild(upBtn); wrap.appendChild(dnBtn);
-    tdOrder.appendChild(wrap);
-    tr.appendChild(tdOrder);
-
-    const tdPeriods = document.createElement('td');
-    const periodsChk = document.createElement('input'); periodsChk.type = 'checkbox'; periodsChk.checked = !!row.showPeriodLabels;
-    periodsChk.title = 'Repeat the period/timeline header labels across this row instead of leaving it blank';
-    periodsChk.addEventListener('change', () => { row.showPeriodLabels = periodsChk.checked; saveMapping(); });
-    tdPeriods.appendChild(periodsChk);
-    tr.appendChild(tdPeriods);
-
-    const tdFormat = document.createElement('td');
-    const fmtBtn = document.createElement('button'); fmtBtn.className = 'icon'; fmtBtn.textContent = '🎨';
-    fmtBtn.addEventListener('click', () => toggleCustomRowStyleEditor(tr, row));
-    tdFormat.appendChild(fmtBtn);
-    tr.appendChild(tdFormat);
-
-    const tdDel = document.createElement('td');
-    const delBtn = document.createElement('button'); delBtn.className = 'icon danger'; delBtn.textContent = '🗑';
-    delBtn.addEventListener('click', () => deleteCustomRow(row));
-    tdDel.appendChild(delBtn);
-    tr.appendChild(tdDel);
-
-    body.appendChild(tr);
-  });
   renderRowsByTab();
   renderTreeView();
 }

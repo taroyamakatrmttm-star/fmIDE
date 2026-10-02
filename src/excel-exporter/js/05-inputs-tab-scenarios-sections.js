@@ -342,7 +342,7 @@ function renderInputsSettings(){
   $('cfgInputsCases').value = globalCaseCount();
   renderCasesHint();
   ['cfgInputsName', 'cfgInputsGroup', 'cfgInputsOrder', 'btnInputsRelayout', 'cfgInputsScenarios', 'cfgInputsCases'].forEach(id => { $(id).disabled = !cfg.enabled; });
-  $('inputsOptions').classList.toggle('muted-block', !cfg.enabled);
+  $('inputsOptions').classList.toggle('hidden', !cfg.enabled); // its settings show once it is on
 }
 
 // ---------- Custom / label rows ----------
@@ -504,7 +504,7 @@ function insertCustomRowNear(anchor, where){
   return newRow;
 }
 
-// "+ Add Custom Row": with rows selected, inserts just below the last selected row;
+// "+ Label Row": with rows selected, inserts just below the last selected row;
 // with nothing selected, keeps the original behavior (bottom of the first tab).
 function addCustomRow(){
   const sel = selectionInSheetOrder();
@@ -524,6 +524,16 @@ function addCustomRow(){
   saveMapping();
   renderCustomRows();
   renderTabs();
+  // Label rows are edited where they sit: from the By Canvas view, show the new one in the Tree.
+  if(currentRowView === 'canvas') setRowView('tree');
+  if(currentRowView === 'tree'){
+    const row = mapping.customRows[mapping.customRows.length - 1];
+    const entry = treeRowElements.find(e => e.id === row.id);
+    if(entry){
+      entry.el.scrollIntoView({ block: 'nearest' });
+      startTreeRowRename(entry.el, entry.el.querySelector('.tree-row-label'), row);
+    }
+  }
 }
 
 function deleteCustomRow(row){
