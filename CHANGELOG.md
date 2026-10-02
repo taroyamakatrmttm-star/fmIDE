@@ -10,6 +10,7 @@ Notable changes before this repository existed (recorded from the development hi
 - **Several boards per model, as tabs**: + Board, rename, duplicate, delete (asked). Each has its own bars, charts and sliders.
 - **Arranging**: drag a bar, chart or slider by its handle (⠿) — mouse, finger or the arrow keys — and make bars and charts wide or narrow (⇔), in a two-column grid.
 - **Colours** for bars, a chart's rectangles (click the key) and waterfall steps.
+- Fixed: a colour chosen for a bar or a waterfall step was kept but not shown (the page's usual colour painted over it).
 - **Undo / Redo** (↶ ↷, Ctrl+Z / Ctrl+Y) for every change to the boards; moving a slider is not one.
 - **The board file** (`fmIDE-graph-board` 1): Boards ▾ → Export this board / Export all boards / Import boards…, or drop a board file on the page; widgets on rectangles the model doesn't have are left out and counted. Boards kept by the earlier fmGraph still open.
 
