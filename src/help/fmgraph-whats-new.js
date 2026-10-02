@@ -8,6 +8,22 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'charts', date: '2026-10-02', title: 'Charts: columns and waterfalls',
+    summary: 'Stacked or side-by-side columns with an optional totals check, and waterfalls whose totals are checked.',
+    what: [
+      '+ Chart adds a chart made of your own rectangles. Columns: groups of rectangles, each stacked into one column per period, side by side — a balance sheet is two groups. Tick the check, and each period shows ✓ when the groups\' totals agree, or ✗ and the gap.',
+      'Waterfall: steps in one period — start, add, subtract, total — for an income statement, a cash bridge or any walk from one number to another. Each total is checked against the steps before it.',
+      'Charts move with the sliders like bars: they light up when a slider reaches them, and show the model\'s own values as dashed outlines.',
+    ],
+    why: 'To see a whole statement move at once — and to spot at a glance when something stops adding up.',
+    how: [
+      'Press + Chart; its editor opens.',
+      'Add rectangles and groups, or choose Waterfall and give each step its role.',
+      'Move a slider.',
+    ],
+    notes: ['The sample model now has a small balance sheet and both kinds of chart.'],
+    see: ['charts'] },
+
   { id: 'fmgraph', date: '2026-10-02', title: 'fmGraph: see how a value moves your model',
     summary: 'Bars show your rectangles; sliders change your inputs; the bars move as you slide.',
     what: [

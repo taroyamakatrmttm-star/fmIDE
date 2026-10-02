@@ -24,6 +24,7 @@
     <button id="btnOpen" class="gbar-btn" title="Open a .fmide document, or a system or workspace file saved by fmIDE">Open…</button>
     <button id="btnFromFmide" class="gbar-btn hidden" title="Show fmIDE's model as it is now">↻ From fmIDE</button>
     <button id="btnAddBar" class="gbar-btn needs-model" title="Show a rectangle's value as bars">+ Bar</button>
+    <button id="btnAddChart" class="gbar-btn needs-model" title="Columns of several rectangles, stacked or side by side, or a waterfall">+ Chart</button>
     <button id="btnAddSlider" class="gbar-btn needs-model" title="Change an input rectangle with a slider">+ Slider</button>
     <button id="btnResetAll" class="gbar-btn needs-model" title="Put every slider back to the model's own numbers">Reset all</button>
     <button id="btnHelp" class="gbar-btn" title="Help (F1)">❓ Help</button>
@@ -52,9 +53,9 @@
       <p id="noSliders" class="empty-note">No sliders yet: <button type="button" class="link-btn" data-add="slider">+ Slider</button></p>
     </div>
     <div class="board-col board-main">
-      <h2 class="col-head">Bars <span id="calcNote" class="calc-note"></span></h2>
+      <h2 class="col-head">Bars and charts <span id="calcNote" class="calc-note"></span></h2>
       <div id="barList" class="widget-list bars"></div>
-      <p id="noBars" class="empty-note">No bars yet: <button type="button" class="link-btn" data-add="bar">+ Bar</button></p>
+      <p id="noBars" class="empty-note">No bars yet: <button type="button" class="link-btn" data-add="bar">+ Bar</button> or <button type="button" class="link-btn" data-add="chart">+ Chart</button></p>
     </div>
   </section>
 </main>

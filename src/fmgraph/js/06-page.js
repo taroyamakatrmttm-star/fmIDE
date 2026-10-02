@@ -36,6 +36,20 @@ const SAMPLE_MODEL = {
       { id: 'c1', from: 'open', to: 'add' }, { id: 'c2', from: 'pr', to: 'add' }, { id: 'c3', from: 'add', to: 'close' },
       { id: 'c4', from: 'close', to: 'ps' }, { id: 'c5', from: 'ps', to: 'open' },
     ] },
+    // A balance sheet that balances every year: the cash comes from Cash, equity grows by the profit.
+    { id: 'cBS', name: 'Balance sheet', nodes: [
+      { id: 'bcash', type: 'alias', x: 0, y: 0, w: 150, h: 64, sourceCanvasId: 'cCash', sourceNodeId: 'close' },
+      { id: 'equip', type: 'value', x: 0, y: 100, w: 150, h: 64, text: 'Equipment\n500' },
+      { id: 'debt', type: 'value', x: 0, y: 200, w: 150, h: 64, text: 'Debt\n800' },
+      { id: 'eqopen', type: 'value', x: 0, y: 300, w: 150, h: 64, text: 'Opening equity\n700', literalPeriods: [0] },
+      { id: 'bprofit', type: 'alias', x: 0, y: 400, w: 150, h: 64, sourceCanvasId: 'cProfit', sourceNodeId: 'profit' },
+      { id: 'eqadd', type: 'operator', x: 180, y: 350, text: '+' },
+      { id: 'equity', type: 'value', x: 250, y: 350, w: 150, h: 64, text: 'Equity' },
+      { id: 'eqps', type: 'periodShift', x: 250, y: 450, shift: -1 },
+    ], edges: [
+      { id: 'b1', from: 'eqopen', to: 'eqadd' }, { id: 'b2', from: 'bprofit', to: 'eqadd' }, { id: 'b3', from: 'eqadd', to: 'equity' },
+      { id: 'b4', from: 'equity', to: 'eqps' }, { id: 'b5', from: 'eqps', to: 'eqopen' },
+    ] },
   ],
 };
 const SAMPLE_BOARD = {
@@ -45,10 +59,21 @@ const SAMPLE_BOARD = {
     { canvasId: 'cProfit', nodeId: 'vol', name: 'Volume', periods: { mode: 'all' }, mode: 'shift', min: -50, max: 50, step: 1 },
   ],
   bars: [
-    { canvasId: 'cProfit', nodeId: 'rev', name: 'Revenue', periods: { mode: 'all' } },
     { canvasId: 'cProfit', nodeId: 'profit', name: 'Profit', periods: { mode: 'all' } },
     { canvasId: 'cCash', nodeId: 'close', name: 'Closing cash', periods: { mode: 'all' } },
-    { canvasId: 'cProfit', nodeId: 'cogs', name: 'Cost of sales', periods: { mode: 'all' } },
+  ],
+  charts: [
+    { layout: 'columns', title: 'Balance sheet', periods: { mode: 'all' }, check: true, groups: [
+      { name: 'Assets', parts: [{ canvasId: 'cCash', nodeId: 'close', name: 'Closing cash' }, { canvasId: 'cBS', nodeId: 'equip', name: 'Equipment' }] },
+      { name: 'Liabilities and equity', parts: [{ canvasId: 'cBS', nodeId: 'debt', name: 'Debt' }, { canvasId: 'cBS', nodeId: 'equity', name: 'Equity' }] },
+    ] },
+    { layout: 'flow', title: 'Profit', period: 0, steps: [
+      { canvasId: 'cProfit', nodeId: 'rev', name: 'Revenue', role: 'start' },
+      { canvasId: 'cProfit', nodeId: 'cogs', name: 'Cost of sales', role: 'subtract' },
+      { canvasId: 'cProfit', nodeId: 'gp', name: 'Gross profit', role: 'total' },
+      { canvasId: 'cProfit', nodeId: 'over', name: 'Overheads', role: 'subtract' },
+      { canvasId: 'cProfit', nodeId: 'profit', name: 'Profit', role: 'total' },
+    ] },
   ],
 };
 async function loadSample(){
@@ -56,7 +81,7 @@ async function loadSample(){
   // The sample starts on its own board the first time (after that, as it was left).
   const key = BOARD_PREFIX + modelSignature(compileModel(SAMPLE_MODEL));
   try{ if(!(await store.get(key))) await store.put(key, JSON.stringify(SAMPLE_BOARD)); }catch(e){ /* not kept: the starting board */ }
-  if(await openModelText(JSON.stringify(SAMPLE_MODEL), 'Sample model')) notify('The sample model: move Price or Volume and watch the bars.', 'ok', 'load');
+  if(await openModelText(JSON.stringify(SAMPLE_MODEL), 'Sample model')) notify('The sample model: move Price or Volume and watch the bars and charts.', 'ok', 'load');
 }
 
 function readFileAndOpen(file){
@@ -91,12 +116,19 @@ document.addEventListener('drop', (ev) => {
 });
 
 $('btnAddBar').addEventListener('click', () => { if(model && addBar()) renderBoard(); });
+$('btnAddChart').addEventListener('click', () => {
+  if(!model) return;
+  const c = addChart('columns');
+  if(!c) return;
+  chartsEditing.add(c.id); // a new chart opens with its editor
+  renderBoard();
+});
 $('btnAddSlider').addEventListener('click', () => {
   if(!model) return;
   if(!model.inputs.length){ notify('This model has no input rectangles to put a slider on.', 'info', 'add'); return; }
   if(addSlider()) renderBoard();
 });
-document.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', () => $(b.dataset.add === 'bar' ? 'btnAddBar' : 'btnAddSlider').click()));
+document.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', () => $({ bar: 'btnAddBar', chart: 'btnAddChart', slider: 'btnAddSlider' }[b.dataset.add]).click()));
 $('btnResetAll').addEventListener('click', () => { if(!model) return; board.sliders.forEach(s => { s.value = null; }); renderBoard(); });
 window.addEventListener('pagehide', () => { if(saveTimer) saveBoardNow(); });
 

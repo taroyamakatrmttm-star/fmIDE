@@ -119,6 +119,37 @@
   .dialog h3{ margin:0 0 8px; font-size:16px; }
   .dialog p{ margin:0 0 16px; color:var(--soft-ink); }
   .dialog-actions{ display:flex; justify-content:flex-end; gap:8px; }
+
+  /* Charts (G2): wider than a bar widget. */
+  .widget-list.bars .chart-widget{ grid-column:1 / -1; }
+  .board.moving .chart-widget{ opacity:.38; }
+  .board.moving .chart-widget.reached{ opacity:1; box-shadow:0 0 0 2px var(--reach); }
+  .chart-title{ flex:1 1 auto; font:inherit; font-weight:600; font-size:14px; padding:4px 6px; border:1px solid transparent; border-radius:6px; background:transparent; color:var(--ink); min-width:0; }
+  .chart-title:hover, .chart-title:focus{ border-color:var(--line-strong); background:#fff; }
+  .chart-key{ display:flex; flex-direction:column; gap:3px; margin-top:4px; font-size:12px; color:var(--soft-ink); }
+  .key-line{ display:flex; flex-wrap:wrap; gap:4px 12px; align-items:center; }
+  .key-group{ font-weight:600; color:var(--ink); }
+  .key-item{ display:inline-flex; align-items:center; gap:5px; }
+  .key-swatch{ width:11px; height:11px; border-radius:3px; display:inline-block; }
+  .bar-chart .c-part{ stroke:#fff; stroke-width:.6; }
+  .bar-chart .t-check{ font-size:13px; font-weight:700; }
+  .bar-chart .t-check.ok{ fill:var(--up); }
+  .bar-chart .t-check.bad{ fill:var(--down); }
+  .bar-chart .f-total{ fill:#334155; }
+  .bar-chart .f-up{ fill:var(--up); }
+  .bar-chart .f-down{ fill:var(--down); }
+  .bar-chart .f-link{ stroke:var(--line-strong); stroke-width:1; stroke-dasharray:3 2; }
+  .chart-edit{ margin-top:8px; border-top:1px solid var(--line); padding-top:6px; }
+  .chart-edit summary{ cursor:pointer; font-size:12.5px; color:var(--soft-ink); }
+  .edit-row{ display:flex; gap:6px; align-items:center; margin-top:6px; }
+  .edit-row select{ flex:1 1 auto; }
+  .edit-row .group-name{ flex:1 1 auto; font:inherit; font-size:13px; font-weight:600; padding:4px 6px; border:1px solid var(--line-strong); border-radius:6px; }
+  .group-edit{ border:1px solid var(--line); border-radius:8px; padding:4px 8px 8px; margin:8px 0 0; }
+  .row-buttons{ display:inline-flex; gap:2px; }
+  button.mini{ padding:2px 7px; font-size:12px; }
+  .check-row{ cursor:pointer; color:var(--ink); }
+  .add-part, .add-step, .add-group{ display:inline-block; margin-top:6px; font-size:12.5px; }
+  .chart-widget .widget-head select{ flex:0 0 auto; }
 /* The Help panel (build step 10; docs/step10-help.md), shared by fmIDE and ExcelExporter with
    src/shared/help-panel.js. Each app sets --help-top (where the panel starts) and makes room
    for the panel under body.help-open. */
@@ -204,6 +235,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     <button id="btnOpen" class="gbar-btn" title="Open a .fmide document, or a system or workspace file saved by fmIDE">Open…</button>
     <button id="btnFromFmide" class="gbar-btn hidden" title="Show fmIDE's model as it is now">↻ From fmIDE</button>
     <button id="btnAddBar" class="gbar-btn needs-model" title="Show a rectangle's value as bars">+ Bar</button>
+    <button id="btnAddChart" class="gbar-btn needs-model" title="Columns of several rectangles, stacked or side by side, or a waterfall">+ Chart</button>
     <button id="btnAddSlider" class="gbar-btn needs-model" title="Change an input rectangle with a slider">+ Slider</button>
     <button id="btnResetAll" class="gbar-btn needs-model" title="Put every slider back to the model's own numbers">Reset all</button>
     <button id="btnHelp" class="gbar-btn" title="Help (F1)">❓ Help</button>
@@ -232,9 +264,9 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       <p id="noSliders" class="empty-note">No sliders yet: <button type="button" class="link-btn" data-add="slider">+ Slider</button></p>
     </div>
     <div class="board-col board-main">
-      <h2 class="col-head">Bars <span id="calcNote" class="calc-note"></span></h2>
+      <h2 class="col-head">Bars and charts <span id="calcNote" class="calc-note"></span></h2>
       <div id="barList" class="widget-list bars"></div>
-      <p id="noBars" class="empty-note">No bars yet: <button type="button" class="link-btn" data-add="bar">+ Bar</button></p>
+      <p id="noBars" class="empty-note">No bars yet: <button type="button" class="link-btn" data-add="bar">+ Bar</button> or <button type="button" class="link-btn" data-add="chart">+ Chart</button></p>
     </div>
   </section>
 </main>
@@ -2886,8 +2918,9 @@ function workOutAhead(s){
 
 function setCalcNote(text){ const el = $('calcNote'); if(el) el.textContent = text; }
 // ============================================================
-// The board: the bars and sliders on the page.
+// The board: the bars, charts and sliders on the page.
 //   bar    { id, key, periods }
+//   chart  { id, layout: 'columns' | 'flow', … } (G2; 04b-charts.js)
 //   slider { id, key, periods, mode: 'set' | 'shift', min, max, step, value }
 // periods: { mode: 'all' } · { mode: 'one', p } · { mode: 'range', from, to } (from 0).
 // A slider's value is null until it moves (the model's own numbers); 'set' gives the input
@@ -2905,7 +2938,7 @@ const store = createStore('fmGraph');
 const BOARD_PREFIX = 'fmgraph-board-';
 const LAST_BOARD_KEY = 'fmgraph-last-board';
 const BOARD_LIMIT = 40; // bars, and sliders, at most
-let board = { bars: [], sliders: [] };
+let board = { bars: [], charts: [], sliders: [] };
 let nextWidgetId = 1;
 const newWidgetId = (kind) => kind + (nextWidgetId++);
 
@@ -2950,7 +2983,7 @@ function cleanRange(raw, fallback){
 // Reads a board (from storage, or later a file) against the loaded model: widgets on
 // rectangles that aren't there, or sliders on rectangles that aren't inputs, are left out.
 function cleanBoard(raw){
-  const out = { bars: [], sliders: [] };
+  const out = { bars: [], charts: [], sliders: [] };
   if(!raw || typeof raw !== 'object' || raw.kind !== 'fmIDE-graph-board') return out;
   const count = model.periods.length;
   const sameName = (a, b) => String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
@@ -2962,6 +2995,10 @@ function cleanBoard(raw){
   (Array.isArray(raw.bars) ? raw.bars : []).slice(0, BOARD_LIMIT).forEach(b => {
     const rect = rectFor(b);
     if(rect) out.bars.push({ id: newWidgetId('b'), key: rect.key, periods: cleanPeriods(b.periods, count) });
+  });
+  (Array.isArray(raw.charts) ? raw.charts : []).slice(0, BOARD_LIMIT).forEach(c => {
+    const chart = cleanChart(c, rectFor, count);
+    if(chart) out.charts.push(chart);
   });
   (Array.isArray(raw.sliders) ? raw.sliders : []).slice(0, BOARD_LIMIT).forEach(s => {
     const rect = rectFor(s);
@@ -2980,6 +3017,7 @@ function boardData(){
   return {
     kind: 'fmIDE-graph-board', version: 1,
     bars: board.bars.map(b => Object.assign(at(b.key), { periods: Object.assign({}, b.periods) })),
+    charts: board.charts.map(c => chartData(c, at)),
     sliders: board.sliders.map(s => Object.assign(at(s.key), { periods: Object.assign({}, s.periods), mode: s.mode, min: s.min, max: s.max, step: s.step })),
   };
 }
@@ -3006,7 +3044,7 @@ async function loadBoardFor(m){
     if(typeof raw !== 'string' || !raw){ raw = await store.get(LAST_BOARD_KEY); fromLast = true; }
     if(typeof raw === 'string' && raw){
       const b = cleanBoard(JSON.parse(raw));
-      if(b.bars.length || b.sliders.length) restored = b;
+      if(b.bars.length || b.charts.length || b.sliders.length) restored = b;
       if(restored && fromLast) saveBoardSoon();
     }
   }catch(e){ /* unreadable: start a new board */ }
@@ -3016,7 +3054,7 @@ async function loadBoardFor(m){
 // A new model's board: a slider on the first input that reaches a calculated rectangle, and
 // a bar on the last rectangle it reaches, so something moves straight away.
 function startingBoard(){
-  const b = { bars: [], sliders: [] };
+  const b = { bars: [], charts: [], sliders: [] };
   for(const input of model.inputs){
     const reached = model.reach(input.key);
     const targets = model.rects.filter(r => !r.input && reached.has(r.key));
@@ -3048,10 +3086,123 @@ function addSlider(key, periods, mode, range){
   return s;
 }
 function removeWidget(id){
-  const before = board.bars.length + board.sliders.length;
+  const count = () => board.bars.length + board.charts.length + board.sliders.length;
+  const before = count();
   board.bars = board.bars.filter(b => b.id !== id);
+  board.charts = board.charts.filter(c => c.id !== id);
   board.sliders = board.sliders.filter(s => s.id !== id);
-  if(board.bars.length + board.sliders.length !== before) saveBoardSoon();
+  if(count() !== before) saveBoardSoon();
+}
+// ============================================================
+// Charts (G2): two general building blocks, made of the same bars as a bar widget. Nothing
+// here knows about balance sheets or income statements: those are just ways of filling them in.
+//
+//   columns  { id, layout: 'columns', title, periods, groups: [{ name, parts: [key] }], check }
+//            Each group is one column per period, its rectangles stacked (values below zero
+//            stack downwards); the groups stand side by side. One rectangle per group is a
+//            plain column chart, one group of several a stacked chart, two groups whose totals
+//            should agree (check: true) a balance sheet.
+//   flow     { id, layout: 'flow', title, period, steps: [{ key, role }] }
+//            A waterfall in one period: 'start' (a full bar), 'add' and 'subtract' (floating
+//            steps up or down from the running total), 'total' (a full bar of that rectangle's
+//            own value, checked against the steps before it; the flow carries on from it).
+//
+// Numbers agree when they differ by less than a millionth of their size (AGREE_TOLERANCE):
+// tiny rounding in the calculation is ignored, any real gap is not.
+// ============================================================
+const CHART_LIMITS = { groups: 12, parts: 30, steps: 40, title: 80, name: 60 };
+const FLOW_ROLES = ['start', 'add', 'subtract', 'total'];
+const AGREE_TOLERANCE = 1e-6;
+const agree = (a, b) => Math.abs(a - b) <= AGREE_TOLERANCE * Math.max(1, Math.abs(a), Math.abs(b));
+const cleanText = (v, max) => typeof v === 'string' ? v.replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, max) : '';
+
+// Reads a chart from storage (or later a file); rectFor finds a part's rectangle by canvas id,
+// node id and name. Parts on rectangles that aren't there are left out.
+function cleanChart(raw, rectFor, count){
+  if(!raw || typeof raw !== 'object') return null;
+  const title = cleanText(raw.title, CHART_LIMITS.title);
+  if(raw.layout === 'flow'){
+    const steps = (Array.isArray(raw.steps) ? raw.steps : []).slice(0, CHART_LIMITS.steps).map(s => {
+      const r = rectFor(s);
+      return r ? { key: r.key, role: FLOW_ROLES.includes(s.role) ? s.role : 'add' } : null;
+    }).filter(Boolean);
+    const p = Math.round(Number(raw.period));
+    return { id: newWidgetId('c'), layout: 'flow', title, period: Number.isFinite(p) && p >= 0 && p < count ? p : 0, steps };
+  }
+  const groups = (Array.isArray(raw.groups) ? raw.groups : []).slice(0, CHART_LIMITS.groups).map(g => ({
+    name: cleanText(g && g.name, CHART_LIMITS.name),
+    parts: (g && Array.isArray(g.parts) ? g.parts : []).slice(0, CHART_LIMITS.parts).map(rectFor).filter(Boolean).map(r => r.key),
+  }));
+  if(!groups.length) groups.push({ name: '', parts: [] });
+  return { id: newWidgetId('c'), layout: 'columns', title, periods: cleanPeriods(raw.periods, count), groups, check: raw.check === true };
+}
+
+// A chart's file form; at(key) gives a rectangle's { canvasId, nodeId, name }.
+function chartData(c, at){
+  if(c.layout === 'flow') return { layout: 'flow', title: c.title, period: c.period, steps: c.steps.map(s => Object.assign(at(s.key), { role: s.role })) };
+  return { layout: 'columns', title: c.title, periods: Object.assign({}, c.periods), check: c.check,
+    groups: c.groups.map(g => ({ name: g.name, parts: g.parts.map(at) })) };
+}
+
+// A new chart: columns with one group holding one calculated rectangle, or a flow with one step.
+function addChart(layout){
+  if(board.charts.length >= BOARD_LIMIT) return null;
+  const first = model.rects.find(r => !r.input) || model.rects[0];
+  const c = layout === 'flow'
+    ? { id: newWidgetId('c'), layout: 'flow', title: '', period: 0, steps: first ? [{ key: first.key, role: 'start' }] : [] }
+    : { id: newWidgetId('c'), layout: 'columns', title: '', periods: { mode: 'all' }, groups: [{ name: '', parts: first ? [first.key] : [] }], check: false };
+  board.charts.push(c);
+  saveBoardSoon();
+  return c;
+}
+
+// Every rectangle a chart shows.
+function chartKeys(c){ return c.layout === 'flow' ? c.steps.map(s => s.key) : c.groups.flatMap(g => g.parts); }
+
+// What a columns chart shows in one calculation: per period, per group, each part's result,
+// the total of what goes up (above zero) and down, and whether the groups' totals agree.
+function columnsFigures(c, results){
+  return periodsOf(c.periods).map(p => {
+    const groups = c.groups.map(g => {
+      const parts = g.parts.map(key => resultOf(results, model.byKey.get(key), p));
+      const ok = parts.filter(r => !r.error);
+      return { parts, error: parts.some(r => r.error),
+        total: ok.reduce((s, r) => s + r.value, 0),
+        up: ok.reduce((s, r) => s + Math.max(0, r.value), 0), down: ok.reduce((s, r) => s + Math.min(0, r.value), 0) };
+    });
+    let check = null;
+    const full = groups.filter(g => g.parts.length);
+    if(c.check && full.length >= 2){
+      if(full.some(g => g.error)) check = { error: true };
+      else {
+        const totals = full.map(g => g.total);
+        const gap = Math.max(...totals) - Math.min(...totals);
+        check = { ok: totals.every(t => agree(t, totals[0])), gap };
+      }
+    }
+    return { p, groups, check };
+  });
+}
+
+// What a flow shows in one calculation: each step's result, where its bar starts and ends,
+// and, for a total, what the steps before it add up to and whether it agrees.
+function flowFigures(c, results){
+  let running = 0, broken = false;
+  return c.steps.map((s, i) => {
+    const r = resultOf(results, model.byKey.get(s.key), c.period);
+    if(r.error){ broken = true; return { role: s.role, error: r.error }; }
+    const v = r.value;
+    let from, to, check = null;
+    if(s.role === 'start'){ from = 0; to = v; running = v; broken = false; }
+    else if(s.role === 'total'){
+      from = 0; to = v;
+      if(i > 0) check = broken ? { error: true } : { ok: agree(running, v), expected: running };
+      running = v; broken = false;
+    }
+    else if(s.role === 'subtract'){ from = running; to = running - v; running = to; }
+    else { from = running; to = running + v; running = to; }
+    return { role: s.role, value: v, from, to, check };
+  });
 }
 // ============================================================
 // Drawing the board. renderBoard() builds every widget; updateValues() redraws only the
@@ -3148,8 +3299,9 @@ function renderBoard(){
   sliders.textContent = '';
   if(!model) return;
   board.sliders.forEach(s => sliders.appendChild(sliderWidget(s)));
+  board.charts.forEach(c => bars.appendChild(chartWidget(c)));
   board.bars.forEach(b => bars.appendChild(barWidget(b)));
-  $('noBars').classList.toggle('hidden', board.bars.length > 0);
+  $('noBars').classList.toggle('hidden', board.bars.length + board.charts.length > 0);
   $('noSliders').classList.toggle('hidden', board.sliders.length > 0);
   updateValues();
 }
@@ -3303,6 +3455,10 @@ function paintReach(){
     const el = document.querySelector('.bar-widget[data-id="' + b.id + '"]');
     if(el) el.classList.toggle('reached', !!reached && (reached.has(b.key) || b.key === s.key));
   });
+  board.charts.forEach(c => {
+    const el = document.querySelector('.chart-widget[data-id="' + c.id + '"]');
+    if(el) el.classList.toggle('reached', !!reached && chartKeys(c).some(k => reached.has(k) || k === s.key));
+  });
 }
 
 function updateValues(){
@@ -3311,6 +3467,10 @@ function updateValues(){
   board.bars.forEach(b => {
     const el = document.querySelector('.bar-widget[data-id="' + b.id + '"]');
     if(el) drawBars(el, b, results);
+  });
+  board.charts.forEach(c => {
+    const el = document.querySelector('.chart-widget[data-id="' + c.id + '"]');
+    if(el) drawChart(el, c, results);
   });
   board.sliders.forEach(s => {
     const el = document.querySelector('.slider-widget[data-id="' + s.id + '"]');
@@ -3381,6 +3541,302 @@ function drawBars(el, b, results){
   problems.forEach((periods, code) => list.appendChild(make('li', null, periods.join(', ') + ': ' + errorText(code))));
 }
 // ============================================================
+// Drawing and editing charts (G2; the data is 04b-charts.js). A chart widget has its chart, a
+// key of what each colour is, any problems (errors, totals that don't agree) as text, and
+// "Edit chart", where its groups and rectangles (or its steps) are chosen. Like a bar widget,
+// it shows the model's own values as dashed outlines once a slider has changed them, and lights
+// up when a slider reaches any of its rectangles.
+// ============================================================
+const PART_COLOURS = ['#0f766e', '#2563eb', '#d97706', '#7c3aed', '#db2777', '#0891b2', '#65a30d', '#9f1239'];
+const chartsEditing = new Set(); // charts whose editor is open (this page only)
+const ROLE_LABELS = { start: 'Start', add: 'Add', subtract: 'Subtract', total: 'Total' };
+
+function chartWidget(c){
+  const w = make('div', 'widget chart-widget');
+  w.dataset.id = c.id;
+  w.dataset.layout = c.layout;
+  const head = make('div', 'widget-head');
+  const title = make('input', 'chart-title');
+  title.type = 'text';
+  title.placeholder = c.layout === 'flow' ? 'Waterfall title' : 'Chart title';
+  title.value = c.title;
+  title.maxLength = CHART_LIMITS.title;
+  title.setAttribute('aria-label', 'Chart title');
+  title.addEventListener('change', () => { c.title = cleanText(title.value, CHART_LIMITS.title); saveBoardSoon(); });
+  const layout = make('select');
+  layout.setAttribute('aria-label', 'Kind of chart');
+  [['columns', 'Columns'], ['flow', 'Waterfall']].forEach(([v, t]) => { const o = make('option', null, t); o.value = v; if(c.layout === v) o.selected = true; layout.appendChild(o); });
+  layout.addEventListener('change', () => { switchLayout(c, layout.value); saveBoardSoon(); renderBoard(); });
+  head.append(title, layout, removeButton(c.id, 'chart'));
+  w.append(head, make('div', 'bar-chart-host'), make('div', 'chart-key'), make('ul', 'bar-errors'));
+  w.appendChild(chartEditor(c));
+  return w;
+}
+
+// Columns ↔ waterfall keeps the rectangles: every part becomes a step (the first a start,
+// the rest added), and every step a part of one group.
+function switchLayout(c, layout){
+  if(layout === c.layout) return;
+  if(layout === 'flow'){
+    const keys = chartKeys(c);
+    Object.assign(c, { layout: 'flow', period: periodsOf(c.periods)[0] || 0, steps: keys.map((key, i) => ({ key, role: i === 0 ? 'start' : 'add' })) });
+    delete c.groups; delete c.periods; delete c.check;
+  } else {
+    const keys = chartKeys(c);
+    Object.assign(c, { layout: 'columns', periods: { mode: 'all' }, groups: [{ name: '', parts: keys }], check: false });
+    delete c.steps; delete c.period;
+  }
+}
+
+function chartEditor(c){
+  const box = make('details', 'chart-edit');
+  if(chartsEditing.has(c.id)) box.open = true;
+  box.addEventListener('toggle', () => { if(box.open) chartsEditing.add(c.id); else chartsEditing.delete(c.id); });
+  box.appendChild(make('summary', null, 'Edit chart'));
+  const changed = () => { saveBoardSoon(); renderBoard(); };
+  // A row of buttons that move or remove item i of list.
+  const rowButtons = (list, i) => {
+    const b = make('span', 'row-buttons');
+    const btn = (text, label, fn, off) => { const x = make('button', 'mini', text); x.type = 'button'; x.title = label; x.setAttribute('aria-label', label); x.disabled = !!off; x.addEventListener('click', fn); b.appendChild(x); };
+    btn('↑', 'Move up', () => { [list[i - 1], list[i]] = [list[i], list[i - 1]]; changed(); }, i === 0);
+    btn('↓', 'Move down', () => { [list[i + 1], list[i]] = [list[i], list[i + 1]]; changed(); }, i === list.length - 1);
+    btn('×', 'Remove', () => { list.splice(i, 1); changed(); });
+    return b;
+  };
+  const firstCalc = () => (model.rects.find(r => !r.input) || model.rects[0]).key;
+  if(c.layout === 'flow'){
+    const row = make('div', 'widget-row');
+    const sel = make('select');
+    sel.setAttribute('aria-label', 'Period');
+    model.periods.forEach((name, i) => { const o = make('option', null, name); o.value = String(i); if(i === c.period) o.selected = true; sel.appendChild(o); });
+    sel.addEventListener('change', () => { c.period = Number(sel.value); changed(); });
+    row.append(make('span', null, 'In'), sel);
+    box.appendChild(row);
+    c.steps.forEach((s, i) => {
+      const r = make('div', 'edit-row step-row');
+      const rs = rectSelect(s.key, false);
+      rs.addEventListener('change', () => { s.key = rs.value; changed(); });
+      const role = make('select');
+      role.setAttribute('aria-label', 'Step');
+      FLOW_ROLES.forEach(v => { const o = make('option', null, ROLE_LABELS[v]); o.value = v; if(s.role === v) o.selected = true; role.appendChild(o); });
+      role.addEventListener('change', () => { s.role = role.value; changed(); });
+      r.append(role, rs, rowButtons(c.steps, i));
+      box.appendChild(r);
+    });
+    const add = make('button', 'link-btn add-step', '+ Step');
+    add.type = 'button';
+    add.disabled = c.steps.length >= CHART_LIMITS.steps;
+    add.addEventListener('click', () => { c.steps.push({ key: firstCalc(), role: c.steps.length ? 'add' : 'start' }); chartsEditing.add(c.id); changed(); });
+    box.appendChild(add);
+    return box;
+  }
+  const row = make('div', 'widget-row');
+  row.appendChild(periodsChooser(c.periods, (p) => { c.periods = p; saveBoardSoon(); updateValues(); }));
+  box.appendChild(row);
+  const checkRow = make('label', 'widget-row check-row');
+  const check = make('input');
+  check.type = 'checkbox';
+  check.checked = c.check;
+  check.disabled = c.groups.length < 2;
+  check.addEventListener('change', () => { c.check = check.checked; changed(); });
+  checkRow.append(check, make('span', null, 'Check that the groups\' totals agree'));
+  box.appendChild(checkRow);
+  c.groups.forEach((g, gi) => {
+    const set = make('fieldset', 'group-edit');
+    const top = make('div', 'edit-row');
+    const name = make('input', 'group-name');
+    name.type = 'text';
+    name.placeholder = 'Group ' + (gi + 1);
+    name.value = g.name;
+    name.maxLength = CHART_LIMITS.name;
+    name.setAttribute('aria-label', 'Group name');
+    name.addEventListener('change', () => { g.name = cleanText(name.value, CHART_LIMITS.name); saveBoardSoon(); updateValues(); });
+    top.append(name, rowButtons(c.groups, gi));
+    set.appendChild(top);
+    g.parts.forEach((key, pi) => {
+      const r = make('div', 'edit-row part-row');
+      const rs = rectSelect(key, false);
+      rs.addEventListener('change', () => { g.parts[pi] = rs.value; changed(); });
+      r.append(rs, rowButtons(g.parts, pi));
+      set.appendChild(r);
+    });
+    const add = make('button', 'link-btn add-part', '+ Rectangle');
+    add.type = 'button';
+    add.disabled = g.parts.length >= CHART_LIMITS.parts;
+    add.addEventListener('click', () => { g.parts.push(firstCalc()); changed(); });
+    set.appendChild(add);
+    box.appendChild(set);
+  });
+  const addGroup = make('button', 'link-btn add-group', '+ Group');
+  addGroup.type = 'button';
+  addGroup.disabled = c.groups.length >= CHART_LIMITS.groups;
+  addGroup.addEventListener('click', () => { c.groups.push({ name: '', parts: [firstCalc()] }); changed(); });
+  box.appendChild(addGroup);
+  return box;
+}
+
+function partLabel(key){ const r = model.byKey.get(key); return r ? r.name : '?'; }
+function groupLabel(c, gi){ return c.groups[gi].name || 'Group ' + (gi + 1); }
+
+function drawChart(el, c, results){
+  const host = el.querySelector('.bar-chart-host'), key = el.querySelector('.chart-key'), list = el.querySelector('.bar-errors');
+  host.textContent = ''; key.textContent = ''; list.textContent = '';
+  const problems = [];
+  if(c.layout === 'flow') host.appendChild(drawFlow(c, results, problems));
+  else host.appendChild(drawColumns(c, results, problems, key));
+  // Rectangles in different units side by side or stacked don't add up: say so.
+  const units = [...new Set(chartKeys(c).map(k => model.byKey.get(k)).filter(r => r && r.unit).map(r => r.unit))];
+  if(units.length > 1) problems.push('This chart mixes units (' + units.join(', ') + '): its totals may not mean much.');
+  problems.forEach(t => list.appendChild(make('li', null, t)));
+}
+
+// The colour of each rectangle, in the order the chart lists them (the same rectangle twice
+// keeps its first colour).
+function partColours(c){
+  const out = new Map();
+  chartKeys(c).forEach(k => { if(!out.has(k)) out.set(k, PART_COLOURS[out.size % PART_COLOURS.length]); });
+  return out;
+}
+
+function drawColumns(c, results, problems, key){
+  const now = columnsFigures(c, results), was = columnsFigures(c, model.base);
+  const colours = partColours(c);
+  const n = Math.max(1, now.length), ng = Math.max(1, c.groups.length);
+  const labels = n * ng <= 12;
+  let lo = 0, hi = 0;
+  now.concat(was).forEach(f => f.groups.forEach(g => { lo = Math.min(lo, g.down); hi = Math.max(hi, g.up); }));
+  if(hi === lo) hi = lo + 1;
+  const checked = now.some(f => f.check);
+  const W = 560, top = 18 + (labels ? 16 : 0) + (checked ? 16 : 0), bottom = 22 + (lo < 0 && labels ? 16 : 0), H = 170 + top + bottom;
+  const plotH = H - top - bottom;
+  const y = (v) => top + (hi - v) / (hi - lo) * plotH;
+  const slot = (W - 8) / n, gap = 6;
+  const bw = Math.max(3, Math.min(44, (slot * 0.8 - gap * (ng - 1)) / ng));
+  const chart = svg('svg', { class: 'bar-chart', viewBox: '0 0 ' + W + ' ' + H, role: 'img' });
+  chart.setAttribute('aria-label', c.title || 'Columns');
+  chart.appendChild(svg('line', { class: 'b-zero', x1: 0, x2: W, y1: y(0), y2: y(0) }));
+  now.forEach((f, i) => {
+    const slotX = 4 + slot * i, groupsW = ng * bw + (ng - 1) * gap;
+    const g = svg('g', { class: 'c-period', 'data-period': f.p });
+    f.groups.forEach((grp, gi) => {
+      const x = slotX + (slot - groupsW) / 2 + gi * (bw + gap), cx = x + bw / 2;
+      const gEl = svg('g', { class: 'c-group', 'data-group': gi });
+      const name = groupLabel(c, gi);
+      if(grp.error){
+        gEl.appendChild(svg('rect', { class: 'b-err', x, y: top, width: bw, height: plotH }));
+        gEl.appendChild(svg('text', { class: 't-err', x: cx, y: top + plotH / 2, 'text-anchor': 'middle' }, '!'));
+        grp.parts.forEach((r, pi) => { if(r.error) problems.push(model.periods[f.p] + ', ' + partLabel(c.groups[gi].parts[pi]) + ': ' + errorText(r.error)); });
+      } else {
+        let up = 0, down = 0;
+        grp.parts.forEach((r, pi) => {
+          const k = c.groups[gi].parts[pi], v = r.value;
+          const from = v >= 0 ? up : down, to = from + v;
+          if(v >= 0) up = to; else down = to;
+          const rect = svg('rect', { class: 'c-part', x, y: Math.min(y(from), y(to)), width: bw, height: Math.max(v === 0 ? 0 : 1, Math.abs(y(to) - y(from))), fill: colours.get(k) });
+          const before = was[i].groups[gi].parts[pi];
+          const diff = before && !before.error ? fmtDiff(v, before.value) : '';
+          rect.appendChild(svg('title', {}, name + ' · ' + partLabel(k) + ', ' + model.periods[f.p] + ': ' + fmtNum(v) + (diff ? ' — was ' + fmtNum(before.value) + ', ' + diff : '')));
+          gEl.appendChild(rect);
+        });
+        const b = was[i].groups[gi];
+        if(!b.error && (!agree(b.up, grp.up) || !agree(b.down, grp.down))){
+          gEl.appendChild(svg('rect', { class: 'b-base', x, y: y(b.up), width: bw, height: Math.max(1, y(b.down) - y(b.up)) }));
+        }
+        if(labels){
+          const diff = b.error ? '' : fmtDiff(grp.total, b.total);
+          const t = svg('text', { class: 't-value', x: cx, y: y(grp.up) - 4, 'text-anchor': 'middle' }, fmtNum(grp.total));
+          gEl.appendChild(t);
+          if(diff) gEl.appendChild(svg('text', { class: 't-diff ' + (grp.total > b.total ? 'up' : 'down'), x: cx, y: y(grp.up) - 17, 'text-anchor': 'middle' }, diff.split(' ')[0]));
+        }
+      }
+      g.appendChild(gEl);
+    });
+    if(f.check){
+      const mark = f.check.error ? '?' : f.check.ok ? '✓' : '✗';
+      const t = svg('text', { class: 't-check ' + (f.check.ok ? 'ok' : 'bad'), x: slotX + slot / 2, y: 13, 'text-anchor': 'middle' }, mark);
+      t.appendChild(svg('title', {}, f.check.error ? 'Can\'t check: a rectangle couldn\'t be worked out'
+        : f.check.ok ? 'The groups\' totals agree' : 'The groups\' totals differ by ' + fmtNum(f.check.gap)));
+      g.appendChild(t);
+      if(!f.check.error && !f.check.ok) problems.push(model.periods[f.p] + ': the groups\' totals differ by ' + fmtNum(f.check.gap) + '.');
+    }
+    if(n <= 8 || i === 0 || i === n - 1) g.appendChild(svg('text', { class: 't-period', x: slotX + slot / 2, y: H - 6, 'text-anchor': 'middle' }, model.periods[f.p]));
+    chart.appendChild(g);
+  });
+  // The key: each group, left to right, with its rectangles' colours.
+  c.groups.forEach((grp, gi) => {
+    const line = make('div', 'key-line');
+    if(ng > 1) line.appendChild(make('span', 'key-group', groupLabel(c, gi) + ':'));
+    grp.parts.forEach(k => {
+      const item = make('span', 'key-item');
+      const sw = make('span', 'key-swatch');
+      sw.style.background = colours.get(k);
+      item.append(sw, document.createTextNode(partLabel(k)));
+      line.appendChild(item);
+    });
+    key.appendChild(line);
+  });
+  return chart;
+}
+
+function drawFlow(c, results, problems){
+  const now = flowFigures(c, results), was = flowFigures(c, model.base);
+  const n = Math.max(1, now.length), labels = n <= 12;
+  let lo = 0, hi = 0;
+  now.concat(was).forEach(f => { if(!f.error){ lo = Math.min(lo, f.from, f.to); hi = Math.max(hi, f.from, f.to); } });
+  if(hi === lo) hi = lo + 1;
+  const W = 560, top = 18 + (labels ? 30 : 0), bottom = 36, H = 170 + top + bottom;
+  const plotH = H - top - bottom;
+  const y = (v) => top + (hi - v) / (hi - lo) * plotH;
+  const slot = (W - 8) / n, bw = Math.max(3, Math.min(46, slot * 0.62));
+  const chart = svg('svg', { class: 'bar-chart flow-chart', viewBox: '0 0 ' + W + ' ' + H, role: 'img' });
+  chart.setAttribute('aria-label', (c.title || 'Waterfall') + ', ' + model.periods[c.period]);
+  chart.appendChild(svg('line', { class: 'b-zero', x1: 0, x2: W, y1: y(0), y2: y(0) }));
+  let prevEnd = null;
+  now.forEach((f, i) => {
+    const s = c.steps[i], name = partLabel(s.key);
+    const cx = 4 + slot * i + slot / 2, x = cx - bw / 2;
+    const g = svg('g', { class: 'f-step', 'data-role': s.role });
+    if(f.error){
+      g.appendChild(svg('rect', { class: 'b-err', x, y: top, width: bw, height: plotH }));
+      g.appendChild(svg('text', { class: 't-err', x: cx, y: top + plotH / 2, 'text-anchor': 'middle' }, '!'));
+      problems.push(name + ': ' + errorText(f.error));
+      prevEnd = null;
+    } else {
+      if(prevEnd !== null && (s.role === 'add' || s.role === 'subtract')) g.appendChild(svg('line', { class: 'f-link', x1: x - (slot - bw), x2: x, y1: y(prevEnd), y2: y(prevEnd) }));
+      const kind = (s.role === 'start' || s.role === 'total') ? 'f-total' : (f.to >= f.from ? 'f-up' : 'f-down');
+      const rect = svg('rect', { class: 'f-bar ' + kind, x, y: Math.min(y(f.from), y(f.to)), width: bw, height: Math.max(1, Math.abs(y(f.to) - y(f.from))) });
+      const b = was[i];
+      const diff = b && !b.error ? fmtDiff(f.value, b.value) : '';
+      rect.appendChild(svg('title', {}, name + ' (' + ROLE_LABELS[s.role].toLowerCase() + '), ' + model.periods[c.period] + ': ' + fmtNum(f.value) + (diff ? ' — was ' + fmtNum(b.value) + ', ' + diff : '')));
+      g.appendChild(rect);
+      if(b && !b.error && (!agree(b.from, f.from) || !agree(b.to, f.to))){
+        g.appendChild(svg('rect', { class: 'b-base', x, y: Math.min(y(b.from), y(b.to)), width: bw, height: Math.max(1, Math.abs(y(b.to) - y(b.from))) }));
+      }
+      if(labels){
+        const shown = s.role === 'add' ? (f.value >= 0 ? '+' : '') + fmtNum(f.value) : s.role === 'subtract' ? '−' + fmtNum(f.value) : fmtNum(f.value);
+        const topY = Math.min(y(f.from), y(f.to));
+        g.appendChild(svg('text', { class: 't-value', x: cx, y: topY - 4, 'text-anchor': 'middle' }, shown.replace('−−', '+')));
+        if(diff) g.appendChild(svg('text', { class: 't-diff ' + (f.value > b.value ? 'up' : 'down'), x: cx, y: topY - 17, 'text-anchor': 'middle' }, diff.split(' ')[0]));
+      }
+      if(f.check && !f.check.error){
+        const t = svg('text', { class: 't-check ' + (f.check.ok ? 'ok' : 'bad'), x: cx, y: 13, 'text-anchor': 'middle' }, f.check.ok ? '✓' : '✗');
+        t.appendChild(svg('title', {}, f.check.ok ? 'The steps before it add up to it' : 'The steps before it add up to ' + fmtNum(f.check.expected)));
+        g.appendChild(t);
+        if(!f.check.ok) problems.push(name + ': the steps before it add up to ' + fmtNum(f.check.expected) + ', not ' + fmtNum(f.value) + '.');
+      }
+      prevEnd = f.to;
+    }
+    // The step's name under it, shortened to fit (in full when pointed at).
+    const room = Math.max(3, Math.floor(slot / 6.2));
+    const label = svg('text', { class: 't-period', x: cx, y: H - 20, 'text-anchor': 'middle' }, name.length > room ? name.slice(0, room - 1) + '…' : name);
+    label.appendChild(svg('title', {}, name));
+    g.appendChild(label);
+    chart.appendChild(g);
+  });
+  chart.appendChild(svg('text', { class: 't-period', x: W / 2, y: H - 4, 'text-anchor': 'middle' }, model.periods[c.period]));
+  return chart;
+}
+// ============================================================
 // The page: opening a model (the file picker, a file dropped anywhere, the sample, or fmIDE),
 // the top bar's buttons, and ← Back to fmIDE.
 // ============================================================
@@ -3418,6 +3874,20 @@ const SAMPLE_MODEL = {
       { id: 'c1', from: 'open', to: 'add' }, { id: 'c2', from: 'pr', to: 'add' }, { id: 'c3', from: 'add', to: 'close' },
       { id: 'c4', from: 'close', to: 'ps' }, { id: 'c5', from: 'ps', to: 'open' },
     ] },
+    // A balance sheet that balances every year: the cash comes from Cash, equity grows by the profit.
+    { id: 'cBS', name: 'Balance sheet', nodes: [
+      { id: 'bcash', type: 'alias', x: 0, y: 0, w: 150, h: 64, sourceCanvasId: 'cCash', sourceNodeId: 'close' },
+      { id: 'equip', type: 'value', x: 0, y: 100, w: 150, h: 64, text: 'Equipment\n500' },
+      { id: 'debt', type: 'value', x: 0, y: 200, w: 150, h: 64, text: 'Debt\n800' },
+      { id: 'eqopen', type: 'value', x: 0, y: 300, w: 150, h: 64, text: 'Opening equity\n700', literalPeriods: [0] },
+      { id: 'bprofit', type: 'alias', x: 0, y: 400, w: 150, h: 64, sourceCanvasId: 'cProfit', sourceNodeId: 'profit' },
+      { id: 'eqadd', type: 'operator', x: 180, y: 350, text: '+' },
+      { id: 'equity', type: 'value', x: 250, y: 350, w: 150, h: 64, text: 'Equity' },
+      { id: 'eqps', type: 'periodShift', x: 250, y: 450, shift: -1 },
+    ], edges: [
+      { id: 'b1', from: 'eqopen', to: 'eqadd' }, { id: 'b2', from: 'bprofit', to: 'eqadd' }, { id: 'b3', from: 'eqadd', to: 'equity' },
+      { id: 'b4', from: 'equity', to: 'eqps' }, { id: 'b5', from: 'eqps', to: 'eqopen' },
+    ] },
   ],
 };
 const SAMPLE_BOARD = {
@@ -3427,10 +3897,21 @@ const SAMPLE_BOARD = {
     { canvasId: 'cProfit', nodeId: 'vol', name: 'Volume', periods: { mode: 'all' }, mode: 'shift', min: -50, max: 50, step: 1 },
   ],
   bars: [
-    { canvasId: 'cProfit', nodeId: 'rev', name: 'Revenue', periods: { mode: 'all' } },
     { canvasId: 'cProfit', nodeId: 'profit', name: 'Profit', periods: { mode: 'all' } },
     { canvasId: 'cCash', nodeId: 'close', name: 'Closing cash', periods: { mode: 'all' } },
-    { canvasId: 'cProfit', nodeId: 'cogs', name: 'Cost of sales', periods: { mode: 'all' } },
+  ],
+  charts: [
+    { layout: 'columns', title: 'Balance sheet', periods: { mode: 'all' }, check: true, groups: [
+      { name: 'Assets', parts: [{ canvasId: 'cCash', nodeId: 'close', name: 'Closing cash' }, { canvasId: 'cBS', nodeId: 'equip', name: 'Equipment' }] },
+      { name: 'Liabilities and equity', parts: [{ canvasId: 'cBS', nodeId: 'debt', name: 'Debt' }, { canvasId: 'cBS', nodeId: 'equity', name: 'Equity' }] },
+    ] },
+    { layout: 'flow', title: 'Profit', period: 0, steps: [
+      { canvasId: 'cProfit', nodeId: 'rev', name: 'Revenue', role: 'start' },
+      { canvasId: 'cProfit', nodeId: 'cogs', name: 'Cost of sales', role: 'subtract' },
+      { canvasId: 'cProfit', nodeId: 'gp', name: 'Gross profit', role: 'total' },
+      { canvasId: 'cProfit', nodeId: 'over', name: 'Overheads', role: 'subtract' },
+      { canvasId: 'cProfit', nodeId: 'profit', name: 'Profit', role: 'total' },
+    ] },
   ],
 };
 async function loadSample(){
@@ -3438,7 +3919,7 @@ async function loadSample(){
   // The sample starts on its own board the first time (after that, as it was left).
   const key = BOARD_PREFIX + modelSignature(compileModel(SAMPLE_MODEL));
   try{ if(!(await store.get(key))) await store.put(key, JSON.stringify(SAMPLE_BOARD)); }catch(e){ /* not kept: the starting board */ }
-  if(await openModelText(JSON.stringify(SAMPLE_MODEL), 'Sample model')) notify('The sample model: move Price or Volume and watch the bars.', 'ok', 'load');
+  if(await openModelText(JSON.stringify(SAMPLE_MODEL), 'Sample model')) notify('The sample model: move Price or Volume and watch the bars and charts.', 'ok', 'load');
 }
 
 function readFileAndOpen(file){
@@ -3473,12 +3954,19 @@ document.addEventListener('drop', (ev) => {
 });
 
 $('btnAddBar').addEventListener('click', () => { if(model && addBar()) renderBoard(); });
+$('btnAddChart').addEventListener('click', () => {
+  if(!model) return;
+  const c = addChart('columns');
+  if(!c) return;
+  chartsEditing.add(c.id); // a new chart opens with its editor
+  renderBoard();
+});
 $('btnAddSlider').addEventListener('click', () => {
   if(!model) return;
   if(!model.inputs.length){ notify('This model has no input rectangles to put a slider on.', 'info', 'add'); return; }
   if(addSlider()) renderBoard();
 });
-document.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', () => $(b.dataset.add === 'bar' ? 'btnAddBar' : 'btnAddSlider').click()));
+document.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', () => $({ bar: 'btnAddBar', chart: 'btnAddChart', slider: 'btnAddSlider' }[b.dataset.add]).click()));
 $('btnResetAll').addEventListener('click', () => { if(!model) return; board.sliders.forEach(s => { s.value = null; }); renderBoard(); });
 window.addEventListener('pagehide', () => { if(saveTimer) saveBoardNow(); });
 
@@ -4100,7 +4588,7 @@ const FMGRAPH_HELP_TOPICS = [
       { p: 'fmGraph shows a model built in fmIDE as bars, and lets you change its inputs with sliders. Move a slider and every bar that depends on that input, directly or through other rectangles, moves with it.' },
       { p: 'It never changes your model. A slider is a "what if": the bars show what the model would give with that number, and Reset puts the model\'s own number back.' },
       { tip: 'Use it to understand a model, to check it (a bar that moves when it shouldn\'t points at a wrong arrow), or to show it to people who don\'t build models.' },
-      { see: ['open-model', 'bars', 'sliders'] },
+      { see: ['open-model', 'bars', 'charts', 'sliders'] },
     ] },
   { id: 'open-model', group: 'start', title: 'Opening a model',
     keywords: 'open file drop fmide document system workspace sample load from fmide',
@@ -4133,11 +4621,23 @@ const FMGRAPH_HELP_TOPICS = [
       { tip: 'Two sliders on the same input apply one after the other: a change by % applies to what the slider above it left.' },
       { see: ['reach', 'speed'] },
     ] },
+  { id: 'charts', group: 'board', title: 'Charts: columns and waterfalls',
+    keywords: 'chart columns stacked side by side group waterfall bridge balance sheet income statement check total',
+    summary: 'Two building blocks for any statement: columns of groups, and waterfalls.',
+    body: [
+      { p: '+ Chart adds a chart. There are two kinds, chosen at its top; both are made from your own rectangles, so they fit any model.' },
+      { p: 'Columns: a chart is a list of groups. Each group is one column per period, its rectangles stacked (values below zero stack downwards), and the groups stand side by side. One rectangle per group gives a plain column chart; one group of several a stacked chart; two groups — Assets, and Liabilities and equity — a balance sheet.' },
+      { p: 'Tick "Check that the groups\' totals agree" and each period shows ✓ when the groups\' totals agree, or ✗ and the gap when they don\'t — a quick test that a balance sheet balances, also while you move a slider.' },
+      { p: 'Waterfall: a list of steps in one period. A start is a full bar; add and subtract step up or down from the running total; a total is a full bar of its own rectangle\'s value, checked against the steps before it (✓, or ✗ and what they add up to). An income statement is Revenue (start), costs (subtract) and each profit line (total); a cash bridge or a cost walk work the same way.' },
+      { steps: ['Press + Chart at the top. Its editor opens.', 'Choose the rectangles: + Rectangle adds one to a group, + Group a new group; ↑ ↓ reorder, × removes.', 'Or choose Waterfall at the top of the chart, then each step\'s role.'] },
+      { tip: 'Numbers agree when they differ by less than a millionth of their size, so tiny rounding never shows as ✗. A chart mixing units says so below it.' },
+      { see: ['bars', 'reach'] },
+    ] },
   { id: 'reach', group: 'board', title: 'What a slider reaches',
     keywords: 'highlight reach depend dependency lit dim impact affected',
     summary: 'The bars a slider can move light up while you use it.',
     body: [
-      { p: 'While you point at a slider or move it, the bars it reaches are outlined and the others fade. A bar is reached when its rectangle depends on the slider\'s input, directly or through other rectangles, aliases, period shifts or blocks.' },
+      { p: 'While you point at a slider or move it, the bars and charts it reaches are outlined and the others fade (a chart is reached when any of its rectangles is). A bar is reached when its rectangle depends on the slider\'s input, directly or through other rectangles, aliases, period shifts or blocks.' },
       { p: 'This comes from the arrows in the model, not from which numbers happened to change, so a bar that is reached but doesn\'t move tells you something too (for example an IF that ignores that input).' },
       { see: ['sliders', 'bars'] },
     ] },
@@ -4170,6 +4670,22 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'charts', date: '2026-10-02', title: 'Charts: columns and waterfalls',
+    summary: 'Stacked or side-by-side columns with an optional totals check, and waterfalls whose totals are checked.',
+    what: [
+      '+ Chart adds a chart made of your own rectangles. Columns: groups of rectangles, each stacked into one column per period, side by side — a balance sheet is two groups. Tick the check, and each period shows ✓ when the groups\' totals agree, or ✗ and the gap.',
+      'Waterfall: steps in one period — start, add, subtract, total — for an income statement, a cash bridge or any walk from one number to another. Each total is checked against the steps before it.',
+      'Charts move with the sliders like bars: they light up when a slider reaches them, and show the model\'s own values as dashed outlines.',
+    ],
+    why: 'To see a whole statement move at once — and to spot at a glance when something stops adding up.',
+    how: [
+      'Press + Chart; its editor opens.',
+      'Add rectangles and groups, or choose Waterfall and give each step its role.',
+      'Move a slider.',
+    ],
+    notes: ['The sample model now has a small balance sheet and both kinds of chart.'],
+    see: ['charts'] },
+
   { id: 'fmgraph', date: '2026-10-02', title: 'fmGraph: see how a value moves your model',
     summary: 'Bars show your rectangles; sliders change your inputs; the bars move as you slide.',
     what: [
@@ -4222,6 +4738,12 @@ document.addEventListener('keydown', (ev) => {
 //   modelValue(rect, period, canvas?) → the model's own number, or { error }
 //   addBar(rect, periods?, canvas?)   → the bar's id
 //   addSlider(rect, { periods, mode: 'set' | 'shift', min, max, step, canvas }?) → the slider's id
+//   addChart({ layout: 'columns', title, periods, check, groups: [{ name, parts: [rect…] }] })
+//   addChart({ layout: 'flow', title, period, steps: [{ rect, role: 'start'|'add'|'subtract'|'total' }] })
+//                  → the chart's id; a rect is a name, '#id', or { rect, canvas }
+//   chart(id)      → what it shows now: columns — per period { period, groups: [{ name, total,
+//                    parts: [value or { error }] }], check: { ok, gap } | null }; flow — per step
+//                    { name, role, value, from, to, check: { ok, expected } | null }
 //   setSlider(id, value), resetSlider(id), resetAll(), remove(id)
 //   board()        → the board ({ kind: 'fmIDE-graph-board', … }) with each slider's value
 //   reached(id)    → the ids of the bars a slider reaches
@@ -4252,6 +4774,12 @@ function sliderById(id){
   return s;
 }
 const answer = (r) => r.error ? { error: r.error } : r.value;
+const rectRef = (x) => (x && typeof x === 'object') ? findRect(x.rect, x.canvas) : findRect(x);
+function chartById(id){
+  const c = board.charts.find(x => x.id === id);
+  if(!c) throw new Error('There is no chart "' + String(id).slice(0, 40) + '".');
+  return c;
+}
 
 window.fmGraph = Object.freeze({
   load: (data, name) => openModelText(typeof data === 'string' ? data : JSON.stringify(data), name),
@@ -4274,6 +4802,27 @@ window.fmGraph = Object.freeze({
     renderBoard();
     return s.id;
   },
+  addChart: (spec) => {
+    spec = spec || {};
+    if(board.charts.length >= BOARD_LIMIT) throw new Error('No more charts can be added.');
+    const at = (r) => ({ canvasId: r.canvasId, nodeId: r.nodeId, name: r.name });
+    const raw = spec.layout === 'flow'
+      ? { layout: 'flow', title: spec.title, period: spec.period === undefined ? 0 : periodIndex(spec.period),
+          steps: (spec.steps || []).map(s => Object.assign(at(rectRef(s.rect)), { role: s.role })) }
+      : { layout: 'columns', title: spec.title, periods: periodSpec(spec.periods), check: spec.check === true,
+          groups: (spec.groups || []).map(g => ({ name: g.name, parts: (g.parts || []).map(p => at(rectRef(p))) })) };
+    const c = cleanChart(raw, (w) => model.byKey.get(keyOf(w.canvasId, w.nodeId)), model.periods.length);
+    board.charts.push(c);
+    saveBoardSoon();
+    renderBoard();
+    return c.id;
+  },
+  chart: (id) => {
+    const c = chartById(id), results = currentResults();
+    if(c.layout === 'flow') return flowFigures(c, results).map((f, i) => Object.assign({ name: partLabel(c.steps[i].key) }, f));
+    return columnsFigures(c, results).map(f => ({ period: model.periods[f.p], check: f.check,
+      groups: f.groups.map((g, gi) => ({ name: groupLabel(c, gi), total: g.error ? { error: true } : g.total, parts: g.parts.map(answer) })) }));
+  },
   setSlider: (id, value) => {
     const s = sliderById(id);
     const v = Number(value);
@@ -4288,10 +4837,14 @@ window.fmGraph = Object.freeze({
     if(!model) return null;
     const d = boardData();
     d.bars.forEach((b, i) => { b.id = board.bars[i].id; });
+    d.charts.forEach((c, i) => { c.id = board.charts[i].id; });
     d.sliders.forEach((s, i) => { s.id = board.sliders[i].id; s.value = board.sliders[i].value; });
     return d;
   },
-  reached: (id) => { const s = sliderById(id); const reach = model.reach(s.key); return board.bars.filter(b => reach.has(b.key) || b.key === s.key).map(b => b.id); },
+  reached: (id) => {
+    const s = sliderById(id), reach = model.reach(s.key), hit = (k) => reach.has(k) || k === s.key;
+    return board.charts.filter(c => chartKeys(c).some(hit)).map(c => c.id).concat(board.bars.filter(b => hit(b.key)).map(b => b.id));
+  },
   calcTime: () => model ? model.baseMs : null,
 });
 // ============================================================
