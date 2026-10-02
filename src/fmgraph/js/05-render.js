@@ -331,7 +331,7 @@ function drawBars(el, b, results){
     } else {
       const y0 = y(0), y1 = y(r.value);
       const bar = svg('rect', { class: 'b-now' + (r.value < 0 ? ' neg' : ''), x, y: Math.min(y0, y1), width: bw, height: Math.max(1, Math.abs(y1 - y0)) });
-      if(b.colour) bar.setAttribute('fill', b.colour);
+      if(b.colour) bar.style.fill = b.colour; // a style, so the page's usual bar colour doesn't paint over it
       g.appendChild(bar);
       if(!was.error && was.value !== r.value){
         const yb = y(was.value);
