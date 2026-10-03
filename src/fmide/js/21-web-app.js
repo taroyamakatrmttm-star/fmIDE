@@ -62,7 +62,11 @@
   function sendModelToGraph(target){
     const origin = ownOrigin();
     const boards = (graphBoards && !inPractice()) ? JSON.stringify(graphBoards) : null;
-    try{ target.postMessage({ type: 'fmIDE:model', name: docDisplayName(), text: JSON.stringify(buildSystemPayload()), boards }, origin || '*'); }
+    // The library's templates that carry an fmGraph board (G5b): every such version, as fmGraph
+    // picks one per template for itself (the version a canvas was made from, else the newest).
+    const templateBoards = JSON.stringify(TEMPLATES.filter(t => t.attachments && t.attachments.graph && (t.kind === 'module' || t.kind === 'system'))
+      .map(t => ({ family: t.family, kind: t.kind, name: t.name, version: t.version, versionId: t.versionId, board: t.attachments.graph })));
+    try{ target.postMessage({ type: 'fmIDE:model', name: docDisplayName(), text: JSON.stringify(buildSystemPayload()), boards, templateBoards }, origin || '*'); }
     catch(e){ /* the window went away */ }
   }
   window.addEventListener('message', (ev) => {
@@ -72,7 +76,86 @@
     if(!ev.data || typeof ev.data !== 'object') return;
     if(ev.data.type === 'fmGraph:want-model') sendModelToGraph(graphWindow);
     else if(ev.data.type === 'fmGraph:boards') takeGraphBoards(ev.data.text);
+    else if(ev.data.type === 'fmGraph:attach-board') askToAttachGraphBoard(ev.data.text);
   });
+  // fmGraph's Attach to template… (step 15 G5b): a board in its template form, for a canvas
+  // template (the one it names) or a system template (the person picks one). Read like a file
+  // (graphBoardForTemplate: kind, version, form, template kind and family only), attached to the
+  // latest version only after asking; fmGraph is told the outcome in words.
+  function answerGraph(type, text){
+    const origin = ownOrigin();
+    try{ if(graphWindow && !graphWindow.closed) graphWindow.postMessage({ type, text }, origin || '*'); }catch(e){ /* gone */ }
+  }
+  function askToAttachGraphBoard(text){
+    const no = (why) => { answerGraph('fmIDE:board-not-attached', why); };
+    if(inPractice()){ showMessage('Finish or exit the tutorial first, then attach the board again.'); return no('Not attached: fmIDE is in a tutorial.'); }
+    if(typeof text !== 'string' || fileTextProblem(text)) return no('Not attached: the board is too large.');
+    let raw;
+    try{ raw = JSON.parse(text); }catch(e){ return no('Not attached: fmIDE couldn\'t read it.'); }
+    if(fileDataProblem(raw) || !raw || typeof raw !== 'object' || !raw.template || typeof raw.template !== 'object') return no('Not attached: fmIDE couldn\'t read it.');
+    const attach = (t) => {
+      const r = graphBoardForTemplate(raw, t.family, t.kind);
+      if(r.error){ showMessage(r.error); return no('Not attached: ' + r.error); }
+      t.attachments = Object.assign({}, t.attachments || {}, { graph: r.attachment });
+      saveWorkspaceSoon();
+      showMessage(`fmGraph board attached to version ${t.version} of "${t.name}".`);
+      answerGraph('fmIDE:board-attached', `Attached to version ${t.version} of “${t.name}” in fmIDE.`);
+    };
+    const replaces = (t) => t.attachments && t.attachments.graph ? ' It replaces the board that version has.' : '';
+    if(raw.template.kind === 'module'){
+      const t = latestOfFamily(raw.template.family);
+      if(!t || t.kind !== 'module') { showMessage('That board is for a canvas template that isn\'t in your library.'); return no('Not attached: that canvas template isn\'t in fmIDE\'s library.'); }
+      return showConfirmCancelable(`Attach this fmGraph board to version ${t.version} of the canvas template "${t.name}"?${replaces(t)}`, 'Attach', () => attach(t), () => no('Not attached: cancelled in fmIDE.'));
+    }
+    if(raw.template.kind !== 'system') return no('Not attached: fmIDE couldn\'t read it.');
+    const systems = [...new Set(TEMPLATES.filter(t => t.kind === 'system' && !t.builtin).map(t => t.family))].map(latestOfFamily).filter(Boolean);
+    if(!systems.length){ showMessage('There is no system template in your library to attach this board to. Save the model as a system template first, then attach it again.'); return no('Not attached: there is no system template in fmIDE\'s library.'); }
+    showSystemTemplateChoice(systems, replaces, attach, () => no('Not attached: cancelled in fmIDE.'));
+  }
+  // A question with Cancel (and Escape, or a click outside) reported back.
+  function showConfirmCancelable(message, okLabel, onOk, onCancel){
+    const { overlay, box, close } = smallDialog(onCancel);
+    const p = document.createElement('p'); p.textContent = message;
+    const actions = document.createElement('div'); actions.className = 'modal-actions';
+    const cancel = document.createElement('button'); cancel.textContent = 'Cancel';
+    const ok = document.createElement('button'); ok.className = 'primary'; ok.textContent = okLabel;
+    cancel.addEventListener('click', () => close(true));
+    ok.addEventListener('click', () => { close(false); onOk(); });
+    actions.append(cancel, ok);
+    box.append(p, actions);
+    document.body.appendChild(overlay);
+    ok.focus();
+  }
+  function showSystemTemplateChoice(systems, replaces, onPick, onCancel){
+    const { overlay, box, close } = smallDialog(onCancel);
+    box.classList.add('graph-attach-box');
+    const p = document.createElement('p'); p.textContent = 'Attach this fmGraph board to which system template?';
+    const sel = document.createElement('select');
+    sel.setAttribute('aria-label', 'System template');
+    systems.forEach((t, i) => { const o = document.createElement('option'); o.value = String(i); o.textContent = `${t.name} (version ${t.version})`; sel.appendChild(o); });
+    const note = document.createElement('p'); note.className = 'graph-attach-note';
+    const showNote = () => { note.textContent = replaces(systems[Number(sel.value)]).trim(); };
+    sel.addEventListener('change', showNote); showNote();
+    const actions = document.createElement('div'); actions.className = 'modal-actions';
+    const cancel = document.createElement('button'); cancel.textContent = 'Cancel';
+    const ok = document.createElement('button'); ok.className = 'primary'; ok.textContent = 'Attach';
+    cancel.addEventListener('click', () => close(true));
+    ok.addEventListener('click', () => { close(false); onPick(systems[Number(sel.value)]); });
+    actions.append(cancel, ok);
+    box.append(p, sel, note, actions);
+    document.body.appendChild(overlay);
+    sel.focus();
+  }
+  function smallDialog(onCancel){
+    const overlay = document.createElement('div'); overlay.className = 'modal-overlay';
+    const box = document.createElement('div'); box.className = 'modal-box';
+    overlay.appendChild(box);
+    const onKey = (ev) => { if(ev.key === 'Escape') close(true); };
+    function close(cancelled){ overlay.remove(); document.removeEventListener('keydown', onKey); if(cancelled && onCancel) onCancel(); }
+    overlay.addEventListener('mousedown', (ev) => { if(ev.target === overlay) close(true); });
+    document.addEventListener('keydown', onKey);
+    return { overlay, box, close };
+  }
   function takeGraphBoards(text){
     if(inPractice() || typeof text !== 'string' || text.length > GRAPH_BOARDS_LIMITS.bytes) return;
     let raw;

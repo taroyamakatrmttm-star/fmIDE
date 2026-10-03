@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph uses templates' boards (step 15, phase G5b)
+- **A model with no boards of its own starts with its templates' boards** (a canvas template's on each canvas made from it, in the version it came from; a system template's when it all fits). **Boards ▾ → Add boards from templates…** adds them any time.
+- **Boards ▾ → Attach to template…** (fmGraph opened from fmIDE) sends boards to fmIDE, which asks before attaching them — for a system template, which one.
+
 ## Templates carry fmGraph boards (step 15, phase G5a)
 - **fmGraph: Boards ▾ → Export for a template…** saves the boards for a canvas template (just its canvas) or a system template (the whole model), naming rectangles by name.
 - **fmIDE: 📈 Attach fmGraph board…** in the Templates window, on canvas and system templates; the board goes with the template in documents, new versions and library packs, and the pack checker checks it against the template.

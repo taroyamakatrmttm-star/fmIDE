@@ -8,6 +8,20 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'boards-from-templates', date: '2026-10-03', title: 'Boards from templates',
+    summary: 'A model built from templates starts with their boards; attach boards to a template straight from fmGraph.',
+    what: [
+      'A model with no boards of its own starts with the boards its templates carry: a canvas template\'s on each canvas made from it, a system template\'s when it all fits.',
+      'Boards ▾ → Add boards from templates… adds them at any time, saying how many of their rectangles this model has.',
+      'With fmGraph opened from fmIDE, Boards ▾ → Attach to template… sends the boards to fmIDE, which asks before attaching them.',
+    ],
+    why: 'So a template comes with its views, and sharing them takes one step.',
+    how: [
+      'In fmIDE, build a model from a template that carries a board, and open fmGraph.',
+      'To share yours: Boards ▾ → Attach to template…, then answer fmIDE\'s question.',
+    ],
+    see: ['board-file'] },
+
   { id: 'boards-for-templates', date: '2026-10-02', title: 'Boards for templates',
     summary: 'Save your boards for a template, so they go along with it — in documents and in packs you share.',
     what: [
@@ -20,7 +34,6 @@ const FMGRAPH_WHATS_NEW = [
       'Boards ▾ → Export for a template…, and choose the template.',
       'In fmIDE: Templates, select the template, 📈 Attach fmGraph board….',
     ],
-    notes: ['Using a template\'s boards in fmGraph comes in the next update.'],
     see: ['board-file'] },
 
   { id: 'compare-a-b', date: '2026-10-02', title: 'Compare two what-ifs, and bars that glide',

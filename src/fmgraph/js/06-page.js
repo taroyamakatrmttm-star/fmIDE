@@ -177,10 +177,22 @@ window.addEventListener('message', (ev) => {
   if(!op || ev.source !== op) return;
   if(ownOrigin() && ev.origin !== ownOrigin()) return;
   const d = ev.data;
-  if(!d || typeof d !== 'object' || d.type !== 'fmIDE:model' || typeof d.text !== 'string') return;
+  if(!d || typeof d !== 'object') return;
+  // fmIDE's answer to Attach to template… (G5b): its words come from fmIDE, shown as text.
+  if(d.type === 'fmIDE:board-attached' || d.type === 'fmIDE:board-not-attached'){
+    const text = typeof d.text === 'string' ? d.text.slice(0, 300) : '';
+    notify(text || (d.type === 'fmIDE:board-attached' ? 'Attached in fmIDE.' : 'Not attached.'), d.type === 'fmIDE:board-attached' ? 'ok' : 'info', 'boards');
+    return;
+  }
+  if(d.type !== 'fmIDE:model' || typeof d.text !== 'string') return;
   const name = typeof d.name === 'string' && d.name ? d.name.slice(0, 120) : 'fmIDE model';
   const docBoards = typeof d.boards === 'string' ? d.boards : null;
-  openModelText(d.text, name, { boards: docBoards, fromFmide: true }).then(ok => { if(ok) notify('Showing ' + name + ' from fmIDE.', 'ok', 'load'); });
+  // The library's templates that carry a board (G5b), as JSON text.
+  let templates = [];
+  if(typeof d.templateBoards === 'string' && d.templateBoards.length <= 8 * 1024 * 1024){
+    try{ const t = JSON.parse(d.templateBoards); if(Array.isArray(t) && !fileDataProblem(t)) templates = t; }catch(e){ /* none */ }
+  }
+  openModelText(d.text, name, { boards: docBoards, fromFmide: true, templates }).then(ok => { if(ok) notify('Showing ' + name + ' from fmIDE.', 'ok', 'load'); });
 });
 $('btnFromFmide').addEventListener('click', () => {
   if(!askFmideForModel()) notify('fmIDE\'s window is closed: open fmGraph from fmIDE again, or open a saved file.', 'info', 'load');

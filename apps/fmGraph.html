@@ -320,6 +320,8 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         <button type="button" role="menuitem" id="btnExportBoards" class="needs-model">Export all boards</button>
         <button type="button" role="menuitem" id="btnImportBoards" class="needs-model">Import boards…</button>
         <button type="button" role="menuitem" id="btnExportTemplate" class="needs-model" title="Save the boards for a template, to attach in fmIDE's Templates window">Export for a template…</button>
+        <button type="button" role="menuitem" id="btnAttachTemplate" class="needs-model hidden" title="Send the boards to fmIDE, to attach to a template this model was built from">Attach to template…</button>
+        <button type="button" role="menuitem" id="btnAddFromTemplates" class="needs-model" title="Add the boards this model's templates carry">Add boards from templates…</button>
       </div>
     </details>
     <button id="btnHelp" class="gbar-btn" title="Help (F1)">❓ Help</button>
@@ -371,10 +373,22 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     <p>Which template are these boards for?</p>
     <div id="templateChoices" class="template-choices" role="radiogroup" aria-labelledby="templateTitle"></div>
     <label class="template-only"><input type="checkbox" id="templateOnlyShown"> Only the board shown</label>
-    <p class="template-hint">Then, in fmIDE: Templates → 📈 Attach fmGraph board….</p>
+    <p class="template-hint" id="templateHint">Then, in fmIDE: Templates → 📈 Attach fmGraph board….</p>
     <div class="dialog-actions">
       <button id="templateNo">Cancel</button>
       <button id="templateYes" class="primary">Export</button>
+    </div>
+  </div>
+</div>
+
+<div id="fromTemplatesBox" class="dialog-back hidden" role="dialog" aria-modal="true" aria-labelledby="fromTemplatesTitle">
+  <div class="dialog">
+    <h3 id="fromTemplatesTitle">Add boards from templates</h3>
+    <p>The boards this model's templates carry:</p>
+    <div id="fromTemplatesChoices" class="template-choices"></div>
+    <div class="dialog-actions">
+      <button id="fromTemplatesNo">Cancel</button>
+      <button id="fromTemplatesYes" class="primary">Add</button>
     </div>
   </div>
 </div>
@@ -2817,7 +2831,11 @@ async function openModelText(text, name, opts){
   try{
     const o = opts || {};
     const docBoards = o.boards !== undefined ? o.boards : (r.kind === 'fmIDE-workspace' ? r.data.graphBoards : null);
-    await loadModel(r.kind === 'fmIDE-workspace' ? r.data.system : r.data, name, { boards: docBoards, fromFmide: !!o.fromFmide });
+    // Its templates' boards (G5b): from fmIDE, or a workspace's own templates.
+    const templates = o.templates !== undefined ? o.templates
+      : r.kind === 'fmIDE-workspace' && Array.isArray(r.data.templates) ? r.data.templates.filter(t => t && t.attachments && t.attachments.graph)
+        .map(t => ({ family: t.family, kind: t.kind, name: t.name, version: t.version, versionId: t.versionId, board: t.attachments.graph })) : [];
+    await loadModel(r.kind === 'fmIDE-workspace' ? r.data.system : r.data, name, { boards: docBoards, fromFmide: !!o.fromFmide, templates });
   }catch(e){
     notify(e && e.message ? e.message : 'That model could not be opened.', 'err', 'load');
     return false;
@@ -2866,18 +2884,20 @@ async function loadModel(system, name, opts){
   const baseMs = performance.now() - t;
   // The canvas template each canvas was made from (G5a; a system file's canvas.template), for
   // Export for a template….
-  const canvasTemplates = new Map();
+  const canvasTemplates = new Map(), canvasVersionIds = new Map();
   system.canvases.forEach(c => {
     const t = c && c.template;
     if(!c || typeof c.id !== 'string' || !t || typeof t !== 'object' || typeof t.family !== 'string' || !/^[A-Za-z0-9-]{8,64}$/.test(t.family)) return;
     if(!canvasTemplates.has(c.id)) canvasTemplates.set(c.id, { family: t.family, name: typeof t.name === 'string' && t.name.trim() ? t.name.trim().slice(0, 120) : 'a canvas template' });
+    if(typeof t.versionId === 'string' && !canvasVersionIds.has(c.id)) canvasVersionIds.set(c.id, t.versionId);
   });
-  const m = { name: typeof name === 'string' && name ? name.slice(0, 120) : 'Model', periods, ir, canvasIndex, rects, byKey, canvasTemplates,
+  const m = { name: typeof name === 'string' && name ? name.slice(0, 120) : 'Model', periods, ir, canvasIndex, rects, byKey, canvasTemplates, canvasVersionIds,
     inputs: rects.filter(r => r.input), base, baseMs, signature: modelSignature(ir), reach: reachMap(ir) };
   model = m;
   linkedToFmide = !!(opts && opts.fromFmide);
   clearResultCache();
   pinA = null; forgetGeometry(); renderCompareBar(); // a new model: no A, nothing to glide from (05e-compare.js)
+  m.templateSources = cleanTemplateSources(opts && opts.templates); // its templates' boards (06d-template-sources.js)
   await loadBoardFor(m, opts && opts.boards);
   showBoard();
 }
@@ -3262,7 +3282,10 @@ async function loadBoardFor(m, docRaw){
       if(restored && fromLast) setTimeout(saveBoardNow, 0);
     }
   }catch(e){ /* unreadable: start a new board */ }
-  boards = restored ? restored.boards : [startingBoard()];
+  // None of its own: its templates' boards (G5b, 06d-template-sources.js), else a starting board.
+  const fromTemplates = restored ? [] : templateStartBoards();
+  if(fromTemplates.length) setTimeout(saveBoardNow, 0);
+  boards = restored ? restored.boards : fromTemplates.length ? fromTemplates : [startingBoard()];
   board = boards[restored ? restored.active : 0];
   resetUndo();
 }
@@ -3531,6 +3554,7 @@ function showBoard(){
 
 function syncPageState(){
   document.querySelectorAll('.needs-model').forEach(b => { b.disabled = !model; });
+  $('btnAttachTemplate').classList.toggle('hidden', !(model && linkedToFmide)); // G5b: only with the model from fmIDE
 }
 
 // A <select> of rectangles, by canvas. onlyInputs: a slider's.
@@ -4828,10 +4852,22 @@ window.addEventListener('message', (ev) => {
   if(!op || ev.source !== op) return;
   if(ownOrigin() && ev.origin !== ownOrigin()) return;
   const d = ev.data;
-  if(!d || typeof d !== 'object' || d.type !== 'fmIDE:model' || typeof d.text !== 'string') return;
+  if(!d || typeof d !== 'object') return;
+  // fmIDE's answer to Attach to template… (G5b): its words come from fmIDE, shown as text.
+  if(d.type === 'fmIDE:board-attached' || d.type === 'fmIDE:board-not-attached'){
+    const text = typeof d.text === 'string' ? d.text.slice(0, 300) : '';
+    notify(text || (d.type === 'fmIDE:board-attached' ? 'Attached in fmIDE.' : 'Not attached.'), d.type === 'fmIDE:board-attached' ? 'ok' : 'info', 'boards');
+    return;
+  }
+  if(d.type !== 'fmIDE:model' || typeof d.text !== 'string') return;
   const name = typeof d.name === 'string' && d.name ? d.name.slice(0, 120) : 'fmIDE model';
   const docBoards = typeof d.boards === 'string' ? d.boards : null;
-  openModelText(d.text, name, { boards: docBoards, fromFmide: true }).then(ok => { if(ok) notify('Showing ' + name + ' from fmIDE.', 'ok', 'load'); });
+  // The library's templates that carry a board (G5b), as JSON text.
+  let templates = [];
+  if(typeof d.templateBoards === 'string' && d.templateBoards.length <= 8 * 1024 * 1024){
+    try{ const t = JSON.parse(d.templateBoards); if(Array.isArray(t) && !fileDataProblem(t)) templates = t; }catch(e){ /* none */ }
+  }
+  openModelText(d.text, name, { boards: docBoards, fromFmide: true, templates }).then(ok => { if(ok) notify('Showing ' + name + ' from fmIDE.', 'ok', 'load'); });
 });
 $('btnFromFmide').addEventListener('click', () => {
   if(!askFmideForModel()) notify('fmIDE\'s window is closed: open fmGraph from fmIDE again, or open a saved file.', 'info', 'load');
@@ -5068,8 +5104,13 @@ function exportForTemplate(target, onlyShown){
 }
 
 // The dialog: one choice per target (the first canvas template ticked, else the whole model).
-function showTemplateExport(){
+// mode 'attach' (G5b): the same choice, sent to fmIDE instead of saved as a file.
+function showTemplateExport(mode){
   if(!model) return;
+  const attaching = mode === 'attach';
+  $('templateTitle').textContent = attaching ? 'Attach to a template' : 'Export for a template';
+  $('templateYes').textContent = attaching ? 'Attach' : 'Export';
+  $('templateHint').textContent = attaching ? 'fmIDE asks before attaching it.' : 'Then, in fmIDE: Templates → 📈 Attach fmGraph board….';
   const back = $('templateBox'), box = $('templateChoices');
   box.textContent = '';
   const targets = templateTargets();
@@ -5089,7 +5130,9 @@ function showTemplateExport(){
     document.removeEventListener('keydown', key, true);
     if(!go) return;
     const picked = box.querySelector('input[name="templateTarget"]:checked');
-    exportForTemplate(targets[picked ? Number(picked.value) : targets.length - 1], $('templateOnlyShown').checked);
+    const target = targets[picked ? Number(picked.value) : targets.length - 1];
+    if(attaching) attachToTemplate(target, $('templateOnlyShown').checked);
+    else exportForTemplate(target, $('templateOnlyShown').checked);
   };
   const yes = () => done(true), no = () => done(false);
   const key = (ev) => { if(ev.key === 'Escape'){ ev.preventDefault(); done(false); } };
@@ -5099,6 +5142,195 @@ function showTemplateExport(){
   $('templateYes').focus();
 }
 $('btnExportTemplate').addEventListener('click', () => { closeMenus(); showTemplateExport(); });
+// ============================================================
+// Boards from templates (G5b). A template may carry an fmGraph board (`attachments.graph`, in the
+// board file's template form, G5a). fmGraph gets them with the model — from fmIDE (`templateBoards`,
+// every version of the library's templates that has one) or from a `.fmide` / workspace file's
+// templates — and:
+// - a model with no boards of its own (none from its document, none kept in this browser) starts
+//   with its templates' boards instead of the automatic starting board (the owner's choice): every
+//   canvas template a canvas was made from, and a system template whose every widget fits;
+// - Boards ▾ → Add boards from templates… lists them all, with how much of each fits, and adds the
+//   ticked ones as tabs (one undo step);
+// - Boards ▾ → Attach to template… (only with the model from fmIDE) sends boards in the template
+//   form to fmIDE, which asks before attaching them (21-web-app.js there).
+// "Fits" counts rectangles: a chart missing one of its parts doesn't fit, though the rest of it
+// is shown.
+// A template board names rectangles by name (and canvas name, for a system template): a canvas
+// template's board is placed on each canvas made from that template, by rectangle name there; a
+// system template's finds each canvas by its name. A name used twice can't be told apart, so what
+// it names is left out, and counted. Everything from a template is read like a file: through
+// cleanBoards, every text as text.
+// ============================================================
+const TEMPLATE_SOURCES_LIMIT = 60;
+
+// The templates' boards, from fmIDE's list or a workspace's templates: one entry per family, with
+// every version that has a board (newest first). Which version a canvas uses is decided per canvas
+// (boardsFromTemplate): the one it was made from when that has a board, else the newest.
+function cleanTemplateSources(list){
+  const raw = (Array.isArray(list) ? list : []).slice(0, 500).filter(t => t && typeof t === 'object'
+    && (t.kind === 'module' || t.kind === 'system') && typeof t.family === 'string' && /^[A-Za-z0-9-]{8,64}$/.test(t.family)
+    && t.board && typeof t.board === 'object' && t.board.kind === 'fmIDE-graph-board' && t.board.form === 'template'
+    && t.board.template && t.board.template.kind === t.kind && Array.isArray(t.board.boards));
+  const fromCanvases = new Set();
+  model.canvasTemplates.forEach(ct => fromCanvases.add(ct.family));
+  const byFamily = new Map();
+  raw.forEach(t => {
+    let f = byFamily.get(t.family);
+    if(!f){
+      f = { family: t.family, kind: t.kind, name: typeof t.name === 'string' && t.name.trim() ? t.name.trim().slice(0, 120) : 'A template', versions: [], linked: fromCanvases.has(t.family) };
+      byFamily.set(t.family, f);
+    }
+    if(f.kind !== t.kind) return;
+    f.versions.push({ version: Math.round(Number(t.version)) || 0, versionId: typeof t.versionId === 'string' ? t.versionId : '', board: t.board });
+  });
+  const out = [...byFamily.values()].slice(0, TEMPLATE_SOURCES_LIMIT);
+  out.forEach(f => { f.versions.sort((x, y) => y.version - x.version); f.version = f.versions[0].version; });
+  return out;
+}
+// The version of a template a canvas uses: the one it was made from when it has a board, else the newest.
+function versionFor(src, canvasId){
+  const vid = canvasId && model.canvasVersionIds ? model.canvasVersionIds.get(canvasId) : null;
+  return (vid && src.versions.find(v => v.versionId === vid)) || src.versions[0];
+}
+
+// A template's boards placed in this model: { boards (as cleanBoards gives them), total, missing } —
+// how many rectangles they name, and how many of those this model doesn't have by that name.
+function boardsFromTemplate(src){
+  const lower = (s) => String(s).trim().toLowerCase();
+  const rectsOn = (canvasId) => model.rects.filter(r => r.canvasId === canvasId);
+  const unique = (list, key) => { const m = new Map(); list.forEach(x => { const k = key(x); m.set(k, m.has(k) ? null : x); }); return m; };
+  // Where a reference lands: { canvasId, nodeId, name }, or one that cleanBoards leaves out.
+  let resolve, copies;
+  if(src.kind === 'module'){
+    const canvasIds = [...model.canvasTemplates.entries()].filter(([, ct]) => ct.family === src.family).map(([id]) => id);
+    copies = canvasIds.map(id => ({ id, label: (model.rects.find(r => r.canvasId === id) || { canvasName: id }).canvasName, names: unique(rectsOn(id), r => lower(r.name)) }));
+    resolve = (copy, ref) => {
+      const r = ref && typeof ref.name === 'string' ? copy.names.get(lower(ref.name)) : null;
+      return r ? { canvasId: r.canvasId, nodeId: r.nodeId, name: r.name } : { canvasId: '', nodeId: '', name: '' };
+    };
+  } else {
+    const canvases = unique([...new Set(model.rects.map(r => r.canvasId))].map(id => ({ id, name: model.rects.find(r => r.canvasId === id).canvasName })), c => lower(c.name));
+    const names = new Map();
+    copies = [{ id: null, label: null }];
+    resolve = (copy, ref) => {
+      const c = ref && typeof ref.canvas === 'string' ? canvases.get(lower(ref.canvas)) : null;
+      if(!c) return { canvasId: '', nodeId: '', name: '' };
+      if(!names.has(c.id)) names.set(c.id, unique(rectsOn(c.id), r => lower(r.name)));
+      const r = typeof ref.name === 'string' ? names.get(c.id).get(lower(ref.name)) : null;
+      return r ? { canvasId: r.canvasId, nodeId: r.nodeId, name: r.name } : { canvasId: '', nodeId: '', name: '' };
+    };
+  }
+  const out = [];
+  let total = 0, missing = 0;
+  copies.forEach(copy => {
+    const at = (ref) => {
+      const where = resolve(copy, ref);
+      total++;
+      if(!where.canvasId) missing++;
+      return Object.assign({}, ref && typeof ref === 'object' ? ref : {}, where);
+    };
+    const v = versionFor(src, copy.id);
+    const boardsIn = v.board.boards.slice(0, BOARDS_LIMIT).filter(b => b && typeof b === 'object').map(b => ({
+      name: (typeof b.name === 'string' && b.name.trim() ? b.name : src.name) + (copies.length > 1 ? ' — ' + copy.label : ''),
+      items: (Array.isArray(b.items) ? b.items : []).map(w => {
+        if(!w || typeof w !== 'object') return w;
+        if(w.type === 'bar') return at(w);
+        if(w.layout === 'flow') return Object.assign({}, w, { steps: (Array.isArray(w.steps) ? w.steps : []).map(at) });
+        return Object.assign({}, w, { groups: (Array.isArray(w.groups) ? w.groups : []).map(g => Object.assign({}, g, { parts: (g && Array.isArray(g.parts) ? g.parts : []).map(at) })) });
+      }),
+      sliders: (Array.isArray(b.sliders) ? b.sliders : []).map(at),
+    }));
+    const r = cleanBoards({ kind: 'fmIDE-graph-board', version: BOARD_FILE_VERSION, boards: boardsIn });
+    if(!r) return;
+    r.boards.forEach(b => { if(b.items.length || b.sliders.length) out.push(b); });
+  });
+  return { boards: out, total, missing };
+}
+
+// A model with no boards of its own starts with these: every canvas template a canvas was made
+// from, and every system template whose widgets all fit. Empty when there are none.
+function templateStartBoards(){
+  const out = [];
+  (model.templateSources || []).forEach(src => {
+    const r = boardsFromTemplate(src);
+    if(!r.boards.length) return;
+    if(src.kind === 'module' ? src.linked : r.missing === 0) out.push(...r.boards);
+  });
+  return out.slice(0, BOARDS_LIMIT);
+}
+
+// ---- Boards ▾ → Add boards from templates… ----
+function showAddFromTemplates(){
+  if(!model) return;
+  const sources = (model.templateSources || []).map(src => Object.assign({ src }, boardsFromTemplate(src))).filter(x => x.boards.length);
+  if(!sources.length){
+    notify('This model\'s templates carry no boards that fit it. In fmIDE, attach one: Templates → 📈 Attach fmGraph board….', 'info', 'boards');
+    return;
+  }
+  const back = $('fromTemplatesBox'), box = $('fromTemplatesChoices');
+  box.textContent = '';
+  sources.forEach((x, i) => {
+    const l = make('label');
+    const c = make('input');
+    c.type = 'checkbox'; c.value = String(i);
+    c.checked = x.src.kind === 'module' ? x.src.linked : x.missing === 0;
+    const words = make('span');
+    words.appendChild(make('strong', null, '“' + x.src.name + '”'));
+    words.appendChild(document.createTextNode(' (' + (x.src.kind === 'module' ? 'canvas' : 'system') + ' template' + (x.src.kind === 'system' ? ', v' + x.src.version : '') + '): '
+      + x.boards.length + ' board' + (x.boards.length === 1 ? '' : 's') + ', ' + (x.total - x.missing) + ' of ' + x.total + ' rectangles found'));
+    l.append(c, words);
+    box.appendChild(l);
+  });
+  back.classList.remove('hidden');
+  const done = (go) => {
+    back.classList.add('hidden');
+    $('fromTemplatesYes').removeEventListener('click', yes);
+    $('fromTemplatesNo').removeEventListener('click', no);
+    document.removeEventListener('keydown', key, true);
+    if(!go) return;
+    const picked = [...box.querySelectorAll('input[type=checkbox]:checked')].map(c => sources[Number(c.value)]);
+    addTemplateBoards(picked);
+  };
+  const yes = () => done(true), no = () => done(false);
+  const key = (ev) => { if(ev.key === 'Escape'){ ev.preventDefault(); done(false); } };
+  $('fromTemplatesYes').addEventListener('click', yes);
+  $('fromTemplatesNo').addEventListener('click', no);
+  document.addEventListener('keydown', key, true);
+  $('fromTemplatesYes').focus();
+}
+// Adds the boards of these sources as tabs; returns how many.
+function addTemplateBoards(picked){
+  const all = picked.flatMap(x => x.boards);
+  if(!all.length) return 0;
+  const room = Math.max(0, BOARDS_LIMIT - boards.length);
+  const adding = all.slice(0, room);
+  adding.forEach(b => { b.name = freeBoardName(b.name); boards.push(b); });
+  if(adding.length) board = adding[0];
+  saveBoardSoon();
+  renderAll();
+  const left = picked.reduce((n, x) => n + x.missing, 0);
+  notify('Added ' + adding.map(b => '“' + b.name + '”').join(', ') + '.'
+    + (left ? ' ' + left + ' rectangle' + (left === 1 ? '' : 's') + ' left out: not in this model by that name.' : '')
+    + (all.length > adding.length ? ' ' + (all.length - adding.length) + ' not added: a model has at most ' + BOARDS_LIMIT + ' boards.' : ''), adding.length ? 'ok' : 'err', 'boards');
+  return adding.length;
+}
+
+// ---- Boards ▾ → Attach to template… (the model from fmIDE) ----
+// Sends the boards, in the template form, to fmIDE; fmIDE asks, attaches and answers
+// ('fmIDE:board-attached' or 'fmIDE:board-not-attached', 06-page.js).
+function attachToTemplate(target, onlyShown){
+  const op = fmideOpener();
+  if(!linkedToFmide || !op){ notify('Attach to template works with fmGraph opened from fmIDE. Use Export for a template… instead.', 'info', 'boards'); return null; }
+  const r = templateBoardsData(target, onlyShown);
+  if(!r.data.boards.length){ notify('Nothing on ' + (onlyShown ? 'this board' : 'these boards') + ' fits that template, so nothing was sent.', 'err', 'boards'); return null; }
+  try{ op.postMessage({ type: 'fmGraph:attach-board', text: JSON.stringify(r.data) }, messageTarget()); }catch(e){ return null; }
+  notify('Sent to fmIDE: answer its question there.' + (r.left ? ' ' + r.left + ' widget' + (r.left === 1 ? '' : 's') + ' left out (see Export for a template… in Help).' : ''), 'info', 'boards');
+  return r;
+}
+
+$('btnAddFromTemplates').addEventListener('click', () => { closeMenus(); showAddFromTemplates(); });
+$('btnAttachTemplate').addEventListener('click', () => { closeMenus(); showTemplateExport('attach'); });
 // ============================================================
 // Help: the same panel as fmIDE and ExcelExporter (src/shared/help-panel.js), with fmGraph's
 // own topics and What's new (src/help/fmgraph-help.js, fmgraph-whats-new.js; CC BY 4.0).
@@ -5711,12 +5943,14 @@ const FMGRAPH_HELP_TOPICS = [
       { see: ['board-file', 'charts'] },
     ] },
   { id: 'board-file', group: 'board', title: 'Saving and sharing boards',
-    keywords: 'export import file board json share send save template attach pack library',
+    keywords: 'export import file board json share send save template attach pack library add from templates',
     summary: 'Boards travel as a file.',
     body: [
       { p: 'Boards ▾ at the top: Export this board, or Export all boards, saves a board file. Import boards… (or dropping a board file on the page) adds its boards as new tabs to the model you have open.' },
       { p: 'A board names its rectangles by canvas, id and name, so it fits the model it was made from, or another one built from the same templates. Anything it shows that isn\'t in this model is left out, and fmGraph says how much.' },
       { p: 'For a template: Boards ▾ → Export for a template… saves the boards for a template the model was built from — a canvas made from a canvas template (only that canvas\'s rectangles), or the whole model for a system template. It names each rectangle by its name (and its canvas\'s name), since a template gets new ids each time it is used, so a rectangle whose name is used twice on its canvas is left out, and fmGraph says how many. In fmIDE, select the template and choose 📈 Attach fmGraph board…: the board then goes along with the template, in packs too.' },
+      { p: 'Boards from templates: a model with no boards of its own starts with the boards its templates carry — a canvas template\'s board on each canvas made from it (in the version that canvas came from), and a system template\'s when every rectangle it names is found. Boards ▾ → Add boards from templates… lists them all, with how many of their rectangles this model has, and adds the ones you tick as tabs.' },
+      { p: 'Opened from fmIDE, Boards ▾ → Attach to template… sends the boards straight to fmIDE: choose the template as for Export for a template…, and fmIDE asks before attaching them (for a system template, it asks which one).' },
       { tip: 'Where sliders are set is not saved: a board always opens on the model\'s own numbers.' },
       { see: ['boards', 'board-kept'] },
     ] },
@@ -5777,6 +6011,20 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'boards-from-templates', date: '2026-10-03', title: 'Boards from templates',
+    summary: 'A model built from templates starts with their boards; attach boards to a template straight from fmGraph.',
+    what: [
+      'A model with no boards of its own starts with the boards its templates carry: a canvas template\'s on each canvas made from it, a system template\'s when it all fits.',
+      'Boards ▾ → Add boards from templates… adds them at any time, saying how many of their rectangles this model has.',
+      'With fmGraph opened from fmIDE, Boards ▾ → Attach to template… sends the boards to fmIDE, which asks before attaching them.',
+    ],
+    why: 'So a template comes with its views, and sharing them takes one step.',
+    how: [
+      'In fmIDE, build a model from a template that carries a board, and open fmGraph.',
+      'To share yours: Boards ▾ → Attach to template…, then answer fmIDE\'s question.',
+    ],
+    see: ['board-file'] },
+
   { id: 'boards-for-templates', date: '2026-10-02', title: 'Boards for templates',
     summary: 'Save your boards for a template, so they go along with it — in documents and in packs you share.',
     what: [
@@ -5789,7 +6037,6 @@ const FMGRAPH_WHATS_NEW = [
       'Boards ▾ → Export for a template…, and choose the template.',
       'In fmIDE: Templates, select the template, 📈 Attach fmGraph board….',
     ],
-    notes: ['Using a template\'s boards in fmGraph comes in the next update.'],
     see: ['board-file'] },
 
   { id: 'compare-a-b', date: '2026-10-02', title: 'Compare two what-ifs, and bars that glide',

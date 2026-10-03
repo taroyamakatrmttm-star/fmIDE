@@ -37,6 +37,8 @@
         <button type="button" role="menuitem" id="btnExportBoards" class="needs-model">Export all boards</button>
         <button type="button" role="menuitem" id="btnImportBoards" class="needs-model">Import boards…</button>
         <button type="button" role="menuitem" id="btnExportTemplate" class="needs-model" title="Save the boards for a template, to attach in fmIDE's Templates window">Export for a template…</button>
+        <button type="button" role="menuitem" id="btnAttachTemplate" class="needs-model hidden" title="Send the boards to fmIDE, to attach to a template this model was built from">Attach to template…</button>
+        <button type="button" role="menuitem" id="btnAddFromTemplates" class="needs-model" title="Add the boards this model's templates carry">Add boards from templates…</button>
       </div>
     </details>
     <button id="btnHelp" class="gbar-btn" title="Help (F1)">❓ Help</button>
@@ -88,10 +90,22 @@
     <p>Which template are these boards for?</p>
     <div id="templateChoices" class="template-choices" role="radiogroup" aria-labelledby="templateTitle"></div>
     <label class="template-only"><input type="checkbox" id="templateOnlyShown"> Only the board shown</label>
-    <p class="template-hint">Then, in fmIDE: Templates → 📈 Attach fmGraph board….</p>
+    <p class="template-hint" id="templateHint">Then, in fmIDE: Templates → 📈 Attach fmGraph board….</p>
     <div class="dialog-actions">
       <button id="templateNo">Cancel</button>
       <button id="templateYes" class="primary">Export</button>
+    </div>
+  </div>
+</div>
+
+<div id="fromTemplatesBox" class="dialog-back hidden" role="dialog" aria-modal="true" aria-labelledby="fromTemplatesTitle">
+  <div class="dialog">
+    <h3 id="fromTemplatesTitle">Add boards from templates</h3>
+    <p>The boards this model's templates carry:</p>
+    <div id="fromTemplatesChoices" class="template-choices"></div>
+    <div class="dialog-actions">
+      <button id="fromTemplatesNo">Cancel</button>
+      <button id="fromTemplatesYes" class="primary">Add</button>
     </div>
   </div>
 </div>

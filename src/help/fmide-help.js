@@ -243,7 +243,7 @@ const HELP_TOPICS = [
       { p: 'Templates are kept in fmIDE and travel inside your documents.' },
       { p: '{cmd:removeDuplicateTemplates} tidies up copies that built up over time.' },
       { p: 'A canvas template can carry its Excel layout: select it and choose 📎 Attach Excel layout…, then pick a file saved by ExcelExporter\'s Export Module Layouts. The layout then goes wherever the template goes — your documents, new versions and packs you share — and ExcelExporter uses it for that module\'s tab unless you have arranged the tab yourself. fmIDE only carries it; Remove takes it off.' },
-      { p: 'A canvas or system template can carry an fmGraph board the same way: in fmGraph, open a model made from the template and choose Boards → Export for a template…, then select the template here and choose 📈 Attach fmGraph board…. A canvas template\'s board shows only its own canvas; a system template\'s, the whole model. The board goes along with the template, in packs too.' },
+      { p: 'A canvas or system template can carry an fmGraph board the same way: in fmGraph, open a model made from the template and choose Boards → Export for a template…, then select the template here and choose 📈 Attach fmGraph board…. A canvas template\'s board shows only its own canvas; a system template\'s, the whole model. The board goes along with the template, in packs too. With fmGraph opened from here, its Boards → Attach to template… does it in one step: fmIDE asks first. fmGraph starts a model that has no boards of its own with its templates\' boards.' },
       { see: ['template-versions', 'recipes', 'library-packs'] },
     ] },
   { id: 'template-versions', group: 'templates', title: 'Template versions and updating a canvas',

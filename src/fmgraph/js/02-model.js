@@ -54,7 +54,11 @@ async function openModelText(text, name, opts){
   try{
     const o = opts || {};
     const docBoards = o.boards !== undefined ? o.boards : (r.kind === 'fmIDE-workspace' ? r.data.graphBoards : null);
-    await loadModel(r.kind === 'fmIDE-workspace' ? r.data.system : r.data, name, { boards: docBoards, fromFmide: !!o.fromFmide });
+    // Its templates' boards (G5b): from fmIDE, or a workspace's own templates.
+    const templates = o.templates !== undefined ? o.templates
+      : r.kind === 'fmIDE-workspace' && Array.isArray(r.data.templates) ? r.data.templates.filter(t => t && t.attachments && t.attachments.graph)
+        .map(t => ({ family: t.family, kind: t.kind, name: t.name, version: t.version, versionId: t.versionId, board: t.attachments.graph })) : [];
+    await loadModel(r.kind === 'fmIDE-workspace' ? r.data.system : r.data, name, { boards: docBoards, fromFmide: !!o.fromFmide, templates });
   }catch(e){
     notify(e && e.message ? e.message : 'That model could not be opened.', 'err', 'load');
     return false;
@@ -103,18 +107,20 @@ async function loadModel(system, name, opts){
   const baseMs = performance.now() - t;
   // The canvas template each canvas was made from (G5a; a system file's canvas.template), for
   // Export for a template….
-  const canvasTemplates = new Map();
+  const canvasTemplates = new Map(), canvasVersionIds = new Map();
   system.canvases.forEach(c => {
     const t = c && c.template;
     if(!c || typeof c.id !== 'string' || !t || typeof t !== 'object' || typeof t.family !== 'string' || !/^[A-Za-z0-9-]{8,64}$/.test(t.family)) return;
     if(!canvasTemplates.has(c.id)) canvasTemplates.set(c.id, { family: t.family, name: typeof t.name === 'string' && t.name.trim() ? t.name.trim().slice(0, 120) : 'a canvas template' });
+    if(typeof t.versionId === 'string' && !canvasVersionIds.has(c.id)) canvasVersionIds.set(c.id, t.versionId);
   });
-  const m = { name: typeof name === 'string' && name ? name.slice(0, 120) : 'Model', periods, ir, canvasIndex, rects, byKey, canvasTemplates,
+  const m = { name: typeof name === 'string' && name ? name.slice(0, 120) : 'Model', periods, ir, canvasIndex, rects, byKey, canvasTemplates, canvasVersionIds,
     inputs: rects.filter(r => r.input), base, baseMs, signature: modelSignature(ir), reach: reachMap(ir) };
   model = m;
   linkedToFmide = !!(opts && opts.fromFmide);
   clearResultCache();
   pinA = null; forgetGeometry(); renderCompareBar(); // a new model: no A, nothing to glide from (05e-compare.js)
+  m.templateSources = cleanTemplateSources(opts && opts.templates); // its templates' boards (06d-template-sources.js)
   await loadBoardFor(m, opts && opts.boards);
   showBoard();
 }
