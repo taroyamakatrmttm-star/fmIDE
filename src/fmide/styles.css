@@ -1030,12 +1030,14 @@
   .recipe-part button:disabled{ opacity:.4; cursor:default; }
   .recipe-part-state{ font-size:12px; }
   .recipe-part-state.ok{ color:#15803d; }
-  .recipe-part-state.differs, .recipe-part-state.missing-version, .recipe-part-state.missing-family, .recipe-part-state.wrong-kind{ color:#b45309; }
+  .recipe-part-state.differs, .recipe-part-state.missing-version, .recipe-part-state.missing-family, .recipe-part-state.wrong-kind,
+  .recipe-part-state.loop, .recipe-part-state.too-deep, .recipe-part-state.too-many{ color:#b45309; }
   .recipe-add-part{ padding:4px 10px; border-radius:6px; border:1px dashed #9ca3af; background:#fff; cursor:pointer; font-size:12.5px; }
   .recipe-check{ font-size:12px; color:#15803d; margin:10px 0; }
   .recipe-check.warn{ color:#92400e; background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:6px 8px; }
   .recipe-detail-parts{ margin:4px 0 8px 18px; padding:0; font-size:13px; }
   .recipe-detail-parts li{ margin-bottom:3px; }
+  .recipe-detail-parts .recipe-detail-subparts{ margin:3px 0 4px 16px; padding:0; list-style:circle; }
   .recipe-part-skip{ display:block; margin:2px 0 0 14px; font-size:12px; color:#374151; cursor:pointer; }
 
   /* A socket fed by more than one plug: their values are added (maybe by accident) */

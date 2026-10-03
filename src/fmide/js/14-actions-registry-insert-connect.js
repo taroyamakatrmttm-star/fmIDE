@@ -330,7 +330,7 @@
     } });
 
   defineAction({ name:'insertTemplate', label:'Insert Template', category:'Insert', icon:'📚',
-    desc:'Inserts a saved template: its name (the latest version), "Name@latest", "Name@3" (version 3), the same with its family id, or "#id". Modules: "here" (this canvas) or "newCanvas". Systems: "add" (merge alongside) or "replace". Recipes: "add" builds one canvas per part and returns { canvases, warnings, skipped, unfedSockets }; skip lists part numbers (from 1) not to build, and skipExisting skips every part already here (a canvas of the same template, or an earlier part of the recipe).',
+    desc:'Inserts a saved template: its name (the latest version), "Name@latest", "Name@3" (version 3), the same with its family id, or "#id". Modules: "here" (this canvas) or "newCanvas". Systems: "add" (merge alongside) or "replace". Recipes: "add" builds one canvas per part (a recipe inside opened up into its parts) and returns { canvases, warnings, skipped, unfedSockets }; skip lists the numbers (from 1) of the canvases not to build, in the order they are built, and skipExisting skips every part already here (a canvas of the same template, or an earlier part of the recipe).',
     params:[ P('template','template'), P('mode','enum',{ options:['auto','here','newCanvas','add','replace'], def:'auto' }),
       P('onCollision','enum',{ options:['merge','keep'], def:'merge', label:'same-name canvases', help:'systems added alongside' }),
       P('decisions','json',{ optional:true, help:'per-canvas {"Name":"merge"|"keep"}' }),
@@ -343,9 +343,10 @@
         const skip = new Set();
         if(a.skip != null){
           if(!Array.isArray(a.skip)) fail('skip must be a list of part numbers, e.g. [2].');
-          a.skip.forEach(v => { const k = Math.round(Number(v)); if(k >= 1 && k <= t.data.parts.length) skip.add(k - 1); });
+          const count = recipeBuildLeaves(t.data.parts, t.family).length;
+          a.skip.forEach(v => { const k = Math.round(Number(v)); if(k >= 1 && k <= count) skip.add(k - 1); });
         }
-        if(a.skipExisting) recipePartsAlreadyHere(t.data.parts).forEach((h, i) => { if(h) skip.add(i); });
+        if(a.skipExisting) recipePartsAlreadyHere(t.data.parts, t.family).forEach((h, i) => { if(h) skip.add(i); });
         return buildRecipe(t, { skip });
       }
       const data = cloneData(t.data);
@@ -373,7 +374,7 @@
     } });
 
   defineAction({ name:'saveRecipe', label:'Save Recipe', category:'Insert', icon:'🧾', returns:'value',
-    desc:'Saves a recipe: canvas templates added together, each "Name" / "Name@latest" (follows the latest version) or "Name@2" (that version). A name already in use fails unless newVersionOf names that recipe. Returns the recipe as "Name@version".',
+    desc:'Saves a recipe: canvas templates (or other recipes, built in their place) added together, each "Name" / "Name@latest" (follows the latest version) or "Name@2" (that version). A name already in use fails unless newVersionOf names that recipe; a part that contains the recipe itself fails. Returns the recipe as "Name@version".',
     params:[ P('name','string',{ def:'' }), P('parts','json',{ help:'list of template references' }),
       P('group','string',{ def:'My Templates' }), P('description','string',{ def:'' }), P('note','string',{ def:'' }),
       P('newVersionOf','string',{ def:'', help:'a recipe to save the next version of' }) ],
@@ -383,13 +384,15 @@
       const parts = a.parts.map(ref => {
         const s = String(ref == null ? '' : ref).trim();
         const t = resolveTemplateRef(s);
-        if(t.kind !== 'module') fail(`"${t.name}" is not a canvas template — a recipe's parts are canvas templates.`);
+        if(t.kind !== 'module' && t.kind !== 'recipe') fail(`"${t.name}" is not a canvas template or a recipe — a recipe's parts are canvas templates and other recipes.`);
         return recipePartOf(t, /@\s*\d+$/.test(s) || /^#/.test(s));
       });
       let base = null;
       if(a.newVersionOf.trim()){
         base = resolveTemplateRef(a.newVersionOf);
         if(base.kind !== 'recipe') fail(`"${base.name}" is not a recipe.`);
+        const loop = recipeBuildLeaves(parts, base.family).find(l => l.st.state === 'loop');
+        if(loop) fail(`A part of the new version contains "${base.name}" itself, which would make a loop: ${loop.st.label}.`);
       } else {
         const name = a.name.trim();
         if(!name) fail('A recipe needs a name.');

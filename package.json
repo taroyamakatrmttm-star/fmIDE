@@ -41,6 +41,7 @@
     "test:block-layouts": "playwright test tests/39-block-instance-layouts.spec.js",
     "test:add-many": "playwright test tests/40-add-many-rectangles.spec.js",
     "test:equal-spacing": "playwright test tests/41-equal-spacing-snap.spec.js",
+    "test:nested-recipes": "playwright test tests/62-nested-recipes.spec.js",
     "test:canvas-switching": "playwright test tests/61-canvas-switching.spec.js",
     "test:messages": "playwright test tests/60-long-messages.spec.js",
     "test:excel-page": "playwright test tests/46-excel-page.spec.js",

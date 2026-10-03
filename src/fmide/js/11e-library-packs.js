@@ -37,20 +37,23 @@
 
   // ---------- writing a pack ----------
   // The versions a pack needs for `templates` and `functions` (library entries): each
-  // recipe's parts (the version the recipe would build with) and every function a function
-  // calls. A recipe part that isn't in the library fails: the pack would be broken.
+  // recipe's parts (the version the recipe would build with; a recipe inside, with its own
+  // parts) and every function a function calls. A recipe part that isn't in the library, or
+  // a recipe that contains itself, fails: the pack would be broken.
   function libraryPackContents(templates, functions){
     const tList = [], fList = [];
-    const addT = (t) => { if(!tList.includes(t)) tList.push(t); };
-    templates.forEach(t => {
-      addT(t);
+    const addT = (t, stack) => {
+      if(stack.includes(t.family)) fail(`The recipe "${t.name}" contains itself, so it can't be shared.`);
+      if(tList.includes(t)) return;
+      tList.push(t);
       if(t.kind !== 'recipe') return;
       t.data.parts.forEach(part => {
         const st = recipePartStatus(part);
         if(!st.template) fail(`The recipe "${t.name}" needs a part your library doesn't have (${st.label}), so it can't be shared.`);
-        addT(st.template);
+        addT(st.template, stack.concat([t.family]));
       });
-    });
+    };
+    templates.forEach(t => addT(t, []));
     functions.forEach(d => functionWithCallees(d).forEach(x => { if(!fList.includes(x)) fList.push(x); }));
     return { templates: tList, functions: fList };
   }

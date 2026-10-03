@@ -13,6 +13,22 @@
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
 
+  { id: 'recipes-in-recipes', date: '2026-10-03', title: 'Recipes within a recipe',
+    summary: 'A recipe\'s part can be another recipe, built in its place.',
+    what: [
+      'In the recipe window, a part can now be a recipe as well as a canvas template. Building opens it up into its own parts, in order — as deep as eight recipes inside each other.',
+      'The recipe\'s details in {cmd:openTemplates} list the canvases each recipe inside builds, with Skip boxes for any already in your model. The socket check covers them all.',
+      'Library packs bring the recipes inside, with their parts.',
+    ],
+    why: 'So a full model can be put together from smaller recipes — say, statements plus a debt schedule — without listing every canvas template again.',
+    how: [
+      'Open {cmd:openTemplates} and choose + New Recipe….',
+      'Press + Add part and pick a recipe (marked "(recipe)") from the list.',
+      'Save, then Build.',
+    ],
+    notes: ['A recipe can\'t contain itself, even through others: the window doesn\'t offer such a recipe, and one from a file is skipped with a warning.', 'An older fmIDE shows a recipe inside a recipe as a part it can\'t build.'],
+    see: ['recipes'] },
+
   { id: 'canvas-switching', date: '2026-10-03', title: 'Move between canvases from the keyboard',
     summary: 'Alt+Page Down goes to the next canvas, Alt+Page Up to the previous one.',
     what: [

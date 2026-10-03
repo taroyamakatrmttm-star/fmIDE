@@ -809,6 +809,14 @@ fmIDE's Open ExcelExporter, the offline fixture; the model Hours 8 × Rate 50 = 
 - Opened on its own: the welcome screen, no ↻ From fmIDE, no errors. After fmIDE is reloaded, ↻ From fmIDE still reaches it.
 - Also changed on purpose: group 12 (ExcelExporter opened from fmIDE now shows the model, not the welcome screen; Back closes without asking for fmIDE's model and asks for the sample loaded there), group 30 (the window shows fmIDE's model before the tap on Back), groups 33 and 35 (the To Excel tutorial lost its Save System step).
 
+### 62. Recipes within a recipe (`tests/62-nested-recipes.spec.js`; `npm run test:nested-recipes`)
+`formats/templates-v2.json`; Two Statements = Income Statement + Balance Sheet v2; Full Model = Two Statements + Cash Flow.
+- Building Full Model: three canvases (Income Statement, Balance Sheet v2 linked, Cash Flow), no warnings, nothing unfed; Retained Earnings 40, Cash balance 25; one undo removes them.
+- The Templates window: "✓ Two Statements (recipe) @latest (v1) — builds 2 canvases:" with Income Statement and Balance Sheet v2 under it, then Cash Flow; "Every socket is fed…"; Build: "Built Full Model: 3 canvases."
+- Two Statements built first: the two canvases inside offered to skip, ticked; Build adds Cash Flow and says what it skipped. `skip: [3]` skips Cash Flow; `skipExisting` builds only what is missing.
+- `fm.saveRecipe` refuses a new version of Two Statements holding Full Model, and Full Model holding itself ("would make a loop"). A file of Loop A (Cash Flow + Loop B) and Loop B (Loop A): the window shows the loop; building Loop A builds Cash Flow and warns "Skipped Loop A (recipe) — it contains itself…".
+- The recipe window offers "Two Statements (recipe)" and "Full Model (recipe)"; a recipe of Full Model ("builds 3 canvases") builds three; a new version of Two Statements offers neither itself, nor Full Model, nor that recipe.
+- A pack of Full Model holds Full Model, Two Statements, Income Statement, Balance Sheet v2, Cash Flow; the checker passes it (3 templates, 2 recipes); in a fresh browser, Full Model ticked alone brings the rest and builds three canvases; the checker finds a loop added to it.
 ### 61. Moving between canvases from the keyboard (`tests/61-canvas-switching.spec.js`; `npm run test:canvas-switching`)
 - One, Two, Three: Alt+PageDown → Two, Three, One (round the end); Alt+PageUp → Three, Two; the active tab shows Two; no KeyTips on the way.
 - `fm.commands()` lists Previous Canvas (Alt+PageUp) and Next Canvas (Alt+PageDown) in Canvas; with one canvas Alt+PageDown does nothing; Alt+PageUp while renaming a tab stays in the text box.

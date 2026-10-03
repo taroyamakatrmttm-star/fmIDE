@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmIDE: recipes within a recipe
+- A recipe's part may be **another recipe**, built in its place (as deep as eight). The recipe window offers recipes as parts (never one that leads back to it); the Templates window lists the canvases a recipe inside builds, with Skip boxes; `fm.saveRecipe` takes recipes; `fm.insertTemplate`'s `skip` counts the canvases built. Packs carry recipes inside with their parts; the pack checker checks loops and depth. No file version changed.
+
 ## fmIDE: moving between canvases from the keyboard
 - **Next Canvas** (Alt+Page Down) and **Previous Canvas** (Alt+Page Up), round the ends; in the Canvas group of the ribbon (added once to a customised ribbon, `ui.canvasSwitchAdded`), the Command Launcher and macros (recorded as Go to Canvas).
 
