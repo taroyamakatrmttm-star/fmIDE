@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmIDE: stepping through a macro keeps its variables
+- **▶ Run selected step** keeps the variables the steps already run saved, until the Macro Builder closes or another macro is chosen (it started every step with none, so the second step of a macro using `$t1` stopped).
+- **Undo while recording** takes back exactly the steps recorded since the undone change (each undo point is numbered); an undone change that was never recorded — a node dragged back to where it was — no longer takes an unrelated step with it.
+- The Macro Builder marks with ⚠ a step reading a variable no step before it saves; running it says so and lists the variables the steps do save.
+
 ## fmIDE: macros that keep working, and help to write them
 - **Insert Template saves what it made** for later steps (`$t1`): the canvases it adds — a system template's in its order (one merged into yours: yours), a recipe's one per part, in order (a part skipped as already here: that canvas) — or the nodes it puts on this canvas. `fm.insertTemplate` returns them (a recipe's result gains `parts`).
 - **The recorder copes with a different model at run time**: a later step refers to the canvas a template made through its variable, not its name; a template's node with no name of its own by its place on that canvas (`@all[3]`, new); skipping the recipe parts already here is recorded as `skipExisting`; a reference that may not hold (a node of this model by id, a node made but not saved, an automatic plug alias, a Paste whose Copy wasn't recorded) gets a ⚠ note, and the Macro Builder says so when recording stops.

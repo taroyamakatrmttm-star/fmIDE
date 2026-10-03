@@ -1,7 +1,8 @@
   // =====================================================================================
   // ---------- Macro Builder UI ----------
   // =====================================================================================
-  const mb = { overlay:null, macroId:null, selStepId:null, errorStepId:null, collapsed:new Set(), els:{}, dragId:null };
+  // stepVars: the variables ▶ Run selected step has left so far, for the macro stepVarsFor.
+  const mb = { overlay:null, macroId:null, selStepId:null, errorStepId:null, collapsed:new Set(), els:{}, dragId:null, stepVars:null, stepVarsFor:null };
   function mbMacro(){ return MACROS.find(m => m.id === mb.macroId) || null; }
   function mbSetStatus(text, kind){
     const s = mb.els.status;
@@ -52,6 +53,7 @@
     if(!mb.overlay) return;
     mb.overlay.remove();
     mb.overlay = null;
+    mb.stepVars = null; mb.stepVarsFor = null;
     mb.els = {};
     syncMacroCommands();
     if(!silent) saveWorkspace();
@@ -259,7 +261,22 @@
       });
     }
     rows(m.steps, 0);
+    markVariableProblems();
     tree.scrollTop = scroll;
+  }
+  // ⚠ on each step that reads a variable no step before it saves (macroVariableProblems).
+  function markVariableProblems(){
+    const tree = mb.els.tree, m = mbMacro();
+    if(!tree || !m) return;
+    const problems = macroVariableProblems(m);
+    tree.querySelectorAll('.mrow').forEach(row => {
+      const names = problems.get(row.dataset.id);
+      row.classList.toggle('var-missing', !!names);
+      let mark = row.querySelector('.mvar');
+      if(names && !mark){ mark = el('span', 'mvar', '⚠'); row.appendChild(mark); }
+      if(!names && mark) mark.remove();
+      if(names) mark.title = variableProblemText(names);
+    });
   }
 
   function stepSummaryDom(st){
@@ -292,6 +309,7 @@
     if(!tree) return;
     const row = tree.querySelector(`.mrow[data-id="${st.id}"]`);
     if(row){ const old = row.querySelector('.msum'); if(old) old.replaceWith(stepSummaryDom(st)); row.classList.toggle('disabled', !!st.disabled); }
+    markVariableProblems();
   }
 
   function renderMBProps(){
@@ -307,6 +325,8 @@
       return;
     }
     const st = f.step;
+    const missing = macroVariableProblems(m).get(st.id);
+    if(missing) props.appendChild(el('p', 'pdesc var-missing-note', '⚠ ' + variableProblemText(missing)));
     const changed = () => { refreshMBRow(st); mbChanged(); mb.errorStepId = null; };
     const row = (label, input) => { const r = el('div', 'pform-row'); r.appendChild(el('label', '', label)); r.appendChild(input); props.appendChild(r); return input; };
     const textIn = (val, ph) => { const i = el('input'); i.type = 'text'; i.value = val == null ? '' : String(val); if(ph) i.placeholder = ph; i.addEventListener('keydown', ev => ev.stopPropagation()); return i; };
@@ -552,7 +572,9 @@
       if(!mb.selStepId){ mbSetStatus('Select a step first.', 'err'); return; }
       mb.errorStepId = null;
       const ranId = mb.selStepId;
-      if(runMacroInteractive(m.id, [ranId])){
+      // The variables the steps already run saved stay for the next one, as in a whole run.
+      if(mb.stepVarsFor !== m.id){ mb.stepVars = {}; mb.stepVarsFor = m.id; }
+      if(runMacroInteractive(m.id, [ranId], mb.stepVars)){
         // Move on to the step after it (and after anything inside it), so the next click runs that.
         const next = mbNextStepAfter(m.steps, ranId);
         if(next) mb.selStepId = next.id;
@@ -566,6 +588,7 @@
     runBtn.disabled = !m;
     runBtn.addEventListener('click', () => {
       mb.errorStepId = null;
+      mb.stepVars = null; mb.stepVarsFor = null;
       if(runMacroInteractive(m.id)){ renderMBTree(); mbSetStatus(`Ran "${m.name}" — ${shortcutBindings.undo ? prettyCombo(shortcutBindings.undo) : 'Undo'} undoes the whole run.`, 'ok'); }
     });
     const closeBtn = el('button', 'mbtn', 'Close');

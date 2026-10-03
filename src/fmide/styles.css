@@ -345,6 +345,8 @@
   .macro-foot .status.err{ color:#b91c1c; }
   .macro-foot .status.ok{ color:#047857; }
   .macro-foot .status.warn{ color:#b45309; }
+  .mrow .mvar{ color:#b45309; margin-left:6px; flex:none; }
+  .macro-props .var-missing-note{ color:#b45309; }
   .macro-ref-help{ font-size:11px; color:#6b7280; line-height:1.45; background:#f8fafc; border-radius:6px; padding:6px 8px; margin-top:8px; }
   .macro-ref-help code{ font-family:Menlo,Consolas,monospace; color:#4338ca; }
   .macro-ref-help .macro-ref-more{ margin-top:6px; }

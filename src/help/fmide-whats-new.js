@@ -13,6 +13,22 @@
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
 
+  { id: 'macro-variables-kept', date: '2026-10-03', title: 'Stepping through a macro keeps its variables',
+    summary: 'Run selected step remembers what earlier steps saved; a step reading a variable nothing saves is marked.',
+    what: [
+      'In {cmd:openMacros}, ▶ Run selected step now keeps the variables the steps already run saved ($t1, $r3…), so stepping through a macro works like running it. Before, every step started with none, and the second step stopped with "Variable $t1 has no value yet".',
+      'A step that reads a variable no step before it saves is marked ⚠ in the list, with the reason when you point at it — so a step deleted or changed since is found before the macro runs. Running it says which variables the steps do save.',
+      'Undo while recording takes back only the steps recorded since the change it undoes. Before, undoing something that was never a step (a box picked up and put back) could take an unrelated step, such as an Insert Template, with it.',
+    ],
+    why: 'A recorded macro could lose its Insert Template step to an Undo, and stepping through any macro with variables stopped at its second step.',
+    how: [
+      'Open {cmd:openMacros} and choose a macro.',
+      'Select its first step and press ▶ Run selected step, then again for each next step.',
+      'Fix any step marked ⚠ by pointing it at a variable an earlier step saves.',
+    ],
+    notes: ['A macro recorded before this that lost a step keeps the ⚠ until you point the step at a variable that exists, or record it again.'],
+    see: ['macro-steps', 'macro-errors'] },
+
   { id: 'macros-that-hold', date: '2026-10-03', title: 'Macros that keep working, and help to write them',
     summary: 'A canvas a template adds is saved for later steps; ids you can see; Copy Reference; six help topics on macros.',
     what: [

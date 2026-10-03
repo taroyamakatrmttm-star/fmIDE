@@ -28,12 +28,22 @@
     return JSON.stringify({ canvases, activeCanvasId, nextId, nextCanvasId, periods, currentPeriod, modelFunctions });
   }
 
+  // Every undo point gets a number that only grows (the list itself is capped), so the macro
+  // recorder can tell which recorded steps an undo takes back. An entry is the snapshot's text
+  // as a String object, so it can be a WeakMap key; restore() reads it as text all the same.
+  let historySeq = 0;
+  const historySeqOf = new WeakMap();
+  function historyEntry(){
+    const entry = new String(snapshot());
+    historySeqOf.set(entry, ++historySeq);
+    return entry;
+  }
   function pushHistory(){
     invalidateIR(); // the model is about to change
     // Inside a transaction (one API action, or a whole macro run) only the first push
     // records a snapshot, so the entire transaction undoes as a single step.
     if(tx.depth > 0){ if(tx.pushed) return; tx.pushed = true; }
-    history.push(snapshot());
+    history.push(historyEntry());
     if(history.length > MAX_HISTORY) history.shift();
     future = [];
     updateHistoryButtons();
@@ -69,7 +79,7 @@
   function undo(){
     if(tx.depth > 0) fail('Undo cannot run inside a macro or another action.');
     if(history.length === 0) return;
-    if(recorder.active) recorder.onUndo();
+    if(recorder.active) recorder.onUndo(historySeqOf.get(history[history.length - 1]));
     future.push(snapshot());
     restore(history.pop());
     clearSelection();
@@ -83,7 +93,7 @@
     if(tx.depth > 0) fail('Redo cannot run inside a macro or another action.');
     if(future.length === 0) return;
     if(recorder.active) toast('Redo is not captured by the macro recorder.');
-    history.push(snapshot());
+    history.push(historyEntry());
     restore(future.pop());
     clearSelection();
     render();
