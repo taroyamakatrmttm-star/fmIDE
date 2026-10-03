@@ -234,10 +234,11 @@ const HELP_TOPICS = [
 
   // ---------- Templates and recipes ----------
   { id: 'templates', group: 'templates', title: 'Templates',
-    keywords: 'template save reuse insert add canvas module system library excel layout attach attachment',
+    keywords: 'template save reuse insert add canvas module system library excel layout attach attachment group expand collapse all tree',
     summary: 'Save a canvas (or the whole model) to reuse it, and add it again in one click.',
     body: [
       { p: '{cmd:openTemplates} lists your templates, with a search box: type part of a name, then press Enter to add it.' },
+      { p: 'The list is a tree of groups. Click a group to open or close it; ▾ Expand all and ▸ Collapse all, under the search box, open or close every group at once. ✎ Edit info and 🗑 Delete sit beside the selected template\'s name; 🧹 Remove duplicates… and 🗑 Clear all templates, under the list.' },
       { p: 'To save one, use + Save Canvas as Template (the canvas you are on) or + Save System as Template (the whole model) in the same window. Give it a name, a group and a short description.' },
       { p: 'A canvas template can be added to a new canvas or to the current one. A system template adds its canvases alongside yours, or replaces the model.' },
       { p: 'Templates are kept in fmIDE and travel inside your documents.' },

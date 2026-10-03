@@ -1546,12 +1546,16 @@
     overlay.addEventListener('mousedown', (ev) => { if(ev.target === overlay) close(); });
 
     const title = document.createElement('p');
+    title.className = 'template-title';
     title.textContent = 'Templates';
     box.appendChild(title);
 
+    // One toolbar: what you can save on the left, the templates file on the right. Remove
+    // duplicates and Clear all sit quietly under the list (they act on the whole library).
+    const toolbar = document.createElement('div');
+    toolbar.className = 'template-toolbar';
     const saveRow = document.createElement('div');
-    saveRow.className = 'template-import-actions';
-    saveRow.style.marginBottom = '8px';
+    saveRow.className = 'template-toolbar-group';
     const saveCanvasBtn = document.createElement('button');
     saveCanvasBtn.textContent = '+ Save Canvas as Template';
     const saveSystemBtn = document.createElement('button');
@@ -1563,11 +1567,10 @@
     saveRow.appendChild(saveCanvasBtn);
     saveRow.appendChild(saveSystemBtn);
     saveRow.appendChild(newRecipeBtn);
-    box.appendChild(saveRow);
+    toolbar.appendChild(saveRow);
 
     const ioRow = document.createElement('div');
-    ioRow.className = 'template-import-actions';
-    ioRow.style.marginBottom = '12px';
+    ioRow.className = 'template-toolbar-group template-toolbar-files';
     const exportBtn = document.createElement('button');
     exportBtn.textContent = '⇩ Export Templates';
     const importBtn = document.createElement('button');
@@ -1584,14 +1587,13 @@
     }));
     ioRow.appendChild(exportBtn);
     ioRow.appendChild(importBtn);
-    ioRow.appendChild(dedupeBtn);
+    ioRow.appendChild(tplFileInput);
+    toolbar.appendChild(ioRow);
+    box.appendChild(toolbar);
     const clearBtn = document.createElement('button');
     clearBtn.className = 'template-clear-all';
     clearBtn.textContent = '🗑 Clear all templates';
     clearBtn.addEventListener('click', () => clearAllTemplates(() => { selected = null; renderList(); renderDetail(); }));
-    ioRow.appendChild(clearBtn);
-    ioRow.appendChild(tplFileInput);
-    box.appendChild(ioRow);
 
     exportBtn.addEventListener('click', exportTemplatesToFile);
     importBtn.addEventListener('click', () => tplFileInput.click());
@@ -1621,10 +1623,45 @@
     search.spellcheck = false;
     listCol.appendChild(search);
 
+    // Expand all / Collapse all: every group of the tree open or closed (Collapse all also
+    // closes the older versions shown). Hidden while searching, when every match shows.
+    const treeTools = document.createElement('div');
+    treeTools.className = 'template-tree-tools';
+    const expandAllBtn = document.createElement('button');
+    expandAllBtn.type = 'button';
+    expandAllBtn.className = 'template-expand-all';
+    expandAllBtn.textContent = '▾ Expand all';
+    expandAllBtn.title = 'Open every group';
+    const collapseAllBtn = document.createElement('button');
+    collapseAllBtn.type = 'button';
+    collapseAllBtn.className = 'template-collapse-all';
+    collapseAllBtn.textContent = '▸ Collapse all';
+    collapseAllBtn.title = 'Close every group';
+    treeTools.append(expandAllBtn, collapseAllBtn);
+    listCol.appendChild(treeTools);
+    const groupNames = () => [...new Set(templateFamilies().map(t => t.group || 'Ungrouped'))];
+    expandAllBtn.addEventListener('click', () => {
+      templateGroupsClosed = [];
+      saveWorkspaceSoon();
+      renderList();
+    });
+    collapseAllBtn.addEventListener('click', () => {
+      templateGroupsClosed = groupNames();
+      expanded.clear();
+      if(selected) selected = latestOfFamily(selected.family) || selected;
+      saveWorkspaceSoon();
+      renderList(); renderDetail();
+    });
+
     const list = document.createElement('div');
     list.className = 'template-list';
     listCol.appendChild(list);
     let shown = []; // templates in the list, in display order
+
+    const listFooter = document.createElement('div');
+    listFooter.className = 'template-list-footer';
+    listFooter.append(dedupeBtn, clearBtn);
+    listCol.appendChild(listFooter);
 
     const detail = document.createElement('div');
     detail.className = 'template-detail';
@@ -1698,7 +1735,7 @@
       check.textContent = chk.text;
       detail.appendChild(check);
       const actionsRow = document.createElement('div');
-      actionsRow.className = 'template-import-actions';
+      actionsRow.className = 'template-import-actions template-actions';
       const buildBtn = document.createElement('button');
       buildBtn.className = 'primary recipe-build';
       buildBtn.textContent = 'Build (add canvases)';
@@ -1718,10 +1755,12 @@
         const left = TEMPLATES.includes(selected) ? selected : latestOfFamily(selected.family);
         selected = left || templateFamilies()[0] || null; renderList(); renderDetail();
       }));
-      actionsRow.append(buildBtn, editBtn, infoBtn, delBtn);
+      actionsRow.append(buildBtn, editBtn);
+      headTools.append(infoBtn, delBtn);
       detail.appendChild(actionsRow);
     }
 
+    let headTools = null; // beside the selected template's name: Edit info, Delete
     function renderDetail(){
       detail.innerHTML = '';
       if(!selected){
@@ -1731,9 +1770,16 @@
         detail.appendChild(empty);
         return;
       }
+      // The name, with ✎ Edit info and 🗑 Delete beside it (headTools); what the template
+      // does (add, build, save a version) in one row under the preview.
+      const head = document.createElement('div');
+      head.className = 'template-detail-head';
       const h = document.createElement('h4');
       h.textContent = selected.name;
-      detail.appendChild(h);
+      headTools = document.createElement('div');
+      headTools.className = 'template-head-tools';
+      head.append(h, headTools);
+      detail.appendChild(head);
       const all = familyVersions(selected.family);
       const ver = document.createElement('p');
       ver.className = 'template-version-info';
@@ -1749,9 +1795,14 @@
       }
       detail.appendChild(ver);
       appendOriginLines(detail, selected, all);
-      if(selected.kind === 'module' || selected.kind === 'system') appendAttachmentLine(detail, selected, () => renderDetail());
+      if(selected.kind === 'module' || selected.kind === 'system'){
+        const attachRow = document.createElement('div');
+        attachRow.className = 'template-attachments-row';
+        appendAttachmentLine(attachRow, selected, () => renderDetail());
+        detail.appendChild(attachRow);
+      }
       const desc = document.createElement('p');
-      desc.className = 'template-desc';
+      desc.className = 'template-desc' + (selected.description ? '' : ' empty');
       desc.textContent = selected.description || '(no description)';
       detail.appendChild(desc);
 
@@ -1782,7 +1833,7 @@
       detail.appendChild(previewBox);
 
       const actionsRow = document.createElement('div');
-      actionsRow.className = 'template-import-actions';
+      actionsRow.className = 'template-import-actions template-actions';
       if(selected.kind === 'module'){
         const addBtn = document.createElement('button');
         addBtn.className = 'primary';
@@ -1830,8 +1881,7 @@
           selected = left || templateFamilies()[0] || null; previewCanvasIdx = 0; renderList(); renderDetail();
         }));
         actionsRow.appendChild(versionBtn);
-        actionsRow.appendChild(editBtn);
-        actionsRow.appendChild(delBtn);
+        headTools.append(editBtn, delBtn);
       }
       detail.appendChild(actionsRow);
     }
@@ -1896,6 +1946,11 @@
       dedupeBtn.textContent = '🧹 Remove duplicates…';
       dedupeBtn.style.display = families.length > 1 ? '' : 'none';
       clearBtn.style.display = TEMPLATES.length ? '' : 'none';
+      listFooter.style.display = families.length ? '' : 'none';
+      const names = groupNames();
+      treeTools.style.display = families.length && !search.value.trim() ? '' : 'none';
+      expandAllBtn.disabled = !names.some(g => templateGroupsClosed.includes(g));
+      collapseAllBtn.disabled = names.every(g => templateGroupsClosed.includes(g)) && !expanded.size;
       list.innerHTML = '';
       shown = [];
       if(families.length === 0){
