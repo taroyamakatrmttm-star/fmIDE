@@ -777,10 +777,18 @@ fmGraph with its sample model (step 15, scenarios S1).
 - Price 13 saved with + Save as scenario (its box focused), named "High price" (marked as shown); Price 13 and Volume +10% saved as "sc01"; "sc01" again refused with a message; ▶ on High price: sliders [13, none], Profit 4,500; A on sc01: the strip "Comparing with A: scenario “sc01” (Price 13, Volume +10%)", the Profit bar −700; A again unpins; renamed "Growth" (the strip follows); "HIGH PRICE" refused; ⟳ to Price 8; ↑ (first ↑ and last ↓ off); ×.
 - Undo and redo: save, save, rename undone one by one (sliders kept), redo; ▶ is not a step.
 - "Both" (Price 14, Volume −10%) shown on a board with only a Price slider: "“Both” also changes Volume…"; compared with: +800 on Profit.
-- After a reload: kept, sliders on the model's numbers; Export all: version 3 with `scenarios`; one board: none; import adds "Theirs" (a used name keeps yours); a file of only scenarios adds them; Export for a template: version 2, no scenarios; a version 2 file imports.
+- After a reload: kept, sliders on the model's numbers; Export all: version 4 (3 before the scenario waterfall) with `scenarios`; one board: none; import adds "Theirs" (a used name keeps yours); a file of only scenarios adds them; Export for a template: version 2, no scenarios; a version 2 file imports.
 - From a file: settings on a calculated, missing, non-number or renamed rectangle dropped; a second name differing in capitals and a blank name dropped; markup kept as text in the name box and the strip, nothing run.
 - From fmIDE: a saved scenario reaches the document's `graphBoards` and marks it unsaved.
 - `tests/fixtures/formats/board-v2.json` (a board file from before scenarios) imports.
+
+### 57. fmGraph's scenario waterfall (`tests/57-fmgraph-scenario-waterfall.spec.js`; part of `npm run test:fmgraph`)
+fmGraph with its sample model (step 15, scenarios S2); sc01 Price 13, sc02 Price 13 and Volume +10%.
+- Profit and Revenue in Year 1: Start 1,500, sc01 +3,000 (to 4,500), sc02 +700 (to 5,200), End 5,200; Revenue 10,000, +3,000, +1,300, 14,300; two waterfalls of four bars, the labels, the title "Profit — Year 1", the hover text "sc02: 5,200 (+700 from sc01)"; moving the sliders doesn't change it.
+- sc01 updated to Price 11: +1,000 then +2,700; reordered; sc02 unticked (the file's `scenarios` ["sc01"]); renamed and followed; deleted ("None of the scenarios is ticked"); undo.
+- Built with the mouse (+ Chart, Scenario waterfall, Year 2, + Output Profit, a title); the file version 4 with no `scenarios` on the chart (every one); kept after a reload.
+- No scenarios and no outputs said; a file naming a scenario that is gone ("No scenario called “Gone” any more."); a markup name as text; nothing run.
+- Export for a template leaves it out (version 2, "left out"); `tests/fixtures/formats/board-v3.json` imports with its scenario.
 
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.

@@ -2,7 +2,7 @@
 // The boards (G3a: several, as tabs, each a view of the model). A board:
 //   { id, name, items: [bar | chart, …] (in the order shown), sliders: [slider, …] }
 //   bar    { id, kind: 'bar', key, periods, wide, colour }
-//   chart  { id, kind: 'chart', wide, layout: 'columns' | 'flow', … } (G2; 04b-charts.js)
+//   chart  { id, kind: 'chart', wide, layout: 'columns' | 'flow' | 'scenarios', … } (G2; 04b-charts.js)
 //   slider { id, key, periods, mode: 'set' | 'shift', min, max, step, value }
 // periods: { mode: 'all' } · { mode: 'one', p } · { mode: 'range', from, to } (from 0).
 // A slider's value is null until it moves (the model's own numbers); 'set' gives the input
@@ -101,6 +101,7 @@ function cleanBoard(raw, dropped){
     // A chart that named rectangles, none of them in this model, is left out (one emptied
     // on purpose, naming none, is kept).
     const named = c && (c.layout === 'flow' ? (Array.isArray(c.steps) ? c.steps.length : 0)
+      : c.layout === 'scenarios' ? (Array.isArray(c.outputs) ? c.outputs.length : 0)
       : (Array.isArray(c.groups) ? c.groups.reduce((n, gr) => n + (gr && Array.isArray(gr.parts) ? gr.parts.length : 0), 0) : 0));
     if(!ch || (named > 0 && !chartKeys(ch).length)){ drop(); return null; }
     ch.wide = c.wide !== false;
@@ -134,8 +135,9 @@ function cleanBoards(raw){
 // A board's file form.
 // The board file's version (docs/file-formats.md): 1 (G3a); 2 (G5a) adds the template form
 // (`form: "template"`, 06c-template-boards.js); 3 adds the model's named scenarios
-// (`scenarios`, 05f-scenarios.js) — the template form, which carries none, stays version 2.
-const BOARD_FILE_VERSION = 3;
+// (`scenarios`, 05f-scenarios.js); 4 the scenario waterfall (a chart of layout `scenarios`,
+// 04b-charts.js). The template form, which carries neither, stays version 2.
+const BOARD_FILE_VERSION = 4;
 const TEMPLATE_BOARD_VERSION = 2;
 function boardData(b){
   const at = (key) => { const r = model.byKey.get(key); return { canvasId: r.canvasId, nodeId: r.nodeId, name: r.name }; };

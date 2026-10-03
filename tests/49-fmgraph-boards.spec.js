@@ -203,7 +203,7 @@ test('the board file: export one or all, import into the same model, a model it 
   expect(dl.suggestedFilename()).toBe('Sample model - Second.board.json');
   const one = JSON.parse(fs.readFileSync(await dl.path(), 'utf8'));
   expect(one.kind).toBe('fmIDE-graph-board');
-  expect(one.version).toBe(3);
+  expect(one.version).toBe(4);
   expect(one.boards.map(b => b.name)).toEqual(['Second']);
   // Export all.
   await page.click('.gbar-menu summary');

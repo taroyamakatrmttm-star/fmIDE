@@ -120,7 +120,7 @@ test('a scenario reaches inputs on any board; one with no slider on this board i
   expect(await page.locator('.bar-widget').first().locator('.t-diff').first().textContent()).toBe('+800'); // 5,500 now (Price 14), 4,700 in Both (Price 14, Volume −10%)
 });
 
-test('kept: after a reload, in the board file (version 3), and imported into another model', async ({ page }) => {
+test('kept: after a reload, in the board file (version 3 and later), and imported into another model', async ({ page }) => {
   await openSample(page);
   const [price] = await sliders(page);
   await g(page, (i) => fmGraph.setSlider(i, 11), price);
@@ -132,9 +132,9 @@ test('kept: after a reload, in the board file (version 3), and imported into ano
   await expect(rows(page)).toHaveCount(1);
   expect(await list(page)).toEqual([{ name: 'Eleven', settings: 'Price 11', shown: false, compared: false }]);
   expect(await values(page)).toEqual([null, null]);                       // sliders start on the model's numbers
-  // Export all: version 3 with the scenarios; one board: none.
+  // Export all: version 4 (since the scenario waterfall) with the scenarios; one board: none.
   const all = await g(page, () => fmGraph.exportBoards(true));
-  expect(all.version).toBe(3);
+  expect(all.version).toBe(4);
   expect(all.scenarios).toEqual([{ name: 'Eleven', sliders: [{ canvasId: 'cProfit', nodeId: 'price', name: 'Price', mode: 'set', periods: { mode: 'all' }, value: 11 }] }]);
   expect(await g(page, () => fmGraph.exportBoards(false))).not.toHaveProperty('scenarios');
   // Importing: a new name is added, a name used here keeps yours.

@@ -1,0 +1,21 @@
+{
+  "kind": "fmIDE-graph-board",
+  "version": 3,
+  "active": 0,
+  "boards": [
+    {
+      "name": "Saved before waterfalls",
+      "items": [
+        { "type": "bar", "canvasId": "cProfit", "nodeId": "profit", "name": "Profit", "periods": { "mode": "all" }, "wide": false }
+      ],
+      "sliders": [
+        { "canvasId": "cProfit", "nodeId": "price", "name": "Price", "periods": { "mode": "all" }, "mode": "set", "min": 5, "max": 15, "step": 0.5 }
+      ]
+    }
+  ],
+  "scenarios": [
+    { "name": "Before waterfalls", "sliders": [
+      { "canvasId": "cProfit", "nodeId": "price", "name": "Price", "mode": "set", "periods": { "mode": "all" }, "value": 12 }
+    ] }
+  ]
+}
