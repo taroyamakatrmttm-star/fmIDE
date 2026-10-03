@@ -194,7 +194,10 @@ async function loadBoardFor(m, docRaw){
       if(restored && fromLast) setTimeout(saveBoardNow, 0);
     }
   }catch(e){ /* unreadable: start a new board */ }
-  boards = restored ? restored.boards : [startingBoard()];
+  // None of its own: its templates' boards (G5b, 06d-template-sources.js), else a starting board.
+  const fromTemplates = restored ? [] : templateStartBoards();
+  if(fromTemplates.length) setTimeout(saveBoardNow, 0);
+  boards = restored ? restored.boards : fromTemplates.length ? fromTemplates : [startingBoard()];
   board = boards[restored ? restored.active : 0];
   resetUndo();
 }

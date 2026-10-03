@@ -103,8 +103,13 @@ function exportForTemplate(target, onlyShown){
 }
 
 // The dialog: one choice per target (the first canvas template ticked, else the whole model).
-function showTemplateExport(){
+// mode 'attach' (G5b): the same choice, sent to fmIDE instead of saved as a file.
+function showTemplateExport(mode){
   if(!model) return;
+  const attaching = mode === 'attach';
+  $('templateTitle').textContent = attaching ? 'Attach to a template' : 'Export for a template';
+  $('templateYes').textContent = attaching ? 'Attach' : 'Export';
+  $('templateHint').textContent = attaching ? 'fmIDE asks before attaching it.' : 'Then, in fmIDE: Templates → 📈 Attach fmGraph board….';
   const back = $('templateBox'), box = $('templateChoices');
   box.textContent = '';
   const targets = templateTargets();
@@ -124,7 +129,9 @@ function showTemplateExport(){
     document.removeEventListener('keydown', key, true);
     if(!go) return;
     const picked = box.querySelector('input[name="templateTarget"]:checked');
-    exportForTemplate(targets[picked ? Number(picked.value) : targets.length - 1], $('templateOnlyShown').checked);
+    const target = targets[picked ? Number(picked.value) : targets.length - 1];
+    if(attaching) attachToTemplate(target, $('templateOnlyShown').checked);
+    else exportForTemplate(target, $('templateOnlyShown').checked);
   };
   const yes = () => done(true), no = () => done(false);
   const key = (ev) => { if(ev.key === 'Escape'){ ev.preventDefault(); done(false); } };

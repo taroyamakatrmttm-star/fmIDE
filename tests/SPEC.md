@@ -757,6 +757,14 @@ fmIDE, fmGraph and the pack checker (step 15, phase G5a), with a canvas template
 - The checker: a slider on "Prices", a part in a canvas "Nowhere", a slider without its canvas, a name used twice, a "pie", no boards, the wrong form and a hidden character are errors.
 - fmGraph alone, a model with a canvas made from Sales and another canvas: for Sales, two widgets left out (another canvas, a name used twice), said; for the whole model (the board shown) one; a template board dropped isn't added ("saved for a template"); a version 1 board still is; a board with nothing fitting saves nothing, said.
 
+### 54. fmGraph using templates' boards (`tests/54-template-boards-in-fmgraph.spec.js`; part of `npm run test:fmgraph`)
+fmIDE and fmGraph (step 15, phase G5b), with the canvas template "Sales" (versions 1 and 2, each with a board) and a document with a system template "<b>Plan</b>".
+- Sales v1 on the first canvas and the newest on a new one ("East"): fmGraph starts with "Sales v1 board — Revenue Model" and "Sales v2 board — East" (a Revenue bar, a Price slider); nothing reaches the document.
+- One canvas: starts with "Sales board"; renamed "Mine" (now the document's own); opened again: "Mine" only; Add boards from templates…: "“Sales” (canvas template): 1 board, 2 of 2 rectangles found", ticked; Add: two tabs, "Added “Sales board”.", the document holding both; Undo: one again.
+- Plan's board all found: the document opens in fmGraph with "Plan board" (a chart of two parts). With one rectangle misnamed: the starting "Board"; offered "“<b>Plan</b>” (system template, v3): 1 board, 2 of 3 rectangles found", unticked, no element made; ticked and added: "1 rectangle left out"; a model whose templates carry nothing: said, no window.
+- Attach to template… (from fmIDE): fmIDE asks about version 1 of "Sales"; Cancel: "Not attached: cancelled in fmIDE."; Attach: fmIDE's message and fmGraph's "Attached to version 1 of “Sales” in fmIDE.", the workspace holding it; the whole model with no system template: fmIDE says so, and so does fmGraph.
+- With systems "Plan A" and "Plan B": the whole model only; fmIDE's list, Plan B picked and attached (its Pay bar by canvas and name). fmGraph on its own: no Attach to template….
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.

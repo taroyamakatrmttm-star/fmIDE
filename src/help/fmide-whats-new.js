@@ -12,6 +12,20 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'fmgraph-attach-to-template', date: '2026-10-03', title: 'fmGraph uses your templates\' boards',
+    summary: 'fmGraph starts with the boards your templates carry, and can attach boards to a template for you.',
+    what: [
+      '{cmd:openFmGraph} sends fmGraph the boards your templates carry: a model with no boards of its own starts with them.',
+      'In fmGraph, Boards → Attach to template… sends boards back here; fmIDE asks which template (for a system template) and attaches them to its latest version.',
+    ],
+    why: 'So sharing a template\'s views no longer needs a file in between.',
+    how: [
+      'Open {cmd:openFmGraph} on a model built from a template.',
+      'Arrange the boards, then Boards → Attach to template….',
+      'Answer the question here.',
+    ],
+    see: ['templates', 'fmgraph'] },
+
   { id: 'template-fmgraph-boards', date: '2026-10-02', title: 'Templates can carry fmGraph boards',
     summary: 'Attach an fmGraph board to a canvas or system template, and it goes wherever the template goes.',
     what: [

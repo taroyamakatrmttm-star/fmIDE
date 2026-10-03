@@ -27,6 +27,7 @@ function showBoard(){
 
 function syncPageState(){
   document.querySelectorAll('.needs-model').forEach(b => { b.disabled = !model; });
+  $('btnAttachTemplate').classList.toggle('hidden', !(model && linkedToFmide)); // G5b: only with the model from fmIDE
 }
 
 // A <select> of rectangles, by canvas. onlyInputs: a slider's.
