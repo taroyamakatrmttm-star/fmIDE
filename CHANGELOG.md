@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmIDE: moving between canvases from the keyboard
+- **Next Canvas** (Alt+Page Down) and **Previous Canvas** (Alt+Page Up), round the ends; in the Canvas group of the ribbon (added once to a customised ribbon, `ui.canvasSwitchAdded`), the Command Launcher and macros (recorded as Go to Canvas).
+
 ## fmIDE: a tidier Templates window
 - **▾ Expand all / ▸ Collapse all** over the Templates tree (kept in your own UI settings, like each group's state).
 - The buttons are rearranged, none renamed: one toolbar (save on the left, Export / Import on the right), ✎ Edit info and 🗑 Delete beside the template's name, its actions in one row, Remove duplicates and Clear all under the list.

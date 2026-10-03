@@ -89,6 +89,8 @@
     { id:'addBlock',    label:'Add Block',             icon:'▣', category:'Insert', defaultShortcut:null, action:() => showBlockPicker(null) },
     { id:'addPeriodShift', label:'Add Period Shift',   icon:'⇥', category:'Insert', defaultShortcut:null, action:() => addPeriodShiftInteractive() },
     { id:'newCanvas',   label:'New Canvas',            icon:'🗋', category:'Canvas', defaultShortcut:null, action:() => fm.addCanvas() },
+    { id:'prevCanvas',  label:'Previous Canvas',       icon:'◂', category:'Canvas', defaultShortcut:'Alt+PageUp', enabled:() => canvases.length > 1, action:() => switchCanvasBy(-1) },
+    { id:'nextCanvas',  label:'Next Canvas',           icon:'▸', category:'Canvas', defaultShortcut:'Alt+PageDown', enabled:() => canvases.length > 1, action:() => switchCanvasBy(1) },
     { id:'renameCanvas',label:'Rename Canvas',         icon:'✎', category:'Canvas', defaultShortcut:null, action:() => startRenameActiveCanvas() },
     { id:'deleteCanvas',label:'Delete Canvas',         icon:'🗙', category:'Canvas', defaultShortcut:null, enabled:() => canvases.length > 1, action:() => deleteCanvasById(activeCanvasId) },
     { id:'clearCanvas', label:'Clear Canvas',          icon:'⌫', category:'Canvas', defaultShortcut:null, enabled:() => nodes.length > 0 || edges.length > 0, action:() => clearCanvasInteractive() },

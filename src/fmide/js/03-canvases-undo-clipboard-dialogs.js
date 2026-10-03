@@ -105,6 +105,18 @@
     renderCanvasTabs();
   }
 
+  // Previous / Next Canvas (Alt+PageUp / Alt+PageDown): the tab beside this one, from the
+  // last back to the first and the other way round. Through fm.switchCanvas, so a macro
+  // being recorded keeps the step; the tab is scrolled into view in a long strip.
+  function switchCanvasBy(step){
+    if(canvases.length < 2) return;
+    const at = canvases.findIndex(c => c.id === activeCanvasId);
+    const next = canvases[(at + step + canvases.length) % canvases.length];
+    fm.switchCanvas(next.id);
+    const tab = document.querySelector('#canvasTabs .canvas-tab.active');
+    if(tab && tab.scrollIntoView) tab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+
   function addCanvas(){
     pushHistory();
     const c = {

@@ -13,6 +13,20 @@
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
 
+  { id: 'canvas-switching', date: '2026-10-03', title: 'Move between canvases from the keyboard',
+    summary: 'Alt+Page Down goes to the next canvas, Alt+Page Up to the previous one.',
+    what: [
+      '{cmd:nextCanvas} (Alt+Page Down) and {cmd:prevCanvas} (Alt+Page Up) go to the canvas tab beside the one you are on, and round from the last tab to the first. On a Mac, Option+Page Down and Option+Page Up.',
+      'Both are in the Model tab\'s Canvas group and in the Command Launcher, and a macro records them.',
+    ],
+    why: 'A model of many canvases is quicker to move through without reaching for the mouse.',
+    how: [
+      'Press Alt+Page Down to go to the next canvas.',
+      'Press Alt+Page Up to go back.',
+    ],
+    notes: ['Ctrl+Page Down, as in Excel, is kept by the browser for its own tabs. In {cmd:openShortcuts} you can choose other keys.'],
+    see: ['canvases', 'launcher-shortcuts'] },
+
   { id: 'templates-window-tidy', date: '2026-10-03', title: 'A tidier Templates window, with Expand all and Collapse all',
     summary: 'Open or close every group of templates at once, and find each button where you expect it.',
     what: [

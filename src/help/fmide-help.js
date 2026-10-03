@@ -198,12 +198,13 @@ const HELP_TOPICS = [
 
   // ---------- Canvases, blocks, plugs ----------
   { id: 'canvases', group: 'canvases', title: 'Canvases',
-    keywords: 'canvas tab sheet page new rename delete move',
+    keywords: 'canvas tab sheet page new rename delete move switch next previous go to shortcut alt pagedown pageup',
     summary: 'Split a model into canvases, like the sheets of a workbook.',
     body: [
       { p: 'Each canvas is a tab above the canvas area, and becomes its own tab in Excel.' },
       { p: '{cmd:newCanvas} (or + at the end of the tabs) adds one. Double-click a tab to rename it, and drag it to move it.' },
       { p: 'The Model tab also has {cmd:renameCanvas}, {cmd:deleteCanvas} and {cmd:clearCanvas}.' },
+      { p: 'To move between canvases from the keyboard, use {cmd:nextCanvas} (Alt+Page Down) and {cmd:prevCanvas} (Alt+Page Up); they go round from the last tab to the first. On a Mac, Option+Page Down. You can choose other keys in Keyboard Shortcuts.' },
       { p: 'Values can travel between canvases through aliases, or plugs and sockets.' },
       { see: ['aliases', 'plugs-sockets', 'blocks'] },
     ] },
@@ -451,6 +452,8 @@ const COMMAND_HELP = {
   clearAll: 'Removes every canvas, leaving one empty canvas.',
   moveCanvasLeft: 'Moves the current canvas tab one place to the left.',
   moveCanvasRight: 'Moves the current canvas tab one place to the right.',
+  prevCanvas: 'Goes to the canvas tab on the left (from the first, to the last).',
+  nextCanvas: 'Goes to the canvas tab on the right (from the last, back to the first).',
   alignLeft: 'Lines up the selected boxes on their left edges.',
   alignCenterH: 'Lines up the selected boxes on their centres, left to right.',
   alignRight: 'Lines up the selected boxes on their right edges.',

@@ -1436,6 +1436,8 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     { id:'addBlock',    label:'Add Block',             icon:'▣', category:'Insert', defaultShortcut:null, action:() => showBlockPicker(null) },
     { id:'addPeriodShift', label:'Add Period Shift',   icon:'⇥', category:'Insert', defaultShortcut:null, action:() => addPeriodShiftInteractive() },
     { id:'newCanvas',   label:'New Canvas',            icon:'🗋', category:'Canvas', defaultShortcut:null, action:() => fm.addCanvas() },
+    { id:'prevCanvas',  label:'Previous Canvas',       icon:'◂', category:'Canvas', defaultShortcut:'Alt+PageUp', enabled:() => canvases.length > 1, action:() => switchCanvasBy(-1) },
+    { id:'nextCanvas',  label:'Next Canvas',           icon:'▸', category:'Canvas', defaultShortcut:'Alt+PageDown', enabled:() => canvases.length > 1, action:() => switchCanvasBy(1) },
     { id:'renameCanvas',label:'Rename Canvas',         icon:'✎', category:'Canvas', defaultShortcut:null, action:() => startRenameActiveCanvas() },
     { id:'deleteCanvas',label:'Delete Canvas',         icon:'🗙', category:'Canvas', defaultShortcut:null, enabled:() => canvases.length > 1, action:() => deleteCanvasById(activeCanvasId) },
     { id:'clearCanvas', label:'Clear Canvas',          icon:'⌫', category:'Canvas', defaultShortcut:null, enabled:() => nodes.length > 0 || edges.length > 0, action:() => clearCanvasInteractive() },
@@ -1860,12 +1862,13 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
 
     // ---------- Canvases, blocks, plugs ----------
     { id: 'canvases', group: 'canvases', title: 'Canvases',
-      keywords: 'canvas tab sheet page new rename delete move',
+      keywords: 'canvas tab sheet page new rename delete move switch next previous go to shortcut alt pagedown pageup',
       summary: 'Split a model into canvases, like the sheets of a workbook.',
       body: [
         { p: 'Each canvas is a tab above the canvas area, and becomes its own tab in Excel.' },
         { p: '{cmd:newCanvas} (or + at the end of the tabs) adds one. Double-click a tab to rename it, and drag it to move it.' },
         { p: 'The Model tab also has {cmd:renameCanvas}, {cmd:deleteCanvas} and {cmd:clearCanvas}.' },
+        { p: 'To move between canvases from the keyboard, use {cmd:nextCanvas} (Alt+Page Down) and {cmd:prevCanvas} (Alt+Page Up); they go round from the last tab to the first. On a Mac, Option+Page Down. You can choose other keys in Keyboard Shortcuts.' },
         { p: 'Values can travel between canvases through aliases, or plugs and sockets.' },
         { see: ['aliases', 'plugs-sockets', 'blocks'] },
       ] },
@@ -2113,6 +2116,8 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     clearAll: 'Removes every canvas, leaving one empty canvas.',
     moveCanvasLeft: 'Moves the current canvas tab one place to the left.',
     moveCanvasRight: 'Moves the current canvas tab one place to the right.',
+    prevCanvas: 'Goes to the canvas tab on the left (from the first, to the last).',
+    nextCanvas: 'Goes to the canvas tab on the right (from the last, back to the first).',
     alignLeft: 'Lines up the selected boxes on their left edges.',
     alignCenterH: 'Lines up the selected boxes on their centres, left to right.',
     alignRight: 'Lines up the selected boxes on their right edges.',
@@ -2218,6 +2223,20 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // entry: ids, dates in order, commands and topics that exist.
   // **A change people will notice adds its entry here in the same pull request.**
   const WHATS_NEW = [
+
+    { id: 'canvas-switching', date: '2026-10-03', title: 'Move between canvases from the keyboard',
+      summary: 'Alt+Page Down goes to the next canvas, Alt+Page Up to the previous one.',
+      what: [
+        '{cmd:nextCanvas} (Alt+Page Down) and {cmd:prevCanvas} (Alt+Page Up) go to the canvas tab beside the one you are on, and round from the last tab to the first. On a Mac, Option+Page Down and Option+Page Up.',
+        'Both are in the Model tab\'s Canvas group and in the Command Launcher, and a macro records them.',
+      ],
+      why: 'A model of many canvases is quicker to move through without reaching for the mouse.',
+      how: [
+        'Press Alt+Page Down to go to the next canvas.',
+        'Press Alt+Page Up to go back.',
+      ],
+      notes: ['Ctrl+Page Down, as in Excel, is kept by the browser for its own tabs. In {cmd:openShortcuts} you can choose other keys.'],
+      see: ['canvases', 'launcher-shortcuts'] },
 
     { id: 'templates-window-tidy', date: '2026-10-03', title: 'A tidier Templates window, with Expand all and Collapse all',
       summary: 'Open or close every group of templates at once, and find each button where you expect it.',
@@ -4667,6 +4686,18 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     loadCanvasState(target);
     clearSelection();
     renderCanvasTabs();
+  }
+
+  // Previous / Next Canvas (Alt+PageUp / Alt+PageDown): the tab beside this one, from the
+  // last back to the first and the other way round. Through fm.switchCanvas, so a macro
+  // being recorded keeps the step; the tab is scrolled into view in a long strip.
+  function switchCanvasBy(step){
+    if(canvases.length < 2) return;
+    const at = canvases.findIndex(c => c.id === activeCanvasId);
+    const next = canvases[(at + step + canvases.length) % canvases.length];
+    fm.switchCanvas(next.id);
+    const tab = document.querySelector('#canvasTabs .canvas-tab.active');
+    if(tab && tab.scrollIntoView) tab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
 
   function addCanvas(){
@@ -17679,7 +17710,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       { id:'model', label:'Model', keytip:'M', groups:[
         { label:'Compute', items:[ { cmd:'evaluate', size:'large' } ] },
         { label:'Periods', items:[ { cmd:'prevPeriod' }, { cmd:'managePeriods' }, { cmd:'nextPeriod' } ] },
-        { label:'Canvas', items:[ { cmd:'newCanvas', size:'large' }, { cmd:'renameCanvas' }, { cmd:'deleteCanvas' }, { cmd:'clearCanvas' }, { cmd:'moveCanvasLeft' }, { cmd:'moveCanvasRight' }, { cmd:'clearAll', size:'large' } ] },
+        { label:'Canvas', items:[ { cmd:'newCanvas', size:'large' }, { cmd:'renameCanvas' }, { cmd:'deleteCanvas' }, { cmd:'clearCanvas' }, { cmd:'moveCanvasLeft' }, { cmd:'moveCanvasRight' }, { cmd:'prevCanvas' }, { cmd:'nextCanvas' }, { cmd:'clearAll', size:'large' } ] },
         { label:'Formatting', items:[ { cmd:'openFormats', size:'large' } ] },
       ]},
       { id:'view', label:'View', keytip:'W', groups:[
@@ -20663,6 +20694,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       zoomGroupAdded: true, // 13a: the View tab's Zoom group
       addManyRectsAdded: true, // 12b: Add Many Rectangles… after Add Rectangle
       fmGraphAdded: true, // 15 G1: Open fmGraph after Open ExcelExporter
+      canvasSwitchAdded: true, // Previous / Next Canvas after Move Canvas Right
       libraryAuthor,
       windowSizes: cleanWindowSizes(windowSizes), templateGroupsClosed: templateGroupsClosed.slice(0, 200),
       helpSize: cleanHelpSize(helpPanelSize),
@@ -20764,6 +20796,17 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   }
   // One-time update (step 12b) of a customised ribbon: Add Many Rectangles… right after every
   // Add Rectangle it has (none: left alone; already there: left alone).
+  // One-time update of a customised ribbon: Previous Canvas and Next Canvas after Move Canvas
+  // Right, wherever that is (a ribbon without it, or with them already, is left alone).
+  function addCanvasSwitchCommandsToRibbon(){
+    const groups = [];
+    ribbonState.config.tabs.forEach(t => (t && Array.isArray(t.groups) ? t.groups : []).forEach(g => { if(g && Array.isArray(g.items)) groups.push(g); }));
+    if(groups.some(g => g.items.some(it => it && (it.cmd === 'prevCanvas' || it.cmd === 'nextCanvas')))) return;
+    groups.forEach(g => {
+      const at = g.items.findIndex(it => it && it.cmd === 'moveCanvasRight');
+      if(at >= 0) g.items.splice(at + 1, 0, { cmd: 'prevCanvas' }, { cmd: 'nextCanvas' });
+    });
+  }
   function addManyRectsCommandToRibbon(){
     const groups = [];
     ribbonState.config.tabs.forEach(t => (t && Array.isArray(t.groups) ? t.groups : []).forEach(g => { if(g && Array.isArray(g.items)) groups.push(g); }));
@@ -20826,6 +20869,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       if(ui.zoomGroupAdded !== true) addZoomGroupToRibbon();
       if(ui.addManyRectsAdded !== true) addManyRectsCommandToRibbon();
       if(ui.fmGraphAdded !== true) addFmGraphCommandToRibbon();
+      if(ui.canvasSwitchAdded !== true) addCanvasSwitchCommandsToRibbon();
     }
     if(!fromImport && typeof ui.libraryAuthor === 'string') libraryAuthor = ui.libraryAuthor.slice(0, LIBRARY_PACK_LIMITS.author);
     // Window sizes, closed template groups, the Help panel's width, the updates seen and the canvases' zoom belong to this screen and person: never from

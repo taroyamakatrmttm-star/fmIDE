@@ -809,6 +809,11 @@ fmIDE's Open ExcelExporter, the offline fixture; the model Hours 8 × Rate 50 = 
 - Opened on its own: the welcome screen, no ↻ From fmIDE, no errors. After fmIDE is reloaded, ↻ From fmIDE still reaches it.
 - Also changed on purpose: group 12 (ExcelExporter opened from fmIDE now shows the model, not the welcome screen; Back closes without asking for fmIDE's model and asks for the sample loaded there), group 30 (the window shows fmIDE's model before the tap on Back), groups 33 and 35 (the To Excel tutorial lost its Save System step).
 
+### 61. Moving between canvases from the keyboard (`tests/61-canvas-switching.spec.js`; `npm run test:canvas-switching`)
+- One, Two, Three: Alt+PageDown → Two, Three, One (round the end); Alt+PageUp → Three, Two; the active tab shows Two; no KeyTips on the way.
+- `fm.commands()` lists Previous Canvas (Alt+PageUp) and Next Canvas (Alt+PageDown) in Canvas; with one canvas Alt+PageDown does nothing; Alt+PageUp while renaming a tab stays in the text box.
+- The ribbon's Canvas group: Move Canvas Right, Previous Canvas, Next Canvas; the command works. A customised ribbon from before gets both after its Move Canvas Right, once (`canvasSwitchAdded`).
+- The macro recorder records Alt+PageDown as one `switchCanvas` step that plays back; the Command Launcher runs Next Canvas.
 ### 60. Long messages and picking files on an iPad (`tests/60-long-messages.spec.js`; `npm run test:messages`)
 - fmIDE at 1024 × 600: a recipe of a canvas template with 80 sockets nothing feeds; Build shows "Built Wide Recipe: 1 canvas." and the 80th socket; the window inside the screen, its text scrolling (`overflow-y: auto`), OK on the screen before and after scrolling to the end, OK closes it. At 1024 × 500, Delete Canvas on a canvas with a very long name: the danger button and Cancel on the screen.
 - ExcelExporter, `ir/error-cases.json`: every line in the page, three shown, "…and N more.", Show all N ▾ (`aria-expanded`) shows them all and scrolls inside the list, Show fewer ▴; × hides the panel; unticking Include on A changes the list and it comes back. `scenario-unit-price-volume.json` with one difference: no Show all, × there.
