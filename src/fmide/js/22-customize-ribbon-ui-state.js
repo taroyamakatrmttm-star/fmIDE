@@ -315,6 +315,7 @@
       zoomGroupAdded: true, // 13a: the View tab's Zoom group
       addManyRectsAdded: true, // 12b: Add Many Rectangles… after Add Rectangle
       fmGraphAdded: true, // 15 G1: Open fmGraph after Open ExcelExporter
+      canvasSwitchAdded: true, // Previous / Next Canvas after Move Canvas Right
       libraryAuthor,
       windowSizes: cleanWindowSizes(windowSizes), templateGroupsClosed: templateGroupsClosed.slice(0, 200),
       helpSize: cleanHelpSize(helpPanelSize),
@@ -416,6 +417,17 @@
   }
   // One-time update (step 12b) of a customised ribbon: Add Many Rectangles… right after every
   // Add Rectangle it has (none: left alone; already there: left alone).
+  // One-time update of a customised ribbon: Previous Canvas and Next Canvas after Move Canvas
+  // Right, wherever that is (a ribbon without it, or with them already, is left alone).
+  function addCanvasSwitchCommandsToRibbon(){
+    const groups = [];
+    ribbonState.config.tabs.forEach(t => (t && Array.isArray(t.groups) ? t.groups : []).forEach(g => { if(g && Array.isArray(g.items)) groups.push(g); }));
+    if(groups.some(g => g.items.some(it => it && (it.cmd === 'prevCanvas' || it.cmd === 'nextCanvas')))) return;
+    groups.forEach(g => {
+      const at = g.items.findIndex(it => it && it.cmd === 'moveCanvasRight');
+      if(at >= 0) g.items.splice(at + 1, 0, { cmd: 'prevCanvas' }, { cmd: 'nextCanvas' });
+    });
+  }
   function addManyRectsCommandToRibbon(){
     const groups = [];
     ribbonState.config.tabs.forEach(t => (t && Array.isArray(t.groups) ? t.groups : []).forEach(g => { if(g && Array.isArray(g.items)) groups.push(g); }));
@@ -478,6 +490,7 @@
       if(ui.zoomGroupAdded !== true) addZoomGroupToRibbon();
       if(ui.addManyRectsAdded !== true) addManyRectsCommandToRibbon();
       if(ui.fmGraphAdded !== true) addFmGraphCommandToRibbon();
+      if(ui.canvasSwitchAdded !== true) addCanvasSwitchCommandsToRibbon();
     }
     if(!fromImport && typeof ui.libraryAuthor === 'string') libraryAuthor = ui.libraryAuthor.slice(0, LIBRARY_PACK_LIMITS.author);
     // Window sizes, closed template groups, the Help panel's width, the updates seen and the canvases' zoom belong to this screen and person: never from

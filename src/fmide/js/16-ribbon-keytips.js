@@ -50,7 +50,7 @@
       { id:'model', label:'Model', keytip:'M', groups:[
         { label:'Compute', items:[ { cmd:'evaluate', size:'large' } ] },
         { label:'Periods', items:[ { cmd:'prevPeriod' }, { cmd:'managePeriods' }, { cmd:'nextPeriod' } ] },
-        { label:'Canvas', items:[ { cmd:'newCanvas', size:'large' }, { cmd:'renameCanvas' }, { cmd:'deleteCanvas' }, { cmd:'clearCanvas' }, { cmd:'moveCanvasLeft' }, { cmd:'moveCanvasRight' }, { cmd:'clearAll', size:'large' } ] },
+        { label:'Canvas', items:[ { cmd:'newCanvas', size:'large' }, { cmd:'renameCanvas' }, { cmd:'deleteCanvas' }, { cmd:'clearCanvas' }, { cmd:'moveCanvasLeft' }, { cmd:'moveCanvasRight' }, { cmd:'prevCanvas' }, { cmd:'nextCanvas' }, { cmd:'clearAll', size:'large' } ] },
         { label:'Formatting', items:[ { cmd:'openFormats', size:'large' } ] },
       ]},
       { id:'view', label:'View', keytip:'W', groups:[
