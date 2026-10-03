@@ -125,7 +125,7 @@ function cleanLibraryIndexEntry(e){
     if(!name) return { error: 'an item without a name' };
     const item = { type: it.type, kind: it.type === 'function' ? 'function' : it.kind, name, family: it.family, version: it.version,
       versionId: it.versionId, group: packText(it.group, 80), description: packText(it.description, LIBRARY_PACK_LIMITS.description, true),
-      note: packText(it.note, 200), origin: null };
+      note: packText(it.note, 200), origin: null, board: it.type === 'template' && it.board === true };
     if(it.origin !== undefined){
       const o = it.origin;
       if(o && typeof o === 'object' && [o.packTitle, o.author].some(hasHiddenCharacter)) return { error: 'hidden characters in an item' };

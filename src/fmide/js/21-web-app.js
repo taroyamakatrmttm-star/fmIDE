@@ -74,7 +74,11 @@
     const origin = ownOrigin();
     if(origin && ev.origin !== origin) return;
     if(!ev.data || typeof ev.data !== 'object') return;
-    if(ev.data.type === 'fmGraph:want-model') sendModelToGraph(graphWindow);
+    if(ev.data.type === 'fmGraph:want-model'){
+      // A window opened for Try in fmGraph gets the template, once it has arrived.
+      if(graphTrial){ graphTrial.asked = true; if(graphTrial.data) sendTrialToGraph(); }
+      else sendModelToGraph(graphWindow);
+    }
     else if(ev.data.type === 'fmGraph:boards') takeGraphBoards(ev.data.text);
     else if(ev.data.type === 'fmGraph:attach-board') askToAttachGraphBoard(ev.data.text);
   });
@@ -166,17 +170,58 @@
     markDocDirty();
   }
   function openFmGraph(){
-    try {
-      if(graphWindow && graphWindow !== window && !graphWindow.closed && graphWindow.opener === window){
-        graphWindow.focus();
-        sendModelToGraph(graphWindow);
-        return;
-      }
-    } catch(e){ /* a window we can't ask about: open it again */ }
+    graphTrial = null;
+    if(liveGraphWindow()){
+      graphWindow.focus();
+      sendModelToGraph(graphWindow);
+      return;
+    }
+    openGraphWindow();
+  }
+  // The window this page opened, when it is still there.
+  function liveGraphWindow(){
+    try { return !!(graphWindow && graphWindow !== window && !graphWindow.closed && graphWindow.opener === window); }
+    catch(e){ return false; } // a window we can't ask about: open it again
+  }
+  function openGraphWindow(){
     try { sessionStorage.setItem('fmIDE-opened-fmGraph', '1'); } catch(e){ /* storage off: Back opens fmIDE instead */ }
     const w = window.open('fmGraph.html', 'fmIDE-fmGraph');
     graphWindow = w || null;
     if(!w) showMessage('The browser blocked the fmGraph window. Allow pop-ups for fmIDE, or open fmGraph.html from the same folder as fmIDE.');
+    return !!w;
+  }
+  // Browse Library's Try in fmGraph (step 15 G5c, 11f-library-browse.js): a template from a pack
+  // shown in fmGraph with its board, without adding anything to the library or the document.
+  // The window opens on the click itself (a browser blocks a window opened later), the pack
+  // arrives afterwards: graphTrial = { data (once read), asked (fmGraph is waiting for it) }.
+  // The answer is 'fmIDE:try' — { name, text (the template's model as a system file's text),
+  // templateBoards (its board, as for G5b), pack (the pack's title) } — which fmGraph shows
+  // in its try mode: nothing kept, nothing sent back. ↻ From fmIDE there shows this model again.
+  let graphTrial = null;
+  function startGraphTrial(){
+    const trial = { data: null, asked: false };
+    if(liveGraphWindow()){ graphWindow.focus(); trial.asked = true; }
+    else if(!openGraphWindow()) return null;
+    graphTrial = trial;
+    return trial;
+  }
+  function finishGraphTrial(trial, data){
+    if(graphTrial !== trial) return;
+    if(!data){ // the pack couldn't be read: show the model instead of an empty window
+      graphTrial = null;
+      if(trial.asked && liveGraphWindow()) sendModelToGraph(graphWindow);
+      return;
+    }
+    trial.data = data;
+    if(trial.asked) sendTrialToGraph();
+  }
+  function sendTrialToGraph(){
+    const trial = graphTrial;
+    graphTrial = null;
+    if(!trial || !trial.data || !liveGraphWindow()) return;
+    const origin = ownOrigin();
+    try{ graphWindow.postMessage(Object.assign({ type: 'fmIDE:try' }, trial.data), origin || '*'); }
+    catch(e){ /* the window went away */ }
   }
 
   // A .fmide double-clicked in the operating system (installed app, Chrome/Edge desktop):

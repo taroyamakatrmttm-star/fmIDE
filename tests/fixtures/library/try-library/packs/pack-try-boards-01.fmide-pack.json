@@ -1,0 +1,306 @@
+{
+  "kind": "fmIDE-library-pack",
+  "version": 4,
+  "pack": {
+    "id": "pack-try-boards-01",
+    "title": "Boards to try <img src=x onerror=\"window.__pwned=1\"> & \"quotes\"",
+    "author": "Ann Example",
+    "licence": "CC-BY-4.0",
+    "created": "2026-10-03"
+  },
+  "templates": [
+    {
+      "name": "Sales <img src=x onerror=\"window.__pwned=1\"> & \"quotes\"",
+      "kind": "module",
+      "group": "Try",
+      "description": "Price × Volume = Revenue.",
+      "family": "fam-try-sales-00001",
+      "version": 1,
+      "note": "",
+      "versionId": "vid-try-sales-00001",
+      "data": {
+        "version": 7,
+        "kind": "module",
+        "selfCanvasId": "c1",
+        "nodes": [
+          {
+            "id": "n1",
+            "type": "value",
+            "x": 60,
+            "y": 60,
+            "w": 170,
+            "h": 64,
+            "text": "Price\n10",
+            "plugs": []
+          },
+          {
+            "id": "n2",
+            "type": "value",
+            "x": 60,
+            "y": 180,
+            "w": 170,
+            "h": 64,
+            "text": "Volume\n5",
+            "plugs": []
+          },
+          {
+            "id": "n3",
+            "type": "operator",
+            "x": 300,
+            "y": 120,
+            "w": 56,
+            "h": 56,
+            "text": "×"
+          },
+          {
+            "id": "n4",
+            "type": "value",
+            "x": 420,
+            "y": 110,
+            "w": 170,
+            "h": 64,
+            "text": "Revenue",
+            "plugs": []
+          }
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "from": "n1",
+            "to": "n3"
+          },
+          {
+            "id": "e2",
+            "from": "n2",
+            "to": "n3"
+          },
+          {
+            "id": "e3",
+            "from": "n3",
+            "to": "n4"
+          }
+        ]
+      },
+      "attachments": {
+        "graph": {
+          "kind": "fmIDE-graph-board",
+          "version": 2,
+          "form": "template",
+          "template": {
+            "kind": "module",
+            "family": "fam-try-sales-00001",
+            "name": "Sales"
+          },
+          "active": 0,
+          "family": "fam-try-sales-00001",
+          "boards": [
+            {
+              "name": "Sales board <img src=x onerror=\"window.__pwned=1\"> & \"quotes\"",
+              "items": [
+                {
+                  "type": "bar",
+                  "name": "Revenue",
+                  "periods": {
+                    "mode": "all"
+                  },
+                  "wide": false
+                }
+              ],
+              "sliders": [
+                {
+                  "name": "Price",
+                  "periods": {
+                    "mode": "all"
+                  },
+                  "mode": "set",
+                  "min": 0,
+                  "max": 20,
+                  "step": 1
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Plan",
+      "kind": "system",
+      "group": "Try",
+      "description": "",
+      "family": "fam-try-plan-000001",
+      "version": 1,
+      "note": "",
+      "versionId": "vid-try-plan-000001",
+      "data": {
+        "version": 9,
+        "kind": "system",
+        "periods": [
+          "Y1",
+          "Y2"
+        ],
+        "canvases": [
+          {
+            "id": "c1",
+            "name": "Sales",
+            "nodes": [
+              {
+                "id": "a",
+                "type": "value",
+                "x": 0,
+                "y": 0,
+                "w": 150,
+                "h": 64,
+                "text": "Price\n10"
+              },
+              {
+                "id": "b",
+                "type": "value",
+                "x": 0,
+                "y": 100,
+                "w": 150,
+                "h": 64,
+                "text": "Revenue"
+              },
+              {
+                "id": "m",
+                "type": "operator",
+                "x": 200,
+                "y": 50,
+                "text": "×"
+              },
+              {
+                "id": "q",
+                "type": "value",
+                "x": 0,
+                "y": 200,
+                "w": 150,
+                "h": 64,
+                "text": "Units\n3"
+              }
+            ],
+            "edges": [
+              {
+                "id": "e1",
+                "from": "a",
+                "to": "m"
+              },
+              {
+                "id": "e2",
+                "from": "q",
+                "to": "m"
+              },
+              {
+                "id": "e3",
+                "from": "m",
+                "to": "b"
+              }
+            ]
+          },
+          {
+            "id": "c2",
+            "name": "Costs",
+            "nodes": [
+              {
+                "id": "c",
+                "type": "value",
+                "x": 0,
+                "y": 0,
+                "w": 150,
+                "h": 64,
+                "text": "Cost\n5"
+              }
+            ],
+            "edges": []
+          }
+        ]
+      },
+      "attachments": {
+        "graph": {
+          "kind": "fmIDE-graph-board",
+          "version": 2,
+          "form": "template",
+          "template": {
+            "kind": "system"
+          },
+          "active": 0,
+          "family": "fam-try-plan-000001",
+          "boards": [
+            {
+              "name": "Plan board",
+              "items": [
+                {
+                  "type": "chart",
+                  "wide": true,
+                  "layout": "columns",
+                  "title": "Both",
+                  "periods": {
+                    "mode": "all"
+                  },
+                  "check": false,
+                  "groups": [
+                    {
+                      "name": "",
+                      "parts": [
+                        {
+                          "canvas": "Sales",
+                          "name": "Revenue"
+                        },
+                        {
+                          "canvas": "Costs",
+                          "name": "Cost"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "sliders": [
+                {
+                  "canvas": "Sales",
+                  "name": "Price",
+                  "periods": {
+                    "mode": "all"
+                  },
+                  "mode": "set",
+                  "min": 0,
+                  "max": 20,
+                  "step": 1
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Plain",
+      "kind": "module",
+      "group": "Try",
+      "description": "",
+      "family": "fam-try-plain-00001",
+      "version": 1,
+      "note": "",
+      "versionId": "vid-try-plain-00001",
+      "data": {
+        "version": 7,
+        "kind": "module",
+        "selfCanvasId": "c1",
+        "nodes": [
+          {
+            "id": "n1",
+            "type": "value",
+            "x": 0,
+            "y": 0,
+            "w": 150,
+            "h": 64,
+            "text": "Alone\n1",
+            "plugs": []
+          }
+        ],
+        "edges": []
+      }
+    }
+  ],
+  "functions": []
+}

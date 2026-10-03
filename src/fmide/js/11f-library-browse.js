@@ -143,6 +143,35 @@
     return list;
   }
 
+  // ---------- Try in fmGraph (step 15 G5c) ----------
+  // A canvas or system template of a pack that carries an fmGraph board (the list marks it,
+  // `board`) can be tried in fmGraph before adding it: the pack is fetched with the usual checks,
+  // the template's model sent to fmGraph with its board (21-web-app.js), nothing added to the
+  // library or the document. A canvas template becomes a model of its one canvas, in this
+  // model's periods, linked to its template so the board finds it; a system template is its
+  // whole model. What's ready for fmGraph: { name, text, templateBoards, pack }, or fails.
+  function libraryTrialOf(read, item){
+    const t = read.templates.find(x => x && x.versionId === item.versionId && x.family === item.family && x.kind === item.kind);
+    if(!t || !t.data || typeof t.data !== 'object') fail('That template isn\'t in the pack.');
+    const att = cleanTemplateAttachments(t.attachments, t.family, t.kind);
+    if(!att || !att.graph) fail('That template\'s fmGraph board didn\'t pass fmIDE\'s checks, so it can\'t be tried.');
+    const name = typeof t.name === 'string' && t.name.trim() ? t.name.trim() : 'A template';
+    let system;
+    if(t.kind === 'system'){
+      system = Object.assign({}, t.data, { kind: 'system' });
+      if(!system.version) system.version = SHARED_FILE_VERSIONS['system'];
+    } else {
+      const d = t.data;
+      if(!Array.isArray(d.nodes) || !Array.isArray(d.edges)) fail('That canvas template holds no canvas.');
+      const id = typeof d.selfCanvasId === 'string' && d.selfCanvasId ? d.selfCanvasId : 'c1';
+      system = { kind: 'system', version: SHARED_FILE_VERSIONS['system'], periods: periods.slice(), currentPeriod: 0, activeCanvasId: id,
+        canvases: [{ id, name, nodes: d.nodes, edges: d.edges, template: { family: t.family, version: t.version, versionId: t.versionId, name } }] };
+      if(Array.isArray(d.functions)) system.functions = d.functions;
+    }
+    return { name, text: JSON.stringify(system), pack: read.pack.title,
+      templateBoards: JSON.stringify([{ family: t.family, kind: t.kind, name, version: t.version, versionId: t.versionId, board: att.graph }]) };
+  }
+
   // ---------- the window ----------
   function showLibraryBrowser(){
     if(!libraryOnSite()){ showMessage(LIBRARY_FROM_DISK); return; }
@@ -242,6 +271,14 @@
           if(it.description) row.appendChild(mk('span', 'library-pack-item-detail', it.description));
           if(it.note) row.appendChild(mk('span', 'library-pack-item-detail', 'Note: ' + it.note));
           if(it.origin && it.origin.packId !== p.id) row.appendChild(mk('span', 'library-pack-item-origin', 'Shared before: ' + originText(it.origin)));
+          if(it.board && (it.kind === 'module' || it.kind === 'system')){
+            const tryBtn = mk('button', 'library-browse-try', '📈 Try in fmGraph');
+            tryBtn.type = 'button';
+            tryBtn.title = 'Opens this template with its fmGraph board, to see how it moves. Nothing is added to your library.';
+            tryBtn.disabled = busy;
+            tryBtn.addEventListener('click', () => tryItem(p, it));
+            row.appendChild(tryBtn);
+          }
           details.appendChild(row);
         });
       });
@@ -250,6 +287,26 @@
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
       details.appendChild(mk('p', 'library-browse-link')).appendChild(link);
+    }
+    // Try in fmGraph: the window opens now, on the click; the pack follows.
+    function tryItem(entry, item){
+      if(busy) return;
+      const trial = startGraphTrial();
+      if(!trial) return;
+      busy = true;
+      renderDetails();
+      status.textContent = `Fetching “${entry.title}”…`;
+      fetchLibraryPack(entry).then(text => {
+        const { read } = readLibraryPackText(text, entry);
+        finishGraphTrial(trial, libraryTrialOf(read, item));
+        busy = false;
+        if(overlay.isConnected){ renderList(); renderDetails(); }
+      }).catch(err => {
+        finishGraphTrial(trial, null);
+        busy = false;
+        if(overlay.isConnected){ renderList(); renderDetails(); }
+        reportError(err);
+      });
     }
     [search, tagSel, holdsSel, sortSel].forEach(c => c.addEventListener(c === search ? 'input' : 'change', renderList));
     addBtn.addEventListener('click', () => {

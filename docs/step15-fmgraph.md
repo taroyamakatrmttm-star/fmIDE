@@ -86,7 +86,7 @@ Each slider position needs the whole model worked out again (`evaluateModel` on 
 | **G2** ✅ | Charts: side by side, stacked with the balance check, waterfall with subtotals; period choices; units; errors; sample balance-sheet and income-statement boards |
 | **G3** ✅ (G3a, G3b) | Editing a board: placing and sizing widgets, titles, colours, undo; the `fmIDE-graph-board` file, Export / Import; boards in `.fmide` documents |
 | **G4** ✅ (G4a, G4b) | Exploring: G4a Trace and Biggest movers; G4b the A/B snapshot and animation |
-| **G5** (G5a ✅, G5b ✅) | Sharing: G5a `attachments.graph` on templates (system templates too), packs and the checker, fmGraph's Export for a template…; G5b fmGraph using template boards and Attach to template…; G5c Try in fmGraph from Browse Library |
+| **G5** ✅ (G5a, G5b, G5c) | Sharing: G5a `attachments.graph` on templates (system templates too), packs and the checker, fmGraph's Export for a template…; G5b fmGraph using template boards and Attach to template…; G5c Try in fmGraph from Browse Library |
 | **Scenarios** (after G5, before G6; the owner's request, 3 October 2026) | Named scenarios instead of only A (as many as wanted, named by the person, e.g. sc01…sc05) to switch between, and a scenario waterfall: for chosen outputs in one period, the change from the start through each scenario in turn. Plan to come. |
 | **G6** | Tutorials |
 
@@ -170,6 +170,15 @@ The owner chose (2 October 2026): boards reach a template both from a file (fmID
 - **Placing them** (`boardsFromTemplate`): a canvas template's board on every canvas made from it (named "board — canvas" when there are several), each rectangle found by its name on that canvas; a system template's by canvas name and name. A name used twice can't be found. The result goes through `cleanBoards`, like a file. What fits is counted in rectangles: a chart missing one of its parts doesn't "fit", though the rest of it shows.
 - **When**: a model with no boards of its own (none from its document, none in this browser, not the last boards used) starts with them (`templateStartBoards`: every canvas template a canvas came from, and a system template whose every rectangle is found) instead of the starting board; showing them is not a change (nothing sent to fmIDE). **Boards ▾ → Add boards from templates…** lists every template with a board that places something, with "N of M rectangles found" (ticked: the canvas templates here, and system templates found in full), and adds the ticked ones as tabs — one undo step, sent to fmIDE's document like any change.
 - **Attach to template…** (with the model from fmIDE only): the Export for a template… dialog, sending the boards to fmIDE (`fmGraph:attach-board`). fmIDE (`21-web-app.js`, `askToAttachGraphBoard`) reads it with `graphBoardForTemplate`, asks — for a canvas template, about its latest version; for a system template, which one, from a list — and attaches to the latest version; refused during a tutorial, and when the template isn't in the library or there is no system template. The answer goes back in words (`fmIDE:board-attached` / `fmIDE:board-not-attached`), shown as text.
+
+### G5c (Try in fmGraph from Browse Library)
+
+The owner chose (3 October 2026): the button only on templates carrying a board; changes made while trying are forgotten.
+
+- **The list marks them**: the catalogue's `index.json` gives an item `board: true` when a canvas or system template carries `attachments.graph` (`tools/build-library.js`; optional, so the list stays version 1, `docs/file-formats.md`); `cleanLibraryIndexEntry` reads it.
+- **fmIDE** (`11f-library-browse.js`): such an item has **📈 Try in fmGraph** in the pack's details. The window opens on the click (`startGraphTrial`, `21-web-app.js` — a window opened after waiting for the pack would be blocked), the pack is fetched with the usual checks (size, SHA-256, id), and `libraryTrialOf` builds the template's model: a system template as it is; a canvas template as a model of its one canvas, in this model's periods, linked to its template (`canvas.template`) so its board finds it. fmGraph gets `fmIDE:try` — `{ name, text, templateBoards, pack }` — when it has asked for it; a pack that fails a check sends the model instead (`finishGraphTrial`). Nothing is added to the library or the document.
+- **fmGraph** (`06e-trial.js`, `trying`): the model read like any file, its boards from the template (`boardsFromTemplate`, whatever fits), else the starting board; the strip `#trialBar` names the template and pack as text, with **Show fmIDE's model**; nothing read from or kept in the browser (`loadBoardFor`, `saveBoardNow`), not linked to fmIDE's document (no changes sent, Attach to template… hidden). Any other model opened ends the try. `fmGraph.trying()`.
+- Tests: group 55 (`tests/55-try-in-fmgraph.spec.js`; sample library `tests/fixtures/library/try-library/`).
 
 ## Risks
 

@@ -207,6 +207,11 @@
   .gbar-btn[aria-pressed="true"]{ background:var(--reach); color:#1b2333; }
   .bar-chart rect[data-anim]{ transform-box:view-box; transform-origin:0 0; }
 
+  /* Try in fmGraph (G5c) */
+  .trial-bar{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:0 0 10px; padding:7px 12px; border:1px solid var(--accent, #3b82f6); border-radius:9px; background:#eff6ff; font-size:13px; }
+  .trial-text{ flex:1 1 auto; }
+  .trial-btn{ padding:3px 10px; }
+
   /* Export for a template (G5a) */
   .template-choices{ display:flex; flex-direction:column; gap:6px; margin:0 0 12px; }
   .template-choices label, .template-only{ display:flex; gap:8px; align-items:baseline; font-size:14px; }

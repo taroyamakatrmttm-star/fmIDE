@@ -12,6 +12,20 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'try-in-fmgraph', date: '2026-10-03', title: 'Try a library template in fmGraph',
+    summary: 'Browse Library opens a template that carries an fmGraph board in fmGraph, before you add it.',
+    what: [
+      'In {cmd:browseLibrary}, a canvas or system template carrying an fmGraph board has 📈 Try in fmGraph.',
+      'fmGraph shows the template with its board. Nothing is added to your library or document, and fmGraph keeps nothing.',
+    ],
+    why: 'So you can see how a shared template behaves before adding it.',
+    how: [
+      'On fmIDE\'s website, open {cmd:browseLibrary} and choose a pack.',
+      'Press 📈 Try in fmGraph beside a template, and move its sliders.',
+      'Back in fmIDE, Preview and add… adds it if you want it.',
+    ],
+    see: ['browse-library', 'fmgraph'] },
+
   { id: 'fmgraph-attach-to-template', date: '2026-10-03', title: 'fmGraph uses your templates\' boards',
     summary: 'fmGraph starts with the boards your templates carry, and can attach boards to a template for you.',
     what: [

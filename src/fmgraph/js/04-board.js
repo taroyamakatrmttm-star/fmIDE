@@ -158,7 +158,7 @@ function saveBoardSoon(){
 }
 function saveBoardNow(){
   clearTimeout(saveTimer);
-  if(!model) return;
+  if(!model || trying) return; // a template tried from the library is never kept (G5c)
   const text = JSON.stringify(boardsData());
   Promise.all([store.put(BOARD_PREFIX + model.signature, text), store.put(LAST_BOARD_KEY, text)])
     .catch(() => notify('This browser could not keep the boards; they will be gone after a reload.', 'err', 'storage'));
@@ -175,6 +175,14 @@ function documentBoards(raw){
   }catch(e){ return null; }
 }
 async function loadBoardFor(m, docRaw){
+  // A template tried from the library (G5c): its own boards, nothing read from or kept in the browser.
+  if(trying){
+    const fromTemplate = (m.templateSources || []).flatMap(src => boardsFromTemplate(src).boards).slice(0, BOARDS_LIMIT);
+    boards = fromTemplate.length ? fromTemplate : [startingBoard()];
+    board = boards[0];
+    resetUndo();
+    return;
+  }
   let restored = docRaw ? documentBoards(docRaw) : null;
   if(restored){
     boards = restored.boards;

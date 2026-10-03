@@ -1,0 +1,30 @@
+{
+  "kind": "fmIDE-library-families",
+  "version": 1,
+  "families": {
+    "fam-try-plain-00001": {
+      "type": "template",
+      "kind": "module",
+      "accountId": 1001,
+      "account": "ann-example",
+      "firstPack": "pack-try-boards-01",
+      "added": "2026-10-03"
+    },
+    "fam-try-plan-000001": {
+      "type": "template",
+      "kind": "system",
+      "accountId": 1001,
+      "account": "ann-example",
+      "firstPack": "pack-try-boards-01",
+      "added": "2026-10-03"
+    },
+    "fam-try-sales-00001": {
+      "type": "template",
+      "kind": "module",
+      "accountId": 1001,
+      "account": "ann-example",
+      "firstPack": "pack-try-boards-01",
+      "added": "2026-10-03"
+    }
+  }
+}

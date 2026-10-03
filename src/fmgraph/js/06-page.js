@@ -184,6 +184,7 @@ window.addEventListener('message', (ev) => {
     notify(text || (d.type === 'fmIDE:board-attached' ? 'Attached in fmIDE.' : 'Not attached.'), d.type === 'fmIDE:board-attached' ? 'ok' : 'info', 'boards');
     return;
   }
+  if(d.type === 'fmIDE:try' && typeof d.text === 'string'){ openTrial(d); return; }
   if(d.type !== 'fmIDE:model' || typeof d.text !== 'string') return;
   const name = typeof d.name === 'string' && d.name ? d.name.slice(0, 120) : 'fmIDE model';
   const docBoards = typeof d.boards === 'string' ? d.boards : null;
