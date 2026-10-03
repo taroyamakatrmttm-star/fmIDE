@@ -11,6 +11,21 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'shorter-differences', date: '2026-10-03', title: 'A shorter list of differences from fmIDE',
+    summary: 'The list of where the workbook will differ from fmIDE shows its first three lines; Show all opens the rest, × hides it.',
+    what: [
+      'The yellow list above the tabs now shows its first three lines, with Show all to see every line (scrolling inside the list) and Show fewer to close it again.',
+      '× hides the list. It comes back by itself when something in it changes.',
+      'On an iPad, a .fmide file can be picked in Open Model… again (it showed greyed out).',
+    ],
+    why: 'One broken arrow in fmIDE can make dozens of lines, which pushed everything else off the screen.',
+    how: [
+      'Press Show all to read every line.',
+      'Press × to hide the list once you have read it.',
+    ],
+    notes: ['Often many lines come from one place: fix that operator or arrow in fmIDE and they all go.'],
+    see: ['differences'] },
+
   { id: 'model-from-fmide', date: '2026-10-03', title: 'The model arrives from fmIDE',
     summary: 'Opened from fmIDE, ExcelExporter loads the model fmIDE has open — no file to save first.',
     what: [

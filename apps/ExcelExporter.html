@@ -395,8 +395,15 @@ var XLSX = (function(){
   .status-close::before{ content:'×'; font-size:17px; line-height:24px; }
   .status-close:hover{ opacity:1; background:rgba(0,0,0,.06); }
   .differences{ font-size:12.5px; padding:10px 14px; border-radius:8px; background:#fffaeb; border:1px solid #fedf89; color:#93370d; }
-  .differences-head{ font-weight:600; display:flex; align-items:center; }
+  .differences-head{ font-weight:600; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .differences-head .differences-title{ flex:0 1 auto; }
+  .differences-toggle{ font:inherit; font-weight:600; font-size:12px; color:#93370d; background:#fef0c7; border:1px solid #fedf89; border-radius:6px; padding:2px 9px; cursor:pointer; }
+  .differences-toggle:hover{ background:#fedf89; }
+  .differences-close{ margin-left:auto; font-size:18px; line-height:1; color:#93370d; background:none; border:none; border-radius:6px; padding:2px 8px; cursor:pointer; min-width:32px; min-height:28px; }
+  .differences-close:hover{ background:#fef0c7; }
   .differences ul{ margin:6px 0; padding-left:18px; }
+  .differences ul.open{ max-height:min(40vh, 360px); overflow-y:auto; overscroll-behavior:contain; }
+  .differences li.more{ display:none; }
   .differences .hint{ margin:0; font-size:12px; color:#b54708; }
 
   /* Before a model is loaded. */
@@ -8646,16 +8653,28 @@ function differenceLines(){
   return lines;
 }
 
+// A long list would push the page down (43 lines for one unwired operator): the panel shows
+// the first few lines, "Show all" opens the rest (scrolling inside the panel), and × hides it
+// until the list changes. Every line stays in the page, the hidden ones marked `.more`.
+const DIFFERENCES_SHOWN = 3;
+let differencesOpen = false;
+let differencesDismissed = null; // the list (its lines joined) the person closed with ×
+
 function renderDifferences(){
   const panel = $('differencesPanel');
   if(!panel) return;
   const lines = differenceLines();
+  const key = lines.join('\n');
+  if(differencesDismissed !== null && differencesDismissed !== key) differencesDismissed = null;
   panel.textContent = '';
-  panel.classList.toggle('hidden', lines.length === 0);
+  panel.classList.toggle('hidden', lines.length === 0 || differencesDismissed === key);
   if(!lines.length) return;
   const head = document.createElement('div');
   head.className = 'differences-head';
-  head.textContent = 'Where the workbook will differ from fmIDE (' + lines.length + '):';
+  const title = document.createElement('span');
+  title.className = 'differences-title';
+  title.textContent = 'Where the workbook will differ from fmIDE (' + lines.length + '):';
+  head.appendChild(title);
   const help = document.createElement('button');
   help.type = 'button';
   help.className = 'panel-help';
@@ -8663,13 +8682,38 @@ function renderDifferences(){
   help.title = 'Help: where the workbook differs from fmIDE';
   help.addEventListener('click', () => excelHelp.open('differences'));
   head.appendChild(help);
+  const many = lines.length > DIFFERENCES_SHOWN;
+  if(many){
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'differences-toggle';
+    toggle.setAttribute('aria-expanded', String(differencesOpen));
+    toggle.textContent = differencesOpen ? 'Show fewer ▴' : 'Show all ' + lines.length + ' ▾';
+    toggle.addEventListener('click', () => { differencesOpen = !differencesOpen; renderDifferences(); });
+    head.appendChild(toggle);
+  }
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'differences-close';
+  close.textContent = '×';
+  close.title = 'Hide this list (it comes back when something in it changes)';
+  close.setAttribute('aria-label', 'Hide the list of differences');
+  close.addEventListener('click', () => { differencesDismissed = key; panel.classList.add('hidden'); });
+  head.appendChild(close);
   panel.appendChild(head);
   const ul = document.createElement('ul');
-  lines.forEach(t => { const li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
+  ul.classList.toggle('open', many && differencesOpen);
+  lines.forEach((t, i) => {
+    const li = document.createElement('li');
+    li.textContent = t;
+    if(many && !differencesOpen && i >= DIFFERENCES_SHOWN) li.className = 'more';
+    ul.appendChild(li);
+  });
   panel.appendChild(ul);
   const note = document.createElement('div');
   note.className = 'hint';
-  note.textContent = 'You can still download. Fix these in fmIDE (or include the rows) and both give the same numbers.';
+  note.textContent = (many && !differencesOpen ? '…and ' + (lines.length - DIFFERENCES_SHOWN) + ' more. ' : '')
+    + 'You can still download. Fix these in fmIDE (or include the rows) and both give the same numbers.';
   panel.appendChild(note);
 }
 // ============================================================
@@ -9518,7 +9562,7 @@ const EXCEL_HELP_TOPICS = [
       { see: ['tree-view', 'periods-output', 'remembered'] },
     ] },
   { id: 'differences', group: 'generate', title: 'Where the workbook differs from fmIDE',
-    keywords: 'differences yellow list warning na n/a error loop broken too long',
+    keywords: 'differences yellow list warning na n/a error loop broken too long show all hide dismiss',
     summary: 'The yellow list under Generate says where Excel can\'t calculate as fmIDE does.',
     body: [
       { p: 'The workbook calculates exactly as fmIDE does. Where it can\'t, a yellow list at the top of the page, under the Generate button, says where, before you download. For example:' },
@@ -9528,6 +9572,8 @@ const EXCEL_HELP_TOPICS = [
         'a function fmIDE can\'t calculate, or a formula too long for Excel (the cell shows #N/A).',
       ] },
       { p: 'The download still works. Fix the model in fmIDE, or the layout here, and the list goes away.' },
+      { p: 'A long list shows its first three lines: Show all opens the rest, and × hides the list until something in it changes.' },
+      { tip: 'Many lines often come from one place, such as one operator with nothing wired into it: fix that in fmIDE and they all go.' },
       { see: ['generate'] },
     ] },
   { id: 'generate', group: 'generate', title: 'Generating and saving the layout',
@@ -9553,6 +9599,21 @@ const EXCEL_HELP_TOPICS = [
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'shorter-differences', date: '2026-10-03', title: 'A shorter list of differences from fmIDE',
+    summary: 'The list of where the workbook will differ from fmIDE shows its first three lines; Show all opens the rest, × hides it.',
+    what: [
+      'The yellow list above the tabs now shows its first three lines, with Show all to see every line (scrolling inside the list) and Show fewer to close it again.',
+      '× hides the list. It comes back by itself when something in it changes.',
+      'On an iPad, a .fmide file can be picked in Open Model… again (it showed greyed out).',
+    ],
+    why: 'One broken arrow in fmIDE can make dozens of lines, which pushed everything else off the screen.',
+    how: [
+      'Press Show all to read every line.',
+      'Press × to hide the list once you have read it.',
+    ],
+    notes: ['Often many lines come from one place: fix that operator or arrow in fmIDE and they all go.'],
+    see: ['differences'] },
+
   { id: 'model-from-fmide', date: '2026-10-03', title: 'The model arrives from fmIDE',
     summary: 'Opened from fmIDE, ExcelExporter loads the model fmIDE has open — no file to save first.',
     what: [
@@ -10154,6 +10215,24 @@ $('dropZone').addEventListener('drop', (ev) => {
   const file = ev.dataTransfer.files[0];
   if(file) readFile(file);
 });
+// ---------- choosing a file on an iPhone or iPad (shared: src/shared/file-picker.js) ----------
+// Safari on iOS and iPadOS turns a file box's `accept` list into the file types the system
+// knows. It knows nothing of `.fmide`, so a .fmide file shows greyed out and can't be picked,
+// even where the list names it. There the list is dropped and any file can be picked: what is
+// read is checked anyway (its kind, its version, its limits), so a wrong file is refused with
+// a message, as everywhere else. Elsewhere the list stays and filters the files shown.
+function isAppleTouchDevice(){
+  const nav = window.navigator || {};
+  if(/iPad|iPhone|iPod/.test(String(nav.userAgent || ''))) return true;
+  // iPadOS asks for the desktop site by default and then calls itself a Mac: a Mac with touch.
+  return nav.platform === 'MacIntel' && Number(nav.maxTouchPoints) > 1;
+}
+function letAnyFileBePicked(inputs){
+  if(!isAppleTouchDevice()) return;
+  (inputs || []).forEach(input => { if(input && input.removeAttribute) input.removeAttribute('accept'); });
+}
+// On an iPhone or iPad a .fmide could not be picked at all (src/shared/file-picker.js).
+letAnyFileBePicked([$('fileInput')]);
 $('fileInput').addEventListener('change', () => {
   const file = $('fileInput').files[0];
   if(file) readFile(file);

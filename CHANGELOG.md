@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Long messages fit the screen; .fmide files open on an iPad
+- **fmIDE**: a long message or question (building a recipe lists every socket nothing feeds) scrolls inside its window; its buttons always stay on the screen, a tablet's included.
+- **ExcelExporter**: the list of where the workbook will differ from fmIDE shows its first three lines, **Show all** opens the rest (scrolling inside the list), **×** hides it until it changes.
+- **iPad and iPhone**: Safari greyed out `.fmide` files in every app's Open box (it doesn't know the type); there the boxes now take any file, which the apps check as always (`src/shared/file-picker.js`).
+
 ## ExcelExporter reads fmIDE's model
 - **Open ExcelExporter** in fmIDE now sends the model you have open: ExcelExporter shows it straight away, with no file to save and load. **File → ↻ From fmIDE** in ExcelExporter, or Open ExcelExporter again, loads it as it is now. The Excel layouts your canvas templates carry go along. Opened on its own, ExcelExporter is unchanged.
 - The tutorial *From fmIDE to Excel* is a step shorter (no Save System).

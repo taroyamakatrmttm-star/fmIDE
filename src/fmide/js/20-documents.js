@@ -21,6 +21,9 @@
   const recentCopyKey = (id) => 'fmIDE-recent:' + id;
   const recentHandleKey = (id) => 'fmIDE-recent-handle:' + id;
   const fileInputDocument = document.getElementById('fileInputDocument');
+  // build:include shared/file-picker.js
+  // On an iPhone or iPad a .fmide could not be picked at all (src/shared/file-picker.js).
+  letAnyFileBePicked(['fileInputDocument', 'fileInputWorkspace', 'fileInputSystem'].map(id => document.getElementById(id)));
 
   // name: shown in the title (null = "Untitled"); fileName: the .fmide file it lives in,
   // if any (Save downloads it again where there is no handle); handle: the file handle.
