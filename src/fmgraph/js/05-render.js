@@ -266,6 +266,7 @@ function quietSoon(ms){
   quietTimer = setTimeout(() => { activeSlider = null; paintReach(); }, ms);
 }
 function paintReach(){
+  if(!model || !board) return; // (a timer after the model has gone: the first screen again)
   const s = board.sliders.find(x => x.id === activeSlider);
   const reached = s ? model.reach(s.key) : null;
   $('board').classList.toggle('moving', !!s);

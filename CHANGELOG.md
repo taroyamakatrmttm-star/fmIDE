@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph: tutorials (step 15, phase G6)
+- **Four tutorials** in fmGraph — Sliders and bars, Charts, Trace and compare, Scenarios — at the top of Help and from the first screen (🎓 Learn with a tutorial). Each practises on a copy of the sample model, keeps nothing, and puts your own model back at the end.
+
 ## fmGraph: the scenario waterfall (step 15, scenarios S2)
 - **Scenario waterfall**, a third kind of chart: for each output chosen, in one period, from the model's own number through each scenario (each step the change from the one before) to the last; one small waterfall per output. It follows the scenarios as they change.
 - **File format**: fmGraph board file 4 (the new chart); a template's board never holds one and stays 2.

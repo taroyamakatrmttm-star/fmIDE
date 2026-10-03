@@ -196,6 +196,12 @@ window.fmGraph = Object.freeze({
   updateScenario: (name) => updateScenario(findScenario(name)),
   moveScenario: (name, index) => moveScenario(findScenario(name), Number(index)),
   deleteScenario: (name) => deleteScenario(findScenario(name)),
+  // G6: tutorials. startTutorial(id) → Promise<boolean>; tutorial() → { id, step (its id), index } or null;
+  // stopTutorial() puts the model from before back.
+  tutorials: () => FMGRAPH_TUTORIALS.map(t => ({ id: t.id, title: t.title, steps: t.steps.length })),
+  startTutorial: (id) => startTutorial(String(id)),
+  tutorial: () => practice ? { id: practice.tutorial.id, step: practice.tutorial.steps[practice.step].id, index: practice.step } : null,
+  stopTutorial: () => stopTutorial(true),
   // G5c: the template tried from fmIDE's Browse Library, { name, pack }, or null.
   trying: () => trying ? { name: trying.name, pack: trying.pack } : null,
   // movers(n): the rectangles the sliders change most (default 8), against the model's own numbers.

@@ -1,7 +1,7 @@
 // ============================================================
 // Help: the same panel as fmIDE and ExcelExporter (src/shared/help-panel.js), with fmGraph's
 // own topics and What's new (src/help/fmgraph-help.js, fmgraph-whats-new.js; CC BY 4.0).
-// ❓ Help or F1. Its width and the date of the newest update seen are kept in this browser.
+// ❓ Help or F1. The tutorials are listed at its top (07b-tutorials.js). Its width and the date of the newest update seen are kept in this browser.
 // ============================================================
 // build:include shared/help-panel.js
 
@@ -16,6 +16,7 @@ const help = createHelpPanel({
   groups: FMGRAPH_HELP_GROUPS, topics: FMGRAPH_HELP_TOPICS,
   intro: 'Plain-English guides to fmGraph. Pick a topic, or search above.',
   placeholder: 'Search help — e.g. "slider" or "reach"',
+  homeTop: (body, mk) => renderTutorialList(body, mk), // the tutorials (07b-tutorials.js)
   size: { get: () => ({}), set: (v) => { store.put(HELP_SIZE_KEY, JSON.stringify(cleanHelpSize(v))).catch(() => {}); } },
   whatsNew: { entries: FMGRAPH_WHATS_NEW,
     intro: 'Every update to fmGraph so far, newest first: what changed, why, and how to use it.',
