@@ -2,8 +2,9 @@
 // "← Back to fmIDE" (top bar). How ExcelExporter was opened decides what it does:
 //   1. in its own window, by fmIDE (Open ExcelExporter names the window fmIDE-ExcelExporter;
 //      fmIDE is still open behind it — Chrome, Edge, Firefox on a computer): close this
-//      window, asking first when a model is loaded (it has to be loaded again next time;
-//      the layout is kept). A page can't reliably bring another window to the front.
+//      window — asking first only when the model shown is not fmIDE's (a file opened here
+//      has to be loaded again next time; fmIDE sends its own again; the layout is kept).
+//      A page can't reliably bring another window to the front.
 //   2. in fmIDE's place, in the same window (an iPad's home-screen app): go back a page,
 //      like the swipe from the left edge. fmIDE marks this tab (sessionStorage) just before
 //      opening ExcelExporter; the site sends no referrer, so the mark is how we know.
@@ -38,8 +39,8 @@ function fmideWindowBehind(){
 async function backToFmide(ev){
   if(fmideWindowBehind()){
     ev.preventDefault();
-    if(model && !(await showConfirm('Close ExcelExporter?',
-      'fmIDE is open in its own window. Your layout is kept; you\'ll load your file again next time you open ExcelExporter.',
+    if(model && !modelFromFmide && !(await showConfirm('Close ExcelExporter?',
+      'fmIDE is open in its own window. Your layout is kept; you\'ll load this file again next time (fmIDE sends its own model by itself).',
       'Close'))) return;
     writeMapping();
     window.close();

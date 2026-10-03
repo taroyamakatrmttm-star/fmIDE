@@ -28,7 +28,7 @@
   // or, in an iPad's home-screen app, in fmIDE's place. The mark in this tab's
   // sessionStorage tells ExcelExporter's "Back to fmIDE" that fmIDE is the page before it
   // (the site sends no referrer). A window this page already opened is brought to the front,
-  // not loaded again (which would lose the model loaded there).
+  // not loaded again, and sent the model as it is now (sendModelToExcel, below).
   let excelWindow = null;
   window.addEventListener('pageshow', (ev) => { if(ev.persisted) excelWindow = null; });
   function openExcelExporter(){
@@ -36,6 +36,7 @@
     try {
       if(excelWindow && excelWindow !== window && !excelWindow.closed && excelWindow.opener === window){
         excelWindow.focus();
+        sendModelToExcel(excelWindow);
         return;
       }
     } catch(e){ /* a window we can't ask about: open it again */ }
@@ -59,6 +60,35 @@
   let graphWindow = null;
   window.addEventListener('pageshow', (ev) => { if(ev.persisted) graphWindow = null; });
   const ownOrigin = () => (location.protocol !== 'file:' && location.origin && location.origin !== 'null') ? location.origin : null;
+  // ExcelExporter opened from here shows the model open here, as fmGraph does: it asks
+  // ('excel:want-model') once loaded and on its File → From fmIDE, and the answer
+  // ('fmIDE:model') is a workspace file's text holding the model (as Save System writes it,
+  // format presets included) and the canvas templates whose Excel layout ExcelExporter may use
+  // (attachments.excel, step 11c-2) — no macros, shortcuts or settings. Only the window this
+  // page opened is answered, under the same origin rules as fmGraph's. In a tutorial's
+  // practice the practice model goes.
+  function buildExcelPayload(){
+    return {
+      version: FILE_FORMATS['fmIDE-workspace'].current, kind: 'fmIDE-workspace',
+      system: buildSystemPayload(),
+      templates: TEMPLATES.filter(t => !t.builtin && t.kind === 'module' && t.attachments && t.attachments.excel).map(t => templateRecord(t, true)),
+      formatPresets: FORMAT_PRESETS.map(p => ({ id: p.id, name: p.name, style: p.style }))
+    };
+  }
+  function sendModelToExcel(target){
+    const origin = ownOrigin();
+    try{ target.postMessage({ type: 'fmIDE:model', name: docDisplayName(), text: JSON.stringify(buildExcelPayload()) }, origin || '*'); }
+    catch(e){ /* the window went away */ }
+  }
+  window.addEventListener('message', (ev) => {
+    const origin = ownOrigin();
+    if(origin && ev.origin !== origin) return;
+    if(!ev.data || typeof ev.data !== 'object' || ev.data.type !== 'excel:want-model') return;
+    // A window this page opened before it was reloaded is still its own: taken back on asking.
+    if(!excelWindow){ try{ if(ev.source && ev.source !== window && ev.source.opener === window && ev.source.name === 'fmIDE-ExcelExporter') excelWindow = ev.source; }catch(e){ /* not ours */ } }
+    if(!excelWindow || ev.source !== excelWindow) return;
+    sendModelToExcel(excelWindow);
+  });
   function sendModelToGraph(target){
     const origin = ownOrigin();
     const boards = (graphBoards && !inPractice()) ? JSON.stringify(graphBoards) : null;

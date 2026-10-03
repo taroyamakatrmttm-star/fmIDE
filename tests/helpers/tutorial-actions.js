@@ -5,7 +5,7 @@
 //
 //   tutorialActions(pace) → { actions, command, addRect, next, finish, trip }
 //     actions — { 'first-model': { intro: async (page) => …, … }, … }
-//     trip    — the To Excel tutorial's file and ExcelExporter window (trip.popup), once opened
+//     trip    — the To Excel tutorial's ExcelExporter window (trip.popup), once opened
 //
 // pace says how a person's hands move: testPace does everything at once (the tests), and
 // recordPace (tools/record-tutorials.js) moves the pointer across the screen, types a key at a
@@ -13,7 +13,7 @@
 //   click(page, locator), type(page, text), fill(page, locator, text), press(page, key),
 //   drag(page, fromLocator, toLocator, button), attach(page, locator) — before a file is handed
 //   to a file box, which a video can't show being picked
-// Each call to tutorialActions has its own state (the To Excel tutorial's file and window).
+// Each call to tutorialActions has its own state (the To Excel tutorial's window).
 const { expect } = require('@playwright/test');
 const F = require('./fmide');
 
@@ -216,24 +216,16 @@ function tutorialActions(P){
     },
     'to-excel': {
       'intro': next,
-      'save': async (page) => {
-        const [dl] = await Promise.all([page.waitForEvent('download'), command(page, 'saveSystem')]);
-        // Kept under the name fmIDE gave it, which ExcelExporter shows when it loads the file.
-        const fs = require('fs'), os = require('os'), path = require('path');
-        trip.file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'fmide-tutorial-')), dl.suggestedFilename());
-        await dl.saveAs(trip.file);
-      },
       'open': async (page) => {
         const [popup] = await Promise.all([page.waitForEvent('popup'), command(page, 'openExcelExporter')]);
         await popup.waitForLoadState();
         trip.popup = popup;
       },
-      // What the card says to do in ExcelExporter, done for real: load the file, then Generate.
+      // What the card says: the model fmIDE sent is already there; then Generate.
       'load': async (page) => {
         const popup = trip.popup;
-        await P.attach(popup, popup.locator('#dropZone'));
-        await popup.locator('#fileInput').setInputFiles(trip.file);
         await expect(popup.locator('#afterLoad')).toBeVisible();
+        await expect(popup.locator('#modelName')).toHaveText('Practice — From fmIDE to Excel');
         await next(page);
       },
       'generate': async (page) => {

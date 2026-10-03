@@ -28,7 +28,7 @@ function syncPageState(){
 // ← → go to the next menu, Esc or a click elsewhere closes it, and choosing an item closes it.
 const MENUS = [['menuFile', 'menuFileList'], ['menuLayout', 'menuLayoutList']].map(([b, l]) => ({ btn: $(b), list: $(l) }));
 let openMenuEntry = null;
-function menuItems(m){ return [...m.list.querySelectorAll('[role=menuitem]')].filter(b => !b.disabled); }
+function menuItems(m){ return [...m.list.querySelectorAll('[role=menuitem]')].filter(b => !b.disabled && !b.classList.contains('hidden')); }
 function openMenu(m, focusFirst){
   if(openMenuEntry && openMenuEntry !== m) closeMenu(false);
   openMenuEntry = m;

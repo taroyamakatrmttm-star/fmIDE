@@ -11,6 +11,25 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'model-from-fmide', date: '2026-10-03', title: 'The model arrives from fmIDE',
+    summary: 'Opened from fmIDE, ExcelExporter loads the model fmIDE has open — no file to save first.',
+    what: [
+      'When you open ExcelExporter from fmIDE (File → Open ExcelExporter), the model you have open in fmIDE is loaded straight away, with its name at the top.',
+      'File → ↻ From fmIDE loads it again after you change it in fmIDE. Pressing Open ExcelExporter in fmIDE again does the same.',
+    ],
+    why: 'Saving a file in fmIDE and loading it here every time was a detour.',
+    how: [
+      'In fmIDE, choose File → Open ExcelExporter.',
+      'Arrange the tabs and rows, then press ⬇ Generate .xlsx.',
+      'After a change in fmIDE, choose File → ↻ From fmIDE here.',
+    ],
+    notes: [
+      'Your layout is remembered for each model, as before: a change to numbers keeps it, while adding or deleting a rectangle starts a new one (a module\'s tab keeps its remembered layout).',
+      'The Excel layouts your canvas templates carry come along too.',
+      'Opened on its own, ExcelExporter works as before: open a saved file.',
+    ],
+    see: ['load-model'] },
+
   { id: 'new-look', date: '2026-10-02', title: 'A cleaner, simpler ExcelExporter',
     summary: 'Menus for every file and reset, Generate always at the top, tabs and rows side by side, less text.',
     what: [

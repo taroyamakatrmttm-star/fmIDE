@@ -91,7 +91,7 @@ One pull request each, each approved before the next.
   - **Blocks: build once, use many times** (14 steps): a Tax canvas with an input and an output, used as a block on a second canvas (1000 × 0.3 = 300).
   - **Templates: save a canvas and reuse it** (4 steps): save a revenue canvas as a template, add it to a new canvas, which remembers its template and already shows Revenue = 50.
   - **Your own functions** (7 steps): write `Margin(Revenue, Cost)`, put it on the canvas, wire its two inputs, 0.4.
-  - **From fmIDE to Excel** (6 steps): Save System (a download, allowed while practising), Open ExcelExporter, then what to do there.
+  - **From fmIDE to Excel** (5 steps since ExcelExporter reads fmIDE's model, October 2026; 6 before, with Save System first): Open ExcelExporter, which shows the practice model, then what to do there.
 - **Decided (29 Sep 2026, the owner):**
   - What a tutorial saves in the library is taken back out at the end, unless the last step's **Keep what I saved in my library** is ticked (off by default). Exiting early always takes it out.
   - The To Excel card stays in fmIDE. Its last steps say what to do in ExcelExporter, and the test does exactly that there: it loads the downloaded file, generates the workbook, and checks for a real formula.

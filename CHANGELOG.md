@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter reads fmIDE's model
+- **Open ExcelExporter** in fmIDE now sends the model you have open: ExcelExporter shows it straight away, with no file to save and load. **File → ↻ From fmIDE** in ExcelExporter, or Open ExcelExporter again, loads it as it is now. The Excel layouts your canvas templates carry go along. Opened on its own, ExcelExporter is unchanged.
+- The tutorial *From fmIDE to Excel* is a step shorter (no Save System).
+
 ## fmGraph: tutorials (step 15, phase G6)
 - **Four tutorials** in fmGraph — Sliders and bars, Charts, Trace and compare, Scenarios — at the top of Help and from the first screen (🎓 Learn with a tutorial). Each practises on a copy of the sample model, keeps nothing, and puts your own model back at the end.
 

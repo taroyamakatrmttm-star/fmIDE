@@ -668,6 +668,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
           <button type="button" role="menuitem" id="btnOpenModel" title="Open a .fmide document, or a system or workspace file saved by fmIDE">Open Model…</button>
           <button type="button" role="menuitem" id="btnMenuSample" title="Load a small built-in model to try things out">Load Sample Model</button>
           <button type="button" role="menuitem" id="btnMenuPaste" title="Paste a model's JSON text">Paste JSON…</button>
+          <button type="button" role="menuitem" id="btnFromFmide" class="hidden" title="Load the model open in fmIDE again, as it is now">↻ From fmIDE</button>
           <div class="menu-sep" role="separator"></div>
           <button type="button" role="menuitem" id="btnClearAll" class="danger" title="Empties this page. Saved layouts are kept.">Start Over</button>
         </div>
@@ -8675,8 +8676,9 @@ function renderDifferences(){
 // "← Back to fmIDE" (top bar). How ExcelExporter was opened decides what it does:
 //   1. in its own window, by fmIDE (Open ExcelExporter names the window fmIDE-ExcelExporter;
 //      fmIDE is still open behind it — Chrome, Edge, Firefox on a computer): close this
-//      window, asking first when a model is loaded (it has to be loaded again next time;
-//      the layout is kept). A page can't reliably bring another window to the front.
+//      window — asking first only when the model shown is not fmIDE's (a file opened here
+//      has to be loaded again next time; fmIDE sends its own again; the layout is kept).
+//      A page can't reliably bring another window to the front.
 //   2. in fmIDE's place, in the same window (an iPad's home-screen app): go back a page,
 //      like the swipe from the left edge. fmIDE marks this tab (sessionStorage) just before
 //      opening ExcelExporter; the site sends no referrer, so the mark is how we know.
@@ -8711,8 +8713,8 @@ function fmideWindowBehind(){
 async function backToFmide(ev){
   if(fmideWindowBehind()){
     ev.preventDefault();
-    if(model && !(await showConfirm('Close ExcelExporter?',
-      'fmIDE is open in its own window. Your layout is kept; you\'ll load your file again next time you open ExcelExporter.',
+    if(model && !modelFromFmide && !(await showConfirm('Close ExcelExporter?',
+      'fmIDE is open in its own window. Your layout is kept; you\'ll load this file again next time (fmIDE sends its own model by itself).',
       'Close'))) return;
     writeMapping();
     window.close();
@@ -9311,7 +9313,7 @@ const EXCEL_HELP_TOPICS = [
     body: [
       { p: 'ExcelExporter reads a model you built in fmIDE and writes an Excel workbook (.xlsx) whose cells hold real formulas, so it calculates exactly as fmIDE does and keeps working when you change an input in Excel.' },
       { steps: [
-        'Load the model: drop its file on the page, or choose File → Open Model….',
+        'Load the model: open ExcelExporter from fmIDE (it arrives by itself), drop its file on the page, or choose File → Open Model….',
         'Check the period labels and the file name (⚙ Settings → Workbook).',
         'Arrange the tabs (on the left) and the rows (on the right), if you like.',
         'Press ⬇ Generate .xlsx, at the top right.',
@@ -9323,9 +9325,11 @@ const EXCEL_HELP_TOPICS = [
       { see: ['load-model', 'generate'] },
     ] },
   { id: 'load-model', group: 'start', title: 'Loading a model',
-    keywords: 'load open file fmide json drop sample paste system workspace',
-    summary: 'Open a .fmide document, or a system or workspace file saved by fmIDE.',
+    keywords: 'load open file fmide json drop sample paste system workspace from fmide reload refresh',
+    summary: 'Open ExcelExporter from fmIDE, or open a .fmide document, or a system or workspace file saved by fmIDE.',
     body: [
+      { p: 'Opened from fmIDE (File → Open ExcelExporter), ExcelExporter loads the model fmIDE has open by itself — no file to save first. After changing the model in fmIDE, choose File → ↻ From fmIDE here (or Open ExcelExporter in fmIDE again) to load it as it is now. A change to numbers keeps your layout; adding or deleting a rectangle starts a new layout, as loading a changed file does (a module\'s tab keeps its remembered layout). The Excel layouts its canvas templates carry come along too.' },
+      { p: 'Or open a saved file:' },
       { steps: [
         'In fmIDE, save your model (File → Save gives a .fmide file).',
         'Here, drop the file on the box (or anywhere on the page), or click the box to choose it. Once a model is loaded, File → Open Model… opens another.',
@@ -9339,7 +9343,7 @@ const EXCEL_HELP_TOPICS = [
     keywords: 'back fmide return window close',
     summary: '← Back to fmIDE, at the top left.',
     body: [
-      { p: '← Back to fmIDE returns to fmIDE. When ExcelExporter has its own window, it closes that window (asking first if a model is loaded; your layout is kept, and you load the file again next time). On an iPad, where ExcelExporter took fmIDE\'s place, it goes back to fmIDE.' },
+      { p: '← Back to fmIDE returns to fmIDE. When ExcelExporter has its own window, it closes that window (your layout is kept, and fmIDE sends its model again next time you open ExcelExporter; it asks first only when the model shown is a file you opened here). On an iPad, where ExcelExporter took fmIDE\'s place, it goes back to fmIDE.' },
       { p: 'File → Start Over clears the model loaded here. Saved layouts are kept.' },
       { see: ['remembered'] },
     ] },
@@ -9390,7 +9394,7 @@ const EXCEL_HELP_TOPICS = [
       { p: 'fmIDE only carries the layout: it never reads or changes it. It goes with the template in workspaces, .fmide documents, template files and library packs; Save as new version carries it on. A model file (Save System) carries no templates, so no attached layout.' },
       { p: 'When it is used here:' },
       { steps: [
-        'Only when you load a .fmide document or a workspace (they carry their templates).',
+        'Only when the model comes from fmIDE, or you load a .fmide document or a workspace (they carry their templates).',
         'Only for a new layout: a model you have already arranged here keeps its own layout.',
         'Only when you have no remembered layout of your own for that module: yours wins.',
         'The layout of the version the canvas was made from, else the newest version that has one.',
@@ -9549,6 +9553,25 @@ const EXCEL_HELP_TOPICS = [
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'model-from-fmide', date: '2026-10-03', title: 'The model arrives from fmIDE',
+    summary: 'Opened from fmIDE, ExcelExporter loads the model fmIDE has open — no file to save first.',
+    what: [
+      'When you open ExcelExporter from fmIDE (File → Open ExcelExporter), the model you have open in fmIDE is loaded straight away, with its name at the top.',
+      'File → ↻ From fmIDE loads it again after you change it in fmIDE. Pressing Open ExcelExporter in fmIDE again does the same.',
+    ],
+    why: 'Saving a file in fmIDE and loading it here every time was a detour.',
+    how: [
+      'In fmIDE, choose File → Open ExcelExporter.',
+      'Arrange the tabs and rows, then press ⬇ Generate .xlsx.',
+      'After a change in fmIDE, choose File → ↻ From fmIDE here.',
+    ],
+    notes: [
+      'Your layout is remembered for each model, as before: a change to numbers keeps it, while adding or deleting a rectangle starts a new one (a module\'s tab keeps its remembered layout).',
+      'The Excel layouts your canvas templates carry come along too.',
+      'Opened on its own, ExcelExporter works as before: open a saved file.',
+    ],
+    see: ['load-model'] },
+
   { id: 'new-look', date: '2026-10-02', title: 'A cleaner, simpler ExcelExporter',
     summary: 'Menus for every file and reset, Generate always at the top, tabs and rows side by side, less text.',
     what: [
@@ -9895,7 +9918,7 @@ function syncPageState(){
 // ← → go to the next menu, Esc or a click elsewhere closes it, and choosing an item closes it.
 const MENUS = [['menuFile', 'menuFileList'], ['menuLayout', 'menuLayoutList']].map(([b, l]) => ({ btn: $(b), list: $(l) }));
 let openMenuEntry = null;
-function menuItems(m){ return [...m.list.querySelectorAll('[role=menuitem]')].filter(b => !b.disabled); }
+function menuItems(m){ return [...m.list.querySelectorAll('[role=menuitem]')].filter(b => !b.disabled && !b.classList.contains('hidden')); }
 function openMenu(m, focusFirst){
   if(openMenuEntry && openMenuEntry !== m) closeMenu(false);
   openMenuEntry = m;
@@ -10054,6 +10077,44 @@ document.addEventListener('drop', (ev) => {
   new ResizeObserver(() => document.documentElement.style.setProperty('--topbar-h', bar.offsetHeight + 'px')).observe(bar);
 })();
 // ============================================================
+// The model from fmIDE. Opened by fmIDE's Open ExcelExporter (its own window, named
+// fmIDE-ExcelExporter, fmIDE still open behind it: fmideWindowBehind, 09c), this page asks
+// fmIDE for the model it has open ('excel:want-model') once it has started, and again on
+// File → ↻ From fmIDE; fmIDE answers ('fmIDE:model') with a workspace file's text — the model
+// and the canvas templates whose Excel layout may be used — and sends it unasked when Open
+// ExcelExporter is pressed again. It is read exactly like a file dropped here (tryLoad: size
+// limits, kind, upgrades), and replaces the model shown: its layout is already saved. Only
+// the window that opened this one is listened to, and on the site only a page of the site.
+// ============================================================
+const ownOrigin = () => (location.protocol !== 'file:' && location.origin && location.origin !== 'null') ? location.origin : null;
+let fmideLoading = Promise.resolve(); // one model from fmIDE at a time, in the order sent
+let modelFromFmide = false;           // the model shown is fmIDE's: Back to fmIDE needn't ask (09c)
+
+function askFmideForModel(){
+  if(!fmideWindowBehind()) return false;
+  try{ window.opener.postMessage({ type: 'excel:want-model' }, ownOrigin() || '*'); }catch(e){ return false; }
+  return true;
+}
+
+window.addEventListener('message', (ev) => {
+  if(!fmideWindowBehind() || ev.source !== window.opener) return;
+  if(ownOrigin() && ev.origin !== ownOrigin()) return;
+  const d = ev.data;
+  if(!d || typeof d !== 'object' || d.type !== 'fmIDE:model' || typeof d.text !== 'string') return;
+  const name = typeof d.name === 'string' && d.name.trim() ? d.name.trim().slice(0, 120) : 'fmIDE model';
+  fmideLoading = fmideLoading.then(async () => {
+    const before = model;
+    await tryLoad(d.text, `“${name}” from fmIDE`, name);
+    if(model && model !== before) modelFromFmide = true;
+  }).catch(() => {});
+});
+
+$('btnFromFmide').classList.toggle('hidden', !fmideWindowBehind());
+$('btnFromFmide').addEventListener('click', () => {
+  if(!askFmideForModel()) setStatus($('loadStatus'), 'fmIDE\'s window is closed: open ExcelExporter from fmIDE again, or open a saved file.', 'info');
+});
+askFmideForModel();
+// ============================================================
 // Wiring
 // ============================================================
 // A file that is too large or nested too deep is refused first (FILE_LIMITS, shared).
@@ -10076,6 +10137,7 @@ async function tryLoad(jsonText, label, name){
   try{
     await loadModel(r.data);
     currentModelLabel = name || label; // only once it has loaded: a file that fails leaves the name as it was
+    modelFromFmide = false;            // 09f-from-fmide.js sets it back for fmIDE's model
     syncPageState();
     setStatus($('genStatus'), '', null); // a message about the last model's workbook
     setStatus($('loadStatus'), `Loaded ${label} — ${model.canvases.length} canvas${model.canvases.length === 1 ? '' : 'es'}, ${model.periods.length} periods.`, 'ok');

@@ -26,7 +26,7 @@ const EXCEL_HELP_TOPICS = [
     body: [
       { p: 'ExcelExporter reads a model you built in fmIDE and writes an Excel workbook (.xlsx) whose cells hold real formulas, so it calculates exactly as fmIDE does and keeps working when you change an input in Excel.' },
       { steps: [
-        'Load the model: drop its file on the page, or choose File → Open Model….',
+        'Load the model: open ExcelExporter from fmIDE (it arrives by itself), drop its file on the page, or choose File → Open Model….',
         'Check the period labels and the file name (⚙ Settings → Workbook).',
         'Arrange the tabs (on the left) and the rows (on the right), if you like.',
         'Press ⬇ Generate .xlsx, at the top right.',
@@ -38,9 +38,11 @@ const EXCEL_HELP_TOPICS = [
       { see: ['load-model', 'generate'] },
     ] },
   { id: 'load-model', group: 'start', title: 'Loading a model',
-    keywords: 'load open file fmide json drop sample paste system workspace',
-    summary: 'Open a .fmide document, or a system or workspace file saved by fmIDE.',
+    keywords: 'load open file fmide json drop sample paste system workspace from fmide reload refresh',
+    summary: 'Open ExcelExporter from fmIDE, or open a .fmide document, or a system or workspace file saved by fmIDE.',
     body: [
+      { p: 'Opened from fmIDE (File → Open ExcelExporter), ExcelExporter loads the model fmIDE has open by itself — no file to save first. After changing the model in fmIDE, choose File → ↻ From fmIDE here (or Open ExcelExporter in fmIDE again) to load it as it is now. A change to numbers keeps your layout; adding or deleting a rectangle starts a new layout, as loading a changed file does (a module\'s tab keeps its remembered layout). The Excel layouts its canvas templates carry come along too.' },
+      { p: 'Or open a saved file:' },
       { steps: [
         'In fmIDE, save your model (File → Save gives a .fmide file).',
         'Here, drop the file on the box (or anywhere on the page), or click the box to choose it. Once a model is loaded, File → Open Model… opens another.',
@@ -54,7 +56,7 @@ const EXCEL_HELP_TOPICS = [
     keywords: 'back fmide return window close',
     summary: '← Back to fmIDE, at the top left.',
     body: [
-      { p: '← Back to fmIDE returns to fmIDE. When ExcelExporter has its own window, it closes that window (asking first if a model is loaded; your layout is kept, and you load the file again next time). On an iPad, where ExcelExporter took fmIDE\'s place, it goes back to fmIDE.' },
+      { p: '← Back to fmIDE returns to fmIDE. When ExcelExporter has its own window, it closes that window (your layout is kept, and fmIDE sends its model again next time you open ExcelExporter; it asks first only when the model shown is a file you opened here). On an iPad, where ExcelExporter took fmIDE\'s place, it goes back to fmIDE.' },
       { p: 'File → Start Over clears the model loaded here. Saved layouts are kept.' },
       { see: ['remembered'] },
     ] },
@@ -105,7 +107,7 @@ const EXCEL_HELP_TOPICS = [
       { p: 'fmIDE only carries the layout: it never reads or changes it. It goes with the template in workspaces, .fmide documents, template files and library packs; Save as new version carries it on. A model file (Save System) carries no templates, so no attached layout.' },
       { p: 'When it is used here:' },
       { steps: [
-        'Only when you load a .fmide document or a workspace (they carry their templates).',
+        'Only when the model comes from fmIDE, or you load a .fmide document or a workspace (they carry their templates).',
         'Only for a new layout: a model you have already arranged here keeps its own layout.',
         'Only when you have no remembered layout of your own for that module: yours wins.',
         'The layout of the version the canvas was made from, else the newest version that has one.',

@@ -145,14 +145,14 @@ test.describe('the recorder', () => {
     // ExcelExporter's own video carries the lines from when its window opened.
     const own = parseSrt(fs.readFileSync(path.join(dir, 'to-excel-excelexporter.srt'), 'utf8'));
     expect(own.length).toBeGreaterThan(2);
-    expect(own.map(c => c.lines.join(' ')).join(' ')).toContain('drop the file you just downloaded');
+    expect(own.map(c => c.lines.join(' ')).join(' ')).toContain('shows the model fmIDE sent it');
     expect(own.map(c => c.lines.join(' ')).join(' ')).not.toContain('This practice canvas holds');
     // The script, with the time each line starts, and the ExcelExporter video's times.
     const md = fs.readFileSync(path.join(dir, 'to-excel-script.md'), 'utf8');
     const times = [...md.matchAll(/^\*\*\[(\d\d):(\d\d)\] /gm)].map(m => +m[1] * 60 + +m[2]);
     expect(times.length).toBe(script.lines.length);
     times.forEach((s, i) => { if(i) expect(s).toBeGreaterThanOrEqual(times[i - 1]); });
-    expect(md).toMatch(/\*\*\[\d\d:\d\d\] Step 4 of 6\*\* · ExcelExporter video \[\d\d:\d\d\]/);
+    expect(md).toMatch(/\*\*\[\d\d:\d\d\] Step 3 of 5\*\* · ExcelExporter video \[\d\d:\d\d\]/);
     // Both videos are real WebM files that play for as long as the recording took.
     for(const [name, length] of [['to-excel.webm', r.timing['video-outro'].end], ['to-excel-excelexporter.webm', null]]){
       const bytes = fs.readFileSync(path.join(dir, name));

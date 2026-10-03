@@ -147,7 +147,7 @@ test('a tap on Back to fmIDE closes ExcelExporter\'s own window, leaving fmIDE o
   await F.openFmIDE(page);
   const [popup] = await Promise.all([page.waitForEvent('popup'), page.evaluate(() => fm.command('openExcelExporter'))]);
   await popup.waitForLoadState();
-  await expect(popup.locator('#dropZone')).toBeVisible();
+  await expect(popup.locator('#afterLoad')).toBeVisible(); // fmIDE's model: Back doesn't ask
   // The window closes, so what it saw (touch, not a mouse) is noted in fmIDE's window.
   await popup.evaluate(() => window.addEventListener('pointerdown', (ev) => { window.opener.__backPointer = ev.pointerType; }, true));
   const f = await finger(popup);

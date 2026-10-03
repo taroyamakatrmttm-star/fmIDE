@@ -12,6 +12,24 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'excel-from-fmide', date: '2026-10-03', title: 'ExcelExporter opens with your model',
+    summary: 'Open ExcelExporter sends it the model you have open — no file to save first.',
+    what: [
+      '{cmd:openExcelExporter} opens ExcelExporter with the model you have open here, as fmGraph does. Pressing it again sends the model as it is now; so does File → ↻ From fmIDE in ExcelExporter.',
+      'The Excel layouts your canvas templates carry go along too.',
+    ],
+    why: 'Saving a file and loading it in ExcelExporter every time was a detour.',
+    how: [
+      'Open {cmd:openExcelExporter}.',
+      'Arrange the tabs and rows there, then press ⬇ Generate .xlsx.',
+      'After a change here, press {cmd:openExcelExporter} again.',
+    ],
+    notes: [
+      'ExcelExporter remembers your layout for each model, as before: a change to numbers keeps it, while adding or deleting a rectangle starts a new one.',
+      'The tutorial From fmIDE to Excel is a step shorter.',
+    ],
+    see: ['to-excel'] },
+
   { id: 'try-in-fmgraph', date: '2026-10-03', title: 'Try a library template in fmGraph',
     summary: 'Browse Library opens a template that carries an fmGraph board in fmGraph, before you add it.',
     what: [
