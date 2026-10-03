@@ -8,6 +8,18 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'tutorials', date: '2026-10-03', title: 'Tutorials',
+    summary: 'Four short guided tours, on a practice copy of the sample model.',
+    what: [
+      'Sliders and bars, Charts, Trace and compare, and Scenarios: at the top of Help, and 🎓 Learn with a tutorial on the first screen.',
+      'A card shows one step at a time and moves on by itself once you have done it. Nothing is kept, and your own model comes back at the end.',
+    ],
+    why: 'So the quickest way to learn fmGraph is to try it, safely.',
+    how: [
+      'Press ❓ Help, then ▶ beside a tutorial.',
+    ],
+    see: ['tutorials'] },
+
   { id: 'scenario-waterfall', date: '2026-10-03', title: 'Scenario waterfall',
     summary: 'See how an output moves from the model\'s own number through each of your scenarios.',
     what: [

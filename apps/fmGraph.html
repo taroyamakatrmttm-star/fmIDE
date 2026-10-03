@@ -217,6 +217,29 @@
   .gbar-btn[aria-pressed="true"]{ background:var(--reach); color:#1b2333; }
   .bar-chart rect[data-anim]{ transform-box:view-box; transform-origin:0 0; }
 
+  /* Tutorials (G6): the coach card, the ring, the list in Help */
+  .tutorial-card{
+    position:fixed; z-index:150; left:16px; bottom:16px; width:340px; max-width:calc(100vw - 32px); background:#fff; color:#1e293b;
+    border:1px solid #c7d2fe; border-radius:12px; box-shadow:0 16px 40px rgba(15,23,42,.28); padding:12px 14px; font-size:13px; line-height:1.5;
+  }
+  .tutorial-head{ display:flex; align-items:baseline; gap:8px; }
+  .tutorial-title{ flex:1; font-weight:700; color:#3730a3; }
+  .tutorial-count{ font-size:11.5px; color:#64748b; }
+  .tutorial-progress{ height:4px; background:#e0e7ff; border-radius:2px; margin:6px 0 8px; overflow:hidden; }
+  .tutorial-progress-fill{ height:100%; background:#6366f1; transition:width .3s; }
+  .tutorial-text{ margin:0 0 6px; }
+  .tutorial-waiting{ margin:0 0 8px; font-size:11.5px; color:#64748b; font-style:italic; }
+  .tutorial-actions{ display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }
+  .tutorial-actions button{ padding:5px 10px; font-size:12.5px; }
+  .tutorial-pointer{
+    position:fixed; z-index:225; pointer-events:none; border:3px solid #f59e0b; border-radius:10px;
+    box-shadow:0 0 0 4px rgba(245,158,11,.25); animation:tutorial-pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes tutorial-pulse{ 0%,100%{ box-shadow:0 0 0 3px rgba(245,158,11,.35); } 50%{ box-shadow:0 0 0 9px rgba(245,158,11,.08); } }
+  @media (prefers-reduced-motion: reduce){ .tutorial-pointer{ animation:none; } .tutorial-progress-fill{ transition:none; } }
+  .help-tutorial{ display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid #f1f5f9; }
+  body.practising main{ padding-bottom:220px; } /* room to scroll past the coach card */
+
   /* The scenario waterfall */
   .scenario-flows{ display:flex; flex-wrap:wrap; gap:10px; }
   .scenario-flows .scenario-flow{ flex:1 1 260px; max-width:100%; }
@@ -364,6 +387,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     </div>
     <div class="welcome-actions">
       <button id="btnSample" class="primary">Try the sample model</button>
+      <button id="btnTutorials" title="Short tutorials on a practice copy of the sample model">🎓 Learn with a tutorial</button>
     </div>
   </section>
 
@@ -2845,7 +2869,9 @@ function readModelData(raw){
 // opts.boards: the document's own boards (an fmIDE-graph-board file, parsed or as text) —
 // fmIDE's (step 15 G3b), or a workspace's `graphBoards`; opts.fromFmide: the model came from
 // fmIDE's window, so changes to the boards go back to it (06-page.js); opts.trial: a template
-// tried from fmIDE's Browse Library ({ name, pack }, G5c, 06e-trial.js): nothing kept.
+// tried from fmIDE's Browse Library ({ name, pack }, G5c, 06e-trial.js): nothing kept;
+// opts.practice: a tutorial's practice copy ('sliders' | 'sample', its starting board; G6,
+// 07b-tutorials.js): nothing kept.
 async function openModelText(text, name, opts){
   const big = fileTextProblem(text);
   if(big){ notify(big, 'err', 'load'); return false; }
@@ -2860,14 +2886,17 @@ async function openModelText(text, name, opts){
     const go = await askConfirm('Saved by a newer version', what + ' was saved by a newer version of fmIDE. Open it anyway? Anything the newer version added may be ignored.', 'Open Anyway');
     if(!go) return false;
   }
+  const o = opts || {};
+  if(practice && !o.practice) stopTutorial(false); // another model opened during a tutorial ends it (07b-tutorials.js)
   try{
-    const o = opts || {};
     const docBoards = o.boards !== undefined ? o.boards : (r.kind === 'fmIDE-workspace' ? r.data.graphBoards : null);
     // Its templates' boards (G5b): from fmIDE, or a workspace's own templates.
     const templates = o.templates !== undefined ? o.templates
       : r.kind === 'fmIDE-workspace' && Array.isArray(r.data.templates) ? r.data.templates.filter(t => t && t.attachments && t.attachments.graph)
         .map(t => ({ family: t.family, kind: t.kind, name: t.name, version: t.version, versionId: t.versionId, board: t.attachments.graph })) : [];
-    await loadModel(r.kind === 'fmIDE-workspace' ? r.data.system : r.data, name, { boards: docBoards, fromFmide: !!o.fromFmide, templates, trial: o.trial });
+    await loadModel(r.kind === 'fmIDE-workspace' ? r.data.system : r.data, name, { boards: docBoards, fromFmide: !!o.fromFmide, templates, trial: o.trial, practice: o.practice });
+    // What a tutorial puts back afterwards (its boards then from this browser, where they were saved).
+    if(!o.practice && !o.trial) lastOpened = { text, name, opts: { boards: null, fromFmide: !!o.fromFmide, templates } };
   }catch(e){
     notify(e && e.message ? e.message : 'That model could not be opened.', 'err', 'load');
     return false;
@@ -2928,6 +2957,7 @@ async function loadModel(system, name, opts){
   model = m;
   linkedToFmide = !!(opts && opts.fromFmide);
   trying = opts && opts.trial ? opts.trial : null; // G5c (06e-trial.js)
+  practiceStart = opts && opts.practice ? opts.practice : null; // G6 (07b-tutorials.js)
   clearResultCache();
   pinA = null; forgetGeometry(); renderCompareBar(); // a new model: no A, nothing to glide from (05e-compare.js)
   m.templateSources = cleanTemplateSources(opts && opts.templates); // its templates' boards (06d-template-sources.js)
@@ -3287,7 +3317,7 @@ function saveBoardSoon(){
 }
 function saveBoardNow(){
   clearTimeout(saveTimer);
-  if(!model || trying) return; // a template tried from the library is never kept (G5c)
+  if(!model || trying || practiceStart) return; // a template tried from the library (G5c), or a tutorial's practice (G6), is never kept
   const text = JSON.stringify(boardsData());
   Promise.all([store.put(BOARD_PREFIX + model.signature, text), store.put(LAST_BOARD_KEY, text)])
     .catch(() => notify('This browser could not keep the boards; they will be gone after a reload.', 'err', 'storage'));
@@ -3304,6 +3334,14 @@ function documentBoards(raw){
   }catch(e){ return null; }
 }
 async function loadBoardFor(m, docRaw){
+  // A tutorial's practice copy (G6): its starting board, nothing read from or kept in the browser.
+  if(practiceStart){
+    boards = practiceBoards(practiceStart);
+    board = boards[0];
+    scenarios = [];
+    resetUndo();
+    return;
+  }
   // A template tried from the library (G5c): its own boards, nothing read from or kept in the browser.
   if(trying){
     const fromTemplate = (m.templateSources || []).flatMap(src => boardsFromTemplate(src).boards).slice(0, BOARDS_LIMIT);
@@ -3890,6 +3928,7 @@ function quietSoon(ms){
   quietTimer = setTimeout(() => { activeSlider = null; paintReach(); }, ms);
 }
 function paintReach(){
+  if(!model || !board) return; // (a timer after the model has gone: the first screen again)
   const s = board.sliders.find(x => x.id === activeSlider);
   const reached = s ? model.reach(s.key) : null;
   $('board').classList.toggle('moving', !!s);
@@ -5788,7 +5827,7 @@ function renderTrialBar(){
 // ============================================================
 // Help: the same panel as fmIDE and ExcelExporter (src/shared/help-panel.js), with fmGraph's
 // own topics and What's new (src/help/fmgraph-help.js, fmgraph-whats-new.js; CC BY 4.0).
-// ❓ Help or F1. Its width and the date of the newest update seen are kept in this browser.
+// ❓ Help or F1. The tutorials are listed at its top (07b-tutorials.js). Its width and the date of the newest update seen are kept in this browser.
 // ============================================================
 // =====================================================================================
 // The Help panel (build step 10; docs/step10-help.md) — shared by fmIDE and ExcelExporter.
@@ -6341,7 +6380,16 @@ const FMGRAPH_HELP_TOPICS = [
       { p: 'fmGraph shows a model built in fmIDE as bars, and lets you change its inputs with sliders. Move a slider and every bar that depends on that input, directly or through other rectangles, moves with it.' },
       { p: 'It never changes your model. A slider is a "what if": the bars show what the model would give with that number, and Reset puts the model\'s own number back.' },
       { tip: 'Use it to understand a model, to check it (a bar that moves when it shouldn\'t points at a wrong arrow), or to show it to people who don\'t build models.' },
-      { see: ['open-model', 'bars', 'charts', 'sliders'] },
+      { see: ['open-model', 'tutorials', 'bars', 'charts', 'sliders'] },
+    ] },
+  { id: 'tutorials', group: 'start', title: 'Tutorials',
+    keywords: 'tutorial learn tour practice guide steps coach start',
+    summary: 'Short guided tours on a practice copy of the sample model.',
+    body: [
+      { p: 'The tutorials are at the top of this panel, and 🎓 Learn with a tutorial on the first screen opens them: Sliders and bars, Charts, Trace and compare, and Scenarios, three or four minutes each.' },
+      { p: 'Each one practises on a copy of the sample model. A card in the corner shows one step at a time, a ring points at what to press, and the card moves on by itself once you have done what it asks. Back shows the step before; Exit stops at any time.' },
+      { p: 'Nothing you do in a tutorial is kept, in this browser or in fmIDE. At the end your own model comes back as it was, with its boards — asked for again from fmIDE when it came from there. Opening another model during a tutorial ends it.' },
+      { see: ['what-is-fmgraph', 'open-model'] },
     ] },
   { id: 'open-model', group: 'start', title: 'Opening a model',
     keywords: 'open file drop fmide document system workspace sample load from fmide',
@@ -6481,6 +6529,18 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'tutorials', date: '2026-10-03', title: 'Tutorials',
+    summary: 'Four short guided tours, on a practice copy of the sample model.',
+    what: [
+      'Sliders and bars, Charts, Trace and compare, and Scenarios: at the top of Help, and 🎓 Learn with a tutorial on the first screen.',
+      'A card shows one step at a time and moves on by itself once you have done it. Nothing is kept, and your own model comes back at the end.',
+    ],
+    why: 'So the quickest way to learn fmGraph is to try it, safely.',
+    how: [
+      'Press ❓ Help, then ▶ beside a tutorial.',
+    ],
+    see: ['tutorials'] },
+
   { id: 'scenario-waterfall', date: '2026-10-03', title: 'Scenario waterfall',
     summary: 'See how an output moves from the model\'s own number through each of your scenarios.',
     what: [
@@ -6653,6 +6713,7 @@ const help = createHelpPanel({
   groups: FMGRAPH_HELP_GROUPS, topics: FMGRAPH_HELP_TOPICS,
   intro: 'Plain-English guides to fmGraph. Pick a topic, or search above.',
   placeholder: 'Search help — e.g. "slider" or "reach"',
+  homeTop: (body, mk) => renderTutorialList(body, mk), // the tutorials (07b-tutorials.js)
   size: { get: () => ({}), set: (v) => { store.put(HELP_SIZE_KEY, JSON.stringify(cleanHelpSize(v))).catch(() => {}); } },
   whatsNew: { entries: FMGRAPH_WHATS_NEW,
     intro: 'Every update to fmGraph so far, newest first: what changed, why, and how to use it.',
@@ -6671,6 +6732,227 @@ document.addEventListener('keydown', (ev) => {
   ev.preventDefault();
   help.toggle();
 });
+// ============================================================
+// Tutorials (step 15, G6). Four short tutorials, listed at the top of the Help panel, each
+// practising on a copy of the sample model: the model open before is set aside (its boards are
+// saved first) and comes back at the end — asked for again from fmIDE when it came from there,
+// else read again from what was opened, its boards from this browser. While practising nothing
+// is kept in the browser or sent to fmIDE. A coach card (#tutorialCard) shows one step at a time;
+// a ring (#tutorialPointer) points at what to press; a step moves on by itself once what it asks
+// for is true (checks in src/help/fmgraph-tutorials.js, data only). Nothing is done for the
+// person. Opening another model during a tutorial ends it.
+// ============================================================
+// fmGraph's tutorials (step 15, G6). Licensed CC BY 4.0, like the rest of src/help/.
+// Data only: each tutorial practises on a copy of the sample model ('board': what its board
+// starts with — 'sliders' (Price and Volume), 'sample' (the sample's board)), one step at a time.
+// A step: { id, text, point (where the ring points: a CSS selector), done (checks, all of which
+// must hold for it to move on by itself; none: a Next button) }. Checks (src/fmgraph/js/07b-tutorials.js):
+//   { bar: name | null }                     a bar on that rectangle (null: any bar)
+//   { slider: name, moved: true }            that rectangle's slider moved off the model's number
+//   { reset: true }                          every slider on the model's numbers
+//   { chart: layout, steps?, outputs? }      a chart of that kind ('columns', 'flow', 'scenarios');
+//                                            steps: [[name, role]…] exactly; outputs: names it shows
+//   { traced: true | false }, { pinned: true | false }
+//   { scenarios: n }                         at least n scenarios
+//   { scenarioShown: i }                     the sliders where the i-th scenario (from 0) has them
+const FMGRAPH_TUTORIALS = [
+  { id: 'sliders-and-bars', title: 'Sliders and bars', minutes: 3, topic: 'bars', board: 'sliders',
+    summary: 'Put a rectangle on a bar, move a slider, and watch what it reaches move with it.',
+    steps: [
+      { id: 'intro', text: 'This is a practice copy of the sample model: a profit calculation and its cash. Nothing you do here is kept. On the left are two sliders, Price and Volume.' },
+      { id: 'add-bar', text: 'Press + Bar at the top. A bar shows a rectangle\'s value in each year.', point: '#btnAddBar', done: [{ bar: null }] },
+      { id: 'choose-profit', text: 'In the new bar\'s list, choose Profit.', point: '.bar-widget select', done: [{ bar: 'Profit' }] },
+      { id: 'move-price', text: 'Drag the Price slider, or type a number in its box. The Profit bar moves with it; the dashed outline keeps the model\'s own number, and the label says the difference.', point: '.slider-widget input[type=range]', done: [{ slider: 'Price', moved: true }] },
+      { id: 'reset', text: 'Press Reset all to put the sliders back on the model\'s own numbers. fmGraph never changes the model itself.', point: '#btnResetAll', done: [{ reset: true }] },
+      { id: 'end', text: 'That\'s the heart of fmGraph: sliders on inputs, bars on what they reach. Finish to go back to your own model.' },
+    ] },
+  { id: 'charts', title: 'Charts', minutes: 4, topic: 'charts', board: 'sliders',
+    summary: 'Build a waterfall from Revenue to Gross profit, with its check.',
+    steps: [
+      { id: 'add-chart', text: 'Press + Chart at the top. A chart is made of your own rectangles; its editor opens.', point: '#btnAddChart', done: [{ chart: 'columns' }] },
+      { id: 'waterfall', text: 'At the chart\'s top, choose Waterfall: steps in one year, up and down from a start.', point: '.chart-widget select[aria-label="Kind of chart"]', done: [{ chart: 'flow' }] },
+      { id: 'steps', text: 'In Edit chart, make three steps: Revenue as Start, Cost of sales as Subtract, and Gross profit as Total. + Step adds one; each step has its role and its rectangle.', point: '.chart-widget .chart-edit', done: [{ chart: 'flow', steps: [['Revenue', 'start'], ['Cost of sales', 'subtract'], ['Gross profit', 'total']] }] },
+      { id: 'check', text: 'The ✓ above Gross profit says the steps before it add up to it. Now move Price: the bars move and the check still holds.', point: '.slider-widget input[type=range]', done: [{ slider: 'Price', moved: true }] },
+      { id: 'end', text: 'A balance sheet is a Columns chart of two groups with "Check that the groups\' totals agree". Finish to go back to your own model.' },
+    ] },
+  { id: 'trace-and-compare', title: 'Trace and compare', minutes: 3, topic: 'compare', board: 'sample',
+    summary: 'See what reaches a bar, and compare one what-if with another.',
+    steps: [
+      { id: 'trace', text: 'Press 🔍 on the Profit bar. The sliders that reach it light up, and a note shows the way each one gets there.', point: '.bar-widget .widget-trace', done: [{ traced: true }] },
+      { id: 'price', text: 'Move Price to try a what-if.', point: '.slider-widget input[type=range]', done: [{ slider: 'Price', moved: true }] },
+      { id: 'pin', text: 'Press 📌 Pin as A to keep this what-if as A.', point: '#btnPinA', done: [{ pinned: true }] },
+      { id: 'volume', text: 'Now move Volume. The outlines and labels show the change from A, not from the model.', point: '.slider-widget:nth-child(2) input[type=range]', done: [{ slider: 'Volume', moved: true }] },
+      { id: 'unpin', text: 'Press Unpin in the strip above the board to compare with the model\'s own numbers again.', point: '#compareBar', done: [{ pinned: false }] },
+      { id: 'end', text: 'Biggest movers, under the sliders, lists what the sliders change most. Finish to go back to your own model.' },
+    ] },
+  { id: 'scenarios', title: 'Scenarios', minutes: 4, topic: 'scenarios', board: 'sample',
+    summary: 'Save what-ifs as named scenarios, switch between them, and see them in a scenario waterfall.',
+    steps: [
+      { id: 'price', text: 'Move Price to a higher price.', point: '.slider-widget input[type=range]', done: [{ slider: 'Price', moved: true }] },
+      { id: 'save', text: 'Press + Save as scenario in the Scenarios panel. It is named sc01; you could type your own name.', point: '#btnSaveScenario', done: [{ scenarios: 1 }] },
+      { id: 'second', text: 'Move Volume as well, then save again: sc02.', point: '#scenariosPanel', done: [{ scenarios: 2 }] },
+      { id: 'show', text: 'Press ▶ on sc01: the sliders go back where it had them.', point: '.scenario .scenario-show', done: [{ scenarioShown: 0 }] },
+      { id: 'chart', text: 'Press + Chart, then choose Scenario waterfall at its top.', point: '#btnAddChart', done: [{ chart: 'scenarios' }] },
+      { id: 'output', text: 'In Edit chart, choose Profit as its output. It shows Profit from the model\'s own number through sc01 and sc02.', point: '.chart-widget[data-layout="scenarios"] .chart-edit', done: [{ chart: 'scenarios', outputs: ['Profit'] }] },
+      { id: 'end', text: 'Scenarios are kept with your boards, and in fmIDE\'s document too. Finish to go back to your own model.' },
+    ] },
+];
+
+let practice = null;      // { tutorial, step, back, timer }
+let practiceStart = null; // the board a practice model starts with ('sliders' | 'sample'), while practising
+let lastOpened = null;    // { text, name, opts } of the model opened last (not a practice or a try)
+
+function tutorialById(id){ return FMGRAPH_TUTORIALS.find(t => t.id === id) || null; }
+
+async function startTutorial(id){
+  const t = tutorialById(id);
+  if(!t) return false;
+  if(practice) stopTutorial(false);
+  help.close();
+  if(model) saveBoardNow();
+  const back = model && !practiceStart ? { model: lastOpened, fromFmide: linkedToFmide } : null;
+  practice = { tutorial: t, step: 0, back, timer: null, shown: -1, armed: false };
+  const ok = await openModelText(JSON.stringify(SAMPLE_MODEL), 'Practice — ' + t.title, { boards: null, templates: [], practice: t.board || 'sample' });
+  if(!ok || !practice){ practice = null; return false; }
+  document.body.classList.add('practising');
+  renderTutorialCard();
+  practice.timer = setInterval(tutorialTick, 300);
+  return true;
+}
+
+// The board a practice model starts with.
+function practiceBoards(kind){
+  const r = cleanBoards(JSON.parse(JSON.stringify(SAMPLE_BOARD)));
+  if(kind === 'sliders') r.boards.forEach(b => { b.items = []; });
+  return r.boards;
+}
+
+// Ends the tutorial; restore: put the model from before back.
+function stopTutorial(restore){
+  if(!practice) return;
+  const back = practice.back;
+  clearInterval(practice.timer);
+  practice = null;
+  practiceStart = null;
+  document.body.classList.remove('practising');
+  const card = $('tutorialCard'); if(card) card.remove();
+  hideTutorialPointer();
+  if(!restore) return;
+  if(back && back.fromFmide && fmideOpener()) askFmideForModel();
+  else if(back && back.model) openModelText(back.model.text, back.model.name, back.model.opts);
+  else showWelcomeScreen();
+}
+
+// The first screen again (no model).
+function showWelcomeScreen(){
+  clearTimeout(saveTimer); clearTimeout(sendTimer); clearTimeout(quietTimer);
+  model = null; boards = []; board = null; pinA = null; traceId = null; scenarios = [];
+  linkedToFmide = false; trying = null;
+  $('welcome').classList.remove('hidden');
+  $('board').classList.add('hidden');
+  $('boardTabs').classList.add('hidden');
+  $('trialBar').classList.add('hidden');
+  $('compareBar').classList.add('hidden');
+  $('modelName').textContent = '';
+  syncPageState();
+  syncUndoButtons();
+}
+
+// ---- the checks ----
+function rectNamed(key){ const r = model.byKey.get(key); return r ? r.name.trim().toLowerCase() : ''; }
+const sameText = (a, b) => String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
+function checkPasses(c){
+  if(!model || !board) return false;
+  if('bar' in c) return board.bars.some(b => c.bar === null || sameText(rectNamed(b.key), c.bar));
+  if('slider' in c) return board.sliders.some(s => sameText(rectNamed(s.key), c.slider) && (!c.moved || (s.value !== null && isFinite(s.value))));
+  if('reset' in c) return board.sliders.length > 0 && board.sliders.every(s => s.value === null);
+  if('chart' in c) return board.charts.some(ch => {
+    if(ch.layout !== c.chart) return false;
+    if(c.steps && !(ch.steps && ch.steps.length === c.steps.length && c.steps.every(([n, role], i) => sameText(rectNamed(ch.steps[i].key), n) && ch.steps[i].role === role))) return false;
+    if(c.outputs && !(ch.outputs && c.outputs.every(n => ch.outputs.some(k => sameText(rectNamed(k), n))))) return false;
+    return true;
+  });
+  if('traced' in c) return (traceId !== null) === !!c.traced;
+  if('pinned' in c) return !!pinA === !!c.pinned;
+  if('scenarios' in c) return scenarios.length >= c.scenarios;
+  if('scenarioShown' in c) return !!scenarios[c.scenarioShown] && scenarioShown(scenarios[c.scenarioShown]);
+  return false;
+}
+function stepDone(step){ return !!(step.done && step.done.length && step.done.every(checkPasses)); }
+
+// A step moves on once its checks hold — but one already done when it is shown (Back) waits for
+// Next, until it is undone again.
+function tutorialTick(){
+  if(!practice) return;
+  const t = practice.tutorial, step = t.steps[practice.step];
+  const done = stepDone(step);
+  if(!practice.armed){ if(!done && step.done && step.done.length){ practice.armed = true; renderTutorialCard(); } }
+  else if(done && practice.step < t.steps.length - 1){ practice.step++; renderTutorialCard(); return; }
+  showTutorialPointer(step && step.point);
+}
+
+// ---- the coach card ----
+function renderTutorialCard(){
+  let card = $('tutorialCard');
+  if(!card){ card = make('div', 'tutorial-card'); card.id = 'tutorialCard'; card.setAttribute('role', 'dialog'); card.setAttribute('aria-label', 'Tutorial'); document.body.appendChild(card); }
+  const t = practice.tutorial, i = practice.step, step = t.steps[i], last = i === t.steps.length - 1;
+  card.dataset.tutorial = t.id;
+  card.dataset.step = step.id;
+  const checks = !!(step.done && step.done.length);
+  if(practice.shown !== i){ practice.shown = i; practice.armed = checks && !stepDone(step); }
+  card.textContent = '';
+  const head = make('div', 'tutorial-head');
+  head.append(make('span', 'tutorial-title', '🎓 ' + t.title), make('span', 'tutorial-count', 'Step ' + (i + 1) + ' of ' + t.steps.length));
+  const bar = make('div', 'tutorial-progress');
+  const fill = make('div', 'tutorial-progress-fill');
+  fill.style.width = Math.round((i + 1) / t.steps.length * 100) + '%';
+  bar.appendChild(fill);
+  card.append(head, bar, make('p', 'tutorial-text', step.text));
+  if(practice.armed && !last) card.appendChild(make('p', 'tutorial-waiting', 'Moves on when you have done it.'));
+  if(i === 0) card.appendChild(make('p', 'tutorial-waiting', 'Practice: nothing here is kept, and your own model comes back at the end.'));
+  const actions = make('div', 'tutorial-actions');
+  const btn = (label, cls, fn) => { const b = make('button', cls, label); b.type = 'button'; b.addEventListener('click', fn); actions.appendChild(b); return b; };
+  btn('Exit', 'tutorial-exit', () => stopTutorial(true));
+  if(i > 0) btn('Back', 'tutorial-back', () => { practice.step--; renderTutorialCard(); });
+  if(last) btn('Finish', 'primary tutorial-finish', () => stopTutorial(true));
+  else if(!practice.armed) btn('Next', 'primary tutorial-next', () => { practice.step++; renderTutorialCard(); });
+  card.appendChild(actions);
+  showTutorialPointer(step.point);
+}
+
+function showTutorialPointer(selector){
+  const target = selector ? document.querySelector(selector) : null;
+  if(!target || !target.getClientRects().length){ hideTutorialPointer(); return; }
+  let ring = $('tutorialPointer');
+  if(!ring){ ring = make('div', 'tutorial-pointer'); ring.id = 'tutorialPointer'; document.body.appendChild(ring); }
+  const r = target.getBoundingClientRect();
+  ring.style.left = (r.left - 4) + 'px';
+  ring.style.top = (r.top - 4) + 'px';
+  ring.style.width = (r.width + 8) + 'px';
+  ring.style.height = (r.height + 8) + 'px';
+}
+function hideTutorialPointer(){ const ring = $('tutorialPointer'); if(ring) ring.remove(); }
+
+// ---- where they are found: the top of the Help panel, and the first screen ----
+function renderTutorialList(body, mk){
+  body.appendChild(mk('h3', 'help-group', 'Tutorials'));
+  FMGRAPH_TUTORIALS.forEach(t => {
+    const row = mk('div', 'help-tutorial');
+    row.dataset.tutorial = t.id;
+    const text = mk('div', 'help-command-text');
+    text.appendChild(mk('div', 'help-command-name', '🎓 ' + t.title + ' · ' + t.minutes + ' min'));
+    text.appendChild(mk('div', 'help-command-sentence', t.summary));
+    row.appendChild(text);
+    const go = mk('button', 'help-run help-tutorial-start', '▶');
+    go.type = 'button';
+    go.title = 'Start this tutorial (on a practice copy of the sample model; your own model comes back untouched)';
+    go.setAttribute('aria-label', 'Start the tutorial ' + t.title);
+    go.addEventListener('click', () => { startTutorial(t.id); });
+    row.appendChild(go);
+    body.appendChild(row);
+  });
+}
+$('btnTutorials').addEventListener('click', () => { help.open(); });
 // ============================================================
 // window.fmGraph: fmGraph from a script (and the tests). Rectangles and canvases are named
 // as in fmIDE: a rectangle by its name or '#id', a canvas by its name or id; periods count
@@ -6869,6 +7151,12 @@ window.fmGraph = Object.freeze({
   updateScenario: (name) => updateScenario(findScenario(name)),
   moveScenario: (name, index) => moveScenario(findScenario(name), Number(index)),
   deleteScenario: (name) => deleteScenario(findScenario(name)),
+  // G6: tutorials. startTutorial(id) → Promise<boolean>; tutorial() → { id, step (its id), index } or null;
+  // stopTutorial() puts the model from before back.
+  tutorials: () => FMGRAPH_TUTORIALS.map(t => ({ id: t.id, title: t.title, steps: t.steps.length })),
+  startTutorial: (id) => startTutorial(String(id)),
+  tutorial: () => practice ? { id: practice.tutorial.id, step: practice.tutorial.steps[practice.step].id, index: practice.step } : null,
+  stopTutorial: () => stopTutorial(true),
   // G5c: the template tried from fmIDE's Browse Library, { name, pack }, or null.
   trying: () => trying ? { name: trying.name, pack: trying.pack } : null,
   // movers(n): the rectangles the sliders change most (default 8), against the model's own numbers.

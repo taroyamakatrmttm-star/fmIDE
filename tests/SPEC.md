@@ -790,6 +790,13 @@ fmGraph with its sample model (step 15, scenarios S2); sc01 Price 13, sc02 Price
 - No scenarios and no outputs said; a file naming a scenario that is gone ("No scenario called “Gone” any more."); a markup name as text; nothing run.
 - Export for a template leaves it out (version 2, "left out"); `tests/fixtures/formats/board-v3.json` imports with its scenario.
 
+### 58. fmGraph's tutorials (`tests/58-fmgraph-tutorials.spec.js`; part of `npm run test:fmgraph`)
+fmGraph (step 15, G6); each tutorial played with real clicks and typing.
+- From the first screen (🎓 Learn with a tutorial): Help lists the four, with their minutes. Sliders and bars: the practice board has the two sliders and nothing else; Next; + Bar; Profit chosen; 12 typed for Price; Reset all; Back shows "reset" and waits for Next; Finish: the first screen, nothing stored for boards.
+- Charts, with the sample open and a board "Mine" added: + Chart, Waterfall, three steps (Revenue start, Cost of sales subtract, Gross profit total) with ✓, Price 14; Finish: the boards "Board" and "Mine" back, storage unchanged.
+- Trace and compare: 🔍, Price 12, Pin as A, Volume 10, Unpin. Scenarios: Price 12, save, Volume 10, save, ▶ on sc01, + Chart as a scenario waterfall of Profit (four bars).
+- Exit puts the sample back; a model opened during a tutorial ends it. With the model from fmIDE: changes in practice don't mark fmIDE's document; Exit shows fmIDE's model again.
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.

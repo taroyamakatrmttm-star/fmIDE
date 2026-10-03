@@ -88,7 +88,7 @@ Each slider position needs the whole model worked out again (`evaluateModel` on 
 | **G4** ✅ (G4a, G4b) | Exploring: G4a Trace and Biggest movers; G4b the A/B snapshot and animation |
 | **G5** ✅ (G5a, G5b, G5c) | Sharing: G5a `attachments.graph` on templates (system templates too), packs and the checker, fmGraph's Export for a template…; G5b fmGraph using template boards and Attach to template…; G5c Try in fmGraph from Browse Library |
 | **Scenarios** (after G5, before G6; the owner's request, 3 October 2026) | Named scenarios instead of only A (as many as wanted, named by the person, e.g. sc01…sc05) to switch between, and a scenario waterfall: for chosen outputs in one period, the change from the start through each scenario in turn. In two phases: S1 named scenarios ✅; S2 the scenario waterfall ✅. |
-| **G6** | Tutorials |
+| **G6** ✅ | Tutorials |
 
 Later ideas, not in this step: blocks and vintages, line charts, a tornado chart (which inputs matter most), goal seek ("what price keeps cash above zero?"), the live link with fmIDE, phones.
 
@@ -196,6 +196,15 @@ The owner asked (3 October 2026) to go ahead with the recommended choices withou
 - **Edit chart**: the period, the outputs (+ Output, ↑ ↓ ×) and a tick per scenario (all ticked: `use` null, so new scenarios join). Switching kind keeps the rectangles (calculated ones first, six at most).
 - **Kept**: the board file version 4 (the chart's `outputs`, by canvas id, node id and name, and `scenarios`, the names ticked, absent for all). A template's board leaves it out and counts it (templates carry no scenarios), so the template form stays version 2. `fmGraph.addChart({ layout: 'scenarios', … })`, `fmGraph.chart(id)`.
 - Tests: group 57 (`tests/57-fmgraph-scenario-waterfall.spec.js`; sample `tests/fixtures/formats/board-v3.json`).
+
+### G6 (tutorials)
+
+Chosen under the owner's instruction to go ahead (3 October 2026): fmGraph's own tutorials, inside fmGraph, on a practice copy of the sample model, like fmIDE's (H3) in how they look and behave.
+
+- **Four tutorials** (`src/help/fmgraph-tutorials.js`, CC BY 4.0, data only): Sliders and bars, Charts (a waterfall from Revenue to Gross profit, with its check), Trace and compare (🔍, Pin as A, Unpin), and Scenarios (two scenarios, ▶, a scenario waterfall of Profit). Each step `{ id, text, point, done }`; the checks are declarative (`bar`, `slider` + `moved`, `reset`, `chart` + `steps` / `outputs`, `traced`, `pinned`, `scenarios`, `scenarioShown`), never code.
+- **The engine** (`07b-tutorials.js`): listed at the top of the Help panel (`homeTop`, `renderTutorialList`) and from the first screen (🎓 Learn with a tutorial). `startTutorial` saves the open model's boards, keeps what to put back (`lastOpened`: the text opened and its templates, its boards then from this browser; or fmIDE, asked again), and opens the sample as a practice copy (`practice` option: `practiceStart` — its starting board, nothing read from or kept in the browser, not linked to fmIDE). The coach card `#tutorialCard` (`data-tutorial`, `data-step`) and the ring `#tutorialPointer`; a step moves on by itself once its checks hold (`tutorialTick`, every 300 ms), and one already done when shown (Back) waits for Next. Finish or Exit puts the model back (`stopTutorial(true)`), or the first screen when there was none; another model opened ends it. `fmGraph.tutorials`, `startTutorial`, `tutorial`, `stopTutorial`.
+- Not done here: videos of these tutorials (fmIDE's recorder, H4b, plays fmIDE's), and fmGraph's help on the site (`/help` is fmIDE's and ExcelExporter's).
+- Tests: group 58 (`tests/58-fmgraph-tutorials.spec.js`): each tutorial played through with real clicks and typing.
 
 ## Risks
 
