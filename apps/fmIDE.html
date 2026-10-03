@@ -354,6 +354,8 @@
   .macro-foot .status.err{ color:#b91c1c; }
   .macro-foot .status.ok{ color:#047857; }
   .macro-foot .status.warn{ color:#b45309; }
+  .mrow .mvar{ color:#b45309; margin-left:6px; flex:none; }
+  .macro-props .var-missing-note{ color:#b45309; }
   .macro-ref-help{ font-size:11px; color:#6b7280; line-height:1.45; background:#f8fafc; border-radius:6px; padding:6px 8px; margin-top:8px; }
   .macro-ref-help code{ font-family:Menlo,Consolas,monospace; color:#4338ca; }
   .macro-ref-help .macro-ref-more{ margin-top:6px; }
@@ -2095,7 +2097,8 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
           '+ Comment: a note in the list. It does nothing.',
         ] },
         { p: 'Move a step into the group or loop above it with → (Alt+→) and out again with ← (Alt+←), or drag it onto the middle of a group. ↑ and ↓ move it, ⧉ duplicates it, ⊘ switches it off without deleting it, 🗑 deletes it. Every step can carry a Note.' },
-        { p: '▶ Run selected step runs just that step, to try it; ▶ Run macro runs them all.' },
+        { p: '▶ Run selected step runs just that step, to try it, and selects the next one, so pressing it again steps through the macro. The variables the steps already run saved are kept for the next step, as in a whole run, until you close the Macro Builder or choose another macro. ▶ Run macro runs them all.' },
+        { p: 'A step marked ⚠ in the list reads a variable that no step before it saves — usually because the step that saved it was deleted or changed. Point it at a variable an earlier step saves before you run the macro.' },
         { tip: 'Record first, then open the Macro Builder to tidy up: the recorder writes finished steps that you can change, put in loops or switch off.' },
         { see: ['macros', 'macro-variables', 'macro-references'] },
       ] },
@@ -2147,6 +2150,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
           'A node a template made with no name of its own, such as an operator, is referred to by its place on that canvas (@all[3]).',
         ] },
         { p: 'Where it can\'t be sure, the recorder puts a ⚠ note on the step and says so when you stop recording. A note means: a node of this model referred to by its id (another model won\'t have it); a node made while recording that no step saved; an automatic plug alias (it gets a new id whenever plugs are worked out); a template\'s node referred to by its place (check it if the template changes); or a Paste whose Copy wasn\'t recorded (it pastes whatever was copied last).' },
+        { p: 'Undo while recording takes back the steps recorded since the change it undoes, and only those: undoing something that was never a step (a box picked up and put back where it was) leaves the recorded steps alone.' },
         { p: 'Other things that can be different when it runs:' },
         { steps: [
           'The selection: a macro using @sel needs the nodes selected first.',
@@ -2167,6 +2171,8 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
           'There is no canvas called "…" / no rectangle named "…": it was renamed or deleted, or the macro is running on another canvas than you expected.',
           'Nothing was selected when the macro started: select the nodes it should work on, then run it again.',
           '$t1 holds 2 canvases or nodes — say which one: write $t1[0], $t1[1]….',
+          'No step in this macro saves $t2: the step that saved it was deleted or changed (or lost while recording — see Macros that work every time). The message lists the variables the steps do save; point the step at one of them. The Macro Builder marks such a step with ⚠ before you run it.',
+          '$t1 is saved by an earlier step that hasn\'t run in this step-by-step run: you started ▶ Run selected step in the middle. Select the first step and step through from there, or use ▶ Run macro.',
           'Variable $x has no value yet: the step that sets it has not run — it is switched off, comes later, or is inside a loop that ran no times.',
           'More than one template family is named "…": write the family\'s ID (listed in the message) instead of the name, or rename one in Templates.',
         ] },
@@ -2325,6 +2331,22 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // entry: ids, dates in order, commands and topics that exist.
   // **A change people will notice adds its entry here in the same pull request.**
   const WHATS_NEW = [
+
+    { id: 'macro-variables-kept', date: '2026-10-03', title: 'Stepping through a macro keeps its variables',
+      summary: 'Run selected step remembers what earlier steps saved; a step reading a variable nothing saves is marked.',
+      what: [
+        'In {cmd:openMacros}, ▶ Run selected step now keeps the variables the steps already run saved ($t1, $r3…), so stepping through a macro works like running it. Before, every step started with none, and the second step stopped with "Variable $t1 has no value yet".',
+        'A step that reads a variable no step before it saves is marked ⚠ in the list, with the reason when you point at it — so a step deleted or changed since is found before the macro runs. Running it says which variables the steps do save.',
+        'Undo while recording takes back only the steps recorded since the change it undoes. Before, undoing something that was never a step (a box picked up and put back) could take an unrelated step, such as an Insert Template, with it.',
+      ],
+      why: 'A recorded macro could lose its Insert Template step to an Undo, and stepping through any macro with variables stopped at its second step.',
+      how: [
+        'Open {cmd:openMacros} and choose a macro.',
+        'Select its first step and press ▶ Run selected step, then again for each next step.',
+        'Fix any step marked ⚠ by pointing it at a variable an earlier step saves.',
+      ],
+      notes: ['A macro recorded before this that lost a step keeps the ⚠ until you point the step at a variable that exists, or record it again.'],
+      see: ['macro-steps', 'macro-errors'] },
 
     { id: 'macros-that-hold', date: '2026-10-03', title: 'Macros that keep working, and help to write them',
       summary: 'A canvas a template adds is saved for later steps; ids you can see; Copy Reference; six help topics on macros.',
@@ -4747,12 +4769,22 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     return JSON.stringify({ canvases, activeCanvasId, nextId, nextCanvasId, periods, currentPeriod, modelFunctions });
   }
 
+  // Every undo point gets a number that only grows (the list itself is capped), so the macro
+  // recorder can tell which recorded steps an undo takes back. An entry is the snapshot's text
+  // as a String object, so it can be a WeakMap key; restore() reads it as text all the same.
+  let historySeq = 0;
+  const historySeqOf = new WeakMap();
+  function historyEntry(){
+    const entry = new String(snapshot());
+    historySeqOf.set(entry, ++historySeq);
+    return entry;
+  }
   function pushHistory(){
     invalidateIR(); // the model is about to change
     // Inside a transaction (one API action, or a whole macro run) only the first push
     // records a snapshot, so the entire transaction undoes as a single step.
     if(tx.depth > 0){ if(tx.pushed) return; tx.pushed = true; }
-    history.push(snapshot());
+    history.push(historyEntry());
     if(history.length > MAX_HISTORY) history.shift();
     future = [];
     updateHistoryButtons();
@@ -4788,7 +4820,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   function undo(){
     if(tx.depth > 0) fail('Undo cannot run inside a macro or another action.');
     if(history.length === 0) return;
-    if(recorder.active) recorder.onUndo();
+    if(recorder.active) recorder.onUndo(historySeqOf.get(history[history.length - 1]));
     future.push(snapshot());
     restore(history.pop());
     clearSelection();
@@ -4802,7 +4834,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     if(tx.depth > 0) fail('Redo cannot run inside a macro or another action.');
     if(future.length === 0) return;
     if(recorder.active) toast('Redo is not captured by the macro recorder.');
-    history.push(snapshot());
+    history.push(historyEntry());
     restore(future.pop());
     clearSelection();
     render();
@@ -16282,6 +16314,18 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     return text;
   }
 
+  // Why a variable has no value, in a macro: no step saves it (deleted or changed since), or
+  // the step that does hasn't run (stepping from the middle, switched off, a loop run no times).
+  function unsetVariableText(name){
+    const m = runCtx && runCtx.macro;
+    if(m && Array.isArray(m.steps) && !macroSavedVariables(m).has(name)){
+      const kept = [...macroSavedVariables(m)].map(v => '$' + v);
+      return `No step in this macro saves $${name}, so it has no value — the step that saved it was deleted or changed since. Use a variable a step saves${kept.length ? ' (' + kept.join(', ') + ')' : ''}, or add the step back.`;
+    }
+    if(runCtx && runCtx.stepping) return `$${name} is saved by an earlier step that hasn't run in this step-by-step run. Select the macro's first step and step through from there, or use ▶ Run macro.`;
+    return `Variable $${name} has no value yet: the step that saves it hasn't run — it is switched off, comes later, or is inside a loop that ran no times.`;
+  }
+
   function lookupVar(token){
     const m = /^\$([A-Za-z_]\w*)(?:\[(\d+)\])?$/.exec(String(token).trim());
     if(!m) fail(`"${token}" is not a valid variable reference.`);
@@ -16291,7 +16335,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     if(Object.prototype.hasOwnProperty.call(vars, name)) v = vars[name];
     else if(name === 'periods') v = periods.length;
     else if(name === 'period') v = currentPeriod + 1;
-    else fail(`Variable $${name} has no value yet.`);
+    else fail(unsetVariableText(name));
     if(m[2] !== undefined){
       if(!Array.isArray(v)) fail(`$${name} is not a list, so $${name}[${m[2]}] is not valid.`);
       v = v[+m[2]];
@@ -18896,6 +18940,54 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // Whether an action makes something a later step may want: the Macro Builder names its
   // variable by itself, as the recorder does.
   function makesSomething(def){ return !!def && ['node', 'nodes', 'canvas', 'made'].includes(def.returns); }
+  // The variables a macro's steps save: Save result as, Set var, and the loops' own.
+  function macroSavedVariables(m){
+    const out = new Set();
+    walkSteps(m.steps, st => {
+      if(st.kind === 'action' && st.assign) out.add(st.assign);
+      if(st.kind === 'set') out.add(st.var || 'x');
+      if(st.kind === 'repeat') out.add(st.var || 'i');
+      if(st.kind === 'forEach'){ out.add(st.var || 'item'); out.add((st.var || 'item') + 'Index'); }
+    });
+    return out;
+  }
+  // The variables a piece of step text reads: $name, $name[0], and the names inside ${…}.
+  function variablesReadIn(text){
+    const out = new Set();
+    String(text).replace(/\$\{([^}]+)\}/g, (all, inner) => {
+      inner.replace(/\$?\b([A-Za-z_]\w*)\b(?!\s*\()/g, (x, n) => { out.add(n); return x; });
+      return '';
+    }).replace(/\$([A-Za-z_]\w*)/g, (x, n) => { out.add(n); return x; });
+    return out;
+  }
+  // Steps that read a variable no step before them saves (switched-off steps left out), by
+  // step id: the Macro Builder marks them before the macro is run.
+  function macroVariableProblems(m){
+    const out = new Map();
+    const known = new Set(['periods', 'period']);
+    const visit = steps => (steps || []).forEach(st => {
+      if(!st || st.disabled) return;
+      const used = new Set();
+      const add = v => { if(typeof v === 'string') variablesReadIn(v).forEach(n => used.add(n)); else if(Array.isArray(v)) v.forEach(add); };
+      if(st.kind === 'action') Object.keys(st.args || {}).forEach(k => add(st.args[k]));
+      if(st.kind === 'repeat') add(st.count);
+      if(st.kind === 'forEach') add(st.nodes);
+      if(st.kind === 'set') add(st.value);
+      const missing = [...used].filter(n => !known.has(n));
+      if(missing.length) out.set(st.id, missing);
+      if(st.kind === 'repeat') known.add(st.var || 'i');
+      if(st.kind === 'forEach'){ known.add(st.var || 'item'); known.add((st.var || 'item') + 'Index'); }
+      if(CONTAINER_KINDS.has(st.kind)) visit(st.children);
+      if(st.kind === 'action' && st.assign) known.add(st.assign);
+      if(st.kind === 'set') known.add(st.var || 'x');
+    });
+    visit(m.steps);
+    return out;
+  }
+  function variableProblemText(names){
+    return `Uses ${names.map(n => '$' + n).join(', ')}, which no step before it saves — the step that saved ${names.length === 1 ? 'it' : 'them'} may have been deleted or changed. Point this step at a variable an earlier step saves.`;
+  }
+
   // A note the recorder puts on a step whose reference may not hold when the macro runs.
   const RECORDER_NOTE = '⚠ ';
   function nextVarName(m, letter){
@@ -18929,7 +19021,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   const recorder = {
     active:false, steps:[], created:new Map(), createdCanvases:new Map(), counter:0,
     selRefs:false, initialSel:[], selCanvasId:null, origin:null, macroId:null, isNewMacro:false, histAtStart:0,
-    startNodeIds:new Set(), startCanvasIds:new Set(), notes:[],
+    startNodeIds:new Set(), startCanvasIds:new Set(), notes:[], startSeq:0, stepSeq:new Map(),
 
     refOf(n){
       if(this.created.has(n.id)) return this.created.get(n.id);
@@ -19007,9 +19099,11 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       if(this.coalesce(step)){
         const last = this.steps[this.steps.length - 1];
         if(noteText && last && !(last.comment || '').includes(noteText)) last.comment = last.comment ? last.comment + ' ' + noteText : noteText;
+        if(last) this.stepSeq.set(last.id, historySeq);
       } else {
         if(noteText) step.comment = noteText;
         this.steps.push(step);
+        this.stepSeq.set(step.id, historySeq);
       }
       refreshCommandStates();
     },
@@ -19050,11 +19144,22 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       if(step.action === 'setText' && last.action === 'setText' && L.node === A.node){ L.text = A.text; return true; }
       return false;
     },
-    onUndo(){
-      if(history.length <= this.histAtStart || !this.steps.length) return;
-      const isMut = s => s.kind === 'action' && ACTIONS[s.action] && ACTIONS[s.action].mutates !== false;
-      while(this.steps.length && !isMut(this.steps[this.steps.length - 1])) this.steps.pop();
-      if(this.steps.length) this.steps.pop();
+    // `seq`: the number of the undo point being taken back (03). The steps recorded since it
+    // was made go — exactly those: a change that was never recorded (a node dragged back to
+    // where it was) takes no step with it.
+    onUndo(seq){
+      if(!this.steps.length) return;
+      if(typeof seq !== 'number'){
+        if(history.length <= this.histAtStart) return;
+        const isMut = s => s.kind === 'action' && ACTIONS[s.action] && ACTIONS[s.action].mutates !== false;
+        while(this.steps.length && !isMut(this.steps[this.steps.length - 1])) this.steps.pop();
+        if(this.steps.length) this.steps.pop();
+      } else {
+        if(seq <= this.startSeq) return;
+        const before = this.steps.length;
+        while(this.steps.length && (this.stepSeq.get(this.steps[this.steps.length - 1].id) || 0) >= seq) this.steps.pop();
+        if(this.steps.length === before){ refreshCommandStates(); return; }
+      }
       toast('Undo — the last recorded step was removed.');
       refreshCommandStates();
     },
@@ -19091,6 +19196,8 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     recorder.selCanvasId = activeCanvasId;
     recorder.origin = m.relative ? computeOrigin() : null;
     recorder.histAtStart = history.length;
+    recorder.startSeq = historySeq;
+    recorder.stepSeq = new Map();
     recorder.active = true;
     renderRibbon();
     toast('Recording — work on the canvas as usual. Click the red pill to stop.', 3500);
@@ -19170,10 +19277,12 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     }
   }
 
-  function executeMacro(m, onlySteps){
+  // `vars`: the variables to start from (stepping through a macro in the Macro Builder keeps
+  // them from one step to the next); a run of the whole macro starts with none.
+  function executeMacro(m, onlySteps, vars){
     if(macroDepth >= 16) fail('Macros are nested too deeply — is a macro running itself?');
     const prev = runCtx;
-    runCtx = { vars: {}, startSelection: prev ? prev.startSelection : Array.from(selectedNodeIds), origin: m.relative ? computeOrigin() : null, macro: m };
+    runCtx = { vars: vars || {}, startSelection: prev ? prev.startSelection : Array.from(selectedNodeIds), origin: m.relative ? computeOrigin() : null, macro: m, stepping: !!onlySteps };
     macroDepth++;
     try{ execSteps(onlySteps || m.steps); }
     finally{ macroDepth--; runCtx = prev; }
@@ -19184,15 +19293,19 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     params:[ P('macro','macro') ],
     run(a){ executeMacro(a.macro); } });
 
-  function runMacroInteractive(id, onlyStepIds){
+  // `stepVars`: with onlyStepIds, the variables the steps run before left (the Macro Builder's
+  // step by step); they take what these steps save only if the steps run.
+  function runMacroInteractive(id, onlyStepIds, stepVars){
     const m = MACROS.find(x => x.id === id);
     if(!m) return false;
     lastRunMacroId = id;
     try{
       if(onlyStepIds){
         const steps = onlyStepIds.map(sid => { const f = findStep(m.steps, sid); return f && f.step; }).filter(Boolean);
+        const vars = Object.assign({}, stepVars || {});
         apiDepth++;
-        try{ runBatch(() => executeMacro(m, steps)); } finally{ apiDepth--; }
+        try{ runBatch(() => executeMacro(m, steps, vars)); } finally{ apiDepth--; }
+        if(stepVars) Object.assign(stepVars, vars);
       } else {
         callAction('runMacro', { macro: m });
       }
@@ -19249,7 +19362,8 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // =====================================================================================
   // ---------- Macro Builder UI ----------
   // =====================================================================================
-  const mb = { overlay:null, macroId:null, selStepId:null, errorStepId:null, collapsed:new Set(), els:{}, dragId:null };
+  // stepVars: the variables ▶ Run selected step has left so far, for the macro stepVarsFor.
+  const mb = { overlay:null, macroId:null, selStepId:null, errorStepId:null, collapsed:new Set(), els:{}, dragId:null, stepVars:null, stepVarsFor:null };
   function mbMacro(){ return MACROS.find(m => m.id === mb.macroId) || null; }
   function mbSetStatus(text, kind){
     const s = mb.els.status;
@@ -19300,6 +19414,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     if(!mb.overlay) return;
     mb.overlay.remove();
     mb.overlay = null;
+    mb.stepVars = null; mb.stepVarsFor = null;
     mb.els = {};
     syncMacroCommands();
     if(!silent) saveWorkspace();
@@ -19507,7 +19622,22 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       });
     }
     rows(m.steps, 0);
+    markVariableProblems();
     tree.scrollTop = scroll;
+  }
+  // ⚠ on each step that reads a variable no step before it saves (macroVariableProblems).
+  function markVariableProblems(){
+    const tree = mb.els.tree, m = mbMacro();
+    if(!tree || !m) return;
+    const problems = macroVariableProblems(m);
+    tree.querySelectorAll('.mrow').forEach(row => {
+      const names = problems.get(row.dataset.id);
+      row.classList.toggle('var-missing', !!names);
+      let mark = row.querySelector('.mvar');
+      if(names && !mark){ mark = el('span', 'mvar', '⚠'); row.appendChild(mark); }
+      if(!names && mark) mark.remove();
+      if(names) mark.title = variableProblemText(names);
+    });
   }
 
   function stepSummaryDom(st){
@@ -19540,6 +19670,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     if(!tree) return;
     const row = tree.querySelector(`.mrow[data-id="${st.id}"]`);
     if(row){ const old = row.querySelector('.msum'); if(old) old.replaceWith(stepSummaryDom(st)); row.classList.toggle('disabled', !!st.disabled); }
+    markVariableProblems();
   }
 
   function renderMBProps(){
@@ -19555,6 +19686,8 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       return;
     }
     const st = f.step;
+    const missing = macroVariableProblems(m).get(st.id);
+    if(missing) props.appendChild(el('p', 'pdesc var-missing-note', '⚠ ' + variableProblemText(missing)));
     const changed = () => { refreshMBRow(st); mbChanged(); mb.errorStepId = null; };
     const row = (label, input) => { const r = el('div', 'pform-row'); r.appendChild(el('label', '', label)); r.appendChild(input); props.appendChild(r); return input; };
     const textIn = (val, ph) => { const i = el('input'); i.type = 'text'; i.value = val == null ? '' : String(val); if(ph) i.placeholder = ph; i.addEventListener('keydown', ev => ev.stopPropagation()); return i; };
@@ -19800,7 +19933,9 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       if(!mb.selStepId){ mbSetStatus('Select a step first.', 'err'); return; }
       mb.errorStepId = null;
       const ranId = mb.selStepId;
-      if(runMacroInteractive(m.id, [ranId])){
+      // The variables the steps already run saved stay for the next one, as in a whole run.
+      if(mb.stepVarsFor !== m.id){ mb.stepVars = {}; mb.stepVarsFor = m.id; }
+      if(runMacroInteractive(m.id, [ranId], mb.stepVars)){
         // Move on to the step after it (and after anything inside it), so the next click runs that.
         const next = mbNextStepAfter(m.steps, ranId);
         if(next) mb.selStepId = next.id;
@@ -19814,6 +19949,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     runBtn.disabled = !m;
     runBtn.addEventListener('click', () => {
       mb.errorStepId = null;
+      mb.stepVars = null; mb.stepVarsFor = null;
       if(runMacroInteractive(m.id)){ renderMBTree(); mbSetStatus(`Ran "${m.name}" — ${shortcutBindings.undo ? prettyCombo(shortcutBindings.undo) : 'Undo'} undoes the whole run.`, 'ok'); }
     });
     const closeBtn = el('button', 'mbtn', 'Close');

@@ -47,6 +47,54 @@
   // Whether an action makes something a later step may want: the Macro Builder names its
   // variable by itself, as the recorder does.
   function makesSomething(def){ return !!def && ['node', 'nodes', 'canvas', 'made'].includes(def.returns); }
+  // The variables a macro's steps save: Save result as, Set var, and the loops' own.
+  function macroSavedVariables(m){
+    const out = new Set();
+    walkSteps(m.steps, st => {
+      if(st.kind === 'action' && st.assign) out.add(st.assign);
+      if(st.kind === 'set') out.add(st.var || 'x');
+      if(st.kind === 'repeat') out.add(st.var || 'i');
+      if(st.kind === 'forEach'){ out.add(st.var || 'item'); out.add((st.var || 'item') + 'Index'); }
+    });
+    return out;
+  }
+  // The variables a piece of step text reads: $name, $name[0], and the names inside ${…}.
+  function variablesReadIn(text){
+    const out = new Set();
+    String(text).replace(/\$\{([^}]+)\}/g, (all, inner) => {
+      inner.replace(/\$?\b([A-Za-z_]\w*)\b(?!\s*\()/g, (x, n) => { out.add(n); return x; });
+      return '';
+    }).replace(/\$([A-Za-z_]\w*)/g, (x, n) => { out.add(n); return x; });
+    return out;
+  }
+  // Steps that read a variable no step before them saves (switched-off steps left out), by
+  // step id: the Macro Builder marks them before the macro is run.
+  function macroVariableProblems(m){
+    const out = new Map();
+    const known = new Set(['periods', 'period']);
+    const visit = steps => (steps || []).forEach(st => {
+      if(!st || st.disabled) return;
+      const used = new Set();
+      const add = v => { if(typeof v === 'string') variablesReadIn(v).forEach(n => used.add(n)); else if(Array.isArray(v)) v.forEach(add); };
+      if(st.kind === 'action') Object.keys(st.args || {}).forEach(k => add(st.args[k]));
+      if(st.kind === 'repeat') add(st.count);
+      if(st.kind === 'forEach') add(st.nodes);
+      if(st.kind === 'set') add(st.value);
+      const missing = [...used].filter(n => !known.has(n));
+      if(missing.length) out.set(st.id, missing);
+      if(st.kind === 'repeat') known.add(st.var || 'i');
+      if(st.kind === 'forEach'){ known.add(st.var || 'item'); known.add((st.var || 'item') + 'Index'); }
+      if(CONTAINER_KINDS.has(st.kind)) visit(st.children);
+      if(st.kind === 'action' && st.assign) known.add(st.assign);
+      if(st.kind === 'set') known.add(st.var || 'x');
+    });
+    visit(m.steps);
+    return out;
+  }
+  function variableProblemText(names){
+    return `Uses ${names.map(n => '$' + n).join(', ')}, which no step before it saves — the step that saved ${names.length === 1 ? 'it' : 'them'} may have been deleted or changed. Point this step at a variable an earlier step saves.`;
+  }
+
   // A note the recorder puts on a step whose reference may not hold when the macro runs.
   const RECORDER_NOTE = '⚠ ';
   function nextVarName(m, letter){
@@ -80,7 +128,7 @@
   const recorder = {
     active:false, steps:[], created:new Map(), createdCanvases:new Map(), counter:0,
     selRefs:false, initialSel:[], selCanvasId:null, origin:null, macroId:null, isNewMacro:false, histAtStart:0,
-    startNodeIds:new Set(), startCanvasIds:new Set(), notes:[],
+    startNodeIds:new Set(), startCanvasIds:new Set(), notes:[], startSeq:0, stepSeq:new Map(),
 
     refOf(n){
       if(this.created.has(n.id)) return this.created.get(n.id);
@@ -158,9 +206,11 @@
       if(this.coalesce(step)){
         const last = this.steps[this.steps.length - 1];
         if(noteText && last && !(last.comment || '').includes(noteText)) last.comment = last.comment ? last.comment + ' ' + noteText : noteText;
+        if(last) this.stepSeq.set(last.id, historySeq);
       } else {
         if(noteText) step.comment = noteText;
         this.steps.push(step);
+        this.stepSeq.set(step.id, historySeq);
       }
       refreshCommandStates();
     },
@@ -201,11 +251,22 @@
       if(step.action === 'setText' && last.action === 'setText' && L.node === A.node){ L.text = A.text; return true; }
       return false;
     },
-    onUndo(){
-      if(history.length <= this.histAtStart || !this.steps.length) return;
-      const isMut = s => s.kind === 'action' && ACTIONS[s.action] && ACTIONS[s.action].mutates !== false;
-      while(this.steps.length && !isMut(this.steps[this.steps.length - 1])) this.steps.pop();
-      if(this.steps.length) this.steps.pop();
+    // `seq`: the number of the undo point being taken back (03). The steps recorded since it
+    // was made go — exactly those: a change that was never recorded (a node dragged back to
+    // where it was) takes no step with it.
+    onUndo(seq){
+      if(!this.steps.length) return;
+      if(typeof seq !== 'number'){
+        if(history.length <= this.histAtStart) return;
+        const isMut = s => s.kind === 'action' && ACTIONS[s.action] && ACTIONS[s.action].mutates !== false;
+        while(this.steps.length && !isMut(this.steps[this.steps.length - 1])) this.steps.pop();
+        if(this.steps.length) this.steps.pop();
+      } else {
+        if(seq <= this.startSeq) return;
+        const before = this.steps.length;
+        while(this.steps.length && (this.stepSeq.get(this.steps[this.steps.length - 1].id) || 0) >= seq) this.steps.pop();
+        if(this.steps.length === before){ refreshCommandStates(); return; }
+      }
       toast('Undo — the last recorded step was removed.');
       refreshCommandStates();
     },
@@ -242,6 +303,8 @@
     recorder.selCanvasId = activeCanvasId;
     recorder.origin = m.relative ? computeOrigin() : null;
     recorder.histAtStart = history.length;
+    recorder.startSeq = historySeq;
+    recorder.stepSeq = new Map();
     recorder.active = true;
     renderRibbon();
     toast('Recording — work on the canvas as usual. Click the red pill to stop.', 3500);
@@ -321,10 +384,12 @@
     }
   }
 
-  function executeMacro(m, onlySteps){
+  // `vars`: the variables to start from (stepping through a macro in the Macro Builder keeps
+  // them from one step to the next); a run of the whole macro starts with none.
+  function executeMacro(m, onlySteps, vars){
     if(macroDepth >= 16) fail('Macros are nested too deeply — is a macro running itself?');
     const prev = runCtx;
-    runCtx = { vars: {}, startSelection: prev ? prev.startSelection : Array.from(selectedNodeIds), origin: m.relative ? computeOrigin() : null, macro: m };
+    runCtx = { vars: vars || {}, startSelection: prev ? prev.startSelection : Array.from(selectedNodeIds), origin: m.relative ? computeOrigin() : null, macro: m, stepping: !!onlySteps };
     macroDepth++;
     try{ execSteps(onlySteps || m.steps); }
     finally{ macroDepth--; runCtx = prev; }
@@ -335,15 +400,19 @@
     params:[ P('macro','macro') ],
     run(a){ executeMacro(a.macro); } });
 
-  function runMacroInteractive(id, onlyStepIds){
+  // `stepVars`: with onlyStepIds, the variables the steps run before left (the Macro Builder's
+  // step by step); they take what these steps save only if the steps run.
+  function runMacroInteractive(id, onlyStepIds, stepVars){
     const m = MACROS.find(x => x.id === id);
     if(!m) return false;
     lastRunMacroId = id;
     try{
       if(onlyStepIds){
         const steps = onlyStepIds.map(sid => { const f = findStep(m.steps, sid); return f && f.step; }).filter(Boolean);
+        const vars = Object.assign({}, stepVars || {});
         apiDepth++;
-        try{ runBatch(() => executeMacro(m, steps)); } finally{ apiDepth--; }
+        try{ runBatch(() => executeMacro(m, steps, vars)); } finally{ apiDepth--; }
+        if(stepVars) Object.assign(stepVars, vars);
       } else {
         callAction('runMacro', { macro: m });
       }

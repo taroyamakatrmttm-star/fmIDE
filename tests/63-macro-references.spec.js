@@ -363,3 +363,125 @@ test('a ribbon customised before gets Copy Reference after Run Last Macro, once'
   expect(await load(older, 'older.json')).toEqual([['Mac:openMacros,runLastMacro,copyReference,undo']]);
   expect(await load(Object.assign({}, older, { copyReferenceAdded: true }), 'removed.json')).toEqual([['Mac:openMacros,runLastMacro,undo']]);
 });
+
+// ---------- variables lost between steps, and steps lost while recording ----------
+// A two-canvas system template, as in a macro a person sent: insert it, go to a canvas it made.
+async function importCogsAp(page, testInfo){
+  const file = testInfo.outputPath('cogs-ap.json');
+  fs.writeFileSync(file, JSON.stringify({ version: 10, kind: 'fmIDE-templates', templates: [{
+    name: 'COGS AP', kind: 'system', family: 'fam-cogs-ap', version: 1, note: '', versionId: 'vid-cogs-ap-1',
+    data: { version: 9, kind: 'system', periods: ['P1'], activeCanvasId: 'c1', canvases: [
+      { id: 'c1', name: 'COGS', nodes: [{ id: 'n1', type: 'value', x: 40, y: 40, w: 170, h: 64, text: 'COGS\n5' }], edges: [] },
+      { id: 'c2', name: 'AP', nodes: [{ id: 'n1', type: 'value', x: 40, y: 40, w: 170, h: 64, text: 'Payables\n0' }], edges: [] }] } }] }));
+  await importTemplates(page, file);
+}
+async function importMacros(page, testInfo, macros){
+  const file = testInfo.outputPath('macros-' + macros[0].id + '.json');
+  fs.writeFileSync(file, JSON.stringify({ version: 1, kind: 'fmIDE-macros', macros }));
+  await page.evaluate(() => fm.command('openMacros'));
+  const chooser = page.waitForEvent('filechooser');
+  await builder(page).locator('button', { hasText: '⇧ Import' }).click();
+  await (await chooser).setFiles(file);
+  await expect(builder(page).locator('.macro-foot .status')).toHaveText(/^Imported/);
+  await builder(page).locator('.mitem', { hasText: macros[0].name }).click();
+}
+
+test('Run selected step keeps the variables the steps before it saved', async ({ page }, testInfo) => {
+  await importCogsAp(page, testInfo);
+  await importMacros(page, testInfo, [{ id: 'macStep', name: 'Step through', steps: [
+    { kind: 'action', action: 'insertTemplate', args: { template: 'COGS AP', mode: 'add' }, assign: 't1' },
+    { kind: 'action', action: 'switchCanvas', args: { canvas: '$t1[1]' } },
+    { kind: 'action', action: 'setValue', args: { node: 'Payables', value: '7' } }] }]);
+  const rows = builder(page).locator('.macro-tree .mrow');
+  const runStep = builder(page).locator('.macro-foot button', { hasText: 'Run selected step' });
+  const status = builder(page).locator('.macro-foot .status');
+  await rows.nth(0).click();
+  await runStep.click();
+  await expect(status).toHaveText('Step ran. The next step is selected.');
+  // Before the fix: "Variable $t1 has no value yet."
+  await runStep.click();
+  await expect(status).toHaveText('Step ran. The next step is selected.');
+  await runStep.click();
+  await expect(status).toHaveText('Step ran. It was the last step.');
+  const list = await canvasList(page);
+  expect(list.map(c => c.name)).toEqual(['Canvas 1', 'COGS', 'AP']);
+  expect((await active(page)).id).toBe(list[2].id);
+  expect(await page.evaluate(() => fm.getValue({ node: 'Payables' }))).toBe(7);
+  // Starting in the middle, in a new window: says the earlier step hasn't run.
+  await closeBuilder(page);
+  await page.evaluate(() => fm.command('openMacros'));
+  await builder(page).locator('.mitem', { hasText: 'Step through' }).click();
+  await rows.nth(1).click();
+  await runStep.click();
+  await expect(status).toHaveText('Stopped — nothing was changed. Step "switchCanvas canvas=$t1[1]" — $t1 is saved by an earlier step that hasn\'t run in this step-by-step run. Select the macro\'s first step and step through from there, or use ▶ Run macro.');
+  await closeBuilder(page);
+});
+
+test('Undo while recording takes back only the steps recorded since that change', async ({ page }, testInfo) => {
+  await importCogsAp(page, testInfo);
+  await page.evaluate(() => fm.command('toggleRecord'));
+  await page.locator('.modal-box button.primary', { hasText: 'Start recording' }).click();
+  await page.evaluate(() => fm.insertTemplate('COGS AP', 'add'));
+  // A node picked up and put back where it was: an undo point, but nothing to record.
+  const node = page.locator('#canvas .node').first();
+  const box = await node.boundingBox();
+  const at = { x: box.x + box.width / 2, y: box.y + 10 };
+  await page.mouse.move(at.x, at.y);
+  await page.mouse.down();
+  await page.mouse.move(at.x + 40, at.y + 30, { steps: 4 });
+  await page.mouse.move(at.x, at.y, { steps: 4 });
+  await page.mouse.up();
+  await page.locator('#viewport').click({ position: { x: 900, y: 600 } });
+  await page.keyboard.press('Control+z');
+  // Before the fix this removed the Insert Template step, though its canvases stayed.
+  await page.evaluate(() => fm.switchCanvas(fm.canvases().find(c => c.name === 'AP').id));
+  await page.evaluate(() => fm.command('toggleRecord'));
+  await closeBuilder(page);
+  const macro = await lastMacro(page);
+  expect(macro.steps.map(s => [s.action, s.args, s.assign || null])).toEqual([
+    ['insertTemplate', { template: 'COGS AP', mode: 'add' }, 't1'],
+    ['switchCanvas', { canvas: '$t1[1]' }, null],
+  ]);
+  // An undo of a recorded change still takes its step back.
+  await page.evaluate(() => fm.command('toggleRecord'));
+  await page.locator('.modal-box button.primary', { hasText: 'Start recording' }).click();
+  await page.evaluate(() => fm.createRect({ x: 400, y: 300, name: 'Extra' }));
+  await page.locator('#viewport').click({ position: { x: 900, y: 600 } });
+  await page.keyboard.press('Control+z');
+  await page.evaluate(() => fm.createRect({ x: 400, y: 300, name: 'Kept' }));
+  await page.evaluate(() => fm.command('toggleRecord'));
+  await closeBuilder(page);
+  expect((await lastMacro(page)).steps.map(s => s.args.name)).toEqual(['Kept']);
+});
+
+test('a step reading a variable no step before it saves is marked, and says so when run', async ({ page }, testInfo) => {
+  await importCogsAp(page, testInfo);
+  // As in the macro sent: step 5 reads $t2, which no step saves.
+  await importMacros(page, testInfo, [{ id: 'macLost', name: 'Lost step', steps: [
+    { kind: 'action', action: 'insertTemplate', args: { template: 'COGS AP', mode: 'add' }, assign: 't1' },
+    { kind: 'action', action: 'switchCanvas', args: { canvas: '$t1[0]' } },
+    { kind: 'action', action: 'aliasOf', args: { nodes: ['COGS'], dx: 226, dy: 0 }, assign: 'r3' },
+    { kind: 'action', action: 'cut', args: { nodes: ['$r3[0]'] } },
+    { kind: 'action', action: 'switchCanvas', args: { canvas: '$t2[1]' } },
+    { kind: 'action', action: 'paste', args: {}, assign: 'r4' },
+    { kind: 'action', action: 'createRect', args: { x: 400, y: 300, name: 'Line ${i} of ${periods}' } }] }]);
+  const rows = builder(page).locator('.macro-tree .mrow');
+  await expect(rows.locator('.mvar')).toHaveCount(2);
+  await expect(rows.nth(4).locator('.mvar')).toHaveAttribute('title', 'Uses $t2, which no step before it saves — the step that saved it may have been deleted or changed. Point this step at a variable an earlier step saves.');
+  await expect(rows.nth(6).locator('.mvar')).toHaveAttribute('title', /^Uses \$i, which/);
+  await rows.nth(4).click();
+  await expect(builder(page).locator('.macro-props .var-missing-note')).toContainText('Uses $t2');
+  await builder(page).locator('.macro-foot button', { hasText: 'Run macro' }).click();
+  await expect(builder(page).locator('.macro-foot .status')).toHaveText('Stopped — nothing was changed. Step "switchCanvas canvas=$t2[1]" — No step in this macro saves $t2, so it has no value — the step that saved it was deleted or changed since. Use a variable a step saves ($t1, $r3, $r4), or add the step back.');
+  // Pointed at $t1[1], the mark goes and the macro runs (the last step still reads $i).
+  await builder(page).locator('.macro-props input[data-param="canvas"]').fill('$t1[1]');
+  await expect(rows.nth(4).locator('.mvar')).toHaveCount(0);
+  await rows.nth(6).click();
+  await builder(page).locator('.macro-props input[data-param="name"]').fill('Line of ${periods}');
+  await expect(rows.locator('.mvar')).toHaveCount(0);
+  await builder(page).locator('.macro-foot button', { hasText: 'Run macro' }).click();
+  await expect(builder(page).locator('.macro-foot .status')).toHaveText(/^Ran "Lost step"/);
+  await closeBuilder(page);
+  expect((await active(page)).name).toBe('AP');
+  expect(await page.evaluate(() => fm.nodes().map(n => n.name))).toEqual(['Payables', 'COGS', 'Line of 1']);
+});

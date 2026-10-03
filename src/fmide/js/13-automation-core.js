@@ -136,6 +136,18 @@
     return text;
   }
 
+  // Why a variable has no value, in a macro: no step saves it (deleted or changed since), or
+  // the step that does hasn't run (stepping from the middle, switched off, a loop run no times).
+  function unsetVariableText(name){
+    const m = runCtx && runCtx.macro;
+    if(m && Array.isArray(m.steps) && !macroSavedVariables(m).has(name)){
+      const kept = [...macroSavedVariables(m)].map(v => '$' + v);
+      return `No step in this macro saves $${name}, so it has no value — the step that saved it was deleted or changed since. Use a variable a step saves${kept.length ? ' (' + kept.join(', ') + ')' : ''}, or add the step back.`;
+    }
+    if(runCtx && runCtx.stepping) return `$${name} is saved by an earlier step that hasn't run in this step-by-step run. Select the macro's first step and step through from there, or use ▶ Run macro.`;
+    return `Variable $${name} has no value yet: the step that saves it hasn't run — it is switched off, comes later, or is inside a loop that ran no times.`;
+  }
+
   function lookupVar(token){
     const m = /^\$([A-Za-z_]\w*)(?:\[(\d+)\])?$/.exec(String(token).trim());
     if(!m) fail(`"${token}" is not a valid variable reference.`);
@@ -145,7 +157,7 @@
     if(Object.prototype.hasOwnProperty.call(vars, name)) v = vars[name];
     else if(name === 'periods') v = periods.length;
     else if(name === 'period') v = currentPeriod + 1;
-    else fail(`Variable $${name} has no value yet.`);
+    else fail(unsetVariableText(name));
     if(m[2] !== undefined){
       if(!Array.isArray(v)) fail(`$${name} is not a list, so $${name}[${m[2]}] is not valid.`);
       v = v[+m[2]];
