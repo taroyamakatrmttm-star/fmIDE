@@ -9,7 +9,8 @@
 // ============================================================
 const BOARD_FILE_FORMAT = { 'fmIDE-graph-board': { current: BOARD_FILE_VERSION, label: 'fmGraph board file' } };
 // v1 → v2: a board file may be in the template form (G5a); a v1 file is boards for one model.
-const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {} } };
+// v2 → v3: boards for one model may carry the model's named scenarios.
+const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {} } };
 
 function safeFileName(s){ return String(s).replace(/[^A-Za-z0-9 ._()-]+/g, '_').replace(/\s+/g, ' ').trim().slice(0, 80) || 'board'; }
 
@@ -51,6 +52,15 @@ async function importBoardsText(text){
   }
   const r = cleanBoards(data);
   const useful = r ? r.boards.filter(b => b.items.length || b.sliders.length) : [];
+  // Its scenarios: those with a name not used here are added (a name used here keeps yours).
+  const newScenarios = r ? r.scenarios.filter(sc => !scenarios.some(s => sameName(s.name, sc.name))).slice(0, Math.max(0, SCENARIOS_LIMIT - scenarios.length)) : [];
+  if(!useful.length && newScenarios.length){
+    scenarios.push(...newScenarios);
+    saveBoardSoon();
+    renderAll();
+    notify('Added the scenarios ' + newScenarios.map(s => '“' + s.name + '”').join(', ') + '.', 'ok', 'boards');
+    return 0;
+  }
   if(!useful.length){
     notify('None of the rectangles on that board are in this model, so nothing was added.', 'err', 'boards');
     return 0;
@@ -59,11 +69,13 @@ async function importBoardsText(text){
   const adding = useful.slice(0, room);
   adding.forEach(b => { b.name = freeBoardName(b.name); boards.push(b); });
   if(adding.length) board = adding[0];
+  scenarios.push(...newScenarios);
   saveBoardSoon();
   renderAll();
+  const sc = newScenarios.length ? ' Added the scenarios ' + newScenarios.map(s => '“' + s.name + '”').join(', ') + '.' : '';
   const left = r.dropped ? ' ' + r.dropped + ' widget' + (r.dropped === 1 ? '' : 's') + ' left out: their rectangles aren\'t in this model.' : '';
   const full = useful.length > adding.length ? ' ' + (useful.length - adding.length) + ' not added: a model has at most ' + BOARDS_LIMIT + ' boards.' : '';
-  notify('Added ' + adding.map(b => '"' + b.name + '"').join(', ') + '.' + left + full, adding.length ? 'ok' : 'err', 'boards');
+  notify('Added ' + adding.map(b => '"' + b.name + '"').join(', ') + '.' + sc + left + full, adding.length ? 'ok' : 'err', 'boards');
   return adding.length;
 }
 

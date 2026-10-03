@@ -772,6 +772,16 @@ fmIDE's Browse Library and fmGraph (step 15, phase G5c), on a site built with th
 - A pack changed after publishing (same size): fmIDE's mismatch message; fmGraph shows fmIDE's model, not trying.
 - A `fmIDE:try` message from another window: ignored.
 
+### 56. fmGraph's named scenarios (`tests/56-fmgraph-scenarios.spec.js`; part of `npm run test:fmgraph`)
+fmGraph with its sample model (step 15, scenarios S1).
+- Price 13 saved with + Save as scenario (its box focused), named "High price" (marked as shown); Price 13 and Volume +10% saved as "sc01"; "sc01" again refused with a message; ▶ on High price: sliders [13, none], Profit 4,500; A on sc01: the strip "Comparing with A: scenario “sc01” (Price 13, Volume +10%)", the Profit bar −700; A again unpins; renamed "Growth" (the strip follows); "HIGH PRICE" refused; ⟳ to Price 8; ↑ (first ↑ and last ↓ off); ×.
+- Undo and redo: save, save, rename undone one by one (sliders kept), redo; ▶ is not a step.
+- "Both" (Price 14, Volume −10%) shown on a board with only a Price slider: "“Both” also changes Volume…"; compared with: +800 on Profit.
+- After a reload: kept, sliders on the model's numbers; Export all: version 3 with `scenarios`; one board: none; import adds "Theirs" (a used name keeps yours); a file of only scenarios adds them; Export for a template: version 2, no scenarios; a version 2 file imports.
+- From a file: settings on a calculated, missing, non-number or renamed rectangle dropped; a second name differing in capitals and a blank name dropped; markup kept as text in the name box and the strip, nothing run.
+- From fmIDE: a saved scenario reaches the document's `graphBoards` and marks it unsaved.
+- `tests/fixtures/formats/board-v2.json` (a board file from before scenarios) imports.
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.

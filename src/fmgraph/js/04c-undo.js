@@ -1,8 +1,9 @@
 // ============================================================
 // Undo and Redo (G3a) for every change to the boards: adding, removing, moving, resizing and
 // colouring widgets, editing charts, sliders' settings, boards added, renamed or deleted, a
-// board imported. Each change (saveBoardSoon → noteChange) keeps the boards as they were
-// before it, in their file form; Undo puts that back. Moving a slider is a "what if", not a
+// board imported, a scenario saved, renamed, updated, moved or deleted (05f-scenarios.js). Each
+// change (saveBoardSoon → noteChange) keeps the boards as they were before it, in their file
+// form; Undo puts that back. Moving a slider is a "what if", not a
 // change, and showing another board is not one either. Sliders keep their positions through an
 // undo where they are still there.
 // ============================================================
@@ -37,6 +38,7 @@ function restoreState(text){
   const r = cleanBoards(JSON.parse(text));
   if(!r || !r.boards.length) return;
   boards = r.boards;
+  scenarios = r.scenarios;
   boards.forEach((b, bi) => b.sliders.forEach(s => { const v = positions.get(bi + '|' + s.key + '|' + s.mode); if(v !== undefined) s.value = v; }));
   board = boards[Math.min(shown, boards.length - 1)];
   lastState = text;

@@ -87,7 +87,7 @@ Each slider position needs the whole model worked out again (`evaluateModel` on 
 | **G3** ✅ (G3a, G3b) | Editing a board: placing and sizing widgets, titles, colours, undo; the `fmIDE-graph-board` file, Export / Import; boards in `.fmide` documents |
 | **G4** ✅ (G4a, G4b) | Exploring: G4a Trace and Biggest movers; G4b the A/B snapshot and animation |
 | **G5** ✅ (G5a, G5b, G5c) | Sharing: G5a `attachments.graph` on templates (system templates too), packs and the checker, fmGraph's Export for a template…; G5b fmGraph using template boards and Attach to template…; G5c Try in fmGraph from Browse Library |
-| **Scenarios** (after G5, before G6; the owner's request, 3 October 2026) | Named scenarios instead of only A (as many as wanted, named by the person, e.g. sc01…sc05) to switch between, and a scenario waterfall: for chosen outputs in one period, the change from the start through each scenario in turn. Plan to come. |
+| **Scenarios** (after G5, before G6; the owner's request, 3 October 2026) | Named scenarios instead of only A (as many as wanted, named by the person, e.g. sc01…sc05) to switch between, and a scenario waterfall: for chosen outputs in one period, the change from the start through each scenario in turn. In two phases: S1 named scenarios ✅; S2 the scenario waterfall. |
 | **G6** | Tutorials |
 
 Later ideas, not in this step: blocks and vintages, line charts, a tornado chart (which inputs matter most), goal seek ("what price keeps cash above zero?"), the live link with fmIDE, phones.
@@ -179,6 +179,15 @@ The owner chose (3 October 2026): the button only on templates carrying a board;
 - **fmIDE** (`11f-library-browse.js`): such an item has **📈 Try in fmGraph** in the pack's details. The window opens on the click (`startGraphTrial`, `21-web-app.js` — a window opened after waiting for the pack would be blocked), the pack is fetched with the usual checks (size, SHA-256, id), and `libraryTrialOf` builds the template's model: a system template as it is; a canvas template as a model of its one canvas, in this model's periods, linked to its template (`canvas.template`) so its board finds it. fmGraph gets `fmIDE:try` — `{ name, text, templateBoards, pack }` — when it has asked for it; a pack that fails a check sends the model instead (`finishGraphTrial`). Nothing is added to the library or the document.
 - **fmGraph** (`06e-trial.js`, `trying`): the model read like any file, its boards from the template (`boardsFromTemplate`, whatever fits), else the starting board; the strip `#trialBar` names the template and pack as text, with **Show fmIDE's model**; nothing read from or kept in the browser (`loadBoardFor`, `saveBoardNow`), not linked to fmIDE's document (no changes sent, Attach to template… hidden). Any other model opened ends the try. `fmGraph.trying()`.
 - Tests: group 55 (`tests/55-try-in-fmgraph.spec.js`; sample library `tests/fixtures/library/try-library/`).
+
+### Scenarios, S1 (named scenarios)
+
+The owner asked (3 October 2026) to go ahead with the recommended choices without waiting between phases. Chosen: 📌 Pin as A stays, as the quick unnamed snapshot, and a scenario can be compared with the same way; scenarios belong to the model (not a board), saved from the sliders of the board shown; ▶ Show sets that board's sliders; scenarios are kept with the boards, in the document too; the waterfall (S2) follows the scenarios' order, each step the change from the one before.
+
+- **What a scenario is** (`05f-scenarios.js`): `{ name, settings: [{ key, mode, periods, value }] }` — the moved sliders when it was saved. Its numbers are worked out from those settings (`overridesFor`, `scenarioResults`), on any board.
+- **The panel** (`#scenariosPanel`, under the sliders): + Save as scenario (`sc01`, `sc02`…, `freeScenarioName`; the name box focused), each row a name box (unique names, ignoring capitals), ▶ Show (`showScenario`: the board's sliders matching a setting by input, mode and periods take its value, the others go back; settings with no slider here are said), A (`compareWithScenario`: `pinA` with `scenario`, so the strip names it; again to unpin), ⟳ (`updateScenario`), ↑ ↓, ×; the row the sliders match is `.current` (`markScenarios`, after every redraw).
+- **Kept**: the board file version 3, `scenarios` at the top of a file of all boards (`scenariosData`, read back by `cleanScenarios` inside `cleanBoards`: inputs only, numbers, unique names, 50 at most); so in the browser, undo, fmIDE's document (which keeps the file as it is) and Export all boards. Import adds scenarios with new names. The template form doesn't carry them and stays version 2 (`TEMPLATE_BOARD_VERSION`), so fmIDE's checks of template boards are unchanged.
+- Tests: group 56 (`tests/56-fmgraph-scenarios.spec.js`; sample `tests/fixtures/formats/board-v2.json`).
 
 ## Risks
 

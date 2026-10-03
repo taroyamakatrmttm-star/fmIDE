@@ -1,0 +1,16 @@
+{
+  "kind": "fmIDE-graph-board",
+  "version": 2,
+  "active": 0,
+  "boards": [
+    {
+      "name": "Saved before scenarios",
+      "items": [
+        { "type": "bar", "canvasId": "cProfit", "nodeId": "profit", "name": "Profit", "periods": { "mode": "all" }, "wide": false }
+      ],
+      "sliders": [
+        { "canvasId": "cProfit", "nodeId": "price", "name": "Price", "periods": { "mode": "all" }, "mode": "set", "min": 5, "max": 15, "step": 0.5 }
+      ]
+    }
+  ]
+}

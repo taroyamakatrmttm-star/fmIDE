@@ -61,7 +61,7 @@ test('fmGraph → fmIDE: a board saved for a canvas template attaches to it, and
   await page.evaluate(() => { fm.clearCanvas(); fm.insertTemplate('Sales', 'here'); });
   // fmGraph, opened from fmIDE: the canvas made from Sales is offered, then the whole model.
   const [graph] = await Promise.all([page.waitForEvent('popup'), page.evaluate(() => fm.command('openFmGraph'))]);
-  await graph.waitForFunction(() => !!window.fmGraph && fmGraph.rectangles().length > 0);
+  await graph.waitForFunction(() => !!window.fmGraph && fmGraph.rectangles().length > 0 && fmGraph.boards().length > 0);
   expect(await graph.evaluate(() => fmGraph.templates())).toEqual(['Canvas “Revenue Model” — canvas template “Sales”', 'The whole model — for a system template']);
   // Through the dialog.
   await graph.locator('.gbar-menu > summary').click();

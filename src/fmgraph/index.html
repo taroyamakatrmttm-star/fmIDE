@@ -68,6 +68,12 @@
       <h2 class="col-head">Sliders</h2>
       <div id="sliderList" class="widget-list"></div>
       <p id="noSliders" class="empty-note">No sliders yet: <button type="button" class="link-btn" data-add="slider">+ Slider</button></p>
+      <details id="scenariosPanel" class="scenarios" open>
+        <summary class="col-head" title="Where the sliders were, saved under a name: show one, or compare with it">Scenarios</summary>
+        <ol id="scenarioList" class="scenario-list"></ol>
+        <p id="scenariosEmpty" class="empty-note">Move the sliders, then save where they are.</p>
+        <button type="button" id="btnSaveScenario" class="link-btn needs-model" title="Keep where the sliders are now, under a name">+ Save as scenario</button>
+      </details>
       <details id="moversPanel" class="movers" open>
         <summary class="col-head" title="The rectangles the sliders change most, against the model's own numbers">Biggest movers</summary>
         <ol id="moversList" class="movers-list"></ol>

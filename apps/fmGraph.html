@@ -217,8 +217,19 @@
   .gbar-btn[aria-pressed="true"]{ background:var(--reach); color:#1b2333; }
   .bar-chart rect[data-anim]{ transform-box:view-box; transform-origin:0 0; }
 
+  /* Named scenarios */
+  .scenarios{ margin-top:14px; }
+  .scenarios > summary{ cursor:pointer; }
+  .scenario-list{ list-style:none; margin:6px 0; padding:0; display:flex; flex-direction:column; gap:6px; }
+  .scenario{ display:flex; flex-wrap:wrap; gap:4px; align-items:center; padding:5px 6px; border:1px solid var(--line, #d5dbe5); border-radius:8px; }
+  .scenario.current{ border-color:var(--reach); background:#fffbeb; }
+  .scenario-name{ flex:1 1 90px; min-width:70px; font:inherit; font-size:13px; padding:2px 5px; }
+  .scenario-btn{ min-width:26px; padding:2px 6px; font-size:12px; }
+  .scenario-btn[aria-pressed="true"]{ background:var(--reach); color:#1b2333; }
+  .scenario-what{ flex-basis:100%; font-size:12px; color:var(--soft-ink); overflow-wrap:anywhere; }
+
   /* Try in fmGraph (G5c) */
-  .trial-bar{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:0 0 10px; padding:7px 12px; border:1px solid var(--accent, #3b82f6); border-radius:9px; background:#eff6ff; font-size:13px; }
+  .trial-bar{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:0 0 10px; padding:7px 12px; border:1px solid var(--brand); border-radius:9px; background:#eff6ff; font-size:13px; }
   .trial-text{ flex:1 1 auto; }
   .trial-btn{ padding:3px 10px; }
 
@@ -356,6 +367,12 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       <h2 class="col-head">Sliders</h2>
       <div id="sliderList" class="widget-list"></div>
       <p id="noSliders" class="empty-note">No sliders yet: <button type="button" class="link-btn" data-add="slider">+ Slider</button></p>
+      <details id="scenariosPanel" class="scenarios" open>
+        <summary class="col-head" title="Where the sliders were, saved under a name: show one, or compare with it">Scenarios</summary>
+        <ol id="scenarioList" class="scenario-list"></ol>
+        <p id="scenariosEmpty" class="empty-note">Move the sliders, then save where they are.</p>
+        <button type="button" id="btnSaveScenario" class="link-btn needs-model" title="Keep where the sliders are now, under a name">+ Save as scenario</button>
+      </details>
       <details id="moversPanel" class="movers" open>
         <summary class="col-head" title="The rectangles the sliders change most, against the model's own numbers">Biggest movers</summary>
         <ol id="moversList" class="movers-list"></ol>
@@ -3224,13 +3241,16 @@ function cleanBoards(raw){
   const dropped = { n: 0 };
   const list = Array.isArray(raw.boards) ? raw.boards.slice(0, BOARDS_LIMIT).map(b => cleanBoard(b, dropped)) : [cleanBoard(raw, dropped)];
   const a = Math.round(Number(raw.active));
-  return { boards: list, active: Number.isFinite(a) && a >= 0 && a < list.length ? a : 0, dropped: dropped.n };
+  return { boards: list, active: Number.isFinite(a) && a >= 0 && a < list.length ? a : 0, dropped: dropped.n,
+    scenarios: cleanScenarios(raw.scenarios, rectForEntry) }; // version 3 (05f-scenarios.js)
 }
 
 // A board's file form.
 // The board file's version (docs/file-formats.md): 1 (G3a); 2 (G5a) adds the template form
-// (`form: "template"`, 06c-template-boards.js). Boards for one model are the same in both.
-const BOARD_FILE_VERSION = 2;
+// (`form: "template"`, 06c-template-boards.js); 3 adds the model's named scenarios
+// (`scenarios`, 05f-scenarios.js) — the template form, which carries none, stays version 2.
+const BOARD_FILE_VERSION = 3;
+const TEMPLATE_BOARD_VERSION = 2;
 function boardData(b){
   const at = (key) => { const r = model.byKey.get(key); return { canvasId: r.canvasId, nodeId: r.nodeId, name: r.name }; };
   return {
@@ -3244,7 +3264,9 @@ function boardData(b){
 // The file form of these boards (all, or the ones given).
 function boardsData(list){
   const which = list || boards;
-  return { kind: 'fmIDE-graph-board', version: BOARD_FILE_VERSION, active: list ? 0 : Math.max(0, boards.indexOf(board)), boards: which.map(boardData) };
+  const out = { kind: 'fmIDE-graph-board', version: BOARD_FILE_VERSION, active: list ? 0 : Math.max(0, boards.indexOf(board)), boards: which.map(boardData) };
+  if(!list && scenarios.length) out.scenarios = scenariosData(); // the model's, with all its boards
+  return out;
 }
 
 let saveTimer = null;
@@ -3277,6 +3299,7 @@ async function loadBoardFor(m, docRaw){
     const fromTemplate = (m.templateSources || []).flatMap(src => boardsFromTemplate(src).boards).slice(0, BOARDS_LIMIT);
     boards = fromTemplate.length ? fromTemplate : [startingBoard()];
     board = boards[0];
+    scenarios = [];
     resetUndo();
     return;
   }
@@ -3284,6 +3307,7 @@ async function loadBoardFor(m, docRaw){
   if(restored){
     boards = restored.boards;
     board = boards[restored.active];
+    scenarios = restored.scenarios;
     resetUndo();
     setTimeout(saveBoardNow, 0);
     return;
@@ -3304,6 +3328,7 @@ async function loadBoardFor(m, docRaw){
   if(fromTemplates.length) setTimeout(saveBoardNow, 0);
   boards = restored ? restored.boards : fromTemplates.length ? fromTemplates : [startingBoard()];
   board = boards[restored ? restored.active : 0];
+  scenarios = restored ? restored.scenarios : [];
   resetUndo();
 }
 
@@ -3479,8 +3504,9 @@ function flowFigures(c, results){
 // ============================================================
 // Undo and Redo (G3a) for every change to the boards: adding, removing, moving, resizing and
 // colouring widgets, editing charts, sliders' settings, boards added, renamed or deleted, a
-// board imported. Each change (saveBoardSoon → noteChange) keeps the boards as they were
-// before it, in their file form; Undo puts that back. Moving a slider is a "what if", not a
+// board imported, a scenario saved, renamed, updated, moved or deleted (05f-scenarios.js). Each
+// change (saveBoardSoon → noteChange) keeps the boards as they were before it, in their file
+// form; Undo puts that back. Moving a slider is a "what if", not a
 // change, and showing another board is not one either. Sliders keep their positions through an
 // undo where they are still there.
 // ============================================================
@@ -3515,6 +3541,7 @@ function restoreState(text){
   const r = cleanBoards(JSON.parse(text));
   if(!r || !r.boards.length) return;
   boards = r.boards;
+  scenarios = r.scenarios;
   boards.forEach((b, bi) => b.sliders.forEach(s => { const v = positions.get(bi + '|' + s.key + '|' + s.mode); if(v !== undefined) s.value = v; }));
   board = boards[Math.min(shown, boards.length - 1)];
   lastState = text;
@@ -3664,6 +3691,7 @@ function renderBoard(){
   $('noBars').classList.toggle('hidden', board.items.length > 0);
   $('noSliders').classList.toggle('hidden', board.sliders.length > 0);
   renderTraceNote();
+  renderScenarios(); // (05f-scenarios.js)
   updateValues();
 }
 
@@ -3849,6 +3877,7 @@ function updateValues(){
       : 'Model\'s numbers: ' + fmtNum(baseValue(rect, first)) + ' (' + model.periods[first] + ') to ' + fmtNum(baseValue(rect, last)) + ' (' + model.periods[last] + ')';
   });
   updateMovers(results);
+  markScenarios(); // (05f-scenarios.js)
   paintReach();
 }
 
@@ -4691,6 +4720,191 @@ function glide(host){
 }
 function forgetGeometry(){ lastGeometry = new Map(); }
 // ============================================================
+// Named scenarios (step 15, after G5; the owner's request, 3 October 2026). A scenario is a
+// name and where sliders were when it was saved — each slider's input, mode, periods and value
+// ({ key, mode, periods, value }, the moved ones only) — so its numbers are worked out the same
+// way the sliders' are (overridesFor), whatever board is shown. The model's scenarios, in
+// order (the order a scenario waterfall follows), sit in the Scenarios panel under the sliders:
+// - + Save as scenario keeps where the board's sliders are, named sc01, sc02… (renamed in its
+//   box; names are unique, ignoring capitals);
+// - ▶ Show puts the board's sliders where the scenario had them (a slider it doesn't name goes
+//   back to the model's own number; an input it changes with no slider on this board is said);
+//   the scenario the sliders match is marked;
+// - A compares with it: the outlines, differences and Biggest movers measure from that
+//   scenario, as from 📌 Pin as A (05e-compare.js);
+// - ⟳ keeps where the sliders are now in it; ↑ ↓ reorder; × deletes.
+// Scenarios are kept with the boards (the board file's `scenarios`, version 3, in this browser
+// and in fmIDE's document), and every change to them is an undo step; showing one is not (it
+// moves sliders). A board's template form carries none.
+// ============================================================
+const SCENARIOS_LIMIT = 50;
+const SCENARIO_NAME_MAX = 40;
+let scenarios = []; // [{ name, settings: [{ key, mode, periods, value }] }]
+
+// Read from a file or storage: names unique, settings on input rectangles of this model.
+function cleanScenarios(raw, rectFor){
+  const out = [];
+  (Array.isArray(raw) ? raw : []).slice(0, SCENARIOS_LIMIT).forEach(sc => {
+    if(!sc || typeof sc !== 'object') return;
+    const name = cleanText(sc.name, SCENARIO_NAME_MAX);
+    if(!name || out.some(o => sameName(o.name, name))) return;
+    const settings = [];
+    (Array.isArray(sc.sliders) ? sc.sliders : []).slice(0, BOARD_LIMIT).forEach(s => {
+      const rect = rectFor(s);
+      const value = Number(s && s.value);
+      if(!rect || !rect.input || s.value === null || !Number.isFinite(value)) return;
+      settings.push({ key: rect.key, mode: s.mode === 'shift' ? 'shift' : 'set', periods: cleanPeriods(s.periods, model.periods.length), value });
+    });
+    out.push({ name, settings });
+  });
+  return out;
+}
+// The file form.
+function scenariosData(){
+  const at = (key) => { const r = model.byKey.get(key); return { canvasId: r.canvasId, nodeId: r.nodeId, name: r.name }; };
+  return scenarios.map(sc => ({ name: sc.name, sliders: sc.settings.map(s => Object.assign(at(s.key), { mode: s.mode, periods: Object.assign({}, s.periods), value: s.value })) }));
+}
+const sameName = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
+function freeScenarioName(){
+  for(let i = 1; ; i++){ const n = 'sc' + String(i).padStart(2, '0'); if(!scenarios.some(s => sameName(s.name, n))) return n; }
+}
+function findScenario(name){
+  const s = scenarios.find(x => sameName(x.name, String(name)));
+  if(!s) throw new Error('There is no scenario "' + String(name).slice(0, 60) + '".');
+  return s;
+}
+
+// Where the board's sliders are now (the moved ones).
+function slidersNow(){
+  return board.sliders.filter(s => s.value !== null && isFinite(s.value)).map(s => ({ key: s.key, mode: s.mode, periods: Object.assign({}, s.periods), value: s.value }));
+}
+const settingKey = (s) => s.key + '|' + s.mode + '|' + JSON.stringify(s.periods);
+// Whether the board's sliders are exactly where the scenario had them.
+function scenarioShown(sc){
+  const now = slidersNow();
+  if(now.length !== sc.settings.length) return false;
+  return sc.settings.every(s => now.some(n => settingKey(n) === settingKey(s) && n.value === s.value));
+}
+// The scenario's numbers worked out (results, as resultsWith).
+function scenarioResults(sc){ return resultsWith(overridesFor(sc.settings)); }
+
+function saveScenario(name){
+  if(!model) return null;
+  if(scenarios.length >= SCENARIOS_LIMIT){ notify('A model has at most ' + SCENARIOS_LIMIT + ' scenarios.', 'err', 'scenarios'); return null; }
+  let n = cleanText(name, SCENARIO_NAME_MAX);
+  if(n && scenarios.some(s => sameName(s.name, n))){ notify('There is already a scenario called “' + n + '”.', 'err', 'scenarios'); return null; }
+  if(!n) n = freeScenarioName();
+  scenarios.push({ name: n, settings: slidersNow() });
+  saveBoardSoon();
+  renderScenarios();
+  return n;
+}
+function renameScenario(sc, name){
+  const n = cleanText(name, SCENARIO_NAME_MAX);
+  if(!n || n === sc.name) return false;
+  if(scenarios.some(s => s !== sc && sameName(s.name, n))){ notify('There is already a scenario called “' + n + '”.', 'err', 'scenarios'); renderScenarios(); return false; }
+  if(pinA && pinA.scenario === sc.name){ pinA.scenario = n; pinA.label = scenarioLabel(n, sc.settings); renderCompareBar(); }
+  sc.name = n;
+  saveBoardSoon();
+  renderScenarios();
+  return true;
+}
+function updateScenario(sc){
+  sc.settings = slidersNow();
+  saveBoardSoon();
+  renderScenarios();
+}
+function moveScenario(sc, to){
+  const from = scenarios.indexOf(sc);
+  const i = Math.max(0, Math.min(scenarios.length - 1, to));
+  if(from < 0 || from === i) return;
+  scenarios.splice(from, 1);
+  scenarios.splice(i, 0, sc);
+  saveBoardSoon();
+  renderScenarios();
+}
+function deleteScenario(sc){
+  scenarios = scenarios.filter(s => s !== sc);
+  saveBoardSoon();
+  renderScenarios();
+}
+// ▶ Show: the board's sliders where the scenario had them. Returns how many of the inputs it
+// changes have no slider on this board.
+function showScenario(sc){
+  const left = sc.settings.slice();
+  board.sliders.forEach(s => {
+    const i = left.findIndex(o => settingKey(o) === settingKey(s));
+    s.value = i >= 0 ? left.splice(i, 1)[0].value : null;
+  });
+  renderBoard();
+  if(left.length){
+    const names = [...new Set(left.map(s => model.byKey.get(s.key).name))];
+    notify('“' + sc.name + '” also changes ' + names.join(', ') + ', with no slider ' + (names.length === 1 ? 'like it' : 'like them') + ' on this board: + Slider adds one.', 'info', 'scenarios');
+  }
+  return left.length;
+}
+function scenarioLabel(name, settings){ return 'scenario “' + name + '”' + (settings.length ? ' (' + settingsLabel(settings) + ')' : ' (the model\'s own numbers)'); }
+// A: compare with this scenario, as with a pinned A (05e-compare.js).
+function compareWithScenario(sc){
+  pinA = { overrides: overridesFor(sc.settings), sliders: sc.settings.map(s => ({ key: s.key, mode: s.mode, periods: JSON.stringify(s.periods), value: s.value })),
+    label: scenarioLabel(sc.name, sc.settings), scenario: sc.name };
+  renderCompareBar();
+  updateValues();
+  return pinA.label;
+}
+
+// ---- the panel ----
+function renderScenarios(){
+  const list = $('scenarioList');
+  list.textContent = '';
+  $('scenariosEmpty').classList.toggle('hidden', !!scenarios.length);
+  if(!model) return;
+  scenarios.forEach((sc, i) => {
+    const li = make('li', 'scenario');
+    li.dataset.name = sc.name;
+    const name = make('input', 'scenario-name');
+    name.type = 'text';
+    name.value = sc.name;
+    name.maxLength = SCENARIO_NAME_MAX;
+    name.setAttribute('aria-label', 'Scenario name');
+    name.addEventListener('change', () => { if(!renameScenario(sc, name.value)) name.value = sc.name; });
+    name.addEventListener('keydown', (ev) => { if(ev.key === 'Enter') name.blur(); });
+    const button = (cls, label, title, fn) => { const b = make('button', 'scenario-btn ' + cls, label); b.type = 'button'; b.title = title; b.setAttribute('aria-label', title); b.addEventListener('click', fn); return b; };
+    li.append(name,
+      button('scenario-show', '▶', 'Show: put the sliders where this scenario has them', () => showScenario(sc)),
+      button('scenario-compare', 'A', 'Compare with this scenario', () => { if(pinA && pinA.scenario === sc.name) unpinA(); else compareWithScenario(sc); markScenarios(); }),
+      button('scenario-update', '⟳', 'Keep where the sliders are now in this scenario', () => updateScenario(sc)),
+      button('scenario-up', '↑', 'Move up', () => moveScenario(sc, i - 1)),
+      button('scenario-down', '↓', 'Move down', () => moveScenario(sc, i + 1)),
+      button('scenario-delete', '×', 'Delete this scenario', () => deleteScenario(sc)));
+    li.querySelector('.scenario-up').disabled = i === 0;
+    li.querySelector('.scenario-down').disabled = i === scenarios.length - 1;
+    const what = make('div', 'scenario-what', sc.settings.length ? settingsLabel(sc.settings) : 'The model\'s own numbers');
+    li.appendChild(what);
+    list.appendChild(li);
+  });
+  markScenarios();
+}
+// Marks the scenario the sliders match, and the one compared with.
+function markScenarios(){
+  if(!model) return;
+  document.querySelectorAll('#scenarioList .scenario').forEach(li => {
+    const sc = scenarios.find(s => s.name === li.dataset.name);
+    if(!sc) return;
+    const shown = scenarioShown(sc);
+    li.classList.toggle('current', shown);
+    li.querySelector('.scenario-show').setAttribute('aria-pressed', shown ? 'true' : 'false');
+    li.querySelector('.scenario-compare').setAttribute('aria-pressed', pinA && pinA.scenario === sc.name ? 'true' : 'false');
+  });
+}
+
+$('btnSaveScenario').addEventListener('click', () => {
+  const n = saveScenario();
+  if(!n) return;
+  const box = document.querySelector('#scenarioList .scenario[data-name="' + CSS.escape(n) + '"] .scenario-name');
+  if(box){ box.focus(); box.select(); }
+});
+// ============================================================
 // The page: opening a model (the file picker, a file dropped anywhere, the sample, or fmIDE),
 // the top bar's buttons, and ← Back to fmIDE.
 // ============================================================
@@ -4928,7 +5142,8 @@ back.addEventListener('click', (ev) => {
 // ============================================================
 const BOARD_FILE_FORMAT = { 'fmIDE-graph-board': { current: BOARD_FILE_VERSION, label: 'fmGraph board file' } };
 // v1 → v2: a board file may be in the template form (G5a); a v1 file is boards for one model.
-const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {} } };
+// v2 → v3: boards for one model may carry the model's named scenarios.
+const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {} } };
 
 function safeFileName(s){ return String(s).replace(/[^A-Za-z0-9 ._()-]+/g, '_').replace(/\s+/g, ' ').trim().slice(0, 80) || 'board'; }
 
@@ -4970,6 +5185,15 @@ async function importBoardsText(text){
   }
   const r = cleanBoards(data);
   const useful = r ? r.boards.filter(b => b.items.length || b.sliders.length) : [];
+  // Its scenarios: those with a name not used here are added (a name used here keeps yours).
+  const newScenarios = r ? r.scenarios.filter(sc => !scenarios.some(s => sameName(s.name, sc.name))).slice(0, Math.max(0, SCENARIOS_LIMIT - scenarios.length)) : [];
+  if(!useful.length && newScenarios.length){
+    scenarios.push(...newScenarios);
+    saveBoardSoon();
+    renderAll();
+    notify('Added the scenarios ' + newScenarios.map(s => '“' + s.name + '”').join(', ') + '.', 'ok', 'boards');
+    return 0;
+  }
   if(!useful.length){
     notify('None of the rectangles on that board are in this model, so nothing was added.', 'err', 'boards');
     return 0;
@@ -4978,11 +5202,13 @@ async function importBoardsText(text){
   const adding = useful.slice(0, room);
   adding.forEach(b => { b.name = freeBoardName(b.name); boards.push(b); });
   if(adding.length) board = adding[0];
+  scenarios.push(...newScenarios);
   saveBoardSoon();
   renderAll();
+  const sc = newScenarios.length ? ' Added the scenarios ' + newScenarios.map(s => '“' + s.name + '”').join(', ') + '.' : '';
   const left = r.dropped ? ' ' + r.dropped + ' widget' + (r.dropped === 1 ? '' : 's') + ' left out: their rectangles aren\'t in this model.' : '';
   const full = useful.length > adding.length ? ' ' + (useful.length - adding.length) + ' not added: a model has at most ' + BOARDS_LIMIT + ' boards.' : '';
-  notify('Added ' + adding.map(b => '"' + b.name + '"').join(', ') + '.' + left + full, adding.length ? 'ok' : 'err', 'boards');
+  notify('Added ' + adding.map(b => '"' + b.name + '"').join(', ') + '.' + sc + left + full, adding.length ? 'ok' : 'err', 'boards');
   return adding.length;
 }
 
@@ -5101,7 +5327,7 @@ function templateBoardsData(target, onlyShown){
   };
   const list = (onlyShown ? [board] : boards).map(one).filter(b => b.items.length || b.sliders.length);
   const template = target.kind === 'module' ? { kind: 'module', family: target.family, name: target.templateName } : { kind: 'system' };
-  return { data: { kind: 'fmIDE-graph-board', version: BOARD_FILE_VERSION, form: 'template', template, active: 0, boards: list }, left };
+  return { data: { kind: 'fmIDE-graph-board', version: TEMPLATE_BOARD_VERSION, form: 'template', template, active: 0, boards: list }, left };
 }
 
 // Writes the file; says what was left out. Returns { data, left } or null when nothing fits.
@@ -5259,7 +5485,7 @@ function boardsFromTemplate(src){
       }),
       sliders: (Array.isArray(b.sliders) ? b.sliders : []).map(at),
     }));
-    const r = cleanBoards({ kind: 'fmIDE-graph-board', version: BOARD_FILE_VERSION, boards: boardsIn });
+    const r = cleanBoards({ kind: 'fmIDE-graph-board', version: TEMPLATE_BOARD_VERSION, boards: boardsIn });
     if(!r) return;
     r.boards.forEach(b => { if(b.items.length || b.sliders.length) out.push(b); });
   });
@@ -6007,6 +6233,7 @@ const FMGRAPH_HELP_TOPICS = [
     summary: 'Boards travel as a file.',
     body: [
       { p: 'Boards ▾ at the top: Export this board, or Export all boards, saves a board file. Import boards… (or dropping a board file on the page) adds its boards as new tabs to the model you have open.' },
+      { p: 'Export all boards carries the model\'s named scenarios too; importing adds the ones whose names you don\'t have yet.' },
       { p: 'A board names its rectangles by canvas, id and name, so it fits the model it was made from, or another one built from the same templates. Anything it shows that isn\'t in this model is left out, and fmGraph says how much.' },
       { p: 'For a template: Boards ▾ → Export for a template… saves the boards for a template the model was built from — a canvas made from a canvas template (only that canvas\'s rectangles), or the whole model for a system template. It names each rectangle by its name (and its canvas\'s name), since a template gets new ids each time it is used, so a rectangle whose name is used twice on its canvas is left out, and fmGraph says how many. In fmIDE, select the template and choose 📈 Attach fmGraph board…: the board then goes along with the template, in packs too.' },
       { p: 'Boards from templates: a model with no boards of its own starts with the boards its templates carry — a canvas template\'s board on each canvas made from it (in the version that canvas came from), and a system template\'s when every rectangle it names is found. Boards ▾ → Add boards from templates… lists them all, with how many of their rectangles this model has, and adds the ones you tick as tabs.' },
@@ -6039,7 +6266,19 @@ const FMGRAPH_HELP_TOPICS = [
       { p: '⇄ Swap puts the sliders where A had them, and keeps where they were as the new A — a quick way to flip between two what-ifs. Unpin compares with the model\'s own numbers again. Press 📌 Pin as A again to make where the sliders are now the new A.' },
       { p: 'A holds on every board of the model, and through undo. Like where the sliders are, it isn\'t saved: opening a model starts without one.' },
       { p: 'When values change — a reset, a typed number, Swap — the bars glide to their new heights. While you drag a slider they follow it straight away, and if your device is set to reduce motion they never glide.' },
-      { see: ['sliders', 'explore'] },
+      { tip: 'To keep a what-if for later, or compare with any of several, save it as a scenario.' },
+      { see: ['scenarios', 'sliders', 'explore'] },
+    ] },
+  { id: 'scenarios', group: 'board', title: 'Named scenarios',
+    keywords: 'scenario scenarios named save switch show compare sc01 what if case version keep',
+    summary: 'Save where the sliders are under a name, switch between scenarios, and compare with any of them.',
+    body: [
+      { p: 'Set the sliders, then press + Save as scenario in the Scenarios panel under the sliders. It is named sc01, sc02 and so on; type a name of your own in its box. Save as many as you like (up to 50 a model).' },
+      { p: '▶ puts the sliders where a scenario had them; the scenario the sliders match is marked. A scenario keeps the inputs it changed, whatever board it was saved on: if one of them has no slider on the board you are looking at, fmGraph says so, and + Slider adds one.' },
+      { p: 'A compares with a scenario: the dashed outlines, difference labels and Biggest movers measure from it, as with 📌 Pin as A, and the strip names it. Press A again to stop.' },
+      { p: '⟳ keeps where the sliders are now in that scenario, ↑ ↓ change the order, and × deletes it.' },
+      { p: 'Scenarios are kept with the model\'s boards: in this browser, in fmIDE\'s document when fmGraph was opened from fmIDE, and in Export all boards. Saving, renaming, updating, moving and deleting them can be undone; showing one is like moving a slider, not a change.' },
+      { see: ['compare', 'board-file'] },
     ] },
   { id: 'speed', group: 'board', title: 'Large models',
     keywords: 'slow speed large working out ahead fast smooth',
@@ -6072,6 +6311,21 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'named-scenarios', date: '2026-10-03', title: 'Named scenarios',
+    summary: 'Save where the sliders are under a name, switch between scenarios, and compare with any of them.',
+    what: [
+      'The Scenarios panel under the sliders: + Save as scenario keeps where the sliders are, named sc01, sc02… or your own name.',
+      '▶ switches to a scenario, A compares with it, ⟳ updates it, ↑ ↓ order them.',
+      'Scenarios are kept with the boards, in fmIDE\'s document too, and can be undone.',
+    ],
+    why: 'Pin as A held one what-if at a time; now you can keep as many as you need and move between them.',
+    how: [
+      'Set the sliders, then + Save as scenario, and type a name.',
+      'Set them differently and save another.',
+      'Press ▶ on either to switch, or A to see the differences from it.',
+    ],
+    see: ['scenarios', 'compare'] },
+
   { id: 'try-from-library', date: '2026-10-03', title: 'Try a template from the library',
     summary: 'fmIDE\'s Browse Library can show a shared template here with its board, before you add it.',
     what: [
@@ -6407,6 +6661,19 @@ window.fmGraph = Object.freeze({
   unpinA: () => { unpinA(); },
   swapA: () => { if(!pinA) throw new Error('Nothing is pinned as A.'); return swapWithA(); },
   comparing: () => pinA ? pinA.label : null,
+  // Named scenarios: saveScenario(name?) → its name; scenarios() → [{ name, settings (words),
+  // shown, compared }]; showScenario(name) → how many of its inputs have no slider on this
+  // board; compareWith(name or null) → A's words (null unpins); renameScenario(name, newName),
+  // updateScenario(name), moveScenario(name, index), deleteScenario(name).
+  saveScenario: (name) => saveScenario(name),
+  scenarios: () => scenarios.map(sc => ({ name: sc.name, settings: sc.settings.length ? settingsLabel(sc.settings) : 'the model\'s own numbers',
+    shown: scenarioShown(sc), compared: !!(pinA && pinA.scenario === sc.name) })),
+  showScenario: (name) => showScenario(findScenario(name)),
+  compareWith: (name) => { if(name === null || name === undefined){ unpinA(); markScenarios(); return null; } const l = compareWithScenario(findScenario(name)); markScenarios(); return l; },
+  renameScenario: (name, to) => renameScenario(findScenario(name), to),
+  updateScenario: (name) => updateScenario(findScenario(name)),
+  moveScenario: (name, index) => moveScenario(findScenario(name), Number(index)),
+  deleteScenario: (name) => deleteScenario(findScenario(name)),
   // G5c: the template tried from fmIDE's Browse Library, { name, pack }, or null.
   trying: () => trying ? { name: trying.name, pack: trying.pack } : null,
   // movers(n): the rectangles the sliders change most (default 8), against the model's own numbers.

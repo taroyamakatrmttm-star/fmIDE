@@ -37,7 +37,7 @@ async function exported(page){
 }
 async function openGraphFromFmide(page){
   const [popup] = await Promise.all([page.waitForEvent('popup'), page.evaluate(() => fm.command('openFmGraph'))]);
-  await popup.waitForFunction(() => !!window.fmGraph && fmGraph.rectangles().length > 0);
+  await popup.waitForFunction(() => !!window.fmGraph && fmGraph.rectangles().length > 0 && fmGraph.boards().length > 0);
   return popup;
 }
 const boardNames = (popup) => popup.evaluate(() => fmGraph.boards().map(b => b.name));
