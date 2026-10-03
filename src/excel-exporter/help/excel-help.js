@@ -231,7 +231,7 @@ const EXCEL_HELP_TOPICS = [
       { see: ['tree-view', 'periods-output', 'remembered'] },
     ] },
   { id: 'differences', group: 'generate', title: 'Where the workbook differs from fmIDE',
-    keywords: 'differences yellow list warning na n/a error loop broken too long',
+    keywords: 'differences yellow list warning na n/a error loop broken too long show all hide dismiss',
     summary: 'The yellow list under Generate says where Excel can\'t calculate as fmIDE does.',
     body: [
       { p: 'The workbook calculates exactly as fmIDE does. Where it can\'t, a yellow list at the top of the page, under the Generate button, says where, before you download. For example:' },
@@ -241,6 +241,8 @@ const EXCEL_HELP_TOPICS = [
         'a function fmIDE can\'t calculate, or a formula too long for Excel (the cell shows #N/A).',
       ] },
       { p: 'The download still works. Fix the model in fmIDE, or the layout here, and the list goes away.' },
+      { p: 'A long list shows its first three lines: Show all opens the rest, and × hides the list until something in it changes.' },
+      { tip: 'Many lines often come from one place, such as one operator with nothing wired into it: fix that in fmIDE and they all go.' },
       { see: ['generate'] },
     ] },
   { id: 'generate', group: 'generate', title: 'Generating and saving the layout',

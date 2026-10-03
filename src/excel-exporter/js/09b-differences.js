@@ -283,16 +283,28 @@ function differenceLines(){
   return lines;
 }
 
+// A long list would push the page down (43 lines for one unwired operator): the panel shows
+// the first few lines, "Show all" opens the rest (scrolling inside the panel), and × hides it
+// until the list changes. Every line stays in the page, the hidden ones marked `.more`.
+const DIFFERENCES_SHOWN = 3;
+let differencesOpen = false;
+let differencesDismissed = null; // the list (its lines joined) the person closed with ×
+
 function renderDifferences(){
   const panel = $('differencesPanel');
   if(!panel) return;
   const lines = differenceLines();
+  const key = lines.join('\n');
+  if(differencesDismissed !== null && differencesDismissed !== key) differencesDismissed = null;
   panel.textContent = '';
-  panel.classList.toggle('hidden', lines.length === 0);
+  panel.classList.toggle('hidden', lines.length === 0 || differencesDismissed === key);
   if(!lines.length) return;
   const head = document.createElement('div');
   head.className = 'differences-head';
-  head.textContent = 'Where the workbook will differ from fmIDE (' + lines.length + '):';
+  const title = document.createElement('span');
+  title.className = 'differences-title';
+  title.textContent = 'Where the workbook will differ from fmIDE (' + lines.length + '):';
+  head.appendChild(title);
   const help = document.createElement('button');
   help.type = 'button';
   help.className = 'panel-help';
@@ -300,12 +312,37 @@ function renderDifferences(){
   help.title = 'Help: where the workbook differs from fmIDE';
   help.addEventListener('click', () => excelHelp.open('differences'));
   head.appendChild(help);
+  const many = lines.length > DIFFERENCES_SHOWN;
+  if(many){
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'differences-toggle';
+    toggle.setAttribute('aria-expanded', String(differencesOpen));
+    toggle.textContent = differencesOpen ? 'Show fewer ▴' : 'Show all ' + lines.length + ' ▾';
+    toggle.addEventListener('click', () => { differencesOpen = !differencesOpen; renderDifferences(); });
+    head.appendChild(toggle);
+  }
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'differences-close';
+  close.textContent = '×';
+  close.title = 'Hide this list (it comes back when something in it changes)';
+  close.setAttribute('aria-label', 'Hide the list of differences');
+  close.addEventListener('click', () => { differencesDismissed = key; panel.classList.add('hidden'); });
+  head.appendChild(close);
   panel.appendChild(head);
   const ul = document.createElement('ul');
-  lines.forEach(t => { const li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
+  ul.classList.toggle('open', many && differencesOpen);
+  lines.forEach((t, i) => {
+    const li = document.createElement('li');
+    li.textContent = t;
+    if(many && !differencesOpen && i >= DIFFERENCES_SHOWN) li.className = 'more';
+    ul.appendChild(li);
+  });
   panel.appendChild(ul);
   const note = document.createElement('div');
   note.className = 'hint';
-  note.textContent = 'You can still download. Fix these in fmIDE (or include the rows) and both give the same numbers.';
+  note.textContent = (many && !differencesOpen ? '…and ' + (lines.length - DIFFERENCES_SHOWN) + ' more. ' : '')
+    + 'You can still download. Fix these in fmIDE (or include the rows) and both give the same numbers.';
   panel.appendChild(note);
 }

@@ -38,6 +38,9 @@ $('dropZone').addEventListener('drop', (ev) => {
   const file = ev.dataTransfer.files[0];
   if(file) readFile(file);
 });
+// build:include shared/file-picker.js
+// On an iPhone or iPad a .fmide could not be picked at all (src/shared/file-picker.js).
+letAnyFileBePicked([$('fileInput')]);
 $('fileInput').addEventListener('change', () => {
   const file = $('fileInput').files[0];
   if(file) readFile(file);

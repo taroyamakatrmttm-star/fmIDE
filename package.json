@@ -41,6 +41,7 @@
     "test:block-layouts": "playwright test tests/39-block-instance-layouts.spec.js",
     "test:add-many": "playwright test tests/40-add-many-rectangles.spec.js",
     "test:equal-spacing": "playwright test tests/41-equal-spacing-snap.spec.js",
+    "test:messages": "playwright test tests/60-long-messages.spec.js",
     "test:excel-page": "playwright test tests/46-excel-page.spec.js",
     "test:excel-from-fmide": "playwright test tests/59-excel-from-fmide.spec.js",
     "test:fmgraph": "playwright test tests/47-fmgraph.spec.js tests/48-fmgraph-charts.spec.js tests/49-fmgraph-boards.spec.js tests/50-fmgraph-documents.spec.js tests/51-fmgraph-explore.spec.js tests/52-fmgraph-compare.spec.js tests/53-template-boards.spec.js tests/54-template-boards-in-fmgraph.spec.js tests/55-try-in-fmgraph.spec.js tests/56-fmgraph-scenarios.spec.js tests/57-fmgraph-scenario-waterfall.spec.js tests/58-fmgraph-tutorials.spec.js",

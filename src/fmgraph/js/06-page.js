@@ -92,6 +92,9 @@ function readFileAndOpen(file){
 }
 
 $('btnOpen').addEventListener('click', () => $('fileInput').click());
+// build:include shared/file-picker.js
+// On an iPhone or iPad a .fmide could not be picked at all (src/shared/file-picker.js).
+letAnyFileBePicked([$('fileInput')]);
 $('fileInput').addEventListener('change', () => {
   const f = $('fileInput').files && $('fileInput').files[0];
   $('fileInput').value = '';

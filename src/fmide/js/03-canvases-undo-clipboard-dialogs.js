@@ -471,12 +471,15 @@
   }
 
   // ---------- in-page dialogs (native confirm/alert are blocked in many embedded previews) ----------
+  // A long message (a recipe's socket check can list dozens of sockets) scrolls inside its
+  // window, whose buttons always stay on the visible screen (.message-box, styles.css).
   function showConfirm(message, onConfirm){
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
-    box.className = 'modal-box';
+    box.className = 'modal-box message-box';
     const p = document.createElement('p');
+    p.className = 'message-text';
     p.textContent = message;
     const actions = document.createElement('div');
     actions.className = 'modal-actions';
@@ -505,8 +508,9 @@
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
-    box.className = 'modal-box';
+    box.className = 'modal-box message-box';
     const p = document.createElement('p');
+    p.className = 'message-text';
     p.textContent = message;
     const actions = document.createElement('div');
     actions.className = 'modal-actions';

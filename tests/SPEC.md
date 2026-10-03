@@ -806,6 +806,11 @@ fmIDE's Open ExcelExporter, the offline fixture; the model Hours 8 × Rate 50 = 
 - Opened on its own: the welcome screen, no ↻ From fmIDE, no errors. After fmIDE is reloaded, ↻ From fmIDE still reaches it.
 - Also changed on purpose: group 12 (ExcelExporter opened from fmIDE now shows the model, not the welcome screen; Back closes without asking for fmIDE's model and asks for the sample loaded there), group 30 (the window shows fmIDE's model before the tap on Back), groups 33 and 35 (the To Excel tutorial lost its Save System step).
 
+### 60. Long messages and picking files on an iPad (`tests/60-long-messages.spec.js`; `npm run test:messages`)
+- fmIDE at 1024 × 600: a recipe of a canvas template with 80 sockets nothing feeds; Build shows "Built Wide Recipe: 1 canvas." and the 80th socket; the window inside the screen, its text scrolling (`overflow-y: auto`), OK on the screen before and after scrolling to the end, OK closes it. At 1024 × 500, Delete Canvas on a canvas with a very long name: the danger button and Cancel on the screen.
+- ExcelExporter, `ir/error-cases.json`: every line in the page, three shown, "…and N more.", Show all N ▾ (`aria-expanded`) shows them all and scrolls inside the list, Show fewer ▴; × hides the panel; unticking Include on A changes the list and it comes back. `scenario-unit-price-volume.json` with one difference: no Show all, × there.
+- An iPad's Safari (its user agent, and a Mac with touch points as iPadOS asking for the desktop site): fmIDE's `#fileInputDocument`, `#fileInputWorkspace`, `#fileInputSystem` and ExcelExporter's and fmGraph's `#fileInput` have no `accept`; a `.fmide` opens through Open… with the file box. A desktop browser keeps the lists.
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.

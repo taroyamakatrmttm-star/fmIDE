@@ -12,6 +12,19 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'long-messages-ipad', date: '2026-10-03', title: 'Long messages fit the screen; .fmide files open on an iPad',
+    summary: 'A long message scrolls inside its window with OK always in reach, and an iPad can pick a .fmide again.',
+    what: [
+      'A message with a long list — building a recipe lists every socket nothing feeds — now scrolls inside its window. OK (and Cancel, in a question) always stays on the screen, on a tablet too.',
+      'On an iPad or iPhone, {cmd:openDocument} showed .fmide files greyed out, so they couldn\'t be picked. Now any file can be picked there; one that isn\'t a model is refused with a message, as before.',
+    ],
+    why: 'On an iPad the OK button of a long message was out of reach, and saved documents couldn\'t be opened.',
+    how: [
+      'Scroll the message\'s text with a finger or the wheel.',
+      'On an iPad, choose {cmd:openDocument} and pick the .fmide file in Files.',
+    ],
+    see: ['documents', 'touch'] },
+
   { id: 'excel-from-fmide', date: '2026-10-03', title: 'ExcelExporter opens with your model',
     summary: 'Open ExcelExporter sends it the model you have open — no file to save first.',
     what: [
