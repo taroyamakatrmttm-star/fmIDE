@@ -55,6 +55,8 @@ The large windows (Templates, Functions, Browse Library, Macro Builder, Customiz
 
 New rectangles, operators, aliases and other nodes go near the middle of the view, into free space (pasted ones too, keeping their layout), so they never land on top of what is already there; the aliases a socket gets from other canvases are placed the same way. In the Macro Builder, **▶ Run selected step** moves on to the next step, so pressing it again steps through a macro.
 
+A recorded macro keeps working when the model has changed: a canvas or nodes a step made (New Canvas, Insert Template, the Create actions) are saved in that step's variable (`$t1[0]`, `$r1`), and later steps refer to them that way, so two canvases of the same name don't confuse it. Where a step must use an id, hover over a canvas tab to see the canvas's (`#c3`), or select nodes and use **Macros → Copy Reference**. A step whose reference may not hold in another model gets a ⚠ note. Help's Macros group explains steps, variables, references and every message that stops a macro.
+
 Opening someone else's `.fmide` never replaces your own setup: their templates and macros are added to yours, and your shortcuts and ribbon stay as they are.
 
 Your own settings (keyboard shortcuts, ribbon layout, Quick Access Toolbar and KeyTips key) travel separately: **File → Export Preferences…** saves them to `fmIDE-preferences.json`, and **File → Import Preferences…** on another computer (or for a colleague) replaces theirs with yours. Your macros' own shortcuts are kept.

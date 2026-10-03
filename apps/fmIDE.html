@@ -353,8 +353,10 @@
   .macro-foot .status{ font-size:12px; color:#6b7280; margin-right:auto; }
   .macro-foot .status.err{ color:#b91c1c; }
   .macro-foot .status.ok{ color:#047857; }
+  .macro-foot .status.warn{ color:#b45309; }
   .macro-ref-help{ font-size:11px; color:#6b7280; line-height:1.45; background:#f8fafc; border-radius:6px; padding:6px 8px; margin-top:8px; }
   .macro-ref-help code{ font-family:Menlo,Consolas,monospace; color:#4338ca; }
+  .macro-ref-help .macro-ref-more{ margin-top:6px; }
 
   /* ---------- Customize Ribbon ---------- */
   .modal-box.rbc-box{ width:900px; max-width:96vw; height:600px; max-height:92vh; display:flex; flex-direction:column; padding:16px 18px; }
@@ -1516,6 +1518,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     { id:'toggleRecord',label:'Record Macro',          icon:'⏺', category:'Macros', defaultShortcut:null,
       dynLabel:() => recorder.active ? 'Stop Recording' : 'Record Macro', action:() => toggleRecordingQuick() },
     { id:'runLastMacro',label:'Run Last Macro',        icon:'⏵', category:'Macros', defaultShortcut:null, enabled:() => !!lastRunMacroId && MACROS.some(m => m.id === lastRunMacroId), action:() => runMacroInteractive(lastRunMacroId) },
+    { id:'copyReference',label:'Copy Reference',       icon:'📋', category:'Macros', defaultShortcut:null, action:() => copyReferenceInteractive() },
   ];
   // Symbol operators show the symbol as the icon and a word as the label ("+ Add");
   // function operators show ƒ plus their name ("ƒ max"), so nothing is printed twice.
@@ -1695,6 +1698,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     { id: 'format',    title: 'Formatting' },
     { id: 'excel',     title: 'To Excel' },
     { id: 'faster',    title: 'Working faster' },
+    { id: 'macros',    title: 'Macros' },
     { id: 'touch',     title: 'Touch' },
   ];
 
@@ -2066,14 +2070,108 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         { p: '{cmd:toggleRibbon} (Ctrl+F1) folds the ribbon away to make room.' },
         { see: ['launcher-shortcuts'] },
       ] },
-    { id: 'macros', group: 'faster', title: 'Macros',
-      keywords: 'macro record automate repeat steps builder run script',
+    // ---------- Macros ----------
+    { id: 'macros', group: 'macros', title: 'Macros',
+      keywords: 'macro record automate repeat steps builder run script shortcut ribbon',
       summary: 'Record or build a series of steps and run it again with one click.',
       body: [
-        { p: '{cmd:toggleRecord} records what you do. Press it again to stop, and the steps become a macro.' },
-        { p: '{cmd:openMacros} shows your macros step by step: change them, add steps, give them a shortcut or a ribbon button.' },
-        { p: '{cmd:runLastMacro} runs the last one again.' },
-        { see: ['launcher-shortcuts', 'customize-ribbon'] },
+        { p: 'A macro is a list of steps that fmIDE runs for you, in order. It runs as one step you can undo, and if any step fails it stops and puts everything back, so a macro never leaves a model half changed.' },
+        { p: '{cmd:toggleRecord} records what you do: adding, connecting, typing, moving, formatting, switching canvases, inserting templates. Press it again (or the red Recording pill) to stop, and the steps become a macro. Before you start you can choose to refer to the selected nodes as @sel, so the macro works on whatever is selected when it runs, and to record positions relative to the selection, so it can build anywhere.' },
+        { p: '{cmd:openMacros} shows your macros step by step: change them, add steps, run them, export and import them. {cmd:runLastMacro} runs the last one again.' },
+        { p: 'Give a macro a shortcut in Keyboard Shortcuts (category Macros), or tick Show on Ribbon to give it a button under Macros › My Macros.' },
+        { see: ['macro-steps', 'macro-variables', 'macro-references', 'macro-reliable', 'macro-errors'] },
+      ] },
+    { id: 'macro-steps', group: 'macros', title: 'Building a macro step by step',
+      keywords: 'macro builder action group repeat loop for each set var variable comment indent disable step',
+      summary: 'What + Action, + Group, + Repeat, + For each, + Set var and + Comment do.',
+      body: [
+        { p: 'In {cmd:openMacros} the list on the left holds your macros. The middle shows the chosen macro\'s steps as a tree, and the right side edits the step you select. A new step goes after the selected one, or inside it when it is a group or loop.' },
+        { steps: [
+          '+ Action: one fmIDE action, such as createRect (add a rectangle), connect, setValue or switchCanvas (go to a canvas). Choose it under Action and fill in its boxes; a blank box uses its default. An action that makes something has a "Save result as" box, which the builder fills in for you ($r1 for nodes, $c1 for a canvas, $t1 for Insert Template), so later steps can refer to what it made.',
+          '+ Group: a labelled folder for keeping a long macro tidy. It does nothing by itself: the steps inside it run in order, as if it were not there.',
+          '+ Repeat: runs the steps inside it a number of times (Times: 5, or $periods for once per period). Its variable, $i unless you rename it, counts 1, 2, 3… — use it in the steps inside, such as y = 100 + $i*80 or a name Line ${i}.',
+          '+ For each: runs the steps inside it once for each node in a list (Nodes: @sel, the selection, unless you change it). Its variable, $item, is that node: write $item in a step\'s node box. $itemIndex counts 1, 2, 3…',
+          '+ Set var: gives a variable a value for later steps — a number or expression (100 + $i*80), another variable ($r1), or text (Total ${i}).',
+          '+ Comment: a note in the list. It does nothing.',
+        ] },
+        { p: 'Move a step into the group or loop above it with → (Alt+→) and out again with ← (Alt+←), or drag it onto the middle of a group. ↑ and ↓ move it, ⧉ duplicates it, ⊘ switches it off without deleting it, 🗑 deletes it. Every step can carry a Note.' },
+        { p: '▶ Run selected step runs just that step, to try it; ▶ Run macro runs them all.' },
+        { tip: 'Record first, then open the Macro Builder to tidy up: the recorder writes finished steps that you can change, put in loops or switch off.' },
+        { see: ['macros', 'macro-variables', 'macro-references'] },
+      ] },
+    { id: 'macro-variables', group: 'macros', title: 'Variables, loops and expressions',
+      keywords: 'macro variable $ $i $item $periods $period list index expression round min max text ${}',
+      summary: 'Named values ($i, $item, $r1) and the expressions a number box takes.',
+      body: [
+        { p: 'A variable is a named value that a step can use, written with $ in front: $i, $item, $r1. They come from:' },
+        { steps: [
+          'A Repeat\'s counter ($i: 1, 2, 3…) and a For each\'s node ($item, and $itemIndex: 1, 2, 3…).',
+          'A Set var step.',
+          'An action\'s "Save result as": what it made — a node ($r1), several nodes ($r1, a list), a canvas ($c1), or what Insert Template made ($t1).',
+          'Two that are always there: $periods, how many periods the model has, and $period, the period you are viewing (from 1).',
+        ] },
+        { p: 'A variable holding a list takes a number in brackets, counted from 0: $r1[0] is the first item, $r1[2] the third. Add Many Rectangles saved as $r1 gives one item per rectangle; a recipe inserted as $t1 gives one canvas per part.' },
+        { p: 'Every number box takes an expression: + - * / % and brackets, variables, and min, max, round, floor, ceil and abs — for example 100 + $i*80, $periods - 1 or round($x/2).' },
+        { p: 'In text, ${…} puts in a variable or an expression: a name Line ${i} gives Line 1, Line 2…, and Year ${2024 + i} gives Year 2025, Year 2026…' },
+        { tip: 'Five input rows in one go: + Repeat with Times 5, and inside it + Action createRect with name Line ${i} and y 100 + $i*80.' },
+        { see: ['macro-steps', 'macro-references'] },
+      ] },
+    { id: 'macro-references', group: 'macros', title: 'Referring to nodes, canvases and templates',
+      keywords: 'macro reference id #id #n #c canvas node @sel @cur @all :: copy reference name duplicate template family version',
+      summary: 'How a step names what it works on: names, ids (#n12, #c3), @sel, saved variables.',
+      body: [
+        { p: 'A step names what it works on in a box. For nodes:' },
+        { steps: [
+          'Revenue — the rectangle named Revenue on the canvas (capitals don\'t matter). An alias or a block goes by the name it shows.',
+          '#n12 — a node by its id.',
+          '@sel, @sel[0] — the selection when the macro started, or its first node. @cur is the selection as it is now, while the macro runs.',
+          '@all — every node on the canvas; @all[3] is its fourth node (counted from 0, leaving out the automatic plug aliases).',
+          '$r1, $r1[0] — a node an earlier step made and saved.',
+          'Loans::Interest — the rectangle Interest on the canvas Loans; $t1[0]::Interest is it on the canvas a step made. A box for several nodes takes a list: Revenue, Cost.',
+        ] },
+        { p: 'For canvases: a name (Loans), an id (#c3), or a canvas an earlier step made ($c1, $t1[0]).' },
+        { p: 'An id is a node\'s or canvas\'s own label inside the model: nodes #n…, canvases #c…. It stays the same when you rename them, so it works when two share a name. To find one: hover over a canvas tab to see its id; select nodes and use {cmd:copyReference}, which copies how a step refers to them — the name, or the id when the name is used twice — ready to paste in a box. With nothing selected it copies the canvas\'s. On a tablet, hold a node and choose Copy reference. The step boxes also offer the selected nodes, and canvases sharing a name, by id.' },
+        { p: 'Ids belong to one model: run in another model, a step using #n12 won\'t find it, or finds a different node. Names, @sel and saved variables work in any model.' },
+        { p: 'Templates: Name (the latest version), Name@3 (version 3) or Name@latest. When two template families share a name, use the family\'s ID instead of the name: the message that stops the macro lists them.' },
+        { see: ['macro-reliable', 'macro-errors', 'macro-variables'] },
+      ] },
+    { id: 'macro-reliable', group: 'macros', title: 'Macros that work every time',
+      keywords: 'macro recorded fails differs state duplicate name canvas template recipe skip @all note warning relative selection paste',
+      summary: 'A macro runs in the model as it is then. How recording copes, and what a ⚠ note means.',
+      body: [
+        { p: 'A macro runs in the model as it is when you run it, which may not be how it was when you recorded it. The recorder picks references that keep working:' },
+        { steps: [
+          'What a step made is kept in its variable. A canvas Insert Template adds is $t1 (several: $t1[0], $t1[1]…), so a later Go to Canvas finds the new one even when another canvas has the same name.',
+          'A recipe gives one canvas per part, in order, so $t1[1] is always the second part — also when a part already here was skipped (it is then that canvas).',
+          'Skipping the parts of a recipe that are already here is recorded as that rule, so the macro skips what is here when it runs.',
+          'A node a template made with no name of its own, such as an operator, is referred to by its place on that canvas (@all[3]).',
+        ] },
+        { p: 'Where it can\'t be sure, the recorder puts a ⚠ note on the step and says so when you stop recording. A note means: a node of this model referred to by its id (another model won\'t have it); a node made while recording that no step saved; an automatic plug alias (it gets a new id whenever plugs are worked out); a template\'s node referred to by its place (check it if the template changes); or a Paste whose Copy wasn\'t recorded (it pastes whatever was copied last).' },
+        { p: 'Other things that can be different when it runs:' },
+        { steps: [
+          'The selection: a macro using @sel needs the nodes selected first.',
+          'Names: a canvas or rectangle renamed or deleted since; or a name now used twice — rename one, or use the id.',
+          'The canvas you are on: the macro starts on the current canvas. If it should start somewhere else, record a Go to Canvas step first.',
+          'Positions: x and y are where you put things. Tick Relative positions to build next to the selection (or the middle of the view) instead.',
+        ] },
+        { see: ['macro-references', 'macro-errors'] },
+      ] },
+    { id: 'macro-errors', group: 'macros', title: 'When a macro stops',
+      keywords: 'macro error stopped nothing was changed message fix more than one canvas named no rectangle selection variable no value',
+      summary: 'What "Stopped — nothing was changed" means, and what to do about each message.',
+      body: [
+        { p: '"Stopped — nothing was changed" means a step could not run, so fmIDE put the model back as it was before the macro. The message names the step (its action and boxes) and why; in the Macro Builder that step is marked in red.' },
+        { steps: [
+          'More than one canvas is named "…" (#c3, #c7): rename one (double-click its tab), or write the id of the one you mean in the step\'s Canvas box. If an earlier step made that canvas, use its variable instead ($t1[0] or $c1): it always finds the canvas the macro made.',
+          '2 rectangles on "…" are named "…": rename one, or write the id of the one you mean (select it and use {cmd:copyReference}).',
+          'There is no canvas called "…" / no rectangle named "…": it was renamed or deleted, or the macro is running on another canvas than you expected.',
+          'Nothing was selected when the macro started: select the nodes it should work on, then run it again.',
+          '$t1 holds 2 canvases or nodes — say which one: write $t1[0], $t1[1]….',
+          'Variable $x has no value yet: the step that sets it has not run — it is switched off, comes later, or is inside a loop that ran no times.',
+          'More than one template family is named "…": write the family\'s ID (listed in the message) instead of the name, or rename one in Templates.',
+        ] },
+        { tip: 'Select a step and press ▶ Run selected step to try it on its own.' },
+        { see: ['macro-references', 'macro-reliable'] },
       ] },
 
     // ---------- Touch ----------
@@ -2177,6 +2275,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     openMacros: 'Opens the Macro Builder, to make and change macros.',
     toggleRecord: 'Records what you do as a macro; press again to stop.',
     runLastMacro: 'Runs the last macro you ran again.',
+    copyReference: 'Copies how a macro step refers to the selected nodes (or, with nothing selected, this canvas): the name, or the id when the name is used twice.',
   };
 
   const OPERATOR_HELP = {
@@ -2226,6 +2325,24 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // entry: ids, dates in order, commands and topics that exist.
   // **A change people will notice adds its entry here in the same pull request.**
   const WHATS_NEW = [
+
+    { id: 'macros-that-hold', date: '2026-10-03', title: 'Macros that keep working, and help to write them',
+      summary: 'A canvas a template adds is saved for later steps; ids you can see; Copy Reference; six help topics on macros.',
+      what: [
+        'Insert Template now saves what it made, like New Canvas and the Create actions: the canvases it adds ($t1[0], $t1[1]… — a recipe one per part, in order) or the nodes it puts on this canvas. The recorder uses it, so a recorded "Go to Canvas" finds the canvas the macro made, even when another canvas has the same name.',
+        'The recorder copes with other differences between recording and running too: a template\'s nodes without a name are referred to by their place (@all[3]), skipping recipe parts already here is recorded as that rule, and a step whose reference may not hold gets a ⚠ note saying why.',
+        'Every canvas tab shows its id when you hover over it, and {cmd:copyReference} copies how a step refers to the selected nodes (or the canvas) — the name, or the id when the name is used twice. On a tablet, hold a node and choose Copy reference.',
+        'The Macro Builder names the result of a step that makes something by itself, and the messages that stop a macro say what to do, listing the ids to choose from.',
+        'Help has a Macros group: building a macro step by step, variables and loops, references, macros that work every time, and what each message means.',
+      ],
+      why: 'A recorded macro could stop with "More than one canvas is named …" and no way to find the id it asked for. Now the macro refers to what it made itself, and where it still needs an id, you can see it.',
+      how: [
+        'Record a macro that inserts a template on a new canvas and then goes back to it.',
+        'Run it again: it adds another canvas of the same name and goes to that one.',
+        'Open {cmd:openMacros}: the Insert Template step shows → $t1, and the Go to Canvas step uses $t1.',
+      ],
+      notes: ['Macros recorded before keep their steps: record again, or put the variable in the step by hand.', 'Ids belong to one model: a macro using #n12 in another model won\'t find it.'],
+      see: ['macro-references', 'macro-reliable', 'macro-errors', 'macro-steps'] },
 
     { id: 'recipes-in-recipes', date: '2026-10-03', title: 'Recipes within a recipe',
       summary: 'A recipe\'s part can be another recipe, built in its place.',
@@ -4757,7 +4874,8 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     closeX.title = 'Delete canvas';
     tab.appendChild(nameSpan);
     tab.appendChild(closeX);
-    tab.title = 'Click to open · double-click to rename · drag to reorder';
+    // Its id too: what a macro step can use when two canvases share a name.
+    tab.title = `Click to open · double-click to rename · drag to reorder · id #${id}`;
 
     tab.addEventListener('click', (ev) => {
       if(ev.target === closeX || tabDragJustEnded || tab.dataset.renaming) return;
@@ -6595,6 +6713,8 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     clearSelection();
     renderCanvasTabs();
     evaluateAll();
+    // The canvas each of the system's canvases became, in its order (a merged one: yours).
+    return data.canvases.map(c => canvasIdMap[c.id]);
   }
 
   function applySystemData(data, mode){
@@ -6718,6 +6838,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     selectNodesOnly(newNodes.map(n => n.id));
     render();
     evaluateAll();
+    return newNodes.map(n => n.id);
   }
 
   // Creates a brand-new canvas and inserts the module template's contents into it,
@@ -6740,6 +6861,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     clearSelection();
     applyModuleDataDirect(data);
     renderCanvasTabs();
+    return c.id;
   }
 
   function loadModuleFromFile(file){
@@ -9944,6 +10066,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     item(inSelection ? 'Remove from selection' : 'Add to selection', () => toggleNodeSelection(id));
     item('Edit…', () => { const m = getNode(id); if(m) editNode(m); });
     if(n.type === 'value') item('Properties…', () => { const m = getNode(id); if(m) showPropertiesEditor(m); });
+    item(several ? 'Copy references' : 'Copy reference', () => copyReferenceInteractive(targets().map(x => x.id)));
     item('Help', () => openHelp(helpTopicForNode(getNode(id) || n)));
     item(several ? 'Delete selection' : 'Delete', () => guarded(() => fm.deleteNodes(refs()))).classList.add('danger');
 
@@ -12088,7 +12211,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     return recipeBuildLeaves(parts, own).map(({ part, st }) => {
       if(!st.template) return null;
       const onCanvas = canvases.find(c => c.template && c.template.family === part.family);
-      const hit = onCanvas ? { canvas: onCanvas.name, version: onCanvas.template.version }
+      const hit = onCanvas ? { canvas: onCanvas.name, id: onCanvas.id, version: onCanvas.template.version }
         : seen.has(part.family) ? { canvas: seen.get(part.family), inRecipe: true } : null;
       if(!seen.has(part.family)) seen.set(part.family, st.template.name);
       return hit;
@@ -12101,21 +12224,28 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     const skip = (opts && opts.skip) || new Set();
     const made = [], warnings = recipeNestedNotes(t.data.parts, t.family), skipped = [];
     const here = recipePartsAlreadyHere(t.data.parts, t.family);
+    // `parts`: one entry per canvas the recipe builds, in order — the canvas built, or the one
+    // already here that a skipped part stands for, else null — so a macro's $t1[2] is always
+    // the third part, whatever was skipped.
+    const parts = [], partOfFamily = new Map();
     recipeBuildLeaves(t.data.parts, t.family).forEach(({ part, st }, i) => {
       if(skip.has(i)){
         const name = (st.template && st.template.name) || part.name || 'A part';
         skipped.push(here[i] ? `Skipped ${name} — already here as canvas “${here[i].canvas}”.` : `Skipped ${name}.`);
+        parts.push(here[i] ? (here[i].id || partOfFamily.get(part.family) || null) : null);
         return;
       }
-      if(!st.template){ warnings.push(`Skipped ${st.label}.`); return; }
+      if(!st.template){ warnings.push(`Skipped ${st.label}.`); parts.push(null); return; }
       if(st.state === 'differs') warnings.push(`${st.template.name} v${st.template.version} in your library isn't the one this recipe was made with — built with yours.`);
       applyModuleDataToNewCanvas(cloneData(st.template.data));
       const c = canvases.find(x => x.id === activeCanvasId);
       setCanvasTemplateLink(c, st.template);
       made.push(c.id);
+      parts.push(c.id);
+      if(!partOfFamily.has(part.family)) partOfFamily.set(part.family, c.id);
     });
     if(!made.length && !skipped.length) fail(`Nothing to build: none of the parts of "${t.name}" is in your library.`);
-    if(!made.length) return { canvases: [], warnings, skipped, unfedSockets: [], multiFedSockets: [] };
+    if(!made.length) return { canvases: [], parts, warnings, skipped, unfedSockets: [], multiFedSockets: [] };
     syncAutoConnections();
     clearComputed();
     evaluateAll();
@@ -12126,7 +12256,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     // is on a canvas it added) — e.g. a part whose canvas was already in the model.
     const newNames = new Set(made.map(id => canvases.find(c => c.id === id).name));
     const multi = multiFedSocketsIn(all).filter(m => newNames.has(m.canvas) || m.sources.some(s => newNames.has(s.split('::')[0])));
-    return { canvases: made, warnings, skipped, unfedSockets: unfed, multiFedSockets: multi };
+    return { canvases: made, parts, warnings, skipped, unfedSockets: unfed, multiFedSockets: multi };
   }
   function recipeBuildSummary(t, r){
     const lines = [r.canvases.length ? `Built ${t.name}: ${r.canvases.length} canvas${r.canvases.length === 1 ? '' : 'es'}.`
@@ -12920,7 +13050,12 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       if(t.kind === 'module'){ guarded(() => fm.insertTemplate(t.id, 'here')); return; }
       if(t.kind === 'recipe'){
         const skip = recipeSkipFor === t ? [...recipeSkip].map(i => i + 1) : [];
-        guarded(() => { const r = fm.insertTemplate(Object.assign({ template: t.id, mode: 'add' }, skip.length ? { skip } : {})); if(r) showMessage(recipeBuildSummary(t, r)); });
+        // Skipping exactly the parts already here is recorded as that rule (skipExisting), so
+        // a macro skips what is already here when it runs, not what was when it was recorded.
+        const hereNow = recipePartsAlreadyHere(t.data.parts, t.family).map((h, i) => h ? i + 1 : 0).filter(Boolean);
+        const sameAsHere = skip.length > 0 && skip.length === hereNow.length && skip.every(k => hereNow.includes(k));
+        const how = sameAsHere ? { skipExisting: true } : skip.length ? { skip } : {};
+        guarded(() => { const r = fm.insertTemplate(Object.assign({ template: t.id, mode: 'add' }, how)); if(r) showMessage(recipeBuildSummary(t, r)); });
         return;
       }
       const collisions = (t.data.canvases || [])
@@ -16089,6 +16224,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   //   #n12             a node by id           @sel / @sel[0]   the selection (in a macro: as it was when the macro started)
   //   @cur / @cur[0]   the live selection     @all             every node on the canvas
   //   $r1 / $r1[0]     a macro variable (e.g. the id a Create step returned)
+  //   @all[3]          the 4th node on the canvas, counted without the automatic plug aliases
   //   Canvas::Name     a rectangle on another canvas (alias sources)
   //   A, B, C          several references (for "nodes" arguments)
   function activeCanvas(){ return canvases.find(c => c.id === activeCanvasId); }
@@ -16117,6 +16253,35 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     return nm ? `"${nm}"` : `#${n.id}`;
   }
 
+  // How a macro step refers to a node or canvas: its name when that finds exactly it, else
+  // its id (#n12, #c3). The recorder and Copy Reference both use it.
+  function macroRefOfNode(n){
+    const c = canvasOfNode(n);
+    const nm = refNameOf(n);
+    if(nm && isPlainRefName(nm) && c){
+      try{ if(resolveOneNode(nm, c) === n) return nm; }catch(err){ /* not unique: its id */ }
+    }
+    return '#' + n.id;
+  }
+  function macroRefOfCanvas(c){
+    const same = canvases.filter(x => x.name.trim().toLowerCase() === c.name.trim().toLowerCase());
+    return same.length === 1 && isPlainRefName(c.name) ? c.name : '#' + c.id;
+  }
+  // Copy Reference: the selected nodes' references (else the current canvas's), to paste into
+  // a macro step.
+  function copyReferenceInteractive(ids){
+    const list = (ids || Array.from(selectedNodeIds)).map(id => getNode(id)).filter(Boolean);
+    const text = list.length ? list.map(macroRefOfNode).join(', ') : macroRefOfCanvas(activeCanvas());
+    const what = list.length ? (list.length === 1 ? 'this node' : `these ${list.length} nodes`) : 'this canvas';
+    const done = () => toast(`Copied ${text} — how a macro step refers to ${what}.`, 3500);
+    const shown = () => showMessage(`How a macro step refers to ${what}:\n\n${text}`);
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, shown);
+      else shown();
+    }catch(err){ shown(); }
+    return text;
+  }
+
   function lookupVar(token){
     const m = /^\$([A-Za-z_]\w*)(?:\[(\d+)\])?$/.exec(String(token).trim());
     if(!m) fail(`"${token}" is not a valid variable reference.`);
@@ -16142,11 +16307,19 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     const pool = nodesIn(c);
     const vals = pool.filter(n => n.type === 'value' && (parseNode(n).name || '').trim().toLowerCase() === lc);
     if(vals.length === 1) return vals[0];
-    if(vals.length > 1) fail(`${vals.length} rectangles on "${c.name}" are named "${name}" — rename one, or refer to it by id (#id).`);
+    if(vals.length > 1) fail(`${vals.length} rectangles on "${c.name}" are named "${name}" (${idList(vals)}). Rename one, or write its id instead of the name, like ${'#' + vals[0].id} — select it and use Copy Reference to get it. If an earlier step made it, use that step's variable (like $r1).`);
     const others = pool.filter(n => (n.type === 'alias' || n.type === 'blockInstance') && refNameOf(n).toLowerCase() === lc);
     if(others.length === 1) return others[0];
-    if(others.length > 1) fail(`${others.length} nodes on "${c.name}" are called "${name}" — refer to one by id (#id).`);
+    if(others.length > 1) fail(`${others.length} nodes on "${c.name}" are called "${name}" (${idList(others)}). Write the id of the one you mean instead of the name, like ${'#' + others[0].id} — select it and use Copy Reference to get it.`);
     fail(`There is no rectangle named "${name}" on canvas "${c.name}".`);
+  }
+
+  function idList(list){ return list.map(x => '#' + x.id).join(', '); }
+  // The nodes "@all" counts with an index: the automatic plug aliases are left out, since they
+  // are made again (with new ids, at the end) whenever plugs and sockets are worked out.
+  function indexedNodes(pool){ return pool.filter(n => !(n.type === 'alias' && n.auto)); }
+  function noSelectionText(){
+    return 'Nothing was selected when the macro started, and this step works on the selection (@sel). Select the nodes it should work on, then run the macro again.';
   }
 
   function selectionIds(kind){
@@ -16176,16 +16349,30 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       const list = ids.map(id => pool.find(n => n.id === id)).filter(Boolean);
       if(m[2] === undefined) return list;
       const one = list[+m[2]];
-      if(!one) fail(`The selection has no item [${m[2]}] (it has ${list.length}).`);
+      if(!one){
+        if(m[1] === 'sel' && runCtx && !list.length) fail(noSelectionText());
+        fail(`The selection has no item [${m[2]}] (it has ${list.length}).`);
+      }
       return [one];
     }
     if(s === '@all') return pool.slice();
+    m = /^@all\[(\d+)\]$/.exec(s);
+    if(m){
+      const list = indexedNodes(pool);
+      const one = list[+m[1]];
+      if(!one) fail(`Canvas "${c.name}" has no node @all[${m[1]}] (it has ${list.length}, counted from 0).`);
+      return [one];
+    }
     if(s.startsWith('$')){
       const v = lookupVar(s);
       const list = Array.isArray(v) ? v : [v];
       return list.map(id => {
         const n = pool.find(x => x.id === id);
-        if(!n) fail(`${s} does not refer to a node on canvas "${c.name}".`);
+        if(!n){
+          if(id === null) fail(`${s} is empty: the step that saved it made nothing there (a part it skipped).`);
+          if(canvases.some(x => x.id === id)) fail(`${s} holds a canvas, not a node. For a node on it, write ${/\[\d+\]$/.test(s) || list.length === 1 ? s : s + '[0]'}::Name (Name: the rectangle's name).`);
+          fail(`${s} does not refer to a node on canvas "${c.name}".`);
+        }
         return n;
       });
     }
@@ -16204,7 +16391,10 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   function resolveOneNode(ref, c){
     const list = resolveNodes(ref, c);
     if(list.length === 1) return list[0];
-    if(list.length === 0) fail(ref === '' || ref == null ? 'No node was given.' : `Nothing matched "${ref}".`);
+    if(list.length === 0){
+      if(runCtx && !runCtx.startSelection.length && /^@sel(\[\d+\])?$/.test(String(ref).trim())) fail(noSelectionText());
+      fail(ref === '' || ref == null ? 'No node was given.' : `Nothing matched "${ref}".`);
+    }
     fail(`Expected one node, but "${Array.isArray(ref) ? ref.join(', ') : ref}" matched ${list.length}.`);
   }
 
@@ -16212,14 +16402,27 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     if(ref && typeof ref === 'object' && Array.isArray(ref.nodes)) return ref;
     if(ref === undefined || ref === null || ref === '' || ref === '@current') return activeCanvas();
     let s = String(ref).trim();
-    if(s.startsWith('$')) s = String(lookupVar(s));
+    if(s.startsWith('$')){
+      const token = s;
+      let v = lookupVar(token);
+      if(Array.isArray(v)){
+        if(v.length !== 1) fail(`${token} holds ${v.length} canvases or nodes — say which one, like ${token}[0] (counted from 0).`);
+        v = v[0];
+      }
+      if(v === null || v === undefined) fail(`${token} is empty: the step that saved it made no canvas there (a part it skipped).`);
+      const hit = canvases.find(c => c.id === v);
+      if(hit) return hit;
+      if(canvases.some(c => nodesIn(c).some(n => n.id === v))) fail(`${token} holds a node, not a canvas.`);
+      s = String(v).trim();               // a variable holding a canvas's name (or #id)
+    }
     const id = s.startsWith('#') ? s.slice(1) : s;
     const byId = canvases.find(c => c.id === id);
     if(byId) return byId;
+    if(s.startsWith('#')) fail(`There is no canvas ${s} (ids belong to one document: a macro made in another one names other canvases).`);
     const lc = s.toLowerCase();
     const byName = canvases.filter(c => c.name.trim().toLowerCase() === lc);
     if(byName.length === 1) return byName[0];
-    if(byName.length > 1) fail(`More than one canvas is named "${s}" — refer to it by id (#id).`);
+    if(byName.length > 1) fail(`More than one canvas is named "${s}" (${idList(byName)}). Rename one (double-click its tab), or write the id of the one you mean instead of the name, like #${byName[0].id} — hover over a canvas tab to see its id. If an earlier step made the canvas, use that step's variable instead (like $t1[0] or $c1).`);
     fail(`There is no canvas called "${s}".`);
   }
 
@@ -16233,7 +16436,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     const family = (text) => {
       if(TEMPLATES.some(t => t.family === text)) return latestOfFamily(text);
       const named = familiesNamed(text);
-      if(named.length > 1) fail(`More than one template family is named "${text}" — refer to it by its family ID.`);
+      if(named.length > 1) fail(`More than one template family is named "${text}" — refer to it by its family ID instead of the name — ${named.map(t => `${t.family} (latest v${t.version}${t.origin && t.origin.author ? ', by ' + t.origin.author : ''})`).join(', ')} — like "${named[0].family}@latest", or rename one in Templates.`);
       return named[0] || null;
     };
     const m = /^(.*?)\s*@\s*(latest|\d+)$/i.exec(s);
@@ -16266,7 +16469,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     if(byId) return byId;
     const byName = MACROS.filter(m => m.name.trim().toLowerCase() === s.toLowerCase());
     if(byName.length === 1) return byName[0];
-    if(byName.length > 1) fail(`More than one macro is named "${s}".`);
+    if(byName.length > 1) fail(`More than one macro is named "${s}" — rename one in the Macro Builder.`);
     fail(`There is no macro called "${s}".`);
   }
 
@@ -16701,8 +16904,11 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       return newNodes.map(n => n.id);
     } });
 
-  defineAction({ name:'insertTemplate', label:'Insert Template', category:'Insert', icon:'📚',
-    desc:'Inserts a saved template: its name (the latest version), "Name@latest", "Name@3" (version 3), the same with its family id, or "#id". Modules: "here" (this canvas) or "newCanvas". Systems: "add" (merge alongside) or "replace". Recipes: "add" builds one canvas per part (a recipe inside opened up into its parts) and returns { canvases, warnings, skipped, unfedSockets }; skip lists the numbers (from 1) of the canvases not to build, in the order they are built, and skipExisting skips every part already here (a canvas of the same template, or an earlier part of the recipe).',
+  defineAction({ name:'insertTemplate', label:'Insert Template', category:'Insert', icon:'📚', returns:'made',
+    // What a macro's "Save result as" keeps: the canvases made (a recipe: one per part, in
+    // order), or the nodes put on this canvas.
+    saved: r => (r && !Array.isArray(r) && typeof r === 'object' && Array.isArray(r.parts)) ? r.parts : r,
+    desc:'Inserts a saved template: its name (the latest version), "Name@latest", "Name@3" (version 3), the same with its family id, or "#id". Modules: "here" (this canvas; returns the new nodes\' ids) or "newCanvas" (returns the new canvas\'s id). Systems: "add" (merge alongside) or "replace" (both return the ids of the canvases, in the template\'s order; a canvas merged into one of yours gives yours). Recipes: "add" builds one canvas per part (a recipe inside opened up into its parts) and returns { canvases, parts, warnings, skipped, unfedSockets } — parts has one canvas id per part, in order (a part skipped as already here: that canvas; else null); skip lists the numbers (from 1) of the canvases not to build, in the order they are built, and skipExisting skips every part already here (a canvas of the same template, or an earlier part of the recipe). In a macro, "Save result as" keeps the canvases (a recipe\'s parts) or the nodes.',
     params:[ P('template','template'), P('mode','enum',{ options:['auto','here','newCanvas','add','replace'], def:'auto' }),
       P('onCollision','enum',{ options:['merge','keep'], def:'merge', label:'same-name canvases', help:'systems added alongside' }),
       P('decisions','json',{ optional:true, help:'per-canvas {"Name":"merge"|"keep"}' }),
@@ -16728,18 +16934,19 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         const active = () => canvases.find(c => c.id === activeCanvasId);
         if(mode === 'here'){
           const wasEmpty = nodes.length === 0;
-          pushHistory(); applyModuleDataDirect(data);
+          pushHistory(); const made = applyModuleDataDirect(data);
           setCanvasTemplateLink(active(), wasEmpty ? t : null);
+          return made;
         }
-        else if(mode === 'newCanvas'){ applyModuleDataToNewCanvas(data); setCanvasTemplateLink(active(), t); }
+        else if(mode === 'newCanvas'){ const id = applyModuleDataToNewCanvas(data); setCanvasTemplateLink(active(), t); return id; }
         else fail(`"${t.name}" is a module template — use mode "here" or "newCanvas".`);
       } else {
         if(!Array.isArray(data.canvases) || !data.canvases.length) fail(`Template "${t.name}" has no canvases.`);
-        if(mode === 'replace'){ pushHistory(); applySystemDataDirect(data); }
+        if(mode === 'replace'){ pushHistory(); applySystemDataDirect(data); return canvases.map(c => c.id); }
         else if(mode === 'add'){
           const decisions = Object.assign({}, a.decisions || {});
           data.canvases.forEach(c => { const k = c.name || 'Canvas'; if(!(k in decisions)) decisions[k] = a.onCollision; });
-          performAddSystem(data, decisions);
+          return performAddSystem(data, decisions);
         }
         else fail(`"${t.name}" is a system template — use mode "add" or "replace".`);
       }
@@ -17835,7 +18042,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         cloneData(HELP_RIBBON_GROUP),
       ]},
       { id:'macros', label:'Macros', keytip:'X', groups:[
-        { label:'Macros', items:[ { cmd:'openMacros', size:'large' }, { cmd:'toggleRecord', size:'large' }, { cmd:'runLastMacro' } ] },
+        { label:'Macros', items:[ { cmd:'openMacros', size:'large' }, { cmd:'toggleRecord', size:'large' }, { cmd:'runLastMacro' }, { cmd:'copyReference' } ] },
         { label:'My Macros', id:'myMacros', items:[] },
       ]},
     ]
@@ -18296,9 +18503,11 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       nodes.forEach(n => { const nm = refNameOf(n); if(nm && isPlainRefName(nm)) seen[nm] = (seen[nm] || 0) + 1; });
       Object.keys(seen).filter(k => seen[k] === 1).sort().forEach(k => out.push(k));
       out.push('@sel', '@sel[0]', '@sel[1]', '@cur', '@all');
-      if(p.type === 'node' && selectedNodeIds.size === 1) out.push('#' + Array.from(selectedNodeIds)[0]);
+      // The selected nodes by id, named, which holds even when a name is used twice.
+      Array.from(selectedNodeIds).map(getNode).filter(Boolean).forEach(n => out.push({ value: '#' + n.id, label: (refNameOf(n) || describeNode(n)) + ' (selected)' }));
     } else if(p.type === 'canvas'){
-      canvases.forEach(c => out.push(c.name));
+      // A name used by two canvases finds neither: those are offered by id, named.
+      canvases.forEach(c => { const ref = macroRefOfCanvas(c); out.push(ref.startsWith('#') ? { value: ref, label: c.name } : ref); });
     } else if(p.type === 'template'){
       templateFamilies().forEach(t => {
         out.push(t.name);
@@ -18354,7 +18563,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         if(sugg.length){
           const dl = el('datalist');
           dl.id = 'pformdl' + (++pformSeq);
-          sugg.forEach(s => { const o = el('option'); o.value = s; dl.appendChild(o); });
+          sugg.forEach(s => { const o = el('option'); if(typeof s === 'string') o.value = s; else { o.value = s.value; o.label = s.label; } dl.appendChild(o); });
           row.appendChild(dl);
           input.setAttribute('list', dl.id);
           input.setAttribute('autocomplete', 'off');
@@ -18680,6 +18889,21 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   }
   function countSteps(steps){ let n = 0; walkSteps(steps, () => n++); return n; }
 
+  // What an action step keeps in its "Save result as" variable (insertTemplate: the canvases
+  // or nodes it made), and the letter a new variable for it starts with.
+  function savedResult(def, r){ return def && def.saved ? def.saved(r) : r; }
+  function resultVarLetter(def){ return def.returns === 'canvas' ? 'c' : def.returns === 'made' ? 't' : 'r'; }
+  // Whether an action makes something a later step may want: the Macro Builder names its
+  // variable by itself, as the recorder does.
+  function makesSomething(def){ return !!def && ['node', 'nodes', 'canvas', 'made'].includes(def.returns); }
+  // A note the recorder puts on a step whose reference may not hold when the macro runs.
+  const RECORDER_NOTE = '⚠ ';
+  function nextVarName(m, letter){
+    let maxN = 0;
+    walkSteps(m.steps, st => { const mm = /^[rct](\d+)$/.exec(st.assign || ''); if(mm) maxN = Math.max(maxN, +mm[1]); });
+    return letter + (maxN + 1);
+  }
+
   function fmtArg(v){
     if(Array.isArray(v)) return '[' + v.map(fmtArg).join(', ') + ']';
     if(v && typeof v === 'object') return JSON.stringify(v);
@@ -18705,17 +18929,30 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   const recorder = {
     active:false, steps:[], created:new Map(), createdCanvases:new Map(), counter:0,
     selRefs:false, initialSel:[], selCanvasId:null, origin:null, macroId:null, isNewMacro:false, histAtStart:0,
+    startNodeIds:new Set(), startCanvasIds:new Set(), notes:[],
 
     refOf(n){
       if(this.created.has(n.id)) return this.created.get(n.id);
       if(this.selRefs && n && this.initialSel.includes(n.id)) return `@sel[${this.initialSel.indexOf(n.id)}]`;
       const c = canvasOfNode(n);
-      const nm = refNameOf(n);
-      if(nm && isPlainRefName(nm) && c){
-        try{ if(resolveOneNode(nm, c) === n) return nm; }catch(err){ /* ambiguous: fall back to id */ }
+      const plain = macroRefOfNode(n);
+      if(!plain.startsWith('#')) return plain;
+      const madeHere = !this.startNodeIds.has(n.id);
+      // A node a template step made on a canvas this recording made (an operator, or a name
+      // used twice): its place on that canvas, which the macro makes again in the same order.
+      if(madeHere && c && this.createdCanvases.has(c.id) && !this.startCanvasIds.has(c.id) && !(n.type === 'alias' && n.auto)){
+        const k = indexedNodes(nodesIn(c)).indexOf(n);
+        if(k >= 0){
+          this.note(`@all[${k}] is node ${k + 1} on the canvas a template made (it has no name of its own) — if the template changes, check this step.`);
+          return `@all[${k}]`;
+        }
       }
+      if(n.type === 'alias' && n.auto) this.note(`#${n.id} is an automatic plug alias: it gets a new id whenever plugs are worked out, so this step may not find it.`);
+      else if(madeHere) this.note(`#${n.id} was made while recording, but no step saved it, so the macro won't find the copy it makes. Give it a name, or refer to it through a step's "Save result as".`);
+      else this.note(`#${n.id} is a node of this model with no name of its own to use — run in another model, this step won't find it.`);
       return '#' + n.id;
     },
+    note(text){ if(!this.notes.includes(text)) this.notes.push(text); },
     refsOf(list){
       const ids = list.map(n => n.id);
       if(this.selRefs && ids.length && ids.length === this.initialSel.length && ids.every(id => this.initialSel.includes(id))) return '@sel';
@@ -18723,12 +18960,12 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     },
     canvasRef(c){
       if(this.createdCanvases.has(c.id)) return this.createdCanvases.get(c.id);
-      const same = canvases.filter(x => x.name.trim().toLowerCase() === c.name.trim().toLowerCase());
-      return same.length === 1 && isPlainRefName(c.name) ? c.name : '#' + c.id;
+      return macroRefOfCanvas(c);
     },
     convertArgs(name, args){
       const def = ACTIONS[name];
       const out = {};
+      this.notes = [];
       def.params.forEach(p => {
         if(!(p.name in args)) return;
         let v = args[p.name];
@@ -18749,14 +18986,31 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     push(name, args, result){
       const def = ACTIONS[name];
       const step = { id: newStepId(), kind:'action', action: name, args };
-      if(def.returns && def.returns !== 'value' && def.returns !== 'edge' && result != null){
-        const v = (def.returns === 'canvas' ? 'c' : 'r') + (++this.counter);
+      const kept = savedResult(def, result);
+      if(def.returns && def.returns !== 'value' && def.returns !== 'edge' && kept != null){
+        const v = resultVarLetter(def) + (++this.counter);
         step.assign = v;
-        if(Array.isArray(result)) result.forEach((id, i) => this.created.set(id, `$${v}[${i}]`));
-        else if(def.returns === 'canvas') this.createdCanvases.set(result, '$' + v);
-        else this.created.set(result, '$' + v);
+        const isCanvas = id => canvases.some(c => c.id === id);
+        const keep = (id, ref) => {
+          if(id == null) return;
+          const map = (def.returns === 'canvas' || (def.returns === 'made' && isCanvas(id))) ? this.createdCanvases : this.created;
+          if(!map.has(id)) map.set(id, ref);
+        };
+        if(Array.isArray(kept)) kept.forEach((id, i) => keep(id, `$${v}[${i}]`));
+        else keep(kept, '$' + v);
       }
-      if(!this.coalesce(step)) this.steps.push(step);
+      const notes = this.notes;
+      this.notes = [];
+      if(name === 'paste' && !this.steps.some(s => s.kind === 'action' && (s.action === 'copy' || s.action === 'cut')))
+        notes.push('Pastes whatever was copied before the macro runs — the copy wasn\'t recorded. Add a Copy step before it to paste the same thing every time.');
+      const noteText = notes.length ? RECORDER_NOTE + notes.join(' ') : '';
+      if(this.coalesce(step)){
+        const last = this.steps[this.steps.length - 1];
+        if(noteText && last && !(last.comment || '').includes(noteText)) last.comment = last.comment ? last.comment + ' ' + noteText : noteText;
+      } else {
+        if(noteText) step.comment = noteText;
+        this.steps.push(step);
+      }
       refreshCommandStates();
     },
     // record an interaction that was already applied directly (e.g. a mouse drag)
@@ -18827,8 +19081,11 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     recorder.created = new Map();
     recorder.createdCanvases = new Map();
     let maxN = 0;
-    walkSteps(m.steps, st => { const mm = /^[rc](\d+)$/.exec(st.assign || ''); if(mm) maxN = Math.max(maxN, +mm[1]); });
+    walkSteps(m.steps, st => { const mm = /^[rct](\d+)$/.exec(st.assign || ''); if(mm) maxN = Math.max(maxN, +mm[1]); });
     recorder.counter = maxN;
+    recorder.startNodeIds = new Set(canvases.flatMap(c => nodesIn(c).map(n => n.id)));
+    recorder.startCanvasIds = new Set(canvases.map(c => c.id));
+    recorder.notes = [];
     recorder.initialSel = Array.from(selectedNodeIds);
     recorder.selRefs = !!opts.selRefs && recorder.initialSel.length > 0;
     recorder.selCanvasId = activeCanvasId;
@@ -18855,8 +19112,10 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     m.steps = m.steps.concat(steps);
     syncMacroCommands();
     saveWorkspace();
+    const noted = steps.filter(st => (st.comment || '').includes(RECORDER_NOTE)).length;
     showMacroBuilder(m.id, steps[0].id);
-    mbSetStatus(`Recorded ${steps.length} step${steps.length === 1 ? '' : 's'}.`, 'ok');
+    if(noted) mbSetStatus(`Recorded ${steps.length} step${steps.length === 1 ? '' : 's'}. ${noted === 1 ? 'One step has' : noted + ' steps have'} a ⚠ note: something it refers to may not be there when the macro runs.`, 'warn');
+    else mbSetStatus(`Recorded ${steps.length} step${steps.length === 1 ? '' : 's'}.`, 'ok');
   }
 
   function toggleRecordingQuick(){
@@ -18879,7 +19138,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         switch(st.kind){
           case 'action': {
             const r = callAction(st.action, Object.assign({}, st.args || {}));
-            if(st.assign) runCtx.vars[st.assign] = r;
+            if(st.assign) runCtx.vars[st.assign] = savedResult(ACTIONS[st.action], r);
             break;
           }
           case 'group': execSteps(st.children); break;
@@ -19319,6 +19578,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         d2.params.forEach(p => { if(st.args && p.name in st.args) keep[p.name] = st.args[p.name]; });
         st.action = sel.value; st.args = keep;
         if(!d2.returns) delete st.assign;
+        else if(makesSomething(d2) && !st.assign) st.assign = nextVarName(m, resultVarLetter(d2));
         changed(); renderMBProps();
       });
       const def = ACTIONS[st.action];
@@ -19334,7 +19594,10 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       });
       props.appendChild(pf.el);
       if(def.returns && def.returns !== 'edge'){
-        const asg = row('Save result as $', textIn(st.assign, def.returns === 'nodes' ? 'e.g. copies' : 'e.g. rev'));
+        const asg = row('Save result as $', textIn(st.assign, def.returns === 'nodes' ? 'e.g. copies' : def.returns === 'made' ? 'e.g. t1' : 'e.g. rev'));
+        asg.title = def.returns === 'made'
+          ? 'Keeps what this step made, for later steps: the canvases (use $t1[0], $t1[1]… — a recipe: one per part, in order) or, added to this canvas, the nodes.'
+          : 'Keeps what this step made, so later steps can refer to it by this name (like $r1), whatever else is in the model.';
         asg.addEventListener('input', () => { const v = asg.value.trim().replace(/^\$/, ''); if(v && /^[A-Za-z_]\w*$/.test(v)) st.assign = v; else delete st.assign; changed(); });
       }
     } else if(st.kind === 'group'){
@@ -19386,13 +19649,21 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     const add = (code, text) => { const line = el('div'); line.appendChild(el('code', '', code)); line.appendChild(document.createTextNode(' ' + text)); h.appendChild(line); };
     h.appendChild(el('div', '', 'Referring to nodes:'));
     add('Revenue', 'a rectangle by name (aliases/blocks by the name they show)');
+    add('#n12', 'a node by id — select it and use Copy Reference to get it');
     add('@sel  @sel[0]', 'the selection when the macro started');
     add('@cur  @all', 'the live selection · every node on the canvas');
-    add('$r1  $r1[0]', 'a node saved by an earlier step');
-    add('#n12', 'a node by id');
-    add('Canvas::Name', 'a rectangle on another canvas (alias sources)');
-    add('Name@3  Name@latest', 'a template: version 3, or the latest (the name alone is the latest too)');
+    add('@all[3]', 'the 4th node on the canvas (counted from 0)');
+    add('$r1  $r1[0]', 'a node an earlier step saved (Save result as)');
+    add('Canvas::Name', 'a rectangle on another canvas ($t1[0]::Name: on the canvas a step made)');
+    h.appendChild(el('div', '', 'Referring to canvases:'));
+    add('Loans  #c3', 'by name, or by id (hover over its tab to see it)');
+    add('$c1  $t1[0]', 'a canvas an earlier step made (New Canvas, Insert Template)');
+    h.appendChild(el('div', '', 'Templates: Name (the latest), Name@3 (version 3), Name@latest.'));
     h.appendChild(el('div', '', 'Numbers accept expressions: 100 + $i*80, $periods, round($x/2).'));
+    const more = el('button', 'mbtn macro-ref-more', '❓ More about references');
+    more.type = 'button';
+    more.addEventListener('click', () => openHelp('macro-references'));
+    h.appendChild(more);
     return h;
   }
 
@@ -19400,6 +19671,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   function mbInsert(step){
     const m = mbMacro(); if(!m) return;
     step.id = newStepId();
+    if(step.kind === 'action' && !step.assign && makesSomething(ACTIONS[step.action])) step.assign = nextVarName(m, resultVarLetter(ACTIONS[step.action]));
     const f = mb.selStepId ? findStep(m.steps, mb.selStepId) : null;
     if(!f) m.steps.push(step);
     else if(CONTAINER_KINDS.has(f.step.kind) && !mb.collapsed.has(f.step.id)){ f.step.children = f.step.children || []; f.step.children.push(step); }
@@ -19439,6 +19711,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     if(!f) return;
     const copy = normalizeSteps([cloneData(f.step)])[0];
     delete copy.assign;
+    if(copy.kind === 'action' && makesSomething(ACTIONS[copy.action])) copy.assign = nextVarName(m, resultVarLetter(ACTIONS[copy.action]));
     f.arr.splice(f.index + 1, 0, copy);
     mb.selStepId = copy.id;
     renderMBTree(); renderMBProps(); renderMBList(); mbChanged();
@@ -20810,6 +21083,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       addManyRectsAdded: true, // 12b: Add Many Rectangles… after Add Rectangle
       fmGraphAdded: true, // 15 G1: Open fmGraph after Open ExcelExporter
       canvasSwitchAdded: true, // Previous / Next Canvas after Move Canvas Right
+      copyReferenceAdded: true, // Copy Reference after Run Last Macro
       libraryAuthor,
       windowSizes: cleanWindowSizes(windowSizes), templateGroupsClosed: templateGroupsClosed.slice(0, 200),
       helpSize: cleanHelpSize(helpPanelSize),
@@ -20922,6 +21196,15 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       if(at >= 0) g.items.splice(at + 1, 0, { cmd: 'prevCanvas' }, { cmd: 'nextCanvas' });
     });
   }
+  function addCopyReferenceToRibbon(){
+    const groups = [];
+    ribbonState.config.tabs.forEach(t => (t && Array.isArray(t.groups) ? t.groups : []).forEach(g => { if(g && Array.isArray(g.items)) groups.push(g); }));
+    if(groups.some(g => g.items.some(it => it && it.cmd === 'copyReference'))) return;
+    groups.forEach(g => {
+      const at = g.items.findIndex(it => it && it.cmd === 'runLastMacro');
+      if(at >= 0) g.items.splice(at + 1, 0, { cmd: 'copyReference' });
+    });
+  }
   function addManyRectsCommandToRibbon(){
     const groups = [];
     ribbonState.config.tabs.forEach(t => (t && Array.isArray(t.groups) ? t.groups : []).forEach(g => { if(g && Array.isArray(g.items)) groups.push(g); }));
@@ -20985,6 +21268,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       if(ui.addManyRectsAdded !== true) addManyRectsCommandToRibbon();
       if(ui.fmGraphAdded !== true) addFmGraphCommandToRibbon();
       if(ui.canvasSwitchAdded !== true) addCanvasSwitchCommandsToRibbon();
+      if(ui.copyReferenceAdded !== true) addCopyReferenceToRibbon();
     }
     if(!fromImport && typeof ui.libraryAuthor === 'string') libraryAuthor = ui.libraryAuthor.slice(0, LIBRARY_PACK_LIMITS.author);
     // Window sizes, closed template groups, the Help panel's width, the updates seen and the canvases' zoom belong to this screen and person: never from

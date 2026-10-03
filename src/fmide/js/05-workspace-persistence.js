@@ -448,6 +448,8 @@
     clearSelection();
     renderCanvasTabs();
     evaluateAll();
+    // The canvas each of the system's canvases became, in its order (a merged one: yours).
+    return data.canvases.map(c => canvasIdMap[c.id]);
   }
 
   function applySystemData(data, mode){
@@ -571,6 +573,7 @@
     selectNodesOnly(newNodes.map(n => n.id));
     render();
     evaluateAll();
+    return newNodes.map(n => n.id);
   }
 
   // Creates a brand-new canvas and inserts the module template's contents into it,
@@ -593,6 +596,7 @@
     clearSelection();
     applyModuleDataDirect(data);
     renderCanvasTabs();
+    return c.id;
   }
 
   function loadModuleFromFile(file){

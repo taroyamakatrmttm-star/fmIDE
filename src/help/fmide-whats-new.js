@@ -13,6 +13,24 @@
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
 
+  { id: 'macros-that-hold', date: '2026-10-03', title: 'Macros that keep working, and help to write them',
+    summary: 'A canvas a template adds is saved for later steps; ids you can see; Copy Reference; six help topics on macros.',
+    what: [
+      'Insert Template now saves what it made, like New Canvas and the Create actions: the canvases it adds ($t1[0], $t1[1]… — a recipe one per part, in order) or the nodes it puts on this canvas. The recorder uses it, so a recorded "Go to Canvas" finds the canvas the macro made, even when another canvas has the same name.',
+      'The recorder copes with other differences between recording and running too: a template\'s nodes without a name are referred to by their place (@all[3]), skipping recipe parts already here is recorded as that rule, and a step whose reference may not hold gets a ⚠ note saying why.',
+      'Every canvas tab shows its id when you hover over it, and {cmd:copyReference} copies how a step refers to the selected nodes (or the canvas) — the name, or the id when the name is used twice. On a tablet, hold a node and choose Copy reference.',
+      'The Macro Builder names the result of a step that makes something by itself, and the messages that stop a macro say what to do, listing the ids to choose from.',
+      'Help has a Macros group: building a macro step by step, variables and loops, references, macros that work every time, and what each message means.',
+    ],
+    why: 'A recorded macro could stop with "More than one canvas is named …" and no way to find the id it asked for. Now the macro refers to what it made itself, and where it still needs an id, you can see it.',
+    how: [
+      'Record a macro that inserts a template on a new canvas and then goes back to it.',
+      'Run it again: it adds another canvas of the same name and goes to that one.',
+      'Open {cmd:openMacros}: the Insert Template step shows → $t1, and the Go to Canvas step uses $t1.',
+    ],
+    notes: ['Macros recorded before keep their steps: record again, or put the variable in the step by hand.', 'Ids belong to one model: a macro using #n12 in another model won\'t find it.'],
+    see: ['macro-references', 'macro-reliable', 'macro-errors', 'macro-steps'] },
+
   { id: 'recipes-in-recipes', date: '2026-10-03', title: 'Recipes within a recipe',
     summary: 'A recipe\'s part can be another recipe, built in its place.',
     what: [

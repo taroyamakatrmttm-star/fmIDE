@@ -329,8 +329,11 @@
       return newNodes.map(n => n.id);
     } });
 
-  defineAction({ name:'insertTemplate', label:'Insert Template', category:'Insert', icon:'📚',
-    desc:'Inserts a saved template: its name (the latest version), "Name@latest", "Name@3" (version 3), the same with its family id, or "#id". Modules: "here" (this canvas) or "newCanvas". Systems: "add" (merge alongside) or "replace". Recipes: "add" builds one canvas per part (a recipe inside opened up into its parts) and returns { canvases, warnings, skipped, unfedSockets }; skip lists the numbers (from 1) of the canvases not to build, in the order they are built, and skipExisting skips every part already here (a canvas of the same template, or an earlier part of the recipe).',
+  defineAction({ name:'insertTemplate', label:'Insert Template', category:'Insert', icon:'📚', returns:'made',
+    // What a macro's "Save result as" keeps: the canvases made (a recipe: one per part, in
+    // order), or the nodes put on this canvas.
+    saved: r => (r && !Array.isArray(r) && typeof r === 'object' && Array.isArray(r.parts)) ? r.parts : r,
+    desc:'Inserts a saved template: its name (the latest version), "Name@latest", "Name@3" (version 3), the same with its family id, or "#id". Modules: "here" (this canvas; returns the new nodes\' ids) or "newCanvas" (returns the new canvas\'s id). Systems: "add" (merge alongside) or "replace" (both return the ids of the canvases, in the template\'s order; a canvas merged into one of yours gives yours). Recipes: "add" builds one canvas per part (a recipe inside opened up into its parts) and returns { canvases, parts, warnings, skipped, unfedSockets } — parts has one canvas id per part, in order (a part skipped as already here: that canvas; else null); skip lists the numbers (from 1) of the canvases not to build, in the order they are built, and skipExisting skips every part already here (a canvas of the same template, or an earlier part of the recipe). In a macro, "Save result as" keeps the canvases (a recipe\'s parts) or the nodes.',
     params:[ P('template','template'), P('mode','enum',{ options:['auto','here','newCanvas','add','replace'], def:'auto' }),
       P('onCollision','enum',{ options:['merge','keep'], def:'merge', label:'same-name canvases', help:'systems added alongside' }),
       P('decisions','json',{ optional:true, help:'per-canvas {"Name":"merge"|"keep"}' }),
@@ -356,18 +359,19 @@
         const active = () => canvases.find(c => c.id === activeCanvasId);
         if(mode === 'here'){
           const wasEmpty = nodes.length === 0;
-          pushHistory(); applyModuleDataDirect(data);
+          pushHistory(); const made = applyModuleDataDirect(data);
           setCanvasTemplateLink(active(), wasEmpty ? t : null);
+          return made;
         }
-        else if(mode === 'newCanvas'){ applyModuleDataToNewCanvas(data); setCanvasTemplateLink(active(), t); }
+        else if(mode === 'newCanvas'){ const id = applyModuleDataToNewCanvas(data); setCanvasTemplateLink(active(), t); return id; }
         else fail(`"${t.name}" is a module template — use mode "here" or "newCanvas".`);
       } else {
         if(!Array.isArray(data.canvases) || !data.canvases.length) fail(`Template "${t.name}" has no canvases.`);
-        if(mode === 'replace'){ pushHistory(); applySystemDataDirect(data); }
+        if(mode === 'replace'){ pushHistory(); applySystemDataDirect(data); return canvases.map(c => c.id); }
         else if(mode === 'add'){
           const decisions = Object.assign({}, a.decisions || {});
           data.canvases.forEach(c => { const k = c.name || 'Canvas'; if(!(k in decisions)) decisions[k] = a.onCollision; });
-          performAddSystem(data, decisions);
+          return performAddSystem(data, decisions);
         }
         else fail(`"${t.name}" is a system template — use mode "add" or "replace".`);
       }
