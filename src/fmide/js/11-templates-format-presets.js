@@ -288,6 +288,86 @@
     });
   }
 
+  // ---------- removing old versions ----------
+  // Every version but the latest of a family can go, except one something still uses: a
+  // canvas of the open model linked to it, or — among the versions that stay — a canvas of a
+  // system template linked to it, or a recipe part pinned to its number. (What stays can
+  // keep more in use, so this repeats until nothing changes.) The latest always stays, so a
+  // version number is never used twice.
+  // Returns { remove: [versions], kept: [{ t, why }] } for the families in `families`.
+  function oldTemplateVersionsPlan(families){
+    const fams = new Set(families);
+    const stays = new Set(templateFamilies().filter(t => fams.has(t.family)));
+    TEMPLATES.forEach(t => { if(!fams.has(t.family)) stays.add(t); });
+    const why = new Map();
+    const keep = (t, reason) => { if(t && !stays.has(t)){ stays.add(t); why.set(t, reason); return true; } return false; };
+    syncActiveIntoRegistry();
+    canvases.forEach(c => keep(linkedTemplate(c.template), `a canvas in this model (“${c.name}”) is linked to it`));
+    let changed = true;
+    while(changed){
+      changed = false;
+      Array.from(stays).forEach(s => {
+        if(s.kind === 'system'){
+          ((s.data && s.data.canvases) || []).forEach(c => {
+            if(keep(linkedTemplate(c && c.template), `the system template “${s.name}” v${s.version} has a canvas linked to it`)) changed = true;
+          });
+        } else if(s.kind === 'recipe'){
+          ((s.data && s.data.parts) || []).forEach(p => {
+            if(!p || p.version === 'latest') return;
+            const t = TEMPLATES.find(x => x.family === p.family && x.version === p.version);
+            if(keep(t, `the recipe “${s.name}” v${s.version} is pinned to it`)) changed = true;
+          });
+        }
+      });
+    }
+    const remove = TEMPLATES.filter(t => fams.has(t.family) && !stays.has(t));
+    const kept = TEMPLATES.filter(t => why.has(t) && fams.has(t.family)).map(t => ({ t, why: why.get(t) }));
+    return { remove, kept };
+  }
+  const versionList = (list) => list.slice().sort((a, b) => a.version - b.version).map(t => 'v' + t.version).join(', ');
+  const keptLines = (kept) => kept.map(k => `“${k.t.name}” v${k.t.version} stays: ${k.why}.`).join('\n');
+
+  // "Remove old versions" on one template (the Templates window): every version but the
+  // latest that nothing uses.
+  function removeOldVersionsOf(t, onDone){
+    const latest = latestOfFamily(t.family);
+    if(!latest) return;
+    const { remove, kept } = oldTemplateVersionsPlan([t.family]);
+    if(!remove.length){
+      showMessage(familyVersions(t.family).length < 2
+        ? `“${latest.name}” has only one version.`
+        : `Every older version of “${latest.name}” is still in use, so none was removed.\n` + keptLines(kept));
+      return;
+    }
+    showConfirm(`Remove ${remove.length === 1 ? 'the older version' : remove.length + ' older versions'} of “${latest.name}” (${versionList(remove)})? Version ${latest.version}, the latest, stays. This can't be undone.`
+      + (kept.length ? '\n' + keptLines(kept) : ''), () => {
+      const drop = new Set(remove);
+      TEMPLATES = TEMPLATES.filter(x => !drop.has(x));
+      saveWorkspaceSoon();
+      toast(`Removed ${remove.length} older version${remove.length === 1 ? '' : 's'} of “${latest.name}”.`);
+      if(onDone) onDone();
+    });
+  }
+
+  // "Remove Older Versions of All Templates…": the same for every template in the library.
+  function removeAllOldVersions(onDone){
+    if(!TEMPLATES.length){ showMessage("You don't have any templates."); return; }
+    const { remove, kept } = oldTemplateVersionsPlan(templateFamilies().map(t => t.family));
+    if(!remove.length){
+      showMessage(kept.length ? 'Every older version is still in use, so none was removed.\n' + keptLines(kept) : 'Every template has only its latest version.');
+      return;
+    }
+    const n = new Set(remove.map(t => t.family)).size;
+    showConfirm(`Remove ${remove.length} older version${remove.length === 1 ? '' : 's'} of ${n} template${n === 1 ? '' : 's'}? The latest version of each template stays. This can't be undone — use ⇩ Export Templates first if you might want them back.`
+      + (kept.length ? '\n' + keptLines(kept) : ''), () => {
+      const drop = new Set(remove);
+      TEMPLATES = TEMPLATES.filter(x => !drop.has(x));
+      saveWorkspace();
+      toast(`Removed ${remove.length} older version${remove.length === 1 ? '' : 's'} of ${n} template${n === 1 ? '' : 's'}.`);
+      if(onDone) onDone();
+    });
+  }
+
   // ---------- template families and versions ----------
   // TEMPLATES holds one entry per version. Versions of the same template share a `family` —
   // a lasting random id, so templates from different people never clash — and are numbered
@@ -1667,6 +1747,14 @@
     clearBtn.className = 'template-clear-all';
     clearBtn.textContent = '🗑 Clear all templates';
     clearBtn.addEventListener('click', () => clearAllTemplates(() => { selected = null; renderList(); renderDetail(); }));
+    const oldAllBtn = document.createElement('button');
+    oldAllBtn.className = 'template-remove-old-all';
+    oldAllBtn.textContent = '🧹 Remove older versions';
+    oldAllBtn.title = 'Remove every template\'s older versions, keeping the latest of each and those still in use';
+    oldAllBtn.addEventListener('click', () => removeAllOldVersions(() => {
+      if(selected && !TEMPLATES.includes(selected)) selected = latestOfFamily(selected.family) || templateFamilies()[0] || null;
+      renderList(); renderDetail();
+    }));
 
     exportBtn.addEventListener('click', exportTemplatesToFile);
     importBtn.addEventListener('click', () => tplFileInput.click());
@@ -1733,7 +1821,7 @@
 
     const listFooter = document.createElement('div');
     listFooter.className = 'template-list-footer';
-    listFooter.append(dedupeBtn, clearBtn);
+    listFooter.append(dedupeBtn, oldAllBtn, clearBtn);
     listCol.appendChild(listFooter);
 
     const detail = document.createElement('div');
@@ -1861,6 +1949,7 @@
       }));
       actionsRow.append(buildBtn, editBtn);
       headTools.append(infoBtn, delBtn);
+      appendRemoveOldButton(all);
       detail.appendChild(actionsRow);
     }
 
@@ -1986,8 +2075,22 @@
         }));
         actionsRow.appendChild(versionBtn);
         headTools.append(editBtn, delBtn);
+        appendRemoveOldButton(all);
       }
       detail.appendChild(actionsRow);
+    }
+    // 🧹 Remove old versions beside the name, for a template with more than one version.
+    function appendRemoveOldButton(all){
+      if(all.length < 2) return;
+      const oldBtn = document.createElement('button');
+      oldBtn.className = 'template-remove-old';
+      oldBtn.textContent = '🧹 Remove old versions';
+      oldBtn.title = `Remove every version of “${selected.name}” but the latest (v${all[0].version}), except those still in use`;
+      oldBtn.addEventListener('click', () => removeOldVersionsOf(selected, () => {
+        if(!TEMPLATES.includes(selected)) selected = latestOfFamily(selected.family) || templateFamilies()[0] || null;
+        previewCanvasIdx = 0; renderList(); renderDetail();
+      }));
+      headTools.appendChild(oldBtn);
     }
 
     // One entry per family (its latest version); a family with older versions gets a
@@ -2050,6 +2153,7 @@
       dedupeBtn.textContent = '🧹 Remove duplicates…';
       dedupeBtn.style.display = families.length > 1 ? '' : 'none';
       clearBtn.style.display = TEMPLATES.length ? '' : 'none';
+      oldAllBtn.style.display = TEMPLATES.length > families.length ? '' : 'none'; // only when some template has older versions
       listFooter.style.display = families.length ? '' : 'none';
       const names = groupNames();
       treeTools.style.display = families.length && !search.value.trim() ? '' : 'none';

@@ -215,6 +215,10 @@ Commands `exportPreferences` (download `fmIDE-preferences.json`) and `importPref
 - A family id `<script>…`, a `versionId` with markup and a version "two" from a file are replaced by valid ones; a note with markup is shown as text and never runs.
 - Remove duplicates compares one entry per family (its latest version): a family whose latest matches another family is offered ("v2 (and 1 older version)"); a copy of an older version only is not. Removing the family removes every version.
 - ExcelExporter (group 6): a version 2 workspace with templates that have families loads.
+- Remove old versions (Revenue plan v1, v2, v3; Single with one version): no button for Single; on Revenue plan the question is "Remove 2 older versions of “Revenue plan” (v1, v2)? Version 3, the latest, stays. This can't be undone."; Cancel keeps all four versions; OK leaves Revenue plan@3 and Single@1, the button gone, Version 3 shown; the next version saved is 4.
+- In use: with a canvas "Old plan" linked to v1 and a recipe "Plan pack" pinned to v2, nothing is removed and the message names both, with why. A system template "Whole" of the Old plan canvas alone, the model cleared and v4 saved: only v3 goes; v1 stays for the system template, v2 for the recipe.
+- Remove older versions of all templates (Revenue plan v1–v3, Costs plan v1–v2, Single): the footer button asks "Remove 3 older versions of 2 templates? …"; Cancel keeps all six; the command `removeOldTemplateVersions` ("Remove Older Versions of All Templates…") leaves Revenue plan@3, Costs plan@2, Single@1; then the footer button is hidden (Clear all still shown) and the command is off and opens nothing.
+- A template named with markup: the question shows it as text; no `<img>`, nothing runs.
 
 ### 15. Canvases linked to their template (fmIDE)
 "Sales" v1 is saved from an "Author" canvas: inputs Price 10, Volume 5 and Discount 1, and Revenue = Price × Volume. It is added with "Add to new canvas" as a canvas called "Sales". Version 2, saved from Author, removes Discount and adds an input Tax 2 (note "tax added").
