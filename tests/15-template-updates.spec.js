@@ -248,6 +248,63 @@ test('a link from a file is checked: a bad one is dropped, names are shown as te
   expect(await page.evaluate(() => window.__pwned)).toBeUndefined();
 });
 
+// ---------- system templates (found 3 Oct 2026: saving one used to drop the links) ----------
+async function saveSystemAsTemplate(page, name){
+  await openTemplates(page);
+  await picker(page).locator('button', { hasText: '+ Save System as Template' }).click();
+  await form(page).locator('input.template-form-name').fill(name);
+  await form(page).locator('button.primary', { hasText: 'Save Template' }).click();
+  await closeTemplates(page);
+}
+const linksOf = (page) => page.evaluate(() => fm.canvases().map(c => [c.name, c.template ? c.template.version + ':' + c.template.status : null]));
+
+test('a system template keeps its canvases\' links: added back by replace and by add, they stay linked', async ({ page }) => {
+  await salesV1(page);
+  const family = (await canvasInfo(page, 'Sales')).template.family;
+  await saveSystemAsTemplate(page, 'Whole model');
+  const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
+  const whole = data.templates.find(t => t.name === 'Whole model');
+  expect(whole.kind).toBe('system');
+  expect(whole.data.canvases.map(c => [c.name, c.template && c.template.family, c.template && c.template.version]))
+    .toEqual([['Author', family, 1], ['Sales', family, 1]]);
+  // Replace: the model is the template's, its canvases linked.
+  await page.evaluate(() => { fm.clearAll(); fm.insertTemplate('Whole model', 'replace'); });
+  expect(await linksOf(page)).toEqual([['Author', '1:current'], ['Sales', '1:current']]);
+  // Add: the template's canvases join the model, still linked; a newer version is offered.
+  await page.evaluate(() => { fm.clearAll(); fm.renameCanvas({ canvas: '@current', name: 'Mine' }); fm.insertTemplate('Whole model', 'add'); });
+  expect(await linksOf(page)).toEqual([['Mine', null], ['Author', '1:current'], ['Sales', '1:current']]);
+  await page.evaluate(() => fm.switchCanvas('Author'));
+  await salesV2(page);
+  expect((await canvasInfo(page, 'Sales')).template).toMatchObject({ version: 1, status: 'newer', latest: 2 });
+  await expect(banner(page)).toBeVisible();
+});
+
+test('a system template with links goes through a templates file and a library pack; the pack passes the checker', async ({ page }, testInfo) => {
+  const { checkPack } = require('../tools/check-pack');
+  await salesV1(page);
+  await saveSystemAsTemplate(page, 'Whole model');
+  // The templates file, imported into an empty library, still holds the links.
+  await openTemplates(page);
+  const { data: file } = await F.downloadJson(page, () => picker(page).locator('button', { hasText: '⇩ Export Templates' }).click());
+  await closeTemplates(page);
+  await page.evaluate(() => fm.command('clearAllTemplates'));
+  await F.confirmDanger(page);
+  const path = testInfo.outputPath('templates.json');
+  fs.writeFileSync(path, JSON.stringify(file));
+  await F.importViaDialog(page, 'openTemplates', '⇧ Import Templates', path);
+  await F.dismissMessage(page);
+  await closeTemplates(page);
+  await page.evaluate(() => { fm.clearAll(); fm.insertTemplate('Whole model', 'replace'); });
+  expect(await linksOf(page)).toEqual([['Author', '1:current'], ['Sales', '1:current']]);
+  // A pack holding it (and the canvas template its canvases came from) passes the checker.
+  const pack = await page.evaluate(() => fm.saveLibraryPack({ title: 'Whole model', author: 'Ann Example', templates: ['Whole model', 'Sales'], download: false }));
+  const whole = pack.templates.find(t => t.name === 'Whole model');
+  expect(whole.data.canvases.map(c => c.template && c.template.version)).toEqual([1, 1]);
+  const r = checkPack(JSON.stringify(pack, null, 2), pack.pack.id + '.fmide-pack.json');
+  expect(r.errors.map(e => `${e.where}: ${e.message}`)).toEqual([]);
+  expect(r.ok).toBe(true);
+});
+
 test('system v3 files still open; sys-newer-v4 is now a current file', async ({ page }) => {
   await F.importViaCommand(page, 'loadSystem', fixture('formats', 'sys-newer-v4.json'));
   const seen = await F.acceptAll(page);

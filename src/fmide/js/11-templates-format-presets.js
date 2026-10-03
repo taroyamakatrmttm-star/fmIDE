@@ -143,13 +143,15 @@
   }
 
   // The model a template of this kind holds, taken from what is open now: the active
-  // canvas (a module) or every canvas (a system).
+  // canvas (a module) or every canvas (a system). A system keeps each canvas's link to the
+  // canvas template it came from, as Save System does, so the canvases added from it stay
+  // linked (and ExcelExporter still sees them as modules).
   function openModelAsTemplateData(kind, name){
     syncActiveIntoRegistry();
     const payload = kind === 'module'
       ? withFunctions({ version: FILE_FORMATS['module'].current, kind:'module', name, selfCanvasId: activeCanvasId, nextId, nodes, edges }, [{ nodes }])
       : withFunctions({ version: SHARED_FILE_VERSIONS['system'], kind:'system', nextId, nextCanvasId, activeCanvasId,
-          canvases: canvases.map(c => ({ id:c.id, name:c.name, nodes:c.nodes, edges:c.edges })) }, canvases);
+          canvases: canvases.map(c => Object.assign({ id:c.id, name:c.name, nodes:c.nodes, edges:c.edges }, c.template ? { template: c.template } : {})) }, canvases);
     return cloneData(payload);
   }
 

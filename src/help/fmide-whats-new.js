@@ -13,6 +13,21 @@
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
 
+  { id: 'system-template-links', date: '2026-10-03', title: 'System templates keep their canvases\' links',
+    summary: 'A system saved as a template remembers which canvas templates its canvases came from.',
+    what: [
+      'Save System as Template, in {cmd:openTemplates}, now keeps each canvas\'s link to the canvas template it was made from, as Save System always has. Before, the links were dropped, so the canvases added back from the system template had forgotten their templates.',
+      'So a system added from the template, alongside your canvases or replacing the model, still offers each canvas\'s template updates (the ⬆ on its tab), and ExcelExporter still treats those canvases as modules: their Excel layouts, the ones attached to their templates and the ones it remembers, are used again.',
+    ],
+    why: 'A model built from canvas templates and shared as one system template lost its modules\' Excel layouts on the way.',
+    how: [
+      'Open the model whose canvases came from canvas templates.',
+      'In {cmd:openTemplates}, choose + Save System as Template (or ⤴ Save as new version on a system template you saved before).',
+      'Add it back with Add or Replace: the canvases are still linked.',
+    ],
+    notes: ['A system template saved before this holds no links. Open a model made from it with the links in place and save it again with ⤴ Save as new version.'],
+    see: ['templates', 'template-versions'] },
+
   { id: 'macro-variables-kept', date: '2026-10-03', title: 'Stepping through a macro keeps its variables',
     summary: 'Run selected step remembers what earlier steps saved; a step reading a variable nothing saves is marked.',
     what: [
