@@ -353,12 +353,12 @@ const HELP_TOPICS = [
     summary: 'Turn the model into an Excel workbook with live formulas.',
     body: [
       { steps: [
-        'Save your model ({cmd:saveDocument}).',
-        'Open {cmd:openExcelExporter}.',
-        'In ExcelExporter, load the .fmide file.',
+        'Open {cmd:openExcelExporter}. It opens in its own window (or tab) with the model you have open — no need to save first.',
         'Arrange the tabs and rows if you like.',
         'Press ⬇ Generate .xlsx, at its top right.',
       ] },
+      { p: 'After changing the model here, choose File → ↻ From fmIDE in ExcelExporter (or {cmd:openExcelExporter} again) to load it as it is now. A change to numbers keeps your layout there; adding or deleting a rectangle starts a new layout, as loading a changed file does (a module\'s tab keeps its remembered layout). The Excel layouts your canvas templates carry go along too.' },
+      { tip: 'ExcelExporter can also open a saved .fmide document or system file on its own (File → Open Model…).' },
       { p: 'The workbook calculates exactly as fmIDE does. Where it can\'t (for example a loop, or an alias to a rectangle that was deleted), a yellow list above the Generate button says where, before you download.' },
       { see: ['formats', 'other-files'] },
     ] },

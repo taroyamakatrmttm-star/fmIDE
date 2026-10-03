@@ -797,6 +797,15 @@ fmGraph (step 15, G6); each tutorial played with real clicks and typing.
 - Trace and compare: 🔍, Price 12, Pin as A, Volume 10, Unpin. Scenarios: Price 12, save, Volume 10, save, ▶ on sc01, + Chart as a scenario waterfall of Profit (four bars).
 - Exit puts the sample back; a model opened during a tutorial ends it. With the model from fmIDE: changes in practice don't mark fmIDE's document; Exit shows fmIDE's model again.
 
+### 59. ExcelExporter reads fmIDE's model (`tests/59-excel-from-fmide.spec.js`; `npm run test:excel-from-fmide`)
+fmIDE's Open ExcelExporter, the offline fixture; the model Hours 8 × Rate 50 = Pay.
+- The window shows the model with no file: its name "Untitled" at the top, "“Untitled” from fmIDE" in the message, the rows Hours, Rate, Pay; a tab renamed there, Hours 10 in fmIDE, File → ↻ From fmIDE: Hours 10 in the workbook and the tab name kept; a new rectangle arrives; Open ExcelExporter again brings the same window up to date (Rate 60).
+- A name with markup sent from fmIDE's window: shown as text, nothing run; the File menu lists ↻ From fmIDE and reaches it by keyboard.
+- `module-layouts/doc-with-layouts.json` opened in fmIDE: the tabs "Overview", "Sales from v1", marked "layout from the template".
+- A model posted by the page itself is ignored; fmIDE answers no window but the one it opened. A broken answer (a macros file) is said in words and leaves the model.
+- Opened on its own: the welcome screen, no ↻ From fmIDE, no errors. After fmIDE is reloaded, ↻ From fmIDE still reaches it.
+- Also changed on purpose: group 12 (ExcelExporter opened from fmIDE now shows the model, not the welcome screen; Back closes without asking for fmIDE's model and asks for the sample loaded there), group 30 (the window shows fmIDE's model before the tap on Back), groups 33 and 35 (the To Excel tutorial lost its Save System step).
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.

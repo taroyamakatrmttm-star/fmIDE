@@ -21,6 +21,7 @@ async function tryLoad(jsonText, label, name){
   try{
     await loadModel(r.data);
     currentModelLabel = name || label; // only once it has loaded: a file that fails leaves the name as it was
+    modelFromFmide = false;            // 09f-from-fmide.js sets it back for fmIDE's model
     syncPageState();
     setStatus($('genStatus'), '', null); // a message about the last model's workbook
     setStatus($('loadStatus'), `Loaded ${label} — ${model.canvases.length} canvas${model.canvases.length === 1 ? '' : 'es'}, ${model.periods.length} periods.`, 'ok');

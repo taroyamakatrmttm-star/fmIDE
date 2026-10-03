@@ -187,14 +187,15 @@ test.describe('the site', () => {
     await page.locator('#saveAsName').fill('Policy Check');
     const [saved] = await Promise.all([page.waitForEvent('download'), page.locator('#saveAsDialog button.primary').click()]);
     expect(saved.suggestedFilename()).toBe('Policy Check.fmide');
-    // ExcelExporter, opened from fmIDE (its short address): load the sample, make a workbook.
+    // ExcelExporter, opened from fmIDE (its short address): fmIDE's model arrives (the site's
+    // own origin only), make a workbook.
     const [popup] = await Promise.all([page.waitForEvent('popup'), page.evaluate(() => fm.command('openExcelExporter'))]);
     await popup.waitForLoadState();
     // Answered from the offline copy (so no redirect to the short address) — which must still
     // carry the policy: a script that isn't ExcelExporter's own is blocked there too.
     expect(new URL(popup.url()).pathname).toMatch(/^\/ExcelExporter(\.html)?$/);
-    await popup.click('#btnLoadSample');
     await expect(popup.locator('#afterLoad')).toBeVisible();
+    await expect(popup.locator('#modelName')).toHaveText('Policy Check');
     const [xlsx] = await Promise.all([popup.waitForEvent('download'), popup.click('#btnGenerate')]);
     expect(xlsx.suggestedFilename()).toMatch(/\.xlsx$/);
     expect(await page.evaluate(() => window.__cspViolations)).toEqual([]);
@@ -248,12 +249,12 @@ test.describe('the site', () => {
 
 // ---------- anywhere: Open ExcelExporter and launched files (the usual offline fixture) ----------
 apps.test.describe('fmIDE', () => {
-  apps.test('Open ExcelExporter opens it in its own window', async ({ page }) => {
+  apps.test('Open ExcelExporter opens it in its own window, with fmIDE\'s model', async ({ page }) => {
     await F.openFmIDE(page);
     const [popup] = await Promise.all([page.waitForEvent('popup'), page.evaluate(() => fm.command('openExcelExporter'))]);
     await popup.waitForLoadState();
     expect(popup.url()).toBe(apps.ORIGIN + 'ExcelExporter.html');
-    await expect(popup.locator('#dropZone')).toBeVisible();
+    await expect(popup.locator('#afterLoad')).toBeVisible();
   });
 
   apps.test('Install fmIDE is disabled until the browser offers it, then prompts', async ({ page }) => {
@@ -319,7 +320,7 @@ apps.test.describe('Back to fmIDE', () => {
     await page.evaluate(() => { fm.clearCanvas(); fm.createRect({ x: 60, y: 60, name: 'Kept', value: 7 }); });
     const [popup] = await Promise.all([page.waitForEvent('popup'), page.evaluate(() => fm.command('openExcelExporter'))]);
     await popup.waitForLoadState();
-    await expect(popup.locator('#dropZone')).toBeVisible();
+    await expect(popup.locator('#afterLoad')).toBeVisible(); // fmIDE's model, loaded by itself
     return popup;
   }
   const rectNames = (page) => page.evaluate(() => fm.canvases().flatMap(c => fm.nodes({ canvas: c.id }).map(n => n.name)));
@@ -334,10 +335,12 @@ apps.test.describe('Back to fmIDE', () => {
     expect(pageErrors).toEqual([]);
   });
 
-  apps.test('with a model loaded it asks first; Cancel keeps the window', async ({ page }) => {
+  apps.test('with a model of its own loaded it asks first; Cancel keeps the window', async ({ page }) => {
     const popup = await openFromFmide(page);
-    await popup.click('#btnLoadSample');
-    await expect(popup.locator('#afterLoad')).toBeVisible();
+    // fmIDE's model needs no question (test above); a model loaded here does.
+    await popup.click('#menuFile');
+    await popup.click('#btnMenuSample');
+    await expect(popup.locator('#modelName')).toHaveText('Sample model');
     await back(popup).click();
     await expect(popup.locator('#confirmModal')).toBeVisible();
     await expect(popup.locator('#confirmTitle')).toHaveText('Close ExcelExporter?');
@@ -353,8 +356,6 @@ apps.test.describe('Back to fmIDE', () => {
 
   apps.test('Open ExcelExporter again brings its window forward without loading it again', async ({ page, context }) => {
     const popup = await openFromFmide(page);
-    await popup.click('#btnLoadSample');
-    await expect(popup.locator('#afterLoad')).toBeVisible();
     await popup.evaluate(() => { window.__stillHere = true; });
     let opened = 0;
     context.on('page', () => opened++);
@@ -367,7 +368,7 @@ apps.test.describe('Back to fmIDE', () => {
     await Promise.all([popup.waitForEvent('close'), popup.evaluate(() => window.close())]);
     const [again] = await Promise.all([page.waitForEvent('popup'), page.evaluate(() => fm.command('openExcelExporter'))]);
     await again.waitForLoadState();
-    await expect(again.locator('#dropZone')).toBeVisible();
+    await expect(again.locator('#afterLoad')).toBeVisible();
   });
 
   apps.test('in fmIDE\'s place (an iPad\'s home-screen app), it goes back to fmIDE', async ({ page, pageErrors }) => {
