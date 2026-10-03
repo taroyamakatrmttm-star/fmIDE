@@ -82,7 +82,7 @@ function templateBoardsData(target, onlyShown){
   };
   const list = (onlyShown ? [board] : boards).map(one).filter(b => b.items.length || b.sliders.length);
   const template = target.kind === 'module' ? { kind: 'module', family: target.family, name: target.templateName } : { kind: 'system' };
-  return { data: { kind: 'fmIDE-graph-board', version: BOARD_FILE_VERSION, form: 'template', template, active: 0, boards: list }, left };
+  return { data: { kind: 'fmIDE-graph-board', version: TEMPLATE_BOARD_VERSION, form: 'template', template, active: 0, boards: list }, left };
 }
 
 // Writes the file; says what was left out. Returns { data, left } or null when nothing fits.

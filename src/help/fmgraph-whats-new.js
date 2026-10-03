@@ -8,6 +8,21 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'named-scenarios', date: '2026-10-03', title: 'Named scenarios',
+    summary: 'Save where the sliders are under a name, switch between scenarios, and compare with any of them.',
+    what: [
+      'The Scenarios panel under the sliders: + Save as scenario keeps where the sliders are, named sc01, sc02… or your own name.',
+      '▶ switches to a scenario, A compares with it, ⟳ updates it, ↑ ↓ order them.',
+      'Scenarios are kept with the boards, in fmIDE\'s document too, and can be undone.',
+    ],
+    why: 'Pin as A held one what-if at a time; now you can keep as many as you need and move between them.',
+    how: [
+      'Set the sliders, then + Save as scenario, and type a name.',
+      'Set them differently and save another.',
+      'Press ▶ on either to switch, or A to see the differences from it.',
+    ],
+    see: ['scenarios', 'compare'] },
+
   { id: 'try-from-library', date: '2026-10-03', title: 'Try a template from the library',
     summary: 'fmIDE\'s Browse Library can show a shared template here with its board, before you add it.',
     what: [

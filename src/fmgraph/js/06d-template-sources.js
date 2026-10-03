@@ -97,7 +97,7 @@ function boardsFromTemplate(src){
       }),
       sliders: (Array.isArray(b.sliders) ? b.sliders : []).map(at),
     }));
-    const r = cleanBoards({ kind: 'fmIDE-graph-board', version: BOARD_FILE_VERSION, boards: boardsIn });
+    const r = cleanBoards({ kind: 'fmIDE-graph-board', version: TEMPLATE_BOARD_VERSION, boards: boardsIn });
     if(!r) return;
     r.boards.forEach(b => { if(b.items.length || b.sliders.length) out.push(b); });
   });

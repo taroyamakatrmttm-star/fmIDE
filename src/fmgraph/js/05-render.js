@@ -120,6 +120,7 @@ function renderBoard(){
   $('noBars').classList.toggle('hidden', board.items.length > 0);
   $('noSliders').classList.toggle('hidden', board.sliders.length > 0);
   renderTraceNote();
+  renderScenarios(); // (05f-scenarios.js)
   updateValues();
 }
 
@@ -305,6 +306,7 @@ function updateValues(){
       : 'Model\'s numbers: ' + fmtNum(baseValue(rect, first)) + ' (' + model.periods[first] + ') to ' + fmtNum(baseValue(rect, last)) + ' (' + model.periods[last] + ')';
   });
   updateMovers(results);
+  markScenarios(); // (05f-scenarios.js)
   paintReach();
 }
 

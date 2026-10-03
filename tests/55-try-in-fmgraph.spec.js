@@ -42,7 +42,8 @@ async function tryItem(page, box, versionId, { popup = true } = {}){
   let graph;
   if(popup) [graph] = await Promise.all([page.waitForEvent('popup'), button.click()]);
   else { await button.click(); graph = page.context().pages().find(p => p !== page); }
-  await graph.waitForFunction(() => !!window.fmGraph && !!fmGraph.trying());
+  // fmGraph lists the rectangles a moment before the boards are placed: wait for both.
+  await graph.waitForFunction(() => !!window.fmGraph && !!fmGraph.trying() && fmGraph.boards().length > 0);
   return graph;
 }
 // fmIDE's library, model, boards and title (an unsaved document shows •).
@@ -110,12 +111,13 @@ test('a system template is its whole model, its board placed by canvas name; an 
   await W.openSite(page, site.origin);
   // fmGraph already open with fmIDE's model.
   const [graph] = await Promise.all([page.waitForEvent('popup'), page.evaluate(() => fm.command('openFmGraph'))]);
-  await graph.waitForFunction(() => !!window.fmGraph && fmGraph.rectangles().length > 0);
+  await graph.waitForFunction(() => !!window.fmGraph && fmGraph.rectangles().length > 0 && fmGraph.boards().length > 0);
   const own = await storedKeys(graph);
   const box = await openPack(page);
   await tryItem(page, box, 'vid-try-plan-000001', { popup: false });
   expect(page.context().pages().length).toBe(2);
   expect(await graph.evaluate(() => fmGraph.trying())).toEqual({ name: 'Plan', pack: 'Boards to try ' + HOSTILE });
+  await expect.poll(() => graph.evaluate(() => fmGraph.boards().map(b => b.name))).toEqual(['Plan board']); // the window's old boards until then
   expect(await graph.evaluate(() => fmGraph.rectangles().map(r => r.canvas + '/' + r.name))).toEqual(['Sales/Price', 'Sales/Revenue', 'Sales/Units', 'Costs/Cost']);
   expect(await graph.evaluate(() => fmGraph.boards())).toEqual([{ name: 'Plan board', shown: true }]);
   const b = await graph.evaluate(() => fmGraph.board());
@@ -139,7 +141,7 @@ test('a pack changed after publishing is refused: fmGraph shows fmIDE\'s model i
   const box = await openPack(page);
   const [graph] = await Promise.all([page.waitForEvent('popup'), itemRow(box, 'vid-try-sales-00001').locator('.library-browse-try').click()]);
   await expect(F.topDialog(page)).toContainText(/doesn't match the library's list/);
-  await graph.waitForFunction(() => !!window.fmGraph && fmGraph.rectangles().length > 0);
+  await graph.waitForFunction(() => !!window.fmGraph && fmGraph.rectangles().length > 0 && fmGraph.boards().length > 0);
   expect(await graph.evaluate(() => fmGraph.trying())).toBeNull();
   expect(await graph.evaluate(() => fmGraph.rectangles().map(r => r.name))).not.toContain('Volumo');
 });
@@ -147,7 +149,7 @@ test('a pack changed after publishing is refused: fmGraph shows fmIDE\'s model i
 test('a message from another window is ignored', async ({ page, site }) => {
   await W.openSite(page, site.origin);
   const [graph] = await Promise.all([page.waitForEvent('popup'), page.evaluate(() => fm.command('openFmGraph'))]);
-  await graph.waitForFunction(() => !!window.fmGraph && fmGraph.rectangles().length > 0);
+  await graph.waitForFunction(() => !!window.fmGraph && fmGraph.rectangles().length > 0 && fmGraph.boards().length > 0);
   const names = await graph.evaluate(() => fmGraph.rectangles().map(r => r.name));
   await graph.evaluate(() => window.postMessage({ type: 'fmIDE:try', name: 'X', pack: 'Y',
     text: JSON.stringify({ kind: 'system', version: 9, periods: ['P'], canvases: [{ id: 'c', name: 'C', nodes: [{ id: 'z', type: 'value', x: 0, y: 0, text: 'Intruder\n1' }], edges: [] }] }) }, '*'));

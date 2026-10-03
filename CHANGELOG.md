@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph: named scenarios (step 15, scenarios S1)
+- **The Scenarios panel**: + Save as scenario keeps where the sliders are (sc01, sc02… or your own name); ▶ switches to one, A compares with it (as Pin as A), ⟳ updates it, ↑ ↓ order them, × deletes. Kept with the boards, in fmIDE's document too; changes can be undone.
+- **File format**: fmGraph board file 3 (`scenarios`, in a file of all boards); the template form stays 2. Older files import as before; an older fmGraph asks first and ignores the scenarios.
+
 ## Try a library template in fmGraph (step 15, phase G5c)
 - **📈 Try in fmGraph** in fmIDE's Browse Library, beside a canvas or system template that carries an fmGraph board: fmGraph shows the template with its board, in a try mode that keeps nothing and sends nothing back; nothing is added to your library or document.
 - The library's list (`/library/index.json`) marks such items `board: true`; its version is unchanged.

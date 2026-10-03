@@ -34,7 +34,7 @@ async function importTemplates(page, testInfo, templates){
 }
 async function openGraph(page){
   const [graph] = await Promise.all([page.waitForEvent('popup'), page.evaluate(() => fm.command('openFmGraph'))]);
-  await graph.waitForFunction(() => !!window.fmGraph && fmGraph.rectangles().length > 0);
+  await graph.waitForFunction(() => !!window.fmGraph && fmGraph.rectangles().length > 0 && fmGraph.boards().length > 0);
   return graph;
 }
 const boardNames = (graph) => graph.evaluate(() => fmGraph.boards().map(b => b.name));

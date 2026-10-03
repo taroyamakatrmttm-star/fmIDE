@@ -127,13 +127,16 @@ function cleanBoards(raw){
   const dropped = { n: 0 };
   const list = Array.isArray(raw.boards) ? raw.boards.slice(0, BOARDS_LIMIT).map(b => cleanBoard(b, dropped)) : [cleanBoard(raw, dropped)];
   const a = Math.round(Number(raw.active));
-  return { boards: list, active: Number.isFinite(a) && a >= 0 && a < list.length ? a : 0, dropped: dropped.n };
+  return { boards: list, active: Number.isFinite(a) && a >= 0 && a < list.length ? a : 0, dropped: dropped.n,
+    scenarios: cleanScenarios(raw.scenarios, rectForEntry) }; // version 3 (05f-scenarios.js)
 }
 
 // A board's file form.
 // The board file's version (docs/file-formats.md): 1 (G3a); 2 (G5a) adds the template form
-// (`form: "template"`, 06c-template-boards.js). Boards for one model are the same in both.
-const BOARD_FILE_VERSION = 2;
+// (`form: "template"`, 06c-template-boards.js); 3 adds the model's named scenarios
+// (`scenarios`, 05f-scenarios.js) — the template form, which carries none, stays version 2.
+const BOARD_FILE_VERSION = 3;
+const TEMPLATE_BOARD_VERSION = 2;
 function boardData(b){
   const at = (key) => { const r = model.byKey.get(key); return { canvasId: r.canvasId, nodeId: r.nodeId, name: r.name }; };
   return {
@@ -147,7 +150,9 @@ function boardData(b){
 // The file form of these boards (all, or the ones given).
 function boardsData(list){
   const which = list || boards;
-  return { kind: 'fmIDE-graph-board', version: BOARD_FILE_VERSION, active: list ? 0 : Math.max(0, boards.indexOf(board)), boards: which.map(boardData) };
+  const out = { kind: 'fmIDE-graph-board', version: BOARD_FILE_VERSION, active: list ? 0 : Math.max(0, boards.indexOf(board)), boards: which.map(boardData) };
+  if(!list && scenarios.length) out.scenarios = scenariosData(); // the model's, with all its boards
+  return out;
 }
 
 let saveTimer = null;
@@ -180,6 +185,7 @@ async function loadBoardFor(m, docRaw){
     const fromTemplate = (m.templateSources || []).flatMap(src => boardsFromTemplate(src).boards).slice(0, BOARDS_LIMIT);
     boards = fromTemplate.length ? fromTemplate : [startingBoard()];
     board = boards[0];
+    scenarios = [];
     resetUndo();
     return;
   }
@@ -187,6 +193,7 @@ async function loadBoardFor(m, docRaw){
   if(restored){
     boards = restored.boards;
     board = boards[restored.active];
+    scenarios = restored.scenarios;
     resetUndo();
     setTimeout(saveBoardNow, 0);
     return;
@@ -207,6 +214,7 @@ async function loadBoardFor(m, docRaw){
   if(fromTemplates.length) setTimeout(saveBoardNow, 0);
   boards = restored ? restored.boards : fromTemplates.length ? fromTemplates : [startingBoard()];
   board = boards[restored ? restored.active : 0];
+  scenarios = restored ? restored.scenarios : [];
   resetUndo();
 }
 

@@ -276,7 +276,7 @@ test('fmIDE: Open fmGraph shows its model straight away, ↻ From fmIDE shows it
     fm.connect(a, op); fm.connect(b, op); fm.connect(op, c);
   });
   const [popup] = await Promise.all([page.waitForEvent('popup'), page.evaluate(() => fm.command('openFmGraph'))]);
-  await popup.waitForFunction(() => !!window.fmGraph && fmGraph.rectangles().length > 0);
+  await popup.waitForFunction(() => !!window.fmGraph && fmGraph.rectangles().length > 0 && fmGraph.boards().length > 0);
   await expect(popup.locator('#btnFromFmide')).toBeVisible();
   expect(await popup.evaluate(() => fmGraph.value('Pay', 1))).toBe(400);
   // A change in fmIDE, then ↻ From fmIDE.
@@ -405,7 +405,7 @@ test('opened from disk: Open fmGraph still hands the model over', async ({ brows
     await page.waitForFunction(() => window.fm && typeof fm.nodes === 'function');
     await page.evaluate(() => { fm.clearCanvas(); fm.createRect({ name: 'Only', value: 7, x: 40, y: 40 }); });
     const [popup] = await Promise.all([page.waitForEvent('popup'), page.evaluate(() => fm.command('openFmGraph'))]);
-    await popup.waitForFunction(() => !!window.fmGraph && fmGraph.rectangles().length > 0);
+    await popup.waitForFunction(() => !!window.fmGraph && fmGraph.rectangles().length > 0 && fmGraph.boards().length > 0);
     expect(await popup.evaluate(() => fmGraph.value('Only', 1))).toBe(7);
     expect(outside).toEqual([]);
   } finally {

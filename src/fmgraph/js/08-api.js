@@ -172,6 +172,19 @@ window.fmGraph = Object.freeze({
   unpinA: () => { unpinA(); },
   swapA: () => { if(!pinA) throw new Error('Nothing is pinned as A.'); return swapWithA(); },
   comparing: () => pinA ? pinA.label : null,
+  // Named scenarios: saveScenario(name?) → its name; scenarios() → [{ name, settings (words),
+  // shown, compared }]; showScenario(name) → how many of its inputs have no slider on this
+  // board; compareWith(name or null) → A's words (null unpins); renameScenario(name, newName),
+  // updateScenario(name), moveScenario(name, index), deleteScenario(name).
+  saveScenario: (name) => saveScenario(name),
+  scenarios: () => scenarios.map(sc => ({ name: sc.name, settings: sc.settings.length ? settingsLabel(sc.settings) : 'the model\'s own numbers',
+    shown: scenarioShown(sc), compared: !!(pinA && pinA.scenario === sc.name) })),
+  showScenario: (name) => showScenario(findScenario(name)),
+  compareWith: (name) => { if(name === null || name === undefined){ unpinA(); markScenarios(); return null; } const l = compareWithScenario(findScenario(name)); markScenarios(); return l; },
+  renameScenario: (name, to) => renameScenario(findScenario(name), to),
+  updateScenario: (name) => updateScenario(findScenario(name)),
+  moveScenario: (name, index) => moveScenario(findScenario(name), Number(index)),
+  deleteScenario: (name) => deleteScenario(findScenario(name)),
   // G5c: the template tried from fmIDE's Browse Library, { name, pack }, or null.
   trying: () => trying ? { name: trying.name, pack: trying.pack } : null,
   // movers(n): the rectangles the sliders change most (default 8), against the model's own numbers.
