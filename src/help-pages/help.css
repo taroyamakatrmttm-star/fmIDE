@@ -16,6 +16,8 @@ ol.steps { padding-left: 1.6em; }
 ol.steps li { margin: 6px 0; }
 .tip { background: var(--card); border-left: 4px solid var(--accent); padding: 8px 12px; border-radius: 0 6px 6px 0; }
 .cmd-name { white-space: nowrap; }
+/* A long command name ("Remove Older Versions of All Templates…") wraps on a phone. */
+@media (max-width: 480px) { .cmd-name { white-space: normal; } }
 .cmd-where { color: var(--muted); font-size: 15px; }
 article.topic { margin-bottom: 8px; }
 section.group > article.topic { border-top: 1px solid var(--line); padding-top: 4px; }

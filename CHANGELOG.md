@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmIDE: removing templates' old versions
+- **🧹 Remove old versions** beside a template's name in the Templates window removes every version of it but the latest; **🧹 Remove older versions** under the list and the command **Remove Older Versions of All Templates…** (`removeOldTemplateVersions`, Command Launcher) do it for every template. Both ask first and can't be undone.
+- A version still in use stays: one a canvas in the open model is linked to, one a system template's canvas (among the versions that stay) is linked to, or one a recipe (among those that stay) is pinned to; the question names each and why. The latest version always stays, so numbers are never reused. No file-format change.
+
 ## fmIDE: system templates keep their canvases' links
 - **Save System as Template** (and ⤴ Save as new version of a system template) keeps each canvas's `template`, its link to the canvas template it came from, as Save System does. A system added back from the template (Add or replace) has its canvases linked again, so they offer their template's updates and ExcelExporter lays them out as modules (their attached and remembered Excel layouts). No file-format change; system templates saved before hold no links until saved again.
 

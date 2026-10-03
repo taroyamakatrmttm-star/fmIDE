@@ -13,6 +13,22 @@
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
 
+  { id: 'remove-old-template-versions', date: '2026-10-03', title: 'Remove a template\'s old versions',
+    summary: 'Keep only the latest version of a template, or of every template, in one step.',
+    what: [
+      'In {cmd:openTemplates}, a template with more than one version has 🧹 Remove old versions beside its name. It removes every version but the latest, after asking.',
+      '🧹 Remove older versions, under the list, and {cmd:removeOldTemplateVersions} do the same for every template in your library at once.',
+      'A version still in use stays: one a canvas in the open model is linked to, one a system template\'s canvas is linked to, or one a recipe is pinned to. The question lists them, with the reason.',
+    ],
+    why: 'Every Save as new version keeps the version before, so a library worked on for a while fills up with versions nobody needs.',
+    how: [
+      'Open {cmd:openTemplates} and select a template.',
+      'Choose 🧹 Remove old versions beside its name, or 🧹 Remove older versions under the list for every template.',
+      'Read which versions go and which stay, then choose OK.',
+    ],
+    notes: ['Removing can\'t be undone. Use ⇩ Export Templates first if you might want the old versions back.', 'The latest version always stays, so the next version saved gets a new number.'],
+    see: ['template-versions', 'templates'] },
+
   { id: 'system-template-links', date: '2026-10-03', title: 'System templates keep their canvases\' links',
     summary: 'A system saved as a template remembers which canvas templates its canvases came from.',
     what: [

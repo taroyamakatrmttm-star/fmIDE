@@ -335,3 +335,121 @@ test('Remove duplicates compares latest versions and removes a whole family', as
   await dedupe.locator('label[data-option="name"] input').waitFor({ state: 'detached' });
   expect((await library(page)).map(t => t.name)).toEqual(['Copy of latest', 'Copy of v1']);
 });
+
+// ---------- removing old versions ----------
+// Revenue plan v1 (10), v2 (20) and v3 (30); the canvas is linked to v3, the latest. The
+// window is left open.
+async function threeVersions(page){
+  await twoVersions(page);
+  await closeTemplates(page);
+  await setRevenue(page, 30);
+  await openTemplates(page);
+  await selectFamily(page, 'Revenue plan');
+  await saveNewVersion(page, 'price up again');
+}
+const versionsOf = async (page) => (await library(page)).map(t => `${t.name}@${t.version}`);
+const removeOldBtn = (page) => picker(page).locator('.template-head-tools button.template-remove-old');
+const removeOldAllBtn = (page) => picker(page).locator('.template-list-footer button.template-remove-old-all');
+
+test('Remove old versions keeps only the latest of the selected template, after asking', async ({ page }) => {
+  await threeVersions(page);
+  await page.evaluate(() => fm.addCanvas({ name: 'Other' }));
+  await saveCanvasAsTemplate(page, 'Single', 'only one');
+  await expect(removeOldBtn(page)).toHaveCount(0);              // one version: no button
+  await selectFamily(page, 'Revenue plan');
+  await expect(removeOldBtn(page)).toHaveText('🧹 Remove old versions');
+  // Cancel changes nothing.
+  await removeOldBtn(page).click();
+  expect(await F.dialogText(page)).toBe('Remove 2 older versions of “Revenue plan” (v1, v2)? Version 3, the latest, stays. This can\'t be undone.');
+  await F.cancelDialog(page);
+  expect(await versionsOf(page)).toEqual(['Revenue plan@1', 'Revenue plan@2', 'Revenue plan@3', 'Single@1']);
+  await removeOldBtn(page).click();
+  await F.confirmDanger(page);
+  expect(await versionsOf(page)).toEqual(['Revenue plan@3', 'Single@1']);
+  await expect(removeOldBtn(page)).toHaveCount(0);
+  await expect(picker(page).locator('.template-version-info b')).toHaveText('Version 3');
+  // The next version still gets a new number.
+  await saveNewVersion(page, 'later');
+  expect(await versionsOf(page)).toEqual(['Revenue plan@3', 'Single@1', 'Revenue plan@4']);
+});
+
+test('a version still in use stays: linked by a canvas, by a system template\'s canvas, or pinned by a recipe', async ({ page }) => {
+  await threeVersions(page);
+  await closeTemplates(page);
+  // A canvas linked to v1, and a recipe pinned to v2.
+  await page.evaluate(() => {
+    fm.insertTemplate('Revenue plan@1', 'newCanvas');
+    fm.renameCanvas({ canvas: '@current', name: 'Old plan' });
+    fm.saveRecipe({ name: 'Plan pack', parts: ['Revenue plan@2'] });
+  });
+  await openTemplates(page);
+  await selectFamily(page, 'Revenue plan');
+  await removeOldBtn(page).click();
+  expect(await F.dialogText(page)).toBe('Every older version of “Revenue plan” is still in use, so none was removed.\n'
+    + '“Revenue plan” v1 stays: a canvas in this model (“Old plan”) is linked to it.\n'
+    + '“Revenue plan” v2 stays: the recipe “Plan pack” v1 is pinned to it.');
+  await F.dismissMessage(page);
+  // Saved as a system template (of the Old plan canvas only), the canvas linked to v1 keeps it
+  // in use once the model is cleared.
+  await closeTemplates(page);
+  await page.evaluate(() => fm.deleteCanvas(fm.canvases().find(c => c.name !== 'Old plan').id));
+  await openTemplates(page);
+  await picker(page).locator('button', { hasText: '+ Save System as Template' }).click();
+  await form(page).locator('input.template-form-name').fill('Whole');
+  await form(page).locator('button.primary', { hasText: 'Save Template' }).click();
+  await closeTemplates(page);
+  await page.evaluate(() => fm.clearAll());
+  await setRevenue(page, 40);
+  await openTemplates(page);
+  await selectFamily(page, 'Revenue plan');
+  await saveNewVersion(page, 'v4');
+  await removeOldBtn(page).click();
+  expect(await F.dialogText(page)).toBe('Remove the older version of “Revenue plan” (v3)? Version 4, the latest, stays. This can\'t be undone.\n'
+    + '“Revenue plan” v1 stays: the system template “Whole” v1 has a canvas linked to it.\n'
+    + '“Revenue plan” v2 stays: the recipe “Plan pack” v1 is pinned to it.');
+  await F.confirmDanger(page);
+  expect((await versionsOf(page)).filter(v => v.startsWith('Revenue plan'))).toEqual(['Revenue plan@1', 'Revenue plan@2', 'Revenue plan@4']);
+});
+
+test('Remove older versions of all templates: the footer button and the command', async ({ page }) => {
+  await threeVersions(page);
+  await closeTemplates(page);
+  await page.evaluate(() => fm.addCanvas({ name: 'Costs' }));
+  await setRevenue(page, 1);
+  await openTemplates(page);
+  await saveCanvasAsTemplate(page, 'Costs plan', 'first');
+  await saveNewVersion(page, 'second');
+  await saveCanvasAsTemplate(page, 'Single', 'only one');
+  await expect(removeOldAllBtn(page)).toHaveText('🧹 Remove older versions');
+  await removeOldAllBtn(page).click();
+  expect(await F.dialogText(page)).toBe('Remove 3 older versions of 2 templates? The latest version of each template stays. This can\'t be undone — use ⇩ Export Templates first if you might want them back.');
+  await F.cancelDialog(page);
+  expect(await versionsOf(page)).toHaveLength(6);
+  await closeTemplates(page);
+  // The command, from the Command Launcher's list.
+  expect(await page.evaluate(() => fm.commands().find(c => c.id === 'removeOldTemplateVersions').label)).toBe('Remove Older Versions of All Templates…');
+  await page.evaluate(() => fm.command('removeOldTemplateVersions'));
+  await F.confirmDanger(page);
+  expect(await versionsOf(page)).toEqual(['Revenue plan@3', 'Costs plan@2', 'Single@1']);
+  // Nothing left to remove: the button is hidden and the command is off.
+  await openTemplates(page);
+  await expect(removeOldAllBtn(page)).toBeHidden();
+  await expect(picker(page).locator('.template-list-footer button.template-clear-all')).toBeVisible();
+  await closeTemplates(page);
+  expect(await page.evaluate(() => fm.command('removeOldTemplateVersions'))).toBe(false); // off: nothing runs
+  await expect(page.locator('.modal-box')).toHaveCount(0);
+});
+
+test('names in the questions are text, never markup', async ({ page }) => {
+  const evil = '<img src=x onerror="window.__pwned=1">';
+  await page.evaluate(() => fm.clearAll());
+  await setRevenue(page, 1);
+  await openTemplates(page);
+  await saveCanvasAsTemplate(page, evil, 'first');
+  await saveNewVersion(page, 'second');
+  await removeOldBtn(page).click();
+  expect(await F.dialogText(page)).toContain(`“${evil}” (v1)`);
+  await expect(page.locator('.modal-box img')).toHaveCount(0);
+  await F.confirmDanger(page);
+  expect(await page.evaluate(() => window.__pwned)).toBeUndefined();
+});
