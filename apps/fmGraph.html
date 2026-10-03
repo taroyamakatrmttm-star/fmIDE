@@ -216,6 +216,12 @@
   .compare-btn{ padding:3px 10px; }
   .gbar-btn[aria-pressed="true"]{ background:var(--reach); color:#1b2333; }
   .bar-chart rect[data-anim]{ transform-box:view-box; transform-origin:0 0; }
+
+  /* Export for a template (G5a) */
+  .template-choices{ display:flex; flex-direction:column; gap:6px; margin:0 0 12px; }
+  .template-choices label, .template-only{ display:flex; gap:8px; align-items:baseline; font-size:14px; }
+  .template-only{ margin:0 0 10px; color:var(--soft-ink); }
+  .dialog p.template-hint{ font-size:12px; margin:0 0 14px; }
 /* The Help panel (build step 10; docs/step10-help.md), shared by fmIDE and ExcelExporter with
    src/shared/help-panel.js. Each app sets --help-top (where the panel starts) and makes room
    for the panel under body.help-open. */
@@ -313,6 +319,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         <button type="button" role="menuitem" id="btnExportBoard" class="needs-model">Export this board</button>
         <button type="button" role="menuitem" id="btnExportBoards" class="needs-model">Export all boards</button>
         <button type="button" role="menuitem" id="btnImportBoards" class="needs-model">Import boards…</button>
+        <button type="button" role="menuitem" id="btnExportTemplate" class="needs-model" title="Save the boards for a template, to attach in fmIDE's Templates window">Export for a template…</button>
       </div>
     </details>
     <button id="btnHelp" class="gbar-btn" title="Help (F1)">❓ Help</button>
@@ -357,6 +364,20 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
 
 <input type="file" id="fileInput" accept=".fmide,application/json,.json" hidden>
 <input type="file" id="boardFileInput" accept="application/json,.json" hidden>
+
+<div id="templateBox" class="dialog-back hidden" role="dialog" aria-modal="true" aria-labelledby="templateTitle">
+  <div class="dialog">
+    <h3 id="templateTitle">Export for a template</h3>
+    <p>Which template are these boards for?</p>
+    <div id="templateChoices" class="template-choices" role="radiogroup" aria-labelledby="templateTitle"></div>
+    <label class="template-only"><input type="checkbox" id="templateOnlyShown"> Only the board shown</label>
+    <p class="template-hint">Then, in fmIDE: Templates → 📈 Attach fmGraph board….</p>
+    <div class="dialog-actions">
+      <button id="templateNo">Cancel</button>
+      <button id="templateYes" class="primary">Export</button>
+    </div>
+  </div>
+</div>
 
 <div id="confirmBox" class="dialog-back hidden" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
   <div class="dialog">
@@ -2177,7 +2198,7 @@ function evaluateModel(ir, options){
 // (docs/file-formats.md). To change one of these formats: raise its version here and add
 // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
 // exactly one version.
-const SHARED_FILE_VERSIONS = { 'system': 9, 'fmIDE-workspace': 11 };
+const SHARED_FILE_VERSIONS = { 'system': 9, 'fmIDE-workspace': 12 };
 // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
 // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
 function upgradeNodePlugs(nodes){
@@ -2265,7 +2286,10 @@ const SHARED_FILE_MIGRATIONS = {
     9: () => {},
     // v10 → v11: a document may carry the fmGraph boards of its model (`graphBoards`, an
     // fmIDE-graph-board file; step 15 G3b); older ones have none.
-    10: () => {}
+    10: () => {},
+    // v11 → v12: its templates — canvas and system templates — may carry an fmGraph board
+    // (`attachments.graph`, step 15 G5a); older ones have none.
+    11: () => {}
   },
   'system': {
     // v1 systems were accepted with fields the loader already defaults (periods, ids…);
@@ -2840,7 +2864,15 @@ async function loadModel(system, name, opts){
   const t = performance.now();
   const base = evaluateModel(ir);
   const baseMs = performance.now() - t;
-  const m = { name: typeof name === 'string' && name ? name.slice(0, 120) : 'Model', periods, ir, canvasIndex, rects, byKey,
+  // The canvas template each canvas was made from (G5a; a system file's canvas.template), for
+  // Export for a template….
+  const canvasTemplates = new Map();
+  system.canvases.forEach(c => {
+    const t = c && c.template;
+    if(!c || typeof c.id !== 'string' || !t || typeof t !== 'object' || typeof t.family !== 'string' || !/^[A-Za-z0-9-]{8,64}$/.test(t.family)) return;
+    if(!canvasTemplates.has(c.id)) canvasTemplates.set(c.id, { family: t.family, name: typeof t.name === 'string' && t.name.trim() ? t.name.trim().slice(0, 120) : 'a canvas template' });
+  });
+  const m = { name: typeof name === 'string' && name ? name.slice(0, 120) : 'Model', periods, ir, canvasIndex, rects, byKey, canvasTemplates,
     inputs: rects.filter(r => r.input), base, baseMs, signature: modelSignature(ir), reach: reachMap(ir) };
   model = m;
   linkedToFmide = !!(opts && opts.fromFmide);
@@ -3167,6 +3199,9 @@ function cleanBoards(raw){
 }
 
 // A board's file form.
+// The board file's version (docs/file-formats.md): 1 (G3a); 2 (G5a) adds the template form
+// (`form: "template"`, 06c-template-boards.js). Boards for one model are the same in both.
+const BOARD_FILE_VERSION = 2;
 function boardData(b){
   const at = (key) => { const r = model.byKey.get(key); return { canvasId: r.canvasId, nodeId: r.nodeId, name: r.name }; };
   return {
@@ -3180,7 +3215,7 @@ function boardData(b){
 // The file form of these boards (all, or the ones given).
 function boardsData(list){
   const which = list || boards;
-  return { kind: 'fmIDE-graph-board', version: 1, active: list ? 0 : Math.max(0, boards.indexOf(board)), boards: which.map(boardData) };
+  return { kind: 'fmIDE-graph-board', version: BOARD_FILE_VERSION, active: list ? 0 : Math.max(0, boards.indexOf(board)), boards: which.map(boardData) };
 }
 
 let saveTimer = null;
@@ -4837,7 +4872,9 @@ back.addEventListener('click', (ev) => {
 // the boards kept in the browser are; widgets whose rectangles aren't in this model are left
 // out and counted. Imported boards are added as new tabs (a name already used gets "(2)").
 // ============================================================
-const BOARD_FILE_FORMAT = { 'fmIDE-graph-board': { current: 1, label: 'fmGraph board file' } };
+const BOARD_FILE_FORMAT = { 'fmIDE-graph-board': { current: BOARD_FILE_VERSION, label: 'fmGraph board file' } };
+// v1 → v2: a board file may be in the template form (G5a); a v1 file is boards for one model.
+const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {} } };
 
 function safeFileName(s){ return String(s).replace(/[^A-Za-z0-9 ._()-]+/g, '_').replace(/\s+/g, ' ').trim().slice(0, 80) || 'board'; }
 
@@ -4871,8 +4908,12 @@ async function importBoardsText(text){
   if(deep){ notify(deep, 'err', 'boards'); return 0; }
   if(!raw || typeof raw !== 'object' || raw.kind !== 'fmIDE-graph-board'){ notify("That isn't an fmGraph board file.", 'err', 'boards'); return 0; }
   const data = JSON.parse(JSON.stringify(raw));
-  const { fromVersion, newer } = upgradeFileData(data, 'fmIDE-graph-board', BOARD_FILE_FORMAT, {});
+  const { fromVersion, newer } = upgradeFileData(data, 'fmIDE-graph-board', BOARD_FILE_FORMAT, BOARD_FILE_MIGRATIONS);
   if(newer && !(await askConfirm('Saved by a newer version', 'This board file (format version ' + fromVersion + ') was saved by a newer version of fmGraph. Open it anyway? Anything the newer version added may be ignored.', 'Open Anyway'))) return 0;
+  if(data.form === 'template'){
+    notify('That board was saved for a template. Attach it to the template in fmIDE: Templates → 📈 Attach fmGraph board….', 'info', 'boards');
+    return 0;
+  }
   const r = cleanBoards(data);
   const useful = r ? r.boards.filter(b => b.items.length || b.sliders.length) : [];
   if(!useful.length){
@@ -4922,6 +4963,142 @@ document.addEventListener('keydown', (ev) => {
   if(k === 'z' && !ev.shiftKey){ ev.preventDefault(); undo(); }
   else if(k === 'y' || (k === 'z' && ev.shiftKey)){ ev.preventDefault(); redo(); }
 });
+// ============================================================
+// Boards for a template (G5a). Boards ▾ → Export for a template… saves the boards in the board
+// file's template form (version 2, `form: "template"`; docs/file-formats.md), for fmIDE's
+// Templates → 📈 Attach fmGraph board…. A template gets new ids each time it is used, so the
+// template form names each rectangle by its name — and, for a system template, its canvas's
+// name — never by id:
+// - for a canvas template (a canvas made from one, `canvas.template`): only that canvas's
+//   rectangles (the owner's choice); `template: { kind: "module", family, name }`;
+// - for a system template (the whole model): any canvas's; `template: { kind: "system" }`.
+// A rectangle whose name isn't unique on its canvas (or whose canvas's name isn't unique in the
+// model) can't be found again by name, so it is left out, like one on another canvas, and the
+// export says how many were. Where sliders are set is never written.
+// ============================================================
+
+// The templates this model's boards can be saved for: each canvas made from a canvas template,
+// then the whole model.
+function templateTargets(){
+  if(!model) return [];
+  const out = [];
+  model.canvasTemplates.forEach((t, canvasId) => {
+    const r = model.rects.find(x => x.canvasId === canvasId);
+    const canvasName = r ? r.canvasName : canvasId;
+    out.push({ kind: 'module', canvasId, family: t.family, templateName: t.name, label: 'Canvas “' + canvasName + '” — canvas template “' + t.name + '”' });
+  });
+  out.push({ kind: 'system', label: 'The whole model — for a system template' });
+  return out;
+}
+
+// A rectangle as the template form names it, or null when it can't be found again by name.
+function templateRefMaker(target){
+  const lower = (s) => String(s).trim().toLowerCase();
+  const perCanvas = new Map(), canvasNames = new Map();
+  model.rects.forEach(r => {
+    const k = r.canvasId + '\u0000' + lower(r.name);
+    perCanvas.set(k, (perCanvas.get(k) || 0) + 1);
+  });
+  [...new Set(model.rects.map(r => r.canvasId))].forEach(id => {
+    const r = model.rects.find(x => x.canvasId === id);
+    const k = lower(r.canvasName);
+    canvasNames.set(k, (canvasNames.get(k) || 0) + 1);
+  });
+  return (key) => {
+    const r = model.byKey.get(key);
+    if(!r || perCanvas.get(r.canvasId + '\u0000' + lower(r.name)) !== 1) return null;
+    if(target.kind === 'module') return r.canvasId === target.canvasId ? { name: r.name } : null;
+    return canvasNames.get(lower(r.canvasName)) === 1 ? { canvas: r.canvasName, name: r.name } : null;
+  };
+}
+
+// The boards (all, or the one shown) in the template form, and how many widgets were left out.
+function templateBoardsData(target, onlyShown){
+  const ref = templateRefMaker(target);
+  let left = 0;
+  const colourOf = (c, key) => c.colours && c.colours[key] ? { colour: c.colours[key] } : {};
+  const one = (b) => {
+    const items = [];
+    b.items.forEach(w => {
+      if(w.kind === 'bar'){
+        const r = ref(w.key);
+        if(!r){ left++; return; }
+        items.push(Object.assign({ type: 'bar' }, r, { periods: Object.assign({}, w.periods), wide: w.wide }, w.colour ? { colour: w.colour } : {}));
+        return;
+      }
+      if(w.layout === 'flow'){
+        const steps = [];
+        w.steps.forEach(s => { const r = ref(s.key); if(r) steps.push(Object.assign(r, { role: s.role }, colourOf(w, s.key))); else left++; });
+        if(!steps.length) return;
+        items.push({ type: 'chart', wide: w.wide, layout: 'flow', title: w.title, period: w.period, steps });
+      } else {
+        const groups = w.groups.map(g => ({ name: g.name, parts: g.parts.map(k => { const r = ref(k); if(!r) left++; return r ? Object.assign(r, colourOf(w, k)) : null; }).filter(Boolean) }));
+        if(!groups.some(g => g.parts.length)) return;
+        items.push({ type: 'chart', wide: w.wide, layout: 'columns', title: w.title, periods: Object.assign({}, w.periods), check: w.check, groups });
+      }
+    });
+    const sliders = [];
+    b.sliders.forEach(s => {
+      const r = ref(s.key);
+      if(!r){ left++; return; }
+      sliders.push(Object.assign(r, { periods: Object.assign({}, s.periods), mode: s.mode, min: s.min, max: s.max, step: s.step }));
+    });
+    return { name: b.name, items, sliders };
+  };
+  const list = (onlyShown ? [board] : boards).map(one).filter(b => b.items.length || b.sliders.length);
+  const template = target.kind === 'module' ? { kind: 'module', family: target.family, name: target.templateName } : { kind: 'system' };
+  return { data: { kind: 'fmIDE-graph-board', version: BOARD_FILE_VERSION, form: 'template', template, active: 0, boards: list }, left };
+}
+
+// Writes the file; says what was left out. Returns { data, left } or null when nothing fits.
+function exportForTemplate(target, onlyShown){
+  const r = templateBoardsData(target, onlyShown);
+  const leftText = r.left ? ' ' + r.left + ' widget' + (r.left === 1 ? '' : 's') + ' left out: ' + (target.kind === 'module'
+    ? 'a canvas template\'s board shows only its own canvas, and each rectangle by a name used once on it.'
+    : 'each rectangle is found by its canvas\'s name and its own, so both must be used once.') : '';
+  if(!r.data.boards.length){
+    notify('Nothing on ' + (onlyShown ? 'this board' : 'these boards') + ' fits that template, so nothing was saved.' + leftText, 'err', 'boards');
+    return null;
+  }
+  const label = target.kind === 'module' ? target.templateName : model.name;
+  downloadText(JSON.stringify(r.data, null, 2), safeFileName(label + ' - for a template') + '.board.json');
+  notify('Saved ' + r.data.boards.length + ' board' + (r.data.boards.length === 1 ? '' : 's') + ' for ' + (target.kind === 'module' ? 'the canvas template “' + target.templateName + '”' : 'a system template')
+    + '. In fmIDE, attach the file: Templates → 📈 Attach fmGraph board….' + leftText, 'ok', 'boards');
+  return r;
+}
+
+// The dialog: one choice per target (the first canvas template ticked, else the whole model).
+function showTemplateExport(){
+  if(!model) return;
+  const back = $('templateBox'), box = $('templateChoices');
+  box.textContent = '';
+  const targets = templateTargets();
+  targets.forEach((t, i) => {
+    const l = make('label');
+    const r = make('input');
+    r.type = 'radio'; r.name = 'templateTarget'; r.value = String(i); r.checked = i === 0;
+    l.append(r, document.createTextNode(t.label));
+    box.appendChild(l);
+  });
+  $('templateOnlyShown').checked = false;
+  back.classList.remove('hidden');
+  const done = (go) => {
+    back.classList.add('hidden');
+    $('templateYes').removeEventListener('click', yes);
+    $('templateNo').removeEventListener('click', no);
+    document.removeEventListener('keydown', key, true);
+    if(!go) return;
+    const picked = box.querySelector('input[name="templateTarget"]:checked');
+    exportForTemplate(targets[picked ? Number(picked.value) : targets.length - 1], $('templateOnlyShown').checked);
+  };
+  const yes = () => done(true), no = () => done(false);
+  const key = (ev) => { if(ev.key === 'Escape'){ ev.preventDefault(); done(false); } };
+  $('templateYes').addEventListener('click', yes);
+  $('templateNo').addEventListener('click', no);
+  document.addEventListener('keydown', key, true);
+  $('templateYes').focus();
+}
+$('btnExportTemplate').addEventListener('click', () => { closeMenus(); showTemplateExport(); });
 // ============================================================
 // Help: the same panel as fmIDE and ExcelExporter (src/shared/help-panel.js), with fmGraph's
 // own topics and What's new (src/help/fmgraph-help.js, fmgraph-whats-new.js; CC BY 4.0).
@@ -5534,11 +5711,12 @@ const FMGRAPH_HELP_TOPICS = [
       { see: ['board-file', 'charts'] },
     ] },
   { id: 'board-file', group: 'board', title: 'Saving and sharing boards',
-    keywords: 'export import file board json share send save',
+    keywords: 'export import file board json share send save template attach pack library',
     summary: 'Boards travel as a file.',
     body: [
       { p: 'Boards ▾ at the top: Export this board, or Export all boards, saves a board file. Import boards… (or dropping a board file on the page) adds its boards as new tabs to the model you have open.' },
       { p: 'A board names its rectangles by canvas, id and name, so it fits the model it was made from, or another one built from the same templates. Anything it shows that isn\'t in this model is left out, and fmGraph says how much.' },
+      { p: 'For a template: Boards ▾ → Export for a template… saves the boards for a template the model was built from — a canvas made from a canvas template (only that canvas\'s rectangles), or the whole model for a system template. It names each rectangle by its name (and its canvas\'s name), since a template gets new ids each time it is used, so a rectangle whose name is used twice on its canvas is left out, and fmGraph says how many. In fmIDE, select the template and choose 📈 Attach fmGraph board…: the board then goes along with the template, in packs too.' },
       { tip: 'Where sliders are set is not saved: a board always opens on the model\'s own numbers.' },
       { see: ['boards', 'board-kept'] },
     ] },
@@ -5599,6 +5777,21 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'boards-for-templates', date: '2026-10-02', title: 'Boards for templates',
+    summary: 'Save your boards for a template, so they go along with it — in documents and in packs you share.',
+    what: [
+      'Boards ▾ → Export for a template… saves the boards for a template the model was built from: a canvas made from a canvas template (just that canvas), or the whole model for a system template.',
+      'Attach the file to the template in fmIDE (Templates → 📈 Attach fmGraph board…). It then travels with the template — in documents, new versions and library packs.',
+    ],
+    why: 'So someone who uses your template also gets the boards that explain it.',
+    how: [
+      'Open a model built from your template, from fmIDE.',
+      'Boards ▾ → Export for a template…, and choose the template.',
+      'In fmIDE: Templates, select the template, 📈 Attach fmGraph board….',
+    ],
+    notes: ['Using a template\'s boards in fmGraph comes in the next update.'],
+    see: ['board-file'] },
+
   { id: 'compare-a-b', date: '2026-10-02', title: 'Compare two what-ifs, and bars that glide',
     summary: 'Pin where the sliders are as A, try something else, and see the difference; bars now glide to new values.',
     what: [
@@ -5878,6 +6071,16 @@ window.fmGraph = Object.freeze({
     return { sliders: t.sliders.map(s => ({ id: s.id, path: s.path.slice() })), inputs: t.inputs.map(r => r.name) };
   },
   traced: () => traceId,
+  // Boards for a template (G5a): templates() lists what Export for a template… offers (its
+  // words); exportForTemplate(i, { onlyShown }) saves the boards for the i-th (from 0) and
+  // returns the file's data and how many widgets were left out, or null when nothing fits.
+  templates: () => templateTargets().map(t => t.label),
+  exportForTemplate: (i, opts) => {
+    const t = templateTargets()[Number(i)];
+    if(!t) throw new Error('There is no template number ' + String(i).slice(0, 20) + '.');
+    const r = exportForTemplate(t, !!(opts && opts.onlyShown));
+    return r ? { data: r.data, left: r.left } : null;
+  },
   // The A/B snapshot (G4b): pinA() keeps where the sliders are as A (returns its words),
   // unpinA(), swapA() (returns the new A's words), comparing() — A's words, or null.
   pinA: () => pinAsA(),

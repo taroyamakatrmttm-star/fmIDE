@@ -36,6 +36,7 @@
         <button type="button" role="menuitem" id="btnExportBoard" class="needs-model">Export this board</button>
         <button type="button" role="menuitem" id="btnExportBoards" class="needs-model">Export all boards</button>
         <button type="button" role="menuitem" id="btnImportBoards" class="needs-model">Import boards…</button>
+        <button type="button" role="menuitem" id="btnExportTemplate" class="needs-model" title="Save the boards for a template, to attach in fmIDE's Templates window">Export for a template…</button>
       </div>
     </details>
     <button id="btnHelp" class="gbar-btn" title="Help (F1)">❓ Help</button>
@@ -80,6 +81,20 @@
 
 <input type="file" id="fileInput" accept=".fmide,application/json,.json" hidden>
 <input type="file" id="boardFileInput" accept="application/json,.json" hidden>
+
+<div id="templateBox" class="dialog-back hidden" role="dialog" aria-modal="true" aria-labelledby="templateTitle">
+  <div class="dialog">
+    <h3 id="templateTitle">Export for a template</h3>
+    <p>Which template are these boards for?</p>
+    <div id="templateChoices" class="template-choices" role="radiogroup" aria-labelledby="templateTitle"></div>
+    <label class="template-only"><input type="checkbox" id="templateOnlyShown"> Only the board shown</label>
+    <p class="template-hint">Then, in fmIDE: Templates → 📈 Attach fmGraph board….</p>
+    <div class="dialog-actions">
+      <button id="templateNo">Cancel</button>
+      <button id="templateYes" class="primary">Export</button>
+    </div>
+  </div>
+</div>
 
 <div id="confirmBox" class="dialog-back hidden" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
   <div class="dialog">

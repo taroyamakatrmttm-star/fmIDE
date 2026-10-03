@@ -22,18 +22,18 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 |---|---|---|---|
 | `system` | 9 | A whole model (all canvases, periods); v4: a canvas may remember the canvas template it came from; v5: the function definitions its function nodes use; v6: the operators of phase E1 (below); v7: no Excel-only format settings (step 11a, below); v8: the operators of phase E2a (below); v9: `choose` (phase E2b, below) | fmIDE: File → Load System · ExcelExporter |
 | `module` | 7 | One canvas; v3: the function definitions it uses; v4: the operators of phase E1; v5: no Excel-only format settings; v6: the operators of phase E2a; v7: `choose` | fmIDE: File → Load Module |
-| `fmIDE-workspace` | 11 | Everything: system + templates, format presets, shortcuts, macros; v4: the function library; v5: its system and templates may use the operators of phase E1; v6: its templates and library functions may say which library pack they came from (`origin`, below); v7: no Excel-only format roles or settings; v8: its templates may carry `attachments` (below); v9: its system and templates may use the operators of phase E2a; v10: `choose`; v11: `graphBoards`, the model's fmGraph boards (below). A **`.fmide` document** is exactly this, with the `.fmide` extension | fmIDE: File → Open… (a document) or Import Workspace (a full replace) · ExcelExporter |
-| `fmIDE-templates` | 9 | Saved templates (each holds a module, a system or a recipe), with their families and versions; v4: a template's model may carry function definitions; v5: it may use the operators of phase E1; v6: a template may carry `origin`; v7: a canvas template may carry `attachments` (below); v8: it may use the operators of phase E2a; v9: `choose` | fmIDE: Templates → Import Templates |
+| `fmIDE-workspace` | 12 | Everything: system + templates, format presets, shortcuts, macros; v4: the function library; v5: its system and templates may use the operators of phase E1; v6: its templates and library functions may say which library pack they came from (`origin`, below); v7: no Excel-only format roles or settings; v8: its templates may carry `attachments` (below); v9: its system and templates may use the operators of phase E2a; v10: `choose`; v11: `graphBoards`, the model's fmGraph boards (below); v12: its templates — canvas and system — may carry an fmGraph board (`attachments.graph`, below). A **`.fmide` document** is exactly this, with the `.fmide` extension | fmIDE: File → Open… (a document) or Import Workspace (a full replace) · ExcelExporter |
+| `fmIDE-templates` | 10 | Saved templates (each holds a module, a system or a recipe), with their families and versions; v4: a template's model may carry function definitions; v5: it may use the operators of phase E1; v6: a template may carry `origin`; v7: a canvas template may carry `attachments` (below); v8: it may use the operators of phase E2a; v9: `choose`; v10: a canvas or system template may carry an fmGraph board (`attachments.graph`) | fmIDE: Templates → Import Templates |
 | `fmIDE-functions` | 2 | Function definitions (a library of functions); v2: a definition may carry `origin` | fmIDE: Functions → Import Functions |
 | `fmIDE-format-presets` | 2 | Format presets, including the canvas format roles; v2: no Excel-only roles or settings | fmIDE: Format Presets → Import Presets |
 | `fmIDE-shortcuts` | 2 | Keyboard shortcut bindings | fmIDE: Keyboard Shortcuts → Import Shortcuts |
 | `fmIDE-macros` | 1 | Macros | fmIDE: Macro Builder → Import |
 | `fmIDE-preferences` | 1 | Personal settings: shortcut bindings for built-in commands, ribbon layout and Quick Access Toolbar, ribbon collapsed state, KeyTips trigger (fmIDE only) | fmIDE: File → Import Preferences (or Customize Ribbon) |
-| `fmIDE-library-pack` | 3 | Templates, recipes and functions to share with other people, with who made them and their licence (below); v2: an item shared again carries the `origin` it came with; v3: a canvas template may carry `attachments` | fmIDE: File → Open Library Pack… |
+| `fmIDE-library-pack` | 4 | Templates, recipes and functions to share with other people, with who made them and their licence (below); v2: an item shared again carries the `origin` it came with; v3: a canvas template may carry `attachments`; v4: a canvas or system template may carry an fmGraph board (`attachments.graph`) | fmIDE: File → Open Library Pack… |
 | `fmIDE-excel-mapping` | 2 | ExcelExporter's tab/row layout for one model; v2: any row may carry its own format (`style`) and an `indent` (below) | ExcelExporter: Import Mapping JSON |
 | `fmIDE-excel-style` | 1 | ExcelExporter's Excel style: how every cell in the workbook looks, by role (step 11a, below) | ExcelExporter: Import Excel Style |
 | `fmIDE-excel-module-layouts` | 2 | ExcelExporter's layouts remembered per module (step 11b, below); v2: the layout of a module's block instances, `instance` (step 11d) | ExcelExporter: Import Module Layouts |
-| `fmIDE-graph-board` | 1 | fmGraph's boards: bars, charts and sliders showing one model (step 15, below) | fmGraph: Boards → Import boards… (or dropped on the page) |
+| `fmIDE-graph-board` | 2 | fmGraph's boards: bars, charts and sliders showing one model (step 15, below); v2: the template form, for a template's `attachments.graph` (G5a) | fmGraph: Boards → Import boards… (or dropped on the page) |
 
 ## A row's own format and indent (`fmIDE-excel-mapping` 2)
 
@@ -87,7 +87,7 @@ ExcelExporter remembers the layout of a module's tab — a canvas added from a c
 - Version 1 files open unchanged (the upgrade only raises the number); fmIDE's Attach Excel layout… reads both versions.
 - Everything in the file is someone else's text: labels and names are only ever shown as text.
 
-## fmGraph boards (`fmIDE-graph-board` 1, step 15)
+## fmGraph boards (`fmIDE-graph-board` 2, step 15)
 
 A board is a view of one model in fmGraph: bars, charts and sliders. A file holds one or more boards (**Export this board**, **Export all boards**); fmGraph keeps the boards of each model in the browser in the same form.
 
@@ -114,6 +114,23 @@ A board is a view of one model in fmGraph: bars, charts and sliders. A file hold
 - At most 20 boards, 40 bars and charts and 40 sliders a board. `active` is the board shown.
 - The form fmGraph kept in the browser before boards had tabs (one board: `bars`, `charts`, `sliders` at the top level, no `boards`) is read as one board, charts first.
 
+### Boards for a template (`fmIDE-graph-board` 2, step 15 G5a)
+
+fmGraph's **Boards → Export for a template…** writes the same file in its **template form**: a template gets new ids each time it is used, so rectangles are named by their name (capitals and outer spaces ignored), and, for a system template, their canvas's name — never by id:
+
+```
+{ "kind": "fmIDE-graph-board", "version": 2, "form": "template",
+  "template": { "kind": "module", "family": "3f2a9c1e-…", "name": "Sales" },
+  "active": 0,
+  "boards": [ { "name": "Board",
+    "items": [ { "type": "bar", "name": "Revenue", "periods": { "mode": "all" }, "wide": false } ],
+    "sliders": [ { "name": "Price", "periods": { "mode": "all" }, "mode": "set", "min": 0, "max": 20, "step": 1 } ] } ] }
+```
+
+- `template.kind` is `module` (a canvas template: `family` and `name` say which; only that canvas's rectangles, each `{ "name" }`) or `system` (a system template: the whole model; each rectangle `{ "canvas", "name" }`). Charts' parts and waterfall steps name rectangles the same way; everything else is as in a board for one model.
+- A rectangle whose name is used twice on its canvas, or whose canvas's name is used twice in the model, can't be found again by name: it is left out, as is (for a canvas template) one on another canvas, and fmGraph says how many.
+- fmGraph doesn't import a template board as a model's board; fmIDE attaches it to a template (`attachments.graph`, below). Version 1 files are boards for one model and read as before (the upgrade step changes nothing); an older fmGraph asks before opening version 2.
+
 ### Boards in a document (`fmIDE-workspace` 11, step 15 G3b)
 
 A workspace — and so a `.fmide` document — may carry `graphBoards`: an `fmIDE-graph-board` file (as above, the whole object) holding its model's boards.
@@ -123,18 +140,19 @@ A workspace — and so a `.fmide` document — may carry `graphBoards`: an `fmID
 - fmGraph opened from fmIDE gets it with the model and shows it instead of the boards the browser keeps for that model (when it shows anything for this model); each change to the boards in fmGraph goes back to fmIDE, which keeps it and marks the document unsaved. fmGraph opening a `.fmide` or workspace file shows its `graphBoards` the same way. fmGraph reads it with its own checks (`cleanBoards`), as any board file.
 - Older workspaces (v1–v10) have none; the upgrade step changes nothing. An older fmIDE or ExcelExporter asks before opening a v11 file; ExcelExporter ignores `graphBoards`.
 
-## Template attachments (`fmIDE-templates` 7, `fmIDE-workspace` 8, `fmIDE-library-pack` 3, step 11c)
+## Template attachments (`fmIDE-templates` 7 and 10, `fmIDE-workspace` 8 and 12, `fmIDE-library-pack` 3 and 4; steps 11c and 15 G5a)
 
-A canvas template version may carry **attachments**: data for an output other than fmIDE, which fmIDE keeps with the template but never reads. Today there is one, `excel` — the layout ExcelExporter remembers for that module, exactly one entry of an `fmIDE-excel-module-layouts` file (above):
+A template version may carry **attachments**: data for an output other than fmIDE, which fmIDE keeps with the template but never reads. There are two: `excel` (canvas templates) — the layout ExcelExporter remembers for that module, exactly one entry of an `fmIDE-excel-module-layouts` file (above) — and `graph` (canvas and system templates; step 15 G5a) — an fmGraph board file in its template form (above), with the template's `family` added:
 
 ```json
 { "name": "Sales", "kind": "module", "family": "3f2a9c1e-…", "version": 2, "versionId": "…", "note": "", "data": { … },
   "attachments": { "excel": { "family": "3f2a9c1e-…", "name": "Sales", "tabName": "Sales plan", "rows": [ … ], "customs": [ … ], "sectioned": [ … ], "flat": [ … ] } } }
 ```
 
-- fmIDE keeps an attachment only on a canvas template (`kind: "module"`), under a name it knows (`excel`), when it is plain data (objects, lists, text, numbers, `true` / `false` / `null`), nested at most 12 deep, at most 256 KB written out, and its `family` is the template's own. Anything else is dropped when the file is read (`cleanTemplateAttachments` in `src/shared/fmide-files.js`); the library's checker refuses a pack holding what fmIDE would drop, and any text in it with a hidden character. A version 2 pack is as good as a version 3 one and gets no warning; a version 1 pack is warned about (it lost the credit of items shared again).
+- fmIDE keeps `excel` only on a canvas template (`kind: "module"`), and `graph` on a canvas or system template when it says it is a template board for that kind (`kind` `fmIDE-graph-board`, `form` `template`, `version` 2 or later, `template.kind` the template's), when it is plain data (objects, lists, text, numbers, `true` / `false` / `null`), nested at most 12 deep, at most 256 KB written out, and its `family` is the template's own. Anything else is dropped when the file is read (`cleanTemplateAttachments` in `src/shared/fmide-files.js`); the library's checker refuses a pack holding what fmIDE would drop, and any text in it with a hidden character. A version 2 pack is as good as a version 3 one and gets no warning; a version 1 pack is warned about (it lost the credit of items shared again).
 - It goes wherever the template goes: workspaces and `.fmide` documents, templates files, library packs, and the next version (Save as new version copies it). A template read into a new family (its family was taken by another kind) loses it. A template already in the library gains the attachment of an imported copy that has one and it lacks. A model (system, module) never carries one.
 - fmIDE adds one with **📎 Attach Excel layout…** in the Templates window, from a file ExcelExporter's Export Module Layouts saved: it reads that file's `kind`, `version` and each entry's `family`, and takes the entry of the template's family. ExcelExporter checks the layout itself (`cleanModuleLayout`) when it uses it.
+- fmIDE adds a board with **📈 Attach fmGraph board…**, from a file fmGraph's Export for a template… saved (`graphBoardForTemplate`): it reads only its `kind`, `version`, `form`, `template.kind` and, for a canvas template, `template.family` (which must be the template's), and adds the template's `family`. The library's checker also checks the board against the template it comes with: every rectangle it names must be in the template, once (and, for a system template, in the canvas of that name), with at most 20 boards, 40 bars and charts and 40 sliders a board.
 - Older files have none, and open unchanged; an older fmIDE asks before opening the new versions.
 
 ## Limits on a file that is opened

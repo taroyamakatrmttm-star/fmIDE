@@ -1861,6 +1861,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         { p: 'Templates are kept in fmIDE and travel inside your documents.' },
         { p: '{cmd:removeDuplicateTemplates} tidies up copies that built up over time.' },
         { p: 'A canvas template can carry its Excel layout: select it and choose 📎 Attach Excel layout…, then pick a file saved by ExcelExporter\'s Export Module Layouts. The layout then goes wherever the template goes — your documents, new versions and packs you share — and ExcelExporter uses it for that module\'s tab unless you have arranged the tab yourself. fmIDE only carries it; Remove takes it off.' },
+        { p: 'A canvas or system template can carry an fmGraph board the same way: in fmGraph, open a model made from the template and choose Boards → Export for a template…, then select the template here and choose 📈 Attach fmGraph board…. A canvas template\'s board shows only its own canvas; a system template\'s, the whole model. The board goes along with the template, in packs too.' },
         { see: ['template-versions', 'recipes', 'library-packs'] },
       ] },
     { id: 'template-versions', group: 'templates', title: 'Template versions and updating a canvas',
@@ -2171,6 +2172,20 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // entry: ids, dates in order, commands and topics that exist.
   // **A change people will notice adds its entry here in the same pull request.**
   const WHATS_NEW = [
+    { id: 'template-fmgraph-boards', date: '2026-10-02', title: 'Templates can carry fmGraph boards',
+      summary: 'Attach an fmGraph board to a canvas or system template, and it goes wherever the template goes.',
+      what: [
+        'In the Templates window, a canvas or system template has 📈 Attach fmGraph board…: pick a file saved by fmGraph\'s Boards → Export for a template….',
+        'The board then goes along with the template: in your documents, its new versions and library packs you share. Open Library Pack marks templates that have one (📈 fmGraph board), and offers the board for a template you already have.',
+      ],
+      why: 'So a template can come with the views that show how it works.',
+      how: [
+        'Open {cmd:openFmGraph} on a model built from the template, and use Boards → Export for a template….',
+        'Open {cmd:openTemplates}, select the template, and choose 📈 Attach fmGraph board….',
+      ],
+      notes: ['Library packs, templates files and documents saved now are a new version: an older fmIDE asks before opening them.'],
+      see: ['templates'] },
+
     { id: 'fmgraph-boards-in-documents', date: '2026-10-02', title: 'fmGraph\'s boards are saved in your document',
       summary: 'The bars, charts and sliders you set up in fmGraph are kept in the .fmide file, with the model.',
       what: [
@@ -5225,7 +5240,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // (docs/file-formats.md). To change one of these formats: raise its version here and add
   // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
   // exactly one version.
-  const SHARED_FILE_VERSIONS = { 'system': 9, 'fmIDE-workspace': 11 };
+  const SHARED_FILE_VERSIONS = { 'system': 9, 'fmIDE-workspace': 12 };
   // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
   // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
   function upgradeNodePlugs(nodes){
@@ -5313,7 +5328,10 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       9: () => {},
       // v10 → v11: a document may carry the fmGraph boards of its model (`graphBoards`, an
       // fmIDE-graph-board file; step 15 G3b); older ones have none.
-      10: () => {}
+      10: () => {},
+      // v11 → v12: its templates — canvas and system templates — may carry an fmGraph board
+      // (`attachments.graph`, step 15 G5a); older ones have none.
+      11: () => {}
     },
     'system': {
       // v1 systems were accepted with fields the loader already defaults (periods, ids…);
@@ -5425,13 +5443,13 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     'system':               { current: SHARED_FILE_VERSIONS['system'], label: 'system', where: 'File → Load System' },
     'module':               { current: 7, label: 'module',              where: 'File → Load Module' },
     'fmIDE-workspace':      { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'workspace', where: 'File → Import Workspace' },
-    'fmIDE-templates':      { current: 9, label: 'templates file',      where: 'Templates → Import Templates' },
+    'fmIDE-templates':      { current: 10, label: 'templates file',      where: 'Templates → Import Templates' },
     'fmIDE-functions':      { current: 2, label: 'functions file',      where: 'Functions → Import Functions' },
     'fmIDE-format-presets': { current: 2, label: 'format presets file', where: 'Format Presets → Import Presets' },
     'fmIDE-shortcuts':      { current: 2, label: 'shortcuts file',      where: 'Keyboard Shortcuts → Import Shortcuts' },
     'fmIDE-macros':         { current: 1, label: 'macros file',         where: 'Macro Builder → Import' },
     'fmIDE-preferences':    { current: 1, label: 'preferences file',    where: 'File → Import Preferences' },
-    'fmIDE-library-pack':   { current: 3, label: 'library pack',        where: 'File → Open Library Pack' },
+    'fmIDE-library-pack':   { current: 4, label: 'library pack',        where: 'File → Open Library Pack' },
     // The library's list, /library/index.json: written by the site's build, read from the site by
     // Browse Library (phase 8d); never opened as a file.
     'fmIDE-library-index':  { current: 1, label: 'library list',        where: 'File → Browse Library (fmIDE reads it from its website)' }
@@ -5481,7 +5499,10 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       // don't.
       7: () => {},
       // v8 → v9: a template's module or system may use choose (phase E2b); older ones don't.
-      8: () => {}
+      8: () => {},
+      // v9 → v10: a canvas or system template may carry an fmGraph board (`attachments.graph`,
+      // step 15 G5a); older ones have none.
+      9: () => {}
     },
     // v1 → v2: an item in a pack may say which pack it came from before (`origin`, phase 8b),
     // so re-sharing keeps its author's credit; older packs have no such record.
@@ -5489,7 +5510,10 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       1: () => {},
       // v2 → v3: a canvas template in a pack may carry its Excel layout (`attachments`, step
       // 11c); older packs have none.
-      2: () => {}
+      2: () => {},
+      // v3 → v4: a canvas or system template in a pack may carry an fmGraph board
+      // (`attachments.graph`, step 15 G5a); older packs have none.
+      3: () => {}
     },
     // v1 → v2: a definition may say which library pack it came from (`origin`, phase 8b);
     // older ones have no such record.
@@ -5574,15 +5598,21 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     return parts.length ? { kind: 'recipe', parts } : null;
   }
 
-  // ---------- a template's attachments (step 11c) ----------
-  // A canvas template version may carry attachments for outputs other than fmIDE — today one,
-  // `excel`: the layout ExcelExporter remembers for that module (one entry of an
-  // fmIDE-excel-module-layouts file). fmIDE never reads what is inside: it keeps an attachment
-  // with its template (workspace, templates file, library pack, new versions) when it passes
-  // these general checks — plain data only (objects, lists, text, numbers, true / false /
-  // null), nested at most 12 deep, at most 256 KB as text — and belongs to the template's own
-  // family. ExcelExporter checks the layout itself when it uses one. Anything else is dropped.
-  const TEMPLATE_ATTACHMENT_OUTPUTS = ['excel'];
+  // ---------- a template's attachments (step 11c; fmGraph's, step 15 G5a) ----------
+  // A template version may carry attachments for outputs other than fmIDE:
+  // - `excel` (canvas templates only): the layout ExcelExporter remembers for that module (one
+  //   entry of an fmIDE-excel-module-layouts file);
+  // - `graph` (canvas and system templates): an fmGraph board file in its template form
+  //   (`form: "template"`, version 2 and later), which names rectangles by their name — and, for
+  //   a system template, their canvas's name — since a template gets new ids each time it is used.
+  // fmIDE never reads what is inside: it keeps an attachment with its template (workspace,
+  // templates file, library pack, new versions) when it passes these general checks — plain data
+  // only (objects, lists, text, numbers, true / false / null), nested at most 12 deep, at most
+  // 256 KB as text — and belongs to the template's own family (and, for `graph`, says it is that
+  // kind of board). ExcelExporter and fmGraph check the contents when they use them. Anything else
+  // is dropped.
+  const TEMPLATE_ATTACHMENT_OUTPUTS = ['excel', 'graph'];
+  const TEMPLATE_ATTACHMENT_KINDS = { excel: ['module'], graph: ['module', 'system'] };
   const TEMPLATE_ATTACHMENT_LIMITS = { bytes: 256 * 1024, depth: 12 };
   function isPlainData(v, depth){
     if(depth > TEMPLATE_ATTACHMENT_LIMITS.depth) return false;
@@ -5593,13 +5623,20 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     if(typeof v === 'object' && Object.prototype.toString.call(v) === '[object Object]') return Object.keys(v).every(k => isPlainData(v[k], depth + 1));
     return false;
   }
+  // Whether an attachment says it is a template's fmGraph board (only these few fields read).
+  function isTemplateGraphBoard(a, kind){
+    return a.kind === 'fmIDE-graph-board' && a.form === 'template' && Number(a.version) >= 2
+      && !!a.template && typeof a.template === 'object' && a.template.kind === kind;
+  }
   // A template's attachments from a file (untrusted): a copy of the ones that pass, or null.
   function cleanTemplateAttachments(raw, family, kind){
-    if(kind !== 'module' || !raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+    if((kind !== 'module' && kind !== 'system') || !raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
     const out = {};
     TEMPLATE_ATTACHMENT_OUTPUTS.forEach(k => {
+      if(!TEMPLATE_ATTACHMENT_KINDS[k].includes(kind)) return;
       const a = Object.prototype.hasOwnProperty.call(raw, k) ? raw[k] : undefined;
       if(!a || typeof a !== 'object' || Array.isArray(a) || a.family !== family || !isPlainData(a, 1)) return;
+      if(k === 'graph' && !isTemplateGraphBoard(a, kind)) return;
       const text = JSON.stringify(a);
       if(text.length > TEMPLATE_ATTACHMENT_LIMITS.bytes) return;
       out[k] = JSON.parse(text);
@@ -5642,6 +5679,35 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     const clean = cleanTemplateAttachments({ excel: entry }, family, 'module');
     if(!clean) return { error: 'The layout for this template in that file is too large or not plain data, so it can\'t be attached.' };
     return { attachment: clean.excel };
+  }
+
+  // An fmGraph board for a template, out of a board file fmGraph's "Export for a template…"
+  // saved (parsed JSON; step 15 G5a). fmIDE reads only the file's kind, version, form and which
+  // kind of template it was made for (and, for a canvas template, its family). A board for a
+  // system template doesn't name one, so it takes the family it is attached to.
+  // Returns { attachment } or { error }.
+  const GRAPH_BOARD_VERSION = 2; // the board file versions fmIDE knows (v2: the template form)
+  function graphBoardForTemplate(raw, family, kind){
+    if(!raw || typeof raw !== 'object' || raw.kind !== 'fmIDE-graph-board') {
+      return { error: 'That isn\'t an fmGraph board file. In fmGraph, use Boards → Export for a template… to save one.' };
+    }
+    if(!(Number(raw.version) >= 1 && Number(raw.version) <= GRAPH_BOARD_VERSION)) {
+      return { error: 'That board file was saved by a newer fmGraph than this fmIDE knows. Update fmIDE, then try again.' };
+    }
+    if(raw.form !== 'template' || !raw.template || typeof raw.template !== 'object') {
+      return { error: 'That board is for one model, not a template. In fmGraph, use Boards → Export for a template… to save one for a template.' };
+    }
+    if(raw.template.kind !== kind) {
+      return { error: kind === 'system'
+        ? 'That board was saved for a canvas template. For a system template, choose "The whole model" in fmGraph\'s Export for a template….'
+        : 'That board was saved for a system template. For a canvas template, choose its canvas in fmGraph\'s Export for a template….' };
+    }
+    if(kind === 'module' && raw.template.family !== family) {
+      return { error: 'That board was saved for another canvas template. In fmGraph, choose a canvas made from this template.' };
+    }
+    const clean = cleanTemplateAttachments({ graph: Object.assign({}, raw, { family }) }, family, kind);
+    if(!clean) return { error: 'That board is too large or not plain data, so it can\'t be attached.' };
+    return { attachment: clean.graph };
   }
 
   // ---------- the function library from files ----------
@@ -11255,21 +11321,38 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     return r;
   }
 
-  // The Templates window's line about a canvas template version's Excel layout (step 11c):
-  // attached (with Remove) or not (with Attach Excel layout…, which takes this family's entry
-  // from a file ExcelExporter's Export Module Layouts saved). fmIDE never shows or reads the
-  // layout itself; ExcelExporter uses it for a new layout of a tab from this module.
+  // The Templates window's lines about a template version's attachments: its Excel layout
+  // (canvas templates, step 11c) and its fmGraph board (canvas and system templates, step 15
+  // G5a) — attached (with Remove) or not (with Attach…, which takes it from a file the other app
+  // saved: ExcelExporter's Export Module Layouts, fmGraph's Export for a template…). fmIDE never
+  // shows or reads what is inside; the other app uses it.
+  const ATTACHMENT_LINES = {
+    excel: { lineClass: 'template-attachment', attachClass: 'template-attach-excel', removeClass: 'template-attachment-remove',
+      attached: '📎 An Excel layout is attached to this version: ExcelExporter lays out this module\'s tab with it, unless you have arranged that tab yourself. It goes along in packs you share.',
+      button: '📎 Attach Excel layout…',
+      title: 'Attach the layout ExcelExporter remembers for this module (a file from its Export Module Layouts), so it goes along when you share this template',
+      read: (raw, t) => excelLayoutForFamily(raw, t.family), done: 'Excel layout' },
+    graph: { lineClass: 'template-attachment-graph', attachClass: 'template-attach-graph', removeClass: 'template-graph-remove',
+      attached: '📈 An fmGraph board is attached to this version: fmGraph offers it for models built from this template. It goes along in packs you share.',
+      button: '📈 Attach fmGraph board…',
+      title: 'Attach a board saved by fmGraph\'s Boards → Export for a template…, so it goes along when you share this template',
+      read: (raw, t) => graphBoardForTemplate(raw, t.family, t.kind), done: 'fmGraph board' },
+  };
   function appendAttachmentLine(box, t, onChange){
+    TEMPLATE_ATTACHMENT_OUTPUTS.filter(k => TEMPLATE_ATTACHMENT_KINDS[k].includes(t.kind)).forEach(k => appendOneAttachmentLine(box, t, k, onChange));
+  }
+  function appendOneAttachmentLine(box, t, k, onChange){
+    const line = ATTACHMENT_LINES[k];
     const row = document.createElement('p');
-    row.className = 'template-attachment';
-    if(t.attachments && t.attachments.excel){
+    row.className = line.lineClass;
+    if(t.attachments && t.attachments[k]){
       const s = document.createElement('span');
-      s.textContent = '📎 An Excel layout is attached to this version: ExcelExporter lays out this module\'s tab with it, unless you have arranged that tab yourself. It goes along in packs you share.';
+      s.textContent = line.attached;
       const rm = document.createElement('button');
-      rm.className = 'template-attachment-remove';
+      rm.className = line.removeClass;
       rm.textContent = 'Remove';
       rm.addEventListener('click', () => {
-        delete t.attachments.excel;
+        delete t.attachments[k];
         if(!Object.keys(t.attachments).length) delete t.attachments;
         saveWorkspaceSoon();
         onChange();
@@ -11277,9 +11360,9 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       row.append(s, ' ', rm);
     } else {
       const attach = document.createElement('button');
-      attach.className = 'template-attach-excel';
-      attach.textContent = '📎 Attach Excel layout…';
-      attach.title = 'Attach the layout ExcelExporter remembers for this module (a file from its Export Module Layouts), so it goes along when you share this template';
+      attach.className = line.attachClass;
+      attach.textContent = line.button;
+      attach.title = line.title;
       const input = document.createElement('input');
       input.type = 'file'; input.accept = 'application/json,.json'; input.style.display = 'none';
       attach.addEventListener('click', () => input.click());
@@ -11296,12 +11379,12 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
           try{ raw = JSON.parse(text); }catch(err){ showMessage('That file is not valid JSON.'); return; }
           const shape = fileDataProblem(raw);
           if(shape){ showMessage(shape); return; }
-          const r = excelLayoutForFamily(raw, t.family);
+          const r = line.read(raw, t);
           if(r.error){ showMessage(r.error); return; }
-          t.attachments = Object.assign({}, t.attachments || {}, { excel: r.attachment });
+          t.attachments = Object.assign({}, t.attachments || {}, { [k]: r.attachment });
           saveWorkspaceSoon();
           onChange();
-          showMessage(`Excel layout attached to version ${t.version} of "${t.name}".`);
+          showMessage(`${line.done} attached to version ${t.version} of "${t.name}".`);
         };
         reader.readAsText(file);
       });
@@ -12661,7 +12744,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       }
       detail.appendChild(ver);
       appendOriginLines(detail, selected, all);
-      if(selected.kind === 'module') appendAttachmentLine(detail, selected, () => renderDetail());
+      if(selected.kind === 'module' || selected.kind === 'system') appendAttachmentLine(detail, selected, () => renderDetail());
       const desc = document.createElement('p');
       desc.className = 'template-desc';
       desc.textContent = selected.description || '(no description)';
@@ -14694,11 +14777,15 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       if(!e) return;
       const item = { key: 't' + i, type: 'template', kind: e.kind, name: e.name, version: e.version,
         description: e.description, note: e.note, group: e.group, needs: [], origin: e.origin || null, warning: null, warningKind: null,
-        excelLayout: !!(e.attachments && e.attachments.excel) };
+        excelLayout: !!(e.attachments && e.attachments.excel), graphBoard: !!(e.attachments && e.attachments.graph) };
       const mine = latestOfFamily(e.family);
       if(templateAlreadyHere(e, t)){
         // Already here, but the pack's copy has an Excel layout ours lacks: offered for that.
-        if(attachmentsToAdd(e, t)){ item.status = 'attachment'; item.statusText = 'Already in your library — adds its Excel layout'; }
+        const more = attachmentsToAdd(e, t);
+        if(more){
+          const what = Object.keys(more.add).map(k => k === 'graph' ? 'its fmGraph board' : 'its Excel layout');
+          item.status = 'attachment'; item.statusText = 'Already in your library — adds ' + what.join(' and ');
+        }
         else { item.status = 'present'; item.statusText = 'Already in your library'; }
       }
       else if(mine && mine.kind === e.kind){
@@ -14904,7 +14991,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         const name = document.createElement('span');
         name.className = 'library-pack-item-name';
         name.textContent = `${it.name} v${it.version}` + (it.type === 'template' ? ` — ${TEMPLATE_KIND_WORDS[it.kind]}` : '')
-          + (it.excelLayout ? ' · 📎 Excel layout' : '');
+          + (it.excelLayout ? ' · 📎 Excel layout' : '') + (it.graphBoard ? ' · 📈 fmGraph board' : '');
         const status = document.createElement('span');
         status.className = 'library-pack-item-status';
         const warnedNeeds = it.needs.filter(k => items.some(x => x.key === k && x.warning)).length;

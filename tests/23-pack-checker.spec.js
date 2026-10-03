@@ -55,7 +55,7 @@ test.describe('packs that pass', () => {
   test('an older pack (version 1) passes with a warning to save it again', () => {
     const r = checkPack(fs.readFileSync(fixture('library', 'pack-v1.json')), 'pack-sample-0001.fmide-pack.json');
     expect(r.ok).toBe(true);
-    expect(messages(r, 'warnings').join('\n')).toMatch(/saved by an older fmIDE \(library pack version 1; the current version is 3\)/);
+    expect(messages(r, 'warnings').join('\n')).toMatch(/saved by an older fmIDE \(library pack version 1; the current version is 4\)/);
   });
 
   test('a file not named after its pack id gets a note with the name it will have', () => {
@@ -83,7 +83,7 @@ test.describe('the file', () => {
     expectError(checkPack('{"kind":"something-else"}', 'x.json'), /isn't an fmIDE file this version recognises/);
   });
   test('a newer pack needs a newer checker; a version must be a whole number', () => {
-    expectError(check(p => { p.version = 4; }), /saved by a newer fmIDE \(library pack version 4; this checker reads up to version 3\)/); // v3 current since step 11c
+    expectError(check(p => { p.version = 5; }), /saved by a newer fmIDE \(library pack version 5; this checker reads up to version 4\)/); // v4 current since step 15 G5a
     expectError(check(p => { p.version = '2'; }), /"version" isn't a whole number/);
   });
   test('an empty pack, and more items than fmIDE reads', () => {

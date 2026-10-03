@@ -86,7 +86,7 @@ Each slider position needs the whole model worked out again (`evaluateModel` on 
 | **G2** ✅ | Charts: side by side, stacked with the balance check, waterfall with subtotals; period choices; units; errors; sample balance-sheet and income-statement boards |
 | **G3** ✅ (G3a, G3b) | Editing a board: placing and sizing widgets, titles, colours, undo; the `fmIDE-graph-board` file, Export / Import; boards in `.fmide` documents |
 | **G4** ✅ (G4a, G4b) | Exploring: G4a Trace and Biggest movers; G4b the A/B snapshot and animation |
-| **G5** | Sharing: `attachments.graph` on templates (system templates too), packs and the checker; Try in fmGraph from Browse Library |
+| **G5** (G5a ✅) | Sharing: G5a `attachments.graph` on templates (system templates too), packs and the checker, fmGraph's Export for a template…; G5b fmGraph using template boards and Attach to template…; G5c Try in fmGraph from Browse Library |
 | **G6** | Tutorials |
 
 Later ideas, not in this step: blocks and vintages, line charts, a tornado chart (which inputs matter most), goal seek ("what price keeps cash above zero?"), the live link with fmIDE, phones.
@@ -153,6 +153,15 @@ The owner chose (2 October 2026): G4 in two pull requests (G4a Trace and Biggest
 - **Animation**: each bar that can move carries a key (`animKey`: widget and position); after a redraw, `glide` moves it from where that key last was to where it is now with the Web Animations API (a 200 ms transform, `ANIM_MS`), so a widget drawn again also glides. Not when the redraw comes within 150 ms of the last one (`DRAG_GAP_MS`: a slider being dragged follows straight away), and never with `prefers-reduced-motion: reduce`. The bars' attributes are always the final ones; only their look moves.
 - `window.fmGraph.pinA()`, `unpinA()`, `swapA()`, `comparing()`.
 - Found on CI: a chart's editor opened by a click could close again when the board was drawn again before the browser reported the click (G2's code, shown up by a slower runner). The board now reads which editors are open from the page before drawing (`rememberOpenEditors`).
+
+### G5a (boards on templates: the formats, fmIDE and the checker)
+
+The owner chose (2 October 2026): boards reach a template both from a file (fmIDE's Templates window) and straight from fmGraph (Attach to template…, G5b); a canvas template's board holds only that canvas's rectangles; a model with no boards of its own starts with its templates' boards, and Boards ▾ → Add boards from templates adds them any time (G5b); a system template's board finds rectangles by canvas name and name, since system templates don't record their canvases; Try in fmGraph as G5c.
+
+- **The template form** (`06c-template-boards.js`; board file version 2, `docs/file-formats.md`): **Boards ▾ → Export for a template…** offers each canvas made from a canvas template (`canvas.template`, kept in `model.canvasTemplates`) and the whole model (for a system template), and writes the boards with every rectangle named by its name (and, for the whole model, its canvas's name). For a canvas template only that canvas's rectangles go in; a rectangle whose name is used twice on its canvas (or whose canvas's name is used twice) can't be found again by name. What doesn't fit is left out and counted; nothing fitting saves nothing. "Only the board shown" exports one board. A template board dropped on fmGraph isn't taken as a model's board (it says to attach it in fmIDE). Version 1 files are still read (an upgrade step that does nothing). Added here, not in G5b as first planned, so the file fmIDE attaches exists.
+- **fmIDE** (`11-templates-format-presets.js`, `11e-library-packs.js`; `src/shared/fmide-files.js`): `attachments.graph` on canvas and system templates (`TEMPLATE_ATTACHMENT_KINDS`), kept by the same general checks as the Excel layout plus "a template board for this kind of template" (`isTemplateGraphBoard`); **📈 Attach fmGraph board…** and Remove in the Templates window (`graphBoardForTemplate`: the file's kind, version, form and template kind — and, for a canvas template, family — with clear messages for a file that doesn't fit); carried by Save as new version, imports and packs like the Excel layout; Open Library Pack marks it (📈 fmGraph board) and offers it for a template you have without one ("adds its fmGraph board"). Versions: templates file 10, workspace 12, library pack 4.
+- **The checker** (`tools/check-pack.js`, `checkGraphBoard`): besides fmIDE's own checks, every rectangle a board names must be in its template exactly once (in the canvas of that name for a system template), with at most 20 boards, 40 bars and charts and 40 sliders a board. The library runs the checker of the fmIDE commit its `checker.json` names: until that pointer is moved, the library refuses version 4 packs.
+- `window.fmGraph.templates()`, `exportForTemplate(i, { onlyShown })`.
 
 ## Risks
 

@@ -326,21 +326,38 @@
     return r;
   }
 
-  // The Templates window's line about a canvas template version's Excel layout (step 11c):
-  // attached (with Remove) or not (with Attach Excel layout…, which takes this family's entry
-  // from a file ExcelExporter's Export Module Layouts saved). fmIDE never shows or reads the
-  // layout itself; ExcelExporter uses it for a new layout of a tab from this module.
+  // The Templates window's lines about a template version's attachments: its Excel layout
+  // (canvas templates, step 11c) and its fmGraph board (canvas and system templates, step 15
+  // G5a) — attached (with Remove) or not (with Attach…, which takes it from a file the other app
+  // saved: ExcelExporter's Export Module Layouts, fmGraph's Export for a template…). fmIDE never
+  // shows or reads what is inside; the other app uses it.
+  const ATTACHMENT_LINES = {
+    excel: { lineClass: 'template-attachment', attachClass: 'template-attach-excel', removeClass: 'template-attachment-remove',
+      attached: '📎 An Excel layout is attached to this version: ExcelExporter lays out this module\'s tab with it, unless you have arranged that tab yourself. It goes along in packs you share.',
+      button: '📎 Attach Excel layout…',
+      title: 'Attach the layout ExcelExporter remembers for this module (a file from its Export Module Layouts), so it goes along when you share this template',
+      read: (raw, t) => excelLayoutForFamily(raw, t.family), done: 'Excel layout' },
+    graph: { lineClass: 'template-attachment-graph', attachClass: 'template-attach-graph', removeClass: 'template-graph-remove',
+      attached: '📈 An fmGraph board is attached to this version: fmGraph offers it for models built from this template. It goes along in packs you share.',
+      button: '📈 Attach fmGraph board…',
+      title: 'Attach a board saved by fmGraph\'s Boards → Export for a template…, so it goes along when you share this template',
+      read: (raw, t) => graphBoardForTemplate(raw, t.family, t.kind), done: 'fmGraph board' },
+  };
   function appendAttachmentLine(box, t, onChange){
+    TEMPLATE_ATTACHMENT_OUTPUTS.filter(k => TEMPLATE_ATTACHMENT_KINDS[k].includes(t.kind)).forEach(k => appendOneAttachmentLine(box, t, k, onChange));
+  }
+  function appendOneAttachmentLine(box, t, k, onChange){
+    const line = ATTACHMENT_LINES[k];
     const row = document.createElement('p');
-    row.className = 'template-attachment';
-    if(t.attachments && t.attachments.excel){
+    row.className = line.lineClass;
+    if(t.attachments && t.attachments[k]){
       const s = document.createElement('span');
-      s.textContent = '📎 An Excel layout is attached to this version: ExcelExporter lays out this module\'s tab with it, unless you have arranged that tab yourself. It goes along in packs you share.';
+      s.textContent = line.attached;
       const rm = document.createElement('button');
-      rm.className = 'template-attachment-remove';
+      rm.className = line.removeClass;
       rm.textContent = 'Remove';
       rm.addEventListener('click', () => {
-        delete t.attachments.excel;
+        delete t.attachments[k];
         if(!Object.keys(t.attachments).length) delete t.attachments;
         saveWorkspaceSoon();
         onChange();
@@ -348,9 +365,9 @@
       row.append(s, ' ', rm);
     } else {
       const attach = document.createElement('button');
-      attach.className = 'template-attach-excel';
-      attach.textContent = '📎 Attach Excel layout…';
-      attach.title = 'Attach the layout ExcelExporter remembers for this module (a file from its Export Module Layouts), so it goes along when you share this template';
+      attach.className = line.attachClass;
+      attach.textContent = line.button;
+      attach.title = line.title;
       const input = document.createElement('input');
       input.type = 'file'; input.accept = 'application/json,.json'; input.style.display = 'none';
       attach.addEventListener('click', () => input.click());
@@ -367,12 +384,12 @@
           try{ raw = JSON.parse(text); }catch(err){ showMessage('That file is not valid JSON.'); return; }
           const shape = fileDataProblem(raw);
           if(shape){ showMessage(shape); return; }
-          const r = excelLayoutForFamily(raw, t.family);
+          const r = line.read(raw, t);
           if(r.error){ showMessage(r.error); return; }
-          t.attachments = Object.assign({}, t.attachments || {}, { excel: r.attachment });
+          t.attachments = Object.assign({}, t.attachments || {}, { [k]: r.attachment });
           saveWorkspaceSoon();
           onChange();
-          showMessage(`Excel layout attached to version ${t.version} of "${t.name}".`);
+          showMessage(`${line.done} attached to version ${t.version} of "${t.name}".`);
         };
         reader.readAsText(file);
       });
@@ -1732,7 +1749,7 @@
       }
       detail.appendChild(ver);
       appendOriginLines(detail, selected, all);
-      if(selected.kind === 'module') appendAttachmentLine(detail, selected, () => renderDetail());
+      if(selected.kind === 'module' || selected.kind === 'system') appendAttachmentLine(detail, selected, () => renderDetail());
       const desc = document.createElement('p');
       desc.className = 'template-desc';
       desc.textContent = selected.description || '(no description)';

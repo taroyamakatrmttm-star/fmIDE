@@ -131,6 +131,9 @@ function cleanBoards(raw){
 }
 
 // A board's file form.
+// The board file's version (docs/file-formats.md): 1 (G3a); 2 (G5a) adds the template form
+// (`form: "template"`, 06c-template-boards.js). Boards for one model are the same in both.
+const BOARD_FILE_VERSION = 2;
 function boardData(b){
   const at = (key) => { const r = model.byKey.get(key); return { canvasId: r.canvasId, nodeId: r.nodeId, name: r.name }; };
   return {
@@ -144,7 +147,7 @@ function boardData(b){
 // The file form of these boards (all, or the ones given).
 function boardsData(list){
   const which = list || boards;
-  return { kind: 'fmIDE-graph-board', version: 1, active: list ? 0 : Math.max(0, boards.indexOf(board)), boards: which.map(boardData) };
+  return { kind: 'fmIDE-graph-board', version: BOARD_FILE_VERSION, active: list ? 0 : Math.max(0, boards.indexOf(board)), boards: which.map(boardData) };
 }
 
 let saveTimer = null;

@@ -404,10 +404,10 @@ test('Save System carries the functions the model uses (system v5, now v9); the 
   expect(await fmideValues(page, 'Functions', Object.keys(BASIC), 3)).toEqual(BASIC);
 });
 
-test('the workspace carries the function library (v4, now v11), and the autosave keeps it', async ({ page }) => {
+test('the workspace carries the function library (v4, now v12), and the autosave keeps it', async ({ page }) => {
   await openSample(page, 'basic');
   const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
-  expect(data.version).toBe(11);
+  expect(data.version).toBe(12);
   expect(data.system.version).toBe(9);
   // The library holds every version the file brought, the unused one too.
   expect(data.functions.map(d => d.family + '@' + d.version)).toEqual(sample('basic').functions.map(d => d.family + '@' + d.version));

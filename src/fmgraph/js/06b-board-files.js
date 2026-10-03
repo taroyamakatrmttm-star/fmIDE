@@ -7,7 +7,9 @@
 // the boards kept in the browser are; widgets whose rectangles aren't in this model are left
 // out and counted. Imported boards are added as new tabs (a name already used gets "(2)").
 // ============================================================
-const BOARD_FILE_FORMAT = { 'fmIDE-graph-board': { current: 1, label: 'fmGraph board file' } };
+const BOARD_FILE_FORMAT = { 'fmIDE-graph-board': { current: BOARD_FILE_VERSION, label: 'fmGraph board file' } };
+// v1 → v2: a board file may be in the template form (G5a); a v1 file is boards for one model.
+const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {} } };
 
 function safeFileName(s){ return String(s).replace(/[^A-Za-z0-9 ._()-]+/g, '_').replace(/\s+/g, ' ').trim().slice(0, 80) || 'board'; }
 
@@ -41,8 +43,12 @@ async function importBoardsText(text){
   if(deep){ notify(deep, 'err', 'boards'); return 0; }
   if(!raw || typeof raw !== 'object' || raw.kind !== 'fmIDE-graph-board'){ notify("That isn't an fmGraph board file.", 'err', 'boards'); return 0; }
   const data = JSON.parse(JSON.stringify(raw));
-  const { fromVersion, newer } = upgradeFileData(data, 'fmIDE-graph-board', BOARD_FILE_FORMAT, {});
+  const { fromVersion, newer } = upgradeFileData(data, 'fmIDE-graph-board', BOARD_FILE_FORMAT, BOARD_FILE_MIGRATIONS);
   if(newer && !(await askConfirm('Saved by a newer version', 'This board file (format version ' + fromVersion + ') was saved by a newer version of fmGraph. Open it anyway? Anything the newer version added may be ignored.', 'Open Anyway'))) return 0;
+  if(data.form === 'template'){
+    notify('That board was saved for a template. Attach it to the template in fmIDE: Templates → 📈 Attach fmGraph board….', 'info', 'boards');
+    return 0;
+  }
   const r = cleanBoards(data);
   const useful = r ? r.boards.filter(b => b.items.length || b.sliders.length) : [];
   if(!useful.length){

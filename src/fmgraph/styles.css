@@ -206,3 +206,9 @@
   .compare-btn{ padding:3px 10px; }
   .gbar-btn[aria-pressed="true"]{ background:var(--reach); color:#1b2333; }
   .bar-chart rect[data-anim]{ transform-box:view-box; transform-origin:0 0; }
+
+  /* Export for a template (G5a) */
+  .template-choices{ display:flex; flex-direction:column; gap:6px; margin:0 0 12px; }
+  .template-choices label, .template-only{ display:flex; gap:8px; align-items:baseline; font-size:14px; }
+  .template-only{ margin:0 0 10px; color:var(--soft-ink); }
+  .dialog p.template-hint{ font-size:12px; margin:0 0 14px; }
