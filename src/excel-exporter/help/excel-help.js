@@ -166,7 +166,7 @@ const EXCEL_HELP_TOPICS = [
         'Double-click a row\'s label to rename it.',
         'Right-click rows for every command: move, include, constant, scenarios, indent, format, move to another tab.',
         'Alt+Shift+→ and Alt+Shift+← indent the selected labels, like Excel\'s Increase Indent.',
-        '🎨 on a row gives it its own fill, font colour, bold, border and number format in Excel. Reset to the Excel style takes it off.',
+        '🎨 on a row gives it its own fill, font colour, bold, border and number format in Excel. Its border is set side by side: tick Top, Bottom, Left or Right (a total line is usually Top). Reset to the Excel style takes it off.',
       ] },
       { p: 'On a tablet, press and hold a row for its menu, and double-tap to rename.' },
       { see: ['rows', 'formats'] },

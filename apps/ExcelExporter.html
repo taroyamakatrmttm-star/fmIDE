@@ -498,6 +498,10 @@ var XLSX = (function(){
   .style-fields{ display:flex; gap:14px; align-items:center; flex-wrap:wrap; font-size:12px; color:var(--muted); }
   .style-fields label{ display:flex; align-items:center; gap:5px; }
   .style-fields input[type=color]{ width:32px; height:24px; padding:1px; border-radius:5px; }
+  /* A row's own border: each side on or off, then its colour. */
+  .style-fields fieldset.fmt-borders{ display:flex; align-items:center; gap:8px; margin:0; padding:2px 8px 3px; border:1px solid #e2e8f0; border-radius:6px; }
+  .style-fields fieldset.fmt-borders legend{ padding:0 4px; font-size:11px; }
+  .style-fields fieldset.fmt-borders label{ gap:3px; }
 
   .tree-row-list{ display:flex; flex-direction:column; }
   .tree-row{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:6px 12px; font-size:13px; cursor:pointer; user-select:none; border-bottom:1px solid #f1f3f6; }
@@ -3852,13 +3856,24 @@ function cleanRowFormat(st){
   const out = { fill: cleanHexColor(st.fill) };
   const f = st.font && typeof st.font === 'object' ? st.font : {};
   out.font = { color: cleanHexColor(f.color) || '#1e293b', weight: (f.weight === '700' || f.weight === 'bold') ? '700' : 'normal' };
-  const b = st.border && typeof st.border === 'object' ? st.border : {};
-  out.border = b.style && b.style !== 'none' ? { color: cleanHexColor(b.color) || '#94a3b8', style: 'solid' } : { style: 'none' };
+  out.border = cleanRowBorder(st.border);
   const nf = st.numberFormat;
   if(nf && typeof nf === 'object' && ROW_NUMBER_KINDS.includes(nf.kind)){
     const d = Math.round(Number(nf.decimals));
     out.numberFormat = { kind: nf.kind, decimals: Number.isFinite(d) ? Math.max(0, Math.min(10, d)) : 2 };
     if(nf.kind === 'currency') out.numberFormat.currencySymbol = '$';
+  }
+  return out;
+}
+// A row's own border: solid, one colour, on the sides it names — `sides` left out means all
+// four (as every format before sides existed), none named means no border.
+function cleanRowBorder(b){
+  if(!b || typeof b !== 'object' || !b.style || b.style === 'none') return { style: 'none' };
+  const out = { color: cleanHexColor(b.color) || '#94a3b8', style: 'solid' };
+  if(Array.isArray(b.sides)){
+    const sides = EXCEL_SIDES.filter(k => b.sides.includes(k));
+    if(!sides.length) return { style: 'none' };
+    if(sides.length < EXCEL_SIDES.length) out.sides = sides;
   }
   return out;
 }
@@ -3873,6 +3888,7 @@ function withRowFormat(base, fmt){
   out.fill = fmt.fill || null;
   out.font = Object.assign({}, out.font || {}, { color: fmt.font.color, weight: fmt.font.weight });
   out.border = fmt.border.style === 'none' ? { style: 'none' } : { color: fmt.border.color, style: 'solid' };
+  if(fmt.border.sides) out.border.sides = fmt.border.sides.slice();
   if(fmt.numberFormat) out.numberFormat = fmt.numberFormat;
   return out;
 }
@@ -3910,7 +3926,7 @@ function nodeStyleToExcelCellStyle(style){
     const excelStyle = { solid: 'thin', dashed: 'dashed', dotted: 'dotted' }[style.border.style] || 'thin';
     const color = styleColorToRgbHex(style.border.color) || '94A3B8';
     const edge = { style: excelStyle, color: { rgb: color } };
-    // Only the sides the style asks for (a row's own format has no "sides": all four).
+    // Only the sides the style asks for (a row's own format without "sides": all four).
     const sides = Array.isArray(style.border.sides) ? style.border.sides : ['top', 'bottom', 'left', 'right'];
     const b = {};
     sides.forEach(k => { if(['top', 'bottom', 'left', 'right'].includes(k)) b[k] = edge; });
@@ -6888,6 +6904,51 @@ function renderCustomRows(){
   renderTreeView();
 }
 
+// A row's own border in a format editor: Top, Bottom, Left and Right each on or off, and its
+// colour. `st` is the look the editor starts from (its border's sides, else all four).
+// read() gives the border for row.style (all four: no `sides`; none: no border).
+const BORDER_SIDE_LABELS = { top: 'Top', bottom: 'Bottom', left: 'Left', right: 'Right' };
+function rowBorderField(st){
+  const b = st && st.border;
+  const on = b && b.style && b.style !== 'none';
+  const sides = on ? (Array.isArray(b.sides) ? b.sides : EXCEL_SIDES) : [];
+  const el = document.createElement('fieldset');
+  el.className = 'fmt-borders';
+  const legend = document.createElement('legend');
+  legend.textContent = 'Border';
+  el.appendChild(legend);
+  const boxes = {};
+  EXCEL_SIDES.forEach(k => {
+    const lab = document.createElement('label');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'fmt-border-' + k;
+    cb.checked = sides.includes(k);
+    lab.appendChild(cb);
+    lab.appendChild(document.createTextNode(BORDER_SIDE_LABELS[k]));
+    el.appendChild(lab);
+    boxes[k] = cb;
+  });
+  const color = document.createElement('input');
+  color.type = 'color';
+  color.className = 'fmt-bordercolor';
+  color.title = 'Border colour';
+  color.setAttribute('aria-label', 'Border colour');
+  color.value = cleanHexColor(b && b.color) || '#94a3b8';
+  el.appendChild(color);
+  return {
+    el,
+    inputs: Object.values(boxes).concat([color]),
+    read(){
+      const picked = EXCEL_SIDES.filter(k => boxes[k].checked);
+      if(!picked.length) return { style: 'none' };
+      const out = { color: color.value, style: 'solid' };
+      if(picked.length < EXCEL_SIDES.length) out.sides = picked;
+      return out;
+    },
+  };
+}
+
 function toggleCustomRowStyleEditor(afterRowEl, row){
   const existing = afterRowEl.nextElementSibling;
   if(existing && existing.classList.contains('style-editor-row')){ existing.remove(); return; }
@@ -6912,25 +6973,23 @@ function toggleCustomRowStyleEditor(afterRowEl, row){
   const fillNone = document.createElement('input'); fillNone.type = 'checkbox'; fillNone.checked = !st.fill;
   const fontColor = document.createElement('input'); fontColor.type = 'color'; fontColor.value = (st.font && st.font.color) || '#475569';
   const boldChk = document.createElement('input'); boldChk.type = 'checkbox'; boldChk.checked = !!(st.font && (st.font.weight === '700' || st.font.weight === 'bold'));
-  const borderChk = document.createElement('input'); borderChk.type = 'checkbox'; borderChk.checked = !!(st.border && st.border.style && st.border.style !== 'none');
-  const borderColor = document.createElement('input'); borderColor.type = 'color'; borderColor.value = (st.border && st.border.color) || '#94a3b8';
+  const border = rowBorderField(st);
 
   fields.appendChild(labeled('Fill', fillInput));
   fields.appendChild(labeled('No fill', fillNone));
   fields.appendChild(labeled('Font color', fontColor));
   fields.appendChild(labeled('Bold', boldChk));
-  fields.appendChild(labeled('Border', borderChk));
-  fields.appendChild(labeled('Border color', borderColor));
+  fields.appendChild(border.el);
 
   function commit(){
     row.style = {
       fill: fillNone.checked ? null : fillInput.value,
       font: { color: fontColor.value, weight: boldChk.checked ? '700' : 'normal' },
-      border: borderChk.checked ? { color: borderColor.value, style: 'solid' } : { style: 'none' }
+      border: border.read()
     };
     saveMapping();
   }
-  [fillInput, fillNone, fontColor, boldChk, borderChk, borderColor].forEach(el => el.addEventListener('change', commit));
+  [fillInput, fillNone, fontColor, boldChk].concat(border.inputs).forEach(el => el.addEventListener('change', commit));
 
   td.appendChild(fields);
   tr.appendChild(td);
@@ -7635,7 +7694,7 @@ window.addEventListener('resize', closeTreeContextMenu);
 
 // A row's format editor in the Tree view, laid out as a flex block appended INSIDE the
 // row's own div (the tree isn't a table). A custom row's format is its whole look (fill,
-// font colour, bold, border — the same `row.style` shape as the Canvas/Tab views); a
+// font colour, bold, border on any of its four sides — the same `row.style` shape as the Canvas/Tab views); a
 // rectangle row's overrides what fmIDE's roles and the rectangle give it in Excel, and
 // can also set the number format. With the row among several selected, a change applies
 // to all of them. "Reset to the Excel style" drops the rows' own formats and indents.
@@ -7674,16 +7733,14 @@ function toggleTreeRowStyleEditor(rowEl, row){
   const fillNone = document.createElement('input'); fillNone.type = 'checkbox'; fillNone.checked = !cleanHexColor(st.fill);
   const fontColor = document.createElement('input'); fontColor.type = 'color'; fontColor.value = cleanHexColor(st.font && st.font.color) || '#475569';
   const boldChk = document.createElement('input'); boldChk.type = 'checkbox'; boldChk.checked = !!(st.font && (st.font.weight === '700' || st.font.weight === 'bold'));
-  const borderChk = document.createElement('input'); borderChk.type = 'checkbox'; borderChk.checked = !!(st.border && st.border.style && st.border.style !== 'none');
-  const borderColor = document.createElement('input'); borderColor.type = 'color'; borderColor.value = cleanHexColor(st.border && st.border.color) || '#94a3b8';
-  [fillInput, fillNone, fontColor, boldChk, borderChk, borderColor].forEach((x, i) => x.className = 'fmt-' + ['fill', 'nofill', 'font', 'bold', 'border', 'bordercolor'][i]);
+  const border = rowBorderField(st);
+  [fillInput, fillNone, fontColor, boldChk].forEach((x, i) => x.className = 'fmt-' + ['fill', 'nofill', 'font', 'bold'][i]);
 
   editor.appendChild(labeled('Fill', fillInput));
   editor.appendChild(labeled('No fill', fillNone));
   editor.appendChild(labeled('Font color', fontColor));
   editor.appendChild(labeled('Bold', boldChk));
-  editor.appendChild(labeled('Border', borderChk));
-  editor.appendChild(labeled('Border color', borderColor));
+  editor.appendChild(border.el);
 
   // Number format: rectangle rows only (a custom row has no numbers).
   let nfKind = null, nfDec = null;
@@ -7705,7 +7762,7 @@ function toggleTreeRowStyleEditor(rowEl, row){
     const fmt = {
       fill: fillNone.checked ? null : fillInput.value,
       font: { color: fontColor.value, weight: boldChk.checked ? '700' : 'normal' },
-      border: borderChk.checked ? { color: borderColor.value, style: 'solid' } : { style: 'none' }
+      border: border.read()
     };
     if(nfKind){
       nfDec.disabled = !nfKind.value;
@@ -7727,7 +7784,7 @@ function toggleTreeRowStyleEditor(rowEl, row){
       if(btn) btn.classList.add('on');
     });
   }
-  [fillInput, fillNone, fontColor, boldChk, borderChk, borderColor].concat(nfKind ? [nfKind, nfDec] : [])
+  [fillInput, fillNone, fontColor, boldChk].concat(border.inputs, nfKind ? [nfKind, nfDec] : [])
     .forEach(fieldEl => fieldEl.addEventListener('change', commit));
 
   const reset = document.createElement('button'); reset.type = 'button'; reset.className = 'icon fmt-reset';
@@ -9497,7 +9554,7 @@ const EXCEL_HELP_TOPICS = [
         'Double-click a row\'s label to rename it.',
         'Right-click rows for every command: move, include, constant, scenarios, indent, format, move to another tab.',
         'Alt+Shift+→ and Alt+Shift+← indent the selected labels, like Excel\'s Increase Indent.',
-        '🎨 on a row gives it its own fill, font colour, bold, border and number format in Excel. Reset to the Excel style takes it off.',
+        '🎨 on a row gives it its own fill, font colour, bold, border and number format in Excel. Its border is set side by side: tick Top, Bottom, Left or Right (a total line is usually Top). Reset to the Excel style takes it off.',
       ] },
       { p: 'On a tablet, press and hold a row for its menu, and double-tap to rename.' },
       { see: ['rows', 'formats'] },
@@ -9599,6 +9656,20 @@ const EXCEL_HELP_TOPICS = [
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'row-border-sides', date: '2026-10-03', title: 'A row\'s border, side by side',
+    summary: 'A row\'s own format sets its border on the top, bottom, left and right separately.',
+    what: [
+      'In the Tree View, 🎨 on a row used to have one Border box: all four sides or none. Now it has Top, Bottom, Left and Right, each on its own, and the border\'s colour.',
+    ],
+    why: 'Financial statements draw a line above a total, or a double check below it, not a box around every cell.',
+    how: [
+      'Open the Tree View and press 🎨 on a row.',
+      'Under Border, tick Top (or any other side) and pick the colour.',
+      'Press ⬇ Generate .xlsx: every cell of that row has the line on that side.',
+    ],
+    notes: ['A layout saved before keeps its borders: a row that had a border still has all four sides.'],
+    see: ['tree-view'] },
+
   { id: 'shorter-differences', date: '2026-10-03', title: 'A shorter list of differences from fmIDE',
     summary: 'The list of where the workbook will differ from fmIDE shows its first three lines; Show all opens the rest, × hides it.',
     what: [

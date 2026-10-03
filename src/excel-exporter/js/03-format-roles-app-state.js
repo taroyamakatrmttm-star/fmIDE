@@ -135,13 +135,24 @@ function cleanRowFormat(st){
   const out = { fill: cleanHexColor(st.fill) };
   const f = st.font && typeof st.font === 'object' ? st.font : {};
   out.font = { color: cleanHexColor(f.color) || '#1e293b', weight: (f.weight === '700' || f.weight === 'bold') ? '700' : 'normal' };
-  const b = st.border && typeof st.border === 'object' ? st.border : {};
-  out.border = b.style && b.style !== 'none' ? { color: cleanHexColor(b.color) || '#94a3b8', style: 'solid' } : { style: 'none' };
+  out.border = cleanRowBorder(st.border);
   const nf = st.numberFormat;
   if(nf && typeof nf === 'object' && ROW_NUMBER_KINDS.includes(nf.kind)){
     const d = Math.round(Number(nf.decimals));
     out.numberFormat = { kind: nf.kind, decimals: Number.isFinite(d) ? Math.max(0, Math.min(10, d)) : 2 };
     if(nf.kind === 'currency') out.numberFormat.currencySymbol = '$';
+  }
+  return out;
+}
+// A row's own border: solid, one colour, on the sides it names — `sides` left out means all
+// four (as every format before sides existed), none named means no border.
+function cleanRowBorder(b){
+  if(!b || typeof b !== 'object' || !b.style || b.style === 'none') return { style: 'none' };
+  const out = { color: cleanHexColor(b.color) || '#94a3b8', style: 'solid' };
+  if(Array.isArray(b.sides)){
+    const sides = EXCEL_SIDES.filter(k => b.sides.includes(k));
+    if(!sides.length) return { style: 'none' };
+    if(sides.length < EXCEL_SIDES.length) out.sides = sides;
   }
   return out;
 }
@@ -156,6 +167,7 @@ function withRowFormat(base, fmt){
   out.fill = fmt.fill || null;
   out.font = Object.assign({}, out.font || {}, { color: fmt.font.color, weight: fmt.font.weight });
   out.border = fmt.border.style === 'none' ? { style: 'none' } : { color: fmt.border.color, style: 'solid' };
+  if(fmt.border.sides) out.border.sides = fmt.border.sides.slice();
   if(fmt.numberFormat) out.numberFormat = fmt.numberFormat;
   return out;
 }
@@ -193,7 +205,7 @@ function nodeStyleToExcelCellStyle(style){
     const excelStyle = { solid: 'thin', dashed: 'dashed', dotted: 'dotted' }[style.border.style] || 'thin';
     const color = styleColorToRgbHex(style.border.color) || '94A3B8';
     const edge = { style: excelStyle, color: { rgb: color } };
-    // Only the sides the style asks for (a row's own format has no "sides": all four).
+    // Only the sides the style asks for (a row's own format without "sides": all four).
     const sides = Array.isArray(style.border.sides) ? style.border.sides : ['top', 'bottom', 'left', 'right'];
     const b = {};
     sides.forEach(k => { if(['top', 'bottom', 'left', 'right'].includes(k)) b[k] = edge; });

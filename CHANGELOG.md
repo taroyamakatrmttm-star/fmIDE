@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: a row's border, side by side
+- **🎨 on a row in the Tree View** sets its border's Top, Bottom, Left and Right separately (and the custom row's editor in By Excel Tab the same), instead of one box for all four. The row's format in a layout or mapping file gains an optional `border.sides`; without it a border is on all four sides, so every older layout looks as before (no file version change).
+
 ## Long messages fit the screen; .fmide files open on an iPad
 - **fmIDE**: a long message or question (building a recipe lists every socket nothing feeds) scrolls inside its window; its buttons always stay on the screen, a tablet's included.
 - **ExcelExporter**: the list of where the workbook will differ from fmIDE shows its first three lines, **Show all** opens the rest (scrolling inside the list), **×** hides it until it changes.

@@ -416,6 +416,84 @@ test.describe('Tree view: a row\'s own format, indent and the right-click comman
     for(const l of ['Cash', 'Inventory']) await expect(treeRow(page, l).locator('.tree-fmt-btn')).toHaveClass(/\bon\b/);
   });
 
+  test('a row\'s own border takes each side on its own: top, bottom, left, right', async ({ page }) => {
+    await open(page, { sections: false });
+    await page.click('#viewByTree');
+    const row = treeRow(page, 'Revenue');
+    await row.locator('.tree-fmt-btn').click();
+    const ed = row.locator('.tree-style-editor');
+    // Calculations have no border in the Excel style: the editor starts with no side on.
+    for(const k of ['top', 'bottom', 'left', 'right']) await expect(ed.locator('.fmt-border-' + k)).not.toBeChecked();
+    await pickColour(ed.locator('.fmt-bordercolor'), '#b45309');
+    await ed.locator('.fmt-border-top').check();
+    await ed.locator('.fmt-border-bottom').check();
+    let { label, periods } = await cellsOf(page, 'BS', 'Revenue');
+    for(const c of periods.concat([label])){
+      expect(c.border.top && c.border.top.style, `${c.address} top`).toBe('thin');
+      expect(c.border.top.color.argb, `${c.address} top colour`).toBe('FFB45309');
+      expect(c.border.bottom && c.border.bottom.style, `${c.address} bottom`).toBe('thin');
+      expect(c.border.left, `${c.address} left`).toBeUndefined();
+      expect(c.border.right, `${c.address} right`).toBeUndefined();
+    }
+    // Only the left side.
+    await ed.locator('.fmt-border-top').uncheck();
+    await ed.locator('.fmt-border-bottom').uncheck();
+    await ed.locator('.fmt-border-left').check();
+    ({ label, periods } = await cellsOf(page, 'BS', 'Revenue'));
+    for(const c of periods){
+      expect(c.border.left && c.border.left.style, `${c.address} left`).toBe('thin');
+      expect(c.border.top || c.border.bottom || c.border.right, `${c.address} other sides`).toBeFalsy();
+    }
+    // Saved in the layout: the mapping file names the sides; kept after a reload.
+    const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
+    const m = JSON.parse(require('fs').readFileSync(await download.path(), 'utf8'));
+    expect(m.rows.find(r => r.label === 'Revenue').style.border).toEqual({ color: '#b45309', style: 'solid', sides: ['left'] });
+    await page.reload();
+    await X.loadFixtureModel(page, 'revenue-bs-corkscrew.json');
+    await page.click('#viewByTree');
+    await treeRow(page, 'Revenue').locator('.tree-fmt-btn').click();
+    const again = treeRow(page, 'Revenue').locator('.tree-style-editor');
+    await expect(again.locator('.fmt-border-left')).toBeChecked();
+    for(const k of ['top', 'bottom', 'right']) await expect(again.locator('.fmt-border-' + k)).not.toBeChecked();
+    // All four: written as before sides existed (no `sides`), and boxed in Excel.
+    for(const k of ['top', 'bottom', 'right']) await again.locator('.fmt-border-' + k).check();
+    ({ periods } = await cellsOf(page, 'BS', 'Revenue'));
+    for(const c of periods) for(const k of ['top', 'bottom', 'left', 'right']) expect(c.border[k] && c.border[k].style, `${c.address} ${k}`).toBe('thin');
+    const [d2] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
+    const m2 = JSON.parse(require('fs').readFileSync(await d2.path(), 'utf8'));
+    expect(m2.rows.find(r => r.label === 'Revenue').style.border).toEqual({ color: '#b45309', style: 'solid' });
+    // None: no border.
+    for(const k of ['top', 'bottom', 'left', 'right']) await again.locator('.fmt-border-' + k).uncheck();
+    ({ periods } = await cellsOf(page, 'BS', 'Revenue'));
+    for(const c of periods) expect(Object.keys(c.border || {}).length, `${c.address} no border`).toBe(0);
+  });
+
+  test('border sides from a mapping file: unknown ones dropped, none means no border, none named means all four', async ({ page }, testInfo) => {
+    await open(page, { sections: false });
+    const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
+    const m = JSON.parse(require('fs').readFileSync(await download.path(), 'utf8'));
+    const style = (border) => ({ fill: null, font: { color: '#1e293b', weight: 'normal' }, border });
+    m.rows.find(r => r.label === 'Revenue').style = style({ style: 'solid', color: '#123456', sides: ['bottom', '<img src=x onerror="window.__hacked=1">', 'bottom'] });
+    m.rows.find(r => r.label === 'Cash').style = style({ style: 'solid', color: '#123456', sides: [] });
+    m.rows.find(r => r.label === 'Inventory').style = style({ style: 'solid', color: '#123456' });
+    const file = testInfo.outputPath('border-sides.json');
+    require('fs').writeFileSync(file, JSON.stringify(m));
+    await page.setInputFiles('#mappingFileInput', file);
+    await expect(page.locator('#genStatus .status')).toHaveText('Mapping imported.');
+    const sidesOf = async (label) => {
+      const { periods } = await cellsOf(page, 'BS', label);
+      return Object.keys(periods[0].border || {}).filter(k => periods[0].border[k] && periods[0].border[k].style).sort();
+    };
+    expect(await sidesOf('Revenue')).toEqual(['bottom']);
+    expect(await sidesOf('Cash')).toEqual([]);
+    expect(await sidesOf('Inventory')).toEqual(['bottom', 'left', 'right', 'top']);
+    await page.click('#viewByTree');
+    await treeRow(page, 'Revenue').locator('.tree-fmt-btn').click();
+    await expect(treeRow(page, 'Revenue').locator('.tree-style-editor .fmt-border-bottom')).toBeChecked();
+    await expect(treeRow(page, 'Revenue').locator('.tree-style-editor .fmt-border-top')).not.toBeChecked();
+    expect(await page.evaluate(() => window.__hacked)).toBeUndefined();
+  });
+
   test('a row format or indent from a mapping file is checked before use', async ({ page }, testInfo) => {
     await open(page, { sections: false });
     const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);

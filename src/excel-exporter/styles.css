@@ -201,6 +201,10 @@
   .style-fields{ display:flex; gap:14px; align-items:center; flex-wrap:wrap; font-size:12px; color:var(--muted); }
   .style-fields label{ display:flex; align-items:center; gap:5px; }
   .style-fields input[type=color]{ width:32px; height:24px; padding:1px; border-radius:5px; }
+  /* A row's own border: each side on or off, then its colour. */
+  .style-fields fieldset.fmt-borders{ display:flex; align-items:center; gap:8px; margin:0; padding:2px 8px 3px; border:1px solid #e2e8f0; border-radius:6px; }
+  .style-fields fieldset.fmt-borders legend{ padding:0 4px; font-size:11px; }
+  .style-fields fieldset.fmt-borders label{ gap:3px; }
 
   .tree-row-list{ display:flex; flex-direction:column; }
   .tree-row{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:6px 12px; font-size:13px; cursor:pointer; user-select:none; border-bottom:1px solid #f1f3f6; }
