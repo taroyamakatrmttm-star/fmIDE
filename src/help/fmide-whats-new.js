@@ -12,6 +12,20 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+
+  { id: 'templates-window-tidy', date: '2026-10-03', title: 'A tidier Templates window, with Expand all and Collapse all',
+    summary: 'Open or close every group of templates at once, and find each button where you expect it.',
+    what: [
+      'In {cmd:openTemplates}, ▾ Expand all and ▸ Collapse all under the search box open or close every group at once (Collapse all also hides older versions). Your choice is kept, as each group\'s is.',
+      'The buttons are tidied: saving and the templates file in one toolbar at the top, ✎ Edit info and 🗑 Delete beside the selected template\'s name, its actions in one row under the preview, and 🧹 Remove duplicates… and 🗑 Clear all templates quietly under the list.',
+    ],
+    why: 'A long library is easier to scan with its groups closed, and the buttons looked scattered.',
+    how: [
+      'Open {cmd:openTemplates}.',
+      'Press ▸ Collapse all, then open just the group you need.',
+    ],
+    see: ['templates'] },
+
   { id: 'long-messages-ipad', date: '2026-10-03', title: 'Long messages fit the screen; .fmide files open on an iPad',
     summary: 'A long message scrolls inside its window with OK always in reach, and an iPad can pick a .fmide again.',
     what: [

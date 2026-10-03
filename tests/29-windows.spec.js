@@ -132,6 +132,70 @@ test.describe('the Templates tree', () => {
     await expect(headings(box).filter({ hasText: 'Financial Statement' })).toHaveAttribute('aria-expanded', 'true');
     expect((await names(box)).length).toBe(all.length);
   });
+
+  test('Collapse all closes every group (and older versions shown), Expand all opens them; kept after a reload; hidden while searching', async ({ page }) => {
+    let box = await importSearchTemplates(page);
+    // templates-v2.json adds a group Statements whose Balance Sheet has an older version.
+    await box.locator('.modal-actions button', { hasText: /^Close$/ }).click();
+    await F.importViaDialog(page, 'openTemplates', '⇧ Import Templates', fixture('formats', 'templates-v2.json'));
+    await F.dismissMessage(page);
+    box = page.locator('.modal-box.template-box');
+    const groupCount = await headings(box).count();
+    expect(groupCount).toBeGreaterThan(1);
+    const expandAll = box.locator('button.template-expand-all'), collapseAll = box.locator('button.template-collapse-all');
+    await expect(expandAll).toBeDisabled(); // every group is open
+    await expect(collapseAll).toBeEnabled();
+    await box.locator('.template-family', { hasText: 'Balance Sheet' }).click();
+    await box.locator('button.template-versions-toggle').first().click();
+    await expect(box.locator('.template-list button.template-version')).toHaveCount(1);
+    await collapseAll.click();
+    for(let i = 0; i < groupCount; i++) await expect(headings(box).nth(i)).toHaveAttribute('aria-expanded', 'false');
+    expect(await names(box)).toEqual([]);
+    await expect(collapseAll).toBeDisabled();
+    await expect(expandAll).toBeEnabled();
+    await expect.poll(() => savedUi(page).then(ui => (ui.templateGroupsClosed || []).length), { timeout: 5000 }).toBe(groupCount);
+    // Kept after a reload.
+    await page.reload();
+    await page.waitForFunction(() => window.fm && typeof window.fm.nodes === 'function');
+    await page.evaluate(() => fm.command('openTemplates'));
+    box = page.locator('.modal-box.template-box');
+    for(let i = 0; i < groupCount; i++) await expect(headings(box).nth(i)).toHaveAttribute('aria-expanded', 'false');
+    // A search shows every match and hides the two buttons.
+    await box.locator('.template-search').fill('statement');
+    await expect(box.locator('.template-tree-tools')).toBeHidden();
+    expect((await names(box)).length).toBeGreaterThan(0);
+    await box.locator('.template-search').fill('');
+    await box.locator('button.template-expand-all').click();
+    for(let i = 0; i < groupCount; i++) await expect(headings(box).nth(i)).toHaveAttribute('aria-expanded', 'true');
+    // Older versions stay closed after Expand all; every template shows.
+    await expect(box.locator('.template-list button.template-version')).toHaveCount(0);
+    expect((await names(box)).length).toBe(7);
+    await expect.poll(() => savedUi(page).then(ui => ui.templateGroupsClosed), { timeout: 5000 }).toEqual([]);
+  });
+
+  test('the window\'s buttons: one toolbar, the library-wide ones under the list, Edit info and Delete beside the name', async ({ page }) => {
+    const box = await importSearchTemplates(page);
+    const toolbar = box.locator('.template-toolbar');
+    for(const t of ['+ Save Canvas as Template', '+ Save System as Template', '+ New Recipe…', '⇩ Export Templates', '⇧ Import Templates']) {
+      await expect(toolbar.locator('button', { hasText: t })).toBeVisible();
+    }
+    const footer = box.locator('.template-list-col .template-list-footer');
+    await expect(footer.locator('button.template-dedupe')).toBeVisible();
+    await expect(footer.locator('button.template-clear-all')).toBeVisible();
+    await box.locator('.template-list button.template-family').first().click();
+    const head = box.locator('.template-detail-head');
+    await expect(head.locator('button', { hasText: '✎ Edit info' })).toBeVisible();
+    await expect(head.locator('button.template-delete')).toBeVisible();
+    // The toolbar's two groups and the selected template's actions each fit on one line.
+    const rows = await box.evaluate((b) => {
+      const tops = (sel) => [...new Set([...b.querySelectorAll(sel)].map(e => Math.round(e.getBoundingClientRect().top)))].length;
+      return { toolbar: tops('.template-toolbar button'), actions: tops('.template-actions button') };
+    });
+    expect(rows).toEqual({ toolbar: 1, actions: 1 });
+    // Edit info still works from there.
+    await head.locator('button', { hasText: '✎ Edit info' }).click();
+    await expect(page.locator('.modal-box').last()).toBeVisible();
+  });
 });
 
 test.describe('the 📈 chart (values across periods)', () => {

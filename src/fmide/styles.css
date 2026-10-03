@@ -585,6 +585,38 @@
   .template-import-actions button.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
   .template-import-actions button.primary:hover{ background:var(--accent-hover); }
   .template-import-actions button:not(.primary):hover{ background:#f3f4f6; }
+  /* The Templates window, tidied: a title, one toolbar (save on the left, the file on the
+     right), Expand / Collapse all over the tree, the library-wide actions under it, and the
+     selected template's actions in one row with Delete at its end. */
+  .template-box > p.template-title{ font-size:16px; font-weight:700; margin:0 0 10px; }
+  .template-toolbar{ display:flex; align-items:center; gap:8px 16px; flex-wrap:wrap; padding-bottom:10px; margin-bottom:12px; border-bottom:1px solid #e5e7eb; }
+  .template-toolbar-group{ display:flex; gap:6px; flex-wrap:wrap; }
+  .template-toolbar-files{ margin-left:auto; }
+  .template-toolbar button, .template-list-footer button, .template-tree-tools button,
+  .template-attachment button, .template-attachment-graph button, .template-actions button{
+    font-family:inherit; font-size:12.5px; font-weight:600; line-height:1.2; padding:6px 11px; border-radius:7px;
+    border:1px solid #d1d5db; background:#fff; color:var(--text); cursor:pointer; white-space:nowrap;
+  }
+  .template-toolbar button:hover, .template-attachment button:hover, .template-attachment-graph button:hover, .template-actions button:not(.primary):hover{ background:#f3f4f6; }
+  .template-tree-tools{ display:flex; gap:4px; }
+  .template-tree-tools button, .template-list-footer button{ font-weight:500; font-size:11.5px; padding:3px 6px; border-color:transparent; background:none; color:#6b7280; }
+  .template-tree-tools button:hover:not(:disabled), .template-list-footer button:hover{ background:#f3f4f6; color:var(--text); }
+  .template-tree-tools button:disabled{ opacity:.45; cursor:default; }
+  .template-list-footer{ display:flex; flex-direction:row; gap:4px; flex-wrap:wrap; padding-top:6px; border-top:1px solid #f1f5f9; }
+  .template-list-footer button.template-clear-all:hover{ color:#b91c1c; background:#fef2f2; }
+  .template-attachments-row{ display:flex; gap:6px 14px; flex-wrap:wrap; margin:2px 0 8px; }
+  .template-attachments-row > p{ margin:0; }
+  .template-desc.empty{ font-style:italic; color:#9ca3af; }
+  .template-actions{ align-items:center; margin-top:10px; gap:6px; }
+  .template-actions button{ padding:7px 12px; }
+  .template-detail-head{ display:flex; align-items:flex-start; gap:8px; }
+  .template-detail-head h4{ flex:1 1 auto; min-width:0; overflow-wrap:anywhere; }
+  .template-head-tools{ display:flex; gap:4px; flex-wrap:wrap; justify-content:flex-end; flex:0 1 auto; }
+  .template-head-tools button{ font-family:inherit; font-size:11.5px; font-weight:500; padding:3px 8px; border-radius:6px;
+    border:1px solid #e5e7eb; background:#fff; color:#4b5563; cursor:pointer; white-space:nowrap; }
+  .template-head-tools button:hover{ background:#f3f4f6; color:var(--text); }
+  .template-head-tools button.template-delete{ color:#b91c1c; border-color:#fecaca; }
+  .template-head-tools button.template-delete:hover{ background:#fef2f2; }
   button.tbtn.op:hover{background:#fde68a;}
   button.tbtn.run{ background:var(--run); border-color:var(--run); color:#fff; font-weight:700; }
   button.tbtn.run:hover{background:var(--run-hover);}
