@@ -207,6 +207,14 @@
   .gbar-btn[aria-pressed="true"]{ background:var(--reach); color:#1b2333; }
   .bar-chart rect[data-anim]{ transform-box:view-box; transform-origin:0 0; }
 
+  /* The scenario waterfall */
+  .scenario-flows{ display:flex; flex-wrap:wrap; gap:10px; }
+  .scenario-flows .scenario-flow{ flex:1 1 260px; max-width:100%; }
+  .bar-chart .t-flow-title{ fill:var(--ink); font-weight:600; }
+  .edit-head{ font-size:12px; font-weight:600; color:var(--soft-ink); margin:8px 0 4px; }
+  .scenario-ticks{ display:flex; flex-wrap:wrap; gap:4px 12px; font-size:13px; }
+  .scenario-tick{ display:flex; gap:5px; align-items:center; }
+
   /* Named scenarios */
   .scenarios{ margin-top:14px; }
   .scenarios > summary{ cursor:pointer; }

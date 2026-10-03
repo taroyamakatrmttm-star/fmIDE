@@ -55,6 +55,7 @@ function templateBoardsData(target, onlyShown){
   const one = (b) => {
     const items = [];
     b.items.forEach(w => {
+      if(w.kind === 'chart' && w.layout === 'scenarios'){ left++; return; } // it needs the model's scenarios, which a template doesn't carry
       if(w.kind === 'bar'){
         const r = ref(w.key);
         if(!r){ left++; return; }

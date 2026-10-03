@@ -16,14 +16,14 @@ function chartWidget(c){
   const head = make('div', 'widget-head');
   const title = make('input', 'chart-title');
   title.type = 'text';
-  title.placeholder = c.layout === 'flow' ? 'Waterfall title' : 'Chart title';
+  title.placeholder = c.layout === 'columns' ? 'Chart title' : 'Waterfall title';
   title.value = c.title;
   title.maxLength = CHART_LIMITS.title;
   title.setAttribute('aria-label', 'Chart title');
   title.addEventListener('change', () => { c.title = cleanText(title.value, CHART_LIMITS.title); saveBoardSoon(); });
   const layout = make('select');
   layout.setAttribute('aria-label', 'Kind of chart');
-  [['columns', 'Columns'], ['flow', 'Waterfall']].forEach(([v, t]) => { const o = make('option', null, t); o.value = v; if(c.layout === v) o.selected = true; layout.appendChild(o); });
+  [['columns', 'Columns'], ['flow', 'Waterfall'], ['scenarios', 'Scenario waterfall']].forEach(([v, t]) => { const o = make('option', null, t); o.value = v; if(c.layout === v) o.selected = true; layout.appendChild(o); });
   layout.addEventListener('change', () => { switchLayout(c, layout.value); saveBoardSoon(); renderBoard(); });
   head.append(title, layout, removeButton(c.id, 'chart'));
   w.append(head, make('div', 'bar-chart-host'), make('div', 'chart-key'), make('ul', 'bar-errors'));
@@ -31,19 +31,21 @@ function chartWidget(c){
   return w;
 }
 
-// Columns ↔ waterfall keeps the rectangles: every part becomes a step (the first a start,
-// the rest added), and every step a part of one group.
+// Switching kind keeps the rectangles: every part becomes a step (the first a start, the rest
+// added), every step a part of one group, and a scenario waterfall's outputs the first six of
+// them (calculated rectangles first).
 function switchLayout(c, layout){
   if(layout === c.layout) return;
-  if(layout === 'flow'){
-    const keys = chartKeys(c);
-    Object.assign(c, { layout: 'flow', period: periodsOf(c.periods)[0] || 0, steps: keys.map((key, i) => ({ key, role: i === 0 ? 'start' : 'add' })) });
-    delete c.groups; delete c.periods; delete c.check;
-  } else {
-    const keys = chartKeys(c);
-    Object.assign(c, { layout: 'columns', periods: { mode: 'all' }, groups: [{ name: '', parts: keys }], check: false });
-    delete c.steps; delete c.period;
+  const keys = chartKeys(c);
+  const period = c.layout === 'columns' ? (periodsOf(c.periods)[0] || 0) : c.period;
+  ['groups', 'periods', 'check', 'steps', 'period', 'outputs', 'use'].forEach(k => { delete c[k]; });
+  if(layout === 'flow') Object.assign(c, { layout: 'flow', period, steps: keys.map((key, i) => ({ key, role: i === 0 ? 'start' : 'add' })) });
+  else if(layout === 'scenarios'){
+    const unique = [...new Set(keys)];
+    const calc = unique.filter(k => !model.byKey.get(k).input).concat(unique.filter(k => model.byKey.get(k).input));
+    Object.assign(c, { layout: 'scenarios', period, outputs: calc.slice(0, CHART_LIMITS.outputs), use: null });
   }
+  else Object.assign(c, { layout: 'columns', periods: { mode: 'all' }, groups: [{ name: '', parts: keys }], check: false });
 }
 
 // Which editors are open, read from the page just before it is drawn again: the browser tells
@@ -73,6 +75,49 @@ function chartEditor(c){
     return b;
   };
   const firstCalc = () => (model.rects.find(r => !r.input) || model.rects[0]).key;
+  const periodRow = () => {
+    const row = make('div', 'widget-row');
+    const sel = make('select');
+    sel.setAttribute('aria-label', 'Period');
+    model.periods.forEach((name, i) => { const o = make('option', null, name); o.value = String(i); if(i === c.period) o.selected = true; sel.appendChild(o); });
+    sel.addEventListener('change', () => { c.period = Number(sel.value); changed(); });
+    row.append(make('span', null, 'In'), sel);
+    return row;
+  };
+  if(c.layout === 'scenarios'){
+    box.appendChild(periodRow());
+    box.appendChild(make('div', 'edit-head', 'Outputs'));
+    c.outputs.forEach((key, i) => {
+      const r = make('div', 'edit-row output-row');
+      const rs = rectSelect(key, false);
+      rs.addEventListener('change', () => { c.outputs[i] = rs.value; changed(); });
+      r.append(rs, rowButtons(c.outputs, i));
+      box.appendChild(r);
+    });
+    const add = make('button', 'link-btn add-output', '+ Output');
+    add.type = 'button';
+    add.disabled = c.outputs.length >= CHART_LIMITS.outputs;
+    add.addEventListener('click', () => { c.outputs.push(firstCalc()); chartsEditing.add(c.id); changed(); });
+    box.appendChild(add);
+    box.appendChild(make('div', 'edit-head', 'Through the scenarios'));
+    if(!scenarios.length) box.appendChild(make('p', 'empty-note', 'None yet: save some in the Scenarios panel.'));
+    const ticks = make('div', 'scenario-ticks');
+    scenarios.forEach(sc => {
+      const l = make('label', 'scenario-tick');
+      const t = make('input');
+      t.type = 'checkbox';
+      t.checked = !c.use || c.use.some(n => sameName(n, sc.name));
+      t.addEventListener('change', () => {
+        const picked = [...ticks.querySelectorAll('input')].map((x, i) => x.checked ? scenarios[i].name : null).filter(Boolean);
+        c.use = picked.length === scenarios.length ? null : picked;
+        changed();
+      });
+      l.append(t, document.createTextNode(sc.name));
+      ticks.appendChild(l);
+    });
+    box.appendChild(ticks);
+    return box;
+  }
   if(c.layout === 'flow'){
     const row = make('div', 'widget-row');
     const sel = make('select');
@@ -155,6 +200,7 @@ function drawChart(el, c, results){
   host.textContent = ''; key.textContent = ''; list.textContent = '';
   const problems = [];
   if(c.layout === 'flow') host.appendChild(drawFlow(c, results, problems));
+  else if(c.layout === 'scenarios') host.appendChild(drawScenarioFlows(c, problems));
   else host.appendChild(drawColumns(c, results, problems, key));
   glide(host);
   // Rectangles in different units side by side or stacked don't add up: say so.
@@ -310,5 +356,69 @@ function drawFlow(c, results, problems){
     chart.appendChild(g);
   });
   chart.appendChild(svg('text', { class: 't-period', x: W / 2, y: H - 4, 'text-anchor': 'middle' }, model.periods[c.period]));
+  return chart;
+}
+
+// The scenario waterfall (scenarios S2): one small waterfall per output, side by side, from the
+// model's own number through each scenario to the last. It shows the scenarios, not where the
+// sliders are now, so moving a slider leaves it as it is.
+function drawScenarioFlows(c, problems){
+  const wrap = make('div', 'scenario-flows');
+  const chain = chartScenarios(c);
+  if(!scenarios.length) problems.push('No scenarios yet: save some in the Scenarios panel, under the sliders.');
+  else if(!chain.length) problems.push('None of the scenarios is ticked: Edit chart chooses them.');
+  if(c.use){
+    const gone = c.use.filter(n => !scenarios.some(sc => sameName(sc.name, n)));
+    if(gone.length) problems.push('No scenario called ' + gone.map(n => '“' + n + '”').join(', ') + ' any more.');
+  }
+  if(!c.outputs.length) problems.push('No outputs yet: Edit chart adds them.');
+  const memo = new Map();
+  const resultsFor = (sc) => { if(!memo.has(sc)) memo.set(sc, scenarioResults(sc)); return memo.get(sc); };
+  c.outputs.forEach((key, oi) => wrap.appendChild(drawScenarioFlow(c, key, oi, scenarioFigures(c, key, resultsFor), problems)));
+  return wrap;
+}
+function drawScenarioFlow(c, key, oi, figs, problems){
+  const name = partLabel(key);
+  const n = Math.max(1, figs.length), labels = n <= 14;
+  let lo = 0, hi = 0;
+  figs.forEach(f => { if(!f.error){ lo = Math.min(lo, f.from, f.to); hi = Math.max(hi, f.from, f.to); } });
+  if(hi === lo) hi = lo + 1;
+  const W = Math.max(260, Math.min(560, 70 + n * 52)), top = 34 + (labels ? 14 : 0), bottom = 36, H = 150 + top + bottom;
+  const plotH = H - top - bottom;
+  const y = (v) => top + (hi - v) / (hi - lo) * plotH;
+  const slot = (W - 8) / n, bw = Math.max(3, Math.min(46, slot * 0.62));
+  const chart = svg('svg', { class: 'bar-chart flow-chart scenario-flow', viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'data-output': name });
+  chart.setAttribute('aria-label', name + ' through the scenarios, ' + model.periods[c.period]);
+  chart.appendChild(svg('text', { class: 't-flow-title', x: 6, y: 14 }, name + ' — ' + model.periods[c.period]));
+  chart.appendChild(svg('line', { class: 'b-zero', x1: 0, x2: W, y1: y(0), y2: y(0) }));
+  let prevEnd = null;
+  figs.forEach((f, i) => {
+    const cx = 4 + slot * i + slot / 2, x = cx - bw / 2;
+    const g = svg('g', { class: 'f-step', 'data-kind': f.kind });
+    if(f.error){
+      g.appendChild(svg('rect', { class: 'b-err', x, y: top, width: bw, height: plotH }));
+      g.appendChild(svg('text', { class: 't-err', x: cx, y: top + plotH / 2, 'text-anchor': 'middle' }, '!'));
+      problems.push(name + ', ' + f.name + ': ' + errorText(f.error));
+      prevEnd = null;
+    } else {
+      if(prevEnd !== null && f.kind === 'step') g.appendChild(svg('line', { class: 'f-link', x1: x - (slot - bw), x2: x, y1: y(prevEnd), y2: y(prevEnd) }));
+      const kind = f.kind === 'step' ? (f.to >= f.from ? 'f-up' : 'f-down') : 'f-total';
+      const rect = animKey(svg('rect', { class: 'f-bar ' + kind, x, y: Math.min(y(f.from), y(f.to)), width: bw, height: Math.max(1, Math.abs(y(f.to) - y(f.from))) }), c.id + '|' + oi + '|' + i);
+      rect.appendChild(svg('title', {}, f.kind === 'step'
+        ? f.name + ': ' + fmtNum(f.number) + ' (' + (f.value >= 0 ? '+' : '−') + fmtNum(Math.abs(f.value)) + ' from ' + (i === 1 ? 'the start' : figs[i - 1].name) + ')'
+        : (f.kind === 'start' ? 'Start (the model\'s own number)' : 'End (' + figs[figs.length - 2].name + ')') + ': ' + fmtNum(f.value)));
+      g.appendChild(rect);
+      if(labels){
+        const shown = f.kind === 'step' ? (f.value >= 0 ? '+' : '−') + fmtNum(Math.abs(f.value)) : fmtNum(f.value);
+        g.appendChild(svg('text', { class: 't-value', x: cx, y: Math.min(y(f.from), y(f.to)) - 4, 'text-anchor': 'middle' }, shown));
+      }
+      prevEnd = f.to;
+    }
+    const room = Math.max(3, Math.floor(slot / 6.2));
+    const label = svg('text', { class: 't-period', x: cx, y: H - 20, 'text-anchor': 'middle' }, f.name.length > room ? f.name.slice(0, room - 1) + '…' : f.name);
+    label.appendChild(svg('title', {}, f.name));
+    g.appendChild(label);
+    chart.appendChild(g);
+  });
   return chart;
 }

@@ -9,8 +9,9 @@
 // ============================================================
 const BOARD_FILE_FORMAT = { 'fmIDE-graph-board': { current: BOARD_FILE_VERSION, label: 'fmGraph board file' } };
 // v1 → v2: a board file may be in the template form (G5a); a v1 file is boards for one model.
-// v2 → v3: boards for one model may carry the model's named scenarios.
-const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {} } };
+// v2 → v3: boards for one model may carry the model's named scenarios; v3 → v4: a chart may be a
+// scenario waterfall.
+const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {} } };
 
 function safeFileName(s){ return String(s).replace(/[^A-Za-z0-9 ._()-]+/g, '_').replace(/\s+/g, ' ').trim().slice(0, 80) || 'board'; }
 

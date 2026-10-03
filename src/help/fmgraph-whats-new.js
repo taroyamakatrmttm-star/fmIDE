@@ -8,6 +8,20 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'scenario-waterfall', date: '2026-10-03', title: 'Scenario waterfall',
+    summary: 'See how an output moves from the model\'s own number through each of your scenarios.',
+    what: [
+      'A third kind of chart: for each output, in one period, a waterfall from Start through each scenario — each step the change from the one before — to End.',
+      'One small waterfall per output, side by side; it follows your scenarios as you change them.',
+    ],
+    why: 'So you can see what each scenario adds on top of the one before.',
+    how: [
+      'Save a few scenarios in the Scenarios panel.',
+      'Press + Chart and choose Scenario waterfall at its top.',
+      'In Edit chart, pick the period, the outputs and the scenarios.',
+    ],
+    see: ['charts', 'scenarios'] },
+
   { id: 'named-scenarios', date: '2026-10-03', title: 'Named scenarios',
     summary: 'Save where the sliders are under a name, switch between scenarios, and compare with any of them.',
     what: [

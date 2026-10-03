@@ -33,7 +33,7 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 | `fmIDE-excel-mapping` | 2 | ExcelExporter's tab/row layout for one model; v2: any row may carry its own format (`style`) and an `indent` (below) | ExcelExporter: Import Mapping JSON |
 | `fmIDE-excel-style` | 1 | ExcelExporter's Excel style: how every cell in the workbook looks, by role (step 11a, below) | ExcelExporter: Import Excel Style |
 | `fmIDE-excel-module-layouts` | 2 | ExcelExporter's layouts remembered per module (step 11b, below); v2: the layout of a module's block instances, `instance` (step 11d) | ExcelExporter: Import Module Layouts |
-| `fmIDE-graph-board` | 3 | fmGraph's boards: bars, charts and sliders showing one model (step 15, below); v2: the template form, for a template's `attachments.graph` (G5a); v3: the model's named scenarios, `scenarios` (the template form stays version 2) | fmGraph: Boards → Import boards… (or dropped on the page) |
+| `fmIDE-graph-board` | 3 | fmGraph's boards: bars, charts and sliders showing one model (step 15, below); v2: the template form, for a template's `attachments.graph` (G5a); v3: the model's named scenarios, `scenarios`; v4: the scenario waterfall, a chart of layout `scenarios` (the template form stays version 2) | fmGraph: Boards → Import boards… (or dropped on the page) |
 
 ## A row's own format and indent (`fmIDE-excel-mapping` 2)
 
@@ -87,7 +87,7 @@ ExcelExporter remembers the layout of a module's tab — a canvas added from a c
 - Version 1 files open unchanged (the upgrade only raises the number); fmIDE's Attach Excel layout… reads both versions.
 - Everything in the file is someone else's text: labels and names are only ever shown as text.
 
-## fmGraph boards (`fmIDE-graph-board` 3, step 15)
+## fmGraph boards (`fmIDE-graph-board` 4, step 15)
 
 A board is a view of one model in fmGraph: bars, charts and sliders. A file holds one or more boards (**Export this board**, **Export all boards**); fmGraph keeps the boards of each model in the browser in the same form.
 
@@ -120,9 +120,11 @@ A board is a view of one model in fmGraph: bars, charts and sliders. A file hold
     "sliders": [ { "canvasId": "cProfit", "nodeId": "price", "name": "Price", "mode": "set", "periods": { "mode": "all" }, "value": 13 } ] } ]
   ```
 
-  Rectangles are named as above; a setting is kept only on an input rectangle of the open model, with a `value` that is a number (`mode` `shift`: a change by that many %). Names are at most 40 characters and unique (capitals and outer spaces ignored: a later one with a used name is left out); at most 50 scenarios and 40 settings each. A file of one board carries none, nor does the template form. Importing adds the scenarios whose names aren't used yet. Versions 1 and 2 read as before (the upgrade step changes nothing); an older fmGraph asks before opening version 3 and ignores the scenarios.
+  Rectangles are named as above; a setting is kept only on an input rectangle of the open model, with a `value` that is a number (`mode` `shift`: a change by that many %). Names are at most 40 characters and unique (capitals and outer spaces ignored: a later one with a used name is left out); at most 50 scenarios and 40 settings each. A file of one board carries none, nor does the template form. Importing adds the scenarios whose names aren't used yet. Versions 1 and 2 read as before (the upgrade steps change nothing); an older fmGraph asks before opening version 3 and ignores the scenarios.
 
-### Boards for a template (`fmIDE-graph-board` 2, step 15 G5a; still 2 in version 3)
+- **The scenario waterfall** (version 4): a chart `{ "type": "chart", "wide": true, "layout": "scenarios", "title": "…", "period": 1, "outputs": [ { "canvasId": "cProfit", "nodeId": "profit", "name": "Profit" } ], "scenarios": ["sc01", "sc02"] }` — up to 6 outputs, named like any rectangle; `scenarios` the names it goes through (in the order of the file's `scenarios`), absent for every one; a name with no scenario is shown as gone. Never in the template form. Version 3 files read as before; an older fmGraph asks before opening version 4 and shows a scenario waterfall as an empty chart.
+
+### Boards for a template (`fmIDE-graph-board` 2, step 15 G5a; still 2 in versions 3 and 4)
 
 fmGraph's **Boards → Export for a template…** writes the same file in its **template form**: a template gets new ids each time it is used, so rectangles are named by their name (capitals and outer spaces ignored), and, for a system template, their canvas's name — never by id:
 

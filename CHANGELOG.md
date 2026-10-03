@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph: the scenario waterfall (step 15, scenarios S2)
+- **Scenario waterfall**, a third kind of chart: for each output chosen, in one period, from the model's own number through each scenario (each step the change from the one before) to the last; one small waterfall per output. It follows the scenarios as they change.
+- **File format**: fmGraph board file 4 (the new chart); a template's board never holds one and stays 2.
+
 ## fmGraph: named scenarios (step 15, scenarios S1)
 - **The Scenarios panel**: + Save as scenario keeps where the sliders are (sc01, sc02… or your own name); ▶ switches to one, A compares with it (as Pin as A), ⟳ updates it, ↑ ↓ order them, × deletes. Kept with the boards, in fmIDE's document too; changes can be undone.
 - **File format**: fmGraph board file 3 (`scenarios`, in a file of all boards); the template form stays 2. Older files import as before; an older fmGraph asks first and ignores the scenarios.

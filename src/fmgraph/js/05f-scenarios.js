@@ -75,7 +75,7 @@ function saveScenario(name){
   if(!n) n = freeScenarioName();
   scenarios.push({ name: n, settings: slidersNow() });
   saveBoardSoon();
-  renderScenarios();
+  renderBoard();
   return n;
 }
 function renameScenario(sc, name){
@@ -83,15 +83,16 @@ function renameScenario(sc, name){
   if(!n || n === sc.name) return false;
   if(scenarios.some(s => s !== sc && sameName(s.name, n))){ notify('There is already a scenario called “' + n + '”.', 'err', 'scenarios'); renderScenarios(); return false; }
   if(pinA && pinA.scenario === sc.name){ pinA.scenario = n; pinA.label = scenarioLabel(n, sc.settings); renderCompareBar(); }
+  eachScenarioChart(c => { c.use = c.use.map(u => sameName(u, sc.name) ? n : u); }); // scenario waterfalls follow the name
   sc.name = n;
   saveBoardSoon();
-  renderScenarios();
+  renderBoard();
   return true;
 }
 function updateScenario(sc){
   sc.settings = slidersNow();
   saveBoardSoon();
-  renderScenarios();
+  renderBoard();
 }
 function moveScenario(sc, to){
   const from = scenarios.indexOf(sc);
@@ -100,13 +101,16 @@ function moveScenario(sc, to){
   scenarios.splice(from, 1);
   scenarios.splice(i, 0, sc);
   saveBoardSoon();
-  renderScenarios();
+  renderBoard();
 }
 function deleteScenario(sc){
   scenarios = scenarios.filter(s => s !== sc);
+  eachScenarioChart(c => { c.use = c.use.filter(u => !sameName(u, sc.name)); });
   saveBoardSoon();
-  renderScenarios();
+  renderBoard();
 }
+// Every scenario waterfall that names its scenarios, on every board (04b-charts.js).
+function eachScenarioChart(fn){ boards.forEach(b => b.items.forEach(w => { if(w.kind === 'chart' && w.layout === 'scenarios' && w.use) fn(w); })); }
 // ▶ Show: the board's sliders where the scenario had them. Returns how many of the inputs it
 // changes have no slider on this board.
 function showScenario(sc){

@@ -87,7 +87,7 @@ Each slider position needs the whole model worked out again (`evaluateModel` on 
 | **G3** ✅ (G3a, G3b) | Editing a board: placing and sizing widgets, titles, colours, undo; the `fmIDE-graph-board` file, Export / Import; boards in `.fmide` documents |
 | **G4** ✅ (G4a, G4b) | Exploring: G4a Trace and Biggest movers; G4b the A/B snapshot and animation |
 | **G5** ✅ (G5a, G5b, G5c) | Sharing: G5a `attachments.graph` on templates (system templates too), packs and the checker, fmGraph's Export for a template…; G5b fmGraph using template boards and Attach to template…; G5c Try in fmGraph from Browse Library |
-| **Scenarios** (after G5, before G6; the owner's request, 3 October 2026) | Named scenarios instead of only A (as many as wanted, named by the person, e.g. sc01…sc05) to switch between, and a scenario waterfall: for chosen outputs in one period, the change from the start through each scenario in turn. In two phases: S1 named scenarios ✅; S2 the scenario waterfall. |
+| **Scenarios** (after G5, before G6; the owner's request, 3 October 2026) | Named scenarios instead of only A (as many as wanted, named by the person, e.g. sc01…sc05) to switch between, and a scenario waterfall: for chosen outputs in one period, the change from the start through each scenario in turn. In two phases: S1 named scenarios ✅; S2 the scenario waterfall ✅. |
 | **G6** | Tutorials |
 
 Later ideas, not in this step: blocks and vintages, line charts, a tornado chart (which inputs matter most), goal seek ("what price keeps cash above zero?"), the live link with fmIDE, phones.
@@ -188,6 +188,14 @@ The owner asked (3 October 2026) to go ahead with the recommended choices withou
 - **The panel** (`#scenariosPanel`, under the sliders): + Save as scenario (`sc01`, `sc02`…, `freeScenarioName`; the name box focused), each row a name box (unique names, ignoring capitals), ▶ Show (`showScenario`: the board's sliders matching a setting by input, mode and periods take its value, the others go back; settings with no slider here are said), A (`compareWithScenario`: `pinA` with `scenario`, so the strip names it; again to unpin), ⟳ (`updateScenario`), ↑ ↓, ×; the row the sliders match is `.current` (`markScenarios`, after every redraw).
 - **Kept**: the board file version 3, `scenarios` at the top of a file of all boards (`scenariosData`, read back by `cleanScenarios` inside `cleanBoards`: inputs only, numbers, unique names, 50 at most); so in the browser, undo, fmIDE's document (which keeps the file as it is) and Export all boards. Import adds scenarios with new names. The template form doesn't carry them and stays version 2 (`TEMPLATE_BOARD_VERSION`), so fmIDE's checks of template boards are unchanged.
 - Tests: group 56 (`tests/56-fmgraph-scenarios.spec.js`; sample `tests/fixtures/formats/board-v2.json`).
+
+### Scenarios, S2 (the scenario waterfall)
+
+- **A third chart kind** (`04b-charts.js`, `05b-chart-render.js`): `{ layout: 'scenarios', title, period, outputs: [key] (up to 6), use: [names] | null }`. For each output, `scenarioFigures` gives Start (the model's own number), a step per scenario (its number minus the one before; `chartScenarios`: the ticked ones in the panel's order, or all) and End (the last scenario's number); each scenario's results are worked out once for all outputs. `drawScenarioFlows` draws one small waterfall per output, side by side, with the waterfall's colours (up, down, full bars). It shows the scenarios, not where the sliders are, so moving a slider leaves it as it is.
+- **Following the scenarios**: saving, updating and moving one redraws it; renaming one renames it in every chart's `use`, deleting one takes it out (`eachScenarioChart`, `05f-scenarios.js`); a name in `use` with no scenario (from a file) is said. No scenarios, none ticked, no outputs: said under the chart.
+- **Edit chart**: the period, the outputs (+ Output, ↑ ↓ ×) and a tick per scenario (all ticked: `use` null, so new scenarios join). Switching kind keeps the rectangles (calculated ones first, six at most).
+- **Kept**: the board file version 4 (the chart's `outputs`, by canvas id, node id and name, and `scenarios`, the names ticked, absent for all). A template's board leaves it out and counts it (templates carry no scenarios), so the template form stays version 2. `fmGraph.addChart({ layout: 'scenarios', … })`, `fmGraph.chart(id)`.
+- Tests: group 57 (`tests/57-fmgraph-scenario-waterfall.spec.js`; sample `tests/fixtures/formats/board-v3.json`).
 
 ## Risks
 

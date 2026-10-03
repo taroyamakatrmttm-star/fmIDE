@@ -10,10 +10,12 @@
 //   addSlider(rect, { periods, mode: 'set' | 'shift', min, max, step, canvas }?) → the slider's id
 //   addChart({ layout: 'columns', title, periods, check, groups: [{ name, parts: [rect…] }] })
 //   addChart({ layout: 'flow', title, period, steps: [{ rect, role: 'start'|'add'|'subtract'|'total' }] })
+//   addChart({ layout: 'scenarios', title, period, outputs: [rect…], scenarios?: [name…] })
 //                  → the chart's id; a rect is a name, '#id', or { rect, canvas }
 //   chart(id)      → what it shows now: columns — per period { period, groups: [{ name, total,
 //                    parts: [value or { error }] }], check: { ok, gap } | null }; flow — per step
-//                    { name, role, value, from, to, check: { ok, expected } | null }
+//                    { name, role, value, from, to, check: { ok, expected } | null }; scenarios — per
+//                    output { name, steps: [{ name, kind: 'start'|'step'|'end', value, from, to }] }
 //   setSlider(id, value), resetSlider(id), resetAll(), remove(id)
 //   board()        → the board ({ kind: 'fmIDE-graph-board', … }) with each slider's value
 //   reached(id)    → the ids of the bars a slider reaches
@@ -82,7 +84,10 @@ window.fmGraph = Object.freeze({
     spec = spec || {};
     if(board.charts.length >= BOARD_LIMIT) throw new Error('No more charts can be added.');
     const at = (r) => ({ canvasId: r.canvasId, nodeId: r.nodeId, name: r.name });
-    const raw = spec.layout === 'flow'
+    const raw = spec.layout === 'scenarios'
+      ? Object.assign({ layout: 'scenarios', title: spec.title, period: spec.period === undefined ? 0 : periodIndex(spec.period),
+          outputs: (spec.outputs || []).map(r => at(rectRef(r))) }, Array.isArray(spec.scenarios) ? { scenarios: spec.scenarios.map(String) } : {})
+      : spec.layout === 'flow'
       ? { layout: 'flow', title: spec.title, period: spec.period === undefined ? 0 : periodIndex(spec.period),
           steps: (spec.steps || []).map(s => Object.assign(at(rectRef(s.rect)), { role: s.role })) }
       : { layout: 'columns', title: spec.title, periods: periodSpec(spec.periods), check: spec.check === true,
@@ -96,6 +101,12 @@ window.fmGraph = Object.freeze({
   chart: (id) => {
     const c = chartById(id), results = currentResults();
     if(c.layout === 'flow') return flowFigures(c, results).map((f, i) => Object.assign({ name: partLabel(c.steps[i].key) }, f));
+    if(c.layout === 'scenarios'){
+      const memo = new Map();
+      const resultsFor = (sc) => { if(!memo.has(sc)) memo.set(sc, scenarioResults(sc)); return memo.get(sc); };
+      return c.outputs.map(k => ({ name: partLabel(k), steps: scenarioFigures(c, k, resultsFor).map(f => f.error ? { name: f.name, kind: f.kind, error: f.error }
+        : { name: f.name, kind: f.kind, value: f.value, from: f.from, to: f.to }) }));
+    }
     return columnsFigures(c, results).map(f => ({ period: model.periods[f.p], check: f.check,
       groups: f.groups.map((g, gi) => ({ name: groupLabel(c, gi), total: g.error ? { error: true } : g.total, parts: g.parts.map(answer) })) }));
   },
