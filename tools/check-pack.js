@@ -451,22 +451,42 @@ function checkCanvasShape(c, cw, err){
     if(e.toPort !== undefined && !(Number.isInteger(e.toPort) && e.toPort >= 0)) once(`Its ${cw}'s arrow #${k + 1} has an input number ("toPort") that isn't a whole number.`);
   });
 }
-// Each recipe part must be in the pack, as a canvas template (the version it pins, or any
-// version for "latest").
+// Each recipe part must be in the pack, as a canvas template or another recipe (the version
+// it pins, or any version for "latest"). A recipe inside a recipe is built in its place, as
+// fmIDE does, at most RECIPE_MAX_DEPTH deep; one that contains itself is an error.
+const RECIPE_MAX_DEPTH = 8;
 function checkRecipeParts(templates, rawList, error){
+  const resolve = (part) => {
+    const same = templates.filter(x => x.family === part.family);
+    if(part.version === 'latest') return same.sort((a, b) => b.version - a.version)[0];
+    return same.find(x => part.versionId && x.versionId === part.versionId) || same.find(x => x.version === part.version);
+  };
+  // The deepest a recipe's recipes go, or 'loop' when one leads back to one on the way.
+  const depthOf = (t, stack) => {
+    if(stack.includes(t.family)) return 'loop';
+    let deepest = 0;
+    for(const part of t.raw.data.parts){
+      const hit = resolve(part);
+      if(!hit || hit.kind !== 'recipe') continue;
+      const d = depthOf(hit, stack.concat([t.family]));
+      if(d === 'loop') return 'loop';
+      deepest = Math.max(deepest, d + 1);
+    }
+    return deepest;
+  };
   templates.filter(t => t.kind === 'recipe').forEach(t => {
+    const depth = depthOf(t, []);
+    if(depth === 'loop') error(t.where, 'The recipe contains itself, through the recipes inside it; fmIDE can\'t build it.');
+    else if(depth > RECIPE_MAX_DEPTH) error(t.where, `The recipe has recipes inside recipes ${depth} deep; fmIDE builds at most ${RECIPE_MAX_DEPTH}.`);
     t.raw.data.parts.forEach((part, j) => {
-      const same = templates.filter(x => x.family === part.family);
-      let hit;
-      if(part.version === 'latest') hit = same.sort((a, b) => b.version - a.version)[0];
-      else hit = same.find(x => part.versionId && x.versionId === part.versionId) || same.find(x => x.version === part.version);
+      const hit = resolve(part);
       const shown = part.name ? quote(part.name) : `part ${j + 1}`;
       const vText = part.version === 'latest' ? '@latest' : ' v' + part.version;
       if(!hit){
         const inPack = rawList.some(x => isObject(x) && x.family === part.family);
         return error(t.where, `The recipe needs ${shown}${vText}, which ` + (inPack ? 'has errors of its own.' : 'the pack doesn\'t carry.'));
       }
-      if(hit.kind !== 'module') return error(t.where, `The recipe's part ${shown} is not a canvas template.`);
+      if(hit.kind !== 'module' && hit.kind !== 'recipe') return error(t.where, `The recipe's part ${shown} is not a canvas template or a recipe.`);
       if(part.version !== 'latest' && part.versionId && hit.versionId !== part.versionId) error(t.where, `The recipe was made with a different ${shown}${vText} than the one in the pack.`);
     });
   });

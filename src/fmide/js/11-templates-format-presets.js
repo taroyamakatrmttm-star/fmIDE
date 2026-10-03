@@ -816,6 +816,12 @@
   // RECIPE_MAX_PARTS, templateKindOf and cleanRecipeData (reading recipes from files) are in
   // src/shared/fmide-files.js.
 
+  // Recipes within a recipe: a part may name another recipe's family. Building opens it up
+  // into its own parts, in their place (recipeLeaves), as deep as RECIPE_MAX_DEPTH; a recipe
+  // that contains itself, through any number of others, is a loop: that part is skipped with
+  // a warning. Skipping and "already here" count the canvases the recipe builds, in order.
+  const RECIPE_MAX_DEPTH = 8;
+  const RECIPE_MAX_CANVASES = 200;
   // A part for the recipe from a library version: pinned to it, or following the latest.
   function recipePartOf(t, pinned){
     const part = { family: t.family, version: pinned ? t.version : 'latest', name: t.name };
@@ -830,23 +836,71 @@
     const shown = (latest && latest.name) || part.name || 'A part';
     const vText = part.version === 'latest' ? '@latest' : '@' + part.version;
     if(!latest) return { part, template: null, state: 'missing-family', label: `${shown} ${vText} — not in your library` };
-    if(latest.kind !== 'module') return { part, template: null, state: 'wrong-kind', label: `${shown} — not a canvas template` };
-    if(part.version === 'latest') return { part, template: latest, state: 'ok', label: `${shown} @latest (v${latest.version})` };
+    if(latest.kind !== 'module' && latest.kind !== 'recipe') return { part, template: null, state: 'wrong-kind', label: `${shown} — not a canvas template or a recipe` };
+    // A recipe part: `recipe` true, `template` the recipe version it opens up into.
+    const recipe = latest.kind === 'recipe';
+    const kindWord = recipe ? ' (recipe)' : '';
+    if(part.version === 'latest') return { part, template: latest, recipe, state: 'ok', label: `${shown}${kindWord} @latest (v${latest.version})` };
     const t = familyVersions(part.family).find(v => v.version === part.version);
     if(!t) return { part, template: null, state: 'missing-version', label: `${shown} v${part.version} — not in your library` };
-    if(part.versionId && t.versionId !== part.versionId) return { part, template: t, state: 'differs', label: `${shown} v${part.version} — yours differs from the one this recipe was made with` };
-    return { part, template: t, state: 'ok', label: `${shown} v${part.version}` };
+    if(part.versionId && t.versionId !== part.versionId) return { part, template: t, recipe, state: 'differs', label: `${shown}${kindWord} v${part.version} — yours differs from the one this recipe was made with` };
+    return { part, template: t, recipe, state: 'ok', label: `${shown}${kindWord} v${part.version}` };
   }
+  // The canvases a recipe builds, in order: its parts, each recipe among them opened up into
+  // its own parts. [{ part, st (recipePartStatus of the canvas part, or a problem with no
+  // template), via: [the recipes it sits inside, outermost first], top (index of the part
+  // in `parts` it came from) }]. `own`: the family of the recipe these parts belong to (a
+  // part naming it is a loop).
+  function recipeLeaves(parts, own){
+    const out = [];
+    let overflow = false;
+    const walk = (list, stack, via, top) => {
+      list.forEach((part, i) => {
+        const at = top === null ? i : top;
+        if(out.length >= RECIPE_MAX_CANVASES){
+          if(!overflow){ overflow = true; out.push({ part, via, top: at, st: { part, template: null, state: 'too-many', label: `${part.name || 'A part'} — the recipe builds more than ${RECIPE_MAX_CANVASES} canvases` } }); }
+          return;
+        }
+        const st = recipePartStatus(part);
+        if(!st.recipe){ out.push({ part, st, via, top: at }); return; }
+        const name = st.template.name;
+        if(stack.includes(part.family)){ out.push({ part, via, top: at, st: { part, template: null, state: 'loop', label: `${name} (recipe) — it contains itself, so it can't be built` } }); return; }
+        if(via.length >= RECIPE_MAX_DEPTH){ out.push({ part, via, top: at, st: { part, template: null, state: 'too-deep', label: `${name} (recipe) — recipes inside recipes more than ${RECIPE_MAX_DEPTH} deep` } }); return; }
+        if(st.state === 'differs') out.push({ part, via, top: at, note: true, st: { part, template: null, state: 'differs-recipe', label: `${name} (recipe) v${st.template.version} in your library isn't the one this recipe was made with — built with yours` } });
+        walk(st.template.data.parts, stack.concat([part.family]), via.concat([name]), at);
+      });
+    };
+    walk(parts, own ? [own] : [], [], null);
+    return out;
+  }
+  // Whether recipe `r` is, or contains (through any number of recipes inside), the recipe
+  // family `family`: adding it to that recipe would make a loop.
+  function recipeReaches(r, family){
+    if(!family) return false;
+    const seen = new Set();
+    const walk = (rec) => {
+      if(rec.family === family) return true;
+      if(seen.has(rec.family)) return false;
+      seen.add(rec.family);
+      return rec.data.parts.some(p => { const st = recipePartStatus(p); return st.recipe && walk(st.template); });
+    };
+    return walk(r);
+  }
+  // The leaves that are canvases to build (or a part that can't be: missing, a loop, too deep),
+  // leaving out the notes about a nested recipe's version.
+  function recipeBuildLeaves(parts, own){ return recipeLeaves(parts, own).filter(l => !l.note); }
+  // Notes about the recipes inside (a different version than the one the recipe was made with).
+  function recipeNestedNotes(parts, own){ return recipeLeaves(parts, own).filter(l => l.note).map(l => l.st.label + '.'); }
   // The versions a recipe would use, as canvases ({ name, nodes }).
-  function recipeCanvasList(parts){
-    return parts.map(recipePartStatus).filter(st => st.template)
-      .map(st => ({ name: st.template.name, nodes: st.template.data.nodes || [] }));
+  function recipeCanvasList(parts, own){
+    return recipeBuildLeaves(parts, own).filter(l => l.st.template)
+      .map(l => ({ name: l.st.template.name, nodes: l.st.template.data.nodes || [] }));
   }
   // Sockets nothing feeds among the versions a recipe would use.
-  function recipeUnfedSockets(parts){ return unfedSocketsIn(recipeCanvasList(parts)); }
+  function recipeUnfedSockets(parts, own){ return unfedSocketsIn(recipeCanvasList(parts, own)); }
   // The socket check shown for a recipe: unfed sockets, and sockets more than one plug feeds.
-  function recipeCheckText(parts){
-    const list = recipeCanvasList(parts);
+  function recipeCheckText(parts, own){
+    const list = recipeCanvasList(parts, own);
     const unfed = unfedSocketsIn(list), multi = multiFedSocketsIn(list);
     const lines = [];
     if(unfed.length) lines.push(unfedSocketsText(unfed));
@@ -862,30 +916,31 @@
   // For each part of a recipe, whether it is already here: { canvas } — a canvas of the
   // model built from the same template family (canvas.template), or an earlier part of the
   // same recipe with that family — else null.
-  function recipePartsAlreadyHere(parts){
+  // One entry per canvas the recipe builds (recipeBuildLeaves), recipes inside opened up.
+  function recipePartsAlreadyHere(parts, own){
     const seen = new Map(); // family → the name its earlier part will have
-    return parts.map(part => {
+    return recipeBuildLeaves(parts, own).map(({ part, st }) => {
+      if(!st.template) return null;
       const onCanvas = canvases.find(c => c.template && c.template.family === part.family);
       const hit = onCanvas ? { canvas: onCanvas.name, version: onCanvas.template.version }
         : seen.has(part.family) ? { canvas: seen.get(part.family), inRecipe: true } : null;
-      if(!seen.has(part.family)){ const st = recipePartStatus(part); seen.set(part.family, st.template ? st.template.name : (part.name || 'that part')); }
+      if(!seen.has(part.family)) seen.set(part.family, st.template.name);
       return hit;
     });
   }
-  // `opts.skip`: the part indexes (from 0) not to build — parts already here, whose canvas
-  // the new ones connect to through their plugs and sockets, by name, as ever.
+  // `opts.skip`: the indexes (from 0) of the canvases it builds — recipes inside opened up,
+  // recipeBuildLeaves — not to build: parts already here, whose canvas the new ones connect
+  // to through their plugs and sockets, by name, as ever.
   function buildRecipe(t, opts){
     const skip = (opts && opts.skip) || new Set();
-    const made = [], warnings = [], skipped = [];
-    const here = recipePartsAlreadyHere(t.data.parts);
-    t.data.parts.forEach((part, i) => {
+    const made = [], warnings = recipeNestedNotes(t.data.parts, t.family), skipped = [];
+    const here = recipePartsAlreadyHere(t.data.parts, t.family);
+    recipeBuildLeaves(t.data.parts, t.family).forEach(({ part, st }, i) => {
       if(skip.has(i)){
-        const st = recipePartStatus(part);
         const name = (st.template && st.template.name) || part.name || 'A part';
         skipped.push(here[i] ? `Skipped ${name} — already here as canvas “${here[i].canvas}”.` : `Skipped ${name}.`);
         return;
       }
-      const st = recipePartStatus(part);
       if(!st.template){ warnings.push(`Skipped ${st.label}.`); return; }
       if(st.state === 'differs') warnings.push(`${st.template.name} v${st.template.version} in your library isn't the one this recipe was made with — built with yours.`);
       applyModuleDataToNewCanvas(cloneData(st.template.data));
@@ -937,7 +992,10 @@
   // `from` (a recipe) starts from its parts and saves the next version of it.
   function showRecipeEditor(from, onSaved){
     let parts = from ? cloneData(from.data.parts) : [];
-    const modules = () => templateFamilies().filter(f => f.kind === 'module');
+    // The families a part can be: canvas templates, and recipes — not this one, nor one that
+    // contains it (that would be a loop).
+    const own = from ? from.family : null;
+    const modules = () => templateFamilies().filter(f => f.kind === 'module' || (f.kind === 'recipe' && !recipeReaches(f, own)));
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
@@ -970,7 +1028,7 @@
     const noteIn = field('Change note', document.createElement('input'));
     noteIn.className = 'recipe-note'; noteIn.maxLength = TEMPLATE_NOTE_MAX; noteIn.placeholder = 'What changed (optional)';
 
-    const head = document.createElement('p'); head.className = 'recipe-parts-head'; head.textContent = 'Parts (canvas templates, added in this order)';
+    const head = document.createElement('p'); head.className = 'recipe-parts-head'; head.textContent = 'Parts (canvas templates, or recipes built in their place; added in this order)';
     const list = document.createElement('div'); list.className = 'recipe-parts';
     const addBtn = document.createElement('button'); addBtn.className = 'recipe-add-part'; addBtn.textContent = '+ Add part';
     const check = document.createElement('p'); check.className = 'recipe-check';
@@ -991,7 +1049,7 @@
         if(!fams.some(f => f.family === part.family)){
           const o = document.createElement('option'); o.value = part.family; o.textContent = (part.name || 'Unknown') + ' (not in your library)'; fam.appendChild(o);
         }
-        fams.forEach(f => { const o = document.createElement('option'); o.value = f.family; o.textContent = f.name; fam.appendChild(o); });
+        fams.forEach(f => { const o = document.createElement('option'); o.value = f.family; o.textContent = f.name + (f.kind === 'recipe' ? ' (recipe)' : ''); fam.appendChild(o); });
         fam.value = part.family;
         fam.addEventListener('change', () => {
           const f = latestOfFamily(fam.value);
@@ -1014,8 +1072,13 @@
           render();
         });
         const st = recipePartStatus(part);
-        const mark = document.createElement('span'); mark.className = 'recipe-part-state ' + st.state;
-        mark.textContent = st.state === 'ok' ? '✓' : '⚠'; mark.title = st.label;
+        // A recipe part: what it builds, or why it can't (a loop, too deep, a missing part).
+        const inside = st.recipe ? recipeBuildLeaves([part], own) : [];
+        const bad = inside.find(l => !l.st.template);
+        const state = bad ? bad.st.state : st.state;
+        const mark = document.createElement('span'); mark.className = 'recipe-part-state ' + state;
+        mark.textContent = state === 'ok' ? '✓' : '⚠';
+        mark.title = bad ? bad.st.label : st.recipe ? st.label + ' — builds ' + inside.length + ' canvas' + (inside.length === 1 ? '' : 'es') : st.label;
         const btn = (label, cls, fn, disabled) => { const b = document.createElement('button'); b.textContent = label; b.className = cls; b.disabled = !!disabled; b.addEventListener('click', fn); return b; };
         row.append(fam, ver, mark,
           btn('↑', 'recipe-up', () => { [parts[i - 1], parts[i]] = [parts[i], parts[i - 1]]; render(); }, i === 0),
@@ -1025,10 +1088,11 @@
       });
       if(!parts.length){ const p = document.createElement('p'); p.className = 'template-desc'; p.textContent = 'No parts yet.'; list.appendChild(p); }
       addBtn.disabled = !modules().length || parts.length >= RECIPE_MAX_PARTS;
-      const chk = recipeCheckText(parts);
-      check.classList.toggle('warn', parts.length > 0 && chk.warn);
-      check.textContent = !parts.length ? '' : chk.text;
-      saveBtn.disabled = !parts.length;
+      const chk = recipeCheckText(parts, own);
+      const loop = recipeBuildLeaves(parts, own).find(l => l.st.state === 'loop');
+      check.classList.toggle('warn', parts.length > 0 && (chk.warn || !!loop));
+      check.textContent = !parts.length ? '' : loop ? loop.st.label + '.' : chk.text;
+      saveBtn.disabled = !parts.length || !!loop;
     }
     addBtn.addEventListener('click', () => {
       const used = new Set(parts.map(p => p.family));
@@ -1705,31 +1769,57 @@
     function renderRecipeDetail(all){
       const ul = document.createElement('ul');
       ul.className = 'recipe-detail-parts';
-      const here = recipePartsAlreadyHere(selected.data.parts);
+      // One entry per canvas it builds; a recipe inside lists its own canvases under it.
+      const leaves = recipeBuildLeaves(selected.data.parts, selected.family);
+      const here = recipePartsAlreadyHere(selected.data.parts, selected.family);
       if(recipeSkipFor !== selected){ recipeSkipFor = selected; recipeSkip = new Set(here.map((h, i) => h ? i : -1).filter(i => i >= 0)); }
-      selected.data.parts.forEach((part, i) => {
-        const st = recipePartStatus(part);
+      const leafItem = (leaf, k) => {
+        const st = leaf.st;
         const li = document.createElement('li');
         li.className = 'recipe-part-state ' + st.state;
         li.textContent = (st.state === 'ok' ? '✓ ' : '⚠ ') + st.label;
         // A part already here: skip it (ticked by default) rather than add it again.
-        if(here[i]){
+        if(here[k]){
           const lab = document.createElement('label');
           lab.className = 'recipe-part-skip';
           const box = document.createElement('input');
           box.type = 'checkbox';
-          box.checked = recipeSkip.has(i);
-          box.addEventListener('change', () => { if(box.checked) recipeSkip.add(i); else recipeSkip.delete(i); });
+          box.checked = recipeSkip.has(k);
+          box.addEventListener('change', () => { if(box.checked) recipeSkip.add(k); else recipeSkip.delete(k); });
           lab.appendChild(box);
-          const differs = !here[i].inRecipe && st.template && here[i].version !== st.template.version;
-          lab.appendChild(document.createTextNode(' Skip — already here as canvas “' + here[i].canvas + '”'
-            + (differs ? ` (v${here[i].version}; this recipe uses v${st.template.version})` : '')));
+          const differs = !here[k].inRecipe && st.template && here[k].version !== st.template.version;
+          lab.appendChild(document.createTextNode(' Skip — already here as canvas “' + here[k].canvas + '”'
+            + (differs ? ` (v${here[k].version}; this recipe uses v${st.template.version})` : '')));
           li.appendChild(lab);
         }
+        return li;
+      };
+      selected.data.parts.forEach((part, i) => {
+        const st = recipePartStatus(part);
+        if(!st.recipe){
+          const k = leaves.findIndex(l => l.top === i);
+          if(k >= 0) ul.appendChild(leafItem(leaves[k], k));
+          return;
+        }
+        const mine = leaves.map((l, k) => ({ l, k })).filter(({ l }) => l.top === i);
+        const bad = mine.find(({ l }) => !l.st.template);
+        const li = document.createElement('li');
+        li.className = 'recipe-part-state recipe-part-recipe ' + (bad ? bad.l.st.state : st.state);
+        const built = mine.filter(({ l }) => l.st.template).length;
+        li.appendChild(document.createTextNode((bad || st.state !== 'ok' ? '⚠ ' : '✓ ') + st.label + ' — builds ' + built + ' canvas' + (built === 1 ? '' : 'es') + ':'));
+        const sub = document.createElement('ul');
+        sub.className = 'recipe-detail-subparts';
+        mine.forEach(({ l, k }) => {
+          const item = leafItem(l, k);
+          // Inside a recipe inside it: say which.
+          if(l.via.length > 1) item.firstChild.textContent += ' — inside ' + l.via.slice(1).join(' › ');
+          sub.appendChild(item);
+        });
+        li.appendChild(sub);
         ul.appendChild(li);
       });
       detail.appendChild(ul);
-      const chk = recipeCheckText(selected.data.parts);
+      const chk = recipeCheckText(selected.data.parts, selected.family);
       const check = document.createElement('p');
       check.className = 'recipe-check' + (chk.warn ? ' warn' : '');
       check.textContent = chk.text;

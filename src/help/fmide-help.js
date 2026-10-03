@@ -259,12 +259,13 @@ const HELP_TOPICS = [
       { see: ['templates', 'recipes'] },
     ] },
   { id: 'recipes', group: 'templates', title: 'Recipes',
-    keywords: 'recipe build parts three statements combine templates together',
+    keywords: 'recipe build parts three statements combine templates together nested inside recipe of recipes',
     summary: 'Several canvas templates put together, built in one go.',
     body: [
       { p: 'A recipe lists canvas templates to build together, for example Income Statement + Balance Sheet + Cash Flow. In {cmd:openTemplates}, choose + New Recipe…, pick the parts, and choose the latest or a fixed version of each.' },
       { p: 'Build adds one canvas per part, and plugs and sockets connect them by name. A part already in your model is skipped, ticked by default.' },
       { p: 'Build warns about sockets that nothing feeds.' },
+      { p: 'A part can also be another recipe: it is built in its place, with its own parts, so a full model can be made from smaller recipes. The recipe\'s details list the canvases each recipe inside builds. A recipe can\'t contain itself, even through others; fmIDE won\'t offer one that would.' },
       { see: ['templates', 'plugs-sockets'] },
     ] },
 
