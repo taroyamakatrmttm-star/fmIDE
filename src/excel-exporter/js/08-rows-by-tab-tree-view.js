@@ -554,7 +554,7 @@ window.addEventListener('resize', closeTreeContextMenu);
 
 // A row's format editor in the Tree view, laid out as a flex block appended INSIDE the
 // row's own div (the tree isn't a table). A custom row's format is its whole look (fill,
-// font colour, bold, border — the same `row.style` shape as the Canvas/Tab views); a
+// font colour, bold, border on any of its four sides — the same `row.style` shape as the Canvas/Tab views); a
 // rectangle row's overrides what fmIDE's roles and the rectangle give it in Excel, and
 // can also set the number format. With the row among several selected, a change applies
 // to all of them. "Reset to the Excel style" drops the rows' own formats and indents.
@@ -593,16 +593,14 @@ function toggleTreeRowStyleEditor(rowEl, row){
   const fillNone = document.createElement('input'); fillNone.type = 'checkbox'; fillNone.checked = !cleanHexColor(st.fill);
   const fontColor = document.createElement('input'); fontColor.type = 'color'; fontColor.value = cleanHexColor(st.font && st.font.color) || '#475569';
   const boldChk = document.createElement('input'); boldChk.type = 'checkbox'; boldChk.checked = !!(st.font && (st.font.weight === '700' || st.font.weight === 'bold'));
-  const borderChk = document.createElement('input'); borderChk.type = 'checkbox'; borderChk.checked = !!(st.border && st.border.style && st.border.style !== 'none');
-  const borderColor = document.createElement('input'); borderColor.type = 'color'; borderColor.value = cleanHexColor(st.border && st.border.color) || '#94a3b8';
-  [fillInput, fillNone, fontColor, boldChk, borderChk, borderColor].forEach((x, i) => x.className = 'fmt-' + ['fill', 'nofill', 'font', 'bold', 'border', 'bordercolor'][i]);
+  const border = rowBorderField(st);
+  [fillInput, fillNone, fontColor, boldChk].forEach((x, i) => x.className = 'fmt-' + ['fill', 'nofill', 'font', 'bold'][i]);
 
   editor.appendChild(labeled('Fill', fillInput));
   editor.appendChild(labeled('No fill', fillNone));
   editor.appendChild(labeled('Font color', fontColor));
   editor.appendChild(labeled('Bold', boldChk));
-  editor.appendChild(labeled('Border', borderChk));
-  editor.appendChild(labeled('Border color', borderColor));
+  editor.appendChild(border.el);
 
   // Number format: rectangle rows only (a custom row has no numbers).
   let nfKind = null, nfDec = null;
@@ -624,7 +622,7 @@ function toggleTreeRowStyleEditor(rowEl, row){
     const fmt = {
       fill: fillNone.checked ? null : fillInput.value,
       font: { color: fontColor.value, weight: boldChk.checked ? '700' : 'normal' },
-      border: borderChk.checked ? { color: borderColor.value, style: 'solid' } : { style: 'none' }
+      border: border.read()
     };
     if(nfKind){
       nfDec.disabled = !nfKind.value;
@@ -646,7 +644,7 @@ function toggleTreeRowStyleEditor(rowEl, row){
       if(btn) btn.classList.add('on');
     });
   }
-  [fillInput, fillNone, fontColor, boldChk, borderChk, borderColor].concat(nfKind ? [nfKind, nfDec] : [])
+  [fillInput, fillNone, fontColor, boldChk].concat(border.inputs, nfKind ? [nfKind, nfDec] : [])
     .forEach(fieldEl => fieldEl.addEventListener('change', commit));
 
   const reset = document.createElement('button'); reset.type = 'button'; reset.className = 'icon fmt-reset';

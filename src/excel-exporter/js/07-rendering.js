@@ -354,6 +354,51 @@ function renderCustomRows(){
   renderTreeView();
 }
 
+// A row's own border in a format editor: Top, Bottom, Left and Right each on or off, and its
+// colour. `st` is the look the editor starts from (its border's sides, else all four).
+// read() gives the border for row.style (all four: no `sides`; none: no border).
+const BORDER_SIDE_LABELS = { top: 'Top', bottom: 'Bottom', left: 'Left', right: 'Right' };
+function rowBorderField(st){
+  const b = st && st.border;
+  const on = b && b.style && b.style !== 'none';
+  const sides = on ? (Array.isArray(b.sides) ? b.sides : EXCEL_SIDES) : [];
+  const el = document.createElement('fieldset');
+  el.className = 'fmt-borders';
+  const legend = document.createElement('legend');
+  legend.textContent = 'Border';
+  el.appendChild(legend);
+  const boxes = {};
+  EXCEL_SIDES.forEach(k => {
+    const lab = document.createElement('label');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'fmt-border-' + k;
+    cb.checked = sides.includes(k);
+    lab.appendChild(cb);
+    lab.appendChild(document.createTextNode(BORDER_SIDE_LABELS[k]));
+    el.appendChild(lab);
+    boxes[k] = cb;
+  });
+  const color = document.createElement('input');
+  color.type = 'color';
+  color.className = 'fmt-bordercolor';
+  color.title = 'Border colour';
+  color.setAttribute('aria-label', 'Border colour');
+  color.value = cleanHexColor(b && b.color) || '#94a3b8';
+  el.appendChild(color);
+  return {
+    el,
+    inputs: Object.values(boxes).concat([color]),
+    read(){
+      const picked = EXCEL_SIDES.filter(k => boxes[k].checked);
+      if(!picked.length) return { style: 'none' };
+      const out = { color: color.value, style: 'solid' };
+      if(picked.length < EXCEL_SIDES.length) out.sides = picked;
+      return out;
+    },
+  };
+}
+
 function toggleCustomRowStyleEditor(afterRowEl, row){
   const existing = afterRowEl.nextElementSibling;
   if(existing && existing.classList.contains('style-editor-row')){ existing.remove(); return; }
@@ -378,25 +423,23 @@ function toggleCustomRowStyleEditor(afterRowEl, row){
   const fillNone = document.createElement('input'); fillNone.type = 'checkbox'; fillNone.checked = !st.fill;
   const fontColor = document.createElement('input'); fontColor.type = 'color'; fontColor.value = (st.font && st.font.color) || '#475569';
   const boldChk = document.createElement('input'); boldChk.type = 'checkbox'; boldChk.checked = !!(st.font && (st.font.weight === '700' || st.font.weight === 'bold'));
-  const borderChk = document.createElement('input'); borderChk.type = 'checkbox'; borderChk.checked = !!(st.border && st.border.style && st.border.style !== 'none');
-  const borderColor = document.createElement('input'); borderColor.type = 'color'; borderColor.value = (st.border && st.border.color) || '#94a3b8';
+  const border = rowBorderField(st);
 
   fields.appendChild(labeled('Fill', fillInput));
   fields.appendChild(labeled('No fill', fillNone));
   fields.appendChild(labeled('Font color', fontColor));
   fields.appendChild(labeled('Bold', boldChk));
-  fields.appendChild(labeled('Border', borderChk));
-  fields.appendChild(labeled('Border color', borderColor));
+  fields.appendChild(border.el);
 
   function commit(){
     row.style = {
       fill: fillNone.checked ? null : fillInput.value,
       font: { color: fontColor.value, weight: boldChk.checked ? '700' : 'normal' },
-      border: borderChk.checked ? { color: borderColor.value, style: 'solid' } : { style: 'none' }
+      border: border.read()
     };
     saveMapping();
   }
-  [fillInput, fillNone, fontColor, boldChk, borderChk, borderColor].forEach(el => el.addEventListener('change', commit));
+  [fillInput, fillNone, fontColor, boldChk].concat(border.inputs).forEach(el => el.addEventListener('change', commit));
 
   td.appendChild(fields);
   tr.appendChild(td);

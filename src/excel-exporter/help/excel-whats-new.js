@@ -11,6 +11,20 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'row-border-sides', date: '2026-10-03', title: 'A row\'s border, side by side',
+    summary: 'A row\'s own format sets its border on the top, bottom, left and right separately.',
+    what: [
+      'In the Tree View, 🎨 on a row used to have one Border box: all four sides or none. Now it has Top, Bottom, Left and Right, each on its own, and the border\'s colour.',
+    ],
+    why: 'Financial statements draw a line above a total, or a double check below it, not a box around every cell.',
+    how: [
+      'Open the Tree View and press 🎨 on a row.',
+      'Under Border, tick Top (or any other side) and pick the colour.',
+      'Press ⬇ Generate .xlsx: every cell of that row has the line on that side.',
+    ],
+    notes: ['A layout saved before keeps its borders: a row that had a border still has all four sides.'],
+    see: ['tree-view'] },
+
   { id: 'shorter-differences', date: '2026-10-03', title: 'A shorter list of differences from fmIDE',
     summary: 'The list of where the workbook will differ from fmIDE shows its first three lines; Show all opens the rest, × hides it.',
     what: [
