@@ -40,7 +40,11 @@ Workflow since step 3a: edit `src/` → `npm run build` → `npm test` (the file
 
 Found and agreed with the owner; each waits for its own session, branch and pull request.
 
-- **A system template loses its canvases' links to their canvas templates** (found 3 Oct 2026; the owner's choice: fix later). **Save System as Template** (`openModelAsTemplateData` in `src/fmide/js/11-templates-format-presets.js`) stores each canvas without `canvas.template`, while a plain system file keeps it (`buildSystemPayload`, `src/fmide/js/04-file-formats.js`). So a system added from the template (Add or replace) has unlinked canvases: ExcelExporter no longer sees them as modules, and their Excel layouts — the template's `attachments.excel` and the ones remembered in the browser — are not used. Adding a system already keeps a link the template holds (`performAddSystem`, `applySystemDataDirect`); only saving drops it. **The fix:** keep each canvas's `template` when saving a system template (no file-format change). **Tests:** a system with a linked canvas saved as a system template and added back by Add and by replace keeps its links, and ExcelExporter lays out the module from its layout; a templates file and a pack holding it still open and pass the pack checker. Also a What's new entry and a CHANGELOG line. System templates saved before the fix hold no links: saving each again with Save as new version picks them up. **Optional, the owner to decide:** when a system template goes into a library pack, offer to add the canvas templates its canvases come from, so their Excel layouts travel too.
+None at the moment.
+
+Fixed:
+
+- **A system template lost its canvases' links to their canvas templates** (found and fixed 3 Oct 2026). **Save System as Template** (`openModelAsTemplateData` in `src/fmide/js/11-templates-format-presets.js`) now keeps each canvas's `template`, as a plain system file does (`buildSystemPayload`), so a system added back from the template (Add or replace) has its canvases linked, and ExcelExporter lays them out as modules with their Excel layouts. No file-format change; system templates saved before hold no links until saved again with Save as new version. Tests: groups 15 and 38. **Still for the owner to decide:** when a system template goes into a library pack, offer to add the canvas templates its canvases come from, so their Excel layouts travel too.
 
 ## Phase 0 (hardening) — status
 

@@ -242,7 +242,7 @@ const HELP_TOPICS = [
       { p: '{cmd:openTemplates} lists your templates, with a search box: type part of a name, then press Enter to add it.' },
       { p: 'The list is a tree of groups. Click a group to open or close it; ▾ Expand all and ▸ Collapse all, under the search box, open or close every group at once. ✎ Edit info and 🗑 Delete sit beside the selected template\'s name; 🧹 Remove duplicates… and 🗑 Clear all templates, under the list.' },
       { p: 'To save one, use + Save Canvas as Template (the canvas you are on) or + Save System as Template (the whole model) in the same window. Give it a name, a group and a short description.' },
-      { p: 'A canvas template can be added to a new canvas or to the current one. A system template adds its canvases alongside yours, or replaces the model.' },
+      { p: 'A canvas template can be added to a new canvas or to the current one. A system template adds its canvases alongside yours, or replaces the model. Canvases that came from a canvas template stay linked to it in a system template, so when the system is added back they still offer that template\'s updates and ExcelExporter still lays them out as modules.' },
       { p: 'Templates are kept in fmIDE and travel inside your documents.' },
       { p: '{cmd:removeDuplicateTemplates} tidies up copies that built up over time.' },
       { p: 'A canvas template can carry its Excel layout: select it and choose 📎 Attach Excel layout…, then pick a file saved by ExcelExporter\'s Export Module Layouts. The layout then goes wherever the template goes — your documents, new versions and packs you share — and ExcelExporter uses it for that module\'s tab unless you have arranged the tab yourself. fmIDE only carries it; Remove takes it off.' },

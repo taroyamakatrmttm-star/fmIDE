@@ -228,6 +228,8 @@ Commands `exportPreferences` (download `fmIDE-preferences.json`) and `importPref
 - A macro records the update as `updateCanvasFromTemplate({ canvas: 'Sales', version: '2' })`.
 - Links from a file: a bad one is dropped; one whose version id isn't in the library is "unknown-version", and the update window says it can't check for changes of your own; a name with markup is shown as text and never runs.
 - `sys-newer-v4` now opens without asking; a version 3 system opens with no links.
+- A system template keeps its canvases' links (fixed 3 Oct 2026): Save System as Template from Author and Sales writes both canvases' `template` (Sales's family, v1); added back by replace, both are linked at v1 ("current"); added by add next to a canvas "Mine", Mine has no link and the two are linked, and after v2 the Sales canvas shows "newer" and the bar.
+- The same template through Export / Import Templates (into an emptied library) still builds linked canvases; a library pack holding it and Sales keeps the links and passes the pack checker with no errors.
 
 ### 16. Recipes (fmIDE)
 The library comes from `templates-v2.json` (a version 2 templates file, which also shows that such files still open): Income Statement v1 (Net Income 40, plug "to Net Income"); Balance Sheet v1 and v2 (v2: Retained Earnings fed by a socket "to Net Income", Cash balance fed by a socket "to Cash"); Cash Flow v1 (Cash 25, plug "to Cash").
@@ -580,6 +582,7 @@ Samples `tests/fixtures/module-layouts/doc-with-layouts.json` (model-b as a work
 - Renaming the tab laid out from the template stores it as your own ("Sales, mine"), with the template's "Top line" row.
 - model-b (a system file): "Sales (Gold)", the plain tag, no status line.
 - A hostile document: version 1's layout made for another family is ignored; version 2's hostile tab name becomes a valid sheet name; its markup appears only as text (twice in the sheet); nothing runs, no `<img>`.
+- From fmIDE (fixed 3 Oct 2026): doc-with-layouts imported as a workspace, saved with Save System as Template and replacing the model; the exported workspace's Sales canvas keeps its link (`vid-sales-module-0001`), and ExcelExporter lays it out as "Sales from v1", tagged "layout from the template".
 
 ### 39. Block instance layouts (`tests/39-block-instance-layouts.spec.js`; step 11, phase 11d)
 Samples `tests/fixtures/block-layouts/`: `block-a` (the Loan block — a canvas linked to template family `fam-loan-block-0001`, with Interest, Fee and the output Total cost — used twice on Main), `block-b` (other ids; the block with Arrangement added; used once), `block-v` and `block-v4` (the block used vertically, three periods and, with other ids, four); `tests/fixtures/formats/module-layouts-v1.json` (a version 1 file).

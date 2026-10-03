@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmIDE: system templates keep their canvases' links
+- **Save System as Template** (and ⤴ Save as new version of a system template) keeps each canvas's `template`, its link to the canvas template it came from, as Save System does. A system added back from the template (Add or replace) has its canvases linked again, so they offer their template's updates and ExcelExporter lays them out as modules (their attached and remembered Excel layouts). No file-format change; system templates saved before hold no links until saved again.
+
 ## fmIDE: stepping through a macro keeps its variables
 - **▶ Run selected step** keeps the variables the steps already run saved, until the Macro Builder closes or another macro is chosen (it started every step with none, so the second step of a macro using `$t1` stopped).
 - **Undo while recording** takes back exactly the steps recorded since the undone change (each undo point is numbered); an undone change that was never recorded — a node dragged back to where it was — no longer takes an unrelated step with it.

@@ -102,3 +102,29 @@ test('an attached layout is someone else\'s data: checked, wrong family ignored,
   expect(await page.evaluate(() => window.__pwned)).toBeUndefined();
   expect(await page.locator('#afterLoad img').count()).toBe(0);
 });
+
+// Found 3 Oct 2026: Save System as Template dropped each canvas's link to its canvas
+// template, so a system added back from it lost its modules' layouts. Now the link stays.
+test('a system saved as a template in fmIDE and added back keeps its module\'s template layout', async ({ page, context }, testInfo) => {
+  const F = require('./helpers/fmide');
+  const fmide = await context.newPage();
+  await F.openFmIDE(fmide);
+  await F.importViaCommand(fmide, 'importWorkspace', sample('doc-with-layouts'));
+  await F.acceptAll(fmide);
+  // Save System as Template, then replace the model with it.
+  await fmide.evaluate(() => fm.command('openTemplates'));
+  const picker = fmide.locator('.modal-box.template-box');
+  await picker.locator('button', { hasText: '+ Save System as Template' }).click();
+  const form = fmide.locator('.modal-box.template-form');
+  await form.locator('input.template-form-name').fill('Whole model');
+  await form.locator('button.primary', { hasText: 'Save Template' }).click();
+  await picker.locator('.modal-actions button', { hasText: /^Close$/ }).click();
+  await fmide.evaluate(() => { fm.clearAll(); fm.insertTemplate('Whole model', 'replace'); });
+  const { data } = await F.downloadJson(fmide, () => fmide.evaluate(() => fm.exportWorkspace()));
+  expect(data.system.canvases.map(c => c.template ? c.template.versionId : null)).toEqual([null, 'vid-sales-module-0001']);
+  const path = testInfo.outputPath('from-template.json');
+  fs.writeFileSync(path, JSON.stringify(data));
+  await loadPath(page, path, 'from-template.json');
+  expect(await tabNames(page)).toEqual(['Overview', 'Sales from v1']);
+  await expect(tag(page)).toHaveText('🧩 Sales · layout from the template');
+});
