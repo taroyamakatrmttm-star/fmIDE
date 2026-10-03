@@ -172,6 +172,8 @@ window.fmGraph = Object.freeze({
   unpinA: () => { unpinA(); },
   swapA: () => { if(!pinA) throw new Error('Nothing is pinned as A.'); return swapWithA(); },
   comparing: () => pinA ? pinA.label : null,
+  // G5c: the template tried from fmIDE's Browse Library, { name, pack }, or null.
+  trying: () => trying ? { name: trying.name, pack: trying.pack } : null,
   // movers(n): the rectangles the sliders change most (default 8), against the model's own numbers.
   movers: (n) => biggestMovers(currentResults(), Math.max(1, Math.min(200, Number(n) || MOVERS_SHOWN))).map(m => ({
     name: m.rect.name, canvas: m.rect.canvasName, period: model.periods[m.p],

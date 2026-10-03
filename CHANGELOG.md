@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Try a library template in fmGraph (step 15, phase G5c)
+- **📈 Try in fmGraph** in fmIDE's Browse Library, beside a canvas or system template that carries an fmGraph board: fmGraph shows the template with its board, in a try mode that keeps nothing and sends nothing back; nothing is added to your library or document.
+- The library's list (`/library/index.json`) marks such items `board: true`; its version is unchanged.
+
 ## fmGraph uses templates' boards (step 15, phase G5b)
 - **A model with no boards of its own starts with its templates' boards** (a canvas template's on each canvas made from it, in the version it came from; a system template's when it all fits). **Boards ▾ → Add boards from templates…** adds them any time.
 - **Boards ▾ → Attach to template…** (fmGraph opened from fmIDE) sends boards to fmIDE, which asks before attaching them — for a system template, which one.

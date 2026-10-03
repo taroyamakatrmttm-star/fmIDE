@@ -28,6 +28,7 @@ const FMGRAPH_HELP_TOPICS = [
       { p: 'The quickest way is from fmIDE: Open fmGraph (File tab, App group) opens fmGraph with the model you have open, without saving a file first. ↻ From fmIDE shows fmIDE\'s model again as it is now, after you changed it.' },
       { p: 'You can also open a file saved by fmIDE: a .fmide document (File → Save), or a system or workspace file. Use Open… at the top, or drop the file anywhere on the page.' },
       { p: 'Try the sample model on the first screen to see how it works.' },
+      { p: 'Trying a template from the library: on fmIDE\'s website, File → Browse Library… shows 📈 Try in fmGraph beside a template that carries a board. fmGraph then shows that template with its board, and a strip at the top says so. Everything works as usual, but nothing is kept in this browser or sent to fmIDE. Show fmIDE\'s model in the strip (or ↻ From fmIDE) goes back to the model open in fmIDE.' },
       { tip: 'A file from someone else is only shown, never run: names and numbers are read as plain text.' },
       { see: ['what-is-fmgraph', 'board-kept'] },
     ] },
@@ -128,6 +129,7 @@ const FMGRAPH_HELP_TOPICS = [
     body: [
       { p: 'Your boards — their bars, charts and sliders, how they are arranged and coloured — are remembered in this browser for each model, and come back when you open it again — also when the model has changed a little in fmIDE. Sliders always start on the model\'s own numbers. To move boards to another computer or person, export them (Boards ▾).' },
       { p: 'Opened from fmIDE, your boards are also kept in fmIDE\'s document: each change to them goes back to fmIDE, whose document then has unsaved changes, and saving it there keeps the boards with the model. A document that has boards shows them here instead of the ones this browser remembered — from fmIDE, or a .fmide file opened here.' },
+      { p: 'A template tried from the library is never remembered: its boards are gone when you leave it.' },
       { p: 'Nothing is sent anywhere: fmGraph works offline and keeps everything on this device.' },
       { see: ['open-model'] },
     ] },

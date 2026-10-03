@@ -304,8 +304,9 @@ const HELP_TOPICS = [
     summary: 'Find packs other people shared, on fmIDE\'s website.',
     body: [
       { p: 'On fmIDE\'s website, {cmd:browseLibrary} lists the community\'s packs, with a search box and filters. Preview and add… opens the usual preview before anything is added.' },
+      { p: 'A canvas or system template that carries an fmGraph board has 📈 Try in fmGraph: fmGraph opens the template with its board, so you can move its sliders before adding it. Nothing is added to your library or your document, and fmGraph keeps nothing; Show fmIDE\'s model there goes back to your own.' },
       { p: 'It needs a connection. fmIDE opened from a file on your computer never connects to anything: download packs from the website\'s /library page instead, and open them with {cmd:openLibraryPack}.' },
-      { see: ['library-packs'] },
+      { see: ['library-packs', 'fmgraph'] },
     ] },
 
   // ---------- Files and saving ----------

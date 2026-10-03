@@ -8,6 +8,18 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'try-from-library', date: '2026-10-03', title: 'Try a template from the library',
+    summary: 'fmIDE\'s Browse Library can show a shared template here with its board, before you add it.',
+    what: [
+      'A strip says which template and pack you are trying. Sliders, Trace, Pin as A and the boards all work.',
+      'Nothing is kept in this browser or sent to fmIDE. Show fmIDE\'s model goes back to your own.',
+    ],
+    why: 'So you can see how a shared template behaves before adding it to your library.',
+    how: [
+      'On fmIDE\'s website: File → Browse Library…, choose a pack, then 📈 Try in fmGraph beside a template.',
+    ],
+    see: ['open-model', 'board-file'] },
+
   { id: 'boards-from-templates', date: '2026-10-03', title: 'Boards from templates',
     summary: 'A model built from templates starts with their boards; attach boards to a template straight from fmGraph.',
     what: [

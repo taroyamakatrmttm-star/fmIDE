@@ -297,6 +297,9 @@ function indexJson(packs){
         e.description = it.raw.description || '';
         if(it.raw.note) e.note = it.raw.note;
         if(it.raw.origin) e.origin = it.raw.origin;
+        // A template carrying an fmGraph board (checked by the library checker): fmIDE's Browse
+        // Library offers Try in fmGraph for it (step 15 G5c).
+        if(it.type === 'template' && (it.kind === 'module' || it.kind === 'system') && it.raw.attachments && it.raw.attachments.graph) e.board = true;
         return e;
       })
     }))

@@ -765,6 +765,13 @@ fmIDE and fmGraph (step 15, phase G5b), with the canvas template "Sales" (versio
 - Attach to template… (from fmIDE): fmIDE asks about version 1 of "Sales"; Cancel: "Not attached: cancelled in fmIDE."; Attach: fmIDE's message and fmGraph's "Attached to version 1 of “Sales” in fmIDE.", the workspace holding it; the whole model with no system template: fmIDE says so, and so does fmGraph.
 - With systems "Plan A" and "Plan B": the whole model only; fmIDE's list, Plan B picked and attached (its Pay bar by canvas and name). fmGraph on its own: no Attach to template….
 
+### 55. Try in fmGraph (`tests/55-try-in-fmgraph.spec.js`; part of `npm run test:fmgraph`)
+fmIDE's Browse Library and fmGraph (step 15, phase G5c), on a site built with the sample library `tests/fixtures/library/try-library/`: one pack ("Boards to try" plus markup) holding the canvas template "Sales" (plus markup) and the system template "Plan", each with a board, and "Plain" without one. Every request goes to the site itself.
+- The list marks Sales and Plan `board: true`, Plain not; 📈 Try in fmGraph on those two only. Sales: a new fmGraph window shows its one canvas (Price, Volume, Revenue) with "Sales board…" (cut to 60 characters), the strip naming template and pack as text (no element made, nothing run); a slider moves Revenue; a bar added; nothing stored in the browser; Attach to template… hidden; fmIDE's templates, canvases, boards and title unchanged; Show fmIDE's model ends the try and shows fmIDE's model.
+- Plan, with fmGraph already open: the same window, its two canvases, "Plan board" (a chart of Revenue and Cost: 35 in both periods, 65 with Price at 20); what the browser kept unchanged; ↻ From fmIDE ends the try.
+- A pack changed after publishing (same size): fmIDE's mismatch message; fmGraph shows fmIDE's model, not trying.
+- A `fmIDE:try` message from another window: ignored.
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.

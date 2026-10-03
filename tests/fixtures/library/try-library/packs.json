@@ -1,0 +1,17 @@
+{
+  "kind": "fmIDE-library-packs",
+  "version": 1,
+  "packs": {
+    "pack-try-boards-01": {
+      "accountId": 1001,
+      "account": "ann-example",
+      "added": "2026-10-03",
+      "sha256": "cc6c31dbbf6bcfd1950171065510588635ae77207a10b836be61999c9f797167",
+      "versions": [
+        "vid-try-sales-00001",
+        "vid-try-plan-000001",
+        "vid-try-plain-00001"
+      ]
+    }
+  }
+}

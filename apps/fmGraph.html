@@ -217,6 +217,11 @@
   .gbar-btn[aria-pressed="true"]{ background:var(--reach); color:#1b2333; }
   .bar-chart rect[data-anim]{ transform-box:view-box; transform-origin:0 0; }
 
+  /* Try in fmGraph (G5c) */
+  .trial-bar{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:0 0 10px; padding:7px 12px; border:1px solid var(--accent, #3b82f6); border-radius:9px; background:#eff6ff; font-size:13px; }
+  .trial-text{ flex:1 1 auto; }
+  .trial-btn{ padding:3px 10px; }
+
   /* Export for a template (G5a) */
   .template-choices{ display:flex; flex-direction:column; gap:6px; margin:0 0 12px; }
   .template-choices label, .template-only{ display:flex; gap:8px; align-items:baseline; font-size:14px; }
@@ -344,6 +349,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   </section>
 
   <nav id="boardTabs" class="board-tabs hidden" role="tablist" aria-label="Boards"></nav>
+  <div id="trialBar" class="trial-bar hidden" role="status"></div>
   <div id="compareBar" class="compare-bar hidden" role="status"></div>
   <section id="board" class="board hidden">
     <div class="board-col">
@@ -2813,7 +2819,8 @@ function readModelData(raw){
 // Opens a file's text (from the disk, a drop or fmIDE). Resolves true when a model was loaded.
 // opts.boards: the document's own boards (an fmIDE-graph-board file, parsed or as text) —
 // fmIDE's (step 15 G3b), or a workspace's `graphBoards`; opts.fromFmide: the model came from
-// fmIDE's window, so changes to the boards go back to it (06-page.js).
+// fmIDE's window, so changes to the boards go back to it (06-page.js); opts.trial: a template
+// tried from fmIDE's Browse Library ({ name, pack }, G5c, 06e-trial.js): nothing kept.
 async function openModelText(text, name, opts){
   const big = fileTextProblem(text);
   if(big){ notify(big, 'err', 'load'); return false; }
@@ -2835,7 +2842,7 @@ async function openModelText(text, name, opts){
     const templates = o.templates !== undefined ? o.templates
       : r.kind === 'fmIDE-workspace' && Array.isArray(r.data.templates) ? r.data.templates.filter(t => t && t.attachments && t.attachments.graph)
         .map(t => ({ family: t.family, kind: t.kind, name: t.name, version: t.version, versionId: t.versionId, board: t.attachments.graph })) : [];
-    await loadModel(r.kind === 'fmIDE-workspace' ? r.data.system : r.data, name, { boards: docBoards, fromFmide: !!o.fromFmide, templates });
+    await loadModel(r.kind === 'fmIDE-workspace' ? r.data.system : r.data, name, { boards: docBoards, fromFmide: !!o.fromFmide, templates, trial: o.trial });
   }catch(e){
     notify(e && e.message ? e.message : 'That model could not be opened.', 'err', 'load');
     return false;
@@ -2895,10 +2902,12 @@ async function loadModel(system, name, opts){
     inputs: rects.filter(r => r.input), base, baseMs, signature: modelSignature(ir), reach: reachMap(ir) };
   model = m;
   linkedToFmide = !!(opts && opts.fromFmide);
+  trying = opts && opts.trial ? opts.trial : null; // G5c (06e-trial.js)
   clearResultCache();
   pinA = null; forgetGeometry(); renderCompareBar(); // a new model: no A, nothing to glide from (05e-compare.js)
   m.templateSources = cleanTemplateSources(opts && opts.templates); // its templates' boards (06d-template-sources.js)
   await loadBoardFor(m, opts && opts.boards);
+  renderTrialBar();
   showBoard();
 }
 
@@ -3246,7 +3255,7 @@ function saveBoardSoon(){
 }
 function saveBoardNow(){
   clearTimeout(saveTimer);
-  if(!model) return;
+  if(!model || trying) return; // a template tried from the library is never kept (G5c)
   const text = JSON.stringify(boardsData());
   Promise.all([store.put(BOARD_PREFIX + model.signature, text), store.put(LAST_BOARD_KEY, text)])
     .catch(() => notify('This browser could not keep the boards; they will be gone after a reload.', 'err', 'storage'));
@@ -3263,6 +3272,14 @@ function documentBoards(raw){
   }catch(e){ return null; }
 }
 async function loadBoardFor(m, docRaw){
+  // A template tried from the library (G5c): its own boards, nothing read from or kept in the browser.
+  if(trying){
+    const fromTemplate = (m.templateSources || []).flatMap(src => boardsFromTemplate(src).boards).slice(0, BOARDS_LIMIT);
+    boards = fromTemplate.length ? fromTemplate : [startingBoard()];
+    board = boards[0];
+    resetUndo();
+    return;
+  }
   let restored = docRaw ? documentBoards(docRaw) : null;
   if(restored){
     boards = restored.boards;
@@ -4859,6 +4876,7 @@ window.addEventListener('message', (ev) => {
     notify(text || (d.type === 'fmIDE:board-attached' ? 'Attached in fmIDE.' : 'Not attached.'), d.type === 'fmIDE:board-attached' ? 'ok' : 'info', 'boards');
     return;
   }
+  if(d.type === 'fmIDE:try' && typeof d.text === 'string'){ openTrial(d); return; }
   if(d.type !== 'fmIDE:model' || typeof d.text !== 'string') return;
   const name = typeof d.name === 'string' && d.name ? d.name.slice(0, 120) : 'fmIDE model';
   const docBoards = typeof d.boards === 'string' ? d.boards : null;
@@ -5331,6 +5349,47 @@ function attachToTemplate(target, onlyShown){
 
 $('btnAddFromTemplates').addEventListener('click', () => { closeMenus(); showAddFromTemplates(); });
 $('btnAttachTemplate').addEventListener('click', () => { closeMenus(); showTemplateExport('attach'); });
+// ============================================================
+// Try in fmGraph (G5c). fmIDE's Browse Library can show a pack's canvas or system template here,
+// with the board it carries, before anything is added: fmIDE sends 'fmIDE:try' — { name (the
+// template's), text (its model, as a system file's text), templateBoards (its board, as for
+// G5b), pack (the pack's title) }. The model is read like any file, and shown in try mode:
+// - the template's boards, placed by rectangle name (06d-template-sources.js), whatever fits;
+// - nothing read from or kept in this browser, nothing sent to fmIDE (not linked to its
+//   document), Attach to template… hidden; everything else works (sliders, Trace, Pin as A,
+//   changing the boards, Export for a template…);
+// - a strip says so, with Show fmIDE's model (↻ From fmIDE does the same).
+// ============================================================
+let trying = null; // { name, pack } while a template from the library is shown
+
+function openTrial(d){
+  const name = typeof d.name === 'string' && d.name.trim() ? d.name.trim().slice(0, 120) : 'A template';
+  const pack = typeof d.pack === 'string' && d.pack.trim() ? d.pack.trim().slice(0, 120) : 'the library';
+  let templates = [];
+  if(typeof d.templateBoards === 'string' && d.templateBoards.length <= 8 * 1024 * 1024){
+    try{ const t = JSON.parse(d.templateBoards); if(Array.isArray(t) && !fileDataProblem(t)) templates = t; }catch(e){ /* none */ }
+  }
+  return openModelText(d.text, name, { boards: null, fromFmide: false, templates, trial: { name, pack } })
+    .then(ok => { if(ok) notify('Trying “' + name + '” from the library. Nothing is kept or added to fmIDE.', 'ok', 'load'); return ok; });
+}
+
+function renderTrialBar(){
+  const bar = $('trialBar');
+  bar.textContent = '';
+  bar.classList.toggle('hidden', !trying || !model);
+  if(!trying || !model) return;
+  const text = make('span', 'trial-text');
+  text.appendChild(make('strong', null, 'Trying “' + trying.name + '”'));
+  text.appendChild(document.createTextNode(' from the library pack “' + trying.pack + '”. Nothing is kept: add it to your library in fmIDE to keep it.'));
+  bar.appendChild(text);
+  const b = make('button', 'trial-btn', 'Show fmIDE\'s model');
+  b.type = 'button';
+  b.title = 'Leave the template and show the model open in fmIDE';
+  b.addEventListener('click', () => {
+    if(!askFmideForModel()) notify('fmIDE\'s window is closed: open fmGraph from fmIDE again, or open a saved file.', 'info', 'load');
+  });
+  bar.appendChild(b);
+}
 // ============================================================
 // Help: the same panel as fmIDE and ExcelExporter (src/shared/help-panel.js), with fmGraph's
 // own topics and What's new (src/help/fmgraph-help.js, fmgraph-whats-new.js; CC BY 4.0).
@@ -5896,6 +5955,7 @@ const FMGRAPH_HELP_TOPICS = [
       { p: 'The quickest way is from fmIDE: Open fmGraph (File tab, App group) opens fmGraph with the model you have open, without saving a file first. ↻ From fmIDE shows fmIDE\'s model again as it is now, after you changed it.' },
       { p: 'You can also open a file saved by fmIDE: a .fmide document (File → Save), or a system or workspace file. Use Open… at the top, or drop the file anywhere on the page.' },
       { p: 'Try the sample model on the first screen to see how it works.' },
+      { p: 'Trying a template from the library: on fmIDE\'s website, File → Browse Library… shows 📈 Try in fmGraph beside a template that carries a board. fmGraph then shows that template with its board, and a strip at the top says so. Everything works as usual, but nothing is kept in this browser or sent to fmIDE. Show fmIDE\'s model in the strip (or ↻ From fmIDE) goes back to the model open in fmIDE.' },
       { tip: 'A file from someone else is only shown, never run: names and numbers are read as plain text.' },
       { see: ['what-is-fmgraph', 'board-kept'] },
     ] },
@@ -5996,6 +6056,7 @@ const FMGRAPH_HELP_TOPICS = [
     body: [
       { p: 'Your boards — their bars, charts and sliders, how they are arranged and coloured — are remembered in this browser for each model, and come back when you open it again — also when the model has changed a little in fmIDE. Sliders always start on the model\'s own numbers. To move boards to another computer or person, export them (Boards ▾).' },
       { p: 'Opened from fmIDE, your boards are also kept in fmIDE\'s document: each change to them goes back to fmIDE, whose document then has unsaved changes, and saving it there keeps the boards with the model. A document that has boards shows them here instead of the ones this browser remembered — from fmIDE, or a .fmide file opened here.' },
+      { p: 'A template tried from the library is never remembered: its boards are gone when you leave it.' },
       { p: 'Nothing is sent anywhere: fmGraph works offline and keeps everything on this device.' },
       { see: ['open-model'] },
     ] },
@@ -6011,6 +6072,18 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'try-from-library', date: '2026-10-03', title: 'Try a template from the library',
+    summary: 'fmIDE\'s Browse Library can show a shared template here with its board, before you add it.',
+    what: [
+      'A strip says which template and pack you are trying. Sliders, Trace, Pin as A and the boards all work.',
+      'Nothing is kept in this browser or sent to fmIDE. Show fmIDE\'s model goes back to your own.',
+    ],
+    why: 'So you can see how a shared template behaves before adding it to your library.',
+    how: [
+      'On fmIDE\'s website: File → Browse Library…, choose a pack, then 📈 Try in fmGraph beside a template.',
+    ],
+    see: ['open-model', 'board-file'] },
+
   { id: 'boards-from-templates', date: '2026-10-03', title: 'Boards from templates',
     summary: 'A model built from templates starts with their boards; attach boards to a template straight from fmGraph.',
     what: [
@@ -6334,6 +6407,8 @@ window.fmGraph = Object.freeze({
   unpinA: () => { unpinA(); },
   swapA: () => { if(!pinA) throw new Error('Nothing is pinned as A.'); return swapWithA(); },
   comparing: () => pinA ? pinA.label : null,
+  // G5c: the template tried from fmIDE's Browse Library, { name, pack }, or null.
+  trying: () => trying ? { name: trying.name, pack: trying.pack } : null,
   // movers(n): the rectangles the sliders change most (default 8), against the model's own numbers.
   movers: (n) => biggestMovers(currentResults(), Math.max(1, Math.min(200, Number(n) || MOVERS_SHOWN))).map(m => ({
     name: m.rect.name, canvas: m.rect.canvasName, period: model.periods[m.p],
