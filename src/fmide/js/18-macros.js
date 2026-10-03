@@ -40,6 +40,21 @@
   }
   function countSteps(steps){ let n = 0; walkSteps(steps, () => n++); return n; }
 
+  // What an action step keeps in its "Save result as" variable (insertTemplate: the canvases
+  // or nodes it made), and the letter a new variable for it starts with.
+  function savedResult(def, r){ return def && def.saved ? def.saved(r) : r; }
+  function resultVarLetter(def){ return def.returns === 'canvas' ? 'c' : def.returns === 'made' ? 't' : 'r'; }
+  // Whether an action makes something a later step may want: the Macro Builder names its
+  // variable by itself, as the recorder does.
+  function makesSomething(def){ return !!def && ['node', 'nodes', 'canvas', 'made'].includes(def.returns); }
+  // A note the recorder puts on a step whose reference may not hold when the macro runs.
+  const RECORDER_NOTE = '⚠ ';
+  function nextVarName(m, letter){
+    let maxN = 0;
+    walkSteps(m.steps, st => { const mm = /^[rct](\d+)$/.exec(st.assign || ''); if(mm) maxN = Math.max(maxN, +mm[1]); });
+    return letter + (maxN + 1);
+  }
+
   function fmtArg(v){
     if(Array.isArray(v)) return '[' + v.map(fmtArg).join(', ') + ']';
     if(v && typeof v === 'object') return JSON.stringify(v);
@@ -65,17 +80,30 @@
   const recorder = {
     active:false, steps:[], created:new Map(), createdCanvases:new Map(), counter:0,
     selRefs:false, initialSel:[], selCanvasId:null, origin:null, macroId:null, isNewMacro:false, histAtStart:0,
+    startNodeIds:new Set(), startCanvasIds:new Set(), notes:[],
 
     refOf(n){
       if(this.created.has(n.id)) return this.created.get(n.id);
       if(this.selRefs && n && this.initialSel.includes(n.id)) return `@sel[${this.initialSel.indexOf(n.id)}]`;
       const c = canvasOfNode(n);
-      const nm = refNameOf(n);
-      if(nm && isPlainRefName(nm) && c){
-        try{ if(resolveOneNode(nm, c) === n) return nm; }catch(err){ /* ambiguous: fall back to id */ }
+      const plain = macroRefOfNode(n);
+      if(!plain.startsWith('#')) return plain;
+      const madeHere = !this.startNodeIds.has(n.id);
+      // A node a template step made on a canvas this recording made (an operator, or a name
+      // used twice): its place on that canvas, which the macro makes again in the same order.
+      if(madeHere && c && this.createdCanvases.has(c.id) && !this.startCanvasIds.has(c.id) && !(n.type === 'alias' && n.auto)){
+        const k = indexedNodes(nodesIn(c)).indexOf(n);
+        if(k >= 0){
+          this.note(`@all[${k}] is node ${k + 1} on the canvas a template made (it has no name of its own) — if the template changes, check this step.`);
+          return `@all[${k}]`;
+        }
       }
+      if(n.type === 'alias' && n.auto) this.note(`#${n.id} is an automatic plug alias: it gets a new id whenever plugs are worked out, so this step may not find it.`);
+      else if(madeHere) this.note(`#${n.id} was made while recording, but no step saved it, so the macro won't find the copy it makes. Give it a name, or refer to it through a step's "Save result as".`);
+      else this.note(`#${n.id} is a node of this model with no name of its own to use — run in another model, this step won't find it.`);
       return '#' + n.id;
     },
+    note(text){ if(!this.notes.includes(text)) this.notes.push(text); },
     refsOf(list){
       const ids = list.map(n => n.id);
       if(this.selRefs && ids.length && ids.length === this.initialSel.length && ids.every(id => this.initialSel.includes(id))) return '@sel';
@@ -83,12 +111,12 @@
     },
     canvasRef(c){
       if(this.createdCanvases.has(c.id)) return this.createdCanvases.get(c.id);
-      const same = canvases.filter(x => x.name.trim().toLowerCase() === c.name.trim().toLowerCase());
-      return same.length === 1 && isPlainRefName(c.name) ? c.name : '#' + c.id;
+      return macroRefOfCanvas(c);
     },
     convertArgs(name, args){
       const def = ACTIONS[name];
       const out = {};
+      this.notes = [];
       def.params.forEach(p => {
         if(!(p.name in args)) return;
         let v = args[p.name];
@@ -109,14 +137,31 @@
     push(name, args, result){
       const def = ACTIONS[name];
       const step = { id: newStepId(), kind:'action', action: name, args };
-      if(def.returns && def.returns !== 'value' && def.returns !== 'edge' && result != null){
-        const v = (def.returns === 'canvas' ? 'c' : 'r') + (++this.counter);
+      const kept = savedResult(def, result);
+      if(def.returns && def.returns !== 'value' && def.returns !== 'edge' && kept != null){
+        const v = resultVarLetter(def) + (++this.counter);
         step.assign = v;
-        if(Array.isArray(result)) result.forEach((id, i) => this.created.set(id, `$${v}[${i}]`));
-        else if(def.returns === 'canvas') this.createdCanvases.set(result, '$' + v);
-        else this.created.set(result, '$' + v);
+        const isCanvas = id => canvases.some(c => c.id === id);
+        const keep = (id, ref) => {
+          if(id == null) return;
+          const map = (def.returns === 'canvas' || (def.returns === 'made' && isCanvas(id))) ? this.createdCanvases : this.created;
+          if(!map.has(id)) map.set(id, ref);
+        };
+        if(Array.isArray(kept)) kept.forEach((id, i) => keep(id, `$${v}[${i}]`));
+        else keep(kept, '$' + v);
       }
-      if(!this.coalesce(step)) this.steps.push(step);
+      const notes = this.notes;
+      this.notes = [];
+      if(name === 'paste' && !this.steps.some(s => s.kind === 'action' && (s.action === 'copy' || s.action === 'cut')))
+        notes.push('Pastes whatever was copied before the macro runs — the copy wasn\'t recorded. Add a Copy step before it to paste the same thing every time.');
+      const noteText = notes.length ? RECORDER_NOTE + notes.join(' ') : '';
+      if(this.coalesce(step)){
+        const last = this.steps[this.steps.length - 1];
+        if(noteText && last && !(last.comment || '').includes(noteText)) last.comment = last.comment ? last.comment + ' ' + noteText : noteText;
+      } else {
+        if(noteText) step.comment = noteText;
+        this.steps.push(step);
+      }
       refreshCommandStates();
     },
     // record an interaction that was already applied directly (e.g. a mouse drag)
@@ -187,8 +232,11 @@
     recorder.created = new Map();
     recorder.createdCanvases = new Map();
     let maxN = 0;
-    walkSteps(m.steps, st => { const mm = /^[rc](\d+)$/.exec(st.assign || ''); if(mm) maxN = Math.max(maxN, +mm[1]); });
+    walkSteps(m.steps, st => { const mm = /^[rct](\d+)$/.exec(st.assign || ''); if(mm) maxN = Math.max(maxN, +mm[1]); });
     recorder.counter = maxN;
+    recorder.startNodeIds = new Set(canvases.flatMap(c => nodesIn(c).map(n => n.id)));
+    recorder.startCanvasIds = new Set(canvases.map(c => c.id));
+    recorder.notes = [];
     recorder.initialSel = Array.from(selectedNodeIds);
     recorder.selRefs = !!opts.selRefs && recorder.initialSel.length > 0;
     recorder.selCanvasId = activeCanvasId;
@@ -215,8 +263,10 @@
     m.steps = m.steps.concat(steps);
     syncMacroCommands();
     saveWorkspace();
+    const noted = steps.filter(st => (st.comment || '').includes(RECORDER_NOTE)).length;
     showMacroBuilder(m.id, steps[0].id);
-    mbSetStatus(`Recorded ${steps.length} step${steps.length === 1 ? '' : 's'}.`, 'ok');
+    if(noted) mbSetStatus(`Recorded ${steps.length} step${steps.length === 1 ? '' : 's'}. ${noted === 1 ? 'One step has' : noted + ' steps have'} a ⚠ note: something it refers to may not be there when the macro runs.`, 'warn');
+    else mbSetStatus(`Recorded ${steps.length} step${steps.length === 1 ? '' : 's'}.`, 'ok');
   }
 
   function toggleRecordingQuick(){
@@ -239,7 +289,7 @@
         switch(st.kind){
           case 'action': {
             const r = callAction(st.action, Object.assign({}, st.args || {}));
-            if(st.assign) runCtx.vars[st.assign] = r;
+            if(st.assign) runCtx.vars[st.assign] = savedResult(ACTIONS[st.action], r);
             break;
           }
           case 'group': execSteps(st.children); break;

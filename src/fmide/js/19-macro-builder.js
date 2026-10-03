@@ -330,6 +330,7 @@
         d2.params.forEach(p => { if(st.args && p.name in st.args) keep[p.name] = st.args[p.name]; });
         st.action = sel.value; st.args = keep;
         if(!d2.returns) delete st.assign;
+        else if(makesSomething(d2) && !st.assign) st.assign = nextVarName(m, resultVarLetter(d2));
         changed(); renderMBProps();
       });
       const def = ACTIONS[st.action];
@@ -345,7 +346,10 @@
       });
       props.appendChild(pf.el);
       if(def.returns && def.returns !== 'edge'){
-        const asg = row('Save result as $', textIn(st.assign, def.returns === 'nodes' ? 'e.g. copies' : 'e.g. rev'));
+        const asg = row('Save result as $', textIn(st.assign, def.returns === 'nodes' ? 'e.g. copies' : def.returns === 'made' ? 'e.g. t1' : 'e.g. rev'));
+        asg.title = def.returns === 'made'
+          ? 'Keeps what this step made, for later steps: the canvases (use $t1[0], $t1[1]… — a recipe: one per part, in order) or, added to this canvas, the nodes.'
+          : 'Keeps what this step made, so later steps can refer to it by this name (like $r1), whatever else is in the model.';
         asg.addEventListener('input', () => { const v = asg.value.trim().replace(/^\$/, ''); if(v && /^[A-Za-z_]\w*$/.test(v)) st.assign = v; else delete st.assign; changed(); });
       }
     } else if(st.kind === 'group'){
@@ -397,13 +401,21 @@
     const add = (code, text) => { const line = el('div'); line.appendChild(el('code', '', code)); line.appendChild(document.createTextNode(' ' + text)); h.appendChild(line); };
     h.appendChild(el('div', '', 'Referring to nodes:'));
     add('Revenue', 'a rectangle by name (aliases/blocks by the name they show)');
+    add('#n12', 'a node by id — select it and use Copy Reference to get it');
     add('@sel  @sel[0]', 'the selection when the macro started');
     add('@cur  @all', 'the live selection · every node on the canvas');
-    add('$r1  $r1[0]', 'a node saved by an earlier step');
-    add('#n12', 'a node by id');
-    add('Canvas::Name', 'a rectangle on another canvas (alias sources)');
-    add('Name@3  Name@latest', 'a template: version 3, or the latest (the name alone is the latest too)');
+    add('@all[3]', 'the 4th node on the canvas (counted from 0)');
+    add('$r1  $r1[0]', 'a node an earlier step saved (Save result as)');
+    add('Canvas::Name', 'a rectangle on another canvas ($t1[0]::Name: on the canvas a step made)');
+    h.appendChild(el('div', '', 'Referring to canvases:'));
+    add('Loans  #c3', 'by name, or by id (hover over its tab to see it)');
+    add('$c1  $t1[0]', 'a canvas an earlier step made (New Canvas, Insert Template)');
+    h.appendChild(el('div', '', 'Templates: Name (the latest), Name@3 (version 3), Name@latest.'));
     h.appendChild(el('div', '', 'Numbers accept expressions: 100 + $i*80, $periods, round($x/2).'));
+    const more = el('button', 'mbtn macro-ref-more', '❓ More about references');
+    more.type = 'button';
+    more.addEventListener('click', () => openHelp('macro-references'));
+    h.appendChild(more);
     return h;
   }
 
@@ -411,6 +423,7 @@
   function mbInsert(step){
     const m = mbMacro(); if(!m) return;
     step.id = newStepId();
+    if(step.kind === 'action' && !step.assign && makesSomething(ACTIONS[step.action])) step.assign = nextVarName(m, resultVarLetter(ACTIONS[step.action]));
     const f = mb.selStepId ? findStep(m.steps, mb.selStepId) : null;
     if(!f) m.steps.push(step);
     else if(CONTAINER_KINDS.has(f.step.kind) && !mb.collapsed.has(f.step.id)){ f.step.children = f.step.children || []; f.step.children.push(step); }
@@ -450,6 +463,7 @@
     if(!f) return;
     const copy = normalizeSteps([cloneData(f.step)])[0];
     delete copy.assign;
+    if(copy.kind === 'action' && makesSomething(ACTIONS[copy.action])) copy.assign = nextVarName(m, resultVarLetter(ACTIONS[copy.action]));
     f.arr.splice(f.index + 1, 0, copy);
     mb.selStepId = copy.id;
     renderMBTree(); renderMBProps(); renderMBList(); mbChanged();

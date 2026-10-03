@@ -60,7 +60,7 @@
         cloneData(HELP_RIBBON_GROUP),
       ]},
       { id:'macros', label:'Macros', keytip:'X', groups:[
-        { label:'Macros', items:[ { cmd:'openMacros', size:'large' }, { cmd:'toggleRecord', size:'large' }, { cmd:'runLastMacro' } ] },
+        { label:'Macros', items:[ { cmd:'openMacros', size:'large' }, { cmd:'toggleRecord', size:'large' }, { cmd:'runLastMacro' }, { cmd:'copyReference' } ] },
         { label:'My Macros', id:'myMacros', items:[] },
       ]},
     ]

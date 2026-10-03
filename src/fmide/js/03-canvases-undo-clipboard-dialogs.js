@@ -155,7 +155,8 @@
     closeX.title = 'Delete canvas';
     tab.appendChild(nameSpan);
     tab.appendChild(closeX);
-    tab.title = 'Click to open · double-click to rename · drag to reorder';
+    // Its id too: what a macro step can use when two canvases share a name.
+    tab.title = `Click to open · double-click to rename · drag to reorder · id #${id}`;
 
     tab.addEventListener('click', (ev) => {
       if(ev.target === closeX || tabDragJustEnded || tab.dataset.renaming) return;

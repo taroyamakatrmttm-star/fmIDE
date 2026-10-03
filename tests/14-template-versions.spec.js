@@ -155,7 +155,8 @@ test('two families with the same name: refer to them by family id', async ({ pag
   expect(await messageText(page)).toBe('Imported 1 template.');
   await F.dismissMessage(page);
   expect(await familyNames(page)).toEqual(['Revenue plan', 'Revenue plan']);
-  expect(await insertedRevenue(page, 'Revenue plan@1')).toBe('Error: More than one template family is named "Revenue plan" — refer to it by its family ID.');
+  // The message names each family's id, so the person can pick one.
+  expect(await insertedRevenue(page, 'Revenue plan@1')).toMatch(/^Error: More than one template family is named "Revenue plan" — refer to it by its family ID instead of the name — .*someone-elses-family \(latest v1\).* — like ".+@latest", or rename one in Templates\.$/);
   expect(await insertedRevenue(page, 'someone-elses-family@latest')).toBe(99);
 });
 

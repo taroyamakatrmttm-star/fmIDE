@@ -69,6 +69,7 @@
     item(inSelection ? 'Remove from selection' : 'Add to selection', () => toggleNodeSelection(id));
     item('Edit…', () => { const m = getNode(id); if(m) editNode(m); });
     if(n.type === 'value') item('Properties…', () => { const m = getNode(id); if(m) showPropertiesEditor(m); });
+    item(several ? 'Copy references' : 'Copy reference', () => copyReferenceInteractive(targets().map(x => x.id)));
     item('Help', () => openHelp(helpTopicForNode(getNode(id) || n)));
     item(several ? 'Delete selection' : 'Delete', () => guarded(() => fm.deleteNodes(refs()))).classList.add('danger');
 

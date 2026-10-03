@@ -922,7 +922,7 @@
     return recipeBuildLeaves(parts, own).map(({ part, st }) => {
       if(!st.template) return null;
       const onCanvas = canvases.find(c => c.template && c.template.family === part.family);
-      const hit = onCanvas ? { canvas: onCanvas.name, version: onCanvas.template.version }
+      const hit = onCanvas ? { canvas: onCanvas.name, id: onCanvas.id, version: onCanvas.template.version }
         : seen.has(part.family) ? { canvas: seen.get(part.family), inRecipe: true } : null;
       if(!seen.has(part.family)) seen.set(part.family, st.template.name);
       return hit;
@@ -935,21 +935,28 @@
     const skip = (opts && opts.skip) || new Set();
     const made = [], warnings = recipeNestedNotes(t.data.parts, t.family), skipped = [];
     const here = recipePartsAlreadyHere(t.data.parts, t.family);
+    // `parts`: one entry per canvas the recipe builds, in order — the canvas built, or the one
+    // already here that a skipped part stands for, else null — so a macro's $t1[2] is always
+    // the third part, whatever was skipped.
+    const parts = [], partOfFamily = new Map();
     recipeBuildLeaves(t.data.parts, t.family).forEach(({ part, st }, i) => {
       if(skip.has(i)){
         const name = (st.template && st.template.name) || part.name || 'A part';
         skipped.push(here[i] ? `Skipped ${name} — already here as canvas “${here[i].canvas}”.` : `Skipped ${name}.`);
+        parts.push(here[i] ? (here[i].id || partOfFamily.get(part.family) || null) : null);
         return;
       }
-      if(!st.template){ warnings.push(`Skipped ${st.label}.`); return; }
+      if(!st.template){ warnings.push(`Skipped ${st.label}.`); parts.push(null); return; }
       if(st.state === 'differs') warnings.push(`${st.template.name} v${st.template.version} in your library isn't the one this recipe was made with — built with yours.`);
       applyModuleDataToNewCanvas(cloneData(st.template.data));
       const c = canvases.find(x => x.id === activeCanvasId);
       setCanvasTemplateLink(c, st.template);
       made.push(c.id);
+      parts.push(c.id);
+      if(!partOfFamily.has(part.family)) partOfFamily.set(part.family, c.id);
     });
     if(!made.length && !skipped.length) fail(`Nothing to build: none of the parts of "${t.name}" is in your library.`);
-    if(!made.length) return { canvases: [], warnings, skipped, unfedSockets: [], multiFedSockets: [] };
+    if(!made.length) return { canvases: [], parts, warnings, skipped, unfedSockets: [], multiFedSockets: [] };
     syncAutoConnections();
     clearComputed();
     evaluateAll();
@@ -960,7 +967,7 @@
     // is on a canvas it added) — e.g. a part whose canvas was already in the model.
     const newNames = new Set(made.map(id => canvases.find(c => c.id === id).name));
     const multi = multiFedSocketsIn(all).filter(m => newNames.has(m.canvas) || m.sources.some(s => newNames.has(s.split('::')[0])));
-    return { canvases: made, warnings, skipped, unfedSockets: unfed, multiFedSockets: multi };
+    return { canvases: made, parts, warnings, skipped, unfedSockets: unfed, multiFedSockets: multi };
   }
   function recipeBuildSummary(t, r){
     const lines = [r.canvases.length ? `Built ${t.name}: ${r.canvases.length} canvas${r.canvases.length === 1 ? '' : 'es'}.`
@@ -1754,7 +1761,12 @@
       if(t.kind === 'module'){ guarded(() => fm.insertTemplate(t.id, 'here')); return; }
       if(t.kind === 'recipe'){
         const skip = recipeSkipFor === t ? [...recipeSkip].map(i => i + 1) : [];
-        guarded(() => { const r = fm.insertTemplate(Object.assign({ template: t.id, mode: 'add' }, skip.length ? { skip } : {})); if(r) showMessage(recipeBuildSummary(t, r)); });
+        // Skipping exactly the parts already here is recorded as that rule (skipExisting), so
+        // a macro skips what is already here when it runs, not what was when it was recorded.
+        const hereNow = recipePartsAlreadyHere(t.data.parts, t.family).map((h, i) => h ? i + 1 : 0).filter(Boolean);
+        const sameAsHere = skip.length > 0 && skip.length === hereNow.length && skip.every(k => hereNow.includes(k));
+        const how = sameAsHere ? { skipExisting: true } : skip.length ? { skip } : {};
+        guarded(() => { const r = fm.insertTemplate(Object.assign({ template: t.id, mode: 'add' }, how)); if(r) showMessage(recipeBuildSummary(t, r)); });
         return;
       }
       const collisions = (t.data.canvases || [])

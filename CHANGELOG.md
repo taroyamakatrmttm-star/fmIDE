@@ -2,6 +2,13 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmIDE: macros that keep working, and help to write them
+- **Insert Template saves what it made** for later steps (`$t1`): the canvases it adds — a system template's in its order (one merged into yours: yours), a recipe's one per part, in order (a part skipped as already here: that canvas) — or the nodes it puts on this canvas. `fm.insertTemplate` returns them (a recipe's result gains `parts`).
+- **The recorder copes with a different model at run time**: a later step refers to the canvas a template made through its variable, not its name; a template's node with no name of its own by its place on that canvas (`@all[3]`, new); skipping the recipe parts already here is recorded as `skipExisting`; a reference that may not hold (a node of this model by id, a node made but not saved, an automatic plug alias, a Paste whose Copy wasn't recorded) gets a ⚠ note, and the Macro Builder says so when recording stops.
+- **Ids you can see**: a canvas tab's tooltip ends with its id; **Copy Reference** (Macros tab; on a tablet, a node's menu) copies how a step refers to the selected nodes or the canvas; the step boxes offer same-named canvases and the selected nodes by id. A customised ribbon gets Copy Reference once (`ui.copyReferenceAdded`).
+- The Macro Builder names the result of a step that makes something; the messages that stop a macro list the ids to choose from and say what to do; its reference card covers canvases.
+- **Help**: a Macros group of six topics (building a macro, variables, references, macros that work every time, when a macro stops).
+
 ## fmIDE: recipes within a recipe
 - A recipe's part may be **another recipe**, built in its place (as deep as eight). The recipe window offers recipes as parts (never one that leads back to it); the Templates window lists the canvases a recipe inside builds, with Skip boxes; `fm.saveRecipe` takes recipes; `fm.insertTemplate`'s `skip` counts the canvases built. Packs carry recipes inside with their parts; the pack checker checks loops and depth. No file version changed.
 

@@ -8,9 +8,11 @@
       nodes.forEach(n => { const nm = refNameOf(n); if(nm && isPlainRefName(nm)) seen[nm] = (seen[nm] || 0) + 1; });
       Object.keys(seen).filter(k => seen[k] === 1).sort().forEach(k => out.push(k));
       out.push('@sel', '@sel[0]', '@sel[1]', '@cur', '@all');
-      if(p.type === 'node' && selectedNodeIds.size === 1) out.push('#' + Array.from(selectedNodeIds)[0]);
+      // The selected nodes by id, named, which holds even when a name is used twice.
+      Array.from(selectedNodeIds).map(getNode).filter(Boolean).forEach(n => out.push({ value: '#' + n.id, label: (refNameOf(n) || describeNode(n)) + ' (selected)' }));
     } else if(p.type === 'canvas'){
-      canvases.forEach(c => out.push(c.name));
+      // A name used by two canvases finds neither: those are offered by id, named.
+      canvases.forEach(c => { const ref = macroRefOfCanvas(c); out.push(ref.startsWith('#') ? { value: ref, label: c.name } : ref); });
     } else if(p.type === 'template'){
       templateFamilies().forEach(t => {
         out.push(t.name);
@@ -66,7 +68,7 @@
         if(sugg.length){
           const dl = el('datalist');
           dl.id = 'pformdl' + (++pformSeq);
-          sugg.forEach(s => { const o = el('option'); o.value = s; dl.appendChild(o); });
+          sugg.forEach(s => { const o = el('option'); if(typeof s === 'string') o.value = s; else { o.value = s.value; o.label = s.label; } dl.appendChild(o); });
           row.appendChild(dl);
           input.setAttribute('list', dl.id);
           input.setAttribute('autocomplete', 'off');

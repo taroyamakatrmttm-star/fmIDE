@@ -167,6 +167,7 @@
     { id:'toggleRecord',label:'Record Macro',          icon:'⏺', category:'Macros', defaultShortcut:null,
       dynLabel:() => recorder.active ? 'Stop Recording' : 'Record Macro', action:() => toggleRecordingQuick() },
     { id:'runLastMacro',label:'Run Last Macro',        icon:'⏵', category:'Macros', defaultShortcut:null, enabled:() => !!lastRunMacroId && MACROS.some(m => m.id === lastRunMacroId), action:() => runMacroInteractive(lastRunMacroId) },
+    { id:'copyReference',label:'Copy Reference',       icon:'📋', category:'Macros', defaultShortcut:null, action:() => copyReferenceInteractive() },
   ];
   // Symbol operators show the symbol as the icon and a word as the label ("+ Add");
   // function operators show ƒ plus their name ("ƒ max"), so nothing is printed twice.

@@ -78,6 +78,7 @@
   //   #n12             a node by id           @sel / @sel[0]   the selection (in a macro: as it was when the macro started)
   //   @cur / @cur[0]   the live selection     @all             every node on the canvas
   //   $r1 / $r1[0]     a macro variable (e.g. the id a Create step returned)
+  //   @all[3]          the 4th node on the canvas, counted without the automatic plug aliases
   //   Canvas::Name     a rectangle on another canvas (alias sources)
   //   A, B, C          several references (for "nodes" arguments)
   function activeCanvas(){ return canvases.find(c => c.id === activeCanvasId); }
@@ -106,6 +107,35 @@
     return nm ? `"${nm}"` : `#${n.id}`;
   }
 
+  // How a macro step refers to a node or canvas: its name when that finds exactly it, else
+  // its id (#n12, #c3). The recorder and Copy Reference both use it.
+  function macroRefOfNode(n){
+    const c = canvasOfNode(n);
+    const nm = refNameOf(n);
+    if(nm && isPlainRefName(nm) && c){
+      try{ if(resolveOneNode(nm, c) === n) return nm; }catch(err){ /* not unique: its id */ }
+    }
+    return '#' + n.id;
+  }
+  function macroRefOfCanvas(c){
+    const same = canvases.filter(x => x.name.trim().toLowerCase() === c.name.trim().toLowerCase());
+    return same.length === 1 && isPlainRefName(c.name) ? c.name : '#' + c.id;
+  }
+  // Copy Reference: the selected nodes' references (else the current canvas's), to paste into
+  // a macro step.
+  function copyReferenceInteractive(ids){
+    const list = (ids || Array.from(selectedNodeIds)).map(id => getNode(id)).filter(Boolean);
+    const text = list.length ? list.map(macroRefOfNode).join(', ') : macroRefOfCanvas(activeCanvas());
+    const what = list.length ? (list.length === 1 ? 'this node' : `these ${list.length} nodes`) : 'this canvas';
+    const done = () => toast(`Copied ${text} — how a macro step refers to ${what}.`, 3500);
+    const shown = () => showMessage(`How a macro step refers to ${what}:\n\n${text}`);
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, shown);
+      else shown();
+    }catch(err){ shown(); }
+    return text;
+  }
+
   function lookupVar(token){
     const m = /^\$([A-Za-z_]\w*)(?:\[(\d+)\])?$/.exec(String(token).trim());
     if(!m) fail(`"${token}" is not a valid variable reference.`);
@@ -131,11 +161,19 @@
     const pool = nodesIn(c);
     const vals = pool.filter(n => n.type === 'value' && (parseNode(n).name || '').trim().toLowerCase() === lc);
     if(vals.length === 1) return vals[0];
-    if(vals.length > 1) fail(`${vals.length} rectangles on "${c.name}" are named "${name}" — rename one, or refer to it by id (#id).`);
+    if(vals.length > 1) fail(`${vals.length} rectangles on "${c.name}" are named "${name}" (${idList(vals)}). Rename one, or write its id instead of the name, like ${'#' + vals[0].id} — select it and use Copy Reference to get it. If an earlier step made it, use that step's variable (like $r1).`);
     const others = pool.filter(n => (n.type === 'alias' || n.type === 'blockInstance') && refNameOf(n).toLowerCase() === lc);
     if(others.length === 1) return others[0];
-    if(others.length > 1) fail(`${others.length} nodes on "${c.name}" are called "${name}" — refer to one by id (#id).`);
+    if(others.length > 1) fail(`${others.length} nodes on "${c.name}" are called "${name}" (${idList(others)}). Write the id of the one you mean instead of the name, like ${'#' + others[0].id} — select it and use Copy Reference to get it.`);
     fail(`There is no rectangle named "${name}" on canvas "${c.name}".`);
+  }
+
+  function idList(list){ return list.map(x => '#' + x.id).join(', '); }
+  // The nodes "@all" counts with an index: the automatic plug aliases are left out, since they
+  // are made again (with new ids, at the end) whenever plugs and sockets are worked out.
+  function indexedNodes(pool){ return pool.filter(n => !(n.type === 'alias' && n.auto)); }
+  function noSelectionText(){
+    return 'Nothing was selected when the macro started, and this step works on the selection (@sel). Select the nodes it should work on, then run the macro again.';
   }
 
   function selectionIds(kind){
@@ -165,16 +203,30 @@
       const list = ids.map(id => pool.find(n => n.id === id)).filter(Boolean);
       if(m[2] === undefined) return list;
       const one = list[+m[2]];
-      if(!one) fail(`The selection has no item [${m[2]}] (it has ${list.length}).`);
+      if(!one){
+        if(m[1] === 'sel' && runCtx && !list.length) fail(noSelectionText());
+        fail(`The selection has no item [${m[2]}] (it has ${list.length}).`);
+      }
       return [one];
     }
     if(s === '@all') return pool.slice();
+    m = /^@all\[(\d+)\]$/.exec(s);
+    if(m){
+      const list = indexedNodes(pool);
+      const one = list[+m[1]];
+      if(!one) fail(`Canvas "${c.name}" has no node @all[${m[1]}] (it has ${list.length}, counted from 0).`);
+      return [one];
+    }
     if(s.startsWith('$')){
       const v = lookupVar(s);
       const list = Array.isArray(v) ? v : [v];
       return list.map(id => {
         const n = pool.find(x => x.id === id);
-        if(!n) fail(`${s} does not refer to a node on canvas "${c.name}".`);
+        if(!n){
+          if(id === null) fail(`${s} is empty: the step that saved it made nothing there (a part it skipped).`);
+          if(canvases.some(x => x.id === id)) fail(`${s} holds a canvas, not a node. For a node on it, write ${/\[\d+\]$/.test(s) || list.length === 1 ? s : s + '[0]'}::Name (Name: the rectangle's name).`);
+          fail(`${s} does not refer to a node on canvas "${c.name}".`);
+        }
         return n;
       });
     }
@@ -193,7 +245,10 @@
   function resolveOneNode(ref, c){
     const list = resolveNodes(ref, c);
     if(list.length === 1) return list[0];
-    if(list.length === 0) fail(ref === '' || ref == null ? 'No node was given.' : `Nothing matched "${ref}".`);
+    if(list.length === 0){
+      if(runCtx && !runCtx.startSelection.length && /^@sel(\[\d+\])?$/.test(String(ref).trim())) fail(noSelectionText());
+      fail(ref === '' || ref == null ? 'No node was given.' : `Nothing matched "${ref}".`);
+    }
     fail(`Expected one node, but "${Array.isArray(ref) ? ref.join(', ') : ref}" matched ${list.length}.`);
   }
 
@@ -201,14 +256,27 @@
     if(ref && typeof ref === 'object' && Array.isArray(ref.nodes)) return ref;
     if(ref === undefined || ref === null || ref === '' || ref === '@current') return activeCanvas();
     let s = String(ref).trim();
-    if(s.startsWith('$')) s = String(lookupVar(s));
+    if(s.startsWith('$')){
+      const token = s;
+      let v = lookupVar(token);
+      if(Array.isArray(v)){
+        if(v.length !== 1) fail(`${token} holds ${v.length} canvases or nodes — say which one, like ${token}[0] (counted from 0).`);
+        v = v[0];
+      }
+      if(v === null || v === undefined) fail(`${token} is empty: the step that saved it made no canvas there (a part it skipped).`);
+      const hit = canvases.find(c => c.id === v);
+      if(hit) return hit;
+      if(canvases.some(c => nodesIn(c).some(n => n.id === v))) fail(`${token} holds a node, not a canvas.`);
+      s = String(v).trim();               // a variable holding a canvas's name (or #id)
+    }
     const id = s.startsWith('#') ? s.slice(1) : s;
     const byId = canvases.find(c => c.id === id);
     if(byId) return byId;
+    if(s.startsWith('#')) fail(`There is no canvas ${s} (ids belong to one document: a macro made in another one names other canvases).`);
     const lc = s.toLowerCase();
     const byName = canvases.filter(c => c.name.trim().toLowerCase() === lc);
     if(byName.length === 1) return byName[0];
-    if(byName.length > 1) fail(`More than one canvas is named "${s}" — refer to it by id (#id).`);
+    if(byName.length > 1) fail(`More than one canvas is named "${s}" (${idList(byName)}). Rename one (double-click its tab), or write the id of the one you mean instead of the name, like #${byName[0].id} — hover over a canvas tab to see its id. If an earlier step made the canvas, use that step's variable instead (like $t1[0] or $c1).`);
     fail(`There is no canvas called "${s}".`);
   }
 
@@ -222,7 +290,7 @@
     const family = (text) => {
       if(TEMPLATES.some(t => t.family === text)) return latestOfFamily(text);
       const named = familiesNamed(text);
-      if(named.length > 1) fail(`More than one template family is named "${text}" — refer to it by its family ID.`);
+      if(named.length > 1) fail(`More than one template family is named "${text}" — refer to it by its family ID instead of the name — ${named.map(t => `${t.family} (latest v${t.version}${t.origin && t.origin.author ? ', by ' + t.origin.author : ''})`).join(', ')} — like "${named[0].family}@latest", or rename one in Templates.`);
       return named[0] || null;
     };
     const m = /^(.*?)\s*@\s*(latest|\d+)$/i.exec(s);
@@ -255,7 +323,7 @@
     if(byId) return byId;
     const byName = MACROS.filter(m => m.name.trim().toLowerCase() === s.toLowerCase());
     if(byName.length === 1) return byName[0];
-    if(byName.length > 1) fail(`More than one macro is named "${s}".`);
+    if(byName.length > 1) fail(`More than one macro is named "${s}" — rename one in the Macro Builder.`);
     fail(`There is no macro called "${s}".`);
   }
 
