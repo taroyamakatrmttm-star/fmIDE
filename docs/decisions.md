@@ -46,6 +46,41 @@ Fixed:
 
 - **A system template lost its canvases' links to their canvas templates** (found and fixed 3 Oct 2026). **Save System as Template** (`openModelAsTemplateData` in `src/fmide/js/11-templates-format-presets.js`) now keeps each canvas's `template`, as a plain system file does (`buildSystemPayload`), so a system added back from the template (Add or replace) has its canvases linked, and ExcelExporter lays them out as modules with their Excel layouts. No file-format change; system templates saved before hold no links until saved again with Save as new version. Tests: groups 15 and 38. **Still for the owner to decide:** when a system template goes into a library pack, offer to add the canvas templates its canvases come from, so their Excel layouts travel too.
 
+## Before sharing the project: your name out of the public places (deferred)
+
+Agreed with the owner on 4 October 2026, and **deferred until before the project is shared with anyone** (nobody has it yet). Its own session, branch and pull requests.
+
+**Why:** the owner's real name shows in public places:
+- the GitHub username `taroyamakatrmttm-star`: every repository address, the library's upload link and records;
+- the copyright holder "Taro Yamaka": the licence notices, and the footer of every `/help` page on the live site;
+- the email `taro.yamaka.trmttm@gmail.com`: the author of every commit.
+
+**The owner's choices:**
+- **Rename the GitHub account** (not an organization).
+- **Change the copyright name** to one the owner will give: a pen name or a company. It is also the name CC BY 4.0 credits, so it belongs with the lawyer review of the licence texts.
+- Not yet chosen: the new username, the copyright name.
+
+**Steps, in this order:**
+1. **The owner** chooses the new username (check `github.com/<name>` shows a 404) and the copyright name.
+2. **A session** prepares the fmIDE pull request on a branch, not merged yet:
+   - **The library's address:** `.gitmodules`, `LIBRARY_UPLOAD_URL` in `src/fmide/js/11e-library-packs.js`, `LIBRARY_REPOSITORY` in `tools/build-library.js`, and the address written out in the help topic `share-library-pack` (`src/help/fmide-help.js`).
+   - **The copyright name** (`git grep -i "taro yamaka"` lists them, 23 files today): `NOTICE`, `LICENSING.md`, `README.md`, the licence comment in each app's `index.html`, the help files' headers in `src/help/` and `src/excel-exporter/help/`, `src/excel-exporter/LICENSE`, and the generated notices in `tools/build-help.js` (the `/help` footer) and `tools/video-scripts.js`.
+   - **Tests and docs:** tests 12 (`NOTICE.txt`), 22 (the upload link) and 25 (the "report an item" links); `CLAUDE.md`; `docs/step8-community-library.md`. The sample libraries in `tests/fixtures/library/` name the account only as test data, and can take a made-up one.
+   - Then `npm run build` and the whole of `npm test`.
+3. **The owner** renames the account: GitHub → Settings → Account → Change username. GitHub redirects the old addresses, and git commands, **only until someone registers the old name**, so steps 4 and 5 follow straight away.
+4. **Merge the fmIDE pull request** once it is green; the live site follows.
+5. **A library pull request** (it needs a session with push access to `fmide-library`):
+   - `checker.json`: `fmide.repository`, and the maintainer's `account`;
+   - `.github/CODEOWNERS`;
+   - the `account` fields in `authors.json`, `families.json` and `packs.json`;
+   - the links in `README.md` and `.github/pull_request_template.md`.
+
+   The checks match accounts by their numeric id (333327860), so ownership survives the rename. A maintainer's pull request that only changes records gets warnings, not errors.
+6. **The email:**
+   - GitHub → Settings → Emails → **Keep my email addresses private** and **Block command line pushes that expose my email**; commit with the `@users.noreply.github.com` address from then on.
+   - Past commits keep the old email: rewriting history would break the library pointer fmIDE pins and `checker.json`'s fmIDE commit, so it is not planned.
+7. **Afterwards:** reconnect GitHub for Claude if sessions lose access, and start sessions on the renamed repositories.
+
 ## Phase 0 (hardening) — status
 
 - ✅ Text from files is escaped (safe to share files)
