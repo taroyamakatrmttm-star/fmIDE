@@ -8,6 +8,14 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'share-board-library', date: '2026-10-04', title: 'Sharing a board with everyone',
+    summary: 'A Help topic on how a board reaches the community library, on its template.',
+    what: ['Help has a new topic, "Sharing a board with everyone": attach the board to its template, then save and share the pack from fmIDE, whose Help takes you through every step, with no GitHub experience needed.'],
+    why: 'A board is shared on its template, so the way there goes through fmIDE.',
+    how: ['Open Help and search for "share".'],
+    notes: [],
+    see: ['share-library'] },
+
   { id: 'tutorials', date: '2026-10-03', title: 'Tutorials',
     summary: 'Four short guided tours, on a practice copy of the sample model.',
     what: [

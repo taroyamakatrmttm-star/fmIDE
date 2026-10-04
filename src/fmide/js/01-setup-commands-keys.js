@@ -133,6 +133,7 @@
     { id:'browseLibrary', label:'Browse Library…', icon:'📚', category:'File', defaultShortcut:null, action:() => showLibraryBrowser() },
     { id:'openLibraryPack', label:'Open Library Pack…', icon:'📦', category:'File', defaultShortcut:null, action:() => pickLibraryPackFile() },
     { id:'saveLibraryPack', label:'Save as Library Pack…', icon:'📦', category:'File', defaultShortcut:null, action:() => showSaveLibraryPack() },
+    { id:'shareLibraryPack', label:'Share in the Community Library…', icon:'🌐', category:'File', defaultShortcut:null, action:() => showShareLibraryPack() },
     { id:'insertFunction', label:'Insert Function…',    icon:'ƒ', category:'Insert', defaultShortcut:null, action:() => showFunctionPicker(null) },
     { id:'updateFunction', label:'Update Function…',    icon:'⬆', category:'Insert', defaultShortcut:null, action:() => updateFunctionCommand() },
     { id:'removeDuplicateTemplates', label:'Remove Duplicate Templates…', icon:'🧹', category:'File', defaultShortcut:null, enabled:() => templateFamilies().length > 1, action:() => showRemoveDuplicatesDialog() },

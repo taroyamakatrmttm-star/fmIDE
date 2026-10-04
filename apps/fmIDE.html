@@ -240,6 +240,13 @@
 
   /* A window's "?" (top-right corner) */
   .modal-box.has-window-help{ position:relative; }
+  /* Share in the Community Library… (11e-library-packs.js) */
+  .modal-box.library-share-box{ width:520px; max-width:calc(100vw - 24px); }
+  .modal-box.library-share-box h3{ margin:0 0 8px; }
+  .library-share-steps{ margin:6px 0 10px; padding-left:1.4em; }
+  .library-share-steps li{ margin:5px 0; }
+  .modal-box p.library-share-saved b{ overflow-wrap:anywhere; }
+  .modal-box p.library-share-note{ font-size:12px; color:#6b7280; }
   .window-help{
     position:absolute; top:8px; right:8px; width:24px; height:24px; border-radius:50%; border:1px solid #c7d2fe;
     background:#eef2ff; color:#3730a3; font-weight:700; font-size:13px; line-height:1; cursor:pointer; padding:0; z-index:2;
@@ -1486,6 +1493,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     { id:'browseLibrary', label:'Browse Library…', icon:'📚', category:'File', defaultShortcut:null, action:() => showLibraryBrowser() },
     { id:'openLibraryPack', label:'Open Library Pack…', icon:'📦', category:'File', defaultShortcut:null, action:() => pickLibraryPackFile() },
     { id:'saveLibraryPack', label:'Save as Library Pack…', icon:'📦', category:'File', defaultShortcut:null, action:() => showSaveLibraryPack() },
+    { id:'shareLibraryPack', label:'Share in the Community Library…', icon:'🌐', category:'File', defaultShortcut:null, action:() => showShareLibraryPack() },
     { id:'insertFunction', label:'Insert Function…',    icon:'ƒ', category:'Insert', defaultShortcut:null, action:() => showFunctionPicker(null) },
     { id:'updateFunction', label:'Update Function…',    icon:'⬆', category:'Insert', defaultShortcut:null, action:() => updateFunctionCommand() },
     { id:'removeDuplicateTemplates', label:'Remove Duplicate Templates…', icon:'🧹', category:'File', defaultShortcut:null, enabled:() => templateFamilies().length > 1, action:() => showRemoveDuplicatesDialog() },
@@ -1973,8 +1981,60 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       summary: 'Share templates, recipes and functions with other people as one file.',
       body: [
         { p: '{cmd:saveLibraryPack} puts the templates, recipes and functions you pick into one file, with a title and your name. Everything in a pack is shared under the CC BY 4.0 licence, so share only what is yours.' },
+        { p: 'The pack is saved in your Downloads folder, named after its id (a long code ending in .fmide-pack.json). Keep that name. Send the file to a colleague by email or a shared folder, or share it with everyone in the community library: {cmd:shareLibraryPack}, step by step in "Share your pack in the community library".' },
         { p: '{cmd:openLibraryPack} shows a pack before anything is added: who made it, and for each item whether it is new or already in your library. Untick what you don\'t want. Nothing of yours is replaced.' },
-        { see: ['browse-library', 'templates', 'functions'] },
+        { see: ['share-library-pack', 'browse-library', 'templates', 'functions'] },
+      ] },
+    { id: 'share-library-pack', group: 'sharing', title: 'Share your pack in the community library',
+      keywords: 'share publish upload submit community library github account sign up pull request fork propose changes terms review',
+      summary: 'Put your templates in the community library, so anyone can add them from Browse Library. Every step, no GitHub experience needed.',
+      body: [
+        { p: 'The community library lives on GitHub, a free website where people share files. You don\'t need to know anything about it: follow these steps. The first time takes about fifteen minutes, mostly making an account. fmIDE never sends anything itself: you upload your pack file in your web browser.' },
+        { p: 'You need: your pack file, an internet connection, and an email address for a free GitHub account.' },
+        { p: 'Step 1 — Save your pack' },
+        { steps: [
+          'Choose {cmd:saveLibraryPack}.',
+          'Give it a title, your name as the author (use the same name every time you share), a short description and a few tags.',
+          'Tick the templates, recipes and functions to share. Share only what is yours: everything in a pack is shared under the CC BY 4.0 licence, so anyone may use and change it, with credit to you.',
+          'Press Save Pack. The file goes to your Downloads folder. Its name is a long code ending in .fmide-pack.json. Don\'t rename it: the library finds packs by that name.',
+          'A window opens with the next steps. Keep it open, or come back to it any time with {cmd:shareLibraryPack}.',
+        ] },
+        { p: 'Step 2 — Make a free GitHub account (the first time only)' },
+        { steps: [
+          'Go to github.com in your web browser and choose Sign up.',
+          'Enter your email address, a password and a user name, and follow the steps on the screen. GitHub emails you a code to check your address.',
+          'Already have an account? Just sign in.',
+        ] },
+        { p: 'Step 3 — Upload your pack' },
+        { steps: [
+          'In fmIDE, choose {cmd:shareLibraryPack} and press Open the upload page. GitHub opens in a new tab. (Or type this address into your browser: https://github.com/taroyamakatrmttm-star/fmide-library/upload/main/packs)',
+          'Sign in if GitHub asks.',
+          'If GitHub says you need your own copy of the library to make changes (a "fork"), press the green Fork this repository button. It is free, and you never need to look at it again. You may need to open the upload page again afterwards.',
+          'Drag your pack file from your Downloads folder onto the page. Or press choose your files and pick it.',
+          'Wait until the file\'s name appears under the box. Leave the other boxes as they are.',
+          'Press the green Propose changes button. (If you see Commit changes instead, choose "Create a new branch for this commit", then press Propose changes.)',
+        ] },
+        { p: 'Step 4 — Send it for review' },
+        { steps: [
+          'GitHub shows a page called "Comparing changes". Press the green Create pull request button. A "pull request" is GitHub\'s name for "please add my file".',
+          'A form opens. Under "What this pack holds", you may write a sentence about what your templates are for. Don\'t change anything else.',
+          'Press Create pull request again, at the bottom of the form.',
+          'On the page that opens, find "Submission terms" and read them (the link opens them). They say the items are yours to share and that you share them under CC BY 4.0.',
+          'Tick the box beside "I have read the submission terms". It is ticked as soon as you click it; nothing else to press.',
+        ] },
+        { p: 'Step 5 — The automatic check and the review' },
+        { steps: [
+          'Within a few minutes, a comment called "Library check" appears on your pull request.',
+          'The first time, it usually says FAILED ❌ and lists "Records to add". That is expected: the library doesn\'t know your pack yet, and the library\'s maintainer adds those records for you. You don\'t need to do anything.',
+          'If it says "The submission terms are not ticked", tick the box from Step 4. The check runs again by itself.',
+          'If it lists another problem, write a comment on your pull request asking for help (the box at the bottom of the page, then Comment). Or save the pack again in fmIDE and upload the new file the same way.',
+          'The maintainer reviews every pack by hand. GitHub emails you when your pack is accepted, or if there is a question.',
+        ] },
+        { p: 'Step 6 — See it in the library' },
+        { p: 'Once accepted, your pack appears on fmIDE\'s website, in {cmd:browseLibrary} and on the /library pages, usually within a few days. People who add your templates see you as their author.' },
+        { tip: 'To share an improved version later: in {cmd:openTemplates}, save the new version (⤴ Save as new version), then save a new pack and upload it the same way. A pack is never changed once it is in the library. Only the account that first shared a template or function can add new versions of it, so nobody else can publish a "new version" of yours.' },
+        { tip: 'An fmGraph board shares with its template: attach it to the template first (in fmGraph, Boards ▾ → Attach to template…), then save and share the pack here.' },
+        { see: ['library-packs', 'browse-library', 'template-versions'] },
       ] },
     { id: 'browse-library', group: 'sharing', title: 'Browsing the library',
       keywords: 'browse library community catalogue download online',
@@ -1983,7 +2043,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         { p: 'On fmIDE\'s website, {cmd:browseLibrary} lists the community\'s packs, with a search box and filters. Preview and add… opens the usual preview before anything is added.' },
         { p: 'A canvas or system template that carries an fmGraph board has 📈 Try in fmGraph: fmGraph opens the template with its board, so you can move its sliders before adding it. Nothing is added to your library or your document, and fmGraph keeps nothing; Show fmIDE\'s model there goes back to your own.' },
         { p: 'It needs a connection. fmIDE opened from a file on your computer never connects to anything: download packs from the website\'s /library page instead, and open them with {cmd:openLibraryPack}.' },
-        { see: ['library-packs', 'fmgraph'] },
+        { see: ['library-packs', 'share-library-pack', 'fmgraph'] },
       ] },
 
     // ---------- Files and saving ----------
@@ -2253,6 +2313,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     importFunctions: 'Adds the functions in a functions file to your library.',
     browseLibrary: 'Lists the packs people shared on fmIDE\'s website (needs a connection).',
     openLibraryPack: 'Previews a library pack file and adds the items you choose.',
+    shareLibraryPack: 'Shows how to share a pack with everyone in the community library, and opens the library\'s upload page on GitHub.',
     saveLibraryPack: 'Saves templates, recipes and functions you pick as a pack to share.',
     insertFunction: 'Adds one of your functions to the canvas as a box.',
     updateFunction: 'Moves function boxes on an older version of their function to the latest one.',
@@ -2334,6 +2395,21 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // entry: ids, dates in order, commands and topics that exist.
   // **A change people will notice adds its entry here in the same pull request.**
   const WHATS_NEW = [
+
+    { id: 'share-in-library', date: '2026-10-04', title: 'Share your pack with everyone, step by step',
+      summary: 'A new Share in the Community Library… window and a step-by-step guide, for people who have never used GitHub.',
+      what: [
+        'After {cmd:saveLibraryPack}, a window shows where the file went and the next steps, with Open the upload page, which opens the community library\'s upload page on GitHub in your browser. {cmd:shareLibraryPack} (File tab, Library group) opens the same window any time.',
+        'A new Help topic, "Share your pack in the community library", goes through every step: making a free GitHub account, uploading the file, sending it for review, ticking the submission terms, what the automatic check says, and when your pack appears in Browse Library.',
+        'A pack is now saved under the name the library needs: its id, a long code ending in .fmide-pack.json. There is nothing to rename before sharing it.',
+      ],
+      why: 'Sharing in the library meant knowing GitHub, and renaming the file by hand. Now anyone can follow the steps.',
+      how: [
+        'Choose {cmd:saveLibraryPack}, tick what to share and press Save Pack.',
+        'In the window that opens, press Open the upload page, and follow the steps (❓ Step-by-step guide has every detail).',
+      ],
+      notes: ['fmIDE never sends anything itself: you upload the file in your web browser.', 'A pack saved before this has a name made from its title. Save it again, or rename it to its id, before sharing it in the library.'],
+      see: ['share-library-pack', 'library-packs'] },
 
     { id: 'remove-old-template-versions', date: '2026-10-03', title: 'Remove a template\'s old versions',
       summary: 'Keep only the latest version of a template, or of every template, in one step.',
@@ -15352,10 +15428,82 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     return { kind: 'fmIDE-library-pack', version: FILE_FORMATS['fmIDE-library-pack'].current, pack: read.info,
       templates: c.templates.map(t => cloneData(templateRecord(t, false))), functions: cloneData(c.functions) };
   }
-  // A file name from the pack's title: "Three Statements" → "Three-Statements.fmide-pack.json".
-  function libraryPackFileName(title){
-    const base = String(title).replace(/[^A-Za-z0-9 _-]+/g, '').trim().replace(/\s+/g, '-').slice(0, 60);
-    return (base || 'library-pack') + '.fmide-pack.json';
+  // The file is named after the pack's id ("<id>.fmide-pack.json"): the community library
+  // takes a pack only under that name (packs/<pack id>.fmide-pack.json), so nobody has to
+  // rename it before sharing. The id is checked by cleanLibraryPackInfo (letters, digits, dashes).
+  function libraryPackFileName(pack){
+    return (pack && isTemplateUid(pack.id) ? pack.id : 'library-pack') + '.fmide-pack.json';
+  }
+
+  // ---------- sharing a pack in the community library ----------
+  // The library is a public GitHub repository; a pack is shared by uploading its file there,
+  // in the person's own web browser (help topic share-library-pack). fmIDE only opens the
+  // upload page: it never sends anything itself (decision 6).
+  const LIBRARY_UPLOAD_URL = 'https://github.com/taroyamakatrmttm-star/fmide-library/upload/main/packs';
+  function openLibraryUploadPage(){
+    window.open(LIBRARY_UPLOAD_URL, '_blank', 'noopener,noreferrer');
+  }
+  // The window "Share in the Community Library…": the steps in short, the upload page and the
+  // full guide. `savedName`: the file just saved by Save as Library Pack…, if any.
+  function showShareLibraryPack(savedName){
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const box = document.createElement('div');
+    box.className = 'modal-box library-share-box';
+    const h = document.createElement('h3');
+    h.textContent = savedName ? 'Your pack is saved' : 'Share a pack in the community library';
+    box.appendChild(h);
+    if(savedName){
+      const saved = document.createElement('p');
+      saved.className = 'library-share-saved';
+      saved.append('It is in your Downloads folder as ');
+      const b = document.createElement('b');
+      b.textContent = savedName;
+      saved.append(b, '. Keep that name: the library finds packs by it. To share it with everyone, in the community library:');
+      box.appendChild(saved);
+    } else {
+      const intro = document.createElement('p');
+      intro.textContent = 'The community library is on GitHub, a free website for sharing files. You upload your pack file there yourself, in your web browser:';
+      box.appendChild(intro);
+    }
+    const steps = document.createElement('ol');
+    steps.className = 'library-share-steps';
+    [
+      ...(savedName ? [] : ['Save your pack with Save as Library Pack… (File → Library).']),
+      'Press Open the upload page. Sign in to GitHub, or make a free account.',
+      'Drag your pack file onto the page, then press the green Propose changes button.',
+      'Press Create pull request, and Create pull request again.',
+      'Tick the box "I have read the submission terms".',
+      'That\'s all: the library\'s maintainer reviews your pack and adds it. GitHub emails you when it is in.',
+    ].forEach(t => { const li = document.createElement('li'); li.textContent = t; steps.appendChild(li); });
+    box.appendChild(steps);
+    const note = document.createElement('p');
+    note.className = 'library-share-note';
+    note.textContent = 'First time, or stuck? Every step, with what to do if something looks different, is in the guide.';
+    box.appendChild(note);
+    const actions = document.createElement('div');
+    actions.className = 'modal-actions';
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = 'Close';
+    const guideBtn = document.createElement('button');
+    guideBtn.className = 'library-share-guide';
+    guideBtn.textContent = '❓ Step-by-step guide';
+    const uploadBtn = document.createElement('button');
+    uploadBtn.className = 'primary library-share-upload';
+    uploadBtn.textContent = 'Open the upload page ↗';
+    uploadBtn.title = LIBRARY_UPLOAD_URL;
+    actions.append(closeBtn, guideBtn, uploadBtn);
+    box.appendChild(actions);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    addWindowHelp(box, 'share-library-pack');
+    const close = () => { overlay.remove(); document.removeEventListener('keydown', onKey, true); };
+    function onKey(ev){ if(ev.key === 'Escape'){ ev.preventDefault(); ev.stopPropagation(); close(); } }
+    document.addEventListener('keydown', onKey, true);
+    closeBtn.addEventListener('click', close);
+    guideBtn.addEventListener('click', () => { close(); openHelp('share-library-pack'); });
+    uploadBtn.addEventListener('click', () => openLibraryUploadPage());
+    uploadBtn.focus();
   }
 
   // ---------- reading a pack ----------
@@ -15550,7 +15698,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       const ref = (x) => x.family + '@' + x.version;
       const out = guarded(() => fm.saveLibraryPack({ title: title.value, author: author.value, description: desc.value, tags: packTags(tags.value),
         templates: picked.filter(x => TEMPLATES.includes(x)).map(ref), functions: picked.filter(x => FUNCTIONS.includes(x)).map(ref) }));
-      if(out) close();
+      if(out){ close(); showShareLibraryPack(libraryPackFileName(out.pack)); }
     });
     title.focus();
   }
@@ -17558,7 +17706,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         templates, functions);
       libraryAuthor = payload.pack.author;
       saveWorkspaceSoon();
-      if(a.download) downloadJSON(payload, libraryPackFileName(payload.pack.title));
+      if(a.download) downloadJSON(payload, libraryPackFileName(payload.pack));
       return payload;
     } });
 
@@ -18191,7 +18339,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         { label:'Workspace', items:[ { cmd:'exportWorkspace' }, { cmd:'importWorkspace' } ] },
         { label:'Preferences', items:[ { cmd:'exportPreferences' }, { cmd:'importPreferences' } ] },
         { label:'App', items:[ { cmd:'openExcelExporter', size:'large' }, { cmd:'openFmGraph', size:'large' }, { cmd:'installApp' } ] },
-        { label:'Library', items:[ { cmd:'openTemplates', size:'large' }, { cmd:'openFunctions', size:'large' }, { cmd:'openFormats', size:'large' }, { cmd:'browseLibrary' }, { cmd:'openLibraryPack' }, { cmd:'saveLibraryPack' } ] },
+        { label:'Library', items:[ { cmd:'openTemplates', size:'large' }, { cmd:'openFunctions', size:'large' }, { cmd:'openFormats', size:'large' }, { cmd:'browseLibrary' }, { cmd:'openLibraryPack' }, { cmd:'saveLibraryPack' }, { cmd:'shareLibraryPack' } ] },
       ]},
       { id:'home', label:'Home', keytip:'H', groups:[
         { label:'Clipboard', items:[ { cmd:'paste', size:'large' }, { cmd:'cut' }, { cmd:'copy' } ] },
@@ -21353,6 +21501,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       operatorsE2bAdded: true, // E2b: choose in the same group
       libraryPacksAdded: true, // 8a: Open Library Pack… and Save as Library Pack… in the File tab's Library group
       libraryBrowseAdded: true, // 8d: Browse Library… in the same group
+      libraryShareAdded: true, // Share in the Community Library… after Save as Library Pack…
       helpAdded: true, // step 10: the Help group at the end of the View tab
       whatsNewAdded: true, // H5b: What's New beside Help
       zoomGroupAdded: true, // 13a: the View tab's Zoom group
@@ -21447,6 +21596,16 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     const at = g.items.findIndex(it => it && it.cmd === 'openLibraryPack');
     g.items.splice(at < 0 ? g.items.length : at, 0, { cmd: 'browseLibrary' });
   }
+  // One-time update of a customised ribbon: Share in the Community Library… right after Save
+  // as Library Pack… (none: left alone; already there: left alone).
+  function addLibraryShareCommandToRibbon(){
+    const groups = [];
+    ribbonState.config.tabs.forEach(t => (t && Array.isArray(t.groups) ? t.groups : []).forEach(g => { if(g && Array.isArray(g.items)) groups.push(g); }));
+    if(groups.some(g => g.items.some(it => it && it.cmd === 'shareLibraryPack'))) return;
+    const g = groups.find(x => x.items.some(it => it && it.cmd === 'saveLibraryPack'));
+    if(!g) return;
+    g.items.splice(g.items.findIndex(it => it && it.cmd === 'saveLibraryPack') + 1, 0, { cmd: 'shareLibraryPack' });
+  }
   // One-time update (step 15, G1) of a customised ribbon: Open fmGraph right after Open
   // ExcelExporter (none: left alone; already there: left alone).
   function addFmGraphCommandToRibbon(){
@@ -21538,6 +21697,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       if(ui.operatorsE2bAdded !== true) addE2OperatorsToRibbon(E2B_FUNCTION_OPS);
       if(ui.libraryPacksAdded !== true) addLibraryPackCommandsToRibbon();
       if(ui.libraryBrowseAdded !== true) addLibraryBrowseCommandToRibbon();
+      if(ui.libraryShareAdded !== true) addLibraryShareCommandToRibbon();
       if(ui.helpAdded !== true) addHelpGroupToRibbon();
       if(ui.whatsNewAdded !== true) addWhatsNewToRibbon();
       if(ui.zoomGroupAdded !== true) addZoomGroupToRibbon();

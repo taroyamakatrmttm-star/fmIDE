@@ -376,7 +376,7 @@ test.describe('the ribbon', () => {
     await W.openSite(page, site.origin);
     const cfg = await page.evaluate(() => __fmIDE.getRibbonConfig());
     const lib = cfg.tabs.find(t => t.id === 'file').groups.find(g => g.label === 'Library').items.map(i => i.cmd);
-    expect(lib).toEqual(['openTemplates', 'openFunctions', 'openFormats', 'browseLibrary', 'openLibraryPack', 'saveLibraryPack']);
+    expect(lib).toEqual(['openTemplates', 'openFunctions', 'openFormats', 'browseLibrary', 'openLibraryPack', 'saveLibraryPack', 'shareLibraryPack']); // Share… since 4 Oct 2026
     expect(await page.evaluate(() => fm.commands().filter(c => c.id === 'browseLibrary'))).toEqual([
       { id: 'browseLibrary', label: 'Browse Library…', category: 'File', shortcut: null }]);
   });

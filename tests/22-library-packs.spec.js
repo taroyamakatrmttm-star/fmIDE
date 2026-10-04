@@ -60,9 +60,11 @@ test.describe('saving a pack', () => {
     expect(pack.templates.map(t => `${t.name}@${t.version}:${t.kind}`)).toEqual(['Statements@1:recipe', 'Income Statement@1:module', 'Balance Sheet@1:module']);
     // Profit brings the Margin version it calls (v1), not the latest (v2).
     expect(pack.functions.map(f => `${f.family}@${f.version}`)).toEqual(['family-profit@1', 'family-margin@1']);
-    // The file name comes from the title; the window remembers the author.
+    // The file is named after the pack's id, the name the community library requires (it was
+    // the title until 4 October 2026).
     const { name, data } = await F.downloadJson(page, () => page.evaluate((info) => fm.saveLibraryPack(Object.assign({}, info, { functions: ['Margin'] })), PACK_INFO));
-    expect(name).toBe('Three-statements-starter.fmide-pack.json');
+    expect(data.pack.id).toMatch(/^[A-Za-z0-9-]{8,64}$/);
+    expect(name).toBe(data.pack.id + '.fmide-pack.json');
     expect(data.functions.map(f => f.version)).toEqual([2]);
   });
 
@@ -92,10 +94,16 @@ test.describe('saving a pack', () => {
     await box.locator('input.pack-author').fill('Bo Author');
     await box.locator('input.pack-tags').fill('a, b, a');
     await box.locator('label.library-pack-pick', { hasText: /^ Margin/ }).locator('input').check();
-    const { data } = await F.downloadJson(page, () => box.locator('button.primary', { hasText: 'Save Pack' }).click());
+    const { name, data } = await F.downloadJson(page, () => box.locator('button.primary', { hasText: 'Save Pack' }).click());
     await expect(box).toHaveCount(0);
     expect(data.pack).toMatchObject({ title: 'My pack', author: 'Bo Author', tags: ['a', 'b'] });
     expect(data.functions.map(f => f.family)).toEqual(['family-margin']);
+    // Saving opens the sharing window, naming the file saved (4 October 2026).
+    const share = page.locator('.modal-box.library-share-box');
+    await expect(share.locator('h3')).toHaveText('Your pack is saved');
+    await expect(share.locator('.library-share-saved b')).toHaveText(name);
+    await share.locator('.modal-actions button', { hasText: /^Close$/ }).click();
+    await expect(share).toHaveCount(0);
     await page.evaluate(() => fm.command('saveLibraryPack'));
     await expect(box.locator('input.pack-author')).toHaveValue('Bo Author');
     // Nothing ticked: it says so and stays open.
@@ -286,10 +294,11 @@ test.describe('the ribbon', () => {
   test('Open Library Pack… and Save as Library Pack… in the File tab\'s Library group, no shortcuts', async ({ page }) => {
     const cfg = await page.evaluate(() => __fmIDE.getRibbonConfig());
     const lib = cfg.tabs.find(t => t.id === 'file').groups.find(g => g.label === 'Library').items.map(i => i.cmd);
-    expect(lib).toEqual(['openTemplates', 'openFunctions', 'openFormats', 'browseLibrary', 'openLibraryPack', 'saveLibraryPack']);
+    expect(lib).toEqual(['openTemplates', 'openFunctions', 'openFormats', 'browseLibrary', 'openLibraryPack', 'saveLibraryPack', 'shareLibraryPack']); // Share… since 4 Oct 2026
     expect(await page.evaluate(() => fm.commands().filter(c => /LibraryPack$/.test(c.id)))).toEqual([
       { id: 'openLibraryPack', label: 'Open Library Pack…', category: 'File', shortcut: null },
       { id: 'saveLibraryPack', label: 'Save as Library Pack…', category: 'File', shortcut: null },
+      { id: 'shareLibraryPack', label: 'Share in the Community Library…', category: 'File', shortcut: null },
     ]);
   });
 
@@ -303,7 +312,7 @@ test.describe('the ribbon', () => {
     const items = () => page.evaluate(() => __fmIDE.getRibbonConfig().tabs[0].groups.map(g => g.label + ':' + g.items.map(i => i.cmd).join(',')));
     await F.importViaCommand(page, 'importWorkspace', writeFile(testInfo, 'old.json', ws(undefined, [{ label: 'Stuff', items: [{ cmd: 'openFormats' }] }, { label: 'Other', items: [{ cmd: 'addRect' }] }])));
     await F.acceptAll(page);
-    expect(await items()).toEqual(['Stuff:openFormats,browseLibrary,openLibraryPack,saveLibraryPack', 'Other:addRect,addManyRects']); // Browse Library… since 8d; Add Many Rectangles… since 12b
+    expect(await items()).toEqual(['Stuff:openFormats,browseLibrary,openLibraryPack,saveLibraryPack,shareLibraryPack', 'Other:addRect,addManyRects']); // Browse Library… since 8d; Add Many Rectangles… since 12b; Share… since 4 Oct 2026
     await F.importViaCommand(page, 'importWorkspace', writeFile(testInfo, 'removed.json', ws(true, [{ label: 'Stuff', items: [{ cmd: 'openFormats' }] }])));
     await F.acceptAll(page);
     expect(await items()).toEqual(['Stuff:openFormats']);
@@ -522,3 +531,66 @@ test.describe('where items came from (origin)', () => {
     expect(pageErrors).toEqual([]);
   });
 });
+
+// Sharing in the community library (4 October 2026): the window, its upload page and the guide.
+test.describe('sharing in the community library', () => {
+  const UPLOAD = 'https://github.com/taroyamakatrmttm-star/fmide-library/upload/main/packs';
+  // Catches window.open (test side only), so nothing leaves the test.
+  const catchOpen = (page) => page.evaluate(() => { window.__opened = []; window.open = (...a) => { window.__opened.push(a); return null; }; });
+
+  test('Share in the Community Library…: the steps, the upload page and the guide', async ({ page }) => {
+    await catchOpen(page);
+    await page.evaluate(() => fm.command('shareLibraryPack'));
+    const box = page.locator('.modal-box.library-share-box');
+    await expect(box.locator('h3')).toHaveText('Share a pack in the community library');
+    const steps = await box.locator('.library-share-steps li').allTextContents();
+    expect(steps[0]).toBe('Save your pack with Save as Library Pack… (File → Library).');
+    expect(steps).toHaveLength(6);
+    expect(steps.join(' ')).toContain('I have read the submission terms');
+    // Open the upload page: only the library's upload page, in a new tab; nothing else.
+    await box.locator('button.library-share-upload').click();
+    expect(await page.evaluate(() => window.__opened)).toEqual([[UPLOAD, '_blank', 'noopener,noreferrer']]);
+    await expect(box).toBeVisible();
+    // The guide opens Help at its topic, and closes the window.
+    await box.locator('button.library-share-guide').click();
+    await expect(box).toHaveCount(0);
+    await expect(page.locator('#helpPanel')).toBeVisible();
+    await expect(page.locator('#helpPanel')).toContainText('Share your pack in the community library');
+    await expect(page.locator('#helpPanel')).toContainText('Step 3 — Upload your pack');
+    // Esc closes it.
+    await page.evaluate(() => fm.command('shareLibraryPack'));
+    await expect(box).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(box).toHaveCount(0);
+  });
+
+  test('the guide in Help: every step, the upload address, and the window\'s "?"', async ({ page }) => {
+    await page.evaluate(() => fm.command('shareLibraryPack'));
+    await page.locator('.modal-box.library-share-box button.library-share-guide').click();
+    await expect(page.locator('#helpPanel')).toContainText('Step 1 — Save your pack');
+    const text = await page.locator('#helpPanel').textContent();
+    for(const part of ['Step 1 — Save your pack', 'Step 2 — Make a free GitHub account', 'Step 3 — Upload your pack', 'Step 4 — Send it for review',
+      'Step 5 — The automatic check and the review', 'Step 6 — See it in the library', 'Fork this repository', 'Propose changes', 'Create pull request',
+      'I have read the submission terms', 'Records to add', UPLOAD]) expect(text).toContain(part);
+    await page.evaluate(() => fm.command('shareLibraryPack'));
+    await page.locator('.modal-box.library-share-box .window-help').click();
+    await expect(page.locator('#helpPanel')).toContainText('Step 6 — See it in the library');
+  });
+
+  test('a pack saved from the window is named after its id, and the window names that file', async ({ page }) => {
+    await fillLibrary(page);
+    await page.evaluate(() => fm.command('saveLibraryPack'));
+    const save = page.locator('.modal-box.library-pack-save');
+    await save.locator('input.pack-title').fill('Statements <b>bold</b>');
+    await save.locator('input.pack-author').fill('Bo Author');
+    await save.locator('label.library-pack-pick', { hasText: /^ Margin/ }).locator('input').check();
+    const { name, data } = await F.downloadJson(page, () => save.locator('button.primary', { hasText: 'Save Pack' }).click());
+    expect(name).toBe(data.pack.id + '.fmide-pack.json');
+    const share = page.locator('.modal-box.library-share-box');
+    await expect(share.locator('.library-share-saved')).toContainText('It is in your Downloads folder as ' + name);
+    // The save step is left out: the pack is saved already.
+    expect(await share.locator('.library-share-steps li').count()).toBe(5);
+    await expect(share.locator('b')).toHaveCount(1);
+  });
+});
+
