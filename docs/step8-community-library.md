@@ -154,6 +154,13 @@ At the owner's request, sharing in the library is explained for people who know 
 
 - **Share in the Community Library…** (`shareLibraryPack`, File tab, Library group; `showShareLibraryPack` in `11e-library-packs.js`): the steps in short, **Open the upload page ↗** — `window.open` of the library's GitHub upload page for `packs/` (`LIBRARY_UPLOAD_URL`), in the person's browser, with nothing sent by fmIDE — and the full guide. It opens by itself after Save as Library Pack…, naming the file saved.
 - **The pack's file name is its id** (`libraryPackFileName`), the name the library's checker requires, so nothing is renamed by hand.
-- **Help:** fmIDE's topic `share-library-pack` goes through every step (a GitHub account, a fork, the upload, Propose changes, the pull request, the terms box, the check's comment — a first submission's FAILED ❌ for "Records to add" is expected, the maintainer adds them — and when the pack appears); fmGraph's topic `share-library` leads there.
+- **Help:** fmIDE's topic `share-library-pack` goes through every step (a GitHub account, a fork, the upload, Propose changes, the pull request, the terms box, the check's comment — the records "added automatically when the pull request is merged" — and when the pack appears); fmGraph's topic `share-library` leads there.
 - Tests: group 22.
 
+## Records written when a pack is merged (4 October 2026)
+
+At the owner's request, nobody edits the records by hand any more — neither a submitter nor the maintainer, for anyone's pack. This replaces C above (records added by the submitter).
+
+- **The checker** (`tools/check-library.js`) takes `--records-on-merge` with `--base` (a pull request): the records the pull request's own packs lack — the pack's, a new family's, a new author's — are notes ("It is added automatically when the pull request is merged."), not errors. They are still worked out for the account that opened the pull request, so the family rule and the author name are checked exactly as before, and listed in the report. Everything else still fails, and so does a record missing for a pack that was already in the library. Without the option nothing changes; on `main` (no `--base`) a pack without records is still an error.
+- **The library's CI** (in `fmide-library`): the pull-request check runs with `--records-on-merge`; after a merge into `main`, a step finds the pull request merged (from GitHub, never from the files), runs `--write-records` with the account that opened it, and commits the record files to `main`. It writes only for the packs that pull request added, and writes nothing when anything else is wrong.
+- Tests: group 24.

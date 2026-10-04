@@ -4,7 +4,12 @@
 // two folders. Used through tools/check-pack.js:
 //
 //   node tools/check-pack.js --library DIR [--base DIR] [--account LOGIN --account-id N]
-//                            [--date YYYY-MM-DD] [--write-records] [--json | --markdown]
+//                            [--date YYYY-MM-DD] [--write-records] [--records-on-merge]
+//                            [--json | --markdown]
+//
+// With --records-on-merge (a pull request, with --base) the records the pull request's own
+// packs lack are not errors: the library's CI writes them (--write-records) once the pull
+// request is merged, for the account that opened it, so nobody edits the records by hand.
 //
 // The library folder holds packs/<pack id>.fmide-pack.json and three records, which are only
 // ever added to (never changed): families.json (who owns each template or function family:
@@ -165,14 +170,15 @@ function readChecker(files, out){
 
 // ---- checking a library ----
 // Checks the library in `headDir`; with `opts.baseDir`, also what changed since that folder
-// (a pull request). opts: { baseDir, account: { login, id }, date }.
-// Returns the report: { ok, mode, account, summary, recordsToAdd, errors, warnings, notes, packs }.
+// (a pull request). opts: { baseDir, account: { login, id }, date, recordsOnMerge }.
+// Returns the report: { ok, mode, account, summary, recordsToAdd, recordsOnMerge, errors,
+// warnings, notes, packs }.
 function checkLibrary(headDir, opts){
   opts = opts || {};
   const report = { ok: false, mode: opts.baseDir ? 'pull-request' : 'library', library: headDir,
     account: opts.account ? { login: opts.account.login, id: opts.account.id } : null,
     summary: { packs: 0, newPacks: [], takedowns: [], newFamilies: [], newAuthors: [], reshared: [] },
-    recordsToAdd: null, errors: [], warnings: [], notes: [], packs: [] };
+    recordsToAdd: null, recordsOnMerge: !!(opts.recordsOnMerge && opts.baseDir), errors: [], warnings: [], notes: [], packs: [] };
   const add = (list) => (where, message, extra) => list.push(Object.assign({ where, message }, extra || {}));
   const out = { error: add(report.errors), warning: add(report.warnings), note: add(report.notes) };
   const done = () => { report.ok = !report.errors.length && report.packs.every(p => p.ok); return report; };
@@ -398,6 +404,14 @@ function checkLibrary(headDir, opts){
     });
     // Only the pull request's own packs may be missing records; anything else was already wrong.
     report.errors.forEach(e => { if(e.missing && e.where !== 'authors.json' && !addedPacks.some(p => e.where === p || e.where.startsWith('pack ' + packIdOfPath(p) + ':'))) e.missing = false; });
+    // Written when merged: the pull request's own missing records become notes.
+    if(report.recordsOnMerge && opts.account){
+      report.errors = report.errors.filter(e => {
+        if(!e.missing) return true;
+        report.notes.push({ where: e.where, message: e.message + ' It is added automatically when the pull request is merged.', missing: true });
+        return false;
+      });
+    }
   } else {
     Object.keys(toAdd.packs).forEach(id => report.summary.newPacks.push(packSummary(packs.get(id), id)));
     Object.keys(toAdd.authors).forEach(id => report.summary.newAuthors.push({ accountId: Number(id), account: toAdd.authors[id].account }));
@@ -476,7 +490,7 @@ function formatLibraryReport(r){
   section('Warnings', r.warnings, '!');
   section('Notes', r.notes, '·');
   if(r.recordsToAdd) {
-    lines.push('  Records to add (run with --write-records, or add these entries):');
+    lines.push(r.recordsOnMerge ? '  Records added automatically when the pull request is merged:' : '  Records to add (run with --write-records, or add these entries):');
     JSON.stringify(r.recordsToAdd, null, 2).split('\n').forEach(l => lines.push('    ' + l));
   }
   lines.push(`  Result: ${r.ok ? 'PASSED' : 'FAILED'} — ${plural(countErrors(r), 'error')}, ${plural(countWarnings(r), 'warning')}.`);
@@ -492,7 +506,8 @@ function formatMarkdown(r){
   head.push(`## Library check: ${r.ok ? 'PASSED ✅' : 'FAILED ❌'}`, '');
   head.push(`${plural(countErrors(r), 'error')}, ${plural(countWarnings(r), 'warning')}.`, '');
   summaryLines(r).forEach(l => head.push('- ' + l));
-  if(r.recordsToAdd) head.push('', 'Records are missing: add the entries listed at the end of the report (or a maintainer runs the checker with `--write-records`).');
+  if(r.recordsToAdd) head.push('', r.recordsOnMerge ? 'The records for this pack are added automatically when the pull request is merged; nobody edits them by hand.'
+    : 'Records are missing: add the entries listed at the end of the report (or a maintainer runs the checker with `--write-records`).');
   head.push('', '<details open><summary>The full report</summary>', '', '~~~~text');
   const tail = ['~~~~', '', '</details>'];
   let body = fenceSafe(formatLibraryReport(r));

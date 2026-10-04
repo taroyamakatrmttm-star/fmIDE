@@ -8,7 +8,7 @@
 //   node tools/check-pack.js PACK.json [PACK.json …]      a report for people
 //   node tools/check-pack.js --json PACK.json [ … ]       the same, as JSON
 //   node tools/check-pack.js --library DIR [--base DIR] [--account LOGIN --account-id N]
-//        [--date YYYY-MM-DD] [--write-records] [--json | --markdown]
+//        [--date YYYY-MM-DD] [--write-records] [--records-on-merge] [--json | --markdown]
 //                                     a whole library, or a pull request to it (check-library.js)
 //
 // The rule: fmIDE is forgiving so that people's files still open — it quietly drops or
@@ -591,10 +591,10 @@ function main(argv){
 
 // The library mode (check-library.js): options with a value, and flags.
 const LIBRARY_OPTIONS = ['--library', '--base', '--account', '--account-id', '--date'];
-const LIBRARY_FLAGS = ['--write-records', '--json', '--markdown'];
+const LIBRARY_FLAGS = ['--write-records', '--records-on-merge', '--json', '--markdown'];
 function mainLibrary(args){
   const L = require('./check-library');
-  const usage = 'Usage: node tools/check-pack.js --library DIR [--base DIR] [--account LOGIN --account-id N] [--date YYYY-MM-DD] [--write-records] [--json | --markdown]\n';
+  const usage = 'Usage: node tools/check-pack.js --library DIR [--base DIR] [--account LOGIN --account-id N] [--date YYYY-MM-DD] [--write-records] [--records-on-merge] [--json | --markdown]\n';
   const o = {};
   for(let i = 0; i < args.length; i++){
     const a = args[i];
@@ -614,7 +614,8 @@ function mainLibrary(args){
   for(const d of [o['--library'], o['--base']].filter(Boolean)){
     if(!fs.existsSync(d) || !fs.statSync(d).isDirectory()){ process.stderr.write(`Can't read the folder ${d}.\n`); return 2; }
   }
-  const opts = { baseDir: o['--base'] || null, account, date: o['--date'] };
+  if(o['--records-on-merge'] && !o['--base']){ process.stderr.write('--records-on-merge is for a pull request; give --base.\n'); return 2; }
+  const opts = { baseDir: o['--base'] || null, account, date: o['--date'], recordsOnMerge: !!o['--records-on-merge'] };
   let report;
   if(o['--write-records']){
     if(opts.baseDir){ process.stderr.write('--write-records works on one folder; leave out --base.\n'); return 2; }

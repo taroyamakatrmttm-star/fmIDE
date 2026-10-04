@@ -345,7 +345,7 @@ const HELP_TOPICS = [
       { p: 'Step 5 — The automatic check and the review' },
       { steps: [
         'Within a few minutes, a comment called "Library check" appears on your pull request.',
-        'The first time, it usually says FAILED ❌ and lists "Records to add". That is expected: the library doesn\'t know your pack yet, and the library\'s maintainer adds those records for you. You don\'t need to do anything.',
+        'It should say PASSED ✅. It also lists the library\'s records for your pack (who shared it, and when), "added automatically when the pull request is merged". You don\'t need to do anything with them: the library writes them itself when your pack is accepted.',
         'If it says "The submission terms are not ticked", tick the box from Step 4. The check runs again by itself.',
         'If it lists another problem, write a comment on your pull request asking for help (the box at the bottom of the page, then Comment). Or save the pack again in fmIDE and upload the new file the same way.',
         'The maintainer reviews every pack by hand. GitHub emails you when your pack is accepted, or if there is a question.',
