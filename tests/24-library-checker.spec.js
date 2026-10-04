@@ -9,6 +9,8 @@
 // - A pull request (--base): records only added, packs never edited, only packs and records
 //   changed by a submitter, new entries naming the submitting account; takedowns; maintainers.
 // - --write-records adds exactly what is missing, never changing an entry.
+// - --records-on-merge: a pull request's own missing records are notes (CI writes them when it
+//   is merged); everything else still fails.
 // - Reports: the Markdown for the pull request keeps pack text inside a fenced block.
 // Sample: tests/fixtures/library/sample-library/ (Ann's pack pack-checker-good-1, and Bob's
 // pack, saved by fmIDE, which shares Ann's Margin again).
@@ -266,6 +268,42 @@ test.describe('a pull request', () => {
     expect(formatMarkdown(r)).toMatch(/Records are missing/);
   });
 
+  // --records-on-merge: the library's CI writes the records once the pull request is merged.
+  const bobWithoutRecords = (testInfo) => ({
+    base: library(testInfo, 'base', lib => lib.withoutBob()),
+    head: library(testInfo, 'head', lib => { lib.withoutBob(); fs.cpSync(path.join(SAMPLE, 'packs', BOB_PACK + '.fmide-pack.json'), path.join(lib.dir, lib.packPath(BOB_PACK))); }),
+  });
+  test('with --records-on-merge, a submission without its records passes; they are listed, to be written when merged', ({}, testInfo) => {
+    const { base, head } = bobWithoutRecords(testInfo);
+    const r = checkLibrary(head, { baseDir: base, account: BOB, date: DATE, recordsOnMerge: true });
+    expectPass(r);
+    expect(r.recordsOnMerge).toBe(true);
+    // The pack, the new family and the new author: notes now, not errors.
+    expect(r.notes.filter(n => n.missing).map(n => n.message).join('\n')).toMatch(/The pack has no record in packs\.json\. It is added automatically when the pull request is merged\.[\s\S]*no author name[\s\S]*no record in families\.json/);
+    expect(Object.keys(r.recordsToAdd.packs)).toEqual([BOB_PACK]);
+    expect(Object.keys(r.recordsToAdd.authors)).toEqual([String(BOB.id)]);
+    expect(formatLibraryReport(r)).toMatch(/Records added automatically when the pull request is merged:/);
+    expect(formatMarkdown(r)).toMatch(/^## Library check: PASSED ✅[\s\S]*added automatically when the pull request is merged; nobody edits them by hand/);
+    expect(formatMarkdown(r)).not.toMatch(/Records are missing/);
+  });
+  test('with --records-on-merge, every other problem still fails, and so does a record missing for a pack already there', ({}, testInfo) => {
+    const { base, head } = bobWithoutRecords(testInfo);
+    // Bob already shares under "Bob Sample"; Carol submits his pack under that name.
+    const bobAuthor = helpers(SAMPLE).read('authors.json').authors[String(BOB.id)];
+    [base, head].forEach(d => { const lib = helpers(d), a = lib.read('authors.json'); a.authors[String(BOB.id)] = bobAuthor; lib.write('authors.json', a); });
+    expectError(checkLibrary(head, { baseDir: base, account: CAROL, date: DATE, recordsOnMerge: true }), /author name, "Bob Sample", belongs to another account \(bob-sample\)/);
+    // The submitter changes a file only maintainers change.
+    const other = bobWithoutRecords({ outputPath: (n) => testInfo.outputPath('o-' + n) });
+    fs.appendFileSync(path.join(other.head, 'README.md'), '\nchanged\n');
+    expectError(checkLibrary(other.head, { baseDir: other.base, account: BOB, date: DATE, recordsOnMerge: true }), /README\.md: It is changed by the pull request/);
+    // Ann's pack lost its record before the pull request: still an error.
+    const lost = bobWithoutRecords({ outputPath: (n) => testInfo.outputPath('l-' + n) });
+    [lost.base, lost.head].forEach(d => helpers(d).record('packs', ANN_PACK, (e, all) => { delete all[ANN_PACK]; }));
+    const r = checkLibrary(lost.head, { baseDir: lost.base, account: BOB, date: DATE, recordsOnMerge: true });
+    expectError(r, new RegExp('packs/' + ANN_PACK + '\\.fmide-pack\\.json: The pack has no record in packs\\.json'));
+    expect(r.errors.some(e => e.where === 'packs/' + BOB_PACK + '.fmide-pack.json')).toBe(false);
+  });
+
   test('records are only added: a changed or removed entry is refused', ({}, testInfo) => {
     const { base, head } = bobPR(testInfo, lib => lib.record('families', 'family-margin', e => { e.accountId = BOB.id; e.account = 'bob-sample'; }));
     expectError(pr(head, base, BOB), /families\.json: The pull request changes the entry "family-margin"; records are only ever added/);
@@ -432,6 +470,7 @@ test.describe('the command', () => {
     expect(run(['--library', SAMPLE, '--json', '--markdown']).status).toBe(2);
     expect(run(['--library', SAMPLE, '--base', base, '--write-records', '--account', 'bob-sample', '--account-id', '1002']).status).toBe(2);
     expect(run(['--library', SAMPLE, '--nope']).status).toBe(2);
+    expect(run(['--library', SAMPLE, '--records-on-merge']).status).toBe(2);              // a pull request only
   });
   test('--write-records from the command', ({}, testInfo) => {
     const dir = library(testInfo, 'lib', lib => { lib.withoutBob(); fs.cpSync(path.join(SAMPLE, 'packs', BOB_PACK + '.fmide-pack.json'), path.join(lib.dir, lib.packPath(BOB_PACK))); });
@@ -439,5 +478,19 @@ test.describe('the command', () => {
     expect(w.status, w.stdout + w.stderr).toBe(0);
     expect(w.stderr).toMatch(/Added records to families\.json, authors\.json, packs\.json/);
     expect(fs.readFileSync(path.join(dir, 'packs.json'), 'utf8')).toBe(fs.readFileSync(path.join(SAMPLE, 'packs.json'), 'utf8'));
+  });
+  test('--records-on-merge from the command: passes, then --write-records after the merge leaves a library that passes', ({}, testInfo) => {
+    const base = library(testInfo, 'base', lib => lib.withoutBob());
+    const head = library(testInfo, 'head', lib => { lib.withoutBob(); fs.cpSync(path.join(SAMPLE, 'packs', BOB_PACK + '.fmide-pack.json'), path.join(lib.dir, lib.packPath(BOB_PACK))); });
+    const without = run(['--library', head, '--base', base, '--account', 'bob-sample', '--account-id', '1002']);
+    expect(without.status).toBe(1);
+    const md = run(['--library', head, '--base', base, '--account', 'bob-sample', '--account-id', '1002', '--records-on-merge', '--markdown']);
+    expect(md.status, md.stdout + md.stderr).toBe(0);
+    expect(md.stdout).toMatch(/^## Library check: PASSED ✅/);
+    // Merged: main holds the pack without records until CI writes them.
+    expect(run(['--library', head]).status).toBe(1);
+    const w = run(['--library', head, '--write-records', '--account', 'bob-sample', '--account-id', '1002', '--date', '2026-09-28']);
+    expect(w.status, w.stdout + w.stderr).toBe(0);
+    expect(run(['--library', head]).status).toBe(0);
   });
 });

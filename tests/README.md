@@ -31,7 +31,7 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | `npm run test:functions-fmide` | functions in fmIDE: the library, the Functions manager and editor, the `fmIDE-functions` file, function nodes on the canvas (insert, drawing, wiring, updating, copy and paste), undo, ribbon, macros |
 | `npm run test:library-packs` | library packs (save, preview, open; packs from other people; where items came from and the family-rule warnings) and the size limits on every file opened, both apps |
 | `npm run test:pack-checker` | the library's pack checker, `tools/check-pack.js` (mostly in Node; one check against fmIDE) |
-| `npm run test:library-checker` | the library's rules: the checker's library mode (`--library`), pull requests, `--write-records`, the Markdown report (Node only) |
+| `npm run test:library-checker` | the library's rules: the checker's library mode (`--library`), pull requests, `--write-records`, `--records-on-merge`, the Markdown report (Node only) |
 | `npm run test:library-catalogue` | the library's catalogue the build writes under `/library` (pages, downloads, `index.json`, escaping, its security policy) |
 | `npm run test:library-browse` | browsing the library inside fmIDE (Browse Library…, its checks of the list and packs, offline, the single file, `window.fm`) |
 | `npm run test:touch` | fmIDE by finger: real touch input on an emulated touchscreen (drag, arrows, resize, tabs, the curve editor, scrolling; press and hold, the node menu, the selection box, double-tap, larger touch areas; the viewport line, the ribbon's arrows, dialogs at tablet sizes, the on-screen keyboard) |

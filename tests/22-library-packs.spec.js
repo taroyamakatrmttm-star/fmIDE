@@ -571,7 +571,7 @@ test.describe('sharing in the community library', () => {
     const text = await page.locator('#helpPanel').textContent();
     for(const part of ['Step 1 — Save your pack', 'Step 2 — Make a free GitHub account', 'Step 3 — Upload your pack', 'Step 4 — Send it for review',
       'Step 5 — The automatic check and the review', 'Step 6 — See it in the library', 'Fork this repository', 'Propose changes', 'Create pull request',
-      'I have read the submission terms', 'Records to add', UPLOAD]) expect(text).toContain(part);
+      'I have read the submission terms', 'added automatically when the pull request is merged', UPLOAD]) expect(text).toContain(part);
     await page.evaluate(() => fm.command('shareLibraryPack'));
     await page.locator('.modal-box.library-share-box .window-help').click();
     await expect(page.locator('#helpPanel')).toContainText('Step 6 — See it in the library');
