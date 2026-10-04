@@ -46,6 +46,23 @@ Fixed:
 
 - **A system template lost its canvases' links to their canvas templates** (found and fixed 3 Oct 2026). **Save System as Template** (`openModelAsTemplateData` in `src/fmide/js/11-templates-format-presets.js`) now keeps each canvas's `template`, as a plain system file does (`buildSystemPayload`), so a system added back from the template (Add or replace) has its canvases linked, and ExcelExporter lays them out as modules with their Excel layouts. No file-format change; system templates saved before hold no links until saved again with Save as new version. Tests: groups 15 and 38. **Still for the owner to decide:** when a system template goes into a library pack, offer to add the canvas templates its canvases come from, so their Excel layouts travel too.
 
+## Agreed improvements, for later
+
+Agreed with the owner; each waits for its own session, branch and pull request.
+
+- **A readable pack file name** (agreed 4 October 2026). Since #107, Save as Library Pack… names the file after the pack's id (`c526c522-….fmide-pack.json`), because the library accepts a pack only under that name. That name is right, but hard to recognise in a Downloads folder. **The idea:**
+  - fmIDE saves a readable name with the id in it, for example `Three-Statement Model v01 (c526c522).fmide-pack.json` (`libraryPackFileName`);
+  - the library accepts any `….fmide-pack.json` name in `packs/`, reading the id from inside the file, as the checker already does;
+  - the catalogue build (`tools/build-library.js`) publishes each pack under its id, so the site's addresses (`library/packs/<id>.fmide-pack.json`), Browse Library and `index.json` are unchanged.
+
+  **What changes:**
+  - the checker's file-name rule (`tools/check-pack.js`, `tools/check-library.js`; two packs with the same id are still refused), then a library pull request moving `checker.json` to that fmIDE commit;
+  - the share window's and the guide's "keep that name" (`11e-library-packs.js`, help topic `share-library-pack`);
+  - tests in groups 22–25;
+  - the library's `README.md`.
+
+  **Why:** the owner's first upload (4 October 2026) was refused for its name; a person following the app should never meet a file-name rule.
+
 ## Before sharing the project: your name out of the public places (deferred)
 
 Agreed with the owner on 4 October 2026, and **deferred until before the project is shared with anyone** (nobody has it yet). Its own session, branch and pull requests.
