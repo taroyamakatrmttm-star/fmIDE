@@ -13,6 +13,21 @@
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
 
+  { id: 'share-in-library', date: '2026-10-04', title: 'Share your pack with everyone, step by step',
+    summary: 'A new Share in the Community Library… window and a step-by-step guide, for people who have never used GitHub.',
+    what: [
+      'After {cmd:saveLibraryPack}, a window shows where the file went and the next steps, with Open the upload page, which opens the community library\'s upload page on GitHub in your browser. {cmd:shareLibraryPack} (File tab, Library group) opens the same window any time.',
+      'A new Help topic, "Share your pack in the community library", goes through every step: making a free GitHub account, uploading the file, sending it for review, ticking the submission terms, what the automatic check says, and when your pack appears in Browse Library.',
+      'A pack is now saved under the name the library needs: its id, a long code ending in .fmide-pack.json. There is nothing to rename before sharing it.',
+    ],
+    why: 'Sharing in the library meant knowing GitHub, and renaming the file by hand. Now anyone can follow the steps.',
+    how: [
+      'Choose {cmd:saveLibraryPack}, tick what to share and press Save Pack.',
+      'In the window that opens, press Open the upload page, and follow the steps (❓ Step-by-step guide has every detail).',
+    ],
+    notes: ['fmIDE never sends anything itself: you upload the file in your web browser.', 'A pack saved before this has a name made from its title. Save it again, or rename it to its id, before sharing it in the library.'],
+    see: ['share-library-pack', 'library-packs'] },
+
   { id: 'remove-old-template-versions', date: '2026-10-03', title: 'Remove a template\'s old versions',
     summary: 'Keep only the latest version of a template, or of every template, in one step.',
     what: [

@@ -70,10 +70,82 @@
     return { kind: 'fmIDE-library-pack', version: FILE_FORMATS['fmIDE-library-pack'].current, pack: read.info,
       templates: c.templates.map(t => cloneData(templateRecord(t, false))), functions: cloneData(c.functions) };
   }
-  // A file name from the pack's title: "Three Statements" → "Three-Statements.fmide-pack.json".
-  function libraryPackFileName(title){
-    const base = String(title).replace(/[^A-Za-z0-9 _-]+/g, '').trim().replace(/\s+/g, '-').slice(0, 60);
-    return (base || 'library-pack') + '.fmide-pack.json';
+  // The file is named after the pack's id ("<id>.fmide-pack.json"): the community library
+  // takes a pack only under that name (packs/<pack id>.fmide-pack.json), so nobody has to
+  // rename it before sharing. The id is checked by cleanLibraryPackInfo (letters, digits, dashes).
+  function libraryPackFileName(pack){
+    return (pack && isTemplateUid(pack.id) ? pack.id : 'library-pack') + '.fmide-pack.json';
+  }
+
+  // ---------- sharing a pack in the community library ----------
+  // The library is a public GitHub repository; a pack is shared by uploading its file there,
+  // in the person's own web browser (help topic share-library-pack). fmIDE only opens the
+  // upload page: it never sends anything itself (decision 6).
+  const LIBRARY_UPLOAD_URL = 'https://github.com/taroyamakatrmttm-star/fmide-library/upload/main/packs';
+  function openLibraryUploadPage(){
+    window.open(LIBRARY_UPLOAD_URL, '_blank', 'noopener,noreferrer');
+  }
+  // The window "Share in the Community Library…": the steps in short, the upload page and the
+  // full guide. `savedName`: the file just saved by Save as Library Pack…, if any.
+  function showShareLibraryPack(savedName){
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const box = document.createElement('div');
+    box.className = 'modal-box library-share-box';
+    const h = document.createElement('h3');
+    h.textContent = savedName ? 'Your pack is saved' : 'Share a pack in the community library';
+    box.appendChild(h);
+    if(savedName){
+      const saved = document.createElement('p');
+      saved.className = 'library-share-saved';
+      saved.append('It is in your Downloads folder as ');
+      const b = document.createElement('b');
+      b.textContent = savedName;
+      saved.append(b, '. Keep that name: the library finds packs by it. To share it with everyone, in the community library:');
+      box.appendChild(saved);
+    } else {
+      const intro = document.createElement('p');
+      intro.textContent = 'The community library is on GitHub, a free website for sharing files. You upload your pack file there yourself, in your web browser:';
+      box.appendChild(intro);
+    }
+    const steps = document.createElement('ol');
+    steps.className = 'library-share-steps';
+    [
+      ...(savedName ? [] : ['Save your pack with Save as Library Pack… (File → Library).']),
+      'Press Open the upload page. Sign in to GitHub, or make a free account.',
+      'Drag your pack file onto the page, then press the green Propose changes button.',
+      'Press Create pull request, and Create pull request again.',
+      'Tick the box "I have read the submission terms".',
+      'That\'s all: the library\'s maintainer reviews your pack and adds it. GitHub emails you when it is in.',
+    ].forEach(t => { const li = document.createElement('li'); li.textContent = t; steps.appendChild(li); });
+    box.appendChild(steps);
+    const note = document.createElement('p');
+    note.className = 'library-share-note';
+    note.textContent = 'First time, or stuck? Every step, with what to do if something looks different, is in the guide.';
+    box.appendChild(note);
+    const actions = document.createElement('div');
+    actions.className = 'modal-actions';
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = 'Close';
+    const guideBtn = document.createElement('button');
+    guideBtn.className = 'library-share-guide';
+    guideBtn.textContent = '❓ Step-by-step guide';
+    const uploadBtn = document.createElement('button');
+    uploadBtn.className = 'primary library-share-upload';
+    uploadBtn.textContent = 'Open the upload page ↗';
+    uploadBtn.title = LIBRARY_UPLOAD_URL;
+    actions.append(closeBtn, guideBtn, uploadBtn);
+    box.appendChild(actions);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    addWindowHelp(box, 'share-library-pack');
+    const close = () => { overlay.remove(); document.removeEventListener('keydown', onKey, true); };
+    function onKey(ev){ if(ev.key === 'Escape'){ ev.preventDefault(); ev.stopPropagation(); close(); } }
+    document.addEventListener('keydown', onKey, true);
+    closeBtn.addEventListener('click', close);
+    guideBtn.addEventListener('click', () => { close(); openHelp('share-library-pack'); });
+    uploadBtn.addEventListener('click', () => openLibraryUploadPage());
+    uploadBtn.focus();
   }
 
   // ---------- reading a pack ----------
@@ -268,7 +340,7 @@
       const ref = (x) => x.family + '@' + x.version;
       const out = guarded(() => fm.saveLibraryPack({ title: title.value, author: author.value, description: desc.value, tags: packTags(tags.value),
         templates: picked.filter(x => TEMPLATES.includes(x)).map(ref), functions: picked.filter(x => FUNCTIONS.includes(x)).map(ref) }));
-      if(out) close();
+      if(out){ close(); showShareLibraryPack(libraryPackFileName(out.pack)); }
     });
     title.focus();
   }

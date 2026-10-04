@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmIDE and fmGraph: sharing a pack in the community library, step by step
+- **Share in the Community Library…** (File tab, Library group; `shareLibraryPack`): a window with the steps in short, **Open the upload page ↗** (the library's GitHub upload page for `packs/`, opened in the browser — fmIDE sends nothing itself) and the step-by-step guide. It also opens after **Save as Library Pack…**, naming the file saved. A customised ribbon gets the command once (`ui.libraryShareAdded`).
+- **A pack is saved named after its id** (`<pack id>.fmide-pack.json`), the name the library requires, instead of its title.
+- **Help:** fmIDE's new topic "Share your pack in the community library" (every step from making a GitHub account to the pack appearing in Browse Library, for people who don't know GitHub); fmGraph's "Sharing a board with everyone".
+
 ## fmIDE: removing templates' old versions
 - **🧹 Remove old versions** beside a template's name in the Templates window removes every version of it but the latest; **🧹 Remove older versions** under the list and the command **Remove Older Versions of All Templates…** (`removeOldTemplateVersions`, Command Launcher) do it for every template. Both ask first and can't be undone.
 - A version still in use stays: one a canvas in the open model is linked to, one a system template's canvas (among the versions that stay) is linked to, or one a recipe (among those that stay) is pinned to; the question names each and why. The latest version always stays, so numbers are never reused. No file-format change.

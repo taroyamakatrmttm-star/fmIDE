@@ -310,6 +310,7 @@
       operatorsE2bAdded: true, // E2b: choose in the same group
       libraryPacksAdded: true, // 8a: Open Library Pack… and Save as Library Pack… in the File tab's Library group
       libraryBrowseAdded: true, // 8d: Browse Library… in the same group
+      libraryShareAdded: true, // Share in the Community Library… after Save as Library Pack…
       helpAdded: true, // step 10: the Help group at the end of the View tab
       whatsNewAdded: true, // H5b: What's New beside Help
       zoomGroupAdded: true, // 13a: the View tab's Zoom group
@@ -404,6 +405,16 @@
     const at = g.items.findIndex(it => it && it.cmd === 'openLibraryPack');
     g.items.splice(at < 0 ? g.items.length : at, 0, { cmd: 'browseLibrary' });
   }
+  // One-time update of a customised ribbon: Share in the Community Library… right after Save
+  // as Library Pack… (none: left alone; already there: left alone).
+  function addLibraryShareCommandToRibbon(){
+    const groups = [];
+    ribbonState.config.tabs.forEach(t => (t && Array.isArray(t.groups) ? t.groups : []).forEach(g => { if(g && Array.isArray(g.items)) groups.push(g); }));
+    if(groups.some(g => g.items.some(it => it && it.cmd === 'shareLibraryPack'))) return;
+    const g = groups.find(x => x.items.some(it => it && it.cmd === 'saveLibraryPack'));
+    if(!g) return;
+    g.items.splice(g.items.findIndex(it => it && it.cmd === 'saveLibraryPack') + 1, 0, { cmd: 'shareLibraryPack' });
+  }
   // One-time update (step 15, G1) of a customised ribbon: Open fmGraph right after Open
   // ExcelExporter (none: left alone; already there: left alone).
   function addFmGraphCommandToRibbon(){
@@ -495,6 +506,7 @@
       if(ui.operatorsE2bAdded !== true) addE2OperatorsToRibbon(E2B_FUNCTION_OPS);
       if(ui.libraryPacksAdded !== true) addLibraryPackCommandsToRibbon();
       if(ui.libraryBrowseAdded !== true) addLibraryBrowseCommandToRibbon();
+      if(ui.libraryShareAdded !== true) addLibraryShareCommandToRibbon();
       if(ui.helpAdded !== true) addHelpGroupToRibbon();
       if(ui.whatsNewAdded !== true) addWhatsNewToRibbon();
       if(ui.zoomGroupAdded !== true) addZoomGroupToRibbon();

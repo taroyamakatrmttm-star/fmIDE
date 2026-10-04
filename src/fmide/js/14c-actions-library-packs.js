@@ -22,7 +22,7 @@
         templates, functions);
       libraryAuthor = payload.pack.author;
       saveWorkspaceSoon();
-      if(a.download) downloadJSON(payload, libraryPackFileName(payload.pack.title));
+      if(a.download) downloadJSON(payload, libraryPackFileName(payload.pack));
       return payload;
     } });
 
