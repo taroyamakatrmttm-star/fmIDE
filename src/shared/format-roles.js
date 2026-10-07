@@ -6,7 +6,7 @@
 // Excel style (step 11a, decision 9 in docs/decisions.md). The Excel-only roles and style
 // settings older files carry are dropped when they are read (dropExcelOnlyPresets in
 // src/shared/file-formats.js).
-const FORMAT_ROLES = [
+export const FORMAT_ROLES = [
   { name: 'Inputs', where: 'Canvas',
     desc: 'Input rectangles: the numbers you type. Their number format is used in Excel too.',
     style: { numberFormat: { kind: 'general', decimals: 2, currencySymbol: '$' }, fill: '#eff6ff',

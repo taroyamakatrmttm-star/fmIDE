@@ -43,6 +43,7 @@
     "test:equal-spacing": "playwright test tests/41-equal-spacing-snap.spec.js",
     "test:nested-recipes": "playwright test tests/62-nested-recipes.spec.js",
     "test:macro-references": "playwright test tests/63-macro-references.spec.js",
+    "test:shared-modules": "playwright test tests/64-shared-modules.spec.js",
     "test:canvas-switching": "playwright test tests/61-canvas-switching.spec.js",
     "test:messages": "playwright test tests/60-long-messages.spec.js",
     "test:excel-page": "playwright test tests/46-excel-page.spec.js",

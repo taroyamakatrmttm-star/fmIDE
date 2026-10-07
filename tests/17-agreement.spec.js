@@ -50,11 +50,8 @@ async function fmideValues(page, file){
 // group 18 checks that). One entry per block-instance tab, as ExcelExporter names them:
 // { tab: [{ label, values[] }] }, labelled as ExcelExporter labels rows ("Name — Vintage 2",
 // "Name (Total)", "Name (shared)").
-const vm = require('vm');
 function loadIR(){
-  const dir = path.join(__dirname, '..', 'src', 'shared');
-  const code = ['operators.js', 'uom.js', 'input-rule.js', 'functions.js', 'ir.js'].map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
-  return vm.runInContext(code + '\n;({ compileModel, evaluateModel, parseRectText })', vm.createContext({}));
+  return require('../src/shared/ir.js');
 }
 function instanceValues(system){
   const IR = loadIR();

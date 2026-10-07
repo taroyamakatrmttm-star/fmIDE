@@ -5,10 +5,10 @@
 // (docs/file-formats.md). To change one of these formats: raise its version here and add
 // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
 // exactly one version.
-const SHARED_FILE_VERSIONS = { 'system': 9, 'fmIDE-workspace': 12 };
+export const SHARED_FILE_VERSIONS = { 'system': 9, 'fmIDE-workspace': 12 };
 // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
 // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
-function upgradeNodePlugs(nodes){
+export function upgradeNodePlugs(nodes){
   (Array.isArray(nodes) ? nodes : []).forEach(n => {
     if(!n || typeof n !== 'object' || !('plug' in n)) return;
     if(!Array.isArray(n.plugs)){
@@ -20,7 +20,7 @@ function upgradeNodePlugs(nodes){
 }
 // A random ID in the UUID v4 form, for things that must never clash between people (a
 // template family, one version of it). crypto.getRandomValues works everywhere, file:// too.
-function newRandomId(){
+export function newRandomId(){
   const b = new Uint8Array(16);
   crypto.getRandomValues(b);
   b[6] = (b[6] & 0x0f) | 0x40;
@@ -30,7 +30,7 @@ function newRandomId(){
 }
 // Before templates file v2 (workspace v2) a template had no family or version. Each one
 // becomes a family of its own, version 1, with no change note. Upgrades a list in place.
-function upgradeTemplateEntries(list){
+export function upgradeTemplateEntries(list){
   (Array.isArray(list) ? list : []).forEach(t => {
     if(!t || typeof t !== 'object') return;
     if(t.family === undefined) t.family = newRandomId();
@@ -45,14 +45,14 @@ function upgradeTemplateEntries(list){
 // (`keepColours`), Excel border sides (`border.sides`) and "Use Excel's default font size"
 // (`font.excelDefaultSize`). The upgrade drops them; everything else stays.
 const EXCEL_ONLY_ROLE_NAMES = ['Links', 'Headers', 'Section Headers', 'Labels', 'Notes'];
-function dropExcelOnlyStyle(st){
+export function dropExcelOnlyStyle(st){
   if(!st || typeof st !== 'object' || Array.isArray(st)) return;
   delete st.keepColours;
   if(st.border && typeof st.border === 'object') delete st.border.sides;
   if(st.font && typeof st.font === 'object') delete st.font.excelDefaultSize;
 }
 // A list of format presets upgraded in place: the Excel-only roles go, every style is cleaned.
-function dropExcelOnlyPresets(list){
+export function dropExcelOnlyPresets(list){
   if(!Array.isArray(list)) return list;
   for(let i = list.length - 1; i >= 0; i--){
     const p = list[i];
@@ -62,10 +62,10 @@ function dropExcelOnlyPresets(list){
   return list;
 }
 // Every node's own style in a list of nodes.
-function dropExcelOnlyNodeStyles(nodes){
+export function dropExcelOnlyNodeStyles(nodes){
   (Array.isArray(nodes) ? nodes : []).forEach(n => { if(n && typeof n === 'object') dropExcelOnlyStyle(n.style); });
 }
-const SHARED_FILE_MIGRATIONS = {
+export const SHARED_FILE_MIGRATIONS = {
   // v1 → v2: templates get a family, a version number, a change note and a version id.
   'fmIDE-workspace': {
     1: d => upgradeTemplateEntries(d.templates),
@@ -139,7 +139,7 @@ const SHARED_FILE_MIGRATIONS = {
 };
 // A file's kind: its "kind" field, or — for files saved before kinds were written — its
 // shape, so either app can say where a file belongs.
-function inferFileKind(d){
+export function inferFileKind(d){
   if(Array.isArray(d)) return 'fmIDE-macros';                       // a bare macro list
   if(typeof d.kind === 'string') return d.kind;
   if(Array.isArray(d.canvases)) return 'system';
@@ -154,7 +154,7 @@ function inferFileKind(d){
 // The version check and step-by-step upgrade, applied in place to `data` (a copy of the
 // file, of a kind listed in `formats`). A file from a NEWER version is left as it is so the
 // caller can ask before a best-effort open. Returns { fromVersion, newer }.
-function upgradeFileData(data, kind, formats, migrations){
+export function upgradeFileData(data, kind, formats, migrations){
   const fmt = formats[kind];
   let version = Number(data.version);
   if(!Number.isInteger(version) || version < 1) version = 1;          // files from before versions were written
@@ -174,15 +174,15 @@ function upgradeFileData(data, kind, formats, migrations){
 // would overflow the stack of code that walks it) or too many values are refused with a
 // plain message before anything else reads the file. The autosave is never checked: it is
 // the person's own work. Generous for real models (the largest sample is 60 kB, 5 deep).
-const FILE_LIMITS = { chars: 50 * 1024 * 1024, depth: 100, values: 5000000 };
+export const FILE_LIMITS = { chars: 50 * 1024 * 1024, depth: 100, values: 5000000 };
 // A message when a file's text is too long to open, else null.
-function fileTextProblem(text){
+export function fileTextProblem(text){
   if(typeof text !== 'string' || text.length <= FILE_LIMITS.chars) return null;
   return 'That file is too large to open (' + Math.ceil(text.length / 1048576) + ' MB; the limit is ' + (FILE_LIMITS.chars / 1048576) + ' MB).';
 }
 // A message when parsed data is nested too deep or holds too many values, else null.
 // Walks without recursion, so a deep file can't overflow the stack here either.
-function fileDataProblem(raw){
+export function fileDataProblem(raw){
   const stack = [[raw, 1]];
   let values = 0;
   while(stack.length){

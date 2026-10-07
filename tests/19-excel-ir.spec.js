@@ -48,9 +48,9 @@ for(const [dir, model] of CASES){
 const vm = require('vm');
 const ROOT = path.join(__dirname, '..');
 function loadSpellings(){
-  const code = fs.readFileSync(path.join(ROOT, 'src', 'shared', 'operators.js'), 'utf8') + '\n'
-    + fs.readFileSync(path.join(ROOT, 'src', 'excel-exporter', 'js', '01b-operator-spellings.js'), 'utf8');
-  return vm.runInContext(code + '\n;({ OPERATORS, EXCEL_SPELLINGS })', vm.createContext({}));
+  const { OPERATORS } = require('../src/shared/operators.js');
+  const code = fs.readFileSync(path.join(ROOT, 'src', 'excel-exporter', 'js', '01b-operator-spellings.js'), 'utf8');
+  return { OPERATORS, EXCEL_SPELLINGS: vm.runInContext(code + '\n;EXCEL_SPELLINGS', vm.createContext({})) };
 }
 
 test('every operator in the catalogue has an Excel spelling, and only those do', () => {

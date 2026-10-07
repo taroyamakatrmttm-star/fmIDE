@@ -41,7 +41,18 @@
 //   <indent>// build:include shared/escaping.js
 // The file replaces that line, with <indent> added in front of each non-empty line, so
 // the same shared file sits at the right depth in either app's wrapped function.
-// Shared files are plain fragments too, and may not include other files.
+// Shared files may not include other files.
+//
+// Modules (step 3c): a .js file in a folder whose package.json says "type": "module" (today
+// src/shared/) is a real module, which Node loads as it is (tools and tests require() it).
+// Its imports and exports are written in one plain form only:
+//   import { a, b } from './other.js';          one line each, at the start of a line
+//   export function name(…) / export const NAME = … / export let / export class
+// The build turns it back into a plain fragment of the wrapped function: each import line is
+// left out (line and all) and each "export " taken off, so the app gets exactly the code it
+// would have had as a fragment. It then checks that every name imported is exported by that
+// file, and that each app also includes every file its modules import (anywhere: what a
+// module needs is then in the same wrapped function). Any other import or export is an error.
 // Everything else is copied exactly as it is — nothing is trimmed, added or reformatted —
 // so the pieces must each end with a newline. Needs only Node: no packages.
 'use strict';
@@ -83,31 +94,114 @@ function readPiece(file){
   return text;
 }
 
-function readFolder(dir){
+// `included`: the modules this app takes in so far (a Set of paths), for checkImports.
+function readFolder(dir, included){
   if(!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) fail('missing folder ' + path.relative(ROOT, dir));
   const names = fs.readdirSync(dir).filter(n => n.endsWith('.js')).sort();
   if(names.length === 0) fail('no .js files in ' + path.relative(ROOT, dir));
-  return names.map(n => expandIncludes(readPiece(path.join(dir, n)))).join('');
+  return names.map(n => expandIncludes(readScript(path.join(dir, n), included), included)).join('');
+}
+
+// A script file's text as the app takes it: a module turned into a plain fragment.
+function readScript(file, included){
+  if(!isModuleFile(file)) return readPiece(file);
+  included.add(file);
+  return moduleInfo(file).text;
 }
 
 // Replaces each include-marker line of a script piece with the (indented) shared file.
-function expandIncludes(text){
+function expandIncludes(text, included){
   return text.split('\n').map(line => {
     const m = INCLUDE.exec(line);
     if(!m) return line;
     const [, indent, rel] = m;
     if(rel.split('/').includes('..')) fail('include path may not contain "..": ' + rel);
     const file = path.join(ROOT, 'src', ...rel.split('/'));
-    const body = readPiece(file);
+    const body = readScript(file, included);
     if(body.split('\n').some(l => INCLUDE.test(l))) fail(rel + ' is included, so it may not include other files');
     // The marker line's own newline stays (join below); drop the file's final one.
     return body.slice(0, -1).split('\n').map(l => (l === '' || l === '\r') ? l : indent + l).join('\n');
   }).join('\n');
 }
 
+// ---------- modules (step 3c) ----------
+const IMPORT_LINE = /^import \{ ([A-Za-z0-9_$]+(?:, [A-Za-z0-9_$]+)*) \} from '\.\/([A-Za-z0-9._-]+\.js)';\r?$/;
+const EXPORT_LINE = /^export (?:async function\*? |function\*? |const |let |class )([A-Za-z0-9_$]+)/;
+const moduleFolders = new Map(); // folder → is it a module folder
+const modules = new Map();       // file → moduleFragment(…), each import with its file
+
+// True for a .js file whose nearest package.json, at or below src/, says "type": "module".
+function isModuleFile(file){
+  const src = path.join(ROOT, 'src');
+  for(let dir = path.dirname(file); dir.startsWith(src); dir = path.dirname(dir)){
+    if(!moduleFolders.has(dir)){
+      const pkg = path.join(dir, 'package.json');
+      moduleFolders.set(dir, fs.existsSync(pkg) ? JSON.parse(fs.readFileSync(pkg, 'utf8')).type === 'module' : null);
+    }
+    const kind = moduleFolders.get(dir);
+    if(kind !== null) return kind;
+    if(dir === src) break;
+  }
+  return false;
+}
+
+// Reads a module once: the fragment the apps take, what it imports and what it exports.
+function moduleInfo(file){
+  if(modules.has(file)) return modules.get(file);
+  const rel = path.relative(ROOT, file).split(path.sep).join('/');
+  let info;
+  try{ info = moduleFragment(readPiece(file), rel); }
+  catch(e){ if(e instanceof ModuleError) fail(e.message); throw e; }
+  info.imports.forEach(im => { im.file = path.join(path.dirname(file), im.from); });
+  modules.set(file, info);
+  return info;
+}
+
+class ModuleError extends Error {}
+// A module's text as a plain fragment: { text, imports: [{ from, names, where }], exports }.
+// `rel` names the file in messages. Throws a ModuleError for an import or export in any other
+// form. Pure, so the tests can call it.
+function moduleFragment(source, rel){
+  const imports = [], exports = new Set(), kept = [];
+  source.split('\n').forEach((line, i) => {
+    const where = rel + ':' + (i + 1);
+    const im = IMPORT_LINE.exec(line);
+    if(im){
+      imports.push({ from: im[2], names: im[1].split(', '), where });
+      return; // the line is left out altogether
+    }
+    if(/^import\b/.test(line)) throw new ModuleError(where + ': an import must be one line of the form  import { a, b } from \'./file.js\';');
+    const ex = EXPORT_LINE.exec(line);
+    if(ex){
+      if(exports.has(ex[1])) throw new ModuleError(where + ': ' + ex[1] + ' is exported twice');
+      exports.add(ex[1]);
+      kept.push(line.slice('export '.length));
+      return;
+    }
+    if(/^export\b/.test(line)) throw new ModuleError(where + ': only  export function / const / let / class <name>  is allowed (no export lists, defaults or re-exports)');
+    kept.push(line);
+  });
+  return { text: kept.join('\n'), imports, exports };
+}
+
+// Every name a module imports must be exported by that file, and the app must include it.
+function checkImports(appName, included){
+  for(const file of included){
+    for(const im of moduleInfo(file).imports){
+      const target = path.relative(ROOT, im.file).split(path.sep).join('/');
+      if(!fs.existsSync(im.file)) fail(im.where + ': imports from ' + target + ', which does not exist');
+      if(!isModuleFile(im.file)) fail(im.where + ': imports from ' + target + ', which is not a module');
+      const missing = im.names.filter(n => !moduleInfo(im.file).exports.has(n));
+      if(missing.length) fail(im.where + ': ' + target + ' does not export ' + missing.join(', '));
+      if(!included.has(im.file)) fail(im.where + ': imports from ' + target + ', which ' + appName + ' does not include (add a  // build:include  line for it)');
+    }
+  }
+}
+
 // forSite: the site's version of the page (the site-head marker filled in, fmIDE's address
 // the site's front page).
 function buildApp(app, forSite){
+  const included = new Set();
   const page = readPiece(path.join(app.src, 'index.html'));
   const lines = page.split('\n');
   let out = '';
@@ -121,8 +215,9 @@ function buildApp(app, forSite){
       return;
     }
     const target = path.join(app.src, ...m[2].split('/'));
-    out += m[1] === 'css' ? readPiece(target) : readFolder(target);
+    out += m[1] === 'css' ? readPiece(target) : readFolder(target, included);
   });
+  checkImports(path.basename(app.out), included);
   return out;
 }
 
@@ -216,7 +311,7 @@ function siteHeaders(files){
   ].join('\n');
 }
 
-module.exports = { buildSite, siteHeaders, LibraryError: LIBRARY.LibraryError, HelpError: HELP.HelpError };
+module.exports = { buildSite, siteHeaders, moduleFragment, ModuleError, LibraryError: LIBRARY.LibraryError, HelpError: HELP.HelpError };
 if(require.main === module) main();
 
 // Builds the site, reporting a library that fails (or is missing when required) and exiting.

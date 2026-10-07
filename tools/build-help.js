@@ -34,8 +34,8 @@ const ROOT = path.join(__dirname, '..');
 const SRC = path.join(ROOT, 'src');
 const CC_BY = 'https://creativecommons.org/licenses/by/4.0/';
 
-const escapeXml = vm.runInContext(fs.readFileSync(path.join(SRC, 'shared', 'escaping.js'), 'utf8') + '\n;escapeXml',
-  vm.createContext({}));
+const { escapeXml } = require('../src/shared/escaping.js');
+const { OPERATORS } = require('../src/shared/operators.js');
 const h = (s) => escapeXml(s == null ? '' : s);
 
 class HelpError extends Error {}
@@ -47,8 +47,9 @@ const CMD = /\{cmd:([A-Za-z0-9_:]+)\}/g;
 
 // ---------- reading the sources ----------
 const read = (...p) => fs.readFileSync(path.join(SRC, ...p), 'utf8');
+// The help files are plain data (not modules); fmIDE's help reads the operator catalogue.
 function runData(files, names){
-  return vm.runInContext(files.map(f => read(...f)).join('\n') + '\n;({ ' + names.join(', ') + ' })', vm.createContext({}));
+  return vm.runInContext(files.map(f => read(...f)).join('\n') + '\n;({ ' + names.join(', ') + ' })', vm.createContext({ OPERATORS }));
 }
 
 // fmIDE's commands: { id → { label, icon } }, read from its command list. Each entry
@@ -94,7 +95,7 @@ function readRibbon(OPERATORS){
 
 // Everything the pages are made from. Tests pass their own (hostile text, missing commands…).
 function loadHelpSources(){
-  const F = runData([['shared', 'operators.js'], ['help', 'fmide-help.js'], ['help', 'fmide-tutorials.js'], ['help', 'fmide-whats-new.js']],
+  const F = runData([['help', 'fmide-help.js'], ['help', 'fmide-tutorials.js'], ['help', 'fmide-whats-new.js']],
     ['HELP_GROUPS', 'HELP_TOPICS', 'TUTORIALS', 'OPERATORS', 'WHATS_NEW']);
   const E = runData([['excel-exporter', 'help', 'excel-help.js'], ['excel-exporter', 'help', 'excel-whats-new.js']], ['EXCEL_HELP_GROUPS', 'EXCEL_HELP_TOPICS', 'EXCEL_WHATS_NEW']);
   return {

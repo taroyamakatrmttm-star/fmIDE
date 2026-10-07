@@ -1,4 +1,6 @@
 // ---------- function plugins (shared: src/shared/functions.js) ----------
+import { applyOperator, operatorById } from './operators.js';
+import { uomMultiply, uomDivide, uomDimsEqual } from './uom.js';
 // A function is a formula held in a file, written with the operators of the catalogue
 // (operators.js), for example
 //   Margin(Revenue, Cost) = (Revenue - Cost) / Revenue
@@ -20,7 +22,7 @@
 // Uses operators.js (applyOperator, operatorById) and uom.js (units).
 
 // Limits, so a file can't make either app work without end.
-const FUNCTION_LIMITS = { text: 4000, name: 64, inputs: 32, nesting: 64, callDepth: 16, description: 2000, note: 500, calls: 64 };
+export const FUNCTION_LIMITS = { text: 4000, name: 64, inputs: 32, nesting: 64, callDepth: 16, description: 2000, note: 500, calls: 64 };
 
 // The functions of the syntax that are built in: the catalogue's operators by their Excel
 // names, with Excel's number of arguments. (Lookup tables without a prototype, so no name
@@ -75,7 +77,7 @@ const FUNCTION_COMPARISONS = new Set(['lt', 'le', 'gt', 'ge', 'eq', 'ne']);
 // and `calls` lists the called names (lower case) in the order they first appear.
 // Precedence follows Excel: a leading minus binds tightest (-2^2 = 4), then ^ (from the
 // left), then * and /, then + and −, then one comparison.
-function parseFunctionText(text){
+export function parseFunctionText(text){
   const src = typeof text === 'string' ? text : '';
   const fail = (message, at, length) => { throw { fnParseError: true, message, at: at || 0, length: Math.max(1, length || 1) }; };
   try{
@@ -283,7 +285,7 @@ function tokenizeFunctionText(src, fail){
 // ---- definitions from files ----
 // A clean copy of each definition in `list` that has what a definition needs; anything else
 // is left out. Nothing from the file is kept that isn't listed here.
-function cleanFunctionDefinitions(list){
+export function cleanFunctionDefinitions(list){
   const out = [];
   (Array.isArray(list) ? list : []).forEach(d => {
     const clean = cleanFunctionDefinition(d);
@@ -291,7 +293,7 @@ function cleanFunctionDefinitions(list){
   });
   return out;
 }
-function cleanFunctionDefinition(d){
+export function cleanFunctionDefinition(d){
   if(!d || typeof d !== 'object') return null;
   const ref = cleanFunctionRef(d);
   if(!ref || typeof d.text !== 'string' || !d.text.trim()) return null;
@@ -308,7 +310,7 @@ function cleanFunctionDefinition(d){
 // `calls`), or null. Ids are 8–64 letters, digits and dashes, as for templates; a malformed
 // `versionId` counts as unknown ('').
 const FUNCTION_ID = /^[A-Za-z0-9-]{8,64}$/;
-function cleanFunctionRef(r){
+export function cleanFunctionRef(r){
   if(!r || typeof r !== 'object') return null;
   if(typeof r.family !== 'string' || !FUNCTION_ID.test(r.family)) return null;
   const version = Number(r.version);
@@ -320,7 +322,7 @@ function functionKey(ref){ return ref.family + '@' + ref.version; }
 
 // The function name a definition's text starts with, or '' (for showing a definition whose
 // text can't be read).
-function functionNameOf(def){
+export function functionNameOf(def){
   const m = def && typeof def.text === 'string' ? /^\s*([\p{L}_][\p{L}\p{N}_.]*)/u.exec(def.text) : null;
   return m ? m[1].slice(0, FUNCTION_LIMITS.name) : '';
 }
@@ -335,7 +337,7 @@ function functionNameOf(def){
 //   function-too-deep (calls nested more than FUNCTION_LIMITS.callDepth deep),
 //   function-arguments (it calls a function with the wrong number of inputs).
 // A reference with a versionId matches only the definition with that versionId.
-function compileFunctions(list){
+export function compileFunctions(list){
   const byKey = new Map();
   const compiled = [];
   cleanFunctionDefinitions(list).forEach(def => {
@@ -401,7 +403,7 @@ function compileFunctions(list){
 // counted from 1). Returns { value } or { error, edge? }: a failing input's own result, or
 // { error: 'math-error' } for a result that isn't a finite number (a divide by zero; Excel
 // shows #DIV/0! or #NUM!).
-function runFunction(fn, input, period){
+export function runFunction(fn, input, period){
   const memo = [];
   const arg = (i) => {
     if(!memo[i]) memo[i] = i < fn.params.length ? input(i) : { error: 'function-input-unwired' };
@@ -503,7 +505,7 @@ function functionExprKey(x){
 // reachesOutsideTimeline). Only what the formula must read counts: IFERROR fails only when
 // both of its inputs do, IF when its condition does or both of its branches do, and an input
 // the formula doesn't read never counts — as the calculation reads them.
-function functionNeedsOutsideTimeline(fn, inputReaches){
+export function functionNeedsOutsideTimeline(fn, inputReaches){
   const memo = [];
   const arg = (i) => { if(!(i in memo)) memo[i] = !!inputReaches(i); return memo[i]; };
   return functionExprNeedsOutside(fn, fn.body, arg);
@@ -542,7 +544,7 @@ function functionExprNeedsOutside(fn, x, arg){
 // keeps Revenue's unit) and is left out for the rules that need equal units (Revenue + 100
 // keeps it too). Returns a unit or null.
 const FUNCTION_UNIT_NUMBER = { number: true };
-function functionUnit(fn, inputUnit){
+export function functionUnit(fn, inputUnit){
   const memo = [];
   const arg = (i) => { if(!(i in memo)) memo[i] = inputUnit(i); return memo[i]; };
   const u = functionExprUnit(fn, fn.body, arg);
@@ -600,7 +602,7 @@ function functionExprUnit(fn, x, arg){
 // ---- which definitions a model needs ----
 // The definitions in `list` that the function nodes of `canvases` use, and every function
 // those call, in `list`'s order — what a file carries. Unused ones are left out.
-function functionsUsedBy(canvases, list){
+export function functionsUsedBy(canvases, list){
   const defs = cleanFunctionDefinitions(list);
   if(!defs.length) return [];
   const byKey = new Map();

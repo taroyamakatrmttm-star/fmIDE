@@ -26,23 +26,12 @@
 
 const fs = require('fs');
 const path = require('path');
-const vm = require('vm');
 
-const SHARED = path.join(__dirname, '..', 'src', 'shared');
+// The shared modules (src/shared/, step 3c), exactly as the apps take them. They use only
+// what they import, and Node's own crypto.getRandomValues for the ids an old file's upgrade
+// gives.
 const SHARED_FILES = ['file-formats.js', 'operators.js', 'uom.js', 'input-rule.js', 'functions.js', 'ir.js', 'library-pack.js', 'fmide-files.js'];
-const SHARED_NAMES = ['FILE_FORMATS', 'FILE_LIMITS', 'fileTextProblem', 'fileDataProblem', 'readFmData', 'FMIDE_FILE_MIGRATIONS',
-  'readLibraryPackData', 'readLibraryIndexData', 'LIBRARY_INDEX_LIMITS', 'cleanLibraryPackInfo', 'cleanItemOrigin', 'sameAuthorName', 'LIBRARY_PACK_LIMITS', 'LIBRARY_PACK_LICENCES',
-  'isTemplateUid', 'cleanTemplateNote', 'TEMPLATE_NOTE_MAX', 'cleanRecipeData', 'RECIPE_MAX_PARTS', 'cleanTemplateAttachments', 'TEMPLATE_ATTACHMENT_LIMITS',
-  'cleanFunctionDefinition', 'parseFunctionText', 'compileFunctions', 'functionNameOf', 'FUNCTION_LIMITS',
-  'compileModel', 'evaluateModel', 'parseRectText'];
-// The shared files, loaded into a context of their own: they can use only what they define
-// (and a random-number source, for the ids an old file's upgrade gives).
-function loadShared(){
-  const code = SHARED_FILES.map(f => fs.readFileSync(path.join(SHARED, f), 'utf8')).join('\n');
-  const ctx = vm.createContext({ crypto: require('crypto').webcrypto });
-  return vm.runInContext(code + '\n;({ ' + SHARED_NAMES.join(', ') + ' })', ctx);
-}
-const S = loadShared();
+const S = Object.assign({}, ...SHARED_FILES.map(f => require(path.join(__dirname, '..', 'src', 'shared', f))));
 
 // Limits of the library, on top of fmIDE's own (FILE_LIMITS): a pack is at most 5 MB.
 const CHECK_LIMITS = { bytes: 5 * 1024 * 1024 };

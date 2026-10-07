@@ -6,14 +6,14 @@
 // checker (phase 8c) can run them in Node.
 
 // The licences a shared item may carry (decision: CC BY 4.0 only, for now).
-const LIBRARY_PACK_LICENCES = {
+export const LIBRARY_PACK_LICENCES = {
   'CC-BY-4.0': { short: 'CC BY 4.0', name: 'Creative Commons Attribution 4.0 International',
     summary: 'anyone may use, change and share it, including commercially, with credit to the author' }
 };
-const LIBRARY_PACK_LIMITS = { title: 120, author: 120, description: 2000, tags: 10, tag: 40, items: 500 };
+export const LIBRARY_PACK_LIMITS = { title: 120, author: 120, description: 2000, tags: 10, tag: 40, items: 500 };
 
 // Text a person typed or a file holds: trimmed, one line (or not), at most `max` characters.
-function packText(v, max, multiline){
+export function packText(v, max, multiline){
   if(typeof v !== 'string') return '';
   let s = v.replace(/\r\n?/g, '\n');
   if(!multiline) s = s.replace(/\s+/g, ' ');
@@ -21,7 +21,7 @@ function packText(v, max, multiline){
 }
 // Tags: a list (or comma-separated text), lower case, no duplicates, at most 10 of 40
 // characters each.
-function packTags(v){
+export function packTags(v){
   const list = Array.isArray(v) ? v : (typeof v === 'string' ? v.split(',') : []);
   const out = [];
   list.forEach(t => {
@@ -33,7 +33,7 @@ function packTags(v){
 
 // A pack's `pack` object read from a file (or typed when saving). Returns { info } with only
 // the known fields, cleaned, or { error } saying what is missing.
-function cleanLibraryPackInfo(p){
+export function cleanLibraryPackInfo(p){
   if(!p || typeof p !== 'object' || Array.isArray(p)) return { error: "This library pack doesn't say what it is (it has no \"pack\" details)." };
   const id = typeof p.id === 'string' && /^[A-Za-z0-9-]{8,64}$/.test(p.id) ? p.id : null;
   if(!id) return { error: "This library pack has no valid id." };
@@ -60,7 +60,7 @@ function cleanLibraryPackInfo(p){
 // what the pack said, not proof. Read from a file it is untrusted like everything else: the
 // same rules as the pack details; anything else is dropped. Returns a clean copy or null
 // (then the item simply has no origin).
-function cleanItemOrigin(o){
+export function cleanItemOrigin(o){
   if(!o || typeof o !== 'object' || Array.isArray(o)) return null;
   const packId = typeof o.packId === 'string' && /^[A-Za-z0-9-]{8,64}$/.test(o.packId) ? o.packId : null;
   const packTitle = packText(o.packTitle, LIBRARY_PACK_LIMITS.title);
@@ -70,17 +70,17 @@ function cleanItemOrigin(o){
   return { packId, packTitle, author, licence };
 }
 // The origin an item gets from the pack (cleaned `pack` details) it is added from.
-function originFromPack(info){
+export function originFromPack(info){
   return { packId: info.id, packTitle: info.title, author: info.author, licence: info.licence };
 }
 // Whether two author names are the same person's, as far as fmIDE can tell: capitals and
 // spaces don't count.
-function sameAuthorName(a, b){
+export function sameAuthorName(a, b){
   const k = (s) => String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
   return !!k(a) && k(a) === k(b);
 }
 // One line for people: 'From the library pack "…" by … · CC BY 4.0'.
-function originText(o){
+export function originText(o){
   const lic = LIBRARY_PACK_LICENCES[o.licence];
   return `From the library pack “${o.packTitle}” by ${o.author}` + (lic ? ` · ${lic.short}` : '');
 }
@@ -91,7 +91,7 @@ function originText(o){
 // comes from the packs, so it is checked like a pack: an entry that fails any check is left
 // out whole (the rest are still shown), and what is kept is only ever shown as plain text.
 // Addresses are never taken from it: fmIDE builds a pack's address from its id alone.
-const LIBRARY_INDEX_LIMITS = { bytes: 10 * 1024 * 1024, packs: 5000, packBytes: 5 * 1024 * 1024 };
+export const LIBRARY_INDEX_LIMITS = { bytes: 10 * 1024 * 1024, packs: 5000, packBytes: 5 * 1024 * 1024 };
 // Characters that make text look different from what it is (the same ones the library's
 // checker refuses, tools/check-pack.js): they change the direction of text, are invisible,
 // or are control characters (a line break is allowed where text may have several lines).
@@ -100,7 +100,7 @@ function hasHiddenCharacter(text){ return typeof text === 'string' && LIBRARY_HI
 const LIBRARY_INDEX_KINDS = ['module', 'system', 'recipe'];
 // One entry of the list, checked. Returns { entry } (only the known fields, cleaned) or
 // { error } (a short reason, for the count of packs that could not be shown).
-function cleanLibraryIndexEntry(e){
+export function cleanLibraryIndexEntry(e){
   if(!e || typeof e !== 'object' || Array.isArray(e)) return { error: 'not an entry' };
   const info = cleanLibraryPackInfo(e);
   if(info.error) return { error: info.error };

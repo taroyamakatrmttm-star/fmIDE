@@ -15,10 +15,9 @@ const F = require('./helpers/fmide');
 
 // The help text and the operator catalogue, on their own (no app).
 function loadHelp(){
-  const src = path.join(__dirname, '..', 'src');
-  const code = [path.join(src, 'shared', 'operators.js'), path.join(src, 'help', 'fmide-help.js')]
-    .map(f => fs.readFileSync(f, 'utf8')).join('\n');
-  return vm.runInContext(code + '\n;({ HELP_GROUPS, HELP_TOPICS, COMMAND_HELP, OPERATOR_HELP, OPERATORS })', vm.createContext({}));
+  const { OPERATORS } = require('../src/shared/operators.js');
+  const code = fs.readFileSync(path.join(__dirname, '..', 'src', 'help', 'fmide-help.js'), 'utf8');
+  return vm.runInContext(code + '\n;({ HELP_GROUPS, HELP_TOPICS, COMMAND_HELP, OPERATOR_HELP, OPERATORS })', vm.createContext({ OPERATORS }));
 }
 const H = loadHelp();
 const panel = (page) => page.locator('#helpPanel');

@@ -30,7 +30,7 @@ function parseUOMSegment(seg){
 
 // Parses a manually-typed UOM string (e.g. "$/t", "kt", "$k") into {scale, dims}, or
 // null if blank/unparseable.
-function parseUOM(str){
+export function parseUOM(str){
   if(!str) return null;
   const s = str.trim();
   if(!s) return null;
@@ -47,7 +47,7 @@ function parseUOM(str){
 }
 
 // Renders {scale, dims} back to a display string, e.g. {scale:1000, dims:{$:1}} -> "$k".
-function formatUOM(u){
+export function formatUOM(u){
   if(!u) return '';
   const numSyms = Object.keys(u.dims).filter(k => u.dims[k] > 0).sort();
   const denSyms = Object.keys(u.dims).filter(k => u.dims[k] < 0).sort();
@@ -74,9 +74,9 @@ function uomCombineDims(a, b, sign){
   });
   return dims;
 }
-function uomMultiply(a, b){ return (a && b) ? { scale: a.scale * b.scale, dims: uomCombineDims(a, b, 1) } : null; }
-function uomDivide(a, b){ return (a && b) ? { scale: a.scale / b.scale, dims: uomCombineDims(a, b, -1) } : null; }
-function uomDimsEqual(a, b){
+export function uomMultiply(a, b){ return (a && b) ? { scale: a.scale * b.scale, dims: uomCombineDims(a, b, 1) } : null; }
+export function uomDivide(a, b){ return (a && b) ? { scale: a.scale / b.scale, dims: uomCombineDims(a, b, -1) } : null; }
+export function uomDimsEqual(a, b){
   const ak = Object.keys(a.dims), bk = Object.keys(b.dims);
   return ak.length === bk.length && ak.every(k => a.dims[k] === b.dims[k]);
 }
