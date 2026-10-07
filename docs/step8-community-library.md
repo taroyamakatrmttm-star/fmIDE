@@ -164,3 +164,14 @@ At the owner's request, nobody edits the records by hand any more — neither a 
 - **The checker** (`tools/check-library.js`) takes `--records-on-merge` with `--base` (a pull request): the records the pull request's own packs lack — the pack's, a new family's, a new author's — are notes ("It is added automatically when the pull request is merged."), not errors. They are still worked out for the account that opened the pull request, so the family rule and the author name are checked exactly as before, and listed in the report. Everything else still fails, and so does a record missing for a pack that was already in the library. Without the option nothing changes; on `main` (no `--base`) a pack without records is still an error.
 - **The library's CI** (in `fmide-library`): the pull-request check runs with `--records-on-merge`; after a merge into `main`, a step finds the pull request merged (from GitHub, never from the files), runs `--write-records` with the account that opened it, and commits the record files to `main`. It writes only for the packs that pull request added, and writes nothing when anything else is wrong.
 - Tests: group 24.
+
+## The live site follows the library by itself (7 October 2026)
+
+At the owner's request, a pack merged into the library reaches the live site without anyone moving the `library/` pointer (the owner's choice: every hour, and at once on request).
+
+- **The deploy job** (`.github/workflows/tests.yml`) builds the live site from the library's latest `main`, fetched at deploy time; every pack there was checked by the library's CI and merged by the maintainer, and fmIDE's build checks the whole library again. A pull request's preview still uses the pinned commit.
+- **When it runs:** on every merge into fmIDE's `main` (as before), every hour (`schedule`, minute 17), and at once with **Run workflow** in fmIDE's Actions tab (`workflow_dispatch`). The hourly and manual runs skip the test job (they run `main`'s code, tested when it was merged). The hourly run publishes only when the built `/library/index.json` differs from the live site's: the list holds every pack's id, details and hash.
+- **If the latest library fails fmIDE's checks** (for example after fmIDE's checker became stricter than the one the library runs), the site is built from the pinned commit instead, the run's summary says so, and the run ends in an error, so the owner hears of it. The live site never loses its catalogue.
+- **The pointer** is now only for previews; moving it is no longer needed to publish. GitHub turns off a repository's hourly runs after 60 days without activity; a merge, or Run workflow, starts them again.
+- Tests: the workflow's build step was run locally against the library (an old pinned commit and the latest `main`: the latest was built) and against a library whose latest commit holds a broken pack (the pinned commit was built, the fallback reported).
+
