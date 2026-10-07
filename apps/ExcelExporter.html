@@ -2672,11 +2672,14 @@ function evaluateModel(ir, options){
   if(wantInstances) out.instances = instances;
   return out;
 }
-
+// The formulas themselves are modules (step 3c-4), in src/excel-exporter/formulas/.
+// ---------- the formulas (src/excel-exporter/formulas/core-translation.js; a module, step 3c-4) ----------
 // The loaded model's IR (compileModel), set by loadModel. Every question about the graph —
 // what feeds what, in which order, block ports, plug-to-socket links, units — is asked of
 // it; the layout's `model.canvases` are its canvases as the calculation sees them.
 let modelIR = null;
+// Sets it (loadModel, and Start Over with null): the one way the rest of the app changes it.
+function useModelIR(ir){ modelIR = ir; }
 function irCanvas(canvasId){ return modelIR ? modelIR.canvases.get(canvasId) : undefined; }
 function irNode(canvasId, nodeId){ return modelIR ? irNodeIn(modelIR, canvasId, nodeId) : undefined; }
 // The block-instance hops of a row path, as the IR reads them (a vintage doesn't change units).
@@ -2705,7 +2708,8 @@ function blankCell(style, numFmt){
   return c;
 }
 function textCell(v, style){ return (v === '' || v === null || v === undefined) ? blankCell(style) : Object.assign({ t: 's', v }, style ? { s: style } : {}); }
-let helperColCount = 0; // set per export by generateWorkbook
+let helperColCount = 0; // set per export by generateWorkbook, through useHelperColumns
+function useHelperColumns(n){ helperColCount = n; }
 function helperCol(slot){ return colLetter(4 + slot); }
 function periodCol(periodIndex){ return 5 + helperColCount + periodIndex; } // +1 = spacer column
 function sanitizeSheetName(name){
@@ -2854,7 +2858,7 @@ function operandRef(canvasId, nodeId, periodIndex, ctx, currentTabName, path, fr
   }
   try{
     if(n.type === 'operator') return buildOperatorFormula(canvasId, n, periodIndex, ctx, currentTabName, path);
-    // A function call, written out in full (01c-function-calls.js).
+    // A function call, written out in full (function-calls.js).
     if(n.type === 'function') return buildFunctionCallFormula(canvasId, n, periodIndex, ctx, currentTabName, path);
     if(n.type === 'alias'){
       if(!n.sourceCanvasId || !n.sourceNodeId) return '0';
@@ -3083,7 +3087,7 @@ function spellOperator(spell, operandStrs){
 // ---------- brackets only where Excel needs them ----------
 // Formula text is built from pieces; an operator's piece comes in brackets. These drop the
 // ones Excel's order of operations doesn't need, by the rules function calls follow
-// (01c-function-calls.js): a leading minus binds tightest, then ^, then * and /, then + and
+// (function-calls.js): a leading minus binds tightest, then ^, then * and /, then + and
 // -, then a comparison; the right side of an equal level keeps its brackets (a-(b-c)), and
 // so does a piece that starts with a minus there (a+(-b)).
 const INFIX_LEVEL = { '+': 2, '-': 2, '*': 3, '/': 3, '^': 4 };
@@ -3226,6 +3230,65 @@ function classifyNode(canvas, node){
   return 'calc';
 }
 
+// ---------- row identities (moved here from 02-block-instances.js and 05-inputs-tab…, step 3c-4) ----------
+// Canonical row-id / cellPos key for a node reached via a given instance path. An
+// empty path reproduces the exact pre-existing "canvasId|nodeId" format, so normal
+// (non-block) rows and any mapping already saved in browser storage are unaffected.
+// A hop that belongs to a specific vintage/run of a VERTICAL block instance carries
+// a `vIndex` (1-based); it's folded into the key so each vintage's copy of a node
+// gets its own distinct row identity, while the hop with no vIndex stays the
+// identity of the combined/reduced row (see collectInstanceRows) — exactly the same
+// key a non-vertical instance's single copy would already use, so existing mappings
+// and existing cross-instance references are completely unaffected.
+function pathKey(path, canvasId, nodeId){
+  const hops = (path || []).map(h => h.canvasId + ':' + h.nodeId + (typeof h.vIndex === 'number' ? ':v' + h.vIndex : '')).join('>>');
+  return (hops ? hops + '>>' : '') + canvasId + '|' + nodeId;
+}
+
+// The id of a row's Inputs-tab mirror (05-inputs-tab-scenarios-sections.js).
+function mirrorIdFor(sourceRowId){ return 'inp|' + sourceRowId; }
+
+// True if resolving `nodeId` (in `canvasId`) from INSIDE a vertical instantiation of
+// `hostNode` (sitting on `hostCanvasId`) could differ from one vintage/run to
+// another — i.e. its formula chain (through operators, aliases, period-shifts —
+// everything operandRef already inlines) ever reaches the "Vertical Index" port
+// (blockRole 'index'), or a Block Input port whose feeding edge (at hostCanvasId
+// level) is marked `verticalIndexed`. A node for which this returns false computes
+// the EXACT same formula/value regardless of which vintage it's evaluated for — see
+// operandRef: the only two places a hop's `vIndex` is ever consulted are exactly
+// these two cases — so such a node is safe to collapse to a single shared row
+// instead of duplicating it once per vintage. Conservative (returns true, i.e. "keep
+// this per-vintage") on anything unclear — a cycle, an unresolved edge, a nested
+// block instance's own internals — so a row is only ever collapsed when it's
+// actually provable to be vintage-invariant.
+function isVintageVarying(hostCanvasId, hostNode, canvasId, nodeId, visiting){
+  const key = canvasId + '|' + nodeId;
+  if(visiting.has(key)) return true;
+  const n = irNode(canvasId, nodeId);
+  if(!n) return true;
+  if(n.blockRole === 'index') return true;
+  const nextVisiting = new Set(visiting); nextVisiting.add(key);
+  if(n.type === 'operator' || n.type === 'periodShift' || n.type === 'function'){
+    return n.incoming.some(e => isVintageVarying(hostCanvasId, hostNode, canvasId, e.from, nextVisiting));
+  }
+  if(n.type === 'alias'){
+    if(!n.sourceCanvasId || !n.sourceNodeId) return false;
+    return isVintageVarying(hostCanvasId, hostNode, n.sourceCanvasId, n.sourceNodeId, nextVisiting);
+  }
+  if(n.type === 'blockInstance') return true; // not analyzed — conservative
+  if(n.type === 'value'){
+    if(n.blockRole === 'input'){
+      if(canvasId !== hostNode.blockDefCanvasId) return true; // only the immediate definition is analyzed
+      const edge = irPortEdge(modelIR, hostCanvasId, hostNode.id, irCanvas(canvasId).ports.inputs.indexOf(n));
+      if(!edge) return false; // unwired port defaults to a fixed literal (0) — invariant
+      if(edge.verticalIndexed) return true;
+      return isVintageVarying(hostCanvasId, hostNode, hostCanvasId, edge.from, nextVisiting);
+    }
+    if(n.incoming.length === 1) return isVintageVarying(hostCanvasId, hostNode, canvasId, n.incoming[0].from, nextVisiting);
+    return false; // a true input (literal / periodValues only) — invariant
+  }
+  return true;
+}
 // ============================================================
 // How each operator is written in Excel, keyed by the operator catalogue's lasting ids
 // (src/shared/operators.js). What an operator means lives in the catalogue; how Excel
@@ -3459,20 +3522,6 @@ function excelFormulaProblem(formula){
 // never collide or share a cell.
 // ============================================================
 
-// Canonical row-id / cellPos key for a node reached via a given instance path. An
-// empty path reproduces the exact pre-existing "canvasId|nodeId" format, so normal
-// (non-block) rows and any mapping already saved in browser storage are unaffected.
-// A hop that belongs to a specific vintage/run of a VERTICAL block instance carries
-// a `vIndex` (1-based); it's folded into the key so each vintage's copy of a node
-// gets its own distinct row identity, while the hop with no vIndex stays the
-// identity of the combined/reduced row (see collectInstanceRows) — exactly the same
-// key a non-vertical instance's single copy would already use, so existing mappings
-// and existing cross-instance references are completely unaffected.
-function pathKey(path, canvasId, nodeId){
-  const hops = (path || []).map(h => h.canvasId + ':' + h.nodeId + (typeof h.vIndex === 'number' ? ':v' + h.vIndex : '')).join('>>');
-  return (hops ? hops + '>>' : '') + canvasId + '|' + nodeId;
-}
-
 // Like classifyNode, but used only while walking INSIDE a block definition during
 // unpacking: a rectangle marked as a Block Input port is a pure pass-through to
 // whatever feeds the instance's corresponding port (see operandRef) — it never
@@ -3538,48 +3587,6 @@ function collectUnpackedRows(defCanvasId, pathPrefix, visitingDefIds, periodCoun
     out.push({ path: pathPrefix, canvasId: defCanvasId, nodeId: n.id, section });
   });
   return out;
-}
-
-// True if resolving `nodeId` (in `canvasId`) from INSIDE a vertical instantiation of
-// `hostNode` (sitting on `hostCanvasId`) could differ from one vintage/run to
-// another — i.e. its formula chain (through operators, aliases, period-shifts —
-// everything operandRef already inlines) ever reaches the "Vertical Index" port
-// (blockRole 'index'), or a Block Input port whose feeding edge (at hostCanvasId
-// level) is marked `verticalIndexed`. A node for which this returns false computes
-// the EXACT same formula/value regardless of which vintage it's evaluated for — see
-// operandRef: the only two places a hop's `vIndex` is ever consulted are exactly
-// these two cases — so such a node is safe to collapse to a single shared row
-// instead of duplicating it once per vintage. Conservative (returns true, i.e. "keep
-// this per-vintage") on anything unclear — a cycle, an unresolved edge, a nested
-// block instance's own internals — so a row is only ever collapsed when it's
-// actually provable to be vintage-invariant.
-function isVintageVarying(hostCanvasId, hostNode, canvasId, nodeId, visiting){
-  const key = canvasId + '|' + nodeId;
-  if(visiting.has(key)) return true;
-  const n = irNode(canvasId, nodeId);
-  if(!n) return true;
-  if(n.blockRole === 'index') return true;
-  const nextVisiting = new Set(visiting); nextVisiting.add(key);
-  if(n.type === 'operator' || n.type === 'periodShift' || n.type === 'function'){
-    return n.incoming.some(e => isVintageVarying(hostCanvasId, hostNode, canvasId, e.from, nextVisiting));
-  }
-  if(n.type === 'alias'){
-    if(!n.sourceCanvasId || !n.sourceNodeId) return false;
-    return isVintageVarying(hostCanvasId, hostNode, n.sourceCanvasId, n.sourceNodeId, nextVisiting);
-  }
-  if(n.type === 'blockInstance') return true; // not analyzed — conservative
-  if(n.type === 'value'){
-    if(n.blockRole === 'input'){
-      if(canvasId !== hostNode.blockDefCanvasId) return true; // only the immediate definition is analyzed
-      const edge = irPortEdge(modelIR, hostCanvasId, hostNode.id, irCanvas(canvasId).ports.inputs.indexOf(n));
-      if(!edge) return false; // unwired port defaults to a fixed literal (0) — invariant
-      if(edge.verticalIndexed) return true;
-      return isVintageVarying(hostCanvasId, hostNode, hostCanvasId, edge.from, nextVisiting);
-    }
-    if(n.incoming.length === 1) return isVintageVarying(hostCanvasId, hostNode, canvasId, n.incoming[0].from, nextVisiting);
-    return false; // a true input (literal / periodValues only) — invariant
-  }
-  return true;
 }
 
 // Produces every unpacked row for ONE block instance — vertical or not — given the
@@ -4691,7 +4698,7 @@ async function loadModel(m){
     if(typeof raw === 'string' && raw) restored = JSON.parse(raw);
   }catch(err){ /* ignore */ }
   model = loaded;
-  modelIR = ir;
+  useModelIR(ir);
   canvasModules = readCanvasModules(systemData);
   templateLayouts = readTemplateLayouts(m && m.kind === 'fmIDE-workspace' ? m : null); // step 11c-2
   mappingKey = key;
@@ -5374,7 +5381,6 @@ function inputMirrorRows(){ return (mapping && mapping.inputRows) || []; }
 function inputsCfg(){ return mapping.cfg.inputsTab; }
 function inputsEnabled(){ return !!(mapping && mapping.cfg.inputsTab && mapping.cfg.inputsTab.enabled); }
 function inputsTab(){ return mapping.tabs.find(t => t.id === INPUTS_TAB_ID) || null; }
-function mirrorIdFor(sourceRowId){ return 'inp|' + sourceRowId; }
 
 // A real rectangle row whose rectangle has no incoming arrow — i.e. its numbers are typed.
 // A Block Input rectangle counts too: inside an instance (row.path not empty) when nothing
@@ -8061,7 +8067,7 @@ function buildWorkbook(){
       else if(prev.join('\u0000') !== names.join('\u0000')) helperHeadersByTab[tabId] = prev.map((x, i) => 'Helper ' + (i + 1));
     });
   });
-  helperColCount = maxSlots;
+  useHelperColumns(maxSlots);
   // Scenarios plan: every scenario variable written on the Inputs tab, in that tab's
   // order, gets one row on the Scenarios tab (from row 4).
   const scenarioVars = inputsEnabled() ? (ctx.rowsByTabOrdered[INPUTS_TAB_ID] || []).filter(e => ctx.scenarioBlocks[e.row.id]) : [];
@@ -8382,7 +8388,7 @@ function buildWorkbook(){
     wb.SheetNames.unshift(wb.SheetNames.pop()); // Scenarios first
   }
   return { wb, tooLong };
-  }finally{ helperColCount = 0; }
+  }finally{ useHelperColumns(0); }
 }
 
 // The Functions tab: one row per function version the formulas write out, so a reader can
@@ -10545,7 +10551,7 @@ watchForUpdates({
 });
 
 $('btnClearAll').addEventListener('click', () => {
-  model = null; modelIR = null; mapping = null; mappingKey = null;
+  model = null; useModelIR(null); mapping = null; mappingKey = null;
   canvasModules = {}; moduleBaselines = {}; moduleLayoutsApplied = []; templateLayouts = {}; tabLayoutFromTemplate = {};
   $('fileInput').value = '';
   $('afterLoad').classList.add('hidden');

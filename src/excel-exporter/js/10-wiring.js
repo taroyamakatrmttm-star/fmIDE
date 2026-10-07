@@ -209,7 +209,7 @@ watchForUpdates({
 });
 
 $('btnClearAll').addEventListener('click', () => {
-  model = null; modelIR = null; mapping = null; mappingKey = null;
+  model = null; useModelIR(null); mapping = null; mappingKey = null;
   canvasModules = {}; moduleBaselines = {}; moduleLayoutsApplied = []; templateLayouts = {}; tabLayoutFromTemplate = {};
   $('fileInput').value = '';
   $('afterLoad').classList.add('hidden');

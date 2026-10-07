@@ -78,7 +78,7 @@ Each app is still delivered as one self-contained HTML file, but its source is s
 
 ```
 src/fmide/            index.html (the page) · styles.css · js/01-….js … (the script, in order)
-src/excel-exporter/   index.html · styles.css · js-head/ (built-in Excel writer) · js/ (the app)
+src/excel-exporter/   index.html · styles.css · js-head/ (built-in Excel writer) · formulas/ (formula building) · js/ (the app)
 src/shared/           code the apps share, as modules: escaping, the input-rectangle rule, the calculation, file formats (and fmIDE's canvas format roles)
 ```
 
@@ -87,7 +87,7 @@ src/shared/           code the apps share, as modules: escaping, the input-recta
 3. `npm test`.
 4. Commit `src/` and the rebuilt `apps/` together. CI rebuilds and fails if `apps/` doesn't match `src/`; `npm run build:check` does the same check locally.
 
-The script pieces are plain fragments of one wrapped function — no `import`/`export` — joined in file-name order. In `index.html`, a line `<!-- build:css styles.css -->` or `<!-- build:js js -->` marks where a file or folder is inserted. Inside a script piece, a line `// build:include shared/<file>.js` pulls in a shared file, so logic both apps need is written once. The shared files, ExcelExporter's Excel writer (`js-head/`) and fmIDE's `src/fmide/modules/` are real modules (step 3c): each says what it needs (`import { a } from './other.js';`, one line each) and what it offers (`export function …`, `export const …`); Node tools and tests load them as they are, and the build takes the import lines and export words out, so the apps get plain fragments as before. The tools need Node 22.12 or later (or 20.19 or later).
+The script pieces are plain fragments of one wrapped function — no `import`/`export` — joined in file-name order. In `index.html`, a line `<!-- build:css styles.css -->` or `<!-- build:js js -->` marks where a file or folder is inserted. Inside a script piece, a line `// build:include shared/<file>.js` pulls in a shared file, so logic both apps need is written once. The shared files, ExcelExporter's Excel writer (`js-head/`) and formula building (`formulas/`), and fmIDE's `src/fmide/modules/` are real modules (step 3c): each says what it needs (`import { a } from './other.js';`, one line each) and what it offers (`export function …`, `export const …`); Node tools and tests load them as they are, and the build takes the import lines and export words out, so the apps get plain fragments as before. The tools need Node 22.12 or later (or 20.19 or later).
 
 ## Docs
 

@@ -1,4 +1,7 @@
 // ============================================================
+import { irPortEdge } from '../../shared/ir.js';
+import { modelIR, colLetter, periodCol, operandRef, isLogicalValued, isWrapped, formulaLevel } from './core-translation.js';
+import { EXCEL_SPELLINGS } from './operator-spellings.js';
 // Function calls (function plugins, step 7 phase D3): a call is written out in full inside
 // each formula that reads it (step 7 decision 5) — no LAMBDA, no named function. The
 // function's formula comes from the shared parser's tree (parseFunctionText, through the
@@ -23,22 +26,22 @@
 //   lists the cell.
 // ============================================================
 
-const EXCEL_LIMITS = { length: 8192, nesting: 64 };
+export const EXCEL_LIMITS = { length: 8192, nesting: 64 };
 // Thrown while writing a call whose text is already too long for Excel.
 function ExcelFormulaTooLong(){ this.excelTooLong = true; }
 
 // Binding strength, as Excel reads it (higher binds tighter).
-const FN_LEVEL = { compare: 1, add: 2, subtract: 2, multiply: 3, divide: 3, power: 4, neg: 5, atom: 6 };
+export const FN_LEVEL = { compare: 1, add: 2, subtract: 2, multiply: 3, divide: 3, power: 4, neg: 5, atom: 6 };
 
 // A number from a formula, as Excel reads it: 1500, 0.5, 1E-7, 1E+21. (The parser gives
 // only numbers of 0 or more; a minus is its own step.)
-function excelNumber(v){
+export function excelNumber(v){
   return String(v).replace('e', 'E');
 }
 
 // The call a function node makes, written out in full: formula text that can stand anywhere
 // another formula reads it (a cell reference, a bracketed expression or a function call).
-function buildFunctionCallFormula(canvasId, n, periodIndex, ctx, currentTabName, path){
+export function buildFunctionCallFormula(canvasId, n, periodIndex, ctx, currentTabName, path){
   if(!n.call || n.call.status) return 'NA()';
   ctx.fnWrites = (ctx.fnWrites || 0) + 1;
   if(ctx.onFunction) ctx.onFunction(n.call);
@@ -153,7 +156,7 @@ function writeFunctionExpr(fn, x, input, caught, ctx){
 // Why `formula` can't go into Excel, or null: longer than 8,192 characters (with its "="),
 // or brackets nested deeper than 64 (every bracket counts, the stricter reading of Excel's
 // limit; brackets inside a quoted sheet name don't).
-function excelFormulaProblem(formula){
+export function excelFormulaProblem(formula){
   if(formula.length + 1 > EXCEL_LIMITS.length) return { kind: 'length', size: formula.length + 1 };
   let depth = 0, most = 0, quoted = false;
   for(let i = 0; i < formula.length; i++){

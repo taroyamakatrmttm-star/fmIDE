@@ -19,7 +19,7 @@ const { test, expect, ROOT } = require('./helpers/apps');
 const { moduleFragment, ModuleError } = require('../tools/build.js');
 
 const SRC = path.join(ROOT, 'src');
-const MODULE_DIRS = ['shared', 'excel-exporter/js-head', 'fmide/modules'];
+const MODULE_DIRS = ['shared', 'excel-exporter/js-head', 'excel-exporter/formulas', 'fmide/modules'];
 // Every module, by its path from the repository's folder ('src/shared/ir.js').
 const MODULES = MODULE_DIRS.flatMap(d => fs.readdirSync(path.join(SRC, ...d.split('/'))).filter(f => f.endsWith('.js')).map(f => 'src/' + d + '/' + f)).sort();
 // The browser's own pieces (storage, pointer input, the Help panel…) reach for the page when

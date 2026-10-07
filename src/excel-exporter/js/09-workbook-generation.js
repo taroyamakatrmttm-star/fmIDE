@@ -120,7 +120,7 @@ function buildWorkbook(){
       else if(prev.join('\u0000') !== names.join('\u0000')) helperHeadersByTab[tabId] = prev.map((x, i) => 'Helper ' + (i + 1));
     });
   });
-  helperColCount = maxSlots;
+  useHelperColumns(maxSlots);
   // Scenarios plan: every scenario variable written on the Inputs tab, in that tab's
   // order, gets one row on the Scenarios tab (from row 4).
   const scenarioVars = inputsEnabled() ? (ctx.rowsByTabOrdered[INPUTS_TAB_ID] || []).filter(e => ctx.scenarioBlocks[e.row.id]) : [];
@@ -441,7 +441,7 @@ function buildWorkbook(){
     wb.SheetNames.unshift(wb.SheetNames.pop()); // Scenarios first
   }
   return { wb, tooLong };
-  }finally{ helperColCount = 0; }
+  }finally{ useHelperColumns(0); }
 }
 
 // The Functions tab: one row per function version the formulas write out, so a reader can
