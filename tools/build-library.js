@@ -21,7 +21,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const vm = require('vm');
 const crypto = require('crypto');
 
 const ROOT = path.join(__dirname, '..');
@@ -30,9 +29,8 @@ const LIBRARY_REPOSITORY = 'https://github.com/taroyamakatrmttm-star/fmide-libra
 const LICENCES = { 'CC-BY-4.0': { short: 'CC BY 4.0', url: 'https://creativecommons.org/licenses/by/4.0/' } };
 const INDEX_DESCRIPTION_MAX = 300;
 
-// escapeXml from the shared code, loaded into a context of its own (as the checker loads it).
-const escapeXml = vm.runInContext(fs.readFileSync(path.join(ROOT, 'src', 'shared', 'escaping.js'), 'utf8') + '\n;escapeXml',
-  vm.createContext({}));
+// escapeXml from the shared code (a module, src/shared/escaping.js).
+const { escapeXml } = require('../src/shared/escaping.js');
 const h = (s) => escapeXml(s == null ? '' : s);
 
 class LibraryError extends Error {}

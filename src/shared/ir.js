@@ -1,4 +1,8 @@
 // ---------- the formula IR (shared: src/shared/ir.js) ----------
+import { operatorForSymbol, operatorPortNames, chooseChoiceCount, applyOperator } from './operators.js';
+import { parseUOM, uomMultiply, uomDivide, uomDimsEqual } from './uom.js';
+import { feedsNothing, isInputRectangle, reachesOutsideTimeline } from './input-rule.js';
+import { cleanFunctionRef, compileFunctions, runFunction, functionUnit } from './functions.js';
 // The IR (intermediate representation) is the model's calculation, read once from the saved
 // system — { periods, canvases: [{ id, name, nodes, edges }] } — and kept in memory only
 // (never saved). compileModel(system) is a pure function of that object: it reads nothing
@@ -12,7 +16,7 @@
 
 // A value rectangle's text: "Name\nValue\nUnit"; a single line that is a number is a value
 // with no name.
-function parseRectText(text){
+export function parseRectText(text){
   const raw = text || '';
   const lines = raw.split('\n');
   if(lines.length === 1){
@@ -32,7 +36,7 @@ function parseRectText(text){
 // the rectangle's own number is used; other periods fall through to an incoming
 // edge instead (e.g. a period-shift connector carrying a prior period forward).
 // node.periodValues, when present, is a number per period (a drawn curve).
-function effectiveLiteral(n, period){
+export function effectiveLiteral(n, period){
   if(Array.isArray(n.periodValues) && typeof n.periodValues[period] === 'number' && isFinite(n.periodValues[period])){
     return n.periodValues[period];
   }
@@ -49,7 +53,7 @@ function irByPosition(a, b){ return (a.x - b.x) || (a.y - b.y); }
 // A rectangle's plug names (system v3: a list, `plugs`). Tolerates a node still holding the
 // older single `plug` text and drops anything that isn't a non-empty name; names match
 // case-insensitively, so a name appears once.
-function plugsOf(n){
+export function plugsOf(n){
   if(!n) return [];
   const raw = Array.isArray(n.plugs) ? n.plugs : (typeof n.plug === 'string' ? [n.plug] : []);
   const out = [], seen = new Set();
@@ -69,7 +73,7 @@ function plugsOf(n){
 // { to, alias: { sourceCanvasId, sourceNodeId, x, y } } — an alias of a plugged rectangle on
 // another canvas (ordered by canvas, then left to right), placed left of the socket, stacked
 // downwards. fmIDE draws exactly these; compileModel follows them.
-function plugLinks(list){
+export function plugLinks(list){
   const sources = [];
   list.forEach((c, idx) => (c.nodes || []).forEach(n => {
     if(!n || n.type !== 'value') return;
@@ -242,7 +246,7 @@ function compileCanvas(c, functions){
 // are only reused where they still match. `functions` are the function definitions the
 // model carries (functions.js); a model without any reads none.
 const IR_NO_FUNCTIONS = { resolve: () => null, list: [] };
-function compileModel(system){
+export function compileModel(system){
   const periods = system && Array.isArray(system.periods) ? system.periods : [];
   const source = system && Array.isArray(system.canvases) ? system.canvases : [];
   const saved = source.map(c => {
@@ -264,12 +268,12 @@ function compileModel(system){
   return { periodCount: periods.length, order, canvases, units: new Map(), functions };
 }
 
-function irNodeIn(ir, canvasId, nodeId){
+export function irNodeIn(ir, canvasId, nodeId){
   const c = ir.canvases.get(canvasId);
   return c ? c.byId.get(nodeId) : undefined;
 }
 // The ports of a block definition canvas (none when it is missing).
-function irBlockPorts(ir, defCanvasId){
+export function irBlockPorts(ir, defCanvasId){
   const def = ir.canvases.get(defCanvasId);
   return def ? def.ports : { inputs: [], outputs: [], indexNode: null };
 }
@@ -286,7 +290,7 @@ function irBlockPorts(ir, defCanvasId){
 // rectangle inside a block is seen in: the block-instance hops from the top level down,
 // [{ canvasId, nodeId }] (the canvas the instance sits on, and the instance); [] or none is
 // the rectangle on its own canvas. A block that contains itself gives no unit.
-function unitOf(ir, canvasId, nodeId, path){ return irUnit(ir, canvasId, nodeId, path || [], new Set()); }
+export function unitOf(ir, canvasId, nodeId, path){ return irUnit(ir, canvasId, nodeId, path || [], new Set()); }
 
 function irScopeKey(path){
   let k = '';
@@ -296,7 +300,7 @@ function irScopeKey(path){
 
 // The arrow feeding input port `portIndex` of block instance `instanceId` on canvas
 // `hostCanvasId`, or null.
-function irPortEdge(ir, hostCanvasId, instanceId, portIndex){
+export function irPortEdge(ir, hostCanvasId, instanceId, portIndex){
   const c = ir.canvases.get(hostCanvasId);
   const ports = c && c.portEdges.get(instanceId);
   return (ports && ports.get(portIndex)) || null;
@@ -306,7 +310,7 @@ function irPortEdge(ir, hostCanvasId, instanceId, portIndex){
 // `path` ends in, is fed by nothing there: no arrow into the instance's port, or one from
 // something fed by nothing (feedsNothing — e.g. an operator whose socket nothing plugs into).
 // Such a port is an input of the instance: its own typed number, or 0.
-function irPortUnfed(ir, path, defCanvasId, node){
+export function irPortUnfed(ir, path, defCanvasId, node){
   if(!path.length) return false;
   const hop = path[path.length - 1];
   const def = ir.canvases.get(defCanvasId);
@@ -415,7 +419,7 @@ function irEdgeUnit(ir, canvasId, edge, path, visiting){
 // answer from the one shown for the period it reads.)
 // Inside a block instance, `scope` is { prefix, bindings, outerCanvasId, outerScope, hops },
 // where `bindings` maps each Input port to the outer arrow feeding it.
-function evaluateModel(ir, options){
+export function evaluateModel(ir, options){
   const periodCount = ir.periodCount;
   const trace = !!(options && (options.trace || options.instances));
   const wantInstances = !!(options && options.instances);

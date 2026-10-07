@@ -1,4 +1,7 @@
 // ---------- fmIDE's files (shared: src/shared/fmide-files.js; step 8, phase 8c) ----------
+import { SHARED_FILE_VERSIONS, SHARED_FILE_MIGRATIONS, upgradeNodePlugs, upgradeTemplateEntries, dropExcelOnlyPresets, dropExcelOnlyNodeStyles, inferFileKind, upgradeFileData, fileDataProblem } from './file-formats.js';
+import { cleanFunctionDefinition } from './functions.js';
+import { LIBRARY_PACK_LIMITS, LIBRARY_INDEX_LIMITS, cleanLibraryPackInfo, cleanItemOrigin, cleanLibraryIndexEntry } from './library-pack.js';
 // The kinds of file fmIDE reads, their current versions and upgrade steps, the reader that
 // identifies, checks and upgrades them (readFmData), and the checks on the templates,
 // recipes and library functions they hold. Pure functions: fmIDE reads its files with them,
@@ -7,7 +10,7 @@
 // Uses file-formats.js (the kinds both apps read), functions.js and library-pack.js.
 
 // Every kind fmIDE knows: its current version, what people call it, and where it is opened.
-const FILE_FORMATS = {
+export const FILE_FORMATS = {
   'system':               { current: SHARED_FILE_VERSIONS['system'], label: 'system', where: 'File → Load System' },
   'module':               { current: 7, label: 'module',              where: 'File → Load Module' },
   'fmIDE-workspace':      { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'workspace', where: 'File → Import Workspace' },
@@ -24,7 +27,7 @@ const FILE_FORMATS = {
 };
 // The upgrade steps of the kinds above, except the shortcuts file's (its step reads fmIDE's
 // key names, so fmIDE adds it: js/04-file-formats.js).
-const FMIDE_FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
+export const FMIDE_FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
   // v1 → v2: one plug name per rectangle becomes a list of plug names (as system v2 → v3).
   'module': {
     1: d => upgradeNodePlugs(d.nodes),
@@ -98,7 +101,7 @@ function fileKindLabel(kind){ return FILE_FORMATS[kind] ? FILE_FORMATS[kind].lab
 // content (a workspace's system, each template's model). A file from a NEWER version is
 // flagged (`newer`), not refused, so the caller can ask first.
 // Returns { error } or { kind, data (the upgraded copy), fromVersion, newer, warnings }.
-function readFmData(raw, accept, migrations){
+export function readFmData(raw, accept, migrations){
   if(!raw || typeof raw !== 'object') return { error: "That file doesn't contain fmIDE data." };
   const kind = inferFileKind(raw);
   const fmt = kind && FILE_FORMATS[kind];
@@ -143,15 +146,15 @@ function readFmData(raw, accept, migrations){
 // ---------- templates and recipes from files ----------
 // A template family's id and a version id: 8–64 letters, digits and dashes (new ones are
 // random, newRandomId). A change note: one line of at most 200 characters.
-const TEMPLATE_NOTE_MAX = 200;
-function isTemplateUid(v){ return typeof v === 'string' && /^[A-Za-z0-9-]{8,64}$/.test(v); }
-function cleanTemplateNote(v){ return typeof v === 'string' ? v.trim().slice(0, TEMPLATE_NOTE_MAX) : ''; }
+export const TEMPLATE_NOTE_MAX = 200;
+export function isTemplateUid(v){ return typeof v === 'string' && /^[A-Za-z0-9-]{8,64}$/.test(v); }
+export function cleanTemplateNote(v){ return typeof v === 'string' ? v.trim().slice(0, TEMPLATE_NOTE_MAX) : ''; }
 // A recipe holds at most this many parts.
-const RECIPE_MAX_PARTS = 50;
+export const RECIPE_MAX_PARTS = 50;
 // The kinds a template can be. A workspace has always read an unknown kind as a canvas template.
-function templateKindOf(k){ return k === 'system' || k === 'recipe' ? k : 'module'; }
+export function templateKindOf(k){ return k === 'system' || k === 'recipe' ? k : 'module'; }
 // A recipe's data read from a file (untrusted): bad parts are dropped; null when none is left.
-function cleanRecipeData(d){
+export function cleanRecipeData(d){
   if(!d || typeof d !== 'object' || !Array.isArray(d.parts)) return null;
   const parts = [];
   d.parts.slice(0, RECIPE_MAX_PARTS).forEach(p => {
@@ -179,9 +182,9 @@ function cleanRecipeData(d){
 // 256 KB as text — and belongs to the template's own family (and, for `graph`, says it is that
 // kind of board). ExcelExporter and fmGraph check the contents when they use them. Anything else
 // is dropped.
-const TEMPLATE_ATTACHMENT_OUTPUTS = ['excel', 'graph'];
-const TEMPLATE_ATTACHMENT_KINDS = { excel: ['module'], graph: ['module', 'system'] };
-const TEMPLATE_ATTACHMENT_LIMITS = { bytes: 256 * 1024, depth: 12 };
+export const TEMPLATE_ATTACHMENT_OUTPUTS = ['excel', 'graph'];
+export const TEMPLATE_ATTACHMENT_KINDS = { excel: ['module'], graph: ['module', 'system'] };
+export const TEMPLATE_ATTACHMENT_LIMITS = { bytes: 256 * 1024, depth: 12 };
 function isPlainData(v, depth){
   if(depth > TEMPLATE_ATTACHMENT_LIMITS.depth) return false;
   if(v === null || typeof v === 'string' || typeof v === 'boolean') return true;
@@ -197,7 +200,7 @@ function isTemplateGraphBoard(a, kind){
     && !!a.template && typeof a.template === 'object' && a.template.kind === kind;
 }
 // A template's attachments from a file (untrusted): a copy of the ones that pass, or null.
-function cleanTemplateAttachments(raw, family, kind){
+export function cleanTemplateAttachments(raw, family, kind){
   if((kind !== 'module' && kind !== 'system') || !raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   const out = {};
   TEMPLATE_ATTACHMENT_OUTPUTS.forEach(k => {
@@ -215,8 +218,8 @@ function cleanTemplateAttachments(raw, family, kind){
 // file that fmGraph wrote, kept with the document. fmIDE never reads what is inside: it keeps
 // it when it is that kind of file, plain data, at most 16 deep and 1 MB as text; anything else
 // is dropped. fmGraph reads it with its own checks (cleanBoards) when it shows the boards.
-const GRAPH_BOARDS_LIMITS = { bytes: 1024 * 1024, depth: 16 };
-function cleanGraphBoards(raw){
+export const GRAPH_BOARDS_LIMITS = { bytes: 1024 * 1024, depth: 16 };
+export function cleanGraphBoards(raw){
   if(!raw || typeof raw !== 'object' || Array.isArray(raw) || raw.kind !== 'fmIDE-graph-board') return null;
   const plain = (v, depth) => {
     if(depth > GRAPH_BOARDS_LIMITS.depth) return false;
@@ -235,7 +238,7 @@ function cleanGraphBoards(raw){
 // Layouts saved (parsed JSON). fmIDE reads only the file's kind, version and each entry's
 // family. Returns { attachment } or { error }.
 const EXCEL_MODULE_LAYOUTS_VERSION = 2; // v2 (step 11d): an entry may carry its block instances' layout
-function excelLayoutForFamily(raw, family){
+export function excelLayoutForFamily(raw, family){
   if(!raw || typeof raw !== 'object' || raw.kind !== 'fmIDE-excel-module-layouts' || !Array.isArray(raw.modules)) {
     return { error: 'That isn\'t a file of module layouts. In ExcelExporter, use Export Module Layouts (section 3) to save one.' };
   }
@@ -255,7 +258,7 @@ function excelLayoutForFamily(raw, family){
 // system template doesn't name one, so it takes the family it is attached to.
 // Returns { attachment } or { error }.
 const GRAPH_BOARD_VERSION = 2; // the board file versions fmIDE knows (v2: the template form)
-function graphBoardForTemplate(raw, family, kind){
+export function graphBoardForTemplate(raw, family, kind){
   if(!raw || typeof raw !== 'object' || raw.kind !== 'fmIDE-graph-board') {
     return { error: 'That isn\'t an fmGraph board file. In fmGraph, use Boards → Export for a template… to save one.' };
   }
@@ -283,7 +286,7 @@ function graphBoardForTemplate(raw, family, kind){
 // autosave): cleaned like any definition, keeping an `origin` (the library pack a version
 // came from, phase 8b) that passes cleanItemOrigin. A model's own definitions never carry
 // one: cleanFunctionDefinitions drops it, so an origin never reaches a system or module.
-function cleanLibraryFunctions(list){
+export function cleanLibraryFunctions(list){
   const out = [];
   (Array.isArray(list) ? list : []).forEach(raw => {
     const d = cleanFunctionDefinition(raw);
@@ -300,7 +303,7 @@ function cleanLibraryFunctions(list){
 // { pack (its cleaned details), templates (as the file holds them, models upgraded),
 // functions (cleaned), newer, fromVersion, warnings }. At most LIBRARY_PACK_LIMITS.items of
 // each are read.
-function readLibraryPackData(raw){
+export function readLibraryPackData(raw){
   const shape = fileDataProblem(raw);
   if(shape) return { error: shape };
   const r = readFmData(raw, ['fmIDE-library-pack'], FMIDE_FILE_MIGRATIONS);
@@ -316,7 +319,7 @@ function readLibraryPackData(raw){
 // /library/index.json (parsed JSON) read and checked: { error } or { packs (cleaned entries,
 // cleanLibraryIndexEntry, each id once, in the list's order), dropped (how many entries
 // could not be shown), newer, fromVersion }. At most LIBRARY_INDEX_LIMITS.packs are read.
-function readLibraryIndexData(raw){
+export function readLibraryIndexData(raw){
   const shape = fileDataProblem(raw);
   if(shape) return { error: shape };
   const r = readFmData(raw, ['fmIDE-library-index'], FMIDE_FILE_MIGRATIONS);

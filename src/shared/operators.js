@@ -26,7 +26,7 @@
 // input must have the same unit, which the result takes), 'first' (the first input's),
 // 'branches' (the inputs it may pick must have the same unit, which the result takes), or null.
 // How each operator is spelled in Excel lives in ExcelExporter, not here.
-const OPERATORS = [
+export const OPERATORS = [
   { id: 'add',      symbol: '+',       word: 'Add',          fold: (a, b) => a + b, unit: 'same' },
   { id: 'subtract', symbol: '−',       word: 'Subtract',     fold: (a, b) => a - b, unit: 'same' },
   { id: 'multiply', symbol: '×',       word: 'Multiply',     fold: (a, b) => a * b, unit: 'multiply' },
@@ -71,14 +71,14 @@ const OPERATORS = [
 ];
 
 // CHOOSE takes at most 254 choices, as Excel does.
-const CHOOSE_MAX_CHOICES = 254;
+export const CHOOSE_MAX_CHOICES = 254;
 // The choice an index picks among `n` (1…n), or 0 when it picks none.
 function chooseIndex(index, n){
   const i = Math.trunc(index);
   return i >= 1 && i <= n ? i : 0;
 }
 // An operator's named inputs, or null. For choose, `choiceCount` choices after the index.
-function operatorPortNames(op, choiceCount){
+export function operatorPortNames(op, choiceCount){
   if(!op || !op.ports) return null;
   if(!op.choices) return op.ports;
   const n = Math.max(0, Math.min(CHOOSE_MAX_CHOICES, choiceCount | 0));
@@ -88,7 +88,7 @@ function operatorPortNames(op, choiceCount){
 }
 // How many choices a choose has: as many as its highest-numbered arrow reaches (`toPorts`, the
 // `toPort` of each arrow into it; choice n is toPort n), at most CHOOSE_MAX_CHOICES.
-function chooseChoiceCount(toPorts){
+export function chooseChoiceCount(toPorts){
   let most = 0;
   toPorts.forEach(p => { if(Number.isInteger(p) && p >= 1 && p <= CHOOSE_MAX_CHOICES && p > most) most = p; });
   return most;
@@ -129,13 +129,13 @@ const OPERATOR_BY_SYMBOL = new Map(OPERATORS.map(op => [op.symbol, op]));
 const OPERATOR_BY_ID = new Map(OPERATORS.map(op => [op.id, op]));
 
 // The catalogue entry for an operator node's saved text, or null (an unknown operator).
-function operatorForSymbol(symbol){ return OPERATOR_BY_SYMBOL.get(symbol) || null; }
-function operatorById(id){ return OPERATOR_BY_ID.get(id) || null; }
+export function operatorForSymbol(symbol){ return OPERATOR_BY_SYMBOL.get(symbol) || null; }
+export function operatorById(id){ return OPERATOR_BY_ID.get(id) || null; }
 
 // Applies an operator to its inputs' values (every one a number; iferror, if and period are
 // handled by the evaluator, which reads their inputs one at a time). Returns { value } or
 // { error: code }. An unknown operator (only a hand-edited file has one) is an error.
-function applyOperator(op, values){
+export function applyOperator(op, values){
   if(!op) return { error: 'operator-unknown' };
   if(op.apply){
     const r = op.apply(...values);

@@ -8,7 +8,6 @@
 //   autosave, and templates.
 const fs = require('fs');
 const path = require('path');
-const vm = require('vm');
 const { test, expect, fixture } = require('./helpers/apps');
 const F = require('./helpers/fmide');
 const X = require('./helpers/excel');
@@ -16,8 +15,7 @@ const X = require('./helpers/excel');
 // ---- the shared code alone, in Node ----
 const SHARED = path.join(__dirname, '..', 'src', 'shared');
 function loadShared(){
-  const code = ['operators.js', 'uom.js', 'input-rule.js', 'functions.js', 'ir.js'].map(f => fs.readFileSync(path.join(SHARED, f), 'utf8')).join('\n');
-  return vm.runInContext(code + '\n;({ parseFunctionText, compileFunctions, runFunction, functionUnit, cleanFunctionDefinitions, functionsUsedBy, compileModel, evaluateModel, unitOf, formatUOM, parseUOM, FUNCTION_LIMITS })', vm.createContext({}));
+  return Object.assign({}, require('../src/shared/uom.js'), require('../src/shared/functions.js'), require('../src/shared/ir.js'));
 }
 const S = loadShared();
 const sample = (name) => JSON.parse(fs.readFileSync(fixture('functions', name + '.json'), 'utf8'));

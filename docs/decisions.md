@@ -22,7 +22,7 @@ Workflow since step 3a: edit `src/` → `npm run build` → `npm test` (the file
 
 1. Repository (this) ✅
 2. Permanent test suite — one command that runs every check, on every change ✅ (`npm test`, see `tests/README.md`)
-3. Split each app into modules (still building to single files), protected by the tests ✅ — 3a source split into `src/`, built by `npm run build`; 3b shared code in `src/shared/` (see `docs/step3-modules.md`)
+3. Split each app into modules (still building to single files), protected by the tests ✅ — 3a source split into `src/`, built by `npm run build`; 3b shared code in `src/shared/` (see `docs/step3-modules.md`). 3c real modules, after step 15 (the owner's request, 7 October 2026): 3c-1 the build reads modules, the shared files Node runs are modules ✅; 3c-2 the browser's shared pieces; 3c-3 ExcelExporter's Excel writer and fmIDE's expression parser; 3c-4 ExcelExporter's formula building
 4. Storage for the web app: IndexedDB plus explicit open/save of `.fmide` files ✅ — 4a IndexedDB underneath, 4b `.fmide` documents (Open, Save, Save As, Recent, recovery), 4c Preferences file (see `docs/step4-storage.md`). Double-clicking a `.fmide` file to open it (PWA file association; PWA = installable web app) belongs to step 5.
 5. Publish the web app (see `docs/step5-publish.md`) ✅ — 5a installable web app (PWA): offline, updates, install, double-click `.fmide`, one app with ExcelExporter inside; 5b licences (decision 3) and automatic publishing to Cloudflare Pages on every merge, with a preview address for each pull request.
 6. Template management ✅ — families and versions, canvases linked to their template ("Update this canvas"), recipe templates, and a warning when more than one plug feeds a socket (see `docs/file-formats.md`)
@@ -107,7 +107,9 @@ Agreed with the owner on 4 October 2026, and **deferred until before the project
 - ✅ Storage (build step 4): IndexedDB, `.fmide` documents, Preferences file
 - ✅ Modules (build step 3): the apps are generated from `src/`, with shared logic once in `src/shared/`
 
-## Step 3c (later): which pieces to turn into real modules first
+## Step 3c: which pieces to turn into real modules first
+
+Noted at the end of 3b; started 7 October 2026 in this order (see `docs/step3-modules.md`).
 
 Converting to `import`/`export` modules matters for the plugin work. Easiest first, because they have no DOM and no hidden globals:
 

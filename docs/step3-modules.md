@@ -51,9 +51,24 @@ For each candidate, **first list every difference** between the two apps' versio
 
 - **Acceptance:** each commit passes `npm test` with snapshots unchanged; the two apps now read these rules from one source; the comments that say "keep in sync with the other app" are replaced by a note pointing at `src/shared/`.
 
-## Phase 3c — real modules (not now)
+## Phase 3c — real modules
 
-Converting to proper `import`/`export` modules (so pieces can be unit-tested and loaded by plugins) will matter for the plugin work later. **Do not start it in this step**; at the end of 3b, note in `docs/decisions.md` which pieces would be easiest to convert first.
+Converting to proper `import`/`export` modules (so pieces can be unit-tested and loaded by plugins) matters for the plugin work. It was left out of step 3 (3b noted in `docs/decisions.md` which pieces would be easiest first) and started after step 15, at the owner's request (7 October 2026).
+
+**Decided (the owner, 7 October 2026, the recommended choices):**
+- The four pieces `docs/decisions.md` lists, in four phases, one pull request each: **3c-1** the build reads modules, and the shared files Node runs are modules (the calculation and the file readers); **3c-2** the browser's shared pieces (storage, pointer input, the Help panel, the update notice, the file boxes); **3c-3** ExcelExporter's Excel writer and fmIDE's expression parser; **3c-4** ExcelExporter's formula building. The parts of the apps that read the open model or build the page stay fragments.
+- **The apps stay single files, byte-for-byte as they were**: the build takes the module syntax out. Nothing a person uses changes, so no What's new entry.
+- Each phase is merged once its pull request is green, without waiting between phases; a major decision found on the way is put to the owner first.
+
+**The form** (the build accepts no other, so it never needs a parser): `import { a, b } from './other.js';` on one line, at the start of the line; `export function` / `export const` / `export let` / `export class` before a top-level declaration. A folder is a module folder when its `package.json` says `"type": "module"` (the nearest one at or below `src/`), so Node reads its `.js` files as modules too.
+
+### 3c-1 — how it turned out
+
+- `tools/build.js`: `isModuleFile`, `moduleFragment` (the import lines left out whole, the `export ` taken off; anything else of the kind a `ModuleError` naming file and line) and `checkImports` (each name imported is exported by that file, which the app includes somewhere — the apps share one scope, so where does not matter). `apps/` came out byte-for-byte the same.
+- `src/shared/package.json` (`"type": "module"`). Ten files became modules: `escaping`, `format-roles`, `operators`, `uom`, `input-rule`, `functions`, `ir`, `file-formats`, `library-pack`, `fmide-files`. Each exports the names something else uses — another shared file, an app, a tool or a test — and keeps the rest to itself; the imports are exactly what each uses from the others (`input-rule` from `operators` and `functions`; `functions` from `operators` and `uom`; `ir` from four files; `fmide-files` from `file-formats`, `functions` and `library-pack`). Before, nothing said so: the pack checker and the tests listed the files to join, in order, and the names to pull out.
+- The browser's five pieces are in the module folder already, with no imports or exports yet (3c-2).
+- Node loads them as they are: `require()` of a module needs Node 22.12 or later (20.19 on the older line). The pack checker (`tools/check-pack.js`), the help pages' and the catalogue's builders and test groups 17–20, 31 and 32 require them instead of joining their text in a sandbox (`vm`); the help text, plain data that reads the operator catalogue, is still read in a sandbox, given `OPERATORS`. The checker's reports are unchanged (its tests, groups 23 and 24, and the sample packs' reports compared before and after).
+- New test group 64 (`npm run test:shared-modules`).
 
 ## Done when
 
