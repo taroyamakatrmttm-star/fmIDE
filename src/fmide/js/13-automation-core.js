@@ -340,68 +340,11 @@
   }
 
   // ---------- small expression language for numeric arguments ----------
-  // Numbers, + - * / % ( ), $variables, and min/max/round/floor/ceil/abs(...).
-  function evalExpr(src){
-    let i = 0;
-    const s = String(src);
-    function ws(){ while(i < s.length && /\s/.test(s[i])) i++; }
-    function expr(){
-      let v = term();
-      for(;;){ ws(); const c = s[i]; if(c === '+'){ i++; v += term(); } else if(c === '-'){ i++; v -= term(); } else return v; }
-    }
-    function term(){
-      let v = factor();
-      for(;;){
-        ws(); const c = s[i];
-        if(c === '*'){ i++; v *= factor(); }
-        else if(c === '/'){ i++; v /= factor(); }
-        else if(c === '%'){ i++; v %= factor(); }
-        else return v;
-      }
-    }
-    function factor(){
-      ws();
-      const c = s[i];
-      if(c === '-'){ i++; return -factor(); }
-      if(c === '+'){ i++; return factor(); }
-      if(c === '('){ i++; const v = expr(); ws(); if(s[i] !== ')') fail(`Missing ")" in "${s}".`); i++; return v; }
-      if(c === '$'){
-        const m = /^\$[A-Za-z_]\w*(\[\d+\])?/.exec(s.slice(i));
-        if(!m) fail(`Bad variable in "${s}".`);
-        i += m[0].length;
-        const v = lookupVar(m[0]);
-        const num = typeof v === 'number' ? v : Number(v);
-        if(!isFinite(num)) fail(`${m[0]} is not a number (it is "${v}").`);
-        return num;
-      }
-      let m = /^(\d+\.?\d*|\.\d+)(e[-+]?\d+)?/i.exec(s.slice(i));
-      if(m){ i += m[0].length; return Number(m[0]); }
-      m = /^(min|max|round|floor|ceil|abs)\s*\(/i.exec(s.slice(i));
-      if(m){
-        i += m[0].length;
-        const args = [expr()];
-        ws();
-        while(s[i] === ','){ i++; args.push(expr()); ws(); }
-        if(s[i] !== ')') fail(`Missing ")" in "${s}".`);
-        i++;
-        return Math[m[1].toLowerCase()](...args);
-      }
-      fail(`Could not read the number or expression "${s}".`);
-    }
-    const v = expr();
-    ws();
-    if(i < s.length) fail(`Unexpected "${s.slice(i)}" in "${s}".`);
-    return v;
-  }
-  function evalNumber(v, label){
-    if(typeof v === 'number'){ if(!isFinite(v)) fail(`${label} is not a finite number.`); return v; }
-    if(typeof v === 'boolean') return v ? 1 : 0;
-    const s = String(v).trim();
-    if(s === '') fail(`${label} is empty.`);
-    const n = /^[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$/i.test(s) ? Number(s) : evalExpr(s);
-    if(!isFinite(n)) fail(`${label} is not a finite number.`);
-    return n;
-  }
+  // build:include fmide/modules/expression.js
+  // fmIDE's side of it: the macro's variables, and FmError for a message.
+  function evalExpr(src){ return evalExpression(src, { lookupVar, fail }); }
+  function evalNumber(v, label){ return readNumber(v, label, { lookupVar, fail }); }
+  function toBool(v){ return readBool(v, { lookupVar, fail }); }
   // "${var}" / "${expr}" inside text arguments
   function interpolate(str){
     if(typeof str !== 'string' || !str.includes('${')) return str;
@@ -413,13 +356,6 @@
       }
       return formatNum(evalExpr(t.replace(/\b([A-Za-z_]\w*)\b(?!\s*\()/g, '$$$1')));
     });
-  }
-  function toBool(v){
-    if(typeof v === 'boolean') return v;
-    const s = String(v).trim().toLowerCase();
-    if(['true','yes','y','1','on'].includes(s)) return true;
-    if(['false','no','n','0','off',''].includes(s)) return false;
-    fail(`"${v}" is not true/false.`);
   }
 
   // ---------- rectangle text helpers (Name / Value / UOM lines) ----------

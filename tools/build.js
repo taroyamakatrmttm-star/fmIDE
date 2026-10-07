@@ -43,11 +43,12 @@
 // the same shared file sits at the right depth in either app's wrapped function.
 // Shared files may not include other files.
 //
-// Modules (step 3c): a .js file in a folder whose package.json says "type": "module" (today
-// src/shared/) is a real module, which Node loads as it is (tools and tests require() it).
+// Modules (step 3c): a .js file in a folder whose package.json says "type": "module" (src/shared/,
+// ExcelExporter's js-head/, fmIDE's modules/) is a real module, which Node loads as it is (tools and tests require() it).
 // Its imports and exports are written in one plain form only:
-//   import { a, b } from './other.js';          one line each, at the start of a line
-//   export function name(…) / export const NAME = … / export let / export class
+//   import { a, b } from './other.js';          one line each, at the start of a line (a path
+//                                               starting ./ or ../, within src/)
+//   export function name(…) / export const NAME = … / export let / export var / export class
 // The build turns it back into a plain fragment of the wrapped function: each import line is
 // left out (line and all) and each "export " taken off, so the app gets exactly the code it
 // would have had as a fragment. It then checks that every name imported is exported by that
@@ -125,8 +126,8 @@ function expandIncludes(text, included){
 }
 
 // ---------- modules (step 3c) ----------
-const IMPORT_LINE = /^import \{ ([A-Za-z0-9_$]+(?:, [A-Za-z0-9_$]+)*) \} from '\.\/([A-Za-z0-9._-]+\.js)';\r?$/;
-const EXPORT_LINE = /^export (?:async function\*? |function\*? |const |let |class )([A-Za-z0-9_$]+)/;
+const IMPORT_LINE = /^import \{ ([A-Za-z0-9_$]+(?:, [A-Za-z0-9_$]+)*) \} from '((?:\.\/|(?:\.\.\/)+)[A-Za-z0-9._\/-]+\.js)';\r?$/;
+const EXPORT_LINE = /^export (?:async function\*? |function\*? |const |let |var |class )([A-Za-z0-9_$]+)/;
 const moduleFolders = new Map(); // folder → is it a module folder
 const modules = new Map();       // file → moduleFragment(…), each import with its file
 
@@ -152,7 +153,10 @@ function moduleInfo(file){
   let info;
   try{ info = moduleFragment(readPiece(file), rel); }
   catch(e){ if(e instanceof ModuleError) fail(e.message); throw e; }
-  info.imports.forEach(im => { im.file = path.join(path.dirname(file), im.from); });
+  info.imports.forEach(im => {
+    im.file = path.join(path.dirname(file), ...im.from.split('/'));
+    if(!im.file.startsWith(path.join(ROOT, 'src') + path.sep)) fail(im.where + ': imports from outside src/: ' + im.from);
+  });
   modules.set(file, info);
   return info;
 }
@@ -178,7 +182,7 @@ function moduleFragment(source, rel){
       kept.push(line.slice('export '.length));
       return;
     }
-    if(/^export\b/.test(line)) throw new ModuleError(where + ': only  export function / const / let / class <name>  is allowed (no export lists, defaults or re-exports)');
+    if(/^export\b/.test(line)) throw new ModuleError(where + ': only  export function / const / let / var / class <name>  is allowed (no export lists, defaults or re-exports)');
     kept.push(line);
   });
   return { text: kept.join('\n'), imports, exports };

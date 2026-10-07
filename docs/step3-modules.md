@@ -75,6 +75,12 @@ Converting to proper `import`/`export` modules (so pieces can be unit-tested and
 - The browser's five pieces export what the apps use: `store` (`createStore`), `pointer-input` (`onPress`, `followPointer`, `pressDefault`, `isEmulatedMouse`, `waitForHold`, `cancelFingerActions`, `touchPointersDown`), `help-panel` (`createHelpPanel`, `cleanHelpSize`, `cleanNewsSeen`), `update-notice` (`watchForUpdates`), `file-picker` (`letAnyFileBePicked`). None needs another shared file, so none imports. Every file in `src/shared/` is now a module; `apps/` again came out byte-for-byte the same.
 - They reach for the page when they load (`pointer-input` listens on `window` at once), so Node can't load them: group 64 imports each as a module in a page instead. Group 43, which tries the Help panel in an empty page, loads it as a module too (changed on purpose).
 
+### 3c-3 — how it turned out
+
+- **The Excel writer** (`src/excel-exporter/js-head/01-xlsx-writer.js`, ExcelExporter's own, under its licence): `js-head/` is a module folder; the writer is `export var XLSX = (function(){ … })();` and imports `escapeXml` from `../../shared/escaping.js` (the build also includes it inside, as before). For this the build accepts `export var` and a path starting `../`, as long as it stays within `src/`. ExcelExporter came out byte-for-byte the same; the `XLSX` global is unchanged.
+- **The expression parser** — the numbers a macro step or `fm.*` action reads — moved from `13-automation-core.js` into its own module, `src/fmide/modules/expression.js` (Apache, as fmIDE): `evalExpression(src, env)`, `readNumber(v, label, env)` and `readBool(v, env)`, the same code, given what they need from fmIDE in `env` (`lookupVar`, the macro's variables, and `fail`, which throws fmIDE's `FmError`). fmIDE keeps `evalExpr`, `evalNumber` and `toBool` as one-line wrappers, so no caller changed. fmIDE's file changed for the first time in this step, by exactly that.
+- New test group 65: both, alone in Node. Group 64 covers the three module folders.
+
 ## Done when
 
 - `src/` holds the source, `tools/build.js` builds both apps, CI checks the generated files match.
