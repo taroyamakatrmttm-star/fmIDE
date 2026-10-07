@@ -70,6 +70,11 @@ Converting to proper `import`/`export` modules (so pieces can be unit-tested and
 - Node loads them as they are: `require()` of a module needs Node 22.12 or later (20.19 on the older line). The pack checker (`tools/check-pack.js`), the help pages' and the catalogue's builders and test groups 17–20, 31 and 32 require them instead of joining their text in a sandbox (`vm`); the help text, plain data that reads the operator catalogue, is still read in a sandbox, given `OPERATORS`. The checker's reports are unchanged (its tests, groups 23 and 24, and the sample packs' reports compared before and after).
 - New test group 64 (`npm run test:shared-modules`).
 
+### 3c-2 — how it turned out
+
+- The browser's five pieces export what the apps use: `store` (`createStore`), `pointer-input` (`onPress`, `followPointer`, `pressDefault`, `isEmulatedMouse`, `waitForHold`, `cancelFingerActions`, `touchPointersDown`), `help-panel` (`createHelpPanel`, `cleanHelpSize`, `cleanNewsSeen`), `update-notice` (`watchForUpdates`), `file-picker` (`letAnyFileBePicked`). None needs another shared file, so none imports. Every file in `src/shared/` is now a module; `apps/` again came out byte-for-byte the same.
+- They reach for the page when they load (`pointer-input` listens on `window` at once), so Node can't load them: group 64 imports each as a module in a page instead. Group 43, which tries the Help panel in an empty page, loads it as a module too (changed on purpose).
+
 ## Done when
 
 - `src/` holds the source, `tools/build.js` builds both apps, CI checks the generated files match.

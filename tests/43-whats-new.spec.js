@@ -63,7 +63,9 @@ test.describe('the shared panel on its own', () => {
   // The panel with three made-up updates and a date seen, in an empty page.
   async function panelWith(page, seen){
     await page.setContent('<!doctype html><html><body></body></html>');
-    await page.addScriptTag({ content: read('shared', 'help-panel.js') });
+    // A module (step 3c): loaded as one, its createHelpPanel handed to the page.
+    await page.addScriptTag({ type: 'module', content: read('shared', 'help-panel.js') + '\nwindow.createHelpPanel = createHelpPanel;\n' });
+    await page.waitForFunction(() => typeof window.createHelpPanel === 'function');
     await page.evaluate((seen) => {
       window.seenNow = seen;
       window.p = createHelpPanel({ topics: [{ id: 't', group: 'g', title: 'T', summary: 's', body: [] }], groups: [{ id: 'g', title: 'G' }],
