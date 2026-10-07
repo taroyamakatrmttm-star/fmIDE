@@ -67,11 +67,12 @@ jobs:
   # The hourly run publishes only when the library differs from the live site's.
   deploy:
     needs: test
+    # Wrapped in ${{ }}: a condition starting with "!" is otherwise not read as one.
     if: >-
-      !cancelled() && (needs.test.result == 'success' || needs.test.result == 'skipped') && (
+      ${{ !cancelled() && (needs.test.result == 'success' || needs.test.result == 'skipped') && (
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       ((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository))
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     concurrency:
