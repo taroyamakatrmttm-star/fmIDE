@@ -44,6 +44,7 @@ None at the moment.
 
 Fixed:
 
+- **On a touchscreen, a menu choice made straight after a tap that cancelled "Draw arrow from here" was lost** (found 7 Oct 2026, when the touch test failed now and then on GitHub's slower machines during step 3c). The cancelling tap dropped every click for 0.8 s, not only its own, so a quick hold and a menu choice inside that time did nothing. Now only that tap's own click is dropped (`onTapArrowPress` in `src/fmide/js/08b-touch-menu.js`; the next press is a new tap). Test: group 27.
 - **A system template lost its canvases' links to their canvas templates** (found and fixed 3 Oct 2026). **Save System as Template** (`openModelAsTemplateData` in `src/fmide/js/11-templates-format-presets.js`) now keeps each canvas's `template`, as a plain system file does (`buildSystemPayload`), so a system added back from the template (Add or replace) has its canvases linked, and ExcelExporter lays them out as modules with their Excel layouts. No file-format change; system templates saved before hold no links until saved again with Save as new version. Tests: groups 15 and 38. **Still for the owner to decide:** when a system template goes into a library pack, offer to add the canvas templates its canvases come from, so their Excel layouts travel too.
 
 ## Agreed improvements, for later

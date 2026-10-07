@@ -281,6 +281,31 @@ test('the menu draws an arrow: "Draw arrow from here", then a tap on the target'
   expect(pageErrors).toEqual([]);
 });
 
+test('a menu item chosen straight after a tap that cancelled the arrow still counts', async ({ page, pageErrors }) => {
+  // The cancelling tap's own click is dropped, and only that one: a quick hold (0.55 s) and a
+  // menu choice within 0.8 s of it used to be lost, and the banner never came.
+  const { b } = await setup(page);
+  const f = await finger(page);
+  await holdNode(page, f, b);
+  await menuItem(page, 'Draw arrow from here').tap();
+  const vp = await box(page.locator('#viewport'));
+  await f.tap({ x: vp.x + 700, y: vp.y + 500 });
+  await expect(page.locator('#tapArrowBanner')).toHaveCount(0);
+  const p = centre(await box(nodeEl(page, b).locator('.label, .opsym').first()));
+  const cdp = await page.context().newCDPSession(page);
+  const started = Date.now();
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [p] });
+  await page.waitForTimeout(550);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await expect(menu(page)).toBeVisible();
+  await menuItem(page, 'Draw arrow from here').tap();
+  expect(Date.now() - started).toBeLessThan(800);
+  await expect(page.locator('#tapArrowBanner')).toBeVisible();
+  await page.locator('#tapArrowBanner button', { hasText: 'Cancel' }).tap();
+  await expect(page.locator('#tapArrowBanner')).toHaveCount(0);
+  expect(pageErrors).toEqual([]);
+});
+
 test("an arrow by taps onto one of an if's named input dots", async ({ page, pageErrors }) => {
   const { a } = await setup(page);
   const op = await page.evaluate(() => fm.createOperator({ x: 420, y: 60, op: 'if' }));

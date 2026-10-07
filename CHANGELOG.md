@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmIDE: a quick menu choice after cancelling an arrow by touch
+- On a touchscreen, after a tap on empty canvas cancels **Draw arrow from here**, a node's menu chosen straight away (within 0.8 s) works again; before, that choice was silently ignored.
+
 ## fmIDE and fmGraph: sharing a pack in the community library, step by step
 - **Share in the Community Library…** (File tab, Library group; `shareLibraryPack`): a window with the steps in short, **Open the upload page ↗** (the library's GitHub upload page for `packs/`, opened in the browser — fmIDE sends nothing itself) and the step-by-step guide. It also opens after **Save as Library Pack…**, naming the file saved. A customised ribbon gets the command once (`ui.libraryShareAdded`).
 - **A pack is saved named after its id** (`<pack id>.fmide-pack.json`), the name the library requires, instead of its title.
