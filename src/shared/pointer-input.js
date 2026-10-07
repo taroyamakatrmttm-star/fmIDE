@@ -7,7 +7,7 @@
 // sees them as before. Also here: telling a hold from a drag or a tap (waitForHold), double-tap
 // sending a double-click, and body.touch-input (larger touch areas, text boxes that don't make
 // the browser zoom).
-const touchPointersDown = new Set();
+export const touchPointersDown = new Set();
 let lastTouchLift = null; // { x, y, time } where the last finger or pen lifted
 window.addEventListener('pointerdown', (ev) => { if(ev.pointerType !== 'mouse') touchPointersDown.add(ev.pointerId); }, true);
 function noteTouchLift(ev){
@@ -19,7 +19,7 @@ window.addEventListener('pointerup', noteTouchLift, true);
 window.addEventListener('pointercancel', noteTouchLift, true);
 
 // A mouse event the browser made from a finger or pen: one is down, or one just lifted there.
-function isEmulatedMouse(ev){
+export function isEmulatedMouse(ev){
   if(touchPointersDown.size) return true;
   const t = lastTouchLift;
   return !!t && performance.now() - t.time < 1000 && Math.abs(ev.clientX - t.x) < 30 && Math.abs(ev.clientY - t.y) < 30;
@@ -27,7 +27,7 @@ function isEmulatedMouse(ev){
 
 // Run handler(ev) when a mouse button, a finger or a pen goes down on el. Only the first
 // finger acts: a second one, while the first is still down, starts nothing.
-function onPress(el, handler){
+export function onPress(el, handler){
   el.addEventListener('mousedown', (ev) => { if(!isEmulatedMouse(ev)) handler(ev); });
   el.addEventListener('pointerdown', (ev) => { if(ev.pointerType !== 'mouse' && touchPointersDown.size === 1) handler(ev); });
 }
@@ -35,12 +35,12 @@ function onPress(el, handler){
 // What mousedown's preventDefault did (no text selection, no focus change). A finger's
 // pointerdown is left alone: cancelling it would also cancel the mouse events copied from
 // a tap, which the rest of the page (closing pop-ups) still listens for.
-function pressDefault(ev){ if(ev.type !== 'pointerdown') ev.preventDefault(); }
+export function pressDefault(ev){ if(ev.type !== 'pointerdown') ev.preventDefault(); }
 
 // Follow the pointer that made downEvent until it lifts: onMove(ev) on each move, then
 // onUp(ev, cancelled) once — cancelled when the browser took a finger over (ev is then the
 // last move, or downEvent). Returns a function that stops following without calling onUp.
-function followPointer(downEvent, onMove, onUp){
+export function followPointer(downEvent, onMove, onUp){
   if(downEvent.type !== 'pointerdown'){
     const up = (ev) => { stop(); onUp(ev, false); };
     function stop(){
@@ -75,7 +75,7 @@ function followPointer(downEvent, onMove, onUp){
 // (fmIDE's zoom, step 13b) undoes the drag the first one began. The fingers down are then no
 // tap or double-tap either.
 const fingerActions = new Set();
-function cancelFingerActions(){
+export function cancelFingerActions(){
   Array.from(fingerActions).forEach(cancel => cancel());
   touchDownAt.clear();
   lastTap = null;
@@ -87,7 +87,7 @@ const HOLD_SLOP = 10;   // pixels a finger may wander and still be holding (or t
 // Follow a finger's press on something that also has a hold: onMoveFirst(ev) if the finger
 // moves before HOLD_MS (the caller then starts its drag from downEvent), onHold() once it has
 // been still that long, onRelease(ev, cancelled) if it lifts first (a tap).
-function waitForHold(downEvent, { onHold, onMoveFirst, onRelease }){
+export function waitForHold(downEvent, { onHold, onMoveFirst, onRelease }){
   const x0 = downEvent.clientX, y0 = downEvent.clientY;
   let settled = false;
   const timer = setTimeout(() => { if(settle()) onHold(); }, HOLD_MS);

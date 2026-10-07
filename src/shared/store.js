@@ -18,7 +18,7 @@
 //                                the localStorage copies are kept
 //   requestPersistence()         ask the browser once, ever, to keep this app's data
 //                                (navigator.storage.persist); the answer is remembered
-function createStore(dbName){
+export function createStore(dbName){
   const KV = 'kv';
   const META_MIGRATED = dbName + '/migrated-from-localStorage';
   const META_PERSIST = dbName + '/persistence-requested';

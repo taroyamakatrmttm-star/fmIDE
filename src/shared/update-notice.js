@@ -12,7 +12,7 @@
 //   onReload      optional; runs right before the page reloads.
 // If another tab has already switched to the new version, this tab gets the notice too, and
 // Reload simply reloads — so no open app is left behind on the old version without a word.
-function watchForUpdates(opts){
+export function watchForUpdates(opts){
   if(!('serviceWorker' in navigator) || !window.isSecureContext) return;
   const sw = navigator.serviceWorker;
   let hadController = !!sw.controller;

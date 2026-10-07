@@ -36,7 +36,7 @@
 // reading column). It always leaves HELP_KEEP_FREE pixels of the app beside it.
 const NEWS_FRESH_DAYS = 14, NEWS_ON_HOME = 3;
 // A date seen, from storage: 'YYYY-MM-DD', or ''.
-function cleanNewsSeen(v){ return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : ''; }
+export function cleanNewsSeen(v){ return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : ''; }
 // '2026-10-01' → '1 October 2026' (no time zones: the date is written as it is).
 function newsDateText(d){
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(d || ''));
@@ -46,7 +46,7 @@ function newsDateText(d){
 }
 const HELP_DEFAULT_W = 380, HELP_MIN_W = 300, HELP_WIDE_AT = 600, HELP_KEEP_FREE = 200;
 // A saved size (the person's own setting, but read from storage): numbers in range, or left out.
-function cleanHelpSize(v){
+export function cleanHelpSize(v){
   const out = {};
   if(!v || typeof v !== 'object') return out;
   ['width', 'narrow'].forEach(k => {
@@ -55,7 +55,7 @@ function cleanHelpSize(v){
   });
   return out;
 }
-function createHelpPanel(options){
+export function createHelpPanel(options){
   const groups = options.groups || [];
   const topics = options.topics || [];
   const cmds = options.commands || null;

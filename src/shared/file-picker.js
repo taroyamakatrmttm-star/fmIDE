@@ -10,7 +10,7 @@ function isAppleTouchDevice(){
   // iPadOS asks for the desktop site by default and then calls itself a Mac: a Mac with touch.
   return nav.platform === 'MacIntel' && Number(nav.maxTouchPoints) > 1;
 }
-function letAnyFileBePicked(inputs){
+export function letAnyFileBePicked(inputs){
   if(!isAppleTouchDevice()) return;
   (inputs || []).forEach(input => { if(input && input.removeAttribute) input.removeAttribute('accept'); });
 }

@@ -19,7 +19,7 @@ const { moduleFragment, ModuleError } = require('../tools/build.js');
 const SHARED = path.join(ROOT, 'src', 'shared');
 const MODULES = fs.readdirSync(SHARED).filter(f => f.endsWith('.js')).sort();
 // The browser's own pieces (storage, pointer input, the Help panel…) reach for the page when
-// they load, so Node can't load them; they are checked in a page instead.
+// they load, so Node can't load them; they are loaded as modules in a page instead.
 const BROWSER_ONLY = ['file-picker.js', 'help-panel.js', 'pointer-input.js', 'store.js', 'update-notice.js'];
 const read = (f) => fs.readFileSync(path.join(SHARED, f), 'utf8');
 const fragment = (f) => moduleFragment(read(f), 'src/shared/' + f);
@@ -62,6 +62,18 @@ test('every shared module but the browser\'s own loads on its own in Node and of
   }
   // The folder is a module folder: Node reads its files as modules, as the build does.
   expect(JSON.parse(fs.readFileSync(path.join(SHARED, 'package.json'), 'utf8'))).toEqual({ type: 'module' });
+});
+
+test('the browser\'s own pieces load on their own as modules in a page and offer what their export lines name', async ({ page }) => {
+  await page.setContent('<!doctype html><html><body></body></html>');
+  for(const f of BROWSER_ONLY){
+    const names = await page.evaluate(async (code) => {
+      const url = URL.createObjectURL(new Blob([code], { type: 'text/javascript' }));
+      try{ return Object.keys(await import(url)).sort(); } finally { URL.revokeObjectURL(url); }
+    }, read(f));
+    expect(names, f).toEqual([...fragment(f).exports].sort());
+    expect(names.length, f).toBeGreaterThan(0);
+  }
 });
 
 test('a module uses another module\'s names only through an import', () => {
