@@ -119,12 +119,21 @@
   function onTapArrowKey(ev){ if(ev.key === 'Escape'){ ev.stopPropagation(); endTapConnection(); } }
   function onTapArrowPress(ev){
     if(!tapArrow || tapArrow.banner.contains(ev.target)) return;
-    // The tap is this mode's alone: no mouse events copied from it, and its click is dropped.
+    // The tap is this mode's alone: no mouse events copied from it, and its click is dropped —
+    // only its own click: the next press is a new tap, whose click counts (a menu item chosen
+    // straight after a tap that cancelled was lost when every click for 0.8 s was dropped).
     ev.stopPropagation();
     ev.preventDefault();
-    const swallowClick = (c) => { c.stopPropagation(); c.preventDefault(); };
+    let swallowTimer = 0;
+    const stopSwallowing = () => {
+      clearTimeout(swallowTimer);
+      document.removeEventListener('click', swallowClick, true);
+      document.removeEventListener('pointerdown', stopSwallowing, true);
+    };
+    const swallowClick = (c) => { c.stopPropagation(); c.preventDefault(); stopSwallowing(); };
     document.addEventListener('click', swallowClick, true);
-    setTimeout(() => document.removeEventListener('click', swallowClick, true), 800);
+    document.addEventListener('pointerdown', stopSwallowing, true);
+    swallowTimer = setTimeout(stopSwallowing, 800);
 
     const fromId = tapArrow.fromId;
     const target = ev.target;
