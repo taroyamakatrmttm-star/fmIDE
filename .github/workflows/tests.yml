@@ -3,9 +3,16 @@ name: Tests
 on:
   push:
   pull_request:
+  # The live site picks up packs merged into the community library by itself: every hour
+  # (only when the library changed), or at once with "Run workflow" in the Actions tab.
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
 
 jobs:
   test:
+    # An hourly or manual publish runs main's code, already tested when it was merged.
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -50,20 +57,28 @@ jobs:
   # address, posted on the pull request. Needs the repository secrets CLOUDFLARE_API_TOKEN
   # (a token with the Cloudflare Pages: Edit permission) and CLOUDFLARE_ACCOUNT_ID; without
   # them the job only notes that it skipped. See docs/step5-publish.md.
-  # The site includes the community library's catalogue (/library), built from the library/
-  # submodule at the commit this repository pins; the library is public, so GitHub's normal
-  # token fetches it. The build checks it again and publishes nothing if a pack fails, or if
-  # the library is missing (a site without it would take the live catalogue down).
+  # The site includes the community library's catalogue (/library). The live site is built
+  # from the library's latest main (every pack there was checked and merged in the library);
+  # a pull request's preview from the library/ submodule at the commit this repository pins.
+  # The library is public, so GitHub's normal token fetches it. The build checks it again
+  # and publishes nothing if a pack fails, or if the library is missing (a site without it
+  # would take the live catalogue down). If the latest library fails this fmIDE's checks,
+  # the live site is built from the pinned commit instead and the run ends in an error.
+  # The hourly run publishes only when the library differs from the live site's.
   deploy:
     needs: test
+    # Wrapped in ${{ }}: a condition starting with "!" is otherwise not read as one.
     if: >-
+      ${{ !cancelled() && (needs.test.result == 'success' || needs.test.result == 'skipped') && (
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+      ((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     concurrency:
       group: deploy-${{ github.head_ref || github.ref_name }}
-      cancel-in-progress: true
+      # A newer push to a pull request replaces its preview; the live site's runs wait their turn.
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     permissions:
       contents: read
       pull-requests: write
@@ -94,11 +109,48 @@ jobs:
           node-version: lts/*
 
       - name: Build the site
+        id: build
         if: steps.secrets.outputs.ready == 'true'
-        run: node tools/build.js --site site --require-library
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = pull_request ]; then
+            node tools/build.js --site site --require-library
+            exit 0
+          fi
+          # The live site: the library's latest main, else the pinned commit.
+          pinned=$(git -C library rev-parse HEAD)
+          git -C library fetch -q --depth=1 origin main
+          latest=$(git -C library rev-parse FETCH_HEAD)
+          git -C library checkout -q "$latest"
+          if node tools/build.js --site site --require-library; then
+            echo "Built with the library's latest main, $latest."
+            echo "### Library: latest main, ${latest:0:7}" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::The library's latest main ($latest) failed fmIDE's checks (above). Building with the pinned commit $pinned instead."
+            echo "fallback=$latest" >> "$GITHUB_OUTPUT"
+            git -C library checkout -q "$pinned"
+            rm -rf site   # --site writes into the folder; nothing of the failed try may stay
+            node tools/build.js --site site --require-library
+            echo "### Library: pinned ${pinned:0:7} (the latest, ${latest:0:7}, failed the checks)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Anything new for the live site? (hourly run)
+        id: changed
+        if: steps.secrets.outputs.ready == 'true' && github.event_name == 'schedule'
+        run: |
+          # The catalogue's list holds every pack's id, details and hash, so an unchanged list
+          # means an unchanged library.
+          if curl -fsS --max-time 30 https://fmide.pages.dev/library/index.json -o "$RUNNER_TEMP/live-index.json" &&
+             cmp -s "$RUNNER_TEMP/live-index.json" site/library/index.json; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "The live site already has this library; nothing to publish."
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Create the Pages project (first time only)
-        if: steps.secrets.outputs.ready == 'true'
+        if: steps.secrets.outputs.ready == 'true' && steps.changed.outputs.publish != 'false'
         run: |
           if out=$(npx --yes wrangler@4 pages project create "$PROJECT" --production-branch=main 2>&1); then
             echo "$out"
@@ -110,7 +162,7 @@ jobs:
 
       - name: Publish
         id: publish
-        if: steps.secrets.outputs.ready == 'true'
+        if: steps.secrets.outputs.ready == 'true' && steps.changed.outputs.publish != 'false'
         env:
           BRANCH: ${{ github.head_ref || github.ref_name }}
           # the pull request's own latest commit (GITHUB_SHA is GitHub's temporary merge commit there)
@@ -145,3 +197,11 @@ jobs:
             const mine = comments.find(c => c.body && c.body.startsWith(marker));
             if (mine) await github.rest.issues.updateComment({ owner, repo, comment_id: mine.id, body });
             else await github.rest.issues.createComment({ owner, repo, issue_number, body });
+
+      - name: Say if the latest library was left out
+        if: steps.build.outputs.fallback != ''
+        env:
+          LATEST: ${{ steps.build.outputs.fallback }}
+        run: |
+          echo "::error::The library's latest main ($LATEST) failed fmIDE's checks, so the live site kept the library/ pointer's commit. See the step 'Build the site'."
+          exit 1
