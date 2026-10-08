@@ -1,7 +1,10 @@
 name: Tests
 
 on:
+  # Tests run once per change: on a pull request (the change as it would be merged), and on
+  # main after a merge. A push to any other branch runs nothing (its pull request does).
   push:
+    branches: [main]
   pull_request:
   # The live site picks up packs merged into the community library by itself: every hour
   # (only when the library changed), or at once with "Run workflow" in the Actions tab.
@@ -10,11 +13,25 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  # The suite runs in 4 parts at once, each on its own machine (Playwright's --shard: the
+  # tests split into 4 even runs of the same list), so a run takes about a quarter of the
+  # time. Every test still runs on every change. The job "test" below goes green only when
+  # all 4 parts passed; it is the one check to wait for, and what deploy waits on.
+  test-part:
     # An hourly or manual publish runs main's code, already tested when it was merged.
     if: github.event_name == 'push' || github.event_name == 'pull_request'
+    name: test (part ${{ matrix.part }} of 4)
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    concurrency:
+      # A newer push to a pull request replaces the run of the older one.
+      group: test-${{ github.head_ref || github.ref_name }}-${{ matrix.part }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    strategy:
+      # Every part runs to the end even when another fails, so one run shows every failure.
+      fail-fast: false
+      matrix:
+        part: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v4
 
@@ -39,18 +56,33 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libreoffice-calc
 
-      - name: Run tests
-        run: npm test
+      - name: Run tests (part ${{ matrix.part }} of 4)
+        run: npx playwright test --shard=${{ matrix.part }}/4
 
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-part-${{ matrix.part }}
           path: |
             playwright-report/
             test-results/
           retention-days: 14
+
+  test:
+    # Green only when all 4 parts passed (a part that failed, was cancelled or didn't run
+    # makes it red). Skipped, like the parts, on an hourly or manual publish.
+    needs: test-part
+    if: ${{ !cancelled() && (github.event_name == 'push' || github.event_name == 'pull_request') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: All 4 parts passed?
+        env:
+          RESULT: ${{ needs.test-part.result }}
+        run: |
+          echo "The 4 parts: $RESULT"
+          [ "$RESULT" = success ]
 
   # Publishes the web app (site/) to Cloudflare Pages once the tests pass: a merge into
   # main updates the live site; a pull request from this repository gets its own preview
