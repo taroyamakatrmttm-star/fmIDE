@@ -14,7 +14,7 @@
 //   logical: the result is Excel's TRUE/FALSE (AND, OR, NOT), like a comparison's
 // This file holds nothing but the table (the test reads it on its own, in Node).
 // ============================================================
-const EXCEL_SPELLINGS = {
+export const EXCEL_SPELLINGS = {
   add:      { infix: '+' },
   subtract: { infix: '-' },
   multiply: { infix: '*' },

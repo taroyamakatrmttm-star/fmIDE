@@ -81,6 +81,17 @@ Converting to proper `import`/`export` modules (so pieces can be unit-tested and
 - **The expression parser** — the numbers a macro step or `fm.*` action reads — moved from `13-automation-core.js` into its own module, `src/fmide/modules/expression.js` (Apache, as fmIDE): `evalExpression(src, env)`, `readNumber(v, label, env)` and `readBool(v, env)`, the same code, given what they need from fmIDE in `env` (`lookupVar`, the macro's variables, and `fail`, which throws fmIDE's `FmError`). fmIDE keeps `evalExpr`, `evalNumber` and `toBool` as one-line wrappers, so no caller changed. fmIDE's file changed for the first time in this step, by exactly that.
 - New test group 65: both, alone in Node. Group 64 covers the three module folders.
 
+### 3c-4 — how it turned out
+
+- **ExcelExporter's formula building** is the module folder `src/excel-exporter/formulas/` (ExcelExporter's own, under its licence): `core-translation.js` (from `js/01-core-translation.js`: `operandRef`, `buildCellContent`, `classifyNode`, the brackets Excel needs, columns and cells), `operator-spellings.js` (was `js/01b-…`) and `function-calls.js` (was `js/01c-…`). They import from each other (a loop the modules allow: each only calls the other's functions when a formula is built) and from the shared IR. `js/01-core-translation.js` keeps what a module can't hold — the opening of ExcelExporter's wrapped function — and includes the three, in their old order.
+- Three helpers the formulas used from elsewhere in the app moved in with them: `pathKey` and `isVintageVarying` (from `02-block-instances.js`) and `mirrorIdFor` (from `05-inputs-tab…`). The rest of the app still uses them, as before.
+- The module's state — the model's IR and the number of helper columns — changes only through `useModelIR(ir)` and `useHelperColumns(n)`, which the three places that assigned it now call (`04-file-formats.js`, `09-workbook-generation.js`, `10-wiring.js`).
+- ExcelExporter's file changed only by those moves and calls; the workbooks are unchanged (their snapshots, group 8, and the agreement tests, group 17, untouched). Group 19 requires the modules instead of cutting text out of the files (changed on purpose); group 65 tests the formulas alone in Node.
+
+## Step 3c — done
+
+The four pieces are modules, each tested on its own in Node (or, for the browser's own, in a page). What stays a plain fragment is the part of each app that reads its open model or builds the page — rendering, dialogs, the ribbon, the Macro Builder — which would only become modules as part of the plugin work.
+
 ## Done when
 
 - `src/` holds the source, `tools/build.js` builds both apps, CI checks the generated files match.

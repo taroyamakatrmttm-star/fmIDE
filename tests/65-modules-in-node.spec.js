@@ -1,12 +1,15 @@
 // 65. Pieces of the apps tested on their own in Node, now that they are modules (step 3c,
-// phase 3c-3): ExcelExporter's built-in Excel writer (src/excel-exporter/js-head/01-xlsx-writer.js,
-// the XLSX global) and fmIDE's expression parser for numbers in macros and fm.* actions
-// (src/fmide/modules/expression.js). No browser, no app: what each takes and gives.
+// phases 3c-3 and 3c-4): ExcelExporter's built-in Excel writer (src/excel-exporter/js-head/
+// 01-xlsx-writer.js, the XLSX global), fmIDE's expression parser for numbers in macros and fm.*
+// actions (src/fmide/modules/expression.js) and ExcelExporter's formula building
+// (src/excel-exporter/formulas/). No browser, no app: what each takes and gives.
 const { test, expect } = require('./helpers/apps');
 const JSZip = require('jszip');
 const ExcelJS = require('exceljs');
 const { XLSX } = require('../src/excel-exporter/js-head/01-xlsx-writer.js');
 const { evalExpression, readNumber, readBool } = require('../src/fmide/modules/expression.js');
+const { compileModel } = require('../src/shared/ir.js');
+const FX = require('../src/excel-exporter/formulas/core-translation.js');
 
 // ---------- the Excel writer ----------
 // A small workbook using what ExcelExporter writes: text, numbers, formulas (with a text
@@ -166,5 +169,84 @@ test.describe('the expression parser, in Node', () => {
     for(const yes of [true, 'true', 'Yes', 'y', '1', 'ON', 1]) expect(readBool(yes, env), String(yes)).toBe(true);
     for(const no of [false, 'false', 'No', 'n', '0', 'off', '', 0]) expect(readBool(no, env), String(no)).toBe(false);
     expect(() => readBool('maybe', env)).toThrow('"maybe" is not true/false.');
+  });
+});
+
+// ---------- ExcelExporter's formula building ----------
+// A small model on one canvas, "Calc": Price × Volume = Revenue; Closing = Closing a period
+// before + Revenue (a corkscrew); Big = IF(Volume > Revenue, Revenue, Volume) — the inputs
+// of > left to right. Each rectangle has a row on the tab Calc (row 5 on); with no helper
+// columns, period 1 is column E.
+const rect = (id, text, x, y) => ({ id, type: 'value', text, x, y, w: 120, h: 60 });
+const op = (id, text, x, y) => ({ id, type: 'operator', text, x, y, w: 40, h: 40 });
+const FORMULA_MODEL = { kind: 'system', version: 9, periods: 3, canvases: [{ id: 'c1', name: 'Calc', nodes: [
+  rect('price', 'Price\n10\n$/t', 0, 0), rect('vol', 'Volume\n3\nkt', 0, 100), op('mul', '×', 200, 50), rect('rev', 'Revenue', 300, 50),
+  { id: 'sh', type: 'periodShift', shift: -1, x: 100, y: 300, w: 40, h: 40 }, op('add', '+', 200, 300), rect('close', 'Closing', 300, 300),
+  op('gt', '>', 200, 200), op('if', 'if', 250, 200), rect('flag', 'Big', 400, 200),
+], edges: [
+  { id: 'e1', from: 'price', to: 'mul' }, { id: 'e2', from: 'vol', to: 'mul' }, { id: 'e3', from: 'mul', to: 'rev' },
+  { id: 'e4', from: 'close', to: 'sh' }, { id: 'e5', from: 'sh', to: 'add' }, { id: 'e6', from: 'rev', to: 'add' }, { id: 'e7', from: 'add', to: 'close' },
+  { id: 'e8', from: 'rev', to: 'gt' }, { id: 'e9', from: 'vol', to: 'gt' }, { id: 'e10', from: 'gt', to: 'if', toPort: 0 }, { id: 'e11', from: 'rev', to: 'if', toPort: 1 },
+  { id: 'e12', from: 'vol', to: 'if', toPort: 2 }, { id: 'e13', from: 'if', to: 'flag' },
+] }] };
+const ROWS = ['price', 'vol', 'rev', 'close', 'flag'];
+// What each row's cells hold, period by period: a number, or "=" and the formula.
+function cells(ids, opts){
+  opts = opts || {};
+  const cellPos = Object.fromEntries(ids.map((id, i) => ['c1|' + id, { tabName: 'Calc', row: 5 + i }]));
+  return Object.fromEntries(ROWS.map(id => [id, [0, 1, 2].map(p => {
+    const ctx = Object.assign({ periodCount: 3, cellPos }, opts.ctx);
+    const r = FX.buildCellContent('c1', { id }, p, ctx, opts.tab || 'Calc', []);
+    return r.isFormula ? '=' + FX.formulaTop(r.formula) : r.value;
+  })]));
+}
+
+test.describe('ExcelExporter\'s formula building, in Node', () => {
+  test.beforeEach(() => { FX.useModelIR(compileModel(FORMULA_MODEL)); FX.useHelperColumns(0); });
+  test.afterAll(() => { FX.useModelIR(null); FX.useHelperColumns(0); });
+
+  test('each row\'s cells: typed numbers, formulas by row, a corkscrew\'s first period, an IF', () => {
+    expect(cells(ROWS)).toEqual({
+      price: [10, 10, 10],
+      vol: [3, 3, 3],
+      rev: ['=E5*E6', '=F5*F6', '=G5*G6'],
+      close: [0, '=E8+F7', '=F8+G7'],               // period 1 would read period 0: its own number, none, so 0
+      flag: ['=IF(E6>E7,E7,E6)', '=IF(F6>F7,F7,F6)', '=IF(G6>G7,G7,G6)'],
+    });
+    const canvas = FORMULA_MODEL.canvases[0];
+    expect(ROWS.map(id => FX.classifyNode(canvas, canvas.nodes.find(n => n.id === id)))).toEqual(['input', 'input', 'calc', 'calc', 'output']);
+    expect(canvas.nodes.filter(n => n.type !== 'value').map(n => FX.classifyNode(canvas, n))).toEqual([null, null, null, null, null]);
+    expect(FX.isInputNode(canvas, canvas.nodes[0])).toBe(true);
+  });
+
+  test('another tab\'s rows are read with the tab\'s name; helper columns move the periods along', () => {
+    expect(cells(ROWS, { tab: 'Summary' }).rev[0]).toBe("='Calc'!E5*'Calc'!E6");
+    FX.useHelperColumns(2);
+    expect(cells(ROWS).rev).toEqual(['=G5*G6', '=H5*H6', '=I5*I6']);
+    expect(FX.periodCol(0)).toBe(7);
+    expect(FX.colLetter(27)).toBe('AA');
+  });
+
+  test('a row left out of the layout reads 0 and is reported; a Constant is written into the formula', () => {
+    const missing = [];
+    const without = cells(['price', 'rev', 'close', 'flag'], { ctx: { onMissingRow: (key) => missing.push(key) } });
+    expect(without.rev).toEqual(['=E5*0', '=F5*0', '=G5*0']);
+    expect([...new Set(missing)]).toEqual(['c1|vol']);
+    const inlined = cells(ROWS, { ctx: { inlineConstantIds: new Set(['c1|price']) } });
+    expect(inlined.rev).toEqual(['=10*E6', '=10*F6', '=10*G6']);
+  });
+
+  test('sheet names, cells and row keys as the workbook needs them', () => {
+    expect(FX.sanitizeSheetName('Q1/Q2: [draft]*?')).toBe('Q1 Q2   draft');
+    expect(FX.sanitizeSheetName('x'.repeat(40))).toHaveLength(31);
+    expect(FX.sanitizeSheetName('  ')).toBe('Sheet');
+    expect(FX.sheetRef('Calc', 'E', 5, 'Calc', false)).toBe('E5');
+    expect(FX.sheetRef("O'Brien", 'E', 5, 'Calc', true)).toBe("'O'Brien'!E$5");
+    expect(FX.blankCell(null, '0.0')).toEqual({ t: 'z', z: '0.0' });
+    expect(FX.textCell('')).toEqual({ t: 'z', z: 'General' });
+    expect(FX.textCell('Name', { font: { bold: true } })).toEqual({ t: 's', v: 'Name', s: { font: { bold: true } } });
+    expect(FX.pathKey([], 'c1', 'n1')).toBe('c1|n1');
+    expect(FX.pathKey([{ canvasId: 'c1', nodeId: 'b1', vIndex: 2 }], 'c2', 'n3')).toBe('c1:b1:v2>>c2|n3');
+    expect(FX.mirrorIdFor('c1|n1')).toBe('inp|c1|n1');
   });
 });

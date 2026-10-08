@@ -105,7 +105,7 @@ async function loadModel(m){
     if(typeof raw === 'string' && raw) restored = JSON.parse(raw);
   }catch(err){ /* ignore */ }
   model = loaded;
-  modelIR = ir;
+  useModelIR(ir);
   canvasModules = readCanvasModules(systemData);
   templateLayouts = readTemplateLayouts(m && m.kind === 'fmIDE-workspace' ? m : null); // step 11c-2
   mappingKey = key;

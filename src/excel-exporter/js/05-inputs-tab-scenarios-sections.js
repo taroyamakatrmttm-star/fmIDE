@@ -17,7 +17,6 @@ function inputMirrorRows(){ return (mapping && mapping.inputRows) || []; }
 function inputsCfg(){ return mapping.cfg.inputsTab; }
 function inputsEnabled(){ return !!(mapping && mapping.cfg.inputsTab && mapping.cfg.inputsTab.enabled); }
 function inputsTab(){ return mapping.tabs.find(t => t.id === INPUTS_TAB_ID) || null; }
-function mirrorIdFor(sourceRowId){ return 'inp|' + sourceRowId; }
 
 // A real rectangle row whose rectangle has no incoming arrow — i.e. its numbers are typed.
 // A Block Input rectangle counts too: inside an instance (row.path not empty) when nothing

@@ -12,20 +12,6 @@
 // never collide or share a cell.
 // ============================================================
 
-// Canonical row-id / cellPos key for a node reached via a given instance path. An
-// empty path reproduces the exact pre-existing "canvasId|nodeId" format, so normal
-// (non-block) rows and any mapping already saved in browser storage are unaffected.
-// A hop that belongs to a specific vintage/run of a VERTICAL block instance carries
-// a `vIndex` (1-based); it's folded into the key so each vintage's copy of a node
-// gets its own distinct row identity, while the hop with no vIndex stays the
-// identity of the combined/reduced row (see collectInstanceRows) — exactly the same
-// key a non-vertical instance's single copy would already use, so existing mappings
-// and existing cross-instance references are completely unaffected.
-function pathKey(path, canvasId, nodeId){
-  const hops = (path || []).map(h => h.canvasId + ':' + h.nodeId + (typeof h.vIndex === 'number' ? ':v' + h.vIndex : '')).join('>>');
-  return (hops ? hops + '>>' : '') + canvasId + '|' + nodeId;
-}
-
 // Like classifyNode, but used only while walking INSIDE a block definition during
 // unpacking: a rectangle marked as a Block Input port is a pure pass-through to
 // whatever feeds the instance's corresponding port (see operandRef) — it never
@@ -91,48 +77,6 @@ function collectUnpackedRows(defCanvasId, pathPrefix, visitingDefIds, periodCoun
     out.push({ path: pathPrefix, canvasId: defCanvasId, nodeId: n.id, section });
   });
   return out;
-}
-
-// True if resolving `nodeId` (in `canvasId`) from INSIDE a vertical instantiation of
-// `hostNode` (sitting on `hostCanvasId`) could differ from one vintage/run to
-// another — i.e. its formula chain (through operators, aliases, period-shifts —
-// everything operandRef already inlines) ever reaches the "Vertical Index" port
-// (blockRole 'index'), or a Block Input port whose feeding edge (at hostCanvasId
-// level) is marked `verticalIndexed`. A node for which this returns false computes
-// the EXACT same formula/value regardless of which vintage it's evaluated for — see
-// operandRef: the only two places a hop's `vIndex` is ever consulted are exactly
-// these two cases — so such a node is safe to collapse to a single shared row
-// instead of duplicating it once per vintage. Conservative (returns true, i.e. "keep
-// this per-vintage") on anything unclear — a cycle, an unresolved edge, a nested
-// block instance's own internals — so a row is only ever collapsed when it's
-// actually provable to be vintage-invariant.
-function isVintageVarying(hostCanvasId, hostNode, canvasId, nodeId, visiting){
-  const key = canvasId + '|' + nodeId;
-  if(visiting.has(key)) return true;
-  const n = irNode(canvasId, nodeId);
-  if(!n) return true;
-  if(n.blockRole === 'index') return true;
-  const nextVisiting = new Set(visiting); nextVisiting.add(key);
-  if(n.type === 'operator' || n.type === 'periodShift' || n.type === 'function'){
-    return n.incoming.some(e => isVintageVarying(hostCanvasId, hostNode, canvasId, e.from, nextVisiting));
-  }
-  if(n.type === 'alias'){
-    if(!n.sourceCanvasId || !n.sourceNodeId) return false;
-    return isVintageVarying(hostCanvasId, hostNode, n.sourceCanvasId, n.sourceNodeId, nextVisiting);
-  }
-  if(n.type === 'blockInstance') return true; // not analyzed — conservative
-  if(n.type === 'value'){
-    if(n.blockRole === 'input'){
-      if(canvasId !== hostNode.blockDefCanvasId) return true; // only the immediate definition is analyzed
-      const edge = irPortEdge(modelIR, hostCanvasId, hostNode.id, irCanvas(canvasId).ports.inputs.indexOf(n));
-      if(!edge) return false; // unwired port defaults to a fixed literal (0) — invariant
-      if(edge.verticalIndexed) return true;
-      return isVintageVarying(hostCanvasId, hostNode, hostCanvasId, edge.from, nextVisiting);
-    }
-    if(n.incoming.length === 1) return isVintageVarying(hostCanvasId, hostNode, canvasId, n.incoming[0].from, nextVisiting);
-    return false; // a true input (literal / periodValues only) — invariant
-  }
-  return true;
 }
 
 // Produces every unpacked row for ONE block instance — vertical or not — given the

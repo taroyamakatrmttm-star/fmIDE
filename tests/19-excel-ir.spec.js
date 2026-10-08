@@ -43,14 +43,12 @@ for(const [dir, model] of CASES){
 
 // ---- operator spellings ----
 // The catalogue (src/shared/operators.js) and ExcelExporter's table of Excel spellings
-// (src/excel-exporter/js/01b-operator-spellings.js, a file holding only the table), each
+// (src/excel-exporter/formulas/operator-spellings.js, a module holding only the table), each
 // loaded on its own in Node: every catalogue operator has a spelling, and nothing else does.
-const vm = require('vm');
-const ROOT = path.join(__dirname, '..');
 function loadSpellings(){
   const { OPERATORS } = require('../src/shared/operators.js');
-  const code = fs.readFileSync(path.join(ROOT, 'src', 'excel-exporter', 'js', '01b-operator-spellings.js'), 'utf8');
-  return { OPERATORS, EXCEL_SPELLINGS: vm.runInContext(code + '\n;EXCEL_SPELLINGS', vm.createContext({})) };
+  const { EXCEL_SPELLINGS } = require('../src/excel-exporter/formulas/operator-spellings.js');
+  return { OPERATORS, EXCEL_SPELLINGS };
 }
 
 test('every operator in the catalogue has an Excel spelling, and only those do', () => {
@@ -198,10 +196,7 @@ test('function calls are written out in full, in Excel\'s order of operations', 
 });
 
 test('an operator\'s formula keeps only the brackets Excel\'s order of operations needs', () => {
-  const code = fs.readFileSync(path.join(ROOT, 'src', 'excel-exporter', 'js', '01-core-translation.js'), 'utf8');
-  const from = code.indexOf('function spellOperator('), to = code.indexOf('function buildCellContent(');
-  const FN = 'const FN_LEVEL = { compare: 1, add: 2, subtract: 2, multiply: 3, divide: 3, power: 4, neg: 5, atom: 6 };\n';
-  const { spellOperator, formulaTop } = vm.runInContext(FN + code.slice(from, to) + '\n;({ spellOperator, formulaTop })', vm.createContext({}));
+  const { spellOperator, formulaTop } = require('../src/excel-exporter/formulas/core-translation.js');
   const op = (infix) => (...a) => spellOperator({ infix }, a);
   const [add, sub, mul, div, pow] = ['+', '-', '*', '/', '^'].map(op);
   const le = (...a) => spellOperator({ compare: '<=' }, a);
@@ -223,8 +218,7 @@ test('an operator\'s formula keeps only the brackets Excel\'s order of operation
 });
 
 test('the numbers in a function are written so Excel reads the same number', () => {
-  const code = fs.readFileSync(path.join(ROOT, 'src', 'excel-exporter', 'js', '01c-function-calls.js'), 'utf8');
-  const { excelNumber } = vm.runInContext(code + '\n;({ excelNumber })', vm.createContext({}));
+  const { excelNumber } = require('../src/excel-exporter/formulas/function-calls.js');
   for(const v of [0, 1, 12, 0.5, 1500, 0.05, 1e-7, 1.5e-12, 1e21, 2.5e300, 123456789012345, 0.1 + 0.2, 5e-324, Number.MAX_VALUE]){
     const s = excelNumber(v);
     expect(s, String(v)).toMatch(/^\d+(\.\d+)?(E[+-]\d+)?$/);
