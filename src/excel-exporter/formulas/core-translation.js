@@ -41,12 +41,16 @@ export let helperColCount = 0; // set per export by generateWorkbook, through us
 export function useHelperColumns(n){ helperColCount = n; }
 export function helperCol(slot){ return colLetter(4 + slot); }
 export function periodCol(periodIndex){ return 5 + helperColCount + periodIndex; } // +1 = spacer column
+// Excel's rules for a sheet name: none of \ / ? * [ ] :, at most 31 characters, and no
+// apostrophe at its start or end (Excel refuses the file otherwise).
 export function sanitizeSheetName(name){
-  return (name || 'Sheet').replace(/[\\/?*\[\]:]/g, ' ').slice(0, 31).trim() || 'Sheet';
+  return (name || 'Sheet').replace(/[\\/?*\[\]:]/g, ' ').slice(0, 31).trim().replace(/^'+|'+$/g, '').trim() || 'Sheet';
 }
+// Another sheet's cell in a formula: the name in quotes, an apostrophe in it doubled
+// ('Bob''s Model'!E4), as Excel needs.
 export function sheetRef(tabName, col, row, currentTabName, absRow){
   const addr = col + (absRow ? '$' : '') + row;
-  return (tabName === currentTabName) ? addr : ("'" + tabName + "'!" + addr);
+  return (tabName === currentTabName) ? addr : ("'" + String(tabName).replace(/'/g, "''") + "'!" + addr);
 }
 // Renders a JS number as a bare literal safe to splice into an Excel formula string —
 // negatives are parenthesized so they never collide with an adjacent operator (e.g. the
