@@ -1,6 +1,6 @@
 # Tests
 
-One command runs every check, locally and on GitHub (`.github/workflows/tests.yml`: on every pull request, and on `main` after a merge). On GitHub the suite runs in 4 parts at once, each on its own machine (`npx playwright test --shard=N/4`), and the check **test** goes green only when all 4 passed; every test runs on every change. To run one part locally: `npx playwright test --shard=2/4`. The brief is [`SPEC.md`](SPEC.md). The apps themselves stay dependency-free: everything here is a dev dependency.
+One command runs every check, locally and on GitHub (`.github/workflows/tests.yml`: on every pull request, and on `main` after a merge). On GitHub the suite runs in 4 parts at once, each on its own machine, and the check **test** goes green only when all 4 passed; every test runs on every change. `tools/test-parts.js` puts every test file into exactly one part, spread by how long each took (`tests/test-durations.json`); a new group counts as an average one. To run one part locally: `npx playwright test $(node tools/test-parts.js 2 4)`; to see the parts: `node tools/test-parts.js --show 4`. When the parts drift apart, refresh the times from a GitHub run's log: `node tools/test-parts.js --measure LOG`. The brief is [`SPEC.md`](SPEC.md). The apps themselves stay dependency-free: everything here is a dev dependency.
 
 ## Setup (once)
 
@@ -52,6 +52,7 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | `npm run test:pinch` | pinch to zoom (step 13b): two real fingers zooming around the point between them, moving the canvas, the limits, settling at 100%, a drag cancelled by a second finger, one finger as before, each canvas's zoom, macros |
 | `npm run test:excel-from-fmide` | ExcelExporter reading fmIDE's model (group 59): the model arriving when opened from fmIDE, File → ↻ From fmIDE and Open ExcelExporter again, a template's Excel layout coming along, messages from other windows, a hostile name, a broken answer, opened on its own, fmIDE reloaded |
 | `npm run test:shared-modules` | real modules (group 64, step 3c): each loads on its own (in Node, or a page), imports what it uses, and reaches the apps without its imports and exports; the build's rules |
+| `npm run test:test-parts` | the suite's parts for GitHub (group 66): every file in one part, balanced by time, never empty |
 | `npm run test:modules-in-node` | the apps' pieces that are modules, alone in Node (group 65): ExcelExporter's Excel writer, fmIDE's expression parser |
 | `npm run test:macro-references` | macros that keep working (group 63): Insert Template's saved result and the recorder using it, a template's unnamed nodes by place, skipExisting, ⚠ notes, the Macro Builder naming results, the messages that stop a macro, canvas ids on the tabs, Copy Reference |
 | `npm run test:nested-recipes` | recipes within a recipe (group 62): building, the Templates window, skipping, loops, the recipe window, packs and the checker |
