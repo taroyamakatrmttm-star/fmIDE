@@ -8,6 +8,19 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'phone-mixer-show-share', date: '2026-10-09', title: 'On a phone: the mixer, Show, holding A, and Share',
+    summary: 'Turn the phone sideways to move several sliders at once with your thumbs; show one chart full screen; hold A to look at a scenario; share a picture of the board.',
+    what: [
+      'The mixer: sideways, the sliders become faders at the two edges of the screen, under your thumbs, with the board between them. Each finger moves its own fader, at the same time, and the bars follow all of them. Slide a finger sideways, away from its fader, to make it finer. Tap a fader\'s name to put another slider there.',
+      '⤢ Show, from a bar\'s or chart\'s quick look (hold it): that one on the whole screen, the screen kept on while it shows, the sliders beside it.',
+      'Scenarios become cards. Hold a card\'s A to look at that scenario: the bars show it while your finger stays down, and come back when you let go. A quick tap still compares.',
+      '⇪ Share a picture of the board or of the chart shown, or the board file, through your phone\'s own Share button.',
+    ],
+    why: 'Two thumbs on two inputs, a chart held out to someone across the table, a what-if glanced at and let go: things a phone does better than a computer.',
+    how: ['On a phone, Try the sample model, then turn the phone sideways and move Price and Volume together.', 'Hold the Balance sheet chart, then ⤢ Show.'],
+    notes: ['A picture is drawn on your phone; nothing is sent until you choose where it goes. Tablets and computers are unchanged.'],
+    see: ['phone'] },
+
   { id: 'phone', date: '2026-10-08', title: 'fmGraph on a phone',
     summary: 'A layout made for a phone: the board fills the screen, the sliders sit under your thumb, and a slider you can set exactly with one finger.',
     what: [

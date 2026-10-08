@@ -70,6 +70,7 @@
   <nav id="phoneBoards" class="phone-boards" aria-label="Boards"></nav>
   <div id="trialBar" class="trial-bar hidden" role="status"></div>
   <div id="compareBar" class="compare-bar hidden" role="status"></div>
+  <div id="lookBar" class="look-bar hidden" role="status"></div>
   <section id="board" class="board hidden">
     <div class="board-col">
       <h2 class="col-head">Sliders</h2>
@@ -80,6 +81,7 @@
         <ol id="scenarioList" class="scenario-list"></ol>
         <p id="scenariosEmpty" class="empty-note">Move the sliders, then save where they are.</p>
         <button type="button" id="btnSaveScenario" class="link-btn needs-model" title="Keep where the sliders are now, under a name">+ Save as scenario</button>
+        <p class="empty-note phone-only scenario-hint">Hold <strong>A</strong> to look at a scenario; let go to come back.</p>
       </details>
       <details id="moversPanel" class="movers" open>
         <summary class="col-head" title="The rectangles the sliders change most, against the model's own numbers">Biggest movers</summary>
@@ -102,6 +104,17 @@
   <div id="dockDots" class="dock-dots" aria-hidden="true"></div>
   <p id="dockEmpty" class="dock-empty">This board has no sliders.</p>
 </section>
+<aside id="mixerLeft" class="mixer mixer-left phone-only hidden" aria-label="Sliders on the left"></aside>
+<aside id="mixerRight" class="mixer mixer-right phone-only hidden" aria-label="Sliders on the right"></aside>
+<div id="faderMenu" class="phone-menu fader-menu hidden" role="menu" aria-label="Put another slider here"></div>
+<section id="showView" class="show-view hidden" role="dialog" aria-labelledby="showTitle">
+  <div class="show-head">
+    <h2 id="showTitle"></h2>
+    <button type="button" id="showShare" class="show-btn">⇪ Share</button>
+    <button type="button" id="showClose" class="show-btn show-close" aria-label="Close">×</button>
+  </div>
+  <div id="showBody" class="show-body"></div>
+</section>
 <div id="phoneMenu" class="phone-menu hidden" role="menu" aria-label="Menu">
   <button type="button" role="menuitem" id="phoneOpen">📂 Open…</button>
   <button type="button" role="menuitem" id="phoneFromFmide" class="hidden">↻ From fmIDE</button>
@@ -113,6 +126,8 @@
     <button type="button" role="menuitem" id="phoneUndo" disabled>↶ Undo</button>
     <button type="button" role="menuitem" id="phoneRedo" disabled>↷ Redo</button>
   </div>
+  <button type="button" role="menuitem" id="phoneSharePicture" class="needs-model">⇪ Share a picture of the board</button>
+  <button type="button" role="menuitem" id="phoneShareFile" class="needs-model">⇪ Share the board file</button>
   <button type="button" role="menuitemcheckbox" id="phoneVibrate" class="hidden" aria-checked="true">Vibrate on the marks: On</button>
   <button type="button" role="menuitem" id="phoneHelp">❓ Help</button>
   <button type="button" role="menuitem" id="phoneFullApp">🖥 Full app</button>
@@ -123,7 +138,7 @@
     <div id="peekWhere" class="peek-where"></div>
     <div id="peekChart" class="peek-chart"></div>
     <table id="peekTable" class="peek-table"></table>
-    <div class="peek-actions"><button type="button" id="peekTrace">🔍 Trace</button></div>
+    <div class="peek-actions"><button type="button" id="peekTrace">🔍 Trace</button><button type="button" id="peekShow" class="primary">⤢ Show</button></div>
   </div>
 </div>
 

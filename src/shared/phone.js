@@ -15,6 +15,13 @@
 //     knob while finer; tapping the number lets it be typed; − and + step it, repeating faster while held;
 //   · a double-tap goes back to the base; the arrow keys, Page Up / Down, Home and End work.
 //   Each finger is followed by its own pointer id, so several sliders move at once.
+//   With `vertical`, it stands on end (a fader: up is more) and sliding the finger sideways,
+//   away from it, makes it finer.
+// - shareFiles(files, title): the phone's own share sheet (Messages, Mail, AirDrop…); the
+//   person picks where the files go, nothing is sent first. Where a browser can't share files,
+//   they download instead.
+// - keepScreenOn(): asks the browser to keep the screen on (Wake Lock) until the function it
+//   returns is called; asked again when the page comes back into view.
 // Nothing here touches the page until it is called.
 
 export const PHONE_MAX_SIDE = 600;
@@ -57,7 +64,7 @@ function roundStep(x){
 function decimalsOf(step){ return Math.max(0, Math.min(12, Math.ceil(-Math.log10(step)) + 1)); }
 
 // options: { label, min, max, step, value, base, format(v) → text, vibrate() → whether to
-//   vibrate on a tick, onStart(), onInput(value, atBase), onEnd() }
+//   vibrate on a tick, onStart(), onInput(value, atBase), onEnd(), vertical }
 // Returns { el, setValue(v), value(), dragging() }.
 export function createPhoneSlider(options){
   const o = options;
@@ -72,11 +79,12 @@ export function createPhoneSlider(options){
   const decimals = decimalsOf(step);
   const markStep = roundStep(span / MARKS);
   const format = typeof o.format === 'function' ? o.format : (v) => String(v);
+  const vertical = !!o.vertical;
   let value = Number.isFinite(o.value) ? o.value : base;
   let drags = 0;
   let lastTickAt = 0;
 
-  const el = mk('div', 'ps');
+  const el = mk('div', vertical ? 'ps vertical' : 'ps');
   const row = mk('div', 'ps-row');
   const minus = mk('button', 'ps-step ps-minus', '−');
   const plus = mk('button', 'ps-step ps-plus', '+');
@@ -93,6 +101,7 @@ export function createPhoneSlider(options){
   track.setAttribute('aria-label', o.label);
   track.setAttribute('aria-valuemin', String(min));
   track.setAttribute('aria-valuemax', String(max));
+  if(vertical) track.setAttribute('aria-orientation', 'vertical');
   const rail = mk('div', 'ps-rail');
   rail.append(mk('div', 'ps-fill'), mk('div', 'ps-notch'));
   const thumb = mk('div', 'ps-thumb');
@@ -145,20 +154,24 @@ export function createPhoneSlider(options){
     if(ev.pointerType === 'mouse') ev.preventDefault(); // no text selection; a finger's is left alone (pointer-input.js)
     try{ track.setPointerCapture(ev.pointerId); }catch(e){ /* followed through the document anyway */ }
     const id = ev.pointerId, x0 = ev.clientX, y0 = ev.clientY;
-    const width = Math.max(1, rail.getBoundingClientRect().width);
-    let anchorX = x0, raw = value, anchorV = value, factor = 1, moved = false;
+    const box = rail.getBoundingClientRect();
+    const length = Math.max(1, vertical ? box.height : box.width);
+    // Along the slider (up is more on a fader), and away from it (finer).
+    const along = (e) => vertical ? -e.clientY : e.clientX;
+    const away = (e) => vertical ? Math.abs(e.clientX - x0) : y0 - e.clientY;
+    let anchor = along(ev), raw = value, anchorV = value, factor = 1, moved = false;
     drags++;
     el.classList.add('dragging');
     track.focus({ preventScroll: true });
     start();
     const move = (e) => {
       if(e.pointerId !== id) return;
-      const fine = fineStep(y0 - e.clientY);
-      if(fine.factor !== factor){ anchorX = e.clientX; anchorV = raw; factor = fine.factor; }
-      if(!moved && Math.abs(e.clientX - x0) < 3) return;
+      const fine = fineStep(away(e));
+      if(fine.factor !== factor){ anchor = along(e); anchorV = raw; factor = fine.factor; }
+      if(!moved && Math.abs(along(e) - along(ev)) < 3) return;
       moved = true;
-      raw = clamp(anchorV + (e.clientX - anchorX) / width * span * factor);
-      const unitsPerPx = span * factor / width;
+      raw = clamp(anchorV + (along(e) - anchor) / length * span * factor);
+      const unitsPerPx = span * factor / length;
       const v = Math.abs(raw - base) / unitsPerPx <= NOTCH_PX && base >= min && base <= max ? base : snap(raw);
       el.classList.toggle('fine', factor < 1);
       if(v !== value) setTo(v);
@@ -180,8 +193,14 @@ export function createPhoneSlider(options){
   // "fine ×¼" over the knob, kept inside the slider.
   function placeBubble(text){
     bubble.textContent = text;
+    const pad = 24;
+    if(vertical){
+      const h = track.clientHeight, at = h - pad - frac(value) * (h - 2 * pad);
+      bubble.style.top = Math.max(0, Math.min(h - bubble.offsetHeight, at - bubble.offsetHeight - 22)) + 'px';
+      return;
+    }
     const w = track.clientWidth, half = bubble.offsetWidth / 2 + 4;
-    const pad = 24, at = pad + frac(value) * (w - 2 * pad);
+    const at = pad + frac(value) * (w - 2 * pad);
     bubble.style.left = Math.max(half, Math.min(w - half, at)) + 'px';
   }
   // A double-tap (pointer-input.js sends a finger's as dblclick) or a double-click: the base.
@@ -249,5 +268,50 @@ export function createPhoneSlider(options){
     setValue(v){ if(Number.isFinite(v) && !drags){ value = v; paint(); } },
     value: () => value,
     dragging: () => drags > 0,
+  };
+}
+
+// The phone's share sheet for these files (File objects); else they download. Resolves
+// 'shared', 'cancelled' (the person closed the sheet) or 'downloaded'.
+export async function shareFiles(files, title){
+  try{
+    if(navigator.share && navigator.canShare && navigator.canShare({ files })){
+      await navigator.share({ files, title });
+      return 'shared';
+    }
+  }catch(e){
+    if(e && e.name === 'AbortError') return 'cancelled';
+    // Not allowed here (or failed): download instead.
+  }
+  files.forEach(f => {
+    const url = URL.createObjectURL(f);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = f.name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  return 'downloaded';
+}
+
+// Keeps the screen on while something is being shown; call what it returns to let it sleep.
+export function keepScreenOn(){
+  let on = true, sentinel = null;
+  const ask = () => {
+    if(!on || !navigator.wakeLock || document.visibilityState !== 'visible') return;
+    navigator.wakeLock.request('screen').then(s => {
+      if(on) sentinel = s;
+      else s.release().catch(() => {});
+    }, () => { /* refused (battery saver…): the screen sleeps as usual */ });
+  };
+  const visible = () => { if(document.visibilityState === 'visible') ask(); };
+  document.addEventListener('visibilitychange', visible);
+  ask();
+  return () => {
+    on = false;
+    document.removeEventListener('visibilitychange', visible);
+    if(sentinel){ sentinel.release().catch(() => {}); sentinel = null; }
   };
 }

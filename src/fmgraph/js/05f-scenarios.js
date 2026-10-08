@@ -160,6 +160,8 @@ function renderScenarios(){
       button('scenario-up', '↑', 'Move up', () => moveScenario(sc, i - 1)),
       button('scenario-down', '↓', 'Move down', () => moveScenario(sc, i + 1)),
       button('scenario-delete', '×', 'Delete this scenario', () => deleteScenario(sc)));
+    // On a phone, a finger held on A looks at the scenario until it lifts (05h-phone-show.js).
+    holdToLook(li.querySelector('.scenario-compare'), () => ({ overrides: overridesFor(sc.settings), label: 'scenario “' + sc.name + '”' }));
     li.querySelector('.scenario-up').disabled = i === 0;
     li.querySelector('.scenario-down').disabled = i === scenarios.length - 1;
     const what = make('div', 'scenario-what', sc.settings.length ? settingsLabel(sc.settings) : 'The model\'s own numbers');

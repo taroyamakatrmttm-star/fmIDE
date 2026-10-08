@@ -305,6 +305,7 @@ function updateValues(){
     if(!el) return;
     el.querySelector('.slider-base').textContent = sliderBaseText(s);
   });
+  drawShow(results); // one shown on the whole screen, on a phone (05h-phone-show.js)
   updateMovers(results);
   markScenarios(); // (05f-scenarios.js)
   paintReach();

@@ -354,24 +354,51 @@
   .peek-table .up{ color:var(--up); }
   .peek-table .down{ color:var(--down); }
   .peek-actions button{ width:100%; padding:12px; font-size:15px; }
-  /* Sideways: the dock in one low row, so the board keeps the screen. */
+  /* Sideways: the mixer at the two edges, the board between them. */
   @media (orientation: landscape){
-    body.phone .dock-card{ display:grid; grid-template-columns:minmax(0, 1fr) auto; align-items:center; column-gap:10px; padding:0 16px; }
-    body.phone .dock-card .ps{ grid-column:1 / -1; display:flex; align-items:center; gap:10px; }
-    body.phone .dock-card .ps-row{ flex:0 0 auto; gap:6px; }
-    body.phone .dock-card .ps-value, body.phone .dock-card .ps-type{ width:118px; flex:none; height:44px; font-size:24px !important; }
-    body.phone .dock-card .ps-row input.ps-type:not([type=range]):not([type=file]){ font-size:24px !important; }
-    body.phone .dock-card .ps-step{ width:42px; height:42px; font-size:20px; }
-    body.phone .dock-card .ps-track{ flex:1 1 auto; height:52px; }
-    body.phone .dock-base{ display:none; }
-    body.phone .dock-handle{ padding:5px 0 2px; }
-    body.phone .slider-dock[data-state="open"] .dock-cards{ max-height:55vh; }
     body.phone .phone-menu{ max-height:calc(100vh - 60px); overflow-y:auto; }
     body.phone .widget-list.bars{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
     body.phone .widget-list.bars > .wide{ grid-column:1 / -1; }
-    body.phone .bar-chart{ max-height:calc(100vh - var(--dock-h, 0px) - 120px); }
+    body.phone .bar-chart{ max-height:calc(100vh - 120px); }
     body.phone .phone-boards{ margin-bottom:4px; }
     body.phone .phone-board-arrow{ height:32px; }
     body.phone .peek-card{ max-width:640px; margin:0 auto; max-height:92vh; }
     body.phone .peek-back{ justify-content:center; }
   }
+  body.phone.mixing main{ padding-left:calc(var(--mix-l, 0px) + 12px); padding-right:calc(var(--mix-r, 0px) + 12px); padding-bottom:24px; }
+  .mixer{ position:fixed; top:var(--gbar-h, 52px); bottom:0; z-index:35; display:flex; gap:2px; padding:8px 6px calc(8px + env(safe-area-inset-bottom, 0px)); background:var(--card); box-shadow:0 0 24px rgba(16,24,40,.14); }
+  .mixer-left{ left:0; padding-left:calc(6px + env(safe-area-inset-left, 0px)); border-radius:0 16px 0 0; }
+  .mixer-right{ right:0; padding-right:calc(6px + env(safe-area-inset-right, 0px)); border-radius:16px 0 0 0; }
+  .fader{ width:78px; display:flex; flex-direction:column; align-items:stretch; gap:2px; min-height:0; }
+  .fader .ps{ flex:1 1 auto; min-height:0; }
+  .fader-name{ border:none; background:var(--brand-soft); border-radius:8px; padding:4px 4px; font-size:12px; font-weight:700; line-height:1.2; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .fader-change{ min-height:16px; font-size:11.5px; font-weight:600; color:var(--reach); text-align:center; font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; }
+  .fader.moved .ps-value{ color:var(--brand-dark); }
+  .fader-menu{ top:60px; right:auto; }
+  /* Show: one bar or chart on the whole screen. */
+  .show-view{ position:fixed; z-index:40; inset:0; top:0; background:var(--page); display:flex; flex-direction:column; padding:8px 12px calc(var(--dock-h, 0px) + 8px); }
+  body.mixing .show-view{ left:var(--mix-l, 0px); right:var(--mix-r, 0px); padding-bottom:8px; }
+  .show-head{ display:flex; align-items:center; gap:8px; padding-top:env(safe-area-inset-top, 0px); }
+  .show-head h2{ flex:1 1 auto; margin:0; font-size:20px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .show-btn{ font-size:15px; padding:8px 14px; border-radius:10px; }
+  .show-close{ font-size:22px; padding:4px 14px; }
+  .show-body{ flex:1 1 auto; min-height:0; display:flex; align-items:center; justify-content:center; overflow:auto; }
+  .show-widget{ width:100%; }
+  .show-widget .bar-chart{ max-height:calc(100vh - var(--dock-h, 0px) - 120px); font-size:13px; }
+  .show-widget .chart-key{ font-size:14px; }
+  body.showing .slider-dock{ z-index:41; }
+  body.showing .mixer{ z-index:41; top:0; }
+  /* Holding A to look. */
+  .look-bar{ position:sticky; top:var(--gbar-h, 52px); z-index:20; margin:0 0 10px; padding:9px 12px; border-radius:10px; background:var(--reach); color:#1b2333; font-size:14px; }
+  body.looking .board .b-now{ opacity:.9; }
+  /* Scenarios as cards on a phone. */
+  body.phone .scenario-list{ flex-direction:row; overflow-x:auto; scroll-snap-type:x mandatory; gap:10px; padding:2px 2px 8px; }
+  body.phone .scenario{ flex:0 0 82%; scroll-snap-align:start; padding:10px; border-radius:12px; background:var(--card); gap:6px; }
+  body.phone .scenario-name{ flex:1 1 100%; font-size:16px; font-weight:600; }
+  body.phone .scenario-up, body.phone .scenario-down{ display:none; }
+  body.phone .scenario-btn{ flex:1 1 0; min-height:44px; font-size:16px; }
+  body.phone .scenario-compare{ font-weight:700; touch-action:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+  body.phone .compare-mark{ width:40px; height:40px; font-size:18px; touch-action:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+  .scenario-hint{ font-size:12.5px; }
+  .peek-actions{ display:flex; gap:8px; }
+  .peek-actions button{ flex:1 1 0; }
