@@ -30,6 +30,18 @@ function buildCtx(){
   mapping.tabs.forEach(t => rowsByTabOrdered[t.id] = []);
   const sectioned = sectionsEnabled();
   const scenarioBlocks = {}; // Inputs-tab variable row id -> { first, n } (its scenario rows)
+  // Sensitivity (09g-sensitivity.js): each input it moves, by its Inputs-tab row id. One
+  // without scenarios gets a base row above it (sensBase: row id -> that row's number).
+  const plan = sensitivityPlan();
+  const sens = plan && !plan.problem ? plan : null;
+  const sensMoved = new Map(sens ? sens.variables.map((v, i) => [v.mirror.id, i]) : []);
+  const sensBase = {};
+  const reserveRows = (row, r) => {
+    r = reserveScenarioRows(row, r, scenarioBlocks);
+    if(sensMoved.has(row.id) && !scenarioBlocks[row.id]){ sensBase[row.id] = r; r++; }
+    return r;
+  };
+  const blankAfter = (row) => scenarioBlocks[row.id] || sensBase[row.id] !== undefined;
   mapping.tabs.forEach(t => {
     let r = 4; // row 1: tab title, row 2: period header, row 3: blank
     if(sectioned){
@@ -38,11 +50,11 @@ function buildCtx(){
         if(combined.length === 0) return;
         r++; // section header row
         combined.forEach(row => {
-          r = reserveScenarioRows(row, r, scenarioBlocks);
+          r = reserveRows(row, r);
           if(!row.isCustom) cellPos[row.id] = { tabName: tabById[row.tabId].name, row: r };
           rowsByTabOrdered[t.id].push({ row, excelRow: r, section: sec, isCustom: !!row.isCustom });
           r++;
-          if(scenarioBlocks[row.id]) r++; // blank row after each scenario block
+          if(blankAfter(row)) r++; // blank row after each scenario block (or base row)
         });
         r++; // blank spacer row after section
       });
@@ -51,15 +63,15 @@ function buildCtx(){
       // is still carried through on each entry (it's what a row's own tag reads from
       // elsewhere), it just no longer drives physical row placement here.
       combinedRowsForTab(t.id).forEach(row => {
-        r = reserveScenarioRows(row, r, scenarioBlocks);
+        r = reserveRows(row, r);
         if(!row.isCustom) cellPos[row.id] = { tabName: tabById[row.tabId].name, row: r };
         rowsByTabOrdered[t.id].push({ row, excelRow: r, section: row.section, isCustom: !!row.isCustom });
         r++;
-        if(scenarioBlocks[row.id]) r++; // blank row after each scenario block
+        if(blankAfter(row)) r++; // blank row after each scenario block (or base row)
       });
     }
   });
-  return { canvasById, cellPos, periodCount: model.periods.length, rowsByTabOrdered, tabById, inlineConstantIds, scenarioBlocks };
+  return { canvasById, cellPos, periodCount: model.periods.length, rowsByTabOrdered, tabById, inlineConstantIds, scenarioBlocks, sens, sensMoved, sensBase };
 }
 
 // Scenario rows sit directly above their variable's own row on the Inputs tab.
@@ -130,6 +142,9 @@ function buildWorkbook(){
   const SCN_FIRST_ROW = nCases ? 8 : 4; // with global cases: case block rows 2-3, "Scenarios" section from row 5
   scenarioVars.forEach((e, i) => { scenarioRowOf[e.row.id] = SCN_FIRST_ROW + i; });
   const HDR = (extra) => roleCellStyle('Headers', extra);
+  // Sensitivity: its tab's name and where everything on it sits, known before the Inputs tab
+  // (whose moved inputs read it) is written.
+  const sensLay = ctx.sens ? sensitivityLayout(ctx.sens, addedTabName('Sensitivity', [scenarioSheetName || ''])) : null;
   try{
   const nPeriods = model.periods.length;
   const fallbackFmt = mapping.cfg.fallbackFormat || 'General';
@@ -217,6 +232,11 @@ function buildWorkbook(){
       // A scenario variable (Inputs tab): N scenario rows above this row, then this row
       // picking one of them.
       const scnBlock = row.isInputMirror ? ctx.scenarioBlocks[row.id] : null;
+      // An input the Sensitivity tab moves: its base (the scenario it picks, or the base row
+      // above it) × (1 + the % change) + the amount change, both 0 unless it is being moved.
+      const sensIndex = row.isInputMirror && sensLay && ctx.sensMoved.has(row.id) ? ctx.sensMoved.get(row.id) : null;
+      const sensBaseRow = sensIndex !== null ? ctx.sensBase[row.id] : undefined;
+      const moved = (base) => '(' + base + ')*(1+' + sensLay.pctRef(sensIndex, tab.name) + ')+' + sensLay.amtRef(sensIndex, tab.name);
 
       const lastHop = row.path && row.path.length ? row.path[row.path.length - 1] : null;
       const rowVintage = (lastHop && typeof lastHop.vIndex === 'number') ? lastHop.vIndex : null;
@@ -256,8 +276,11 @@ function buildWorkbook(){
         // A vertical block instance's combined/reduced output row doesn't compute like
         // an ordinary rectangle (it's the reducer across every vintage's copy of this same
         // node); build its formula separately instead of going through buildCellContent.
-        contents.push(scnBlock
-          ? { isFormula: true, formula: 'INDEX(' + col + scnBlock.first + ':' + col + (scnBlock.first + scnBlock.n - 1) + ',MIN(MAX($' + VINTAGE_COL + excelRow + ',1),' + scnBlock.n + '))' }
+        const picked = scnBlock ? 'INDEX(' + col + scnBlock.first + ':' + col + (scnBlock.first + scnBlock.n - 1) + ',MIN(MAX($' + VINTAGE_COL + excelRow + ',1),' + scnBlock.n + '))' : null;
+        contents.push(sensIndex !== null
+          ? { isFormula: true, formula: moved(picked || (col + sensBaseRow)) }
+          : scnBlock
+          ? { isFormula: true, formula: picked }
           : linkPos
           ? { isFormula: true, formula: sheetRef(linkPos.tabName, col, linkPos.row, tab.name) }
           : row.verticalCombined
@@ -267,7 +290,7 @@ function buildWorkbook(){
       // Role of the row: Inputs (typed numbers) · Links (every cell only pulls one cell
       // from another sheet) · Calculations (any other formula).
       const PURE_LINK = /^(?:'(?:[^']|'')+'|[A-Za-z0-9_.]+)!\$?[A-Z]{1,3}\$?\d+$/;
-      const rowRole = scnBlock ? 'Calculations'
+      const rowRole = scnBlock || sensIndex !== null ? 'Calculations'
         : row.isInputMirror ? 'Inputs'
         : linkPos ? 'Links'
         : isInputNode(canvas, node) ? 'Inputs'
@@ -305,6 +328,26 @@ function buildWorkbook(){
           }
           lastRow = Math.max(lastRow, r);
         }
+      }
+
+      if(sensBaseRow !== undefined){
+        // The base row: the typed numbers the Sensitivity tab moves (Inputs role).
+        const inObj = withRowFormat(composeStyle('Inputs', modelFmt), row.style);
+        const inStyle = nodeStyleToExcelCellStyle(inObj);
+        const inFmt = numberFormatToExcel(inObj, fallbackFmt);
+        const r = sensBaseRow;
+        setCell('A' + r, textCell('Base (before sensitivity)', inStyle));
+        setCell('B' + r, blankCell(inStyle));
+        setCell(VINTAGE_COL + r, blankCell(inStyle));
+        for(let h = 0; h < helperColCount; h++) setCell(helperCol(h) + r, blankCell(inStyle));
+        for(let p = 0; p < nPeriods; p++){
+          const content = fitted(() => buildCellContent(row.canvasId, node, p, ctx, tab.name, row.path), p);
+          const cell = content.isFormula ? { t: 'n', f: content.formula, v: 0, z: inFmt }
+            : content.value !== null ? { t: 'n', v: content.value, z: inFmt } : blankCell(null, inFmt);
+          if(inStyle) cell.s = inStyle;
+          setCell(colLetter(periodCol(p)) + r, cell);
+        }
+        lastRow = Math.max(lastRow, r);
       }
 
       setCell('A' + excelRow, textCell(row.label, withIndent(cellStyle, row)));
@@ -364,6 +407,9 @@ function buildWorkbook(){
 
   // Functions tab (last): every function version whose calls the formulas write out.
   if(functionUses.size) appendFunctionsSheet(wb, functionUses, HDR);
+
+  // Sensitivity tab, after the model's tabs (09g-sensitivity.js).
+  if(sensLay) appendSensitivitySheet(wb, ctx.sens, sensLay, ctx, labels);
 
   // Scenarios tab (first sheet).
   // With global cases (nCases > 0), following the layout of the workbook it was designed from:

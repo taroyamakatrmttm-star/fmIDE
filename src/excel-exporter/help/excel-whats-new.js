@@ -11,6 +11,21 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'sensitivity', date: '2026-10-08', title: 'Sensitivity: how much each input moves an output',
+    summary: 'A Sensitivity tab moves each input you pick from Low to High and shows the effect on an output, live in Excel.',
+    what: [
+      'A new Sensitivity panel, under Inputs & scenarios. Pick the outputs to watch, the period, and the inputs to move — each by a % or by an amount, from its Low to its High.',
+      'The workbook gets a Sensitivity tab: an Excel Data Table works the output out with each input at each point, the Tornado table sorts the inputs by how much they move it, and the Spider table shows each one\'s line. Change Low, High, the output or the period in Excel and they follow.',
+    ],
+    why: 'A model is only as good as its assumptions: this shows which ones matter most.',
+    how: [
+      'Turn on Gather inputs on a separate tab, then tick Tornado and Spider under Sensitivity.',
+      'Add an output, then Add all (or the inputs you want), and set each one\'s Low and High.',
+      'Press ⬇ Generate .xlsx and open the Sensitivity tab.',
+    ],
+    notes: ['With nothing being moved (the Input moved cell at 0), the workbook shows exactly the numbers it did before.'],
+    see: ['sensitivity'] },
+
   { id: 'row-border-sides', date: '2026-10-03', title: 'A row\'s border, side by side',
     summary: 'A row\'s own format sets its border on the top, bottom, left and right separately.',
     what: [

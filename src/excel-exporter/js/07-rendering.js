@@ -25,6 +25,7 @@ function renderAll(){
 function renderTabs(){
   refreshSortControls(); // tab names/order feed the sort scope picker
   renderInputsSettings();
+  renderSensitivity();
   const body = $('tabsBody');
   body.innerHTML = '';
   mapping.tabs.slice().sort((a, b) => a.order - b.order).forEach((tab, idx, arr) => {
@@ -254,6 +255,7 @@ function buildCanvasViewRowTR(r, definitionCanvas, sortedTabs){
 }
 
 function renderRows(){
+  renderSensitivity(); // a row included or left out changes what it can move and watch
   const container = $('rowGroups');
   const scrollTops = captureScrollTops(container);
   container.innerHTML = '';

@@ -10,7 +10,8 @@
 const FILE_FORMATS = {
   'system':              { current: SHARED_FILE_VERSIONS['system'], label: 'fmIDE system' },
   'fmIDE-workspace':     { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'fmIDE workspace' },
-  'fmIDE-excel-mapping': { current: 2, label: 'ExcelExporter mapping file' },
+  // v3: the Tornado and Spider's settings, `cfg.sensitivity` (step 16).
+  'fmIDE-excel-mapping': { current: 3, label: 'ExcelExporter mapping file' },
   // The person's own Excel style (step 11a): how every cell looks, by role.
   'fmIDE-excel-style':   { current: 1, label: 'ExcelExporter Excel style file' },
   // The layouts remembered per module (step 11b); v2: a module's block instances' layout, `instance` (step 11d).
@@ -28,10 +29,11 @@ const OTHER_FMIDE_KINDS = {
   'fmIDE-library-pack': 'an fmIDE library pack (templates and functions to share) — open it in fmIDE with File → Open Library Pack'
 };
 // The mapping file's upgrades. v2: any row may carry its own format (`style`) and an
-// `indent`; a v1 file has neither, so it reads as it is. The module layouts file's v2 adds
+// `indent`; a v1 file has neither, so it reads as it is. v3: `cfg.sensitivity` (the
+// Tornado and Spider, step 16); a v2 file has none (off), so it too reads as it is. The module layouts file's v2 adds
 // `instance` (step 11d); a v1 file has none, so it too reads as it is.
 const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
-  'fmIDE-excel-mapping': { 1: (d) => { d.version = 2; return d; } },
+  'fmIDE-excel-mapping': { 1: (d) => { d.version = 2; return d; }, 2: (d) => { d.version = 3; return d; } },
   'fmIDE-excel-module-layouts': { 1: (d) => { d.version = 2; return d; } }
 });
 // Returns { error } or { kind, data (migrated copy), fromVersion, newer, newerParts }.
@@ -178,6 +180,7 @@ function reconcileMapping(){
     if(r.indent !== undefined){ const n = rowIndent(r); if(n) r.indent = n; else delete r.indent; }
   }));
   syncInputMirrors(); // add/drop Inputs-tab rows for inputs that appeared/disappeared in fmIDE
+  reconcileSensitivity(); // the Tornado and Spider's settings, checked (09g-sensitivity.js)
   // Keep both order dimensions clean and fully populated regardless of which one is
   // currently "live" (sectioned `order` vs. flat `flatOrder`, see sectionsEnabled()) —
   // so flipping the toggle later never lands on a row with a stale/missing value in

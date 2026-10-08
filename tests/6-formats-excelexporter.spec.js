@@ -105,7 +105,8 @@ test.describe('mapping files', () => {
     const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
     const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
     expect(exported.kind).toBe('fmIDE-excel-mapping');
-    expect(exported.version).toBe(2); // v2: a row may carry its own format and indent
+    expect(exported.version).toBe(3); // v2: a row may carry its own format and indent; v3: cfg.sensitivity
+    expect(exported.cfg.sensitivity).toEqual({ enabled: false, outputs: [], period: 0, steps: 5, charts: 'tabs', variables: [] });
     expect(exported.tabs.map(t => t.name)).toContain('Exported Tab');
     await renameFirstTab(page, 'Changed Since');
     const saved = testInfo.outputPath('exported-mapping.json');
@@ -116,13 +117,15 @@ test.describe('mapping files', () => {
     expect(await expectCleanStorage(page)).toBeGreaterThan(0);
   });
 
-  for(const name of ['map-export', 'map-legacy']){
+  // map-v2: a version 2 file (before the Tornado and Spider) reads as it is, Sensitivity off.
+  for(const name of ['map-export', 'map-legacy', 'map-v2']){
     test(`${name} imports`, async ({ page }) => {
       await renameFirstTab(page, 'Before Import');
       await importMapping(page, file(name));
       await expect(genStatus(page)).toHaveText('Mapping imported.');
       expect(await tabNames(page)).toEqual(['Revenue Model']);
       expect(await expectCleanStorage(page)).toBeGreaterThan(0);
+      await expect(page.locator('#cfgSensEnabled')).not.toBeChecked();
     });
   }
 

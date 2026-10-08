@@ -119,6 +119,33 @@
         </div>
         <div id="inputsStatus"></div>
       </section>
+
+      <section class="card" id="sensitivityPanel">
+        <h2>Sensitivity</h2>
+        <label class="check-line" title="A Sensitivity tab: how much each input you pick moves an output, live in Excel, as a Tornado and a Spider table">
+          <input type="checkbox" id="cfgSensEnabled"> Tornado and Spider
+        </label>
+        <div id="sensOptions" class="stack">
+          <div class="sens-group">
+            <span class="sens-head">Outputs</span>
+            <div id="sensOutputs" class="sens-list"></div>
+            <select id="sensOutputPick" aria-label="Add an output" title="A rectangle whose value the charts show; in Excel, the Output cell picks one"></select>
+          </div>
+          <div class="field-pair">
+            <label class="field" title="The period the charts show; in Excel, the Period cell changes it"><span>Period</span><select id="cfgSensPeriod"></select></label>
+            <label class="field" title="Points between the base and each of Low and High on the Spider chart"><span>Spider steps</span><input type="number" id="cfgSensSteps" min="1" max="10"></label>
+          </div>
+          <div class="sens-group">
+            <span class="sens-head">Inputs to move</span>
+            <div id="sensVars" class="sens-list"></div>
+            <div class="sens-add">
+              <select id="sensVarPick" aria-label="Add an input" title="An input on the Inputs tab, moved by a % or an amount from Low to High"></select>
+              <button id="btnSensAddAllVars" class="btn-quiet" title="Move every input (each by % from −10 to +10)">Add all</button>
+            </div>
+          </div>
+        </div>
+        <div id="sensStatus"></div>
+      </section>
     </aside>
 
     <section class="card rows-card" id="rowsPanel">

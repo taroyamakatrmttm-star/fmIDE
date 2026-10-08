@@ -858,6 +858,18 @@ Node only; `tools/test-parts.js` and `tests/test-durations.json` (seconds per te
 - Three files of 100, 50 and 50 s and a new one (counted as the average, 66.7 s) in 2 parts: a and c, b and the new one. 0 parts is refused; `5 4` is refused with the usage; a part with nothing to run (80 of 80) is refused rather than printing nothing (which would run every test).
 - From a log: lines "› tests/NAME.spec.js:L:C › … (1.5s)", "(250ms)", "(1.2m)" add up per file (1.8 and 72); other lines are ignored.
 
+### 67. Sensitivity in ExcelExporter (`tests/67-excel-sensitivity.spec.js`; `npm run test:sensitivity`; step 16)
+The sample `models/scenario-unit-price-volume.json` (Unit Price 10 × Volume 5 = Revenue 50) and `models/vertical-depreciation-block.json`.
+- The panel: off at first; the Inputs tab needed, said in words; only typed inputs offered to move, any rectangle row to watch; the inputs added one by one and with Add all, removed with ×; % from −10 to +10 by default, an amount from −1 to +1; the period, Spider steps cut to 10; all kept after a reload; the "?" opens the topic.
+- The workbook: a Base row above each moved input, whose own row is `(base)*(1+'Sensitivity'!$I$n)+'Sensitivity'!$J$n`; the Sensitivity tab's controls (C4–C8, `CHOOSE` and `INDEX`), the outputs linked, the inputs' Change by / Low / High / Show and Change now formulas; the Data Table's definition in the file (`<f t="dataTable" ref="N16:X17" dt2D="1" dtr="1" r1="C7" r2="C6"/>`) and fmIDE's numbers written in (Unit Price ±10%: 45…55; Volume −2 / +1: 30…60); the Tornado and Spider tables' formulas.
+- LibreOffice (through its own format, `recalcDataTables`): the live table gives the same numbers, the model's own Revenue stays 50, the check says OK, the Tornado puts Volume first; then, with Unit Price's Low −50% and Volume's Show 0 changed in the file, the table and the Tornado follow (25…50, one input ranked, `#N/A` for the rest) and the model's Revenue is still 50.
+- An input with scenarios: no Base row, its picked scenario is moved; LibreOffice agrees.
+- A block model: the block's own Tax rate can't be moved; Capex (%), Asset Life (amount −2 / +3) and Other moved; Grand Total and a vintage's row inside the block watched, period 3, 2 steps: the numbers written in match the shared IR run in Node with each input moved, and so does LibreOffice's live table, for the vintage row too (Output 2 typed in the file).
+- Off (or with no output left): the workbook is exactly as before.
+- An output left out of the workbook (☐ Exclude): struck through, said in words, no Sensitivity tab.
+- A mapping file: version 3 with the settings; spoiled settings (an unknown kind, text for a number, 1e20, unknown and repeated rows, 60 inputs, steps 99, a period below 0, markup for the charts' place) are cleaned; a name with markup is shown as text.
+- Group 65: the Excel writer's Data Table cell (two inputs, one along a row or down a column; a range or address not shaped like one is no table). Group 6: the mapping file's version 3 by default; `formats/map-v2.json` opens with Sensitivity off.
+
 ### 62. Recipes within a recipe (`tests/62-nested-recipes.spec.js`; `npm run test:nested-recipes`)
 `formats/templates-v2.json`; Two Statements = Income Statement + Balance Sheet v2; Full Model = Two Statements + Cash Flow.
 - Building Full Model: three canvases (Income Statement, Balance Sheet v2 linked, Cash Flow), no warnings, nothing unfed; Retained Earnings 40, Cash balance 25; one undo removes them.
