@@ -28,6 +28,7 @@ function renderTabs(){
   tool('✎', 'Rename this board', () => renameBoard(strip.querySelector('.board-tab.active')));
   tool('⧉', 'Duplicate this board', () => duplicateBoard()).disabled = boards.length >= BOARDS_LIMIT;
   tool('🗑', 'Delete this board', () => deleteBoard(), 'danger').disabled = boards.length < 2;
+  renderPhoneBoards(); // on a phone, ‹ name › (05g-phone.js)
 }
 
 function showBoardAt(i){

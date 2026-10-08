@@ -129,3 +129,11 @@ Tilt to sweep; a phone tutorial; receiving a `.fmide` from another app's share s
 ## How it turned out
 
 **P0** (8 October 2026): this brief, approved with the five recommended choices.
+
+**P1a** (8 October 2026): fmGraph's phone layout, as above, with these details settled while building it:
+- **The large number is the one above the finger.** A bubble with the number over the knob covered the number just above it, so the bubble now says only how fine the drag is ("fine ×¼"), kept inside the slider.
+- **The quick look stays open after the finger lifts**, as a phone's own long-press menus do, so 🔍 Trace can be tapped; a tap around it, × or Esc closes it.
+- **A change by %** says what it does to the first period's number ("900 (−100)").
+- **Sideways**, the dock is one low row (the number, − / + and the slider side by side) and the bars sit two to a row, so the board keeps most of the screen; P1b's mixer is for sideways.
+- Shared: `src/shared/phone.js` and `phone.css` (the phone check, the tick, `createPhoneSlider`), ready for fmIDE in P2. fmGraph's part: `05g-phone.js`. The person's own settings: `fmgraph-full-app`, `fmgraph-vibrate`.
+- Test group 68 (`tests/68-fmgraph-phone.spec.js`, `npm run test:phone`): 12 tests.

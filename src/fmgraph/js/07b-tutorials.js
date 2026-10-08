@@ -147,6 +147,7 @@ function hideTutorialPointer(){ const ring = $('tutorialPointer'); if(ring) ring
 
 // ---- where they are found: the top of the Help panel, and the first screen ----
 function renderTutorialList(body, mk){
+  if(isPhone()) return; // they practise building charts: a tablet or computer (step 17)
   body.appendChild(mk('h3', 'help-group', 'Tutorials'));
   FMGRAPH_TUTORIALS.forEach(t => {
     const row = mk('div', 'help-tutorial');

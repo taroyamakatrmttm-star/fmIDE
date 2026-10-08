@@ -269,6 +269,122 @@
   .template-choices label, .template-only{ display:flex; gap:8px; align-items:baseline; font-size:14px; }
   .template-only{ margin:0 0 10px; color:var(--soft-ink); }
   .dialog p.template-hint{ font-size:12px; margin:0 0 14px; }
+
+  /* ---- On a phone (step 17, 05g-phone.js): body.phone ---- */
+  body:not(.phone) .phone-only{ display:none !important; }
+  body.phone .desk-only{ display:none !important; }
+  .phone-boards:empty{ display:none; }
+  .ps{ --ps-accent:var(--brand); --ps-ink:var(--ink); --ps-soft:var(--soft-ink); --ps-line:var(--line-strong); }
+  body.phone{ font-size:15px; -webkit-text-size-adjust:100%; }
+  body.phone main{ padding:10px 12px calc(var(--dock-h, 0px) + 24px); }
+  /* The top bar: ←, the model's name, ☰. */
+  body.phone .gbar{ flex-wrap:nowrap; padding:6px 8px; padding-top:calc(6px + env(safe-area-inset-top, 0px)); gap:6px; }
+  body.phone .gbar-side{ flex-wrap:nowrap; }
+  body.phone .gbar-side:first-child{ flex:1 1 auto; }
+  body.phone .gbar-back-words, body.phone .gbar-name, body.phone .gbar-btn:not(#btnPhoneMenu), body.phone .gbar-menu{ display:none; }
+  body.phone .gbar-back{ font-size:20px; padding:6px 12px; line-height:1; }
+  body.phone .gbar-model{ max-width:none; flex:1 1 auto; font-size:15px; font-weight:600; color:var(--top-ink); }
+  body.phone #btnPhoneMenu{ display:inline-block; font-size:20px; padding:4px 14px; line-height:1.2; }
+  body.phone #btnPhoneMenu.has-news{ position:relative; }
+  #btnPhoneMenu.has-news::after{ content:''; position:absolute; top:3px; right:3px; width:8px; height:8px; border-radius:50%; background:var(--reach); }
+  /* Before a model. */
+  body.phone .welcome{ margin:4vh auto 0; padding:22px 18px 18px; }
+  body.phone .dropbox{ min-height:110px; }
+  body.phone .welcome-actions button{ font-size:15px; padding:10px 16px; }
+  /* The board: one column, bars and charts first; no building or arranging. */
+  body.phone #boardTabs{ display:none !important; }
+  .phone-boards{ display:flex; align-items:center; gap:6px; margin:0 0 8px; }
+  .phone-board-arrow{ flex:none; width:44px; height:40px; padding:0; font-size:24px; line-height:1; border-radius:10px; }
+  .phone-board-name{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .phone-board-title{ font-weight:700; font-size:16px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .phone-board-dots{ display:flex; gap:5px; }
+  body.phone .board{ display:flex; flex-direction:column; align-items:stretch; gap:14px; touch-action:pan-y; }
+  body.phone .board-main{ order:-1; }
+  body.phone .board-col:first-child > .col-head, body.phone #sliderList, body.phone #noSliders{ display:none; }
+  body.phone .board-main > .col-head{ display:none; }
+  body.phone .widget-list.bars{ grid-template-columns:minmax(0, 1fr); }
+  body.phone .arrange, body.phone .widget-remove, body.phone .bar-widget .widget-head select, body.phone .bar-settings,
+  body.phone .chart-widget .widget-head select, body.phone .chart-edit, body.phone .chart-key input.key-swatch{ display:none !important; }
+  body.phone .widget-title{ flex:1 1 auto; font-weight:700; font-size:15px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  body.phone .chart-title{ pointer-events:none; font-size:15px; }
+  body.phone .bar-widget{ -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+  body.phone .bar-chart text{ font-size:12px; }
+  body.phone .widget-trace{ font-size:18px; padding:4px 10px; }
+  body.phone .scenario-btn{ min-width:40px; min-height:36px; font-size:14px; }
+  /* The dock: the sliders under the thumb. */
+  .slider-dock{ position:fixed; left:0; right:0; bottom:0; z-index:35; background:var(--card); border-top:1px solid var(--line); border-radius:18px 18px 0 0; box-shadow:0 -8px 28px rgba(16,24,40,.16); padding:0 0 calc(8px + env(safe-area-inset-bottom, 0px)); }
+  .dock-handle{ display:flex; flex-direction:column; align-items:center; gap:4px; width:100%; border:none; background:transparent; padding:8px 0 4px; border-radius:18px 18px 0 0; touch-action:none; }
+  .dock-handle:hover{ background:transparent; }
+  .dock-grip{ width:40px; height:5px; border-radius:3px; background:var(--line-strong); }
+  .dock-handle-text{ font-size:14px; font-weight:600; color:var(--ink); }
+  .dock-handle-text:empty{ display:none; }
+  .dock-cards{ display:flex; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; overscroll-behavior-x:contain; }
+  .dock-cards::-webkit-scrollbar{ display:none; }
+  .dock-card{ flex:0 0 100%; scroll-snap-align:center; scroll-snap-stop:always; padding:4px 16px 2px; min-width:0; }
+  .dock-card-head{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+  .dock-name{ font-weight:700; font-size:16px; overflow-wrap:anywhere; }
+  .dock-periods{ font-size:12.5px; color:var(--soft-ink); }
+  .dock-change{ margin-left:auto; font-size:13px; font-weight:600; color:var(--reach); font-variant-numeric:tabular-nums; }
+  .dock-base{ font-size:12.5px; color:var(--soft-ink); text-align:center; margin-top:-4px; }
+  .dock-card.moved .ps-value{ color:var(--brand-dark); }
+  .dock-dots{ display:flex; justify-content:center; gap:6px; padding:4px 0 2px; }
+  .dock-dots:empty{ display:none; }
+  .dock-dot{ width:7px; height:7px; border-radius:50%; background:var(--line-strong); }
+  .dock-dot.on{ background:var(--brand); }
+  .dock-empty{ margin:4px 16px 8px; color:var(--soft-ink); text-align:center; }
+  .slider-dock[data-state="open"] .dock-cards{ flex-direction:column; overflow-x:hidden; overflow-y:auto; max-height:62vh; scroll-snap-type:none; gap:6px; }
+  .slider-dock[data-state="open"] .dock-card{ flex:none; border-bottom:1px solid var(--line); padding-bottom:8px; }
+  .slider-dock[data-state="open"] .dock-dots{ display:none; }
+  .slider-dock[data-state="closed"] .dock-cards, .slider-dock[data-state="closed"] .dock-dots, .slider-dock[data-state="closed"] .dock-empty{ display:none; }
+  /* ☰ */
+  .phone-menu{ position:fixed; top:calc(52px + env(safe-area-inset-top, 0px)); right:8px; z-index:45; min-width:230px; max-width:calc(100vw - 16px); background:#fff; border:1px solid var(--line); border-radius:14px; padding:6px; box-shadow:0 16px 40px rgba(16,24,40,.22); display:flex; flex-direction:column; }
+  .phone-menu button{ text-align:left; border:none; background:none; font-size:16px; padding:12px 14px; border-radius:9px; }
+  .phone-menu button:active:not(:disabled){ background:var(--brand-soft); }
+  .phone-menu-row{ display:flex; }
+  .phone-menu-row button{ flex:1 1 0; }
+  /* A bar's quick look. */
+  .peek-back{ position:fixed; inset:0; z-index:55; background:rgba(15,23,42,.38); display:flex; align-items:flex-end; }
+  .peek-card{ width:100%; max-height:82vh; overflow-y:auto; background:#fff; border-radius:18px 18px 0 0; padding:14px 16px calc(16px + env(safe-area-inset-bottom, 0px)); box-shadow:0 -10px 30px rgba(16,24,40,.25); animation:peek-up .16s ease-out; }
+  @keyframes peek-up{ from{ transform:translateY(40px); opacity:.5; } to{ transform:none; opacity:1; } }
+  @media (prefers-reduced-motion: reduce){ .peek-card{ animation:none; } }
+  .peek-head{ display:flex; align-items:center; gap:8px; }
+  .peek-head h3{ flex:1 1 auto; margin:0; font-size:18px; overflow-wrap:anywhere; }
+  .peek-close{ border:none; background:none; font-size:26px; padding:0 10px; line-height:1; }
+  .peek-where{ color:var(--soft-ink); font-size:13px; margin:2px 0 8px; }
+  .peek-line{ display:block; width:100%; height:auto; max-height:28vh; }
+  .peek-line .b-zero{ stroke:var(--line-strong); stroke-width:1; }
+  .peek-line .peek-now{ fill:none; stroke:var(--brand); stroke-width:2.5; stroke-linejoin:round; }
+  .peek-line .peek-was{ fill:none; stroke:var(--bar-base); stroke-width:1.5; stroke-dasharray:4 3; }
+  .peek-line .peek-dot{ fill:var(--brand); }
+  .peek-table{ width:100%; border-collapse:collapse; margin:8px 0 10px; font-size:14px; }
+  .peek-table th{ text-align:left; font-size:12px; color:var(--soft-ink); font-weight:600; padding:4px 6px; border-bottom:1px solid var(--line); }
+  .peek-table td{ padding:6px; border-bottom:1px solid #f1f3f6; }
+  .peek-table .num{ text-align:right; font-variant-numeric:tabular-nums; }
+  .peek-table th:not(:first-child){ text-align:right; }
+  .peek-table .up{ color:var(--up); }
+  .peek-table .down{ color:var(--down); }
+  .peek-actions button{ width:100%; padding:12px; font-size:15px; }
+  /* Sideways: the dock in one low row, so the board keeps the screen. */
+  @media (orientation: landscape){
+    body.phone .dock-card{ display:grid; grid-template-columns:minmax(0, 1fr) auto; align-items:center; column-gap:10px; padding:0 16px; }
+    body.phone .dock-card .ps{ grid-column:1 / -1; display:flex; align-items:center; gap:10px; }
+    body.phone .dock-card .ps-row{ flex:0 0 auto; gap:6px; }
+    body.phone .dock-card .ps-value, body.phone .dock-card .ps-type{ width:118px; flex:none; height:44px; font-size:24px !important; }
+    body.phone .dock-card .ps-row input.ps-type:not([type=range]):not([type=file]){ font-size:24px !important; }
+    body.phone .dock-card .ps-step{ width:42px; height:42px; font-size:20px; }
+    body.phone .dock-card .ps-track{ flex:1 1 auto; height:52px; }
+    body.phone .dock-base{ display:none; }
+    body.phone .dock-handle{ padding:5px 0 2px; }
+    body.phone .slider-dock[data-state="open"] .dock-cards{ max-height:55vh; }
+    body.phone .phone-menu{ max-height:calc(100vh - 60px); overflow-y:auto; }
+    body.phone .widget-list.bars{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
+    body.phone .widget-list.bars > .wide{ grid-column:1 / -1; }
+    body.phone .bar-chart{ max-height:calc(100vh - var(--dock-h, 0px) - 120px); }
+    body.phone .phone-boards{ margin-bottom:4px; }
+    body.phone .phone-board-arrow{ height:32px; }
+    body.phone .peek-card{ max-width:640px; margin:0 auto; max-height:92vh; }
+    body.phone .peek-back{ justify-content:center; }
+  }
 /* The Help panel (build step 10; docs/step10-help.md), shared by fmIDE and ExcelExporter with
    src/shared/help-panel.js. Each app sets --help-top (where the panel starts) and makes room
    for the panel under body.help-open. */
@@ -340,13 +456,37 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   .help-resize, .help-expand{ display:none; }
 }
 
+  /* The phone's slider (step 17, src/shared/phone.js). Its colours from the page:
+     --ps-accent (the fill and knob), --ps-ink, --ps-soft, --ps-line. */
+  .ps{ --ps-pad:24px; --ps-accent:#0f766e; --ps-ink:#1b2333; --ps-soft:#5f6b7d; --ps-line:#d5dbe5; position:relative; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
+  .ps-row{ display:flex; align-items:center; gap:10px; }
+  .ps-step{ flex:none; width:48px; height:48px; border-radius:50%; font-size:24px; line-height:1; padding:0; border:1px solid var(--ps-line); background:#fff; color:var(--ps-ink); touch-action:manipulation; }
+  .ps-step:active{ background:#eef1f5; transform:scale(.94); }
+  .ps-value, .ps-type{ flex:1 1 auto; min-width:0; height:52px; font-size:30px !important; font-weight:700; font-variant-numeric:tabular-nums; text-align:center; border:none; border-radius:10px; background:transparent; color:var(--ps-ink); padding:0 6px; }
+  .ps-value:active{ background:#eef1f5; }
+  .ps-type{ border:2px solid var(--ps-accent); background:#fff; }
+  /* As large as the number it replaces, over an app's own size for text boxes on a touchscreen. */
+  .ps .ps-row input.ps-type:not([type=range]):not([type=file]){ font-size:30px !important; }
+  .ps-track{ position:relative; height:64px; touch-action:none; cursor:ew-resize; outline:none; border-radius:12px; }
+  .ps-track:focus-visible{ box-shadow:0 0 0 2px var(--ps-accent); }
+  .ps-rail{ position:absolute; left:var(--ps-pad); right:var(--ps-pad); top:50%; height:8px; margin-top:-4px; border-radius:4px; background:var(--ps-line); }
+  .ps-fill{ position:absolute; top:0; bottom:0; left:calc(var(--ps-a) * 100%); width:calc((var(--ps-b) - var(--ps-a)) * 100%); background:var(--ps-accent); border-radius:4px; }
+  .ps-notch{ position:absolute; top:-9px; bottom:-9px; width:3px; margin-left:-1.5px; left:calc(var(--ps-n) * 100%); border-radius:2px; background:var(--ps-soft); }
+  .ps-thumb{ position:absolute; top:50%; width:34px; height:34px; margin:-17px 0 0 -17px; left:calc(var(--ps-pad) + var(--ps-f) * (100% - 2 * var(--ps-pad))); border-radius:50%; background:#fff; border:3px solid var(--ps-accent); box-shadow:0 2px 6px rgba(16,24,40,.25); transition:transform .12s; }
+  .ps.dragging .ps-thumb{ transform:scale(1.18); }
+  .ps.at-base .ps-thumb{ border-color:var(--ps-soft); }
+  .ps.ticked .ps-thumb{ animation:ps-tick .18s ease-out; }
+  @keyframes ps-tick{ 0%{ box-shadow:0 0 0 0 rgba(15,118,110,.55); } 100%{ box-shadow:0 0 0 12px rgba(15,118,110,0); } }
+  .ps-bubble{ position:absolute; bottom:calc(50% + 24px); transform:translateX(-50%); display:none; white-space:nowrap; padding:3px 10px; border-radius:10px; background:var(--ps-accent); color:#fff; font-size:13px; font-weight:700; pointer-events:none; box-shadow:0 3px 10px rgba(16,24,40,.25); z-index:5; }
+  .ps.dragging.fine .ps-bubble{ display:block; }
+  @media (prefers-reduced-motion: reduce){ .ps-thumb{ transition:none; } .ps.ticked .ps-thumb{ animation:none; } }
 </style>
 </head>
 <body>
 
 <header class="gbar">
   <div class="gbar-side">
-    <a id="backToFmide" class="gbar-back" href="fmIDE.html">← Back to fmIDE</a>
+    <a id="backToFmide" class="gbar-back" href="fmIDE.html" aria-label="Back to fmIDE">←<span class="gbar-back-words"> Back to fmIDE</span></a>
     <span class="gbar-name">fmGraph</span>
     <span id="modelName" class="gbar-model"></span>
   </div>
@@ -372,6 +512,8 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       </div>
     </details>
     <button id="btnHelp" class="gbar-btn" title="Help (F1)">❓ Help</button>
+    <button id="btnPhoneLayout" class="gbar-btn hidden" title="Back to the layout made for a phone">📱 Phone layout</button>
+    <button id="btnPhoneMenu" class="gbar-btn phone-only" aria-haspopup="menu" aria-expanded="false" aria-controls="phoneMenu" aria-label="Menu">☰</button>
   </div>
 </header>
 
@@ -382,16 +524,19 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     <h2>See how a value moves your model</h2>
     <p class="welcome-lead">Open a model saved by fmIDE, then add bars and sliders.</p>
     <div id="dropBox" class="dropbox" role="button" tabindex="0">
-      <span class="dropbox-main">Drop a .fmide or .json file here</span>
-      <span class="dropbox-sub">or click to choose one</span>
+      <span class="dropbox-main desk-only">Drop a .fmide or .json file here</span>
+      <span class="dropbox-sub desk-only">or click to choose one</span>
+      <span class="dropbox-main phone-only">Choose a .fmide or .json file</span>
+      <span class="dropbox-sub phone-only">saved by fmIDE</span>
     </div>
     <div class="welcome-actions">
       <button id="btnSample" class="primary">Try the sample model</button>
-      <button id="btnTutorials" title="Short tutorials on a practice copy of the sample model">🎓 Learn with a tutorial</button>
+      <button id="btnTutorials" class="desk-only" title="Short tutorials on a practice copy of the sample model">🎓 Learn with a tutorial</button>
     </div>
   </section>
 
   <nav id="boardTabs" class="board-tabs hidden" role="tablist" aria-label="Boards"></nav>
+  <nav id="phoneBoards" class="phone-boards" aria-label="Boards"></nav>
   <div id="trialBar" class="trial-bar hidden" role="status"></div>
   <div id="compareBar" class="compare-bar hidden" role="status"></div>
   <section id="board" class="board hidden">
@@ -414,10 +559,42 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     <div class="board-col board-main">
       <h2 class="col-head">Bars and charts <span id="calcNote" class="calc-note"></span></h2>
       <div id="barList" class="widget-list bars"></div>
-      <p id="noBars" class="empty-note">No bars yet: <button type="button" class="link-btn" data-add="bar">+ Bar</button> or <button type="button" class="link-btn" data-add="chart">+ Chart</button></p>
+      <p id="noBars" class="empty-note"><span class="desk-only">No bars yet: <button type="button" class="link-btn" data-add="bar">+ Bar</button> or <button type="button" class="link-btn" data-add="chart">+ Chart</button></span><span class="phone-only">No bars on this board yet: add them on a tablet or computer, or ☰ → Full app.</span></p>
     </div>
   </section>
 </main>
+
+<!-- On a phone (step 17, 05g-phone.js): the sliders under the thumb, the menu, a bar's quick look. -->
+<section id="sliderDock" class="slider-dock phone-only hidden" aria-label="Sliders" data-state="peek">
+  <button type="button" id="dockHandle" class="dock-handle" aria-expanded="false" aria-label="Show every slider"><span class="dock-grip"></span><span id="dockHandleText" class="dock-handle-text"></span></button>
+  <div id="dockCards" class="dock-cards"></div>
+  <div id="dockDots" class="dock-dots" aria-hidden="true"></div>
+  <p id="dockEmpty" class="dock-empty">This board has no sliders.</p>
+</section>
+<div id="phoneMenu" class="phone-menu hidden" role="menu" aria-label="Menu">
+  <button type="button" role="menuitem" id="phoneOpen">📂 Open…</button>
+  <button type="button" role="menuitem" id="phoneFromFmide" class="hidden">↻ From fmIDE</button>
+  <button type="button" role="menuitem" id="phoneReset" class="needs-model">⟲ Reset all sliders</button>
+  <button type="button" role="menuitem" id="phonePin" class="needs-model">📌 Pin as A</button>
+  <button type="button" role="menuitem" id="phoneScenarios" class="needs-model">Scenarios</button>
+  <button type="button" role="menuitem" id="phoneMovers" class="needs-model">Biggest movers</button>
+  <div class="phone-menu-row">
+    <button type="button" role="menuitem" id="phoneUndo" disabled>↶ Undo</button>
+    <button type="button" role="menuitem" id="phoneRedo" disabled>↷ Redo</button>
+  </div>
+  <button type="button" role="menuitemcheckbox" id="phoneVibrate" class="hidden" aria-checked="true">Vibrate on the marks: On</button>
+  <button type="button" role="menuitem" id="phoneHelp">❓ Help</button>
+  <button type="button" role="menuitem" id="phoneFullApp">🖥 Full app</button>
+</div>
+<div id="peekBack" class="peek-back hidden">
+  <div id="peekCard" class="peek-card" role="dialog" aria-modal="true" aria-labelledby="peekTitle">
+    <div class="peek-head"><h3 id="peekTitle"></h3><button type="button" id="peekClose" class="peek-close" aria-label="Close">×</button></div>
+    <div id="peekWhere" class="peek-where"></div>
+    <div id="peekChart" class="peek-chart"></div>
+    <table id="peekTable" class="peek-table"></table>
+    <div class="peek-actions"><button type="button" id="peekTrace">🔍 Trace</button></div>
+  </div>
+</div>
 
 <input type="file" id="fileInput" accept=".fmide,application/json,.json" hidden>
 <input type="file" id="boardFileInput" accept="application/json,.json" hidden>
@@ -3671,6 +3848,7 @@ function syncUndoButtons(){
   const u = $('btnUndo'), r = $('btnRedo');
   if(u) u.disabled = !model || !undoStack.length;
   if(r) r.disabled = !model || !redoStack.length;
+  if($('phoneUndo')){ $('phoneUndo').disabled = u.disabled; $('phoneRedo').disabled = r.disabled; } // ☰ on a phone (05g-phone.js)
 }
 // ============================================================
 // Drawing the board. renderBoard() builds every widget; updateValues() redraws only the
@@ -3702,6 +3880,7 @@ function showBoard(){
 function syncPageState(){
   document.querySelectorAll('.needs-model').forEach(b => { b.disabled = !model; });
   $('btnAttachTemplate').classList.toggle('hidden', !(model && linkedToFmide)); // G5b: only with the model from fmIDE
+  if(!model){ renderDock(); renderPhoneBoards(); } // the first screen again: no dock (05g-phone.js)
 }
 
 // A <select> of rectangles, by canvas. onlyInputs: a slider's.
@@ -3796,6 +3975,7 @@ function renderBoard(){
   renderTraceNote();
   renderScenarios(); // (05f-scenarios.js)
   updateValues();
+  renderDock(); // on a phone, the sliders' dock (05g-phone.js)
 }
 
 function barWidget(b){
@@ -3804,8 +3984,11 @@ function barWidget(b){
   const head = make('div', 'widget-head');
   const sel = rectSelect(b.key, false);
   sel.addEventListener('change', () => { b.key = sel.value; saveBoardSoon(); renderBoard(); });
-  head.append(sel, removeButton(b.id, 'bar'));
-  const row = make('div', 'widget-row');
+  head.append(sel, make('span', 'widget-title phone-only', model.byKey.get(b.key).name), removeButton(b.id, 'bar'));
+  // On a phone, holding the bar opens its quick look (05g-phone.js).
+  w.addEventListener('pointerdown', (ev) => phoneBarPress(ev, b));
+  w.addEventListener('contextmenu', (ev) => { if(isPhone()) ev.preventDefault(); });
+  const row = make('div', 'widget-row bar-settings');
   row.appendChild(periodsChooser(b.periods, (p) => { b.periods = p; saveBoardSoon(); updateValues(); }));
   row.appendChild(colourPicker(b.colour || DEFAULT_BAR_COLOUR, 'Bar colour', (c) => { b.colour = c === DEFAULT_BAR_COLOUR ? null : c; saveBoardSoon(); updateValues(); }));
   const rect = model.byKey.get(b.key);
@@ -3972,17 +4155,23 @@ function updateValues(){
   board.sliders.forEach(s => {
     const el = document.querySelector('.slider-widget[data-id="' + s.id + '"]');
     if(!el) return;
-    const rect = model.byKey.get(s.key);
-    const ps = periodsOf(s.periods);
-    const first = ps[0] || 0, last = ps[ps.length - 1] || 0;
-    const same = ps.every(p => baseValue(rect, p) === baseValue(rect, first));
-    el.querySelector('.slider-base').textContent = same
-      ? 'Model\'s number: ' + fmtNum(baseValue(rect, first))
-      : 'Model\'s numbers: ' + fmtNum(baseValue(rect, first)) + ' (' + model.periods[first] + ') to ' + fmtNum(baseValue(rect, last)) + ' (' + model.periods[last] + ')';
+    el.querySelector('.slider-base').textContent = sliderBaseText(s);
   });
   updateMovers(results);
   markScenarios(); // (05f-scenarios.js)
   paintReach();
+  updateDock(); // (05g-phone.js)
+}
+
+// "Model's number: 10", or the first and last when the periods it covers differ.
+function sliderBaseText(s){
+  const rect = model.byKey.get(s.key);
+  const ps = periodsOf(s.periods);
+  const first = ps[0] || 0, last = ps[ps.length - 1] || 0;
+  const same = ps.every(p => baseValue(rect, p) === baseValue(rect, first));
+  return same
+    ? 'Model\'s number: ' + fmtNum(baseValue(rect, first))
+    : 'Model\'s numbers: ' + fmtNum(baseValue(rect, first)) + ' (' + model.periods[first] + ') to ' + fmtNum(baseValue(rect, last)) + ' (' + model.periods[last] + ')';
 }
 
 // One bar per period, the model's own value as a dashed outline behind it.
@@ -4496,6 +4685,7 @@ function renderTabs(){
   tool('✎', 'Rename this board', () => renameBoard(strip.querySelector('.board-tab.active')));
   tool('⧉', 'Duplicate this board', () => duplicateBoard()).disabled = boards.length >= BOARDS_LIMIT;
   tool('🗑', 'Delete this board', () => deleteBoard(), 'danger').disabled = boards.length < 2;
+  renderPhoneBoards(); // on a phone, ‹ name › (05g-phone.js)
 }
 
 function showBoardAt(i){
@@ -5122,6 +5312,606 @@ $('btnSaveScenario').addEventListener('click', () => {
   const box = document.querySelector('#scenarioList .scenario[data-name="' + CSS.escape(n) + '"] .scenario-name');
   if(box){ box.focus(); box.select(); }
 });
+// ============================================================
+// fmGraph on a phone (step 17, phase P1a; docs/step17-phones.md). On a touchscreen whose
+// shorter side is under 600 pixels (isPhoneScreen, src/shared/phone.js) the page takes its
+// phone layout, body.phone:
+// - the top bar keeps ←, the model's name and ☰ (#phoneMenu: Open, ↻ From fmIDE, Reset all,
+//   Pin as A, Scenarios, Biggest movers, Undo / Redo, the tick's switch, Help, Full app);
+// - the bars and charts fill the screen in one column; a swipe sideways across them, or ‹ ›
+//   (#phoneBoards), shows the next or previous board;
+// - the sliders sit in the dock along the bottom (#sliderDock), in reach of the thumb: one at a
+//   time, large (the shared phone slider), a swipe along the dock to the next; drawn up it
+//   lists them all, drawn down it gets out of the way;
+// - holding a bar opens its quick look (#peekCard): every period, now against the model's own
+//   numbers (or A), and 🔍 Trace;
+// - building and editing (+ Bar, + Chart, + Slider, the Boards menu, editors, arranging,
+//   colours, the tutorials) is left to a tablet or computer: ☰ → Full app shows the full page,
+//   📱 Phone layout goes back. Both settings are the person's own, kept in this browser
+//   (fmgraph-full-app, fmgraph-vibrate), never in a file.
+// ============================================================
+// ---------- phones: what fmGraph and fmIDE share on a phone (step 17, docs/step17-phones.md) ----------
+// - isPhoneScreen(): a touchscreen whose shorter side is under PHONE_MAX_SIDE pixels, upright or
+//   sideways. The screen's own size, not the window's: an on-screen keyboard never turns a
+//   tablet into a phone.
+// - tick(): a short vibration, where the phone lets a page vibrate (Android; Safari on an
+//   iPhone gives web pages none, so there the tick is only seen).
+// - createPhoneSlider(options): the phone's own slider. Made for a thumb:
+//   · grab anywhere along it: the value moves with the finger from where it is, never jumping
+//     to where the finger landed;
+//   · finer by sliding the finger up, away from it, while dragging (×½, ×¼, ×⅒, FINE_STEPS),
+//     coarse and exact in one gesture, without letting go;
+//   · a notch at the base (the model's own number): the value settles there when the finger
+//     passes close, with a tick; ticks at round marks too;
+//   · the number large, right above the finger (which hides the knob), and "fine ×¼" over the
+//     knob while finer; tapping the number lets it be typed; − and + step it, repeating faster while held;
+//   · a double-tap goes back to the base; the arrow keys, Page Up / Down, Home and End work.
+//   Each finger is followed by its own pointer id, so several sliders move at once.
+// Nothing here touches the page until it is called.
+
+const PHONE_MAX_SIDE = 600;
+// How far up (pixels from where the finger went down) makes a drag finer, and by how much.
+const FINE_STEPS = [[0, 1, ''], [50, 1 / 2, '×½'], [110, 1 / 4, '×¼'], [170, 1 / 10, '×⅒']];
+const NOTCH_PX = 9;      // the value settles at the base within this many pixels of it
+const MARKS = 8;         // about this many round marks along a slider tick
+const TICK_GAP_MS = 45;  // ticks closer than this are one
+
+function isPhoneScreen(){
+  try{
+    const coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    const side = Math.min(window.screen.width || Infinity, window.screen.height || Infinity);
+    return coarse && side < PHONE_MAX_SIDE;
+  }catch(e){ return false; }
+}
+
+function canVibrate(){
+  return typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
+}
+function tick(){
+  if(!canVibrate()) return false;
+  try{ return navigator.vibrate(8) !== false; }catch(e){ return false; }
+}
+
+// The finer factor for a finger this many pixels above where it went down.
+function fineStep(up){
+  let pick = FINE_STEPS[0];
+  FINE_STEPS.forEach(f => { if(up >= f[0]) pick = f; });
+  return { factor: pick[1], label: pick[2] };
+}
+
+// A 1-2-5 step near x.
+function roundStep(x){
+  if(!(x > 0) || !isFinite(x)) return 1;
+  const p = Math.pow(10, Math.floor(Math.log10(x)));
+  const f = x / p;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p;
+}
+function decimalsOf(step){ return Math.max(0, Math.min(12, Math.ceil(-Math.log10(step)) + 1)); }
+
+// options: { label, min, max, step, value, base, format(v) → text, vibrate() → whether to
+//   vibrate on a tick, onStart(), onInput(value, atBase), onEnd() }
+// Returns { el, setValue(v), value(), dragging() }.
+function createPhoneSlider(options){
+  const o = options;
+  const mk = (tag, cls, text) => {
+    const e = document.createElement(tag);
+    if(cls) e.className = cls;
+    if(text !== undefined && text !== null) e.textContent = String(text);
+    return e;
+  };
+  const min = o.min, max = o.max, span = Math.max(1e-12, max - min), step = o.step > 0 ? o.step : span / 100;
+  const base = Number.isFinite(o.base) ? o.base : min;
+  const decimals = decimalsOf(step);
+  const markStep = roundStep(span / MARKS);
+  const format = typeof o.format === 'function' ? o.format : (v) => String(v);
+  let value = Number.isFinite(o.value) ? o.value : base;
+  let drags = 0;
+  let lastTickAt = 0;
+
+  const el = mk('div', 'ps');
+  const row = mk('div', 'ps-row');
+  const minus = mk('button', 'ps-step ps-minus', '−');
+  const plus = mk('button', 'ps-step ps-plus', '+');
+  const shown = mk('button', 'ps-value');
+  [minus, plus, shown].forEach(b => { b.type = 'button'; });
+  minus.setAttribute('aria-label', 'Less: ' + o.label);
+  plus.setAttribute('aria-label', 'More: ' + o.label);
+  shown.title = 'Type a number';
+  shown.setAttribute('aria-label', 'Type a number for ' + o.label);
+  row.append(minus, shown, plus);
+  const track = mk('div', 'ps-track');
+  track.tabIndex = 0;
+  track.setAttribute('role', 'slider');
+  track.setAttribute('aria-label', o.label);
+  track.setAttribute('aria-valuemin', String(min));
+  track.setAttribute('aria-valuemax', String(max));
+  const rail = mk('div', 'ps-rail');
+  rail.append(mk('div', 'ps-fill'), mk('div', 'ps-notch'));
+  const thumb = mk('div', 'ps-thumb');
+  const bubble = mk('div', 'ps-bubble');
+  bubble.setAttribute('aria-hidden', 'true');
+  track.append(rail, thumb, bubble);
+  el.append(row, track);
+
+  const clamp = (v) => Math.min(max, Math.max(min, v));
+  const frac = (v) => Math.min(1, Math.max(0, (v - min) / span));
+  const snap = (v) => Number(clamp(min + Math.round((v - min) / step) * step).toFixed(decimals));
+  function paint(){
+    el.style.setProperty('--ps-f', String(frac(value)));
+    el.style.setProperty('--ps-n', String(frac(base)));
+    el.style.setProperty('--ps-a', String(Math.min(frac(value), frac(base))));
+    el.style.setProperty('--ps-b', String(Math.max(frac(value), frac(base))));
+    el.classList.toggle('at-base', value === base);
+    shown.textContent = format(value);
+    track.setAttribute('aria-valuenow', String(value));
+    track.setAttribute('aria-valuetext', format(value));
+  }
+  function tickNow(){
+    const now = performance.now();
+    if(now - lastTickAt < TICK_GAP_MS) return;
+    lastTickAt = now;
+    el.classList.remove('ticked');
+    void el.offsetWidth; // start the little pulse again
+    el.classList.add('ticked');
+    if(!o.vibrate || o.vibrate()) tick();
+  }
+  // Ticks for a move from a to b: reaching the base, or crossing a round mark.
+  function ticksFor(a, b){
+    if(a === b) return;
+    if(b === base || (a - base) * (b - base) < 0) return tickNow();
+    if(Math.floor(a / markStep + 1e-9) !== Math.floor(b / markStep + 1e-9)) tickNow();
+  }
+  function setTo(v, quiet){
+    const was = value;
+    value = v;
+    paint();
+    if(!quiet) ticksFor(was, v);
+    if(o.onInput) o.onInput(value, value === base);
+  }
+  const start = () => { if(o.onStart) o.onStart(); };
+  const end = () => { if(o.onEnd) o.onEnd(); };
+
+  // ---- dragging ----
+  track.addEventListener('pointerdown', (ev) => {
+    if(ev.button > 0) return;
+    if(ev.pointerType === 'mouse') ev.preventDefault(); // no text selection; a finger's is left alone (pointer-input.js)
+    try{ track.setPointerCapture(ev.pointerId); }catch(e){ /* followed through the document anyway */ }
+    const id = ev.pointerId, x0 = ev.clientX, y0 = ev.clientY;
+    const width = Math.max(1, rail.getBoundingClientRect().width);
+    let anchorX = x0, raw = value, anchorV = value, factor = 1, moved = false;
+    drags++;
+    el.classList.add('dragging');
+    track.focus({ preventScroll: true });
+    start();
+    const move = (e) => {
+      if(e.pointerId !== id) return;
+      const fine = fineStep(y0 - e.clientY);
+      if(fine.factor !== factor){ anchorX = e.clientX; anchorV = raw; factor = fine.factor; }
+      if(!moved && Math.abs(e.clientX - x0) < 3) return;
+      moved = true;
+      raw = clamp(anchorV + (e.clientX - anchorX) / width * span * factor);
+      const unitsPerPx = span * factor / width;
+      const v = Math.abs(raw - base) / unitsPerPx <= NOTCH_PX && base >= min && base <= max ? base : snap(raw);
+      el.classList.toggle('fine', factor < 1);
+      if(v !== value) setTo(v);
+      if(factor < 1) placeBubble('fine ' + fine.label);
+    };
+    const up = (e) => {
+      if(e.pointerId !== id) return;
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      document.removeEventListener('pointercancel', up);
+      drags = Math.max(0, drags - 1);
+      el.classList.remove('dragging', 'fine');
+      end();
+    };
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+    document.addEventListener('pointercancel', up);
+  });
+  // "fine ×¼" over the knob, kept inside the slider.
+  function placeBubble(text){
+    bubble.textContent = text;
+    const w = track.clientWidth, half = bubble.offsetWidth / 2 + 4;
+    const pad = 24, at = pad + frac(value) * (w - 2 * pad);
+    bubble.style.left = Math.max(half, Math.min(w - half, at)) + 'px';
+  }
+  // A double-tap (pointer-input.js sends a finger's as dblclick) or a double-click: the base.
+  track.addEventListener('dblclick', (ev) => { ev.preventDefault(); start(); setTo(base); end(); });
+  track.addEventListener('keydown', (ev) => {
+    const k = ev.key;
+    const by = { ArrowRight: step, ArrowUp: step, ArrowLeft: -step, ArrowDown: -step, PageUp: step * 10, PageDown: -step * 10 }[k];
+    let v = null;
+    if(by !== undefined) v = snap(value + by);
+    else if(k === 'Home') v = min;
+    else if(k === 'End') v = max;
+    if(v === null) return;
+    ev.preventDefault();
+    start(); setTo(v); end();
+  });
+
+  // ---- − and +: a step, repeating faster while held ----
+  [[minus, -1], [plus, 1]].forEach(([b, dir]) => {
+    let timer = null;
+    const stepOnce = () => setTo(snap(value + dir * step));
+    const stop = () => { if(timer === null) return; clearTimeout(timer); timer = null; end(); };
+    b.addEventListener('pointerdown', (ev) => {
+      if(ev.button > 0) return;
+      if(ev.pointerType === 'mouse') ev.preventDefault();
+      start();
+      stepOnce();
+      let gap = 380;
+      const again = () => { stepOnce(); gap = Math.max(35, gap * 0.8); timer = setTimeout(again, gap); };
+      timer = setTimeout(again, gap);
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => b.addEventListener(t, stop));
+    b.addEventListener('click', (ev) => { if(ev.detail === 0){ start(); stepOnce(); end(); } }); // the keyboard's Enter or Space
+    b.addEventListener('contextmenu', (ev) => ev.preventDefault());
+  });
+
+  // ---- typing ----
+  shown.addEventListener('click', () => {
+    const box = mk('input', 'ps-type');
+    box.type = 'text';
+    box.inputMode = min >= 0 && base >= 0 ? 'decimal' : 'text';
+    box.value = String(value);
+    box.setAttribute('aria-label', o.label + ' (number)');
+    let done = false;
+    const finish = (keep) => {
+      if(done) return;
+      done = true;
+      const v = Number(box.value.replace(/[\s,]/g, '').replace(/−/g, '-'));
+      box.replaceWith(shown);
+      if(keep && box.value.trim() !== '' && isFinite(v)){ start(); setTo(v, true); end(); }
+      else paint();
+    };
+    box.addEventListener('keydown', (ev) => {
+      if(ev.key === 'Enter'){ ev.preventDefault(); finish(true); }
+      else if(ev.key === 'Escape'){ ev.preventDefault(); finish(false); }
+    });
+    box.addEventListener('blur', () => finish(true));
+    shown.replaceWith(box);
+    box.focus();
+    box.select();
+  });
+
+  paint();
+  return {
+    el,
+    setValue(v){ if(Number.isFinite(v) && !drags){ value = v; paint(); } },
+    value: () => value,
+    dragging: () => drags > 0,
+  };
+}
+
+const FULL_APP_KEY = 'fmgraph-full-app';
+const VIBRATE_KEY = 'fmgraph-vibrate';
+let fullApp = false;     // the full page on a phone (☰ → Full app)
+let vibrateOn = true;    // the tick felt, where the phone allows it
+let dockIndex = 0;       // the slider the dock shows
+let dockControls = new Map(); // slider id → its phone slider
+
+const isPhone = () => document.body.classList.contains('phone');
+
+function applyPhoneLayout(){
+  const screenIsPhone = isPhoneScreen();
+  const phone = screenIsPhone && !fullApp;
+  const was = isPhone();
+  document.body.classList.toggle('phone-screen', screenIsPhone);
+  document.body.classList.toggle('phone', phone);
+  $('btnPhoneLayout').classList.toggle('hidden', !(screenIsPhone && fullApp));
+  if(!phone){ closePhoneMenu(); closePeek(); }
+  if(was !== phone && model && board) renderAll();
+  else { renderDock(); renderPhoneBoards(); }
+}
+function setFullApp(on){
+  fullApp = !!on;
+  store.put(FULL_APP_KEY, fullApp ? '1' : '').catch(() => {});
+  applyPhoneLayout();
+}
+
+// ---- the dock ----
+function sliderText(s, v){
+  return s.mode === 'shift' ? (v > 0 ? '+' : v < 0 ? '−' : '') + fmtNum(Math.abs(v)) + '%' : fmtNum(v);
+}
+function sliderBase(s){
+  return s.mode === 'shift' ? 0 : baseValue(model.byKey.get(s.key), periodsOf(s.periods)[0] || 0);
+}
+function periodsText(spec){
+  if(!spec || spec.mode === 'all') return '';
+  const ps = periodsOf(spec);
+  return ps.length === 1 ? model.periods[ps[0]] : model.periods[ps[0]] + ' to ' + model.periods[ps[ps.length - 1]];
+}
+
+function renderDock(){
+  const dock = $('sliderDock'), cards = $('dockCards');
+  const on = isPhone() && !!model && !!board;
+  dock.classList.toggle('hidden', !on);
+  cards.textContent = '';
+  dockControls = new Map();
+  if(on){
+    board.sliders.forEach(s => cards.appendChild(dockCard(s)));
+    $('dockEmpty').classList.toggle('hidden', board.sliders.length > 0);
+    dockIndex = Math.max(0, Math.min(dockIndex, board.sliders.length - 1));
+    renderDockDots();
+    showDockCard(dockIndex);
+    updateDock();
+  }
+  updateDockSpace();
+}
+
+function dockCard(s){
+  const rect = model.byKey.get(s.key);
+  const card = make('div', 'dock-card');
+  card.dataset.id = s.id;
+  const head = make('div', 'dock-card-head');
+  head.appendChild(make('span', 'dock-name', rect.name));
+  const when = periodsText(s.periods);
+  if(when) head.appendChild(make('span', 'dock-periods', when));
+  head.appendChild(make('span', 'dock-change'));
+  const ctl = createPhoneSlider({
+    label: rect.name, min: s.min, max: s.max, step: s.step, value: sliderShown(s), base: sliderBase(s),
+    format: (v) => sliderText(s, v),
+    vibrate: () => vibrateOn,
+    onStart: () => { setActiveSlider(s.id); workOutAhead(s); },
+    onInput: (v, atBase) => {
+      if(atBase){ s.value = null; setActiveSlider(s.id); quietSoon(1500); scheduleUpdate(); }
+      else moveSlider(s, v);
+    },
+    onEnd: () => quietSoon(1200),
+  });
+  dockControls.set(s.id, ctl);
+  card.append(head, ctl.el, make('div', 'dock-base'));
+  return card;
+}
+
+// The words under each slider, after every redraw (updateValues).
+function updateDock(){
+  if(!isPhone() || !model || !board) return;
+  board.sliders.forEach(s => {
+    const card = document.querySelector('#dockCards .dock-card[data-id="' + s.id + '"]');
+    const ctl = dockControls.get(s.id);
+    if(!card || !ctl) return;
+    if(!ctl.dragging()) ctl.setValue(sliderShown(s));
+    const v = sliderShown(s), base = sliderBase(s);
+    // What the change does to the first period's number (for a change by %, that number too).
+    const first = baseValue(model.byKey.get(s.key), periodsOf(s.periods)[0] || 0);
+    card.querySelector('.dock-change').textContent = s.value === null ? '' : s.mode === 'shift'
+      ? fmtNum(first * (1 + v / 100)) + ' (' + fmtDiff(first * (1 + v / 100), first).split(' ')[0] + ')' : fmtDiff(v, base);
+    card.querySelector('.dock-base').textContent = sliderBaseText(s) + (s.value === null ? '' : ' · double-tap to go back');
+    card.classList.toggle('moved', s.value !== null);
+  });
+  updateDockHandle();
+}
+
+function renderDockDots(){
+  const dots = $('dockDots');
+  dots.textContent = '';
+  if(board.sliders.length < 2) return;
+  board.sliders.forEach((s, i) => dots.appendChild(make('span', 'dock-dot' + (i === dockIndex ? ' on' : ''))));
+}
+function showDockCard(i){
+  const cards = $('dockCards');
+  if($('sliderDock').dataset.state !== 'peek') return;
+  requestAnimationFrame(() => { cards.scrollLeft = i * cards.clientWidth; });
+}
+$('dockCards').addEventListener('scroll', () => {
+  const cards = $('dockCards');
+  if($('sliderDock').dataset.state !== 'peek' || !board || !cards.clientWidth) return;
+  const i = Math.max(0, Math.min(board.sliders.length - 1, Math.round(cards.scrollLeft / cards.clientWidth)));
+  if(i === dockIndex) return;
+  dockIndex = i;
+  document.querySelectorAll('#dockDots .dock-dot').forEach((d, k) => d.classList.toggle('on', k === i));
+  updateDockHandle();
+}, { passive: true });
+
+// Drawn up: every slider; drawn down: out of the way; a tap: one or all.
+const DOCK_STATES = ['closed', 'peek', 'open'];
+function setDockState(state){
+  const dock = $('sliderDock');
+  dock.dataset.state = DOCK_STATES.includes(state) ? state : 'peek';
+  $('dockHandle').setAttribute('aria-expanded', dock.dataset.state === 'open' ? 'true' : 'false');
+  $('dockHandle').setAttribute('aria-label', dock.dataset.state === 'open' ? 'Show one slider at a time' : 'Show every slider');
+  showDockCard(dockIndex);
+  updateDockHandle();
+  updateDockSpace();
+}
+function updateDockHandle(){
+  const s = board && board.sliders[dockIndex];
+  $('dockHandleText').textContent = $('sliderDock').dataset.state === 'closed' && s && model
+    ? model.byKey.get(s.key).name + ': ' + sliderText(s, sliderShown(s)) + ' ▴' : '';
+}
+let handleY = null, handleSwiped = false;
+$('dockHandle').addEventListener('pointerdown', (ev) => { handleY = ev.clientY; handleSwiped = false; });
+$('dockHandle').addEventListener('pointerup', (ev) => {
+  if(handleY === null) return;
+  const dy = ev.clientY - handleY, at = DOCK_STATES.indexOf($('sliderDock').dataset.state);
+  handleY = null;
+  if(Math.abs(dy) < 30) return;
+  handleSwiped = true;
+  setDockState(DOCK_STATES[Math.max(0, Math.min(2, at + (dy < 0 ? 1 : -1)))]);
+});
+$('dockHandle').addEventListener('click', () => {
+  if(handleSwiped){ handleSwiped = false; return; }
+  setDockState($('sliderDock').dataset.state === 'peek' ? 'open' : 'peek');
+});
+
+// Room under the page for the dock, so the last bar can be scrolled above it.
+function updateDockSpace(){
+  const dock = $('sliderDock');
+  const h = dock.classList.contains('hidden') || !isPhone() ? 0 : dock.offsetHeight;
+  document.body.style.setProperty('--dock-h', h + 'px');
+}
+if(typeof ResizeObserver === 'function') new ResizeObserver(() => updateDockSpace()).observe($('sliderDock'));
+
+// ---- boards: ‹ name › and a swipe sideways ----
+function renderPhoneBoards(){
+  const nav = $('phoneBoards');
+  nav.textContent = '';
+  if(!isPhone() || !model || !board) return;
+  const i = boards.indexOf(board);
+  const arrow = (text, label, to) => {
+    const b = make('button', 'phone-board-arrow', text);
+    b.type = 'button';
+    b.setAttribute('aria-label', label);
+    b.disabled = to < 0 || to >= boards.length;
+    b.addEventListener('click', () => swipeBoard(to - i));
+    return b;
+  };
+  const name = make('div', 'phone-board-name');
+  name.appendChild(make('span', 'phone-board-title', board.name));
+  if(boards.length > 1){
+    const dots = make('span', 'phone-board-dots');
+    dots.setAttribute('aria-label', 'Board ' + (i + 1) + ' of ' + boards.length);
+    boards.forEach((b, k) => dots.appendChild(make('span', 'dock-dot' + (k === i ? ' on' : ''))));
+    name.appendChild(dots);
+  }
+  nav.append(arrow('‹', 'Previous board', i - 1), name, arrow('›', 'Next board', i + 1));
+}
+function swipeBoard(by){
+  const i = boards.indexOf(board) + by;
+  if(by === 0 || i < 0 || i >= boards.length) return false;
+  showBoardAt(i);
+  const el = $('board');
+  if(!(reducedMotion && reducedMotion.matches) && typeof el.animate === 'function'){
+    el.animate([{ transform: 'translateX(' + (by > 0 ? 40 : -40) + 'px)', opacity: 0.4 }, { transform: 'none', opacity: 1 }], { duration: 180, easing: 'ease-out' });
+  }
+  return true;
+}
+$('board').addEventListener('pointerdown', (ev) => {
+  if(!isPhone() || ev.pointerType === 'mouse' || ev.target.closest('.ps, button, input, select, summary, .scenarios, .movers')) return;
+  const id = ev.pointerId, x0 = ev.clientX, y0 = ev.clientY, t0 = performance.now();
+  const up = (e) => {
+    if(e.pointerId !== id) return;
+    document.removeEventListener('pointerup', up);
+    document.removeEventListener('pointercancel', up);
+    const dx = e.clientX - x0, dy = e.clientY - y0;
+    if(e.type === 'pointerup' && Math.abs(dx) > 60 && Math.abs(dx) > 2 * Math.abs(dy) && performance.now() - t0 < 900) swipeBoard(dx < 0 ? 1 : -1);
+  };
+  document.addEventListener('pointerup', up);
+  document.addEventListener('pointercancel', up);
+});
+
+// ---- holding a bar: its quick look ----
+let peekFor = null, peekOpenedAt = 0, peekDownOnBack = false;
+function phoneBarPress(ev, b){
+  if(!isPhone() || ev.pointerType === 'mouse' || ev.target.closest('button, select, input')) return;
+  waitForHold(ev, { onHold: () => openPeek(b), onMoveFirst: () => {}, onRelease: () => {} });
+}
+function openPeek(b){
+  if(!model || !board.items.includes(b)) return;
+  const rect = model.byKey.get(b.key);
+  const results = currentResults(), cmp = compareResults();
+  peekFor = b;
+  peekOpenedAt = performance.now();
+  $('peekTitle').textContent = rect.name;
+  $('peekWhere').textContent = rect.canvasName + (rect.unit ? ' · in ' + rect.unit : '');
+  const all = model.periods.map((_, p) => ({ p, now: resultOf(results, rect, p), was: resultOf(cmp, rect, p) }));
+  // Every period as a small line: now, and the model's own numbers (or A) dashed.
+  const host = $('peekChart');
+  host.textContent = '';
+  const nums = [];
+  all.forEach(r => { if(!r.now.error) nums.push(r.now.value); if(!r.was.error) nums.push(r.was.value); });
+  if(nums.length){
+    let lo = Math.min(0, ...nums), hi = Math.max(0, ...nums);
+    if(hi === lo) hi = lo + 1;
+    const W = 320, H = 110, n = all.length;
+    const x = (i) => n === 1 ? W / 2 : 14 + i * (W - 28) / (n - 1);
+    const y = (v) => 8 + (hi - v) / (hi - lo) * (H - 16);
+    const chart = svg('svg', { class: 'peek-line', viewBox: '0 0 ' + W + ' ' + H, role: 'img' });
+    chart.setAttribute('aria-label', rect.name + ', every period');
+    chart.appendChild(svg('line', { class: 'b-zero', x1: 0, x2: W, y1: y(0), y2: y(0) }));
+    const line = (key, cls) => {
+      const pts = all.filter(r => !r[key].error).map(r => x(r.p) + ',' + y(r[key].value)).join(' ');
+      if(pts) chart.appendChild(svg('polyline', { class: cls, points: pts }));
+    };
+    line('was', 'peek-was');
+    line('now', 'peek-now');
+    all.forEach(r => { if(!r.now.error) chart.appendChild(svg('circle', { class: 'peek-dot', cx: x(r.p), cy: y(r.now.value), r: 3.5 })); });
+    host.appendChild(chart);
+  }
+  const table = $('peekTable');
+  table.textContent = '';
+  const headRow = make('tr');
+  [['Period'], ['Now'], [pinA ? 'From A' : 'From the model\'s']].forEach(([t]) => headRow.appendChild(make('th', null, t)));
+  const thead = make('thead');
+  thead.appendChild(headRow);
+  const tbody = make('tbody');
+  all.forEach(r => {
+    const tr = make('tr');
+    tr.appendChild(make('td', null, model.periods[r.p]));
+    tr.appendChild(make('td', 'num', r.now.error ? '! ' + errorText(r.now.error) : fmtNum(r.now.value)));
+    const diff = r.now.error || r.was.error ? '' : fmtDiff(r.now.value, r.was.value);
+    tr.appendChild(make('td', 'num ' + (diff ? (r.now.value > r.was.value ? 'up' : 'down') : ''), diff || '—'));
+    tbody.appendChild(tr);
+  });
+  table.append(thead, tbody);
+  $('peekTrace').setAttribute('aria-pressed', traceId === b.id ? 'true' : 'false');
+  $('peekBack').classList.remove('hidden');
+  $('peekClose').focus({ preventScroll: true });
+}
+function closePeek(){
+  peekFor = null;
+  $('peekBack').classList.add('hidden');
+}
+$('peekClose').addEventListener('click', closePeek);
+$('peekTrace').addEventListener('click', () => { const b = peekFor; closePeek(); if(b) setTrace(traceId === b.id ? null : b.id); });
+// A tap on the dim page around the card closes it (not the finger that opened it, lifting).
+$('peekBack').addEventListener('pointerdown', (ev) => { peekDownOnBack = ev.target === $('peekBack') && performance.now() - peekOpenedAt > 300; });
+$('peekBack').addEventListener('click', (ev) => { if(ev.target === $('peekBack') && peekDownOnBack) closePeek(); peekDownOnBack = false; });
+
+// ---- ☰ ----
+function openPhoneMenu(){
+  const menu = $('phoneMenu');
+  $('phoneFromFmide').classList.toggle('hidden', $('btnFromFmide').classList.contains('hidden'));
+  $('phonePin').textContent = pinA ? '📌 Unpin A' : '📌 Pin as A';
+  $('phoneUndo').disabled = $('btnUndo').disabled;
+  $('phoneRedo').disabled = $('btnRedo').disabled;
+  $('phoneVibrate').classList.toggle('hidden', !canVibrate());
+  $('phoneVibrate').setAttribute('aria-checked', vibrateOn ? 'true' : 'false');
+  $('phoneVibrate').textContent = 'Vibrate on the marks: ' + (vibrateOn ? 'On' : 'Off');
+  menu.classList.remove('hidden');
+  $('btnPhoneMenu').setAttribute('aria-expanded', 'true');
+}
+function closePhoneMenu(){
+  $('phoneMenu').classList.add('hidden');
+  $('btnPhoneMenu').setAttribute('aria-expanded', 'false');
+}
+$('btnPhoneMenu').addEventListener('click', () => { if($('phoneMenu').classList.contains('hidden')) openPhoneMenu(); else closePhoneMenu(); });
+document.addEventListener('pointerdown', (ev) => {
+  if(!$('phoneMenu').classList.contains('hidden') && !ev.target.closest('#phoneMenu, #btnPhoneMenu')) closePhoneMenu();
+}, true);
+document.addEventListener('keydown', (ev) => {
+  if(ev.key !== 'Escape') return;
+  if(!$('peekBack').classList.contains('hidden')){ ev.stopPropagation(); closePeek(); }
+  else if(!$('phoneMenu').classList.contains('hidden')){ ev.stopPropagation(); closePhoneMenu(); $('btnPhoneMenu').focus(); }
+}, true);
+const menuItem = (id, fn) => $(id).addEventListener('click', () => { closePhoneMenu(); fn(); });
+const openPanel = (id) => { const p = $(id); p.open = true; p.scrollIntoView({ block: 'start', behavior: 'smooth' }); };
+menuItem('phoneOpen', () => $('btnOpen').click());
+menuItem('phoneFromFmide', () => $('btnFromFmide').click());
+menuItem('phoneReset', () => $('btnResetAll').click());
+menuItem('phonePin', () => { if(pinA) unpinA(); else pinAsA(); });
+menuItem('phoneScenarios', () => openPanel('scenariosPanel'));
+menuItem('phoneMovers', () => openPanel('moversPanel'));
+menuItem('phoneUndo', () => $('btnUndo').click());
+menuItem('phoneRedo', () => $('btnRedo').click());
+menuItem('phoneHelp', () => help.toggle());
+menuItem('phoneFullApp', () => setFullApp(true));
+$('phoneVibrate').addEventListener('click', () => {
+  vibrateOn = !vibrateOn;
+  store.put(VIBRATE_KEY, vibrateOn ? '' : 'off').catch(() => {});
+  closePhoneMenu();
+});
+$('btnPhoneLayout').addEventListener('click', () => setFullApp(false));
+
+applyPhoneLayout();
+window.addEventListener('resize', () => { if(isPhoneScreen() !== document.body.classList.contains('phone-screen')) applyPhoneLayout(); else updateDockSpace(); });
+store.ready.then(() => Promise.all([store.get(FULL_APP_KEY), store.get(VIBRATE_KEY)])).then(([full, vib]) => {
+  fullApp = full === '1';
+  vibrateOn = vib !== 'off';
+  applyPhoneLayout();
+}, () => {});
 // ============================================================
 // The page: opening a model (the file picker, a file dropped anywhere, the sample, or fmIDE),
 // the top bar's buttons, and ← Back to fmIDE.
@@ -6453,6 +7243,19 @@ const FMGRAPH_HELP_TOPICS = [
       { tip: 'Two sliders on the same input apply one after the other: a change by % applies to what the slider above it left.' },
       { see: ['reach', 'speed'] },
     ] },
+  { id: 'phone', group: 'start', title: 'fmGraph on a phone',
+    keywords: 'phone mobile iphone android smartphone thumb dock slider fine notch tick vibrate swipe hold full app',
+    summary: 'On a phone the board fills the screen and the sliders sit under your thumb.',
+    body: [
+      { p: 'On a phone fmGraph is laid out for one hand: the bars and charts fill the screen, and the sliders sit in a dock along the bottom, one at a time, large. Swipe along the dock for the next slider; tap its handle to see them all; draw it down to get it out of the way.' },
+      { p: 'Grab a slider anywhere along it: it moves from where it is, never jumping to your finger. To set it exactly, slide your finger up, away from the slider, while you drag: the higher, the finer (×½, ×¼, ×⅒), shown over the knob. Come back down for big moves, without letting go.' },
+      { p: 'There is a notch at the model\'s own number: the slider settles there when you pass close, with a tick. Tap the number to type one; − and + step it (hold them to keep going, faster and faster); double-tap the slider to go back to the model\'s number.' },
+      { p: 'Swipe sideways across the bars, or use ‹ and ›, for the next board. Hold a bar for a quick look: its value in every period, now against the model\'s own numbers (or A), and 🔍 Trace.' },
+      { steps: ['Open a model (☰ → Open…), or Try the sample model.', 'Drag a slider in the dock and watch the bars.', 'Slide your finger up to set it exactly.', 'Hold a bar to see every period.'] },
+      { tip: 'On Android the tick is felt; ☰ → Vibrate on the marks turns that off. An iPhone does not let web pages vibrate, so there the tick is only seen.' },
+      { p: 'Adding bars, charts and sliders, arranging them and the tutorials are left to a tablet or computer. ☰ → Full app shows the whole page on a phone too; 📱 Phone layout goes back. Both are remembered in this browser.' },
+      { see: ['sliders', 'explore', 'compare'] },
+    ] },
   { id: 'charts', group: 'board', title: 'Charts: columns and waterfalls',
     keywords: 'chart columns stacked side by side group waterfall bridge balance sheet income statement check total scenario waterfall cases',
     summary: 'Two building blocks for any statement: columns of groups, and waterfalls.',
@@ -6574,6 +7377,19 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'phone', date: '2026-10-08', title: 'fmGraph on a phone',
+    summary: 'A layout made for a phone: the board fills the screen, the sliders sit under your thumb, and a slider you can set exactly with one finger.',
+    what: [
+      'On a phone, the bars and charts fill the screen and the sliders sit in a dock along the bottom, one at a time and large, in reach of the thumb holding the phone. Swipe along the dock for the next slider, tap its handle to see them all, draw it down to get it out of the way.',
+      'A new slider: grab it anywhere and it moves from where it is; slide your finger up while dragging to make it finer (×½, ×¼, ×⅒); it settles at the model\'s own number with a tick (felt on Android); tap the number to type one; − and + step it; a double-tap goes back.',
+      'Swipe sideways across the bars for the next board. Hold a bar for a quick look at every period, against the model\'s own numbers, with 🔍 Trace.',
+      '☰ holds Open, Reset all, Pin as A, Scenarios, Biggest movers, Undo, Help and Full app (the whole page, for when you need it).',
+    ],
+    why: 'To show and explore a model away from a desk, with a slider that is pleasant to use with one thumb rather than a small copy of the desktop page.',
+    how: ['Open fmGraph on a phone (or Add to Home Screen), then Try the sample model and move Price in the dock.'],
+    notes: ['Building boards (adding bars, charts and sliders, arranging them) stays on a tablet or computer, as do the tutorials. Tablets and computers are unchanged.'],
+    see: ['phone'] },
+
   { id: 'empty-operator-zero', date: '2026-10-08', title: 'Bars no longer stop at an empty socket',
     summary: 'An operator with nothing wired into it gives 0, as in Excel, so the bars reading it show numbers and follow the sliders.',
     what: [
@@ -6784,7 +7600,7 @@ const help = createHelpPanel({
     seen: { get: () => newsSeen, set: (d) => { newsSeen = cleanNewsSeen(d); store.put(NEWS_SEEN_KEY, newsSeen).catch(() => {}); } },
     onSeen: () => syncNewsDot() },
 });
-function syncNewsDot(){ $('btnHelp').classList.toggle('has-news', help.unseenCount() > 0); }
+function syncNewsDot(){ const news = help.unseenCount() > 0; $('btnHelp').classList.toggle('has-news', news); $('btnPhoneMenu').classList.toggle('has-news', news); }
 store.ready.then(() => store.get(NEWS_SEEN_KEY)).then(raw => { newsSeen = cleanNewsSeen(raw); help.newsSeenChanged(); syncNewsDot(); }, () => syncNewsDot());
 store.ready.then(() => store.get(HELP_SIZE_KEY)).then(raw => {
   if(typeof raw !== 'string' || !raw) return;
@@ -6999,6 +7815,7 @@ function hideTutorialPointer(){ const ring = $('tutorialPointer'); if(ring) ring
 
 // ---- where they are found: the top of the Help panel, and the first screen ----
 function renderTutorialList(body, mk){
+  if(isPhone()) return; // they practise building charts: a tablet or computer (step 17)
   body.appendChild(mk('h3', 'help-group', 'Tutorials'));
   FMGRAPH_TUTORIALS.forEach(t => {
     const row = mk('div', 'help-tutorial');
