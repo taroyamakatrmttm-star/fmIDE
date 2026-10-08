@@ -259,3 +259,119 @@
   .template-choices label, .template-only{ display:flex; gap:8px; align-items:baseline; font-size:14px; }
   .template-only{ margin:0 0 10px; color:var(--soft-ink); }
   .dialog p.template-hint{ font-size:12px; margin:0 0 14px; }
+
+  /* ---- On a phone (step 17, 05g-phone.js): body.phone ---- */
+  body:not(.phone) .phone-only{ display:none !important; }
+  body.phone .desk-only{ display:none !important; }
+  .phone-boards:empty{ display:none; }
+  .ps{ --ps-accent:var(--brand); --ps-ink:var(--ink); --ps-soft:var(--soft-ink); --ps-line:var(--line-strong); }
+  body.phone{ font-size:15px; -webkit-text-size-adjust:100%; }
+  body.phone main{ padding:10px 12px calc(var(--dock-h, 0px) + 24px); }
+  /* The top bar: ←, the model's name, ☰. */
+  body.phone .gbar{ flex-wrap:nowrap; padding:6px 8px; padding-top:calc(6px + env(safe-area-inset-top, 0px)); gap:6px; }
+  body.phone .gbar-side{ flex-wrap:nowrap; }
+  body.phone .gbar-side:first-child{ flex:1 1 auto; }
+  body.phone .gbar-back-words, body.phone .gbar-name, body.phone .gbar-btn:not(#btnPhoneMenu), body.phone .gbar-menu{ display:none; }
+  body.phone .gbar-back{ font-size:20px; padding:6px 12px; line-height:1; }
+  body.phone .gbar-model{ max-width:none; flex:1 1 auto; font-size:15px; font-weight:600; color:var(--top-ink); }
+  body.phone #btnPhoneMenu{ display:inline-block; font-size:20px; padding:4px 14px; line-height:1.2; }
+  body.phone #btnPhoneMenu.has-news{ position:relative; }
+  #btnPhoneMenu.has-news::after{ content:''; position:absolute; top:3px; right:3px; width:8px; height:8px; border-radius:50%; background:var(--reach); }
+  /* Before a model. */
+  body.phone .welcome{ margin:4vh auto 0; padding:22px 18px 18px; }
+  body.phone .dropbox{ min-height:110px; }
+  body.phone .welcome-actions button{ font-size:15px; padding:10px 16px; }
+  /* The board: one column, bars and charts first; no building or arranging. */
+  body.phone #boardTabs{ display:none !important; }
+  .phone-boards{ display:flex; align-items:center; gap:6px; margin:0 0 8px; }
+  .phone-board-arrow{ flex:none; width:44px; height:40px; padding:0; font-size:24px; line-height:1; border-radius:10px; }
+  .phone-board-name{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .phone-board-title{ font-weight:700; font-size:16px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .phone-board-dots{ display:flex; gap:5px; }
+  body.phone .board{ display:flex; flex-direction:column; align-items:stretch; gap:14px; touch-action:pan-y; }
+  body.phone .board-main{ order:-1; }
+  body.phone .board-col:first-child > .col-head, body.phone #sliderList, body.phone #noSliders{ display:none; }
+  body.phone .board-main > .col-head{ display:none; }
+  body.phone .widget-list.bars{ grid-template-columns:minmax(0, 1fr); }
+  body.phone .arrange, body.phone .widget-remove, body.phone .bar-widget .widget-head select, body.phone .bar-settings,
+  body.phone .chart-widget .widget-head select, body.phone .chart-edit, body.phone .chart-key input.key-swatch{ display:none !important; }
+  body.phone .widget-title{ flex:1 1 auto; font-weight:700; font-size:15px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  body.phone .chart-title{ pointer-events:none; font-size:15px; }
+  body.phone .bar-widget{ -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+  body.phone .bar-chart text{ font-size:12px; }
+  body.phone .widget-trace{ font-size:18px; padding:4px 10px; }
+  body.phone .scenario-btn{ min-width:40px; min-height:36px; font-size:14px; }
+  /* The dock: the sliders under the thumb. */
+  .slider-dock{ position:fixed; left:0; right:0; bottom:0; z-index:35; background:var(--card); border-top:1px solid var(--line); border-radius:18px 18px 0 0; box-shadow:0 -8px 28px rgba(16,24,40,.16); padding:0 0 calc(8px + env(safe-area-inset-bottom, 0px)); }
+  .dock-handle{ display:flex; flex-direction:column; align-items:center; gap:4px; width:100%; border:none; background:transparent; padding:8px 0 4px; border-radius:18px 18px 0 0; touch-action:none; }
+  .dock-handle:hover{ background:transparent; }
+  .dock-grip{ width:40px; height:5px; border-radius:3px; background:var(--line-strong); }
+  .dock-handle-text{ font-size:14px; font-weight:600; color:var(--ink); }
+  .dock-handle-text:empty{ display:none; }
+  .dock-cards{ display:flex; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; overscroll-behavior-x:contain; }
+  .dock-cards::-webkit-scrollbar{ display:none; }
+  .dock-card{ flex:0 0 100%; scroll-snap-align:center; scroll-snap-stop:always; padding:4px 16px 2px; min-width:0; }
+  .dock-card-head{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+  .dock-name{ font-weight:700; font-size:16px; overflow-wrap:anywhere; }
+  .dock-periods{ font-size:12.5px; color:var(--soft-ink); }
+  .dock-change{ margin-left:auto; font-size:13px; font-weight:600; color:var(--reach); font-variant-numeric:tabular-nums; }
+  .dock-base{ font-size:12.5px; color:var(--soft-ink); text-align:center; margin-top:-4px; }
+  .dock-card.moved .ps-value{ color:var(--brand-dark); }
+  .dock-dots{ display:flex; justify-content:center; gap:6px; padding:4px 0 2px; }
+  .dock-dots:empty{ display:none; }
+  .dock-dot{ width:7px; height:7px; border-radius:50%; background:var(--line-strong); }
+  .dock-dot.on{ background:var(--brand); }
+  .dock-empty{ margin:4px 16px 8px; color:var(--soft-ink); text-align:center; }
+  .slider-dock[data-state="open"] .dock-cards{ flex-direction:column; overflow-x:hidden; overflow-y:auto; max-height:62vh; scroll-snap-type:none; gap:6px; }
+  .slider-dock[data-state="open"] .dock-card{ flex:none; border-bottom:1px solid var(--line); padding-bottom:8px; }
+  .slider-dock[data-state="open"] .dock-dots{ display:none; }
+  .slider-dock[data-state="closed"] .dock-cards, .slider-dock[data-state="closed"] .dock-dots, .slider-dock[data-state="closed"] .dock-empty{ display:none; }
+  /* ☰ */
+  .phone-menu{ position:fixed; top:calc(52px + env(safe-area-inset-top, 0px)); right:8px; z-index:45; min-width:230px; max-width:calc(100vw - 16px); background:#fff; border:1px solid var(--line); border-radius:14px; padding:6px; box-shadow:0 16px 40px rgba(16,24,40,.22); display:flex; flex-direction:column; }
+  .phone-menu button{ text-align:left; border:none; background:none; font-size:16px; padding:12px 14px; border-radius:9px; }
+  .phone-menu button:active:not(:disabled){ background:var(--brand-soft); }
+  .phone-menu-row{ display:flex; }
+  .phone-menu-row button{ flex:1 1 0; }
+  /* A bar's quick look. */
+  .peek-back{ position:fixed; inset:0; z-index:55; background:rgba(15,23,42,.38); display:flex; align-items:flex-end; }
+  .peek-card{ width:100%; max-height:82vh; overflow-y:auto; background:#fff; border-radius:18px 18px 0 0; padding:14px 16px calc(16px + env(safe-area-inset-bottom, 0px)); box-shadow:0 -10px 30px rgba(16,24,40,.25); animation:peek-up .16s ease-out; }
+  @keyframes peek-up{ from{ transform:translateY(40px); opacity:.5; } to{ transform:none; opacity:1; } }
+  @media (prefers-reduced-motion: reduce){ .peek-card{ animation:none; } }
+  .peek-head{ display:flex; align-items:center; gap:8px; }
+  .peek-head h3{ flex:1 1 auto; margin:0; font-size:18px; overflow-wrap:anywhere; }
+  .peek-close{ border:none; background:none; font-size:26px; padding:0 10px; line-height:1; }
+  .peek-where{ color:var(--soft-ink); font-size:13px; margin:2px 0 8px; }
+  .peek-line{ display:block; width:100%; height:auto; max-height:28vh; }
+  .peek-line .b-zero{ stroke:var(--line-strong); stroke-width:1; }
+  .peek-line .peek-now{ fill:none; stroke:var(--brand); stroke-width:2.5; stroke-linejoin:round; }
+  .peek-line .peek-was{ fill:none; stroke:var(--bar-base); stroke-width:1.5; stroke-dasharray:4 3; }
+  .peek-line .peek-dot{ fill:var(--brand); }
+  .peek-table{ width:100%; border-collapse:collapse; margin:8px 0 10px; font-size:14px; }
+  .peek-table th{ text-align:left; font-size:12px; color:var(--soft-ink); font-weight:600; padding:4px 6px; border-bottom:1px solid var(--line); }
+  .peek-table td{ padding:6px; border-bottom:1px solid #f1f3f6; }
+  .peek-table .num{ text-align:right; font-variant-numeric:tabular-nums; }
+  .peek-table th:not(:first-child){ text-align:right; }
+  .peek-table .up{ color:var(--up); }
+  .peek-table .down{ color:var(--down); }
+  .peek-actions button{ width:100%; padding:12px; font-size:15px; }
+  /* Sideways: the dock in one low row, so the board keeps the screen. */
+  @media (orientation: landscape){
+    body.phone .dock-card{ display:grid; grid-template-columns:minmax(0, 1fr) auto; align-items:center; column-gap:10px; padding:0 16px; }
+    body.phone .dock-card .ps{ grid-column:1 / -1; display:flex; align-items:center; gap:10px; }
+    body.phone .dock-card .ps-row{ flex:0 0 auto; gap:6px; }
+    body.phone .dock-card .ps-value, body.phone .dock-card .ps-type{ width:118px; flex:none; height:44px; font-size:24px !important; }
+    body.phone .dock-card .ps-row input.ps-type:not([type=range]):not([type=file]){ font-size:24px !important; }
+    body.phone .dock-card .ps-step{ width:42px; height:42px; font-size:20px; }
+    body.phone .dock-card .ps-track{ flex:1 1 auto; height:52px; }
+    body.phone .dock-base{ display:none; }
+    body.phone .dock-handle{ padding:5px 0 2px; }
+    body.phone .slider-dock[data-state="open"] .dock-cards{ max-height:55vh; }
+    body.phone .phone-menu{ max-height:calc(100vh - 60px); overflow-y:auto; }
+    body.phone .widget-list.bars{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
+    body.phone .widget-list.bars > .wide{ grid-column:1 / -1; }
+    body.phone .bar-chart{ max-height:calc(100vh - var(--dock-h, 0px) - 120px); }
+    body.phone .phone-boards{ margin-bottom:4px; }
+    body.phone .phone-board-arrow{ height:32px; }
+    body.phone .peek-card{ max-width:640px; margin:0 auto; max-height:92vh; }
+    body.phone .peek-back{ justify-content:center; }
+  }

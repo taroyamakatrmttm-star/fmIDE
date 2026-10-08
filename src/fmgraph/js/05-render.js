@@ -28,6 +28,7 @@ function showBoard(){
 function syncPageState(){
   document.querySelectorAll('.needs-model').forEach(b => { b.disabled = !model; });
   $('btnAttachTemplate').classList.toggle('hidden', !(model && linkedToFmide)); // G5b: only with the model from fmIDE
+  if(!model){ renderDock(); renderPhoneBoards(); } // the first screen again: no dock (05g-phone.js)
 }
 
 // A <select> of rectangles, by canvas. onlyInputs: a slider's.
@@ -122,6 +123,7 @@ function renderBoard(){
   renderTraceNote();
   renderScenarios(); // (05f-scenarios.js)
   updateValues();
+  renderDock(); // on a phone, the sliders' dock (05g-phone.js)
 }
 
 function barWidget(b){
@@ -130,8 +132,11 @@ function barWidget(b){
   const head = make('div', 'widget-head');
   const sel = rectSelect(b.key, false);
   sel.addEventListener('change', () => { b.key = sel.value; saveBoardSoon(); renderBoard(); });
-  head.append(sel, removeButton(b.id, 'bar'));
-  const row = make('div', 'widget-row');
+  head.append(sel, make('span', 'widget-title phone-only', model.byKey.get(b.key).name), removeButton(b.id, 'bar'));
+  // On a phone, holding the bar opens its quick look (05g-phone.js).
+  w.addEventListener('pointerdown', (ev) => phoneBarPress(ev, b));
+  w.addEventListener('contextmenu', (ev) => { if(isPhone()) ev.preventDefault(); });
+  const row = make('div', 'widget-row bar-settings');
   row.appendChild(periodsChooser(b.periods, (p) => { b.periods = p; saveBoardSoon(); updateValues(); }));
   row.appendChild(colourPicker(b.colour || DEFAULT_BAR_COLOUR, 'Bar colour', (c) => { b.colour = c === DEFAULT_BAR_COLOUR ? null : c; saveBoardSoon(); updateValues(); }));
   const rect = model.byKey.get(b.key);
@@ -298,17 +303,23 @@ function updateValues(){
   board.sliders.forEach(s => {
     const el = document.querySelector('.slider-widget[data-id="' + s.id + '"]');
     if(!el) return;
-    const rect = model.byKey.get(s.key);
-    const ps = periodsOf(s.periods);
-    const first = ps[0] || 0, last = ps[ps.length - 1] || 0;
-    const same = ps.every(p => baseValue(rect, p) === baseValue(rect, first));
-    el.querySelector('.slider-base').textContent = same
-      ? 'Model\'s number: ' + fmtNum(baseValue(rect, first))
-      : 'Model\'s numbers: ' + fmtNum(baseValue(rect, first)) + ' (' + model.periods[first] + ') to ' + fmtNum(baseValue(rect, last)) + ' (' + model.periods[last] + ')';
+    el.querySelector('.slider-base').textContent = sliderBaseText(s);
   });
   updateMovers(results);
   markScenarios(); // (05f-scenarios.js)
   paintReach();
+  updateDock(); // (05g-phone.js)
+}
+
+// "Model's number: 10", or the first and last when the periods it covers differ.
+function sliderBaseText(s){
+  const rect = model.byKey.get(s.key);
+  const ps = periodsOf(s.periods);
+  const first = ps[0] || 0, last = ps[ps.length - 1] || 0;
+  const same = ps.every(p => baseValue(rect, p) === baseValue(rect, first));
+  return same
+    ? 'Model\'s number: ' + fmtNum(baseValue(rect, first))
+    : 'Model\'s numbers: ' + fmtNum(baseValue(rect, first)) + ' (' + model.periods[first] + ') to ' + fmtNum(baseValue(rect, last)) + ' (' + model.periods[last] + ')';
 }
 
 // One bar per period, the model's own value as a dashed outline behind it.

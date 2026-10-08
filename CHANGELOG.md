@@ -2,6 +2,12 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph: a layout made for a phone (step 17, P1a)
+- On a phone (a touchscreen whose shorter side is under 600 pixels) the bars and charts fill the screen and the sliders sit in a **dock** along the bottom, one at a time and large; a swipe along it for the next, its handle to see them all or put it away.
+- **A phone slider**: grabbed anywhere without a jump; **finer by sliding the finger up** (×½, ×¼, ×⅒); a **notch** at the model's own number with a tick (felt on Android, with a switch); − and + (repeating when held); a tap on the number to type one; a double-tap to go back.
+- **Boards by a swipe** sideways, or ‹ ›; **holding a bar** shows every period against the model's own numbers, with 🔍 Trace; **☰** holds the rest, and **Full app** shows the whole page on a phone (remembered).
+- Building and arranging boards, and the tutorials, stay on a tablet or computer. Tablets and computers are unchanged; no file changed.
+
 ## ExcelExporter: tab names with an apostrophe
 - A tab named with an apostrophe (a canvas called "Bob's Model", or a tab renamed so) gave formulas Excel can't read (`'Bob's Model'!E4`), so Excel reported a problem with the file. The apostrophe is now doubled in formulas (`'Bob''s Model'!E4`), as Excel needs.
 - A tab name can no longer start or end with an apostrophe, which Excel refuses: such apostrophes are dropped (`'Q1'` becomes `Q1`).

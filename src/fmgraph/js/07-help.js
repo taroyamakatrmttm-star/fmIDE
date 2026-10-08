@@ -23,7 +23,7 @@ const help = createHelpPanel({
     seen: { get: () => newsSeen, set: (d) => { newsSeen = cleanNewsSeen(d); store.put(NEWS_SEEN_KEY, newsSeen).catch(() => {}); } },
     onSeen: () => syncNewsDot() },
 });
-function syncNewsDot(){ $('btnHelp').classList.toggle('has-news', help.unseenCount() > 0); }
+function syncNewsDot(){ const news = help.unseenCount() > 0; $('btnHelp').classList.toggle('has-news', news); $('btnPhoneMenu').classList.toggle('has-news', news); }
 store.ready.then(() => store.get(NEWS_SEEN_KEY)).then(raw => { newsSeen = cleanNewsSeen(raw); help.newsSeenChanged(); syncNewsDot(); }, () => syncNewsDot());
 store.ready.then(() => store.get(HELP_SIZE_KEY)).then(raw => {
   if(typeof raw !== 'string' || !raw) return;
