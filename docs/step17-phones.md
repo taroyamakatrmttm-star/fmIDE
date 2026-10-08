@@ -1,0 +1,127 @@
+# Step 17 — Phones: made for the hand, not a smaller screen
+
+The owner's request (8 October 2026): bring the apps to phones. The owner chose the recommended scope: **on a phone a person looks at a model and adjusts it; building stays on a tablet or computer**, and fmGraph comes first. The owner added: the phone's own controls (fmGraph's slider first of all) must be **pleasant and easy to use, built for a hand that moves around** — "not just a compromised small-screen app. There must be something only a smartphone excels at."
+
+This is the brief (P0). Nothing is built until the owner approves it.
+
+## Why
+
+- **A model goes where its people go.** A meeting, a site visit, a train: "what if volumes fall 10%?" answered from a pocket.
+- **Showing beats sending.** A phone passed across a table, with a finger moving a slider, explains a model better than a file sent by email.
+- **Today's apps don't fit.** Step 9 made them work by touch on a tablet. On a phone the ribbon, the canvas and the windows are too large; browser sliders are hard to grab and to set exactly.
+
+## What a phone does better than a computer
+
+The phone layouts are built around these, not around what has to be left out:
+
+1. **The thumb.** One hand; what is used most sits at the bottom of the screen, in reach of the thumb holding the phone.
+2. **Several fingers at once.** A mouse moves one thing at a time; two thumbs move two sliders together and the bars follow both. Only a touchscreen can do that.
+3. **Turning it.** Upright for working, sideways for showing.
+4. **Being in the room.** Held out to someone, passed round a table; the screen stays on while it is being shown.
+5. **Feel.** A small tick under the finger when a slider passes a round number or comes back to the model's own number (where the phone allows it: Android; Safari on an iPhone gives web pages no vibration, so there the tick is seen, not felt).
+6. **The share sheet.** The phone's own Share button sends a picture of a board, a `.fmide` file or a workbook straight to Messages, Mail, AirDrop or Excel. The app itself still sends nothing: the person picks where it goes, as with a download today.
+
+## What counts as a phone
+
+A touchscreen (`pointer: coarse`) whose **shorter side is under 600 pixels**, upright or sideways. Tablets, touchscreen laptops and narrow desktop windows keep today's layout exactly. The phone layout is a `body.phone` class worked out once at start (and again if the screen changes), so a test can be sure what it is looking at. ☰ → **Full app** switches a phone to the full layout (remembered, the person's own setting), and back.
+
+## P1 — fmGraph on a phone
+
+### Upright: the board above, the sliders under the thumb
+
+- **The top bar** keeps the model's name and the board's name; Open…, ↻ From fmIDE, Boards, Scenarios, Help sit in ☰.
+- **Boards** change with a swipe sideways across the bars (dots show where you are), as well as from ☰.
+- **The bars and charts** fill the screen in one column and scroll up and down.
+- **The slider dock** sits along the bottom, in reach of the thumb. It shows one slider, large; a swipe along the dock moves to the next slider (its name and dots above). Drawn up, it shows every slider as a list; drawn down, it gets out of the way.
+
+### The phone slider — the heart of it
+
+fmGraph's sliders are today the browser's own (`<input type="range">`). On a phone those have a small knob, jump to wherever the finger lands and are hard to set exactly. The phone slider is fmGraph's own control:
+
+- **Grab anywhere along it.** The value moves with the finger from where it is — it never jumps to where the finger landed.
+- **The number above the finger**, large, because the finger hides the knob; the change from the model's own number beside it (+12%).
+- **Finer by sliding the finger up.** Moving the finger up, away from the slider, while dragging makes each movement count for less — ×½, ×¼, ×⅒ — shown as "Fine ×¼". Coarse and exact in the same gesture, without letting go (the way a phone's video player scrubs).
+- **A notch at the model's own number**: the slider settles there when it passes close, with a tick. Ticks at round steps too.
+- **Exact when wanted:** tapping the number opens the number keyboard; − and + step it (held down, they repeat and speed up).
+- **Double-tap** puts the slider back to the model's own number.
+- The calculation is the one fmGraph already has (`03-calc.js`: results kept per set of slider values, steps worked out ahead on a slow model), so the bars move with the finger.
+
+### Holding a bar: a quick look
+
+Holding a bar opens a card while the finger stays down: its value in every period as a small line, its own number against the model's, and 🔍 Trace. Lifting closes it. Quick to check, nothing to close afterwards.
+
+### Sideways: the mixer and showing
+
+- **The mixer.** Turned sideways, the sliders become upright faders side by side under the board (two to four, the person picks which). Each thumb or finger moves its own fader, at the same time — volume and price together, the bars following both. Each set of positions is worked out once.
+- **Show.** Holding a chart, then **Show**, puts it on the whole screen, large, with the mixer under it, and keeps the screen on while it is shown (the browser's Wake Lock; it ends when Show ends).
+
+### Scenarios as cards
+
+The saved scenarios become cards to swipe through; a tap shows one. **Hold A to look**: while a finger holds the A button, the bars show scenario A; on letting go they come back. Comparing becomes a gesture rather than a setting.
+
+### Share
+
+⇪ Share (in ☰ and on Show) gives the phone's share sheet a **picture of the board or chart** (drawn on the phone from fmGraph's own drawing; nothing is sent first) or the **board file**. Where the browser can't share files, it downloads them as today.
+
+### Left out on a phone
+
+Building and editing charts, arranging the grid, wide or narrow, colours, Export for a template, Attach to template, Add boards from templates, and fmGraph's tutorials (they practise building charts). They stay on a tablet or computer, and ☰ → Full app shows them. Everything made elsewhere (boards, charts, scenarios) shows and works on the phone.
+
+## P2 — fmIDE on a phone: open, adjust, watch
+
+fmIDE on a phone opens to **numbers, not the canvas**. A bar along the bottom: **Inputs · Watch · Canvas · ☰**.
+
+- **Inputs**: every input rectangle as a row (by canvas, with a search box), its number in the chosen period. Each number is changed with the same control as fmGraph's slider: drag sideways across the number to change it, finger up for finer, tap to type. A change is an ordinary change: undo (↶ at the top), the document marked unsaved, the autosave.
+- **Watch**: the results the person stars (★ on any rectangle), at the top of the Inputs screen while an input is being changed, each showing how far it has moved. The person's own setting, never in a file. Watching what matters while changing what drives it, on one screen.
+- **Periods**: swiped along a strip under the top bar.
+- **Canvas**: to look at, not to edit — fitted to the screen, pinch to zoom (step 13b), a canvas changed by a swipe at the edge. Tapping a rectangle opens a card: its value in every period, what it is worked out from (in words), what reads it, ✎ for an input, ★ Watch.
+- **☰**: Open…, Open Recent, Save, ⇪ Share the document (the share sheet), Open fmGraph (the phone fmGraph, with the model), Make Excel (P3), Help, Full app.
+- **Install**: Safari on an iPhone may clear a website's saved data after some weeks without a visit; an installed app (Add to Home Screen) keeps it. The phone layout says so once, with how to do it, and reminds the person to save a document they care about.
+- **Left out on a phone**: everything that builds — the ribbon, drawing and wiring, templates, recipes, functions, macros, Formats, Preferences, tutorials. ☰ → Full app shows them.
+
+## P3 — ExcelExporter on a phone: make the workbook
+
+One screen: the model's name, its tabs listed (with the layout already remembered for it, or the automatic one), and **⬇ Make the workbook**, which hands the `.xlsx` to the share sheet (so it opens straight in Excel, or goes into Mail), or downloads it where sharing files isn't available. Opened from fmIDE's ☰ → Make Excel, the model arrives as it does today. Layout editing, the Excel style and Sensitivity's settings stay on a larger screen (whatever was set there is used).
+
+## Shared pieces
+
+What fmGraph and fmIDE both use — the phone check, the number control, the tick, the share helper — goes once in `src/shared/` (Apache, like both). ExcelExporter uses only the phone check and the share helper; no code moves between ExcelExporter and the open part.
+
+## Rules that do not change
+
+- Nothing loads from or sends to another site; the security policy stays as it is (the share sheet, Wake Lock and vibration are on the phone itself).
+- No file format changes. The phone-only settings (Full app, the watch list, the mixer's faders) are the person's own settings, never taken from a file.
+- Text from files is shown as text, as everywhere.
+- On a tablet and a computer nothing changes; every existing test group stays as it is.
+
+## How it will be tested
+
+- Chromium with a phone's screen (390 × 844 and 412 × 915, and both sideways), a touchscreen, and real touch input through the Chrome DevTools Protocol — several fingers at once for the mixer (the two-finger helper from step 13b, extended). Each test checks the page used the phone layout.
+- The share sheet, Wake Lock and vibration are replaced inside the test page by stand-ins that record what they were given; the apps are not changed for testing.
+- The phone slider: grabbing without a jump, finer by moving up, the notch and the tick, typing, − / +, double-tap; the bars matching fmIDE's numbers (the snapshots of test group 18) after each.
+- **Safari on a real iPhone can't run here.** For each phase the owner tries the pull request's preview address on their own phone; the pull request lists what to try.
+
+## Phases — one pull request each
+
+| Phase | What |
+|---|---|
+| P0 | This brief |
+| P1a | fmGraph: the phone layout, the slider dock and the phone slider, swiping between boards, holding a bar |
+| P1b | fmGraph: the mixer, Show with the screen kept on, scenario cards and Hold A, Share |
+| P2a | fmIDE: the phone layout, Inputs, Watch, periods, the canvas to look at and its cards |
+| P2b | fmIDE: Save and Share, the install note, Open fmGraph and Make Excel from the phone |
+| P3 | ExcelExporter: make the workbook and share it |
+
+Each phase adds its What's new entry, help topic and tests.
+
+## The owner's choices (recommendations first)
+
+1. **The share sheet** — **use it (recommended)**: the person chooses where a picture, document or workbook goes, as with a download; the app sends nothing itself. Or: downloads only.
+2. **Tilt to move a slider** (tilting the phone sweeps the chosen slider; an iPhone asks permission first) — **later (recommended)**: the mixer and the fine drag give more for less; it can come after P1b if wanted. Or: in P1b.
+3. **The tick** — **on, with a switch to turn it off (recommended)**; felt on Android, seen on an iPhone.
+4. **What counts as a phone** — **the shorter side under 600 pixels, on a touchscreen (recommended)**, so a tablet keeps today's layout. Or: by window width alone.
+5. **Full app on a phone** — **offered in ☰ and remembered (recommended)**. Or: never.
+
+## Later ideas, not in this step
+
+Tilt to sweep (if not chosen above); a phone tutorial; receiving a `.fmide` from another app's share sheet (Android only); light editing in fmIDE on a phone (rename, add a rectangle) through the hold menu of step 9b.
