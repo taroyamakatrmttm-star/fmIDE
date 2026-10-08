@@ -409,7 +409,10 @@ function buildWorkbook(){
   if(functionUses.size) appendFunctionsSheet(wb, functionUses, HDR);
 
   // Sensitivity tab, after the model's tabs (09g-sensitivity.js).
-  if(sensLay) appendSensitivitySheet(wb, ctx.sens, sensLay, ctx, labels);
+  if(sensLay){
+    const sheet = appendSensitivitySheet(wb, ctx.sens, sensLay, ctx, labels);
+    placeSensitivityCharts(wb, ctx.sens, sensLay, sheet); // the Tornado and Spider charts
+  }
 
   // Scenarios tab (first sheet).
   // With global cases (nCases > 0), following the layout of the workbook it was designed from:

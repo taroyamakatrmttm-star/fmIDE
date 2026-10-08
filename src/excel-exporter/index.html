@@ -122,7 +122,7 @@
 
       <section class="card" id="sensitivityPanel">
         <h2>Sensitivity</h2>
-        <label class="check-line" title="A Sensitivity tab: how much each input you pick moves an output, live in Excel, as a Tornado and a Spider table">
+        <label class="check-line" title="A Sensitivity tab: how much each input you pick moves an output, live in Excel, with a Tornado and a Spider chart">
           <input type="checkbox" id="cfgSensEnabled"> Tornado and Spider
         </label>
         <div id="sensOptions" class="stack">
@@ -135,6 +135,9 @@
             <label class="field" title="The period the charts show; in Excel, the Period cell changes it"><span>Period</span><select id="cfgSensPeriod"></select></label>
             <label class="field" title="Points between the base and each of Low and High on the Spider chart"><span>Spider steps</span><input type="number" id="cfgSensSteps" min="1" max="10"></label>
           </div>
+          <label class="field" title="Where the two charts go in the workbook"><span>Charts</span>
+            <select id="cfgSensCharts"><option value="tabs">On their own tabs</option><option value="sheet">On the Sensitivity tab</option></select>
+          </label>
           <div class="sens-group">
             <span class="sens-head">Inputs to move</span>
             <div id="sensVars" class="sens-list"></div>

@@ -11,6 +11,19 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'sensitivity-charts', date: '2026-10-08', title: 'The Tornado and Spider charts',
+    summary: 'The Sensitivity tab now comes with a Tornado chart and a Spider chart, on their own tabs or on the Sensitivity tab.',
+    what: [
+      'The Tornado chart draws each input\'s Low and High as bars either side of the base, the input that moves the output most at the top. The Spider chart draws each input\'s line from Low through the base to High.',
+      'Both read the Sensitivity tab\'s tables, so they change in Excel with the output, the period, Low, High and Show.',
+    ],
+    why: 'A picture shows at a glance which assumptions matter most.',
+    how: [
+      'Under Sensitivity, choose where the charts go: On their own tabs, or On the Sensitivity tab.',
+      'Press ⬇ Generate .xlsx.',
+    ],
+    see: ['sensitivity'] },
+
   { id: 'sensitivity', date: '2026-10-08', title: 'Sensitivity: how much each input moves an output',
     summary: 'A Sensitivity tab moves each input you pick from Low to High and shows the effect on an output, live in Excel.',
     what: [

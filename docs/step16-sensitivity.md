@@ -24,8 +24,11 @@ Phases, one pull request each: **A** the calculation (the panel, the Inputs tab,
   - **The Tornado table**: the inputs by rank, each one's Low and High against the base (`#N/A` where there are fewer inputs shown).
   - **The Spider table**: each input's line through every point (`#N/A` when hidden), under the points as a share of Low (−) / High (+).
 - **Settings** are kept with the layout: `mapping.cfg.sensitivity` (`cleanSensitivity`), mapping file version 3.
+- **The charts** (phase B; ExcelExporter's own Excel writer learnt charts: `chartXml`, drawings, chart tabs — `XLSX.utils.book_append_chartsheet` — and `ws['!charts']` placed between two cells). The **Tornado**: horizontal bars, Low vs base and High vs base overlapping (`overlap 100`), the categories in reverse so the first rank is at the top, from the Tornado table; the **Spider**: a line per input from the Spider table, the points along the bottom as a share of Low / High. Titles read C9 and C10. Each series carries fmIDE's numbers too (what Excel shows before it recalculates; the Tornado's sorted as the Rank column sorts them, `sensitivityCharts`). Where they go (`cfg.charts`, the panel's Charts): `tabs` — two chart tabs, Tornado and Spider, after the Sensitivity tab (a name in use takes the next, "Tornado 2") — or `sheet` — on the Sensitivity tab, two rows below the Spider table, side by side (`placeSensitivityCharts`).
 
 ## Known limits
+
+- LibreOffice has no chart tabs: it shows each as a sheet holding the chart.
 
 - A Data Table works the whole model out once for each of its cells (inputs × points). On a large model Excel may take a while; *Formulas → Calculation Options → Automatic except for data tables* pauses it.
 - LibreOffice reads a Data Table (as `MULTIPLE.OPERATIONS`) but leaves it uncalculated when it opens an `.xlsx`; opened again from its own format it works it out. The tests do that (`recalcDataTables`, `tests/helpers/soffice.js`). Google Sheets has no Data Tables: it shows the numbers written in.
@@ -33,3 +36,5 @@ Phases, one pull request each: **A** the calculation (the panel, the Inputs tab,
 ## How it turned out
 
 **Phase A** (8 October 2026): as above. Test group 67 (`tests/67-excel-sensitivity.spec.js`): the panel, the workbook's formulas and Data Table, fmIDE's numbers written in, LibreOffice working the live table out again (the model's own numbers unchanged, the tables following a Low and a Show changed in the file), an input with scenarios, a block model (an output on a canvas and one inside a block, against the shared IR in Node), off = the workbook as before, rows left out, a mapping file's settings checked and names as text. Group 6: the mapping file's version 3, and a version 2 file opening with Sensitivity off.
+
+**Phase B** (8 October 2026): the charts, as above. Group 67: the two chart tabs (names, parts, the Tornado's direction, overlap, order and references, what it shows before Excel recalculates, the Spider's lines and points; LibreOffice keeping both), the charts on the Sensitivity tab (placed, chosen and remembered), names in the charts as text. Group 65: the writer's charts on a worksheet and a chart tab, escaped text, references not shaped like one dropped.

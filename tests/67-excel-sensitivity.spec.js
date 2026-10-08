@@ -163,7 +163,7 @@ test('the workbook: base rows, the moved inputs, the Sensitivity tab and its Dat
   await setUpUPV(page);
   await setChange(page, 'Volume', 'amount', -2, 1);
   const { wb, bytes } = await X.generate(page);
-  expect(wb.SheetNames).toEqual(['Inputs', 'Canvas 1', 'Sensitivity']);
+  expect(wb.SheetNames).toEqual(['Inputs', 'Canvas 1', 'Sensitivity', 'Tornado', 'Spider']); // the charts' tabs: phase B
   // Inputs tab: a Base row above each moved input, which reads the Sensitivity tab.
   const inp = wb.Sheets.Inputs;
   const [price] = X.findRow(inp, 'Unit Price');
@@ -361,4 +361,92 @@ test('settings from a mapping file are checked; names are text', async ({ page }
   const cleaned = JSON.parse(fs.readFileSync(await again.path(), 'utf8')).cfg.sensitivity;
   expect(cleaned).toEqual({ enabled: true, outputs: [realVar], period: 0, steps: 10, charts: 'tabs',
     variables: [{ row: realVar, by: 'percent', low: -10, high: 1e9 }] });
+});
+
+// ---------- Phase B: the charts ----------
+async function chartParts(bytes){
+  const parts = await X.unzip(bytes);
+  const charts = Object.keys(parts).filter(k => /^xl\/charts\/chart\d+\.xml$/.test(k)).sort().map(k => parts[k]);
+  return { parts, charts };
+}
+
+test('the charts on their own tabs: a Tornado and a Spider reading the Sensitivity tab', async ({ page }, testInfo) => {
+  await setUpUPV(page);
+  await expect(page.locator('#cfgSensCharts')).toHaveValue('tabs');
+  await setChange(page, 'Volume', 'amount', -2, 1);
+  // A tab already named Tornado: the chart tab takes the next name.
+  const firstTab = page.locator('#tabsBody input[type=text]').nth(1);
+  await firstTab.fill('Tornado'); await firstTab.dispatchEvent('change');
+  const { wb, bytes } = await X.generate(page);
+  expect(wb.SheetNames).toEqual(['Inputs', 'Tornado', 'Sensitivity', 'Tornado 2', 'Spider']);
+  expect(wb.Sheets['Tornado 2']['!chartsheet']).toBe(true);
+  const { parts, charts } = await chartParts(bytes);
+  expect(parts['xl/_rels/workbook.xml.rels']).toContain('Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chartsheet" Target="chartsheets/sheet1.xml"');
+  expect(parts['[Content_Types].xml']).toContain('<Override PartName="/xl/chartsheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.chartsheet+xml"/>');
+  expect(parts['xl/chartsheets/_rels/sheet1.xml.rels']).toContain('Target="../drawings/drawing1.xml"');
+  expect(charts).toHaveLength(2);
+  const [tornado, spider] = charts;
+  // Tornado: horizontal bars, Low and High overlapping, the largest swing at the top.
+  expect(tornado).toContain('<c:barDir val="bar"/>');
+  expect(tornado).toContain('<c:overlap val="100"/>');
+  expect(tornado).toContain('<c:orientation val="maxMin"/>');
+  expect(tornado).toContain("<c:f>'Sensitivity'!$C$9</c:f>");
+  expect(tornado).toContain("<c:f>'Sensitivity'!$B$20:$B$21</c:f>");
+  expect(tornado).toContain("<c:f>'Sensitivity'!$C$20:$C$21</c:f>");
+  expect(tornado).toContain("<c:f>'Sensitivity'!$D$20:$D$21</c:f>");
+  // What it shows before Excel recalculates: Volume first (−20 / +10), then Unit Price (−5 / +5).
+  expect(tornado).toContain('<c:pt idx="0"><c:v>Volume (-2 / +1)</c:v></c:pt><c:pt idx="1"><c:v>Unit Price (-10% / +10%)</c:v></c:pt>');
+  expect(tornado).toContain('<c:pt idx="0"><c:v>-20</c:v></c:pt><c:pt idx="1"><c:v>-5</c:v></c:pt>');
+  // Spider: a line per input over every point.
+  expect(spider).toContain('<c:lineChart>');
+  expect(spider.match(/<c:ser>/g)).toHaveLength(2);
+  expect(spider).toContain("<c:f>'Sensitivity'!$N$23:$X$23</c:f>");
+  expect(spider).toContain("<c:f>'Sensitivity'!$N$25:$X$25</c:f>");
+  expect(spider).toContain('<c:formatCode>+0%;-0%;0%</c:formatCode>');
+  // LibreOffice opens it with both charts and their tabs.
+  requireSoffice(test);
+  testInfo.setTimeout(180_000);
+  const book = await recalculated(bytes);
+  expect(book.worksheets.map(w => w.name)).toEqual(expect.arrayContaining(['Inputs', 'Tornado', 'Sensitivity']));
+  const back = await X.unzip(recalcDataTables({ wb: bytes }).wb);
+  expect(Object.keys(back).filter(k => /^xl\/charts\/chart\d+\.xml$/.test(k))).toHaveLength(2);
+  // (LibreOffice has no chart tabs of its own: it keeps each as a tab holding the chart.)
+  expect(back['xl/workbook.xml']).toContain('name="Tornado 2"');
+  expect(back['xl/workbook.xml']).toContain('name="Spider"');
+});
+
+test('the charts on the Sensitivity tab, below the Spider table; chosen and remembered', async ({ page }) => {
+  await setUpUPV(page);
+  await page.selectOption('#cfgSensCharts', 'sheet');
+  await page.reload();
+  await X.loadFixtureModel(page, UPV);
+  await expect(page.locator('#cfgSensCharts')).toHaveValue('sheet');
+  const { wb, bytes } = await X.generate(page);
+  expect(wb.SheetNames).toEqual(['Inputs', 'Canvas 1', 'Sensitivity']);
+  const placed = wb.Sheets.Sensitivity['!charts'];
+  expect(placed.map(p => [p.chart.type, p.from, p.to])).toEqual([
+    ['bar', { c: 0, r: 27 }, { c: 6, r: 51 }],
+    ['line', { c: 7, r: 27 }, { c: 24, r: 51 }],
+  ]);
+  const { parts, charts } = await chartParts(bytes);
+  expect(parts['xl/worksheets/sheet3.xml']).toContain('<drawing r:id="rId1"/></worksheet>');
+  expect(parts['xl/worksheets/_rels/sheet3.xml.rels']).toContain('Target="../drawings/drawing1.xml"');
+  expect(parts['xl/drawings/drawing1.xml'].match(/<xdr:twoCellAnchor>/g)).toHaveLength(2);
+  expect(charts).toHaveLength(2);
+  expect(Object.keys(parts).some(k => k.startsWith('xl/chartsheets/'))).toBe(false);
+});
+
+test('names in the charts are text', async ({ page }, testInfo) => {
+  const model = readFixture('models', UPV);
+  model.system.canvases[0].nodes.forEach(n => { if(/^Volume/.test(n.text)) n.text = '<img src=x>&"\n5'; });
+  const file = testInfo.outputPath('hostile.json');
+  fs.writeFileSync(file, JSON.stringify(model));
+  await X.loadModelFile(page, file);
+  await X.setInputsTab(page, true);
+  await turnOn(page);
+  await page.click('#btnSensAddAllVars');
+  await addOutput(page, 'Revenue — Canvas 1');
+  const { charts } = await chartParts((await X.generate(page)).bytes);
+  expect(charts.join('')).toContain('&lt;img src=x&gt;&amp;&quot;');
+  expect(charts.join('')).not.toContain('<img');
 });
