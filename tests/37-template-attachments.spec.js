@@ -30,9 +30,12 @@ async function importTemplates(page, testInfo, templates, version){
 async function selectSales(page){
   await picker(page).locator('.template-list button.template-family', { hasText: 'Sales' }).click();
 }
+// fmIDE reads the file in the background, then always says what happened: wait for that
+// message, or the next F.dialogText could read the Templates window still on top.
 async function attach(page, file){
   const [chooser] = await Promise.all([page.waitForEvent('filechooser'), picker(page).locator('button.template-attach-excel').click()]);
   await chooser.setFiles(file);
+  await expect(page.locator('.message-box')).toBeVisible();
 }
 async function library(page){
   const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
