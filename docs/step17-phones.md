@@ -2,7 +2,7 @@
 
 The owner's request (8 October 2026): bring the apps to phones. The owner chose the recommended scope: **on a phone a person looks at a model and adjusts it; building stays on a tablet or computer**, and fmGraph comes first. The owner added: the phone's own controls (fmGraph's slider first of all) must be **pleasant and easy to use, built for a hand that moves around** — "not just a compromised small-screen app. There must be something only a smartphone excels at."
 
-This is the brief (P0). Nothing is built until the owner approves it.
+This is the brief (P0), approved by the owner on 8 October 2026 with the five recommended choices below.
 
 ## Why
 
@@ -114,14 +114,18 @@ What fmGraph and fmIDE both use — the phone check, the number control, the tic
 
 Each phase adds its What's new entry, help topic and tests.
 
-## The owner's choices (recommendations first)
+## The owner's choices (8 October 2026: all five as recommended)
 
-1. **The share sheet** — **use it (recommended)**: the person chooses where a picture, document or workbook goes, as with a download; the app sends nothing itself. Or: downloads only.
-2. **Tilt to move a slider** (tilting the phone sweeps the chosen slider; an iPhone asks permission first) — **later (recommended)**: the mixer and the fine drag give more for less; it can come after P1b if wanted. Or: in P1b.
-3. **The tick** — **on, with a switch to turn it off (recommended)**; felt on Android, seen on an iPhone.
-4. **What counts as a phone** — **the shorter side under 600 pixels, on a touchscreen (recommended)**, so a tablet keeps today's layout. Or: by window width alone.
-5. **Full app on a phone** — **offered in ☰ and remembered (recommended)**. Or: never.
+1. **The share sheet** — **use it (chosen)**: the person chooses where a picture, document or workbook goes, as with a download; the app sends nothing itself. Or: downloads only.
+2. **Tilt to move a slider** (tilting the phone sweeps the chosen slider; an iPhone asks permission first) — **later (chosen)**: the mixer and the fine drag give more for less; it can come after P1b if wanted. Or: in P1b.
+3. **The tick** — **on, with a switch to turn it off (chosen)**; felt on Android, seen on an iPhone.
+4. **What counts as a phone** — **the shorter side under 600 pixels, on a touchscreen (chosen)**, so a tablet keeps today's layout. Or: by window width alone.
+5. **Full app on a phone** — **offered in ☰ and remembered (chosen)**. Or: never.
 
 ## Later ideas, not in this step
 
-Tilt to sweep (if not chosen above); a phone tutorial; receiving a `.fmide` from another app's share sheet (Android only); light editing in fmIDE on a phone (rename, add a rectangle) through the hold menu of step 9b.
+Tilt to sweep; a phone tutorial; receiving a `.fmide` from another app's share sheet (Android only); light editing in fmIDE on a phone (rename, add a rectangle) through the hold menu of step 9b.
+
+## How it turned out
+
+**P0** (8 October 2026): this brief, approved with the five recommended choices.
