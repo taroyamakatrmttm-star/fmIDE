@@ -159,6 +159,19 @@ test('a slider by finger', async ({ browser }) => {
   await context.close();
 });
 
+// An operator with nothing wired in (a socket nothing is plugged into) is 0, as in fmIDE and
+// Excel: a total reading one through another operator works out, and a slider on an input
+// moves it (before, the empty socket's error reached the total and its bar showed "!").
+test('a total reading an empty socket works out, and a slider moves it', async ({ page }) => {
+  await openGraph(page);
+  await loadFile(page, fixture('agreement', 'empty-operators.json'));
+  expect(await g(page, () => fmGraph.rectangles().filter(r => r.input).map(r => r.name))).toEqual(['Negative one', 'Revenue', 'Five', 'Price', 'Ten', 'Fed by lonely times']);
+  expect(await g(page, () => [fmGraph.value('COGS', 1) + 0, fmGraph.value('Gross Profit', 1), fmGraph.value('Gross Profit plus COGS', 1)])).toEqual([0, 100, 100]);
+  await g(page, () => { fmGraph.addBar('Gross Profit plus COGS'); fmGraph.setSlider(fmGraph.addSlider('Revenue'), 250); });
+  expect(await g(page, () => [fmGraph.value('Gross Profit', 1), fmGraph.value('Gross Profit plus COGS', 2)])).toEqual([250, 250]);
+  await expect(page.locator('.bar-widget').filter({ hasText: 'Gross Profit plus COGS' }).locator('.bar-errors li')).toHaveCount(0);
+});
+
 test('change by %, one period, a range; sliders only on inputs', async ({ page }) => {
   await openSample(page);
   // Volume: +10% in Year 2 only.

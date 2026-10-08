@@ -426,6 +426,13 @@ export function evaluateModel(ir, options){
   const TOP_HOPS = [];
   const TOP = () => ({ prefix: '', bindings: {}, hops: TOP_HOPS });
   const rawCanvasOf = (id) => { const c = ir.canvases.get(id); return c ? c.raw : undefined; };
+  // Whether nothing feeds a node (the shared input rule's feedsNothing), worked out once each.
+  const fedByNothing = new Map();
+  const feedsNothingIn = (canvasId, nodeId) => {
+    const k = canvasId + '|' + nodeId;
+    if(!fedByNothing.has(k)) fedByNothing.set(k, feedsNothing(rawCanvasOf(canvasId), nodeId, new Set()));
+    return fedByNothing.get(k);
+  };
   const bad = (v) => v === null || v === undefined || Number.isNaN(v);
   const has = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
   const valueKey = (period, canvasId, scope, nodeId) => period + '|' + canvasId + '|' + scope.prefix + nodeId;
@@ -502,14 +509,17 @@ export function evaluateModel(ir, options){
         } else {
           const inEdge = binding ? binding.edge : null;
           const bindPeriod = (binding && typeof binding.fixedPeriod === 'number') ? binding.fixedPeriod : period;
-          const bound = inEdge ? resolveEdge(scope.outerCanvasId, inEdge, bindPeriod, scope.outerScope, visiting) : null;
-          if(!bad(bound)){
+          // Nothing feeds the port (it is an input of the instance — an operator with nothing
+          // wired in gives 0, but the port is still an input): the port's own typed number, or 0.
+          const unfed = !inEdge || feedsNothingIn(scope.outerCanvasId, inEdge.from);
+          const bound = unfed ? null : resolveEdge(scope.outerCanvasId, inEdge, bindPeriod, scope.outerScope, visiting);
+          if(unfed){
+            result = literalOrZero(n, period);
+          } else if(!bad(bound)){
             result = bound;
-          } else if(!inEdge || feedsNothing(rawCanvasOf(scope.outerCanvasId), inEdge.from, new Set())
-            || reachesOutsideTimeline(rawCanvasOf, scope.outerCanvasId, inEdge.from, bindPeriod, periodCount)){
-            // Nothing feeds the port (it is an input of the instance), or what feeds it needs
-            // a period outside the timeline: the port's own typed number, or 0 — as for any
-            // wired rectangle. Any other failure shows as an error.
+          } else if(reachesOutsideTimeline(rawCanvasOf, scope.outerCanvasId, inEdge.from, bindPeriod, periodCount)){
+            // What feeds it needs a period outside the timeline: the port's own typed number,
+            // or 0 — as for any wired rectangle. Any other failure shows as an error.
             result = literalOrZero(n, period);
           } else if(!errors[key]){
             errors[key] = 'missing-input';
@@ -630,7 +640,9 @@ export function evaluateModel(ir, options){
           }
         }
       } else if(inputs.length === 0){
-        errors[key] = 'no-input';
+        // Nothing wired in (e.g. a socket nothing is plugged into): 0, as ExcelExporter
+        // writes it, so what it feeds still works out.
+        result = 0;
       } else {
         const values = inputs.map(e => resolveEdge(canvasId, e, period, scope, visiting));
         const failed = values.findIndex(bad);

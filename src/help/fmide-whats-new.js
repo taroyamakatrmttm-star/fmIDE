@@ -13,6 +13,20 @@
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
 
+  { id: 'empty-operator-zero', date: '2026-10-08', title: 'An empty socket counts as 0',
+    summary: 'An operator with nothing wired into it gives 0, as in Excel, instead of "?" spreading through the model.',
+    what: [
+      'An operator with nothing wired into it, such as a socket nothing is plugged into yet, now gives 0. Before, it showed "?", and so did everything that read it, all the way down to totals on other canvases.',
+      'Excel already wrote such an operator as 0, so fmIDE, fmGraph and the workbook now agree, and ExcelExporter no longer lists it under "differs from fmIDE".',
+      'A rectangle fed only by such an operator is still an input and uses its own number, as before; so is a block\'s input fed by one.',
+    ],
+    why: 'A model built from templates often has sockets nothing feeds yet (a cost line the business doesn\'t have). One of them made a whole statement, and every fmGraph bar reading it, show "?".',
+    how: [
+      'Nothing to do: open the model, and the rectangles that showed "?" because of an empty socket show their numbers.',
+    ],
+    notes: ['A recipe still warns about sockets nothing feeds when it builds, so you can see which are empty.', 'Dividing by an empty operator is still an error, as in Excel (#DIV/0!).'],
+    see: ['plugs-sockets', 'operators'] },
+
   { id: 'share-in-library', date: '2026-10-04', title: 'Share your pack with everyone, step by step',
     summary: 'A new Share in the Community Library… window and a step-by-step guide, for people who have never used GitHub.',
     what: [

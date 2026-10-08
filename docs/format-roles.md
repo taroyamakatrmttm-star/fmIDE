@@ -20,7 +20,7 @@ A rectangle's own 🎨 format replaces its role's look on the canvas. Presets tr
 
 **What reaches Excel from fmIDE: the number format only** — the rectangle's own 🎨 number format if it has its own format, otherwise its role's (Inputs or Calculations, as the file's presets say). ExcelExporter reads it through `modelNumberFormat` (checked: a known kind, 0–10 decimals, a short currency symbol). A rectangle's canvas fill, font, weight, size and border never reach Excel.
 
-**Input rectangle** (one rule for both apps, in `src/shared/input-rule.js`): no incoming arrow, or a single incoming arrow from an operator or period shift that nothing feeds (e.g. a socket operator with nothing plugged in).
+**Input rectangle** (one rule for both apps, in `src/shared/input-rule.js`): no incoming arrow, or a single incoming arrow from an operator or period shift that nothing feeds (e.g. a socket operator with nothing plugged in). Such an operator gives 0 in the calculation (as in Excel), but the rectangle it feeds uses its own number.
 
 ## ExcelExporter: the Excel style
 

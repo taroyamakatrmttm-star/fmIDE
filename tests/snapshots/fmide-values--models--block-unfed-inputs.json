@@ -4,8 +4,8 @@
   "n183": {"values":[-4,-4,-4]},
   "n184": {"values":[-4,-4,-4]},
   "n196": {"values":[-4,-4,-4]},
-  "n201": {"values":["error: operator + has no value: This operator has nothing connected to it..","error: operator + has no value: This operator has nothing connected to it..","error: operator + has no value: This operator has nothing connected to it.."]},
-  "n202": {"values":["error: operator + has no value: This operator has nothing connected to it..","error: operator + has no value: This operator has nothing connected to it..","error: operator + has no value: This operator has nothing connected to it.."]},
+  "n201": {"values":[0,0,0]},
+  "n202": {"values":[0,0,0]},
   "n244": {"values":[[-4],[-4],[-4]]}
  },
  "Case2": {
@@ -13,7 +13,7 @@
   "n263": {"values":[-4,-4,-4]},
   "n264": {"values":[-4,-4,-4]},
   "n265": {"values":[-4,-4,-4]},
-  "n266": {"values":["error: operator + has no value: This operator has nothing connected to it..","error: operator + has no value: This operator has nothing connected to it..","error: operator + has no value: This operator has nothing connected to it.."]},
+  "n266": {"values":[0,0,0]},
   "n268": {"values":[[-4],[-4],[-4]]}
  },
  "Negatizer": {

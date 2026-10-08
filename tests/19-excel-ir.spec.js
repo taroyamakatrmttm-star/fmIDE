@@ -87,6 +87,15 @@ test('a model without broken links shows no differences', async ({ page }) => {
   }
 });
 
+// An operator with nothing wired in is 0 in fmIDE too, as Excel writes it: nothing to list
+// (a divide by one is an error in both, so it isn't listed either).
+test('empty operators: no differences listed', async ({ page }) => {
+  await X.openExporter(page);
+  await X.loadModelFile(page, fixture('agreement', 'empty-operators.json'));
+  await expect(page.locator('#loadStatus .status.ok')).toBeVisible();
+  await expect(page.locator('#differencesPanel')).toBeHidden();
+});
+
 test('broken links: the rows where fmIDE shows "?" are listed before download, and the download still works', async ({ page }) => {
   await X.openExporter(page);
   await X.loadModelFile(page, fixture('ir', 'error-cases.json'));

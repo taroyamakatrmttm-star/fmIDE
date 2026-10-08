@@ -56,8 +56,8 @@ function mayDifferFromFmide(ir){
       const def = ir.canvases.get(n.blockDefCanvasId);
       found = !def || n.outgoing.some(e => !def.ports.outputs[e.fromPort || 0]) || blockContainsItself(ir, def.id, new Set());
     } else if(n.type === 'operator'){
-      found = !n.op
-        || (n.op.ports ? n.portInputs.some(e => !e) : (n.inputs.length === 0 && !n.op.fallback && !n.op.period));
+      // One with nothing wired in is 0 in both; a named input without an arrow is not.
+      found = !n.op || (!!n.op.ports && n.portInputs.some(e => !e));
     }
     else if(n.type === 'function') found = !n.call || !!n.call.status || n.call.params.some((p, i) => !irPortEdge(ir, c.id, n.id, i));
   }));

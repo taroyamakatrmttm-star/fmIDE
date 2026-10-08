@@ -1,0 +1,369 @@
+{
+ "version": 9,
+ "kind": "system",
+ "nextId": 100,
+ "nextCanvasId": 3,
+ "activeCanvasId": "c1",
+ "periods": [
+  "P1",
+  "P2",
+  "P3"
+ ],
+ "currentPeriod": 0,
+ "canvases": [
+  {
+   "id": "c1",
+   "name": "Income",
+   "nodes": [
+    {
+     "id": "neg",
+     "type": "value",
+     "x": 40,
+     "y": 40,
+     "w": 170,
+     "h": 64,
+     "text": "Negative one\n-1"
+    },
+    {
+     "id": "sockCogs",
+     "type": "operator",
+     "x": 40,
+     "y": 140,
+     "w": 56,
+     "h": 56,
+     "text": "+",
+     "socket": "Total COGS"
+    },
+    {
+     "id": "mulCogs",
+     "type": "operator",
+     "x": 260,
+     "y": 90,
+     "w": 56,
+     "h": 56,
+     "text": "×"
+    },
+    {
+     "id": "cogs",
+     "type": "value",
+     "x": 360,
+     "y": 80,
+     "w": 170,
+     "h": 64,
+     "text": "COGS"
+    },
+    {
+     "id": "rev",
+     "type": "value",
+     "x": 40,
+     "y": 240,
+     "w": 170,
+     "h": 64,
+     "text": "Revenue\n100"
+    },
+    {
+     "id": "gpOp",
+     "type": "operator",
+     "x": 560,
+     "y": 160,
+     "w": 56,
+     "h": 56,
+     "text": "+"
+    },
+    {
+     "id": "gp",
+     "type": "value",
+     "x": 660,
+     "y": 150,
+     "w": 170,
+     "h": 64,
+     "text": "Gross Profit"
+    },
+    {
+     "id": "emptyMinus",
+     "type": "operator",
+     "x": 140,
+     "y": 340,
+     "w": 56,
+     "h": 56,
+     "text": "−"
+    },
+    {
+     "id": "subOp",
+     "type": "operator",
+     "x": 260,
+     "y": 300,
+     "w": 56,
+     "h": 56,
+     "text": "−"
+    },
+    {
+     "id": "revLessEmpty",
+     "type": "value",
+     "x": 360,
+     "y": 290,
+     "w": 170,
+     "h": 64,
+     "text": "Revenue less nothing"
+    },
+    {
+     "id": "five",
+     "type": "value",
+     "x": 40,
+     "y": 420,
+     "w": 170,
+     "h": 64,
+     "text": "Five\n5"
+    },
+    {
+     "id": "emptyMin",
+     "type": "operator",
+     "x": 140,
+     "y": 500,
+     "w": 56,
+     "h": 56,
+     "text": "min"
+    },
+    {
+     "id": "minOp",
+     "type": "operator",
+     "x": 260,
+     "y": 460,
+     "w": 56,
+     "h": 56,
+     "text": "min"
+    },
+    {
+     "id": "minRes",
+     "type": "value",
+     "x": 360,
+     "y": 450,
+     "w": 170,
+     "h": 64,
+     "text": "Min with nothing"
+    },
+    {
+     "id": "sockPrice",
+     "type": "operator",
+     "x": 40,
+     "y": 580,
+     "w": 56,
+     "h": 56,
+     "text": "+",
+     "socket": "Price in"
+    },
+    {
+     "id": "price",
+     "type": "value",
+     "x": 160,
+     "y": 570,
+     "w": 170,
+     "h": 64,
+     "text": "Price\n7"
+    },
+    {
+     "id": "ten",
+     "type": "value",
+     "x": 40,
+     "y": 660,
+     "w": 170,
+     "h": 64,
+     "text": "Ten\n10"
+    },
+    {
+     "id": "emptyDiv",
+     "type": "operator",
+     "x": 140,
+     "y": 740,
+     "w": 56,
+     "h": 56,
+     "text": "+"
+    },
+    {
+     "id": "divOp",
+     "type": "operator",
+     "x": 260,
+     "y": 700,
+     "w": 56,
+     "h": 56,
+     "text": "÷"
+    },
+    {
+     "id": "divRes",
+     "type": "value",
+     "x": 360,
+     "y": 690,
+     "w": 170,
+     "h": 64,
+     "text": "Ten over nothing"
+    },
+    {
+     "id": "lonely",
+     "type": "operator",
+     "x": 40,
+     "y": 820,
+     "w": 56,
+     "h": 56,
+     "text": "×"
+    },
+    {
+     "id": "fedLonely",
+     "type": "value",
+     "x": 160,
+     "y": 810,
+     "w": 170,
+     "h": 64,
+     "text": "Fed by lonely times\n3"
+    }
+   ],
+   "edges": [
+    {
+     "id": "e1",
+     "from": "neg",
+     "to": "mulCogs"
+    },
+    {
+     "id": "e2",
+     "from": "sockCogs",
+     "to": "mulCogs"
+    },
+    {
+     "id": "e3",
+     "from": "mulCogs",
+     "to": "cogs"
+    },
+    {
+     "id": "e4",
+     "from": "rev",
+     "to": "gpOp"
+    },
+    {
+     "id": "e5",
+     "from": "cogs",
+     "to": "gpOp"
+    },
+    {
+     "id": "e6",
+     "from": "gpOp",
+     "to": "gp"
+    },
+    {
+     "id": "e7",
+     "from": "rev",
+     "to": "subOp"
+    },
+    {
+     "id": "e8",
+     "from": "emptyMinus",
+     "to": "subOp"
+    },
+    {
+     "id": "e9",
+     "from": "subOp",
+     "to": "revLessEmpty"
+    },
+    {
+     "id": "e10",
+     "from": "five",
+     "to": "minOp"
+    },
+    {
+     "id": "e11",
+     "from": "emptyMin",
+     "to": "minOp"
+    },
+    {
+     "id": "e12",
+     "from": "minOp",
+     "to": "minRes"
+    },
+    {
+     "id": "e13",
+     "from": "sockPrice",
+     "to": "price"
+    },
+    {
+     "id": "e14",
+     "from": "ten",
+     "to": "divOp"
+    },
+    {
+     "id": "e15",
+     "from": "emptyDiv",
+     "to": "divOp"
+    },
+    {
+     "id": "e16",
+     "from": "divOp",
+     "to": "divRes"
+    },
+    {
+     "id": "e17",
+     "from": "lonely",
+     "to": "fedLonely"
+    }
+   ]
+  },
+  {
+   "id": "c2",
+   "name": "Totals",
+   "nodes": [
+    {
+     "id": "aGp",
+     "type": "alias",
+     "x": 40,
+     "y": 40,
+     "w": 170,
+     "h": 64,
+     "sourceCanvasId": "c1",
+     "sourceNodeId": "gp"
+    },
+    {
+     "id": "aCogs",
+     "type": "alias",
+     "x": 40,
+     "y": 140,
+     "w": 170,
+     "h": 64,
+     "sourceCanvasId": "c1",
+     "sourceNodeId": "cogs"
+    },
+    {
+     "id": "totOp",
+     "type": "operator",
+     "x": 260,
+     "y": 90,
+     "w": 56,
+     "h": 56,
+     "text": "+"
+    },
+    {
+     "id": "tot",
+     "type": "value",
+     "x": 360,
+     "y": 80,
+     "w": 170,
+     "h": 64,
+     "text": "Gross Profit plus COGS"
+    }
+   ],
+   "edges": [
+    {
+     "id": "e20",
+     "from": "aGp",
+     "to": "totOp"
+    },
+    {
+     "id": "e21",
+     "from": "aCogs",
+     "to": "totOp"
+    },
+    {
+     "id": "e22",
+     "from": "totOp",
+     "to": "tot"
+    }
+   ]
+  }
+ ]
+}
