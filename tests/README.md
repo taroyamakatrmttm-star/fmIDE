@@ -1,6 +1,6 @@
 # Tests
 
-One command runs every check, locally and on GitHub (`.github/workflows/tests.yml`, on every push and pull request). The brief is [`SPEC.md`](SPEC.md). The apps themselves stay dependency-free: everything here is a dev dependency.
+One command runs every check, locally and on GitHub (`.github/workflows/tests.yml`: on every pull request, and on `main` after a merge). On GitHub the suite runs in 4 parts at once, each on its own machine (`npx playwright test --shard=N/4`), and the check **test** goes green only when all 4 passed; every test runs on every change. To run one part locally: `npx playwright test --shard=2/4`. The brief is [`SPEC.md`](SPEC.md). The apps themselves stay dependency-free: everything here is a dev dependency.
 
 ## Setup (once)
 

@@ -15,7 +15,7 @@ This is the brief for building the permanent automated test suite. Until now eve
 - Reading `.xlsx` in tests: `exceljs` (dev dependency only — the apps stay dependency-free).
 - LibreOffice (`soffice`) for recalculating workbooks. **Locally optional**: if `soffice` is not found, skip the recalculation tests with a clear "skipped: LibreOffice not installed" message. **Required on GitHub Actions** (install it in the workflow).
 - `package.json` scripts: `npm test` (everything), `npm run test:update-snapshots` (see Snapshots), plus one script per group if convenient.
-- Add `.github/workflows/tests.yml`: on push and pull request; Ubuntu; install Node, Chromium (`npx playwright install --with-deps chromium`) and LibreOffice; run `npm test`; upload the Playwright report as an artifact on failure.
+- Add `.github/workflows/tests.yml`: on pull requests and on `main` (since 8 October 2026; before, on every push too, so a pull request ran twice); in 4 parts at once (`--shard=N/4`, the job `test-part`), with the check `test` green only when all 4 passed; Ubuntu; install Node, Chromium (`npx playwright install --with-deps chromium`) and LibreOffice; run `npm test`; upload the Playwright report as an artifact on failure.
 
 ## How to drive the apps (learned the hard way)
 
