@@ -45,6 +45,7 @@
     "test:macro-references": "playwright test tests/63-macro-references.spec.js",
     "test:shared-modules": "playwright test tests/64-shared-modules.spec.js",
     "test:modules-in-node": "playwright test tests/65-modules-in-node.spec.js",
+    "test:test-parts": "playwright test tests/66-test-parts.spec.js",
     "test:canvas-switching": "playwright test tests/61-canvas-switching.spec.js",
     "test:messages": "playwright test tests/60-long-messages.spec.js",
     "test:excel-page": "playwright test tests/46-excel-page.spec.js",

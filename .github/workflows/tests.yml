@@ -13,9 +13,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  # The suite runs in 4 parts at once, each on its own machine (Playwright's --shard: the
-  # tests split into 4 even runs of the same list), so a run takes about a quarter of the
-  # time. Every test still runs on every change. The job "test" below goes green only when
+  # The suite runs in 4 parts at once, each on its own machine, so a run takes about a quarter
+  # of the time. tools/test-parts.js puts every test file into exactly one part, spread by how
+  # long each took in a measured run (tests/test-durations.json), so the parts end together.
+  # Every test still runs on every change. The job "test" below goes green only when
   # all 4 parts passed; it is the one check to wait for, and what deploy waits on.
   test-part:
     # An hourly or manual publish runs main's code, already tested when it was merged.
@@ -57,7 +58,9 @@ jobs:
           sudo apt-get install -y --no-install-recommends libreoffice-calc
 
       - name: Run tests (part ${{ matrix.part }} of 4)
-        run: npx playwright test --shard=${{ matrix.part }}/4
+        run: |
+          node tools/test-parts.js ${{ matrix.part }} 4
+          npx playwright test $(node tools/test-parts.js ${{ matrix.part }} 4)
 
       - name: Upload Playwright report
         if: failure()
