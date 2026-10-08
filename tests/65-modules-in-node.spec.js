@@ -306,7 +306,13 @@ test.describe('ExcelExporter\'s formula building, in Node', () => {
     expect(FX.sanitizeSheetName('x'.repeat(40))).toHaveLength(31);
     expect(FX.sanitizeSheetName('  ')).toBe('Sheet');
     expect(FX.sheetRef('Calc', 'E', 5, 'Calc', false)).toBe('E5');
-    expect(FX.sheetRef("O'Brien", 'E', 5, 'Calc', true)).toBe("'O'Brien'!E$5");
+    // An apostrophe in a name is doubled in a formula; none may start or end a name.
+    expect(FX.sheetRef("O'Brien", 'E', 5, 'Calc', true)).toBe("'O''Brien'!E$5");
+    expect(FX.sheetRef("Bob's 'Q1'", '$A', '$6', 'Calc')).toBe("'Bob''s ''Q1'''!$A$6");
+    expect(FX.sanitizeSheetName("'Quoted'")).toBe('Quoted');
+    expect(FX.sanitizeSheetName("'' x ''")).toBe('x');
+    expect(FX.sanitizeSheetName("'''")).toBe('Sheet');
+    expect(FX.sanitizeSheetName("Bob's")).toBe("Bob's");
     expect(FX.blankCell(null, '0.0')).toEqual({ t: 'z', z: '0.0' });
     expect(FX.textCell('')).toEqual({ t: 'z', z: 'General' });
     expect(FX.textCell('Name', { font: { bold: true } })).toEqual({ t: 's', v: 'Name', s: { font: { bold: true } } });

@@ -11,6 +11,18 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'apostrophe-tab-names', date: '2026-10-08', title: 'Tab names with an apostrophe',
+    summary: 'A tab named like "Bob\'s Model" no longer breaks the workbook.',
+    what: [
+      'A formula reading a tab whose name holds an apostrophe was written in a way Excel can\'t read, so Excel reported a problem with the file. It is now written as Excel needs, and the workbook opens and calculates as usual.',
+      'A tab name can\'t start or end with an apostrophe (Excel refuses one), so such apostrophes are dropped: \'Q1\' becomes Q1.',
+    ],
+    why: 'Names like "Bob\'s Model" or "Year\'s total" are common.',
+    how: [
+      'Nothing to do: press ⬇ Generate .xlsx again for a workbook made before.',
+    ],
+    see: ['tabs'] },
+
   { id: 'sensitivity-charts', date: '2026-10-08', title: 'The Tornado and Spider charts',
     summary: 'The Sensitivity tab now comes with a Tornado chart and a Spider chart, on their own tabs or on the Sensitivity tab.',
     what: [

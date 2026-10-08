@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: tab names with an apostrophe
+- A tab named with an apostrophe (a canvas called "Bob's Model", or a tab renamed so) gave formulas Excel can't read (`'Bob's Model'!E4`), so Excel reported a problem with the file. The apostrophe is now doubled in formulas (`'Bob''s Model'!E4`), as Excel needs.
+- A tab name can no longer start or end with an apostrophe, which Excel refuses: such apostrophes are dropped (`'Q1'` becomes `Q1`).
+
 ## ExcelExporter: the Tornado and Spider charts
 - The Sensitivity tab comes with a **Tornado** chart (each input's Low and High as bars either side of the base, the largest at the top) and a **Spider** chart (each input's line from Low to High), reading its tables, so they follow every change in Excel. **Charts** in the Sensitivity panel puts them on their own tabs or on the Sensitivity tab.
 - ExcelExporter's own Excel writer writes bar and line charts, and chart tabs. No library was added.

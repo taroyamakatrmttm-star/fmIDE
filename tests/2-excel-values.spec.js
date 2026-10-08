@@ -178,3 +178,39 @@ test.describe('no error cells after recalculation', () => {
     });
   }
 });
+
+// Tab names with apostrophes (a bug fix, 8 October 2026): a formula reading another tab
+// doubles the apostrophe ('Bob''s BS'!E4), and a name may not start or end with one, so the
+// workbook opens and works out exactly as it does with plain names.
+test.describe('known answers — tab names with apostrophes', () => {
+  test("Bob's tabs give the same numbers as plain ones", async ({ page }) => {
+    requireSoffice(test);
+    await X.openExporter(page);
+    await X.loadFixtureModel(page, 'revenue-bs-corkscrew.json');
+    await X.setInputsTab(page, true);
+    const plain = (await X.generate(page)).bytes;
+    const names = page.locator('#tabsBody input[type=text]');
+    const before = await names.evaluateAll(els => els.map(e => e.value));
+    const wanted = ["Tom's Inputs", "Bob's BS", "'Corkscrew'"];
+    for(let i = 0; i < wanted.length; i++){ await names.nth(i).fill(wanted[i]); await names.nth(i).dispatchEvent('change'); }
+    // No name may start or end with an apostrophe: that one is trimmed.
+    expect(await names.evaluateAll(els => els.map(e => e.value))).toEqual(["Tom's Inputs", "Bob's BS", 'Corkscrew']);
+    const { wb, bytes } = await X.generate(page);
+    const bsFormulas = Object.values(wb.Sheets["Bob's BS"]).map(c => c && c.f).filter(Boolean);
+    expect(bsFormulas.some(f => f.startsWith("'Tom''s Inputs'!"))).toBe(true);
+    const out = recalc({ plain, quoted: bytes });
+    const values = async (b, rename) => {
+      const book = await X.readBack(b);
+      const res = {};
+      book.eachSheet(ws => ws.eachRow(r => r.eachCell(c => { res[(rename[ws.name] || ws.name) + '!' + c.address] = valueOf(c); })));
+      return res;
+    };
+    const a = await values(out.plain, {});
+    const back = { "Tom's Inputs": before[0], "Bob's BS": before[1], 'Corkscrew': before[2] };
+    const b = await values(out.quoted, back);
+    // Each tab's title (row 1, merged across it) is its name; everything else matches.
+    [a, b].forEach(m => Object.keys(m).forEach(k => { if(/![A-Z]+1$/.test(k)) delete m[k]; }));
+    expect(b).toEqual(a);
+    expect(Object.values(b).filter(v => typeof v === 'string' && /^#|^Err:/.test(v))).toEqual([]);
+  });
+});
