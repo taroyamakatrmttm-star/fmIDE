@@ -65,4 +65,5 @@ function syncUndoButtons(){
   const u = $('btnUndo'), r = $('btnRedo');
   if(u) u.disabled = !model || !undoStack.length;
   if(r) r.disabled = !model || !redoStack.length;
+  if($('phoneUndo')){ $('phoneUndo').disabled = u.disabled; $('phoneRedo').disabled = r.disabled; } // ☰ on a phone (05g-phone.js)
 }

@@ -8,6 +8,19 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'phone', date: '2026-10-08', title: 'fmGraph on a phone',
+    summary: 'A layout made for a phone: the board fills the screen, the sliders sit under your thumb, and a slider you can set exactly with one finger.',
+    what: [
+      'On a phone, the bars and charts fill the screen and the sliders sit in a dock along the bottom, one at a time and large, in reach of the thumb holding the phone. Swipe along the dock for the next slider, tap its handle to see them all, draw it down to get it out of the way.',
+      'A new slider: grab it anywhere and it moves from where it is; slide your finger up while dragging to make it finer (×½, ×¼, ×⅒); it settles at the model\'s own number with a tick (felt on Android); tap the number to type one; − and + step it; a double-tap goes back.',
+      'Swipe sideways across the bars for the next board. Hold a bar for a quick look at every period, against the model\'s own numbers, with 🔍 Trace.',
+      '☰ holds Open, Reset all, Pin as A, Scenarios, Biggest movers, Undo, Help and Full app (the whole page, for when you need it).',
+    ],
+    why: 'To show and explore a model away from a desk, with a slider that is pleasant to use with one thumb rather than a small copy of the desktop page.',
+    how: ['Open fmGraph on a phone (or Add to Home Screen), then Try the sample model and move Price in the dock.'],
+    notes: ['Building boards (adding bars, charts and sliders, arranging them) stays on a tablet or computer, as do the tutorials. Tablets and computers are unchanged.'],
+    see: ['phone'] },
+
   { id: 'empty-operator-zero', date: '2026-10-08', title: 'Bars no longer stop at an empty socket',
     summary: 'An operator with nothing wired into it gives 0, as in Excel, so the bars reading it show numbers and follow the sliders.',
     what: [

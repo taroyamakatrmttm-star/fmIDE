@@ -1,0 +1,24 @@
+  /* The phone's slider (step 17, src/shared/phone.js). Its colours from the page:
+     --ps-accent (the fill and knob), --ps-ink, --ps-soft, --ps-line. */
+  .ps{ --ps-pad:24px; --ps-accent:#0f766e; --ps-ink:#1b2333; --ps-soft:#5f6b7d; --ps-line:#d5dbe5; position:relative; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
+  .ps-row{ display:flex; align-items:center; gap:10px; }
+  .ps-step{ flex:none; width:48px; height:48px; border-radius:50%; font-size:24px; line-height:1; padding:0; border:1px solid var(--ps-line); background:#fff; color:var(--ps-ink); touch-action:manipulation; }
+  .ps-step:active{ background:#eef1f5; transform:scale(.94); }
+  .ps-value, .ps-type{ flex:1 1 auto; min-width:0; height:52px; font-size:30px !important; font-weight:700; font-variant-numeric:tabular-nums; text-align:center; border:none; border-radius:10px; background:transparent; color:var(--ps-ink); padding:0 6px; }
+  .ps-value:active{ background:#eef1f5; }
+  .ps-type{ border:2px solid var(--ps-accent); background:#fff; }
+  /* As large as the number it replaces, over an app's own size for text boxes on a touchscreen. */
+  .ps .ps-row input.ps-type:not([type=range]):not([type=file]){ font-size:30px !important; }
+  .ps-track{ position:relative; height:64px; touch-action:none; cursor:ew-resize; outline:none; border-radius:12px; }
+  .ps-track:focus-visible{ box-shadow:0 0 0 2px var(--ps-accent); }
+  .ps-rail{ position:absolute; left:var(--ps-pad); right:var(--ps-pad); top:50%; height:8px; margin-top:-4px; border-radius:4px; background:var(--ps-line); }
+  .ps-fill{ position:absolute; top:0; bottom:0; left:calc(var(--ps-a) * 100%); width:calc((var(--ps-b) - var(--ps-a)) * 100%); background:var(--ps-accent); border-radius:4px; }
+  .ps-notch{ position:absolute; top:-9px; bottom:-9px; width:3px; margin-left:-1.5px; left:calc(var(--ps-n) * 100%); border-radius:2px; background:var(--ps-soft); }
+  .ps-thumb{ position:absolute; top:50%; width:34px; height:34px; margin:-17px 0 0 -17px; left:calc(var(--ps-pad) + var(--ps-f) * (100% - 2 * var(--ps-pad))); border-radius:50%; background:#fff; border:3px solid var(--ps-accent); box-shadow:0 2px 6px rgba(16,24,40,.25); transition:transform .12s; }
+  .ps.dragging .ps-thumb{ transform:scale(1.18); }
+  .ps.at-base .ps-thumb{ border-color:var(--ps-soft); }
+  .ps.ticked .ps-thumb{ animation:ps-tick .18s ease-out; }
+  @keyframes ps-tick{ 0%{ box-shadow:0 0 0 0 rgba(15,118,110,.55); } 100%{ box-shadow:0 0 0 12px rgba(15,118,110,0); } }
+  .ps-bubble{ position:absolute; bottom:calc(50% + 24px); transform:translateX(-50%); display:none; white-space:nowrap; padding:3px 10px; border-radius:10px; background:var(--ps-accent); color:#fff; font-size:13px; font-weight:700; pointer-events:none; box-shadow:0 3px 10px rgba(16,24,40,.25); z-index:5; }
+  .ps.dragging.fine .ps-bubble{ display:block; }
+  @media (prefers-reduced-motion: reduce){ .ps-thumb{ transition:none; } .ps.ticked .ps-thumb{ animation:none; } }

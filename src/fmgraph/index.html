@@ -10,13 +10,14 @@
 <style>
 <!-- build:css styles.css -->
 <!-- build:css ../shared/help-panel.css -->
+<!-- build:css ../shared/phone.css -->
 </style>
 </head>
 <body>
 
 <header class="gbar">
   <div class="gbar-side">
-    <a id="backToFmide" class="gbar-back" href="fmIDE.html">← Back to fmIDE</a>
+    <a id="backToFmide" class="gbar-back" href="fmIDE.html" aria-label="Back to fmIDE">←<span class="gbar-back-words"> Back to fmIDE</span></a>
     <span class="gbar-name">fmGraph</span>
     <span id="modelName" class="gbar-model"></span>
   </div>
@@ -42,6 +43,8 @@
       </div>
     </details>
     <button id="btnHelp" class="gbar-btn" title="Help (F1)">❓ Help</button>
+    <button id="btnPhoneLayout" class="gbar-btn hidden" title="Back to the layout made for a phone">📱 Phone layout</button>
+    <button id="btnPhoneMenu" class="gbar-btn phone-only" aria-haspopup="menu" aria-expanded="false" aria-controls="phoneMenu" aria-label="Menu">☰</button>
   </div>
 </header>
 
@@ -52,16 +55,19 @@
     <h2>See how a value moves your model</h2>
     <p class="welcome-lead">Open a model saved by fmIDE, then add bars and sliders.</p>
     <div id="dropBox" class="dropbox" role="button" tabindex="0">
-      <span class="dropbox-main">Drop a .fmide or .json file here</span>
-      <span class="dropbox-sub">or click to choose one</span>
+      <span class="dropbox-main desk-only">Drop a .fmide or .json file here</span>
+      <span class="dropbox-sub desk-only">or click to choose one</span>
+      <span class="dropbox-main phone-only">Choose a .fmide or .json file</span>
+      <span class="dropbox-sub phone-only">saved by fmIDE</span>
     </div>
     <div class="welcome-actions">
       <button id="btnSample" class="primary">Try the sample model</button>
-      <button id="btnTutorials" title="Short tutorials on a practice copy of the sample model">🎓 Learn with a tutorial</button>
+      <button id="btnTutorials" class="desk-only" title="Short tutorials on a practice copy of the sample model">🎓 Learn with a tutorial</button>
     </div>
   </section>
 
   <nav id="boardTabs" class="board-tabs hidden" role="tablist" aria-label="Boards"></nav>
+  <nav id="phoneBoards" class="phone-boards" aria-label="Boards"></nav>
   <div id="trialBar" class="trial-bar hidden" role="status"></div>
   <div id="compareBar" class="compare-bar hidden" role="status"></div>
   <section id="board" class="board hidden">
@@ -84,10 +90,42 @@
     <div class="board-col board-main">
       <h2 class="col-head">Bars and charts <span id="calcNote" class="calc-note"></span></h2>
       <div id="barList" class="widget-list bars"></div>
-      <p id="noBars" class="empty-note">No bars yet: <button type="button" class="link-btn" data-add="bar">+ Bar</button> or <button type="button" class="link-btn" data-add="chart">+ Chart</button></p>
+      <p id="noBars" class="empty-note"><span class="desk-only">No bars yet: <button type="button" class="link-btn" data-add="bar">+ Bar</button> or <button type="button" class="link-btn" data-add="chart">+ Chart</button></span><span class="phone-only">No bars on this board yet: add them on a tablet or computer, or ☰ → Full app.</span></p>
     </div>
   </section>
 </main>
+
+<!-- On a phone (step 17, 05g-phone.js): the sliders under the thumb, the menu, a bar's quick look. -->
+<section id="sliderDock" class="slider-dock phone-only hidden" aria-label="Sliders" data-state="peek">
+  <button type="button" id="dockHandle" class="dock-handle" aria-expanded="false" aria-label="Show every slider"><span class="dock-grip"></span><span id="dockHandleText" class="dock-handle-text"></span></button>
+  <div id="dockCards" class="dock-cards"></div>
+  <div id="dockDots" class="dock-dots" aria-hidden="true"></div>
+  <p id="dockEmpty" class="dock-empty">This board has no sliders.</p>
+</section>
+<div id="phoneMenu" class="phone-menu hidden" role="menu" aria-label="Menu">
+  <button type="button" role="menuitem" id="phoneOpen">📂 Open…</button>
+  <button type="button" role="menuitem" id="phoneFromFmide" class="hidden">↻ From fmIDE</button>
+  <button type="button" role="menuitem" id="phoneReset" class="needs-model">⟲ Reset all sliders</button>
+  <button type="button" role="menuitem" id="phonePin" class="needs-model">📌 Pin as A</button>
+  <button type="button" role="menuitem" id="phoneScenarios" class="needs-model">Scenarios</button>
+  <button type="button" role="menuitem" id="phoneMovers" class="needs-model">Biggest movers</button>
+  <div class="phone-menu-row">
+    <button type="button" role="menuitem" id="phoneUndo" disabled>↶ Undo</button>
+    <button type="button" role="menuitem" id="phoneRedo" disabled>↷ Redo</button>
+  </div>
+  <button type="button" role="menuitemcheckbox" id="phoneVibrate" class="hidden" aria-checked="true">Vibrate on the marks: On</button>
+  <button type="button" role="menuitem" id="phoneHelp">❓ Help</button>
+  <button type="button" role="menuitem" id="phoneFullApp">🖥 Full app</button>
+</div>
+<div id="peekBack" class="peek-back hidden">
+  <div id="peekCard" class="peek-card" role="dialog" aria-modal="true" aria-labelledby="peekTitle">
+    <div class="peek-head"><h3 id="peekTitle"></h3><button type="button" id="peekClose" class="peek-close" aria-label="Close">×</button></div>
+    <div id="peekWhere" class="peek-where"></div>
+    <div id="peekChart" class="peek-chart"></div>
+    <table id="peekTable" class="peek-table"></table>
+    <div class="peek-actions"><button type="button" id="peekTrace">🔍 Trace</button></div>
+  </div>
+</div>
 
 <input type="file" id="fileInput" accept=".fmide,application/json,.json" hidden>
 <input type="file" id="boardFileInput" accept="application/json,.json" hidden>
