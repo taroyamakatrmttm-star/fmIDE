@@ -13,7 +13,9 @@
 // offline). It implements exactly what this tool uses, with the same interface:
 //   XLSX.utils.book_new(), XLSX.utils.book_append_sheet(wb, ws, name),
 //   XLSX.writeFile(wb, fileName)   (download), XLSX.write(wb) -> Uint8Array (bytes)
-// Worksheet object: { 'A1': cell, …, '!ref', '!cols': [{wch}], '!merges': [{s:{r,c},e:{r,c}}] }
+// Worksheet object: { 'A1': cell, …, '!ref', '!cols': [{wch}], '!merges': [{s:{r,c},e:{r,c}}],
+//   '!charts': [{ chart, from: {c, r}, to: {c, r} }] (charts placed between two cells, 0-based) }
+// A chart tab: XLSX.utils.book_append_chartsheet(wb, chart, name). Charts: see chartXml.
 // Cell: { t:'s'|'n'|'z', v, f (formula, no leading '='), z (number format), s (style) }
 //   t:'s' with f  -> a formula with a text result;  t:'z' -> an empty cell (style only).
 //   dataTable: { ref, r1, r2 } on a Data Table's top-left cell (see dataTableXml); its value
@@ -212,7 +214,128 @@ var XLSX = (function(){
       '<worksheet xmlns="' + NS_MAIN + '" xmlns:r="' + NS_REL + '">' +
       '<dimension ref="' + ref + '"/><sheetViews><sheetView workbookViewId="0"/></sheetViews>' +
       '<sheetFormatPr defaultRowHeight="15"/>' + cols + '<sheetData>' + rowXml + '</sheetData>' + merges +
-      '<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/></worksheet>';
+      '<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>' +
+      (chartsOn(ws).length ? '<drawing r:id="rId1"/>' : '') + '</worksheet>';
+  }
+  // The charts placed on a worksheet: [{ chart, from: { c, r }, to: { c, r } }] (0-based cells).
+  function chartsOn(ws){ return Array.isArray(ws && ws['!charts']) ? ws['!charts'].filter(x => x && x.chart && typeof x.chart === 'object') : []; }
+  // A chart tab: { '!chartsheet': true, '!chart': chart } (book_append_chartsheet).
+  function isChartsheet(ws){ return !!(ws && ws['!chartsheet'] && ws['!chart'] && typeof ws['!chart'] === 'object'); }
+  function chartsheetXml(){
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+      '<chartsheet xmlns="' + NS_MAIN + '" xmlns:r="' + NS_REL + '"><sheetPr/><sheetViews><sheetView zoomToFit="1" workbookViewId="0"/></sheetViews>' +
+      '<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/><drawing r:id="rId1"/></chartsheet>';
+  }
+
+  // ---------- charts ----------
+  // A chart (plain data, so a workbook stays JSON):
+  //   { type: 'bar' | 'line', title: { ref, text },
+  //     bar: { dir: 'bar' | 'col', overlap, gapWidth },
+  //     catAxis: { title, reverse }, valAxis: { title, numFmt },
+  //     legend: 'b' | 'r' | 't' | null,
+  //     series: [{ name: { ref, text }, cat: { ref, values: [text|number], numFmt? },
+  //                val: { ref, values: [number|null], numFmt? }, color: 'RRGGBB', marker: bool }] }
+  // `ref` is a cell or range on a sheet ("'Sensitivity'!$B$16:$B$20"); `text` / `values` are
+  // what it holds now (Excel shows them until it recalculates). A ref not shaped like that
+  // leaves the text or values standing alone.
+  const NS_C = 'http://schemas.openxmlformats.org/drawingml/2006/chart';
+  const NS_A = 'http://schemas.openxmlformats.org/drawingml/2006/main';
+  const NS_XDR = 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing';
+  const REF = /^(?:'(?:[^'\u0000-\u001f]|'')+'|[A-Za-z0-9_.]+)!\$?[A-Z]{1,3}\$?[1-9]\d{0,6}(?::\$?[A-Z]{1,3}\$?[1-9]\d{0,6})?$/;
+  const goodRef = (r) => typeof r === 'string' && REF.test(r);
+  const hex = (c) => /^[0-9A-Fa-f]{6}$/.test(String(c || '')) ? String(c).toUpperCase() : null;
+  const finite = (v) => typeof v === 'number' && isFinite(v);
+  function richText(text, rot){
+    return '<c:tx><c:rich><a:bodyPr' + (rot ? ' rot="-5400000" vert="horz"' : '') + '/><a:lstStyle/><a:p><a:pPr><a:defRPr/></a:pPr><a:r><a:rPr lang="en-US"/><a:t>' + esc(text) + '</a:t></a:r></a:p></c:rich></c:tx>';
+  }
+  function strRef(src){
+    const cache = '<c:strCache><c:ptCount val="1"/><c:pt idx="0"><c:v>' + esc(src && src.text != null ? src.text : '') + '</c:v></c:pt></c:strCache>';
+    return goodRef(src && src.ref) ? '<c:strRef><c:f>' + esc(src.ref) + '</c:f>' + cache + '</c:strRef>' : null;
+  }
+  function titleXml(t, rot){
+    if(!t) return '';
+    if(typeof t === 'string') return '<c:title>' + richText(t, rot) + '<c:overlay val="0"/></c:title>';
+    const sr = strRef(t);
+    if(sr) return '<c:title><c:tx>' + sr + '</c:tx><c:overlay val="0"/></c:title>';
+    return t.text ? '<c:title>' + richText(t.text, rot) + '<c:overlay val="0"/></c:title>' : '';
+  }
+  function numData(src, tag){
+    const vals = Array.isArray(src && src.values) ? src.values : [];
+    const pts = vals.map((v, i) => finite(v) ? '<c:pt idx="' + i + '"><c:v>' + v + '</c:v></c:pt>' : '').join('');
+    const cache = '<c:numCache><c:formatCode>' + esc((src && src.numFmt) || 'General') + '</c:formatCode><c:ptCount val="' + vals.length + '"/>' + pts + '</c:numCache>';
+    if(goodRef(src && src.ref)) return '<' + tag + '><c:numRef><c:f>' + esc(src.ref) + '</c:f>' + cache + '</c:numRef></' + tag + '>';
+    return '<' + tag + '><c:numLit>' + cache.slice('<c:numCache>'.length, -'</c:numCache>'.length) + '</c:numLit></' + tag + '>';
+  }
+  function catData(src){
+    const vals = Array.isArray(src && src.values) ? src.values : [];
+    if(vals.every(v => finite(v) || v === null) && vals.some(finite)) return numData(src, 'c:cat');
+    const pts = vals.map((v, i) => '<c:pt idx="' + i + '"><c:v>' + esc(v == null ? '' : v) + '</c:v></c:pt>').join('');
+    const cache = '<c:ptCount val="' + vals.length + '"/>' + pts;
+    if(goodRef(src && src.ref)) return '<c:cat><c:strRef><c:f>' + esc(src.ref) + '</c:f><c:strCache>' + cache + '</c:strCache></c:strRef></c:cat>';
+    return '<c:cat><c:strLit>' + cache + '</c:strLit></c:cat>';
+  }
+  function seriesXml(s, i, type){
+    const color = hex(s.color);
+    const fill = color ? '<a:solidFill><a:srgbClr val="' + color + '"/></a:solidFill>' : '';
+    const sp = type === 'line'
+      ? '<c:spPr><a:ln w="22225" cap="rnd">' + fill + '<a:round/></a:ln></c:spPr>'
+      : (fill ? '<c:spPr>' + fill + '</c:spPr>' : '');
+    const name = s.name ? (strRef(s.name) ? '<c:tx>' + strRef(s.name) + '</c:tx>' : '<c:tx><c:v>' + esc(s.name.text || '') + '</c:v></c:tx>') : '';
+    const marker = type === 'line' ? (s.marker === false ? '<c:marker><c:symbol val="none"/></c:marker>'
+      : '<c:marker><c:symbol val="circle"/><c:size val="5"/>' + (fill ? '<c:spPr>' + fill + '</c:spPr>' : '') + '</c:marker>') : '';
+    return '<c:ser><c:idx val="' + i + '"/><c:order val="' + i + '"/>' + name + sp +
+      (type === 'bar' ? '<c:invertIfNegative val="0"/>' : marker) +
+      catData(s.cat) + numData(s.val, 'c:val') + (type === 'line' ? '<c:smooth val="0"/>' : '') + '</c:ser>';
+  }
+  function chartXml(ch){
+    const type = ch.type === 'line' ? 'line' : 'bar';
+    const series = (Array.isArray(ch.series) ? ch.series : []).map((s, i) => seriesXml(s || {}, i, type)).join('');
+    const bar = ch.bar || {};
+    const cat = ch.catAxis || {}, val = ch.valAxis || {};
+    const horizontal = type === 'bar' && bar.dir !== 'col';
+    const plot = type === 'bar'
+      ? '<c:barChart><c:barDir val="' + (horizontal ? 'bar' : 'col') + '"/><c:grouping val="clustered"/><c:varyColors val="0"/>' + series +
+        '<c:gapWidth val="' + Math.max(0, Math.min(500, Math.round(Number(bar.gapWidth)) || 150)) + '"/>' +
+        '<c:overlap val="' + Math.max(-100, Math.min(100, Math.round(Number(bar.overlap)) || 0)) + '"/>' +
+        '<c:axId val="1001"/><c:axId val="1002"/></c:barChart>'
+      : '<c:lineChart><c:grouping val="standard"/><c:varyColors val="0"/>' + series + '<c:marker val="1"/><c:axId val="1001"/><c:axId val="1002"/></c:lineChart>';
+    // The categories: on the left of a horizontal bar chart (reversed: the first at the top,
+    // the values' axis at the bottom); along the bottom otherwise.
+    const catAx = '<c:catAx><c:axId val="1001"/><c:scaling><c:orientation val="' + (cat.reverse ? 'maxMin' : 'minMax') + '"/></c:scaling>' +
+      '<c:delete val="0"/><c:axPos val="' + (horizontal ? 'l' : 'b') + '"/>' + titleXml(cat.title, horizontal) +
+      '<c:numFmt formatCode="' + esc(cat.numFmt || 'General') + '" sourceLinked="' + (cat.numFmt ? 0 : 1) + '"/>' +
+      '<c:majorTickMark val="out"/><c:minorTickMark val="none"/><c:tickLblPos val="low"/>' +
+      '<c:crossAx val="1002"/><c:crosses val="autoZero"/><c:auto val="1"/><c:lblAlgn val="ctr"/><c:lblOffset val="100"/><c:noMultiLvlLbl val="0"/></c:catAx>';
+    const valAx = '<c:valAx><c:axId val="1002"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/>' +
+      '<c:axPos val="' + (horizontal ? 'b' : 'l') + '"/><c:majorGridlines/>' + titleXml(val.title, !horizontal) +
+      '<c:numFmt formatCode="' + esc(val.numFmt || 'General') + '" sourceLinked="0"/><c:majorTickMark val="out"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/>' +
+      '<c:crossAx val="1001"/><c:crosses val="' + (cat.reverse ? 'max' : 'autoZero') + '"/><c:crossBetween val="between"/></c:valAx>';
+    const legend = ['b', 'r', 't', 'l'].includes(ch.legend) ? '<c:legend><c:legendPos val="' + ch.legend + '"/><c:overlay val="0"/></c:legend>' : '';
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+      '<c:chartSpace xmlns:c="' + NS_C + '" xmlns:a="' + NS_A + '" xmlns:r="' + NS_REL + '"><c:roundedCorners val="0"/>' +
+      '<c:chart>' + titleXml(ch.title) + '<c:autoTitleDeleted val="' + (ch.title ? 0 : 1) + '"/><c:plotArea><c:layout/>' + plot + catAx + valAx + '</c:plotArea>' +
+      legend + '<c:plotVisOnly val="1"/><c:dispBlanksAs val="gap"/></c:chart></c:chartSpace>';
+  }
+  // A drawing: the charts on a worksheet (each between two cells, 0-based) or one filling a
+  // chart tab. `ids` are the drawing's relationship ids for its charts.
+  function graphicFrame(id, rid){
+    return '<xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="' + (id + 1) + '" name="Chart ' + id + '"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr>' +
+      '<xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm><a:graphic><a:graphicData uri="' + NS_C + '">' +
+      '<c:chart xmlns:c="' + NS_C + '" r:id="' + rid + '"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/>';
+  }
+  function drawingXml(anchors){
+    const cellIdx = (n, max) => Math.max(0, Math.min(max, Math.round(Number(n)) || 0));
+    const body = anchors.map((a, i) => {
+      if(a.whole) return '<xdr:absoluteAnchor><xdr:pos x="0" y="0"/><xdr:ext cx="9300000" cy="6000000"/>' + graphicFrame(i + 1, 'rId' + (i + 1)) + '</xdr:absoluteAnchor>';
+      const f = a.from || {}, t = a.to || {};
+      const pt = (p) => '<xdr:col>' + cellIdx(p.c, 16383) + '</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>' + cellIdx(p.r, 1048575) + '</xdr:row><xdr:rowOff>0</xdr:rowOff>';
+      return '<xdr:twoCellAnchor><xdr:from>' + pt(f) + '</xdr:from><xdr:to>' + pt(t) + '</xdr:to>' + graphicFrame(i + 1, 'rId' + (i + 1)) + '</xdr:twoCellAnchor>';
+    }).join('');
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<xdr:wsDr xmlns:xdr="' + NS_XDR + '" xmlns:a="' + NS_A + '" xmlns:r="' + NS_REL + '">' + body + '</xdr:wsDr>';
+  }
+  function relsXml(list){
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="' + NS_PKG_REL + '">' +
+      list.map((r, i) => '<Relationship Id="rId' + (i + 1) + '" Type="' + REL_BASE + r.type + '" Target="' + r.target + '"/>').join('') + '</Relationships>';
   }
 
   // ---------- package ----------
@@ -220,14 +343,41 @@ var XLSX = (function(){
     if(!wb || !Array.isArray(wb.SheetNames) || !wb.SheetNames.length) throw new Error('The workbook has no sheets.');
     const styles = makeStyleTable();
     const n = wb.SheetNames.length;
-    const sheets = wb.SheetNames.map((name, i) => ({ path: 'xl/worksheets/sheet' + (i + 1) + '.xml', xml: sheetXml(wb.Sheets[name] || {}, styles) }));
+    // Worksheets and chart tabs, each numbered in its own folder; then each one's drawing (if
+    // it has charts) and the charts themselves.
+    let wsCount = 0, csCount = 0, drawingCount = 0, chartCount = 0;
+    const extra = [], overrides = [];
+    const sheets = wb.SheetNames.map((name) => {
+      const ws = wb.Sheets[name] || {};
+      const chartsheet = isChartsheet(ws);
+      const sheet = chartsheet
+        ? { path: 'xl/chartsheets/sheet' + (++csCount) + '.xml', xml: chartsheetXml(), type: 'chartsheet', ct: 'spreadsheetml.chartsheet+xml' }
+        : { path: 'xl/worksheets/sheet' + (++wsCount) + '.xml', xml: sheetXml(ws, styles), type: 'worksheet', ct: 'spreadsheetml.worksheet+xml' };
+      const anchors = chartsheet ? [{ whole: true, chart: ws['!chart'] }] : chartsOn(ws);
+      if(anchors.length){
+        const d = ++drawingCount;
+        const dir = sheet.path.slice(0, sheet.path.lastIndexOf('/'));
+        extra.push({ path: dir + '/_rels/' + sheet.path.slice(dir.length + 1) + '.rels', xml: relsXml([{ type: 'drawing', target: '../drawings/drawing' + d + '.xml' }]) });
+        extra.push({ path: 'xl/drawings/drawing' + d + '.xml', xml: drawingXml(anchors) });
+        overrides.push(['/xl/drawings/drawing' + d + '.xml', 'drawing+xml']);
+        const charts = anchors.map(a => {
+          const k = ++chartCount;
+          extra.push({ path: 'xl/charts/chart' + k + '.xml', xml: chartXml(a.chart) });
+          overrides.push(['/xl/charts/chart' + k + '.xml', 'drawingml.chart+xml']);
+          return { type: 'chart', target: '../charts/chart' + k + '.xml' };
+        });
+        extra.push({ path: 'xl/drawings/_rels/drawing' + d + '.xml.rels', xml: relsXml(charts) });
+      }
+      return sheet;
+    });
     const parts = [];
     parts.push({ path: '[Content_Types].xml', xml: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
       '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
       '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
       '<Default Extension="xml" ContentType="application/xml"/>' +
       '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
-      sheets.map(s => '<Override PartName="/' + s.path + '" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('') +
+      sheets.map(s => '<Override PartName="/' + s.path + '" ContentType="application/vnd.openxmlformats-officedocument.' + s.ct + '"/>').join('') +
+      overrides.map(([part, ct]) => '<Override PartName="' + part + '" ContentType="application/vnd.openxmlformats-officedocument.' + ct + '"/>').join('') +
       '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
       '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>' +
       '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>' +
@@ -252,10 +402,11 @@ var XLSX = (function(){
       '</sheets><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>' });
     parts.push({ path: 'xl/_rels/workbook.xml.rels', xml: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
       '<Relationships xmlns="' + NS_PKG_REL + '">' +
-      sheets.map((s, i) => '<Relationship Id="rId' + (i + 1) + '" Type="' + REL_BASE + 'worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>').join('') +
+      sheets.map((s, i) => '<Relationship Id="rId' + (i + 1) + '" Type="' + REL_BASE + s.type + '" Target="' + s.path.slice(3) + '"/>').join('') +
       '<Relationship Id="rId' + (n + 1) + '" Type="' + REL_BASE + 'styles" Target="styles.xml"/>' +
       '</Relationships>' });
-    sheets.forEach(s => parts.push(s));
+    sheets.forEach(s => parts.push({ path: s.path, xml: s.xml }));
+    extra.forEach(x => parts.push(x));
     parts.push({ path: 'xl/styles.xml', xml: styles.toXml() });
     return parts;
   }
@@ -308,7 +459,9 @@ var XLSX = (function(){
   return {
     utils: {
       book_new: () => ({ SheetNames: [], Sheets: {} }),
-      book_append_sheet: (wb, ws, name) => { wb.SheetNames.push(name); wb.Sheets[name] = ws; }
+      book_append_sheet: (wb, ws, name) => { wb.SheetNames.push(name); wb.Sheets[name] = ws; },
+      // A chart tab holding one chart (see chartXml).
+      book_append_chartsheet: (wb, chart, name) => { wb.SheetNames.push(name); wb.Sheets[name] = { '!chartsheet': true, '!chart': chart }; }
     },
     write, writeFile
   };
@@ -808,7 +961,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
 
       <section class="card" id="sensitivityPanel">
         <h2>Sensitivity</h2>
-        <label class="check-line" title="A Sensitivity tab: how much each input you pick moves an output, live in Excel, as a Tornado and a Spider table">
+        <label class="check-line" title="A Sensitivity tab: how much each input you pick moves an output, live in Excel, with a Tornado and a Spider chart">
           <input type="checkbox" id="cfgSensEnabled"> Tornado and Spider
         </label>
         <div id="sensOptions" class="stack">
@@ -821,6 +974,9 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
             <label class="field" title="The period the charts show; in Excel, the Period cell changes it"><span>Period</span><select id="cfgSensPeriod"></select></label>
             <label class="field" title="Points between the base and each of Low and High on the Spider chart"><span>Spider steps</span><input type="number" id="cfgSensSteps" min="1" max="10"></label>
           </div>
+          <label class="field" title="Where the two charts go in the workbook"><span>Charts</span>
+            <select id="cfgSensCharts"><option value="tabs">On their own tabs</option><option value="sheet">On the Sensitivity tab</option></select>
+          </label>
           <div class="sens-group">
             <span class="sens-head">Inputs to move</span>
             <div id="sensVars" class="sens-list"></div>
@@ -8439,7 +8595,10 @@ function buildWorkbook(){
   if(functionUses.size) appendFunctionsSheet(wb, functionUses, HDR);
 
   // Sensitivity tab, after the model's tabs (09g-sensitivity.js).
-  if(sensLay) appendSensitivitySheet(wb, ctx.sens, sensLay, ctx, labels);
+  if(sensLay){
+    const sheet = appendSensitivitySheet(wb, ctx.sens, sensLay, ctx, labels);
+    placeSensitivityCharts(wb, ctx.sens, sensLay, sheet); // the Tornado and Spider charts
+  }
 
   // Scenarios tab (first sheet).
   // With global cases (nCases > 0), following the layout of the workbook it was designed from:
@@ -9735,10 +9894,10 @@ const EXCEL_HELP_TOPICS = [
         'Under Sensitivity, tick Tornado and Spider.',
         'Add the outputs to watch (any rectangle the workbook writes) and pick the period.',
         'Add the inputs to move — one by one, or Add all. For each, choose % (a percentage of its numbers) or amount (added to them), and its Low and High: −10 and +10 means 10% lower and 10% higher, or 10 less and 10 more.',
-        'Spider steps sets how many points lie between the base and each of Low and High.',
+        'Spider steps sets how many points lie between the base and each of Low and High; Charts puts the two charts on their own tabs, or on the Sensitivity tab below its tables.',
         'Press ⬇ Generate .xlsx.',
       ] },
-      { p: 'The workbook gets a Sensitivity tab. Each input you move gets a Base row on the Inputs tab, and its own row becomes the base changed by the Sensitivity tab — by nothing, unless that tab\'s Input moved cell names it, so the model shows its own numbers. An Excel Data Table (What-If Analysis) works the output out with each input at each point, live: change Low, High, Show (1 or 0), the output (C4) or the period (C5) in Excel and the tables follow. The Tornado table sorts the inputs by how much they move the output; the Spider table lists each line.' },
+      { p: 'The workbook gets a Sensitivity tab. Each input you move gets a Base row on the Inputs tab, and its own row becomes the base changed by the Sensitivity tab — by nothing, unless that tab\'s Input moved cell names it, so the model shows its own numbers. An Excel Data Table (What-If Analysis) works the output out with each input at each point, live: change Low, High, Show (1 or 0), the output (C4) or the period (C5) in Excel and the tables follow. The Tornado table sorts the inputs by how much they move the output; the Spider table lists each line. The Tornado chart draws each input\'s Low and High as bars either side of the base, the input that moves the output most at the top; the Spider chart draws each input\'s line. Both follow the tables, so they change with them in Excel.' },
       { tip: 'Keep Input moved (C6) and Point (C7) at 0: the Data Table moves them itself. A check beside C6 says so if it isn\'t 0.' },
       { p: 'Inputs inside a block can\'t be moved (every copy of the block shares them), and only inputs gathered on the Inputs tab can. A Data Table works the whole model out once for each cell, so on a large model Excel may take a moment; Excel\'s Formulas → Calculation Options → Automatic except for data tables pauses it (press F9 to work it out).' },
       { see: ['inputs-tab', 'scenarios'] },
@@ -9809,6 +9968,19 @@ const EXCEL_HELP_TOPICS = [
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'sensitivity-charts', date: '2026-10-08', title: 'The Tornado and Spider charts',
+    summary: 'The Sensitivity tab now comes with a Tornado chart and a Spider chart, on their own tabs or on the Sensitivity tab.',
+    what: [
+      'The Tornado chart draws each input\'s Low and High as bars either side of the base, the input that moves the output most at the top. The Spider chart draws each input\'s line from Low through the base to High.',
+      'Both read the Sensitivity tab\'s tables, so they change in Excel with the output, the period, Low, High and Show.',
+    ],
+    why: 'A picture shows at a glance which assumptions matter most.',
+    how: [
+      'Under Sensitivity, choose where the charts go: On their own tabs, or On the Sensitivity tab.',
+      'Press ⬇ Generate .xlsx.',
+    ],
+    see: ['sensitivity'] },
+
   { id: 'sensitivity', date: '2026-10-08', title: 'Sensitivity: how much each input moves an output',
     summary: 'A Sensitivity tab moves each input you pick from Low to High and shows the effect on an output, live in Excel.',
     what: [
@@ -10754,6 +10926,76 @@ function appendSensitivitySheet(wb, plan, lay, ctx, labels){
   return { ws, cached };
 
   function calcCenter(){ return roleCellStyle('Calculations', CENTER); }
+}
+
+// ---------- The charts (phase B) ----------
+// The Tornado: a horizontal bar per input shown, its Low and High against the base, largest
+// swing at the top. The Spider: a line per input shown, through every point. Both read the
+// Sensitivity tab's tables (live), with fmIDE's numbers as what they show before Excel
+// recalculates. On their own tabs (chart tabs) or on the Sensitivity tab, as chosen.
+const SENS_SPIDER_COLOURS = ['2563EB', 'DC2626', '16A34A', 'D97706', '7C3AED', '0891B2', 'DB2777', '65A30D', '475569', 'EA580C'];
+function sensitivityCharts(plan, lay, cached){
+  const S = lay.sheetName, L = (n) => colLetter(n);
+  const fmt = mapping.cfg.fallbackFormat || 'General';
+  const ref = (col, r1, r2) => "'" + S.replace(/'/g, "''") + "'!$" + L(col) + '$' + r1 + (r2 ? ':$' + L(col) + '$' + r2 : '');
+  const rowRef = (r, c1, c2) => "'" + S.replace(/'/g, "''") + "'!$" + L(c1) + '$' + r + ':$' + L(c2) + '$' + r;
+  const V = lay.V, th = lay.tornadoHead, sh = lay.spiderHead;
+  const steps = plan.steps, points = sensPoints(steps);
+  // What the tables show now: fmIDE's numbers, sorted as the Rank column sorts them.
+  const label = (v) => {
+    const s = (x) => (x > 0 ? '+' : '') + x + (v.spec.by === 'percent' ? '%' : '');
+    return (v.source.label || '') + ' (' + s(v.spec.low) + ' / ' + s(v.spec.high) + ')';
+  };
+  const rows = plan.variables.map((v, i) => {
+    const t = cached.table[i], b = t[steps];
+    const low = t[0] !== null && b !== null ? t[0] - b : null;
+    const high = t[t.length - 1] !== null && b !== null ? t[t.length - 1] - b : null;
+    return { i, label: label(v), low, high, swing: Math.abs(low || 0) + Math.abs(high || 0) };
+  }).sort((a, b) => (b.swing - a.swing) || (a.i - b.i));
+  const tornado = {
+    type: 'bar', title: { ref: ref(3, 9), text: 'Tornado - ' + (plan.outputs[0].label || '') },
+    bar: { dir: 'bar', overlap: 100, gapWidth: 40 },
+    catAxis: { reverse: true }, valAxis: { title: 'Change from the base', numFmt: fmt },
+    legend: 'b',
+    series: [['Low vs base', 3, 'low', 'C0504D'], ['High vs base', 4, 'high', '4F81BD']].map(([name, col, key, color]) => ({
+      name: { ref: ref(col, th), text: name },
+      cat: { ref: ref(2, th + 1, th + V), values: rows.map(r => r.label) },
+      val: { ref: ref(col, th + 1, th + V), values: rows.map(r => r[key]), numFmt: fmt },
+      color })),
+  };
+  const spider = {
+    type: 'line', title: { ref: ref(3, 10), text: 'Spider - ' + (plan.outputs[0].label || '') },
+    catAxis: { title: 'Share of each input\'s Low (−) / High (+)', numFmt: '+0%;-0%;0%' },
+    valAxis: { title: 'Output', numFmt: fmt },
+    legend: 'r',
+    series: plan.variables.map((v, i) => ({
+      name: { ref: ref(2, sh + 1 + i), text: v.source.label || '' },
+      cat: { ref: rowRef(sh, SENS_COL.firstPoint, lay.lastPoint), values: points.map(p => p / steps), numFmt: '+0%;-0%;0%' },
+      val: { ref: rowRef(sh + 1 + i, SENS_COL.firstPoint, lay.lastPoint), values: cached.table[i], numFmt: fmt },
+      color: SENS_SPIDER_COLOURS[i % SENS_SPIDER_COLOURS.length] })),
+  };
+  return { tornado, spider };
+}
+
+// Puts the two charts where the person chose: each on its own chart tab after the
+// Sensitivity tab, or on that tab below the Spider table, side by side.
+function placeSensitivityCharts(wb, plan, lay, sheet){
+  const { tornado, spider } = sensitivityCharts(plan, lay, sheet.cached);
+  if(plan.charts === 'sheet'){
+    const top = lay.spiderHead + lay.V + 2; // 0-based: two rows below the Spider table
+    sheet.ws['!charts'] = [
+      { chart: tornado, from: { c: 0, r: top }, to: { c: 6, r: top + 24 } },
+      { chart: spider, from: { c: 7, r: top }, to: { c: SENS_COL.firstPoint + 2 * plan.steps, r: top + 24 } },
+    ];
+    sheet.ws['!ref'] = 'A1:' + colLetter(lay.cols.rank) + (top + 25);
+    return [];
+  }
+  const taken = wb.SheetNames.slice();
+  const tName = addedTabName('Tornado', taken);
+  XLSX.utils.book_append_chartsheet(wb, tornado, tName);
+  const sName = addedTabName('Spider', taken.concat([tName]));
+  XLSX.utils.book_append_chartsheet(wb, spider, sName);
+  return [tName, sName];
 }
 
 // ---------- The panel (sidebar: Sensitivity) ----------

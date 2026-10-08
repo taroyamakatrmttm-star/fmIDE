@@ -127,6 +127,45 @@ test.describe('the Excel writer, in Node', () => {
     await book.xlsx.load(Buffer.from(bytes));
     expect(book.getWorksheet('S').getCell('O16').value).toBe(12);
   });
+
+  test('charts (step 16): on a worksheet between two cells, and on a chart tab; text escaped, odd references dropped', async () => {
+    const wb = XLSX.utils.book_new();
+    const bar = { type: 'bar', title: { ref: "'S 1'!$A$1", text: 'T <&>' }, bar: { dir: 'bar', overlap: 100, gapWidth: 40 },
+      catAxis: { reverse: true }, valAxis: { title: 'Change', numFmt: '#,##0' }, legend: 'b',
+      series: [{ name: { ref: "'S 1'!$B$1", text: 'Low' }, cat: { ref: "'S 1'!$A$2:$A$3", values: ['a', 'b'] },
+        val: { ref: "'S 1'!$B$2:$B$3", values: [-5, null] }, color: 'C0504D' }] };
+    const line = { type: 'line', title: 'Spider', legend: 'r',
+      series: [{ name: { ref: 'not a ref', text: 'x' }, cat: { ref: "S!A1:B1')", values: [-1, 1] }, val: { values: [1, 2] }, color: 'nothex' }] };
+    XLSX.utils.book_append_sheet(wb, { A1: { t: 's', v: 'T' }, '!charts': [{ chart: bar, from: { c: 3, r: 0 }, to: { c: 9, r: 15 } }] }, 'S 1');
+    XLSX.utils.book_append_chartsheet(wb, line, 'Spider');
+    const bytes = XLSX.write(wb);
+    const zip = await JSZip.loadAsync(bytes, { checkCRC32: true });
+    const part = (p) => zip.file(p).async('string');
+    expect(Object.keys(zip.files).filter(k => !zip.files[k].dir).sort()).toEqual(['[Content_Types].xml', '_rels/.rels', 'docProps/app.xml', 'docProps/core.xml',
+      'xl/_rels/workbook.xml.rels', 'xl/charts/chart1.xml', 'xl/charts/chart2.xml', 'xl/chartsheets/_rels/sheet1.xml.rels', 'xl/chartsheets/sheet1.xml',
+      'xl/drawings/_rels/drawing1.xml.rels', 'xl/drawings/_rels/drawing2.xml.rels', 'xl/drawings/drawing1.xml', 'xl/drawings/drawing2.xml',
+      'xl/styles.xml', 'xl/workbook.xml', 'xl/worksheets/_rels/sheet1.xml.rels', 'xl/worksheets/sheet1.xml'].sort());
+    expect(await part('xl/worksheets/sheet1.xml')).toContain('<drawing r:id="rId1"/></worksheet>');
+    const d1 = await part('xl/drawings/drawing1.xml');
+    expect(d1).toContain('<xdr:from><xdr:col>3</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row>');
+    expect(await part('xl/drawings/drawing2.xml')).toContain('<xdr:absoluteAnchor>');
+    const c1 = await part('xl/charts/chart1.xml');
+    expect(c1).toContain("<c:f>'S 1'!$A$1</c:f>");
+    expect(c1).toContain('<c:v>T &lt;&amp;&gt;</c:v>');
+    expect(c1).toContain('<c:barDir val="bar"/><c:grouping val="clustered"/>');
+    expect(c1).toContain('<c:ptCount val="2"/><c:pt idx="0"><c:v>-5</c:v></c:pt></c:numCache>'); // the empty point left out
+    expect(c1).toContain('<a:srgbClr val="C0504D"/>');
+    expect(c1).toContain('<c:crosses val="max"/>');
+    const c2 = await part('xl/charts/chart2.xml');
+    expect(c2).toContain('<c:lineChart>');
+    expect(c2).not.toContain('<c:f>'); // no reference shaped like one: the values stand alone
+    expect(c2).toContain('<c:numLit>');
+    expect(c2).not.toContain('srgbClr');
+    expect(await part('xl/_rels/workbook.xml.rels')).toContain('relationships/chartsheet" Target="chartsheets/sheet1.xml"');
+    const book = new ExcelJS.Workbook();
+    await book.xlsx.load(Buffer.from(bytes));
+    expect(book.getWorksheet('S 1').getCell('A1').value).toBe('T');
+  });
 });
 
 // ---------- the expression parser ----------

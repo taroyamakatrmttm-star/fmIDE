@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: the Tornado and Spider charts
+- The Sensitivity tab comes with a **Tornado** chart (each input's Low and High as bars either side of the base, the largest at the top) and a **Spider** chart (each input's line from Low to High), reading its tables, so they follow every change in Excel. **Charts** in the Sensitivity panel puts them on their own tabs or on the Sensitivity tab.
+- ExcelExporter's own Excel writer writes bar and line charts, and chart tabs. No library was added.
+
 ## ExcelExporter: Sensitivity — the Tornado and Spider tables, live in Excel
 - A **Sensitivity** panel (under Inputs & scenarios): pick the outputs to watch, the period, and the inputs to move — each by a **%** or an **amount**, from its Low to its High.
 - The workbook gets a **Sensitivity** tab: an Excel **Data Table** (What-If Analysis) works the output out with each input at each point from Low through the base to High, live; the **Tornado** table sorts the inputs by how much they move it, the **Spider** table lists each one's line. The output, the period, Low, High and which inputs show can all be changed in Excel. fmIDE's own numbers are written into the table too.

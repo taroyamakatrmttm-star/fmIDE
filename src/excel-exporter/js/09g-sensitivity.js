@@ -340,6 +340,76 @@ function appendSensitivitySheet(wb, plan, lay, ctx, labels){
   function calcCenter(){ return roleCellStyle('Calculations', CENTER); }
 }
 
+// ---------- The charts (phase B) ----------
+// The Tornado: a horizontal bar per input shown, its Low and High against the base, largest
+// swing at the top. The Spider: a line per input shown, through every point. Both read the
+// Sensitivity tab's tables (live), with fmIDE's numbers as what they show before Excel
+// recalculates. On their own tabs (chart tabs) or on the Sensitivity tab, as chosen.
+const SENS_SPIDER_COLOURS = ['2563EB', 'DC2626', '16A34A', 'D97706', '7C3AED', '0891B2', 'DB2777', '65A30D', '475569', 'EA580C'];
+function sensitivityCharts(plan, lay, cached){
+  const S = lay.sheetName, L = (n) => colLetter(n);
+  const fmt = mapping.cfg.fallbackFormat || 'General';
+  const ref = (col, r1, r2) => "'" + S.replace(/'/g, "''") + "'!$" + L(col) + '$' + r1 + (r2 ? ':$' + L(col) + '$' + r2 : '');
+  const rowRef = (r, c1, c2) => "'" + S.replace(/'/g, "''") + "'!$" + L(c1) + '$' + r + ':$' + L(c2) + '$' + r;
+  const V = lay.V, th = lay.tornadoHead, sh = lay.spiderHead;
+  const steps = plan.steps, points = sensPoints(steps);
+  // What the tables show now: fmIDE's numbers, sorted as the Rank column sorts them.
+  const label = (v) => {
+    const s = (x) => (x > 0 ? '+' : '') + x + (v.spec.by === 'percent' ? '%' : '');
+    return (v.source.label || '') + ' (' + s(v.spec.low) + ' / ' + s(v.spec.high) + ')';
+  };
+  const rows = plan.variables.map((v, i) => {
+    const t = cached.table[i], b = t[steps];
+    const low = t[0] !== null && b !== null ? t[0] - b : null;
+    const high = t[t.length - 1] !== null && b !== null ? t[t.length - 1] - b : null;
+    return { i, label: label(v), low, high, swing: Math.abs(low || 0) + Math.abs(high || 0) };
+  }).sort((a, b) => (b.swing - a.swing) || (a.i - b.i));
+  const tornado = {
+    type: 'bar', title: { ref: ref(3, 9), text: 'Tornado - ' + (plan.outputs[0].label || '') },
+    bar: { dir: 'bar', overlap: 100, gapWidth: 40 },
+    catAxis: { reverse: true }, valAxis: { title: 'Change from the base', numFmt: fmt },
+    legend: 'b',
+    series: [['Low vs base', 3, 'low', 'C0504D'], ['High vs base', 4, 'high', '4F81BD']].map(([name, col, key, color]) => ({
+      name: { ref: ref(col, th), text: name },
+      cat: { ref: ref(2, th + 1, th + V), values: rows.map(r => r.label) },
+      val: { ref: ref(col, th + 1, th + V), values: rows.map(r => r[key]), numFmt: fmt },
+      color })),
+  };
+  const spider = {
+    type: 'line', title: { ref: ref(3, 10), text: 'Spider - ' + (plan.outputs[0].label || '') },
+    catAxis: { title: 'Share of each input\'s Low (−) / High (+)', numFmt: '+0%;-0%;0%' },
+    valAxis: { title: 'Output', numFmt: fmt },
+    legend: 'r',
+    series: plan.variables.map((v, i) => ({
+      name: { ref: ref(2, sh + 1 + i), text: v.source.label || '' },
+      cat: { ref: rowRef(sh, SENS_COL.firstPoint, lay.lastPoint), values: points.map(p => p / steps), numFmt: '+0%;-0%;0%' },
+      val: { ref: rowRef(sh + 1 + i, SENS_COL.firstPoint, lay.lastPoint), values: cached.table[i], numFmt: fmt },
+      color: SENS_SPIDER_COLOURS[i % SENS_SPIDER_COLOURS.length] })),
+  };
+  return { tornado, spider };
+}
+
+// Puts the two charts where the person chose: each on its own chart tab after the
+// Sensitivity tab, or on that tab below the Spider table, side by side.
+function placeSensitivityCharts(wb, plan, lay, sheet){
+  const { tornado, spider } = sensitivityCharts(plan, lay, sheet.cached);
+  if(plan.charts === 'sheet'){
+    const top = lay.spiderHead + lay.V + 2; // 0-based: two rows below the Spider table
+    sheet.ws['!charts'] = [
+      { chart: tornado, from: { c: 0, r: top }, to: { c: 6, r: top + 24 } },
+      { chart: spider, from: { c: 7, r: top }, to: { c: SENS_COL.firstPoint + 2 * plan.steps, r: top + 24 } },
+    ];
+    sheet.ws['!ref'] = 'A1:' + colLetter(lay.cols.rank) + (top + 25);
+    return [];
+  }
+  const taken = wb.SheetNames.slice();
+  const tName = addedTabName('Tornado', taken);
+  XLSX.utils.book_append_chartsheet(wb, tornado, tName);
+  const sName = addedTabName('Spider', taken.concat([tName]));
+  XLSX.utils.book_append_chartsheet(wb, spider, sName);
+  return [tName, sName];
+}
+
 // ---------- The panel (sidebar: Sensitivity) ----------
 // Text only (names come from the loaded file): textContent everywhere.
 function renderSensitivity(){
