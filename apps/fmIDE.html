@@ -1911,6 +1911,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         { p: 'A rectangle can have several plugs.' },
         { p: 'When more than one plug feeds a socket, their values are added together. The socket shows ⚡ name ×2 in amber as a warning, since that can double a number by accident.' },
         { p: 'Plugs and sockets are how the canvases built by a recipe connect.' },
+        { p: 'A socket nothing is plugged into gives 0, as in Excel, so what reads it still works out. A rectangle fed only by such an operator is an input: it uses its own number.' },
         { see: ['canvases', 'recipes'] },
       ] },
 
@@ -2395,6 +2396,20 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // entry: ids, dates in order, commands and topics that exist.
   // **A change people will notice adds its entry here in the same pull request.**
   const WHATS_NEW = [
+
+    { id: 'empty-operator-zero', date: '2026-10-08', title: 'An empty socket counts as 0',
+      summary: 'An operator with nothing wired into it gives 0, as in Excel, instead of "?" spreading through the model.',
+      what: [
+        'An operator with nothing wired into it, such as a socket nothing is plugged into yet, now gives 0. Before, it showed "?", and so did everything that read it, all the way down to totals on other canvases.',
+        'Excel already wrote such an operator as 0, so fmIDE, fmGraph and the workbook now agree, and ExcelExporter no longer lists it under "differs from fmIDE".',
+        'A rectangle fed only by such an operator is still an input and uses its own number, as before; so is a block\'s input fed by one.',
+      ],
+      why: 'A model built from templates often has sockets nothing feeds yet (a cost line the business doesn\'t have). One of them made a whole statement, and every fmGraph bar reading it, show "?".',
+      how: [
+        'Nothing to do: open the model, and the rectangles that showed "?" because of an empty socket show their numbers.',
+      ],
+      notes: ['A recipe still warns about sockets nothing feeds when it builds, so you can see which are empty.', 'Dividing by an empty operator is still an error, as in Excel (#DIV/0!).'],
+      see: ['plugs-sockets', 'operators'] },
 
     { id: 'share-in-library', date: '2026-10-04', title: 'Share your pack with everyone, step by step',
       summary: 'A new Share in the Community Library… window and a step-by-step guide, for people who have never used GitHub.',
@@ -8242,6 +8257,13 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     const TOP_HOPS = [];
     const TOP = () => ({ prefix: '', bindings: {}, hops: TOP_HOPS });
     const rawCanvasOf = (id) => { const c = ir.canvases.get(id); return c ? c.raw : undefined; };
+    // Whether nothing feeds a node (the shared input rule's feedsNothing), worked out once each.
+    const fedByNothing = new Map();
+    const feedsNothingIn = (canvasId, nodeId) => {
+      const k = canvasId + '|' + nodeId;
+      if(!fedByNothing.has(k)) fedByNothing.set(k, feedsNothing(rawCanvasOf(canvasId), nodeId, new Set()));
+      return fedByNothing.get(k);
+    };
     const bad = (v) => v === null || v === undefined || Number.isNaN(v);
     const has = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
     const valueKey = (period, canvasId, scope, nodeId) => period + '|' + canvasId + '|' + scope.prefix + nodeId;
@@ -8318,14 +8340,17 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
           } else {
             const inEdge = binding ? binding.edge : null;
             const bindPeriod = (binding && typeof binding.fixedPeriod === 'number') ? binding.fixedPeriod : period;
-            const bound = inEdge ? resolveEdge(scope.outerCanvasId, inEdge, bindPeriod, scope.outerScope, visiting) : null;
-            if(!bad(bound)){
+            // Nothing feeds the port (it is an input of the instance — an operator with nothing
+            // wired in gives 0, but the port is still an input): the port's own typed number, or 0.
+            const unfed = !inEdge || feedsNothingIn(scope.outerCanvasId, inEdge.from);
+            const bound = unfed ? null : resolveEdge(scope.outerCanvasId, inEdge, bindPeriod, scope.outerScope, visiting);
+            if(unfed){
+              result = literalOrZero(n, period);
+            } else if(!bad(bound)){
               result = bound;
-            } else if(!inEdge || feedsNothing(rawCanvasOf(scope.outerCanvasId), inEdge.from, new Set())
-              || reachesOutsideTimeline(rawCanvasOf, scope.outerCanvasId, inEdge.from, bindPeriod, periodCount)){
-              // Nothing feeds the port (it is an input of the instance), or what feeds it needs
-              // a period outside the timeline: the port's own typed number, or 0 — as for any
-              // wired rectangle. Any other failure shows as an error.
+            } else if(reachesOutsideTimeline(rawCanvasOf, scope.outerCanvasId, inEdge.from, bindPeriod, periodCount)){
+              // What feeds it needs a period outside the timeline: the port's own typed number,
+              // or 0 — as for any wired rectangle. Any other failure shows as an error.
               result = literalOrZero(n, period);
             } else if(!errors[key]){
               errors[key] = 'missing-input';
@@ -8446,7 +8471,9 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
             }
           }
         } else if(inputs.length === 0){
-          errors[key] = 'no-input';
+          // Nothing wired in (e.g. a socket nothing is plugged into): 0, as ExcelExporter
+          // writes it, so what it feeds still works out.
+          result = 0;
         } else {
           const values = inputs.map(e => resolveEdge(canvasId, e, period, scope, visiting));
           const failed = values.findIndex(bad);

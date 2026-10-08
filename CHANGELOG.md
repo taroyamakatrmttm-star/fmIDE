@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmIDE and fmGraph: an operator with nothing wired in gives 0
+- An operator with nothing wired into it (such as a socket nothing is plugged into) gives **0** in the shared calculation, as ExcelExporter always wrote it, instead of "?" — which spread to everything reading it, up to totals on other canvases and the fmGraph bars showing them. fmIDE, fmGraph and the workbook now agree; ExcelExporter no longer lists such operators under "differs from fmIDE".
+- A rectangle, or a block's input, fed only by such an operator is still an input and uses its own number. Operators with named inputs (`if`, `choose`, the rounding ones) with an input missing are still errors, as in Excel.
+
 ## fmIDE: a quick menu choice after cancelling an arrow by touch
 - On a touchscreen, after a tap on empty canvas cancels **Draw arrow from here**, a node's menu chosen straight away (within 0.8 s) works again; before, that choice was silently ignored.
 

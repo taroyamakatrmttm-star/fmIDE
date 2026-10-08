@@ -1,0 +1,32 @@
+{
+ "Income": {
+  "neg": {"values":[-1,-1,-1]},
+  "sockCogs": {"values":[0,0,0]},
+  "mulCogs": {"values":[0,0,0]},
+  "cogs": {"values":[0,0,0]},
+  "rev": {"values":[100,100,100]},
+  "gpOp": {"values":[100,100,100]},
+  "gp": {"values":[100,100,100]},
+  "emptyMinus": {"values":[0,0,0]},
+  "subOp": {"values":[100,100,100]},
+  "revLessEmpty": {"values":[100,100,100]},
+  "five": {"values":[5,5,5]},
+  "emptyMin": {"values":[0,0,0]},
+  "minOp": {"values":[0,0,0]},
+  "minRes": {"values":[0,0,0]},
+  "sockPrice": {"values":[0,0,0]},
+  "price": {"values":[7,7,7]},
+  "ten": {"values":[10,10,10]},
+  "emptyDiv": {"values":[0,0,0]},
+  "divOp": {"values":["error: operator ÷ has no value: Invalid result (e.g. divide by zero)..","error: operator ÷ has no value: Invalid result (e.g. divide by zero)..","error: operator ÷ has no value: Invalid result (e.g. divide by zero).."]},
+  "divRes": {"values":["error: \"Ten over nothing\" has no value: One of this operator's inputs could not be computed..","error: \"Ten over nothing\" has no value: One of this operator's inputs could not be computed..","error: \"Ten over nothing\" has no value: One of this operator's inputs could not be computed.."]},
+  "lonely": {"values":[0,0,0]},
+  "fedLonely": {"values":[3,3,3]}
+ },
+ "Totals": {
+  "aGp": {"values":[100,100,100]},
+  "aCogs": {"values":[0,0,0]},
+  "totOp": {"values":[100,100,100]},
+  "tot": {"values":[100,100,100]}
+ }
+}

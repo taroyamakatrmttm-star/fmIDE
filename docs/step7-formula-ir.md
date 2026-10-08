@@ -106,7 +106,7 @@ What was built:
   - **Loops and self-containing blocks:** a loop of operators, aliases or period shifts with no row to break it, and a block inside itself, now read 0 instead of recursing forever.
   - **Ports outside the timeline:** a port whose source needs a period outside the timeline writes the port's typed number, as fmIDE does.
 - **The check before download** (`src/excel-exporter/js/09b-differences.js`, panel `#differencesPanel`):
-  - A quick look at the IR decides whether anything could make fmIDE show "?" where Excel writes 0 or a blank: an alias to nothing, a missing canvas or rectangle, two arrows into a rectangle, a period shift without one input, an operator with no inputs, a missing block or block output, a block inside itself, an arrow from a missing node, or a loop (found by a search that doesn't count period shifts to another period).
+  - A quick look at the IR decides whether anything could make fmIDE show "?" where Excel writes 0 or a blank: an alias to nothing, a missing canvas or rectangle, two arrows into a rectangle, a period shift without one input, a missing block or block output, a block inside itself, an arrow from a missing node, or a loop (found by a search that doesn't count period shifts to another period).
   - Only if it finds something does it run fmIDE's calculation with `trace` and `instances`.
   - It then lists every row (block-instance rows included) where fmIDE shows "?" because of one of those, with the periods, where it starts, and whether Excel writes 0 or leaves the cell blank. Errors Excel shows too (a divide by zero) are not listed.
   - Text from the file is shown with `textContent`.
@@ -464,3 +464,7 @@ How it was checked:
 
   ExcelExporter's Generate gets a little faster too (it calculates the model for its check): 719 → 506 ms at 24 periods. The rest of its time, and what is left of fmIDE's growth, is the vertical blocks, which really do run once per period inside every period.
 - **Memory:** the results of every period are kept until the calculation ends — about half a million small entries for the large model at 60 periods.
+
+## An operator with nothing wired in (8 October 2026)
+
+At the owner's request, an operator with nothing wired into it (no named inputs — `+`, `×`, `min`…; for example a socket nothing is plugged into) gives **0** in the shared calculation, as ExcelExporter always wrote it. Before, it was the error `no-input`, which spread to everything reading it (one empty socket could make a whole statement, and every fmGraph bar reading it, show "?"). A rectangle fed only by such an operator is still an input (the shared input rule, `feedsNothing`), and so is a block's Input port fed by one: it uses its own typed number, checked before the operator's 0 is read. `if`, `choose` and the rounding operators with an input missing are unchanged (an error in both apps). ExcelExporter's differences list no longer looks for empty operators. Tests: the agreement sample `agreement/empty-operators.json` (groups 17, 18, 19, 47).

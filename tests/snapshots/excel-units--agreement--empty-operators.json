@@ -1,0 +1,22 @@
+{
+ "Income": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Price"},
+  "A6": {"v":"Fed by lonely times"},
+  "A7": {"v":"Negative one"},
+  "A8": {"v":"Revenue"},
+  "A9": {"v":"Five"},
+  "A10": {"v":"Ten"},
+  "A12": {"v":"CALCULATIONS"},
+  "A13": {"v":"COGS"},
+  "A15": {"v":"OUTPUTS"},
+  "A16": {"v":"Gross Profit"},
+  "A17": {"v":"Revenue less nothing"},
+  "A18": {"v":"Min with nothing"},
+  "A19": {"v":"Ten over nothing"}
+ },
+ "Totals": {
+  "A4": {"v":"OUTPUTS"},
+  "A5": {"v":"Gross Profit plus COGS"}
+ }
+}

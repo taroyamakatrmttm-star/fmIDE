@@ -1860,6 +1860,13 @@ function evaluateModel(ir, options){
   const TOP_HOPS = [];
   const TOP = () => ({ prefix: '', bindings: {}, hops: TOP_HOPS });
   const rawCanvasOf = (id) => { const c = ir.canvases.get(id); return c ? c.raw : undefined; };
+  // Whether nothing feeds a node (the shared input rule's feedsNothing), worked out once each.
+  const fedByNothing = new Map();
+  const feedsNothingIn = (canvasId, nodeId) => {
+    const k = canvasId + '|' + nodeId;
+    if(!fedByNothing.has(k)) fedByNothing.set(k, feedsNothing(rawCanvasOf(canvasId), nodeId, new Set()));
+    return fedByNothing.get(k);
+  };
   const bad = (v) => v === null || v === undefined || Number.isNaN(v);
   const has = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
   const valueKey = (period, canvasId, scope, nodeId) => period + '|' + canvasId + '|' + scope.prefix + nodeId;
@@ -1936,14 +1943,17 @@ function evaluateModel(ir, options){
         } else {
           const inEdge = binding ? binding.edge : null;
           const bindPeriod = (binding && typeof binding.fixedPeriod === 'number') ? binding.fixedPeriod : period;
-          const bound = inEdge ? resolveEdge(scope.outerCanvasId, inEdge, bindPeriod, scope.outerScope, visiting) : null;
-          if(!bad(bound)){
+          // Nothing feeds the port (it is an input of the instance — an operator with nothing
+          // wired in gives 0, but the port is still an input): the port's own typed number, or 0.
+          const unfed = !inEdge || feedsNothingIn(scope.outerCanvasId, inEdge.from);
+          const bound = unfed ? null : resolveEdge(scope.outerCanvasId, inEdge, bindPeriod, scope.outerScope, visiting);
+          if(unfed){
+            result = literalOrZero(n, period);
+          } else if(!bad(bound)){
             result = bound;
-          } else if(!inEdge || feedsNothing(rawCanvasOf(scope.outerCanvasId), inEdge.from, new Set())
-            || reachesOutsideTimeline(rawCanvasOf, scope.outerCanvasId, inEdge.from, bindPeriod, periodCount)){
-            // Nothing feeds the port (it is an input of the instance), or what feeds it needs
-            // a period outside the timeline: the port's own typed number, or 0 — as for any
-            // wired rectangle. Any other failure shows as an error.
+          } else if(reachesOutsideTimeline(rawCanvasOf, scope.outerCanvasId, inEdge.from, bindPeriod, periodCount)){
+            // What feeds it needs a period outside the timeline: the port's own typed number,
+            // or 0 — as for any wired rectangle. Any other failure shows as an error.
             result = literalOrZero(n, period);
           } else if(!errors[key]){
             errors[key] = 'missing-input';
@@ -2064,7 +2074,9 @@ function evaluateModel(ir, options){
           }
         }
       } else if(inputs.length === 0){
-        errors[key] = 'no-input';
+        // Nothing wired in (e.g. a socket nothing is plugged into): 0, as ExcelExporter
+        // writes it, so what it feeds still works out.
+        result = 0;
       } else {
         const values = inputs.map(e => resolveEdge(canvasId, e, period, scope, visiting));
         const failed = values.findIndex(bad);
@@ -6562,6 +6574,17 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'empty-operator-zero', date: '2026-10-08', title: 'Bars no longer stop at an empty socket',
+    summary: 'An operator with nothing wired into it gives 0, as in Excel, so the bars reading it show numbers and follow the sliders.',
+    what: [
+      'In a model where a socket has nothing plugged into it, everything reading that socket showed "!" (something it reads could not be worked out), often up to the totals, such as Total Asset. Now the empty operator gives 0, as Excel writes it, and those bars show their numbers and move with the sliders.',
+      'fmIDE calculates the same way, so fmGraph still shows exactly fmIDE\'s numbers.',
+    ],
+    why: 'A model built from templates often has sockets nothing feeds yet; one of them was enough to stop a whole board.',
+    how: ['Nothing to do: open the model again (or ↻ From fmIDE).'],
+    notes: [],
+    see: ['bars'] },
+
   { id: 'share-board-library', date: '2026-10-04', title: 'Sharing a board with everyone',
     summary: 'A Help topic on how a board reaches the community library, on its template.',
     what: ['Help has a new topic, "Sharing a board with everyone": attach the board to its template, then save and share the pack from fmIDE, whose Help takes you through every step, with no GitHub experience needed.'],

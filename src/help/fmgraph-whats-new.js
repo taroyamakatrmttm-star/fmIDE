@@ -8,6 +8,17 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'empty-operator-zero', date: '2026-10-08', title: 'Bars no longer stop at an empty socket',
+    summary: 'An operator with nothing wired into it gives 0, as in Excel, so the bars reading it show numbers and follow the sliders.',
+    what: [
+      'In a model where a socket has nothing plugged into it, everything reading that socket showed "!" (something it reads could not be worked out), often up to the totals, such as Total Asset. Now the empty operator gives 0, as Excel writes it, and those bars show their numbers and move with the sliders.',
+      'fmIDE calculates the same way, so fmGraph still shows exactly fmIDE\'s numbers.',
+    ],
+    why: 'A model built from templates often has sockets nothing feeds yet; one of them was enough to stop a whole board.',
+    how: ['Nothing to do: open the model again (or ↻ From fmIDE).'],
+    notes: [],
+    see: ['bars'] },
+
   { id: 'share-board-library', date: '2026-10-04', title: 'Sharing a board with everyone',
     summary: 'A Help topic on how a board reaches the community library, on its template.',
     what: ['Help has a new topic, "Sharing a board with everyone": attach the board to its template, then save and share the pack from fmIDE, whose Help takes you through every step, with no GitHub experience needed.'],

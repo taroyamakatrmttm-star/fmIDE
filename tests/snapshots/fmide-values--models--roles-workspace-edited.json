@@ -4,7 +4,7 @@
   "n20": {"values":[5]},
   "n21": {"values":[50]},
   "n22": {"values":[50]},
-  "n26": {"values":["error: operator + has no value: This operator has nothing connected to it.."]},
+  "n26": {"values":[0]},
   "n27": {"values":[0]}
  }
 }

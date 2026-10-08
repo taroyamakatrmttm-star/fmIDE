@@ -192,6 +192,24 @@ test('edge cases: fmIDE gives the agreed answers', async ({ page }) => {
   expect(v['Fed by empty iferror']).toEqual([5, 5, 5]);
 });
 
+// An operator with nothing wired in (a socket nothing is plugged into) is 0 in both apps, so
+// what reads it works out — here COGS = Negative one × an empty socket, read on another canvas
+// too. A rectangle fed only by one is still an input (its own number), and a divide by it is
+// still an error, as in Excel.
+test('empty operators: fmIDE gives 0, as Excel writes', async ({ page }) => {
+  const fm = await fmideValues(page, fixture('agreement', 'empty-operators.json'));
+  const v = Object.fromEntries(fm['Income'].map(r => [r.name, r.values.map(x => x === 'error' ? x : x + 0)]));
+  expect(v['COGS']).toEqual([0, 0, 0]);
+  expect(v['Gross Profit']).toEqual([100, 100, 100]);
+  expect(v['Revenue less nothing']).toEqual([100, 100, 100]);
+  expect(v['Min with nothing']).toEqual([0, 0, 0]);
+  expect(v['Price']).toEqual([7, 7, 7]);
+  expect(v['Fed by lonely times']).toEqual([3, 3, 3]);
+  expect(v['Ten over nothing']).toEqual(['error', 'error', 'error']);
+  const t = Object.fromEntries(fm['Totals'].map(r => [r.name, r.values.map(x => x + 0)]));
+  expect(t['Gross Profit plus COGS']).toEqual([100, 100, 100]);
+});
+
 // Phase E2a: ln, exp, sqrt, int and trunc, on the canvas and inside functions — the known
 // answers (Excel's), besides agreeing with the recalculated workbook above.
 test('phase E2a operators: fmIDE gives Excel\'s answers', async ({ page }) => {

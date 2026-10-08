@@ -231,6 +231,7 @@ const HELP_TOPICS = [
       { p: 'A rectangle can have several plugs.' },
       { p: 'When more than one plug feeds a socket, their values are added together. The socket shows ⚡ name ×2 in amber as a warning, since that can double a number by accident.' },
       { p: 'Plugs and sockets are how the canvases built by a recipe connect.' },
+      { p: 'A socket nothing is plugged into gives 0, as in Excel, so what reads it still works out. A rectangle fed only by such an operator is an input: it uses its own number.' },
       { see: ['canvases', 'recipes'] },
     ] },
 

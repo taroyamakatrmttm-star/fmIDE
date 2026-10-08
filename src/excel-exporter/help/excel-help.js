@@ -242,7 +242,7 @@ const EXCEL_HELP_TOPICS = [
       ] },
       { p: 'The download still works. Fix the model in fmIDE, or the layout here, and the list goes away.' },
       { p: 'A long list shows its first three lines: Show all opens the rest, and × hides the list until something in it changes.' },
-      { tip: 'Many lines often come from one place, such as one operator with nothing wired into it: fix that in fmIDE and they all go.' },
+      { tip: 'Many lines often come from one place, such as one alias to a rectangle that was deleted: fix that in fmIDE and they all go.' },
       { see: ['generate'] },
     ] },
   { id: 'generate', group: 'generate', title: 'Generating and saving the layout',
