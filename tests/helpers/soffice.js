@@ -108,6 +108,44 @@ function recalc(files){
   }
 }
 
+// Recalculate workbooks holding an Excel Data Table (What-If Analysis; step 16's Sensitivity
+// tab). LibreOffice reads a Data Table as its MULTIPLE.OPERATIONS but leaves it uncalculated
+// when it opens an .xlsx; opened again from its own format, with "recalculate on load" always
+// on, it works every table out. So: .xlsx → .ods → .xlsx, in one profile set to recalculate.
+// { name: Buffer } -> { name: Buffer }.
+function recalcDataTables(files){
+  const exe = findSoffice();
+  if(!exe) throw new Error(SKIP_MESSAGE);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fmide-recalc-dt-'));
+  try{
+    const inDir = path.join(dir, 'in'), odsDir = path.join(dir, 'ods'), outDir = path.join(dir, 'out'), profile = path.join(dir, 'profile');
+    [inDir, odsDir, outDir, path.join(profile, 'user')].forEach(d => fs.mkdirSync(d, { recursive: true }));
+    // 0 = always recalculate, for files in both formats.
+    fs.writeFileSync(path.join(profile, 'user', 'registrymodifications.xcu'),
+      '<?xml version="1.0" encoding="UTF-8"?>\n<oor:items xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' +
+      '<item oor:path="/org.openoffice.Office.Calc/Formula/Load"><prop oor:name="OOXMLRecalcMode" oor:op="fuse"><value>0</value></prop></item>' +
+      '<item oor:path="/org.openoffice.Office.Calc/Formula/Load"><prop oor:name="ODFRecalcMode" oor:op="fuse"><value>0</value></prop></item>' +
+      '</oor:items>\n');
+    const inputs = Object.entries(files).map(([name, bytes]) => {
+      const p = path.join(inDir, name + '.xlsx');
+      fs.writeFileSync(p, bytes);
+      return p;
+    });
+    let log = String(runSoffice(['--calc', '--convert-to', 'ods', '--outdir', odsDir, ...inputs], profile));
+    const odsFiles = Object.keys(files).map(name => path.join(odsDir, name + '.ods'));
+    log += String(runSoffice(['--calc', '--convert-to', 'xlsx', '--outdir', outDir, ...odsFiles], profile));
+    const out = {};
+    for(const name of Object.keys(files)){
+      const p = path.join(outDir, name + '.xlsx');
+      if(!fs.existsSync(p)) throw new Error('LibreOffice did not produce ' + name + '.xlsx\n' + log);
+      out[name] = fs.readFileSync(p);
+    }
+    return out;
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 // The calculated value of an exceljs cell (formula result or plain value).
 function valueOf(cell){
   const v = cell.value;
@@ -120,4 +158,4 @@ function valueOf(cell){
   return v;
 }
 
-module.exports = { findSoffice, hasCalc, requireSoffice, recalc, valueOf, SKIP_MESSAGE };
+module.exports = { findSoffice, hasCalc, requireSoffice, recalc, recalcDataTables, valueOf, SKIP_MESSAGE };

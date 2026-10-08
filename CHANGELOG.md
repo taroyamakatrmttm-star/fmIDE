@@ -2,6 +2,12 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: Sensitivity — the Tornado and Spider tables, live in Excel
+- A **Sensitivity** panel (under Inputs & scenarios): pick the outputs to watch, the period, and the inputs to move — each by a **%** or an **amount**, from its Low to its High.
+- The workbook gets a **Sensitivity** tab: an Excel **Data Table** (What-If Analysis) works the output out with each input at each point from Low through the base to High, live; the **Tornado** table sorts the inputs by how much they move it, the **Spider** table lists each one's line. The output, the period, Low, High and which inputs show can all be changed in Excel. fmIDE's own numbers are written into the table too.
+- On the Inputs tab, a moved input gets a **Base** row and its own row reads the Sensitivity tab — unchanged unless that tab's Input moved cell names it.
+- The mapping file is version 3 (`cfg.sensitivity`); version 2 files open as before, with Sensitivity off.
+
 ## fmIDE and fmGraph: an operator with nothing wired in gives 0
 - An operator with nothing wired into it (such as a socket nothing is plugged into) gives **0** in the shared calculation, as ExcelExporter always wrote it, instead of "?" — which spread to everything reading it, up to totals on other canvases and the fmGraph bars showing them. fmIDE, fmGraph and the workbook now agree; ExcelExporter no longer lists such operators under "differs from fmIDE".
 - A rectangle, or a block's input, fed only by such an operator is still an input and uses its own number. Operators with named inputs (`if`, `choose`, the rounding ones) with an input missing are still errors, as in Excel.

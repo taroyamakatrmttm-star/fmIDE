@@ -101,6 +101,32 @@ test.describe('the Excel writer, in Node', () => {
     expect(sheet).toContain('<dimension ref="A1:D1"/>');
     expect(() => XLSX.write(XLSX.utils.book_new())).toThrow('The workbook has no sheets.');
   });
+
+  test('an Excel Data Table (step 16): its definition on the top-left cell, values in the rest; a bad one is no table', async () => {
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, {
+      C6: { t: 'n', v: 0 }, C7: { t: 'n', v: 0 }, M15: { t: 'n', f: 'C6*10+C7' },
+      N15: { t: 'n', v: 1 }, O15: { t: 'n', v: 2 }, M16: { t: 'n', v: 1 },
+      N16: { t: 'n', v: 11, dataTable: { ref: 'N16:O16', r1: 'C7', r2: 'C6' } }, O16: { t: 'n', v: 12 },
+      P1: { t: 'n', v: 5, dataTable: { ref: 'P1:P2', r1: 'C6' } },
+      Q1: { t: 'n', v: 6, dataTable: { ref: 'Q1:R1', r1: 'C6', row: true } },
+      S1: { t: 'n', v: 7, dataTable: { ref: 'S1:S2"/><x y="', r1: 'C6' } },
+      T1: { t: 'n', v: 8, dataTable: { ref: 'T1:T2', r1: 'C6', r2: 'c7' } },
+    }, 'S');
+    const bytes = XLSX.write(wb);
+    const sheet = await (await JSZip.loadAsync(bytes)).file('xl/worksheets/sheet1.xml').async('string');
+    expect(sheet).toContain('<c r="N16"><f t="dataTable" ref="N16:O16" dt2D="1" dtr="1" r1="C7" r2="C6"/><v>11</v></c>');
+    expect(sheet).toContain('<c r="O16"><v>12</v></c>');
+    expect(sheet).toContain('<c r="P1"><f t="dataTable" ref="P1:P2" r1="C6"/><v>5</v></c>');
+    expect(sheet).toContain('<c r="Q1"><f t="dataTable" ref="Q1:R1" dtr="1" r1="C6"/><v>6</v></c>');
+    // Not shaped like a table: a plain number.
+    expect(sheet).toContain('<c r="S1"><v>7</v></c>');
+    expect(sheet).toContain('<c r="T1"><v>8</v></c>');
+    expect(sheet.match(/dataTable/g)).toHaveLength(3);
+    const book = new ExcelJS.Workbook();
+    await book.xlsx.load(Buffer.from(bytes));
+    expect(book.getWorksheet('S').getCell('O16').value).toBe(12);
+  });
 });
 
 // ---------- the expression parser ----------

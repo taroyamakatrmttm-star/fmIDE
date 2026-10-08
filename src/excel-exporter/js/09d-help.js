@@ -53,10 +53,10 @@ layoutsMigrated.then(() => layoutStore.get(HELP_SIZE_KEY)).then(raw => {
     ev.preventDefault();
     excelHelp.toggle();
   });
-  // A "?" beside each heading: the welcome screen, the Tabs, Inputs and Rows panels, and
+  // A "?" beside each heading: the welcome screen, the Tabs, Inputs, Sensitivity and Rows panels, and
   // Settings' two tabs.
   const PANEL_TOPICS = [
-    ['loadPanel', 'load-model'], ['tabsPanel', 'tabs'], ['inputsPanel', 'inputs-tab'], ['rowsPanel', 'rows'],
+    ['loadPanel', 'load-model'], ['tabsPanel', 'tabs'], ['inputsPanel', 'inputs-tab'], ['sensitivityPanel', 'sensitivity'], ['rowsPanel', 'rows'],
     ['periodsPanel', 'periods-output'], ['excelStyleBlock', 'formats'],
   ];
   const places = PANEL_TOPICS.map(([id, topicId]) => [document.querySelector('#' + id + ' h2'), topicId]);

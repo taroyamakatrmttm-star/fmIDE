@@ -30,10 +30,35 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 | `fmIDE-macros` | 1 | Macros | fmIDE: Macro Builder → Import |
 | `fmIDE-preferences` | 1 | Personal settings: shortcut bindings for built-in commands, ribbon layout and Quick Access Toolbar, ribbon collapsed state, KeyTips trigger (fmIDE only) | fmIDE: File → Import Preferences (or Customize Ribbon) |
 | `fmIDE-library-pack` | 4 | Templates, recipes and functions to share with other people, with who made them and their licence (below); v2: an item shared again carries the `origin` it came with; v3: a canvas template may carry `attachments`; v4: a canvas or system template may carry an fmGraph board (`attachments.graph`) | fmIDE: File → Open Library Pack… |
-| `fmIDE-excel-mapping` | 2 | ExcelExporter's tab/row layout for one model; v2: any row may carry its own format (`style`) and an `indent` (below) | ExcelExporter: Import Mapping JSON |
+| `fmIDE-excel-mapping` | 3 | ExcelExporter's tab/row layout for one model; v2: any row may carry its own format (`style`) and an `indent` (below); v3: `cfg.sensitivity`, the Tornado and Spider's settings (step 16, below) | ExcelExporter: Import Mapping JSON |
 | `fmIDE-excel-style` | 1 | ExcelExporter's Excel style: how every cell in the workbook looks, by role (step 11a, below) | ExcelExporter: Import Excel Style |
 | `fmIDE-excel-module-layouts` | 2 | ExcelExporter's layouts remembered per module (step 11b, below); v2: the layout of a module's block instances, `instance` (step 11d) | ExcelExporter: Import Module Layouts |
 | `fmIDE-graph-board` | 3 | fmGraph's boards: bars, charts and sliders showing one model (step 15, below); v2: the template form, for a template's `attachments.graph` (G5a); v3: the model's named scenarios, `scenarios`; v4: the scenario waterfall, a chart of layout `scenarios` (the template form stays version 2) | fmGraph: Boards → Import boards… (or dropped on the page) |
+
+## The Tornado and Spider's settings (`fmIDE-excel-mapping` 3)
+
+ExcelExporter's Sensitivity panel (step 16, `docs/step16-sensitivity.md`) keeps its settings in the layout, `cfg.sensitivity`:
+
+```json
+"sensitivity": {
+  "enabled": true,
+  "outputs": ["c1|n3"],
+  "period": 0,
+  "steps": 5,
+  "charts": "tabs",
+  "variables": [
+    { "row": "c1|n1", "by": "percent", "low": -10, "high": 10 },
+    { "row": "c1|n2", "by": "amount", "low": -2, "high": 1 }
+  ]
+}
+```
+
+- `outputs`: row ids (as `rows[].id`) of the rectangles watched, in order — at most 20.
+- `period`: the period shown, from 0. `steps`: points between the base and each of Low and High (1–10).
+- `charts`: `"tabs"` (each chart on its own tab) or `"sheet"` (on the Sensitivity tab).
+- `variables`: the inputs moved, in order — at most 50. `row` is the input's own row id (not its Inputs-tab row); `by` is `"percent"` (Low and High are % changes) or `"amount"` (added); `low` and `high` are numbers (cut to ±1,000,000,000).
+
+Read through `cleanSensitivity`: anything else is dropped or replaced by its default; rows no longer in the model, or no longer an input that can be moved (one inside a block, or on a canvas used as a block), are dropped. A version 2 file has no `sensitivity`: Sensitivity is off.
 
 ## A row's own format and indent (`fmIDE-excel-mapping` 2)
 

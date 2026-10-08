@@ -6,6 +6,8 @@
 // Worksheet object: { 'A1': cell, …, '!ref', '!cols': [{wch}], '!merges': [{s:{r,c},e:{r,c}}] }
 // Cell: { t:'s'|'n'|'z', v, f (formula, no leading '='), z (number format), s (style) }
 //   t:'s' with f  -> a formula with a text result;  t:'z' -> an empty cell (style only).
+//   dataTable: { ref, r1, r2 } on a Data Table's top-left cell (see dataTableXml); its value
+//   v is written too, as are the plain numbers of the table's other cells.
 // Style: { font:{bold, sz, color:{rgb}}, fill:{patternType:'solid', fgColor:{rgb}},
 //          border:{top|bottom|left|right:{style, color:{rgb}}}, alignment:{horizontal, vertical, wrapText} }
 // Formulas are written without cached values and the workbook asks Excel to recalculate
@@ -117,6 +119,19 @@ export var XLSX = (function(){
   }
 
   // ---------- one worksheet ----------
+  // A Data Table's definition, { ref: 'N21:X25', r1: 'C7', r2: 'C6' } (two inputs: r1 the
+  // cell the top row's values go into, r2 the one the left column's go into), or
+  // { ref, r1, row: true|false } with one input (the values along the top row, or down the
+  // left column). Anything not shaped like that is no table (null).
+  const RANGE = /^[A-Z]{1,3}[1-9]\d{0,6}:[A-Z]{1,3}[1-9]\d{0,6}$/, ADDR = /^[A-Z]{1,3}[1-9]\d{0,6}$/;
+  function dataTableXml(t){
+    if(!t || typeof t !== 'object' || !RANGE.test(t.ref) || !ADDR.test(t.r1)) return null;
+    if(t.r2 !== undefined){
+      if(!ADDR.test(t.r2)) return null;
+      return '<f t="dataTable" ref="' + t.ref + '" dt2D="1" dtr="1" r1="' + t.r1 + '" r2="' + t.r2 + '"/>';
+    }
+    return '<f t="dataTable" ref="' + t.ref + '"' + (t.row ? ' dtr="1"' : '') + ' r1="' + t.r1 + '"/>';
+  }
   function sheetXml(ws, styles){
     const rows = new Map(); // row number -> [{c, xml}]
     let maxR = 0, maxC = 0;
@@ -131,7 +146,12 @@ export var XLSX = (function(){
       const sAttr = si ? ' s="' + si + '"' : '';
       let xml = null;
       const hasFormula = typeof cell.f === 'string' && cell.f !== '';
-      if(hasFormula){
+      const dt = dataTableXml(cell.dataTable);
+      if(dt){
+        // The top-left cell of an Excel Data Table (What-If Analysis): the whole table's
+        // definition, plus its own value; the table's other cells hold only values.
+        xml = '<c r="' + addr + '"' + sAttr + '>' + dt + (cell.t === 'n' && typeof cell.v === 'number' && isFinite(cell.v) ? '<v>' + cell.v + '</v>' : '') + '</c>';
+      } else if(hasFormula){
         const f = cell.f.charAt(0) === '=' ? cell.f.slice(1) : cell.f;
         xml = '<c r="' + addr + '"' + sAttr + (cell.t === 's' ? ' t="str"' : '') + '><f>' + esc(f) + '</f></c>';
       } else if(cell.t === 'n' && typeof cell.v === 'number' && isFinite(cell.v)){
