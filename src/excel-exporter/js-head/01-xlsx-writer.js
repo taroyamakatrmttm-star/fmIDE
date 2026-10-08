@@ -12,7 +12,8 @@
 // on open (fullCalcOnLoad), so every app shows live results — never stale zeros.
 // The package is a standard ZIP (stored entries) of the Office Open XML parts.
 // ============================================================
-var XLSX = (function(){
+import { escapeXml } from '../../shared/escaping.js';
+export var XLSX = (function(){
   const NS_MAIN = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
   const NS_REL = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
   const NS_PKG_REL = 'http://schemas.openxmlformats.org/package/2006/relationships';

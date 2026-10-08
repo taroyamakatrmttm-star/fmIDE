@@ -16815,8 +16815,15 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   }
 
   // ---------- small expression language for numeric arguments ----------
-  // Numbers, + - * / % ( ), $variables, and min/max/round/floor/ceil/abs(...).
-  function evalExpr(src){
+  // ---------- small expression language for numeric arguments (src/fmide/modules/expression.js) ----------
+  // Numbers, + - * / % ( ), $variables, and min/max/round/floor/ceil/abs(...) — what a macro step
+  // or fm.* action takes where a number goes (fmIDE's automation layer, 13-automation-core.js).
+  // A module (step 3c): what it needs from fmIDE comes in `env` —
+  //   env.lookupVar(token)  a macro variable's value ('$r1', '$t1[2]'); throws when there is none
+  //   env.fail(message)     stops with that message (throws)
+  // The text is read by this small parser only, never run as code.
+  function evalExpression(src, env){
+    const { lookupVar, fail } = env;
     let i = 0;
     const s = String(src);
     function ws(){ while(i < s.length && /\s/.test(s[i])) i++; }
@@ -16868,15 +16875,28 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     if(i < s.length) fail(`Unexpected "${s.slice(i)}" in "${s}".`);
     return v;
   }
-  function evalNumber(v, label){
+  function readNumber(v, label, env){
+    const { fail } = env;
     if(typeof v === 'number'){ if(!isFinite(v)) fail(`${label} is not a finite number.`); return v; }
     if(typeof v === 'boolean') return v ? 1 : 0;
     const s = String(v).trim();
     if(s === '') fail(`${label} is empty.`);
-    const n = /^[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$/i.test(s) ? Number(s) : evalExpr(s);
+    const n = /^[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$/i.test(s) ? Number(s) : evalExpression(s, env);
     if(!isFinite(n)) fail(`${label} is not a finite number.`);
     return n;
   }
+  function readBool(v, env){
+    const { fail } = env;
+    if(typeof v === 'boolean') return v;
+    const s = String(v).trim().toLowerCase();
+    if(['true','yes','y','1','on'].includes(s)) return true;
+    if(['false','no','n','0','off',''].includes(s)) return false;
+    fail(`"${v}" is not true/false.`);
+  }
+  // fmIDE's side of it: the macro's variables, and FmError for a message.
+  function evalExpr(src){ return evalExpression(src, { lookupVar, fail }); }
+  function evalNumber(v, label){ return readNumber(v, label, { lookupVar, fail }); }
+  function toBool(v){ return readBool(v, { lookupVar, fail }); }
   // "${var}" / "${expr}" inside text arguments
   function interpolate(str){
     if(typeof str !== 'string' || !str.includes('${')) return str;
@@ -16888,13 +16908,6 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       }
       return formatNum(evalExpr(t.replace(/\b([A-Za-z_]\w*)\b(?!\s*\()/g, '$$$1')));
     });
-  }
-  function toBool(v){
-    if(typeof v === 'boolean') return v;
-    const s = String(v).trim().toLowerCase();
-    if(['true','yes','y','1','on'].includes(s)) return true;
-    if(['false','no','n','0','off',''].includes(s)) return false;
-    fail(`"${v}" is not true/false.`);
   }
 
   // ---------- rectangle text helpers (Name / Value / UOM lines) ----------
