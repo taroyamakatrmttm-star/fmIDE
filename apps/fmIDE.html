@@ -1106,6 +1106,82 @@
   .add-many-arrange input[type=number]{ width:60px; font-size:13px; padding:4px 6px; border-radius:6px; border:1px solid #d1d5db; }
   .modal-box p.add-many-status{ font-size:12px; color:#374151; margin:4px 0 10px; }
   .modal-box p.add-many-status.add-many-error{ color:#b91c1c; }
+
+  /* ---- On a phone (step 17 P2a, 21b-phone.js): body.phone ---- */
+  .phone-only{ display:none; }
+  .phone-menu.hidden, .phone-card-back.hidden, .phone-layout-btn.hidden, .phone-menu button.hidden{ display:none !important; }
+  body .ps{ --ps-accent:var(--accent); }
+  body.phone{ --phone-top:52px; --phone-periods:46px; --phone-nav:62px; overscroll-behavior:none; }
+  body.phone .phone-only{ display:flex; }
+  body.phone #canvasTabs, body.phone #ribbon, body.phone #zoomControl, body.phone #zoomMenu, body.phone #welcomeCard, body.phone #commandTip, body.phone #tutorialCard{ display:none !important; }
+  body.phone{ --help-top:0px; }
+  .phone-top{ position:fixed; top:0; left:0; right:0; height:calc(var(--phone-top) + env(safe-area-inset-top, 0px)); padding:env(safe-area-inset-top, 0px) 8px 0 14px; z-index:60; align-items:center; gap:6px; background:var(--bar-bg); color:#f8fafc; }
+  .phone-title{ flex:1 1 auto; min-width:0; font-weight:700; font-size:16px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .phone-icon{ flex:none; min-width:44px; height:40px; border-radius:10px; border:1px solid #374151; background:transparent; color:inherit; font-size:20px; line-height:1; padding:0 8px; }
+  .phone-icon:disabled{ opacity:.35; }
+  .phone-periods{ position:fixed; left:0; right:0; top:calc(var(--phone-top) + env(safe-area-inset-top, 0px)); height:var(--phone-periods); z-index:59; align-items:center; gap:6px; padding:0 8px; background:#fff; border-bottom:1px solid #e2e8f0; }
+  .phone-periods .phone-icon{ color:#1e293b; border-color:#cbd5e1; }
+  body.phone.phone-one-period{ --phone-periods:0px; }
+  body.phone.phone-one-period .phone-periods{ display:none; }
+  .phone-period-pick{ flex:1 1 auto; min-width:0; height:38px; font-size:16px; font-weight:600; text-align:center; border:1px solid #cbd5e1; border-radius:10px; background:#f8fafc; color:#1e293b; }
+  .phone-panel{ position:fixed; left:0; right:0; top:calc(var(--phone-top) + var(--phone-periods) + env(safe-area-inset-top, 0px)); bottom:calc(var(--phone-nav) + env(safe-area-inset-bottom, 0px)); overflow-y:auto; -webkit-overflow-scrolling:touch; flex-direction:column; gap:12px; padding:12px 12px 24px; background:var(--canvas-bg); z-index:10; }
+  body.phone.phone-canvas .phone-panel{ display:none; }
+  .phone-nav{ position:fixed; left:0; right:0; bottom:0; height:calc(var(--phone-nav) + env(safe-area-inset-bottom, 0px)); padding-bottom:env(safe-area-inset-bottom, 0px); z-index:60; background:#fff; border-top:1px solid #e2e8f0; justify-content:space-around; align-items:stretch; }
+  .phone-nav-btn{ flex:1 1 0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; border:none; background:none; color:#64748b; font-size:12px; }
+  .phone-nav-icon{ font-size:20px; line-height:1; }
+  .phone-nav-btn[aria-current="page"]{ color:var(--accent); font-weight:700; }
+  /* Inputs and Watch. */
+  .phone-search{ width:100%; height:44px; font-size:16px; padding:0 14px; border:1px solid #cbd5e1; border-radius:12px; background:#fff; flex:none; }
+  .phone-head{ margin:4px 2px 6px; font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:#64748b; overflow-wrap:anywhere; }
+  .phone-group{ display:flex; flex-direction:column; gap:10px; }
+  .phone-input{ background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:10px 14px 8px; }
+  .phone-input.moved{ border-color:#c7d2fe; }
+  .phone-input-head{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+  .phone-input-name{ font-weight:700; font-size:16px; overflow-wrap:anywhere; }
+  .phone-input-unit{ font-size:12.5px; color:#64748b; }
+  .phone-input-change{ margin-left:auto; font-size:13px; font-weight:600; color:#d97706; font-variant-numeric:tabular-nums; }
+  .phone-star{ border:none; background:none; font-size:22px; color:#f59e0b; padding:0 4px; min-width:40px; min-height:36px; }
+  .phone-input-note{ font-size:12.5px; color:#b45309; margin:2px 0 4px; }
+  .phone-input-foot{ display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:12.5px; color:#64748b; margin-top:-4px; }
+  .phone-all{ display:flex; align-items:center; gap:6px; color:#1e293b; font-size:14px; }
+  .phone-all input{ width:22px; height:22px; }
+  .phone-watch{ display:flex; flex-direction:column; gap:6px; position:sticky; top:-12px; z-index:2; background:var(--canvas-bg); padding:4px 0 8px; }
+  .phone-watch-row{ display:flex; align-items:baseline; gap:10px; width:100%; text-align:left; background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:10px 14px; font-size:15px; color:#1e293b; }
+  .phone-watch-name{ flex:1 1 auto; min-width:0; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .phone-watch-value{ font-weight:700; font-variant-numeric:tabular-nums; }
+  .phone-watch-change{ font-size:13px; font-variant-numeric:tabular-nums; min-width:0; }
+  .phone-watch-change.up{ color:#047857; }
+  .phone-watch-change.down{ color:#b91c1c; }
+  .phone-empty{ color:#64748b; font-size:14px; margin:4px 2px; }
+  /* Canvas: to look at. */
+  body.phone #viewport{ top:calc(var(--phone-top) + var(--phone-periods) + 44px + env(safe-area-inset-top, 0px)); bottom:calc(var(--phone-nav) + env(safe-area-inset-bottom, 0px)); }
+  body.phone:not(.phone-canvas) #viewport, body.phone:not(.phone-canvas) .phone-canvas-bar{ display:none; }
+  .phone-canvas-bar{ position:fixed; left:0; right:0; top:calc(var(--phone-top) + var(--phone-periods) + env(safe-area-inset-top, 0px)); height:44px; z-index:58; align-items:center; gap:10px; padding:0 10px; background:#f8fafc; border-bottom:1px solid #e2e8f0; }
+  .phone-canvas-pick{ flex:0 1 auto; max-width:60%; height:34px; font-size:16px; border:1px solid #cbd5e1; border-radius:9px; background:#fff; }
+  .phone-canvas-hint{ font-size:12.5px; color:#64748b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* ☰ */
+  .phone-menu{ position:fixed; right:8px; bottom:calc(var(--phone-nav) + 8px + env(safe-area-inset-bottom, 0px)); z-index:70; min-width:230px; background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:6px; box-shadow:0 16px 40px rgba(15,23,42,.22); display:flex; flex-direction:column; }
+  .phone-menu button{ text-align:left; border:none; background:none; font-size:16px; padding:12px 14px; border-radius:9px; color:#1e293b; }
+  .phone-menu button:active{ background:#eef2ff; }
+  /* A rectangle's card. */
+  .phone-card-back{ position:fixed; inset:0; z-index:65; background:rgba(15,23,42,.38); display:flex; align-items:flex-end; }
+  .phone-card{ width:100%; max-height:85vh; overflow-y:auto; background:#fff; border-radius:18px 18px 0 0; padding:14px 16px calc(16px + env(safe-area-inset-bottom, 0px)); box-shadow:0 -10px 30px rgba(15,23,42,.25); }
+  .phone-card-head{ display:flex; align-items:center; gap:8px; }
+  .phone-card-head h3{ flex:1 1 auto; margin:0; font-size:18px; overflow-wrap:anywhere; }
+  .phone-card-close{ color:#1e293b; border:none; font-size:26px; }
+  .phone-card-where{ font-size:13px; color:#64748b; margin:2px 0 6px; }
+  .phone-card-formula{ margin:6px 0; font-size:15px; font-weight:600; overflow-wrap:anywhere; }
+  .phone-card-readers{ margin:4px 0 8px; font-size:13.5px; color:#475569; overflow-wrap:anywhere; }
+  .phone-card-star{ width:100%; padding:11px; font-size:15px; border-radius:10px; border:1px solid #fcd34d; background:#fffbeb; color:#92400e; margin:4px 0 8px; }
+  .phone-card-input .phone-input{ border:none; padding:4px 0; }
+  .phone-card-table{ width:100%; border-collapse:collapse; font-size:14px; margin-top:6px; }
+  .phone-card-table th{ text-align:left; font-size:12px; color:#64748b; padding:4px 6px; border-bottom:1px solid #e2e8f0; }
+  .phone-card-table th:not(:first-child), .phone-card-table .num{ text-align:right; font-variant-numeric:tabular-nums; }
+  .phone-card-table td{ padding:6px; border-bottom:1px solid #f1f5f9; }
+  .phone-card-table tr.now td{ background:#eef2ff; font-weight:600; }
+  .phone-card-table .up{ color:#047857; }
+  .phone-card-table .down{ color:#b91c1c; }
+  .phone-layout-btn{ position:fixed; left:10px; bottom:10px; z-index:80; padding:10px 14px; font-size:15px; border-radius:12px; border:1px solid #c7d2fe; background:#eef2ff; color:#3730a3; box-shadow:0 6px 18px rgba(15,23,42,.18); }
 /* The Help panel (build step 10; docs/step10-help.md), shared by fmIDE and ExcelExporter with
    src/shared/help-panel.js. Each app sets --help-top (where the panel starts) and makes room
    for the panel under body.help-open. */
@@ -1177,6 +1253,42 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   .help-resize, .help-expand{ display:none; }
 }
 
+  /* The phone's slider (step 17, src/shared/phone.js). Its colours from the page:
+     --ps-accent (the fill and knob), --ps-ink, --ps-soft, --ps-line. */
+  .ps{ --ps-pad:24px; --ps-accent:#0f766e; --ps-ink:#1b2333; --ps-soft:#5f6b7d; --ps-line:#d5dbe5; position:relative; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
+  .ps-row{ display:flex; align-items:center; gap:10px; }
+  .ps-step{ flex:none; width:48px; height:48px; border-radius:50%; font-size:24px; line-height:1; padding:0; border:1px solid var(--ps-line); background:#fff; color:var(--ps-ink); touch-action:manipulation; }
+  .ps-step:active{ background:#eef1f5; transform:scale(.94); }
+  .ps-value, .ps-type{ flex:1 1 auto; min-width:0; height:52px; font-size:30px !important; font-weight:700; font-variant-numeric:tabular-nums; text-align:center; border:none; border-radius:10px; background:transparent; color:var(--ps-ink); padding:0 6px; }
+  .ps-value:active{ background:#eef1f5; }
+  .ps-type{ border:2px solid var(--ps-accent); background:#fff; }
+  /* As large as the number it replaces, over an app's own size for text boxes on a touchscreen. */
+  .ps .ps-row input.ps-type:not([type=range]):not([type=file]){ font-size:30px !important; }
+  .ps-track{ position:relative; height:64px; touch-action:none; cursor:ew-resize; outline:none; border-radius:12px; }
+  .ps-track:focus-visible{ box-shadow:0 0 0 2px var(--ps-accent); }
+  .ps-rail{ position:absolute; left:var(--ps-pad); right:var(--ps-pad); top:50%; height:8px; margin-top:-4px; border-radius:4px; background:var(--ps-line); }
+  .ps-fill{ position:absolute; top:0; bottom:0; left:calc(var(--ps-a) * 100%); width:calc((var(--ps-b) - var(--ps-a)) * 100%); background:var(--ps-accent); border-radius:4px; }
+  .ps-notch{ position:absolute; top:-9px; bottom:-9px; width:3px; margin-left:-1.5px; left:calc(var(--ps-n) * 100%); border-radius:2px; background:var(--ps-soft); }
+  .ps-thumb{ position:absolute; top:50%; width:34px; height:34px; margin:-17px 0 0 -17px; left:calc(var(--ps-pad) + var(--ps-f) * (100% - 2 * var(--ps-pad))); border-radius:50%; background:#fff; border:3px solid var(--ps-accent); box-shadow:0 2px 6px rgba(16,24,40,.25); transition:transform .12s; }
+  .ps.dragging .ps-thumb{ transform:scale(1.18); }
+  .ps.at-base .ps-thumb{ border-color:var(--ps-soft); }
+  .ps.ticked .ps-thumb{ animation:ps-tick .18s ease-out; }
+  @keyframes ps-tick{ 0%{ box-shadow:0 0 0 0 rgba(15,118,110,.55); } 100%{ box-shadow:0 0 0 12px rgba(15,118,110,0); } }
+  .ps-bubble{ position:absolute; bottom:calc(50% + 24px); transform:translateX(-50%); display:none; white-space:nowrap; padding:3px 10px; border-radius:10px; background:var(--ps-accent); color:#fff; font-size:13px; font-weight:700; pointer-events:none; box-shadow:0 3px 10px rgba(16,24,40,.25); z-index:5; }
+  .ps.dragging.fine .ps-bubble{ display:block; }
+  @media (prefers-reduced-motion: reduce){ .ps-thumb{ transition:none; } .ps.ticked .ps-thumb{ animation:none; } }
+  /* Standing on end (a fader, the mixer): up is more. */
+  .ps.vertical{ display:flex; flex-direction:column; align-items:stretch; height:100%; }
+  .ps.vertical .ps-row{ flex:none; justify-content:center; }
+  .ps.vertical .ps-step{ display:none; }
+  .ps.vertical .ps-value, .ps.vertical .ps-type{ height:34px; font-size:18px !important; padding:0 2px; }
+  .ps.vertical .ps-row input.ps-type:not([type=range]):not([type=file]){ font-size:18px !important; width:100%; }
+  .ps.vertical .ps-track{ flex:1 1 auto; height:auto; min-height:110px; cursor:ns-resize; }
+  .ps.vertical .ps-rail{ left:50%; right:auto; top:var(--ps-pad); bottom:var(--ps-pad); width:8px; height:auto; margin:0 0 0 -4px; }
+  .ps.vertical .ps-fill{ left:0; right:0; width:auto; top:auto; bottom:calc(var(--ps-a) * 100%); height:calc((var(--ps-b) - var(--ps-a)) * 100%); }
+  .ps.vertical .ps-notch{ left:-9px; right:-9px; width:auto; top:auto; height:3px; margin:0 0 -1.5px 0; bottom:calc(var(--ps-n) * 100%); }
+  .ps.vertical .ps-thumb{ left:50%; top:auto; margin:0 0 -17px -17px; bottom:calc(var(--ps-pad) + var(--ps-f) * (100% - 2 * var(--ps-pad))); }
+  .ps.vertical .ps-bubble{ bottom:auto; left:50%; }
 </style>
 </head>
 <body>
@@ -2260,7 +2372,22 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         { p: 'One finger on empty canvas scrolls. Press and hold there, then drag, to select with a box.' },
         { p: 'Pinch with two fingers to zoom the canvas around the point between them; move both fingers together to move around. A pinch that ends close to 100% settles at 100%.' },
         { p: 'Double-tap does what a double-click does.' },
-        { see: ['arrows', 'arranging'] },
+        { see: ['arrows', 'arranging', 'phone'] },
+      ] },
+    { id: 'phone', group: 'touch', title: 'Using fmIDE on a phone',
+      keywords: 'phone mobile iphone android smartphone inputs watch star slider period canvas card full app',
+      summary: 'On a phone fmIDE opens to your inputs: change them with a slider and watch what they move.',
+      body: [
+        { p: 'On a phone, fmIDE shows the numbers, not the canvas. Along the bottom: Inputs, Watch, Canvas and More (☰). At the top: the document\'s name, ↶ Undo and ↷ Redo, and the periods (‹ and ›, or tap the period to pick one).' },
+        { p: 'Inputs lists every input rectangle with a number, by canvas; search by its name or its canvas\'s. Change one with its slider: grab it anywhere, slide your finger up while dragging to make it finer, tap the number to type one, or use − and +. It settles at the number it had when you opened the document, with a tick.' },
+        { p: 'A change on a phone is a change to your model, exactly as typing it on a computer: each move is one step you can undo, the document is marked unsaved, and it is kept in the autosave. Save it from More (☰).' },
+        { p: 'An input with its own number in each period changes in the period shown. Tick All periods by % to move every period together by a percentage.' },
+        { p: 'An input on a canvas used as a block says how many blocks use it: changing it changes every copy.' },
+        { p: 'Watch: ☆ on an input, or on any rectangle\'s card, keeps it at the top of Inputs (and on the Watch screen) with how far it has moved since you opened the document. The list is kept in this browser for each document, never in the file.' },
+        { p: 'Canvas shows a canvas to look at: pick one from the list, pinch to zoom. Nothing is moved or edited there. Tap a rectangle for its card: its value in every period, what it is worked out from and what reads it, in words, ☆ Watch, and its slider if it is an input.' },
+        { steps: ['Open a document from More (☰) → Open….', 'In Inputs, move a slider; see the change at the top if you watch something.', 'In Canvas, tap a rectangle to see how it is worked out.', 'More (☰) → Save.'] },
+        { tip: 'More (☰) → Full app shows the whole fmIDE on a phone, to build; 📱 Phone layout goes back. Your choice is remembered in this browser.' },
+        { see: ['touch', 'values-over-time'] },
       ] },
   ];
 
@@ -2396,6 +2523,19 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // entry: ids, dates in order, commands and topics that exist.
   // **A change people will notice adds its entry here in the same pull request.**
   const WHATS_NEW = [
+    { id: 'phone-inputs', date: '2026-10-09', title: 'fmIDE on a phone',
+      summary: 'On a phone fmIDE opens to your inputs: change them with a slider made for a thumb, and watch what they move.',
+      what: [
+        'Inputs: every input rectangle with a number, by canvas, with a search box. Change one with its slider (grab it anywhere, slide your finger up to make it finer, tap to type, − and +). An input with a number per period changes in the period shown, or all periods together by %.',
+        'Watch: ☆ an input or any rectangle, and it stays at the top while you change inputs, with how far it has moved since you opened the document.',
+        'Canvas: look at any canvas and tap a rectangle for its card: its value in every period, what it is worked out from and what reads it, in words.',
+        'Each change is a real change to the model: one undo step, the document marked unsaved, the autosave. More (☰) has Open, Open Recent, Save, Help and Full app.',
+      ],
+      why: 'To check and adjust a model away from your desk, with controls made for a phone rather than a squeezed-down desktop.',
+      how: ['Open fmIDE on a phone, open a document from More (☰), then move an input in Inputs.'],
+      notes: ['Building (drawing, wiring, templates, functions, macros) stays on a tablet or computer, or More (☰) → Full app. Tablets and computers are unchanged.'],
+      see: ['phone'] },
+
 
     { id: 'empty-operator-zero', date: '2026-10-08', title: 'An empty socket counts as 0',
       summary: 'An operator with nothing wired into it gives 0, as in Excel, instead of "?" spreading through the model.',
@@ -9002,6 +9142,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
 
     renderEdges();
     refreshCommandStates();
+    if(phoneReady) phoneRefreshSoon(); // on a phone, its numbers follow (21b-phone.js)
   }
 
   function blockPortsOf(defCanvas){
@@ -20394,7 +20535,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   let dirtySaveTimer = null;
 
   function docDisplayName(){ return currentDoc.name || 'Untitled'; }
-  function updateDocTitle(){ document.title = docDisplayName() + (currentDoc.dirty ? ' •' : '') + ' — fmIDE'; }
+  function updateDocTitle(){ document.title = docDisplayName() + (currentDoc.dirty ? ' •' : '') + ' — fmIDE'; if(phoneReady) phoneRefreshSoon(); }
 
   // Called for every change that goes into undo history (and undo/redo themselves). The
   // autosave follows about 2 s after the last change, besides the 8-second timer.
@@ -21238,6 +21379,985 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       onReload: () => { skipLeaveWarning = true; },
     });
   }
+  // =====================================================================================
+  // ---------- fmIDE on a phone (step 17, phase P2a; docs/step17-phones.md) ----------
+  // =====================================================================================
+  // On a touchscreen whose shorter side is under 600 pixels (isPhoneScreen, src/shared/phone.js)
+  // fmIDE opens to the numbers, not the canvas (body.phone): a bar along the bottom with
+  // Inputs · Watch · Canvas · ☰, the document's name and ↶ ↷ at the top, a strip of periods.
+  // - Inputs: every input rectangle, by canvas, with a search box; each with the shared phone
+  //   slider. A change is a change to the model, as typed on a computer: one undo step per
+  //   gesture (pushed on its first change), the document marked unsaved, the autosave. An input
+  //   with a number per period is changed in the period shown, or, with "All periods by %", all
+  //   of them together. The slider's range is half the number either way (any number can be
+  //   typed); its notch is the number when the document was opened. An input on a canvas used
+  //   as a block says how many blocks use it.
+  // - Watch: the rectangles starred (★), at the top of Inputs while inputs change and on their
+  //   own screen, each with how far it has moved since the document was opened. Kept in this
+  //   browser per document (fmIDE-phone: the person's own, never in a file).
+  // - Canvas: to look at — fitted, pinch to zoom (13b), a canvas picked from a list; editing is
+  //   held back (no press reaches the canvas); a tap on a rectangle opens its card: its value
+  //   in every period, what it is worked out from and what reads it, in words, ★, and its
+  //   slider if it is an input.
+  // - ☰: Open…, Open Recent…, Save, Help, Full app (the whole fmIDE; 📱 Phone layout back).
+  // Everything from the model is shown as text.
+  // ---------- phones: what fmGraph and fmIDE share on a phone (step 17, docs/step17-phones.md) ----------
+  // - isPhoneScreen(): a touchscreen whose shorter side is under PHONE_MAX_SIDE pixels, upright or
+  //   sideways. The screen's own size, not the window's: an on-screen keyboard never turns a
+  //   tablet into a phone.
+  // - tick(): a short vibration, where the phone lets a page vibrate (Android; Safari on an
+  //   iPhone gives web pages none, so there the tick is only seen).
+  // - createPhoneSlider(options): the phone's own slider. Made for a thumb:
+  //   · grab anywhere along it: the value moves with the finger from where it is, never jumping
+  //     to where the finger landed;
+  //   · finer by sliding the finger up, away from it, while dragging (×½, ×¼, ×⅒, FINE_STEPS),
+  //     coarse and exact in one gesture, without letting go;
+  //   · a notch at the base (the model's own number): the value settles there when the finger
+  //     passes close, with a tick; ticks at round marks too;
+  //   · the number large, right above the finger (which hides the knob), and "fine ×¼" over the
+  //     knob while finer; tapping the number lets it be typed; − and + step it, repeating faster while held;
+  //   · a double-tap goes back to the base; the arrow keys, Page Up / Down, Home and End work.
+  //   Each finger is followed by its own pointer id, so several sliders move at once.
+  //   With `vertical`, it stands on end (a fader: up is more) and sliding the finger sideways,
+  //   away from it, makes it finer.
+  // - shareFiles(files, title): the phone's own share sheet (Messages, Mail, AirDrop…); the
+  //   person picks where the files go, nothing is sent first. Where a browser can't share files,
+  //   they download instead.
+  // - keepScreenOn(): asks the browser to keep the screen on (Wake Lock) until the function it
+  //   returns is called; asked again when the page comes back into view.
+  // Nothing here touches the page until it is called.
+
+  const PHONE_MAX_SIDE = 600;
+  // How far up (pixels from where the finger went down) makes a drag finer, and by how much.
+  const FINE_STEPS = [[0, 1, ''], [50, 1 / 2, '×½'], [110, 1 / 4, '×¼'], [170, 1 / 10, '×⅒']];
+  const NOTCH_PX = 9;      // the value settles at the base within this many pixels of it
+  const MARKS = 8;         // about this many round marks along a slider tick
+  const TICK_GAP_MS = 45;  // ticks closer than this are one
+
+  function isPhoneScreen(){
+    try{
+      const coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+      const side = Math.min(window.screen.width || Infinity, window.screen.height || Infinity);
+      return coarse && side < PHONE_MAX_SIDE;
+    }catch(e){ return false; }
+  }
+
+  function canVibrate(){
+    return typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
+  }
+  function tick(){
+    if(!canVibrate()) return false;
+    try{ return navigator.vibrate(8) !== false; }catch(e){ return false; }
+  }
+
+  // The finer factor for a finger this many pixels above where it went down.
+  function fineStep(up){
+    let pick = FINE_STEPS[0];
+    FINE_STEPS.forEach(f => { if(up >= f[0]) pick = f; });
+    return { factor: pick[1], label: pick[2] };
+  }
+
+  // A 1-2-5 step near x.
+  function roundStep(x){
+    if(!(x > 0) || !isFinite(x)) return 1;
+    const p = Math.pow(10, Math.floor(Math.log10(x)));
+    const f = x / p;
+    return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p;
+  }
+  function decimalsOf(step){ return Math.max(0, Math.min(12, Math.ceil(-Math.log10(step)) + 1)); }
+
+  // options: { label, min, max, step, value, base, format(v) → text, vibrate() → whether to
+  //   vibrate on a tick, onStart(), onInput(value, atBase), onEnd(), vertical }
+  // Returns { el, setValue(v), value(), dragging() }.
+  function createPhoneSlider(options){
+    const o = options;
+    const mk = (tag, cls, text) => {
+      const e = document.createElement(tag);
+      if(cls) e.className = cls;
+      if(text !== undefined && text !== null) e.textContent = String(text);
+      return e;
+    };
+    const min = o.min, max = o.max, span = Math.max(1e-12, max - min), step = o.step > 0 ? o.step : span / 100;
+    const base = Number.isFinite(o.base) ? o.base : min;
+    const decimals = decimalsOf(step);
+    const markStep = roundStep(span / MARKS);
+    const format = typeof o.format === 'function' ? o.format : (v) => String(v);
+    const vertical = !!o.vertical;
+    let value = Number.isFinite(o.value) ? o.value : base;
+    let drags = 0;
+    let lastTickAt = 0;
+
+    const el = mk('div', vertical ? 'ps vertical' : 'ps');
+    const row = mk('div', 'ps-row');
+    const minus = mk('button', 'ps-step ps-minus', '−');
+    const plus = mk('button', 'ps-step ps-plus', '+');
+    const shown = mk('button', 'ps-value');
+    [minus, plus, shown].forEach(b => { b.type = 'button'; });
+    minus.setAttribute('aria-label', 'Less: ' + o.label);
+    plus.setAttribute('aria-label', 'More: ' + o.label);
+    shown.title = 'Type a number';
+    shown.setAttribute('aria-label', 'Type a number for ' + o.label);
+    row.append(minus, shown, plus);
+    const track = mk('div', 'ps-track');
+    track.tabIndex = 0;
+    track.setAttribute('role', 'slider');
+    track.setAttribute('aria-label', o.label);
+    track.setAttribute('aria-valuemin', String(min));
+    track.setAttribute('aria-valuemax', String(max));
+    if(vertical) track.setAttribute('aria-orientation', 'vertical');
+    const rail = mk('div', 'ps-rail');
+    rail.append(mk('div', 'ps-fill'), mk('div', 'ps-notch'));
+    const thumb = mk('div', 'ps-thumb');
+    const bubble = mk('div', 'ps-bubble');
+    bubble.setAttribute('aria-hidden', 'true');
+    track.append(rail, thumb, bubble);
+    el.append(row, track);
+
+    const clamp = (v) => Math.min(max, Math.max(min, v));
+    const frac = (v) => Math.min(1, Math.max(0, (v - min) / span));
+    const snap = (v) => Number(clamp(min + Math.round((v - min) / step) * step).toFixed(decimals));
+    function paint(){
+      el.style.setProperty('--ps-f', String(frac(value)));
+      el.style.setProperty('--ps-n', String(frac(base)));
+      el.style.setProperty('--ps-a', String(Math.min(frac(value), frac(base))));
+      el.style.setProperty('--ps-b', String(Math.max(frac(value), frac(base))));
+      el.classList.toggle('at-base', value === base);
+      shown.textContent = format(value);
+      track.setAttribute('aria-valuenow', String(value));
+      track.setAttribute('aria-valuetext', format(value));
+    }
+    function tickNow(){
+      const now = performance.now();
+      if(now - lastTickAt < TICK_GAP_MS) return;
+      lastTickAt = now;
+      el.classList.remove('ticked');
+      void el.offsetWidth; // start the little pulse again
+      el.classList.add('ticked');
+      if(!o.vibrate || o.vibrate()) tick();
+    }
+    // Ticks for a move from a to b: reaching the base, or crossing a round mark.
+    function ticksFor(a, b){
+      if(a === b) return;
+      if(b === base || (a - base) * (b - base) < 0) return tickNow();
+      if(Math.floor(a / markStep + 1e-9) !== Math.floor(b / markStep + 1e-9)) tickNow();
+    }
+    function setTo(v, quiet){
+      const was = value;
+      value = v;
+      paint();
+      if(!quiet) ticksFor(was, v);
+      if(o.onInput) o.onInput(value, value === base);
+    }
+    const start = () => { if(o.onStart) o.onStart(); };
+    const end = () => { if(o.onEnd) o.onEnd(); };
+
+    // ---- dragging ----
+    track.addEventListener('pointerdown', (ev) => {
+      if(ev.button > 0) return;
+      if(ev.pointerType === 'mouse') ev.preventDefault(); // no text selection; a finger's is left alone (pointer-input.js)
+      try{ track.setPointerCapture(ev.pointerId); }catch(e){ /* followed through the document anyway */ }
+      const id = ev.pointerId, x0 = ev.clientX, y0 = ev.clientY;
+      const box = rail.getBoundingClientRect();
+      const length = Math.max(1, vertical ? box.height : box.width);
+      // Along the slider (up is more on a fader), and away from it (finer).
+      const along = (e) => vertical ? -e.clientY : e.clientX;
+      const away = (e) => vertical ? Math.abs(e.clientX - x0) : y0 - e.clientY;
+      let anchor = along(ev), raw = value, anchorV = value, factor = 1, moved = false;
+      drags++;
+      el.classList.add('dragging');
+      track.focus({ preventScroll: true });
+      start();
+      const move = (e) => {
+        if(e.pointerId !== id) return;
+        const fine = fineStep(away(e));
+        if(fine.factor !== factor){ anchor = along(e); anchorV = raw; factor = fine.factor; }
+        if(!moved && Math.abs(along(e) - along(ev)) < 3) return;
+        moved = true;
+        raw = clamp(anchorV + (along(e) - anchor) / length * span * factor);
+        const unitsPerPx = span * factor / length;
+        const v = Math.abs(raw - base) / unitsPerPx <= NOTCH_PX && base >= min && base <= max ? base : snap(raw);
+        el.classList.toggle('fine', factor < 1);
+        if(v !== value) setTo(v);
+        if(factor < 1) placeBubble('fine ' + fine.label);
+      };
+      const up = (e) => {
+        if(e.pointerId !== id) return;
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', up);
+        document.removeEventListener('pointercancel', up);
+        drags = Math.max(0, drags - 1);
+        el.classList.remove('dragging', 'fine');
+        end();
+      };
+      document.addEventListener('pointermove', move);
+      document.addEventListener('pointerup', up);
+      document.addEventListener('pointercancel', up);
+    });
+    // "fine ×¼" over the knob, kept inside the slider.
+    function placeBubble(text){
+      bubble.textContent = text;
+      const pad = 24;
+      if(vertical){
+        const h = track.clientHeight, at = h - pad - frac(value) * (h - 2 * pad);
+        bubble.style.top = Math.max(0, Math.min(h - bubble.offsetHeight, at - bubble.offsetHeight - 22)) + 'px';
+        return;
+      }
+      const w = track.clientWidth, half = bubble.offsetWidth / 2 + 4;
+      const at = pad + frac(value) * (w - 2 * pad);
+      bubble.style.left = Math.max(half, Math.min(w - half, at)) + 'px';
+    }
+    // A double-tap (pointer-input.js sends a finger's as dblclick) or a double-click: the base.
+    track.addEventListener('dblclick', (ev) => { ev.preventDefault(); start(); setTo(base); end(); });
+    track.addEventListener('keydown', (ev) => {
+      const k = ev.key;
+      const by = { ArrowRight: step, ArrowUp: step, ArrowLeft: -step, ArrowDown: -step, PageUp: step * 10, PageDown: -step * 10 }[k];
+      let v = null;
+      if(by !== undefined) v = snap(value + by);
+      else if(k === 'Home') v = min;
+      else if(k === 'End') v = max;
+      if(v === null) return;
+      ev.preventDefault();
+      start(); setTo(v); end();
+    });
+
+    // ---- − and +: a step, repeating faster while held ----
+    [[minus, -1], [plus, 1]].forEach(([b, dir]) => {
+      let timer = null;
+      const stepOnce = () => setTo(snap(value + dir * step));
+      const stop = () => { if(timer === null) return; clearTimeout(timer); timer = null; end(); };
+      b.addEventListener('pointerdown', (ev) => {
+        if(ev.button > 0) return;
+        if(ev.pointerType === 'mouse') ev.preventDefault();
+        start();
+        stepOnce();
+        let gap = 380;
+        const again = () => { stepOnce(); gap = Math.max(35, gap * 0.8); timer = setTimeout(again, gap); };
+        timer = setTimeout(again, gap);
+      });
+      ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => b.addEventListener(t, stop));
+      b.addEventListener('click', (ev) => { if(ev.detail === 0){ start(); stepOnce(); end(); } }); // the keyboard's Enter or Space
+      b.addEventListener('contextmenu', (ev) => ev.preventDefault());
+    });
+
+    // ---- typing ----
+    shown.addEventListener('click', () => {
+      const box = mk('input', 'ps-type');
+      box.type = 'text';
+      box.inputMode = min >= 0 && base >= 0 ? 'decimal' : 'text';
+      box.value = String(value);
+      box.setAttribute('aria-label', o.label + ' (number)');
+      let done = false;
+      const finish = (keep) => {
+        if(done) return;
+        done = true;
+        const v = Number(box.value.replace(/[\s,]/g, '').replace(/−/g, '-'));
+        box.replaceWith(shown);
+        if(keep && box.value.trim() !== '' && isFinite(v)){ start(); setTo(v, true); end(); }
+        else paint();
+      };
+      box.addEventListener('keydown', (ev) => {
+        if(ev.key === 'Enter'){ ev.preventDefault(); finish(true); }
+        else if(ev.key === 'Escape'){ ev.preventDefault(); finish(false); }
+      });
+      box.addEventListener('blur', () => finish(true));
+      shown.replaceWith(box);
+      box.focus();
+      box.select();
+    });
+
+    paint();
+    return {
+      el,
+      setValue(v){ if(Number.isFinite(v) && !drags){ value = v; paint(); } },
+      value: () => value,
+      dragging: () => drags > 0,
+    };
+  }
+
+  // The phone's share sheet for these files (File objects); else they download. Resolves
+  // 'shared', 'cancelled' (the person closed the sheet) or 'downloaded'.
+  async function shareFiles(files, title){
+    try{
+      if(navigator.share && navigator.canShare && navigator.canShare({ files })){
+        await navigator.share({ files, title });
+        return 'shared';
+      }
+    }catch(e){
+      if(e && e.name === 'AbortError') return 'cancelled';
+      // Not allowed here (or failed): download instead.
+    }
+    files.forEach(f => {
+      const url = URL.createObjectURL(f);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = f.name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+    return 'downloaded';
+  }
+
+  // Keeps the screen on while something is being shown; call what it returns to let it sleep.
+  function keepScreenOn(){
+    let on = true, sentinel = null;
+    const ask = () => {
+      if(!on || !navigator.wakeLock || document.visibilityState !== 'visible') return;
+      navigator.wakeLock.request('screen').then(s => {
+        if(on) sentinel = s;
+        else s.release().catch(() => {});
+      }, () => { /* refused (battery saver…): the screen sleeps as usual */ });
+    };
+    const visible = () => { if(document.visibilityState === 'visible') ask(); };
+    document.addEventListener('visibilitychange', visible);
+    ask();
+    return () => {
+      on = false;
+      document.removeEventListener('visibilitychange', visible);
+      if(sentinel){ sentinel.release().catch(() => {}); sentinel = null; }
+    };
+  }
+
+  // (var: render() and updateDocTitle() may run before this file has started; they look at it.)
+  var phoneReady = false;
+  const PHONE_KEY = 'fmIDE-phone';
+  const PHONE_WATCH_DOCS = 50;          // documents whose Watch list is kept
+  const PHONE_WATCH_MAX = 30;           // rectangles watched in one document
+  let phoneSettings = { fullApp: false, vibrate: true, watch: {} };
+  let phoneView = 'inputs';             // 'inputs' | 'watch' | 'canvas'
+  let phoneQuery = '';
+  let phoneStructure = '';              // what the Inputs list was built from
+  let phoneStartSerial = null;          // the document the starting numbers belong to
+  let phoneStart = new Map();           // 'canvas|node' → [number per period] when the document was opened
+  const phoneAllPeriods = new Map();    // 'canvas|node' → the numbers when "All periods by %" was turned on
+  const phoneControls = new Map();      // 'canvas|node' → its slider (Inputs and the card)
+  let phoneRefreshPending = false;
+  let phoneCardFor = null;              // { canvasId, nodeId } of the card shown
+
+  function isPhone(){ return document.body.classList.contains('phone'); }
+  const phoneKey = (canvasId, nodeId) => canvasId + '|' + nodeId;
+  const pmk = (tag, cls, text) => { const e = document.createElement(tag); if(cls) e.className = cls; if(text !== undefined && text !== null) e.textContent = String(text); return e; };
+
+  // ---- the page ----
+  const phoneUi = (() => {
+    const top = pmk('header', 'phone-top phone-only');
+    top.id = 'phoneTop';
+    const title = pmk('div', 'phone-title');
+    title.id = 'phoneTitle';
+    const undoB = pmk('button', 'phone-icon', '↶'); undoB.id = 'phoneUndo'; undoB.setAttribute('aria-label', 'Undo');
+    const redoB = pmk('button', 'phone-icon', '↷'); redoB.id = 'phoneRedo'; redoB.setAttribute('aria-label', 'Redo');
+    top.append(title, undoB, redoB);
+    const strip = pmk('div', 'phone-periods phone-only');
+    strip.id = 'phonePeriods';
+    const prev = pmk('button', 'phone-icon', '‹'); prev.id = 'phonePrevPeriod'; prev.setAttribute('aria-label', 'Previous period');
+    const pick = pmk('select', 'phone-period-pick'); pick.id = 'phonePeriodPick'; pick.setAttribute('aria-label', 'Period');
+    const next = pmk('button', 'phone-icon', '›'); next.id = 'phoneNextPeriod'; next.setAttribute('aria-label', 'Next period');
+    strip.append(prev, pick, next);
+    const panel = pmk('main', 'phone-panel phone-only');
+    panel.id = 'phonePanel';
+    const canvasBar = pmk('div', 'phone-canvas-bar phone-only');
+    canvasBar.id = 'phoneCanvasBar';
+    const canvasPick = pmk('select', 'phone-canvas-pick'); canvasPick.id = 'phoneCanvasPick'; canvasPick.setAttribute('aria-label', 'Canvas');
+    canvasBar.append(canvasPick, pmk('span', 'phone-canvas-hint', 'Tap a rectangle for its numbers'));
+    const nav = pmk('nav', 'phone-nav phone-only');
+    nav.id = 'phoneNav';
+    nav.setAttribute('aria-label', 'Phone views');
+    [['inputs', '🎚', 'Inputs'], ['watch', '★', 'Watch'], ['canvas', '▦', 'Canvas'], ['menu', '☰', 'More']].forEach(([id, icon, label]) => {
+      const b = pmk('button', 'phone-nav-btn');
+      b.type = 'button';
+      b.dataset.view = id;
+      b.id = 'phoneNav-' + id;
+      b.append(pmk('span', 'phone-nav-icon', icon), pmk('span', 'phone-nav-label', label));
+      nav.appendChild(b);
+    });
+    const menu = pmk('div', 'phone-menu hidden');
+    menu.id = 'phoneMenu';
+    menu.setAttribute('role', 'menu');
+    [['phoneOpen', '📁 Open…'], ['phoneRecent', '🕘 Open Recent…'], ['phoneSave', '💾 Save'], ['phoneHelp', '❓ Help'], ['phoneFullApp', '🖥 Full app']].forEach(([id, text]) => {
+      const b = pmk('button', null, text); b.type = 'button'; b.id = id; b.setAttribute('role', 'menuitem'); menu.appendChild(b);
+    });
+    const vib = pmk('button', 'hidden', ''); vib.type = 'button'; vib.id = 'phoneVibrate'; vib.setAttribute('role', 'menuitemcheckbox');
+    menu.insertBefore(vib, menu.querySelector('#phoneHelp'));
+    const back = pmk('div', 'phone-card-back hidden');
+    back.id = 'phoneCardBack';
+    const card = pmk('div', 'phone-card');
+    card.id = 'phoneCard';
+    card.setAttribute('role', 'dialog');
+    card.setAttribute('aria-modal', 'true');
+    back.appendChild(card);
+    const layoutBtn = pmk('button', 'phone-layout-btn hidden', '📱 Phone layout');
+    layoutBtn.type = 'button';
+    layoutBtn.id = 'phoneLayoutBtn';
+    document.body.append(top, strip, panel, canvasBar, nav, menu, back, layoutBtn);
+    return { top, title, undoB, redoB, prev, pick, next, panel, canvasPick, nav, menu, vib, back, card, layoutBtn };
+  })();
+
+  function applyPhoneLayout(){
+    const screenIsPhone = isPhoneScreen();
+    const on = screenIsPhone && !phoneSettings.fullApp;
+    const was = isPhone();
+    document.body.classList.toggle('phone-screen', screenIsPhone);
+    document.body.classList.toggle('phone', on);
+    phoneUi.layoutBtn.classList.toggle('hidden', !(screenIsPhone && phoneSettings.fullApp));
+    if(!on){ closePhoneMenu(); closePhoneCard(); document.body.classList.remove('phone-canvas'); }
+    if(on && !was){ phoneStructure = ''; showPhoneView(phoneView); }
+  }
+  function setPhoneFullApp(full){
+    phoneSettings.fullApp = !!full;
+    savePhoneSettings();
+    applyPhoneLayout();
+  }
+
+  // ---- settings: this browser only ----
+  function cleanPhoneSettings(raw){
+    const out = { fullApp: false, vibrate: true, watch: {} };
+    let d = null;
+    try{ d = JSON.parse(raw); }catch(e){ return out; }
+    if(!d || typeof d !== 'object') return out;
+    out.fullApp = d.fullApp === true;
+    out.vibrate = d.vibrate !== false;
+    if(d.watch && typeof d.watch === 'object' && !Array.isArray(d.watch)){
+      Object.keys(d.watch).slice(-PHONE_WATCH_DOCS).forEach(k => {
+        const v = d.watch[k];
+        if(k.length <= 400 && Array.isArray(v)) out.watch[k] = v.filter(x => typeof x === 'string' && x.length <= 200).slice(0, PHONE_WATCH_MAX);
+      });
+    }
+    return out;
+  }
+  function savePhoneSettings(){ workspaceStore.put(PHONE_KEY, JSON.stringify(phoneSettings)).catch(() => {}); }
+  // The open document, for its Watch list: its Recent entry or name, and its canvases.
+  function phoneDocKey(){
+    syncActiveIntoRegistry();
+    return String(currentDoc.recentId || currentDoc.name || 'untitled').slice(0, 120) + '|' + canvases.map(c => c.id).join(',').slice(0, 260);
+  }
+  function watchedKeys(){ return phoneSettings.watch[phoneDocKey()] || []; }
+  function isWatched(key){ return watchedKeys().includes(key); }
+  function toggleWatch(key){
+    const doc = phoneDocKey();
+    const list = (phoneSettings.watch[doc] || []).slice();
+    const i = list.indexOf(key);
+    if(i >= 0) list.splice(i, 1);
+    else { if(list.length >= PHONE_WATCH_MAX){ toast('At most ' + PHONE_WATCH_MAX + ' rectangles can be watched.'); return; } list.push(key); }
+    delete phoneSettings.watch[doc];
+    if(list.length) phoneSettings.watch[doc] = list; // the most recent last, so the oldest go first
+    const docs = Object.keys(phoneSettings.watch);
+    if(docs.length > PHONE_WATCH_DOCS) delete phoneSettings.watch[docs[0]];
+    savePhoneSettings();
+    phoneStructure = '';
+    phoneRefreshNow();
+  }
+
+  // ---- the model, read for the phone ----
+  function phoneCanvas(canvasId){ syncActiveIntoRegistry(); return canvases.find(c => c.id === canvasId) || null; }
+  function phoneNode(canvasId, nodeId){ const c = phoneCanvas(canvasId); return c ? c.nodes.find(n => n.id === nodeId) || null : null; }
+  // The value shown in period p: { value } or { error }.
+  function phoneValue(canvasId, nodeId, p){
+    const c = phoneCanvas(canvasId);
+    if(!c || !c.periodComputedValues) return { error: true };
+    const err = c.periodComputeErrors && c.periodComputeErrors[p] && c.periodComputeErrors[p][nodeId];
+    if(err) return { error: err };
+    const v = c.periodComputedValues[p] && c.periodComputedValues[p][nodeId];
+    return typeof v === 'number' && isFinite(v) ? { value: v } : { error: true };
+  }
+  function phoneName(c, n){
+    if(!n) return '?';
+    if(n.type === 'value'){ const p = parseNode(n); return p.name || (p.literal !== null ? String(p.literal) : 'Untitled'); }
+    if(n.type === 'alias'){ const src = phoneNode(n.sourceCanvasId, n.sourceNodeId); const sc = phoneCanvas(n.sourceCanvasId); return src ? phoneName(sc, src) : 'an alias to nothing'; }
+    if(n.type === 'blockInstance'){ const d = phoneCanvas(n.blockDefCanvasId); return 'block ' + (d ? d.name : '?'); }
+    if(n.type === 'function') return (n.fn && n.fn.name ? n.fn.name : 'function') + '(…)';
+    if(n.type === 'periodShift') return 'a period shift';
+    return n.text || '?';
+  }
+  // Canvases used as a block: canvas id → how many block instances use it.
+  function phoneBlockUses(){
+    const uses = new Map();
+    canvases.forEach(c => c.nodes.forEach(n => { if(n.type === 'blockInstance' && n.blockDefCanvasId) uses.set(n.blockDefCanvasId, (uses.get(n.blockDefCanvasId) || 0) + 1); }));
+    return uses;
+  }
+  // Every input rectangle with a typed number (or a number per period), by canvas.
+  function phoneInputs(){
+    syncActiveIntoRegistry();
+    const out = [];
+    canvases.forEach(c => c.nodes.forEach(n => {
+      if(n.type !== 'value' || !isInputRectangle(c, n)) return;
+      const p = parseNode(n);
+      const perPeriod = Array.isArray(n.periodValues);
+      if(!perPeriod && p.literal === null) return; // a formula or nothing typed: not a number to slide
+      out.push({ canvasId: c.id, nodeId: n.id, key: phoneKey(c.id, n.id), name: p.name || 'Untitled', unit: p.uom, perPeriod });
+    }));
+    return out;
+  }
+  // The input's own number in period p (what the slider shows).
+  function phoneInputNumber(n, p){
+    if(Array.isArray(n.periodValues) && typeof n.periodValues[p] === 'number') return n.periodValues[p];
+    const lit = parseNode(n).literal;
+    return lit === null ? 0 : lit;
+  }
+  // The numbers when the document was opened (the notch, and "since you started").
+  function phoneStartValues(key, canvasId, nodeId){
+    if(phoneStartSerial !== currentDoc.serial){ phoneStartSerial = currentDoc.serial; phoneStart = new Map(); phoneAllPeriods.clear(); }
+    if(!phoneStart.has(key)) phoneStart.set(key, periods.map((_, p) => phoneValue(canvasId, nodeId, p)));
+    return phoneStart.get(key);
+  }
+
+  // ---- changing an input: a change to the model ----
+  // One undo step per gesture, pushed on its first change; the calculation once per frame.
+  let phoneGesture = { pushed: false };
+  let phoneCalcPending = false;
+  function phoneStartGesture(){ phoneGesture = { pushed: false }; }
+  function phoneChanging(){ if(!phoneGesture.pushed){ pushHistory(); phoneGesture.pushed = true; } }
+  function phoneCalcSoon(){
+    clearComputed();
+    if(phoneCalcPending) return;
+    phoneCalcPending = true;
+    requestAnimationFrame(() => { phoneCalcPending = false; evaluateAll(); });
+  }
+  function setPhoneNumber(item, v, p){
+    const n = phoneNode(item.canvasId, item.nodeId);
+    if(!n || !isFinite(v)) return;
+    phoneChanging();
+    if(Array.isArray(n.periodValues)){
+      n.periodValues[p] = v;
+      if(n.periodValuesRange){ n.periodValuesRange.min = Math.min(n.periodValuesRange.min, v); n.periodValuesRange.max = Math.max(n.periodValuesRange.max, v); }
+    } else {
+      const parts = textParts(n);
+      parts.value = String(v);
+      n.text = composeText(parts);
+    }
+    phoneCalcSoon();
+  }
+  // "All periods by %": every period's number from the ones when it was turned on.
+  function setPhoneAllPeriods(item, pct){
+    const n = phoneNode(item.canvasId, item.nodeId);
+    const from = phoneAllPeriods.get(item.key);
+    if(!n || !Array.isArray(n.periodValues) || !from) return;
+    phoneChanging();
+    n.periodValues = from.map(x => Number((x * (1 + pct / 100)).toPrecision(12)));
+    if(n.periodValuesRange){
+      n.periodValuesRange.min = Math.min(n.periodValuesRange.min, ...n.periodValues);
+      n.periodValuesRange.max = Math.max(n.periodValuesRange.max, ...n.periodValues);
+    }
+    phoneCalcSoon();
+  }
+
+  // A 1-2-5 step near x (the slider's step: about 20 either side of the number).
+  function phoneNiceStep(x){
+    if(!(x > 0) || !isFinite(x)) return 1;
+    const p = Math.pow(10, Math.floor(Math.log10(x))), f = x / p;
+    return Number(((f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p).toPrecision(6));
+  }
+  // Half the number either way (10 either way around 0), in steps of about a twentieth of that.
+  function phoneRange(v){
+    const span = Math.abs(v) > 0 ? Math.abs(v) * 0.5 : 10;
+    const step = phoneNiceStep(span / 20);
+    const r = (x) => Number(x.toPrecision(12));
+    return { min: r(Math.floor((v - span) / step) * step), max: r(Math.ceil((v + span) / step) * step), step };
+  }
+  const phoneFmt = (v) => (typeof v === 'number' && isFinite(v)) ? fmtNumberPlain(v) : '—';
+  function fmtNumberPlain(v){
+    if(v === 0) v = 0;
+    const a = Math.abs(v), digits = a === 0 ? 0 : a >= 100 ? 2 : a >= 1 ? 3 : 4;
+    return v.toLocaleString('en-US', { maximumFractionDigits: digits }).replace('-', '−');
+  }
+  function phoneDiff(now, was){
+    const d = now - was;
+    if(!isFinite(d) || Math.abs(d) < 1e-12 * Math.max(1, Math.abs(was))) return '';
+    let t = (d > 0 ? '+' : '−') + fmtNumberPlain(Math.abs(d));
+    if(was !== 0 && isFinite(was)) t += ' (' + (d > 0 ? '+' : '−') + Math.abs(d / Math.abs(was) * 100).toLocaleString('en-US', { maximumFractionDigits: 1 }) + '%)';
+    return t;
+  }
+
+  // An input's card: its name, ★, what it is, and its slider.
+  function phoneInputCard(item, blockUses){
+    const n = phoneNode(item.canvasId, item.nodeId);
+    const p = currentPeriod;
+    const card = pmk('div', 'phone-input');
+    card.dataset.key = item.key;
+    const head = pmk('div', 'phone-input-head');
+    head.appendChild(pmk('span', 'phone-input-name', item.name));
+    if(item.unit) head.appendChild(pmk('span', 'phone-input-unit', item.unit));
+    head.appendChild(pmk('span', 'phone-input-change'));
+    const star = pmk('button', 'phone-star', isWatched(item.key) ? '★' : '☆');
+    star.type = 'button';
+    star.setAttribute('aria-pressed', isWatched(item.key) ? 'true' : 'false');
+    star.setAttribute('aria-label', 'Watch ' + item.name);
+    star.addEventListener('click', () => toggleWatch(item.key));
+    head.appendChild(star);
+    card.appendChild(head);
+    if(blockUses) card.appendChild(pmk('div', 'phone-input-note', 'Used in ' + blockUses + (blockUses === 1 ? ' block' : ' blocks') + ': a change here changes every copy.'));
+    const all = item.perPeriod && phoneAllPeriods.has(item.key);
+    const start = phoneStartValues(item.key, item.canvasId, item.nodeId);
+    const startNow = start[p] && !start[p].error ? start[p].value : phoneInputNumber(n, p);
+    let ctl;
+    if(all){
+      ctl = createPhoneSlider({ label: item.name + ', all periods', min: -50, max: 50, step: 1, value: Number(card.dataset.pct || 0), base: 0,
+        format: (v) => (v > 0 ? '+' : v < 0 ? '−' : '') + fmtNumberPlain(Math.abs(v)) + '%',
+        vibrate: () => phoneSettings.vibrate,
+        onStart: phoneStartGesture,
+        onInput: (v) => { phoneAllPct.set(item.key, v); setPhoneAllPeriods(item, v); },
+        onEnd: () => {} });
+      ctl.setValue(phoneAllPct.get(item.key) || 0);
+    } else {
+      const now = phoneInputNumber(n, p);
+      ctl = createPhoneSlider(Object.assign(phoneRange(now), { label: item.name, value: now, base: startNow,
+        format: (v) => fmtNumberPlain(v),
+        vibrate: () => phoneSettings.vibrate,
+        onStart: phoneStartGesture,
+        onInput: (v) => setPhoneNumber(item, v, currentPeriod),
+        onEnd: () => { phoneStructure = ''; phoneRefreshSoon(); } })); // a new range around the new number
+    }
+    phoneControls.set(item.key, { ctl, all });
+    card.appendChild(ctl.el);
+    const foot = pmk('div', 'phone-input-foot');
+    foot.appendChild(pmk('span', 'phone-input-start'));
+    if(item.perPeriod){
+      const label = pmk('label', 'phone-all');
+      const box = pmk('input');
+      box.type = 'checkbox';
+      box.checked = all;
+      box.addEventListener('change', () => {
+        if(box.checked){ const node = phoneNode(item.canvasId, item.nodeId); phoneAllPeriods.set(item.key, node.periodValues.slice()); phoneAllPct.set(item.key, 0); }
+        else { phoneAllPeriods.delete(item.key); phoneAllPct.delete(item.key); }
+        phoneStructure = '';
+        phoneRefreshNow();
+      });
+      label.append(box, document.createTextNode(' All periods by %'));
+      foot.appendChild(label);
+    }
+    card.appendChild(foot);
+    return card;
+  }
+  const phoneAllPct = new Map(); // 'canvas|node' → the % "All periods by %" is at
+
+  // The Watch rows: name, the value in the period shown, how far it has moved.
+  function phoneWatchList(into){
+    const keys = watchedKeys();
+    keys.forEach(key => {
+      const [canvasId, nodeId] = key.split('|');
+      const c = phoneCanvas(canvasId), n = phoneNode(canvasId, nodeId);
+      if(!c || !n) return;
+      const row = pmk('button', 'phone-watch-row');
+      row.type = 'button';
+      row.dataset.key = key;
+      row.append(pmk('span', 'phone-watch-name', phoneName(c, n)), pmk('span', 'phone-watch-value'), pmk('span', 'phone-watch-change'));
+      row.addEventListener('click', () => openPhoneCard(canvasId, nodeId));
+      into.appendChild(row);
+    });
+  }
+
+  // ---- drawing the views ----
+  function phoneStructureNow(){
+    const items = phoneInputs();
+    return { items, sig: phoneView + '|' + phoneQuery + '|' + currentPeriod + '|' + items.map(i => i.key + ':' + i.name + ':' + i.perPeriod + ':' + phoneAllPeriods.has(i.key)).join(';')
+      + '|' + watchedKeys().join(',') + '|' + canvases.map(c => c.id + ':' + c.name).join(',') + '|' + phoneDocKey() };
+  }
+  function phoneRebuild(items){
+    const panel = phoneUi.panel;
+    const scroll = panel.scrollTop;
+    panel.textContent = '';
+    phoneControls.clear();
+    if(phoneView === 'canvas'){ panel.scrollTop = 0; return; }
+    if(phoneView === 'watch' || watchedKeys().length){
+      const box = pmk('section', 'phone-watch');
+      box.id = 'phoneWatch';
+      box.appendChild(pmk('h2', 'phone-head', 'Watching'));
+      phoneWatchList(box);
+      if(!watchedKeys().length) box.appendChild(pmk('p', 'phone-empty', 'Nothing watched yet: ☆ on an input, or tap a rectangle on the canvas and ☆ Watch.'));
+      panel.appendChild(box);
+    }
+    if(phoneView === 'inputs'){
+      const search = pmk('input', 'phone-search');
+      search.type = 'search';
+      search.id = 'phoneSearch';
+      search.placeholder = 'Search inputs';
+      search.setAttribute('aria-label', 'Search inputs');
+      search.value = phoneQuery;
+      search.addEventListener('input', () => { phoneQuery = search.value; phoneRefreshNow(); const s = document.getElementById('phoneSearch'); if(s){ s.focus(); s.setSelectionRange(s.value.length, s.value.length); } });
+      panel.appendChild(search);
+      const q = phoneQuery.trim().toLowerCase();
+      const uses = phoneBlockUses();
+      const shown = items.filter(i => !q || i.name.toLowerCase().includes(q) || (phoneCanvas(i.canvasId) || {}).name.toLowerCase().includes(q));
+      if(!items.length) panel.appendChild(pmk('p', 'phone-empty', 'This model has no inputs with a number to change.'));
+      else if(!shown.length) panel.appendChild(pmk('p', 'phone-empty', 'No input matches “' + phoneQuery.slice(0, 60) + '”.'));
+      canvases.forEach(c => {
+        const mine = shown.filter(i => i.canvasId === c.id);
+        if(!mine.length) return;
+        const group = pmk('section', 'phone-group');
+        group.dataset.canvas = c.id;
+        group.appendChild(pmk('h2', 'phone-head', c.name));
+        mine.forEach(i => group.appendChild(phoneInputCard(i, uses.get(c.id) || 0)));
+        panel.appendChild(group);
+      });
+    }
+    panel.scrollTop = scroll;
+  }
+  // The numbers and words that follow the model (no slider is rebuilt while one is held).
+  function phoneUpdateValues(){
+    const p = currentPeriod;
+    document.querySelectorAll('#phonePanel .phone-input').forEach(card => {
+      const key = card.dataset.key, [canvasId, nodeId] = key.split('|');
+      const n = phoneNode(canvasId, nodeId), entry = phoneControls.get(key);
+      if(!n || !entry) return;
+      const start = phoneStartValues(key, canvasId, nodeId)[p];
+      const shown = phoneValue(canvasId, nodeId, p);
+      if(!entry.all && !entry.ctl.dragging()) entry.ctl.setValue(phoneInputNumber(n, p));
+      const was = start && !start.error ? start.value : null;
+      card.querySelector('.phone-input-change').textContent = (was !== null && !shown.error) ? phoneDiff(shown.value, was) : '';
+      card.querySelector('.phone-input-start').textContent = was !== null ? 'At the start: ' + fmtNumberPlain(was) : '';
+      card.classList.toggle('moved', was !== null && !shown.error && shown.value !== was);
+    });
+    document.querySelectorAll('#phonePanel .phone-watch-row').forEach(row => {
+      const [canvasId, nodeId] = row.dataset.key.split('|');
+      const now = phoneValue(canvasId, nodeId, p);
+      const start = phoneStartValues(row.dataset.key, canvasId, nodeId)[p];
+      row.querySelector('.phone-watch-value').textContent = now.error ? '!' : fmtNumberPlain(now.value);
+      const d = !now.error && start && !start.error ? phoneDiff(now.value, start.value) : '';
+      const ch = row.querySelector('.phone-watch-change');
+      ch.textContent = d;
+      ch.className = 'phone-watch-change' + (d ? (now.value > start.value ? ' up' : ' down') : '');
+    });
+    if(phoneCardFor) fillPhoneCardValues();
+  }
+  function phoneTopBar(){
+    phoneUi.title.textContent = docDisplayName() + (currentDoc.dirty ? ' •' : '');
+    phoneUi.undoB.disabled = !history.length;
+    phoneUi.redoB.disabled = !future.length;
+    const pick = phoneUi.pick;
+    if(pick.options.length !== periods.length || [...pick.options].some((o, i) => o.textContent !== periods[i])){
+      pick.textContent = '';
+      periods.forEach((name, i) => { const o = pmk('option', null, name); o.value = String(i); pick.appendChild(o); });
+    }
+    pick.value = String(currentPeriod);
+    phoneUi.prev.disabled = currentPeriod <= 0;
+    phoneUi.next.disabled = currentPeriod >= periods.length - 1;
+    document.body.classList.toggle('phone-one-period', periods.length < 2); // no strip for one period
+    const cp = phoneUi.canvasPick;
+    if(cp.options.length !== canvases.length || canvases.some((c, i) => cp.options[i].value !== c.id || cp.options[i].textContent !== c.name)){
+      cp.textContent = '';
+      canvases.forEach(c => { const o = pmk('option', null, c.name); o.value = c.id; cp.appendChild(o); });
+    }
+    cp.value = activeCanvasId;
+    phoneUi.nav.querySelectorAll('.phone-nav-btn').forEach(b => b.setAttribute('aria-current', b.dataset.view === phoneView ? 'page' : 'false'));
+  }
+  function phoneRefreshNow(){
+    if(!isPhone() || !canvases.length) return;
+    const now = phoneStructureNow();
+    const holding = [...phoneControls.values()].some(e => e.ctl.dragging());
+    if(now.sig !== phoneStructure && !holding){ phoneStructure = now.sig; phoneRebuild(now.items); }
+    phoneTopBar();
+    phoneUpdateValues();
+  }
+  function phoneRefreshSoon(){
+    if(!isPhone() || phoneRefreshPending) return;
+    phoneRefreshPending = true;
+    requestAnimationFrame(() => { phoneRefreshPending = false; phoneRefreshNow(); });
+  }
+  function showPhoneView(view){
+    phoneView = view === 'watch' || view === 'canvas' ? view : 'inputs';
+    document.body.classList.toggle('phone-canvas', phoneView === 'canvas');
+    closePhoneMenu();
+    phoneStructure = '';
+    phoneRefreshNow();
+    if(phoneView === 'canvas') requestAnimationFrame(() => { try{ zoomToFit(); }catch(e){ /* nothing to fit */ } });
+  }
+
+  // ---- the canvas: to look at; a tap on a rectangle opens its card ----
+  const viewportEl = document.getElementById('viewport');
+  let phoneTap = null;
+  // The card opens on the tap's click (opened on its lift, the click would land on the card's
+  // dim background and close it again).
+  let phoneTapped = null;
+  ['pointerdown', 'mousedown', 'dblclick', 'click', 'contextmenu'].forEach(type => viewportEl.addEventListener(type, (ev) => {
+    if(!isPhone()) return;
+    ev.stopPropagation(); // nothing on the canvas is edited on a phone
+    if(type === 'contextmenu' || type === 'dblclick') ev.preventDefault();
+    if(type === 'pointerdown'){
+      const el = ev.target.closest && ev.target.closest('.node');
+      phoneTap = { id: ev.pointerId, x: ev.clientX, y: ev.clientY, node: el ? el.dataset.id : null };
+      phoneTapped = null;
+    }
+    if(type === 'click' && phoneTapped){
+      const n = getNode(phoneTapped);
+      phoneTapped = null;
+      if(n && (n.type === 'value' || n.type === 'alias')) openPhoneCard(activeCanvasId, n.id);
+    }
+  }, true));
+  viewportEl.addEventListener('pointerup', (ev) => {
+    if(!isPhone()) return;
+    ev.stopPropagation();
+    const t = phoneTap;
+    phoneTap = null;
+    if(t && t.id === ev.pointerId && t.node && Math.hypot(ev.clientX - t.x, ev.clientY - t.y) <= 12) phoneTapped = t.node;
+  }, true);
+  phoneUi.canvasPick.addEventListener('change', () => { switchToCanvas(phoneUi.canvasPick.value); render(); requestAnimationFrame(() => { try{ zoomToFit(); }catch(e){ /* nothing */ } }); });
+
+  // In words: what a node is worked out from.
+  function phoneFormula(c, nodeId, depth){
+    const n = c.nodes.find(x => x.id === nodeId);
+    if(!n) return '?';
+    if(n.type !== 'operator' || depth > 2) return phoneName(c, n);
+    const ins = c.edges.filter(e => e.to === n.id).sort((a, b) => (a.toPort || 0) - (b.toPort || 0) || ((c.nodes.find(x => x.id === a.from) || {}).x || 0) - ((c.nodes.find(x => x.id === b.from) || {}).x || 0));
+    const parts = ins.map(e => { const s = c.nodes.find(x => x.id === e.from); return s && s.type === 'operator' ? '(' + phoneFormula(c, s.id, depth + 1) + ')' : phoneShiftWords(c, e.from, depth); });
+    const op = String(n.text || '?');
+    return /^[+\-−×÷*/^]$/.test(op) ? parts.join(' ' + op + ' ') : op + '(' + parts.join(', ') + ')';
+  }
+  function phoneShiftWords(c, nodeId, depth){
+    const n = c.nodes.find(x => x.id === nodeId);
+    if(!n || n.type !== 'periodShift') return phoneName(c, n);
+    const into = c.edges.find(e => e.to === n.id);
+    const what = into ? phoneFormula(c, into.from, depth + 1) : 'nothing';
+    const k = typeof n.shift === 'number' ? n.shift : -1;
+    return what + (k === -1 ? ' in the period before' : k === 1 ? ' in the period after' : ' ' + Math.abs(k) + ' periods ' + (k < 0 ? 'before' : 'after'));
+  }
+  function phoneWorkedOutFrom(c, n){
+    if(n.type === 'alias'){ const sc = phoneCanvas(n.sourceCanvasId); return 'The same as ' + phoneName(c, n) + (sc ? ' on ' + sc.name : '') + '.'; }
+    const ins = c.edges.filter(e => e.to === n.id);
+    if(isInputRectangle(c, n)) return Array.isArray(n.periodValues) ? 'An input: its own number in each period.' : 'An input: a number typed in.';
+    if(ins.length === 1) return '= ' + phoneFormula(c, ins[0].from, 0);
+    return '= ' + ins.map(e => phoneFormula(c, e.from, 0)).join(' + ');
+  }
+  // What reads it: the rectangles its arrows lead to (through operators and period shifts).
+  function phoneReadBy(c, n){
+    const out = new Set(), seen = new Set([n.id]);
+    let todo = c.edges.filter(e => e.from === n.id).map(e => e.to);
+    while(todo.length && out.size < 12){
+      const id = todo.shift();
+      if(seen.has(id)) continue;
+      seen.add(id);
+      const t = c.nodes.find(x => x.id === id);
+      if(!t) continue;
+      if(t.type === 'value' || t.type === 'blockInstance' || t.type === 'function') out.add(phoneName(c, t));
+      else todo = todo.concat(c.edges.filter(e => e.from === id).map(e => e.to));
+    }
+    canvases.forEach(other => other.nodes.forEach(a => {
+      if(a.type === 'alias' && a.sourceCanvasId === c.id && a.sourceNodeId === n.id && other.id !== c.id) out.add('the ' + other.name + ' canvas');
+    }));
+    return [...out];
+  }
+
+  function openPhoneCard(canvasId, nodeId){
+    const c = phoneCanvas(canvasId), n = phoneNode(canvasId, nodeId);
+    if(!c || !n) return;
+    phoneCardFor = { canvasId, nodeId };
+    const card = phoneUi.card;
+    card.textContent = '';
+    const key = phoneKey(canvasId, nodeId);
+    const head = pmk('div', 'phone-card-head');
+    const title = pmk('h3', null, phoneName(c, n));
+    title.id = 'phoneCardTitle';
+    card.setAttribute('aria-labelledby', 'phoneCardTitle');
+    const close = pmk('button', 'phone-icon phone-card-close', '×');
+    close.type = 'button';
+    close.setAttribute('aria-label', 'Close');
+    close.addEventListener('click', closePhoneCard);
+    head.append(title, close);
+    card.appendChild(head);
+    const unit = n.type === 'value' ? parseNode(n).uom : null;
+    card.appendChild(pmk('div', 'phone-card-where', c.name + (unit ? ' · in ' + unit : '')));
+    card.appendChild(pmk('p', 'phone-card-formula', phoneWorkedOutFrom(c, n)));
+    const readers = phoneReadBy(c, n);
+    if(readers.length) card.appendChild(pmk('p', 'phone-card-readers', 'Read by ' + readers.join(', ') + '.'));
+    const star = pmk('button', 'phone-card-star', isWatched(key) ? '★ Watching' : '☆ Watch');
+    star.type = 'button';
+    star.setAttribute('aria-pressed', isWatched(key) ? 'true' : 'false');
+    star.addEventListener('click', () => { toggleWatch(key); openPhoneCard(canvasId, nodeId); });
+    card.appendChild(star);
+    const item = phoneInputs().find(i => i.key === key);
+    if(item){
+      const slot = pmk('div', 'phone-card-input');
+      slot.appendChild(phoneInputCard(item, phoneBlockUses().get(canvasId) || 0));
+      slot.querySelector('.phone-star').remove(); // the card's own ★ above
+      card.appendChild(slot);
+    }
+    const table = pmk('table', 'phone-card-table');
+    const tr = pmk('tr');
+    ['Period', 'Value', 'Since the start'].forEach(t => tr.appendChild(pmk('th', null, t)));
+    const thead = pmk('thead'); thead.appendChild(tr);
+    table.append(thead, pmk('tbody'));
+    card.appendChild(table);
+    phoneUi.back.classList.remove('hidden');
+    fillPhoneCardValues();
+  }
+  function fillPhoneCardValues(){
+    if(!phoneCardFor) return;
+    const { canvasId, nodeId } = phoneCardFor;
+    const key = phoneKey(canvasId, nodeId);
+    const body = phoneUi.card.querySelector('.phone-card-table tbody');
+    if(!body) return;
+    const start = phoneStartValues(key, canvasId, nodeId);
+    body.textContent = '';
+    periods.forEach((name, p) => {
+      const v = phoneValue(canvasId, nodeId, p), s = start[p];
+      const row = pmk('tr', p === currentPeriod ? 'now' : null);
+      row.appendChild(pmk('td', null, name));
+      row.appendChild(pmk('td', 'num', v.error ? '!' : fmtNumberPlain(v.value)));
+      const d = !v.error && s && !s.error ? phoneDiff(v.value, s.value) : '';
+      row.appendChild(pmk('td', 'num' + (d ? (v.value > s.value ? ' up' : ' down') : ''), d || '—'));
+      body.appendChild(row);
+    });
+    const slot = phoneUi.card.querySelector('.phone-card-input .phone-input');
+    if(slot){
+      const n = phoneNode(canvasId, nodeId);
+      const entry = phoneControls.get(key);
+      if(n && entry && !entry.all && !entry.ctl.dragging()) entry.ctl.setValue(phoneInputNumber(n, currentPeriod));
+    }
+  }
+  function closePhoneCard(){
+    phoneCardFor = null;
+    phoneUi.back.classList.add('hidden');
+    phoneUi.card.textContent = '';
+    phoneStructure = '';
+    phoneRefreshSoon();
+  }
+  phoneUi.back.addEventListener('click', (ev) => { if(ev.target === phoneUi.back) closePhoneCard(); });
+
+  // ---- ☰ ----
+  function openPhoneMenu(){
+    phoneUi.vib.classList.toggle('hidden', !canVibrate());
+    phoneUi.vib.textContent = 'Vibrate on the marks: ' + (phoneSettings.vibrate ? 'On' : 'Off');
+    phoneUi.vib.setAttribute('aria-checked', phoneSettings.vibrate ? 'true' : 'false');
+    phoneUi.menu.classList.remove('hidden');
+  }
+  function closePhoneMenu(){ phoneUi.menu.classList.add('hidden'); }
+  phoneUi.nav.addEventListener('click', (ev) => {
+    const b = ev.target.closest('.phone-nav-btn');
+    if(!b) return;
+    if(b.dataset.view === 'menu'){ if(phoneUi.menu.classList.contains('hidden')) openPhoneMenu(); else closePhoneMenu(); return; }
+    showPhoneView(b.dataset.view);
+  });
+  document.addEventListener('pointerdown', (ev) => {
+    if(!phoneUi.menu.classList.contains('hidden') && !ev.target.closest('#phoneMenu, #phoneNav-menu')) closePhoneMenu();
+  }, true);
+  const phoneMenuItem = (id, fn) => document.getElementById(id).addEventListener('click', () => { closePhoneMenu(); fn(); });
+  phoneMenuItem('phoneOpen', () => runCommand('openDocument'));
+  phoneMenuItem('phoneRecent', () => runCommand('openRecent'));
+  phoneMenuItem('phoneSave', () => runCommand('saveDocument'));
+  phoneMenuItem('phoneHelp', () => runCommand('openHelp'));
+  phoneMenuItem('phoneFullApp', () => setPhoneFullApp(true));
+  phoneUi.vib.addEventListener('click', () => { phoneSettings.vibrate = !phoneSettings.vibrate; savePhoneSettings(); closePhoneMenu(); });
+  phoneUi.layoutBtn.addEventListener('click', () => setPhoneFullApp(false));
+  phoneUi.undoB.addEventListener('click', () => runCommand('undo'));
+  phoneUi.redoB.addEventListener('click', () => runCommand('redo'));
+  phoneUi.prev.addEventListener('click', () => { if(currentPeriod > 0) setCurrentPeriod(currentPeriod - 1); });
+  phoneUi.next.addEventListener('click', () => { if(currentPeriod < periods.length - 1) setCurrentPeriod(currentPeriod + 1); });
+  phoneUi.pick.addEventListener('change', () => setCurrentPeriod(Number(phoneUi.pick.value)));
+  document.addEventListener('keydown', (ev) => {
+    if(ev.key !== 'Escape' || !isPhone()) return;
+    if(phoneCardFor){ ev.stopPropagation(); closePhoneCard(); }
+    else if(!phoneUi.menu.classList.contains('hidden')){ ev.stopPropagation(); closePhoneMenu(); }
+  }, true);
+
+  phoneReady = true;
+  applyPhoneLayout();
+  // Decided once: a phone's screen keeps its size (the on-screen keyboard shrinks the window, not
+  // the screen; turning it swaps the sides), so a window that changes size never switches layout.
+  workspaceStore.ready.then(() => workspaceStore.get(PHONE_KEY)).then(raw => {
+    if(typeof raw === 'string' && raw) phoneSettings = cleanPhoneSettings(raw);
+    applyPhoneLayout();
+    phoneStructure = '';
+    phoneRefreshSoon();
+  }, () => {});
   // =====================================================================================
   // ---------- Customize Ribbon & KeyTips dialog ----------
   // =====================================================================================

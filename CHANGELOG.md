@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmIDE on a phone: Inputs, Watch and the canvas to look at (step 17, P2a)
+- On a phone fmIDE opens to the numbers: **Inputs** (every input with a number, by canvas, searchable, each with the phone slider), **Watch** (☆ any rectangle; how far it has moved since the document was opened), **Canvas** (to look at; a tap on a rectangle shows its value in every period and how it is worked out, in words) and **More** (Open, Open Recent, Save, Help, Full app).
+- A change is a real change to the model: one undo step per move (↶ ↷ at the top), the document marked unsaved, the autosave. An input with a number per period changes in the period shown, or **All periods by %**. An input in a block says how many blocks use it.
+- The Watch list is kept in this browser, per document, never in the file. Tablets and computers are unchanged; no file format changed.
+
 ## fmGraph on a phone: the mixer, Show, holding A, Share (step 17, P1b)
 - **The mixer**: a phone turned sideways shows the sliders as faders at the screen's two edges, under the thumbs, the board between them; several fingers move several faders at once. Sliding a finger sideways, away from its fader, makes it finer. A tap on a fader's name puts another slider there (remembered per board).
 - **⤢ Show**, from a bar's or chart's quick look (holding a chart now opens one too): one on the whole screen, the screen kept on while it shows; ×, Esc or the back gesture ends it.

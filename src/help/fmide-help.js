@@ -580,7 +580,22 @@ const HELP_TOPICS = [
       { p: 'One finger on empty canvas scrolls. Press and hold there, then drag, to select with a box.' },
       { p: 'Pinch with two fingers to zoom the canvas around the point between them; move both fingers together to move around. A pinch that ends close to 100% settles at 100%.' },
       { p: 'Double-tap does what a double-click does.' },
-      { see: ['arrows', 'arranging'] },
+      { see: ['arrows', 'arranging', 'phone'] },
+    ] },
+  { id: 'phone', group: 'touch', title: 'Using fmIDE on a phone',
+    keywords: 'phone mobile iphone android smartphone inputs watch star slider period canvas card full app',
+    summary: 'On a phone fmIDE opens to your inputs: change them with a slider and watch what they move.',
+    body: [
+      { p: 'On a phone, fmIDE shows the numbers, not the canvas. Along the bottom: Inputs, Watch, Canvas and More (☰). At the top: the document\'s name, ↶ Undo and ↷ Redo, and the periods (‹ and ›, or tap the period to pick one).' },
+      { p: 'Inputs lists every input rectangle with a number, by canvas; search by its name or its canvas\'s. Change one with its slider: grab it anywhere, slide your finger up while dragging to make it finer, tap the number to type one, or use − and +. It settles at the number it had when you opened the document, with a tick.' },
+      { p: 'A change on a phone is a change to your model, exactly as typing it on a computer: each move is one step you can undo, the document is marked unsaved, and it is kept in the autosave. Save it from More (☰).' },
+      { p: 'An input with its own number in each period changes in the period shown. Tick All periods by % to move every period together by a percentage.' },
+      { p: 'An input on a canvas used as a block says how many blocks use it: changing it changes every copy.' },
+      { p: 'Watch: ☆ on an input, or on any rectangle\'s card, keeps it at the top of Inputs (and on the Watch screen) with how far it has moved since you opened the document. The list is kept in this browser for each document, never in the file.' },
+      { p: 'Canvas shows a canvas to look at: pick one from the list, pinch to zoom. Nothing is moved or edited there. Tap a rectangle for its card: its value in every period, what it is worked out from and what reads it, in words, ☆ Watch, and its slider if it is an input.' },
+      { steps: ['Open a document from More (☰) → Open….', 'In Inputs, move a slider; see the change at the top if you watch something.', 'In Canvas, tap a rectangle to see how it is worked out.', 'More (☰) → Save.'] },
+      { tip: 'More (☰) → Full app shows the whole fmIDE on a phone, to build; 📱 Phone layout goes back. Your choice is remembered in this browser.' },
+      { see: ['touch', 'values-over-time'] },
     ] },
 ];
 

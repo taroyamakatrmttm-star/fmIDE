@@ -899,6 +899,17 @@ Chromium at 844 × 390 (sideways) and 390 × 844 with a touchscreen; real touch 
 - Hostile names: a fader's name, Show's title, the pictures (made, PNG), the file name made safe; no element made, nothing run.
 - A tablet sideways and a computer: no faders, no mixer; a click on A compares at once, no "looking at".
 
+### 70. fmIDE on a phone (`tests/70-fmide-phone.spec.js`; `npm run test:phone`; step 17, P2a)
+Chromium at 390 × 844 with a touchscreen; real touch through the Chrome DevTools Protocol. A model of two canvases, Sales (Price 10 $, Volume 100 / 110 / 121 per period, Revenue = Price × Volume) and Report (an alias of Revenue, Tax rate 0.25, Tax), three periods Y1–Y3, loaded through Load System (its question answered OK); its file written to a plain temporary folder. Every test: no request leaves the page, no page error.
+- The layout: `body.phone`, the ribbon, tabs and canvas hidden, Inputs current; Sales then Report; Price, Volume, Tax rate; Price's unit; Volume's All periods by % (not Price's); period Y1. Search: "tax" → Tax rate; "sales" (a canvas's name) → Price and Volume; nothing → "No input matches". A tablet (1024 × 768, touch) and a computer: the ribbon, no phone bar.
+- The slider: Price grabbed in the middle and moved a fifth of the rail: 12 (range 5–15), Revenue 1,200 and Tax 300 in Y1, "Untitled •", "+2" and "At the start: 10"; ↶ back to 10 and 1,000, ↷ 12 again; a touch that moves nothing leaves no step (one ↶ takes the move back); typed 20 → Revenue 2,000; + → 20.5 and 2,050; the rectangle's text "Price\n20.5\n$".
+- Per period: › to Y2 shows 110; typed 150 → Volume 100 / 150 / 121, Revenue 1,500 in Y2 and 1,000 in Y1; All periods by % → 0%, typed 10 → 110 / 165 / 133.1 and "+10%"; one ↶ → 100 / 150 / 121; unticked → 150; Y3 picked → 121.
+- Watch: ☆ on Tax rate (pressed, listed); Revenue starred from its card on the canvas ("★ Watching"); the Watch screen: Tax rate and Revenue, no inputs; Price 15 → Revenue's row 1,500, "+500 (+50%)", up; the row opens Revenue's card. After a reload the same two; the workspace saved holds no Watch list, `fmIDE-phone` does.
+- The canvas: shown, the list hidden; Sales picked; Price dragged by a finger stays where it was; a drag opens no card; a double-tap opens no editor; Revenue's card: Sales, "= Price × Volume", "Read by the Report canvas.", three periods (Y3 1,210), no slider; Esc closes it. Price's card: "An input: a number typed in.", "Read by Revenue.", its + → Revenue 1,050 and 10.5 in its table; a tap on the dim page closes it; Report: Tax rate's card; the alias's: "The same as Revenue on Sales."
+- A block: `models/vertical-depreciation-block.json`: DepBlock's Tax rate "Used in 1 block: a change here changes every copy."; Capex's inputs no note.
+- More (☰): Help opens; Full app shows the ribbon, the phone bar hidden, 📱 Phone layout shown; kept after a reload; 📱 Phone layout back.
+- Hostile names: an input's, a canvas's (heading and list), a card's title and formula as text; no element made, nothing run.
+
 ### 62. Recipes within a recipe (`tests/62-nested-recipes.spec.js`; `npm run test:nested-recipes`)
 `formats/templates-v2.json`; Two Statements = Income Statement + Balance Sheet v2; Full Model = Two Statements + Cash Flow.
 - Building Full Model: three canvases (Income Statement, Balance Sheet v2 linked, Cash Flow), no warnings, nothing unfed; Retained Earnings 40, Cash balance 25; one undo removes them.

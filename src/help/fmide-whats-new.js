@@ -12,6 +12,19 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'phone-inputs', date: '2026-10-09', title: 'fmIDE on a phone',
+    summary: 'On a phone fmIDE opens to your inputs: change them with a slider made for a thumb, and watch what they move.',
+    what: [
+      'Inputs: every input rectangle with a number, by canvas, with a search box. Change one with its slider (grab it anywhere, slide your finger up to make it finer, tap to type, − and +). An input with a number per period changes in the period shown, or all periods together by %.',
+      'Watch: ☆ an input or any rectangle, and it stays at the top while you change inputs, with how far it has moved since you opened the document.',
+      'Canvas: look at any canvas and tap a rectangle for its card: its value in every period, what it is worked out from and what reads it, in words.',
+      'Each change is a real change to the model: one undo step, the document marked unsaved, the autosave. More (☰) has Open, Open Recent, Save, Help and Full app.',
+    ],
+    why: 'To check and adjust a model away from your desk, with controls made for a phone rather than a squeezed-down desktop.',
+    how: ['Open fmIDE on a phone, open a document from More (☰), then move an input in Inputs.'],
+    notes: ['Building (drawing, wiring, templates, functions, macros) stays on a tablet or computer, or More (☰) → Full app. Tablets and computers are unchanged.'],
+    see: ['phone'] },
+
 
   { id: 'empty-operator-zero', date: '2026-10-08', title: 'An empty socket counts as 0',
     summary: 'An operator with nothing wired into it gives 0, as in Excel, instead of "?" spreading through the model.',
