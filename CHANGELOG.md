@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmIDE on a phone: share the document, open fmGraph, install (step 17, P2b)
+- **More (☰) → ⇪ Share the document** hands the `.fmide` file to the phone's share sheet (a download where the browser can't share files). A shared copy leaves the document unsaved until Save.
+- **More (☰) → 📈 Open fmGraph** opens the model in fmGraph's phone layout.
+- On the site, a note at the top of Inputs says why and how to install fmIDE (a browser may clear what it keeps; Safari on an iPhone after some weeks without a visit), until Got it; **⤓ Install fmIDE** stays in More (☰). No file format changed.
+
 ## fmIDE on a phone: Inputs, Watch and the canvas to look at (step 17, P2a)
 - On a phone fmIDE opens to the numbers: **Inputs** (every input with a number, by canvas, searchable, each with the phone slider), **Watch** (☆ any rectangle; how far it has moved since the document was opened), **Canvas** (to look at; a tap on a rectangle shows its value in every period and how it is worked out, in words) and **More** (Open, Open Recent, Save, Help, Full app).
 - A change is a real change to the model: one undo step per move (↶ ↷ at the top), the document marked unsaved, the autosave. An input with a number per period changes in the period shown, or **All periods by %**. An input in a block says how many blocks use it.

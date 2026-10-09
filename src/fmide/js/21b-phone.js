@@ -18,7 +18,13 @@
   //   held back (no press reaches the canvas); a tap on a rectangle opens its card: its value
   //   in every period, what it is worked out from and what reads it, in words, ★, and its
   //   slider if it is an input.
-  // - ☰: Open…, Open Recent…, Save, Help, Full app (the whole fmIDE; 📱 Phone layout back).
+  // - ☰: Open…, Open Recent…, Save, ⇪ Share the document (P2b: the share sheet, a copy — the
+  //   document stays unsaved until Save), 📈 Open fmGraph (with the model, as on a computer),
+  //   ⤓ Install fmIDE (on the site, not installed), Help, Full app (the whole fmIDE; 📱 Phone
+  //   layout back).
+  // - The install note (P2b): on the site and not installed, a card at the top of Inputs says a
+  //   browser may clear what fmIDE keeps (Safari on an iPhone after some weeks without a visit)
+  //   and how to install; shown until Got it (installNoteSeen, fmIDE-phone).
   // Everything from the model is shown as text.
   // build:include shared/phone.js
 
@@ -27,7 +33,8 @@
   const PHONE_KEY = 'fmIDE-phone';
   const PHONE_WATCH_DOCS = 50;          // documents whose Watch list is kept
   const PHONE_WATCH_MAX = 30;           // rectangles watched in one document
-  let phoneSettings = { fullApp: false, vibrate: true, watch: {} };
+  let phoneSettings = { fullApp: false, vibrate: true, installNoteSeen: false, watch: {} };
+  let phoneSettingsRead = false;        // the install note waits for the settings
   let phoneView = 'inputs';             // 'inputs' | 'watch' | 'canvas'
   let phoneQuery = '';
   let phoneStructure = '';              // what the Inputs list was built from
@@ -77,7 +84,8 @@
     const menu = pmk('div', 'phone-menu hidden');
     menu.id = 'phoneMenu';
     menu.setAttribute('role', 'menu');
-    [['phoneOpen', '📁 Open…'], ['phoneRecent', '🕘 Open Recent…'], ['phoneSave', '💾 Save'], ['phoneHelp', '❓ Help'], ['phoneFullApp', '🖥 Full app']].forEach(([id, text]) => {
+    [['phoneOpen', '📁 Open…'], ['phoneRecent', '🕘 Open Recent…'], ['phoneSave', '💾 Save'], ['phoneShare', '⇪ Share the document'],
+      ['phoneGraph', '📈 Open fmGraph'], ['phoneInstall', '⤓ Install fmIDE'], ['phoneHelp', '❓ Help'], ['phoneFullApp', '🖥 Full app']].forEach(([id, text]) => {
       const b = pmk('button', null, text); b.type = 'button'; b.id = id; b.setAttribute('role', 'menuitem'); menu.appendChild(b);
     });
     const vib = pmk('button', 'hidden', ''); vib.type = 'button'; vib.id = 'phoneVibrate'; vib.setAttribute('role', 'menuitemcheckbox');
@@ -114,12 +122,13 @@
 
   // ---- settings: this browser only ----
   function cleanPhoneSettings(raw){
-    const out = { fullApp: false, vibrate: true, watch: {} };
+    const out = { fullApp: false, vibrate: true, installNoteSeen: false, watch: {} };
     let d = null;
     try{ d = JSON.parse(raw); }catch(e){ return out; }
     if(!d || typeof d !== 'object') return out;
     out.fullApp = d.fullApp === true;
     out.vibrate = d.vibrate !== false;
+    out.installNoteSeen = d.installNoteSeen === true;
     if(d.watch && typeof d.watch === 'object' && !Array.isArray(d.watch)){
       Object.keys(d.watch).slice(-PHONE_WATCH_DOCS).forEach(k => {
         const v = d.watch[k];
@@ -353,7 +362,8 @@
   function phoneStructureNow(){
     const items = phoneInputs();
     return { items, sig: phoneView + '|' + phoneQuery + '|' + currentPeriod + '|' + items.map(i => i.key + ':' + i.name + ':' + i.perPeriod + ':' + phoneAllPeriods.has(i.key)).join(';')
-      + '|' + watchedKeys().join(',') + '|' + canvases.map(c => c.id + ':' + c.name).join(',') + '|' + phoneDocKey() };
+      + '|' + watchedKeys().join(',') + '|' + canvases.map(c => c.id + ':' + c.name).join(',') + '|' + phoneDocKey()
+      + '|' + phoneInstallNoteWanted() + ':' + !!installPrompt };
   }
   function phoneRebuild(items){
     const panel = phoneUi.panel;
@@ -369,6 +379,7 @@
       if(!watchedKeys().length) box.appendChild(pmk('p', 'phone-empty', 'Nothing watched yet: ☆ on an input, or tap a rectangle on the canvas and ☆ Watch.'));
       panel.appendChild(box);
     }
+    if(phoneView === 'inputs' && phoneInstallNoteWanted()) panel.insertBefore(phoneInstallNote(), panel.firstChild);
     if(phoneView === 'inputs'){
       const search = pmk('input', 'phone-search');
       search.type = 'search';
@@ -615,8 +626,72 @@
   }
   phoneUi.back.addEventListener('click', (ev) => { if(ev.target === phoneUi.back) closePhoneCard(); });
 
+  // ---- getting the work out (P2b) ----
+  // ⇪ Share the document: the .fmide file (as Save writes it) to the phone's share sheet, or a
+  // download where the browser can't share files. A copy: the document stays unsaved.
+  async function sharePhoneDocument(){
+    if(inPractice()){ toast('Not while practising a tutorial.'); return null; }
+    const fileName = withDocExt(docDisplayName());
+    const file = new File([documentText()], fileName, { type: 'application/octet-stream' });
+    const how = await shareFiles([file], docDisplayName());
+    if(how === 'shared') toast('Shared a copy of “' + fileName + '”. 💾 Save keeps your own file.', 4000);
+    else if(how === 'downloaded') toast('Downloaded a copy: ' + fileName, 4000);
+    return how;
+  }
+  // The install note: only on the published site (a manifest; opened from disk there is nothing
+  // to install), and not inside the installed app.
+  function phoneOnSite(){ return !!document.querySelector('link[rel="manifest"]') && /^https?:$/.test(location.protocol); }
+  function phoneInstalled(){
+    try{
+      if(navigator.standalone === true) return true;
+      return ['standalone', 'fullscreen', 'minimal-ui'].some(m => window.matchMedia('(display-mode: ' + m + ')').matches);
+    }catch(e){ return false; }
+  }
+  function phoneIsIos(){
+    const ua = navigator.userAgent || '';
+    return /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  }
+  function phoneInstallOffered(){ return phoneOnSite() && !phoneInstalled(); }
+  function phoneInstallNoteWanted(){ return phoneSettingsRead && !phoneSettings.installNoteSeen && phoneInstallOffered(); }
+  function phoneInstallSteps(){
+    if(phoneIsIos()) return 'To install fmIDE: tap Share ⇪ in Safari, then Add to Home Screen. fmIDE then opens from its own icon and keeps your work.';
+    if(installPrompt) return 'To install fmIDE: ☰ → Install fmIDE.';
+    return 'To install fmIDE: open the browser’s menu (⋮) and choose Install app or Add to Home screen.';
+  }
+  function phoneInstallNote(){
+    const box = pmk('section', 'phone-install-note');
+    box.id = 'phoneInstallNote';
+    box.appendChild(pmk('h2', 'phone-install-title', 'Keep your work on this phone'));
+    box.appendChild(pmk('p', null, (phoneIsIos() ? 'Safari may clear what fmIDE keeps here after some weeks without a visit.' : 'A browser may clear what fmIDE keeps here.')
+      + ' Installed, fmIDE keeps it. For a document you care about, 💾 Save keeps your own copy.'));
+    const steps = phoneIsIos() ? 'Tap Share ⇪, then Add to Home Screen.' : installPrompt ? '' : 'Open the browser’s menu (⋮), then Install app or Add to Home screen.';
+    if(steps) box.appendChild(pmk('p', 'phone-install-steps', steps));
+    const row = pmk('div', 'phone-install-actions');
+    if(installPrompt && !phoneIsIos()){
+      const inst = pmk('button', 'phone-install-btn', '⤓ Install');
+      inst.type = 'button';
+      inst.id = 'phoneInstallNow';
+      inst.addEventListener('click', () => { dismissPhoneInstallNote(); installApp(); });
+      row.appendChild(inst);
+    }
+    const ok = pmk('button', 'phone-install-ok', 'Got it');
+    ok.type = 'button';
+    ok.id = 'phoneInstallOk';
+    ok.addEventListener('click', dismissPhoneInstallNote);
+    row.appendChild(ok);
+    box.appendChild(row);
+    return box;
+  }
+  function dismissPhoneInstallNote(){
+    phoneSettings.installNoteSeen = true;
+    savePhoneSettings();
+    phoneStructure = '';
+    phoneRefreshNow();
+  }
+
   // ---- ☰ ----
   function openPhoneMenu(){
+    document.getElementById('phoneInstall').classList.toggle('hidden', !phoneInstallOffered());
     phoneUi.vib.classList.toggle('hidden', !canVibrate());
     phoneUi.vib.textContent = 'Vibrate on the marks: ' + (phoneSettings.vibrate ? 'On' : 'Off');
     phoneUi.vib.setAttribute('aria-checked', phoneSettings.vibrate ? 'true' : 'false');
@@ -636,6 +711,9 @@
   phoneMenuItem('phoneOpen', () => runCommand('openDocument'));
   phoneMenuItem('phoneRecent', () => runCommand('openRecent'));
   phoneMenuItem('phoneSave', () => runCommand('saveDocument'));
+  phoneMenuItem('phoneShare', () => sharePhoneDocument());
+  phoneMenuItem('phoneGraph', () => runCommand('openFmGraph'));
+  phoneMenuItem('phoneInstall', () => { if(installPrompt) installApp(); else showMessage(phoneInstallSteps()); });
   phoneMenuItem('phoneHelp', () => runCommand('openHelp'));
   phoneMenuItem('phoneFullApp', () => setPhoneFullApp(true));
   phoneUi.vib.addEventListener('click', () => { phoneSettings.vibrate = !phoneSettings.vibrate; savePhoneSettings(); closePhoneMenu(); });
@@ -657,6 +735,7 @@
   // the screen; turning it swaps the sides), so a window that changes size never switches layout.
   workspaceStore.ready.then(() => workspaceStore.get(PHONE_KEY)).then(raw => {
     if(typeof raw === 'string' && raw) phoneSettings = cleanPhoneSettings(raw);
+    phoneSettingsRead = true;
     applyPhoneLayout();
     phoneStructure = '';
     phoneRefreshSoon();

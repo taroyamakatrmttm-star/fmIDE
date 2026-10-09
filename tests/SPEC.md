@@ -910,6 +910,16 @@ Chromium at 390 × 844 with a touchscreen; real touch through the Chrome DevTool
 - More (☰): Help opens; Full app shows the ribbon, the phone bar hidden, 📱 Phone layout shown; kept after a reload; 📱 Phone layout back.
 - Hostile names: an input's, a canvas's (heading and list), a card's title and formula as text; no element made, nothing run.
 
+### 71. fmIDE on a phone, getting the work out (`tests/71-fmide-phone-share.spec.js`; `npm run test:phone`; step 17, P2b)
+Chromium at 390 × 844 with a touchscreen; real touch through the Chrome DevTools Protocol. The share sheet (recording each file's name and text, or closed by the person, or missing) and the browser's install offer are stand-ins put in the page by the test. A model of one canvas, Sales (Price 10, Volume 100, Revenue), two periods. Every test: no request leaves the page (but the site's own, where served), no page error.
+- Share: Price typed 12 ("Untitled •"); ☰ → ⇪ Share the document: one file "Untitled.fmide", title "Untitled", an `fmIDE-workspace` with Sales and Price 12; "Shared a copy of “Untitled.fmide”"; still "Untitled •"; the file opened on another phone shows Price 12.
+- No file sharing: a download "Untitled.fmide" (an `fmIDE-workspace`), "Downloaded a copy: Untitled.fmide", still unsaved. A share closed by the person: nothing shared, nothing downloaded, no message.
+- A document named `<img src=x onerror=alert(1)> plan`: shown as text in the top bar; shared under a `.fmide` name with none of `< > " / \ : * ? |`, its title the name as text; no element made.
+- Save without a save picker: the name box inside the 390-pixel screen, its text at least 16 pixels; "Pricing" → a download "Pricing.fmide", the top bar "Pricing".
+- Open fmGraph after Price 20: a window with fmGraph's phone layout, Revenue 2,000 in period 1, the dock shown.
+- The install note on the site (an iPhone's Safari): at the top of Inputs, "Safari may clear…", "Tap Share ⇪, then Add to Home Screen.", no Install button; not on Watch; ☰ → ⤓ Install fmIDE gives the steps; Got it hides it, still hidden after a reload, ☰'s item still there; `installNoteSeen` in `fmIDE-phone`, not in the workspace.
+- On the site (Android): "A browser may clear…" with the menu's steps; the browser's offer arriving → ⤓ Install, which asks the browser once and hides the note. Inside the installed app (`navigator.standalone`): no note, no ☰ item. A computer on the site: the ribbon, no note. From disk: no note, no Install item; Share and Open fmGraph there.
+
 ### 62. Recipes within a recipe (`tests/62-nested-recipes.spec.js`; `npm run test:nested-recipes`)
 `formats/templates-v2.json`; Two Statements = Income Statement + Balance Sheet v2; Full Model = Two Statements + Cash Flow.
 - Building Full Model: three canvases (Income Statement, Balance Sheet v2 linked, Cash Flow), no warnings, nothing unfed; Retained Earnings 40, Cash balance 25; one undo removes them.

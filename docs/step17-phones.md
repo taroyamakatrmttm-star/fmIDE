@@ -75,7 +75,7 @@ fmIDE on a phone opens to **numbers, not the canvas**. A bar along the bottom: *
 - **Watch**: the results the person stars (★ on any rectangle), at the top of the Inputs screen while an input is being changed, each showing how far it has moved. The person's own setting, never in a file. Watching what matters while changing what drives it, on one screen.
 - **Periods**: swiped along a strip under the top bar.
 - **Canvas**: to look at, not to edit — fitted to the screen, pinch to zoom (step 13b), a canvas changed by a swipe at the edge. Tapping a rectangle opens a card: its value in every period, what it is worked out from (in words), what reads it, ✎ for an input, ★ Watch.
-- **☰**: Open…, Open Recent, Save, ⇪ Share the document (the share sheet), Open fmGraph (the phone fmGraph, with the model), Make Excel (P3), Help, Full app.
+- **☰**: Open…, Open Recent, Save, ⇪ Share the document (the share sheet), Open fmGraph (the phone fmGraph, with the model), Install fmIDE, Help, Full app; Make Excel comes with P3.
 - **Install**: Safari on an iPhone may clear a website's saved data after some weeks without a visit; an installed app (Add to Home Screen) keeps it. The phone layout says so once, with how to do it, and reminds the person to save a document they care about.
 - **Left out on a phone**: everything that builds — the ribbon, drawing and wiring, templates, recipes, functions, macros, Formats, Preferences, tutorials. ☰ → Full app shows them.
 
@@ -109,8 +109,8 @@ What fmGraph and fmIDE both use — the phone check, the number control, the tic
 | P1a | fmGraph: the phone layout, the slider dock and the phone slider, swiping between boards, holding a bar |
 | P1b | fmGraph: the mixer, Show with the screen kept on, scenario cards and Hold A, Share |
 | P2a | fmIDE: the phone layout, Inputs, Watch, periods, the canvas to look at and its cards |
-| P2b | fmIDE: Save and Share, the install note, Open fmGraph and Make Excel from the phone |
-| P3 | ExcelExporter: make the workbook and share it |
+| P2b | fmIDE: Save and Share, the install note, Open fmGraph from the phone |
+| P3 | ExcelExporter: make the workbook and share it; Make Excel in fmIDE's ☰ |
 
 Each phase adds its What's new entry, help topic and tests.
 
@@ -154,3 +154,12 @@ Tilt to sweep; a phone tutorial; receiving a `.fmide` from another app's share s
 - **The layout is decided once, at start.** A phone's screen keeps its size: the on-screen keyboard shrinks the window, not the screen, and turning the phone swaps its sides. Found through test group 27, which imitates a tablet's keyboard by shrinking the window: the test browser shrinks the screen with it, and a tablet briefly read as a phone.
 - **Kept**: `fmIDE-phone` in the `fmIDE` database (Full app, the tick's switch, the Watch lists), apart from the workspace, which is written into documents.
 - Test group 70 (`tests/70-fmide-phone.spec.js`): 8 tests. Found while testing: a test's file in a folder named after a title with ★ or − didn't reach the page's file box; the tests write theirs to a plain temporary folder.
+
+**P2b** (9 October 2026): getting the work out of fmIDE on a phone, with the owner's three choices (Make Excel in fmIDE's ☰ comes in P3, with ExcelExporter's phone screen, so it never leads to a squeezed desktop page; the install note once, until Got it, with ⤓ Install fmIDE kept in ☰; sharing the document doesn't count as saving). Settled while building it:
+- **⇪ Share the document** hands the shared `shareFiles` the `.fmide` file exactly as Save writes it, named as Save would (`withDocExt`, a name made safe). "Shared a copy…" or "Downloaded a copy…"; a cancelled share says nothing. The document stays unsaved.
+- **On Android**, Chrome's share sheet may take only some kinds of file (pictures, text, PDF…); a `.fmide` is then downloaded instead. Safari on an iPhone shares any file.
+- **💾 Save** on a phone is the download with its name box, as on any browser without a save picker; the box fits the screen and its text is large enough that the phone doesn't zoom in.
+- **📈 Open fmGraph** opens fmGraph with the model as on a computer, and fmGraph shows its phone layout. On an iPhone's installed app, whether the window link carries the model is for the owner to try.
+- **The install note** shows only on the published site (a manifest; from disk there is nothing to install), not inside the installed app (`display-mode` or an iPhone's `navigator.standalone`), and after the phone's settings are read, so it doesn't flash. On an iPhone it gives Safari's steps; elsewhere the browser's offer becomes an Install button, else the browser menu's steps. Its "seen" mark is `installNoteSeen` in `fmIDE-phone`.
+- A message (toast) sits above the phone's bottom bar.
+- Test group 71 (`tests/71-fmide-phone-share.spec.js`): 7 tests; the share sheet and the browser's install offer are stand-ins put in the page by the test.
