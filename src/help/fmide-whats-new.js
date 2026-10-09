@@ -12,6 +12,17 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'phone-share', date: '2026-10-09', title: 'Share a document from your phone',
+    summary: 'On a phone, send the open document on through the share sheet, open it in fmGraph, and keep your work by installing fmIDE.',
+    what: [
+      'More (☰) → ⇪ Share the document: the .fmide file goes to your phone\'s share sheet — Mail, Messages, Files, AirDrop. Where the browser can\'t share files, it downloads. A shared copy leaves the document unsaved until you Save it.',
+      'More (☰) → 📈 Open fmGraph: the model in fmGraph, in its phone layout, to move sliders and watch the bars.',
+      'On the site, a note at the top of Inputs says how to install fmIDE (on an iPhone: Share ⇪, Add to Home Screen) and why: a browser may clear what fmIDE keeps, and an installed app keeps it. Got it hides it; ⤓ Install fmIDE stays in More (☰).',
+    ],
+    why: 'To get a model changed on the phone to someone else, or into fmGraph, without a computer — and to keep it there.',
+    how: ['On a phone, change an input, then More (☰) → ⇪ Share the document.'],
+    notes: ['On Android, Chrome may share only some kinds of file; then a .fmide is downloaded instead (into Downloads).', 'Making the Excel workbook on a phone comes next.'],
+    see: ['phone'] },
   { id: 'phone-inputs', date: '2026-10-09', title: 'fmIDE on a phone',
     summary: 'On a phone fmIDE opens to your inputs: change them with a slider made for a thumb, and watch what they move.',
     what: [

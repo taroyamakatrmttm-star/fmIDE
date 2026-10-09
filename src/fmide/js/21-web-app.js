@@ -11,10 +11,12 @@
     ev.preventDefault(); // offered through the Install fmIDE command instead of a pop-up bar
     installPrompt = ev;
     refreshCommandStates();
+    if(phoneReady) phoneRefreshSoon(); // the phone's install note offers it (21b)
   });
   window.addEventListener('appinstalled', () => {
     installPrompt = null;
     refreshCommandStates();
+    if(phoneReady) phoneRefreshSoon();
     toast('fmIDE is installed.');
   });
   function installApp(){

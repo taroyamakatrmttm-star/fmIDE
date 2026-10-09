@@ -1144,6 +1144,15 @@
   .phone-watch-change.up{ color:#047857; }
   .phone-watch-change.down{ color:#b91c1c; }
   .phone-empty{ color:#64748b; font-size:14px; margin:4px 2px; }
+  body.phone .toast{ bottom:calc(var(--phone-nav) + 12px + env(safe-area-inset-bottom, 0px)); max-width:calc(100vw - 32px); text-align:center; font-size:14px; }
+  /* The install note (P2b). */
+  .phone-install-note{ flex:none; background:#eff6ff; border:1px solid #bfdbfe; border-radius:14px; padding:12px 14px; color:#1e293b; font-size:14.5px; }
+  .phone-install-note p{ margin:4px 0; }
+  .phone-install-title{ margin:0 0 2px; font-size:16px; }
+  .phone-install-steps{ font-weight:600; }
+  .phone-install-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:8px; }
+  .phone-install-actions button{ min-height:40px; padding:0 16px; border-radius:10px; font-size:15px; border:1px solid #93c5fd; background:#fff; color:#1e3a8a; }
+  .phone-install-actions .phone-install-btn{ background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700; }
   /* Canvas: to look at. */
   body.phone #viewport{ top:calc(var(--phone-top) + var(--phone-periods) + 44px + env(safe-area-inset-top, 0px)); bottom:calc(var(--phone-nav) + env(safe-area-inset-bottom, 0px)); }
   body.phone:not(.phone-canvas) #viewport, body.phone:not(.phone-canvas) .phone-canvas-bar{ display:none; }
