@@ -1,0 +1,11 @@
+{
+ "Balance Sheet": {
+  "sc": {"values":[0,0]},
+  "sa": {"values":[0,0]},
+  "cash": {"values":[0,0]},
+  "ar": {"values":[0,0]},
+  "ppe": {"values":[500,500]},
+  "sum": {"values":[500,500]},
+  "ta": {"values":[500,500]}
+ }
+}

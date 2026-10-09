@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmIDE on a phone: every input by the shared rule
+- Inputs on a phone now lists every input rectangle by the shared rule, the ones ExcelExporter gathers on its Inputs tab, including those with no number typed yet ("No number yet (counts as 0)"). Before, a model whose template rectangles had no numbers showed no inputs. A rectangle holding a formula is still left out, and a block's Input rectangles on a canvas used as a block, as in ExcelExporter.
+
 ## ExcelExporter on a phone: make the workbook and share it (step 17, P3)
 - On a phone, ExcelExporter is **one screen**: the tabs the workbook will hold (with row counts), where it differs from fmIDE, the file name (tap to change it) and **⬇ Make the workbook**, which hands the `.xlsx` to the phone's share sheet (a download where the browser can't share files). The layout, Excel style and Sensitivity set up on a larger screen are used; **☰** has Open a model file…, ↻ From fmIDE, Help and **Full app**.
 - fmIDE's phone layout gains **More (☰) → 📊 Make Excel**, which opens it with the model. Tablets and computers are unchanged; no file format changed.

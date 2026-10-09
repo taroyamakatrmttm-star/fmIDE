@@ -1,0 +1,21 @@
+{
+  "kind": "system", "version": 9, "periods": ["Y1", "Y2"],
+  "canvases": [
+    { "id": "cB", "name": "Balance Sheet", "nodes": [
+      { "id": "sc", "type": "operator", "x": 0, "y": 0, "w": 56, "h": 56, "text": "+", "socket": "to Cash EB" },
+      { "id": "sa", "type": "operator", "x": 0, "y": 100, "w": 56, "h": 56, "text": "+", "socket": "to Total AR" },
+      { "id": "cash", "type": "value", "x": 120, "y": 0, "w": 170, "h": 64, "text": "Cash", "plugs": ["to Total Asset"] },
+      { "id": "ar", "type": "value", "x": 120, "y": 100, "w": 170, "h": 64, "text": "Accounts Receivable", "plugs": ["to Total Asset"] },
+      { "id": "ppe", "type": "value", "x": 120, "y": 200, "w": 170, "h": 64, "text": "Gross PPE\n500", "plugs": ["to Total Asset"] },
+      { "id": "sum", "type": "operator", "x": 360, "y": 100, "w": 56, "h": 56, "text": "+", "socket": "to Total Asset" },
+      { "id": "ta", "type": "value", "x": 460, "y": 100, "w": 170, "h": 64, "text": "Total Asset" }
+    ], "edges": [
+      { "id": "e1", "from": "sc", "to": "cash" },
+      { "id": "e2", "from": "sa", "to": "ar" },
+      { "id": "e3", "from": "sum", "to": "ta" },
+      { "id": "e4", "from": "cash", "to": "sum", "auto": true },
+      { "id": "e5", "from": "ar", "to": "sum", "auto": true },
+      { "id": "e6", "from": "ppe", "to": "sum", "auto": true }
+    ] }
+  ]
+}

@@ -1132,6 +1132,7 @@
   .phone-input-unit{ font-size:12.5px; color:#64748b; }
   .phone-input-change{ margin-left:auto; font-size:13px; font-weight:600; color:#d97706; font-variant-numeric:tabular-nums; }
   .phone-star{ border:none; background:none; font-size:22px; color:#f59e0b; padding:0 4px; min-width:40px; min-height:36px; }
+  .phone-input-blank{ font-size:12.5px; color:#64748b; margin:2px 0 4px; }
   .phone-input-note{ font-size:12.5px; color:#b45309; margin:2px 0 4px; }
   .phone-input-foot{ display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:12.5px; color:#64748b; margin-top:-4px; }
   .phone-all{ display:flex; align-items:center; gap:6px; color:#1e293b; font-size:14px; }

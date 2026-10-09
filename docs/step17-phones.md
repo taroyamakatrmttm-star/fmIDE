@@ -174,3 +174,5 @@ Tilt to sweep; a phone tutorial; receiving a `.fmide` from another app's share s
 
 Step 17 is done. The later ideas above (tilt to sweep, a phone tutorial, receiving a file from another app's share sheet, light editing) wait for the owner.
 
+**Fixed after P3** (9 October 2026, found by the owner on a model built from templates): Inputs on a phone had left out an input rectangle with nothing typed in it, so such a model showed no inputs at all, while ExcelExporter's Inputs tab gathered them. The phone now follows the shared rule as ExcelExporter does: nothing typed counts as 0, marked "No number yet"; a formula typed is still left out (a slider would write over it), and so are a block's Input rectangles on a canvas used as a block, as in ExcelExporter. Test group 70 compares the phone's list with ExcelExporter's Inputs tab.
+

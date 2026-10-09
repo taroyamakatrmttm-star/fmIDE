@@ -587,7 +587,7 @@ const HELP_TOPICS = [
     summary: 'On a phone fmIDE opens to your inputs: change them with a slider and watch what they move.',
     body: [
       { p: 'On a phone, fmIDE shows the numbers, not the canvas. Along the bottom: Inputs, Watch, Canvas and More (☰). At the top: the document\'s name, ↶ Undo and ↷ Redo, and the periods (‹ and ›, or tap the period to pick one).' },
-      { p: 'Inputs lists every input rectangle with a number, by canvas; search by its name or its canvas\'s. Change one with its slider: grab it anywhere, slide your finger up while dragging to make it finer, tap the number to type one, or use − and +. It settles at the number it had when you opened the document, with a tick.' },
+      { p: 'Inputs lists every input rectangle, by canvas — the same ones ExcelExporter gathers on its Inputs tab, including those with no number typed yet (they count as 0 until you set one); search by its name or its canvas\'s. Change one with its slider: grab it anywhere, slide your finger up while dragging to make it finer, tap the number to type one, or use − and +. It settles at the number it had when you opened the document, with a tick.' },
       { p: 'A change on a phone is a change to your model, exactly as typing it on a computer: each move is one step you can undo, the document is marked unsaved, and it is kept in the autosave. Save it from More (☰).' },
       { p: 'An input with its own number in each period changes in the period shown. Tick All periods by % to move every period together by a percentage.' },
       { p: 'An input on a canvas used as a block says how many blocks use it: changing it changes every copy.' },

@@ -1141,6 +1141,7 @@
   .phone-input-unit{ font-size:12.5px; color:#64748b; }
   .phone-input-change{ margin-left:auto; font-size:13px; font-weight:600; color:#d97706; font-variant-numeric:tabular-nums; }
   .phone-star{ border:none; background:none; font-size:22px; color:#f59e0b; padding:0 4px; min-width:40px; min-height:36px; }
+  .phone-input-blank{ font-size:12.5px; color:#64748b; margin:2px 0 4px; }
   .phone-input-note{ font-size:12.5px; color:#b45309; margin:2px 0 4px; }
   .phone-input-foot{ display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:12.5px; color:#64748b; margin-top:-4px; }
   .phone-all{ display:flex; align-items:center; gap:6px; color:#1e293b; font-size:14px; }
@@ -2388,7 +2389,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       summary: 'On a phone fmIDE opens to your inputs: change them with a slider and watch what they move.',
       body: [
         { p: 'On a phone, fmIDE shows the numbers, not the canvas. Along the bottom: Inputs, Watch, Canvas and More (☰). At the top: the document\'s name, ↶ Undo and ↷ Redo, and the periods (‹ and ›, or tap the period to pick one).' },
-        { p: 'Inputs lists every input rectangle with a number, by canvas; search by its name or its canvas\'s. Change one with its slider: grab it anywhere, slide your finger up while dragging to make it finer, tap the number to type one, or use − and +. It settles at the number it had when you opened the document, with a tick.' },
+        { p: 'Inputs lists every input rectangle, by canvas — the same ones ExcelExporter gathers on its Inputs tab, including those with no number typed yet (they count as 0 until you set one); search by its name or its canvas\'s. Change one with its slider: grab it anywhere, slide your finger up while dragging to make it finer, tap the number to type one, or use − and +. It settles at the number it had when you opened the document, with a tick.' },
         { p: 'A change on a phone is a change to your model, exactly as typing it on a computer: each move is one step you can undo, the document is marked unsaved, and it is kept in the autosave. Save it from More (☰).' },
         { p: 'An input with its own number in each period changes in the period shown. Tick All periods by % to move every period together by a percentage.' },
         { p: 'An input on a canvas used as a block says how many blocks use it: changing it changes every copy.' },
@@ -2534,6 +2535,16 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // entry: ids, dates in order, commands and topics that exist.
   // **A change people will notice adds its entry here in the same pull request.**
   const WHATS_NEW = [
+    { id: 'phone-every-input', date: '2026-10-09', title: 'Every input on the phone',
+      summary: 'On a phone, Inputs now lists every input — the same ones ExcelExporter gathers — including those with no number typed yet.',
+      what: [
+        'Before, Inputs on a phone left out an input rectangle with nothing typed in it, so a model built from templates whose numbers aren\'t filled in yet showed no inputs at all.',
+        'Now the phone follows the same rule as ExcelExporter\'s Inputs tab. An input with no number yet says "No number yet (counts as 0)"; slide it or tap the number to set one, which writes it into the rectangle as typing it on a computer would.',
+      ],
+      why: 'Filling in a template\'s numbers is one of the first things to do with a model, and the phone and the workbook should agree on what an input is.',
+      how: ['On a phone, open a model, then set a number in Inputs.'],
+      notes: ['A rectangle holding a formula is still left out: a slider would write over it.'],
+      see: ['phone'] },
     { id: 'phone-excel', date: '2026-10-09', title: 'Make Excel from your phone',
       summary: 'On a phone, More (☰) → 📊 Make Excel opens ExcelExporter with your model, ready to make the workbook and share it.',
       what: [
@@ -21919,16 +21930,24 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     canvases.forEach(c => c.nodes.forEach(n => { if(n.type === 'blockInstance' && n.blockDefCanvasId) uses.set(n.blockDefCanvasId, (uses.get(n.blockDefCanvasId) || 0) + 1); }));
     return uses;
   }
-  // Every input rectangle with a typed number (or a number per period), by canvas.
+  // Every input rectangle by the shared rule, by canvas — the rectangles ExcelExporter gathers on
+  // its Inputs tab. Like there, a block's Input rectangle on a canvas used as a block is left out
+  // (only a placeholder: each copy takes what is wired into it), and so is a block's index.
   function phoneInputs(){
     syncActiveIntoRegistry();
     const out = [];
+    const uses = phoneBlockUses();
     canvases.forEach(c => c.nodes.forEach(n => {
       if(n.type !== 'value' || !isInputRectangle(c, n)) return;
+      if(n.blockRole === 'index' || (n.blockRole === 'input' && uses.has(c.id))) return;
       const p = parseNode(n);
       const perPeriod = Array.isArray(n.periodValues);
-      if(!perPeriod && p.literal === null) return; // a formula or nothing typed: not a number to slide
-      out.push({ canvasId: c.id, nodeId: n.id, key: phoneKey(c.id, n.id), name: p.name || 'Untitled', unit: p.uom, perPeriod });
+      // Every input by the shared rule (src/shared/input-rule.js: what ExcelExporter's Inputs tab
+      // gathers too), nothing typed included — it counts as 0 until a number is set. Only a
+      // formula typed in the rectangle is left out: a slider would write over it.
+      const typed = !perPeriod && textParts(n).value !== '';
+      if(typed && p.literal === null) return;
+      out.push({ canvasId: c.id, nodeId: n.id, key: phoneKey(c.id, n.id), name: p.name || 'Untitled', unit: p.uom, perPeriod, blank: !perPeriod && !typed });
     }));
     return out;
   }
@@ -22029,6 +22048,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     star.addEventListener('click', () => toggleWatch(item.key));
     head.appendChild(star);
     card.appendChild(head);
+    if(item.blank) card.appendChild(pmk('div', 'phone-input-blank', 'No number yet (counts as 0)'));
     if(blockUses) card.appendChild(pmk('div', 'phone-input-note', 'Used in ' + blockUses + (blockUses === 1 ? ' block' : ' blocks') + ': a change here changes every copy.'));
     const all = item.perPeriod && phoneAllPeriods.has(item.key);
     const start = phoneStartValues(item.key, item.canvasId, item.nodeId);
@@ -22093,7 +22113,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // ---- drawing the views ----
   function phoneStructureNow(){
     const items = phoneInputs();
-    return { items, sig: phoneView + '|' + phoneQuery + '|' + currentPeriod + '|' + items.map(i => i.key + ':' + i.name + ':' + i.perPeriod + ':' + phoneAllPeriods.has(i.key)).join(';')
+    return { items, sig: phoneView + '|' + phoneQuery + '|' + currentPeriod + '|' + items.map(i => i.key + ':' + i.name + ':' + i.perPeriod + ':' + i.blank + ':' + phoneAllPeriods.has(i.key)).join(';')
       + '|' + watchedKeys().join(',') + '|' + canvases.map(c => c.id + ':' + c.name).join(',') + '|' + phoneDocKey()
       + '|' + phoneInstallNoteWanted() + ':' + !!installPrompt };
   }
@@ -22124,7 +22144,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       const q = phoneQuery.trim().toLowerCase();
       const uses = phoneBlockUses();
       const shown = items.filter(i => !q || i.name.toLowerCase().includes(q) || (phoneCanvas(i.canvasId) || {}).name.toLowerCase().includes(q));
-      if(!items.length) panel.appendChild(pmk('p', 'phone-empty', 'This model has no inputs with a number to change.'));
+      if(!items.length) panel.appendChild(pmk('p', 'phone-empty', 'This model has no inputs.'));
       else if(!shown.length) panel.appendChild(pmk('p', 'phone-empty', 'No input matches “' + phoneQuery.slice(0, 60) + '”.'));
       canvases.forEach(c => {
         const mine = shown.filter(i => i.canvasId === c.id);

@@ -14,6 +14,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { test, expect, ROOT, fixture } = require('./helpers/apps');
+const X = require('./helpers/excel');
 
 const URL = 'http://local.test/fmIDE.html';
 const PHONE = { viewport: { width: 390, height: 844 }, screen: { width: 390, height: 844 }, hasTouch: true, isMobile: true };
@@ -307,6 +308,43 @@ test('the canvas is to look at: a drag or a double-tap edits nothing; a tap open
   await phone.tapOn(p.locator('#canvas .node[data-id="a"]')); // the alias of Revenue
   await expect(p.locator('.phone-card-formula')).toHaveText('The same as Revenue on Sales.');
   await phone.done();
+});
+
+// The shared input rule decides (src/shared/input-rule.js), as for ExcelExporter's Inputs tab: an
+// input with nothing typed (a template's rectangle fed by a socket nothing feeds) is listed, at 0.
+test('every input by the shared rule, nothing typed included: the same inputs as ExcelExporter\'s Inputs tab', async ({ browser, page }) => {
+  const phone = await openPhone(browser);
+  const p = phone.page;
+  const model = JSON.parse(fs.readFileSync(fixture('models', 'phone-blank-inputs.json'), 'utf8'));
+  await loadModel(phone, model);
+  const names = await p.locator('#phonePanel .phone-input-name').allTextContents();
+  expect(names).toEqual(['Cash', 'Accounts Receivable', 'Gross PPE']);
+  await expect(input(p, 'Cash').locator('.phone-input-blank')).toHaveText('No number yet (counts as 0)');
+  await expect(input(p, 'Cash').locator('.ps-value')).toHaveText('0');
+  await expect(input(p, 'Gross PPE').locator('.phone-input-blank')).toHaveCount(0);
+  expect(await value(p, 'Balance Sheet', 'Total Asset', 1)).toBe(500);
+  // Setting a number writes it into the rectangle, as typing it on a computer: one undo step.
+  await typeInto(phone, input(p, 'Cash'), '100');
+  expect(await value(p, 'Balance Sheet', 'Total Asset', 1)).toBe(600);
+  expect(await p.evaluate(() => { fm.switchCanvas('Balance Sheet'); return fm.nodes().find(n => n.id === 'cash').text; })).toBe('Cash\n100');
+  await expect(input(p, 'Cash').locator('.phone-input-blank')).toHaveCount(0);
+  await expect(p.locator('#phoneTitle')).toHaveText(/•$/);
+  await phone.tapOn(p.locator('#phoneUndo'));
+  expect(await p.evaluate(() => { fm.switchCanvas('Balance Sheet'); return fm.nodes().find(n => n.id === 'cash').text; })).toBe('Cash');
+  await expect(input(p, 'Cash').locator('.phone-input-blank')).toBeVisible();
+  // The slider moves it too (around 0: −10 to +10).
+  await phone.slide(input(p, 'Accounts Receivable').locator('.ps-rail'), 0.5, 0.75);
+  expect(await value(p, 'Balance Sheet', 'Total Asset', 1)).toBe(505);
+  await phone.done();
+
+  // ExcelExporter gathers the same rectangles on its Inputs tab, and not the total.
+  await X.openExporter(page);
+  await X.loadFixtureModel(page, 'phone-blank-inputs.json');
+  await X.setInputsTab(page, true);
+  const { wb } = await X.generate(page);
+  const ws = wb.Sheets['Inputs'];
+  for(const n of names) expect(X.findRow(ws, n).length, n + ' on the Inputs tab').toBeGreaterThan(0);
+  expect(X.findRow(ws, 'Total Asset')).toEqual([]);
 });
 
 test('an input on a canvas used as a block says so', async ({ browser }) => {
