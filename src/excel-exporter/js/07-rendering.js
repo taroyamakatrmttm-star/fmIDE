@@ -29,7 +29,7 @@ function renderTabs(){
   const body = $('tabsBody');
   body.innerHTML = '';
   mapping.tabs.slice().sort((a, b) => a.order - b.order).forEach((tab, idx, arr) => {
-    const rowCount = [...mapping.rows, ...inputMirrorRows()].filter(r => r.tabId === tab.id && r.include).length + mapping.customRows.filter(r => r.tabId === tab.id).length;
+    const rowCount = tabRowCount(tab);
     const isInputsTab = tab.id === INPUTS_TAB_ID;
     const tr = document.createElement('tr');
     tr.dataset.tabId = tab.id;

@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter on a phone: make the workbook and share it (step 17, P3)
+- On a phone, ExcelExporter is **one screen**: the tabs the workbook will hold (with row counts), where it differs from fmIDE, the file name (tap to change it) and **⬇ Make the workbook**, which hands the `.xlsx` to the phone's share sheet (a download where the browser can't share files). The layout, Excel style and Sensitivity set up on a larger screen are used; **☰** has Open a model file…, ↻ From fmIDE, Help and **Full app**.
+- fmIDE's phone layout gains **More (☰) → 📊 Make Excel**, which opens it with the model. Tablets and computers are unchanged; no file format changed.
+
 ## fmIDE on a phone: share the document, open fmGraph, install (step 17, P2b)
 - **More (☰) → ⇪ Share the document** hands the `.fmide` file to the phone's share sheet (a download where the browser can't share files). A shared copy leaves the document unsaved until Save.
 - **More (☰) → 📈 Open fmGraph** opens the model in fmGraph's phone layout.

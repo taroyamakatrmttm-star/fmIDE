@@ -21,6 +21,7 @@ function syncPageState(){
   $('settingsTabWorkbook').disabled = !loaded;
   $('modelName').textContent = loaded ? currentModelLabel : '';
   $('modelName').title = loaded ? `${model.canvases.length} canvas${model.canvases.length === 1 ? '' : 'es'}, ${model.periods.length} periods` : '';
+  if(excelPhoneReady) renderExcelPhone(); // the phone's one screen (09h)
 }
 
 // ---------- Menus ----------

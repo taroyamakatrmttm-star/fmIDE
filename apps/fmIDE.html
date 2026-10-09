@@ -2384,7 +2384,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         { see: ['arrows', 'arranging', 'phone'] },
       ] },
     { id: 'phone', group: 'touch', title: 'Using fmIDE on a phone',
-      keywords: 'phone mobile iphone android smartphone inputs watch star slider period canvas card full app share send install home screen fmgraph',
+      keywords: 'phone mobile iphone android smartphone inputs watch star slider period canvas card full app share send install home screen fmgraph excel workbook',
       summary: 'On a phone fmIDE opens to your inputs: change them with a slider and watch what they move.',
       body: [
         { p: 'On a phone, fmIDE shows the numbers, not the canvas. Along the bottom: Inputs, Watch, Canvas and More (☰). At the top: the document\'s name, ↶ Undo and ↷ Redo, and the periods (‹ and ›, or tap the period to pick one).' },
@@ -2394,7 +2394,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         { p: 'An input on a canvas used as a block says how many blocks use it: changing it changes every copy.' },
         { p: 'Watch: ☆ on an input, or on any rectangle\'s card, keeps it at the top of Inputs (and on the Watch screen) with how far it has moved since you opened the document. The list is kept in this browser for each document, never in the file.' },
         { p: 'Canvas shows a canvas to look at: pick one from the list, pinch to zoom. Nothing is moved or edited there. Tap a rectangle for its card: its value in every period, what it is worked out from and what reads it, in words, ☆ Watch, and its slider if it is an input.' },
-        { p: 'More (☰) → ⇪ Share the document hands the .fmide file to your phone\'s share sheet (Mail, Messages, Files, AirDrop…); where the browser can\'t share files, it downloads. Sharing sends a copy: the document stays unsaved until you Save it. 📈 Open fmGraph shows the model in fmGraph, made for a phone too.' },
+        { p: 'More (☰) → ⇪ Share the document hands the .fmide file to your phone\'s share sheet (Mail, Messages, Files, AirDrop…); where the browser can\'t share files, it downloads. Sharing sends a copy: the document stays unsaved until you Save it. 📈 Open fmGraph shows the model in fmGraph, made for a phone too, and 📊 Make Excel opens ExcelExporter with it: one screen to make the workbook and share it.' },
         { p: 'A browser may clear what fmIDE keeps on a phone — the autosave and your Watch lists — Safari on an iPhone after some weeks without a visit. Installed, fmIDE keeps it: on an iPhone, tap Share ⇪ in Safari, then Add to Home Screen; on Android, More (☰) → ⤓ Install fmIDE, or the browser\'s menu. On the site fmIDE says so once at the top of Inputs. Save a document you care about either way.' },
         { steps: ['Open a document from More (☰) → Open….', 'In Inputs, move a slider; see the change at the top if you watch something.', 'In Canvas, tap a rectangle to see how it is worked out.', 'More (☰) → Save, or ⇪ Share the document to send it on.'] },
         { tip: 'More (☰) → Full app shows the whole fmIDE on a phone, to build; 📱 Phone layout goes back. Your choice is remembered in this browser.' },
@@ -2534,6 +2534,16 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // entry: ids, dates in order, commands and topics that exist.
   // **A change people will notice adds its entry here in the same pull request.**
   const WHATS_NEW = [
+    { id: 'phone-excel', date: '2026-10-09', title: 'Make Excel from your phone',
+      summary: 'On a phone, More (☰) → 📊 Make Excel opens ExcelExporter with your model, ready to make the workbook and share it.',
+      what: [
+        'More (☰) → 📊 Make Excel opens ExcelExporter with the model as it is now, as File → Open ExcelExporter does on a computer.',
+        'On a phone, ExcelExporter is one screen: the tabs the workbook will hold, the file name, and ⬇ Make the workbook, which hands the .xlsx to your phone\'s share sheet (Excel, Mail, Files…).',
+      ],
+      why: 'To go from a change made on the phone to a live Excel workbook in someone\'s inbox, without a computer.',
+      how: ['On a phone, change an input, then More (☰) → 📊 Make Excel → ⬇ Make the workbook.'],
+      notes: ['The workbook uses the layout set up for the model on a larger screen.'],
+      see: ['phone'] },
     { id: 'phone-share', date: '2026-10-09', title: 'Share a document from your phone',
       summary: 'On a phone, send the open document on through the share sheet, open it in fmGraph, and keep your work by installing fmIDE.',
       what: [
@@ -2543,7 +2553,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       ],
       why: 'To get a model changed on the phone to someone else, or into fmGraph, without a computer — and to keep it there.',
       how: ['On a phone, change an input, then More (☰) → ⇪ Share the document.'],
-      notes: ['On Android, Chrome may share only some kinds of file; then a .fmide is downloaded instead (into Downloads).', 'Making the Excel workbook on a phone comes next.'],
+      notes: ['On Android, Chrome may share only some kinds of file; then a .fmide is downloaded instead (into Downloads).', 'Making the Excel workbook on a phone came next: More (☰) → 📊 Make Excel.'],
       see: ['phone'] },
     { id: 'phone-inputs', date: '2026-10-09', title: 'fmIDE on a phone',
       summary: 'On a phone fmIDE opens to your inputs: change them with a slider made for a thumb, and watch what they move.',
@@ -21425,6 +21435,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   //   slider if it is an input.
   // - ☰: Open…, Open Recent…, Save, ⇪ Share the document (P2b: the share sheet, a copy — the
   //   document stays unsaved until Save), 📈 Open fmGraph (with the model, as on a computer),
+  //   📊 Make Excel (P3: ExcelExporter with the model, in its phone screen),
   //   ⤓ Install fmIDE (on the site, not installed), Help, Full app (the whole fmIDE; 📱 Phone
   //   layout back).
   // - The install note (P2b): on the site and not installed, a card at the top of Inputs says a
@@ -21806,7 +21817,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     menu.id = 'phoneMenu';
     menu.setAttribute('role', 'menu');
     [['phoneOpen', '📁 Open…'], ['phoneRecent', '🕘 Open Recent…'], ['phoneSave', '💾 Save'], ['phoneShare', '⇪ Share the document'],
-      ['phoneGraph', '📈 Open fmGraph'], ['phoneInstall', '⤓ Install fmIDE'], ['phoneHelp', '❓ Help'], ['phoneFullApp', '🖥 Full app']].forEach(([id, text]) => {
+      ['phoneGraph', '📈 Open fmGraph'], ['phoneExcel', '📊 Make Excel'], ['phoneInstall', '⤓ Install fmIDE'], ['phoneHelp', '❓ Help'], ['phoneFullApp', '🖥 Full app']].forEach(([id, text]) => {
       const b = pmk('button', null, text); b.type = 'button'; b.id = id; b.setAttribute('role', 'menuitem'); menu.appendChild(b);
     });
     const vib = pmk('button', 'hidden', ''); vib.type = 'button'; vib.id = 'phoneVibrate'; vib.setAttribute('role', 'menuitemcheckbox');
@@ -22434,6 +22445,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   phoneMenuItem('phoneSave', () => runCommand('saveDocument'));
   phoneMenuItem('phoneShare', () => sharePhoneDocument());
   phoneMenuItem('phoneGraph', () => runCommand('openFmGraph'));
+  phoneMenuItem('phoneExcel', () => runCommand('openExcelExporter'));
   phoneMenuItem('phoneInstall', () => { if(installPrompt) installApp(); else showMessage(phoneInstallSteps()); });
   phoneMenuItem('phoneHelp', () => runCommand('openHelp'));
   phoneMenuItem('phoneFullApp', () => setPhoneFullApp(true));
