@@ -12,6 +12,16 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'phone-every-input', date: '2026-10-09', title: 'Every input on the phone',
+    summary: 'On a phone, Inputs now lists every input — the same ones ExcelExporter gathers — including those with no number typed yet.',
+    what: [
+      'Before, Inputs on a phone left out an input rectangle with nothing typed in it, so a model built from templates whose numbers aren\'t filled in yet showed no inputs at all.',
+      'Now the phone follows the same rule as ExcelExporter\'s Inputs tab. An input with no number yet says "No number yet (counts as 0)"; slide it or tap the number to set one, which writes it into the rectangle as typing it on a computer would.',
+    ],
+    why: 'Filling in a template\'s numbers is one of the first things to do with a model, and the phone and the workbook should agree on what an input is.',
+    how: ['On a phone, open a model, then set a number in Inputs.'],
+    notes: ['A rectangle holding a formula is still left out: a slider would write over it.'],
+    see: ['phone'] },
   { id: 'phone-excel', date: '2026-10-09', title: 'Make Excel from your phone',
     summary: 'On a phone, More (☰) → 📊 Make Excel opens ExcelExporter with your model, ready to make the workbook and share it.',
     what: [

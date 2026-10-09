@@ -1,0 +1,10 @@
+{
+ "Balance Sheet": {
+  "A4": {"v":"INPUTS"},
+  "A5": {"v":"Cash"},
+  "A6": {"v":"Accounts Receivable"},
+  "A7": {"v":"Gross PPE"},
+  "A9": {"v":"OUTPUTS"},
+  "A10": {"v":"Total Asset"}
+ }
+}

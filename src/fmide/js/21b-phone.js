@@ -188,16 +188,24 @@
     canvases.forEach(c => c.nodes.forEach(n => { if(n.type === 'blockInstance' && n.blockDefCanvasId) uses.set(n.blockDefCanvasId, (uses.get(n.blockDefCanvasId) || 0) + 1); }));
     return uses;
   }
-  // Every input rectangle with a typed number (or a number per period), by canvas.
+  // Every input rectangle by the shared rule, by canvas — the rectangles ExcelExporter gathers on
+  // its Inputs tab. Like there, a block's Input rectangle on a canvas used as a block is left out
+  // (only a placeholder: each copy takes what is wired into it), and so is a block's index.
   function phoneInputs(){
     syncActiveIntoRegistry();
     const out = [];
+    const uses = phoneBlockUses();
     canvases.forEach(c => c.nodes.forEach(n => {
       if(n.type !== 'value' || !isInputRectangle(c, n)) return;
+      if(n.blockRole === 'index' || (n.blockRole === 'input' && uses.has(c.id))) return;
       const p = parseNode(n);
       const perPeriod = Array.isArray(n.periodValues);
-      if(!perPeriod && p.literal === null) return; // a formula or nothing typed: not a number to slide
-      out.push({ canvasId: c.id, nodeId: n.id, key: phoneKey(c.id, n.id), name: p.name || 'Untitled', unit: p.uom, perPeriod });
+      // Every input by the shared rule (src/shared/input-rule.js: what ExcelExporter's Inputs tab
+      // gathers too), nothing typed included — it counts as 0 until a number is set. Only a
+      // formula typed in the rectangle is left out: a slider would write over it.
+      const typed = !perPeriod && textParts(n).value !== '';
+      if(typed && p.literal === null) return;
+      out.push({ canvasId: c.id, nodeId: n.id, key: phoneKey(c.id, n.id), name: p.name || 'Untitled', unit: p.uom, perPeriod, blank: !perPeriod && !typed });
     }));
     return out;
   }
@@ -298,6 +306,7 @@
     star.addEventListener('click', () => toggleWatch(item.key));
     head.appendChild(star);
     card.appendChild(head);
+    if(item.blank) card.appendChild(pmk('div', 'phone-input-blank', 'No number yet (counts as 0)'));
     if(blockUses) card.appendChild(pmk('div', 'phone-input-note', 'Used in ' + blockUses + (blockUses === 1 ? ' block' : ' blocks') + ': a change here changes every copy.'));
     const all = item.perPeriod && phoneAllPeriods.has(item.key);
     const start = phoneStartValues(item.key, item.canvasId, item.nodeId);
@@ -362,7 +371,7 @@
   // ---- drawing the views ----
   function phoneStructureNow(){
     const items = phoneInputs();
-    return { items, sig: phoneView + '|' + phoneQuery + '|' + currentPeriod + '|' + items.map(i => i.key + ':' + i.name + ':' + i.perPeriod + ':' + phoneAllPeriods.has(i.key)).join(';')
+    return { items, sig: phoneView + '|' + phoneQuery + '|' + currentPeriod + '|' + items.map(i => i.key + ':' + i.name + ':' + i.perPeriod + ':' + i.blank + ':' + phoneAllPeriods.has(i.key)).join(';')
       + '|' + watchedKeys().join(',') + '|' + canvases.map(c => c.id + ':' + c.name).join(',') + '|' + phoneDocKey()
       + '|' + phoneInstallNoteWanted() + ':' + !!installPrompt };
   }
@@ -393,7 +402,7 @@
       const q = phoneQuery.trim().toLowerCase();
       const uses = phoneBlockUses();
       const shown = items.filter(i => !q || i.name.toLowerCase().includes(q) || (phoneCanvas(i.canvasId) || {}).name.toLowerCase().includes(q));
-      if(!items.length) panel.appendChild(pmk('p', 'phone-empty', 'This model has no inputs with a number to change.'));
+      if(!items.length) panel.appendChild(pmk('p', 'phone-empty', 'This model has no inputs.'));
       else if(!shown.length) panel.appendChild(pmk('p', 'phone-empty', 'No input matches “' + phoneQuery.slice(0, 60) + '”.'));
       canvases.forEach(c => {
         const mine = shown.filter(i => i.canvasId === c.id);
