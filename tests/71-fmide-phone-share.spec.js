@@ -234,6 +234,16 @@ test('the install note: on the site, shown until Got it; the steps for an iPhone
     // Got it: gone, and still gone after a reload; the ☰ item stays.
     await phone.tapOn(note.locator('#phoneInstallOk'));
     await expect(note).toHaveCount(0);
+    // The browser keeps it a moment later (IndexedDB): reload once it is kept, as a person would.
+    await expect.poll(() => p.evaluate(() => new Promise(resolve => {
+      const open = indexedDB.open('fmIDE');
+      open.onerror = () => resolve('');
+      open.onsuccess = () => {
+        const req = open.result.transaction('kv', 'readonly').objectStore('kv').get('fmIDE-phone');
+        req.onsuccess = () => resolve(String(req.result || ''));
+        req.onerror = () => resolve('');
+      };
+    }))).toContain('"installNoteSeen":true');
     await p.reload();
     await p.waitForFunction(() => window.fm && typeof window.fm.nodes === 'function');
     await expect(p.locator('#phonePanel .phone-input, #phonePanel .phone-empty').first()).toBeVisible();
