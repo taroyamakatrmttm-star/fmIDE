@@ -364,27 +364,54 @@
   .peek-table .up{ color:var(--up); }
   .peek-table .down{ color:var(--down); }
   .peek-actions button{ width:100%; padding:12px; font-size:15px; }
-  /* Sideways: the dock in one low row, so the board keeps the screen. */
+  /* Sideways: the mixer at the two edges, the board between them. */
   @media (orientation: landscape){
-    body.phone .dock-card{ display:grid; grid-template-columns:minmax(0, 1fr) auto; align-items:center; column-gap:10px; padding:0 16px; }
-    body.phone .dock-card .ps{ grid-column:1 / -1; display:flex; align-items:center; gap:10px; }
-    body.phone .dock-card .ps-row{ flex:0 0 auto; gap:6px; }
-    body.phone .dock-card .ps-value, body.phone .dock-card .ps-type{ width:118px; flex:none; height:44px; font-size:24px !important; }
-    body.phone .dock-card .ps-row input.ps-type:not([type=range]):not([type=file]){ font-size:24px !important; }
-    body.phone .dock-card .ps-step{ width:42px; height:42px; font-size:20px; }
-    body.phone .dock-card .ps-track{ flex:1 1 auto; height:52px; }
-    body.phone .dock-base{ display:none; }
-    body.phone .dock-handle{ padding:5px 0 2px; }
-    body.phone .slider-dock[data-state="open"] .dock-cards{ max-height:55vh; }
     body.phone .phone-menu{ max-height:calc(100vh - 60px); overflow-y:auto; }
     body.phone .widget-list.bars{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
     body.phone .widget-list.bars > .wide{ grid-column:1 / -1; }
-    body.phone .bar-chart{ max-height:calc(100vh - var(--dock-h, 0px) - 120px); }
+    body.phone .bar-chart{ max-height:calc(100vh - 120px); }
     body.phone .phone-boards{ margin-bottom:4px; }
     body.phone .phone-board-arrow{ height:32px; }
     body.phone .peek-card{ max-width:640px; margin:0 auto; max-height:92vh; }
     body.phone .peek-back{ justify-content:center; }
   }
+  body.phone.mixing main{ padding-left:calc(var(--mix-l, 0px) + 12px); padding-right:calc(var(--mix-r, 0px) + 12px); padding-bottom:24px; }
+  .mixer{ position:fixed; top:var(--gbar-h, 52px); bottom:0; z-index:35; display:flex; gap:2px; padding:8px 6px calc(8px + env(safe-area-inset-bottom, 0px)); background:var(--card); box-shadow:0 0 24px rgba(16,24,40,.14); }
+  .mixer-left{ left:0; padding-left:calc(6px + env(safe-area-inset-left, 0px)); border-radius:0 16px 0 0; }
+  .mixer-right{ right:0; padding-right:calc(6px + env(safe-area-inset-right, 0px)); border-radius:16px 0 0 0; }
+  .fader{ width:78px; display:flex; flex-direction:column; align-items:stretch; gap:2px; min-height:0; }
+  .fader .ps{ flex:1 1 auto; min-height:0; }
+  .fader-name{ border:none; background:var(--brand-soft); border-radius:8px; padding:4px 4px; font-size:12px; font-weight:700; line-height:1.2; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .fader-change{ min-height:16px; font-size:11.5px; font-weight:600; color:var(--reach); text-align:center; font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; }
+  .fader.moved .ps-value{ color:var(--brand-dark); }
+  .fader-menu{ top:60px; right:auto; }
+  /* Show: one bar or chart on the whole screen. */
+  .show-view{ position:fixed; z-index:40; inset:0; top:0; background:var(--page); display:flex; flex-direction:column; padding:8px 12px calc(var(--dock-h, 0px) + 8px); }
+  body.mixing .show-view{ left:var(--mix-l, 0px); right:var(--mix-r, 0px); padding-bottom:8px; }
+  .show-head{ display:flex; align-items:center; gap:8px; padding-top:env(safe-area-inset-top, 0px); }
+  .show-head h2{ flex:1 1 auto; margin:0; font-size:20px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .show-btn{ font-size:15px; padding:8px 14px; border-radius:10px; }
+  .show-close{ font-size:22px; padding:4px 14px; }
+  .show-body{ flex:1 1 auto; min-height:0; display:flex; align-items:center; justify-content:center; overflow:auto; }
+  .show-widget{ width:100%; }
+  .show-widget .bar-chart{ max-height:calc(100vh - var(--dock-h, 0px) - 120px); font-size:13px; }
+  .show-widget .chart-key{ font-size:14px; }
+  body.showing .slider-dock{ z-index:41; }
+  body.showing .mixer{ z-index:41; top:0; }
+  /* Holding A to look. */
+  .look-bar{ position:sticky; top:var(--gbar-h, 52px); z-index:20; margin:0 0 10px; padding:9px 12px; border-radius:10px; background:var(--reach); color:#1b2333; font-size:14px; }
+  body.looking .board .b-now{ opacity:.9; }
+  /* Scenarios as cards on a phone. */
+  body.phone .scenario-list{ flex-direction:row; overflow-x:auto; scroll-snap-type:x mandatory; gap:10px; padding:2px 2px 8px; }
+  body.phone .scenario{ flex:0 0 82%; scroll-snap-align:start; padding:10px; border-radius:12px; background:var(--card); gap:6px; }
+  body.phone .scenario-name{ flex:1 1 100%; font-size:16px; font-weight:600; }
+  body.phone .scenario-up, body.phone .scenario-down{ display:none; }
+  body.phone .scenario-btn{ flex:1 1 0; min-height:44px; font-size:16px; }
+  body.phone .scenario-compare{ font-weight:700; touch-action:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+  body.phone .compare-mark{ width:40px; height:40px; font-size:18px; touch-action:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+  .scenario-hint{ font-size:12.5px; }
+  .peek-actions{ display:flex; gap:8px; }
+  .peek-actions button{ flex:1 1 0; }
 /* The Help panel (build step 10; docs/step10-help.md), shared by fmIDE and ExcelExporter with
    src/shared/help-panel.js. Each app sets --help-top (where the panel starts) and makes room
    for the panel under body.help-open. */
@@ -480,6 +507,18 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   .ps-bubble{ position:absolute; bottom:calc(50% + 24px); transform:translateX(-50%); display:none; white-space:nowrap; padding:3px 10px; border-radius:10px; background:var(--ps-accent); color:#fff; font-size:13px; font-weight:700; pointer-events:none; box-shadow:0 3px 10px rgba(16,24,40,.25); z-index:5; }
   .ps.dragging.fine .ps-bubble{ display:block; }
   @media (prefers-reduced-motion: reduce){ .ps-thumb{ transition:none; } .ps.ticked .ps-thumb{ animation:none; } }
+  /* Standing on end (a fader, the mixer): up is more. */
+  .ps.vertical{ display:flex; flex-direction:column; align-items:stretch; height:100%; }
+  .ps.vertical .ps-row{ flex:none; justify-content:center; }
+  .ps.vertical .ps-step{ display:none; }
+  .ps.vertical .ps-value, .ps.vertical .ps-type{ height:34px; font-size:18px !important; padding:0 2px; }
+  .ps.vertical .ps-row input.ps-type:not([type=range]):not([type=file]){ font-size:18px !important; width:100%; }
+  .ps.vertical .ps-track{ flex:1 1 auto; height:auto; min-height:110px; cursor:ns-resize; }
+  .ps.vertical .ps-rail{ left:50%; right:auto; top:var(--ps-pad); bottom:var(--ps-pad); width:8px; height:auto; margin:0 0 0 -4px; }
+  .ps.vertical .ps-fill{ left:0; right:0; width:auto; top:auto; bottom:calc(var(--ps-a) * 100%); height:calc((var(--ps-b) - var(--ps-a)) * 100%); }
+  .ps.vertical .ps-notch{ left:-9px; right:-9px; width:auto; top:auto; height:3px; margin:0 0 -1.5px 0; bottom:calc(var(--ps-n) * 100%); }
+  .ps.vertical .ps-thumb{ left:50%; top:auto; margin:0 0 -17px -17px; bottom:calc(var(--ps-pad) + var(--ps-f) * (100% - 2 * var(--ps-pad))); }
+  .ps.vertical .ps-bubble{ bottom:auto; left:50%; }
 </style>
 </head>
 <body>
@@ -539,6 +578,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   <nav id="phoneBoards" class="phone-boards" aria-label="Boards"></nav>
   <div id="trialBar" class="trial-bar hidden" role="status"></div>
   <div id="compareBar" class="compare-bar hidden" role="status"></div>
+  <div id="lookBar" class="look-bar hidden" role="status"></div>
   <section id="board" class="board hidden">
     <div class="board-col">
       <h2 class="col-head">Sliders</h2>
@@ -549,6 +589,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         <ol id="scenarioList" class="scenario-list"></ol>
         <p id="scenariosEmpty" class="empty-note">Move the sliders, then save where they are.</p>
         <button type="button" id="btnSaveScenario" class="link-btn needs-model" title="Keep where the sliders are now, under a name">+ Save as scenario</button>
+        <p class="empty-note phone-only scenario-hint">Hold <strong>A</strong> to look at a scenario; let go to come back.</p>
       </details>
       <details id="moversPanel" class="movers" open>
         <summary class="col-head" title="The rectangles the sliders change most, against the model's own numbers">Biggest movers</summary>
@@ -571,6 +612,17 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   <div id="dockDots" class="dock-dots" aria-hidden="true"></div>
   <p id="dockEmpty" class="dock-empty">This board has no sliders.</p>
 </section>
+<aside id="mixerLeft" class="mixer mixer-left phone-only hidden" aria-label="Sliders on the left"></aside>
+<aside id="mixerRight" class="mixer mixer-right phone-only hidden" aria-label="Sliders on the right"></aside>
+<div id="faderMenu" class="phone-menu fader-menu hidden" role="menu" aria-label="Put another slider here"></div>
+<section id="showView" class="show-view hidden" role="dialog" aria-labelledby="showTitle">
+  <div class="show-head">
+    <h2 id="showTitle"></h2>
+    <button type="button" id="showShare" class="show-btn">⇪ Share</button>
+    <button type="button" id="showClose" class="show-btn show-close" aria-label="Close">×</button>
+  </div>
+  <div id="showBody" class="show-body"></div>
+</section>
 <div id="phoneMenu" class="phone-menu hidden" role="menu" aria-label="Menu">
   <button type="button" role="menuitem" id="phoneOpen">📂 Open…</button>
   <button type="button" role="menuitem" id="phoneFromFmide" class="hidden">↻ From fmIDE</button>
@@ -582,6 +634,8 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     <button type="button" role="menuitem" id="phoneUndo" disabled>↶ Undo</button>
     <button type="button" role="menuitem" id="phoneRedo" disabled>↷ Redo</button>
   </div>
+  <button type="button" role="menuitem" id="phoneSharePicture" class="needs-model">⇪ Share a picture of the board</button>
+  <button type="button" role="menuitem" id="phoneShareFile" class="needs-model">⇪ Share the board file</button>
   <button type="button" role="menuitemcheckbox" id="phoneVibrate" class="hidden" aria-checked="true">Vibrate on the marks: On</button>
   <button type="button" role="menuitem" id="phoneHelp">❓ Help</button>
   <button type="button" role="menuitem" id="phoneFullApp">🖥 Full app</button>
@@ -592,7 +646,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     <div id="peekWhere" class="peek-where"></div>
     <div id="peekChart" class="peek-chart"></div>
     <table id="peekTable" class="peek-table"></table>
-    <div class="peek-actions"><button type="button" id="peekTrace">🔍 Trace</button></div>
+    <div class="peek-actions"><button type="button" id="peekTrace">🔍 Trace</button><button type="button" id="peekShow" class="primary">⤢ Show</button></div>
   </div>
 </div>
 
@@ -3301,7 +3355,9 @@ function resultsWith(overrides){
   }
 }
 
-function currentResults(){ return resultsWith(overridesFor(board.sliders)); }
+// While a finger holds A (05h-phone-show.js), the numbers looked at instead of the sliders'.
+let lookingAt = null;
+function currentResults(){ return resultsWith(lookingAt ? lookingAt.overrides : overridesFor(board.sliders)); }
 
 // The positions a slider snaps to.
 function sliderSteps(s){
@@ -4157,6 +4213,7 @@ function updateValues(){
     if(!el) return;
     el.querySelector('.slider-base').textContent = sliderBaseText(s);
   });
+  drawShow(results); // one shown on the whole screen, on a phone (05h-phone-show.js)
   updateMovers(results);
   markScenarios(); // (05f-scenarios.js)
   paintReach();
@@ -4246,6 +4303,9 @@ function chartWidget(c){
   const w = make('div', 'widget chart-widget');
   w.dataset.id = c.id;
   w.dataset.layout = c.layout;
+  // On a phone, holding the chart opens its quick look (05g-phone.js).
+  w.addEventListener('pointerdown', (ev) => phoneBarPress(ev, c));
+  w.addEventListener('contextmenu', (ev) => { if(isPhone()) ev.preventDefault(); });
   const head = make('div', 'widget-head');
   const title = make('input', 'chart-title');
   title.type = 'text';
@@ -5082,7 +5142,9 @@ function renderCompareBar(){
   bar.classList.toggle('hidden', !pinA || !model);
   $('btnPinA').setAttribute('aria-pressed', pinA ? 'true' : 'false');
   if(!pinA || !model) return;
-  bar.appendChild(make('span', 'compare-mark', 'A'));
+  const mark = make('span', 'compare-mark', 'A');
+  holdToLook(mark, () => pinA ? { overrides: pinA.overrides, label: 'A' } : null); // on a phone (05h-phone-show.js)
+  bar.appendChild(mark);
   const text = make('span', 'compare-text');
   text.appendChild(make('strong', null, 'Comparing with A: '));
   text.appendChild(document.createTextNode(pinA.label));
@@ -5285,6 +5347,8 @@ function renderScenarios(){
       button('scenario-up', '↑', 'Move up', () => moveScenario(sc, i - 1)),
       button('scenario-down', '↓', 'Move down', () => moveScenario(sc, i + 1)),
       button('scenario-delete', '×', 'Delete this scenario', () => deleteScenario(sc)));
+    // On a phone, a finger held on A looks at the scenario until it lifts (05h-phone-show.js).
+    holdToLook(li.querySelector('.scenario-compare'), () => ({ overrides: overridesFor(sc.settings), label: 'scenario “' + sc.name + '”' }));
     li.querySelector('.scenario-up').disabled = i === 0;
     li.querySelector('.scenario-down').disabled = i === scenarios.length - 1;
     const what = make('div', 'scenario-what', sc.settings.length ? settingsLabel(sc.settings) : 'The model\'s own numbers');
@@ -5324,7 +5388,7 @@ $('btnSaveScenario').addEventListener('click', () => {
 //   time, large (the shared phone slider), a swipe along the dock to the next; drawn up it
 //   lists them all, drawn down it gets out of the way;
 // - holding a bar opens its quick look (#peekCard): every period, now against the model's own
-//   numbers (or A), and 🔍 Trace;
+//   numbers (or A), 🔍 Trace and ⤢ Show (05h-phone-show.js); holding a chart, its rectangles;
 // - building and editing (+ Bar, + Chart, + Slider, the Boards menu, editors, arranging,
 //   colours, the tutorials) is left to a tablet or computer: ☰ → Full app shows the full page,
 //   📱 Phone layout goes back. Both settings are the person's own, kept in this browser
@@ -5347,6 +5411,13 @@ $('btnSaveScenario').addEventListener('click', () => {
 //     knob while finer; tapping the number lets it be typed; − and + step it, repeating faster while held;
 //   · a double-tap goes back to the base; the arrow keys, Page Up / Down, Home and End work.
 //   Each finger is followed by its own pointer id, so several sliders move at once.
+//   With `vertical`, it stands on end (a fader: up is more) and sliding the finger sideways,
+//   away from it, makes it finer.
+// - shareFiles(files, title): the phone's own share sheet (Messages, Mail, AirDrop…); the
+//   person picks where the files go, nothing is sent first. Where a browser can't share files,
+//   they download instead.
+// - keepScreenOn(): asks the browser to keep the screen on (Wake Lock) until the function it
+//   returns is called; asked again when the page comes back into view.
 // Nothing here touches the page until it is called.
 
 const PHONE_MAX_SIDE = 600;
@@ -5389,7 +5460,7 @@ function roundStep(x){
 function decimalsOf(step){ return Math.max(0, Math.min(12, Math.ceil(-Math.log10(step)) + 1)); }
 
 // options: { label, min, max, step, value, base, format(v) → text, vibrate() → whether to
-//   vibrate on a tick, onStart(), onInput(value, atBase), onEnd() }
+//   vibrate on a tick, onStart(), onInput(value, atBase), onEnd(), vertical }
 // Returns { el, setValue(v), value(), dragging() }.
 function createPhoneSlider(options){
   const o = options;
@@ -5404,11 +5475,12 @@ function createPhoneSlider(options){
   const decimals = decimalsOf(step);
   const markStep = roundStep(span / MARKS);
   const format = typeof o.format === 'function' ? o.format : (v) => String(v);
+  const vertical = !!o.vertical;
   let value = Number.isFinite(o.value) ? o.value : base;
   let drags = 0;
   let lastTickAt = 0;
 
-  const el = mk('div', 'ps');
+  const el = mk('div', vertical ? 'ps vertical' : 'ps');
   const row = mk('div', 'ps-row');
   const minus = mk('button', 'ps-step ps-minus', '−');
   const plus = mk('button', 'ps-step ps-plus', '+');
@@ -5425,6 +5497,7 @@ function createPhoneSlider(options){
   track.setAttribute('aria-label', o.label);
   track.setAttribute('aria-valuemin', String(min));
   track.setAttribute('aria-valuemax', String(max));
+  if(vertical) track.setAttribute('aria-orientation', 'vertical');
   const rail = mk('div', 'ps-rail');
   rail.append(mk('div', 'ps-fill'), mk('div', 'ps-notch'));
   const thumb = mk('div', 'ps-thumb');
@@ -5477,20 +5550,24 @@ function createPhoneSlider(options){
     if(ev.pointerType === 'mouse') ev.preventDefault(); // no text selection; a finger's is left alone (pointer-input.js)
     try{ track.setPointerCapture(ev.pointerId); }catch(e){ /* followed through the document anyway */ }
     const id = ev.pointerId, x0 = ev.clientX, y0 = ev.clientY;
-    const width = Math.max(1, rail.getBoundingClientRect().width);
-    let anchorX = x0, raw = value, anchorV = value, factor = 1, moved = false;
+    const box = rail.getBoundingClientRect();
+    const length = Math.max(1, vertical ? box.height : box.width);
+    // Along the slider (up is more on a fader), and away from it (finer).
+    const along = (e) => vertical ? -e.clientY : e.clientX;
+    const away = (e) => vertical ? Math.abs(e.clientX - x0) : y0 - e.clientY;
+    let anchor = along(ev), raw = value, anchorV = value, factor = 1, moved = false;
     drags++;
     el.classList.add('dragging');
     track.focus({ preventScroll: true });
     start();
     const move = (e) => {
       if(e.pointerId !== id) return;
-      const fine = fineStep(y0 - e.clientY);
-      if(fine.factor !== factor){ anchorX = e.clientX; anchorV = raw; factor = fine.factor; }
-      if(!moved && Math.abs(e.clientX - x0) < 3) return;
+      const fine = fineStep(away(e));
+      if(fine.factor !== factor){ anchor = along(e); anchorV = raw; factor = fine.factor; }
+      if(!moved && Math.abs(along(e) - along(ev)) < 3) return;
       moved = true;
-      raw = clamp(anchorV + (e.clientX - anchorX) / width * span * factor);
-      const unitsPerPx = span * factor / width;
+      raw = clamp(anchorV + (along(e) - anchor) / length * span * factor);
+      const unitsPerPx = span * factor / length;
       const v = Math.abs(raw - base) / unitsPerPx <= NOTCH_PX && base >= min && base <= max ? base : snap(raw);
       el.classList.toggle('fine', factor < 1);
       if(v !== value) setTo(v);
@@ -5512,8 +5589,14 @@ function createPhoneSlider(options){
   // "fine ×¼" over the knob, kept inside the slider.
   function placeBubble(text){
     bubble.textContent = text;
+    const pad = 24;
+    if(vertical){
+      const h = track.clientHeight, at = h - pad - frac(value) * (h - 2 * pad);
+      bubble.style.top = Math.max(0, Math.min(h - bubble.offsetHeight, at - bubble.offsetHeight - 22)) + 'px';
+      return;
+    }
     const w = track.clientWidth, half = bubble.offsetWidth / 2 + 4;
-    const pad = 24, at = pad + frac(value) * (w - 2 * pad);
+    const at = pad + frac(value) * (w - 2 * pad);
     bubble.style.left = Math.max(half, Math.min(w - half, at)) + 'px';
   }
   // A double-tap (pointer-input.js sends a finger's as dblclick) or a double-click: the base.
@@ -5584,6 +5667,51 @@ function createPhoneSlider(options){
   };
 }
 
+// The phone's share sheet for these files (File objects); else they download. Resolves
+// 'shared', 'cancelled' (the person closed the sheet) or 'downloaded'.
+async function shareFiles(files, title){
+  try{
+    if(navigator.share && navigator.canShare && navigator.canShare({ files })){
+      await navigator.share({ files, title });
+      return 'shared';
+    }
+  }catch(e){
+    if(e && e.name === 'AbortError') return 'cancelled';
+    // Not allowed here (or failed): download instead.
+  }
+  files.forEach(f => {
+    const url = URL.createObjectURL(f);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = f.name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  return 'downloaded';
+}
+
+// Keeps the screen on while something is being shown; call what it returns to let it sleep.
+function keepScreenOn(){
+  let on = true, sentinel = null;
+  const ask = () => {
+    if(!on || !navigator.wakeLock || document.visibilityState !== 'visible') return;
+    navigator.wakeLock.request('screen').then(s => {
+      if(on) sentinel = s;
+      else s.release().catch(() => {});
+    }, () => { /* refused (battery saver…): the screen sleeps as usual */ });
+  };
+  const visible = () => { if(document.visibilityState === 'visible') ask(); };
+  document.addEventListener('visibilitychange', visible);
+  ask();
+  return () => {
+    on = false;
+    document.removeEventListener('visibilitychange', visible);
+    if(sentinel){ sentinel.release().catch(() => {}); sentinel = null; }
+  };
+}
+
 const FULL_APP_KEY = 'fmgraph-full-app';
 const VIBRATE_KEY = 'fmgraph-vibrate';
 let fullApp = false;     // the full page on a phone (☰ → Full app)
@@ -5600,7 +5728,7 @@ function applyPhoneLayout(){
   document.body.classList.toggle('phone-screen', screenIsPhone);
   document.body.classList.toggle('phone', phone);
   $('btnPhoneLayout').classList.toggle('hidden', !(screenIsPhone && fullApp));
-  if(!phone){ closePhoneMenu(); closePeek(); }
+  if(!phone){ closePhoneMenu(); closePeek(); closeShow(); }
   if(was !== phone && model && board) renderAll();
   else { renderDock(); renderPhoneBoards(); }
 }
@@ -5625,7 +5753,7 @@ function periodsText(spec){
 
 function renderDock(){
   const dock = $('sliderDock'), cards = $('dockCards');
-  const on = isPhone() && !!model && !!board;
+  const on = isPhone() && !!model && !!board && !isMixing(); // sideways: the mixer instead (05h-phone-show.js)
   dock.classList.toggle('hidden', !on);
   cards.textContent = '';
   dockControls = new Map();
@@ -5637,6 +5765,7 @@ function renderDock(){
     showDockCard(dockIndex);
     updateDock();
   }
+  renderMixer();
   updateDockSpace();
 }
 
@@ -5668,6 +5797,7 @@ function dockCard(s){
 // The words under each slider, after every redraw (updateValues).
 function updateDock(){
   if(!isPhone() || !model || !board) return;
+  updateMixer();
   board.sliders.forEach(s => {
     const card = document.querySelector('#dockCards .dock-card[data-id="' + s.id + '"]');
     const ctl = dockControls.get(s.id);
@@ -5800,6 +5930,8 @@ function phoneBarPress(ev, b){
 }
 function openPeek(b){
   if(!model || !board.items.includes(b)) return;
+  if(b.kind === 'chart') return openChartPeek(b);
+  $('peekChart').classList.remove('hidden');
   const rect = model.byKey.get(b.key);
   const results = currentResults(), cmp = compareResults();
   peekFor = b;
@@ -5846,9 +5978,44 @@ function openPeek(b){
     tbody.appendChild(tr);
   });
   table.append(thead, tbody);
-  $('peekTrace').setAttribute('aria-pressed', traceId === b.id ? 'true' : 'false');
+  showPeekCard(b);
+}
+function showPeekCard(w){
+  $('peekTrace').setAttribute('aria-pressed', traceId === w.id ? 'true' : 'false');
   $('peekBack').classList.remove('hidden');
   $('peekClose').focus({ preventScroll: true });
+}
+// A chart's quick look: each of its rectangles in the period it shows (the first, for columns).
+function openChartPeek(c){
+  const results = currentResults(), cmp = compareResults();
+  peekFor = c;
+  peekOpenedAt = performance.now();
+  const p = c.layout === 'columns' ? (periodsOf(c.periods)[0] || 0) : c.period;
+  const kind = { columns: 'Columns', flow: 'Waterfall', scenarios: 'Scenario waterfall' }[c.layout] || 'Chart';
+  $('peekTitle').textContent = c.title || kind;
+  $('peekWhere').textContent = kind + ' · ' + model.periods[p];
+  $('peekChart').textContent = '';
+  $('peekChart').classList.add('hidden');
+  const table = $('peekTable');
+  table.textContent = '';
+  const headRow = make('tr');
+  ['Rectangle', 'Now', pinA ? 'From A' : 'From the model\'s'].forEach(t => headRow.appendChild(make('th', null, t)));
+  const thead = make('thead');
+  thead.appendChild(headRow);
+  const tbody = make('tbody');
+  [...new Set(chartKeys(c))].forEach(k => {
+    const rect = model.byKey.get(k);
+    if(!rect) return;
+    const now = resultOf(results, rect, p), was = resultOf(cmp, rect, p);
+    const tr = make('tr');
+    tr.appendChild(make('td', null, rect.name));
+    tr.appendChild(make('td', 'num', now.error ? '! ' + errorText(now.error) : fmtNum(now.value)));
+    const diff = now.error || was.error ? '' : fmtDiff(now.value, was.value);
+    tr.appendChild(make('td', 'num ' + (diff ? (now.value > was.value ? 'up' : 'down') : ''), diff || '—'));
+    tbody.appendChild(tr);
+  });
+  table.append(thead, tbody);
+  showPeekCard(c);
 }
 function closePeek(){
   peekFor = null;
@@ -5856,6 +6023,7 @@ function closePeek(){
 }
 $('peekClose').addEventListener('click', closePeek);
 $('peekTrace').addEventListener('click', () => { const b = peekFor; closePeek(); if(b) setTrace(traceId === b.id ? null : b.id); });
+$('peekShow').addEventListener('click', () => { const w = peekFor; closePeek(); if(w) openShow(w); });
 // A tap on the dim page around the card closes it (not the finger that opened it, lifting).
 $('peekBack').addEventListener('pointerdown', (ev) => { peekDownOnBack = ev.target === $('peekBack') && performance.now() - peekOpenedAt > 300; });
 $('peekBack').addEventListener('click', (ev) => { if(ev.target === $('peekBack') && peekDownOnBack) closePeek(); peekDownOnBack = false; });
@@ -5897,6 +6065,8 @@ menuItem('phoneMovers', () => openPanel('moversPanel'));
 menuItem('phoneUndo', () => $('btnUndo').click());
 menuItem('phoneRedo', () => $('btnRedo').click());
 menuItem('phoneHelp', () => help.toggle());
+menuItem('phoneSharePicture', () => shareBoardPicture()); // (05i-phone-share.js)
+menuItem('phoneShareFile', () => shareBoardFile());
 menuItem('phoneFullApp', () => setFullApp(true));
 $('phoneVibrate').addEventListener('click', () => {
   vibrateOn = !vibrateOn;
@@ -5905,6 +6075,252 @@ $('phoneVibrate').addEventListener('click', () => {
 });
 $('btnPhoneLayout').addEventListener('click', () => setFullApp(false));
 
+// The phone layout starts at the end of 05h-phone-show.js, once everything it draws is defined.
+// ============================================================
+// fmGraph on a phone, sideways and showing (step 17, phase P1b; docs/step17-phones.md).
+// - The mixer: a phone turned sideways shows the board's sliders as faders standing on end,
+//   at the screen's two edges under the thumbs (#mixerLeft, #mixerRight; at most MIXER_MAX),
+//   each the shared phone slider (vertical: up is more, sideways is finer). Each finger moves
+//   its own fader, so several move at once. Which sliders: the board's first ones, or those
+//   picked by a tap on a fader's name (#faderMenu), remembered in this browser per model and
+//   board (fmgraph-mixer, the person's own setting, never in a file).
+// - Show: one bar or chart on the whole screen (#showView), from its quick look; the screen
+//   is kept on while it shows (keepScreenOn); ×, Esc or the phone's back gesture ends it. It
+//   follows the sliders like the board.
+// - Holding A: while a finger is on a scenario's A (05f-scenarios.js) or on the compare strip's
+//   A (05e-compare.js), the bars show those numbers instead of the sliders' (lookingAt,
+//   03-calc.js), with #lookBar saying so; letting go brings the sliders' numbers back. A quick
+//   tap still compares, as before.
+// ============================================================
+const MIXER_MAX = 4;
+const MIXER_KEY = 'fmgraph-mixer';
+const MIXER_REMEMBERED = 100;   // boards whose mixer is remembered
+let mixerChoice = {};           // model signature | board name → [slider setting key…]
+let mixerControls = new Map();  // slider id → its fader
+const landscape = (() => { try{ return window.matchMedia('(orientation: landscape)'); }catch(e){ return null; } })();
+
+const isMixing = () => isPhone() && !!landscape && landscape.matches;
+const mixerBoardKey = () => model.signature + '|' + board.name;
+
+// The sliders on the mixer, in order: those picked for this board that are still on it, then
+// the board's others, up to MIXER_MAX.
+function mixerSliders(){
+  const picked = (mixerChoice[mixerBoardKey()] || []).map(k => board.sliders.find(s => settingKey(s) === k)).filter(Boolean);
+  const out = [...new Set(picked)];
+  board.sliders.forEach(s => { if(out.length < MIXER_MAX && !out.includes(s)) out.push(s); });
+  return out.slice(0, MIXER_MAX);
+}
+function pickForMixer(at, s){
+  const list = mixerSliders();
+  const was = list.indexOf(s);
+  if(was >= 0) list[was] = list[at]; // swapping two already on the mixer
+  list[at] = s;
+  mixerChoice[mixerBoardKey()] = list.map(settingKey);
+  const keys = Object.keys(mixerChoice);
+  if(keys.length > MIXER_REMEMBERED) delete mixerChoice[keys[0]];
+  store.put(MIXER_KEY, JSON.stringify(mixerChoice)).catch(() => {});
+  renderMixer();
+}
+// What was kept: an object of short strings only.
+function cleanMixerChoice(raw){
+  const out = {};
+  let data = null;
+  try{ data = JSON.parse(raw); }catch(e){ return out; }
+  if(!data || typeof data !== 'object' || Array.isArray(data)) return out;
+  Object.keys(data).slice(-MIXER_REMEMBERED).forEach(k => {
+    const v = data[k];
+    if(k.length <= 200 && Array.isArray(v)) out[k] = v.filter(x => typeof x === 'string' && x.length <= 400).slice(0, MIXER_MAX);
+  });
+  return out;
+}
+
+function renderMixer(){
+  const left = $('mixerLeft'), right = $('mixerRight');
+  left.textContent = '';
+  right.textContent = '';
+  mixerControls = new Map();
+  closeFaderMenu();
+  const on = isMixing() && !!model && !!board;
+  document.body.classList.toggle('mixing', on);
+  const list = on ? mixerSliders() : [];
+  // Fewer on the left: the right thumb takes the odd one.
+  const nLeft = Math.floor(list.length / 2);
+  list.forEach((s, i) => (i < nLeft ? left : right).appendChild(fader(s, i)));
+  left.classList.toggle('hidden', !on || nLeft === 0);
+  right.classList.toggle('hidden', !on || list.length === 0);
+  if(on) updateMixer();
+  const w = (el) => el.classList.contains('hidden') ? 0 : el.offsetWidth;
+  document.body.style.setProperty('--gbar-h', document.querySelector('.gbar').offsetHeight + 'px');
+  document.body.style.setProperty('--mix-l', w(left) + 'px');
+  document.body.style.setProperty('--mix-r', w(right) + 'px');
+}
+
+function fader(s, at){
+  const rect = model.byKey.get(s.key);
+  const el = make('div', 'fader');
+  el.dataset.id = s.id;
+  const name = make('button', 'fader-name', rect.name);
+  name.type = 'button';
+  name.title = 'Put another slider here';
+  name.setAttribute('aria-haspopup', 'menu');
+  name.addEventListener('click', () => openFaderMenu(name, at));
+  const ctl = createPhoneSlider({
+    label: rect.name, min: s.min, max: s.max, step: s.step, value: sliderShown(s), base: sliderBase(s), vertical: true,
+    format: (v) => sliderText(s, v),
+    vibrate: () => vibrateOn,
+    onStart: () => { setActiveSlider(s.id); workOutAhead(s); },
+    onInput: (v, atBase) => {
+      if(atBase){ s.value = null; setActiveSlider(s.id); quietSoon(1500); scheduleUpdate(); }
+      else moveSlider(s, v);
+    },
+    onEnd: () => quietSoon(1200),
+  });
+  mixerControls.set(s.id, ctl);
+  el.append(name, ctl.el, make('div', 'fader-change'));
+  return el;
+}
+function updateMixer(){
+  if(!isMixing() || !model || !board) return;
+  board.sliders.forEach(s => {
+    const ctl = mixerControls.get(s.id);
+    const el = document.querySelector('.fader[data-id="' + s.id + '"]');
+    if(!ctl || !el) return;
+    if(!ctl.dragging()) ctl.setValue(sliderShown(s));
+    const first = baseValue(model.byKey.get(s.key), periodsOf(s.periods)[0] || 0);
+    const v = sliderShown(s);
+    el.querySelector('.fader-change').textContent = s.value === null ? '' : s.mode === 'shift'
+      ? fmtDiff(first * (1 + v / 100), first).split(' ')[0] : fmtDiff(v, sliderBase(s)).split(' ')[0];
+    el.classList.toggle('moved', s.value !== null);
+  });
+}
+
+// A tap on a fader's name: every slider on the board, the one there marked.
+function openFaderMenu(anchor, at){
+  const menu = $('faderMenu');
+  menu.textContent = '';
+  const here = mixerSliders()[at];
+  board.sliders.forEach(s => {
+    const b = make('button', null, model.byKey.get(s.key).name + (periodsText(s.periods) ? ' · ' + periodsText(s.periods) : ''));
+    b.type = 'button';
+    b.setAttribute('role', 'menuitemradio');
+    b.setAttribute('aria-checked', s === here ? 'true' : 'false');
+    b.addEventListener('click', () => { closeFaderMenu(); if(s !== here) pickForMixer(at, s); });
+    menu.appendChild(b);
+  });
+  const r = anchor.getBoundingClientRect();
+  menu.style.top = Math.round(r.bottom + 6) + 'px';
+  menu.style.left = Math.round(Math.max(8, Math.min(window.innerWidth - 240, r.left))) + 'px';
+  menu.style.right = 'auto';
+  menu.classList.remove('hidden');
+}
+function closeFaderMenu(){ $('faderMenu').classList.add('hidden'); }
+document.addEventListener('pointerdown', (ev) => {
+  if(!$('faderMenu').classList.contains('hidden') && !ev.target.closest('#faderMenu, .fader-name')) closeFaderMenu();
+}, true);
+if(landscape) landscape.addEventListener('change', () => { if(isPhone() && model){ closePeek(); renderDock(); renderPhoneBoards(); } });
+store.ready.then(() => store.get(MIXER_KEY)).then(raw => {
+  if(typeof raw === 'string' && raw) mixerChoice = cleanMixerChoice(raw);
+  if(isMixing()) renderMixer();
+}, () => {});
+
+// ---- Show ----
+let showing = null;       // the bar or chart shown
+let letScreenSleep = null;
+function openShow(w){
+  if(!model || !board.items.includes(w)) return;
+  if(showing) closeShow();
+  showing = w;
+  $('showTitle').textContent = w.kind === 'chart' ? (w.title || 'Chart') : model.byKey.get(w.key).name;
+  const body = $('showBody');
+  body.textContent = '';
+  const el = make('div', 'show-widget');
+  el.dataset.id = w.id;
+  el.append(make('div', 'bar-chart-host'), make('div', 'chart-key'), make('ul', 'bar-errors'));
+  body.appendChild(el);
+  $('showView').classList.remove('hidden');
+  document.body.classList.add('showing');
+  letScreenSleep = keepScreenOn();
+  try{ history.pushState({ fmGraphShow: true }, ''); }catch(e){ /* no history: × and Esc still close */ }
+  drawShow(currentResults());
+  $('showClose').focus({ preventScroll: true });
+}
+// fromHistory: the back gesture already took the step back.
+function closeShow(fromHistory){
+  if(!showing) return;
+  showing = null;
+  $('showView').classList.add('hidden');
+  $('showBody').textContent = '';
+  document.body.classList.remove('showing');
+  if(letScreenSleep){ letScreenSleep(); letScreenSleep = null; }
+  if(!fromHistory && history.state && history.state.fmGraphShow){ try{ history.back(); }catch(e){ /* stays */ } }
+}
+// Drawn like the board's own, without gliding (its bars sit elsewhere than the board's).
+function drawShow(results){
+  if(!showing) return;
+  if(!board.items.includes(showing)){ closeShow(); return; }
+  const el = $('showBody').querySelector('.show-widget');
+  const kept = new Map(lastGeometry), glides = animateNow;
+  animateNow = false;
+  if(showing.kind === 'chart') drawChart(el, showing, results); else drawBars(el, showing, results);
+  lastGeometry = kept;
+  animateNow = glides;
+}
+$('showClose').addEventListener('click', () => closeShow());
+$('showShare').addEventListener('click', () => { if(showing) shareWidgetPicture(showing); }); // (05i-phone-share.js)
+window.addEventListener('popstate', () => { if(showing) closeShow(true); });
+document.addEventListener('keydown', (ev) => { if(ev.key === 'Escape' && showing && $('peekBack').classList.contains('hidden')){ ev.stopPropagation(); closeShow(); } }, true);
+
+// ---- Holding A to look ----
+const LOOK_HOLD_MS = 220;
+// On a phone, a finger held on el looks at what get() gives ({ overrides, label }) until it
+// lifts; a quick tap does what el's click does.
+function holdToLook(el, get){
+  el.addEventListener('pointerdown', (ev) => {
+    if(!isPhone() || ev.pointerType === 'mouse') return;
+    const id = ev.pointerId;
+    let looked = false;
+    const timer = setTimeout(() => {
+      const what = get();
+      if(!what) return;
+      looked = true;
+      startLook(what);
+    }, LOOK_HOLD_MS);
+    const up = (e) => {
+      if(e.pointerId !== id) return;
+      clearTimeout(timer);
+      document.removeEventListener('pointerup', up, true);
+      document.removeEventListener('pointercancel', up, true);
+      if(!looked) return;
+      endLook();
+      // The click that follows the lift is not a tap.
+      const swallow = (c) => { c.stopPropagation(); c.preventDefault(); };
+      document.addEventListener('click', swallow, { capture: true, once: true });
+      setTimeout(() => document.removeEventListener('click', swallow, { capture: true }), 400);
+    };
+    document.addEventListener('pointerup', up, true);
+    document.addEventListener('pointercancel', up, true);
+  });
+  el.addEventListener('contextmenu', (ev) => { if(isPhone()) ev.preventDefault(); });
+}
+function startLook(what){
+  lookingAt = what;
+  const bar = $('lookBar');
+  bar.textContent = '';
+  bar.appendChild(make('strong', null, 'Looking at ' + what.label));
+  bar.appendChild(document.createTextNode(' — let go to come back'));
+  bar.classList.remove('hidden');
+  document.body.classList.add('looking');
+  updateValues();
+}
+function endLook(){
+  if(!lookingAt) return;
+  lookingAt = null;
+  $('lookBar').classList.add('hidden');
+  document.body.classList.remove('looking');
+  if(model) updateValues();
+}
+
+// ---- the phone layout starts (05g-phone.js) ----
 applyPhoneLayout();
 window.addEventListener('resize', () => { if(isPhoneScreen() !== document.body.classList.contains('phone-screen')) applyPhoneLayout(); else updateDockSpace(); });
 store.ready.then(() => Promise.all([store.get(FULL_APP_KEY), store.get(VIBRATE_KEY)])).then(([full, vib]) => {
@@ -5912,6 +6328,151 @@ store.ready.then(() => Promise.all([store.get(FULL_APP_KEY), store.get(VIBRATE_K
   vibrateOn = vib !== 'off';
   applyPhoneLayout();
 }, () => {});
+// ============================================================
+// Sharing from a phone (step 17, phase P1b): ☰ → Share a picture of the board or the board
+// file, and ⇪ Share in Show (the chart shown), through the phone's own share sheet (shared
+// shareFiles: the person picks where it goes; where a browser can't share files, it
+// downloads). The picture is drawn here, on the page: each widget's SVG with its look written
+// into it, drawn on a canvas under the board's and model's names, the widgets' names, a chart's
+// key, and where the sliders are. Names reach the picture only as canvas text, and an SVG drawn
+// as an image runs nothing.
+// ============================================================
+const PICTURE_W = 1080;           // pixels across
+const PICTURE_PAD = 44;
+const PICTURE_MAX_H = 16000;
+const PICTURE_ZOOM = 1.8;         // a widget's drawing at most this much larger than its own size      // a browser's canvas stops somewhere beyond this
+const PICTURE_FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+const SVG_LOOK = ['fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'opacity', 'fill-opacity', 'font-size', 'font-weight', 'font-family', 'text-anchor'];
+
+// An SVG on the page as an image: its look (from the style sheet) written into each element.
+function svgPicture(el){
+  const copy = el.cloneNode(true);
+  const from = el.querySelectorAll('*'), to = copy.querySelectorAll('*');
+  from.forEach((e, i) => {
+    const cs = getComputedStyle(e);
+    to[i].setAttribute('style', SVG_LOOK.map(p => p + ':' + cs.getPropertyValue(p)).join(';'));
+  });
+  copy.querySelectorAll('title').forEach(t => t.remove());
+  const vb = el.viewBox && el.viewBox.baseVal;
+  const w = vb && vb.width ? vb.width : 300, h = vb && vb.height ? vb.height : 150;
+  copy.setAttribute('xmlns', SVG_NS);
+  copy.setAttribute('width', String(w));
+  copy.setAttribute('height', String(h));
+  copy.removeAttribute('class');
+  const text = new XMLSerializer().serializeToString(copy);
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve({ img, w, h });
+    img.onerror = () => reject(new Error('The chart could not be drawn.'));
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(text);
+  });
+}
+
+// Lines of text no wider than width.
+function wrapText(ctx, text, width){
+  const words = String(text).split(/\s+/).filter(Boolean), lines = [];
+  let line = '';
+  words.forEach(w => {
+    const next = line ? line + ' ' + w : w;
+    if(line && ctx.measureText(next).width > width){ lines.push(line); line = w; } else line = next;
+  });
+  if(line) lines.push(line);
+  return lines.length ? lines : [''];
+}
+
+// The widgets (their elements on the page, and names) drawn as one PNG. Resolves a Blob.
+async function drawPicture(title, widgets){
+  const inner = PICTURE_W - 2 * PICTURE_PAD;
+  const parts = [];
+  for(const w of widgets){
+    const images = [];
+    for(const s of w.el.querySelectorAll('.bar-chart-host svg')) images.push(await svgPicture(s));
+    // A chart's key, a line per group: "Assets: Closing cash, Equipment".
+    const key = [...w.el.querySelectorAll('.chart-key .key-line')].map(l => {
+      const group = l.querySelector('.key-group'), items = [...l.querySelectorAll('.key-item')].map(i => i.textContent.trim()).filter(Boolean);
+      return ((group ? group.textContent.trim() + ' ' : '') + items.join(', ')).trim();
+    }).filter(Boolean);
+    const problems = [...w.el.querySelectorAll('.bar-errors li')].map(l => l.textContent);
+    parts.push({ name: w.name, images, key, problems });
+  }
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const font = (size, weight) => { ctx.font = (weight || 400) + ' ' + size + 'px ' + PICTURE_FONT; };
+  const settings = (pinA ? 'Compared with ' + pinA.label + '. ' : '') + 'Sliders: ' + settingsLabel(board.sliders.map(sliderSetting)) + '.';
+  // Measured first (the canvas's size), then drawn.
+  const layout = () => {
+    const ops = [];
+    let y = PICTURE_PAD;
+    const text = (t, size, weight, colour, gap) => {
+      font(size, weight);
+      wrapText(ctx, t, inner).forEach(line => { ops.push({ t: line, y: y + size, size, weight, colour }); y += Math.round(size * 1.3); });
+      y += gap || 0;
+    };
+    text(title, 44, 700, '#1b2333', 4);
+    text(model.name, 26, 400, '#5f6b7d', 10);
+    text(settings, 24, 400, '#5f6b7d', 26);
+    parts.forEach(p => {
+      if(p.name) text(p.name, 32, 700, '#1b2333', 8);
+      // At most PICTURE_ZOOM times its own size, so a bar's small drawing keeps the charts' text size.
+      p.images.forEach(im => {
+        const w = Math.min(inner, im.w * PICTURE_ZOOM), h = Math.round(w * im.h / im.w);
+        ops.push({ im: im.img, x: PICTURE_PAD + (inner - w) / 2, y, w, h });
+        y += h + 10;
+      });
+      p.key.forEach(k => text(k, 22, 400, '#5f6b7d', 0));
+      p.problems.forEach(k => text(k, 22, 400, '#b42318', 0));
+      y += 30;
+    });
+    text('Made with fmGraph', 20, 400, '#94a3b8', 0);
+    return { ops, h: Math.min(PICTURE_MAX_H, y + PICTURE_PAD) };
+  };
+  const { ops, h } = layout();
+  canvas.width = PICTURE_W;
+  canvas.height = h;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, PICTURE_W, h);
+  ops.forEach(op => {
+    if(op.y > h) return;
+    if(op.im){ ctx.drawImage(op.im, op.x, op.y, op.w, op.h); return; }
+    font(op.size, op.weight);
+    ctx.fillStyle = op.colour;
+    ctx.fillText(op.t, PICTURE_PAD, op.y);
+  });
+  return new Promise((resolve, reject) => canvas.toBlob(b => b ? resolve(b) : reject(new Error('The picture could not be made.')), 'image/png'));
+}
+
+const widgetName = (w) => w.kind === 'chart' ? (w.title || ({ columns: 'Columns', flow: 'Waterfall', scenarios: 'Scenario waterfall' }[w.layout] || 'Chart')) : model.byKey.get(w.key).name;
+
+async function sharePicture(title, widgets, fileName){
+  try{
+    const blob = await drawPicture(title, widgets);
+    const file = new File([blob], safeFileName(fileName) + '.png', { type: 'image/png' });
+    const how = await shareFiles([file], title);
+    if(how === 'downloaded') notify('Saved the picture: ' + file.name + '.', 'ok', 'share');
+    return how;
+  }catch(e){
+    notify('The picture could not be made: ' + String(e && e.message || e).slice(0, 200), 'err', 'share');
+    return 'failed';
+  }
+}
+function shareBoardPicture(){
+  if(!model || !board) return Promise.resolve(null);
+  const widgets = board.items.map(w => ({ el: document.querySelector('#barList .widget[data-id="' + w.id + '"]'), name: widgetName(w) })).filter(w => w.el);
+  return sharePicture(board.name, widgets, model.name + ' - ' + board.name);
+}
+function shareWidgetPicture(w){
+  const el = $('showBody').querySelector('.show-widget');
+  if(!model || !el) return Promise.resolve(null);
+  return sharePicture(widgetName(w), [{ el, name: '' }], model.name + ' - ' + widgetName(w));
+}
+async function shareBoardFile(){
+  if(!model || !board) return null;
+  const text = JSON.stringify(boardsData([board]), null, 2);
+  const file = new File([text], safeFileName(model.name + ' - ' + board.name) + '.board.json', { type: 'application/json' });
+  const how = await shareFiles([file], board.name);
+  if(how === 'downloaded') notify('Saved the board file: ' + file.name + '.', 'ok', 'share');
+  return how;
+}
 // ============================================================
 // The page: opening a model (the file picker, a file dropped anywhere, the sample, or fmIDE),
 // the top bar's buttons, and ← Back to fmIDE.
@@ -7244,14 +7805,18 @@ const FMGRAPH_HELP_TOPICS = [
       { see: ['reach', 'speed'] },
     ] },
   { id: 'phone', group: 'start', title: 'fmGraph on a phone',
-    keywords: 'phone mobile iphone android smartphone thumb dock slider fine notch tick vibrate swipe hold full app',
+    keywords: 'phone mobile iphone android smartphone thumb dock slider fine notch tick vibrate swipe hold full app mixer fader sideways landscape show present share picture airdrop scenario look',
     summary: 'On a phone the board fills the screen and the sliders sit under your thumb.',
     body: [
       { p: 'On a phone fmGraph is laid out for one hand: the bars and charts fill the screen, and the sliders sit in a dock along the bottom, one at a time, large. Swipe along the dock for the next slider; tap its handle to see them all; draw it down to get it out of the way.' },
       { p: 'Grab a slider anywhere along it: it moves from where it is, never jumping to your finger. To set it exactly, slide your finger up, away from the slider, while you drag: the higher, the finer (×½, ×¼, ×⅒), shown over the knob. Come back down for big moves, without letting go.' },
       { p: 'There is a notch at the model\'s own number: the slider settles there when you pass close, with a tick. Tap the number to type one; − and + step it (hold them to keep going, faster and faster); double-tap the slider to go back to the model\'s number.' },
-      { p: 'Swipe sideways across the bars, or use ‹ and ›, for the next board. Hold a bar for a quick look: its value in every period, now against the model\'s own numbers (or A), and 🔍 Trace.' },
-      { steps: ['Open a model (☰ → Open…), or Try the sample model.', 'Drag a slider in the dock and watch the bars.', 'Slide your finger up to set it exactly.', 'Hold a bar to see every period.'] },
+      { p: 'Swipe sideways across the bars, or use ‹ and ›, for the next board. Hold a bar for a quick look: its value in every period, now against the model\'s own numbers (or A), 🔍 Trace and ⤢ Show. Hold a chart to see its rectangles\' numbers.' },
+      { p: 'Turn the phone sideways for the mixer: the sliders stand up as faders at the two edges of the screen, under your thumbs, with the board between them. Each finger moves its own fader, so you can move two (or more) at once and watch the bars follow both. Slide your finger sideways, away from a fader, to make it finer. Tap a fader\'s name to put another slider there; that is remembered for the board.' },
+      { p: '⤢ Show puts one bar or chart on the whole screen and keeps the screen on while it shows, for showing someone; ×, Esc or your phone\'s back gesture ends it. The sliders stay beside it.' },
+      { p: 'Saved scenarios are cards: swipe through them; ▶ shows one. Hold a card\'s A to look at that scenario: the bars show it while your finger stays down, and come back when you let go. A quick tap on A compares with it, as before. With 📌 Pin as A, hold the A on the strip to look at A.' },
+      { p: '⇪ Share (in Show, and in ☰) sends a picture of the chart, or of the whole board, or the board file, through your phone\'s own Share button: Messages, Mail, AirDrop. The picture is drawn on your phone; nothing is sent until you choose where it goes. Where a browser can\'t share files, they download instead.' },
+      { steps: ['Open a model (☰ → Open…), or Try the sample model.', 'Drag a slider in the dock and watch the bars.', 'Slide your finger up to set it exactly.', 'Hold a bar to see every period, then ⤢ Show.', 'Turn the phone sideways and move two faders at once.'] },
       { tip: 'On Android the tick is felt; ☰ → Vibrate on the marks turns that off. An iPhone does not let web pages vibrate, so there the tick is only seen.' },
       { p: 'Adding bars, charts and sliders, arranging them and the tutorials are left to a tablet or computer. ☰ → Full app shows the whole page on a phone too; 📱 Phone layout goes back. Both are remembered in this browser.' },
       { see: ['sliders', 'explore', 'compare'] },
@@ -7377,6 +7942,19 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'phone-mixer-show-share', date: '2026-10-09', title: 'On a phone: the mixer, Show, holding A, and Share',
+    summary: 'Turn the phone sideways to move several sliders at once with your thumbs; show one chart full screen; hold A to look at a scenario; share a picture of the board.',
+    what: [
+      'The mixer: sideways, the sliders become faders at the two edges of the screen, under your thumbs, with the board between them. Each finger moves its own fader, at the same time, and the bars follow all of them. Slide a finger sideways, away from its fader, to make it finer. Tap a fader\'s name to put another slider there.',
+      '⤢ Show, from a bar\'s or chart\'s quick look (hold it): that one on the whole screen, the screen kept on while it shows, the sliders beside it.',
+      'Scenarios become cards. Hold a card\'s A to look at that scenario: the bars show it while your finger stays down, and come back when you let go. A quick tap still compares.',
+      '⇪ Share a picture of the board or of the chart shown, or the board file, through your phone\'s own Share button.',
+    ],
+    why: 'Two thumbs on two inputs, a chart held out to someone across the table, a what-if glanced at and let go: things a phone does better than a computer.',
+    how: ['On a phone, Try the sample model, then turn the phone sideways and move Price and Volume together.', 'Hold the Balance sheet chart, then ⤢ Show.'],
+    notes: ['A picture is drawn on your phone; nothing is sent until you choose where it goes. Tablets and computers are unchanged.'],
+    see: ['phone'] },
+
   { id: 'phone', date: '2026-10-08', title: 'fmGraph on a phone',
     summary: 'A layout made for a phone: the board fills the screen, the sliders sit under your thumb, and a slider you can set exactly with one finger.',
     what: [

@@ -22,3 +22,15 @@
   .ps-bubble{ position:absolute; bottom:calc(50% + 24px); transform:translateX(-50%); display:none; white-space:nowrap; padding:3px 10px; border-radius:10px; background:var(--ps-accent); color:#fff; font-size:13px; font-weight:700; pointer-events:none; box-shadow:0 3px 10px rgba(16,24,40,.25); z-index:5; }
   .ps.dragging.fine .ps-bubble{ display:block; }
   @media (prefers-reduced-motion: reduce){ .ps-thumb{ transition:none; } .ps.ticked .ps-thumb{ animation:none; } }
+  /* Standing on end (a fader, the mixer): up is more. */
+  .ps.vertical{ display:flex; flex-direction:column; align-items:stretch; height:100%; }
+  .ps.vertical .ps-row{ flex:none; justify-content:center; }
+  .ps.vertical .ps-step{ display:none; }
+  .ps.vertical .ps-value, .ps.vertical .ps-type{ height:34px; font-size:18px !important; padding:0 2px; }
+  .ps.vertical .ps-row input.ps-type:not([type=range]):not([type=file]){ font-size:18px !important; width:100%; }
+  .ps.vertical .ps-track{ flex:1 1 auto; height:auto; min-height:110px; cursor:ns-resize; }
+  .ps.vertical .ps-rail{ left:50%; right:auto; top:var(--ps-pad); bottom:var(--ps-pad); width:8px; height:auto; margin:0 0 0 -4px; }
+  .ps.vertical .ps-fill{ left:0; right:0; width:auto; top:auto; bottom:calc(var(--ps-a) * 100%); height:calc((var(--ps-b) - var(--ps-a)) * 100%); }
+  .ps.vertical .ps-notch{ left:-9px; right:-9px; width:auto; top:auto; height:3px; margin:0 0 -1.5px 0; bottom:calc(var(--ps-n) * 100%); }
+  .ps.vertical .ps-thumb{ left:50%; top:auto; margin:0 0 -17px -17px; bottom:calc(var(--ps-pad) + var(--ps-f) * (100% - 2 * var(--ps-pad))); }
+  .ps.vertical .ps-bubble{ bottom:auto; left:50%; }

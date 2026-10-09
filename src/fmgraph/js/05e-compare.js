@@ -60,7 +60,9 @@ function renderCompareBar(){
   bar.classList.toggle('hidden', !pinA || !model);
   $('btnPinA').setAttribute('aria-pressed', pinA ? 'true' : 'false');
   if(!pinA || !model) return;
-  bar.appendChild(make('span', 'compare-mark', 'A'));
+  const mark = make('span', 'compare-mark', 'A');
+  holdToLook(mark, () => pinA ? { overrides: pinA.overrides, label: 'A' } : null); // on a phone (05h-phone-show.js)
+  bar.appendChild(mark);
   const text = make('span', 'compare-text');
   text.appendChild(make('strong', null, 'Comparing with A: '));
   text.appendChild(document.createTextNode(pinA.label));

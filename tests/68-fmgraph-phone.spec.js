@@ -95,8 +95,9 @@ test('a phone takes the phone layout, upright and sideways; a tablet and a narro
 
   const sideways = await openPhone(browser, SIDEWAYS);
   await expect(sideways.page.locator('body')).toHaveClass(/(^| )phone( |$)/);
-  await sample(sideways.page);
-  await expect(sideways.page.locator('#sliderDock')).toBeVisible();
+  await sideways.page.click('#btnSample');
+  await expect(sideways.page.locator('.fader')).toHaveCount(2); // sideways: the mixer (P1b, group 69), not the dock
+  await expect(sideways.page.locator('#sliderDock')).toBeHidden();
   await sideways.done();
 
   const tablet = await openPhone(browser, { viewport: { width: 1024, height: 768 }, screen: { width: 1024, height: 768 }, hasTouch: true });
@@ -321,8 +322,12 @@ test('boards: a swipe sideways across the bars, ‹ and ›; up and down scrolls
   const shown = () => p.evaluate(() => fmGraph.boards().findIndex(b => b.shown));
   const chart = await p.locator('.chart-widget').first().boundingBox();
   const a = { x: 320, y: chart.y + 120 };
-  // Up and down: no change of board.
-  await phone.drag(a, steps(a, { x: a.x + 10, y: a.y - 150 }));
+  // Up and down: no change of board. (The finger stops before lifting, so the page doesn't
+  // coast on: a tap while it coasts only stops it, as on a real phone.)
+  await phone.drag(a, steps(a, { x: a.x + 10, y: a.y - 150 }), { lift: false });
+  await p.waitForTimeout(250);
+  await phone.touch('touchMove', [{ x: a.x + 10, y: a.y - 150 }]);
+  await phone.touch('touchEnd', []);
   expect(await shown()).toBe(0);
   // Right to left: the next board.
   await p.evaluate(() => window.scrollTo(0, 0));
@@ -334,10 +339,16 @@ test('boards: a swipe sideways across the bars, ‹ and ›; up and down scrolls
   await expect(p.locator('#phoneBoards b')).toHaveCount(0);
   await expect(p.locator('#noBars')).toContainText('add them on a tablet or computer');
   await expect(p.locator('#dockEmpty')).toBeVisible();
-  // Past the last: nothing.
+  // Past the last: nothing. (The finger stops before it lifts: Chromium's touch emulation takes
+  // a flick that lifts while moving as a fling, and the next tap only ends it — for P1a's code
+  // too, once the drag lands on the board.)
   const b = { x: 320, y: 400 };
-  await phone.drag(b, steps(b, { x: 60, y: 405 }, 6));
+  await phone.drag(b, steps(b, { x: 60, y: 405 }, 6), { lift: false });
+  await p.waitForTimeout(200);
+  await phone.touch('touchEnd', []);
   expect(await shown()).toBe(1);
+  // Once the page has stopped moving (a tap while it coasts only stops it).
+  await expect.poll(async () => { const y0 = await p.evaluate(() => window.scrollY); await p.waitForTimeout(150); return y0 === await p.evaluate(() => window.scrollY); }).toBe(true);
   await phone.tapOn(p.locator('#phoneBoards .phone-board-arrow').first());
   await expect.poll(shown).toBe(0);
   await expect(p.locator('#dockCards .dock-card')).toHaveCount(2);

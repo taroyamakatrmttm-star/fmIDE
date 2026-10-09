@@ -10,7 +10,7 @@
 //   time, large (the shared phone slider), a swipe along the dock to the next; drawn up it
 //   lists them all, drawn down it gets out of the way;
 // - holding a bar opens its quick look (#peekCard): every period, now against the model's own
-//   numbers (or A), and 🔍 Trace;
+//   numbers (or A), 🔍 Trace and ⤢ Show (05h-phone-show.js); holding a chart, its rectangles;
 // - building and editing (+ Bar, + Chart, + Slider, the Boards menu, editors, arranging,
 //   colours, the tutorials) is left to a tablet or computer: ☰ → Full app shows the full page,
 //   📱 Phone layout goes back. Both settings are the person's own, kept in this browser
@@ -34,7 +34,7 @@ function applyPhoneLayout(){
   document.body.classList.toggle('phone-screen', screenIsPhone);
   document.body.classList.toggle('phone', phone);
   $('btnPhoneLayout').classList.toggle('hidden', !(screenIsPhone && fullApp));
-  if(!phone){ closePhoneMenu(); closePeek(); }
+  if(!phone){ closePhoneMenu(); closePeek(); closeShow(); }
   if(was !== phone && model && board) renderAll();
   else { renderDock(); renderPhoneBoards(); }
 }
@@ -59,7 +59,7 @@ function periodsText(spec){
 
 function renderDock(){
   const dock = $('sliderDock'), cards = $('dockCards');
-  const on = isPhone() && !!model && !!board;
+  const on = isPhone() && !!model && !!board && !isMixing(); // sideways: the mixer instead (05h-phone-show.js)
   dock.classList.toggle('hidden', !on);
   cards.textContent = '';
   dockControls = new Map();
@@ -71,6 +71,7 @@ function renderDock(){
     showDockCard(dockIndex);
     updateDock();
   }
+  renderMixer();
   updateDockSpace();
 }
 
@@ -102,6 +103,7 @@ function dockCard(s){
 // The words under each slider, after every redraw (updateValues).
 function updateDock(){
   if(!isPhone() || !model || !board) return;
+  updateMixer();
   board.sliders.forEach(s => {
     const card = document.querySelector('#dockCards .dock-card[data-id="' + s.id + '"]');
     const ctl = dockControls.get(s.id);
@@ -234,6 +236,8 @@ function phoneBarPress(ev, b){
 }
 function openPeek(b){
   if(!model || !board.items.includes(b)) return;
+  if(b.kind === 'chart') return openChartPeek(b);
+  $('peekChart').classList.remove('hidden');
   const rect = model.byKey.get(b.key);
   const results = currentResults(), cmp = compareResults();
   peekFor = b;
@@ -280,9 +284,44 @@ function openPeek(b){
     tbody.appendChild(tr);
   });
   table.append(thead, tbody);
-  $('peekTrace').setAttribute('aria-pressed', traceId === b.id ? 'true' : 'false');
+  showPeekCard(b);
+}
+function showPeekCard(w){
+  $('peekTrace').setAttribute('aria-pressed', traceId === w.id ? 'true' : 'false');
   $('peekBack').classList.remove('hidden');
   $('peekClose').focus({ preventScroll: true });
+}
+// A chart's quick look: each of its rectangles in the period it shows (the first, for columns).
+function openChartPeek(c){
+  const results = currentResults(), cmp = compareResults();
+  peekFor = c;
+  peekOpenedAt = performance.now();
+  const p = c.layout === 'columns' ? (periodsOf(c.periods)[0] || 0) : c.period;
+  const kind = { columns: 'Columns', flow: 'Waterfall', scenarios: 'Scenario waterfall' }[c.layout] || 'Chart';
+  $('peekTitle').textContent = c.title || kind;
+  $('peekWhere').textContent = kind + ' · ' + model.periods[p];
+  $('peekChart').textContent = '';
+  $('peekChart').classList.add('hidden');
+  const table = $('peekTable');
+  table.textContent = '';
+  const headRow = make('tr');
+  ['Rectangle', 'Now', pinA ? 'From A' : 'From the model\'s'].forEach(t => headRow.appendChild(make('th', null, t)));
+  const thead = make('thead');
+  thead.appendChild(headRow);
+  const tbody = make('tbody');
+  [...new Set(chartKeys(c))].forEach(k => {
+    const rect = model.byKey.get(k);
+    if(!rect) return;
+    const now = resultOf(results, rect, p), was = resultOf(cmp, rect, p);
+    const tr = make('tr');
+    tr.appendChild(make('td', null, rect.name));
+    tr.appendChild(make('td', 'num', now.error ? '! ' + errorText(now.error) : fmtNum(now.value)));
+    const diff = now.error || was.error ? '' : fmtDiff(now.value, was.value);
+    tr.appendChild(make('td', 'num ' + (diff ? (now.value > was.value ? 'up' : 'down') : ''), diff || '—'));
+    tbody.appendChild(tr);
+  });
+  table.append(thead, tbody);
+  showPeekCard(c);
 }
 function closePeek(){
   peekFor = null;
@@ -290,6 +329,7 @@ function closePeek(){
 }
 $('peekClose').addEventListener('click', closePeek);
 $('peekTrace').addEventListener('click', () => { const b = peekFor; closePeek(); if(b) setTrace(traceId === b.id ? null : b.id); });
+$('peekShow').addEventListener('click', () => { const w = peekFor; closePeek(); if(w) openShow(w); });
 // A tap on the dim page around the card closes it (not the finger that opened it, lifting).
 $('peekBack').addEventListener('pointerdown', (ev) => { peekDownOnBack = ev.target === $('peekBack') && performance.now() - peekOpenedAt > 300; });
 $('peekBack').addEventListener('click', (ev) => { if(ev.target === $('peekBack') && peekDownOnBack) closePeek(); peekDownOnBack = false; });
@@ -331,6 +371,8 @@ menuItem('phoneMovers', () => openPanel('moversPanel'));
 menuItem('phoneUndo', () => $('btnUndo').click());
 menuItem('phoneRedo', () => $('btnRedo').click());
 menuItem('phoneHelp', () => help.toggle());
+menuItem('phoneSharePicture', () => shareBoardPicture()); // (05i-phone-share.js)
+menuItem('phoneShareFile', () => shareBoardFile());
 menuItem('phoneFullApp', () => setFullApp(true));
 $('phoneVibrate').addEventListener('click', () => {
   vibrateOn = !vibrateOn;
@@ -339,10 +381,4 @@ $('phoneVibrate').addEventListener('click', () => {
 });
 $('btnPhoneLayout').addEventListener('click', () => setFullApp(false));
 
-applyPhoneLayout();
-window.addEventListener('resize', () => { if(isPhoneScreen() !== document.body.classList.contains('phone-screen')) applyPhoneLayout(); else updateDockSpace(); });
-store.ready.then(() => Promise.all([store.get(FULL_APP_KEY), store.get(VIBRATE_KEY)])).then(([full, vib]) => {
-  fullApp = full === '1';
-  vibrateOn = vib !== 'off';
-  applyPhoneLayout();
-}, () => {});
+// The phone layout starts at the end of 05h-phone-show.js, once everything it draws is defined.

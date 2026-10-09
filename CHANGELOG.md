@@ -2,6 +2,12 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph on a phone: the mixer, Show, holding A, Share (step 17, P1b)
+- **The mixer**: a phone turned sideways shows the sliders as faders at the screen's two edges, under the thumbs, the board between them; several fingers move several faders at once. Sliding a finger sideways, away from its fader, makes it finer. A tap on a fader's name puts another slider there (remembered per board).
+- **⤢ Show**, from a bar's or chart's quick look (holding a chart now opens one too): one on the whole screen, the screen kept on while it shows; ×, Esc or the back gesture ends it.
+- **Holding A** on a scenario card (scenarios are cards on a phone) or on the compare strip shows those numbers until the finger lifts; a quick tap still compares.
+- **⇪ Share** a picture of the board or of the chart shown, or the board file, through the phone's own share sheet (downloads where it can't); the picture is drawn on the phone.
+
 ## fmGraph: a layout made for a phone (step 17, P1a)
 - On a phone (a touchscreen whose shorter side is under 600 pixels) the bars and charts fill the screen and the sliders sit in a **dock** along the bottom, one at a time and large; a swipe along it for the next, its handle to see them all or put it away.
 - **A phone slider**: grabbed anywhere without a jump; **finer by sliding the finger up** (×½, ×¼, ×⅒); a **notch** at the model's own number with a tick (felt on Android, with a switch); − and + (repeating when held); a tap on the number to type one; a double-tap to go back.

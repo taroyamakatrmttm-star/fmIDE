@@ -13,6 +13,9 @@ function chartWidget(c){
   const w = make('div', 'widget chart-widget');
   w.dataset.id = c.id;
   w.dataset.layout = c.layout;
+  // On a phone, holding the chart opens its quick look (05g-phone.js).
+  w.addEventListener('pointerdown', (ev) => phoneBarPress(ev, c));
+  w.addEventListener('contextmenu', (ev) => { if(isPhone()) ev.preventDefault(); });
   const head = make('div', 'widget-head');
   const title = make('input', 'chart-title');
   title.type = 'text';

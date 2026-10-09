@@ -65,7 +65,9 @@ function resultsWith(overrides){
   }
 }
 
-function currentResults(){ return resultsWith(overridesFor(board.sliders)); }
+// While a finger holds A (05h-phone-show.js), the numbers looked at instead of the sliders'.
+let lookingAt = null;
+function currentResults(){ return resultsWith(lookingAt ? lookingAt.overrides : overridesFor(board.sliders)); }
 
 // The positions a slider snaps to.
 function sliderSteps(s){
