@@ -254,6 +254,7 @@
 
     renderEdges();
     refreshCommandStates();
+    if(phoneReady) phoneRefreshSoon(); // on a phone, its numbers follow (21b-phone.js)
   }
 
   function blockPortsOf(defCanvas){

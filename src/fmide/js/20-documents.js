@@ -34,7 +34,7 @@
   let dirtySaveTimer = null;
 
   function docDisplayName(){ return currentDoc.name || 'Untitled'; }
-  function updateDocTitle(){ document.title = docDisplayName() + (currentDoc.dirty ? ' •' : '') + ' — fmIDE'; }
+  function updateDocTitle(){ document.title = docDisplayName() + (currentDoc.dirty ? ' •' : '') + ' — fmIDE'; if(phoneReady) phoneRefreshSoon(); }
 
   // Called for every change that goes into undo history (and undo/redo themselves). The
   // autosave follows about 2 s after the last change, besides the 8-second timer.
