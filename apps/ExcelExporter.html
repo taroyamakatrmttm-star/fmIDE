@@ -781,6 +781,37 @@ var XLSX = (function(){
     main{ padding:12px 12px 32px; }
     .welcome{ padding:24px 18px; margin-top:3vh; }
   }
+
+  /* ---------- On a phone (step 17 P3, 09h-phone.js): body.phone, one screen ---------- */
+  .phone-only{ display:none !important; }
+  body.phone .phone-only{ display:block !important; }
+  body.phone .menubar, body.phone #btnSettings, body.phone #btnHelp, body.phone #btnGenerate,
+  body.phone #loadPanel, body.phone #afterLoad, body.phone #dropZone{ display:none !important; }
+  body.phone .topbar{ padding:calc(8px + env(safe-area-inset-top, 0px)) 10px 8px; flex-wrap:nowrap; }
+  body.phone .tb-left{ flex:1 1 auto; flex-wrap:nowrap; }
+  body.phone .tb-right{ flex:none; flex-wrap:nowrap; }
+  body.phone .brand{ flex:1 1 auto; overflow:hidden; }
+  body.phone .brand:has(.model-name:not(:empty)) .brand-name{ display:none; }
+  body.phone .model-name{ display:block; max-width:none; min-width:0; font-size:16px; font-weight:700; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  body.phone main{ padding:12px 12px calc(32px + env(safe-area-inset-bottom, 0px)); }
+  .phone-menu-wrap{ position:relative; }
+  body.phone #phoneMenuBtn{ font-size:20px; min-width:44px; min-height:40px; }
+  .phone-menu-wrap .phone-menu{ position:absolute; left:auto; right:0; top:calc(100% + 6px); min-width:230px; z-index:60; }
+  .phone-menu [role=menuitem]{ font-size:16px; padding:12px 14px; }
+  #phoneLayoutBtn{ min-height:40px; }
+  .phone-view{ max-width:560px; margin:0 auto; }
+  .phone-card{ background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:14px 16px; margin-bottom:12px; box-shadow:var(--shadow-sm); }
+  .phone-card h2{ margin:0 0 8px; font-size:17px; }
+  .phone-lead{ margin:6px 0 10px; color:var(--muted); font-size:14px; }
+  .phone-tabs{ list-style:none; margin:0; padding:0; }
+  .phone-tabs li{ display:flex; align-items:baseline; gap:10px; padding:10px 2px; border-bottom:1px solid var(--border); font-size:16px; }
+  .phone-tabs li:last-child{ border-bottom:none; }
+  .phone-tab-name{ flex:1 1 auto; min-width:0; font-weight:600; overflow-wrap:anywhere; }
+  .phone-tab-count{ color:var(--muted); font-size:14px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .phone-field{ display:flex; flex-direction:column; gap:6px; font-size:14px; color:var(--muted); margin-bottom:12px; }
+  .phone-field input{ font-size:16px !important; height:44px; padding:0 12px; }
+  button.phone-big{ display:block; width:100%; min-height:52px; font-size:17px; border-radius:12px; }
+
 /* The Help panel (build step 10; docs/step10-help.md), shared by fmIDE and ExcelExporter with
    src/shared/help-panel.js. Each app sets --help-top (where the panel starts) and makes room
    for the panel under body.help-open. */
@@ -894,6 +925,16 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     </nav>
   </div>
   <div class="tb-right">
+    <button id="phoneLayoutBtn" class="tb-btn hidden" title="The layout made for a phone">📱 Phone layout</button>
+    <div class="phone-menu-wrap phone-only">
+      <button id="phoneMenuBtn" class="tb-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="phoneMenu" aria-label="More">☰</button>
+      <div id="phoneMenu" class="menu-list phone-menu hidden" role="menu" aria-labelledby="phoneMenuBtn">
+        <button type="button" role="menuitem" id="phoneMenuOpen">📁 Open a model file…</button>
+        <button type="button" role="menuitem" id="phoneMenuFromFmide" class="hidden">↻ From fmIDE</button>
+        <button type="button" role="menuitem" id="phoneMenuHelp">❓ Help</button>
+        <button type="button" role="menuitem" id="phoneMenuFullApp">🖥 Full app</button>
+      </div>
+    </div>
     <button id="btnSettings" class="tb-btn" title="Period labels, file name and your Excel style">⚙ Settings</button>
     <button id="btnHelp" class="tb-btn help-btn" title="Help (F1)">❓ Help</button>
     <button id="btnGenerate" class="primary" disabled title="Write the workbook and download it">⬇ Generate .xlsx</button>
@@ -910,6 +951,26 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     <div id="genStatus"></div>
     <div id="differencesPanel" class="differences hidden" role="status"></div>
   </div>
+
+  <!-- On a phone (step 17 P3, 09h-phone.js): one screen to make the workbook. -->
+  <section id="phoneView" class="phone-view phone-only">
+    <div id="phoneStart" class="phone-card">
+      <h2>Make an Excel workbook</h2>
+      <p class="phone-lead">From fmIDE: More (☰) → 📊 Make Excel. Or open a model file here.</p>
+      <button id="phoneOpen" class="primary phone-big">📁 Open a model file…</button>
+    </div>
+    <div id="phoneLoaded" class="hidden">
+      <div class="phone-card">
+        <h2>Tabs in the workbook</h2>
+        <ul id="phoneTabs" class="phone-tabs"></ul>
+        <p class="phone-lead">The layout set up on a larger screen is used. To change it: ☰ → Full app.</p>
+      </div>
+      <div class="phone-card">
+        <label class="phone-field"><span>File name</span><input type="text" id="phoneFileName" autocomplete="off"></label>
+        <button id="phoneMake" class="primary phone-big">⬇ Make the workbook</button>
+      </div>
+    </div>
+  </section>
 
   <section class="welcome" id="loadPanel">
     <h2>Turn an fmIDE model into a live Excel workbook</h2>
@@ -6826,7 +6887,7 @@ function renderTabs(){
   const body = $('tabsBody');
   body.innerHTML = '';
   mapping.tabs.slice().sort((a, b) => a.order - b.order).forEach((tab, idx, arr) => {
-    const rowCount = [...mapping.rows, ...inputMirrorRows()].filter(r => r.tabId === tab.id && r.include).length + mapping.customRows.filter(r => r.tabId === tab.id).length;
+    const rowCount = tabRowCount(tab);
     const isInputsTab = tab.id === INPUTS_TAB_ID;
     const tr = document.createElement('tr');
     tr.dataset.tabId = tab.id;
@@ -9955,7 +10016,18 @@ const EXCEL_HELP_TOPICS = [
     body: [
       { p: '⬇ Generate .xlsx, at the top right, writes the workbook and downloads it. Excel works out every formula when it opens the file. Formulas, number formats and how cells look all carry through.' },
       { p: 'Your layout is saved in this browser as you go. In the Layout menu, Export Mapping saves this model\'s whole layout to a file (to share it, or keep it safe), and Import Mapping… loads one. Reset Mapping to Defaults… discards the layout for this model and starts again; module layouts and your Excel style are kept.' },
-      { see: ['differences', 'rows', 'remembered'] },
+      { see: ['differences', 'rows', 'remembered', 'phone'] },
+    ] },
+  { id: 'phone', group: 'generate', title: 'Making the workbook on a phone',
+    keywords: 'phone mobile iphone android smartphone share send mail make workbook full app',
+    summary: 'On a phone ExcelExporter is one screen: check the tabs, then make the workbook and share it.',
+    body: [
+      { p: 'On a phone, ExcelExporter shows one screen: the model\'s name, the tabs the workbook will hold (with how many rows each), where it will differ from fmIDE, if anywhere, and the file name.' },
+      { p: '⬇ Make the workbook writes the .xlsx and hands it to your phone\'s share sheet: open it in Excel or Numbers, send it by Mail or Messages, or keep it in Files. Where the browser can\'t share files, it downloads instead.' },
+      { p: 'The workbook is laid out as you set it up on a computer or tablet for this model (or the automatic layout, if you haven\'t): its tabs and rows, your Excel style, and the Sensitivity tab. Tap the file name to change it; it is kept with this model\'s layout.' },
+      { steps: ['In fmIDE on your phone, More (☰) → 📊 Make Excel. (Or, here, ☰ → Open a model file….)', 'Check the tabs and the file name.', 'Tap ⬇ Make the workbook, then pick where it goes.'] },
+      { tip: '☰ → Full app shows the whole ExcelExporter, to change the layout on the phone; 📱 Phone layout at the top goes back. Your choice is remembered in this browser.' },
+      { see: ['generate', 'differences'] },
     ] },
 ];
 
@@ -9972,6 +10044,18 @@ const EXCEL_HELP_TOPICS = [
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'phone-workbook', date: '2026-10-09', title: 'Make the workbook on your phone',
+    summary: 'On a phone, ExcelExporter is one screen: check the tabs, tap ⬇ Make the workbook, and send it on.',
+    what: [
+      'The screen lists the tabs the workbook will hold, with how many rows each, where it will differ from fmIDE, and the file name (tap it to change it).',
+      '⬇ Make the workbook hands the .xlsx to your phone\'s share sheet: Excel, Numbers, Mail, Messages or Files. Where the browser can\'t share files, it downloads.',
+      'The layout, Excel style and Sensitivity tab you set up on a larger screen are used as they are. ☰ → Full app shows the whole page.',
+    ],
+    why: 'To turn a model into a live workbook and send it while away from your desk.',
+    how: ['In fmIDE on a phone, More (☰) → 📊 Make Excel, then ⬇ Make the workbook.'],
+    notes: ['Tablets and computers are unchanged.'],
+    see: ['phone'] },
+
   { id: 'apostrophe-tab-names', date: '2026-10-08', title: 'Tab names with an apostrophe',
     summary: 'A tab named like "Bob\'s Model" no longer breaks the workbook.',
     what: [
@@ -10399,6 +10483,7 @@ function syncPageState(){
   $('settingsTabWorkbook').disabled = !loaded;
   $('modelName').textContent = loaded ? currentModelLabel : '';
   $('modelName').title = loaded ? `${model.canvases.length} canvas${model.canvases.length === 1 ? '' : 'es'}, ${model.periods.length} periods` : '';
+  if(excelPhoneReady) renderExcelPhone(); // the phone's one screen (09h)
 }
 
 // ---------- Menus ----------
@@ -11176,6 +11261,458 @@ if($('cfgSensCharts')) $('cfgSensCharts').addEventListener('change', () => {
   sensCfg().charts = SENS_CHART_PLACES.includes($('cfgSensCharts').value) ? $('cfgSensCharts').value : 'tabs';
   saveMapping();
 });
+// ============================================================
+// ExcelExporter on a phone (step 17, phase P3; docs/step17-phones.md)
+// ============================================================
+// On a touchscreen whose shorter side is under 600 pixels (isPhoneScreen, src/shared/phone.js)
+// ExcelExporter is one screen (body.phone): the model's name, the tabs the workbook will hold
+// (each with its row count; the layout saved for this model, else the automatic one — whatever
+// was set up on a larger screen is used as it is), where it will differ from fmIDE (the usual
+// list), the file name, and ⬇ Make the workbook, which hands the .xlsx to the phone's share
+// sheet (a download where the browser can't share files). ☰: Open a model file…, ↻ From fmIDE
+// (when fmIDE opened this window), Help, Full app (the whole page; 📱 Phone layout back; kept in
+// this browser, fmide-excel-full-app). Laying out tabs and rows, the Excel style and
+// Sensitivity's settings stay on a larger screen. Decided once at start: a phone's screen keeps
+// its size. Everything from the model is shown as text.
+// ---------- phones: what fmGraph and fmIDE share on a phone (step 17, docs/step17-phones.md) ----------
+// - isPhoneScreen(): a touchscreen whose shorter side is under PHONE_MAX_SIDE pixels, upright or
+//   sideways. The screen's own size, not the window's: an on-screen keyboard never turns a
+//   tablet into a phone.
+// - tick(): a short vibration, where the phone lets a page vibrate (Android; Safari on an
+//   iPhone gives web pages none, so there the tick is only seen).
+// - createPhoneSlider(options): the phone's own slider. Made for a thumb:
+//   · grab anywhere along it: the value moves with the finger from where it is, never jumping
+//     to where the finger landed;
+//   · finer by sliding the finger up, away from it, while dragging (×½, ×¼, ×⅒, FINE_STEPS),
+//     coarse and exact in one gesture, without letting go;
+//   · a notch at the base (the model's own number): the value settles there when the finger
+//     passes close, with a tick; ticks at round marks too;
+//   · the number large, right above the finger (which hides the knob), and "fine ×¼" over the
+//     knob while finer; tapping the number lets it be typed; − and + step it, repeating faster while held;
+//   · a double-tap goes back to the base; the arrow keys, Page Up / Down, Home and End work.
+//   Each finger is followed by its own pointer id, so several sliders move at once.
+//   With `vertical`, it stands on end (a fader: up is more) and sliding the finger sideways,
+//   away from it, makes it finer.
+// - shareFiles(files, title): the phone's own share sheet (Messages, Mail, AirDrop…); the
+//   person picks where the files go, nothing is sent first. Where a browser can't share files,
+//   they download instead.
+// - keepScreenOn(): asks the browser to keep the screen on (Wake Lock) until the function it
+//   returns is called; asked again when the page comes back into view.
+// Nothing here touches the page until it is called.
+
+const PHONE_MAX_SIDE = 600;
+// How far up (pixels from where the finger went down) makes a drag finer, and by how much.
+const FINE_STEPS = [[0, 1, ''], [50, 1 / 2, '×½'], [110, 1 / 4, '×¼'], [170, 1 / 10, '×⅒']];
+const NOTCH_PX = 9;      // the value settles at the base within this many pixels of it
+const MARKS = 8;         // about this many round marks along a slider tick
+const TICK_GAP_MS = 45;  // ticks closer than this are one
+
+function isPhoneScreen(){
+  try{
+    const coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    const side = Math.min(window.screen.width || Infinity, window.screen.height || Infinity);
+    return coarse && side < PHONE_MAX_SIDE;
+  }catch(e){ return false; }
+}
+
+function canVibrate(){
+  return typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
+}
+function tick(){
+  if(!canVibrate()) return false;
+  try{ return navigator.vibrate(8) !== false; }catch(e){ return false; }
+}
+
+// The finer factor for a finger this many pixels above where it went down.
+function fineStep(up){
+  let pick = FINE_STEPS[0];
+  FINE_STEPS.forEach(f => { if(up >= f[0]) pick = f; });
+  return { factor: pick[1], label: pick[2] };
+}
+
+// A 1-2-5 step near x.
+function roundStep(x){
+  if(!(x > 0) || !isFinite(x)) return 1;
+  const p = Math.pow(10, Math.floor(Math.log10(x)));
+  const f = x / p;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p;
+}
+function decimalsOf(step){ return Math.max(0, Math.min(12, Math.ceil(-Math.log10(step)) + 1)); }
+
+// options: { label, min, max, step, value, base, format(v) → text, vibrate() → whether to
+//   vibrate on a tick, onStart(), onInput(value, atBase), onEnd(), vertical }
+// Returns { el, setValue(v), value(), dragging() }.
+function createPhoneSlider(options){
+  const o = options;
+  const mk = (tag, cls, text) => {
+    const e = document.createElement(tag);
+    if(cls) e.className = cls;
+    if(text !== undefined && text !== null) e.textContent = String(text);
+    return e;
+  };
+  const min = o.min, max = o.max, span = Math.max(1e-12, max - min), step = o.step > 0 ? o.step : span / 100;
+  const base = Number.isFinite(o.base) ? o.base : min;
+  const decimals = decimalsOf(step);
+  const markStep = roundStep(span / MARKS);
+  const format = typeof o.format === 'function' ? o.format : (v) => String(v);
+  const vertical = !!o.vertical;
+  let value = Number.isFinite(o.value) ? o.value : base;
+  let drags = 0;
+  let lastTickAt = 0;
+
+  const el = mk('div', vertical ? 'ps vertical' : 'ps');
+  const row = mk('div', 'ps-row');
+  const minus = mk('button', 'ps-step ps-minus', '−');
+  const plus = mk('button', 'ps-step ps-plus', '+');
+  const shown = mk('button', 'ps-value');
+  [minus, plus, shown].forEach(b => { b.type = 'button'; });
+  minus.setAttribute('aria-label', 'Less: ' + o.label);
+  plus.setAttribute('aria-label', 'More: ' + o.label);
+  shown.title = 'Type a number';
+  shown.setAttribute('aria-label', 'Type a number for ' + o.label);
+  row.append(minus, shown, plus);
+  const track = mk('div', 'ps-track');
+  track.tabIndex = 0;
+  track.setAttribute('role', 'slider');
+  track.setAttribute('aria-label', o.label);
+  track.setAttribute('aria-valuemin', String(min));
+  track.setAttribute('aria-valuemax', String(max));
+  if(vertical) track.setAttribute('aria-orientation', 'vertical');
+  const rail = mk('div', 'ps-rail');
+  rail.append(mk('div', 'ps-fill'), mk('div', 'ps-notch'));
+  const thumb = mk('div', 'ps-thumb');
+  const bubble = mk('div', 'ps-bubble');
+  bubble.setAttribute('aria-hidden', 'true');
+  track.append(rail, thumb, bubble);
+  el.append(row, track);
+
+  const clamp = (v) => Math.min(max, Math.max(min, v));
+  const frac = (v) => Math.min(1, Math.max(0, (v - min) / span));
+  const snap = (v) => Number(clamp(min + Math.round((v - min) / step) * step).toFixed(decimals));
+  function paint(){
+    el.style.setProperty('--ps-f', String(frac(value)));
+    el.style.setProperty('--ps-n', String(frac(base)));
+    el.style.setProperty('--ps-a', String(Math.min(frac(value), frac(base))));
+    el.style.setProperty('--ps-b', String(Math.max(frac(value), frac(base))));
+    el.classList.toggle('at-base', value === base);
+    shown.textContent = format(value);
+    track.setAttribute('aria-valuenow', String(value));
+    track.setAttribute('aria-valuetext', format(value));
+  }
+  function tickNow(){
+    const now = performance.now();
+    if(now - lastTickAt < TICK_GAP_MS) return;
+    lastTickAt = now;
+    el.classList.remove('ticked');
+    void el.offsetWidth; // start the little pulse again
+    el.classList.add('ticked');
+    if(!o.vibrate || o.vibrate()) tick();
+  }
+  // Ticks for a move from a to b: reaching the base, or crossing a round mark.
+  function ticksFor(a, b){
+    if(a === b) return;
+    if(b === base || (a - base) * (b - base) < 0) return tickNow();
+    if(Math.floor(a / markStep + 1e-9) !== Math.floor(b / markStep + 1e-9)) tickNow();
+  }
+  function setTo(v, quiet){
+    const was = value;
+    value = v;
+    paint();
+    if(!quiet) ticksFor(was, v);
+    if(o.onInput) o.onInput(value, value === base);
+  }
+  const start = () => { if(o.onStart) o.onStart(); };
+  const end = () => { if(o.onEnd) o.onEnd(); };
+
+  // ---- dragging ----
+  track.addEventListener('pointerdown', (ev) => {
+    if(ev.button > 0) return;
+    if(ev.pointerType === 'mouse') ev.preventDefault(); // no text selection; a finger's is left alone (pointer-input.js)
+    try{ track.setPointerCapture(ev.pointerId); }catch(e){ /* followed through the document anyway */ }
+    const id = ev.pointerId, x0 = ev.clientX, y0 = ev.clientY;
+    const box = rail.getBoundingClientRect();
+    const length = Math.max(1, vertical ? box.height : box.width);
+    // Along the slider (up is more on a fader), and away from it (finer).
+    const along = (e) => vertical ? -e.clientY : e.clientX;
+    const away = (e) => vertical ? Math.abs(e.clientX - x0) : y0 - e.clientY;
+    let anchor = along(ev), raw = value, anchorV = value, factor = 1, moved = false;
+    drags++;
+    el.classList.add('dragging');
+    track.focus({ preventScroll: true });
+    start();
+    const move = (e) => {
+      if(e.pointerId !== id) return;
+      const fine = fineStep(away(e));
+      if(fine.factor !== factor){ anchor = along(e); anchorV = raw; factor = fine.factor; }
+      if(!moved && Math.abs(along(e) - along(ev)) < 3) return;
+      moved = true;
+      raw = clamp(anchorV + (along(e) - anchor) / length * span * factor);
+      const unitsPerPx = span * factor / length;
+      const v = Math.abs(raw - base) / unitsPerPx <= NOTCH_PX && base >= min && base <= max ? base : snap(raw);
+      el.classList.toggle('fine', factor < 1);
+      if(v !== value) setTo(v);
+      if(factor < 1) placeBubble('fine ' + fine.label);
+    };
+    const up = (e) => {
+      if(e.pointerId !== id) return;
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      document.removeEventListener('pointercancel', up);
+      drags = Math.max(0, drags - 1);
+      el.classList.remove('dragging', 'fine');
+      end();
+    };
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+    document.addEventListener('pointercancel', up);
+  });
+  // "fine ×¼" over the knob, kept inside the slider.
+  function placeBubble(text){
+    bubble.textContent = text;
+    const pad = 24;
+    if(vertical){
+      const h = track.clientHeight, at = h - pad - frac(value) * (h - 2 * pad);
+      bubble.style.top = Math.max(0, Math.min(h - bubble.offsetHeight, at - bubble.offsetHeight - 22)) + 'px';
+      return;
+    }
+    const w = track.clientWidth, half = bubble.offsetWidth / 2 + 4;
+    const at = pad + frac(value) * (w - 2 * pad);
+    bubble.style.left = Math.max(half, Math.min(w - half, at)) + 'px';
+  }
+  // A double-tap (pointer-input.js sends a finger's as dblclick) or a double-click: the base.
+  track.addEventListener('dblclick', (ev) => { ev.preventDefault(); start(); setTo(base); end(); });
+  track.addEventListener('keydown', (ev) => {
+    const k = ev.key;
+    const by = { ArrowRight: step, ArrowUp: step, ArrowLeft: -step, ArrowDown: -step, PageUp: step * 10, PageDown: -step * 10 }[k];
+    let v = null;
+    if(by !== undefined) v = snap(value + by);
+    else if(k === 'Home') v = min;
+    else if(k === 'End') v = max;
+    if(v === null) return;
+    ev.preventDefault();
+    start(); setTo(v); end();
+  });
+
+  // ---- − and +: a step, repeating faster while held ----
+  [[minus, -1], [plus, 1]].forEach(([b, dir]) => {
+    let timer = null;
+    const stepOnce = () => setTo(snap(value + dir * step));
+    const stop = () => { if(timer === null) return; clearTimeout(timer); timer = null; end(); };
+    b.addEventListener('pointerdown', (ev) => {
+      if(ev.button > 0) return;
+      if(ev.pointerType === 'mouse') ev.preventDefault();
+      start();
+      stepOnce();
+      let gap = 380;
+      const again = () => { stepOnce(); gap = Math.max(35, gap * 0.8); timer = setTimeout(again, gap); };
+      timer = setTimeout(again, gap);
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => b.addEventListener(t, stop));
+    b.addEventListener('click', (ev) => { if(ev.detail === 0){ start(); stepOnce(); end(); } }); // the keyboard's Enter or Space
+    b.addEventListener('contextmenu', (ev) => ev.preventDefault());
+  });
+
+  // ---- typing ----
+  shown.addEventListener('click', () => {
+    const box = mk('input', 'ps-type');
+    box.type = 'text';
+    box.inputMode = min >= 0 && base >= 0 ? 'decimal' : 'text';
+    box.value = String(value);
+    box.setAttribute('aria-label', o.label + ' (number)');
+    let done = false;
+    const finish = (keep) => {
+      if(done) return;
+      done = true;
+      const v = Number(box.value.replace(/[\s,]/g, '').replace(/−/g, '-'));
+      box.replaceWith(shown);
+      if(keep && box.value.trim() !== '' && isFinite(v)){ start(); setTo(v, true); end(); }
+      else paint();
+    };
+    box.addEventListener('keydown', (ev) => {
+      if(ev.key === 'Enter'){ ev.preventDefault(); finish(true); }
+      else if(ev.key === 'Escape'){ ev.preventDefault(); finish(false); }
+    });
+    box.addEventListener('blur', () => finish(true));
+    shown.replaceWith(box);
+    box.focus();
+    box.select();
+  });
+
+  paint();
+  return {
+    el,
+    setValue(v){ if(Number.isFinite(v) && !drags){ value = v; paint(); } },
+    value: () => value,
+    dragging: () => drags > 0,
+  };
+}
+
+// The phone's share sheet for these files (File objects); else they download. Resolves
+// 'shared', 'cancelled' (the person closed the sheet) or 'downloaded'.
+async function shareFiles(files, title){
+  try{
+    if(navigator.share && navigator.canShare && navigator.canShare({ files })){
+      await navigator.share({ files, title });
+      return 'shared';
+    }
+  }catch(e){
+    if(e && e.name === 'AbortError') return 'cancelled';
+    // Not allowed here (or failed): download instead.
+  }
+  files.forEach(f => {
+    const url = URL.createObjectURL(f);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = f.name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  return 'downloaded';
+}
+
+// Keeps the screen on while something is being shown; call what it returns to let it sleep.
+function keepScreenOn(){
+  let on = true, sentinel = null;
+  const ask = () => {
+    if(!on || !navigator.wakeLock || document.visibilityState !== 'visible') return;
+    navigator.wakeLock.request('screen').then(s => {
+      if(on) sentinel = s;
+      else s.release().catch(() => {});
+    }, () => { /* refused (battery saver…): the screen sleeps as usual */ });
+  };
+  const visible = () => { if(document.visibilityState === 'visible') ask(); };
+  document.addEventListener('visibilitychange', visible);
+  ask();
+  return () => {
+    on = false;
+    document.removeEventListener('visibilitychange', visible);
+    if(sentinel){ sentinel.release().catch(() => {}); sentinel = null; }
+  };
+}
+
+// (var: syncPageState() may run before this file has started; it looks at it.)
+var excelPhoneReady = false;
+const PHONE_FULL_APP_KEY = 'fmide-excel-full-app';
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+let phoneFullApp = false;
+
+function isExcelPhone(){ return document.body.classList.contains('phone'); }
+function applyExcelPhoneLayout(){
+  const screenIsPhone = isPhoneScreen();
+  document.body.classList.toggle('phone-screen', screenIsPhone);
+  document.body.classList.toggle('phone', screenIsPhone && !phoneFullApp);
+  $('phoneLayoutBtn').classList.toggle('hidden', !(screenIsPhone && phoneFullApp));
+  if(!isExcelPhone()) closePhoneMenu();
+  renderExcelPhone();
+}
+function setExcelFullApp(full){
+  phoneFullApp = !!full;
+  layoutStore.put(PHONE_FULL_APP_KEY, phoneFullApp ? '1' : '').catch(() => {});
+  applyExcelPhoneLayout();
+}
+
+// The workbook's file name, as Generate writes it, made safe to hand to the phone.
+function phoneWorkbookName(){
+  const base = String((mapping && mapping.cfg.fileName) || 'fmIDE-export').replace(/\.xlsx$/i, '')
+    .replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '-').trim().slice(0, 120);
+  return (base || 'fmIDE-export') + '.xlsx';
+}
+function tabRowCount(tab){
+  return [...mapping.rows, ...inputMirrorRows()].filter(r => r.tabId === tab.id && r.include).length + mapping.customRows.filter(r => r.tabId === tab.id).length;
+}
+// The workbook's tabs, built without downloading it; remembered until the model or layout changes.
+let phoneSheetsCache = null; // { ir, layout, wb }
+function phoneSheets(){
+  const layout = JSON.stringify(mapping);
+  if(phoneSheetsCache && phoneSheetsCache.ir === modelIR && phoneSheetsCache.layout === layout) return phoneSheetsCache.wb;
+  let wb = null;
+  try{ wb = buildWorkbook().wb; }catch(e){ wb = null; }
+  phoneSheetsCache = { ir: modelIR, layout, wb };
+  return wb;
+}
+// The one screen, following the model (called from syncPageState).
+function renderExcelPhone(){
+  if(!excelPhoneReady || !isExcelPhone()) return;
+  const loaded = !!(model && mapping);
+  $('phoneStart').classList.toggle('hidden', loaded);
+  $('phoneLoaded').classList.toggle('hidden', !loaded);
+  $('phoneMenuFromFmide').classList.toggle('hidden', !fmideWindowBehind());
+  if(!loaded) return;
+  const list = $('phoneTabs');
+  list.textContent = '';
+  const tabs = mapping.tabs.slice().sort((a, b) => a.order - b.order);
+  // What the workbook will hold besides the tabs laid out (Sensitivity, Functions, block
+  // instance tabs, charts): read from the workbook itself, built without downloading it.
+  const sheets = phoneSheets();
+  const names = sheets ? sheets.SheetNames : tabs.map(t => t.name);
+  names.forEach(name => {
+    const li = document.createElement('li');
+    const tab = tabs.find(t => t.name === name);
+    const n = document.createElement('span');
+    n.className = 'phone-tab-name';
+    n.textContent = name;
+    const c = document.createElement('span');
+    c.className = 'phone-tab-count';
+    if(tab){ const k = tabRowCount(tab); c.textContent = k + ' row' + (k === 1 ? '' : 's'); }
+    else if(sheets && sheets.Sheets[name] && sheets.Sheets[name]['!chartsheet']) c.textContent = 'chart';
+    li.append(n, c);
+    list.appendChild(li);
+  });
+  if(document.activeElement !== $('phoneFileName')) $('phoneFileName').value = mapping.cfg.fileName;
+}
+
+// ⬇ Make the workbook: built and handed over within the tap (a share sheet needs the tap).
+async function makeWorkbookOnPhone(){
+  if(!model || !mapping) return null;
+  let bytes;
+  try{ bytes = XLSX.write(buildWorkbook().wb); }
+  catch(err){ setStatus($('genStatus'), 'Could not make the workbook: ' + err.message, 'err'); return null; }
+  const name = phoneWorkbookName();
+  const how = await shareFiles([new File([bytes], name, { type: XLSX_MIME })], name);
+  if(how === 'shared') setStatus($('genStatus'), 'Workbook shared: ' + name, 'ok');
+  else if(how === 'downloaded') setStatus($('genStatus'), 'Workbook downloaded: ' + name, 'ok');
+  return how;
+}
+
+// ---- ☰ ----
+function openPhoneMenu(){
+  $('phoneMenu').classList.remove('hidden');
+  $('phoneMenuBtn').setAttribute('aria-expanded', 'true');
+}
+function closePhoneMenu(){
+  $('phoneMenu').classList.add('hidden');
+  $('phoneMenuBtn').setAttribute('aria-expanded', 'false');
+}
+$('phoneMenuBtn').addEventListener('click', () => { if($('phoneMenu').classList.contains('hidden')) openPhoneMenu(); else closePhoneMenu(); });
+document.addEventListener('pointerdown', (ev) => {
+  if(!$('phoneMenu').classList.contains('hidden') && !ev.target.closest('#phoneMenu, #phoneMenuBtn')) closePhoneMenu();
+}, true);
+document.addEventListener('keydown', (ev) => {
+  if(ev.key === 'Escape' && !$('phoneMenu').classList.contains('hidden')){ ev.stopPropagation(); closePhoneMenu(); $('phoneMenuBtn').focus(); }
+}, true);
+const phoneMenuItem = (id, fn) => $(id).addEventListener('click', () => { closePhoneMenu(); fn(); });
+phoneMenuItem('phoneMenuOpen', () => $('fileInput').click());
+phoneMenuItem('phoneMenuFromFmide', () => $('btnFromFmide').click());
+phoneMenuItem('phoneMenuHelp', () => excelHelp.open('phone'));
+phoneMenuItem('phoneMenuFullApp', () => setExcelFullApp(true));
+$('phoneLayoutBtn').addEventListener('click', () => setExcelFullApp(false));
+$('phoneOpen').addEventListener('click', () => $('fileInput').click());
+$('phoneMake').addEventListener('click', () => { makeWorkbookOnPhone(); });
+$('phoneFileName').addEventListener('change', () => {
+  if(!mapping) return;
+  mapping.cfg.fileName = $('phoneFileName').value;
+  $('cfgFileName').value = mapping.cfg.fileName;
+  saveMapping();
+});
+
+excelPhoneReady = true;
+applyExcelPhoneLayout();
+layoutsMigrated.then(() => layoutStore.get(PHONE_FULL_APP_KEY)).then(raw => {
+  phoneFullApp = raw === '1';
+  applyExcelPhoneLayout();
+}, () => {});
 // ============================================================
 // Wiring
 // ============================================================

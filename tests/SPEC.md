@@ -910,6 +910,17 @@ Chromium at 390 × 844 with a touchscreen; real touch through the Chrome DevTool
 - More (☰): Help opens; Full app shows the ribbon, the phone bar hidden, 📱 Phone layout shown; kept after a reload; 📱 Phone layout back.
 - Hostile names: an input's, a canvas's (heading and list), a card's title and formula as text; no element made, nothing run.
 
+### 72. ExcelExporter on a phone (`tests/72-excel-phone.spec.js`; `npm run test:phone`; step 17, P3)
+Chromium at 390 × 844 with a touchscreen; real touch through the Chrome DevTools Protocol. The share sheet (recording each file's name, type and bytes, or closed by the person, or missing) is a stand-in put in the page by the test. Model `models/revenue-bs-corkscrew.json`, opened with 📁 Open a model file…. Every test: no request leaves the page, no page error.
+- The screen: `body.phone`; before a model, Open a model file…, no welcome screen, Generate, File menu or Settings; with one, the page's panels hidden, the model's name, the tabs with the same names and row counts as the Tabs panel, the file name "fmIDE-export", nothing wider than 390 pixels; ☰ without ↻ From fmIDE; Help opens on "Making the workbook on a phone". A tablet (1024 × 768, touch) and a computer: the full page, no phone screen or ☰.
+- Make the workbook: one file "fmIDE-export.xlsx" of the spreadsheet type, "Workbook shared: fmIDE-export.xlsx"; its `workbook.xml` names the tabs listed, ExcelJS reads it; the same formulas and values as Generate on a computer from the same file.
+- No file sharing: a download "fmIDE-export.xlsx" holding a workbook, "Workbook downloaded…". A share closed by the person: nothing downloaded, no message.
+- The file name "Q3 plan" → "Q3 plan.xlsx"; after a reload and the same file, still "Q3 plan", in Settings' file name too; `a/b<c>:"d"` → a `.xlsx` name with none of `< > " / \ : * ? |`.
+- Full app: the page, Generate and 📱 Phone layout; a tab renamed "My Revenue" and the Inputs tab on; kept after a reload; 📱 Phone layout: the phone lists My Revenue (not the old name) and Inputs, one more tab than before.
+- fmIDE on a phone (Hours × Rate = Pay): More (☰) → 📊 Make Excel opens ExcelExporter's phone screen with "Untitled" and its tabs; its ☰ has ↻ From fmIDE, which loads the model again after a change in fmIDE.
+- A canvas named with markup: its tab's name as text; no element made, nothing run.
+- `ir/error-cases.json`: the differences shown on the phone, inside the screen.
+
 ### 71. fmIDE on a phone, getting the work out (`tests/71-fmide-phone-share.spec.js`; `npm run test:phone`; step 17, P2b)
 Chromium at 390 × 844 with a touchscreen; real touch through the Chrome DevTools Protocol. The share sheet (recording each file's name and text, or closed by the person, or missing) and the browser's install offer are stand-ins put in the page by the test. A model of one canvas, Sales (Price 10, Volume 100, Revenue), two periods. Every test: no request leaves the page (but the site's own, where served), no page error.
 - Share: Price typed 12 ("Untitled •"); ☰ → ⇪ Share the document: one file "Untitled.fmide", title "Untitled", an `fmIDE-workspace` with Sales and Price 12; "Shared a copy of “Untitled.fmide”"; still "Untitled •"; the file opened on another phone shows Price 12.

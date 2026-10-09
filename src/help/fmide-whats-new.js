@@ -12,6 +12,16 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'phone-excel', date: '2026-10-09', title: 'Make Excel from your phone',
+    summary: 'On a phone, More (☰) → 📊 Make Excel opens ExcelExporter with your model, ready to make the workbook and share it.',
+    what: [
+      'More (☰) → 📊 Make Excel opens ExcelExporter with the model as it is now, as File → Open ExcelExporter does on a computer.',
+      'On a phone, ExcelExporter is one screen: the tabs the workbook will hold, the file name, and ⬇ Make the workbook, which hands the .xlsx to your phone\'s share sheet (Excel, Mail, Files…).',
+    ],
+    why: 'To go from a change made on the phone to a live Excel workbook in someone\'s inbox, without a computer.',
+    how: ['On a phone, change an input, then More (☰) → 📊 Make Excel → ⬇ Make the workbook.'],
+    notes: ['The workbook uses the layout set up for the model on a larger screen.'],
+    see: ['phone'] },
   { id: 'phone-share', date: '2026-10-09', title: 'Share a document from your phone',
     summary: 'On a phone, send the open document on through the share sheet, open it in fmGraph, and keep your work by installing fmIDE.',
     what: [
@@ -21,7 +31,7 @@ const WHATS_NEW = [
     ],
     why: 'To get a model changed on the phone to someone else, or into fmGraph, without a computer — and to keep it there.',
     how: ['On a phone, change an input, then More (☰) → ⇪ Share the document.'],
-    notes: ['On Android, Chrome may share only some kinds of file; then a .fmide is downloaded instead (into Downloads).', 'Making the Excel workbook on a phone comes next.'],
+    notes: ['On Android, Chrome may share only some kinds of file; then a .fmide is downloaded instead (into Downloads).', 'Making the Excel workbook on a phone came next: More (☰) → 📊 Make Excel.'],
     see: ['phone'] },
   { id: 'phone-inputs', date: '2026-10-09', title: 'fmIDE on a phone',
     summary: 'On a phone fmIDE opens to your inputs: change them with a slider made for a thumb, and watch what they move.',

@@ -269,6 +269,17 @@ const EXCEL_HELP_TOPICS = [
     body: [
       { p: '⬇ Generate .xlsx, at the top right, writes the workbook and downloads it. Excel works out every formula when it opens the file. Formulas, number formats and how cells look all carry through.' },
       { p: 'Your layout is saved in this browser as you go. In the Layout menu, Export Mapping saves this model\'s whole layout to a file (to share it, or keep it safe), and Import Mapping… loads one. Reset Mapping to Defaults… discards the layout for this model and starts again; module layouts and your Excel style are kept.' },
-      { see: ['differences', 'rows', 'remembered'] },
+      { see: ['differences', 'rows', 'remembered', 'phone'] },
+    ] },
+  { id: 'phone', group: 'generate', title: 'Making the workbook on a phone',
+    keywords: 'phone mobile iphone android smartphone share send mail make workbook full app',
+    summary: 'On a phone ExcelExporter is one screen: check the tabs, then make the workbook and share it.',
+    body: [
+      { p: 'On a phone, ExcelExporter shows one screen: the model\'s name, the tabs the workbook will hold (with how many rows each), where it will differ from fmIDE, if anywhere, and the file name.' },
+      { p: '⬇ Make the workbook writes the .xlsx and hands it to your phone\'s share sheet: open it in Excel or Numbers, send it by Mail or Messages, or keep it in Files. Where the browser can\'t share files, it downloads instead.' },
+      { p: 'The workbook is laid out as you set it up on a computer or tablet for this model (or the automatic layout, if you haven\'t): its tabs and rows, your Excel style, and the Sensitivity tab. Tap the file name to change it; it is kept with this model\'s layout.' },
+      { steps: ['In fmIDE on your phone, More (☰) → 📊 Make Excel. (Or, here, ☰ → Open a model file….)', 'Check the tabs and the file name.', 'Tap ⬇ Make the workbook, then pick where it goes.'] },
+      { tip: '☰ → Full app shows the whole ExcelExporter, to change the layout on the phone; 📱 Phone layout at the top goes back. Your choice is remembered in this browser.' },
+      { see: ['generate', 'differences'] },
     ] },
 ];

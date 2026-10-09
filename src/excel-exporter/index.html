@@ -55,6 +55,16 @@
     </nav>
   </div>
   <div class="tb-right">
+    <button id="phoneLayoutBtn" class="tb-btn hidden" title="The layout made for a phone">📱 Phone layout</button>
+    <div class="phone-menu-wrap phone-only">
+      <button id="phoneMenuBtn" class="tb-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="phoneMenu" aria-label="More">☰</button>
+      <div id="phoneMenu" class="menu-list phone-menu hidden" role="menu" aria-labelledby="phoneMenuBtn">
+        <button type="button" role="menuitem" id="phoneMenuOpen">📁 Open a model file…</button>
+        <button type="button" role="menuitem" id="phoneMenuFromFmide" class="hidden">↻ From fmIDE</button>
+        <button type="button" role="menuitem" id="phoneMenuHelp">❓ Help</button>
+        <button type="button" role="menuitem" id="phoneMenuFullApp">🖥 Full app</button>
+      </div>
+    </div>
     <button id="btnSettings" class="tb-btn" title="Period labels, file name and your Excel style">⚙ Settings</button>
     <button id="btnHelp" class="tb-btn help-btn" title="Help (F1)">❓ Help</button>
     <button id="btnGenerate" class="primary" disabled title="Write the workbook and download it">⬇ Generate .xlsx</button>
@@ -71,6 +81,26 @@
     <div id="genStatus"></div>
     <div id="differencesPanel" class="differences hidden" role="status"></div>
   </div>
+
+  <!-- On a phone (step 17 P3, 09h-phone.js): one screen to make the workbook. -->
+  <section id="phoneView" class="phone-view phone-only">
+    <div id="phoneStart" class="phone-card">
+      <h2>Make an Excel workbook</h2>
+      <p class="phone-lead">From fmIDE: More (☰) → 📊 Make Excel. Or open a model file here.</p>
+      <button id="phoneOpen" class="primary phone-big">📁 Open a model file…</button>
+    </div>
+    <div id="phoneLoaded" class="hidden">
+      <div class="phone-card">
+        <h2>Tabs in the workbook</h2>
+        <ul id="phoneTabs" class="phone-tabs"></ul>
+        <p class="phone-lead">The layout set up on a larger screen is used. To change it: ☰ → Full app.</p>
+      </div>
+      <div class="phone-card">
+        <label class="phone-field"><span>File name</span><input type="text" id="phoneFileName" autocomplete="off"></label>
+        <button id="phoneMake" class="primary phone-big">⬇ Make the workbook</button>
+      </div>
+    </div>
+  </section>
 
   <section class="welcome" id="loadPanel">
     <h2>Turn an fmIDE model into a live Excel workbook</h2>

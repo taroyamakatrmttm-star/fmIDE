@@ -11,6 +11,18 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'phone-workbook', date: '2026-10-09', title: 'Make the workbook on your phone',
+    summary: 'On a phone, ExcelExporter is one screen: check the tabs, tap ⬇ Make the workbook, and send it on.',
+    what: [
+      'The screen lists the tabs the workbook will hold, with how many rows each, where it will differ from fmIDE, and the file name (tap it to change it).',
+      '⬇ Make the workbook hands the .xlsx to your phone\'s share sheet: Excel, Numbers, Mail, Messages or Files. Where the browser can\'t share files, it downloads.',
+      'The layout, Excel style and Sensitivity tab you set up on a larger screen are used as they are. ☰ → Full app shows the whole page.',
+    ],
+    why: 'To turn a model into a live workbook and send it while away from your desk.',
+    how: ['In fmIDE on a phone, More (☰) → 📊 Make Excel, then ⬇ Make the workbook.'],
+    notes: ['Tablets and computers are unchanged.'],
+    see: ['phone'] },
+
   { id: 'apostrophe-tab-names', date: '2026-10-08', title: 'Tab names with an apostrophe',
     summary: 'A tab named like "Bob\'s Model" no longer breaks the workbook.',
     what: [

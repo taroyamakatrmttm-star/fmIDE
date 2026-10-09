@@ -75,7 +75,7 @@ fmIDE on a phone opens to **numbers, not the canvas**. A bar along the bottom: *
 - **Watch**: the results the person stars (★ on any rectangle), at the top of the Inputs screen while an input is being changed, each showing how far it has moved. The person's own setting, never in a file. Watching what matters while changing what drives it, on one screen.
 - **Periods**: swiped along a strip under the top bar.
 - **Canvas**: to look at, not to edit — fitted to the screen, pinch to zoom (step 13b), a canvas changed by a swipe at the edge. Tapping a rectangle opens a card: its value in every period, what it is worked out from (in words), what reads it, ✎ for an input, ★ Watch.
-- **☰**: Open…, Open Recent, Save, ⇪ Share the document (the share sheet), Open fmGraph (the phone fmGraph, with the model), Install fmIDE, Help, Full app; Make Excel comes with P3.
+- **☰**: Open…, Open Recent, Save, ⇪ Share the document (the share sheet), Open fmGraph (the phone fmGraph, with the model), Make Excel (P3), Install fmIDE, Help, Full app.
 - **Install**: Safari on an iPhone may clear a website's saved data after some weeks without a visit; an installed app (Add to Home Screen) keeps it. The phone layout says so once, with how to do it, and reminds the person to save a document they care about.
 - **Left out on a phone**: everything that builds — the ribbon, drawing and wiring, templates, recipes, functions, macros, Formats, Preferences, tutorials. ☰ → Full app shows them.
 
@@ -163,3 +163,14 @@ Tilt to sweep; a phone tutorial; receiving a `.fmide` from another app's share s
 - **The install note** shows only on the published site (a manifest; from disk there is nothing to install), not inside the installed app (`display-mode` or an iPhone's `navigator.standalone`), and after the phone's settings are read, so it doesn't flash. On an iPhone it gives Safari's steps; elsewhere the browser's offer becomes an Install button, else the browser menu's steps. Its "seen" mark is `installNoteSeen` in `fmIDE-phone`.
 - A message (toast) sits above the phone's bottom bar.
 - Test group 71 (`tests/71-fmide-phone-share.spec.js`): 7 tests; the share sheet and the browser's install offer are stand-ins put in the page by the test.
+
+**P3** (9 October 2026): ExcelExporter on a phone, and 📊 Make Excel in fmIDE's More (☰), with the owner's three choices (the tabs read-only; the file name changed with a tap, kept with the model's layout; a model file opened on the phone too). Settled while building it:
+- **The tabs listed are the workbook's own**: it is built (without downloading) when the model or layout changes, so the Inputs, Sensitivity and Functions tabs, block instance tabs and chart tabs show as they will be; a tab laid out in the page shows its row count, as the Tabs panel does, a chart tab says "chart".
+- **⬇ Make the workbook** writes the same workbook as Generate (a test compares their formulas and values) and hands it to the shared `shareFiles` within the tap, as a share sheet requires; a name no phone can save under is made safe.
+- **Messages and "differs from fmIDE"** sit at the top, as on the full page.
+- **On Android**, as with fmIDE's document, Chrome may not share an `.xlsx`; it is then downloaded.
+- The shared code ExcelExporter uses is only `phone.js`'s phone check and share helper (Apache, in `src/shared/`); nothing moved from the open part into ExcelExporter or back. Its own setting: `fmide-excel-full-app`.
+- Test group 72 (`tests/72-excel-phone.spec.js`): 8 tests.
+
+Step 17 is done. The later ideas above (tilt to sweep, a phone tutorial, receiving a file from another app's share sheet, light editing) wait for the owner.
+

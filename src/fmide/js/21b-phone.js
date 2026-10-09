@@ -20,6 +20,7 @@
   //   slider if it is an input.
   // - ☰: Open…, Open Recent…, Save, ⇪ Share the document (P2b: the share sheet, a copy — the
   //   document stays unsaved until Save), 📈 Open fmGraph (with the model, as on a computer),
+  //   📊 Make Excel (P3: ExcelExporter with the model, in its phone screen),
   //   ⤓ Install fmIDE (on the site, not installed), Help, Full app (the whole fmIDE; 📱 Phone
   //   layout back).
   // - The install note (P2b): on the site and not installed, a card at the top of Inputs says a
@@ -85,7 +86,7 @@
     menu.id = 'phoneMenu';
     menu.setAttribute('role', 'menu');
     [['phoneOpen', '📁 Open…'], ['phoneRecent', '🕘 Open Recent…'], ['phoneSave', '💾 Save'], ['phoneShare', '⇪ Share the document'],
-      ['phoneGraph', '📈 Open fmGraph'], ['phoneInstall', '⤓ Install fmIDE'], ['phoneHelp', '❓ Help'], ['phoneFullApp', '🖥 Full app']].forEach(([id, text]) => {
+      ['phoneGraph', '📈 Open fmGraph'], ['phoneExcel', '📊 Make Excel'], ['phoneInstall', '⤓ Install fmIDE'], ['phoneHelp', '❓ Help'], ['phoneFullApp', '🖥 Full app']].forEach(([id, text]) => {
       const b = pmk('button', null, text); b.type = 'button'; b.id = id; b.setAttribute('role', 'menuitem'); menu.appendChild(b);
     });
     const vib = pmk('button', 'hidden', ''); vib.type = 'button'; vib.id = 'phoneVibrate'; vib.setAttribute('role', 'menuitemcheckbox');
@@ -713,6 +714,7 @@
   phoneMenuItem('phoneSave', () => runCommand('saveDocument'));
   phoneMenuItem('phoneShare', () => sharePhoneDocument());
   phoneMenuItem('phoneGraph', () => runCommand('openFmGraph'));
+  phoneMenuItem('phoneExcel', () => runCommand('openExcelExporter'));
   phoneMenuItem('phoneInstall', () => { if(installPrompt) installApp(); else showMessage(phoneInstallSteps()); });
   phoneMenuItem('phoneHelp', () => runCommand('openHelp'));
   phoneMenuItem('phoneFullApp', () => setPhoneFullApp(true));
