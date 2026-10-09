@@ -62,6 +62,9 @@ async function openPhone(browser, options = SIDEWAYS, { share = 'ok' } = {}){
     context, page, errors, touch,
     async tap(p){ await touch('touchStart', [p]); await touch('touchEnd', []); },
     async hold(p, ms = 700){ await touch('touchStart', [p]); await page.waitForTimeout(ms); await touch('touchEnd', []); },
+    // Fingers lifted after resting a moment, as a hand does: Chromium's touch emulation takes a
+    // drag lifted while moving as a fling, and the next tap would only end it (group 68).
+    async lift(){ await page.waitForTimeout(150); await touch('touchEnd', []); },
     async tapOn(locator){
       await expect(locator).toBeVisible();
       await locator.scrollIntoViewIfNeeded();
@@ -134,7 +137,7 @@ test('the mixer: faders at the edges, two fingers move two sliders at once, the 
   await phone.touch('touchStart', [fa, fb]);
   for(let i = 1; i <= 8; i++) await phone.touch('touchMove', [{ ...fa, y: fa.y - a.h * 0.2 * i / 8 }, { ...fb, y: fb.y - b.h * 0.2 * i / 8 }]);
   await expect(p.locator('.fader .ps.dragging')).toHaveCount(2); // both held at once
-  await phone.touch('touchEnd', []);
+  await phone.lift();
   const [price, volume] = await values(p);
   expect(Math.abs(price - 12)).toBeLessThanOrEqual(0.25);
   expect(Math.abs(volume - 20)).toBeLessThanOrEqual(1);
@@ -148,7 +151,7 @@ test('the mixer: faders at the edges, two fingers move two sliders at once, the 
   for(let i = 1; i <= 5; i++) await phone.touch('touchMove', [{ x: s.x + 120 * i / 5, y: s.y, id: 1 }]);
   for(let i = 1; i <= 8; i++) await phone.touch('touchMove', [{ x: s.x + 120, y: s.y - c.h * 0.2 * i / 8, id: 1 }]);
   await expect(p.locator('.fader').first().locator('.ps-bubble')).toHaveText('fine ×¼');
-  await phone.touch('touchEnd', []);
+  await phone.lift();
   expect((await values(p))[0]).toBe(price + 0.5);
   // A double-tap: the model's own number.
   await phone.tap({ x: c.x, y: c.at(0.9) });
@@ -178,7 +181,7 @@ test('three fingers, three faders; a tap on a name puts another slider there, re
   await phone.touch('touchStart', down.slice(0, 2));
   await phone.touch('touchStart', down);
   for(let k = 1; k <= 6; k++) await phone.touch('touchMove', down.map((d, i) => ({ ...d, y: d.y - r[i].h * 0.25 * k / 6 })));
-  await phone.touch('touchEnd', []);
+  await phone.lift();
   const v = await values(p);
   expect(v.slice(0, 3).every(x => x !== null && x > 0)).toBe(true);
   expect(v[3]).toBeNull();
@@ -233,7 +236,7 @@ test('Show: a chart on the whole screen from its quick look, following the fader
   const a = await faderRail(p, 0);
   await phone.touch('touchStart', [{ x: a.x, y: a.at(0.5) }]);
   for(let i = 1; i <= 6; i++) await phone.touch('touchMove', [{ x: a.x, y: a.at(0.5) - a.h * 0.2 * i / 6 }]);
-  await phone.touch('touchEnd', []);
+  await phone.lift();
   await expect.poll(label).not.toBe(before);
   // × ends it and lets the screen sleep.
   await phone.tapOn(p.locator('#showClose'));
@@ -292,7 +295,7 @@ test('holding A: the bars show the scenario until the finger lifts; a quick tap 
   await expect(p.locator('#lookBar i')).toHaveCount(0);
   expect(await revenue(p)).toBe(12000); // the bars show the scenario…
   expect((await values(p))[0]).toBeNull(); // …the sliders stay where they were
-  await phone.touch('touchEnd', []);
+  await phone.lift();
   await expect(p.locator('#lookBar')).toBeHidden();
   expect(await revenue(p)).toBe(10000);
   await p.waitForTimeout(500);
@@ -306,7 +309,7 @@ test('holding A: the bars show the scenario until the finger lifts; a quick tap 
   await phone.touch('touchStart', [{ x: mb.x + mb.width / 2, y: mb.y + mb.height / 2 }]);
   await expect(p.locator('#lookBar')).toHaveText('Looking at A — let go to come back');
   expect(await revenue(p)).toBe(12000);
-  await phone.touch('touchEnd', []);
+  await phone.lift();
   await expect(p.locator('#lookBar')).toBeHidden();
   expect(await revenue(p)).toBe(10000);
   await expect(p.locator('#compareBar')).toBeVisible();
@@ -417,6 +420,7 @@ test('a tablet sideways and a computer: no mixer, no Show', async ({ browser, pa
   await page.goto(URL);
   await page.waitForFunction(() => !!window.fmGraph);
   await page.click('#btnSample');
+  await expect(page.locator('.slider-widget')).toHaveCount(2); // the sample loaded
   await expect(page.locator('.fader')).toHaveCount(0);
   await expect(page.locator('#mixerLeft')).toBeHidden();
   await expect(page.locator('#mixerRight')).toBeHidden();
