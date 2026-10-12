@@ -960,6 +960,17 @@ fmGraph at the usual size with the sample, through its page and `window.fmGraph`
 - `board-v4.json` (a bar and a scenario waterfall, a scenario): opens, every widget on Auto, the scenario added; hostile scales (text, min above or equal to max, 10³⁰⁰, one end missing, a list, text, null, −Infinity) read as Auto; −1.5 to 2.5 kept.
 - On a phone: the bar fixed below its numbers; held, its quick look's points all on the scale's top edge; ⤢ Show: the bar on its fixed scale, ▲ on all four years.
 
+### 74. Which tests a change reaches (`tests/74-test-impact.spec.js`; `npm run test:test-impact`; token-efficiency phase 2, 12 October 2026)
+Node only; `tools/test-impact.js` (`npm run test:changed`) and `appSources` in `tools/build.js`.
+- Every file Git tracks under `src/` and `tools/` is known to the map, and each reaches at least one test besides smoke unless it is a tool no test runs (`tools/serve.js`, smoke only) or runs everything; a file in a new folder (`src/new-app/…`, `src/fmide/new-folder/…`, `tools/new-tool.js`, `new-folder/…`, `tests/new-folder/…`) runs every test.
+- Every test file is found to load an app, a tool, a `src/` file or the site; every fixture folder is loaded by a test.
+- The build's own list of each app's files: its page, styles, every script piece, the shared includes and modules (ExcelExporter's formulas and Excel writer, fmIDE's expression parser), each one there; fmGraph's has none of ExcelExporter's.
+- The tools read only what the map says: `build-help.js`'s help pages, `build-library.js`'s catalogue (the sample library), `video-scripts.js`'s tutorials and `test-parts.js`'s durations are run with every file read noted, and each one is in the map (a missing one fails, naming it).
+- Every test runs for `src/shared/` (a module and its `package.json`), `tools/build.js`, `tests/helpers/`, a format sample, the three apps' file-format code, `playwright.config.js`, `package.json`, `package-lock.json`, `.github/`, the library submodule, a deleted source file — and when one of them is among smaller changes.
+- An fmGraph-only change (`src/fmgraph/js/05-render.js`): smoke first, every fmGraph group (47–58, 68, 69, 73), none of 1, 2, 3, 17, 18, 19, 27, 44, 67, fewer than half the files.
+- Documentation no test reads (`docs/*.md`, `README.md`, `CHANGELOG.md`, `CLAUDE.md`, `tests/SPEC.md`, `.claude/rules/…`): smoke only; `docs/LICENSE-CC-BY-4.0.txt` (carried by the help pages and the catalogue): 25 and 34. A tool: the tests that run it (`test-parts.js` 66; `check-library.js` 24 and 25). A test file: itself and 66. An agreement fixture: 17, not 44. ExcelExporter's `operator-spellings.js`: 19, 65, 1 and 17, not 48. fmIDE's command list: 34 (the help pages read it). This file names the files its cases change, so it counts as loading them; the cases expecting smoke only leave it out.
+- The command prints the files one per line (the same as the map), `--why` gives each changed file's reason and each test file's changed files (smoke "(always)"); no test file's path holds another's (Playwright reads each as a pattern); `src/shared/ir.js` prints every test file.
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.

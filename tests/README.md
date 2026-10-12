@@ -1,6 +1,6 @@
 # Tests
 
-One command runs every check, locally and on GitHub (`.github/workflows/tests.yml`: on every pull request, and on `main` after a merge). On GitHub the suite runs in 4 parts at once, each on its own machine, and the check **test** goes green only when all 4 passed; every test runs on every change. `tools/test-parts.js` puts every test file into exactly one part, spread by how long each took (`tests/test-durations.json`); a new group counts as an average one. To run one part locally: `npx playwright test $(node tools/test-parts.js 2 4)`; to see the parts: `node tools/test-parts.js --show 4`. When the parts drift apart, refresh the times from a GitHub run's log: `node tools/test-parts.js --measure LOG`. The brief is [`SPEC.md`](SPEC.md). The apps themselves stay dependency-free: everything here is a dev dependency.
+One command runs every check, locally and on GitHub (`.github/workflows/tests.yml`: on every pull request, and on `main` after a merge). On GitHub the suite runs in 4 parts at once, each on its own machine, and the check **test** goes green only when all 4 passed; every test runs on every change. `tools/test-parts.js` puts every test file into exactly one part, spread by how long each took (`tests/test-durations.json`); a new group counts as an average one. To run one part locally: `npx playwright test $(node tools/test-parts.js 2 4)`; to see the parts: `node tools/test-parts.js --show 4`. When the parts drift apart, refresh the times from a GitHub run's log: `node tools/test-parts.js --measure LOG`. Before a commit, `npm run test:changed` runs only the test files the change reaches (`tools/test-impact.js`, below); GitHub still runs the whole suite. The brief is [`SPEC.md`](SPEC.md). The apps themselves stay dependency-free: everything here is a dev dependency.
 
 ## Setup (once)
 
@@ -18,6 +18,7 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | Command | What it runs |
 |---|---|
 | `npm test` | everything |
+| `npm run test:changed` | `npm run build:check`, then only the test files the change reaches (see "Which tests a change reaches" below) |
 | `npm run test:excel` | Excel output: structure, LibreOffice values, layout, the Excel style (group 4) |
 | `npm run test:security` | the malicious-file checks, both apps |
 | `npm run test:formats` | file formats, both apps |
@@ -54,6 +55,7 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 | `npm run test:shared-modules` | real modules (group 64, step 3c): each loads on its own (in Node, or a page), imports what it uses, and reaches the apps without its imports and exports; the build's rules |
 | `npm run test:sensitivity` | ExcelExporter's Sensitivity (group 67, step 16): the panel, the moved inputs, the Sensitivity tab's Data Table, fmIDE's numbers written in, LibreOffice working the live table out, a block model, the Tornado and Spider charts, files and hostile names |
 | `npm run test:phone` | fmGraph on a phone (groups 68 and 69, step 17 P1a and P1b): which screens take the phone layout, the dock and the phone slider (no jump, finer by moving up, the notch and the tick, − and +, typing, double-tap, keys), boards by a swipe, a bar's quick look, ☰ and Full app; the mixer with several fingers at once, Show with the screen kept on, holding A, Share (pictures and the board file); hostile names; fmIDE on a phone (group 70, P2a): Inputs, the slider changing the model with undo, a number per period and All periods by %, Watch, the canvas to look at and a rectangle's card, Full app; group 71 (P2b): ⇪ Share the document, Save at phone size, Open fmGraph, the install note; ExcelExporter on a phone (group 72, P3): the one screen, Make the workbook through the share sheet, the file name, fmIDE's Make Excel |
+| `npm run test:test-impact` | the map of which tests a change reaches (group 74): every file under `src/` and `tools/` known, every test file loading something, the tools reading only what the map says, conservative cases |
 | `npm run test:test-parts` | the suite's parts for GitHub (group 66): every file in one part, balanced by time, never empty |
 | `npm run test:modules-in-node` | the apps' pieces that are modules, alone in Node (group 65): ExcelExporter's Excel writer, fmIDE's expression parser |
 | `npm run test:macro-references` | macros that keep working (group 63): Insert Template's saved result and the recorder using it, a template's unnamed nodes by place, skipExisting, ⚠ notes, the Macro Builder naming results, the messages that stop a macro, canvas ids on the tabs, Copy Reference |
@@ -80,6 +82,12 @@ npm run test:update-snapshots
 ```
 
 Review the snapshot diff before committing: it is the record of what the change did to every workbook.
+
+## Which tests a change reaches
+
+`npm run test:changed` asks `tools/test-impact.js` which test files the change reaches, then runs `npm run build:check` and those files (or every test, when the change calls for it). The change is everything that differs from where the branch left `main` (`origin/main`, else `main`), committed or not, and new files Git doesn't ignore. To see the list and why each file is on it: `node tools/test-impact.js --why`; with other files: `--files A B …`; against another base: `--base REF`.
+
+The map is worked out, not matched by file names: which source files go into which app comes from the build itself (`appSources` in `tools/build.js`), a module reaches the modules that import it, and what each test file loads is read from it and the helpers it requires — the apps it names (any mention of an app counts), the tools it runs (and the tools they require, and what those read), the `src/` files it loads, its fixture folders, the snapshots, the built site. Conservative: a change to `src/shared/`, `tools/build.js`, `tests/helpers/`, a file format's code or samples (`tests/fixtures/formats/`, the apps' `04-file-formats.js`, fmGraph's board files), `playwright.config.js`, `package.json`, `package-lock.json`, `.github/`, the library submodule, a deleted source file, or any file the map doesn't know runs every test. Group 0 (smoke) always runs. Documentation (`*.md`, `.claude/`) runs only smoke, unless a test reads it. The written part of the map (what runs everything, the site's files, what each tool reads, tools no test runs) is at the top of `tools/test-impact.js`; group 74 fails when a new file or folder under `src/` or `tools/` isn't known, when a test file loads nothing the map can see, or when a tool reads a file the map doesn't name.
 
 ## Timing the calculation
 
