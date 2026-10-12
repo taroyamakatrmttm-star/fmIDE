@@ -105,7 +105,9 @@ test('a template\'s attached Excel layout comes along with the model', async ({ 
   await page.waitForFunction(() => fm.canvases().some(c => c.name === 'Sales (Gold)'));
   const popup = await openExcelFromFmide(page);
   expect(await tabNames(popup)).toEqual(['Overview', 'Sales from v1']);
-  await expect(popup.locator('#tabsBody .module-tag').first()).toHaveText('🧩 Sales · layout from the template');
+  const tag = popup.locator('#tabsBody .module-tag').first();
+  await expect(tag.locator('> span').first()).toHaveText('🧩 Sales · layout from the template');
+  await expect(tag.locator('.module-attach')).toHaveText('📎 Attach'); // opened from fmIDE (group 75)
 });
 
 test('messages from other windows are ignored, and fmIDE answers only the window it opened', async ({ page }) => {
