@@ -300,6 +300,30 @@ function rememberModuleLayouts(){
   if(newlyRemembered) renderTabs(); // the tab's tag now says its layout is remembered
 }
 
+// One module's layout as this model shows it now, for Attach to Template… (09f): its own tab
+// and its block instances' tab — `tabId` when it is one of them, else the first of each.
+// Cleaned like a file, so what is sent is what ExcelExporter would read back. null: no tab.
+function moduleLayoutNow(family, tabId){
+  const mine = (canvasId) => !!(canvasModules[canvasId] && canvasModules[canvasId].family === family);
+  const owns = model.canvases.filter(c => mine(c.id) && moduleTabSpec(c));
+  const own = owns.find(c => moduleTabId(c.id) === tabId) || owns[0];
+  const insts = blockInstanceTabs().filter(x => mine(x.defCanvas.id));
+  const inst = insts.find(x => x.tab.id === tabId) || insts[0];
+  if(!own && !inst) return null;
+  const m = own ? captureModuleLayout(own) : emptyTabLayout(canvasModules[inst.defCanvas.id]);
+  if(inst) m.instance = captureTabLayout(instanceTabSpec(inst));
+  return cleanModuleLayout(JSON.parse(JSON.stringify(m)));
+}
+// The model's modules that have a tab here, for Attach to Template…: [{ family, name, tab }],
+// `tab` the first tab of each (its own, else an instance's).
+function modulesWithTabs(){
+  const out = [], seen = new Set();
+  const add = (mod, tab) => { if(!mod || seen.has(mod.family)) return; seen.add(mod.family); out.push({ family: mod.family, name: mod.name || 'module', tab }); };
+  model.canvases.forEach(c => { const spec = canvasModules[c.id] && moduleTabSpec(c); if(spec) add(canvasModules[c.id], spec.tab); });
+  blockInstanceTabs().forEach(x => add(canvasModules[x.defCanvas.id], x.tab));
+  return out;
+}
+
 // `stored`: the remembered order (row objects); `auto`: the rows as the automatic sort placed
 // them. Rows the remembered order doesn't hold go in after the row they followed in `auto`.
 function mergeRememberedOrder(stored, auto){
@@ -449,7 +473,20 @@ function moduleTabTag(tab){
       return 'Forgot the layout remembered for "' + mod.name + '".';
     }));
   }
+  const attach = attachLayoutButton(mod, tab);
+  if(attach) wrap.appendChild(attach);
   return wrap;
+}
+// 📎 Attach on a module's tab or instance tab: sends this module's layout to fmIDE, for its
+// template (09f). Only with fmIDE's window behind this one.
+function attachLayoutButton(mod, tab){
+  if(!fmideWindowBehind()) return null;
+  const btn = document.createElement('button');
+  btn.className = 'icon module-attach';
+  btn.textContent = '📎 Attach';
+  btn.title = 'Attach this module\'s layout to its template in fmIDE (fmIDE asks first)';
+  btn.addEventListener('click', () => attachLayoutToTemplate(mod.family, tab.id));
+  return btn;
 }
 function forgetButton(title, forget){
   const btn = document.createElement('button');
@@ -496,6 +533,8 @@ function instanceTabTag(tab){
         return 'Forgot the layout remembered for the instances of "' + mod.name + '".';
       }));
     }
+    const attach = attachLayoutButton(mod, tab);
+    if(attach) wrap.appendChild(attach);
   }
   if(others.length){
     const btn = document.createElement('button');

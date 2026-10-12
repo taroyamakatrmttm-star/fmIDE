@@ -83,3 +83,12 @@ Decided when the plan was approved (30 Sep 2026, the owner): only blocks **added
 - **Tests**: group 39 (`tests/39-block-instance-layouts.spec.js`, samples `tests/fixtures/block-layouts/`, `tests/fixtures/formats/module-layouts-v1.json`); groups 36 and 37 follow the new version.
 
 Step 11 is complete. Left for later, by the owner's choices: a template carrying a suggested Excel style.
+
+## Done (Attach to Template…, a follow-up to 11c) — how it turned out
+
+The owner asked (12 October 2026) for ExcelExporter to attach a layout to its template the way fmGraph's Attach to template… attaches a board (step 15 G5b), with no file in between. Chosen: both a Layout menu item and a button on each module's tab; the layout as the model shows it now; attached to the template's latest version; one module at a time; and fmIDE's ask-and-answer shared by fmGraph and ExcelExporter.
+
+- **ExcelExporter** (`04b-module-layouts.js`, `09f-from-fmide.js`): only with fmIDE's window behind it (`fmideWindowBehind`), **Layout → 📎 Attach to Template…** (`#btnAttachLayout`, a picker `#attachModal` of the model's modules, `modulesWithTabs`) and **📎 Attach** on a module's tab or instance tab (`.module-attach`) send `excel:attach-layout`: a module layouts file holding one entry, `moduleLayoutNow` — the module's own tab and its block instances' tab (the one pressed on, else the first of each), cleaned by `cleanModuleLayout`. fmIDE's answer (`fmIDE:layout-attached` / `fmIDE:layout-not-attached`) shows as text in `#moduleLayoutsStatus`.
+- **fmIDE** (`21-web-app.js`): `askToAttachFromApp` holds what both apps share — refused in a tutorial, size and JSON checks, the question, attaching to the latest version, the answer in words; `askToAttachGraphBoard` and `askToAttachExcelLayout` say only how each reads its data (`graphBoardForTemplate`, `excelLayoutForFamily`, as for a file) and which template it is for. Only the ExcelExporter window fmIDE opened is heard.
+- No file format or storage changed. In the iPad's home-screen app, where ExcelExporter replaces fmIDE in one window, the file route stays.
+- Tests: group 75 (`tests/75-excel-attach-layout.spec.js`); fmGraph's (54) unchanged.

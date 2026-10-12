@@ -12,6 +12,19 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'excel-attach-to-template', date: '2026-10-12', title: 'ExcelExporter attaches layouts to templates',
+    summary: 'In ExcelExporter opened from here, 📎 Attach on a module\'s tab sends its Excel layout to its canvas template — no file in between.',
+    what: [
+      'In ExcelExporter, a tab made from a canvas template has 📎 Attach, and Layout has 📎 Attach to Template…. Either sends that module\'s layout here; fmIDE asks, then attaches it to the template\'s latest version.',
+      'It is the same layout 📎 Attach Excel layout… takes from a file, and it goes wherever the template goes.',
+    ],
+    why: 'So a template carries its Excel layout as easily as an fmGraph board.',
+    how: [
+      'Open {cmd:openExcelExporter} on a model built from a canvas template.',
+      'Arrange the module\'s tab there, then press 📎 Attach on it.',
+      'Answer the question here.',
+    ],
+    see: ['templates'] },
   { id: 'phone-every-input', date: '2026-10-09', title: 'Every input on the phone',
     summary: 'On a phone, Inputs now lists every input — the same ones ExcelExporter gathers — including those with no number typed yet.',
     what: [
