@@ -4,9 +4,9 @@ Since 12 October 2026 (the owner's request: less read for an ordinary small chan
 
 - **`CLAUDE.md`** — always loaded. What the project is, how we work, how the code is built, the licences, the non-negotiable rules, the rules that apply wherever a change is made, where the details are, the build order's status and how to check a change.
 - **`.claude/rules/*.md`** — each starts with `paths:`; Claude Code loads it only when a session reads a file matching one of them. Module-specific rules: fmIDE's areas, fmGraph, ExcelExporter, shared code, pointer input, format roles, file formats, the site, the calculation tests.
-- **`docs/architecture/`** — reference read on purpose: `test-groups.md` (what each test group covers), `storage.md` (every database and key), `build-order.md` (the decisions and the full build order), and this file.
+- **`docs/architecture/`** — reference read on purpose: `storage.md` (every database and key), `build-order.md` (the decisions and the full build order), and this file.
 
-Every line of the old `CLAUDE.md` was moved word for word, each to exactly one place, apart from the four below. The old file is in Git's history (the commit before this change).
+Every line of the old `CLAUDE.md` was moved word for word, each to exactly one place, apart from the four below. The old file is in Git's history (the commit before this change). Later the same day the owner's decisions (below) reworded a few lines and dropped the test-group list, `tests/SPEC.md` covering it.
 
 **Keeping it this way:** a rule that must hold whichever files a change touches goes in `CLAUDE.md` (in full, or as a line naming the file that has it in full); a rule about one module goes in that module's rules file, whose `paths` must name the files it is about; long reference goes in `docs/architecture/`. When a rules file's module gains a file, add it to `paths`.
 
@@ -28,16 +28,15 @@ Every line of the old `CLAUDE.md` was moved word for word, each to exactly one p
 
 > Workflow: edit `src/` → **`npm run build`** → **`npm test`**. Run **`npm test`** before every commit (setup and details: `tests/README.md`). It runs offline, every group in `tests/SPEC.md`, and must pass against the apps as they are.
 
-**Added** (new, not moved): "How we work" items 7 (work narrowly, widen on evidence) and 8 (raise improvements — the owner's standing request of 12 October 2026); "Rules that apply wherever you work" (one-line summaries of rules stated in full in the rules files, plus the input-rectangle rule moved there whole); "Where the details are"; a short build-order status (the full text in `build-order.md`); in "Checking a change", **Which tests** and **Say what ran**.
+**Added** (new, not moved; confirmed by the owner): "How we work" items 7 (work narrowly, widen on evidence) and 8 (raise improvements — the owner's standing request of 12 October 2026); "Rules that apply wherever you work" (one-line summaries of rules stated in full in the rules files, plus the input-rectangle rule moved there whole); "Where the details are"; a short build-order status (the full text in `build-order.md`); in "Checking a change", **Which tests** and **Say what ran**.
 
-## Flagged for the owner's decision (left as they were)
+## The owner's decisions (12 October 2026)
 
-1. Non-negotiable rule 1 says "the planned community library": the library exists since step 8.
-2. `build-order.md`, step 10 says "in progress"; the status says done but for H4c.
-3. `build-order.md`, step 15 says "a live link later"; G3b sends boards back to fmIDE by themselves — is a live link still planned?
-4. `README.md`'s "how to change the apps" still says `npm test` after each build: it is for people, so it was left; should it follow the new commit rule?
-5. `docs/architecture/test-groups.md` repeats in short what `tests/SPEC.md` says in full; one could go, or stay as the short index it is.
-6. The build-order status paragraph (`build-order.md`, the paragraph after step 17) repeats the list above it; it could be cut to what the list doesn't say.
+1. **Out-of-date wording updated:** non-negotiable rule 1 now says "the community library" (it was "planned"); in `build-order.md`, step 10 reads "✅ but for H4c" (it was "in progress"), and step 15 says the live link — fmIDE's edits reaching an open fmGraph straight away — is still a later idea (it said "a live link later").
+2. **`README.md` follows the new commit rule:** "how to change the apps" says to run the tests the change reaches; GitHub runs the whole suite.
+3. **The test-group list dropped** (`docs/architecture/test-groups.md`): `tests/SPEC.md` covers every group in full. Its lines carrying code facts found nowhere else were moved word for word first: placing nodes, Add Many Rectangles, Next / Previous Canvas, long messages and resizable windows to `.claude/rules/fmide-canvas.md`; real modules to `.claude/rules/shared.md`; zoom (with the rule on `zoomGroupAdded` in tests) to `.claude/rules/fmide-zoom.md`.
+4. **The build-order status paragraph shortened** to what the list above it doesn't say (the order chosen, the deferred and known items, the requests after step 15, the checker pointer).
+5. **"How we work" items 7 and 8 confirmed.**
 
 ## How much is loaded (measured 12 October 2026)
 
