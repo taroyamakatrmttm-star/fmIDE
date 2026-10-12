@@ -3,6 +3,7 @@ paths:
   - "tests/**"
   - "playwright.config.*"
   - "tools/test-parts.js"
+  - "tools/test-impact.js"
   - "src/shared/ir.js"
   - "src/excel-exporter/formulas/**"
 ---
@@ -13,3 +14,4 @@ Loaded when a session works on the tests or the calculation. The rest of "Checki
 
 - Both apps calculate on the shared IR (`src/shared/ir.js`, `compileModel` / `evaluateModel`), a pure function of the model that reads no app state; units come from it too (`unitOf`), and so do plug-to-socket links (worked out from the names, never taken from the file). `evaluateModel` keeps every period's results for the whole calculation (keyed by period), so each period is worked out once and a period shift shows the value shown for the period it reads, loops included; group 18 counts the work in Node (twice the periods, about twice the work). Test group 18 (`npm run test:ir`) pins fmIDE's values, error messages and units for every sample (`tests/snapshots/fmide-values--*`) and runs the shared IR alone in Node. Group 19 (`npm run test:excel-ir`) pins ExcelExporter's unit column for every sample (`tests/snapshots/excel-units--*`), checks every operator has an Excel spelling, and covers the panel that lists where the workbook will differ from fmIDE (`#differencesPanel`). A change to the calculation or the formula writer must not make either slower: compare `npm run bench` (fmIDE's calculation and ExcelExporter's Generate) before and after on the same machine.
 - Both apps must calculate alike: test group 17 (`npm run test:agreement`) compares fmIDE's values with the recalculated workbooks for every sample model, and the rows on block-instance tabs with the IR's per-instance values. A change to how either app calculates keeps it green; a new calculation feature gets a case in `tests/fixtures/agreement/`.
+- Which tests a change reaches (`npm run test:changed`, `tools/test-impact.js`, group 74): the map is worked out from the build (`appSources` in `tools/build.js`) and from what each test file and its helpers load; its written part — what runs every test, the site's files, what each tool reads (`TOOL_INPUTS`), tools no test runs, loads a test's text can't show (`EXTRA_LOADS`) — is at the top of the tool. A new folder under `src/` or a new tool that group 74 reports as unknown is added there; a new file-format or upgrade file outside `src/shared/` is added to `FULL_SUITE`.

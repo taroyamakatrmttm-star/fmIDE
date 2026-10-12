@@ -55,3 +55,27 @@ Measured with Claude Code 2.1.296 run headless (`claude -p --output-format json 
 | build tool (`tools/build-help.js`) | 83,506 | 44,333 | fmide-help, build-and-site |
 
 In the old copy no rules file loaded; in the new one each run loaded exactly the files whose `paths` name the file read (the model listed them). The project's own instructions went from about 50,200 tokens to about 6,600 with nothing read, and 9,500–12,000 for these tasks. A session that reads files from several areas loads each area's rules file once. To compare again after a change, run the same in two copies.
+
+## Phase 2: which tests a change reaches (12 October 2026)
+
+The owner's request: replace a session's judgement of "the tests the change reaches" with a dependable, checked map, so a small change runs fewer tests locally without losing safety; GitHub keeps running the whole suite on every pull request, and CI is unchanged.
+
+**What was built.** `tools/test-impact.js` and `npm run test:changed` (details in `tests/README.md`, "Which tests a change reaches"); `appSources()` in `tools/build.js` (the build's own list of each app's source files; the apps it writes are unchanged); test group 74. The owner's decisions: the map is **worked out** (source → app from the build, a module → the modules importing it, test → what it loads read from the test and its helpers, with a short written part at the top of the tool), not written by hand; the build's list comes from an export of `tools/build.js`; documentation runs smoke only, unless a test reads it.
+
+**Measured** on recent merged pull requests: each one's changed files run through today's map (`node tools/test-impact.js --files …`), test time from `tests/test-durations.json` (seconds on GitHub's machine, one file after another; locally Playwright runs several at once). "Guards" are the test files the pull request itself added or changed; every one was picked, and every one would have been picked from the pull request's other files alone (its source changes), not only because the test file itself changed.
+
+| Pull request | What changed | Files | Picked | Time (of 2,260 s) | Guards picked |
+|---|---|---|---|---|---|
+| #135 | guidance: the owner's decisions | 9 | smoke only (1 of 77) | 2 s | no test changed |
+| #134 | guidance: CLAUDE.md split | 22 | smoke only | 2 s | no test changed |
+| #133 | fmGraph's fixed scale (group 73) | 25 | all — `package.json` (a new npm script) and fmGraph's board format | 2,260 s | yes (4) |
+| #132 | fmIDE: the input rule on a phone | 17 | 74 of 77 | 2,230 s | yes (2) |
+| #131 | step 17 P3, ExcelExporter on a phone | 21 | all — `package.json` | 2,260 s | yes (1) |
+| #130 | step 17 P2b, fmIDE on a phone | 15 | all — `package.json` | 2,260 s | yes (1) |
+| #129 | step 17 P2a, fmIDE on a phone | 19 | all — `package.json` | 2,260 s | yes (2) |
+| #128 | step 17 P1b, fmGraph on a phone | 25 | all — `package.json`, `src/shared/phone.*` | 2,260 s | yes (2) |
+| #127 | step 17 P1a, fmGraph on a phone | 22 | all — `package.json`, `src/shared/phone.*` | 2,260 s | yes (1) |
+| #125 | step 17's brief | 3 | smoke only | 2 s | no test changed |
+| #124 | ExcelExporter: apostrophes in tab names | 7 | 50 of 77 | 1,650 s | yes (2) |
+
+What it shows: documentation and guidance changes go from the whole suite to the smoke test; an ExcelExporter-only change saves about a quarter; an fmGraph-only change runs 29 of 77 files (about 720 s); a pull request adding a test group runs everything, because its new npm script changes `package.json`. An fmIDE-only change picks 71 of 77 files (about 2,130 s), because nearly every test file names fmIDE somewhere (a file kind such as `fmIDE-excel-module-layouts`, a test's title), and any mention counts. Measured alongside: counting only the tests that open fmIDE (`openFmIDE`, `openApp(…, 'fmIDE')`, `fmIDE.html`, its helper) would pick 54 files (about 1,665 s) — not adopted; the owner's to decide.

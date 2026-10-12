@@ -88,7 +88,11 @@ function fail(msg){
   process.exit(1);
 }
 
+// While appSources runs: every source file the app being built takes in.
+let piecesRead = null;
+
 function readPiece(file){
+  if(piecesRead) piecesRead.add(file);
   if(!fs.existsSync(file) || !fs.statSync(file).isFile()) fail('missing file ' + path.relative(ROOT, file));
   const text = fs.readFileSync(file, 'utf8');
   if(text !== '' && !text.endsWith('\n')) fail(path.relative(ROOT, file) + ' must end with a newline');
@@ -105,6 +109,7 @@ function readFolder(dir, included){
 
 // A script file's text as the app takes it: a module turned into a plain fragment.
 function readScript(file, included){
+  if(piecesRead) piecesRead.add(file); // a module already read is taken from moduleInfo's store
   if(!isModuleFile(file)) return readPiece(file);
   included.add(file);
   return moduleInfo(file).text;
@@ -225,6 +230,23 @@ function buildApp(app, forSite){
   return out;
 }
 
+// Which source files go into each app: [{ app: 'fmIDE', out: 'apps/fmIDE.html', files: [paths
+// relative to the repository, '/' between folders] }]. Builds each app in memory and notes what
+// it reads (the page, its styles, every script piece, include and module); writes nothing.
+// For tools/test-impact.js, which picks the tests a change reaches.
+function appSources(){
+  const rel = (f) => path.relative(ROOT, f).split(path.sep).join('/');
+  return APPS.map(app => {
+    piecesRead = new Set();
+    try{
+      buildApp(app, false);
+      return { app: path.basename(app.out, '.html'), out: rel(app.out), files: [...piecesRead].map(rel).sort() };
+    } finally {
+      piecesRead = null;
+    }
+  });
+}
+
 function firstDifference(a, b){
   const al = a.split('\n'), bl = b.split('\n');
   for(let i = 0; i < Math.max(al.length, bl.length); i++){
@@ -315,7 +337,7 @@ function siteHeaders(files){
   ].join('\n');
 }
 
-module.exports = { buildSite, siteHeaders, moduleFragment, ModuleError, LibraryError: LIBRARY.LibraryError, HelpError: HELP.HelpError };
+module.exports = { buildSite, siteHeaders, appSources, moduleFragment, ModuleError, LibraryError: LIBRARY.LibraryError, HelpError: HELP.HelpError };
 if(require.main === module) main();
 
 // Builds the site, reporting a library that fails (or is missing when required) and exiting.
