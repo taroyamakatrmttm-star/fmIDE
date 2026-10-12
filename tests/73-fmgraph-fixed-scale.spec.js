@@ -253,6 +253,7 @@ test('on a phone: the bar\'s quick look and Show keep its fixed scale', async ({
   await page.waitForFunction(() => !!window.fmGraph);
   await page.click('#btnSample');
   await expect(page.locator('body')).toHaveClass(/phone/);
+  await expect(page.locator('.bar-widget')).toHaveCount(2); // the sample's board shown, not only its model
   const id = await itemId(page);
   await g(page, (i) => fmGraph.setScale(i, { min: 0, max: 1000 }), id); // below the profits
   const cdp = await context.newCDPSession(page);
