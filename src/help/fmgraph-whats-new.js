@@ -8,6 +8,18 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'fixed-scale', date: '2026-10-12', title: 'A fixed vertical scale',
+    summary: 'Draw a bar or chart from a min to a max you choose, so moving a slider shows the change as a change in size.',
+    what: [
+      'Each bar and chart has a scale setting: Auto, as before — the scale stretches to the numbers shown — or Fixed scale, from a min to a max you choose.',
+      'Fixed scale starts from what Auto shows at that moment, rounded. Type other numbers if you like; 📏 fixes it again at what Auto shows now.',
+      'A number beyond a fixed scale is drawn to its edge with ▲ or ▼; its label still gives the number itself.',
+    ],
+    why: 'On Auto, the scale moves with the numbers, so a bar that grows can look about the same size as before. On a fixed scale the change is seen at a glance.',
+    how: ['Try the sample model, choose Fixed scale beside the Profit bar\'s colour, then move Price.', 'On a chart, the scale is at the end of Edit chart.'],
+    notes: ['Kept with the board, in board files and in fmIDE\'s documents (board file version 5; older files open on Auto). A board exported for a template leaves it out.'],
+    see: ['scale'] },
+
   { id: 'phone-mixer-show-share', date: '2026-10-09', title: 'On a phone: the mixer, Show, holding A, and Share',
     summary: 'Turn the phone sideways to move several sliders at once with your thumbs; show one chart full screen; hold A to look at a scenario; share a picture of the board.',
     what: [

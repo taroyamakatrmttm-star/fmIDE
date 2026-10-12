@@ -1,8 +1,9 @@
 // ============================================================
 // The boards (G3a: several, as tabs, each a view of the model). A board:
 //   { id, name, items: [bar | chart, …] (in the order shown), sliders: [slider, …] }
-//   bar    { id, kind: 'bar', key, periods, wide, colour }
-//   chart  { id, kind: 'chart', wide, layout: 'columns' | 'flow' | 'scenarios', … } (G2; 04b-charts.js)
+//   bar    { id, kind: 'bar', key, periods, wide, colour, scale }
+//   chart  { id, kind: 'chart', wide, layout: 'columns' | 'flow' | 'scenarios', scale, … } (G2; 04b-charts.js)
+// scale: null for Auto, or { min, max } (04d-scale.js).
 //   slider { id, key, periods, mode: 'set' | 'shift', min, max, step, value }
 // periods: { mode: 'all' } · { mode: 'one', p } · { mode: 'range', from, to } (from 0).
 // A slider's value is null until it moves (the model's own numbers); 'set' gives the input
@@ -94,7 +95,7 @@ function cleanBoard(raw, dropped){
   const bar = (b) => {
     const rect = rectForEntry(b);
     if(!rect){ drop(); return null; }
-    return { id: newWidgetId('b'), kind: 'bar', key: rect.key, periods: cleanPeriods(b.periods, count), wide: b.wide === true, colour: cleanColour(b.colour) };
+    return { id: newWidgetId('b'), kind: 'bar', key: rect.key, periods: cleanPeriods(b.periods, count), wide: b.wide === true, colour: cleanColour(b.colour), scale: cleanScale(b.scale) };
   };
   const chart = (c) => {
     const ch = cleanChart(c, rectForEntry, count);
@@ -105,6 +106,7 @@ function cleanBoard(raw, dropped){
       : (Array.isArray(c.groups) ? c.groups.reduce((n, gr) => n + (gr && Array.isArray(gr.parts) ? gr.parts.length : 0), 0) : 0));
     if(!ch || (named > 0 && !chartKeys(ch).length)){ drop(); return null; }
     ch.wide = c.wide !== false;
+    ch.scale = cleanScale(c.scale); // version 5 (04d-scale.js)
     return ch;
   };
   let items;
@@ -136,16 +138,18 @@ function cleanBoards(raw){
 // The board file's version (docs/file-formats.md): 1 (G3a); 2 (G5a) adds the template form
 // (`form: "template"`, 06c-template-boards.js); 3 adds the model's named scenarios
 // (`scenarios`, 05f-scenarios.js); 4 the scenario waterfall (a chart of layout `scenarios`,
-// 04b-charts.js). The template form, which carries neither, stays version 2.
-const BOARD_FILE_VERSION = 4;
+// 04b-charts.js); 5 a bar's or chart's fixed vertical scale (`scale`, 04d-scale.js). The
+// template form, which carries none of these, stays version 2.
+const BOARD_FILE_VERSION = 5;
 const TEMPLATE_BOARD_VERSION = 2;
 function boardData(b){
   const at = (key) => { const r = model.byKey.get(key); return { canvasId: r.canvasId, nodeId: r.nodeId, name: r.name }; };
+  const scaleOf = (w) => w.scale ? { scale: { min: w.scale.min, max: w.scale.max } } : {};
   return {
     name: b.name,
     items: b.items.map(w => w.kind === 'bar'
-      ? Object.assign({ type: 'bar' }, at(w.key), { periods: Object.assign({}, w.periods), wide: w.wide }, w.colour ? { colour: w.colour } : {})
-      : Object.assign({ type: 'chart', wide: w.wide }, chartData(w, at))),
+      ? Object.assign({ type: 'bar' }, at(w.key), { periods: Object.assign({}, w.periods), wide: w.wide }, w.colour ? { colour: w.colour } : {}, scaleOf(w))
+      : Object.assign({ type: 'chart', wide: w.wide }, chartData(w, at), scaleOf(w))),
     sliders: b.sliders.map(s => Object.assign(at(s.key), { periods: Object.assign({}, s.periods), mode: s.mode, min: s.min, max: s.max, step: s.step })),
   };
 }

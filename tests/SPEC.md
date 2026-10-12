@@ -950,6 +950,16 @@ Chromium at 390 × 844 with a touchscreen; real touch through the Chrome DevTool
 - ExcelExporter, `ir/error-cases.json`: every line in the page, three shown, "…and N more.", Show all N ▾ (`aria-expanded`) shows them all and scrolls inside the list, Show fewer ▴; × hides the panel; unticking Include on A changes the list and it comes back. `scenario-unit-price-volume.json` with one difference: no Show all, × there.
 - An iPad's Safari (its user agent, and a Mac with touch points as iPadOS asking for the desktop site): fmIDE's `#fileInputDocument`, `#fileInputWorkspace`, `#fileInputSystem` and ExcelExporter's and fmGraph's `#fileInput` have no `accept`; a `.fmide` opens through Open… with the file box. A desktop browser keeps the lists.
 
+### 73. fmGraph's fixed vertical scale (`tests/73-fmgraph-fixed-scale.spec.js`; `npm run test:fmgraph`; the owner's request, 12 October 2026)
+fmGraph at the usual size with the sample, through its page and `window.fmGraph` (`setScale`, `scale`); the last test on a phone (390 × 844, real touch). Every test: no page error.
+- A bar: Auto by default (no boxes, no scale lines); Fixed scale takes what Auto shows rounded outwards to two figures of its span (0 to Profit's largest, rounded); its two ends drawn and labelled. Price moved up: each bar is its number over the scale's top (a year past it stops at the edge), Year 1 taller than before; back on Auto the tallest bar fills the plot as before.
+- By the keyboard: to 10,000 and from −2,000 typed; the zero line where zero is on the scale; from above to, or an empty box: refused in words, the boxes put back, the scale unchanged; a scale without zero: no zero line. 📏 after Price moved: from 0 to just above the largest profit. `setScale` refuses min = max, sets and clears.
+- Past the scale (0 to 1,000): every bar to the top edge, ▲ on each with "Above the scale (1,000)", the label still the number itself; above every number: ▼; within it: no marks.
+- Charts: the balance sheet's Fixed scale 0 to 9,900, typed 5,000: ▲ on Years 3 and 4 both groups, the check still ✓; the waterfall's 📏: 0 to 10,000, its labels unchanged; a scenario waterfall of Profit and Revenue fixed at current: 0 to 12,000 on both outputs; switching kind keeps it.
+- Undo and redo: each change one step; a slider move none and the scale as it was; kept after a reload; Export all: version 5, the Profit bar's `scale`, none on the Closing cash bar; imported back as a new board with it.
+- `board-v4.json` (a bar and a scenario waterfall, a scenario): opens, every widget on Auto, the scenario added; hostile scales (text, min above or equal to max, 10³⁰⁰, one end missing, a list, text, null, −Infinity) read as Auto; −1.5 to 2.5 kept.
+- On a phone: the bar fixed below its numbers; held, its quick look's points all on the scale's top edge; ⤢ Show: the bar on its fixed scale, ▲ on all four years.
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.

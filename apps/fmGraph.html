@@ -106,6 +106,13 @@
   .bar-chart .t-diff.up{ fill:var(--up); font-weight:600; }
   .bar-chart .t-diff.down{ fill:var(--down); font-weight:600; }
   .bar-chart .t-err{ fill:var(--down); font-weight:600; }
+  /* A fixed vertical scale (04d-scale.js): its two ends, and ▲ / ▼ where a number goes past it. */
+  .bar-chart .b-scale-edge{ stroke:var(--line-strong); stroke-width:1; stroke-dasharray:2 3; }
+  .bar-chart .t-axis{ font-size:9.5px; fill:var(--soft-ink); stroke:#fff; stroke-width:3; paint-order:stroke; }
+  .bar-chart .t-over{ font-size:10px; fill:var(--ink); stroke:#fff; stroke-width:2.5; paint-order:stroke; }
+  .scale-chooser{ display:inline-flex; flex-wrap:wrap; align-items:center; gap:4px; }
+  .scale-chooser .scale-box{ width:84px; font:inherit; font-size:12.5px; padding:2px 4px; }
+  .scale-chooser .scale-to{ font-size:12.5px; color:var(--soft-ink); }
   .bar-errors{ margin:6px 0 0; padding:0; list-style:none; font-size:12px; color:var(--down); }
 
   /* A slider widget. */
@@ -3398,8 +3405,9 @@ function setCalcNote(text){ const el = $('calcNote'); if(el) el.textContent = te
 // ============================================================
 // The boards (G3a: several, as tabs, each a view of the model). A board:
 //   { id, name, items: [bar | chart, …] (in the order shown), sliders: [slider, …] }
-//   bar    { id, kind: 'bar', key, periods, wide, colour }
-//   chart  { id, kind: 'chart', wide, layout: 'columns' | 'flow' | 'scenarios', … } (G2; 04b-charts.js)
+//   bar    { id, kind: 'bar', key, periods, wide, colour, scale }
+//   chart  { id, kind: 'chart', wide, layout: 'columns' | 'flow' | 'scenarios', scale, … } (G2; 04b-charts.js)
+// scale: null for Auto, or { min, max } (04d-scale.js).
 //   slider { id, key, periods, mode: 'set' | 'shift', min, max, step, value }
 // periods: { mode: 'all' } · { mode: 'one', p } · { mode: 'range', from, to } (from 0).
 // A slider's value is null until it moves (the model's own numbers); 'set' gives the input
@@ -3491,7 +3499,7 @@ function cleanBoard(raw, dropped){
   const bar = (b) => {
     const rect = rectForEntry(b);
     if(!rect){ drop(); return null; }
-    return { id: newWidgetId('b'), kind: 'bar', key: rect.key, periods: cleanPeriods(b.periods, count), wide: b.wide === true, colour: cleanColour(b.colour) };
+    return { id: newWidgetId('b'), kind: 'bar', key: rect.key, periods: cleanPeriods(b.periods, count), wide: b.wide === true, colour: cleanColour(b.colour), scale: cleanScale(b.scale) };
   };
   const chart = (c) => {
     const ch = cleanChart(c, rectForEntry, count);
@@ -3502,6 +3510,7 @@ function cleanBoard(raw, dropped){
       : (Array.isArray(c.groups) ? c.groups.reduce((n, gr) => n + (gr && Array.isArray(gr.parts) ? gr.parts.length : 0), 0) : 0));
     if(!ch || (named > 0 && !chartKeys(ch).length)){ drop(); return null; }
     ch.wide = c.wide !== false;
+    ch.scale = cleanScale(c.scale); // version 5 (04d-scale.js)
     return ch;
   };
   let items;
@@ -3533,16 +3542,18 @@ function cleanBoards(raw){
 // The board file's version (docs/file-formats.md): 1 (G3a); 2 (G5a) adds the template form
 // (`form: "template"`, 06c-template-boards.js); 3 adds the model's named scenarios
 // (`scenarios`, 05f-scenarios.js); 4 the scenario waterfall (a chart of layout `scenarios`,
-// 04b-charts.js). The template form, which carries neither, stays version 2.
-const BOARD_FILE_VERSION = 4;
+// 04b-charts.js); 5 a bar's or chart's fixed vertical scale (`scale`, 04d-scale.js). The
+// template form, which carries none of these, stays version 2.
+const BOARD_FILE_VERSION = 5;
 const TEMPLATE_BOARD_VERSION = 2;
 function boardData(b){
   const at = (key) => { const r = model.byKey.get(key); return { canvasId: r.canvasId, nodeId: r.nodeId, name: r.name }; };
+  const scaleOf = (w) => w.scale ? { scale: { min: w.scale.min, max: w.scale.max } } : {};
   return {
     name: b.name,
     items: b.items.map(w => w.kind === 'bar'
-      ? Object.assign({ type: 'bar' }, at(w.key), { periods: Object.assign({}, w.periods), wide: w.wide }, w.colour ? { colour: w.colour } : {})
-      : Object.assign({ type: 'chart', wide: w.wide }, chartData(w, at))),
+      ? Object.assign({ type: 'bar' }, at(w.key), { periods: Object.assign({}, w.periods), wide: w.wide }, w.colour ? { colour: w.colour } : {}, scaleOf(w))
+      : Object.assign({ type: 'chart', wide: w.wide }, chartData(w, at), scaleOf(w))),
     sliders: b.sliders.map(s => Object.assign(at(s.key), { periods: Object.assign({}, s.periods), mode: s.mode, min: s.min, max: s.max, step: s.step })),
   };
 }
@@ -3907,6 +3918,132 @@ function syncUndoButtons(){
   if($('phoneUndo')){ $('phoneUndo').disabled = u.disabled; $('phoneRedo').disabled = r.disabled; } // ☰ on a phone (05g-phone.js)
 }
 // ============================================================
+// A bar's or chart's vertical scale (the owner's request, 12 October 2026). Auto, as before:
+// stretched to the numbers shown and always taking in zero, so it changes as a slider moves.
+// Fixed: from a min to a max the person chose, so a change shows as a change in size. A
+// widget's `scale` is absent or null (Auto) or { min, max } with min below max (board file
+// version 5; the template form leaves it out). A number past a fixed scale is drawn to the
+// edge with ▲ or ▼; its label and hover text still give the number itself. A scenario
+// waterfall's fixed scale is shared by all its outputs.
+// ============================================================
+const SCALE_LIMIT = 1e15;
+const autoScales = new Map(); // widget id → { lo, hi }: what Auto would show now (Fix at current scale)
+
+// A scale from a file, storage or a script: { min, max }, or null (Auto).
+function cleanScale(raw){
+  if(!raw || typeof raw !== 'object' || typeof raw.min !== 'number' || typeof raw.max !== 'number') return null;
+  const { min, max } = raw;
+  if(!Number.isFinite(min) || !Number.isFinite(max) || Math.abs(min) > SCALE_LIMIT || Math.abs(max) > SCALE_LIMIT || !(min < max)) return null;
+  return { min, max };
+}
+
+// Auto's range rounded outwards to two significant figures of its span: 0 to 1,234.5 → 0 to 1,300.
+function niceScale(lo, hi){
+  if(!(hi > lo)) return { min: lo, max: lo + 1 };
+  const step = Math.pow(10, Math.floor(Math.log10(hi - lo)) - 1);
+  const r = (x) => Number(x.toPrecision(12));
+  return { min: r(Math.floor(lo / step + 1e-9) * step), max: r(Math.ceil(hi / step - 1e-9) * step) };
+}
+
+// The range a widget is drawn on: its fixed scale, or Auto's. record: remember Auto's range for
+// Fix at current scale (a scenario waterfall records the range of all its outputs itself).
+function scaleFor(w, lo, hi, record){
+  if(record !== false) autoScales.set(w.id, { lo, hi });
+  return w.scale ? { lo: w.scale.min, hi: w.scale.max, fixed: true } : { lo, hi, fixed: false };
+}
+// y for a number on that range, kept inside the plot.
+function scaleY(top, plotH, sc){
+  return (v) => top + (sc.hi - Math.max(sc.lo, Math.min(sc.hi, v))) / (sc.hi - sc.lo) * plotH;
+}
+// The zero line (when zero is on the scale) and, on a fixed scale, its two ends.
+function drawScaleAxis(chart, sc, y, W, top, plotH){
+  if(sc.lo <= 0 && sc.hi >= 0) chart.appendChild(svg('line', { class: 'b-zero', x1: 0, x2: W, y1: y(0), y2: y(0) }));
+  if(!sc.fixed) return;
+  chart.appendChild(svg('line', { class: 'b-scale-edge', x1: 0, x2: W, y1: top, y2: top }));
+  chart.appendChild(svg('line', { class: 'b-scale-edge', x1: 0, x2: W, y1: top + plotH, y2: top + plotH }));
+  chart.appendChild(svg('text', { class: 't-axis', x: W - 2, y: top + 10, 'text-anchor': 'end' }, fmtNum(sc.hi)));
+  chart.appendChild(svg('text', { class: 't-axis', x: W - 2, y: top + plotH - 3, 'text-anchor': 'end' }, fmtNum(sc.lo)));
+}
+// The scale's two numbers drawn last, over the bars.
+function raiseScaleLabels(chart){ chart.querySelectorAll('.t-axis').forEach(t => chart.appendChild(t)); }
+// ▲ / ▼ where a number goes past a fixed scale.
+function drawOverMarks(g, sc, cx, top, plotH, highest, lowest){
+  if(!sc.fixed) return;
+  const mark = (up) => {
+    const t = svg('text', { class: 't-over', x: cx, y: up ? top + 11 : top + plotH - 3, 'text-anchor': 'middle' }, up ? '▲' : '▼');
+    t.appendChild(svg('title', {}, up ? 'Above the scale (' + fmtNum(sc.hi) + ')' : 'Below the scale (' + fmtNum(sc.lo) + ')'));
+    g.appendChild(t);
+  };
+  if(highest > sc.hi) mark(true);
+  if(lowest < sc.lo) mark(false);
+}
+
+// Sets a widget's scale: null (Auto), 'current' (Fix at current scale) or { min, max }.
+// Returns the scale set, or throws when it isn't one.
+function setWidgetScale(w, spec){
+  if(spec === null){ w.scale = null; return null; }
+  if(spec === 'current'){
+    const a = autoScales.get(w.id);
+    w.scale = a ? niceScale(a.lo, a.hi) : { min: 0, max: 1 };
+    return Object.assign({}, w.scale);
+  }
+  const s = cleanScale(spec);
+  if(!s) throw new Error('A scale is two numbers, its "from" below its "to".');
+  w.scale = s;
+  return Object.assign({}, s);
+}
+
+// Scale: Auto or Fixed, from … to …, and 📏 Fix at current scale. onChange after each change.
+function scaleChooser(w, onChange){
+  const wrap = make('span', 'scale-chooser');
+  const mode = make('select');
+  mode.setAttribute('aria-label', 'Vertical scale');
+  [['auto', 'Auto scale'], ['fixed', 'Fixed scale']].forEach(([v, t]) => { const o = make('option', null, t); o.value = v; mode.appendChild(o); });
+  const box = (label) => {
+    const i = make('input', 'scale-box');
+    i.type = 'number';
+    i.step = 'any';
+    i.setAttribute('aria-label', label);
+    i.title = label;
+    return i;
+  };
+  const minBox = box('Scale from'), maxBox = box('Scale to');
+  const to = make('span', 'scale-to', 'to');
+  const fixNow = make('button', 'mini scale-fix', '📏');
+  fixNow.type = 'button';
+  fixNow.title = 'Fix at current scale';
+  fixNow.setAttribute('aria-label', 'Fix at current scale');
+  const show = () => {
+    mode.value = w.scale ? 'fixed' : 'auto';
+    minBox.value = w.scale ? String(w.scale.min) : '';
+    maxBox.value = w.scale ? String(w.scale.max) : '';
+    [minBox, to, maxBox].forEach(el => el.classList.toggle('hidden', !w.scale));
+  };
+  const fixCurrent = () => { setWidgetScale(w, 'current'); show(); onChange(); };
+  mode.addEventListener('change', () => {
+    if(mode.value === 'auto'){ w.scale = null; show(); onChange(); }
+    else fixCurrent();
+  });
+  fixNow.addEventListener('click', fixCurrent);
+  const typed = () => {
+    const num = (i) => i.value.trim() === '' ? NaN : Number(i.value);
+    const s = cleanScale({ min: num(minBox), max: num(maxBox) });
+    if(!s){
+      notify('The scale wasn\'t changed: its "from" and "to" must be numbers, "from" below "to".', 'err', 'scale');
+      show();
+      return;
+    }
+    notify('', null, 'scale');
+    if(w.scale && w.scale.min === s.min && w.scale.max === s.max) return;
+    w.scale = s;
+    onChange();
+  };
+  [minBox, maxBox].forEach(i => i.addEventListener('change', typed));
+  wrap.append(mode, minBox, to, maxBox, fixNow);
+  show();
+  return wrap;
+}
+// ============================================================
 // Drawing the board. renderBoard() builds every widget; updateValues() redraws only the
 // numbers and bars (it runs on every slider move). Everything from the model (names, canvas
 // and period labels) goes in as text — textContent, or SVG text nodes — never as markup.
@@ -4047,6 +4184,7 @@ function barWidget(b){
   const row = make('div', 'widget-row bar-settings');
   row.appendChild(periodsChooser(b.periods, (p) => { b.periods = p; saveBoardSoon(); updateValues(); }));
   row.appendChild(colourPicker(b.colour || DEFAULT_BAR_COLOUR, 'Bar colour', (c) => { b.colour = c === DEFAULT_BAR_COLOUR ? null : c; saveBoardSoon(); updateValues(); }));
+  row.appendChild(scaleChooser(b, () => { saveBoardSoon(); updateValues(); })); // (04d-scale.js)
   const rect = model.byKey.get(b.key);
   w.append(head, row);
   if(rect.unit) w.appendChild(make('div', 'widget-unit', 'In ' + rect.unit));
@@ -4241,15 +4379,16 @@ function drawBars(el, b, results){
   now.concat(base).forEach(r => { if(!r.error) nums.push(r.value); });
   let lo = Math.min(0, ...nums), hi = Math.max(0, ...nums);
   if(hi === lo) hi = lo + 1;
+  const sc = scaleFor(b, lo, hi); // Auto, or the bar's fixed scale (04d-scale.js)
   // Room above for the labels of bars going up, and below for those of bars going down.
   const n = Math.max(1, ps.length), labels = n <= 8;
-  const W = 300, top = hi > 0 && labels ? 34 : 12, bottom = 22 + (lo < 0 && labels ? 30 : 0), H = 130 + top + bottom;
+  const W = 300, top = sc.hi > 0 && labels ? 34 : 12, bottom = 22 + (sc.lo < 0 && labels ? 30 : 0), H = 130 + top + bottom;
   const plotH = H - top - bottom;
-  const y = (v) => top + (hi - v) / (hi - lo) * plotH;
+  const y = scaleY(top, plotH, sc);
   const slot = (W - 8) / n, bw = Math.max(3, Math.min(46, slot * 0.62));
-  const chart = svg('svg', { class: 'bar-chart', viewBox: '0 0 ' + W + ' ' + H, role: 'img' });
+  const chart = svg('svg', { class: 'bar-chart' + (sc.fixed ? ' fixed-scale' : ''), viewBox: '0 0 ' + W + ' ' + H, role: 'img' });
   chart.setAttribute('aria-label', rect.name);
-  chart.appendChild(svg('line', { class: 'b-zero', x1: 0, x2: W, y1: y(0), y2: y(0) }));
+  drawScaleAxis(chart, sc, y, W, top, plotH);
   const problems = new Map();
   ps.forEach((p, i) => {
     const cx = 4 + slot * i + slot / 2, x = cx - bw / 2;
@@ -4269,6 +4408,7 @@ function drawBars(el, b, results){
         const yb = y(was.value);
         g.appendChild(svg('rect', { class: 'b-base', x, y: Math.min(y0, yb), width: bw, height: Math.max(1, Math.abs(yb - y0)) }));
       }
+      drawOverMarks(g, sc, cx, top, plotH, r.value, r.value);
       const diff = was.error ? '' : fmtDiff(r.value, was.value);
       const textY = r.value >= 0 ? Math.min(y0, y1) - 4 : Math.max(y0, y1) + 12;
       if(labels){
@@ -4280,6 +4420,7 @@ function drawBars(el, b, results){
     if(labels || i === 0 || i === n - 1) g.appendChild(svg('text', { class: 't-period', x: cx, y: H - 6, 'text-anchor': 'middle' }, model.periods[p]));
     chart.appendChild(g);
   });
+  raiseScaleLabels(chart);
   const host = el.querySelector('.bar-chart-host');
   host.textContent = '';
   host.appendChild(chart);
@@ -4352,7 +4493,15 @@ function rememberOpenEditors(){
   });
 }
 
+// Edit chart: what the chart shows, then its vertical scale (04d-scale.js).
 function chartEditor(c){
+  const box = chartEditorParts(c);
+  const scaleRow = make('div', 'widget-row scale-row');
+  scaleRow.appendChild(scaleChooser(c, () => { saveBoardSoon(); updateValues(); }));
+  box.appendChild(scaleRow);
+  return box;
+}
+function chartEditorParts(c){
   const box = make('details', 'chart-edit');
   if(chartsEditing.has(c.id)) box.open = true;
   box.addEventListener('toggle', () => { if(box.open) chartsEditing.add(c.id); else chartsEditing.delete(c.id); });
@@ -4519,15 +4668,16 @@ function drawColumns(c, results, problems, key){
   let lo = 0, hi = 0;
   now.concat(was).forEach(f => f.groups.forEach(g => { lo = Math.min(lo, g.down); hi = Math.max(hi, g.up); }));
   if(hi === lo) hi = lo + 1;
+  const sc = scaleFor(c, lo, hi); // Auto, or the chart's fixed scale (04d-scale.js)
   const checked = now.some(f => f.check);
-  const W = 560, top = 18 + (labels ? 16 : 0) + (checked ? 16 : 0), bottom = 22 + (lo < 0 && labels ? 16 : 0), H = 170 + top + bottom;
+  const W = 560, top = 18 + (labels ? 16 : 0) + (checked ? 16 : 0), bottom = 22 + (sc.lo < 0 && labels ? 16 : 0), H = 170 + top + bottom;
   const plotH = H - top - bottom;
-  const y = (v) => top + (hi - v) / (hi - lo) * plotH;
+  const y = scaleY(top, plotH, sc);
   const slot = (W - 8) / n, gap = 6;
   const bw = Math.max(3, Math.min(44, (slot * 0.8 - gap * (ng - 1)) / ng));
-  const chart = svg('svg', { class: 'bar-chart', viewBox: '0 0 ' + W + ' ' + H, role: 'img' });
+  const chart = svg('svg', { class: 'bar-chart' + (sc.fixed ? ' fixed-scale' : ''), viewBox: '0 0 ' + W + ' ' + H, role: 'img' });
   chart.setAttribute('aria-label', c.title || 'Columns');
-  chart.appendChild(svg('line', { class: 'b-zero', x1: 0, x2: W, y1: y(0), y2: y(0) }));
+  drawScaleAxis(chart, sc, y, W, top, plotH);
   now.forEach((f, i) => {
     const slotX = 4 + slot * i, groupsW = ng * bw + (ng - 1) * gap;
     const g = svg('g', { class: 'c-period', 'data-period': f.p });
@@ -4551,6 +4701,7 @@ function drawColumns(c, results, problems, key){
           rect.appendChild(svg('title', {}, name + ' · ' + partLabel(k) + ', ' + model.periods[f.p] + ': ' + fmtNum(v) + (diff ? ' — was ' + fmtNum(before.value) + ', ' + diff : '')));
           gEl.appendChild(rect);
         });
+        drawOverMarks(gEl, sc, cx, top, plotH, grp.up, grp.down);
         const b = was[i].groups[gi];
         if(!b.error && (!agree(b.up, grp.up) || !agree(b.down, grp.down))){
           gEl.appendChild(svg('rect', { class: 'b-base', x, y: y(b.up), width: bw, height: Math.max(1, y(b.down) - y(b.up)) }));
@@ -4589,6 +4740,7 @@ function drawColumns(c, results, problems, key){
     });
     key.appendChild(line);
   });
+  raiseScaleLabels(chart);
   return chart;
 }
 
@@ -4598,13 +4750,14 @@ function drawFlow(c, results, problems){
   let lo = 0, hi = 0;
   now.concat(was).forEach(f => { if(!f.error){ lo = Math.min(lo, f.from, f.to); hi = Math.max(hi, f.from, f.to); } });
   if(hi === lo) hi = lo + 1;
+  const sc = scaleFor(c, lo, hi);
   const W = 560, top = 18 + (labels ? 30 : 0), bottom = 36, H = 170 + top + bottom;
   const plotH = H - top - bottom;
-  const y = (v) => top + (hi - v) / (hi - lo) * plotH;
+  const y = scaleY(top, plotH, sc);
   const slot = (W - 8) / n, bw = Math.max(3, Math.min(46, slot * 0.62));
-  const chart = svg('svg', { class: 'bar-chart flow-chart', viewBox: '0 0 ' + W + ' ' + H, role: 'img' });
+  const chart = svg('svg', { class: 'bar-chart flow-chart' + (sc.fixed ? ' fixed-scale' : ''), viewBox: '0 0 ' + W + ' ' + H, role: 'img' });
   chart.setAttribute('aria-label', (c.title || 'Waterfall') + ', ' + model.periods[c.period]);
-  chart.appendChild(svg('line', { class: 'b-zero', x1: 0, x2: W, y1: y(0), y2: y(0) }));
+  drawScaleAxis(chart, sc, y, W, top, plotH);
   let prevEnd = null;
   now.forEach((f, i) => {
     const s = c.steps[i], name = partLabel(s.key);
@@ -4624,6 +4777,7 @@ function drawFlow(c, results, problems){
       const diff = b && !b.error ? fmtDiff(f.value, b.value) : '';
       rect.appendChild(svg('title', {}, name + ' (' + ROLE_LABELS[s.role].toLowerCase() + '), ' + model.periods[c.period] + ': ' + fmtNum(f.value) + (diff ? ' — was ' + fmtNum(b.value) + ', ' + diff : '')));
       g.appendChild(rect);
+      drawOverMarks(g, sc, cx, top, plotH, Math.max(f.from, f.to), Math.min(f.from, f.to));
       if(b && !b.error && (!agree(b.from, f.from) || !agree(b.to, f.to))){
         g.appendChild(svg('rect', { class: 'b-base', x, y: Math.min(y(b.from), y(b.to)), width: bw, height: Math.max(1, Math.abs(y(b.to) - y(b.from))) }));
       }
@@ -4649,6 +4803,7 @@ function drawFlow(c, results, problems){
     chart.appendChild(g);
   });
   chart.appendChild(svg('text', { class: 't-period', x: W / 2, y: H - 4, 'text-anchor': 'middle' }, model.periods[c.period]));
+  raiseScaleLabels(chart);
   return chart;
 }
 
@@ -4667,7 +4822,12 @@ function drawScenarioFlows(c, problems){
   if(!c.outputs.length) problems.push('No outputs yet: Edit chart adds them.');
   const memo = new Map();
   const resultsFor = (sc) => { if(!memo.has(sc)) memo.set(sc, scenarioResults(sc)); return memo.get(sc); };
-  c.outputs.forEach((key, oi) => wrap.appendChild(drawScenarioFlow(c, key, oi, scenarioFigures(c, key, resultsFor), problems)));
+  const all = c.outputs.map(key => scenarioFigures(c, key, resultsFor));
+  // Fix at current scale takes in every output: a fixed scale is shared by them all.
+  let lo = 0, hi = 0;
+  all.forEach(figs => figs.forEach(f => { if(!f.error){ lo = Math.min(lo, f.from, f.to); hi = Math.max(hi, f.from, f.to); } }));
+  autoScales.set(c.id, { lo, hi: hi === lo ? lo + 1 : hi });
+  c.outputs.forEach((key, oi) => wrap.appendChild(drawScenarioFlow(c, key, oi, all[oi], problems)));
   return wrap;
 }
 function drawScenarioFlow(c, key, oi, figs, problems){
@@ -4676,14 +4836,15 @@ function drawScenarioFlow(c, key, oi, figs, problems){
   let lo = 0, hi = 0;
   figs.forEach(f => { if(!f.error){ lo = Math.min(lo, f.from, f.to); hi = Math.max(hi, f.from, f.to); } });
   if(hi === lo) hi = lo + 1;
+  const sc = scaleFor(c, lo, hi, false);
   const W = Math.max(260, Math.min(560, 70 + n * 52)), top = 34 + (labels ? 14 : 0), bottom = 36, H = 150 + top + bottom;
   const plotH = H - top - bottom;
-  const y = (v) => top + (hi - v) / (hi - lo) * plotH;
+  const y = scaleY(top, plotH, sc);
   const slot = (W - 8) / n, bw = Math.max(3, Math.min(46, slot * 0.62));
-  const chart = svg('svg', { class: 'bar-chart flow-chart scenario-flow', viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'data-output': name });
+  const chart = svg('svg', { class: 'bar-chart flow-chart scenario-flow' + (sc.fixed ? ' fixed-scale' : ''), viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'data-output': name });
   chart.setAttribute('aria-label', name + ' through the scenarios, ' + model.periods[c.period]);
   chart.appendChild(svg('text', { class: 't-flow-title', x: 6, y: 14 }, name + ' — ' + model.periods[c.period]));
-  chart.appendChild(svg('line', { class: 'b-zero', x1: 0, x2: W, y1: y(0), y2: y(0) }));
+  drawScaleAxis(chart, sc, y, W, top, plotH);
   let prevEnd = null;
   figs.forEach((f, i) => {
     const cx = 4 + slot * i + slot / 2, x = cx - bw / 2;
@@ -4701,6 +4862,7 @@ function drawScenarioFlow(c, key, oi, figs, problems){
         ? f.name + ': ' + fmtNum(f.number) + ' (' + (f.value >= 0 ? '+' : '−') + fmtNum(Math.abs(f.value)) + ' from ' + (i === 1 ? 'the start' : figs[i - 1].name) + ')'
         : (f.kind === 'start' ? 'Start (the model\'s own number)' : 'End (' + figs[figs.length - 2].name + ')') + ': ' + fmtNum(f.value)));
       g.appendChild(rect);
+      drawOverMarks(g, sc, cx, top, plotH, Math.max(f.from, f.to), Math.min(f.from, f.to));
       if(labels){
         const shown = f.kind === 'step' ? (f.value >= 0 ? '+' : '−') + fmtNum(Math.abs(f.value)) : fmtNum(f.value);
         g.appendChild(svg('text', { class: 't-value', x: cx, y: Math.min(y(f.from), y(f.to)) - 4, 'text-anchor': 'middle' }, shown));
@@ -4713,6 +4875,7 @@ function drawScenarioFlow(c, key, oi, figs, problems){
     g.appendChild(label);
     chart.appendChild(g);
   });
+  raiseScaleLabels(chart);
   return chart;
 }
 // ============================================================
@@ -5949,10 +6112,12 @@ function openPeek(b){
     if(hi === lo) hi = lo + 1;
     const W = 320, H = 110, n = all.length;
     const x = (i) => n === 1 ? W / 2 : 14 + i * (W - 28) / (n - 1);
-    const y = (v) => 8 + (hi - v) / (hi - lo) * (H - 16);
+    // The bar's fixed scale, if it has one (04d-scale.js); numbers past it on its edge.
+    const sc = b.scale ? { lo: b.scale.min, hi: b.scale.max } : { lo, hi };
+    const y = scaleY(8, H - 16, sc);
     const chart = svg('svg', { class: 'peek-line', viewBox: '0 0 ' + W + ' ' + H, role: 'img' });
     chart.setAttribute('aria-label', rect.name + ', every period');
-    chart.appendChild(svg('line', { class: 'b-zero', x1: 0, x2: W, y1: y(0), y2: y(0) }));
+    if(sc.lo <= 0 && sc.hi >= 0) chart.appendChild(svg('line', { class: 'b-zero', x1: 0, x2: W, y1: y(0), y2: y(0) }));
     const line = (key, cls) => {
       const pts = all.filter(r => !r[key].error).map(r => x(r.p) + ',' + y(r[key].value)).join(' ');
       if(pts) chart.appendChild(svg('polyline', { class: cls, points: pts }));
@@ -6342,7 +6507,7 @@ const PICTURE_PAD = 44;
 const PICTURE_MAX_H = 16000;
 const PICTURE_ZOOM = 1.8;         // a widget's drawing at most this much larger than its own size      // a browser's canvas stops somewhere beyond this
 const PICTURE_FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
-const SVG_LOOK = ['fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'opacity', 'fill-opacity', 'font-size', 'font-weight', 'font-family', 'text-anchor'];
+const SVG_LOOK = ['fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'opacity', 'fill-opacity', 'font-size', 'font-weight', 'font-family', 'text-anchor', 'paint-order'];
 
 // An SVG on the page as an image: its look (from the style sheet) written into each element.
 function svgPicture(el){
@@ -6730,8 +6895,8 @@ back.addEventListener('click', (ev) => {
 const BOARD_FILE_FORMAT = { 'fmIDE-graph-board': { current: BOARD_FILE_VERSION, label: 'fmGraph board file' } };
 // v1 → v2: a board file may be in the template form (G5a); a v1 file is boards for one model.
 // v2 → v3: boards for one model may carry the model's named scenarios; v3 → v4: a chart may be a
-// scenario waterfall.
-const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {} } };
+// scenario waterfall; v4 → v5: a bar or chart may have a fixed vertical scale. Nothing to change.
+const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {} } };
 
 function safeFileName(s){ return String(s).replace(/[^A-Za-z0-9 ._()-]+/g, '_').replace(/\s+/g, ' ').trim().slice(0, 80) || 'board'; }
 
@@ -7791,7 +7956,18 @@ const FMGRAPH_HELP_TOPICS = [
       { p: 'When a slider has changed something it reaches, a dashed outline shows the model\'s own value and a label shows the difference, for example +250 (+12%) — or A\'s value, while one is pinned (see Comparing two what-ifs). Point at a bar to read its numbers.' },
       { p: 'A bar marked ! couldn\'t be worked out in that period (for example a division by zero); the reason is listed below the chart.' },
       { steps: ['Press + Bar at the top.', 'Choose a rectangle from the list.', 'Choose which periods to show.'] },
-      { see: ['sliders', 'reach'] },
+      { see: ['scale', 'sliders', 'reach'] },
+    ] },
+  { id: 'scale', group: 'board', title: 'A fixed vertical scale',
+    keywords: 'scale axis vertical fixed auto min max minimum maximum range zoom compare size height',
+    summary: 'Draw a bar or chart from a min to a max you choose, so a change shows as a change in size.',
+    body: [
+      { p: 'Each bar and chart starts on Auto: its scale stretches to the numbers it shows (and always takes in zero), so it changes as you move a slider. That keeps every bar in view, but a bar that doubles can look about the same size as before.' },
+      { p: 'Fixed scale draws it from a min to a max you choose instead, and keeps them as sliders move: a number that grows makes a taller bar. Choosing Fixed scale takes what Auto shows at that moment, rounded; type other numbers in its from and to boxes; 📏 fixes it again at what Auto shows now. Auto scale goes back.' },
+      { p: 'A number beyond a fixed scale is drawn to its edge with ▲ (above) or ▼ (below); its label and the words when you point at it still give the number itself. The scale\'s two ends are drawn as dotted lines with their numbers.' },
+      { p: 'A bar\'s scale sits beside its colour; a chart\'s at the end of Edit chart. A scenario waterfall\'s fixed scale is shared by all its outputs, so they can be compared. The scale is kept with the board, in board files and in fmIDE\'s documents, and each change can be undone; a board exported for a template leaves it out.' },
+      { steps: ['Move nothing yet, or set the sliders where you want to start.', 'On a bar, choose Fixed scale beside its colour (on a chart, open Edit chart).', 'Move a slider: the bars grow and shrink against the same scale.'] },
+      { see: ['bars', 'charts'] },
     ] },
   { id: 'sliders', group: 'board', title: 'Sliders',
     keywords: 'slider input change set percent shift range step reset what if',
@@ -7832,7 +8008,7 @@ const FMGRAPH_HELP_TOPICS = [
       { p: 'Scenario waterfall: for each output you choose, in one period, a waterfall from the model\'s own number (Start) through each of your named scenarios in turn — each step the change from the one before — to the last scenario\'s number (End). Each output gets its own small waterfall. It shows the scenarios, not where the sliders are now, and follows them as you update, reorder, rename or delete them. Edit chart chooses the period, the outputs (up to six) and which scenarios it goes through, in the Scenarios panel\'s order. A template\'s board never holds one, since templates carry no scenarios.' },
       { steps: ['Press + Chart at the top. Its editor opens.', 'Choose the rectangles: + Rectangle adds one to a group, + Group a new group; ↑ ↓ reorder, × removes.', 'Or choose Waterfall at the top of the chart, then each step\'s role.'] },
       { tip: 'Numbers agree when they differ by less than a millionth of their size, so tiny rounding never shows as ✗. A chart mixing units says so below it.' },
-      { see: ['bars', 'reach', 'scenarios'] },
+      { see: ['bars', 'scale', 'reach', 'scenarios'] },
     ] },
   { id: 'boards', group: 'board', title: 'Boards: tabs, arranging, colours, undo',
     keywords: 'board boards tab tabs arrange move drag order wide narrow colour color undo redo rename duplicate delete',
@@ -7942,6 +8118,18 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'fixed-scale', date: '2026-10-12', title: 'A fixed vertical scale',
+    summary: 'Draw a bar or chart from a min to a max you choose, so moving a slider shows the change as a change in size.',
+    what: [
+      'Each bar and chart has a scale setting: Auto, as before — the scale stretches to the numbers shown — or Fixed scale, from a min to a max you choose.',
+      'Fixed scale starts from what Auto shows at that moment, rounded. Type other numbers if you like; 📏 fixes it again at what Auto shows now.',
+      'A number beyond a fixed scale is drawn to its edge with ▲ or ▼; its label still gives the number itself.',
+    ],
+    why: 'On Auto, the scale moves with the numbers, so a bar that grows can look about the same size as before. On a fixed scale the change is seen at a glance.',
+    how: ['Try the sample model, choose Fixed scale beside the Profit bar\'s colour, then move Price.', 'On a chart, the scale is at the end of Edit chart.'],
+    notes: ['Kept with the board, in board files and in fmIDE\'s documents (board file version 5; older files open on Auto). A board exported for a template leaves it out.'],
+    see: ['scale'] },
+
   { id: 'phone-mixer-show-share', date: '2026-10-09', title: 'On a phone: the mixer, Show, holding A, and Share',
     summary: 'Turn the phone sideways to move several sliders at once with your thumbs; show one chart full screen; hold A to look at a scenario; share a picture of the board.',
     what: [
@@ -8437,6 +8625,9 @@ $('btnTutorials').addEventListener('click', () => { help.open(); });
 //   renameBoard(name), duplicateBoard(), removeBoard() (the one shown; the last can't go)
 //   move(id, index) (a bar or chart among the items, a slider among the sliders),
 //   setWide(id, wide), setColour(id, '#rrggbb' or null, rect?) (a bar's, or a chart rectangle's)
+//   setScale(id, { min, max } | 'current' | null) → the bar's or chart's vertical scale: fixed,
+//                  fixed at what Auto shows now, or Auto (null); returns { min, max } or null
+//   scale(id)      → its fixed scale { min, max }, or null (Auto)
 //   undo(), redo() → whether there was one; exportBoards(all?) → the file's data (downloads it)
 //   importBoards(textOrObject) → Promise<number of boards added>
 //   calcTime()     → how long one run of the model takes, in milliseconds
@@ -8554,6 +8745,19 @@ window.fmGraph = Object.freeze({
   removeBoard: () => { if(boards.length < 2) throw new Error('The last board can\'t be removed.'); removeBoard(board); },
   move: (id, index) => { const ok = moveWidget(id, Number(index)); renderBoard(); return ok; },
   setWide: (id, wide) => { const w = board.items.find(x => x.id === id); if(!w) throw new Error('There is no bar or chart "' + String(id).slice(0, 40) + '".'); w.wide = !!wide; saveBoardSoon(); renderBoard(); },
+  setScale: (id, spec) => {
+    const w = board.items.find(x => x.id === id);
+    if(!w) throw new Error('There is no bar or chart "' + String(id).slice(0, 40) + '".');
+    const s = setWidgetScale(w, spec === undefined ? null : spec);
+    saveBoardSoon();
+    renderBoard();
+    return s;
+  },
+  scale: (id) => {
+    const w = board.items.find(x => x.id === id);
+    if(!w) throw new Error('There is no bar or chart "' + String(id).slice(0, 40) + '".');
+    return w.scale ? { min: w.scale.min, max: w.scale.max } : null;
+  },
   setColour: (id, colour, rect) => {
     const c = colour === null ? null : cleanColour(colour);
     if(colour !== null && !c) throw new Error('A colour is written #rrggbb.');

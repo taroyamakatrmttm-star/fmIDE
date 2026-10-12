@@ -12,7 +12,7 @@ const PICTURE_PAD = 44;
 const PICTURE_MAX_H = 16000;
 const PICTURE_ZOOM = 1.8;         // a widget's drawing at most this much larger than its own size      // a browser's canvas stops somewhere beyond this
 const PICTURE_FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
-const SVG_LOOK = ['fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'opacity', 'fill-opacity', 'font-size', 'font-weight', 'font-family', 'text-anchor'];
+const SVG_LOOK = ['fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'opacity', 'fill-opacity', 'font-size', 'font-weight', 'font-family', 'text-anchor', 'paint-order'];
 
 // An SVG on the page as an image: its look (from the style sheet) written into each element.
 function svgPicture(el){

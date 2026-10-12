@@ -62,7 +62,15 @@ function rememberOpenEditors(){
   });
 }
 
+// Edit chart: what the chart shows, then its vertical scale (04d-scale.js).
 function chartEditor(c){
+  const box = chartEditorParts(c);
+  const scaleRow = make('div', 'widget-row scale-row');
+  scaleRow.appendChild(scaleChooser(c, () => { saveBoardSoon(); updateValues(); }));
+  box.appendChild(scaleRow);
+  return box;
+}
+function chartEditorParts(c){
   const box = make('details', 'chart-edit');
   if(chartsEditing.has(c.id)) box.open = true;
   box.addEventListener('toggle', () => { if(box.open) chartsEditing.add(c.id); else chartsEditing.delete(c.id); });
@@ -229,15 +237,16 @@ function drawColumns(c, results, problems, key){
   let lo = 0, hi = 0;
   now.concat(was).forEach(f => f.groups.forEach(g => { lo = Math.min(lo, g.down); hi = Math.max(hi, g.up); }));
   if(hi === lo) hi = lo + 1;
+  const sc = scaleFor(c, lo, hi); // Auto, or the chart's fixed scale (04d-scale.js)
   const checked = now.some(f => f.check);
-  const W = 560, top = 18 + (labels ? 16 : 0) + (checked ? 16 : 0), bottom = 22 + (lo < 0 && labels ? 16 : 0), H = 170 + top + bottom;
+  const W = 560, top = 18 + (labels ? 16 : 0) + (checked ? 16 : 0), bottom = 22 + (sc.lo < 0 && labels ? 16 : 0), H = 170 + top + bottom;
   const plotH = H - top - bottom;
-  const y = (v) => top + (hi - v) / (hi - lo) * plotH;
+  const y = scaleY(top, plotH, sc);
   const slot = (W - 8) / n, gap = 6;
   const bw = Math.max(3, Math.min(44, (slot * 0.8 - gap * (ng - 1)) / ng));
-  const chart = svg('svg', { class: 'bar-chart', viewBox: '0 0 ' + W + ' ' + H, role: 'img' });
+  const chart = svg('svg', { class: 'bar-chart' + (sc.fixed ? ' fixed-scale' : ''), viewBox: '0 0 ' + W + ' ' + H, role: 'img' });
   chart.setAttribute('aria-label', c.title || 'Columns');
-  chart.appendChild(svg('line', { class: 'b-zero', x1: 0, x2: W, y1: y(0), y2: y(0) }));
+  drawScaleAxis(chart, sc, y, W, top, plotH);
   now.forEach((f, i) => {
     const slotX = 4 + slot * i, groupsW = ng * bw + (ng - 1) * gap;
     const g = svg('g', { class: 'c-period', 'data-period': f.p });
@@ -261,6 +270,7 @@ function drawColumns(c, results, problems, key){
           rect.appendChild(svg('title', {}, name + ' · ' + partLabel(k) + ', ' + model.periods[f.p] + ': ' + fmtNum(v) + (diff ? ' — was ' + fmtNum(before.value) + ', ' + diff : '')));
           gEl.appendChild(rect);
         });
+        drawOverMarks(gEl, sc, cx, top, plotH, grp.up, grp.down);
         const b = was[i].groups[gi];
         if(!b.error && (!agree(b.up, grp.up) || !agree(b.down, grp.down))){
           gEl.appendChild(svg('rect', { class: 'b-base', x, y: y(b.up), width: bw, height: Math.max(1, y(b.down) - y(b.up)) }));
@@ -299,6 +309,7 @@ function drawColumns(c, results, problems, key){
     });
     key.appendChild(line);
   });
+  raiseScaleLabels(chart);
   return chart;
 }
 
@@ -308,13 +319,14 @@ function drawFlow(c, results, problems){
   let lo = 0, hi = 0;
   now.concat(was).forEach(f => { if(!f.error){ lo = Math.min(lo, f.from, f.to); hi = Math.max(hi, f.from, f.to); } });
   if(hi === lo) hi = lo + 1;
+  const sc = scaleFor(c, lo, hi);
   const W = 560, top = 18 + (labels ? 30 : 0), bottom = 36, H = 170 + top + bottom;
   const plotH = H - top - bottom;
-  const y = (v) => top + (hi - v) / (hi - lo) * plotH;
+  const y = scaleY(top, plotH, sc);
   const slot = (W - 8) / n, bw = Math.max(3, Math.min(46, slot * 0.62));
-  const chart = svg('svg', { class: 'bar-chart flow-chart', viewBox: '0 0 ' + W + ' ' + H, role: 'img' });
+  const chart = svg('svg', { class: 'bar-chart flow-chart' + (sc.fixed ? ' fixed-scale' : ''), viewBox: '0 0 ' + W + ' ' + H, role: 'img' });
   chart.setAttribute('aria-label', (c.title || 'Waterfall') + ', ' + model.periods[c.period]);
-  chart.appendChild(svg('line', { class: 'b-zero', x1: 0, x2: W, y1: y(0), y2: y(0) }));
+  drawScaleAxis(chart, sc, y, W, top, plotH);
   let prevEnd = null;
   now.forEach((f, i) => {
     const s = c.steps[i], name = partLabel(s.key);
@@ -334,6 +346,7 @@ function drawFlow(c, results, problems){
       const diff = b && !b.error ? fmtDiff(f.value, b.value) : '';
       rect.appendChild(svg('title', {}, name + ' (' + ROLE_LABELS[s.role].toLowerCase() + '), ' + model.periods[c.period] + ': ' + fmtNum(f.value) + (diff ? ' — was ' + fmtNum(b.value) + ', ' + diff : '')));
       g.appendChild(rect);
+      drawOverMarks(g, sc, cx, top, plotH, Math.max(f.from, f.to), Math.min(f.from, f.to));
       if(b && !b.error && (!agree(b.from, f.from) || !agree(b.to, f.to))){
         g.appendChild(svg('rect', { class: 'b-base', x, y: Math.min(y(b.from), y(b.to)), width: bw, height: Math.max(1, Math.abs(y(b.to) - y(b.from))) }));
       }
@@ -359,6 +372,7 @@ function drawFlow(c, results, problems){
     chart.appendChild(g);
   });
   chart.appendChild(svg('text', { class: 't-period', x: W / 2, y: H - 4, 'text-anchor': 'middle' }, model.periods[c.period]));
+  raiseScaleLabels(chart);
   return chart;
 }
 
@@ -377,7 +391,12 @@ function drawScenarioFlows(c, problems){
   if(!c.outputs.length) problems.push('No outputs yet: Edit chart adds them.');
   const memo = new Map();
   const resultsFor = (sc) => { if(!memo.has(sc)) memo.set(sc, scenarioResults(sc)); return memo.get(sc); };
-  c.outputs.forEach((key, oi) => wrap.appendChild(drawScenarioFlow(c, key, oi, scenarioFigures(c, key, resultsFor), problems)));
+  const all = c.outputs.map(key => scenarioFigures(c, key, resultsFor));
+  // Fix at current scale takes in every output: a fixed scale is shared by them all.
+  let lo = 0, hi = 0;
+  all.forEach(figs => figs.forEach(f => { if(!f.error){ lo = Math.min(lo, f.from, f.to); hi = Math.max(hi, f.from, f.to); } }));
+  autoScales.set(c.id, { lo, hi: hi === lo ? lo + 1 : hi });
+  c.outputs.forEach((key, oi) => wrap.appendChild(drawScenarioFlow(c, key, oi, all[oi], problems)));
   return wrap;
 }
 function drawScenarioFlow(c, key, oi, figs, problems){
@@ -386,14 +405,15 @@ function drawScenarioFlow(c, key, oi, figs, problems){
   let lo = 0, hi = 0;
   figs.forEach(f => { if(!f.error){ lo = Math.min(lo, f.from, f.to); hi = Math.max(hi, f.from, f.to); } });
   if(hi === lo) hi = lo + 1;
+  const sc = scaleFor(c, lo, hi, false);
   const W = Math.max(260, Math.min(560, 70 + n * 52)), top = 34 + (labels ? 14 : 0), bottom = 36, H = 150 + top + bottom;
   const plotH = H - top - bottom;
-  const y = (v) => top + (hi - v) / (hi - lo) * plotH;
+  const y = scaleY(top, plotH, sc);
   const slot = (W - 8) / n, bw = Math.max(3, Math.min(46, slot * 0.62));
-  const chart = svg('svg', { class: 'bar-chart flow-chart scenario-flow', viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'data-output': name });
+  const chart = svg('svg', { class: 'bar-chart flow-chart scenario-flow' + (sc.fixed ? ' fixed-scale' : ''), viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'data-output': name });
   chart.setAttribute('aria-label', name + ' through the scenarios, ' + model.periods[c.period]);
   chart.appendChild(svg('text', { class: 't-flow-title', x: 6, y: 14 }, name + ' — ' + model.periods[c.period]));
-  chart.appendChild(svg('line', { class: 'b-zero', x1: 0, x2: W, y1: y(0), y2: y(0) }));
+  drawScaleAxis(chart, sc, y, W, top, plotH);
   let prevEnd = null;
   figs.forEach((f, i) => {
     const cx = 4 + slot * i + slot / 2, x = cx - bw / 2;
@@ -411,6 +431,7 @@ function drawScenarioFlow(c, key, oi, figs, problems){
         ? f.name + ': ' + fmtNum(f.number) + ' (' + (f.value >= 0 ? '+' : '−') + fmtNum(Math.abs(f.value)) + ' from ' + (i === 1 ? 'the start' : figs[i - 1].name) + ')'
         : (f.kind === 'start' ? 'Start (the model\'s own number)' : 'End (' + figs[figs.length - 2].name + ')') + ': ' + fmtNum(f.value)));
       g.appendChild(rect);
+      drawOverMarks(g, sc, cx, top, plotH, Math.max(f.from, f.to), Math.min(f.from, f.to));
       if(labels){
         const shown = f.kind === 'step' ? (f.value >= 0 ? '+' : '−') + fmtNum(Math.abs(f.value)) : fmtNum(f.value);
         g.appendChild(svg('text', { class: 't-value', x: cx, y: Math.min(y(f.from), y(f.to)) - 4, 'text-anchor': 'middle' }, shown));
@@ -423,5 +444,6 @@ function drawScenarioFlow(c, key, oi, figs, problems){
     g.appendChild(label);
     chart.appendChild(g);
   });
+  raiseScaleLabels(chart);
   return chart;
 }
