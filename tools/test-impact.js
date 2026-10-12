@@ -8,6 +8,8 @@
 //   --base REF                                compare with REF (default: where this branch left
 //                                             origin/main, else main)
 //   --files A B …                             these changed files instead of asking Git
+//   --head REF                                with --files: read package.json at REF, not from
+//                                             this folder (for measuring past changes)
 //
 // The changed files: every difference from the base, committed or not, and new files Git
 // doesn't ignore. The map is worked out, not matched by file names:
@@ -19,7 +21,8 @@
 //     built site (tests/helpers/site.js);
 //   - a test file runs when something it loads is reached by a change.
 // Conservative by design: FULL_SUITE below, a deleted source file and any file the map
-// doesn't know run every test. Group 0 (smoke) always runs. Test group 74 checks the map:
+// doesn't know run every test; package.json does too, unless the only change is to test:
+// shortcuts that name test files (packageScriptsReach). Group 0 (smoke) always runs. Test group 74 checks the map:
 // every file under src/ and tools/ is known, every test file loads something, and the tools
 // read only what TOOL_INPUTS says. Node only, no packages.
 'use strict';
@@ -49,7 +52,7 @@ const FULL_SUITE = [
   ['src/fmgraph/js/04-board.js', 'a file format or its upgrades (the board file\'s version)'],
   ['src/fmgraph/js/06b-board-files.js', 'a file format or its upgrades (the board file\'s upgrades)'],
   ['playwright.config.js', 'the test runner\'s settings'],
-  ['package.json', 'the scripts and test tooling'],
+  ['package.json', 'the scripts and test tooling (more than test: shortcuts changed)'],
   ['package-lock.json', 'the test tooling'],
   ['.github/', 'what GitHub runs'],
   ['.gitattributes', 'how Git checks files out'],
@@ -188,6 +191,52 @@ function toolLoads(tool){
 
 // ---------- what a change reaches ----------
 
+// package.json's scripts that run every test whenever they change (the owner's decision,
+// 12 October 2026: test:update-snapshots rewrites the snapshots).
+const SCRIPTS_THAT_RUN_EVERYTHING = ['test', 'test:changed', 'test:update-snapshots'];
+
+// When package.json changed only in test: shortcuts — added, changed or removed, none of
+// SCRIPTS_THAT_RUN_EVERYTHING, each new or changed one "playwright test" and test files or
+// their beginnings (as Playwright reads them) — the test files they name; otherwise null
+// (every test runs). Nothing reads package.json's scripts but npm: a shortcut is only a
+// way to run test files.
+function packageScriptsReach(baseText, headText){
+  let a, b;
+  try{ a = JSON.parse(baseText); b = JSON.parse(headText); } catch(e){ return null; }
+  const isObject = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);
+  if(!isObject(a) || !isObject(b)) return null;
+  const same = (x, y) => JSON.stringify(x) === JSON.stringify(y);
+  for(const k of new Set([...Object.keys(a), ...Object.keys(b)])) if(k !== 'scripts' && !same(a[k], b[k])) return null;
+  const sa = a.scripts === undefined ? {} : a.scripts, sb = b.scripts === undefined ? {} : b.scripts;
+  if(!isObject(sa) || !isObject(sb)) return null;
+  const tests = new Set();
+  for(const name of new Set([...Object.keys(sa), ...Object.keys(sb)])){
+    if(sa[name] === sb[name]) continue;
+    if(!name.startsWith('test:') || SCRIPTS_THAT_RUN_EVERYTHING.includes(name)) return null;
+    if(!(name in sb)) continue; // a shortcut taken out runs nothing
+    const m = typeof sb[name] === 'string' && /^playwright test((?: tests\/[A-Za-z0-9._-]+)+)$/.exec(sb[name]);
+    if(!m) return null;
+    for(const p of m[1].trim().split(' ')){
+      const files = testFiles().filter(t => t.startsWith(p));
+      if(!files.length) return null;
+      files.forEach(f => tests.add(f));
+    }
+  }
+  return [...tests].sort(byGroup);
+}
+
+// package.json at the base and now: opts.packageTexts ({ base, head }), else from Git (the
+// head from opts.head, else this folder). Null when either can't be read.
+function packageTexts(opts){
+  if(opts.packageTexts) return opts.packageTexts;
+  const base = opts.base || defaultBase();
+  if(!base) return null;
+  const baseText = git(['show', base + ':package.json']);
+  const headText = opts.head ? git(['show', opts.head + ':package.json'])
+    : (exists('package.json') ? read('package.json') : null);
+  return baseText === null || headText === null ? null : { base: baseText, head: headText };
+}
+
 // The modules a module imports, and theirs (repository paths).
 function moduleImports(file, seen){
   seen = seen || new Set();
@@ -220,8 +269,13 @@ const under = (file, prefix) => prefix.endsWith('/') ? file.startsWith(prefix) :
 const isDoc = (f) => f.startsWith('.claude/') || (/\.md$/.test(f) && !f.startsWith('tests/fixtures/') && !f.startsWith('src/'));
 
 // What one changed file reaches: { full: reason } or { reach: [paths and SITE], how }.
-function reachOf(file){
+function reachOf(file, opts){
   const m = map();
+  if(file === 'package.json'){
+    const texts = packageTexts(opts || {});
+    const tests = texts && packageScriptsReach(texts.base, texts.head);
+    if(tests) return { reach: tests, how: 'package.json: only test: shortcuts' + (tests.length ? '' : ' (none naming a test file)') };
+  }
   const full = FULL_SUITE.find(([p]) => under(file, p));
   if(full) return { full: full[1] };
   if(/^tests\/[^/]+\.spec\.js$/.test(file)) return { reach: [file, 'tools/test-parts.js'], how: 'a test file' };
@@ -260,7 +314,7 @@ const touches = (load, r) => load === r || (load.endsWith('/') && r.startsWith(l
 
 // The tests a set of changed files reaches: { full, reasons: [[file, why]], tests: [file],
 // why: Map(test → [changed files]) }.
-function impactOf(changed){
+function impactOf(changed, opts){
   const m = map();
   const reasons = [];
   const why = new Map();
@@ -268,7 +322,7 @@ function impactOf(changed){
   add(SMOKE, '(always)');
   let full = false;
   for(const file of [...new Set(changed)].sort()){
-    const r = reachOf(file);
+    const r = reachOf(file, opts);
     if(r.full){
       full = true;
       reasons.push([file, 'whole suite: ' + r.full]);
@@ -290,14 +344,18 @@ function git(args){
   return r.status === 0 ? r.stdout.trim() : null;
 }
 
-function changedFiles(base){
-  if(!base){
-    for(const ref of ['origin/main', 'main']){
-      base = git(['merge-base', 'HEAD', ref]);
-      if(base) break;
-    }
-    if(!base) return null;
+// Where this branch left origin/main (else main), or null.
+function defaultBase(){
+  for(const ref of ['origin/main', 'main']){
+    const base = git(['merge-base', 'HEAD', ref]);
+    if(base) return base;
   }
+  return null;
+}
+
+function changedFiles(base){
+  base = base || defaultBase();
+  if(!base) return null;
   const diff = git(['diff', '--name-only', '--no-renames', base]);
   const added = git(['ls-files', '--others', '--exclude-standard']);
   if(diff === null || added === null) return null;
@@ -308,14 +366,18 @@ function main(argv){
   const valueOf = (name) => { const i = argv.indexOf(name); return i < 0 ? undefined : argv[i + 1]; };
   let files;
   const fi = argv.indexOf('--files');
-  if(fi >= 0) files = argv.slice(fi + 1).filter(a => !a.startsWith('--'));
+  if(fi >= 0){
+    const rest = argv.slice(fi + 1);
+    const end = rest.findIndex(a => a.startsWith('--'));
+    files = end < 0 ? rest : rest.slice(0, end);
+  }
   else files = changedFiles(valueOf('--base'));
   let result;
   if(files === null){
     console.error('test-impact: could not compare with main (no origin/main or main to compare with): running every test.');
     result = { full: true, reasons: [], tests: testFiles(), why: new Map() };
   } else {
-    result = impactOf(files);
+    result = impactOf(files, { base: valueOf('--base'), head: valueOf('--head') });
   }
   if(argv.includes('--why') || argv.includes('--run')){
     const out = argv.includes('--run') ? console.error : console.log;
@@ -338,5 +400,5 @@ function main(argv){
   if(!argv.includes('--why')) result.tests.forEach(t => console.log(t));
 }
 
-module.exports = { impactOf, reachOf, loadsOf, toolLoads, touches, testFiles, map, FULL_SUITE, SITE_FILES, TOOL_INPUTS, NOT_TESTED, EXTRA_LOADS, SITE, SMOKE, APP_PAGES };
+module.exports = { impactOf, reachOf, packageScriptsReach, SCRIPTS_THAT_RUN_EVERYTHING, loadsOf, toolLoads, touches, testFiles, map, FULL_SUITE, SITE_FILES, TOOL_INPUTS, NOT_TESTED, EXTRA_LOADS, SITE, SMOKE, APP_PAGES };
 if(require.main === module) main(process.argv.slice(2));
