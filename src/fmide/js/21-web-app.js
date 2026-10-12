@@ -85,11 +85,13 @@
   window.addEventListener('message', (ev) => {
     const origin = ownOrigin();
     if(origin && ev.origin !== origin) return;
-    if(!ev.data || typeof ev.data !== 'object' || ev.data.type !== 'excel:want-model') return;
+    const type = ev.data && typeof ev.data === 'object' ? ev.data.type : null;
+    if(type !== 'excel:want-model' && type !== 'excel:attach-layout') return;
     // A window this page opened before it was reloaded is still its own: taken back on asking.
     if(!excelWindow){ try{ if(ev.source && ev.source !== window && ev.source.opener === window && ev.source.name === 'fmIDE-ExcelExporter') excelWindow = ev.source; }catch(e){ /* not ours */ } }
     if(!excelWindow || ev.source !== excelWindow) return;
-    sendModelToExcel(excelWindow);
+    if(type === 'excel:want-model') sendModelToExcel(excelWindow);
+    else askToAttachExcelLayout(ev.data.text); // Layout → Attach to Template… (askToAttachFromApp, below)
   });
   function sendModelToGraph(target){
     const origin = ownOrigin();
@@ -114,39 +116,76 @@
     else if(ev.data.type === 'fmGraph:boards') takeGraphBoards(ev.data.text);
     else if(ev.data.type === 'fmGraph:attach-board') askToAttachGraphBoard(ev.data.text);
   });
-  // fmGraph's Attach to template… (step 15 G5b): a board in its template form, for a canvas
-  // template (the one it names) or a system template (the person picks one). Read like a file
-  // (graphBoardForTemplate: kind, version, form, template kind and family only), attached to the
-  // latest version only after asking; fmGraph is told the outcome in words.
-  function answerGraph(type, text){
-    const origin = ownOrigin();
-    try{ if(graphWindow && !graphWindow.closed) graphWindow.postMessage({ type, text }, origin || '*'); }catch(e){ /* gone */ }
-  }
-  function askToAttachGraphBoard(text){
-    const no = (why) => { answerGraph('fmIDE:board-not-attached', why); };
-    if(inPractice()){ showMessage('Finish or exit the tutorial first, then attach the board again.'); return no('Not attached: fmIDE is in a tutorial.'); }
-    if(typeof text !== 'string' || fileTextProblem(text)) return no('Not attached: the board is too large.');
+  // Attaching to a template from another app: fmGraph's Attach to template… (step 15 G5b) and
+  // ExcelExporter's Attach to Template… (a module's Excel layout). The app sends the attachment
+  // as JSON text; fmIDE reads it as it would the same file in the Templates window (`o.read`:
+  // graphBoardForTemplate, excelLayoutForFamily — only kind, version and which template),
+  // asks, attaches it to the template's latest version, and tells the app the outcome in words.
+  // `o`: { key (the attachment's output), label ('fmGraph board'), what ('board'),
+  // answer(ok, text), read(raw, t), pick(raw, h) } — `pick` finds the template and asks, with
+  // h = { attach(t), no(why), replaces(t), cancelled(), askCanvasTemplate(family) }.
+  function askToAttachFromApp(o, text){
+    const no = (why) => { o.answer(false, 'Not attached: ' + why); };
+    if(inPractice()){ showMessage(`Finish or exit the tutorial first, then attach the ${o.what} again.`); return no('fmIDE is in a tutorial.'); }
+    if(typeof text !== 'string' || fileTextProblem(text)) return no(`the ${o.what} is too large.`);
     let raw;
-    try{ raw = JSON.parse(text); }catch(e){ return no('Not attached: fmIDE couldn\'t read it.'); }
-    if(fileDataProblem(raw) || !raw || typeof raw !== 'object' || !raw.template || typeof raw.template !== 'object') return no('Not attached: fmIDE couldn\'t read it.');
-    const attach = (t) => {
-      const r = graphBoardForTemplate(raw, t.family, t.kind);
-      if(r.error){ showMessage(r.error); return no('Not attached: ' + r.error); }
-      t.attachments = Object.assign({}, t.attachments || {}, { graph: r.attachment });
-      saveWorkspaceSoon();
-      showMessage(`fmGraph board attached to version ${t.version} of "${t.name}".`);
-      answerGraph('fmIDE:board-attached', `Attached to version ${t.version} of “${t.name}” in fmIDE.`);
+    try{ raw = JSON.parse(text); }catch(e){ return no('fmIDE couldn\'t read it.'); }
+    if(fileDataProblem(raw) || !raw || typeof raw !== 'object') return no('fmIDE couldn\'t read it.');
+    const h = {
+      no,
+      cancelled: () => no('cancelled in fmIDE.'),
+      replaces: (t) => t.attachments && t.attachments[o.key] ? ` It replaces the ${o.what} that version has.` : '',
+      attach: (t) => {
+        const r = o.read(raw, t);
+        if(r.error){ showMessage(r.error); return no(r.error); }
+        t.attachments = Object.assign({}, t.attachments || {}, { [o.key]: r.attachment });
+        saveWorkspaceSoon();
+        showMessage(`${o.label} attached to version ${t.version} of "${t.name}".`);
+        o.answer(true, `Attached to version ${t.version} of “${t.name}” in fmIDE.`);
+      },
+      // A canvas template named by its family: its latest version, after asking.
+      askCanvasTemplate: (family) => {
+        const t = typeof family === 'string' ? latestOfFamily(family) : null;
+        if(!t || t.kind !== 'module') { showMessage(`That ${o.what} is for a canvas template that isn't in your library.`); return no('that canvas template isn\'t in fmIDE\'s library.'); }
+        showConfirmCancelable(`Attach this ${o.label} to version ${t.version} of the canvas template "${t.name}"?${h.replaces(t)}`, 'Attach', () => h.attach(t), h.cancelled);
+      }
     };
-    const replaces = (t) => t.attachments && t.attachments.graph ? ' It replaces the board that version has.' : '';
-    if(raw.template.kind === 'module'){
-      const t = latestOfFamily(raw.template.family);
-      if(!t || t.kind !== 'module') { showMessage('That board is for a canvas template that isn\'t in your library.'); return no('Not attached: that canvas template isn\'t in fmIDE\'s library.'); }
-      return showConfirmCancelable(`Attach this fmGraph board to version ${t.version} of the canvas template "${t.name}"?${replaces(t)}`, 'Attach', () => attach(t), () => no('Not attached: cancelled in fmIDE.'));
-    }
-    if(raw.template.kind !== 'system') return no('Not attached: fmIDE couldn\'t read it.');
-    const systems = [...new Set(TEMPLATES.filter(t => t.kind === 'system' && !t.builtin).map(t => t.family))].map(latestOfFamily).filter(Boolean);
-    if(!systems.length){ showMessage('There is no system template in your library to attach this board to. Save the model as a system template first, then attach it again.'); return no('Not attached: there is no system template in fmIDE\'s library.'); }
-    showSystemTemplateChoice(systems, replaces, attach, () => no('Not attached: cancelled in fmIDE.'));
+    o.pick(raw, h);
+  }
+  function answerApp(win, type, text){
+    const origin = ownOrigin();
+    try{ if(win && !win.closed) win.postMessage({ type, text }, origin || '*'); }catch(e){ /* gone */ }
+  }
+  // fmGraph: a board in its template form, for a canvas template (the one it names) or a
+  // system template (the person picks one).
+  function askToAttachGraphBoard(text){
+    askToAttachFromApp({
+      key: 'graph', label: 'fmGraph board', what: 'board',
+      answer: (ok, why) => answerApp(graphWindow, ok ? 'fmIDE:board-attached' : 'fmIDE:board-not-attached', why),
+      read: (raw, t) => graphBoardForTemplate(raw, t.family, t.kind),
+      pick: (raw, h) => {
+        if(!raw.template || typeof raw.template !== 'object') return h.no('fmIDE couldn\'t read it.');
+        if(raw.template.kind === 'module') return h.askCanvasTemplate(raw.template.family);
+        if(raw.template.kind !== 'system') return h.no('fmIDE couldn\'t read it.');
+        const systems = [...new Set(TEMPLATES.filter(t => t.kind === 'system' && !t.builtin).map(t => t.family))].map(latestOfFamily).filter(Boolean);
+        if(!systems.length){ showMessage('There is no system template in your library to attach this board to. Save the model as a system template first, then attach it again.'); return h.no('there is no system template in fmIDE\'s library.'); }
+        showSystemTemplateChoice(systems, h.replaces, h.attach, h.cancelled);
+      }
+    }, text);
+  }
+  // ExcelExporter: a module layouts file holding one module's layout, for that module's
+  // canvas template (the family its entry names).
+  function askToAttachExcelLayout(text){
+    askToAttachFromApp({
+      key: 'excel', label: 'Excel layout', what: 'layout',
+      answer: (ok, why) => answerApp(excelWindow, ok ? 'fmIDE:layout-attached' : 'fmIDE:layout-not-attached', why),
+      read: (raw, t) => excelLayoutForFamily(raw, t.family),
+      pick: (raw, h) => {
+        const entry = Array.isArray(raw.modules) && raw.modules.length === 1 ? raw.modules[0] : null;
+        if(raw.kind !== 'fmIDE-excel-module-layouts' || !entry || typeof entry !== 'object') return h.no('fmIDE couldn\'t read it.');
+        h.askCanvasTemplate(entry.family);
+      }
+    }, text);
   }
   // A question with Cancel (and Escape, or a click outside) reported back.
   function showConfirmCancelable(message, okLabel, onOk, onCancel){

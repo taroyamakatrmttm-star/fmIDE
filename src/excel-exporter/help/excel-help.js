@@ -99,6 +99,13 @@ const EXCEL_HELP_TOPICS = [
     summary: 'Attach a module\'s layout to its template in fmIDE, so it travels with the template.',
     body: [
       { p: 'A canvas template in fmIDE can carry the Excel layout of its module, so that whoever uses the template — another person, or you in another browser — gets the same tab layout here.' },
+      { p: 'With ExcelExporter opened from fmIDE (File → Open ExcelExporter), no file is needed:' },
+      { steps: [
+        'Arrange the module\'s tab (marked 🧩).',
+        'Press 📎 Attach on that tab, or choose Layout → 📎 Attach to Template… and pick the module.',
+        'Answer fmIDE\'s question there: it attaches the layout to the template\'s latest version, and the answer shows under Tabs here.',
+      ] },
+      { p: 'What goes is the module\'s layout as this model shows it: its own tab, and its block instances\' tab when it is used as a block. Otherwise, with a file:' },
       { steps: [
         'Here, arrange the module\'s tab (marked 🧩). The layout is remembered.',
         'Choose Layout → Export Module Layouts. The file holds every remembered module; that is fine.',

@@ -620,7 +620,7 @@ var XLSX = (function(){
   .tab-actions button:hover:not(:disabled){ background:var(--danger-soft); }
   .add-tab{ margin-top:8px; }
   .module-tag{ display:inline-flex; flex-wrap:wrap; align-items:center; gap:4px 6px; margin:4px 0 0 4px; font-size:11.5px; color:#1e3a8a; background:var(--accent-soft); border-radius:6px; padding:2px 7px; }
-  .module-tag .module-forget, .module-tag .instance-copy{ font-size:11px; padding:1px 7px; }
+  .module-tag .module-forget, .module-tag .instance-copy, .module-tag .module-attach{ font-size:11px; padding:1px 7px; }
 
   #inputsPanel .check-line{ margin-bottom:10px; }
   .stack{ display:flex; flex-direction:column; gap:10px; padding:12px; background:#f8f9fb; border:1px solid var(--border); border-radius:9px; }
@@ -742,6 +742,8 @@ var XLSX = (function(){
   .modal .modal-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
   .modal-head{ display:flex; align-items:center; gap:14px; margin-bottom:16px; flex-wrap:wrap; }
   .modal-head h3{ margin:0; }
+  .attach-pick{ display:flex; align-items:center; gap:8px; font-size:13.5px; }
+  .attach-pick select{ flex:1; min-width:0; }
   .modal-close{ width:32px; height:32px; padding:0; border:none; background:transparent; border-radius:8px; color:var(--muted); }
   .modal-close::before{ content:'×'; font-size:22px; line-height:32px; }
   .modal-close:hover{ background:#f1f3f6; color:var(--text); }
@@ -916,6 +918,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
           <div class="menu-head">Module layouts (every model)</div>
           <button type="button" role="menuitem" id="btnImportModuleLayouts" title="Read module layouts saved with Export Module Layouts">Import Module Layouts…</button>
           <button type="button" role="menuitem" id="btnExportModuleLayouts" title="Save the layouts remembered for your modules, e.g. for another computer or fmIDE's Attach Excel layout…">Export Module Layouts</button>
+          <button type="button" role="menuitem" id="btnAttachLayout" class="hidden needs-model" title="Send a module's layout to fmIDE, to attach to its template">📎 Attach to Template…</button>
           <div class="menu-sep" role="separator"></div>
           <button type="button" role="menuitem" id="btnMenuStyle" title="How cells look in Excel: edit, import, export or reset your Excel style">Excel Style…</button>
           <div class="menu-sep" role="separator"></div>
@@ -1162,6 +1165,17 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
 <input type="file" id="excelStyleFileInput" accept="application/json,.json" hidden>
 
 <div id="treeCtxMenu" class="ctx-menu hidden" role="menu"></div>
+
+<div id="attachModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="attachTitle">
+  <div class="modal">
+    <h3 id="attachTitle">Attach to a template</h3>
+    <label class="attach-pick">Module <select id="attachPick"></select></label>
+    <div class="modal-actions">
+      <button id="attachCancel">Cancel</button>
+      <button id="attachOk" class="primary">Attach</button>
+    </div>
+  </div>
+</div>
 
 <div id="confirmModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
   <div class="modal">
@@ -5412,6 +5426,30 @@ function rememberModuleLayouts(){
   if(newlyRemembered) renderTabs(); // the tab's tag now says its layout is remembered
 }
 
+// One module's layout as this model shows it now, for Attach to Template… (09f): its own tab
+// and its block instances' tab — `tabId` when it is one of them, else the first of each.
+// Cleaned like a file, so what is sent is what ExcelExporter would read back. null: no tab.
+function moduleLayoutNow(family, tabId){
+  const mine = (canvasId) => !!(canvasModules[canvasId] && canvasModules[canvasId].family === family);
+  const owns = model.canvases.filter(c => mine(c.id) && moduleTabSpec(c));
+  const own = owns.find(c => moduleTabId(c.id) === tabId) || owns[0];
+  const insts = blockInstanceTabs().filter(x => mine(x.defCanvas.id));
+  const inst = insts.find(x => x.tab.id === tabId) || insts[0];
+  if(!own && !inst) return null;
+  const m = own ? captureModuleLayout(own) : emptyTabLayout(canvasModules[inst.defCanvas.id]);
+  if(inst) m.instance = captureTabLayout(instanceTabSpec(inst));
+  return cleanModuleLayout(JSON.parse(JSON.stringify(m)));
+}
+// The model's modules that have a tab here, for Attach to Template…: [{ family, name, tab }],
+// `tab` the first tab of each (its own, else an instance's).
+function modulesWithTabs(){
+  const out = [], seen = new Set();
+  const add = (mod, tab) => { if(!mod || seen.has(mod.family)) return; seen.add(mod.family); out.push({ family: mod.family, name: mod.name || 'module', tab }); };
+  model.canvases.forEach(c => { const spec = canvasModules[c.id] && moduleTabSpec(c); if(spec) add(canvasModules[c.id], spec.tab); });
+  blockInstanceTabs().forEach(x => add(canvasModules[x.defCanvas.id], x.tab));
+  return out;
+}
+
 // `stored`: the remembered order (row objects); `auto`: the rows as the automatic sort placed
 // them. Rows the remembered order doesn't hold go in after the row they followed in `auto`.
 function mergeRememberedOrder(stored, auto){
@@ -5561,7 +5599,20 @@ function moduleTabTag(tab){
       return 'Forgot the layout remembered for "' + mod.name + '".';
     }));
   }
+  const attach = attachLayoutButton(mod, tab);
+  if(attach) wrap.appendChild(attach);
   return wrap;
+}
+// 📎 Attach on a module's tab or instance tab: sends this module's layout to fmIDE, for its
+// template (09f). Only with fmIDE's window behind this one.
+function attachLayoutButton(mod, tab){
+  if(!fmideWindowBehind()) return null;
+  const btn = document.createElement('button');
+  btn.className = 'icon module-attach';
+  btn.textContent = '📎 Attach';
+  btn.title = 'Attach this module\'s layout to its template in fmIDE (fmIDE asks first)';
+  btn.addEventListener('click', () => attachLayoutToTemplate(mod.family, tab.id));
+  return btn;
 }
 function forgetButton(title, forget){
   const btn = document.createElement('button');
@@ -5608,6 +5659,8 @@ function instanceTabTag(tab){
         return 'Forgot the layout remembered for the instances of "' + mod.name + '".';
       }));
     }
+    const attach = attachLayoutButton(mod, tab);
+    if(attach) wrap.appendChild(attach);
   }
   if(others.length){
     const btn = document.createElement('button');
@@ -9846,6 +9899,13 @@ const EXCEL_HELP_TOPICS = [
     summary: 'Attach a module\'s layout to its template in fmIDE, so it travels with the template.',
     body: [
       { p: 'A canvas template in fmIDE can carry the Excel layout of its module, so that whoever uses the template — another person, or you in another browser — gets the same tab layout here.' },
+      { p: 'With ExcelExporter opened from fmIDE (File → Open ExcelExporter), no file is needed:' },
+      { steps: [
+        'Arrange the module\'s tab (marked 🧩).',
+        'Press 📎 Attach on that tab, or choose Layout → 📎 Attach to Template… and pick the module.',
+        'Answer fmIDE\'s question there: it attaches the layout to the template\'s latest version, and the answer shows under Tabs here.',
+      ] },
+      { p: 'What goes is the module\'s layout as this model shows it: its own tab, and its block instances\' tab when it is used as a block. Otherwise, with a file:' },
       { steps: [
         'Here, arrange the module\'s tab (marked 🧩). The layout is remembered.',
         'Choose Layout → Export Module Layouts. The file holds every remembered module; that is fine.',
@@ -10044,6 +10104,17 @@ const EXCEL_HELP_TOPICS = [
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'attach-layout-to-template', date: '2026-10-12', title: 'Attach a layout to its template from here',
+    summary: 'Opened from fmIDE, 📎 Attach on a module\'s tab sends its layout straight to its template in fmIDE — no file in between.',
+    what: [
+      'A tab marked 🧩 has 📎 Attach, and Layout has 📎 Attach to Template…, which lists the model\'s modules. Either sends the module\'s layout as this model shows it to fmIDE.',
+      'fmIDE asks before attaching it to the template\'s latest version, and its answer shows under Tabs.',
+    ],
+    why: 'So a template carries its Excel layout without exporting and picking a file.',
+    how: ['In fmIDE, File → Open ExcelExporter on a model built from a canvas template.', 'Arrange the module\'s tab, then press 📎 Attach on it.', 'Answer fmIDE\'s question.'],
+    notes: ['Opened on its own, ExcelExporter has no fmIDE to send to: Export Module Layouts and fmIDE\'s 📎 Attach Excel layout… still work.'],
+    see: ['template-layouts'] },
+
   { id: 'phone-workbook', date: '2026-10-09', title: 'Make the workbook on your phone',
     summary: 'On a phone, ExcelExporter is one screen: check the tabs, tap ⬇ Make the workbook, and send it on.',
     what: [
@@ -10673,6 +10744,12 @@ window.addEventListener('message', (ev) => {
   if(!fmideWindowBehind() || ev.source !== window.opener) return;
   if(ownOrigin() && ev.origin !== ownOrigin()) return;
   const d = ev.data;
+  if(d && typeof d === 'object' && (d.type === 'fmIDE:layout-attached' || d.type === 'fmIDE:layout-not-attached')){
+    const ok = d.type === 'fmIDE:layout-attached';
+    const text = typeof d.text === 'string' && d.text.trim() ? d.text.slice(0, 300) : (ok ? 'Attached in fmIDE.' : 'Not attached.');
+    setStatus($('moduleLayoutsStatus'), text, ok ? 'ok' : 'info');
+    return;
+  }
   if(!d || typeof d !== 'object' || d.type !== 'fmIDE:model' || typeof d.text !== 'string') return;
   const name = typeof d.name === 'string' && d.name.trim() ? d.name.trim().slice(0, 120) : 'fmIDE model';
   fmideLoading = fmideLoading.then(async () => {
@@ -10681,6 +10758,55 @@ window.addEventListener('message', (ev) => {
     if(model && model !== before) modelFromFmide = true;
   }).catch(() => {});
 });
+
+// ---- Layout → 📎 Attach to Template…, and 📎 Attach on a module's tab ----
+// With fmIDE's window behind this one: sends one module's layout as this model shows it
+// (moduleLayoutNow, 04b) to fmIDE ('excel:attach-layout'), as a module layouts file holding
+// that one entry — what Export Module Layouts writes for fmIDE's Attach Excel layout…. fmIDE
+// reads it the same way, asks, attaches it to the template's latest version, and answers in
+// words ('fmIDE:layout-attached' / 'fmIDE:layout-not-attached', above).
+function attachLayoutToTemplate(family, tabId){
+  const status = $('moduleLayoutsStatus');
+  if(!fmideWindowBehind()){ setStatus(status, 'Attach to Template works with ExcelExporter opened from fmIDE. Use Export Module Layouts instead.', 'info'); return false; }
+  const m = model && mapping && moduleLayoutNow(family, tabId);
+  if(!m){ setStatus(status, 'That module has no tab here, so there is no layout to attach.', 'info'); return false; }
+  try{ window.opener.postMessage({ type: 'excel:attach-layout', text: JSON.stringify(moduleLayoutsPayload([m])) }, ownOrigin() || '*'); }
+  catch(e){ return false; }
+  setStatus(status, `Sent the layout of “${m.name || 'module'}” to fmIDE: answer its question there.`, 'info');
+  return true;
+}
+function showAttachLayout(){
+  const status = $('moduleLayoutsStatus');
+  const mods = model && mapping ? modulesWithTabs() : [];
+  if(!mods.length){ setStatus(status, 'No tab here comes from a canvas template, so there is no layout to attach.', 'info'); return; }
+  const pick = $('attachPick');
+  pick.innerHTML = '';
+  mods.forEach((m, i) => {
+    const o = document.createElement('option');
+    o.value = String(i);
+    o.textContent = `${m.name} — tab “${m.tab.name}”`;
+    pick.appendChild(o);
+  });
+  const modal = $('attachModal');
+  const close = () => {
+    modal.classList.add('hidden');
+    $('attachOk').removeEventListener('click', onOk);
+    $('attachCancel').removeEventListener('click', close);
+    modal.removeEventListener('click', onBackdrop);
+    document.removeEventListener('keydown', onKey, true);
+  };
+  const onOk = () => { const m = mods[Number(pick.value)]; close(); if(m) attachLayoutToTemplate(m.family, m.tab.id); };
+  const onBackdrop = (ev) => { if(ev.target === modal) close(); };
+  const onKey = (ev) => { if(ev.key === 'Escape'){ ev.preventDefault(); close(); } };
+  $('attachOk').addEventListener('click', onOk);
+  $('attachCancel').addEventListener('click', close);
+  modal.addEventListener('click', onBackdrop);
+  document.addEventListener('keydown', onKey, true);
+  modal.classList.remove('hidden');
+  pick.focus();
+}
+$('btnAttachLayout').classList.toggle('hidden', !fmideWindowBehind());
+$('btnAttachLayout').addEventListener('click', showAttachLayout);
 
 $('btnFromFmide').classList.toggle('hidden', !fmideWindowBehind());
 $('btnFromFmide').addEventListener('click', () => {

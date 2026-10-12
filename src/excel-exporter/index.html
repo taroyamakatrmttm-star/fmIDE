@@ -46,6 +46,7 @@
           <div class="menu-head">Module layouts (every model)</div>
           <button type="button" role="menuitem" id="btnImportModuleLayouts" title="Read module layouts saved with Export Module Layouts">Import Module Layouts…</button>
           <button type="button" role="menuitem" id="btnExportModuleLayouts" title="Save the layouts remembered for your modules, e.g. for another computer or fmIDE's Attach Excel layout…">Export Module Layouts</button>
+          <button type="button" role="menuitem" id="btnAttachLayout" class="hidden needs-model" title="Send a module's layout to fmIDE, to attach to its template">📎 Attach to Template…</button>
           <div class="menu-sep" role="separator"></div>
           <button type="button" role="menuitem" id="btnMenuStyle" title="How cells look in Excel: edit, import, export or reset your Excel style">Excel Style…</button>
           <div class="menu-sep" role="separator"></div>
@@ -292,6 +293,17 @@
 <input type="file" id="excelStyleFileInput" accept="application/json,.json" hidden>
 
 <div id="treeCtxMenu" class="ctx-menu hidden" role="menu"></div>
+
+<div id="attachModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="attachTitle">
+  <div class="modal">
+    <h3 id="attachTitle">Attach to a template</h3>
+    <label class="attach-pick">Module <select id="attachPick"></select></label>
+    <div class="modal-actions">
+      <button id="attachCancel">Cancel</button>
+      <button id="attachOk" class="primary">Attach</button>
+    </div>
+  </div>
+</div>
 
 <div id="confirmModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
   <div class="modal">

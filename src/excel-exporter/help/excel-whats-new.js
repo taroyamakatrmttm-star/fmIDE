@@ -11,6 +11,17 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'attach-layout-to-template', date: '2026-10-12', title: 'Attach a layout to its template from here',
+    summary: 'Opened from fmIDE, 📎 Attach on a module\'s tab sends its layout straight to its template in fmIDE — no file in between.',
+    what: [
+      'A tab marked 🧩 has 📎 Attach, and Layout has 📎 Attach to Template…, which lists the model\'s modules. Either sends the module\'s layout as this model shows it to fmIDE.',
+      'fmIDE asks before attaching it to the template\'s latest version, and its answer shows under Tabs.',
+    ],
+    why: 'So a template carries its Excel layout without exporting and picking a file.',
+    how: ['In fmIDE, File → Open ExcelExporter on a model built from a canvas template.', 'Arrange the module\'s tab, then press 📎 Attach on it.', 'Answer fmIDE\'s question.'],
+    notes: ['Opened on its own, ExcelExporter has no fmIDE to send to: Export Module Layouts and fmIDE\'s 📎 Attach Excel layout… still work.'],
+    see: ['template-layouts'] },
+
   { id: 'phone-workbook', date: '2026-10-09', title: 'Make the workbook on your phone',
     summary: 'On a phone, ExcelExporter is one screen: check the tabs, tap ⬇ Make the workbook, and send it on.',
     what: [

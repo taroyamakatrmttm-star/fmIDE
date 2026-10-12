@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: attach a module's layout to its template, no file in between
+- With ExcelExporter opened from fmIDE, a module's tab (🧩) has **📎 Attach**, and **Layout → 📎 Attach to Template…** lists the model's modules. Either sends the module's layout as the model shows it (its own tab, and its block instances' tab) to fmIDE, which asks, attaches it to the canvas template's latest version and answers; the answer shows under Tabs. It is the same layout fmIDE's **📎 Attach Excel layout…** takes from a file, which still works. No file format changed.
+- fmIDE now asks and answers the same way for fmGraph's **Attach to template…** and ExcelExporter's, through one piece of code.
+
 ## fmGraph: a fixed vertical scale
 - A bar or chart in fmGraph can be drawn on a **fixed scale**, from a min to a max you choose, instead of Auto (which stretches to the numbers shown, as before, and is still the default). A slider moved then shows its change as a change in size. **Fixed scale** takes what Auto shows, rounded; the numbers can be typed; **📏** fixes it again at what Auto shows now. A number past the scale is drawn to its edge with ▲ or ▼, its label still the number itself. For a bar it sits beside its colour; for a chart, in Edit chart.
 - Saved with the board (in the browser, board files and `.fmide` documents): the board file is now version 5; older files open on Auto. A template's board doesn't carry it.
