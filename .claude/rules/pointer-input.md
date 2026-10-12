@@ -1,0 +1,18 @@
+---
+paths:
+  - "src/shared/pointer-input.js"
+  - "src/fmide/js/02*.js"
+  - "src/fmide/js/07b-zoom.js"
+  - "src/fmide/js/08*.js"
+  - "src/excel-exporter/js/08-*.js"
+  - "tests/27-*.spec.js"
+  - "tests/30-*.spec.js"
+  - "tests/45-*.spec.js"
+  - "tests/helpers/touch.js"
+---
+
+# Pointer input, touch and the screen
+
+Loaded when a session works on mouse, finger and pen input. Moved word for word from `CLAUDE.md` (12 October 2026); keep it in step with the code, as `CLAUDE.md` asks.
+
+- **Pointer input** (step 9, `src/shared/pointer-input.js`, included by fmIDE's `02b-pointer-input.js` and ExcelExporter's Tree view): a canvas action starts through `onPress(el, handler)` and follows the pointer with `followPointer(downEvent, onMove, onUp)`. A mouse keeps its own events (`mousedown`, `mousemove`, `mouseup`, exactly as before); a finger or pen uses pointer events. Use `pressDefault(ev)`, never `preventDefault()`, on the event that starts an action: cancelling a finger's `pointerdown` would stop the mouse events the browser copies from a tap, which the rest of the page (closing pop-ups) listens for; the canvas itself ignores those copies (`isEmulatedMouse`). `touch-action: none` sits on what a finger drags (nodes, the curve editor's chart); empty canvas and the canvas tab strip scroll. **Touch replacements** (step 9b): `waitForHold(downEvent, { onHold, onMoveFirst, onRelease })` tells a hold (0.5 s, still) from a drag or a tap; where a hold turns a finger's drag into an action on something that scrolls (the selection box on empty canvas, moving a canvas tab), `holdBlocksScrolling()` stops the scroll through the `touchmove` listener `blockScrollWhileHolding(el)` puts there. Holding a node opens its menu (`08b-touch-menu.js`: draw an arrow by a second tap — `connectOnto`, shared with dropping an arrow — make alias, duplicate, add to / remove from the selection, Edit = `editNode` (what a double-click does), Properties, Delete, and the node's hover texts as plain text); a finger's tap selects on lifting, so a hold leaves the selection alone. A double-tap anywhere sends a `dblclick` (the browser's own copy is dropped). `body.touch-input` (on a `pointer: coarse` screen always, elsewhere from a touch until a mouse is used) gives the dots, resize corner and node buttons larger invisible touch areas (`::after`) on a selected node. **The screen** (step 9c): both pages carry the viewport line (`width=device-width, initial-scale=1, interactive-widget=resizes-content`); `touch-action: manipulation` on everything (no double-tap zoom; what a finger drags keeps its own value) and `pan-x pan-y` on fmIDE's canvas (two fingers don't zoom the page there — they pinch fmIDE's own zoom, step 13b); under `body.touch-input`, text boxes are 16px (a tablet's browser zooms in on smaller ones), the ribbon shows arrows at its ends (`.rb-more`, `addRibbonScrollArrows`), and dialogs keep to the part of the screen the on-screen keyboard leaves (`--vv-top` / `--vv-h` from `visualViewport`, `02c-visible-screen.js`, which also scrolls the text box being typed in into sight — `keepTypingVisible`); on a `pointer: coarse` screen the ribbon's buttons are taller; in a window under 900 pixels wide the search box shrinks to its 🔎 and the ribbon's top row scrolls. ExcelExporter's Tree view (`08-rows-by-tab-tree-view.js`): a hold on a row opens its menu (`openTreeContextMenu(…, { touch: true })`, which adds Add to / Remove from selection and Select from the last row to here), a double-tap renames; the mouse events copied from that touch are dropped (`dropTapCopies`). Apart from that narrow-window rule, nothing of 9c changes anything for a mouse.
