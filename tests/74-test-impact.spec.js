@@ -27,7 +27,8 @@ test('every file under src/ and tools/ is known to the map, and reaches a test u
     const r = I.reachOf(f);
     expect(r.full || '', f).not.toMatch(/doesn't know/);
     if(r.full) continue;
-    const tests = others(pick(f).tests).filter(t => t !== I.SMOKE);
+    // Group 74 counts only for the tool it tests (it names other files in its cases).
+    const tests = (f === 'tools/test-impact.js' ? pick(f).tests : others(pick(f).tests)).filter(t => t !== I.SMOKE);
     if(I.NOT_TESTED[f]) expect(tests, f).toEqual([]);
     else expect(tests.length, f + ' reaches no test').toBeGreaterThan(0);
   }
