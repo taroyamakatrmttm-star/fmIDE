@@ -92,7 +92,7 @@ src/shared/           code the apps share, as modules: escaping, the input-recta
 
 1. Edit the pieces in `src/`.
 2. `npm run build` — rewrites `apps/fmIDE.html` and `apps/ExcelExporter.html` (needs only Node).
-3. `npm test`.
+3. Run the tests the change reaches (`npm run test:<area>`, or `npx playwright test tests/NN-…`; `npm test` runs everything). GitHub runs the whole suite on every pull request.
 4. Commit `src/` and the rebuilt `apps/` together. CI rebuilds and fails if `apps/` doesn't match `src/`; `npm run build:check` does the same check locally.
 
 The script pieces are plain fragments of one wrapped function — no `import`/`export` — joined in file-name order. In `index.html`, a line `<!-- build:css styles.css -->` or `<!-- build:js js -->` marks where a file or folder is inserted. Inside a script piece, a line `// build:include shared/<file>.js` pulls in a shared file, so logic both apps need is written once. The shared files, ExcelExporter's Excel writer (`js-head/`) and formula building (`formulas/`), and fmIDE's `src/fmide/modules/` are real modules (step 3c): each says what it needs (`import { a } from './other.js';`, one line each) and what it offers (`export function …`, `export const …`); Node tools and tests load them as they are, and the build takes the import lines and export words out, so the apps get plain fragments as before. The tools need Node 22.12 or later (or 20.19 or later).

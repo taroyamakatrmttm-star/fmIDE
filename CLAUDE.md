@@ -46,7 +46,7 @@ The owner decides what is built and approves each change; sessions do the work a
 
 ## Non-negotiable rules for every change
 
-1. **Text from files is always escaped.** Files may come from other people (the planned community library), so anything read from a file is untrusted:
+1. **Text from files is always escaped.** Files may come from other people (the community library), so anything read from a file is untrusted:
    - show it as plain text (`textContent`, or `escapeXml()` from `src/shared/escaping.js` when building markup or XML — ExcelExporter's XLSX writer calls it through `esc()`) — never insert it as HTML;
    - force numbers to be numbers and validate coordinates;
    - check colours before use (e.g. `safeColor()` in fmIDE);
@@ -71,7 +71,7 @@ Each is stated in full in the file named; these lines are here so they apply whi
 
 ## Where the details are
 
-Files under `.claude/rules/` load by themselves when a session reads a file they name (the `paths` at their top); read any of them directly when the work needs it. Each was moved word for word from this file on 12 October 2026.
+Files under `.claude/rules/` load by themselves when a session reads a file they name (the `paths` at their top); read any of them directly when the work needs it. Each was moved word for word from this file on 12 October 2026 (`docs/architecture/README.md`).
 
 | Topic | File |
 |---|---|
@@ -83,6 +83,7 @@ Files under `.claude/rules/` load by themselves when a session reads a file they
 | fmIDE: functions, operators with named inputs | `.claude/rules/fmide-functions-operators.md` |
 | fmIDE: library packs, browsing the library | `.claude/rules/fmide-library.md` |
 | Help, tutorials, What's new (both apps) | `.claude/rules/fmide-help.md` |
+| fmIDE: placing nodes, Add Many Rectangles, switching canvases, messages, resizable windows | `.claude/rules/fmide-canvas.md` |
 | fmIDE: zoom, pinch | `.claude/rules/fmide-zoom.md` |
 | fmIDE: macros and actions | `.claude/rules/fmide-macros.md` |
 | fmIDE on a phone | `.claude/rules/fmide-phone.md` |
@@ -91,7 +92,6 @@ Files under `.claude/rules/` load by themselves when a session reads a file they
 | Format roles and the Excel style | `.claude/rules/format-roles.md` |
 | File formats: current versions, how to change one | `.claude/rules/file-formats.md` |
 | The calculation tests (IR, agreement) | `.claude/rules/testing.md` |
-| Which test group covers what | `docs/architecture/test-groups.md` |
 | Browser storage: every database and key | `docs/architecture/storage.md` |
 | Decisions and the full build order | `docs/architecture/build-order.md` |
 | How this guidance is organised, what changed on 12 October 2026 | `docs/architecture/README.md` |
@@ -107,7 +107,7 @@ Work in the build order and don't jump ahead unless asked. **Tell the owner at t
 ## Checking a change
 
 Workflow: edit `src/` → **`npm run build`** → the tests the change reaches → commit; the whole suite (`npm test`) runs on GitHub for every pull request (setup and details: `tests/README.md`). It runs offline, every group in `tests/SPEC.md`, and must pass against the apps as they are.
-- **Which tests:** the `npm run test:<area>` scripts in `package.json`, or the group files themselves (`npx playwright test tests/NN-…`), for every group the change reaches (`docs/architecture/test-groups.md`). Always add group 0 (smoke) and run `npm run build:check`. A change to `src/shared/`, `tools/build.js`, a file format or the test helpers reaches everything: run `npm test`. When unsure, run more, not less.
+- **Which tests:** the `npm run test:<area>` scripts in `package.json`, or the group files themselves (`npx playwright test tests/NN-…`), for every group the change reaches (which group covers what: `tests/SPEC.md` — search it, don't read it whole). Always add group 0 (smoke) and run `npm run build:check`. A change to `src/shared/`, `tools/build.js`, a file format or the test helpers reaches everything: run `npm test`. When unsure, run more, not less.
 - **Say what ran:** the commit message or pull request lists the tests run locally; never claim the full suite passed unless it was run.
 - **Test time** (the owner's standing request, 8 October 2026): keep making the suite faster whenever a way is found, **without lowering what it checks** — never by skipping, removing or loosening a test. A slow check that only a browser can do stays; one that can run in Node (the modules of step 3c) may move there. Measure first (the durations in a GitHub run's log, per group) and say what it saved. History: about 13 minutes per pull request, run twice (push and pull request), until 8 October 2026; then once, in 4 parts at once (4 min 47 s); then the parts balanced by time (`tools/test-parts.js`, test group 66).
 
