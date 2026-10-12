@@ -14,8 +14,8 @@
 //   - which source files go into which app comes from the build itself (appSources in
 //     tools/build.js), and a module reaches every module that imports it;
 //   - what each test file loads is read from it and the helpers it requires: the apps it
-//     opens, the tools it runs (and the tools they require, and the files those read,
-//     TOOL_INPUTS below), the src/ files it loads, its fixture folders, the snapshots, the
+//     opens (fmIDE where it can be opened, the others wherever they are named), the tools
+//     it runs (and the tools they require, and the files those read, TOOL_INPUTS below), the src/ files it loads, its fixture folders, the snapshots, the
 //     built site (tests/helpers/site.js);
 //   - a test file runs when something it loads is reached by a change.
 // Conservative by design: FULL_SUITE below, a deleted source file and any file the map
@@ -86,6 +86,9 @@ const EXTRA_LOADS = {};
 
 // ---------- reading what the tests load ----------
 
+// Where a test (or a helper it requires) can open fmIDE.
+const OPENS_FMIDE = /openFmIDE|openApp\([^)]*'fmIDE'|fmIDE\.html|helpers\/fmide|require\('\.\/fmide(?:\.js)?'\)|backToFmide|Back to fmIDE|fmide-address/i;
+
 const rel = (abs) => path.relative(ROOT, abs).split(path.sep).join('/');
 const read = (relPath) => fs.readFileSync(path.join(ROOT, relPath), 'utf8');
 const exists = (relPath) => fs.existsSync(path.join(ROOT, relPath));
@@ -142,9 +145,13 @@ function loadsOf(spec){
   for(const f of files){
     const text = read(f);
     // apps/apps.js names every app (it opens whichever it is asked for), so the apps a test
-    // opens are read from the test and its other helpers. Any mention counts (conservative).
+    // opens are read from the test and its other helpers. ExcelExporter and fmGraph: any
+    // mention counts (conservative). fmIDE is named almost everywhere (file kinds such as
+    // 'fmIDE-excel-style', test titles), so it counts only where a test can open it: its
+    // opener and helper, its page, openApp with its name, the other apps' Back to fmIDE and
+    // the address they use for it (the owner's decision, 12 October 2026). The site opens all.
     if(f !== 'tests/helpers/apps.js'){
-      if(/fmide/i.test(text)) loads.add(APP_PAGES.fmIDE);
+      if(OPENS_FMIDE.test(text)) loads.add(APP_PAGES.fmIDE);
       if(/ExcelExporter|openExporter|openExcel|\bexporter\b/i.test(text)) loads.add(APP_PAGES.ExcelExporter);
       if(/fmgraph/i.test(text)) loads.add(APP_PAGES.fmGraph);
     }

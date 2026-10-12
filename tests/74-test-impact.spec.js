@@ -118,6 +118,21 @@ test('an fmGraph-only change runs fmGraph\'s groups, not the Excel or calculatio
   expect(r.tests.length).toBeLessThan(ALL.length / 2);
 });
 
+test('an fmIDE-only change runs the groups that can open fmIDE, not those that only name it', () => {
+  const r = pick('src/fmide/js/07b-zoom.js');
+  expect(r.full).toBe(false);
+  // Open fmIDE: through its opener or helper, its page, the site, or another app's Back to fmIDE.
+  for(const t of ['7-ui-fmide', '10-documents', '12-web-app', '17-agreement', '27-touch', '33-tutorials', '44-zoom', '47-fmgraph', '59-excel-from-fmide', '68-fmgraph-phone', '70-fmide-phone']){
+    expect(r.tests, t).toContain('tests/' + t + '.spec.js');
+  }
+  // Name fmIDE only (file kinds such as 'fmIDE-excel-style', test titles) and never open it.
+  for(const t of ['2-excel-values', '4-format-roles', '36-module-layouts', '46-excel-page', '49-fmgraph-boards', '73-fmgraph-fixed-scale']){
+    expect(r.tests, t).not.toContain('tests/' + t + '.spec.js');
+  }
+  // fmIDE's expression module is loaded on its own in Node by group 65.
+  expect(pick('src/fmide/modules/expression.js').tests).toContain('tests/65-modules-in-node.spec.js');
+});
+
 test('smaller changes: documentation, a tool, a test file, a fixture, an ExcelExporter module', () => {
   // Documentation no test reads: smoke only.
   for(const f of ['docs/step13-zoom.md', 'README.md', 'CHANGELOG.md', 'CLAUDE.md', 'tests/SPEC.md', '.claude/rules/fmgraph.md']){
