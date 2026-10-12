@@ -255,10 +255,12 @@ function openPeek(b){
     if(hi === lo) hi = lo + 1;
     const W = 320, H = 110, n = all.length;
     const x = (i) => n === 1 ? W / 2 : 14 + i * (W - 28) / (n - 1);
-    const y = (v) => 8 + (hi - v) / (hi - lo) * (H - 16);
+    // The bar's fixed scale, if it has one (04d-scale.js); numbers past it on its edge.
+    const sc = b.scale ? { lo: b.scale.min, hi: b.scale.max } : { lo, hi };
+    const y = scaleY(8, H - 16, sc);
     const chart = svg('svg', { class: 'peek-line', viewBox: '0 0 ' + W + ' ' + H, role: 'img' });
     chart.setAttribute('aria-label', rect.name + ', every period');
-    chart.appendChild(svg('line', { class: 'b-zero', x1: 0, x2: W, y1: y(0), y2: y(0) }));
+    if(sc.lo <= 0 && sc.hi >= 0) chart.appendChild(svg('line', { class: 'b-zero', x1: 0, x2: W, y1: y(0), y2: y(0) }));
     const line = (key, cls) => {
       const pts = all.filter(r => !r[key].error).map(r => x(r.p) + ',' + y(r[key].value)).join(' ');
       if(pts) chart.appendChild(svg('polyline', { class: cls, points: pts }));

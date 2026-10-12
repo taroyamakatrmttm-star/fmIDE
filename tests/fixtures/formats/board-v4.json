@@ -1,0 +1,23 @@
+{
+  "kind": "fmIDE-graph-board",
+  "version": 4,
+  "active": 0,
+  "boards": [
+    {
+      "name": "Saved before fixed scales",
+      "items": [
+        { "type": "bar", "canvasId": "cProfit", "nodeId": "profit", "name": "Profit", "periods": { "mode": "all" }, "wide": false },
+        { "type": "chart", "wide": true, "layout": "scenarios", "title": "Through the cases", "period": 0,
+          "outputs": [ { "canvasId": "cProfit", "nodeId": "profit", "name": "Profit" } ] }
+      ],
+      "sliders": [
+        { "canvasId": "cProfit", "nodeId": "price", "name": "Price", "periods": { "mode": "all" }, "mode": "set", "min": 5, "max": 15, "step": 0.5 }
+      ]
+    }
+  ],
+  "scenarios": [
+    { "name": "High price", "sliders": [
+      { "canvasId": "cProfit", "nodeId": "price", "name": "Price", "mode": "set", "periods": { "mode": "all" }, "value": 12 }
+    ] }
+  ]
+}

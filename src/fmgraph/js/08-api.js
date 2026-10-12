@@ -23,6 +23,9 @@
 //   renameBoard(name), duplicateBoard(), removeBoard() (the one shown; the last can't go)
 //   move(id, index) (a bar or chart among the items, a slider among the sliders),
 //   setWide(id, wide), setColour(id, '#rrggbb' or null, rect?) (a bar's, or a chart rectangle's)
+//   setScale(id, { min, max } | 'current' | null) → the bar's or chart's vertical scale: fixed,
+//                  fixed at what Auto shows now, or Auto (null); returns { min, max } or null
+//   scale(id)      → its fixed scale { min, max }, or null (Auto)
 //   undo(), redo() → whether there was one; exportBoards(all?) → the file's data (downloads it)
 //   importBoards(textOrObject) → Promise<number of boards added>
 //   calcTime()     → how long one run of the model takes, in milliseconds
@@ -140,6 +143,19 @@ window.fmGraph = Object.freeze({
   removeBoard: () => { if(boards.length < 2) throw new Error('The last board can\'t be removed.'); removeBoard(board); },
   move: (id, index) => { const ok = moveWidget(id, Number(index)); renderBoard(); return ok; },
   setWide: (id, wide) => { const w = board.items.find(x => x.id === id); if(!w) throw new Error('There is no bar or chart "' + String(id).slice(0, 40) + '".'); w.wide = !!wide; saveBoardSoon(); renderBoard(); },
+  setScale: (id, spec) => {
+    const w = board.items.find(x => x.id === id);
+    if(!w) throw new Error('There is no bar or chart "' + String(id).slice(0, 40) + '".');
+    const s = setWidgetScale(w, spec === undefined ? null : spec);
+    saveBoardSoon();
+    renderBoard();
+    return s;
+  },
+  scale: (id) => {
+    const w = board.items.find(x => x.id === id);
+    if(!w) throw new Error('There is no bar or chart "' + String(id).slice(0, 40) + '".');
+    return w.scale ? { min: w.scale.min, max: w.scale.max } : null;
+  },
   setColour: (id, colour, rect) => {
     const c = colour === null ? null : cleanColour(colour);
     if(colour !== null && !c) throw new Error('A colour is written #rrggbb.');

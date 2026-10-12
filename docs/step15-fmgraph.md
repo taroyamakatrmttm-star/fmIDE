@@ -206,6 +206,15 @@ Chosen under the owner's instruction to go ahead (3 October 2026): fmGraph's own
 - Not done here: videos of these tutorials (fmIDE's recorder, H4b, plays fmIDE's), and fmGraph's help on the site (`/help` is fmIDE's and ExcelExporter's).
 - Tests: group 58 (`tests/58-fmgraph-tutorials.spec.js`): each tutorial played through with real clicks and typing.
 
+### A fixed vertical scale (after step 15)
+
+The owner's request (12 October 2026), with the recommended choices: one scale per bar or chart (not one for the whole board), not on a template's board, and a number past the scale drawn to its edge with a mark.
+
+- **The setting** (`04d-scale.js`): a bar's or chart's `scale`, null for Auto (as before: stretched to the numbers shown, zero always in) or `{ min, max }` (`cleanScale`: two numbers within 10¹⁵, min below max; anything else is Auto). `scaleChooser` — Auto scale / Fixed scale, from … to …, 📏 Fix at current scale — sits beside a bar's colour and at the end of Edit chart. Fixed scale and 📏 take what Auto shows now (`autoScales`, kept by every drawing), rounded outwards to two figures of its span (`niceScale`). Numbers typed that aren't a scale are refused in words and the boxes put back.
+- **Drawing**: every drawing (`drawBars`, `drawColumns`, `drawFlow`, `drawScenarioFlow`, and a bar's quick look on a phone) works out Auto's range as before, then `scaleFor` gives the fixed one when set; `scaleY` keeps every number inside the plot, so a bar past the scale stops at its edge, and `drawOverMarks` adds ▲ or ▼ (with its words on hover); the labels still give the number itself. `drawScaleAxis` draws the zero line only when zero is on the scale, and a fixed scale's two ends dotted with their numbers (`raiseScaleLabels` puts those over the bars). A scenario waterfall's fixed scale is shared by its outputs (its Auto stays per output). Show and the shared pictures draw through the same functions.
+- **Kept**: the board file version 5 (`scale` on a bar or chart, left out on Auto; the upgrade from 4 changes nothing); the browser, documents and undo use the same form, so each change is one undo step and a slider move none. The template form leaves it out and stays version 2. `fmGraph.setScale(id, { min, max } | 'current' | null)`, `fmGraph.scale(id)`.
+- Tests: group 73 (`tests/73-fmgraph-fixed-scale.spec.js`; sample `tests/fixtures/formats/board-v4.json`). Groups 49, 56 and 57 now expect version 5 from Export.
+
 ## Risks
 
 - **Scope creep** into a full dashboard tool — kept to a lens.

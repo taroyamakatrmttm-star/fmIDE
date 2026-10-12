@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph: a fixed vertical scale
+- A bar or chart in fmGraph can be drawn on a **fixed scale**, from a min to a max you choose, instead of Auto (which stretches to the numbers shown, as before, and is still the default). A slider moved then shows its change as a change in size. **Fixed scale** takes what Auto shows, rounded; the numbers can be typed; **📏** fixes it again at what Auto shows now. A number past the scale is drawn to its edge with ▲ or ▼, its label still the number itself. For a bar it sits beside its colour; for a chart, in Edit chart.
+- Saved with the board (in the browser, board files and `.fmide` documents): the board file is now version 5; older files open on Auto. A template's board doesn't carry it.
+
 ## fmIDE on a phone: every input by the shared rule
 - Inputs on a phone now lists every input rectangle by the shared rule, the ones ExcelExporter gathers on its Inputs tab, including those with no number typed yet ("No number yet (counts as 0)"). Before, a model whose template rectangles had no numbers showed no inputs. A rectangle holding a formula is still left out, and a block's Input rectangles on a canvas used as a block, as in ExcelExporter.
 

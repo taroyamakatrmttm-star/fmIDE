@@ -139,6 +139,7 @@ function barWidget(b){
   const row = make('div', 'widget-row bar-settings');
   row.appendChild(periodsChooser(b.periods, (p) => { b.periods = p; saveBoardSoon(); updateValues(); }));
   row.appendChild(colourPicker(b.colour || DEFAULT_BAR_COLOUR, 'Bar colour', (c) => { b.colour = c === DEFAULT_BAR_COLOUR ? null : c; saveBoardSoon(); updateValues(); }));
+  row.appendChild(scaleChooser(b, () => { saveBoardSoon(); updateValues(); })); // (04d-scale.js)
   const rect = model.byKey.get(b.key);
   w.append(head, row);
   if(rect.unit) w.appendChild(make('div', 'widget-unit', 'In ' + rect.unit));
@@ -333,15 +334,16 @@ function drawBars(el, b, results){
   now.concat(base).forEach(r => { if(!r.error) nums.push(r.value); });
   let lo = Math.min(0, ...nums), hi = Math.max(0, ...nums);
   if(hi === lo) hi = lo + 1;
+  const sc = scaleFor(b, lo, hi); // Auto, or the bar's fixed scale (04d-scale.js)
   // Room above for the labels of bars going up, and below for those of bars going down.
   const n = Math.max(1, ps.length), labels = n <= 8;
-  const W = 300, top = hi > 0 && labels ? 34 : 12, bottom = 22 + (lo < 0 && labels ? 30 : 0), H = 130 + top + bottom;
+  const W = 300, top = sc.hi > 0 && labels ? 34 : 12, bottom = 22 + (sc.lo < 0 && labels ? 30 : 0), H = 130 + top + bottom;
   const plotH = H - top - bottom;
-  const y = (v) => top + (hi - v) / (hi - lo) * plotH;
+  const y = scaleY(top, plotH, sc);
   const slot = (W - 8) / n, bw = Math.max(3, Math.min(46, slot * 0.62));
-  const chart = svg('svg', { class: 'bar-chart', viewBox: '0 0 ' + W + ' ' + H, role: 'img' });
+  const chart = svg('svg', { class: 'bar-chart' + (sc.fixed ? ' fixed-scale' : ''), viewBox: '0 0 ' + W + ' ' + H, role: 'img' });
   chart.setAttribute('aria-label', rect.name);
-  chart.appendChild(svg('line', { class: 'b-zero', x1: 0, x2: W, y1: y(0), y2: y(0) }));
+  drawScaleAxis(chart, sc, y, W, top, plotH);
   const problems = new Map();
   ps.forEach((p, i) => {
     const cx = 4 + slot * i + slot / 2, x = cx - bw / 2;
@@ -361,6 +363,7 @@ function drawBars(el, b, results){
         const yb = y(was.value);
         g.appendChild(svg('rect', { class: 'b-base', x, y: Math.min(y0, yb), width: bw, height: Math.max(1, Math.abs(yb - y0)) }));
       }
+      drawOverMarks(g, sc, cx, top, plotH, r.value, r.value);
       const diff = was.error ? '' : fmtDiff(r.value, was.value);
       const textY = r.value >= 0 ? Math.min(y0, y1) - 4 : Math.max(y0, y1) + 12;
       if(labels){
@@ -372,6 +375,7 @@ function drawBars(el, b, results){
     if(labels || i === 0 || i === n - 1) g.appendChild(svg('text', { class: 't-period', x: cx, y: H - 6, 'text-anchor': 'middle' }, model.periods[p]));
     chart.appendChild(g);
   });
+  raiseScaleLabels(chart);
   const host = el.querySelector('.bar-chart-host');
   host.textContent = '';
   host.appendChild(chart);
