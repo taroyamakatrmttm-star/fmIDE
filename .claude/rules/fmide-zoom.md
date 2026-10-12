@@ -1,0 +1,14 @@
+---
+paths:
+  - "src/fmide/js/07b-zoom.js"
+  - "src/fmide/js/08-node-interaction.js"
+  - "src/fmide/js/06-align-marquee-computation.js"
+  - "tests/44-*.spec.js"
+  - "tests/45-*.spec.js"
+---
+
+# fmIDE: zoom and pinch
+
+Loaded when a session works on the canvas's zoom, drags or placement. Moved word for word from `CLAUDE.md` (12 October 2026); keep it in step with the code, as `CLAUDE.md` asks.
+
+- **Zoom** (step 13, `07b-zoom.js`, `docs/step13-zoom.md`): `#canvas` is scaled (CSS transform, `--zoom` / `--unzoom` on `#viewport`, `.zoomed` when not 100%) inside `#canvasZoom`, sized to the scaled canvas; nodes keep canvas units. **Every pointer-to-canvas conversion goes through `canvasPoint(clientX, clientY)` or divides a drag's movement by `zoom`**, and positions in view through `viewCentre()` / `viewRect()` — a new drag or placement must too. Snapping uses `SNAP_THRESHOLD / zoom`. Pickers and pop-ups appended to `#canvas` (`.op-picker`, `.tag-popup`) are scaled back. `ZOOM_STEPS` 25%…200%; `setZoom(z, clientX?, clientY?)` keeps the point under the pointer (or the view's middle); Ctrl/Cmd + wheel (`passive: false`); commands `zoomIn` (Mod+=), `zoomOut` (Mod+-), `zoomReset` (Mod+0), `zoomFit`, `zoomSelection`, the View tab's Zoom group (`ZOOM_RIBBON_GROUP`, added once to a customised ribbon, `ui.zoomGroupAdded`); the control `#zoomControl` and its menu `#zoomMenu`. `canvasZooms` (canvas id → zoom) is the person's own UI setting (`ui.canvasZoom`, `cleanCanvasZooms`; never from an imported file); `applySystemDataDirect` forgets it (a model coming in starts at 100%), `loadCanvasState` shows each canvas's zoom, undo leaves it, a tutorial keeps a copy (`practice.saved.zooms`). `fm.zoom()`, `fm.setZoom(level | 'fit' | 'selection')` — not actions: macros never record zoom. **Pinch** (13b): two fingers that both went down in `#viewport` zoom around the point between them and move the canvas (touch events: `touchstart` on the viewport, moves and lifts on the document; `touchmove` cancelled while the browser allows, else the browser scrolls and the pinch only zooms); the zoom from the fingers' distance over the start's; within `PINCH_SNAP_TO_100` (5%) of 100% it settles at 100%; a second finger cancels the first's drag through `cancelFingerActions()` (shared `pointer-input.js`; a cancelled node drag or resize puts the model back with `dropLastHistory()`, no undo step; a cancelled selection box selects nothing) — a new finger drag's `onUp(ev, cancelled)` must undo itself the same way.
