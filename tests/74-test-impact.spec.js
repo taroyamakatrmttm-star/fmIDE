@@ -96,13 +96,55 @@ test('the tools read only what the map says they read', () => {
 test('shared code, the build, the helpers, a file format, the settings and a deleted source file run every test', () => {
   for(const f of ['src/shared/ir.js', 'src/shared/package.json', 'tools/build.js', 'tests/helpers/apps.js', 'tests/helpers/fmide.js',
     'tests/fixtures/formats/sys-current.json', 'src/fmide/js/04-file-formats.js', 'src/excel-exporter/js/04-file-formats.js', 'src/fmgraph/js/06b-board-files.js',
-    'playwright.config.js', 'package.json', 'package-lock.json', '.github/workflows/tests.yml', 'library', 'src/fmide/js/99-gone.js']){
+    'playwright.config.js', 'package-lock.json', '.github/workflows/tests.yml', 'library', 'src/fmide/js/99-gone.js']){
     const r = pick(f);
     expect(r.full, f).toBe(true);
     expect(r.tests, f).toEqual(ALL);
   }
   // One such file among small ones is enough.
   expect(pick('docs/step13-zoom.md', 'src/shared/uom.js').full).toBe(true);
+});
+
+test('package.json: only test: shortcuts changed runs the files they name; anything else in it runs every test', () => {
+  const base = fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8');
+  const pkg = JSON.parse(base);
+  const changed = (edit) => { const p = JSON.parse(base); edit(p); return JSON.stringify(p, null, 2); };
+  const withPackage = (head) => I.impactOf(['package.json'], { packageTexts: { base, head } });
+  // A new shortcut: the files it names; a beginning, as Playwright reads it, every file it begins.
+  expect(withPackage(changed(p => { p.scripts['test:x'] = 'playwright test tests/73-fmgraph-fixed-scale.spec.js'; })).tests)
+    .toEqual([I.SMOKE, 'tests/73-fmgraph-fixed-scale.spec.js']);
+  expect(withPackage(changed(p => { p.scripts['test:y'] = 'playwright test tests/6-formats tests/44-zoom.spec.js'; })).tests)
+    .toEqual([I.SMOKE, 'tests/6-formats-excelexporter.spec.js', 'tests/6-formats-fmide.spec.js', 'tests/44-zoom.spec.js']);
+  // One changed: every file it now names; one taken out, or the same file: smoke only.
+  expect(withPackage(changed(p => { p.scripts['test:pinch'] += ' tests/27-touch.spec.js'; })).tests)
+    .toEqual([I.SMOKE, 'tests/27-touch.spec.js', 'tests/45-pinch-zoom.spec.js']);
+  expect(withPackage(changed(p => { delete p.scripts['test:pinch']; })).tests).toEqual([I.SMOKE]);
+  expect(withPackage(base).tests).toEqual([I.SMOKE]);
+  // Everything else runs every test: the scripts that always do, any other script, any other
+  // field, a shortcut that isn't just "playwright test" and test files, one naming no test
+  // file, a file that isn't JSON.
+  expect(I.SCRIPTS_THAT_RUN_EVERYTHING).toEqual(['test', 'test:changed', 'test:update-snapshots']);
+  const everything = [
+    changed(p => { p.scripts['test:changed'] += ' --why'; }),
+    changed(p => { p.scripts['test:update-snapshots'] = 'playwright test tests/8-snapshots.spec.js --update-snapshots'; }),
+    changed(p => { p.scripts.test = 'playwright test tests/0-smoke.spec.js'; }),
+    changed(p => { p.scripts.build = 'node tools/build.js --quiet'; }),
+    changed(p => { p.scripts['bench2'] = 'node tools/bench-calc.js'; }),
+    changed(p => { p.devDependencies.jszip = '3.10.1'; }),
+    changed(p => { p.name = 'other'; }),
+    changed(p => { p.scripts['test:z'] = 'playwright test -g "Tree view"'; }),
+    changed(p => { p.scripts['test:z'] = 'playwright test tests/44-zoom.spec.js --update-snapshots'; }),
+    changed(p => { p.scripts['test:z'] = 'node tools/serve.js'; }),
+    changed(p => { p.scripts['test:z'] = 'playwright test tests/99-nothing'; }),
+    changed(p => { p.scripts['test:z'] = ['playwright test tests/44-zoom.spec.js']; }),
+    '{ not json',
+  ];
+  for(const head of everything){
+    const r = withPackage(head);
+    expect(r.full, head.slice(0, 300)).toBe(true);
+    expect(r.tests).toEqual(ALL);
+  }
+  expect(pkg.scripts['test:pinch']).toBe('playwright test tests/45-pinch-zoom.spec.js');
 });
 
 test('an fmGraph-only change runs fmGraph\'s groups, not the Excel or calculation ones', () => {
