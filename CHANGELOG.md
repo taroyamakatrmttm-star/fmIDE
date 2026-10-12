@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmIDE: a plug name typed and clicked away from is no longer lost
+- The plug editor (🔌) adds a typed name when you click elsewhere. A click that came very soon after the editor opened could close it without adding the name; it now always adds it. Found because a test of it failed on GitHub's slower machines.
+
 ## ExcelExporter: attach a module's layout to its template, no file in between
 - With ExcelExporter opened from fmIDE, a module's tab (🧩) has **📎 Attach**, and **Layout → 📎 Attach to Template…** lists the model's modules. Either sends the module's layout as the model shows it (its own tab, and its block instances' tab) to fmIDE, which asks, attaches it to the canvas template's latest version and answers; the answer shows under Tabs. It is the same layout fmIDE's **📎 Attach Excel layout…** takes from a file, which still works. No file format changed.
 - fmIDE now asks and answers the same way for fmGraph's **Attach to template…** and ExcelExporter's, through one piece of code.
