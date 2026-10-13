@@ -215,6 +215,16 @@ The owner's request (12 October 2026), with the recommended choices: one scale p
 - **Kept**: the board file version 5 (`scale` on a bar or chart, left out on Auto; the upgrade from 4 changes nothing); the browser, documents and undo use the same form, so each change is one undo step and a slider move none. The template form leaves it out and stays version 2. `fmGraph.setScale(id, { min, max } | 'current' | null)`, `fmGraph.scale(id)`.
 - Tests: group 73 (`tests/73-fmgraph-fixed-scale.spec.js`; sample `tests/fixtures/formats/board-v4.json`). Groups 49, 56 and 57 now expect version 5 from Export.
 
+### Folded sliders, a Sliders column that stays on screen, dragging on an iPad (after step 15)
+
+The owner's request (13 October 2026, from an iPad): the ⠿ handle didn't drag, and with many sliders the charts scrolled out of sight. Chosen: folding remembered with the board (option a).
+
+- **Folding** (`05c-arrange.js`): ▾ / ▸ in a slider's head (`foldButton`, `aria-pressed`) and Collapse all / Expand all beside the Sliders heading (`#btnFoldSliders`, `setFolded`, `syncFoldAll`); a folded slider (`.folded`) hides every `.slider-more` part (periods, mode, the model's number, Range and step, Reset) and keeps its name, track and number. Each change is one undo step.
+- **Kept**: board file version 6, `folded: true` on a slider (absent when unfolded; anything but `true` is unfolded; the upgrade from 5 changes nothing). The template form leaves it out and stays version 2.
+- **The column**: on a page wider than 820 pixels (not the phone layout) the first board column is `position: sticky` under the top bar (`--gbar-h`, kept by a `ResizeObserver`) with its own scroll.
+- **The iPad drag**: the handle already had `touch-action: none`, which Chrome honours; Safari on an iPad still scrolled the page and cancelled the drag. The handle now stops a finger's `touchmove` itself (a non-passive listener) and can't be selected or dragged by the browser (`user-select`, `-webkit-touch-callout`, `-webkit-user-drag`). The tests run Chrome only, so this was checked on the owner's iPad, not by the suite.
+- Tests: group 49 (folding, the version 5 sample `tests/fixtures/formats/board-v5.json`, the column, a slider dragged by finger and the handle's `touchmove` stopped). Groups 49, 56, 57 and 73 now expect version 6 from Export.
+
 ## Risks
 
 - **Scope creep** into a full dashboard tool — kept to a lens.

@@ -134,7 +134,7 @@ test('kept: after a reload, in the board file (version 3 and later), and importe
   expect(await values(page)).toEqual([null, null]);                       // sliders start on the model's numbers
   // Export all: version 4 (since the scenario waterfall) with the scenarios; one board: none.
   const all = await g(page, () => fmGraph.exportBoards(true));
-  expect(all.version).toBe(5);
+  expect(all.version).toBe(6);
   expect(all.scenarios).toEqual([{ name: 'Eleven', sliders: [{ canvasId: 'cProfit', nodeId: 'price', name: 'Price', mode: 'set', periods: { mode: 'all' }, value: 11 }] }]);
   expect(await g(page, () => fmGraph.exportBoards(false))).not.toHaveProperty('scenarios');
   // Importing: a new name is added, a name used here keeps yours.

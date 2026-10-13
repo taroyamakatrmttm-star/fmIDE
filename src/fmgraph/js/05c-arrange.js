@@ -6,6 +6,10 @@
 //   chart among the bars and charts, a slider among the sliders — by mouse, finger or pen
 //   (shared pointer-input.js), or press ← ↑ / → ↓ on it. ⇔ makes a bar or chart wide (the
 //   whole row) or narrow (half). Every change is one undo step.
+// - A slider folds (▸) to its name, track and number, and unfolds (▾) to all its settings;
+//   Collapse all / Expand all beside the Sliders heading. Kept with the board (`folded`, board
+//   file 6); each is one undo step. On a wide page the Sliders column stays on screen beside
+//   the bars and charts, scrolling on its own when it is longer than the screen (styles.css).
 // ============================================================
 function renderAll(){ renderTabs(); renderBoard(); syncUndoButtons(); }
 
@@ -116,6 +120,9 @@ function arrangeControls(w, el){
     if(moveWidget(w.id, i + step)){ renderBoard(); const h = document.querySelector('[data-id="' + w.id + '"] .drag-handle'); if(h) h.focus(); }
   });
   onPress(handle, (ev) => startDrag(ev, w, el));
+  // A finger on the handle drags the widget, never the page: Safari on an iPad scrolls (and
+  // cancels the drag) unless the touch's moves are stopped here, whatever touch-action says.
+  handle.addEventListener('touchmove', (ev) => { if(ev.cancelable) ev.preventDefault(); }, { passive: false });
   span.appendChild(handle);
   if(w.kind){
     const size = make('button', 'size-toggle' + (w.wide ? ' on' : ''), '⇔');
@@ -161,3 +168,36 @@ function startDrag(ev, w, el){
     renderBoard();
   });
 }
+
+// ---- folding sliders ----
+function foldButton(s){
+  const b = make('button', 'slider-fold', s.folded ? '▸' : '▾');
+  b.type = 'button';
+  b.title = s.folded ? 'Show all of this slider' : 'Show only the slider and its number';
+  b.setAttribute('aria-label', 'Folded');
+  b.setAttribute('aria-pressed', s.folded ? 'true' : 'false');
+  b.addEventListener('click', () => { setFolded([s], !s.folded); });
+  return b;
+}
+// Fold or unfold these sliders (one undo step); false when nothing changed.
+function setFolded(list, on){
+  const changing = list.filter(s => !!s.folded !== on);
+  if(!changing.length) return false;
+  changing.forEach(s => { s.folded = on; });
+  saveBoardSoon();
+  renderBoard();
+  return true;
+}
+// Collapse all while any slider is unfolded, else Expand all.
+function syncFoldAll(){
+  const b = $('btnFoldSliders');
+  const some = !!board && board.sliders.length > 0;
+  b.classList.toggle('hidden', !some);
+  if(!some) return;
+  const fold = board.sliders.some(s => !s.folded);
+  b.textContent = fold ? 'Collapse all' : 'Expand all';
+  b.title = fold ? 'Show every slider as its name, track and number only' : 'Show all of every slider\'s settings';
+}
+$('btnFoldSliders').addEventListener('click', () => { if(board) setFolded(board.sliders, board.sliders.some(s => !s.folded)); });
+// The top bar's height (--gbar-h), for the Sliders column that stays on screen under it.
+if(window.ResizeObserver) new ResizeObserver(() => document.body.style.setProperty('--gbar-h', document.querySelector('.gbar').offsetHeight + 'px')).observe(document.querySelector('.gbar'));

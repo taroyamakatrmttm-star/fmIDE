@@ -68,6 +68,12 @@
   /* The board: sliders beside bars (stacked when the page is narrow). */
   .board{ display:grid; grid-template-columns:minmax(260px, 340px) minmax(0, 1fr); gap:16px; align-items:start; }
   @media (max-width: 820px){ .board{ grid-template-columns:minmax(0, 1fr); } }
+  /* Beside the bars, the Sliders column stays on screen under the top bar and scrolls on its own
+     when it is longer than the screen (05c-arrange.js). */
+  @media (min-width: 821px){
+    body:not(.phone) .board > .board-col:first-child{ position:sticky; top:calc(var(--gbar-h, 52px) + 8px); max-height:calc(100vh - var(--gbar-h, 52px) - 16px); max-height:calc(100dvh - var(--gbar-h, 52px) - 16px); overflow-y:auto; overscroll-behavior:contain; padding:2px 6px 8px 2px; }
+  }
+  .col-tool{ margin-left:auto; text-transform:none; letter-spacing:0; font-size:12.5px; }
   .col-head{ margin:0 0 8px; font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--soft-ink); display:flex; align-items:center; gap:8px; }
   .calc-note{ text-transform:none; letter-spacing:0; font-weight:400; font-size:12px; }
   .widget-list{ display:flex; flex-direction:column; gap:10px; }
@@ -121,6 +127,13 @@
   body.touch-input .slider-track input[type=range]{ height:40px; }
   .slider-value{ min-width:86px; text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
   .slider-base{ font-size:12px; color:var(--soft-ink); margin-top:2px; }
+  .slider-fold{ border:none; background:none; color:var(--soft-ink); padding:2px 6px; font-size:14px; }
+  .slider-fold:hover{ color:var(--ink); background:#eef1f5; }
+  body.touch-input .slider-fold{ padding:8px 10px; }
+  /* A folded slider: its name, track and number only. */
+  .slider-widget.folded{ padding:6px 10px 6px; }
+  .slider-widget.folded .slider-more{ display:none; }
+  .slider-widget.folded .slider-track{ margin-top:4px; }
   .slider-range summary{ cursor:pointer; font-size:12.5px; color:var(--soft-ink); margin-top:8px; }
 
   /* Questions. */
@@ -170,7 +183,7 @@
 
   /* Moving and sizing widgets. */
   .arrange{ display:inline-flex; gap:2px; flex:none; }
-  .drag-handle{ cursor:grab; padding:2px 6px; border-color:transparent; background:transparent; color:var(--soft-ink); touch-action:none; font-size:15px; line-height:1; }
+  .drag-handle{ cursor:grab; padding:2px 6px; border-color:transparent; background:transparent; color:var(--soft-ink); touch-action:none; font-size:15px; line-height:1; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; -webkit-user-drag:none; }
   .drag-handle:hover{ background:#eef1f5; color:var(--ink); }
   body.widget-dragging, body.widget-dragging *{ cursor:grabbing !important; user-select:none; }
   .widget.dragging{ opacity:.55; outline:2px dashed var(--brand); }
@@ -588,7 +601,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   <div id="lookBar" class="look-bar hidden" role="status"></div>
   <section id="board" class="board hidden">
     <div class="board-col">
-      <h2 class="col-head">Sliders</h2>
+      <h2 class="col-head">Sliders <button type="button" id="btnFoldSliders" class="link-btn col-tool hidden">Collapse all</button></h2>
       <div id="sliderList" class="widget-list"></div>
       <p id="noSliders" class="empty-note">No sliders yet: <button type="button" class="link-btn" data-add="slider">+ Slider</button></p>
       <details id="scenariosPanel" class="scenarios" open>
@@ -3408,13 +3421,14 @@ function setCalcNote(text){ const el = $('calcNote'); if(el) el.textContent = te
 //   bar    { id, kind: 'bar', key, periods, wide, colour, scale }
 //   chart  { id, kind: 'chart', wide, layout: 'columns' | 'flow' | 'scenarios', scale, … } (G2; 04b-charts.js)
 // scale: null for Auto, or { min, max } (04d-scale.js).
-//   slider { id, key, periods, mode: 'set' | 'shift', min, max, step, value }
+//   slider { id, key, periods, mode: 'set' | 'shift', min, max, step, value, folded }
 // periods: { mode: 'all' } · { mode: 'one', p } · { mode: 'range', from, to } (from 0).
 // A slider's value is null until it moves (the model's own numbers); 'set' gives the input
 // that number in the periods it covers, 'shift' changes them by that many percent.
 //
 // A wide widget takes a whole row of the grid, a narrow one half of it (charts start wide,
-// bars narrow); colour is a bar's own colour (null: the usual one).
+// bars narrow); colour is a bar's own colour (null: the usual one). A folded slider shows only
+// its name, track and number (board file 6; 05c-arrange.js).
 //
 // The boards are remembered in this browser for each model (fmgraph-board-<signature>), and the
 // last ones used are kept too, so a model that has changed a little (a rectangle added in
@@ -3523,7 +3537,7 @@ function cleanBoard(raw, dropped){
     const periods = cleanPeriods(s.periods, count);
     const mode = s.mode === 'shift' ? 'shift' : 'set';
     out.sliders.push(Object.assign({ id: newWidgetId('s'), key: rect.key, periods, mode, value: null },
-      cleanRange(s, defaultRange(rect, periods, mode))));
+      cleanRange(s, defaultRange(rect, periods, mode)), { folded: s.folded === true })); // version 6
   });
   return out;
 }
@@ -3542,9 +3556,10 @@ function cleanBoards(raw){
 // The board file's version (docs/file-formats.md): 1 (G3a); 2 (G5a) adds the template form
 // (`form: "template"`, 06c-template-boards.js); 3 adds the model's named scenarios
 // (`scenarios`, 05f-scenarios.js); 4 the scenario waterfall (a chart of layout `scenarios`,
-// 04b-charts.js); 5 a bar's or chart's fixed vertical scale (`scale`, 04d-scale.js). The
-// template form, which carries none of these, stays version 2.
-const BOARD_FILE_VERSION = 5;
+// 04b-charts.js); 5 a bar's or chart's fixed vertical scale (`scale`, 04d-scale.js); 6 a
+// folded slider (`folded`, 05c-arrange.js). The template form, which carries none of these,
+// stays version 2.
+const BOARD_FILE_VERSION = 6;
 const TEMPLATE_BOARD_VERSION = 2;
 function boardData(b){
   const at = (key) => { const r = model.byKey.get(key); return { canvasId: r.canvasId, nodeId: r.nodeId, name: r.name }; };
@@ -3554,7 +3569,7 @@ function boardData(b){
     items: b.items.map(w => w.kind === 'bar'
       ? Object.assign({ type: 'bar' }, at(w.key), { periods: Object.assign({}, w.periods), wide: w.wide }, w.colour ? { colour: w.colour } : {}, scaleOf(w))
       : Object.assign({ type: 'chart', wide: w.wide }, chartData(w, at), scaleOf(w))),
-    sliders: b.sliders.map(s => Object.assign(at(s.key), { periods: Object.assign({}, s.periods), mode: s.mode, min: s.min, max: s.max, step: s.step })),
+    sliders: b.sliders.map(s => Object.assign(at(s.key), { periods: Object.assign({}, s.periods), mode: s.mode, min: s.min, max: s.max, step: s.step }, s.folded ? { folded: true } : {})),
   };
 }
 // The file form of these boards (all, or the ones given).
@@ -4165,6 +4180,7 @@ function renderBoard(){
   board.sliders.forEach(s => { const el = sliders.querySelector('.slider-widget[data-id="' + s.id + '"]'); if(el) el.querySelector('.widget-head').prepend(arrangeControls(s, el)); });
   $('noBars').classList.toggle('hidden', board.items.length > 0);
   $('noSliders').classList.toggle('hidden', board.sliders.length > 0);
+  syncFoldAll(); // (05c-arrange.js)
   renderTraceNote();
   renderScenarios(); // (05f-scenarios.js)
   updateValues();
@@ -4196,7 +4212,7 @@ function barWidget(b){
 
 function sliderWidget(s){
   const rect = model.byKey.get(s.key);
-  const w = make('div', 'widget slider-widget');
+  const w = make('div', 'widget slider-widget' + (s.folded ? ' folded' : ''));
   w.dataset.id = s.id;
   const head = make('div', 'widget-head');
   const sel = rectSelect(s.key, true);
@@ -4206,15 +4222,15 @@ function sliderWidget(s){
     Object.assign(s, defaultRange(model.byKey.get(s.key), s.periods, s.mode));
     saveBoardSoon(); renderBoard();
   });
-  head.append(sel, removeButton(s.id, 'slider'));
+  head.append(sel, foldButton(s), removeButton(s.id, 'slider')); // (05c-arrange.js)
 
-  const row = make('div', 'widget-row');
+  const row = make('div', 'widget-row slider-more');
   row.appendChild(periodsChooser(s.periods, (p) => {
     s.periods = p;
     if(s.mode === 'set' && s.value === null) Object.assign(s, defaultRange(rect, p, 'set'));
     saveBoardSoon(); renderBoard();
   }));
-  const modeRow = make('div', 'widget-row');
+  const modeRow = make('div', 'widget-row slider-more');
   const mode = make('select');
   mode.setAttribute('aria-label', 'What the slider does');
   [['set', 'Set the number to'], ['shift', 'Change it by %']].forEach(([v, t]) => { const o = make('option', null, t); o.value = v; if(s.mode === v) o.selected = true; mode.appendChild(o); });
@@ -4246,13 +4262,13 @@ function sliderWidget(s){
   });
   track.append(range, box);
   if(s.mode === 'shift') track.appendChild(make('span', null, '%'));
-  const baseLine = make('div', 'slider-base');
+  const baseLine = make('div', 'slider-base slider-more');
   const reset = make('button', null, 'Reset');
   reset.type = 'button';
   reset.title = 'Back to the model\'s own number';
   reset.addEventListener('click', () => { s.value = null; range.value = box.value = String(sliderShown(s)); scheduleUpdate(); });
 
-  const more = make('details', 'slider-range');
+  const more = make('details', 'slider-range slider-more');
   more.appendChild(make('summary', null, 'Range and step'));
   const rangeRow = make('div', 'widget-row');
   const num = (label, value) => {
@@ -4272,7 +4288,7 @@ function sliderWidget(s){
   [minBox, maxBox, stepBox].forEach(i => i.addEventListener('change', rangeChanged));
   more.appendChild(rangeRow);
 
-  const foot = make('div', 'widget-row');
+  const foot = make('div', 'widget-row slider-more');
   foot.append(reset);
   w.append(head, row, modeRow, track, baseLine, more, foot);
 
@@ -4886,6 +4902,10 @@ function drawScenarioFlow(c, key, oi, figs, problems){
 //   chart among the bars and charts, a slider among the sliders — by mouse, finger or pen
 //   (shared pointer-input.js), or press ← ↑ / → ↓ on it. ⇔ makes a bar or chart wide (the
 //   whole row) or narrow (half). Every change is one undo step.
+// - A slider folds (▸) to its name, track and number, and unfolds (▾) to all its settings;
+//   Collapse all / Expand all beside the Sliders heading. Kept with the board (`folded`, board
+//   file 6); each is one undo step. On a wide page the Sliders column stays on screen beside
+//   the bars and charts, scrolling on its own when it is longer than the screen (styles.css).
 // ============================================================
 function renderAll(){ renderTabs(); renderBoard(); syncUndoButtons(); }
 
@@ -4996,6 +5016,9 @@ function arrangeControls(w, el){
     if(moveWidget(w.id, i + step)){ renderBoard(); const h = document.querySelector('[data-id="' + w.id + '"] .drag-handle'); if(h) h.focus(); }
   });
   onPress(handle, (ev) => startDrag(ev, w, el));
+  // A finger on the handle drags the widget, never the page: Safari on an iPad scrolls (and
+  // cancels the drag) unless the touch's moves are stopped here, whatever touch-action says.
+  handle.addEventListener('touchmove', (ev) => { if(ev.cancelable) ev.preventDefault(); }, { passive: false });
   span.appendChild(handle);
   if(w.kind){
     const size = make('button', 'size-toggle' + (w.wide ? ' on' : ''), '⇔');
@@ -5041,6 +5064,39 @@ function startDrag(ev, w, el){
     renderBoard();
   });
 }
+
+// ---- folding sliders ----
+function foldButton(s){
+  const b = make('button', 'slider-fold', s.folded ? '▸' : '▾');
+  b.type = 'button';
+  b.title = s.folded ? 'Show all of this slider' : 'Show only the slider and its number';
+  b.setAttribute('aria-label', 'Folded');
+  b.setAttribute('aria-pressed', s.folded ? 'true' : 'false');
+  b.addEventListener('click', () => { setFolded([s], !s.folded); });
+  return b;
+}
+// Fold or unfold these sliders (one undo step); false when nothing changed.
+function setFolded(list, on){
+  const changing = list.filter(s => !!s.folded !== on);
+  if(!changing.length) return false;
+  changing.forEach(s => { s.folded = on; });
+  saveBoardSoon();
+  renderBoard();
+  return true;
+}
+// Collapse all while any slider is unfolded, else Expand all.
+function syncFoldAll(){
+  const b = $('btnFoldSliders');
+  const some = !!board && board.sliders.length > 0;
+  b.classList.toggle('hidden', !some);
+  if(!some) return;
+  const fold = board.sliders.some(s => !s.folded);
+  b.textContent = fold ? 'Collapse all' : 'Expand all';
+  b.title = fold ? 'Show every slider as its name, track and number only' : 'Show all of every slider\'s settings';
+}
+$('btnFoldSliders').addEventListener('click', () => { if(board) setFolded(board.sliders, board.sliders.some(s => !s.folded)); });
+// The top bar's height (--gbar-h), for the Sliders column that stays on screen under it.
+if(window.ResizeObserver) new ResizeObserver(() => document.body.style.setProperty('--gbar-h', document.querySelector('.gbar').offsetHeight + 'px')).observe(document.querySelector('.gbar'));
 // ============================================================
 // Exploring (G4a).
 // - Trace: 🔍 on a bar or chart pins what reaches it. The sliders on the board that reach it
@@ -6895,8 +6951,9 @@ back.addEventListener('click', (ev) => {
 const BOARD_FILE_FORMAT = { 'fmIDE-graph-board': { current: BOARD_FILE_VERSION, label: 'fmGraph board file' } };
 // v1 → v2: a board file may be in the template form (G5a); a v1 file is boards for one model.
 // v2 → v3: boards for one model may carry the model's named scenarios; v3 → v4: a chart may be a
-// scenario waterfall; v4 → v5: a bar or chart may have a fixed vertical scale. Nothing to change.
-const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {} } };
+// scenario waterfall; v4 → v5: a bar or chart may have a fixed vertical scale; v5 → v6: a slider
+// may be folded. Nothing to change.
+const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {}, 5: () => {} } };
 
 function safeFileName(s){ return String(s).replace(/[^A-Za-z0-9 ._()-]+/g, '_').replace(/\s+/g, ' ').trim().slice(0, 80) || 'board'; }
 
@@ -7970,12 +8027,13 @@ const FMGRAPH_HELP_TOPICS = [
       { see: ['bars', 'charts'] },
     ] },
   { id: 'sliders', group: 'board', title: 'Sliders',
-    keywords: 'slider input change set percent shift range step reset what if',
+    keywords: 'slider input change set percent shift range step reset what if fold collapse expand',
     summary: 'Change an input rectangle and watch the bars move.',
     body: [
       { p: 'A slider changes an input rectangle: one with no arrow into it (or only one from an operator that nothing feeds). It can set the input to a number, or change it by a percentage, in all periods, one period or a range of periods.' },
       { p: 'Drag the slider, use the arrow keys, or type a number in the box beside it. The slider stops at its steps; Range and step changes where it starts, ends and stops.' },
       { p: 'Reset puts one slider back to the model\'s own number; Reset all at the top puts every slider back.' },
+      { p: '▾ folds a slider to its name, the slider and its number, so many fit on the screen; ▸ shows all its settings again. Collapse all and Expand all sit beside the Sliders heading. Folding is kept with the board. On a wide screen the Sliders column stays beside the bars and charts as the page scrolls, and scrolls by itself when it is longer than the screen.' },
       { steps: ['Press + Slider at the top.', 'Choose an input rectangle.', 'Choose the periods and whether to set the number or change it by %.', 'Move the slider.'] },
       { tip: 'Two sliders on the same input apply one after the other: a change by % applies to what the slider above it left.' },
       { see: ['reach', 'speed'] },
@@ -8015,7 +8073,7 @@ const FMGRAPH_HELP_TOPICS = [
     summary: 'Several boards per model, arranged as you like.',
     body: [
       { p: 'A model can have several boards — for example one for the statements and one for pricing — shown as tabs above the board. + Board adds an empty one; ✎ (or a double-click on its tab) renames the board shown, ⧉ duplicates it and 🗑 deletes it (after asking; the last board stays). Each board has its own bars, charts and sliders.' },
-      { p: 'Drag a bar, chart or slider by its handle (⠿) to move it among the others — by mouse, by finger, or with the arrow keys on the handle. ⇔ makes a bar or chart wide (the whole row) or narrow (half of it).' },
+      { p: 'Drag a bar, chart or slider by its handle (⠿) to move it among the others — by mouse, by finger (on an iPad too), or with the arrow keys on the handle. ⇔ makes a bar or chart wide (the whole row) or narrow (half of it).' },
       { p: 'Colours: a bar\'s colour box, beside its periods; in a chart, click a rectangle\'s colour in its key; a waterfall step\'s colour is in Edit chart.' },
       { p: '↶ Undo and ↷ Redo (Ctrl+Z, Ctrl+Y) take back any change to the boards — not where a slider is set, which is a "what if", not a change.' },
       { see: ['board-file', 'charts'] },
@@ -8118,6 +8176,18 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'fold-sliders', date: '2026-10-13', title: 'Fold sliders, keep them on screen, move them on an iPad',
+    summary: 'Fold a slider to one slim card, keep the Sliders column beside the charts, and drag sliders by finger on an iPad.',
+    what: [
+      '▾ on a slider folds it to its name, the slider and its number; ▸ shows all its settings again. Collapse all and Expand all sit beside the Sliders heading.',
+      'On a wide screen the Sliders column stays beside the bars and charts as the page scrolls, and scrolls by itself when it holds more sliders than the screen.',
+      'On an iPad, the handle (⠿) now moves a slider, bar or chart by finger: Safari used to take the touch over and nothing moved.',
+    ],
+    why: 'With many sliders, the ones lower down were hard to reach without the chart scrolling out of sight.',
+    how: ['Press Collapse all beside the Sliders heading, then move any slider while the charts stay in view.'],
+    notes: ['Folding is kept with the board, in board files and in fmIDE\'s documents (board file version 6; older files open with every slider unfolded). A board exported for a template leaves it out.'],
+    see: ['sliders'] },
+
   { id: 'fixed-scale', date: '2026-10-12', title: 'A fixed vertical scale',
     summary: 'Draw a bar or chart from a min to a max you choose, so moving a slider shows the change as a change in size.',
     what: [
