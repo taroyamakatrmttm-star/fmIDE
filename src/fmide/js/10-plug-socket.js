@@ -203,10 +203,11 @@
     addBtn.addEventListener('click', () => { addTyped(); input.focus(); });
     clearBtn.addEventListener('click', () => { input.value = ''; guarded(() => fm.setPlugs('#' + node.id, [])); finish(false); });
 
-    setTimeout(() => {
-      docListener = (ev) => { if(!popup.contains(ev.target)) finish(true); };
-      document.addEventListener('mousedown', docListener);
-    }, 0);
+    // Listened for at once: the editor opens on a click, so the press that opened it is
+    // already over. (Waiting a tick let a quick click elsewhere close it through the canvas
+    // without adding the typed name.)
+    docListener = (ev) => { if(!popup.contains(ev.target)) finish(true); };
+    document.addEventListener('mousedown', docListener);
   }
 
   function showTagEditor(node, kind){

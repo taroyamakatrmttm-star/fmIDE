@@ -196,7 +196,7 @@ Commands `exportPreferences` (download `fmIDE-preferences.json`) and `importPref
 - Both "Income Tax expense" and "Income Tax paid" compute 30.
 - `removePlug` (any capitals) removes only that connection (paid falls back to its typed 0); undo brings it back.
 - `addPlug` ignores a name already there; `setPlug` replaces all plugs with one; `setPlugs` sets a list (blanks and repeats dropped), `[]` clears, anything but a list of names is refused.
-- The plug editor (🔌): one chip per plug; ✕ removes one; Enter adds the typed name; Escape drops a typed name; a click elsewhere adds it. The rectangle shows "🔌 to Income Tax expense · to CF Income Tax paid".
+- The plug editor (🔌): one chip per plug; ✕ removes one; Enter adds the typed name; Escape drops a typed name; a click elsewhere adds it — even straight after the editor opens, in the same task (no timer in between). The rectangle shows "🔌 to Income Tax expense · to CF Income Tax paid".
 - A plug name with markup from a file is shown as text and never runs.
 - ExcelExporter: the saved v3 system loads; with the Inputs tab off, both rows are formulas (fed), not typed numbers.
 - Deleting a canvas that held one of two plugs feeding a socket (30 + 12 = 42): the other still feeds it (30), because the automatic connections are rebuilt.
