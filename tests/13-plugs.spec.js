@@ -124,6 +124,19 @@ test.describe('several plugs on one rectangle', () => {
     expect(await valueOf(page, 'Cash Flow::Income Tax paid')).toBe(30);
   });
 
+  test('a click elsewhere straight after the editor opens still adds the typed name', async ({ page }) => {
+    const { tax } = await buildTaxModel(page);
+    // Opened, typed in and clicked away from within one task: no timer gets to run in between.
+    const open = await page.evaluate((id) => {
+      document.querySelector(`.node[data-id="${id}"] .plug-btn`).click();
+      document.querySelector('.tag-popup.plug-editor input').value = 'Quick name';
+      document.getElementById('canvas').dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: 5, clientY: 300 }));
+      return !!document.querySelector('.tag-popup.plug-editor');
+    }, tax);
+    expect(open).toBe(false);
+    expect(await plugsOfNode(page, 'Tax::Income Tax')).toEqual(['to Income Tax expense', 'to CF Income Tax paid', 'Quick name']);
+  });
+
   test('plug names from a file are shown as plain text', async ({ page }, testInfo) => {
     const evil = '<img src=x onerror="window.__pwned=1">';
     const sys = JSON.parse(fs.readFileSync(file('sys-v2-plug'), 'utf8'));
