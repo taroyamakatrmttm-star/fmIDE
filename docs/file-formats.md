@@ -33,7 +33,7 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 | `fmIDE-excel-mapping` | 3 | ExcelExporter's tab/row layout for one model; v2: any row may carry its own format (`style`) and an `indent` (below); v3: `cfg.sensitivity`, the Tornado and Spider's settings (step 16, below) | ExcelExporter: Import Mapping JSON |
 | `fmIDE-excel-style` | 1 | ExcelExporter's Excel style: how every cell in the workbook looks, by role (step 11a, below) | ExcelExporter: Import Excel Style |
 | `fmIDE-excel-module-layouts` | 2 | ExcelExporter's layouts remembered per module (step 11b, below); v2: the layout of a module's block instances, `instance` (step 11d) | ExcelExporter: Import Module Layouts |
-| `fmIDE-graph-board` | 5 | fmGraph's boards: bars, charts and sliders showing one model (step 15, below); v2: the template form, for a template's `attachments.graph` (G5a); v3: the model's named scenarios, `scenarios`; v4: the scenario waterfall, a chart of layout `scenarios`; v5: a bar's or chart's fixed vertical scale, `scale` (the template form stays version 2) | fmGraph: Boards → Import boards… (or dropped on the page) |
+| `fmIDE-graph-board` | 6 | fmGraph's boards: bars, charts and sliders showing one model (step 15, below); v2: the template form, for a template's `attachments.graph` (G5a); v3: the model's named scenarios, `scenarios`; v4: the scenario waterfall, a chart of layout `scenarios`; v5: a bar's or chart's fixed vertical scale, `scale`; v6: a folded slider, `folded` (the template form stays version 2) | fmGraph: Boards → Import boards… (or dropped on the page) |
 
 ## The Tornado and Spider's settings (`fmIDE-excel-mapping` 3)
 
@@ -112,7 +112,7 @@ ExcelExporter remembers the layout of a module's tab — a canvas added from a c
 - Version 1 files open unchanged (the upgrade only raises the number); fmIDE's Attach Excel layout… reads both versions.
 - Everything in the file is someone else's text: labels and names are only ever shown as text.
 
-## fmGraph boards (`fmIDE-graph-board` 5, step 15)
+## fmGraph boards (`fmIDE-graph-board` 6, step 15)
 
 A board is a view of one model in fmGraph: bars, charts and sliders. A file holds one or more boards (**Export this board**, **Export all boards**); fmGraph keeps the boards of each model in the browser in the same form.
 
@@ -151,7 +151,9 @@ A board is a view of one model in fmGraph: bars, charts and sliders. A file hold
 
 - **A fixed vertical scale** (version 5): a bar or chart may carry `"scale": { "min": 0, "max": 5000 }` — drawn from `min` to `max` instead of stretching to the numbers shown (Auto, when absent). Both must be numbers no bigger than 10¹⁵ either way, `min` below `max`; anything else reads as Auto. A scenario waterfall's scale is shared by all its outputs. Never in the template form. Version 4 files read as before (every widget on Auto); an older fmGraph asks before opening version 5 and ignores the scale.
 
-### Boards for a template (`fmIDE-graph-board` 2, step 15 G5a; still 2 in versions 3, 4 and 5)
+- **A folded slider** (version 6): a slider may carry `"folded": true` — shown as its name, track and number only; absent when unfolded, and anything but `true` reads as unfolded. Never in the template form. Version 5 files read as before (every slider unfolded); an older fmGraph asks before opening version 6 and shows every slider unfolded.
+
+### Boards for a template (`fmIDE-graph-board` 2, step 15 G5a; still 2 in versions 3 to 6)
 
 fmGraph's **Boards → Export for a template…** writes the same file in its **template form**: a template gets new ids each time it is used, so rectangles are named by their name (capitals and outer spaces ignored), and, for a system template, their canvas's name — never by id:
 

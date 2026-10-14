@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph: fold sliders, a Sliders column that stays on screen, dragging on an iPad
+- A slider folds (▾ / ▸) to its name, the slider and its number; Collapse all / Expand all beside the Sliders heading. Kept with the board: the board file is now version 6 (`folded` on a slider); version 5 files open with every slider unfolded.
+- On a wide screen the Sliders column stays beside the bars and charts as the page scrolls, and scrolls on its own when it is longer than the screen.
+- The handle (⠿) now drags by finger in Safari on an iPad, which used to scroll the page and cancel the drag.
+
 ## fmIDE: a plug name typed and clicked away from is no longer lost
 - The plug editor (🔌) adds a typed name when you click elsewhere. A click that came very soon after the editor opened could close it without adding the name; it now always adds it. Found because a test of it failed on GitHub's slower machines.
 

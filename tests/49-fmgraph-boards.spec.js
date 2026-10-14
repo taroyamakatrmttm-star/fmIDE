@@ -203,7 +203,7 @@ test('the board file: export one or all, import into the same model, a model it 
   expect(dl.suggestedFilename()).toBe('Sample model - Second.board.json');
   const one = JSON.parse(fs.readFileSync(await dl.path(), 'utf8'));
   expect(one.kind).toBe('fmIDE-graph-board');
-  expect(one.version).toBe(5);
+  expect(one.version).toBe(6);
   expect(one.boards.map(b => b.name)).toEqual(['Second']);
   // Export all.
   await page.click('.gbar-menu summary');
@@ -269,4 +269,129 @@ test('the board file is read like any file: wrong kind, not JSON, newer version,
   await expect(page.getByRole('button', { name: 'Add an empty board' })).toBeDisabled();
   expect(pageErrors).toEqual([]);
   void testInfo;
+});
+
+test('folding sliders: one by its ▸, Collapse all / Expand all; undo; kept; the board file version 6', async ({ page, pageErrors }) => {
+  await openSample(page);
+  const sliders = page.locator('.slider-widget');
+  await expect(sliders).toHaveCount(2);
+  const folded = () => g(page, () => fmGraph.board().sliders.map(s => s.folded === true));
+  // Unfolded at first: every setting shows; the column's button collapses all.
+  await expect(sliders.first().locator('.slider-base')).toBeVisible();
+  await expect(page.locator('#btnFoldSliders')).toHaveText('Collapse all');
+  // One slider folded: its name, track and number only.
+  await sliders.first().getByRole('button', { name: 'Folded' }).click();
+  await expect(sliders.first()).toHaveClass(/folded/);
+  await expect(sliders.first().getByRole('button', { name: 'Folded' })).toHaveAttribute('aria-pressed', 'true');
+  for(const hidden of ['.slider-base', '.slider-range', 'select[aria-label="What the slider does"]', 'button:text("Reset")']) await expect(sliders.first().locator(hidden)).toBeHidden();
+  await expect(sliders.first().locator('.widget-head select')).toBeVisible();
+  await expect(sliders.first().locator('input[type=range]')).toBeVisible();
+  await expect(sliders.first().locator('input.slider-value')).toBeVisible();
+  await expect(sliders.nth(1).locator('.slider-base')).toBeVisible();
+  expect(await folded()).toEqual([true, false]);
+  // A folded slider still moves the bars.
+  const before = await g(page, () => fmGraph.value('Profit', 1));
+  await sliders.first().locator('input.slider-value').fill('14');
+  await sliders.first().locator('input.slider-value').press('Enter');
+  expect(await g(page, () => fmGraph.value('Profit', 1))).not.toBe(before);
+  // Collapse all, then Expand all: one undo step each.
+  await page.click('#btnFoldSliders');
+  expect(await folded()).toEqual([true, true]);
+  await expect(page.locator('#btnFoldSliders')).toHaveText('Expand all');
+  await page.click('#btnFoldSliders');
+  expect(await folded()).toEqual([false, false]);
+  expect(await g(page, () => fmGraph.undo())).toBe(true);
+  expect(await folded()).toEqual([true, true]);
+  expect(await g(page, () => fmGraph.undo())).toBe(true);
+  expect(await folded()).toEqual([true, false]);
+  await expect(sliders.nth(1).locator('.slider-base')).toBeVisible();
+  // Kept after a reload.
+  await page.waitForTimeout(500);
+  await page.reload();
+  await page.waitForFunction(() => !!window.fmGraph);
+  await page.click('#btnSample');
+  await expect(page.locator('.slider-widget')).toHaveCount(2);
+  expect(await folded()).toEqual([true, false]);
+  await expect(page.locator('.slider-widget').first()).toHaveClass(/folded/);
+  // The board file: version 6, `folded` only on a folded slider; imported back with it.
+  const file = await g(page, () => fmGraph.exportBoards(true));
+  expect(file.version).toBe(6);
+  expect(file.boards[0].sliders.map(s => s.folded)).toEqual([true, undefined]);
+  expect(await g(page, (d) => fmGraph.importBoards(d), file)).toBe(1);
+  await g(page, () => fmGraph.showBoard(1));
+  expect(await folded()).toEqual([true, false]);
+  expect(pageErrors).toEqual([]);
+});
+
+test('a version 5 board file opens with its sliders unfolded; a folded that isn\'t true is not folded', async ({ page, pageErrors }) => {
+  await openSample(page);
+  const v5 = JSON.parse(fs.readFileSync(require('path').join(__dirname, 'fixtures', 'formats', 'board-v5.json'), 'utf8'));
+  expect(await g(page, (d) => fmGraph.importBoards(d), v5)).toBe(1);
+  await g(page, () => fmGraph.showBoard('Saved before folded sliders'));
+  const b = await g(page, () => fmGraph.board());
+  expect(b.sliders.map(s => [s.name, s.mode, s.min, s.max, s.step, s.folded])).toEqual([['Price', 'set', 5, 15, 0.5, undefined], ['Volume', 'shift', -50, 50, 1, undefined]]);
+  expect(b.items[0].scale).toEqual({ min: 0, max: 8000 });
+  await expect(page.locator('.slider-widget.folded')).toHaveCount(0);
+  const at = { canvasId: 'cProfit', nodeId: 'price', name: 'Price', periods: { mode: 'all' }, mode: 'set' };
+  const odd = ['true', 1, {}, [true], null];
+  expect(await g(page, (d) => fmGraph.importBoards(d), { kind: 'fmIDE-graph-board', version: 6, boards: [{ name: 'Odd folds',
+    sliders: odd.map(folded => Object.assign({ folded }, at)).concat([Object.assign({ folded: true }, at)]) }] })).toBe(1);
+  await g(page, () => fmGraph.showBoard('Odd folds'));
+  expect((await g(page, () => fmGraph.board())).sliders.map(s => s.folded === true)).toEqual([false, false, false, false, false, true]);
+  expect(pageErrors).toEqual([]);
+});
+
+test('the Sliders column stays on screen beside the bars and scrolls on its own', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 700 });
+  await openSample(page);
+  await g(page, () => { for(let i = 0; i < 6; i++) fmGraph.addSlider('Debt'); });
+  await expect(page.locator('.slider-widget')).toHaveCount(8);
+  await g(page, () => window.scrollBy(0, 500));
+  const col = await g(page, () => {
+    const c = document.querySelector('#board > .board-col');
+    return { top: c.getBoundingClientRect().top, bottom: c.getBoundingClientRect().bottom, gbar: document.querySelector('.gbar').offsetHeight,
+      scrolls: c.scrollHeight > c.clientHeight, y: window.scrollY };
+  });
+  expect(col.y).toBeGreaterThan(0); // the page scrolled…
+  expect(Math.abs(col.top - (col.gbar + 8))).toBeLessThan(2); // …and the column stayed just under the top bar,
+  expect(col.bottom).toBeLessThanOrEqual(700); // on screen,
+  expect(col.scrolls).toBe(true); // scrolling on its own.
+  // Folded, the sliders take well under half the room.
+  const tall = () => g(page, () => document.querySelector('#sliderList').offsetHeight);
+  const unfolded = await tall();
+  await page.click('#btnFoldSliders');
+  expect(await tall()).toBeLessThan(unfolded / 2);
+});
+
+test('by finger: a slider moves by its handle, and the handle never scrolls the page (Safari on an iPad)', async ({ browser }) => {
+  const context = await browser.newContext({ hasTouch: true, viewport: { width: 1024, height: 1400 } });
+  const page = await context.newPage();
+  await page.route('**/*', route => route.request().url() === 'http://local.test/fmGraph.html'
+    ? route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: fs.readFileSync(require('path').join(__dirname, '..', 'apps', 'fmGraph.html')) })
+    : route.abort());
+  await page.goto('http://local.test/fmGraph.html');
+  await page.click('#btnSample');
+  await expect(page.locator('.slider-widget')).toHaveCount(2);
+  expect(await page.evaluate(() => fmGraph.board().sliders.map(s => s.name))).toEqual(['Price', 'Volume']);
+  const from = await page.locator('.slider-widget').nth(1).locator('.drag-handle').boundingBox();
+  const to = await page.locator('.slider-widget').first().boundingBox();
+  const cdp = await context.newCDPSession(page);
+  const pt = (x, y) => [{ x, y }];
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: pt(from.x + from.width / 2, from.y + from.height / 2) });
+  for(let i = 1; i <= 8; i++){
+    const f = i / 8;
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: pt(from.x + (to.x + 40 - from.x) * f, from.y + (to.y + 10 - from.y) * f) });
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  expect(await page.evaluate(() => fmGraph.board().sliders.map(s => s.name))).toEqual(['Volume', 'Price']);
+  // A finger's move on the handle is stopped there, so the browser can't scroll instead.
+  const stopped = await page.evaluate(() => {
+    const h = document.querySelector('.slider-widget .drag-handle');
+    const t = new Touch({ identifier: 9, target: h, clientX: 10, clientY: 10 });
+    return !h.dispatchEvent(new TouchEvent('touchmove', { cancelable: true, bubbles: true, touches: [t], targetTouches: [t], changedTouches: [t] }));
+  });
+  expect(stopped).toBe(true);
+  // The handle's text can't be selected or dragged by the browser itself.
+  expect(await page.evaluate(() => getComputedStyle(document.querySelector('.drag-handle')).userSelect)).toBe('none');
+  await context.close();
 });

@@ -120,6 +120,7 @@ function renderBoard(){
   board.sliders.forEach(s => { const el = sliders.querySelector('.slider-widget[data-id="' + s.id + '"]'); if(el) el.querySelector('.widget-head').prepend(arrangeControls(s, el)); });
   $('noBars').classList.toggle('hidden', board.items.length > 0);
   $('noSliders').classList.toggle('hidden', board.sliders.length > 0);
+  syncFoldAll(); // (05c-arrange.js)
   renderTraceNote();
   renderScenarios(); // (05f-scenarios.js)
   updateValues();
@@ -151,7 +152,7 @@ function barWidget(b){
 
 function sliderWidget(s){
   const rect = model.byKey.get(s.key);
-  const w = make('div', 'widget slider-widget');
+  const w = make('div', 'widget slider-widget' + (s.folded ? ' folded' : ''));
   w.dataset.id = s.id;
   const head = make('div', 'widget-head');
   const sel = rectSelect(s.key, true);
@@ -161,15 +162,15 @@ function sliderWidget(s){
     Object.assign(s, defaultRange(model.byKey.get(s.key), s.periods, s.mode));
     saveBoardSoon(); renderBoard();
   });
-  head.append(sel, removeButton(s.id, 'slider'));
+  head.append(sel, foldButton(s), removeButton(s.id, 'slider')); // (05c-arrange.js)
 
-  const row = make('div', 'widget-row');
+  const row = make('div', 'widget-row slider-more');
   row.appendChild(periodsChooser(s.periods, (p) => {
     s.periods = p;
     if(s.mode === 'set' && s.value === null) Object.assign(s, defaultRange(rect, p, 'set'));
     saveBoardSoon(); renderBoard();
   }));
-  const modeRow = make('div', 'widget-row');
+  const modeRow = make('div', 'widget-row slider-more');
   const mode = make('select');
   mode.setAttribute('aria-label', 'What the slider does');
   [['set', 'Set the number to'], ['shift', 'Change it by %']].forEach(([v, t]) => { const o = make('option', null, t); o.value = v; if(s.mode === v) o.selected = true; mode.appendChild(o); });
@@ -201,13 +202,13 @@ function sliderWidget(s){
   });
   track.append(range, box);
   if(s.mode === 'shift') track.appendChild(make('span', null, '%'));
-  const baseLine = make('div', 'slider-base');
+  const baseLine = make('div', 'slider-base slider-more');
   const reset = make('button', null, 'Reset');
   reset.type = 'button';
   reset.title = 'Back to the model\'s own number';
   reset.addEventListener('click', () => { s.value = null; range.value = box.value = String(sliderShown(s)); scheduleUpdate(); });
 
-  const more = make('details', 'slider-range');
+  const more = make('details', 'slider-range slider-more');
   more.appendChild(make('summary', null, 'Range and step'));
   const rangeRow = make('div', 'widget-row');
   const num = (label, value) => {
@@ -227,7 +228,7 @@ function sliderWidget(s){
   [minBox, maxBox, stepBox].forEach(i => i.addEventListener('change', rangeChanged));
   more.appendChild(rangeRow);
 
-  const foot = make('div', 'widget-row');
+  const foot = make('div', 'widget-row slider-more');
   foot.append(reset);
   w.append(head, row, modeRow, track, baseLine, more, foot);
 

@@ -63,12 +63,13 @@ const FMGRAPH_HELP_TOPICS = [
       { see: ['bars', 'charts'] },
     ] },
   { id: 'sliders', group: 'board', title: 'Sliders',
-    keywords: 'slider input change set percent shift range step reset what if',
+    keywords: 'slider input change set percent shift range step reset what if fold collapse expand',
     summary: 'Change an input rectangle and watch the bars move.',
     body: [
       { p: 'A slider changes an input rectangle: one with no arrow into it (or only one from an operator that nothing feeds). It can set the input to a number, or change it by a percentage, in all periods, one period or a range of periods.' },
       { p: 'Drag the slider, use the arrow keys, or type a number in the box beside it. The slider stops at its steps; Range and step changes where it starts, ends and stops.' },
       { p: 'Reset puts one slider back to the model\'s own number; Reset all at the top puts every slider back.' },
+      { p: '▾ folds a slider to its name, the slider and its number, so many fit on the screen; ▸ shows all its settings again. Collapse all and Expand all sit beside the Sliders heading. Folding is kept with the board. On a wide screen the Sliders column stays beside the bars and charts as the page scrolls, and scrolls by itself when it is longer than the screen.' },
       { steps: ['Press + Slider at the top.', 'Choose an input rectangle.', 'Choose the periods and whether to set the number or change it by %.', 'Move the slider.'] },
       { tip: 'Two sliders on the same input apply one after the other: a change by % applies to what the slider above it left.' },
       { see: ['reach', 'speed'] },
@@ -108,7 +109,7 @@ const FMGRAPH_HELP_TOPICS = [
     summary: 'Several boards per model, arranged as you like.',
     body: [
       { p: 'A model can have several boards — for example one for the statements and one for pricing — shown as tabs above the board. + Board adds an empty one; ✎ (or a double-click on its tab) renames the board shown, ⧉ duplicates it and 🗑 deletes it (after asking; the last board stays). Each board has its own bars, charts and sliders.' },
-      { p: 'Drag a bar, chart or slider by its handle (⠿) to move it among the others — by mouse, by finger, or with the arrow keys on the handle. ⇔ makes a bar or chart wide (the whole row) or narrow (half of it).' },
+      { p: 'Drag a bar, chart or slider by its handle (⠿) to move it among the others — by mouse, by finger (on an iPad too), or with the arrow keys on the handle. ⇔ makes a bar or chart wide (the whole row) or narrow (half of it).' },
       { p: 'Colours: a bar\'s colour box, beside its periods; in a chart, click a rectangle\'s colour in its key; a waterfall step\'s colour is in Edit chart.' },
       { p: '↶ Undo and ↷ Redo (Ctrl+Z, Ctrl+Y) take back any change to the boards — not where a slider is set, which is a "what if", not a change.' },
       { see: ['board-file', 'charts'] },

@@ -4,13 +4,14 @@
 //   bar    { id, kind: 'bar', key, periods, wide, colour, scale }
 //   chart  { id, kind: 'chart', wide, layout: 'columns' | 'flow' | 'scenarios', scale, … } (G2; 04b-charts.js)
 // scale: null for Auto, or { min, max } (04d-scale.js).
-//   slider { id, key, periods, mode: 'set' | 'shift', min, max, step, value }
+//   slider { id, key, periods, mode: 'set' | 'shift', min, max, step, value, folded }
 // periods: { mode: 'all' } · { mode: 'one', p } · { mode: 'range', from, to } (from 0).
 // A slider's value is null until it moves (the model's own numbers); 'set' gives the input
 // that number in the periods it covers, 'shift' changes them by that many percent.
 //
 // A wide widget takes a whole row of the grid, a narrow one half of it (charts start wide,
-// bars narrow); colour is a bar's own colour (null: the usual one).
+// bars narrow); colour is a bar's own colour (null: the usual one). A folded slider shows only
+// its name, track and number (board file 6; 05c-arrange.js).
 //
 // The boards are remembered in this browser for each model (fmgraph-board-<signature>), and the
 // last ones used are kept too, so a model that has changed a little (a rectangle added in
@@ -119,7 +120,7 @@ function cleanBoard(raw, dropped){
     const periods = cleanPeriods(s.periods, count);
     const mode = s.mode === 'shift' ? 'shift' : 'set';
     out.sliders.push(Object.assign({ id: newWidgetId('s'), key: rect.key, periods, mode, value: null },
-      cleanRange(s, defaultRange(rect, periods, mode))));
+      cleanRange(s, defaultRange(rect, periods, mode)), { folded: s.folded === true })); // version 6
   });
   return out;
 }
@@ -138,9 +139,10 @@ function cleanBoards(raw){
 // The board file's version (docs/file-formats.md): 1 (G3a); 2 (G5a) adds the template form
 // (`form: "template"`, 06c-template-boards.js); 3 adds the model's named scenarios
 // (`scenarios`, 05f-scenarios.js); 4 the scenario waterfall (a chart of layout `scenarios`,
-// 04b-charts.js); 5 a bar's or chart's fixed vertical scale (`scale`, 04d-scale.js). The
-// template form, which carries none of these, stays version 2.
-const BOARD_FILE_VERSION = 5;
+// 04b-charts.js); 5 a bar's or chart's fixed vertical scale (`scale`, 04d-scale.js); 6 a
+// folded slider (`folded`, 05c-arrange.js). The template form, which carries none of these,
+// stays version 2.
+const BOARD_FILE_VERSION = 6;
 const TEMPLATE_BOARD_VERSION = 2;
 function boardData(b){
   const at = (key) => { const r = model.byKey.get(key); return { canvasId: r.canvasId, nodeId: r.nodeId, name: r.name }; };
@@ -150,7 +152,7 @@ function boardData(b){
     items: b.items.map(w => w.kind === 'bar'
       ? Object.assign({ type: 'bar' }, at(w.key), { periods: Object.assign({}, w.periods), wide: w.wide }, w.colour ? { colour: w.colour } : {}, scaleOf(w))
       : Object.assign({ type: 'chart', wide: w.wide }, chartData(w, at), scaleOf(w))),
-    sliders: b.sliders.map(s => Object.assign(at(s.key), { periods: Object.assign({}, s.periods), mode: s.mode, min: s.min, max: s.max, step: s.step })),
+    sliders: b.sliders.map(s => Object.assign(at(s.key), { periods: Object.assign({}, s.periods), mode: s.mode, min: s.min, max: s.max, step: s.step }, s.folded ? { folded: true } : {})),
   };
 }
 // The file form of these boards (all, or the ones given).

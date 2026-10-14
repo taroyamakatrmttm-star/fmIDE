@@ -8,6 +8,18 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'fold-sliders', date: '2026-10-13', title: 'Fold sliders, keep them on screen, move them on an iPad',
+    summary: 'Fold a slider to one slim card, keep the Sliders column beside the charts, and drag sliders by finger on an iPad.',
+    what: [
+      '▾ on a slider folds it to its name, the slider and its number; ▸ shows all its settings again. Collapse all and Expand all sit beside the Sliders heading.',
+      'On a wide screen the Sliders column stays beside the bars and charts as the page scrolls, and scrolls by itself when it holds more sliders than the screen.',
+      'On an iPad, the handle (⠿) now moves a slider, bar or chart by finger: Safari used to take the touch over and nothing moved.',
+    ],
+    why: 'With many sliders, the ones lower down were hard to reach without the chart scrolling out of sight.',
+    how: ['Press Collapse all beside the Sliders heading, then move any slider while the charts stay in view.'],
+    notes: ['Folding is kept with the board, in board files and in fmIDE\'s documents (board file version 6; older files open with every slider unfolded). A board exported for a template leaves it out.'],
+    see: ['sliders'] },
+
   { id: 'fixed-scale', date: '2026-10-12', title: 'A fixed vertical scale',
     summary: 'Draw a bar or chart from a min to a max you choose, so moving a slider shows the change as a change in size.',
     what: [

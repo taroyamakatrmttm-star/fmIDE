@@ -732,6 +732,10 @@ fmGraph (step 15, phase G3a), the sample model, through the page and `window.fmG
 - Colours: a bar's box #ff0000 fills its bars; the balance sheet's first key swatch #00ff00 its first part; a waterfall step's #0000ff its bar; all three in the board's data; `setColour(…, 'red')` refused; a file's "url(…)" and "#12345" ignored (no fill).
 - Undo: off at first and after a slider move; a bar added, undone, redone (buttons), and again by Ctrl+Z / Ctrl+Y; a chart's title and a removed chart undone step by step; a deleted board brought back; the slider still at 12 afterwards.
 - The board file: Export this board downloads "Sample model - Second.board.json" (kind, version 1, one board); Export all two boards, the first's items chart, chart, bar, bar and sliders Price, Volume; imported back as "Board (2)" and "Second (2)" ("Added …"); dropped on the page as "Second (3)"; into a model without its rectangles: nothing added, said; into one with Profit only: one board, "left out" said.
+- Folding sliders: the first slider's ▸ (`aria-pressed`) hides its periods, mode, the model's number, Range and step and Reset, keeping its name, track and number; it still moves Profit; Collapse all, Expand all, each one undo step; kept after a reload; Export gives version 6 with `folded: true` on the folded slider only; imported back folded.
+- A version 5 board file (`board-v5.json`, a bar with a fixed scale, a set and a shift slider) opens with every slider unfolded, ranges and scale kept; `folded` of "true", 1, {}, [true] or null is unfolded, true folded. No page error.
+- The Sliders column at 1024 × 700 with 8 sliders: after the page scrolls it sits just under the top bar, on screen, scrolling on its own; folded, the sliders take under half the room.
+- By finger (real touch input): Volume's handle dragged above Price; a cancelable `touchmove` on the handle is stopped (Safari on an iPad would scroll); the handle's text can't be selected.
 - Read like any file: not JSON, another kind ("isn't an fmGraph board file"), version 7 asked (Cancel adds nothing), markup in a board's name, title and group shown as text, the G1–G2 form read as one board (charts first, wide; bars narrow), 30 boards stopping at 20 ("at most 20 boards", + Board off).
 
 ### 50. fmGraph's boards in documents (`tests/50-fmgraph-documents.spec.js`; part of `npm run test:fmgraph`)
@@ -957,6 +961,7 @@ fmGraph at the usual size with the sample, through its page and `window.fmGraph`
 - Past the scale (0 to 1,000): every bar to the top edge, ▲ on each with "Above the scale (1,000)", the label still the number itself; above every number: ▼; within it: no marks.
 - Charts: the balance sheet's Fixed scale 0 to 9,900, typed 5,000: ▲ on Years 3 and 4 both groups, the check still ✓; the waterfall's 📏: 0 to 10,000, its labels unchanged; a scenario waterfall of Profit and Revenue fixed at current: 0 to 12,000 on both outputs; switching kind keeps it.
 - Undo and redo: each change one step; a slider move none and the scale as it was; kept after a reload; Export all: version 5, the Profit bar's `scale`, none on the Closing cash bar; imported back as a new board with it.
+- `board-v5.json` (group 49; a bar with a fixed scale, a set and a shift slider): opens with every slider unfolded.
 - `board-v4.json` (a bar and a scenario waterfall, a scenario): opens, every widget on Auto, the scenario added; hostile scales (text, min above or equal to max, 10³⁰⁰, one end missing, a list, text, null, −Infinity) read as Auto; −1.5 to 2.5 kept.
 - On a phone: the bar fixed below its numbers; held, its quick look's points all on the scale's top edge; ⤢ Show: the bar on its fixed scale, ▲ on all four years.
 

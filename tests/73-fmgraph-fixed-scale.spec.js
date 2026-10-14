@@ -200,9 +200,9 @@ test('undo and redo, kept after a reload, the board file version 5, imported bac
   await page.click('#btnSample');
   await expect(profitBar(page).locator('select[aria-label="Vertical scale"]')).toHaveValue('fixed');
   await expect(profitBar(page).locator('input[aria-label="Scale to"]')).toHaveValue('8000');
-  // The board file: version 5, the bar's scale; another bar on Auto carries none.
+  // The board file: version 6 (5 brought the scale), the bar's scale; another bar on Auto carries none.
   const file = await g(page, () => fmGraph.exportBoards(true));
-  expect(file.version).toBe(5);
+  expect(file.version).toBe(6);
   const profit = file.boards[0].items.find(w => w.type === 'bar' && w.name === 'Profit');
   const cash = file.boards[0].items.find(w => w.type === 'bar' && w.name === 'Closing cash');
   expect(profit.scale).toEqual({ min: 0, max: 8000 });
