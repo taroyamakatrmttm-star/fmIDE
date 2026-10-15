@@ -8,6 +8,18 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'tornado-spider-edit', date: '2026-10-16', title: 'Tornado and Spider: choose each input\'s Low and High',
+    summary: 'Edit chart now sets, for each input, whether it moves by a percent or an amount, its Low and High, and whether it shows.',
+    what: [
+      'Each input in a Tornado\'s or Spider\'s Edit chart has its own row: the input, % or ± (by a percent or by an amount), Low, High, and a tick to show it in the chart.',
+      'Under each row, Low and High in the input\'s own numbers now: "Now 10: 9 … 11 in Year 1". An input that is 0 says a percent doesn\'t move it.',
+      '+ Input adds the next input that reaches the output; ↑ ↓ reorder, × removes.',
+      'The Trace and compare tutorial ends with a Tornado on Profit.',
+    ],
+    why: 'A rate is better moved by a percentage point than by 10% of itself, and some inputs only make sense within a narrow range.',
+    how: ['+ Chart, choose Tornado, then open Edit chart.'],
+    see: ['sensitivity'] },
+
   { id: 'tornado-spider', date: '2026-10-15', title: 'Tornado and Spider charts: what moves an output most',
     summary: 'Two new kinds of chart move each input on its own and show which ones move an output most, around where your sliders stand.',
     what: [

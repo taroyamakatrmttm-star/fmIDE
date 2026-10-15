@@ -147,7 +147,7 @@ const SENSITIVITY_WAIT_MS = 300;
 const sensitivityMemo = new Map(); // chart id → { key, layout, figures }
 let sensitivityTimer = null, sensitivityJob = 0;
 function sensitivityKey(c, base){
-  return overridesKey(base) + '#' + JSON.stringify([c.layout, c.output, c.period, c.steps, c.inputs.map(i => [i.key, i.by, i.low, i.high])]);
+  return overridesKey(base) + '#' + JSON.stringify([c.layout, c.output, c.period, c.steps, c.inputs.map(i => [i.key, i.by, i.low, i.high, i.show])]);
 }
 // The chart's figures for base: { figures, ready }. ready false: being worked out (figures are
 // the last ones worked out, or undefined). now: work them out whatever they cost (fmGraph.chart).
