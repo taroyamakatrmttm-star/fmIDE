@@ -5878,7 +5878,7 @@ $('moduleLayoutsFileInput').addEventListener('change', () => {
 //   cleanGraphCopy(raw, periods) → the layout's cfg.graph (mapping file 4), checked
 // ============================================================
 const GRAPH_BOARD_KIND = 'fmIDE-graph-board';
-const GRAPH_BOARD_VERSION = 7; // the newest version this reader knows
+const GRAPH_BOARD_VERSION = 8; // the newest version this reader knows (8: step 18's Tornado and Spider charts, not read here yet)
 const GRAPH_LIMITS = { boards: 20, scenarios: 50, settings: 40, boardName: 60, scenarioName: 40, rectName: 60, value: 1e15 };
 
 let modelGraphBoards = null; // the graphBoards a loaded workspace or .fmide carried (raw; read only when used)

@@ -1,9 +1,9 @@
-// 76. fmGraph's scenarios in ExcelExporter (step 19, phase B2; docs/step19-fmgraph-in-excel.md).
+// 77. fmGraph's scenarios in ExcelExporter (step 19, phase B2; docs/step19-fmgraph-in-excel.md).
 // - fmIDE's model for ExcelExporter carries the document's graphBoards; a .fmide opened in
 //   ExcelExporter itself does too. Layout → Use fmGraph boards… and File → Import fmGraph boards…
 //   (or a board file dropped) open the window: the boards, the scenarios with tick boxes, what
 //   can't be carried and why.
-// - ExcelExporter's own reader: kind and version (1–7; a newer one and the template form refused),
+// - ExcelExporter's own reader: kind and version (1–8; a newer one and the template form refused),
 //   names as text, numbers forced, rectangles matched by canvas id, node id and name (capitals and
 //   outer spaces ignored), the rest left out and counted; version 1–2 files carry no scenarios.
 // - Use copies them into the layout (cfg.graph, mapping file 4), turning the Inputs tab on, and
@@ -196,7 +196,7 @@ test('someone else\'s board file: names as text, numbers forced, the rest left o
   expect(pageErrors).toEqual([]);
 });
 
-test('board versions: 2 has no scenarios, 3 reads, a newer one and the template form are refused', async ({ page }) => {
+test('board versions: 2 has no scenarios, 3 and 8 read, a newer one and the template form are refused', async ({ page }) => {
   await openProfit(page);
   await importFile(page, board('board-v2.board.json'));
   await expect(page.locator('#graphModal')).toBeVisible();
@@ -207,9 +207,12 @@ test('board versions: 2 has no scenarios, 3 reads, a newer one and the template 
   await importFile(page, board('board-v3.board.json'));
   expect(await scenarioNames(page)).toEqual(['Price 14']);
   await page.click('#graphCancel');
-  await importFile(page, board('board-newer.board.json'));
+  await importFile(page, board('board-newer.board.json')); // version 8 (step 18's), read
+  expect(await scenarioNames(page)).toEqual(['Price 14']);
+  await page.click('#graphCancel');
+  await importFile(page, board('board-newer-v9.board.json'));
   await expect(genStatus(page)).toHaveClass(/err/);
-  await expect(genStatus(page)).toContainText('format version 8; this ExcelExporter reads up to version 7');
+  await expect(genStatus(page)).toContainText('format version 9; this ExcelExporter reads up to version 8');
   await expect(page.locator('#graphModal')).toBeHidden();
   await importFile(page, board('board-template.board.json'));
   await expect(genStatus(page)).toContainText('is for a template');

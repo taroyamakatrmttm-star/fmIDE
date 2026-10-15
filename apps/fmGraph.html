@@ -268,6 +268,12 @@
   .scenario-flows .scenario-flow{ flex:1 1 260px; max-width:100%; }
   .bar-chart .t-flow-title{ fill:var(--ink); font-weight:600; }
   .edit-head{ font-size:12px; font-weight:600; color:var(--soft-ink); margin:8px 0 4px; }
+  /* The Tornado and the Spider (step 18) */
+  .bar-chart .s-base{ stroke:var(--ink); stroke-width:1.5; stroke-dasharray:4 3; }
+  .bar-chart .s-axis{ stroke:var(--line-strong); stroke-width:1; }
+  .bar-chart .s-path{ stroke-width:2; }
+  .bar-chart.stale{ opacity:.45; }
+  .sens-inputs{ margin:2px 0 6px; padding-left:18px; font-size:13px; }
   .scenario-ticks{ display:flex; flex-wrap:wrap; gap:4px 12px; font-size:13px; }
   .scenario-tick{ display:flex; gap:5px; align-items:center; }
 
@@ -3334,7 +3340,7 @@ const AHEAD_MAX_STEPS = 401;   // a slider with more steps is worked out as it m
 let resultCache = new Map();
 let aheadJob = 0;              // the current "work out ahead" job; a new one stops the old
 
-function clearResultCache(){ resultCache = new Map(); aheadJob++; }
+function clearResultCache(){ resultCache = new Map(); aheadJob++; sensitivityMemo.clear(); sensitivityJob++; }
 
 // The numbers the sliders lay over the model: key → a number per period. Sliders apply in
 // order; a later one over the same input and period wins (a change by % applies to what the
@@ -3449,7 +3455,57 @@ function setOwnSliders(b, on){
 
 // While a finger holds A (05h-phone-show.js), the numbers looked at instead of the sliders'.
 let lookingAt = null;
-function currentResults(){ return resultsWith(lookingAt ? lookingAt.overrides : overridesFor(liveSliders())); }
+// The numbers laid over the model for what the board shows now.
+function shownOverrides(){ return lookingAt ? lookingAt.overrides : overridesFor(liveSliders()); }
+function currentResults(){ return resultsWith(shownOverrides()); }
+
+// ---- the Tornado and the Spider (step 18; 04b-charts.js) ----
+// Their figures are kept per chart for the base and settings they were worked out for
+// (sensitivityMemo), so a redraw that changes neither works nothing out. When working them out
+// would take longer than SENSITIVITY_BUDGET_MS (a slow model, or many runs), they are worked out
+// once the sliders have stopped for SENSITIVITY_WAIT_MS, in small pieces so the page stays
+// responsive; meanwhile the chart shows "Working out…" (and what it showed before, faded).
+const SENSITIVITY_BUDGET_MS = 60;
+const SENSITIVITY_WAIT_MS = 300;
+const sensitivityMemo = new Map(); // chart id → { key, layout, figures }
+let sensitivityTimer = null, sensitivityJob = 0;
+function sensitivityKey(c, base){
+  return overridesKey(base) + '#' + JSON.stringify([c.layout, c.output, c.period, c.steps, c.inputs.map(i => [i.key, i.by, i.low, i.high])]);
+}
+// The chart's figures for base: { figures, ready }. ready false: being worked out (figures are
+// the last ones worked out, or undefined). now: work them out whatever they cost (fmGraph.chart).
+function sensitivityNow(c, base, now){
+  const key = sensitivityKey(c, base), hit = sensitivityMemo.get(c.id);
+  if(hit && hit.key === key) return { figures: hit.figures, ready: true };
+  if(!now && model.baseMs * sensitivityRuns(c, base).length > SENSITIVITY_BUDGET_MS){
+    workOutSensitivitySoon();
+    return { figures: hit && hit.layout === c.layout ? hit.figures : undefined, ready: false }; // a Spider can't be drawn from a Tornado's figures
+  }
+  const figures = sensitivityFigures(c, base);
+  sensitivityMemo.set(c.id, { key, layout: c.layout, figures });
+  return { figures, ready: true };
+}
+function workOutSensitivitySoon(){
+  clearTimeout(sensitivityTimer);
+  const job = ++sensitivityJob;
+  sensitivityTimer = setTimeout(() => {
+    if(job !== sensitivityJob || !model || !board) return;
+    const base = shownOverrides();
+    const charts = board.charts.filter(c => isSensitivity(c) && (sensitivityMemo.get(c.id) || {}).key !== sensitivityKey(c, base));
+    const todo = charts.flatMap(c => sensitivityRuns(c, base));
+    setCalcNote('Working out the Tornado and Spider charts…');
+    const piece = () => {
+      if(job !== sensitivityJob || !model) return;
+      const until = performance.now() + 30;
+      while(todo.length && performance.now() < until) resultsWith(todo.shift());
+      if(todo.length){ setTimeout(piece, 0); return; }
+      charts.forEach(c => sensitivityMemo.set(c.id, { key: sensitivityKey(c, base), layout: c.layout, figures: sensitivityFigures(c, base) }));
+      setCalcNote('');
+      scheduleUpdate();
+    };
+    piece();
+  }, SENSITIVITY_WAIT_MS);
+}
 
 // The positions a slider snaps to.
 function sliderSteps(s){
@@ -3491,7 +3547,7 @@ function setCalcNote(text){ const el = $('calcNote'); if(el) el.textContent = te
 // The boards (G3a: several, as tabs, each a view of the model). A board:
 //   { id, name, items: [bar | chart, …] (in the order shown), sliders: [slider, …], ownSliders }
 //   bar    { id, kind: 'bar', key, periods, wide, colour, scale }
-//   chart  { id, kind: 'chart', wide, layout: 'columns' | 'flow' | 'scenarios', scale, … } (G2; 04b-charts.js)
+//   chart  { id, kind: 'chart', wide, layout: 'columns' | 'flow' | 'scenarios' | 'tornado' | 'spider', scale, … } (G2; 04b-charts.js)
 // scale: null for Auto, or { min, max } (04d-scale.js).
 //   slider { id, key, periods, mode: 'set' | 'shift', min, max, step, value, folded }
 // periods: { mode: 'all' } · { mode: 'one', p } · { mode: 'range', from, to } (from 0).
@@ -3589,10 +3645,12 @@ function cleanBoard(raw, dropped){
     return { id: newWidgetId('b'), kind: 'bar', key: rect.key, periods: cleanPeriods(b.periods, count), wide: b.wide === true, colour: cleanColour(b.colour), scale: cleanScale(b.scale) };
   };
   const chart = (c) => {
-    const ch = cleanChart(c, rectForEntry, count);
+    // A Tornado or Spider whose output isn't in this model is left out (version 8).
+    if(isSensitivity(c) && c.output && !rectForEntry(c.output)){ drop(); return null; }
+    const ch = cleanChart(c, rectForEntry, count, drop);
     // A chart that named rectangles, none of them in this model, is left out (one emptied
     // on purpose, naming none, is kept).
-    const named = c && (c.layout === 'flow' ? (Array.isArray(c.steps) ? c.steps.length : 0)
+    const named = c && (isSensitivity(c) ? (c.output ? 1 : 0) + (Array.isArray(c.inputs) ? c.inputs.length : 0) : c.layout === 'flow' ? (Array.isArray(c.steps) ? c.steps.length : 0)
       : c.layout === 'scenarios' ? (Array.isArray(c.outputs) ? c.outputs.length : 0)
       : (Array.isArray(c.groups) ? c.groups.reduce((n, gr) => n + (gr && Array.isArray(gr.parts) ? gr.parts.length : 0), 0) : 0));
     if(!ch || (named > 0 && !chartKeys(ch).length)){ drop(); return null; }
@@ -3632,8 +3690,9 @@ function cleanBoards(raw){
 // (`scenarios`, 05f-scenarios.js); 4 the scenario waterfall (a chart of layout `scenarios`,
 // 04b-charts.js); 5 a bar's or chart's fixed vertical scale (`scale`, 04d-scale.js); 6 a
 // folded slider (`folded`, 05c-arrange.js); 7 a board keeping its own slider positions
-// (`ownSliders`, 03-calc.js). The template form, which carries none of these, stays version 2.
-const BOARD_FILE_VERSION = 7;
+// (`ownSliders`, 03-calc.js); 8 the Tornado and the Spider (charts of layout `tornado` and
+// `spider`, 04b-charts.js). The template form, which carries none of these, stays version 2.
+const BOARD_FILE_VERSION = 8;
 const TEMPLATE_BOARD_VERSION = 2;
 function boardData(b){
   const at = (key) => { const r = model.byKey.get(key); return { canvasId: r.canvasId, nodeId: r.nodeId, name: r.name }; };
@@ -3796,6 +3855,15 @@ function moveWidget(id, to){
 //            change from the one before (sc01 − Start, sc02 − sc01, …) — to the last scenario's
 //            number (End). `use`: the scenarios it goes through, in the Scenarios panel's
 //            order; null for every one (05f-scenarios.js).
+//   tornado / spider (step 18) { id, layout, title, output: key | null, period, steps,
+//            inputs: [{ key, by: 'percent' | 'amount', low, high, show }], colour, colour2 }
+//            What moves one output most, measured around where the sliders stand now: each input
+//            moved on its own, in every period (percent: × (1 + x / 100); amount: + x), the output
+//            read in one period. The Tornado: Low and High against the base, sorted by swing. The
+//            Spider: `steps` points from the base out to Low and to High, a line per input. The
+//            same meanings and limits as ExcelExporter's Sensitivity (docs/file-formats.md);
+//            `show: false` keeps an input listed but leaves it out of the drawing. colour /
+//            colour2: the Tornado's Low and High; a Spider's line takes its input's colour.
 //
 // A chart may give any of its rectangles its own colour: colours { key: '#rrggbb' }, kept in the
 // file on that part or step (`colour`).
@@ -3807,15 +3875,41 @@ const CHART_LIMITS = { groups: 12, parts: 30, steps: 40, title: 80, name: 60, ou
 const FLOW_ROLES = ['start', 'add', 'subtract', 'total'];
 const AGREE_TOLERANCE = 1e-6;
 const agree = (a, b) => Math.abs(a - b) <= AGREE_TOLERANCE * Math.max(1, Math.abs(a), Math.abs(b));
+const SENSITIVITY_LAYOUTS = ['tornado', 'spider'];
+const SENSITIVITY_LIMITS = { inputs: 50, bound: 1e9, steps: 10, defaultSteps: 5 };
+const isSensitivity = (c) => !!c && SENSITIVITY_LAYOUTS.includes(c.layout);
+const defaultBounds = (by) => by === 'amount' ? { low: -1, high: 1 } : { low: -10, high: 10 };
+// A Low or High from a file: a number, cut to ±1e9; anything else the default.
+function cleanBound(v, fallback){
+  const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN;
+  if(!Number.isFinite(n)) return fallback;
+  return Math.max(-SENSITIVITY_LIMITS.bound, Math.min(SENSITIVITY_LIMITS.bound, n));
+}
 const cleanText = (v, max) => typeof v === 'string' ? v.replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, max) : '';
 
 // Reads a chart from storage (or later a file); rectFor finds a part's rectangle by canvas id,
-// node id and name. Parts on rectangles that aren't there are left out.
-function cleanChart(raw, rectFor, count){
+// node id and name. Parts on rectangles that aren't there are left out (a Tornado's or Spider's
+// inputs, or ones no longer inputs, are also counted through drop, when given).
+function cleanChart(raw, rectFor, count, drop){
   if(!raw || typeof raw !== 'object') return null;
   const title = cleanText(raw.title, CHART_LIMITS.title);
   const colours = {};
   const keep = (entry, r) => { const c = cleanColour(entry && entry.colour); if(c) colours[r.key] = c; return r; };
+  const periodOf = () => { const p = Math.round(Number(raw.period)); return Number.isFinite(p) && p >= 0 && p < count ? p : 0; };
+  if(isSensitivity(raw)){
+    const out = raw.output && typeof raw.output === 'object' ? rectFor(raw.output) : null;
+    const inputs = [];
+    (Array.isArray(raw.inputs) ? raw.inputs : []).slice(0, SENSITIVITY_LIMITS.inputs).forEach(i => {
+      const r = i && typeof i === 'object' ? rectFor(i) : null;
+      if(!r || !r.input || inputs.some(x => x.key === r.key)){ if(drop) drop(); return; }
+      const by = i.by === 'amount' ? 'amount' : 'percent', d = defaultBounds(by);
+      inputs.push({ key: keep(i, r).key, by, low: cleanBound(i.low, d.low), high: cleanBound(i.high, d.high), show: i.show !== false });
+    });
+    const st = Math.round(Number(raw.steps));
+    return { id: newWidgetId('c'), kind: 'chart', wide: true, layout: raw.layout, title, output: out ? out.key : null, period: periodOf(),
+      steps: Number.isFinite(st) && st >= 1 && st <= SENSITIVITY_LIMITS.steps ? st : SENSITIVITY_LIMITS.defaultSteps, inputs,
+      colour: cleanColour(raw.colour), colour2: cleanColour(raw.colour2), colours };
+  }
   if(raw.layout === 'scenarios'){
     const outputs = (Array.isArray(raw.outputs) ? raw.outputs : []).slice(0, CHART_LIMITS.outputs).map(o => rectFor(o)).filter(Boolean).map(r => r.key);
     let use = null;
@@ -3845,6 +3939,9 @@ function cleanChart(raw, rectFor, count){
 // A chart's file form; at(key) gives a rectangle's { canvasId, nodeId, name }.
 function chartData(c, at){
   const withColour = (key, extra) => Object.assign(at(key), extra || {}, c.colours && c.colours[key] ? { colour: c.colours[key] } : {});
+  if(isSensitivity(c)) return Object.assign({ layout: c.layout, title: c.title, output: c.output ? at(c.output) : null, period: c.period, steps: c.steps,
+    inputs: c.inputs.map(i => withColour(i.key, Object.assign({ by: i.by, low: i.low, high: i.high }, i.show ? {} : { show: false }))) },
+    c.colour ? { colour: c.colour } : {}, c.colour2 ? { colour2: c.colour2 } : {});
   if(c.layout === 'scenarios') return Object.assign({ layout: 'scenarios', title: c.title, period: c.period, outputs: c.outputs.map(k => at(k)) }, c.use ? { scenarios: c.use.slice() } : {});
   if(c.layout === 'flow') return { layout: 'flow', title: c.title, period: c.period, steps: c.steps.map(s => withColour(s.key, { role: s.role })) };
   return { layout: 'columns', title: c.title, periods: Object.assign({}, c.periods), check: c.check,
@@ -3864,7 +3961,7 @@ function addChart(layout){
 }
 
 // Every rectangle a chart shows.
-function chartKeys(c){ return c.layout === 'flow' ? c.steps.map(s => s.key) : c.layout === 'scenarios' ? c.outputs.slice() : c.groups.flatMap(g => g.parts); }
+function chartKeys(c){ return isSensitivity(c) ? [c.output].concat(c.inputs.map(i => i.key)).filter(Boolean) : c.layout === 'flow' ? c.steps.map(s => s.key) : c.layout === 'scenarios' ? c.outputs.slice() : c.groups.flatMap(g => g.parts); }
 
 // What a columns chart shows in one calculation: per period, per group, each part's result,
 // the total of what goes up (above zero) and down, and whether the groups' totals agree.
@@ -3936,6 +4033,69 @@ function scenarioFigures(c, key, resultsFor){
     out.push(broken ? { name: 'End', kind: 'end', error: out.slice().reverse().find(f => f.error).error } : { name: 'End', kind: 'end', value: prev, from: 0, to: prev });
   }
   return out;
+}
+
+// ---- the Tornado and the Spider (step 18) ----
+// A new Tornado or Spider's output and inputs: the first calculated rectangle (or the one given),
+// and every input that reaches it, in the model's order (at most 50).
+function sensitivityStart(outputKey){
+  const out = outputKey ? model.byKey.get(outputKey) : (model.rects.find(r => !r.input) || model.rects[0]);
+  if(!out) return { output: null, inputs: [] };
+  const inputs = model.inputs.filter(r => r.key !== out.key && model.reach(r.key).has(out.key)).slice(0, SENSITIVITY_LIMITS.inputs)
+    .map(r => Object.assign({ key: r.key, by: 'percent', show: true }, defaultBounds('percent')));
+  return { output: out.key, inputs };
+}
+
+// The numbers laid over the model with one input moved: its number in every period, as the
+// sliders leave it (or the model's own), changed by percent or by an amount; the rest as given.
+function movedOverrides(base, key, by, x){
+  const rect = model.byKey.get(key);
+  const from = base.get(key) || model.periods.map((_, p) => baseValue(rect, p));
+  const out = new Map(base);
+  out.set(key, from.map(v => by === 'amount' ? v + x : v * (1 + x / 100)));
+  return out;
+}
+// The Spider's points along one side: k / steps of the way out, for k = 1 … steps.
+const spiderShares = (steps) => Array.from({ length: steps }, (_, k) => (k + 1) / steps);
+
+// Every set of numbers a Tornado or Spider works out, around the base (for working them out
+// ahead on a slow model).
+function sensitivityRuns(c, base){
+  const out = [];
+  c.inputs.forEach(i => {
+    const xs = c.layout === 'spider' ? spiderShares(c.steps).flatMap(f => [i.low * f, i.high * f]) : [i.low, i.high];
+    xs.forEach(x => out.push(movedOverrides(base, i.key, i.by, x)));
+  });
+  return out;
+}
+
+// What a Tornado or Spider shows, around base (the overrides the board shows now):
+//   { base: number | { error }, inputs: [{ key, by, low, high, show, lowValue, highValue, swing,
+//     error?, points? }] } — the Tornado's sorted by swing (largest first; equal swings keep the
+//   inputs' order; ones that can't be worked out last), the Spider's in the inputs' order with
+//   points [{ at (−1 … 1, a share of Low or High), change, value | error }].
+// null when there is no output.
+function sensitivityFigures(c, base){
+  const rect = c.output && model.byKey.get(c.output);
+  if(!rect) return null;
+  const read = (overrides) => resultOf(resultsWith(overrides), rect, c.period);
+  const b = read(base);
+  const inputs = c.inputs.map((i, n) => {
+    const f = { n, key: i.key, by: i.by, low: i.low, high: i.high, show: i.show };
+    const lo = read(movedOverrides(base, i.key, i.by, i.low)), hi = read(movedOverrides(base, i.key, i.by, i.high));
+    if(lo.error || hi.error) f.error = lo.error || hi.error;
+    else Object.assign(f, { lowValue: lo.value, highValue: hi.value, swing: Math.abs(hi.value - lo.value) });
+    if(c.layout === 'spider'){
+      const point = (at, x) => { const r = read(movedOverrides(base, i.key, i.by, x)); return r.error ? { at, change: x, error: r.error } : { at, change: x, value: r.value }; };
+      const shares = spiderShares(c.steps);
+      f.points = shares.slice().reverse().map(s => point(-s, i.low * s))
+        .concat([b.error ? { at: 0, change: 0, error: b.error } : { at: 0, change: 0, value: b.value }])
+        .concat(shares.map(s => point(s, i.high * s)));
+    }
+    return f;
+  });
+  if(c.layout === 'tornado') inputs.sort((x, y) => (x.error ? 1 : 0) - (y.error ? 1 : 0) || (y.swing || 0) - (x.swing || 0) || x.n - y.n);
+  return { base: b.error ? { error: b.error } : b.value, inputs };
 }
 // ============================================================
 // Undo and Redo (G3a) for every change to the boards: adding, removing, moving, resizing and
@@ -4542,14 +4702,14 @@ function chartWidget(c){
   const head = make('div', 'widget-head');
   const title = make('input', 'chart-title');
   title.type = 'text';
-  title.placeholder = c.layout === 'columns' ? 'Chart title' : 'Waterfall title';
+  title.placeholder = c.layout === 'columns' || isSensitivity(c) ? 'Chart title' : 'Waterfall title';
   title.value = c.title;
   title.maxLength = CHART_LIMITS.title;
   title.setAttribute('aria-label', 'Chart title');
   title.addEventListener('change', () => { c.title = cleanText(title.value, CHART_LIMITS.title); saveBoardSoon(); });
   const layout = make('select');
   layout.setAttribute('aria-label', 'Kind of chart');
-  [['columns', 'Columns'], ['flow', 'Waterfall'], ['scenarios', 'Scenario waterfall']].forEach(([v, t]) => { const o = make('option', null, t); o.value = v; if(c.layout === v) o.selected = true; layout.appendChild(o); });
+  [['columns', 'Columns'], ['flow', 'Waterfall'], ['scenarios', 'Scenario waterfall'], ['tornado', 'Tornado'], ['spider', 'Spider']].forEach(([v, t]) => { const o = make('option', null, t); o.value = v; if(c.layout === v) o.selected = true; layout.appendChild(o); });
   layout.addEventListener('change', () => { switchLayout(c, layout.value); saveBoardSoon(); renderBoard(); });
   head.append(title, layout, removeButton(c.id, 'chart'));
   w.append(head, make('div', 'bar-chart-host'), make('div', 'chart-key'), make('ul', 'bar-errors'));
@@ -4559,17 +4719,24 @@ function chartWidget(c){
 
 // Switching kind keeps the rectangles: every part becomes a step (the first a start, the rest
 // added), every step a part of one group, and a scenario waterfall's outputs the first six of
-// them (calculated rectangles first).
+// them (calculated rectangles first). A Tornado or Spider measures the first calculated one,
+// moving every input that reaches it (step 18); between the two they keep everything.
 function switchLayout(c, layout){
   if(layout === c.layout) return;
+  if(isSensitivity(c) && SENSITIVITY_LAYOUTS.includes(layout)){ c.layout = layout; return; }
   const keys = chartKeys(c);
   const period = c.layout === 'columns' ? (periodsOf(c.periods)[0] || 0) : c.period;
-  ['groups', 'periods', 'check', 'steps', 'period', 'outputs', 'use'].forEach(k => { delete c[k]; });
+  ['groups', 'periods', 'check', 'steps', 'period', 'outputs', 'use', 'output', 'inputs', 'colour', 'colour2'].forEach(k => { delete c[k]; });
   if(layout === 'flow') Object.assign(c, { layout: 'flow', period, steps: keys.map((key, i) => ({ key, role: i === 0 ? 'start' : 'add' })) });
   else if(layout === 'scenarios'){
     const unique = [...new Set(keys)];
     const calc = unique.filter(k => !model.byKey.get(k).input).concat(unique.filter(k => model.byKey.get(k).input));
     Object.assign(c, { layout: 'scenarios', period, outputs: calc.slice(0, CHART_LIMITS.outputs), use: null });
+  }
+  else if(SENSITIVITY_LAYOUTS.includes(layout)){
+    const start = sensitivityStart(keys.find(k => !model.byKey.get(k).input));
+    c.colours = {};
+    Object.assign(c, { layout, period, output: start.output, inputs: start.inputs, steps: SENSITIVITY_LIMITS.defaultSteps, colour: null, colour2: null });
   }
   else Object.assign(c, { layout: 'columns', periods: { mode: 'all' }, groups: [{ name: '', parts: keys }], check: false });
 }
@@ -4618,6 +4785,39 @@ function chartEditorParts(c){
     row.append(make('span', null, 'In'), sel);
     return row;
   };
+  if(isSensitivity(c)){
+    // A2 brings the full editor (each input's mode, Low, High and Show); here: the output, its
+    // period, the Spider's points, and the inputs it moves, listed.
+    box.appendChild(periodRow());
+    const outRow = make('div', 'edit-row output-row');
+    const rs = rectSelect(c.output || firstCalc(), false);
+    rs.setAttribute('aria-label', 'Output');
+    rs.addEventListener('change', () => { c.output = rs.value; changed(); });
+    outRow.append(make('span', null, 'Output'), rs);
+    box.appendChild(outRow);
+    if(c.layout === 'spider'){
+      const row = make('div', 'widget-row');
+      const sel = make('select');
+      sel.setAttribute('aria-label', 'Points each side');
+      for(let i = 1; i <= SENSITIVITY_LIMITS.steps; i++){ const o = make('option', null, String(i)); o.value = String(i); if(i === c.steps) o.selected = true; sel.appendChild(o); }
+      sel.addEventListener('change', () => { c.steps = Number(sel.value); changed(); });
+      row.append(make('span', null, 'Points each side'), sel);
+      box.appendChild(row);
+    }
+    box.appendChild(make('div', 'edit-head', 'Inputs moved, one at a time'));
+    if(!c.inputs.length) box.appendChild(make('p', 'empty-note', 'None: no input reaches this output.'));
+    const list = make('ul', 'sens-inputs');
+    c.inputs.forEach(i => {
+      const sign = (v) => (v > 0 ? '+' : v < 0 ? '−' : '') + fmtNum(Math.abs(v)) + (i.by === 'percent' ? '%' : '');
+      list.appendChild(make('li', null, partLabel(i.key) + ': ' + sign(i.low) + ' … ' + sign(i.high) + (i.show ? '' : ' (hidden)')));
+    });
+    box.appendChild(list);
+    const reach = make('button', 'link-btn sens-reach', '↻ Use the inputs that reach the output');
+    reach.type = 'button';
+    reach.addEventListener('click', () => { c.inputs = sensitivityStart(c.output).inputs; changed(); });
+    box.appendChild(reach);
+    return box;
+  }
   if(c.layout === 'scenarios'){
     box.appendChild(periodRow());
     box.appendChild(make('div', 'edit-head', 'Outputs'));
@@ -4735,10 +4935,12 @@ function drawChart(el, c, results){
   const problems = [];
   if(c.layout === 'flow') host.appendChild(drawFlow(c, results, problems));
   else if(c.layout === 'scenarios') host.appendChild(drawScenarioFlows(c, problems));
+  else if(isSensitivity(c)) host.appendChild(drawSensitivity(c, problems, key));
   else host.appendChild(drawColumns(c, results, problems, key));
   glide(host);
-  // Rectangles in different units side by side or stacked don't add up: say so.
-  const units = [...new Set(chartKeys(c).map(k => model.byKey.get(k)).filter(r => r && r.unit).map(r => r.unit))];
+  // Rectangles in different units side by side or stacked don't add up: say so. (A Tornado's
+  // inputs are only moved, never added up.)
+  const units = isSensitivity(c) ? [] : [...new Set(chartKeys(c).map(k => model.byKey.get(k)).filter(r => r && r.unit).map(r => r.unit))];
   if(units.length > 1) problems.push('This chart mixes units (' + units.join(', ') + '): its totals may not mean much.');
   problems.forEach(t => list.appendChild(make('li', null, t)));
 }
@@ -4968,6 +5170,158 @@ function drawScenarioFlow(c, key, oi, figs, problems){
     chart.appendChild(g);
   });
   raiseScaleLabels(chart);
+  return chart;
+}
+
+// ---- the Tornado and the Spider (step 18; figures in 04b-charts.js, kept in 03-calc.js) ----
+const TORNADO_LOW = '#2563eb', TORNADO_HIGH = '#d97706';
+const shortName = (name, room) => name.length > room ? name.slice(0, Math.max(1, room - 1)) + '…' : name;
+const signed = (v, by) => (v > 0 ? '+' : v < 0 ? '−' : '') + fmtNum(Math.abs(v)) + (by === 'percent' ? '%' : '');
+// A Spider line's colour: its input's own, else the next of the chart colours.
+function spiderColour(c, key, i){ return (c.colours && c.colours[key]) || PART_COLOURS[i % PART_COLOURS.length]; }
+
+function drawSensitivity(c, problems, key){
+  const { figures, ready } = sensitivityNow(c, shownOverrides());
+  const where = model.periods[c.period];
+  const name = c.output ? partLabel(c.output) : '';
+  const kind = c.layout === 'tornado' ? 'Tornado' : 'Spider';
+  if(!c.output) problems.push('No output yet: Edit chart chooses it.');
+  else if(!c.inputs.length) problems.push('No inputs to move: none reaches ' + name + '.');
+  if(!ready) problems.push('Working out…');
+  const W = 560;
+  if(!figures || !figures.inputs.length){
+    const empty = svg('svg', { class: 'bar-chart sens-chart sens-empty', viewBox: '0 0 ' + W + ' 40', role: 'img', 'data-layout': c.layout });
+    empty.setAttribute('aria-label', (c.title || kind) + (name ? ', ' + name + ', ' + where : ''));
+    return empty;
+  }
+  if(typeof figures.base === 'object'){
+    problems.push(name + ', ' + where + ': ' + errorText(figures.base.error));
+    const bad = svg('svg', { class: 'bar-chart sens-chart', viewBox: '0 0 ' + W + ' 40', role: 'img', 'data-layout': c.layout });
+    bad.setAttribute('aria-label', (c.title || kind) + ', ' + name + ', ' + where);
+    return bad;
+  }
+  const shown = figures.inputs.filter(f => f.show);
+  shown.filter(f => f.error).forEach(f => problems.push(partLabel(f.key) + ': ' + errorText(f.error)));
+  // Inputs that are 0 don't move by percent: say so.
+  const flat = shown.filter(f => !f.error && f.by === 'percent' && f.swing === 0 && model.periods.every((_, p) => baseValue(model.byKey.get(f.key), p) === 0));
+  if(flat.length) problems.push(flat.map(f => partLabel(f.key)).join(', ') + ' is 0: a change by percent doesn\'t move it (an amount would).');
+  const chart = c.layout === 'tornado' ? drawTornado(c, figures, shown, name, where) : drawSpider(c, figures, shown, name, where);
+  if(!ready) chart.classList.add('stale');
+  // The key: its swatches pick the colours.
+  const line = make('div', 'key-line');
+  const swatch = (colour, label, text, set) => {
+    const item = make('label', 'key-item');
+    const sw = colourPicker(colour, label, (v) => { set(v); saveBoardSoon(); updateValues(); });
+    sw.classList.add('key-swatch');
+    item.append(sw, document.createTextNode(text));
+    line.appendChild(item);
+  };
+  if(c.layout === 'tornado'){
+    swatch(c.colour || TORNADO_LOW, 'Colour of Low', 'Low', (v) => { c.colour = v; });
+    swatch(c.colour2 || TORNADO_HIGH, 'Colour of High', 'High', (v) => { c.colour2 = v; });
+  } else {
+    figures.inputs.forEach((f, i) => { if(f.show) swatch(spiderColour(c, f.key, i), 'Colour of ' + partLabel(f.key), partLabel(f.key), (v) => { c.colours = Object.assign({}, c.colours, { [f.key]: v }); }); });
+  }
+  key.appendChild(line);
+  raiseScaleLabels(chart);
+  return chart;
+}
+
+// One bar per input across the page, from the base to Low and to High, largest swing at the top.
+function drawTornado(c, figures, shown, name, where){
+  const base = figures.base;
+  let lo = base, hi = base;
+  shown.forEach(f => { if(!f.error){ lo = Math.min(lo, f.lowValue, f.highValue); hi = Math.max(hi, f.lowValue, f.highValue); } });
+  if(hi === lo){ lo -= 1; hi += 1; }
+  const pad = (hi - lo) * 0.04;
+  const sc = scaleFor(c, lo - pad, hi + pad);
+  const W = 560, left = 130, right = 12, top = 30, rowH = 26, bottom = 20;
+  const H = top + Math.max(1, shown.length) * rowH + bottom, plotW = W - left - right;
+  const x = (v) => left + (Math.max(sc.lo, Math.min(sc.hi, v)) - sc.lo) / (sc.hi - sc.lo) * plotW;
+  const chart = svg('svg', { class: 'bar-chart sens-chart tornado-chart' + (sc.fixed ? ' fixed-scale' : ''), viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'data-layout': 'tornado' });
+  chart.setAttribute('aria-label', (c.title || 'Tornado') + ': what moves ' + name + ', ' + where);
+  chart.appendChild(svg('text', { class: 't-flow-title', x: 6, y: 14 }, name + ' — ' + where));
+  const bx = x(base);
+  if(sc.fixed){
+    chart.appendChild(svg('text', { class: 't-axis', x: left, y: H - 4, 'text-anchor': 'start' }, fmtNum(sc.lo)));
+    chart.appendChild(svg('text', { class: 't-axis', x: W - right, y: H - 4, 'text-anchor': 'end' }, fmtNum(sc.hi)));
+  }
+  const lowColour = c.colour || TORNADO_LOW, highColour = c.colour2 || TORNADO_HIGH;
+  shown.forEach((f, i) => {
+    const label = partLabel(f.key), yTop = top + i * rowH, cy = yTop + rowH / 2;
+    const g = svg('g', { class: 's-row', 'data-input': label });
+    const t = svg('text', { class: 't-period s-name', x: left - 6, y: cy + 4, 'text-anchor': 'end' }, shortName(label, 20));
+    t.appendChild(svg('title', {}, label + ' (' + signed(f.low, f.by) + ' … ' + signed(f.high, f.by) + ')'));
+    g.appendChild(t);
+    if(f.error){
+      g.appendChild(svg('rect', { class: 'b-err', x: left, y: yTop + 4, width: plotW, height: rowH - 8 }));
+      g.appendChild(svg('text', { class: 't-err', x: left + plotW / 2, y: cy + 4, 'text-anchor': 'middle' }, '!'));
+    } else {
+      [['low', f.lowValue, lowColour, f.low], ['high', f.highValue, highColour, f.high]].forEach(([side, v, colour, change]) => {
+        const r = svg('rect', { class: 's-bar s-' + side, x: Math.min(bx, x(v)), y: yTop + 4, width: Math.max(v === base ? 0 : 1, Math.abs(x(v) - bx)), height: rowH - 8, fill: colour });
+        r.dataset.axis = 'x';
+        animKey(r, c.id + '|' + f.key + '|' + side);
+        r.appendChild(svg('title', {}, label + ' ' + signed(change, f.by) + ': ' + name + ' ' + fmtNum(v) + ' (' + (v - base >= 0 ? '+' : '−') + fmtNum(Math.abs(v - base)) + ')'));
+        g.appendChild(r);
+        // The value at the bar's end, outside it.
+        const rightOf = v >= base;
+        const tx = x(v) + (rightOf ? 3 : -3);
+        if(tx > left + 20 && tx < W - 20) g.appendChild(svg('text', { class: 't-value s-end', x: tx, y: cy + 4, 'text-anchor': rightOf ? 'start' : 'end' }, fmtNum(v)));
+      });
+      if(sc.fixed){
+        const over = (v) => v > sc.hi || v < sc.lo;
+        [f.lowValue, f.highValue].forEach(v => { if(over(v)) g.appendChild(svg('text', { class: 't-over', x: v > sc.hi ? W - right - 6 : left + 6, y: cy + 4, 'text-anchor': 'middle' }, v > sc.hi ? '▶' : '◀')); });
+      }
+    }
+    chart.appendChild(g);
+  });
+  chart.appendChild(svg('line', { class: 's-base', x1: bx, x2: bx, y1: top - 4, y2: H - bottom + 2 }));
+  chart.appendChild(svg('text', { class: 't-value s-base-label', x: bx, y: top - 7, 'text-anchor': 'middle' }, fmtNum(base)));
+  return chart;
+}
+
+// A line per input through its points, from Low (left) through the base to High (right).
+function drawSpider(c, figures, shown, name, where){
+  const base = figures.base;
+  let lo = base, hi = base;
+  shown.forEach(f => f.points.forEach(p => { if(!p.error){ lo = Math.min(lo, p.value); hi = Math.max(hi, p.value); } }));
+  if(hi === lo){ lo -= 1; hi += 1; }
+  const pad = (hi - lo) * 0.05;
+  const sc = scaleFor(c, lo - pad, hi + pad);
+  const W = 560, left = 64, right = 12, top = 24, bottom = 24, H = 230;
+  const plotW = W - left - right, plotH = H - top - bottom;
+  const x = (at) => left + (at + 1) / 2 * plotW;
+  const y = scaleY(top, plotH, sc);
+  const chart = svg('svg', { class: 'bar-chart sens-chart spider-chart' + (sc.fixed ? ' fixed-scale' : ''), viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'data-layout': 'spider' });
+  chart.setAttribute('aria-label', (c.title || 'Spider') + ': what moves ' + name + ', ' + where);
+  chart.appendChild(svg('text', { class: 't-flow-title', x: 6, y: 14 }, name + ' — ' + where));
+  chart.appendChild(svg('line', { class: 's-axis', x1: x(0), x2: x(0), y1: top, y2: top + plotH }));
+  chart.appendChild(svg('line', { class: 's-base', x1: left, x2: W - right, y1: y(base), y2: y(base) }));
+  chart.appendChild(svg('text', { class: 't-axis s-side', x: left - 4, y: y(sc.hi) + 10, 'text-anchor': 'end' }, fmtNum(sc.hi)));
+  chart.appendChild(svg('text', { class: 't-axis s-side', x: left - 4, y: y(sc.lo) - 2, 'text-anchor': 'end' }, fmtNum(sc.lo)));
+  chart.appendChild(svg('text', { class: 't-value s-base-label', x: left - 4, y: y(base) + 4, 'text-anchor': 'end' }, fmtNum(base)));
+  [['Low', x(-1), 'start'], ['0', x(0), 'middle'], ['High', x(1), 'end']].forEach(([t, at, anchor]) => chart.appendChild(svg('text', { class: 't-period', x: at, y: H - 6, 'text-anchor': anchor }, t)));
+  figures.inputs.forEach((f, i) => {
+    if(!f.show) return;
+    const label = partLabel(f.key), colour = spiderColour(c, f.key, i);
+    const g = svg('g', { class: 's-line', 'data-input': label });
+    // Broken where a point can't be worked out.
+    let run = [];
+    const flush = () => {
+      if(run.length > 1) g.appendChild(svg('polyline', { class: 's-path', points: run.join(' '), fill: 'none', stroke: colour }));
+      run = [];
+    };
+    f.points.forEach(p => {
+      if(p.error){ flush(); return; }
+      const px = x(p.at), py = y(p.value);
+      run.push(px.toFixed(1) + ',' + py.toFixed(1));
+      const dot = svg('circle', { class: 's-point', cx: px, cy: py, r: 2.5, fill: colour });
+      dot.appendChild(svg('title', {}, label + ' ' + signed(p.change, f.by) + ': ' + name + ' ' + fmtNum(p.value)));
+      g.appendChild(dot);
+    });
+    flush();
+    chart.appendChild(g);
+  });
   return chart;
 }
 // ============================================================
@@ -5497,13 +5851,15 @@ function animKey(rect, key){ rect.dataset.anim = key; return rect; }
 // After a widget's SVG is in place: glide each bar from where it was.
 function glide(host){
   host.querySelectorAll('rect[data-anim]').forEach(r => {
-    const key = r.dataset.anim, y1 = Number(r.getAttribute('y')), h1 = Number(r.getAttribute('height'));
+    // A Tornado's bars lie across (data-axis x): they glide sideways.
+    const across = r.dataset.axis === 'x';
+    const key = r.dataset.anim, y1 = Number(r.getAttribute(across ? 'x' : 'y')), h1 = Number(r.getAttribute(across ? 'width' : 'height'));
     const was = lastGeometry.get(key);
     lastGeometry.set(key, { y: y1, h: h1 });
     if(!animateNow || !was || h1 < 0.5 || typeof r.animate !== 'function') return;
     if(Math.abs(was.y - y1) < 0.5 && Math.abs(was.h - h1) < 0.5) return;
     const a = was.h / h1, b = was.y - a * y1;
-    r.animate([{ transform: 'matrix(1,0,0,' + a + ',0,' + b + ')' }, { transform: 'matrix(1,0,0,1,0,0)' }], { duration: ANIM_MS, easing: 'ease-out' });
+    r.animate([{ transform: across ? 'matrix(' + a + ',0,0,1,' + b + ',0)' : 'matrix(1,0,0,' + a + ',0,' + b + ')' }, { transform: 'matrix(1,0,0,1,0,0)' }], { duration: ANIM_MS, easing: 'ease-out' });
   });
 }
 function forgetGeometry(){ lastGeometry = new Map(); }
@@ -6315,7 +6671,7 @@ function openChartPeek(c){
   peekFor = c;
   peekOpenedAt = performance.now();
   const p = c.layout === 'columns' ? (periodsOf(c.periods)[0] || 0) : c.period;
-  const kind = { columns: 'Columns', flow: 'Waterfall', scenarios: 'Scenario waterfall' }[c.layout] || 'Chart';
+  const kind = { columns: 'Columns', flow: 'Waterfall', scenarios: 'Scenario waterfall', tornado: 'Tornado', spider: 'Spider' }[c.layout] || 'Chart';
   $('peekTitle').textContent = c.title || kind;
   $('peekWhere').textContent = kind + ' · ' + model.periods[p];
   $('peekChart').textContent = '';
@@ -6765,7 +7121,7 @@ async function drawPicture(title, widgets){
   return new Promise((resolve, reject) => canvas.toBlob(b => b ? resolve(b) : reject(new Error('The picture could not be made.')), 'image/png'));
 }
 
-const widgetName = (w) => w.kind === 'chart' ? (w.title || ({ columns: 'Columns', flow: 'Waterfall', scenarios: 'Scenario waterfall' }[w.layout] || 'Chart')) : model.byKey.get(w.key).name;
+const widgetName = (w) => w.kind === 'chart' ? (w.title || ({ columns: 'Columns', flow: 'Waterfall', scenarios: 'Scenario waterfall', tornado: 'Tornado', spider: 'Spider' }[w.layout] || 'Chart')) : model.byKey.get(w.key).name;
 
 async function sharePicture(title, widgets, fileName){
   try{
@@ -7055,8 +7411,9 @@ const BOARD_FILE_FORMAT = { 'fmIDE-graph-board': { current: BOARD_FILE_VERSION, 
 // v1 → v2: a board file may be in the template form (G5a); a v1 file is boards for one model.
 // v2 → v3: boards for one model may carry the model's named scenarios; v3 → v4: a chart may be a
 // scenario waterfall; v4 → v5: a bar or chart may have a fixed vertical scale; v5 → v6: a slider
-// may be folded; v6 → v7: a board may keep its own slider positions. Nothing to change.
-const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {}, 5: () => {}, 6: () => {} } };
+// may be folded; v6 → v7: a board may keep its own slider positions; v7 → v8: a chart may be a
+// Tornado or a Spider. Nothing to change.
+const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {}, 5: () => {}, 6: () => {}, 7: () => {} } };
 
 function safeFileName(s){ return String(s).replace(/[^A-Za-z0-9 ._()-]+/g, '_').replace(/\s+/g, ' ').trim().slice(0, 80) || 'board'; }
 
@@ -7214,6 +7571,7 @@ function templateBoardsData(target, onlyShown){
     const items = [];
     b.items.forEach(w => {
       if(w.kind === 'chart' && w.layout === 'scenarios'){ left++; return; } // it needs the model's scenarios, which a template doesn't carry
+      if(w.kind === 'chart' && isSensitivity(w)){ left++; return; } // a Tornado or Spider (board file 8) is never in the template form
       if(w.kind === 'bar'){
         const r = ref(w.key);
         if(!r){ left++; return; }
@@ -7394,6 +7752,7 @@ function boardsFromTemplate(src){
       items: (Array.isArray(b.items) ? b.items : []).map(w => {
         if(!w || typeof w !== 'object') return w;
         if(w.type === 'bar') return at(w);
+        if(isSensitivity(w)) return null; // never in the template form (board file 8)
         if(w.layout === 'flow') return Object.assign({}, w, { steps: (Array.isArray(w.steps) ? w.steps : []).map(at) });
         return Object.assign({}, w, { groups: (Array.isArray(w.groups) ? w.groups : []).map(g => Object.assign({}, g, { parts: (g && Array.isArray(g.parts) ? g.parts : []).map(at) })) });
       }),
@@ -8160,17 +8519,29 @@ const FMGRAPH_HELP_TOPICS = [
       { see: ['sliders', 'explore', 'compare'] },
     ] },
   { id: 'charts', group: 'board', title: 'Charts: columns and waterfalls',
-    keywords: 'chart columns stacked side by side group waterfall bridge balance sheet income statement check total scenario waterfall cases',
+    keywords: 'chart columns stacked side by side group waterfall bridge balance sheet income statement check total scenario waterfall cases tornado spider',
     summary: 'Two building blocks for any statement: columns of groups, and waterfalls.',
     body: [
-      { p: '+ Chart adds a chart. There are three kinds, chosen at its top; all are made from your own rectangles, so they fit any model.' },
+      { p: '+ Chart adds a chart. There are five kinds, chosen at its top; all are made from your own rectangles, so they fit any model. This topic covers Columns, Waterfall and Scenario waterfall; the Tornado and the Spider have a topic of their own.' },
       { p: 'Columns: a chart is a list of groups. Each group is one column per period, its rectangles stacked (values below zero stack downwards), and the groups stand side by side. One rectangle per group gives a plain column chart; one group of several a stacked chart; two groups — Assets, and Liabilities and equity — a balance sheet.' },
       { p: 'Tick "Check that the groups\' totals agree" and each period shows ✓ when the groups\' totals agree, or ✗ and the gap when they don\'t — a quick test that a balance sheet balances, also while you move a slider.' },
       { p: 'Waterfall: a list of steps in one period. A start is a full bar; add and subtract step up or down from the running total; a total is a full bar of its own rectangle\'s value, checked against the steps before it (✓, or ✗ and what they add up to). An income statement is Revenue (start), costs (subtract) and each profit line (total); a cash bridge or a cost walk work the same way.' },
       { p: 'Scenario waterfall: for each output you choose, in one period, a waterfall from the model\'s own number (Start) through each of your named scenarios in turn — each step the change from the one before — to the last scenario\'s number (End). Each output gets its own small waterfall. It shows the scenarios, not where the sliders are now, and follows them as you update, reorder, rename or delete them. Edit chart chooses the period, the outputs (up to six) and which scenarios it goes through, in the Scenarios panel\'s order. A template\'s board never holds one, since templates carry no scenarios.' },
       { steps: ['Press + Chart at the top. Its editor opens.', 'Choose the rectangles: + Rectangle adds one to a group, + Group a new group; ↑ ↓ reorder, × removes.', 'Or choose Waterfall at the top of the chart, then each step\'s role.'] },
       { tip: 'Numbers agree when they differ by less than a millionth of their size, so tiny rounding never shows as ✗. A chart mixing units says so below it.' },
-      { see: ['bars', 'scale', 'reach', 'scenarios'] },
+      { see: ['bars', 'scale', 'reach', 'scenarios', 'sensitivity'] },
+    ] },
+  { id: 'sensitivity', group: 'board', title: 'Tornado and Spider: what moves an output most',
+    keywords: 'tornado spider sensitivity swing low high percent amount percentage point inputs matter most',
+    summary: 'Each input moved on its own: which ones move an output most, and how.',
+    body: [
+      { p: 'A Tornado or a Spider measures one output, in one period, around where the sliders stand now. Each input it lists is moved on its own — in every period, by a percent (−10% takes 100 to 90) or by an amount (−2 takes 100 to 98; an amount also covers percentage points: 0.05 moved by +0.01 is 0.06) — while every other input stays where the sliders put it.' },
+      { p: 'Tornado: one bar per input, from the output\'s number now (the dashed line) to its number with the input at Low and at High, each end labelled. The input with the largest swing (the gap between its two ends) is at the top; equal swings keep the inputs\' order.' },
+      { p: 'Spider: one line per input, from Low (left) through the number now (where every line crosses) to High (right), with points in between. A straight line means the effect grows evenly; a bend means it doesn\'t.' },
+      { p: 'A new one measures the first calculated rectangle, moving every input that reaches it by −10% … +10%. Edit chart chooses another output (↻ then takes the inputs that reach it), the period, and the Spider\'s points each side (1–10). A number that can\'t be worked out shows as a gap, with the reason below the chart. An input that is 0 doesn\'t move by a percent.' },
+      { steps: ['Press + Chart at the top.', 'Choose Tornado or Spider at the top of the chart.', 'Move a slider: the chart is measured again around the new numbers.'] },
+      { tip: 'The meanings and limits are the same as ExcelExporter\'s Sensitivity tab: at most 50 inputs, Low and High within ±1,000,000,000. On a large model these charts are worked out once the sliders stop ("Working out…"). A template\'s board never holds one.' },
+      { see: ['charts', 'sliders', 'speed'] },
     ] },
   { id: 'boards', group: 'board', title: 'Boards: tabs, arranging, colours, undo',
     keywords: 'board boards tab tabs arrange move drag order wide narrow colour color undo redo rename duplicate delete',
@@ -8255,6 +8626,7 @@ const FMGRAPH_HELP_TOPICS = [
     body: [
       { p: 'Each slider position means working the whole model out again. Most models take a few thousandths of a second, so the bars follow the slider as it moves.' },
       { p: 'On a model that takes longer, grabbing a slider works out each of its steps ahead ("Working out this slider\'s steps…" beside Bars), with the other sliders where they are. Dragging then shows results already worked out, and each one is exact: the slider stops at its steps, so nothing is guessed in between.' },
+      { p: 'A Tornado or Spider works the model out twice for each input (a Spider twice for each of its points). When that would take long, it is worked out once the sliders stop, in small pieces, and shows "Working out…" (and what it showed before, faded) meanwhile.' },
       { tip: 'Fewer steps (Range and step) means less to work out ahead.' },
       { see: ['sliders'] },
     ] },
@@ -8280,6 +8652,19 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'tornado-spider', date: '2026-10-15', title: 'Tornado and Spider charts: what moves an output most',
+    summary: 'Two new kinds of chart move each input on its own and show which ones move an output most, around where your sliders stand.',
+    what: [
+      'A Tornado shows, for one output in one period, how far it moves when each input goes to its Low and its High: one bar per input, the largest swing at the top.',
+      'A Spider draws a line per input from Low through where it stands now to High, so you see whether each one\'s effect is straight or bends.',
+      'Each input moves in every period, by a percent (−10% … +10% to start) or by an amount (which also covers percentage points: a rate of 0.05 moved by 0.01). They are measured around where the sliders stand now: move a slider and the charts follow.',
+      'A new Tornado or Spider measures the first calculated rectangle with every input that reaches it. Edit chart chooses another output, its period and the Spider\'s points.',
+    ],
+    why: 'A slider answers "what if this moves?" one input at a time; a Tornado answers "which inputs matter most here?" for all of them at once. The settings mean the same as ExcelExporter\'s Sensitivity tab.',
+    how: ['+ Chart, then choose Tornado (or Spider) at the top of the chart.'],
+    notes: ['Saved in board files and fmIDE\'s documents (board file version 8; an older fmGraph asks before opening one and shows these charts empty). A template\'s board never holds one. Choosing each input\'s mode, Low and High in Edit chart comes next.'],
+    see: ['sensitivity'] },
+
   { id: 'shared-sliders', date: '2026-10-15', title: 'Boards share where the sliders stand',
     summary: 'Move a slider on one board and every other board shows its effect; a board can keep its own positions instead.',
     what: [
@@ -8799,11 +9184,19 @@ $('btnTutorials').addEventListener('click', () => { help.open(); });
 //   addChart({ layout: 'columns', title, periods, check, groups: [{ name, parts: [rect…] }] })
 //   addChart({ layout: 'flow', title, period, steps: [{ rect, role: 'start'|'add'|'subtract'|'total' }] })
 //   addChart({ layout: 'scenarios', title, period, outputs: [rect…], scenarios?: [name…] })
+//   addChart({ layout: 'tornado' | 'spider', title, output: rect, period, steps (1–10, the Spider's
+//              points each side), inputs: [{ rect, by: 'percent' | 'amount', low, high, show }] })
+//                  (step 18) output: the first calculated rectangle when left out; inputs: every
+//                  input that reaches it when left out
 //                  → the chart's id; a rect is a name, '#id', or { rect, canvas }
 //   chart(id)      → what it shows now: columns — per period { period, groups: [{ name, total,
 //                    parts: [value or { error }] }], check: { ok, gap } | null }; flow — per step
 //                    { name, role, value, from, to, check: { ok, expected } | null }; scenarios — per
-//                    output { name, steps: [{ name, kind: 'start'|'step'|'end', value, from, to }] }
+//                    output { name, steps: [{ name, kind: 'start'|'step'|'end', value, from, to }] };
+//                    tornado / spider — { output, period, base, inputs: [{ name, by, low, high, show,
+//                    lowValue, highValue, swing } or { …, error }] } around where the sliders stand
+//                    (the Tornado's sorted by swing), a Spider's inputs also with points: [{ at
+//                    (−1 … 1, the share of Low or High), change, value or error }]
 //   setSlider(id, value), resetSlider(id), resetAll(), remove(id)
 //   board()        → the board ({ kind: 'fmIDE-graph-board', … }) with each slider's value
 //   reached(id)    → the ids of the bars a slider reaches
@@ -8850,6 +9243,24 @@ function chartById(id){
   return c;
 }
 
+// A Tornado or Spider from addChart, in the file's form (step 18).
+function sensitivitySpec(spec, at){
+  const out = spec.output !== undefined ? rectRef(spec.output) : null;
+  const inputs = Array.isArray(spec.inputs)
+    ? spec.inputs.map(i => {
+      const r = rectRef(i);
+      if(!r.input) throw new Error('"' + r.name + '" is not an input rectangle: a Tornado or Spider moves inputs only.');
+      return Object.assign(at(r), i && typeof i === 'object' ? { by: i.by, low: i.low, high: i.high, show: i.show } : {});
+    })
+    : null;
+  if(inputs && inputs.length > SENSITIVITY_LIMITS.inputs) throw new Error('A Tornado or Spider moves at most ' + SENSITIVITY_LIMITS.inputs + ' inputs.');
+  const start = sensitivityStart(out ? out.key : null);
+  const startOut = start.output && model.byKey.get(start.output);
+  return { layout: spec.layout, title: spec.title, period: spec.period === undefined ? 0 : periodIndex(spec.period), steps: spec.steps,
+    output: out ? at(out) : startOut ? at(startOut) : null,
+    inputs: inputs || start.inputs.map(i => Object.assign(at(model.byKey.get(i.key)), { by: i.by, low: i.low, high: i.high })) };
+}
+
 window.fmGraph = Object.freeze({
   load: (data, name) => openModelText(typeof data === 'string' ? data : JSON.stringify(data), name),
   rectangles: () => model ? model.rects.map(r => ({ canvas: r.canvasName, canvasId: r.canvasId, id: r.nodeId, name: r.name, input: r.input, unit: r.unit })) : [],
@@ -8875,7 +9286,8 @@ window.fmGraph = Object.freeze({
     spec = spec || {};
     if(board.charts.length >= BOARD_LIMIT) throw new Error('No more charts can be added.');
     const at = (r) => ({ canvasId: r.canvasId, nodeId: r.nodeId, name: r.name });
-    const raw = spec.layout === 'scenarios'
+    const raw = SENSITIVITY_LAYOUTS.includes(spec.layout) ? sensitivitySpec(spec, at)
+      : spec.layout === 'scenarios'
       ? Object.assign({ layout: 'scenarios', title: spec.title, period: spec.period === undefined ? 0 : periodIndex(spec.period),
           outputs: (spec.outputs || []).map(r => at(rectRef(r))) }, Array.isArray(spec.scenarios) ? { scenarios: spec.scenarios.map(String) } : {})
       : spec.layout === 'flow'
@@ -8891,6 +9303,14 @@ window.fmGraph = Object.freeze({
   },
   chart: (id) => {
     const c = chartById(id), results = currentResults();
+    if(isSensitivity(c)){
+      const f = sensitivityNow(c, shownOverrides(), true).figures;
+      if(!f) return null;
+      return { output: partLabel(c.output), period: model.periods[c.period], base: f.base,
+        inputs: f.inputs.map(i => Object.assign({ name: partLabel(i.key), by: i.by, low: i.low, high: i.high, show: i.show },
+          i.error ? { error: i.error } : { lowValue: i.lowValue, highValue: i.highValue, swing: i.swing },
+          i.points ? { points: i.points.map(p => Object.assign({}, p)) } : {})) };
+    }
     if(c.layout === 'flow') return flowFigures(c, results).map((f, i) => Object.assign({ name: partLabel(c.steps[i].key) }, f));
     if(c.layout === 'scenarios'){
       const memo = new Map();

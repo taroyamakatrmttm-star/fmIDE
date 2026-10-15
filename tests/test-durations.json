@@ -73,6 +73,10 @@
  "71-fmide-phone-share.spec.js": 14.9,
  "72-excel-phone.spec.js": 15.6,
  "73-fmgraph-fixed-scale.spec.js": 12.9,
+ "74-test-impact.spec.js": 3.4,
+ "75-excel-attach-layout.spec.js": 8.3,
+ "76-fmgraph-sensitivity.spec.js": 16.9,
+ "77-excel-graph-boards.spec.js": 25.7,
  "8-snapshots.spec.js": 35.8,
  "9-storage.spec.js": 12.2
 }

@@ -33,11 +33,11 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 | `fmIDE-excel-mapping` | 4 | ExcelExporter's tab/row layout for one model; v2: any row may carry its own format (`style`) and an `indent` (below); v3: `cfg.sensitivity`, the Tornado and Spider's settings (step 16, below); v4: `cfg.graph`, fmGraph's scenarios copied by Use fmGraph boards… (step 19 B2, below) | ExcelExporter: Import Mapping JSON |
 | `fmIDE-excel-style` | 1 | ExcelExporter's Excel style: how every cell in the workbook looks, by role (step 11a, below) | ExcelExporter: Import Excel Style |
 | `fmIDE-excel-module-layouts` | 2 | ExcelExporter's layouts remembered per module (step 11b, below); v2: the layout of a module's block instances, `instance` (step 11d) | ExcelExporter: Import Module Layouts |
-| `fmIDE-graph-board` | 7 | fmGraph's boards: bars, charts and sliders showing one model (step 15, below); v2: the template form, for a template's `attachments.graph` (G5a); v3: the model's named scenarios, `scenarios`; v4: the scenario waterfall, a chart of layout `scenarios`; v5: a bar's or chart's fixed vertical scale, `scale`; v6: a folded slider, `folded`; v7: a board keeping its own slider positions, `ownSliders` (the template form stays version 2) | fmGraph: Boards → Import boards… (or dropped on the page) · ExcelExporter: File → Import fmGraph boards… (its scenarios, below) |
+| `fmIDE-graph-board` | 8 | fmGraph's boards: bars, charts and sliders showing one model (step 15, below); v2: the template form, for a template's `attachments.graph` (G5a); v3: the model's named scenarios, `scenarios`; v4: the scenario waterfall, a chart of layout `scenarios`; v5: a bar's or chart's fixed vertical scale, `scale`; v6: a folded slider, `folded`; v7: a board keeping its own slider positions, `ownSliders`; v8: the Tornado and the Spider, charts of layout `tornado` and `spider` (step 18; the template form stays version 2) | fmGraph: Boards → Import boards… (or dropped on the page) · ExcelExporter: File → Import fmGraph boards… (its scenarios, below) |
 
 ## fmGraph's scenarios in the layout (`fmIDE-excel-mapping` 4, step 19 B2)
 
-ExcelExporter's Layout → Use fmGraph boards… copies the scenarios of a model's fmGraph boards (a document's `graphBoards`, or a board file of versions 1 to 7, below) into the layout, `cfg.graph`; the workbook is made from this copy, never from the board file:
+ExcelExporter's Layout → Use fmGraph boards… copies the scenarios of a model's fmGraph boards (a document's `graphBoards`, or a board file of versions 1 to 8, below) into the layout, `cfg.graph`; the workbook is made from this copy, never from the board file:
 
 ```
 "graph": { "from": ["Profit board", "Second board"], "board": "Profit board",
@@ -128,7 +128,7 @@ ExcelExporter remembers the layout of a module's tab — a canvas added from a c
 - Version 1 files open unchanged (the upgrade only raises the number); fmIDE's Attach Excel layout… reads both versions.
 - Everything in the file is someone else's text: labels and names are only ever shown as text.
 
-## fmGraph boards (`fmIDE-graph-board` 7, step 15)
+## fmGraph boards (`fmIDE-graph-board` 8, step 15)
 
 A board is a view of one model in fmGraph: bars, charts and sliders. A file holds one or more boards (**Export this board**, **Export all boards**); fmGraph keeps the boards of each model in the browser in the same form.
 
@@ -171,7 +171,19 @@ A board is a view of one model in fmGraph: bars, charts and sliders. A file hold
 
 - **Own slider positions** (version 7): a board may carry `"ownSliders": true` — it keeps its own slider positions instead of sharing them with the other boards (the default, when absent; anything but `true` shares). Positions themselves are still never saved. Never in the template form. Version 6 files read as before, every board sharing; an older fmGraph asks before opening version 7 and gives each board its own positions, as it always did.
 
-### Boards for a template (`fmIDE-graph-board` 2, step 15 G5a; still 2 in versions 3 to 7)
+- **The Tornado and the Spider** (version 8, step 18, `docs/step18-fmgraph-sensitivity.md`): a chart of layout `tornado` or `spider`, for one output and the inputs moved:
+
+  ```json
+  { "type": "chart", "wide": true, "layout": "tornado", "title": "What moves Profit",
+    "output": { "canvasId": "cProfit", "nodeId": "profit", "name": "Profit" }, "period": 2, "steps": 5,
+    "colour": "#2563eb", "colour2": "#d97706",
+    "inputs": [ { "canvasId": "cProfit", "nodeId": "price", "name": "Price", "by": "percent", "low": -10, "high": 10 },
+                { "canvasId": "cProfit", "nodeId": "rate", "name": "Tax rate", "by": "amount", "low": -0.01, "high": 0.01, "show": false, "colour": "#7c3aed" } ] }
+  ```
+
+  The same meanings and limits as ExcelExporter's `cfg.sensitivity` (above): `period` from 0 (anything else 0); `steps` the Spider's points between the base and each of Low and High, a whole number 1–10 (anything else 5; a Tornado keeps it for a switch to Spider); `inputs` at most 50, in order, each an input rectangle of the open model by the shared rule (`src/shared/input-rule.js`) — one that isn't, isn't in the model, or is listed twice is left out and counted; `by` `"amount"` (added) or `"percent"` (anything else); `low` and `high` numbers (text that is a number is read as one), cut to ±1,000,000,000, else −10 / +10 (percent) or −1 / +1 (amount). `show: false` keeps an input listed but leaves it out of the drawing (written only when false). `colour` / `colour2`: the Tornado's Low and High bars; an input's `colour`: its Spider line (`#rrggbb`, anything else dropped). `output` names a rectangle as every widget does; a chart whose output isn't in the model is left out and counted; one with no `output` is kept, empty. Measured around the board's slider positions (never saved). Read through `cleanChart` (`src/fmgraph/js/04b-charts.js`). Never in the template form. Version 7 files read as before; an older fmGraph asks before opening version 8 and shows these charts as empty column charts (it reads a layout it doesn't know that way).
+
+### Boards for a template (`fmIDE-graph-board` 2, step 15 G5a; still 2 in versions 3 to 8)
 
 fmGraph's **Boards → Export for a template…** writes the same file in its **template form**: a template gets new ids each time it is used, so rectangles are named by their name (capitals and outer spaces ignored), and, for a system template, their canvas's name — never by id:
 

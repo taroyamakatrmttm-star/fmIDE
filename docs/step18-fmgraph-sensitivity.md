@@ -2,7 +2,7 @@
 
 The owner's request (15 October 2026): fmGraph shows a **Tornado** and a **Spider**, so a person sees on a board which inputs move an output most, the way ExcelExporter's Sensitivity tab does in Excel (step 16, `docs/step16-sensitivity.md`). Step 19 (`docs/step19-fmgraph-in-excel.md`) carries these charts into Excel as ExcelExporter's sensitivity analyses.
 
-This is the brief, written for the owner's approval. Nothing is built yet. The owner's choices it rests on are decision 12 in `docs/decisions.md`.
+This is the brief, approved by the owner on 15 October 2026 with the changes listed under Phases; phase A1 is built. The owner's choices it rests on are decision 12 in `docs/decisions.md`.
 
 ## The owner's choices (15 October 2026)
 
@@ -25,9 +25,9 @@ A Tornado and a Spider are charts on a board, beside `columns`, `flow` and `scen
 - **The output**: one rectangle, named by canvas id, node id and name, like every widget.
 - **The period** it is read in: one period, from 0.
 - **The inputs moved**, in order: any input rectangle of the model by the shared rule (`src/shared/input-rule.js`). A new chart starts with the inputs the board's sliders move. Each input has `by` (`percent` or `amount`), `low` and `high` (−10 / +10 by default; −1 / +1 for an amount), and `show` (to keep it in the chart's list but leave it out of the drawing).
-- **The Spider's points**: 1–10 points between the base and each of Low and High, 5 by default, as in step 16.
+- **The Spider's points** (`steps`): 1–10 points between the base and each of Low and High, 5 by default, as in step 16.
 
-Limits: at most 20 inputs a chart, as many outputs as charts (one each). Names, titles and the period are read like any chart's (`cleanChart`). Each input row in Edit chart says what Low and High are in the input's own numbers now ("Price: 9.00 … 11.00").
+Limits: at most 50 inputs a chart (20 in the first draft; changed to match ExcelExporter at the start of A1), as many outputs as charts (one each). Names, titles and the period are read like any chart's (`cleanChart`). Each input row in Edit chart says what Low and High are in the input's own numbers now ("Price: 9.00 … 11.00").
 
 ### How a number is worked out
 
@@ -55,7 +55,7 @@ Board file **version 8**: a chart of layout `tornado` or `spider`:
               { "canvasId": "cProfit", "nodeId": "rate", "name": "Tax rate", "by": "amount", "low": -0.01, "high": 0.01, "show": false } ] }
 ```
 
-A `spider` also has `"points": 5`. Rectangles are named and matched as in every board. An input that is no longer an input of the open model is left out and counted. `low` and `high` are numbers cut to ±1,000,000,000; `by` other than `amount` reads as `percent`. These charts are **never in the template form**, as with the newer chart settings. Version 7 files read as before. An older fmGraph asks before opening version 8 and shows these charts as empty. The format goes in `docs/file-formats.md` with a version-7 sample in `tests/fixtures/formats/`.
+Both carry `"steps": 5` (the Spider's points each side; as built, `points` in the first draft). Rectangles are named and matched as in every board. An input that is no longer an input of the open model is left out and counted. `low` and `high` are numbers cut to ±1,000,000,000; `by` other than `amount` reads as `percent`. These charts are **never in the template form**, as with the newer chart settings. Version 7 files read as before. An older fmGraph asks before opening version 8 and shows these charts as empty. The format goes in `docs/file-formats.md` with a version-7 sample in `tests/fixtures/formats/`.
 
 ### What stays the same
 
@@ -67,8 +67,23 @@ A `spider` also has `"points": 5`. Rectangles are named and matched as in every 
 
 | Phase | Holds |
 |---|---|
-| **A1** | **The Tornado**: the calculation (`sensitivityFigures` in `04b-charts.js`: base, Low, High and swing per input, sorted), the chart drawn and edited (Edit chart: output, period, inputs with mode, Low, High, Show), the board file version 8 with its `cleanChart` rules, the sample and upgrade test, `docs/file-formats.md`, help topic and What's new, `window.fmGraph` reading a chart's figures for tests. Tests: a new fmGraph group, figures against the model worked by hand (percent and amount, a percentage-point input, a slider on one period, the base following the sliders and a scenario shown, equal swings keeping order, an error as a gap), the version-7 file opening, names as text, a slow model working out after the drag. |
-| **A2** | **The Spider**: its points along the same runs, the chart drawn and edited (points 1–10), the phone's quick look and Show for both charts, a tutorial step or a fifth tutorial (the owner to say which; recommended: a step in the existing "Explore" tutorial, with its action in group 58), help and What's new. Tests: the Spider's lines against the Tornado's ends (the Spider's outer points equal Low and High), points, Show on a phone, the tutorial step. Then a short "how it turned out" here. |
+| **A1** | **Both charts, without the full editor** (the owner's choice, 15 October 2026): the calculation (`sensitivityFigures` in `04b-charts.js`: base, Low, High and swing per input, the Tornado sorted, the Spider's points), both drawn (`05b-chart-render.js`), the board file version 8 with its `cleanChart` rules, the sample and test, `docs/file-formats.md`, help topic and What's new, `window.fmGraph` reading a chart's figures. A minimal way to add one: Tornado or Spider chosen at a chart's top measures the first calculated rectangle with every input that reaches it (`model.reach`); Edit chart chooses the output, the period and the Spider's points, and lists the inputs. |
+| **A2** | **The full editor**: Edit chart's inputs with mode, Low, High and Show, and Low and High in the input's own numbers ("Price: 9.00 … 11.00"), adding and removing inputs; a tutorial step or a fifth tutorial (the owner to say which; recommended: a step in the existing "Explore" tutorial, with its action in group 58), help and What's new. Then a short "how it turned out" here. |
+
+### Changed from the brief at the start of A1 (the owner, 15 October 2026)
+
+- **A1 holds both charts**; the full editor moves to A2.
+- **The same limits and names as ExcelExporter's `cfg.sensitivity`**: at most **50** inputs (not 20), and the Spider's points are **`steps`** (not `points`).
+- **A new chart's inputs** are those that reach its output (`model.reach`), not the board's sliders.
+- **`show`, `colour` and `colour2` are in the file from version 8**, so A2 adds only their controls, not another version.
+
+### How A1 turned out (15 October 2026)
+
+- **The calculation** reuses the sliders' own: the base is the overrides the board shows now (`shownOverrides()` in `03-calc.js`: the sliders it counts, or A held on a phone); moving one input copies them and changes only that input in every period (`movedOverrides`); each set is one `resultsWith` run, kept in the result cache. The Spider's outer points are the same runs as the Tornado's ends, so they agree exactly.
+- **Kept per chart** (`sensitivityMemo`): a redraw that changes neither the base nor the chart's settings works nothing out. **Slow models**: when a chart would take longer than 60 ms (`SENSITIVITY_BUDGET_MS`: the model's time × its runs), it waits until the sliders have stopped for 300 ms and is worked out in small pieces, showing "Working out…" and its last drawing faded. This is judged by the whole chart's cost rather than the 25 ms per run of the sliders, since a Tornado of 50 inputs is 100 runs.
+- **Drawing**: the Tornado's bars lie across the page and glide sideways (`data-axis="x"` in `glide`); its fixed scale runs across, with ◀ / ▶ past it. The Spider's lines break where a point can't be worked out. The key's swatches pick Low / High (Tornado) or each input's colour (Spider). The phone's quick look and Show draw them through the same code.
+- **Found along the way**: a Spider switched from a Tornado on a model where it waits could briefly be drawn from the Tornado's figures (which have no points) and fail; the kept figures now remember their chart's kind. Caught by test group 76 before it was pushed.
+- **Tests**: group 76 (`tests/76-fmgraph-sensitivity.spec.js`). The groups that checked the board file's version (49, 56, 57, 73) now expect 8, and group 49's "newer version" file is version 9.
 
 ## Open points for the owner
 

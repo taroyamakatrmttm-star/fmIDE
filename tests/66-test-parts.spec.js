@@ -49,9 +49,10 @@ test('a new group goes in as an average one; a part with nothing to run is refus
   let r = run('5', '4');
   expect(r.status).toBe(2);
   expect(r.stderr).toMatch(/usage/);
-  r = run('80', '80');
+  // More parts than there are test files: the last is empty (a count the suite won't reach).
+  r = run('500', '500');
   expect(r.status).toBe(2);
-  expect(r.stderr).toMatch(/part 80 of 80 has no test files/);
+  expect(r.stderr).toMatch(/part 500 of 500 has no test files/);
 });
 
 test('the durations come from a run\'s log, file by file', () => {

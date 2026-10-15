@@ -92,6 +92,7 @@ function boardsFromTemplate(src){
       items: (Array.isArray(b.items) ? b.items : []).map(w => {
         if(!w || typeof w !== 'object') return w;
         if(w.type === 'bar') return at(w);
+        if(isSensitivity(w)) return null; // never in the template form (board file 8)
         if(w.layout === 'flow') return Object.assign({}, w, { steps: (Array.isArray(w.steps) ? w.steps : []).map(at) });
         return Object.assign({}, w, { groups: (Array.isArray(w.groups) ? w.groups : []).map(g => Object.assign({}, g, { parts: (g && Array.isArray(g.parts) ? g.parts : []).map(at) })) });
       }),
