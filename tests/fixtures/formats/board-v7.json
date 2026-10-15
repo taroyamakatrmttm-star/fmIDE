@@ -1,0 +1,21 @@
+{
+  "kind": "fmIDE-graph-board",
+  "version": 7,
+  "active": 0,
+  "boards": [
+    {
+      "name": "Saved before the Tornado",
+      "ownSliders": true,
+      "items": [
+        { "type": "bar", "canvasId": "cProfit", "nodeId": "profit", "name": "Profit", "periods": { "mode": "all" }, "wide": false },
+        { "type": "chart", "wide": true, "layout": "flow", "title": "Profit", "period": 0, "steps": [
+          { "canvasId": "cProfit", "nodeId": "rev", "name": "Revenue", "role": "start" },
+          { "canvasId": "cProfit", "nodeId": "profit", "name": "Profit", "role": "total" }
+        ] }
+      ],
+      "sliders": [
+        { "canvasId": "cProfit", "nodeId": "price", "name": "Price", "periods": { "mode": "all" }, "mode": "set", "min": 5, "max": 15, "step": 0.5 }
+      ]
+    }
+  ]
+}

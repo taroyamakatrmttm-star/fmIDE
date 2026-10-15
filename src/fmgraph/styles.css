@@ -258,6 +258,12 @@
   .scenario-flows .scenario-flow{ flex:1 1 260px; max-width:100%; }
   .bar-chart .t-flow-title{ fill:var(--ink); font-weight:600; }
   .edit-head{ font-size:12px; font-weight:600; color:var(--soft-ink); margin:8px 0 4px; }
+  /* The Tornado and the Spider (step 18) */
+  .bar-chart .s-base{ stroke:var(--ink); stroke-width:1.5; stroke-dasharray:4 3; }
+  .bar-chart .s-axis{ stroke:var(--line-strong); stroke-width:1; }
+  .bar-chart .s-path{ stroke-width:2; }
+  .bar-chart.stale{ opacity:.45; }
+  .sens-inputs{ margin:2px 0 6px; padding-left:18px; font-size:13px; }
   .scenario-ticks{ display:flex; flex-wrap:wrap; gap:4px 12px; font-size:13px; }
   .scenario-tick{ display:flex; gap:5px; align-items:center; }
 

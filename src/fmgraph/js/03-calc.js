@@ -17,7 +17,7 @@ const AHEAD_MAX_STEPS = 401;   // a slider with more steps is worked out as it m
 let resultCache = new Map();
 let aheadJob = 0;              // the current "work out ahead" job; a new one stops the old
 
-function clearResultCache(){ resultCache = new Map(); aheadJob++; }
+function clearResultCache(){ resultCache = new Map(); aheadJob++; sensitivityMemo.clear(); sensitivityJob++; }
 
 // The numbers the sliders lay over the model: key → a number per period. Sliders apply in
 // order; a later one over the same input and period wins (a change by % applies to what the
@@ -132,7 +132,57 @@ function setOwnSliders(b, on){
 
 // While a finger holds A (05h-phone-show.js), the numbers looked at instead of the sliders'.
 let lookingAt = null;
-function currentResults(){ return resultsWith(lookingAt ? lookingAt.overrides : overridesFor(liveSliders())); }
+// The numbers laid over the model for what the board shows now.
+function shownOverrides(){ return lookingAt ? lookingAt.overrides : overridesFor(liveSliders()); }
+function currentResults(){ return resultsWith(shownOverrides()); }
+
+// ---- the Tornado and the Spider (step 18; 04b-charts.js) ----
+// Their figures are kept per chart for the base and settings they were worked out for
+// (sensitivityMemo), so a redraw that changes neither works nothing out. When working them out
+// would take longer than SENSITIVITY_BUDGET_MS (a slow model, or many runs), they are worked out
+// once the sliders have stopped for SENSITIVITY_WAIT_MS, in small pieces so the page stays
+// responsive; meanwhile the chart shows "Working out…" (and what it showed before, faded).
+const SENSITIVITY_BUDGET_MS = 60;
+const SENSITIVITY_WAIT_MS = 300;
+const sensitivityMemo = new Map(); // chart id → { key, layout, figures }
+let sensitivityTimer = null, sensitivityJob = 0;
+function sensitivityKey(c, base){
+  return overridesKey(base) + '#' + JSON.stringify([c.layout, c.output, c.period, c.steps, c.inputs.map(i => [i.key, i.by, i.low, i.high])]);
+}
+// The chart's figures for base: { figures, ready }. ready false: being worked out (figures are
+// the last ones worked out, or undefined). now: work them out whatever they cost (fmGraph.chart).
+function sensitivityNow(c, base, now){
+  const key = sensitivityKey(c, base), hit = sensitivityMemo.get(c.id);
+  if(hit && hit.key === key) return { figures: hit.figures, ready: true };
+  if(!now && model.baseMs * sensitivityRuns(c, base).length > SENSITIVITY_BUDGET_MS){
+    workOutSensitivitySoon();
+    return { figures: hit && hit.layout === c.layout ? hit.figures : undefined, ready: false }; // a Spider can't be drawn from a Tornado's figures
+  }
+  const figures = sensitivityFigures(c, base);
+  sensitivityMemo.set(c.id, { key, layout: c.layout, figures });
+  return { figures, ready: true };
+}
+function workOutSensitivitySoon(){
+  clearTimeout(sensitivityTimer);
+  const job = ++sensitivityJob;
+  sensitivityTimer = setTimeout(() => {
+    if(job !== sensitivityJob || !model || !board) return;
+    const base = shownOverrides();
+    const charts = board.charts.filter(c => isSensitivity(c) && (sensitivityMemo.get(c.id) || {}).key !== sensitivityKey(c, base));
+    const todo = charts.flatMap(c => sensitivityRuns(c, base));
+    setCalcNote('Working out the Tornado and Spider charts…');
+    const piece = () => {
+      if(job !== sensitivityJob || !model) return;
+      const until = performance.now() + 30;
+      while(todo.length && performance.now() < until) resultsWith(todo.shift());
+      if(todo.length){ setTimeout(piece, 0); return; }
+      charts.forEach(c => sensitivityMemo.set(c.id, { key: sensitivityKey(c, base), layout: c.layout, figures: sensitivityFigures(c, base) }));
+      setCalcNote('');
+      scheduleUpdate();
+    };
+    piece();
+  }, SENSITIVITY_WAIT_MS);
+}
 
 // The positions a slider snaps to.
 function sliderSteps(s){

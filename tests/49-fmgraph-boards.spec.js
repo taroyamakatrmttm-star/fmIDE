@@ -203,7 +203,7 @@ test('the board file: export one or all, import into the same model, a model it 
   expect(dl.suggestedFilename()).toBe('Sample model - Second.board.json');
   const one = JSON.parse(fs.readFileSync(await dl.path(), 'utf8'));
   expect(one.kind).toBe('fmIDE-graph-board');
-  expect(one.version).toBe(7);
+  expect(one.version).toBe(8);
   expect(one.boards.map(b => b.name)).toEqual(['Second']);
   // Export all.
   await page.click('.gbar-menu summary');
@@ -242,7 +242,7 @@ test('the board file is read like any file: wrong kind, not JSON, newer version,
   expect(await g(page, () => fmGraph.importBoards({ kind: 'fmIDE-templates', version: 9, templates: [] }))).toBe(0);
   await expect(page.locator('.note.err')).toContainText("isn't an fmGraph board file");
   // A newer version: asked first.
-  const newer = { kind: 'fmIDE-graph-board', version: 8, boards: [{ name: 'Later', items: [{ type: 'bar', canvasId: 'cProfit', nodeId: 'profit', name: 'Profit' }] }] };
+  const newer = { kind: 'fmIDE-graph-board', version: 9, boards: [{ name: 'Later', items: [{ type: 'bar', canvasId: 'cProfit', nodeId: 'profit', name: 'Profit' }] }] };
   const p = g(page, (d) => fmGraph.importBoards(d), newer);
   await expect(page.locator('#confirmTitle')).toHaveText('Saved by a newer version');
   await page.click('#confirmNo');
@@ -313,9 +313,9 @@ test('folding sliders: one by its ▸, Collapse all / Expand all; undo; kept; th
   await expect(page.locator('.slider-widget')).toHaveCount(2);
   expect(await folded()).toEqual([true, false]);
   await expect(page.locator('.slider-widget').first()).toHaveClass(/folded/);
-  // The board file: version 7 (6 brought `folded`), `folded` only on a folded slider; imported back with it.
+  // The board file: version 8 (6 brought `folded`), `folded` only on a folded slider; imported back with it.
   const file = await g(page, () => fmGraph.exportBoards(true));
-  expect(file.version).toBe(7);
+  expect(file.version).toBe(8);
   expect(file.boards[0].sliders.map(s => s.folded)).toEqual([true, undefined]);
   expect(await g(page, (d) => fmGraph.importBoards(d), file)).toBe(1);
   await g(page, () => fmGraph.showBoard(1));
@@ -478,9 +478,9 @@ test('a board with its own slider positions: untouched by the others, and back t
   await page.click('#btnResetAll');
   await tabs(page).first().click();
   expect(await shown(page)).toEqual([['Price', 14], ['Volume', 1200]]);
-  // Kept in the board file (version 7, `ownSliders` only where true) and after a reload.
+  // Kept in the board file (version 8 (7 brought it), `ownSliders` only where true) and after a reload.
   const file = await g(page, () => fmGraph.exportBoards(true));
-  expect(file.version).toBe(7);
+  expect(file.version).toBe(8);
   expect(file.boards.map(b => b.ownSliders)).toEqual([undefined, true]);
   await page.waitForTimeout(500);
   await page.reload();

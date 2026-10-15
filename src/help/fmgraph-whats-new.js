@@ -8,6 +8,19 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'tornado-spider', date: '2026-10-15', title: 'Tornado and Spider charts: what moves an output most',
+    summary: 'Two new kinds of chart move each input on its own and show which ones move an output most, around where your sliders stand.',
+    what: [
+      'A Tornado shows, for one output in one period, how far it moves when each input goes to its Low and its High: one bar per input, the largest swing at the top.',
+      'A Spider draws a line per input from Low through where it stands now to High, so you see whether each one\'s effect is straight or bends.',
+      'Each input moves in every period, by a percent (−10% … +10% to start) or by an amount (which also covers percentage points: a rate of 0.05 moved by 0.01). They are measured around where the sliders stand now: move a slider and the charts follow.',
+      'A new Tornado or Spider measures the first calculated rectangle with every input that reaches it. Edit chart chooses another output, its period and the Spider\'s points.',
+    ],
+    why: 'A slider answers "what if this moves?" one input at a time; a Tornado answers "which inputs matter most here?" for all of them at once. The settings mean the same as ExcelExporter\'s Sensitivity tab.',
+    how: ['+ Chart, then choose Tornado (or Spider) at the top of the chart.'],
+    notes: ['Saved in board files and fmIDE\'s documents (board file version 8; an older fmGraph asks before opening one and shows these charts empty). A template\'s board never holds one. Choosing each input\'s mode, Low and High in Edit chart comes next.'],
+    see: ['sensitivity'] },
+
   { id: 'shared-sliders', date: '2026-10-15', title: 'Boards share where the sliders stand',
     summary: 'Move a slider on one board and every other board shows its effect; a board can keep its own positions instead.',
     what: [

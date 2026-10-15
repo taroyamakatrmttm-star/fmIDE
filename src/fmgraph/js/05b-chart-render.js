@@ -19,14 +19,14 @@ function chartWidget(c){
   const head = make('div', 'widget-head');
   const title = make('input', 'chart-title');
   title.type = 'text';
-  title.placeholder = c.layout === 'columns' ? 'Chart title' : 'Waterfall title';
+  title.placeholder = c.layout === 'columns' || isSensitivity(c) ? 'Chart title' : 'Waterfall title';
   title.value = c.title;
   title.maxLength = CHART_LIMITS.title;
   title.setAttribute('aria-label', 'Chart title');
   title.addEventListener('change', () => { c.title = cleanText(title.value, CHART_LIMITS.title); saveBoardSoon(); });
   const layout = make('select');
   layout.setAttribute('aria-label', 'Kind of chart');
-  [['columns', 'Columns'], ['flow', 'Waterfall'], ['scenarios', 'Scenario waterfall']].forEach(([v, t]) => { const o = make('option', null, t); o.value = v; if(c.layout === v) o.selected = true; layout.appendChild(o); });
+  [['columns', 'Columns'], ['flow', 'Waterfall'], ['scenarios', 'Scenario waterfall'], ['tornado', 'Tornado'], ['spider', 'Spider']].forEach(([v, t]) => { const o = make('option', null, t); o.value = v; if(c.layout === v) o.selected = true; layout.appendChild(o); });
   layout.addEventListener('change', () => { switchLayout(c, layout.value); saveBoardSoon(); renderBoard(); });
   head.append(title, layout, removeButton(c.id, 'chart'));
   w.append(head, make('div', 'bar-chart-host'), make('div', 'chart-key'), make('ul', 'bar-errors'));
@@ -36,17 +36,24 @@ function chartWidget(c){
 
 // Switching kind keeps the rectangles: every part becomes a step (the first a start, the rest
 // added), every step a part of one group, and a scenario waterfall's outputs the first six of
-// them (calculated rectangles first).
+// them (calculated rectangles first). A Tornado or Spider measures the first calculated one,
+// moving every input that reaches it (step 18); between the two they keep everything.
 function switchLayout(c, layout){
   if(layout === c.layout) return;
+  if(isSensitivity(c) && SENSITIVITY_LAYOUTS.includes(layout)){ c.layout = layout; return; }
   const keys = chartKeys(c);
   const period = c.layout === 'columns' ? (periodsOf(c.periods)[0] || 0) : c.period;
-  ['groups', 'periods', 'check', 'steps', 'period', 'outputs', 'use'].forEach(k => { delete c[k]; });
+  ['groups', 'periods', 'check', 'steps', 'period', 'outputs', 'use', 'output', 'inputs', 'colour', 'colour2'].forEach(k => { delete c[k]; });
   if(layout === 'flow') Object.assign(c, { layout: 'flow', period, steps: keys.map((key, i) => ({ key, role: i === 0 ? 'start' : 'add' })) });
   else if(layout === 'scenarios'){
     const unique = [...new Set(keys)];
     const calc = unique.filter(k => !model.byKey.get(k).input).concat(unique.filter(k => model.byKey.get(k).input));
     Object.assign(c, { layout: 'scenarios', period, outputs: calc.slice(0, CHART_LIMITS.outputs), use: null });
+  }
+  else if(SENSITIVITY_LAYOUTS.includes(layout)){
+    const start = sensitivityStart(keys.find(k => !model.byKey.get(k).input));
+    c.colours = {};
+    Object.assign(c, { layout, period, output: start.output, inputs: start.inputs, steps: SENSITIVITY_LIMITS.defaultSteps, colour: null, colour2: null });
   }
   else Object.assign(c, { layout: 'columns', periods: { mode: 'all' }, groups: [{ name: '', parts: keys }], check: false });
 }
@@ -95,6 +102,39 @@ function chartEditorParts(c){
     row.append(make('span', null, 'In'), sel);
     return row;
   };
+  if(isSensitivity(c)){
+    // A2 brings the full editor (each input's mode, Low, High and Show); here: the output, its
+    // period, the Spider's points, and the inputs it moves, listed.
+    box.appendChild(periodRow());
+    const outRow = make('div', 'edit-row output-row');
+    const rs = rectSelect(c.output || firstCalc(), false);
+    rs.setAttribute('aria-label', 'Output');
+    rs.addEventListener('change', () => { c.output = rs.value; changed(); });
+    outRow.append(make('span', null, 'Output'), rs);
+    box.appendChild(outRow);
+    if(c.layout === 'spider'){
+      const row = make('div', 'widget-row');
+      const sel = make('select');
+      sel.setAttribute('aria-label', 'Points each side');
+      for(let i = 1; i <= SENSITIVITY_LIMITS.steps; i++){ const o = make('option', null, String(i)); o.value = String(i); if(i === c.steps) o.selected = true; sel.appendChild(o); }
+      sel.addEventListener('change', () => { c.steps = Number(sel.value); changed(); });
+      row.append(make('span', null, 'Points each side'), sel);
+      box.appendChild(row);
+    }
+    box.appendChild(make('div', 'edit-head', 'Inputs moved, one at a time'));
+    if(!c.inputs.length) box.appendChild(make('p', 'empty-note', 'None: no input reaches this output.'));
+    const list = make('ul', 'sens-inputs');
+    c.inputs.forEach(i => {
+      const sign = (v) => (v > 0 ? '+' : v < 0 ? '−' : '') + fmtNum(Math.abs(v)) + (i.by === 'percent' ? '%' : '');
+      list.appendChild(make('li', null, partLabel(i.key) + ': ' + sign(i.low) + ' … ' + sign(i.high) + (i.show ? '' : ' (hidden)')));
+    });
+    box.appendChild(list);
+    const reach = make('button', 'link-btn sens-reach', '↻ Use the inputs that reach the output');
+    reach.type = 'button';
+    reach.addEventListener('click', () => { c.inputs = sensitivityStart(c.output).inputs; changed(); });
+    box.appendChild(reach);
+    return box;
+  }
   if(c.layout === 'scenarios'){
     box.appendChild(periodRow());
     box.appendChild(make('div', 'edit-head', 'Outputs'));
@@ -212,10 +252,12 @@ function drawChart(el, c, results){
   const problems = [];
   if(c.layout === 'flow') host.appendChild(drawFlow(c, results, problems));
   else if(c.layout === 'scenarios') host.appendChild(drawScenarioFlows(c, problems));
+  else if(isSensitivity(c)) host.appendChild(drawSensitivity(c, problems, key));
   else host.appendChild(drawColumns(c, results, problems, key));
   glide(host);
-  // Rectangles in different units side by side or stacked don't add up: say so.
-  const units = [...new Set(chartKeys(c).map(k => model.byKey.get(k)).filter(r => r && r.unit).map(r => r.unit))];
+  // Rectangles in different units side by side or stacked don't add up: say so. (A Tornado's
+  // inputs are only moved, never added up.)
+  const units = isSensitivity(c) ? [] : [...new Set(chartKeys(c).map(k => model.byKey.get(k)).filter(r => r && r.unit).map(r => r.unit))];
   if(units.length > 1) problems.push('This chart mixes units (' + units.join(', ') + '): its totals may not mean much.');
   problems.forEach(t => list.appendChild(make('li', null, t)));
 }
@@ -445,5 +487,157 @@ function drawScenarioFlow(c, key, oi, figs, problems){
     chart.appendChild(g);
   });
   raiseScaleLabels(chart);
+  return chart;
+}
+
+// ---- the Tornado and the Spider (step 18; figures in 04b-charts.js, kept in 03-calc.js) ----
+const TORNADO_LOW = '#2563eb', TORNADO_HIGH = '#d97706';
+const shortName = (name, room) => name.length > room ? name.slice(0, Math.max(1, room - 1)) + '…' : name;
+const signed = (v, by) => (v > 0 ? '+' : v < 0 ? '−' : '') + fmtNum(Math.abs(v)) + (by === 'percent' ? '%' : '');
+// A Spider line's colour: its input's own, else the next of the chart colours.
+function spiderColour(c, key, i){ return (c.colours && c.colours[key]) || PART_COLOURS[i % PART_COLOURS.length]; }
+
+function drawSensitivity(c, problems, key){
+  const { figures, ready } = sensitivityNow(c, shownOverrides());
+  const where = model.periods[c.period];
+  const name = c.output ? partLabel(c.output) : '';
+  const kind = c.layout === 'tornado' ? 'Tornado' : 'Spider';
+  if(!c.output) problems.push('No output yet: Edit chart chooses it.');
+  else if(!c.inputs.length) problems.push('No inputs to move: none reaches ' + name + '.');
+  if(!ready) problems.push('Working out…');
+  const W = 560;
+  if(!figures || !figures.inputs.length){
+    const empty = svg('svg', { class: 'bar-chart sens-chart sens-empty', viewBox: '0 0 ' + W + ' 40', role: 'img', 'data-layout': c.layout });
+    empty.setAttribute('aria-label', (c.title || kind) + (name ? ', ' + name + ', ' + where : ''));
+    return empty;
+  }
+  if(typeof figures.base === 'object'){
+    problems.push(name + ', ' + where + ': ' + errorText(figures.base.error));
+    const bad = svg('svg', { class: 'bar-chart sens-chart', viewBox: '0 0 ' + W + ' 40', role: 'img', 'data-layout': c.layout });
+    bad.setAttribute('aria-label', (c.title || kind) + ', ' + name + ', ' + where);
+    return bad;
+  }
+  const shown = figures.inputs.filter(f => f.show);
+  shown.filter(f => f.error).forEach(f => problems.push(partLabel(f.key) + ': ' + errorText(f.error)));
+  // Inputs that are 0 don't move by percent: say so.
+  const flat = shown.filter(f => !f.error && f.by === 'percent' && f.swing === 0 && model.periods.every((_, p) => baseValue(model.byKey.get(f.key), p) === 0));
+  if(flat.length) problems.push(flat.map(f => partLabel(f.key)).join(', ') + ' is 0: a change by percent doesn\'t move it (an amount would).');
+  const chart = c.layout === 'tornado' ? drawTornado(c, figures, shown, name, where) : drawSpider(c, figures, shown, name, where);
+  if(!ready) chart.classList.add('stale');
+  // The key: its swatches pick the colours.
+  const line = make('div', 'key-line');
+  const swatch = (colour, label, text, set) => {
+    const item = make('label', 'key-item');
+    const sw = colourPicker(colour, label, (v) => { set(v); saveBoardSoon(); updateValues(); });
+    sw.classList.add('key-swatch');
+    item.append(sw, document.createTextNode(text));
+    line.appendChild(item);
+  };
+  if(c.layout === 'tornado'){
+    swatch(c.colour || TORNADO_LOW, 'Colour of Low', 'Low', (v) => { c.colour = v; });
+    swatch(c.colour2 || TORNADO_HIGH, 'Colour of High', 'High', (v) => { c.colour2 = v; });
+  } else {
+    figures.inputs.forEach((f, i) => { if(f.show) swatch(spiderColour(c, f.key, i), 'Colour of ' + partLabel(f.key), partLabel(f.key), (v) => { c.colours = Object.assign({}, c.colours, { [f.key]: v }); }); });
+  }
+  key.appendChild(line);
+  raiseScaleLabels(chart);
+  return chart;
+}
+
+// One bar per input across the page, from the base to Low and to High, largest swing at the top.
+function drawTornado(c, figures, shown, name, where){
+  const base = figures.base;
+  let lo = base, hi = base;
+  shown.forEach(f => { if(!f.error){ lo = Math.min(lo, f.lowValue, f.highValue); hi = Math.max(hi, f.lowValue, f.highValue); } });
+  if(hi === lo){ lo -= 1; hi += 1; }
+  const pad = (hi - lo) * 0.04;
+  const sc = scaleFor(c, lo - pad, hi + pad);
+  const W = 560, left = 130, right = 12, top = 30, rowH = 26, bottom = 20;
+  const H = top + Math.max(1, shown.length) * rowH + bottom, plotW = W - left - right;
+  const x = (v) => left + (Math.max(sc.lo, Math.min(sc.hi, v)) - sc.lo) / (sc.hi - sc.lo) * plotW;
+  const chart = svg('svg', { class: 'bar-chart sens-chart tornado-chart' + (sc.fixed ? ' fixed-scale' : ''), viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'data-layout': 'tornado' });
+  chart.setAttribute('aria-label', (c.title || 'Tornado') + ': what moves ' + name + ', ' + where);
+  chart.appendChild(svg('text', { class: 't-flow-title', x: 6, y: 14 }, name + ' — ' + where));
+  const bx = x(base);
+  if(sc.fixed){
+    chart.appendChild(svg('text', { class: 't-axis', x: left, y: H - 4, 'text-anchor': 'start' }, fmtNum(sc.lo)));
+    chart.appendChild(svg('text', { class: 't-axis', x: W - right, y: H - 4, 'text-anchor': 'end' }, fmtNum(sc.hi)));
+  }
+  const lowColour = c.colour || TORNADO_LOW, highColour = c.colour2 || TORNADO_HIGH;
+  shown.forEach((f, i) => {
+    const label = partLabel(f.key), yTop = top + i * rowH, cy = yTop + rowH / 2;
+    const g = svg('g', { class: 's-row', 'data-input': label });
+    const t = svg('text', { class: 't-period s-name', x: left - 6, y: cy + 4, 'text-anchor': 'end' }, shortName(label, 20));
+    t.appendChild(svg('title', {}, label + ' (' + signed(f.low, f.by) + ' … ' + signed(f.high, f.by) + ')'));
+    g.appendChild(t);
+    if(f.error){
+      g.appendChild(svg('rect', { class: 'b-err', x: left, y: yTop + 4, width: plotW, height: rowH - 8 }));
+      g.appendChild(svg('text', { class: 't-err', x: left + plotW / 2, y: cy + 4, 'text-anchor': 'middle' }, '!'));
+    } else {
+      [['low', f.lowValue, lowColour, f.low], ['high', f.highValue, highColour, f.high]].forEach(([side, v, colour, change]) => {
+        const r = svg('rect', { class: 's-bar s-' + side, x: Math.min(bx, x(v)), y: yTop + 4, width: Math.max(v === base ? 0 : 1, Math.abs(x(v) - bx)), height: rowH - 8, fill: colour });
+        r.dataset.axis = 'x';
+        animKey(r, c.id + '|' + f.key + '|' + side);
+        r.appendChild(svg('title', {}, label + ' ' + signed(change, f.by) + ': ' + name + ' ' + fmtNum(v) + ' (' + (v - base >= 0 ? '+' : '−') + fmtNum(Math.abs(v - base)) + ')'));
+        g.appendChild(r);
+        // The value at the bar's end, outside it.
+        const rightOf = v >= base;
+        const tx = x(v) + (rightOf ? 3 : -3);
+        if(tx > left + 20 && tx < W - 20) g.appendChild(svg('text', { class: 't-value s-end', x: tx, y: cy + 4, 'text-anchor': rightOf ? 'start' : 'end' }, fmtNum(v)));
+      });
+      if(sc.fixed){
+        const over = (v) => v > sc.hi || v < sc.lo;
+        [f.lowValue, f.highValue].forEach(v => { if(over(v)) g.appendChild(svg('text', { class: 't-over', x: v > sc.hi ? W - right - 6 : left + 6, y: cy + 4, 'text-anchor': 'middle' }, v > sc.hi ? '▶' : '◀')); });
+      }
+    }
+    chart.appendChild(g);
+  });
+  chart.appendChild(svg('line', { class: 's-base', x1: bx, x2: bx, y1: top - 4, y2: H - bottom + 2 }));
+  chart.appendChild(svg('text', { class: 't-value s-base-label', x: bx, y: top - 7, 'text-anchor': 'middle' }, fmtNum(base)));
+  return chart;
+}
+
+// A line per input through its points, from Low (left) through the base to High (right).
+function drawSpider(c, figures, shown, name, where){
+  const base = figures.base;
+  let lo = base, hi = base;
+  shown.forEach(f => f.points.forEach(p => { if(!p.error){ lo = Math.min(lo, p.value); hi = Math.max(hi, p.value); } }));
+  if(hi === lo){ lo -= 1; hi += 1; }
+  const pad = (hi - lo) * 0.05;
+  const sc = scaleFor(c, lo - pad, hi + pad);
+  const W = 560, left = 64, right = 12, top = 24, bottom = 24, H = 230;
+  const plotW = W - left - right, plotH = H - top - bottom;
+  const x = (at) => left + (at + 1) / 2 * plotW;
+  const y = scaleY(top, plotH, sc);
+  const chart = svg('svg', { class: 'bar-chart sens-chart spider-chart' + (sc.fixed ? ' fixed-scale' : ''), viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'data-layout': 'spider' });
+  chart.setAttribute('aria-label', (c.title || 'Spider') + ': what moves ' + name + ', ' + where);
+  chart.appendChild(svg('text', { class: 't-flow-title', x: 6, y: 14 }, name + ' — ' + where));
+  chart.appendChild(svg('line', { class: 's-axis', x1: x(0), x2: x(0), y1: top, y2: top + plotH }));
+  chart.appendChild(svg('line', { class: 's-base', x1: left, x2: W - right, y1: y(base), y2: y(base) }));
+  chart.appendChild(svg('text', { class: 't-axis s-side', x: left - 4, y: y(sc.hi) + 10, 'text-anchor': 'end' }, fmtNum(sc.hi)));
+  chart.appendChild(svg('text', { class: 't-axis s-side', x: left - 4, y: y(sc.lo) - 2, 'text-anchor': 'end' }, fmtNum(sc.lo)));
+  chart.appendChild(svg('text', { class: 't-value s-base-label', x: left - 4, y: y(base) + 4, 'text-anchor': 'end' }, fmtNum(base)));
+  [['Low', x(-1), 'start'], ['0', x(0), 'middle'], ['High', x(1), 'end']].forEach(([t, at, anchor]) => chart.appendChild(svg('text', { class: 't-period', x: at, y: H - 6, 'text-anchor': anchor }, t)));
+  figures.inputs.forEach((f, i) => {
+    if(!f.show) return;
+    const label = partLabel(f.key), colour = spiderColour(c, f.key, i);
+    const g = svg('g', { class: 's-line', 'data-input': label });
+    // Broken where a point can't be worked out.
+    let run = [];
+    const flush = () => {
+      if(run.length > 1) g.appendChild(svg('polyline', { class: 's-path', points: run.join(' '), fill: 'none', stroke: colour }));
+      run = [];
+    };
+    f.points.forEach(p => {
+      if(p.error){ flush(); return; }
+      const px = x(p.at), py = y(p.value);
+      run.push(px.toFixed(1) + ',' + py.toFixed(1));
+      const dot = svg('circle', { class: 's-point', cx: px, cy: py, r: 2.5, fill: colour });
+      dot.appendChild(svg('title', {}, label + ' ' + signed(p.change, f.by) + ': ' + name + ' ' + fmtNum(p.value)));
+      g.appendChild(dot);
+    });
+    flush();
+    chart.appendChild(g);
+  });
   return chart;
 }

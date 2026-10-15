@@ -111,7 +111,7 @@ async function drawPicture(title, widgets){
   return new Promise((resolve, reject) => canvas.toBlob(b => b ? resolve(b) : reject(new Error('The picture could not be made.')), 'image/png'));
 }
 
-const widgetName = (w) => w.kind === 'chart' ? (w.title || ({ columns: 'Columns', flow: 'Waterfall', scenarios: 'Scenario waterfall' }[w.layout] || 'Chart')) : model.byKey.get(w.key).name;
+const widgetName = (w) => w.kind === 'chart' ? (w.title || ({ columns: 'Columns', flow: 'Waterfall', scenarios: 'Scenario waterfall', tornado: 'Tornado', spider: 'Spider' }[w.layout] || 'Chart')) : model.byKey.get(w.key).name;
 
 async function sharePicture(title, widgets, fileName){
   try{
