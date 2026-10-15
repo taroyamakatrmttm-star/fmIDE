@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph: Tornado and Spider charts (step 18, phase A1)
+- Two new kinds of chart, chosen at a chart's top: a **Tornado** (one bar per input from its Low to its High, largest swing first) and a **Spider** (a line per input through points from Low to High) for one output in one period. Each input is moved on its own, in every period, by a percent or an amount, around where the sliders stand now; moving a slider measures them again. A new one measures the first calculated rectangle with every input that reaches it; Edit chart chooses the output, the period and the Spider's points. The same meanings and limits as ExcelExporter's Sensitivity (at most 50 inputs, Low and High within ±1e9, 1–10 points).
+- Saved with the board: the board file is now version 8 (charts of layout `tornado` and `spider`); version 7 files open as before; an older fmGraph asks first and shows these charts empty. Never in a template's board. `window.fmGraph.addChart` takes the new layouts and `fmGraph.chart(id)` gives their Low, High, swing and points.
+- On a large model these charts are worked out once the sliders stop ("Working out…").
+
 ## ExcelExporter's Excel writer: a form control is never too small to see (step 19, B0)
 - A scroll bar or check box placed with its end corner not past its start was written 0 cells wide or tall, so Excel drew nothing (found by the owner opening the sample in desktop Excel: the Other tab's scroll bar was missing). Every control now covers at least one cell each way.
 

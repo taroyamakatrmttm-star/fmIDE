@@ -11,11 +11,19 @@
 //   addChart({ layout: 'columns', title, periods, check, groups: [{ name, parts: [rect…] }] })
 //   addChart({ layout: 'flow', title, period, steps: [{ rect, role: 'start'|'add'|'subtract'|'total' }] })
 //   addChart({ layout: 'scenarios', title, period, outputs: [rect…], scenarios?: [name…] })
+//   addChart({ layout: 'tornado' | 'spider', title, output: rect, period, steps (1–10, the Spider's
+//              points each side), inputs: [{ rect, by: 'percent' | 'amount', low, high, show }] })
+//                  (step 18) output: the first calculated rectangle when left out; inputs: every
+//                  input that reaches it when left out
 //                  → the chart's id; a rect is a name, '#id', or { rect, canvas }
 //   chart(id)      → what it shows now: columns — per period { period, groups: [{ name, total,
 //                    parts: [value or { error }] }], check: { ok, gap } | null }; flow — per step
 //                    { name, role, value, from, to, check: { ok, expected } | null }; scenarios — per
-//                    output { name, steps: [{ name, kind: 'start'|'step'|'end', value, from, to }] }
+//                    output { name, steps: [{ name, kind: 'start'|'step'|'end', value, from, to }] };
+//                    tornado / spider — { output, period, base, inputs: [{ name, by, low, high, show,
+//                    lowValue, highValue, swing } or { …, error }] } around where the sliders stand
+//                    (the Tornado's sorted by swing), a Spider's inputs also with points: [{ at
+//                    (−1 … 1, the share of Low or High), change, value or error }]
 //   setSlider(id, value), resetSlider(id), resetAll(), remove(id)
 //   board()        → the board ({ kind: 'fmIDE-graph-board', … }) with each slider's value
 //   reached(id)    → the ids of the bars a slider reaches
@@ -62,6 +70,24 @@ function chartById(id){
   return c;
 }
 
+// A Tornado or Spider from addChart, in the file's form (step 18).
+function sensitivitySpec(spec, at){
+  const out = spec.output !== undefined ? rectRef(spec.output) : null;
+  const inputs = Array.isArray(spec.inputs)
+    ? spec.inputs.map(i => {
+      const r = rectRef(i);
+      if(!r.input) throw new Error('"' + r.name + '" is not an input rectangle: a Tornado or Spider moves inputs only.');
+      return Object.assign(at(r), i && typeof i === 'object' ? { by: i.by, low: i.low, high: i.high, show: i.show } : {});
+    })
+    : null;
+  if(inputs && inputs.length > SENSITIVITY_LIMITS.inputs) throw new Error('A Tornado or Spider moves at most ' + SENSITIVITY_LIMITS.inputs + ' inputs.');
+  const start = sensitivityStart(out ? out.key : null);
+  const startOut = start.output && model.byKey.get(start.output);
+  return { layout: spec.layout, title: spec.title, period: spec.period === undefined ? 0 : periodIndex(spec.period), steps: spec.steps,
+    output: out ? at(out) : startOut ? at(startOut) : null,
+    inputs: inputs || start.inputs.map(i => Object.assign(at(model.byKey.get(i.key)), { by: i.by, low: i.low, high: i.high })) };
+}
+
 window.fmGraph = Object.freeze({
   load: (data, name) => openModelText(typeof data === 'string' ? data : JSON.stringify(data), name),
   rectangles: () => model ? model.rects.map(r => ({ canvas: r.canvasName, canvasId: r.canvasId, id: r.nodeId, name: r.name, input: r.input, unit: r.unit })) : [],
@@ -87,7 +113,8 @@ window.fmGraph = Object.freeze({
     spec = spec || {};
     if(board.charts.length >= BOARD_LIMIT) throw new Error('No more charts can be added.');
     const at = (r) => ({ canvasId: r.canvasId, nodeId: r.nodeId, name: r.name });
-    const raw = spec.layout === 'scenarios'
+    const raw = SENSITIVITY_LAYOUTS.includes(spec.layout) ? sensitivitySpec(spec, at)
+      : spec.layout === 'scenarios'
       ? Object.assign({ layout: 'scenarios', title: spec.title, period: spec.period === undefined ? 0 : periodIndex(spec.period),
           outputs: (spec.outputs || []).map(r => at(rectRef(r))) }, Array.isArray(spec.scenarios) ? { scenarios: spec.scenarios.map(String) } : {})
       : spec.layout === 'flow'
@@ -103,6 +130,14 @@ window.fmGraph = Object.freeze({
   },
   chart: (id) => {
     const c = chartById(id), results = currentResults();
+    if(isSensitivity(c)){
+      const f = sensitivityNow(c, shownOverrides(), true).figures;
+      if(!f) return null;
+      return { output: partLabel(c.output), period: model.periods[c.period], base: f.base,
+        inputs: f.inputs.map(i => Object.assign({ name: partLabel(i.key), by: i.by, low: i.low, high: i.high, show: i.show },
+          i.error ? { error: i.error } : { lowValue: i.lowValue, highValue: i.highValue, swing: i.swing },
+          i.points ? { points: i.points.map(p => Object.assign({}, p)) } : {})) };
+    }
     if(c.layout === 'flow') return flowFigures(c, results).map((f, i) => Object.assign({ name: partLabel(c.steps[i].key) }, f));
     if(c.layout === 'scenarios'){
       const memo = new Map();

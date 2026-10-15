@@ -94,13 +94,15 @@ function animKey(rect, key){ rect.dataset.anim = key; return rect; }
 // After a widget's SVG is in place: glide each bar from where it was.
 function glide(host){
   host.querySelectorAll('rect[data-anim]').forEach(r => {
-    const key = r.dataset.anim, y1 = Number(r.getAttribute('y')), h1 = Number(r.getAttribute('height'));
+    // A Tornado's bars lie across (data-axis x): they glide sideways.
+    const across = r.dataset.axis === 'x';
+    const key = r.dataset.anim, y1 = Number(r.getAttribute(across ? 'x' : 'y')), h1 = Number(r.getAttribute(across ? 'width' : 'height'));
     const was = lastGeometry.get(key);
     lastGeometry.set(key, { y: y1, h: h1 });
     if(!animateNow || !was || h1 < 0.5 || typeof r.animate !== 'function') return;
     if(Math.abs(was.y - y1) < 0.5 && Math.abs(was.h - h1) < 0.5) return;
     const a = was.h / h1, b = was.y - a * y1;
-    r.animate([{ transform: 'matrix(1,0,0,' + a + ',0,' + b + ')' }, { transform: 'matrix(1,0,0,1,0,0)' }], { duration: ANIM_MS, easing: 'ease-out' });
+    r.animate([{ transform: across ? 'matrix(' + a + ',0,0,1,' + b + ',0)' : 'matrix(1,0,0,' + a + ',0,' + b + ')' }, { transform: 'matrix(1,0,0,1,0,0)' }], { duration: ANIM_MS, easing: 'ease-out' });
   });
 }
 function forgetGeometry(){ lastGeometry = new Map(); }

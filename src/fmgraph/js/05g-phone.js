@@ -299,7 +299,7 @@ function openChartPeek(c){
   peekFor = c;
   peekOpenedAt = performance.now();
   const p = c.layout === 'columns' ? (periodsOf(c.periods)[0] || 0) : c.period;
-  const kind = { columns: 'Columns', flow: 'Waterfall', scenarios: 'Scenario waterfall' }[c.layout] || 'Chart';
+  const kind = { columns: 'Columns', flow: 'Waterfall', scenarios: 'Scenario waterfall', tornado: 'Tornado', spider: 'Spider' }[c.layout] || 'Chart';
   $('peekTitle').textContent = c.title || kind;
   $('peekWhere').textContent = kind + ' · ' + model.periods[p];
   $('peekChart').textContent = '';
