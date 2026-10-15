@@ -1,0 +1,394 @@
+{
+ "kind": "fmIDE-workspace",
+ "version": 12,
+ "system": {
+  "kind": "system",
+  "version": 9,
+  "periods": [
+   "2027",
+   "2028",
+   "2029",
+   "2030"
+  ],
+  "canvases": [
+   {
+    "id": "cProfit",
+    "name": "Profit",
+    "nodes": [
+     {
+      "id": "price",
+      "type": "value",
+      "x": 40,
+      "y": 40,
+      "w": 170,
+      "h": 64,
+      "text": "Price\n10"
+     },
+     {
+      "id": "volume",
+      "type": "value",
+      "x": 260,
+      "y": 40,
+      "w": 170,
+      "h": 64,
+      "text": "Volume\n400"
+     },
+     {
+      "id": "mul",
+      "type": "operator",
+      "x": 180,
+      "y": 140,
+      "w": 56,
+      "h": 56,
+      "text": "\u00d7"
+     },
+     {
+      "id": "revenue",
+      "type": "value",
+      "x": 120,
+      "y": 220,
+      "w": 170,
+      "h": 64,
+      "text": "Revenue"
+     },
+     {
+      "id": "cost",
+      "type": "value",
+      "x": 360,
+      "y": 220,
+      "w": 170,
+      "h": 64,
+      "text": "Cost\n-3000"
+     },
+     {
+      "id": "plus",
+      "type": "operator",
+      "x": 260,
+      "y": 320,
+      "w": 56,
+      "h": 56,
+      "text": "+"
+     },
+     {
+      "id": "profit",
+      "type": "value",
+      "x": 200,
+      "y": 400,
+      "w": 170,
+      "h": 64,
+      "text": "Profit"
+     },
+     {
+      "id": "inst",
+      "type": "blockInstance",
+      "x": 480,
+      "y": 400,
+      "w": 180,
+      "h": 90,
+      "blockDefCanvasId": "cBonus"
+     },
+     {
+      "id": "bonus",
+      "type": "value",
+      "x": 480,
+      "y": 540,
+      "w": 170,
+      "h": 64,
+      "text": "Bonus paid"
+     }
+    ],
+    "edges": [
+     {
+      "id": "e1",
+      "from": "price",
+      "to": "mul"
+     },
+     {
+      "id": "e2",
+      "from": "volume",
+      "to": "mul"
+     },
+     {
+      "id": "e3",
+      "from": "mul",
+      "to": "revenue"
+     },
+     {
+      "id": "e4",
+      "from": "revenue",
+      "to": "plus"
+     },
+     {
+      "id": "e5",
+      "from": "cost",
+      "to": "plus"
+     },
+     {
+      "id": "e6",
+      "from": "plus",
+      "to": "profit"
+     },
+     {
+      "id": "e7",
+      "from": "profit",
+      "to": "inst",
+      "toPort": 0
+     },
+     {
+      "id": "e8",
+      "from": "inst",
+      "to": "bonus",
+      "fromPort": 0
+     }
+    ]
+   },
+   {
+    "id": "cBonus",
+    "name": "Bonus",
+    "nodes": [
+     {
+      "id": "pin",
+      "type": "value",
+      "x": 40,
+      "y": 40,
+      "w": 170,
+      "h": 64,
+      "text": "Profit In",
+      "blockRole": "input"
+     },
+     {
+      "id": "rate",
+      "type": "value",
+      "x": 260,
+      "y": 40,
+      "w": 170,
+      "h": 64,
+      "text": "Bonus rate\n0.1"
+     },
+     {
+      "id": "bmul",
+      "type": "operator",
+      "x": 180,
+      "y": 140,
+      "w": 56,
+      "h": 56,
+      "text": "\u00d7"
+     },
+     {
+      "id": "bout",
+      "type": "value",
+      "x": 120,
+      "y": 220,
+      "w": 170,
+      "h": 64,
+      "text": "Bonus",
+      "blockRole": "output"
+     }
+    ],
+    "edges": [
+     {
+      "id": "b1",
+      "from": "pin",
+      "to": "bmul"
+     },
+     {
+      "id": "b2",
+      "from": "rate",
+      "to": "bmul"
+     },
+     {
+      "id": "b3",
+      "from": "bmul",
+      "to": "bout"
+     }
+    ]
+   }
+  ]
+ },
+ "templates": [],
+ "formatPresets": [],
+ "graphBoards": {
+  "kind": "fmIDE-graph-board",
+  "version": 7,
+  "active": 0,
+  "boards": [
+   {
+    "name": "Profit board",
+    "items": [
+     {
+      "canvasId": "cProfit",
+      "nodeId": "profit",
+      "name": "Profit",
+      "type": "bar",
+      "periods": {
+       "mode": "all"
+      },
+      "wide": false
+     }
+    ],
+    "sliders": [
+     {
+      "canvasId": "cProfit",
+      "nodeId": "price",
+      "name": "Price",
+      "periods": {
+       "mode": "all"
+      },
+      "mode": "set",
+      "min": 5,
+      "max": 15,
+      "step": 0.5
+     },
+     {
+      "canvasId": "cProfit",
+      "nodeId": "volume",
+      "name": "Volume",
+      "periods": {
+       "mode": "all"
+      },
+      "mode": "shift",
+      "min": -50,
+      "max": 50,
+      "step": 1
+     },
+     {
+      "canvasId": "cProfit",
+      "nodeId": "price",
+      "name": "Price",
+      "periods": {
+       "mode": "range",
+       "from": 1,
+       "to": 2
+      },
+      "mode": "set",
+      "min": 5,
+      "max": 15,
+      "step": 0.5
+     },
+     {
+      "canvasId": "cProfit",
+      "nodeId": "volume",
+      "name": "Volume",
+      "periods": {
+       "mode": "one",
+       "p": 3
+      },
+      "mode": "shift",
+      "min": -50,
+      "max": 50,
+      "step": 1
+     },
+     {
+      "canvasId": "cProfit",
+      "nodeId": "cost",
+      "name": "Cost",
+      "periods": {
+       "mode": "one",
+       "p": 0
+      },
+      "mode": "set",
+      "min": -5000,
+      "max": 0,
+      "step": 100
+     }
+    ]
+   },
+   {
+    "name": "Second board",
+    "items": [],
+    "sliders": []
+   }
+  ],
+  "scenarios": [
+   {
+    "name": "High price",
+    "sliders": [
+     {
+      "canvasId": "cProfit",
+      "nodeId": "price",
+      "name": "Price",
+      "mode": "set",
+      "periods": {
+       "mode": "all"
+      },
+      "value": 13
+     }
+    ]
+   },
+   {
+    "name": "Volume up",
+    "sliders": [
+     {
+      "canvasId": "cProfit",
+      "nodeId": "volume",
+      "name": "Volume",
+      "mode": "shift",
+      "periods": {
+       "mode": "all"
+      },
+      "value": 10
+     }
+    ]
+   },
+   {
+    "name": "Mixed",
+    "sliders": [
+     {
+      "canvasId": "cProfit",
+      "nodeId": "price",
+      "name": "Price",
+      "mode": "set",
+      "periods": {
+       "mode": "range",
+       "from": 1,
+       "to": 2
+      },
+      "value": 12
+     },
+     {
+      "canvasId": "cProfit",
+      "nodeId": "volume",
+      "name": "Volume",
+      "mode": "shift",
+      "periods": {
+       "mode": "one",
+       "p": 3
+      },
+      "value": -5
+     }
+    ]
+   },
+   {
+    "name": "Also high",
+    "sliders": [
+     {
+      "canvasId": "cProfit",
+      "nodeId": "price",
+      "name": "Price",
+      "mode": "set",
+      "periods": {
+       "mode": "all"
+      },
+      "value": 13
+     }
+    ]
+   },
+   {
+    "name": "Cost cut",
+    "sliders": [
+     {
+      "canvasId": "cProfit",
+      "nodeId": "cost",
+      "name": "Cost",
+      "mode": "set",
+      "periods": {
+       "mode": "one",
+       "p": 0
+      },
+      "value": -2500
+     }
+    ]
+   }
+  ]
+ }
+}

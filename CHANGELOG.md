@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: fmGraph's scenarios become Global Cases (step 19, phase B2)
+- **Layout → Use fmGraph boards…** turns the scenarios saved in fmGraph into the workbook's Global Cases: case 1 is Base (fmIDE's numbers), then one case per scenario, named after it. Each input a scenario moves gets row scenarios on the Inputs tab: a set value in the scenario's periods (the others link to scenario 1), a % change a live formula on scenario 1. A window lists the scenarios with tick boxes and what can't be carried (an input inside a block, a rectangle the model hasn't got, past 50 cases or 20 row scenarios); Generate lists them again. It asks before replacing cases in the layout.
+- The boards come with the model from fmIDE (Open ExcelExporter now sends the document's boards) or a `.fmide` document, or from a board file: **File → Import fmGraph boards…**, or dropped on the page. ExcelExporter reads them with its own reader of the documented format (versions 1–7).
+- What was used is copied into the layout: the layout file is now version 4 (`cfg.graph`); version 3 files open with none.
+
 ## fmGraph: boards share where the sliders stand
 - Every board shares slider positions by default: a slider moved on one board moves the numbers on every sharing board, and a like slider there (same rectangle, periods and kind) stands in the same place. Each board still shows only its own sliders; "Also moved on other boards" names the others counting.
 - Untick "Share slider positions with other boards" (☰ on a phone) to give a board its own positions, as before; its tab is marked ◇. Kept with the board: the board file is now version 7 (`ownSliders`); version 6 files open with every board sharing.

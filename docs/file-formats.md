@@ -30,10 +30,26 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 | `fmIDE-macros` | 1 | Macros | fmIDE: Macro Builder → Import |
 | `fmIDE-preferences` | 1 | Personal settings: shortcut bindings for built-in commands, ribbon layout and Quick Access Toolbar, ribbon collapsed state, KeyTips trigger (fmIDE only) | fmIDE: File → Import Preferences (or Customize Ribbon) |
 | `fmIDE-library-pack` | 4 | Templates, recipes and functions to share with other people, with who made them and their licence (below); v2: an item shared again carries the `origin` it came with; v3: a canvas template may carry `attachments`; v4: a canvas or system template may carry an fmGraph board (`attachments.graph`) | fmIDE: File → Open Library Pack… |
-| `fmIDE-excel-mapping` | 3 | ExcelExporter's tab/row layout for one model; v2: any row may carry its own format (`style`) and an `indent` (below); v3: `cfg.sensitivity`, the Tornado and Spider's settings (step 16, below) | ExcelExporter: Import Mapping JSON |
+| `fmIDE-excel-mapping` | 4 | ExcelExporter's tab/row layout for one model; v2: any row may carry its own format (`style`) and an `indent` (below); v3: `cfg.sensitivity`, the Tornado and Spider's settings (step 16, below); v4: `cfg.graph`, fmGraph's scenarios copied by Use fmGraph boards… (step 19 B2, below) | ExcelExporter: Import Mapping JSON |
 | `fmIDE-excel-style` | 1 | ExcelExporter's Excel style: how every cell in the workbook looks, by role (step 11a, below) | ExcelExporter: Import Excel Style |
 | `fmIDE-excel-module-layouts` | 2 | ExcelExporter's layouts remembered per module (step 11b, below); v2: the layout of a module's block instances, `instance` (step 11d) | ExcelExporter: Import Module Layouts |
-| `fmIDE-graph-board` | 7 | fmGraph's boards: bars, charts and sliders showing one model (step 15, below); v2: the template form, for a template's `attachments.graph` (G5a); v3: the model's named scenarios, `scenarios`; v4: the scenario waterfall, a chart of layout `scenarios`; v5: a bar's or chart's fixed vertical scale, `scale`; v6: a folded slider, `folded`; v7: a board keeping its own slider positions, `ownSliders` (the template form stays version 2) | fmGraph: Boards → Import boards… (or dropped on the page) |
+| `fmIDE-graph-board` | 7 | fmGraph's boards: bars, charts and sliders showing one model (step 15, below); v2: the template form, for a template's `attachments.graph` (G5a); v3: the model's named scenarios, `scenarios`; v4: the scenario waterfall, a chart of layout `scenarios`; v5: a bar's or chart's fixed vertical scale, `scale`; v6: a folded slider, `folded`; v7: a board keeping its own slider positions, `ownSliders` (the template form stays version 2) | fmGraph: Boards → Import boards… (or dropped on the page) · ExcelExporter: File → Import fmGraph boards… (its scenarios, below) |
+
+## fmGraph's scenarios in the layout (`fmIDE-excel-mapping` 4, step 19 B2)
+
+ExcelExporter's Layout → Use fmGraph boards… copies the scenarios of a model's fmGraph boards (a document's `graphBoards`, or a board file of versions 1 to 7, below) into the layout, `cfg.graph`; the workbook is made from this copy, never from the board file:
+
+```
+"graph": { "from": ["Profit board", "Second board"], "board": "Profit board",
+  "scenarios": [ { "name": "Mixed", "settings": [
+    { "row": "cProfit|price", "name": "Price", "mode": "set", "periods": { "mode": "range", "from": 1, "to": 2 }, "value": 12 },
+    { "row": "cProfit|volume", "name": "Volume", "mode": "shift", "periods": { "mode": "one", "p": 3 }, "value": -5 } ] } ] }
+```
+
+- `from`: the boards' names; `board`: the one picked (names at most 60 characters, at most 20).
+- `scenarios`, in order (at most 50; names at most 40 characters, unique with capitals and outer spaces ignored): each a `name` and its `settings` (at most 40), each on a layout row — `row`, the input rectangle's row id (`canvasId|nodeId`; only an input outside any block), `name` the rectangle's name when copied, `mode` `set` (that number) or `shift` (a change by that many %), `periods` as a board's, and `value`, a number no bigger than 10¹⁵ either way. Settings apply in their order: a set value replaces, a shift changes what is there by %.
+- In the workbook: Global Case 1 is Base, then one case per scenario (at most 50 cases); each input a scenario moves gets row scenarios — 1 fmIDE's numbers, then one per different way the scenarios set it (at most 20) — and the case matrix picks them.
+- Read with the same checks as a board (kinds, numbers forced, names as text); a setting whose row is gone, or is no longer an input that can be moved, is dropped. A version 3 file has no `cfg.graph`, and reads as none (the upgrade step changes nothing); an older ExcelExporter asks before opening version 4 and ignores the copy.
 
 ## The Tornado and Spider's settings (`fmIDE-excel-mapping` 3)
 
@@ -179,7 +195,7 @@ A workspace — and so a `.fmide` document — may carry `graphBoards`: an `fmID
 - **fmIDE never reads what is inside.** It keeps `graphBoards` as it came when it is an object of kind `fmIDE-graph-board`, plain data (objects, lists, text, finite numbers, true / false, null), at most 16 deep and 1 MB as JSON text (`cleanGraphBoards`, `GRAPH_BOARDS_LIMITS` in `src/shared/fmide-files.js`); anything else is dropped.
 - It belongs to the model: opening a document or importing a workspace takes the file's (or none); opening a system file and New have none; saving and the autosave write it when there is one.
 - fmGraph opened from fmIDE gets it with the model and shows it instead of the boards the browser keeps for that model (when it shows anything for this model); each change to the boards in fmGraph goes back to fmIDE, which keeps it and marks the document unsaved. fmGraph opening a `.fmide` or workspace file shows its `graphBoards` the same way. fmGraph reads it with its own checks (`cleanBoards`), as any board file.
-- Older workspaces (v1–v10) have none; the upgrade step changes nothing. An older fmIDE or ExcelExporter asks before opening a v11 file; ExcelExporter ignores `graphBoards`.
+- Older workspaces (v1–v10) have none; the upgrade step changes nothing. An older fmIDE or ExcelExporter asks before opening a v11 file. ExcelExporter reads `graphBoards` with its own reader only when the person chooses Layout → Use fmGraph boards… (step 19 B2, `fmIDE-excel-mapping` 4 above); fmIDE sends them to an ExcelExporter it opened, with the model.
 
 ## Template attachments (`fmIDE-templates` 7 and 10, `fmIDE-workspace` 8 and 12, `fmIDE-library-pack` 3 and 4; steps 11c and 15 G5a)
 

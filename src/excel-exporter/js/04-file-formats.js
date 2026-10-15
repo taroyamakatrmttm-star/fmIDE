@@ -10,8 +10,9 @@
 const FILE_FORMATS = {
   'system':              { current: SHARED_FILE_VERSIONS['system'], label: 'fmIDE system' },
   'fmIDE-workspace':     { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'fmIDE workspace' },
-  // v3: the Tornado and Spider's settings, `cfg.sensitivity` (step 16).
-  'fmIDE-excel-mapping': { current: 3, label: 'ExcelExporter mapping file' },
+  // v3: the Tornado and Spider's settings, `cfg.sensitivity` (step 16); v4: `cfg.graph`, what
+  // Use fmGraph boards… copied (step 19 B2).
+  'fmIDE-excel-mapping': { current: 4, label: 'ExcelExporter mapping file' },
   // The person's own Excel style (step 11a): how every cell looks, by role.
   'fmIDE-excel-style':   { current: 1, label: 'ExcelExporter Excel style file' },
   // The layouts remembered per module (step 11b); v2: a module's block instances' layout, `instance` (step 11d).
@@ -30,10 +31,11 @@ const OTHER_FMIDE_KINDS = {
 };
 // The mapping file's upgrades. v2: any row may carry its own format (`style`) and an
 // `indent`; a v1 file has neither, so it reads as it is. v3: `cfg.sensitivity` (the
-// Tornado and Spider, step 16); a v2 file has none (off), so it too reads as it is. The module layouts file's v2 adds
+// Tornado and Spider, step 16); a v2 file has none (off), so it too reads as it is. v4: `cfg.graph`
+// (fmGraph's scenarios, step 19 B2); a v3 file has none, so it reads as it is. The module layouts file's v2 adds
 // `instance` (step 11d); a v1 file has none, so it too reads as it is.
 const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
-  'fmIDE-excel-mapping': { 1: (d) => { d.version = 2; return d; }, 2: (d) => { d.version = 3; return d; } },
+  'fmIDE-excel-mapping': { 1: (d) => { d.version = 2; return d; }, 2: (d) => { d.version = 3; return d; }, 3: (d) => { d.version = 4; return d; } },
   'fmIDE-excel-module-layouts': { 1: (d) => { d.version = 2; return d; } }
 });
 // Returns { error } or { kind, data (migrated copy), fromVersion, newer, newerParts }.
@@ -110,6 +112,8 @@ async function loadModel(m){
   useModelIR(ir);
   canvasModules = readCanvasModules(systemData);
   templateLayouts = readTemplateLayouts(m && m.kind === 'fmIDE-workspace' ? m : null); // step 11c-2
+  // Its fmGraph boards, kept as they came: read only by Use fmGraph boards… (04c, 09i).
+  modelGraphBoards = m && m.kind === 'fmIDE-workspace' && m.graphBoards && typeof m.graphBoards === 'object' && !Array.isArray(m.graphBoards) ? m.graphBoards : null;
   mappingKey = key;
   mapping = restored || buildDefaultMapping(model);
   // reconcile: drop rows/tabs referencing nodes/canvases no longer present, add rows for new nodes
@@ -181,6 +185,7 @@ function reconcileMapping(){
   }));
   syncInputMirrors(); // add/drop Inputs-tab rows for inputs that appeared/disappeared in fmIDE
   reconcileSensitivity(); // the Tornado and Spider's settings, checked (09g-sensitivity.js)
+  reconcileGraph(); // what Use fmGraph boards… copied, checked (04c-graph-boards.js)
   // Keep both order dimensions clean and fully populated regardless of which one is
   // currently "live" (sectioned `order` vs. flat `flatOrder`, see sectionsEnabled()) —
   // so flipping the toggle later never lands on a row with a stale/missing value in
@@ -195,6 +200,7 @@ function reconcileMapping(){
 let mappingSaveFailing = false;
 function saveMapping(){
   if(!mappingKey) return;
+  graphPlanCache = null; // the fmGraph scenarios' plan follows the layout (09i)
   layoutStore.requestPersistence(); // once, ever — on the first change, not at start-up
   writeMapping();
   rememberModuleLayouts(); // a module tab that changed is remembered for that module

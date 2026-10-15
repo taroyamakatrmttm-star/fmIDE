@@ -94,7 +94,7 @@ test('the name fmIDE sends is shown as text, and the menu item is reached by key
   await popup.locator('#menuFile').focus();
   await popup.keyboard.press('ArrowDown');
   const items = await popup.locator('#menuFileList [role=menuitem]:not(.hidden)').allTextContents();
-  expect(items).toEqual(['Open Model…', 'Load Sample Model', 'Paste JSON…', '↻ From fmIDE', 'Start Over']);
+  expect(items).toEqual(['Open Model…', 'Load Sample Model', 'Paste JSON…', '↻ From fmIDE', 'Import fmGraph boards…', 'Start Over']);
   for(let i = 0; i < 3; i++) await popup.keyboard.press('ArrowDown');
   await expect(popup.locator('#btnFromFmide')).toBeFocused();
 });

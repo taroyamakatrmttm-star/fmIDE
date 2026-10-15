@@ -138,6 +138,9 @@ function buildWorkbook(){
   const scenarioVars = inputsEnabled() ? (ctx.rowsByTabOrdered[INPUTS_TAB_ID] || []).filter(e => ctx.scenarioBlocks[e.row.id]) : [];
   const scenarioSheetName = scenarioVars.length ? uniqueTabName('Scenarios', null).name : null;
   const scenarioRowOf = {};
+  // fmGraph's scenarios (09i): the case names, each input's row scenarios and the case matrix.
+  graphPlanCache = null;
+  const graphPlan = graphScenarioPlan();
   const nCases = scenarioVars.length ? globalCaseCount() : 0;
   const SCN_FIRST_ROW = nCases ? 8 : 4; // with global cases: case block rows 2-3, "Scenarios" section from row 5
   scenarioVars.forEach((e, i) => { scenarioRowOf[e.row.id] = SCN_FIRST_ROW + i; });
@@ -307,9 +310,12 @@ function buildWorkbook(){
         const inStyle = nodeStyleToExcelCellStyle(inObj);
         const inFmt = numberFormatToExcel(inObj, fallbackFmt);
         const numStyle = roleCellStyle('Notes', CENTER);
+        const graphRow = graphPlan ? graphPlan.byMirror.get(row.id) : null; // set by fmGraph's scenarios
         for(let k = 1; k <= scnBlock.n; k++){
           const r = scnBlock.first + k - 1;
-          setCell('A' + r, textCell('Scenario ' + k, inStyle));   // rename freely in Excel
+          const variant = graphRow && k >= 2 ? graphRow.variants[k - 2] : null;
+          // Named after the first fmGraph scenario setting it so (text from the file, written as text).
+          setCell('A' + r, textCell(variant ? variant.name : 'Scenario ' + k, inStyle));   // rename freely in Excel
           setCell('B' + r, blankCell(inStyle));
           setCell(VINTAGE_COL + r, k === 1 ? { t: 'n', v: 1, s: numStyle } : { t: 'n', f: VINTAGE_COL + (r - 1) + '+1', v: k, s: numStyle });
           for(let h = 0; h < helperColCount; h++) setCell(helperCol(h) + r, blankCell(inStyle));
@@ -320,6 +326,10 @@ function buildWorkbook(){
               const content = fitted(() => buildCellContent(row.canvasId, node, p, ctx, tab.name, row.path), p);
               cell = content.isFormula ? { t: 'n', f: content.formula, v: 0, z: inFmt }
                 : content.value !== null ? { t: 'n', v: content.value, z: inFmt } : blankCell(null, inFmt);
+            } else if(variant){
+              // A set value in its periods; a shift a live formula on scenario 1; else scenario 1.
+              const made = graphScenarioCell(variant, p, col + scnBlock.first);
+              cell = made.formula !== undefined ? { t: 'n', f: made.formula, v: 0, z: inFmt } : { t: 'n', v: made.value, z: inFmt };
             } else {
               cell = blankCell(null, inFmt); // empty = 0 until you type a value
             }
@@ -440,13 +450,14 @@ function buildWorkbook(){
     if(nCases){
       ws.A2 = { t: 's', v: 'Global Case', s: mergeXlStyle({ font: (roleCellStyle('Headers') || {}).font || {} }, { font: { sz: 12 } }) };
       ws.C2 = { t: 'n', v: 1, s: mergeXlStyle(inputStyle, { font: { bold: true } }) };
-      ws.D2 = { t: 's', f: 'INDEX($' + firstCaseCol + '$3:$' + lastCaseCol + '$3,MIN(MAX($C$2,1),' + nCases + '))', v: 'Case 1', s: mergeXlStyle(calcStyle, { font: { bold: true } }) };
+      const caseName = (k) => graphPlan && graphPlan.cases[k - 1] !== undefined ? graphPlan.cases[k - 1] : 'Case ' + k;
+      ws.D2 = { t: 's', f: 'INDEX($' + firstCaseCol + '$3:$' + lastCaseCol + '$3,MIN(MAX($C$2,1),' + nCases + '))', v: caseName(1), s: mergeXlStyle(calcStyle, { font: { bold: true } }) };
       ws.F2 = { t: 's', f: 'IF(ISNUMBER(C2),IF(AND(C2=INT(C2),C2>=1,C2<=' + nCases + '),"OK","Out of range - using "&MIN(MAX(INT(C2),1),' + nCases + ')),"Not a number - using 1")', v: 'OK', s: calcStyle };
       for(let k = 1; k <= nCases; k++){
         const c = caseCol(k);
         ws[c + '2'] = k === 1 ? { t: 'n', v: 1, s: HDR(CENTER) }
                               : { t: 'n', f: caseCol(k - 1) + '2+1', v: k, s: HDR(CENTER) };
-        ws[c + '3'] = { t: 's', v: 'Case ' + k, s: mergeXlStyle(inputStyle, { font: { bold: true } }) };
+        ws[c + '3'] = textCell(caseName(k), mergeXlStyle(inputStyle, { font: { bold: true } }));
       }
       ws.A4 = { t: 's', v: 'Type the case to run in C2. Rename cases in row 3; set each case\'s scenario per variable in columns ' + firstCaseCol + '-' + lastCaseCol + '.', s: noteStyle };
       ws.A5 = { t: 's', v: scenarioSheetName, s: mergeXlStyle({ font: (roleCellStyle('Headers') || {}).font || {} }, { font: { sz: 13 } }) };
@@ -458,7 +469,7 @@ function buildWorkbook(){
     [['A', 'Input variable'], ['B', 'UOM'], ['C', 'Applied'], ['D', 'Scenario name'], ['E', 'Scenarios'], ['F', 'Check']]
       .forEach(([c, v]) => { ws[c + hdrRow] = { t: 's', v, s: HDR(c === 'C' || c === 'E' ? CENTER : null) }; });
     if(nCases){
-      for(let k = 1; k <= nCases; k++) ws[caseCol(k) + hdrRow] = { t: 's', f: caseCol(k) + '$3', v: 'Case ' + k, s: HDR(CENTER) };
+      for(let k = 1; k <= nCases; k++) ws[caseCol(k) + hdrRow] = { t: 's', f: caseCol(k) + '$3', v: graphPlan && graphPlan.cases[k - 1] !== undefined ? graphPlan.cases[k - 1] : 'Case ' + k, s: HDR(CENTER) };
     }
     ws['A' + noteRow] = { t: 's', v: nCases
       ? 'Applied (C) follows the global case. Rename scenarios in column A of the ' + inputsTabName + ' tab.'
@@ -473,8 +484,13 @@ function buildWorkbook(){
       if(nCases){
         // Applied = this variable's scenario in the global case (a formula now, so plain style).
         ws['C' + r] = { t: 'n', f: 'INDEX($' + firstCaseCol + r + ':$' + lastCaseCol + r + ',MIN(MAX($C$2,1),' + nCases + '))', v: 1, s: calcCenter };
-        // Case matrix default: case k uses scenario k (or the last one) — edit freely.
-        for(let k = 1; k <= nCases; k++) ws[caseCol(k) + r] = { t: 'n', v: Math.min(k, blk.n), s: inputStyle };
+        // Case matrix default: case k uses scenario k (or the last one) — edit freely. With
+        // fmGraph's scenarios: the row scenario each case gives it, and 1 for any other input.
+        const graphRow = graphPlan ? graphPlan.byMirror.get(row.id) : null;
+        for(let k = 1; k <= nCases; k++){
+          const v = graphPlan ? (graphRow ? graphRow.pick[k - 1] || 1 : 1) : Math.min(k, blk.n);
+          ws[caseCol(k) + r] = { t: 'n', v, s: inputStyle };
+        }
       } else {
         ws['C' + r] = { t: 'n', v: 1, s: inputStyle };
       }

@@ -105,8 +105,9 @@ test.describe('mapping files', () => {
     const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
     const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
     expect(exported.kind).toBe('fmIDE-excel-mapping');
-    expect(exported.version).toBe(3); // v2: a row may carry its own format and indent; v3: cfg.sensitivity
+    expect(exported.version).toBe(4); // v2: a row may carry its own format and indent; v3: cfg.sensitivity; v4: cfg.graph
     expect(exported.cfg.sensitivity).toEqual({ enabled: false, outputs: [], period: 0, steps: 5, charts: 'tabs', variables: [] });
+    expect(exported.cfg.graph).toEqual({ from: [], board: '', scenarios: [] });
     expect(exported.tabs.map(t => t.name)).toContain('Exported Tab');
     await renameFirstTab(page, 'Changed Since');
     const saved = testInfo.outputPath('exported-mapping.json');
@@ -117,8 +118,9 @@ test.describe('mapping files', () => {
     expect(await expectCleanStorage(page)).toBeGreaterThan(0);
   });
 
-  // map-v2: a version 2 file (before the Tornado and Spider) reads as it is, Sensitivity off.
-  for(const name of ['map-export', 'map-legacy', 'map-v2']){
+  // map-v2: a version 2 file (before the Tornado and Spider) reads as it is, Sensitivity off;
+  // map-v3: a version 3 file (before fmGraph's scenarios) reads as it is, with none.
+  for(const name of ['map-export', 'map-legacy', 'map-v2', 'map-v3']){
     test(`${name} imports`, async ({ page }) => {
       await renameFirstTab(page, 'Before Import');
       await importMapping(page, file(name));
@@ -126,19 +128,24 @@ test.describe('mapping files', () => {
       expect(await tabNames(page)).toEqual(['Revenue Model']);
       expect(await expectCleanStorage(page)).toBeGreaterThan(0);
       await expect(page.locator('#cfgSensEnabled')).not.toBeChecked();
+      const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
+      const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
+      expect(exported.version).toBe(4);
+      expect(exported.cfg.graph).toEqual({ from: [], board: '', scenarios: [] });
     });
   }
 
-  test('map-newer asks first', async ({ page }) => {
+  // map-newer-v5: version 4 is now current (map-newer, version 4, is no longer newer).
+  test('map-newer-v5 asks first', async ({ page }) => {
     await renameFirstTab(page, 'Before Import');
-    await importMapping(page, file('map-newer'));
+    await importMapping(page, file('map-newer-v5'));
     await expect(page.locator('#confirmModal')).toBeVisible();
-    await expect(page.locator('#confirmMessage')).toContainText('format version 4');
+    await expect(page.locator('#confirmMessage')).toContainText('format version 5');
     await page.click('#confirmCancel');
     await expect(genStatus(page)).toHaveText('Mapping not imported.');
     expect(await tabNames(page)).toEqual(['Before Import']);
 
-    await importMapping(page, file('map-newer'));
+    await importMapping(page, file('map-newer-v5'));
     await page.click('#confirmOk');
     await expect(genStatus(page)).toHaveText('Mapping imported.');
     expect(await tabNames(page)).toEqual(['Revenue Model']);

@@ -744,6 +744,15 @@ var XLSX = (function(){
   .modal-head h3{ margin:0; }
   .attach-pick{ display:flex; align-items:center; gap:8px; font-size:13.5px; }
   .attach-pick select{ flex:1; min-width:0; }
+  /* Use fmGraph boards (09i): the scenarios to bring, and what can't be carried */
+  #graphModal .modal{ max-width:640px; }
+  #graphModal h4{ margin:14px 0 6px; font-size:13.5px; }
+  .graph-source{ margin:0 0 10px; font-size:12.5px; color:var(--muted, #64748b); }
+  .graph-scenarios, .graph-left-out{ list-style:none; margin:0; padding:0; max-height:40vh; overflow:auto; font-size:13px; }
+  .graph-scenarios label{ display:flex; align-items:baseline; gap:8px; padding:3px 0; }
+  .graph-scn-name{ font-weight:600; overflow-wrap:anywhere; }
+  .graph-scn-what{ color:var(--muted, #64748b); font-size:12px; overflow-wrap:anywhere; }
+  .graph-left-out li{ padding:2px 0; color:#92400e; overflow-wrap:anywhere; }
   .modal-close{ width:32px; height:32px; padding:0; border:none; background:transparent; border-radius:8px; color:var(--muted); }
   .modal-close::before{ content:'×'; font-size:22px; line-height:32px; }
   .modal-close:hover{ background:#f1f3f6; color:var(--text); }
@@ -905,6 +914,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
           <button type="button" role="menuitem" id="btnMenuSample" title="Load a small built-in model to try things out">Load Sample Model</button>
           <button type="button" role="menuitem" id="btnMenuPaste" title="Paste a model's JSON text">Paste JSON…</button>
           <button type="button" role="menuitem" id="btnFromFmide" class="hidden" title="Load the model open in fmIDE again, as it is now">↻ From fmIDE</button>
+          <button type="button" role="menuitem" id="btnImportGraphBoards" class="needs-model" title="Read a board file saved with Export all boards in fmGraph, to use its scenarios">Import fmGraph boards…</button>
           <div class="menu-sep" role="separator"></div>
           <button type="button" role="menuitem" id="btnClearAll" class="danger" title="Empties this page. Saved layouts are kept.">Start Over</button>
         </div>
@@ -915,6 +925,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
           <div class="menu-head">This model's layout</div>
           <button type="button" role="menuitem" id="btnImportMapping" class="needs-model" title="Load a layout saved with Export Mapping">Import Mapping…</button>
           <button type="button" role="menuitem" id="btnExportMapping" class="needs-model" title="Save this model's tabs, rows and settings to a file">Export Mapping</button>
+          <button type="button" role="menuitem" id="btnUseGraphBoards" class="needs-model" title="Bring the scenarios of the model's fmGraph boards into this layout, as Global Cases">Use fmGraph boards…</button>
           <div class="menu-head">Module layouts (every model)</div>
           <button type="button" role="menuitem" id="btnImportModuleLayouts" title="Read module layouts saved with Export Module Layouts">Import Module Layouts…</button>
           <button type="button" role="menuitem" id="btnExportModuleLayouts" title="Save the layouts remembered for your modules, e.g. for another computer or fmIDE's Attach Excel layout…">Export Module Layouts</button>
@@ -1163,6 +1174,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
 <input type="file" id="mappingFileInput" accept="application/json,.json" hidden>
 <input type="file" id="moduleLayoutsFileInput" accept="application/json,.json" hidden>
 <input type="file" id="excelStyleFileInput" accept="application/json,.json" hidden>
+<input type="file" id="graphFileInput" accept="application/json,.json" hidden>
 
 <div id="treeCtxMenu" class="ctx-menu hidden" role="menu"></div>
 
@@ -1173,6 +1185,24 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     <div class="modal-actions">
       <button id="attachCancel">Cancel</button>
       <button id="attachOk" class="primary">Attach</button>
+    </div>
+  </div>
+</div>
+
+<div id="graphModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="graphTitle">
+  <div class="modal modal-wide">
+    <h3 id="graphTitle">Use fmGraph boards</h3>
+    <p id="graphSource" class="graph-source"></p>
+    <label id="graphBoardRow" class="attach-pick">Board <select id="graphBoardPick" title="The board to bring. Its scenarios are the model's, shared by every board."></select></label>
+    <h4>Scenarios → Global Cases</h4>
+    <ul id="graphScenarioList" class="graph-scenarios"></ul>
+    <p id="graphNoScenarios" class="graph-source hidden">No scenarios in these boards.</p>
+    <h4 id="graphLeftOutHead" class="hidden">Not carried</h4>
+    <ul id="graphLeftOut" class="graph-left-out"></ul>
+    <div class="modal-actions">
+      <button id="graphRemove" class="danger hidden" title="Take the fmGraph scenarios out of this layout">Remove from Layout</button>
+      <button id="graphCancel">Cancel</button>
+      <button id="graphUse" class="primary">Use</button>
     </div>
   </div>
 </div>
@@ -4916,8 +4946,9 @@ function fileDataProblem(raw){
 const FILE_FORMATS = {
   'system':              { current: SHARED_FILE_VERSIONS['system'], label: 'fmIDE system' },
   'fmIDE-workspace':     { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'fmIDE workspace' },
-  // v3: the Tornado and Spider's settings, `cfg.sensitivity` (step 16).
-  'fmIDE-excel-mapping': { current: 3, label: 'ExcelExporter mapping file' },
+  // v3: the Tornado and Spider's settings, `cfg.sensitivity` (step 16); v4: `cfg.graph`, what
+  // Use fmGraph boards… copied (step 19 B2).
+  'fmIDE-excel-mapping': { current: 4, label: 'ExcelExporter mapping file' },
   // The person's own Excel style (step 11a): how every cell looks, by role.
   'fmIDE-excel-style':   { current: 1, label: 'ExcelExporter Excel style file' },
   // The layouts remembered per module (step 11b); v2: a module's block instances' layout, `instance` (step 11d).
@@ -4936,10 +4967,11 @@ const OTHER_FMIDE_KINDS = {
 };
 // The mapping file's upgrades. v2: any row may carry its own format (`style`) and an
 // `indent`; a v1 file has neither, so it reads as it is. v3: `cfg.sensitivity` (the
-// Tornado and Spider, step 16); a v2 file has none (off), so it too reads as it is. The module layouts file's v2 adds
+// Tornado and Spider, step 16); a v2 file has none (off), so it too reads as it is. v4: `cfg.graph`
+// (fmGraph's scenarios, step 19 B2); a v3 file has none, so it reads as it is. The module layouts file's v2 adds
 // `instance` (step 11d); a v1 file has none, so it too reads as it is.
 const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
-  'fmIDE-excel-mapping': { 1: (d) => { d.version = 2; return d; }, 2: (d) => { d.version = 3; return d; } },
+  'fmIDE-excel-mapping': { 1: (d) => { d.version = 2; return d; }, 2: (d) => { d.version = 3; return d; }, 3: (d) => { d.version = 4; return d; } },
   'fmIDE-excel-module-layouts': { 1: (d) => { d.version = 2; return d; } }
 });
 // Returns { error } or { kind, data (migrated copy), fromVersion, newer, newerParts }.
@@ -5016,6 +5048,8 @@ async function loadModel(m){
   useModelIR(ir);
   canvasModules = readCanvasModules(systemData);
   templateLayouts = readTemplateLayouts(m && m.kind === 'fmIDE-workspace' ? m : null); // step 11c-2
+  // Its fmGraph boards, kept as they came: read only by Use fmGraph boards… (04c, 09i).
+  modelGraphBoards = m && m.kind === 'fmIDE-workspace' && m.graphBoards && typeof m.graphBoards === 'object' && !Array.isArray(m.graphBoards) ? m.graphBoards : null;
   mappingKey = key;
   mapping = restored || buildDefaultMapping(model);
   // reconcile: drop rows/tabs referencing nodes/canvases no longer present, add rows for new nodes
@@ -5087,6 +5121,7 @@ function reconcileMapping(){
   }));
   syncInputMirrors(); // add/drop Inputs-tab rows for inputs that appeared/disappeared in fmIDE
   reconcileSensitivity(); // the Tornado and Spider's settings, checked (09g-sensitivity.js)
+  reconcileGraph(); // what Use fmGraph boards… copied, checked (04c-graph-boards.js)
   // Keep both order dimensions clean and fully populated regardless of which one is
   // currently "live" (sectioned `order` vs. flat `flatOrder`, see sectionsEnabled()) —
   // so flipping the toggle later never lands on a row with a stale/missing value in
@@ -5101,6 +5136,7 @@ function reconcileMapping(){
 let mappingSaveFailing = false;
 function saveMapping(){
   if(!mappingKey) return;
+  graphPlanCache = null; // the fmGraph scenarios' plan follows the layout (09i)
   layoutStore.requestPersistence(); // once, ever — on the first change, not at start-up
   writeMapping();
   rememberModuleLayouts(); // a module tab that changed is remembered for that module
@@ -5718,6 +5754,173 @@ $('moduleLayoutsFileInput').addEventListener('change', () => {
   $('moduleLayoutsFileInput').value = '';
 });
 // ============================================================
+// fmGraph boards — ExcelExporter's own reader of the fmIDE-graph-board format (step 19,
+// phase B2; docs/step19-fmgraph-in-excel.md). Written from the format's documentation
+// (docs/file-formats.md, "fmGraph boards", CC BY 4.0): no code comes from fmGraph, which is
+// under another licence (LICENSING.md).
+//
+// A board file comes from someone else as often as not (fmGraph's Export, a document's
+// graphBoards), so everything in it is untrusted: names are kept as plain text and cut to
+// the documented lengths, numbers forced to numbers, periods checked, and a rectangle is used
+// only where the open model has it — same canvas id, node id and name (capitals and outer
+// spaces ignored). Anything else is left out and counted, and the window says so.
+//
+//   readGraphBoards(raw)         → { error } or { version, boards, scenarios, badScenarios, badSettings }
+//   matchGraphScenarios(read)    → the scenarios with each setting matched to a layout row
+//   cleanGraphCopy(raw, periods) → the layout's cfg.graph (mapping file 4), checked
+// ============================================================
+const GRAPH_BOARD_KIND = 'fmIDE-graph-board';
+const GRAPH_BOARD_VERSION = 7; // the newest version this reader knows
+const GRAPH_LIMITS = { boards: 20, scenarios: 50, settings: 40, boardName: 60, scenarioName: 40, rectName: 60, value: 1e15 };
+
+let modelGraphBoards = null; // the graphBoards a loaded workspace or .fmide carried (raw; read only when used)
+
+// Plain text, outer spaces off, at most `max` characters.
+function graphText(v, max){
+  if(typeof v !== 'string') return '';
+  const s = v.replace(/[\u0000-\u001f\u007f]/g, ' ').trim();
+  return s.length > max ? s.slice(0, max) : s;
+}
+// A number, or null: numbers and number-looking text forced, nothing beyond ±10¹⁵.
+function graphNumber(v){
+  if(typeof v === 'string' && v.trim() === '') return null;
+  if(typeof v !== 'number' && typeof v !== 'string') return null;
+  const n = Number(v);
+  return Number.isFinite(n) && Math.abs(n) <= GRAPH_LIMITS.value ? n : null;
+}
+// A widget's periods: all, one period or a range (counting from 0); a period the model
+// doesn't have, or anything else, reads as all.
+function cleanGraphPeriods(p, periodCount){
+  const n = Math.max(1, periodCount || 1);
+  const whole = (x) => { const v = Number(x); return Number.isInteger(v) && v >= 0 && v < n ? v : null; };
+  if(p && typeof p === 'object' && !Array.isArray(p)){
+    if(p.mode === 'one'){ const at = whole(p.p); if(at !== null) return { mode: 'one', p: at }; }
+    if(p.mode === 'range'){
+      const from = whole(p.from), to = whole(p.to);
+      if(from !== null && to !== null && from <= to) return { mode: 'range', from, to };
+    }
+  }
+  return { mode: 'all' };
+}
+function graphPeriodsCover(periods, p){
+  if(!periods || periods.mode === 'all') return true;
+  if(periods.mode === 'one') return p === periods.p;
+  return p >= periods.from && p <= periods.to;
+}
+function graphPeriodsText(periods, labels){
+  if(!periods || periods.mode === 'all') return 'all periods';
+  const at = (i) => (labels && labels[i]) || ('period ' + (i + 1));
+  return periods.mode === 'one' ? at(periods.p) : at(periods.from) + '–' + at(periods.to);
+}
+
+// Reads a board file's structure (not yet matched to a model). The template form, a newer
+// version and anything not a board file are refused with the reason.
+function readGraphBoards(raw){
+  if(!raw || typeof raw !== 'object' || Array.isArray(raw) || raw.kind !== GRAPH_BOARD_KIND){
+    return { error: 'That is not an fmGraph boards file (made with Export all boards in fmGraph).' };
+  }
+  const version = raw.version === undefined ? 1 : Number(raw.version);
+  if(!Number.isInteger(version) || version < 1) return { error: 'That fmGraph boards file has no version this ExcelExporter can read.' };
+  if(version > GRAPH_BOARD_VERSION){
+    return { error: 'That fmGraph boards file is from a newer version (format version ' + version + '; this ExcelExporter reads up to version ' + GRAPH_BOARD_VERSION + '). Update ExcelExporter to use it.' };
+  }
+  if(raw.form === 'template'){
+    return { error: 'That fmGraph boards file is for a template (Export for a template…), not for one model: export the model\'s boards with Export all boards.' };
+  }
+  // Before boards had tabs, one board sat at the top level (no `boards`).
+  const list = Array.isArray(raw.boards) ? raw.boards : [raw];
+  const boards = [];
+  list.slice(0, GRAPH_LIMITS.boards).forEach((b, i) => {
+    if(!b || typeof b !== 'object' || Array.isArray(b)) return;
+    const count = (x) => Array.isArray(x) ? x.length : 0;
+    boards.push({ name: graphText(b.name, GRAPH_LIMITS.boardName) || ('Board ' + (i + 1)),
+      sliders: count(b.sliders), items: count(b.items) + count(b.bars) + count(b.charts) });
+  });
+  // Named scenarios came in version 3: an older file's are not read.
+  const scenarios = [];
+  let badScenarios = 0, badSettings = 0;
+  const seen = new Set();
+  (version >= 3 && Array.isArray(raw.scenarios) ? raw.scenarios : []).forEach(sc => {
+    const name = sc && typeof sc === 'object' ? graphText(sc.name, GRAPH_LIMITS.scenarioName) : '';
+    const key = name.toLowerCase();
+    if(!name || seen.has(key) || scenarios.length >= GRAPH_LIMITS.scenarios){ badScenarios++; return; }
+    seen.add(key);
+    const settings = [];
+    (Array.isArray(sc.sliders) ? sc.sliders : []).forEach(s => {
+      if(!s || typeof s !== 'object' || typeof s.canvasId !== 'string' || typeof s.nodeId !== 'string'
+        || !s.canvasId || !s.nodeId || s.canvasId.length > 200 || s.nodeId.length > 200
+        || (s.mode !== 'set' && s.mode !== 'shift') || settings.length >= GRAPH_LIMITS.settings){ badSettings++; return; }
+      const value = graphNumber(s.value);
+      if(value === null){ badSettings++; return; }
+      settings.push({ canvasId: s.canvasId, nodeId: s.nodeId, name: graphText(s.name, GRAPH_LIMITS.rectName), mode: s.mode, periods: s.periods, value });
+    });
+    scenarios.push({ name, settings });
+  });
+  return { version, boards, scenarios, badScenarios, badSettings };
+}
+
+// Each scenario's settings matched to the open model: kept only on an input rectangle the
+// model has under that canvas id, node id and name, outside any block. The rest counted.
+// → { scenarios: [{ name, settings: [{ row, name, mode, periods, value }] }], left: { notFound, notInput, inBlock, bad, names (of those not found) } }
+function matchGraphScenarios(read){
+  const left = { notFound: 0, notInput: 0, inBlock: 0, bad: read.badSettings || 0, names: [] };
+  const norm = (s) => String(s || '').trim().toLowerCase();
+  const scenarios = read.scenarios.map(sc => ({ name: sc.name, settings: sc.settings.filter(s => {
+    const canvas = model.canvases.find(c => c.id === s.canvasId);
+    const node = canvas && canvas.nodes.find(n => n.id === s.nodeId);
+    const row = node && mapping.rows.find(r => r.id === pathKey([], s.canvasId, s.nodeId));
+    const named = node && node.type === 'value' && norm(parseRectText(node.text).name) === norm(s.name);
+    const why = !row || !named ? 'notFound' : isUsedAsBlock(s.canvasId) ? 'inBlock' : !isSensitivityInputRow(row) ? 'notInput' : null;
+    if(why){
+      left[why]++;
+      if(why === 'notFound' && s.name && !left.names.includes(s.name) && left.names.length < 20) left.names.push(s.name);
+      return false;
+    }
+    s.row = row.id;
+    s.periods = cleanGraphPeriods(s.periods, model.periods.length);
+    return true;
+  }).map(s => ({ row: s.row, name: s.name || row0Label(s.row), mode: s.mode, periods: s.periods, value: s.value })) }));
+  return { scenarios, left };
+}
+function row0Label(rowId){ const r = mapping.rows.find(x => x.id === rowId); return r ? String(r.label || '') : ''; }
+
+// ---------- The layout's copy: cfg.graph (mapping file 4) ----------
+// What Layout → Use fmGraph boards… copied, as settings ExcelExporter owns from then on:
+//   { from: [board names], board: the board picked, scenarios: [{ name, settings: [{ row, name, mode, periods, value }] }] }
+function defaultGraphCopy(){ return { from: [], board: '', scenarios: [] }; }
+function cleanGraphCopy(raw, periodCount){
+  const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const out = defaultGraphCopy();
+  out.from = (Array.isArray(src.from) ? src.from : []).map(n => graphText(n, GRAPH_LIMITS.boardName)).filter(Boolean).slice(0, GRAPH_LIMITS.boards);
+  out.board = graphText(src.board, GRAPH_LIMITS.boardName);
+  const seen = new Set();
+  (Array.isArray(src.scenarios) ? src.scenarios : []).forEach(sc => {
+    const name = sc && typeof sc === 'object' ? graphText(sc.name, GRAPH_LIMITS.scenarioName) : '';
+    if(!name || seen.has(name.toLowerCase()) || out.scenarios.length >= GRAPH_LIMITS.scenarios) return;
+    seen.add(name.toLowerCase());
+    const settings = [];
+    (Array.isArray(sc.settings) ? sc.settings : []).forEach(s => {
+      if(!s || typeof s !== 'object' || typeof s.row !== 'string' || !s.row || s.row.length > 400) return;
+      if((s.mode !== 'set' && s.mode !== 'shift') || settings.length >= GRAPH_LIMITS.settings) return;
+      const value = graphNumber(s.value);
+      if(value === null) return;
+      settings.push({ row: s.row, name: graphText(s.name, GRAPH_LIMITS.rectName), mode: s.mode, periods: cleanGraphPeriods(s.periods, periodCount), value });
+    });
+    out.scenarios.push({ name, settings });
+  });
+  return out;
+}
+// Called when a model or a layout is read: settings on rows that are gone, or no longer
+// inputs that can be moved, are dropped.
+function reconcileGraph(){
+  const g = cleanGraphCopy(mapping.cfg.graph, model.periods.length);
+  const byId = new Map(mapping.rows.map(r => [r.id, r]));
+  g.scenarios.forEach(sc => { sc.settings = sc.settings.filter(s => isSensitivityInputRow(byId.get(s.row))); });
+  mapping.cfg.graph = g;
+  graphPlanCache = null;
+}
+function graphScenariosInLayout(){ return !!(mapping && mapping.cfg.graph && mapping.cfg.graph.scenarios && mapping.cfg.graph.scenarios.length); }
+// ============================================================
 // Inputs tab — optional. Gathers every input rectangle (a value rectangle with no
 // incoming arrow) onto one tab holding the hard-coded numbers; each original row stays
 // where it is but becomes a green-font link to its Inputs-tab cell (see generateWorkbook).
@@ -5987,12 +6190,16 @@ function undoInputsLayout(){
 const MAX_SCENARIOS = 20;
 function scenarioCountOf(row){
   if(!row || !row.isInputMirror || !inputsEnabled()) return 0;
+  const g = graphScenarioPlan(); // an input fmGraph's scenarios move: 1 + its different settings (09i)
+  if(g && g.byMirror.has(row.id)) return 1 + g.byMirror.get(row.id).variants.length;
   const n = Math.round(Number(row.scenarios));
   return n >= 2 ? Math.min(n, MAX_SCENARIOS) : 0;
 }
 // Global cases (Scenarios tab): 0 = off (type each variable's Applied number directly).
 const MAX_CASES = 50;
 function globalCaseCount(){
+  const g = graphScenarioPlan(); // Base plus fmGraph's scenarios (09i)
+  if(g) return g.cases.length;
   const v = inputsCfg().globalCases;
   const n = Math.round(Number(v === undefined ? 3 : v));
   return n >= 1 ? Math.min(n, MAX_CASES) : 0;
@@ -6028,6 +6235,11 @@ function buildScenarioControl(row){
     if(cb.checked){ setRowScenarios(row, v); saveMapping(); renderCasesHint(); }
   });
   wrap.classList.toggle('on', cb.checked);
+  const g = graphScenarioPlan();
+  if(g && g.byMirror.has(row.id)){ // made by fmGraph's scenarios: changed there, or by Use fmGraph boards… again
+    cb.disabled = num.disabled = true;
+    wrap.title = 'Scenarios from fmGraph (Layout → Use fmGraph boards…)';
+  }
   wrap.append(cb, lab, num);
   return wrap;
 }
@@ -6060,6 +6272,11 @@ function renderInputsSettings(){
   $('cfgInputsCases').value = globalCaseCount();
   renderCasesHint();
   ['cfgInputsName', 'cfgInputsGroup', 'cfgInputsOrder', 'btnInputsRelayout', 'cfgInputsScenarios', 'cfgInputsCases'].forEach(id => { $(id).disabled = !cfg.enabled; });
+  // The Global Cases come from fmGraph's scenarios while the layout has them (09i).
+  const fromGraph = !!graphScenarioPlan();
+  if(fromGraph) $('cfgInputsCases').disabled = true;
+  if($('cfgInputsCases').dataset.tip === undefined) $('cfgInputsCases').dataset.tip = $('cfgInputsCases').title || '';
+  $('cfgInputsCases').title = fromGraph ? 'Base and fmGraph\'s scenarios (Layout → Use fmGraph boards…)' : $('cfgInputsCases').dataset.tip;
   $('inputsOptions').classList.toggle('hidden', !cfg.enabled); // its settings show once it is on
 }
 
@@ -8442,6 +8659,9 @@ function buildWorkbook(){
   const scenarioVars = inputsEnabled() ? (ctx.rowsByTabOrdered[INPUTS_TAB_ID] || []).filter(e => ctx.scenarioBlocks[e.row.id]) : [];
   const scenarioSheetName = scenarioVars.length ? uniqueTabName('Scenarios', null).name : null;
   const scenarioRowOf = {};
+  // fmGraph's scenarios (09i): the case names, each input's row scenarios and the case matrix.
+  graphPlanCache = null;
+  const graphPlan = graphScenarioPlan();
   const nCases = scenarioVars.length ? globalCaseCount() : 0;
   const SCN_FIRST_ROW = nCases ? 8 : 4; // with global cases: case block rows 2-3, "Scenarios" section from row 5
   scenarioVars.forEach((e, i) => { scenarioRowOf[e.row.id] = SCN_FIRST_ROW + i; });
@@ -8611,9 +8831,12 @@ function buildWorkbook(){
         const inStyle = nodeStyleToExcelCellStyle(inObj);
         const inFmt = numberFormatToExcel(inObj, fallbackFmt);
         const numStyle = roleCellStyle('Notes', CENTER);
+        const graphRow = graphPlan ? graphPlan.byMirror.get(row.id) : null; // set by fmGraph's scenarios
         for(let k = 1; k <= scnBlock.n; k++){
           const r = scnBlock.first + k - 1;
-          setCell('A' + r, textCell('Scenario ' + k, inStyle));   // rename freely in Excel
+          const variant = graphRow && k >= 2 ? graphRow.variants[k - 2] : null;
+          // Named after the first fmGraph scenario setting it so (text from the file, written as text).
+          setCell('A' + r, textCell(variant ? variant.name : 'Scenario ' + k, inStyle));   // rename freely in Excel
           setCell('B' + r, blankCell(inStyle));
           setCell(VINTAGE_COL + r, k === 1 ? { t: 'n', v: 1, s: numStyle } : { t: 'n', f: VINTAGE_COL + (r - 1) + '+1', v: k, s: numStyle });
           for(let h = 0; h < helperColCount; h++) setCell(helperCol(h) + r, blankCell(inStyle));
@@ -8624,6 +8847,10 @@ function buildWorkbook(){
               const content = fitted(() => buildCellContent(row.canvasId, node, p, ctx, tab.name, row.path), p);
               cell = content.isFormula ? { t: 'n', f: content.formula, v: 0, z: inFmt }
                 : content.value !== null ? { t: 'n', v: content.value, z: inFmt } : blankCell(null, inFmt);
+            } else if(variant){
+              // A set value in its periods; a shift a live formula on scenario 1; else scenario 1.
+              const made = graphScenarioCell(variant, p, col + scnBlock.first);
+              cell = made.formula !== undefined ? { t: 'n', f: made.formula, v: 0, z: inFmt } : { t: 'n', v: made.value, z: inFmt };
             } else {
               cell = blankCell(null, inFmt); // empty = 0 until you type a value
             }
@@ -8744,13 +8971,14 @@ function buildWorkbook(){
     if(nCases){
       ws.A2 = { t: 's', v: 'Global Case', s: mergeXlStyle({ font: (roleCellStyle('Headers') || {}).font || {} }, { font: { sz: 12 } }) };
       ws.C2 = { t: 'n', v: 1, s: mergeXlStyle(inputStyle, { font: { bold: true } }) };
-      ws.D2 = { t: 's', f: 'INDEX($' + firstCaseCol + '$3:$' + lastCaseCol + '$3,MIN(MAX($C$2,1),' + nCases + '))', v: 'Case 1', s: mergeXlStyle(calcStyle, { font: { bold: true } }) };
+      const caseName = (k) => graphPlan && graphPlan.cases[k - 1] !== undefined ? graphPlan.cases[k - 1] : 'Case ' + k;
+      ws.D2 = { t: 's', f: 'INDEX($' + firstCaseCol + '$3:$' + lastCaseCol + '$3,MIN(MAX($C$2,1),' + nCases + '))', v: caseName(1), s: mergeXlStyle(calcStyle, { font: { bold: true } }) };
       ws.F2 = { t: 's', f: 'IF(ISNUMBER(C2),IF(AND(C2=INT(C2),C2>=1,C2<=' + nCases + '),"OK","Out of range - using "&MIN(MAX(INT(C2),1),' + nCases + ')),"Not a number - using 1")', v: 'OK', s: calcStyle };
       for(let k = 1; k <= nCases; k++){
         const c = caseCol(k);
         ws[c + '2'] = k === 1 ? { t: 'n', v: 1, s: HDR(CENTER) }
                               : { t: 'n', f: caseCol(k - 1) + '2+1', v: k, s: HDR(CENTER) };
-        ws[c + '3'] = { t: 's', v: 'Case ' + k, s: mergeXlStyle(inputStyle, { font: { bold: true } }) };
+        ws[c + '3'] = textCell(caseName(k), mergeXlStyle(inputStyle, { font: { bold: true } }));
       }
       ws.A4 = { t: 's', v: 'Type the case to run in C2. Rename cases in row 3; set each case\'s scenario per variable in columns ' + firstCaseCol + '-' + lastCaseCol + '.', s: noteStyle };
       ws.A5 = { t: 's', v: scenarioSheetName, s: mergeXlStyle({ font: (roleCellStyle('Headers') || {}).font || {} }, { font: { sz: 13 } }) };
@@ -8762,7 +8990,7 @@ function buildWorkbook(){
     [['A', 'Input variable'], ['B', 'UOM'], ['C', 'Applied'], ['D', 'Scenario name'], ['E', 'Scenarios'], ['F', 'Check']]
       .forEach(([c, v]) => { ws[c + hdrRow] = { t: 's', v, s: HDR(c === 'C' || c === 'E' ? CENTER : null) }; });
     if(nCases){
-      for(let k = 1; k <= nCases; k++) ws[caseCol(k) + hdrRow] = { t: 's', f: caseCol(k) + '$3', v: 'Case ' + k, s: HDR(CENTER) };
+      for(let k = 1; k <= nCases; k++) ws[caseCol(k) + hdrRow] = { t: 's', f: caseCol(k) + '$3', v: graphPlan && graphPlan.cases[k - 1] !== undefined ? graphPlan.cases[k - 1] : 'Case ' + k, s: HDR(CENTER) };
     }
     ws['A' + noteRow] = { t: 's', v: nCases
       ? 'Applied (C) follows the global case. Rename scenarios in column A of the ' + inputsTabName + ' tab.'
@@ -8777,8 +9005,13 @@ function buildWorkbook(){
       if(nCases){
         // Applied = this variable's scenario in the global case (a formula now, so plain style).
         ws['C' + r] = { t: 'n', f: 'INDEX($' + firstCaseCol + r + ':$' + lastCaseCol + r + ',MIN(MAX($C$2,1),' + nCases + '))', v: 1, s: calcCenter };
-        // Case matrix default: case k uses scenario k (or the last one) — edit freely.
-        for(let k = 1; k <= nCases; k++) ws[caseCol(k) + r] = { t: 'n', v: Math.min(k, blk.n), s: inputStyle };
+        // Case matrix default: case k uses scenario k (or the last one) — edit freely. With
+        // fmGraph's scenarios: the row scenario each case gives it, and 1 for any other input.
+        const graphRow = graphPlan ? graphPlan.byMirror.get(row.id) : null;
+        for(let k = 1; k <= nCases; k++){
+          const v = graphPlan ? (graphRow ? graphRow.pick[k - 1] || 1 : 1) : Math.min(k, blk.n);
+          ws[caseCol(k) + r] = { t: 'n', v, s: inputStyle };
+        }
       } else {
         ws['C' + r] = { t: 'n', v: 1, s: inputStyle };
       }
@@ -9831,7 +10064,7 @@ const EXCEL_HELP_TOPICS = [
         'Arrange the tabs (on the left) and the rows (on the right), if you like.',
         'Press ⬇ Generate .xlsx, at the top right.',
       ] },
-      { p: 'Every file you can import or export, and every reset, is in the two menus at the top: File (the model, Start Over) and Layout (this model\'s layout, module layouts, your Excel style). Pointing at a button or a menu item says what it does.' },
+      { p: 'Every file you can import or export, and every reset, is in the two menus at the top: File (the model, fmGraph boards, Start Over) and Layout (this model\'s layout, fmGraph\'s scenarios, module layouts, your Excel style). Pointing at a button or a menu item says what it does.' },
       { p: 'Everything happens in your browser: nothing is uploaded, and it works offline.' },
       { p: 'What\'s new, at the top of this Help panel, lists every update to ExcelExporter, newest first, each with what changed, why and how to use it. A dot on ❓ Help means there is something you haven\'t seen yet.' },
       { p: 'This Help panel opens with ❓ or F1. Press ⤢ at its top for a wider reading view (⤡ brings it back), or drag its left edge to any width; it remembers the width.' },
@@ -10007,7 +10240,23 @@ const EXCEL_HELP_TOPICS = [
         'A Scenarios tab in the workbook picks which scenario each input uses.',
       ] },
       { p: 'With Global cases above 0, each case picks one scenario for every input, and a single Global Case cell chooses the case the whole workbook runs.' },
-      { see: ['inputs-tab'] },
+      { p: 'Scenarios saved in fmGraph can fill these for you: Layout → Use fmGraph boards….' },
+      { see: ['inputs-tab', 'fmgraph-scenarios'] },
+    ] },
+  { id: 'fmgraph-scenarios', group: 'inputs', title: 'fmGraph\'s scenarios as Global Cases',
+    keywords: 'fmgraph graph board boards scenario scenarios global case cases import use slider what if',
+    summary: 'Bring what you saved in fmGraph into the workbook: one Global Case each, after Base.',
+    body: [
+      { p: 'Scenarios you save in fmGraph (+ Save as scenario) travel with the model\'s boards. ExcelExporter turns them into Global Cases, so whoever opens the workbook can switch between them in Excel.' },
+      { steps: [
+        'Get the boards: open ExcelExporter from fmIDE, or open the .fmide document, and the boards come with the model. For a board file saved with Export all boards in fmGraph, choose File → Import fmGraph boards… (or drop the file on the page).',
+        'Choose Layout → Use fmGraph boards…. The window lists the boards and their scenarios; untick any you don\'t want.',
+        'Press Use. ExcelExporter turns on the Inputs tab if it is off, then press ⬇ Generate .xlsx.',
+      ] },
+      { p: 'In the workbook, Global Case 1 is Base: every input keeps fmIDE\'s numbers. Each fmGraph scenario is the next case, named after it. Every input a scenario moves gets row scenarios on the Inputs tab. Scenario 1 holds fmIDE\'s numbers, then there is one row scenario for each different way the scenarios set the input; two scenarios that set it alike share one. A set value goes only in the periods the scenario covers, and the other periods link to scenario 1. A % change is a formula on scenario 1, such as =F12*(1+10%), so it follows when you change scenario 1 in Excel. Type a case number in the Scenarios tab\'s Global Case cell (C2) to run it.' },
+      { p: 'The scenarios are copied into this model\'s layout and saved with it (Export Mapping carries them). Changing the boards in fmGraph later changes nothing here until you choose Use fmGraph boards… again. ExcelExporter asks before it replaces cases already in the layout. Inputs with scenarios of your own keep them, but use scenario 1 in every fmGraph case. Remove from Layout, in the same window, takes the fmGraph scenarios out again.' },
+      { tip: 'The window lists what can\'t be carried, and why. That includes a setting on an input inside a block (every copy of the block shares it), a rectangle this model doesn\'t have, scenarios after the 49th (a workbook has at most 50 cases), and an input needing more than 20 row scenarios. ⬇ Generate lists them again.' },
+      { see: ['scenarios', 'inputs-tab'] },
     ] },
   { id: 'sensitivity', group: 'inputs', title: 'Sensitivity: the Tornado and the Spider',
     keywords: 'sensitivity tornado spider what if data table swing low high base output input percent amount',
@@ -10104,6 +10353,18 @@ const EXCEL_HELP_TOPICS = [
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'fmgraph-scenarios', date: '2026-10-15', title: 'fmGraph\'s scenarios become Global Cases',
+    summary: 'Layout → Use fmGraph boards… turns the scenarios you saved in fmGraph into the workbook\'s Global Cases, after Base.',
+    what: [
+      'The boards that come with a model from fmIDE or a .fmide document, or a board file from File → Import fmGraph boards…, are read by ExcelExporter itself. A window lists their scenarios, each with a tick box, and what can\'t be carried and why.',
+      'Global Case 1 is Base, fmIDE\'s numbers. Each scenario is the next case, named after it. Each input a scenario moves gets row scenarios on the Inputs tab: a set value in its periods, and a % change as a live formula on scenario 1.',
+      'The scenarios are copied into the layout and saved with it. A later change in fmGraph changes nothing until you choose Use fmGraph boards… again.',
+    ],
+    why: 'So the "what if" you played with in fmGraph is still there in the workbook you send.',
+    how: ['Save scenarios in fmGraph.', 'In fmIDE, File → Open ExcelExporter (or open the .fmide here).', 'Layout → Use fmGraph boards…, then Use.', '⬇ Generate .xlsx, and type a case number in the Scenarios tab\'s C2.'],
+    notes: ['At most 50 cases and 20 row scenarios an input; what goes past them, and an input inside a block, is listed. Sliders, charts and Tornado and Spider charts from fmGraph come in later updates.'],
+    see: ['fmgraph-scenarios'] },
+
   { id: 'attach-layout-to-template', date: '2026-10-12', title: 'Attach a layout to its template from here',
     summary: 'Opened from fmIDE, 📎 Attach on a module\'s tab sends its layout straight to its template in fmIDE — no file in between.',
     what: [
@@ -11840,6 +12101,250 @@ layoutsMigrated.then(() => layoutStore.get(PHONE_FULL_APP_KEY)).then(raw => {
   applyExcelPhoneLayout();
 }, () => {});
 // ============================================================
+// fmGraph's scenarios in the workbook (step 19, phase B2; docs/step19-fmgraph-in-excel.md).
+// Layout → Use fmGraph boards… (and File → Import fmGraph boards… for a board file) copies the
+// boards' named scenarios into the layout (cfg.graph, 04c-graph-boards.js). At Generate, the
+// copy — never the board file — becomes ExcelExporter's own row scenarios and Global Cases:
+//   · Global Case 1 is "Base" (every input on its scenario 1, fmIDE's numbers); each fmGraph
+//     scenario is a further case, named after it, in order (at most MAX_CASES in all);
+//   · each input a scenario moves gets row scenarios: 1 is fmIDE's numbers, then one for
+//     each different way the scenarios set it (two that set it alike share one; at most
+//     MAX_SCENARIOS) — a set value in its periods, a shift a live formula on scenario 1
+//     (=<scenario 1's cell>*(1+x%)), every other period linking to scenario 1;
+//   · the case matrix picks that row scenario in each case, and 1 everywhere else.
+// What goes past a cut-off, or can't be moved, is listed in the window and after Generate.
+// ============================================================
+let graphPlanCache = null;
+
+// The plan from the layout's copy (or `g`, a copy not yet used, for the window), or null:
+// { cases: [names], byMirror: Map(Inputs-tab row id → { name, variants: [{ name, settings }], pick: [scenario per case] }),
+//   bySource: Map(source row id → the same entry), notes: [text] }.
+// `assumeInputs`: the Inputs tab will be turned on, so a row needs no Inputs-tab row yet.
+function graphScenarioPlan(g, assumeInputs){
+  const fromLayout = g === undefined;
+  if(fromLayout){
+    if(!mapping || !inputsEnabled() || !graphScenariosInLayout()) return null;
+    if(graphPlanCache && graphPlanCache.mapping === mapping) return graphPlanCache.plan;
+    g = mapping.cfg.graph;
+  }
+  if(!g || !g.scenarios || !g.scenarios.length) return null;
+  const notes = [];
+  const kept = g.scenarios.slice(0, MAX_CASES - 1);
+  const past = g.scenarios.slice(MAX_CASES - 1);
+  if(past.length) notes.push('Scenarios after the ' + (MAX_CASES - 1) + 'th are not written: ' + past.map(s => s.name).join(', ') + '.');
+  const cases = ['Base'].concat(kept.map(s => s.name));
+  const mirrors = new Map(inputMirrorRows().map(m => [m.sourceRowId, m]));
+  const bySource = new Map(), byMirror = new Map();
+  const cantMove = [];
+  kept.forEach((sc, k) => {
+    const caseIndex = k + 1; // 0 is Base
+    const perRow = new Map();
+    sc.settings.forEach(s => {
+      if(!perRow.has(s.row)) perRow.set(s.row, []);
+      perRow.get(s.row).push(s);
+    });
+    perRow.forEach((settings, rowId) => {
+      const source = mapping.rows.find(r => r.id === rowId);
+      const mirror = mirrors.get(rowId);
+      const ok = source && source.include && !source.inlineConstant && isSensitivityInputRow(source)
+        && (assumeInputs ? true : (mirror && mirror.tabId === INPUTS_TAB_ID));
+      if(!ok){
+        const name = (source && source.label) || settings[0].name || rowId;
+        if(!cantMove.includes(name)) cantMove.push(name);
+        return;
+      }
+      let entry = bySource.get(rowId);
+      if(!entry){
+        entry = { name: source.label || settings[0].name, variants: [], pick: cases.map(() => 1), over: [] };
+        bySource.set(rowId, entry);
+        if(mirror) byMirror.set(mirror.id, entry);
+      }
+      const key = JSON.stringify(settings.map(s => [s.mode, s.periods, s.value]));
+      let at = entry.variants.findIndex(v => v.key === key);
+      if(at < 0 && entry.variants.length < MAX_SCENARIOS - 1){
+        entry.variants.push({ key, name: sc.name, settings: settings.map(s => ({ mode: s.mode, periods: s.periods, value: s.value })) });
+        at = entry.variants.length - 1;
+      }
+      if(at < 0) entry.over.push(sc.name);
+      else entry.pick[caseIndex] = at + 2; // scenario 1 is fmIDE's numbers
+    });
+  });
+  if(cantMove.length) notes.push('Not moved (not on the Inputs tab, left out or a constant): ' + cantMove.join(', ') + '.');
+  bySource.forEach(e => {
+    if(e.over.length) notes.push('“' + e.name + '” needs ' + (MAX_SCENARIOS + e.over.length) + ' row scenarios; ' + e.over.join(', ') + ' use its scenario 1 in Excel.');
+  });
+  const plan = { cases, byMirror, bySource, notes };
+  if(fromLayout) graphPlanCache = { mapping, plan };
+  return plan;
+}
+// What Generate says after the workbook: the cut-offs and inputs that couldn't be moved.
+function graphScenarioNotes(){ graphPlanCache = null; const p = graphScenarioPlan(); return p ? p.notes : []; }
+
+// One cell of a row scenario the plan writes: a number, or a formula on scenario 1's cell
+// (`baseRef`, same tab). Settings apply in order: a set value replaces, a shift changes by %.
+function graphScenarioCell(variant, p, baseRef){
+  const lit = (x) => String(x);
+  let expr = baseRef, single = true, value = null; // single: a reference or a number, needing no brackets
+  variant.settings.forEach(s => {
+    if(!graphPeriodsCover(s.periods, p)) return;
+    if(s.mode === 'set'){ value = s.value; expr = lit(s.value); single = true; return; }
+    const by = s.value < 0 ? '1-' + lit(-s.value) + '%' : '1+' + lit(s.value) + '%';
+    expr = (single ? expr : '(' + expr + ')') + '*(' + by + ')';
+    value = null; single = false;
+  });
+  return value !== null ? { value } : { formula: expr };
+}
+
+// ---------- Layout → Use fmGraph boards… ----------
+// `read` is readGraphBoards' result; `source` names where the boards came from.
+function openGraphBoardsWindow(read, source){
+  const matched = matchGraphScenarios(read);
+  const modal = $('graphModal');
+  const pick = $('graphBoardPick');
+  pick.textContent = '';
+  read.boards.forEach((b, i) => {
+    const o = document.createElement('option');
+    o.value = String(i);
+    o.textContent = b.name;
+    pick.appendChild(o);
+  });
+  $('graphBoardRow').classList.toggle('hidden', !read.boards.length);
+  $('graphSource').textContent = source;
+  const list = $('graphScenarioList');
+  list.textContent = '';
+  matched.scenarios.forEach((sc, i) => {
+    const li = document.createElement('li');
+    const label = document.createElement('label');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.checked = true; cb.dataset.index = String(i);
+    const name = document.createElement('span');
+    name.className = 'graph-scn-name';
+    name.textContent = sc.name;
+    const what = document.createElement('span');
+    what.className = 'graph-scn-what';
+    what.textContent = sc.settings.length
+      ? sc.settings.map(s => s.name + ' ' + (s.mode === 'shift' ? (s.value >= 0 ? '+' : '') + s.value + '%' : s.value) + (s.periods.mode === 'all' ? '' : ' (' + graphPeriodsText(s.periods, periodLabels()) + ')')).join(', ')
+      : 'fmIDE\'s numbers';
+    label.append(cb, name, what);
+    li.appendChild(label);
+    list.appendChild(li);
+  });
+  $('graphNoScenarios').classList.toggle('hidden', !!matched.scenarios.length);
+  const chosen = () => [...list.querySelectorAll('input[type=checkbox]')].filter(c => c.checked).map(c => matched.scenarios[Number(c.dataset.index)]);
+  const renderLeft = () => {
+    const lines = [];
+    const l = matched.left;
+    if(l.notFound) lines.push(l.notFound + ' setting' + (l.notFound === 1 ? '' : 's') + ' on a rectangle this model doesn\'t have' + (l.names.length ? ' (' + l.names.join(', ') + ')' : '') + '.');
+    if(l.inBlock) lines.push(l.inBlock + ' on an input inside a block, which every copy of the block shares.');
+    if(l.notInput) lines.push(l.notInput + ' on a rectangle that isn\'t an input.');
+    if(l.bad) lines.push(l.bad + ' setting' + (l.bad === 1 ? '' : 's') + ' not readable.');
+    if(read.badScenarios) lines.push(read.badScenarios + ' scenario' + (read.badScenarios === 1 ? '' : 's') + ' without a name of its own, or past ' + GRAPH_LIMITS.scenarios + '.');
+    const plan = graphScenarioPlan({ scenarios: chosen() }, true);
+    if(plan) lines.push(...plan.notes);
+    if(!inputsEnabled()) lines.push('The Inputs tab will be turned on: the scenarios move inputs there.');
+    const ul = $('graphLeftOut');
+    ul.textContent = '';
+    lines.forEach(t => { const li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
+    $('graphLeftOutHead').classList.toggle('hidden', !lines.length);
+    $('graphUse').disabled = !chosen().length;
+  };
+  list.onchange = renderLeft;
+  renderLeft();
+  $('graphRemove').classList.toggle('hidden', !graphScenariosInLayout());
+  const opener = document.activeElement;
+  const close = () => {
+    modal.classList.add('hidden');
+    $('graphUse').onclick = $('graphCancel').onclick = $('graphRemove').onclick = null;
+    modal.removeEventListener('click', onBackdrop);
+    document.removeEventListener('keydown', onKey, true);
+    if(opener && document.contains(opener) && opener.focus && !opener.closest('.hidden')) opener.focus();
+  };
+  const onBackdrop = (ev) => { if(ev.target === modal) close(); };
+  const onKey = (ev) => { if(ev.key === 'Escape' && $('confirmModal').classList.contains('hidden')){ ev.preventDefault(); close(); } };
+  $('graphCancel').onclick = close;
+  $('graphRemove').onclick = async () => { close(); await removeGraphScenarios(); };
+  $('graphUse').onclick = async () => {
+    const scenarios = chosen();
+    const board = read.boards[Number(pick.value)];
+    close();
+    await useGraphScenarios({ from: read.boards.map(b => b.name), board: board ? board.name : '', scenarios });
+  };
+  modal.addEventListener('click', onBackdrop);
+  document.addEventListener('keydown', onKey, true);
+  modal.classList.remove('hidden');
+  (matched.scenarios.length ? $('graphUse') : $('graphCancel')).focus();
+}
+
+// Copies the chosen scenarios into the layout, after asking when it replaces cases there.
+async function useGraphScenarios(copy){
+  const had = graphScenariosInLayout();
+  const ownScenarios = inputMirrorRows().filter(m => m.scenarios).length;
+  if(had || ownScenarios){
+    const ok = await showConfirm('Replace the cases?',
+      (had ? 'This layout already has fmGraph scenarios; they are replaced. ' : '') +
+      'The Global Cases become Base and the ' + copy.scenarios.length + ' scenario' + (copy.scenarios.length === 1 ? '' : 's') + ' chosen' +
+      (ownScenarios ? '; inputs with scenarios of your own keep them, on scenario 1 in every case.' : '.'),
+      'Replace');
+    if(!ok){ setStatus($('genStatus'), 'fmGraph scenarios not used.', 'info'); return; }
+  }
+  const turnedOn = !inputsEnabled();
+  if(turnedOn) await setInputsEnabled(true);
+  mapping.cfg.graph = cleanGraphCopy(copy, model.periods.length);
+  reconcileGraph();
+  const plan = graphScenarioPlan();
+  if(plan){
+    // An input the scenarios move takes its row scenarios from them.
+    plan.byMirror.forEach((e, id) => { const m = inputMirrorRows().find(x => x.id === id); if(m) delete m.scenarios; });
+    inputsCfg().globalCases = plan.cases.length;
+  }
+  saveMapping(); renderAll();
+  const n = plan ? plan.byMirror.size : 0;
+  const msg = 'fmGraph scenarios used: ' + (plan ? plan.cases.length : 1) + ' Global Cases (Base and ' + copy.scenarios.length + '), ' +
+    n + ' input' + (n === 1 ? '' : 's') + ' with scenarios.' + (turnedOn ? ' The Inputs tab is on.' : '') +
+    (plan && plan.notes.length ? ' ' + plan.notes.join(' ') : '');
+  setStatus($('genStatus'), msg, plan && plan.notes.length ? 'warn' : 'ok');
+}
+async function removeGraphScenarios(){
+  const ok = await showConfirm('Remove the fmGraph scenarios?',
+    'The Global Cases and row scenarios they made are removed from this layout. The boards themselves are not changed.', 'Remove');
+  if(!ok) return;
+  mapping.cfg.graph = defaultGraphCopy();
+  graphPlanCache = null;
+  delete inputsCfg().globalCases;
+  saveMapping(); renderAll();
+  setStatus($('genStatus'), 'fmGraph scenarios removed from this layout.', 'ok');
+}
+
+// A board file or a document's graphBoards, read and shown in the window.
+function showGraphBoards(raw, source){
+  const read = readGraphBoards(raw);
+  if(read.error){ setStatus($('genStatus'), read.error, 'err'); return false; }
+  openGraphBoardsWindow(read, source);
+  return true;
+}
+$('btnUseGraphBoards').addEventListener('click', async () => {
+  if(!model) return;
+  if(modelGraphBoards){ showGraphBoards(modelGraphBoards, 'The boards that came with the model'); return; }
+  if(graphScenariosInLayout()){ await removeGraphScenarios(); return; }
+  setStatus($('genStatus'), 'This model came without fmGraph boards: use File → Import fmGraph boards… for a board file.', 'info');
+});
+$('btnImportGraphBoards').addEventListener('click', () => $('graphFileInput').click());
+letAnyFileBePicked([$('graphFileInput')]);
+$('graphFileInput').addEventListener('change', () => {
+  const file = $('graphFileInput').files[0];
+  $('graphFileInput').value = '';
+  if(!file || !model) return;
+  const reader = new FileReader();
+  reader.onload = () => importGraphBoardsText(reader.result, file.name);
+  reader.onerror = () => setStatus($('genStatus'), 'Could not read that file.', 'err');
+  reader.readAsText(file);
+});
+function importGraphBoardsText(text, fileName){
+  const { parsed, error } = parseFileText(text);
+  if(error){ setStatus($('genStatus'), error, 'err'); return false; }
+  return showGraphBoards(parsed, 'From “' + String(fileName || 'board file').slice(0, 120) + '”');
+}
+// ============================================================
 // Wiring
 // ============================================================
 // A file that is too large or nested too deep is refused first (FILE_LIMITS, shared).
@@ -11856,6 +12361,12 @@ function parseFileText(text){
 async function tryLoad(jsonText, label, name){
   const { parsed, error } = parseFileText(jsonText);
   if(error){ setStatus($('loadStatus'), error, 'err'); return; }
+  // A board file dropped on the page: its scenarios, for the model shown (09i).
+  if(parsed && parsed.kind === GRAPH_BOARD_KIND){
+    if(model && mapping){ importGraphBoardsText(jsonText, label); return; }
+    setStatus($('loadStatus'), 'That is an fmGraph boards file: open its model first, then File → Import fmGraph boards….', 'err');
+    return;
+  }
   const r = readKnownFile(parsed, ['system', 'fmIDE-workspace']);
   if(r.error){ setStatus($('loadStatus'), r.error, 'err'); return; }
   if(!(await confirmNewerFile(r))){ setStatus($('loadStatus'), 'Not loaded.', 'info'); return; }
@@ -11865,7 +12376,8 @@ async function tryLoad(jsonText, label, name){
     modelFromFmide = false;            // 09f-from-fmide.js sets it back for fmIDE's model
     syncPageState();
     setStatus($('genStatus'), '', null); // a message about the last model's workbook
-    setStatus($('loadStatus'), `Loaded ${label} — ${model.canvases.length} canvas${model.canvases.length === 1 ? '' : 'es'}, ${model.periods.length} periods.`, 'ok');
+    setStatus($('loadStatus'), `Loaded ${label} — ${model.canvases.length} canvas${model.canvases.length === 1 ? '' : 'es'}, ${model.periods.length} periods.` +
+      (modelGraphBoards ? ' It has fmGraph boards: Layout → Use fmGraph boards….' : ''), 'ok');
   }catch(err){
     setStatus($('loadStatus'), 'Could not read that as an fmIDE system export: ' + err.message, 'err');
   }
@@ -11956,7 +12468,8 @@ $('cfgSectionsEnabled').addEventListener('change', () => setSectionsEnabled($('c
 $('btnGenerate').addEventListener('click', () => {
   try{
     generateWorkbook();
-    setStatus($('genStatus'), 'Workbook generated — check your downloads.', 'ok');
+    const notes = graphScenarioNotes(); // fmGraph's scenarios past a cut-off, or not moved (09i)
+    setStatus($('genStatus'), 'Workbook generated — check your downloads.' + (notes.length ? ' ' + notes.join(' ') : ''), 'ok');
   }catch(err){
     setStatus($('genStatus'), 'Could not generate the workbook: ' + err.message, 'err');
   }
@@ -12140,6 +12653,7 @@ watchForUpdates({
 $('btnClearAll').addEventListener('click', () => {
   model = null; useModelIR(null); mapping = null; mappingKey = null;
   canvasModules = {}; moduleBaselines = {}; moduleLayoutsApplied = []; templateLayouts = {}; tabLayoutFromTemplate = {};
+  modelGraphBoards = null; graphPlanCache = null;
   $('fileInput').value = '';
   $('afterLoad').classList.add('hidden');
   $('pasteArea').value = '';

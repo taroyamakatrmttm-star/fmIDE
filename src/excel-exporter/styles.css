@@ -274,6 +274,15 @@
   .modal-head h3{ margin:0; }
   .attach-pick{ display:flex; align-items:center; gap:8px; font-size:13.5px; }
   .attach-pick select{ flex:1; min-width:0; }
+  /* Use fmGraph boards (09i): the scenarios to bring, and what can't be carried */
+  #graphModal .modal{ max-width:640px; }
+  #graphModal h4{ margin:14px 0 6px; font-size:13.5px; }
+  .graph-source{ margin:0 0 10px; font-size:12.5px; color:var(--muted, #64748b); }
+  .graph-scenarios, .graph-left-out{ list-style:none; margin:0; padding:0; max-height:40vh; overflow:auto; font-size:13px; }
+  .graph-scenarios label{ display:flex; align-items:baseline; gap:8px; padding:3px 0; }
+  .graph-scn-name{ font-weight:600; overflow-wrap:anywhere; }
+  .graph-scn-what{ color:var(--muted, #64748b); font-size:12px; overflow-wrap:anywhere; }
+  .graph-left-out li{ padding:2px 0; color:#92400e; overflow-wrap:anywhere; }
   .modal-close{ width:32px; height:32px; padding:0; border:none; background:transparent; border-radius:8px; color:var(--muted); }
   .modal-close::before{ content:'×'; font-size:22px; line-height:32px; }
   .modal-close:hover{ background:#f1f3f6; color:var(--text); }
