@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter's Excel writer: a form control is never too small to see (step 19, B0)
+- A scroll bar or check box placed with its end corner not past its start was written 0 cells wide or tall, so Excel drew nothing (found by the owner opening the sample in desktop Excel: the Other tab's scroll bar was missing). Every control now covers at least one cell each way.
+
 ## ExcelExporter's Excel writer: form controls and stacked charts (step 19, B0)
 - The built-in Excel writer can now put **scroll bars** and **check boxes** on a sheet, each tied to a cell, alongside the sheet's charts, and draw **stacked** (and 100% stacked) bar charts with a series that draws nothing — the pieces step 19's Dashboard and waterfall charts will use. Nothing in ExcelExporter uses them yet, so its workbooks are unchanged. No external library.
 
