@@ -2,7 +2,7 @@
 
 The owner's request (15 October 2026): fmGraph shows a **Tornado** and a **Spider**, so a person sees on a board which inputs move an output most, the way ExcelExporter's Sensitivity tab does in Excel (step 16, `docs/step16-sensitivity.md`). Step 19 (`docs/step19-fmgraph-in-excel.md`) carries these charts into Excel as ExcelExporter's sensitivity analyses.
 
-This is the brief, approved by the owner on 15 October 2026 with the changes listed under Phases; phase A1 is built. The owner's choices it rests on are decision 12 in `docs/decisions.md`.
+This is the brief, approved by the owner on 15 October 2026 with the changes listed under Phases; phases A1 and A2 are built (step 18 is done). The owner's choices it rests on are decision 12 in `docs/decisions.md`.
 
 ## The owner's choices (15 October 2026)
 
@@ -84,6 +84,14 @@ Both carry `"steps": 5` (the Spider's points each side; as built, `points` in th
 - **Drawing**: the Tornado's bars lie across the page and glide sideways (`data-axis="x"` in `glide`); its fixed scale runs across, with ◀ / ▶ past it. The Spider's lines break where a point can't be worked out. The key's swatches pick Low / High (Tornado) or each input's colour (Spider). The phone's quick look and Show draw them through the same code.
 - **Found along the way**: a Spider switched from a Tornado on a model where it waits could briefly be drawn from the Tornado's figures (which have no points) and fail; the kept figures now remember their chart's kind. Caught by test group 76 before it was pushed.
 - **Tests**: group 76 (`tests/76-fmgraph-sensitivity.spec.js`). The groups that checked the board file's version (49, 56, 57, 73) now expect 8, and group 49's "newer version" file is version 9.
+
+### How A2 turned out (16 October 2026)
+
+- **Edit chart** has a row per input (`sensitivityInputRow` in `05b-chart-render.js`): a Show tick, the input (inputs only), % or ± (choosing the other mode starts from its own −10 … +10 or −1 … +1), Low and High (a number, cut to ±1e9; anything else refused in words and put back). Under it, Low and High in the input's own numbers in the chart's period, with the sliders where they are ("Now 10: 9 … 11 in Year 1"), and a note when the input is 0 everywhere. + Input adds the next input not listed, one that reaches the output first; ↑ ↓ ×; an input already listed is refused, since the file reader would drop it. Each change is an undo step. Low and High change the chart without rebuilding the editor, so Tab goes on to the next box.
+- **The tutorial** (the recommendation, the owner's go-ahead of 15 October 2026): two steps at the end of Trace and compare — + Chart → Tornado, then Profit as its output — with a check `{ chart, output }`; the tutorial is now 4 minutes. (The brief called it "Explore"; Trace and compare is that tutorial.)
+- **Found along the way**: hiding an input didn't redraw, because the kept figures' key left out `show`. It couldn't happen in A1 (nothing there changed `show`); fixed before it shipped.
+- **Unchanged**: the board file (version 8 already carried `show` and the colours). The phone's quick look and Show draw these charts already (A1), so nothing was added there.
+- **Tests**: group 76's new Edit chart test; group 58 plays the two new steps; group 76's "adding one" test now reads the rows instead of A1's list (changed on purpose).
 
 ## Open points for the owner
 

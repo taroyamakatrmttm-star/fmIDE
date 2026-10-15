@@ -82,6 +82,7 @@ function checkPasses(c){
     if(ch.layout !== c.chart) return false;
     if(c.steps && !(ch.steps && ch.steps.length === c.steps.length && c.steps.every(([n, role], i) => sameText(rectNamed(ch.steps[i].key), n) && ch.steps[i].role === role))) return false;
     if(c.outputs && !(ch.outputs && c.outputs.every(n => ch.outputs.some(k => sameText(rectNamed(k), n))))) return false;
+    if(c.output && !(ch.output && sameText(rectNamed(ch.output), c.output))) return false;
     return true;
   });
   if('traced' in c) return (traceId !== null) === !!c.traced;

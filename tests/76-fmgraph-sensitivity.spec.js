@@ -219,7 +219,9 @@ test('adding one: + Chart → Tornado measures the first calculated rectangle; S
   item = (await g(page, () => fmGraph.board())).items.at(-1);
   expect(item.output.name).toBe('Profit');
   expect(item.inputs.map(i => i.name)).toEqual(['Price', 'Volume', 'Unit cost', 'Overheads']);
-  await expect(page.locator('.chart-widget[data-layout="tornado"] .sens-inputs li')).toHaveText(['Price: −10% … +10%', 'Volume: −10% … +10%', 'Unit cost: −10% … +10%', 'Overheads: −10% … +10%']);
+  const rows = page.locator('.chart-widget[data-layout="tornado"] .sens-row');
+  expect(await rows.evaluateAll(els => els.map(e => e.dataset.input))).toEqual(['Price', 'Volume', 'Unit cost', 'Overheads']);
+  await expect(rows.first().locator('.sens-own')).toHaveText('Now 10: 9 … 11 in Year 1');
   await page.locator('.chart-widget[data-layout="tornado"] select[aria-label="Period"]').selectOption({ label: 'Year 3' });
   expect((await g(page, () => fmGraph.board())).items.at(-1).period).toBe(2);
   // Spider keeps output, period and inputs; its points each side.
@@ -240,6 +242,68 @@ test('adding one: + Chart → Tornado measures the first calculated rectangle; S
   expect((await g(page, () => fmGraph.board())).items.length).toBe(before);
   expect(await g(page, () => fmGraph.redo())).toBe(true);
   expect((await g(page, () => fmGraph.board())).items.length).toBe(before + 1);
+  expect(pageErrors).toEqual([]);
+});
+
+test('Edit chart (A2): each input\'s mode, Low, High and Show; + Input; in the input\'s own numbers', async ({ page, pageErrors }) => {
+  await openSample(page);
+  const id = await g(page, () => fmGraph.addChart({ layout: 'tornado', output: 'Profit', inputs: [{ rect: 'Price' }, { rect: 'Volume' }] }));
+  const w = page.locator('.chart-widget[data-layout="tornado"]');
+  await w.locator('details.chart-edit > summary').click();
+  const row = (name) => w.locator('.sens-row[data-input="' + name + '"]');
+  const item = async () => (await g(page, () => fmGraph.board())).items.at(-1);
+  // Price by an amount: Low and High start at −1 … +1; typed −2 … 3.
+  await row('Price').locator('select[aria-label="Change by"]').selectOption('amount');
+  expect((await item()).inputs[0]).toMatchObject({ name: 'Price', by: 'amount', low: -1, high: 1 });
+  await expect(row('Price').locator('.sens-own')).toHaveText('Now 10: 9 … 11 in Year 1');
+  await row('Price').locator('input[aria-label="Low"]').fill('-2');
+  await row('Price').locator('input[aria-label="Low"]').press('Enter');
+  await row('Price').locator('input[aria-label="High"]').fill('3');
+  await row('Price').locator('input[aria-label="High"]').press('Enter');
+  await expect(row('Price').locator('.sens-own')).toHaveText('Now 10: 8 … 13 in Year 1');
+  // Profit with Price 8 and 13: (8 − 6) × 1000 − 2500 = −500, (13 − 6) × 1000 − 2500 = 4500.
+  expectEnds(await chart(page, id), [['Price', -500, 4500, 5000], ['Volume', 1100, 1900, 800]]);
+  // Not a number: refused in words, put back; past 1e9: cut.
+  await row('Price').locator('input[aria-label="High"]').fill('');
+  await row('Price').locator('input[aria-label="High"]').press('Enter');
+  await expect(page.locator('#notices [data-slot="chart"]')).toContainText('High wasn\'t changed');
+  await expect(row('Price').locator('input[aria-label="High"]')).toHaveValue('3');
+  await row('Price').locator('input[aria-label="Low"]').fill('-5e12');
+  await row('Price').locator('input[aria-label="Low"]').press('Enter');
+  expect((await item()).inputs[0].low).toBe(-1e9);
+  await row('Price').locator('input[aria-label="Low"]').fill('-2');
+  await row('Price').locator('input[aria-label="Low"]').press('Enter');
+  // Show off: worked out, not drawn.
+  await row('Volume').locator('input[aria-label="Show in the chart"]').uncheck();
+  expect((await item()).inputs[1].show).toBe(false);
+  await expect(w.locator('.s-row')).toHaveCount(1);
+  // Another input in its place; one already listed is refused.
+  await row('Volume').locator('select[aria-label="Input rectangle"]').selectOption({ label: 'Price' });
+  await expect(page.locator('#notices [data-slot="chart"]')).toContainText('Price is already in this chart');
+  expect((await item()).inputs.map(i => i.name)).toEqual(['Price', 'Volume']);
+  await row('Volume').locator('select[aria-label="Input rectangle"]').selectOption({ label: 'Overheads' });
+  expect((await item()).inputs.map(i => i.name)).toEqual(['Price', 'Overheads']);
+  // + Input takes one that reaches the output first (Volume, then Unit cost), until none is left.
+  await w.locator('.sens-add').click();
+  await w.locator('.sens-add').click();
+  expect((await item()).inputs.map(i => i.name)).toEqual(['Price', 'Overheads', 'Volume', 'Unit cost']);
+  // × and ↓ on a row.
+  await row('Overheads').locator('button[aria-label="Remove"]').click();
+  await row('Price').locator('button[aria-label="Move down"]').click();
+  expect((await item()).inputs.map(i => i.name)).toEqual(['Volume', 'Price', 'Unit cost']);
+  // Each change one undo step.
+  expect(await g(page, () => fmGraph.undo())).toBe(true);
+  expect((await item()).inputs.map(i => i.name)).toEqual(['Price', 'Volume', 'Unit cost']);
+  // An input that is 0 says a percent doesn't move it.
+  await g(page, () => fmGraph.load({ kind: 'system', version: 9, periods: ['P1'], canvases: [{ id: 'c', name: 'C', nodes: [
+    { id: 'a', type: 'value', x: 0, y: 0, w: 150, h: 64, text: 'Grant\n0' }, { id: 'b', type: 'value', x: 0, y: 100, w: 150, h: 64, text: 'Base\n5' },
+    { id: 'o', type: 'operator', x: 180, y: 50, text: '+' }, { id: 't', type: 'value', x: 250, y: 50, w: 150, h: 64, text: 'Total' }],
+    edges: [{ id: 'e1', from: 'a', to: 'o' }, { id: 'e2', from: 'b', to: 'o' }, { id: 'e3', from: 'o', to: 't' }] }] }, 'Zero'));
+  await g(page, () => fmGraph.addChart({ layout: 'tornado', output: 'Total', inputs: [{ rect: 'Grant' }] }));
+  const z = page.locator('.chart-widget[data-layout="tornado"]');
+  await z.locator('details.chart-edit > summary').click();
+  await expect(z.locator('.sens-own')).toContainText('it is 0, so a percent doesn\'t move it');
+  await expect(z.locator('.bar-errors')).toContainText('Grant is 0');
   expect(pageErrors).toEqual([]);
 });
 
