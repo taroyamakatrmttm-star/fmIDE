@@ -2,7 +2,8 @@
 // phases 3c-3 and 3c-4): ExcelExporter's built-in Excel writer (src/excel-exporter/js-head/
 // 01-xlsx-writer.js, the XLSX global), fmIDE's expression parser for numbers in macros and fm.*
 // actions (src/fmide/modules/expression.js) and ExcelExporter's formula building
-// (src/excel-exporter/formulas/). No browser, no app: what each takes and gives.
+// (src/excel-exporter/formulas/). No browser, no app: what each takes and gives. The writer's
+// form controls and stacked charts (step 19, phase B0) are also opened in LibreOffice.
 const { test, expect } = require('./helpers/apps');
 const JSZip = require('jszip');
 const ExcelJS = require('exceljs');
@@ -10,6 +11,10 @@ const { XLSX } = require('../src/excel-exporter/js-head/01-xlsx-writer.js');
 const { evalExpression, readNumber, readBool } = require('../src/fmide/modules/expression.js');
 const { compileModel } = require('../src/shared/ir.js');
 const FX = require('../src/excel-exporter/formulas/core-translation.js');
+const { SaxesParser } = require('saxes');
+const fs = require('fs');
+const path = require('path');
+const { requireSoffice, recalc, valueOf } = require('./helpers/soffice');
 
 // ---------- the Excel writer ----------
 // A small workbook using what ExcelExporter writes: text, numbers, formulas (with a text
@@ -165,6 +170,175 @@ test.describe('the Excel writer, in Node', () => {
     const book = new ExcelJS.Workbook();
     await book.xlsx.load(Buffer.from(bytes));
     expect(book.getWorksheet('S 1').getCell('A1').value).toBe('T');
+  });
+});
+
+// ---------- the writer's form controls and stacked charts (step 19, phase B0) ----------
+// A Dashboard as step 19 will write one: a scroll bar and a check box with their linked cells,
+// a formula using them, a stacked column chart and a waterfall with an invisible base — charts
+// and controls on one sheet — plus a second sheet with a control of its own.
+function dashboardWorkbook(){
+  const wb = XLSX.utils.book_new();
+  const ref = (r) => "'Dash board'!" + r;
+  const steps = { ref: ref('$B$8:$D$8'), values: ['Start', 'Rise', 'End'] };
+  const stacked = { type: 'bar', title: 'Parts', bar: { dir: 'col', grouping: 'stacked', overlap: 0, gapWidth: 60 }, legend: 'b',
+    series: [{ name: { text: 'A' }, cat: steps, val: { ref: ref('$B$9:$D$9'), values: [1, 2, 3] }, color: '2563EB' },
+      { name: { text: 'B' }, cat: steps, val: { ref: ref('$B$10:$D$10'), values: [3, 2, 1] }, color: 'F59E0B' }] };
+  const waterfall = { type: 'bar', title: 'Flow', bar: { dir: 'col', grouping: 'stacked' }, legend: 'b',
+    series: [{ name: { text: 'Base' }, cat: steps, val: { ref: ref('$B$11:$D$11'), values: [0, 10, 0] }, noFill: true, color: '000000' },
+      { name: { text: 'Step' }, cat: steps, val: { ref: ref('$B$12:$D$12'), values: [10, 5, 15] }, color: '16A34A' }] };
+  XLSX.utils.book_append_sheet(wb, {
+    A1: { t: 's', v: 'Price' }, B1: { t: 'z' }, C1: { t: 'n', v: 40 }, D1: { t: 'n', f: '10+C1*0.5' },
+    A2: { t: 's', v: 'Use' }, C2: { t: 'b', v: false }, D2: { t: 'n', f: 'IF(C2,D1*2,D1)' },
+    B8: { t: 's', v: 'Start' }, C8: { t: 's', v: 'Rise' }, D8: { t: 's', v: 'End' },
+    B9: { t: 'n', v: 1 }, C9: { t: 'n', v: 2 }, D9: { t: 'n', v: 3 }, B10: { t: 'n', v: 3 }, C10: { t: 'n', v: 2 }, D10: { t: 'n', v: 1 },
+    B11: { t: 'n', v: 0 }, C11: { t: 'n', f: 'B12' }, D11: { t: 'n', v: 0 }, B12: { t: 'n', v: 10 }, C12: { t: 'n', v: 5 }, D12: { t: 'n', f: 'B12+C12' },
+    '!charts': [{ chart: stacked, from: { c: 5, r: 0 }, to: { c: 11, r: 14 } }, { chart: waterfall, from: { c: 12, r: 0 }, to: { c: 18, r: 14 } }],
+    '!controls': [
+      { type: 'scroll', from: { c: 1, r: 0 }, to: { c: 2, r: 1 }, cell: '$C$1', min: 0, max: 100, inc: 1, page: 10, val: 40, horiz: true },
+      { type: 'check', from: { c: 1, r: 1 }, to: { c: 2, r: 2 }, cell: 'C2', text: 'Use <this> & that' },
+    ],
+  }, 'Dash board');
+  XLSX.utils.book_append_sheet(wb, { A1: { t: 'n', v: 3 }, '!controls': [{ type: 'scroll', from: { c: 1, r: 0 }, to: { c: 1, r: 4 }, cell: 'A1', max: 9 }] }, 'Other');
+  return wb;
+}
+// Every XML part parsed by a strict, namespace-aware parser: well formed, every prefix bound.
+function wellFormed(name, xml){
+  const parser = new SaxesParser({ xmlns: true });
+  let error = null;
+  parser.on('error', (e) => { if(!error) error = e; });
+  parser.write(xml).close();
+  if(error) throw new Error(name + ' is not well formed: ' + error.message);
+}
+// A part's relationships: [{ id, type, target }], targets resolved against the part's folder.
+function relsOf(xml, relsPath){
+  const base = path.posix.dirname(path.posix.dirname(relsPath)); // xl/worksheets/_rels/x.rels -> xl/worksheets
+  return [...xml.matchAll(/<Relationship Id="([^"]+)" Type="([^"]+)" Target="([^"]+)"\/>/g)]
+    .map(([, id, type, target]) => ({ id, type: type.replace(/^.*\//, ''), target: path.posix.normalize(path.posix.join(base, target)) }));
+}
+
+test.describe('the Excel writer\'s form controls and stacked charts (step 19), in Node', () => {
+  test('a sheet with charts and controls: every part there, every part well formed, rels and content types matching', async () => {
+    const zip = await JSZip.loadAsync(XLSX.write(dashboardWorkbook()), { checkCRC32: true });
+    const files = Object.keys(zip.files).filter(k => !zip.files[k].dir);
+    const part = (p) => zip.file(p).async('string');
+    expect(files).toEqual(expect.arrayContaining(['xl/drawings/drawing1.xml', 'xl/charts/chart1.xml', 'xl/charts/chart2.xml',
+      'xl/drawings/vmlDrawing1.vml', 'xl/drawings/vmlDrawing2.vml', 'xl/ctrlProps/ctrlProp1.xml', 'xl/ctrlProps/ctrlProp2.xml', 'xl/ctrlProps/ctrlProp3.xml',
+      'xl/worksheets/_rels/sheet1.xml.rels', 'xl/worksheets/_rels/sheet2.xml.rels']));
+    for(const f of files) if(/\.(xml|rels|vml)$/.test(f)) wellFormed(f, await part(f));
+    // Every relationship's target exists, and every part has a content type (an Override, or
+    // a Default for its extension); every Override names a part that exists.
+    const types = await part('[Content_Types].xml');
+    const overrides = new Map([...types.matchAll(/<Override PartName="\/([^"]+)" ContentType="([^"]+)"\/>/g)].map(m => [m[1], m[2]]));
+    const defaults = new Map([...types.matchAll(/<Default Extension="([^"]+)" ContentType="([^"]+)"\/>/g)].map(m => [m[1], m[2]]));
+    for(const f of files) expect(overrides.get(f) || defaults.get(f.replace(/^.*\./, '')), f).toBeTruthy();
+    for(const o of overrides.keys()) expect(files, o).toContain(o);
+    expect(defaults.get('vml')).toBe('application/vnd.openxmlformats-officedocument.vmlDrawing');
+    expect(overrides.get('xl/ctrlProps/ctrlProp1.xml')).toBe('application/vnd.ms-excel.controlproperties+xml');
+    for(const r of files.filter(f => f.endsWith('.rels'))){
+      const rels = relsOf(await part(r), r);
+      expect(rels.length, r).toBeGreaterThan(0);
+      for(const rel of rels) expect(files, r + ' → ' + rel.target).toContain(rel.target);
+    }
+    // The sheet: the charts' drawing, the VML drawing and each control by the ids its rels give.
+    const sheet = await part('xl/worksheets/sheet1.xml');
+    const rels = relsOf(await part('xl/worksheets/_rels/sheet1.xml.rels'), 'xl/worksheets/_rels/sheet1.xml.rels');
+    expect(rels).toEqual([
+      { id: 'rId1', type: 'drawing', target: 'xl/drawings/drawing1.xml' },
+      { id: 'rId2', type: 'vmlDrawing', target: 'xl/drawings/vmlDrawing1.vml' },
+      { id: 'rId3', type: 'ctrlProp', target: 'xl/ctrlProps/ctrlProp1.xml' },
+      { id: 'rId4', type: 'ctrlProp', target: 'xl/ctrlProps/ctrlProp2.xml' }]);
+    expect(sheet).toMatch(/<drawing r:id="rId1"\/><legacyDrawing r:id="rId2"\/><controls>.*<\/controls><\/worksheet>$/);
+    expect(sheet).toContain('<mc:AlternateContent><mc:Choice Requires="x14"><control shapeId="1025" r:id="rId3" name="Scroll Bar 1"><controlPr defaultSize="0" autoPict="0">' +
+      '<anchor moveWithCells="1"><from><xdr:col>1</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></from>');
+    expect(sheet).toContain('<control shapeId="1026" r:id="rId4" name="Check Box 2">');
+    // The second sheet: no charts, so its VML is rId1; its shapes numbered in their own block.
+    expect(await part('xl/worksheets/sheet2.xml')).toContain('<legacyDrawing r:id="rId1"/><controls><mc:AlternateContent><mc:Choice Requires="x14"><control shapeId="2049" r:id="rId2"');
+    expect(await part('xl/drawings/vmlDrawing2.vml')).toContain('<o:idmap v:ext="edit" data="2"/>');
+  });
+
+  test('what each control holds: the scroll bar\'s range and link, the check box\'s link and label, in both its parts', async () => {
+    const zip = await JSZip.loadAsync(XLSX.write(dashboardWorkbook()));
+    const part = (p) => zip.file(p).async('string');
+    expect(await part('xl/ctrlProps/ctrlProp1.xml')).toContain('<formControlPr xmlns="http://schemas.microsoft.com/office/spreadsheetml/2009/9/main" objectType="Scroll" dx="22" fmlaLink="$C$1" horiz="1" inc="1" max="100" min="0" page="10" val="40"/>');
+    expect(await part('xl/ctrlProps/ctrlProp2.xml')).toContain('objectType="CheckBox" fmlaLink="C2" lockText="1" noThreeD="1"/>');
+    expect(await part('xl/ctrlProps/ctrlProp3.xml')).toContain('fmlaLink="A1" inc="1" max="9" min="0" page="10" val="0"/>'); // defaults; upright
+    const vml = await part('xl/drawings/vmlDrawing1.vml');
+    expect(vml).toContain('<v:shape id="_x0000_s1025" type="#_x0000_t201"');
+    expect(vml).toContain('<x:ClientData ObjectType="Scroll"><x:Anchor>1, 0, 0, 0, 2, 0, 1, 0</x:Anchor>');
+    expect(vml).toContain('<x:FmlaLink>$C$1</x:FmlaLink><x:Val>40</x:Val><x:Min>0</x:Min><x:Max>100</x:Max><x:Inc>1</x:Inc><x:Page>10</x:Page><x:Horiz/>');
+    expect(vml).toContain('<x:ClientData ObjectType="Checkbox">');
+    expect(vml).toContain('<div style="text-align:left">Use &lt;this&gt; &amp; that</div>'); // the label escaped
+  });
+
+  test('controls checked: odd links left out, numbers kept to Excel\'s 0–30,000, names and links escaped', async () => {
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, { A1: { t: 'n', v: 1 }, '!controls': [
+      { type: 'scroll', cell: '"/><evil/>', from: { c: 0, r: 0 }, to: { c: 1, r: 1 } },
+      { type: 'button', cell: 'A1' }, null, { type: 'check' },
+      { type: 'scroll', cell: "'It''s <&>'!$A$1", from: { c: -5, r: 'x' }, to: { c: 2, r: 3 }, min: -10, max: 99999, inc: 0, page: 1e9, val: 'x', horiz: 'yes' },
+      { type: 'check', cell: '$B$2', checked: true, text: '</div></v:textbox><x:evil/>' },
+    ] }, 'S');
+    const zip = await JSZip.loadAsync(XLSX.write(wb));
+    const files = Object.keys(zip.files);
+    expect(files.filter(f => f.startsWith('xl/ctrlProps/') && !zip.files[f].dir)).toEqual(['xl/ctrlProps/ctrlProp1.xml', 'xl/ctrlProps/ctrlProp2.xml']);
+    const all = await Promise.all(files.filter(f => !zip.files[f].dir).map(async f => { const x = await zip.file(f).async('string'); if(/\.(xml|rels|vml)$/.test(f)) wellFormed(f, x); return x; }));
+    expect(all.join('')).not.toContain('<evil');
+    expect(all.join('')).not.toContain('<x:evil');
+    const p1 = await zip.file('xl/ctrlProps/ctrlProp1.xml').async('string');
+    expect(p1).toContain('fmlaLink="\'It\'\'s &lt;&amp;&gt;\'!$A$1" inc="1" max="30000" min="0" page="30000" val="0"/>'); // not sideways: horiz must be true
+    expect(await zip.file('xl/ctrlProps/ctrlProp2.xml').async('string')).toContain('objectType="CheckBox" checked="Checked" fmlaLink="$B$2"');
+    const vml = await zip.file('xl/drawings/vmlDrawing1.vml').async('string');
+    expect(vml).toContain('<x:Anchor>0, 0, 0, 0, 2, 0, 3, 0</x:Anchor>'); // a bad corner taken as A1
+    expect(vml).toContain('<x:Checked>1</x:Checked>');
+    // A sheet without controls is written as before: no VML, no extra namespaces.
+    const plain = await (await JSZip.loadAsync(XLSX.write(sampleWorkbook()))).file('xl/worksheets/sheet1.xml').async('string');
+    expect(plain).not.toContain('legacyDrawing');
+    expect(plain).not.toContain('xmlns:mc');
+  });
+
+  test('stacked bars overlap fully; percent-stacked too; a series drawing nothing has no legend entry', async () => {
+    const zip = await JSZip.loadAsync(XLSX.write(dashboardWorkbook()));
+    const stacked = await zip.file('xl/charts/chart1.xml').async('string');
+    expect(stacked).toContain('<c:barDir val="col"/><c:grouping val="stacked"/>');
+    expect(stacked).toContain('<c:gapWidth val="60"/><c:overlap val="100"/>'); // 0 asked; stacked bars need 100
+    expect(stacked).not.toContain('noFill');
+    const waterfall = await zip.file('xl/charts/chart2.xml').async('string');
+    expect(waterfall).toContain('<c:spPr><a:noFill/><a:ln><a:noFill/></a:ln></c:spPr>');
+    expect(waterfall).not.toContain('<a:srgbClr val="000000"/>'); // its colour ignored
+    expect(waterfall).toContain('<c:legendPos val="b"/><c:legendEntry><c:idx val="0"/><c:delete val="1"/></c:legendEntry><c:overlay val="0"/>');
+    const wb = XLSX.utils.book_new();
+    const pct = (grouping) => ({ type: 'bar', bar: { dir: 'col', grouping, overlap: -20 }, series: [{ val: { values: [1] } }] });
+    XLSX.utils.book_append_sheet(wb, { '!charts': [{ chart: pct('percentStacked') }, { chart: pct('sideways') }] }, 'S');
+    const z2 = await JSZip.loadAsync(XLSX.write(wb));
+    const c1 = await z2.file('xl/charts/chart1.xml').async('string'), c2 = await z2.file('xl/charts/chart2.xml').async('string');
+    expect(c1).toContain('<c:grouping val="percentStacked"/>');
+    expect(c1).toContain('<c:overlap val="100"/>');
+    expect(c2).toContain('<c:grouping val="clustered"/>'); // anything else: clustered, its own overlap
+    expect(c2).toContain('<c:overlap val="-20"/>');
+  });
+
+  test('ExcelJS reads it back, and LibreOffice opens it and recalculates (the sample for desktop Excel is kept in tests/output)', async ({}, testInfo) => {
+    const bytes = XLSX.write(dashboardWorkbook());
+    // The sample the owner opens in desktop Excel by hand (tests/output is not committed).
+    const out = path.join(__dirname, 'output');
+    fs.mkdirSync(out, { recursive: true });
+    fs.writeFileSync(path.join(out, 'step19-b0-controls.xlsx'), bytes);
+    const book = new ExcelJS.Workbook();
+    await book.xlsx.load(Buffer.from(bytes));
+    expect(book.getWorksheet('Dash board').getCell('C1').value).toBe(40);
+    requireSoffice(test);
+    testInfo.setTimeout(180_000);
+    const recalculated = recalc({ wb: bytes }).wb;
+    const back = new ExcelJS.Workbook();
+    await back.xlsx.load(recalculated);
+    const dash = back.getWorksheet('Dash board');
+    expect(valueOf(dash.getCell('D1'))).toBe(30);   // 10 + 40 × 0.5, from the scroll bar's cell
+    expect(valueOf(dash.getCell('D2'))).toBe(30);   // the check box's cell FALSE
+    expect(valueOf(dash.getCell('D12'))).toBe(15);
+    expect(back.getWorksheet('Other').getCell('A1').value).toBe(3);
+    const zip = await JSZip.loadAsync(recalculated);
+    expect(Object.keys(zip.files).filter(k => /^xl\/charts\/chart\d+\.xml$/.test(k))).toHaveLength(2); // both charts kept
   });
 });
 
