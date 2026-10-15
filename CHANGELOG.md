@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph: Tornado and Spider — each input's Low and High (step 18, phase A2)
+- A Tornado's or Spider's Edit chart now has a row per input: shown or not, the input, by a percent or an amount (% / ±), Low and High, with Low and High in the input's own numbers under it ("Now 10: 9 … 11 in Year 1") and a note when an input is 0. + Input, ↑ ↓ and ×; an input already listed is refused. No file format changed (version 8 already carried these).
+- The Trace and compare tutorial ends with a Tornado on Profit (now 4 minutes).
+
 ## fmGraph: Tornado and Spider charts (step 18, phase A1)
 - Two new kinds of chart, chosen at a chart's top: a **Tornado** (one bar per input from its Low to its High, largest swing first) and a **Spider** (a line per input through points from Low to High) for one output in one period. Each input is moved on its own, in every period, by a percent or an amount, around where the sliders stand now; moving a slider measures them again. A new one measures the first calculated rectangle with every input that reaches it; Edit chart chooses the output, the period and the Spider's points. The same meanings and limits as ExcelExporter's Sensitivity (at most 50 inputs, Low and High within ±1e9, 1–10 points).
 - Saved with the board: the board file is now version 8 (charts of layout `tornado` and `spider`); version 7 files open as before; an older fmGraph asks first and shows these charts empty. Never in a template's board. `window.fmGraph.addChart` takes the new layouts and `fmGraph.chart(id)` gives their Low, High, swing and points.

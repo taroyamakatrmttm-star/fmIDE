@@ -50,7 +50,7 @@ test('Sliders and bars, from the first screen: played through; the first screen 
   await openFmGraph(page);
   await page.click('#btnTutorials');
   await expect(page.locator('.help-tutorial')).toHaveCount(4);
-  expect(await page.locator('.help-tutorial .help-command-name').allTextContents()).toEqual(['🎓 Sliders and bars · 3 min', '🎓 Charts · 4 min', '🎓 Trace and compare · 3 min', '🎓 Scenarios · 4 min']);
+  expect(await page.locator('.help-tutorial .help-command-name').allTextContents()).toEqual(['🎓 Sliders and bars · 3 min', '🎓 Charts · 4 min', '🎓 Trace and compare · 4 min', '🎓 Scenarios · 4 min']);
   await page.locator('.help-tutorial[data-tutorial="sliders-and-bars"] .help-tutorial-start').click();
   await stepIs(page, 'intro');
   await expect(page.locator('#helpPanel')).toBeHidden();
@@ -129,7 +129,16 @@ test('Trace and compare: played through', async ({ page, pageErrors }) => {
   await typeSlider(page, 1, 10);
   await stepIs(page, 'unpin');
   await page.locator('#compareBar button', { hasText: 'Unpin' }).click();
+  await stepIs(page, 'tornado');
+  await page.click('#btnAddChart');
+  await page.locator('.chart-widget').last().locator('select[aria-label="Kind of chart"]').selectOption('tornado');
+  await stepIs(page, 'tornado-output');
+  const t = page.locator('.chart-widget[data-layout="tornado"]');
+  if(!(await t.locator('details.chart-edit').evaluate(d => d.open))) await t.locator('summary', { hasText: 'Edit chart' }).click();
+  await t.locator('select[aria-label="Output"]').selectOption({ label: 'Profit' });
   await stepIs(page, 'end');
+  await t.locator('.sens-reach').click();
+  await expect(t.locator('.s-row')).toHaveCount(4);
   await card(page).locator('.tutorial-finish').click();
   await expect(page.locator('#welcome')).toBeVisible();
   expect(pageErrors).toEqual([]);

@@ -122,13 +122,23 @@ function chartEditorParts(c){
       box.appendChild(row);
     }
     box.appendChild(make('div', 'edit-head', 'Inputs moved, one at a time'));
-    if(!c.inputs.length) box.appendChild(make('p', 'empty-note', 'None: no input reaches this output.'));
-    const list = make('ul', 'sens-inputs');
-    c.inputs.forEach(i => {
-      const sign = (v) => (v > 0 ? '+' : v < 0 ? '−' : '') + fmtNum(Math.abs(v)) + (i.by === 'percent' ? '%' : '');
-      list.appendChild(make('li', null, partLabel(i.key) + ': ' + sign(i.low) + ' … ' + sign(i.high) + (i.show ? '' : ' (hidden)')));
+    if(!c.inputs.length) box.appendChild(make('p', 'empty-note', 'None yet: + Input adds one, or ↻ takes every input that reaches the output.'));
+    c.inputs.forEach((inp, n) => box.appendChild(sensitivityInputRow(c, inp, n, changed, rowButtons)));
+    const add = make('button', 'link-btn sens-add', '+ Input');
+    add.type = 'button';
+    const spare = () => {
+      const listed = new Set(c.inputs.map(i => i.key));
+      const free = model.inputs.filter(r => !listed.has(r.key));
+      return free.find(r => c.output && model.reach(r.key).has(c.output)) || free[0];
+    };
+    add.disabled = c.inputs.length >= SENSITIVITY_LIMITS.inputs || !spare();
+    add.addEventListener('click', () => {
+      const r = spare();
+      if(!r) return;
+      c.inputs.push(Object.assign({ key: r.key, by: 'percent', show: true }, defaultBounds('percent')));
+      changed();
     });
-    box.appendChild(list);
+    box.appendChild(add);
     const reach = make('button', 'link-btn sens-reach', '↻ Use the inputs that reach the output');
     reach.type = 'button';
     reach.addEventListener('click', () => { c.inputs = sensitivityStart(c.output).inputs; changed(); });
@@ -491,6 +501,74 @@ function drawScenarioFlow(c, key, oi, figs, problems){
 }
 
 // ---- the Tornado and the Spider (step 18; figures in 04b-charts.js, kept in 03-calc.js) ----
+// One input's row in Edit chart (A2): shown or not, the input, by percent or amount, Low and High,
+// and what those are in the input's own numbers now ("now 10: 9 … 11", in the chart's period,
+// with the sliders where they are).
+function sensitivityInputRow(c, inp, n, changed, rowButtons){
+  const wrap = make('div', 'sens-row');
+  wrap.dataset.input = partLabel(inp.key);
+  const row = make('div', 'edit-row');
+  const show = make('input');
+  show.type = 'checkbox';
+  show.checked = inp.show;
+  show.title = 'Show in the chart';
+  show.setAttribute('aria-label', 'Show in the chart');
+  show.addEventListener('change', () => { inp.show = show.checked; changed(); });
+  const rs = rectSelect(inp.key, true);
+  rs.addEventListener('change', () => {
+    if(c.inputs.some((x, i) => i !== n && x.key === rs.value)){
+      notify(partLabel(rs.value) + ' is already in this chart: each input is moved once.', 'err', 'chart');
+      rs.value = inp.key;
+      return;
+    }
+    notify('', null, 'chart');
+    inp.key = rs.value;
+    changed();
+  });
+  const by = make('select');
+  by.setAttribute('aria-label', 'Change by');
+  [['percent', '%'], ['amount', '±']].forEach(([v, t]) => { const o = make('option', null, t); o.value = v; o.title = v === 'percent' ? 'By a percent' : 'By an amount'; if(inp.by === v) o.selected = true; by.appendChild(o); });
+  by.title = 'By a percent (%) or an amount (±)';
+  // Another mode starts from its own Low and High (−10% … +10%, or −1 … +1).
+  by.addEventListener('change', () => { Object.assign(inp, { by: by.value }, defaultBounds(by.value)); changed(); });
+  const note = make('div', 'sens-own');
+  const writeNote = () => {
+    const rect = model.byKey.get(inp.key);
+    const now = (shownOverrides().get(inp.key) || [])[c.period];
+    const v = typeof now === 'number' ? now : baseValue(rect, c.period);
+    const at = (x) => inp.by === 'amount' ? v + x : v * (1 + x / 100);
+    note.textContent = 'Now ' + fmtNum(v) + ': ' + fmtNum(at(inp.low)) + ' … ' + fmtNum(at(inp.high)) + ' in ' + model.periods[c.period]
+      + (inp.by === 'percent' && model.periods.every((_, p) => baseValue(rect, p) === 0) ? ' — it is 0, so a percent doesn\'t move it: choose ±.' : '');
+  };
+  const bound = (label, side) => {
+    const box = make('input', 'sens-bound');
+    box.type = 'number';
+    box.step = 'any';
+    box.value = String(inp[side]);
+    box.title = label + (inp.by === 'percent' ? ' (%)' : '');
+    box.setAttribute('aria-label', label);
+    box.addEventListener('change', () => {
+      const v = box.value.trim() === '' ? NaN : Number(box.value);
+      if(!Number.isFinite(v)){
+        notify(label + ' wasn\'t changed: it must be a number.', 'err', 'chart');
+        box.value = String(inp[side]);
+        return;
+      }
+      notify('', null, 'chart');
+      inp[side] = cleanBound(v, inp[side]);
+      box.value = String(inp[side]);
+      writeNote();
+      saveBoardSoon();
+      updateValues();
+    });
+    return box;
+  };
+  row.append(show, rs, by, bound('Low', 'low'), make('span', 'scale-to', 'to'), bound('High', 'high'), rowButtons(c.inputs, n));
+  writeNote();
+  wrap.append(row, note);
+  return wrap;
+}
+
 const TORNADO_LOW = '#2563eb', TORNADO_HIGH = '#d97706';
 const shortName = (name, room) => name.length > room ? name.slice(0, Math.max(1, room - 1)) + '…' : name;
 const signed = (v, by) => (v > 0 ? '+' : v < 0 ? '−' : '') + fmtNum(Math.abs(v)) + (by === 'percent' ? '%' : '');

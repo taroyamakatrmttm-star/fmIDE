@@ -6,8 +6,9 @@
 //   { bar: name | null }                     a bar on that rectangle (null: any bar)
 //   { slider: name, moved: true }            that rectangle's slider moved off the model's number
 //   { reset: true }                          every slider on the model's numbers
-//   { chart: layout, steps?, outputs? }      a chart of that kind ('columns', 'flow', 'scenarios');
-//                                            steps: [[name, role]…] exactly; outputs: names it shows
+//   { chart: layout, steps?, outputs?, output? }  a chart of that kind ('columns', 'flow', 'scenarios',
+//                                            'tornado', 'spider'); steps: [[name, role]…] exactly;
+//                                            outputs: names it shows; output: a Tornado's or Spider's output
 //   { traced: true | false }, { pinned: true | false }
 //   { scenarios: n }                         at least n scenarios
 //   { scenarioShown: i }                     the sliders where the i-th scenario (from 0) has them
@@ -31,7 +32,7 @@ const FMGRAPH_TUTORIALS = [
       { id: 'check', text: 'The ✓ above Gross profit says the steps before it add up to it. Now move Price: the bars move and the check still holds.', point: '.slider-widget input[type=range]', done: [{ slider: 'Price', moved: true }] },
       { id: 'end', text: 'A balance sheet is a Columns chart of two groups with "Check that the groups\' totals agree". Finish to go back to your own model.' },
     ] },
-  { id: 'trace-and-compare', title: 'Trace and compare', minutes: 3, topic: 'compare', board: 'sample',
+  { id: 'trace-and-compare', title: 'Trace and compare', minutes: 4, topic: 'compare', board: 'sample',
     summary: 'See what reaches a bar, and compare one what-if with another.',
     steps: [
       { id: 'trace', text: 'Press 🔍 on the Profit bar. The sliders that reach it light up, and a note shows the way each one gets there.', point: '.bar-widget .widget-trace', done: [{ traced: true }] },
@@ -39,6 +40,8 @@ const FMGRAPH_TUTORIALS = [
       { id: 'pin', text: 'Press 📌 Pin as A to keep this what-if as A.', point: '#btnPinA', done: [{ pinned: true }] },
       { id: 'volume', text: 'Now move Volume. The outlines and labels show the change from A, not from the model.', point: '.slider-widget:nth-child(2) input[type=range]', done: [{ slider: 'Volume', moved: true }] },
       { id: 'unpin', text: 'Press Unpin in the strip above the board to compare with the model\'s own numbers again.', point: '#compareBar', done: [{ pinned: false }] },
+      { id: 'tornado', text: 'Which inputs matter most? Press + Chart, then choose Tornado at the chart\'s top.', point: '#btnAddChart', done: [{ chart: 'tornado' }] },
+      { id: 'tornado-output', text: 'In Edit chart, choose Profit as its output, then ↻ to move every input that reaches it. Each bar shows Profit with one input 10% lower and 10% higher; the biggest swing is at the top.', point: '.chart-widget[data-layout="tornado"] .chart-edit', done: [{ chart: 'tornado', output: 'Profit' }] },
       { id: 'end', text: 'Biggest movers, under the sliders, lists what the sliders change most. Finish to go back to your own model.' },
     ] },
   { id: 'scenarios', title: 'Scenarios', minutes: 4, topic: 'scenarios', board: 'sample',
