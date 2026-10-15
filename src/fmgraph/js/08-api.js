@@ -121,10 +121,13 @@ window.fmGraph = Object.freeze({
     renderBoard();
   },
   resetSlider: (id) => { sliderById(id).value = null; renderBoard(); },
-  resetAll: () => { board.sliders.forEach(s => { s.value = null; }); renderBoard(); },
+  resetAll: () => { liveSliders().forEach(s => { s.value = null; }); renderBoard(); },
+  // Whether the board shown keeps its own slider positions (true) or shares them (false).
+  setOwnSliders: (on) => { if(!model) throw new Error('Open a model first.'); setOwnSliders(board, !!on); return !!board.ownSliders; },
   remove: (id) => { removeWidget(id); renderBoard(); },
   board: () => {
     if(!model) return null;
+    syncShared(); // (03-calc.js)
     const d = boardData(board);
     d.items.forEach((w, i) => { w.id = board.items[i].id; });
     d.sliders.forEach((s, i) => { s.id = board.sliders[i].id; s.value = board.sliders[i].value; });

@@ -74,6 +74,8 @@
   <section id="board" class="board hidden">
     <div class="board-col">
       <h2 class="col-head">Sliders <button type="button" id="btnFoldSliders" class="link-btn col-tool hidden">Collapse all</button></h2>
+      <label id="shareSlidersRow" class="share-sliders hidden" title="Ticked: the sliders stand in the same place on every board that shares, and a slider moved on another board moves this board's numbers too. Unticked: this board keeps its own positions."><input type="checkbox" id="shareSliders" checked> Share slider positions with other boards</label>
+      <p id="sharedNote" class="shared-note hidden"></p>
       <div id="sliderList" class="widget-list"></div>
       <p id="noSliders" class="empty-note">No sliders yet: <button type="button" class="link-btn" data-add="slider">+ Slider</button></p>
       <details id="scenariosPanel" class="scenarios" open>
@@ -120,6 +122,7 @@
   <button type="button" role="menuitem" id="phoneFromFmide" class="hidden">↻ From fmIDE</button>
   <button type="button" role="menuitem" id="phoneReset" class="needs-model">⟲ Reset all sliders</button>
   <button type="button" role="menuitem" id="phonePin" class="needs-model">📌 Pin as A</button>
+  <button type="button" role="menuitemcheckbox" id="phoneShareSliders" class="needs-model hidden" aria-checked="true">Share slider positions with other boards: On</button>
   <button type="button" role="menuitem" id="phoneScenarios" class="needs-model">Scenarios</button>
   <button type="button" role="menuitem" id="phoneMovers" class="needs-model">Biggest movers</button>
   <div class="phone-menu-row">

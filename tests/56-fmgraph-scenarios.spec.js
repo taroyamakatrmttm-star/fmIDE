@@ -111,6 +111,10 @@ test('a scenario reaches inputs on any board; one with no slider on this board i
   await g(page, () => fmGraph.saveScenario('Both'));
   await g(page, () => fmGraph.addBoard('Only price'));
   await g(page, () => fmGraph.addSlider('Price'));
+  // Sharing slider positions (the default), the first board's Volume slider counts here: nothing left over.
+  expect(await g(page, () => fmGraph.showScenario('Both'))).toBe(0);
+  // A board with its own positions has only its Price slider: Volume is said.
+  await g(page, () => fmGraph.setOwnSliders(true));
   expect(await g(page, () => fmGraph.showScenario('Both'))).toBe(1);
   await expect(page.locator('.note[data-slot="scenarios"]')).toContainText('“Both” also changes Volume, with no slider like it on this board: + Slider adds one.');
   expect(await values(page)).toEqual([14]);
@@ -134,7 +138,7 @@ test('kept: after a reload, in the board file (version 3 and later), and importe
   expect(await values(page)).toEqual([null, null]);                       // sliders start on the model's numbers
   // Export all: version 4 (since the scenario waterfall) with the scenarios; one board: none.
   const all = await g(page, () => fmGraph.exportBoards(true));
-  expect(all.version).toBe(6);
+  expect(all.version).toBe(7);
   expect(all.scenarios).toEqual([{ name: 'Eleven', sliders: [{ canvasId: 'cProfit', nodeId: 'price', name: 'Price', mode: 'set', periods: { mode: 'all' }, value: 11 }] }]);
   expect(await g(page, () => fmGraph.exportBoards(false))).not.toHaveProperty('scenarios');
   // Importing: a new name is added, a name used here keeps yours.

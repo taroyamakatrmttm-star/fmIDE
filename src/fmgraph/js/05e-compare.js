@@ -28,8 +28,9 @@ function settingsLabel(list){
 
 function pinAsA(){
   if(!model) return null;
-  const sliders = board.sliders.map(sliderSetting);
-  pinA = { overrides: overridesFor(board.sliders), sliders, label: settingsLabel(sliders) };
+  const live = liveSliders(); // shared with other boards, or this board's own (03-calc.js)
+  const sliders = live.map(sliderSetting);
+  pinA = { overrides: overridesFor(live), sliders, label: settingsLabel(sliders) };
   renderCompareBar();
   updateValues();
   return pinA.label;
@@ -45,7 +46,7 @@ function swapWithA(){
   if(!pinA || !model) return null;
   const old = pinA.sliders.slice();
   pinAsA();
-  board.sliders.forEach(s => {
+  liveSliders().forEach(s => {
     const me = sliderSetting(s);
     const i = old.findIndex(o => o.key === me.key && o.mode === me.mode && o.periods === me.periods);
     s.value = i >= 0 ? old.splice(i, 1)[0].value : null;

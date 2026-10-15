@@ -203,7 +203,7 @@ test('the board file: export one or all, import into the same model, a model it 
   expect(dl.suggestedFilename()).toBe('Sample model - Second.board.json');
   const one = JSON.parse(fs.readFileSync(await dl.path(), 'utf8'));
   expect(one.kind).toBe('fmIDE-graph-board');
-  expect(one.version).toBe(6);
+  expect(one.version).toBe(7);
   expect(one.boards.map(b => b.name)).toEqual(['Second']);
   // Export all.
   await page.click('.gbar-menu summary');
@@ -242,7 +242,7 @@ test('the board file is read like any file: wrong kind, not JSON, newer version,
   expect(await g(page, () => fmGraph.importBoards({ kind: 'fmIDE-templates', version: 9, templates: [] }))).toBe(0);
   await expect(page.locator('.note.err')).toContainText("isn't an fmGraph board file");
   // A newer version: asked first.
-  const newer = { kind: 'fmIDE-graph-board', version: 7, boards: [{ name: 'Later', items: [{ type: 'bar', canvasId: 'cProfit', nodeId: 'profit', name: 'Profit' }] }] };
+  const newer = { kind: 'fmIDE-graph-board', version: 8, boards: [{ name: 'Later', items: [{ type: 'bar', canvasId: 'cProfit', nodeId: 'profit', name: 'Profit' }] }] };
   const p = g(page, (d) => fmGraph.importBoards(d), newer);
   await expect(page.locator('#confirmTitle')).toHaveText('Saved by a newer version');
   await page.click('#confirmNo');
@@ -313,9 +313,9 @@ test('folding sliders: one by its ▸, Collapse all / Expand all; undo; kept; th
   await expect(page.locator('.slider-widget')).toHaveCount(2);
   expect(await folded()).toEqual([true, false]);
   await expect(page.locator('.slider-widget').first()).toHaveClass(/folded/);
-  // The board file: version 6, `folded` only on a folded slider; imported back with it.
+  // The board file: version 7 (6 brought `folded`), `folded` only on a folded slider; imported back with it.
   const file = await g(page, () => fmGraph.exportBoards(true));
-  expect(file.version).toBe(6);
+  expect(file.version).toBe(7);
   expect(file.boards[0].sliders.map(s => s.folded)).toEqual([true, undefined]);
   expect(await g(page, (d) => fmGraph.importBoards(d), file)).toBe(1);
   await g(page, () => fmGraph.showBoard(1));
@@ -394,4 +394,159 @@ test('by finger: a slider moves by its handle, and the handle never scrolls the 
   // The handle's text can't be selected or dragged by the browser itself.
   expect(await page.evaluate(() => getComputedStyle(document.querySelector('.drag-handle')).userSelect)).toBe('none');
   await context.close();
+});
+
+// Shared slider positions (the owner's request, 15 October 2026): boards share where the sliders
+// stand by default; a board can keep its own. Which sliders a board shows stays its own.
+const typeSlider = async (page, name, value) => {
+  const box = page.locator('.slider-widget').filter({ has: page.locator('.widget-head select option:checked', { hasText: name }) }).first().locator('input.slider-value');
+  await box.fill(String(value));
+  await box.press('Enter');
+};
+const shown = (page) => g(page, () => fmGraph.board().sliders.map(s => [s.name, s.value]));
+const profit1 = (page) => g(page, () => fmGraph.value('Profit', 1));
+
+test('shared slider positions: each board shows its own sliders; a slider moved on one board counts on the others', async ({ page, pageErrors }) => {
+  await openSample(page);
+  const base = await profit1(page);
+  // One board: no tick box, nothing shared to say.
+  await expect(page.locator('#shareSlidersRow')).toBeHidden();
+  await typeSlider(page, 'Price', 14);
+  const moved = await profit1(page);
+  expect(moved).not.toBe(base);
+  // A second board, with only a Volume slider: Price at 14 still counts there, and the note says so.
+  await page.getByRole('button', { name: 'Add an empty board' }).click();
+  await expect(page.locator('#shareSlidersRow')).toBeVisible();
+  await expect(page.locator('#shareSliders')).toBeChecked();
+  expect(await profit1(page)).toBe(moved);
+  await expect(page.locator('#sharedNote')).toHaveText('Also moved on other boards: Price 14.');
+  await g(page, () => fmGraph.addSlider('Volume', { mode: 'shift' }));
+  expect((await shown(page)).map(s => s[0])).toEqual(['Volume']); // its own sliders only
+  await typeSlider(page, 'Volume', 10);
+  const both = await profit1(page);
+  expect(both).not.toBe(moved);
+  // Back on the first board: its own Volume slider (also a change by %) is the same slider, at +10%.
+  await tabs(page).first().click();
+  expect(await shown(page)).toEqual([['Price', 14], ['Volume', 10]]);
+  expect(await profit1(page)).toBe(both);
+  await expect(page.locator('#sharedNote')).toBeHidden(); // nothing moved that isn't shown here
+  // A Volume slider that sets the number is another setting: not moved with them.
+  await g(page, () => fmGraph.addSlider('Volume', { mode: 'set' }));
+  expect(await shown(page)).toEqual([['Price', 14], ['Volume', 10], ['Volume', null]]);
+  await g(page, (id) => fmGraph.remove(id), (await g(page, () => fmGraph.board().sliders[2].id)));
+  // A Price slider added on the second board stands at 14 already; moving it moves the first board's.
+  await tabs(page).nth(1).click();
+  await g(page, () => fmGraph.addSlider('Price'));
+  expect(await shown(page)).toEqual([['Volume', 10], ['Price', 14]]);
+  await typeSlider(page, 'Price', 12);
+  await tabs(page).first().click();
+  expect((await shown(page))[0]).toEqual(['Price', 12]);
+  await expect(page.locator('.slider-widget').first().locator('input.slider-value')).toHaveValue('12');
+  // Reset all on a sharing board puts every shared slider back.
+  await page.click('#btnResetAll');
+  expect(await profit1(page)).toBe(base);
+  await tabs(page).nth(1).click();
+  expect(await shown(page)).toEqual([['Volume', null], ['Price', null]]);
+  expect(pageErrors).toEqual([]);
+});
+
+test('a board with its own slider positions: untouched by the others, and back to sharing takes the shared ones', async ({ page, pageErrors }) => {
+  await openSample(page);
+  await typeSlider(page, 'Price', 14);
+  const shared = await profit1(page);
+  await page.getByRole('button', { name: 'Duplicate this board' }).click();
+  expect(await shown(page)).toEqual([['Price', 14], ['Volume', null]]);
+  // Unticked: it keeps what it shows as its own; the tab is marked; one undo step.
+  await page.locator('#shareSliders').uncheck();
+  await expect(tabs(page).nth(1).locator('.own-mark')).toHaveCount(1);
+  await expect(tabs(page).first().locator('.own-mark')).toHaveCount(0);
+  expect(await shown(page)).toEqual([['Price', 14], ['Volume', null]]);
+  expect(await profit1(page)).toBe(shared);
+  await typeSlider(page, 'Price', 6);
+  const own = await profit1(page);
+  expect(own).not.toBe(shared);
+  // The first board doesn't move with it, and moving the first doesn't move it.
+  await tabs(page).first().click();
+  expect(await shown(page)).toEqual([['Price', 14], ['Volume', null]]);
+  expect(await profit1(page)).toBe(shared);
+  await typeSlider(page, 'Volume', 1200);
+  await tabs(page).nth(1).click();
+  expect(await shown(page)).toEqual([['Price', 6], ['Volume', null]]);
+  expect(await profit1(page)).toBe(own);
+  await expect(page.locator('#sharedNote')).toBeHidden();
+  // Reset all here resets only its own.
+  await page.click('#btnResetAll');
+  await tabs(page).first().click();
+  expect(await shown(page)).toEqual([['Price', 14], ['Volume', 1200]]);
+  // Kept in the board file (version 7, `ownSliders` only where true) and after a reload.
+  const file = await g(page, () => fmGraph.exportBoards(true));
+  expect(file.version).toBe(7);
+  expect(file.boards.map(b => b.ownSliders)).toEqual([undefined, true]);
+  await page.waitForTimeout(500);
+  await page.reload();
+  await page.waitForFunction(() => !!window.fmGraph);
+  await page.click('#btnSample');
+  await expect(tabs(page).nth(1).locator('.own-mark')).toHaveCount(1);
+  // Ticked again: it takes the shared positions (its own are dropped).
+  await tabs(page).first().click();
+  await typeSlider(page, 'Price', 13);
+  await tabs(page).nth(1).click();
+  await typeSlider(page, 'Price', 7);
+  await page.locator('#shareSliders').check();
+  expect(await shown(page)).toEqual([['Price', 13], ['Volume', null]]);
+  await expect(tabs(page).nth(1).locator('.own-mark')).toHaveCount(0);
+  // Undo takes the switch back: its own again.
+  expect(await g(page, () => fmGraph.undo())).toBe(true);
+  await expect(tabs(page).nth(1).locator('.own-mark')).toHaveCount(1);
+  expect(pageErrors).toEqual([]);
+});
+
+test('scenarios and Pin as A on sharing boards take every shared slider, shown or not', async ({ page, pageErrors }) => {
+  await openSample(page);
+  await page.getByRole('button', { name: 'Add an empty board' }).click();
+  await g(page, () => fmGraph.addSlider('Unit cost'));
+  await typeSlider(page, 'Unit cost', 5);
+  await tabs(page).first().click();
+  await typeSlider(page, 'Price', 13);
+  const both = await profit1(page);
+  expect(await g(page, () => fmGraph.saveScenario('Both'))).toBeTruthy();
+  expect((await g(page, () => fmGraph.scenarios()))[0].settings).toBe('Price 13, Unit cost 5');
+  expect(await g(page, () => fmGraph.pinA())).toBe('Price 13, Unit cost 5');
+  await g(page, () => fmGraph.unpinA());
+  await page.click('#btnResetAll');
+  expect(await profit1(page)).not.toBe(both);
+  // ▶ Show from the first board sets the second board's slider too.
+  await g(page, () => fmGraph.showScenario('Both'));
+  expect(await profit1(page)).toBe(both);
+  await tabs(page).nth(1).click();
+  expect(await shown(page)).toEqual([['Unit cost', 5]]);
+  expect(pageErrors).toEqual([]);
+});
+
+test('a version 6 board file opens with every board sharing; an ownSliders that isn\'t true shares', async ({ page, pageErrors }) => {
+  await openSample(page);
+  const v6 = JSON.parse(fs.readFileSync(require('path').join(__dirname, 'fixtures', 'formats', 'board-v6.json'), 'utf8'));
+  expect(await g(page, (d) => fmGraph.importBoards(d), v6)).toBe(2);
+  await g(page, () => fmGraph.showBoard('Saved before shared sliders'));
+  const b = await g(page, () => fmGraph.board());
+  expect(b.ownSliders).toBeUndefined();
+  expect(b.sliders.map(s => [s.name, s.folded])).toEqual([['Price', true]]);
+  await expect(page.locator('#shareSliders')).toBeChecked();
+  await expect(page.locator('.own-mark')).toHaveCount(0);
+  // Shared with the sample's own board: Price moved here stands there too.
+  await typeSlider(page, 'Price', 11);
+  await g(page, () => fmGraph.showBoard('Board'));
+  expect((await shown(page))[0]).toEqual(['Price', 11]);
+  const at = { name: 'Odd', items: [], sliders: [] };
+  const odd = ['true', 1, {}, [true], null];
+  expect(await g(page, (d) => fmGraph.importBoards(d), { kind: 'fmIDE-graph-board', version: 7,
+    boards: odd.map((ownSliders, i) => Object.assign({}, at, { name: 'Odd ' + i, ownSliders })).concat([Object.assign({}, at, { name: 'Own', ownSliders: true })]) })).toBe(0);
+  // Empty boards aren't added; the same with a slider each.
+  const slider = { canvasId: 'cProfit', nodeId: 'price', name: 'Price', periods: { mode: 'all' }, mode: 'set' };
+  expect(await g(page, (d) => fmGraph.importBoards(d), { kind: 'fmIDE-graph-board', version: 7,
+    boards: odd.map((ownSliders, i) => ({ name: 'Odd ' + i, ownSliders, sliders: [slider] })).concat([{ name: 'Own', ownSliders: true, sliders: [slider] }]) })).toBe(6);
+  const owns = [];
+  for(const name of ['Odd 0', 'Odd 1', 'Odd 2', 'Odd 3', 'Odd 4', 'Own']){ await g(page, (n) => fmGraph.showBoard(n), name); owns.push((await g(page, () => fmGraph.board())).ownSliders === true); }
+  expect(owns).toEqual([false, false, false, false, false, true]);
+  expect(pageErrors).toEqual([]);
 });

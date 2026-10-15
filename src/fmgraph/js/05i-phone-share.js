@@ -68,7 +68,7 @@ async function drawPicture(title, widgets){
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   const font = (size, weight) => { ctx.font = (weight || 400) + ' ' + size + 'px ' + PICTURE_FONT; };
-  const settings = (pinA ? 'Compared with ' + pinA.label + '. ' : '') + 'Sliders: ' + settingsLabel(board.sliders.map(sliderSetting)) + '.';
+  const settings = (pinA ? 'Compared with ' + pinA.label + '. ' : '') + 'Sliders: ' + settingsLabel(liveSliders().map(sliderSetting)) + '.';
   // Measured first (the canvas's size), then drawn.
   const layout = () => {
     const ops = [];

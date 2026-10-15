@@ -104,7 +104,7 @@ test('built with the mouse, kept after a reload and in the board file (version 4
   await sc.locator('input.chart-title').press('Enter');
   await page.waitForTimeout(600);
   const all = await g(page, () => fmGraph.exportBoards(true));
-  expect(all.version).toBe(6);
+  expect(all.version).toBe(7);
   const saved = all.boards[0].items.find(i => i.layout === 'scenarios');
   expect(saved).toMatchObject({ type: 'chart', layout: 'scenarios', title: 'Cases', period: 1 });
   expect(saved).not.toHaveProperty('scenarios'); // every scenario

@@ -104,6 +104,7 @@ function removeButton(id, what){
 
 function renderBoard(){
   rememberOpenEditors(); // (05b-chart-render.js)
+  syncShared(); // slider positions shared with other boards (03-calc.js)
   const bars = $('barList'), sliders = $('sliderList');
   bars.textContent = '';
   sliders.textContent = '';
@@ -121,6 +122,7 @@ function renderBoard(){
   $('noBars').classList.toggle('hidden', board.items.length > 0);
   $('noSliders').classList.toggle('hidden', board.sliders.length > 0);
   syncFoldAll(); // (05c-arrange.js)
+  renderSharing(); // (05c-arrange.js)
   renderTraceNote();
   renderScenarios(); // (05f-scenarios.js)
   updateValues();

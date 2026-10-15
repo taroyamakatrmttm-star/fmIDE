@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph: boards share where the sliders stand
+- Every board shares slider positions by default: a slider moved on one board moves the numbers on every sharing board, and a like slider there (same rectangle, periods and kind) stands in the same place. Each board still shows only its own sliders; "Also moved on other boards" names the others counting.
+- Untick "Share slider positions with other boards" (☰ on a phone) to give a board its own positions, as before; its tab is marked ◇. Kept with the board: the board file is now version 7 (`ownSliders`); version 6 files open with every board sharing.
+
 ## fmGraph: fold sliders, a Sliders column that stays on screen, dragging on an iPad
 - A slider folds (▾ / ▸) to its name, the slider and its number; Collapse all / Expand all beside the Sliders heading. Kept with the board: the board file is now version 6 (`folded` on a slider); version 5 files open with every slider unfolded.
 - On a wide screen the Sliders column stays beside the bars and charts as the page scrolls, and scrolls on its own when it is longer than the screen.

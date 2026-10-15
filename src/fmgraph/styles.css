@@ -63,6 +63,9 @@
   @media (min-width: 821px){
     body:not(.phone) .board > .board-col:first-child{ position:sticky; top:calc(var(--gbar-h, 52px) + 8px); max-height:calc(100vh - var(--gbar-h, 52px) - 16px); max-height:calc(100dvh - var(--gbar-h, 52px) - 16px); overflow-y:auto; overscroll-behavior:contain; padding:2px 6px 8px 2px; }
   }
+  .share-sliders{ display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--soft-ink); margin:-2px 0 8px; }
+  .shared-note{ font-size:12.5px; color:var(--soft-ink); margin:0 0 8px; padding:6px 8px; border-radius:8px; background:#eef6f5; }
+  .own-mark{ color:var(--soft-ink); font-size:11px; }
   .col-tool{ margin-left:auto; text-transform:none; letter-spacing:0; font-size:12.5px; }
   .col-head{ margin:0 0 8px; font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--soft-ink); display:flex; align-items:center; gap:8px; }
   .calc-note{ text-transform:none; letter-spacing:0; font-weight:400; font-size:12px; }

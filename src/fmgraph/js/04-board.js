@@ -1,6 +1,6 @@
 // ============================================================
 // The boards (G3a: several, as tabs, each a view of the model). A board:
-//   { id, name, items: [bar | chart, …] (in the order shown), sliders: [slider, …] }
+//   { id, name, items: [bar | chart, …] (in the order shown), sliders: [slider, …], ownSliders }
 //   bar    { id, kind: 'bar', key, periods, wide, colour, scale }
 //   chart  { id, kind: 'chart', wide, layout: 'columns' | 'flow' | 'scenarios', scale, … } (G2; 04b-charts.js)
 // scale: null for Auto, or { min, max } (04d-scale.js).
@@ -11,7 +11,8 @@
 //
 // A wide widget takes a whole row of the grid, a narrow one half of it (charts start wide,
 // bars narrow); colour is a bar's own colour (null: the usual one). A folded slider shows only
-// its name, track and number (board file 6; 05c-arrange.js).
+// its name, track and number (board file 6; 05c-arrange.js). ownSliders: the board keeps its own
+// slider positions instead of sharing them with the other boards (board file 7; 03-calc.js).
 //
 // The boards are remembered in this browser for each model (fmgraph-board-<signature>), and the
 // last ones used are kept too, so a model that has changed a little (a rectangle added in
@@ -114,6 +115,7 @@ function cleanBoard(raw, dropped){
   if(Array.isArray(raw.items)) items = raw.items.map(w => w && w.type === 'chart' ? chart(w) : w && w.type === 'bar' ? bar(w) : (drop(), null));
   else items = (Array.isArray(raw.charts) ? raw.charts.map(chart) : []).concat(Array.isArray(raw.bars) ? raw.bars.map(bar) : []); // G1, G2
   out.items = items.filter(Boolean).slice(0, BOARD_LIMIT * 2);
+  out.ownSliders = raw.ownSliders === true; // version 7
   (Array.isArray(raw.sliders) ? raw.sliders : []).slice(0, BOARD_LIMIT).forEach(s => {
     const rect = rectForEntry(s);
     if(!rect || !rect.input){ drop(); return; }
@@ -140,20 +142,20 @@ function cleanBoards(raw){
 // (`form: "template"`, 06c-template-boards.js); 3 adds the model's named scenarios
 // (`scenarios`, 05f-scenarios.js); 4 the scenario waterfall (a chart of layout `scenarios`,
 // 04b-charts.js); 5 a bar's or chart's fixed vertical scale (`scale`, 04d-scale.js); 6 a
-// folded slider (`folded`, 05c-arrange.js). The template form, which carries none of these,
-// stays version 2.
-const BOARD_FILE_VERSION = 6;
+// folded slider (`folded`, 05c-arrange.js); 7 a board keeping its own slider positions
+// (`ownSliders`, 03-calc.js). The template form, which carries none of these, stays version 2.
+const BOARD_FILE_VERSION = 7;
 const TEMPLATE_BOARD_VERSION = 2;
 function boardData(b){
   const at = (key) => { const r = model.byKey.get(key); return { canvasId: r.canvasId, nodeId: r.nodeId, name: r.name }; };
   const scaleOf = (w) => w.scale ? { scale: { min: w.scale.min, max: w.scale.max } } : {};
-  return {
+  return Object.assign({
     name: b.name,
     items: b.items.map(w => w.kind === 'bar'
       ? Object.assign({ type: 'bar' }, at(w.key), { periods: Object.assign({}, w.periods), wide: w.wide }, w.colour ? { colour: w.colour } : {}, scaleOf(w))
       : Object.assign({ type: 'chart', wide: w.wide }, chartData(w, at), scaleOf(w))),
     sliders: b.sliders.map(s => Object.assign(at(s.key), { periods: Object.assign({}, s.periods), mode: s.mode, min: s.min, max: s.max, step: s.step }, s.folded ? { folded: true } : {})),
-  };
+  }, b.ownSliders ? { ownSliders: true } : {});
 }
 // The file form of these boards (all, or the ones given).
 function boardsData(list){

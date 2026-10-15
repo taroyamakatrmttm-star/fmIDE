@@ -53,9 +53,9 @@ function findScenario(name){
   return s;
 }
 
-// Where the board's sliders are now (the moved ones).
+// Where the board's sliders are now (the moved ones; shared with other boards, or its own).
 function slidersNow(){
-  return board.sliders.filter(s => s.value !== null && isFinite(s.value)).map(s => ({ key: s.key, mode: s.mode, periods: Object.assign({}, s.periods), value: s.value }));
+  return liveSliders().filter(s => s.value !== null && isFinite(s.value)).map(s => ({ key: s.key, mode: s.mode, periods: Object.assign({}, s.periods), value: s.value }));
 }
 const settingKey = (s) => s.key + '|' + s.mode + '|' + JSON.stringify(s.periods);
 // Whether the board's sliders are exactly where the scenario had them.
@@ -115,7 +115,7 @@ function eachScenarioChart(fn){ boards.forEach(b => b.items.forEach(w => { if(w.
 // changes have no slider on this board.
 function showScenario(sc){
   const left = sc.settings.slice();
-  board.sliders.forEach(s => {
+  liveSliders().forEach(s => {
     const i = left.findIndex(o => settingKey(o) === settingKey(s));
     s.value = i >= 0 ? left.splice(i, 1)[0].value : null;
   });

@@ -73,6 +73,9 @@
   @media (min-width: 821px){
     body:not(.phone) .board > .board-col:first-child{ position:sticky; top:calc(var(--gbar-h, 52px) + 8px); max-height:calc(100vh - var(--gbar-h, 52px) - 16px); max-height:calc(100dvh - var(--gbar-h, 52px) - 16px); overflow-y:auto; overscroll-behavior:contain; padding:2px 6px 8px 2px; }
   }
+  .share-sliders{ display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--soft-ink); margin:-2px 0 8px; }
+  .shared-note{ font-size:12.5px; color:var(--soft-ink); margin:0 0 8px; padding:6px 8px; border-radius:8px; background:#eef6f5; }
+  .own-mark{ color:var(--soft-ink); font-size:11px; }
   .col-tool{ margin-left:auto; text-transform:none; letter-spacing:0; font-size:12.5px; }
   .col-head{ margin:0 0 8px; font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--soft-ink); display:flex; align-items:center; gap:8px; }
   .calc-note{ text-transform:none; letter-spacing:0; font-weight:400; font-size:12px; }
@@ -602,6 +605,8 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   <section id="board" class="board hidden">
     <div class="board-col">
       <h2 class="col-head">Sliders <button type="button" id="btnFoldSliders" class="link-btn col-tool hidden">Collapse all</button></h2>
+      <label id="shareSlidersRow" class="share-sliders hidden" title="Ticked: the sliders stand in the same place on every board that shares, and a slider moved on another board moves this board's numbers too. Unticked: this board keeps its own positions."><input type="checkbox" id="shareSliders" checked> Share slider positions with other boards</label>
+      <p id="sharedNote" class="shared-note hidden"></p>
       <div id="sliderList" class="widget-list"></div>
       <p id="noSliders" class="empty-note">No sliders yet: <button type="button" class="link-btn" data-add="slider">+ Slider</button></p>
       <details id="scenariosPanel" class="scenarios" open>
@@ -648,6 +653,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   <button type="button" role="menuitem" id="phoneFromFmide" class="hidden">↻ From fmIDE</button>
   <button type="button" role="menuitem" id="phoneReset" class="needs-model">⟲ Reset all sliders</button>
   <button type="button" role="menuitem" id="phonePin" class="needs-model">📌 Pin as A</button>
+  <button type="button" role="menuitemcheckbox" id="phoneShareSliders" class="needs-model hidden" aria-checked="true">Share slider positions with other boards: On</button>
   <button type="button" role="menuitem" id="phoneScenarios" class="needs-model">Scenarios</button>
   <button type="button" role="menuitem" id="phoneMovers" class="needs-model">Biggest movers</button>
   <div class="phone-menu-row">
@@ -3222,6 +3228,7 @@ async function loadModel(system, name, opts){
   trying = opts && opts.trial ? opts.trial : null; // G5c (06e-trial.js)
   practiceStart = opts && opts.practice ? opts.practice : null; // G6 (07b-tutorials.js)
   clearResultCache();
+  resetSharedValues(); // (03-calc.js)
   pinA = null; forgetGeometry(); renderCompareBar(); // a new model: no A, nothing to glide from (05e-compare.js)
   m.templateSources = cleanTemplateSources(opts && opts.templates); // its templates' boards (06d-template-sources.js)
   await loadBoardFor(m, opts && opts.boards);
@@ -3375,9 +3382,74 @@ function resultsWith(overrides){
   }
 }
 
+// ---- shared slider positions (the owner's request, 15 October 2026) ----
+// Every board shares where its sliders stand with the other sharing boards, unless it keeps
+// its own (`ownSliders`, board file 7; the tick box under the Sliders heading). Which sliders a
+// board shows stays its own. Sliders are the same when their rectangle, periods and kind are
+// (settingKey). A slider moved on one sharing board moves its like on the others, and counts
+// on every sharing board, with a slider there or not. sharedValues holds the positions;
+// syncShared, before each drawing, takes in what moved since (any of the sharing boards'
+// sliders whose value is not what it was given) and gives every sharing slider its position. A
+// slider new to sharing (added, changed, or its board just switched to sharing) takes the
+// shared position rather than giving its own.
+let sharedValues = new Map(); // settingKey → value
+function resetSharedValues(){ sharedValues = new Map(); }
+function sharingBoards(){ return boards.filter(b => !b.ownSliders); }
+function syncShared(){
+  if(!model) return;
+  const list = sharingBoards().flatMap(b => b.sliders);
+  list.forEach(s => {
+    const k = settingKey(s);
+    if(s._sharedKey !== k) return; // new to sharing: takes the shared position below
+    if(s.value === s._sharedValue) return;
+    if(s.value === null || !isFinite(s.value)) sharedValues.delete(k); else sharedValues.set(k, s.value);
+  });
+  const present = new Set(list.map(settingKey));
+  [...sharedValues.keys()].forEach(k => { if(!present.has(k)) sharedValues.delete(k); }); // no slider left: it no longer counts
+  list.forEach(s => {
+    const k = settingKey(s);
+    s.value = sharedValues.has(k) ? sharedValues.get(k) : null;
+    s._sharedKey = k;
+    s._sharedValue = s.value;
+  });
+}
+// The sliders whose positions count on board b: its own when it keeps them; else every sharing
+// board's, in tab order, a setting given by an earlier board left out of the later ones.
+function liveSliders(b){
+  b = b || board;
+  if(!b) return [];
+  if(b.ownSliders) return b.sliders;
+  syncShared();
+  const out = [], seen = new Set();
+  sharingBoards().forEach(x => {
+    const mine = [];
+    x.sliders.forEach(s => { const k = settingKey(s); if(!seen.has(k)){ out.push(s); mine.push(k); } });
+    mine.forEach(k => seen.add(k));
+  });
+  return out;
+}
+// The moved sliders counting on this board that are on other boards (for the note under the
+// Sliders heading), one per setting.
+function slidersFromOtherBoards(){
+  if(!board || board.ownSliders) return [];
+  const here = new Set(board.sliders.map(settingKey));
+  return liveSliders().filter(s => !here.has(settingKey(s)) && s.value !== null && isFinite(s.value));
+}
+// Keep this board's own positions (on), or share them (off: it takes the shared positions).
+function setOwnSliders(b, on){
+  on = !!on;
+  if(!!b.ownSliders === on) return false;
+  syncShared(); // what moved so far is shared before the board leaves or joins
+  b.ownSliders = on;
+  b.sliders.forEach(s => { delete s._sharedKey; delete s._sharedValue; });
+  saveBoardSoon();
+  renderAll();
+  return true;
+}
+
 // While a finger holds A (05h-phone-show.js), the numbers looked at instead of the sliders'.
 let lookingAt = null;
-function currentResults(){ return resultsWith(lookingAt ? lookingAt.overrides : overridesFor(board.sliders)); }
+function currentResults(){ return resultsWith(lookingAt ? lookingAt.overrides : overridesFor(liveSliders())); }
 
 // The positions a slider snaps to.
 function sliderSteps(s){
@@ -3398,7 +3470,7 @@ function workOutAhead(s){
   const steps = sliderSteps(s);
   if(!steps) return;
   const job = ++aheadJob;
-  const others = board.sliders;
+  const others = liveSliders(), sk = settingKey(s);
   const todo = steps.slice();
   setCalcNote('Working out this slider\'s steps…');
   const piece = () => {
@@ -3406,7 +3478,7 @@ function workOutAhead(s){
     const until = performance.now() + 30;
     while(todo.length && performance.now() < until){
       const v = todo.shift();
-      resultsWith(overridesFor(others.map(o => o === s ? Object.assign({}, o, { value: v }) : o)));
+      resultsWith(overridesFor(others.map(o => settingKey(o) === sk ? Object.assign({}, o, { value: v }) : o)));
     }
     if(todo.length) setTimeout(piece, 0);
     else setCalcNote('');
@@ -3417,7 +3489,7 @@ function workOutAhead(s){
 function setCalcNote(text){ const el = $('calcNote'); if(el) el.textContent = text; }
 // ============================================================
 // The boards (G3a: several, as tabs, each a view of the model). A board:
-//   { id, name, items: [bar | chart, …] (in the order shown), sliders: [slider, …] }
+//   { id, name, items: [bar | chart, …] (in the order shown), sliders: [slider, …], ownSliders }
 //   bar    { id, kind: 'bar', key, periods, wide, colour, scale }
 //   chart  { id, kind: 'chart', wide, layout: 'columns' | 'flow' | 'scenarios', scale, … } (G2; 04b-charts.js)
 // scale: null for Auto, or { min, max } (04d-scale.js).
@@ -3428,7 +3500,8 @@ function setCalcNote(text){ const el = $('calcNote'); if(el) el.textContent = te
 //
 // A wide widget takes a whole row of the grid, a narrow one half of it (charts start wide,
 // bars narrow); colour is a bar's own colour (null: the usual one). A folded slider shows only
-// its name, track and number (board file 6; 05c-arrange.js).
+// its name, track and number (board file 6; 05c-arrange.js). ownSliders: the board keeps its own
+// slider positions instead of sharing them with the other boards (board file 7; 03-calc.js).
 //
 // The boards are remembered in this browser for each model (fmgraph-board-<signature>), and the
 // last ones used are kept too, so a model that has changed a little (a rectangle added in
@@ -3531,6 +3604,7 @@ function cleanBoard(raw, dropped){
   if(Array.isArray(raw.items)) items = raw.items.map(w => w && w.type === 'chart' ? chart(w) : w && w.type === 'bar' ? bar(w) : (drop(), null));
   else items = (Array.isArray(raw.charts) ? raw.charts.map(chart) : []).concat(Array.isArray(raw.bars) ? raw.bars.map(bar) : []); // G1, G2
   out.items = items.filter(Boolean).slice(0, BOARD_LIMIT * 2);
+  out.ownSliders = raw.ownSliders === true; // version 7
   (Array.isArray(raw.sliders) ? raw.sliders : []).slice(0, BOARD_LIMIT).forEach(s => {
     const rect = rectForEntry(s);
     if(!rect || !rect.input){ drop(); return; }
@@ -3557,20 +3631,20 @@ function cleanBoards(raw){
 // (`form: "template"`, 06c-template-boards.js); 3 adds the model's named scenarios
 // (`scenarios`, 05f-scenarios.js); 4 the scenario waterfall (a chart of layout `scenarios`,
 // 04b-charts.js); 5 a bar's or chart's fixed vertical scale (`scale`, 04d-scale.js); 6 a
-// folded slider (`folded`, 05c-arrange.js). The template form, which carries none of these,
-// stays version 2.
-const BOARD_FILE_VERSION = 6;
+// folded slider (`folded`, 05c-arrange.js); 7 a board keeping its own slider positions
+// (`ownSliders`, 03-calc.js). The template form, which carries none of these, stays version 2.
+const BOARD_FILE_VERSION = 7;
 const TEMPLATE_BOARD_VERSION = 2;
 function boardData(b){
   const at = (key) => { const r = model.byKey.get(key); return { canvasId: r.canvasId, nodeId: r.nodeId, name: r.name }; };
   const scaleOf = (w) => w.scale ? { scale: { min: w.scale.min, max: w.scale.max } } : {};
-  return {
+  return Object.assign({
     name: b.name,
     items: b.items.map(w => w.kind === 'bar'
       ? Object.assign({ type: 'bar' }, at(w.key), { periods: Object.assign({}, w.periods), wide: w.wide }, w.colour ? { colour: w.colour } : {}, scaleOf(w))
       : Object.assign({ type: 'chart', wide: w.wide }, chartData(w, at), scaleOf(w))),
     sliders: b.sliders.map(s => Object.assign(at(s.key), { periods: Object.assign({}, s.periods), mode: s.mode, min: s.min, max: s.max, step: s.step }, s.folded ? { folded: true } : {})),
-  };
+  }, b.ownSliders ? { ownSliders: true } : {});
 }
 // The file form of these boards (all, or the ones given).
 function boardsData(list){
@@ -4164,6 +4238,7 @@ function removeButton(id, what){
 
 function renderBoard(){
   rememberOpenEditors(); // (05b-chart-render.js)
+  syncShared(); // slider positions shared with other boards (03-calc.js)
   const bars = $('barList'), sliders = $('sliderList');
   bars.textContent = '';
   sliders.textContent = '';
@@ -4181,6 +4256,7 @@ function renderBoard(){
   $('noBars').classList.toggle('hidden', board.items.length > 0);
   $('noSliders').classList.toggle('hidden', board.sliders.length > 0);
   syncFoldAll(); // (05c-arrange.js)
+  renderSharing(); // (05c-arrange.js)
   renderTraceNote();
   renderScenarios(); // (05f-scenarios.js)
   updateValues();
@@ -4915,6 +4991,12 @@ function renderTabs(){
   if(!model) return;
   boards.forEach((b, i) => {
     const t = make('button', 'board-tab' + (b === board ? ' active' : ''), b.name);
+    if(b.ownSliders && boards.length > 1){ // keeps its own slider positions (03-calc.js)
+      const mark = make('span', 'own-mark', ' ◇');
+      mark.title = 'Keeps its own slider positions';
+      t.appendChild(mark);
+      t.title = 'Keeps its own slider positions';
+    }
     t.type = 'button';
     t.setAttribute('role', 'tab');
     t.setAttribute('aria-selected', b === board ? 'true' : 'false');
@@ -5095,6 +5177,26 @@ function syncFoldAll(){
   b.title = fold ? 'Show every slider as its name, track and number only' : 'Show all of every slider\'s settings';
 }
 $('btnFoldSliders').addEventListener('click', () => { if(board) setFolded(board.sliders, board.sliders.some(s => !s.folded)); });
+// ---- shared slider positions (03-calc.js) ----
+// The tick box under the Sliders heading (with two boards or more), and the note naming the
+// moved sliders on other boards that count here too; on a phone, the ☰ menu's switch.
+function renderSharing(){
+  const several = !!model && boards.length > 1;
+  const shares = several && !board.ownSliders;
+  $('shareSlidersRow').classList.toggle('hidden', !several);
+  $('shareSliders').checked = !board || !board.ownSliders;
+  const item = $('phoneShareSliders');
+  item.classList.toggle('hidden', !several);
+  item.setAttribute('aria-checked', shares ? 'true' : 'false');
+  item.textContent = 'Share slider positions with other boards: ' + (shares ? 'On' : 'Off');
+  const note = $('sharedNote');
+  const others = shares ? slidersFromOtherBoards() : [];
+  note.classList.toggle('hidden', !others.length);
+  note.textContent = others.length ? 'Also moved on other boards: ' + settingsLabel(others.map(sliderSetting)) + '.' : '';
+}
+$('shareSliders').addEventListener('change', () => { if(board) setOwnSliders(board, !$('shareSliders').checked); });
+$('phoneShareSliders').addEventListener('click', () => { closePhoneMenu(); if(board) setOwnSliders(board, !board.ownSliders); });
+
 // The top bar's height (--gbar-h), for the Sliders column that stays on screen under it.
 if(window.ResizeObserver) new ResizeObserver(() => document.body.style.setProperty('--gbar-h', document.querySelector('.gbar').offsetHeight + 'px')).observe(document.querySelector('.gbar'));
 // ============================================================
@@ -5329,8 +5431,9 @@ function settingsLabel(list){
 
 function pinAsA(){
   if(!model) return null;
-  const sliders = board.sliders.map(sliderSetting);
-  pinA = { overrides: overridesFor(board.sliders), sliders, label: settingsLabel(sliders) };
+  const live = liveSliders(); // shared with other boards, or this board's own (03-calc.js)
+  const sliders = live.map(sliderSetting);
+  pinA = { overrides: overridesFor(live), sliders, label: settingsLabel(sliders) };
   renderCompareBar();
   updateValues();
   return pinA.label;
@@ -5346,7 +5449,7 @@ function swapWithA(){
   if(!pinA || !model) return null;
   const old = pinA.sliders.slice();
   pinAsA();
-  board.sliders.forEach(s => {
+  liveSliders().forEach(s => {
     const me = sliderSetting(s);
     const i = old.findIndex(o => o.key === me.key && o.mode === me.mode && o.periods === me.periods);
     s.value = i >= 0 ? old.splice(i, 1)[0].value : null;
@@ -5459,9 +5562,9 @@ function findScenario(name){
   return s;
 }
 
-// Where the board's sliders are now (the moved ones).
+// Where the board's sliders are now (the moved ones; shared with other boards, or its own).
 function slidersNow(){
-  return board.sliders.filter(s => s.value !== null && isFinite(s.value)).map(s => ({ key: s.key, mode: s.mode, periods: Object.assign({}, s.periods), value: s.value }));
+  return liveSliders().filter(s => s.value !== null && isFinite(s.value)).map(s => ({ key: s.key, mode: s.mode, periods: Object.assign({}, s.periods), value: s.value }));
 }
 const settingKey = (s) => s.key + '|' + s.mode + '|' + JSON.stringify(s.periods);
 // Whether the board's sliders are exactly where the scenario had them.
@@ -5521,7 +5624,7 @@ function eachScenarioChart(fn){ boards.forEach(b => b.items.forEach(w => { if(w.
 // changes have no slider on this board.
 function showScenario(sc){
   const left = sc.settings.slice();
-  board.sliders.forEach(s => {
+  liveSliders().forEach(s => {
     const i = left.findIndex(o => settingKey(o) === settingKey(s));
     s.value = i >= 0 ? left.splice(i, 1)[0].value : null;
   });
@@ -6619,7 +6722,7 @@ async function drawPicture(title, widgets){
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   const font = (size, weight) => { ctx.font = (weight || 400) + ' ' + size + 'px ' + PICTURE_FONT; };
-  const settings = (pinA ? 'Compared with ' + pinA.label + '. ' : '') + 'Sliders: ' + settingsLabel(board.sliders.map(sliderSetting)) + '.';
+  const settings = (pinA ? 'Compared with ' + pinA.label + '. ' : '') + 'Sliders: ' + settingsLabel(liveSliders().map(sliderSetting)) + '.';
   // Measured first (the canvas's size), then drawn.
   const layout = () => {
     const ops = [];
@@ -6843,7 +6946,7 @@ $('btnAddSlider').addEventListener('click', () => {
   if(addSlider()) renderBoard();
 });
 document.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', () => $({ bar: 'btnAddBar', chart: 'btnAddChart', slider: 'btnAddSlider' }[b.dataset.add]).click()));
-$('btnResetAll').addEventListener('click', () => { if(!model) return; board.sliders.forEach(s => { s.value = null; }); renderBoard(); });
+$('btnResetAll').addEventListener('click', () => { if(!model) return; liveSliders().forEach(s => { s.value = null; }); renderBoard(); });
 window.addEventListener('pagehide', () => { if(saveTimer) saveBoardNow(); if(sendTimer) sendBoardsToFmide(); });
 
 // ---- fmIDE ----
@@ -6952,8 +7055,8 @@ const BOARD_FILE_FORMAT = { 'fmIDE-graph-board': { current: BOARD_FILE_VERSION, 
 // v1 → v2: a board file may be in the template form (G5a); a v1 file is boards for one model.
 // v2 → v3: boards for one model may carry the model's named scenarios; v3 → v4: a chart may be a
 // scenario waterfall; v4 → v5: a bar or chart may have a fixed vertical scale; v5 → v6: a slider
-// may be folded. Nothing to change.
-const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {}, 5: () => {} } };
+// may be folded; v6 → v7: a board may keep its own slider positions. Nothing to change.
+const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {}, 5: () => {}, 6: () => {} } };
 
 function safeFileName(s){ return String(s).replace(/[^A-Za-z0-9 ._()-]+/g, '_').replace(/\s+/g, ' ').trim().slice(0, 80) || 'board'; }
 
@@ -8027,13 +8130,14 @@ const FMGRAPH_HELP_TOPICS = [
       { see: ['bars', 'charts'] },
     ] },
   { id: 'sliders', group: 'board', title: 'Sliders',
-    keywords: 'slider input change set percent shift range step reset what if fold collapse expand',
+    keywords: 'slider input change set percent shift range step reset what if fold collapse expand share shared boards own positions linked',
     summary: 'Change an input rectangle and watch the bars move.',
     body: [
       { p: 'A slider changes an input rectangle: one with no arrow into it (or only one from an operator that nothing feeds). It can set the input to a number, or change it by a percentage, in all periods, one period or a range of periods.' },
       { p: 'Drag the slider, use the arrow keys, or type a number in the box beside it. The slider stops at its steps; Range and step changes where it starts, ends and stops.' },
       { p: 'Reset puts one slider back to the model\'s own number; Reset all at the top puts every slider back.' },
       { p: '▾ folds a slider to its name, the slider and its number, so many fit on the screen; ▸ shows all its settings again. Collapse all and Expand all sit beside the Sliders heading. Folding is kept with the board. On a wide screen the Sliders column stays beside the bars and charts as the page scrolls, and scrolls by itself when it is longer than the screen.' },
+      { p: 'With several boards, the boards share where the sliders stand: move Price on one board and every board that shares shows its numbers with that price, whether it has a Price slider or not ("Also moved on other boards" under the Sliders heading names the ones it hasn\'t). A like slider on another board — the same rectangle, periods and kind — stands in the same place. Each board still shows only its own sliders. Untick "Share slider positions with other boards" to give a board its own positions, as on a separate sheet; its tab is marked ◇. Ticking it again takes the shared positions.' },
       { steps: ['Press + Slider at the top.', 'Choose an input rectangle.', 'Choose the periods and whether to set the number or change it by %.', 'Move the slider.'] },
       { tip: 'Two sliders on the same input apply one after the other: a change by % applies to what the slider above it left.' },
       { see: ['reach', 'speed'] },
@@ -8176,6 +8280,18 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'shared-sliders', date: '2026-10-15', title: 'Boards share where the sliders stand',
+    summary: 'Move a slider on one board and every other board shows its effect; a board can keep its own positions instead.',
+    what: [
+      'Boards now share slider positions. Move Capex on the balance sheet board and the income statement board shows the same "what if", even with no Capex slider of its own; "Also moved on other boards" under its Sliders heading says which.',
+      'Each board still shows only the sliders you put on it. A like slider on two boards (same rectangle, periods and kind) stands in the same place on both.',
+      'Untick "Share slider positions with other boards" to give a board its own positions, as before; its tab is marked ◇. Reset all, scenarios and 📌 Pin as A take the shared sliders on a sharing board, its own on the others.',
+    ],
+    why: 'Boards are usually views of one model — a balance sheet, an income statement — and a change made on one should show on all of them.',
+    how: ['Add a second board, move a slider on the first, then switch tabs.', 'On a phone: ☰ → Share slider positions with other boards.'],
+    notes: ['Whether a board shares is kept with the board, in board files and fmIDE\'s documents (board file version 7; older files open with every board sharing). Slider positions themselves are still not saved: save a scenario to keep them.'],
+    see: ['sliders'] },
+
   { id: 'fold-sliders', date: '2026-10-13', title: 'Fold sliders, keep them on screen, move them on an iPad',
     summary: 'Fold a slider to one slim card, keep the Sliders column beside the charts, and drag sliders by finger on an iPad.',
     what: [
@@ -8793,10 +8909,13 @@ window.fmGraph = Object.freeze({
     renderBoard();
   },
   resetSlider: (id) => { sliderById(id).value = null; renderBoard(); },
-  resetAll: () => { board.sliders.forEach(s => { s.value = null; }); renderBoard(); },
+  resetAll: () => { liveSliders().forEach(s => { s.value = null; }); renderBoard(); },
+  // Whether the board shown keeps its own slider positions (true) or shares them (false).
+  setOwnSliders: (on) => { if(!model) throw new Error('Open a model first.'); setOwnSliders(board, !!on); return !!board.ownSliders; },
   remove: (id) => { removeWidget(id); renderBoard(); },
   board: () => {
     if(!model) return null;
+    syncShared(); // (03-calc.js)
     const d = boardData(board);
     d.items.forEach((w, i) => { w.id = board.items[i].id; });
     d.sliders.forEach((s, i) => { s.id = board.sliders[i].id; s.value = board.sliders[i].value; });
