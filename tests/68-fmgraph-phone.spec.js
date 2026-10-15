@@ -434,6 +434,19 @@ test('holding a bar: its quick look — every period, now and the model\'s, Trac
   await phone.done();
 });
 
+// What fmGraph keeps for ☰ → Full app ('1', '' or null), read from its browser storage.
+const fullAppKept = (page) => page.evaluate(() => new Promise((resolve) => {
+  const req = indexedDB.open('fmGraph');
+  req.onsuccess = () => {
+    const db = req.result;
+    if(!db.objectStoreNames.contains('kv')){ db.close(); resolve(null); return; }
+    const get = db.transaction('kv').objectStore('kv').get('fmgraph-full-app');
+    get.onsuccess = () => { db.close(); resolve(get.result === undefined ? null : get.result); };
+    get.onerror = () => { db.close(); resolve(null); };
+  };
+  req.onerror = () => resolve(null);
+}));
+
 test('☰: Reset, Pin as A, Help without tutorials, Full app and back (kept)', async ({ browser }) => {
   const phone = await openPhone(browser);
   const p = phone.page;
@@ -463,12 +476,14 @@ test('☰: Reset, Pin as A, Help without tutorials, Full app and back (kept)', a
   await expect(p.locator('.slider-widget')).toHaveCount(2);
   await expect(p.locator('#sliderDock')).toBeHidden();
   await expect(p.locator('#btnPhoneLayout')).toBeVisible();
+  await expect.poll(() => fullAppKept(p)).toBe('1'); // kept in the browser before the reload (the write is not instant)
   await p.reload();
   await p.waitForFunction(() => !!window.fmGraph);
   await expect(p.locator('#btnPhoneLayout')).toBeVisible();
   await expect(p.locator('body')).not.toHaveClass(/(^| )phone( |$)/);
   await phone.tapOn(p.locator('#btnPhoneLayout'));
   await expect(p.locator('body')).toHaveClass(/(^| )phone( |$)/);
+  await expect.poll(() => fullAppKept(p)).toBe('');
   await p.reload();
   await p.waitForFunction(() => !!window.fmGraph);
   await expect(p.locator('body')).toHaveClass(/(^| )phone( |$)/);
