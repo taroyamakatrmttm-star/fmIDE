@@ -79,6 +79,10 @@ test('A holds on another board and through undo, is not an undo step, and goes w
   await page.locator('#boardTabs .board-tool', { hasText: '+ Board' }).click();
   await expect(page.locator('#compareBar')).toBeVisible();
   await g(page, () => fmGraph.addBar('Profit'));
+  // The boards share slider positions: Price is at 13 here too, the same as A…
+  await expect(profitBar(page).locator('.t-diff')).toHaveCount(0);
+  // …and back on the model's own numbers (Reset all is no undo step), A still compares.
+  await g(page, () => fmGraph.resetAll());
   await expect(profitBar(page).locator('.t-diff')).toHaveText(['−3,000', '−3,300', '−3,600', '−3,900']);
   // Undo (the bar, then the board): still comparing.
   await page.click('#btnUndo');

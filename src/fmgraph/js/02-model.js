@@ -127,6 +127,7 @@ async function loadModel(system, name, opts){
   trying = opts && opts.trial ? opts.trial : null; // G5c (06e-trial.js)
   practiceStart = opts && opts.practice ? opts.practice : null; // G6 (07b-tutorials.js)
   clearResultCache();
+  resetSharedValues(); // (03-calc.js)
   pinA = null; forgetGeometry(); renderCompareBar(); // a new model: no A, nothing to glide from (05e-compare.js)
   m.templateSources = cleanTemplateSources(opts && opts.templates); // its templates' boards (06d-template-sources.js)
   await loadBoardFor(m, opts && opts.boards);

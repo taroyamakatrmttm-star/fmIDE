@@ -225,6 +225,16 @@ The owner's request (13 October 2026, from an iPad): the ⠿ handle didn't drag,
 - **The iPad drag**: the handle already had `touch-action: none`, which Chrome honours; Safari on an iPad still scrolled the page and cancelled the drag. The handle now stops a finger's `touchmove` itself (a non-passive listener) and can't be selected or dragged by the browser (`user-select`, `-webkit-touch-callout`, `-webkit-user-drag`). The tests run Chrome only, so this is for the owner to check on an iPad; the suite checks that the handle stops the move.
 - Tests: group 49 (folding, the version 5 sample `tests/fixtures/formats/board-v5.json`, the column, a slider dragged by finger and the handle's `touchmove` stopped). Groups 49, 56, 57 and 73 now expect version 6 from Export.
 
+### Shared slider positions (after step 15)
+
+The owner's request (15 October 2026): boards share the state of the sliders by default, not which sliders are shown; a board can keep its own. Chosen: a slider moved on one board counts on every sharing board, shown there or not (1a); switching to own keeps the positions shown, back to sharing takes the shared ones (2a).
+
+- **The rule** (`03-calc.js`): two sliders are alike when their rectangle, periods and kind are (`settingKey`). `sharedValues` holds the sharing boards' positions; `syncShared`, before each drawing (and in `liveSliders`), takes in any sharing slider whose value is not what it was last given, drops settings no sharing board has a slider for, and gives every sharing slider its position. A slider new to sharing (added, its setting changed, its board just switched to sharing, every slider after undo or import) takes the shared position. Every way a slider moves (the track, the box, Reset, a scenario, Swap, the dock, the mixer, `window.fmGraph`) needs nothing more.
+- **What counts on a board**: `liveSliders(board)` — its own sliders when it keeps them, else every sharing board's in tab order (a setting given by an earlier board left out of later ones). The calculation, Work out ahead, Reset all, scenarios (saved and shown), Pin as A, Swap and Share's words use it. `#sharedNote` names the moved ones on other boards (`slidersFromOtherBoards`).
+- **The switch**: the tick box `#shareSliders` under the Sliders heading, with two boards or more; ☰ → `#phoneShareSliders`; `.own-mark` ◇ on an own board's tab; `setOwnSliders(board, on)`, one undo step; `fmGraph.setOwnSliders(on)`.
+- **Kept**: board file version 7, `ownSliders: true` (absent when sharing; anything but `true` shares; the upgrade from 6 changes nothing; never in the template form). Positions are still never saved.
+- Tests: group 49 (sharing, own positions, scenarios and Pin as A, the version 6 sample `tests/fixtures/formats/board-v6.json`). Groups 49, 56, 57 and 73 now expect version 7 from Export; group 49's "newer version" file is 8. Groups 52 (A on another board) and 56 (a scenario shown on a board with only a Price slider) now meet a sharing board first, as the default, and check the old meaning on Reset all or an own board.
+
 ## Risks
 
 - **Scope creep** into a full dashboard tool — kept to a lens.

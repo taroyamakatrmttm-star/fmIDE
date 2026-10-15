@@ -8,6 +8,18 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'shared-sliders', date: '2026-10-15', title: 'Boards share where the sliders stand',
+    summary: 'Move a slider on one board and every other board shows its effect; a board can keep its own positions instead.',
+    what: [
+      'Boards now share slider positions. Move Capex on the balance sheet board and the income statement board shows the same "what if", even with no Capex slider of its own; "Also moved on other boards" under its Sliders heading says which.',
+      'Each board still shows only the sliders you put on it. A like slider on two boards (same rectangle, periods and kind) stands in the same place on both.',
+      'Untick "Share slider positions with other boards" to give a board its own positions, as before; its tab is marked ◇. Reset all, scenarios and 📌 Pin as A take the shared sliders on a sharing board, its own on the others.',
+    ],
+    why: 'Boards are usually views of one model — a balance sheet, an income statement — and a change made on one should show on all of them.',
+    how: ['Add a second board, move a slider on the first, then switch tabs.', 'On a phone: ☰ → Share slider positions with other boards.'],
+    notes: ['Whether a board shares is kept with the board, in board files and fmIDE\'s documents (board file version 7; older files open with every board sharing). Slider positions themselves are still not saved: save a scenario to keep them.'],
+    see: ['sliders'] },
+
   { id: 'fold-sliders', date: '2026-10-13', title: 'Fold sliders, keep them on screen, move them on an iPad',
     summary: 'Fold a slider to one slim card, keep the Sliders column beside the charts, and drag sliders by finger on an iPad.',
     what: [

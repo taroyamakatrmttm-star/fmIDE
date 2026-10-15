@@ -19,6 +19,12 @@ function renderTabs(){
   if(!model) return;
   boards.forEach((b, i) => {
     const t = make('button', 'board-tab' + (b === board ? ' active' : ''), b.name);
+    if(b.ownSliders && boards.length > 1){ // keeps its own slider positions (03-calc.js)
+      const mark = make('span', 'own-mark', ' ◇');
+      mark.title = 'Keeps its own slider positions';
+      t.appendChild(mark);
+      t.title = 'Keeps its own slider positions';
+    }
     t.type = 'button';
     t.setAttribute('role', 'tab');
     t.setAttribute('aria-selected', b === board ? 'true' : 'false');
@@ -199,5 +205,25 @@ function syncFoldAll(){
   b.title = fold ? 'Show every slider as its name, track and number only' : 'Show all of every slider\'s settings';
 }
 $('btnFoldSliders').addEventListener('click', () => { if(board) setFolded(board.sliders, board.sliders.some(s => !s.folded)); });
+// ---- shared slider positions (03-calc.js) ----
+// The tick box under the Sliders heading (with two boards or more), and the note naming the
+// moved sliders on other boards that count here too; on a phone, the ☰ menu's switch.
+function renderSharing(){
+  const several = !!model && boards.length > 1;
+  const shares = several && !board.ownSliders;
+  $('shareSlidersRow').classList.toggle('hidden', !several);
+  $('shareSliders').checked = !board || !board.ownSliders;
+  const item = $('phoneShareSliders');
+  item.classList.toggle('hidden', !several);
+  item.setAttribute('aria-checked', shares ? 'true' : 'false');
+  item.textContent = 'Share slider positions with other boards: ' + (shares ? 'On' : 'Off');
+  const note = $('sharedNote');
+  const others = shares ? slidersFromOtherBoards() : [];
+  note.classList.toggle('hidden', !others.length);
+  note.textContent = others.length ? 'Also moved on other boards: ' + settingsLabel(others.map(sliderSetting)) + '.' : '';
+}
+$('shareSliders').addEventListener('change', () => { if(board) setOwnSliders(board, !$('shareSliders').checked); });
+$('phoneShareSliders').addEventListener('click', () => { closePhoneMenu(); if(board) setOwnSliders(board, !board.ownSliders); });
+
 // The top bar's height (--gbar-h), for the Sliders column that stays on screen under it.
 if(window.ResizeObserver) new ResizeObserver(() => document.body.style.setProperty('--gbar-h', document.querySelector('.gbar').offsetHeight + 'px')).observe(document.querySelector('.gbar'));

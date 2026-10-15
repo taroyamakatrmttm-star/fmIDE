@@ -132,7 +132,7 @@ $('btnAddSlider').addEventListener('click', () => {
   if(addSlider()) renderBoard();
 });
 document.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', () => $({ bar: 'btnAddBar', chart: 'btnAddChart', slider: 'btnAddSlider' }[b.dataset.add]).click()));
-$('btnResetAll').addEventListener('click', () => { if(!model) return; board.sliders.forEach(s => { s.value = null; }); renderBoard(); });
+$('btnResetAll').addEventListener('click', () => { if(!model) return; liveSliders().forEach(s => { s.value = null; }); renderBoard(); });
 window.addEventListener('pagehide', () => { if(saveTimer) saveBoardNow(); if(sendTimer) sendBoardsToFmide(); });
 
 // ---- fmIDE ----
