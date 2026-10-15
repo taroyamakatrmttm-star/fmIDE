@@ -1,0 +1,142 @@
+{
+ "kind": "fmIDE-graph-board",
+ "version": 7,
+ "boards": [
+  {
+   "name": "<img src=x onerror=alert(1)>",
+   "items": [],
+   "sliders": []
+  }
+ ],
+ "scenarios": [
+  {
+   "name": "<b>Bold</b> & co",
+   "sliders": [
+    {
+     "canvasId": "cProfit",
+     "nodeId": "price",
+     "name": "Price",
+     "mode": "set",
+     "periods": {
+      "mode": "all"
+     },
+     "value": 11
+    }
+   ]
+  },
+  {
+   "name": "=HYPERLINK(\"http://example.com\",\"x\")",
+   "sliders": [
+    {
+     "canvasId": "cProfit",
+     "nodeId": "volume",
+     "name": "  VOLUME ",
+     "mode": "set",
+     "periods": {
+      "mode": "all"
+     },
+     "value": "450"
+    }
+   ]
+  },
+  {
+   "name": "Strangers",
+   "sliders": [
+    {
+     "canvasId": "cProfit",
+     "nodeId": "price",
+     "name": "Not price",
+     "mode": "set",
+     "periods": {
+      "mode": "all"
+     },
+     "value": 11
+    },
+    {
+     "canvasId": "cBonus",
+     "nodeId": "rate",
+     "name": "Bonus rate",
+     "mode": "set",
+     "periods": {
+      "mode": "all"
+     },
+     "value": 0.2
+    },
+    {
+     "canvasId": "cProfit",
+     "nodeId": "revenue",
+     "name": "Revenue",
+     "mode": "set",
+     "periods": {
+      "mode": "all"
+     },
+     "value": 1
+    },
+    {
+     "canvasId": "cProfit",
+     "nodeId": "nope",
+     "name": "Nope",
+     "mode": "set",
+     "periods": {
+      "mode": "all"
+     },
+     "value": 1
+    },
+    {
+     "canvasId": "cProfit",
+     "nodeId": "price",
+     "name": "Price",
+     "mode": "double",
+     "periods": {
+      "mode": "all"
+     },
+     "value": 1
+    },
+    {
+     "canvasId": "cProfit",
+     "nodeId": "price",
+     "name": "Price",
+     "mode": "set",
+     "periods": {
+      "mode": "all"
+     },
+     "value": "lots"
+    },
+    {
+     "canvasId": "cProfit",
+     "nodeId": "price",
+     "name": "Price",
+     "mode": "set",
+     "periods": {
+      "mode": "all"
+     },
+     "value": 1e+300
+    },
+    {
+     "canvasId": "cProfit",
+     "nodeId": "price",
+     "name": "Price",
+     "mode": "set",
+     "periods": {
+      "mode": "one",
+      "p": 99
+     },
+     "value": 9
+    }
+   ]
+  },
+  {
+   "name": "  high price  ",
+   "sliders": []
+  },
+  {
+   "name": "HIGH PRICE",
+   "sliders": []
+  },
+  {
+   "name": "",
+   "sliders": []
+  },
+  "not a scenario"
+ ]
+}

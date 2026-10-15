@@ -33,6 +33,7 @@
           <button type="button" role="menuitem" id="btnMenuSample" title="Load a small built-in model to try things out">Load Sample Model</button>
           <button type="button" role="menuitem" id="btnMenuPaste" title="Paste a model's JSON text">Paste JSON…</button>
           <button type="button" role="menuitem" id="btnFromFmide" class="hidden" title="Load the model open in fmIDE again, as it is now">↻ From fmIDE</button>
+          <button type="button" role="menuitem" id="btnImportGraphBoards" class="needs-model" title="Read a board file saved with Export all boards in fmGraph, to use its scenarios">Import fmGraph boards…</button>
           <div class="menu-sep" role="separator"></div>
           <button type="button" role="menuitem" id="btnClearAll" class="danger" title="Empties this page. Saved layouts are kept.">Start Over</button>
         </div>
@@ -43,6 +44,7 @@
           <div class="menu-head">This model's layout</div>
           <button type="button" role="menuitem" id="btnImportMapping" class="needs-model" title="Load a layout saved with Export Mapping">Import Mapping…</button>
           <button type="button" role="menuitem" id="btnExportMapping" class="needs-model" title="Save this model's tabs, rows and settings to a file">Export Mapping</button>
+          <button type="button" role="menuitem" id="btnUseGraphBoards" class="needs-model" title="Bring the scenarios of the model's fmGraph boards into this layout, as Global Cases">Use fmGraph boards…</button>
           <div class="menu-head">Module layouts (every model)</div>
           <button type="button" role="menuitem" id="btnImportModuleLayouts" title="Read module layouts saved with Export Module Layouts">Import Module Layouts…</button>
           <button type="button" role="menuitem" id="btnExportModuleLayouts" title="Save the layouts remembered for your modules, e.g. for another computer or fmIDE's Attach Excel layout…">Export Module Layouts</button>
@@ -291,6 +293,7 @@
 <input type="file" id="mappingFileInput" accept="application/json,.json" hidden>
 <input type="file" id="moduleLayoutsFileInput" accept="application/json,.json" hidden>
 <input type="file" id="excelStyleFileInput" accept="application/json,.json" hidden>
+<input type="file" id="graphFileInput" accept="application/json,.json" hidden>
 
 <div id="treeCtxMenu" class="ctx-menu hidden" role="menu"></div>
 
@@ -301,6 +304,24 @@
     <div class="modal-actions">
       <button id="attachCancel">Cancel</button>
       <button id="attachOk" class="primary">Attach</button>
+    </div>
+  </div>
+</div>
+
+<div id="graphModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="graphTitle">
+  <div class="modal modal-wide">
+    <h3 id="graphTitle">Use fmGraph boards</h3>
+    <p id="graphSource" class="graph-source"></p>
+    <label id="graphBoardRow" class="attach-pick">Board <select id="graphBoardPick" title="The board to bring. Its scenarios are the model's, shared by every board."></select></label>
+    <h4>Scenarios → Global Cases</h4>
+    <ul id="graphScenarioList" class="graph-scenarios"></ul>
+    <p id="graphNoScenarios" class="graph-source hidden">No scenarios in these boards.</p>
+    <h4 id="graphLeftOutHead" class="hidden">Not carried</h4>
+    <ul id="graphLeftOut" class="graph-left-out"></ul>
+    <div class="modal-actions">
+      <button id="graphRemove" class="danger hidden" title="Take the fmGraph scenarios out of this layout">Remove from Layout</button>
+      <button id="graphCancel">Cancel</button>
+      <button id="graphUse" class="primary">Use</button>
     </div>
   </div>
 </div>

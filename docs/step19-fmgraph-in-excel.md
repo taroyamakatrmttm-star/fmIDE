@@ -13,7 +13,7 @@ This is the brief, written for the owner's approval. Nothing is built yet. The o
 
 1. **Sliders are scroll bars plus a typed cell.** The scroll bar is the quick way, and the typed cell is the exact way that always works.
 2. **Boards come in only through Layout → "Use fmGraph boards…"**. They are copied into the layout, and **never read at Generate**. The workbook depends only on the layout, which the person can see, change and save. A board changed later in fmGraph changes nothing until the person uses the command again.
-3. **ExcelExporter holds several analyses.** This raises the layout file (`fmIDE-excel-mapping`) to **version 4**.
+3. **ExcelExporter holds several analyses.** This raises the layout file (`fmIDE-excel-mapping`) again: to **version 5**, after B2's version 4 (below).
 4. **Two modes**, **percent** (relative) and **amount** (added; this covers percentage points). These are the same as step 16 and step 18.
 5. **Licence**: ExcelExporter reads the documented `fmIDE-graph-board` format (`docs/file-formats.md`, CC BY 4.0) with **its own reader**, written in `src/excel-exporter/`. **No code moves from fmGraph** (Apache) into ExcelExporter (proprietary), or back. This is decision 10's "no code moves between them", kept.
 
@@ -69,11 +69,11 @@ On the Dashboard, under the sliders, in the board's order (wide charts the full 
 - Every series carries fmIDE's numbers too, which is what Excel shows before it recalculates, as step 16's charts do.
 - **A scenario waterfall** (layout `scenarios`) needs every case worked out at once. It is not carried in step 19 and is listed in the window as such (see "Open points").
 
-### The layout file, version 4
+### The layout file, versions 4 and 5
 
-`fmIDE-excel-mapping` **version 4**:
+`fmIDE-excel-mapping` **version 4** (B2, done) holds `cfg.graph` with its `scenarios`, `from` and `board`; **version 5** (B3) adds `cfg.sensitivities`, and later phases add `sliders` and `charts` to `cfg.graph` (the owner's choice of 15 October 2026: each version step comes with the phase that needs it):
 
-- `cfg.sensitivities`: a list of analyses (at most 10), each in step 16's form plus `name`. Version 3's one `cfg.sensitivity` becomes the first, named "Sensitivity", by a one-step upgrade of a copy (`.claude/rules/file-formats.md`), with a version-3 sample in `tests/fixtures/formats/`.
+- `cfg.sensitivities`: a list of analyses (at most 10), each in step 16's form plus `name`. Version 4's one `cfg.sensitivity` becomes the first, named "Sensitivity", by a one-step upgrade of a copy (`.claude/rules/file-formats.md`), with a version-4 sample in `tests/fixtures/formats/`.
 - `cfg.graph`: what Use fmGraph boards… copied:
   - `sliders`: row id, periods, mode, min, max, step, name;
   - `scenarios`: name, then settings of row id, mode, periods and value;
@@ -81,7 +81,7 @@ On the Dashboard, under the sliders, in the board's order (wide charts the full 
   - `from`: the boards' names, for the window's "replace" message.
 
   Read through `cleanGraphCopy`: rows no longer in the model, or no longer inputs, are dropped, and everything else is read as in `cleanSensitivity`.
-- An older ExcelExporter asks before opening version 4, and keeps only what it knows (the first analysis). Documented in `docs/file-formats.md` (CC BY 4.0) in the same pull request.
+- An older ExcelExporter asks before opening a newer version, and keeps only what it knows (the first analysis). Documented in `docs/file-formats.md` (CC BY 4.0) in the same pull request.
 
 ### What the Excel version cannot do
 
@@ -99,14 +99,23 @@ On the Dashboard, under the sliders, in the board's order (wide charts the full 
 
 ## Phases, one pull request each
 
+B0 came first (the writer, the riskiest part); then the owner's order (15 October 2026): B2, then sensitivity, then sliders and charts.
+
 | Phase | Holds |
 |---|---|
 | **B0** | **The writer learns form controls and stacked charts** (done, 15 October 2026; the owner's request: the writer first, as the riskiest part): `ws['!controls']` — scroll bars and check boxes with a linked cell, as `xl/ctrlProps` parts plus a VML drawing, beside a sheet's charts — bar charts `stacked` / `percentStacked` (overlap 100), and a `noFill` series for the waterfall's base. App unchanged. Tests: group 65 (parts, rels, content types, well formed, escaped, a sheet with charts and controls, LibreOffice opening and recalculating). Checked in desktop Excel by the owner from `tests/output/step19-b0-controls.xlsx`. |
-| **B1** | **Several analyses and the layout file version 4**: `cfg.sensitivities` (the panel's list: + Add, rename, order, remove; a Sensitivity tab, Data Table and charts for each; parts added on a shared input's row) and `cfg.graph` read and kept through `cleanGraphCopy` (filled from B2), the upgrade from version 3, the sample and its test, `docs/file-formats.md`, help, What's new. Tests: group 67 extended (two analyses sharing an input, each table moving only its own, LibreOffice recalculating both, fmIDE's numbers in both), group 6 (version 3 opening as one analysis, version 4 written). |
-| **B2** | **Use fmGraph boards… and the scenarios**: ExcelExporter's own board reader, the window, the copy (replace after asking); Tornado / Spider → analyses; scenarios → row scenarios and Global Cases (Base, set and shift, shared settings, cut-offs reported). Tests: a new ExcelExporter group, with board samples of versions 1–8 in `tests/fixtures/` (a newer version refused, the template form refused, names as text, unmatched widgets counted), the cases' formulas and numbers recalculated in LibreOffice against fmGraph's own numbers for the same scenarios, the 50 / 20 cut-offs and their messages, boards arriving with the model from fmIDE, Generate unchanged when the board file changes after copying. |
-| **B3** | **The Dashboard and its sliders**: the Dashboard's rows, with B0's form controls, the Inputs-tab formula order, the starting positions, the note. Tests: the new group (typed values and TRUE in Use moving the model in LibreOffice the same as fmGraph's sliders; a shift slider at 0 and Use off giving fmIDE's numbers, so "differs" stays empty; one period only; past 30,000 steps), and a check in the real Excel the owner uses (Windows and iPhone, as for the writer at first), recorded here. |
-| **B4** | **Charts on the Dashboard**: bar → column, columns → stacked columns, flow → stacked-column waterfall with the invisible base, scale, colours, layout under the sliders. Uses B0's stacked and no-fill series. Tests: the new group (each chart's series pointing at the right rows, the waterfall's helper rows against fmGraph's `flowFigures` for the same board, what Excel shows before recalculating). |
-| **B5** | **Finishing**: help topic "fmGraph in Excel" and its Help sentences, the To Excel tutorial (or a new one) taking a model with boards through to the Dashboard, the phone screen (step 17, P3) listing the Dashboard, `README.md` (what a person does differently), an end-to-end test from fmIDE (Open fmGraph, a board with a slider, a scenario and a Tornado, Open ExcelExporter, Use fmGraph boards…, Generate, recalculate in LibreOffice, agree with fmGraph), and a short "how it turned out" here. |
+| **B2** ✅ | **Use fmGraph boards… and the scenarios** (done 15 October 2026, before B1, at the owner's request): ExcelExporter's own board reader (`04c-graph-boards.js`), the window and File → Import fmGraph boards… (`09i-graph-scenarios.js`), the copy (`cfg.graph`, layout file 4; replace after asking); scenarios → row scenarios and Global Cases (Base, set and shift, shared settings, cut-offs reported). Tests: group 77. |
+| **B3** | **Several analyses and the layout file version 5**: `cfg.sensitivities` (the panel's list: + Add, rename, order, remove; a Sensitivity tab, Data Table and charts for each; parts added on a shared input's row) and `cfg.graph` read and kept through `cleanGraphCopy` (filled from B2), the upgrade from version 3, the sample and its test, `docs/file-formats.md`, help, What's new. Tests: group 67 extended (two analyses sharing an input, each table moving only its own, LibreOffice recalculating both, fmIDE's numbers in both), group 6 (version 4 opening as one analysis, version 5 written). Also Tornado / Spider from fmGraph → analyses, through Use fmGraph boards…. |
+| **B4** | **The Dashboard and its sliders**: the Dashboard's rows, with B0's form controls, the Inputs-tab formula order, the starting positions, the note. Tests: the new group (typed values and TRUE in Use moving the model in LibreOffice the same as fmGraph's sliders; a shift slider at 0 and Use off giving fmIDE's numbers, so "differs" stays empty; one period only; past 30,000 steps), and a check in the real Excel the owner uses (Windows and iPhone, as for the writer at first), recorded here. |
+| **B5** | **Charts on the Dashboard, and finishing**: bar → column, columns → stacked columns, flow → stacked-column waterfall with the invisible base, scale, colours, layout under the sliders. Uses B0's stacked and no-fill series. Tests: the new group (each chart's series pointing at the right rows, the waterfall's helper rows against fmGraph's `flowFigures` for the same board, what Excel shows before recalculating). Then the finishing: help topic "fmGraph in Excel" and its Help sentences, the To Excel tutorial (or a new one) taking a model with boards through to the Dashboard, the phone screen (step 17, P3) listing the Dashboard, `README.md` (what a person does differently), an end-to-end test from fmIDE (Open fmGraph, a board with a slider, a scenario and a Tornado, Open ExcelExporter, Use fmGraph boards…, Generate, recalculate in LibreOffice, agree with fmGraph), and a short "how it turned out" here. |
+
+### How B2 turned out (15 October 2026)
+
+- **The layout file**: storing the scenario names, settings and matrix needed new data, so the layout file went to version 4 with only `cfg.graph` (scenarios, `from`, `board`), a do-nothing upgrade from version 3 and a version-3 sample (`map-v3`); "several analyses" moves to B3 and version 5. The old `map-newer` sample (version 4) is current now; `map-newer-v5` replaced it in group 6.
+- **The reader** reads versions 1–8 (8, step 18's Tornado and Spider, arrived while B2 was in review; its charts are not read until B3); scenarios from version 3 on. A setting is matched by canvas id, node id and name, kept only on an input outside any block; the window counts the rest by reason. A scenario setting an input twice (two sliders, different periods) becomes one row scenario, its settings applied in order.
+- **The workbook**: the plan (`graphScenarioPlan`) is worked out from the layout at Generate; an input it moves takes its scenario count from it (its own scenarios control is off), and the Global cases number shows the plan's, off. Inputs with scenarios of their own keep them on scenario 1 in every case. A shift is `=<scenario 1>*(1+x%)`, or `(1-x%)` for a cut.
+- **Checked**: group 77, including LibreOffice recalculating every Global Case against fmGraph's own `fmGraph.value` with the same scenario shown, within a millionth.
+
 
 ## Open points for the owner
 
@@ -117,6 +126,6 @@ On the Dashboard, under the sliders, in the board's order (wide charts the full 
 
 ## Risks
 
-- **Form controls in the writer** are the newest and least-tested part of the Excel format here. B3 is checked in the real Excel before it is merged, as the writer was at first.
+- **Form controls in the writer** are the newest and least-tested part of the Excel format here. B4 is checked in the real Excel before it is merged, as the writer was at first.
 - **Recalculation time**: several Data Tables in one workbook multiply step 16's cost. The Dashboard note mentions *Automatic except for data tables*.
 - **Agreement**: fmGraph and Excel must give the same numbers for the same slider positions, scenario and analysis. The B2–B5 tests compare them within a millionth (`AGREE_TOLERANCE`), as the step-7 agreement tests do for the model itself.

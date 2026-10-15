@@ -346,7 +346,7 @@ test('settings from a mapping file are checked; names are text', async ({ page }
   // Export the layout, spoil its settings, import it back.
   const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
   const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
-  expect(exported.version).toBe(3);
+  expect(exported.version).toBe(4); // v4: cfg.graph (step 19 B2)
   const realVar = exported.cfg.sensitivity.variables[0].row;
   exported.cfg.sensitivity = {
     enabled: true, outputs: ['nope', 42, realVar, realVar], period: -5, steps: 99, charts: '<script>',

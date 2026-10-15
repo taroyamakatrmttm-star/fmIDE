@@ -66,7 +66,8 @@
   // ('excel:want-model') once loaded and on its File → From fmIDE, and the answer
   // ('fmIDE:model') is a workspace file's text holding the model (as Save System writes it,
   // format presets included) and the canvas templates whose Excel layout ExcelExporter may use
-  // (attachments.excel, step 11c-2) — no macros, shortcuts or settings. Only the window this
+  // (attachments.excel, step 11c-2), and the model's fmGraph boards (graphBoards, step 19 B2)
+  // — no macros, shortcuts or settings. Only the window this
   // page opened is answered, under the same origin rules as fmGraph's. In a tutorial's
   // practice the practice model goes.
   function buildExcelPayload(){
@@ -74,7 +75,10 @@
       version: FILE_FORMATS['fmIDE-workspace'].current, kind: 'fmIDE-workspace',
       system: buildSystemPayload(),
       templates: TEMPLATES.filter(t => !t.builtin && t.kind === 'module' && t.attachments && t.attachments.excel).map(t => templateRecord(t, true)),
-      formatPresets: FORMAT_PRESETS.map(p => ({ id: p.id, name: p.name, style: p.style }))
+      formatPresets: FORMAT_PRESETS.map(p => ({ id: p.id, name: p.name, style: p.style })),
+      // The model's fmGraph boards (step 19 B2), for ExcelExporter's Use fmGraph boards…; the
+      // practice model has none, as for fmGraph (sendModelToGraph).
+      ...(graphBoards && !inPractice() ? { graphBoards } : {})
     };
   }
   function sendModelToExcel(target){

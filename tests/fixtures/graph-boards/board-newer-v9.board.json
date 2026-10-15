@@ -1,0 +1,42 @@
+{
+ "kind": "fmIDE-graph-board",
+ "version": 9,
+ "active": 0,
+ "boards": [
+  {
+   "name": "Version 3",
+   "items": [],
+   "sliders": [
+    {
+     "canvasId": "cProfit",
+     "nodeId": "price",
+     "name": "Price",
+     "periods": {
+      "mode": "all"
+     },
+     "mode": "set",
+     "min": 5,
+     "max": 15,
+     "step": 0.5
+    }
+   ]
+  }
+ ],
+ "scenarios": [
+  {
+   "name": "Price 14",
+   "sliders": [
+    {
+     "canvasId": "cProfit",
+     "nodeId": "price",
+     "name": "Price",
+     "mode": "set",
+     "periods": {
+      "mode": "all"
+     },
+     "value": 14
+    }
+   ]
+  }
+ ]
+}

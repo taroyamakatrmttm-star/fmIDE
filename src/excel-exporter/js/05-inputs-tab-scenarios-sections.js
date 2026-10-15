@@ -268,12 +268,16 @@ function undoInputsLayout(){
 const MAX_SCENARIOS = 20;
 function scenarioCountOf(row){
   if(!row || !row.isInputMirror || !inputsEnabled()) return 0;
+  const g = graphScenarioPlan(); // an input fmGraph's scenarios move: 1 + its different settings (09i)
+  if(g && g.byMirror.has(row.id)) return 1 + g.byMirror.get(row.id).variants.length;
   const n = Math.round(Number(row.scenarios));
   return n >= 2 ? Math.min(n, MAX_SCENARIOS) : 0;
 }
 // Global cases (Scenarios tab): 0 = off (type each variable's Applied number directly).
 const MAX_CASES = 50;
 function globalCaseCount(){
+  const g = graphScenarioPlan(); // Base plus fmGraph's scenarios (09i)
+  if(g) return g.cases.length;
   const v = inputsCfg().globalCases;
   const n = Math.round(Number(v === undefined ? 3 : v));
   return n >= 1 ? Math.min(n, MAX_CASES) : 0;
@@ -309,6 +313,11 @@ function buildScenarioControl(row){
     if(cb.checked){ setRowScenarios(row, v); saveMapping(); renderCasesHint(); }
   });
   wrap.classList.toggle('on', cb.checked);
+  const g = graphScenarioPlan();
+  if(g && g.byMirror.has(row.id)){ // made by fmGraph's scenarios: changed there, or by Use fmGraph boards… again
+    cb.disabled = num.disabled = true;
+    wrap.title = 'Scenarios from fmGraph (Layout → Use fmGraph boards…)';
+  }
   wrap.append(cb, lab, num);
   return wrap;
 }
@@ -341,6 +350,11 @@ function renderInputsSettings(){
   $('cfgInputsCases').value = globalCaseCount();
   renderCasesHint();
   ['cfgInputsName', 'cfgInputsGroup', 'cfgInputsOrder', 'btnInputsRelayout', 'cfgInputsScenarios', 'cfgInputsCases'].forEach(id => { $(id).disabled = !cfg.enabled; });
+  // The Global Cases come from fmGraph's scenarios while the layout has them (09i).
+  const fromGraph = !!graphScenarioPlan();
+  if(fromGraph) $('cfgInputsCases').disabled = true;
+  if($('cfgInputsCases').dataset.tip === undefined) $('cfgInputsCases').dataset.tip = $('cfgInputsCases').title || '';
+  $('cfgInputsCases').title = fromGraph ? 'Base and fmGraph\'s scenarios (Layout → Use fmGraph boards…)' : $('cfgInputsCases').dataset.tip;
   $('inputsOptions').classList.toggle('hidden', !cfg.enabled); // its settings show once it is on
 }
 

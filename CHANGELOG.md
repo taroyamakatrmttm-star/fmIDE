@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: fmGraph's scenarios become Global Cases (step 19, phase B2)
+- **Layout → Use fmGraph boards…** turns the scenarios saved in fmGraph into the workbook's Global Cases: case 1 is Base (fmIDE's numbers), then one case per scenario, named after it. Each input a scenario moves gets row scenarios on the Inputs tab: a set value in the scenario's periods (the others link to scenario 1), a % change a live formula on scenario 1. A window lists the scenarios with tick boxes and what can't be carried (an input inside a block, a rectangle the model hasn't got, past 50 cases or 20 row scenarios); Generate lists them again. It asks before replacing cases in the layout.
+- The boards come with the model from fmIDE (Open ExcelExporter now sends the document's boards) or a `.fmide` document, or from a board file: **File → Import fmGraph boards…**, or dropped on the page. ExcelExporter reads them with its own reader of the documented format (versions 1–8).
+- What was used is copied into the layout: the layout file is now version 4 (`cfg.graph`); version 3 files open with none.
+
 ## fmGraph: Tornado and Spider — each input's Low and High (step 18, phase A2)
 - A Tornado's or Spider's Edit chart now has a row per input: shown or not, the input, by a percent or an amount (% / ±), Low and High, with Low and High in the input's own numbers under it ("Now 10: 9 … 11 in Year 1") and a note when an input is 0. + Input, ↑ ↓ and ×; an input already listed is refused. No file format changed (version 8 already carried these).
 - The Trace and compare tutorial ends with a Tornado on Profit (now 4 minutes).

@@ -11,6 +11,18 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'fmgraph-scenarios', date: '2026-10-15', title: 'fmGraph\'s scenarios become Global Cases',
+    summary: 'Layout → Use fmGraph boards… turns the scenarios you saved in fmGraph into the workbook\'s Global Cases, after Base.',
+    what: [
+      'The boards that come with a model from fmIDE or a .fmide document, or a board file from File → Import fmGraph boards…, are read by ExcelExporter itself. A window lists their scenarios, each with a tick box, and what can\'t be carried and why.',
+      'Global Case 1 is Base, fmIDE\'s numbers. Each scenario is the next case, named after it. Each input a scenario moves gets row scenarios on the Inputs tab: a set value in its periods, and a % change as a live formula on scenario 1.',
+      'The scenarios are copied into the layout and saved with it. A later change in fmGraph changes nothing until you choose Use fmGraph boards… again.',
+    ],
+    why: 'So the "what if" you played with in fmGraph is still there in the workbook you send.',
+    how: ['Save scenarios in fmGraph.', 'In fmIDE, File → Open ExcelExporter (or open the .fmide here).', 'Layout → Use fmGraph boards…, then Use.', '⬇ Generate .xlsx, and type a case number in the Scenarios tab\'s C2.'],
+    notes: ['At most 50 cases and 20 row scenarios an input; what goes past them, and an input inside a block, is listed. Sliders, charts and Tornado and Spider charts from fmGraph come in later updates.'],
+    see: ['fmgraph-scenarios'] },
+
   { id: 'attach-layout-to-template', date: '2026-10-12', title: 'Attach a layout to its template from here',
     summary: 'Opened from fmIDE, 📎 Attach on a module\'s tab sends its layout straight to its template in fmIDE — no file in between.',
     what: [

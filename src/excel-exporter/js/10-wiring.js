@@ -15,6 +15,12 @@ function parseFileText(text){
 async function tryLoad(jsonText, label, name){
   const { parsed, error } = parseFileText(jsonText);
   if(error){ setStatus($('loadStatus'), error, 'err'); return; }
+  // A board file dropped on the page: its scenarios, for the model shown (09i).
+  if(parsed && parsed.kind === GRAPH_BOARD_KIND){
+    if(model && mapping){ importGraphBoardsText(jsonText, label); return; }
+    setStatus($('loadStatus'), 'That is an fmGraph boards file: open its model first, then File → Import fmGraph boards….', 'err');
+    return;
+  }
   const r = readKnownFile(parsed, ['system', 'fmIDE-workspace']);
   if(r.error){ setStatus($('loadStatus'), r.error, 'err'); return; }
   if(!(await confirmNewerFile(r))){ setStatus($('loadStatus'), 'Not loaded.', 'info'); return; }
@@ -24,7 +30,8 @@ async function tryLoad(jsonText, label, name){
     modelFromFmide = false;            // 09f-from-fmide.js sets it back for fmIDE's model
     syncPageState();
     setStatus($('genStatus'), '', null); // a message about the last model's workbook
-    setStatus($('loadStatus'), `Loaded ${label} — ${model.canvases.length} canvas${model.canvases.length === 1 ? '' : 'es'}, ${model.periods.length} periods.`, 'ok');
+    setStatus($('loadStatus'), `Loaded ${label} — ${model.canvases.length} canvas${model.canvases.length === 1 ? '' : 'es'}, ${model.periods.length} periods.` +
+      (modelGraphBoards ? ' It has fmGraph boards: Layout → Use fmGraph boards….' : ''), 'ok');
   }catch(err){
     setStatus($('loadStatus'), 'Could not read that as an fmIDE system export: ' + err.message, 'err');
   }
@@ -100,7 +107,8 @@ $('cfgSectionsEnabled').addEventListener('change', () => setSectionsEnabled($('c
 $('btnGenerate').addEventListener('click', () => {
   try{
     generateWorkbook();
-    setStatus($('genStatus'), 'Workbook generated — check your downloads.', 'ok');
+    const notes = graphScenarioNotes(); // fmGraph's scenarios past a cut-off, or not moved (09i)
+    setStatus($('genStatus'), 'Workbook generated — check your downloads.' + (notes.length ? ' ' + notes.join(' ') : ''), 'ok');
   }catch(err){
     setStatus($('genStatus'), 'Could not generate the workbook: ' + err.message, 'err');
   }
@@ -211,6 +219,7 @@ watchForUpdates({
 $('btnClearAll').addEventListener('click', () => {
   model = null; useModelIR(null); mapping = null; mappingKey = null;
   canvasModules = {}; moduleBaselines = {}; moduleLayoutsApplied = []; templateLayouts = {}; tabLayoutFromTemplate = {};
+  modelGraphBoards = null; graphPlanCache = null;
   $('fileInput').value = '';
   $('afterLoad').classList.add('hidden');
   $('pasteArea').value = '';

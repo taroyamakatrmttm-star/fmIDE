@@ -1,0 +1,29 @@
+{
+ "kind": "fmIDE-graph-board",
+ "version": 2,
+ "form": "template",
+ "template": {
+  "kind": "module",
+  "family": "f1",
+  "name": "Sales"
+ },
+ "active": 0,
+ "boards": [
+  {
+   "name": "Board",
+   "items": [],
+   "sliders": [
+    {
+     "name": "Price",
+     "periods": {
+      "mode": "all"
+     },
+     "mode": "set",
+     "min": 0,
+     "max": 20,
+     "step": 1
+    }
+   ]
+  }
+ ]
+}
