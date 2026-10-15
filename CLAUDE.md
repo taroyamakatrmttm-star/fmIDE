@@ -101,6 +101,7 @@ Files under `.claude/rules/` load by themselves when a session reads a file they
 Work in the build order and don't jump ahead unless asked. **Tell the owner at the start of each message where in the build order the work is.**
 
 - Steps 1–17 are done: 1 repository · 2 test suite · 3 modules (3c real modules) · 4 storage · 5 publishing · 6 templates · 7 formula IR and plugins · 8 community library · 9 touch · 10 help (all but **H4c, the video links, waiting on the owner's recordings**) · 11 the Excel look in ExcelExporter · 12 faster canvas building · 13 zoom · 14 ExcelExporter's new look · 15 fmGraph · 16 sensitivity · 17 phones (later ideas in `docs/step17-phones.md`).
+- Next, briefs awaiting the owner's approval (decision 12, 15 October 2026): **18 Tornado and Spider charts in fmGraph** (`docs/step18-fmgraph-sensitivity.md`; phases A1 the Tornado, A2 the Spider) · **19 fmGraph in Excel** (`docs/step19-fmgraph-in-excel.md`; ExcelExporter rebuilds a model's boards through Layout → Use fmGraph boards…: Dashboard scroll bars, scenarios as Global Cases, several analyses (layout file 4), Excel charts; phases B1–B5).
 - Deferred: before the project is shared, the owner's name comes out of the public places (`docs/decisions.md`, "Before sharing the project"). Known issues: `docs/decisions.md` ("Known issues, to fix later"), none today.
 - The library repository names the fmIDE commit whose checker it runs in its `checker.json`: a change to the checker reaches the library only when that pointer is moved.
 
