@@ -195,11 +195,11 @@ function dashboardWorkbook(){
     B11: { t: 'n', v: 0 }, C11: { t: 'n', f: 'B12' }, D11: { t: 'n', v: 0 }, B12: { t: 'n', v: 10 }, C12: { t: 'n', v: 5 }, D12: { t: 'n', f: 'B12+C12' },
     '!charts': [{ chart: stacked, from: { c: 5, r: 0 }, to: { c: 11, r: 14 } }, { chart: waterfall, from: { c: 12, r: 0 }, to: { c: 18, r: 14 } }],
     '!controls': [
-      { type: 'scroll', from: { c: 1, r: 0 }, to: { c: 2, r: 1 }, cell: '$C$1', min: 0, max: 100, inc: 1, page: 10, val: 40, horiz: true },
+      { type: 'scroll', from: { c: 1, r: 0 }, to: { c: 3, r: 1 }, cell: '$C$1', min: 0, max: 100, inc: 1, page: 10, val: 40, horiz: true },
       { type: 'check', from: { c: 1, r: 1 }, to: { c: 2, r: 2 }, cell: 'C2', text: 'Use <this> & that' },
     ],
   }, 'Dash board');
-  XLSX.utils.book_append_sheet(wb, { A1: { t: 'n', v: 3 }, '!controls': [{ type: 'scroll', from: { c: 1, r: 0 }, to: { c: 1, r: 4 }, cell: 'A1', max: 9 }] }, 'Other');
+  XLSX.utils.book_append_sheet(wb, { A1: { t: 'n', v: 3 }, '!controls': [{ type: 'scroll', from: { c: 1, r: 0 }, to: { c: 2, r: 5 }, cell: 'A1', max: 9 }] }, 'Other');
   return wb;
 }
 // Every XML part parsed by a strict, namespace-aware parser: well formed, every prefix bound.
@@ -265,7 +265,7 @@ test.describe('the Excel writer\'s form controls and stacked charts (step 19), i
     expect(await part('xl/ctrlProps/ctrlProp3.xml')).toContain('fmlaLink="A1" inc="1" max="9" min="0" page="10" val="0"/>'); // defaults; upright
     const vml = await part('xl/drawings/vmlDrawing1.vml');
     expect(vml).toContain('<v:shape id="_x0000_s1025" type="#_x0000_t201"');
-    expect(vml).toContain('<x:ClientData ObjectType="Scroll"><x:Anchor>1, 0, 0, 0, 2, 0, 1, 0</x:Anchor>');
+    expect(vml).toContain('<x:ClientData ObjectType="Scroll"><x:Anchor>1, 0, 0, 0, 3, 0, 1, 0</x:Anchor>');
     expect(vml).toContain('<x:FmlaLink>$C$1</x:FmlaLink><x:Val>40</x:Val><x:Min>0</x:Min><x:Max>100</x:Max><x:Inc>1</x:Inc><x:Page>10</x:Page><x:Horiz/>');
     expect(vml).toContain('<x:ClientData ObjectType="Checkbox">');
     expect(vml).toContain('<div style="text-align:left">Use &lt;this&gt; &amp; that</div>'); // the label escaped
@@ -290,11 +290,28 @@ test.describe('the Excel writer\'s form controls and stacked charts (step 19), i
     expect(await zip.file('xl/ctrlProps/ctrlProp2.xml').async('string')).toContain('objectType="CheckBox" checked="Checked" fmlaLink="$B$2"');
     const vml = await zip.file('xl/drawings/vmlDrawing1.vml').async('string');
     expect(vml).toContain('<x:Anchor>0, 0, 0, 0, 2, 0, 3, 0</x:Anchor>'); // a bad corner taken as A1
+    expect(vml).toContain('<x:Anchor>0, 0, 0, 0, 1, 0, 1, 0</x:Anchor>'); // no corners: one cell, A1
     expect(vml).toContain('<x:Checked>1</x:Checked>');
     // A sheet without controls is written as before: no VML, no extra namespaces.
     const plain = await (await JSZip.loadAsync(XLSX.write(sampleWorkbook()))).file('xl/worksheets/sheet1.xml').async('string');
     expect(plain).not.toContain('legacyDrawing');
     expect(plain).not.toContain('xmlns:mc');
+  });
+
+  test('a control is always at least one cell wide and tall (a corner not past the start drew nothing in Excel)', async () => {
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, { A1: { t: 'n', v: 3 }, '!controls': [
+      { type: 'scroll', from: { c: 1, r: 0 }, to: { c: 1, r: 4 }, cell: 'A1' },   // 0 wide: B1 to B1's own left edge
+      { type: 'check', from: { c: 3, r: 6 }, to: { c: 5, r: 6 }, cell: 'A2' },    // 0 tall
+      { type: 'scroll', from: { c: 4, r: 9 }, to: { c: 2, r: 3 }, cell: 'A3' },   // before its start
+      { type: 'scroll', from: { c: 16383, r: 1048575 }, cell: 'A4' },             // the sheet's last cell
+    ] }, 'S');
+    const zip = await JSZip.loadAsync(XLSX.write(wb));
+    const vml = await zip.file('xl/drawings/vmlDrawing1.vml').async('string');
+    expect([...vml.matchAll(/<x:Anchor>([^<]+)<\/x:Anchor>/g)].map(m => m[1])).toEqual([
+      '1, 0, 0, 0, 2, 0, 4, 0', '3, 0, 6, 0, 5, 0, 7, 0', '4, 0, 9, 0, 5, 0, 10, 0', '16383, 0, 1048575, 0, 16384, 0, 1048576, 0']);
+    const sheet = await zip.file('xl/worksheets/sheet1.xml').async('string');
+    expect(sheet).toContain('<to><xdr:col>2</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>4</xdr:row>'); // both parts alike
   });
 
   test('stacked bars overlap fully; percent-stacked too; a series drawing nothing has no legend entry', async () => {

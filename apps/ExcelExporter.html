@@ -366,7 +366,8 @@ var XLSX = (function(){
 
   // ---------- form controls (step 19) ----------
   // ws['!controls'] = [{ type: 'scroll' | 'check', from: { c, r }, to: { c, r } (0-based cells
-  //   the control sits between), cell: 'E5' | '$E$5' | "'Dashboard'!$E$5" (its linked cell),
+  //   the control sits between: it starts at from's top-left corner and ends at to's, so B1:B5
+  //   is from { c: 1, r: 0 } to { c: 2, r: 5 }; at least one cell each way), cell: 'E5' | '$E$5' | "'Dashboard'!$E$5" (its linked cell),
   //   scroll bar: min, max, inc, page, val (whole numbers 0–30,000), horiz (true: sideways);
   //   check box: checked (true / false), text (its label) }]
   // Each is written twice, as Excel does: in the sheet's VML drawing (x:ClientData, which every
@@ -381,7 +382,8 @@ var XLSX = (function(){
     if(!Array.isArray(ws && ws['!controls'])) return [];
     return ws['!controls'].filter(x => x && (x.type === 'scroll' || x.type === 'check') && typeof x.cell === 'string' && CELL.test(x.cell)).map(x => {
       const from = { c: cellIdx(x.from && x.from.c, 16383), r: cellIdx(x.from && x.from.r, 1048575) };
-      const to = { c: Math.max(from.c, cellIdx(x.to && x.to.c, 16383)), r: Math.max(from.r, cellIdx(x.to && x.to.r, 1048575)) };
+      // At least one cell each way: a corner not past `from` would make the control 0 wide or tall, unseen.
+      const to = { c: Math.max(from.c + 1, cellIdx(x.to && x.to.c, 16384)), r: Math.max(from.r + 1, cellIdx(x.to && x.to.r, 1048576)) };
       if(x.type === 'check') return { type: 'check', from, to, cell: x.cell, checked: x.checked === true, text: x.text == null ? '' : String(x.text) };
       const min = whole(x.min, 0, SCROLL_MAX, 0);
       const max = Math.max(min, whole(x.max, 0, SCROLL_MAX, 100));
