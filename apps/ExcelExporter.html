@@ -14,7 +14,8 @@
 //   XLSX.utils.book_new(), XLSX.utils.book_append_sheet(wb, ws, name),
 //   XLSX.writeFile(wb, fileName)   (download), XLSX.write(wb) -> Uint8Array (bytes)
 // Worksheet object: { 'A1': cell, …, '!ref', '!cols': [{wch}], '!merges': [{s:{r,c},e:{r,c}}],
-//   '!charts': [{ chart, from: {c, r}, to: {c, r} }] (charts placed between two cells, 0-based) }
+//   '!charts': [{ chart, from: {c, r}, to: {c, r} }] (charts placed between two cells, 0-based),
+//   '!controls': [{ type: 'scroll'|'check', from, to, cell, … }] (form controls; see controlsOn) }
 // A chart tab: XLSX.utils.book_append_chartsheet(wb, chart, name). Charts: see chartXml.
 // Cell: { t:'s'|'n'|'z', v, f (formula, no leading '='), z (number format), s (style) }
 //   t:'s' with f  -> a formula with a text result;  t:'z' -> an empty cell (style only).
@@ -31,6 +32,7 @@ var XLSX = (function(){
   const NS_REL = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
   const NS_PKG_REL = 'http://schemas.openxmlformats.org/package/2006/relationships';
   const REL_BASE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/';
+  const OOXML = 'application/vnd.openxmlformats-officedocument.'; // the start of most parts' content types
 
   // ---------- escaping & validation (shared: src/shared/escaping.js, used by both apps) ----------
   // Anything that came from a file (names, labels, kinds — including shared/community
@@ -52,6 +54,7 @@ var XLSX = (function(){
   function colToNum(letters){ let n = 0; for(const ch of letters) n = n * 26 + (ch.charCodeAt(0) - 64); return n; }
   function numToCol(n){ let s = ''; while(n > 0){ const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; }
   function encodeCell(r, c){ return numToCol(c + 1) + (r + 1); } // 0-based -> "A1"
+  const cellIdx = (n, max) => Math.max(0, Math.min(max, Math.round(Number(n)) || 0)); // a 0-based row or column, kept in the sheet
   function argb(rgb){ const h = String(rgb || '').replace('#', '').toUpperCase(); return /^[0-9A-F]{6}$/.test(h) ? 'FF' + h : (/^[0-9A-F]{8}$/.test(h) ? h : null); }
 
   // ---------- styles ----------
@@ -157,7 +160,7 @@ var XLSX = (function(){
     }
     return '<f t="dataTable" ref="' + t.ref + '"' + (t.row ? ' dtr="1"' : '') + ' r1="' + t.r1 + '"/>';
   }
-  function sheetXml(ws, styles){
+  function sheetXml(ws, styles, vmlIndex){
     const rows = new Map(); // row number -> [{c, xml}]
     let maxR = 0, maxC = 0;
     Object.keys(ws).forEach(addr => {
@@ -210,12 +213,29 @@ var XLSX = (function(){
       const list = ws['!merges'].filter(m => m && m.s && m.e).map(m => '<mergeCell ref="' + encodeCell(m.s.r, m.s.c) + ':' + encodeCell(m.e.r, m.e.c) + '"/>');
       if(list.length) merges = '<mergeCells count="' + list.length + '">' + list.join('') + '</mergeCells>';
     }
+    // The sheet's relationships, in the order buildParts writes them (sheetRels): the charts'
+    // drawing, then the controls' VML drawing, then each control's properties.
+    const ids = sheetRelIds(ws);
+    const ctrls = controlsOn(ws);
     return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
-      '<worksheet xmlns="' + NS_MAIN + '" xmlns:r="' + NS_REL + '">' +
+      '<worksheet xmlns="' + NS_MAIN + '" xmlns:r="' + NS_REL + '"' +
+      (ctrls.length ? ' xmlns:mc="' + NS_MC + '" xmlns:x14="' + NS_X14 + '" xmlns:xdr="' + NS_XDR + '"' : '') + '>' +
       '<dimension ref="' + ref + '"/><sheetViews><sheetView workbookViewId="0"/></sheetViews>' +
       '<sheetFormatPr defaultRowHeight="15"/>' + cols + '<sheetData>' + rowXml + '</sheetData>' + merges +
       '<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>' +
-      (chartsOn(ws).length ? '<drawing r:id="rId1"/>' : '') + '</worksheet>';
+      (ids.drawing ? '<drawing r:id="' + ids.drawing + '"/>' : '') +
+      (ids.vml ? '<legacyDrawing r:id="' + ids.vml + '"/>' : '') +
+      (ctrls.length ? '<controls>' + ctrls.map((x, i) => controlXml(x, i, vmlIndex, ids.ctrls[i])).join('') + '</controls>' : '') +
+      '</worksheet>';
+  }
+  // The relationship ids a worksheet uses: rId1 the charts' drawing (if any), then the VML
+  // drawing and each control's properties (if any controls).
+  function sheetRelIds(ws){
+    let k = 0;
+    const drawing = chartsOn(ws).length ? 'rId' + (++k) : null;
+    const ctrls = controlsOn(ws);
+    const vml = ctrls.length ? 'rId' + (++k) : null;
+    return { drawing, vml, ctrls: ctrls.map(() => 'rId' + (++k)) };
   }
   // The charts placed on a worksheet: [{ chart, from: { c, r }, to: { c, r } }] (0-based cells).
   function chartsOn(ws){ return Array.isArray(ws && ws['!charts']) ? ws['!charts'].filter(x => x && x.chart && typeof x.chart === 'object') : []; }
@@ -230,11 +250,13 @@ var XLSX = (function(){
   // ---------- charts ----------
   // A chart (plain data, so a workbook stays JSON):
   //   { type: 'bar' | 'line', title: { ref, text },
-  //     bar: { dir: 'bar' | 'col', overlap, gapWidth },
+  //     bar: { dir: 'bar' | 'col', grouping: 'clustered' | 'stacked' | 'percentStacked', overlap, gapWidth },
   //     catAxis: { title, reverse }, valAxis: { title, numFmt },
   //     legend: 'b' | 'r' | 't' | null,
   //     series: [{ name: { ref, text }, cat: { ref, values: [text|number], numFmt? },
-  //                val: { ref, values: [number|null], numFmt? }, color: 'RRGGBB', marker: bool }] }
+  //                val: { ref, values: [number|null], numFmt? }, color: 'RRGGBB', marker: bool,
+  //                noFill: true (draws nothing and has no legend entry: a waterfall's base) }] }
+  // Stacked bars always overlap fully (100), as Excel needs to stack them.
   // `ref` is a cell or range on a sheet ("'Sensitivity'!$B$16:$B$20"); `text` / `values` are
   // what it holds now (Excel shows them until it recalculates). A ref not shaped like that
   // leaves the text or values standing alone.
@@ -277,11 +299,13 @@ var XLSX = (function(){
   function seriesXml(s, i, type){
     const color = hex(s.color);
     const fill = color ? '<a:solidFill><a:srgbClr val="' + color + '"/></a:solidFill>' : '';
-    const sp = type === 'line'
+    const sp = s.noFill === true
+      ? (type === 'line' ? '<c:spPr><a:ln><a:noFill/></a:ln></c:spPr>' : '<c:spPr><a:noFill/><a:ln><a:noFill/></a:ln></c:spPr>')
+      : type === 'line'
       ? '<c:spPr><a:ln w="22225" cap="rnd">' + fill + '<a:round/></a:ln></c:spPr>'
       : (fill ? '<c:spPr>' + fill + '</c:spPr>' : '');
     const name = s.name ? (strRef(s.name) ? '<c:tx>' + strRef(s.name) + '</c:tx>' : '<c:tx><c:v>' + esc(s.name.text || '') + '</c:v></c:tx>') : '';
-    const marker = type === 'line' ? (s.marker === false ? '<c:marker><c:symbol val="none"/></c:marker>'
+    const marker = type === 'line' ? (s.marker === false || s.noFill === true ? '<c:marker><c:symbol val="none"/></c:marker>'
       : '<c:marker><c:symbol val="circle"/><c:size val="5"/>' + (fill ? '<c:spPr>' + fill + '</c:spPr>' : '') + '</c:marker>') : '';
     return '<c:ser><c:idx val="' + i + '"/><c:order val="' + i + '"/>' + name + sp +
       (type === 'bar' ? '<c:invertIfNegative val="0"/>' : marker) +
@@ -289,14 +313,16 @@ var XLSX = (function(){
   }
   function chartXml(ch){
     const type = ch.type === 'line' ? 'line' : 'bar';
-    const series = (Array.isArray(ch.series) ? ch.series : []).map((s, i) => seriesXml(s || {}, i, type)).join('');
+    const list = Array.isArray(ch.series) ? ch.series : [];
+    const series = list.map((s, i) => seriesXml(s || {}, i, type)).join('');
     const bar = ch.bar || {};
+    const grouping = type === 'bar' && (bar.grouping === 'stacked' || bar.grouping === 'percentStacked') ? bar.grouping : 'clustered';
     const cat = ch.catAxis || {}, val = ch.valAxis || {};
     const horizontal = type === 'bar' && bar.dir !== 'col';
     const plot = type === 'bar'
-      ? '<c:barChart><c:barDir val="' + (horizontal ? 'bar' : 'col') + '"/><c:grouping val="clustered"/><c:varyColors val="0"/>' + series +
+      ? '<c:barChart><c:barDir val="' + (horizontal ? 'bar' : 'col') + '"/><c:grouping val="' + grouping + '"/><c:varyColors val="0"/>' + series +
         '<c:gapWidth val="' + Math.max(0, Math.min(500, Math.round(Number(bar.gapWidth)) || 150)) + '"/>' +
-        '<c:overlap val="' + Math.max(-100, Math.min(100, Math.round(Number(bar.overlap)) || 0)) + '"/>' +
+        '<c:overlap val="' + (grouping === 'clustered' ? Math.max(-100, Math.min(100, Math.round(Number(bar.overlap)) || 0)) : 100) + '"/>' +
         '<c:axId val="1001"/><c:axId val="1002"/></c:barChart>'
       : '<c:lineChart><c:grouping val="standard"/><c:varyColors val="0"/>' + series + '<c:marker val="1"/><c:axId val="1001"/><c:axId val="1002"/></c:lineChart>';
     // The categories: on the left of a horizontal bar chart (reversed: the first at the top,
@@ -310,7 +336,8 @@ var XLSX = (function(){
       '<c:axPos val="' + (horizontal ? 'b' : 'l') + '"/><c:majorGridlines/>' + titleXml(val.title, !horizontal) +
       '<c:numFmt formatCode="' + esc(val.numFmt || 'General') + '" sourceLinked="0"/><c:majorTickMark val="out"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/>' +
       '<c:crossAx val="1001"/><c:crosses val="' + (cat.reverse ? 'max' : 'autoZero') + '"/><c:crossBetween val="between"/></c:valAx>';
-    const legend = ['b', 'r', 't', 'l'].includes(ch.legend) ? '<c:legend><c:legendPos val="' + ch.legend + '"/><c:overlay val="0"/></c:legend>' : '';
+    const hidden = list.map((s, i) => s && s.noFill === true ? '<c:legendEntry><c:idx val="' + i + '"/><c:delete val="1"/></c:legendEntry>' : '').join('');
+    const legend = ['b', 'r', 't', 'l'].includes(ch.legend) ? '<c:legend><c:legendPos val="' + ch.legend + '"/>' + hidden + '<c:overlay val="0"/></c:legend>' : '';
     return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
       '<c:chartSpace xmlns:c="' + NS_C + '" xmlns:a="' + NS_A + '" xmlns:r="' + NS_REL + '"><c:roundedCorners val="0"/>' +
       '<c:chart>' + titleXml(ch.title) + '<c:autoTitleDeleted val="' + (ch.title ? 0 : 1) + '"/><c:plotArea><c:layout/>' + plot + catAx + valAx + '</c:plotArea>' +
@@ -324,7 +351,6 @@ var XLSX = (function(){
       '<c:chart xmlns:c="' + NS_C + '" r:id="' + rid + '"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/>';
   }
   function drawingXml(anchors){
-    const cellIdx = (n, max) => Math.max(0, Math.min(max, Math.round(Number(n)) || 0));
     const body = anchors.map((a, i) => {
       if(a.whole) return '<xdr:absoluteAnchor><xdr:pos x="0" y="0"/><xdr:ext cx="9300000" cy="6000000"/>' + graphicFrame(i + 1, 'rId' + (i + 1)) + '</xdr:absoluteAnchor>';
       const f = a.from || {}, t = a.to || {};
@@ -338,35 +364,116 @@ var XLSX = (function(){
       list.map((r, i) => '<Relationship Id="rId' + (i + 1) + '" Type="' + REL_BASE + r.type + '" Target="' + r.target + '"/>').join('') + '</Relationships>';
   }
 
+  // ---------- form controls (step 19) ----------
+  // ws['!controls'] = [{ type: 'scroll' | 'check', from: { c, r }, to: { c, r } (0-based cells
+  //   the control sits between: it starts at from's top-left corner and ends at to's, so B1:B5
+  //   is from { c: 1, r: 0 } to { c: 2, r: 5 }; at least one cell each way), cell: 'E5' | '$E$5' | "'Dashboard'!$E$5" (its linked cell),
+  //   scroll bar: min, max, inc, page, val (whole numbers 0–30,000), horiz (true: sideways);
+  //   check box: checked (true / false), text (its label) }]
+  // Each is written twice, as Excel does: in the sheet's VML drawing (x:ClientData, which every
+  // Excel reads) and as a control with its own properties part (xl/ctrlProps, Excel 2010 on).
+  // A control whose linked cell is not shaped like a cell is left out.
+  const NS_MC = 'http://schemas.openxmlformats.org/markup-compatibility/2006';
+  const NS_X14 = 'http://schemas.microsoft.com/office/spreadsheetml/2009/9/main';
+  const CELL = /^(?:(?:'(?:[^'\u0000-\u001f]|'')+'|[A-Za-z0-9_.]+)!)?\$?[A-Z]{1,3}\$?[1-9]\d{0,6}$/;
+  const SCROLL_MAX = 30000;
+  const whole = (v, lo, hi, dflt) => { const n = Math.round(Number(v)); return isFinite(n) ? Math.max(lo, Math.min(hi, n)) : dflt; };
+  function controlsOn(ws){
+    if(!Array.isArray(ws && ws['!controls'])) return [];
+    return ws['!controls'].filter(x => x && (x.type === 'scroll' || x.type === 'check') && typeof x.cell === 'string' && CELL.test(x.cell)).map(x => {
+      const from = { c: cellIdx(x.from && x.from.c, 16383), r: cellIdx(x.from && x.from.r, 1048575) };
+      // At least one cell each way: a corner not past `from` would make the control 0 wide or tall, unseen.
+      const to = { c: Math.max(from.c + 1, cellIdx(x.to && x.to.c, 16384)), r: Math.max(from.r + 1, cellIdx(x.to && x.to.r, 1048576)) };
+      if(x.type === 'check') return { type: 'check', from, to, cell: x.cell, checked: x.checked === true, text: x.text == null ? '' : String(x.text) };
+      const min = whole(x.min, 0, SCROLL_MAX, 0);
+      const max = Math.max(min, whole(x.max, 0, SCROLL_MAX, 100));
+      return { type: 'scroll', from, to, cell: x.cell, min, max, inc: whole(x.inc, 1, SCROLL_MAX, 1), page: whole(x.page, 1, SCROLL_MAX, 10),
+        val: whole(x.val, min, max, min), horiz: x.horiz === true };
+    });
+  }
+  // Shape ids: the n-th VML drawing holds 1024·n + 1, + 2, … (its o:idmap is n).
+  const shapeId = (vmlIndex, i) => vmlIndex * 1024 + 1 + i;
+  const controlName = (x, i) => (x.type === 'check' ? 'Check Box ' : 'Scroll Bar ') + (i + 1);
+  function controlXml(x, i, vmlIndex, rid){
+    const pt = (p) => '<xdr:col>' + p.c + '</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>' + p.r + '</xdr:row><xdr:rowOff>0</xdr:rowOff>';
+    return '<mc:AlternateContent><mc:Choice Requires="x14"><control shapeId="' + shapeId(vmlIndex, i) + '" r:id="' + rid + '" name="' + esc(controlName(x, i)) + '">' +
+      '<controlPr defaultSize="0" autoPict="0"><anchor moveWithCells="1"><from>' + pt(x.from) + '</from><to>' + pt(x.to) + '</to></anchor></controlPr>' +
+      '</control></mc:Choice></mc:AlternateContent>';
+  }
+  function ctrlPropXml(x){
+    const attrs = x.type === 'check'
+      ? 'objectType="CheckBox"' + (x.checked ? ' checked="Checked"' : '') + ' fmlaLink="' + esc(x.cell) + '" lockText="1" noThreeD="1"'
+      : 'objectType="Scroll" dx="22" fmlaLink="' + esc(x.cell) + '"' + (x.horiz ? ' horiz="1"' : '') +
+        ' inc="' + x.inc + '" max="' + x.max + '" min="' + x.min + '" page="' + x.page + '" val="' + x.val + '"';
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<formControlPr xmlns="' + NS_X14 + '" ' + attrs + '/>';
+  }
+  function vmlXml(ctrls, vmlIndex){
+    const shapes = ctrls.map((x, i) => {
+      const anchor = [x.from.c, 0, x.from.r, 0, x.to.c, 0, x.to.r, 0].join(', ');
+      const data = x.type === 'check'
+        ? '<x:ClientData ObjectType="Checkbox"><x:Anchor>' + anchor + '</x:Anchor><x:PrintObject>False</x:PrintObject><x:AutoFill>False</x:AutoFill>' +
+          '<x:AutoLine>False</x:AutoLine><x:TextVAlign>Center</x:TextVAlign><x:FmlaLink>' + esc(x.cell) + '</x:FmlaLink>' +
+          (x.checked ? '<x:Checked>1</x:Checked>' : '') + '<x:NoThreeD/></x:ClientData>'
+        : '<x:ClientData ObjectType="Scroll"><x:Anchor>' + anchor + '</x:Anchor><x:PrintObject>False</x:PrintObject><x:AutoFill>False</x:AutoFill>' +
+          '<x:FmlaLink>' + esc(x.cell) + '</x:FmlaLink><x:Val>' + x.val + '</x:Val><x:Min>' + x.min + '</x:Min><x:Max>' + x.max + '</x:Max>' +
+          '<x:Inc>' + x.inc + '</x:Inc><x:Page>' + x.page + '</x:Page>' + (x.horiz ? '<x:Horiz/>' : '') + '<x:Dx>22</x:Dx></x:ClientData>';
+      const text = x.type === 'check' ? '<v:textbox style="mso-direction-alt:auto" o:singleclick="f"><div style="text-align:left">' + esc(x.text) + '</div></v:textbox>' : '';
+      return '<v:shape id="_x0000_s' + shapeId(vmlIndex, i) + '" type="#_x0000_t201" style="position:absolute;z-index:' + (i + 1) + '" ' +
+        'filled="f" fillcolor="window [65]" stroked="f" strokecolor="windowText [64]" o:insetmode="auto">' + text + data + '</v:shape>';
+    }).join('');
+    return '<xml xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">' +
+      '<o:shapelayout v:ext="edit"><o:idmap v:ext="edit" data="' + vmlIndex + '"/></o:shapelayout>' +
+      '<v:shapetype id="_x0000_t201" coordsize="21600,21600" o:spt="201" path="m,l,21600r21600,l21600,xe"><v:stroke joinstyle="miter"/>' +
+      '<v:path shadowok="f" o:extrusionok="f" strokeok="f" fillok="f" o:connecttype="rect"/><o:lock v:ext="edit" shapetype="t"/></v:shapetype>' +
+      shapes + '</xml>';
+  }
+
   // ---------- package ----------
   function buildParts(wb){
     if(!wb || !Array.isArray(wb.SheetNames) || !wb.SheetNames.length) throw new Error('The workbook has no sheets.');
     const styles = makeStyleTable();
     const n = wb.SheetNames.length;
     // Worksheets and chart tabs, each numbered in its own folder; then each one's drawing (if
-    // it has charts) and the charts themselves.
-    let wsCount = 0, csCount = 0, drawingCount = 0, chartCount = 0;
+    // it has charts) and the charts themselves, and its VML drawing and control properties (if
+    // it has form controls). A sheet's rels list them in sheetRelIds' order.
+    let wsCount = 0, csCount = 0, drawingCount = 0, chartCount = 0, vmlCount = 0, ctrlCount = 0;
     const extra = [], overrides = [];
     const sheets = wb.SheetNames.map((name) => {
       const ws = wb.Sheets[name] || {};
       const chartsheet = isChartsheet(ws);
+      const ctrls = chartsheet ? [] : controlsOn(ws);
+      const v = ctrls.length ? ++vmlCount : 0;
       const sheet = chartsheet
-        ? { path: 'xl/chartsheets/sheet' + (++csCount) + '.xml', xml: chartsheetXml(), type: 'chartsheet', ct: 'spreadsheetml.chartsheet+xml' }
-        : { path: 'xl/worksheets/sheet' + (++wsCount) + '.xml', xml: sheetXml(ws, styles), type: 'worksheet', ct: 'spreadsheetml.worksheet+xml' };
+        ? { path: 'xl/chartsheets/sheet' + (++csCount) + '.xml', xml: chartsheetXml(), type: 'chartsheet', ct: OOXML + 'spreadsheetml.chartsheet+xml' }
+        : { path: 'xl/worksheets/sheet' + (++wsCount) + '.xml', xml: sheetXml(ws, styles, v), type: 'worksheet', ct: OOXML + 'spreadsheetml.worksheet+xml' };
+      const rels = [];
       const anchors = chartsheet ? [{ whole: true, chart: ws['!chart'] }] : chartsOn(ws);
       if(anchors.length){
         const d = ++drawingCount;
-        const dir = sheet.path.slice(0, sheet.path.lastIndexOf('/'));
-        extra.push({ path: dir + '/_rels/' + sheet.path.slice(dir.length + 1) + '.rels', xml: relsXml([{ type: 'drawing', target: '../drawings/drawing' + d + '.xml' }]) });
+        rels.push({ type: 'drawing', target: '../drawings/drawing' + d + '.xml' });
         extra.push({ path: 'xl/drawings/drawing' + d + '.xml', xml: drawingXml(anchors) });
-        overrides.push(['/xl/drawings/drawing' + d + '.xml', 'drawing+xml']);
+        overrides.push(['/xl/drawings/drawing' + d + '.xml', OOXML + 'drawing+xml']);
         const charts = anchors.map(a => {
           const k = ++chartCount;
           extra.push({ path: 'xl/charts/chart' + k + '.xml', xml: chartXml(a.chart) });
-          overrides.push(['/xl/charts/chart' + k + '.xml', 'drawingml.chart+xml']);
+          overrides.push(['/xl/charts/chart' + k + '.xml', OOXML + 'drawingml.chart+xml']);
           return { type: 'chart', target: '../charts/chart' + k + '.xml' };
         });
         extra.push({ path: 'xl/drawings/_rels/drawing' + d + '.xml.rels', xml: relsXml(charts) });
+      }
+      if(ctrls.length){
+        rels.push({ type: 'vmlDrawing', target: '../drawings/vmlDrawing' + v + '.vml' });
+        extra.push({ path: 'xl/drawings/vmlDrawing' + v + '.vml', xml: vmlXml(ctrls, v) });
+        ctrls.forEach(x => {
+          const k = ++ctrlCount;
+          rels.push({ type: 'ctrlProp', target: '../ctrlProps/ctrlProp' + k + '.xml' });
+          extra.push({ path: 'xl/ctrlProps/ctrlProp' + k + '.xml', xml: ctrlPropXml(x) });
+          overrides.push(['/xl/ctrlProps/ctrlProp' + k + '.xml', 'application/vnd.ms-excel.controlproperties+xml']);
+        });
+      }
+      if(rels.length){
+        const dir = sheet.path.slice(0, sheet.path.lastIndexOf('/'));
+        extra.push({ path: dir + '/_rels/' + sheet.path.slice(dir.length + 1) + '.rels', xml: relsXml(rels) });
       }
       return sheet;
     });
@@ -375,9 +482,10 @@ var XLSX = (function(){
       '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
       '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
       '<Default Extension="xml" ContentType="application/xml"/>' +
+      (vmlCount ? '<Default Extension="vml" ContentType="' + OOXML + 'vmlDrawing"/>' : '') +
       '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
-      sheets.map(s => '<Override PartName="/' + s.path + '" ContentType="application/vnd.openxmlformats-officedocument.' + s.ct + '"/>').join('') +
-      overrides.map(([part, ct]) => '<Override PartName="' + part + '" ContentType="application/vnd.openxmlformats-officedocument.' + ct + '"/>').join('') +
+      sheets.map(s => '<Override PartName="/' + s.path + '" ContentType="' + s.ct + '"/>').join('') +
+      overrides.map(([part, ct]) => '<Override PartName="' + part + '" ContentType="' + ct + '"/>').join('') +
       '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
       '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>' +
       '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>' +

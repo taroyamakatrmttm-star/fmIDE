@@ -7,6 +7,12 @@ Notable changes before this repository existed (recorded from the development hi
 - Saved with the board: the board file is now version 8 (charts of layout `tornado` and `spider`); version 7 files open as before; an older fmGraph asks first and shows these charts empty. Never in a template's board. `window.fmGraph.addChart` takes the new layouts and `fmGraph.chart(id)` gives their Low, High, swing and points.
 - On a large model these charts are worked out once the sliders stop ("Working out…").
 
+## ExcelExporter's Excel writer: a form control is never too small to see (step 19, B0)
+- A scroll bar or check box placed with its end corner not past its start was written 0 cells wide or tall, so Excel drew nothing (found by the owner opening the sample in desktop Excel: the Other tab's scroll bar was missing). Every control now covers at least one cell each way.
+
+## ExcelExporter's Excel writer: form controls and stacked charts (step 19, B0)
+- The built-in Excel writer can now put **scroll bars** and **check boxes** on a sheet, each tied to a cell, alongside the sheet's charts, and draw **stacked** (and 100% stacked) bar charts with a series that draws nothing — the pieces step 19's Dashboard and waterfall charts will use. Nothing in ExcelExporter uses them yet, so its workbooks are unchanged. No external library.
+
 ## fmGraph: boards share where the sliders stand
 - Every board shares slider positions by default: a slider moved on one board moves the numbers on every sharing board, and a like slider there (same rectangle, periods and kind) stands in the same place. Each board still shows only its own sliders; "Also moved on other boards" names the others counting.
 - Untick "Share slider positions with other boards" (☰ on a phone) to give a board its own positions, as before; its tab is marked ◇. Kept with the board: the board file is now version 7 (`ownSliders`); version 6 files open with every board sharing.
