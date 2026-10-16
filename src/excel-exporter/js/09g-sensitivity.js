@@ -36,6 +36,7 @@ function defaultSensitivity(){
 function cleanSensitivity(raw, periodCount){
   const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const out = defaultSensitivity();
+  if(src.origin === 'fmGraph') out.origin = 'fmGraph'; // made from a board's Tornado and Spider (step 19 B3b, 09i)
   out.enabled = src.enabled === true;
   const ids = (list, max) => {
     const seen = new Set(), res = [];
@@ -57,7 +58,9 @@ function cleanSensitivity(raw, periodCount){
     seen.add(v.row);
     const by = SENS_BY.includes(v.by) ? v.by : 'percent';
     const num = (x, d) => { const n = Number(x); return Number.isFinite(n) ? Math.max(-SENS_MAX_CHANGE, Math.min(SENS_MAX_CHANGE, n)) : d; };
-    out.variables.push({ row: v.row, by, low: num(v.low, SENS_DEFAULT_CHANGE[by][0]), high: num(v.high, SENS_DEFAULT_CHANGE[by][1]) });
+    const spec = { row: v.row, by, low: num(v.low, SENS_DEFAULT_CHANGE[by][0]), high: num(v.high, SENS_DEFAULT_CHANGE[by][1]) };
+    if(v.show === false) spec.show = false; // listed but left out of the charts: Show 0 in Excel (B3b)
+    out.variables.push(spec);
   });
   return out;
 }
@@ -314,7 +317,7 @@ function appendSensitivitySheet(wb, plan, lay, ctx, labels){
     ws[L(SENS_COL.by) + r] = { t: 's', v: v.spec.by === 'percent' ? '%' : 'amount', s: inputCenter };
     ws[L(SENS_COL.low) + r] = { t: 'n', v: v.spec.low, s: inputStyle };
     ws[L(SENS_COL.high) + r] = { t: 'n', v: v.spec.high, s: inputStyle };
-    ws[L(SENS_COL.show) + r] = { t: 'n', v: 1, s: inputCenter };
+    ws[L(SENS_COL.show) + r] = { t: 'n', v: v.spec.show === false ? 0 : 1, s: inputCenter };
     ws[L(SENS_COL.now) + r] = { t: 'n', f: 'IF($C$6=' + c(SENS_COL.no) + ',IF($C$7<0,' + c(SENS_COL.low) + '*(-$C$7)/' + steps + ',' + c(SENS_COL.high) + '*$C$7/' + steps + '),0)', s: calcStyle };
     ws[L(SENS_COL.pct) + r] = { t: 'n', f: 'IF(' + c(SENS_COL.by) + '="%",' + c(SENS_COL.now) + '/100,0)', s: calcStyle };
     ws[L(SENS_COL.amt) + r] = { t: 'n', f: 'IF(' + c(SENS_COL.by) + '="%",0,' + c(SENS_COL.now) + ')', s: calcStyle };
@@ -584,7 +587,8 @@ function renderSensitivityList(){
     pick.addEventListener('click', () => { sensPicked = i; renderSensitivity(); });
     const state = document.createElement('span');
     state.className = 'sens-state';
-    state.textContent = a.enabled ? '' : 'off';
+    state.textContent = [a.origin === 'fmGraph' ? 'fmGraph' : '', a.enabled ? '' : 'off'].filter(Boolean).join(' · ');
+    if(a.origin === 'fmGraph') state.title = 'Made from an fmGraph board\'s Tornado or Spider (Layout → Use fmGraph boards…)';
     const btn = (text, cls, title, disabled, act) => {
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'icon ' + cls; b.textContent = text;

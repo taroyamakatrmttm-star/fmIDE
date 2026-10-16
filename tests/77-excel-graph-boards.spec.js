@@ -18,7 +18,7 @@ const { test, expect, fixture, readFixture, openApp } = require('./helpers/apps'
 const X = require('./helpers/excel');
 const F = require('./helpers/fmide');
 const D = require('./helpers/documents');
-const { requireSoffice, recalc, valueOf } = require('./helpers/soffice');
+const { requireSoffice, recalc, recalcDataTables, valueOf } = require('./helpers/soffice');
 
 const board = (name) => fixture('graph-boards', name);
 const genStatus = (page) => page.locator('#genStatus .status');
@@ -95,10 +95,10 @@ test('a .fmide with boards: the window, Use, and the cases, row scenarios and ma
   expect(X.formulaOf(cellAt(inp, p1 + 1, cost.first + 1))).toBe(X.numToCol(p1 + 1) + cost.first);
   // The input's own row still picks its scenario (column C links to the Scenarios tab).
   expect(X.formulaOf(cellAt(inp, p1, price.own))).toMatch(/^INDEX\(/);
-  // Exported, the layout is version 5 (since step 19 B3a) and carries the copy.
+  // Exported, the layout is version 6 (since step 19 B3b) and carries the copy.
   const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
   const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
-  expect(exported.version).toBe(5);
+  expect(exported.version).toBe(6);
   expect(exported.cfg.graph.board).toBe('Profit board');
   expect(exported.cfg.graph.from).toEqual(['Profit board', 'Second board']);
   expect(exported.cfg.graph.scenarios.map(s => s.name)).toEqual(['High price', 'Volume up', 'Mixed', 'Also high', 'Cost cut']);
@@ -317,4 +317,131 @@ test('a model without boards says where to find them; the menu items need a mode
   await X.loadFixtureModel(page, 'scenario-unit-price-volume.json');
   await X.menuCommand(page, 'btnUseGraphBoards');
   await expect(genStatus(page)).toContainText('This model came without fmGraph boards');
+});
+
+// ---------- Step 19 B3b: fmGraph's Tornado and Spider → sensitivity analyses ----------
+// fmGraph makes the charts on the same model (its own window.fmGraph), exports the board, and
+// ExcelExporter turns them into analyses; LibreOffice works each Data Table out to fmGraph's
+// own Low and High figures.
+const analysisNames = (page) => page.locator('#sensAnalyses .sens-pick').allTextContents();
+const SENS_INPUTS = [
+  { rect: 'Price', by: 'percent', low: -10, high: 20 },
+  { rect: 'Volume', by: 'amount', low: -50, high: 50 },
+  { rect: 'Cost', by: 'percent', low: -20, high: 20, show: false },
+];
+async function graphWithCharts(context){
+  const graph = await context.newPage();
+  await openApp(graph, 'fmGraph');
+  await graph.waitForFunction(() => !!window.fmGraph);
+  await graph.evaluate((t) => fmGraph.load(t, 'Profit'), fs.readFileSync(board('profit.fmide'), 'utf8'));
+  await graph.waitForFunction(() => fmGraph.rectangles().length > 0);
+  const ids = await graph.evaluate((inputs) => ({
+    tornado: fmGraph.addChart({ layout: 'tornado', title: 'What moves Profit', output: 'Profit', period: 3, inputs }),
+    spider: fmGraph.addChart({ layout: 'spider', title: 'Profit lines', output: 'Profit', period: 3, steps: 3, inputs }),
+    revenue: fmGraph.addChart({ layout: 'tornado', title: 'Revenue', output: 'Revenue', period: 3, inputs: inputs.slice(0, 2) }),
+  }), SENS_INPUTS);
+  const file = await graph.evaluate(() => fmGraph.exportBoards(false)); // Export this board: its file, as written
+  const figures = await graph.evaluate((id) => fmGraph.chart(id), ids.tornado);
+  const revenue = await graph.evaluate((id) => fmGraph.chart(id), ids.revenue);
+  return { graph, file, figures, revenue };
+}
+
+test('fmGraph\'s Tornado and Spider become analyses: grouped, named, Show 0, the Spider\'s points', async ({ page, context, pageErrors }, testInfo) => {
+  const { file } = await graphWithCharts(context);
+  expect(file.version).toBe(8);
+  await openProfit(page);
+  await importFile(page, D.tempFile(testInfo, 'charts.board.json', JSON.stringify(file)));
+  await expect(page.locator('#graphSensHead')).toBeVisible();
+  expect(await page.locator('#graphSensList .graph-scn-name').allTextContents()).toEqual(['What moves Profit', 'Revenue']);
+  expect(await page.locator('#graphSensList .graph-scn-what').allTextContents()).toEqual(['Tornado + Spider: Profit · 3 inputs · 2029', 'Tornado: Revenue · 2 inputs · 2029']);
+  expect(await scenarioNames(page)).toEqual([]); // one board's file carries no scenarios
+  await page.click('#graphUse');
+  await expect(genStatus(page)).toHaveText('fmGraph boards used: 2 sensitivity analyses from its Tornado and Spider charts. The Inputs tab is on.');
+  // The panel: the untouched default replaced by the two, marked as from fmGraph; the first picked.
+  expect(await analysisNames(page)).toEqual(['What moves Profit', 'Revenue']);
+  expect(await page.locator('#sensAnalyses .sens-state').allTextContents()).toEqual(['fmGraph', 'fmGraph']);
+  await expect(page.locator('#sensAnalyses .sens-pick').first()).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#cfgSensSteps')).toHaveValue('3');
+  await expect(page.locator('#cfgSensPeriod')).toHaveValue('2'); // fmGraph's API counts periods from 1: its 3 is 2029
+  const { wb } = await X.generate(page);
+  expect(wb.SheetNames.filter(n => !['Inputs', 'Profit', 'Bonus', 'Bonus (instance 1)'].includes(n))).toEqual(['What moves Profit', 'Tornado', 'Spider', 'Revenue', 'Tornado 2', 'Spider 2']);
+  const ws = wb.Sheets['What moves Profit'];
+  expect(ws.C5.v).toBe(3); // the period, from 1
+  const head = X.findRow(ws, 'Input variable', 'B')[0];
+  expect([1, 2, 3].map(i => [ws['D' + (head + i)].v, ws['E' + (head + i)].v, ws['F' + (head + i)].v, ws['G' + (head + i)].v]))
+    .toEqual([['%', -10, 20, 1], ['amount', -50, 50, 1], ['%', -20, 20, 0]]);
+  expect(ws['T' + head].v).toBe(3); // 7 points: −3 … 3
+  // Kept with the layout: the mark and the hidden input travel in Export Mapping.
+  const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
+  const sens = JSON.parse(fs.readFileSync(await download.path(), 'utf8')).cfg.sensitivities;
+  expect(sens.map(a => [a.name, a.origin, a.steps, a.period, a.outputs.length])).toEqual([['What moves Profit', 'fmGraph', 3, 2, 1], ['Revenue', 'fmGraph', 5, 2, 1]]);
+  expect(sens[0].variables.map(v => v.show)).toEqual([undefined, undefined, false]);
+  // Used again: asked first, fmGraph's analyses replaced, the person's own kept.
+  await page.click('#btnSensAdd');
+  await importFile(page, D.tempFile(testInfo, 'charts.board.json', JSON.stringify(file)));
+  await page.locator('#graphSensList input[type=checkbox]').nth(1).uncheck();
+  await page.click('#graphUse');
+  await expect(page.locator('#confirmMessage')).toHaveText('The sensitivity analyses made from fmGraph before are replaced; your own stay.');
+  await page.click('#confirmOk');
+  expect(await analysisNames(page)).toEqual(['Sensitivity 3', 'What moves Profit']);
+  // Remove from Layout takes fmGraph's out, the person's stays.
+  await X.menuCommand(page, 'btnUseGraphBoards');
+  await page.click('#graphRemove');
+  await page.click('#confirmOk');
+  await expect(genStatus(page)).toHaveText('fmGraph scenarios and analyses removed from this layout.');
+  expect(await analysisNames(page)).toEqual(['Sensitivity 3']);
+  expect(pageErrors).toEqual([]);
+});
+
+test('LibreOffice: each analysis\'s Data Table gives fmGraph\'s own Tornado figures', async ({ page, context }, testInfo) => {
+  requireSoffice(test);
+  testInfo.setTimeout(180_000);
+  const { file, figures, revenue } = await graphWithCharts(context);
+  await openProfit(page);
+  await importFile(page, D.tempFile(testInfo, 'charts.board.json', JSON.stringify(file)));
+  await page.click('#graphUse');
+  const { bytes, wb } = await X.generate(page);
+  const out = recalcDataTables({ wb: bytes }).wb;
+  const book = await X.readBack(out);
+  const check = (sheet, fig, points) => {
+    const ws = book.getWorksheet(sheet);
+    const head = X.findRow(wb.Sheets[sheet], 'Input variable', 'B')[0];
+    fig.inputs.filter(i => i.show !== false).forEach(i => {
+      const r = X.findRow(wb.Sheets[sheet], i.name, 'B').find(x => x > head && x <= head + 3);
+      const low = valueOf(ws.getCell(r, 14)), high = valueOf(ws.getCell(r, 14 + points - 1));
+      const near = (a, b) => Math.abs(a - b) <= 1e-6 * Math.max(1, Math.abs(b));
+      if(!near(low, i.lowValue) || !near(high, i.highValue)) throw new Error(`${sheet}: ${i.name} gives ${low} / ${high}, fmGraph ${i.lowValue} / ${i.highValue}`);
+    });
+    expect(valueOf(ws.getCell('C8'))).toBe(fig.base);
+  };
+  check('What moves Profit', figures, 7);
+  check('Revenue', revenue, 11);
+});
+
+test('a board\'s Tornado and Spider from someone else: outputs and inputs the model hasn\'t got are left out and counted', async ({ page }, testInfo) => {
+  await openProfit(page);
+  const at = (nodeId, name, canvasId = 'cProfit') => ({ canvasId, nodeId, name });
+  const f = { kind: 'fmIDE-graph-board', version: 8, boards: [{ name: 'Charts', sliders: [], items: [
+    { type: 'chart', layout: 'tornado', title: '<b>Bold</b>', output: at('profit', 'Profit'), period: 99, steps: 'x', inputs: [
+      Object.assign(at('price', 'Price'), { by: 'evil', low: 'abc', high: '5' }),
+      Object.assign(at('rate', 'Bonus rate', 'cBonus'), { by: 'percent', low: -1, high: 1 }),
+      Object.assign(at('revenue', 'Revenue'), { by: 'percent', low: -1, high: 1 }),
+      Object.assign(at('nope', 'Nope'), { by: 'percent', low: -1, high: 1 }),
+      'junk'] },
+    { type: 'chart', layout: 'spider', title: 'Lost', output: at('nope', 'Nope'), inputs: [] },
+    { type: 'chart', layout: 'tornado', title: 'No output', inputs: [] }] }] };
+  await importFile(page, D.tempFile(testInfo, 'strangers-charts.board.json', JSON.stringify(f)));
+  expect(await page.locator('#graphSensList .graph-scn-name').allTextContents()).toEqual(['<b>Bold</b>']);
+  await expect(page.locator('#graphSensList b')).toHaveCount(0);
+  expect(await page.locator('#graphSensList .graph-scn-what').allTextContents()).toEqual(['Tornado: Profit · 1 input · 2027']);
+  expect(await leftOut(page)).toEqual([
+    '2 Tornado or Spider charts whose output this model doesn\'t have.',
+    '4 inputs of the Tornado and Spider charts left out (not in this model, inside a block, not an input, or not readable).',
+    'The Inputs tab will be turned on: the scenarios move inputs there.']);
+  await page.click('#graphUse');
+  const { wb } = await X.generate(page);
+  const ws = wb.Sheets['<b>Bold<'] || wb.Sheets[wb.SheetNames.find(n => n.startsWith('<b>Bold'))];
+  const head = X.findRow(ws, 'Input variable', 'B')[0];
+  // "evil" reads as percent, "abc" as the default −10, "5" as 5.
+  expect([ws['D' + (head + 1)].v, ws['E' + (head + 1)].v, ws['F' + (head + 1)].v]).toEqual(['%', -10, 5]);
 });
