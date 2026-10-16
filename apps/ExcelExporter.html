@@ -225,15 +225,16 @@ var XLSX = (function(){
       '<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>' +
       (ids.drawing ? '<drawing r:id="' + ids.drawing + '"/>' : '') +
       (ids.vml ? '<legacyDrawing r:id="' + ids.vml + '"/>' : '') +
-      (ctrls.length ? '<controls>' + ctrls.map((x, i) => controlXml(x, i, vmlIndex, ids.ctrls[i])).join('') + '</controls>' : '') +
+      // The controls list in an x14 choice too, as Excel writes it (the iPad's Excel wants it so).
+      (ctrls.length ? '<mc:AlternateContent><mc:Choice Requires="x14"><controls>' + ctrls.map((x, i) => controlXml(x, i, vmlIndex, ids.ctrls[i])).join('') + '</controls></mc:Choice></mc:AlternateContent>' : '') +
       '</worksheet>';
   }
-  // The relationship ids a worksheet uses: rId1 the charts' drawing (if any), then the VML
-  // drawing and each control's properties (if any controls).
+  // The relationship ids a worksheet uses: rId1 the drawing (if it has charts or controls), then
+  // the VML drawing and each control's properties (if any controls).
   function sheetRelIds(ws){
     let k = 0;
-    const drawing = chartsOn(ws).length ? 'rId' + (++k) : null;
     const ctrls = controlsOn(ws);
+    const drawing = chartsOn(ws).length || ctrls.length ? 'rId' + (++k) : null;
     const vml = ctrls.length ? 'rId' + (++k) : null;
     return { drawing, vml, ctrls: ctrls.map(() => 'rId' + (++k)) };
   }
@@ -350,14 +351,26 @@ var XLSX = (function(){
       '<xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm><a:graphic><a:graphicData uri="' + NS_C + '">' +
       '<c:chart xmlns:c="' + NS_C + '" r:id="' + rid + '"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/>';
   }
-  function drawingXml(anchors){
+  // `controls` (a worksheet's form controls, with their VML drawing's number): each also as a
+  // hidden shape tied to its VML shape (a14:compatExt), as Excel writes them — the iPad's Excel
+  // reports a damaged file without these (found by the owner, 16 October 2026).
+  function drawingXml(anchors, controls, vmlIndex){
+    const pt = (p) => '<xdr:col>' + cellIdx(p.c, 16383) + '</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>' + cellIdx(p.r, 1048575) + '</xdr:row><xdr:rowOff>0</xdr:rowOff>';
+    const shapes = (controls || []).map((x, i) => {
+      const id = shapeId(vmlIndex, i);
+      return '<mc:AlternateContent xmlns:mc="' + NS_MC + '"><mc:Choice xmlns:a14="' + NS_A14 + '" Requires="a14">' +
+        '<xdr:twoCellAnchor editAs="oneCell"><xdr:from>' + pt(x.from) + '</xdr:from><xdr:to>' + pt(x.to) + '</xdr:to>' +
+        '<xdr:sp macro="" textlink=""><xdr:nvSpPr><xdr:cNvPr id="' + id + '" name="' + esc(controlName(x, i)) + '" hidden="1"><a:extLst>' +
+        '<a:ext uri="{63B3BB69-23CF-44E3-9099-C40C66FF867C}"><a14:compatExt spid="_x0000_s' + id + '"/></a:ext></a:extLst></xdr:cNvPr><xdr:cNvSpPr/></xdr:nvSpPr>' +
+        '<xdr:spPr bwMode="auto"><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></xdr:spPr>' +
+        '</xdr:sp><xdr:clientData/></xdr:twoCellAnchor></mc:Choice><mc:Fallback/></mc:AlternateContent>';
+    }).join('');
     const body = anchors.map((a, i) => {
       if(a.whole) return '<xdr:absoluteAnchor><xdr:pos x="0" y="0"/><xdr:ext cx="9300000" cy="6000000"/>' + graphicFrame(i + 1, 'rId' + (i + 1)) + '</xdr:absoluteAnchor>';
       const f = a.from || {}, t = a.to || {};
-      const pt = (p) => '<xdr:col>' + cellIdx(p.c, 16383) + '</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>' + cellIdx(p.r, 1048575) + '</xdr:row><xdr:rowOff>0</xdr:rowOff>';
       return '<xdr:twoCellAnchor><xdr:from>' + pt(f) + '</xdr:from><xdr:to>' + pt(t) + '</xdr:to>' + graphicFrame(i + 1, 'rId' + (i + 1)) + '</xdr:twoCellAnchor>';
     }).join('');
-    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<xdr:wsDr xmlns:xdr="' + NS_XDR + '" xmlns:a="' + NS_A + '" xmlns:r="' + NS_REL + '">' + body + '</xdr:wsDr>';
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<xdr:wsDr xmlns:xdr="' + NS_XDR + '" xmlns:a="' + NS_A + '" xmlns:r="' + NS_REL + '">' + body + shapes + '</xdr:wsDr>';
   }
   function relsXml(list){
     return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="' + NS_PKG_REL + '">' +
@@ -375,6 +388,7 @@ var XLSX = (function(){
   // A control whose linked cell is not shaped like a cell is left out.
   const NS_MC = 'http://schemas.openxmlformats.org/markup-compatibility/2006';
   const NS_X14 = 'http://schemas.microsoft.com/office/spreadsheetml/2009/9/main';
+  const NS_A14 = 'http://schemas.microsoft.com/office/drawing/2010/main';
   const CELL = /^(?:(?:'(?:[^'\u0000-\u001f]|'')+'|[A-Za-z0-9_.]+)!)?\$?[A-Z]{1,3}\$?[1-9]\d{0,6}$/;
   const SCROLL_MAX = 30000;
   const whole = (v, lo, hi, dflt) => { const n = Math.round(Number(v)); return isFinite(n) ? Math.max(lo, Math.min(hi, n)) : dflt; };
@@ -448,10 +462,10 @@ var XLSX = (function(){
         : { path: 'xl/worksheets/sheet' + (++wsCount) + '.xml', xml: sheetXml(ws, styles, v), type: 'worksheet', ct: OOXML + 'spreadsheetml.worksheet+xml' };
       const rels = [];
       const anchors = chartsheet ? [{ whole: true, chart: ws['!chart'] }] : chartsOn(ws);
-      if(anchors.length){
+      if(anchors.length || ctrls.length){
         const d = ++drawingCount;
         rels.push({ type: 'drawing', target: '../drawings/drawing' + d + '.xml' });
-        extra.push({ path: 'xl/drawings/drawing' + d + '.xml', xml: drawingXml(anchors) });
+        extra.push({ path: 'xl/drawings/drawing' + d + '.xml', xml: drawingXml(anchors, ctrls, v) });
         overrides.push(['/xl/drawings/drawing' + d + '.xml', OOXML + 'drawing+xml']);
         const charts = anchors.map(a => {
           const k = ++chartCount;
@@ -459,7 +473,7 @@ var XLSX = (function(){
           overrides.push(['/xl/charts/chart' + k + '.xml', OOXML + 'drawingml.chart+xml']);
           return { type: 'chart', target: '../charts/chart' + k + '.xml' };
         });
-        extra.push({ path: 'xl/drawings/_rels/drawing' + d + '.xml.rels', xml: relsXml(charts) });
+        if(charts.length) extra.push({ path: 'xl/drawings/_rels/drawing' + d + '.xml.rels', xml: relsXml(charts) });
       }
       if(ctrls.length){
         rels.push({ type: 'vmlDrawing', target: '../drawings/vmlDrawing' + v + '.vml' });

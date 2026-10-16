@@ -222,7 +222,7 @@ test.describe('the Excel writer\'s form controls and stacked charts (step 19), i
     const zip = await JSZip.loadAsync(XLSX.write(dashboardWorkbook()), { checkCRC32: true });
     const files = Object.keys(zip.files).filter(k => !zip.files[k].dir);
     const part = (p) => zip.file(p).async('string');
-    expect(files).toEqual(expect.arrayContaining(['xl/drawings/drawing1.xml', 'xl/charts/chart1.xml', 'xl/charts/chart2.xml',
+    expect(files).toEqual(expect.arrayContaining(['xl/drawings/drawing1.xml', 'xl/drawings/drawing2.xml', 'xl/charts/chart1.xml', 'xl/charts/chart2.xml',
       'xl/drawings/vmlDrawing1.vml', 'xl/drawings/vmlDrawing2.vml', 'xl/ctrlProps/ctrlProp1.xml', 'xl/ctrlProps/ctrlProp2.xml', 'xl/ctrlProps/ctrlProp3.xml',
       'xl/worksheets/_rels/sheet1.xml.rels', 'xl/worksheets/_rels/sheet2.xml.rels']));
     for(const f of files) if(/\.(xml|rels|vml)$/.test(f)) wellFormed(f, await part(f));
@@ -248,12 +248,25 @@ test.describe('the Excel writer\'s form controls and stacked charts (step 19), i
       { id: 'rId2', type: 'vmlDrawing', target: 'xl/drawings/vmlDrawing1.vml' },
       { id: 'rId3', type: 'ctrlProp', target: 'xl/ctrlProps/ctrlProp1.xml' },
       { id: 'rId4', type: 'ctrlProp', target: 'xl/ctrlProps/ctrlProp2.xml' }]);
-    expect(sheet).toMatch(/<drawing r:id="rId1"\/><legacyDrawing r:id="rId2"\/><controls>.*<\/controls><\/worksheet>$/);
+    // The controls list in an x14 choice, as Excel writes it (the iPad's Excel reports a damaged file otherwise).
+    expect(sheet).toMatch(/<drawing r:id="rId1"\/><legacyDrawing r:id="rId2"\/><mc:AlternateContent><mc:Choice Requires="x14"><controls>.*<\/controls><\/mc:Choice><\/mc:AlternateContent><\/worksheet>$/);
     expect(sheet).toContain('<mc:AlternateContent><mc:Choice Requires="x14"><control shapeId="1025" r:id="rId3" name="Scroll Bar 1"><controlPr defaultSize="0" autoPict="0">' +
       '<anchor moveWithCells="1"><from><xdr:col>1</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></from>');
     expect(sheet).toContain('<control shapeId="1026" r:id="rId4" name="Check Box 2">');
-    // The second sheet: no charts, so its VML is rId1; its shapes numbered in their own block.
-    expect(await part('xl/worksheets/sheet2.xml')).toContain('<legacyDrawing r:id="rId1"/><controls><mc:AlternateContent><mc:Choice Requires="x14"><control shapeId="2049" r:id="rId2"');
+    // Each control is also a hidden shape in the sheet's drawing, beside its charts, tied to its VML
+    // shape (a14:compatExt), as Excel writes it: the iPad's Excel reports a damaged file without it
+    // (the owner, 16 October 2026).
+    const d1 = await part('xl/drawings/drawing1.xml');
+    expect((d1.match(/<xdr:graphicFrame /g) || []).length).toBe(2);
+    expect(d1).toContain('<mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><mc:Choice xmlns:a14="http://schemas.microsoft.com/office/drawing/2010/main" Requires="a14">' +
+      '<xdr:twoCellAnchor editAs="oneCell"><xdr:from><xdr:col>1</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>');
+    expect(d1).toContain('<xdr:cNvPr id="1025" name="Scroll Bar 1" hidden="1"><a:extLst><a:ext uri="{63B3BB69-23CF-44E3-9099-C40C66FF867C}"><a14:compatExt spid="_x0000_s1025"/>');
+    expect(d1).toContain('<xdr:cNvPr id="1026" name="Check Box 2" hidden="1">');
+    // The second sheet: no charts, but a drawing for its control (rId1), then its VML (rId2); its
+    // shapes numbered in their own block. Its drawing has no rels (no charts).
+    expect(await part('xl/worksheets/sheet2.xml')).toContain('<drawing r:id="rId1"/><legacyDrawing r:id="rId2"/><mc:AlternateContent><mc:Choice Requires="x14"><controls><mc:AlternateContent><mc:Choice Requires="x14"><control shapeId="2049" r:id="rId3"');
+    expect(await part('xl/drawings/drawing2.xml')).toContain('<xdr:cNvPr id="2049" name="Scroll Bar 1" hidden="1"><a:extLst><a:ext uri="{63B3BB69-23CF-44E3-9099-C40C66FF867C}"><a14:compatExt spid="_x0000_s2049"/>');
+    expect(files).not.toContain('xl/drawings/_rels/drawing2.xml.rels');
     expect(await part('xl/drawings/vmlDrawing2.vml')).toContain('<o:idmap v:ext="edit" data="2"/>');
   });
 
