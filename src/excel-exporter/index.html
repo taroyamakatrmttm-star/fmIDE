@@ -33,7 +33,7 @@
           <button type="button" role="menuitem" id="btnMenuSample" title="Load a small built-in model to try things out">Load Sample Model</button>
           <button type="button" role="menuitem" id="btnMenuPaste" title="Paste a model's JSON text">Paste JSON…</button>
           <button type="button" role="menuitem" id="btnFromFmide" class="hidden" title="Load the model open in fmIDE again, as it is now">↻ From fmIDE</button>
-          <button type="button" role="menuitem" id="btnImportGraphBoards" class="needs-model" title="Read a board file saved with Export all boards in fmGraph, to use its scenarios">Import fmGraph boards…</button>
+          <button type="button" role="menuitem" id="btnImportGraphBoards" class="needs-model" title="Read a board file saved with Export all boards in fmGraph, to use its scenarios, sliders and charts">Import fmGraph boards…</button>
           <div class="menu-sep" role="separator"></div>
           <button type="button" role="menuitem" id="btnClearAll" class="danger" title="Empties this page. Saved layouts are kept.">Start Over</button>
         </div>
@@ -44,7 +44,7 @@
           <div class="menu-head">This model's layout</div>
           <button type="button" role="menuitem" id="btnImportMapping" class="needs-model" title="Load a layout saved with Export Mapping">Import Mapping…</button>
           <button type="button" role="menuitem" id="btnExportMapping" class="needs-model" title="Save this model's tabs, rows and settings to a file">Export Mapping</button>
-          <button type="button" role="menuitem" id="btnUseGraphBoards" class="needs-model" title="Bring the scenarios of the model's fmGraph boards into this layout, as Global Cases">Use fmGraph boards…</button>
+          <button type="button" role="menuitem" id="btnUseGraphBoards" class="needs-model" title="Bring the model's fmGraph boards into this layout: scenarios as Global Cases, Tornado and Spider as analyses, sliders and charts on a Dashboard">Use fmGraph boards…</button>
           <div class="menu-head">Module layouts (every model)</div>
           <button type="button" role="menuitem" id="btnImportModuleLayouts" title="Read module layouts saved with Export Module Layouts">Import Module Layouts…</button>
           <button type="button" role="menuitem" id="btnExportModuleLayouts" title="Save the layouts remembered for your modules, e.g. for another computer or fmIDE's Attach Excel layout…">Export Module Layouts</button>
@@ -325,6 +325,8 @@
     <p id="graphNoScenarios" class="graph-source hidden">No scenarios in these boards.</p>
     <h4 id="graphSliderHead" class="hidden">Sliders → the Dashboard</h4>
     <ul id="graphSliderList" class="graph-scenarios"></ul>
+    <h4 id="graphChartHead" class="hidden">Charts → the Dashboard</h4>
+    <ul id="graphChartList" class="graph-scenarios"></ul>
     <h4 id="graphSensHead" class="hidden">Tornado and Spider → analyses</h4>
     <ul id="graphSensList" class="graph-scenarios"></ul>
     <h4 id="graphLeftOutHead" class="hidden">Not carried</h4>

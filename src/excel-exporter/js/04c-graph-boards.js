@@ -13,11 +13,15 @@
 //   readGraphBoards(raw)         → { error } or { version, boards, scenarios, badScenarios, badSettings }
 //   matchGraphScenarios(read)    → the scenarios with each setting matched to a layout row
 //   matchGraphSliders(read)      → every board's sliders matched to layout rows, like ones once (B4)
-//   cleanGraphCopy(raw, periods) → the layout's cfg.graph (mapping file 4; sliders from file 7), checked
+//   readGraphCharts(board, version) → a board's bars, columns and flow charts (B5), not yet matched
+//   matchGraphCharts(board)      → those charts matched to layout rows, for the Dashboard (B5)
+//   cleanGraphCopy(raw, periods) → the layout's cfg.graph (mapping file 4; sliders from file 7, charts from 8), checked
 // ============================================================
 const GRAPH_BOARD_KIND = 'fmIDE-graph-board';
-const GRAPH_BOARD_VERSION = 8; // the newest version this reader knows (8: step 18's Tornado and Spider charts, not read here yet)
-const GRAPH_LIMITS = { boards: 20, scenarios: 50, settings: 40, sliders: 40, boardName: 60, scenarioName: 40, rectName: 60, value: 1e15 };
+const GRAPH_BOARD_VERSION = 8; // the newest version this reader knows (8: step 18's Tornado and Spider charts)
+const GRAPH_LIMITS = { boards: 20, scenarios: 50, settings: 40, sliders: 40, boardName: 60, scenarioName: 40, rectName: 60, value: 1e15,
+  items: 40, title: 80, groups: 12, parts: 30, steps: 40 };
+const GRAPH_FLOW_ROLES = ['start', 'add', 'subtract', 'total'];
 
 let modelGraphBoards = null; // the graphBoards a loaded workspace or .fmide carried (raw; read only when used)
 
@@ -81,7 +85,7 @@ function readGraphBoards(raw){
     const count = (x) => Array.isArray(x) ? x.length : 0;
     boards.push({ name: graphText(b.name, GRAPH_LIMITS.boardName) || ('Board ' + (i + 1)),
       sliders: count(b.sliders), sliderList: readGraphSliders(b.sliders), items: count(b.items) + count(b.bars) + count(b.charts),
-      sensCharts: version >= 8 ? readGraphSensCharts(b.items) : [] });
+      sensCharts: version >= 8 ? readGraphSensCharts(b.items) : [], charts: readGraphCharts(b, version) });
   });
   // Named scenarios came in version 3: an older file's are not read.
   const scenarios = [];
@@ -195,6 +199,112 @@ function readGraphSensCharts(items){
   });
   return out;
 }
+// ---------- Bars and charts → the Dashboard's charts (step 19 B5) ----------
+// A colour as the format has it, '#rrggbb' (small letters), else null.
+function graphColour(v){ return typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v) ? v.toLowerCase() : null; }
+// A fixed vertical scale (board file 5): both numbers, min below max, else null (Auto).
+function graphScale(v){
+  if(!v || typeof v !== 'object' || Array.isArray(v)) return null;
+  const min = graphNumber(v.min), max = graphNumber(v.max);
+  return typeof v.min === 'number' && typeof v.max === 'number' && min !== null && max !== null && min < max ? { min, max } : null;
+}
+// A rectangle a widget names: { canvasId, nodeId, name }, or null.
+function graphRect(r){
+  return r && typeof r === 'object' && typeof r.canvasId === 'string' && typeof r.nodeId === 'string'
+    && r.canvasId && r.nodeId && r.canvasId.length <= 200 && r.nodeId.length <= 200
+    ? { canvasId: r.canvasId, nodeId: r.nodeId, name: graphText(r.name, GRAPH_LIMITS.rectName) } : null;
+}
+// A board's bars and its columns and flow charts, in the board's order, each read as the format
+// says (text cut, colours checked, at most 12 groups of 30 parts, 40 steps); a scenario waterfall
+// is kept only to be listed as not carried, a Tornado or Spider not here (they become analyses).
+// The form before boards had tabs (no `items`) is read charts first. Not yet matched to a model:
+// [{ kind: 'bar' | 'columns' | 'flow' | 'scenarios', title, wide, scale, periods | period, … }]
+function readGraphCharts(b, version){
+  const items = Array.isArray(b.items) ? b.items
+    : (Array.isArray(b.charts) ? b.charts.map(c => Object.assign({}, c, { type: 'chart' })) : [])
+      .concat(Array.isArray(b.bars) ? b.bars.map(x => Object.assign({}, x, { type: 'bar' })) : []);
+  const out = [];
+  items.slice(0, GRAPH_LIMITS.items).forEach(it => {
+    if(!it || typeof it !== 'object' || Array.isArray(it)) return;
+    const scale = version >= 5 ? graphScale(it.scale) : null;
+    const period = (x) => { const n = Number(x); return Number.isInteger(n) && n >= 0 ? n : 0; };
+    if(it.type === 'bar'){
+      const r = graphRect(it);
+      out.push({ kind: 'bar', title: '', wide: it.wide === true, scale, periods: it.periods, parts: r ? [Object.assign(r, { colour: graphColour(it.colour) })] : [], bad: r ? 0 : 1 });
+      return;
+    }
+    if(it.type !== 'chart') return;
+    const title = graphText(it.title, GRAPH_LIMITS.title), wide = it.wide !== false;
+    if(it.layout === 'scenarios'){ out.push({ kind: 'scenarios', title, wide, scale, parts: [], bad: 0 }); return; }
+    if(it.layout === 'flow'){
+      const parts = [];
+      let bad = 0;
+      (Array.isArray(it.steps) ? it.steps : []).forEach(st => {
+        const r = graphRect(st);
+        if(!r || parts.length >= GRAPH_LIMITS.steps){ bad++; return; }
+        parts.push(Object.assign(r, { role: GRAPH_FLOW_ROLES.includes(st.role) ? st.role : 'add', colour: graphColour(st.colour) }));
+      });
+      out.push({ kind: 'flow', title, wide, scale, period: period(it.period), parts, bad });
+      return;
+    }
+    if(it.layout === 'tornado' || it.layout === 'spider') return;
+    // columns (and, as fmGraph reads it, a layout this reader doesn't know)
+    const groups = [], parts = [];
+    let bad = 0;
+    const allGroups = Array.isArray(it.groups) ? it.groups : [];
+    allGroups.slice(GRAPH_LIMITS.groups).forEach(g => { bad += g && Array.isArray(g.parts) ? g.parts.length : 1; }); // past 12 groups: counted
+    allGroups.slice(0, GRAPH_LIMITS.groups).forEach(g => {
+      if(!g || typeof g !== 'object'){ bad++; return; }
+      const gi = groups.length;
+      groups.push(graphText(g.name, GRAPH_LIMITS.rectName));
+      (Array.isArray(g.parts) ? g.parts : []).forEach((x, k) => {
+        const r = graphRect(x);
+        if(!r || k >= GRAPH_LIMITS.parts){ bad++; return; }
+        parts.push(Object.assign(r, { group: gi, colour: graphColour(x.colour) }));
+      });
+    });
+    out.push({ kind: 'columns', title, wide, scale, periods: it.periods, groups, parts, bad });
+  });
+  return out;
+}
+// A board's bars and charts matched to the open model, in the layout's form: each part kept
+// where the model has its rectangle (any value rectangle with a row, outside any block); a
+// chart with no part left is left out. A scenario waterfall is counted as not carried.
+// → { charts: [cfg.graph.charts entry], left: { notFound, bad, empty, scenarios } }
+function matchGraphCharts(board){
+  const left = { notFound: 0, bad: 0, empty: 0, scenarios: 0 };
+  const charts = [];
+  (board && board.charts || []).forEach(c => {
+    if(c.kind === 'scenarios'){ left.scenarios++; return; }
+    left.bad += c.bad;
+    const parts = [];
+    c.parts.forEach(x => {
+      const row = graphRectRow(x);
+      if(!row || row.isCustom){ left.notFound++; return; }
+      const part = { row: row.id, name: x.name || row.label || '' };
+      if(x.colour) part.colour = x.colour;
+      if(c.kind === 'flow') part.role = x.role;
+      if(c.kind === 'columns') part.group = x.group;
+      parts.push(part);
+    });
+    if(!parts.length){ left.empty++; return; }
+    const out = { kind: c.kind, title: c.title, wide: c.wide, scale: c.scale, parts };
+    if(c.kind === 'flow') out.period = c.period < model.periods.length ? c.period : 0; // as fmGraph reads a period it hasn't got
+    else out.periods = cleanGraphPeriods(c.periods, model.periods.length);
+    if(c.kind === 'columns') out.groups = c.groups.slice();
+    charts.push(out);
+  });
+  return { charts, left };
+}
+// A chart's name in the window and on the Dashboard: its title, else (a bar) its rectangle,
+// else its parts' names.
+function graphChartName(c){
+  if(c.title) return c.title;
+  const names = c.parts.map(x => x.name).filter(Boolean);
+  const text = c.kind === 'bar' ? (names[0] || 'Bar') : names.join(', ') || (c.kind === 'flow' ? 'Waterfall' : 'Columns');
+  return text.length > GRAPH_LIMITS.title ? text.slice(0, GRAPH_LIMITS.title - 1) + '…' : text;
+}
+
 // A rectangle of the open model by canvas id, node id and name (capitals and outer spaces
 // ignored), at the top level: its layout row, or null.
 function graphRectRow(r){
@@ -258,8 +368,11 @@ function row0Label(rowId){ const r = mapping.rows.find(x => x.id === rowId); ret
 // ---------- The layout's copy: cfg.graph (mapping file 4) ----------
 // What Layout → Use fmGraph boards… copied, as settings ExcelExporter owns from then on:
 //   { from: [board names], board: the board picked, scenarios: [{ name, settings: [{ row, name, mode, periods, value }] }],
-//     sliders: [{ row, name, mode, periods, min, max, step }] (mapping file 7, step 19 B4) }
-function defaultGraphCopy(){ return { from: [], board: '', scenarios: [], sliders: [] }; }
+//     sliders: [{ row, name, mode, periods, min, max, step }] (mapping file 7, step 19 B4),
+//     charts: [{ kind: 'bar' | 'columns' | 'flow', title, wide, scale: { min, max } | null,
+//       periods (bar, columns) | period (flow), groups: [names] (columns),
+//       parts: [{ row, name, colour?, role (flow), group (columns) }] }] (mapping file 8, B5) }
+function defaultGraphCopy(){ return { from: [], board: '', scenarios: [], sliders: [], charts: [] }; }
 function cleanGraphCopy(raw, periodCount){
   const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const out = defaultGraphCopy();
@@ -290,6 +403,31 @@ function cleanGraphCopy(raw, periodCount){
     if(out.sliders.some(x => x.row === s.row && x.mode === s.mode && JSON.stringify(x.periods) === JSON.stringify(periods))) return;
     out.sliders.push(Object.assign({ row: s.row, name: graphText(s.name, GRAPH_LIMITS.rectName), mode: s.mode, periods }, range));
   });
+  // The Dashboard's charts: a kind not known, or a chart with no part, is left out.
+  (Array.isArray(src.charts) ? src.charts : []).forEach(c => {
+    if(!c || typeof c !== 'object' || Array.isArray(c) || !['bar', 'columns', 'flow'].includes(c.kind)) return;
+    if(out.charts.length >= GRAPH_LIMITS.items) return;
+    const chart = { kind: c.kind, title: graphText(c.title, GRAPH_LIMITS.title), wide: c.wide === true, scale: graphScale(c.scale) };
+    if(c.kind === 'flow'){ const n = Number(c.period); chart.period = Number.isInteger(n) && n >= 0 && n < Math.max(1, periodCount || 1) ? n : 0; }
+    else chart.periods = cleanGraphPeriods(c.periods, periodCount);
+    if(c.kind === 'columns') chart.groups = (Array.isArray(c.groups) ? c.groups : []).slice(0, GRAPH_LIMITS.groups).map(g => graphText(g, GRAPH_LIMITS.rectName));
+    const most = c.kind === 'bar' ? 1 : c.kind === 'flow' ? GRAPH_LIMITS.steps : GRAPH_LIMITS.groups * GRAPH_LIMITS.parts;
+    chart.parts = [];
+    (Array.isArray(c.parts) ? c.parts : []).forEach(x => {
+      if(!x || typeof x !== 'object' || typeof x.row !== 'string' || !x.row || x.row.length > 400 || chart.parts.length >= most) return;
+      const part = { row: x.row, name: graphText(x.name, GRAPH_LIMITS.rectName) };
+      const colour = graphColour(x.colour);
+      if(colour) part.colour = colour;
+      if(c.kind === 'flow') part.role = GRAPH_FLOW_ROLES.includes(x.role) ? x.role : 'add';
+      if(c.kind === 'columns'){
+        const g = Number(x.group);
+        if(!Number.isInteger(g) || g < 0 || g >= chart.groups.length) return;
+        part.group = g;
+      }
+      chart.parts.push(part);
+    });
+    if(chart.parts.length) out.charts.push(chart);
+  });
   return out;
 }
 // Called when a model or a layout is read: settings on rows that are gone, or no longer
@@ -299,8 +437,11 @@ function reconcileGraph(){
   const byId = new Map(mapping.rows.map(r => [r.id, r]));
   g.scenarios.forEach(sc => { sc.settings = sc.settings.filter(s => isSensitivityInputRow(byId.get(s.row))); });
   g.sliders = g.sliders.filter(s => isSensitivityInputRow(byId.get(s.row)));
+  g.charts.forEach(c => { c.parts = c.parts.filter(x => byId.has(x.row) && !byId.get(x.row).isCustom); });
+  g.charts = g.charts.filter(c => c.parts.length);
   mapping.cfg.graph = g;
   graphPlanCache = null;
 }
 function graphSlidersInLayout(){ return !!(mapping && mapping.cfg.graph && mapping.cfg.graph.sliders && mapping.cfg.graph.sliders.length); }
+function graphChartsInLayout(){ return !!(mapping && mapping.cfg.graph && mapping.cfg.graph.charts && mapping.cfg.graph.charts.length); }
 function graphScenariosInLayout(){ return !!(mapping && mapping.cfg.graph && mapping.cfg.graph.scenarios && mapping.cfg.graph.scenarios.length); }

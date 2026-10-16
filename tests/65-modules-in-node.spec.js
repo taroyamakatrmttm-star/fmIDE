@@ -348,6 +348,37 @@ test.describe('the Excel writer\'s form controls and stacked charts (step 19), i
     expect(c2).toContain('<c:overlap val="-20"/>');
   });
 
+  // Step 19 B5: the Dashboard's charts carry fmGraph's fixed scale, a step's own colour, and
+  // a waterfall's second part of a kind without a legend entry of its own.
+  test('a fixed scale, a bar\'s own colour and a series without a legend entry (step 19 B5)', async () => {
+    const wb = XLSX.utils.book_new();
+    const s = (extra) => Object.assign({ val: { values: [1, 2, 3] } }, extra);
+    XLSX.utils.book_append_sheet(wb, { '!charts': [
+      { chart: { type: 'bar', bar: { dir: 'col', grouping: 'stacked' }, legend: 'b', valAxis: { min: -5, max: 50 },
+        series: [s({ noFill: true, points: [{ idx: 0, color: '123456' }] }),
+          s({ color: '16A34A', points: [{ idx: 2, color: 'ab12CD' }, { idx: 0, color: '0000FF' }, { idx: 2, color: 'FF0000' }, { idx: -1, color: '00FF00' }, { idx: 1, color: 'red' }] }),
+          s({ color: '16A34A', noLegend: true })] } },
+      { chart: { type: 'bar', valAxis: { min: 5, max: 5 }, series: [s()] } },
+      { chart: { type: 'bar', valAxis: { min: '0', max: 9 }, series: [s()] } },
+      { chart: { type: 'line', series: [s({ points: [{ idx: 0, color: '123456' }] })] } },
+    ] }, 'S');
+    const zip = await JSZip.loadAsync(XLSX.write(wb));
+    const part = (n) => zip.file('xl/charts/chart' + n + '.xml').async('string');
+    const c1 = await part(1);
+    wellFormed('chart1', c1);
+    expect(c1).toContain('<c:scaling><c:orientation val="minMax"/><c:max val="50"/><c:min val="-5"/></c:scaling>');
+    // The visible series: its bars' own colours in order, each place once (the first kept), odd ones dropped.
+    const ser = [...c1.matchAll(/<c:ser>.*?<\/c:ser>/g)].map(m => m[0]);
+    expect(ser[0]).not.toContain('<c:dPt>'); // a series drawing nothing has no bar colours
+    expect([...ser[1].matchAll(/<c:dPt><c:idx val="(\d+)"\/>.*?<a:srgbClr val="([0-9A-F]{6})"\/>/g)].map(m => m[1] + ':' + m[2])).toEqual(['0:0000FF', '2:AB12CD']);
+    expect(ser[1].indexOf('<c:invertIfNegative')).toBeLessThan(ser[1].indexOf('<c:dPt>')); // the schema's order
+    expect(ser[1].indexOf('<c:dPt>')).toBeLessThan(ser[1].indexOf('<c:cat>') < 0 ? ser[1].indexOf('<c:val>') : ser[1].indexOf('<c:cat>'));
+    expect(c1).toContain('<c:legendEntry><c:idx val="0"/><c:delete val="1"/></c:legendEntry><c:legendEntry><c:idx val="2"/><c:delete val="1"/></c:legendEntry>');
+    expect(await part(2)).not.toContain('<c:max '); // min not below max: the axis stretches
+    expect(await part(3)).not.toContain('<c:max '); // text is not a number
+    expect(await part(4)).not.toContain('<c:dPt>'); // a line has no bars
+  });
+
   test('ExcelJS reads it back, and LibreOffice opens it and recalculates (the sample for desktop Excel is kept in tests/output)', async ({}, testInfo) => {
     const bytes = XLSX.write(dashboardWorkbook());
     // The sample the owner opens in desktop Excel by hand (tests/output is not committed).

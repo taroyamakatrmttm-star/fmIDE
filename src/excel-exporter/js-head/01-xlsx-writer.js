@@ -229,11 +229,13 @@ export var XLSX = (function(){
   // A chart (plain data, so a workbook stays JSON):
   //   { type: 'bar' | 'line', title: { ref, text },
   //     bar: { dir: 'bar' | 'col', grouping: 'clustered' | 'stacked' | 'percentStacked', overlap, gapWidth },
-  //     catAxis: { title, reverse }, valAxis: { title, numFmt },
+  //     catAxis: { title, reverse }, valAxis: { title, numFmt, min, max (a fixed scale: both numbers, min below max) },
   //     legend: 'b' | 'r' | 't' | null,
   //     series: [{ name: { ref, text }, cat: { ref, values: [text|number], numFmt? },
   //                val: { ref, values: [number|null], numFmt? }, color: 'RRGGBB', marker: bool,
-  //                noFill: true (draws nothing and has no legend entry: a waterfall's base) }] }
+  //                noFill: true (draws nothing and has no legend entry: a waterfall's base),
+  //                noLegend: true (drawn, but no legend entry of its own: a part a series before names),
+  //                points: [{ idx, color: 'RRGGBB' }] (a bar's own colour, by its 0-based place) }] }
   // Stacked bars always overlap fully (100), as Excel needs to stack them.
   // `ref` is a cell or range on a sheet ("'Sensitivity'!$B$16:$B$20"); `text` / `values` are
   // what it holds now (Excel shows them until it recalculates). A ref not shaped like that
@@ -285,8 +287,15 @@ export var XLSX = (function(){
     const name = s.name ? (strRef(s.name) ? '<c:tx>' + strRef(s.name) + '</c:tx>' : '<c:tx><c:v>' + esc(s.name.text || '') + '</c:v></c:tx>') : '';
     const marker = type === 'line' ? (s.marker === false || s.noFill === true ? '<c:marker><c:symbol val="none"/></c:marker>'
       : '<c:marker><c:symbol val="circle"/><c:size val="5"/>' + (fill ? '<c:spPr>' + fill + '</c:spPr>' : '') + '</c:marker>') : '';
+    // A bar's own colour (bar charts only), in the order of the bars, each place once.
+    const seen = new Set();
+    const points = type !== 'bar' || s.noFill === true || !Array.isArray(s.points) ? '' : s.points
+      .map(p => ({ idx: Math.round(Number(p && p.idx)), color: hex(p && p.color) }))
+      .filter(p => p.color && Number.isInteger(p.idx) && p.idx >= 0 && p.idx < 100000 && !seen.has(p.idx) && seen.add(p.idx))
+      .sort((a, b) => a.idx - b.idx)
+      .map(p => '<c:dPt><c:idx val="' + p.idx + '"/><c:invertIfNegative val="0"/><c:bubble3D val="0"/><c:spPr><a:solidFill><a:srgbClr val="' + p.color + '"/></a:solidFill></c:spPr></c:dPt>').join('');
     return '<c:ser><c:idx val="' + i + '"/><c:order val="' + i + '"/>' + name + sp +
-      (type === 'bar' ? '<c:invertIfNegative val="0"/>' : marker) +
+      (type === 'bar' ? '<c:invertIfNegative val="0"/>' + points : marker) +
       catData(s.cat) + numData(s.val, 'c:val') + (type === 'line' ? '<c:smooth val="0"/>' : '') + '</c:ser>';
   }
   function chartXml(ch){
@@ -310,11 +319,14 @@ export var XLSX = (function(){
       '<c:numFmt formatCode="' + esc(cat.numFmt || 'General') + '" sourceLinked="' + (cat.numFmt ? 0 : 1) + '"/>' +
       '<c:majorTickMark val="out"/><c:minorTickMark val="none"/><c:tickLblPos val="low"/>' +
       '<c:crossAx val="1002"/><c:crosses val="autoZero"/><c:auto val="1"/><c:lblAlgn val="ctr"/><c:lblOffset val="100"/><c:noMultiLvlLbl val="0"/></c:catAx>';
-    const valAx = '<c:valAx><c:axId val="1002"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/>' +
+    // A fixed scale: both ends numbers, the lower below the upper (else the axis stretches).
+    const fixed = finite(val.min) && finite(val.max) && val.min < val.max;
+    const valAx = '<c:valAx><c:axId val="1002"/><c:scaling><c:orientation val="minMax"/>' +
+      (fixed ? '<c:max val="' + val.max + '"/><c:min val="' + val.min + '"/>' : '') + '</c:scaling><c:delete val="0"/>' +
       '<c:axPos val="' + (horizontal ? 'b' : 'l') + '"/><c:majorGridlines/>' + titleXml(val.title, !horizontal) +
       '<c:numFmt formatCode="' + esc(val.numFmt || 'General') + '" sourceLinked="0"/><c:majorTickMark val="out"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/>' +
       '<c:crossAx val="1001"/><c:crosses val="' + (cat.reverse ? 'max' : 'autoZero') + '"/><c:crossBetween val="between"/></c:valAx>';
-    const hidden = list.map((s, i) => s && s.noFill === true ? '<c:legendEntry><c:idx val="' + i + '"/><c:delete val="1"/></c:legendEntry>' : '').join('');
+    const hidden = list.map((s, i) => s && (s.noFill === true || s.noLegend === true) ? '<c:legendEntry><c:idx val="' + i + '"/><c:delete val="1"/></c:legendEntry>' : '').join('');
     const legend = ['b', 'r', 't', 'l'].includes(ch.legend) ? '<c:legend><c:legendPos val="' + ch.legend + '"/>' + hidden + '<c:overlay val="0"/></c:legend>' : '';
     return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
       '<c:chartSpace xmlns:c="' + NS_C + '" xmlns:a="' + NS_A + '" xmlns:r="' + NS_REL + '"><c:roundedCorners val="0"/>' +

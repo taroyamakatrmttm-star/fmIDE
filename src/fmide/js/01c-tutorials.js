@@ -41,6 +41,7 @@
       saved: { snap: snapshot(), history: history.slice(), future: future.slice(), doc: Object.assign({}, currentDoc),
         templates: TEMPLATES.slice(), functions: FUNCTIONS.slice(), zooms: Object.assign({}, canvasZooms) } };
     applySystemDataDirect(practiceStartModel(t));
+    practice.graphBoards = practiceStartBoards(t);
     render();
     clearUndoHistory();
     Object.assign(currentDoc, { name: 'Practice — ' + t.title, dirty: false });
@@ -66,6 +67,22 @@
       periods: Array.from({ length: count }, (_, i) => 'Period ' + (i + 1)), currentPeriod: 0,
     };
   }
+  // The fmGraph board a tutorial's practice model comes with (start.board, data only), as a board
+  // file naming the practice canvas's rectangles, for ExcelExporter (buildExcelPayload); or null.
+  function practiceStartBoards(t){
+    const b = t.start && t.start.board;
+    const canvas = canvases[0];
+    if(!b || typeof b !== 'object' || !canvas) return null;
+    const rect = (x) => {
+      const out = {};
+      Object.keys(x).forEach(k => { if(k !== 'node') out[k] = place(x[k]); });
+      const node = (t.start.canvases[0].nodes || []).find(n => n.id === x.node); // its name from the tutorial's own data
+      return Object.assign({ canvasId: canvas.id, nodeId: 'tut-' + x.node, name: node ? String(node.text || '').split('\n')[0] : '' }, out);
+    };
+    const place = (v) => Array.isArray(v) ? v.map(place) : v && typeof v === 'object' ? (typeof v.node === 'string' ? rect(v) : Object.fromEntries(Object.entries(v).map(([k, x]) => [k, place(x)]))) : v;
+    return { kind: 'fmIDE-graph-board', version: 8, active: 0, boards: [place(b)] };
+  }
+  function practiceGraphBoards(){ return practice ? practice.graphBoards || null : null; }
   // What this tutorial saved in the library (templates and functions not there at the start).
   function practiceLibraryAdded(){
     if(!practice) return { templates: [], functions: [] };

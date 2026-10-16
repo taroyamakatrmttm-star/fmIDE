@@ -252,11 +252,13 @@ var XLSX = (function(){
   // A chart (plain data, so a workbook stays JSON):
   //   { type: 'bar' | 'line', title: { ref, text },
   //     bar: { dir: 'bar' | 'col', grouping: 'clustered' | 'stacked' | 'percentStacked', overlap, gapWidth },
-  //     catAxis: { title, reverse }, valAxis: { title, numFmt },
+  //     catAxis: { title, reverse }, valAxis: { title, numFmt, min, max (a fixed scale: both numbers, min below max) },
   //     legend: 'b' | 'r' | 't' | null,
   //     series: [{ name: { ref, text }, cat: { ref, values: [text|number], numFmt? },
   //                val: { ref, values: [number|null], numFmt? }, color: 'RRGGBB', marker: bool,
-  //                noFill: true (draws nothing and has no legend entry: a waterfall's base) }] }
+  //                noFill: true (draws nothing and has no legend entry: a waterfall's base),
+  //                noLegend: true (drawn, but no legend entry of its own: a part a series before names),
+  //                points: [{ idx, color: 'RRGGBB' }] (a bar's own colour, by its 0-based place) }] }
   // Stacked bars always overlap fully (100), as Excel needs to stack them.
   // `ref` is a cell or range on a sheet ("'Sensitivity'!$B$16:$B$20"); `text` / `values` are
   // what it holds now (Excel shows them until it recalculates). A ref not shaped like that
@@ -308,8 +310,15 @@ var XLSX = (function(){
     const name = s.name ? (strRef(s.name) ? '<c:tx>' + strRef(s.name) + '</c:tx>' : '<c:tx><c:v>' + esc(s.name.text || '') + '</c:v></c:tx>') : '';
     const marker = type === 'line' ? (s.marker === false || s.noFill === true ? '<c:marker><c:symbol val="none"/></c:marker>'
       : '<c:marker><c:symbol val="circle"/><c:size val="5"/>' + (fill ? '<c:spPr>' + fill + '</c:spPr>' : '') + '</c:marker>') : '';
+    // A bar's own colour (bar charts only), in the order of the bars, each place once.
+    const seen = new Set();
+    const points = type !== 'bar' || s.noFill === true || !Array.isArray(s.points) ? '' : s.points
+      .map(p => ({ idx: Math.round(Number(p && p.idx)), color: hex(p && p.color) }))
+      .filter(p => p.color && Number.isInteger(p.idx) && p.idx >= 0 && p.idx < 100000 && !seen.has(p.idx) && seen.add(p.idx))
+      .sort((a, b) => a.idx - b.idx)
+      .map(p => '<c:dPt><c:idx val="' + p.idx + '"/><c:invertIfNegative val="0"/><c:bubble3D val="0"/><c:spPr><a:solidFill><a:srgbClr val="' + p.color + '"/></a:solidFill></c:spPr></c:dPt>').join('');
     return '<c:ser><c:idx val="' + i + '"/><c:order val="' + i + '"/>' + name + sp +
-      (type === 'bar' ? '<c:invertIfNegative val="0"/>' : marker) +
+      (type === 'bar' ? '<c:invertIfNegative val="0"/>' + points : marker) +
       catData(s.cat) + numData(s.val, 'c:val') + (type === 'line' ? '<c:smooth val="0"/>' : '') + '</c:ser>';
   }
   function chartXml(ch){
@@ -333,11 +342,14 @@ var XLSX = (function(){
       '<c:numFmt formatCode="' + esc(cat.numFmt || 'General') + '" sourceLinked="' + (cat.numFmt ? 0 : 1) + '"/>' +
       '<c:majorTickMark val="out"/><c:minorTickMark val="none"/><c:tickLblPos val="low"/>' +
       '<c:crossAx val="1002"/><c:crosses val="autoZero"/><c:auto val="1"/><c:lblAlgn val="ctr"/><c:lblOffset val="100"/><c:noMultiLvlLbl val="0"/></c:catAx>';
-    const valAx = '<c:valAx><c:axId val="1002"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/>' +
+    // A fixed scale: both ends numbers, the lower below the upper (else the axis stretches).
+    const fixed = finite(val.min) && finite(val.max) && val.min < val.max;
+    const valAx = '<c:valAx><c:axId val="1002"/><c:scaling><c:orientation val="minMax"/>' +
+      (fixed ? '<c:max val="' + val.max + '"/><c:min val="' + val.min + '"/>' : '') + '</c:scaling><c:delete val="0"/>' +
       '<c:axPos val="' + (horizontal ? 'b' : 'l') + '"/><c:majorGridlines/>' + titleXml(val.title, !horizontal) +
       '<c:numFmt formatCode="' + esc(val.numFmt || 'General') + '" sourceLinked="0"/><c:majorTickMark val="out"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/>' +
       '<c:crossAx val="1001"/><c:crosses val="' + (cat.reverse ? 'max' : 'autoZero') + '"/><c:crossBetween val="between"/></c:valAx>';
-    const hidden = list.map((s, i) => s && s.noFill === true ? '<c:legendEntry><c:idx val="' + i + '"/><c:delete val="1"/></c:legendEntry>' : '').join('');
+    const hidden = list.map((s, i) => s && (s.noFill === true || s.noLegend === true) ? '<c:legendEntry><c:idx val="' + i + '"/><c:delete val="1"/></c:legendEntry>' : '').join('');
     const legend = ['b', 'r', 't', 'l'].includes(ch.legend) ? '<c:legend><c:legendPos val="' + ch.legend + '"/>' + hidden + '<c:overlay val="0"/></c:legend>' : '';
     return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
       '<c:chartSpace xmlns:c="' + NS_C + '" xmlns:a="' + NS_A + '" xmlns:r="' + NS_REL + '"><c:roundedCorners val="0"/>' +
@@ -1040,7 +1052,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
           <button type="button" role="menuitem" id="btnMenuSample" title="Load a small built-in model to try things out">Load Sample Model</button>
           <button type="button" role="menuitem" id="btnMenuPaste" title="Paste a model's JSON text">Paste JSON…</button>
           <button type="button" role="menuitem" id="btnFromFmide" class="hidden" title="Load the model open in fmIDE again, as it is now">↻ From fmIDE</button>
-          <button type="button" role="menuitem" id="btnImportGraphBoards" class="needs-model" title="Read a board file saved with Export all boards in fmGraph, to use its scenarios">Import fmGraph boards…</button>
+          <button type="button" role="menuitem" id="btnImportGraphBoards" class="needs-model" title="Read a board file saved with Export all boards in fmGraph, to use its scenarios, sliders and charts">Import fmGraph boards…</button>
           <div class="menu-sep" role="separator"></div>
           <button type="button" role="menuitem" id="btnClearAll" class="danger" title="Empties this page. Saved layouts are kept.">Start Over</button>
         </div>
@@ -1051,7 +1063,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
           <div class="menu-head">This model's layout</div>
           <button type="button" role="menuitem" id="btnImportMapping" class="needs-model" title="Load a layout saved with Export Mapping">Import Mapping…</button>
           <button type="button" role="menuitem" id="btnExportMapping" class="needs-model" title="Save this model's tabs, rows and settings to a file">Export Mapping</button>
-          <button type="button" role="menuitem" id="btnUseGraphBoards" class="needs-model" title="Bring the scenarios of the model's fmGraph boards into this layout, as Global Cases">Use fmGraph boards…</button>
+          <button type="button" role="menuitem" id="btnUseGraphBoards" class="needs-model" title="Bring the model's fmGraph boards into this layout: scenarios as Global Cases, Tornado and Spider as analyses, sliders and charts on a Dashboard">Use fmGraph boards…</button>
           <div class="menu-head">Module layouts (every model)</div>
           <button type="button" role="menuitem" id="btnImportModuleLayouts" title="Read module layouts saved with Export Module Layouts">Import Module Layouts…</button>
           <button type="button" role="menuitem" id="btnExportModuleLayouts" title="Save the layouts remembered for your modules, e.g. for another computer or fmIDE's Attach Excel layout…">Export Module Layouts</button>
@@ -1332,6 +1344,8 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     <p id="graphNoScenarios" class="graph-source hidden">No scenarios in these boards.</p>
     <h4 id="graphSliderHead" class="hidden">Sliders → the Dashboard</h4>
     <ul id="graphSliderList" class="graph-scenarios"></ul>
+    <h4 id="graphChartHead" class="hidden">Charts → the Dashboard</h4>
+    <ul id="graphChartList" class="graph-scenarios"></ul>
     <h4 id="graphSensHead" class="hidden">Tornado and Spider → analyses</h4>
     <ul id="graphSensList" class="graph-scenarios"></ul>
     <h4 id="graphLeftOutHead" class="hidden">Not carried</h4>
@@ -5087,7 +5101,8 @@ const FILE_FORMATS = {
   // Use fmGraph boards… copied (step 19 B2); v5: several analyses, `cfg.sensitivities` (step 19 B3);
   // v6: an analysis's `origin` ("fmGraph") and an input's `show: false` (step 19 B3b);
   // v7: the Dashboard's sliders, `cfg.graph.sliders` (step 19 B4).
-  'fmIDE-excel-mapping': { current: 7, label: 'ExcelExporter mapping file' },
+  // v8: the Dashboard's charts, `cfg.graph.charts` (step 19 B5).
+  'fmIDE-excel-mapping': { current: 8, label: 'ExcelExporter mapping file' },
   // The person's own Excel style (step 11a): how every cell looks, by role.
   'fmIDE-excel-style':   { current: 1, label: 'ExcelExporter Excel style file' },
   // The layouts remembered per module (step 11b); v2: a module's block instances' layout, `instance` (step 11d).
@@ -5125,7 +5140,10 @@ const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
     5: (d) => { d.version = 6; return d; },
     // v7: the sliders Use fmGraph boards… copied for the Dashboard (`cfg.graph.sliders`, step 19
     // B4); a v6 file has none, so it reads as it is.
-    6: (d) => { d.version = 7; return d; } },
+    6: (d) => { d.version = 7; return d; },
+    // v8: the charts Use fmGraph boards… copied for the Dashboard (`cfg.graph.charts`, step 19
+    // B5); a v7 file has none, so it reads as it is.
+    7: (d) => { d.version = 8; return d; } },
   'fmIDE-excel-module-layouts': { 1: (d) => { d.version = 2; return d; } }
 });
 // Returns { error } or { kind, data (migrated copy), fromVersion, newer, newerParts }.
@@ -5923,11 +5941,15 @@ $('moduleLayoutsFileInput').addEventListener('change', () => {
 //   readGraphBoards(raw)         → { error } or { version, boards, scenarios, badScenarios, badSettings }
 //   matchGraphScenarios(read)    → the scenarios with each setting matched to a layout row
 //   matchGraphSliders(read)      → every board's sliders matched to layout rows, like ones once (B4)
-//   cleanGraphCopy(raw, periods) → the layout's cfg.graph (mapping file 4; sliders from file 7), checked
+//   readGraphCharts(board, version) → a board's bars, columns and flow charts (B5), not yet matched
+//   matchGraphCharts(board)      → those charts matched to layout rows, for the Dashboard (B5)
+//   cleanGraphCopy(raw, periods) → the layout's cfg.graph (mapping file 4; sliders from file 7, charts from 8), checked
 // ============================================================
 const GRAPH_BOARD_KIND = 'fmIDE-graph-board';
-const GRAPH_BOARD_VERSION = 8; // the newest version this reader knows (8: step 18's Tornado and Spider charts, not read here yet)
-const GRAPH_LIMITS = { boards: 20, scenarios: 50, settings: 40, sliders: 40, boardName: 60, scenarioName: 40, rectName: 60, value: 1e15 };
+const GRAPH_BOARD_VERSION = 8; // the newest version this reader knows (8: step 18's Tornado and Spider charts)
+const GRAPH_LIMITS = { boards: 20, scenarios: 50, settings: 40, sliders: 40, boardName: 60, scenarioName: 40, rectName: 60, value: 1e15,
+  items: 40, title: 80, groups: 12, parts: 30, steps: 40 };
+const GRAPH_FLOW_ROLES = ['start', 'add', 'subtract', 'total'];
 
 let modelGraphBoards = null; // the graphBoards a loaded workspace or .fmide carried (raw; read only when used)
 
@@ -5991,7 +6013,7 @@ function readGraphBoards(raw){
     const count = (x) => Array.isArray(x) ? x.length : 0;
     boards.push({ name: graphText(b.name, GRAPH_LIMITS.boardName) || ('Board ' + (i + 1)),
       sliders: count(b.sliders), sliderList: readGraphSliders(b.sliders), items: count(b.items) + count(b.bars) + count(b.charts),
-      sensCharts: version >= 8 ? readGraphSensCharts(b.items) : [] });
+      sensCharts: version >= 8 ? readGraphSensCharts(b.items) : [], charts: readGraphCharts(b, version) });
   });
   // Named scenarios came in version 3: an older file's are not read.
   const scenarios = [];
@@ -6105,6 +6127,112 @@ function readGraphSensCharts(items){
   });
   return out;
 }
+// ---------- Bars and charts → the Dashboard's charts (step 19 B5) ----------
+// A colour as the format has it, '#rrggbb' (small letters), else null.
+function graphColour(v){ return typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v) ? v.toLowerCase() : null; }
+// A fixed vertical scale (board file 5): both numbers, min below max, else null (Auto).
+function graphScale(v){
+  if(!v || typeof v !== 'object' || Array.isArray(v)) return null;
+  const min = graphNumber(v.min), max = graphNumber(v.max);
+  return typeof v.min === 'number' && typeof v.max === 'number' && min !== null && max !== null && min < max ? { min, max } : null;
+}
+// A rectangle a widget names: { canvasId, nodeId, name }, or null.
+function graphRect(r){
+  return r && typeof r === 'object' && typeof r.canvasId === 'string' && typeof r.nodeId === 'string'
+    && r.canvasId && r.nodeId && r.canvasId.length <= 200 && r.nodeId.length <= 200
+    ? { canvasId: r.canvasId, nodeId: r.nodeId, name: graphText(r.name, GRAPH_LIMITS.rectName) } : null;
+}
+// A board's bars and its columns and flow charts, in the board's order, each read as the format
+// says (text cut, colours checked, at most 12 groups of 30 parts, 40 steps); a scenario waterfall
+// is kept only to be listed as not carried, a Tornado or Spider not here (they become analyses).
+// The form before boards had tabs (no `items`) is read charts first. Not yet matched to a model:
+// [{ kind: 'bar' | 'columns' | 'flow' | 'scenarios', title, wide, scale, periods | period, … }]
+function readGraphCharts(b, version){
+  const items = Array.isArray(b.items) ? b.items
+    : (Array.isArray(b.charts) ? b.charts.map(c => Object.assign({}, c, { type: 'chart' })) : [])
+      .concat(Array.isArray(b.bars) ? b.bars.map(x => Object.assign({}, x, { type: 'bar' })) : []);
+  const out = [];
+  items.slice(0, GRAPH_LIMITS.items).forEach(it => {
+    if(!it || typeof it !== 'object' || Array.isArray(it)) return;
+    const scale = version >= 5 ? graphScale(it.scale) : null;
+    const period = (x) => { const n = Number(x); return Number.isInteger(n) && n >= 0 ? n : 0; };
+    if(it.type === 'bar'){
+      const r = graphRect(it);
+      out.push({ kind: 'bar', title: '', wide: it.wide === true, scale, periods: it.periods, parts: r ? [Object.assign(r, { colour: graphColour(it.colour) })] : [], bad: r ? 0 : 1 });
+      return;
+    }
+    if(it.type !== 'chart') return;
+    const title = graphText(it.title, GRAPH_LIMITS.title), wide = it.wide !== false;
+    if(it.layout === 'scenarios'){ out.push({ kind: 'scenarios', title, wide, scale, parts: [], bad: 0 }); return; }
+    if(it.layout === 'flow'){
+      const parts = [];
+      let bad = 0;
+      (Array.isArray(it.steps) ? it.steps : []).forEach(st => {
+        const r = graphRect(st);
+        if(!r || parts.length >= GRAPH_LIMITS.steps){ bad++; return; }
+        parts.push(Object.assign(r, { role: GRAPH_FLOW_ROLES.includes(st.role) ? st.role : 'add', colour: graphColour(st.colour) }));
+      });
+      out.push({ kind: 'flow', title, wide, scale, period: period(it.period), parts, bad });
+      return;
+    }
+    if(it.layout === 'tornado' || it.layout === 'spider') return;
+    // columns (and, as fmGraph reads it, a layout this reader doesn't know)
+    const groups = [], parts = [];
+    let bad = 0;
+    const allGroups = Array.isArray(it.groups) ? it.groups : [];
+    allGroups.slice(GRAPH_LIMITS.groups).forEach(g => { bad += g && Array.isArray(g.parts) ? g.parts.length : 1; }); // past 12 groups: counted
+    allGroups.slice(0, GRAPH_LIMITS.groups).forEach(g => {
+      if(!g || typeof g !== 'object'){ bad++; return; }
+      const gi = groups.length;
+      groups.push(graphText(g.name, GRAPH_LIMITS.rectName));
+      (Array.isArray(g.parts) ? g.parts : []).forEach((x, k) => {
+        const r = graphRect(x);
+        if(!r || k >= GRAPH_LIMITS.parts){ bad++; return; }
+        parts.push(Object.assign(r, { group: gi, colour: graphColour(x.colour) }));
+      });
+    });
+    out.push({ kind: 'columns', title, wide, scale, periods: it.periods, groups, parts, bad });
+  });
+  return out;
+}
+// A board's bars and charts matched to the open model, in the layout's form: each part kept
+// where the model has its rectangle (any value rectangle with a row, outside any block); a
+// chart with no part left is left out. A scenario waterfall is counted as not carried.
+// → { charts: [cfg.graph.charts entry], left: { notFound, bad, empty, scenarios } }
+function matchGraphCharts(board){
+  const left = { notFound: 0, bad: 0, empty: 0, scenarios: 0 };
+  const charts = [];
+  (board && board.charts || []).forEach(c => {
+    if(c.kind === 'scenarios'){ left.scenarios++; return; }
+    left.bad += c.bad;
+    const parts = [];
+    c.parts.forEach(x => {
+      const row = graphRectRow(x);
+      if(!row || row.isCustom){ left.notFound++; return; }
+      const part = { row: row.id, name: x.name || row.label || '' };
+      if(x.colour) part.colour = x.colour;
+      if(c.kind === 'flow') part.role = x.role;
+      if(c.kind === 'columns') part.group = x.group;
+      parts.push(part);
+    });
+    if(!parts.length){ left.empty++; return; }
+    const out = { kind: c.kind, title: c.title, wide: c.wide, scale: c.scale, parts };
+    if(c.kind === 'flow') out.period = c.period < model.periods.length ? c.period : 0; // as fmGraph reads a period it hasn't got
+    else out.periods = cleanGraphPeriods(c.periods, model.periods.length);
+    if(c.kind === 'columns') out.groups = c.groups.slice();
+    charts.push(out);
+  });
+  return { charts, left };
+}
+// A chart's name in the window and on the Dashboard: its title, else (a bar) its rectangle,
+// else its parts' names.
+function graphChartName(c){
+  if(c.title) return c.title;
+  const names = c.parts.map(x => x.name).filter(Boolean);
+  const text = c.kind === 'bar' ? (names[0] || 'Bar') : names.join(', ') || (c.kind === 'flow' ? 'Waterfall' : 'Columns');
+  return text.length > GRAPH_LIMITS.title ? text.slice(0, GRAPH_LIMITS.title - 1) + '…' : text;
+}
+
 // A rectangle of the open model by canvas id, node id and name (capitals and outer spaces
 // ignored), at the top level: its layout row, or null.
 function graphRectRow(r){
@@ -6168,8 +6296,11 @@ function row0Label(rowId){ const r = mapping.rows.find(x => x.id === rowId); ret
 // ---------- The layout's copy: cfg.graph (mapping file 4) ----------
 // What Layout → Use fmGraph boards… copied, as settings ExcelExporter owns from then on:
 //   { from: [board names], board: the board picked, scenarios: [{ name, settings: [{ row, name, mode, periods, value }] }],
-//     sliders: [{ row, name, mode, periods, min, max, step }] (mapping file 7, step 19 B4) }
-function defaultGraphCopy(){ return { from: [], board: '', scenarios: [], sliders: [] }; }
+//     sliders: [{ row, name, mode, periods, min, max, step }] (mapping file 7, step 19 B4),
+//     charts: [{ kind: 'bar' | 'columns' | 'flow', title, wide, scale: { min, max } | null,
+//       periods (bar, columns) | period (flow), groups: [names] (columns),
+//       parts: [{ row, name, colour?, role (flow), group (columns) }] }] (mapping file 8, B5) }
+function defaultGraphCopy(){ return { from: [], board: '', scenarios: [], sliders: [], charts: [] }; }
 function cleanGraphCopy(raw, periodCount){
   const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const out = defaultGraphCopy();
@@ -6200,6 +6331,31 @@ function cleanGraphCopy(raw, periodCount){
     if(out.sliders.some(x => x.row === s.row && x.mode === s.mode && JSON.stringify(x.periods) === JSON.stringify(periods))) return;
     out.sliders.push(Object.assign({ row: s.row, name: graphText(s.name, GRAPH_LIMITS.rectName), mode: s.mode, periods }, range));
   });
+  // The Dashboard's charts: a kind not known, or a chart with no part, is left out.
+  (Array.isArray(src.charts) ? src.charts : []).forEach(c => {
+    if(!c || typeof c !== 'object' || Array.isArray(c) || !['bar', 'columns', 'flow'].includes(c.kind)) return;
+    if(out.charts.length >= GRAPH_LIMITS.items) return;
+    const chart = { kind: c.kind, title: graphText(c.title, GRAPH_LIMITS.title), wide: c.wide === true, scale: graphScale(c.scale) };
+    if(c.kind === 'flow'){ const n = Number(c.period); chart.period = Number.isInteger(n) && n >= 0 && n < Math.max(1, periodCount || 1) ? n : 0; }
+    else chart.periods = cleanGraphPeriods(c.periods, periodCount);
+    if(c.kind === 'columns') chart.groups = (Array.isArray(c.groups) ? c.groups : []).slice(0, GRAPH_LIMITS.groups).map(g => graphText(g, GRAPH_LIMITS.rectName));
+    const most = c.kind === 'bar' ? 1 : c.kind === 'flow' ? GRAPH_LIMITS.steps : GRAPH_LIMITS.groups * GRAPH_LIMITS.parts;
+    chart.parts = [];
+    (Array.isArray(c.parts) ? c.parts : []).forEach(x => {
+      if(!x || typeof x !== 'object' || typeof x.row !== 'string' || !x.row || x.row.length > 400 || chart.parts.length >= most) return;
+      const part = { row: x.row, name: graphText(x.name, GRAPH_LIMITS.rectName) };
+      const colour = graphColour(x.colour);
+      if(colour) part.colour = colour;
+      if(c.kind === 'flow') part.role = GRAPH_FLOW_ROLES.includes(x.role) ? x.role : 'add';
+      if(c.kind === 'columns'){
+        const g = Number(x.group);
+        if(!Number.isInteger(g) || g < 0 || g >= chart.groups.length) return;
+        part.group = g;
+      }
+      chart.parts.push(part);
+    });
+    if(chart.parts.length) out.charts.push(chart);
+  });
   return out;
 }
 // Called when a model or a layout is read: settings on rows that are gone, or no longer
@@ -6209,10 +6365,13 @@ function reconcileGraph(){
   const byId = new Map(mapping.rows.map(r => [r.id, r]));
   g.scenarios.forEach(sc => { sc.settings = sc.settings.filter(s => isSensitivityInputRow(byId.get(s.row))); });
   g.sliders = g.sliders.filter(s => isSensitivityInputRow(byId.get(s.row)));
+  g.charts.forEach(c => { c.parts = c.parts.filter(x => byId.has(x.row) && !byId.get(x.row).isCustom); });
+  g.charts = g.charts.filter(c => c.parts.length);
   mapping.cfg.graph = g;
   graphPlanCache = null;
 }
 function graphSlidersInLayout(){ return !!(mapping && mapping.cfg.graph && mapping.cfg.graph.sliders && mapping.cfg.graph.sliders.length); }
+function graphChartsInLayout(){ return !!(mapping && mapping.cfg.graph && mapping.cfg.graph.charts && mapping.cfg.graph.charts.length); }
 function graphScenariosInLayout(){ return !!(mapping && mapping.cfg.graph && mapping.cfg.graph.scenarios && mapping.cfg.graph.scenarios.length); }
 // ============================================================
 // Inputs tab — optional. Gathers every input rectangle (a value rectangle with no
@@ -8971,7 +9130,10 @@ function buildWorkbook(){
   // Sensitivity: each analysis's tab name and where everything on it sits, known before the
   // Inputs tab (whose moved inputs read them) is written.
   // The Dashboard (09j-dashboard.js): its name, known before the Inputs tab that reads it.
-  const dashName = ctx.dash && ctx.dash.rows.length ? uniqueTabName('Dashboard', null).name : null;
+  // With the boards' charts (B5) there is a Dashboard even without sliders.
+  const dashCharts = (graphChartPlan() || { charts: [] }).charts
+    .map(c => Object.assign({}, c, { parts: c.parts.filter(x => ctx.cellPos[x.row]) })).filter(c => c.parts.length);
+  const dashName = (ctx.dash && ctx.dash.rows.length) || dashCharts.length ? uniqueTabName('Dashboard', null).name : null;
   const sensTaken = [scenarioSheetName || '', dashName || ''];
   const sensLays = ctx.sens.map(plan => {
     const name = addedTabName(plan.name, sensTaken);
@@ -9346,8 +9508,8 @@ function buildWorkbook(){
   // The Dashboard, before Scenarios: the workbook opens on it.
   if(dashName){
     const ownRow = {};
-    ctx.dash.rows.forEach(d => { if(d.mirrorId && ctx.cellPos[d.mirrorId]) ownRow[d.mirrorId] = ctx.cellPos[d.mirrorId]; });
-    appendDashboardSheet(wb, ctx.dash, dashName, ownRow);
+    (ctx.dash ? ctx.dash.rows : []).forEach(d => { if(d.mirrorId && ctx.cellPos[d.mirrorId]) ownRow[d.mirrorId] = ctx.cellPos[d.mirrorId]; });
+    appendDashboardSheet(wb, ctx.dash, dashName, ownRow, dashCharts, ctx.cellPos);
   }
   return { wb, tooLong };
   }finally{ useHelperColumns(0); }
@@ -10566,6 +10728,22 @@ const EXCEL_HELP_TOPICS = [
       { p: 'Scenarios saved in fmGraph can fill these for you: Layout → Use fmGraph boards….' },
       { see: ['inputs-tab', 'fmgraph-scenarios'] },
     ] },
+  { id: 'fmgraph-in-excel', group: 'inputs', title: 'fmGraph in Excel',
+    keywords: 'fmgraph graph board boards excel workbook dashboard slider scenario tornado spider chart bar waterfall what if use',
+    summary: 'Layout → Use fmGraph boards… rebuilds the model\'s fmGraph boards in the workbook, so the "what if" travels with the file.',
+    body: [
+      { p: 'What you set up in fmGraph comes into the workbook through one window. Each part becomes something Excel can do on its own, with live formulas:' },
+      { steps: [
+        'Scenarios become Global Cases, after Base (see fmGraph\'s scenarios as Global Cases).',
+        'Tornado and Spider charts become sensitivity analyses, each with its own tab and charts.',
+        'Sliders become the Dashboard tab: a scroll bar and a cell to type into for each (see fmGraph\'s sliders: the Dashboard).',
+        'Bars and charts become Excel charts on the Dashboard, under the sliders (see fmGraph\'s charts on the Dashboard).',
+      ] },
+      { p: 'Get the boards with the model: open ExcelExporter from fmIDE, or open the .fmide document here. For a board file saved with Export all boards in fmGraph, choose File → Import fmGraph boards…. Then Layout → Use fmGraph boards…, untick what you don\'t want, and press Use. What can\'t be carried is listed in the window, with the reason.' },
+      { p: 'Everything chosen is copied into this model\'s layout and saved with it. Changing the boards in fmGraph later changes nothing here until you use the window again; it asks before it replaces what is there. Remove from Layout, in the same window, takes it all out.' },
+      { tip: 'A scenario waterfall is not carried: Excel would have to work out every case at once.' },
+      { see: ['fmgraph-scenarios', 'fmgraph-dashboard', 'fmgraph-charts', 'sensitivity'] },
+    ] },
   { id: 'fmgraph-scenarios', group: 'inputs', title: 'fmGraph\'s scenarios as Global Cases',
     keywords: 'fmgraph graph board boards scenario scenarios global case cases import use slider what if',
     summary: 'Bring what you saved in fmGraph into the workbook: one Global Case each, after Base.',
@@ -10579,7 +10757,7 @@ const EXCEL_HELP_TOPICS = [
       { p: 'In the workbook, Global Case 1 is Base: every input keeps fmIDE\'s numbers. Each fmGraph scenario is the next case, named after it. Every input a scenario moves gets row scenarios on the Inputs tab. Scenario 1 holds fmIDE\'s numbers, then there is one row scenario for each different way the scenarios set the input; two scenarios that set it alike share one. A set value goes only in the periods the scenario covers, and the other periods link to scenario 1. A % change is a formula on scenario 1, such as =F12*(1+10%), so it follows when you change scenario 1 in Excel. Type a case number in the Scenarios tab\'s Global Case cell (C2) to run it.' },
       { p: 'The scenarios are copied into this model\'s layout and saved with it (Export Mapping carries them). Changing the boards in fmGraph later changes nothing here until you choose Use fmGraph boards… again. ExcelExporter asks before it replaces cases already in the layout. Inputs with scenarios of your own keep them, but use scenario 1 in every fmGraph case. Remove from Layout, in the same window, takes the fmGraph scenarios out again.' },
       { p: 'The window also lists the picked board\'s Tornado and Spider charts. Each becomes a sensitivity analysis with its own Sensitivity tab and charts, and the same inputs, Low and High, period and output. A Tornado and a Spider moving the same inputs alike become one analysis with both outputs, using the Spider\'s points. An input hidden in fmGraph is written with Show 0. These analyses are marked fmGraph in the Sensitivity panel\'s list. Using the window again replaces them, after asking; analyses of your own stay.' },
-      { p: 'The window lists the boards\' sliders too. They become the Dashboard tab: see fmGraph\'s sliders: the Dashboard.' },
+      { p: 'The window lists the boards\' sliders and the picked board\'s bars and charts too. They go on the Dashboard tab: see fmGraph\'s sliders: the Dashboard, and fmGraph\'s charts on the Dashboard.' },
       { tip: 'The window lists what can\'t be carried, and why. That includes a setting on an input inside a block (every copy of the block shares it), a rectangle this model doesn\'t have, scenarios after the 49th (a workbook has at most 50 cases), and an input needing more than 20 row scenarios. ⬇ Generate lists them again.' },
       { see: ['scenarios', 'inputs-tab', 'fmgraph-dashboard'] },
     ] },
@@ -10591,9 +10769,23 @@ const EXCEL_HELP_TOPICS = [
       { p: 'The Dashboard is the workbook\'s first tab, one row per slider: its name, periods and kind, a scroll bar, Position (the scroll bar\'s cell), Typed, Value, Use (set sliders only), and Min, Max and Step. Value is the number typed in Typed, or else Min + Position × Step. Clear Typed to give the scroll bar back. Min, Max and Step can be changed in Excel.' },
       { p: 'A set slider replaces the input\'s number in its periods, but only while Use is ticked (TRUE). A change by % slider changes the input by Value % in its periods. On the Inputs tab, each slider is laid over what the input\'s Global Case picks, in the board\'s order (as in fmGraph, a later slider applies to what the earlier ones left), and the sensitivity analyses come after.' },
       { p: 'The workbook opens on fmIDE\'s numbers: every Use off and every change by % at 0. A set slider starts at fmIDE\'s number in its first period, so ticking Use puts that one number in all its periods.' },
-      { tip: 'Scroll bars and check boxes don\'t show in Excel on the web, and not always in LibreOffice. Type a number in Typed, and TRUE in Use: they work everywhere.' },
+      { tip: 'Scroll bars and check boxes don\'t show in Excel on the web or in Excel on an iPad or iPhone (it says "This version of Excel doesn\'t support this control"), and not always in LibreOffice. Type a number in Typed, and TRUE in Use: they work everywhere.' },
       { tip: 'A scroll bar has at most 30,000 positions. A slider with more steps gets a larger step, and a change by % slider that can\'t be 0 on its steps starts at the nearest one. The window and ⬇ Generate say so.' },
-      { see: ['fmgraph-scenarios', 'inputs-tab'] },
+      { see: ['fmgraph-charts', 'fmgraph-in-excel', 'inputs-tab'] },
+    ] },
+  { id: 'fmgraph-charts', group: 'inputs', title: 'fmGraph\'s charts on the Dashboard',
+    keywords: 'fmgraph graph board bar bars chart charts columns stacked flow waterfall dashboard colour scale',
+    summary: 'The picked board\'s bars and charts become Excel charts on the Dashboard, under the sliders, and follow them.',
+    body: [
+      { p: 'Layout → Use fmGraph boards… lists the picked board\'s bars and charts with a tick box each. Press Use, then ⬇ Generate .xlsx. They go on the Dashboard, under the sliders, in the board\'s order: a wide one takes the full width, narrow ones sit two to a row. A model with charts but no sliders still gets a Dashboard.' },
+      { steps: [
+        'A bar becomes a column chart of the rectangle over its periods, read straight from the rectangle\'s row.',
+        'A columns chart becomes stacked columns, one series per rectangle. With several groups, a small table under the chart has a column per period and group, so each group stacks on its own.',
+        'A flow becomes a waterfall. Under it, rows of formulas work it out: Value, From and To (the running total, as fmGraph works it out), then the parts Excel stacks: an invisible Base, and Total, Rise and Fall above and below 0.',
+      ] },
+      { p: 'Every chart reads its numbers from the model\'s rows, so it moves with the sliders, the Global Case and anything you change in Excel. Titles, names and the colours you picked in fmGraph come along; a fixed scale becomes the axis\'s minimum and maximum. Before Excel recalculates, the charts show fmIDE\'s numbers.' },
+      { tip: 'A rectangle left out of the workbook, or made a constant, can\'t be charted: ⬇ Generate says which.' },
+      { see: ['fmgraph-dashboard', 'fmgraph-in-excel'] },
     ] },
   { id: 'sensitivity', group: 'inputs', title: 'Sensitivity: the Tornado and the Spider',
     keywords: 'sensitivity tornado spider what if data table swing low high base output input percent amount analysis analyses several add',
@@ -10671,7 +10863,7 @@ const EXCEL_HELP_TOPICS = [
     body: [
       { p: 'On a phone, ExcelExporter shows one screen: the model\'s name, the tabs the workbook will hold (with how many rows each), where it will differ from fmIDE, if anywhere, and the file name.' },
       { p: '⬇ Make the workbook writes the .xlsx and hands it to your phone\'s share sheet: open it in Excel or Numbers, send it by Mail or Messages, or keep it in Files. Where the browser can\'t share files, it downloads instead.' },
-      { p: 'The workbook is laid out as you set it up on a computer or tablet for this model (or the automatic layout, if you haven\'t): its tabs and rows, your Excel style, and the Sensitivity tab. Tap the file name to change it; it is kept with this model\'s layout.' },
+      { p: 'The workbook is laid out as you set it up on a computer or tablet for this model (or the automatic layout, if you haven\'t): its tabs and rows, your Excel style, the Sensitivity tab, and the Dashboard with fmGraph\'s sliders and charts. Tap the file name to change it; it is kept with this model\'s layout.' },
       { steps: ['In fmIDE on your phone, More (☰) → 📊 Make Excel. (Or, here, ☰ → Open a model file….)', 'Check the tabs and the file name.', 'Tap ⬇ Make the workbook, then pick where it goes.'] },
       { tip: '☰ → Full app shows the whole ExcelExporter, to change the layout on the phone; 📱 Phone layout at the top goes back. Your choice is remembered in this browser.' },
       { see: ['generate', 'differences'] },
@@ -10691,6 +10883,18 @@ const EXCEL_HELP_TOPICS = [
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'fmgraph-charts', date: '2026-10-16', title: 'fmGraph\'s charts on the Dashboard',
+    summary: 'Layout → Use fmGraph boards… also turns a board\'s bars and charts into Excel charts on the Dashboard, which follow the sliders.',
+    what: [
+      'The window lists the picked board\'s bars and charts, each with a tick box.',
+      'A bar becomes a column chart, a columns chart stacked columns, and a flow a waterfall, with its workings in rows of formulas under it.',
+      'Titles, names, the colours you picked and a fixed scale come along. A scenario waterfall is not carried.',
+    ],
+    why: 'So whoever opens the workbook sees the same charts as on your board, and sees them move.',
+    how: ['Add bars and charts to a board in fmGraph.', 'Open ExcelExporter from fmIDE (or open the .fmide here).', 'Layout → Use fmGraph boards…, pick the board, then Use.', '⬇ Generate .xlsx, and open the Dashboard tab.'],
+    notes: ['Scroll bars and check boxes don\'t show in Excel on the web or on an iPad or iPhone: type in Typed and Use instead. The charts show everywhere.'],
+    see: ['fmgraph-charts', 'fmgraph-in-excel'] },
+
   { id: 'fmgraph-dashboard', date: '2026-10-16', title: 'fmGraph\'s sliders on a Dashboard',
     summary: 'Layout → Use fmGraph boards… turns the boards\' sliders into a Dashboard tab: a scroll bar and a cell to type into for each.',
     what: [
@@ -12815,6 +13019,33 @@ function openGraphBoardsWindow(read, source){
     $('graphSensHead').classList.toggle('hidden', !sensAnalyses.length);
   };
   const chosenAnalyses = () => [...sensUl.querySelectorAll('input[type=checkbox]')].filter(c => c.checked).map(c => sensAnalyses[Number(c.dataset.index)]);
+  // The picked board's bars and charts, for the Dashboard (B5).
+  const chartUl = $('graphChartList');
+  let chartsMatched = { charts: [], left: {} };
+  const renderCharts = () => {
+    chartsMatched = matchGraphCharts(read.boards[Number(pick.value)]);
+    chartUl.textContent = '';
+    chartsMatched.charts.forEach((c, i) => {
+      const li = document.createElement('li');
+      const label = document.createElement('label');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.checked = true; cb.dataset.index = String(i);
+      const name = document.createElement('span');
+      name.className = 'graph-scn-name';
+      name.textContent = graphChartName(c);
+      const what = document.createElement('span');
+      what.className = 'graph-scn-what';
+      const kind = c.kind === 'bar' ? 'Bar' : c.kind === 'flow' ? 'Waterfall' : 'Stacked columns';
+      what.textContent = kind + ' · ' + (c.kind === 'flow' ? (periodLabels()[c.period] || '') + ' · ' + c.parts.length + ' step' + (c.parts.length === 1 ? '' : 's')
+        : graphPeriodsText(c.periods, periodLabels()) + (c.kind === 'columns' ? ' · ' + c.parts.length + ' part' + (c.parts.length === 1 ? '' : 's') : '')) +
+        (c.wide ? ' · wide' : '');
+      label.append(cb, name, what);
+      li.appendChild(label);
+      chartUl.appendChild(li);
+    });
+    $('graphChartHead').classList.toggle('hidden', !chartsMatched.charts.length);
+  };
+  const chosenCharts = () => [...chartUl.querySelectorAll('input[type=checkbox]')].filter(c => c.checked).map(c => chartsMatched.charts[Number(c.dataset.index)]);
   const renderLeft = () => {
     const lines = [];
     const l = matched.left;
@@ -12835,6 +13066,11 @@ function openGraphBoardsWindow(read, source){
     if(sl.noOutput) lines.push(sl.noOutput + ' Tornado or Spider chart' + (sl.noOutput === 1 ? '' : 's') + ' whose output this model doesn\'t have.');
     const sIn = (sl.notFound || 0) + (sl.inBlock || 0) + (sl.notInput || 0) + (sl.bad || 0);
     if(sIn) lines.push(sIn + ' input' + (sIn === 1 ? '' : 's') + ' of the Tornado and Spider charts left out (not in this model, inside a block, not an input, or not readable).');
+    const cl = chartsMatched.left;
+    if(cl.scenarios) lines.push(cl.scenarios + ' scenario waterfall' + (cl.scenarios === 1 ? '' : 's') + ' not carried: Excel would need every case worked out at once.');
+    const cOut = (cl.notFound || 0) + (cl.bad || 0);
+    if(cOut) lines.push(cOut + ' rectangle' + (cOut === 1 ? '' : 's') + ' of the bars and charts left out (not in this model, inside a block, or not readable).');
+    if(cl.empty) lines.push(cl.empty + ' bar' + (cl.empty === 1 ? '' : 's') + ' or chart' + (cl.empty === 1 ? '' : 's') + ' with nothing of this model to show.');
     const room = SENS_MAX_ANALYSES - (mapping.cfg.sensitivities || []).filter(a => a.origin !== 'fmGraph' && !isUnusedSensitivity(a)).length;
     const pastRoom = chosenAnalyses().slice(Math.max(0, room));
     if(pastRoom.length) lines.push('Analyses past ' + SENS_MAX_ANALYSES + ' in all are not added: ' + pastRoom.map(a => a.name).join(', ') + '.');
@@ -12843,20 +13079,22 @@ function openGraphBoardsWindow(read, source){
     ul.textContent = '';
     lines.forEach(t => { const li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
     $('graphLeftOutHead').classList.toggle('hidden', !lines.length);
-    $('graphUse').disabled = !chosen().length && !chosenAnalyses().length && !chosenSliders().length;
+    $('graphUse').disabled = !chosen().length && !chosenAnalyses().length && !chosenSliders().length && !chosenCharts().length;
   };
   list.onchange = renderLeft;
   sliderUl.onchange = renderLeft;
   sensUl.onchange = renderLeft;
-  pick.onchange = () => { renderSens(); renderLeft(); };
+  chartUl.onchange = renderLeft;
+  pick.onchange = () => { renderSens(); renderCharts(); renderLeft(); };
   renderSens();
+  renderCharts();
   renderLeft();
-  $('graphRemove').classList.toggle('hidden', !graphScenariosInLayout() && !graphAnalysesInLayout() && !graphSlidersInLayout());
+  $('graphRemove').classList.toggle('hidden', !graphScenariosInLayout() && !graphAnalysesInLayout() && !graphSlidersInLayout() && !graphChartsInLayout());
   const opener = document.activeElement;
   const close = () => {
     modal.classList.add('hidden');
     $('graphUse').onclick = $('graphCancel').onclick = $('graphRemove').onclick = null;
-    pick.onchange = list.onchange = sensUl.onchange = sliderUl.onchange = null;
+    pick.onchange = list.onchange = sensUl.onchange = sliderUl.onchange = chartUl.onchange = null;
     modal.removeEventListener('click', onBackdrop);
     document.removeEventListener('keydown', onKey, true);
     if(opener && document.contains(opener) && opener.focus && !opener.closest('.hidden')) opener.focus();
@@ -12868,9 +13106,10 @@ function openGraphBoardsWindow(read, source){
   $('graphUse').onclick = async () => {
     const scenarios = chosen(), analyses = chosenAnalyses();
     const chosenS = chosenSliders().map(s => ({ row: s.row, name: s.name, mode: s.mode, periods: s.periods, min: s.min, max: s.max, step: s.step }));
+    const charts = chosenCharts();
     const board = read.boards[Number(pick.value)];
     close();
-    await useGraphScenarios({ from: read.boards.map(b => b.name), board: board ? board.name : '', scenarios, analyses, sliders: chosenS });
+    await useGraphScenarios({ from: read.boards.map(b => b.name), board: board ? board.name : '', scenarios, analyses, sliders: chosenS, charts });
   };
   modal.addEventListener('click', onBackdrop);
   document.addEventListener('keydown', onKey, true);
@@ -12885,8 +13124,9 @@ async function useGraphScenarios(copy){
   const had = graphScenariosInLayout();
   const hadAnalyses = graphAnalysesInLayout();
   const hadSliders = graphSlidersInLayout();
+  const hadCharts = graphChartsInLayout();
   const ownScenarios = inputMirrorRows().filter(m => m.scenarios).length;
-  if(had || ownScenarios || hadAnalyses || hadSliders){
+  if(had || ownScenarios || hadAnalyses || hadSliders || hadCharts){
     const parts = [];
     if(had || ownScenarios || copy.scenarios.length){
       parts.push((had ? 'This layout already has fmGraph scenarios; they are replaced. ' : '') +
@@ -12895,6 +13135,7 @@ async function useGraphScenarios(copy){
     }
     if(hadAnalyses) parts.push('The sensitivity analyses made from fmGraph before are replaced; your own stay.');
     if(hadSliders) parts.push('The Dashboard\'s sliders are replaced.');
+    if(hadCharts) parts.push('The Dashboard\'s charts are replaced.');
     const ok = await showConfirm('Replace the cases?', parts.join(' '), 'Replace');
     if(!ok){ setStatus($('genStatus'), 'fmGraph scenarios not used.', 'info'); return; }
   }
@@ -12921,9 +13162,11 @@ async function useGraphScenarios(copy){
   const n = plan ? plan.byMirror.size : 0;
   const dash = graphSliderPlan();
   const nSliders = mapping.cfg.graph.sliders.length;
-  const notes = (plan ? plan.notes : []).concat(dash ? dash.notes : [], past.length ? ['Analyses past ' + SENS_MAX_ANALYSES + ' in all are not added: ' + past.map(a => a.name).join(', ') + '.'] : []);
+  const nCharts = mapping.cfg.graph.charts.length;
+  const notes = (plan ? plan.notes : []).concat(dash ? dash.notes : [], graphChartNotes(), past.length ? ['Analyses past ' + SENS_MAX_ANALYSES + ' in all are not added: ' + past.map(a => a.name).join(', ') + '.'] : []);
   const sensText = (added.length ? added.length + ' sensitivity analys' + (added.length === 1 ? 'is' : 'es') + ' from its Tornado and Spider charts.' : '') +
-    (nSliders ? (added.length ? ' ' : '') + nSliders + ' slider' + (nSliders === 1 ? '' : 's') + ' on the Dashboard.' : '');
+    (nSliders ? (added.length ? ' ' : '') + nSliders + ' slider' + (nSliders === 1 ? '' : 's') + ' on the Dashboard.' : '') +
+    (nCharts ? (added.length || nSliders ? ' ' : '') + nCharts + ' chart' + (nCharts === 1 ? '' : 's') + ' on the Dashboard.' : '');
   const msg = (copy.scenarios.length
       ? 'fmGraph scenarios used: ' + (plan ? plan.cases.length : 1) + ' Global Cases (Base and ' + copy.scenarios.length + '), ' +
         n + ' input' + (n === 1 ? '' : 's') + ' with scenarios.' + (sensText ? ' Also ' + sensText.charAt(0).toLowerCase() + sensText.slice(1) : '')
@@ -12934,9 +13177,10 @@ async function useGraphScenarios(copy){
 async function removeGraphScenarios(){
   const withAnalyses = graphAnalysesInLayout();
   const withSliders = graphSlidersInLayout();
+  const withCharts = graphChartsInLayout();
   const ok = await showConfirm('Remove the fmGraph scenarios?',
     'The Global Cases and row scenarios they made are removed from this layout' + (withAnalyses ? ', and so are the sensitivity analyses made from its charts' : '') +
-    (withSliders ? ', and the Dashboard\'s sliders' : '') +
+    (withSliders ? ', and the Dashboard\'s sliders' : '') + (withCharts ? ', and the Dashboard\'s charts' : '') +
     '. The boards themselves are not changed.', 'Remove');
   if(!ok) return;
   mapping.cfg.graph = defaultGraphCopy();
@@ -12961,7 +13205,7 @@ function showGraphBoards(raw, source){
 $('btnUseGraphBoards').addEventListener('click', async () => {
   if(!model) return;
   if(modelGraphBoards){ showGraphBoards(modelGraphBoards, 'The boards that came with the model'); return; }
-  if(graphScenariosInLayout() || graphAnalysesInLayout() || graphSlidersInLayout()){ await removeGraphScenarios(); return; }
+  if(graphScenariosInLayout() || graphAnalysesInLayout() || graphSlidersInLayout() || graphChartsInLayout()){ await removeGraphScenarios(); return; }
   setStatus($('genStatus'), 'This model came without fmGraph boards: use File → Import fmGraph boards… for a board file.', 'info');
 });
 $('btnImportGraphBoards').addEventListener('click', () => $('graphFileInput').click());
@@ -12993,6 +13237,13 @@ function importGraphBoardsText(text, fileName){
 // what its Global Case picks (or its base row), in the board's order and only in each slider's
 // periods — set: IF(Use=TRUE, Value, …); change by %: (…)*(1+Value/100) — as fmGraph does,
 // a later slider applying to what the earlier ones left; the sensitivity parts come after.
+// Under the sliders, the boards' bars and charts as Excel charts (B5, cfg.graph.charts), in the
+// board's order — wide ones the full width, narrow ones two to a row: a bar a column chart of its
+// row; columns stacked columns (several groups: a small table under the chart, one column per
+// period and group, so each group stacks on its own); a flow a stacked-column waterfall over
+// helper rows under it — Value, From, To (the running total, as fmGraph works it out), the
+// parts above and below 0, an invisible Base, then Total / Rise / Fall each above and below 0
+// (Excel stacks the two signs apart) — all formulas, so the charts follow the sliders.
 // ============================================================
 const DASH_POSITIONS = 30000;  // the most a form-control scroll bar takes
 const DASH_FIRST_ROW = 5;      // row 1 title, 2 the note, 4 the headers
@@ -13058,8 +13309,203 @@ function dashboardSliders(dash, list, base, p, name, from){
   }, base);
 }
 
-// Writes the Dashboard tab (and puts it first). `ownRow`: Inputs-tab row id → { tabName, row }.
-function appendDashboardSheet(wb, dash, name, ownRow){
+// ---------- The charts (step 19 B5) ----------
+const DASH_CHART_ROWS = 18;  // a chart's height, in rows
+const DASH_HALF_COL = 4;     // a narrow chart takes columns A–D or E–L
+const DASH_LAST_COL = 12;    // a wide one A–L
+const DASH_FLOW_COLOURS = { total: '64748B', rise: '16A34A', fall: 'DC2626' };
+
+// The layout's charts as the workbook writes them, or null: { charts: [chart, with only the
+// parts the workbook writes, and its `name`], notes: [text] }.
+function graphChartPlan(){
+  if(!mapping || !graphChartsInLayout()) return null;
+  const byId = new Map(mapping.rows.map(r => [r.id, r]));
+  const charts = [], missing = [], gone = [];
+  mapping.cfg.graph.charts.forEach(c => {
+    const parts = c.parts.filter(x => {
+      const r = byId.get(x.row);
+      if(isSensitivityOutputRow(r)) return true;
+      const n = (r && r.label) || x.name || x.row;
+      if(!missing.includes(n)) missing.push(n);
+      return false;
+    });
+    if(!parts.length){ gone.push(graphChartName(c)); return; }
+    charts.push(Object.assign({}, c, { parts, name: graphChartName(c) }));
+  });
+  const notes = [];
+  if(missing.length) notes.push('Not in the Dashboard\'s charts (left out of the workbook, or a constant): ' + missing.join(', ') + '.');
+  if(gone.length) notes.push('Charts not written (none of their rows is in the workbook): ' + gone.join(', ') + '.');
+  return { charts, notes };
+}
+function graphChartNotes(){ const p = graphChartPlan(); return p ? p.notes : []; }
+
+// fmIDE's number for a row in period p (what Excel shows before it recalculates), or null.
+function dashNumbers(){
+  const results = evaluateModel(modelIR);
+  const byId = new Map(mapping.rows.map(r => [r.id, r]));
+  return (rowId, p) => { const r = byId.get(rowId); return r ? outputValueFrom(modelIR, results, r, p) : null; };
+}
+// The periods a chart shows, in order.
+function dashPeriods(periods){ return model.periods.map((_, p) => p).filter(p => graphPeriodsCover(periods, p)); }
+// A range on a sheet for a chart: 'Tab'!$C$5:$H$5 (always with the sheet's name).
+function dashRange(tab, c1, r1, c2, r2){
+  return "'" + String(tab).replace(/'/g, "''") + "'!$" + c1 + '$' + r1 + (c2 ? ':$' + c2 + '$' + (r2 || r1) : '');
+}
+// The steps of a flow as fmGraph works them out: { value, from, to } each, from fmIDE's numbers.
+function dashFlowFigures(c, num){
+  let running = 0;
+  return c.parts.map(x => {
+    const v = num(x.row, c.period);
+    if(v === null) return { value: null, from: null, to: null };
+    let from, to;
+    if(x.role === 'start' || x.role === 'total'){ from = 0; to = v; }
+    else { from = running; to = x.role === 'subtract' ? running - v : running + v; }
+    running = to;
+    return { value: v, from, to };
+  });
+}
+// A bar from `from` to `to` as Excel stacks it: the invisible base, then what shows above and
+// below 0.
+function dashFlowParts(from, to){
+  if(from === null || to === null) return { base: null, above: null, below: null };
+  const lo = Math.min(from, to), hi = Math.max(from, to);
+  if(lo >= 0) return { base: lo, above: hi - lo, below: 0 };
+  if(hi <= 0) return { base: hi, above: 0, below: lo - hi };
+  return { base: 0, above: hi, below: lo };
+}
+// The rows of a flow's helper block, in order, by name.
+const DASH_FLOW_ROWS = ['Value', 'From', 'To', 'Above 0', 'Below 0', 'Base (hidden)',
+  'Total above 0', 'Total below 0', 'Rise above 0', 'Rise below 0', 'Fall above 0', 'Fall below 0'];
+
+// One chart: { chart, block: { rows: n, write(ws, top) } | null }, `top` its block's first row.
+function dashChart(c, top, ctx){
+  const { sheet, cellPos, num, labels, styles } = ctx;
+  const fmt = mapping.cfg.fallbackFormat || 'General';
+  const hex = (col) => col ? col.slice(1).toUpperCase() : undefined;
+  const valAxis = Object.assign({ numFmt: fmt }, c.scale ? { min: c.scale.min, max: c.scale.max } : {});
+  const L = (k) => colLetter(k);
+  if(c.kind === 'flow'){
+    const n = c.parts.length, figs = dashFlowFigures(c, num);
+    const col = (k) => L(2 + k), last = col(n - 1);
+    const R = (name) => top + 1 + DASH_FLOW_ROWS.indexOf(name);
+    const cat = { ref: dashRange(sheet, 'B', top, last), values: c.parts.map(x => x.name) };
+    const parts = figs.map(f => dashFlowParts(f.from, f.to));
+    const isTotal = (x) => x.role === 'start' || x.role === 'total';
+    const kindOf = (x, f) => isTotal(x) ? 'total' : (f.to !== null && f.to >= f.from ? 'rise' : 'fall');
+    const valuesOf = (kind, side) => c.parts.map((x, k) => parts[k][side] === null ? null : kindOf(x, figs[k]) === kind ? parts[k][side] : 0);
+    const points = c.parts.map((x, k) => x.colour ? { idx: k, color: hex(x.colour) } : null).filter(Boolean);
+    const series = [{ name: { text: 'Base' }, cat, val: { ref: dashRange(sheet, 'B', R('Base (hidden)'), last), values: parts.map(q => q.base), numFmt: fmt }, noFill: true }];
+    [['total', 'Total'], ['rise', 'Rise'], ['fall', 'Fall']].forEach(([kind, label]) => [['above', ' above 0'], ['below', ' below 0']].forEach(([side, text], j) => {
+      series.push({ name: { text: label }, cat, val: { ref: dashRange(sheet, 'B', R(label + text), last), values: valuesOf(kind, side), numFmt: fmt },
+        color: DASH_FLOW_COLOURS[kind], points, noLegend: j === 1 });
+    }));
+    const chart = { type: 'bar', title: c.name, bar: { dir: 'col', grouping: 'stacked', gapWidth: 50 }, legend: 'b', valAxis, series };
+    const write = (ws) => {
+      ws['A' + top] = textCell('Chart data: ' + c.name + ' (' + (labels[c.period] || '') + ')', styles.head);
+      DASH_FLOW_ROWS.forEach(r => { ws['A' + R(r)] = textCell(r, styles.label); });
+      c.parts.forEach((x, k) => {
+        const C = col(k), f = figs[k], q = parts[k];
+        const at = (r) => C + R(r);
+        const F = at('From'), T = at('To'), V = at('Value'), A = at('Above 0'), B = at('Below 0');
+        const pos = cellPos[x.row];
+        ws[C + top] = textCell(x.name, styles.head);
+        ws[V] = { t: 'n', f: sheetRef(pos.tabName, '$' + colLetter(periodCol(c.period)), pos.row, sheet, true), v: f.value, s: styles.link };
+        const calc = (r, formula, v) => { ws[at(r)] = Object.assign({ t: 'n', f: formula, s: styles.calc }, v === null ? {} : { v }); };
+        const zero = (r) => { ws[at(r)] = { t: 'n', v: 0, s: styles.calc }; };
+        if(isTotal(x)){ zero('From'); calc('To', V, f.to); }
+        else {
+          if(k === 0) zero('From'); else calc('From', col(k - 1) + R('To'), f.from);
+          calc('To', F + (x.role === 'subtract' ? '-' : '+') + V, f.to);
+        }
+        const lo = 'MIN(' + F + ',' + T + ')', hi = 'MAX(' + F + ',' + T + ')';
+        calc('Above 0', 'IF(' + lo + '>=0,' + hi + '-' + lo + ',IF(' + hi + '<=0,0,' + hi + '))', q.above);
+        calc('Below 0', 'IF(' + lo + '>=0,0,IF(' + hi + '<=0,' + lo + '-' + hi + ',' + lo + '))', q.below);
+        calc('Base (hidden)', 'IF(' + lo + '>=0,' + lo + ',IF(' + hi + '<=0,' + hi + ',0))', q.base);
+        const kind = kindOf(x, f);
+        [['Total', 'total'], ['Rise', 'rise'], ['Fall', 'fall']].forEach(([label, k2]) => {
+          if(isTotal(x) !== (k2 === 'total')){ zero(label + ' above 0'); zero(label + ' below 0'); return; }
+          const when = k2 === 'total' ? null : k2 === 'rise' ? T + '>=' + F : T + '<' + F;
+          const pick = (cell, v) => when ? 'IF(' + when + ',' + cell + ',0)' : cell;
+          const v = (side) => q[side] === null ? null : kind === k2 ? q[side] : 0;
+          calc(label + ' above 0', pick(A), v('above'));
+          calc(label + ' below 0', pick(B), v('below'));
+        });
+      });
+    };
+    return { chart, block: { rows: 1 + DASH_FLOW_ROWS.length, cols: 1 + n, write } };
+  }
+  const ps = dashPeriods(c.periods);
+  const groups = c.kind === 'columns' ? c.groups : [];
+  const series = [];
+  let block = null;
+  if(groups.length > 1){
+    // Several groups: one column per period and group, each part only in its group's columns.
+    const cols = [];
+    ps.forEach(p => groups.forEach((g, gi) => cols.push({ p, gi, label: (labels[p] || '') + ' · ' + (g || 'Group ' + (gi + 1)) })));
+    const last = L(1 + cols.length);
+    const cat = { ref: dashRange(sheet, 'B', top, last), values: cols.map(x => x.label) };
+    c.parts.forEach((x, i) => {
+      series.push({ name: { text: x.name }, cat, color: hex(x.colour),
+        val: { ref: dashRange(sheet, 'B', top + 1 + i, last), values: cols.map(q => q.gi === x.group ? num(x.row, q.p) : null), numFmt: fmt } });
+    });
+    block = { rows: 1 + c.parts.length, cols: 1 + cols.length, write: (ws) => {
+      ws['A' + top] = textCell('Chart data: ' + c.name, styles.head);
+      cols.forEach((q, k) => { ws[L(2 + k) + top] = textCell(q.label, styles.head); });
+      c.parts.forEach((x, i) => {
+        const r = top + 1 + i, pos = cellPos[x.row];
+        ws['A' + r] = textCell(x.name, styles.label);
+        cols.forEach((q, k) => {
+          if(q.gi !== x.group) return;
+          const v = num(x.row, q.p);
+          ws[L(2 + k) + r] = Object.assign({ t: 'n', f: sheetRef(pos.tabName, '$' + colLetter(periodCol(q.p)), pos.row, sheet, true), s: styles.link }, v === null ? {} : { v });
+        });
+      });
+    } };
+  } else {
+    // A bar, or one group: each series straight from its row, the periods from its tab's row 2.
+    const c1 = colLetter(periodCol(ps[0])), c2 = colLetter(periodCol(ps[ps.length - 1]));
+    c.parts.forEach(x => {
+      const pos = cellPos[x.row];
+      series.push({ name: { text: x.name }, color: hex(x.colour),
+        cat: { ref: dashRange(pos.tabName, c1, 2, c2), values: ps.map(p => labels[p] || '') },
+        val: { ref: dashRange(pos.tabName, c1, pos.row, c2), values: ps.map(p => num(x.row, p)), numFmt: fmt } });
+    });
+  }
+  const chart = { type: 'bar', title: c.name, bar: { dir: 'col', grouping: c.kind === 'columns' ? 'stacked' : 'clustered', gapWidth: 60 },
+    legend: c.kind === 'columns' ? 'b' : null, valAxis, series };
+  return { chart, block };
+}
+// Places the charts from row `first` (1-based) down: each row of charts (one wide, or two
+// narrow), then the helper blocks of those charts. Returns the last row used and column count.
+function placeDashboardCharts(ws, charts, first, ctx){
+  const anchors = [];
+  let r = first, maxCol = DASH_LAST_COL;
+  for(let i = 0; i < charts.length;){
+    const row = charts[i].wide || i + 1 >= charts.length || charts[i + 1].wide ? [charts[i]] : [charts[i], charts[i + 1]];
+    i += row.length;
+    const blocksTop = r + DASH_CHART_ROWS + 1;
+    let b = blocksTop;
+    const made = row.map(c => {
+      const ch = dashChart(c, b, ctx);
+      if(ch.block){ ch.top = b; b += ch.block.rows + 1; }
+      return ch;
+    });
+    made.forEach((ch, k) => {
+      const narrow = row.length === 2 || !row[k].wide;
+      const c1 = narrow && k === 1 ? DASH_HALF_COL : 0, c2 = narrow ? (k === 1 ? DASH_LAST_COL : DASH_HALF_COL) : DASH_LAST_COL;
+      anchors.push({ chart: ch.chart, from: { c: c1, r: r - 1 }, to: { c: c2, r: r - 1 + DASH_CHART_ROWS } });
+      if(ch.block){ ch.block.write(ws); maxCol = Math.max(maxCol, ch.block.cols); }
+    });
+    r = b === blocksTop ? r + DASH_CHART_ROWS + 1 : b;
+  }
+  ws['!charts'] = anchors;
+  return { lastRow: r, maxCol };
+}
+
+// Writes the Dashboard tab (and puts it first). `ownRow`: Inputs-tab row id → { tabName, row };
+// `charts`: graphChartPlan's charts with only the parts written (cellPos: row id → { tabName, row }).
+function appendDashboardSheet(wb, dash, name, ownRow, charts, cellPos){
+  dash = dash || { rows: [] };
   const ws = {};
   const C = DASH_COL;
   const hdr = (extra) => roleCellStyle('Headers', extra);
@@ -13068,10 +13514,12 @@ function appendDashboardSheet(wb, dash, name, ownRow){
   const calcStyle = roleCellStyle('Calculations'), linkStyle = roleCellStyle('Links'), noteStyle = roleCellStyle('Notes');
   const labels = periodLabels();
   ws.A1 = { t: 's', v: name, s: mergeXlStyle({ font: (roleCellStyle('Headers') || {}).font || {} }, { font: { sz: 13 } }) };
-  ws.A2 = textCell('Scroll bars and check boxes don\'t show in Excel on the web, or always in LibreOffice: type in Typed and Use instead.', noteStyle);
+  if(dash.rows.length){
+  ws.A2 = textCell('Scroll bars and check boxes don\'t show in Excel on the web, on an iPad or iPhone, or always in LibreOffice: type in Typed and Use instead.', noteStyle);
   [['name', 'Slider'], ['periods', 'Periods'], ['kind', 'Kind'], ['bar', 'Scroll bar'], ['pos', 'Position'], ['typed', 'Typed'],
     ['value', 'Value'], ['box', ''], ['use', 'Use'], ['min', 'Min'], ['max', 'Max'], ['step', 'Step']]
     .forEach(([k, v]) => { ws[C[k] + '4'] = { t: 's', v, s: hdr(k === 'name' || k === 'periods' || k === 'kind' ? null : CENTER) }; });
+  }
   const controls = [];
   const col = (k) => C[k].charCodeAt(0) - 65; // 0-based (columns A–L)
   dash.rows.forEach((d, i) => {
@@ -13098,8 +13546,15 @@ function appendDashboardSheet(wb, dash, name, ownRow){
       controls.push({ type: 'check', from: { c: col('box'), r: r - 1 }, to: { c: col('box') + 1, r }, cell: C.use + r, checked: false, text: 'Use' });
     }
   });
-  ws['!controls'] = controls;
-  ws['!ref'] = 'A1:' + C.step + Math.max(4, DASH_FIRST_ROW + dash.rows.length - 1);
+  if(controls.length) ws['!controls'] = controls;
+  let lastRow = dash.rows.length ? DASH_FIRST_ROW + dash.rows.length - 1 : 1, lastCol = DASH_LAST_COL;
+  if(charts && charts.length){
+    const placed = placeDashboardCharts(ws, charts, dash.rows.length ? lastRow + 2 : 3, {
+      sheet: name, cellPos, num: dashNumbers(), labels,
+      styles: { head: hdr(), label: roleCellStyle('Labels'), link: linkStyle, calc: calcStyle } });
+    lastRow = placed.lastRow; lastCol = placed.maxCol;
+  }
+  ws['!ref'] = 'A1:' + colLetter(lastCol) + Math.max(4, lastRow);
   ws['!cols'] = [{ wch: 26 }, { wch: 16 }, { wch: 12 }, { wch: 30 }, { wch: 9 }, { wch: 10 }, { wch: 12 }, { wch: 8 }, { wch: 7 }, { wch: 10 }, { wch: 10 }, { wch: 10 }];
   XLSX.utils.book_append_sheet(wb, ws, name);
   wb.SheetNames.unshift(wb.SheetNames.pop()); // the Dashboard first
@@ -13228,7 +13683,7 @@ $('cfgSectionsEnabled').addEventListener('change', () => setSectionsEnabled($('c
 $('btnGenerate').addEventListener('click', () => {
   try{
     generateWorkbook();
-    const notes = graphScenarioNotes().concat(graphSliderNotes()); // fmGraph's scenarios past a cut-off, or not moved (09i); the sliders' (09j)
+    const notes = graphScenarioNotes().concat(graphSliderNotes(), graphChartNotes()); // fmGraph's scenarios past a cut-off, or not moved (09i); the sliders' and charts' (09j)
     setStatus($('genStatus'), 'Workbook generated — check your downloads.' + (notes.length ? ' ' + notes.join(' ') : ''), 'ok');
   }catch(err){
     setStatus($('genStatus'), 'Could not generate the workbook: ' + err.message, 'err');

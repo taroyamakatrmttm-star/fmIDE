@@ -10,7 +10,11 @@
 //
 //   TUTORIALS — { id, title, minutes, summary, topic, start?, steps }
 //     start — the practice model to begin from (left out: one empty canvas):
-//             { periods: n, canvases: [{ name, nodes: [{ id, type, x, y, text, … }], edges: [{ from, to }] }] }
+//             { periods: n, canvases: [{ name, nodes: [{ id, type, x, y, text, … }], edges: [{ from, to }] }],
+//               board? }
+//             board — an fmGraph board that comes with the practice model (step 19 B5), in the
+//             board file's form (docs/file-formats.md) but naming each rectangle by { node: id }
+//             on the first canvas; it goes to ExcelExporter with the model, as a document's boards do.
 //     step: { id, text, say?, point?, done? }
 //       text  — plain English; {cmd:id} shows that command as a button (as in the help topics)
 //       say   — what the video's voice-over says instead of text, where the card's words don't
@@ -212,5 +216,39 @@ const TUTORIALS = [
       { id: 'done',
         say: 'That is the whole trip. ExcelExporter remembers your layout for each model, and its own Help (F1) explains tabs, rows, scenarios and formatting.',
         text: 'That is the whole trip. ExcelExporter remembers your layout for each model, and its own Help (❓ at its top right, or F1) explains tabs, rows, scenarios and formatting. Back to fmIDE returns here; Finish returns you to your own model.' },
+    ] },
+  { id: 'fmgraph-to-excel', title: 'fmGraph boards in Excel', minutes: 4, topic: 'fmgraph',
+    summary: 'Take a model\'s fmGraph board — a slider, a bar and a waterfall — into the workbook as a Dashboard tab.',
+    start: { periods: 3, canvases: [{ name: 'Profit', nodes: [
+      { id: 'p', type: 'value', x: 80, y: 40, text: 'Price\n10\n$/t' },
+      { id: 'q', type: 'value', x: 80, y: 170, text: 'Quantity\n5\nt' },
+      { id: 'm', type: 'operator', x: 330, y: 110, text: '×' },
+      { id: 'r', type: 'value', x: 480, y: 100, text: 'Revenue' },
+      { id: 'c', type: 'value', x: 480, y: 260, text: 'Costs\n-20\n$' },
+      { id: 'a', type: 'operator', x: 700, y: 180, text: '+' },
+      { id: 'n', type: 'value', x: 850, y: 170, text: 'Profit' },
+    ], edges: [{ from: 'p', to: 'm' }, { from: 'q', to: 'm' }, { from: 'm', to: 'r' }, { from: 'r', to: 'a' }, { from: 'c', to: 'a' }, { from: 'a', to: 'n' }] }],
+      board: { name: 'Practice board',
+        items: [
+          { type: 'bar', node: 'n', periods: { mode: 'all' }, wide: false },
+          { type: 'chart', layout: 'flow', title: 'Profit walk', period: 0, wide: true,
+            steps: [{ node: 'r', role: 'start' }, { node: 'c', role: 'add' }, { node: 'n', role: 'total' }] },
+        ],
+        sliders: [{ node: 'p', periods: { mode: 'all' }, mode: 'set', min: 5, max: 15, step: 1 }] } },
+    steps: [
+      { id: 'intro',
+        say: 'This practice model comes with an fmGraph board: a slider for Price, a bar of Profit and a waterfall from Revenue to Profit. We\'ll take that board into Excel.',
+        text: 'This practice model comes with an fmGraph board: a slider for Price, a bar of Profit and a waterfall from Revenue to Profit (in fmGraph, {cmd:openFmGraph} shows your own boards). You will take this one into Excel. Press Next.' },
+      { id: 'open', point: { cmd: 'openExcelExporter' }, done: [{ openedExcel: true }],
+        text: 'Press {cmd:openExcelExporter}. The model goes to ExcelExporter with its board — no file to save first.' },
+      { id: 'use',
+        say: 'In ExcelExporter, choose Layout, then Use fmGraph boards. The window lists the board\'s slider and charts, each with a tick box. Press Use.',
+        text: 'In ExcelExporter, choose Layout → Use fmGraph boards…. The window lists the board\'s slider and charts, each with a tick box. Press Use, then come back and press Next.' },
+      { id: 'generate',
+        say: 'Press Generate .xlsx. The workbook opens on the Dashboard: a scroll bar for Price, a cell to type into, and the bar and the waterfall, which move with it.',
+        text: 'Press ⬇ Generate .xlsx and open the workbook. It opens on the Dashboard: a scroll bar for Price, a Typed cell, and the two charts under them, which move with it. Tick Use and move the scroll bar. Press Next.' },
+      { id: 'done',
+        say: 'That is how a board travels. Scenarios become Global Cases and a Tornado or Spider a sensitivity tab the same way; ExcelExporter\'s Help, fmGraph in Excel, says more.',
+        text: 'That is how a board travels. Scenarios become Global Cases, and a Tornado or Spider a sensitivity tab, the same way: ExcelExporter\'s Help topic "fmGraph in Excel" says more. Finish returns you to your own model.' },
     ] },
 ];

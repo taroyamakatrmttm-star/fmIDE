@@ -2,6 +2,13 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: fmGraph's charts on the Dashboard, and step 19 finished (step 19, phase B5)
+- **Layout → Use fmGraph boards…** lists the picked board's **bars and charts** and draws them as Excel charts on the Dashboard, under the sliders, in the board's order (wide charts the full width, narrow ones two to a row): a bar is a column chart of its row; a columns chart stacked columns (with several groups, from a small table under it, so each group stacks on its own); a flow a stacked-column waterfall over rows of formulas under it — Value, From, To (the running total, as fmGraph works it out), and what Excel stacks: an invisible base, then Total, Rise and Fall above and below 0, so a bar crossing 0 is drawn right. They follow the sliders and the Global Case. Titles, names, the colours picked in fmGraph and a fixed scale come along; before Excel recalculates the charts show fmIDE's numbers. A scenario waterfall is not carried (said in the window). A layout with charts but no sliders still gets a Dashboard.
+- The layout file is now **version 8** (`cfg.graph.charts`); version 7 files open as they are.
+- The Excel writer: a chart's value axis may have a fixed minimum and maximum, a bar its own colour, and a series no legend entry of its own.
+- The Dashboard's note now names Excel on the iPad and iPhone too, where a scroll bar or check box shows as "This version of Excel doesn't support this control" (found by the owner); Typed and Use still work there.
+- Help: ExcelExporter's topics "fmGraph in Excel" and "fmGraph's charts on the Dashboard"; fmIDE's and fmGraph's help point to them. fmIDE has a new tutorial, **fmGraph boards in Excel**, whose practice model comes with a board.
+
 ## ExcelExporter: fmGraph's sliders on a Dashboard (step 19, phase B4)
 - **Layout → Use fmGraph boards…** lists every board's **sliders** (a slider on several boards once) and turns them into a **Dashboard** tab, the workbook's first: per slider a form-control scroll bar, Position (its cell), Typed (a number typed wins), Value, a **Use** check box for a set slider, and Min, Max and Step. On the Inputs tab each slider is laid over the input's Global Case in its own periods, in the board's order as fmGraph does, before the sensitivity parts. The workbook opens on fmIDE's numbers (Use off, changes at 0). A note on the tab: scroll bars and check boxes don't show in Excel on the web or always in LibreOffice; Typed and Use always work. Past 30,000 steps the step grows, and the window and Generate say so.
 - The layout file is now **version 7** (`cfg.graph.sliders`); version 6 files open as they are.

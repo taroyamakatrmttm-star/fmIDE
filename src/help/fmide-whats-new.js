@@ -12,6 +12,21 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'fmgraph-boards-in-excel', date: '2026-10-16', title: 'fmGraph boards in Excel',
+    summary: 'ExcelExporter rebuilds your fmGraph boards in the workbook: scenarios, Tornado and Spider, sliders and charts on a Dashboard. A new tutorial shows how.',
+    what: [
+      'Open ExcelExporter from here and its Layout → Use fmGraph boards… takes the document\'s boards: scenarios become Global Cases, a Tornado or Spider a sensitivity tab, sliders a Dashboard tab with scroll bars, and bars and charts Excel charts under them.',
+      'The new tutorial "fmGraph boards in Excel" takes a practice model that comes with a board through to the Dashboard.',
+    ],
+    why: 'So the "what if" you play with in fmGraph is still there in the Excel file you send.',
+    how: [
+      'Set up a board in {cmd:openFmGraph}: sliders, scenarios, charts.',
+      'Open {cmd:openExcelExporter}, then Layout → Use fmGraph boards… and Use.',
+      'Press ⬇ Generate .xlsx: the workbook opens on the Dashboard.',
+    ],
+    notes: ['Scroll bars and check boxes don\'t show in Excel on the web or on an iPad or iPhone: type in the Dashboard\'s Typed and Use cells instead.'],
+    see: ['fmgraph', 'to-excel'] },
+
   { id: 'excel-attach-to-template', date: '2026-10-12', title: 'ExcelExporter attaches layouts to templates',
     summary: 'In ExcelExporter opened from here, 📎 Attach on a module\'s tab sends its Excel layout to its canvas template — no file in between.',
     what: [

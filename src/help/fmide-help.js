@@ -433,6 +433,7 @@ const HELP_TOPICS = [
       ] },
       { p: 'fmGraph never changes your model: a slider is a "what if", and Reset puts the number back. After changing the model here, press ↻ From fmIDE in fmGraph (or {cmd:openFmGraph} again) to see it as it is now.' },
       { p: 'The boards you set up in fmGraph — its bars, charts and sliders — are kept in your document: a change to them there marks the document unsaved here, and {cmd:saveDocument} keeps them with the model. Opening the document brings them back, ahead of the ones fmGraph remembered in the browser. Moving a slider changes nothing.' },
+      { p: 'The boards go into Excel too: {cmd:openExcelExporter}, then its Layout → Use fmGraph boards… writes the scenarios as Global Cases, the Tornado and Spider as sensitivity tabs, and the sliders and charts on a Dashboard tab (its Help, "fmGraph in Excel", says how).' },
       { tip: 'fmGraph can also open a saved .fmide file on its own, and has its own Help (❓).' },
       { see: ['to-excel'] },
     ] },

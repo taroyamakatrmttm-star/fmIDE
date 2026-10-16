@@ -46,7 +46,7 @@ function checkCaptions(srt, script, timing){
 
 test.describe('the scripts', () => {
   test('every tutorial: an opening line, a line per step, a closing line', () => {
-    expect(tutorials.length).toBe(6);
+    expect(tutorials.length).toBe(7); // step 19 B5 added fmgraph-to-excel;
     for(const t of tutorials){
       const s = S.videoScript(t, video, commands);
       expect(s.lines.map(l => l.id)).toEqual(['video-intro'].concat(t.steps.map(x => x.id), ['video-outro']));
