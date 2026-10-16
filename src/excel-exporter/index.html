@@ -155,6 +155,14 @@
 
       <section class="card" id="sensitivityPanel">
         <h2>Sensitivity</h2>
+        <div class="sens-analyses">
+          <select id="sensPick" aria-label="Analysis" title="The analysis shown below; each one is a Sensitivity tab of its own (at most 10)"></select>
+          <button id="btnSensAdd" class="btn-quiet" title="Add an analysis: another Sensitivity tab, with its own outputs and inputs">+ Add</button>
+          <button id="btnSensUp" class="icon" title="Move this analysis up" aria-label="Move this analysis up">↑</button>
+          <button id="btnSensDown" class="icon" title="Move this analysis down" aria-label="Move this analysis down">↓</button>
+          <button id="btnSensRemove" class="icon" title="Remove this analysis" aria-label="Remove this analysis">×</button>
+        </div>
+        <label class="field" title="The analysis's name: its Sensitivity tab is named after it"><span>Name</span><input type="text" id="cfgSensName" maxlength="31"></label>
         <label class="check-line" title="A Sensitivity tab: how much each input you pick moves an output, live in Excel, with a Tornado and a Spider chart">
           <input type="checkbox" id="cfgSensEnabled"> Tornado and Spider
         </label>
@@ -316,6 +324,8 @@
     <h4>Scenarios → Global Cases</h4>
     <ul id="graphScenarioList" class="graph-scenarios"></ul>
     <p id="graphNoScenarios" class="graph-source hidden">No scenarios in these boards.</p>
+    <h4 id="graphSensHead" class="hidden">Tornado and Spider → analyses</h4>
+    <ul id="graphSensList" class="graph-scenarios"></ul>
     <h4 id="graphLeftOutHead" class="hidden">Not carried</h4>
     <ul id="graphLeftOut" class="graph-left-out"></ul>
     <div class="modal-actions">

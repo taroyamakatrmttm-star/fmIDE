@@ -274,6 +274,9 @@
   .modal-head h3{ margin:0; }
   .attach-pick{ display:flex; align-items:center; gap:8px; font-size:13.5px; }
   .attach-pick select{ flex:1; min-width:0; }
+  /* Several sensitivity analyses (09g): the picker and its buttons */
+  .sens-analyses{ display:flex; gap:6px; align-items:center; }
+  .sens-analyses select{ flex:1; min-width:0; }
   /* Use fmGraph boards (09i): the scenarios to bring, and what can't be carried */
   #graphModal .modal{ max-width:640px; }
   #graphModal h4{ margin:14px 0 6px; font-size:13.5px; }

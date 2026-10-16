@@ -11,8 +11,8 @@ const FILE_FORMATS = {
   'system':              { current: SHARED_FILE_VERSIONS['system'], label: 'fmIDE system' },
   'fmIDE-workspace':     { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'fmIDE workspace' },
   // v3: the Tornado and Spider's settings, `cfg.sensitivity` (step 16); v4: `cfg.graph`, what
-  // Use fmGraph boards… copied (step 19 B2).
-  'fmIDE-excel-mapping': { current: 4, label: 'ExcelExporter mapping file' },
+  // Use fmGraph boards… copied (step 19 B2); v5: `cfg.sensitivities`, several analyses (B3).
+  'fmIDE-excel-mapping': { current: 5, label: 'ExcelExporter mapping file' },
   // The person's own Excel style (step 11a): how every cell looks, by role.
   'fmIDE-excel-style':   { current: 1, label: 'ExcelExporter Excel style file' },
   // The layouts remembered per module (step 11b); v2: a module's block instances' layout, `instance` (step 11d).
@@ -32,10 +32,19 @@ const OTHER_FMIDE_KINDS = {
 // The mapping file's upgrades. v2: any row may carry its own format (`style`) and an
 // `indent`; a v1 file has neither, so it reads as it is. v3: `cfg.sensitivity` (the
 // Tornado and Spider, step 16); a v2 file has none (off), so it too reads as it is. v4: `cfg.graph`
-// (fmGraph's scenarios, step 19 B2); a v3 file has none, so it reads as it is. The module layouts file's v2 adds
+// (fmGraph's scenarios, step 19 B2); a v3 file has none, so it reads as it is. v5: several
+// analyses, `cfg.sensitivities` (B3): a v4 file's one `cfg.sensitivity` becomes the first,
+// named "Sensitivity". The module layouts file's v2 adds
 // `instance` (step 11d); a v1 file has none, so it too reads as it is.
 const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
-  'fmIDE-excel-mapping': { 1: (d) => { d.version = 2; return d; }, 2: (d) => { d.version = 3; return d; }, 3: (d) => { d.version = 4; return d; } },
+  'fmIDE-excel-mapping': { 1: (d) => { d.version = 2; return d; }, 2: (d) => { d.version = 3; return d; }, 3: (d) => { d.version = 4; return d; },
+    4: (d) => {
+      if(d.cfg && typeof d.cfg === 'object'){
+        if(d.cfg.sensitivity && typeof d.cfg.sensitivity === 'object') d.cfg.sensitivities = [Object.assign({}, d.cfg.sensitivity, { name: 'Sensitivity' })];
+        delete d.cfg.sensitivity;
+      }
+      d.version = 5; return d;
+    } },
   'fmIDE-excel-module-layouts': { 1: (d) => { d.version = 2; return d; } }
 });
 // Returns { error } or { kind, data (migrated copy), fromVersion, newer, newerParts }.

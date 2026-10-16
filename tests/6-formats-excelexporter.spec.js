@@ -105,7 +105,9 @@ test.describe('mapping files', () => {
     const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
     const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
     expect(exported.kind).toBe('fmIDE-excel-mapping');
-    expect(exported.version).toBe(4); // v2: a row may carry its own format and indent; v3: cfg.sensitivity; v4: cfg.graph
+    expect(exported.version).toBe(5); // v2: a row may carry its own format and indent; v3: cfg.sensitivity; v4: cfg.graph; v5: cfg.sensitivities
+    expect(exported.cfg.sensitivities).toEqual([{ name: 'Sensitivity', enabled: false, outputs: [], period: 0, steps: 5, charts: 'tabs', variables: [] }]);
+    // The first analysis also in the old place, for an ExcelExporter from before version 5.
     expect(exported.cfg.sensitivity).toEqual({ enabled: false, outputs: [], period: 0, steps: 5, charts: 'tabs', variables: [] });
     expect(exported.cfg.graph).toEqual({ from: [], board: '', scenarios: [] });
     expect(exported.tabs.map(t => t.name)).toContain('Exported Tab');
@@ -130,22 +132,40 @@ test.describe('mapping files', () => {
       await expect(page.locator('#cfgSensEnabled')).not.toBeChecked();
       const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
       const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
-      expect(exported.version).toBe(4);
+      expect(exported.version).toBe(5);
       expect(exported.cfg.graph).toEqual({ from: [], board: '', scenarios: [] });
+      expect(exported.cfg.sensitivities.map(a => a.name)).toEqual(['Sensitivity']);
     });
   }
 
-  // map-newer-v5: version 4 is now current (map-newer, version 4, is no longer newer).
-  test('map-newer-v5 asks first', async ({ page }) => {
+  // map-v4: a version 4 file (one Sensitivity setup, before several analyses) opens as one
+  // analysis named "Sensitivity", with its settings.
+  test('map-v4 imports as one analysis', async ({ page }) => {
+    await importMapping(page, file('map-v4'));
+    await expect(genStatus(page)).toHaveText('Mapping imported.');
+    expect(await page.locator('#sensPick option').allTextContents()).toEqual(['1. Sensitivity']);
+    await expect(page.locator('#cfgSensEnabled')).toBeChecked();
+    await expect(page.locator('#cfgSensSteps')).toHaveValue('4');
+    await expect(page.locator('#cfgSensCharts')).toHaveValue('sheet');
+    await expect(page.locator('#sensVars .sens-name')).toHaveText(['1. Unit Price']);
+    const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
+    const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
+    expect(exported.version).toBe(5);
+    expect(exported.cfg.sensitivities).toEqual([{ name: 'Sensitivity', enabled: true, outputs: ['c1|n22'], period: 0, steps: 4, charts: 'sheet',
+      variables: [{ row: 'c1|n19', by: 'amount', low: -2, high: 3 }] }]);
+  });
+
+  // map-newer-v6: version 5 is now current (map-newer-v5 is no longer newer, step 19 B3).
+  test('map-newer-v6 asks first', async ({ page }) => {
     await renameFirstTab(page, 'Before Import');
-    await importMapping(page, file('map-newer-v5'));
+    await importMapping(page, file('map-newer-v6'));
     await expect(page.locator('#confirmModal')).toBeVisible();
-    await expect(page.locator('#confirmMessage')).toContainText('format version 5');
+    await expect(page.locator('#confirmMessage')).toContainText('format version 6');
     await page.click('#confirmCancel');
     await expect(genStatus(page)).toHaveText('Mapping not imported.');
     expect(await tabNames(page)).toEqual(['Before Import']);
 
-    await importMapping(page, file('map-newer-v5'));
+    await importMapping(page, file('map-newer-v6'));
     await page.click('#confirmOk');
     await expect(genStatus(page)).toHaveText('Mapping imported.');
     expect(await tabNames(page)).toEqual(['Revenue Model']);

@@ -117,6 +117,13 @@ $('btnGenerate').addEventListener('click', () => {
 $('btnExportMapping').addEventListener('click', () => {
   const out = Object.assign({ kind: 'fmIDE-excel-mapping', version: FILE_FORMATS['fmIDE-excel-mapping'].current }, JSON.parse(JSON.stringify(mapping)));
   out.kind = 'fmIDE-excel-mapping'; out.version = FILE_FORMATS['fmIDE-excel-mapping'].current;
+  // The first analysis also as `cfg.sensitivity`, the one an ExcelExporter from before version 5
+  // reads (this one reads `cfg.sensitivities` and ignores it).
+  if(out.cfg && Array.isArray(out.cfg.sensitivities) && out.cfg.sensitivities[0]){
+    const first = Object.assign({}, out.cfg.sensitivities[0]);
+    delete first.name; delete first.origin;
+    out.cfg.sensitivity = first;
+  }
   const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

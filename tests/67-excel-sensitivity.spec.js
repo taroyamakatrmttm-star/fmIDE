@@ -6,6 +6,7 @@
 const fs = require('fs');
 const { test, expect, fixture, readFixture } = require('./helpers/apps');
 const X = require('./helpers/excel');
+const S = require('./helpers/storage');
 const { requireSoffice, recalcDataTables, valueOf } = require('./helpers/soffice');
 
 const IR = () => require('../src/shared/ir.js');
@@ -346,21 +347,179 @@ test('settings from a mapping file are checked; names are text', async ({ page }
   // Export the layout, spoil its settings, import it back.
   const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
   const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
-  expect(exported.version).toBe(4); // v4: cfg.graph (step 19 B2)
-  const realVar = exported.cfg.sensitivity.variables[0].row;
-  exported.cfg.sensitivity = {
-    enabled: true, outputs: ['nope', 42, realVar, realVar], period: -5, steps: 99, charts: '<script>',
-    variables: [{ row: realVar, by: 'evil', low: 'abc', high: 1e20 }, { row: realVar, by: 'amount', low: 1, high: 2 }, { row: 'missing' }, 'junk',
+  expect(exported.version).toBe(5); // v5: cfg.sensitivities, several analyses (step 19 B3)
+  const realVar = exported.cfg.sensitivities[0].variables[0].row;
+  // The first analysis is also written as cfg.sensitivity, for an ExcelExporter from before v5.
+  expect(exported.cfg.sensitivity.variables[0].row).toBe(realVar);
+  expect(exported.cfg.sensitivity.name).toBeUndefined();
+  exported.cfg.sensitivities = [{
+    name: 42, origin: '<script>', enabled: true, outputs: ['nope', 42, realVar, realVar], period: -5, steps: 99, charts: '<script>',
+    variables: [{ row: realVar, by: 'evil', low: 'abc', high: 1e20, show: 'no' }, { row: realVar, by: 'amount', low: 1, high: 2 }, { row: 'missing' }, 'junk',
       ...Array.from({ length: 60 }, (_, i) => ({ row: 'x' + i }))],
-  };
+  }, 'junk', ...Array.from({ length: 12 }, () => ({ name: '<b>Same</b>' }))];
   const file = testInfo.outputPath('spoiled.json');
   fs.writeFileSync(file, JSON.stringify(exported));
   await page.setInputFiles('#mappingFileInput', file);
   await expect(page.locator('#genStatus .status')).toHaveText('Mapping imported.');
   const [again] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
-  const cleaned = JSON.parse(fs.readFileSync(await again.path(), 'utf8')).cfg.sensitivity;
-  expect(cleaned).toEqual({ enabled: true, outputs: [realVar], period: 0, steps: 10, charts: 'tabs',
+  const list = JSON.parse(fs.readFileSync(await again.path(), 'utf8')).cfg.sensitivities;
+  expect(list[0]).toEqual({ name: 'Sensitivity', enabled: true, outputs: [realVar], period: 0, steps: 10, charts: 'tabs',
     variables: [{ row: realVar, by: 'percent', low: -10, high: 1e9 }] });
+  // At most 10 analyses; a name used twice gets a number; names stay text.
+  expect(list.map(a => a.name)).toEqual(['Sensitivity', 'Sensitivity 2', '<b>Same</b>', '<b>Same</b> 2', '<b>Same</b> 3',
+    '<b>Same</b> 4', '<b>Same</b> 5', '<b>Same</b> 6', '<b>Same</b> 7', '<b>Same</b> 8']);
+  expect(await page.locator('#sensPick option').allTextContents()).toContain('3. <b>Same</b> — off');
+  await expect(page.locator('#sensitivityPanel b')).toHaveCount(0);
+});
+
+// ---------- Several analyses (step 19 B3) ----------
+async function addAnalysis(page){ await page.click('#btnSensAdd'); }
+async function nameAnalysis(page, name){ await page.fill('#cfgSensName', name); await page.locator('#cfgSensName').dispatchEvent('change'); }
+const analyses = (page) => page.locator('#sensPick option').allTextContents();
+
+test('several analyses: add, name, order, remove; each its own settings; remembered', async ({ page, pageErrors }) => {
+  await setUpUPV(page);
+  expect(await analyses(page)).toEqual(['1. Sensitivity']);
+  await expect(page.locator('#btnSensRemove')).toBeDisabled();
+  await expect(page.locator('#btnSensUp')).toBeDisabled();
+  // + Add: a second analysis, on, picked, with nothing in it yet.
+  await addAnalysis(page);
+  expect(await analyses(page)).toEqual(['1. Sensitivity', '2. Sensitivity 2']);
+  await expect(page.locator('#sensPick')).toHaveValue('1');
+  await expect(page.locator('#cfgSensEnabled')).toBeChecked();
+  await expect(page.locator('#sensVars .sens-name')).toHaveCount(0);
+  await expect(page.locator('#sensStatus')).toContainText('Add the inputs to move and at least one output');
+  // A name used by another analysis is refused; a new one is kept.
+  await nameAnalysis(page, '  sensitivity ');
+  await expect(page.locator('#sensStatus')).toContainText('Another analysis is called “sensitivity”');
+  await expect(page.locator('#cfgSensName')).toHaveValue('Sensitivity 2');
+  await nameAnalysis(page, 'Price only');
+  await addInput(page, 'Unit Price — Canvas 1');
+  await addOutput(page, 'Revenue — Canvas 1');
+  await setChange(page, 'Unit Price', 'amount', -1, 1);
+  // The first analysis kept its own settings.
+  await page.selectOption('#sensPick', '0');
+  await expect(page.locator('#sensVars .sens-name')).toHaveText(['1. Unit Price', '2. Volume']);
+  // ↓ moves it after Price only.
+  await page.click('#btnSensDown');
+  expect(await analyses(page)).toEqual(['1. Price only', '2. Sensitivity']);
+  await expect(page.locator('#sensPick')).toHaveValue('1');
+  await page.click('#btnSensUp');
+  expect(await analyses(page)).toEqual(['1. Sensitivity', '2. Price only']);
+  // Remembered for this model.
+  await page.reload();
+  await X.loadFixtureModel(page, UPV);
+  expect(await analyses(page)).toEqual(['1. Sensitivity', '2. Price only']);
+  await page.selectOption('#sensPick', '1');
+  await expect(page.locator('#cfgSensName')).toHaveValue('Price only');
+  await expect(varLine(page, 'Unit Price').locator('select.sens-by')).toHaveValue('amount');
+  // × asks, then removes; the last one can't go.
+  await page.click('#btnSensRemove');
+  await expect(page.locator('#confirmMessage')).toContainText('“Price only”');
+  await page.click('#confirmCancel');
+  expect(await analyses(page)).toEqual(['1. Sensitivity', '2. Price only']);
+  await page.click('#btnSensRemove');
+  await page.click('#confirmOk');
+  expect(await analyses(page)).toEqual(['1. Sensitivity']);
+  await expect(page.locator('#btnSensRemove')).toBeDisabled();
+  // At most 10.
+  for(let i = 0; i < 9; i++) await addAnalysis(page);
+  expect(await analyses(page)).toHaveLength(10);
+  await expect(page.locator('#btnSensAdd')).toBeDisabled();
+  // Turned off: "— off" in the list, and no tab.
+  await page.click('#cfgSensEnabled');
+  expect((await analyses(page))[9]).toBe('10. Sensitivity 10 — off');
+  expect(pageErrors).toEqual([]);
+});
+
+test('a layout saved in this browser before several analyses opens as one analysis, its settings kept', async ({ page }) => {
+  await setUpUPV(page);
+  await setChange(page, 'Volume', 'amount', -2, 1);
+  // Make the saved layout look as an older ExcelExporter kept it: one cfg.sensitivity, no list.
+  await expect.poll(() => S.storedKeys(page, 'ExcelExporter', 'fmide-excelmap-')).not.toHaveLength(0);
+  await page.evaluate(() => new Promise((resolve, reject) => {
+    const req = indexedDB.open('fmIDE-ExcelExporter');
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const db = req.result, tx = db.transaction('kv', 'readwrite'), store = tx.objectStore('kv');
+      const cur = store.openCursor();
+      cur.onsuccess = () => {
+        const c = cur.result;
+        if(!c) return;
+        if(String(c.key).startsWith('fmide-excelmap-')){
+          const m = JSON.parse(c.value);
+          const first = Object.assign({}, m.cfg.sensitivities[0]); delete first.name;
+          m.cfg.sensitivity = first; delete m.cfg.sensitivities;
+          c.update(JSON.stringify(m));
+        }
+        c.continue();
+      };
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => reject(tx.error);
+    };
+  }));
+  await page.reload();
+  await X.loadFixtureModel(page, UPV);
+  expect(await page.locator('#sensPick option').allTextContents()).toEqual(['1. Sensitivity']);
+  await expect(page.locator('#cfgSensEnabled')).toBeChecked();
+  await expect(page.locator('#sensVars .sens-name')).toHaveText(['1. Unit Price', '2. Volume']);
+  await expect(varLine(page, 'Volume').locator('input.sens-low')).toHaveValue('-2');
+  const { wb } = await X.generate(page);
+  expect(wb.SheetNames).toEqual(['Inputs', 'Canvas 1', 'Sensitivity', 'Tornado', 'Spider']);
+});
+
+// Two analyses sharing Unit Price: "Sensitivity" (both inputs, Volume by amount) and "Price
+// only" (Unit Price by an amount, −1 / +1), both watching Revenue.
+async function setUpTwo(page){
+  await setUpUPV(page);
+  await setChange(page, 'Volume', 'amount', -2, 1);
+  await addAnalysis(page);
+  await nameAnalysis(page, 'Price only');
+  await addInput(page, 'Unit Price — Canvas 1');
+  await addOutput(page, 'Revenue — Canvas 1');
+  await setChange(page, 'Unit Price', 'amount', -1, 1);
+}
+
+test('two analyses: a tab, Data Table and charts each; a shared input adds both analyses\' parts', async ({ page }) => {
+  await setUpTwo(page);
+  const { wb, bytes } = await X.generate(page);
+  expect(wb.SheetNames).toEqual(['Inputs', 'Canvas 1', 'Sensitivity', 'Tornado', 'Spider', 'Price only', 'Price only Tornado', 'Price only Spider']);
+  const inp = wb.Sheets.Inputs;
+  const [price] = X.findRow(inp, 'Unit Price');
+  const [vol] = X.findRow(inp, 'Volume');
+  expect(X.formulaOf(inp['E' + price])).toBe("(E" + (price - 1) + ")*(1+'Sensitivity'!$I$16+'Price only'!$I$16)+'Sensitivity'!$J$16+'Price only'!$J$16");
+  expect(X.formulaOf(inp['N' + vol])).toBe("(N" + (vol - 1) + ")*(1+'Sensitivity'!$I$17)+'Sensitivity'!$J$17");
+  // The first tab exactly as with one analysis; the second its own, from row 16.
+  expectTable(writtenTable(wb.Sheets.Sensitivity, 5, 2).table, [
+    [45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55],
+    [30, 34, 38, 42, 46, 50, 52, 54, 56, 58, 60],
+  ]);
+  const po = wb.Sheets['Price only'];
+  expect(po.A1.v).toBe('Price only');
+  expect([po.D16.v, po.E16.v, po.F16.v, po.G16.v]).toEqual(['amount', -1, 1, 1]);
+  expectTable(writtenTable(po, 5, 1).table, [[45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55]]);
+  // Each tab its own Data Table on its own C6 and C7.
+  const parts = await X.unzip(bytes);
+  const sheets = Object.keys(parts).filter(k => /^xl\/worksheets\/sheet\d+\.xml$/.test(k)).map(k => parts[k]);
+  const tables = sheets.map(x => (x.match(/<f t="dataTable"[^>]*\/>/) || [])[0]).filter(Boolean);
+  expect(tables).toEqual(['<f t="dataTable" ref="N16:X17" dt2D="1" dtr="1" r1="C7" r2="C6"/>', '<f t="dataTable" ref="N16:X16" dt2D="1" dtr="1" r1="C7" r2="C6"/>']);
+});
+
+test('LibreOffice: two analyses sharing an input, each Data Table moving only its own', async ({ page }, testInfo) => {
+  requireSoffice(test);
+  testInfo.setTimeout(180_000);
+  await setUpTwo(page);
+  const { bytes } = await X.generate(page);
+  const book = await recalculated(bytes);
+  const read = (name, r, n) => Array.from({ length: n }, (_, j) => valueOf(book.getWorksheet(name).getCell(r, 14 + j)));
+  expectTable([read('Sensitivity', 16, 11), read('Sensitivity', 17, 11)], [
+    [45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55],
+    [30, 34, 38, 42, 46, 50, 52, 54, 56, 58, 60],
+  ]);
+  expectTable([read('Price only', 16, 11)], [[45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55]]);
+  // The model's own numbers, with nothing moved.
+  expect(valueOf(book.getWorksheet('Canvas 1').getCell('E6'))).toBe(50);
+  expect(valueOf(book.getWorksheet('Price only').getCell('C8'))).toBe(50);
 });
 
 // ---------- Phase B: the charts ----------

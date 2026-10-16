@@ -852,6 +852,9 @@ var XLSX = (function(){
   .modal-head h3{ margin:0; }
   .attach-pick{ display:flex; align-items:center; gap:8px; font-size:13.5px; }
   .attach-pick select{ flex:1; min-width:0; }
+  /* Several sensitivity analyses (09g): the picker and its buttons */
+  .sens-analyses{ display:flex; gap:6px; align-items:center; }
+  .sens-analyses select{ flex:1; min-width:0; }
   /* Use fmGraph boards (09i): the scenarios to bring, and what can't be carried */
   #graphModal .modal{ max-width:640px; }
   #graphModal h4{ margin:14px 0 6px; font-size:13.5px; }
@@ -1144,6 +1147,14 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
 
       <section class="card" id="sensitivityPanel">
         <h2>Sensitivity</h2>
+        <div class="sens-analyses">
+          <select id="sensPick" aria-label="Analysis" title="The analysis shown below; each one is a Sensitivity tab of its own (at most 10)"></select>
+          <button id="btnSensAdd" class="btn-quiet" title="Add an analysis: another Sensitivity tab, with its own outputs and inputs">+ Add</button>
+          <button id="btnSensUp" class="icon" title="Move this analysis up" aria-label="Move this analysis up">↑</button>
+          <button id="btnSensDown" class="icon" title="Move this analysis down" aria-label="Move this analysis down">↓</button>
+          <button id="btnSensRemove" class="icon" title="Remove this analysis" aria-label="Remove this analysis">×</button>
+        </div>
+        <label class="field" title="The analysis's name: its Sensitivity tab is named after it"><span>Name</span><input type="text" id="cfgSensName" maxlength="31"></label>
         <label class="check-line" title="A Sensitivity tab: how much each input you pick moves an output, live in Excel, with a Tornado and a Spider chart">
           <input type="checkbox" id="cfgSensEnabled"> Tornado and Spider
         </label>
@@ -1305,6 +1316,8 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     <h4>Scenarios → Global Cases</h4>
     <ul id="graphScenarioList" class="graph-scenarios"></ul>
     <p id="graphNoScenarios" class="graph-source hidden">No scenarios in these boards.</p>
+    <h4 id="graphSensHead" class="hidden">Tornado and Spider → analyses</h4>
+    <ul id="graphSensList" class="graph-scenarios"></ul>
     <h4 id="graphLeftOutHead" class="hidden">Not carried</h4>
     <ul id="graphLeftOut" class="graph-left-out"></ul>
     <div class="modal-actions">
@@ -5055,8 +5068,8 @@ const FILE_FORMATS = {
   'system':              { current: SHARED_FILE_VERSIONS['system'], label: 'fmIDE system' },
   'fmIDE-workspace':     { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'fmIDE workspace' },
   // v3: the Tornado and Spider's settings, `cfg.sensitivity` (step 16); v4: `cfg.graph`, what
-  // Use fmGraph boards… copied (step 19 B2).
-  'fmIDE-excel-mapping': { current: 4, label: 'ExcelExporter mapping file' },
+  // Use fmGraph boards… copied (step 19 B2); v5: `cfg.sensitivities`, several analyses (B3).
+  'fmIDE-excel-mapping': { current: 5, label: 'ExcelExporter mapping file' },
   // The person's own Excel style (step 11a): how every cell looks, by role.
   'fmIDE-excel-style':   { current: 1, label: 'ExcelExporter Excel style file' },
   // The layouts remembered per module (step 11b); v2: a module's block instances' layout, `instance` (step 11d).
@@ -5076,10 +5089,19 @@ const OTHER_FMIDE_KINDS = {
 // The mapping file's upgrades. v2: any row may carry its own format (`style`) and an
 // `indent`; a v1 file has neither, so it reads as it is. v3: `cfg.sensitivity` (the
 // Tornado and Spider, step 16); a v2 file has none (off), so it too reads as it is. v4: `cfg.graph`
-// (fmGraph's scenarios, step 19 B2); a v3 file has none, so it reads as it is. The module layouts file's v2 adds
+// (fmGraph's scenarios, step 19 B2); a v3 file has none, so it reads as it is. v5: several
+// analyses, `cfg.sensitivities` (B3): a v4 file's one `cfg.sensitivity` becomes the first,
+// named "Sensitivity". The module layouts file's v2 adds
 // `instance` (step 11d); a v1 file has none, so it too reads as it is.
 const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
-  'fmIDE-excel-mapping': { 1: (d) => { d.version = 2; return d; }, 2: (d) => { d.version = 3; return d; }, 3: (d) => { d.version = 4; return d; } },
+  'fmIDE-excel-mapping': { 1: (d) => { d.version = 2; return d; }, 2: (d) => { d.version = 3; return d; }, 3: (d) => { d.version = 4; return d; },
+    4: (d) => {
+      if(d.cfg && typeof d.cfg === 'object'){
+        if(d.cfg.sensitivity && typeof d.cfg.sensitivity === 'object') d.cfg.sensitivities = [Object.assign({}, d.cfg.sensitivity, { name: 'Sensitivity' })];
+        delete d.cfg.sensitivity;
+      }
+      d.version = 5; return d;
+    } },
   'fmIDE-excel-module-layouts': { 1: (d) => { d.version = 2; return d; } }
 });
 // Returns { error } or { kind, data (migrated copy), fromVersion, newer, newerParts }.
@@ -5942,7 +5964,8 @@ function readGraphBoards(raw){
     if(!b || typeof b !== 'object' || Array.isArray(b)) return;
     const count = (x) => Array.isArray(x) ? x.length : 0;
     boards.push({ name: graphText(b.name, GRAPH_LIMITS.boardName) || ('Board ' + (i + 1)),
-      sliders: count(b.sliders), items: count(b.items) + count(b.bars) + count(b.charts) });
+      sliders: count(b.sliders), items: count(b.items) + count(b.bars) + count(b.charts),
+      sensCharts: version >= 8 ? readGraphSensCharts(b.items) : [] });
   });
   // Named scenarios came in version 3: an older file's are not read.
   const scenarios = [];
@@ -5965,6 +5988,68 @@ function readGraphBoards(raw){
     scenarios.push({ name, settings });
   });
   return { version, boards, scenarios, badScenarios, badSettings };
+}
+
+// A board's Tornado and Spider charts (version 8, step 18): layout, title, output, period,
+// steps and inputs, each read as the format says (text cut, numbers forced and bounded, at
+// most 50 inputs, anything else its default); not yet matched to a model.
+function readGraphSensCharts(items){
+  const out = [];
+  const rect = (r) => r && typeof r === 'object' && typeof r.canvasId === 'string' && typeof r.nodeId === 'string'
+    && r.canvasId && r.nodeId && r.canvasId.length <= 200 && r.nodeId.length <= 200
+    ? { canvasId: r.canvasId, nodeId: r.nodeId, name: graphText(r.name, GRAPH_LIMITS.rectName) } : null;
+  (Array.isArray(items) ? items : []).slice(0, 40).forEach(it => {
+    if(!it || typeof it !== 'object' || it.type !== 'chart' || (it.layout !== 'tornado' && it.layout !== 'spider')) return;
+    const p = Number(it.period), st = Number(it.steps);
+    const chart = { layout: it.layout, title: graphText(it.title, 80), output: rect(it.output),
+      period: Number.isInteger(p) && p >= 0 ? p : 0,
+      steps: Number.isInteger(st) && st >= 1 && st <= 10 ? st : 5, inputs: [], badInputs: 0 };
+    (Array.isArray(it.inputs) ? it.inputs : []).forEach(v => {
+      const r = rect(v);
+      if(!r || chart.inputs.length >= 50){ chart.badInputs++; return; }
+      const by = v.by === 'amount' ? 'amount' : 'percent';
+      const num = (x, d) => { const n = graphNumber(x); return n === null ? d : Math.max(-1e9, Math.min(1e9, n)); };
+      const spec = Object.assign(r, { by, low: num(v.low, by === 'amount' ? -1 : -10), high: num(v.high, by === 'amount' ? 1 : 10) });
+      if(v.show === false) spec.show = false;
+      chart.inputs.push(spec);
+    });
+    out.push(chart);
+  });
+  return out;
+}
+// A rectangle of the open model by canvas id, node id and name (capitals and outer spaces
+// ignored), at the top level: its layout row, or null.
+function graphRectRow(r){
+  const norm = (s) => String(s || '').trim().toLowerCase();
+  const canvas = r && model.canvases.find(c => c.id === r.canvasId);
+  const node = canvas && canvas.nodes.find(n => n.id === r.nodeId);
+  if(!node || node.type !== 'value' || norm(parseRectText(node.text).name) !== norm(r.name)) return null;
+  return mapping.rows.find(x => x.id === pathKey([], r.canvasId, r.nodeId)) || null;
+}
+// A board's Tornado and Spider charts matched to the open model: the output a rectangle row
+// of it (else the chart is left out), each input as a scenario's setting is (else left out).
+// → { charts: [{ layout, title, output (row id), outputName, period, steps, variables }], left: { noOutput, notFound, inBlock, notInput, bad } }
+function matchGraphSensCharts(board){
+  const left = { noOutput: 0, notFound: 0, inBlock: 0, notInput: 0, bad: 0 };
+  const charts = [];
+  (board && board.sensCharts || []).forEach(c => {
+    left.bad += c.badInputs;
+    const outRow = c.output && graphRectRow(c.output);
+    if(!outRow || outRow.isCustom){ left.noOutput++; return; }
+    const variables = [];
+    c.inputs.forEach(v => {
+      const row = graphRectRow(v);
+      const why = !row ? 'notFound' : isUsedAsBlock(v.canvasId) ? 'inBlock' : !isSensitivityInputRow(row) ? 'notInput' : null;
+      if(why){ left[why]++; return; }
+      if(variables.some(x => x.row === row.id)) return;
+      const spec = { row: row.id, by: v.by, low: v.low, high: v.high };
+      if(v.show === false) spec.show = false;
+      variables.push(spec);
+    });
+    charts.push({ layout: c.layout, title: c.title, output: outRow.id, outputName: outRow.label || c.output.name,
+      period: c.period < model.periods.length ? c.period : 0, steps: c.steps, variables }); // a period the model hasn't got: 0, as fmGraph reads it
+  });
+  return { charts, left };
 }
 
 // Each scenario's settings matched to the open model: kept only on an input rectangle the
@@ -8659,11 +8744,15 @@ function buildCtx(){
   mapping.tabs.forEach(t => rowsByTabOrdered[t.id] = []);
   const sectioned = sectionsEnabled();
   const scenarioBlocks = {}; // Inputs-tab variable row id -> { first, n } (its scenario rows)
-  // Sensitivity (09g-sensitivity.js): each input it moves, by its Inputs-tab row id. One
-  // without scenarios gets a base row above it (sensBase: row id -> that row's number).
-  const plan = sensitivityPlan();
-  const sens = plan && !plan.problem ? plan : null;
-  const sensMoved = new Map(sens ? sens.variables.map((v, i) => [v.mirror.id, i]) : []);
+  // Sensitivity (09g-sensitivity.js): every analysis with a tab, and each input they move, by
+  // its Inputs-tab row id → [{ a: analysis, i: its place in that analysis }]. One without
+  // scenarios gets a base row above it (sensBase: row id -> that row's number).
+  const sens = sensitivityPlans();
+  const sensMoved = new Map();
+  sens.forEach((plan, a) => plan.variables.forEach((v, i) => {
+    if(!sensMoved.has(v.mirror.id)) sensMoved.set(v.mirror.id, []);
+    sensMoved.get(v.mirror.id).push({ a, i });
+  }));
   const sensBase = {};
   const reserveRows = (row, r) => {
     r = reserveScenarioRows(row, r, scenarioBlocks);
@@ -8774,9 +8863,14 @@ function buildWorkbook(){
   const SCN_FIRST_ROW = nCases ? 8 : 4; // with global cases: case block rows 2-3, "Scenarios" section from row 5
   scenarioVars.forEach((e, i) => { scenarioRowOf[e.row.id] = SCN_FIRST_ROW + i; });
   const HDR = (extra) => roleCellStyle('Headers', extra);
-  // Sensitivity: its tab's name and where everything on it sits, known before the Inputs tab
-  // (whose moved inputs read it) is written.
-  const sensLay = ctx.sens ? sensitivityLayout(ctx.sens, addedTabName('Sensitivity', [scenarioSheetName || ''])) : null;
+  // Sensitivity: each analysis's tab name (its own name, made unique) and where everything on
+  // it sits, known before the Inputs tab (whose moved inputs read them) is written.
+  const sensTaken = [scenarioSheetName || ''];
+  const sensLays = ctx.sens.map(plan => {
+    const name = addedTabName(plan.name || 'Sensitivity', sensTaken);
+    sensTaken.push(name);
+    return sensitivityLayout(plan, name);
+  });
   try{
   const nPeriods = model.periods.length;
   const fallbackFmt = mapping.cfg.fallbackFormat || 'General';
@@ -8864,11 +8958,13 @@ function buildWorkbook(){
       // A scenario variable (Inputs tab): N scenario rows above this row, then this row
       // picking one of them.
       const scnBlock = row.isInputMirror ? ctx.scenarioBlocks[row.id] : null;
-      // An input the Sensitivity tab moves: its base (the scenario it picks, or the base row
-      // above it) × (1 + the % change) + the amount change, both 0 unless it is being moved.
-      const sensIndex = row.isInputMirror && sensLay && ctx.sensMoved.has(row.id) ? ctx.sensMoved.get(row.id) : null;
+      // An input the Sensitivity tabs move: its base (the scenario it picks, or the base row
+      // above it) × (1 + the analyses' % changes) + their amount changes, all 0 unless one is
+      // moving it.
+      const sensIndex = row.isInputMirror && ctx.sensMoved.has(row.id) ? ctx.sensMoved.get(row.id) : null;
       const sensBaseRow = sensIndex !== null ? ctx.sensBase[row.id] : undefined;
-      const moved = (base) => '(' + base + ')*(1+' + sensLay.pctRef(sensIndex, tab.name) + ')+' + sensLay.amtRef(sensIndex, tab.name);
+      const moved = (base) => '(' + base + ')*(1+' + sensIndex.map(m => sensLays[m.a].pctRef(m.i, tab.name)).join('+') + ')+' +
+        sensIndex.map(m => sensLays[m.a].amtRef(m.i, tab.name)).join('+');
 
       const lastHop = row.path && row.path.length ? row.path[row.path.length - 1] : null;
       const rowVintage = (lastHop && typeof lastHop.vIndex === 'number') ? lastHop.vIndex : null;
@@ -9047,11 +9143,11 @@ function buildWorkbook(){
   // Functions tab (last): every function version whose calls the formulas write out.
   if(functionUses.size) appendFunctionsSheet(wb, functionUses, HDR);
 
-  // Sensitivity tab, after the model's tabs (09g-sensitivity.js).
-  if(sensLay){
-    const sheet = appendSensitivitySheet(wb, ctx.sens, sensLay, ctx, labels);
-    placeSensitivityCharts(wb, ctx.sens, sensLay, sheet); // the Tornado and Spider charts
-  }
+  // The Sensitivity tabs, after the model's tabs, each followed by its charts (09g-sensitivity.js).
+  ctx.sens.forEach((plan, a) => {
+    const sheet = appendSensitivitySheet(wb, plan, sensLays[a], ctx, labels);
+    placeSensitivityCharts(wb, plan, sensLays[a], sheet, sensLays.slice(a + 1).map(l => l.sheetName)); // its Tornado and Spider
+  });
 
   // Scenarios tab (first sheet).
   // With global cases (nCases > 0), following the layout of the workbook it was designed from:
@@ -10363,8 +10459,9 @@ const EXCEL_HELP_TOPICS = [
       ] },
       { p: 'In the workbook, Global Case 1 is Base: every input keeps fmIDE\'s numbers. Each fmGraph scenario is the next case, named after it. Every input a scenario moves gets row scenarios on the Inputs tab. Scenario 1 holds fmIDE\'s numbers, then there is one row scenario for each different way the scenarios set the input; two scenarios that set it alike share one. A set value goes only in the periods the scenario covers, and the other periods link to scenario 1. A % change is a formula on scenario 1, such as =F12*(1+10%), so it follows when you change scenario 1 in Excel. Type a case number in the Scenarios tab\'s Global Case cell (C2) to run it.' },
       { p: 'The scenarios are copied into this model\'s layout and saved with it (Export Mapping carries them). Changing the boards in fmGraph later changes nothing here until you choose Use fmGraph boards… again. ExcelExporter asks before it replaces cases already in the layout. Inputs with scenarios of your own keep them, but use scenario 1 in every fmGraph case. Remove from Layout, in the same window, takes the fmGraph scenarios out again.' },
+      { p: 'The window also lists the picked board\'s Tornado and Spider charts. Each becomes a sensitivity analysis, with its own Sensitivity tab and charts, and the same inputs, Low and High, period and output. A Tornado and a Spider moving the same inputs alike become one analysis with both outputs, and the Spider\'s points are used. An input hidden in fmGraph is written with Show 0. These analyses are marked (fmGraph) in the Sensitivity panel. Using the window again replaces them, after asking; analyses of your own stay.' },
       { tip: 'The window lists what can\'t be carried, and why. That includes a setting on an input inside a block (every copy of the block shares it), a rectangle this model doesn\'t have, scenarios after the 49th (a workbook has at most 50 cases), and an input needing more than 20 row scenarios. ⬇ Generate lists them again.' },
-      { see: ['scenarios', 'inputs-tab'] },
+      { see: ['scenarios', 'inputs-tab', 'sensitivity'] },
     ] },
   { id: 'sensitivity', group: 'inputs', title: 'Sensitivity: the Tornado and the Spider',
     keywords: 'sensitivity tornado spider what if data table swing low high base output input percent amount',
@@ -10381,6 +10478,7 @@ const EXCEL_HELP_TOPICS = [
       ] },
       { p: 'The workbook gets a Sensitivity tab. Each input you move gets a Base row on the Inputs tab, and its own row becomes the base changed by the Sensitivity tab — by nothing, unless that tab\'s Input moved cell names it, so the model shows its own numbers. An Excel Data Table (What-If Analysis) works the output out with each input at each point, live: change Low, High, Show (1 or 0), the output (C4) or the period (C5) in Excel and the tables follow. The Tornado table sorts the inputs by how much they move the output; the Spider table lists each line. The Tornado chart draws each input\'s Low and High as bars either side of the base, the input that moves the output most at the top; the Spider chart draws each input\'s line. Both follow the tables, so they change with them in Excel.' },
       { tip: 'Keep Input moved (C6) and Point (C7) at 0: the Data Table moves them itself. A check beside C6 says so if it isn\'t 0.' },
+      { p: 'Several analyses: the list at the top of the panel holds up to 10, each its own Sensitivity tab with its own outputs, inputs, period and charts. + Add starts another; Name renames the one shown (its tab is named after it); ↑ ↓ change the order and × removes it. An input moved by several analyses is moved by whichever Data Table is working it out, one at a time.' },
       { p: 'Inputs inside a block can\'t be moved (every copy of the block shares them), and only inputs gathered on the Inputs tab can. A Data Table works the whole model out once for each cell, so on a large model Excel may take a moment; Excel\'s Formulas → Calculation Options → Automatic except for data tables pauses it (press F9 to work it out).' },
       { see: ['inputs-tab', 'scenarios'] },
     ] },
@@ -10461,6 +10559,18 @@ const EXCEL_HELP_TOPICS = [
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'several-analyses', date: '2026-10-16', title: 'Several sensitivity analyses, and fmGraph\'s Tornado and Spider',
+    summary: 'The Sensitivity panel holds up to 10 analyses, each its own tab and charts; fmGraph\'s Tornado and Spider charts can become them.',
+    what: [
+      'The list at the top of the Sensitivity panel picks the analysis to edit. + Add starts another, Name renames it (its tab is named after it), ↑ ↓ order them, × removes one.',
+      'Each analysis writes its own Sensitivity tab, Data Table, Tornado and Spider. An input several of them move is moved by one Data Table at a time.',
+      'Layout → Use fmGraph boards… now also lists the picked board\'s Tornado and Spider charts. Each becomes an analysis with the same inputs, Low and High, output and period.',
+    ],
+    why: 'To look at what moves several outputs, or a model from several angles, in one workbook, and to carry the charts made in fmGraph into it.',
+    how: ['Sensitivity → + Add, give it a name, its outputs and its inputs.', 'Or, with a model whose fmGraph board has a Tornado or Spider: Layout → Use fmGraph boards…, then Use.', '⬇ Generate .xlsx.'],
+    notes: ['A layout saved before opens as one analysis, named Sensitivity, its tabs as before.'],
+    see: ['sensitivity', 'fmgraph-scenarios'] },
+
   { id: 'fmgraph-scenarios', date: '2026-10-15', title: 'fmGraph\'s scenarios become Global Cases',
     summary: 'Layout → Use fmGraph boards… turns the scenarios you saved in fmGraph into the workbook\'s Global Cases, after Base.',
     what: [
@@ -11196,22 +11306,33 @@ askFmideForModel();
 //     first) and the Spider table (each input's line through every point) read that table.
 // The numbers fmIDE's calculation gives (the shared IR, with the input's numbers laid over
 // it) are written into the Data Table's cells too, so the file shows them before Excel has
-// recalculated. Settings: mapping.cfg.sensitivity (cleanSensitivity), mapping file v3.
+// recalculated. Settings: mapping.cfg.sensitivities (cleanSensitivities), mapping file v5 —
+// several analyses, each its own tab (step 19 B3); an input moved by several gets each one's
+// parts added on its row (only the analysis whose Data Table is running moves anything).
 // ============================================================
 const SENS_MAX_VARIABLES = 50, SENS_MAX_OUTPUTS = 20, SENS_MAX_STEPS = 10, SENS_DEFAULT_STEPS = 5;
 const SENS_MAX_CHANGE = 1e9; // a Low or High beyond this is cut to it
 const SENS_BY = ['percent', 'amount'];
 const SENS_CHART_PLACES = ['tabs', 'sheet'];
 const SENS_DEFAULT_CHANGE = { percent: [-10, 10], amount: [-1, 1] };
+// Several analyses (step 19 B3): each its own Sensitivity tab, named after it; at most 10.
+const SENS_MAX_ANALYSES = 10, SENS_NAME_MAX = 31;
+let sensPick = 0; // the analysis the panel shows (not saved)
 
-function defaultSensitivity(){
-  return { enabled: false, outputs: [], period: 0, steps: SENS_DEFAULT_STEPS, charts: 'tabs', variables: [] };
+function defaultSensitivity(name){
+  return { name: name || 'Sensitivity', enabled: false, outputs: [], period: 0, steps: SENS_DEFAULT_STEPS, charts: 'tabs', variables: [] };
 }
-// The settings from a saved layout or a mapping file (untrusted): kinds checked, numbers
+// An analysis's name: plain text, at most 31 characters (it names a tab), never empty.
+function sensName(v){
+  const s = typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, SENS_NAME_MAX).trim() : '';
+  return s;
+}
+// One analysis from a saved layout or a mapping file (untrusted): kinds checked, numbers
 // forced and bounded, ids kept as short text, nothing twice.
 function cleanSensitivity(raw, periodCount){
   const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
-  const out = defaultSensitivity();
+  const out = defaultSensitivity(sensName(src.name) || 'Sensitivity');
+  if(src.origin === 'fmGraph') out.origin = 'fmGraph'; // made by Use fmGraph boards… (09i)
   out.enabled = src.enabled === true;
   const ids = (list, max) => {
     const seen = new Set(), res = [];
@@ -11233,11 +11354,41 @@ function cleanSensitivity(raw, periodCount){
     seen.add(v.row);
     const by = SENS_BY.includes(v.by) ? v.by : 'percent';
     const num = (x, d) => { const n = Number(x); return Number.isFinite(n) ? Math.max(-SENS_MAX_CHANGE, Math.min(SENS_MAX_CHANGE, n)) : d; };
-    out.variables.push({ row: v.row, by, low: num(v.low, SENS_DEFAULT_CHANGE[by][0]), high: num(v.high, SENS_DEFAULT_CHANGE[by][1]) });
+    const spec = { row: v.row, by, low: num(v.low, SENS_DEFAULT_CHANGE[by][0]), high: num(v.high, SENS_DEFAULT_CHANGE[by][1]) };
+    if(v.show === false) spec.show = false; // listed, left out of the charts (Show 0 in Excel)
+    out.variables.push(spec);
   });
   return out;
 }
-function sensCfg(){ return mapping.cfg.sensitivity; }
+// The layout's analyses (cfg.sensitivities; a layout from before B3 has one, cfg.sensitivity):
+// at most 10, names unique (capitals ignored), never none.
+function cleanSensitivities(cfg, periodCount){
+  const src = cfg && typeof cfg === 'object' ? cfg : {};
+  const list = Array.isArray(src.sensitivities) ? src.sensitivities : (src.sensitivity && typeof src.sensitivity === 'object' ? [src.sensitivity] : []);
+  const out = [];
+  list.slice(0, SENS_MAX_ANALYSES).forEach(raw => {
+    const a = cleanSensitivity(raw, periodCount);
+    a.name = uniqueSensName(a.name, out);
+    out.push(a);
+  });
+  if(!out.length) out.push(defaultSensitivity());
+  return out;
+}
+// `name`, or with " 2", " 3"… after it, so no other analysis in `list` has it.
+function uniqueSensName(name, list){
+  const taken = new Set(list.map(a => a.name.toLowerCase()));
+  if(!taken.has(name.toLowerCase())) return name;
+  for(let n = 2; ; n++){
+    const cand = name.slice(0, SENS_NAME_MAX - (' ' + n).length).trim() + ' ' + n;
+    if(!taken.has(cand.toLowerCase())) return cand;
+  }
+}
+function sensList(){ return mapping.cfg.sensitivities; }
+function sensCfg(){
+  const list = sensList();
+  sensPick = Math.max(0, Math.min(list.length - 1, sensPick));
+  return list[sensPick];
+}
 
 // An input that can be moved: a rectangle row whose numbers are typed, on a canvas that isn't
 // a block (inside a block, or on the canvas a block is made from, every copy of the block
@@ -11252,17 +11403,21 @@ function isSensitivityOutputRow(row){
 }
 // Called when a model or a layout is read: settings cleaned, rows that are gone dropped.
 function reconcileSensitivity(){
-  const cfg = cleanSensitivity(mapping.cfg.sensitivity, model.periods.length);
+  const list = cleanSensitivities(mapping.cfg, model.periods.length);
   const byId = new Map(mapping.rows.map(r => [r.id, r]));
-  cfg.outputs = cfg.outputs.filter(id => byId.has(id) && !byId.get(id).isCustom);
-  cfg.variables = cfg.variables.filter(v => isSensitivityInputRow(byId.get(v.row)));
-  mapping.cfg.sensitivity = cfg;
+  list.forEach(cfg => {
+    cfg.outputs = cfg.outputs.filter(id => byId.has(id) && !byId.get(id).isCustom);
+    cfg.variables = cfg.variables.filter(v => isSensitivityInputRow(byId.get(v.row)));
+  });
+  mapping.cfg.sensitivities = list;
+  delete mapping.cfg.sensitivity;
+  sensPick = Math.max(0, Math.min(list.length - 1, sensPick));
 }
 
-// What the workbook will hold, or { problem } saying why there is no Sensitivity tab:
-// { variables: [{ spec, source, mirror }], outputs: [row], steps, period }.
-function sensitivityPlan(){
-  const cfg = mapping && mapping.cfg.sensitivity;
+// What one analysis's tab will hold, or { problem } saying why there is none (null when off):
+// { name, variables: [{ spec, source, mirror }], outputs: [row], steps, period, charts }.
+function sensitivityPlan(cfg){
+  if(cfg === undefined) cfg = mapping && mapping.cfg.sensitivities ? sensCfg() : null;
   if(!cfg || !cfg.enabled) return null;
   if(!inputsEnabled()) return { problem: 'Turn on “Gather inputs on a separate tab” (Inputs & scenarios): the inputs to move live there.' };
   const mirrors = new Map(inputMirrorRows().map(m => [m.sourceRowId, m]));
@@ -11278,7 +11433,12 @@ function sensitivityPlan(){
   if(!variables.length && !outputs.length) return { problem: 'Add the inputs to move and at least one output.' };
   if(!variables.length) return { problem: 'Add at least one input to move.' };
   if(!outputs.length) return { problem: 'Add at least one output.' };
-  return { variables, outputs, steps: cfg.steps, period: Math.min(cfg.period, model.periods.length - 1), charts: cfg.charts };
+  return { name: cfg.name, variables, outputs, steps: cfg.steps, period: Math.min(cfg.period, model.periods.length - 1), charts: cfg.charts };
+}
+// Every analysis that will have a tab, in the list's order.
+function sensitivityPlans(){
+  if(!mapping || !mapping.cfg.sensitivities) return [];
+  return sensList().map(cfg => sensitivityPlan(cfg)).filter(p => p && !p.problem);
 }
 
 // The points along each input's line: −n … −1 (towards Low), 0 (the base), 1 … n (towards High).
@@ -11451,7 +11611,7 @@ function appendSensitivitySheet(wb, plan, lay, ctx, labels){
     ws[L(SENS_COL.by) + r] = { t: 's', v: v.spec.by === 'percent' ? '%' : 'amount', s: inputCenter };
     ws[L(SENS_COL.low) + r] = { t: 'n', v: v.spec.low, s: inputStyle };
     ws[L(SENS_COL.high) + r] = { t: 'n', v: v.spec.high, s: inputStyle };
-    ws[L(SENS_COL.show) + r] = { t: 'n', v: 1, s: inputCenter };
+    ws[L(SENS_COL.show) + r] = { t: 'n', v: v.spec.show === false ? 0 : 1, s: inputCenter };
     ws[L(SENS_COL.now) + r] = { t: 'n', f: 'IF($C$6=' + c(SENS_COL.no) + ',IF($C$7<0,' + c(SENS_COL.low) + '*(-$C$7)/' + steps + ',' + c(SENS_COL.high) + '*$C$7/' + steps + '),0)', s: calcStyle };
     ws[L(SENS_COL.pct) + r] = { t: 'n', f: 'IF(' + c(SENS_COL.by) + '="%",' + c(SENS_COL.now) + '/100,0)', s: calcStyle };
     ws[L(SENS_COL.amt) + r] = { t: 'n', f: 'IF(' + c(SENS_COL.by) + '="%",0,' + c(SENS_COL.now) + ')', s: calcStyle };
@@ -11574,8 +11734,11 @@ function sensitivityCharts(plan, lay, cached){
 }
 
 // Puts the two charts where the person chose: each on its own chart tab after the
-// Sensitivity tab, or on that tab below the Spider table, side by side.
-function placeSensitivityCharts(wb, plan, lay, sheet){
+// Sensitivity tab, or on that tab below the Spider table, side by side. The analysis named
+// "Sensitivity" (the first one, as before B3) has chart tabs Tornado and Spider; any
+// other analysis "<its tab> Tornado" and "<its tab> Spider". `reserved`: tab names not yet
+// written (the other analyses' tabs).
+function placeSensitivityCharts(wb, plan, lay, sheet, reserved){
   const { tornado, spider } = sensitivityCharts(plan, lay, sheet.cached);
   if(plan.charts === 'sheet'){
     const top = lay.spiderHead + lay.V + 2; // 0-based: two rows below the Spider table
@@ -11586,10 +11749,11 @@ function placeSensitivityCharts(wb, plan, lay, sheet){
     sheet.ws['!ref'] = 'A1:' + colLetter(lay.cols.rank) + (top + 25);
     return [];
   }
-  const taken = wb.SheetNames.slice();
-  const tName = addedTabName('Tornado', taken);
+  const taken = wb.SheetNames.concat(reserved || []);
+  const prefix = String(plan.name || '').toLowerCase() === 'sensitivity' ? '' : lay.sheetName + ' ';
+  const tName = addedTabName(prefix + 'Tornado', taken);
   XLSX.utils.book_append_chartsheet(wb, tornado, tName);
-  const sName = addedTabName('Spider', taken.concat([tName]));
+  const sName = addedTabName(prefix + 'Spider', taken.concat([tName]));
   XLSX.utils.book_append_chartsheet(wb, spider, sName);
   return [tName, sName];
 }
@@ -11598,8 +11762,10 @@ function placeSensitivityCharts(wb, plan, lay, sheet){
 // Text only (names come from the loaded file): textContent everywhere.
 function renderSensitivity(){
   const panel = $('sensitivityPanel');
-  if(!panel || !mapping || !mapping.cfg.sensitivity) return;
+  if(!panel || !mapping || !mapping.cfg.sensitivities) return;
   const cfg = sensCfg();
+  renderSensPicker();
+  $('cfgSensName').value = cfg.name;
   $('cfgSensEnabled').checked = cfg.enabled;
   $('sensOptions').classList.toggle('hidden', !cfg.enabled);
   const byId = new Map(mapping.rows.map(r => [r.id, r]));
@@ -11699,6 +11865,20 @@ function renderSensitivity(){
   const plan = cfg.enabled ? sensitivityPlan() : null;
   setStatus($('sensStatus'), plan && plan.problem ? plan.problem : '', 'warn');
 }
+// The analyses: the picker and the buttons that change the list (alone, so renaming doesn't
+// redraw the inputs a click may be landing on).
+function renderSensPicker(){
+  const list = sensList();
+  sensCfg();
+  const pick = $('sensPick');
+  pick.textContent = '';
+  list.forEach((a, i) => pick.appendChild(new Option((i + 1) + '. ' + a.name + (a.origin === 'fmGraph' ? ' (fmGraph)' : '') + (a.enabled ? '' : ' — off'), String(i))));
+  pick.value = String(sensPick);
+  $('btnSensAdd').disabled = list.length >= SENS_MAX_ANALYSES;
+  $('btnSensUp').disabled = sensPick === 0;
+  $('btnSensDown').disabled = sensPick === list.length - 1;
+  $('btnSensRemove').disabled = list.length <= 1;
+}
 // Real rectangle rows in the order the workbook shows them (tab order, then each tab's rows).
 function sensRowsInSheetOrder(){
   const out = [];
@@ -11720,6 +11900,56 @@ function addSensitivityVariables(ids){
   });
   saveMapping(); renderSensitivity();
 }
+
+// ---------- The analyses: pick, add, rename, order, remove ----------
+$('sensPick').addEventListener('change', () => {
+  const i = Math.round(Number($('sensPick').value));
+  if(Number.isFinite(i)) sensPick = i;
+  renderSensitivity();
+});
+$('btnSensAdd').addEventListener('click', () => {
+  const list = sensList();
+  if(list.length >= SENS_MAX_ANALYSES) return;
+  const a = defaultSensitivity(uniqueSensName('Sensitivity ' + (list.length + 1), list));
+  a.enabled = true;
+  list.push(a);
+  sensPick = list.length - 1;
+  saveMapping(); renderSensitivity();
+  $('cfgSensName').focus();
+});
+$('cfgSensName').addEventListener('change', () => {
+  const cfg = sensCfg();
+  const name = sensName($('cfgSensName').value);
+  const others = sensList().filter(a => a !== cfg);
+  if(!name){ $('cfgSensName').value = cfg.name; return; }
+  if(others.some(a => a.name.toLowerCase() === name.toLowerCase())){
+    setStatus($('sensStatus'), 'Another analysis is called “' + name + '”: each needs a name of its own.', 'warn');
+    $('cfgSensName').value = cfg.name;
+    return;
+  }
+  cfg.name = name;
+  $('cfgSensName').value = name;
+  saveMapping(); renderSensPicker();
+});
+function moveSensitivity(by){
+  const list = sensList(), to = sensPick + by;
+  if(to < 0 || to >= list.length) return;
+  [list[sensPick], list[to]] = [list[to], list[sensPick]];
+  sensPick = to;
+  saveMapping(); renderSensitivity();
+}
+$('btnSensUp').addEventListener('click', () => moveSensitivity(-1));
+$('btnSensDown').addEventListener('click', () => moveSensitivity(1));
+$('btnSensRemove').addEventListener('click', async () => {
+  const list = sensList();
+  if(list.length <= 1) return;
+  const cfg = sensCfg();
+  const ok = await showConfirm('Remove this analysis?', '“' + cfg.name + '” and its settings are removed from this layout; its Sensitivity tab is no longer written.', 'Remove');
+  if(!ok) return;
+  list.splice(list.indexOf(cfg), 1);
+  sensPick = Math.min(sensPick, list.length - 1);
+  saveMapping(); renderSensitivity();
+});
 
 $('cfgSensEnabled').addEventListener('change', () => {
   sensCfg().enabled = $('cfgSensEnabled').checked;
@@ -12303,6 +12533,33 @@ function graphScenarioCell(variant, p, baseRef){
   return value !== null ? { value } : { formula: expr };
 }
 
+// ---------- fmGraph's Tornado and Spider → analyses (step 19 B3) ----------
+// A board's Tornado and Spider charts (matched, matchGraphSensCharts) as analyses: a Tornado and
+// a Spider moving the same inputs alike in the same period become one analysis, their outputs
+// gathered; any other chart one of its own. Points from the Spider, else 5. Named after the
+// first chart's title, else its output. Each marked as made from fmGraph (origin).
+function graphSensAnalyses(charts){
+  const groups = [];
+  charts.forEach(c => {
+    const key = c.period + '|' + JSON.stringify(c.variables);
+    let g = groups.find(x => x.key === key && !x.layouts.includes(c.layout));
+    if(!g){ g = { key, layouts: [], charts: [] }; groups.push(g); }
+    g.layouts.push(c.layout); g.charts.push(c);
+  });
+  return groups.map(g => {
+    const first = g.charts[0], spider = g.charts.find(c => c.layout === 'spider');
+    const outputs = [];
+    g.charts.forEach(c => { if(!outputs.includes(c.output)) outputs.push(c.output); });
+    return { name: sensName(first.title) || sensName('Sensitivity - ' + first.outputName) || 'Sensitivity', enabled: true,
+      outputs, period: first.period, steps: spider ? spider.steps : SENS_DEFAULT_STEPS, charts: 'tabs',
+      variables: first.variables.map(v => Object.assign({}, v)), origin: 'fmGraph',
+      kinds: g.layouts.slice(), outputNames: g.charts.map(c => c.outputName) };
+  });
+}
+function graphAnalysesInLayout(){ return !!(mapping && mapping.cfg.sensitivities && mapping.cfg.sensitivities.some(a => a.origin === 'fmGraph')); }
+// An analysis no one has touched yet: the default, off and empty (replaced by fmGraph's).
+function isUnusedSensitivity(a){ return !a.enabled && !a.outputs.length && !a.variables.length && a.origin !== 'fmGraph'; }
+
 // ---------- Layout → Use fmGraph boards… ----------
 // `read` is readGraphBoards' result; `source` names where the boards came from.
 function openGraphBoardsWindow(read, source){
@@ -12339,6 +12596,32 @@ function openGraphBoardsWindow(read, source){
   });
   $('graphNoScenarios').classList.toggle('hidden', !!matched.scenarios.length);
   const chosen = () => [...list.querySelectorAll('input[type=checkbox]')].filter(c => c.checked).map(c => matched.scenarios[Number(c.dataset.index)]);
+  // The picked board's Tornado and Spider charts, as the analyses they become.
+  const sensUl = $('graphSensList');
+  let sensMatched = { charts: [], left: {} }, sensAnalyses = [];
+  const renderSens = () => {
+    sensMatched = matchGraphSensCharts(read.boards[Number(pick.value)]);
+    sensAnalyses = graphSensAnalyses(sensMatched.charts);
+    sensUl.textContent = '';
+    sensAnalyses.forEach((a, i) => {
+      const li = document.createElement('li');
+      const label = document.createElement('label');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.checked = true; cb.dataset.index = String(i);
+      const name = document.createElement('span');
+      name.className = 'graph-scn-name';
+      name.textContent = a.name;
+      const what = document.createElement('span');
+      what.className = 'graph-scn-what';
+      const kinds = a.kinds.map(k => k === 'tornado' ? 'Tornado' : 'Spider').join(' + ');
+      what.textContent = kinds + ': ' + [...new Set(a.outputNames)].join(', ') + ' · ' + a.variables.length + ' input' + (a.variables.length === 1 ? '' : 's') + ' · ' + (periodLabels()[a.period] || '');
+      label.append(cb, name, what);
+      li.appendChild(label);
+      sensUl.appendChild(li);
+    });
+    $('graphSensHead').classList.toggle('hidden', !sensAnalyses.length);
+  };
+  const chosenAnalyses = () => [...sensUl.querySelectorAll('input[type=checkbox]')].filter(c => c.checked).map(c => sensAnalyses[Number(c.dataset.index)]);
   const renderLeft = () => {
     const lines = [];
     const l = matched.left;
@@ -12349,20 +12632,31 @@ function openGraphBoardsWindow(read, source){
     if(read.badScenarios) lines.push(read.badScenarios + ' scenario' + (read.badScenarios === 1 ? '' : 's') + ' without a name of its own, or past ' + GRAPH_LIMITS.scenarios + '.');
     const plan = graphScenarioPlan({ scenarios: chosen() }, true);
     if(plan) lines.push(...plan.notes);
+    const sl = sensMatched.left;
+    if(sl.noOutput) lines.push(sl.noOutput + ' Tornado or Spider chart' + (sl.noOutput === 1 ? '' : 's') + ' whose output this model doesn\'t have.');
+    const sIn = (sl.notFound || 0) + (sl.inBlock || 0) + (sl.notInput || 0) + (sl.bad || 0);
+    if(sIn) lines.push(sIn + ' input' + (sIn === 1 ? '' : 's') + ' of the Tornado and Spider charts left out (not in this model, inside a block, not an input, or not readable).');
+    const room = SENS_MAX_ANALYSES - (mapping.cfg.sensitivities || []).filter(a => a.origin !== 'fmGraph' && !isUnusedSensitivity(a)).length;
+    const pastRoom = chosenAnalyses().slice(Math.max(0, room));
+    if(pastRoom.length) lines.push('Analyses past ' + SENS_MAX_ANALYSES + ' in all are not added: ' + pastRoom.map(a => a.name).join(', ') + '.');
     if(!inputsEnabled()) lines.push('The Inputs tab will be turned on: the scenarios move inputs there.');
     const ul = $('graphLeftOut');
     ul.textContent = '';
     lines.forEach(t => { const li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
     $('graphLeftOutHead').classList.toggle('hidden', !lines.length);
-    $('graphUse').disabled = !chosen().length;
+    $('graphUse').disabled = !chosen().length && !chosenAnalyses().length;
   };
   list.onchange = renderLeft;
+  sensUl.onchange = renderLeft;
+  pick.onchange = () => { renderSens(); renderLeft(); };
+  renderSens();
   renderLeft();
-  $('graphRemove').classList.toggle('hidden', !graphScenariosInLayout());
+  $('graphRemove').classList.toggle('hidden', !graphScenariosInLayout() && !graphAnalysesInLayout());
   const opener = document.activeElement;
   const close = () => {
     modal.classList.add('hidden');
     $('graphUse').onclick = $('graphCancel').onclick = $('graphRemove').onclick = null;
+    pick.onchange = list.onchange = sensUl.onchange = null;
     modal.removeEventListener('click', onBackdrop);
     document.removeEventListener('keydown', onKey, true);
     if(opener && document.contains(opener) && opener.focus && !opener.closest('.hidden')) opener.focus();
@@ -12372,33 +12666,48 @@ function openGraphBoardsWindow(read, source){
   $('graphCancel').onclick = close;
   $('graphRemove').onclick = async () => { close(); await removeGraphScenarios(); };
   $('graphUse').onclick = async () => {
-    const scenarios = chosen();
+    const scenarios = chosen(), analyses = chosenAnalyses();
     const board = read.boards[Number(pick.value)];
     close();
-    await useGraphScenarios({ from: read.boards.map(b => b.name), board: board ? board.name : '', scenarios });
+    await useGraphScenarios({ from: read.boards.map(b => b.name), board: board ? board.name : '', scenarios, analyses });
   };
   modal.addEventListener('click', onBackdrop);
   document.addEventListener('keydown', onKey, true);
   modal.classList.remove('hidden');
-  (matched.scenarios.length ? $('graphUse') : $('graphCancel')).focus();
+  (!$('graphUse').disabled ? $('graphUse') : $('graphCancel')).focus();
 }
 
-// Copies the chosen scenarios into the layout, after asking when it replaces cases there.
+// Copies the chosen scenarios (and, from B3, the Tornado and Spider charts as analyses) into
+// the layout, after asking when it replaces cases or fmGraph's analyses there.
 async function useGraphScenarios(copy){
+  const analyses = copy.analyses || [];
   const had = graphScenariosInLayout();
+  const hadAnalyses = graphAnalysesInLayout();
   const ownScenarios = inputMirrorRows().filter(m => m.scenarios).length;
-  if(had || ownScenarios){
-    const ok = await showConfirm('Replace the cases?',
-      (had ? 'This layout already has fmGraph scenarios; they are replaced. ' : '') +
-      'The Global Cases become Base and the ' + copy.scenarios.length + ' scenario' + (copy.scenarios.length === 1 ? '' : 's') + ' chosen' +
-      (ownScenarios ? '; inputs with scenarios of your own keep them, on scenario 1 in every case.' : '.'),
-      'Replace');
+  if(had || ownScenarios || hadAnalyses){
+    const parts = [];
+    if(had || ownScenarios || copy.scenarios.length){
+      parts.push((had ? 'This layout already has fmGraph scenarios; they are replaced. ' : '') +
+        'The Global Cases become Base and the ' + copy.scenarios.length + ' scenario' + (copy.scenarios.length === 1 ? '' : 's') + ' chosen' +
+        (ownScenarios ? '; inputs with scenarios of your own keep them, on scenario 1 in every case.' : '.'));
+    }
+    if(hadAnalyses) parts.push('The sensitivity analyses made from fmGraph before are replaced; your own stay.');
+    const ok = await showConfirm('Replace the cases?', parts.join(' '), 'Replace');
     if(!ok){ setStatus($('genStatus'), 'fmGraph scenarios not used.', 'info'); return; }
   }
   const turnedOn = !inputsEnabled();
   if(turnedOn) await setInputsEnabled(true);
   mapping.cfg.graph = cleanGraphCopy(copy, model.periods.length);
   reconcileGraph();
+  // The analyses: the person's own kept (an untouched default dropped), fmGraph's earlier ones
+  // replaced, at most SENS_MAX_ANALYSES in all.
+  const own = mapping.cfg.sensitivities.filter(a => a.origin !== 'fmGraph' && !(analyses.length && isUnusedSensitivity(a)));
+  const room = Math.max(0, SENS_MAX_ANALYSES - own.length);
+  const added = analyses.slice(0, room), past = analyses.slice(room);
+  mapping.cfg.sensitivities = own.concat(added.map(a => ({ name: a.name, enabled: true, outputs: a.outputs, period: a.period,
+    steps: a.steps, charts: a.charts, variables: a.variables, origin: 'fmGraph' })));
+  reconcileSensitivity();
+  if(added.length) sensPick = own.length;
   const plan = graphScenarioPlan();
   if(plan){
     // An input the scenarios move takes its row scenarios from them.
@@ -12407,20 +12716,30 @@ async function useGraphScenarios(copy){
   }
   saveMapping(); renderAll();
   const n = plan ? plan.byMirror.size : 0;
-  const msg = 'fmGraph scenarios used: ' + (plan ? plan.cases.length : 1) + ' Global Cases (Base and ' + copy.scenarios.length + '), ' +
-    n + ' input' + (n === 1 ? '' : 's') + ' with scenarios.' + (turnedOn ? ' The Inputs tab is on.' : '') +
-    (plan && plan.notes.length ? ' ' + plan.notes.join(' ') : '');
-  setStatus($('genStatus'), msg, plan && plan.notes.length ? 'warn' : 'ok');
+  const notes = (plan ? plan.notes : []).concat(past.length ? ['Analyses past ' + SENS_MAX_ANALYSES + ' in all are not added: ' + past.map(a => a.name).join(', ') + '.'] : []);
+  const sensText = added.length ? added.length + ' sensitivity analys' + (added.length === 1 ? 'is' : 'es') + ' from its Tornado and Spider charts.' : '';
+  const msg = (copy.scenarios.length
+      ? 'fmGraph scenarios used: ' + (plan ? plan.cases.length : 1) + ' Global Cases (Base and ' + copy.scenarios.length + '), ' +
+        n + ' input' + (n === 1 ? '' : 's') + ' with scenarios.' + (sensText ? ' Also ' + sensText.charAt(0).toLowerCase() + sensText.slice(1) : '')
+      : 'fmGraph boards used: ' + (sensText || 'nothing chosen.')) +
+    (turnedOn ? ' The Inputs tab is on.' : '') + (notes.length ? ' ' + notes.join(' ') : '');
+  setStatus($('genStatus'), msg, notes.length ? 'warn' : 'ok');
 }
 async function removeGraphScenarios(){
+  const withAnalyses = graphAnalysesInLayout();
   const ok = await showConfirm('Remove the fmGraph scenarios?',
-    'The Global Cases and row scenarios they made are removed from this layout. The boards themselves are not changed.', 'Remove');
+    'The Global Cases and row scenarios they made are removed from this layout' + (withAnalyses ? ', and so are the sensitivity analyses made from its charts' : '') +
+    '. The boards themselves are not changed.', 'Remove');
   if(!ok) return;
   mapping.cfg.graph = defaultGraphCopy();
   graphPlanCache = null;
   delete inputsCfg().globalCases;
+  if(withAnalyses){
+    mapping.cfg.sensitivities = mapping.cfg.sensitivities.filter(a => a.origin !== 'fmGraph');
+    reconcileSensitivity(); // never none: an empty list becomes the default analysis
+  }
   saveMapping(); renderAll();
-  setStatus($('genStatus'), 'fmGraph scenarios removed from this layout.', 'ok');
+  setStatus($('genStatus'), withAnalyses ? 'fmGraph scenarios and analyses removed from this layout.' : 'fmGraph scenarios removed from this layout.', 'ok');
 }
 
 // A board file or a document's graphBoards, read and shown in the window.
@@ -12433,7 +12752,7 @@ function showGraphBoards(raw, source){
 $('btnUseGraphBoards').addEventListener('click', async () => {
   if(!model) return;
   if(modelGraphBoards){ showGraphBoards(modelGraphBoards, 'The boards that came with the model'); return; }
-  if(graphScenariosInLayout()){ await removeGraphScenarios(); return; }
+  if(graphScenariosInLayout() || graphAnalysesInLayout()){ await removeGraphScenarios(); return; }
   setStatus($('genStatus'), 'This model came without fmGraph boards: use File → Import fmGraph boards… for a board file.', 'info');
 });
 $('btnImportGraphBoards').addEventListener('click', () => $('graphFileInput').click());
@@ -12586,6 +12905,13 @@ $('btnGenerate').addEventListener('click', () => {
 $('btnExportMapping').addEventListener('click', () => {
   const out = Object.assign({ kind: 'fmIDE-excel-mapping', version: FILE_FORMATS['fmIDE-excel-mapping'].current }, JSON.parse(JSON.stringify(mapping)));
   out.kind = 'fmIDE-excel-mapping'; out.version = FILE_FORMATS['fmIDE-excel-mapping'].current;
+  // The first analysis also as `cfg.sensitivity`, the one an ExcelExporter from before version 5
+  // reads (this one reads `cfg.sensitivities` and ignores it).
+  if(out.cfg && Array.isArray(out.cfg.sensitivities) && out.cfg.sensitivities[0]){
+    const first = Object.assign({}, out.cfg.sensitivities[0]);
+    delete first.name; delete first.origin;
+    out.cfg.sensitivity = first;
+  }
   const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

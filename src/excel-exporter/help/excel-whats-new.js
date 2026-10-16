@@ -11,6 +11,18 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'several-analyses', date: '2026-10-16', title: 'Several sensitivity analyses, and fmGraph\'s Tornado and Spider',
+    summary: 'The Sensitivity panel holds up to 10 analyses, each its own tab and charts; fmGraph\'s Tornado and Spider charts can become them.',
+    what: [
+      'The list at the top of the Sensitivity panel picks the analysis to edit. + Add starts another, Name renames it (its tab is named after it), ↑ ↓ order them, × removes one.',
+      'Each analysis writes its own Sensitivity tab, Data Table, Tornado and Spider. An input several of them move is moved by one Data Table at a time.',
+      'Layout → Use fmGraph boards… now also lists the picked board\'s Tornado and Spider charts. Each becomes an analysis with the same inputs, Low and High, output and period.',
+    ],
+    why: 'To look at what moves several outputs, or a model from several angles, in one workbook, and to carry the charts made in fmGraph into it.',
+    how: ['Sensitivity → + Add, give it a name, its outputs and its inputs.', 'Or, with a model whose fmGraph board has a Tornado or Spider: Layout → Use fmGraph boards…, then Use.', '⬇ Generate .xlsx.'],
+    notes: ['A layout saved before opens as one analysis, named Sensitivity, its tabs as before.'],
+    see: ['sensitivity', 'fmgraph-scenarios'] },
+
   { id: 'fmgraph-scenarios', date: '2026-10-15', title: 'fmGraph\'s scenarios become Global Cases',
     summary: 'Layout → Use fmGraph boards… turns the scenarios you saved in fmGraph into the workbook\'s Global Cases, after Base.',
     what: [

@@ -79,7 +79,8 @@ function readGraphBoards(raw){
     if(!b || typeof b !== 'object' || Array.isArray(b)) return;
     const count = (x) => Array.isArray(x) ? x.length : 0;
     boards.push({ name: graphText(b.name, GRAPH_LIMITS.boardName) || ('Board ' + (i + 1)),
-      sliders: count(b.sliders), items: count(b.items) + count(b.bars) + count(b.charts) });
+      sliders: count(b.sliders), items: count(b.items) + count(b.bars) + count(b.charts),
+      sensCharts: version >= 8 ? readGraphSensCharts(b.items) : [] });
   });
   // Named scenarios came in version 3: an older file's are not read.
   const scenarios = [];
@@ -102,6 +103,68 @@ function readGraphBoards(raw){
     scenarios.push({ name, settings });
   });
   return { version, boards, scenarios, badScenarios, badSettings };
+}
+
+// A board's Tornado and Spider charts (version 8, step 18): layout, title, output, period,
+// steps and inputs, each read as the format says (text cut, numbers forced and bounded, at
+// most 50 inputs, anything else its default); not yet matched to a model.
+function readGraphSensCharts(items){
+  const out = [];
+  const rect = (r) => r && typeof r === 'object' && typeof r.canvasId === 'string' && typeof r.nodeId === 'string'
+    && r.canvasId && r.nodeId && r.canvasId.length <= 200 && r.nodeId.length <= 200
+    ? { canvasId: r.canvasId, nodeId: r.nodeId, name: graphText(r.name, GRAPH_LIMITS.rectName) } : null;
+  (Array.isArray(items) ? items : []).slice(0, 40).forEach(it => {
+    if(!it || typeof it !== 'object' || it.type !== 'chart' || (it.layout !== 'tornado' && it.layout !== 'spider')) return;
+    const p = Number(it.period), st = Number(it.steps);
+    const chart = { layout: it.layout, title: graphText(it.title, 80), output: rect(it.output),
+      period: Number.isInteger(p) && p >= 0 ? p : 0,
+      steps: Number.isInteger(st) && st >= 1 && st <= 10 ? st : 5, inputs: [], badInputs: 0 };
+    (Array.isArray(it.inputs) ? it.inputs : []).forEach(v => {
+      const r = rect(v);
+      if(!r || chart.inputs.length >= 50){ chart.badInputs++; return; }
+      const by = v.by === 'amount' ? 'amount' : 'percent';
+      const num = (x, d) => { const n = graphNumber(x); return n === null ? d : Math.max(-1e9, Math.min(1e9, n)); };
+      const spec = Object.assign(r, { by, low: num(v.low, by === 'amount' ? -1 : -10), high: num(v.high, by === 'amount' ? 1 : 10) });
+      if(v.show === false) spec.show = false;
+      chart.inputs.push(spec);
+    });
+    out.push(chart);
+  });
+  return out;
+}
+// A rectangle of the open model by canvas id, node id and name (capitals and outer spaces
+// ignored), at the top level: its layout row, or null.
+function graphRectRow(r){
+  const norm = (s) => String(s || '').trim().toLowerCase();
+  const canvas = r && model.canvases.find(c => c.id === r.canvasId);
+  const node = canvas && canvas.nodes.find(n => n.id === r.nodeId);
+  if(!node || node.type !== 'value' || norm(parseRectText(node.text).name) !== norm(r.name)) return null;
+  return mapping.rows.find(x => x.id === pathKey([], r.canvasId, r.nodeId)) || null;
+}
+// A board's Tornado and Spider charts matched to the open model: the output a rectangle row
+// of it (else the chart is left out), each input as a scenario's setting is (else left out).
+// → { charts: [{ layout, title, output (row id), outputName, period, steps, variables }], left: { noOutput, notFound, inBlock, notInput, bad } }
+function matchGraphSensCharts(board){
+  const left = { noOutput: 0, notFound: 0, inBlock: 0, notInput: 0, bad: 0 };
+  const charts = [];
+  (board && board.sensCharts || []).forEach(c => {
+    left.bad += c.badInputs;
+    const outRow = c.output && graphRectRow(c.output);
+    if(!outRow || outRow.isCustom){ left.noOutput++; return; }
+    const variables = [];
+    c.inputs.forEach(v => {
+      const row = graphRectRow(v);
+      const why = !row ? 'notFound' : isUsedAsBlock(v.canvasId) ? 'inBlock' : !isSensitivityInputRow(row) ? 'notInput' : null;
+      if(why){ left[why]++; return; }
+      if(variables.some(x => x.row === row.id)) return;
+      const spec = { row: row.id, by: v.by, low: v.low, high: v.high };
+      if(v.show === false) spec.show = false;
+      variables.push(spec);
+    });
+    charts.push({ layout: c.layout, title: c.title, output: outRow.id, outputName: outRow.label || c.output.name,
+      period: c.period < model.periods.length ? c.period : 0, steps: c.steps, variables }); // a period the model hasn't got: 0, as fmGraph reads it
+  });
+  return { charts, left };
 }
 
 // Each scenario's settings matched to the open model: kept only on an input rectangle the

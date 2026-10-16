@@ -2,6 +2,12 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: several sensitivity analyses, and fmGraph's Tornado and Spider (step 19, phase B3)
+- The **Sensitivity panel holds up to 10 analyses**, picked from a list at its top (+ Add, Name, ↑ ↓, ×). Each writes its own Sensitivity tab (named after it), Data Table, Tornado and Spider; an input moved by several gets each one's change added on its row, and each Data Table moves only its own.
+- **Layout → Use fmGraph boards…** also turns the picked board's **Tornado and Spider charts** into analyses: a Tornado and a Spider moving the same inputs alike become one, an input hidden in fmGraph is written with Show 0. Using it again replaces only those, after asking.
+- The layout file is now **version 5** (`cfg.sensitivities`); a version 4 file, or a layout saved in the browser before, opens as one analysis named Sensitivity, and its workbook is unchanged. The first analysis is also written in the old place, so an older ExcelExporter keeps it.
+- Fixed while building it: typing a new name and then clicking straight into Low lost the click (the panel redrew itself as the name changed).
+
 ## ExcelExporter: fmGraph's scenarios become Global Cases (step 19, phase B2)
 - **Layout → Use fmGraph boards…** turns the scenarios saved in fmGraph into the workbook's Global Cases: case 1 is Base (fmIDE's numbers), then one case per scenario, named after it. Each input a scenario moves gets row scenarios on the Inputs tab: a set value in the scenario's periods (the others link to scenario 1), a % change a live formula on scenario 1. A window lists the scenarios with tick boxes and what can't be carried (an input inside a block, a rectangle the model hasn't got, past 50 cases or 20 row scenarios); Generate lists them again. It asks before replacing cases in the layout.
 - The boards come with the model from fmIDE (Open ExcelExporter now sends the document's boards) or a `.fmide` document, or from a board file: **File → Import fmGraph boards…**, or dropped on the page. ExcelExporter reads them with its own reader of the documented format (versions 1–8).
