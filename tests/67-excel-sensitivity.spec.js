@@ -346,21 +346,35 @@ test('settings from a mapping file are checked; names are text', async ({ page }
   // Export the layout, spoil its settings, import it back.
   const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
   const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
-  expect(exported.version).toBe(4); // v4: cfg.graph (step 19 B2)
-  const realVar = exported.cfg.sensitivity.variables[0].row;
-  exported.cfg.sensitivity = {
+  expect(exported.version).toBe(5); // v5: cfg.sensitivities (step 19 B3)
+  const realVar = exported.cfg.sensitivities[0].variables[0].row;
+  const spoiled = {
     enabled: true, outputs: ['nope', 42, realVar, realVar], period: -5, steps: 99, charts: '<script>',
     variables: [{ row: realVar, by: 'evil', low: 'abc', high: 1e20 }, { row: realVar, by: 'amount', low: 1, high: 2 }, { row: 'missing' }, 'junk',
       ...Array.from({ length: 60 }, (_, i) => ({ row: 'x' + i }))],
   };
+  // Names: text, control characters gone, at most 31 characters, none → "Sensitivity n";
+  // at most 10 analyses; anything not an object left out.
+  exported.cfg.sensitivities = [
+    Object.assign({ name: '<img src=x onerror=alert(1)>\n' + 'x'.repeat(40) }, spoiled), 'junk', null,
+    ...Array.from({ length: 12 }, (_, i) => ({ name: i === 0 ? 42 : '  ', enabled: i === 1 })),
+  ];
+  exported.cfg.sensitivity = { enabled: true, outputs: ['ignored'] }; // the copy: never read once the list is there
   const file = testInfo.outputPath('spoiled.json');
   fs.writeFileSync(file, JSON.stringify(exported));
   await page.setInputFiles('#mappingFileInput', file);
   await expect(page.locator('#genStatus .status')).toHaveText('Mapping imported.');
+  await expect(page.locator('#sensAnalyses .sens-pick')).toHaveCount(10);
+  await expect(page.locator('#sensitivityPanel img')).toHaveCount(0);
   const [again] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
-  const cleaned = JSON.parse(fs.readFileSync(await again.path(), 'utf8')).cfg.sensitivity;
-  expect(cleaned).toEqual({ enabled: true, outputs: [realVar], period: 0, steps: 10, charts: 'tabs',
-    variables: [{ row: realVar, by: 'percent', low: -10, high: 1e9 }] });
+  const back = JSON.parse(fs.readFileSync(await again.path(), 'utf8')).cfg;
+  const first = { enabled: true, outputs: [realVar], period: 0, steps: 10, charts: 'tabs',
+    variables: [{ row: realVar, by: 'percent', low: -10, high: 1e9 }] };
+  expect(back.sensitivities).toHaveLength(10);
+  expect(back.sensitivities[0]).toEqual(Object.assign({ name: '<img src=x onerror=alert(1)> ' + 'x'.repeat(2) }, first));
+  expect(back.sensitivities.slice(1).map(a => [a.name, a.enabled])).toEqual(
+    [['Sensitivity 2', false], ['Sensitivity 3', true]].concat(Array.from({ length: 7 }, (_, i) => ['Sensitivity ' + (i + 4), false])));
+  expect(back.sensitivity).toEqual(first);
 });
 
 // ---------- Phase B: the charts ----------
@@ -449,4 +463,151 @@ test('names in the charts are text', async ({ page }, testInfo) => {
   const { charts } = await chartParts((await X.generate(page)).bytes);
   expect(charts.join('')).toContain('&lt;img src=x&gt;&amp;&quot;');
   expect(charts.join('')).not.toContain('<img');
+});
+
+// ---------- Several analyses (step 19 B3) ----------
+const analysisNames = (page) => page.locator('#sensAnalyses .sens-pick');
+const analysisLine = (page, name) => page.locator('#sensAnalyses .sens-analysis').filter({ has: page.locator('.sens-pick', { hasText: name }) });
+async function rename(page, name){ await page.fill('#cfgSensName', name); await page.locator('#cfgSensName').dispatchEvent('change'); }
+// The first analysis (Unit Price and Volume by %, Revenue), and a second, "Volume only",
+// moving Volume by an amount (−2 / +1) in 2 steps: Volume is moved by both.
+async function setUpTwo(page){
+  await setUpUPV(page);
+  await page.click('#btnSensAdd');
+  await expect(page.locator('#cfgSensName')).toHaveValue('Sensitivity 2');
+  await expect(page.locator('#cfgSensEnabled')).toBeChecked();
+  await rename(page, 'Volume only');
+  await addInput(page, 'Volume — Canvas 1');
+  await addOutput(page, 'Revenue — Canvas 1');
+  await setChange(page, 'Volume', 'amount', -2, 1);
+  await page.fill('#cfgSensSteps', '2'); await page.locator('#cfgSensSteps').dispatchEvent('change');
+  await expect(page.locator('#sensStatus')).toBeEmpty();
+}
+
+test('the analyses: + Add, rename, ↑ ↓, ×, at most 10, remembered', async ({ page, pageErrors }) => {
+  await X.loadFixtureModel(page, UPV);
+  await expect(analysisNames(page)).toHaveText(['Sensitivity']); // one at first, off
+  await expect(analysisLine(page, 'Sensitivity').locator('.sens-state')).toHaveText('off');
+  await X.setInputsTab(page, true);
+  await page.click('#btnSensAdd');
+  await expect(analysisNames(page)).toHaveText(['Sensitivity', 'Sensitivity 2']);
+  await expect(analysisLine(page, 'Sensitivity 2')).toHaveClass(/picked/); // the new one is edited
+  await expect(page.locator('#sensVars .sens-line')).toHaveCount(0);
+  await addInput(page, 'Volume — Canvas 1');
+  await rename(page, '  Margin\tcase  ');
+  await expect(analysisNames(page)).toHaveText(['Sensitivity', 'Margin case']);
+  await rename(page, '');
+  await expect(page.locator('#cfgSensName')).toHaveValue('Sensitivity 2'); // none: the default name
+  await rename(page, 'Margin');
+  // Picking one edits it: the first has no inputs.
+  await analysisNames(page).first().click();
+  await expect(page.locator('#cfgSensName')).toHaveValue('Sensitivity');
+  await expect(page.locator('#sensVars .sens-line')).toHaveCount(0);
+  // ↑ ↓: the edited one follows its line.
+  await analysisLine(page, 'Margin').locator('.sens-up').click();
+  await expect(analysisNames(page)).toHaveText(['Margin', 'Sensitivity']);
+  await expect(page.locator('#cfgSensName')).toHaveValue('Sensitivity');
+  await expect(analysisLine(page, 'Margin').locator('.sens-up')).toBeDisabled();
+  await expect(analysisLine(page, 'Sensitivity').locator('.sens-down')).toBeDisabled();
+  // At most 10.
+  for(let n = 3; n <= 10; n++) await page.click('#btnSensAdd');
+  await expect(analysisNames(page)).toHaveCount(10);
+  await expect(page.locator('#btnSensAdd')).toBeDisabled();
+  // × : an empty analysis goes at once; one with settings asks first.
+  await analysisLine(page, 'Sensitivity 10').locator('.sens-remove').click();
+  await expect(analysisNames(page)).toHaveCount(9);
+  await expect(page.locator('#btnSensAdd')).toBeEnabled();
+  await analysisLine(page, 'Margin').locator('.sens-remove').click();
+  await expect(page.locator('#confirmModal')).toBeVisible();
+  await page.click('#confirmCancel');
+  await expect(analysisNames(page)).toHaveCount(9);
+  for(let n = 3; n <= 9; n++) await analysisLine(page, 'Sensitivity ' + n).locator('.sens-remove').click();
+  await expect(analysisNames(page)).toHaveText(['Margin', 'Sensitivity']);
+  // Remembered for this model, in order, with their settings.
+  await page.reload();
+  await X.loadFixtureModel(page, UPV);
+  await expect(analysisNames(page)).toHaveText(['Margin', 'Sensitivity']);
+  await expect(page.locator('#cfgSensName')).toHaveValue('Margin');
+  await expect(page.locator('#sensVars .sens-name')).toHaveText(['1. Volume']);
+  // All removed: no editor, and + Add brings one back.
+  await analysisLine(page, 'Sensitivity').locator('.sens-remove').click();
+  await analysisLine(page, 'Margin').locator('.sens-remove').click();
+  await page.click('#confirmOk');
+  await expect(analysisNames(page)).toHaveCount(0);
+  await expect(page.locator('#sensEditor')).toBeHidden();
+  const { wb } = await X.generate(page);
+  expect(wb.SheetNames).toEqual(['Inputs', 'Canvas 1']);
+  await page.click('#btnSensAdd');
+  await expect(page.locator('#sensEditor')).toBeVisible();
+  await expect(page.locator('#cfgSensName')).toHaveValue('Sensitivity');
+  expect(pageErrors).toEqual([]);
+});
+
+test('two analyses sharing an input: a tab each, one Base row, their parts added on its row', async ({ page }) => {
+  await setUpTwo(page);
+  const { wb, bytes } = await X.generate(page);
+  expect(wb.SheetNames).toEqual(['Inputs', 'Canvas 1', 'Sensitivity', 'Tornado', 'Spider', 'Volume only', 'Tornado 2', 'Spider 2']);
+  const inp = wb.Sheets.Inputs;
+  const [price] = X.findRow(inp, 'Unit Price');
+  const [vol] = X.findRow(inp, 'Volume');
+  expect(X.findRow(inp, 'Base (before sensitivity)')).toEqual([price - 1, vol - 1]); // one each, however many move it
+  expect(X.formulaOf(inp['E' + price])).toBe("(E" + (price - 1) + ")*(1+'Sensitivity'!$I$16)+'Sensitivity'!$J$16");
+  expect(X.formulaOf(inp['E' + vol])).toBe("(E" + (vol - 1) + ")*(1+'Sensitivity'!$I$17+'Volume only'!$I$16)+'Sensitivity'!$J$17+'Volume only'!$J$16");
+  // Each tab has its own controls and its own Data Table over its own C6 and C7.
+  const parts = await X.unzip(bytes);
+  expect(parts['xl/worksheets/sheet3.xml']).toContain('<f t="dataTable" ref="N16:X17" dt2D="1" dtr="1" r1="C7" r2="C6"/>');
+  const second = wb.Sheets['Volume only'];
+  expect(second.A1.v).toBe('Volume only');
+  expect(second.C6.v).toBe(0);
+  expect(X.formulaOf(second.H16)).toBe('IF($C$6=$A16,IF($C$7<0,$E16*(-$C$7)/2,$F16*$C$7/2),0)');
+  const secondXml = Object.entries(parts).find(([k, v]) => /^xl\/worksheets\/sheet\d+\.xml$/.test(k) && v.includes('ref="N16:R16"'));
+  expect(secondXml[1]).toContain('<f t="dataTable" ref="N16:R16" dt2D="1" dtr="1" r1="C7" r2="C6"/>');
+  // Its charts read its own tab.
+  const charts = Object.keys(parts).filter(k => /^xl\/charts\/chart\d+\.xml$/.test(k)).map(k => parts[k]);
+  expect(charts).toHaveLength(4);
+  expect(charts.filter(c => c.includes("'Volume only'!$C$9"))).toHaveLength(1);
+  expect(charts.filter(c => c.includes("'Volume only'!$N$22:$R$22"))).toHaveLength(1);
+
+  // fmIDE's numbers in both, each table moving only its own input.
+  const system = readFixture('models', UPV).system;
+  const pr = nodeByName(system, 'Canvas 1', 'Unit Price'), vo = nodeByName(system, 'Canvas 1', 'Volume'), rev = nodeByName(system, 'Canvas 1', 'Revenue');
+  const out = topValue(rev.canvasId, rev.nodeId, 0);
+  const want1 = expectedTable(system, [Object.assign({ by: 'percent', low: -10, high: 10 }, pr), Object.assign({ by: 'percent', low: -10, high: 10 }, vo)], 5, out);
+  const want2 = expectedTable(system, [Object.assign({ by: 'amount', low: -2, high: 1 }, vo)], 2, out);
+  expectTable(writtenTable(wb.Sheets.Sensitivity, 5, 2).table, want1);
+  expectTable(writtenTable(second, 2, 1).table, want2);
+  expectTable(want2, [[30, 40, 50, 55, 60]]);
+});
+
+test('LibreOffice works out both Data Tables, each moving only its own input', async ({ page }, testInfo) => {
+  requireSoffice(test);
+  testInfo.setTimeout(240_000);
+  await setUpTwo(page);
+  const { wb, bytes } = await X.generate(page);
+  let book = await recalculated(bytes);
+  const row = (ws, r, from, n) => Array.from({ length: n }, (_, j) => valueOf(ws.getCell(r, from + j)));
+  let first = book.getWorksheet('Sensitivity'), second = book.getWorksheet('Volume only');
+  expectTable([row(first, 16, 14, 11), row(first, 17, 14, 11)], [
+    [45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55],
+    [45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55],
+  ]);
+  expectTable([row(second, 16, 14, 5)], [[30, 40, 50, 55, 60]]);
+  // The model's own numbers, with nothing moved.
+  expect(valueOf(book.getWorksheet('Canvas 1').getCell('E6'))).toBe(50);
+  expect(valueOf(first.getCell('C8'))).toBe(50);
+  expect(valueOf(second.getCell('C8'))).toBe(50);
+  expect(valueOf(second.getCell('D6'))).toBe('OK - the model shows its own numbers');
+
+  // The second tab's input cells set by hand (Volume at High, +1): the model shows it, and the
+  // first tab's table works out around it — (base) × (1 + Σ % parts) + Σ amount parts.
+  wb.Sheets['Volume only'].C6.v = 1;
+  wb.Sheets['Volume only'].C7.v = 2;
+  book = await recalculated(await X.writeWithApp(page, wb));
+  first = book.getWorksheet('Sensitivity'); second = book.getWorksheet('Volume only');
+  expect(valueOf(book.getWorksheet('Canvas 1').getCell('E6'))).toBe(60);
+  expect(valueOf(second.getCell('D6'))).toMatch(/^Set C6 back to 0/);
+  expectTable([row(first, 16, 14, 11), row(first, 17, 14, 11)], [
+    [54, 55.2, 56.4, 57.6, 58.8, 60, 61.2, 62.4, 63.6, 64.8, 66], // Unit Price × Volume 6
+    [55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65], // (5 × (1 + x%) + 1) × 10: the % on the base, the amount after
+  ]);
 });

@@ -115,6 +115,7 @@ $('btnGenerate').addEventListener('click', () => {
 });
 
 $('btnExportMapping').addEventListener('click', () => {
+  syncSensitivityCopy(); // the first analysis, as an older ExcelExporter reads it (09g)
   const out = Object.assign({ kind: 'fmIDE-excel-mapping', version: FILE_FORMATS['fmIDE-excel-mapping'].current }, JSON.parse(JSON.stringify(mapping)));
   out.kind = 'fmIDE-excel-mapping'; out.version = FILE_FORMATS['fmIDE-excel-mapping'].current;
   const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });

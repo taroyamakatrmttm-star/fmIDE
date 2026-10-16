@@ -95,10 +95,10 @@ test('a .fmide with boards: the window, Use, and the cases, row scenarios and ma
   expect(X.formulaOf(cellAt(inp, p1 + 1, cost.first + 1))).toBe(X.numToCol(p1 + 1) + cost.first);
   // The input's own row still picks its scenario (column C links to the Scenarios tab).
   expect(X.formulaOf(cellAt(inp, p1, price.own))).toMatch(/^INDEX\(/);
-  // Exported, the layout is version 4 and carries the copy.
+  // Exported, the layout is version 5 (since step 19 B3a) and carries the copy.
   const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
   const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
-  expect(exported.version).toBe(4);
+  expect(exported.version).toBe(5);
   expect(exported.cfg.graph.board).toBe('Profit board');
   expect(exported.cfg.graph.from).toEqual(['Profit board', 'Second board']);
   expect(exported.cfg.graph.scenarios.map(s => s.name)).toEqual(['High price', 'Volume up', 'Mixed', 'Also high', 'Cost cut']);

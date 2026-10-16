@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: several sensitivity analyses (step 19, phase B3a)
+- The Sensitivity panel lists up to 10 analyses: **+ Add**, a **Name** for each (its tab's name), ↑ ↓ to order them, × to remove one (asking first when it has settings); click one to edit it. Each writes its own Sensitivity tab ("Sensitivity", "Sensitivity 2"…) with its own Data Table, Tornado and Spider.
+- An input moved by several analyses keeps one Base row; its own row adds their parts: (base) × (1 + Σ % parts) + Σ amount parts, so each Data Table still moves one input at a time. With one analysis the workbook is as before.
+- The layout file is now version 5 (`cfg.sensitivities`); a version 4 file, or a layout kept in the browser, opens with its one analysis named "Sensitivity". The first analysis is also written in the old form, `cfg.sensitivity`, so an older ExcelExporter still finds it.
+
 ## ExcelExporter: fmGraph's scenarios become Global Cases (step 19, phase B2)
 - **Layout → Use fmGraph boards…** turns the scenarios saved in fmGraph into the workbook's Global Cases: case 1 is Base (fmIDE's numbers), then one case per scenario, named after it. Each input a scenario moves gets row scenarios on the Inputs tab: a set value in the scenario's periods (the others link to scenario 1), a % change a live formula on scenario 1. A window lists the scenarios with tick boxes and what can't be carried (an input inside a block, a rectangle the model hasn't got, past 50 cases or 20 row scenarios); Generate lists them again. It asks before replacing cases in the layout.
 - The boards come with the model from fmIDE (Open ExcelExporter now sends the document's boards) or a `.fmide` document, or from a board file: **File → Import fmGraph boards…**, or dropped on the page. ExcelExporter reads them with its own reader of the documented format (versions 1–8).

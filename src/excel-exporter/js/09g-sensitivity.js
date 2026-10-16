@@ -13,12 +13,20 @@
 // The numbers fmIDE's calculation gives (the shared IR, with the input's numbers laid over
 // it) are written into the Data Table's cells too, so the file shows them before Excel has
 // recalculated. Settings: mapping.cfg.sensitivity (cleanSensitivity), mapping file v3.
+// Several analyses (step 19 B3, mapping file v5): mapping.cfg.sensitivities, a list of at most
+// SENS_MAX_ANALYSES, each that setup plus a `name`; each writes its own tab (named after it),
+// Data Table and charts. An input several move gets their parts added on its row:
+// (base) × (1 + Σ % parts) + Σ amount parts — only the tab whose Data Table is running has a
+// part that isn't 0. mapping.cfg.sensitivity stays as a copy of the first analysis, for an
+// older ExcelExporter (it is written, never read once the list is there).
 // ============================================================
 const SENS_MAX_VARIABLES = 50, SENS_MAX_OUTPUTS = 20, SENS_MAX_STEPS = 10, SENS_DEFAULT_STEPS = 5;
 const SENS_MAX_CHANGE = 1e9; // a Low or High beyond this is cut to it
 const SENS_BY = ['percent', 'amount'];
 const SENS_CHART_PLACES = ['tabs', 'sheet'];
 const SENS_DEFAULT_CHANGE = { percent: [-10, 10], amount: [-1, 1] };
+const SENS_MAX_ANALYSES = 10, SENS_NAME_MAX = 31; // a name is a tab name: Excel's 31 characters
+let sensPicked = 0; // the analysis the panel edits (the page's own, never saved)
 
 function defaultSensitivity(){
   return { enabled: false, outputs: [], period: 0, steps: SENS_DEFAULT_STEPS, charts: 'tabs', variables: [] };
@@ -53,7 +61,38 @@ function cleanSensitivity(raw, periodCount){
   });
   return out;
 }
-function sensCfg(){ return mapping.cfg.sensitivity; }
+// An analysis's name, from a file (untrusted): text, no control characters, at most 31
+// characters; none gives "Sensitivity" (the first) or "Sensitivity n".
+function sensDefaultName(i){ return i ? 'Sensitivity ' + (i + 1) : 'Sensitivity'; }
+function cleanSensName(raw, i){
+  const t = typeof raw === 'string' ? raw.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, SENS_NAME_MAX).trim() : '';
+  return t || sensDefaultName(i);
+}
+// The list of analyses from a layout's cfg (untrusted): `sensitivities` when it is there, else
+// the one `sensitivity` of a layout from before (version 4 or older, or kept in this browser),
+// named "Sensitivity". At most SENS_MAX_ANALYSES, each through cleanSensitivity.
+function cleanSensitivities(cfg, periodCount){
+  const src = cfg && typeof cfg === 'object' ? cfg : {};
+  const list = Array.isArray(src.sensitivities) ? src.sensitivities
+    : [Object.assign({}, src.sensitivity && typeof src.sensitivity === 'object' ? src.sensitivity : {}, { name: 'Sensitivity' })];
+  return list.filter(a => a && typeof a === 'object' && !Array.isArray(a)).slice(0, SENS_MAX_ANALYSES)
+    .map((a, i) => Object.assign({ name: cleanSensName(a.name, i) }, cleanSensitivity(a, periodCount)));
+}
+// The copy of the first analysis an older ExcelExporter reads (`cfg.sensitivity`, step 16's form).
+function syncSensitivityCopy(){
+  if(!mapping || !Array.isArray(mapping.cfg.sensitivities)) return;
+  const first = mapping.cfg.sensitivities[0];
+  const copy = first ? JSON.parse(JSON.stringify(first)) : defaultSensitivity();
+  delete copy.name;
+  mapping.cfg.sensitivity = copy;
+}
+// The analysis the panel edits, or null when there is none.
+function sensCfg(){
+  const list = mapping && mapping.cfg.sensitivities;
+  if(!list || !list.length) return null;
+  sensPicked = Math.max(0, Math.min(list.length - 1, sensPicked));
+  return list[sensPicked];
+}
 
 // An input that can be moved: a rectangle row whose numbers are typed, on a canvas that isn't
 // a block (inside a block, or on the canvas a block is made from, every copy of the block
@@ -68,18 +107,26 @@ function isSensitivityOutputRow(row){
 }
 // Called when a model or a layout is read: settings cleaned, rows that are gone dropped.
 function reconcileSensitivity(){
-  const cfg = cleanSensitivity(mapping.cfg.sensitivity, model.periods.length);
+  const list = cleanSensitivities(mapping.cfg, model.periods.length);
   const byId = new Map(mapping.rows.map(r => [r.id, r]));
-  cfg.outputs = cfg.outputs.filter(id => byId.has(id) && !byId.get(id).isCustom);
-  cfg.variables = cfg.variables.filter(v => isSensitivityInputRow(byId.get(v.row)));
-  mapping.cfg.sensitivity = cfg;
+  list.forEach(cfg => {
+    cfg.outputs = cfg.outputs.filter(id => byId.has(id) && !byId.get(id).isCustom);
+    cfg.variables = cfg.variables.filter(v => isSensitivityInputRow(byId.get(v.row)));
+  });
+  mapping.cfg.sensitivities = list;
+  sensPicked = 0;
+  syncSensitivityCopy();
 }
 
-// What the workbook will hold, or { problem } saying why there is no Sensitivity tab:
-// { variables: [{ spec, source, mirror }], outputs: [row], steps, period }.
-function sensitivityPlan(){
-  const cfg = mapping && mapping.cfg.sensitivity;
-  if(!cfg || !cfg.enabled) return null;
+// The analyses the workbook writes: each one on and complete, its plan with its `name`.
+function sensitivityPlans(){
+  if(!mapping || !Array.isArray(mapping.cfg.sensitivities)) return [];
+  return mapping.cfg.sensitivities.map(sensitivityPlan).filter(p => p && !p.problem);
+}
+// What the workbook will hold for one analysis, or { problem } saying why it has no tab:
+// { name, variables: [{ spec, source, mirror }], outputs: [row], steps, period }.
+function sensitivityPlan(cfg){
+  if(!mapping || !cfg || !cfg.enabled) return null;
   if(!inputsEnabled()) return { problem: 'Turn on “Gather inputs on a separate tab” (Inputs & scenarios): the inputs to move live there.' };
   const mirrors = new Map(inputMirrorRows().map(m => [m.sourceRowId, m]));
   const variables = [];
@@ -94,7 +141,7 @@ function sensitivityPlan(){
   if(!variables.length && !outputs.length) return { problem: 'Add the inputs to move and at least one output.' };
   if(!variables.length) return { problem: 'Add at least one input to move.' };
   if(!outputs.length) return { problem: 'Add at least one output.' };
-  return { variables, outputs, steps: cfg.steps, period: Math.min(cfg.period, model.periods.length - 1), charts: cfg.charts };
+  return { name: cfg.name || 'Sensitivity', variables, outputs, steps: cfg.steps, period: Math.min(cfg.period, model.periods.length - 1), charts: cfg.charts };
 }
 
 // The points along each input's line: −n … −1 (towards Low), 0 (the base), 1 … n (towards High).
@@ -390,8 +437,9 @@ function sensitivityCharts(plan, lay, cached){
 }
 
 // Puts the two charts where the person chose: each on its own chart tab after the
-// Sensitivity tab, or on that tab below the Spider table, side by side.
-function placeSensitivityCharts(wb, plan, lay, sheet){
+// Sensitivity tab, or on that tab below the Spider table, side by side. `alsoTaken`: the other
+// analyses' tab names, not all written yet.
+function placeSensitivityCharts(wb, plan, lay, sheet, alsoTaken){
   const { tornado, spider } = sensitivityCharts(plan, lay, sheet.cached);
   if(plan.charts === 'sheet'){
     const top = lay.spiderHead + lay.V + 2; // 0-based: two rows below the Spider table
@@ -402,7 +450,7 @@ function placeSensitivityCharts(wb, plan, lay, sheet){
     sheet.ws['!ref'] = 'A1:' + colLetter(lay.cols.rank) + (top + 25);
     return [];
   }
-  const taken = wb.SheetNames.slice();
+  const taken = wb.SheetNames.concat(alsoTaken || []);
   const tName = addedTabName('Tornado', taken);
   XLSX.utils.book_append_chartsheet(wb, tornado, tName);
   const sName = addedTabName('Spider', taken.concat([tName]));
@@ -414,8 +462,12 @@ function placeSensitivityCharts(wb, plan, lay, sheet){
 // Text only (names come from the loaded file): textContent everywhere.
 function renderSensitivity(){
   const panel = $('sensitivityPanel');
-  if(!panel || !mapping || !mapping.cfg.sensitivity) return;
+  if(!panel || !mapping || !Array.isArray(mapping.cfg.sensitivities)) return;
+  renderSensitivityList();
   const cfg = sensCfg();
+  $('sensEditor').classList.toggle('hidden', !cfg);
+  if(!cfg){ setStatus($('sensStatus'), '', 'warn'); return; }
+  $('cfgSensName').value = cfg.name;
   $('cfgSensEnabled').checked = cfg.enabled;
   $('sensOptions').classList.toggle('hidden', !cfg.enabled);
   const byId = new Map(mapping.rows.map(r => [r.id, r]));
@@ -512,9 +564,70 @@ function renderSensitivity(){
   $('btnSensAddAllVars').disabled = !candidates.length || cfg.variables.length >= SENS_MAX_VARIABLES;
 
   // Why there will be no Sensitivity tab, if there won't.
-  const plan = cfg.enabled ? sensitivityPlan() : null;
+  const plan = cfg.enabled ? sensitivityPlan(cfg) : null;
   setStatus($('sensStatus'), plan && plan.problem ? plan.problem : '', 'warn');
 }
+// The analyses: each picks the one the panel edits, with ↑ ↓ and ×; + Add up to the limit.
+function renderSensitivityList(){
+  const list = mapping.cfg.sensitivities;
+  const box = $('sensAnalyses');
+  box.textContent = '';
+  list.forEach((a, i) => {
+    const line = document.createElement('div');
+    line.className = 'sens-line sens-analysis' + (i === sensPicked ? ' picked' : '');
+    line.setAttribute('role', 'listitem');
+    const pick = document.createElement('button');
+    pick.type = 'button'; pick.className = 'sens-pick';
+    pick.textContent = a.name;
+    pick.title = 'Edit this analysis';
+    pick.setAttribute('aria-pressed', i === sensPicked ? 'true' : 'false');
+    pick.addEventListener('click', () => { sensPicked = i; renderSensitivity(); });
+    const state = document.createElement('span');
+    state.className = 'sens-state';
+    state.textContent = a.enabled ? '' : 'off';
+    const btn = (text, cls, title, disabled, act) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'icon ' + cls; b.textContent = text;
+      b.title = title; b.setAttribute('aria-label', title + ': ' + a.name);
+      b.disabled = disabled;
+      b.addEventListener('click', act);
+      return b;
+    };
+    const move = (by) => () => {
+      const j = i + by;
+      [list[i], list[j]] = [list[j], list[i]];
+      if(sensPicked === i) sensPicked = j; else if(sensPicked === j) sensPicked = i;
+      saveMapping(); renderSensitivity();
+    };
+    line.append(pick, state,
+      btn('↑', 'sens-up', 'Move up', i === 0, move(-1)),
+      btn('↓', 'sens-down', 'Move down', i === list.length - 1, move(1)),
+      btn('×', 'sens-remove', 'Remove this analysis', false, () => removeSensitivityAnalysis(i)));
+    box.appendChild(line);
+  });
+  $('btnSensAdd').disabled = list.length >= SENS_MAX_ANALYSES;
+}
+async function removeSensitivityAnalysis(i){
+  const list = mapping.cfg.sensitivities;
+  const a = list[i];
+  if(!a) return;
+  if((a.outputs.length || a.variables.length) &&
+     !(await showConfirm('Remove an analysis', 'Remove “' + a.name + '” and its settings? Its tab leaves the workbook.', 'Remove'))) return;
+  list.splice(list.indexOf(a), 1);
+  if(sensPicked >= list.length) sensPicked = Math.max(0, list.length - 1);
+  saveMapping(); renderSensitivity();
+}
+function addSensitivityAnalysis(){
+  const list = mapping.cfg.sensitivities;
+  if(list.length >= SENS_MAX_ANALYSES) return;
+  const used = new Set(list.map(a => a.name.toLowerCase()));
+  let n = list.length;
+  while(used.has(sensDefaultName(n).toLowerCase())) n++;
+  list.push(Object.assign({ name: sensDefaultName(n) }, defaultSensitivity(), { enabled: true }));
+  sensPicked = list.length - 1;
+  saveMapping(); renderSensitivity();
+}
+
 // Real rectangle rows in the order the workbook shows them (tab order, then each tab's rows).
 function sensRowsInSheetOrder(){
   const out = [];
@@ -537,6 +650,21 @@ function addSensitivityVariables(ids){
   saveMapping(); renderSensitivity();
 }
 
+$('btnSensAdd').addEventListener('click', addSensitivityAnalysis);
+$('cfgSensName').addEventListener('change', () => {
+  const cfg = sensCfg();
+  if(!cfg) return;
+  cfg.name = cleanSensName($('cfgSensName').value, sensPicked);
+  $('cfgSensName').value = cfg.name;
+  saveMapping();
+  // The name changed in place: the change comes as the field is left, so the button or field
+  // clicked next must stay where it is.
+  const line = $('sensAnalyses').children[sensPicked];
+  if(line){
+    line.querySelector('.sens-pick').textContent = cfg.name;
+    line.querySelectorAll('button.icon').forEach(b => { b.setAttribute('aria-label', b.title + ': ' + cfg.name); });
+  }
+});
 $('cfgSensEnabled').addEventListener('change', () => {
   sensCfg().enabled = $('cfgSensEnabled').checked;
   saveMapping(); renderSensitivity();
