@@ -156,6 +156,31 @@ function openGraphBoardsWindow(read, source){
   });
   $('graphNoScenarios').classList.toggle('hidden', !!matched.scenarios.length);
   const chosen = () => [...list.querySelectorAll('input[type=checkbox]')].filter(c => c.checked).map(c => matched.scenarios[Number(c.dataset.index)]);
+  // Every board's sliders (like ones once), for the Dashboard (B4).
+  const sliders = matchGraphSliders(read);
+  const sliderUl = $('graphSliderList');
+  sliderUl.textContent = '';
+  sliders.sliders.forEach((s, i) => {
+    const li = document.createElement('li');
+    const label = document.createElement('label');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.checked = true; cb.dataset.index = String(i);
+    const name = document.createElement('span');
+    name.className = 'graph-scn-name';
+    name.textContent = s.name;
+    const what = document.createElement('span');
+    what.className = 'graph-scn-what';
+    const r = graphSliderRow(s, s.name);
+    what.textContent = (s.mode === 'shift' ? 'change by % ' : 'set ') + s.min + ' to ' + s.max + ' by ' + s.step +
+      ' · ' + graphPeriodsText(s.periods, periodLabels()) +
+      (r.grown ? ' · more than ' + DASH_POSITIONS.toLocaleString('en-US') + ' steps: the step grows to ' + r.step : '') +
+      (r.off ? ' · can\'t be 0 on its steps: starts at ' + r.value0 + '%' : '');
+    label.append(cb, name, what);
+    li.appendChild(label);
+    sliderUl.appendChild(li);
+  });
+  $('graphSliderHead').classList.toggle('hidden', !sliders.sliders.length);
+  const chosenSliders = () => [...sliderUl.querySelectorAll('input[type=checkbox]')].filter(c => c.checked).map(c => sliders.sliders[Number(c.dataset.index)]);
   // The picked board's Tornado and Spider charts, as the analyses they become.
   const sensUl = $('graphSensList');
   let sensMatched = { charts: [], left: {} }, sensAnalyses = [];
@@ -192,6 +217,12 @@ function openGraphBoardsWindow(read, source){
     if(read.badScenarios) lines.push(read.badScenarios + ' scenario' + (read.badScenarios === 1 ? '' : 's') + ' without a name of its own, or past ' + GRAPH_LIMITS.scenarios + '.');
     const plan = graphScenarioPlan({ scenarios: chosen() }, true);
     if(plan) lines.push(...plan.notes);
+    const dl = sliders.left;
+    const dOut = dl.notFound + dl.inBlock + dl.notInput + dl.bad;
+    if(dOut) lines.push(dOut + ' slider' + (dOut === 1 ? '' : 's') + ' left out (not in this model, inside a block, not an input, or not readable).');
+    if(dl.past) lines.push(dl.past + ' slider' + (dl.past === 1 ? '' : 's') + ' past ' + GRAPH_LIMITS.sliders + '.');
+    const dash = graphSliderPlan({ sliders: chosenSliders() }, true);
+    if(dash && dash.cantMoveNote) lines.push(dash.cantMoveNote);
     const sl = sensMatched.left;
     if(sl.noOutput) lines.push(sl.noOutput + ' Tornado or Spider chart' + (sl.noOutput === 1 ? '' : 's') + ' whose output this model doesn\'t have.');
     const sIn = (sl.notFound || 0) + (sl.inBlock || 0) + (sl.notInput || 0) + (sl.bad || 0);
@@ -204,19 +235,20 @@ function openGraphBoardsWindow(read, source){
     ul.textContent = '';
     lines.forEach(t => { const li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
     $('graphLeftOutHead').classList.toggle('hidden', !lines.length);
-    $('graphUse').disabled = !chosen().length && !chosenAnalyses().length;
+    $('graphUse').disabled = !chosen().length && !chosenAnalyses().length && !chosenSliders().length;
   };
   list.onchange = renderLeft;
+  sliderUl.onchange = renderLeft;
   sensUl.onchange = renderLeft;
   pick.onchange = () => { renderSens(); renderLeft(); };
   renderSens();
   renderLeft();
-  $('graphRemove').classList.toggle('hidden', !graphScenariosInLayout() && !graphAnalysesInLayout());
+  $('graphRemove').classList.toggle('hidden', !graphScenariosInLayout() && !graphAnalysesInLayout() && !graphSlidersInLayout());
   const opener = document.activeElement;
   const close = () => {
     modal.classList.add('hidden');
     $('graphUse').onclick = $('graphCancel').onclick = $('graphRemove').onclick = null;
-    pick.onchange = list.onchange = sensUl.onchange = null;
+    pick.onchange = list.onchange = sensUl.onchange = sliderUl.onchange = null;
     modal.removeEventListener('click', onBackdrop);
     document.removeEventListener('keydown', onKey, true);
     if(opener && document.contains(opener) && opener.focus && !opener.closest('.hidden')) opener.focus();
@@ -227,9 +259,10 @@ function openGraphBoardsWindow(read, source){
   $('graphRemove').onclick = async () => { close(); await removeGraphScenarios(); };
   $('graphUse').onclick = async () => {
     const scenarios = chosen(), analyses = chosenAnalyses();
+    const chosenS = chosenSliders().map(s => ({ row: s.row, name: s.name, mode: s.mode, periods: s.periods, min: s.min, max: s.max, step: s.step }));
     const board = read.boards[Number(pick.value)];
     close();
-    await useGraphScenarios({ from: read.boards.map(b => b.name), board: board ? board.name : '', scenarios, analyses });
+    await useGraphScenarios({ from: read.boards.map(b => b.name), board: board ? board.name : '', scenarios, analyses, sliders: chosenS });
   };
   modal.addEventListener('click', onBackdrop);
   document.addEventListener('keydown', onKey, true);
@@ -243,8 +276,9 @@ async function useGraphScenarios(copy){
   const analyses = copy.analyses || [];
   const had = graphScenariosInLayout();
   const hadAnalyses = graphAnalysesInLayout();
+  const hadSliders = graphSlidersInLayout();
   const ownScenarios = inputMirrorRows().filter(m => m.scenarios).length;
-  if(had || ownScenarios || hadAnalyses){
+  if(had || ownScenarios || hadAnalyses || hadSliders){
     const parts = [];
     if(had || ownScenarios || copy.scenarios.length){
       parts.push((had ? 'This layout already has fmGraph scenarios; they are replaced. ' : '') +
@@ -252,6 +286,7 @@ async function useGraphScenarios(copy){
         (ownScenarios ? '; inputs with scenarios of your own keep them, on scenario 1 in every case.' : '.'));
     }
     if(hadAnalyses) parts.push('The sensitivity analyses made from fmGraph before are replaced; your own stay.');
+    if(hadSliders) parts.push('The Dashboard\'s sliders are replaced.');
     const ok = await showConfirm('Replace the cases?', parts.join(' '), 'Replace');
     if(!ok){ setStatus($('genStatus'), 'fmGraph scenarios not used.', 'info'); return; }
   }
@@ -276,8 +311,11 @@ async function useGraphScenarios(copy){
   }
   saveMapping(); renderAll();
   const n = plan ? plan.byMirror.size : 0;
-  const notes = (plan ? plan.notes : []).concat(past.length ? ['Analyses past ' + SENS_MAX_ANALYSES + ' in all are not added: ' + past.map(a => a.name).join(', ') + '.'] : []);
-  const sensText = added.length ? added.length + ' sensitivity analys' + (added.length === 1 ? 'is' : 'es') + ' from its Tornado and Spider charts.' : '';
+  const dash = graphSliderPlan();
+  const nSliders = mapping.cfg.graph.sliders.length;
+  const notes = (plan ? plan.notes : []).concat(dash ? dash.notes : [], past.length ? ['Analyses past ' + SENS_MAX_ANALYSES + ' in all are not added: ' + past.map(a => a.name).join(', ') + '.'] : []);
+  const sensText = (added.length ? added.length + ' sensitivity analys' + (added.length === 1 ? 'is' : 'es') + ' from its Tornado and Spider charts.' : '') +
+    (nSliders ? (added.length ? ' ' : '') + nSliders + ' slider' + (nSliders === 1 ? '' : 's') + ' on the Dashboard.' : '');
   const msg = (copy.scenarios.length
       ? 'fmGraph scenarios used: ' + (plan ? plan.cases.length : 1) + ' Global Cases (Base and ' + copy.scenarios.length + '), ' +
         n + ' input' + (n === 1 ? '' : 's') + ' with scenarios.' + (sensText ? ' Also ' + sensText.charAt(0).toLowerCase() + sensText.slice(1) : '')
@@ -287,8 +325,10 @@ async function useGraphScenarios(copy){
 }
 async function removeGraphScenarios(){
   const withAnalyses = graphAnalysesInLayout();
+  const withSliders = graphSlidersInLayout();
   const ok = await showConfirm('Remove the fmGraph scenarios?',
     'The Global Cases and row scenarios they made are removed from this layout' + (withAnalyses ? ', and so are the sensitivity analyses made from its charts' : '') +
+    (withSliders ? ', and the Dashboard\'s sliders' : '') +
     '. The boards themselves are not changed.', 'Remove');
   if(!ok) return;
   mapping.cfg.graph = defaultGraphCopy();
@@ -313,7 +353,7 @@ function showGraphBoards(raw, source){
 $('btnUseGraphBoards').addEventListener('click', async () => {
   if(!model) return;
   if(modelGraphBoards){ showGraphBoards(modelGraphBoards, 'The boards that came with the model'); return; }
-  if(graphScenariosInLayout() || graphAnalysesInLayout()){ await removeGraphScenarios(); return; }
+  if(graphScenariosInLayout() || graphAnalysesInLayout() || graphSlidersInLayout()){ await removeGraphScenarios(); return; }
   setStatus($('genStatus'), 'This model came without fmGraph boards: use File → Import fmGraph boards… for a board file.', 'info');
 });
 $('btnImportGraphBoards').addEventListener('click', () => $('graphFileInput').click());

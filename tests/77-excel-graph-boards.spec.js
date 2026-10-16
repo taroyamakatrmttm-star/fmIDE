@@ -56,13 +56,13 @@ test('a .fmide with boards: the window, Use, and the cases, row scenarios and ma
   expect(await leftOut(page)).toEqual(['The Inputs tab will be turned on: the scenarios move inputs there.']);
   await page.click('#graphUse');
   await expect(page.locator('#graphModal')).toBeHidden();
-  await expect(genStatus(page)).toHaveText('fmGraph scenarios used: 6 Global Cases (Base and 5), 3 inputs with scenarios. The Inputs tab is on.');
+  await expect(genStatus(page)).toHaveText('fmGraph scenarios used: 6 Global Cases (Base and 5), 3 inputs with scenarios. Also 5 sliders on the Dashboard. The Inputs tab is on.');
   await expect(page.locator('#cfgInputsEnabled')).toBeChecked();
   await expect(page.locator('#cfgInputsCases')).toHaveValue('6');
   await expect(page.locator('#cfgInputsCases')).toBeDisabled();
 
   const { wb } = await X.generate(page);
-  expect(wb.SheetNames[0]).toBe('Scenarios');
+  expect(wb.SheetNames.slice(0, 2)).toEqual(['Dashboard', 'Scenarios']); // the sliders' Dashboard first (B4)
   const sc = wb.Sheets.Scenarios;
   // Row 3: the case names; D2 the case run, Base; C2 = 1.
   expect(['H3', 'I3', 'J3', 'K3', 'L3', 'M3'].map(a => sc[a].v)).toEqual(['Base', 'High price', 'Volume up', 'Mixed', 'Also high', 'Cost cut']);
@@ -93,12 +93,13 @@ test('a .fmide with boards: the window, Use, and the cases, row scenarios and ma
   expect(inp['A' + (cost.first + 1)].v).toBe('Cost cut');
   expect(cellAt(inp, p1, cost.first + 1).v).toBe(-2500);
   expect(X.formulaOf(cellAt(inp, p1 + 1, cost.first + 1))).toBe(X.numToCol(p1 + 1) + cost.first);
-  // The input's own row still picks its scenario (column C links to the Scenarios tab).
-  expect(X.formulaOf(cellAt(inp, p1, price.own))).toMatch(/^INDEX\(/);
-  // Exported, the layout is version 6 (since step 19 B3b) and carries the copy.
+  // The input's own row still picks its scenario (column C links to the Scenarios tab), with the
+  // Dashboard's Price slider laid over it (step 19 B4).
+  expect(X.formulaOf(cellAt(inp, p1, price.own))).toMatch(/^IF\('Dashboard'!\$I\$5=TRUE,'Dashboard'!\$G\$5,INDEX\(/);
+  // Exported, the layout is version 7 (since step 19 B4) and carries the copy.
   const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
   const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
-  expect(exported.version).toBe(6);
+  expect(exported.version).toBe(7);
   expect(exported.cfg.graph.board).toBe('Profit board');
   expect(exported.cfg.graph.from).toEqual(['Profit board', 'Second board']);
   expect(exported.cfg.graph.scenarios.map(s => s.name)).toEqual(['High price', 'Volume up', 'Mixed', 'Also high', 'Cost cut']);
@@ -202,6 +203,10 @@ test('board versions: 2 has no scenarios, 3 and 8 read, a newer one and the temp
   await expect(page.locator('#graphModal')).toBeVisible();
   expect(await scenarioNames(page)).toEqual([]);
   await expect(page.locator('#graphNoScenarios')).toBeVisible();
+  // Its one slider (every version has sliders, B4); without it there is nothing to use.
+  expect(await page.locator('#graphSliderList .graph-scn-name').allTextContents()).toEqual(['Price']);
+  await expect(page.locator('#graphUse')).toBeEnabled();
+  await page.locator('#graphSliderList input').uncheck();
   await expect(page.locator('#graphUse')).toBeDisabled();
   await page.click('#graphCancel');
   await importFile(page, board('board-v3.board.json'));
@@ -356,7 +361,7 @@ test('fmGraph\'s Tornado and Spider become analyses: grouped, named, Show 0, the
   expect(await page.locator('#graphSensList .graph-scn-what').allTextContents()).toEqual(['Tornado + Spider: Profit · 3 inputs · 2029', 'Tornado: Revenue · 2 inputs · 2029']);
   expect(await scenarioNames(page)).toEqual([]); // one board's file carries no scenarios
   await page.click('#graphUse');
-  await expect(genStatus(page)).toHaveText('fmGraph boards used: 2 sensitivity analyses from its Tornado and Spider charts. The Inputs tab is on.');
+  await expect(genStatus(page)).toHaveText('fmGraph boards used: 2 sensitivity analyses from its Tornado and Spider charts. 5 sliders on the Dashboard. The Inputs tab is on.');
   // The panel: the untouched default replaced by the two, marked as from fmGraph; the first picked.
   expect(await analysisNames(page)).toEqual(['What moves Profit', 'Revenue']);
   expect(await page.locator('#sensAnalyses .sens-state').allTextContents()).toEqual(['fmGraph', 'fmGraph']);
@@ -364,7 +369,7 @@ test('fmGraph\'s Tornado and Spider become analyses: grouped, named, Show 0, the
   await expect(page.locator('#cfgSensSteps')).toHaveValue('3');
   await expect(page.locator('#cfgSensPeriod')).toHaveValue('2'); // fmGraph's API counts periods from 1: its 3 is 2029
   const { wb } = await X.generate(page);
-  expect(wb.SheetNames.filter(n => !['Inputs', 'Profit', 'Bonus', 'Bonus (instance 1)'].includes(n))).toEqual(['What moves Profit', 'Tornado', 'Spider', 'Revenue', 'Tornado 2', 'Spider 2']);
+  expect(wb.SheetNames.filter(n => !['Inputs', 'Profit', 'Bonus', 'Bonus (instance 1)'].includes(n))).toEqual(['Dashboard', 'What moves Profit', 'Tornado', 'Spider', 'Revenue', 'Tornado 2', 'Spider 2']);
   const ws = wb.Sheets['What moves Profit'];
   expect(ws.C5.v).toBe(3); // the period, from 1
   const head = X.findRow(ws, 'Input variable', 'B')[0];
@@ -381,7 +386,7 @@ test('fmGraph\'s Tornado and Spider become analyses: grouped, named, Show 0, the
   await importFile(page, D.tempFile(testInfo, 'charts.board.json', JSON.stringify(file)));
   await page.locator('#graphSensList input[type=checkbox]').nth(1).uncheck();
   await page.click('#graphUse');
-  await expect(page.locator('#confirmMessage')).toHaveText('The sensitivity analyses made from fmGraph before are replaced; your own stay.');
+  await expect(page.locator('#confirmMessage')).toHaveText('The sensitivity analyses made from fmGraph before are replaced; your own stay. The Dashboard\'s sliders are replaced.');
   await page.click('#confirmOk');
   expect(await analysisNames(page)).toEqual(['Sensitivity 3', 'What moves Profit']);
   // Remove from Layout takes fmGraph's out, the person's stays.
@@ -444,4 +449,202 @@ test('a board\'s Tornado and Spider from someone else: outputs and inputs the mo
   const head = X.findRow(ws, 'Input variable', 'B')[0];
   // "evil" reads as percent, "abc" as the default −10, "5" as 5.
   expect([ws['D' + (head + 1)].v, ws['E' + (head + 1)].v, ws['F' + (head + 1)].v]).toEqual(['%', -10, 5]);
+});
+
+// ---------- Sliders → the Dashboard (step 19, phase B4) ----------
+const sliderNames = (page) => page.locator('#graphSliderList .graph-scn-name').allTextContents();
+const sliderWhats = (page) => page.locator('#graphSliderList .graph-scn-what').allTextContents();
+// The Dashboard's rows 5…: [name, periods, kind, position, value, use] each.
+function dashboardRows(ws){
+  const out = [];
+  for(let r = 5; ws['A' + r]; r++){
+    out.push([ws['A' + r].v, ws['B' + r].v, ws['C' + r].v, ws['E' + r].v, ws['G' + r].v, ws['I' + r] ? ws['I' + r].v : null]);
+  }
+  return out;
+}
+
+test('sliders: the window lists them, Use copies them, the Dashboard comes first and the Inputs tab lays them over the case', async ({ page, pageErrors }) => {
+  await openProfit(page);
+  await useBoards(page);
+  expect(await sliderNames(page)).toEqual(['Price', 'Volume', 'Price', 'Volume', 'Cost']);
+  expect(await sliderWhats(page)).toEqual(['set 5 to 15 by 0.5 · all periods', 'change by % -50 to 50 by 1 · all periods',
+    'set 5 to 15 by 0.5 · 2028–2029', 'change by % -50 to 50 by 1 · 2030', 'set -5000 to 0 by 100 · 2027']);
+  await page.click('#graphUse');
+  await expect(genStatus(page)).toContainText('Also 5 sliders on the Dashboard.');
+
+  const { wb, bytes } = await X.generate(page);
+  await expect(page.locator('#differencesPanel')).toBeHidden(); // Use off and changes at 0: fmIDE's numbers
+  // A sample for the owner's own Excel (Windows and iPhone), as for the writer at first.
+  const out = require('path').join(__dirname, 'output');
+  fs.mkdirSync(out, { recursive: true });
+  fs.writeFileSync(require('path').join(out, 'step19-b4-dashboard.xlsx'), bytes);
+
+  expect(wb.SheetNames.slice(0, 3)).toEqual(['Dashboard', 'Scenarios', 'Inputs']);
+  const d = wb.Sheets.Dashboard;
+  expect(d.A2.v).toMatch(/^Scroll bars and check boxes don't show in Excel on the web, or always in LibreOffice/);
+  expect(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'I', 'J', 'K', 'L'].map(c => d[c + '4'].v))
+    .toEqual(['Slider', 'Periods', 'Kind', 'Scroll bar', 'Position', 'Typed', 'Value', 'Use', 'Min', 'Max', 'Step']);
+  // Set sliders start at fmIDE's number with Use off; a change by % at 0.
+  expect(dashboardRows(d)).toEqual([
+    ['Price', 'all periods', 'Set to', 10, 10, false],
+    ['Volume', 'all periods', 'Change by %', 50, 0, null],
+    ['Price', '2028–2029', 'Set to', 10, 10, false],
+    ['Volume', '2030', 'Change by %', 50, 0, null],
+    ['Cost', '2027', 'Set to', 20, -3000, false]]);
+  expect(X.formulaOf(d.G5)).toBe('IF(ISNUMBER(F5),F5,MIN(K5,J5+E5*L5))');
+  expect(['J', 'K', 'L'].map(c => d[c + '9'].v)).toEqual([-5000, 0, 100]);
+  // The name links to the input's own row on the Inputs tab.
+  const inp = wb.Sheets.Inputs;
+  const priceOwn = X.findRow(inp, 'Price')[0];
+  expect(X.formulaOf(d.A5)).toBe("'Inputs'!$A$" + priceOwn);
+  // The form controls: a scroll bar per slider over column D, linked to Position; a Use check box per set slider.
+  const controls = d['!controls'];
+  expect(controls.filter(c => c.type === 'scroll').map(c => [c.cell, c.min, c.max, c.val, c.from.c, c.from.r]))
+    .toEqual([['E5', 0, 20, 10, 3, 4], ['E6', 0, 100, 50, 3, 5], ['E7', 0, 20, 10, 3, 6], ['E8', 0, 100, 50, 3, 7], ['E9', 0, 50, 20, 3, 8]]);
+  expect(controls.filter(c => c.type === 'check').map(c => [c.cell, c.checked, c.text])).toEqual([['I5', false, 'Use'], ['I7', false, 'Use'], ['I9', false, 'Use']]);
+  const parts = await X.unzip(bytes);
+  expect(Object.keys(parts).filter(n => /^xl\/ctrlProps\//.test(n))).toHaveLength(8);
+
+  // The Inputs tab: each slider only in its periods, in the board's order, over the case's pick.
+  const p1 = X.periodOneCol(inp);
+  const own = (label, p) => X.formulaOf(cellAt(inp, p1 + p, X.findRow(inp, label)[0]));
+  const pick = (label, p, n) => { const r = X.findRow(inp, label)[0]; const c = X.numToCol(p1 + p); return 'INDEX(' + c + (r - n) + ':' + c + (r - 1) + ',MIN(MAX($C' + r + ',1),' + n + '))'; };
+  const set = (r, x) => "IF('Dashboard'!$I$" + r + "=TRUE,'Dashboard'!$G$" + r + ',' + x + ')';
+  const shift = (r, x) => '(' + x + ")*(1+'Dashboard'!$G$" + r + '/100)';
+  expect([0, 1, 2, 3].map(p => own('Price', p))).toEqual([set(5, pick('Price', 0, 3)), set(7, set(5, pick('Price', 1, 3))), set(7, set(5, pick('Price', 2, 3))), set(5, pick('Price', 3, 3))]);
+  expect([0, 1, 2, 3].map(p => own('Volume', p))).toEqual([shift(6, pick('Volume', 0, 3)), shift(6, pick('Volume', 1, 3)), shift(6, pick('Volume', 2, 3)), shift(8, shift(6, pick('Volume', 3, 3)))]);
+  // One period only: Cost's slider is in 2027, the other periods just pick the case.
+  expect([0, 1, 2, 3].map(p => own('Cost', p))).toEqual([set(9, pick('Cost', 0, 2)), pick('Cost', 1, 2), pick('Cost', 2, 2), pick('Cost', 3, 2)]);
+  expect(pageErrors).toEqual([]);
+});
+
+test('sliders, LibreOffice: numbers typed (or the scroll bars\' positions) and TRUE in Use give fmGraph\'s own numbers', async ({ page, context }) => {
+  requireSoffice(test);
+  // fmGraph's own numbers, with the same board's sliders set on the same file.
+  const graph = await context.newPage();
+  await openApp(graph, 'fmGraph');
+  await graph.waitForFunction(() => !!window.fmGraph);
+  await graph.evaluate((t) => fmGraph.load(t, 'Profit'), fs.readFileSync(board('profit.fmide'), 'utf8'));
+  await graph.waitForFunction(() => fmGraph.scenarios().length === 5);
+  await graph.evaluate(() => fmGraph.showBoard('Profit board'));
+  const ids = await graph.evaluate(() => fmGraph.board().sliders.map(s => s.id));
+  expect(ids).toHaveLength(5);
+  const outputs = ['Revenue', 'Profit', 'Bonus paid'];
+  const read = () => graph.evaluate((outs) => outs.map(o => [1, 2, 3, 4].map(p => fmGraph.value(o, p))), outputs);
+  // Price 12 everywhere, Volume +10%, Price 13.5 in 2028–2029, Volume −5% in 2030, Cost −2000 in 2027.
+  const moved = [12, 10, 13.5, -5, -2000];
+  await graph.evaluate(() => fmGraph.resetAll());
+  const base = await read();
+  for(let i = 0; i < 5; i++) await graph.evaluate(([id, v]) => fmGraph.setSlider(id, v), [ids[i], moved[i]]);
+  const want = await read();
+  expect(want[1]).not.toEqual(base[1]);
+  // With the Mixed scenario shown and Volume +10% on top.
+  await graph.evaluate(() => fmGraph.resetAll());
+  expect(await graph.evaluate(() => fmGraph.showScenario('Mixed'))).toBe(0);
+  await graph.evaluate((id) => fmGraph.setSlider(id, 10), ids[1]);
+  const wantMixed = await read();
+
+  await openProfit(page);
+  await useBoards(page);
+  await page.click('#graphUse');
+  const { wb } = await X.generate(page);
+  const edited = (fn) => { const c = JSON.parse(JSON.stringify(wb)); fn(c.Sheets.Dashboard, c.Sheets.Scenarios); return X.writeWithApp(page, c); };
+  const num = (v) => ({ t: 'n', v });
+  const on = { t: 'b', v: true };
+  const files = {
+    // Typed numbers, and TRUE in Use.
+    typed: await edited(d => { ['F5', 'F6', 'F7', 'F8', 'F9'].forEach((a, i) => { d[a] = num(moved[i]); }); d.I5 = on; d.I7 = on; d.I9 = on; }),
+    // The scroll bars' positions instead (as the scroll bars would leave them).
+    positions: await edited(d => { [14, 60, 17, 45, 30].forEach((v, i) => { d['E' + (5 + i)] = num(v); }); d.I5 = on; d.I7 = on; d.I9 = on; }),
+    // Numbers typed but Use off, and the changes by % at 0: fmIDE's numbers.
+    useOff: await edited(d => { d.F5 = num(12); d.F7 = num(13.5); d.F9 = num(-2000); d.F6 = num(0); d.F8 = num(0); }),
+    // A Global Case and a slider together: Mixed, and Volume +10%.
+    mixed: await edited((d, sc) => { sc.C2 = num(4); d.F6 = num(10); }),
+  };
+  const out = recalc(files);
+  const p1 = X.periodOneCol(wb.Sheets.Profit);
+  const check = async (name, expected) => {
+    const book = await X.readBack(out[name]);
+    const ws = book.getWorksheet('Profit');
+    outputs.forEach((o, i) => {
+      const r = X.findRow(wb.Sheets.Profit, o)[0];
+      [0, 1, 2, 3].forEach(p => {
+        const v = valueOf(ws.getCell(r, p1 + p)), w = expected[i][p];
+        if(Math.abs(v - w) > 1e-6 * Math.max(1, Math.abs(w))) throw new Error(`${name}: ${o} in period ${p + 1} is ${v}, fmGraph says ${w}`);
+      });
+    });
+  };
+  await check('typed', want);
+  await check('positions', want);
+  await check('useOff', base);
+  await check('mixed', wantMixed);
+});
+
+test('sliders from someone else: like ones once, a range that isn\'t one, past 30,000 steps, 0 out of reach, the rest counted', async ({ page, pageErrors }) => {
+  await page.addInitScript(() => { window.alert = () => { window.__alerted = true; }; });
+  await openProfit(page);
+  await importFile(page, board('sliders-edges.board.json'));
+  await expect(page.locator('#graphModal')).toBeVisible();
+  // Price twice on one board (the name's capitals and spaces aside) and Volume on both boards: once each.
+  expect(await sliderNames(page)).toEqual(['Price', 'Volume', 'Cost']);
+  expect(await sliderWhats(page)).toEqual([
+    'set 0 to 100000 by 1 · all periods · more than 30,000 steps: the step grows to 3.33333333333',
+    'change by % 5 to 50 by 5 · all periods · can\'t be 0 on its steps: starts at 5%',
+    'set -5000 to -1000 by 100 · 2028']); // no range in the file: 20 steps either side of fmIDE's number
+  expect(await leftOut(page)).toEqual(['3 sliders left out (not in this model, inside a block, not an input, or not readable).',
+    'The Inputs tab will be turned on: the scenarios move inputs there.']);
+  await page.click('#graphUse');
+  await expect(genStatus(page)).toContainText('3 sliders on the Dashboard.');
+  await expect(genStatus(page)).toContainText('“Price” has more than 30,000 steps: its step grows to 3.33333333333.');
+  await expect(genStatus(page)).toContainText('“Volume” (change by %) can\'t be 0 on its steps: it starts at 5%.');
+  const { wb } = await X.generate(page);
+  await expect(genStatus(page)).toContainText('“Price” has more than 30,000 steps');
+  const d = wb.Sheets.Dashboard;
+  expect(dashboardRows(d)).toEqual([
+    ['Price', 'all periods', 'Set to', 3, 9.99999999999, false], // 3 grown steps: the nearest to fmIDE's 10
+    ['Volume', 'all periods', 'Change by %', 0, 5, null],
+    ['Cost', '2028', 'Set to', 20, -3000, false]]);
+  expect(['J', 'K', 'L'].map(c => d[c + '5'].v)).toEqual([0, 100000, 3.33333333333]);
+  expect(d['!controls'].find(c => c.cell === 'E5').max).toBe(30000);
+  expect(await page.evaluate(() => window.__alerted)).toBeUndefined();
+  expect(pageErrors).toEqual([]);
+});
+
+test('sliders: the copy is the layout\'s, using again asks first, Remove takes them out', async ({ page }) => {
+  await openProfit(page);
+  await importFile(page, board('profit.board.json'));
+  await page.locator('#graphScenarioList input').evaluateAll(list => list.forEach(c => { c.checked = false; }));
+  await page.locator('#graphScenarioList').dispatchEvent('change');
+  await page.click('#graphUse');
+  await expect(genStatus(page)).toHaveText('fmGraph boards used: 5 sliders on the Dashboard. The Inputs tab is on.');
+  const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
+  const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
+  expect(exported.version).toBe(7);
+  expect(exported.cfg.graph.sliders).toEqual([
+    { row: 'cProfit|price', name: 'Price', mode: 'set', periods: { mode: 'all' }, min: 5, max: 15, step: 0.5 },
+    { row: 'cProfit|volume', name: 'Volume', mode: 'shift', periods: { mode: 'all' }, min: -50, max: 50, step: 1 },
+    { row: 'cProfit|price', name: 'Price', mode: 'set', periods: { mode: 'range', from: 1, to: 2 }, min: 5, max: 15, step: 0.5 },
+    { row: 'cProfit|volume', name: 'Volume', mode: 'shift', periods: { mode: 'one', p: 3 }, min: -50, max: 50, step: 1 },
+    { row: 'cProfit|cost', name: 'Cost', mode: 'set', periods: { mode: 'one', p: 0 }, min: -5000, max: 0, step: 100 }]);
+  // Without scenarios the moved inputs get a base row, and no Scenarios tab is written.
+  let { wb } = await X.generate(page);
+  expect(wb.SheetNames.slice(0, 2)).toEqual(['Dashboard', 'Inputs']);
+  const inp = wb.Sheets.Inputs;
+  const own = X.findRow(inp, 'Cost')[0];
+  expect(inp['A' + (own - 1)].v).toBe('Base (before sliders)');
+  const c1 = X.numToCol(X.periodOneCol(inp));
+  expect(X.formulaOf(inp[c1 + own])).toBe("IF('Dashboard'!$I$9=TRUE,'Dashboard'!$G$9," + c1 + (own - 1) + ')');
+  // Using the boards again asks before replacing the sliders.
+  await importFile(page, board('profit.board.json'));
+  await page.click('#graphUse');
+  await expect(page.locator('#confirmMessage')).toContainText('The Dashboard\'s sliders are replaced.');
+  await page.click('#confirmCancel');
+  // Remove from Layout takes them out: no Dashboard.
+  await useBoards(page);
+  await expect(page.locator('#graphRemove')).toBeVisible();
+  await page.click('#graphRemove');
+  await expect(page.locator('#confirmMessage')).toContainText('and the Dashboard\'s sliders');
+  await page.click('#confirmOk');
+  ({ wb } = await X.generate(page));
+  expect(wb.SheetNames).not.toContain('Dashboard');
 });

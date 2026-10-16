@@ -12,11 +12,12 @@
 //
 //   readGraphBoards(raw)         → { error } or { version, boards, scenarios, badScenarios, badSettings }
 //   matchGraphScenarios(read)    → the scenarios with each setting matched to a layout row
-//   cleanGraphCopy(raw, periods) → the layout's cfg.graph (mapping file 4), checked
+//   matchGraphSliders(read)      → every board's sliders matched to layout rows, like ones once (B4)
+//   cleanGraphCopy(raw, periods) → the layout's cfg.graph (mapping file 4; sliders from file 7), checked
 // ============================================================
 const GRAPH_BOARD_KIND = 'fmIDE-graph-board';
 const GRAPH_BOARD_VERSION = 8; // the newest version this reader knows (8: step 18's Tornado and Spider charts, not read here yet)
-const GRAPH_LIMITS = { boards: 20, scenarios: 50, settings: 40, boardName: 60, scenarioName: 40, rectName: 60, value: 1e15 };
+const GRAPH_LIMITS = { boards: 20, scenarios: 50, settings: 40, sliders: 40, boardName: 60, scenarioName: 40, rectName: 60, value: 1e15 };
 
 let modelGraphBoards = null; // the graphBoards a loaded workspace or .fmide carried (raw; read only when used)
 
@@ -79,7 +80,7 @@ function readGraphBoards(raw){
     if(!b || typeof b !== 'object' || Array.isArray(b)) return;
     const count = (x) => Array.isArray(x) ? x.length : 0;
     boards.push({ name: graphText(b.name, GRAPH_LIMITS.boardName) || ('Board ' + (i + 1)),
-      sliders: count(b.sliders), items: count(b.items) + count(b.bars) + count(b.charts),
+      sliders: count(b.sliders), sliderList: readGraphSliders(b.sliders), items: count(b.items) + count(b.bars) + count(b.charts),
       sensCharts: version >= 8 ? readGraphSensCharts(b.items) : [] });
   });
   // Named scenarios came in version 3: an older file's are not read.
@@ -103,6 +104,68 @@ function readGraphBoards(raw){
     scenarios.push({ name, settings });
   });
   return { version, boards, scenarios, badScenarios, badSettings };
+}
+
+// A board's sliders (every version): the rectangle, periods (checked when matched), kind and
+// range — min, max and step as numbers, or null when missing or not usable (min below max, a
+// step above 0); not yet matched to a model. At most GRAPH_LIMITS.sliders a board.
+function readGraphSliders(list){
+  const out = [];
+  (Array.isArray(list) ? list : []).slice(0, GRAPH_LIMITS.sliders).forEach(s => {
+    if(!s || typeof s !== 'object' || typeof s.canvasId !== 'string' || typeof s.nodeId !== 'string'
+      || !s.canvasId || !s.nodeId || s.canvasId.length > 200 || s.nodeId.length > 200){ out.push(null); return; }
+    out.push(Object.assign({ canvasId: s.canvasId, nodeId: s.nodeId, name: graphText(s.name, GRAPH_LIMITS.rectName),
+      mode: s.mode === 'shift' ? 'shift' : 'set', periods: s.periods }, graphSliderRange(s)));
+  });
+  return out;
+}
+// min, max and step as numbers, or all null when they don't make a range.
+function graphSliderRange(s){
+  const min = graphNumber(s.min), max = graphNumber(s.max), step = graphNumber(s.step);
+  return min !== null && max !== null && step !== null && min < max && step > 0 ? { min, max, step } : { min: null, max: null, step: null };
+}
+// fmIDE's number for an input row in period p (its typed number; 0 when it has none).
+function graphInputNumber(rowId, p){
+  const row = mapping.rows.find(r => r.id === rowId);
+  const n = row && irNode(row.canvasId, row.nodeId);
+  const v = n && n.literal ? effectiveLiteral(n.literal, p) : null;
+  return typeof v === 'number' && isFinite(v) ? v : 0;
+}
+// The first period a slider covers.
+function graphFirstPeriod(periods){ return !periods || periods.mode === 'all' ? 0 : periods.mode === 'one' ? periods.p : periods.from; }
+// A range for a slider whose board gave none: a change by % from −50 to +50 in steps of 1; a
+// set slider 20 round steps either side of fmIDE's number in its first period.
+function graphDefaultRange(mode, rowId, periods){
+  if(mode === 'shift') return { min: -50, max: 50, step: 1 };
+  const v = graphInputNumber(rowId, graphFirstPeriod(periods));
+  const raw = (Math.abs(v) > 0 ? Math.abs(v) * 0.5 : 10) / 20;
+  const tens = Math.pow(10, Math.floor(Math.log10(raw)));
+  const f = raw / tens;
+  const step = Number(((f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * tens).toPrecision(12));
+  const centre = Math.round(v / step) * step;
+  return { min: Number((centre - 20 * step).toPrecision(12)), max: Number((centre + 20 * step).toPrecision(12)), step };
+}
+
+// Every board's sliders matched to the open model, as a scenario's settings are (an input
+// rectangle outside any block). Like sliders — the same rectangle, periods and kind — are kept
+// once (the first one's range), at most GRAPH_LIMITS.sliders in all. The rest counted.
+// → { sliders: [{ row, name, mode, periods, min, max, step, boards: [names] }], left: { notFound, notInput, inBlock, bad, past } }
+function matchGraphSliders(read){
+  const left = { notFound: 0, notInput: 0, inBlock: 0, bad: 0, past: 0 };
+  const sliders = [];
+  read.boards.forEach(b => (b.sliderList || []).forEach(s => {
+    if(!s){ left.bad++; return; }
+    const row = graphRectRow(s);
+    const why = !row ? 'notFound' : isUsedAsBlock(s.canvasId) ? 'inBlock' : !isSensitivityInputRow(row) ? 'notInput' : null;
+    if(why){ left[why]++; return; }
+    const periods = cleanGraphPeriods(s.periods, model.periods.length);
+    const like = sliders.find(x => x.row === row.id && x.mode === s.mode && JSON.stringify(x.periods) === JSON.stringify(periods));
+    if(like){ if(!like.boards.includes(b.name)) like.boards.push(b.name); return; }
+    if(sliders.length >= GRAPH_LIMITS.sliders){ left.past++; return; }
+    const range = s.min !== null ? { min: s.min, max: s.max, step: s.step } : graphDefaultRange(s.mode, row.id, periods);
+    sliders.push(Object.assign({ row: row.id, name: s.name || row.label || '', mode: s.mode, periods }, range, { boards: [b.name] }));
+  }));
+  return { sliders, left };
 }
 
 // A board's Tornado and Spider charts (version 8, step 18): layout, title, output, period,
@@ -194,8 +257,9 @@ function row0Label(rowId){ const r = mapping.rows.find(x => x.id === rowId); ret
 
 // ---------- The layout's copy: cfg.graph (mapping file 4) ----------
 // What Layout → Use fmGraph boards… copied, as settings ExcelExporter owns from then on:
-//   { from: [board names], board: the board picked, scenarios: [{ name, settings: [{ row, name, mode, periods, value }] }] }
-function defaultGraphCopy(){ return { from: [], board: '', scenarios: [] }; }
+//   { from: [board names], board: the board picked, scenarios: [{ name, settings: [{ row, name, mode, periods, value }] }],
+//     sliders: [{ row, name, mode, periods, min, max, step }] (mapping file 7, step 19 B4) }
+function defaultGraphCopy(){ return { from: [], board: '', scenarios: [], sliders: [] }; }
 function cleanGraphCopy(raw, periodCount){
   const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const out = defaultGraphCopy();
@@ -216,6 +280,16 @@ function cleanGraphCopy(raw, periodCount){
     });
     out.scenarios.push({ name, settings });
   });
+  // The Dashboard's sliders: a range that isn't one, or a like slider again, is left out.
+  (Array.isArray(src.sliders) ? src.sliders : []).forEach(s => {
+    if(!s || typeof s !== 'object' || typeof s.row !== 'string' || !s.row || s.row.length > 400) return;
+    if((s.mode !== 'set' && s.mode !== 'shift') || out.sliders.length >= GRAPH_LIMITS.sliders) return;
+    const range = graphSliderRange(s);
+    if(range.min === null) return;
+    const periods = cleanGraphPeriods(s.periods, periodCount);
+    if(out.sliders.some(x => x.row === s.row && x.mode === s.mode && JSON.stringify(x.periods) === JSON.stringify(periods))) return;
+    out.sliders.push(Object.assign({ row: s.row, name: graphText(s.name, GRAPH_LIMITS.rectName), mode: s.mode, periods }, range));
+  });
   return out;
 }
 // Called when a model or a layout is read: settings on rows that are gone, or no longer
@@ -224,7 +298,9 @@ function reconcileGraph(){
   const g = cleanGraphCopy(mapping.cfg.graph, model.periods.length);
   const byId = new Map(mapping.rows.map(r => [r.id, r]));
   g.scenarios.forEach(sc => { sc.settings = sc.settings.filter(s => isSensitivityInputRow(byId.get(s.row))); });
+  g.sliders = g.sliders.filter(s => isSensitivityInputRow(byId.get(s.row)));
   mapping.cfg.graph = g;
   graphPlanCache = null;
 }
+function graphSlidersInLayout(){ return !!(mapping && mapping.cfg.graph && mapping.cfg.graph.sliders && mapping.cfg.graph.sliders.length); }
 function graphScenariosInLayout(){ return !!(mapping && mapping.cfg.graph && mapping.cfg.graph.scenarios && mapping.cfg.graph.scenarios.length); }
