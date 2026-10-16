@@ -346,7 +346,7 @@ test('settings from a mapping file are checked; names are text', async ({ page }
   // Export the layout, spoil its settings, import it back.
   const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
   const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
-  expect(exported.version).toBe(6); // v5: cfg.sensitivities (step 19 B3); v6: origin and show (B3b)
+  expect(exported.version).toBe(7); // v5: cfg.sensitivities (step 19 B3); v6: origin and show (B3b); v7: sliders (B4)
   const realVar = exported.cfg.sensitivities[0].variables[0].row;
   const spoiled = {
     enabled: true, outputs: ['nope', 42, realVar, realVar], period: -5, steps: 99, charts: '<script>',

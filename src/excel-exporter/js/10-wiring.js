@@ -107,7 +107,7 @@ $('cfgSectionsEnabled').addEventListener('change', () => setSectionsEnabled($('c
 $('btnGenerate').addEventListener('click', () => {
   try{
     generateWorkbook();
-    const notes = graphScenarioNotes(); // fmGraph's scenarios past a cut-off, or not moved (09i)
+    const notes = graphScenarioNotes().concat(graphSliderNotes()); // fmGraph's scenarios past a cut-off, or not moved (09i); the sliders' (09j)
     setStatus($('genStatus'), 'Workbook generated — check your downloads.' + (notes.length ? ' ' + notes.join(' ') : ''), 'ok');
   }catch(err){
     setStatus($('genStatus'), 'Could not generate the workbook: ' + err.message, 'err');

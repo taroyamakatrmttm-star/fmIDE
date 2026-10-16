@@ -39,10 +39,14 @@ function buildCtx(){
     if(!sensMoved.has(v.mirror.id)) sensMoved.set(v.mirror.id, []);
     sensMoved.get(v.mirror.id).push({ a, i });
   }));
+  // The Dashboard's sliders (09j-dashboard.js): each input they move, by its Inputs-tab row id;
+  // one without scenarios gets the same base row.
+  const dash = graphSliderPlan();
+  const sliderMoved = dash ? dash.byMirror : new Map();
   const sensBase = {};
   const reserveRows = (row, r) => {
     r = reserveScenarioRows(row, r, scenarioBlocks);
-    if(sensMoved.has(row.id) && !scenarioBlocks[row.id]){ sensBase[row.id] = r; r++; }
+    if((sensMoved.has(row.id) || sliderMoved.has(row.id)) && !scenarioBlocks[row.id]){ sensBase[row.id] = r; r++; }
     return r;
   };
   const blankAfter = (row) => scenarioBlocks[row.id] || sensBase[row.id] !== undefined;
@@ -75,7 +79,7 @@ function buildCtx(){
       });
     }
   });
-  return { canvasById, cellPos, periodCount: model.periods.length, rowsByTabOrdered, tabById, inlineConstantIds, scenarioBlocks, sens, sensMoved, sensBase };
+  return { canvasById, cellPos, periodCount: model.periods.length, rowsByTabOrdered, tabById, inlineConstantIds, scenarioBlocks, sens, sensMoved, sensBase, dash, sliderMoved };
 }
 
 // Scenario rows sit directly above their variable's own row on the Inputs tab.
@@ -151,7 +155,9 @@ function buildWorkbook(){
   const HDR = (extra) => roleCellStyle('Headers', extra);
   // Sensitivity: each analysis's tab name and where everything on it sits, known before the
   // Inputs tab (whose moved inputs read them) is written.
-  const sensTaken = [scenarioSheetName || ''];
+  // The Dashboard (09j-dashboard.js): its name, known before the Inputs tab that reads it.
+  const dashName = ctx.dash && ctx.dash.rows.length ? uniqueTabName('Dashboard', null).name : null;
+  const sensTaken = [scenarioSheetName || '', dashName || ''];
   const sensLays = ctx.sens.map(plan => {
     const name = addedTabName(plan.name, sensTaken);
     sensTaken.push(name);
@@ -248,7 +254,10 @@ function buildWorkbook(){
       // it) × (1 + the analyses' % parts) + their amount parts, each 0 unless its own tab is
       // moving this input.
       const sensParts = row.isInputMirror && sensLays.length && ctx.sensMoved.get(row.id) || null;
-      const sensBaseRow = sensParts ? ctx.sensBase[row.id] : undefined;
+      // The Dashboard's sliders on this input, laid over its base before the sensitivity parts.
+      const slid = row.isInputMirror && dashName && ctx.sliderMoved.get(row.id) || null;
+      const sensBaseRow = sensParts || slid ? ctx.sensBase[row.id] : undefined;
+      const withSliders = (base, p) => slid ? dashboardSliders(ctx.dash, slid, base, p, dashName, tab.name) : base;
       const moved = (base) => '(' + base + ')*(1+' + sensParts.map(({ a, i }) => sensLays[a].pctRef(i, tab.name)).join('+') + ')+' +
         sensParts.map(({ a, i }) => sensLays[a].amtRef(i, tab.name)).join('+');
 
@@ -292,7 +301,9 @@ function buildWorkbook(){
         // node); build its formula separately instead of going through buildCellContent.
         const picked = scnBlock ? 'INDEX(' + col + scnBlock.first + ':' + col + (scnBlock.first + scnBlock.n - 1) + ',MIN(MAX($' + VINTAGE_COL + excelRow + ',1),' + scnBlock.n + '))' : null;
         contents.push(sensParts
-          ? { isFormula: true, formula: moved(picked || (col + sensBaseRow)) }
+          ? { isFormula: true, formula: moved(withSliders(picked || (col + sensBaseRow), p)) }
+          : slid
+          ? { isFormula: true, formula: withSliders(picked || (col + sensBaseRow), p) }
           : scnBlock
           ? { isFormula: true, formula: picked }
           : linkPos
@@ -304,7 +315,7 @@ function buildWorkbook(){
       // Role of the row: Inputs (typed numbers) · Links (every cell only pulls one cell
       // from another sheet) · Calculations (any other formula).
       const PURE_LINK = /^(?:'(?:[^']|'')+'|[A-Za-z0-9_.]+)!\$?[A-Z]{1,3}\$?\d+$/;
-      const rowRole = scnBlock || sensParts ? 'Calculations'
+      const rowRole = scnBlock || sensParts || slid ? 'Calculations'
         : row.isInputMirror ? 'Inputs'
         : linkPos ? 'Links'
         : isInputNode(canvas, node) ? 'Inputs'
@@ -357,7 +368,7 @@ function buildWorkbook(){
         const inStyle = nodeStyleToExcelCellStyle(inObj);
         const inFmt = numberFormatToExcel(inObj, fallbackFmt);
         const r = sensBaseRow;
-        setCell('A' + r, textCell('Base (before sensitivity)', inStyle));
+        setCell('A' + r, textCell(slid ? 'Base (before sliders)' : 'Base (before sensitivity)', inStyle));
         setCell('B' + r, blankCell(inStyle));
         setCell(VINTAGE_COL + r, blankCell(inStyle));
         for(let h = 0; h < helperColCount; h++) setCell(helperCol(h) + r, blankCell(inStyle));
@@ -516,6 +527,12 @@ function buildWorkbook(){
     ws['!cols'] = [{ wch: 28 }, { wch: 8 }, { wch: 9 }, { wch: 22 }, { wch: 10 }, { wch: 26 }, { wch: 2 }].concat(Array.from({ length: nCases }, () => ({ wch: 10 })));
     XLSX.utils.book_append_sheet(wb, ws, scenarioSheetName);
     wb.SheetNames.unshift(wb.SheetNames.pop()); // Scenarios first
+  }
+  // The Dashboard, before Scenarios: the workbook opens on it.
+  if(dashName){
+    const ownRow = {};
+    ctx.dash.rows.forEach(d => { if(d.mirrorId && ctx.cellPos[d.mirrorId]) ownRow[d.mirrorId] = ctx.cellPos[d.mirrorId]; });
+    appendDashboardSheet(wb, ctx.dash, dashName, ownRow);
   }
   return { wb, tooLong };
   }finally{ useHelperColumns(0); }

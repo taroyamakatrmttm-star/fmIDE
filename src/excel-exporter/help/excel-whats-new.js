@@ -11,6 +11,18 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'fmgraph-dashboard', date: '2026-10-16', title: 'fmGraph\'s sliders on a Dashboard',
+    summary: 'Layout → Use fmGraph boards… turns the boards\' sliders into a Dashboard tab: a scroll bar and a cell to type into for each.',
+    what: [
+      'The window lists every board\'s sliders, each with a tick box. A slider on several boards is listed once.',
+      'The workbook\'s first tab, Dashboard, has a row per slider: a scroll bar, Typed, Value, and for a set slider a Use check box. A number typed wins over the scroll bar.',
+      'The workbook still opens on fmIDE\'s numbers: Use is off and every change by % is at 0.',
+    ],
+    why: 'So the "what if" you play with in fmGraph is still there in the Excel file you send.',
+    how: ['Add sliders to a board in fmGraph.', 'In fmIDE, File → Open ExcelExporter (or open the .fmide here).', 'Layout → Use fmGraph boards…, then Use.', '⬇ Generate .xlsx, and open the Dashboard tab.'],
+    notes: ['Scroll bars and check boxes don\'t show in Excel on the web: type in Typed and Use instead.'],
+    see: ['fmgraph-dashboard', 'fmgraph-scenarios'] },
+
   { id: 'fmgraph-tornado-spider', date: '2026-10-16', title: 'fmGraph\'s Tornado and Spider become analyses',
     summary: 'Layout → Use fmGraph boards… turns a board\'s Tornado and Spider charts into sensitivity analyses, each its own tab and charts.',
     what: [
