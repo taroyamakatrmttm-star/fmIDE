@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: fmGraph's Tornado and Spider become analyses (step 19, phase B3b)
+- **Layout → Use fmGraph boards…** lists the picked board's **Tornado and Spider charts** and adds them as sensitivity analyses: a Tornado and a Spider moving the same inputs alike become one (both outputs, the Spider's points), any other chart one of its own; an input hidden in fmGraph is written with Show 0. They are marked fmGraph in the panel's list; using the window again replaces only those, after asking.
+- The layout file is now **version 6** (an analysis's `origin`, an input's `show`); version 5 files open as they are.
+
 ## ExcelExporter: several sensitivity analyses (step 19, phase B3a)
 - The Sensitivity panel lists up to 10 analyses: **+ Add**, a **Name** for each (its tab's name), ↑ ↓ to order them, × to remove one (asking first when it has settings); click one to edit it. Each writes its own Sensitivity tab ("Sensitivity", "Sensitivity 2"…) with its own Data Table, Tornado and Spider.
 - An input moved by several analyses keeps one Base row; its own row adds their parts: (base) × (1 + Σ % parts) + Σ amount parts, so each Data Table still moves one input at a time. With one analysis the workbook is as before.

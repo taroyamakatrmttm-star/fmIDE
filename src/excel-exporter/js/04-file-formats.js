@@ -11,8 +11,9 @@ const FILE_FORMATS = {
   'system':              { current: SHARED_FILE_VERSIONS['system'], label: 'fmIDE system' },
   'fmIDE-workspace':     { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'fmIDE workspace' },
   // v3: the Tornado and Spider's settings, `cfg.sensitivity` (step 16); v4: `cfg.graph`, what
-  // Use fmGraph boards… copied (step 19 B2); v5: several analyses, `cfg.sensitivities` (step 19 B3).
-  'fmIDE-excel-mapping': { current: 5, label: 'ExcelExporter mapping file' },
+  // Use fmGraph boards… copied (step 19 B2); v5: several analyses, `cfg.sensitivities` (step 19 B3);
+  // v6: an analysis's `origin` ("fmGraph") and an input's `show: false` (step 19 B3b).
+  'fmIDE-excel-mapping': { current: 6, label: 'ExcelExporter mapping file' },
   // The person's own Excel style (step 11a): how every cell looks, by role.
   'fmIDE-excel-style':   { current: 1, label: 'ExcelExporter Excel style file' },
   // The layouts remembered per module (step 11b); v2: a module's block instances' layout, `instance` (step 11d).
@@ -44,7 +45,10 @@ const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
         d.cfg.sensitivities = [Object.assign({ name: 'Sensitivity' }, JSON.parse(JSON.stringify(one)))];
       }
       d.version = 5; return d;
-    } },
+    },
+    // v6: an analysis made from fmGraph is marked (`origin`) and an input may be hidden
+    // (`show: false`, step 19 B3b); a v5 file has neither, so it reads as it is.
+    5: (d) => { d.version = 6; return d; } },
   'fmIDE-excel-module-layouts': { 1: (d) => { d.version = 2; return d; } }
 });
 // Returns { error } or { kind, data (migrated copy), fromVersion, newer, newerParts }.

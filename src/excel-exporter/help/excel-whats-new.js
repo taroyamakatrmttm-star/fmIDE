@@ -11,6 +11,18 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'fmgraph-tornado-spider', date: '2026-10-16', title: 'fmGraph\'s Tornado and Spider become analyses',
+    summary: 'Layout → Use fmGraph boards… turns a board\'s Tornado and Spider charts into sensitivity analyses, each its own tab and charts.',
+    what: [
+      'The window lists the picked board\'s Tornado and Spider charts, each with a tick box. Each becomes an analysis with the same inputs, Low and High, output and period.',
+      'A Tornado and a Spider moving the same inputs alike become one analysis with both outputs and the Spider\'s points. An input hidden in fmGraph is written with Show 0.',
+      'They are marked fmGraph in the Sensitivity panel. Using the window again replaces them, after asking; your own analyses stay.',
+    ],
+    why: 'So the "what moves this" charts made in fmGraph are in the workbook too, live in Excel.',
+    how: ['Make a Tornado or Spider on a board in fmGraph.', 'In fmIDE, File → Open ExcelExporter (or open the .fmide here).', 'Layout → Use fmGraph boards…, then Use.', '⬇ Generate .xlsx.'],
+    notes: ['The charts\' colours stay ExcelExporter\'s for now. At most 10 analyses in all.'],
+    see: ['fmgraph-scenarios', 'sensitivity'] },
+
   { id: 'several-analyses', date: '2026-10-16', title: 'Several sensitivity analyses',
     summary: 'The Sensitivity panel now holds up to 10 analyses, each with its own tab, Data Table, Tornado and Spider.',
     what: [
