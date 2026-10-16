@@ -241,6 +241,39 @@ function tutorialActions(P){
       },
       'done': finish,
     },
+    'fmgraph-to-excel': {
+      'intro': next,
+      'open': async (page) => {
+        const [popup] = await Promise.all([page.waitForEvent('popup'), command(page, 'openExcelExporter')]);
+        await popup.waitForLoadState();
+        trip.popup = popup;
+      },
+      // What the card says: Layout → Use fmGraph boards…, its slider and two charts listed, Use.
+      'use': async (page) => {
+        const popup = trip.popup;
+        await expect(popup.locator('#afterLoad')).toBeVisible();
+        await P.click(popup, popup.locator('#menuLayout'));
+        await P.click(popup, popup.locator('#btnUseGraphBoards'));
+        await expect(popup.locator('#graphModal')).toBeVisible();
+        await expect(popup.locator('#graphSliderList .graph-scn-name')).toHaveText(['Price']);
+        await expect(popup.locator('#graphChartList .graph-scn-name')).toHaveText(['Profit', 'Profit walk']);
+        await P.click(popup, popup.locator('#graphUse'));
+        await expect(popup.locator('#genStatus .status')).toContainText('1 slider on the Dashboard. 2 charts on the Dashboard.');
+        await next(page);
+      },
+      'generate': async (page) => {
+        const popup = trip.popup;
+        const [dl] = await Promise.all([popup.waitForEvent('download'), P.click(popup, popup.locator('#btnGenerate'))]);
+        const fs = require('fs');
+        const JSZip = require('jszip');
+        const zip = await JSZip.loadAsync(fs.readFileSync(await dl.path()));
+        const book = await zip.file('xl/workbook.xml').async('string');
+        expect(book).toMatch(/<sheet name="Dashboard" sheetId="1"/);   // the Dashboard first
+        expect(Object.keys(zip.files).filter(f => /^xl\/charts\/chart\d+\.xml$/.test(f))).toHaveLength(2);
+        await next(page);
+      },
+      'done': finish,
+    },
   };
   return { actions: ACTIONS, command, addRect, next, finish, trip };
 }

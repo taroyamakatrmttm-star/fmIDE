@@ -11,6 +11,18 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'fmgraph-charts', date: '2026-10-16', title: 'fmGraph\'s charts on the Dashboard',
+    summary: 'Layout → Use fmGraph boards… also turns a board\'s bars and charts into Excel charts on the Dashboard, which follow the sliders.',
+    what: [
+      'The window lists the picked board\'s bars and charts, each with a tick box.',
+      'A bar becomes a column chart, a columns chart stacked columns, and a flow a waterfall, with its workings in rows of formulas under it.',
+      'Titles, names, the colours you picked and a fixed scale come along. A scenario waterfall is not carried.',
+    ],
+    why: 'So whoever opens the workbook sees the same charts as on your board, and sees them move.',
+    how: ['Add bars and charts to a board in fmGraph.', 'Open ExcelExporter from fmIDE (or open the .fmide here).', 'Layout → Use fmGraph boards…, pick the board, then Use.', '⬇ Generate .xlsx, and open the Dashboard tab.'],
+    notes: ['Scroll bars and check boxes don\'t show in Excel on the web or on an iPad or iPhone: type in Typed and Use instead. The charts show everywhere.'],
+    see: ['fmgraph-charts', 'fmgraph-in-excel'] },
+
   { id: 'fmgraph-dashboard', date: '2026-10-16', title: 'fmGraph\'s sliders on a Dashboard',
     summary: 'Layout → Use fmGraph boards… turns the boards\' sliders into a Dashboard tab: a scroll bar and a cell to type into for each.',
     what: [

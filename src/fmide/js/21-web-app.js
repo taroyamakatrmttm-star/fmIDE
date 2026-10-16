@@ -76,9 +76,9 @@
       system: buildSystemPayload(),
       templates: TEMPLATES.filter(t => !t.builtin && t.kind === 'module' && t.attachments && t.attachments.excel).map(t => templateRecord(t, true)),
       formatPresets: FORMAT_PRESETS.map(p => ({ id: p.id, name: p.name, style: p.style })),
-      // The model's fmGraph boards (step 19 B2), for ExcelExporter's Use fmGraph boards…; the
-      // practice model has none, as for fmGraph (sendModelToGraph).
-      ...(graphBoards && !inPractice() ? { graphBoards } : {})
+      // The model's fmGraph boards (step 19 B2), for ExcelExporter's Use fmGraph boards…; in
+      // practice, only the board a tutorial's practice model comes with (step 19 B5).
+      ...(inPractice() ? (practiceGraphBoards() ? { graphBoards: practiceGraphBoards() } : {}) : graphBoards ? { graphBoards } : {})
     };
   }
   function sendModelToExcel(target){

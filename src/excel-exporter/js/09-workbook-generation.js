@@ -156,7 +156,10 @@ function buildWorkbook(){
   // Sensitivity: each analysis's tab name and where everything on it sits, known before the
   // Inputs tab (whose moved inputs read them) is written.
   // The Dashboard (09j-dashboard.js): its name, known before the Inputs tab that reads it.
-  const dashName = ctx.dash && ctx.dash.rows.length ? uniqueTabName('Dashboard', null).name : null;
+  // With the boards' charts (B5) there is a Dashboard even without sliders.
+  const dashCharts = (graphChartPlan() || { charts: [] }).charts
+    .map(c => Object.assign({}, c, { parts: c.parts.filter(x => ctx.cellPos[x.row]) })).filter(c => c.parts.length);
+  const dashName = (ctx.dash && ctx.dash.rows.length) || dashCharts.length ? uniqueTabName('Dashboard', null).name : null;
   const sensTaken = [scenarioSheetName || '', dashName || ''];
   const sensLays = ctx.sens.map(plan => {
     const name = addedTabName(plan.name, sensTaken);
@@ -531,8 +534,8 @@ function buildWorkbook(){
   // The Dashboard, before Scenarios: the workbook opens on it.
   if(dashName){
     const ownRow = {};
-    ctx.dash.rows.forEach(d => { if(d.mirrorId && ctx.cellPos[d.mirrorId]) ownRow[d.mirrorId] = ctx.cellPos[d.mirrorId]; });
-    appendDashboardSheet(wb, ctx.dash, dashName, ownRow);
+    (ctx.dash ? ctx.dash.rows : []).forEach(d => { if(d.mirrorId && ctx.cellPos[d.mirrorId]) ownRow[d.mirrorId] = ctx.cellPos[d.mirrorId]; });
+    appendDashboardSheet(wb, ctx.dash, dashName, ownRow, dashCharts, ctx.cellPos);
   }
   return { wb, tooLong };
   }finally{ useHelperColumns(0); }

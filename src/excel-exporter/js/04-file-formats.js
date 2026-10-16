@@ -14,7 +14,8 @@ const FILE_FORMATS = {
   // Use fmGraph boards… copied (step 19 B2); v5: several analyses, `cfg.sensitivities` (step 19 B3);
   // v6: an analysis's `origin` ("fmGraph") and an input's `show: false` (step 19 B3b);
   // v7: the Dashboard's sliders, `cfg.graph.sliders` (step 19 B4).
-  'fmIDE-excel-mapping': { current: 7, label: 'ExcelExporter mapping file' },
+  // v8: the Dashboard's charts, `cfg.graph.charts` (step 19 B5).
+  'fmIDE-excel-mapping': { current: 8, label: 'ExcelExporter mapping file' },
   // The person's own Excel style (step 11a): how every cell looks, by role.
   'fmIDE-excel-style':   { current: 1, label: 'ExcelExporter Excel style file' },
   // The layouts remembered per module (step 11b); v2: a module's block instances' layout, `instance` (step 11d).
@@ -52,7 +53,10 @@ const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
     5: (d) => { d.version = 6; return d; },
     // v7: the sliders Use fmGraph boards… copied for the Dashboard (`cfg.graph.sliders`, step 19
     // B4); a v6 file has none, so it reads as it is.
-    6: (d) => { d.version = 7; return d; } },
+    6: (d) => { d.version = 7; return d; },
+    // v8: the charts Use fmGraph boards… copied for the Dashboard (`cfg.graph.charts`, step 19
+    // B5); a v7 file has none, so it reads as it is.
+    7: (d) => { d.version = 8; return d; } },
   'fmIDE-excel-module-layouts': { 1: (d) => { d.version = 2; return d; } }
 });
 // Returns { error } or { kind, data (migrated copy), fromVersion, newer, newerParts }.

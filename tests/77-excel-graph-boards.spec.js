@@ -56,7 +56,7 @@ test('a .fmide with boards: the window, Use, and the cases, row scenarios and ma
   expect(await leftOut(page)).toEqual(['The Inputs tab will be turned on: the scenarios move inputs there.']);
   await page.click('#graphUse');
   await expect(page.locator('#graphModal')).toBeHidden();
-  await expect(genStatus(page)).toHaveText('fmGraph scenarios used: 6 Global Cases (Base and 5), 3 inputs with scenarios. Also 5 sliders on the Dashboard. The Inputs tab is on.');
+  await expect(genStatus(page)).toHaveText('fmGraph scenarios used: 6 Global Cases (Base and 5), 3 inputs with scenarios. Also 5 sliders on the Dashboard. 1 chart on the Dashboard. The Inputs tab is on.'); // the board's bar too (B5)
   await expect(page.locator('#cfgInputsEnabled')).toBeChecked();
   await expect(page.locator('#cfgInputsCases')).toHaveValue('6');
   await expect(page.locator('#cfgInputsCases')).toBeDisabled();
@@ -99,7 +99,7 @@ test('a .fmide with boards: the window, Use, and the cases, row scenarios and ma
   // Exported, the layout is version 7 (since step 19 B4) and carries the copy.
   const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
   const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
-  expect(exported.version).toBe(7);
+  expect(exported.version).toBe(8);
   expect(exported.cfg.graph.board).toBe('Profit board');
   expect(exported.cfg.graph.from).toEqual(['Profit board', 'Second board']);
   expect(exported.cfg.graph.scenarios.map(s => s.name)).toEqual(['High price', 'Volume up', 'Mixed', 'Also high', 'Cost cut']);
@@ -361,7 +361,7 @@ test('fmGraph\'s Tornado and Spider become analyses: grouped, named, Show 0, the
   expect(await page.locator('#graphSensList .graph-scn-what').allTextContents()).toEqual(['Tornado + Spider: Profit · 3 inputs · 2029', 'Tornado: Revenue · 2 inputs · 2029']);
   expect(await scenarioNames(page)).toEqual([]); // one board's file carries no scenarios
   await page.click('#graphUse');
-  await expect(genStatus(page)).toHaveText('fmGraph boards used: 2 sensitivity analyses from its Tornado and Spider charts. 5 sliders on the Dashboard. The Inputs tab is on.');
+  await expect(genStatus(page)).toHaveText('fmGraph boards used: 2 sensitivity analyses from its Tornado and Spider charts. 5 sliders on the Dashboard. 1 chart on the Dashboard. The Inputs tab is on.');
   // The panel: the untouched default replaced by the two, marked as from fmGraph; the first picked.
   expect(await analysisNames(page)).toEqual(['What moves Profit', 'Revenue']);
   expect(await page.locator('#sensAnalyses .sens-state').allTextContents()).toEqual(['fmGraph', 'fmGraph']);
@@ -386,7 +386,7 @@ test('fmGraph\'s Tornado and Spider become analyses: grouped, named, Show 0, the
   await importFile(page, D.tempFile(testInfo, 'charts.board.json', JSON.stringify(file)));
   await page.locator('#graphSensList input[type=checkbox]').nth(1).uncheck();
   await page.click('#graphUse');
-  await expect(page.locator('#confirmMessage')).toHaveText('The sensitivity analyses made from fmGraph before are replaced; your own stay. The Dashboard\'s sliders are replaced.');
+  await expect(page.locator('#confirmMessage')).toHaveText('The sensitivity analyses made from fmGraph before are replaced; your own stay. The Dashboard\'s sliders are replaced. The Dashboard\'s charts are replaced.');
   await page.click('#confirmOk');
   expect(await analysisNames(page)).toEqual(['Sensitivity 3', 'What moves Profit']);
   // Remove from Layout takes fmGraph's out, the person's stays.
@@ -481,7 +481,7 @@ test('sliders: the window lists them, Use copies them, the Dashboard comes first
 
   expect(wb.SheetNames.slice(0, 3)).toEqual(['Dashboard', 'Scenarios', 'Inputs']);
   const d = wb.Sheets.Dashboard;
-  expect(d.A2.v).toMatch(/^Scroll bars and check boxes don't show in Excel on the web, or always in LibreOffice/);
+  expect(d.A2.v).toMatch(/^Scroll bars and check boxes don't show in Excel on the web, on an iPad or iPhone, or always in LibreOffice/);
   expect(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'I', 'J', 'K', 'L'].map(c => d[c + '4'].v))
     .toEqual(['Slider', 'Periods', 'Kind', 'Scroll bar', 'Position', 'Typed', 'Value', 'Use', 'Min', 'Max', 'Step']);
   // Set sliders start at fmIDE's number with Use off; a change by % at 0.
@@ -615,11 +615,12 @@ test('sliders: the copy is the layout\'s, using again asks first, Remove takes t
   await importFile(page, board('profit.board.json'));
   await page.locator('#graphScenarioList input').evaluateAll(list => list.forEach(c => { c.checked = false; }));
   await page.locator('#graphScenarioList').dispatchEvent('change');
+  await page.locator('#graphChartList input').evaluateAll(list => list.forEach(c => { c.checked = false; }));
   await page.click('#graphUse');
   await expect(genStatus(page)).toHaveText('fmGraph boards used: 5 sliders on the Dashboard. The Inputs tab is on.');
   const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
   const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
-  expect(exported.version).toBe(7);
+  expect(exported.version).toBe(8);
   expect(exported.cfg.graph.sliders).toEqual([
     { row: 'cProfit|price', name: 'Price', mode: 'set', periods: { mode: 'all' }, min: 5, max: 15, step: 0.5 },
     { row: 'cProfit|volume', name: 'Volume', mode: 'shift', periods: { mode: 'all' }, min: -50, max: 50, step: 1 },
@@ -647,4 +648,369 @@ test('sliders: the copy is the layout\'s, using again asks first, Remove takes t
   await page.click('#confirmOk');
   ({ wb } = await X.generate(page));
   expect(wb.SheetNames).not.toContain('Dashboard');
+});
+
+// ---------- Bars and charts → the Dashboard's charts (step 19 B5) ----------
+// fmGraph itself makes the charts on the Profit board (which already has a bar of Profit) and
+// exports the board; a colour, a scale and a title with markup are added to the file as a person's
+// fmGraph would write them. fmGraph's own figures for the waterfall come with it.
+const chartNames = (page) => page.locator('#graphChartList .graph-scn-name').allTextContents();
+const chartWhats = (page) => page.locator('#graphChartList .graph-scn-what').allTextContents();
+const WALK = [{ rect: 'Revenue', role: 'start' }, { rect: 'Cost', role: 'add' }, { rect: 'Bonus paid', role: 'subtract' }, { rect: 'Profit', role: 'total' }];
+async function graphWithBoardCharts(context){
+  const graph = await context.newPage();
+  await openApp(graph, 'fmGraph');
+  await graph.waitForFunction(() => !!window.fmGraph);
+  await graph.evaluate((t) => fmGraph.load(t, 'Profit'), fs.readFileSync(board('profit.fmide'), 'utf8'));
+  await graph.waitForFunction(() => fmGraph.scenarios().length === 5);
+  await graph.evaluate(() => fmGraph.showBoard('Profit board'));
+  const ids = await graph.evaluate((walk) => ({
+    io: fmGraph.addChart({ layout: 'columns', title: 'In and out', groups: [{ name: 'In', parts: ['Revenue'] }, { name: 'Out', parts: ['Cost', 'Bonus paid'] }] }),
+    parts: fmGraph.addChart({ layout: 'columns', title: '', periods: [2, 3], groups: [{ name: '', parts: ['Revenue', 'Cost'] }] }),
+    walk: fmGraph.addChart({ layout: 'flow', title: 'Profit walk', period: 4, steps: walk }),
+    cases: fmGraph.addChart({ layout: 'scenarios', title: 'Cases', period: 4, outputs: ['Profit'] }),
+  }), WALK);
+  const file = await graph.evaluate(() => fmGraph.exportBoards(false));
+  const items = file.boards[0].items;
+  items[0].scale = { min: 0, max: 5000 };
+  items[0].colour = '#0F766E';
+  items[1].groups[0].parts[0].colour = '#2563eb';
+  items[3].steps[1].colour = '#7C3AED';
+  items[3].title = 'Profit <walk> & "more"';
+  const flow = await graph.evaluate((id) => fmGraph.chart(id), ids.walk);
+  return { graph, ids, file, flow };
+}
+// The Dashboard's helper block of a flow: { top, rows: { name: [cells B…] } } found by its heading.
+function flowBlock(ws, heading, n){
+  const top = X.findRow(ws, heading)[0];
+  const rows = {};
+  ['Value', 'From', 'To', 'Above 0', 'Below 0', 'Base (hidden)', 'Total above 0', 'Total below 0', 'Rise above 0', 'Rise below 0', 'Fall above 0', 'Fall below 0']
+    .forEach((name, i) => { expect(ws['A' + (top + 1 + i)].v).toBe(name); rows[name] = Array.from({ length: n }, (_, k) => ws[X.numToCol(2 + k) + (top + 1 + i)]); });
+  return { top, rows };
+}
+const near = (a, b) => Math.abs(a - b) <= 1e-6 * Math.max(1, Math.abs(b));
+
+test('charts: the window lists the board\'s bars and charts, Use copies them, the Dashboard draws each from the right rows', async ({ page, context, pageErrors }, testInfo) => {
+  const { graph, file, flow } = await graphWithBoardCharts(context);
+  await openProfit(page);
+  await importFile(page, D.tempFile(testInfo, 'charts.board.json', JSON.stringify(file)));
+  await expect(page.locator('#graphChartHead')).toBeVisible();
+  expect(await chartNames(page)).toEqual(['Profit', 'In and out', 'Revenue, Cost', 'Profit <walk> & "more"']);
+  expect(await chartWhats(page)).toEqual(['Bar · all periods', 'Stacked columns · all periods · 3 parts · wide',
+    'Stacked columns · 2028–2029 · 2 parts · wide', 'Waterfall · 2030 · 4 steps · wide']);
+  expect(await leftOut(page)).toContain('1 scenario waterfall not carried: Excel would need every case worked out at once.');
+  await page.click('#graphUse');
+  await expect(genStatus(page)).toHaveText('fmGraph boards used: 5 sliders on the Dashboard. 4 charts on the Dashboard. The Inputs tab is on.');
+
+  const { wb, bytes } = await X.generate(page);
+  await expect(page.locator('#differencesPanel')).toBeHidden();
+  // The sample for the owner's own Excel (Windows and iPad): the Dashboard's controls and charts.
+  const out = require('path').join(__dirname, 'output');
+  fs.mkdirSync(out, { recursive: true });
+  fs.writeFileSync(require('path').join(out, 'step19-b5-dashboard.xlsx'), bytes);
+
+  const d = wb.Sheets.Dashboard, pr = wb.Sheets.Profit;
+  const charts = d['!charts'];
+  expect(charts).toHaveLength(4);
+  // Under the sliders (rows 5–9): the narrow bar alone (a wide chart follows it), then each wide chart, the full width.
+  expect(charts.map(c => [c.from.c, c.to.c])).toEqual([[0, 4], [0, 12], [0, 12], [0, 12]]);
+  expect(charts[0].from.r).toBe(10);
+  charts.slice(1).forEach((c, i) => expect(c.from.r).toBeGreaterThanOrEqual(charts[i].to.r)); // in the board's order, none over another
+  const p1 = X.periodOneCol(pr), col = (p) => X.numToCol(p1 + p);
+  const row = (label) => X.findRow(pr, label).filter(r => r > 3)[0]; // not the tab's title
+  const fmIDE = (rect, p) => graph.evaluate(([r, q]) => fmGraph.modelValue(r, q), [rect, p + 1]);
+  // The bar: a column chart of Profit's own row over every period, its colour and fixed scale.
+  const bar = charts[0].chart;
+  expect([bar.title, bar.bar.grouping, bar.legend, bar.valAxis.min, bar.valAxis.max]).toEqual(['Profit', 'clustered', null, 0, 5000]);
+  expect(bar.series).toHaveLength(1);
+  expect(bar.series[0].color).toBe('0F766E');
+  expect(bar.series[0].val.ref).toBe("'Profit'!$" + col(0) + '$' + row('Profit') + ':$' + col(3) + '$' + row('Profit'));
+  expect(bar.series[0].cat.ref).toBe("'Profit'!$" + col(0) + '$2:$' + col(3) + '$2');
+  expect(bar.series[0].cat.values).toEqual(['2027', '2028', '2029', '2030']);
+  for(let p = 0; p < 4; p++) expect(near(bar.series[0].val.values[p], await fmIDE('Profit', p))).toBe(true); // what Excel shows before recalculating
+  // One group: stacked columns straight from the parts' rows, in 2028–2029 only.
+  const parts = charts[2].chart;
+  expect([parts.title, parts.bar.grouping, parts.legend]).toEqual(['Revenue, Cost', 'stacked', 'b']);
+  expect(parts.series.map(s => [s.name.text, s.val.ref])).toEqual([
+    ['Revenue', "'Profit'!$" + col(1) + '$' + row('Revenue') + ':$' + col(2) + '$' + row('Revenue')],
+    ['Cost', "'Profit'!$" + col(1) + '$' + row('Cost') + ':$' + col(2) + '$' + row('Cost')]]);
+  expect(parts.series[1].val.values).toEqual([-3000, -3000]);
+  // Several groups: a table under the chart, one column per period and group, each part only in its group's.
+  const io = charts[1].chart;
+  const ioTop = X.findRow(d, 'Chart data: In and out')[0];
+  expect(ioTop).toBeGreaterThan(charts[1].to.r);
+  expect(ioTop).toBeLessThan(charts[2].from.r);
+  expect(['B', 'C', 'D', 'I'].map(c => d[c + ioTop].v)).toEqual(['2027 · In', '2027 · Out', '2028 · In', '2030 · Out']);
+  expect(io.series.map(s => [s.name.text, s.val.ref, s.color])).toEqual([
+    ['Revenue', "'Dashboard'!$B$" + (ioTop + 1) + ':$I$' + (ioTop + 1), '2563EB'],
+    ['Cost', "'Dashboard'!$B$" + (ioTop + 2) + ':$I$' + (ioTop + 2), undefined],
+    ['Bonus paid', "'Dashboard'!$B$" + (ioTop + 3) + ':$I$' + (ioTop + 3), undefined]]);
+  expect(io.series[0].cat.ref).toBe("'Dashboard'!$B$" + ioTop + ':$I$' + ioTop);
+  expect(X.formulaOf(d['B' + (ioTop + 1)])).toBe("'Profit'!$" + col(0) + '$' + row('Revenue'));
+  expect(d['C' + (ioTop + 1)]).toBeUndefined(); // Revenue isn't in Out
+  expect(X.formulaOf(d['E' + (ioTop + 2)])).toBe("'Profit'!$" + col(1) + '$' + row('Cost'));
+  expect(io.series[1].val.values).toEqual([null, -3000, null, -3000, null, -3000, null, -3000]);
+  // The waterfall: helper rows under it, formulas on the steps' rows in 2030, starting on fmGraph's own figures.
+  const walk = charts[3].chart;
+  expect(walk.title).toBe('Profit <walk> & "more"');
+  const fb = flowBlock(d, 'Chart data: Profit <walk> & "more" (2030)', 4);
+  expect(fb.top).toBeGreaterThan(charts[3].to.r);
+  expect(['B', 'C', 'D', 'E'].map(c => d[c + fb.top].v)).toEqual(['Revenue', 'Cost', 'Bonus paid', 'Profit']);
+  expect(fb.rows.Value.map(X.formulaOf)).toEqual(['Revenue', 'Cost', 'Bonus paid', 'Profit'].map(r => "'Profit'!$" + col(3) + '$' + row(r)));
+  const at = (name, k) => X.numToCol(2 + k) + (fb.top + 1 + ['Value', 'From', 'To'].indexOf(name));
+  expect(fb.rows.From.map(c => X.formulaOf(c) || c.v)).toEqual([0, at('To', 0), at('To', 1), 0]);
+  expect(fb.rows.To.map(X.formulaOf)).toEqual([at('Value', 0), at('From', 1) + '+' + at('Value', 1), at('From', 2) + '-' + at('Value', 2), at('Value', 3)]);
+  flow.forEach((f, k) => {
+    expect(near(fb.rows.Value[k].v, f.value)).toBe(true);
+    expect(near(fb.rows.From[k].v, f.from)).toBe(true);
+    expect(near(fb.rows.To[k].v, f.to)).toBe(true);
+  });
+  // The series: the invisible base, then Total, Rise and Fall above and below 0 (the second of each without a legend entry).
+  expect(walk.series.map(s => [s.name.text, !!s.noFill, !!s.noLegend, s.color || null])).toEqual([
+    ['Base', true, false, null], ['Total', false, false, '64748B'], ['Total', false, true, '64748B'],
+    ['Rise', false, false, '16A34A'], ['Rise', false, true, '16A34A'], ['Fall', false, false, 'DC2626'], ['Fall', false, true, 'DC2626']]);
+  expect(walk.series[0].val.ref).toBe("'Dashboard'!$B$" + (fb.top + 6) + ':$E$' + (fb.top + 6));
+  expect(walk.series[0].cat.ref).toBe("'Dashboard'!$B$" + fb.top + ':$E$' + fb.top);
+  expect(walk.series[3].points).toEqual([{ idx: 1, color: '7C3AED' }]); // Cost's own colour, on its bar
+  // What Excel draws before recalculating adds up to fmGraph's bars: base + the parts reach From and To.
+  flow.forEach((f, k) => {
+    const sum = (side) => walk.series.slice(1).filter((s, i) => (i % 2 === 0) === (side === 'above')).reduce((t, s) => t + s.val.values[k], 0);
+    const base = walk.series[0].val.values[k];
+    const [lo, hi] = [Math.min(f.from, f.to), Math.max(f.from, f.to)];
+    expect(near(base + sum('above') + sum('below'), lo >= 0 ? hi : hi <= 0 ? lo : hi + lo)).toBe(true);
+  });
+  // The parts written: Excel's bar chart parts.
+  const zipped = await X.unzip(bytes);
+  expect(Object.keys(zipped).filter(n => /^xl\/charts\/chart\d+\.xml$/.test(n))).toHaveLength(4);
+  // The copy: the layout's, version 8.
+  const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
+  const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
+  expect(exported.version).toBe(8);
+  expect(exported.cfg.graph.charts[0]).toEqual({ kind: 'bar', title: '', wide: false, scale: { min: 0, max: 5000 }, periods: { mode: 'all' },
+    parts: [{ row: 'cProfit|profit', name: 'Profit', colour: '#0f766e' }] });
+  expect(exported.cfg.graph.charts[3].parts.map(x => [x.row, x.role, x.colour || null])).toEqual([
+    ['cProfit|revenue', 'start', null], ['cProfit|cost', 'add', '#7c3aed'], ['cProfit|bonus', 'subtract', null], ['cProfit|profit', 'total', null]]);
+  expect(exported.cfg.graph.charts[1].groups).toEqual(['In', 'Out']);
+  expect(pageErrors).toEqual([]);
+});
+
+test('charts, LibreOffice: the waterfall\'s helper rows follow the sliders as fmGraph\'s own figures do, across 0', async ({ page, context }, testInfo) => {
+  requireSoffice(test);
+  testInfo.setTimeout(180_000);
+  const { graph, ids, file, flow } = await graphWithBoardCharts(context);
+  // Price 5 everywhere: revenue below the costs, so the running total goes below 0.
+  const priceAll = await graph.evaluate(() => fmGraph.board().sliders[0].id);
+  await graph.evaluate((id) => fmGraph.setSlider(id, 5), priceAll);
+  const low = await graph.evaluate((id) => fmGraph.chart(id), ids.walk);
+  expect(low.some(f => f.to < 0)).toBe(true);
+  await openProfit(page);
+  await importFile(page, D.tempFile(testInfo, 'charts.board.json', JSON.stringify(file)));
+  await page.click('#graphUse');
+  const { wb } = await X.generate(page);
+  const edited = (fn) => { const c = JSON.parse(JSON.stringify(wb)); fn(c.Sheets.Dashboard); return X.writeWithApp(page, c); };
+  const out = recalc({ base: await edited(() => {}), low: await edited(d => { d.F5 = { t: 'n', v: 5 }; d.I5 = { t: 'b', v: true }; }) });
+  const heading = 'Chart data: Profit <walk> & "more" (2030)';
+  const top = X.findRow(wb.Sheets.Dashboard, heading)[0];
+  const check = async (name, want) => {
+    const ws = (await X.readBack(out[name])).getWorksheet('Dashboard');
+    // ExcelJS reads a formula whose result is 0 as one with no result: 0 (an error still reads as its text).
+    const v = (r, k) => { const x = valueOf(ws.getCell(top + 1 + r, 2 + k)); return x === undefined ? 0 : x; };
+    want.forEach((f, k) => {
+      [['value', 0], ['from', 1], ['to', 2]].forEach(([key, r]) => {
+        if(!near(v(r, k), f[key])) throw new Error(`${name}: step ${k + 1}'s ${key} is ${v(r, k)}, fmGraph says ${f[key]}`);
+      });
+      // Excel's stack: base, then above and below 0, as fmGraph draws the bar from From to To.
+      const lo = Math.min(f.from, f.to), hi = Math.max(f.from, f.to);
+      const [base, above, below] = [5, 3, 4].map(r => v(r, k));
+      const want = lo >= 0 ? [lo, hi - lo, 0] : hi <= 0 ? [hi, 0, lo - hi] : [0, hi, lo];
+      if(![base, above, below].every((x, i) => near(x, want[i]))) throw new Error(`${name}: step ${k + 1} stacks ${[base, above, below]}, fmGraph's bar wants ${want}`);
+      const shown = [6, 7, 8, 9, 10, 11].map(r => v(r, k));
+      const kind = k === 0 || k === 3 ? 0 : f.to >= f.from ? 1 : 2;
+      expect(shown.map((x, i) => Math.floor(i / 2) === kind ? null : x).filter(x => x !== null).every(x => x === 0)).toBe(true);
+      expect(near(shown[kind * 2], above) && near(shown[kind * 2 + 1], below)).toBe(true);
+    });
+  };
+  await check('base', flow);
+  await check('low', low);
+});
+
+test('charts from someone else: names as text, colours and scales checked, roles read, the rest left out and counted', async ({ page, pageErrors }, testInfo) => {
+  await page.addInitScript(() => { window.alert = () => { window.__alerted = true; }; });
+  const rect = (nodeId, name, extra) => Object.assign({ canvasId: 'cProfit', nodeId, name }, extra || {});
+  const strange = { kind: 'fmIDE-graph-board', version: 8, boards: [{ name: '<img src=x onerror=alert(1)>', sliders: [], items: [
+    rect('profit', ' PROFIT ', { type: 'bar', colour: 'red', scale: { min: 10, max: 5 }, wide: 'yes' }),
+    rect('nope', 'Nope', { type: 'bar' }),
+    { type: 'chart', layout: 'flow', title: '<b>' + 'x'.repeat(100), period: 99, wide: false, scale: { min: '0', max: 10 },
+      steps: [rect('revenue', 'Revenue', { role: 'start', colour: '#12345' }), rect('cost', 'Cost', { role: 'weird' }), 'junk', rect('ghost', 'Ghost')] },
+    { type: 'chart', layout: 'columns', title: 'Groups', groups: Array.from({ length: 14 }, (_, i) => ({ name: 'G' + i, parts: [rect('revenue', 'Revenue', { colour: '#ABCDEF' })] })) },
+    { type: 'chart', layout: 'mystery', title: 'Unknown', groups: [{ name: 'A', parts: [rect('cost', 'Cost')] }] },
+    { type: 'chart', layout: 'scenarios', title: 'Cases' }, { type: 'chart', layout: 'flow', title: 'Empty', steps: [rect('ghost', 'Ghost')] }, null, 7] }] };
+  await openProfit(page);
+  await importFile(page, D.tempFile(testInfo, 'strange.board.json', JSON.stringify(strange)));
+  await expect(page.locator('#graphModal')).toBeVisible();
+  const title = '<b>' + 'x'.repeat(77);
+  expect(await chartNames(page)).toEqual(['PROFIT', title, 'Groups', 'Unknown']); // the file's name, as text
+  expect(await chartWhats(page)).toEqual(['Bar · all periods', 'Waterfall · 2027 · 2 steps', 'Stacked columns · all periods · 12 parts · wide', 'Stacked columns · all periods · 1 part · wide']);
+  const left = await leftOut(page);
+  expect(left).toContain('1 scenario waterfall not carried: Excel would need every case worked out at once.');
+  expect(left).toContain('6 rectangles of the bars and charts left out (not in this model, inside a block, or not readable).');
+  expect(left).toContain('2 bars or charts with nothing of this model to show.');
+  await page.locator('#graphScenarioList input, #graphSliderList input, #graphSensList input').evaluateAll(list => list.forEach(c => { c.checked = false; }));
+  await page.click('#graphUse');
+  await expect(genStatus(page)).toContainText('4 charts on the Dashboard.');
+  const { wb } = await X.generate(page);
+  const d = wb.Sheets.Dashboard;
+  expect(d.A2).toBeUndefined(); // no sliders: no note on the controls, the charts from row 3
+  expect(d['!controls']).toBeUndefined();
+  const charts = d['!charts'].map(c => c.chart);
+  expect(charts[0].series[0].color).toBeUndefined(); // 'red' is not a colour of the format
+  expect(charts[0].valAxis.min).toBeUndefined();     // min above max: Auto
+  expect(charts[1].title).toBe(title);
+  expect(charts[1].valAxis.min).toBeUndefined();     // text is not a number
+  expect(d['!charts'][0].to.c).toBe(4); expect(d['!charts'][1].from.c).toBe(4); // two narrow charts side by side
+  expect(charts[1].series[3].points).toEqual([]);    // '#12345' dropped
+  expect(charts[2].series).toHaveLength(12);         // at most 12 groups
+  expect(charts[2].series[0].color).toBe('ABCDEF');
+  // Cost's unknown role reads as add.
+  const fb = flowBlock(d, 'Chart data: ' + title + ' (2027)', 2);
+  expect(X.formulaOf(fb.rows.To[1])).toMatch(/^C\d+\+C\d+$/);
+  expect(await page.evaluate(() => window.__alerted)).toBeUndefined();
+  expect(pageErrors).toEqual([]);
+});
+
+test('charts: using the boards again asks first, Remove takes them out, a row left out of the workbook is said', async ({ page }, testInfo) => {
+  await openProfit(page);
+  await importFile(page, board('profit.board.json'));
+  await page.locator('#graphScenarioList input, #graphSliderList input').evaluateAll(list => list.forEach(c => { c.checked = false; }));
+  await page.locator('#graphScenarioList').dispatchEvent('change');
+  await page.click('#graphUse');
+  await expect(genStatus(page)).toHaveText('fmGraph boards used: 1 chart on the Dashboard. The Inputs tab is on.');
+  let { wb } = await X.generate(page);
+  expect(wb.SheetNames[0]).toBe('Dashboard'); // charts alone make a Dashboard
+  // Profit left out of the workbook: the chart isn't written, and Generate says why.
+  const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
+  const layout = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
+  layout.rows.find(r => r.id === 'cProfit|profit').include = false;
+  await page.setInputFiles('#mappingFileInput', D.tempFile(testInfo, 'without-profit.json', JSON.stringify(layout)));
+  await expect(genStatus(page)).toHaveText('Mapping imported.');
+  ({ wb } = await X.generate(page));
+  expect(wb.SheetNames).not.toContain('Dashboard');
+  await expect(genStatus(page)).toContainText('Not in the Dashboard\'s charts (left out of the workbook, or a constant): Profit.');
+  layout.rows.find(r => r.id === 'cProfit|profit').include = true;
+  await page.setInputFiles('#mappingFileInput', D.tempFile(testInfo, 'with-profit.json', JSON.stringify(layout)));
+  await expect(genStatus(page)).toHaveText('Mapping imported.');
+  await importFile(page, board('profit.board.json'));
+  await page.click('#graphUse');
+  await expect(page.locator('#confirmMessage')).toContainText('The Dashboard\'s charts are replaced.');
+  await page.click('#confirmCancel');
+  await useBoards(page);
+  await page.click('#graphRemove');
+  await expect(page.locator('#confirmMessage')).toContainText('and the Dashboard\'s charts');
+  await page.click('#confirmOk');
+  ({ wb } = await X.generate(page));
+  expect(wb.SheetNames).not.toContain('Dashboard');
+});
+
+// ---------- From fmIDE to the Dashboard, end to end (step 19 B5) ----------
+// fmIDE opens a model without boards; in fmGraph, opened from fmIDE, a person adds a slider,
+// saves a scenario, and adds a Tornado and a waterfall — the board goes back to fmIDE's document.
+// ExcelExporter, opened from fmIDE, uses the boards; LibreOffice recalculates the workbook, which
+// agrees with fmGraph: a number typed on the Dashboard, the scenario's Global Case, the waterfall's
+// helper rows and the Tornado's Data Table.
+test('end to end: fmIDE → fmGraph (slider, scenario, Tornado, waterfall) → ExcelExporter → LibreOffice agrees with fmGraph', async ({ page }, testInfo) => {
+  requireSoffice(test);
+  testInfo.setTimeout(240_000);
+  page.on('dialog', d => d.accept());
+  await F.openFmIDE(page);
+  const doc = JSON.parse(fs.readFileSync(board('profit.fmide'), 'utf8'));
+  delete doc.graphBoards;
+  await D.openViaInput(page, 'openDocument', D.tempFile(testInfo, 'Plan.fmide', JSON.stringify(doc)));
+  await expect.poll(() => D.title(page)).toBe('Plan — fmIDE');
+  // fmGraph, from fmIDE.
+  const [graph] = await Promise.all([page.waitForEvent('popup'), page.evaluate(() => fm.command('openFmGraph'))]);
+  await graph.waitForFunction(() => !!window.fmGraph && fmGraph.rectangles().length > 0 && fmGraph.boards().length > 0);
+  const ids = await graph.evaluate((walk) => {
+    const slider = fmGraph.addSlider('Price', { mode: 'set', min: 5, max: 15, step: 0.5 });
+    fmGraph.setSlider(slider, 13);
+    fmGraph.saveScenario('High price');
+    fmGraph.resetAll();
+    return { slider,
+      tornado: fmGraph.addChart({ layout: 'tornado', title: 'What moves Profit', output: 'Profit', period: 4,
+        inputs: [{ rect: 'Price', by: 'percent', low: -10, high: 10 }, { rect: 'Volume', by: 'amount', low: -50, high: 50 }] }),
+      walk: fmGraph.addChart({ layout: 'flow', title: 'Profit walk', period: 4, steps: walk }) };
+  }, WALK);
+  // The board goes back to fmIDE's document.
+  await expect.poll(() => D.title(page)).toBe('Plan • — fmIDE');
+  await expect.poll(async () => {
+    const data = (await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()))).data;
+    const b = data.graphBoards && data.graphBoards.boards.find(x => x.items.some(i => i.layout === 'flow'));
+    return b && data.graphBoards.scenarios ? [b.sliders.some(s => s.name === 'Price' && s.min === 5), b.items.map(i => i.layout || i.type), data.graphBoards.scenarios.map(s => s.name)] : null;
+  }).toEqual([true, expect.arrayContaining(['tornado', 'flow']), ['High price']]); // with what fmGraph's first board starts with
+  // fmGraph's own numbers: Price 12 on the slider; the High price scenario; the Tornado; the waterfall.
+  const outputs = ['Revenue', 'Profit'];
+  const read = () => graph.evaluate((outs) => outs.map(o => [1, 2, 3, 4].map(p => fmGraph.value(o, p))), outputs);
+  await graph.evaluate((id) => fmGraph.setSlider(id, 12), ids.slider);
+  const want12 = await read();
+  const walk12 = await graph.evaluate((id) => fmGraph.chart(id), ids.walk);
+  await graph.evaluate(() => fmGraph.resetAll());
+  const tornado = await graph.evaluate((id) => fmGraph.chart(id), ids.tornado);
+  expect(await graph.evaluate(() => fmGraph.showScenario('High price'))).toBe(0);
+  const wantHigh = await read();
+  await graph.evaluate(() => fmGraph.resetAll());
+
+  // ExcelExporter, from fmIDE: Use fmGraph boards…, then Generate.
+  const [excel] = await Promise.all([page.waitForEvent('popup'), page.evaluate(() => fm.command('openExcelExporter'))]);
+  await excel.waitForLoadState();
+  await expect(excel.locator('#loadStatus .status.ok')).toContainText('It has fmGraph boards');
+  await X.menuCommand(excel, 'btnUseGraphBoards');
+  await expect(excel.locator('#graphModal')).toBeVisible();
+  const flowBoard = await excel.locator('#graphBoardPick option').allTextContents();
+  const pickIndex = await graph.evaluate(() => fmGraph.boards().findIndex(b => b.name === fmGraph.board().name));
+  await excel.selectOption('#graphBoardPick', String(pickIndex));
+  expect(flowBoard.length).toBeGreaterThan(0);
+  expect(await scenarioNames(excel)).toEqual(['High price']);
+  expect(await sliderNames(excel)).toContain('Price');
+  expect(await chartNames(excel)).toContain('Profit walk');
+  expect(await excel.locator('#graphSensList .graph-scn-name').allTextContents()).toEqual(['What moves Profit']);
+  await excel.click('#graphUse');
+  await expect(genStatus(excel)).toContainText('fmGraph scenarios used: 2 Global Cases (Base and 1)');
+  const { wb, bytes } = await X.generate(excel);
+  expect(wb.SheetNames.slice(0, 3)).toEqual(['Dashboard', 'Scenarios', 'Inputs']);
+  await expect(excel.locator('#differencesPanel')).toBeHidden();
+
+  // The Price slider's row on the Dashboard (set, every period); the board's other sliders stay as they open.
+  const priceRow = X.findRow(wb.Sheets.Dashboard, 'Price').find(r => r >= 5 && wb.Sheets.Dashboard['C' + r].v === 'Set to' && wb.Sheets.Dashboard['B' + r].v === 'all periods');
+  expect(priceRow).toBeGreaterThanOrEqual(5);
+  const edited = (fn) => { const c = JSON.parse(JSON.stringify(wb)); fn(c.Sheets.Dashboard, c.Sheets.Scenarios); return X.writeWithApp(excel, c); };
+  const out = recalc({
+    typed: await edited(d => { d['F' + priceRow] = { t: 'n', v: 12 }; d['I' + priceRow] = { t: 'b', v: true }; }),
+    high: await edited((d, sc) => { sc.C2 = { t: 'n', v: 2 }; }),
+  });
+  const p1 = X.periodOneCol(wb.Sheets.Profit);
+  const rowOf = (label) => X.findRow(wb.Sheets.Profit, label).filter(r => r > 3)[0];
+  const agree = async (name, want) => {
+    const ws = (await X.readBack(out[name])).getWorksheet('Profit');
+    outputs.forEach((o, i) => [0, 1, 2, 3].forEach(p => {
+      const v = valueOf(ws.getCell(rowOf(o), p1 + p));
+      if(!near(v, want[i][p])) throw new Error(`${name}: ${o} in period ${p + 1} is ${v}, fmGraph says ${want[i][p]}`);
+    }));
+  };
+  await agree('typed', want12);
+  await agree('high', wantHigh);
+  // The waterfall's helper rows with Price 12: fmGraph's own From and To.
+  const top = X.findRow(wb.Sheets.Dashboard, 'Chart data: Profit walk (2030)')[0];
+  const dash = (await X.readBack(out.typed)).getWorksheet('Dashboard');
+  walk12.forEach((f, k) => [['value', 1], ['from', 2], ['to', 3]].forEach(([key, r]) => {
+    const raw = valueOf(dash.getCell(top + r, 2 + k)), v = raw === undefined ? 0 : raw; // a formula giving 0 reads as none
+    if(!near(v, f[key])) throw new Error(`step ${k + 1}'s ${key} is ${v}, fmGraph says ${f[key]}`);
+  }));
+  // The Tornado's Data Table: fmGraph's own Low and High.
+  const tables = await X.readBack(recalcDataTables({ wb: bytes }).wb);
+  const sheet = 'What moves Profit', ws = tables.getWorksheet(sheet);
+  const head = X.findRow(wb.Sheets[sheet], 'Input variable', 'B')[0];
+  tornado.inputs.forEach(i => {
+    const r = X.findRow(wb.Sheets[sheet], i.name, 'B').find(x => x > head && x <= head + 2);
+    const low = valueOf(ws.getCell(r, 14)), high = valueOf(ws.getCell(r, 14 + 10));
+    if(!near(low, i.lowValue) || !near(high, i.highValue)) throw new Error(`${i.name} gives ${low} / ${high}, fmGraph ${i.lowValue} / ${i.highValue}`);
+  });
 });

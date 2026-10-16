@@ -286,3 +286,28 @@ test('where the workbook will differ from fmIDE shows on the phone screen too', 
   expect(b.x + b.width).toBeLessThanOrEqual(390);
   await phone.done();
 });
+
+// Step 19 B5: fmGraph's boards, used in the full page, put the Dashboard first in the phone's list
+// of tabs, and the workbook made on the phone carries its sliders and charts.
+test('the Dashboard from fmGraph\'s boards is listed first on the phone screen and made with the workbook', async ({ browser }) => {
+  const phone = await openPhone(browser, { init: [shareStandIn('share')] });
+  const p = phone.page;
+  await phone.open(fixture('graph-boards', 'profit.fmide'));
+  expect((await tabsShown(p)).map(t => t[0])).not.toContain('Dashboard');
+  await phone.menu('phoneMenuFullApp');
+  await X.menuCommand(p, 'btnUseGraphBoards');
+  await p.click('#graphUse');
+  await expect(p.locator('#genStatus .status')).toContainText('5 sliders on the Dashboard. 1 chart on the Dashboard.');
+  await phone.tapOn(p.locator('#phoneLayoutBtn'));
+  await expect(p.locator('#phoneLoaded')).toBeVisible();
+  const names = (await tabsShown(p)).map(t => t[0]);
+  expect(names.slice(0, 3)).toEqual(['Dashboard', 'Scenarios', 'Inputs']);
+  await phone.tapOn(p.locator('#phoneMake'));
+  await expect.poll(() => p.evaluate(() => (window.__shared || []).length)).toBe(1);
+  const shared = await p.evaluate(() => window.__shared[0]);
+  const zip = await JSZip.loadAsync(Buffer.from(shared.bytes));
+  expect(await zip.file('xl/workbook.xml').async('string')).toMatch(/<sheet name="Dashboard" sheetId="1"/);
+  expect(Object.keys(zip.files).filter(f => /^xl\/charts\/chart\d+\.xml$/.test(f)).length).toBeGreaterThanOrEqual(1);
+  expect(Object.keys(zip.files).filter(f => /^xl\/ctrlProps\//.test(f)).length).toBeGreaterThanOrEqual(5);
+  await phone.done();
+});
