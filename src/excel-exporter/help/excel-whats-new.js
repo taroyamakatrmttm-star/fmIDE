@@ -15,7 +15,7 @@ const EXCEL_WHATS_NEW = [
     summary: 'Layout → Use fmGraph boards… also turns a board\'s bars and charts into Excel charts on the Dashboard, which follow the sliders.',
     what: [
       'The window lists the picked board\'s bars and charts, each with a tick box.',
-      'A bar becomes a column chart, a columns chart stacked columns, and a flow a waterfall, with its workings in rows of formulas under it.',
+      'A bar becomes a column chart, a columns chart stacked columns, and a flow a waterfall, with its workings in rows of formulas beside it.',
       'Titles, names, the colours you picked and a fixed scale come along. A scenario waterfall is not carried.',
     ],
     why: 'So whoever opens the workbook sees the same charts as on your board, and sees them move.',

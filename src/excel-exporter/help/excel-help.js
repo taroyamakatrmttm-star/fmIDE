@@ -262,8 +262,8 @@ const EXCEL_HELP_TOPICS = [
       { p: 'Layout → Use fmGraph boards… lists the picked board\'s bars and charts with a tick box each. Press Use, then ⬇ Generate .xlsx. They go on the Dashboard, under the sliders, in the board\'s order: a wide one takes the full width, narrow ones sit two to a row. A model with charts but no sliders still gets a Dashboard.' },
       { steps: [
         'A bar becomes a column chart of the rectangle over its periods, read straight from the rectangle\'s row.',
-        'A columns chart becomes stacked columns, one series per rectangle. With several groups, a small table under the chart has a column per period and group, so each group stacks on its own.',
-        'A flow becomes a waterfall. Under it, rows of formulas work it out: Value, From and To (the running total, as fmGraph works it out), then the parts Excel stacks: an invisible Base, and Total, Rise and Fall above and below 0.',
+        'A columns chart becomes stacked columns, one series per rectangle. With several groups, a small table beside the chart has a column per period and group, so each group stacks on its own.',
+        'A flow becomes a waterfall. Beside it (from column N), rows of formulas work it out: Value, From and To (the running total, as fmGraph works it out), then the parts Excel stacks: an invisible Base, and Total, Rise and Fall above and below 0.',
       ] },
       { p: 'Every chart reads its numbers from the model\'s rows, so it moves with the sliders, the Global Case and anything you change in Excel. Titles, names and the colours you picked in fmGraph come along; a fixed scale becomes the axis\'s minimum and maximum. Before Excel recalculates, the charts show fmIDE\'s numbers.' },
       { tip: 'A rectangle left out of the workbook, or made a constant, can\'t be charted: ⬇ Generate says which.' },

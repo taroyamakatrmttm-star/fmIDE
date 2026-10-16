@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: the Dashboard's chart tables tidied (after step 19)
+- The data tables behind the Dashboard's charts (a waterfall's workings, the table of a columns chart with several groups) now sit beside the charts, from column N, in columns of their own width instead of the slider table's; each table's title has a row of its own, so the names beside it no longer cut it off (found in the owner's check on the iPad). The charts and their numbers are unchanged.
+
 ## ExcelExporter: fmGraph's charts on the Dashboard, and step 19 finished (step 19, phase B5)
 - **Layout → Use fmGraph boards…** lists the picked board's **bars and charts** and draws them as Excel charts on the Dashboard, under the sliders, in the board's order (wide charts the full width, narrow ones two to a row): a bar is a column chart of its row; a columns chart stacked columns (with several groups, from a small table under it, so each group stacks on its own); a flow a stacked-column waterfall over rows of formulas under it — Value, From, To (the running total, as fmGraph works it out), and what Excel stacks: an invisible base, then Total, Rise and Fall above and below 0, so a bar crossing 0 is drawn right. They follow the sliders and the Global Case. Titles, names, the colours picked in fmGraph and a fixed scale come along; before Excel recalculates the charts show fmIDE's numbers. A scenario waterfall is not carried (said in the window). A layout with charts but no sliders still gets a Dashboard.
 - The layout file is now **version 8** (`cfg.graph.charts`); version 7 files open as they are.
