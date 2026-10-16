@@ -11,6 +11,18 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'several-analyses', date: '2026-10-16', title: 'Several sensitivity analyses',
+    summary: 'The Sensitivity panel now holds up to 10 analyses, each with its own tab, Data Table, Tornado and Spider.',
+    what: [
+      'The Sensitivity panel lists the analyses: + Add, ↑ ↓ to order them and × to remove one. Click one to edit it below; its Name is its tab\'s name in the workbook.',
+      'Each analysis writes its own Sensitivity tab ("Sensitivity", "Sensitivity 2"…), with its own Data Table and its own Tornado and Spider charts.',
+      'An input moved by several analyses keeps one row on the Inputs tab: its base × (1 + every analysis\'s % part) + every amount part. Only the tab whose Data Table is running moves it, so each table still moves one input at a time.',
+    ],
+    why: 'To look at different outputs, periods or inputs side by side, in one workbook.',
+    how: ['Under Sensitivity, press + Add.', 'Name it, tick Tornado and Spider, and add its outputs and inputs.', 'Press ⬇ Generate .xlsx: each analysis has its own tab.'],
+    notes: ['Layouts saved before open with their one analysis, named Sensitivity. Each analysis is one more Data Table for Excel to work out.'],
+    see: ['sensitivity'] },
+
   { id: 'fmgraph-scenarios', date: '2026-10-15', title: 'fmGraph\'s scenarios become Global Cases',
     summary: 'Layout → Use fmGraph boards… turns the scenarios you saved in fmGraph into the workbook\'s Global Cases, after Base.',
     what: [

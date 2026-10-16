@@ -155,6 +155,12 @@
 
       <section class="card" id="sensitivityPanel">
         <h2>Sensitivity</h2>
+        <div class="sens-group">
+          <div id="sensAnalyses" class="sens-list" role="list" aria-label="Analyses"></div>
+          <button id="btnSensAdd" class="btn-quiet sens-add-analysis" title="Another analysis: its own Sensitivity tab, Data Table and charts">+ Add</button>
+        </div>
+        <div id="sensEditor" class="stack">
+        <label class="field" title="The analysis's name: its tab's name in the workbook"><span>Name</span><input type="text" id="cfgSensName" maxlength="31"></label>
         <label class="check-line" title="A Sensitivity tab: how much each input you pick moves an output, live in Excel, with a Tornado and a Spider chart">
           <input type="checkbox" id="cfgSensEnabled"> Tornado and Spider
         </label>
@@ -179,6 +185,7 @@
               <button id="btnSensAddAllVars" class="btn-quiet" title="Move every input (each by % from −10 to +10)">Add all</button>
             </div>
           </div>
+        </div>
         </div>
         <div id="sensStatus"></div>
       </section>

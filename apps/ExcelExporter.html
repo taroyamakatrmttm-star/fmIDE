@@ -755,6 +755,10 @@ var XLSX = (function(){
   .sens-remove{ border-color:transparent; background:transparent; padding:0 6px; }
   .sens-add{ display:flex; gap:6px; }
   .sens-add select, #sensOutputPick{ flex:1 1 auto; min-width:0; }
+  .sens-analysis .sens-pick{ flex:1 1 auto; min-width:0; text-align:left; border-color:transparent; background:transparent; padding:2px 6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .sens-analysis.picked .sens-pick{ border-color:var(--border); font-weight:600; }
+  .sens-analysis .sens-state{ font-size:11px; color:var(--muted); }
+  .sens-add-analysis{ align-self:flex-start; }
 
   /* The rows. */
   .rows-head{ display:flex; align-items:center; gap:10px 14px; flex-wrap:wrap; margin-bottom:10px; }
@@ -1144,6 +1148,12 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
 
       <section class="card" id="sensitivityPanel">
         <h2>Sensitivity</h2>
+        <div class="sens-group">
+          <div id="sensAnalyses" class="sens-list" role="list" aria-label="Analyses"></div>
+          <button id="btnSensAdd" class="btn-quiet sens-add-analysis" title="Another analysis: its own Sensitivity tab, Data Table and charts">+ Add</button>
+        </div>
+        <div id="sensEditor" class="stack">
+        <label class="field" title="The analysis's name: its tab's name in the workbook"><span>Name</span><input type="text" id="cfgSensName" maxlength="31"></label>
         <label class="check-line" title="A Sensitivity tab: how much each input you pick moves an output, live in Excel, with a Tornado and a Spider chart">
           <input type="checkbox" id="cfgSensEnabled"> Tornado and Spider
         </label>
@@ -1168,6 +1178,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
               <button id="btnSensAddAllVars" class="btn-quiet" title="Move every input (each by % from −10 to +10)">Add all</button>
             </div>
           </div>
+        </div>
         </div>
         <div id="sensStatus"></div>
       </section>
@@ -5055,8 +5066,8 @@ const FILE_FORMATS = {
   'system':              { current: SHARED_FILE_VERSIONS['system'], label: 'fmIDE system' },
   'fmIDE-workspace':     { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'fmIDE workspace' },
   // v3: the Tornado and Spider's settings, `cfg.sensitivity` (step 16); v4: `cfg.graph`, what
-  // Use fmGraph boards… copied (step 19 B2).
-  'fmIDE-excel-mapping': { current: 4, label: 'ExcelExporter mapping file' },
+  // Use fmGraph boards… copied (step 19 B2); v5: several analyses, `cfg.sensitivities` (step 19 B3).
+  'fmIDE-excel-mapping': { current: 5, label: 'ExcelExporter mapping file' },
   // The person's own Excel style (step 11a): how every cell looks, by role.
   'fmIDE-excel-style':   { current: 1, label: 'ExcelExporter Excel style file' },
   // The layouts remembered per module (step 11b); v2: a module's block instances' layout, `instance` (step 11d).
@@ -5076,10 +5087,19 @@ const OTHER_FMIDE_KINDS = {
 // The mapping file's upgrades. v2: any row may carry its own format (`style`) and an
 // `indent`; a v1 file has neither, so it reads as it is. v3: `cfg.sensitivity` (the
 // Tornado and Spider, step 16); a v2 file has none (off), so it too reads as it is. v4: `cfg.graph`
-// (fmGraph's scenarios, step 19 B2); a v3 file has none, so it reads as it is. The module layouts file's v2 adds
+// (fmGraph's scenarios, step 19 B2); a v3 file has none, so it reads as it is. v5: `cfg.sensitivities`,
+// several analyses (step 19 B3); a v4 file's one `cfg.sensitivity` becomes the first, named
+// "Sensitivity", and stays as it is (the copy an older ExcelExporter reads). The module layouts file's v2 adds
 // `instance` (step 11d); a v1 file has none, so it too reads as it is.
 const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
-  'fmIDE-excel-mapping': { 1: (d) => { d.version = 2; return d; }, 2: (d) => { d.version = 3; return d; }, 3: (d) => { d.version = 4; return d; } },
+  'fmIDE-excel-mapping': { 1: (d) => { d.version = 2; return d; }, 2: (d) => { d.version = 3; return d; }, 3: (d) => { d.version = 4; return d; },
+    4: (d) => {
+      if(d.cfg && typeof d.cfg === 'object' && !Array.isArray(d.cfg) && !Array.isArray(d.cfg.sensitivities)){
+        const one = d.cfg.sensitivity && typeof d.cfg.sensitivity === 'object' && !Array.isArray(d.cfg.sensitivity) ? d.cfg.sensitivity : {};
+        d.cfg.sensitivities = [Object.assign({ name: 'Sensitivity' }, JSON.parse(JSON.stringify(one)))];
+      }
+      d.version = 5; return d;
+    } },
   'fmIDE-excel-module-layouts': { 1: (d) => { d.version = 2; return d; } }
 });
 // Returns { error } or { kind, data (migrated copy), fromVersion, newer, newerParts }.
@@ -5252,6 +5272,7 @@ function saveMapping(){
 function writeMapping(){
   if(!mappingKey) return;
   let text;
+  syncSensitivityCopy(); // the first analysis, as an older ExcelExporter reads it (09g)
   try{ text = JSON.stringify(mapping); }
   catch(err){ onMappingSaveFailed(err); return; }
   return layoutStore.put(mappingKey, text).then(() => {
@@ -8659,11 +8680,15 @@ function buildCtx(){
   mapping.tabs.forEach(t => rowsByTabOrdered[t.id] = []);
   const sectioned = sectionsEnabled();
   const scenarioBlocks = {}; // Inputs-tab variable row id -> { first, n } (its scenario rows)
-  // Sensitivity (09g-sensitivity.js): each input it moves, by its Inputs-tab row id. One
-  // without scenarios gets a base row above it (sensBase: row id -> that row's number).
-  const plan = sensitivityPlan();
-  const sens = plan && !plan.problem ? plan : null;
-  const sensMoved = new Map(sens ? sens.variables.map((v, i) => [v.mirror.id, i]) : []);
+  // Sensitivity (09g-sensitivity.js): the analyses written, and each input they move, by its
+  // Inputs-tab row id: [{ a: analysis, i: its input number }]. One without scenarios gets a
+  // base row above it (sensBase: row id -> that row's number), however many analyses move it.
+  const sens = sensitivityPlans();
+  const sensMoved = new Map();
+  sens.forEach((plan, a) => plan.variables.forEach((v, i) => {
+    if(!sensMoved.has(v.mirror.id)) sensMoved.set(v.mirror.id, []);
+    sensMoved.get(v.mirror.id).push({ a, i });
+  }));
   const sensBase = {};
   const reserveRows = (row, r) => {
     r = reserveScenarioRows(row, r, scenarioBlocks);
@@ -8774,9 +8799,14 @@ function buildWorkbook(){
   const SCN_FIRST_ROW = nCases ? 8 : 4; // with global cases: case block rows 2-3, "Scenarios" section from row 5
   scenarioVars.forEach((e, i) => { scenarioRowOf[e.row.id] = SCN_FIRST_ROW + i; });
   const HDR = (extra) => roleCellStyle('Headers', extra);
-  // Sensitivity: its tab's name and where everything on it sits, known before the Inputs tab
-  // (whose moved inputs read it) is written.
-  const sensLay = ctx.sens ? sensitivityLayout(ctx.sens, addedTabName('Sensitivity', [scenarioSheetName || ''])) : null;
+  // Sensitivity: each analysis's tab name and where everything on it sits, known before the
+  // Inputs tab (whose moved inputs read them) is written.
+  const sensTaken = [scenarioSheetName || ''];
+  const sensLays = ctx.sens.map(plan => {
+    const name = addedTabName(plan.name, sensTaken);
+    sensTaken.push(name);
+    return sensitivityLayout(plan, name);
+  });
   try{
   const nPeriods = model.periods.length;
   const fallbackFmt = mapping.cfg.fallbackFormat || 'General';
@@ -8864,11 +8894,13 @@ function buildWorkbook(){
       // A scenario variable (Inputs tab): N scenario rows above this row, then this row
       // picking one of them.
       const scnBlock = row.isInputMirror ? ctx.scenarioBlocks[row.id] : null;
-      // An input the Sensitivity tab moves: its base (the scenario it picks, or the base row
-      // above it) × (1 + the % change) + the amount change, both 0 unless it is being moved.
-      const sensIndex = row.isInputMirror && sensLay && ctx.sensMoved.has(row.id) ? ctx.sensMoved.get(row.id) : null;
-      const sensBaseRow = sensIndex !== null ? ctx.sensBase[row.id] : undefined;
-      const moved = (base) => '(' + base + ')*(1+' + sensLay.pctRef(sensIndex, tab.name) + ')+' + sensLay.amtRef(sensIndex, tab.name);
+      // An input Sensitivity tabs move: its base (the scenario it picks, or the base row above
+      // it) × (1 + the analyses' % parts) + their amount parts, each 0 unless its own tab is
+      // moving this input.
+      const sensParts = row.isInputMirror && sensLays.length && ctx.sensMoved.get(row.id) || null;
+      const sensBaseRow = sensParts ? ctx.sensBase[row.id] : undefined;
+      const moved = (base) => '(' + base + ')*(1+' + sensParts.map(({ a, i }) => sensLays[a].pctRef(i, tab.name)).join('+') + ')+' +
+        sensParts.map(({ a, i }) => sensLays[a].amtRef(i, tab.name)).join('+');
 
       const lastHop = row.path && row.path.length ? row.path[row.path.length - 1] : null;
       const rowVintage = (lastHop && typeof lastHop.vIndex === 'number') ? lastHop.vIndex : null;
@@ -8909,7 +8941,7 @@ function buildWorkbook(){
         // an ordinary rectangle (it's the reducer across every vintage's copy of this same
         // node); build its formula separately instead of going through buildCellContent.
         const picked = scnBlock ? 'INDEX(' + col + scnBlock.first + ':' + col + (scnBlock.first + scnBlock.n - 1) + ',MIN(MAX($' + VINTAGE_COL + excelRow + ',1),' + scnBlock.n + '))' : null;
-        contents.push(sensIndex !== null
+        contents.push(sensParts
           ? { isFormula: true, formula: moved(picked || (col + sensBaseRow)) }
           : scnBlock
           ? { isFormula: true, formula: picked }
@@ -8922,7 +8954,7 @@ function buildWorkbook(){
       // Role of the row: Inputs (typed numbers) · Links (every cell only pulls one cell
       // from another sheet) · Calculations (any other formula).
       const PURE_LINK = /^(?:'(?:[^']|'')+'|[A-Za-z0-9_.]+)!\$?[A-Z]{1,3}\$?\d+$/;
-      const rowRole = scnBlock || sensIndex !== null ? 'Calculations'
+      const rowRole = scnBlock || sensParts ? 'Calculations'
         : row.isInputMirror ? 'Inputs'
         : linkPos ? 'Links'
         : isInputNode(canvas, node) ? 'Inputs'
@@ -9047,11 +9079,12 @@ function buildWorkbook(){
   // Functions tab (last): every function version whose calls the formulas write out.
   if(functionUses.size) appendFunctionsSheet(wb, functionUses, HDR);
 
-  // Sensitivity tab, after the model's tabs (09g-sensitivity.js).
-  if(sensLay){
-    const sheet = appendSensitivitySheet(wb, ctx.sens, sensLay, ctx, labels);
-    placeSensitivityCharts(wb, ctx.sens, sensLay, sheet); // the Tornado and Spider charts
-  }
+  // The Sensitivity tabs, after the model's tabs (09g-sensitivity.js): each analysis's tab,
+  // then its Tornado and Spider charts.
+  sensLays.forEach((lay, a) => {
+    const sheet = appendSensitivitySheet(wb, ctx.sens[a], lay, ctx, labels);
+    placeSensitivityCharts(wb, ctx.sens[a], lay, sheet, sensTaken); // the Tornado and Spider charts
+  });
 
   // Scenarios tab (first sheet).
   // With global cases (nCases > 0), following the layout of the workbook it was designed from:
@@ -10367,18 +10400,19 @@ const EXCEL_HELP_TOPICS = [
       { see: ['scenarios', 'inputs-tab'] },
     ] },
   { id: 'sensitivity', group: 'inputs', title: 'Sensitivity: the Tornado and the Spider',
-    keywords: 'sensitivity tornado spider what if data table swing low high base output input percent amount',
+    keywords: 'sensitivity tornado spider what if data table swing low high base output input percent amount analysis analyses several add',
     summary: 'See how much each input moves an output: every input from Low to High, worked out live in Excel.',
     body: [
       { p: 'A Tornado shows, for each input, how far an output moves when that input goes to its Low and to its High — the input that moves it most at the top. A Spider shows each input\'s whole line, from Low through the base to High.' },
       { steps: [
         'Turn on Gather inputs on a separate tab (Inputs & scenarios): the inputs to move live there.',
-        'Under Sensitivity, tick Tornado and Spider.',
+        'Under Sensitivity, tick Tornado and Spider (for another analysis, press + Add first).',
         'Add the outputs to watch (any rectangle the workbook writes) and pick the period.',
         'Add the inputs to move — one by one, or Add all. For each, choose % (a percentage of its numbers) or amount (added to them), and its Low and High: −10 and +10 means 10% lower and 10% higher, or 10 less and 10 more.',
         'Spider steps sets how many points lie between the base and each of Low and High; Charts puts the two charts on their own tabs, or on the Sensitivity tab below its tables.',
         'Press ⬇ Generate .xlsx.',
       ] },
+      { p: 'You can have up to 10 analyses. The panel lists them: click one to edit it below, + Add makes another, ↑ ↓ change their order and × removes one. Each has a Name, which is its tab\'s name in the workbook, and its own outputs, period, inputs and charts. Each writes its own Sensitivity tab (Sensitivity, Sensitivity 2…) with its own Data Table and charts. An input several analyses move keeps one Base row; its own row adds their parts together, its base × (1 + each % part) + each amount part, and only the tab whose Data Table is running has a part that isn\'t 0.' },
       { p: 'The workbook gets a Sensitivity tab. Each input you move gets a Base row on the Inputs tab, and its own row becomes the base changed by the Sensitivity tab — by nothing, unless that tab\'s Input moved cell names it, so the model shows its own numbers. An Excel Data Table (What-If Analysis) works the output out with each input at each point, live: change Low, High, Show (1 or 0), the output (C4) or the period (C5) in Excel and the tables follow. The Tornado table sorts the inputs by how much they move the output; the Spider table lists each line. The Tornado chart draws each input\'s Low and High as bars either side of the base, the input that moves the output most at the top; the Spider chart draws each input\'s line. Both follow the tables, so they change with them in Excel.' },
       { tip: 'Keep Input moved (C6) and Point (C7) at 0: the Data Table moves them itself. A check beside C6 says so if it isn\'t 0.' },
       { p: 'Inputs inside a block can\'t be moved (every copy of the block shares them), and only inputs gathered on the Inputs tab can. A Data Table works the whole model out once for each cell, so on a large model Excel may take a moment; Excel\'s Formulas → Calculation Options → Automatic except for data tables pauses it (press F9 to work it out).' },
@@ -10461,6 +10495,18 @@ const EXCEL_HELP_TOPICS = [
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'several-analyses', date: '2026-10-16', title: 'Several sensitivity analyses',
+    summary: 'The Sensitivity panel now holds up to 10 analyses, each with its own tab, Data Table, Tornado and Spider.',
+    what: [
+      'The Sensitivity panel lists the analyses: + Add, ↑ ↓ to order them and × to remove one. Click one to edit it below; its Name is its tab\'s name in the workbook.',
+      'Each analysis writes its own Sensitivity tab ("Sensitivity", "Sensitivity 2"…), with its own Data Table and its own Tornado and Spider charts.',
+      'An input moved by several analyses keeps one row on the Inputs tab: its base × (1 + every analysis\'s % part) + every amount part. Only the tab whose Data Table is running moves it, so each table still moves one input at a time.',
+    ],
+    why: 'To look at different outputs, periods or inputs side by side, in one workbook.',
+    how: ['Under Sensitivity, press + Add.', 'Name it, tick Tornado and Spider, and add its outputs and inputs.', 'Press ⬇ Generate .xlsx: each analysis has its own tab.'],
+    notes: ['Layouts saved before open with their one analysis, named Sensitivity. Each analysis is one more Data Table for Excel to work out.'],
+    see: ['sensitivity'] },
+
   { id: 'fmgraph-scenarios', date: '2026-10-15', title: 'fmGraph\'s scenarios become Global Cases',
     summary: 'Layout → Use fmGraph boards… turns the scenarios you saved in fmGraph into the workbook\'s Global Cases, after Base.',
     what: [
@@ -11197,12 +11243,20 @@ askFmideForModel();
 // The numbers fmIDE's calculation gives (the shared IR, with the input's numbers laid over
 // it) are written into the Data Table's cells too, so the file shows them before Excel has
 // recalculated. Settings: mapping.cfg.sensitivity (cleanSensitivity), mapping file v3.
+// Several analyses (step 19 B3, mapping file v5): mapping.cfg.sensitivities, a list of at most
+// SENS_MAX_ANALYSES, each that setup plus a `name`; each writes its own tab (named after it),
+// Data Table and charts. An input several move gets their parts added on its row:
+// (base) × (1 + Σ % parts) + Σ amount parts — only the tab whose Data Table is running has a
+// part that isn't 0. mapping.cfg.sensitivity stays as a copy of the first analysis, for an
+// older ExcelExporter (it is written, never read once the list is there).
 // ============================================================
 const SENS_MAX_VARIABLES = 50, SENS_MAX_OUTPUTS = 20, SENS_MAX_STEPS = 10, SENS_DEFAULT_STEPS = 5;
 const SENS_MAX_CHANGE = 1e9; // a Low or High beyond this is cut to it
 const SENS_BY = ['percent', 'amount'];
 const SENS_CHART_PLACES = ['tabs', 'sheet'];
 const SENS_DEFAULT_CHANGE = { percent: [-10, 10], amount: [-1, 1] };
+const SENS_MAX_ANALYSES = 10, SENS_NAME_MAX = 31; // a name is a tab name: Excel's 31 characters
+let sensPicked = 0; // the analysis the panel edits (the page's own, never saved)
 
 function defaultSensitivity(){
   return { enabled: false, outputs: [], period: 0, steps: SENS_DEFAULT_STEPS, charts: 'tabs', variables: [] };
@@ -11237,7 +11291,38 @@ function cleanSensitivity(raw, periodCount){
   });
   return out;
 }
-function sensCfg(){ return mapping.cfg.sensitivity; }
+// An analysis's name, from a file (untrusted): text, no control characters, at most 31
+// characters; none gives "Sensitivity" (the first) or "Sensitivity n".
+function sensDefaultName(i){ return i ? 'Sensitivity ' + (i + 1) : 'Sensitivity'; }
+function cleanSensName(raw, i){
+  const t = typeof raw === 'string' ? raw.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, SENS_NAME_MAX).trim() : '';
+  return t || sensDefaultName(i);
+}
+// The list of analyses from a layout's cfg (untrusted): `sensitivities` when it is there, else
+// the one `sensitivity` of a layout from before (version 4 or older, or kept in this browser),
+// named "Sensitivity". At most SENS_MAX_ANALYSES, each through cleanSensitivity.
+function cleanSensitivities(cfg, periodCount){
+  const src = cfg && typeof cfg === 'object' ? cfg : {};
+  const list = Array.isArray(src.sensitivities) ? src.sensitivities
+    : [Object.assign({}, src.sensitivity && typeof src.sensitivity === 'object' ? src.sensitivity : {}, { name: 'Sensitivity' })];
+  return list.filter(a => a && typeof a === 'object' && !Array.isArray(a)).slice(0, SENS_MAX_ANALYSES)
+    .map((a, i) => Object.assign({ name: cleanSensName(a.name, i) }, cleanSensitivity(a, periodCount)));
+}
+// The copy of the first analysis an older ExcelExporter reads (`cfg.sensitivity`, step 16's form).
+function syncSensitivityCopy(){
+  if(!mapping || !Array.isArray(mapping.cfg.sensitivities)) return;
+  const first = mapping.cfg.sensitivities[0];
+  const copy = first ? JSON.parse(JSON.stringify(first)) : defaultSensitivity();
+  delete copy.name;
+  mapping.cfg.sensitivity = copy;
+}
+// The analysis the panel edits, or null when there is none.
+function sensCfg(){
+  const list = mapping && mapping.cfg.sensitivities;
+  if(!list || !list.length) return null;
+  sensPicked = Math.max(0, Math.min(list.length - 1, sensPicked));
+  return list[sensPicked];
+}
 
 // An input that can be moved: a rectangle row whose numbers are typed, on a canvas that isn't
 // a block (inside a block, or on the canvas a block is made from, every copy of the block
@@ -11252,18 +11337,26 @@ function isSensitivityOutputRow(row){
 }
 // Called when a model or a layout is read: settings cleaned, rows that are gone dropped.
 function reconcileSensitivity(){
-  const cfg = cleanSensitivity(mapping.cfg.sensitivity, model.periods.length);
+  const list = cleanSensitivities(mapping.cfg, model.periods.length);
   const byId = new Map(mapping.rows.map(r => [r.id, r]));
-  cfg.outputs = cfg.outputs.filter(id => byId.has(id) && !byId.get(id).isCustom);
-  cfg.variables = cfg.variables.filter(v => isSensitivityInputRow(byId.get(v.row)));
-  mapping.cfg.sensitivity = cfg;
+  list.forEach(cfg => {
+    cfg.outputs = cfg.outputs.filter(id => byId.has(id) && !byId.get(id).isCustom);
+    cfg.variables = cfg.variables.filter(v => isSensitivityInputRow(byId.get(v.row)));
+  });
+  mapping.cfg.sensitivities = list;
+  sensPicked = 0;
+  syncSensitivityCopy();
 }
 
-// What the workbook will hold, or { problem } saying why there is no Sensitivity tab:
-// { variables: [{ spec, source, mirror }], outputs: [row], steps, period }.
-function sensitivityPlan(){
-  const cfg = mapping && mapping.cfg.sensitivity;
-  if(!cfg || !cfg.enabled) return null;
+// The analyses the workbook writes: each one on and complete, its plan with its `name`.
+function sensitivityPlans(){
+  if(!mapping || !Array.isArray(mapping.cfg.sensitivities)) return [];
+  return mapping.cfg.sensitivities.map(sensitivityPlan).filter(p => p && !p.problem);
+}
+// What the workbook will hold for one analysis, or { problem } saying why it has no tab:
+// { name, variables: [{ spec, source, mirror }], outputs: [row], steps, period }.
+function sensitivityPlan(cfg){
+  if(!mapping || !cfg || !cfg.enabled) return null;
   if(!inputsEnabled()) return { problem: 'Turn on “Gather inputs on a separate tab” (Inputs & scenarios): the inputs to move live there.' };
   const mirrors = new Map(inputMirrorRows().map(m => [m.sourceRowId, m]));
   const variables = [];
@@ -11278,7 +11371,7 @@ function sensitivityPlan(){
   if(!variables.length && !outputs.length) return { problem: 'Add the inputs to move and at least one output.' };
   if(!variables.length) return { problem: 'Add at least one input to move.' };
   if(!outputs.length) return { problem: 'Add at least one output.' };
-  return { variables, outputs, steps: cfg.steps, period: Math.min(cfg.period, model.periods.length - 1), charts: cfg.charts };
+  return { name: cfg.name || 'Sensitivity', variables, outputs, steps: cfg.steps, period: Math.min(cfg.period, model.periods.length - 1), charts: cfg.charts };
 }
 
 // The points along each input's line: −n … −1 (towards Low), 0 (the base), 1 … n (towards High).
@@ -11574,8 +11667,9 @@ function sensitivityCharts(plan, lay, cached){
 }
 
 // Puts the two charts where the person chose: each on its own chart tab after the
-// Sensitivity tab, or on that tab below the Spider table, side by side.
-function placeSensitivityCharts(wb, plan, lay, sheet){
+// Sensitivity tab, or on that tab below the Spider table, side by side. `alsoTaken`: the other
+// analyses' tab names, not all written yet.
+function placeSensitivityCharts(wb, plan, lay, sheet, alsoTaken){
   const { tornado, spider } = sensitivityCharts(plan, lay, sheet.cached);
   if(plan.charts === 'sheet'){
     const top = lay.spiderHead + lay.V + 2; // 0-based: two rows below the Spider table
@@ -11586,7 +11680,7 @@ function placeSensitivityCharts(wb, plan, lay, sheet){
     sheet.ws['!ref'] = 'A1:' + colLetter(lay.cols.rank) + (top + 25);
     return [];
   }
-  const taken = wb.SheetNames.slice();
+  const taken = wb.SheetNames.concat(alsoTaken || []);
   const tName = addedTabName('Tornado', taken);
   XLSX.utils.book_append_chartsheet(wb, tornado, tName);
   const sName = addedTabName('Spider', taken.concat([tName]));
@@ -11598,8 +11692,12 @@ function placeSensitivityCharts(wb, plan, lay, sheet){
 // Text only (names come from the loaded file): textContent everywhere.
 function renderSensitivity(){
   const panel = $('sensitivityPanel');
-  if(!panel || !mapping || !mapping.cfg.sensitivity) return;
+  if(!panel || !mapping || !Array.isArray(mapping.cfg.sensitivities)) return;
+  renderSensitivityList();
   const cfg = sensCfg();
+  $('sensEditor').classList.toggle('hidden', !cfg);
+  if(!cfg){ setStatus($('sensStatus'), '', 'warn'); return; }
+  $('cfgSensName').value = cfg.name;
   $('cfgSensEnabled').checked = cfg.enabled;
   $('sensOptions').classList.toggle('hidden', !cfg.enabled);
   const byId = new Map(mapping.rows.map(r => [r.id, r]));
@@ -11696,9 +11794,70 @@ function renderSensitivity(){
   $('btnSensAddAllVars').disabled = !candidates.length || cfg.variables.length >= SENS_MAX_VARIABLES;
 
   // Why there will be no Sensitivity tab, if there won't.
-  const plan = cfg.enabled ? sensitivityPlan() : null;
+  const plan = cfg.enabled ? sensitivityPlan(cfg) : null;
   setStatus($('sensStatus'), plan && plan.problem ? plan.problem : '', 'warn');
 }
+// The analyses: each picks the one the panel edits, with ↑ ↓ and ×; + Add up to the limit.
+function renderSensitivityList(){
+  const list = mapping.cfg.sensitivities;
+  const box = $('sensAnalyses');
+  box.textContent = '';
+  list.forEach((a, i) => {
+    const line = document.createElement('div');
+    line.className = 'sens-line sens-analysis' + (i === sensPicked ? ' picked' : '');
+    line.setAttribute('role', 'listitem');
+    const pick = document.createElement('button');
+    pick.type = 'button'; pick.className = 'sens-pick';
+    pick.textContent = a.name;
+    pick.title = 'Edit this analysis';
+    pick.setAttribute('aria-pressed', i === sensPicked ? 'true' : 'false');
+    pick.addEventListener('click', () => { sensPicked = i; renderSensitivity(); });
+    const state = document.createElement('span');
+    state.className = 'sens-state';
+    state.textContent = a.enabled ? '' : 'off';
+    const btn = (text, cls, title, disabled, act) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'icon ' + cls; b.textContent = text;
+      b.title = title; b.setAttribute('aria-label', title + ': ' + a.name);
+      b.disabled = disabled;
+      b.addEventListener('click', act);
+      return b;
+    };
+    const move = (by) => () => {
+      const j = i + by;
+      [list[i], list[j]] = [list[j], list[i]];
+      if(sensPicked === i) sensPicked = j; else if(sensPicked === j) sensPicked = i;
+      saveMapping(); renderSensitivity();
+    };
+    line.append(pick, state,
+      btn('↑', 'sens-up', 'Move up', i === 0, move(-1)),
+      btn('↓', 'sens-down', 'Move down', i === list.length - 1, move(1)),
+      btn('×', 'sens-remove', 'Remove this analysis', false, () => removeSensitivityAnalysis(i)));
+    box.appendChild(line);
+  });
+  $('btnSensAdd').disabled = list.length >= SENS_MAX_ANALYSES;
+}
+async function removeSensitivityAnalysis(i){
+  const list = mapping.cfg.sensitivities;
+  const a = list[i];
+  if(!a) return;
+  if((a.outputs.length || a.variables.length) &&
+     !(await showConfirm('Remove an analysis', 'Remove “' + a.name + '” and its settings? Its tab leaves the workbook.', 'Remove'))) return;
+  list.splice(list.indexOf(a), 1);
+  if(sensPicked >= list.length) sensPicked = Math.max(0, list.length - 1);
+  saveMapping(); renderSensitivity();
+}
+function addSensitivityAnalysis(){
+  const list = mapping.cfg.sensitivities;
+  if(list.length >= SENS_MAX_ANALYSES) return;
+  const used = new Set(list.map(a => a.name.toLowerCase()));
+  let n = list.length;
+  while(used.has(sensDefaultName(n).toLowerCase())) n++;
+  list.push(Object.assign({ name: sensDefaultName(n) }, defaultSensitivity(), { enabled: true }));
+  sensPicked = list.length - 1;
+  saveMapping(); renderSensitivity();
+}
+
 // Real rectangle rows in the order the workbook shows them (tab order, then each tab's rows).
 function sensRowsInSheetOrder(){
   const out = [];
@@ -11721,6 +11880,21 @@ function addSensitivityVariables(ids){
   saveMapping(); renderSensitivity();
 }
 
+$('btnSensAdd').addEventListener('click', addSensitivityAnalysis);
+$('cfgSensName').addEventListener('change', () => {
+  const cfg = sensCfg();
+  if(!cfg) return;
+  cfg.name = cleanSensName($('cfgSensName').value, sensPicked);
+  $('cfgSensName').value = cfg.name;
+  saveMapping();
+  // The name changed in place: the change comes as the field is left, so the button or field
+  // clicked next must stay where it is.
+  const line = $('sensAnalyses').children[sensPicked];
+  if(line){
+    line.querySelector('.sens-pick').textContent = cfg.name;
+    line.querySelectorAll('button.icon').forEach(b => { b.setAttribute('aria-label', b.title + ': ' + cfg.name); });
+  }
+});
 $('cfgSensEnabled').addEventListener('change', () => {
   sensCfg().enabled = $('cfgSensEnabled').checked;
   saveMapping(); renderSensitivity();
@@ -12584,6 +12758,7 @@ $('btnGenerate').addEventListener('click', () => {
 });
 
 $('btnExportMapping').addEventListener('click', () => {
+  syncSensitivityCopy(); // the first analysis, as an older ExcelExporter reads it (09g)
   const out = Object.assign({ kind: 'fmIDE-excel-mapping', version: FILE_FORMATS['fmIDE-excel-mapping'].current }, JSON.parse(JSON.stringify(mapping)));
   out.kind = 'fmIDE-excel-mapping'; out.version = FILE_FORMATS['fmIDE-excel-mapping'].current;
   const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });

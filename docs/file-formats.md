@@ -30,10 +30,30 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 | `fmIDE-macros` | 1 | Macros | fmIDE: Macro Builder → Import |
 | `fmIDE-preferences` | 1 | Personal settings: shortcut bindings for built-in commands, ribbon layout and Quick Access Toolbar, ribbon collapsed state, KeyTips trigger (fmIDE only) | fmIDE: File → Import Preferences (or Customize Ribbon) |
 | `fmIDE-library-pack` | 4 | Templates, recipes and functions to share with other people, with who made them and their licence (below); v2: an item shared again carries the `origin` it came with; v3: a canvas template may carry `attachments`; v4: a canvas or system template may carry an fmGraph board (`attachments.graph`) | fmIDE: File → Open Library Pack… |
-| `fmIDE-excel-mapping` | 4 | ExcelExporter's tab/row layout for one model; v2: any row may carry its own format (`style`) and an `indent` (below); v3: `cfg.sensitivity`, the Tornado and Spider's settings (step 16, below); v4: `cfg.graph`, fmGraph's scenarios copied by Use fmGraph boards… (step 19 B2, below) | ExcelExporter: Import Mapping JSON |
+| `fmIDE-excel-mapping` | 5 | ExcelExporter's tab/row layout for one model; v2: any row may carry its own format (`style`) and an `indent` (below); v3: `cfg.sensitivity`, the Tornado and Spider's settings (step 16, below); v4: `cfg.graph`, fmGraph's scenarios copied by Use fmGraph boards… (step 19 B2, below); v5: `cfg.sensitivities`, several sensitivity analyses (step 19 B3a, below) | ExcelExporter: Import Mapping JSON |
 | `fmIDE-excel-style` | 1 | ExcelExporter's Excel style: how every cell in the workbook looks, by role (step 11a, below) | ExcelExporter: Import Excel Style |
 | `fmIDE-excel-module-layouts` | 2 | ExcelExporter's layouts remembered per module (step 11b, below); v2: the layout of a module's block instances, `instance` (step 11d) | ExcelExporter: Import Module Layouts |
 | `fmIDE-graph-board` | 8 | fmGraph's boards: bars, charts and sliders showing one model (step 15, below); v2: the template form, for a template's `attachments.graph` (G5a); v3: the model's named scenarios, `scenarios`; v4: the scenario waterfall, a chart of layout `scenarios`; v5: a bar's or chart's fixed vertical scale, `scale`; v6: a folded slider, `folded`; v7: a board keeping its own slider positions, `ownSliders`; v8: the Tornado and the Spider, charts of layout `tornado` and `spider` (step 18; the template form stays version 2) | fmGraph: Boards → Import boards… (or dropped on the page) · ExcelExporter: File → Import fmGraph boards… (its scenarios, below) |
+
+## Several sensitivity analyses (`fmIDE-excel-mapping` 5, step 19 B3a)
+
+ExcelExporter's Sensitivity panel holds a list of analyses, `cfg.sensitivities`; each is the Tornado and Spider's settings (below) plus a `name`, and writes its own Sensitivity tab, Data Table and charts:
+
+```
+"sensitivities": [
+  { "name": "Sensitivity", "enabled": true, "outputs": ["c1|n3"], "period": 0, "steps": 5, "charts": "tabs",
+    "variables": [{ "row": "c1|n1", "by": "percent", "low": -10, "high": 10 }] },
+  { "name": "Volume only", "enabled": true, "outputs": ["c1|n3"], "period": 0, "steps": 2, "charts": "sheet",
+    "variables": [{ "row": "c1|n2", "by": "amount", "low": -2, "high": 1 }] } ],
+"sensitivity": { "enabled": true, "outputs": ["c1|n3"], "period": 0, "steps": 5, "charts": "tabs",
+  "variables": [{ "row": "c1|n1", "by": "percent", "low": -10, "high": 10 }] }
+```
+
+- At most 10, in order; anything that isn't an object is left out. Each is read through `cleanSensitivity`, as below.
+- `name`: the analysis's tab name (made unique in the workbook) — text, control characters turned to spaces, outer spaces trimmed, at most 31 characters; none gives "Sensitivity" for the first and "Sensitivity n" for the n-th.
+- `sensitivity`: a copy of the first analysis without its name (step 16's form; the defaults, off, when there is none), written for an older ExcelExporter and never read once `sensitivities` is there.
+- In the workbook, an input several analyses move has one row: its base × (1 + the sum of their % parts) + the sum of their amount parts, each part 0 unless its own tab's Input moved cell names the input.
+- A version 4 file has one `cfg.sensitivity`: the upgrade step makes it the first analysis, named "Sensitivity", and keeps it as it is. An older ExcelExporter asks before opening version 5 and reads only the copy, the first analysis.
 
 ## fmGraph's scenarios in the layout (`fmIDE-excel-mapping` 4, step 19 B2)
 
@@ -51,7 +71,7 @@ ExcelExporter's Layout → Use fmGraph boards… copies the scenarios of a model
 - In the workbook: Global Case 1 is Base, then one case per scenario (at most 50 cases); each input a scenario moves gets row scenarios — 1 fmIDE's numbers, then one per different way the scenarios set it (at most 20) — and the case matrix picks them.
 - Read with the same checks as a board (kinds, numbers forced, names as text); a setting whose row is gone, or is no longer an input that can be moved, is dropped. A version 3 file has no `cfg.graph`, and reads as none (the upgrade step changes nothing); an older ExcelExporter asks before opening version 4 and ignores the copy.
 
-## The Tornado and Spider's settings (`fmIDE-excel-mapping` 3)
+## The Tornado and Spider's settings (`fmIDE-excel-mapping` 3; one analysis's from version 5)
 
 ExcelExporter's Sensitivity panel (step 16, `docs/step16-sensitivity.md`) keeps its settings in the layout, `cfg.sensitivity`:
 
