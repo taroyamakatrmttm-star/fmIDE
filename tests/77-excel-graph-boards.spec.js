@@ -680,13 +680,18 @@ async function graphWithBoardCharts(context){
   const flow = await graph.evaluate((id) => fmGraph.chart(id), ids.walk);
   return { graph, ids, file, flow };
 }
-// The Dashboard's helper block of a flow: { top, rows: { name: [cells B…] } } found by its heading.
+// A chart's data table on the Dashboard sits beside the charts: its title in column N on a row of
+// its own, the names on the next row, labels in N and figures from O (since the B5 tidy-up).
+const FIG = (k) => X.numToCol(15 + k); // the k-th figure column: O, P, …
+// The Dashboard's helper block of a flow: { top (its title's row), head (the names' row), rows: { name: [cells O…] } }.
 function flowBlock(ws, heading, n){
-  const top = X.findRow(ws, heading)[0];
+  const top = X.findRow(ws, heading, 'N')[0];
+  const head = top + 1;
+  expect(ws['N' + head].v).toBe('Step');
   const rows = {};
   ['Value', 'From', 'To', 'Above 0', 'Below 0', 'Base (hidden)', 'Total above 0', 'Total below 0', 'Rise above 0', 'Rise below 0', 'Fall above 0', 'Fall below 0']
-    .forEach((name, i) => { expect(ws['A' + (top + 1 + i)].v).toBe(name); rows[name] = Array.from({ length: n }, (_, k) => ws[X.numToCol(2 + k) + (top + 1 + i)]); });
-  return { top, rows };
+    .forEach((name, i) => { expect(ws['N' + (head + 1 + i)].v).toBe(name); rows[name] = Array.from({ length: n }, (_, k) => ws[FIG(k) + (head + 1 + i)]); });
+  return { top, head, rows };
 }
 const near = (a, b) => Math.abs(a - b) <= 1e-6 * Math.max(1, Math.abs(b));
 
@@ -737,27 +742,33 @@ test('charts: the window lists the board\'s bars and charts, Use copies them, th
   expect(parts.series[1].val.values).toEqual([-3000, -3000]);
   // Several groups: a table under the chart, one column per period and group, each part only in its group's.
   const io = charts[1].chart;
-  const ioTop = X.findRow(d, 'Chart data: In and out')[0];
-  expect(ioTop).toBeGreaterThan(charts[1].to.r);
-  expect(ioTop).toBeLessThan(charts[2].from.r);
-  expect(['B', 'C', 'D', 'I'].map(c => d[c + ioTop].v)).toEqual(['2027 · In', '2027 · Out', '2028 · In', '2030 · Out']);
+  // Beside its chart (from the chart's first row), its title on a row of its own, then the names.
+  const ioTop = X.findRow(d, 'Chart data: In and out', 'N')[0], ioHead = ioTop + 1;
+  expect(ioTop).toBe(charts[1].from.r + 1);
+  expect(['O', 'P', 'Q', 'V'].map(c => d[c + ioTop])).toEqual([undefined, undefined, undefined, undefined]); // nothing beside the title
+  expect(d['N' + ioHead].v).toBe('Part');
+  expect(['O', 'P', 'Q', 'V'].map(c => d[c + ioHead].v)).toEqual(['2027 · In', '2027 · Out', '2028 · In', '2030 · Out']);
   expect(io.series.map(s => [s.name.text, s.val.ref, s.color])).toEqual([
-    ['Revenue', "'Dashboard'!$B$" + (ioTop + 1) + ':$I$' + (ioTop + 1), '2563EB'],
-    ['Cost', "'Dashboard'!$B$" + (ioTop + 2) + ':$I$' + (ioTop + 2), undefined],
-    ['Bonus paid', "'Dashboard'!$B$" + (ioTop + 3) + ':$I$' + (ioTop + 3), undefined]]);
-  expect(io.series[0].cat.ref).toBe("'Dashboard'!$B$" + ioTop + ':$I$' + ioTop);
-  expect(X.formulaOf(d['B' + (ioTop + 1)])).toBe("'Profit'!$" + col(0) + '$' + row('Revenue'));
-  expect(d['C' + (ioTop + 1)]).toBeUndefined(); // Revenue isn't in Out
-  expect(X.formulaOf(d['E' + (ioTop + 2)])).toBe("'Profit'!$" + col(1) + '$' + row('Cost'));
+    ['Revenue', "'Dashboard'!$O$" + (ioHead + 1) + ':$V$' + (ioHead + 1), '2563EB'],
+    ['Cost', "'Dashboard'!$O$" + (ioHead + 2) + ':$V$' + (ioHead + 2), undefined],
+    ['Bonus paid', "'Dashboard'!$O$" + (ioHead + 3) + ':$V$' + (ioHead + 3), undefined]]);
+  expect(io.series[0].cat.ref).toBe("'Dashboard'!$O$" + ioHead + ':$V$' + ioHead);
+  expect(d['N' + (ioHead + 1)].v).toBe('Revenue');
+  expect(X.formulaOf(d['O' + (ioHead + 1)])).toBe("'Profit'!$" + col(0) + '$' + row('Revenue'));
+  expect(d['P' + (ioHead + 1)]).toBeUndefined(); // Revenue isn't in Out
+  expect(X.formulaOf(d['R' + (ioHead + 2)])).toBe("'Profit'!$" + col(1) + '$' + row('Cost'));
+  // The tables' columns have their own widths, not the sliders' (a gap in M, labels in N, figures from O).
+  expect(d['!cols'].slice(12, 16).map(c => c.wch)).toEqual([3, 24, 13, 13]);
+  expect(d['!cols'].length).toBeGreaterThanOrEqual(22); // to V, the widest table's last column
   expect(io.series[1].val.values).toEqual([null, -3000, null, -3000, null, -3000, null, -3000]);
   // The waterfall: helper rows under it, formulas on the steps' rows in 2030, starting on fmGraph's own figures.
   const walk = charts[3].chart;
   expect(walk.title).toBe('Profit <walk> & "more"');
   const fb = flowBlock(d, 'Chart data: Profit <walk> & "more" (2030)', 4);
-  expect(fb.top).toBeGreaterThan(charts[3].to.r);
-  expect(['B', 'C', 'D', 'E'].map(c => d[c + fb.top].v)).toEqual(['Revenue', 'Cost', 'Bonus paid', 'Profit']);
+  expect(fb.top).toBe(charts[3].from.r + 1); // beside its chart
+  expect(['O', 'P', 'Q', 'R'].map(c => d[c + fb.head].v)).toEqual(['Revenue', 'Cost', 'Bonus paid', 'Profit']);
   expect(fb.rows.Value.map(X.formulaOf)).toEqual(['Revenue', 'Cost', 'Bonus paid', 'Profit'].map(r => "'Profit'!$" + col(3) + '$' + row(r)));
-  const at = (name, k) => X.numToCol(2 + k) + (fb.top + 1 + ['Value', 'From', 'To'].indexOf(name));
+  const at = (name, k) => FIG(k) + (fb.head + 1 + ['Value', 'From', 'To'].indexOf(name));
   expect(fb.rows.From.map(c => X.formulaOf(c) || c.v)).toEqual([0, at('To', 0), at('To', 1), 0]);
   expect(fb.rows.To.map(X.formulaOf)).toEqual([at('Value', 0), at('From', 1) + '+' + at('Value', 1), at('From', 2) + '-' + at('Value', 2), at('Value', 3)]);
   flow.forEach((f, k) => {
@@ -769,8 +780,8 @@ test('charts: the window lists the board\'s bars and charts, Use copies them, th
   expect(walk.series.map(s => [s.name.text, !!s.noFill, !!s.noLegend, s.color || null])).toEqual([
     ['Base', true, false, null], ['Total', false, false, '64748B'], ['Total', false, true, '64748B'],
     ['Rise', false, false, '16A34A'], ['Rise', false, true, '16A34A'], ['Fall', false, false, 'DC2626'], ['Fall', false, true, 'DC2626']]);
-  expect(walk.series[0].val.ref).toBe("'Dashboard'!$B$" + (fb.top + 6) + ':$E$' + (fb.top + 6));
-  expect(walk.series[0].cat.ref).toBe("'Dashboard'!$B$" + fb.top + ':$E$' + fb.top);
+  expect(walk.series[0].val.ref).toBe("'Dashboard'!$O$" + (fb.head + 6) + ':$R$' + (fb.head + 6));
+  expect(walk.series[0].cat.ref).toBe("'Dashboard'!$O$" + fb.head + ':$R$' + fb.head);
   expect(walk.series[3].points).toEqual([{ idx: 1, color: '7C3AED' }]); // Cost's own colour, on its bar
   // What Excel draws before recalculating adds up to fmGraph's bars: base + the parts reach From and To.
   flow.forEach((f, k) => {
@@ -810,11 +821,11 @@ test('charts, LibreOffice: the waterfall\'s helper rows follow the sliders as fm
   const edited = (fn) => { const c = JSON.parse(JSON.stringify(wb)); fn(c.Sheets.Dashboard); return X.writeWithApp(page, c); };
   const out = recalc({ base: await edited(() => {}), low: await edited(d => { d.F5 = { t: 'n', v: 5 }; d.I5 = { t: 'b', v: true }; }) });
   const heading = 'Chart data: Profit <walk> & "more" (2030)';
-  const top = X.findRow(wb.Sheets.Dashboard, heading)[0];
+  const head = X.findRow(wb.Sheets.Dashboard, heading, 'N')[0] + 1; // the names' row, under the title
   const check = async (name, want) => {
     const ws = (await X.readBack(out[name])).getWorksheet('Dashboard');
     // ExcelJS reads a formula whose result is 0 as one with no result: 0 (an error still reads as its text).
-    const v = (r, k) => { const x = valueOf(ws.getCell(top + 1 + r, 2 + k)); return x === undefined ? 0 : x; };
+    const v = (r, k) => { const x = valueOf(ws.getCell(head + 1 + r, 15 + k)); return x === undefined ? 0 : x; };
     want.forEach((f, k) => {
       [['value', 0], ['from', 1], ['to', 2]].forEach(([key, r]) => {
         if(!near(v(r, k), f[key])) throw new Error(`${name}: step ${k + 1}'s ${key} is ${v(r, k)}, fmGraph says ${f[key]}`);
@@ -873,7 +884,7 @@ test('charts from someone else: names as text, colours and scales checked, roles
   expect(charts[2].series[0].color).toBe('ABCDEF');
   // Cost's unknown role reads as add.
   const fb = flowBlock(d, 'Chart data: ' + title + ' (2027)', 2);
-  expect(X.formulaOf(fb.rows.To[1])).toMatch(/^C\d+\+C\d+$/);
+  expect(X.formulaOf(fb.rows.To[1])).toMatch(/^P\d+\+P\d+$/);
   expect(await page.evaluate(() => window.__alerted)).toBeUndefined();
   expect(pageErrors).toEqual([]);
 });
@@ -998,10 +1009,10 @@ test('end to end: fmIDE → fmGraph (slider, scenario, Tornado, waterfall) → E
   await agree('typed', want12);
   await agree('high', wantHigh);
   // The waterfall's helper rows with Price 12: fmGraph's own From and To.
-  const top = X.findRow(wb.Sheets.Dashboard, 'Chart data: Profit walk (2030)')[0];
+  const top = X.findRow(wb.Sheets.Dashboard, 'Chart data: Profit walk (2030)', 'N')[0] + 1; // the names' row
   const dash = (await X.readBack(out.typed)).getWorksheet('Dashboard');
   walk12.forEach((f, k) => [['value', 1], ['from', 2], ['to', 3]].forEach(([key, r]) => {
-    const raw = valueOf(dash.getCell(top + r, 2 + k)), v = raw === undefined ? 0 : raw; // a formula giving 0 reads as none
+    const raw = valueOf(dash.getCell(top + r, 15 + k)), v = raw === undefined ? 0 : raw; // a formula giving 0 reads as none
     if(!near(v, f[key])) throw new Error(`step ${k + 1}'s ${key} is ${v}, fmGraph says ${f[key]}`);
   }));
   // The Tornado's Data Table: fmGraph's own Low and High.

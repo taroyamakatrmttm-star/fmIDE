@@ -13,9 +13,9 @@
 // a later slider applying to what the earlier ones left; the sensitivity parts come after.
 // Under the sliders, the boards' bars and charts as Excel charts (B5, cfg.graph.charts), in the
 // board's order — wide ones the full width, narrow ones two to a row: a bar a column chart of its
-// row; columns stacked columns (several groups: a small table under the chart, one column per
+// row; columns stacked columns (several groups: a small table beside the charts, one column per
 // period and group, so each group stacks on its own); a flow a stacked-column waterfall over
-// helper rows under it — Value, From, To (the running total, as fmGraph works it out), the
+// helper rows beside it (from column N, each table its title on a row of its own) — Value, From, To (the running total, as fmGraph works it out), the
 // parts above and below 0, an invisible Base, then Total / Rise / Fall each above and below 0
 // (Excel stacks the two signs apart) — all formulas, so the charts follow the sliders.
 // ============================================================
@@ -87,6 +87,8 @@ function dashboardSliders(dash, list, base, p, name, from){
 const DASH_CHART_ROWS = 18;  // a chart's height, in rows
 const DASH_HALF_COL = 4;     // a narrow chart takes columns A–D or E–L
 const DASH_LAST_COL = 12;    // a wide one A–L
+const DASH_TABLE_COL = 14;   // the charts' data tables beside them: labels in N, figures from O (1-based)
+const DASH_TABLE_WIDTHS = { label: 24, figure: 13 };
 const DASH_FLOW_COLOURS = { total: '64748B', rise: '16A34A', fall: 'DC2626' };
 
 // The layout's charts as the workbook writes them, or null: { charts: [chart, with only the
@@ -151,7 +153,9 @@ function dashFlowParts(from, to){
 const DASH_FLOW_ROWS = ['Value', 'From', 'To', 'Above 0', 'Below 0', 'Base (hidden)',
   'Total above 0', 'Total below 0', 'Rise above 0', 'Rise below 0', 'Fall above 0', 'Fall below 0'];
 
-// One chart: { chart, block: { rows: n, write(ws, top) } | null }, `top` its block's first row.
+// One chart: { chart, block: { rows: n, cols: n, write(ws) } | null }. Its data table sits beside
+// the charts from row `top`: the title on its own row, then the names, then the figures — labels in
+// column N (DASH_TABLE_COL), figures from O, columns of their own width.
 function dashChart(c, top, ctx){
   const { sheet, cellPos, num, labels, styles } = ctx;
   const fmt = mapping.cfg.fallbackFormat || 'General';
@@ -160,29 +164,30 @@ function dashChart(c, top, ctx){
   const L = (k) => colLetter(k);
   if(c.kind === 'flow'){
     const n = c.parts.length, figs = dashFlowFigures(c, num);
-    const col = (k) => L(2 + k), last = col(n - 1);
-    const R = (name) => top + 1 + DASH_FLOW_ROWS.indexOf(name);
-    const cat = { ref: dashRange(sheet, 'B', top, last), values: c.parts.map(x => x.name) };
+    const col = (k) => L(DASH_TABLE_COL + 1 + k), first = col(0), last = col(n - 1), head = top + 1;
+    const R = (name) => head + 1 + DASH_FLOW_ROWS.indexOf(name);
+    const cat = { ref: dashRange(sheet, first, head, last), values: c.parts.map(x => x.name) };
     const parts = figs.map(f => dashFlowParts(f.from, f.to));
     const isTotal = (x) => x.role === 'start' || x.role === 'total';
     const kindOf = (x, f) => isTotal(x) ? 'total' : (f.to !== null && f.to >= f.from ? 'rise' : 'fall');
     const valuesOf = (kind, side) => c.parts.map((x, k) => parts[k][side] === null ? null : kindOf(x, figs[k]) === kind ? parts[k][side] : 0);
     const points = c.parts.map((x, k) => x.colour ? { idx: k, color: hex(x.colour) } : null).filter(Boolean);
-    const series = [{ name: { text: 'Base' }, cat, val: { ref: dashRange(sheet, 'B', R('Base (hidden)'), last), values: parts.map(q => q.base), numFmt: fmt }, noFill: true }];
+    const series = [{ name: { text: 'Base' }, cat, val: { ref: dashRange(sheet, first, R('Base (hidden)'), last), values: parts.map(q => q.base), numFmt: fmt }, noFill: true }];
     [['total', 'Total'], ['rise', 'Rise'], ['fall', 'Fall']].forEach(([kind, label]) => [['above', ' above 0'], ['below', ' below 0']].forEach(([side, text], j) => {
-      series.push({ name: { text: label }, cat, val: { ref: dashRange(sheet, 'B', R(label + text), last), values: valuesOf(kind, side), numFmt: fmt },
+      series.push({ name: { text: label }, cat, val: { ref: dashRange(sheet, first, R(label + text), last), values: valuesOf(kind, side), numFmt: fmt },
         color: DASH_FLOW_COLOURS[kind], points, noLegend: j === 1 });
     }));
     const chart = { type: 'bar', title: c.name, bar: { dir: 'col', grouping: 'stacked', gapWidth: 50 }, legend: 'b', valAxis, series };
     const write = (ws) => {
-      ws['A' + top] = textCell('Chart data: ' + c.name + ' (' + (labels[c.period] || '') + ')', styles.head);
-      DASH_FLOW_ROWS.forEach(r => { ws['A' + R(r)] = textCell(r, styles.label); });
+      ws[L(DASH_TABLE_COL) + top] = textCell('Chart data: ' + c.name + ' (' + (labels[c.period] || '') + ')', styles.title);
+      ws[L(DASH_TABLE_COL) + head] = textCell('Step', styles.head);
+      DASH_FLOW_ROWS.forEach(r => { ws[L(DASH_TABLE_COL) + R(r)] = textCell(r, styles.label); });
       c.parts.forEach((x, k) => {
         const C = col(k), f = figs[k], q = parts[k];
         const at = (r) => C + R(r);
         const F = at('From'), T = at('To'), V = at('Value'), A = at('Above 0'), B = at('Below 0');
         const pos = cellPos[x.row];
-        ws[C + top] = textCell(x.name, styles.head);
+        ws[C + head] = textCell(x.name, styles.head);
         ws[V] = { t: 'n', f: sheetRef(pos.tabName, '$' + colLetter(periodCol(c.period)), pos.row, sheet, true), v: f.value, s: styles.link };
         const calc = (r, formula, v) => { ws[at(r)] = Object.assign({ t: 'n', f: formula, s: styles.calc }, v === null ? {} : { v }); };
         const zero = (r) => { ws[at(r)] = { t: 'n', v: 0, s: styles.calc }; };
@@ -206,7 +211,7 @@ function dashChart(c, top, ctx){
         });
       });
     };
-    return { chart, block: { rows: 1 + DASH_FLOW_ROWS.length, cols: 1 + n, write } };
+    return { chart, block: { rows: 2 + DASH_FLOW_ROWS.length, cols: DASH_TABLE_COL + n, write } };
   }
   const ps = dashPeriods(c.periods);
   const groups = c.kind === 'columns' ? c.groups : [];
@@ -216,22 +221,23 @@ function dashChart(c, top, ctx){
     // Several groups: one column per period and group, each part only in its group's columns.
     const cols = [];
     ps.forEach(p => groups.forEach((g, gi) => cols.push({ p, gi, label: (labels[p] || '') + ' · ' + (g || 'Group ' + (gi + 1)) })));
-    const last = L(1 + cols.length);
-    const cat = { ref: dashRange(sheet, 'B', top, last), values: cols.map(x => x.label) };
+    const first = L(DASH_TABLE_COL + 1), last = L(DASH_TABLE_COL + cols.length), head = top + 1;
+    const cat = { ref: dashRange(sheet, first, head, last), values: cols.map(x => x.label) };
     c.parts.forEach((x, i) => {
       series.push({ name: { text: x.name }, cat, color: hex(x.colour),
-        val: { ref: dashRange(sheet, 'B', top + 1 + i, last), values: cols.map(q => q.gi === x.group ? num(x.row, q.p) : null), numFmt: fmt } });
+        val: { ref: dashRange(sheet, first, head + 1 + i, last), values: cols.map(q => q.gi === x.group ? num(x.row, q.p) : null), numFmt: fmt } });
     });
-    block = { rows: 1 + c.parts.length, cols: 1 + cols.length, write: (ws) => {
-      ws['A' + top] = textCell('Chart data: ' + c.name, styles.head);
-      cols.forEach((q, k) => { ws[L(2 + k) + top] = textCell(q.label, styles.head); });
+    block = { rows: 2 + c.parts.length, cols: DASH_TABLE_COL + cols.length, write: (ws) => {
+      ws[L(DASH_TABLE_COL) + top] = textCell('Chart data: ' + c.name, styles.title);
+      ws[L(DASH_TABLE_COL) + head] = textCell('Part', styles.head);
+      cols.forEach((q, k) => { ws[L(DASH_TABLE_COL + 1 + k) + head] = textCell(q.label, styles.head); });
       c.parts.forEach((x, i) => {
-        const r = top + 1 + i, pos = cellPos[x.row];
-        ws['A' + r] = textCell(x.name, styles.label);
+        const r = head + 1 + i, pos = cellPos[x.row];
+        ws[L(DASH_TABLE_COL) + r] = textCell(x.name, styles.label);
         cols.forEach((q, k) => {
           if(q.gi !== x.group) return;
           const v = num(x.row, q.p);
-          ws[L(2 + k) + r] = Object.assign({ t: 'n', f: sheetRef(pos.tabName, '$' + colLetter(periodCol(q.p)), pos.row, sheet, true), s: styles.link }, v === null ? {} : { v });
+          ws[L(DASH_TABLE_COL + 1 + k) + r] = Object.assign({ t: 'n', f: sheetRef(pos.tabName, '$' + colLetter(periodCol(q.p)), pos.row, sheet, true), s: styles.link }, v === null ? {} : { v });
         });
       });
     } };
@@ -249,19 +255,19 @@ function dashChart(c, top, ctx){
     legend: c.kind === 'columns' ? 'b' : null, valAxis, series };
   return { chart, block };
 }
-// Places the charts from row `first` (1-based) down: each row of charts (one wide, or two
-// narrow), then the helper blocks of those charts. Returns the last row used and column count.
+// Places the charts from row `first` (1-based) down, each row of charts one wide or two narrow;
+// their data tables beside them from column N, each from its chart's first row (or under the
+// table before, when that one is longer). Returns the last row used and column count.
 function placeDashboardCharts(ws, charts, first, ctx){
   const anchors = [];
-  let r = first, maxCol = DASH_LAST_COL;
+  let r = first, maxCol = DASH_LAST_COL, tables = first;
   for(let i = 0; i < charts.length;){
     const row = charts[i].wide || i + 1 >= charts.length || charts[i + 1].wide ? [charts[i]] : [charts[i], charts[i + 1]];
     i += row.length;
-    const blocksTop = r + DASH_CHART_ROWS + 1;
-    let b = blocksTop;
     const made = row.map(c => {
-      const ch = dashChart(c, b, ctx);
-      if(ch.block){ ch.top = b; b += ch.block.rows + 1; }
+      const top = Math.max(r, tables);
+      const ch = dashChart(c, top, ctx);
+      if(ch.block) tables = top + ch.block.rows + 1;
       return ch;
     });
     made.forEach((ch, k) => {
@@ -270,10 +276,10 @@ function placeDashboardCharts(ws, charts, first, ctx){
       anchors.push({ chart: ch.chart, from: { c: c1, r: r - 1 }, to: { c: c2, r: r - 1 + DASH_CHART_ROWS } });
       if(ch.block){ ch.block.write(ws); maxCol = Math.max(maxCol, ch.block.cols); }
     });
-    r = b === blocksTop ? r + DASH_CHART_ROWS + 1 : b;
+    r += DASH_CHART_ROWS + 1;
   }
   ws['!charts'] = anchors;
-  return { lastRow: r, maxCol };
+  return { lastRow: Math.max(r, tables), maxCol };
 }
 
 // Writes the Dashboard tab (and puts it first). `ownRow`: Inputs-tab row id → { tabName, row };
@@ -325,11 +331,16 @@ function appendDashboardSheet(wb, dash, name, ownRow, charts, cellPos){
   if(charts && charts.length){
     const placed = placeDashboardCharts(ws, charts, dash.rows.length ? lastRow + 2 : 3, {
       sheet: name, cellPos, num: dashNumbers(), labels,
-      styles: { head: hdr(), label: roleCellStyle('Labels'), link: linkStyle, calc: calcStyle } });
+      styles: { title: mergeXlStyle({ font: (roleCellStyle('Headers') || {}).font || {} }, { font: { bold: true } }), head: hdr(), label: roleCellStyle('Labels'), link: linkStyle, calc: calcStyle } });
     lastRow = placed.lastRow; lastCol = placed.maxCol;
   }
   ws['!ref'] = 'A1:' + colLetter(lastCol) + Math.max(4, lastRow);
   ws['!cols'] = [{ wch: 26 }, { wch: 16 }, { wch: 12 }, { wch: 30 }, { wch: 9 }, { wch: 10 }, { wch: 12 }, { wch: 8 }, { wch: 7 }, { wch: 10 }, { wch: 10 }, { wch: 10 }];
+  // The charts' data tables: a narrow gap (M), the labels (N), then the figures, each its own width.
+  if(lastCol > DASH_LAST_COL){
+    ws['!cols'].push({ wch: 3 }, { wch: DASH_TABLE_WIDTHS.label });
+    for(let k = DASH_TABLE_COL + 1; k <= lastCol; k++) ws['!cols'].push({ wch: DASH_TABLE_WIDTHS.figure });
+  }
   XLSX.utils.book_append_sheet(wb, ws, name);
   wb.SheetNames.unshift(wb.SheetNames.pop()); // the Dashboard first
 }
