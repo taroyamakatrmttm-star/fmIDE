@@ -28,6 +28,7 @@ const F = require('../src/excel-exporter/import/formula.js');
 const L = require('../src/excel-exporter/import/layout.js');
 const B = require('../src/excel-exporter/import/build.js');
 const C = require('../src/excel-exporter/import/check.js');
+const R = require('../src/excel-exporter/import/recalc.js');
 const { compileModel, evaluateModel } = require('../src/shared/ir.js');
 const { SHARED_FILE_VERSIONS } = require('../src/shared/file-formats.js');
 const { XLSX } = require('../src/excel-exporter/js-head/01-xlsx-writer.js');
@@ -941,6 +942,53 @@ test('a cell\'s look: bold, italic, text colour, fill and borders, with the them
   // No styles in the file: no look.
   const bare = await importBook(await craft({ sheets: [{ name: 'Model', xml: sectionSheet(SECTION_ROWS) }] }));
   expect(bare.layout.canvases[0].items.every(it => it.look === undefined)).toBe(true);
+});
+
+test('the round trip: a workbook worked out from its formulas\' text, as Excel would; cells compared with the original\'s', () => {
+  const n = (v) => ({ t: 'n', v }), f = (formula) => ({ t: 'n', f: formula, v: 0 });
+  const wb = { SheetNames: ['Calc', 'In puts'], Sheets: {
+    'In puts': { B2: n(10), B3: n(0.25), B4: { t: 's', v: 'text' }, B5: { t: 'b', v: true } },
+    Calc: {
+      E3: n(1), F3: n(2), E4: f("'In puts'!B2*(1+'In puts'!B3)"), F4: f('E4*2'), E5: f('SUM(E4:F4,1)'), E6: f('IF(E$3=1,0,NA())'), F6: f('IF(F$3=1,0,NA())'),
+      E7: f('IFERROR(F6,7)'), E8: f('ROUND(2.5,0)+ROUND(-2.5,0)+ROUNDUP(1.21,1)+ROUNDDOWN(-1.29,1)'), E9: f('CHOOSE(2,10,20,30)'),
+      E10: f('INDEX($E$4:$F$4,2)'), E11: f('INDEX(E4:F5,2,1)'), E12: f('E4>12'), E13: f('AND(E3=1,NOT(F3=1))'), E14: f('MAX(0,-E4)+MIN(E4:F4)+AVERAGE(E4:F4)'),
+      E15: f('1/0'), E16: f('MOD(-7,3)+ABS(-2)+INT(-1.5)+TRUNC(-1.5)+POWER(2,3)+SQRT(16)'), E17: f('N(TRUE)+N(\'In puts\'!B5)+SUM(\'In puts\'!B2:B5)'),
+      E18: f('E19+1'), E19: f('E18+1'), E20: f('VLOOKUP(1,E4:F4,2)'), E21: f('E99*3'), E22: f('5%'), E23: f('-E4^2'),
+    } } };
+  const { valueOf } = R.xlRecalc(wb);
+  expect(valueOf('Calc', 'E4')).toBeCloseTo(12.5, 12);
+  expect(valueOf('Calc', 'F4')).toBeCloseTo(25, 12);
+  expect(valueOf('Calc', 'E5')).toBeCloseTo(38.5, 12);
+  expect(valueOf('Calc', 'E6')).toBe(0);
+  expect(valueOf('Calc', 'F6')).toEqual({ error: '#N/A' });
+  expect(valueOf('Calc', 'E7')).toBe(7);
+  expect(valueOf('Calc', 'E8')).toBeCloseTo(3 - 3 + 1.3 - 1.2, 12); // half away from zero, as Excel
+  expect(valueOf('Calc', 'E9')).toBe(20);
+  expect(valueOf('Calc', 'E10')).toBeCloseTo(25, 12);
+  expect(valueOf('Calc', 'E11')).toBeCloseTo(38.5, 12);
+  expect(valueOf('Calc', 'E12')).toBe(true);
+  expect(valueOf('Calc', 'E13')).toBe(true);
+  expect(valueOf('Calc', 'E14')).toBeCloseTo(0 + 12.5 + 18.75, 12);
+  expect(valueOf('Calc', 'E15')).toEqual({ error: '#DIV/0!' });
+  expect(valueOf('Calc', 'E16')).toBe(2 + 2 - 2 - 1 + 8 + 4);
+  expect(valueOf('Calc', 'E17')).toBe(1 + 1 + 10.25); // a range's text and TRUE left out
+  expect(valueOf('Calc', 'E18')).toEqual({ error: '#CYCLE' });
+  expect(valueOf('Calc', 'E20')).toEqual({ error: '#NAME?' });
+  expect(valueOf('Calc', 'E21')).toBe(0); // an empty cell is 0
+  expect(valueOf('Calc', 'E22')).toBeCloseTo(0.05, 12);
+  expect(valueOf('Calc', 'E23')).toBeCloseTo(156.25, 12); // -E4^2 is (-E4)^2, as in Excel
+  // The comparison: agree, differ, an Excel error agreeing with an error, what isn't checked.
+  const at = (a) => ({ tab: 'Calc', address: a });
+  const trip = R.xlRoundTrip(valueOf, [
+    { sheet: 'S', address: 'D4', label: 'A', period: 0, saved: 12.5, at: at('E4') },
+    { sheet: 'S', address: 'E4', label: 'B', period: 1, saved: 24, at: at('F4') },
+    { sheet: 'S', address: 'D6', label: 'C', period: 1, saved: null, excel: '#N/A', at: at('F6') },
+    { sheet: 'S', address: 'D9', label: 'D', period: 0, saved: 1, at: at('E12') },
+    { sheet: 'S', address: 'D18', label: 'E', period: 0, saved: 1, at: at('E18') },
+    { sheet: 'S', address: 'D20', label: 'F', period: 0, saved: 1, at: at('E20') },
+  ]);
+  expect({ compared: trip.compared, agree: trip.agree, unchecked: trip.unchecked }).toEqual({ compared: 4, agree: 3, unchecked: 2 });
+  expect(trip.differ.map(d => [d.address, d.got, d.saved])).toEqual([['E4', 25, 24]]);
 });
 
 test('sections of two sheets are named after their sheet; a section name used twice is made unique', async () => {

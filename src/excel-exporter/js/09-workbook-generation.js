@@ -94,6 +94,7 @@ function reserveScenarioRows(row, r, scenarioBlocks){
 function generateWorkbook(){
   const built = buildWorkbook();
   XLSX.writeFile(built.wb, (mapping.cfg.fileName || 'fmIDE-export').replace(/\.xlsx$/i, '') + '.xlsx');
+  return built;
 }
 
 // Builds the workbook without downloading it: { wb, tooLong }, where `tooLong` lists the

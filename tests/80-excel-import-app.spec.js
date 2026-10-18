@@ -408,3 +408,23 @@ test('the workbook generated after Import keeps each row\'s look: bold, text col
   expect(total.border.top.style).toBe('thin');
   expect(total.border.bottom).toBeUndefined();
 });
+
+test('after Generate, the workbook written is recalculated and checked against the original; the report says so too', async ({ page }) => {
+  await X.openExporter(page);
+  await importFile(page, sample('03-two-sheets.xlsx'));
+  await page.locator('#importOk').click();
+  await expect(page.locator('#importCheckSummary')).toHaveText('All 45 calculated cells agree with Excel\'s saved values.');
+  // Before Generate the report has no round trip.
+  await expect(page.locator('#importRoundTrip')).toBeHidden();
+  await page.locator('#importReportClose').click();
+  await X.generate(page);
+  await expect(page.locator('#genStatus .status.ok').last()).toContainText('Recalculated here, the workbook gives the original\'s value in all 45 cells.');
+  await X.menuCommand(page, 'btnImportReport');
+  await expect(page.locator('#importRoundTrip')).toHaveText('Recalculated here, the workbook gives the original\'s value in all 45 cells.');
+  await expect(page.locator('#importRoundTrip')).toHaveClass(/ok/);
+  await page.locator('#importReportClose').click();
+  // A model that wasn't imported: no round trip.
+  await X.menuCommand(page, 'btnMenuSample');
+  await X.generate(page);
+  await expect(page.locator('#genStatus .status.ok').last()).not.toContainText('Recalculated');
+});

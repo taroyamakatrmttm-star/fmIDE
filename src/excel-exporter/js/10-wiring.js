@@ -107,9 +107,12 @@ $('cfgSectionsEnabled').addEventListener('change', () => setSectionsEnabled($('c
 
 $('btnGenerate').addEventListener('click', () => {
   try{
-    generateWorkbook();
+    const built = generateWorkbook();
     const notes = graphScenarioNotes().concat(graphSliderNotes(), graphChartNotes()); // fmGraph's scenarios past a cut-off, or not moved (09i); the sliders' and charts' (09j)
-    setStatus($('genStatus'), 'Workbook generated — check your downloads.' + (notes.length ? ' ' + notes.join(' ') : ''), 'ok');
+    // An imported model: the workbook recalculated against the original (09k).
+    const trip = importRoundTripAfter(built.wb);
+    if(trip) notes.push(trip.text);
+    setStatus($('genStatus'), 'Workbook generated — check your downloads.' + (notes.length ? ' ' + notes.join(' ') : ''), trip && trip.kind === 'warn' ? 'warn' : 'ok');
   }catch(err){
     setStatus($('genStatus'), 'Could not generate the workbook: ' + err.message, 'err');
   }
