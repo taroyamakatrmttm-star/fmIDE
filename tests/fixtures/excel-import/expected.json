@@ -1,0 +1,100 @@
+{
+  "about": "What importing an Excel model (step 20, docs/step20-excel-import.md) should find in each sample workbook. The samples are written by tools/make-import-samples.js; test group 78 checks this description against them. Kinds: title (a heading, no numbers), input (a typed number in every period), assumption (one typed number in column C, used by every period), calculation (a formula in every period), opening (a typed number in the first period, a formula in the others), single (one formula in column C, not by period). A row noted as not translated keeps Excel's saved values.",
+  "samples": {
+    "01-simple-rows": {
+      "sheets": {
+        "Model": {
+          "headerRow": 3, "periodColumns": ["D", "E", "F", "G", "H"], "periods": ["2026", "2027", "2028", "2029", "2030"],
+          "labelColumn": "A", "unitColumn": "B",
+          "rows": [
+            { "row": 1, "label": "Simple profit model", "kind": "title" },
+            { "row": 5, "label": "Revenue", "kind": "title" },
+            { "row": 6, "label": "Volume", "kind": "input" },
+            { "row": 7, "label": "Price", "kind": "input" },
+            { "row": 8, "label": "Revenue", "kind": "calculation", "formula": "Volume × Price" },
+            { "row": 10, "label": "Costs", "kind": "title" },
+            { "row": 11, "label": "Cost rate", "kind": "input" },
+            { "row": 12, "label": "Costs", "kind": "calculation", "formula": "Revenue × Cost rate" },
+            { "row": 14, "label": "Profit", "kind": "calculation", "formula": "Revenue − Costs" }
+          ]
+        }
+      },
+      "notTranslated": []
+    },
+    "02-corkscrew": {
+      "sheets": {
+        "Assets": {
+          "headerRow": 3, "periodColumns": ["D", "E", "F", "G", "H"], "periods": ["2026", "2027", "2028", "2029", "2030"],
+          "labelColumn": "A", "unitColumn": "B",
+          "rows": [
+            { "row": 1, "label": "Fixed assets", "kind": "title" },
+            { "row": 5, "label": "Depreciation rate", "kind": "assumption" },
+            { "row": 7, "label": "Opening balance", "kind": "opening", "formula": "the previous period's Closing balance" },
+            { "row": 8, "label": "Additions", "kind": "input" },
+            { "row": 9, "label": "Depreciation", "kind": "calculation", "formula": "Opening balance × Depreciation rate" },
+            { "row": 10, "label": "Closing balance", "kind": "calculation", "formula": "Opening balance + Additions − Depreciation" }
+          ]
+        }
+      },
+      "notTranslated": []
+    },
+    "03-two-sheets": {
+      "sheets": {
+        "Inputs": {
+          "headerRow": 3, "periodColumns": ["D", "E", "F", "G", "H"], "periods": ["2026", "2027", "2028", "2029", "2030"],
+          "labelColumn": "A", "unitColumn": "B",
+          "rows": [
+            { "row": 1, "label": "Inputs", "kind": "title" },
+            { "row": 5, "label": "Units sold", "kind": "input" },
+            { "row": 6, "label": "Unit price", "kind": "input" },
+            { "row": 7, "label": "Fixed costs", "kind": "input" },
+            { "row": 8, "label": "Tax rate", "kind": "assumption", "name": "TaxRate" }
+          ]
+        },
+        "Calc": {
+          "headerRow": 3, "periodColumns": ["D", "E", "F", "G", "H"], "periods": ["2026", "2027", "2028", "2029", "2030"],
+          "labelColumn": "A", "unitColumn": "B",
+          "rows": [
+            { "row": 1, "label": "Profit and loss", "kind": "title" },
+            { "row": 5, "label": "Revenue", "kind": "calculation", "formula": "Units sold × Unit price (from Inputs)" },
+            { "row": 6, "label": "Fixed costs", "kind": "calculation", "formula": "Fixed costs (from Inputs)" },
+            { "row": 7, "label": "Variable costs", "kind": "calculation", "formula": "round(Revenue × 0.4, 0)" },
+            { "row": 8, "label": "Total costs", "kind": "calculation", "formula": "Fixed costs + Variable costs" },
+            { "row": 9, "label": "EBIT", "kind": "calculation", "formula": "Revenue − Total costs" },
+            { "row": 10, "label": "Tax", "kind": "calculation", "formula": "max(0, EBIT × Tax rate)" },
+            { "row": 11, "label": "Net income", "kind": "calculation", "formula": "EBIT − Tax" },
+            { "row": 12, "label": "Net margin", "kind": "calculation", "formula": "iferror(Net income ÷ Revenue, 0)" },
+            { "row": 13, "label": "Loss flag", "kind": "calculation", "formula": "if(Net income < 0, 1, 0)" }
+          ]
+        }
+      },
+      "notTranslated": []
+    },
+    "04-not-supported": {
+      "sheets": {
+        "Valuation": {
+          "headerRow": 3, "periodColumns": ["D", "E", "F", "G", "H"], "periods": ["2026", "2027", "2028", "2029", "2030"],
+          "labelColumn": "A", "unitColumn": "B",
+          "rows": [
+            { "row": 1, "label": "Valuation", "kind": "title" },
+            { "row": 5, "label": "Region", "kind": "assumption" },
+            { "row": 6, "label": "Growth", "kind": "calculation", "formula": "VLOOKUP: not translated" },
+            { "row": 7, "label": "Revenue", "kind": "opening", "formula": "the previous period's Revenue × (1 + Growth)" },
+            { "row": 8, "label": "Cash flow", "kind": "calculation", "formula": "Revenue × 0.2" },
+            { "row": 9, "label": "Discount rate", "kind": "assumption" },
+            { "row": 10, "label": "NPV", "kind": "single", "formula": "NPV over the periods: not translated" },
+            { "row": 11, "label": "Cumulative cash", "kind": "calculation", "formula": "a sum from the first period: not translated" },
+            { "row": 12, "label": "Cash doubled", "kind": "calculation", "formula": "Cash flow × 2, with a typed 999 in F12", "odd": ["F12"] },
+            { "row": 13, "label": "Years above 220", "kind": "single", "formula": "COUNTIF over the periods: not translated" }
+          ]
+        }
+      },
+      "notTranslated": [
+        { "sheet": "Valuation", "cells": "D6:H6", "why": "VLOOKUP" },
+        { "sheet": "Valuation", "cells": "C10", "why": "NPV" },
+        { "sheet": "Valuation", "cells": "D11:H11", "why": "a range growing along the periods" },
+        { "sheet": "Valuation", "cells": "C13", "why": "COUNTIF" }
+      ]
+    }
+  }
+}
