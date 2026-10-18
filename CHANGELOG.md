@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: tidier imported models
+- An imported row's typed actuals, the cells that differ from its formula and an opening balance are now the row's own numbers in those periods (ticked under 🕒 "Which periods use this rectangle's own number?"), so its tree is the formula alone: no "(typed)" rectangle, no period test, no "Revenue: 5" box. A real three-statement model went from 151 rectangles and 172 operators to 81 and 67, every cell still agreeing with Excel.
+- Both apps: a ticked period of a wired rectangle with no typed number uses its number for that period. A rectangle with a typed number calculates exactly as before.
+
 ## fmIDE: large models scroll all the way
 - The canvas grows to hold every node of the canvas shown (with room beyond, at any zoom), instead of being a fixed 3600 × 2400 area: a large model, such as an Excel model imported by ExcelExporter, can now be scrolled to its end. Never smaller than before; at most 100,000 pixels either way.
 

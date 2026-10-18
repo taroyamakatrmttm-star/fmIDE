@@ -141,10 +141,18 @@ Done (18 October 2026): `import/check.js` — `xlCheckModel(system, report)` —
 
 ## How 20e turned out
 
+## Tidier models: the actuals in the row's own rectangle (18 October 2026)
+
+The owner asked for fewer small boxes. Most of the CFI model's constant rectangles (38 of 51, "Revenue: 5") were the switch of a row in parts, `if(period ≤ 5, …)`, each with a `period` operator, a `≤` and a "… (typed)" rectangle. The owner chose (of two options) to keep the actuals in the row's own rectangle instead, as fmIDE's 🕒 "Which periods use this rectangle's own number?" does for an opening balance:
+
+- **The shared rule, a little wider** (`src/shared/ir.js`, `tickedPeriodNumber`, used by fmIDE's calculation and ExcelExporter's formulas alike): a ticked period of a wired rectangle uses its typed number, as before; **with no typed number, its number for that period** (`periodValues`). A file with a typed number calculates exactly as before; fmIDE never shows the per-period curve on a wired rectangle, so only such files change.
+- **The import**: the periods of a formula row holding a number of their own — an opening balance's first, the cells that differ, a row in parts' typed actuals beside its **one** formula — are ticked (`literalPeriods`), their numbers in `periodValues` (or typed, when it is one number), and the tree is the formula alone. A row of two formulas keeps its `if(period ≤ k, …)`.
+- **The CFI model**: rectangles 151 → 81, operators 172 → 67, still 670 of 670 cells agreeing; the remaining constants are a formula's own (`1 +`, `365`) and the four rows of two formulas.
+
 Done (18 October 2026): `import/build.js` — `xlBuildModel(book, plans, include)` gives the `system` and a report — and the window's Import button, which loads the model as any model file is ("Imported … — 2 canvases, 13 rectangles, 5 periods.", naming the rows kept as Excel's saved values).
 
 - **Every reference is an alias**, placed in its operator's input column, even to a rectangle on the same canvas: fmIDE reads an operator's inputs by position, so this is how `−`, `÷`, comparisons and `iferror` keep Excel's order wherever the rows sit. Each row reads as a small sentence left of its rectangle; the rectangles stand in one column in the sheet's order. (20g may tidy this.)
-- **A cell that differs** keeps Excel's saved value through `if(period = n, saved value, the row's formula)`, since a wired rectangle has only one typed number; an opening balance keeps its typed number in period 1 (`literalPeriods`).
+- **A cell that differs** keeps Excel's saved value through `if(period = n, saved value, the row's formula)`, since a wired rectangle has only one typed number; an opening balance keeps its typed number in period 1 (`literalPeriods`). (Changed by the tidy-up below: the saved value is now the rectangle's own number in that period.)
 - **Outside the rows**: the header row, when a formula reads it, is a rectangle of its own ("Year (header)"); a number on a sheet not imported, a constant ("Lookup!B3"); an empty cell, 0, as in Excel. A formula on a sheet not imported is used by its saved value.
 - **Circular references** within one period are cut at the loop's later row, which keeps its saved values; loops through a period shift (a corkscrew) are not loops.
 - **Ranges** inside `SUM`, `MIN`, `MAX`, `AVERAGE`, `AND`, `OR`, `PRODUCT` are read down a column (empty cells and text left out, as Excel does); a range along the periods, growing along them, or a whole column is not translated.

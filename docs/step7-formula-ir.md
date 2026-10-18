@@ -9,7 +9,7 @@
    - A comparison chain `a < b < c` means `a < b` and `b < c`.
    - `abs` with more than one input is an error (fmIDE "?", Excel `#N/A`).
    - `iferror` with one failing input, or with none, gives 0.
-   - A period ticked under "Which periods use this rectangle's own number?" uses the typed number, even when the rectangle is wired.
+   - A period ticked under "Which periods use this rectangle's own number?" uses the typed number, even when the rectangle is wired; with no typed number, its number for that period (`periodValues`; step 20's tidy-up, 18 October 2026).
    - A rectangle whose source needs a period outside the timeline (a corkscrew's opening balance in period 1) shows its typed number, or 0.
    - A rectangle fed by an operator that nothing feeds is an input: its typed number, or 0.
 2. **Licence boundary:** nothing moves from ExcelExporter into `src/shared/`. The IR, the evaluator and the operators' meanings come from fmIDE's side. How each built-in operator is spelled in Excel stays in ExcelExporter, and a test checks that every shared operator has a spelling.

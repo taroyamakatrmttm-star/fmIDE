@@ -46,6 +46,18 @@ export function effectiveLiteral(n, period){
   return literal;
 }
 
+// A wired rectangle's own number in a period ticked under "Which periods use this
+// rectangle's own number?" (`literalPeriods`), or null when the period isn't ticked or the
+// rectangle has none: its typed number; with none typed, its number for that period
+// (`periodValues` — an imported Excel row keeps its typed actuals so, step 20). `n` is a
+// compiled node. Both apps read it, so they calculate alike.
+export function tickedPeriodNumber(n, period){
+  if(!Array.isArray(n.literalPeriods) || !n.literalPeriods.includes(period)) return null;
+  if(n.typed !== null && n.typed !== undefined) return n.typed;
+  const pv = n.literal && n.literal.periodValues;
+  return Array.isArray(pv) && typeof pv[period] === 'number' && isFinite(pv[period]) ? pv[period] : null;
+}
+
 // Left to right, then top to bottom: the order an operator reads its inputs in.
 function irByPosition(a, b){ return (a.x - b.x) || (a.y - b.y); }
 
@@ -532,10 +544,10 @@ export function evaluateModel(ir, options){
           // An input (nothing wired in, or only an operator that nothing feeds — the shared
           // input rule): its own number, or 0.
           result = literalOrZero(n, period);
-        } else if(incoming.length === 1 && Array.isArray(n.literalPeriods) && n.literalPeriods.includes(period) && n.typed !== null){
+        } else if(incoming.length === 1 && tickedPeriodNumber(n, period) !== null){
           // A period ticked under "Which periods use this rectangle's own number?" uses it,
           // wired or not.
-          result = n.typed;
+          result = tickedPeriodNumber(n, period);
         } else if(incoming.length === 1){
           // Follow the wired source. Where it needs a period outside the timeline (e.g. a
           // corkscrew's opening balance in period 1), the typed number applies, or 0 — the

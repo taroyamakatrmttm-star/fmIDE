@@ -536,6 +536,27 @@ test.describe('ExcelExporter\'s formula building, in Node', () => {
     expect(inlined.rev).toEqual(['=10*E6', '=10*F6', '=10*G6']);
   });
 
+  test('a ticked period of a wired rectangle: its typed number, else its own number for that period — in both apps alike', () => {
+    // Closing ticks periods 1 and 3. Without a typed number it uses its numbers per period
+    // (an imported Excel row's actuals, step 20); with one, the typed number, as before.
+    const IR = require('../src/shared/ir.js');
+    const withClosing = (extra) => {
+      const m = JSON.parse(JSON.stringify(FORMULA_MODEL));
+      m.periods = ['P1', 'P2', 'P3'];
+      Object.assign(m.canvases[0].nodes.find(n => n.id === 'close'), extra);
+      return m;
+    };
+    const fmideValues = (m) => { const r = IR.evaluateModel(IR.compileModel(m))[0]; return [0, 1, 2].map(p => r.values[p].close); };
+    const perPeriod = withClosing({ literalPeriods: [0, 2], periodValues: [100, 0, 300] });
+    FX.useModelIR(compileModel(perPeriod));
+    expect(cells(ROWS).close).toEqual([100, '=E8+F7', 300]);
+    expect(fmideValues(perPeriod)).toEqual([100, 130, 300]);
+    const typed = withClosing({ text: 'Closing\n50', literalPeriods: [0, 2], periodValues: [100, 0, 300] });
+    FX.useModelIR(compileModel(typed));
+    expect(cells(ROWS).close).toEqual([50, '=E8+F7', 50]);
+    expect(fmideValues(typed)).toEqual([50, 80, 50]);
+  });
+
   test('sheet names, cells and row keys as the workbook needs them', () => {
     expect(FX.sanitizeSheetName('Q1/Q2: [draft]*?')).toBe('Q1 Q2   draft');
     expect(FX.sanitizeSheetName('x'.repeat(40))).toHaveLength(31);

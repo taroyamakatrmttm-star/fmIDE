@@ -631,7 +631,10 @@ test('the trees: aliases in Excel\'s order, period shifts, named inputs, constan
   const four = await importBook(bytesOf('04-not-supported.xlsx'));
   const val = shape(four.system, 'Valuation');
   expect(val.formulaOf('Revenue')).toBe('×(shift(-1 @Revenue), +([Revenue: 1|1], @Growth))');
-  expect(val.formulaOf('Cash doubled')).toBe('if(=(period(), [Cash doubled: 3|3]), [Cash doubled: Excel\'s F12|999], ×(@Cash flow, [Cash doubled: 2|2]))');
+  // The cell that differs is the rectangle's own number in its period (step 20 tidy-up).
+  expect(val.formulaOf('Cash doubled')).toBe('×(@Cash flow, [Cash doubled: 2|2])');
+  expect(val.rect('Cash doubled').literalPeriods).toEqual([2]);
+  expect(val.rect('Cash doubled').text.split('\n')[1]).toBe('999');
   // A row not translated keeps Excel's saved values as an input.
   expect(val.formulaOf('Growth')).toBeNull();
   expect(val.rect('Growth').text).toBe('Growth\n0.05\n%');
@@ -770,20 +773,26 @@ test('rows in parts: actuals typed then the forecast formula, two formulas, the 
   const { system, report } = await importBook(bytesOf('05-actuals-forecast.xlsx'));
   const m = shape(system, 'Model');
   // Typed actuals for 2026–2028, then the forecast formula.
-  expect(m.formulaOf('Revenue')).toBe('if(≤(period(), [Revenue: 3|3]), [Revenue (typed)|1000], ×(shift(-1 @Revenue), +([Revenue: 1|1], @Revenue growth)))');
+  // The actuals are the rectangle's own numbers in their periods; the tree is the formula alone.
+  expect(m.formulaOf('Revenue')).toBe('×(shift(-1 @Revenue), +([Revenue: 1|1], @Revenue growth))');
   expect(m.rect('Revenue').text).toBe('Revenue\n\n£');
-  const typed = m.c.nodes.find(n => n.type === 'value' && n.text.startsWith('Revenue (typed)'));
-  expect(typed.periodValues).toEqual([1000, 1100, 1210, 0, 0]);
-  // A blank first period, a formula, then typed numbers: three parts.
-  expect(m.formulaOf('Revenue growth')).toMatch(/^if\(≤\(period\(\), \[Revenue growth: 1\|1\]\), \[Revenue growth \(typed\)\|0\], if\(≤\(period\(\), \[Revenue growth: 3\|3\]\), −\(÷\(@Revenue, shift\(-1 @Revenue\)\), \[Revenue growth: 1\|1\]\), \[Revenue growth \(typed\)\|0\]\)\)$/);
+  expect(m.rect('Revenue').literalPeriods).toEqual([0, 1, 2]);
+  expect(m.rect('Revenue').periodValues).toEqual([1000, 1100, 1210, 0, 0]);
+  // No "(typed)" rectangles and no switch at period 3 but for the row of two formulas.
+  expect(m.c.nodes.filter(n => n.type === 'value' && /\(typed\)|: 3\n/.test(n.text)).map(n => n.text.split('\n')[0])).toEqual(['Depreciation: 3']);
+  // A blank first period, a formula, then typed numbers: the formula alone, its own numbers around it.
+  expect(m.formulaOf('Revenue growth')).toBe('−(÷(@Revenue, shift(-1 @Revenue)), [Revenue growth: 1|1])');
+  expect(m.rect('Revenue growth').literalPeriods).toEqual([0, 3, 4]);
   // One formula for the actual years, another for the forecast.
   expect(m.formulaOf('Depreciation')).toBe('if(≤(period(), [Depreciation: 3|3]), ×(@Capex, [Depreciation: 0.5|0.5]), ×(shift(-1 @Assets closing), [Depreciation: 0.2|0.2]))');
   // The column before the first period: in 2026 the previous Profit is the blank C9, 0.
   expect(m.formulaOf('Change in profit')).toBe('−(@Profit, if(=(period(), [Change in profit: 1|1]), [Change in profit: Excel\'s C9|0], shift(-1 @Profit)))');
   // Spending reads Paid in the actual years, Paid reads Spending in the forecast: no loop in any one period.
   expect(report.notTranslated).toEqual([]);
-  expect(m.formulaOf('Spending')).toBe('if(≤(period(), [Spending: 3|3]), @Paid, [Spending (typed)|0])');
-  expect(m.formulaOf('Paid')).toBe('if(≤(period(), [Paid: 3|3]), [Paid (typed)|20], @Spending)');
+  expect(m.formulaOf('Spending')).toBe('@Paid');
+  expect(m.rect('Spending').literalPeriods).toEqual([3, 4]);
+  expect(m.formulaOf('Paid')).toBe('@Spending');
+  expect(m.rect('Paid').literalPeriods).toEqual([0, 1, 2]);
   for(const x of compare(system, report)) expect(agrees(x), x.where + ': ' + x.got + ' against ' + x.saved).toBe(true);
   // An opening balance's own first period stays its typed number (no extra if).
   expect(m.formulaOf('Assets opening')).toBe('shift(-1 @Assets closing)');
