@@ -1,5 +1,5 @@
 // ---------- the formulas (src/excel-exporter/formulas/core-translation.js; a module, step 3c-4) ----------
-import { parseRectText, effectiveLiteral, irNodeIn, irPortEdge, irPortUnfed } from '../../shared/ir.js';
+import { parseRectText, effectiveLiteral, tickedPeriodNumber, irNodeIn, irPortEdge, irPortUnfed } from '../../shared/ir.js';
 import { reachesOutsideTimeline } from '../../shared/input-rule.js';
 import { EXCEL_SPELLINGS } from './operator-spellings.js';
 import { FN_LEVEL, buildFunctionCallFormula } from './function-calls.js';
@@ -505,8 +505,8 @@ export function buildCellContent(canvasId, node, periodIndex, ctx, currentTabNam
     // mark specific periods to use its own typed literal instead (e.g. a corkscrew's
     // period-0 opening balance), which is checked here regardless of edge presence.
     if(incoming.length === 1 && !effectiveInput){
-      const restrictedToLiteral = Array.isArray(n.literalPeriods) && n.literalPeriods.includes(periodIndex);
-      if(restrictedToLiteral && n.typed !== null) return { isFormula: false, value: n.typed };
+      const ticked = tickedPeriodNumber(n, periodIndex);
+      if(ticked !== null) return { isFormula: false, value: ticked };
       // src can be an operator, an alias, a period-shift node, a block instance, or
       // another value rectangle — operandRef inlines through all of them uniformly.
       const src = irNode(canvasId, incoming[0].from);

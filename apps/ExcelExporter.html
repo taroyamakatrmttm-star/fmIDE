@@ -2428,6 +2428,18 @@ function effectiveLiteral(n, period){
   return literal;
 }
 
+// A wired rectangle's own number in a period ticked under "Which periods use this
+// rectangle's own number?" (`literalPeriods`), or null when the period isn't ticked or the
+// rectangle has none: its typed number; with none typed, its number for that period
+// (`periodValues` — an imported Excel row keeps its typed actuals so, step 20). `n` is a
+// compiled node. Both apps read it, so they calculate alike.
+function tickedPeriodNumber(n, period){
+  if(!Array.isArray(n.literalPeriods) || !n.literalPeriods.includes(period)) return null;
+  if(n.typed !== null && n.typed !== undefined) return n.typed;
+  const pv = n.literal && n.literal.periodValues;
+  return Array.isArray(pv) && typeof pv[period] === 'number' && isFinite(pv[period]) ? pv[period] : null;
+}
+
 // Left to right, then top to bottom: the order an operator reads its inputs in.
 function irByPosition(a, b){ return (a.x - b.x) || (a.y - b.y); }
 
@@ -2914,10 +2926,10 @@ function evaluateModel(ir, options){
           // An input (nothing wired in, or only an operator that nothing feeds — the shared
           // input rule): its own number, or 0.
           result = literalOrZero(n, period);
-        } else if(incoming.length === 1 && Array.isArray(n.literalPeriods) && n.literalPeriods.includes(period) && n.typed !== null){
+        } else if(incoming.length === 1 && tickedPeriodNumber(n, period) !== null){
           // A period ticked under "Which periods use this rectangle's own number?" uses it,
           // wired or not.
-          result = n.typed;
+          result = tickedPeriodNumber(n, period);
         } else if(incoming.length === 1){
           // Follow the wired source. Where it needs a period outside the timeline (e.g. a
           // corkscrew's opening balance in period 1), the typed number applies, or 0 — the
@@ -3724,8 +3736,8 @@ function buildCellContent(canvasId, node, periodIndex, ctx, currentTabName, path
     // mark specific periods to use its own typed literal instead (e.g. a corkscrew's
     // period-0 opening balance), which is checked here regardless of edge presence.
     if(incoming.length === 1 && !effectiveInput){
-      const restrictedToLiteral = Array.isArray(n.literalPeriods) && n.literalPeriods.includes(periodIndex);
-      if(restrictedToLiteral && n.typed !== null) return { isFormula: false, value: n.typed };
+      const ticked = tickedPeriodNumber(n, periodIndex);
+      if(ticked !== null) return { isFormula: false, value: ticked };
       // src can be an operator, an alias, a period-shift node, a block instance, or
       // another value rectangle — operandRef inlines through all of them uniformly.
       const src = irNode(canvasId, incoming[0].from);
@@ -10640,8 +10652,8 @@ const EXCEL_HELP_TOPICS = [
         'Press Import. The model loads here, and a report says how it compares with the values Excel saved.',
         'Press Save for fmIDE (in the report or the File menu), then open the file in fmIDE with File → Open….',
       ] },
-      { p: 'It reads models laid out with rows as line items and columns as periods, one formula copied along each row. A reference to the column on the left becomes a period shift; a first period typed and the formula after it is an opening balance; typed actual years and a forecast formula (or two formulas, one after the other) make a row in parts, which reads each part in its own years. SUM, MIN, MAX, AVERAGE, IF, IFERROR, AND, OR, NOT, ROUND, CHOOSE, ABS, LN, EXP, SQRT, INT, TRUNC, MOD and POWER become fmIDE\'s operators.' },
-      { p: 'What it can\'t translate keeps Excel\'s saved values as typed numbers, and the report lists it with why: lookups (VLOOKUP, INDEX, MATCH…), sums across the periods (NPV, IRR, SUMIF, COUNTIF, a running total), dates and text, circular references, and any other function. A cell unlike the rest of its row keeps its saved value in that period.' },
+      { p: 'It reads models laid out with rows as line items and columns as periods, one formula copied along each row. A reference to the column on the left becomes a period shift; a first period typed and the formula after it is an opening balance; typed actual years and a forecast formula make a row whose rectangle holds the actuals as its own numbers in those years (ticked under its 🕒), the formula feeding the others; two formulas, one after the other, make a row in parts, which reads each in its own years. SUM, MIN, MAX, AVERAGE, IF, IFERROR, AND, OR, NOT, ROUND, CHOOSE, ABS, LN, EXP, SQRT, INT, TRUNC, MOD and POWER become fmIDE\'s operators.' },
+      { p: 'What it can\'t translate keeps Excel\'s saved values as typed numbers, and the report lists it with why: lookups (VLOOKUP, INDEX, MATCH…), sums across the periods (NPV, IRR, SUMIF, COUNTIF, a running total), dates and text, circular references, and any other function. A cell unlike the rest of its row keeps its saved value in that period, as the rectangle\'s own number there.' },
       { p: 'The report compares every calculated cell with the value Excel saved for it. A workbook saved by a program that keeps no values (ExcelExporter itself is one) has nothing to compare: open it in Excel, save it, and import it again.' },
       { tip: 'Macros are never read or run, and nothing leaves your browser. Old .xls files and password-protected workbooks can\'t be read: save them as .xlsx without a password first.' },
       { see: ['load-model', 'what-is-excelexporter'] },
@@ -10959,6 +10971,17 @@ const EXCEL_HELP_TOPICS = [
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'import-excel-tidier', date: '2026-10-18', title: 'Tidier imported models',
+    summary: 'An imported row\'s typed actuals, and any cell that differs, are now the row\'s own numbers in those years — no extra boxes.',
+    what: [
+      'A row with typed actuals and a forecast formula: its rectangle holds the actuals (its 🕒 button shows those years ticked), and the formula feeds the other years. The "(typed)" rectangle, the period test and the "Revenue: 5" box are gone.',
+      'A cell that differs from the rest of its row is the rectangle\'s own number in that year, the same way.',
+    ],
+    why: 'A real three-statement model now has about half the boxes, and reads like its formulas.',
+    how: ['File → Import Excel model…, and pick the workbook.', 'Press Import, then Save for fmIDE, and open the file in fmIDE.', 'Select a row\'s rectangle and press its 🕒 button to see which years use its own numbers.'],
+    notes: ['A row with one formula for the actual years and another for the forecast still switches between them by year.'],
+    see: ['import-excel'] },
+
   { id: 'import-excel-forecast', date: '2026-10-18', title: 'Importing models with actuals and a forecast',
     summary: 'File → Import Excel model… now keeps the forecast formulas of rows whose actual years are typed.',
     what: [
@@ -15075,9 +15098,11 @@ function openImportWindow(){
 //     operators, period shifts, and aliases of the rectangles it reads, each alias placed in
 //     its operator's input column so the operator reads its inputs in Excel's order (fmIDE
 //     reads them left to right, then top to bottom);
-//   - a cell of the row that differs (odd) keeps Excel's saved value: if(period = n, value, …);
-//   - a row in parts (typed actuals, then a forecast formula) reads its parts by period:
-//     if(period ≤ 5, the typed numbers, the forecast formula);
+//   - a cell of the row that differs (odd) keeps Excel's saved value as the rectangle's own
+//     number in that period (`literalPeriods`, with `periodValues` when they differ);
+//   - a row in parts — typed actuals beside one formula — keeps its actuals the same way, and
+//     its tree is the formula alone; a row of two formulas reads its parts by period:
+//     if(period ≤ 5, the first formula, the second);
 //   - a formula reading the column before the first period reads that cell, as Excel does
 //     (a blank is 0): if(period = 1, Excel's C92, …);
 //   - a row that can't be translated keeps Excel's saved values as an input, and is listed
@@ -15471,17 +15496,35 @@ function xlBuildModel(book, plans, include){
         }
         add(rect);
       } else {
-        // A formula: the row's tree, then the cells that differ, then the rectangle.
+        // A formula: the row's tree, then the rectangle. The periods holding a number of
+        // their own — an opening balance's first, the cells that differ, a row in parts'
+        // typed actuals beside its one formula — are the rectangle's own numbers there
+        // (ticked under "Which periods use this rectangle's own number?", `literalPeriods`,
+        // with `periodValues`), so the tree is the formula alone.
         let expr = entry.expr;
+        const own = new Map();
+        if(entry.kind === 'opening') own.set(0, savedValues[0]);
         const oddCells = entry.kind === 'single' || entry.kind === 'parts' ? [] : plan.cells.slice(0, N).map((cell, p) => ({ cell, p })).filter(({ cell }) => plan.odd.includes(cell.address));
-        for(const { cell, p } of oddCells.slice().reverse()){
-          const v = savedValues[p];
-          expr = { k: 'op', op: 'if', named: true, args: [{ k: 'op', op: '=', args: [{ k: 'period' }, { k: 'const', value: p + 1 }] }, { k: 'const', value: v === null ? 0 : v, oddOf: cell.address }, expr] };
-        }
+        for(const { p } of oddCells) own.set(p, savedValues[p]);
         if(oddCells.length) report.odd.push({ sheet: out.sheet, row: plan.row, label: entry.name, cells: oddCells.map(o => o.cell.address), how: 'Excel\'s saved value in that period' });
-        const first = entry.kind === 'opening' ? savedValues[0] : null;
-        rect.text = xlRectText(entry.name, first, entry.unit);
-        if(entry.kind === 'opening') rect.literalPeriods = [0];
+        const formulas = entry.partExprs ? entry.partExprs.filter(x => x.expr.k !== 'typed') : [];
+        if(formulas.length === 1){
+          expr = formulas[0].expr;
+          for(const part of entry.partExprs){
+            if(part.expr.k !== 'typed') continue;
+            for(let p = part.from; p <= part.to && p < N; p++) own.set(p, part.expr.values[p]);
+          }
+        }
+        if(own.size){
+          const ticked = [...own.keys()].sort((a, b) => a - b);
+          const values = new Array(N).fill(0);
+          ticked.forEach(p => { const v = own.get(p); values[p] = v === null || v === undefined ? 0 : v; });
+          // One number in every ticked period (an opening balance) is typed, as fmIDE shows it.
+          const one = ticked.every(p => values[p] === values[ticked[0]]);
+          rect.text = xlRectText(entry.name, one ? values[ticked[0]] : null, entry.unit);
+          if(!one) rect.periodValues = values;
+          rect.literalPeriods = ticked;
+        } else rect.text = xlRectText(entry.name, null, entry.unit);
         add(rect);
         const root = xlEmit(expr, XL_RECT_X - XL_STEP, y, { c, add, edge, nodeId, label: entry.name });
         edge(root.id, rect.id);

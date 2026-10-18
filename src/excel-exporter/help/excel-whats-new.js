@@ -11,6 +11,17 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'import-excel-tidier', date: '2026-10-18', title: 'Tidier imported models',
+    summary: 'An imported row\'s typed actuals, and any cell that differs, are now the row\'s own numbers in those years — no extra boxes.',
+    what: [
+      'A row with typed actuals and a forecast formula: its rectangle holds the actuals (its 🕒 button shows those years ticked), and the formula feeds the other years. The "(typed)" rectangle, the period test and the "Revenue: 5" box are gone.',
+      'A cell that differs from the rest of its row is the rectangle\'s own number in that year, the same way.',
+    ],
+    why: 'A real three-statement model now has about half the boxes, and reads like its formulas.',
+    how: ['File → Import Excel model…, and pick the workbook.', 'Press Import, then Save for fmIDE, and open the file in fmIDE.', 'Select a row\'s rectangle and press its 🕒 button to see which years use its own numbers.'],
+    notes: ['A row with one formula for the actual years and another for the forecast still switches between them by year.'],
+    see: ['import-excel'] },
+
   { id: 'import-excel-forecast', date: '2026-10-18', title: 'Importing models with actuals and a forecast',
     summary: 'File → Import Excel model… now keeps the forecast formulas of rows whose actual years are typed.',
     what: [

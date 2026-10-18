@@ -8,9 +8,11 @@
 //     operators, period shifts, and aliases of the rectangles it reads, each alias placed in
 //     its operator's input column so the operator reads its inputs in Excel's order (fmIDE
 //     reads them left to right, then top to bottom);
-//   - a cell of the row that differs (odd) keeps Excel's saved value: if(period = n, value, …);
-//   - a row in parts (typed actuals, then a forecast formula) reads its parts by period:
-//     if(period ≤ 5, the typed numbers, the forecast formula);
+//   - a cell of the row that differs (odd) keeps Excel's saved value as the rectangle's own
+//     number in that period (`literalPeriods`, with `periodValues` when they differ);
+//   - a row in parts — typed actuals beside one formula — keeps its actuals the same way, and
+//     its tree is the formula alone; a row of two formulas reads its parts by period:
+//     if(period ≤ 5, the first formula, the second);
 //   - a formula reading the column before the first period reads that cell, as Excel does
 //     (a blank is 0): if(period = 1, Excel's C92, …);
 //   - a row that can't be translated keeps Excel's saved values as an input, and is listed
@@ -407,17 +409,35 @@ export function xlBuildModel(book, plans, include){
         }
         add(rect);
       } else {
-        // A formula: the row's tree, then the cells that differ, then the rectangle.
+        // A formula: the row's tree, then the rectangle. The periods holding a number of
+        // their own — an opening balance's first, the cells that differ, a row in parts'
+        // typed actuals beside its one formula — are the rectangle's own numbers there
+        // (ticked under "Which periods use this rectangle's own number?", `literalPeriods`,
+        // with `periodValues`), so the tree is the formula alone.
         let expr = entry.expr;
+        const own = new Map();
+        if(entry.kind === 'opening') own.set(0, savedValues[0]);
         const oddCells = entry.kind === 'single' || entry.kind === 'parts' ? [] : plan.cells.slice(0, N).map((cell, p) => ({ cell, p })).filter(({ cell }) => plan.odd.includes(cell.address));
-        for(const { cell, p } of oddCells.slice().reverse()){
-          const v = savedValues[p];
-          expr = { k: 'op', op: 'if', named: true, args: [{ k: 'op', op: '=', args: [{ k: 'period' }, { k: 'const', value: p + 1 }] }, { k: 'const', value: v === null ? 0 : v, oddOf: cell.address }, expr] };
-        }
+        for(const { p } of oddCells) own.set(p, savedValues[p]);
         if(oddCells.length) report.odd.push({ sheet: out.sheet, row: plan.row, label: entry.name, cells: oddCells.map(o => o.cell.address), how: 'Excel\'s saved value in that period' });
-        const first = entry.kind === 'opening' ? savedValues[0] : null;
-        rect.text = xlRectText(entry.name, first, entry.unit);
-        if(entry.kind === 'opening') rect.literalPeriods = [0];
+        const formulas = entry.partExprs ? entry.partExprs.filter(x => x.expr.k !== 'typed') : [];
+        if(formulas.length === 1){
+          expr = formulas[0].expr;
+          for(const part of entry.partExprs){
+            if(part.expr.k !== 'typed') continue;
+            for(let p = part.from; p <= part.to && p < N; p++) own.set(p, part.expr.values[p]);
+          }
+        }
+        if(own.size){
+          const ticked = [...own.keys()].sort((a, b) => a - b);
+          const values = new Array(N).fill(0);
+          ticked.forEach(p => { const v = own.get(p); values[p] = v === null || v === undefined ? 0 : v; });
+          // One number in every ticked period (an opening balance) is typed, as fmIDE shows it.
+          const one = ticked.every(p => values[p] === values[ticked[0]]);
+          rect.text = xlRectText(entry.name, one ? values[ticked[0]] : null, entry.unit);
+          if(!one) rect.periodValues = values;
+          rect.literalPeriods = ticked;
+        } else rect.text = xlRectText(entry.name, null, entry.unit);
         add(rect);
         const root = xlEmit(expr, XL_RECT_X - XL_STEP, y, { c, add, edge, nodeId, label: entry.name });
         edge(root.id, rect.id);

@@ -182,8 +182,9 @@ Each part below says what the feature is, why you would use it, and the exact cl
 **How it looks**
 
 - In the confirm window, the row's kind is **in parts**, with its years: "2020–2024: typed; 2025–2029: H26*(1+I8)".
-- In fmIDE, the row reads: if the year is one of the actual years, take the typed numbers (a rectangle named "Revenue (typed)"); otherwise use the forecast formula.
-- It also handles a row with **one formula for the actual years and another for the forecast**, and a row whose first year is blank.
+- In fmIDE, the row's own rectangle holds the typed numbers for the actual years (its 🕒 button shows those years ticked), and the forecast formula feeds it in the other years.
+- A row with one formula for the actual years and another for the forecast reads: if the year is one of the actual years, the first formula; otherwise the second.
+- It also handles a row whose first year is blank.
 
 **Two more things it handles like Excel**
 
