@@ -183,8 +183,20 @@ export var XLSX = (function(){
       }).join('') + '</cols>';
       if(cols === '<cols></cols>') cols = '';
     }
+    // Rows grouped in Excel's outline: ws['!rows'][r - 1] = { level } (1–7), as SheetJS writes them.
+    const levelOf = (r) => {
+      const info = Array.isArray(ws['!rows']) ? ws['!rows'][r - 1] : null;
+      const n = info ? Math.round(Number(info.level)) : 0;
+      return n >= 1 && n <= 7 ? n : 0;
+    };
+    let maxLevel = 0;
+    if(Array.isArray(ws['!rows'])) ws['!rows'].forEach((x, i) => {
+      const n = levelOf(i + 1);
+      if(n){ maxLevel = Math.max(maxLevel, n); if(!rows.has(i + 1)) rows.set(i + 1, []); }
+    });
     const rowXml = [...rows.keys()].sort((a, b) => a - b).map(r =>
-      '<row r="' + r + '">' + rows.get(r).sort((a, b) => a.c - b.c).map(x => x.xml).join('') + '</row>').join('');
+      '<row r="' + r + '"' + (levelOf(r) ? ' outlineLevel="' + levelOf(r) + '"' : '') + '>' +
+      rows.get(r).sort((a, b) => a.c - b.c).map(x => x.xml).join('') + '</row>').join('');
     let merges = '';
     if(Array.isArray(ws['!merges']) && ws['!merges'].length){
       const list = ws['!merges'].filter(m => m && m.s && m.e).map(m => '<mergeCell ref="' + encodeCell(m.s.r, m.s.c) + ':' + encodeCell(m.e.r, m.e.c) + '"/>');
@@ -198,7 +210,7 @@ export var XLSX = (function(){
       '<worksheet xmlns="' + NS_MAIN + '" xmlns:r="' + NS_REL + '"' +
       (ctrls.length ? ' xmlns:mc="' + NS_MC + '" xmlns:x14="' + NS_X14 + '" xmlns:xdr="' + NS_XDR + '"' : '') + '>' +
       '<dimension ref="' + ref + '"/><sheetViews><sheetView workbookViewId="0"/></sheetViews>' +
-      '<sheetFormatPr defaultRowHeight="15"/>' + cols + '<sheetData>' + rowXml + '</sheetData>' + merges +
+      '<sheetFormatPr defaultRowHeight="15"' + (maxLevel ? ' outlineLevelRow="' + maxLevel + '"' : '') + '/>' + cols + '<sheetData>' + rowXml + '</sheetData>' + merges +
       '<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>' +
       (ids.drawing ? '<drawing r:id="' + ids.drawing + '"/>' : '') +
       (ids.vml ? '<legacyDrawing r:id="' + ids.vml + '"/>' : '') +

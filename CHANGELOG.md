@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: sensitivity on the Inputs tab, easier to read
+- A moved input's base row carries its name; two rows under it gather the Sensitivity tabs' parts (% change, change by amount), grouped in Excel's outline; its own row ("Unit Price after sensitivity", or "after sliders") reads them, `(E10)*(1+E11)+E12`. The built-in Excel writer can group rows (`ws['!rows']` levels).
+
 ## ExcelExporter: space between the Inputs tab's groups
 - On the Inputs tab, every group header after the first gets an empty row above it (made and remade with the headers; Re-apply layout adds them to a layout made before).
 

@@ -44,9 +44,18 @@ function buildCtx(){
   const dash = graphSliderPlan();
   const sliderMoved = dash ? dash.byMirror : new Map();
   const sensBase = {};
+  // An input the Sensitivity tabs move gets two rows gathering their numbers, under its base
+  // or scenarios (sensGather: row id -> the first, "% change"; "change by amount" below it).
+  const sensGather = {};
+  // Where the name of a moved input stands on its own (its base row), for the other tabs'
+  // links; null with scenarios, whose own row reads "… after sensitivity" (plainName).
+  const plainName = {};
   const reserveRows = (row, r) => {
     r = reserveScenarioRows(row, r, scenarioBlocks);
-    if((sensMoved.has(row.id) || sliderMoved.has(row.id)) && !scenarioBlocks[row.id]){ sensBase[row.id] = r; r++; }
+    const moved = sensMoved.has(row.id) || sliderMoved.has(row.id);
+    if(moved && !scenarioBlocks[row.id]){ sensBase[row.id] = r; r++; }
+    if(sensMoved.has(row.id)){ sensGather[row.id] = r; r += 2; }
+    if(moved) plainName[row.id] = sensBase[row.id] !== undefined ? { tabName: tabById[row.tabId].name, row: sensBase[row.id] } : null;
     return r;
   };
   const blankAfter = (row) => scenarioBlocks[row.id] || sensBase[row.id] !== undefined;
@@ -79,7 +88,7 @@ function buildCtx(){
       });
     }
   });
-  return { canvasById, cellPos, periodCount: model.periods.length, rowsByTabOrdered, tabById, inlineConstantIds, scenarioBlocks, sens, sensMoved, sensBase, dash, sliderMoved };
+  return { canvasById, cellPos, periodCount: model.periods.length, rowsByTabOrdered, tabById, inlineConstantIds, scenarioBlocks, sens, sensMoved, sensBase, sensGather, plainName, dash, sliderMoved };
 }
 
 // Scenario rows sit directly above their variable's own row on the Inputs tab.
@@ -181,6 +190,7 @@ function buildWorkbook(){
     aoa[1] = ['Line item', 'UOM'].concat(labels);
     const ws = {};
     const merges = [];
+    const outline = []; // rows grouped in Excel's outline (0-based, as the writer reads '!rows')
 
     function setCell(addr, cell){ ws[addr] = cell; }
     // Sheet title: the Headers role's font, a little larger, without the header-row fill.
@@ -262,8 +272,11 @@ function buildWorkbook(){
       const slid = row.isInputMirror && dashName && ctx.sliderMoved.get(row.id) || null;
       const sensBaseRow = sensParts || slid ? ctx.sensBase[row.id] : undefined;
       const withSliders = (base, p) => slid ? dashboardSliders(ctx.dash, slid, base, p, dashName, tab.name) : base;
-      const moved = (base) => '(' + base + ')*(1+' + sensParts.map(({ a, i }) => sensLays[a].pctRef(i, tab.name)).join('+') + ')+' +
-        sensParts.map(({ a, i }) => sensLays[a].amtRef(i, tab.name)).join('+');
+      // The two rows under the base gather the Sensitivity tabs' parts; the row itself reads them.
+      const gatherRow = sensParts ? ctx.sensGather[row.id] : undefined;
+      const moved = (base, col) => '(' + base + ')*(1+' + col + gatherRow + ')+' + col + (gatherRow + 1);
+      // A moved input's own row says what moved it; its base row (or scenarios) above has the name.
+      const movedBy = [slid ? 'sliders' : '', sensParts ? 'sensitivity' : ''].filter(Boolean).join(' and ');
 
       const lastHop = row.path && row.path.length ? row.path[row.path.length - 1] : null;
       const rowVintage = (lastHop && typeof lastHop.vIndex === 'number') ? lastHop.vIndex : null;
@@ -305,7 +318,7 @@ function buildWorkbook(){
         // node); build its formula separately instead of going through buildCellContent.
         const picked = scnBlock ? 'INDEX(' + col + scnBlock.first + ':' + col + (scnBlock.first + scnBlock.n - 1) + ',MIN(MAX($' + VINTAGE_COL + excelRow + ',1),' + scnBlock.n + '))' : null;
         contents.push(sensParts
-          ? { isFormula: true, formula: moved(withSliders(picked || (col + sensBaseRow), p)) }
+          ? { isFormula: true, formula: moved(withSliders(picked || (col + sensBaseRow), p), col) }
           : slid
           ? { isFormula: true, formula: withSliders(picked || (col + sensBaseRow), p) }
           : scnBlock
@@ -372,7 +385,7 @@ function buildWorkbook(){
         const inStyle = nodeStyleToExcelCellStyle(inObj);
         const inFmt = numberFormatToExcel(inObj, fallbackFmt);
         const r = sensBaseRow;
-        setCell('A' + r, textCell(slid ? 'Base (before sliders)' : 'Base (before sensitivity)', inStyle));
+        setCell('A' + r, textCell(row.label, inStyle));
         setCell('B' + r, blankCell(inStyle));
         setCell(VINTAGE_COL + r, blankCell(inStyle));
         for(let h = 0; h < helperColCount; h++) setCell(helperCol(h) + r, blankCell(inStyle));
@@ -386,7 +399,36 @@ function buildWorkbook(){
         lastRow = Math.max(lastRow, r);
       }
 
-      setCell('A' + excelRow, textCell(row.label, withIndent(cellStyle, row)));
+      if(gatherRow !== undefined){
+        // "% change" and "change by amount": each period the sum of the Sensitivity tabs' parts
+        // for this input (0 unless a tab is moving it). Grouped in Excel's outline, to fold away.
+        const gStyle = withIndent(roleCellStyle('Links'), { indent: rowIndent(row) + 1 });
+        const linkStyle = roleCellStyle('Links');
+        [['% change (Sensitivity)', 'pctRef', '0.0%'], ['Change by amount (Sensitivity)', 'amtRef', numFmt]].forEach(([label, ref, z], k) => {
+          const r = gatherRow + k;
+          setCell('A' + r, textCell(label, gStyle));
+          setCell('B' + r, blankCell(linkStyle));
+          setCell(VINTAGE_COL + r, blankCell(linkStyle));
+          for(let h = 0; h < helperColCount; h++) setCell(helperCol(h) + r, blankCell(linkStyle));
+          const f = sensParts.map(({ a, i }) => sensLays[a][ref](i, tab.name)).join('+');
+          for(let p = 0; p < nPeriods; p++){
+            const cell = { t: 'n', f, v: 0, z };
+            if(linkStyle) cell.s = linkStyle;
+            setCell(colLetter(periodCol(p)) + r, cell);
+          }
+          outline[r - 1] = { level: 1 };
+          lastRow = Math.max(lastRow, r);
+        });
+      }
+
+      const labelStyle = withIndent(cellStyle, row);
+      if(movedBy){
+        // "Unit Price after sensitivity": with a base row, built from its name, so a rename there carries.
+        const suffix = ' after ' + movedBy;
+        setCell('A' + excelRow, sensBaseRow !== undefined
+          ? Object.assign({ t: 's', f: 'A' + sensBaseRow + '&"' + suffix + '"', v: (row.label || '') + suffix }, labelStyle ? { s: labelStyle } : {})
+          : textCell((row.label || '') + suffix, labelStyle));
+      } else setCell('A' + excelRow, textCell(row.label, labelStyle));
       const uom = rowUnit(canvas, node, row.path);
       setCell('B' + excelRow, textCell(uom || '', cellStyle));
 
@@ -433,6 +475,7 @@ function buildWorkbook(){
     // Key columns (label, UOM, Vintage, helpers) then the periods — same widths on every tab.
     ws['!cols'] = [{ wch: 28 }, { wch: 8 }, { wch: 8 }].concat(Array.from({ length: helperColCount }, () => ({ wch: 14 })), [{ wch: 2 }], labels.map(() => ({ wch: 13 })));
     ws['!merges'] = merges;
+    if(outline.length) ws['!rows'] = outline;
 
     XLSX.utils.book_append_sheet(wb, ws, tab.name);
   });
@@ -506,7 +549,8 @@ function buildWorkbook(){
       const blk = ctx.scenarioBlocks[row.id];
       const inRef = (col, rr) => sheetRef(inputsTabName, col, rr, scenarioSheetName);
       const nameRange = sheetRef(inputsTabName, '$A', '$' + blk.first, scenarioSheetName) + ':$A$' + (blk.first + blk.n - 1);
-      ws['A' + r] = { t: 's', f: inRef('A', excelRow), v: row.label || '', s: linkStyle };
+      // A moved input's own row reads "… after sensitivity": its name is written here instead.
+      ws['A' + r] = row.id in ctx.plainName ? textCell(row.label, linkStyle) : { t: 's', f: inRef('A', excelRow), v: row.label || '', s: linkStyle };
       ws['B' + r] = { t: 's', f: inRef('B', excelRow) + '&""', v: '', s: linkStyle };
       if(nCases){
         // Applied = this variable's scenario in the global case (a formula now, so plain style).
@@ -535,7 +579,11 @@ function buildWorkbook(){
   // The Dashboard, before Scenarios: the workbook opens on it.
   if(dashName){
     const ownRow = {};
-    (ctx.dash ? ctx.dash.rows : []).forEach(d => { if(d.mirrorId && ctx.cellPos[d.mirrorId]) ownRow[d.mirrorId] = ctx.cellPos[d.mirrorId]; });
+    // Each slider's name links to its input's name: the base row of a moved input (none with scenarios).
+    (ctx.dash ? ctx.dash.rows : []).forEach(d => {
+      const pos = d.mirrorId && (d.mirrorId in ctx.plainName ? ctx.plainName[d.mirrorId] : ctx.cellPos[d.mirrorId]);
+      if(pos) ownRow[d.mirrorId] = pos;
+    });
     appendDashboardSheet(wb, ctx.dash, dashName, ownRow, dashCharts, ctx.cellPos);
   }
   return { wb, tooLong };

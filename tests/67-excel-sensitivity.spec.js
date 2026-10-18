@@ -164,14 +164,23 @@ test('the workbook: base rows, the moved inputs, the Sensitivity tab and its Dat
   await setChange(page, 'Volume', 'amount', -2, 1);
   const { wb, bytes } = await X.generate(page);
   expect(wb.SheetNames).toEqual(['Inputs', 'Canvas 1', 'Sensitivity', 'Tornado', 'Spider']); // the charts' tabs: phase B
-  // Inputs tab: a Base row above each moved input, which reads the Sensitivity tab.
+  // Inputs tab (idea 10): each moved input's base row has its name; two rows under it gather
+  // the Sensitivity tab's parts, grouped in Excel's outline; its own row reads them.
   const inp = wb.Sheets.Inputs;
-  const [price] = X.findRow(inp, 'Unit Price');
-  const [vol] = X.findRow(inp, 'Volume');
-  expect(X.text(inp, 'A' + (price - 1))).toBe('Base (before sensitivity)');
-  expect(inp['E' + (price - 1)].v).toBe(10);
-  expect(X.formulaOf(inp['E' + price])).toBe("(E" + (price - 1) + ")*(1+'Sensitivity'!$I$16)+'Sensitivity'!$J$16");
-  expect(X.formulaOf(inp['N' + vol])).toBe("(N" + (vol - 1) + ")*(1+'Sensitivity'!$I$17)+'Sensitivity'!$J$17");
+  const [base] = X.findRow(inp, 'Unit Price');
+  const [price] = X.findRow(inp, 'Unit Price after sensitivity');
+  const [volBase] = X.findRow(inp, 'Volume');
+  const [vol] = X.findRow(inp, 'Volume after sensitivity');
+  expect(price).toBe(base + 3);
+  expect(X.formulaOf(inp['A' + price])).toBe('A' + base + '&" after sensitivity"');
+  expect(inp['E' + base].v).toBe(10);
+  expect(X.text(inp, 'A' + (base + 1))).toBe('% change (Sensitivity)');
+  expect(X.text(inp, 'A' + (base + 2))).toBe('Change by amount (Sensitivity)');
+  expect(X.formulaOf(inp['E' + (base + 1)])).toBe("'Sensitivity'!$I$16");
+  expect(X.formulaOf(inp['E' + (base + 2)])).toBe("'Sensitivity'!$J$16");
+  expect(X.formulaOf(inp['E' + price])).toBe('(E' + base + ')*(1+E' + (base + 1) + ')+E' + (base + 2));
+  expect(X.formulaOf(inp['N' + vol])).toBe('(N' + volBase + ')*(1+N' + (volBase + 1) + ')+N' + (volBase + 2));
+  expect(X.formulaOf(inp['N' + (volBase + 2)])).toBe("'Sensitivity'!$J$17");
   // The Sensitivity tab: controls, outputs, inputs.
   const { ws } = sensSheet(wb);
   expect(ws.C4.v).toBe(1); expect(ws.C5.v).toBe(1); expect(ws.C6.v).toBe(0); expect(ws.C7.v).toBe(0);
@@ -183,7 +192,14 @@ test('the workbook: base rows, the moved inputs, the Sensitivity tab and its Dat
   expect([ws.D17.v, ws.E17.v, ws.F17.v, ws.G17.v]).toEqual(['amount', -2, 1, 1]);
   expect(X.formulaOf(ws.H16)).toBe('IF($C$6=$A16,IF($C$7<0,$E16*(-$C$7)/5,$F16*$C$7/5),0)');
   // The Data Table: its definition in the file, and fmIDE's numbers written in.
-  const sheetXml = Object.entries(await X.unzip(bytes)).find(([k, v]) => /worksheets\/sheet3\.xml$/.test(k))[1];
+  const parts = Object.entries(await X.unzip(bytes));
+  // The gathering rows are grouped (shown, foldable with the − button on the input's own row).
+  const inputsXml = parts.find(([k]) => /worksheets\/sheet1\.xml$/.test(k))[1];
+  expect(inputsXml).toContain('outlineLevelRow="1"');
+  const grouped = [...inputsXml.matchAll(/<row r="(\d+)" outlineLevel="1"/g)].map(m => Number(m[1]));
+  expect(grouped).toEqual([base + 1, base + 2, volBase + 1, volBase + 2]);
+  expect(X.formulaOf(ws.B16)).toBe("'Inputs'!$A$" + base); // the input's name: its base row
+  const sheetXml = parts.find(([k, v]) => /worksheets\/sheet3\.xml$/.test(k))[1];
   expect(sheetXml).toContain('<f t="dataTable" ref="N16:X17" dt2D="1" dtr="1" r1="C7" r2="C6"/>');
   expect(X.formulaOf(ws.M15)).toBe('$C$8');
   const { table } = writtenTable(ws, 5, 2);
@@ -240,9 +256,15 @@ test('an input with scenarios: the scenario it picks is what moves', async ({ pa
   await row.locator('.scn-ctl input[type=checkbox]').check();
   const { wb, bytes } = await X.generate(page);
   const inp = wb.Sheets.Inputs;
-  const [price] = X.findRow(inp, 'Unit Price');
-  expect(X.text(inp, 'A' + (price - 1))).toBe('Scenario 3'); // no Base row: the scenarios are its base
-  expect(X.formulaOf(inp['E' + price])).toBe("(INDEX(E" + (price - 3) + ":E" + (price - 1) + ",MIN(MAX($C" + price + ",1),3)))*(1+'Sensitivity'!$I$16)+'Sensitivity'!$J$16");
+  const [price] = X.findRow(inp, 'Unit Price after sensitivity');
+  expect(X.findRow(inp, 'Unit Price')).toEqual([]); // no base row: the scenarios are its base
+  expect(X.text(inp, 'A' + (price - 3))).toBe('Scenario 3');
+  expect(X.text(inp, 'A' + (price - 2))).toBe('% change (Sensitivity)');
+  expect(X.formulaOf(inp['E' + price])).toBe("(INDEX(E" + (price - 5) + ":E" + (price - 3) + ",MIN(MAX($C" + price + ",1),3)))*(1+E" + (price - 2) + ")+E" + (price - 1));
+  // Without a base row, the other tabs write its name as text.
+  const [named] = X.findRow(wb.Sheets.Scenarios, 'Unit Price');
+  expect(wb.Sheets.Scenarios['A' + named].f).toBeUndefined();
+  expect(X.text(wb.Sheets.Sensitivity, 'B16')).toBe('Unit Price');
   const book = await recalculated(bytes);
   const ws = book.getWorksheet('Sensitivity');
   expect(valueOf(ws.getCell('N16'))).toBe(45);
@@ -543,16 +565,21 @@ test('the analyses: + Add, rename, ↑ ↓, ×, at most 10, remembered', async (
   expect(pageErrors).toEqual([]);
 });
 
-test('two analyses sharing an input: a tab each, one Base row, their parts added on its row', async ({ page }) => {
+test('two analyses sharing an input: a tab each, one base row, their parts added in its gathering rows', async ({ page }) => {
   await setUpTwo(page);
   const { wb, bytes } = await X.generate(page);
   expect(wb.SheetNames).toEqual(['Inputs', 'Canvas 1', 'Sensitivity', 'Tornado', 'Spider', 'Volume only', 'Tornado 2', 'Spider 2']);
   const inp = wb.Sheets.Inputs;
-  const [price] = X.findRow(inp, 'Unit Price');
-  const [vol] = X.findRow(inp, 'Volume');
-  expect(X.findRow(inp, 'Base (before sensitivity)')).toEqual([price - 1, vol - 1]); // one each, however many move it
-  expect(X.formulaOf(inp['E' + price])).toBe("(E" + (price - 1) + ")*(1+'Sensitivity'!$I$16)+'Sensitivity'!$J$16");
-  expect(X.formulaOf(inp['E' + vol])).toBe("(E" + (vol - 1) + ")*(1+'Sensitivity'!$I$17+'Volume only'!$I$16)+'Sensitivity'!$J$17+'Volume only'!$J$16");
+  const [price] = X.findRow(inp, 'Unit Price after sensitivity');
+  const [vol] = X.findRow(inp, 'Volume after sensitivity');
+  expect(X.findRow(inp, 'Unit Price')).toEqual([price - 3]); // one base row each, however many move it
+  expect(X.findRow(inp, 'Volume')).toEqual([vol - 3]);
+  expect(X.findRow(inp, '% change (Sensitivity)')).toEqual([price - 2, vol - 2]);
+  expect(X.formulaOf(inp['E' + price])).toBe('(E' + (price - 3) + ')*(1+E' + (price - 2) + ')+E' + (price - 1));
+  expect(X.formulaOf(inp['E' + (price - 2)])).toBe("'Sensitivity'!$I$16");
+  expect(X.formulaOf(inp['E' + vol])).toBe('(E' + (vol - 3) + ')*(1+E' + (vol - 2) + ')+E' + (vol - 1));
+  expect(X.formulaOf(inp['E' + (vol - 2)])).toBe("'Sensitivity'!$I$17+'Volume only'!$I$16");
+  expect(X.formulaOf(inp['E' + (vol - 1)])).toBe("'Sensitivity'!$J$17+'Volume only'!$J$16");
   // Each tab has its own controls and its own Data Table over its own C6 and C7.
   const parts = await X.unzip(bytes);
   expect(parts['xl/worksheets/sheet3.xml']).toContain('<f t="dataTable" ref="N16:X17" dt2D="1" dtr="1" r1="C7" r2="C6"/>');
