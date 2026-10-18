@@ -2,6 +2,12 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: importing an Excel model (step 20)
+- **File → Import Excel model…** (or an `.xlsx` dropped on the page) reads a financial model built in Excel and rebuilds it as an fmIDE model: a canvas per sheet, a rectangle per row (its label and unit), an input's numbers per period, assumptions, opening balances, and each row's formula as operators, period shifts and aliases. SUM, MIN, MAX, AVERAGE, IF, IFERROR, AND, OR, NOT, ROUND, ROUNDUP, ROUNDDOWN, CHOOSE, ABS, LN, EXP, SQRT, INT, TRUNC, MOD, POWER and the arithmetic and comparison operators are translated; a reference to the column on the left is a period shift.
+- A window first shows what was found on each sheet — the header row of periods, the period, label and unit columns, each row's kind — and each can be changed, or a sheet left out.
+- After Import, a report compares every calculated cell with the value Excel saved for it, and lists what was kept as Excel's saved values and why (lookups, sums across the periods, dates and text, circular references, other functions) and the cells unlike the rest of their row. File → Import Report… opens it again; **Save for fmIDE** writes the model as a file fmIDE opens.
+- The workbook is read by ExcelExporter's own code, in the browser: no library, nothing uploaded, macros never read or run; limits on sizes, sheets, cells and formulas refuse a hostile file. No file format changed: the model is an ordinary system file.
+
 ## ExcelExporter: the Dashboard's chart tables tidied (after step 19)
 - The data tables behind the Dashboard's charts (a waterfall's workings, the table of a columns chart with several groups) now sit beside the charts, from column N, in columns of their own width instead of the slider table's; each table's title has a row of its own, so the names beside it no longer cut it off (found in the owner's check on the iPad). The charts and their numbers are unchanged.
 

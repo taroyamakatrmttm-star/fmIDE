@@ -2,7 +2,7 @@
 
 The owner's request (18 October 2026): **ExcelExporter reads an existing `.xlsx` financial model and rebuilds it as an fmIDE model**, so a person can see a spreadsheet they inherited as a picture of rectangles and operators, check it, and carry on in fmIDE. It is the other half of what ExcelExporter does today (fmIDE to Excel): Excel to fmIDE.
 
-This is the brief, written in phase 20a. The owner's choices it rests on are decision 13 in `docs/decisions.md`.
+**Done** (18 October 2026): every phase, 20a to 20g, is built and merged ("How 20g turned out" and the phases below it). This is the brief, written in phase 20a. The owner's choices it rests on are decision 13 in `docs/decisions.md`.
 
 ## The owner's choices (18 October 2026)
 
@@ -107,6 +107,16 @@ Each is one pull request, merged when the whole suite is green (the owner's requ
 `expected.json` says what the importer should find in each: the header row, period and label columns, each row's kind and its formula in words, and what can't be translated. Group 78 checks that the samples are the tool's, that the description fits them, and that LibreOffice, recalculating copies written without saved values, gives the saved values: so the "Excel's saved values" phases 20b–20f compare with are right.
 
 **Real workbooks are still needed.** ExcelJS's files are close to Excel's (shared strings, shared formulas, styles), but Excel also writes a calculation chain, rich text, inline strings and other variations. The owner is asked to provide, when they can, one or two real models (or made-up ones saved by Excel) to add as samples.
+
+## How 20g turned out
+
+Done (18 October 2026): the canvas spacing, Save for fmIDE, help, What's new, README and CHANGELOG, and the end-to-end test.
+
+- **The canvas**: kept as 20e laid it out, which reads well — the rectangles in one column on the right, in the sheet's order, each row's formula as a small tree to its left. An alias feeding a period shift was moved further left so they no longer overlap; group 79 checks that no two nodes of any sample overlap.
+- **Save for fmIDE** (in the report and the File menu) downloads the model as `<workbook name>.json`, a system file fmIDE's File → Open… reads. Sending it straight to an fmIDE window that opened ExcelExporter is a later idea.
+- **Help**: ExcelExporter's topic "Importing an Excel model" (`import-excel`), linked from "Loading a model"; What's new "Import an Excel model".
+- **End to end** (group 80, with LibreOffice): a sample imported, written out again by ExcelExporter and recalculated by LibreOffice gives the original workbook's saved values in every row and period; the saved file opened in fmIDE gives them too.
+- **Later ideas** (not built): lookups as `choose`, sums across the periods (new operators), number formats onto the canvas, sending the model straight to fmIDE, and real workbooks from the owner's customers as samples.
 
 ## How 20f turned out
 

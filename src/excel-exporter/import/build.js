@@ -23,7 +23,7 @@ const XL_RANGE_MAX = 500;
 const XL_LANE = 90;      // the height of one input in a row's tree
 const XL_ROW_GAP = 20;   // between rows
 const XL_STEP = 220;     // from an operator to its inputs, leftwards
-const XL_ALIAS_STEP = 150; // from a period shift to the alias feeding it
+const XL_ALIAS_STEP = 190; // from a period shift to the alias feeding it (an alias is 170 wide)
 const XL_RECT_X = 2000;  // the rectangles' column, before the canvas is moved to start at the left
 const XL_MARGIN = 40;
 
