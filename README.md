@@ -106,6 +106,7 @@ The script pieces are plain fragments of one wrapped function — no `import`/`e
 - [`docs/tutorial-step7.md`](docs/tutorial-step7.md) — step-by-step tutorial for everything new since pull request #23: functions, the new operators, and the "differs from fmIDE" list
 - [`docs/tutorial-step20.md`](docs/tutorial-step20.md) — step-by-step guide to pull requests #158 to #165: importing an Excel model into fmIDE (the confirm window, the report, Save for fmIDE, rows with actuals and a forecast)
 - [`docs/tutorial-step18-19.md`](docs/tutorial-step18-19.md) — step-by-step guide to pull requests #144 to #156: Tornado and Spider in fmGraph, and fmGraph boards in Excel (scenarios, sensitivity, the Dashboard's sliders and charts)
+- [`docs/excel-layouts.md`](docs/excel-layouts.md) — ExcelExporter's two layouts, Mapping and Module Layouts: what each holds, where it is kept, and which one wins
 - [`docs/decisions.md`](docs/decisions.md) — agreed and open product decisions, and the build order
 - [`docs/step9-touch.md`](docs/step9-touch.md) — touch support: what was decided, the phases, and how each turned out
 - [`docs/step17-phones.md`](docs/step17-phones.md) — phones: what a phone does better, the phases, and how each turned out
