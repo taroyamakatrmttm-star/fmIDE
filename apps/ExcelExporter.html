@@ -903,6 +903,11 @@ var XLSX = (function(){
   .import-rows th{ color:var(--muted); font-weight:600; }
   .import-rows td.import-formula{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12px; }
   .import-odd{ color:#92400e; }
+  .import-check{ margin:0 0 8px; font-weight:600; }
+  .import-check.ok{ color:#166534; }
+  .import-check.warn{ color:#92400e; }
+  .import-report-lists{ max-height:55vh; overflow:auto; }
+  .import-report-lists li{ padding:2px 0; overflow-wrap:anywhere; }
   .graph-left-out li{ padding:2px 0; color:#92400e; overflow-wrap:anywhere; }
   .modal-close{ width:32px; height:32px; padding:0; border:none; background:transparent; border-radius:8px; color:var(--muted); }
   .modal-close::before{ content:'×'; font-size:22px; line-height:32px; }
@@ -1066,6 +1071,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
           <button type="button" role="menuitem" id="btnMenuPaste" title="Paste a model's JSON text">Paste JSON…</button>
           <button type="button" role="menuitem" id="btnFromFmide" class="hidden" title="Load the model open in fmIDE again, as it is now">↻ From fmIDE</button>
           <button type="button" role="menuitem" id="btnImportExcel" title="Read an Excel workbook (.xlsx) and rebuild it as an fmIDE model">Import Excel model…</button>
+          <button type="button" role="menuitem" id="btnImportReport" class="hidden" title="What the import translated, and how the model compares with the values Excel saved">Import Report…</button>
           <button type="button" role="menuitem" id="btnImportGraphBoards" class="needs-model" title="Read a board file saved with Export all boards in fmGraph, to use its scenarios, sliders and charts">Import fmGraph boards…</button>
           <div class="menu-sep" role="separator"></div>
           <button type="button" role="menuitem" id="btnClearAll" class="danger" title="Empties this page. Saved layouts are kept.">Start Over</button>
@@ -1383,6 +1389,27 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     <div class="modal-actions">
       <button id="importCancel">Cancel</button>
       <button id="importOk" class="primary" title="Build the fmIDE model from the sheets ticked">Import</button>
+    </div>
+  </div>
+</div>
+
+<div id="importReportModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="importReportTitle">
+  <div class="modal modal-wide">
+    <h3 id="importReportTitle">Imported from Excel</h3>
+    <p id="importReportSource" class="graph-source"></p>
+    <p id="importCheckSummary" class="import-check"></p>
+    <div class="import-report-lists">
+      <h4 id="importDifferHead" class="hidden">Differ from Excel</h4>
+      <ul id="importDiffer" class="graph-left-out"></ul>
+      <h4 id="importKeptHead" class="hidden">Kept as Excel's saved values</h4>
+      <ul id="importKept" class="graph-left-out"></ul>
+      <h4 id="importOddHead" class="hidden">Cells unlike the rest of their row</h4>
+      <ul id="importOdd" class="graph-scenarios"></ul>
+      <h4 id="importReportNotesHead" class="hidden">Notes</h4>
+      <ul id="importReportNotes" class="graph-scenarios"></ul>
+    </div>
+    <div class="modal-actions">
+      <button id="importReportClose" class="primary">Close</button>
     </div>
   </div>
 </div>
@@ -11412,6 +11439,7 @@ let currentModelLabel = ''; // the loaded model's file name (or "Sample model"),
 // this model's layout, Settings' Workbook tab and the model's name.
 function syncPageState(){
   const loaded = !!(model && mapping);
+  syncImportReportItem();
   $('loadPanel').classList.toggle('hidden', loaded);
   $('btnGenerate').disabled = !loaded;
   document.querySelectorAll('.menu-list .needs-model').forEach(b => {
@@ -14656,7 +14684,8 @@ function xlKindCounts(plan){
 // imported, its header row, period columns, label and unit columns, and its rows with their
 // kinds. Changing a choice works that sheet out again. Every text from the file is shown
 // with textContent.
-let excelImport = null; // { fileName, book, plans, include }
+// `var`: syncPageState (09e, earlier in the file) reads it through syncImportReportItem.
+var excelImport = null; // { fileName, book, plans, include, result, check, model }
 
 const IMPORT_KIND_NAMES = { title: 'title', input: 'input', assumption: 'assumption', calculation: 'calculation', opening: 'opening balance', single: 'one formula' };
 const IMPORT_ROWS_SHOWN = 300;
@@ -14815,7 +14844,79 @@ async function buildImportedModel(){
   const before = model;
   await tryLoad(JSON.stringify(built.system), label, label.replace(/\.xls[xm]?$/i, ''));
   if(model === before || !model) return; // tryLoad said why
-  setStatus($('loadStatus'), importLoadedMessage(built.report), built.report.notTranslated.length ? 'warn' : 'ok');
+  excelImport.check = xlCheckModel(built.system, built.report);
+  excelImport.model = model;
+  syncImportReportItem();
+  const check = excelImport.check;
+  setStatus($('loadStatus'), importLoadedMessage(built.report), built.report.notTranslated.length || check.differ.length ? 'warn' : 'ok');
+  openImportReport();
+}
+
+// File → Import Report…: shown while the model is the one imported.
+function syncImportReportItem(){
+  const item = $('btnImportReport');
+  if(item) item.classList.toggle('hidden', !(excelImport && excelImport.check && excelImport.model && excelImport.model === model));
+}
+$('btnImportReport').addEventListener('click', () => openImportReport());
+
+// A number as the report shows it: up to 12 significant digits.
+function importNumber(v){
+  if(typeof v !== 'number' || !Number.isFinite(v)) return '—';
+  return String(Number(v.toPrecision(12)));
+}
+
+function importCheckSummary(check){
+  if(!check.compared && check.noSaved) return { text: 'Nothing to compare: the workbook was saved without its formulas\' values. Save it in Excel, then import it again.', kind: 'warn' };
+  if(!check.compared) return { text: 'No calculated cells to compare.', kind: 'warn' };
+  const n = check.compared.toLocaleString('en');
+  let text = check.differ.length
+    ? check.agree.toLocaleString('en') + ' of ' + n + ' calculated cells agree with Excel\'s saved values; ' + check.differ.length.toLocaleString('en') + ' differ.'
+    : 'All ' + n + ' calculated cells agree with Excel\'s saved values.';
+  if(check.noSaved) text += ' ' + check.noSaved.toLocaleString('en') + ' had no saved value.';
+  return { text, kind: check.differ.length ? 'warn' : 'ok' };
+}
+
+const IMPORT_REPORT_SHOWN = 200;
+
+function fillImportList(listId, headId, items){
+  const list = $(listId);
+  list.textContent = '';
+  items.slice(0, IMPORT_REPORT_SHOWN).forEach(t => { const li = document.createElement('li'); li.textContent = t; list.appendChild(li); });
+  if(items.length > IMPORT_REPORT_SHOWN){ const li = document.createElement('li'); li.textContent = 'and ' + (items.length - IMPORT_REPORT_SHOWN) + ' more'; list.appendChild(li); }
+  $(headId).classList.toggle('hidden', !items.length);
+}
+
+function openImportReport(){
+  if(!excelImport || !excelImport.check) return;
+  const { report } = excelImport.result, check = excelImport.check;
+  const periods = excelImport.result.system.periods;
+  $('importReportSource').textContent = excelImport.fileName + ' · ' + report.canvases + ' canvas' + (report.canvases === 1 ? '' : 'es') + ', ' + report.rectangles + ' rectangles';
+  const sum = importCheckSummary(check);
+  const el = $('importCheckSummary');
+  el.textContent = sum.text;
+  el.className = 'import-check ' + sum.kind;
+  fillImportList('importDiffer', 'importDifferHead', check.differ.map(d =>
+    d.sheet + '!' + d.address + ' · ' + d.label + (d.period !== null && periods[d.period] !== undefined ? ' · ' + periods[d.period] : '') + ': ' +
+    'fmIDE ' + (d.got === null ? 'an error' + (d.error ? ' (' + d.error + ')' : '') : importNumber(d.got)) + ', Excel ' + (d.excel || importNumber(d.saved))));
+  fillImportList('importKept', 'importKeptHead', report.notTranslated.map(k => k.sheet + '!' + k.cells + ' · ' + k.label + ': ' + k.why));
+  fillImportList('importOdd', 'importOddHead', report.odd.map(o => o.sheet + '!' + o.cells.join(', ') + ' · ' + o.label + ': ' + o.how));
+  fillImportList('importReportNotes', 'importReportNotesHead', [...excelImport.book.notes, ...report.notes]);
+  const modal = $('importReportModal');
+  const opener = document.activeElement;
+  const close = () => {
+    modal.classList.add('hidden');
+    $('importReportClose').onclick = null;
+    modal.removeEventListener('click', onBackdrop);
+    document.removeEventListener('keydown', onKey, true);
+    if(opener && document.contains(opener) && opener.focus && !opener.closest('.hidden')) opener.focus();
+  };
+  const onBackdrop = (ev) => { if(ev.target === modal) close(); };
+  const onKey = (ev) => { if(ev.key === 'Escape'){ ev.preventDefault(); close(); } };
+  $('importReportClose').onclick = close;
+  modal.addEventListener('click', onBackdrop);
+  document.addEventListener('keydown', onKey, true);
+  modal.classList.remove('hidden');
+  $('importReportClose').focus();
 }
 
 function importLoadedMessage(report){
@@ -14932,7 +15033,7 @@ function xlBuildModel(book, plans, include){
   if(!sheetsIn.length) throw new XlImportError('nothing-to-import', 'Tick a sheet with periods to import.');
   const periods = plans[sheetsIn[0]].periods.slice();
   const N = periods.length;
-  const report = { periodsFrom: plans[sheetsIn[0]].name, notTranslated: [], odd: [], notes: [], rows: [] };
+  const report = { periodsFrom: plans[sheetsIn[0]].name, notTranslated: [], odd: [], notes: [], rows: [], noSaved: 0 };
   sheetsIn.forEach(i => {
     if(plans[i].periods.length !== N) report.notes.push('“' + plans[i].name + '” has ' + plans[i].periods.length + ' periods, “' + report.periodsFrom + '” ' + N + ': periods are matched in order');
   });
@@ -15213,11 +15314,11 @@ function xlBuildModel(book, plans, include){
       const out = { sheet: plans[entry.sheet].name, row: plan.row, label: entry.name, canvasId: c.id, nodeId: entry.id, kind: entry.kind, translated: true, cells: [] };
       const savedValues = plan.cells.map(cell => xlSavedNumber(cell));
       if(entry.kind === 'assumption' || entry.kind === 'single'){
-        out.cells = [{ address: plan.before.address, period: null, saved: xlSavedNumber(plan.before) }];
+        out.cells = [xlReportCell(plan.before, null)];
       } else {
-        out.cells = plan.cells.map((cell, p) => ({ address: cell.address, period: p, saved: savedValues[p] }));
-        out.cells = out.cells.slice(0, N);
+        out.cells = plan.cells.slice(0, N).map((cell, p) => xlReportCell(cell, p));
       }
+      out.cells.forEach(c => { if(c.noSaved) report.noSaved++; });
       let lanes = 1;
       if(entry.kind === 'input' || entry.kind === 'assumption' || ((entry.kind === 'calculation' || entry.kind === 'opening' || entry.kind === 'single') && !entry.expr)){
         // Typed numbers: an input, an assumption, or a row kept as Excel's saved values.
@@ -15270,6 +15371,15 @@ function xlBuildModel(book, plans, include){
   report.rectangles = nodeCount.rectangles;
   report.nodes = canvases.reduce((s, c) => s + c.nodes.length, 0);
   return { system, report };
+}
+
+// A cell of the report: its saved number, or why there is none — Excel shows an error
+// (`error`), or the program that saved it kept no value for its formula (`noSaved`).
+function xlReportCell(cell, period){
+  const out = { address: cell.address, period, saved: xlSavedNumber(cell) };
+  if(cell.error) out.error = cell.error;
+  else if((cell.formula !== null || cell.unreadable) && cell.value === null) out.noSaved = true;
+  return out;
 }
 
 // An input row whose numbers are the same in every period.
@@ -15400,6 +15510,52 @@ function xlEmit(x, px, py, ctx){
     lane += child.lanes;
   });
   return { id, lanes: Math.max(1, lane) };
+}
+// ---------- importing an Excel model: the check (src/excel-exporter/import/check.js; step 20f) ----------
+// xlCheckModel(system, report) calculates the imported model with the shared IR (the same
+// calculation fmIDE and the rest of ExcelExporter use) and compares every cell of every row
+// it translated from a formula (inputs and assumptions are Excel's own numbers) with the
+// value Excel saved for it:
+//   { compared, agree, differ: [{ sheet, address, label, period, got, saved, error }],
+//     excelErrors (cells where Excel shows an error; they agree when the model fails too),
+//     noSaved (formula cells saved without a value: nothing to compare), kept (rows kept as
+//     Excel's saved values, not compared) }.
+// Two numbers agree within a billionth of their size (and of 1).
+
+
+const XL_CHECK_TOLERANCE = 1e-9;
+
+function xlAgree(got, saved){
+  return typeof got === 'number' && Number.isFinite(got) && typeof saved === 'number'
+    && Math.abs(got - saved) <= XL_CHECK_TOLERANCE * Math.max(1, Math.abs(saved));
+}
+
+function xlCheckModel(system, report){
+  const ir = compileModel(system);
+  const results = evaluateModel(ir);
+  const indexOf = new Map(ir.order.map((c, i) => [c, i]));
+  const out = { compared: 0, agree: 0, differ: [], excelErrors: 0, noSaved: 0, kept: 0 };
+  for(const row of report.rows){
+    if(!row.translated){ out.kept++; continue; }
+    if(row.kind === 'input' || row.kind === 'assumption') continue;
+    const r = results[indexOf.get(ir.canvases.get(row.canvasId))];
+    for(const cell of row.cells){
+      if(cell.noSaved){ out.noSaved++; continue; }
+      const p = cell.period === null ? 0 : cell.period;
+      const got = r && r.values[p] ? r.values[p][row.nodeId] : undefined;
+      const error = r && r.errors[p] ? r.errors[p][row.nodeId] || null : null;
+      out.compared++;
+      if(cell.error){
+        out.excelErrors++;
+        if(error || got === null || got === undefined) out.agree++;
+        else out.differ.push({ sheet: row.sheet, address: cell.address, label: row.label, period: cell.period, got, saved: null, excel: cell.error, error });
+        continue;
+      }
+      if(xlAgree(got, cell.saved)) out.agree++;
+      else out.differ.push({ sheet: row.sheet, address: cell.address, label: row.label, period: cell.period, got: typeof got === 'number' ? got : null, saved: cell.saved, error });
+    }
+  }
+  return out;
 }
 // ============================================================
 // Wiring

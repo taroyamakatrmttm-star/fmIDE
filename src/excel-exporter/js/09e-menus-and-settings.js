@@ -11,6 +11,7 @@ let currentModelLabel = ''; // the loaded model's file name (or "Sample model"),
 // this model's layout, Settings' Workbook tab and the model's name.
 function syncPageState(){
   const loaded = !!(model && mapping);
+  syncImportReportItem();
   $('loadPanel').classList.toggle('hidden', loaded);
   $('btnGenerate').disabled = !loaded;
   document.querySelectorAll('.menu-list .needs-model').forEach(b => {

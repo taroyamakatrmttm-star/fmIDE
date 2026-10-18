@@ -5,6 +5,9 @@
 // without periods is off until given a header row, someone else's text is shown as text, and
 // a file that can't be read says why. Phase 20e: Import builds the model from the sheets ticked
 // and loads it (the message says what was kept as Excel's saved values); Generate writes it.
+// Phase 20f: the report after Import — how the model compares with Excel's saved values, what
+// was kept and why, the cells unlike their row — and File → Import Report… while that model is
+// shown.
 const path = require('path');
 const JSZip = require('jszip');
 const { test, expect, fixture } = require('./helpers/apps');
@@ -127,6 +130,8 @@ test('Import builds the model from the sheets ticked and loads it; Generate writ
   await expect(page.locator('#importModal')).toBeHidden();
   await expect(page.locator('#loadStatus .status.ok')).toHaveText('Imported 03-two-sheets.xlsx — 2 canvases, 13 rectangles, 5 periods.');
   await expect(page.locator('#modelName')).toHaveText('03-two-sheets');
+  await expect(page.locator('#importReportModal')).toBeVisible();
+  await page.locator('#importReportClose').click();
   await expect(page.locator('#afterLoad')).toBeVisible();
   const { wb } = await X.generate(page);
   expect(wb.SheetNames).toEqual(expect.arrayContaining(['Inputs', 'Calc']));
@@ -140,4 +145,55 @@ test('rows kept as Excel\'s saved values are named in the message', async ({ pag
   await importFile(page, sample('04-not-supported.xlsx'));
   await page.locator('#importOk').click();
   await expect(page.locator('#loadStatus .status.warn')).toHaveText('Imported 04-not-supported.xlsx — 1 canvas, 9 rectangles, 5 periods. 4 rows kept as Excel\'s saved values: Growth (VLOOKUP), NPV (NPV), Cumulative cash (a range growing along the periods), Years above 220 (COUNTIF). 1 row with cells that differ, kept as Excel\'s saved values there.');
+});
+
+test('the report after Import: the check, what was kept and why, cells unlike their row; File → Import Report…', async ({ page }) => {
+  await X.openExporter(page);
+  await importFile(page, sample('04-not-supported.xlsx'));
+  await page.locator('#importOk').click();
+  const modal = page.locator('#importReportModal');
+  await expect(modal).toBeVisible();
+  await expect(page.locator('#importReportSource')).toHaveText('04-not-supported.xlsx · 1 canvas, 9 rectangles');
+  await expect(page.locator('#importCheckSummary')).toHaveText('All 15 calculated cells agree with Excel\'s saved values.');
+  await expect(page.locator('#importCheckSummary')).toHaveClass(/ok/);
+  await expect(page.locator('#importDifferHead')).toBeHidden();
+  await expect(page.locator('#importKept li')).toHaveText([
+    'Valuation!D6:H6 · Growth: VLOOKUP', 'Valuation!C10 · NPV: NPV',
+    'Valuation!D11:H11 · Cumulative cash: a range growing along the periods', 'Valuation!C13 · Years above 220: COUNTIF']);
+  await expect(page.locator('#importOdd li')).toHaveText(['Valuation!F12 · Cash doubled: Excel\'s saved value in that period']);
+  await page.keyboard.press('Escape');
+  await expect(modal).toBeHidden();
+  // Reopened from the File menu while the imported model is shown; gone once another is loaded.
+  await X.menuCommand(page, 'btnImportReport');
+  await expect(modal).toBeVisible();
+  await page.locator('#importReportClose').click();
+  await X.loadFixtureModel(page, 'revenue-bs-corkscrew.json');
+  await expect(page.locator('#btnImportReport')).toBeHidden();
+});
+
+test('the report lists cells whose saved value the model doesn\'t give, and says when nothing was saved', async ({ page }) => {
+  const make = async (name, cells) => {
+    const zip = new JSZip();
+    zip.file('_rels/.rels', '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
+    zip.file('xl/_rels/workbook.xml.rels', '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>');
+    zip.file('xl/workbook.xml', '<workbook xmlns:r="r"><sheets><sheet name="Plan" sheetId="1" r:id="rId1"/></sheets></workbook>');
+    zip.file('xl/worksheets/sheet1.xml', '<worksheet><sheetData><row r="1"><c r="B1"><v>2026</v></c><c r="C1"><v>2027</v></c></row>' +
+      '<row r="2"><c r="A2" t="inlineStr"><is><t>Units</t></is></c><c r="B2"><v>10</v></c><c r="C2"><v>12</v></c></row>' +
+      '<row r="3"><c r="A3" t="inlineStr"><is><t>Doubled</t></is></c><c r="B3"><f>B2*2</f>' + cells[0] + '</c><c r="C3"><f>C2*2</f>' + cells[1] + '</c></row></sheetData></worksheet>');
+    const file = path.join(test.info().outputDir, name);
+    require('fs').mkdirSync(path.dirname(file), { recursive: true });
+    require('fs').writeFileSync(file, await zip.generateAsync({ type: 'nodebuffer' }));
+    return file;
+  };
+  await X.openExporter(page);
+  await importFile(page, await make('stale.xlsx', ['<v>20</v>', '<v>25</v>']));
+  await page.locator('#importOk').click();
+  await expect(page.locator('#importCheckSummary')).toHaveText('1 of 2 calculated cells agree with Excel\'s saved values; 1 differ.');
+  await expect(page.locator('#importCheckSummary')).toHaveClass(/warn/);
+  await expect(page.locator('#importDiffer li')).toHaveText(['Plan!C3 · Doubled · 2027: fmIDE 24, Excel 25']);
+  await expect(page.locator('#loadStatus .status.warn')).toBeVisible();
+  await page.locator('#importReportClose').click();
+  await importFile(page, await make('unsaved.xlsx', ['', '']));
+  await page.locator('#importOk').click();
+  await expect(page.locator('#importCheckSummary')).toHaveText('Nothing to compare: the workbook was saved without its formulas\' values. Save it in Excel, then import it again.');
 });

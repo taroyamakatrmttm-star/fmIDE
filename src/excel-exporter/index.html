@@ -34,6 +34,7 @@
           <button type="button" role="menuitem" id="btnMenuPaste" title="Paste a model's JSON text">Paste JSON…</button>
           <button type="button" role="menuitem" id="btnFromFmide" class="hidden" title="Load the model open in fmIDE again, as it is now">↻ From fmIDE</button>
           <button type="button" role="menuitem" id="btnImportExcel" title="Read an Excel workbook (.xlsx) and rebuild it as an fmIDE model">Import Excel model…</button>
+          <button type="button" role="menuitem" id="btnImportReport" class="hidden" title="What the import translated, and how the model compares with the values Excel saved">Import Report…</button>
           <button type="button" role="menuitem" id="btnImportGraphBoards" class="needs-model" title="Read a board file saved with Export all boards in fmGraph, to use its scenarios, sliders and charts">Import fmGraph boards…</button>
           <div class="menu-sep" role="separator"></div>
           <button type="button" role="menuitem" id="btnClearAll" class="danger" title="Empties this page. Saved layouts are kept.">Start Over</button>
@@ -351,6 +352,27 @@
     <div class="modal-actions">
       <button id="importCancel">Cancel</button>
       <button id="importOk" class="primary" title="Build the fmIDE model from the sheets ticked">Import</button>
+    </div>
+  </div>
+</div>
+
+<div id="importReportModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="importReportTitle">
+  <div class="modal modal-wide">
+    <h3 id="importReportTitle">Imported from Excel</h3>
+    <p id="importReportSource" class="graph-source"></p>
+    <p id="importCheckSummary" class="import-check"></p>
+    <div class="import-report-lists">
+      <h4 id="importDifferHead" class="hidden">Differ from Excel</h4>
+      <ul id="importDiffer" class="graph-left-out"></ul>
+      <h4 id="importKeptHead" class="hidden">Kept as Excel's saved values</h4>
+      <ul id="importKept" class="graph-left-out"></ul>
+      <h4 id="importOddHead" class="hidden">Cells unlike the rest of their row</h4>
+      <ul id="importOdd" class="graph-scenarios"></ul>
+      <h4 id="importReportNotesHead" class="hidden">Notes</h4>
+      <ul id="importReportNotes" class="graph-scenarios"></ul>
+    </div>
+    <div class="modal-actions">
+      <button id="importReportClose" class="primary">Close</button>
     </div>
   </div>
 </div>

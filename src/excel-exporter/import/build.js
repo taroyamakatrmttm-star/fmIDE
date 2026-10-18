@@ -68,7 +68,7 @@ export function xlBuildModel(book, plans, include){
   if(!sheetsIn.length) throw new XlImportError('nothing-to-import', 'Tick a sheet with periods to import.');
   const periods = plans[sheetsIn[0]].periods.slice();
   const N = periods.length;
-  const report = { periodsFrom: plans[sheetsIn[0]].name, notTranslated: [], odd: [], notes: [], rows: [] };
+  const report = { periodsFrom: plans[sheetsIn[0]].name, notTranslated: [], odd: [], notes: [], rows: [], noSaved: 0 };
   sheetsIn.forEach(i => {
     if(plans[i].periods.length !== N) report.notes.push('“' + plans[i].name + '” has ' + plans[i].periods.length + ' periods, “' + report.periodsFrom + '” ' + N + ': periods are matched in order');
   });
@@ -349,11 +349,11 @@ export function xlBuildModel(book, plans, include){
       const out = { sheet: plans[entry.sheet].name, row: plan.row, label: entry.name, canvasId: c.id, nodeId: entry.id, kind: entry.kind, translated: true, cells: [] };
       const savedValues = plan.cells.map(cell => xlSavedNumber(cell));
       if(entry.kind === 'assumption' || entry.kind === 'single'){
-        out.cells = [{ address: plan.before.address, period: null, saved: xlSavedNumber(plan.before) }];
+        out.cells = [xlReportCell(plan.before, null)];
       } else {
-        out.cells = plan.cells.map((cell, p) => ({ address: cell.address, period: p, saved: savedValues[p] }));
-        out.cells = out.cells.slice(0, N);
+        out.cells = plan.cells.slice(0, N).map((cell, p) => xlReportCell(cell, p));
       }
+      out.cells.forEach(c => { if(c.noSaved) report.noSaved++; });
       let lanes = 1;
       if(entry.kind === 'input' || entry.kind === 'assumption' || ((entry.kind === 'calculation' || entry.kind === 'opening' || entry.kind === 'single') && !entry.expr)){
         // Typed numbers: an input, an assumption, or a row kept as Excel's saved values.
@@ -406,6 +406,15 @@ export function xlBuildModel(book, plans, include){
   report.rectangles = nodeCount.rectangles;
   report.nodes = canvases.reduce((s, c) => s + c.nodes.length, 0);
   return { system, report };
+}
+
+// A cell of the report: its saved number, or why there is none — Excel shows an error
+// (`error`), or the program that saved it kept no value for its formula (`noSaved`).
+function xlReportCell(cell, period){
+  const out = { address: cell.address, period, saved: xlSavedNumber(cell) };
+  if(cell.error) out.error = cell.error;
+  else if((cell.formula !== null || cell.unreadable) && cell.value === null) out.noSaved = true;
+  return out;
 }
 
 // An input row whose numbers are the same in every period.
