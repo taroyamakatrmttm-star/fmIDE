@@ -164,3 +164,98 @@ test('after fmIDE is reloaded, From fmIDE still reaches it', async ({ page }) =>
   await X.menuCommand(popup, 'btnFromFmide');
   await expect.poll(() => inputOf(popup, 'Hours')).toBe(9);
 });
+
+// ---------- the Excel layout in the document (step 20) ----------
+async function exportedWorkspace(page){
+  return (await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()))).data;
+}
+// Open a document file; with unsaved changes, answer "Don't save" first.
+async function openDocFile(page, file, unsaved){
+  const [chooser] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    unsaved ? page.evaluate(() => fm.command('openDocument')).then(() => page.locator('#saveChangesDialog button', { hasText: "Don't save" }).click())
+      : page.evaluate(() => fm.command('openDocument')),
+  ]);
+  await chooser.setFiles(file);
+}
+// Another computer: a browser context with nothing kept, serving the apps as the tests do.
+async function otherComputer(browser){
+  const context = await browser.newContext();
+  const path = require('path'), fs = require('fs');
+  await context.route('**/*', (route) => {
+    const url = route.request().url();
+    const name = url.startsWith(ORIGIN) ? decodeURIComponent(url.slice(ORIGIN.length).split(/[?#]/)[0]) : '';
+    if(['fmIDE.html', 'ExcelExporter.html', 'fmGraph.html'].includes(name)) return route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: fs.readFileSync(path.join(__dirname, '..', 'apps', name)) });
+    return route.abort('blockedbyclient');
+  });
+  return context;
+}
+
+test('the Excel layout travels with the document: a change in ExcelExporter is kept by fmIDE, used on another computer, and rectangles added since join it', async ({ page, browser }, testInfo) => {
+  await F.openFmIDE(page);
+  await buildPay(page);
+  expect((await exportedWorkspace(page)).excelLayout).toBeUndefined();
+  const popup = await openExcelFromFmide(page);
+  // Showing the model changes nothing in the document.
+  await popup.waitForTimeout(1300);
+  expect((await exportedWorkspace(page)).excelLayout).toBeUndefined();
+  // A change to the layout goes back: the document carries it, with unsaved changes.
+  const tab = popup.locator('#tabsBody input[type=text]').first();
+  await tab.fill('My Pay');
+  await tab.dispatchEvent('change');
+  await expect.poll(async () => { const l = (await exportedWorkspace(page)).excelLayout; return l && l.tabs[0].name; }, { timeout: 5000 }).toBe('My Pay');
+  const ws = await exportedWorkspace(page);
+  expect([ws.version, ws.excelLayout.kind, ws.excelLayout.version]).toEqual([13, 'fmIDE-excel-mapping', 8]);
+  expect(await D.title(page)).toMatch(/•/);
+
+  // Another computer (a browser with nothing kept): the document opens with its layout, and a
+  // rectangle added in fmIDE since joins it.
+  const other = await otherComputer(browser);
+  const p2 = await other.newPage();
+  await F.openFmIDE(p2);
+  await openDocFile(p2, D.tempFile(testInfo, 'Pay.fmide', JSON.stringify(ws)), false);
+  await expect.poll(() => D.title(p2)).toBe('Pay — fmIDE');
+  await p2.evaluate(() => fm.createRect({ name: 'Bonus', value: 5, x: 40, y: 300 }));
+  const popup2 = await openExcelFromFmide(p2);
+  await expect(popup2.locator('#loadStatus .status.ok')).toContainText('Its Excel layout came with it.');
+  expect(await tabNames(popup2)).toEqual(['My Pay']);
+  expect(await treeLabels(popup2)).toEqual(expect.arrayContaining(['Hours', 'Rate', 'Pay', 'Bonus']));
+  expect(await inputOf(popup2, 'Bonus')).toBe(5);
+  await popup2.close();
+
+  // A new document, or a model opened from a system file, carries none.
+  await p2.evaluate(() => fm.command('newDocument'));
+  await p2.locator('#saveChangesDialog button', { hasText: "Don't save" }).click();
+  await expect.poll(async () => (await exportedWorkspace(p2)).excelLayout === undefined).toBe(true);
+  await openDocFile(p2, D.tempFile(testInfo, 'Plain.json', JSON.stringify(ws.system)), false);
+  await expect.poll(() => D.title(p2)).toBe('Plain — fmIDE');
+  expect((await exportedWorkspace(p2)).excelLayout).toBeUndefined();
+  await other.close();
+});
+
+test('a document\'s Excel layout that is not one is dropped; in ExcelExporter, the browser\'s own layout for the model wins over the document\'s', async ({ page }, testInfo) => {
+  await F.openFmIDE(page);
+  await buildPay(page);
+  const base = await exportedWorkspace(page);
+  let unsaved = true;
+  for(const bad of [{ kind: 'something-else', tabs: [] }, [1, 2], 'text', { kind: 'fmIDE-excel-mapping', deep: JSON.parse('['.repeat(20) + ']'.repeat(20)) }]){
+    const ws = Object.assign({}, base, { excelLayout: bad });
+    await openDocFile(page, D.tempFile(testInfo, 'Bad.fmide', JSON.stringify(ws)), unsaved);
+    unsaved = false;
+    await expect.poll(() => D.title(page)).toBe('Bad — fmIDE');
+    expect((await exportedWorkspace(page)).excelLayout).toBeUndefined();
+  }
+  // ExcelExporter: a layout of its own for this model (renamed tab) beats the document's.
+  const popup = await openExcelFromFmide(page);
+  const tab = popup.locator('#tabsBody input[type=text]').first();
+  await tab.fill('Browser tab');
+  await tab.dispatchEvent('change');
+  await expect.poll(async () => { const l = (await exportedWorkspace(page)).excelLayout; return l && l.tabs[0].name; }, { timeout: 5000 }).toBe('Browser tab');
+  const ws = await exportedWorkspace(page);
+  ws.excelLayout.tabs[0].name = 'Document tab';
+  await popup.close();
+  await openDocFile(page, D.tempFile(testInfo, 'Doc.fmide', JSON.stringify(ws)), true);
+  await expect.poll(() => D.title(page)).toBe('Doc — fmIDE');
+  const popup2 = await openExcelFromFmide(page);
+  expect(await tabNames(popup2)).toEqual(['Browser tab']);
+});

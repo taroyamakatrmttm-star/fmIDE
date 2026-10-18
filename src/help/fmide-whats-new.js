@@ -12,6 +12,16 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'excel-layout-in-document', date: '2026-10-18', title: 'Your Excel layout is saved in the document',
+    summary: 'The tabs and rows you arrange in ExcelExporter are kept in the .fmide document, so they travel with it.',
+    what: [
+      'Open ExcelExporter from fmIDE and change the layout there: the document keeps it and shows it has unsaved changes. Save as usual.',
+      'Opening the document on another computer, then ExcelExporter, brings the layout back. New rectangles join it at the end of their tab.',
+    ],
+    why: 'Before, the layout stayed in the browser where it was made.',
+    how: ['Open ExcelExporter from fmIDE ({cmd:openExcelExporter}).', 'Arrange the tabs and rows there.', 'Back in fmIDE, save the document ({cmd:saveDocument}).'],
+    see: ['documents'] },
+
   { id: 'canvas-grows', date: '2026-10-18', title: 'Large models scroll all the way',
     summary: 'The canvas now grows to hold every node, so a big model (such as an Excel model imported by ExcelExporter) can be scrolled to its end.',
     what: [

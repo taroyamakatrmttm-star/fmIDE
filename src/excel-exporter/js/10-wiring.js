@@ -31,7 +31,8 @@ async function tryLoad(jsonText, label, name){
     syncPageState();
     setStatus($('genStatus'), '', null); // a message about the last model's workbook
     setStatus($('loadStatus'), `Loaded ${label} — ${model.canvases.length} canvas${model.canvases.length === 1 ? '' : 'es'}, ${model.periods.length} periods.` +
-      (modelGraphBoards ? ' It has fmGraph boards: Layout → Use fmGraph boards….' : ''), 'ok');
+      (modelGraphBoards ? ' It has fmGraph boards: Layout → Use fmGraph boards….' : '') +
+      (layoutFromDocument ? ' Its Excel layout came with it.' : ''), 'ok');
   }catch(err){
     setStatus($('loadStatus'), 'Could not read that as an fmIDE system export: ' + err.message, 'err');
   }
@@ -119,9 +120,7 @@ $('btnGenerate').addEventListener('click', () => {
 });
 
 $('btnExportMapping').addEventListener('click', () => {
-  syncSensitivityCopy(); // the first analysis, as an older ExcelExporter reads it (09g)
-  const out = Object.assign({ kind: 'fmIDE-excel-mapping', version: FILE_FORMATS['fmIDE-excel-mapping'].current }, JSON.parse(JSON.stringify(mapping)));
-  out.kind = 'fmIDE-excel-mapping'; out.version = FILE_FORMATS['fmIDE-excel-mapping'].current;
+  const out = mappingFileData();
   const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

@@ -96,6 +96,25 @@ function confirmNewerFile(r){
     'Open Anyway');
 }
 
+// A document's Excel layout (`excelLayout`, an fmIDE-excel-mapping file) as a layout, or null:
+// the file's kind and version checked and upgraded (readKnownFile; a newer one is used as far
+// as it goes), its tabs and rows lists there; reconcileMapping checks the rest against the model.
+let layoutFromDocument = false; // the layout shown came from the document (the load message says so)
+function documentLayout(m){
+  if(!m || m.kind !== 'fmIDE-workspace' || !m.excelLayout || typeof m.excelLayout !== 'object') return null;
+  const r = readKnownFile(m.excelLayout, ['fmIDE-excel-mapping']);
+  if(r.error || !Array.isArray(r.data.tabs) || !Array.isArray(r.data.rows) || !r.data.cfg || typeof r.data.cfg !== 'object') return null;
+  delete r.data.kind; delete r.data.version;
+  return r.data;
+}
+// The layout as a mapping file (Export Mapping, Save for fmIDE, and what goes back to fmIDE).
+function mappingFileData(){
+  syncSensitivityCopy(); // the first analysis, as an older ExcelExporter reads it (09g)
+  const out = Object.assign({ kind: 'fmIDE-excel-mapping', version: FILE_FORMATS['fmIDE-excel-mapping'].current }, JSON.parse(JSON.stringify(mapping)));
+  out.kind = 'fmIDE-excel-mapping'; out.version = FILE_FORMATS['fmIDE-excel-mapping'].current;
+  return out;
+}
+
 // Asynchronous: it waits for the saved layout (IndexedDB) before showing the model.
 async function loadModel(m){
   let systemData = m, formatPresets = [];
@@ -129,6 +148,13 @@ async function loadModel(m){
     }
     if(typeof raw === 'string' && raw) restored = JSON.parse(raw);
   }catch(err){ /* ignore */ }
+  // None in this browser: the layout the document carries (workspace v13, `excelLayout`; a
+  // .fmide that Save for fmIDE wrote, or fmIDE sent), read as Import Mapping reads a file.
+  layoutFromDocument = false;
+  if(!restored){
+    restored = documentLayout(m);
+    layoutFromDocument = !!restored;
+  }
   model = loaded;
   useModelIR(ir);
   canvasModules = readCanvasModules(systemData);
@@ -225,6 +251,7 @@ function saveMapping(){
   layoutStore.requestPersistence(); // once, ever — on the first change, not at start-up
   writeMapping();
   rememberModuleLayouts(); // a module tab that changed is remembered for that module
+  sendLayoutToFmideSoon(); // fmIDE's model: its document keeps the layout (09f)
 }
 function writeMapping(){
   if(!mappingKey) return;

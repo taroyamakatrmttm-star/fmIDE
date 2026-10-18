@@ -12,7 +12,7 @@
 // the saved file opened in fmIDE gives them too.
 const path = require('path');
 const JSZip = require('jszip');
-const { test, expect, fixture } = require('./helpers/apps');
+const { test, expect, fixture, ORIGIN } = require('./helpers/apps');
 const X = require('./helpers/excel');
 const FM = require('./helpers/fmide');
 const ExcelJS = require('exceljs');
@@ -223,17 +223,22 @@ async function savedValues(file){
 }
 const near = (a, b) => typeof a === 'number' && Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(b));
 
-test('Save for fmIDE writes the imported model as a system file, from the report and from the File menu', async ({ page }) => {
+test('Save for fmIDE writes the imported model as an fmIDE document carrying its Excel layout, from the report and from the File menu', async ({ page }) => {
   await X.openExporter(page);
   await expect(page.locator('#btnSaveForFmide')).toBeHidden();
   await importFile(page, sample('02-corkscrew.xlsx'));
   await page.locator('#importOk').click();
   const fromReport = await FM.downloadJson(page, () => page.locator('#importSave').click());
-  expect(fromReport.name).toBe('02-corkscrew.json');
-  expect([fromReport.data.kind, fromReport.data.version, fromReport.data.periods.length]).toEqual(['system', 9, 5]);
-  expect(fromReport.data.canvases.map(c => c.name)).toEqual(['Assets']);
+  expect(fromReport.name).toBe('02-corkscrew.fmide');
+  expect([fromReport.data.kind, fromReport.data.version]).toEqual(['fmIDE-workspace', 13]);
+  expect([fromReport.data.system.kind, fromReport.data.system.version, fromReport.data.system.periods.length]).toEqual(['system', 9, 5]);
+  expect(fromReport.data.system.canvases.map(c => c.name)).toEqual(['Assets']);
+  // Its Excel layout as it is now: a mapping file, sections off, the sheet's title as a label row.
+  const layout = fromReport.data.excelLayout;
+  expect([layout.kind, layout.version, layout.cfg.sectionsEnabled]).toEqual(['fmIDE-excel-mapping', 8, false]);
+  expect(layout.customRows.filter(r => r.label).map(r => r.label)).toEqual(['Fixed assets']);
   await page.locator('#importReportClose').click();
-  await expect(page.locator('#loadStatus .status.ok')).toHaveText('Saved 02-corkscrew.json — open it in fmIDE with File → Open….');
+  await expect(page.locator('#loadStatus .status.ok')).toHaveText('Saved 02-corkscrew.fmide — open it in fmIDE with File → Open…; its Excel layout goes with it.');
   const fromMenu = await FM.downloadJson(page, () => X.menuCommand(page, 'btnSaveForFmide'));
   expect(fromMenu.data).toEqual(fromReport.data);
 });
@@ -278,7 +283,7 @@ test('end to end: Excel → fmIDE model → ExcelExporter\'s workbook, recalcula
   require('fs').writeFileSync(path2, JSON.stringify(saved.data));
   await fm.setInputFiles('#fileInputDocument', path2);
   await expect.poll(() => fm.evaluate(() => fm.canvases().map(c => c.name)).catch(() => null)).toEqual(['Inputs', 'Calc']);
-  const calc = saved.data.canvases.find(c => c.name === 'Calc');
+  const calc = saved.data.system.canvases.find(c => c.name === 'Calc');
   await fm.evaluate(() => fm.switchCanvas('Calc'));
   for(const label of ['Revenue', 'EBIT', 'Tax', 'Net income', 'Net margin']){
     const node = calc.nodes.find(n => n.type === 'value' && n.text.split('\n')[0] === label);
@@ -427,4 +432,31 @@ test('after Generate, the workbook written is recalculated and checked against t
   await X.menuCommand(page, 'btnMenuSample');
   await X.generate(page);
   await expect(page.locator('#genStatus .status.ok').last()).not.toContainText('Recalculated');
+});
+
+test('the .fmide Save for fmIDE writes, opened in ExcelExporter on another computer, brings its Excel layout', async ({ page, browser }, testInfo) => {
+  await X.openExporter(page);
+  await importFile(page, sample('03-two-sheets.xlsx'));
+  await page.locator('#importOk').click();
+  const saved = await FM.downloadJson(page, () => page.locator('#importSave').click());
+  // A browser with nothing kept (ExcelExporter alone, no fmIDE).
+  const context = await browser.newContext();
+  const path = require('path'), fs = require('fs');
+  await context.route('**/*', (route) => {
+    const url = route.request().url();
+    const name = url.startsWith(ORIGIN) ? decodeURIComponent(url.slice(ORIGIN.length).split(/[?#]/)[0]) : '';
+    if(name === 'ExcelExporter.html') return route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: fs.readFileSync(path.join(__dirname, '..', 'apps', name)) });
+    return route.abort('blockedbyclient');
+  });
+  const p2 = await context.newPage();
+  await X.openExporter(p2);
+  const file = testInfo.outputPath(saved.name);
+  fs.writeFileSync(file, JSON.stringify(saved.data));
+  await p2.setInputFiles('#fileInput', file);
+  await expect(p2.locator('#loadStatus .status.ok')).toContainText('Its Excel layout came with it.');
+  const { bytes } = await X.generate(p2);
+  const calc = (await X.readBack(bytes)).getWorksheet('Calc');
+  const column = []; for(let r = 4; r <= calc.rowCount; r++) column.push(String(calc.getCell('A' + r).value || ''));
+  expect(column).toEqual(['Profit and loss', '', 'Revenue', 'Fixed costs', 'Variable costs', 'Total costs', 'EBIT', 'Tax', 'Net income', 'Net margin', 'Loss flag']);
+  await context.close();
 });

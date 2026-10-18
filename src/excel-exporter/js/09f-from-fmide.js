@@ -37,6 +37,20 @@ window.addEventListener('message', (ev) => {
   }).catch(() => {});
 });
 
+// ---- the layout back to fmIDE ----
+// With fmIDE's model shown (and its window behind), each change of the layout goes back to
+// fmIDE ('excel:layout', a mapping file's text, at most one a second), which keeps it with
+// the document: so the layout travels with the .fmide file, to another computer too.
+let layoutToFmideTimer = null;
+function sendLayoutToFmideSoon(){
+  if(!modelFromFmide || !fmideWindowBehind() || !mapping) return;
+  clearTimeout(layoutToFmideTimer);
+  layoutToFmideTimer = setTimeout(() => {
+    if(!modelFromFmide || !fmideWindowBehind() || !mapping) return;
+    try{ window.opener.postMessage({ type: 'excel:layout', text: JSON.stringify(mappingFileData()) }, ownOrigin() || '*'); }catch(e){ /* the window went away */ }
+  }, 1000);
+}
+
 // ---- Layout → 📎 Attach to Template…, and 📎 Attach on a module's tab ----
 // With fmIDE's window behind this one: sends one module's layout as this model shows it
 // (moduleLayoutNow, 04b) to fmIDE ('excel:attach-layout'), as a module layouts file holding
