@@ -54,6 +54,7 @@ $('fileInput').addEventListener('change', () => {
   $('fileInput').value = ''; // lets the same file be picked again (browsers skip 'change' for an unchanged value)
 });
 function readFile(file){
+  if(/\.xls[xm]?$/i.test(file.name || '')){ importExcelFile(file); return; } // an Excel workbook: 09k
   const reader = new FileReader();
   reader.onload = () => tryLoad(reader.result, file.name);
   reader.onerror = () => setStatus($('loadStatus'), 'Could not read that file.', 'err');

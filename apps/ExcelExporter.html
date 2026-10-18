@@ -890,6 +890,19 @@ var XLSX = (function(){
   .graph-scenarios label{ display:flex; align-items:baseline; gap:8px; padding:3px 0; }
   .graph-scn-name{ font-weight:600; overflow-wrap:anywhere; }
   .graph-scn-what{ color:var(--muted, #64748b); font-size:12px; overflow-wrap:anywhere; }
+  .import-sheets{ max-height:58vh; overflow:auto; display:flex; flex-direction:column; gap:10px; }
+  .import-sheet{ border:1px solid var(--border); border-radius:10px; padding:8px 10px; }
+  .import-sheet-head{ display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 12px; }
+  .import-sheet-head label{ display:flex; align-items:baseline; gap:6px; font-weight:600; overflow-wrap:anywhere; }
+  .import-summary{ font-size:12.5px; color:var(--muted); }
+  .import-choices{ display:flex; flex-wrap:wrap; gap:6px 14px; margin:6px 0 2px; font-size:12.5px; color:var(--muted); }
+  .import-choices label{ display:flex; align-items:center; gap:5px; }
+  .import-choices input{ width:4.5em; padding:3px 6px; font-size:12.5px; }
+  .import-rows{ border-collapse:collapse; font-size:12.5px; margin-top:4px; width:100%; }
+  .import-rows th, .import-rows td{ text-align:left; padding:2px 8px 2px 0; vertical-align:top; overflow-wrap:anywhere; }
+  .import-rows th{ color:var(--muted); font-weight:600; }
+  .import-rows td.import-formula{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12px; }
+  .import-odd{ color:#92400e; }
   .graph-left-out li{ padding:2px 0; color:#92400e; overflow-wrap:anywhere; }
   .modal-close{ width:32px; height:32px; padding:0; border:none; background:transparent; border-radius:8px; color:var(--muted); }
   .modal-close::before{ content:'×'; font-size:22px; line-height:32px; }
@@ -1051,6 +1064,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
           <button type="button" role="menuitem" id="btnOpenModel" title="Open a .fmide document, or a system or workspace file saved by fmIDE">Open Model…</button>
           <button type="button" role="menuitem" id="btnMenuSample" title="Load a small built-in model to try things out">Load Sample Model</button>
           <button type="button" role="menuitem" id="btnMenuPaste" title="Paste a model's JSON text">Paste JSON…</button>
+          <button type="button" role="menuitem" id="btnImportExcel" title="Read an Excel workbook (.xlsx) and rebuild it as an fmIDE model">Import Excel model…</button>
           <button type="button" role="menuitem" id="btnFromFmide" class="hidden" title="Load the model open in fmIDE again, as it is now">↻ From fmIDE</button>
           <button type="button" role="menuitem" id="btnImportGraphBoards" class="needs-model" title="Read a board file saved with Export all boards in fmGraph, to use its scenarios, sliders and charts">Import fmGraph boards…</button>
           <div class="menu-sep" role="separator"></div>
@@ -1320,6 +1334,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
 <input type="file" id="moduleLayoutsFileInput" accept="application/json,.json" hidden>
 <input type="file" id="excelStyleFileInput" accept="application/json,.json" hidden>
 <input type="file" id="graphFileInput" accept="application/json,.json" hidden>
+<input type="file" id="excelImportInput" accept=".xlsx,.xlsm,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel.sheet.macroEnabled.12" hidden>
 
 <div id="treeCtxMenu" class="ctx-menu hidden" role="menu"></div>
 
@@ -1354,6 +1369,20 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       <button id="graphRemove" class="danger hidden" title="Take the fmGraph scenarios, sliders and analyses out of this layout">Remove from Layout</button>
       <button id="graphCancel">Cancel</button>
       <button id="graphUse" class="primary">Use</button>
+    </div>
+  </div>
+</div>
+
+<div id="importModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="importTitle">
+  <div class="modal modal-wide">
+    <h3 id="importTitle">Import Excel model</h3>
+    <p id="importSource" class="graph-source"></p>
+    <div id="importSheets" class="import-sheets"></div>
+    <h4 id="importNotesHead" class="hidden">Left out</h4>
+    <ul id="importNotes" class="graph-left-out"></ul>
+    <div class="modal-actions">
+      <button id="importCancel">Cancel</button>
+      <button id="importOk" class="primary" title="Build the fmIDE model from the sheets ticked">Import</button>
     </div>
   </div>
 </div>
@@ -14421,6 +14450,392 @@ function xlFillSharedFormulas(book){
   }
   return book;
 }
+// ---------- importing an Excel model: the layout (src/excel-exporter/import/layout.js; step 20d) ----------
+// What each sheet of a workbook read by xlReadWorkbook (and xlFillSharedFormulas) holds:
+// the header row of periods, the period columns, the label and unit columns, and each row's
+// kind (docs/step20-excel-import.md, "How a spreadsheet is read"):
+//   title       a label and nothing in the periods or before them
+//   input       a typed number in the periods (a formula among them keeps its saved value)
+//   assumption  one typed number before the period columns, used by every period
+//   calculation a formula in the periods, the same along the row (its signature)
+//   opening     a typed number in the first period, then the same formula
+//   single      one formula before the period columns
+// A formula's signature is its text moved to the first period column: two cells of a row
+// with the same signature hold the same formula, copied along. Cells that differ are `odd`.
+// The person can change the header row, the period columns and the label and unit columns
+// (the confirm screen); xlAnalyseSheet(sheet, choice) works the sheet out again with them.
+
+
+const XL_HEADER_SEARCH_ROWS = 50;
+const XL_PERIOD_TEXT = /(?:^|[^0-9])(?:19|20|21)[0-9]{2}(?:[^0-9]|$)|^(?:FY|CY|Q[1-4]|H[12]|P(?:eriod)?\s*[0-9]+|Y(?:ea)?r?\s*[0-9]+|M(?:onth)?\s*[0-9]+)\b|^(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*[\s\-.']*[0-9]{2,4}$/i;
+
+// A header cell as a period: { kind: 'year' | 'date' | 'text', value } or null.
+function xlPeriodOf(cell){
+  if(!cell || cell.error) return null;
+  const v = cell.value;
+  if(typeof v === 'number'){
+    if(cell.date) return { kind: 'date', value: v };
+    if(Number.isInteger(v) && v >= 1900 && v <= 2200) return { kind: 'year', value: v };
+    return null;
+  }
+  if(typeof v === 'string'){
+    const t = v.trim();
+    return t && t.length <= 40 && XL_PERIOD_TEXT.test(t) ? { kind: 'text', value: t } : null;
+  }
+  return null;
+}
+
+// The period columns a header row holds: the longest run of two or more cells side by side
+// that read as periods, of one kind, numbers rising. { firstCol, lastCol } or null.
+function xlPeriodRun(sheet, row){
+  let best = null, start = 0, prev = null;
+  const close = (end) => {
+    if(start && end - start + 1 >= 2 && (!best || end - start > best.lastCol - best.firstCol)) best = { firstCol: start, lastCol: end };
+  };
+  for(let col = 1; col <= sheet.cols + 1; col++){
+    const p = col <= sheet.cols ? xlPeriodOf(sheet.cells.get(xlAddress(col, row))) : null;
+    const continues = p && prev && p.kind === prev.kind && (p.kind === 'text' || p.value > prev.value);
+    if(continues){ prev = p; continue; }
+    close(col - 1);
+    start = p ? col : 0;
+    prev = p;
+  }
+  return best;
+}
+
+// The header row: the first row (of the first 50) holding the longest run of periods.
+function xlFindHeader(sheet){
+  let best = null;
+  const last = Math.min(sheet.rows, XL_HEADER_SEARCH_ROWS);
+  for(let row = 1; row <= last; row++){
+    const run = xlPeriodRun(sheet, row);
+    if(run && (!best || run.lastCol - run.firstCol > best.lastCol - best.firstCol)) best = { row, ...run };
+  }
+  return best;
+}
+
+// The periods' names, from the header cells: years as "2026"; dates as their year when each
+// is in a year of its own, else "2026-03"; text as written.
+function xlPeriodLabels(sheet, headerRow, firstCol, lastCol, date1904){
+  const ps = [];
+  for(let col = firstCol; col <= lastCol; col++) ps.push(xlPeriodOf(sheet.cells.get(xlAddress(col, headerRow))));
+  const dates = ps.map(p => p && p.kind === 'date' ? xlSerialToDate(p.value, date1904) : null);
+  const years = dates.map(d => d ? d.getUTCFullYear() : null);
+  const yearsUnique = new Set(years.filter(y => y !== null)).size === years.filter(y => y !== null).length;
+  return ps.map((p, i) => {
+    if(!p){
+      const c = sheet.cells.get(xlAddress(firstCol + i, headerRow));
+      const v = c && c.value !== null ? String(c.value).trim().slice(0, 40) : '';
+      return v || xlColLetters(firstCol + i);
+    }
+    if(p.kind === 'year') return String(p.value);
+    if(p.kind === 'text') return p.value;
+    const d = dates[i];
+    return yearsUnique ? String(d.getUTCFullYear()) : d.toISOString().slice(0, 7);
+  });
+}
+
+const xlIsText = (c) => !!c && typeof c.value === 'string' && c.formula === null && c.value.trim() !== '';
+const xlIsFormula = (c) => !!c && (c.formula !== null || !!c.unreadable);
+const xlIsNumber = (c) => !!c && c.formula === null && !c.unreadable && typeof c.value === 'number';
+
+// The label and unit columns, left of the periods: the label column holds the most text
+// (the leftmost of equals); the unit column, short text, the most of the others.
+function xlFindLabelColumns(sheet, headerRow, firstCol){
+  const counts = [];
+  for(let col = 1; col < firstCol; col++){
+    let n = 0, len = 0;
+    for(const c of sheet.cells.values()){
+      if(c.col === col && c.row !== headerRow && xlIsText(c)){ n++; len += c.value.trim().length; }
+    }
+    counts.push({ col, n, avg: n ? len / n : 0 });
+  }
+  const label = counts.filter(c => c.n).sort((a, b) => b.n - a.n || a.col - b.col)[0];
+  const unit = counts.filter(c => c.n && (!label || c.col !== label.col) && c.avg <= 12).sort((a, b) => b.n - a.n || a.col - b.col)[0];
+  return { labelCol: label ? label.col : null, unitCol: unit ? unit.col : null };
+}
+
+// A formula's signature: its text as if it were in the first period column.
+function xlSignature(cell, firstCol){
+  if(!cell.formula) return '!unreadable ' + cell.address;
+  try{ return xlFormulaText(xlShiftFormula(xlParseFormula(cell.formula), 0, firstCol - cell.col)); }
+  catch(e){ return '!unreadable ' + cell.address; }
+}
+
+// One sheet worked out. `choice` (from the confirm screen) may fix headerRow, firstCol,
+// lastCol, labelCol and unitCol (null for none). The result:
+// { name, hidden, byPeriods, headerRow, firstCol, lastCol, labelCol, unitCol, periods,
+//   rows: [{ row, label, unit, kind, signature, formula, odd, cells, before }] }.
+function xlAnalyseSheet(sheet, choice, date1904){
+  const ch = choice || {};
+  let header = null;
+  if(ch.headerRow){
+    const run = ch.firstCol && ch.lastCol ? { firstCol: ch.firstCol, lastCol: ch.lastCol } : xlPeriodRun(sheet, ch.headerRow);
+    if(run && run.lastCol >= run.firstCol) header = { row: ch.headerRow, firstCol: run.firstCol, lastCol: run.lastCol };
+  } else header = xlFindHeader(sheet);
+  const plan = { name: sheet.name, hidden: sheet.hidden, byPeriods: !!header, headerRow: header ? header.row : null,
+    firstCol: header ? header.firstCol : null, lastCol: header ? header.lastCol : null, labelCol: null, unitCol: null, periods: [], rows: [] };
+  if(!header) return plan;
+  const found = xlFindLabelColumns(sheet, header.row, header.firstCol);
+  plan.labelCol = ch.labelCol !== undefined ? ch.labelCol : found.labelCol;
+  plan.unitCol = ch.unitCol !== undefined ? ch.unitCol : found.unitCol;
+  if(plan.unitCol === plan.labelCol) plan.unitCol = null;
+  plan.periods = xlPeriodLabels(sheet, header.row, header.firstCol, header.lastCol, date1904);
+
+  const byRow = new Map();
+  for(const c of sheet.cells.values()){
+    if(!byRow.has(c.row)) byRow.set(c.row, []);
+    byRow.get(c.row).push(c);
+  }
+  const rowNumbers = [...byRow.keys()].sort((a, b) => a - b);
+  for(const r of rowNumbers){
+    if(r === header.row) continue;
+    const at = (col) => col ? sheet.cells.get(xlAddress(col, r)) : undefined;
+    const labelCell = at(plan.labelCol), unitCell = at(plan.unitCol);
+    const label = labelCell && labelCell.value !== null && labelCell.formula === null ? String(labelCell.value).trim()
+      : (labelCell && typeof labelCell.value === 'string' ? labelCell.value.trim() : '');
+    const unit = unitCell && typeof unitCell.value === 'string' ? unitCell.value.trim() : '';
+    const cells = [];
+    for(let col = header.firstCol; col <= header.lastCol; col++){
+      const c = at(col);
+      cells.push(c ? c : { col, row: r, address: xlAddress(col, r), value: null, error: null, formula: null, empty: true });
+    }
+    // Before the periods: a number or formula outside the label and unit columns.
+    let before = null;
+    for(let col = 1; col < header.firstCol; col++){
+      if(col === plan.labelCol || col === plan.unitCol) continue;
+      const c = at(col);
+      if(c && (xlIsFormula(c) || xlIsNumber(c))){ before = c; break; }
+    }
+    const nForm = cells.filter(xlIsFormula).length, nNum = cells.filter(xlIsNumber).length;
+    const row = { row: r, label, unit, kind: 'title', signature: null, formula: null, odd: [], cells, before };
+    if(!nForm && !nNum){
+      if(before) row.kind = xlIsFormula(before) ? 'single' : 'assumption';
+      else if(!label) continue;
+      plan.rows.push(row);
+      continue;
+    }
+    if(nForm <= nNum && nNum > 0 && !(nForm && xlIsNumber(cells[0]) && nForm === cells.length - 1)){
+      row.kind = 'input';
+      row.odd = cells.filter(c => !xlIsNumber(c)).map(c => c.address);
+      plan.rows.push(row);
+      continue;
+    }
+    // Formulas: the most common signature is the row's formula.
+    const tally = new Map();
+    cells.forEach(c => { if(xlIsFormula(c)){ const s = xlSignature(c, header.firstCol); c.signature = s; tally.set(s, (tally.get(s) || 0) + 1); } });
+    let sig = null, most = 0;
+    for(const [s, n] of tally) if(n > most && !s.startsWith('!')){ sig = s; most = n; }
+    row.signature = sig;
+    row.formula = sig;
+    const fits = (c) => xlIsFormula(c) && c.signature === sig;
+    if(sig !== null && xlIsNumber(cells[0]) && cells.slice(1).every(fits)) row.kind = 'opening';
+    else row.kind = 'calculation';
+    row.odd = cells.filter((c, i) => !(fits(c) || (row.kind === 'opening' && i === 0))).map(c => c.address);
+    plan.rows.push(row);
+  }
+  return plan;
+}
+
+// Every sheet of a workbook worked out: { sheets: [plan], names, date1904, notes }. A sheet
+// without a header row of periods is not imported unless the person picks one.
+function xlAnalyseWorkbook(book){
+  return { sheets: book.sheets.map(s => xlAnalyseSheet(s, null, book.date1904)), names: book.names, date1904: book.date1904, notes: book.notes };
+}
+
+// How many rows of each kind a sheet's plan holds.
+function xlKindCounts(plan){
+  const counts = { title: 0, input: 0, assumption: 0, calculation: 0, opening: 0, single: 0 };
+  plan.rows.forEach(r => { counts[r.kind]++; });
+  return counts;
+}
+
+// ---------- File → Import Excel model… and the confirm screen (step 20d) ----------
+// The workbook is read (xlReadWorkbook, xlFillSharedFormulas), each sheet worked out
+// (xlAnalyseWorkbook), and the window shows what was found: per sheet, whether it is
+// imported, its header row, period columns, label and unit columns, and its rows with their
+// kinds. Changing a choice works that sheet out again. Every text from the file is shown
+// with textContent.
+let excelImport = null; // { fileName, book, plans, include }
+
+const IMPORT_KIND_NAMES = { title: 'title', input: 'input', assumption: 'assumption', calculation: 'calculation', opening: 'opening balance', single: 'one formula' };
+const IMPORT_ROWS_SHOWN = 300;
+
+$('btnImportExcel').addEventListener('click', () => $('excelImportInput').click());
+letAnyFileBePicked([$('excelImportInput')]);
+$('excelImportInput').addEventListener('change', () => {
+  const file = $('excelImportInput').files[0];
+  if(file) importExcelFile(file);
+  $('excelImportInput').value = '';
+});
+
+async function importExcelFile(file){
+  let book;
+  try{
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    book = xlFillSharedFormulas(await xlReadWorkbook(bytes));
+  }catch(err){
+    setStatus($('loadStatus'), 'Could not import ' + (file.name || 'that file') + ': ' + (err instanceof XlImportError ? err.message : 'it can\'t be read as an Excel workbook.'), 'err');
+    return;
+  }
+  const found = xlAnalyseWorkbook(book);
+  excelImport = { fileName: String(file.name || 'workbook.xlsx'), book, plans: found.sheets, include: found.sheets.map(p => p.byPeriods && !p.hidden) };
+  openImportWindow();
+}
+
+function importSummary(plan){
+  if(!plan.byPeriods) return 'No row of periods found: give a header row to import it.';
+  const counts = xlKindCounts(plan);
+  const parts = ['input', 'assumption', 'calculation', 'opening', 'single', 'title']
+    .filter(k => counts[k]).map(k => counts[k] + ' ' + IMPORT_KIND_NAMES[k] + (counts[k] === 1 ? '' : 's'));
+  const span = plan.periods.length > 1 ? plan.periods[0] + '–' + plan.periods[plan.periods.length - 1] : plan.periods[0];
+  return plan.periods.length + ' period' + (plan.periods.length === 1 ? '' : 's') + ', ' + span + ' · ' + (parts.join(', ') || 'no rows');
+}
+
+function importChoiceInput(cls, label, value, title){
+  const l = document.createElement('label');
+  l.title = title;
+  const span = document.createElement('span');
+  span.textContent = label;
+  const input = document.createElement('input');
+  input.className = cls;
+  input.value = value;
+  input.setAttribute('aria-label', label);
+  l.append(span, input);
+  return l;
+}
+
+function renderImportSheet(section, i){
+  const plan = excelImport.plans[i];
+  section.textContent = '';
+  const head = document.createElement('div');
+  head.className = 'import-sheet-head';
+  const label = document.createElement('label');
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.className = 'import-include';
+  cb.checked = excelImport.include[i] && plan.byPeriods;
+  cb.disabled = !plan.byPeriods;
+  cb.addEventListener('change', () => { excelImport.include[i] = cb.checked; syncImportOk(); });
+  const name = document.createElement('span');
+  name.className = 'import-sheet-name';
+  name.textContent = plan.name + (plan.hidden ? ' (hidden)' : '');
+  label.append(cb, name);
+  const summary = document.createElement('span');
+  summary.className = 'import-summary';
+  summary.textContent = importSummary(plan);
+  head.append(label, summary);
+  section.appendChild(head);
+
+  const choices = document.createElement('div');
+  choices.className = 'import-choices';
+  const col = (n) => n ? xlColLetters(n) : '';
+  choices.append(
+    importChoiceInput('import-header', 'Header row', plan.headerRow ? String(plan.headerRow) : '', 'The row holding the periods (years, dates or names)'),
+    importChoiceInput('import-first', 'Periods from', col(plan.firstCol), 'The first period\'s column'),
+    importChoiceInput('import-last', 'to', col(plan.lastCol), 'The last period\'s column'),
+    importChoiceInput('import-label', 'Labels', col(plan.labelCol), 'The column holding each row\'s name'),
+    importChoiceInput('import-unit', 'Units', col(plan.unitCol), 'The column holding each row\'s unit (empty: none)'));
+  choices.addEventListener('change', () => {
+    const v = (cls) => choices.querySelector('.' + cls).value.trim();
+    const headerRow = Number(v('import-header'));
+    const choice = {};
+    if(Number.isInteger(headerRow) && headerRow >= 1 && headerRow <= XL_MAX_ROW){
+      choice.headerRow = headerRow;
+      const first = xlColNumber(v('import-first')), last = xlColNumber(v('import-last'));
+      if(first && last && last >= first && headerRow === plan.headerRow){ choice.firstCol = first; choice.lastCol = last; }
+    }
+    const lab = v('import-label'), unit = v('import-unit');
+    choice.labelCol = lab ? (xlColNumber(lab) || null) : null;
+    choice.unitCol = unit ? (xlColNumber(unit) || null) : null;
+    const wasOn = plan.byPeriods;
+    excelImport.plans[i] = xlAnalyseSheet(excelImport.book.sheets[i], choice, excelImport.book.date1904);
+    if(!wasOn && excelImport.plans[i].byPeriods) excelImport.include[i] = true;
+    renderImportSheet(section, i);
+    syncImportOk();
+  });
+  section.appendChild(choices);
+
+  if(plan.rows.length){
+    const details = document.createElement('details');
+    const sum = document.createElement('summary');
+    sum.textContent = 'Rows';
+    details.appendChild(sum);
+    const table = document.createElement('table');
+    table.className = 'import-rows';
+    const hr = table.createTHead().insertRow();
+    ['Row', 'Label', 'Kind', 'Formula'].forEach(t => { const th = document.createElement('th'); th.textContent = t; hr.appendChild(th); });
+    const body = table.createTBody();
+    plan.rows.slice(0, IMPORT_ROWS_SHOWN).forEach(r => {
+      const tr = body.insertRow();
+      tr.dataset.row = String(r.row);
+      const formula = r.kind === 'single' && r.before ? r.before.formula : (r.kind === 'assumption' && r.before ? String(r.before.value) : (r.formula || ''));
+      [String(r.row), r.label, IMPORT_KIND_NAMES[r.kind], formula].forEach((t, k) => {
+        const td = tr.insertCell();
+        td.textContent = t || '';
+        if(k === 3) td.className = 'import-formula';
+      });
+      if(r.odd.length){
+        const odd = document.createElement('div');
+        odd.className = 'import-odd';
+        odd.textContent = 'differs in ' + r.odd.join(', ');
+        tr.cells[3].appendChild(odd);
+      }
+    });
+    details.appendChild(table);
+    if(plan.rows.length > IMPORT_ROWS_SHOWN){
+      const more = document.createElement('p');
+      more.className = 'graph-source';
+      more.textContent = 'and ' + (plan.rows.length - IMPORT_ROWS_SHOWN) + ' more rows';
+      details.appendChild(more);
+    }
+    section.appendChild(details);
+  }
+}
+
+function syncImportOk(){
+  const ok = $('importOk');
+  const any = excelImport && excelImport.plans.some((p, i) => p.byPeriods && excelImport.include[i]);
+  ok.disabled = !any || typeof buildImportedModel !== 'function';
+  ok.title = typeof buildImportedModel !== 'function' ? 'Building the model from the workbook comes in the next update (step 20e)'
+    : (any ? 'Build the fmIDE model from the sheets ticked' : 'Tick a sheet to import');
+}
+
+function openImportWindow(){
+  const modal = $('importModal');
+  const { book } = excelImport;
+  $('importSource').textContent = excelImport.fileName + ' · ' + book.sheets.length + ' sheet' + (book.sheets.length === 1 ? '' : 's');
+  const list = $('importSheets');
+  list.textContent = '';
+  excelImport.plans.forEach((p, i) => {
+    const section = document.createElement('section');
+    section.className = 'import-sheet';
+    section.dataset.sheet = String(i);
+    list.appendChild(section);
+    renderImportSheet(section, i);
+  });
+  const notes = $('importNotes');
+  notes.textContent = '';
+  book.notes.forEach(n => { const li = document.createElement('li'); li.textContent = n; notes.appendChild(li); });
+  $('importNotesHead').classList.toggle('hidden', !book.notes.length);
+  syncImportOk();
+  const opener = document.activeElement;
+  const close = () => {
+    modal.classList.add('hidden');
+    $('importCancel').onclick = $('importOk').onclick = null;
+    modal.removeEventListener('click', onBackdrop);
+    document.removeEventListener('keydown', onKey, true);
+    if(opener && document.contains(opener) && opener.focus && !opener.closest('.hidden')) opener.focus();
+  };
+  const onBackdrop = (ev) => { if(ev.target === modal) close(); };
+  const onKey = (ev) => { if(ev.key === 'Escape' && $('confirmModal').classList.contains('hidden')){ ev.preventDefault(); close(); } };
+  $('importCancel').onclick = close;
+  $('importOk').onclick = () => { if(typeof buildImportedModel === 'function'){ close(); buildImportedModel(); } };
+  modal.addEventListener('click', onBackdrop);
+  document.addEventListener('keydown', onKey, true);
+  modal.classList.remove('hidden');
+  ($('importOk').disabled ? $('importCancel') : $('importOk')).focus();
+}
 // ============================================================
 // Wiring
 // ============================================================
@@ -14492,6 +14907,7 @@ $('fileInput').addEventListener('change', () => {
   $('fileInput').value = ''; // lets the same file be picked again (browsers skip 'change' for an unchanged value)
 });
 function readFile(file){
+  if(/\.xls[xm]?$/i.test(file.name || '')){ importExcelFile(file); return; } // an Excel workbook: 09k
   const reader = new FileReader();
   reader.onload = () => tryLoad(reader.result, file.name);
   reader.onerror = () => setStatus($('loadStatus'), 'Could not read that file.', 'err');
