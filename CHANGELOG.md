@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: space between the Inputs tab's groups
+- On the Inputs tab, every group header after the first gets an empty row above it (made and remade with the headers; Re-apply layout adds them to a layout made before).
+
 ## fmIDE and ExcelExporter: the Excel layout travels with the document
 - A `.fmide` document (workspace v13) may carry its model's Excel layout, `excelLayout`. ExcelExporter opened from fmIDE sends each layout change back, and fmIDE keeps it with the document (an unsaved change); ExcelExporter uses a document's layout when the browser keeps none for the model, rectangles added since joining their tab. Save for fmIDE, after importing an Excel model, writes a `.fmide` with its layout. Older documents open as before.
 

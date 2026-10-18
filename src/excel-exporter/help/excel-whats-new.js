@@ -11,6 +11,13 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'inputs-group-spacing', date: '2026-10-18', title: 'Space between the Inputs tab\'s groups',
+    summary: 'On the Inputs tab, an empty row now comes before each group header after the first.',
+    what: ['When the inputs are gathered by Excel tab or by canvas, every group header but the first gets an empty row above it, so the groups read as separate blocks.'],
+    why: 'The groups ran into each other, which made a long Inputs tab hard to scan.',
+    how: ['Turn on the Inputs tab (Inputs & scenarios, on the left), grouped by Excel tab or by canvas.', 'A layout made before: press Re-apply layout once.'],
+    see: ['inputs-tab'] },
+
   { id: 'layout-in-document', date: '2026-10-18', title: 'The layout travels with the document',
     summary: 'A model\'s Excel layout is kept in its fmIDE document, so it comes back on another computer too.',
     what: [
