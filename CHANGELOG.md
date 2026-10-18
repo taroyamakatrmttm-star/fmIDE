@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: the first year through the shared switch
+- An imported formula reading the column before the first year reads the canvas's shared switch rectangle ("Up to 2020") in that year instead of its own year test; the formula stays live.
+
 ## ExcelExporter: the round trip
 - After Generate, an imported model's workbook is recalculated in the browser from its own formulas and every imported formula cell is compared with the value the original workbook saved; the message and the import report say how many match.
 

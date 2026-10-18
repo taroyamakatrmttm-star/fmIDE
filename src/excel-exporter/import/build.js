@@ -14,7 +14,7 @@
 //     row of two formulas switches by period through the canvas's shared rectangle
 //     "Up to 2024" (1 up to that period, 0 after): if(Up to 2024, the first, the second);
 //   - a formula reading the column before the first period reads that cell, as Excel does
-//     (a blank is 0): if(period = 1, Excel's C92, …);
+//     (a blank is 0): if(@Up to 2020, Excel's C92, …), the same shared switch;
 //   - a row that can't be translated keeps Excel's saved values as an input, and is listed
 //     with why; a circular reference (within one period) is cut the same way.
 // Nothing from the file runs; every name is kept as text, cut to a length fmIDE shows.
@@ -349,7 +349,7 @@ export function xlBuildModel(book, plans, include, split){
       try{ Object.assign(entry, xlPartsExpr(entry, (sig, from) => {
         let tree;
         try{ tree = xlParseFormula(sig); } catch(e){ throw new XlNotTranslated('a formula that can\'t be read'); }
-        return toExpr(tree, entry.sheet, { mode: 'period', canvas: entry.canvas, kind: 'parts', from });
+        return toExpr(tree, entry.sheet, { mode: 'period', canvas: entry.canvas, kind: 'parts', from, upTo: (to) => upTo(entry.canvas, to) });
       }, N, (to) => upTo(entry.canvas, to))); }
       catch(e){
         if(!(e instanceof XlNotTranslated)) throw e;
@@ -359,7 +359,7 @@ export function xlBuildModel(book, plans, include, split){
       continue;
     }
     if(entry.kind !== 'calculation' && entry.kind !== 'opening' && entry.kind !== 'single') continue;
-    const ctx = { mode: entry.kind === 'single' ? 'single' : 'period', canvas: entry.canvas, kind: entry.kind, from: 0 };
+    const ctx = { mode: entry.kind === 'single' ? 'single' : 'period', canvas: entry.canvas, kind: entry.kind, from: 0, upTo: (to) => upTo(entry.canvas, to) };
     const text = entry.kind === 'single' ? entry.plan.before.formula : entry.plan.signature;
     try{
       if(!text) throw new XlNotTranslated('a formula that can\'t be read');
@@ -600,8 +600,9 @@ function xlPartsExpr(entry, formulaExpr, n, upTo){
 
 // A reference some periods back reaching before the first period, in a period the formula
 // is used in: there Excel reads the cell before the period columns (a blank is 0), so that
-// period reads its value: if(period = 1, Excel's C92, …). An opening balance's first period
-// is its typed number, so it is left as it is.
+// period reads its value, through the canvas's shared switch: if(@Up to 2020, Excel's C92, …)
+// (the formula stays live in that period). An opening balance's first period is its typed
+// number, so it is left as it is.
 function xlBeforeThePeriods(ref, sheet, plan, row, ctx){
   if(ref.shift >= 0 || ctx.mode !== 'period') return ref;
   let expr = ref;
@@ -612,7 +613,7 @@ function xlBeforeThePeriods(ref, sheet, plan, row, ctx){
     const cell = col >= 1 ? sheet.cells.get(xlAddress(col, row)) : null;
     const v = cell ? xlSavedNumber(cell) : 0;
     if(v === null) throw new XlNotTranslated('a cell before the periods holding text or an error (' + sheet.name + '!' + xlAddress(col, row) + ')');
-    expr = { k: 'op', op: 'if', named: true, args: [{ k: 'op', op: '=', args: [{ k: 'period' }, { k: 'const', value: p + 1 }] }, { k: 'const', value: v, oddOf: col >= 1 ? xlAddress(col, row) : 'blank' }, expr] };
+    expr = { k: 'op', op: 'if', named: true, args: [ctx.upTo(p), { k: 'const', value: v, oddOf: col >= 1 ? xlAddress(col, row) : 'blank' }, expr] };
   }
   return expr;
 }
