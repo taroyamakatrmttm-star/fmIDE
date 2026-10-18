@@ -4,7 +4,10 @@
 // against ExcelJS, stored and deflated parts, the app's own Excel writer read back, Excel's
 // variations (inline and rich strings, cells without addresses, true/false, errors, 1904
 // dates, hidden and chart sheets, defined names), and hostile files (a zip bomb, too many
-// cells or sheets, a damaged zip, an .xls, a document type, markup in names). No browser.
+// cells or sheets, a damaged zip, an .xls, a document type, markup in names). Phase 20c: the
+// formula parser (formula.js) — every formula of the samples, Excel's precedence, references
+// of every form, what isn't supported, moving a tree, shared formulas copied to their cells,
+// formulas that aren't one. No browser.
 const fs = require('fs');
 const path = require('path');
 const JSZip = require('jszip');
@@ -13,6 +16,7 @@ const { test, expect, ROOT } = require('./helpers/apps');
 const Z = require('../src/excel-exporter/import/zip.js');
 const X = require('../src/excel-exporter/import/xml.js');
 const W = require('../src/excel-exporter/import/workbook.js');
+const F = require('../src/excel-exporter/import/formula.js');
 const { XLSX } = require('../src/excel-exporter/js-head/01-xlsx-writer.js');
 
 const DIR = path.join(ROOT, 'tests', 'fixtures', 'excel-import');
@@ -277,4 +281,140 @@ test('hostile and broken files are refused, each saying why', async () => {
     }
   }
   expect(await codeOf(enc)).toBe('old-or-protected');
+});
+
+// ---------- 20c: the formula parser ----------
+
+// A tree in a short form: (op a b), (fn NAME args…), refs as Excel writes them.
+function show(n){
+  switch(n.type){
+    case 'num': return String(n.value);
+    case 'str': return JSON.stringify(n.value);
+    case 'bool': return n.value ? 'TRUE' : 'FALSE';
+    case 'err': return n.value;
+    case 'missing': return '_';
+    case 'ref': case 'range': case 'name': return '[' + F.xlFormulaText(n) + ']';
+    case 'unsupported': return '<' + n.what + ': ' + n.text + '>';
+    case 'func': return '(' + n.name + (n.args.length ? ' ' + n.args.map(show).join(' ') : '') + ')';
+    case 'unary': return '(neg' + (n.op === '+' ? '+' : '') + ' ' + show(n.arg) + ')';
+    case 'percent': return '(% ' + show(n.arg) + ')';
+    case 'binary': return '(' + n.op + ' ' + show(n.left) + ' ' + show(n.right) + ')';
+  }
+  return '?';
+}
+const parsed = (f) => show(F.xlParseFormula(f));
+
+test('every formula of the samples is read, written back the same, and shared formulas are copied as ExcelJS copies them', async () => {
+  let count = 0;
+  for(const file of SAMPLES){
+    const book = F.xlFillSharedFormulas(await W.xlReadWorkbook(bytesOf(file)));
+    const ej = new ExcelJS.Workbook();
+    await ej.xlsx.load(fs.readFileSync(path.join(DIR, file)));
+    for(const sheet of book.sheets){
+      for(const c of sheet.cells.values()){
+        const ejCell = ej.getWorksheet(sheet.name).getCell(c.address);
+        if(ejCell.formula){
+          count++;
+          expect(c.formula, file + ' ' + c.address).toBe(ejCell.formula);
+          expect(F.xlFormulaText(F.xlParseFormula(c.formula)), file + ' ' + c.address).toBe(c.formula);
+        } else expect(c.formula, file + ' ' + c.address).toBeNull();
+      }
+    }
+  }
+  expect(count).toBeGreaterThan(80);
+  const calc = F.xlFillSharedFormulas(await W.xlReadWorkbook(bytesOf('03-two-sheets.xlsx'))).sheets[1].cells;
+  expect(parsed(calc.get('G10').formula)).toBe('(MAX 0 (* [G9] [TaxRate]))');
+  expect(parsed(calc.get('E5').formula)).toBe('(* [Inputs!E5] [Inputs!E6])');
+  const val = F.xlFillSharedFormulas(await W.xlReadWorkbook(bytesOf('04-not-supported.xlsx'))).sheets[0].cells;
+  expect(parsed(val.get('F6').formula)).toBe('(VLOOKUP [$C$5] [Lookup!$A$2:$B$4] 2 FALSE)');
+  expect(parsed(val.get('G11').formula)).toBe('(SUM [$D$8:G8])');
+  expect(parsed(val.get('C13').formula)).toBe('(COUNTIF [D8:H8] ">220")');
+});
+
+test('Excel\'s precedence: negation before ^, ^ from the left, then * /, + -, &, comparisons', () => {
+  const cases = {
+    '1+2*3': '(+ 1 (* 2 3))',
+    '(1+2)*3': '(* (+ 1 2) 3)',
+    '-2^2': '(^ (neg 2) 2)',
+    '2^-1': '(^ 2 (neg 1))',
+    '2^3^2': '(^ (^ 2 3) 2)',
+    '10%*2': '(* (% 10) 2)',
+    '-A1%': '(neg (% [A1]))',
+    '1-2-3': '(- (- 1 2) 3)',
+    '1-(2-3)': '(- 1 (- 2 3))',
+    'A1&B1=C1': '(= (& [A1] [B1]) [C1])',
+    '1+2&3': '(& (+ 1 2) 3)',
+    'A1<>B1': '(<> [A1] [B1])',
+    'A1<=B1+1': '(<= [A1] (+ [B1] 1))',
+    '--A1': '(neg (neg [A1]))',
+    '+A1': '(neg+ [A1])',
+    ' 1 + 2 ': '(+ 1 2)',
+    '=A1*2': '(* [A1] 2)',
+  };
+  for(const [f, want] of Object.entries(cases)){
+    expect(parsed(f), f).toBe(want);
+    // Written back and read again, the tree is the same.
+    expect(parsed(F.xlFormulaText(F.xlParseFormula(f))), f).toBe(want);
+  }
+  expect(F.xlFormulaText(F.xlParseFormula('1-(2-3)'))).toBe('1-(2-3)');
+  expect(F.xlFormulaText(F.xlParseFormula('(1+2)*3'))).toBe('(1+2)*3');
+  expect(F.xlFormulaText(F.xlParseFormula('2^(3^2)'))).toBe('2^(3^2)');
+  expect(F.xlFormulaText(F.xlParseFormula('-(1+2)'))).toBe('-(1+2)');
+});
+
+test('references, names, functions, constants', () => {
+  const cases = {
+    'A1': '[A1]', '$A$1': '[$A$1]', 'A$1': '[A$1]', '$A1': '[$A1]', 'xfd1048576': '[XFD1048576]',
+    'Sheet1!A1': '[Sheet1!A1]', "'My sheet'!$B$2": "['My sheet'!$B$2]", "'It''s'!A1": "['It''s'!A1]",
+    'A1:B2': '[A1:B2]', 'Inputs!$D$5:H5': '[Inputs!$D$5:H5]', 'A:A': '[A:A]', '$B:$C': '[$B:$C]', '1:1': '[1:1]', 'Data!$1:$3': '[Data!$1:$3]',
+    "'2026'!A1": "['2026'!A1]", "'A1'!B2": "['A1'!B2]",
+    'TaxRate': '[TaxRate]', 'Sheet1!Rate': '[Sheet1!Rate]', 'Q1Sales*2': '(* [Q1Sales] 2)', 'LOG10(100)': '(LOG10 100)',
+    '_xlfn.XLOOKUP(A1,B:B,C:C)': '(XLOOKUP [A1] [B:B] [C:C])', '_xlfn._xlws.SORT(A1:A3)': '(SORT [A1:A3])', 'STDEV.S(A1:A3)': '(STDEV.S [A1:A3])',
+    'sum(a1,b1)': '(SUM [A1] [B1])', 'IF(A1,,2)': '(IF [A1] _ 2)', 'IF(A1,1,)': '(IF [A1] 1 _)', 'NOW()': '(NOW)', 'PI()*2': '(* (PI) 2)',
+    'TRUE': 'TRUE', 'false': 'FALSE', 'AND(TRUE,FALSE)': '(AND TRUE FALSE)',
+    '"say ""hi"""': '"say \\"hi\\""', '""': '""', '1.5E+3': '1500', '.5': '0.5', '2e-3': '0.002', '#DIV/0!': '#DIV/0!', 'IFERROR(#N/A,0)': '(IFERROR #N/A 0)',
+    '{1,2;3,4}': '<an array constant: {1,2;3,4}>', '[1]Sheet1!A1': '<another workbook: [1]Sheet1!A1>', 'SUM(Sales[Amount])': '(SUM <a table\'s column: Sales[Amount]>)',
+    "SUM('Jan:Mar'!B2)": "(SUM <several sheets: 'Jan:Mar'!B2>)",
+  };
+  for(const [f, want] of Object.entries(cases)) expect(parsed(f), f).toBe(want);
+  expect(F.xlParseFormula('"say ""hi"""')).toEqual({ type: 'str', value: 'say "hi"' });
+  expect(F.xlParseFormula("'It''s'!A1")).toMatchObject({ type: 'ref', sheet: "It's", col: 1, row: 1 });
+  expect(F.xlFormulaText(F.xlParseFormula("'It''s'!A1&\"a\"\"b\""))).toBe("'It''s'!A1&\"a\"\"b\"");
+});
+
+test('moving a tree: relative parts move, $ parts stay, off the grid is #REF!', () => {
+  const move = (f, dr, dc) => F.xlFormulaText(F.xlShiftFormula(F.xlParseFormula(f), dr, dc));
+  expect(move('D6*D7', 0, 2)).toBe('F6*F7');
+  expect(move('D7*$C$5', 0, 3)).toBe('G7*$C$5');
+  expect(move('$D8+D$8+SUM($D$8:D8)', 2, 1)).toBe('$D10+E$8+SUM($D$8:E10)');
+  expect(move('Inputs!D5*Inputs!D6', 1, 1)).toBe('Inputs!E6*Inputs!E7');
+  expect(move('A:A+1:1', 1, 1)).toBe('B:B+2:2');
+  expect(move('A1+1', 0, -1)).toBe('#REF!+1');
+  expect(move('SUM(A1:B2)', -1, 0)).toBe('SUM(#REF!)');
+  expect(move('TaxRate*"A1"', 5, 5)).toBe('TaxRate*"A1"');
+});
+
+test('a shared formula whose first cell is missing or unreadable is marked, not guessed', async () => {
+  const book = F.xlFillSharedFormulas(await W.xlReadWorkbook(await craft({ sheets: [{ name: 'S', xml: sheetXml(
+    '<row r="1"><c r="A1"><f t="shared" ref="A1:B1" si="0">1+</f><v>1</v></c><c r="B1"><f t="shared" si="0"/><v>1</v></c><c r="C1"><f t="shared" si="7"/><v>2</v></c></row>') }] })));
+  const c = book.sheets[0].cells;
+  expect(c.get('B1').formula).toBeNull();
+  expect(c.get('B1').unreadable).toContain('can\'t be read');
+  expect(c.get('C1').unreadable).toBe('its shared formula is missing');
+});
+
+test('formulas that aren\'t one are refused, saying why; nesting and length are limited', () => {
+  const bad = ['1+', '(1', 'SUM(1', '"abc', '#BAD!', 'SUM(1;2)', ')', '', '1 2', 'A1:', 'Sheet1!', 'IF(1,2 3)', 'XFE1+1+', '=', '@', 'ZZZZ1('];
+  for(const f of bad){
+    let err = null;
+    try{ F.xlParseFormula(f); } catch(e){ err = e; }
+    expect(err, f).toBeInstanceOf(Z.XlImportError);
+    expect(err.code, f).toBe('formula-unreadable');
+  }
+  const deep = (n) => 'ABS('.repeat(n) + '1' + ')'.repeat(n);
+  expect(parsed(deep(64))).toContain('(ABS');
+  expect(() => F.xlParseFormula(deep(65))).toThrow(/nests more than 64/);
+  expect(() => F.xlParseFormula('('.repeat(65) + '1' + ')'.repeat(65))).toThrow(/nests more than 64/);
+  expect(() => F.xlParseFormula('-'.repeat(65) + '1')).toThrow(/nests more than 64/);
+  expect(() => F.xlParseFormula('1+'.repeat(4097) + '1')).toThrow(/longer than 8192/);
 });

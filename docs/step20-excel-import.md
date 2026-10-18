@@ -108,6 +108,13 @@ Each is one pull request, merged when the whole suite is green (the owner's requ
 
 **Real workbooks are still needed.** ExcelJS's files are close to Excel's (shared strings, shared formulas, styles), but Excel also writes a calculation chain, rich text, inline strings and other variations. The owner is asked to provide, when they can, one or two real models (or made-up ones saved by Excel) to add as samples.
 
+## How 20c turned out
+
+Done (18 October 2026): `import/formula.js` — `xlParseFormula(text)` (the tree described at the top of the file), `xlShiftFormula(tree, rows, columns)`, `xlFormulaText(tree)` and `xlFillSharedFormulas(book)` (each cell of a shared formula gets its own text, as ExcelJS and Excel copy it) — with group 79's parser tests.
+
+- What the first version doesn't translate is still read, so the report can name it: an array constant, another workbook, a table's column and a reference across several sheets are `unsupported` nodes, with their text.
+- A reference across several sheets written without quotes (`Jan:Mar!A1`) can't be told from a range and is refused as unreadable; Excel quotes such names when they have spaces, but not always otherwise. Such a cell will be listed as not translated.
+
 ## How 20b turned out
 
 Done (18 October 2026): `import/zip.js`, `import/xml.js` and `import/workbook.js`, included in ExcelExporter by `js/09k-excel-import.js` (nothing on the page yet), and test group 79 in Node.
