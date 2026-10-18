@@ -511,6 +511,7 @@ fmIDE at 1400 × 900. The help text (`src/help/fmide-help.js`) is also read on i
 ### 32. Help where you are (`tests/32-help-context.spec.js`; step 10, phase H2)
 fmIDE at 1400 × 900 (the touch test at 1024 × 768 with a touchscreen), ExcelExporter at 1400 × 900. fmIDE's help text and ExcelExporter's topic lists are also read on their own in Node.
 - Pausing over Add Period Shift shows `#commandTip` with its name, sentence and "Learn more (F1)"; moving away hides it; Evaluate's tip shows F9.
+- Leaving Add Period Shift at once, before its pause is over: no tip 0.7 s later, and F1 opens Help's own page (its tutorials listed) — found on CI, 18 October 2026, as group 33 failing now and then.
 - F1 while the tip shows opens "Period shifts…" and hides the tip; Learn more on Templates' tip opens "Templates"; F1 with no tip closes the panel.
 - The disabled Align Left's tip says "Not available right now."; the round operator's Learn more opens "Timing, conditions and rounding".
 - For Templates, Functions, Format Presets, Periods, Macro Builder, Customize Ribbon, Keyboard Shortcuts, Open Recent and the alias picker: the window's "?" opens its topic; the window stays open; a point in the panel belongs to the panel (above the backdrop).
