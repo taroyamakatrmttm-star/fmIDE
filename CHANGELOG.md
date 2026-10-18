@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: imported models keep the workbook's layout
+- After Import, each tab has the original sheet's rows in the same order, a label row for each title and an empty one for each blank row, with no Inputs / Calculations / Outputs sections; the numbers written in formulas are written in the formulas again (Constant), with no rows of their own. fmIDE's canvas leaves space where the sheet had titles and blank rows.
+
 ## ExcelExporter: one switch for the actual years
 - An imported row with one formula for the actual years and another for the forecast reads one shared rectangle per canvas, such as "Up to 2024" (1 up to that year, 0 after), instead of its own year test; its typed years are its own numbers.
 

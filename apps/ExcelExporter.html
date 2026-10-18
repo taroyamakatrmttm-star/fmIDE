@@ -10650,7 +10650,7 @@ const EXCEL_HELP_TOPICS = [
       { steps: [
         'Choose File → Import Excel model… (or drop the workbook on the page).',
         'Check what was found for each sheet: the header row of periods, the period columns, the label and unit columns, and each row\'s kind. Change any of them, or untick a sheet to leave it out. One canvas per section (ticked for a sheet of more than 40 rows) gives each section of the sheet its own canvas.',
-        'Press Import. The model loads here, and a report says how it compares with the values Excel saved.',
+        'Press Import. The model loads here, laid out like the workbook — its rows in the same order, its titles and blank rows kept, the numbers in its formulas written in the formulas — and a report says how it compares with the values Excel saved.',
         'Press Save for fmIDE (in the report or the File menu), then open the file in fmIDE with File → Open….',
       ] },
       { p: 'It reads models laid out with rows as line items and columns as periods, one formula copied along each row. A reference to the column on the left becomes a period shift; a first period typed and the formula after it is an opening balance; typed actual years and a forecast formula make a row whose rectangle holds the actuals as its own numbers in those years (ticked under its 🕒), the formula feeding the others; two formulas, one after the other, make a row in parts, which reads each in its own years through one shared rectangle per canvas, such as Up to 2024 (1 in those years, 0 after). SUM, MIN, MAX, AVERAGE, IF, IFERROR, AND, OR, NOT, ROUND, CHOOSE, ABS, LN, EXP, SQRT, INT, TRUNC, MOD and POWER become fmIDE\'s operators.' },
@@ -10972,6 +10972,18 @@ const EXCEL_HELP_TOPICS = [
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'import-excel-layout', date: '2026-10-18', title: 'Imported models keep the workbook\'s layout',
+    summary: 'After Import, each tab has the original\'s rows in the same order, with its titles and blank rows.',
+    what: [
+      'Each tab (one per sheet, or per section) lists the rows in the workbook\'s order, with a label row for each title and an empty one for each blank row.',
+      'Numbers written in the formulas, such as the 0.4 in =D5*0.4, are written in the formulas again, with no rows of their own.',
+      'In fmIDE, the canvas leaves a gap where the sheet had a title or blank rows.',
+    ],
+    why: 'The workbook ExcelExporter makes then reads like the one you started from.',
+    how: ['File → Import Excel model…, and pick the workbook.', 'Press Import, then ⬇ Generate.'],
+    notes: ['The layout is remembered in this browser for the model. Change it in the Rows panel like any layout.'],
+    see: ['import-excel'] },
+
   { id: 'import-excel-switch', date: '2026-10-18', title: 'One switch for the actual years',
     summary: 'Imported rows with one formula for the actual years and another for the forecast share one rectangle, such as "Up to 2024".',
     what: [
@@ -15018,12 +15030,55 @@ async function buildImportedModel(){
   const before = model;
   await tryLoad(JSON.stringify(built.system), label, label.replace(/\.xls[xm]?$/i, ''));
   if(model === before || !model) return; // tryLoad said why
+  useImportedLayout(built.layout);
   excelImport.check = xlCheckModel(built.system, built.report);
   excelImport.model = model;
   syncImportReportItem();
   const check = excelImport.check;
   setStatus($('loadStatus'), importLoadedMessage(built.report), built.report.notTranslated.length || check.differ.length ? 'warn' : 'ok');
   openImportReport();
+}
+
+// The workbook's own layout for the imported model (xlBuildModel's `layout`): each canvas's tab
+// in one list (no Inputs / Calculations / Outputs sections), its rows in the sheet's order with
+// a label row for each title and an empty one for each blank row; the numbers written in the
+// formulas are Constants again, written into the formulas. It replaces the layout the model
+// was given (or had in this browser) and is saved like any change.
+const IMPORT_LABEL_MAX = 200;
+function useImportedLayout(layout){
+  if(!layout || !mapping) return;
+  mapping.cfg.sectionsEnabled = false;
+  const byId = new Map(mapping.rows.map(r => [r.id, r]));
+  layout.canvases.forEach(lc => {
+    const tab = mapping.tabs.find(t => t.id === 'tab_' + lc.id);
+    if(!tab) return;
+    mapping.customRows = mapping.customRows.filter(r => r.tabId !== tab.id);
+    let k = 0;
+    lc.items.forEach(item => {
+      if(item.node !== undefined){
+        const row = byId.get(pathKey([], lc.id, item.node));
+        if(row && row.tabId === tab.id) row.flatOrder = k++;
+        return;
+      }
+      mapping.customRows.push({
+        id: 'custom_xl_' + lc.id + '_' + k, isCustom: true, tabId: tab.id, section: 'input',
+        label: item.title !== undefined ? String(item.title).slice(0, IMPORT_LABEL_MAX) : '', style: null, showPeriodLabels: false,
+        flatOrder: k++,
+      });
+    });
+    // A row the layout doesn't name (none, today) goes after it.
+    mapping.rows.filter(r => r.tabId === tab.id && !lc.items.some(it => it.node !== undefined && pathKey([], lc.id, it.node) === r.id)).forEach(r => { r.flatOrder = k++; });
+  });
+  const canvasById = {}; model.canvases.forEach(c => { canvasById[c.id] = c; });
+  layout.constants.forEach(({ canvasId, nodeId }) => {
+    const row = byId.get(pathKey([], canvasId, nodeId));
+    const c = canvasById[canvasId];
+    const node = c && c.nodes.find(n => n.id === nodeId);
+    if(row && node && isInputRectangle(c, node)) row.inlineConstant = true;
+  });
+  mapping.tabs.forEach(t => { ensureSectionOrderAll(t.id); ensureFlatOrder(t.id); });
+  saveMapping();
+  renderAll();
 }
 
 // File → Import Report… and Save for fmIDE: shown while the model is the one imported.
@@ -15185,6 +15240,8 @@ const XL_STEP = 220;     // from an operator to its inputs, leftwards
 const XL_ALIAS_STEP = 190; // from a period shift to the alias feeding it (an alias is 170 wide)
 const XL_RECT_X = 2000;  // the rectangles' column, before the canvas is moved to start at the left
 const XL_MARGIN = 40;
+const XL_SPACE = 45;     // a blank row or a title of the sheet, as space between rectangles
+const XL_BLANKS_MAX = 20; // blank rows kept between two rows of the sheet, at most
 
 class XlNotTranslated extends Error {
   constructor(why){ super(why); this.why = why; }
@@ -15248,7 +15305,7 @@ function xlBuildModel(book, plans, include, split){
     let n = name, k = 2;
     while(canvasNames.has(n.toLowerCase())) n = xlCleanName(name + ' (' + (k++) + ')');
     canvasNames.add(n.toLowerCase());
-    const c = { id: 'xl' + (canvases.length + 1), name: n, nodes: [], edges: [], usedNames: new Set(), next: 1, nextEdge: 1, sheet: i, order: [] };
+    const c = { id: 'xl' + (canvases.length + 1), name: n, nodes: [], edges: [], usedNames: new Set(), next: 1, nextEdge: 1, sheet: i, items: [], constants: [] };
     canvases.push(c);
     return c;
   };
@@ -15280,11 +15337,11 @@ function xlBuildModel(book, plans, include, split){
   };
   for(const i of sheetsIn){
     for(const r of plans[i].rows){
-      if(r.kind === 'title') continue;
       const c = canvasFor(i, r.row);
+      if(r.kind === 'title'){ c.items.push({ row: r.row, title: xlCleanName(r.label) }); continue; }
       const entry = { sheet: i, plan: r, canvas: c, id: nodeId(c), name: uniqueName(c, xlCleanName(r.label), r.row), unit: xlCleanName(r.unit).slice(0, 40), kind: r.kind, expr: null, why: null, deps: [] };
       rows.set(i + '|' + r.row, entry);
-      c.order.push(entry);
+      c.items.push({ row: r.row, entry });
     }
   }
 
@@ -15558,7 +15615,30 @@ function xlBuildModel(book, plans, include, split){
       nodeCount.rectangles++;
       y += XL_LANE + XL_ROW_GAP;
     }
-    for(const entry of c.order){
+    // The sheet's layout, for ExcelExporter's tab (09k): the extras, then the rows, titles and
+    // blank rows in the sheet's order. On the canvas a title or blank row is space between
+    // the rectangles.
+    const layout = [...extras.values()].filter(x => x.canvas === c).map(e => ({ node: e.id }));
+    let prevRow = null, placed = layout.length > 0;
+    for(const item of c.items){
+      if(prevRow !== null){
+        // The header row of periods is the workbook's own (ExcelExporter writes one): the
+        // blank rows are counted after it.
+        const head = plans[c.sheet].headerRow;
+        const from = head > prevRow && head < item.row ? head : prevRow;
+        const blanks = Math.min(XL_BLANKS_MAX, Math.max(0, item.row - from - 1));
+        for(let k = 0; k < blanks; k++) layout.push({ blank: true });
+        if(placed) y += blanks * XL_SPACE;
+      }
+      prevRow = item.row;
+      if(item.title !== undefined){
+        layout.push({ title: item.title });
+        if(placed) y += XL_SPACE;
+        continue;
+      }
+      const entry = item.entry;
+      layout.push({ node: entry.id });
+      placed = true;
       const plan = entry.plan;
       const rect = { id: entry.id, type: 'value', x: XL_RECT_X, y, text: '' };
       nodeCount.rectangles++;
@@ -15617,13 +15697,14 @@ function xlBuildModel(book, plans, include, split){
           rect.literalPeriods = ticked;
         } else rect.text = xlRectText(entry.name, null, entry.unit);
         add(rect);
-        const root = xlEmit(expr, XL_RECT_X - XL_STEP, y, { c, add, edge, nodeId, label: entry.name });
+        const root = xlEmit(expr, XL_RECT_X - XL_STEP, y, { c, add, edge, nodeId, label: entry.name, constants: c.constants });
         edge(root.id, rect.id);
         lanes = root.lanes;
       }
       report.rows.push(out);
       y += lanes * XL_LANE + XL_ROW_GAP;
     }
+    c.layout = layout;
     // The canvas starts at the left.
     const minX = Math.min(...c.nodes.map(n => n.x));
     const dx = XL_MARGIN - minX;
@@ -15637,7 +15718,11 @@ function xlBuildModel(book, plans, include, split){
   report.canvases = canvases.length;
   report.rectangles = nodeCount.rectangles;
   report.nodes = canvases.reduce((s, c) => s + c.nodes.length, 0);
-  return { system, report };
+  // How ExcelExporter lays the model out to look like the workbook: per canvas, its rows in
+  // the sheet's order with its titles and blank rows; the numbers written in the formulas
+  // (each a rectangle of its own here), to be written back into the formulas there.
+  const layout = { canvases: canvases.map(c => ({ id: c.id, items: c.layout })), constants: canvases.flatMap(c => c.constants.map(id => ({ canvasId: c.id, nodeId: id }))) };
+  return { system, report, layout };
 }
 
 // A cell of the report: its saved number, or why there is none — Excel shows an error
@@ -15790,6 +15875,7 @@ function xlEmit(x, px, py, ctx){
     const id = nodeId(c);
     const name = x.oddOf ? xlCleanName(ctx.label + ': Excel\'s ' + x.oddOf) : xlCleanName(ctx.label + ': ' + xlNumberText(x.value));
     add({ id, type: 'value', x: px, y: py, text: xlRectText(name, x.value, '') });
+    if(ctx.constants) ctx.constants.push(id);
     return { id, lanes: 1 };
   }
   if(x.k === 'period'){

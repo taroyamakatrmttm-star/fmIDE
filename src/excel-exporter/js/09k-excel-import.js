@@ -199,12 +199,55 @@ async function buildImportedModel(){
   const before = model;
   await tryLoad(JSON.stringify(built.system), label, label.replace(/\.xls[xm]?$/i, ''));
   if(model === before || !model) return; // tryLoad said why
+  useImportedLayout(built.layout);
   excelImport.check = xlCheckModel(built.system, built.report);
   excelImport.model = model;
   syncImportReportItem();
   const check = excelImport.check;
   setStatus($('loadStatus'), importLoadedMessage(built.report), built.report.notTranslated.length || check.differ.length ? 'warn' : 'ok');
   openImportReport();
+}
+
+// The workbook's own layout for the imported model (xlBuildModel's `layout`): each canvas's tab
+// in one list (no Inputs / Calculations / Outputs sections), its rows in the sheet's order with
+// a label row for each title and an empty one for each blank row; the numbers written in the
+// formulas are Constants again, written into the formulas. It replaces the layout the model
+// was given (or had in this browser) and is saved like any change.
+const IMPORT_LABEL_MAX = 200;
+function useImportedLayout(layout){
+  if(!layout || !mapping) return;
+  mapping.cfg.sectionsEnabled = false;
+  const byId = new Map(mapping.rows.map(r => [r.id, r]));
+  layout.canvases.forEach(lc => {
+    const tab = mapping.tabs.find(t => t.id === 'tab_' + lc.id);
+    if(!tab) return;
+    mapping.customRows = mapping.customRows.filter(r => r.tabId !== tab.id);
+    let k = 0;
+    lc.items.forEach(item => {
+      if(item.node !== undefined){
+        const row = byId.get(pathKey([], lc.id, item.node));
+        if(row && row.tabId === tab.id) row.flatOrder = k++;
+        return;
+      }
+      mapping.customRows.push({
+        id: 'custom_xl_' + lc.id + '_' + k, isCustom: true, tabId: tab.id, section: 'input',
+        label: item.title !== undefined ? String(item.title).slice(0, IMPORT_LABEL_MAX) : '', style: null, showPeriodLabels: false,
+        flatOrder: k++,
+      });
+    });
+    // A row the layout doesn't name (none, today) goes after it.
+    mapping.rows.filter(r => r.tabId === tab.id && !lc.items.some(it => it.node !== undefined && pathKey([], lc.id, it.node) === r.id)).forEach(r => { r.flatOrder = k++; });
+  });
+  const canvasById = {}; model.canvases.forEach(c => { canvasById[c.id] = c; });
+  layout.constants.forEach(({ canvasId, nodeId }) => {
+    const row = byId.get(pathKey([], canvasId, nodeId));
+    const c = canvasById[canvasId];
+    const node = c && c.nodes.find(n => n.id === nodeId);
+    if(row && node && isInputRectangle(c, node)) row.inlineConstant = true;
+  });
+  mapping.tabs.forEach(t => { ensureSectionOrderAll(t.id); ensureFlatOrder(t.id); });
+  saveMapping();
+  renderAll();
 }
 
 // File → Import Report… and Save for fmIDE: shown while the model is the one imported.

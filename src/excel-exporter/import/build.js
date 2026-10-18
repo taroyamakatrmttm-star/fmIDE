@@ -32,6 +32,8 @@ const XL_STEP = 220;     // from an operator to its inputs, leftwards
 const XL_ALIAS_STEP = 190; // from a period shift to the alias feeding it (an alias is 170 wide)
 const XL_RECT_X = 2000;  // the rectangles' column, before the canvas is moved to start at the left
 const XL_MARGIN = 40;
+const XL_SPACE = 45;     // a blank row or a title of the sheet, as space between rectangles
+const XL_BLANKS_MAX = 20; // blank rows kept between two rows of the sheet, at most
 
 class XlNotTranslated extends Error {
   constructor(why){ super(why); this.why = why; }
@@ -95,7 +97,7 @@ export function xlBuildModel(book, plans, include, split){
     let n = name, k = 2;
     while(canvasNames.has(n.toLowerCase())) n = xlCleanName(name + ' (' + (k++) + ')');
     canvasNames.add(n.toLowerCase());
-    const c = { id: 'xl' + (canvases.length + 1), name: n, nodes: [], edges: [], usedNames: new Set(), next: 1, nextEdge: 1, sheet: i, order: [] };
+    const c = { id: 'xl' + (canvases.length + 1), name: n, nodes: [], edges: [], usedNames: new Set(), next: 1, nextEdge: 1, sheet: i, items: [], constants: [] };
     canvases.push(c);
     return c;
   };
@@ -127,11 +129,11 @@ export function xlBuildModel(book, plans, include, split){
   };
   for(const i of sheetsIn){
     for(const r of plans[i].rows){
-      if(r.kind === 'title') continue;
       const c = canvasFor(i, r.row);
+      if(r.kind === 'title'){ c.items.push({ row: r.row, title: xlCleanName(r.label) }); continue; }
       const entry = { sheet: i, plan: r, canvas: c, id: nodeId(c), name: uniqueName(c, xlCleanName(r.label), r.row), unit: xlCleanName(r.unit).slice(0, 40), kind: r.kind, expr: null, why: null, deps: [] };
       rows.set(i + '|' + r.row, entry);
-      c.order.push(entry);
+      c.items.push({ row: r.row, entry });
     }
   }
 
@@ -405,7 +407,30 @@ export function xlBuildModel(book, plans, include, split){
       nodeCount.rectangles++;
       y += XL_LANE + XL_ROW_GAP;
     }
-    for(const entry of c.order){
+    // The sheet's layout, for ExcelExporter's tab (09k): the extras, then the rows, titles and
+    // blank rows in the sheet's order. On the canvas a title or blank row is space between
+    // the rectangles.
+    const layout = [...extras.values()].filter(x => x.canvas === c).map(e => ({ node: e.id }));
+    let prevRow = null, placed = layout.length > 0;
+    for(const item of c.items){
+      if(prevRow !== null){
+        // The header row of periods is the workbook's own (ExcelExporter writes one): the
+        // blank rows are counted after it.
+        const head = plans[c.sheet].headerRow;
+        const from = head > prevRow && head < item.row ? head : prevRow;
+        const blanks = Math.min(XL_BLANKS_MAX, Math.max(0, item.row - from - 1));
+        for(let k = 0; k < blanks; k++) layout.push({ blank: true });
+        if(placed) y += blanks * XL_SPACE;
+      }
+      prevRow = item.row;
+      if(item.title !== undefined){
+        layout.push({ title: item.title });
+        if(placed) y += XL_SPACE;
+        continue;
+      }
+      const entry = item.entry;
+      layout.push({ node: entry.id });
+      placed = true;
       const plan = entry.plan;
       const rect = { id: entry.id, type: 'value', x: XL_RECT_X, y, text: '' };
       nodeCount.rectangles++;
@@ -464,13 +489,14 @@ export function xlBuildModel(book, plans, include, split){
           rect.literalPeriods = ticked;
         } else rect.text = xlRectText(entry.name, null, entry.unit);
         add(rect);
-        const root = xlEmit(expr, XL_RECT_X - XL_STEP, y, { c, add, edge, nodeId, label: entry.name });
+        const root = xlEmit(expr, XL_RECT_X - XL_STEP, y, { c, add, edge, nodeId, label: entry.name, constants: c.constants });
         edge(root.id, rect.id);
         lanes = root.lanes;
       }
       report.rows.push(out);
       y += lanes * XL_LANE + XL_ROW_GAP;
     }
+    c.layout = layout;
     // The canvas starts at the left.
     const minX = Math.min(...c.nodes.map(n => n.x));
     const dx = XL_MARGIN - minX;
@@ -484,7 +510,11 @@ export function xlBuildModel(book, plans, include, split){
   report.canvases = canvases.length;
   report.rectangles = nodeCount.rectangles;
   report.nodes = canvases.reduce((s, c) => s + c.nodes.length, 0);
-  return { system, report };
+  // How ExcelExporter lays the model out to look like the workbook: per canvas, its rows in
+  // the sheet's order with its titles and blank rows; the numbers written in the formulas
+  // (each a rectangle of its own here), to be written back into the formulas there.
+  const layout = { canvases: canvases.map(c => ({ id: c.id, items: c.layout })), constants: canvases.flatMap(c => c.constants.map(id => ({ canvasId: c.id, nodeId: id }))) };
+  return { system, report, layout };
 }
 
 // A cell of the report: its saved number, or why there is none — Excel shows an error
@@ -637,6 +667,7 @@ function xlEmit(x, px, py, ctx){
     const id = nodeId(c);
     const name = x.oddOf ? xlCleanName(ctx.label + ': Excel\'s ' + x.oddOf) : xlCleanName(ctx.label + ': ' + xlNumberText(x.value));
     add({ id, type: 'value', x: px, y: py, text: xlRectText(name, x.value, '') });
+    if(ctx.constants) ctx.constants.push(id);
     return { id, lanes: 1 };
   }
   if(x.k === 'period'){

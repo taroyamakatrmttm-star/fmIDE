@@ -1,6 +1,6 @@
 # Tutorial: importing an Excel model (step 20)
 
-A step-by-step guide to everything added in pull requests #158 to #171 (18 October 2026): step 20 of the build order, **importing an Excel model**. ExcelExporter has always turned an fmIDE model into an Excel workbook. Now it also goes the other way: it reads a financial model built in Excel and rebuilds it as an fmIDE model.
+A step-by-step guide to everything added in pull requests #158 to #172 (18 October 2026): step 20 of the build order, **importing an Excel model**. ExcelExporter has always turned an fmIDE model into an Excel workbook. Now it also goes the other way: it reads a financial model built in Excel and rebuilds it as an fmIDE model.
 
 In one sentence: open a spreadsheet you inherited, and get it back as a picture of rectangles and arrows that you can check, change and carry on in fmIDE, with a report saying how closely it matches Excel.
 
@@ -30,7 +30,7 @@ The background and design are in [`docs/step20-excel-import.md`](step20-excel-im
 | 5 | Save for fmIDE, then File → Open… in fmIDE | ExcelExporter → fmIDE |
 | 6 | Rows with typed actuals and a forecast formula ("in parts") | ExcelExporter |
 | 7 | Safety: what the import never does with someone else's file | ExcelExporter |
-| 8 | Long sheets and tidy models: a canvas per section, typed years in the row's own rectangle, one shared switch, canvases that scroll to the end | ExcelExporter, fmIDE |
+| 8 | Long sheets and tidy models: a canvas per section, the workbook's own layout kept, typed years in the row's own rectangle, one shared switch, canvases that scroll to the end | ExcelExporter, fmIDE |
 
 You need nothing new installed. All three apps still work offline, straight from their HTML files, and nothing is uploaded anywhere.
 
@@ -207,7 +207,7 @@ Each part below says what the feature is, why you would use it, and the exact cl
 
 ### 8. Long sheets and tidy models
 
-**What it is.** Four improvements made after trying a real three-statement model, all on one sheet (pull requests #168 to #171).
+**What it is.** Five improvements made after trying a real three-statement model, all on one sheet (pull requests #168 to #172).
 
 **A canvas per section**
 
@@ -216,6 +216,13 @@ Each part below says what the feature is, why you would use it, and the exact cl
 - It starts **ticked for a sheet of more than 40 rows**, and unticked for a shorter one. Change it before pressing Import.
 - Rows still read each other across canvases (through aliases), so the model calculates exactly as before.
 - With several sheets imported, a section's canvas is named "Sheet — Section".
+
+**The workbook's own layout, kept**
+
+- After Import, each tab (one per sheet, or per section) lists the rows **in the original's order**, with a label row for each heading ("Expenses", "Assets"…) and an **empty row for each blank row**. There are no Inputs / Calculations / Outputs sections.
+- Numbers written inside the formulas (the 0.4 in `=ROUND(D8*0.4,0)`, the 365 in `=D27/365*D16`) are written **in the formulas again**, as in the original. They are marked **Constant** in the Rows panel, so they have no rows of their own.
+- In fmIDE, the canvas leaves a **gap** wherever the sheet had a heading or blank rows, so it reads in the same blocks as the sheet.
+- The layout is remembered in this browser for the model, like any layout. Change it in the Rows panel as usual. It isn't inside the file Save for fmIDE writes, so on another computer, or after you add or delete rectangles in fmIDE, ExcelExporter makes its usual fresh layout.
 
 **Typed years in the row's own rectangle**
 
@@ -234,7 +241,7 @@ Each part below says what the feature is, why you would use it, and the exact cl
 
 **On the real model.** One canvas of nearly 14,000 pixels became six, the tallest about 3,000. The rectangles went from 151 to 78 and the operators from 172 to 59. All 670 calculated cells still agree with Excel.
 
-**What is still a small rectangle.** A number that is part of the formula itself, such as the 1 in `=H26*(1+I8)` or the 365 in `=D27/365*D16`, is still a rectangle of its own named after its row ("Revenue: 1").
+**What is still a small rectangle in fmIDE.** A number that is part of the formula itself, such as the 1 in `=H26*(1+I8)`, is a rectangle of its own on the canvas, named after its row ("Revenue: 1"). In the workbook ExcelExporter writes, it goes back inside the formula.
 
 ## Putting it together: one model, start to finish
 
@@ -257,7 +264,8 @@ Each part below says what the feature is, why you would use it, and the exact cl
 | The report says "Nothing to compare". | The workbook has no saved values. Open it in Excel, save it, and import it again. |
 | A row is "kept as Excel's saved values". | It uses something not translated yet (the report says what). It still holds Excel's numbers, but won't move when its inputs change. |
 | A cell "differs from Excel". | Usually a stale saved value (Excel not recalculated before saving) or a formula the import reads differently. Press F9 in Excel, save, and import again; if it still differs, look at that cell's formula. |
-| The canvas has small rectangles like "Revenue: 1". | A number written inside a formula (the 1 in `1+growth`) is a rectangle of its own, named after its row. Typed years and the actuals/forecast switch no longer add any (feature 8). |
+| The canvas has small rectangles like "Revenue: 1". | A number written inside a formula (the 1 in `1+growth`) is a rectangle of its own on fmIDE's canvas, named after its row; in the workbook it is written back in the formula. Typed years and the actuals/forecast switch no longer add any (feature 8). |
+| The generated workbook's rows are in a different order from the original. | Import again: a fresh import lays the tabs out like the workbook. A model opened from a file in another browser gets ExcelExporter's usual layout (feature 8). |
 | I can't scroll down to the last rows. | Fixed: a canvas now grows to hold every rectangle (feature 8). For a very long sheet, also tick **One canvas per section** before importing. |
 | Where are a row's typed years? | In the row's own rectangle: select it and press 🕒 to see the years ticked. |
 | Import is greyed out. | No sheet is ticked: tick at least one sheet that has periods. |
@@ -272,6 +280,7 @@ Newest first.
 
 | Pull request | Date | What it did | Feature |
 |---|---|---|---|
+| [#172](https://github.com/taroyamakatrmttm-star/fmIDE/pull/172) | 18 Oct 2026 | The workbook's own layout kept: row order, headings, blank rows; constants back in the formulas; gaps on the canvas | 3, 8 |
 | [#171](https://github.com/taroyamakatrmttm-star/fmIDE/pull/171) | 18 Oct 2026 | One shared "Up to 2024" switch per canvas; this guide brought up to date | 6, 8 |
 | [#170](https://github.com/taroyamakatrmttm-star/fmIDE/pull/170) | 18 Oct 2026 | One canvas per section of a long sheet | 2, 8 |
 | [#169](https://github.com/taroyamakatrmttm-star/fmIDE/pull/169) | 18 Oct 2026 | Typed years, odd cells and opening balances in the row's own rectangle | 6, 8 |

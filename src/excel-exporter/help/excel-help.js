@@ -61,7 +61,7 @@ const EXCEL_HELP_TOPICS = [
       { steps: [
         'Choose File → Import Excel model… (or drop the workbook on the page).',
         'Check what was found for each sheet: the header row of periods, the period columns, the label and unit columns, and each row\'s kind. Change any of them, or untick a sheet to leave it out. One canvas per section (ticked for a sheet of more than 40 rows) gives each section of the sheet its own canvas.',
-        'Press Import. The model loads here, and a report says how it compares with the values Excel saved.',
+        'Press Import. The model loads here, laid out like the workbook — its rows in the same order, its titles and blank rows kept, the numbers in its formulas written in the formulas — and a report says how it compares with the values Excel saved.',
         'Press Save for fmIDE (in the report or the File menu), then open the file in fmIDE with File → Open….',
       ] },
       { p: 'It reads models laid out with rows as line items and columns as periods, one formula copied along each row. A reference to the column on the left becomes a period shift; a first period typed and the formula after it is an opening balance; typed actual years and a forecast formula make a row whose rectangle holds the actuals as its own numbers in those years (ticked under its 🕒), the formula feeding the others; two formulas, one after the other, make a row in parts, which reads each in its own years through one shared rectangle per canvas, such as Up to 2024 (1 in those years, 0 after). SUM, MIN, MAX, AVERAGE, IF, IFERROR, AND, OR, NOT, ROUND, CHOOSE, ABS, LN, EXP, SQRT, INT, TRUNC, MOD and POWER become fmIDE\'s operators.' },
