@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: the round trip
+- After Generate, an imported model's workbook is recalculated in the browser from its own formulas and every imported formula cell is compared with the value the original workbook saved; the message and the import report say how many match.
+
 ## ExcelExporter: imported models keep the workbook's look
 - After Import, each row and title has its look from the workbook as its own format — bold, text colour (theme colours and tints too), fill, the lines above and below, and the number format as the nearest of ExcelExporter's kinds.
 

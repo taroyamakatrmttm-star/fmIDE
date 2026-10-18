@@ -149,6 +149,15 @@ The owner asked for fewer small boxes. Most of the CFI model's constant rectangl
 - **The import**: the periods of a formula row holding a number of their own — an opening balance's first, the cells that differ, a row in parts' typed actuals beside its **one** formula — are ticked (`literalPeriods`), their numbers in `periodValues` (or typed, when it is one number), and the tree is the formula alone. A row of two formulas keeps its `if(period ≤ k, …)`.
 - **The CFI model**: rectangles 151 → 81, operators 172 → 67, still 670 of 670 cells agreeing; the remaining constants are a formula's own (`1 +`, `365`) and the four rows of two formulas.
 
+## The round trip (18 October 2026)
+
+The import's check compares fmIDE's calculation with the original. The owner asked for the step after it: does **the workbook ExcelExporter writes** give the original's numbers? After ⬇ Generate, for an imported model:
+
+- **Recalculated here** (`import/recalc.js`, `xlRecalc(wb)`): the workbook as the writer takes it, each cell worked out from its formula's text, read by the import's own parser — never run as code — with the functions ExcelExporter writes (the arithmetic and comparisons, `SUM` `MIN` `MAX` `AVERAGE` `PRODUCT` `AND` `OR` `NOT` `IF` `IFERROR`, the roundings — half away from zero, as Excel — `ABS` `LN` `EXP` `SQRT` `INT` `TRUNC` `MOD` `POWER` `CHOOSE` `INDEX` `N` `NA`); a range's text and TRUE/FALSE left out of a sum, as Excel; an empty cell 0; errors carried as Excel's (`#N/A`, `#DIV/0!`). Any other function is `#NAME?`, a loop `#CYCLE`, a chain past 5,000 formulas deep `#DEPTH`: not checked.
+- **Compared** (`xlRoundTrip`, 09k `importRoundTripAfter`): every cell of every formula row the import translated, where the workbook writes it (`buildCtx().cellPos`, `periodCol`), against the value the original saved, within a billionth (`xlAgree`); an Excel error agrees with an error. A row left out of the layout is counted, not compared.
+- **Said** after Generate ("Recalculated here, the workbook gives the original's value in all 670 cells."; amber with the first three that differ) and in the report (`#importRoundTrip`).
+- **The CFI model**: all 670 cells, in about a quarter of a second.
+
 ## The workbook's own look (18 October 2026)
 
 The owner asked for the original's look as well (idea 1 after the layout). Since the look of every cell in Excel is ExcelExporter's (`.claude/rules/format-roles.md`), it goes into the imported layout's **row formats**, never into the fmIDE model:

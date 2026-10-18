@@ -11,6 +11,17 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'import-excel-round-trip', date: '2026-10-18', title: 'Check the new workbook against the original',
+    summary: 'After Generate, an imported model\'s workbook is recalculated from its own formulas and compared with the original Excel file.',
+    what: [
+      'ExcelExporter works out every formula of the workbook it has just written and compares each imported formula cell with the value the original workbook saved.',
+      'The message after Generate, and the import report, say how many cells match, and name the first ones that don\'t.',
+    ],
+    why: 'It shows the new workbook can stand in for the original: same numbers, from formulas you can follow.',
+    how: ['File → Import Excel model…, then Import.', 'Press ⬇ Generate and read the message under the top bar.', 'File → Import Report… shows it again.'],
+    notes: ['A function this check doesn\'t work out is counted as not checked, never as a match.'],
+    see: ['import-excel'] },
+
   { id: 'import-excel-look', date: '2026-10-18', title: 'Imported models keep the workbook\'s look',
     summary: 'After Import, each row keeps its look from the workbook: bold, text colour, fill, lines and number format.',
     what: [

@@ -1,6 +1,6 @@
 # Tutorial: importing an Excel model (step 20)
 
-A step-by-step guide to everything added in pull requests #158 to #173 (18 October 2026): step 20 of the build order, **importing an Excel model**. ExcelExporter has always turned an fmIDE model into an Excel workbook. Now it also goes the other way: it reads a financial model built in Excel and rebuilds it as an fmIDE model.
+A step-by-step guide to everything added in pull requests #158 to #174 (18 October 2026): step 20 of the build order, **importing an Excel model**. ExcelExporter has always turned an fmIDE model into an Excel workbook. Now it also goes the other way: it reads a financial model built in Excel and rebuilds it as an fmIDE model.
 
 In one sentence: open a spreadsheet you inherited, and get it back as a picture of rectangles and arrows that you can check, change and carry on in fmIDE, with a report saying how closely it matches Excel.
 
@@ -30,7 +30,7 @@ The background and design are in [`docs/step20-excel-import.md`](step20-excel-im
 | 5 | Save for fmIDE, then File → Open… in fmIDE | ExcelExporter → fmIDE |
 | 6 | Rows with typed actuals and a forecast formula ("in parts") | ExcelExporter |
 | 7 | Safety: what the import never does with someone else's file | ExcelExporter |
-| 8 | Long sheets and tidy models: a canvas per section, the workbook's own layout and look kept, typed years in the row's own rectangle, one shared switch, canvases that scroll to the end | ExcelExporter, fmIDE |
+| 8 | Long sheets and tidy models, and the round trip: a canvas per section, the workbook's own layout and look kept, typed years in the row's own rectangle, one shared switch, canvases that scroll to the end | ExcelExporter, fmIDE |
 
 You need nothing new installed. All three apps still work offline, straight from their HTML files, and nothing is uploaded anywhere.
 
@@ -207,7 +207,7 @@ Each part below says what the feature is, why you would use it, and the exact cl
 
 ### 8. Long sheets and tidy models
 
-**What it is.** Six improvements made after trying a real three-statement model, all on one sheet (pull requests #168 to #173).
+**What it is.** Seven improvements made after trying a real three-statement model, all on one sheet (pull requests #168 to #174).
 
 **A canvas per section**
 
@@ -240,6 +240,12 @@ Each part below says what the feature is, why you would use it, and the exact cl
 
 - A row with one formula for the actual years and another for the forecast still has to choose between them by year. All such rows on a canvas read **one shared rectangle**, such as **Up to 2024**. It holds 1 in the years up to 2024 and 0 after, and feeds each row's **if**.
 - In ExcelExporter's workbook it is an ordinary input row, so you can see, and change, where the actual years end.
+
+**The round trip: the new workbook checked against the original**
+
+- After **⬇ Generate**, ExcelExporter works out every formula of the workbook it has just written, in your browser, and compares each imported formula cell with the value the original workbook saved.
+- The message under the top bar says, for example, "Recalculated here, the workbook gives the original's value in all 670 cells." If some differ, it is amber and names the first three. **File → Import Report…** shows the same line.
+- A function this check doesn't work out (one ExcelExporter never writes) is counted as **not checked**, never as a match.
 
 **Canvases that scroll to the end**
 
@@ -286,6 +292,7 @@ Newest first.
 
 | Pull request | Date | What it did | Feature |
 |---|---|---|---|
+| [#174](https://github.com/taroyamakatrmttm-star/fmIDE/pull/174) | 18 Oct 2026 | The round trip: the generated workbook recalculated and checked against the original | 4, 8 |
 | [#173](https://github.com/taroyamakatrmttm-star/fmIDE/pull/173) | 18 Oct 2026 | The workbook's own look kept: bold, colours, fills, lines and number formats per row | 3, 8 |
 | [#172](https://github.com/taroyamakatrmttm-star/fmIDE/pull/172) | 18 Oct 2026 | The workbook's own layout kept: row order, headings, blank rows; constants back in the formulas; gaps on the canvas | 3, 8 |
 | [#171](https://github.com/taroyamakatrmttm-star/fmIDE/pull/171) | 18 Oct 2026 | One shared "Up to 2024" switch per canvas; this guide brought up to date | 6, 8 |

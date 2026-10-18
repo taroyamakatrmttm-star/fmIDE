@@ -256,6 +256,44 @@ function useImportedLayout(layout){
   renderAll();
 }
 
+// The round trip, after Generate: the workbook just written, recalculated here from its own
+// formulas (recalc.js), against the values the original saved — every cell of every formula
+// row the import translated, where the workbook writes that row. Null for a model not imported.
+function importRoundTripAfter(wb){
+  if(!excelImport || !excelImport.check || excelImport.model !== model) return null;
+  const { cellPos } = buildCtx();
+  const cells = [];
+  let notWritten = 0;
+  for(const row of excelImport.result.report.rows){
+    if(!row.translated || row.kind === 'input' || row.kind === 'assumption') continue;
+    const pos = cellPos[pathKey([], row.canvasId, row.nodeId)];
+    for(const cell of row.cells){
+      if(cell.noSaved) continue;
+      if(!pos){ notWritten++; continue; }
+      const p = cell.period === null ? 0 : cell.period;
+      cells.push({ sheet: row.sheet, address: cell.address, label: row.label, period: cell.period, saved: cell.saved, excel: cell.error || null,
+        at: { tab: pos.tabName, address: colLetter(periodCol(p)) + pos.row } });
+    }
+  }
+  const trip = xlRoundTrip(xlRecalc(wb).valueOf, cells);
+  trip.notWritten = notWritten;
+  excelImport.roundTrip = trip;
+  return Object.assign({ trip }, importRoundTripSummary(trip));
+}
+
+function importRoundTripSummary(trip){
+  const left = (trip.unchecked ? trip.unchecked + ' not checked here (a function this check doesn\'t work out)' : '')
+    + (trip.notWritten ? (trip.unchecked ? '; ' : '') + trip.notWritten + ' on rows left out of the layout' : '');
+  const tail = left ? ' (' + left + ').' : '.';
+  if(!trip.compared) return { text: 'Recalculated here, the workbook had no cells to compare with the original' + tail, kind: 'warn' };
+  const n = trip.compared.toLocaleString('en');
+  if(!trip.differ.length) return { text: 'Recalculated here, the workbook gives the original\'s value in all ' + n + ' cells' + tail, kind: 'ok' };
+  const periods = excelImport.result.system.periods;
+  const first = trip.differ.slice(0, 3).map(d => d.sheet + '!' + d.address + ' ' + d.label + (d.period !== null && periods[d.period] !== undefined ? ' ' + periods[d.period] : '') + ': '
+    + (typeof d.got === 'number' ? importNumber(d.got) : String(d.got)) + ' against ' + (d.excel || importNumber(d.saved))).join('; ');
+  return { text: 'Recalculated here, the workbook gives the original\'s value in ' + trip.agree.toLocaleString('en') + ' of ' + n + ' cells; ' + trip.differ.length + ' differ: ' + first + (trip.differ.length > 3 ? '…' : '') + tail, kind: 'warn' };
+}
+
 // File → Import Report… and Save for fmIDE: shown while the model is the one imported.
 function syncImportReportItem(){
   const shown = !!(excelImport && excelImport.check && excelImport.model && excelImport.model === model);
@@ -313,6 +351,13 @@ function openImportReport(){
   const el = $('importCheckSummary');
   el.textContent = sum.text;
   el.className = 'import-check ' + sum.kind;
+  // After Generate: the workbook written, recalculated (importRoundTripAfter).
+  const trip = $('importRoundTrip');
+  if(excelImport.roundTrip){
+    const rt = importRoundTripSummary(excelImport.roundTrip);
+    trip.textContent = rt.text;
+    trip.className = 'import-check ' + rt.kind;
+  } else trip.className = 'import-check hidden';
   fillImportList('importDiffer', 'importDifferHead', check.differ.map(d =>
     d.sheet + '!' + d.address + ' · ' + d.label + (d.period !== null && periods[d.period] !== undefined ? ' · ' + periods[d.period] : '') + ': ' +
     'fmIDE ' + (d.got === null ? 'an error' + (d.error ? ' (' + d.error + ')' : '') : importNumber(d.got)) + ', Excel ' + (d.excel || importNumber(d.saved))));
@@ -386,3 +431,4 @@ function openImportWindow(){
 }
 // build:include excel-exporter/import/build.js
 // build:include excel-exporter/import/check.js
+// build:include excel-exporter/import/recalc.js
