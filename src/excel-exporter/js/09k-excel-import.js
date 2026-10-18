@@ -156,10 +156,39 @@ function renderImportSheet(section, i){
 
 function syncImportOk(){
   const ok = $('importOk');
-  const any = excelImport && excelImport.plans.some((p, i) => p.byPeriods && excelImport.include[i]);
-  ok.disabled = !any || typeof buildImportedModel !== 'function';
-  ok.title = typeof buildImportedModel !== 'function' ? 'Building the model from the workbook comes in the next update (step 20e)'
-    : (any ? 'Build the fmIDE model from the sheets ticked' : 'Tick a sheet to import');
+  const any = !!excelImport && excelImport.plans.some((p, i) => p.byPeriods && excelImport.include[i]);
+  ok.disabled = !any;
+  ok.title = any ? 'Build the fmIDE model from the sheets ticked' : 'Tick a sheet to import';
+}
+
+// Import: the model built from the sheets ticked (xlBuildModel), loaded as any model file is.
+// The report (what was kept as Excel's saved values, and why) stays in `excelImport.result`.
+async function buildImportedModel(){
+  let built;
+  try{
+    built = xlBuildModel(excelImport.book, excelImport.plans, excelImport.include);
+  }catch(err){
+    setStatus($('loadStatus'), 'Could not import ' + excelImport.fileName + ': ' + (err instanceof XlImportError ? err.message : 'the model could not be built.'), 'err');
+    return;
+  }
+  excelImport.result = built;
+  const label = excelImport.fileName;
+  const before = model;
+  await tryLoad(JSON.stringify(built.system), label, label.replace(/\.xls[xm]?$/i, ''));
+  if(model === before || !model) return; // tryLoad said why
+  setStatus($('loadStatus'), importLoadedMessage(built.report), built.report.notTranslated.length ? 'warn' : 'ok');
+}
+
+function importLoadedMessage(report){
+  const kept = report.notTranslated;
+  let msg = 'Imported ' + excelImport.fileName + ' — ' + report.canvases + ' canvas' + (report.canvases === 1 ? '' : 'es') + ', ' +
+    report.rectangles + ' rectangles, ' + model.periods.length + ' periods.';
+  if(kept.length){
+    const shown = kept.slice(0, 5).map(k => k.label + ' (' + k.why + ')');
+    msg += ' ' + kept.length + ' row' + (kept.length === 1 ? '' : 's') + ' kept as Excel\'s saved values: ' + shown.join(', ') + (kept.length > 5 ? ', …' : '') + '.';
+  }
+  if(report.odd.length) msg += ' ' + report.odd.length + ' row' + (report.odd.length === 1 ? '' : 's') + ' with cells that differ, kept as Excel\'s saved values there.';
+  return msg;
 }
 
 function openImportWindow(){
@@ -191,9 +220,10 @@ function openImportWindow(){
   const onBackdrop = (ev) => { if(ev.target === modal) close(); };
   const onKey = (ev) => { if(ev.key === 'Escape' && $('confirmModal').classList.contains('hidden')){ ev.preventDefault(); close(); } };
   $('importCancel').onclick = close;
-  $('importOk').onclick = () => { if(typeof buildImportedModel === 'function'){ close(); buildImportedModel(); } };
+  $('importOk').onclick = () => { close(); buildImportedModel(); };
   modal.addEventListener('click', onBackdrop);
   document.addEventListener('keydown', onKey, true);
   modal.classList.remove('hidden');
   ($('importOk').disabled ? $('importCancel') : $('importOk')).focus();
 }
+// build:include excel-exporter/import/build.js

@@ -108,6 +108,17 @@ Each is one pull request, merged when the whole suite is green (the owner's requ
 
 **Real workbooks are still needed.** ExcelJS's files are close to Excel's (shared strings, shared formulas, styles), but Excel also writes a calculation chain, rich text, inline strings and other variations. The owner is asked to provide, when they can, one or two real models (or made-up ones saved by Excel) to add as samples.
 
+## How 20e turned out
+
+Done (18 October 2026): `import/build.js` — `xlBuildModel(book, plans, include)` gives the `system` and a report — and the window's Import button, which loads the model as any model file is ("Imported … — 2 canvases, 13 rectangles, 5 periods.", naming the rows kept as Excel's saved values).
+
+- **Every reference is an alias**, placed in its operator's input column, even to a rectangle on the same canvas: fmIDE reads an operator's inputs by position, so this is how `−`, `÷`, comparisons and `iferror` keep Excel's order wherever the rows sit. Each row reads as a small sentence left of its rectangle; the rectangles stand in one column in the sheet's order. (20g may tidy this.)
+- **A cell that differs** keeps Excel's saved value through `if(period = n, saved value, the row's formula)`, since a wired rectangle has only one typed number; an opening balance keeps its typed number in period 1 (`literalPeriods`).
+- **Outside the rows**: the header row, when a formula reads it, is a rectangle of its own ("Year (header)"); a number on a sheet not imported, a constant ("Lookup!B3"); an empty cell, 0, as in Excel. A formula on a sheet not imported is used by its saved value.
+- **Circular references** within one period are cut at the loop's later row, which keeps its saved values; loops through a period shift (a corkscrew) are not loops.
+- **Ranges** inside `SUM`, `MIN`, `MAX`, `AVERAGE`, `AND`, `OR`, `PRODUCT` are read down a column (empty cells and text left out, as Excel does); a range along the periods, growing along them, or a whole column is not translated.
+- **Checked:** every cell of every row of the four samples, calculated by the shared IR, gives Excel's saved value. The check in the app (20f) does the same for any workbook.
+
 ## How 20d turned out
 
 Done (18 October 2026): `import/layout.js` and the confirm screen, File → Import Excel model… (an `.xlsx` dropped on the page opens it too), with group 79's layout tests and the new browser group 80.

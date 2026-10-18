@@ -9,7 +9,11 @@
 // of every form, what isn't supported, moving a tree, shared formulas copied to their cells,
 // formulas that aren't one. Phase 20d: the layout (layout.js) — the header row, periods, label
 // and unit columns and each row's kind found as tests/fixtures/excel-import/expected.json says,
-// and the person's choices. No browser.
+// and the person's choices. Phase 20e: building the model (build.js) — every translated cell of
+// every sample, calculated by the shared IR, agrees with Excel's saved value; the shape of the
+// trees (aliases in Excel's order, period shifts, named inputs, constants); the rows not
+// translated and the odd cells as expected.json lists them; circular references cut; what a
+// formula reads outside the rows. No browser.
 const fs = require('fs');
 const path = require('path');
 const JSZip = require('jszip');
@@ -20,6 +24,9 @@ const X = require('../src/excel-exporter/import/xml.js');
 const W = require('../src/excel-exporter/import/workbook.js');
 const F = require('../src/excel-exporter/import/formula.js');
 const L = require('../src/excel-exporter/import/layout.js');
+const B = require('../src/excel-exporter/import/build.js');
+const { compileModel, evaluateModel } = require('../src/shared/ir.js');
+const { SHARED_FILE_VERSIONS } = require('../src/shared/file-formats.js');
 const { XLSX } = require('../src/excel-exporter/js-head/01-xlsx-writer.js');
 
 const DIR = path.join(ROOT, 'tests', 'fixtures', 'excel-import');
@@ -512,4 +519,175 @@ test('rows: an input with a formula among its numbers, blanks, a row without a l
   expect([r(3).kind, r(3).signature, r(3).odd]).toEqual(['calculation', 'B2*2', ['C3']]);
   expect([r(4).label, r(4).kind]).toEqual(['', 'calculation']);
   expect([r(5).kind, r(5).signature, r(5).odd]).toEqual(['calculation', 'B2*2', ['B5']]);
+});
+
+// ---------- 20e: building the model ----------
+
+// Imports a workbook's sheets by periods: { system, report, book }.
+async function importBook(bytes){
+  const book = F.xlFillSharedFormulas(await W.xlReadWorkbook(bytes));
+  const plans = L.xlAnalyseWorkbook(book).sheets;
+  return { book, ...B.xlBuildModel(book, plans, plans.map(p => p.byPeriods)) };
+}
+// Each reported cell: the model's value next to Excel's saved one.
+function compare(system, report){
+  const ir = compileModel(system);
+  const results = evaluateModel(ir);
+  const out = [];
+  for(const r of report.rows){
+    const ci = system.canvases.findIndex(c => c.id === r.canvasId);
+    for(const c of r.cells){
+      const p = c.period === null ? 0 : c.period;
+      out.push({ where: r.sheet + '!' + c.address + ' (' + r.label + ')', got: results[ci].values[p][r.nodeId], error: results[ci].errors[p][r.nodeId], saved: c.saved, translated: r.translated });
+    }
+  }
+  return out;
+}
+const agrees = (x) => typeof x.got === 'number' && Math.abs(x.got - x.saved) <= 1e-9 * Math.max(1, Math.abs(x.saved));
+
+test('every sample\'s model, calculated, gives Excel\'s saved value in every translated cell', async () => {
+  let translated = 0;
+  for(const file of SAMPLES){
+    const { system, report } = await importBook(bytesOf(file));
+    expect(system.kind).toBe('system');
+    expect(system.version).toBe(SHARED_FILE_VERSIONS.system);
+    expect(system.periods, file).toEqual(['2026', '2027', '2028', '2029', '2030']);
+    for(const x of compare(system, report)){
+      expect(agrees(x), file + ' ' + x.where + ': ' + x.got + ' (' + x.error + ') against ' + x.saved).toBe(true);
+      if(x.translated) translated++;
+    }
+    // What isn't translated, as expected.json lists it.
+    const want = EXPECTED.samples[file.replace(/\.xlsx$/, '')];
+    expect(report.notTranslated.map(n => ({ sheet: n.sheet, cells: n.cells, why: n.why })), file).toEqual(want.notTranslated);
+    const odd = [];
+    for(const [sheet, sh] of Object.entries(want.sheets)) for(const r of sh.rows) if(r.odd) odd.push({ sheet, row: r.row, cells: r.odd });
+    expect(report.odd.map(o => ({ sheet: o.sheet, row: o.row, cells: o.cells })), file).toEqual(odd);
+  }
+  expect(translated).toBeGreaterThan(100);
+});
+
+// The nodes of one canvas, by id, and what feeds each.
+function shape(system, canvasName){
+  const c = system.canvases.find(x => x.name === canvasName);
+  const byId = new Map(c.nodes.map(n => [n.id, n]));
+  const rect = (name) => c.nodes.find(n => n.type === 'value' && n.text.split('\n')[0] === name);
+  const into = (id) => c.edges.filter(e => e.to === id).map(e => ({ ...e, node: byId.get(e.from) }))
+    .sort((a, b) => (a.node.x - b.node.x) || (a.node.y - b.node.y));
+  const nameOf = (n) => {
+    if(n.type === 'alias'){
+      const src = system.canvases.find(k => k.id === n.sourceCanvasId).nodes.find(k => k.id === n.sourceNodeId);
+      return '@' + (n.sourceCanvasId === c.id ? '' : system.canvases.find(k => k.id === n.sourceCanvasId).name + '!') + src.text.split('\n')[0];
+    }
+    if(n.type === 'periodShift') return 'shift(' + n.shift + ' ' + nameOf(into(n.id)[0].node) + ')';
+    if(n.type === 'operator'){
+      const ins = into(n.id);
+      const named = ins.some(e => e.toPort !== undefined);
+      const list = named ? ins.slice().sort((a, b) => a.toPort - b.toPort) : ins;
+      return n.text + '(' + list.map(e => nameOf(e.node)).join(', ') + ')';
+    }
+    return '[' + n.text.replace(/\n/g, '|') + ']';
+  };
+  const formulaOf = (name) => { const r = rect(name); const ins = into(r.id); return ins.length ? nameOf(ins[0].node) : null; };
+  return { c, rect, formulaOf };
+}
+
+test('the trees: aliases in Excel\'s order, period shifts, named inputs, constants, units, an opening balance', async () => {
+  const one = await importBook(bytesOf('01-simple-rows.xlsx'));
+  const m = shape(one.system, 'Model');
+  expect(m.formulaOf('Revenue')).toBe('×(@Volume, @Price)');
+  expect(m.formulaOf('Costs')).toBe('×(@Revenue, @Cost rate)');
+  expect(m.formulaOf('Profit')).toBe('−(@Revenue, @Costs)');
+  expect(m.rect('Volume').text).toBe('Volume\n400\nunits');
+  expect(m.rect('Volume').periodValues).toEqual([400, 420, 441, 463, 486]);
+  expect(m.rect('Revenue').text).toBe('Revenue\n\n£'); // no number: the unit on the third line
+  expect(m.formulaOf('Volume')).toBeNull();
+  // Every node on the canvas, from x 40.
+  expect(Math.min(...m.c.nodes.map(n => n.x))).toBe(40);
+
+  const cork = shape((await importBook(bytesOf('02-corkscrew.xlsx'))).system, 'Assets');
+  expect(cork.rect('Opening balance').text).toBe('Opening balance\n1000\n£');
+  expect(cork.rect('Opening balance').literalPeriods).toEqual([0]);
+  expect(cork.formulaOf('Opening balance')).toBe('shift(-1 @Closing balance)');
+  expect(cork.formulaOf('Depreciation')).toBe('×(@Opening balance, @Depreciation rate)');
+  expect(cork.formulaOf('Closing balance')).toBe('−(+(@Opening balance, @Additions), @Depreciation)');
+  expect(cork.rect('Depreciation rate').text).toBe('Depreciation rate\n0.1\n%');
+  expect(cork.rect('Additions').periodValues).toEqual([200, 150, 100, 100, 50]);
+
+  const two = (await importBook(bytesOf('03-two-sheets.xlsx'))).system;
+  const calc = shape(two, 'Calc');
+  expect(calc.formulaOf('Revenue')).toBe('×(@Inputs!Units sold, @Inputs!Unit price)');
+  expect(calc.formulaOf('Fixed costs')).toBe('@Inputs!Fixed costs');
+  expect(calc.formulaOf('Variable costs')).toBe('round(×(@Revenue, [Variable costs: 0.4|0.4]), [Variable costs: 0|0])');
+  expect(calc.formulaOf('Total costs')).toBe('+(@Fixed costs, @Variable costs)');
+  expect(calc.formulaOf('Tax')).toBe('max([Tax: 0|0], ×(@EBIT, @Inputs!Tax rate))');
+  expect(calc.formulaOf('Net margin')).toBe('iferror(÷(@Net income, @Revenue), [Net margin: 0|0])');
+  expect(calc.formulaOf('Loss flag')).toBe('if(<(@Net income, [Loss flag: 0|0]), [Loss flag: 1|1], [Loss flag: 0|0])');
+  expect(two.canvases.map(c => c.name)).toEqual(['Inputs', 'Calc']);
+
+  const four = await importBook(bytesOf('04-not-supported.xlsx'));
+  const val = shape(four.system, 'Valuation');
+  expect(val.formulaOf('Revenue')).toBe('×(shift(-1 @Revenue), +([Revenue: 1|1], @Growth))');
+  expect(val.formulaOf('Cash doubled')).toBe('if(=(period(), [Cash doubled: 3|3]), [Cash doubled: Excel\'s F12|999], ×(@Cash flow, [Cash doubled: 2|2]))');
+  // A row not translated keeps Excel's saved values as an input.
+  expect(val.formulaOf('Growth')).toBeNull();
+  expect(val.rect('Growth').text).toBe('Growth\n0.05\n%');
+  expect(val.rect('Cumulative cash').periodValues).toEqual(four.report.rows.find(r => r.label === 'Cumulative cash').cells.map(c => c.saved));
+  expect(val.rect('NPV').text).toMatch(/^NPV\n[0-9.]+\n£$/);
+});
+
+test('what a formula reads outside its rows, circular references, and formulas that can\'t be translated', async () => {
+  const { system, report } = await importBook(await craft({
+    strings: '<si><t>Year</t></si><si><t>Age</t></si><si><t>A</t></si><si><t>B</t></si><si><t>Join</t></si><si><t>Fixed</t></si><si><t>Whole</t></si><si><t>Other</t></si><si><t>Lookup</t></si><si><t>x</t></si><si><t>Blank</t></si><si><t>Total</t></si>',
+    sheets: [
+      { name: 'S', xml: sheetXml(
+        '<row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1"><v>2026</v></c><c r="C1"><v>2027</v></c></row>' +
+        '<row r="2"><c r="A2" t="s"><v>1</v></c><c r="B2"><f>B1-2025</f><v>1</v></c><c r="C2"><f>C1-2025</f><v>2</v></c></row>' +
+        '<row r="3"><c r="A3" t="s"><v>2</v></c><c r="B3"><f>B4+1</f><v>5</v></c><c r="C3"><f>C4+1</f><v>5</v></c></row>' +
+        '<row r="4"><c r="A4" t="s"><v>3</v></c><c r="B4"><f>B3-1</f><v>4</v></c><c r="C4"><f>C3-1</f><v>4</v></c></row>' +
+        '<row r="5"><c r="A5" t="s"><v>4</v></c><c r="B5"><f>B2&amp;"x"</f><v>0</v></c><c r="C5"><f>C2&amp;"x"</f><v>0</v></c></row>' +
+        '<row r="6"><c r="A6" t="s"><v>5</v></c><c r="B6"><f>$B$3*2</f><v>10</v></c><c r="C6"><f>$B$3*2</f><v>10</v></c></row>' +
+        '<row r="7"><c r="A7" t="s"><v>6</v></c><c r="B7"><f>SUM(Z:Z)</f><v>0</v></c><c r="C7"><f>SUM(Z:Z)</f><v>0</v></c></row>' +
+        '<row r="8"><c r="A8" t="s"><v>7</v></c><c r="B8"><f>Gone!A1</f><v>0</v></c><c r="C8"><f>Gone!A1</f><v>0</v></c></row>' +
+        '<row r="9"><c r="A9" t="s"><v>8</v></c><c r="B9"><f>T!$B$2*B2</f><v>7</v></c><c r="C9"><f>T!$B$2*C2</f><v>14</v></c></row>' +
+        '<row r="10"><c r="A10" t="s"><v>10</v></c><c r="B10"><f>B2+Q50</f><v>1</v></c><c r="C10"><f>C2+R50</f><v>2</v></c></row>' +
+        '<row r="11"><c r="A11" t="s"><v>11</v></c><c r="B11"><f>SUM(B2:B4)</f><v>10</v></c><c r="C11"><f>SUM(C2:C4)</f><v>11</v></c></row>') },
+      { name: 'T', xml: sheetXml('<row r="2"><c r="A2" t="s"><v>9</v></c><c r="B2"><v>7</v></c></row>') },
+    ],
+  }));
+  const r = (label) => report.rows.find(x => x.label === label);
+  const nt = (label) => (report.notTranslated.find(x => x.label === label) || {}).why;
+  // The header row read as a rectangle of its own; a cell on a sheet not by periods as a constant.
+  const m = shape(system, 'S');
+  expect(m.formulaOf('Age')).toBe('−(@Year (header), [Age: 2025|2025])');
+  expect(m.rect('Year (header)').periodValues).toEqual([2026, 2027]);
+  expect(m.formulaOf('Lookup')).toBe('×(@T!B2, @Age)');
+  expect(m.rect('T!B2').text).toBe('T!B2\n7');
+  // An empty cell reads as 0.
+  expect(m.formulaOf('Blank')).toBe('+(@Age, [Blank: 0|0])');
+  // A circular reference: the later row keeps its saved values, the other calculates.
+  expect(nt('B')).toBe('a circular reference');
+  expect(nt('A')).toBeUndefined();
+  expect([nt('Join'), nt('Fixed'), nt('Whole'), nt('Other')]).toEqual(['joining text (&)', 'a fixed period ($B)', 'a whole column or row', 'a sheet that isn\'t in the workbook']);
+  expect(r('Total').translated).toBe(true);
+  for(const x of compare(system, report)) expect(agrees(x), x.where + ': ' + x.got + ' against ' + x.saved).toBe(true);
+  // Names are one line, made unique.
+  expect(B.XL_SYSTEM_VERSION).toBe(9);
+  expect(() => B.xlBuildModel({ sheets: [], names: [] }, [], [])).toThrow('Tick a sheet with periods to import.');
+});
+
+test('names repeated or with line breaks are made one line and unique; a sheet with fewer periods is matched in order', async () => {
+  const { system, report } = await importBook(await craft({
+    strings: '<si><t>Cost</t></si><si><t>Two\nlines</t></si><si><t>2027</t></si>',
+    sheets: [
+      { name: 'A', xml: sheetXml('<row r="1"><c r="B1"><v>2026</v></c><c r="C1"><v>2027</v></c><c r="D1"><v>2028</v></c></row>' +
+        '<row r="2"><c r="A2" t="s"><v>0</v></c><c r="B2"><v>1</v></c><c r="C2"><v>2</v></c><c r="D2"><v>3</v></c></row>' +
+        '<row r="3"><c r="A3" t="s"><v>0</v></c><c r="B3"><v>4</v></c><c r="C3"><v>4</v></c><c r="D3"><v>4</v></c></row>' +
+        '<row r="4"><c r="A4" t="s"><v>1</v></c><c r="B4"><v>5</v></c><c r="C4"><v>5</v></c><c r="D4"><v>5</v></c></row>' +
+        '<row r="5"><c r="A5" t="s"><v>2</v></c><c r="B5"><v>6</v></c><c r="C5"><v>6</v></c><c r="D5"><v>6</v></c></row>') },
+      { name: 'B', xml: sheetXml('<row r="1"><c r="B1"><v>2026</v></c><c r="C1"><v>2027</v></c></row><row r="2"><c r="A2" t="s"><v>0</v></c><c r="B2"><f>A!B2*2</f><v>2</v></c><c r="C2"><f>A!C2*2</f><v>4</v></c></row>') },
+    ],
+  }));
+  expect(system.canvases[0].nodes.filter(n => n.type === 'value').map(n => n.text)).toEqual(['Cost\n1', 'Cost (row 3)\n4', 'Two lines\n5', '2027\n6']);
+  expect(report.notes).toEqual(['“B” has 2 periods, “A” 3: periods are matched in order']);
+  for(const x of compare(system, report)) expect(agrees(x), x.where).toBe(true);
 });
