@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: sliders on the Inputs tab, easier to read
+- Each Dashboard slider on an input gets a row of its own under the input (its Value in its periods; a set slider's while Use is ticked, else blank), grouped with the sensitivity rows; the input's own row lays them over its base with the same formula in every period: `IF(ISNUMBER(E12),E12,…)` for a set slider, `(…)*(1+E12)` for a change by %.
+
 ## ExcelExporter: sensitivity on the Inputs tab, easier to read
 - A moved input's base row carries its name; two rows under it gather the Sensitivity tabs' parts (% change, change by amount), grouped in Excel's outline; its own row ("Unit Price after sensitivity", or "after sliders") reads them, `(E10)*(1+E11)+E12`. The built-in Excel writer can group rows (`ws['!rows']` levels).
 

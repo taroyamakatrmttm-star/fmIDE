@@ -71,15 +71,28 @@ function graphSliderRow(s, label){
 }
 function graphSliderNotes(){ const p = graphSliderPlan(); return p ? p.notes : []; }
 
-// An input's own row in period p with the sliders laid over `base` (a formula or a reference),
-// in their order; `name` the Dashboard tab, `from` the tab written.
-function dashboardSliders(dash, list, base, p, name, from){
-  return list.reduce((acc, i) => {
-    const r = dash.rows[i];
-    if(!graphPeriodsCover(r.slider.periods, p)) return acc;
-    const value = sheetRef(name, '$' + DASH_COL.value, DASH_FIRST_ROW + i, from, true);
-    if(r.slider.mode === 'set') return 'IF(' + sheetRef(name, '$' + DASH_COL.use, DASH_FIRST_ROW + i, from, true) + '=TRUE,' + value + ',' + acc + ')';
-    return '(' + acc + ')*(1+' + value + '/100)';
+// The Inputs tab gathers each slider on an input into a row of its own under the input's base
+// (idea 10): a set slider's row holds its Value while Use is ticked, else nothing; a change by
+// % slider's row its Value as a fraction; both only in the slider's periods (blank elsewhere).
+function dashSliderRowLabel(dash, i, labels){
+  const s = dash.rows[i].slider;
+  return (s.mode === 'set' ? 'Set to' : '% change') + ' (Dashboard, ' + graphPeriodsText(s.periods, labels) + ')';
+}
+// Slider i's cell in period p: a formula, or null outside its periods. `name` the Dashboard tab,
+// `from` the tab written.
+function dashSliderCell(dash, i, p, name, from){
+  const s = dash.rows[i].slider;
+  if(!graphPeriodsCover(s.periods, p)) return null;
+  const value = sheetRef(name, '$' + DASH_COL.value, DASH_FIRST_ROW + i, from, true);
+  if(s.mode === 'set') return 'IF(' + sheetRef(name, '$' + DASH_COL.use, DASH_FIRST_ROW + i, from, true) + '=TRUE,' + value + ',"")';
+  return value + '/100';
+}
+// An input's own row in column `col` with its sliders' rows (from `firstRow`, in the board's
+// order) laid over `base`: a set row's number replaces it, a change by % row multiplies it.
+function dashboardSliders(dash, list, base, col, firstRow){
+  return list.reduce((acc, i, k) => {
+    const ref = col + (firstRow + k);
+    return dash.rows[i].slider.mode === 'set' ? 'IF(ISNUMBER(' + ref + '),' + ref + ',' + acc + ')' : '(' + acc + ')*(1+' + ref + ')';
   }, base);
 }
 
