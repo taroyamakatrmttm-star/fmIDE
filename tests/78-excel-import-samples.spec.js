@@ -2,7 +2,8 @@
 // docs/step20-excel-import.md): tools/make-import-samples.js writes the same cells again,
 // the description in tests/fixtures/excel-import/expected.json fits each workbook, and
 // LibreOffice, recalculating a copy written without saved values, gives the values each
-// sample saved. Node only (and LibreOffice).
+// sample saved. Node only (and LibreOffice). Sample 05 (actuals then forecast) was added after
+// a real three-statement model was tried.
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -105,6 +106,16 @@ test('the description fits each workbook: the periods, the labels and each row\'
         } else if(r.kind === 'single'){
           expect(isFormula(ws.getCell(before + r.row)), at).toBe(true);
           cells.forEach(c => expect(c.value, at).toBeNull());
+        } else if(r.kind === 'parts'){
+          // Each part: typed numbers (or blanks), or formulas.
+          const covered = [];
+          for(const part of r.parts){
+            const [a, b] = part.cells.split(':');
+            const cs = cells.filter(c => c.address.replace(/[0-9]+$/, '') >= a && c.address.replace(/[0-9]+$/, '') <= b);
+            covered.push(...cs);
+            cs.forEach(c => expect(part.is === 'typed' ? (isNumber(c) || c.value === null) : isFormula(c), at + ' ' + c.address).toBe(true));
+          }
+          expect(covered.length, at).toBe(cells.length);
         } else if(r.kind === 'opening'){
           expect(isNumber(cells[0]), at).toBe(true);
           cells.slice(1).forEach(c => expect(isFormula(c), at + ' ' + c.address).toBe(true));

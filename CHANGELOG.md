@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: importing models with actuals and a forecast (step 20, after a real model)
+- A row whose actual years are typed and whose forecast is a formula (or with one formula for the actual years and another for the forecast) is imported **in parts**: it reads its typed numbers in the actual years and its formula in the forecast, instead of keeping the forecast as fixed numbers. A formula reading the column before the first period reads that cell, as Excel does (a blank is 0). Two rows reading each other in different years are no longer taken for a circular reference.
+
 ## ExcelExporter: importing an Excel model (step 20)
 - **File → Import Excel model…** (or an `.xlsx` dropped on the page) reads a financial model built in Excel and rebuilds it as an fmIDE model: a canvas per sheet, a rectangle per row (its label and unit), an input's numbers per period, assumptions, opening balances, and each row's formula as operators, period shifts and aliases. SUM, MIN, MAX, AVERAGE, IF, IFERROR, AND, OR, NOT, ROUND, ROUNDUP, ROUNDDOWN, CHOOSE, ABS, LN, EXP, SQRT, INT, TRUNC, MOD, POWER and the arithmetic and comparison operators are translated; a reference to the column on the left is a period shift.
 - A window first shows what was found on each sheet — the header row of periods, the period, label and unit columns, each row's kind — and each can be changed, or a sheet left out.

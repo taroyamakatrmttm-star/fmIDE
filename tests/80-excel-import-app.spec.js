@@ -287,3 +287,16 @@ test('end to end: Excel → fmIDE model → ExcelExporter\'s workbook, recalcula
   }
   await fm.close();
 });
+
+test('rows in parts in the window and the report (actuals typed, then a forecast formula)', async ({ page }) => {
+  await X.openExporter(page);
+  await importFile(page, sample('05-actuals-forecast.xlsx'));
+  const box = sheetBox(page, 0);
+  await expect(box.locator('.import-summary')).toHaveText('5 periods, 2026–2030 · 1 input, 3 calculations, 7 rows in parts, 1 opening balance, 1 title');
+  await box.locator('summary').click();
+  await expect(box.locator('tr[data-row="7"] td')).toHaveText(['7', 'Revenue', 'in parts', '2026–2028: typed; 2029–2030: F7*(1+G5)']);
+  await page.locator('#importOk').click();
+  await expect(page.locator('#importCheckSummary')).toHaveText('All 55 calculated cells agree with Excel\'s saved values.');
+  await expect(page.locator('#importOddHead')).toBeHidden();
+  await expect(page.locator('#importKeptHead')).toBeHidden();
+});

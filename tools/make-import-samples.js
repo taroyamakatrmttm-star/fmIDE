@@ -170,6 +170,57 @@ const SAMPLES = {
     COLS.forEach((c, i) => i === 2 ? w.num(c + '12', 999, '#,##0') : w.f(c + '12', c + '8*2', cash[i] * 2, '#,##0'));
     w.row(13, 'Years above 220', ''); w.f('C13', 'COUNTIF(D8:H8,">220")', cash.filter(c => c > 220).length, '0');
   },
+
+  // Actuals then forecast, as most real models are built (step 20, after a three-statement
+  // model the owner tried): 2026–2028 typed, 2029–2030 formulas; a growth rate worked out in
+  // the actual years and typed for the forecast; one formula for the actual years and another
+  // for the forecast; two rows reading each other, one way in the actuals and the other way in
+  // the forecast (no loop in any one period); a change from the column before the periods.
+  '05-actuals-forecast': (wb, results) => {
+    const ws = wb.addWorksheet('Model');
+    const w = writer(ws, results);
+    w.text('A1', 'Actuals and forecast', true);
+    yearHeader(w, 3);
+    const A = 3; // actual years: D, E, F
+    const revenue = [1000, 1100, 1210], costs = [600, 640, 700];
+    const growth = [null, 1100 / 1000 - 1, 1210 / 1100 - 1, 0.08, 0.06];
+    const costRate = [600 / 1000, 640 / 1100, 700 / 1210, 0.55, 0.55];
+    for(let i = A; i < 5; i++){ revenue.push(revenue[i - 1] * (1 + growth[i])); costs.push(revenue[i] * costRate[i]); }
+    w.row(5, 'Revenue growth', '%');
+    COLS.forEach((c, i) => {
+      if(i === 0) return;
+      if(i < A) w.f(c + '5', c + '7/' + prev(c) + '7-1', growth[i], '0.0%');
+      else w.num(c + '5', growth[i], '0.0%');
+    });
+    w.row(6, 'Cost rate', '%');
+    COLS.forEach((c, i) => i < A ? w.f(c + '6', c + '8/' + c + '7', costRate[i], '0.0%') : w.num(c + '6', costRate[i], '0.0%'));
+    w.row(7, 'Revenue', '£');
+    COLS.forEach((c, i) => i < A ? w.num(c + '7', revenue[i], '#,##0') : w.f(c + '7', prev(c) + '7*(1+' + c + '5)', revenue[i], '#,##0'));
+    w.row(8, 'Costs', '£');
+    COLS.forEach((c, i) => i < A ? w.num(c + '8', costs[i], '#,##0') : w.f(c + '8', c + '7*' + c + '6', costs[i], '#,##0'));
+    const profit = revenue.map((r, i) => r - costs[i]);
+    w.row(9, 'Profit', '£', true); w.shared(9, 'D7-D8', profit, '#,##0');
+    const change = profit.map((p, i) => p - (i ? profit[i - 1] : 0));
+    w.row(10, 'Change in profit', '£'); w.shared(10, 'D9-C9', change, '#,##0');
+    const capex = [50, 60, 70, 80, 80];
+    w.row(11, 'Capex', '£'); w.inputs(11, capex, '#,##0');
+    const opening = [], dep = [], closing = [];
+    capex.forEach((cx, i) => {
+      opening.push(i === 0 ? 500 : closing[i - 1]);
+      dep.push(i < A ? cx * 0.5 : opening[i] * 0.2);
+      closing.push(opening[i] + cx - dep[i]);
+    });
+    w.row(12, 'Depreciation', '£');
+    COLS.forEach((c, i) => w.f(c + '12', i < A ? c + '11*0.5' : prev(c) + '14*0.2', dep[i], '#,##0'));
+    w.row(13, 'Assets opening', '£'); w.num('D13', 500, '#,##0');
+    COLS.slice(1).forEach((c, k) => w.f(c + '13', prev(c) + '14', opening[k + 1], '#,##0'));
+    w.row(14, 'Assets closing', '£', true); w.shared(14, 'D13+D11-D12', closing, '#,##0');
+    const paid = [20, 25, 28, 30, 30];
+    w.row(15, 'Spending', '£');
+    COLS.forEach((c, i) => i < A ? w.f(c + '15', c + '16', paid[i], '#,##0') : w.num(c + '15', paid[i], '#,##0'));
+    w.row(16, 'Paid', '£');
+    COLS.forEach((c, i) => i < A ? w.num(c + '16', paid[i], '#,##0') : w.f(c + '16', c + '15', paid[i], '#,##0'));
+  },
 };
 
 // One sample as a workbook (results: false leaves the saved values out, for LibreOffice).

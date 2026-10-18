@@ -8,6 +8,9 @@
 //   calculation a formula in the periods, the same along the row (its signature)
 //   opening     a typed number in the first period, then the same formula
 //   single      one formula before the period columns
+//   parts       the row changes along the periods in up to four runs, each typed numbers (or
+//               blank) or one formula copied along: actuals typed, then a forecast formula; or
+//               one formula for the actual years and another for the forecast (`parts`)
 // A formula's signature is its text moved to the first period column: two cells of a row
 // with the same signature hold the same formula, copied along. Cells that differ are `odd`.
 // The person can change the header row, the period columns and the label and unit columns
@@ -165,9 +168,20 @@ export function xlAnalyseSheet(sheet, choice, date1904){
       plan.rows.push(row);
       continue;
     }
+    // In parts: actuals typed, then a forecast formula (or two formulas, one after the other).
+    const runs = xlRuns(cells, header.firstCol);
+    if(xlIsParts(runs)){
+      row.kind = 'parts';
+      row.parts = runs.map(r => ({ from: r.from, to: r.to, typed: r.typed, signature: r.signature, formula: r.typed ? null : cells[r.from].formula }));
+      const last = runs.filter(r => !r.typed).pop();
+      row.signature = last.signature;
+      row.formula = runs.map(r => (r.from === r.to ? plan.periods[r.from] : plan.periods[r.from] + '–' + plan.periods[r.to]) + ': ' + (r.typed ? 'typed' : cells[r.from].formula)).join('; ');
+      plan.rows.push(row);
+      continue;
+    }
     if(nForm <= nNum && nNum > 0 && !(nForm && xlIsNumber(cells[0]) && nForm === cells.length - 1)){
       row.kind = 'input';
-      row.odd = cells.filter(c => !xlIsNumber(c)).map(c => c.address);
+      row.odd = cells.filter(c => !xlIsNumber(c) && !c.empty).map(c => c.address);
       plan.rows.push(row);
       continue;
     }
@@ -187,6 +201,32 @@ export function xlAnalyseSheet(sheet, choice, date1904){
   return plan;
 }
 
+// A row's period cells as runs side by side: typed (a number, or blank) or one formula
+// signature. [{ from, to, typed, signature }], period indices from 0.
+function xlRuns(cells, firstCol){
+  const runs = [];
+  cells.forEach((c, i) => {
+    let typed, sig = null;
+    if(xlIsFormula(c)){ typed = false; sig = c.signature || xlSignature(c, firstCol); c.signature = sig; }
+    else if(xlIsNumber(c) || c.empty || (c.value === null && !c.error)) typed = true;
+    else { typed = false; sig = '!text ' + c.address; }
+    const last = runs[runs.length - 1];
+    if(last && last.typed === typed && last.signature === sig) last.to = i;
+    else runs.push({ from: i, to: i, typed, signature: sig });
+  });
+  return runs;
+}
+// A row in parts: two to four runs, at least one a formula, none unreadable or text, each at
+// least two periods long (the first may be one typed period, but not as an opening balance:
+// a typed first period then one formula is that).
+function xlIsParts(runs){
+  if(runs.length < 2 || runs.length > 4) return false;
+  if(runs.some(r => r.signature && r.signature.startsWith('!'))) return false;
+  if(!runs.some(r => !r.typed)) return false;
+  if(runs.length === 2 && runs[0].typed && runs[0].from === runs[0].to) return false;
+  return runs.every((r, i) => r.to > r.from || (i === 0 && r.typed));
+}
+
 // Every sheet of a workbook worked out: { sheets: [plan], names, date1904, notes }. A sheet
 // without a header row of periods is not imported unless the person picks one.
 export function xlAnalyseWorkbook(book){
@@ -195,7 +235,7 @@ export function xlAnalyseWorkbook(book){
 
 // How many rows of each kind a sheet's plan holds.
 export function xlKindCounts(plan){
-  const counts = { title: 0, input: 0, assumption: 0, calculation: 0, opening: 0, single: 0 };
+  const counts = { title: 0, input: 0, assumption: 0, calculation: 0, opening: 0, single: 0, parts: 0 };
   plan.rows.forEach(r => { counts[r.kind]++; });
   return counts;
 }
