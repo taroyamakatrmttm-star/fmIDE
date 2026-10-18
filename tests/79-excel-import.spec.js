@@ -889,6 +889,60 @@ test('the layout for ExcelExporter: rows, titles and blank rows in the sheet\'s 
   expect(header.canvases.every(c => c.items.length > 0)).toBe(true);
 });
 
+test('a cell\'s look: bold, italic, text colour, fill and borders, with the theme\'s colours and tints; a row\'s look for ExcelExporter', async () => {
+  const styles = '<numFmts count="2"><numFmt numFmtId="164" formatCode="0.0%"/><numFmt numFmtId="165" formatCode="_(#,##0_)_%;\\(#,##0\\)_%"/></numFmts>' +
+    '<fonts count="3"><font><sz val="11"/><color theme="1"/></font><font><b/><color rgb="FF3271D2"/></font><font><i/><color rgb="FF0000FF"/></font></fonts>' +
+    '<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>' +
+    '<fill><patternFill patternType="solid"><fgColor rgb="FFE7F2FF"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor theme="4" tint="0.5"/></patternFill></fill></fills>' +
+    '<borders count="2"><border><left/><right/><top/><bottom/></border><border><left/><right/><top style="thin"><color rgb="FF000000"/></top><bottom style="double"><color indexed="10"/></bottom></border></borders>' +
+    '<cellXfs count="5"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0"/>' +
+    '<xf numFmtId="164" fontId="2" fillId="0" borderId="0"/><xf numFmtId="165" fontId="1" fillId="3" borderId="1"/><xf numFmtId="4" fontId="0" fillId="0" borderId="0"/></cellXfs>';
+  const theme = '<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:themeElements><a:clrScheme name="T">' +
+    '<a:dk1><a:sysClr val="windowText" lastClr="000000"/></a:dk1><a:lt1><a:sysClr val="window" lastClr="FFFFFF"/></a:lt1>' +
+    '<a:dk2><a:srgbClr val="1F497D"/></a:dk2><a:lt2><a:srgbClr val="EEECE1"/></a:lt2><a:accent1><a:srgbClr val="4F81BD"/></a:accent1>' +
+    '</a:clrScheme></a:themeElements></a:theme>';
+  const str = (ref, t, st) => '<c r="' + ref + '" t="inlineStr"' + (st ? ' s="' + st + '"' : '') + '><is><t>' + t + '</t></is></c>';
+  const num = (ref, v, st) => '<c r="' + ref + '" s="' + st + '"><v>' + v + '</v></c>';
+  const fx = (ref, f, v, st) => '<c r="' + ref + '" s="' + st + '"><f>' + f + '</f><v>' + v + '</v></c>';
+  const xml = sheetXml('<row r="1"><c r="B1"><v>2026</v></c><c r="C1"><v>2027</v></c></row>' +
+    '<row r="2">' + str('A2', 'Revenue', 1) + '</row>' +
+    '<row r="3">' + str('A3', 'Growth') + num('B3', 0.1, 2) + num('C3', 0.2, 2) + '</row>' +
+    '<row r="4">' + str('A4', 'Sales', 1) + num('B4', 100, 2) + fx('C4', 'B4*(1+C3)', 120, 3) + '</row>' +
+    '<row r="5">' + str('A5', 'Plain') + num('B5', 1, 0) + num('C5', 2, 4) + num('D5', 0, 0) + '</row>');
+  const bytes = await craft({ sheets: [{ name: 'S', xml }], styles, extra: [['xl/theme/theme1.xml', theme]] });
+  const book = F.xlFillSharedFormulas(await W.xlReadWorkbook(bytes));
+  const cells = book.sheets[0].cells;
+  expect(cells.get('A2').look).toEqual({ bold: true, italic: false, color: '#3271d2', fill: '#e7f2ff', border: {} });
+  expect(cells.get('B3').look).toMatchObject({ bold: false, italic: true, color: '#0000ff', fill: null });
+  // The theme's dark 1 (theme 1) and accent 1 lightened by half; an indexed colour (10, red).
+  expect(cells.get('B5').look.color).toBe('#000000');
+  expect(cells.get('C4').look.fill).toBe('#a7c0de');
+  expect(cells.get('C4').look.border).toEqual({ top: { style: 'thin', color: '#000000' }, bottom: { style: 'double', color: '#ff0000' } });
+  expect(W.xlColour(null, [])).toBeNull();
+  expect(W.xlColour({ attrs: { auto: '1' } }, [])).toBeNull();
+  expect(W.xlColour({ attrs: { theme: '1', tint: '-0.5' } }, ['FFFFFF', '808080'])).toBe('#404040');
+
+  // Number formats as ExcelExporter's kinds; `_%` is a space, not a percent.
+  expect(['General', '0.0%', '_(#,##0_)_%;\\(#,##0\\)_%', '"$"#,##0.00', '_-* #,##0.00_-', '@', 'yyyy-mm-dd', '0.0000'].map(B.xlNumberKind)).toEqual([
+    { kind: 'general', decimals: 0 }, { kind: 'percent', decimals: 1 }, { kind: 'number', decimals: 0 }, { kind: 'currency', decimals: 2 },
+    { kind: 'number', decimals: 2 }, null, null, { kind: 'number', decimals: 4 }]);
+
+  // A row's look: its period cells' most common look, its label's bold, top and bottom borders.
+  const plan = L.xlAnalyseWorkbook(book).sheets[0];
+  const { layout } = B.xlBuildModel(book, [plan], [true]);
+  const items = layout.canvases[0].items;
+  expect(items[0]).toEqual({ title: 'Revenue', look: { fill: '#e7f2ff', font: { color: '#3271d2', weight: '700' }, border: { style: 'none' } } });
+  expect(items[1].look).toEqual({ fill: null, font: { color: '#0000ff', weight: 'normal' }, border: { style: 'none' }, numberFormat: { kind: 'percent', decimals: 1 } });
+  // Sales (typed, then a formula): its formula cell's look, bold from its label.
+  expect(items[2].look).toEqual({ fill: '#a7c0de', font: { color: '#3271d2', weight: '700' },
+    border: { style: 'solid', color: '#000000', sides: ['top', 'bottom'] }, numberFormat: { kind: 'number', decimals: 0 } });
+  // Plain: two cells of the first style against one of the other.
+  expect(items[3].look.numberFormat).toEqual({ kind: 'general', decimals: 0 });
+  // No styles in the file: no look.
+  const bare = await importBook(await craft({ sheets: [{ name: 'Model', xml: sectionSheet(SECTION_ROWS) }] }));
+  expect(bare.layout.canvases[0].items.every(it => it.look === undefined)).toBe(true);
+});
+
 test('sections of two sheets are named after their sheet; a section name used twice is made unique', async () => {
   const twice = SECTION_ROWS.map(([r, l, c]) => [r, r === 11 ? 'Revenue' : l, c]);
   const bytes = await craft({ sheets: [{ name: 'Model', xml: sectionSheet(twice) }, { name: 'Copy', xml: sectionSheet(SECTION_ROWS) }] });

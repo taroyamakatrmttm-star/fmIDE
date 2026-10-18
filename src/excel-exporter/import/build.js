@@ -130,10 +130,14 @@ export function xlBuildModel(book, plans, include, split){
   for(const i of sheetsIn){
     for(const r of plans[i].rows){
       const c = canvasFor(i, r.row);
-      if(r.kind === 'title'){ c.items.push({ row: r.row, title: xlCleanName(r.label) }); continue; }
+      const labelCell = plans[i].labelCol ? book.sheets[i].cells.get(xlAddress(plans[i].labelCol, r.row)) : null;
+      if(r.kind === 'title'){ c.items.push({ row: r.row, title: xlCleanName(r.label), look: xlRowLook(labelCell, []) }); continue; }
       const entry = { sheet: i, plan: r, canvas: c, id: nodeId(c), name: uniqueName(c, xlCleanName(r.label), r.row), unit: xlCleanName(r.unit).slice(0, 40), kind: r.kind, expr: null, why: null, deps: [] };
       rows.set(i + '|' + r.row, entry);
-      c.items.push({ row: r.row, entry });
+      // A row with formulas looks like its formula cells (typed actuals are often blue).
+      const lookCells = r.kind === 'assumption' || r.kind === 'single' ? [r.before]
+        : r.kind === 'input' ? r.cells : r.cells.filter(x => x.formula !== null);
+      c.items.push({ row: r.row, entry, look: xlRowLook(labelCell, lookCells.length ? lookCells : r.cells) });
     }
   }
 
@@ -424,12 +428,12 @@ export function xlBuildModel(book, plans, include, split){
       }
       prevRow = item.row;
       if(item.title !== undefined){
-        layout.push({ title: item.title });
+        layout.push(item.look ? { title: item.title, look: item.look } : { title: item.title });
         if(placed) y += XL_SPACE;
         continue;
       }
       const entry = item.entry;
-      layout.push({ node: entry.id });
+      layout.push(item.look ? { node: entry.id, look: item.look } : { node: entry.id });
       placed = true;
       const plan = entry.plan;
       const rect = { id: entry.id, type: 'value', x: XL_RECT_X, y, text: '' };
@@ -515,6 +519,52 @@ export function xlBuildModel(book, plans, include, split){
   // (each a rectangle of its own here), to be written back into the formulas there.
   const layout = { canvases: canvases.map(c => ({ id: c.id, items: c.layout })), constants: canvases.flatMap(c => c.constants.map(id => ({ canvasId: c.id, nodeId: id }))) };
   return { system, report, layout };
+}
+
+// A row's look in the workbook, as ExcelExporter's row format (its own fill, text colour,
+// bold, borders and number format; checked again there by cleanRowFormat): the look most of
+// its period cells share (`cells`; empty ones left out), bold when its label is bold too, the
+// top and bottom borders only (lines along the row), the number format as the nearest of
+// ExcelExporter's kinds. A title's from its label alone. Null when the file has no styles.
+export function xlRowLook(labelCell, cells){
+  const tally = new Map();
+  for(const c of cells){
+    if(!c || c.empty || !c.look) continue;
+    const k = tally.get(c.look);
+    tally.set(c.look, k ? { n: k.n + 1, cell: k.cell } : { n: 1, cell: c });
+  }
+  let best = null;
+  for(const v of tally.values()) if(!best || v.n > best.n) best = v;
+  const cell = best ? best.cell : null;
+  const look = cell ? cell.look : labelCell && labelCell.look;
+  if(!look) return null;
+  const label = labelCell && labelCell.look;
+  const sides = cell ? ['top', 'bottom'].filter(k => look.border && look.border[k]) : [];
+  const out = {
+    fill: look.fill || (label && !cell ? label.fill : null) || null,
+    font: { color: look.color || '#000000', weight: look.bold || (label && label.bold) ? '700' : 'normal' },
+    border: sides.length ? { style: 'solid', color: look.border[sides[0]].color || '#000000', sides } : { style: 'none' },
+  };
+  const nf = cell ? xlNumberKind(cell.format) : null;
+  if(nf) out.numberFormat = nf;
+  return out;
+}
+
+// A number format code as one of ExcelExporter's kinds: { kind, decimals }, from its first
+// part (positive numbers; `_x` spaces, `*x` fills, `\x` and quoted text but a "$" set aside):
+// General; a percent; a dollar amount; any other number (the rest of the code, such as
+// brackets for negatives, is not kept). Null for text or a date.
+export function xlNumberKind(code){
+  const text = String(code || 'General');
+  if(/^general$/i.test(text.trim())) return { kind: 'general', decimals: 0 };
+  const first = text.split(';')[0].replace(/"[^"]*"/g, (q) => q.includes('$') ? '$' : '').replace(/\\./g, '').replace(/[_*]./g, '').replace(/\[[^\]]*\]/g, '');
+  if(!/[0#?]/.test(first)) return null;
+  if(/[dmyhs]/i.test(first.replace(/[0#?.,%$ _*\-()]/g, ''))) return null;
+  const dot = first.match(/\.([0#?]+)/);
+  const decimals = dot ? Math.min(10, dot[1].length) : 0;
+  if(first.includes('%')) return { kind: 'percent', decimals };
+  if(first.includes('$')) return { kind: 'currency', decimals };
+  return { kind: 'number', decimals };
 }
 
 // A cell of the report: its saved number, or why there is none — Excel shows an error
