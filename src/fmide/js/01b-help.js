@@ -155,7 +155,11 @@
   document.addEventListener('mouseover', (ev) => {
     if(isEmulatedMouse(ev)) return;
     const anchor = ev.target.closest ? ev.target.closest('[data-tip-cmd]') : null;
-    if(!anchor){ if(commandTip && !commandTip.el.contains(ev.target)) scheduleHideCommandTip(); return; }
+    if(!anchor){
+      if(commandTip){ if(!commandTip.el.contains(ev.target)) scheduleHideCommandTip(); }
+      else clearTimeout(commandTipTimer); // left before its tip showed: it doesn't show late
+      return;
+    }
     if(commandTip && commandTip.anchor === anchor){ clearTimeout(commandTipTimer); return; }
     clearTimeout(commandTipTimer);
     commandTipTimer = setTimeout(() => showCommandTip(anchor), commandTip ? 60 : 450);

@@ -1,6 +1,6 @@
 // Test group 32 — help where you are (build step 10, phase H2; docs/step10-help.md).
 // - fmIDE: a ribbon button's tip (name, shortcut, sentence, "Learn more"; F1 while it shows
-//   opens its topic; disabled buttons too); the "?" in the corner of the windows, above the
+//   opens its topic; disabled buttons too; a tip never shows late, after the pointer left); the "?" in the corner of the windows, above the
 //   dimmed backdrop; Help in a node's touch menu.
 // - ExcelExporter: ❓ Help and F1, the "?" beside each panel's heading, its topics and their
 //   links, the page narrowing beside the panel, no network request.
@@ -37,6 +37,20 @@ test.describe('fmIDE: a ribbon button\'s tip', () => {
     // A shortcut shows in the tip (Evaluate: F9).
     await page.locator('.rb-btn', { hasText: 'Evaluate' }).first().hover();
     await expect(tip(page).locator('.cmd-tip-kbd')).toHaveText('F9');
+  });
+
+  // Found on CI (group 33 now and then, 18 October 2026): the pointer leaving a button before
+  // its tip showed left the tip's timer running, so the tip showed late for a button the pointer
+  // had left, and F1 then opened that button's topic instead of Help's own page.
+  test('leaving a button before its tip shows: no tip comes later, and F1 opens Help\'s own page', async ({ page }) => {
+    await page.locator('.rb-tab', { hasText: 'Home' }).click();
+    await page.locator('.rb-btn', { hasText: 'Add Period Shift' }).hover();
+    await page.mouse.move(700, 600); // at once, before the tip's pause is over
+    await page.waitForTimeout(700);
+    await expect(tip(page)).toHaveCount(0);
+    await page.keyboard.press('F1');
+    await expect(panel(page)).toBeVisible();
+    await expect(panel(page).locator('.help-tutorial').first()).toBeVisible();
   });
 
   test('Learn more, or F1 while the tip shows, opens that command\'s topic', async ({ page }) => {
