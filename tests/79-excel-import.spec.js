@@ -790,7 +790,10 @@ test('rows in parts: actuals typed then the forecast formula, two formulas, the 
   expect(m.formulaOf('Depreciation')).toBe('if(@Up to 2028, ×(@Capex, [Depreciation: 0.5|0.5]), ×(shift(-1 @Assets closing), [Depreciation: 0.2|0.2]))');
   expect(m.rect('Up to 2028').periodValues).toEqual([1, 1, 1, 0, 0]);
   // The column before the first period: in 2026 the previous Profit is the blank C9, 0.
-  expect(m.formulaOf('Change in profit')).toBe('−(@Profit, if(=(period(), [Change in profit: 1|1]), [Change in profit: Excel\'s C9|0], shift(-1 @Profit)))');
+  // Through the canvas's shared switch for the first year (no period test of its own).
+  expect(m.formulaOf('Change in profit')).toBe('−(@Profit, if(@Up to 2026, [Change in profit: Excel\'s C9|0], shift(-1 @Profit)))');
+  expect(m.rect('Up to 2026').periodValues).toEqual([1, 0, 0, 0, 0]);
+  expect(m.c.nodes.filter(n => n.type === 'operator' && (n.text === 'period' || n.text === '='))).toEqual([]);
   // Spending reads Paid in the actual years, Paid reads Spending in the forecast: no loop in any one period.
   expect(report.notTranslated).toEqual([]);
   expect(m.formulaOf('Spending')).toBe('@Paid');

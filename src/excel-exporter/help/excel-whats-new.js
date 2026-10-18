@@ -49,6 +49,7 @@ const EXCEL_WHATS_NEW = [
     what: [
       'Every such row on a canvas reads one rectangle holding 1 in the actual years and 0 after, instead of its own year test and number.',
       'In the workbook ExcelExporter writes, it is an input row: change where the actual years end there.',
+      'A formula reading the column before the first year (=D92-C92) uses the same kind of rectangle for that first year, instead of a year test of its own.',
     ],
     why: 'Fewer boxes, and the end of the actual years is in one place.',
     how: ['File → Import Excel model…, and pick the workbook.', 'Press Import: the shared rectangle sits at the top of the canvas.'],

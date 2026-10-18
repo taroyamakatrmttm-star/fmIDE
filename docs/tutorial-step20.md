@@ -1,6 +1,6 @@
 # Tutorial: importing an Excel model (step 20)
 
-A step-by-step guide to everything added in pull requests #158 to #174 (18 October 2026): step 20 of the build order, **importing an Excel model**. ExcelExporter has always turned an fmIDE model into an Excel workbook. Now it also goes the other way: it reads a financial model built in Excel and rebuilds it as an fmIDE model.
+A step-by-step guide to everything added in pull requests #158 to #175 (18 October 2026): step 20 of the build order, **importing an Excel model**. ExcelExporter has always turned an fmIDE model into an Excel workbook. Now it also goes the other way: it reads a financial model built in Excel and rebuilds it as an fmIDE model.
 
 In one sentence: open a spreadsheet you inherited, and get it back as a picture of rectangles and arrows that you can check, change and carry on in fmIDE, with a report saying how closely it matches Excel.
 
@@ -191,7 +191,7 @@ Each part below says what the feature is, why you would use it, and the exact cl
 
 **Two more things it handles like Excel**
 
-- **The column before the first year.** `=D92-C92` in the first year reads C92, the column before the years. Excel takes a blank there as 0; so does the import.
+- **The column before the first year.** `=D92-C92` in the first year reads C92, the column before the years. Excel takes a blank there as 0; so does the import. In fmIDE that first year reads the canvas's shared switch rectangle ("Up to 2020", 1 in the first year only), and the formula stays live.
 - **Rows that read each other in different years.** In many three-statement models Capex reads Investments in the actual years, and Investments reads Capex in the forecast. That is no circular reference, and the import doesn't treat it as one.
 
 **Tested on a real model.** A three-statement model (income statement, balance sheet, cash flow, 2020–2029) imported with all 670 calculated cells agreeing with Excel. The only row kept as numbers was its "Balance Sheet Check", which gives the text OK or ERROR.
@@ -292,6 +292,7 @@ Newest first.
 
 | Pull request | Date | What it did | Feature |
 |---|---|---|---|
+| [#175](https://github.com/taroyamakatrmttm-star/fmIDE/pull/175) | 18 Oct 2026 | The first year's reading of the column before the years through the shared switch | 6 |
 | [#174](https://github.com/taroyamakatrmttm-star/fmIDE/pull/174) | 18 Oct 2026 | The round trip: the generated workbook recalculated and checked against the original | 4, 8 |
 | [#173](https://github.com/taroyamakatrmttm-star/fmIDE/pull/173) | 18 Oct 2026 | The workbook's own look kept: bold, colours, fills, lines and number formats per row | 3, 8 |
 | [#172](https://github.com/taroyamakatrmttm-star/fmIDE/pull/172) | 18 Oct 2026 | The workbook's own layout kept: row order, headings, blank rows; constants back in the formulas; gaps on the canvas | 3, 8 |
