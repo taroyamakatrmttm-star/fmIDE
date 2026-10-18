@@ -47,6 +47,9 @@ function buildCtx(){
   // An input the Sensitivity tabs move gets two rows gathering their numbers, under its base
   // or scenarios (sensGather: row id -> the first, "% change"; "change by amount" below it).
   const sensGather = {};
+  // Each slider on an input gets a row of its own there too, above those (sliderGather: row id
+  // -> the first, one per slider in the board's order).
+  const sliderGather = {};
   // Where the name of a moved input stands on its own (its base row), for the other tabs'
   // links; null with scenarios, whose own row reads "… after sensitivity" (plainName).
   const plainName = {};
@@ -54,6 +57,7 @@ function buildCtx(){
     r = reserveScenarioRows(row, r, scenarioBlocks);
     const moved = sensMoved.has(row.id) || sliderMoved.has(row.id);
     if(moved && !scenarioBlocks[row.id]){ sensBase[row.id] = r; r++; }
+    if(sliderMoved.has(row.id)){ sliderGather[row.id] = r; r += sliderMoved.get(row.id).length; }
     if(sensMoved.has(row.id)){ sensGather[row.id] = r; r += 2; }
     if(moved) plainName[row.id] = sensBase[row.id] !== undefined ? { tabName: tabById[row.tabId].name, row: sensBase[row.id] } : null;
     return r;
@@ -88,7 +92,7 @@ function buildCtx(){
       });
     }
   });
-  return { canvasById, cellPos, periodCount: model.periods.length, rowsByTabOrdered, tabById, inlineConstantIds, scenarioBlocks, sens, sensMoved, sensBase, sensGather, plainName, dash, sliderMoved };
+  return { canvasById, cellPos, periodCount: model.periods.length, rowsByTabOrdered, tabById, inlineConstantIds, scenarioBlocks, sens, sensMoved, sensBase, sensGather, sliderGather, plainName, dash, sliderMoved };
 }
 
 // Scenario rows sit directly above their variable's own row on the Inputs tab.
@@ -271,7 +275,8 @@ function buildWorkbook(){
       // The Dashboard's sliders on this input, laid over its base before the sensitivity parts.
       const slid = row.isInputMirror && dashName && ctx.sliderMoved.get(row.id) || null;
       const sensBaseRow = sensParts || slid ? ctx.sensBase[row.id] : undefined;
-      const withSliders = (base, p) => slid ? dashboardSliders(ctx.dash, slid, base, p, dashName, tab.name) : base;
+      const sliderRow = slid ? ctx.sliderGather[row.id] : undefined;
+      const withSliders = (base, col) => slid ? dashboardSliders(ctx.dash, slid, base, col, sliderRow) : base;
       // The two rows under the base gather the Sensitivity tabs' parts; the row itself reads them.
       const gatherRow = sensParts ? ctx.sensGather[row.id] : undefined;
       const moved = (base, col) => '(' + base + ')*(1+' + col + gatherRow + ')+' + col + (gatherRow + 1);
@@ -318,9 +323,9 @@ function buildWorkbook(){
         // node); build its formula separately instead of going through buildCellContent.
         const picked = scnBlock ? 'INDEX(' + col + scnBlock.first + ':' + col + (scnBlock.first + scnBlock.n - 1) + ',MIN(MAX($' + VINTAGE_COL + excelRow + ',1),' + scnBlock.n + '))' : null;
         contents.push(sensParts
-          ? { isFormula: true, formula: moved(withSliders(picked || (col + sensBaseRow), p), col) }
+          ? { isFormula: true, formula: moved(withSliders(picked || (col + sensBaseRow), col), col) }
           : slid
-          ? { isFormula: true, formula: withSliders(picked || (col + sensBaseRow), p) }
+          ? { isFormula: true, formula: withSliders(picked || (col + sensBaseRow), col) }
           : scnBlock
           ? { isFormula: true, formula: picked }
           : linkPos
@@ -399,26 +404,38 @@ function buildWorkbook(){
         lastRow = Math.max(lastRow, r);
       }
 
-      if(gatherRow !== undefined){
-        // "% change" and "change by amount": each period the sum of the Sensitivity tabs' parts
-        // for this input (0 unless a tab is moving it). Grouped in Excel's outline, to fold away.
+      // The rows gathering what moves the input (idea 10), grouped in Excel's outline to fold
+      // away: each { label, z: number format, f(p): the period's formula or null (blank) }.
+      const gatherRows = (first, list) => {
         const gStyle = withIndent(roleCellStyle('Links'), { indent: rowIndent(row) + 1 });
         const linkStyle = roleCellStyle('Links');
-        [['% change (Sensitivity)', 'pctRef', '0.0%'], ['Change by amount (Sensitivity)', 'amtRef', numFmt]].forEach(([label, ref, z], k) => {
-          const r = gatherRow + k;
+        list.forEach(({ label, z, f }, k) => {
+          const r = first + k;
           setCell('A' + r, textCell(label, gStyle));
           setCell('B' + r, blankCell(linkStyle));
           setCell(VINTAGE_COL + r, blankCell(linkStyle));
           for(let h = 0; h < helperColCount; h++) setCell(helperCol(h) + r, blankCell(linkStyle));
-          const f = sensParts.map(({ a, i }) => sensLays[a][ref](i, tab.name)).join('+');
           for(let p = 0; p < nPeriods; p++){
-            const cell = { t: 'n', f, v: 0, z };
+            const formula = f(p);
+            const cell = formula ? { t: 'n', f: formula, v: 0, z } : blankCell(null, z);
             if(linkStyle) cell.s = linkStyle;
             setCell(colLetter(periodCol(p)) + r, cell);
           }
           outline[r - 1] = { level: 1 };
           lastRow = Math.max(lastRow, r);
         });
+      };
+      // Each slider: its Value in its periods (a set slider's only while Use is ticked).
+      if(sliderRow !== undefined){
+        gatherRows(sliderRow, slid.map(i => ({ label: dashSliderRowLabel(ctx.dash, i, labels),
+          z: ctx.dash.rows[i].slider.mode === 'set' ? numFmt : '0.0%', f: (p) => dashSliderCell(ctx.dash, i, p, dashName, tab.name) })));
+      }
+      // "% change" and "change by amount": each period the sum of the Sensitivity tabs' parts
+      // for this input (0 unless a tab is moving it).
+      if(gatherRow !== undefined){
+        const sum = (ref) => sensParts.map(({ a, i }) => sensLays[a][ref](i, tab.name)).join('+');
+        gatherRows(gatherRow, [{ label: '% change (Sensitivity)', z: '0.0%', f: () => sum('pctRef') },
+          { label: 'Change by amount (Sensitivity)', z: numFmt, f: () => sum('amtRef') }]);
       }
 
       const labelStyle = withIndent(cellStyle, row);

@@ -40,9 +40,11 @@ async function importFile(page, file){
   await chooser.setFiles(file);
 }
 // The Inputs tab's block of row scenarios for an input: { first, n, own } (rows), found from its own row.
-function scenarioBlock(ws, label, n){
+// `gap`: the rows between the scenarios and the input's own row (a row per Dashboard slider on
+// it, idea 10).
+function scenarioBlock(ws, label, n, gap = 0){
   const own = X.findRow(ws, label)[0];
-  return { first: own - n, n, own };
+  return { first: own - gap - n, n, own };
 }
 function cellAt(ws, col, row){ return ws[X.numToCol(col) + row]; }
 
@@ -77,7 +79,7 @@ test('a .fmide with boards: the window, Use, and the cases, row scenarios and ma
   // The Inputs tab's row scenarios.
   const inp = wb.Sheets.Inputs;
   const p1 = X.periodOneCol(inp);
-  const price = scenarioBlock(inp, 'Price after sliders', 3); // moved by the Dashboard's sliders (idea 10: its own row says so)
+  const price = scenarioBlock(inp, 'Price after sliders', 3, 2); // moved by two of the Dashboard's sliders (idea 10: a row each, and its own row says so)
   expect([0, 1, 2].map(k => inp['A' + (price.first + k)].v)).toEqual(['Scenario 1', 'High price', 'Mixed']);
   expect([0, 1, 2, 3].map(p => cellAt(inp, p1 + p, price.first).v)).toEqual([10, 10, 10, 10]);
   expect([0, 1, 2, 3].map(p => cellAt(inp, p1 + p, price.first + 1).v)).toEqual([13, 13, 13, 13]);
@@ -85,17 +87,17 @@ test('a .fmide with boards: the window, Use, and the cases, row scenarios and ma
   // Mixed: 12 in 2028–2029, the other periods scenario 1.
   expect([0, 1, 2, 3].map(p => X.formulaOf(cellAt(inp, p1 + p, price.first + 2)) || cellAt(inp, p1 + p, price.first + 2).v))
     .toEqual([s1(0), 12, 12, s1(3)]);
-  const volume = scenarioBlock(inp, 'Volume after sliders', 3);
+  const volume = scenarioBlock(inp, 'Volume after sliders', 3, 2);
   const v1 = (p) => X.numToCol(p1 + p) + volume.first;
   expect([0, 1, 2, 3].map(p => X.formulaOf(cellAt(inp, p1 + p, volume.first + 1)))).toEqual([0, 1, 2, 3].map(p => v1(p) + '*(1+10%)'));
   expect([0, 1, 2, 3].map(p => X.formulaOf(cellAt(inp, p1 + p, volume.first + 2)))).toEqual([v1(0), v1(1), v1(2), v1(3) + '*(1-5%)']);
-  const cost = scenarioBlock(inp, 'Cost after sliders', 2);
+  const cost = scenarioBlock(inp, 'Cost after sliders', 2, 1);
   expect(inp['A' + (cost.first + 1)].v).toBe('Cost cut');
   expect(cellAt(inp, p1, cost.first + 1).v).toBe(-2500);
   expect(X.formulaOf(cellAt(inp, p1 + 1, cost.first + 1))).toBe(X.numToCol(p1 + 1) + cost.first);
   // The input's own row still picks its scenario (column C links to the Scenarios tab), with the
   // Dashboard's Price slider laid over it (step 19 B4).
-  expect(X.formulaOf(cellAt(inp, p1, price.own))).toMatch(/^IF\('Dashboard'!\$I\$5=TRUE,'Dashboard'!\$G\$5,INDEX\(/);
+  expect(X.formulaOf(cellAt(inp, p1, price.own))).toMatch(/^IF\(ISNUMBER\([A-Z]+\d+\),[A-Z]+\d+,IF\(ISNUMBER\([A-Z]+\d+\),[A-Z]+\d+,INDEX\(/);
   // Exported, the layout is version 7 (since step 19 B4) and carries the copy.
   const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
   const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
@@ -507,16 +509,33 @@ test('sliders: the window lists them, Use copies them, the Dashboard comes first
   const parts = await X.unzip(bytes);
   expect(Object.keys(parts).filter(n => /^xl\/ctrlProps\//.test(n))).toHaveLength(8);
 
-  // The Inputs tab: each slider only in its periods, in the board's order, over the case's pick.
+  // The Inputs tab (idea 10): a row per slider under the input's scenarios, in the board's order,
+  // each holding the slider only in its periods (blank elsewhere), grouped in the outline; the
+  // input's own row the same formula in every period, laying those rows over the case's pick.
   const p1 = X.periodOneCol(inp);
-  const own = (label, p) => X.formulaOf(cellAt(inp, p1 + p, X.findRow(inp, label + ' after sliders')[0]));
-  const pick = (label, p, n) => { const r = X.findRow(inp, label + ' after sliders')[0]; const c = X.numToCol(p1 + p); return 'INDEX(' + c + (r - n) + ':' + c + (r - 1) + ',MIN(MAX($C' + r + ',1),' + n + '))'; };
-  const set = (r, x) => "IF('Dashboard'!$I$" + r + "=TRUE,'Dashboard'!$G$" + r + ',' + x + ')';
-  const shift = (r, x) => '(' + x + ")*(1+'Dashboard'!$G$" + r + '/100)';
-  expect([0, 1, 2, 3].map(p => own('Price', p))).toEqual([set(5, pick('Price', 0, 3)), set(7, set(5, pick('Price', 1, 3))), set(7, set(5, pick('Price', 2, 3))), set(5, pick('Price', 3, 3))]);
-  expect([0, 1, 2, 3].map(p => own('Volume', p))).toEqual([shift(6, pick('Volume', 0, 3)), shift(6, pick('Volume', 1, 3)), shift(6, pick('Volume', 2, 3)), shift(8, shift(6, pick('Volume', 3, 3)))]);
-  // One period only: Cost's slider is in 2027, the other periods just pick the case.
-  expect([0, 1, 2, 3].map(p => own('Cost', p))).toEqual([set(9, pick('Cost', 0, 2)), pick('Cost', 1, 2), pick('Cost', 2, 2), pick('Cost', 3, 2)]);
+  const ownRow = (label) => X.findRow(inp, label + ' after sliders')[0];
+  const at = (r, p) => cellAt(inp, p1 + p, r);
+  const col = (p) => X.numToCol(p1 + p);
+  const own = (label, p) => X.formulaOf(at(ownRow(label), p));
+  const pick = (label, p, n, gap) => { const r = ownRow(label); return 'INDEX(' + col(p) + (r - gap - n) + ':' + col(p) + (r - gap - 1) + ',MIN(MAX($C' + r + ',1),' + n + '))'; };
+  const set = (ref, x) => 'IF(ISNUMBER(' + ref + '),' + ref + ',' + x + ')';
+  const shift = (ref, x) => '(' + x + ')*(1+' + ref + ')';
+  const P = ownRow('Price'), V = ownRow('Volume'), C = ownRow('Cost');
+  expect([0, 1, 2, 3].map(p => own('Price', p))).toEqual([0, 1, 2, 3].map(p => set(col(p) + (P - 1), set(col(p) + (P - 2), pick('Price', p, 3, 2)))));
+  expect([0, 1, 2, 3].map(p => own('Volume', p))).toEqual([0, 1, 2, 3].map(p => shift(col(p) + (V - 1), shift(col(p) + (V - 2), pick('Volume', p, 3, 2)))));
+  expect([0, 1, 2, 3].map(p => own('Cost', p))).toEqual([0, 1, 2, 3].map(p => set(col(p) + (C - 1), pick('Cost', p, 2, 1))));
+  expect([P - 2, P - 1, V - 2, V - 1, C - 1].map(r => inp['A' + r].v)).toEqual(['Set to (Dashboard, all periods)', 'Set to (Dashboard, 2028–2029)',
+    '% change (Dashboard, all periods)', '% change (Dashboard, 2030)', 'Set to (Dashboard, 2027)']);
+  const useSet = (r) => "IF('Dashboard'!$I$" + r + "=TRUE,'Dashboard'!$G$" + r + ',"")';
+  const row = (r) => [0, 1, 2, 3].map(p => X.formulaOf(at(r, p)) || null);
+  expect(row(P - 2)).toEqual([useSet(5), useSet(5), useSet(5), useSet(5)]);
+  expect(row(P - 1)).toEqual([null, useSet(7), useSet(7), null]); // only in its periods
+  expect(row(V - 2)).toEqual(Array(4).fill("'Dashboard'!$G$6/100"));
+  expect(row(V - 1)).toEqual([null, null, null, "'Dashboard'!$G$8/100"]);
+  expect(row(C - 1)).toEqual([useSet(9), null, null, null]);
+  const inputsXml = Object.entries(parts).find(([n, t]) => /^xl\/worksheets\/sheet\d+\.xml$/.test(n) && t.includes('Set to (Dashboard, 2027)'))[1];
+  const grouped = [...inputsXml.matchAll(/<row r="(\d+)" outlineLevel="1"/g)].map(m => Number(m[1]));
+  expect(grouped).toEqual([P - 2, P - 1, V - 2, V - 1, C - 1].sort((a, b) => a - b));
   expect(pageErrors).toEqual([]);
 });
 
@@ -634,11 +653,13 @@ test('sliders: the copy is the layout\'s, using again asks first, Remove takes t
   expect(wb.SheetNames.slice(0, 2)).toEqual(['Dashboard', 'Inputs']);
   const inp = wb.Sheets.Inputs;
   const own = X.findRow(inp, 'Cost after sliders')[0];
-  expect(X.findRow(inp, 'Cost')).toEqual([own - 1]); // the base row has the name; its own row says what moved it
-  expect(X.formulaOf(inp['A' + own])).toBe('A' + (own - 1) + '&" after sliders"');
-  expect(X.formulaOf(wb.Sheets.Dashboard.A9)).toBe("'Inputs'!$A$" + (own - 1)); // the slider's name: the base row
+  expect(X.findRow(inp, 'Cost')).toEqual([own - 2]); // the base row has the name; its own row says what moved it
+  expect(inp['A' + (own - 1)].v).toBe('Set to (Dashboard, 2027)'); // its slider's row between them
+  expect(X.formulaOf(inp['A' + own])).toBe('A' + (own - 2) + '&" after sliders"');
+  expect(X.formulaOf(wb.Sheets.Dashboard.A9)).toBe("'Inputs'!$A$" + (own - 2)); // the slider's name: the base row
   const c1 = X.numToCol(X.periodOneCol(inp));
-  expect(X.formulaOf(inp[c1 + own])).toBe("IF('Dashboard'!$I$9=TRUE,'Dashboard'!$G$9," + c1 + (own - 1) + ')');
+  expect(X.formulaOf(inp[c1 + (own - 1)])).toBe("IF('Dashboard'!$I$9=TRUE,'Dashboard'!$G$9,\"\")");
+  expect(X.formulaOf(inp[c1 + own])).toBe('IF(ISNUMBER(' + c1 + (own - 1) + '),' + c1 + (own - 1) + ',' + c1 + (own - 2) + ')');
   // Using the boards again asks before replacing the sliders.
   await importFile(page, board('profit.board.json'));
   await page.click('#graphUse');

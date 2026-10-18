@@ -11,6 +11,17 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'slider-rows', date: '2026-10-18', title: 'Sliders on the Inputs tab, easier to read',
+    summary: 'An input the Dashboard\'s sliders move no longer reaches into the Dashboard in its formula: each slider has a row of its own.',
+    what: [
+      'Under the input, each slider on it gets a row, for example "Set to (Dashboard, 2028–2029)" or "% change (Dashboard, all periods)". It shows the slider\'s Value in its periods — a set slider\'s only while Use is ticked — and is blank elsewhere.',
+      'The input\'s own row ("Price after sliders") is the same short formula in every period, such as =IF(ISNUMBER(E12),E12,E10) or =(E10)*(1+E12).',
+      'The rows are grouped with the sensitivity ones, so the − button beside them folds them away.',
+    ],
+    why: 'References to the Dashboard nested inside the formula made it hard to follow, and the formula changed from period to period.',
+    how: ['Layout → Use fmGraph boards…, tick the sliders, Use.', 'Press ⬇ Generate and open the Inputs tab.'],
+    see: ['fmgraph-dashboard'] },
+
   { id: 'sensitivity-rows', date: '2026-10-18', title: 'Sensitivity on the Inputs tab, easier to read',
     summary: 'A moved input\'s formula no longer reaches into the Sensitivity tab: two rows gather those numbers, and the rows are named plainly.',
     what: [
