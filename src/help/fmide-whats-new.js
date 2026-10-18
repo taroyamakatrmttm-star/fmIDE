@@ -12,6 +12,16 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'canvas-grows', date: '2026-10-18', title: 'Large models scroll all the way',
+    summary: 'The canvas now grows to hold every node, so a big model (such as an Excel model imported by ExcelExporter) can be scrolled to its end.',
+    what: [
+      'The canvas used to be a fixed area, 3600 × 2400 pixels: anything placed further right or down was in the model and calculated, but couldn\'t be scrolled to.',
+      'Now it grows to fit the canvas shown, with some room beyond, at any zoom. It is never smaller than before.',
+    ],
+    why: 'A model imported from Excel can be thousands of pixels tall; you couldn\'t reach its lower rows.',
+    how: ['Open the model.', 'Scroll down or right as far as it goes: every node is there.'],
+    see: ['canvases'] },
+
   { id: 'fmgraph-boards-in-excel', date: '2026-10-16', title: 'fmGraph boards in Excel',
     summary: 'ExcelExporter rebuilds your fmGraph boards in the workbook: scenarios, Tornado and Spider, sliders and charts on a Dashboard. A new tutorial shows how.',
     what: [

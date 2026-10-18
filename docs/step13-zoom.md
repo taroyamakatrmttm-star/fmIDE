@@ -6,7 +6,7 @@
 
 ## What was there before
 
-fmIDE had no zoom. The canvas is a fixed 3600 × 2400 area that scrolls. Every drag worked out canvas positions from screen pixels in about ten places (moving and resizing nodes, drawing arrows, the selection box, snapping, where new nodes go). Step 9 left two fingers on the canvas unused on purpose, for zoom.
+fmIDE had no zoom. The canvas is a fixed 3600 × 2400 area that scrolls (since 18 October 2026 it grows to hold every node, `fitCanvasToNodes`). Every drag worked out canvas positions from screen pixels in about ten places (moving and resizing nodes, drawing arrows, the selection box, snapping, where new nodes go). Step 9 left two fingers on the canvas unused on purpose, for zoom.
 
 ## Decided (2 Oct 2026, the owner — all the recommended options)
 

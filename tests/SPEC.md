@@ -658,6 +658,7 @@ fmIDE and ExcelExporter at 1400 × 900; the data read in Node.
 
 ### 44. Zoom (`tests/44-zoom.spec.js`; step 13, phase 13a)
 fmIDE at 1400 × 900, with a real mouse and keyboard.
+- The canvas grows to hold every node (found by the owner, 18 October 2026: an imported Excel model 23,000 pixels tall couldn't be scrolled to its bottom): one rectangle near the top, 3600 × 2400; one at 1200, 23000: `#canvas`, `#canvasZoom` and the arrows' layer 3600 × 23700, and scrolled to the bottom it is on screen; at 50% the scrolled area 1800 × 11850; one at 9000 across: 9800 wide; both deleted: 3600 × 2400 again; one at 10⁹, 10⁹: 100,000 × 100,000 and no node moved.
 - Ctrl + the wheel over a node at 1500, 1000 (scrolled into view) zooms out below 80%; the control shows it; the node stays under the pointer (within 3 pixels) at its new size; a plain wheel scrolls without zooming. At 100% `#viewport` is not `.zoomed`.
 - Ctrl + = → 110%, Ctrl + − twice → 90%, Ctrl + 0 → 100%; the control's + and − step the same; its menu lists Fit the model, Fit the selection (off with nothing selected) and 200% … 25%, the current level marked; 25% turns − off; 200% turns + off; `fm.setZoom` keeps to 25%–200% and refuses a word that isn't a level.
 - Zoom to Fit with nodes at 100, 2600 and 1300: under 50%, every node inside the viewport; Zoom to Selection on one node: 200%, centred.

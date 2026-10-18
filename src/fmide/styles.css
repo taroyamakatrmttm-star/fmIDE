@@ -644,7 +644,9 @@
   #viewport{ position:absolute; top:calc(var(--ribbon-h) + 40px); left:0; right:0; bottom:0; overflow:auto; background:var(--canvas-bg); }
   /* Zoom (step 13): #canvas is scaled inside #canvasZoom, which takes the scaled size so the
      viewport scrolls over all of it. At 100% nothing is transformed. */
-  #canvasZoom{ position:relative; width:calc(3600px * var(--zoom, 1)); height:calc(2400px * var(--zoom, 1)); overflow:hidden; }
+  /* The canvas grows to hold every node (--canvas-w / --canvas-h, set by fitCanvasToNodes in
+     07-rendering.js); never smaller than 3600 × 2400. */
+  #canvasZoom{ position:relative; width:calc(var(--canvas-w, 3600px) * var(--zoom, 1)); height:calc(var(--canvas-h, 2400px) * var(--zoom, 1)); overflow:hidden; }
   #viewport.zoomed #canvas{ transform:scale(var(--zoom)); transform-origin:0 0; }
   #viewport.zoomed #canvas > .op-picker, #viewport.zoomed #canvas > .tag-popup{ transform:scale(var(--unzoom)); transform-origin:0 0; }
   .zoom-control{
@@ -667,11 +669,11 @@
   .zoom-menu button:disabled{ color:#94a3b8; cursor:default; }
   .zoom-menu hr{ border:none; border-top:1px solid #e2e8f0; margin:4px 2px; }
   #canvas{
-    position:relative; width:3600px; height:2400px;
+    position:relative; width:var(--canvas-w, 3600px); height:var(--canvas-h, 2400px);
     background-image:radial-gradient(var(--dot) 1px, transparent 1px);
     background-size:22px 22px;
   }
-  svg#edges{ position:absolute; top:0; left:0; width:3600px; height:2400px; pointer-events:none; }
+  svg#edges{ position:absolute; top:0; left:0; width:var(--canvas-w, 3600px); height:var(--canvas-h, 2400px); pointer-events:none; }
   svg#edges g.edge{ pointer-events:auto; cursor:pointer; }
   svg#edges path.hit{ fill:none; stroke:transparent; stroke-width:16; }
   svg#edges path.line{ fill:none; stroke:var(--edge); stroke-width:2; }
@@ -685,8 +687,8 @@
     pointer-events:none; z-index:46;
   }
   .guide{ position:absolute; background:var(--guide); pointer-events:none; z-index:45; display:none; }
-  .guide-v{ width:1px; top:0; height:2400px; }
-  .guide-h{ height:1px; left:0; width:3600px; }
+  .guide-v{ width:1px; top:0; height:var(--canvas-h, 2400px); }
+  .guide-h{ height:1px; left:0; width:var(--canvas-w, 3600px); }
   .guide.show{ display:block; }
   /* Step 12a: while a drag snaps to equal spacing, each equal gap gets a bar with end caps. */
   #gapMarks{ position:absolute; left:0; top:0; width:0; height:0; pointer-events:none; z-index:46; }

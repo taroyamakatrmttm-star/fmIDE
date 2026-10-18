@@ -30,6 +30,33 @@ test.beforeEach(async ({ page }) => {
   await F.openFmIDE(page);
 });
 
+// Found by the owner (18 October 2026): a model laid out further than 3600 × 2400 (an Excel
+// sheet imported by ExcelExporter, 23,000 pixels tall) couldn't be scrolled to its bottom.
+test('the canvas grows to hold every node, at any zoom, never smaller than 3600 × 2400 and never past 100,000', async ({ page }) => {
+  const size = () => page.evaluate(() => { const c = document.getElementById('canvas'); const z = document.getElementById('canvasZoom'); const e = document.getElementById('edges');
+    return { canvas: [c.offsetWidth, c.offsetHeight], zoom: [z.offsetWidth, z.offsetHeight], edges: [e.getBoundingClientRect().width, e.getBoundingClientRect().height] }; });
+  const [a] = await place(page, [{ name: 'Near', x: 100, y: 100 }]);
+  expect((await size()).canvas).toEqual([3600, 2400]);
+  const far = await page.evaluate(() => fm.createRect({ name: 'Far down', value: '7', x: 1200, y: 23000 }));
+  expect(await size()).toEqual({ canvas: [3600, 23700], zoom: [3600, 23700], edges: [3600, 23700] });
+  // Scrolled to the bottom, the far rectangle is on screen.
+  await page.evaluate(() => { const v = document.getElementById('viewport'); v.scrollTo(0, v.scrollHeight); });
+  await expect(node(page, far)).toBeInViewport();
+  // At 50% the scrolled area is half as big; back at 100%, as before.
+  await page.evaluate(() => fm.setZoom(0.5));
+  expect((await size()).zoom).toEqual([1800, 11850]);
+  await page.evaluate(() => fm.setZoom(1));
+  // Wider too; deleting the far nodes brings it back to 3600 × 2400.
+  const wide = await page.evaluate(() => fm.createRect({ name: 'Far right', x: 9000, y: 100 }));
+  expect((await size()).canvas).toEqual([9800, 23700]);
+  await page.evaluate((ids) => fm.deleteNodes({ nodes: ids }), [far, wide]);
+  expect((await size()).canvas).toEqual([3600, 2400]);
+  // A node absurdly far away (a hostile file): the canvas stops at 100,000.
+  await page.evaluate(() => fm.createRect({ name: 'Too far', x: 1e9, y: 1e9 }));
+  expect((await size()).canvas).toEqual([100000, 100000]);
+  expect(await page.evaluate((id) => fm.nodes().find(n => n.id === id).x, a)).toBe(100);
+});
+
 test('Ctrl + the wheel zooms around the pointer, smoothly; a plain wheel still scrolls', async ({ page, pageErrors }) => {
   const [a] = await place(page, [{ name: 'A', x: 1500, y: 1000 }]);
   await page.evaluate(() => document.getElementById('viewport').scrollTo(1000, 700)); // room to zoom around it
