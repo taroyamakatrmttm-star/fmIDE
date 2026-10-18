@@ -210,8 +210,9 @@ async function buildImportedModel(){
 
 // The workbook's own layout for the imported model (xlBuildModel's `layout`): each canvas's tab
 // in one list (no Inputs / Calculations / Outputs sections), its rows in the sheet's order with
-// a label row for each title and an empty one for each blank row; the numbers written in the
-// formulas are Constants again, written into the formulas. It replaces the layout the model
+// a label row for each title and an empty one for each blank row, each row and title with its
+// look in the workbook as its own format (fill, text colour, bold, borders, number format);
+// the numbers written in the formulas are Constants again, written into the formulas. It replaces the layout the model
 // was given (or had in this browser) and is saved like any change.
 const IMPORT_LABEL_MAX = 200;
 function useImportedLayout(layout){
@@ -226,12 +227,17 @@ function useImportedLayout(layout){
     lc.items.forEach(item => {
       if(item.node !== undefined){
         const row = byId.get(pathKey([], lc.id, item.node));
-        if(row && row.tabId === tab.id) row.flatOrder = k++;
+        if(row && row.tabId === tab.id){
+          row.flatOrder = k++;
+          // Its look in the workbook as the row's own format (the file's: checked).
+          const look = item.look ? cleanRowFormat(item.look) : null;
+          if(look) row.style = look;
+        }
         return;
       }
       mapping.customRows.push({
         id: 'custom_xl_' + lc.id + '_' + k, isCustom: true, tabId: tab.id, section: 'input',
-        label: item.title !== undefined ? String(item.title).slice(0, IMPORT_LABEL_MAX) : '', style: null, showPeriodLabels: false,
+        label: item.title !== undefined ? String(item.title).slice(0, IMPORT_LABEL_MAX) : '', style: item.look ? cleanRowFormat(item.look) : null, showPeriodLabels: false,
         flatOrder: k++,
       });
     });

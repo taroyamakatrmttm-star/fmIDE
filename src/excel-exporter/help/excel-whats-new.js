@@ -11,6 +11,16 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'import-excel-look', date: '2026-10-18', title: 'Imported models keep the workbook\'s look',
+    summary: 'After Import, each row keeps its look from the workbook: bold, text colour, fill, lines and number format.',
+    what: [
+      'Each row and title takes its look from the workbook as its own format: bold headings and totals, blue inputs, fills, the lines above and below totals, and number formats such as 0.0%.',
+      'Number formats become the nearest of ExcelExporter\'s (General, number, percent, $): brackets for negatives, for example, are not kept.',
+    ],
+    why: 'The workbook ExcelExporter makes then looks like the one you started from, not only reads like it.',
+    how: ['File → Import Excel model…, and pick the workbook.', 'Press Import, then ⬇ Generate.', 'Change a row\'s look in the Rows panel, as for any row.'],
+    see: ['import-excel'] },
+
   { id: 'import-excel-layout', date: '2026-10-18', title: 'Imported models keep the workbook\'s layout',
     summary: 'After Import, each tab has the original\'s rows in the same order, with its titles and blank rows.',
     what: [

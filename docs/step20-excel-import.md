@@ -149,6 +149,15 @@ The owner asked for fewer small boxes. Most of the CFI model's constant rectangl
 - **The import**: the periods of a formula row holding a number of their own — an opening balance's first, the cells that differ, a row in parts' typed actuals beside its **one** formula — are ticked (`literalPeriods`), their numbers in `periodValues` (or typed, when it is one number), and the tree is the formula alone. A row of two formulas keeps its `if(period ≤ k, …)`.
 - **The CFI model**: rectangles 151 → 81, operators 172 → 67, still 670 of 670 cells agreeing; the remaining constants are a formula's own (`1 +`, `365`) and the four rows of two formulas.
 
+## The workbook's own look (18 October 2026)
+
+The owner asked for the original's look as well (idea 1 after the layout). Since the look of every cell in Excel is ExcelExporter's (`.claude/rules/format-roles.md`), it goes into the imported layout's **row formats**, never into the fmIDE model:
+
+- **Reading it** (`workbook.js`): each cell's `look` from the workbook's styles — `{ bold, italic, color, fill, border: { top, bottom, left, right } }` — its colours `#rrggbb` from `rgb`, the theme (`xlThemeColours`: the scheme's colours by Excel's theme number, light 1 first) with its `tint` (Excel's change of lightness), or the first sixteen indexed colours; the automatic colour is none (`xlColour`).
+- **A row's look** (`build.js`, `xlRowLook`): the look most of its period cells share — a row with formulas, its formula cells' (typed actuals are often blue) — bold when its label is bold, the top and bottom borders (lines along the row), the number format as the nearest of ExcelExporter's kinds (`xlNumberKind`: General, percent, `$`, number, with its decimals; `_x` spaces and `*x` fills set aside; the rest of a code, such as brackets for negatives, not kept); a title's from its label. In the layout as `look` on each `{ node }` and `{ title }`.
+- **Using it** (`useImportedLayout`): each row's and title's look, through `cleanRowFormat`, as its own format — so in the workbook it replaces the Excel style's look for that row, as a row format always does.
+- **The CFI model**: headings bold in `#3271d2` on `#e7f2ff`, the typed rows blue, totals bold with their line above, the percentages `0.0%`, the rest `#,##0`.
+
 ## The workbook's own layout (18 October 2026)
 
 After Import, ExcelExporter gave the model a fresh layout, sorted by calculation order: the rows moved, the titles and blank rows were gone, and each number written in a formula ("Revenue: 1") had a row of its own. The owner asked for the original's order and spacing, on several canvases too:

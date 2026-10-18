@@ -10650,7 +10650,7 @@ const EXCEL_HELP_TOPICS = [
       { steps: [
         'Choose File → Import Excel model… (or drop the workbook on the page).',
         'Check what was found for each sheet: the header row of periods, the period columns, the label and unit columns, and each row\'s kind. Change any of them, or untick a sheet to leave it out. One canvas per section (ticked for a sheet of more than 40 rows) gives each section of the sheet its own canvas.',
-        'Press Import. The model loads here, laid out like the workbook — its rows in the same order, its titles and blank rows kept, the numbers in its formulas written in the formulas — and a report says how it compares with the values Excel saved.',
+        'Press Import. The model loads here, laid out like the workbook — its rows in the same order, its titles and blank rows kept, each row\'s look (bold, colours, lines, number format), the numbers in its formulas written in the formulas — and a report says how it compares with the values Excel saved.',
         'Press Save for fmIDE (in the report or the File menu), then open the file in fmIDE with File → Open….',
       ] },
       { p: 'It reads models laid out with rows as line items and columns as periods, one formula copied along each row. A reference to the column on the left becomes a period shift; a first period typed and the formula after it is an opening balance; typed actual years and a forecast formula make a row whose rectangle holds the actuals as its own numbers in those years (ticked under its 🕒), the formula feeding the others; two formulas, one after the other, make a row in parts, which reads each in its own years through one shared rectangle per canvas, such as Up to 2024 (1 in those years, 0 after). SUM, MIN, MAX, AVERAGE, IF, IFERROR, AND, OR, NOT, ROUND, CHOOSE, ABS, LN, EXP, SQRT, INT, TRUNC, MOD and POWER become fmIDE\'s operators.' },
@@ -10972,6 +10972,16 @@ const EXCEL_HELP_TOPICS = [
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'import-excel-look', date: '2026-10-18', title: 'Imported models keep the workbook\'s look',
+    summary: 'After Import, each row keeps its look from the workbook: bold, text colour, fill, lines and number format.',
+    what: [
+      'Each row and title takes its look from the workbook as its own format: bold headings and totals, blue inputs, fills, the lines above and below totals, and number formats such as 0.0%.',
+      'Number formats become the nearest of ExcelExporter\'s (General, number, percent, $): brackets for negatives, for example, are not kept.',
+    ],
+    why: 'The workbook ExcelExporter makes then looks like the one you started from, not only reads like it.',
+    how: ['File → Import Excel model…, and pick the workbook.', 'Press Import, then ⬇ Generate.', 'Change a row\'s look in the Rows panel, as for any row.'],
+    see: ['import-excel'] },
+
   { id: 'import-excel-layout', date: '2026-10-18', title: 'Imported models keep the workbook\'s layout',
     summary: 'After Import, each tab has the original\'s rows in the same order, with its titles and blank rows.',
     what: [
@@ -14033,7 +14043,8 @@ function xlStringText(si){
 // error text, as '#DIV/0!', or null), formula (text without '=', or null), shared ({ index,
 // ref } on the cell holding a shared formula's text, { index } on the others), array (an
 // array formula's range), dataTable (true for a Data Table's cell), date (its format shows a
-// date), format (its number format code) }.
+// date), format (its number format code), look (its style's { bold, italic, color, fill,
+// border: { top, bottom, left, right: { style, color } } }, colours #rrggbb or null) }.
 async function xlReadWorkbook(bytes){
   const entries = xlZipEntries(bytes);
   const byName = new Map(entries.map(e => [e.name, e]));
@@ -14078,7 +14089,13 @@ async function xlReadWorkbook(bytes){
     for(const si of xlChildren(sst, 'si')) strings.push(xlStringText(si));
   }
 
-  // Number formats: which style index shows a date, and each one's code.
+  // The theme's colours, for a style naming one (theme="1").
+  const themePath = [...relTypes.entries()].filter(([, t]) => /\/theme$/.test(t)).map(([id]) => relTargets.get(id))[0]
+    || (has('xl/theme/theme1.xml') ? 'xl/theme/theme1.xml' : null);
+  const theme = themePath && has(themePath) ? xlThemeColours(await readXml(themePath)) : [];
+
+  // Number formats: which style index shows a date, and each one's code; and each style's
+  // look (bold, italic, text colour, fill, borders), for ExcelExporter's row formats.
   const stylesPath = [...relTypes.entries()].filter(([, t]) => /\/styles$/.test(t)).map(([id]) => relTargets.get(id))[0]
     || (has('xl/styles.xml') ? 'xl/styles.xml' : null);
   const xfFormats = [];
@@ -14086,10 +14103,27 @@ async function xlReadWorkbook(bytes){
     const st = await readXml(stylesPath);
     const codes = new Map();
     for(const f of xlChildren(xlChild(st, 'numFmts'), 'numFmt')) codes.set(Number(f.attrs.numFmtId), String(f.attrs.formatCode || ''));
+    const fonts = xlChildren(xlChild(st, 'fonts'), 'font').map(f => ({
+      bold: xlOn(xlChild(f, 'b')), italic: xlOn(xlChild(f, 'i')), color: xlColour(xlChild(f, 'color'), theme) }));
+    const fills = xlChildren(xlChild(st, 'fills'), 'fill').map(f => {
+      const p = xlChild(f, 'patternFill');
+      return p && p.attrs.patternType === 'solid' ? xlColour(xlChild(p, 'fgColor'), theme) : null;
+    });
+    const borders = xlChildren(xlChild(st, 'borders'), 'border').map(b => {
+      const out = {};
+      for(const side of ['top', 'bottom', 'left', 'right']){
+        const e = xlChild(b, side);
+        if(e && e.attrs.style && e.attrs.style !== 'none') out[side] = { style: String(e.attrs.style), color: xlColour(xlChild(e, 'color'), theme) };
+      }
+      return out;
+    });
     for(const xf of xlChildren(xlChild(st, 'cellXfs'), 'xf')){
       const id = Number(xf.attrs.numFmtId || 0);
       const code = codes.has(id) ? codes.get(id) : (XL_BUILTIN_FORMATS[id] || '');
-      xfFormats.push({ code, date: codes.has(id) ? xlIsDateFormat(code) : XL_DATE_FORMAT_IDS.has(id) });
+      const font = fonts[Number(xf.attrs.fontId || 0)] || {};
+      const look = { bold: !!font.bold, italic: !!font.italic, color: font.color || null,
+        fill: fills[Number(xf.attrs.fillId || 0)] || null, border: borders[Number(xf.attrs.borderId || 0)] || {} };
+      xfFormats.push({ code, date: codes.has(id) ? xlIsDateFormat(code) : XL_DATE_FORMAT_IDS.has(id), look });
     }
   }
 
@@ -14154,7 +14188,7 @@ const XL_ERRORS = new Set(['#NULL!', '#DIV/0!', '#VALUE!', '#REF!', '#NAME?', '#
 // One <c> element as a cell.
 function xlReadCell(c, col, row, strings, xfFormats, date1904){
   const t = c.attrs.t || 'n';
-  const style = xfFormats[Number(c.attrs.s || 0)] || { code: 'General', date: false };
+  const style = xfFormats[Number(c.attrs.s || 0)] || { code: 'General', date: false, look: null };
   const vEl = xlChild(c, 'v');
   const v = vEl ? vEl.text : null;
   let value = null, error = null;
@@ -14195,7 +14229,67 @@ function xlReadCell(c, col, row, strings, xfFormats, date1904){
     } else formula = text;
   }
   return { col, row, address: xlAddress(col, row), value, error, formula, shared, array, dataTable,
-    date: typeof value === 'number' && style.date, format: style.code };
+    date: typeof value === 'number' && style.date, format: style.code, look: style.look || null };
+}
+
+// ---------- a style's look ----------
+// A font's <b/> or <i/>: on unless val says 0 or false.
+function xlOn(el){ return !!el && el.attrs.val !== '0' && el.attrs.val !== 'false'; }
+
+// Excel's first sixteen indexed colours (the rest, and 64, the automatic colour: none).
+const XL_INDEXED = ['000000', 'FFFFFF', 'FF0000', '00FF00', '0000FF', 'FFFF00', 'FF00FF', '00FFFF',
+  '000000', 'FFFFFF', 'FF0000', '00FF00', '0000FF', 'FFFF00', 'FF00FF', '00FFFF'];
+
+// The theme's colours by Excel's theme number: 0 light 1, 1 dark 1, 2 light 2, 3 dark 2,
+// 4–9 the accents, 10 and 11 the links (the scheme lists the darks first). Each as RRGGBB.
+function xlThemeColours(doc){
+  const find = (el, name) => { if(!el) return null; if(el.name === name) return el; for(const c of el.children){ const f = find(c, name); if(f) return f; } return null; };
+  const scheme = find(doc, 'clrScheme');
+  if(!scheme) return [];
+  const hexOf = (name) => {
+    const e = xlChild(scheme, name);
+    const srgb = xlChild(e, 'srgbClr'), sys = xlChild(e, 'sysClr');
+    const v = srgb ? srgb.attrs.val : sys ? sys.attrs.lastClr : null;
+    return typeof v === 'string' && /^[0-9a-fA-F]{6}$/.test(v) ? v.toUpperCase() : null;
+  };
+  return ['lt1', 'dk1', 'lt2', 'dk2', 'accent1', 'accent2', 'accent3', 'accent4', 'accent5', 'accent6', 'hlink', 'folHlink'].map(hexOf);
+}
+
+// A style's colour (<color rgb="FF0000FF"/>, theme="1" with a tint, indexed="12") as
+// #rrggbb, or null (automatic, or one it can't tell).
+function xlColour(el, theme){
+  if(!el) return null;
+  let hex = null;
+  const rgb = el.attrs.rgb;
+  if(typeof rgb === 'string' && /^([0-9a-fA-F]{2})?[0-9a-fA-F]{6}$/.test(rgb)) hex = rgb.slice(-6);
+  else if(el.attrs.theme !== undefined) hex = (theme || [])[Number(el.attrs.theme)] || null;
+  else if(el.attrs.indexed !== undefined) hex = XL_INDEXED[Number(el.attrs.indexed)] || null;
+  if(!hex) return null;
+  const tint = Number(el.attrs.tint);
+  if(Number.isFinite(tint) && tint !== 0) hex = xlTint(hex, Math.max(-1, Math.min(1, tint)));
+  return '#' + hex.toLowerCase();
+}
+
+// A colour lightened (tint > 0) or darkened (< 0), as Excel does: on its lightness.
+function xlTint(hex, tint){
+  const [r, g, b] = [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, sat = 0, l = (max + min) / 2;
+  if(max !== min){
+    const d = max - min;
+    sat = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    h /= 6;
+  }
+  l = tint < 0 ? l * (1 + tint) : l * (1 - tint) + tint;
+  const hue = (p, q, t) => { t = (t + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < 1 / 2 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; };
+  let out;
+  if(sat === 0) out = [l, l, l];
+  else {
+    const q = l < 0.5 ? l * (1 + sat) : l + sat - l * sat, p = 2 * l - q;
+    out = [hue(p, q, h + 1 / 3), hue(p, q, h), hue(p, q, h - 1 / 3)];
+  }
+  return out.map(v => Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16).padStart(2, '0')).join('').toUpperCase();
 }
 
 // An ISO date (t="d") as Excel's serial number.
@@ -15041,8 +15135,9 @@ async function buildImportedModel(){
 
 // The workbook's own layout for the imported model (xlBuildModel's `layout`): each canvas's tab
 // in one list (no Inputs / Calculations / Outputs sections), its rows in the sheet's order with
-// a label row for each title and an empty one for each blank row; the numbers written in the
-// formulas are Constants again, written into the formulas. It replaces the layout the model
+// a label row for each title and an empty one for each blank row, each row and title with its
+// look in the workbook as its own format (fill, text colour, bold, borders, number format);
+// the numbers written in the formulas are Constants again, written into the formulas. It replaces the layout the model
 // was given (or had in this browser) and is saved like any change.
 const IMPORT_LABEL_MAX = 200;
 function useImportedLayout(layout){
@@ -15057,12 +15152,17 @@ function useImportedLayout(layout){
     lc.items.forEach(item => {
       if(item.node !== undefined){
         const row = byId.get(pathKey([], lc.id, item.node));
-        if(row && row.tabId === tab.id) row.flatOrder = k++;
+        if(row && row.tabId === tab.id){
+          row.flatOrder = k++;
+          // Its look in the workbook as the row's own format (the file's: checked).
+          const look = item.look ? cleanRowFormat(item.look) : null;
+          if(look) row.style = look;
+        }
         return;
       }
       mapping.customRows.push({
         id: 'custom_xl_' + lc.id + '_' + k, isCustom: true, tabId: tab.id, section: 'input',
-        label: item.title !== undefined ? String(item.title).slice(0, IMPORT_LABEL_MAX) : '', style: null, showPeriodLabels: false,
+        label: item.title !== undefined ? String(item.title).slice(0, IMPORT_LABEL_MAX) : '', style: item.look ? cleanRowFormat(item.look) : null, showPeriodLabels: false,
         flatOrder: k++,
       });
     });
@@ -15338,10 +15438,14 @@ function xlBuildModel(book, plans, include, split){
   for(const i of sheetsIn){
     for(const r of plans[i].rows){
       const c = canvasFor(i, r.row);
-      if(r.kind === 'title'){ c.items.push({ row: r.row, title: xlCleanName(r.label) }); continue; }
+      const labelCell = plans[i].labelCol ? book.sheets[i].cells.get(xlAddress(plans[i].labelCol, r.row)) : null;
+      if(r.kind === 'title'){ c.items.push({ row: r.row, title: xlCleanName(r.label), look: xlRowLook(labelCell, []) }); continue; }
       const entry = { sheet: i, plan: r, canvas: c, id: nodeId(c), name: uniqueName(c, xlCleanName(r.label), r.row), unit: xlCleanName(r.unit).slice(0, 40), kind: r.kind, expr: null, why: null, deps: [] };
       rows.set(i + '|' + r.row, entry);
-      c.items.push({ row: r.row, entry });
+      // A row with formulas looks like its formula cells (typed actuals are often blue).
+      const lookCells = r.kind === 'assumption' || r.kind === 'single' ? [r.before]
+        : r.kind === 'input' ? r.cells : r.cells.filter(x => x.formula !== null);
+      c.items.push({ row: r.row, entry, look: xlRowLook(labelCell, lookCells.length ? lookCells : r.cells) });
     }
   }
 
@@ -15632,12 +15736,12 @@ function xlBuildModel(book, plans, include, split){
       }
       prevRow = item.row;
       if(item.title !== undefined){
-        layout.push({ title: item.title });
+        layout.push(item.look ? { title: item.title, look: item.look } : { title: item.title });
         if(placed) y += XL_SPACE;
         continue;
       }
       const entry = item.entry;
-      layout.push({ node: entry.id });
+      layout.push(item.look ? { node: entry.id, look: item.look } : { node: entry.id });
       placed = true;
       const plan = entry.plan;
       const rect = { id: entry.id, type: 'value', x: XL_RECT_X, y, text: '' };
@@ -15723,6 +15827,52 @@ function xlBuildModel(book, plans, include, split){
   // (each a rectangle of its own here), to be written back into the formulas there.
   const layout = { canvases: canvases.map(c => ({ id: c.id, items: c.layout })), constants: canvases.flatMap(c => c.constants.map(id => ({ canvasId: c.id, nodeId: id }))) };
   return { system, report, layout };
+}
+
+// A row's look in the workbook, as ExcelExporter's row format (its own fill, text colour,
+// bold, borders and number format; checked again there by cleanRowFormat): the look most of
+// its period cells share (`cells`; empty ones left out), bold when its label is bold too, the
+// top and bottom borders only (lines along the row), the number format as the nearest of
+// ExcelExporter's kinds. A title's from its label alone. Null when the file has no styles.
+function xlRowLook(labelCell, cells){
+  const tally = new Map();
+  for(const c of cells){
+    if(!c || c.empty || !c.look) continue;
+    const k = tally.get(c.look);
+    tally.set(c.look, k ? { n: k.n + 1, cell: k.cell } : { n: 1, cell: c });
+  }
+  let best = null;
+  for(const v of tally.values()) if(!best || v.n > best.n) best = v;
+  const cell = best ? best.cell : null;
+  const look = cell ? cell.look : labelCell && labelCell.look;
+  if(!look) return null;
+  const label = labelCell && labelCell.look;
+  const sides = cell ? ['top', 'bottom'].filter(k => look.border && look.border[k]) : [];
+  const out = {
+    fill: look.fill || (label && !cell ? label.fill : null) || null,
+    font: { color: look.color || '#000000', weight: look.bold || (label && label.bold) ? '700' : 'normal' },
+    border: sides.length ? { style: 'solid', color: look.border[sides[0]].color || '#000000', sides } : { style: 'none' },
+  };
+  const nf = cell ? xlNumberKind(cell.format) : null;
+  if(nf) out.numberFormat = nf;
+  return out;
+}
+
+// A number format code as one of ExcelExporter's kinds: { kind, decimals }, from its first
+// part (positive numbers; `_x` spaces, `*x` fills, `\x` and quoted text but a "$" set aside):
+// General; a percent; a dollar amount; any other number (the rest of the code, such as
+// brackets for negatives, is not kept). Null for text or a date.
+function xlNumberKind(code){
+  const text = String(code || 'General');
+  if(/^general$/i.test(text.trim())) return { kind: 'general', decimals: 0 };
+  const first = text.split(';')[0].replace(/"[^"]*"/g, (q) => q.includes('$') ? '$' : '').replace(/\\./g, '').replace(/[_*]./g, '').replace(/\[[^\]]*\]/g, '');
+  if(!/[0#?]/.test(first)) return null;
+  if(/[dmyhs]/i.test(first.replace(/[0#?.,%$ _*\-()]/g, ''))) return null;
+  const dot = first.match(/\.([0#?]+)/);
+  const decimals = dot ? Math.min(10, dot[1].length) : 0;
+  if(first.includes('%')) return { kind: 'percent', decimals };
+  if(first.includes('$')) return { kind: 'currency', decimals };
+  return { kind: 'number', decimals };
 }
 
 // A cell of the report: its saved number, or why there is none — Excel shows an error

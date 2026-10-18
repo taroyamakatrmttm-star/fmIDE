@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: imported models keep the workbook's look
+- After Import, each row and title has its look from the workbook as its own format — bold, text colour (theme colours and tints too), fill, the lines above and below, and the number format as the nearest of ExcelExporter's kinds.
+
 ## ExcelExporter: imported models keep the workbook's layout
 - After Import, each tab has the original sheet's rows in the same order, a label row for each title and an empty one for each blank row, with no Inputs / Calculations / Outputs sections; the numbers written in formulas are written in the formulas again (Constant), with no rows of their own. fmIDE's canvas leaves space where the sheet had titles and blank rows.
 

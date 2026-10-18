@@ -79,7 +79,8 @@ function xlStringText(si){
 // error text, as '#DIV/0!', or null), formula (text without '=', or null), shared ({ index,
 // ref } on the cell holding a shared formula's text, { index } on the others), array (an
 // array formula's range), dataTable (true for a Data Table's cell), date (its format shows a
-// date), format (its number format code) }.
+// date), format (its number format code), look (its style's { bold, italic, color, fill,
+// border: { top, bottom, left, right: { style, color } } }, colours #rrggbb or null) }.
 export async function xlReadWorkbook(bytes){
   const entries = xlZipEntries(bytes);
   const byName = new Map(entries.map(e => [e.name, e]));
@@ -124,7 +125,13 @@ export async function xlReadWorkbook(bytes){
     for(const si of xlChildren(sst, 'si')) strings.push(xlStringText(si));
   }
 
-  // Number formats: which style index shows a date, and each one's code.
+  // The theme's colours, for a style naming one (theme="1").
+  const themePath = [...relTypes.entries()].filter(([, t]) => /\/theme$/.test(t)).map(([id]) => relTargets.get(id))[0]
+    || (has('xl/theme/theme1.xml') ? 'xl/theme/theme1.xml' : null);
+  const theme = themePath && has(themePath) ? xlThemeColours(await readXml(themePath)) : [];
+
+  // Number formats: which style index shows a date, and each one's code; and each style's
+  // look (bold, italic, text colour, fill, borders), for ExcelExporter's row formats.
   const stylesPath = [...relTypes.entries()].filter(([, t]) => /\/styles$/.test(t)).map(([id]) => relTargets.get(id))[0]
     || (has('xl/styles.xml') ? 'xl/styles.xml' : null);
   const xfFormats = [];
@@ -132,10 +139,27 @@ export async function xlReadWorkbook(bytes){
     const st = await readXml(stylesPath);
     const codes = new Map();
     for(const f of xlChildren(xlChild(st, 'numFmts'), 'numFmt')) codes.set(Number(f.attrs.numFmtId), String(f.attrs.formatCode || ''));
+    const fonts = xlChildren(xlChild(st, 'fonts'), 'font').map(f => ({
+      bold: xlOn(xlChild(f, 'b')), italic: xlOn(xlChild(f, 'i')), color: xlColour(xlChild(f, 'color'), theme) }));
+    const fills = xlChildren(xlChild(st, 'fills'), 'fill').map(f => {
+      const p = xlChild(f, 'patternFill');
+      return p && p.attrs.patternType === 'solid' ? xlColour(xlChild(p, 'fgColor'), theme) : null;
+    });
+    const borders = xlChildren(xlChild(st, 'borders'), 'border').map(b => {
+      const out = {};
+      for(const side of ['top', 'bottom', 'left', 'right']){
+        const e = xlChild(b, side);
+        if(e && e.attrs.style && e.attrs.style !== 'none') out[side] = { style: String(e.attrs.style), color: xlColour(xlChild(e, 'color'), theme) };
+      }
+      return out;
+    });
     for(const xf of xlChildren(xlChild(st, 'cellXfs'), 'xf')){
       const id = Number(xf.attrs.numFmtId || 0);
       const code = codes.has(id) ? codes.get(id) : (XL_BUILTIN_FORMATS[id] || '');
-      xfFormats.push({ code, date: codes.has(id) ? xlIsDateFormat(code) : XL_DATE_FORMAT_IDS.has(id) });
+      const font = fonts[Number(xf.attrs.fontId || 0)] || {};
+      const look = { bold: !!font.bold, italic: !!font.italic, color: font.color || null,
+        fill: fills[Number(xf.attrs.fillId || 0)] || null, border: borders[Number(xf.attrs.borderId || 0)] || {} };
+      xfFormats.push({ code, date: codes.has(id) ? xlIsDateFormat(code) : XL_DATE_FORMAT_IDS.has(id), look });
     }
   }
 
@@ -200,7 +224,7 @@ const XL_ERRORS = new Set(['#NULL!', '#DIV/0!', '#VALUE!', '#REF!', '#NAME?', '#
 // One <c> element as a cell.
 function xlReadCell(c, col, row, strings, xfFormats, date1904){
   const t = c.attrs.t || 'n';
-  const style = xfFormats[Number(c.attrs.s || 0)] || { code: 'General', date: false };
+  const style = xfFormats[Number(c.attrs.s || 0)] || { code: 'General', date: false, look: null };
   const vEl = xlChild(c, 'v');
   const v = vEl ? vEl.text : null;
   let value = null, error = null;
@@ -241,7 +265,67 @@ function xlReadCell(c, col, row, strings, xfFormats, date1904){
     } else formula = text;
   }
   return { col, row, address: xlAddress(col, row), value, error, formula, shared, array, dataTable,
-    date: typeof value === 'number' && style.date, format: style.code };
+    date: typeof value === 'number' && style.date, format: style.code, look: style.look || null };
+}
+
+// ---------- a style's look ----------
+// A font's <b/> or <i/>: on unless val says 0 or false.
+function xlOn(el){ return !!el && el.attrs.val !== '0' && el.attrs.val !== 'false'; }
+
+// Excel's first sixteen indexed colours (the rest, and 64, the automatic colour: none).
+const XL_INDEXED = ['000000', 'FFFFFF', 'FF0000', '00FF00', '0000FF', 'FFFF00', 'FF00FF', '00FFFF',
+  '000000', 'FFFFFF', 'FF0000', '00FF00', '0000FF', 'FFFF00', 'FF00FF', '00FFFF'];
+
+// The theme's colours by Excel's theme number: 0 light 1, 1 dark 1, 2 light 2, 3 dark 2,
+// 4–9 the accents, 10 and 11 the links (the scheme lists the darks first). Each as RRGGBB.
+export function xlThemeColours(doc){
+  const find = (el, name) => { if(!el) return null; if(el.name === name) return el; for(const c of el.children){ const f = find(c, name); if(f) return f; } return null; };
+  const scheme = find(doc, 'clrScheme');
+  if(!scheme) return [];
+  const hexOf = (name) => {
+    const e = xlChild(scheme, name);
+    const srgb = xlChild(e, 'srgbClr'), sys = xlChild(e, 'sysClr');
+    const v = srgb ? srgb.attrs.val : sys ? sys.attrs.lastClr : null;
+    return typeof v === 'string' && /^[0-9a-fA-F]{6}$/.test(v) ? v.toUpperCase() : null;
+  };
+  return ['lt1', 'dk1', 'lt2', 'dk2', 'accent1', 'accent2', 'accent3', 'accent4', 'accent5', 'accent6', 'hlink', 'folHlink'].map(hexOf);
+}
+
+// A style's colour (<color rgb="FF0000FF"/>, theme="1" with a tint, indexed="12") as
+// #rrggbb, or null (automatic, or one it can't tell).
+export function xlColour(el, theme){
+  if(!el) return null;
+  let hex = null;
+  const rgb = el.attrs.rgb;
+  if(typeof rgb === 'string' && /^([0-9a-fA-F]{2})?[0-9a-fA-F]{6}$/.test(rgb)) hex = rgb.slice(-6);
+  else if(el.attrs.theme !== undefined) hex = (theme || [])[Number(el.attrs.theme)] || null;
+  else if(el.attrs.indexed !== undefined) hex = XL_INDEXED[Number(el.attrs.indexed)] || null;
+  if(!hex) return null;
+  const tint = Number(el.attrs.tint);
+  if(Number.isFinite(tint) && tint !== 0) hex = xlTint(hex, Math.max(-1, Math.min(1, tint)));
+  return '#' + hex.toLowerCase();
+}
+
+// A colour lightened (tint > 0) or darkened (< 0), as Excel does: on its lightness.
+function xlTint(hex, tint){
+  const [r, g, b] = [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, sat = 0, l = (max + min) / 2;
+  if(max !== min){
+    const d = max - min;
+    sat = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    h /= 6;
+  }
+  l = tint < 0 ? l * (1 + tint) : l * (1 - tint) + tint;
+  const hue = (p, q, t) => { t = (t + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < 1 / 2 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; };
+  let out;
+  if(sat === 0) out = [l, l, l];
+  else {
+    const q = l < 0.5 ? l * (1 + sat) : l + sat - l * sat, p = 2 * l - q;
+    out = [hue(p, q, h + 1 / 3), hue(p, q, h), hue(p, q, h - 1 / 3)];
+  }
+  return out.map(v => Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16).padStart(2, '0')).join('').toUpperCase();
 }
 
 // An ISO date (t="d") as Excel's serial number.

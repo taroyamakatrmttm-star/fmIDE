@@ -372,3 +372,39 @@ test('the workbook generated after Import keeps the sheet\'s rows, titles and bl
   // No Inputs / Calculations / Outputs sections in the layout.
   expect(column(book.getWorksheet('Inputs'))).toEqual(['Inputs', '', 'Units sold', 'Unit price', 'Fixed costs', 'Tax rate']);
 });
+
+test('the workbook generated after Import keeps each row\'s look: bold, text colour, fill, lines and number format', async ({ page }) => {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Model');
+  ['B', 'C', 'D'].forEach((c, i) => { ws.getCell(c + '1').value = 2026 + i; });
+  ws.getCell('A2').value = 'Income';
+  ws.getCell('A2').font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  ws.getCell('A2').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF000C3F' } };
+  ws.getCell('A3').value = 'Growth';
+  ['B', 'C', 'D'].forEach(c => { const x = ws.getCell(c + '3'); x.value = 0.05; x.numFmt = '0.0%'; x.font = { color: { argb: 'FF0000FF' } }; });
+  ws.getCell('A4').value = 'Revenue';
+  ['B', 'C', 'D'].forEach((c, i) => { const x = ws.getCell(c + '4'); x.value = i ? { formula: String.fromCharCode(65 + i) + '4*(1+' + c + '3)', result: 100 * Math.pow(1.05, i) } : 100; x.numFmt = '#,##0.0'; });
+  ws.getCell('A5').value = 'Total';
+  ws.getCell('A5').font = { bold: true };
+  ['B', 'C', 'D'].forEach((c, i) => { const x = ws.getCell(c + '5'); x.value = { formula: c + '4*2', result: 200 * Math.pow(1.05, i) }; x.border = { top: { style: 'thin', color: { argb: 'FF000000' } } }; });
+  const file = { name: 'look.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: Buffer.from(await wb.xlsx.writeBuffer()) };
+  await X.openExporter(page);
+  await importFile(page, file);
+  await page.locator('#importOk').click();
+  await page.locator('#importReportClose').click();
+  const { bytes } = await X.generate(page);
+  const out = (await X.readBack(bytes)).getWorksheet('Model');
+  const rowOf = (label) => { for(let r = 1; r <= out.rowCount; r++) if(out.getCell('A' + r).value === label) return r; return 0; };
+  const title = out.getCell('A' + rowOf('Income'));
+  expect(title.font.bold).toBe(true);
+  expect(title.font.color.argb).toBe('FFFFFFFF');
+  expect(title.fill.fgColor.argb).toBe('FF000C3F');
+  const growth = out.getCell('E' + rowOf('Growth'));
+  expect(growth.numFmt).toBe('0.0%');
+  expect(growth.font.color.argb).toBe('FF0000FF');
+  expect(out.getCell('E' + rowOf('Revenue')).numFmt).toBe('#,##0.0');
+  const total = out.getCell('F' + rowOf('Total'));
+  expect(total.font.bold).toBe(true);
+  expect(total.border.top.style).toBe('thin');
+  expect(total.border.bottom).toBeUndefined();
+});
