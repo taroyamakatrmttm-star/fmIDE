@@ -253,8 +253,32 @@
     existing.forEach(el => el.remove());
 
     renderEdges();
+    fitCanvasToNodes();
     refreshCommandStates();
     if(phoneReady) phoneRefreshSoon(); // on a phone, its numbers follow (21b-phone.js)
+  }
+
+  // The canvas grows to hold every node of the canvas shown, with room beyond, so a model laid
+  // out further than 3600 × 2400 (an Excel sheet imported by ExcelExporter, a file from
+  // elsewhere) can be scrolled to; it is never smaller than that, and never more than
+  // CANVAS_MAX either way (a node a file puts further away stays out of reach rather than
+  // making the page enormous). Only the CSS variables change: a node keeps its place.
+  const CANVAS_MIN_W = 3600, CANVAS_MIN_H = 2400, CANVAS_ROOM = 600, CANVAS_MAX = 100000;
+  let canvasExtent = { w: CANVAS_MIN_W, h: CANVAS_MIN_H };
+  function fitCanvasToNodes(){
+    let w = CANVAS_MIN_W, h = CANVAS_MIN_H;
+    for(const n of nodes){
+      const right = (Number(n.x) || 0) + (Number(n.w) || 170) + CANVAS_ROOM;
+      const bottom = (Number(n.y) || 0) + (Number(n.h) || 64) + CANVAS_ROOM;
+      if(right > w) w = right;
+      if(bottom > h) h = bottom;
+    }
+    w = Math.min(CANVAS_MAX, Math.ceil(w / 100) * 100);
+    h = Math.min(CANVAS_MAX, Math.ceil(h / 100) * 100);
+    if(w === canvasExtent.w && h === canvasExtent.h) return;
+    canvasExtent = { w, h };
+    document.documentElement.style.setProperty('--canvas-w', w + 'px');
+    document.documentElement.style.setProperty('--canvas-h', h + 'px');
   }
 
   function blockPortsOf(defCanvas){

@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmIDE: large models scroll all the way
+- The canvas grows to hold every node of the canvas shown (with room beyond, at any zoom), instead of being a fixed 3600 × 2400 area: a large model, such as an Excel model imported by ExcelExporter, can now be scrolled to its end. Never smaller than before; at most 100,000 pixels either way.
+
 ## ExcelExporter: importing models with actuals and a forecast (step 20, after a real model)
 - A row whose actual years are typed and whose forecast is a formula (or with one formula for the actual years and another for the forecast) is imported **in parts**: it reads its typed numbers in the actual years and its formula in the forecast, instead of keeping the forecast as fixed numbers. A formula reading the column before the first period reads that cell, as Excel does (a blank is 0). Two rows reading each other in different years are no longer taken for a circular reference.
 

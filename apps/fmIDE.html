@@ -653,7 +653,9 @@
   #viewport{ position:absolute; top:calc(var(--ribbon-h) + 40px); left:0; right:0; bottom:0; overflow:auto; background:var(--canvas-bg); }
   /* Zoom (step 13): #canvas is scaled inside #canvasZoom, which takes the scaled size so the
      viewport scrolls over all of it. At 100% nothing is transformed. */
-  #canvasZoom{ position:relative; width:calc(3600px * var(--zoom, 1)); height:calc(2400px * var(--zoom, 1)); overflow:hidden; }
+  /* The canvas grows to hold every node (--canvas-w / --canvas-h, set by fitCanvasToNodes in
+     07-rendering.js); never smaller than 3600 × 2400. */
+  #canvasZoom{ position:relative; width:calc(var(--canvas-w, 3600px) * var(--zoom, 1)); height:calc(var(--canvas-h, 2400px) * var(--zoom, 1)); overflow:hidden; }
   #viewport.zoomed #canvas{ transform:scale(var(--zoom)); transform-origin:0 0; }
   #viewport.zoomed #canvas > .op-picker, #viewport.zoomed #canvas > .tag-popup{ transform:scale(var(--unzoom)); transform-origin:0 0; }
   .zoom-control{
@@ -676,11 +678,11 @@
   .zoom-menu button:disabled{ color:#94a3b8; cursor:default; }
   .zoom-menu hr{ border:none; border-top:1px solid #e2e8f0; margin:4px 2px; }
   #canvas{
-    position:relative; width:3600px; height:2400px;
+    position:relative; width:var(--canvas-w, 3600px); height:var(--canvas-h, 2400px);
     background-image:radial-gradient(var(--dot) 1px, transparent 1px);
     background-size:22px 22px;
   }
-  svg#edges{ position:absolute; top:0; left:0; width:3600px; height:2400px; pointer-events:none; }
+  svg#edges{ position:absolute; top:0; left:0; width:var(--canvas-w, 3600px); height:var(--canvas-h, 2400px); pointer-events:none; }
   svg#edges g.edge{ pointer-events:auto; cursor:pointer; }
   svg#edges path.hit{ fill:none; stroke:transparent; stroke-width:16; }
   svg#edges path.line{ fill:none; stroke:var(--edge); stroke-width:2; }
@@ -694,8 +696,8 @@
     pointer-events:none; z-index:46;
   }
   .guide{ position:absolute; background:var(--guide); pointer-events:none; z-index:45; display:none; }
-  .guide-v{ width:1px; top:0; height:2400px; }
-  .guide-h{ height:1px; left:0; width:3600px; }
+  .guide-v{ width:1px; top:0; height:var(--canvas-h, 2400px); }
+  .guide-h{ height:1px; left:0; width:var(--canvas-w, 3600px); }
   .guide.show{ display:block; }
   /* Step 12a: while a drag snaps to equal spacing, each equal gap gets a bar with end caps. */
   #gapMarks{ position:absolute; left:0; top:0; width:0; height:0; pointer-events:none; z-index:46; }
@@ -2536,6 +2538,16 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // entry: ids, dates in order, commands and topics that exist.
   // **A change people will notice adds its entry here in the same pull request.**
   const WHATS_NEW = [
+    { id: 'canvas-grows', date: '2026-10-18', title: 'Large models scroll all the way',
+      summary: 'The canvas now grows to hold every node, so a big model (such as an Excel model imported by ExcelExporter) can be scrolled to its end.',
+      what: [
+        'The canvas used to be a fixed area, 3600 × 2400 pixels: anything placed further right or down was in the model and calculated, but couldn\'t be scrolled to.',
+        'Now it grows to fit the canvas shown, with some room beyond, at any zoom. It is never smaller than before.',
+      ],
+      why: 'A model imported from Excel can be thousands of pixels tall; you couldn\'t reach its lower rows.',
+      how: ['Open the model.', 'Scroll down or right as far as it goes: every node is there.'],
+      see: ['canvases'] },
+
     { id: 'fmgraph-boards-in-excel', date: '2026-10-16', title: 'fmGraph boards in Excel',
       summary: 'ExcelExporter rebuilds your fmGraph boards in the workbook: scenarios, Tornado and Spider, sliders and charts on a Dashboard. A new tutorial shows how.',
       what: [
@@ -9272,8 +9284,32 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     existing.forEach(el => el.remove());
 
     renderEdges();
+    fitCanvasToNodes();
     refreshCommandStates();
     if(phoneReady) phoneRefreshSoon(); // on a phone, its numbers follow (21b-phone.js)
+  }
+
+  // The canvas grows to hold every node of the canvas shown, with room beyond, so a model laid
+  // out further than 3600 × 2400 (an Excel sheet imported by ExcelExporter, a file from
+  // elsewhere) can be scrolled to; it is never smaller than that, and never more than
+  // CANVAS_MAX either way (a node a file puts further away stays out of reach rather than
+  // making the page enormous). Only the CSS variables change: a node keeps its place.
+  const CANVAS_MIN_W = 3600, CANVAS_MIN_H = 2400, CANVAS_ROOM = 600, CANVAS_MAX = 100000;
+  let canvasExtent = { w: CANVAS_MIN_W, h: CANVAS_MIN_H };
+  function fitCanvasToNodes(){
+    let w = CANVAS_MIN_W, h = CANVAS_MIN_H;
+    for(const n of nodes){
+      const right = (Number(n.x) || 0) + (Number(n.w) || 170) + CANVAS_ROOM;
+      const bottom = (Number(n.y) || 0) + (Number(n.h) || 64) + CANVAS_ROOM;
+      if(right > w) w = right;
+      if(bottom > h) h = bottom;
+    }
+    w = Math.min(CANVAS_MAX, Math.ceil(w / 100) * 100);
+    h = Math.min(CANVAS_MAX, Math.ceil(h / 100) * 100);
+    if(w === canvasExtent.w && h === canvasExtent.h) return;
+    canvasExtent = { w, h };
+    document.documentElement.style.setProperty('--canvas-w', w + 'px');
+    document.documentElement.style.setProperty('--canvas-h', h + 'px');
   }
 
   function blockPortsOf(defCanvas){
