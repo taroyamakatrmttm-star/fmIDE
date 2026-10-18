@@ -45,6 +45,7 @@ function rectSelect(selectedKey, onlyInputs){
     if(r.key === selectedKey) o.selected = true;
     g.appendChild(o);
   });
+  makeSearchable(sel); // a press, Enter or a letter opens a search over it (05j-rect-search.js)
   return sel;
 }
 

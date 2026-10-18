@@ -443,6 +443,18 @@
   .scenario-hint{ font-size:12.5px; }
   .peek-actions{ display:flex; gap:8px; }
   .peek-actions button{ flex:1 1 0; }
+
+  /* Searching a rectangle list (05j-rect-search.js): a box under (or above) the list. */
+  .rect-search{ position:fixed; z-index:60; display:flex; flex-direction:column; background:var(--card); border:1px solid var(--line-strong); border-radius:9px; box-shadow:0 10px 28px rgba(15,23,42,.18); overflow:hidden; }
+  .rect-search-input{ font:inherit; font-size:14px; margin:8px; padding:6px 9px; border:1px solid var(--line-strong); border-radius:7px; }
+  .rect-search-list{ overflow-y:auto; padding:0 4px 6px; min-height:0; flex:1; }
+  .rect-search-group{ font-weight:700; font-size:12.5px; padding:7px 8px 3px; color:var(--ink); }
+  .rect-search-item{ display:flex; justify-content:space-between; gap:10px; padding:5px 10px 5px 20px; border-radius:6px; cursor:pointer; font-size:13px; }
+  .rect-search-item.current{ font-weight:600; }
+  .rect-search-item.active{ background:var(--brand-soft); box-shadow:inset 3px 0 0 var(--brand); }
+  .rect-search-item b{ color:var(--brand-dark); }
+  .rect-search-canvas{ color:var(--soft-ink); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:45%; }
+  .rect-search-none{ padding:8px 10px; color:var(--soft-ink); font-size:13px; }
 /* The Help panel (build step 10; docs/step10-help.md), shared by fmIDE and ExcelExporter with
    src/shared/help-panel.js. Each app sets --help-top (where the panel starts) and makes room
    for the panel under body.help-open. */
@@ -4356,6 +4368,7 @@ function rectSelect(selectedKey, onlyInputs){
     if(r.key === selectedKey) o.selected = true;
     g.appendChild(o);
   });
+  makeSearchable(sel); // a press, Enter or a letter opens a search over it (05j-rect-search.js)
   return sel;
 }
 
@@ -7273,6 +7286,240 @@ async function shareBoardFile(){
   return how;
 }
 // ============================================================
+// Searching a rectangle list (the owner's request, 18 October 2026): every list choosing a
+// rectangle — a bar's, a slider's, a chart's parts, outputs and inputs — opens a search box
+// over its rectangles instead of the long list, as fmIDE's template and shortcut searches do
+// (the same fuzzy match, shared/fuzzy-match.js): type to narrow it, best match first, with
+// the canvas beside each; ↑ ↓ choose, Enter takes it, Esc or a click elsewhere closes.
+// - A mouse press on the list opens it (it follows the list when the page scrolls); so do Enter, Space, F4, Alt+↓ or typing a letter while
+//   the list has the focus (the letter starts the search). The arrow keys alone still step
+//   through the list as before, and a finger gets the device's own list.
+// - The list itself stays a <select>: taking a rectangle sets its value and sends `change`,
+//   exactly as choosing it there does. Names are shown as text (textContent).
+// ============================================================
+
+// ---------- fuzzy match (shared: src/shared/fuzzy-match.js; fmIDE's Command Launcher and
+// searches, fmGraph's rectangle search) ----------
+// Returns { score, idx } or null: does `q` match `text`, and how well — a run of the letters
+// as typed scores highest (higher still at the start of a word), else the letters in order,
+// a letter right after the last or at a word's start scoring higher. idx: where they matched.
+function fuzzyMatch(q, text){
+  const t = String(text).toLowerCase();
+  q = String(q).toLowerCase().trim();
+  if(!q) return { score: 0, idx: [] };
+  const sub = t.indexOf(q);
+  if(sub >= 0){
+    const wordStart = sub === 0 || /[^a-z0-9]/.test(t[sub - 1]);
+    return { score: 1000 - sub + (wordStart ? 200 : 0) - t.length * 0.1, idx: Array.from({ length: q.length }, (_, k) => sub + k) };
+  }
+  const idx = [];
+  let ti = 0, score = 0, prev = -2;
+  for(const ch of q){
+    if(ch === ' ') continue;
+    const found = t.indexOf(ch, ti);
+    if(found < 0) return null;
+    idx.push(found);
+    if(found === prev + 1) score += 15;
+    if(found === 0 || /[^a-z0-9]/.test(t[found - 1])) score += 25;
+    score -= (found - ti);
+    prev = found; ti = found + 1;
+  }
+  return { score, idx };
+}
+
+let rectSearch = null; // { sel, box, input, list, items, shown, active } while open
+
+function makeSearchable(sel){
+  sel.addEventListener('mousedown', (ev) => {
+    if(ev.button !== 0 || sel.disabled || isEmulatedMouse(ev)) return;
+    pressDefault(ev); // no native list
+    sel.focus();
+    openRectSearch(sel, '');
+  });
+  sel.addEventListener('keydown', (ev) => {
+    if(sel.disabled || ev.ctrlKey || ev.metaKey) return;
+    const opens = ev.key === 'Enter' || ev.key === ' ' || ev.key === 'F4' || (ev.altKey && ev.key === 'ArrowDown');
+    const letter = !ev.altKey && ev.key.length === 1 && ev.key !== ' ';
+    if(!opens && !letter) return;
+    ev.preventDefault();
+    openRectSearch(sel, letter ? ev.key : '');
+  });
+}
+
+// The list's entries, as the <select> holds them: { value, text, group, selected }.
+function rectSearchItems(sel){
+  const out = [];
+  [...sel.children].forEach(ch => {
+    if(ch.tagName === 'OPTGROUP') [...ch.children].forEach(o => out.push({ value: o.value, text: o.textContent, group: ch.label, selected: o.selected }));
+    else if(ch.tagName === 'OPTION') out.push({ value: ch.value, text: ch.textContent, group: '', selected: ch.selected });
+  });
+  return out;
+}
+
+function openRectSearch(sel, typed){
+  closeRectSearch(false);
+  const box = make('div', 'rect-search');
+  box.id = 'rectSearch';
+  const input = make('input', 'rect-search-input');
+  input.type = 'search';
+  input.placeholder = 'Search rectangles…';
+  input.setAttribute('autocomplete', 'off');
+  input.spellcheck = false;
+  input.setAttribute('aria-label', 'Search ' + (sel.getAttribute('aria-label') || 'rectangles').toLowerCase());
+  input.setAttribute('role', 'combobox');
+  input.setAttribute('aria-expanded', 'true');
+  input.setAttribute('aria-controls', 'rectSearchList');
+  const list = make('div', 'rect-search-list');
+  list.id = 'rectSearchList';
+  list.setAttribute('role', 'listbox');
+  box.append(input, list);
+  document.body.appendChild(box);
+  rectSearch = { sel, box, input, list, items: rectSearchItems(sel), shown: [], active: -1 };
+  placeRectSearch();
+  input.value = typed;
+  input.addEventListener('input', renderRectSearch);
+  input.addEventListener('keydown', rectSearchKey);
+  list.addEventListener('mousedown', (ev) => ev.preventDefault()); // the search box keeps the focus
+  list.addEventListener('click', (ev) => {
+    const row = ev.target.closest('.rect-search-item');
+    if(row) pickRectSearch(Number(row.dataset.i));
+  });
+  document.addEventListener('pointerdown', rectSearchOutside, true);
+  window.addEventListener('resize', rectSearchScroll);
+  document.addEventListener('scroll', rectSearchScroll, true);
+  renderRectSearch();
+  input.focus();
+  if(!typed) input.select();
+}
+
+// Under the list, or above it when there is more room there; at least the list's width.
+function placeRectSearch(){
+  const { sel, box } = rectSearch;
+  const r = sel.getBoundingClientRect();
+  const width = Math.min(window.innerWidth - 16, Math.max(r.width, 300));
+  const below = window.innerHeight - r.bottom - 8, above = r.top - 8;
+  const up = below < 240 && above > below;
+  const height = Math.max(160, Math.min(380, up ? above : below));
+  box.style.width = width + 'px';
+  box.style.left = Math.max(8, Math.min(r.left, window.innerWidth - width - 8)) + 'px';
+  box.style.maxHeight = height + 'px';
+  if(up){ box.style.top = ''; box.style.bottom = (window.innerHeight - r.top + 2) + 'px'; }
+  else { box.style.bottom = ''; box.style.top = (r.bottom + 2) + 'px'; }
+}
+
+// No search: every rectangle under its canvas, as the list shows them. A search: the matches,
+// best first — on the name, else on the canvas's name — each with its canvas beside it.
+function renderRectSearch(){
+  const st = rectSearch;
+  const q = st.input.value.trim();
+  st.list.textContent = '';
+  if(!q){
+    st.shown = st.items.map((it, i) => ({ i, idx: [] }));
+  } else {
+    st.shown = st.items.map((it, i) => {
+      const onName = fuzzyMatch(q, it.text);
+      if(onName) return { i, idx: onName.idx, score: onName.score + 2000 };
+      const onGroup = it.group ? fuzzyMatch(q, it.group) : null;
+      return onGroup ? { i, idx: [], score: onGroup.score } : null;
+    }).filter(Boolean).sort((a, b) => b.score - a.score || a.i - b.i);
+  }
+  let group = null;
+  st.shown.forEach((m, k) => {
+    const it = st.items[m.i];
+    if(!q && it.group !== group){
+      group = it.group;
+      if(group) st.list.appendChild(make('div', 'rect-search-group', group));
+    }
+    const row = make('div', 'rect-search-item' + (it.selected ? ' current' : ''));
+    row.dataset.i = String(k);
+    row.setAttribute('role', 'option');
+    row.id = 'rectSearchItem' + k;
+    const name = make('span', 'rect-search-name');
+    rectSearchMarked(name, it.text, m.idx);
+    row.appendChild(name);
+    if(q && it.group) row.appendChild(make('span', 'rect-search-canvas', it.group));
+    st.list.appendChild(row);
+  });
+  if(!st.shown.length) st.list.appendChild(make('div', 'rect-search-none', 'No rectangle matches "' + q + '".'));
+  const current = st.shown.findIndex(m => st.items[m.i].selected);
+  setRectSearchActive(q ? 0 : Math.max(0, current));
+}
+
+// The name with the matched letters in bold, all as text.
+function rectSearchMarked(el, text, idx){
+  const set = new Set(idx);
+  let buf = '';
+  for(let i = 0; i < text.length; i++){
+    if(set.has(i)){
+      if(buf){ el.appendChild(document.createTextNode(buf)); buf = ''; }
+      el.appendChild(make('b', null, text[i]));
+    } else buf += text[i];
+  }
+  if(buf) el.appendChild(document.createTextNode(buf));
+}
+
+function setRectSearchActive(k){
+  const st = rectSearch;
+  if(!st.shown.length){ st.active = -1; st.input.removeAttribute('aria-activedescendant'); return; }
+  st.active = Math.max(0, Math.min(st.shown.length - 1, k));
+  st.list.querySelectorAll('.rect-search-item').forEach(row => {
+    const on = Number(row.dataset.i) === st.active;
+    row.classList.toggle('active', on);
+    row.setAttribute('aria-selected', on ? 'true' : 'false');
+    if(on){
+      st.input.setAttribute('aria-activedescendant', row.id);
+      const top = row.offsetTop, bottom = top + row.offsetHeight;
+      if(top < st.list.scrollTop) st.list.scrollTop = top - (row.previousSibling && row.previousSibling.classList.contains('rect-search-group') ? row.previousSibling.offsetHeight : 0);
+      else if(bottom > st.list.scrollTop + st.list.clientHeight) st.list.scrollTop = bottom - st.list.clientHeight;
+    }
+  });
+}
+
+function rectSearchKey(ev){
+  const st = rectSearch;
+  if(!st) return;
+  const page = Math.max(1, Math.floor(st.list.clientHeight / 28));
+  const moves = { ArrowDown: 1, ArrowUp: -1, PageDown: page, PageUp: -page };
+  if(moves[ev.key]){ ev.preventDefault(); setRectSearchActive(st.active + moves[ev.key]); return; }
+  if(ev.key === 'Enter'){ ev.preventDefault(); if(st.active >= 0) pickRectSearch(st.active); return; }
+  if(ev.key === 'Escape'){ ev.preventDefault(); ev.stopPropagation(); closeRectSearch(true); return; }
+  if(ev.key === 'Tab'){ closeRectSearch(false); }
+}
+
+function pickRectSearch(k){
+  const st = rectSearch;
+  const m = st && st.shown[k];
+  if(!m) return;
+  const sel = st.sel, value = st.items[m.i].value;
+  closeRectSearch(true);
+  if(sel.value === value) return;
+  // The change usually draws the widget again: the focus goes to the list in the same place.
+  const at = [...document.querySelectorAll('select')].indexOf(sel);
+  sel.value = value;
+  sel.dispatchEvent(new Event('change', { bubbles: true }));
+  if(!sel.isConnected){ const again = document.querySelectorAll('select')[at]; if(again) again.focus(); }
+}
+
+function closeRectSearch(refocus){
+  const st = rectSearch;
+  if(!st) return;
+  rectSearch = null;
+  document.removeEventListener('pointerdown', rectSearchOutside, true);
+  window.removeEventListener('resize', rectSearchScroll);
+  document.removeEventListener('scroll', rectSearchScroll, true);
+  st.box.remove();
+  if(refocus && st.sel.isConnected) st.sel.focus();
+}
+function rectSearchOutside(ev){
+  if(rectSearch && !rectSearch.box.contains(ev.target) && ev.target !== rectSearch.sel) closeRectSearch(false);
+}
+// The page scrolling or resizing: the box follows the list (its own list scrolling is left alone).
+function rectSearchScroll(ev){
+  if(!rectSearch || rectSearch.box.contains(ev.target)) return;
+  if(!rectSearch.sel.isConnected){ closeRectSearch(false); return; }
+  placeRectSearch();
+}
+// ============================================================
 // The page: opening a model (the file picker, a file dropped anywhere, the sample, or fmIDE),
 // the top bar's buttons, and ← Back to fmIDE.
 // ============================================================
@@ -8590,7 +8837,7 @@ const FMGRAPH_HELP_TOPICS = [
     keywords: 'bar chart value period periods ghost outline difference error',
     summary: 'A rectangle\'s value in each period you choose.',
     body: [
-      { p: 'A bar widget shows one rectangle\'s value as a bar for each period: all periods, one period, or a range of periods. Choose the rectangle at the top of the widget.' },
+      { p: 'A bar widget shows one rectangle\'s value as a bar for each period: all periods, one period, or a range of periods. Choose the rectangle at the top of the widget: click the list (or press Enter, or start typing on it) and type part of a name to find it — best match first, with its canvas beside it; ↑ ↓ and Enter take one, Esc closes. Every list of rectangles in fmGraph works this way.' },
       { p: 'When a slider has changed something it reaches, a dashed outline shows the model\'s own value and a label shows the difference, for example +250 (+12%) — or A\'s value, while one is pinned (see Comparing two what-ifs). Point at a bar to read its numbers.' },
       { p: 'A bar marked ! couldn\'t be worked out in that period (for example a division by zero); the reason is listed below the chart.' },
       { steps: ['Press + Bar at the top.', 'Choose a rectangle from the list.', 'Choose which periods to show.'] },
@@ -8773,6 +9020,17 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'rectangle-search', date: '2026-10-18', title: 'Find a rectangle by typing',
+    summary: 'Every list of rectangles — a bar\'s, a slider\'s, a chart\'s steps, groups, outputs and inputs — now opens a search box.',
+    what: [
+      'Click a rectangle list and a search box opens over it, with every rectangle under its canvas. Type part of a name: the matches come first, best match first, with the canvas beside each.',
+      'It matches the way fmIDE\'s template and command searches do: the letters in order, so "cogs" finds "Cost of goods sold".',
+      '↑ ↓ choose, Enter takes it, Esc closes. Pressing Enter or typing a letter on the list opens the search too.',
+    ],
+    why: 'In a large model, scrolling a long list to pick each waterfall step took a lot of time.',
+    how: ['Open Edit chart on a waterfall.', 'Click a step\'s rectangle and type part of its name.', 'Press Enter.'],
+    see: ['bars', 'charts'] },
+
   { id: 'slider-range-stays-open', date: '2026-10-18', title: 'Range and step stays open while you change it',
     summary: 'Changing a slider\'s From, to or step no longer closes its Range and step.',
     what: ['After you change From, to or step and press Tab or click the next box, Range and step stays open and the cursor is in the box you went to, so you can set all three in one go.'],
