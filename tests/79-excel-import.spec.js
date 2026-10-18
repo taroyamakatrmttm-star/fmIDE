@@ -735,3 +735,30 @@ test('the check finds a saved value the formula doesn\'t give, matches Excel\'s 
   expect([c3.compared, c3.noSaved]).toEqual([0, 4]);
   expect(none.report.noSaved).toBe(4);
 });
+
+// ---------- 20g: the canvas ----------
+
+test('the canvases: no two nodes on top of each other, the rectangles in one column in the sheet\'s order', async () => {
+  // fmIDE's default sizes (docs/file-formats.md): rectangles and aliases 170 × 64, operators and
+  // period shifts 56 × 56 (a word operator up to 100 wide).
+  const box = (n) => {
+    const w = n.type === 'value' || n.type === 'alias' ? 170 : (n.type === 'operator' && n.text.length > 1 ? 100 : 56);
+    const h = n.type === 'value' || n.type === 'alias' ? 64 : 56;
+    return { x1: n.x, y1: n.y, x2: n.x + w, y2: n.y + h };
+  };
+  for(const file of SAMPLES){
+    const { system, report } = await importBook(bytesOf(file));
+    for(const c of system.canvases){
+      const boxes = c.nodes.map(n => ({ id: n.id, ...box(n) }));
+      for(let i = 0; i < boxes.length; i++) for(let j = i + 1; j < boxes.length; j++){
+        const a = boxes[i], b = boxes[j];
+        const overlap = a.x1 < b.x2 && b.x1 < a.x2 && a.y1 < b.y2 && b.y1 < a.y2;
+        expect(overlap, file + ' ' + c.name + ': ' + a.id + ' and ' + b.id).toBe(false);
+      }
+      const rects = report.rows.filter(r => r.canvasId === c.id).map(r => c.nodes.find(n => n.id === r.nodeId));
+      expect(new Set(rects.map(n => n.x)).size, file + ' ' + c.name).toBe(1);
+      expect(rects.map(n => n.y), file + ' ' + c.name).toEqual(rects.map(n => n.y).slice().sort((a, b) => a - b));
+      expect(Math.max(...c.nodes.map(n => n.x)), file + ' ' + c.name).toBe(rects[0].x);
+    }
+  }
+});

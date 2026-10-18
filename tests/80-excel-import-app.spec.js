@@ -7,11 +7,16 @@
 // and loads it (the message says what was kept as Excel's saved values); Generate writes it.
 // Phase 20f: the report after Import — how the model compares with Excel's saved values, what
 // was kept and why, the cells unlike their row — and File → Import Report… while that model is
-// shown.
+// shown. Phase 20g: Save for fmIDE, and the end-to-end test: the workbook imported, generated
+// again by ExcelExporter and recalculated by LibreOffice gives the original's saved values, and
+// the saved file opened in fmIDE gives them too.
 const path = require('path');
 const JSZip = require('jszip');
 const { test, expect, fixture } = require('./helpers/apps');
 const X = require('./helpers/excel');
+const FM = require('./helpers/fmide');
+const ExcelJS = require('exceljs');
+const { requireSoffice, recalc, valueOf } = require('./helpers/soffice');
 
 const sample = (name) => fixture('excel-import', name);
 const sheetBox = (page, i) => page.locator('#importSheets .import-sheet').nth(i);
@@ -196,4 +201,89 @@ test('the report lists cells whose saved value the model doesn\'t give, and says
   await importFile(page, await make('unsaved.xlsx', ['', '']));
   await page.locator('#importOk').click();
   await expect(page.locator('#importCheckSummary')).toHaveText('Nothing to compare: the workbook was saved without its formulas\' values. Save it in Excel, then import it again.');
+});
+
+// Excel's saved values of a sample's rows: { sheet: { label: [value per period] } }.
+async function savedValues(file){
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.readFile(file);
+  const out = {};
+  wb.eachSheet(ws => {
+    out[ws.name] = {};
+    ws.eachRow((row, r) => {
+      const label = row.getCell(1).value;
+      if(typeof label !== 'string' || r <= 3) return;
+      const periods = ['D', 'E', 'F', 'G', 'H'].map(c => valueOf(ws.getCell(c + r)));
+      // An assumption: its one number, in column C, for every period.
+      const one = valueOf(ws.getCell('C' + r));
+      out[ws.name][label] = periods.every(v => v === null) && typeof one === 'number' ? periods.map(() => one) : periods.map(v => v === undefined || v === null ? 0 : v);
+    });
+  });
+  return out;
+}
+const near = (a, b) => typeof a === 'number' && Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(b));
+
+test('Save for fmIDE writes the imported model as a system file, from the report and from the File menu', async ({ page }) => {
+  await X.openExporter(page);
+  await expect(page.locator('#btnSaveForFmide')).toBeHidden();
+  await importFile(page, sample('02-corkscrew.xlsx'));
+  await page.locator('#importOk').click();
+  const fromReport = await FM.downloadJson(page, () => page.locator('#importSave').click());
+  expect(fromReport.name).toBe('02-corkscrew.json');
+  expect([fromReport.data.kind, fromReport.data.version, fromReport.data.periods.length]).toEqual(['system', 9, 5]);
+  expect(fromReport.data.canvases.map(c => c.name)).toEqual(['Assets']);
+  await page.locator('#importReportClose').click();
+  await expect(page.locator('#loadStatus .status.ok')).toHaveText('Saved 02-corkscrew.json — open it in fmIDE with File → Open….');
+  const fromMenu = await FM.downloadJson(page, () => X.menuCommand(page, 'btnSaveForFmide'));
+  expect(fromMenu.data).toEqual(fromReport.data);
+});
+
+test('end to end: Excel → fmIDE model → ExcelExporter\'s workbook, recalculated by LibreOffice, and fmIDE give the original\'s saved values', async ({ page }) => {
+  requireSoffice(test);
+  const file = sample('03-two-sheets.xlsx');
+  const want = await savedValues(file);
+  await X.openExporter(page);
+  await importFile(page, file);
+  await page.locator('#importOk').click();
+  await expect(page.locator('#importCheckSummary')).toHaveText('All 45 calculated cells agree with Excel\'s saved values.');
+  const saved = await FM.downloadJson(page, () => page.locator('#importSave').click());
+  await page.locator('#importReportClose').click();
+  // ExcelExporter's own workbook of the imported model, recalculated.
+  const { bytes } = await X.generate(page);
+  const out = await X.readBack(recalc({ book: bytes }).book);
+  let compared = 0;
+  for(const sheet of ['Inputs', 'Calc']){
+    const ws = out.getWorksheet(sheet);
+    let first = null;
+    ws.getRow(3).eachCell((c, col) => { if(c.value === 1 && first === null) first = col; });
+    expect(first, sheet).not.toBeNull();
+    for(const [label, values] of Object.entries(want[sheet])){
+      let row = null;
+      ws.eachRow((r, n) => { if(r.getCell(1).value === label && row === null) row = n; });
+      if(row === null) continue; // a title
+      values.forEach((v, p) => {
+        const got = valueOf(ws.getCell(row, first + p));
+        expect(near(got === undefined ? 0 : got, v), sheet + ' ' + label + ' period ' + (p + 1) + ': ' + got + ' against ' + v).toBe(true);
+        compared++;
+      });
+    }
+  }
+  expect(compared).toBeGreaterThanOrEqual(60);
+
+  // The saved file opened in fmIDE.
+  const fm = await page.context().newPage();
+  await FM.openFmIDE(fm);
+  const path2 = require('path').join(test.info().outputDir, saved.name);
+  require('fs').mkdirSync(test.info().outputDir, { recursive: true });
+  require('fs').writeFileSync(path2, JSON.stringify(saved.data));
+  await fm.setInputFiles('#fileInputDocument', path2);
+  await expect.poll(() => fm.evaluate(() => fm.canvases().map(c => c.name)).catch(() => null)).toEqual(['Inputs', 'Calc']);
+  const calc = saved.data.canvases.find(c => c.name === 'Calc');
+  await fm.evaluate(() => fm.switchCanvas('Calc'));
+  for(const label of ['Revenue', 'EBIT', 'Tax', 'Net income', 'Net margin']){
+    const node = calc.nodes.find(n => n.type === 'value' && n.text.split('\n')[0] === label);
+    const got = await fm.evaluate((id) => [1, 2, 3, 4, 5].map(p => fm.getValue('#' + id, p)), node.id);
+    got.forEach((v, p) => expect(near(v, want.Calc[label][p]), 'fmIDE ' + label + ' period ' + (p + 1) + ': ' + v).toBe(true));
+  }
+  await fm.close();
 });

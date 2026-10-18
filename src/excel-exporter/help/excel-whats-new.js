@@ -11,6 +11,18 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'import-excel', date: '2026-10-18', title: 'Import an Excel model',
+    summary: 'File → Import Excel model… rebuilds an Excel workbook as an fmIDE model, and checks it against the values Excel saved.',
+    what: [
+      'A canvas per sheet, a rectangle per row, and operators, period shifts and aliases for the formulas, read row by row.',
+      'Before anything is built, a window shows what was found on each sheet, and you can change the header row, the period columns and the label and unit columns.',
+      'After Import, a report compares every calculated cell with Excel\'s saved value, and lists what was kept as saved values and why.',
+    ],
+    why: 'So a spreadsheet you inherited can be seen, checked and carried on as an fmIDE model, without rebuilding it by hand.',
+    how: ['File → Import Excel model…, and pick the .xlsx (or drop it on the page).', 'Check each sheet\'s periods, labels and rows, then press Import.', 'Read the report, then Save for fmIDE.', 'In fmIDE, File → Open… the saved file.'],
+    notes: ['Lookups, sums across the periods, dates and text keep Excel\'s saved values for now: the report names each one.', 'Macros are never read or run.'],
+    see: ['import-excel'] },
+
   { id: 'fmgraph-charts', date: '2026-10-16', title: 'fmGraph\'s charts on the Dashboard',
     summary: 'Layout → Use fmGraph boards… also turns a board\'s bars and charts into Excel charts on the Dashboard, which follow the sliders.',
     what: [

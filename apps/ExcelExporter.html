@@ -1071,6 +1071,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
           <button type="button" role="menuitem" id="btnMenuPaste" title="Paste a model's JSON text">Paste JSON…</button>
           <button type="button" role="menuitem" id="btnFromFmide" class="hidden" title="Load the model open in fmIDE again, as it is now">↻ From fmIDE</button>
           <button type="button" role="menuitem" id="btnImportExcel" title="Read an Excel workbook (.xlsx) and rebuild it as an fmIDE model">Import Excel model…</button>
+          <button type="button" role="menuitem" id="btnSaveForFmide" class="hidden" title="Save the imported model as a file fmIDE opens (File → Open… in fmIDE)">Save for fmIDE</button>
           <button type="button" role="menuitem" id="btnImportReport" class="hidden" title="What the import translated, and how the model compares with the values Excel saved">Import Report…</button>
           <button type="button" role="menuitem" id="btnImportGraphBoards" class="needs-model" title="Read a board file saved with Export all boards in fmGraph, to use its scenarios, sliders and charts">Import fmGraph boards…</button>
           <div class="menu-sep" role="separator"></div>
@@ -1409,6 +1410,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       <ul id="importReportNotes" class="graph-scenarios"></ul>
     </div>
     <div class="modal-actions">
+      <button id="importSave" title="Save the imported model as a file fmIDE opens (File → Open… in fmIDE)">Save for fmIDE</button>
       <button id="importReportClose" class="primary">Close</button>
     </div>
   </div>
@@ -10605,7 +10607,7 @@ const EXCEL_HELP_TOPICS = [
         'Arrange the tabs (on the left) and the rows (on the right), if you like.',
         'Press ⬇ Generate .xlsx, at the top right.',
       ] },
-      { p: 'Every file you can import or export, and every reset, is in the two menus at the top: File (the model, fmGraph boards, Start Over) and Layout (this model\'s layout, fmGraph\'s scenarios, module layouts, your Excel style). Pointing at a button or a menu item says what it does.' },
+      { p: 'Every file you can import or export, and every reset, is in the two menus at the top: File (the model, importing an Excel model, fmGraph boards, Start Over) and Layout (this model\'s layout, fmGraph\'s scenarios, module layouts, your Excel style). Pointing at a button or a menu item says what it does.' },
       { p: 'Everything happens in your browser: nothing is uploaded, and it works offline.' },
       { p: 'What\'s new, at the top of this Help panel, lists every update to ExcelExporter, newest first, each with what changed, why and how to use it. A dot on ❓ Help means there is something you haven\'t seen yet.' },
       { p: 'This Help panel opens with ❓ or F1. Press ⤢ at its top for a wider reading view (⤡ brings it back), or drag its left edge to any width; it remembers the width.' },
@@ -10624,7 +10626,25 @@ const EXCEL_HELP_TOPICS = [
       { p: 'A system file (Save System) or a workspace (Export Workspace) works too, and File → Paste JSON… takes a model\'s text. The number formats you set in fmIDE come across; how cells look is your own Excel style (⚙ Settings → Excel Style).' },
       { p: 'To see how it works first, press ▶ Load Sample Model (also in the File menu).' },
       { p: 'Your layout (tabs, rows, names, order) is remembered in this browser for each model, so loading the same model again brings it back.' },
-      { see: ['what-is-excelexporter', 'remembered', 'back-to-fmide'] },
+      { p: 'An Excel workbook instead of an fmIDE file? File → Import Excel model… rebuilds it as a model.' },
+      { see: ['what-is-excelexporter', 'import-excel', 'remembered', 'back-to-fmide'] },
+    ] },
+  { id: 'import-excel', group: 'start', title: 'Importing an Excel model',
+    keywords: 'import excel xlsx xlsm workbook spreadsheet rebuild convert fmide model check saved values not translated',
+    summary: 'File → Import Excel model… rebuilds an Excel workbook as an fmIDE model, and checks it against the values Excel saved.',
+    body: [
+      { p: 'ExcelExporter can also go the other way: it reads a financial model built in Excel (.xlsx or .xlsm) and rebuilds it as an fmIDE model, with a canvas per sheet, a rectangle per row, and operators and period shifts for the formulas.' },
+      { steps: [
+        'Choose File → Import Excel model… (or drop the workbook on the page).',
+        'Check what was found for each sheet: the header row of periods, the period columns, the label and unit columns, and each row\'s kind. Change any of them, or untick a sheet to leave it out.',
+        'Press Import. The model loads here, and a report says how it compares with the values Excel saved.',
+        'Press Save for fmIDE (in the report or the File menu), then open the file in fmIDE with File → Open….',
+      ] },
+      { p: 'It reads models laid out with rows as line items and columns as periods, one formula copied along each row. A reference to the column on the left becomes a period shift; a first period typed and the formula after it is an opening balance. SUM, MIN, MAX, AVERAGE, IF, IFERROR, AND, OR, NOT, ROUND, CHOOSE, ABS, LN, EXP, SQRT, INT, TRUNC, MOD and POWER become fmIDE\'s operators.' },
+      { p: 'What it can\'t translate keeps Excel\'s saved values as typed numbers, and the report lists it with why: lookups (VLOOKUP, INDEX, MATCH…), sums across the periods (NPV, IRR, SUMIF, COUNTIF, a running total), dates and text, circular references, and any other function. A cell unlike the rest of its row keeps its saved value in that period.' },
+      { p: 'The report compares every calculated cell with the value Excel saved for it. A workbook saved by a program that keeps no values (ExcelExporter itself is one) has nothing to compare: open it in Excel, save it, and import it again.' },
+      { tip: 'Macros are never read or run, and nothing leaves your browser. Old .xls files and password-protected workbooks can\'t be read: save them as .xlsx without a password first.' },
+      { see: ['load-model', 'what-is-excelexporter'] },
     ] },
   { id: 'back-to-fmide', group: 'start', title: 'Going back to fmIDE',
     keywords: 'back fmide return window close',
@@ -10939,6 +10959,18 @@ const EXCEL_HELP_TOPICS = [
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'import-excel', date: '2026-10-18', title: 'Import an Excel model',
+    summary: 'File → Import Excel model… rebuilds an Excel workbook as an fmIDE model, and checks it against the values Excel saved.',
+    what: [
+      'A canvas per sheet, a rectangle per row, and operators, period shifts and aliases for the formulas, read row by row.',
+      'Before anything is built, a window shows what was found on each sheet, and you can change the header row, the period columns and the label and unit columns.',
+      'After Import, a report compares every calculated cell with Excel\'s saved value, and lists what was kept as saved values and why.',
+    ],
+    why: 'So a spreadsheet you inherited can be seen, checked and carried on as an fmIDE model, without rebuilding it by hand.',
+    how: ['File → Import Excel model…, and pick the .xlsx (or drop it on the page).', 'Check each sheet\'s periods, labels and rows, then press Import.', 'Read the report, then Save for fmIDE.', 'In fmIDE, File → Open… the saved file.'],
+    notes: ['Lookups, sums across the periods, dates and text keep Excel\'s saved values for now: the report names each one.', 'Macros are never read or run.'],
+    see: ['import-excel'] },
+
   { id: 'fmgraph-charts', date: '2026-10-16', title: 'fmGraph\'s charts on the Dashboard',
     summary: 'Layout → Use fmGraph boards… also turns a board\'s bars and charts into Excel charts on the Dashboard, which follow the sliders.',
     what: [
@@ -14852,12 +14884,26 @@ async function buildImportedModel(){
   openImportReport();
 }
 
-// File → Import Report…: shown while the model is the one imported.
+// File → Import Report… and Save for fmIDE: shown while the model is the one imported.
 function syncImportReportItem(){
-  const item = $('btnImportReport');
-  if(item) item.classList.toggle('hidden', !(excelImport && excelImport.check && excelImport.model && excelImport.model === model));
+  const shown = !!(excelImport && excelImport.check && excelImport.model && excelImport.model === model);
+  ['btnImportReport', 'btnSaveForFmide'].forEach(id => { const item = $(id); if(item) item.classList.toggle('hidden', !shown); });
 }
 $('btnImportReport').addEventListener('click', () => openImportReport());
+$('btnSaveForFmide').addEventListener('click', () => saveImportedForFmide());
+$('importSave').addEventListener('click', () => saveImportedForFmide());
+
+// Save for fmIDE: the imported model as a system file (fmIDE: File → Open…), named after the workbook.
+function saveImportedForFmide(){
+  if(!excelImport || !excelImport.result) return;
+  const base = excelImport.fileName.replace(/\.xls[xm]?$/i, '').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '_').trim().slice(0, 100) || 'imported-model';
+  const blob = new Blob([JSON.stringify(excelImport.result.system, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = base + '.json'; a.click();
+  URL.revokeObjectURL(url);
+  setStatus($('loadStatus'), 'Saved ' + base + '.json — open it in fmIDE with File → Open….', 'ok');
+}
 
 // A number as the report shows it: up to 12 significant digits.
 function importNumber(v){
@@ -14988,7 +15034,7 @@ const XL_RANGE_MAX = 500;
 const XL_LANE = 90;      // the height of one input in a row's tree
 const XL_ROW_GAP = 20;   // between rows
 const XL_STEP = 220;     // from an operator to its inputs, leftwards
-const XL_ALIAS_STEP = 150; // from a period shift to the alias feeding it
+const XL_ALIAS_STEP = 190; // from a period shift to the alias feeding it (an alias is 170 wide)
 const XL_RECT_X = 2000;  // the rectangles' column, before the canvas is moved to start at the left
 const XL_MARGIN = 40;
 

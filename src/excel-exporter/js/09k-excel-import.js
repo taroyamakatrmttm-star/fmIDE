@@ -185,12 +185,26 @@ async function buildImportedModel(){
   openImportReport();
 }
 
-// File → Import Report…: shown while the model is the one imported.
+// File → Import Report… and Save for fmIDE: shown while the model is the one imported.
 function syncImportReportItem(){
-  const item = $('btnImportReport');
-  if(item) item.classList.toggle('hidden', !(excelImport && excelImport.check && excelImport.model && excelImport.model === model));
+  const shown = !!(excelImport && excelImport.check && excelImport.model && excelImport.model === model);
+  ['btnImportReport', 'btnSaveForFmide'].forEach(id => { const item = $(id); if(item) item.classList.toggle('hidden', !shown); });
 }
 $('btnImportReport').addEventListener('click', () => openImportReport());
+$('btnSaveForFmide').addEventListener('click', () => saveImportedForFmide());
+$('importSave').addEventListener('click', () => saveImportedForFmide());
+
+// Save for fmIDE: the imported model as a system file (fmIDE: File → Open…), named after the workbook.
+function saveImportedForFmide(){
+  if(!excelImport || !excelImport.result) return;
+  const base = excelImport.fileName.replace(/\.xls[xm]?$/i, '').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '_').trim().slice(0, 100) || 'imported-model';
+  const blob = new Blob([JSON.stringify(excelImport.result.system, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = base + '.json'; a.click();
+  URL.revokeObjectURL(url);
+  setStatus($('loadStatus'), 'Saved ' + base + '.json — open it in fmIDE with File → Open….', 'ok');
+}
 
 // A number as the report shows it: up to 12 significant digits.
 function importNumber(v){
