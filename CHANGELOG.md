@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: one switch for the actual years
+- An imported row with one formula for the actual years and another for the forecast reads one shared rectangle per canvas, such as "Up to 2024" (1 up to that year, 0 after), instead of its own year test; its typed years are its own numbers.
+
 ## ExcelExporter: a canvas per section
 - Importing an Excel model can give each section of a long sheet (its headings with blank rows above them) a canvas of its own: the import window's "One canvas per section", ticked for a sheet of more than 40 rows. Rows read each other across the canvases through aliases.
 

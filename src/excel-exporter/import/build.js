@@ -10,9 +10,9 @@
 //     reads them left to right, then top to bottom);
 //   - a cell of the row that differs (odd) keeps Excel's saved value as the rectangle's own
 //     number in that period (`literalPeriods`, with `periodValues` when they differ);
-//   - a row in parts — typed actuals beside one formula — keeps its actuals the same way, and
-//     its tree is the formula alone; a row of two formulas reads its parts by period:
-//     if(period ≤ 5, the first formula, the second);
+//   - a row in parts keeps its typed actuals the same way, and its tree is its formula; a
+//     row of two formulas switches by period through the canvas's shared rectangle
+//     "Up to 2024" (1 up to that period, 0 after): if(Up to 2024, the first, the second);
 //   - a formula reading the column before the first period reads that cell, as Excel does
 //     (a blank is 0): if(period = 1, Excel's C92, …);
 //   - a row that can't be translated keeps Excel's saved values as an input, and is listed
@@ -147,6 +147,11 @@ export function xlBuildModel(book, plans, include, split){
     }
     return extras.get(k);
   }
+
+  // The switch of a row of two formulas: one rectangle per canvas and period, shared by
+  // every such row there — 1 up to that period, 0 after ("Up to 2024").
+  const upTo = (c, to) => ({ k: 'ref', shift: 0, entry: extra(c, 'upto|' + to, () => ({
+    name: xlCleanName('Up to ' + periods[to]), values: periods.map((_, p) => p <= to ? 1 : 0) })) });
 
   const sheetIndex = (name, self) => {
     if(name === null || name === undefined) return self;
@@ -339,7 +344,7 @@ export function xlBuildModel(book, plans, include, split){
         let tree;
         try{ tree = xlParseFormula(sig); } catch(e){ throw new XlNotTranslated('a formula that can\'t be read'); }
         return toExpr(tree, entry.sheet, { mode: 'period', canvas: entry.canvas, kind: 'parts', from });
-      }, N)); }
+      }, N, (to) => upTo(entry.canvas, to))); }
       catch(e){
         if(!(e instanceof XlNotTranslated)) throw e;
         entry.why = e.why;
@@ -442,9 +447,7 @@ export function xlBuildModel(book, plans, include, split){
         const oddCells = entry.kind === 'single' || entry.kind === 'parts' ? [] : plan.cells.slice(0, N).map((cell, p) => ({ cell, p })).filter(({ cell }) => plan.odd.includes(cell.address));
         for(const { p } of oddCells) own.set(p, savedValues[p]);
         if(oddCells.length) report.odd.push({ sheet: out.sheet, row: plan.row, label: entry.name, cells: oddCells.map(o => o.cell.address), how: 'Excel\'s saved value in that period' });
-        const formulas = entry.partExprs ? entry.partExprs.filter(x => x.expr.k !== 'typed') : [];
-        if(formulas.length === 1){
-          expr = formulas[0].expr;
+        if(entry.partExprs){
           for(const part of entry.partExprs){
             if(part.expr.k !== 'typed') continue;
             for(let p = part.from; p <= part.to && p < N; p++) own.set(p, part.expr.values[p]);
@@ -493,10 +496,12 @@ function xlReportCell(cell, period){
   return out;
 }
 
-// A row in parts as one expression: its runs by period, the last one outermost —
-// if(period ≤ end of run 1, run 1, if(period ≤ end of run 2, run 2, … the last run)). The typed
-// runs share one rectangle of numbers ("… (typed)"), 0 in the periods of the formulas.
-function xlPartsExpr(entry, formulaExpr, n){
+// A row in parts as one expression: its formula parts by period, the last one outermost —
+// if(Up to 2024, formula 1, if(Up to 2027, formula 2, … the last formula)), each switch the
+// canvas's shared "Up to …" rectangle (`upTo`). Its typed parts are the rectangle's own
+// numbers in their periods (pass 3), so they are left out of the switch; `partExprs` keeps
+// every part (typed ones as { k: 'typed', values }) for the loop check.
+function xlPartsExpr(entry, formulaExpr, n, upTo){
   const runs = entry.plan.parts;
   const values = [];
   for(let p = 0; p < n; p++){
@@ -505,9 +510,10 @@ function xlPartsExpr(entry, formulaExpr, n){
     values.push(r && r.typed && cell ? (xlSavedNumber(cell) || 0) : 0);
   }
   const parts = runs.map(r => ({ from: r.from, to: r.to, expr: r.typed ? { k: 'typed', values } : formulaExpr(r.signature, r.from) }));
-  let expr = parts[parts.length - 1].expr;
-  for(let i = parts.length - 2; i >= 0; i--){
-    expr = { k: 'op', op: 'if', named: true, args: [{ k: 'op', op: '≤', args: [{ k: 'period' }, { k: 'const', value: runs[i].to + 1 }] }, parts[i].expr, expr] };
+  const formulas = parts.filter(x => x.expr.k !== 'typed');
+  let expr = formulas[formulas.length - 1].expr;
+  for(let i = formulas.length - 2; i >= 0; i--){
+    expr = { k: 'op', op: 'if', named: true, args: [upTo(formulas[i].to), formulas[i].expr, expr] };
   }
   return { expr, partExprs: parts };
 }
@@ -631,13 +637,6 @@ function xlEmit(x, px, py, ctx){
     const id = nodeId(c);
     const name = x.oddOf ? xlCleanName(ctx.label + ': Excel\'s ' + x.oddOf) : xlCleanName(ctx.label + ': ' + xlNumberText(x.value));
     add({ id, type: 'value', x: px, y: py, text: xlRectText(name, x.value, '') });
-    return { id, lanes: 1 };
-  }
-  if(x.k === 'typed'){
-    const id = nodeId(c);
-    const node = { id, type: 'value', x: px, y: py, text: xlRectText(xlCleanName(ctx.label + ' (typed)'), x.values[0], '') };
-    if(!x.values.every(v => v === x.values[0])) node.periodValues = x.values.slice();
-    add(node);
     return { id, lanes: 1 };
   }
   if(x.k === 'period'){
