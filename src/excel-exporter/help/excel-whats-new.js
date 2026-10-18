@@ -11,6 +11,18 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'sensitivity-rows', date: '2026-10-18', title: 'Sensitivity on the Inputs tab, easier to read',
+    summary: 'A moved input\'s formula no longer reaches into the Sensitivity tab: two rows gather those numbers, and the rows are named plainly.',
+    what: [
+      'Each input a sensitivity analysis moves now has its name on the row above (instead of "Base (before sensitivity)"). Under it, two rows gather the Sensitivity tab\'s numbers: % change and Change by amount.',
+      'The input\'s own row, for example "Unit Price after sensitivity", reads just those rows: =(E10)*(1+E11)+E12.',
+      'The two rows are grouped, so the − button beside them folds them away for a cleaner tab.',
+      'Inputs moved by the Dashboard\'s sliders are named the same way ("Price after sliders").',
+    ],
+    why: 'References to the Sensitivity tab in the middle of the formula made it hard to read.',
+    how: ['Turn on a sensitivity analysis and press ⬇ Generate.', 'On the Inputs tab, press − in the margin to fold the two rows away, + to show them.'],
+    see: ['sensitivity'] },
+
   { id: 'inputs-group-spacing', date: '2026-10-18', title: 'Space between the Inputs tab\'s groups',
     summary: 'On the Inputs tab, an empty row now comes before each group header after the first.',
     what: ['When the inputs are gathered by Excel tab or by canvas, every group header but the first gets an empty row above it, so the groups read as separate blocks.'],

@@ -67,6 +67,27 @@ test.describe('the Excel writer, in Node', () => {
     expect(book.getWorksheet('Calc (1)').getCell('A1').value).toEqual({ formula: 'Inputs!B1+1' });
   });
 
+  test('rows grouped in Excel\'s outline (ws[\'!rows\'] levels; idea 10): ExcelJS reads the levels back', async () => {
+    const wb = XLSX.utils.book_new();
+    const rows = [];
+    rows[1] = { level: 1 }; rows[2] = { level: 1 }; rows[4] = { level: 9 }; rows[5] = { level: 'x' }; // only 1–7 count
+    rows[6] = { level: 2 }; // a grouped row with no cells is written too
+    XLSX.utils.book_append_sheet(wb, { A1: { t: 's', v: 'Base' }, A2: { t: 'n', v: 1 }, A3: { t: 'n', v: 2 }, A4: { t: 'n', f: 'A1*(1+A2)+A3' },
+      A5: { t: 'n', v: 5 }, A6: { t: 'n', v: 6 }, '!rows': rows }, 'Inputs');
+    XLSX.utils.book_append_sheet(wb, { A1: { t: 'n', v: 1 } }, 'Plain');
+    const bytes = XLSX.write(wb);
+    const zip = await JSZip.loadAsync(bytes);
+    const xml = await zip.file('xl/worksheets/sheet1.xml').async('string');
+    expect(xml).toContain('<sheetFormatPr defaultRowHeight="15" outlineLevelRow="2"/>');
+    expect(xml).toContain('<row r="7" outlineLevel="2"></row>');
+    expect(await zip.file('xl/worksheets/sheet2.xml').async('string')).toContain('<sheetFormatPr defaultRowHeight="15"/>');
+    const book = new ExcelJS.Workbook();
+    await book.xlsx.load(Buffer.from(bytes));
+    const ws = book.getWorksheet('Inputs');
+    expect([1, 2, 3, 4, 5, 6, 7].map(r => ws.getRow(r).outlineLevel || 0)).toEqual([0, 1, 1, 0, 0, 0, 2]);
+    expect(ws.getRow(2).hidden).toBe(false); // grouped, still shown
+  });
+
   test('a standard ZIP whose entries pass their checksums, and a workbook that asks Excel to recalculate', async () => {
     const zip = await JSZip.loadAsync(XLSX.write(sampleWorkbook()), { checkCRC32: true });
     expect(Object.keys(zip.files).sort()).toEqual(['[Content_Types].xml', '_rels/.rels', 'docProps/app.xml', 'docProps/core.xml',

@@ -206,8 +206,20 @@ var XLSX = (function(){
       }).join('') + '</cols>';
       if(cols === '<cols></cols>') cols = '';
     }
+    // Rows grouped in Excel's outline: ws['!rows'][r - 1] = { level } (1–7), as SheetJS writes them.
+    const levelOf = (r) => {
+      const info = Array.isArray(ws['!rows']) ? ws['!rows'][r - 1] : null;
+      const n = info ? Math.round(Number(info.level)) : 0;
+      return n >= 1 && n <= 7 ? n : 0;
+    };
+    let maxLevel = 0;
+    if(Array.isArray(ws['!rows'])) ws['!rows'].forEach((x, i) => {
+      const n = levelOf(i + 1);
+      if(n){ maxLevel = Math.max(maxLevel, n); if(!rows.has(i + 1)) rows.set(i + 1, []); }
+    });
     const rowXml = [...rows.keys()].sort((a, b) => a - b).map(r =>
-      '<row r="' + r + '">' + rows.get(r).sort((a, b) => a.c - b.c).map(x => x.xml).join('') + '</row>').join('');
+      '<row r="' + r + '"' + (levelOf(r) ? ' outlineLevel="' + levelOf(r) + '"' : '') + '>' +
+      rows.get(r).sort((a, b) => a.c - b.c).map(x => x.xml).join('') + '</row>').join('');
     let merges = '';
     if(Array.isArray(ws['!merges']) && ws['!merges'].length){
       const list = ws['!merges'].filter(m => m && m.s && m.e).map(m => '<mergeCell ref="' + encodeCell(m.s.r, m.s.c) + ':' + encodeCell(m.e.r, m.e.c) + '"/>');
@@ -221,7 +233,7 @@ var XLSX = (function(){
       '<worksheet xmlns="' + NS_MAIN + '" xmlns:r="' + NS_REL + '"' +
       (ctrls.length ? ' xmlns:mc="' + NS_MC + '" xmlns:x14="' + NS_X14 + '" xmlns:xdr="' + NS_XDR + '"' : '') + '>' +
       '<dimension ref="' + ref + '"/><sheetViews><sheetView workbookViewId="0"/></sheetViews>' +
-      '<sheetFormatPr defaultRowHeight="15"/>' + cols + '<sheetData>' + rowXml + '</sheetData>' + merges +
+      '<sheetFormatPr defaultRowHeight="15"' + (maxLevel ? ' outlineLevelRow="' + maxLevel + '"' : '') + '/>' + cols + '<sheetData>' + rowXml + '</sheetData>' + merges +
       '<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>' +
       (ids.drawing ? '<drawing r:id="' + ids.drawing + '"/>' : '') +
       (ids.vml ? '<legacyDrawing r:id="' + ids.vml + '"/>' : '') +
@@ -9149,9 +9161,18 @@ function buildCtx(){
   const dash = graphSliderPlan();
   const sliderMoved = dash ? dash.byMirror : new Map();
   const sensBase = {};
+  // An input the Sensitivity tabs move gets two rows gathering their numbers, under its base
+  // or scenarios (sensGather: row id -> the first, "% change"; "change by amount" below it).
+  const sensGather = {};
+  // Where the name of a moved input stands on its own (its base row), for the other tabs'
+  // links; null with scenarios, whose own row reads "… after sensitivity" (plainName).
+  const plainName = {};
   const reserveRows = (row, r) => {
     r = reserveScenarioRows(row, r, scenarioBlocks);
-    if((sensMoved.has(row.id) || sliderMoved.has(row.id)) && !scenarioBlocks[row.id]){ sensBase[row.id] = r; r++; }
+    const moved = sensMoved.has(row.id) || sliderMoved.has(row.id);
+    if(moved && !scenarioBlocks[row.id]){ sensBase[row.id] = r; r++; }
+    if(sensMoved.has(row.id)){ sensGather[row.id] = r; r += 2; }
+    if(moved) plainName[row.id] = sensBase[row.id] !== undefined ? { tabName: tabById[row.tabId].name, row: sensBase[row.id] } : null;
     return r;
   };
   const blankAfter = (row) => scenarioBlocks[row.id] || sensBase[row.id] !== undefined;
@@ -9184,7 +9205,7 @@ function buildCtx(){
       });
     }
   });
-  return { canvasById, cellPos, periodCount: model.periods.length, rowsByTabOrdered, tabById, inlineConstantIds, scenarioBlocks, sens, sensMoved, sensBase, dash, sliderMoved };
+  return { canvasById, cellPos, periodCount: model.periods.length, rowsByTabOrdered, tabById, inlineConstantIds, scenarioBlocks, sens, sensMoved, sensBase, sensGather, plainName, dash, sliderMoved };
 }
 
 // Scenario rows sit directly above their variable's own row on the Inputs tab.
@@ -9286,6 +9307,7 @@ function buildWorkbook(){
     aoa[1] = ['Line item', 'UOM'].concat(labels);
     const ws = {};
     const merges = [];
+    const outline = []; // rows grouped in Excel's outline (0-based, as the writer reads '!rows')
 
     function setCell(addr, cell){ ws[addr] = cell; }
     // Sheet title: the Headers role's font, a little larger, without the header-row fill.
@@ -9367,8 +9389,11 @@ function buildWorkbook(){
       const slid = row.isInputMirror && dashName && ctx.sliderMoved.get(row.id) || null;
       const sensBaseRow = sensParts || slid ? ctx.sensBase[row.id] : undefined;
       const withSliders = (base, p) => slid ? dashboardSliders(ctx.dash, slid, base, p, dashName, tab.name) : base;
-      const moved = (base) => '(' + base + ')*(1+' + sensParts.map(({ a, i }) => sensLays[a].pctRef(i, tab.name)).join('+') + ')+' +
-        sensParts.map(({ a, i }) => sensLays[a].amtRef(i, tab.name)).join('+');
+      // The two rows under the base gather the Sensitivity tabs' parts; the row itself reads them.
+      const gatherRow = sensParts ? ctx.sensGather[row.id] : undefined;
+      const moved = (base, col) => '(' + base + ')*(1+' + col + gatherRow + ')+' + col + (gatherRow + 1);
+      // A moved input's own row says what moved it; its base row (or scenarios) above has the name.
+      const movedBy = [slid ? 'sliders' : '', sensParts ? 'sensitivity' : ''].filter(Boolean).join(' and ');
 
       const lastHop = row.path && row.path.length ? row.path[row.path.length - 1] : null;
       const rowVintage = (lastHop && typeof lastHop.vIndex === 'number') ? lastHop.vIndex : null;
@@ -9410,7 +9435,7 @@ function buildWorkbook(){
         // node); build its formula separately instead of going through buildCellContent.
         const picked = scnBlock ? 'INDEX(' + col + scnBlock.first + ':' + col + (scnBlock.first + scnBlock.n - 1) + ',MIN(MAX($' + VINTAGE_COL + excelRow + ',1),' + scnBlock.n + '))' : null;
         contents.push(sensParts
-          ? { isFormula: true, formula: moved(withSliders(picked || (col + sensBaseRow), p)) }
+          ? { isFormula: true, formula: moved(withSliders(picked || (col + sensBaseRow), p), col) }
           : slid
           ? { isFormula: true, formula: withSliders(picked || (col + sensBaseRow), p) }
           : scnBlock
@@ -9477,7 +9502,7 @@ function buildWorkbook(){
         const inStyle = nodeStyleToExcelCellStyle(inObj);
         const inFmt = numberFormatToExcel(inObj, fallbackFmt);
         const r = sensBaseRow;
-        setCell('A' + r, textCell(slid ? 'Base (before sliders)' : 'Base (before sensitivity)', inStyle));
+        setCell('A' + r, textCell(row.label, inStyle));
         setCell('B' + r, blankCell(inStyle));
         setCell(VINTAGE_COL + r, blankCell(inStyle));
         for(let h = 0; h < helperColCount; h++) setCell(helperCol(h) + r, blankCell(inStyle));
@@ -9491,7 +9516,36 @@ function buildWorkbook(){
         lastRow = Math.max(lastRow, r);
       }
 
-      setCell('A' + excelRow, textCell(row.label, withIndent(cellStyle, row)));
+      if(gatherRow !== undefined){
+        // "% change" and "change by amount": each period the sum of the Sensitivity tabs' parts
+        // for this input (0 unless a tab is moving it). Grouped in Excel's outline, to fold away.
+        const gStyle = withIndent(roleCellStyle('Links'), { indent: rowIndent(row) + 1 });
+        const linkStyle = roleCellStyle('Links');
+        [['% change (Sensitivity)', 'pctRef', '0.0%'], ['Change by amount (Sensitivity)', 'amtRef', numFmt]].forEach(([label, ref, z], k) => {
+          const r = gatherRow + k;
+          setCell('A' + r, textCell(label, gStyle));
+          setCell('B' + r, blankCell(linkStyle));
+          setCell(VINTAGE_COL + r, blankCell(linkStyle));
+          for(let h = 0; h < helperColCount; h++) setCell(helperCol(h) + r, blankCell(linkStyle));
+          const f = sensParts.map(({ a, i }) => sensLays[a][ref](i, tab.name)).join('+');
+          for(let p = 0; p < nPeriods; p++){
+            const cell = { t: 'n', f, v: 0, z };
+            if(linkStyle) cell.s = linkStyle;
+            setCell(colLetter(periodCol(p)) + r, cell);
+          }
+          outline[r - 1] = { level: 1 };
+          lastRow = Math.max(lastRow, r);
+        });
+      }
+
+      const labelStyle = withIndent(cellStyle, row);
+      if(movedBy){
+        // "Unit Price after sensitivity": with a base row, built from its name, so a rename there carries.
+        const suffix = ' after ' + movedBy;
+        setCell('A' + excelRow, sensBaseRow !== undefined
+          ? Object.assign({ t: 's', f: 'A' + sensBaseRow + '&"' + suffix + '"', v: (row.label || '') + suffix }, labelStyle ? { s: labelStyle } : {})
+          : textCell((row.label || '') + suffix, labelStyle));
+      } else setCell('A' + excelRow, textCell(row.label, labelStyle));
       const uom = rowUnit(canvas, node, row.path);
       setCell('B' + excelRow, textCell(uom || '', cellStyle));
 
@@ -9538,6 +9592,7 @@ function buildWorkbook(){
     // Key columns (label, UOM, Vintage, helpers) then the periods — same widths on every tab.
     ws['!cols'] = [{ wch: 28 }, { wch: 8 }, { wch: 8 }].concat(Array.from({ length: helperColCount }, () => ({ wch: 14 })), [{ wch: 2 }], labels.map(() => ({ wch: 13 })));
     ws['!merges'] = merges;
+    if(outline.length) ws['!rows'] = outline;
 
     XLSX.utils.book_append_sheet(wb, ws, tab.name);
   });
@@ -9611,7 +9666,8 @@ function buildWorkbook(){
       const blk = ctx.scenarioBlocks[row.id];
       const inRef = (col, rr) => sheetRef(inputsTabName, col, rr, scenarioSheetName);
       const nameRange = sheetRef(inputsTabName, '$A', '$' + blk.first, scenarioSheetName) + ':$A$' + (blk.first + blk.n - 1);
-      ws['A' + r] = { t: 's', f: inRef('A', excelRow), v: row.label || '', s: linkStyle };
+      // A moved input's own row reads "… after sensitivity": its name is written here instead.
+      ws['A' + r] = row.id in ctx.plainName ? textCell(row.label, linkStyle) : { t: 's', f: inRef('A', excelRow), v: row.label || '', s: linkStyle };
       ws['B' + r] = { t: 's', f: inRef('B', excelRow) + '&""', v: '', s: linkStyle };
       if(nCases){
         // Applied = this variable's scenario in the global case (a formula now, so plain style).
@@ -9640,7 +9696,11 @@ function buildWorkbook(){
   // The Dashboard, before Scenarios: the workbook opens on it.
   if(dashName){
     const ownRow = {};
-    (ctx.dash ? ctx.dash.rows : []).forEach(d => { if(d.mirrorId && ctx.cellPos[d.mirrorId]) ownRow[d.mirrorId] = ctx.cellPos[d.mirrorId]; });
+    // Each slider's name links to its input's name: the base row of a moved input (none with scenarios).
+    (ctx.dash ? ctx.dash.rows : []).forEach(d => {
+      const pos = d.mirrorId && (d.mirrorId in ctx.plainName ? ctx.plainName[d.mirrorId] : ctx.cellPos[d.mirrorId]);
+      if(pos) ownRow[d.mirrorId] = pos;
+    });
     appendDashboardSheet(wb, ctx.dash, dashName, ownRow, dashCharts, ctx.cellPos);
   }
   return { wb, tooLong };
@@ -10921,7 +10981,7 @@ const EXCEL_HELP_TOPICS = [
     body: [
       { p: 'Sliders on fmGraph\'s boards come with the model\'s boards. Layout → Use fmGraph boards… lists every board\'s sliders with a tick box; a slider on several boards (the same input, periods and kind) is listed once. Press Use, then ⬇ Generate .xlsx.' },
       { p: 'The Dashboard is the workbook\'s first tab, one row per slider: its name, periods and kind, a scroll bar, Position (the scroll bar\'s cell), Typed, Value, Use (set sliders only), and Min, Max and Step. Value is the number typed in Typed, or else Min + Position × Step. Clear Typed to give the scroll bar back. Min, Max and Step can be changed in Excel.' },
-      { p: 'A set slider replaces the input\'s number in its periods, but only while Use is ticked (TRUE). A change by % slider changes the input by Value % in its periods. On the Inputs tab, each slider is laid over what the input\'s Global Case picks, in the board\'s order (as in fmGraph, a later slider applies to what the earlier ones left), and the sensitivity analyses come after.' },
+      { p: 'A set slider replaces the input\'s number in its periods, but only while Use is ticked (TRUE). A change by % slider changes the input by Value % in its periods. On the Inputs tab, each slider is laid over what the input\'s Global Case picks, in the board\'s order (as in fmGraph, a later slider applies to what the earlier ones left), and the sensitivity analyses come after. The input\'s own row then reads, for example, "Price after sliders"; its name stays on the row above.' },
       { p: 'The workbook opens on fmIDE\'s numbers: every Use off and every change by % at 0. A set slider starts at fmIDE\'s number in its first period, so ticking Use puts that one number in all its periods.' },
       { tip: 'Scroll bars and check boxes don\'t show in Excel on the web or in Excel on an iPad or iPhone (it says "This version of Excel doesn\'t support this control"), and not always in LibreOffice. Type a number in Typed, and TRUE in Use: they work everywhere.' },
       { tip: 'A scroll bar has at most 30,000 positions. A slider with more steps gets a larger step, and a change by % slider that can\'t be 0 on its steps starts at the nearest one. The window and ⬇ Generate say so.' },
@@ -10955,7 +11015,7 @@ const EXCEL_HELP_TOPICS = [
         'Press ⬇ Generate .xlsx.',
       ] },
       { p: 'You can have up to 10 analyses. The panel lists them: click one to edit it below, + Add makes another, ↑ ↓ change their order and × removes one. Each has a Name, which is its tab\'s name in the workbook, and its own outputs, period, inputs and charts. Each writes its own Sensitivity tab (Sensitivity, Sensitivity 2…) with its own Data Table and charts. An input several analyses move keeps one Base row; its own row adds their parts together, its base × (1 + each % part) + each amount part, and only the tab whose Data Table is running has a part that isn\'t 0.' },
-      { p: 'The workbook gets a Sensitivity tab. Each input you move gets a Base row on the Inputs tab, and its own row becomes the base changed by the Sensitivity tab — by nothing, unless that tab\'s Input moved cell names it, so the model shows its own numbers. An Excel Data Table (What-If Analysis) works the output out with each input at each point, live: change Low, High, Show (1 or 0), the output (C4) or the period (C5) in Excel and the tables follow. The Tornado table sorts the inputs by how much they move the output; the Spider table lists each line. The Tornado chart draws each input\'s Low and High as bars either side of the base, the input that moves the output most at the top; the Spider chart draws each input\'s line. Both follow the tables, so they change with them in Excel.' },
+      { p: 'The workbook gets a Sensitivity tab. On the Inputs tab, each input you move keeps its name on a base row (with scenarios, the scenarios are its base). Under it, two rows gather the Sensitivity tab\'s numbers for it, % change and Change by amount, grouped so the − button beside them folds them away. Its own row, named for example "Unit Price after sensitivity", is the base changed by those two rows — by nothing, unless the Sensitivity tab\'s Input moved cell names it, so the model shows its own numbers. An Excel Data Table (What-If Analysis) works the output out with each input at each point, live: change Low, High, Show (1 or 0), the output (C4) or the period (C5) in Excel and the tables follow. The Tornado table sorts the inputs by how much they move the output; the Spider table lists each line. The Tornado chart draws each input\'s Low and High as bars either side of the base, the input that moves the output most at the top; the Spider chart draws each input\'s line. Both follow the tables, so they change with them in Excel.' },
       { tip: 'Keep Input moved (C6) and Point (C7) at 0: the Data Table moves them itself. A check beside C6 says so if it isn\'t 0.' },
       { p: 'Inputs inside a block can\'t be moved (every copy of the block shares them), and only inputs gathered on the Inputs tab can. A Data Table works the whole model out once for each cell, so on a large model Excel may take a moment; Excel\'s Formulas → Calculation Options → Automatic except for data tables pauses it (press F9 to work it out).' },
       { see: ['inputs-tab', 'scenarios'] },
@@ -11037,6 +11097,18 @@ const EXCEL_HELP_TOPICS = [
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'sensitivity-rows', date: '2026-10-18', title: 'Sensitivity on the Inputs tab, easier to read',
+    summary: 'A moved input\'s formula no longer reaches into the Sensitivity tab: two rows gather those numbers, and the rows are named plainly.',
+    what: [
+      'Each input a sensitivity analysis moves now has its name on the row above (instead of "Base (before sensitivity)"). Under it, two rows gather the Sensitivity tab\'s numbers: % change and Change by amount.',
+      'The input\'s own row, for example "Unit Price after sensitivity", reads just those rows: =(E10)*(1+E11)+E12.',
+      'The two rows are grouped, so the − button beside them folds them away for a cleaner tab.',
+      'Inputs moved by the Dashboard\'s sliders are named the same way ("Price after sliders").',
+    ],
+    why: 'References to the Sensitivity tab in the middle of the formula made it hard to read.',
+    how: ['Turn on a sensitivity analysis and press ⬇ Generate.', 'On the Inputs tab, press − in the margin to fold the two rows away, + to show them.'],
+    see: ['sensitivity'] },
+
   { id: 'inputs-group-spacing', date: '2026-10-18', title: 'Space between the Inputs tab\'s groups',
     summary: 'On the Inputs tab, an empty row now comes before each group header after the first.',
     what: ['When the inputs are gathered by Excel tab or by canvas, every group header but the first gets an empty row above it, so the groups read as separate blocks.'],
@@ -12241,7 +12313,10 @@ function appendSensitivitySheet(wb, plan, lay, ctx, labels){
     const mPos = ctx.cellPos[v.mirror.id];
     const c = (col) => '$' + L(col) + r;
     ws[L(SENS_COL.no) + r] = { t: 'n', v: i + 1, s: noteCenter };
-    ws[L(SENS_COL.name) + r] = { t: 's', f: sheetRef(inputsName, '$A', '$' + mPos.row, S), v: v.source.label || '', s: linkStyle };
+    // The input's name: its base row on the Inputs tab (its own row reads "… after sensitivity").
+    const named = ctx.plainName[v.mirror.id];
+    ws[L(SENS_COL.name) + r] = named ? { t: 's', f: sheetRef(inputsName, '$A', '$' + named.row, S), v: v.source.label || '', s: linkStyle }
+      : textCell(v.source.label || '', linkStyle);
     ws[L(SENS_COL.uom) + r] = { t: 's', f: sheetRef(inputsName, '$B', '$' + mPos.row, S) + '&""', v: '', s: linkStyle };
     ws[L(SENS_COL.by) + r] = { t: 's', v: v.spec.by === 'percent' ? '%' : 'amount', s: inputCenter };
     ws[L(SENS_COL.low) + r] = { t: 'n', v: v.spec.low, s: inputStyle };

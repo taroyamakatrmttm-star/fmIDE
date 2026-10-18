@@ -312,7 +312,10 @@ function appendSensitivitySheet(wb, plan, lay, ctx, labels){
     const mPos = ctx.cellPos[v.mirror.id];
     const c = (col) => '$' + L(col) + r;
     ws[L(SENS_COL.no) + r] = { t: 'n', v: i + 1, s: noteCenter };
-    ws[L(SENS_COL.name) + r] = { t: 's', f: sheetRef(inputsName, '$A', '$' + mPos.row, S), v: v.source.label || '', s: linkStyle };
+    // The input's name: its base row on the Inputs tab (its own row reads "… after sensitivity").
+    const named = ctx.plainName[v.mirror.id];
+    ws[L(SENS_COL.name) + r] = named ? { t: 's', f: sheetRef(inputsName, '$A', '$' + named.row, S), v: v.source.label || '', s: linkStyle }
+      : textCell(v.source.label || '', linkStyle);
     ws[L(SENS_COL.uom) + r] = { t: 's', f: sheetRef(inputsName, '$B', '$' + mPos.row, S) + '&""', v: '', s: linkStyle };
     ws[L(SENS_COL.by) + r] = { t: 's', v: v.spec.by === 'percent' ? '%' : 'amount', s: inputCenter };
     ws[L(SENS_COL.low) + r] = { t: 'n', v: v.spec.low, s: inputStyle };
