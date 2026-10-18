@@ -85,6 +85,7 @@ Each part below says what the feature is, why you would use it, and the exact cl
 - **Periods from … to**: the first and last period columns (for example D to M).
 - **Labels**: the column holding each row's name (usually A).
 - **Units**: the column holding each row's unit (£, %, units…), or empty for none.
+- **One canvas per section (6)**: shown when the sheet has headings with blank rows above them (Assumptions, Income Statement…). Ticked, each section becomes a canvas of its own, so a long sheet isn't one very tall canvas; rows still read each other across canvases. It starts ticked for a sheet of more than 40 rows; untick it to keep the sheet on one canvas.
 - **Rows**: click it to open a table of every row, with its kind and formula. A note such as "differs in F12" marks a cell unlike the rest of its row.
 
 **The kinds of row**

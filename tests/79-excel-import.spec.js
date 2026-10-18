@@ -798,6 +798,74 @@ test('rows in parts: actuals typed then the forecast formula, two formulas, the 
   expect(m.formulaOf('Assets opening')).toBe('shift(-1 @Assets closing)');
 });
 
+// A sheet of sections (step 20 tidy-up): titles and the rows under them, blank rows between.
+// `rows` is [row, label, values or a formula per period (with {f, v}) or null for a title].
+function sectionSheet(rows){
+  const cols = ['B', 'C', 'D', 'E'];
+  const str = (ref, t) => '<c r="' + ref + '" t="inlineStr"><is><t>' + t + '</t></is></c>';
+  let xml = '<row r="1">' + cols.map((c, i) => '<c r="' + c + '1"><v>' + (2026 + i) + '</v></c>').join('') + '</row>';
+  for(const [r, label, cells] of rows){
+    xml += '<row r="' + r + '">' + str('A' + r, label);
+    if(cells) cells.forEach((x, i) => {
+      const ref = cols[i] + r;
+      xml += typeof x === 'number' ? '<c r="' + ref + '"><v>' + x + '</v></c>' : '<c r="' + ref + '"><f>' + x.f.replace(/#/g, cols[i]) + '</f><v>' + x.v[i] + '</v></c>';
+    });
+    xml += '</row>';
+  }
+  return sheetXml(xml);
+}
+const SECTION_ROWS = [
+  [2, 'Inputs', null], [3, 'Price', [10, 10, 10, 10]], [4, 'Volume', [1, 2, 3, 4]],
+  [7, 'Revenue', null], [8, 'Revenue', [{ f: '#3*#4', v: [10, 20, 30, 40] }, { f: '#3*#4', v: [10, 20, 30, 40] }, { f: '#3*#4', v: [10, 20, 30, 40] }, { f: '#3*#4', v: [10, 20, 30, 40] }]],
+  [11, 'Costs', null], [12, 'Cost rate', [0.5, 0.5, 0.5, 0.5]], [13, 'Costs', [0, 1, 2, 3].map(() => ({ f: '#8*#12', v: [5, 10, 15, 20] }))],
+  [15, 'Profit', null], [16, 'Profit', [0, 1, 2, 3].map(() => ({ f: '#8-#13', v: [5, 10, 15, 20] }))],
+];
+
+test('a sheet in sections: found from its titles and blank rows, a canvas each when asked, aliases between them', async () => {
+  const bytes = await craft({ sheets: [{ name: 'Model', xml: sectionSheet(SECTION_ROWS) }] });
+  const book = F.xlFillSharedFormulas(await W.xlReadWorkbook(bytes));
+  const plans = L.xlAnalyseWorkbook(book).sheets;
+  // Two blank rows above Revenue and Costs (one above Profit); the rows before the first are a
+  // section of their own, named after their title.
+  expect(plans[0].sections).toEqual([{ row: 1, label: 'Inputs' }, { row: 7, label: 'Revenue' }, { row: 11, label: 'Costs' }]);
+  expect(L.xlRectangleRows(plans[0])).toBe(6);
+  expect(L.XL_SECTION_MIN_ROWS).toBe(40);
+
+  const one = B.xlBuildModel(book, plans, [true]);
+  expect(one.system.canvases.map(c => c.name)).toEqual(['Model']);
+  const split = B.xlBuildModel(book, plans, [true], [true]);
+  expect(split.system.canvases.map(c => c.name)).toEqual(['Inputs', 'Revenue', 'Costs']);
+  expect(split.report.notes).toContain('“Model” is 3 canvases, one per section');
+  expect(shape(split.system, 'Revenue').formulaOf('Revenue')).toBe('×(@Inputs!Price, @Inputs!Volume)');
+  const costs = shape(split.system, 'Costs');
+  expect(costs.formulaOf('Costs')).toBe('×(@Revenue!Revenue, @Cost rate)');
+  expect(costs.formulaOf('Profit')).toBe('−(@Revenue!Revenue, @Costs)');
+  for(const x of compare(split.system, split.report)) expect(agrees(x), x.where).toBe(true);
+  expect(C.xlCheckModel(split.system, split.report).agree).toBe(12);
+
+  // Only one blank row above each title: those are the sections. One title: no sections.
+  const f = (formula, v) => [0, 1, 2, 3].map(() => ({ f: formula, v }));
+  const tight = [[2, 'Inputs', null], [3, 'Price', [10, 10, 10, 10]], [4, 'Volume', [1, 2, 3, 4]],
+    [6, 'Revenue', null], [7, 'Revenue', f('#3*#4', [10, 20, 30, 40])], [9, 'Costs', null], [10, 'Cost rate', [0.5, 0.5, 0.5, 0.5]],
+    [11, 'Costs', f('#7*#10', [5, 10, 15, 20])], [13, 'Profit', null], [14, 'Profit', f('#7-#11', [5, 10, 15, 20])]];
+  const tightPlan = L.xlAnalyseWorkbook(F.xlFillSharedFormulas(await W.xlReadWorkbook(await craft({ sheets: [{ name: 'Model', xml: sectionSheet(tight) }] })))).sheets[0];
+  expect(tightPlan.sections.map(x => [x.row, x.label])).toEqual([[1, 'Inputs'], [6, 'Revenue'], [9, 'Costs'], [13, 'Profit']]);
+  const single = L.xlAnalyseWorkbook(F.xlFillSharedFormulas(await W.xlReadWorkbook(await craft({ sheets: [{ name: 'Model', xml: sectionSheet(SECTION_ROWS.slice(0, 3)) }] })))).sheets[0];
+  expect(single.sections).toEqual([]);
+  expect(B.xlBuildModel(F.xlFillSharedFormulas(await W.xlReadWorkbook(await craft({ sheets: [{ name: 'Model', xml: sectionSheet(SECTION_ROWS.slice(0, 3)) }] }))), [single], [true], [true]).system.canvases.map(c => c.name)).toEqual(['Model']);
+});
+
+test('sections of two sheets are named after their sheet; a section name used twice is made unique', async () => {
+  const twice = SECTION_ROWS.map(([r, l, c]) => [r, r === 11 ? 'Revenue' : l, c]);
+  const bytes = await craft({ sheets: [{ name: 'Model', xml: sectionSheet(twice) }, { name: 'Copy', xml: sectionSheet(SECTION_ROWS) }] });
+  const book = F.xlFillSharedFormulas(await W.xlReadWorkbook(bytes));
+  const plans = L.xlAnalyseWorkbook(book).sheets;
+  const { system } = B.xlBuildModel(book, plans, [true, true], [true, false]);
+  expect(system.canvases.map(c => c.name)).toEqual(['Model — Inputs', 'Model — Revenue', 'Model — Revenue (2)', 'Copy']);
+  const solo = B.xlBuildModel(book, plans, [true, false], [true, false]).system;
+  expect(solo.canvases.map(c => c.name)).toEqual(['Inputs', 'Revenue', 'Revenue (2)']);
+});
+
 test('a real loop in parts is still cut; one formula row with a blank cell is no part', async () => {
   // A reads B and B reads A in the forecast (G–H): a loop there; the actual years are typed.
   const strings = '<si><t>A</t></si><si><t>B</t></si>';

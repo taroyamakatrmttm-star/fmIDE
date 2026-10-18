@@ -149,6 +149,14 @@ The owner asked for fewer small boxes. Most of the CFI model's constant rectangl
 - **The import**: the periods of a formula row holding a number of their own — an opening balance's first, the cells that differ, a row in parts' typed actuals beside its **one** formula — are ticked (`literalPeriods`), their numbers in `periodValues` (or typed, when it is one number), and the tree is the formula alone. A row of two formulas keeps its `if(period ≤ k, …)`.
 - **The CFI model**: rectangles 151 → 81, operators 172 → 67, still 670 of 670 cells agreeing; the remaining constants are a formula's own (`1 +`, `365`) and the four rows of two formulas.
 
+## A canvas per section (18 October 2026)
+
+The CFI model's one sheet made a canvas over 13,000 pixels tall. The owner chose a tick box per sheet on the confirm screen, **One canvas per section** (`.import-split`), ticked when the sheet has more than 40 rows (`XL_SECTION_MIN_ROWS`, counting rows that become rectangles, `xlRectangleRows`):
+
+- **The sections** (`layout.js`, `plan.sections`): the titles with at least two blank rows above them; with fewer than two such, those with one; none when that still finds fewer than two. Rows before the first are a section of their own, named after their first title (or the sheet).
+- **The canvases** (`xlBuildModel(book, plans, include, split)`): one per section, named after it ("Sheet — Section" when several sheets are imported; a name used twice gets "(2)"). Rows read each other across them through aliases, as across sheets; the report notes "“Sheet” is 6 canvases, one per section".
+- **The CFI model**: Assumptions, Income Statement, Balance Sheet, Cash Flow Statement, Supporting Schedules, Charts and Graphs, the tallest about 3,000 pixels; still 670 of 670 cells agreeing.
+
 Done (18 October 2026): `import/build.js` — `xlBuildModel(book, plans, include)` gives the `system` and a report — and the window's Import button, which loads the model as any model file is ("Imported … — 2 canvases, 13 rectangles, 5 periods.", naming the rows kept as Excel's saved values).
 
 - **Every reference is an alias**, placed in its operator's input column, even to a rectangle on the same canvas: fmIDE reads an operator's inputs by position, so this is how `−`, `÷`, comparisons and `iferror` keep Excel's order wherever the rows sit. Each row reads as a small sentence left of its rectangle; the rectangles stand in one column in the sheet's order. (20g may tidy this.)

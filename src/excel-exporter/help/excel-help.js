@@ -60,7 +60,7 @@ const EXCEL_HELP_TOPICS = [
       { p: 'ExcelExporter can also go the other way: it reads a financial model built in Excel (.xlsx or .xlsm) and rebuilds it as an fmIDE model, with a canvas per sheet, a rectangle per row, and operators and period shifts for the formulas.' },
       { steps: [
         'Choose File → Import Excel model… (or drop the workbook on the page).',
-        'Check what was found for each sheet: the header row of periods, the period columns, the label and unit columns, and each row\'s kind. Change any of them, or untick a sheet to leave it out.',
+        'Check what was found for each sheet: the header row of periods, the period columns, the label and unit columns, and each row\'s kind. Change any of them, or untick a sheet to leave it out. One canvas per section (ticked for a sheet of more than 40 rows) gives each section of the sheet its own canvas.',
         'Press Import. The model loads here, and a report says how it compares with the values Excel saved.',
         'Press Save for fmIDE (in the report or the File menu), then open the file in fmIDE with File → Open….',
       ] },
