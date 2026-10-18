@@ -858,6 +858,37 @@ test('a sheet in sections: found from its titles and blank rows, a canvas each w
   expect(B.xlBuildModel(F.xlFillSharedFormulas(await W.xlReadWorkbook(await craft({ sheets: [{ name: 'Model', xml: sectionSheet(SECTION_ROWS.slice(0, 3)) }] }))), [single], [true], [true]).system.canvases.map(c => c.name)).toEqual(['Model']);
 });
 
+test('the layout for ExcelExporter: rows, titles and blank rows in the sheet\'s order, per canvas; the formulas\' numbers; space on the canvas', async () => {
+  const bytes = await craft({ sheets: [{ name: 'Model', xml: sectionSheet(SECTION_ROWS) }] });
+  const book = F.xlFillSharedFormulas(await W.xlReadWorkbook(bytes));
+  const plans = L.xlAnalyseWorkbook(book).sheets;
+  const words = (built, id) => {
+    const c = built.system.canvases.find(x => x.id === id);
+    const nameOf = (nid) => c.nodes.find(n => n.id === nid).text.split('\n')[0];
+    return built.layout.canvases.find(x => x.id === id).items.map(it => it.node !== undefined ? nameOf(it.node) : it.title !== undefined ? '# ' + it.title : '');
+  };
+  const one = B.xlBuildModel(book, plans, [true]);
+  expect(words(one, 'xl1')).toEqual(['# Inputs', 'Price', 'Volume', '', '', '# Revenue', 'Revenue', '', '', '# Costs', 'Cost rate', 'Costs', '', '# Profit', 'Profit']);
+  expect(one.layout.constants).toEqual([]);
+  // On the canvas, each blank row and title is space: Revenue sits two blanks and a title further down.
+  const m = shape(one.system, 'Model');
+  expect(m.rect('Volume').y - m.rect('Price').y).toBe(110);
+  expect(m.rect('Revenue').y - m.rect('Volume').y).toBe(110 + 3 * 45);
+  const split = B.xlBuildModel(book, plans, [true], [true]);
+  expect(['xl1', 'xl2', 'xl3'].map(id => words(split, id))).toEqual([['# Inputs', 'Price', 'Volume'], ['# Revenue', 'Revenue'], ['# Costs', 'Cost rate', 'Costs', '', '# Profit', 'Profit']]);
+  // The numbers written in the formulas, each a rectangle of its own.
+  const three = await importBook(bytesOf('03-two-sheets.xlsx'));
+  const calc = three.system.canvases.find(c => c.name === 'Calc');
+  const constNames = three.layout.constants.filter(k => k.canvasId === calc.id).map(k => calc.nodes.find(n => n.id === k.nodeId).text.split('\n')[0]);
+  expect(constNames).toEqual(expect.arrayContaining(['Variable costs: 0.4', 'Variable costs: 0', 'Tax: 0']));
+  expect(constNames.every(n => /: /.test(n))).toBe(true);
+  // The sheet's header row of years is not a blank row: only the empty row after it is.
+  expect(words(three, calc.id)).toEqual(['# Profit and loss', '', 'Revenue', 'Fixed costs', 'Variable costs', 'Total costs', 'EBIT', 'Tax', 'Net income', 'Net margin', 'Loss flag']);
+  // The header row's years and the extras come first in their canvas's layout.
+  const header = (await importBook(bytesOf('04-not-supported.xlsx'))).layout;
+  expect(header.canvases.every(c => c.items.length > 0)).toBe(true);
+});
+
 test('sections of two sheets are named after their sheet; a section name used twice is made unique', async () => {
   const twice = SECTION_ROWS.map(([r, l, c]) => [r, r === 11 ? 'Revenue' : l, c]);
   const bytes = await craft({ sheets: [{ name: 'Model', xml: sectionSheet(twice) }, { name: 'Copy', xml: sectionSheet(SECTION_ROWS) }] });

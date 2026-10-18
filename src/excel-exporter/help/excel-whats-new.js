@@ -11,6 +11,18 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'import-excel-layout', date: '2026-10-18', title: 'Imported models keep the workbook\'s layout',
+    summary: 'After Import, each tab has the original\'s rows in the same order, with its titles and blank rows.',
+    what: [
+      'Each tab (one per sheet, or per section) lists the rows in the workbook\'s order, with a label row for each title and an empty one for each blank row.',
+      'Numbers written in the formulas, such as the 0.4 in =D5*0.4, are written in the formulas again, with no rows of their own.',
+      'In fmIDE, the canvas leaves a gap where the sheet had a title or blank rows.',
+    ],
+    why: 'The workbook ExcelExporter makes then reads like the one you started from.',
+    how: ['File → Import Excel model…, and pick the workbook.', 'Press Import, then ⬇ Generate.'],
+    notes: ['The layout is remembered in this browser for the model. Change it in the Rows panel like any layout.'],
+    see: ['import-excel'] },
+
   { id: 'import-excel-switch', date: '2026-10-18', title: 'One switch for the actual years',
     summary: 'Imported rows with one formula for the actual years and another for the forecast share one rectangle, such as "Up to 2024".',
     what: [

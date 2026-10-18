@@ -149,6 +149,14 @@ The owner asked for fewer small boxes. Most of the CFI model's constant rectangl
 - **The import**: the periods of a formula row holding a number of their own — an opening balance's first, the cells that differ, a row in parts' typed actuals beside its **one** formula — are ticked (`literalPeriods`), their numbers in `periodValues` (or typed, when it is one number), and the tree is the formula alone. A row of two formulas keeps its `if(period ≤ k, …)`.
 - **The CFI model**: rectangles 151 → 81, operators 172 → 67, still 670 of 670 cells agreeing; the remaining constants are a formula's own (`1 +`, `365`) and the four rows of two formulas.
 
+## The workbook's own layout (18 October 2026)
+
+After Import, ExcelExporter gave the model a fresh layout, sorted by calculation order: the rows moved, the titles and blank rows were gone, and each number written in a formula ("Revenue: 1") had a row of its own. The owner asked for the original's order and spacing, on several canvases too:
+
+- **The layout** (`xlBuildModel` returns `layout`: per canvas, its `items` in the sheet's order — `{ node }`, `{ title }`, `{ blank: true }`, the extras first; the blank rows counted after the sheet's header row of periods, which ExcelExporter writes itself, at most `XL_BLANKS_MAX` 20 together — and `constants`, the formulas' numbers). `useImportedLayout` (09k) turns sections off and gives each tab that order, a label row for each title (its text) and an empty one for each blank row, and marks the constants **Constant**, so the workbook writes `=ROUND(E6*0.4,0)` as the original did. It replaces any layout the model had and is saved in the browser like any change (found again for the same model; not carried by Save for fmIDE).
+- **The canvas** leaves `XL_SPACE` (45 pixels) for each blank row and title between two rectangles.
+- **The CFI model**: each tab reads as its section of the original, heading, blank rows and all; the "… : 1" and "… : 365" rows are gone into the formulas.
+
 ## One shared switch (18 October 2026)
 
 The four CFI rows with one formula for the actual years and another for the forecast still had their own `period`, `≤` and "5". Now every such row on a canvas reads one shared rectangle per switch period, **"Up to 2024"** (`upTo` in `build.js`: 1 up to that period, 0 after, made like the header row's rectangle, at the canvas's top): `if(@Up to 2024, the first formula, the second)`. A row of two formulas with typed years keeps those years as its own numbers too, so only its formulas switch. The CFI model: 78 rectangles and 59 operators (from 81 and 67), one "Up to 2024" on Supporting Schedules, 670 of 670 cells agreeing. A reference to the column before the periods keeps its own `if(period = 1, …)`.

@@ -352,3 +352,23 @@ test('a tall sheet is a canvas per section unless unticked; a short one is ticke
   await importFile(page, sample('03-two-sheets.xlsx'));
   await expect(page.locator('#importSheets .import-split')).toHaveCount(0);
 });
+
+test('the workbook generated after Import keeps the sheet\'s rows, titles and blank rows in order, and its formulas\' numbers in the formulas', async ({ page }) => {
+  await X.openExporter(page);
+  await importFile(page, sample('03-two-sheets.xlsx'));
+  await page.locator('#importOk').click();
+  await page.locator('#importReportClose').click();
+  const { bytes } = await X.generate(page);
+  const book = await X.readBack(bytes);
+  const column = (ws) => { const out = []; for(let r = 4; r <= ws.rowCount; r++) out.push(String(ws.getCell('A' + r).value || '')); return out; };
+  // Calc: the title, the empty row under the years, then the rows in the sheet's order.
+  expect(column(book.getWorksheet('Calc'))).toEqual(['Profit and loss', '', 'Revenue', 'Fixed costs', 'Variable costs', 'Total costs', 'EBIT', 'Tax', 'Net income', 'Net margin', 'Loss flag']);
+  // The 0.4 and the 0s are written in the formulas, as in the original; they have no rows.
+  const calc = book.getWorksheet('Calc');
+  const rowOf = (ws, label) => column(ws).indexOf(label) + 4;
+  expect(calc.getCell('E' + rowOf(calc, 'Variable costs')).formula).toBe('ROUND(E' + rowOf(calc, 'Revenue') + '*0.4,0)');
+  expect(calc.getCell('E' + rowOf(calc, 'Tax')).formula).toBe('MAX(0,E' + rowOf(calc, 'EBIT') + '*\'Inputs\'!E' + rowOf(book.getWorksheet('Inputs'), 'Tax rate') + ')');
+  for(const ws of book.worksheets) expect(column(ws).filter(t => /: [0-9.]+$/.test(t))).toEqual([]);
+  // No Inputs / Calculations / Outputs sections in the layout.
+  expect(column(book.getWorksheet('Inputs'))).toEqual(['Inputs', '', 'Units sold', 'Unit price', 'Fixed costs', 'Tax rate']);
+});
