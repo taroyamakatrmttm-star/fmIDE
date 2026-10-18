@@ -4,7 +4,7 @@ A step-by-step guide to everything added in pull requests #158 to #165 (18 Octob
 
 In one sentence: open a spreadsheet you inherited, and get it back as a picture of rectangles and arrows that you can check, change and carry on in fmIDE, with a report saying how closely it matches Excel.
 
-The background and design are in [`docs/step20-excel-import.md`](step20-excel-import.md). The same guide is also kept as a document on claude.ai.
+The background and design are in [`docs/step20-excel-import.md`](step20-excel-import.md). The same guide is also kept as a [document on claude.ai](https://claude.ai/code/artifact/77ab76f2-f216-4a4e-83a0-6ae40562f103).
 
 ## Start here
 
@@ -235,6 +235,7 @@ Newest first.
 
 | Pull request | Date | What it did | Feature |
 |---|---|---|---|
+| [#166](https://github.com/taroyamakatrmttm-star/fmIDE/pull/166) | 18 Oct 2026 | This guide | — |
 | [#165](https://github.com/taroyamakatrmttm-star/fmIDE/pull/165) | 18 Oct 2026 | Rows with typed actuals and a forecast formula; the column before the first year; loops looked for year by year (after a real model) | 6 |
 | [#164](https://github.com/taroyamakatrmttm-star/fmIDE/pull/164) | 18 Oct 2026 | Save for fmIDE, help, What's new, the end-to-end test (20g) | 5 |
 | [#163](https://github.com/taroyamakatrmttm-star/fmIDE/pull/163) | 18 Oct 2026 | The check against Excel's saved values, and the report (20f) | 4 |
