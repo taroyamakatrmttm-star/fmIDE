@@ -104,6 +104,11 @@ function removeButton(id, what){
 
 function renderBoard(){
   rememberOpenEditors(); // (05b-chart-render.js)
+  rememberOpenRanges();
+  // A slider's From / to / step box being typed in keeps the focus through the redraw.
+  const was = document.activeElement;
+  const typing = was && was.dataset && was.dataset.range && was.closest('.slider-widget')
+    ? { id: was.closest('.slider-widget').dataset.id, which: was.dataset.range } : null;
   syncShared(); // slider positions shared with other boards (03-calc.js)
   const bars = $('barList'), sliders = $('sliderList');
   bars.textContent = '';
@@ -127,6 +132,21 @@ function renderBoard(){
   renderScenarios(); // (05f-scenarios.js)
   updateValues();
   renderDock(); // on a phone, the sliders' dock (05g-phone.js)
+  if(typing){
+    const w = [...sliders.querySelectorAll('.slider-widget')].find(el => el.dataset.id === typing.id);
+    const box = w && w.querySelector('input[data-range="' + typing.which + '"]');
+    if(box){ box.focus(); box.select(); }
+  }
+}
+
+// The sliders whose Range and step is open: kept open through a redraw (the page's own, not saved).
+const slidersRanging = new Set();
+function rememberOpenRanges(){
+  document.querySelectorAll('#sliderList .slider-widget').forEach(el => {
+    const box = el.querySelector('details.slider-range');
+    if(!box) return;
+    if(box.open) slidersRanging.add(el.dataset.id); else slidersRanging.delete(el.dataset.id);
+  });
 }
 
 function barWidget(b){
@@ -211,21 +231,25 @@ function sliderWidget(s){
   reset.addEventListener('click', () => { s.value = null; range.value = box.value = String(sliderShown(s)); scheduleUpdate(); });
 
   const more = make('details', 'slider-range slider-more');
+  more.open = slidersRanging.has(s.id);
   more.appendChild(make('summary', null, 'Range and step'));
   const rangeRow = make('div', 'widget-row');
-  const num = (label, value) => {
+  const num = (label, value, which) => {
     const l = make('label', null, label + ' ');
     const i = make('input'); i.type = 'number'; i.step = 'any'; i.value = String(value);
+    i.dataset.range = which;
     l.appendChild(i); rangeRow.appendChild(l);
     return i;
   };
-  const minBox = num('From', s.min), maxBox = num('to', s.max), stepBox = num('step', s.step);
+  const minBox = num('From', s.min, 'min'), maxBox = num('to', s.max, 'max'), stepBox = num('step', s.step, 'step');
   const rangeChanged = () => {
     const r = cleanRange({ min: minBox.value, max: maxBox.value, step: stepBox.value }, null);
     if(!r){ notify('A range needs a "from" below its "to", and a step above 0.', 'err', 'range'); return; }
     notify('', null, 'range');
     Object.assign(s, r);
-    saveBoardSoon(); renderBoard();
+    saveBoardSoon();
+    // Redrawn once the focus has moved (Tab, or a click in the next box), so it stays there.
+    setTimeout(renderBoard, 0);
   };
   [minBox, maxBox, stepBox].forEach(i => i.addEventListener('change', rangeChanged));
   more.appendChild(rangeRow);

@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph: a slider's Range and step stays open
+- Changing From, to or step kept the slider but redrew the board, which closed Range and step and lost the cursor; it now stays open through any redraw (Undo aside), and the cursor stays in the box Tab or a click moved it to.
+
 ## ExcelExporter: sliders on the Inputs tab, easier to read
 - Each Dashboard slider on an input gets a row of its own under the input (its Value in its periods; a set slider's while Use is ticked, else blank), grouped with the sensitivity rows; the input's own row lays them over its base with the same formula in every period: `IF(ISNUMBER(E12),E12,…)` for a set slider, `(…)*(1+E12)` for a change by %.
 

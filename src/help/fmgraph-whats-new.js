@@ -8,6 +8,13 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'slider-range-stays-open', date: '2026-10-18', title: 'Range and step stays open while you change it',
+    summary: 'Changing a slider\'s From, to or step no longer closes its Range and step.',
+    what: ['After you change From, to or step and press Tab or click the next box, Range and step stays open and the cursor is in the box you went to, so you can set all three in one go.'],
+    why: 'Each change closed it again, so setting a range meant opening it three times.',
+    how: ['Open Range and step under a slider.', 'Type in From, press Tab, type in to, press Tab, type the step.'],
+    notes: ['It closes when you click its heading, as before.'] },
+
   { id: 'tornado-spider-edit', date: '2026-10-16', title: 'Tornado and Spider: choose each input\'s Low and High',
     summary: 'Edit chart now sets, for each input, whether it moves by a percent or an amount, its Low and High, and whether it shows.',
     what: [
