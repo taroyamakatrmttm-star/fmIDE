@@ -271,6 +271,43 @@ test('the board file is read like any file: wrong kind, not JSON, newer version,
   void testInfo;
 });
 
+test('a slider\'s Range and step stays open while From, to and step are changed (Tab or a click to the next box)', async ({ page, pageErrors }) => {
+  await openSample(page);
+  const slider = page.locator('.slider-widget').first();
+  const box = slider.locator('details.slider-range');
+  await box.locator('summary').click();
+  await expect(box).toHaveAttribute('open', '');
+  const from = box.getByLabel('From', { exact: true }), to = box.getByLabel('to', { exact: true }), step = box.getByLabel('step', { exact: true });
+  const id = await slider.getAttribute('data-id');
+  const range = () => g(page, (sid) => { const s = fmGraph.board().sliders.find(x => x.id === sid); return [s.min, s.max, s.step]; }, id);
+  // From, then Tab: the new range is taken, the box stays open and the focus is in "to".
+  await from.fill('2');
+  await from.press('Tab');
+  await expect.poll(range).toEqual([2, expect.any(Number), expect.any(Number)]);
+  await expect(box).toHaveAttribute('open', '');
+  await expect(to).toBeFocused();
+  // Typing in "to" (all of it selected, as Tab leaves it), then a click in "step".
+  await page.keyboard.type('40');
+  await step.click();
+  await expect.poll(range).toEqual([2, 40, expect.any(Number)]);
+  await expect(box).toHaveAttribute('open', '');
+  await expect(step).toBeFocused();
+  await step.fill('2');
+  await step.press('Tab');
+  await expect.poll(range).toEqual([2, 40, 2]);
+  await expect(box).toHaveAttribute('open', '');
+  // The slider's own track follows; a redraw for another reason (what the slider does) leaves it open too.
+  await expect(slider.locator('input[type=range]')).toHaveAttribute('max', '40');
+  await slider.locator('select[aria-label="What the slider does"]').selectOption('shift');
+  await expect(page.locator('.slider-widget').first().locator('details.slider-range')).toHaveAttribute('open', '');
+  // Closed by its heading, it stays closed.
+  await page.locator('.slider-widget').first().locator('details.slider-range summary').click();
+  await page.locator('.slider-widget').first().getByLabel('From', { exact: true }).evaluate(el => { el.value = '1'; el.dispatchEvent(new Event('change', { bubbles: true })); });
+  await expect.poll(range).toEqual([1, expect.any(Number), expect.any(Number)]);
+  await expect(page.locator('.slider-widget').first().locator('details.slider-range')).not.toHaveAttribute('open', '');
+  expect(pageErrors).toEqual([]);
+});
+
 test('folding sliders: one by its ▸, Collapse all / Expand all; undo; kept; the board file version 6', async ({ page, pageErrors }) => {
   await openSample(page);
   const sliders = page.locator('.slider-widget');

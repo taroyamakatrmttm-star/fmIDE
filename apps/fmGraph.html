@@ -4415,6 +4415,11 @@ function removeButton(id, what){
 
 function renderBoard(){
   rememberOpenEditors(); // (05b-chart-render.js)
+  rememberOpenRanges();
+  // A slider's From / to / step box being typed in keeps the focus through the redraw.
+  const was = document.activeElement;
+  const typing = was && was.dataset && was.dataset.range && was.closest('.slider-widget')
+    ? { id: was.closest('.slider-widget').dataset.id, which: was.dataset.range } : null;
   syncShared(); // slider positions shared with other boards (03-calc.js)
   const bars = $('barList'), sliders = $('sliderList');
   bars.textContent = '';
@@ -4438,6 +4443,21 @@ function renderBoard(){
   renderScenarios(); // (05f-scenarios.js)
   updateValues();
   renderDock(); // on a phone, the sliders' dock (05g-phone.js)
+  if(typing){
+    const w = [...sliders.querySelectorAll('.slider-widget')].find(el => el.dataset.id === typing.id);
+    const box = w && w.querySelector('input[data-range="' + typing.which + '"]');
+    if(box){ box.focus(); box.select(); }
+  }
+}
+
+// The sliders whose Range and step is open: kept open through a redraw (the page's own, not saved).
+const slidersRanging = new Set();
+function rememberOpenRanges(){
+  document.querySelectorAll('#sliderList .slider-widget').forEach(el => {
+    const box = el.querySelector('details.slider-range');
+    if(!box) return;
+    if(box.open) slidersRanging.add(el.dataset.id); else slidersRanging.delete(el.dataset.id);
+  });
 }
 
 function barWidget(b){
@@ -4522,21 +4542,25 @@ function sliderWidget(s){
   reset.addEventListener('click', () => { s.value = null; range.value = box.value = String(sliderShown(s)); scheduleUpdate(); });
 
   const more = make('details', 'slider-range slider-more');
+  more.open = slidersRanging.has(s.id);
   more.appendChild(make('summary', null, 'Range and step'));
   const rangeRow = make('div', 'widget-row');
-  const num = (label, value) => {
+  const num = (label, value, which) => {
     const l = make('label', null, label + ' ');
     const i = make('input'); i.type = 'number'; i.step = 'any'; i.value = String(value);
+    i.dataset.range = which;
     l.appendChild(i); rangeRow.appendChild(l);
     return i;
   };
-  const minBox = num('From', s.min), maxBox = num('to', s.max), stepBox = num('step', s.step);
+  const minBox = num('From', s.min, 'min'), maxBox = num('to', s.max, 'max'), stepBox = num('step', s.step, 'step');
   const rangeChanged = () => {
     const r = cleanRange({ min: minBox.value, max: maxBox.value, step: stepBox.value }, null);
     if(!r){ notify('A range needs a "from" below its "to", and a step above 0.', 'err', 'range'); return; }
     notify('', null, 'range');
     Object.assign(s, r);
-    saveBoardSoon(); renderBoard();
+    saveBoardSoon();
+    // Redrawn once the focus has moved (Tab, or a click in the next box), so it stays there.
+    setTimeout(renderBoard, 0);
   };
   [minBox, maxBox, stepBox].forEach(i => i.addEventListener('change', rangeChanged));
   more.appendChild(rangeRow);
@@ -8749,6 +8773,13 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'slider-range-stays-open', date: '2026-10-18', title: 'Range and step stays open while you change it',
+    summary: 'Changing a slider\'s From, to or step no longer closes its Range and step.',
+    what: ['After you change From, to or step and press Tab or click the next box, Range and step stays open and the cursor is in the box you went to, so you can set all three in one go.'],
+    why: 'Each change closed it again, so setting a range meant opening it three times.',
+    how: ['Open Range and step under a slider.', 'Type in From, press Tab, type in to, press Tab, type the step.'],
+    notes: ['It closes when you click its heading, as before.'] },
+
   { id: 'tornado-spider-edit', date: '2026-10-16', title: 'Tornado and Spider: choose each input\'s Low and High',
     summary: 'Edit chart now sets, for each input, whether it moves by a percent or an amount, its Low and High, and whether it shows.',
     what: [
