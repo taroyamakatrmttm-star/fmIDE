@@ -778,13 +778,16 @@ test('rows in parts: actuals typed then the forecast formula, two formulas, the 
   expect(m.rect('Revenue').text).toBe('Revenue\n\n£');
   expect(m.rect('Revenue').literalPeriods).toEqual([0, 1, 2]);
   expect(m.rect('Revenue').periodValues).toEqual([1000, 1100, 1210, 0, 0]);
-  // No "(typed)" rectangles and no switch at period 3 but for the row of two formulas.
-  expect(m.c.nodes.filter(n => n.type === 'value' && /\(typed\)|: 3\n/.test(n.text)).map(n => n.text.split('\n')[0])).toEqual(['Depreciation: 3']);
+  // No "(typed)" rectangles and no switch of its own in any row.
+  expect(m.c.nodes.filter(n => n.type === 'value' && /\(typed\)|: 3\n/.test(n.text))).toEqual([]);
+  expect(m.c.nodes.filter(n => n.type === 'operator' && n.text === '≤')).toEqual([]);
   // A blank first period, a formula, then typed numbers: the formula alone, its own numbers around it.
   expect(m.formulaOf('Revenue growth')).toBe('−(÷(@Revenue, shift(-1 @Revenue)), [Revenue growth: 1|1])');
   expect(m.rect('Revenue growth').literalPeriods).toEqual([0, 3, 4]);
   // One formula for the actual years, another for the forecast.
-  expect(m.formulaOf('Depreciation')).toBe('if(≤(period(), [Depreciation: 3|3]), ×(@Capex, [Depreciation: 0.5|0.5]), ×(shift(-1 @Assets closing), [Depreciation: 0.2|0.2]))');
+  // Its switch is the canvas's shared "Up to 2028": 1 in 2026–2028, 0 after.
+  expect(m.formulaOf('Depreciation')).toBe('if(@Up to 2028, ×(@Capex, [Depreciation: 0.5|0.5]), ×(shift(-1 @Assets closing), [Depreciation: 0.2|0.2]))');
+  expect(m.rect('Up to 2028').periodValues).toEqual([1, 1, 1, 0, 0]);
   // The column before the first period: in 2026 the previous Profit is the blank C9, 0.
   expect(m.formulaOf('Change in profit')).toBe('−(@Profit, if(=(period(), [Change in profit: 1|1]), [Change in profit: Excel\'s C9|0], shift(-1 @Profit)))');
   // Spending reads Paid in the actual years, Paid reads Spending in the forecast: no loop in any one period.

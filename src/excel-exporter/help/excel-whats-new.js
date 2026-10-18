@@ -11,6 +11,16 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'import-excel-switch', date: '2026-10-18', title: 'One switch for the actual years',
+    summary: 'Imported rows with one formula for the actual years and another for the forecast share one rectangle, such as "Up to 2024".',
+    what: [
+      'Every such row on a canvas reads one rectangle holding 1 in the actual years and 0 after, instead of its own year test and number.',
+      'In the workbook ExcelExporter writes, it is an input row: change where the actual years end there.',
+    ],
+    why: 'Fewer boxes, and the end of the actual years is in one place.',
+    how: ['File → Import Excel model…, and pick the workbook.', 'Press Import: the shared rectangle sits at the top of the canvas.'],
+    see: ['import-excel'] },
+
   { id: 'import-excel-sections', date: '2026-10-18', title: 'A canvas per section',
     summary: 'A long imported sheet can be split into one canvas per section: Assumptions, Income Statement, Balance Sheet…',
     what: [

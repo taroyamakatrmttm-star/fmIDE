@@ -149,6 +149,10 @@ The owner asked for fewer small boxes. Most of the CFI model's constant rectangl
 - **The import**: the periods of a formula row holding a number of their own — an opening balance's first, the cells that differ, a row in parts' typed actuals beside its **one** formula — are ticked (`literalPeriods`), their numbers in `periodValues` (or typed, when it is one number), and the tree is the formula alone. A row of two formulas keeps its `if(period ≤ k, …)`.
 - **The CFI model**: rectangles 151 → 81, operators 172 → 67, still 670 of 670 cells agreeing; the remaining constants are a formula's own (`1 +`, `365`) and the four rows of two formulas.
 
+## One shared switch (18 October 2026)
+
+The four CFI rows with one formula for the actual years and another for the forecast still had their own `period`, `≤` and "5". Now every such row on a canvas reads one shared rectangle per switch period, **"Up to 2024"** (`upTo` in `build.js`: 1 up to that period, 0 after, made like the header row's rectangle, at the canvas's top): `if(@Up to 2024, the first formula, the second)`. A row of two formulas with typed years keeps those years as its own numbers too, so only its formulas switch. The CFI model: 78 rectangles and 59 operators (from 81 and 67), one "Up to 2024" on Supporting Schedules, 670 of 670 cells agreeing. A reference to the column before the periods keeps its own `if(period = 1, …)`.
+
 ## A canvas per section (18 October 2026)
 
 The CFI model's one sheet made a canvas over 13,000 pixels tall. The owner chose a tick box per sheet on the confirm screen, **One canvas per section** (`.import-split`), ticked when the sheet has more than 40 rows (`XL_SECTION_MIN_ROWS`, counting rows that become rectangles, `xlRectangleRows`):
