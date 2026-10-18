@@ -73,7 +73,7 @@ The importer's pieces are **modules** in a new folder, `src/excel-exporter/impor
 |---|---|---|
 | `import/zip.js` | 20b | The zip's directory, each part unpacked (stored or deflated), the size limits |
 | `import/xml.js` | 20b | A small XML reader: elements, attributes, text, the five entities |
-| `import/workbook.js` | 20b | Sheets, cells (number, text, true/false, error, date by its number format), formulas (shared formulas copied to each cell), Excel's saved values, shared strings, defined names, 1904 dates |
+| `import/workbook.js` | 20b | Sheets, cells (number, text, true/false, error, date by its number format), formulas (shared formulas kept as saved; copied to each cell in 20c), Excel's saved values, shared strings, defined names, 1904 dates |
 | `import/formula.js` | 20c | Excel's formula language read into a tree (numbers, text, references, ranges, sheets, names, functions, operators with Excel's precedence), and a tree moved by rows and columns (for shared formulas) |
 | `import/layout.js` | 20d | The header row and period columns, the label and unit columns, each row's kind and signature |
 | `import/build.js` | 20e | The `system` file: canvases, rectangles, operators, period shifts, aliases, where each goes, and the list of what wasn't translated |
@@ -107,6 +107,15 @@ Each is one pull request, merged when the whole suite is green (the owner's requ
 `expected.json` says what the importer should find in each: the header row, period and label columns, each row's kind and its formula in words, and what can't be translated. Group 78 checks that the samples are the tool's, that the description fits them, and that LibreOffice, recalculating copies written without saved values, gives the saved values: so the "Excel's saved values" phases 20b–20f compare with are right.
 
 **Real workbooks are still needed.** ExcelJS's files are close to Excel's (shared strings, shared formulas, styles), but Excel also writes a calculation chain, rich text, inline strings and other variations. The owner is asked to provide, when they can, one or two real models (or made-up ones saved by Excel) to add as samples.
+
+## How 20b turned out
+
+Done (18 October 2026): `import/zip.js`, `import/xml.js` and `import/workbook.js`, included in ExcelExporter by `js/09k-excel-import.js` (nothing on the page yet), and test group 79 in Node.
+
+- `xlReadWorkbook(bytes)` gives `{ sheets: [{ name, hidden, cells, rows, cols }], names, date1904, notes }`; a cell holds its saved `value` or `error`, its `formula` text, `shared`, `array`, `dataTable`, `date` and its number `format` (built-in formats named by id are given their codes).
+- **Shared formulas** are kept as Excel saves them (the first cell's text, the others its index); copying the text to each cell needs the formula parser, so it moves to 20c.
+- **Found:** ExcelExporter's own writer saves formulas without their values (Excel works them out on opening), so its workbooks have nothing for the check to compare with. The check (20f) will say so instead of reporting differences.
+- The limits are `XL_LIMITS` in `zip.js`; an import refused says why in words (`XlImportError`, with a `code` for the tests).
 
 ## How 20a turned out
 
