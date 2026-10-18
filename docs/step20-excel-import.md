@@ -108,6 +108,16 @@ Each is one pull request, merged when the whole suite is green (the owner's requ
 
 **Real workbooks are still needed.** ExcelJS's files are close to Excel's (shared strings, shared formulas, styles), but Excel also writes a calculation chain, rich text, inline strings and other variations. The owner is asked to provide, when they can, one or two real models (or made-up ones saved by Excel) to add as samples.
 
+## How 20d turned out
+
+Done (18 October 2026): `import/layout.js` and the confirm screen, File → Import Excel model… (an `.xlsx` dropped on the page opens it too), with group 79's layout tests and the new browser group 80.
+
+- **The header row** is the first of the first 50 rows holding the longest run of periods side by side: years (1900–2200), dates (shown as their year, or as `2026-03` when two fall in one year) or text with a year or a period word (`FY2026`, `Q1`, `Jan-26`), one kind along the run, numbers rising. A header row of formulas (`=Inputs!D3`) is read by its saved values.
+- **The label column** is the column left of the periods with the most text; **the unit column** the one with the most short text of the others.
+- **Rows**: a row whose period cells are mostly typed numbers is an input (a formula among them keeps its saved value); otherwise the most common signature is the row's formula, and every cell that differs is listed as odd. A label alone is a title; a number or formula before the periods with nothing in them is an assumption or a single formula.
+- **Choices**: the header row, the first and last period columns, and the label and unit columns can be typed per sheet; the sheet is worked out again. A sheet with no periods is off until given a header row that has some.
+- The window's Import button stays off until the model can be built (20e), saying so in its tooltip.
+
 ## How 20c turned out
 
 Done (18 October 2026): `import/formula.js` — `xlParseFormula(text)` (the tree described at the top of the file), `xlShiftFormula(tree, rows, columns)`, `xlFormulaText(tree)` and `xlFillSharedFormulas(book)` (each cell of a shared formula gets its own text, as ExcelJS and Excel copy it) — with group 79's parser tests.

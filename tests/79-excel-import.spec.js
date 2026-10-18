@@ -7,7 +7,9 @@
 // cells or sheets, a damaged zip, an .xls, a document type, markup in names). Phase 20c: the
 // formula parser (formula.js) — every formula of the samples, Excel's precedence, references
 // of every form, what isn't supported, moving a tree, shared formulas copied to their cells,
-// formulas that aren't one. No browser.
+// formulas that aren't one. Phase 20d: the layout (layout.js) — the header row, periods, label
+// and unit columns and each row's kind found as tests/fixtures/excel-import/expected.json says,
+// and the person's choices. No browser.
 const fs = require('fs');
 const path = require('path');
 const JSZip = require('jszip');
@@ -17,11 +19,14 @@ const Z = require('../src/excel-exporter/import/zip.js');
 const X = require('../src/excel-exporter/import/xml.js');
 const W = require('../src/excel-exporter/import/workbook.js');
 const F = require('../src/excel-exporter/import/formula.js');
+const L = require('../src/excel-exporter/import/layout.js');
 const { XLSX } = require('../src/excel-exporter/js-head/01-xlsx-writer.js');
 
 const DIR = path.join(ROOT, 'tests', 'fixtures', 'excel-import');
 const SAMPLES = fs.readdirSync(DIR).filter(f => f.endsWith('.xlsx')).sort();
 const bytesOf = (name) => new Uint8Array(fs.readFileSync(path.join(DIR, name)));
+const EXPECTED = JSON.parse(fs.readFileSync(path.join(DIR, 'expected.json'), 'utf8'));
+const readSample = async (file) => F.xlFillSharedFormulas(await W.xlReadWorkbook(bytesOf(file)));
 
 // A workbook made by hand: { sheets: [{ name, xml, state, rel }], strings, styles, names, workbookPr }.
 async function craft(o, compression){
@@ -417,4 +422,94 @@ test('formulas that aren\'t one are refused, saying why; nesting and length are 
   expect(() => F.xlParseFormula('('.repeat(65) + '1' + ')'.repeat(65))).toThrow(/nests more than 64/);
   expect(() => F.xlParseFormula('-'.repeat(65) + '1')).toThrow(/nests more than 64/);
   expect(() => F.xlParseFormula('1+'.repeat(4097) + '1')).toThrow(/longer than 8192/);
+});
+
+// ---------- 20d: the layout ----------
+
+test('each sample\'s layout is found as expected.json says: header row, periods, columns, each row\'s kind', async () => {
+  for(const file of SAMPLES){
+    const name = file.replace(/\.xlsx$/, '');
+    const want = EXPECTED.samples[name];
+    const book = await readSample(file);
+    const found = L.xlAnalyseWorkbook(book);
+    for(const plan of found.sheets){
+      const sheet = want.sheets[plan.name];
+      const at = name + ' ' + plan.name;
+      if(!sheet){ expect(plan.byPeriods, at + ' is not by periods').toBe(false); continue; }
+      expect(plan.byPeriods, at).toBe(true);
+      expect(plan.headerRow, at).toBe(sheet.headerRow);
+      expect([plan.firstCol, plan.lastCol].map(W.xlColLetters), at).toEqual([sheet.periodColumns[0], sheet.periodColumns[sheet.periodColumns.length - 1]]);
+      expect(plan.periods, at).toEqual(sheet.periods);
+      expect(W.xlColLetters(plan.labelCol), at).toBe(sheet.labelColumn);
+      expect(W.xlColLetters(plan.unitCol), at).toBe(sheet.unitColumn);
+      expect(plan.rows.map(r => [r.row, r.label, r.kind]), at).toEqual(sheet.rows.map(r => [r.row, r.label, r.kind]));
+      for(const r of sheet.rows){
+        const got = plan.rows.find(x => x.row === r.row);
+        expect(got.odd, at + ' row ' + r.row).toEqual(r.odd || []);
+      }
+    }
+    expect(found.sheets.filter(p => p.byPeriods).map(p => p.name).sort(), name).toEqual(Object.keys(want.sheets).sort());
+  }
+});
+
+test('a row\'s signature is its formula as in the first period column; the person\'s choices are followed', async () => {
+  const simple = L.xlAnalyseWorkbook(await readSample('01-simple-rows.xlsx')).sheets[0];
+  const row = (n) => simple.rows.find(r => r.row === n);
+  expect(row(8).signature).toBe('D6*D7');
+  expect(row(14).signature).toBe('D8-D12');
+  const cork = L.xlAnalyseWorkbook(await readSample('02-corkscrew.xlsx')).sheets[0];
+  expect(cork.rows.find(r => r.row === 7).signature).toBe('C10');
+  expect(cork.rows.find(r => r.row === 9).signature).toBe('D7*$C$5');
+  expect(cork.rows.find(r => r.row === 5).before.address).toBe('C5');
+  const val = L.xlAnalyseWorkbook(await readSample('04-not-supported.xlsx')).sheets[0];
+  expect(val.rows.find(r => r.row === 11).signature).toBe('SUM($D$8:D8)');
+  expect(val.rows.find(r => r.row === 10).before.formula).toBe('NPV(C9,D8:H8)');
+
+  // Choices: fewer period columns, another label column, no unit column, a header row picked.
+  const book = await readSample('01-simple-rows.xlsx');
+  const fewer = L.xlAnalyseSheet(book.sheets[0], { headerRow: 3, firstCol: 4, lastCol: 6, labelCol: 1, unitCol: null }, false);
+  expect(fewer.periods).toEqual(['2026', '2027', '2028']);
+  expect(fewer.unitCol).toBeNull();
+  expect(fewer.rows.find(r => r.row === 8).cells.length).toBe(3);
+  const byUnit = L.xlAnalyseSheet(book.sheets[0], { labelCol: 2 }, false);
+  expect(byUnit.rows.find(r => r.row === 8).label).toBe('£');
+  const wrongHeader = L.xlAnalyseSheet(book.sheets[0], { headerRow: 6 }, false);
+  expect(wrongHeader.byPeriods).toBe(false);
+  const lookup = L.xlAnalyseWorkbook(await readSample('04-not-supported.xlsx')).sheets[1];
+  expect(lookup.byPeriods).toBe(false);
+  expect(L.xlKindCounts(simple)).toEqual({ title: 3, input: 3, assumption: 0, calculation: 3, opening: 0, single: 0 });
+});
+
+test('periods: years, dates (a year each, or months), text periods; a run must rise and be of one kind', async () => {
+  const one = async (rows) => L.xlAnalyseWorkbook(F.xlFillSharedFormulas(await W.xlReadWorkbook(await craft({
+    styles: '<cellXfs count="2"><xf numFmtId="0"/><xf numFmtId="14"/></cellXfs>', strings: '<si><t>Sales</t></si>',
+    sheets: [{ name: 'S', xml: sheetXml(rows) }] })))).sheets[0];
+  // Months: dates in one year.
+  const months = await one('<row r="1"><c r="B1" s="1"><v>46053</v></c><c r="C1" s="1"><v>46081</v></c><c r="D1" s="1"><v>46112</v></c></row><row r="2"><c r="A2" t="s"><v>0</v></c><c r="B2"><v>1</v></c><c r="C2"><v>2</v></c><c r="D2"><v>3</v></c></row>');
+  expect(months.periods).toEqual(['2026-01', '2026-02', '2026-03']);
+  expect(months.rows.map(r => r.kind)).toEqual(['input']);
+  // Text periods.
+  const text = await one('<row r="2"><c r="B2" t="inlineStr"><is><t>FY2026</t></is></c><c r="C2" t="inlineStr"><is><t>FY2027</t></is></c></row><row r="3"><c r="A3" t="s"><v>0</v></c><c r="B3"><v>5</v></c><c r="C3"><v>6</v></c></row>');
+  expect([text.headerRow, text.periods]).toEqual([2, ['FY2026', 'FY2027']]);
+  // Years that don't rise are no header; the longer run wins; a single year isn't a run.
+  const falling = await one('<row r="1"><c r="B1"><v>2030</v></c><c r="C1"><v>2029</v></c></row><row r="2"><c r="B2"><v>2020</v></c></row>');
+  expect(falling.byPeriods).toBe(false);
+  const longer = await one('<row r="1"><c r="B1"><v>2026</v></c><c r="C1"><v>2027</v></c></row><row r="4"><c r="B4"><v>2026</v></c><c r="C4"><v>2027</v></c><c r="D4"><v>2028</v></c></row>');
+  expect([longer.headerRow, longer.periods]).toEqual([4, ['2026', '2027', '2028']]);
+});
+
+test('rows: an input with a formula among its numbers, blanks, a row without a label, an unreadable formula', async () => {
+  const plan = L.xlAnalyseWorkbook(F.xlFillSharedFormulas(await W.xlReadWorkbook(await craft({
+    strings: '<si><t>Price</t></si><si><t>Odd</t></si><si><t>Broken</t></si>',
+    sheets: [{ name: 'S', xml: sheetXml(
+      '<row r="1"><c r="B1"><v>2026</v></c><c r="C1"><v>2027</v></c><c r="D1"><v>2028</v></c></row>' +
+      '<row r="2"><c r="A2" t="s"><v>0</v></c><c r="B2"><v>10</v></c><c r="C2"><f>B2*1.1</f><v>11</v></c><c r="D2"><v>12</v></c></row>' +
+      '<row r="3"><c r="A3" t="s"><v>1</v></c><c r="B3"><f>B2*2</f><v>20</v></c><c r="D3"><f>D2*2</f><v>24</v></c></row>' +
+      '<row r="4"><c r="B4"><f>B2+1</f><v>11</v></c><c r="C4"><f>C2+1</f><v>12</v></c><c r="D4"><f>D2+1</f><v>13</v></c></row>' +
+      '<row r="5"><c r="A5" t="s"><v>2</v></c><c r="B5"><f>B2+</f><v>1</v></c><c r="C5"><f>C2*2</f><v>22</v></c><c r="D5"><f>D2*2</f><v>24</v></c></row>') }] })))).sheets[0];
+  const r = (n) => plan.rows.find(x => x.row === n);
+  expect([r(2).kind, r(2).odd]).toEqual(['input', ['C2']]);
+  expect([r(3).kind, r(3).signature, r(3).odd]).toEqual(['calculation', 'B2*2', ['C3']]);
+  expect([r(4).label, r(4).kind]).toEqual(['', 'calculation']);
+  expect([r(5).kind, r(5).signature, r(5).odd]).toEqual(['calculation', 'B2*2', ['B5']]);
 });

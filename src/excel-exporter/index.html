@@ -33,6 +33,7 @@
           <button type="button" role="menuitem" id="btnMenuSample" title="Load a small built-in model to try things out">Load Sample Model</button>
           <button type="button" role="menuitem" id="btnMenuPaste" title="Paste a model's JSON text">Paste JSON…</button>
           <button type="button" role="menuitem" id="btnFromFmide" class="hidden" title="Load the model open in fmIDE again, as it is now">↻ From fmIDE</button>
+          <button type="button" role="menuitem" id="btnImportExcel" title="Read an Excel workbook (.xlsx) and rebuild it as an fmIDE model">Import Excel model…</button>
           <button type="button" role="menuitem" id="btnImportGraphBoards" class="needs-model" title="Read a board file saved with Export all boards in fmGraph, to use its scenarios, sliders and charts">Import fmGraph boards…</button>
           <div class="menu-sep" role="separator"></div>
           <button type="button" role="menuitem" id="btnClearAll" class="danger" title="Empties this page. Saved layouts are kept.">Start Over</button>
@@ -301,6 +302,7 @@
 <input type="file" id="moduleLayoutsFileInput" accept="application/json,.json" hidden>
 <input type="file" id="excelStyleFileInput" accept="application/json,.json" hidden>
 <input type="file" id="graphFileInput" accept="application/json,.json" hidden>
+<input type="file" id="excelImportInput" accept=".xlsx,.xlsm,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel.sheet.macroEnabled.12" hidden>
 
 <div id="treeCtxMenu" class="ctx-menu hidden" role="menu"></div>
 
@@ -335,6 +337,20 @@
       <button id="graphRemove" class="danger hidden" title="Take the fmGraph scenarios, sliders and analyses out of this layout">Remove from Layout</button>
       <button id="graphCancel">Cancel</button>
       <button id="graphUse" class="primary">Use</button>
+    </div>
+  </div>
+</div>
+
+<div id="importModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="importTitle">
+  <div class="modal modal-wide">
+    <h3 id="importTitle">Import Excel model</h3>
+    <p id="importSource" class="graph-source"></p>
+    <div id="importSheets" class="import-sheets"></div>
+    <h4 id="importNotesHead" class="hidden">Left out</h4>
+    <ul id="importNotes" class="graph-left-out"></ul>
+    <div class="modal-actions">
+      <button id="importCancel">Cancel</button>
+      <button id="importOk" class="primary" title="Build the fmIDE model from the sheets ticked">Import</button>
     </div>
   </div>
 </div>
