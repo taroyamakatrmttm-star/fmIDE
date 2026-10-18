@@ -8,3 +8,4 @@
 // build:include excel-exporter/import/zip.js
 // build:include excel-exporter/import/xml.js
 // build:include excel-exporter/import/workbook.js
+// build:include excel-exporter/import/formula.js
