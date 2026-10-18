@@ -108,6 +108,18 @@ Each is one pull request, merged when the whole suite is green (the owner's requ
 
 **Real workbooks are still needed.** ExcelJS's files are close to Excel's (shared strings, shared formulas, styles), but Excel also writes a calculation chain, rich text, inline strings and other variations. The owner is asked to provide, when they can, one or two real models (or made-up ones saved by Excel) to add as samples.
 
+## After a real model (18 October 2026)
+
+The owner tried a real three-statement model (CFI's case study: an income statement, balance sheet and cash flow, 2020–2029, 787 cells). It imported, but showed what the samples lacked, and three things changed:
+
+- **Rows in parts.** Real models type their actual years and use formulas for the forecast, on the same row (Revenue: 2020–2024 typed, 2025–2029 `=H26*(1+I8)`), or use one formula for the actual years and another for the forecast. Such a row was taken as an input, its forecast kept as saved numbers: the check agreed, but the forecast's logic was lost. A row of two to four runs side by side (typed numbers or blanks, or one formula copied along), each at least two periods long (a first typed period may be one), is now a row **in parts**: `if(period ≤ 5, the typed numbers, the forecast formula)`, its typed numbers in a rectangle of their own ("Revenue (typed)").
+- **The column before the periods.** `=D92-C92` in the first period reads C92, a blank: Excel takes 0, the model took the whole cell as 0 (the one cell that differed). A reference reaching before the first period now reads that cell's value in those periods.
+- **Loops period by period.** In the model, Capex reads Investments in the actual years and Investments reads Capex in the forecast: no loop in any one period, but one if all periods are counted together. Loops are now looked for period by period, each row in parts reading only its part.
+
+**The result**: before, 329 of 330 calculated cells agreed and 35 rows were kept as numbers; now **670 of 670** agree, with 38 rows in parts translated and only "Balance Sheet Check" (which gives the text OK or ERROR) kept as saved values. The imported model's own workbook, written by ExcelExporter and recalculated by LibreOffice, gives the original's value in all 630 cells compared. Sample `05-actuals-forecast` has the same patterns; CFI's file itself is not in the repository (it is CFI's).
+
+**Seen, for later**: the small numbers inside formulas (the 1 of `1 + growth`, the period numbers of the parts) are rectangles of their own, so the canvas and the workbook carry many small rows ("Revenue: 5"). Writing such numbers inside the formula, as a constant, would tidy both.
+
 ## How 20g turned out
 
 Done (18 October 2026): the canvas spacing, Save for fmIDE, help, What's new, README and CHANGELOG, and the end-to-end test.

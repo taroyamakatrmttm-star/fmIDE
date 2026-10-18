@@ -20,7 +20,10 @@
 // `var`: syncPageState (09e, earlier in the file) reads it through syncImportReportItem.
 var excelImport = null; // { fileName, book, plans, include, result, check, model }
 
-const IMPORT_KIND_NAMES = { title: 'title', input: 'input', assumption: 'assumption', calculation: 'calculation', opening: 'opening balance', single: 'one formula' };
+const IMPORT_KIND_NAMES = { title: 'title', input: 'input', assumption: 'assumption', calculation: 'calculation', opening: 'opening balance', single: 'one formula', parts: 'in parts' };
+// The kinds counted in a sheet's summary: one and several.
+const IMPORT_KIND_COUNTED = { title: ['title', 'titles'], input: ['input', 'inputs'], assumption: ['assumption', 'assumptions'], calculation: ['calculation', 'calculations'],
+  opening: ['opening balance', 'opening balances'], single: ['one formula', 'one formulas'], parts: ['row in parts', 'rows in parts'] };
 const IMPORT_ROWS_SHOWN = 300;
 
 $('btnImportExcel').addEventListener('click', () => $('excelImportInput').click());
@@ -48,8 +51,8 @@ async function importExcelFile(file){
 function importSummary(plan){
   if(!plan.byPeriods) return 'No row of periods found: give a header row to import it.';
   const counts = xlKindCounts(plan);
-  const parts = ['input', 'assumption', 'calculation', 'opening', 'single', 'title']
-    .filter(k => counts[k]).map(k => counts[k] + ' ' + IMPORT_KIND_NAMES[k] + (counts[k] === 1 ? '' : 's'));
+  const parts = ['input', 'assumption', 'calculation', 'parts', 'opening', 'single', 'title']
+    .filter(k => counts[k]).map(k => counts[k] + ' ' + IMPORT_KIND_COUNTED[k][counts[k] === 1 ? 0 : 1]);
   const span = plan.periods.length > 1 ? plan.periods[0] + '–' + plan.periods[plan.periods.length - 1] : plan.periods[0];
   return plan.periods.length + ' period' + (plan.periods.length === 1 ? '' : 's') + ', ' + span + ' · ' + (parts.join(', ') || 'no rows');
 }

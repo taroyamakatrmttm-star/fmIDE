@@ -83,7 +83,7 @@ async function withLimits(limits, fn){
 // ---------- 20b: reading the file ----------
 
 test('every sample reads as ExcelJS reads it: sheets, values, formulas, shared formulas, dates, names', async () => {
-  expect(SAMPLES.length).toBe(4);
+  expect(SAMPLES.length).toBe(5);
   for(const file of SAMPLES){
     const book = await W.xlReadWorkbook(bytesOf(file));
     const ej = new ExcelJS.Workbook();
@@ -456,6 +456,7 @@ test('each sample\'s layout is found as expected.json says: header row, periods,
       for(const r of sheet.rows){
         const got = plan.rows.find(x => x.row === r.row);
         expect(got.odd, at + ' row ' + r.row).toEqual(r.odd || []);
+        if(r.parts) expect(got.parts.map(x => ({ cells: W.xlColLetters(plan.firstCol + x.from) + ':' + W.xlColLetters(plan.firstCol + x.to), is: x.typed ? 'typed' : 'formula' })), at + ' row ' + r.row).toEqual(r.parts);
       }
     }
     expect(found.sheets.filter(p => p.byPeriods).map(p => p.name).sort(), name).toEqual(Object.keys(want.sheets).sort());
@@ -487,7 +488,7 @@ test('a row\'s signature is its formula as in the first period column; the perso
   expect(wrongHeader.byPeriods).toBe(false);
   const lookup = L.xlAnalyseWorkbook(await readSample('04-not-supported.xlsx')).sheets[1];
   expect(lookup.byPeriods).toBe(false);
-  expect(L.xlKindCounts(simple)).toEqual({ title: 3, input: 3, assumption: 0, calculation: 3, opening: 0, single: 0 });
+  expect(L.xlKindCounts(simple)).toEqual({ title: 3, input: 3, assumption: 0, calculation: 3, opening: 0, single: 0, parts: 0 });
 });
 
 test('periods: years, dates (a year each, or months), text periods; a run must rise and be of one kind', async () => {
@@ -698,7 +699,7 @@ test('names repeated or with line breaks are made one line and unique; a sheet w
 // ---------- 20f: the check ----------
 
 test('the check: every calculated cell of the samples agrees with Excel', async () => {
-  const want = { '01-simple-rows.xlsx': [15, 0], '02-corkscrew.xlsx': [15, 0], '03-two-sheets.xlsx': [45, 0], '04-not-supported.xlsx': [15, 4] };
+  const want = { '01-simple-rows.xlsx': [15, 0], '02-corkscrew.xlsx': [15, 0], '03-two-sheets.xlsx': [45, 0], '04-not-supported.xlsx': [15, 4], '05-actuals-forecast.xlsx': [55, 0] };
   for(const file of SAMPLES){
     const { system, report } = await importBook(bytesOf(file));
     const check = C.xlCheckModel(system, report);
@@ -761,4 +762,39 @@ test('the canvases: no two nodes on top of each other, the rectangles in one col
       expect(Math.max(...c.nodes.map(n => n.x)), file + ' ' + c.name).toBe(rects[0].x);
     }
   }
+});
+
+// ---------- after a real model: rows in parts ----------
+
+test('rows in parts: actuals typed then the forecast formula, two formulas, the column before the periods, no false loop', async () => {
+  const { system, report } = await importBook(bytesOf('05-actuals-forecast.xlsx'));
+  const m = shape(system, 'Model');
+  // Typed actuals for 2026–2028, then the forecast formula.
+  expect(m.formulaOf('Revenue')).toBe('if(≤(period(), [Revenue: 3|3]), [Revenue (typed)|1000], ×(shift(-1 @Revenue), +([Revenue: 1|1], @Revenue growth)))');
+  expect(m.rect('Revenue').text).toBe('Revenue\n\n£');
+  const typed = m.c.nodes.find(n => n.type === 'value' && n.text.startsWith('Revenue (typed)'));
+  expect(typed.periodValues).toEqual([1000, 1100, 1210, 0, 0]);
+  // A blank first period, a formula, then typed numbers: three parts.
+  expect(m.formulaOf('Revenue growth')).toMatch(/^if\(≤\(period\(\), \[Revenue growth: 1\|1\]\), \[Revenue growth \(typed\)\|0\], if\(≤\(period\(\), \[Revenue growth: 3\|3\]\), −\(÷\(@Revenue, shift\(-1 @Revenue\)\), \[Revenue growth: 1\|1\]\), \[Revenue growth \(typed\)\|0\]\)\)$/);
+  // One formula for the actual years, another for the forecast.
+  expect(m.formulaOf('Depreciation')).toBe('if(≤(period(), [Depreciation: 3|3]), ×(@Capex, [Depreciation: 0.5|0.5]), ×(shift(-1 @Assets closing), [Depreciation: 0.2|0.2]))');
+  // The column before the first period: in 2026 the previous Profit is the blank C9, 0.
+  expect(m.formulaOf('Change in profit')).toBe('−(@Profit, if(=(period(), [Change in profit: 1|1]), [Change in profit: Excel\'s C9|0], shift(-1 @Profit)))');
+  // Spending reads Paid in the actual years, Paid reads Spending in the forecast: no loop in any one period.
+  expect(report.notTranslated).toEqual([]);
+  expect(m.formulaOf('Spending')).toBe('if(≤(period(), [Spending: 3|3]), @Paid, [Spending (typed)|0])');
+  expect(m.formulaOf('Paid')).toBe('if(≤(period(), [Paid: 3|3]), [Paid (typed)|20], @Spending)');
+  for(const x of compare(system, report)) expect(agrees(x), x.where + ': ' + x.got + ' against ' + x.saved).toBe(true);
+  // An opening balance's own first period stays its typed number (no extra if).
+  expect(m.formulaOf('Assets opening')).toBe('shift(-1 @Assets closing)');
+});
+
+test('a real loop in parts is still cut; one formula row with a blank cell is no part', async () => {
+  // A reads B and B reads A in the forecast (G–H): a loop there; the actual years are typed.
+  const strings = '<si><t>A</t></si><si><t>B</t></si>';
+  const row = (r, other) => '<row r="' + r + '"><c r="A' + r + '" t="s"><v>' + (r - 2) + '</v></c>' +
+    '<c r="B' + r + '"><v>1</v></c><c r="C' + r + '"><v>2</v></c><c r="D' + r + '"><f>D' + other + '+1</f><v>3</v></c><c r="E' + r + '"><f>E' + other + '+1</f><v>3</v></c></row>';
+  const { report } = await importBook(await craft({ strings, sheets: [{ name: 'S', xml: sheetXml(
+    '<row r="1"><c r="B1"><v>2026</v></c><c r="C1"><v>2027</v></c><c r="D1"><v>2028</v></c><c r="E1"><v>2029</v></c></row>' + row(2, 3) + row(3, 2)) }] }));
+  expect(report.notTranslated.map(n => [n.label, n.why])).toEqual([['B', 'a circular reference']]);
 });

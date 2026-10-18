@@ -11,6 +11,16 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'import-excel-forecast', date: '2026-10-18', title: 'Importing models with actuals and a forecast',
+    summary: 'File → Import Excel model… now keeps the forecast formulas of rows whose actual years are typed.',
+    what: [
+      'A row with typed actuals and forecast formulas (or one formula for the actual years and another for the forecast) is a row "in parts": it reads its typed numbers in the actual years and its formula in the forecast.',
+      'A formula reading the column before the first period reads that cell, as Excel does: a blank is 0.',
+    ],
+    why: 'Most real models are built this way. Before, such rows kept the forecast as fixed numbers, so changing an assumption in fmIDE didn\'t move them.',
+    how: ['File → Import Excel model…, and pick the workbook.', 'The window marks such rows "in parts", with each part\'s years.', 'Press Import: the report compares every calculated cell with Excel.'],
+    see: ['import-excel'] },
+
   { id: 'import-excel', date: '2026-10-18', title: 'Import an Excel model',
     summary: 'File → Import Excel model… rebuilds an Excel workbook as an fmIDE model, and checks it against the values Excel saved.',
     what: [

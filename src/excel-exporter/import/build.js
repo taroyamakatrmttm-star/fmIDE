@@ -9,6 +9,10 @@
 //     its operator's input column so the operator reads its inputs in Excel's order (fmIDE
 //     reads them left to right, then top to bottom);
 //   - a cell of the row that differs (odd) keeps Excel's saved value: if(period = n, value, …);
+//   - a row in parts (typed actuals, then a forecast formula) reads its parts by period:
+//     if(period ≤ 5, the typed numbers, the forecast formula);
+//   - a formula reading the column before the first period reads that cell, as Excel does
+//     (a blank is 0): if(period = 1, Excel's C92, …);
 //   - a row that can't be translated keeps Excel's saved values as an input, and is listed
 //     with why; a circular reference (within one period) is cut the same way.
 // Nothing from the file runs; every name is kept as text, cut to a length fmIDE shows.
@@ -149,7 +153,7 @@ export function xlBuildModel(book, plans, include){
           throw new XlNotTranslated('a fixed period ($' + xlColLetters(ref.col) + ')');
         }
         if(inPeriods || ref.col < plan.firstCol || ref.col > plan.lastCol){
-          return { k: 'ref', entry, shift: ref.col - plan.firstCol };
+          return xlBeforeThePeriods({ k: 'ref', entry, shift: ref.col - plan.firstCol }, sheet, plan, ref.row, ctx);
         }
       } else if(ref.row === plan.headerRow && inPeriods && !ref.colAbs && ctx.mode === 'period'){
         // The header row's years (or numbers), as an input of its own.
@@ -306,8 +310,21 @@ export function xlBuildModel(book, plans, include){
 
   // Pass 1: each formula row's expression, or why it can't be translated.
   for(const entry of rows.values()){
+    if(entry.kind === 'parts'){
+      try{ Object.assign(entry, xlPartsExpr(entry, (sig, from) => {
+        let tree;
+        try{ tree = xlParseFormula(sig); } catch(e){ throw new XlNotTranslated('a formula that can\'t be read'); }
+        return toExpr(tree, entry.sheet, { mode: 'period', canvas: entry.canvas, kind: 'parts', from });
+      }, N)); }
+      catch(e){
+        if(!(e instanceof XlNotTranslated)) throw e;
+        entry.why = e.why;
+        entry.expr = null;
+      }
+      continue;
+    }
     if(entry.kind !== 'calculation' && entry.kind !== 'opening' && entry.kind !== 'single') continue;
-    const ctx = { mode: entry.kind === 'single' ? 'single' : 'period', canvas: entry.canvas };
+    const ctx = { mode: entry.kind === 'single' ? 'single' : 'period', canvas: entry.canvas, kind: entry.kind, from: 0 };
     const text = entry.kind === 'single' ? entry.plan.before.formula : entry.plan.signature;
     try{
       if(!text) throw new XlNotTranslated('a formula that can\'t be read');
@@ -322,8 +339,25 @@ export function xlBuildModel(book, plans, include){
   }
 
   // Pass 2: circular references within a period (Excel's iterative calculation) cut.
-  const depsOf = (entry) => { const out = []; const walk = (x) => { if(!x) return; if(x.k === 'ref'){ if(x.shift === 0 && !x.entry.extra) out.push(x.entry); } else if(x.k === 'op') x.args.forEach(walk); }; walk(entry.expr); return out; };
-  xlCutLoops([...rows.values()], depsOf);
+  // Period by period: a row in parts reads only its part for that period (IF reads one
+  // branch), so two rows reading each other in different periods are no loop.
+  const depsIn = (p) => (entry) => {
+    if(!entry.expr) return [];
+    const part = entry.partExprs && entry.partExprs.find(x => p >= x.from && p <= x.to);
+    const out = [];
+    const walk = (x) => { if(!x) return; if(x.k === 'ref'){ if(x.shift === 0 && !x.entry.extra) out.push(x.entry); } else if(x.k === 'op') x.args.forEach(walk); };
+    walk(part ? part.expr : entry.expr);
+    return out;
+  };
+  const allRows = [...rows.values()];
+  const distinct = new Set();
+  for(let p = 0; p < N; p++){
+    // Periods whose parts are the same have the same loops: each kind is looked at once.
+    const key = allRows.map(e => e.partExprs ? (e.partExprs.findIndex(x => p >= x.from && p <= x.to)) : '').join(',');
+    if(distinct.has(key)) continue;
+    distinct.add(key);
+    xlCutLoops(allRows, depsIn(p));
+  }
 
   // Pass 3: the nodes.
   const nodeCount = { rectangles: 0 };
@@ -355,7 +389,7 @@ export function xlBuildModel(book, plans, include){
       }
       out.cells.forEach(c => { if(c.noSaved) report.noSaved++; });
       let lanes = 1;
-      if(entry.kind === 'input' || entry.kind === 'assumption' || ((entry.kind === 'calculation' || entry.kind === 'opening' || entry.kind === 'single') && !entry.expr)){
+      if(entry.kind === 'input' || entry.kind === 'assumption' || ((entry.kind === 'calculation' || entry.kind === 'opening' || entry.kind === 'single' || entry.kind === 'parts') && !entry.expr)){
         // Typed numbers: an input, an assumption, or a row kept as Excel's saved values.
         if(entry.kind === 'assumption'){
           rect.text = xlRectText(entry.name, xlSavedNumber(plan.before) || 0, entry.unit);
@@ -375,7 +409,7 @@ export function xlBuildModel(book, plans, include){
       } else {
         // A formula: the row's tree, then the cells that differ, then the rectangle.
         let expr = entry.expr;
-        const oddCells = entry.kind === 'single' ? [] : plan.cells.slice(0, N).map((cell, p) => ({ cell, p })).filter(({ cell }) => plan.odd.includes(cell.address));
+        const oddCells = entry.kind === 'single' || entry.kind === 'parts' ? [] : plan.cells.slice(0, N).map((cell, p) => ({ cell, p })).filter(({ cell }) => plan.odd.includes(cell.address));
         for(const { cell, p } of oddCells.slice().reverse()){
           const v = savedValues[p];
           expr = { k: 'op', op: 'if', named: true, args: [{ k: 'op', op: '=', args: [{ k: 'period' }, { k: 'const', value: p + 1 }] }, { k: 'const', value: v === null ? 0 : v, oddOf: cell.address }, expr] };
@@ -415,6 +449,44 @@ function xlReportCell(cell, period){
   if(cell.error) out.error = cell.error;
   else if((cell.formula !== null || cell.unreadable) && cell.value === null) out.noSaved = true;
   return out;
+}
+
+// A row in parts as one expression: its runs by period, the last one outermost —
+// if(period ≤ end of run 1, run 1, if(period ≤ end of run 2, run 2, … the last run)). The typed
+// runs share one rectangle of numbers ("… (typed)"), 0 in the periods of the formulas.
+function xlPartsExpr(entry, formulaExpr, n){
+  const runs = entry.plan.parts;
+  const values = [];
+  for(let p = 0; p < n; p++){
+    const r = runs.find(x => p >= x.from && p <= x.to);
+    const cell = entry.plan.cells[p];
+    values.push(r && r.typed && cell ? (xlSavedNumber(cell) || 0) : 0);
+  }
+  const parts = runs.map(r => ({ from: r.from, to: r.to, expr: r.typed ? { k: 'typed', values } : formulaExpr(r.signature, r.from) }));
+  let expr = parts[parts.length - 1].expr;
+  for(let i = parts.length - 2; i >= 0; i--){
+    expr = { k: 'op', op: 'if', named: true, args: [{ k: 'op', op: '≤', args: [{ k: 'period' }, { k: 'const', value: runs[i].to + 1 }] }, parts[i].expr, expr] };
+  }
+  return { expr, partExprs: parts };
+}
+
+// A reference some periods back reaching before the first period, in a period the formula
+// is used in: there Excel reads the cell before the period columns (a blank is 0), so that
+// period reads its value: if(period = 1, Excel's C92, …). An opening balance's first period
+// is its typed number, so it is left as it is.
+function xlBeforeThePeriods(ref, sheet, plan, row, ctx){
+  if(ref.shift >= 0 || ctx.mode !== 'period') return ref;
+  let expr = ref;
+  const from = ctx.from || 0;
+  for(let p = -ref.shift - 1; p >= from; p--){
+    if(p === 0 && ctx.kind === 'opening') continue;
+    const col = plan.firstCol + p + ref.shift;
+    const cell = col >= 1 ? sheet.cells.get(xlAddress(col, row)) : null;
+    const v = cell ? xlSavedNumber(cell) : 0;
+    if(v === null) throw new XlNotTranslated('a cell before the periods holding text or an error (' + sheet.name + '!' + xlAddress(col, row) + ')');
+    expr = { k: 'op', op: 'if', named: true, args: [{ k: 'op', op: '=', args: [{ k: 'period' }, { k: 'const', value: p + 1 }] }, { k: 'const', value: v, oddOf: col >= 1 ? xlAddress(col, row) : 'blank' }, expr] };
+  }
+  return expr;
 }
 
 // An input row whose numbers are the same in every period.
@@ -477,6 +549,7 @@ function xlCutLoops(entries, depsOf){
     // Cut one row at a time until no loop is left among them.
     for(const cut of order.slice().reverse()){
       cut.expr = null;
+      cut.partExprs = null;
       cut.why = 'a circular reference';
       const rest = order.filter(e => e.expr);
       if(!xlHasLoop(rest, depsOf)) break;
@@ -516,6 +589,13 @@ function xlEmit(x, px, py, ctx){
     const id = nodeId(c);
     const name = x.oddOf ? xlCleanName(ctx.label + ': Excel\'s ' + x.oddOf) : xlCleanName(ctx.label + ': ' + xlNumberText(x.value));
     add({ id, type: 'value', x: px, y: py, text: xlRectText(name, x.value, '') });
+    return { id, lanes: 1 };
+  }
+  if(x.k === 'typed'){
+    const id = nodeId(c);
+    const node = { id, type: 'value', x: px, y: py, text: xlRectText(xlCleanName(ctx.label + ' (typed)'), x.values[0], '') };
+    if(!x.values.every(v => v === x.values[0])) node.periodValues = x.values.slice();
+    add(node);
     return { id, lanes: 1 };
   }
   if(x.k === 'period'){
