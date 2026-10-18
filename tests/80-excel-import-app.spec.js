@@ -3,7 +3,8 @@
 // the confirm screen — per sheet what was found (tick, header row, period, label and unit
 // columns, the rows and their kinds), changing a choice works the sheet out again, a sheet
 // without periods is off until given a header row, someone else's text is shown as text, and
-// a file that can't be read says why.
+// a file that can't be read says why. Phase 20e: Import builds the model from the sheets ticked
+// and loads it (the message says what was kept as Excel's saved values); Generate writes it.
 const path = require('path');
 const JSZip = require('jszip');
 const { test, expect, fixture } = require('./helpers/apps');
@@ -112,4 +113,31 @@ test('someone else\'s workbook: markup in sheet names, labels and formulas is sh
   await expect(box.locator('tr[data-row="2"] td').nth(3)).toHaveText('"<img src=x onerror=window.__pwned=1>"&1');
   await expect(page.locator('#importModal img')).toHaveCount(0);
   expect(await page.evaluate(() => window.__pwned)).toBeUndefined();
+});
+
+test('Import builds the model from the sheets ticked and loads it; Generate writes it', async ({ page }) => {
+  await X.openExporter(page);
+  await importFile(page, sample('03-two-sheets.xlsx'));
+  // Nothing ticked: Import is off.
+  for(const i of [0, 1]) await sheetBox(page, i).locator('.import-include').uncheck();
+  await expect(page.locator('#importOk')).toBeDisabled();
+  for(const i of [0, 1]) await sheetBox(page, i).locator('.import-include').check();
+  await expect(page.locator('#importOk')).toBeEnabled();
+  await page.locator('#importOk').click();
+  await expect(page.locator('#importModal')).toBeHidden();
+  await expect(page.locator('#loadStatus .status.ok')).toHaveText('Imported 03-two-sheets.xlsx — 2 canvases, 13 rectangles, 5 periods.');
+  await expect(page.locator('#modelName')).toHaveText('03-two-sheets');
+  await expect(page.locator('#afterLoad')).toBeVisible();
+  const { wb } = await X.generate(page);
+  expect(wb.SheetNames).toEqual(expect.arrayContaining(['Inputs', 'Calc']));
+  await expect(page.locator('#differencesPanel')).toBeHidden();
+  const calc = wb.Sheets['Calc'];
+  expect(X.findRow(calc, 'Tax').length).toBe(1);
+});
+
+test('rows kept as Excel\'s saved values are named in the message', async ({ page }) => {
+  await X.openExporter(page);
+  await importFile(page, sample('04-not-supported.xlsx'));
+  await page.locator('#importOk').click();
+  await expect(page.locator('#loadStatus .status.warn')).toHaveText('Imported 04-not-supported.xlsx — 1 canvas, 9 rectangles, 5 periods. 4 rows kept as Excel\'s saved values: Growth (VLOOKUP), NPV (NPV), Cumulative cash (a range growing along the periods), Years above 220 (COUNTIF). 1 row with cells that differ, kept as Excel\'s saved values there.');
 });
