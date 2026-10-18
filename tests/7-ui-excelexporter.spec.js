@@ -522,6 +522,33 @@ test.describe('Tree view: a row\'s own format, indent and the right-click comman
 });
 
 test.describe('Inputs tab', () => {
+  test('an empty row above every group header but the first; grouping off has none; regrouping brings them back', async ({ page }) => {
+    await open(page, { inputs: true });
+    const inputsColumn = async () => {
+      const { wb } = await X.generate(page);
+      const ws = wb.Sheets['Inputs'];
+      const out = [];
+      for(let r = 4; ws['A' + r] || ws['A' + (r + 1)]; r++) out.push(X.text(ws, 'A' + r) || '');
+      return out;
+    };
+    const col = await inputsColumn();
+    const headers = ['BS', 'Corkscrew'].map(h => col.indexOf(h)).sort((a, b) => a - b);
+    expect(headers[0]).toBe(0);                         // the first header: nothing above it
+    expect(headers[1]).toBeGreaterThan(1);
+    expect(col[headers[1] - 1]).toBe('');                // an empty row above the second
+    expect(col[headers[1] - 2]).not.toBe('');            // right under the first group's last row
+    expect(col.filter(t => t === '').length).toBe(1);
+    // No grouping: no headers, no empty rows; grouped again: back.
+    await page.selectOption('#cfgInputsGroup', 'none');
+    expect((await inputsColumn()).filter(t => t === '' || t === 'BS' || t === 'Corkscrew')).toEqual([]);
+    await page.selectOption('#cfgInputsGroup', 'tab');
+    expect(await inputsColumn()).toEqual(col);
+    // In the Tree: the empty row is a label row of its own, without the period labels.
+    await page.click('#viewByTree');
+    const rows = await tree(page);
+    expect(rows['Inputs'].filter(t => t === '').length).toBe(1);
+  });
+
   test('renaming an Inputs-tab row renames its source', async ({ page }) => {
     await open(page, { inputs: true });
     await page.click('#viewByTree');

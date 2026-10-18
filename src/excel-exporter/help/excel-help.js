@@ -213,7 +213,7 @@ const EXCEL_HELP_TOPICS = [
     summary: 'Gather every typed-in number on one tab, with the other tabs linking to it.',
     body: [
       { p: 'Tick Gather inputs on a separate tab (Inputs & scenarios, on the left) to put every input (a rectangle with no arrow in) on its own tab. Its original row stays where it was and links to the Inputs tab, shown in the Links format.' },
-      { p: 'Choose the tab\'s name, how its rows are grouped (by Excel tab, by canvas, or not at all) and their order. Re-apply layout rebuilds the grouping from these settings.' },
+      { p: 'Choose the tab\'s name, how its rows are grouped (by Excel tab, by canvas, or not at all) and their order. Each group starts with a header row showing the periods, and an empty row comes before every header but the first. Re-apply layout rebuilds the grouping from these settings.' },
       { see: ['scenarios', 'rows'] },
     ] },
   { id: 'scenarios', group: 'inputs', title: 'Scenarios and global cases',

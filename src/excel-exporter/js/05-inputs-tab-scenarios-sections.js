@@ -90,6 +90,16 @@ function makeGroupHeader(g){
   return { id: 'custom_inpgrp_' + g.key.replace(/[^A-Za-z0-9_:-]/g, '_'), isCustom: true, autoInputsGroup: g.key,
            tabId: INPUTS_TAB_ID, section: 'input', label: g.name, style: null, showPeriodLabels: true };
 }
+// The empty row above a group's header — above every header but the first, so the Inputs
+// tab reads in blocks. Automatic like the headers (made, dropped and remade with them), its
+// autoInputsGroup the group's key after `spacer:`; an older ExcelExporter drops it.
+const INPUT_SPACER_PREFIX = 'spacer:';
+function makeGroupSpacer(g){
+  return { id: 'custom_inpgap_' + g.key.replace(/[^A-Za-z0-9_:-]/g, '_'), isCustom: true, autoInputsGroup: INPUT_SPACER_PREFIX + g.key,
+           tabId: INPUTS_TAB_ID, section: 'input', label: '', style: null, showPeriodLabels: false };
+}
+const isInputSpacer = (r) => typeof r.autoInputsGroup === 'string' && r.autoInputsGroup.startsWith(INPUT_SPACER_PREFIX);
+const isInputHeader = (r) => r.autoInputsGroup !== undefined && !isInputSpacer(r);
 
 // Writes `seq` (every row on the Inputs tab, in the wanted order) into both order
 // dimensions — flat order directly, sectioned order via a clean per-band renumber.
@@ -121,6 +131,11 @@ function relayoutInputsTab(){
       ? (a, b) => labelCollator.compare(a.label || '', b.label || '') || (pos(a) - pos(b))
       : (a, b) => pos(a) - pos(b));
     if(cfg.groupBy !== 'none' && g.items.length){
+      if(seq.some(isInputHeader)){
+        const gap = makeGroupSpacer(g);
+        mapping.customRows.push(gap);
+        seq.push(gap);
+      }
       const h = makeGroupHeader(g);
       mapping.customRows.push(h);
       seq.push(h);
@@ -162,6 +177,11 @@ function syncInputMirrors(){
       const h = list.findIndex(r => r.autoInputsGroup === g.key);
       if(h < 0){
         const header = makeGroupHeader(g);
+        if(list.some(isInputHeader)){
+          const gap = makeGroupSpacer(g);
+          mapping.customRows.push(gap);
+          list.push(gap);
+        }
         mapping.customRows.push(header);
         list.push(header, m);
         return;
@@ -172,9 +192,18 @@ function syncInputMirrors(){
     });
     commitInputsSequence(list);
   }
-  // Drop auto headers whose group is now empty.
+  // Drop auto headers (and the empty rows above them) whose group is now empty; an empty row
+  // left above the first header goes too.
   const liveKeys = new Set(inputMirrorRows().map(m => inputGroupOf(m, inputsCfg().groupBy).key));
-  mapping.customRows = mapping.customRows.filter(r => !(r.autoInputsGroup !== undefined && r.tabId === INPUTS_TAB_ID && !liveKeys.has(r.autoInputsGroup)));
+  const groupOf = (r) => isInputSpacer(r) ? r.autoInputsGroup.slice(INPUT_SPACER_PREFIX.length) : r.autoInputsGroup;
+  mapping.customRows = mapping.customRows.filter(r => !(r.autoInputsGroup !== undefined && r.tabId === INPUTS_TAB_ID && !liveKeys.has(groupOf(r))));
+  let headerSeen = false;
+  const firstGaps = new Set();
+  allRowsForTab(INPUTS_TAB_ID).forEach(r => {
+    if(isInputHeader(r)) headerSeen = true;
+    else if(isInputSpacer(r) && !headerSeen) firstGaps.add(r);
+  });
+  if(firstGaps.size) mapping.customRows = mapping.customRows.filter(r => !firstGaps.has(r));
 }
 
 // Excel needs unique sheet names (case-insensitive). Returns { name, changed }.
