@@ -376,6 +376,7 @@ const HELP_TOPICS = [
       { p: 'In Chrome and Edge, Save writes straight back to the file. Other browsers download a copy each time.' },
       { p: 'fmIDE also saves your work in the browser as you go. After a crash it comes back with your changes and offers to save them.' },
       { p: 'A • in the window title means there are unsaved changes.' },
+      { p: 'The document also keeps the layout you give it in ExcelExporter (its tabs and rows): each change there comes back here as an unsaved change. Save, and the layout goes with the file to any computer.' },
       { see: ['other-files'] },
     ] },
   { id: 'other-files', group: 'files', title: 'Other files: systems, modules, workspaces, preferences',

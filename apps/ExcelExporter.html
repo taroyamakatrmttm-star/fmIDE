@@ -4976,7 +4976,7 @@ $('btnResetStyle').addEventListener('click', async () => {
 // (docs/file-formats.md). To change one of these formats: raise its version here and add
 // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
 // exactly one version.
-const SHARED_FILE_VERSIONS = { 'system': 9, 'fmIDE-workspace': 12 };
+const SHARED_FILE_VERSIONS = { 'system': 9, 'fmIDE-workspace': 13 };
 // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
 // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
 function upgradeNodePlugs(nodes){
@@ -5067,7 +5067,10 @@ const SHARED_FILE_MIGRATIONS = {
     10: () => {},
     // v11 → v12: its templates — canvas and system templates — may carry an fmGraph board
     // (`attachments.graph`, step 15 G5a); older ones have none.
-    11: () => {}
+    11: () => {},
+    // v12 → v13: a document may carry its model's Excel layout (`excelLayout`, an
+    // fmIDE-excel-mapping file, step 20); older ones have none.
+    12: () => {}
   },
   'system': {
     // v1 systems were accepted with fields the loader already defaults (periods, ids…);
@@ -5255,6 +5258,25 @@ function confirmNewerFile(r){
     'Open Anyway');
 }
 
+// A document's Excel layout (`excelLayout`, an fmIDE-excel-mapping file) as a layout, or null:
+// the file's kind and version checked and upgraded (readKnownFile; a newer one is used as far
+// as it goes), its tabs and rows lists there; reconcileMapping checks the rest against the model.
+let layoutFromDocument = false; // the layout shown came from the document (the load message says so)
+function documentLayout(m){
+  if(!m || m.kind !== 'fmIDE-workspace' || !m.excelLayout || typeof m.excelLayout !== 'object') return null;
+  const r = readKnownFile(m.excelLayout, ['fmIDE-excel-mapping']);
+  if(r.error || !Array.isArray(r.data.tabs) || !Array.isArray(r.data.rows) || !r.data.cfg || typeof r.data.cfg !== 'object') return null;
+  delete r.data.kind; delete r.data.version;
+  return r.data;
+}
+// The layout as a mapping file (Export Mapping, Save for fmIDE, and what goes back to fmIDE).
+function mappingFileData(){
+  syncSensitivityCopy(); // the first analysis, as an older ExcelExporter reads it (09g)
+  const out = Object.assign({ kind: 'fmIDE-excel-mapping', version: FILE_FORMATS['fmIDE-excel-mapping'].current }, JSON.parse(JSON.stringify(mapping)));
+  out.kind = 'fmIDE-excel-mapping'; out.version = FILE_FORMATS['fmIDE-excel-mapping'].current;
+  return out;
+}
+
 // Asynchronous: it waits for the saved layout (IndexedDB) before showing the model.
 async function loadModel(m){
   let systemData = m, formatPresets = [];
@@ -5288,6 +5310,13 @@ async function loadModel(m){
     }
     if(typeof raw === 'string' && raw) restored = JSON.parse(raw);
   }catch(err){ /* ignore */ }
+  // None in this browser: the layout the document carries (workspace v13, `excelLayout`; a
+  // .fmide that Save for fmIDE wrote, or fmIDE sent), read as Import Mapping reads a file.
+  layoutFromDocument = false;
+  if(!restored){
+    restored = documentLayout(m);
+    layoutFromDocument = !!restored;
+  }
   model = loaded;
   useModelIR(ir);
   canvasModules = readCanvasModules(systemData);
@@ -5384,6 +5413,7 @@ function saveMapping(){
   layoutStore.requestPersistence(); // once, ever — on the first change, not at start-up
   writeMapping();
   rememberModuleLayouts(); // a module tab that changed is remembered for that module
+  sendLayoutToFmideSoon(); // fmIDE's model: its document keeps the layout (09f)
 }
 function writeMapping(){
   if(!mappingKey) return;
@@ -10640,7 +10670,7 @@ const EXCEL_HELP_TOPICS = [
       ] },
       { p: 'A system file (Save System) or a workspace (Export Workspace) works too, and File → Paste JSON… takes a model\'s text. The number formats you set in fmIDE come across; how cells look is your own Excel style (⚙ Settings → Excel Style).' },
       { p: 'To see how it works first, press ▶ Load Sample Model (also in the File menu).' },
-      { p: 'Your layout (tabs, rows, names, order) is remembered in this browser for each model, so loading the same model again brings it back.' },
+      { p: 'Your layout (tabs, rows, names, order) is remembered in this browser for each model, so loading the same model again brings it back. A model from fmIDE keeps it in its .fmide document too: each change here goes back to fmIDE, and on another computer the document brings it.' },
       { p: 'An Excel workbook instead of an fmIDE file? File → Import Excel model… rebuilds it as a model.' },
       { see: ['what-is-excelexporter', 'import-excel', 'remembered', 'back-to-fmide'] },
     ] },
@@ -10653,7 +10683,7 @@ const EXCEL_HELP_TOPICS = [
         'Choose File → Import Excel model… (or drop the workbook on the page).',
         'Check what was found for each sheet: the header row of periods, the period columns, the label and unit columns, and each row\'s kind. Change any of them, or untick a sheet to leave it out. One canvas per section (ticked for a sheet of more than 40 rows) gives each section of the sheet its own canvas.',
         'Press Import. The model loads here, laid out like the workbook — its rows in the same order, its titles and blank rows kept, each row\'s look (bold, colours, lines, number format), the numbers in its formulas written in the formulas — and a report says how it compares with the values Excel saved.',
-        'Press Save for fmIDE (in the report or the File menu), then open the file in fmIDE with File → Open….',
+        'Press Save for fmIDE (in the report or the File menu): it saves an fmIDE document (.fmide) with its Excel layout inside. Open it in fmIDE with File → Open….',
       ] },
       { p: 'It reads models laid out with rows as line items and columns as periods, one formula copied along each row. A reference to the column on the left becomes a period shift; a first period typed and the formula after it is an opening balance; typed actual years and a forecast formula make a row whose rectangle holds the actuals as its own numbers in those years (ticked under its 🕒), the formula feeding the others; two formulas, one after the other, make a row in parts, which reads each in its own years through one shared rectangle per canvas, such as Up to 2024 (1 in those years, 0 after). SUM, MIN, MAX, AVERAGE, IF, IFERROR, AND, OR, NOT, ROUND, CHOOSE, ABS, LN, EXP, SQRT, INT, TRUNC, MOD and POWER become fmIDE\'s operators.' },
       { p: 'What it can\'t translate keeps Excel\'s saved values as typed numbers, and the report lists it with why: lookups (VLOOKUP, INDEX, MATCH…), sums across the periods (NPV, IRR, SUMIF, COUNTIF, a running total), dates and text, circular references, and any other function. A cell unlike the rest of its row keeps its saved value in that period, as the rectangle\'s own number there.' },
@@ -10975,6 +11005,18 @@ const EXCEL_HELP_TOPICS = [
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'layout-in-document', date: '2026-10-18', title: 'The layout travels with the document',
+    summary: 'A model\'s Excel layout is kept in its fmIDE document, so it comes back on another computer too.',
+    what: [
+      'With ExcelExporter opened from fmIDE, each change to the layout goes back to fmIDE, which keeps it in the .fmide document (save it there).',
+      'Opening that document — in fmIDE, or straight in ExcelExporter — brings the layout, on any computer. Rectangles added in fmIDE since join their tab at the end.',
+      'Save for fmIDE, after importing an Excel model, now saves a .fmide document with its layout inside.',
+    ],
+    why: 'Before, the layout was kept only in the browser where it was made.',
+    how: ['Open ExcelExporter from fmIDE (File → Open ExcelExporter there).', 'Arrange the tabs and rows; each change goes back to fmIDE.', 'Save the document in fmIDE. Opened anywhere later, it brings the layout.'],
+    notes: ['A layout this browser keeps for the very same model still comes first.'],
+    see: ['remembered', 'import-excel'] },
+
   { id: 'import-excel-round-trip', date: '2026-10-18', title: 'Check the new workbook against the original',
     summary: 'After Generate, an imported model\'s workbook is recalculated from its own formulas and compared with the original Excel file.',
     what: [
@@ -11777,6 +11819,20 @@ window.addEventListener('message', (ev) => {
     if(model && model !== before) modelFromFmide = true;
   }).catch(() => {});
 });
+
+// ---- the layout back to fmIDE ----
+// With fmIDE's model shown (and its window behind), each change of the layout goes back to
+// fmIDE ('excel:layout', a mapping file's text, at most one a second), which keeps it with
+// the document: so the layout travels with the .fmide file, to another computer too.
+let layoutToFmideTimer = null;
+function sendLayoutToFmideSoon(){
+  if(!modelFromFmide || !fmideWindowBehind() || !mapping) return;
+  clearTimeout(layoutToFmideTimer);
+  layoutToFmideTimer = setTimeout(() => {
+    if(!modelFromFmide || !fmideWindowBehind() || !mapping) return;
+    try{ window.opener.postMessage({ type: 'excel:layout', text: JSON.stringify(mappingFileData()) }, ownOrigin() || '*'); }catch(e){ /* the window went away */ }
+  }, 1000);
+}
 
 // ---- Layout → 📎 Attach to Template…, and 📎 Attach on a module's tab ----
 // With fmIDE's window behind this one: sends one module's layout as this model shows it
@@ -15243,16 +15299,20 @@ $('btnImportReport').addEventListener('click', () => openImportReport());
 $('btnSaveForFmide').addEventListener('click', () => saveImportedForFmide());
 $('importSave').addEventListener('click', () => saveImportedForFmide());
 
-// Save for fmIDE: the imported model as a system file (fmIDE: File → Open…), named after the workbook.
+// Save for fmIDE: the imported model as an fmIDE document (.fmide, a workspace file: fmIDE's
+// File → Open…), named after the workbook, carrying its Excel layout as it is now
+// (`excelLayout`), so the layout travels with the file.
 function saveImportedForFmide(){
   if(!excelImport || !excelImport.result) return;
   const base = excelImport.fileName.replace(/\.xls[xm]?$/i, '').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '_').trim().slice(0, 100) || 'imported-model';
-  const blob = new Blob([JSON.stringify(excelImport.result.system, null, 2)], { type: 'application/json' });
+  const doc = { kind: 'fmIDE-workspace', version: FILE_FORMATS['fmIDE-workspace'].current, system: excelImport.result.system };
+  if(excelImport.model === model && mapping) doc.excelLayout = mappingFileData();
+  const blob = new Blob([JSON.stringify(doc, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = base + '.json'; a.click();
+  a.href = url; a.download = base + '.fmide'; a.click();
   URL.revokeObjectURL(url);
-  setStatus($('loadStatus'), 'Saved ' + base + '.json — open it in fmIDE with File → Open….', 'ok');
+  setStatus($('loadStatus'), 'Saved ' + base + '.fmide — open it in fmIDE with File → Open…; its Excel layout goes with it.', 'ok');
 }
 
 // A number as the report shows it: up to 12 significant digits.
@@ -16455,7 +16515,8 @@ async function tryLoad(jsonText, label, name){
     syncPageState();
     setStatus($('genStatus'), '', null); // a message about the last model's workbook
     setStatus($('loadStatus'), `Loaded ${label} — ${model.canvases.length} canvas${model.canvases.length === 1 ? '' : 'es'}, ${model.periods.length} periods.` +
-      (modelGraphBoards ? ' It has fmGraph boards: Layout → Use fmGraph boards….' : ''), 'ok');
+      (modelGraphBoards ? ' It has fmGraph boards: Layout → Use fmGraph boards….' : '') +
+      (layoutFromDocument ? ' Its Excel layout came with it.' : ''), 'ok');
   }catch(err){
     setStatus($('loadStatus'), 'Could not read that as an fmIDE system export: ' + err.message, 'err');
   }
@@ -16558,9 +16619,7 @@ $('btnGenerate').addEventListener('click', () => {
 });
 
 $('btnExportMapping').addEventListener('click', () => {
-  syncSensitivityCopy(); // the first analysis, as an older ExcelExporter reads it (09g)
-  const out = Object.assign({ kind: 'fmIDE-excel-mapping', version: FILE_FORMATS['fmIDE-excel-mapping'].current }, JSON.parse(JSON.stringify(mapping)));
-  out.kind = 'fmIDE-excel-mapping'; out.version = FILE_FORMATS['fmIDE-excel-mapping'].current;
+  const out = mappingFileData();
   const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

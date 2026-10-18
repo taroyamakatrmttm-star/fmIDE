@@ -11,6 +11,18 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'layout-in-document', date: '2026-10-18', title: 'The layout travels with the document',
+    summary: 'A model\'s Excel layout is kept in its fmIDE document, so it comes back on another computer too.',
+    what: [
+      'With ExcelExporter opened from fmIDE, each change to the layout goes back to fmIDE, which keeps it in the .fmide document (save it there).',
+      'Opening that document — in fmIDE, or straight in ExcelExporter — brings the layout, on any computer. Rectangles added in fmIDE since join their tab at the end.',
+      'Save for fmIDE, after importing an Excel model, now saves a .fmide document with its layout inside.',
+    ],
+    why: 'Before, the layout was kept only in the browser where it was made.',
+    how: ['Open ExcelExporter from fmIDE (File → Open ExcelExporter there).', 'Arrange the tabs and rows; each change goes back to fmIDE.', 'Save the document in fmIDE. Opened anywhere later, it brings the layout.'],
+    notes: ['A layout this browser keeps for the very same model still comes first.'],
+    see: ['remembered', 'import-excel'] },
+
   { id: 'import-excel-round-trip', date: '2026-10-18', title: 'Check the new workbook against the original',
     summary: 'After Generate, an imported model\'s workbook is recalculated from its own formulas and compared with the original Excel file.',
     what: [

@@ -1,6 +1,6 @@
 # Tutorial: importing an Excel model (step 20)
 
-A step-by-step guide to everything added in pull requests #158 to #175 (18 October 2026): step 20 of the build order, **importing an Excel model**. ExcelExporter has always turned an fmIDE model into an Excel workbook. Now it also goes the other way: it reads a financial model built in Excel and rebuilds it as an fmIDE model.
+A step-by-step guide to everything added in pull requests #158 to #176 (18 October 2026): step 20 of the build order, **importing an Excel model**. ExcelExporter has always turned an fmIDE model into an Excel workbook. Now it also goes the other way: it reads a financial model built in Excel and rebuilds it as an fmIDE model.
 
 In one sentence: open a spreadsheet you inherited, and get it back as a picture of rectangles and arrows that you can check, change and carry on in fmIDE, with a report saying how closely it matches Excel.
 
@@ -166,14 +166,15 @@ Each part below says what the feature is, why you would use it, and the exact cl
 **How to use it**
 
 1. In the report, press **Save for fmIDE** (or later choose **File → Save for fmIDE**).
-2. The file downloads, named after your workbook, for example `03-two-sheets.json`. A message says "Saved 03-two-sheets.json — open it in fmIDE with File → Open…."
+2. The file downloads, named after your workbook, for example `03-two-sheets.fmide`: an fmIDE document with the model and its Excel layout inside. A message says "Saved 03-two-sheets.fmide — open it in fmIDE with File → Open…; its Excel layout goes with it."
 3. In fmIDE, choose **File → Open…** (Ctrl+O, or ⌘O on a Mac) and pick that file.
 4. Your model opens: a canvas per sheet (or per section), the rectangles in one column on the right in the sheet's order, each formula drawn to its left. Switch canvases with the tabs at the bottom, or Alt+PageDown and Alt+PageUp.
-5. Save it as an fmIDE document with **File → Save** (a `.fmide` file).
+5. Keep it with **File → Save**: it is already an fmIDE document.
 
 **Good to know**
 
-- The saved file is an ordinary fmIDE system file: no new file format, so every app opens it.
+- The saved file is an ordinary fmIDE document (`.fmide`), so every app opens it: fmIDE, ExcelExporter and fmGraph.
+- Its Excel layout goes with it: open it in ExcelExporter on any computer, straight or through fmIDE's **File → Open ExcelExporter**, and the tabs come out as they were. Change the layout in ExcelExporter opened from fmIDE, and fmIDE keeps the change in the document (save it there).
 - From here it is a normal fmIDE model: change an input and everything that depends on it moves. Use **File → Open fmGraph** to explore it, or **File → Open ExcelExporter** to make a fresh workbook.
 
 ### 6. Rows with typed actuals and a forecast formula
@@ -222,7 +223,7 @@ Each part below says what the feature is, why you would use it, and the exact cl
 - After Import, each tab (one per sheet, or per section) lists the rows **in the original's order**, with a label row for each heading ("Expenses", "Assets"…) and an **empty row for each blank row**. There are no Inputs / Calculations / Outputs sections.
 - Numbers written inside the formulas (the 0.4 in `=ROUND(D8*0.4,0)`, the 365 in `=D27/365*D16`) are written **in the formulas again**, as in the original. They are marked **Constant** in the Rows panel, so they have no rows of their own.
 - In fmIDE, the canvas leaves a **gap** wherever the sheet had a heading or blank rows, so it reads in the same blocks as the sheet.
-- The layout is remembered in this browser for the model, like any layout. Change it in the Rows panel as usual. It isn't inside the file Save for fmIDE writes, so on another computer, or after you add or delete rectangles in fmIDE, ExcelExporter makes its usual fresh layout.
+- The layout is remembered in this browser for the model, like any layout, and it is **inside the `.fmide` file** Save for fmIDE writes (pull request #176): on another computer the document brings it, and rectangles you add in fmIDE later join it at the end of their tab.
 
 **The workbook's own look, kept**
 
@@ -261,10 +262,10 @@ Each part below says what the feature is, why you would use it, and the exact cl
 2. The window shows two sheets, Inputs and Calc, both ticked, each with "5 periods, 2026–2030". Open **Rows** on Calc and check the kinds look right (Revenue a calculation, Tax rate an assumption…).
 3. Press **Import**.
 4. The report says "All 45 calculated cells agree with Excel's saved values." Nothing is listed as kept.
-5. Press **Save for fmIDE**. `Plan.json` downloads.
+5. Press **Save for fmIDE**. `Plan.fmide` downloads.
 6. Close the report. Press ⬇ **Generate .xlsx** if you also want ExcelExporter's own workbook of the model.
-7. In fmIDE, **File → Open…** `Plan.json`. Two canvases, Inputs and Calc. Change Unit price on Inputs: Revenue, Tax and Net income on Calc move with it.
-8. **File → Save** keeps it as `Plan.fmide`.
+7. In fmIDE, **File → Open…** `Plan.fmide`. Two canvases, Inputs and Calc. Change Unit price on Inputs: Revenue, Tax and Net income on Calc move with it.
+8. **File → Save** keeps your changes in `Plan.fmide`, the Excel layout included.
 
 ## Troubleshooting and questions
 
@@ -292,6 +293,7 @@ Newest first.
 
 | Pull request | Date | What it did | Feature |
 |---|---|---|---|
+| [#176](https://github.com/taroyamakatrmttm-star/fmIDE/pull/176) | 18 Oct 2026 | The Excel layout travels with the document: Save for fmIDE writes a `.fmide` with it; fmIDE keeps it and ExcelExporter's changes | 5, 8 |
 | [#175](https://github.com/taroyamakatrmttm-star/fmIDE/pull/175) | 18 Oct 2026 | The first year's reading of the column before the years through the shared switch | 6 |
 | [#174](https://github.com/taroyamakatrmttm-star/fmIDE/pull/174) | 18 Oct 2026 | The round trip: the generated workbook recalculated and checked against the original | 4, 8 |
 | [#173](https://github.com/taroyamakatrmttm-star/fmIDE/pull/173) | 18 Oct 2026 | The workbook's own look kept: bold, colours, fills, lines and number formats per row | 3, 8 |

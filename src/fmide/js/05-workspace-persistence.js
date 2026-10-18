@@ -8,6 +8,10 @@
   // ('fmGraph:boards', 21-web-app.js) or the document brought, kept as it came
   // (cleanGraphBoards), never read here. Saved with the document and the autosave; null: none.
   let graphBoards = null;
+  // The open document's Excel layout (step 20): an fmIDE-excel-mapping file ExcelExporter sent
+  // ('excel:layout', 21-web-app.js) or the document brought, kept as it came (cleanExcelLayout),
+  // never read here. Saved with the document and the autosave; null: none.
+  let excelLayout = null;
 
   function buildWorkspacePayload(){
     return {
@@ -20,6 +24,7 @@
       macros: cloneData(MACROS),
       functions: cloneData(FUNCTIONS),
       ...(graphBoards ? { graphBoards: cloneData(graphBoards) } : {}),
+      ...(excelLayout ? { excelLayout: cloneData(excelLayout) } : {}),
       ui: buildUiPayload()
     };
   }
@@ -44,6 +49,7 @@
     if(data.system && Array.isArray(data.system.canvases) && data.system.canvases.length){
       applySystemDataDirect(data.system);
       graphBoards = cleanGraphBoards(data.graphBoards); // the boards belong to the model
+      excelLayout = cleanExcelLayout(data.excelLayout); // and so does its Excel layout
     }
     // (A workspace has always read a kind other than 'system' as a canvas template.)
     if(fromImport) addMissingTemplates((Array.isArray(data.templates) ? data.templates : [])

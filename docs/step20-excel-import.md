@@ -149,6 +149,14 @@ The owner asked for fewer small boxes. Most of the CFI model's constant rectangl
 - **The import**: the periods of a formula row holding a number of their own — an opening balance's first, the cells that differ, a row in parts' typed actuals beside its **one** formula — are ticked (`literalPeriods`), their numbers in `periodValues` (or typed, when it is one number), and the tree is the formula alone. A row of two formulas keeps its `if(period ≤ k, …)`.
 - **The CFI model**: rectangles 151 → 81, operators 172 → 67, still 670 of 670 cells agreeing; the remaining constants are a formula's own (`1 +`, `365`) and the four rows of two formulas.
 
+## The layout in the document (18 October 2026)
+
+Item 4 of the open list: the layout (and look) the import makes, or any layout made in ExcelExporter, lived only in the browser. Now it travels with the document — **workspace v13**, `excelLayout`, an `fmIDE-excel-mapping` file (`docs/file-formats.md`):
+
+- **Save for fmIDE** writes `<workbook>.fmide` (a v13 workspace: the system and `excelLayout`).
+- **fmIDE** keeps it with the document as it keeps fmGraph's boards (`cleanExcelLayout`, never read inside), saves it, sends it to an ExcelExporter it opened, and takes each change back (`excel:layout`, `takeExcelLayout`, the document marked unsaved).
+- **ExcelExporter** uses a document's layout when the browser keeps none for the model (`documentLayout`; the browser's own for the very same model wins), read as Import Mapping reads a file and reconciled with the model — rectangles added in fmIDE since join the end of their tab, matched by id. With fmIDE's model shown, every layout change goes back (`sendLayoutToFmideSoon`, at most one a second).
+
 ## The round trip (18 October 2026)
 
 The import's check compares fmIDE's calculation with the original. The owner asked for the step after it: does **the workbook ExcelExporter writes** give the original's numbers? After ⬇ Generate, for an imported model:

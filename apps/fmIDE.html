@@ -2180,6 +2180,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         { p: 'In Chrome and Edge, Save writes straight back to the file. Other browsers download a copy each time.' },
         { p: 'fmIDE also saves your work in the browser as you go. After a crash it comes back with your changes and offers to save them.' },
         { p: 'A • in the window title means there are unsaved changes.' },
+        { p: 'The document also keeps the layout you give it in ExcelExporter (its tabs and rows): each change there comes back here as an unsaved change. Save, and the layout goes with the file to any computer.' },
         { see: ['other-files'] },
       ] },
     { id: 'other-files', group: 'files', title: 'Other files: systems, modules, workspaces, preferences',
@@ -2538,6 +2539,16 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // entry: ids, dates in order, commands and topics that exist.
   // **A change people will notice adds its entry here in the same pull request.**
   const WHATS_NEW = [
+    { id: 'excel-layout-in-document', date: '2026-10-18', title: 'Your Excel layout is saved in the document',
+      summary: 'The tabs and rows you arrange in ExcelExporter are kept in the .fmide document, so they travel with it.',
+      what: [
+        'Open ExcelExporter from fmIDE and change the layout there: the document keeps it and shows it has unsaved changes. Save as usual.',
+        'Opening the document on another computer, then ExcelExporter, brings the layout back. New rectangles join it at the end of their tab.',
+      ],
+      why: 'Before, the layout stayed in the browser where it was made.',
+      how: ['Open ExcelExporter from fmIDE ({cmd:openExcelExporter}).', 'Arrange the tabs and rows there.', 'Back in fmIDE, save the document ({cmd:saveDocument}).'],
+      see: ['documents'] },
+
     { id: 'canvas-grows', date: '2026-10-18', title: 'Large models scroll all the way',
       summary: 'The canvas now grows to hold every node, so a big model (such as an Excel model imported by ExcelExporter) can be scrolled to its end.',
       what: [
@@ -5969,7 +5980,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // (docs/file-formats.md). To change one of these formats: raise its version here and add
   // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
   // exactly one version.
-  const SHARED_FILE_VERSIONS = { 'system': 9, 'fmIDE-workspace': 12 };
+  const SHARED_FILE_VERSIONS = { 'system': 9, 'fmIDE-workspace': 13 };
   // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
   // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
   function upgradeNodePlugs(nodes){
@@ -6060,7 +6071,10 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       10: () => {},
       // v11 → v12: its templates — canvas and system templates — may carry an fmGraph board
       // (`attachments.graph`, step 15 G5a); older ones have none.
-      11: () => {}
+      11: () => {},
+      // v12 → v13: a document may carry its model's Excel layout (`excelLayout`, an
+      // fmIDE-excel-mapping file, step 20); older ones have none.
+      12: () => {}
     },
     'system': {
       // v1 systems were accepted with fields the loader already defaults (periods, ids…);
@@ -6377,10 +6391,21 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // it when it is that kind of file, plain data, at most 16 deep and 1 MB as text; anything else
   // is dropped. fmGraph reads it with its own checks (cleanBoards) when it shows the boards.
   const GRAPH_BOARDS_LIMITS = { bytes: 1024 * 1024, depth: 16 };
-  function cleanGraphBoards(raw){
-    if(!raw || typeof raw !== 'object' || Array.isArray(raw) || raw.kind !== 'fmIDE-graph-board') return null;
+  function cleanGraphBoards(raw){ return keptFileOfKind(raw, 'fmIDE-graph-board', GRAPH_BOARDS_LIMITS); }
+
+  // A document's Excel layout (workspace v13, `excelLayout`; step 20): an fmIDE-excel-mapping
+  // file that ExcelExporter wrote — the layout's tabs, rows, label rows and row formats — kept
+  // with the document the same way: fmIDE never reads inside it; ExcelExporter reads it with its
+  // own checks (readKnownFile, reconcileMapping) when it shows the model.
+  const EXCEL_LAYOUT_LIMITS = { bytes: 4 * 1024 * 1024, depth: 16 };
+  function cleanExcelLayout(raw){ return keptFileOfKind(raw, 'fmIDE-excel-mapping', EXCEL_LAYOUT_LIMITS); }
+
+  // Another app's file kept with a document: that kind, plain data, at most `limits.depth`
+  // deep and `limits.bytes` as text, as a copy; anything else is dropped (null).
+  function keptFileOfKind(raw, kind, limits){
+    if(!raw || typeof raw !== 'object' || Array.isArray(raw) || raw.kind !== kind) return null;
     const plain = (v, depth) => {
-      if(depth > GRAPH_BOARDS_LIMITS.depth) return false;
+      if(depth > limits.depth) return false;
       if(v === null || typeof v === 'string' || typeof v === 'boolean') return true;
       if(typeof v === 'number') return Number.isFinite(v);
       if(Array.isArray(v)) return v.every(x => plain(x, depth + 1));
@@ -6389,7 +6414,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     };
     if(!plain(raw, 1)) return null;
     const text = JSON.stringify(raw);
-    return text.length > GRAPH_BOARDS_LIMITS.bytes ? null : JSON.parse(text);
+    return text.length > limits.bytes ? null : JSON.parse(text);
   }
 
   // The Excel layout for one template family out of a file ExcelExporter's Export Module
@@ -6713,6 +6738,10 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // ('fmGraph:boards', 21-web-app.js) or the document brought, kept as it came
   // (cleanGraphBoards), never read here. Saved with the document and the autosave; null: none.
   let graphBoards = null;
+  // The open document's Excel layout (step 20): an fmIDE-excel-mapping file ExcelExporter sent
+  // ('excel:layout', 21-web-app.js) or the document brought, kept as it came (cleanExcelLayout),
+  // never read here. Saved with the document and the autosave; null: none.
+  let excelLayout = null;
 
   function buildWorkspacePayload(){
     return {
@@ -6725,6 +6754,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       macros: cloneData(MACROS),
       functions: cloneData(FUNCTIONS),
       ...(graphBoards ? { graphBoards: cloneData(graphBoards) } : {}),
+      ...(excelLayout ? { excelLayout: cloneData(excelLayout) } : {}),
       ui: buildUiPayload()
     };
   }
@@ -6749,6 +6779,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     if(data.system && Array.isArray(data.system.canvases) && data.system.canvases.length){
       applySystemDataDirect(data.system);
       graphBoards = cleanGraphBoards(data.graphBoards); // the boards belong to the model
+      excelLayout = cleanExcelLayout(data.excelLayout); // and so does its Excel layout
     }
     // (A workspace has always read a kind other than 'system' as a canvas template.)
     if(fromImport) addMissingTemplates((Array.isArray(data.templates) ? data.templates : [])
@@ -20879,6 +20910,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     confirmDiscardChanges(() => {
       applySystemDataDirect({ canvases: [{ id: 'c' + nextCanvasId, name: 'Canvas 1', nodes: [], edges: [] }], periods: ['Period 1'], currentPeriod: 0 });
       graphBoards = null;
+      excelLayout = null;
       render();
       Object.assign(currentDoc, { name: null, fileName: null, handle: null, recentId: null, serial: currentDoc.serial + 1 });
       clearUndoHistory();
@@ -20953,6 +20985,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     const system = kind === 'system' ? data : data.system;
     applySystemDataDirect(system);
     graphBoards = kind === 'fmIDE-workspace' ? cleanGraphBoards(data.graphBoards) : null;
+    excelLayout = kind === 'fmIDE-workspace' ? cleanExcelLayout(data.excelLayout) : null;
     const presets = (kind === 'fmIDE-workspace' && Array.isArray(data.formatPresets) && data.formatPresets.length)
       ? data.formatPresets : system.formatPresets;
     if(Array.isArray(presets)) mergeFormatPresets(presets);
@@ -21271,8 +21304,9 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // ('excel:want-model') once loaded and on its File → From fmIDE, and the answer
   // ('fmIDE:model') is a workspace file's text holding the model (as Save System writes it,
   // format presets included) and the canvas templates whose Excel layout ExcelExporter may use
-  // (attachments.excel, step 11c-2), and the model's fmGraph boards (graphBoards, step 19 B2)
-  // — no macros, shortcuts or settings. Only the window this
+  // (attachments.excel, step 11c-2), the model's fmGraph boards (graphBoards, step 19 B2) and
+  // its Excel layout (excelLayout, step 20; ExcelExporter sends it back when it changes there,
+  // 'excel:layout') — no macros, shortcuts or settings. Only the window this
   // page opened is answered, under the same origin rules as fmGraph's. In a tutorial's
   // practice the practice model goes.
   function buildExcelPayload(){
@@ -21283,7 +21317,9 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       formatPresets: FORMAT_PRESETS.map(p => ({ id: p.id, name: p.name, style: p.style })),
       // The model's fmGraph boards (step 19 B2), for ExcelExporter's Use fmGraph boards…; in
       // practice, only the board a tutorial's practice model comes with (step 19 B5).
-      ...(inPractice() ? (practiceGraphBoards() ? { graphBoards: practiceGraphBoards() } : {}) : graphBoards ? { graphBoards } : {})
+      ...(inPractice() ? (practiceGraphBoards() ? { graphBoards: practiceGraphBoards() } : {}) : graphBoards ? { graphBoards } : {}),
+      // The document's Excel layout (step 20), never in practice.
+      ...(!inPractice() && excelLayout ? { excelLayout } : {})
     };
   }
   function sendModelToExcel(target){
@@ -21295,11 +21331,12 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     const origin = ownOrigin();
     if(origin && ev.origin !== origin) return;
     const type = ev.data && typeof ev.data === 'object' ? ev.data.type : null;
-    if(type !== 'excel:want-model' && type !== 'excel:attach-layout') return;
+    if(type !== 'excel:want-model' && type !== 'excel:attach-layout' && type !== 'excel:layout') return;
     // A window this page opened before it was reloaded is still its own: taken back on asking.
     if(!excelWindow){ try{ if(ev.source && ev.source !== window && ev.source.opener === window && ev.source.name === 'fmIDE-ExcelExporter') excelWindow = ev.source; }catch(e){ /* not ours */ } }
     if(!excelWindow || ev.source !== excelWindow) return;
     if(type === 'excel:want-model') sendModelToExcel(excelWindow);
+    else if(type === 'excel:layout') takeExcelLayout(ev.data.text); // the layout changed there (below)
     else askToAttachExcelLayout(ev.data.text); // Layout → Attach to Template… (askToAttachFromApp, below)
   });
   function sendModelToGraph(target){
@@ -21447,6 +21484,18 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     const cleaned = cleanGraphBoards(raw);
     if(!cleaned || JSON.stringify(cleaned) === JSON.stringify(graphBoards)) return;
     graphBoards = cleaned;
+    markDocDirty();
+  }
+  // ExcelExporter's layout for this model, changed there ('excel:layout'): kept with the
+  // document, which then has unsaved changes — not an undo step (ExcelExporter keeps its own).
+  // Ignored in a tutorial's practice.
+  function takeExcelLayout(text){
+    if(inPractice() || typeof text !== 'string' || text.length > EXCEL_LAYOUT_LIMITS.bytes) return;
+    let raw;
+    try{ raw = JSON.parse(text); } catch(e){ return; }
+    const cleaned = cleanExcelLayout(raw);
+    if(!cleaned || JSON.stringify(cleaned) === JSON.stringify(excelLayout)) return;
+    excelLayout = cleaned;
     markDocDirty();
   }
   function openFmGraph(){

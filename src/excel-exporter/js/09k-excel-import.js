@@ -303,16 +303,20 @@ $('btnImportReport').addEventListener('click', () => openImportReport());
 $('btnSaveForFmide').addEventListener('click', () => saveImportedForFmide());
 $('importSave').addEventListener('click', () => saveImportedForFmide());
 
-// Save for fmIDE: the imported model as a system file (fmIDE: File → Open…), named after the workbook.
+// Save for fmIDE: the imported model as an fmIDE document (.fmide, a workspace file: fmIDE's
+// File → Open…), named after the workbook, carrying its Excel layout as it is now
+// (`excelLayout`), so the layout travels with the file.
 function saveImportedForFmide(){
   if(!excelImport || !excelImport.result) return;
   const base = excelImport.fileName.replace(/\.xls[xm]?$/i, '').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '_').trim().slice(0, 100) || 'imported-model';
-  const blob = new Blob([JSON.stringify(excelImport.result.system, null, 2)], { type: 'application/json' });
+  const doc = { kind: 'fmIDE-workspace', version: FILE_FORMATS['fmIDE-workspace'].current, system: excelImport.result.system };
+  if(excelImport.model === model && mapping) doc.excelLayout = mappingFileData();
+  const blob = new Blob([JSON.stringify(doc, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = base + '.json'; a.click();
+  a.href = url; a.download = base + '.fmide'; a.click();
   URL.revokeObjectURL(url);
-  setStatus($('loadStatus'), 'Saved ' + base + '.json — open it in fmIDE with File → Open….', 'ok');
+  setStatus($('loadStatus'), 'Saved ' + base + '.fmide — open it in fmIDE with File → Open…; its Excel layout goes with it.', 'ok');
 }
 
 // A number as the report shows it: up to 12 significant digits.

@@ -219,10 +219,21 @@ export function cleanTemplateAttachments(raw, family, kind){
 // it when it is that kind of file, plain data, at most 16 deep and 1 MB as text; anything else
 // is dropped. fmGraph reads it with its own checks (cleanBoards) when it shows the boards.
 export const GRAPH_BOARDS_LIMITS = { bytes: 1024 * 1024, depth: 16 };
-export function cleanGraphBoards(raw){
-  if(!raw || typeof raw !== 'object' || Array.isArray(raw) || raw.kind !== 'fmIDE-graph-board') return null;
+export function cleanGraphBoards(raw){ return keptFileOfKind(raw, 'fmIDE-graph-board', GRAPH_BOARDS_LIMITS); }
+
+// A document's Excel layout (workspace v13, `excelLayout`; step 20): an fmIDE-excel-mapping
+// file that ExcelExporter wrote — the layout's tabs, rows, label rows and row formats — kept
+// with the document the same way: fmIDE never reads inside it; ExcelExporter reads it with its
+// own checks (readKnownFile, reconcileMapping) when it shows the model.
+export const EXCEL_LAYOUT_LIMITS = { bytes: 4 * 1024 * 1024, depth: 16 };
+export function cleanExcelLayout(raw){ return keptFileOfKind(raw, 'fmIDE-excel-mapping', EXCEL_LAYOUT_LIMITS); }
+
+// Another app's file kept with a document: that kind, plain data, at most `limits.depth`
+// deep and `limits.bytes` as text, as a copy; anything else is dropped (null).
+function keptFileOfKind(raw, kind, limits){
+  if(!raw || typeof raw !== 'object' || Array.isArray(raw) || raw.kind !== kind) return null;
   const plain = (v, depth) => {
-    if(depth > GRAPH_BOARDS_LIMITS.depth) return false;
+    if(depth > limits.depth) return false;
     if(v === null || typeof v === 'string' || typeof v === 'boolean') return true;
     if(typeof v === 'number') return Number.isFinite(v);
     if(Array.isArray(v)) return v.every(x => plain(x, depth + 1));
@@ -231,7 +242,7 @@ export function cleanGraphBoards(raw){
   };
   if(!plain(raw, 1)) return null;
   const text = JSON.stringify(raw);
-  return text.length > GRAPH_BOARDS_LIMITS.bytes ? null : JSON.parse(text);
+  return text.length > limits.bytes ? null : JSON.parse(text);
 }
 
 // The Excel layout for one template family out of a file ExcelExporter's Export Module

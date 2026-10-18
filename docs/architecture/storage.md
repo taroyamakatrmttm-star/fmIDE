@@ -8,7 +8,7 @@ Autosave lives in IndexedDB, through `createStore(dbName)` in `src/shared/store.
 
 | App | Database | Keys |
 |---|---|---|
-| fmIDE | `fmIDE` | `fmIDE-workspace-v1` — the whole workspace; saved every 8 s, about 2 s after each change, when the page is hidden, and on close |
+| fmIDE | `fmIDE` | `fmIDE-workspace-v1` — the whole workspace (since step 20 with the document's `excelLayout`, as its `graphBoards`); saved every 8 s, about 2 s after each change, when the page is hidden, and on close |
 | fmIDE | `fmIDE` | `fmIDE-session` (open document: name, file name, Recent entry, unsaved flag) and `fmIDE-session-handle` (its file handle), saved with the workspace |
 | fmIDE | `fmIDE` | `fmIDE-recent` (the list, at most 10), `fmIDE-recent:<id>` (a copy of that document), `fmIDE-recent-handle:<id>` (its file handle) |
 | fmIDE | `fmIDE` | `fmIDE-phone` — on a phone (step 17 P2a): Full app, the tick's switch, the Watch list per document and the install note seen (P2b) (`{ fullApp, vibrate, watch, installNoteSeen }`, read through `cleanPhoneSettings`); never in the workspace or a file; saved when changed |

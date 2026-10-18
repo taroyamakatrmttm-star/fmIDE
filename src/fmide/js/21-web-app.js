@@ -66,8 +66,9 @@
   // ('excel:want-model') once loaded and on its File → From fmIDE, and the answer
   // ('fmIDE:model') is a workspace file's text holding the model (as Save System writes it,
   // format presets included) and the canvas templates whose Excel layout ExcelExporter may use
-  // (attachments.excel, step 11c-2), and the model's fmGraph boards (graphBoards, step 19 B2)
-  // — no macros, shortcuts or settings. Only the window this
+  // (attachments.excel, step 11c-2), the model's fmGraph boards (graphBoards, step 19 B2) and
+  // its Excel layout (excelLayout, step 20; ExcelExporter sends it back when it changes there,
+  // 'excel:layout') — no macros, shortcuts or settings. Only the window this
   // page opened is answered, under the same origin rules as fmGraph's. In a tutorial's
   // practice the practice model goes.
   function buildExcelPayload(){
@@ -78,7 +79,9 @@
       formatPresets: FORMAT_PRESETS.map(p => ({ id: p.id, name: p.name, style: p.style })),
       // The model's fmGraph boards (step 19 B2), for ExcelExporter's Use fmGraph boards…; in
       // practice, only the board a tutorial's practice model comes with (step 19 B5).
-      ...(inPractice() ? (practiceGraphBoards() ? { graphBoards: practiceGraphBoards() } : {}) : graphBoards ? { graphBoards } : {})
+      ...(inPractice() ? (practiceGraphBoards() ? { graphBoards: practiceGraphBoards() } : {}) : graphBoards ? { graphBoards } : {}),
+      // The document's Excel layout (step 20), never in practice.
+      ...(!inPractice() && excelLayout ? { excelLayout } : {})
     };
   }
   function sendModelToExcel(target){
@@ -90,11 +93,12 @@
     const origin = ownOrigin();
     if(origin && ev.origin !== origin) return;
     const type = ev.data && typeof ev.data === 'object' ? ev.data.type : null;
-    if(type !== 'excel:want-model' && type !== 'excel:attach-layout') return;
+    if(type !== 'excel:want-model' && type !== 'excel:attach-layout' && type !== 'excel:layout') return;
     // A window this page opened before it was reloaded is still its own: taken back on asking.
     if(!excelWindow){ try{ if(ev.source && ev.source !== window && ev.source.opener === window && ev.source.name === 'fmIDE-ExcelExporter') excelWindow = ev.source; }catch(e){ /* not ours */ } }
     if(!excelWindow || ev.source !== excelWindow) return;
     if(type === 'excel:want-model') sendModelToExcel(excelWindow);
+    else if(type === 'excel:layout') takeExcelLayout(ev.data.text); // the layout changed there (below)
     else askToAttachExcelLayout(ev.data.text); // Layout → Attach to Template… (askToAttachFromApp, below)
   });
   function sendModelToGraph(target){
@@ -242,6 +246,18 @@
     const cleaned = cleanGraphBoards(raw);
     if(!cleaned || JSON.stringify(cleaned) === JSON.stringify(graphBoards)) return;
     graphBoards = cleaned;
+    markDocDirty();
+  }
+  // ExcelExporter's layout for this model, changed there ('excel:layout'): kept with the
+  // document, which then has unsaved changes — not an undo step (ExcelExporter keeps its own).
+  // Ignored in a tutorial's practice.
+  function takeExcelLayout(text){
+    if(inPractice() || typeof text !== 'string' || text.length > EXCEL_LAYOUT_LIMITS.bytes) return;
+    let raw;
+    try{ raw = JSON.parse(text); } catch(e){ return; }
+    const cleaned = cleanExcelLayout(raw);
+    if(!cleaned || JSON.stringify(cleaned) === JSON.stringify(excelLayout)) return;
+    excelLayout = cleaned;
     markDocDirty();
   }
   function openFmGraph(){

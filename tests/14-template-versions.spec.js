@@ -269,23 +269,23 @@ test('a v1 templates file: each template becomes a family of its own, version 1'
   expect(await messageText(page)).toBe('All 2 templates in that file are already in your library.');
 });
 
-test('a v1 workspace: its templates become families, and it saves as the current version (12)', async ({ page }) => {
+test('a v1 workspace: its templates become families, and it saves as the current version (13)', async ({ page }) => {
   await F.importViaCommand(page, 'importWorkspace', fixture('formats', 'ws-v1-templates.json'));
   await F.acceptAll(page);
   const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
-  expect(data.version).toBe(12);
+  expect(data.version).toBe(13);
   expect(data.templates.map(t => [t.name, t.version, t.note])).toEqual([['Old Revenue', 1, ''], ['Old Costs', 1, '']]);
   data.templates.forEach(t => expect(t.family).toMatch(UID));
   expect(await insertedRevenue(page, 'Old Revenue@1')).toBe(100);
 });
 
-test('a workspace from a newer fmIDE (version 13) asks before opening', async ({ page }, testInfo) => {
+test('a workspace from a newer fmIDE (version 14) asks before opening', async ({ page }, testInfo) => {
   const path = testInfo.outputPath('newer.json');
   const ws = JSON.parse(fs.readFileSync(fixture('formats', 'ws-v1-templates.json'), 'utf8'));
-  ws.version = 13;
+  ws.version = 14;
   fs.writeFileSync(path, JSON.stringify(ws));
   await F.importViaCommand(page, 'importWorkspace', path);
-  expect(await F.dialogText(page)).toMatch(/^This workspace was saved by a newer version of fmIDE \(format version 13; this fmIDE reads up to version 12\)/);
+  expect(await F.dialogText(page)).toMatch(/^This workspace was saved by a newer version of fmIDE \(format version 14; this fmIDE reads up to version 13\)/);
 });
 
 // ---------- untrusted text ----------
