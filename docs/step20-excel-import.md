@@ -108,6 +108,15 @@ Each is one pull request, merged when the whole suite is green (the owner's requ
 
 **Real workbooks are still needed.** ExcelJS's files are close to Excel's (shared strings, shared formulas, styles), but Excel also writes a calculation chain, rich text, inline strings and other variations. The owner is asked to provide, when they can, one or two real models (or made-up ones saved by Excel) to add as samples.
 
+## How 20f turned out
+
+Done (18 October 2026): `import/check.js` — `xlCheckModel(system, report)` — and the report window that opens after Import (and again from File → Import Report… while that model is shown).
+
+- **What is compared**: every cell of every formula row translated (calculations, opening balances, single formulas), calculated by the shared IR, against the value Excel saved for it, within a billionth of its size. Inputs and assumptions are Excel's own numbers, and rows kept as saved values are listed instead of compared.
+- **The report** says "All 45 calculated cells agree with Excel's saved values." or "43 of 45 …; 2 differ.", then lists the cells that differ (sheet, cell, row, period, fmIDE's number and Excel's), the rows kept as saved values and why, the cells unlike the rest of their row, and the notes (macros, chart sheets, periods matched in order).
+- **Excel's errors**: a cell where Excel shows an error agrees when the model fails there too.
+- **No saved values** (a workbook saved by a program that keeps none, such as ExcelExporter itself): the report says there is nothing to compare and how to get the values (save it in Excel).
+
 ## How 20e turned out
 
 Done (18 October 2026): `import/build.js` — `xlBuildModel(book, plans, include)` gives the `system` and a report — and the window's Import button, which loads the model as any model file is ("Imported … — 2 canvases, 13 rectangles, 5 periods.", naming the rows kept as Excel's saved values).

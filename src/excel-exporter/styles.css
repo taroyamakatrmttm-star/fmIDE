@@ -299,6 +299,11 @@
   .import-rows th{ color:var(--muted); font-weight:600; }
   .import-rows td.import-formula{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12px; }
   .import-odd{ color:#92400e; }
+  .import-check{ margin:0 0 8px; font-weight:600; }
+  .import-check.ok{ color:#166534; }
+  .import-check.warn{ color:#92400e; }
+  .import-report-lists{ max-height:55vh; overflow:auto; }
+  .import-report-lists li{ padding:2px 0; overflow-wrap:anywhere; }
   .graph-left-out li{ padding:2px 0; color:#92400e; overflow-wrap:anywhere; }
   .modal-close{ width:32px; height:32px; padding:0; border:none; background:transparent; border-radius:8px; color:var(--muted); }
   .modal-close::before{ content:'×'; font-size:22px; line-height:32px; }

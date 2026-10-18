@@ -13,7 +13,9 @@
 // every sample, calculated by the shared IR, agrees with Excel's saved value; the shape of the
 // trees (aliases in Excel's order, period shifts, named inputs, constants); the rows not
 // translated and the odd cells as expected.json lists them; circular references cut; what a
-// formula reads outside the rows. No browser.
+// formula reads outside the rows. Phase 20f: the check (check.js) — the samples agree in every
+// calculated cell; a stale saved value, Excel's errors and a workbook saved without values. No
+// browser.
 const fs = require('fs');
 const path = require('path');
 const JSZip = require('jszip');
@@ -25,6 +27,7 @@ const W = require('../src/excel-exporter/import/workbook.js');
 const F = require('../src/excel-exporter/import/formula.js');
 const L = require('../src/excel-exporter/import/layout.js');
 const B = require('../src/excel-exporter/import/build.js');
+const C = require('../src/excel-exporter/import/check.js');
 const { compileModel, evaluateModel } = require('../src/shared/ir.js');
 const { SHARED_FILE_VERSIONS } = require('../src/shared/file-formats.js');
 const { XLSX } = require('../src/excel-exporter/js-head/01-xlsx-writer.js');
@@ -690,4 +693,45 @@ test('names repeated or with line breaks are made one line and unique; a sheet w
   expect(system.canvases[0].nodes.filter(n => n.type === 'value').map(n => n.text)).toEqual(['Cost\n1', 'Cost (row 3)\n4', 'Two lines\n5', '2027\n6']);
   expect(report.notes).toEqual(['“B” has 2 periods, “A” 3: periods are matched in order']);
   for(const x of compare(system, report)) expect(agrees(x), x.where).toBe(true);
+});
+
+// ---------- 20f: the check ----------
+
+test('the check: every calculated cell of the samples agrees with Excel', async () => {
+  const want = { '01-simple-rows.xlsx': [15, 0], '02-corkscrew.xlsx': [15, 0], '03-two-sheets.xlsx': [45, 0], '04-not-supported.xlsx': [15, 4] };
+  for(const file of SAMPLES){
+    const { system, report } = await importBook(bytesOf(file));
+    const check = C.xlCheckModel(system, report);
+    expect([check.compared, check.kept], file).toEqual(want[file]);
+    expect(check.agree, file).toBe(check.compared);
+    expect(check.differ, file).toEqual([]);
+    expect([check.noSaved, check.excelErrors], file).toEqual([0, 0]);
+  }
+  expect(C.xlAgree(1 + 1e-12, 1)).toBe(true);
+  expect(C.xlAgree(1e12 + 1, 1e12)).toBe(true);
+  expect(C.xlAgree(1.001, 1)).toBe(false);
+  expect(C.xlAgree(null, 0)).toBe(false);
+  expect(C.xlAgree(NaN, NaN)).toBe(false);
+});
+
+test('the check finds a saved value the formula doesn\'t give, matches Excel\'s errors, and says when nothing was saved', async () => {
+  const rows = (v) => '<row r="1"><c r="B1"><v>2026</v></c><c r="C1"><v>2027</v></c></row>' +
+    '<row r="2"><c r="A2" t="s"><v>0</v></c><c r="B2"><v>10</v></c><c r="C2"><v>0</v></c></row>' +
+    '<row r="3"><c r="A3" t="s"><v>1</v></c><c r="B3"><f>B2*2</f>' + v[0] + '</c><c r="C3"><f>C2*2</f>' + v[1] + '</c></row>' +
+    '<row r="4"><c r="A4" t="s"><v>2</v></c><c r="B4"><f>1/B2</f>' + v[2] + '</c><c r="C4"><f>1/C2</f>' + v[3] + '</c></row>';
+  const strings = '<si><t>Units</t></si><si><t>Doubled</t></si><si><t>Inverse</t></si>';
+  // C3 saved as 99 (stale); C4 is #DIV/0! in Excel and an error in the model too.
+  const stale = await importBook(await craft({ strings, sheets: [{ name: 'S', xml: sheetXml(rows(['<v>20</v>', '<v>99</v>', '<v>0.1</v>', '<v>#DIV/0!</v>']).replace('<c r="C4"><f>', '<c r="C4" t="e"><f>')) }] }));
+  const c1 = C.xlCheckModel(stale.system, stale.report);
+  expect([c1.compared, c1.agree, c1.excelErrors]).toEqual([4, 3, 1]);
+  expect(c1.differ).toEqual([{ sheet: 'S', address: 'C3', label: 'Doubled', period: 1, got: 0, saved: 99, error: null }]);
+  // Excel shows #DIV/0! where the model calculates a number: they differ.
+  const wrong = await importBook(await craft({ strings, sheets: [{ name: 'S', xml: sheetXml(rows(['<v>20</v>', '<v>0</v>', '<v>#DIV/0!</v>', '<v>#DIV/0!</v>']).replace('<c r="B4"><f>', '<c r="B4" t="e"><f>').replace('<c r="C4"><f>', '<c r="C4" t="e"><f>')) }] }));
+  const c2 = C.xlCheckModel(wrong.system, wrong.report);
+  expect(c2.differ.map(d => [d.address, d.got, d.excel])).toEqual([['B4', 0.1, '#DIV/0!']]);
+  // Saved without values (as ExcelExporter's own writer saves): nothing to compare.
+  const none = await importBook(await craft({ strings, sheets: [{ name: 'S', xml: sheetXml(rows(['', '', '', ''])) }] }));
+  const c3 = C.xlCheckModel(none.system, none.report);
+  expect([c3.compared, c3.noSaved]).toEqual([0, 4]);
+  expect(none.report.noSaved).toBe(4);
 });

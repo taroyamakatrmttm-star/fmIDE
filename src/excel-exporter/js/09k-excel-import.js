@@ -17,7 +17,8 @@
 // imported, its header row, period columns, label and unit columns, and its rows with their
 // kinds. Changing a choice works that sheet out again. Every text from the file is shown
 // with textContent.
-let excelImport = null; // { fileName, book, plans, include }
+// `var`: syncPageState (09e, earlier in the file) reads it through syncImportReportItem.
+var excelImport = null; // { fileName, book, plans, include, result, check, model }
 
 const IMPORT_KIND_NAMES = { title: 'title', input: 'input', assumption: 'assumption', calculation: 'calculation', opening: 'opening balance', single: 'one formula' };
 const IMPORT_ROWS_SHOWN = 300;
@@ -176,7 +177,79 @@ async function buildImportedModel(){
   const before = model;
   await tryLoad(JSON.stringify(built.system), label, label.replace(/\.xls[xm]?$/i, ''));
   if(model === before || !model) return; // tryLoad said why
-  setStatus($('loadStatus'), importLoadedMessage(built.report), built.report.notTranslated.length ? 'warn' : 'ok');
+  excelImport.check = xlCheckModel(built.system, built.report);
+  excelImport.model = model;
+  syncImportReportItem();
+  const check = excelImport.check;
+  setStatus($('loadStatus'), importLoadedMessage(built.report), built.report.notTranslated.length || check.differ.length ? 'warn' : 'ok');
+  openImportReport();
+}
+
+// File → Import Report…: shown while the model is the one imported.
+function syncImportReportItem(){
+  const item = $('btnImportReport');
+  if(item) item.classList.toggle('hidden', !(excelImport && excelImport.check && excelImport.model && excelImport.model === model));
+}
+$('btnImportReport').addEventListener('click', () => openImportReport());
+
+// A number as the report shows it: up to 12 significant digits.
+function importNumber(v){
+  if(typeof v !== 'number' || !Number.isFinite(v)) return '—';
+  return String(Number(v.toPrecision(12)));
+}
+
+function importCheckSummary(check){
+  if(!check.compared && check.noSaved) return { text: 'Nothing to compare: the workbook was saved without its formulas\' values. Save it in Excel, then import it again.', kind: 'warn' };
+  if(!check.compared) return { text: 'No calculated cells to compare.', kind: 'warn' };
+  const n = check.compared.toLocaleString('en');
+  let text = check.differ.length
+    ? check.agree.toLocaleString('en') + ' of ' + n + ' calculated cells agree with Excel\'s saved values; ' + check.differ.length.toLocaleString('en') + ' differ.'
+    : 'All ' + n + ' calculated cells agree with Excel\'s saved values.';
+  if(check.noSaved) text += ' ' + check.noSaved.toLocaleString('en') + ' had no saved value.';
+  return { text, kind: check.differ.length ? 'warn' : 'ok' };
+}
+
+const IMPORT_REPORT_SHOWN = 200;
+
+function fillImportList(listId, headId, items){
+  const list = $(listId);
+  list.textContent = '';
+  items.slice(0, IMPORT_REPORT_SHOWN).forEach(t => { const li = document.createElement('li'); li.textContent = t; list.appendChild(li); });
+  if(items.length > IMPORT_REPORT_SHOWN){ const li = document.createElement('li'); li.textContent = 'and ' + (items.length - IMPORT_REPORT_SHOWN) + ' more'; list.appendChild(li); }
+  $(headId).classList.toggle('hidden', !items.length);
+}
+
+function openImportReport(){
+  if(!excelImport || !excelImport.check) return;
+  const { report } = excelImport.result, check = excelImport.check;
+  const periods = excelImport.result.system.periods;
+  $('importReportSource').textContent = excelImport.fileName + ' · ' + report.canvases + ' canvas' + (report.canvases === 1 ? '' : 'es') + ', ' + report.rectangles + ' rectangles';
+  const sum = importCheckSummary(check);
+  const el = $('importCheckSummary');
+  el.textContent = sum.text;
+  el.className = 'import-check ' + sum.kind;
+  fillImportList('importDiffer', 'importDifferHead', check.differ.map(d =>
+    d.sheet + '!' + d.address + ' · ' + d.label + (d.period !== null && periods[d.period] !== undefined ? ' · ' + periods[d.period] : '') + ': ' +
+    'fmIDE ' + (d.got === null ? 'an error' + (d.error ? ' (' + d.error + ')' : '') : importNumber(d.got)) + ', Excel ' + (d.excel || importNumber(d.saved))));
+  fillImportList('importKept', 'importKeptHead', report.notTranslated.map(k => k.sheet + '!' + k.cells + ' · ' + k.label + ': ' + k.why));
+  fillImportList('importOdd', 'importOddHead', report.odd.map(o => o.sheet + '!' + o.cells.join(', ') + ' · ' + o.label + ': ' + o.how));
+  fillImportList('importReportNotes', 'importReportNotesHead', [...excelImport.book.notes, ...report.notes]);
+  const modal = $('importReportModal');
+  const opener = document.activeElement;
+  const close = () => {
+    modal.classList.add('hidden');
+    $('importReportClose').onclick = null;
+    modal.removeEventListener('click', onBackdrop);
+    document.removeEventListener('keydown', onKey, true);
+    if(opener && document.contains(opener) && opener.focus && !opener.closest('.hidden')) opener.focus();
+  };
+  const onBackdrop = (ev) => { if(ev.target === modal) close(); };
+  const onKey = (ev) => { if(ev.key === 'Escape'){ ev.preventDefault(); close(); } };
+  $('importReportClose').onclick = close;
+  modal.addEventListener('click', onBackdrop);
+  document.addEventListener('keydown', onKey, true);
+  modal.classList.remove('hidden');
+  $('importReportClose').focus();
 }
 
 function importLoadedMessage(report){
@@ -227,3 +300,4 @@ function openImportWindow(){
   ($('importOk').disabled ? $('importCancel') : $('importOk')).focus();
 }
 // build:include excel-exporter/import/build.js
+// build:include excel-exporter/import/check.js
