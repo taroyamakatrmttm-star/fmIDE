@@ -13571,6 +13571,486 @@ function appendDashboardSheet(wb, dash, name, ownRow, charts, cellPos){
   wb.SheetNames.unshift(wb.SheetNames.pop()); // the Dashboard first
 }
 // ============================================================
+// Importing an Excel model (step 20, docs/step20-excel-import.md): File → Import Excel
+// model… reads an .xlsx model and rebuilds it as an fmIDE model. The importer's pieces are
+// modules in src/excel-exporter/import/ (tested in Node, group 79); every name they export
+// starts with xl.
+// ============================================================
+
+// ---------- importing an Excel model: the zip (src/excel-exporter/import/zip.js; step 20b) ----------
+// An .xlsx file is a zip archive of XML parts. This reads the zip's central directory and
+// unpacks one part at a time, stored or deflated, with the browser's own
+// DecompressionStream('deflate-raw') (Node 18+ has it too) — no library. Every size is
+// checked against XL_LIMITS while unpacking, so a part that unpacks to far more than it
+// claims (a "zip bomb") is stopped before it fills the memory. Nothing in the file runs.
+// Every top-level name starts with xl: the build puts these modules into ExcelExporter's one
+// wrapped function, beside the rest of the app.
+
+// The limits on a workbook that is imported (docs/step20-excel-import.md, "Safety").
+const XL_LIMITS = {
+  fileBytes: 50 * 1024 * 1024,      // the .xlsx itself
+  partBytes: 100 * 1024 * 1024,     // one part, unpacked
+  totalBytes: 200 * 1024 * 1024,    // every part read, unpacked
+  parts: 10000,                     // entries in the zip
+  sheets: 64,
+  cells: 200000,                    // cells holding a number, text or formula, in all
+  formulaChars: 8192,               // Excel's own limit
+  nesting: 64,                      // brackets and function calls inside each other
+};
+
+// An error the person is shown: `code` for tests, `message` in plain words.
+class XlImportError extends Error {
+  constructor(code, message){ super(message); this.name = 'XlImportError'; this.code = code; }
+}
+
+const XL_OLE_SIGNATURE = [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
+
+function xlU16(b, i){ return b[i] | (b[i + 1] << 8); }
+function xlU32(b, i){ return (b[i] | (b[i + 1] << 8) | (b[i + 2] << 16)) + b[i + 3] * 0x1000000; }
+
+// The entries of a zip: [{ name, method, flags, compressedSize, size, offset }].
+function xlZipEntries(bytes){
+  if(!(bytes instanceof Uint8Array)) throw new XlImportError('not-a-file', 'This is not a file.');
+  if(bytes.length > XL_LIMITS.fileBytes) throw new XlImportError('too-big', 'This file is larger than 50 MB, the most an import reads.');
+  if(XL_OLE_SIGNATURE.every((v, i) => bytes[i] === v)){
+    throw new XlImportError('old-or-protected', 'This is an old Excel file (.xls) or a password-protected workbook. Open it in Excel and save it as an .xlsx workbook without a password, then import that.');
+  }
+  // The end of central directory record: within the last 65,557 bytes (22 + a comment).
+  let eocd = -1;
+  for(let i = bytes.length - 22; i >= Math.max(0, bytes.length - 65557); i--){
+    if(bytes[i] === 0x50 && bytes[i + 1] === 0x4B && bytes[i + 2] === 0x05 && bytes[i + 3] === 0x06){ eocd = i; break; }
+  }
+  if(eocd < 0) throw new XlImportError('not-xlsx', 'This is not an Excel workbook (.xlsx): it is not a zip file.');
+  const count = xlU16(bytes, eocd + 10);
+  const dirOffset = xlU32(bytes, eocd + 16);
+  if(count === 0xFFFF || dirOffset === 0xFFFFFFFF) throw new XlImportError('not-xlsx', 'This workbook uses a zip form (zip64) the import does not read.');
+  if(count > XL_LIMITS.parts) throw new XlImportError('too-many-parts', 'This file has more than ' + XL_LIMITS.parts + ' parts.');
+  const entries = [];
+  let p = dirOffset;
+  const decoder = new TextDecoder('utf-8');
+  for(let k = 0; k < count; k++){
+    if(p + 46 > bytes.length || xlU32(bytes, p) !== 0x02014B50) throw new XlImportError('broken', 'This workbook is damaged: its list of parts can\'t be read.');
+    const flags = xlU16(bytes, p + 8), method = xlU16(bytes, p + 10);
+    const compressedSize = xlU32(bytes, p + 20), size = xlU32(bytes, p + 24);
+    const nameLen = xlU16(bytes, p + 28), extraLen = xlU16(bytes, p + 30), commentLen = xlU16(bytes, p + 32);
+    const offset = xlU32(bytes, p + 42);
+    if(p + 46 + nameLen > bytes.length) throw new XlImportError('broken', 'This workbook is damaged: its list of parts can\'t be read.');
+    const name = decoder.decode(bytes.subarray(p + 46, p + 46 + nameLen));
+    entries.push({ name, method, flags, compressedSize, size, offset });
+    p += 46 + nameLen + extraLen + commentLen;
+  }
+  return entries;
+}
+
+// A budget shared by every part read from one file: { used }.
+function xlZipBudget(){ return { used: 0 }; }
+
+// One entry's bytes, unpacked, within the limits (budget: xlZipBudget()).
+async function xlZipRead(bytes, entry, budget){
+  if(entry.flags & 1) throw new XlImportError('old-or-protected', 'This workbook is password-protected. Save it without a password in Excel, then import it.');
+  const h = entry.offset;
+  if(h + 30 > bytes.length || xlU32(bytes, h) !== 0x04034B50) throw new XlImportError('broken', 'This workbook is damaged: a part can\'t be found.');
+  const start = h + 30 + xlU16(bytes, h + 26) + xlU16(bytes, h + 28);
+  const end = start + entry.compressedSize;
+  if(end > bytes.length) throw new XlImportError('broken', 'This workbook is damaged: a part is cut short.');
+  const raw = bytes.subarray(start, end);
+  const allow = Math.min(XL_LIMITS.partBytes, XL_LIMITS.totalBytes - budget.used);
+  const tooBig = () => new XlImportError('too-big', 'This workbook unpacks to more than the import reads (' + (XL_LIMITS.partBytes / 1048576) + ' MB a part, ' + (XL_LIMITS.totalBytes / 1048576) + ' MB in all).');
+  let out;
+  if(entry.method === 0){
+    if(raw.length > allow) throw tooBig();
+    out = raw.slice();
+  } else if(entry.method === 8){
+    out = await xlInflate(raw, allow, tooBig);
+  } else {
+    throw new XlImportError('broken', 'This workbook packs its parts in a way the import does not read.');
+  }
+  budget.used += out.length;
+  return out;
+}
+
+// Deflated bytes unpacked, stopping as soon as they pass `allow`.
+async function xlInflate(raw, allow, tooBig){
+  if(typeof DecompressionStream !== 'function') throw new XlImportError('no-unzip', 'This browser can\'t unpack workbooks. Use a current Chrome, Edge, Firefox or Safari.');
+  const ds = new DecompressionStream('deflate-raw');
+  const writer = ds.writable.getWriter();
+  writer.write(raw).catch(() => {});
+  writer.close().catch(() => {});
+  const reader = ds.readable.getReader();
+  const chunks = [];
+  let total = 0;
+  try{
+    for(;;){
+      const { done, value } = await reader.read();
+      if(done) break;
+      total += value.length;
+      if(total > allow){ reader.cancel().catch(() => {}); throw tooBig(); }
+      chunks.push(value);
+    }
+  } catch(e){
+    if(e instanceof XlImportError) throw e;
+    throw new XlImportError('broken', 'This workbook is damaged: a part can\'t be unpacked.');
+  }
+  const out = new Uint8Array(total);
+  let at = 0;
+  for(const c of chunks){ out.set(c, at); at += c.length; }
+  return out;
+}
+// ---------- importing an Excel model: XML (src/excel-exporter/import/xml.js; step 20b) ----------
+// A small XML reader for a workbook's parts, the same in the browser and in Node (no
+// DOMParser): elements with their attributes, children and text. Element names lose their
+// namespace prefix (x:c is c); attributes keep theirs (r:id). Only the five XML entities and
+// character references are read; a document type (<!DOCTYPE …>) is refused, so no entity can
+// grow the text. Comments and processing instructions are skipped; CDATA is text.
+
+
+const XL_ENTITIES = { lt: '<', gt: '>', amp: '&', quot: '"', apos: '\'' };
+
+// Text with its entities read. An unknown entity stays as it was written.
+function xlXmlText(s){
+  if(s.indexOf('&') < 0) return s;
+  return s.replace(/&(#x[0-9a-fA-F]+|#[0-9]+|[a-zA-Z]+);/g, (m, e) => {
+    if(e[0] === '#'){
+      const code = e[1] === 'x' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
+      return code > 0 && code <= 0x10FFFF && !(code >= 0xD800 && code <= 0xDFFF) ? String.fromCodePoint(code) : m;
+    }
+    return Object.prototype.hasOwnProperty.call(XL_ENTITIES, e) ? XL_ENTITIES[e] : m;
+  });
+}
+
+const XL_ATTR = /([^\s=\/>]+)\s*=\s*("([^"]*)"|'([^']*)')/g;
+
+// The document's root element: { name, attrs, children, text } (text: the element's own text,
+// joined; children: its elements, in order).
+function xlParseXml(source){
+  const root = { name: '#document', attrs: {}, children: [], text: '' };
+  const stack = [root];
+  let i = 0;
+  const n = source.length;
+  const broken = () => new XlImportError('broken', 'This workbook is damaged: a part is not readable XML.');
+  while(i < n){
+    const lt = source.indexOf('<', i);
+    const textEnd = lt < 0 ? n : lt;
+    if(textEnd > i){
+      const top = stack[stack.length - 1];
+      if(top !== root) top.text += xlXmlText(source.slice(i, textEnd));
+    }
+    if(lt < 0) break;
+    if(source.startsWith('<!--', lt)){
+      const e = source.indexOf('-->', lt + 4);
+      if(e < 0) throw broken();
+      i = e + 3;
+    } else if(source.startsWith('<![CDATA[', lt)){
+      const e = source.indexOf(']]>', lt + 9);
+      if(e < 0) throw broken();
+      stack[stack.length - 1].text += source.slice(lt + 9, e);
+      i = e + 3;
+    } else if(source.startsWith('<?', lt)){
+      const e = source.indexOf('?>', lt + 2);
+      if(e < 0) throw broken();
+      i = e + 2;
+    } else if(source.startsWith('<!', lt)){
+      throw new XlImportError('broken', 'This workbook has a part with a document type, which the import refuses.');
+    } else if(source[lt + 1] === '/'){
+      const e = source.indexOf('>', lt);
+      if(e < 0) throw broken();
+      const name = xlLocal(source.slice(lt + 2, e).trim());
+      const top = stack.pop();
+      if(!top || top === root || top.name !== name) throw broken();
+      i = e + 1;
+    } else {
+      // A start tag: find its end outside quoted attribute values.
+      let e = lt + 1, quote = '';
+      for(; e < n; e++){
+        const ch = source[e];
+        if(quote){ if(ch === quote) quote = ''; }
+        else if(ch === '"' || ch === '\'') quote = ch;
+        else if(ch === '>') break;
+      }
+      if(e >= n) throw broken();
+      let body = source.slice(lt + 1, e);
+      const selfClosing = body.endsWith('/');
+      if(selfClosing) body = body.slice(0, -1);
+      const m = /^[^\s]+/.exec(body);
+      if(!m) throw broken();
+      const el = { name: xlLocal(m[0]), attrs: {}, children: [], text: '' };
+      XL_ATTR.lastIndex = m[0].length;
+      let a;
+      while((a = XL_ATTR.exec(body))) el.attrs[a[1]] = xlXmlText(a[3] !== undefined ? a[3] : a[4]);
+      stack[stack.length - 1].children.push(el);
+      if(!selfClosing) stack.push(el);
+      i = e + 1;
+    }
+  }
+  if(stack.length !== 1 || root.children.length !== 1) throw broken();
+  return root.children[0];
+}
+
+function xlLocal(name){ const k = name.indexOf(':'); return k < 0 ? name : name.slice(k + 1); }
+
+// The first child element called `name`, and all of them.
+function xlChild(el, name){ return el ? el.children.find(c => c.name === name) : undefined; }
+function xlChildren(el, name){ return el ? el.children.filter(c => c.name === name) : []; }
+
+// An attribute by its name without a prefix (r:id and id alike), when no attribute has exactly that name.
+function xlAttr(el, name){
+  if(!el) return undefined;
+  if(Object.prototype.hasOwnProperty.call(el.attrs, name)) return el.attrs[name];
+  for(const k of Object.keys(el.attrs)) if(xlLocal(k) === name) return el.attrs[k];
+  return undefined;
+}
+// ---------- importing an Excel model: the workbook (src/excel-exporter/import/workbook.js; step 20b) ----------
+// xlReadWorkbook(bytes) reads an .xlsx file into plain data: its sheets in order, each cell's
+// saved value (number, text, true/false, error), its formula as written, whether its number
+// format is a date, and the workbook's defined names. Nothing from the file runs: formulas
+// are kept as text (import/formula.js reads them), macros are never opened. Every text is
+// kept as text, for the window to show with textContent. Cell addresses are checked.
+
+
+const XL_MAX_ROW = 1048576;
+const XL_MAX_COL = 16384;
+
+// Column letters to a number (A = 1) and back; 0 when not letters or past XFD.
+function xlColNumber(letters){
+  if(!/^[A-Za-z]{1,3}$/.test(letters)) return 0;
+  let n = 0;
+  for(const ch of letters.toUpperCase()) n = n * 26 + (ch.charCodeAt(0) - 64);
+  return n <= XL_MAX_COL ? n : 0;
+}
+function xlColLetters(n){
+  let s = '';
+  while(n > 0){ const r = (n - 1) % 26; s = String.fromCharCode(65 + r) + s; n = Math.floor((n - 1) / 26); }
+  return s;
+}
+// "B7" to { col: 2, row: 7 }; null when it isn't a cell address inside Excel's grid.
+function xlCellRef(addr){
+  const m = /^([A-Za-z]{1,3})([1-9][0-9]{0,6})$/.exec(String(addr));
+  if(!m) return null;
+  const col = xlColNumber(m[1]), row = Number(m[2]);
+  return col && row <= XL_MAX_ROW ? { col, row } : null;
+}
+function xlAddress(col, row){ return xlColLetters(col) + row; }
+
+// Excel's built-in number formats that show dates or times.
+const XL_DATE_FORMAT_IDS = new Set([14, 15, 16, 17, 18, 19, 20, 21, 22, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 45, 46, 47, 50, 51, 52, 53, 54, 55, 56, 57, 58]);
+
+// Whether a number format's code shows a date or time: d, m, y, h or s outside quotes,
+// brackets and escapes ([h] counts; [Red] and [$-409] don't).
+function xlIsDateFormat(code){
+  if(typeof code !== 'string' || code === '' || /^general$/i.test(code)) return false;
+  const s = code.replace(/"[^"]*"/g, '').replace(/\\./g, '').replace(/_./g, '').replace(/\*./g, '')
+    .replace(/\[(h+|m+|s+)\]/gi, 'h').replace(/\[[^\]]*\]/g, '');
+  return /[dmyhs]/i.test(s.split(';')[0]);
+}
+
+// A part's path inside the zip from a relationship's target, relative to the part `from`.
+function xlResolve(from, target){
+  if(target.startsWith('/')) return target.slice(1);
+  const parts = from.split('/'); parts.pop();
+  for(const seg of target.split('/')){
+    if(seg === '..') parts.pop();
+    else if(seg !== '.' && seg !== '') parts.push(seg);
+  }
+  return parts.join('/');
+}
+function xlRelsPath(part){
+  const k = part.lastIndexOf('/');
+  return (k < 0 ? '' : part.slice(0, k + 1)) + '_rels/' + part.slice(k + 1) + '.rels';
+}
+
+// The text of a shared string or inline string: its <t>, or its runs' <t>s (phonetic
+// guides, <rPh>, left out).
+function xlStringText(si){
+  const t = xlChild(si, 't');
+  if(t && !xlChildren(si, 'r').length) return t.text;
+  return xlChildren(si, 'r').map(r => { const rt = xlChild(r, 't'); return rt ? rt.text : ''; }).join('') || (t ? t.text : '');
+}
+
+// Reads the workbook: { sheets: [{ name, hidden, cells: Map(address → cell), rows, cols }],
+// names: [{ name, ref, sheet (index of the sheet it belongs to, or null) }], date1904, notes }.
+// A cell: { col, row, address, value (number | string | boolean | null), error (Excel's
+// error text, as '#DIV/0!', or null), formula (text without '=', or null), shared ({ index,
+// ref } on the cell holding a shared formula's text, { index } on the others), array (an
+// array formula's range), dataTable (true for a Data Table's cell), date (its format shows a
+// date), format (its number format code) }.
+async function xlReadWorkbook(bytes){
+  const entries = xlZipEntries(bytes);
+  const byName = new Map(entries.map(e => [e.name, e]));
+  const budget = xlZipBudget();
+  const decoder = new TextDecoder('utf-8');
+  const has = (name) => byName.has(name);
+  const readText = async (name) => decoder.decode(await xlZipRead(bytes, byName.get(name), budget));
+  const readXml = async (name) => xlParseXml(await readText(name));
+  const notes = [];
+
+  // The workbook part: from the package's relationships, else where Excel puts it.
+  let wbPath = 'xl/workbook.xml';
+  if(has('_rels/.rels')){
+    const rels = await readXml('_rels/.rels');
+    const office = xlChildren(rels, 'Relationship').find(r => /\/officeDocument$/.test(r.attrs.Type || ''));
+    if(office && office.attrs.Target) wbPath = xlResolve('', office.attrs.Target);
+  }
+  if(!has(wbPath)) throw new XlImportError('not-xlsx', 'This is not an Excel workbook (.xlsx): it has no workbook part.');
+  const wb = await readXml(wbPath);
+  const pr = xlChild(wb, 'workbookPr');
+  const date1904 = !!pr && /^(1|true)$/.test(pr.attrs.date1904 || '');
+
+  // Its relationships: sheet id → part.
+  const relTargets = new Map(), relTypes = new Map();
+  if(has(xlRelsPath(wbPath))){
+    const rels = await readXml(xlRelsPath(wbPath));
+    for(const r of xlChildren(rels, 'Relationship')){
+      if((r.attrs.TargetMode || '') === 'External') continue;
+      relTargets.set(r.attrs.Id, xlResolve(wbPath, r.attrs.Target || ''));
+      relTypes.set(r.attrs.Id, r.attrs.Type || '');
+    }
+  }
+  if([...relTypes.values()].some(t => /\/externalLink$/.test(t))) notes.push('links to other workbooks: their saved values are kept');
+  if(has('xl/vbaProject.bin')) notes.push('macros: not read, never run');
+
+  // Shared strings.
+  const sstPath = [...relTypes.entries()].filter(([, t]) => /\/sharedStrings$/.test(t)).map(([id]) => relTargets.get(id))[0]
+    || (has('xl/sharedStrings.xml') ? 'xl/sharedStrings.xml' : null);
+  const strings = [];
+  if(sstPath && has(sstPath)){
+    const sst = await readXml(sstPath);
+    for(const si of xlChildren(sst, 'si')) strings.push(xlStringText(si));
+  }
+
+  // Number formats: which style index shows a date, and each one's code.
+  const stylesPath = [...relTypes.entries()].filter(([, t]) => /\/styles$/.test(t)).map(([id]) => relTargets.get(id))[0]
+    || (has('xl/styles.xml') ? 'xl/styles.xml' : null);
+  const xfFormats = [];
+  if(stylesPath && has(stylesPath)){
+    const st = await readXml(stylesPath);
+    const codes = new Map();
+    for(const f of xlChildren(xlChild(st, 'numFmts'), 'numFmt')) codes.set(Number(f.attrs.numFmtId), String(f.attrs.formatCode || ''));
+    for(const xf of xlChildren(xlChild(st, 'cellXfs'), 'xf')){
+      const id = Number(xf.attrs.numFmtId || 0);
+      const code = codes.has(id) ? codes.get(id) : (id === 0 ? 'General' : '');
+      xfFormats.push({ code, date: codes.has(id) ? xlIsDateFormat(code) : XL_DATE_FORMAT_IDS.has(id) });
+    }
+  }
+
+  // The sheets, in the workbook's order. Chart sheets and others are left out, and noted.
+  const sheetEls = xlChildren(xlChild(wb, 'sheets'), 'sheet');
+  const worksheets = [];
+  let skipped = 0;
+  sheetEls.forEach((s, index) => {
+    const id = xlAttr(s, 'id');
+    const part = relTargets.get(id);
+    if(!part || !/\/worksheet$/.test(relTypes.get(id) || '') || !has(part)){ skipped++; return; }
+    worksheets.push({ index, name: String(s.attrs.name || ''), hidden: s.attrs.state === 'hidden' || s.attrs.state === 'veryHidden', part });
+  });
+  if(skipped) notes.push(skipped + (skipped === 1 ? ' chart or other sheet' : ' chart or other sheets') + ': left out');
+  if(!worksheets.length) throw new XlImportError('no-sheets', 'This workbook has no worksheets to import.');
+  if(worksheets.length > XL_LIMITS.sheets) throw new XlImportError('too-many-sheets', 'This workbook has ' + worksheets.length + ' sheets; an import reads at most ' + XL_LIMITS.sheets + '.');
+
+  let cellCount = 0;
+  const sheets = [];
+  for(const ws of worksheets){
+    const doc = await readXml(ws.part);
+    const cells = new Map();
+    let maxRow = 0, maxCol = 0, rowNo = 0;
+    for(const rowEl of xlChildren(xlChild(doc, 'sheetData'), 'row')){
+      const r = rowEl.attrs.r !== undefined ? Number(rowEl.attrs.r) : rowNo + 1;
+      if(!Number.isInteger(r) || r < 1 || r > XL_MAX_ROW || r <= rowNo) throw new XlImportError('broken', 'This workbook is damaged: sheet “' + ws.name + '” has a row out of order.');
+      rowNo = r;
+      let colNo = 0;
+      for(const c of xlChildren(rowEl, 'c')){
+        let col;
+        if(c.attrs.r !== undefined){
+          const ref = xlCellRef(c.attrs.r);
+          if(!ref || ref.row !== r) throw new XlImportError('broken', 'This workbook is damaged: sheet “' + ws.name + '” has a cell with an address that is not one.');
+          col = ref.col;
+        } else col = colNo + 1;
+        if(col <= colNo || col > XL_MAX_COL) throw new XlImportError('broken', 'This workbook is damaged: sheet “' + ws.name + '” has a cell out of order.');
+        colNo = col;
+        const cell = xlReadCell(c, col, r, strings, xfFormats, date1904);
+        if(cell.value === null && cell.error === null && cell.formula === null && !cell.shared) continue;
+        if(++cellCount > XL_LIMITS.cells) throw new XlImportError('too-many-cells', 'This workbook has more than ' + XL_LIMITS.cells.toLocaleString('en') + ' cells with numbers, text or formulas, the most an import reads.');
+        cells.set(cell.address, cell);
+        if(r > maxRow) maxRow = r;
+        if(col > maxCol) maxCol = col;
+      }
+    }
+    sheets.push({ name: ws.name, hidden: ws.hidden, cells, rows: maxRow, cols: maxCol, workbookIndex: ws.index });
+  }
+
+  // Defined names (Excel's own, _xlnm., and hidden ones kept but marked).
+  const names = [];
+  for(const d of xlChildren(xlChild(wb, 'definedNames'), 'definedName')){
+    const local = d.attrs.localSheetId !== undefined ? Number(d.attrs.localSheetId) : null;
+    const k = local === null ? -1 : sheets.findIndex(s => s.workbookIndex === local);
+    names.push({ name: String(d.attrs.name || ''), ref: d.text, sheet: k < 0 ? null : k, hidden: d.attrs.hidden === '1' || d.attrs.hidden === 'true' });
+  }
+  sheets.forEach(s => { delete s.workbookIndex; });
+  return { sheets, names, date1904, notes };
+}
+
+const XL_ERRORS = new Set(['#NULL!', '#DIV/0!', '#VALUE!', '#REF!', '#NAME?', '#NUM!', '#N/A', '#GETTING_DATA', '#SPILL!', '#CALC!', '#FIELD!', '#BLOCKED!', '#UNKNOWN!', '#BUSY!', '#CONNECT!', '#PYTHON!']);
+
+// One <c> element as a cell.
+function xlReadCell(c, col, row, strings, xfFormats, date1904){
+  const t = c.attrs.t || 'n';
+  const style = xfFormats[Number(c.attrs.s || 0)] || { code: 'General', date: false };
+  const vEl = xlChild(c, 'v');
+  const v = vEl ? vEl.text : null;
+  let value = null, error = null;
+  if(t === 's'){
+    const k = Number(v);
+    value = v !== null && Number.isInteger(k) && k >= 0 && k < strings.length ? strings[k] : null;
+  } else if(t === 'inlineStr'){
+    const is = xlChild(c, 'is');
+    value = is ? xlStringText(is) : null;
+  } else if(t === 'str'){
+    value = v === null ? null : v;
+  } else if(t === 'b'){
+    value = v === null ? null : (v.trim() === '1' || v.trim() === 'true');
+  } else if(t === 'e'){
+    error = v !== null && XL_ERRORS.has(v.trim()) ? v.trim() : (v === null ? null : '#VALUE!');
+  } else if(t === 'd'){
+    value = v === null ? null : xlDateSerial(v, date1904);
+  } else if(v !== null && v.trim() !== ''){
+    const num = Number(v);
+    value = Number.isFinite(num) ? num : null;
+  }
+  const fEl = xlChild(c, 'f');
+  let formula = null, shared = null, array = null, dataTable = false;
+  if(fEl){
+    const ft = fEl.attrs.t || 'normal';
+    if(fEl.text.length > XL_LIMITS.formulaChars) throw new XlImportError('formula-too-long', 'Cell ' + xlAddress(col, row) + ' has a formula longer than ' + XL_LIMITS.formulaChars + ' characters, more than Excel allows.');
+    const text = fEl.text.trim() === '' ? null : fEl.text;
+    if(ft === 'shared'){
+      const si = Number(fEl.attrs.si);
+      if(Number.isInteger(si) && si >= 0){
+        shared = { index: si };
+        if(text !== null){ formula = text; if(fEl.attrs.ref) shared.ref = fEl.attrs.ref; }
+      } else formula = text;
+    } else if(ft === 'array'){
+      formula = text; array = fEl.attrs.ref || xlAddress(col, row);
+    } else if(ft === 'dataTable'){
+      dataTable = true;
+    } else formula = text;
+  }
+  return { col, row, address: xlAddress(col, row), value, error, formula, shared, array, dataTable,
+    date: typeof value === 'number' && style.date, format: style.code };
+}
+
+// An ISO date (t="d") as Excel's serial number.
+function xlDateSerial(text, date1904){
+  const ms = Date.parse(text.trim().replace(/Z?$/, 'Z'));
+  if(!Number.isFinite(ms)) return null;
+  const base = date1904 ? Date.UTC(1904, 0, 1) : Date.UTC(1899, 11, 30);
+  return (ms - base) / 86400000;
+}
+
+// A serial number as a date (UTC), the workbook's 1900 or 1904 system.
+function xlSerialToDate(serial, date1904){
+  const base = date1904 ? Date.UTC(1904, 0, 1) : Date.UTC(1899, 11, 30);
+  return new Date(base + Math.round(serial * 86400000));
+}
+// ============================================================
 // Wiring
 // ============================================================
 // A file that is too large or nested too deep is refused first (FILE_LIMITS, shared).
