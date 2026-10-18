@@ -300,3 +300,55 @@ test('rows in parts in the window and the report (actuals typed, then a forecast
   await expect(page.locator('#importOddHead')).toBeHidden();
   await expect(page.locator('#importKeptHead')).toBeHidden();
 });
+
+// A workbook of three sections, `per` rows each, two blank rows between them (ExcelJS).
+async function sectionsWorkbook(per){
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Model');
+  ['B', 'C', 'D', 'E'].forEach((c, i) => { ws.getCell(c + '1').value = 2026 + i; });
+  const block = (title, top, make) => {
+    ws.getCell('A' + top).value = title;
+    for(let k = 1; k <= per; k++){
+      ws.getCell('A' + (top + k)).value = title + ' ' + k;
+      ['B', 'C', 'D', 'E'].forEach((c, i) => { ws.getCell(c + (top + k)).value = make(c, top + k, k, i); });
+    }
+    return top + per + 3;
+  };
+  let top = block('Alpha', 2, (c, r, k, i) => k * 10 + i);
+  const alpha = (k, i) => k * 10 + i;
+  top = block('Beta', top, (c, r, k, i) => ({ formula: c + (r - per - 3) + '*2', result: alpha(k, i) * 2 }));
+  block('Gamma', top, (c, r, k, i) => ({ formula: c + (r - per - 3) + '+1', result: alpha(k, i) * 2 + 1 }));
+  return { name: 'sections.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: Buffer.from(await wb.xlsx.writeBuffer()) };
+}
+
+test('a tall sheet is a canvas per section unless unticked; a short one is ticked off; one without sections has no box', async ({ page }) => {
+  await X.openExporter(page);
+  const tall = await sectionsWorkbook(15);
+  await importFile(page, tall);
+  const split = sheetBox(page, 0).locator('.import-split');
+  await expect(split).toBeChecked();
+  await expect(sheetBox(page, 0).locator('.import-split-label')).toHaveText('One canvas per section (3)');
+  await expect(sheetBox(page, 0).locator('.import-split-label')).toHaveAttribute('title', 'A canvas for each section of the sheet: Alpha, Beta, Gamma');
+  await page.locator('#importOk').click();
+  await expect(page.locator('#loadStatus .status.ok')).toHaveText('Imported sections.xlsx — 3 canvases, 45 rectangles, 4 periods.');
+  await expect(page.locator('#importCheckSummary')).toHaveText('All 120 calculated cells agree with Excel\'s saved values.');
+  await expect(page.locator('#importReportNotes')).toContainText('“Model” is 3 canvases, one per section');
+  await page.locator('#importReportClose').click();
+  const { wb } = await X.generate(page);
+  expect(wb.SheetNames).toEqual(expect.arrayContaining(['Alpha', 'Beta', 'Gamma']));
+
+  // Unticked: one canvas.
+  await importFile(page, tall);
+  await sheetBox(page, 0).locator('.import-split').uncheck();
+  await page.locator('#importOk').click();
+  await expect(page.locator('#loadStatus .status.ok')).toHaveText('Imported sections.xlsx — 1 canvas, 45 rectangles, 4 periods.');
+  await page.locator('#importReportClose').click();
+
+  // 6 rows: the box is there, unticked (40 rows or fewer stay on one canvas).
+  await importFile(page, await sectionsWorkbook(2));
+  await expect(sheetBox(page, 0).locator('.import-split')).not.toBeChecked();
+  await page.locator('#importCancel').click();
+  // A sample without sections: no box.
+  await importFile(page, sample('03-two-sheets.xlsx'));
+  await expect(page.locator('#importSheets .import-split')).toHaveCount(0);
+});

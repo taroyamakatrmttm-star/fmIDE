@@ -895,6 +895,7 @@ var XLSX = (function(){
   .import-sheet-head{ display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 12px; }
   .import-sheet-head label{ display:flex; align-items:baseline; gap:6px; font-weight:600; overflow-wrap:anywhere; }
   .import-summary{ font-size:12.5px; color:var(--muted); }
+  .import-sheet-head label.import-split-label{ font-weight:400; font-size:12.5px; }
   .import-choices{ display:flex; flex-wrap:wrap; gap:6px 14px; margin:6px 0 2px; font-size:12.5px; color:var(--muted); }
   .import-choices label{ display:flex; align-items:center; gap:5px; }
   .import-choices input{ width:4.5em; padding:3px 6px; font-size:12.5px; }
@@ -10648,7 +10649,7 @@ const EXCEL_HELP_TOPICS = [
       { p: 'ExcelExporter can also go the other way: it reads a financial model built in Excel (.xlsx or .xlsm) and rebuilds it as an fmIDE model, with a canvas per sheet, a rectangle per row, and operators and period shifts for the formulas.' },
       { steps: [
         'Choose File → Import Excel model… (or drop the workbook on the page).',
-        'Check what was found for each sheet: the header row of periods, the period columns, the label and unit columns, and each row\'s kind. Change any of them, or untick a sheet to leave it out.',
+        'Check what was found for each sheet: the header row of periods, the period columns, the label and unit columns, and each row\'s kind. Change any of them, or untick a sheet to leave it out. One canvas per section (ticked for a sheet of more than 40 rows) gives each section of the sheet its own canvas.',
         'Press Import. The model loads here, and a report says how it compares with the values Excel saved.',
         'Press Save for fmIDE (in the report or the File menu), then open the file in fmIDE with File → Open….',
       ] },
@@ -10971,6 +10972,16 @@ const EXCEL_HELP_TOPICS = [
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'import-excel-sections', date: '2026-10-18', title: 'A canvas per section',
+    summary: 'A long imported sheet can be split into one canvas per section: Assumptions, Income Statement, Balance Sheet…',
+    what: [
+      'The import window\'s "One canvas per section" box gives each section of a sheet — the headings with blank rows above them — its own canvas, named after it.',
+      'Rows still read each other across canvases, so the model calculates exactly as before.',
+    ],
+    why: 'A three-statement model on one sheet made a single canvas many screens tall.',
+    how: ['File → Import Excel model…, and pick the workbook.', 'The box is ticked for a sheet of more than 40 rows: untick it to keep the sheet on one canvas, or tick it for a shorter one.', 'Press Import.'],
+    see: ['import-excel'] },
+
   { id: 'import-excel-tidier', date: '2026-10-18', title: 'Tidier imported models',
     summary: 'An imported row\'s typed actuals, and any cell that differs, are now the row\'s own numbers in those years — no extra boxes.',
     what: [
@@ -14661,7 +14672,7 @@ function xlSignature(cell, firstCol){
 // One sheet worked out. `choice` (from the confirm screen) may fix headerRow, firstCol,
 // lastCol, labelCol and unitCol (null for none). The result:
 // { name, hidden, byPeriods, headerRow, firstCol, lastCol, labelCol, unitCol, periods,
-//   rows: [{ row, label, unit, kind, signature, formula, odd, cells, before }] }.
+//   rows: [{ row, label, unit, kind, signature, formula, odd, cells, before }], sections }.
 function xlAnalyseSheet(sheet, choice, date1904){
   const ch = choice || {};
   let header = null;
@@ -14670,7 +14681,7 @@ function xlAnalyseSheet(sheet, choice, date1904){
     if(run && run.lastCol >= run.firstCol) header = { row: ch.headerRow, firstCol: run.firstCol, lastCol: run.lastCol };
   } else header = xlFindHeader(sheet);
   const plan = { name: sheet.name, hidden: sheet.hidden, byPeriods: !!header, headerRow: header ? header.row : null,
-    firstCol: header ? header.firstCol : null, lastCol: header ? header.lastCol : null, labelCol: null, unitCol: null, periods: [], rows: [] };
+    firstCol: header ? header.firstCol : null, lastCol: header ? header.lastCol : null, labelCol: null, unitCol: null, periods: [], rows: [], sections: [] };
   if(!header) return plan;
   const found = xlFindLabelColumns(sheet, header.row, header.firstCol);
   plan.labelCol = ch.labelCol !== undefined ? ch.labelCol : found.labelCol;
@@ -14741,8 +14752,34 @@ function xlAnalyseSheet(sheet, choice, date1904){
     row.odd = cells.filter((c, i) => !(fits(c) || (row.kind === 'opening' && i === 0))).map(c => c.address);
     plan.rows.push(row);
   }
+  plan.sections = xlSections(plan, new Set(rowNumbers));
   return plan;
 }
+
+// A sheet's sections, for one canvas each: the titles with at least two empty rows above
+// them (with fewer than two such, those with one), [{ row, label }] in order, or [] when
+// there aren't two. Rows before the first are a section of their own, named after their
+// first title (or the sheet), from row 1.
+const XL_SECTION_MIN_ROWS = 40; // a sheet with more rows than this is split by default
+function xlSections(plan, used){
+  const titles = plan.rows.filter(r => r.kind === 'title' && r.label);
+  const blanksAbove = (r) => { let n = 0; while(n < 2 && r - n - 1 >= 1 && !used.has(r - n - 1) && r - n - 1 !== plan.headerRow) n++; return n; };
+  for(const need of [2, 1]){
+    const heads = titles.filter(t => blanksAbove(t.row) >= need);
+    if(heads.length < 2) continue;
+    const out = heads.map(t => ({ row: t.row, label: t.label }));
+    const before = plan.rows.filter(r => r.row < out[0].row);
+    if(before.some(r => r.kind !== 'title')){
+      const first = before.find(r => r.kind === 'title' && r.label);
+      out.unshift({ row: 1, label: first ? first.label : plan.name });
+    }
+    return out;
+  }
+  return [];
+}
+
+// How many rows of a sheet become rectangles (all but titles).
+function xlRectangleRows(plan){ return plan.rows.filter(r => r.kind !== 'title').length; }
 
 // A row's period cells as runs side by side: typed (a number, or blank) or one formula
 // signature. [{ from, to, typed, signature }], period indices from 0.
@@ -14790,7 +14827,7 @@ function xlKindCounts(plan){
 // kinds. Changing a choice works that sheet out again. Every text from the file is shown
 // with textContent.
 // `var`: syncPageState (09e, earlier in the file) reads it through syncImportReportItem.
-var excelImport = null; // { fileName, book, plans, include, result, check, model }
+var excelImport = null; // { fileName, book, plans, include, split, result, check, model }
 
 const IMPORT_KIND_NAMES = { title: 'title', input: 'input', assumption: 'assumption', calculation: 'calculation', opening: 'opening balance', single: 'one formula', parts: 'in parts' };
 // The kinds counted in a sheet's summary: one and several.
@@ -14816,9 +14853,13 @@ async function importExcelFile(file){
     return;
   }
   const found = xlAnalyseWorkbook(book);
-  excelImport = { fileName: String(file.name || 'workbook.xlsx'), book, plans: found.sheets, include: found.sheets.map(p => p.byPeriods && !p.hidden) };
+  excelImport = { fileName: String(file.name || 'workbook.xlsx'), book, plans: found.sheets, include: found.sheets.map(p => p.byPeriods && !p.hidden),
+    split: found.sheets.map(importSplitByDefault) };
   openImportWindow();
 }
+
+// A tall sheet with sections is a canvas per section unless the person unticks it.
+function importSplitByDefault(plan){ return plan.sections.length >= 2 && xlRectangleRows(plan) > XL_SECTION_MIN_ROWS; }
 
 function importSummary(plan){
   if(!plan.byPeriods) return 'No row of periods found: give a header row to import it.';
@@ -14862,6 +14903,20 @@ function renderImportSheet(section, i){
   summary.className = 'import-summary';
   summary.textContent = importSummary(plan);
   head.append(label, summary);
+  if(plan.byPeriods && plan.sections.length >= 2){
+    const sl = document.createElement('label');
+    sl.className = 'import-split-label';
+    sl.title = 'A canvas for each section of the sheet: ' + plan.sections.map(x => x.label).join(', ');
+    const scb = document.createElement('input');
+    scb.type = 'checkbox';
+    scb.className = 'import-split';
+    scb.checked = !!excelImport.split[i];
+    scb.addEventListener('change', () => { excelImport.split[i] = scb.checked; });
+    const st = document.createElement('span');
+    st.textContent = 'One canvas per section (' + plan.sections.length + ')';
+    sl.append(scb, st);
+    head.appendChild(sl);
+  }
   section.appendChild(head);
 
   const choices = document.createElement('div');
@@ -14888,6 +14943,7 @@ function renderImportSheet(section, i){
     const wasOn = plan.byPeriods;
     excelImport.plans[i] = xlAnalyseSheet(excelImport.book.sheets[i], choice, excelImport.book.date1904);
     if(!wasOn && excelImport.plans[i].byPeriods) excelImport.include[i] = true;
+    excelImport.split[i] = importSplitByDefault(excelImport.plans[i]);
     renderImportSheet(section, i);
     syncImportOk();
   });
@@ -14942,7 +14998,7 @@ function syncImportOk(){
 async function buildImportedModel(){
   let built;
   try{
-    built = xlBuildModel(excelImport.book, excelImport.plans, excelImport.include);
+    built = xlBuildModel(excelImport.book, excelImport.plans, excelImport.include, excelImport.split);
   }catch(err){
     setStatus($('loadStatus'), 'Could not import ' + excelImport.fileName + ': ' + (err instanceof XlImportError ? err.message : 'the model could not be built.'), 'err');
     return;
@@ -15155,8 +15211,9 @@ function xlSavedNumber(cell){
   return null;
 }
 
-// Builds the model. `include[i]` says whether sheet i is imported (only sheets by periods).
-function xlBuildModel(book, plans, include){
+// Builds the model. `include[i]` says whether sheet i is imported (only sheets by periods);
+// `split[i]`, whether it is a canvas per section (`plan.sections`, layout.js) instead of one.
+function xlBuildModel(book, plans, include, split){
   const sheetsIn = plans.map((p, i) => i).filter(i => include[i] && plans[i].byPeriods);
   if(!sheetsIn.length) throw new XlImportError('nothing-to-import', 'Tick a sheet with periods to import.');
   const periods = plans[sheetsIn[0]].periods.slice();
@@ -15174,13 +15231,34 @@ function xlBuildModel(book, plans, include){
     if(!names.has(key)) names.set(key, n);
   }
 
-  // A canvas per sheet; a rectangle per row (all but titles).
+  // A canvas per sheet, or per section of a sheet split; a rectangle per row (all but titles).
   const canvases = [], canvasOfSheet = new Map(), rows = new Map(), extras = new Map();
-  sheetsIn.forEach((i, k) => {
-    const c = { id: 'xl' + (k + 1), name: xlCleanName(plans[i].name) || ('Sheet ' + (k + 1)), nodes: [], edges: [], usedNames: new Set(), next: 1, nextEdge: 1, sheet: i, order: [] };
+  const canvasNames = new Set();
+  const newCanvas = (i, name) => {
+    let n = name, k = 2;
+    while(canvasNames.has(n.toLowerCase())) n = xlCleanName(name + ' (' + (k++) + ')');
+    canvasNames.add(n.toLowerCase());
+    const c = { id: 'xl' + (canvases.length + 1), name: n, nodes: [], edges: [], usedNames: new Set(), next: 1, nextEdge: 1, sheet: i, order: [] };
     canvases.push(c);
-    canvasOfSheet.set(i, c);
+    return c;
+  };
+  const sectionsOf = (i) => split && split[i] && plans[i].sections && plans[i].sections.length >= 2 ? plans[i].sections : null;
+  // Two sheets split, or a sheet split beside others: a section's canvas is named "Sheet — Section".
+  const severalSheets = sheetsIn.length > 1;
+  sheetsIn.forEach((i, k) => {
+    const sheetName = xlCleanName(plans[i].name) || ('Sheet ' + (k + 1));
+    const sections = sectionsOf(i);
+    if(!sections){ canvasOfSheet.set(i, [{ from: 0, canvas: newCanvas(i, sheetName) }]); return; }
+    canvasOfSheet.set(i, sections.map(sec => ({ from: sec.row, canvas: newCanvas(i, xlCleanName(severalSheets ? sheetName + ' — ' + sec.label : sec.label)) })));
+    report.notes.push('“' + plans[i].name + '” is ' + sections.length + ' canvases, one per section');
   });
+  // The canvas a row of sheet i goes on: its section's (rows before the first, the first's).
+  const canvasFor = (i, row) => {
+    const list = canvasOfSheet.get(i);
+    let c = list[0].canvas;
+    for(const x of list) if(row >= x.from) c = x.canvas;
+    return c;
+  };
   const nodeId = (c) => 'n' + (c.next++);
   const uniqueName = (c, base, row) => {
     let name = base || ('Row ' + row);
@@ -15191,9 +15269,9 @@ function xlBuildModel(book, plans, include){
     return name;
   };
   for(const i of sheetsIn){
-    const c = canvasOfSheet.get(i);
     for(const r of plans[i].rows){
       if(r.kind === 'title') continue;
+      const c = canvasFor(i, r.row);
       const entry = { sheet: i, plan: r, canvas: c, id: nodeId(c), name: uniqueName(c, xlCleanName(r.label), r.row), unit: xlCleanName(r.unit).slice(0, 40), kind: r.kind, expr: null, why: null, deps: [] };
       rows.set(i + '|' + r.row, entry);
       c.order.push(entry);

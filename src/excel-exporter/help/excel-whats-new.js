@@ -11,6 +11,16 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'import-excel-sections', date: '2026-10-18', title: 'A canvas per section',
+    summary: 'A long imported sheet can be split into one canvas per section: Assumptions, Income Statement, Balance Sheet…',
+    what: [
+      'The import window\'s "One canvas per section" box gives each section of a sheet — the headings with blank rows above them — its own canvas, named after it.',
+      'Rows still read each other across canvases, so the model calculates exactly as before.',
+    ],
+    why: 'A three-statement model on one sheet made a single canvas many screens tall.',
+    how: ['File → Import Excel model…, and pick the workbook.', 'The box is ticked for a sheet of more than 40 rows: untick it to keep the sheet on one canvas, or tick it for a shorter one.', 'Press Import.'],
+    see: ['import-excel'] },
+
   { id: 'import-excel-tidier', date: '2026-10-18', title: 'Tidier imported models',
     summary: 'An imported row\'s typed actuals, and any cell that differs, are now the row\'s own numbers in those years — no extra boxes.',
     what: [

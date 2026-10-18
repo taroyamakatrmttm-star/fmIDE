@@ -118,7 +118,7 @@ export function xlSignature(cell, firstCol){
 // One sheet worked out. `choice` (from the confirm screen) may fix headerRow, firstCol,
 // lastCol, labelCol and unitCol (null for none). The result:
 // { name, hidden, byPeriods, headerRow, firstCol, lastCol, labelCol, unitCol, periods,
-//   rows: [{ row, label, unit, kind, signature, formula, odd, cells, before }] }.
+//   rows: [{ row, label, unit, kind, signature, formula, odd, cells, before }], sections }.
 export function xlAnalyseSheet(sheet, choice, date1904){
   const ch = choice || {};
   let header = null;
@@ -127,7 +127,7 @@ export function xlAnalyseSheet(sheet, choice, date1904){
     if(run && run.lastCol >= run.firstCol) header = { row: ch.headerRow, firstCol: run.firstCol, lastCol: run.lastCol };
   } else header = xlFindHeader(sheet);
   const plan = { name: sheet.name, hidden: sheet.hidden, byPeriods: !!header, headerRow: header ? header.row : null,
-    firstCol: header ? header.firstCol : null, lastCol: header ? header.lastCol : null, labelCol: null, unitCol: null, periods: [], rows: [] };
+    firstCol: header ? header.firstCol : null, lastCol: header ? header.lastCol : null, labelCol: null, unitCol: null, periods: [], rows: [], sections: [] };
   if(!header) return plan;
   const found = xlFindLabelColumns(sheet, header.row, header.firstCol);
   plan.labelCol = ch.labelCol !== undefined ? ch.labelCol : found.labelCol;
@@ -198,8 +198,34 @@ export function xlAnalyseSheet(sheet, choice, date1904){
     row.odd = cells.filter((c, i) => !(fits(c) || (row.kind === 'opening' && i === 0))).map(c => c.address);
     plan.rows.push(row);
   }
+  plan.sections = xlSections(plan, new Set(rowNumbers));
   return plan;
 }
+
+// A sheet's sections, for one canvas each: the titles with at least two empty rows above
+// them (with fewer than two such, those with one), [{ row, label }] in order, or [] when
+// there aren't two. Rows before the first are a section of their own, named after their
+// first title (or the sheet), from row 1.
+export const XL_SECTION_MIN_ROWS = 40; // a sheet with more rows than this is split by default
+function xlSections(plan, used){
+  const titles = plan.rows.filter(r => r.kind === 'title' && r.label);
+  const blanksAbove = (r) => { let n = 0; while(n < 2 && r - n - 1 >= 1 && !used.has(r - n - 1) && r - n - 1 !== plan.headerRow) n++; return n; };
+  for(const need of [2, 1]){
+    const heads = titles.filter(t => blanksAbove(t.row) >= need);
+    if(heads.length < 2) continue;
+    const out = heads.map(t => ({ row: t.row, label: t.label }));
+    const before = plan.rows.filter(r => r.row < out[0].row);
+    if(before.some(r => r.kind !== 'title')){
+      const first = before.find(r => r.kind === 'title' && r.label);
+      out.unshift({ row: 1, label: first ? first.label : plan.name });
+    }
+    return out;
+  }
+  return [];
+}
+
+// How many rows of a sheet become rectangles (all but titles).
+export function xlRectangleRows(plan){ return plan.rows.filter(r => r.kind !== 'title').length; }
 
 // A row's period cells as runs side by side: typed (a number, or blank) or one formula
 // signature. [{ from, to, typed, signature }], period indices from 0.

@@ -68,8 +68,9 @@ function xlSavedNumber(cell){
   return null;
 }
 
-// Builds the model. `include[i]` says whether sheet i is imported (only sheets by periods).
-export function xlBuildModel(book, plans, include){
+// Builds the model. `include[i]` says whether sheet i is imported (only sheets by periods);
+// `split[i]`, whether it is a canvas per section (`plan.sections`, layout.js) instead of one.
+export function xlBuildModel(book, plans, include, split){
   const sheetsIn = plans.map((p, i) => i).filter(i => include[i] && plans[i].byPeriods);
   if(!sheetsIn.length) throw new XlImportError('nothing-to-import', 'Tick a sheet with periods to import.');
   const periods = plans[sheetsIn[0]].periods.slice();
@@ -87,13 +88,34 @@ export function xlBuildModel(book, plans, include){
     if(!names.has(key)) names.set(key, n);
   }
 
-  // A canvas per sheet; a rectangle per row (all but titles).
+  // A canvas per sheet, or per section of a sheet split; a rectangle per row (all but titles).
   const canvases = [], canvasOfSheet = new Map(), rows = new Map(), extras = new Map();
-  sheetsIn.forEach((i, k) => {
-    const c = { id: 'xl' + (k + 1), name: xlCleanName(plans[i].name) || ('Sheet ' + (k + 1)), nodes: [], edges: [], usedNames: new Set(), next: 1, nextEdge: 1, sheet: i, order: [] };
+  const canvasNames = new Set();
+  const newCanvas = (i, name) => {
+    let n = name, k = 2;
+    while(canvasNames.has(n.toLowerCase())) n = xlCleanName(name + ' (' + (k++) + ')');
+    canvasNames.add(n.toLowerCase());
+    const c = { id: 'xl' + (canvases.length + 1), name: n, nodes: [], edges: [], usedNames: new Set(), next: 1, nextEdge: 1, sheet: i, order: [] };
     canvases.push(c);
-    canvasOfSheet.set(i, c);
+    return c;
+  };
+  const sectionsOf = (i) => split && split[i] && plans[i].sections && plans[i].sections.length >= 2 ? plans[i].sections : null;
+  // Two sheets split, or a sheet split beside others: a section's canvas is named "Sheet — Section".
+  const severalSheets = sheetsIn.length > 1;
+  sheetsIn.forEach((i, k) => {
+    const sheetName = xlCleanName(plans[i].name) || ('Sheet ' + (k + 1));
+    const sections = sectionsOf(i);
+    if(!sections){ canvasOfSheet.set(i, [{ from: 0, canvas: newCanvas(i, sheetName) }]); return; }
+    canvasOfSheet.set(i, sections.map(sec => ({ from: sec.row, canvas: newCanvas(i, xlCleanName(severalSheets ? sheetName + ' — ' + sec.label : sec.label)) })));
+    report.notes.push('“' + plans[i].name + '” is ' + sections.length + ' canvases, one per section');
   });
+  // The canvas a row of sheet i goes on: its section's (rows before the first, the first's).
+  const canvasFor = (i, row) => {
+    const list = canvasOfSheet.get(i);
+    let c = list[0].canvas;
+    for(const x of list) if(row >= x.from) c = x.canvas;
+    return c;
+  };
   const nodeId = (c) => 'n' + (c.next++);
   const uniqueName = (c, base, row) => {
     let name = base || ('Row ' + row);
@@ -104,9 +126,9 @@ export function xlBuildModel(book, plans, include){
     return name;
   };
   for(const i of sheetsIn){
-    const c = canvasOfSheet.get(i);
     for(const r of plans[i].rows){
       if(r.kind === 'title') continue;
+      const c = canvasFor(i, r.row);
       const entry = { sheet: i, plan: r, canvas: c, id: nodeId(c), name: uniqueName(c, xlCleanName(r.label), r.row), unit: xlCleanName(r.unit).slice(0, 40), kind: r.kind, expr: null, why: null, deps: [] };
       rows.set(i + '|' + r.row, entry);
       c.order.push(entry);

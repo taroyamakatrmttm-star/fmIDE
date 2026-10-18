@@ -18,7 +18,7 @@
 // kinds. Changing a choice works that sheet out again. Every text from the file is shown
 // with textContent.
 // `var`: syncPageState (09e, earlier in the file) reads it through syncImportReportItem.
-var excelImport = null; // { fileName, book, plans, include, result, check, model }
+var excelImport = null; // { fileName, book, plans, include, split, result, check, model }
 
 const IMPORT_KIND_NAMES = { title: 'title', input: 'input', assumption: 'assumption', calculation: 'calculation', opening: 'opening balance', single: 'one formula', parts: 'in parts' };
 // The kinds counted in a sheet's summary: one and several.
@@ -44,9 +44,13 @@ async function importExcelFile(file){
     return;
   }
   const found = xlAnalyseWorkbook(book);
-  excelImport = { fileName: String(file.name || 'workbook.xlsx'), book, plans: found.sheets, include: found.sheets.map(p => p.byPeriods && !p.hidden) };
+  excelImport = { fileName: String(file.name || 'workbook.xlsx'), book, plans: found.sheets, include: found.sheets.map(p => p.byPeriods && !p.hidden),
+    split: found.sheets.map(importSplitByDefault) };
   openImportWindow();
 }
+
+// A tall sheet with sections is a canvas per section unless the person unticks it.
+function importSplitByDefault(plan){ return plan.sections.length >= 2 && xlRectangleRows(plan) > XL_SECTION_MIN_ROWS; }
 
 function importSummary(plan){
   if(!plan.byPeriods) return 'No row of periods found: give a header row to import it.';
@@ -90,6 +94,20 @@ function renderImportSheet(section, i){
   summary.className = 'import-summary';
   summary.textContent = importSummary(plan);
   head.append(label, summary);
+  if(plan.byPeriods && plan.sections.length >= 2){
+    const sl = document.createElement('label');
+    sl.className = 'import-split-label';
+    sl.title = 'A canvas for each section of the sheet: ' + plan.sections.map(x => x.label).join(', ');
+    const scb = document.createElement('input');
+    scb.type = 'checkbox';
+    scb.className = 'import-split';
+    scb.checked = !!excelImport.split[i];
+    scb.addEventListener('change', () => { excelImport.split[i] = scb.checked; });
+    const st = document.createElement('span');
+    st.textContent = 'One canvas per section (' + plan.sections.length + ')';
+    sl.append(scb, st);
+    head.appendChild(sl);
+  }
   section.appendChild(head);
 
   const choices = document.createElement('div');
@@ -116,6 +134,7 @@ function renderImportSheet(section, i){
     const wasOn = plan.byPeriods;
     excelImport.plans[i] = xlAnalyseSheet(excelImport.book.sheets[i], choice, excelImport.book.date1904);
     if(!wasOn && excelImport.plans[i].byPeriods) excelImport.include[i] = true;
+    excelImport.split[i] = importSplitByDefault(excelImport.plans[i]);
     renderImportSheet(section, i);
     syncImportOk();
   });
@@ -170,7 +189,7 @@ function syncImportOk(){
 async function buildImportedModel(){
   let built;
   try{
-    built = xlBuildModel(excelImport.book, excelImport.plans, excelImport.include);
+    built = xlBuildModel(excelImport.book, excelImport.plans, excelImport.include, excelImport.split);
   }catch(err){
     setStatus($('loadStatus'), 'Could not import ' + excelImport.fileName + ': ' + (err instanceof XlImportError ? err.message : 'the model could not be built.'), 'err');
     return;
