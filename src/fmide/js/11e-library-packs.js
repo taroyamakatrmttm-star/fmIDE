@@ -70,11 +70,25 @@
     return { kind: 'fmIDE-library-pack', version: FILE_FORMATS['fmIDE-library-pack'].current, pack: read.info,
       templates: c.templates.map(t => cloneData(templateRecord(t, false))), functions: cloneData(c.functions) };
   }
-  // The file is named after the pack's id ("<id>.fmide-pack.json"): the community library
-  // takes a pack only under that name (packs/<pack id>.fmide-pack.json), so nobody has to
-  // rename it before sharing. The id is checked by cleanLibraryPackInfo (letters, digits, dashes).
+  // The file's name: the pack's title made safe for a file name, then the start of its id in
+  // brackets ("Three-Statement Model v01 (c526c522).fmide-pack.json"), so it is easy to find in
+  // a Downloads folder. The community library takes any name ending in .fmide-pack.json (it
+  // reads the id from inside the file) and publishes the pack under its id (decision of
+  // 4 October 2026, built 19 October 2026). Left out of the title: characters Windows or
+  // macOS refuse in a name (\ / : * ? " < > |), control characters and invisible or
+  // direction-changing ones; spaces collapsed, dots and spaces trimmed from the ends, at most
+  // 80 characters. A title with nothing left gives "<id>.fmide-pack.json". The id is checked
+  // by cleanLibraryPackInfo (letters, digits, dashes).
+  const LIBRARY_PACK_NAME_MAX = 80;
   function libraryPackFileName(pack){
-    return (pack && isTemplateUid(pack.id) ? pack.id : 'library-pack') + '.fmide-pack.json';
+    if(!pack || !isTemplateUid(pack.id)) return 'library-pack.fmide-pack.json';
+    const safe = (s) => String(s)
+      .replace(/[\\/:*?"<>|\u0000-\u001f\u007f-\u009f\u00ad\u061c\u180e\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff\ufff9-\ufffb]/g, ' ')
+      .replace(/\s+/g, ' ').replace(/^[\s.]+|[\s.]+$/g, '');
+    let title = typeof pack.title === 'string' ? safe(pack.title) : '';
+    const chars = Array.from(title);
+    if(chars.length > LIBRARY_PACK_NAME_MAX) title = safe(chars.slice(0, LIBRARY_PACK_NAME_MAX).join(''));
+    return title ? title + ' (' + pack.id.slice(0, 8) + ').fmide-pack.json' : pack.id + '.fmide-pack.json';
   }
 
   // ---------- sharing a pack in the community library ----------
@@ -101,7 +115,7 @@
       saved.append('It is in your Downloads folder as ');
       const b = document.createElement('b');
       b.textContent = savedName;
-      saved.append(b, '. Keep that name: the library finds packs by it. To share it with everyone, in the community library:');
+      saved.append(b, '. You may rename it, as long as the name still ends in .fmide-pack.json. To share it with everyone, in the community library:');
       box.appendChild(saved);
     } else {
       const intro = document.createElement('p');

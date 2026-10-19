@@ -2106,7 +2106,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       summary: 'Share templates, recipes and functions with other people as one file.',
       body: [
         { p: '{cmd:saveLibraryPack} puts the templates, recipes and functions you pick into one file, with a title and your name. Everything in a pack is shared under the CC BY 4.0 licence, so share only what is yours.' },
-        { p: 'The pack is saved in your Downloads folder, named after its id (a long code ending in .fmide-pack.json). Keep that name. Send the file to a colleague by email or a shared folder, or share it with everyone in the community library: {cmd:shareLibraryPack}, step by step in "Share your pack in the community library".' },
+        { p: 'The pack is saved in your Downloads folder, named after its title, with the start of its id in brackets: for example Three-Statement Model (c526c522).fmide-pack.json. You may rename it, as long as the name still ends in .fmide-pack.json. Send the file to a colleague by email or a shared folder, or share it with everyone in the community library: {cmd:shareLibraryPack}, step by step in "Share your pack in the community library".' },
         { p: '{cmd:openLibraryPack} shows a pack before anything is added: who made it, and for each item whether it is new or already in your library. Untick what you don\'t want. Nothing of yours is replaced.' },
         { see: ['share-library-pack', 'browse-library', 'templates', 'functions'] },
       ] },
@@ -2121,7 +2121,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
           'Choose {cmd:saveLibraryPack}.',
           'Give it a title, your name as the author (use the same name every time you share), a short description and a few tags.',
           'Tick the templates, recipes and functions to share. Share only what is yours: everything in a pack is shared under the CC BY 4.0 licence, so anyone may use and change it, with credit to you.',
-          'Press Save Pack. The file goes to your Downloads folder. Its name is a long code ending in .fmide-pack.json. Don\'t rename it: the library finds packs by that name.',
+          'Press Save Pack. The file goes to your Downloads folder. Its name is the pack\'s title with the start of its id in brackets, ending in .fmide-pack.json. You may rename it, as long as the name still ends in .fmide-pack.json: the library reads the pack\'s id from inside the file.',
           'A window opens with the next steps. Keep it open, or come back to it any time with {cmd:shareLibraryPack}.',
         ] },
         { p: 'Step 2 — Make a free GitHub account (the first time only)' },
@@ -2539,6 +2539,16 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // entry: ids, dates in order, commands and topics that exist.
   // **A change people will notice adds its entry here in the same pull request.**
   const WHATS_NEW = [
+    { id: 'readable-pack-name', date: '2026-10-19', title: 'A pack file you can recognise',
+      summary: 'Save as Library Pack… names the file after the pack\'s title, with the start of its id in brackets, and the community library takes it under any name.',
+      what: [
+        'A pack is saved as, for example, Three-Statement Model v01 (c526c522).fmide-pack.json, instead of a long code. Characters a file name can\'t hold are left out, and a long title is shortened.',
+        'You may rename the file before sharing it, as long as the name still ends in .fmide-pack.json: the library reads the pack\'s id from inside the file, and its addresses and Browse Library stay as they were.',
+      ],
+      why: 'A name made only of the id was hard to find in a Downloads folder, and a renamed file used to be refused by the library.',
+      how: ['Choose {cmd:saveLibraryPack}, tick what to share and press Save Pack.', 'Find the file in your Downloads folder by its title, and share it with {cmd:shareLibraryPack}.'],
+      see: ['library-packs', 'share-library-pack'] },
+
     { id: 'excel-layout-in-document', date: '2026-10-18', title: 'Your Excel layout is saved in the document',
       summary: 'The tabs and rows you arrange in ExcelExporter are kept in the .fmide document, so they travel with it.',
       what: [
@@ -15816,11 +15826,25 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     return { kind: 'fmIDE-library-pack', version: FILE_FORMATS['fmIDE-library-pack'].current, pack: read.info,
       templates: c.templates.map(t => cloneData(templateRecord(t, false))), functions: cloneData(c.functions) };
   }
-  // The file is named after the pack's id ("<id>.fmide-pack.json"): the community library
-  // takes a pack only under that name (packs/<pack id>.fmide-pack.json), so nobody has to
-  // rename it before sharing. The id is checked by cleanLibraryPackInfo (letters, digits, dashes).
+  // The file's name: the pack's title made safe for a file name, then the start of its id in
+  // brackets ("Three-Statement Model v01 (c526c522).fmide-pack.json"), so it is easy to find in
+  // a Downloads folder. The community library takes any name ending in .fmide-pack.json (it
+  // reads the id from inside the file) and publishes the pack under its id (decision of
+  // 4 October 2026, built 19 October 2026). Left out of the title: characters Windows or
+  // macOS refuse in a name (\ / : * ? " < > |), control characters and invisible or
+  // direction-changing ones; spaces collapsed, dots and spaces trimmed from the ends, at most
+  // 80 characters. A title with nothing left gives "<id>.fmide-pack.json". The id is checked
+  // by cleanLibraryPackInfo (letters, digits, dashes).
+  const LIBRARY_PACK_NAME_MAX = 80;
   function libraryPackFileName(pack){
-    return (pack && isTemplateUid(pack.id) ? pack.id : 'library-pack') + '.fmide-pack.json';
+    if(!pack || !isTemplateUid(pack.id)) return 'library-pack.fmide-pack.json';
+    const safe = (s) => String(s)
+      .replace(/[\\/:*?"<>|\u0000-\u001f\u007f-\u009f\u00ad\u061c\u180e\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff\ufff9-\ufffb]/g, ' ')
+      .replace(/\s+/g, ' ').replace(/^[\s.]+|[\s.]+$/g, '');
+    let title = typeof pack.title === 'string' ? safe(pack.title) : '';
+    const chars = Array.from(title);
+    if(chars.length > LIBRARY_PACK_NAME_MAX) title = safe(chars.slice(0, LIBRARY_PACK_NAME_MAX).join(''));
+    return title ? title + ' (' + pack.id.slice(0, 8) + ').fmide-pack.json' : pack.id + '.fmide-pack.json';
   }
 
   // ---------- sharing a pack in the community library ----------
@@ -15847,7 +15871,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       saved.append('It is in your Downloads folder as ');
       const b = document.createElement('b');
       b.textContent = savedName;
-      saved.append(b, '. Keep that name: the library finds packs by it. To share it with everyone, in the community library:');
+      saved.append(b, '. You may rename it, as long as the name still ends in .fmide-pack.json. To share it with everyone, in the community library:');
       box.appendChild(saved);
     } else {
       const intro = document.createElement('p');

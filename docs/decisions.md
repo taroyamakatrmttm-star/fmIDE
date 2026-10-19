@@ -64,18 +64,15 @@ Agreed with the owner; each waits for its own session, branch and pull request.
 
 - **Faster tests, ongoing** (the owner's standing request, 8 October 2026). Keep shortening the test run whenever a way is found, without lowering what it checks. Done: the GitHub run once per change instead of twice, and in 4 parts at once (from about 13 minutes per pull request to 4 min 47 s); then the parts balanced by measured time (`tools/test-parts.js`), as they ended 2–5 minutes apart. Ideas for later, each measured first: move checks that need no browser to Node (the modules of step 3c make that possible — ExcelExporter's formula text, the expression parser, parts of reading files); keep LibreOffice and the browser installed between runs (a cache), if setup becomes the larger share.
 
-- **A readable pack file name** (agreed 4 October 2026). Since #107, Save as Library Pack… names the file after the pack's id (`c526c522-….fmide-pack.json`), because the library accepts a pack only under that name. That name is right, but hard to recognise in a Downloads folder. **The idea:**
-  - fmIDE saves a readable name with the id in it, for example `Three-Statement Model v01 (c526c522).fmide-pack.json` (`libraryPackFileName`);
-  - the library accepts any `….fmide-pack.json` name in `packs/`, reading the id from inside the file, as the checker already does;
-  - the catalogue build (`tools/build-library.js`) publishes each pack under its id, so the site's addresses (`library/packs/<id>.fmide-pack.json`), Browse Library and `index.json` are unchanged.
+Done:
 
-  **What changes:**
-  - the checker's file-name rule (`tools/check-pack.js`, `tools/check-library.js`; two packs with the same id are still refused), then a library pull request moving `checker.json` to that fmIDE commit;
-  - the share window's and the guide's "keep that name" (`11e-library-packs.js`, help topic `share-library-pack`);
-  - tests in groups 22–25;
-  - the library's `README.md`.
-
-  **Why:** the owner's first upload (4 October 2026) was refused for its name; a person following the app should never meet a file-name rule.
+- **A readable pack file name** (agreed 4 October 2026, built 19 October 2026, branch `claude/readable-pack-name`). Since #107, Save as Library Pack… named the file after the pack's id alone (`c526c522-….fmide-pack.json`), because the library accepted a pack only under that name: right, but hard to recognise in a Downloads folder. **Why:** the owner's first upload (4 October 2026) was refused for its name; a person following the app should never meet a file-name rule. **How it turned out:**
+  - fmIDE saves `<title> (<first 8 characters of the id>).fmide-pack.json`, for example `Three-Statement Model v01 (c526c522).fmide-pack.json` (`libraryPackFileName` in `src/fmide/js/11e-library-packs.js`). The title loses the characters Windows or macOS refuse in a name (`\ / : * ? " < > |`), control characters and invisible or direction-changing ones (so a title can't disguise the name, as `…txt.exe` with a right-to-left override would); spaces are collapsed, dots and spaces trimmed from the ends, and it is cut to 80 characters. A title with nothing left gives `<id>.fmide-pack.json`. Random ids are UUIDs, so the eight characters are hex digits; an id of another form gives its first eight characters.
+  - The checker takes any name ending in `.fmide-pack.json` directly in `packs/` (`isPackPath` in `tools/check-library.js`), reading each pack's id from inside the file (`packIdOfFile`, also for a pull request's added packs, their records and takedowns); two files with one id are still refused ("Another file holds the pack id … too"), and an approved pack renamed in a pull request is a removal plus an id used before, so refused. The one-pack check (`tools/check-pack.js`) notes only a name that doesn't end in `.fmide-pack.json`.
+  - The catalogue (`tools/build-library.js`) already published each pack under its id; it still does, so `library/packs/<id>.fmide-pack.json`, the pack pages, `index.json` and Browse Library are unchanged.
+  - The share window says "You may rename it, as long as the name still ends in .fmide-pack.json"; the help topics `library-packs` and `share-library-pack` likewise.
+  - Tests: groups 22 (the names, hostile, long and empty titles; the window), 23 (any name ending in `.fmide-pack.json`), 24 (readable names in a library and a pull request, one id in two files refused), 25 (published under the id, the site unchanged).
+  - **What the library repository needs afterwards** (it is the `library/` submodule, not edited here), in one pull request by the maintainer once this is merged into fmIDE's `main`: (1) move `checker.json`'s `fmide.commit` to the fmIDE `main` commit that contains this change — until then the library's CI runs the old checker and still refuses a readable name, so people saving from the new fmIDE should not upload before it is moved; (2) in its `README.md` (and `SUBMITTING.md` if it says so), the file-name rule becomes: "a pack goes in `packs/`, under any name ending in `.fmide-pack.json` (fmIDE saves `<title> (<start of id>).fmide-pack.json`); the id inside the file is what counts, and the site publishes it as `library/packs/<pack id>.fmide-pack.json`". Packs already in the library keep their id names.
 
 ## Before sharing the project: your name out of the public places (deferred)
 

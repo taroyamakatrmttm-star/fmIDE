@@ -58,10 +58,17 @@ test.describe('packs that pass', () => {
     expect(messages(r, 'warnings').join('\n')).toMatch(/saved by an older fmIDE \(library pack version 1; the current version is 4\)/);
   });
 
-  test('a file not named after its pack id gets a note with the name it will have', () => {
-    const r = check(null, 'Checker-sample.fmide-pack.json');
+  // Any name ending in .fmide-pack.json will do (19 October 2026; before, a name other than
+  // the id got a note with the name it would have in the library).
+  test('a readable name ending in .fmide-pack.json passes without a note; another ending gets a note', () => {
+    for(const name of ['Checker sample (pack-che).fmide-pack.json', 'Checker-sample.fmide-pack.json', GOOD_NAME]){
+      const r = check(null, name);
+      expect(r.ok).toBe(true);
+      expect(messages(r, 'notes')).toEqual([]);
+    }
+    const r = check(null, 'Checker sample.json');
     expect(r.ok).toBe(true);
-    expect(messages(r, 'notes').join('\n')).toMatch(/named pack-checker-good-1\.fmide-pack\.json/);
+    expect(messages(r, 'notes').join('\n')).toMatch(/file: In the library its name must end in \.fmide-pack\.json; it is published as pack-checker-good-1\.fmide-pack\.json/);
   });
 });
 

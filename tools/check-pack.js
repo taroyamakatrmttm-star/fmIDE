@@ -148,8 +148,11 @@ function checkPack(content, fileName){
   if(infoExtra.length) warning('pack', `fmIDE ignores its details ${infoExtra.map(quote).join(', ')}.`);
   checkHidden(error, 'pack', { title: rp.title, author: rp.author, description: rp.description }, true);
   (Array.isArray(rp.tags) ? rp.tags : []).forEach(t => checkHidden(error, 'pack', { tag: t }));
-  if(fileName && path.basename(fileName) !== p.id + '.fmide-pack.json') {
-    note('file', `In the library it will be named ${p.id}.fmide-pack.json (its pack id).`);
+  // Any name ending in .fmide-pack.json will do (fmIDE saves "<title> (<start of id>).fmide-pack.json",
+  // from 19 October 2026): the library reads the id from inside the file and publishes the pack
+  // under it.
+  if(fileName && !path.basename(fileName).endsWith('.fmide-pack.json')) {
+    note('file', `In the library its name must end in .fmide-pack.json; it is published as ${p.id}.fmide-pack.json (its pack id).`);
   }
 
   // ---- the items ----

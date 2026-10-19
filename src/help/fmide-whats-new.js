@@ -12,6 +12,16 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'readable-pack-name', date: '2026-10-19', title: 'A pack file you can recognise',
+    summary: 'Save as Library Pack… names the file after the pack\'s title, with the start of its id in brackets, and the community library takes it under any name.',
+    what: [
+      'A pack is saved as, for example, Three-Statement Model v01 (c526c522).fmide-pack.json, instead of a long code. Characters a file name can\'t hold are left out, and a long title is shortened.',
+      'You may rename the file before sharing it, as long as the name still ends in .fmide-pack.json: the library reads the pack\'s id from inside the file, and its addresses and Browse Library stay as they were.',
+    ],
+    why: 'A name made only of the id was hard to find in a Downloads folder, and a renamed file used to be refused by the library.',
+    how: ['Choose {cmd:saveLibraryPack}, tick what to share and press Save Pack.', 'Find the file in your Downloads folder by its title, and share it with {cmd:shareLibraryPack}.'],
+    see: ['library-packs', 'share-library-pack'] },
+
   { id: 'excel-layout-in-document', date: '2026-10-18', title: 'Your Excel layout is saved in the document',
     summary: 'The tabs and rows you arrange in ExcelExporter are kept in the .fmide document, so they travel with it.',
     what: [

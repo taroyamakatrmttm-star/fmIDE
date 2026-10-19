@@ -7,6 +7,9 @@ Notable changes before this repository existed (recorded from the development hi
 - Importing an Excel model keeps each row's own code exactly (the one most of its period cells use), so the generated workbook shows the original's formatting.
 - The layout (mapping) file is version 10 (`style.excelFormat`); version 9 files open unchanged. Module layouts keep the code too, still version 2.
 
+## fmIDE and the library: a readable pack file name
+- Save as Library Pack… names the file `<title> (<first 8 characters of the id>).fmide-pack.json` (`libraryPackFileName`; the title without the characters Windows or macOS refuse, control or invisible characters, at most 80 characters; a title with nothing left gives `<id>.fmide-pack.json`). The pack checker takes any name ending in `.fmide-pack.json` in the library's `packs/` (the id is read from inside the file; two files with one id are still refused), and the catalogue publishes each pack under its id, so the site's addresses, `index.json` and Browse Library are unchanged. The library repository moves its `checker.json` to this commit to use it.
+
 ## fmGraph: lines charts
 - A new chart kind, Lines: several rectangles over the periods, a line each, with points and their numbers where there is room, the model's own numbers dashed once a slider changes them, errors as gaps listed in words, the key's swatches for colours, the fixed scale; its periods follow the shared period as a Columns chart's do unless it keeps its own; switching between Columns and Lines keeps the rectangles and periods. Board file version 10 (`layout: "lines"`, `lines`); never in the template form. `fmGraph.addChart({ layout: 'lines', … })` and `chart(id)`.
 - ExcelExporter reads board files up to version 10 and draws a lines chart on the Dashboard as an Excel line chart, a series per rectangle from its row; the layout file is version 9 (`cfg.graph.charts` may hold `kind: "lines"`).

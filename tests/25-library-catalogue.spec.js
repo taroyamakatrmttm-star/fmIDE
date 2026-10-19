@@ -170,6 +170,22 @@ test.describe('the pages', () => {
     expect(fs.readFileSync(path.join(again, 'library', 'index.json'), 'utf8')).toBe(fs.readFileSync(path.join(site.dir, 'library', 'index.json'), 'utf8'));
     fs.rmSync(again, { recursive: true, force: true });
   });
+
+  // From 19 October 2026 a pack may have any name ending in .fmide-pack.json in the library
+  // (fmIDE saves "<title> (<start of id>).fmide-pack.json"): the site still has it under its id.
+  test('a pack with a readable name in the library is published under its id, the site unchanged', async ({ page, served }, testInfo) => {
+    const lib = sampleCopy(testInfo, (dir) => fs.renameSync(path.join(dir, 'packs', BOB_PACK + '.fmide-pack.json'), path.join(dir, 'packs', 'Markups (06f097dd).fmide-pack.json')));
+    const site = await served(lib);
+    const plain = await served(SAMPLE);
+    expect(fs.readdirSync(path.join(site.dir, 'library', 'packs')).sort()).toEqual([BOB_PACK + '.fmide-pack.json', ANN_PACK + '.fmide-pack.json'].sort());
+    expect(fs.readFileSync(path.join(site.dir, 'library', 'packs', BOB_PACK + '.fmide-pack.json')).equals(fs.readFileSync(path.join(SAMPLE, 'packs', BOB_PACK + '.fmide-pack.json')))).toBe(true);
+    for(const f of ['index.json', 'index.html', BOB_PACK + '.html', ANN_PACK + '.html']){
+      expect(fs.readFileSync(path.join(site.dir, 'library', f), 'utf8'), f).toBe(fs.readFileSync(path.join(plain.dir, 'library', f), 'utf8'));
+    }
+    await page.goto(site.origin + 'library/' + BOB_PACK);
+    const [download] = await Promise.all([page.waitForEvent('download'), page.locator('a.button', { hasText: 'Download the pack' }).click()]);
+    expect(download.suggestedFilename()).toBe(BOB_PACK + '.fmide-pack.json');
+  });
 });
 
 test.describe('text from packs', () => {
