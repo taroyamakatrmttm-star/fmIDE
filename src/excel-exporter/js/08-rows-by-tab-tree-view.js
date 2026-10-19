@@ -603,7 +603,7 @@ function toggleTreeRowStyleEditor(rowEl, row){
   editor.appendChild(border.el);
 
   // Number format: rectangle rows only (a custom row has no numbers).
-  let nfKind = null, nfDec = null;
+  let nfKind = null, nfDec = null, nfCode = null;
   if(!row.isCustom){
     nfKind = document.createElement('select'); nfKind.className = 'fmt-numkind';
     [['', 'fmIDE\'s'], ['number', 'Number'], ['percent', 'Percent'], ['currency', 'Currency ($)']].forEach(([v, l]) => {
@@ -616,6 +616,13 @@ function toggleTreeRowStyleEditor(rowEl, row){
     nfDec.disabled = !nfKind.value;
     editor.appendChild(labeled('Number format', nfKind));
     editor.appendChild(labeled('Decimals', nfDec));
+    // Excel's own number format code: written as it is, winning over the two above.
+    nfCode = document.createElement('input'); nfCode.type = 'text'; nfCode.className = 'fmt-excelcode';
+    nfCode.maxLength = EXCEL_FORMAT_MAX; nfCode.placeholder = '#,##0;(#,##0)'; nfCode.spellcheck = false;
+    nfCode.value = (row.style && row.style.excelFormat) || '';
+    nfCode.title = 'Excel\'s own number format code, as in Excel\'s Format Cells → Custom (up to four parts split by ;). ' +
+      'It wins over Number format and Decimals. Empty: none.';
+    editor.appendChild(labeled('Excel number format', nfCode));
   }
 
   function commit(){
@@ -628,12 +635,21 @@ function toggleTreeRowStyleEditor(rowEl, row){
       nfDec.disabled = !nfKind.value;
       if(nfKind.value) fmt.numberFormat = { kind: nfKind.value, decimals: nfDec.value };
     }
+    if(nfCode){
+      // A code that can't be used is refused (marked, not saved); the rest still is.
+      const typed = nfCode.value.trim();
+      const code = cleanExcelNumberFormat(typed);
+      const bad = !!typed && !code && !/^general$/i.test(typed);
+      nfCode.classList.toggle('invalid', bad);
+      if(bad) nfCode.setAttribute('aria-invalid', 'true'); else nfCode.removeAttribute('aria-invalid');
+      if(code) fmt.excelFormat = code;
+    }
     const changed = targets();
     changed.forEach(r => {
       const own = cleanRowFormat(fmt);
       // A custom row has no numbers; a rectangle row keeps its own number format when the
       // editor says "fmIDE's".
-      if(r.isCustom) delete own.numberFormat;
+      if(r.isCustom){ delete own.numberFormat; delete own.excelFormat; }
       r.style = own;
     });
     saveMapping();
@@ -644,7 +660,7 @@ function toggleTreeRowStyleEditor(rowEl, row){
       if(btn) btn.classList.add('on');
     });
   }
-  [fillInput, fillNone, fontColor, boldChk].concat(border.inputs, nfKind ? [nfKind, nfDec] : [])
+  [fillInput, fillNone, fontColor, boldChk].concat(border.inputs, nfKind ? [nfKind, nfDec, nfCode] : [])
     .forEach(fieldEl => fieldEl.addEventListener('change', commit));
 
   const reset = document.createElement('button'); reset.type = 'button'; reset.className = 'icon fmt-reset';

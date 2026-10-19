@@ -3,7 +3,8 @@
 // the description in tests/fixtures/excel-import/expected.json fits each workbook, and
 // LibreOffice, recalculating a copy written without saved values, gives the values each
 // sample saved. Node only (and LibreOffice). Sample 05 (actuals then forecast) was added after
-// a real three-statement model was tried; sample 06 (running totals) when they were translated.
+// a real three-statement model was tried; sample 06 (running totals) when they were translated; sample 07
+// (number formats kept exactly, each row's `excelFormat` in expected.json) with exact number formats.
 const fs = require('fs');
 const os = require('os');
 const path = require('path');

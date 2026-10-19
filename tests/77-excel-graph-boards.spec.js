@@ -101,7 +101,7 @@ test('a .fmide with boards: the window, Use, and the cases, row scenarios and ma
   // Exported, the layout is version 7 (since step 19 B4) and carries the copy.
   const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
   const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
-  expect(exported.version).toBe(9);
+  expect(exported.version).toBe(10);
   expect(exported.cfg.graph.board).toBe('Profit board');
   expect(exported.cfg.graph.from).toEqual(['Profit board', 'Second board']);
   expect(exported.cfg.graph.scenarios.map(s => s.name)).toEqual(['High price', 'Volume up', 'Mixed', 'Also high', 'Cost cut']);
@@ -650,7 +650,7 @@ test('sliders: the copy is the layout\'s, using again asks first, Remove takes t
   await expect(genStatus(page)).toHaveText('fmGraph boards used: 5 sliders on the Dashboard. The Inputs tab is on.');
   const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
   const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
-  expect(exported.version).toBe(9);
+  expect(exported.version).toBe(10);
   expect(exported.cfg.graph.sliders).toEqual([
     { row: 'cProfit|price', name: 'Price', mode: 'set', periods: { mode: 'all' }, min: 5, max: 15, step: 0.5 },
     { row: 'cProfit|volume', name: 'Volume', mode: 'shift', periods: { mode: 'all' }, min: -50, max: 50, step: 1 },
@@ -830,7 +830,7 @@ test('charts: the window lists the board\'s bars and charts, Use copies them, th
   // The copy: the layout's, version 9 (8 brought the charts).
   const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
   const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
-  expect(exported.version).toBe(9);
+  expect(exported.version).toBe(10);
   expect(exported.cfg.graph.charts[0]).toEqual({ kind: 'bar', title: '', wide: false, scale: { min: 0, max: 5000 }, periods: { mode: 'all' },
     parts: [{ row: 'cProfit|profit', name: 'Profit', colour: '#0f766e' }] });
   expect(exported.cfg.graph.charts[3].parts.map(x => [x.row, x.role, x.colour || null])).toEqual([
@@ -897,7 +897,7 @@ test('a lines chart becomes an Excel line chart on the Dashboard: a series per r
   // The copy: kind lines, its rows, periods and colours.
   const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
   const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
-  expect(exported.version).toBe(9);
+  expect(exported.version).toBe(10);
   expect(exported.cfg.graph.charts[1]).toEqual({ kind: 'lines', title: 'Revenue <and> profit', wide: true, scale: null, periods: { mode: 'range', from: 1, to: 3 },
     parts: [{ row: 'cProfit|revenue', name: 'Revenue', colour: '#2563eb' }, { row: 'cProfit|profit', name: 'Profit' }, { row: 'cProfit|bonus', name: 'Bonus paid' }] });
   expect(pageErrors).toEqual([]);

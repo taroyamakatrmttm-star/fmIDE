@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: exact number formats
+- A row's own format in the Tree View may carry Excel's own number format code (Excel number format, such as `#,##0;(#,##0)` or `0.0"x"`), written exactly and before any other number format; a code that can't be used is refused. Reset to the Excel style clears it.
+- Importing an Excel model keeps each row's own code exactly (the one most of its period cells use), so the generated workbook shows the original's formatting.
+- The layout (mapping) file is version 10 (`style.excelFormat`); version 9 files open unchanged. Module layouts keep the code too, still version 2.
+
 ## fmIDE and the library: a readable pack file name
 - Save as Library Pack… names the file `<title> (<first 8 characters of the id>).fmide-pack.json` (`libraryPackFileName`; the title without the characters Windows or macOS refuse, control or invisible characters, at most 80 characters; a title with nothing left gives `<id>.fmide-pack.json`). The pack checker takes any name ending in `.fmide-pack.json` in the library's `packs/` (the id is read from inside the file; two files with one id are still refused), and the catalogue publishes each pack under its id, so the site's addresses, `index.json` and Browse Library are unchanged. The library repository moves its `checker.json` to this commit to use it.
 

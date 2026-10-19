@@ -344,6 +344,50 @@ test.describe('Tree view: a row\'s own format, indent and the right-click comman
     for(const c of periods) expect(fillOf(c), `${c.address} fill after Reset`).toBe(null); // Calculations: no fill
   });
 
+  test('a rectangle row\'s own Excel number format code: written exactly, winning over the kind; refused when unusable; Reset clears it', async ({ page }) => {
+    await open(page, { sections: false });
+    await page.click('#viewByTree');
+    const row = treeRow(page, 'Revenue');
+    await row.locator('.tree-fmt-btn').click();
+    const ed = row.locator('.tree-style-editor');
+    const box = ed.locator('.fmt-excelcode');
+    await expect(box).toHaveAttribute('placeholder', '#,##0;(#,##0)');
+    await expect(box).toHaveAttribute('title', /Format Cells/);
+    await expect(box).toHaveValue('');
+    await ed.locator('.fmt-numkind').selectOption('percent');
+    const code = '#,##0.0;(#,##0.0);"–"';
+    await box.fill(code);
+    await box.dispatchEvent('change');
+    await expect(box).not.toHaveAttribute('aria-invalid', 'true');
+    let { periods } = await cellsOf(page, 'BS', 'Revenue');
+    for(const c of periods) expect(c.numFmt, `${c.address} number format`).toBe(code);
+    // Kept in the layout: Export Mapping carries it.
+    const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
+    const exported = JSON.parse(require('fs').readFileSync(await download.path(), 'utf8'));
+    expect(exported.rows.find(r => r.label === 'Revenue').style.excelFormat).toBe(code);
+
+    // Codes that can't be used: refused (marked, not saved), the row's kind used instead.
+    const setRaw = (v) => box.evaluate((el, x) => { el.value = x; el.dispatchEvent(new Event('change', { bubbles: true })); }, v);
+    for(const bad of ['0;0;0;0;0;0', '0\u0001"x"', '0'.repeat(101), '"open', '0[Red']){
+      await setRaw(bad);
+      await expect(box, JSON.stringify(bad)).toHaveAttribute('aria-invalid', 'true');
+      ({ periods } = await cellsOf(page, 'BS', 'Revenue'));
+      for(const c of periods) expect(c.numFmt, `${c.address} with ${JSON.stringify(bad)}`).toBe('0%');
+    }
+    await box.fill('0.0"x"');
+    await box.dispatchEvent('change');
+    await expect(box).not.toHaveAttribute('aria-invalid', 'true');
+    ({ periods } = await cellsOf(page, 'BS', 'Revenue'));
+    for(const c of periods) expect(c.numFmt).toBe('0.0"x"');
+
+    await ed.locator('.fmt-reset').click();
+    await expect(treeRow(page, 'Revenue').locator('.tree-fmt-btn')).not.toHaveClass(/\bon\b/);
+    ({ periods } = await cellsOf(page, 'BS', 'Revenue'));
+    for(const c of periods) expect(c.numFmt, `${c.address} after Reset`).not.toBe('0.0"x"');
+    await treeRow(page, 'Revenue').locator('.tree-fmt-btn').click();
+    await expect(treeRow(page, 'Revenue').locator('.tree-style-editor .fmt-excelcode')).toHaveValue('');
+  });
+
   test('Alt+Shift+→/← and the menu indent the selected labels; the indent reaches Excel and is kept', async ({ page }) => {
     await open(page, { sections: false });
     await page.click('#viewByTree');

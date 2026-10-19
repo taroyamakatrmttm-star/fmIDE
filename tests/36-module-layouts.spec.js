@@ -232,6 +232,27 @@ test('a module layouts file with hostile or broken entries is cleaned; nothing r
   expect(JSON.stringify(kept)).not.toContain('javascript');
 });
 
+test('a remembered row\'s own Excel number format code is kept (version 2, no new version) and written; one that can\'t be used is dropped', async ({ page }, testInfo) => {
+  const path = testInfo.outputPath('code-layouts.json');
+  const fmt = (excelFormat) => ({ fill: null, font: { color: '#1e293b', weight: 'normal' }, border: { style: 'none' }, excelFormat });
+  fs.writeFileSync(path, JSON.stringify({ kind: 'fmIDE-excel-module-layouts', version: 2, modules: [
+    { family: 'fam-sales-module-0001', name: 'Sales',
+      rows: [{ name: 'Profit', section: 'calc', style: fmt('#,##0;(#,##0)') }, { name: 'Revenue', section: 'calc', style: fmt('0;0;0;0;0') }] }
+  ] }));
+  await load(page, 'model-a');
+  await page.setInputFiles('#moduleLayoutsFileInput', path);
+  await expect(page.locator('#moduleLayoutsStatus .status')).toHaveText('Imported 1 module layout. It is used for models laid out here from now on.');
+  const kept = await stored(page);
+  expect(kept.modules[0].rows[0].style.excelFormat).toBe('#,##0;(#,##0)');
+  expect(kept.modules[0].rows[1].style).not.toHaveProperty('excelFormat'); // five sections: refused
+  await load(page, 'model-b');
+  const { wb } = await X.generate(page);
+  const name = wb.SheetNames.find(n => n.startsWith('Sales'));
+  const ws = wb.Sheets[name], col = X.numToCol(X.periodOneCol(ws));
+  expect(ws[col + X.findRow(ws, 'Profit')[0]].z).toBe('#,##0;(#,##0)');
+  expect(ws[col + X.findRow(ws, 'Revenue')[0]].z).not.toBe('0;0;0;0;0');
+});
+
 test('a module layouts file loaded as a model says where it belongs', async ({ page }, testInfo) => {
   const path = testInfo.outputPath('layouts.json');
   fs.writeFileSync(path, JSON.stringify({ kind: 'fmIDE-excel-module-layouts', version: 1, modules: [] }));

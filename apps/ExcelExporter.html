@@ -840,6 +840,8 @@ var XLSX = (function(){
   .style-fields{ display:flex; gap:14px; align-items:center; flex-wrap:wrap; font-size:12px; color:var(--muted); }
   .style-fields label{ display:flex; align-items:center; gap:5px; }
   .style-fields input[type=color]{ width:32px; height:24px; padding:1px; border-radius:5px; }
+  .style-fields input.fmt-excelcode{ width:150px; font-family:ui-monospace, Menlo, Consolas, monospace; }
+  .style-fields input.fmt-excelcode.invalid{ border-color:#dc2626; outline:1px solid #dc2626; }
   /* A row's own border: each side on or off, then its colour. */
   .style-fields fieldset.fmt-borders{ display:flex; align-items:center; gap:8px; margin:0; padding:2px 8px 3px; border:1px solid #e2e8f0; border-radius:6px; }
   .style-fields fieldset.fmt-borders legend{ padding:0 4px; font-size:11px; }
@@ -4294,6 +4296,9 @@ function findAllBlockInstances(model){
   return result;
 }
 function numberFormatToExcel(style, fallback){
+  // A row's own Excel code (cleanRowFormat checked it; checked again, as it is written as is).
+  const own = style && cleanExcelNumberFormat(style.excelFormat);
+  if(own) return own;
   const nf = style && style.numberFormat;
   if(!nf || !nf.kind || nf.kind === 'general') return fallback || 'General';
   const decimals = typeof nf.decimals === 'number' ? nf.decimals : 2;
@@ -4448,7 +4453,33 @@ function cleanRowFormat(st){
     out.numberFormat = { kind: nf.kind, decimals: Number.isFinite(d) ? Math.max(0, Math.min(10, d)) : 2 };
     if(nf.kind === 'currency') out.numberFormat.currencySymbol = '$';
   }
+  const code = cleanExcelNumberFormat(st.excelFormat);
+  if(code) out.excelFormat = code;
   return out;
+}
+// A row's own Excel number format code (`excelFormat`, such as #,##0;(#,##0) or 0.0"x"),
+// written as it is and winning over the row's other number format. From files, so checked:
+// a string of at most EXCEL_FORMAT_MAX characters, no control characters, quotes and
+// brackets closed, no backslash at the end, at most four sections split by an unquoted ";".
+// General or empty: none. Anything else: null (refused). The writer XML-escapes it as well.
+const EXCEL_FORMAT_MAX = 100;
+function cleanExcelNumberFormat(v){
+  if(typeof v !== 'string') return null;
+  const code = v.trim();
+  if(!code || code.length > EXCEL_FORMAT_MAX || /^general$/i.test(code)) return null;
+  if(/[\u0000-\u001F\u007F-\u009F￾￿]/.test(code) || /[\uD800-\uDFFF]/.test(code)) return null;
+  let sections = 1, quoted = false, bracket = false;
+  for(let i = 0; i < code.length; i++){
+    const ch = code[i];
+    if(quoted){ if(ch === '"') quoted = false; continue; }
+    if(bracket){ if(ch === ']') bracket = false; else if(ch === '[') return null; continue; }
+    if(ch === '\\' || ch === '_' || ch === '*'){ if(i === code.length - 1) return null; i++; continue; }
+    if(ch === '"') quoted = true;
+    else if(ch === '[') bracket = true;
+    else if(ch === ']') return null;
+    else if(ch === ';' && ++sections > 4) return null;
+  }
+  return quoted || bracket ? null : code;
 }
 // A row's own border: solid, one colour, on the sides it names — `sides` left out means all
 // four (as every format before sides existed), none named means no border.
@@ -4475,6 +4506,7 @@ function withRowFormat(base, fmt){
   out.border = fmt.border.style === 'none' ? { style: 'none' } : { color: fmt.border.color, style: 'solid' };
   if(fmt.border.sides) out.border.sides = fmt.border.sides.slice();
   if(fmt.numberFormat) out.numberFormat = fmt.numberFormat;
+  if(fmt.excelFormat) out.excelFormat = fmt.excelFormat; // Excel's own code: wins (numberFormatToExcel)
   return out;
 }
 // The label cell's Excel style: the row's style plus its indent.
@@ -5189,8 +5221,9 @@ const FILE_FORMATS = {
   // v6: an analysis's `origin` ("fmGraph") and an input's `show: false` (step 19 B3b);
   // v7: the Dashboard's sliders, `cfg.graph.sliders` (step 19 B4).
   // v8: the Dashboard's charts, `cfg.graph.charts` (step 19 B5); v9: a chart there may be a
-  // lines chart, `kind: 'lines'` (fmGraph's lines chart, board file 10).
-  'fmIDE-excel-mapping': { current: 9, label: 'ExcelExporter mapping file' },
+  // lines chart, `kind: 'lines'` (fmGraph's lines chart, board file 10); v10: a row's own
+  // format may carry Excel's own number format code, `style.excelFormat`.
+  'fmIDE-excel-mapping': { current: 10, label: 'ExcelExporter mapping file' },
   // The person's own Excel style (step 11a): how every cell looks, by role.
   'fmIDE-excel-style':   { current: 1, label: 'ExcelExporter Excel style file' },
   // The layouts remembered per module (step 11b); v2: a module's block instances' layout, `instance` (step 11d).
@@ -5234,7 +5267,10 @@ const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
     7: (d) => { d.version = 8; return d; },
     // v9: a Dashboard chart may be a lines chart (`kind: 'lines'`); a v8 file has none, so it
     // reads as it is.
-    8: (d) => { d.version = 9; return d; } },
+    8: (d) => { d.version = 9; return d; },
+    // v10: a row's own format may carry Excel's own number format code (`style.excelFormat`,
+    // cleanExcelNumberFormat); a v9 file has none, so it reads as it is.
+    9: (d) => { d.version = 10; return d; } },
   'fmIDE-excel-module-layouts': { 1: (d) => { d.version = 2; return d; } }
 });
 // Returns { error } or { kind, data (migrated copy), fromVersion, newer, newerParts }.
@@ -8935,7 +8971,7 @@ function toggleTreeRowStyleEditor(rowEl, row){
   editor.appendChild(border.el);
 
   // Number format: rectangle rows only (a custom row has no numbers).
-  let nfKind = null, nfDec = null;
+  let nfKind = null, nfDec = null, nfCode = null;
   if(!row.isCustom){
     nfKind = document.createElement('select'); nfKind.className = 'fmt-numkind';
     [['', 'fmIDE\'s'], ['number', 'Number'], ['percent', 'Percent'], ['currency', 'Currency ($)']].forEach(([v, l]) => {
@@ -8948,6 +8984,13 @@ function toggleTreeRowStyleEditor(rowEl, row){
     nfDec.disabled = !nfKind.value;
     editor.appendChild(labeled('Number format', nfKind));
     editor.appendChild(labeled('Decimals', nfDec));
+    // Excel's own number format code: written as it is, winning over the two above.
+    nfCode = document.createElement('input'); nfCode.type = 'text'; nfCode.className = 'fmt-excelcode';
+    nfCode.maxLength = EXCEL_FORMAT_MAX; nfCode.placeholder = '#,##0;(#,##0)'; nfCode.spellcheck = false;
+    nfCode.value = (row.style && row.style.excelFormat) || '';
+    nfCode.title = 'Excel\'s own number format code, as in Excel\'s Format Cells → Custom (up to four parts split by ;). ' +
+      'It wins over Number format and Decimals. Empty: none.';
+    editor.appendChild(labeled('Excel number format', nfCode));
   }
 
   function commit(){
@@ -8960,12 +9003,21 @@ function toggleTreeRowStyleEditor(rowEl, row){
       nfDec.disabled = !nfKind.value;
       if(nfKind.value) fmt.numberFormat = { kind: nfKind.value, decimals: nfDec.value };
     }
+    if(nfCode){
+      // A code that can't be used is refused (marked, not saved); the rest still is.
+      const typed = nfCode.value.trim();
+      const code = cleanExcelNumberFormat(typed);
+      const bad = !!typed && !code && !/^general$/i.test(typed);
+      nfCode.classList.toggle('invalid', bad);
+      if(bad) nfCode.setAttribute('aria-invalid', 'true'); else nfCode.removeAttribute('aria-invalid');
+      if(code) fmt.excelFormat = code;
+    }
     const changed = targets();
     changed.forEach(r => {
       const own = cleanRowFormat(fmt);
       // A custom row has no numbers; a rectangle row keeps its own number format when the
       // editor says "fmIDE's".
-      if(r.isCustom) delete own.numberFormat;
+      if(r.isCustom){ delete own.numberFormat; delete own.excelFormat; }
       r.style = own;
     });
     saveMapping();
@@ -8976,7 +9028,7 @@ function toggleTreeRowStyleEditor(rowEl, row){
       if(btn) btn.classList.add('on');
     });
   }
-  [fillInput, fillNone, fontColor, boldChk].concat(border.inputs, nfKind ? [nfKind, nfDec] : [])
+  [fillInput, fillNone, fontColor, boldChk].concat(border.inputs, nfKind ? [nfKind, nfDec, nfCode] : [])
     .forEach(fieldEl => fieldEl.addEventListener('change', commit));
 
   const reset = document.createElement('button'); reset.type = 'button'; reset.className = 'icon fmt-reset';
@@ -10804,7 +10856,7 @@ const EXCEL_HELP_TOPICS = [
       { steps: [
         'Choose File → Import Excel model… (or drop the workbook on the page).',
         'Check what was found for each sheet: the header row of periods, the period columns, the label and unit columns, and each row\'s kind. Change any of them, or untick a sheet to leave it out. One canvas per section (ticked for a sheet of more than 40 rows) gives each section of the sheet its own canvas.',
-        'Press Import. The model loads here, laid out like the workbook — its rows in the same order, its titles and blank rows kept, each row\'s look (bold, colours, lines, number format), the numbers in its formulas written in the formulas — and a report says how it compares with the values Excel saved.',
+        'Press Import. The model loads here, laid out like the workbook — its rows in the same order, its titles and blank rows kept, each row\'s look (bold, colours, lines, and its number format exactly, such as #,##0;(#,##0)), the numbers in its formulas written in the formulas — and a report says how it compares with the values Excel saved.',
         'Press Save for fmIDE (in the report or the File menu): it saves an fmIDE document (.fmide) with its Excel layout inside. Open it in fmIDE with File → Open….',
       ] },
       { p: 'It reads models laid out with rows as line items and columns as periods, one formula copied along each row. A reference to the column on the left becomes a period shift; a first period typed and the formula after it is an opening balance; typed actual years and a forecast formula make a row whose rectangle holds the actuals as its own numbers in those years (ticked under its 🕒), the formula feeding the others; two formulas, one after the other, make a row in parts, which reads each in its own years through one shared rectangle per canvas, such as Up to 2024 (1 in those years, 0 after). SUM, MIN, MAX, AVERAGE, IF, IFERROR, AND, OR, NOT, ROUND, CHOOSE, ABS, LN, EXP, SQRT, INT, TRUNC, MOD and POWER become fmIDE\'s operators. A running total such as SUM($D$8:D8) (one row, from a fixed first column to this period) becomes the previous period\'s total plus this period\'s, through a period shift: in the row itself when that is its whole formula, else in a rectangle of its own, Running total of …, that the formulas read.' },
@@ -11075,12 +11127,14 @@ const EXCEL_HELP_TOPICS = [
       { p: 'fmIDE\'s canvas colours, fonts and borders never reach Excel.' },
       { p: 'A cell\'s number format comes from the first of these that is set:' },
       { steps: [
+        'the row\'s own Excel number format, if you typed one (🎨 → Excel number format);',
         'the row\'s own format, if you gave it a number format;',
         'the rectangle\'s own 🎨 format in fmIDE;',
         'fmIDE\'s Inputs or Calculations format, whichever the rectangle is;',
         'the fallback number format (⚙ Settings → Workbook).',
       ] },
-      { see: ['tree-view', 'periods-output', 'remembered'] },
+      { p: 'Excel number format takes Excel\'s own code, as in Excel\'s Format Cells → Custom: for example #,##0;(#,##0) for brackets round negatives, "£"#,##0 for pounds, 0.0"x" for a multiple or #,##0.0,,"m" for millions. It is written exactly as typed, up to 100 characters and four parts split by ;. A code that can\'t be used (an open quote or bracket, more than four parts) is marked in red and not kept. Reset to the Excel style clears it.' },
+      { see: ['tree-view', 'periods-output', 'remembered', 'import-excel'] },
     ] },
   { id: 'differences', group: 'generate', title: 'Where the workbook differs from fmIDE',
     keywords: 'differences yellow list warning na n/a error loop broken too long show all hide dismiss',
@@ -11131,6 +11185,17 @@ const EXCEL_HELP_TOPICS = [
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'excel-number-formats', date: '2026-10-19', title: 'Exact number formats',
+    summary: 'A row can carry Excel\'s own number format code, and an imported workbook keeps each row\'s code exactly.',
+    what: [
+      'In the Tree View, 🎨 on a row has a new box, Excel number format. Type a code as in Excel\'s Format Cells → Custom, such as #,##0;(#,##0) or 0.0"x", and every period cell of the row is written with it, before any other number format.',
+      'Importing an Excel model keeps each row\'s own code — the one most of its period cells use — so brackets for negatives, currency signs, multiples and millions come back exactly. A row left General keeps none.',
+      'A code that can\'t be used (an open quote or bracket, more than four parts, over 100 characters) is marked in red and not kept.',
+    ],
+    why: 'Financial models rely on their number formats; ExcelExporter\'s few kinds could not show brackets for negatives or a "x" after a multiple.',
+    how: ['In the Tree View, press 🎨 on a row.', 'Type the code in Excel number format.', 'Press ⬇ Generate: the row\'s cells show it. Reset to the Excel style clears it.'],
+    notes: ['A layout saved with a code is mapping file version 10; an older ExcelExporter asks before opening it and leaves the code out.'],
+    see: ['formats', 'import-excel'] },
   { id: 'fmgraph-lines', date: '2026-10-19', title: 'fmGraph\'s lines charts on the Dashboard',
     summary: 'A lines chart on an fmGraph board becomes an Excel line chart on the Dashboard.',
     what: [
@@ -16225,7 +16290,22 @@ function xlRowLook(labelCell, cells){
   };
   const nf = cell ? xlNumberKind(cell.format) : null;
   if(nf) out.numberFormat = nf;
+  const code = xlRowFormatCode(cells);
+  if(code) out.excelFormat = code;
   return out;
+}
+
+// A row's own number format code in the workbook, kept exactly (ExcelExporter writes it as it
+// is; checked there by cleanExcelNumberFormat): the code most of its period cells share (empty
+// ones left out; equal counts: the first), or null when that is General or none.
+function xlRowFormatCode(cells){
+  const tally = new Map();
+  for(const c of cells){
+    if(c && !c.empty && typeof c.format === 'string') tally.set(c.format, (tally.get(c.format) || 0) + 1);
+  }
+  let best = null, most = 0;
+  for(const [code, n] of tally) if(n > most){ most = n; best = code; }
+  return best && best.trim() && !/^general$/i.test(best.trim()) ? best : null;
 }
 
 // A number format code as one of ExcelExporter's kinds: { kind, decimals }, from its first

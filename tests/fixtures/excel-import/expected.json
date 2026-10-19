@@ -1,5 +1,5 @@
 {
-  "about": "What importing an Excel model (step 20, docs/step20-excel-import.md) should find in each sample workbook. The samples are written by tools/make-import-samples.js; test group 78 checks this description against them. Kinds: title (a heading, no numbers), input (a typed number in every period), assumption (one typed number in column C, used by every period), calculation (a formula in every period), opening (a typed number in the first period, a formula in the others), single (one formula in column C, not by period), parts (typed numbers or blanks and formulas in runs along the periods: actuals typed, then a forecast formula; each part's cells and what it is). A row noted as not translated keeps Excel's saved values.",
+  "about": "What importing an Excel model (step 20, docs/step20-excel-import.md) should find in each sample workbook. The samples are written by tools/make-import-samples.js; test group 78 checks this description against them. Kinds: title (a heading, no numbers), input (a typed number in every period), assumption (one typed number in column C, used by every period), calculation (a formula in every period), opening (a typed number in the first period, a formula in the others), single (one formula in column C, not by period), parts (typed numbers or blanks and formulas in runs along the periods: actuals typed, then a forecast formula; each part's cells and what it is). A row noted as not translated keeps Excel's saved values. excelFormat: the number format code the row keeps exactly (the one most of its period cells share; none for General).",
   "samples": {
     "01-simple-rows": {
       "sheets": {
@@ -652,6 +652,89 @@
           "why": "a range over several rows growing along the periods"
         }
       ]
+    },
+    "07-number-formats": {
+      "sheets": {
+        "Formats": {
+          "headerRow": 3,
+          "periodColumns": [
+            "D",
+            "E",
+            "F",
+            "G",
+            "H"
+          ],
+          "periods": [
+            "2026",
+            "2027",
+            "2028",
+            "2029",
+            "2030"
+          ],
+          "labelColumn": "A",
+          "unitColumn": "B",
+          "rows": [
+            {
+              "row": 1,
+              "label": "Number formats",
+              "kind": "title"
+            },
+            {
+              "row": 5,
+              "label": "Revenue",
+              "kind": "input",
+              "excelFormat": "\"£\"#,##0"
+            },
+            {
+              "row": 6,
+              "label": "Costs",
+              "kind": "input",
+              "excelFormat": "#,##0;(#,##0)"
+            },
+            {
+              "row": 7,
+              "label": "Profit",
+              "kind": "calculation",
+              "formula": "Revenue + Costs",
+              "excelFormat": "#,##0;(#,##0);\"-\""
+            },
+            {
+              "row": 8,
+              "label": "Margin",
+              "kind": "calculation",
+              "formula": "Profit ÷ Revenue",
+              "excelFormat": "0.0%;[Red]-0.0%"
+            },
+            {
+              "row": 9,
+              "label": "Cover",
+              "kind": "calculation",
+              "formula": "−Revenue ÷ Costs",
+              "excelFormat": "0.0\"x\""
+            },
+            {
+              "row": 10,
+              "label": "Revenue in pence",
+              "kind": "calculation",
+              "formula": "Revenue × 100",
+              "excelFormat": "#,##0,\"k\""
+            },
+            {
+              "row": 11,
+              "label": "R&D",
+              "kind": "calculation",
+              "formula": "−Costs ÷ 10",
+              "excelFormat": "\"R&D \"#,##0"
+            },
+            {
+              "row": 12,
+              "label": "Headcount",
+              "kind": "input"
+            }
+          ]
+        }
+      },
+      "notTranslated": []
     }
   }
 }

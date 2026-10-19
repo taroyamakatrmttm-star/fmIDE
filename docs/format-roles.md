@@ -45,7 +45,7 @@ The Excel style is **the person's own**: it is saved in the browser (IndexedDB, 
 | Fill, font colour, bold, font size, border | The row's role in the Excel style |
 | Number format | fmIDE: the rectangle's own number format, else its Inputs / Calculations format; else ExcelExporter's fallback number format (section 2) |
 
-**A row's own format in ExcelExporter** (the owner's decision): in the Tree view, 🎨 on a row gives that row, in that workbook layout only, its own fill, font colour, bold, border and optionally number format. It goes over everything above for that row, and **Reset to the Excel style** takes it off. It is saved with the ExcelExporter layout (mapping file version 2), never in the model. The label's indent is set there too.
+**A row's own format in ExcelExporter** (the owner's decision): in the Tree view, 🎨 on a row gives that row, in that workbook layout only, its own fill, font colour, bold, border and optionally number format — one of the kinds, or Excel's own code typed in **Excel number format** (for example `#,##0;(#,##0)`; `style.excelFormat`, mapping file version 10), which wins over the kind and over fmIDE's number format, and which the Excel import fills from each row's own code. The code is ExcelExporter's alone: it never goes back to fmIDE's canvas. It goes over everything above for that row, and **Reset to the Excel style** takes it off. It is saved with the ExcelExporter layout (mapping file version 2), never in the model. The label's indent is set there too.
 
 ## Files from before step 11a
 

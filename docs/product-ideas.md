@@ -49,7 +49,6 @@ From the brainstorm of ten ideas (October 2026), grouped as it was. #2 is built 
 | **Headings visible in fmIDE** | Headings such as "Income Statement" show only as gaps on fmIDE's canvas; they reach Excel through the layout. | A "label" item on the canvas — text that calculates nothing — placed where the heading was; usable by hand to annotate any model, and written by ExcelExporter as a heading row. | Medium (a file-format change) |
 | **Translating more formulas** | A row the import can't translate keeps Excel's saved numbers and doesn't move with its inputs. Running totals (`SUM($D$8:D8)`) are translated since 19 October 2026 (section 3). | Lookups (`INDEX`/`MATCH`, `VLOOKUP`, `XLOOKUP`; perhaps as `choose`), `SUMIF`/`COUNTIF`, `NPV`/`IRR`, dates. Another real model would help choose. | Medium to large (lookups) |
 | **Re-importing an updated workbook** | Importing again makes a new model; changes made in fmIDE are lost. | Import onto the open model: matching rows keep their rectangles, new rows are added, removed rows flagged, with a report of what changed. The owner decides whose change wins. Could reuse "Update this canvas". | Large |
-| **Exact number formats** | A format becomes the nearest of ExcelExporter's four kinds; `(1,234)`, `£` or `0.0x` are not kept exactly. | A row's format may carry Excel's own format code, checked for safety. | Small (a layout file change) |
 | **Formula numbers on fmIDE's canvas** | Numbers inside formulas ("365") are back in the formulas in Excel, but each is a small rectangle in fmIDE. | An operator may take a typed number as one of its inputs. Changes the shared calculation: careful. | Medium |
 | Also noted in `docs/step20-excel-import.md` | | Sums across the periods as new operators; number formats onto the canvas; sending the model straight to fmIDE; real customer workbooks as samples. | — |
 
@@ -84,3 +83,4 @@ Tilt to sweep a slider; a phone tutorial; receiving a `.fmide` from another app'
 | fmGraph: one period for every board, any chart keeping its own | Built: #184 |
 | fmGraph: goal seek ("what price keeps cash above zero?", step 15's later ideas) | Built: #187 — the Goal seek panel under the sliders |
 | Translate running totals in the Excel import (`SUM($D$8:D8)`, as a period shift) | Built: #186; lookups, `SUMIF`/`COUNTIF`, `NPV`/`IRR` and dates remain (section 2) |
+| Exact number formats: a row's own Excel code (`style.excelFormat`), kept by the Excel import | Built: #190 (mapping file 10) |

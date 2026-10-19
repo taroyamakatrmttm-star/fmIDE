@@ -1,0 +1,194 @@
+{
+  "kind": "fmIDE-excel-mapping",
+  "version": 9,
+  "tabs": [
+    {
+      "id": "tab_c1",
+      "name": "Revenue Model",
+      "order": 0
+    }
+  ],
+  "rows": [
+    {
+      "id": "c1|n19",
+      "canvasId": "c1",
+      "nodeId": "n19",
+      "path": [],
+      "tabId": "tab_c1",
+      "section": "input",
+      "order": 0,
+      "label": "Unit Price",
+      "include": true,
+      "inlineConstant": false,
+      "flatOrder": 0
+    },
+    {
+      "id": "c1|n22",
+      "canvasId": "c1",
+      "nodeId": "n22",
+      "path": [],
+      "tabId": "tab_c1",
+      "section": "output",
+      "order": 0,
+      "label": "Revenue",
+      "include": true,
+      "inlineConstant": false,
+      "flatOrder": 3,
+      "style": {
+        "fill": null,
+        "font": {
+          "color": "#1e293b",
+          "weight": "700"
+        },
+        "border": {
+          "style": "none"
+        },
+        "numberFormat": {
+          "kind": "number",
+          "decimals": 1
+        }
+      }
+    },
+    {
+      "id": "c1|n20",
+      "canvasId": "c1",
+      "nodeId": "n20",
+      "path": [],
+      "tabId": "tab_c1",
+      "section": "input",
+      "order": 1,
+      "label": "Volume",
+      "include": true,
+      "inlineConstant": false,
+      "flatOrder": 1
+    },
+    {
+      "id": "c1|n27",
+      "canvasId": "c1",
+      "nodeId": "n27",
+      "path": [],
+      "tabId": "tab_c1",
+      "section": "input",
+      "order": 2,
+      "label": "Cash",
+      "include": true,
+      "inlineConstant": false,
+      "flatOrder": 2
+    }
+  ],
+  "customRows": [],
+  "cfg": {
+    "startLabel": "2027",
+    "frequency": "annual",
+    "fallbackFormat": "#,##0",
+    "fileName": "fmIDE-export",
+    "sectionsEnabled": true,
+    "inputsTab": {
+      "enabled": false,
+      "name": "Inputs",
+      "groupBy": "tab",
+      "orderWithin": "sheet"
+    },
+    "sensitivity": {
+      "enabled": true,
+      "outputs": [
+        "c1|n22"
+      ],
+      "period": 0,
+      "steps": 3,
+      "charts": "sheet",
+      "variables": [
+        {
+          "row": "c1|n19",
+          "by": "percent",
+          "low": -10,
+          "high": 10
+        }
+      ]
+    },
+    "graph": {
+      "from": [],
+      "board": "",
+      "scenarios": [],
+      "sliders": [
+        {
+          "row": "c1|n19",
+          "name": "Unit Price",
+          "mode": "set",
+          "periods": {
+            "mode": "all"
+          },
+          "min": 5,
+          "max": 15,
+          "step": 0.5
+        }
+      ],
+      "charts": [
+        {
+          "kind": "columns",
+          "title": "Revenue and cash",
+          "wide": true,
+          "scale": null,
+          "periods": {
+            "mode": "all"
+          },
+          "groups": [
+            ""
+          ],
+          "parts": [
+            {
+              "row": "c1|n22",
+              "name": "Revenue",
+              "colour": "#2563eb",
+              "group": 0
+            },
+            {
+              "row": "c1|n27",
+              "name": "Cash",
+              "group": 0
+            }
+          ]
+        },
+        {
+          "kind": "lines",
+          "title": "Revenue over time",
+          "wide": false,
+          "scale": null,
+          "periods": {
+            "mode": "all"
+          },
+          "parts": [
+            {
+              "row": "c1|n22",
+              "name": "Revenue",
+              "colour": "#16a34a"
+            }
+          ]
+        }
+      ]
+    },
+    "sensitivities": [
+      {
+        "name": "What moves Revenue",
+        "enabled": true,
+        "outputs": [
+          "c1|n22"
+        ],
+        "period": 0,
+        "steps": 3,
+        "charts": "sheet",
+        "variables": [
+          {
+            "row": "c1|n19",
+            "by": "percent",
+            "low": -10,
+            "high": 10,
+            "show": false
+          }
+        ],
+        "origin": "fmGraph"
+      }
+    ]
+  },
+  "inputRows": []
+}

@@ -235,7 +235,7 @@ test('Save for fmIDE writes the imported model as an fmIDE document carrying its
   expect(fromReport.data.system.canvases.map(c => c.name)).toEqual(['Assets']);
   // Its Excel layout as it is now: a mapping file, sections off, the sheet's title as a label row.
   const layout = fromReport.data.excelLayout;
-  expect([layout.kind, layout.version, layout.cfg.sectionsEnabled]).toEqual(['fmIDE-excel-mapping', 9, false]); // 9 since fmGraph's lines chart (19 October 2026)
+  expect([layout.kind, layout.version, layout.cfg.sectionsEnabled]).toEqual(['fmIDE-excel-mapping', 10, false]); // 10 since a row's own Excel number format code (9: fmGraph's lines chart; 19 October 2026)
   expect(layout.customRows.filter(r => r.label).map(r => r.label)).toEqual(['Fixed assets']);
   await page.locator('#importReportClose').click();
   await expect(page.locator('#loadStatus .status.ok')).toHaveText('Saved 02-corkscrew.fmide — open it in fmIDE with File → Open…; its Excel layout goes with it.');
@@ -449,6 +449,31 @@ test('running totals: imported live, checked, and written by Generate as formula
   const cash = wb.Sheets['Cash'];
   expect(X.findRow(cash, 'Running total of Cash flow').length).toBe(1);
   expect(X.findRow(cash, 'Running total of Cash flow from 2028').length).toBe(1);
+});
+
+test('number formats: each imported row keeps its own Excel code, and Generate writes it exactly', async ({ page }) => {
+  await X.openExporter(page);
+  await importFile(page, sample('07-number-formats.xlsx'));
+  await page.locator('#importOk').click();
+  await expect(page.locator('#importCheckSummary')).toHaveText('All 25 calculated cells agree with Excel\'s saved values.');
+  await page.locator('#importReportClose').click();
+  // The layout keeps each row's code (style.excelFormat); a row left General gets the fallback format.
+  const want = JSON.parse(require('fs').readFileSync(fixture('excel-import', 'expected.json'), 'utf8')).samples['07-number-formats'].sheets.Formats.rows
+    .filter(r => r.kind !== 'title');
+  const { wb, bytes } = await X.generate(page);
+  const first = X.periodOneCol(wb.Sheets['Formats']);
+  const cols = [0, 1, 2, 3, 4].map(i => X.numToCol(first + i));
+  const out = (await X.readBack(bytes)).getWorksheet('Formats');
+  const rowOf = (label) => { for(let r = 1; r <= out.rowCount; r++) if(out.getCell('A' + r).value === label) return r; return 0; };
+  for(const r of want){
+    const at = rowOf(r.label);
+    expect(at, r.label).toBeGreaterThan(0);
+    for(const col of cols) expect(out.getCell(col + at).numFmt, r.label + ' ' + col).toBe(r.excelFormat || '#,##0');
+  }
+  // The XML holds each distinct code once, escaped ("R&D ").
+  const styles = (await X.unzip(bytes))['xl/styles.xml'];
+  expect(styles).toContain('formatCode="&quot;R&amp;D &quot;#,##0"');
+  expect(styles.split('formatCode="#,##0;(#,##0)"').length).toBe(2);
 });
 
 test('the .fmide Save for fmIDE writes, opened in ExcelExporter on another computer, brings its Excel layout', async ({ page, browser }, testInfo) => {
