@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: Collapse all and Expand all in the Tree
+- Two buttons in the Rows panel's head, shown with the Tree, fold or unfold every tab at once (`#btnTreeCollapseAll`, `#btnTreeExpandAll`). The folds stay unsaved, as a single tab's always were.
+
 ## ExcelExporter: exact number formats
 - A row's own format in the Tree View may carry Excel's own number format code (Excel number format, such as `#,##0;(#,##0)` or `0.0"x"`), written exactly and before any other number format; a code that can't be used is refused. Reset to the Excel style clears it.
 - Importing an Excel model keeps each row's own code exactly (the one most of its period cells use), so the generated workbook shows the original's formatting.

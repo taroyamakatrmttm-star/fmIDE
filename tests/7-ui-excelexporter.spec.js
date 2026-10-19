@@ -205,6 +205,38 @@ test.describe('sorting', () => {
 
 // ---------- Tree view ----------
 test.describe('Tree view', () => {
+  test('Collapse all folds every tab, Expand all opens them; only with the Tree; not saved', async ({ page }) => {
+    await open(page);
+    await page.click('#viewByTree');
+    const all = await tree(page);
+    const headings = page.locator('#rowGroupsTree .tree-tab-header span:first-child');
+    await page.click('#btnTreeCollapseAll');
+    expect(Object.values(await tree(page)).every(rows => rows.length === 0)).toBe(true);
+    for(const h of await headings.allTextContents()) expect(h).toMatch(/^▸ /);
+    // A tab's name still opens just that tab.
+    await page.locator('#rowGroupsTree .tree-tab-header', { hasText: /^▸ BS/ }).click();
+    const one = await tree(page);
+    expect(one['BS']).toEqual(all['BS']);
+    expect(Object.entries(one).filter(([name]) => name !== 'BS').every(([, rows]) => rows.length === 0)).toBe(true);
+    await page.click('#btnTreeExpandAll');
+    expect(await tree(page)).toEqual(all);
+    // Shown only with the Tree.
+    await page.click('#viewByTab');
+    await expect(page.locator('#btnTreeCollapseAll')).toBeHidden();
+    await expect(page.locator('#btnTreeExpandAll')).toBeHidden();
+    await page.click('#viewByCanvas');
+    await expect(page.locator('#btnTreeCollapseAll')).toBeHidden();
+    await page.click('#viewByTree');
+    await expect(page.locator('#btnTreeCollapseAll')).toBeVisible();
+    await expect(page.locator('#btnTreeExpandAll')).toBeVisible();
+    // Not saved: after a reload every tab is open again.
+    await page.click('#btnTreeCollapseAll');
+    await page.reload();
+    await X.loadFixtureModel(page, 'revenue-bs-corkscrew.json');
+    await page.click('#viewByTree');
+    expect(await tree(page)).toEqual(all);
+  });
+
   test('right-click inserts a custom row above / below and opens rename', async ({ page }) => {
     await open(page, { sections: false });
     await page.click('#viewByTree');

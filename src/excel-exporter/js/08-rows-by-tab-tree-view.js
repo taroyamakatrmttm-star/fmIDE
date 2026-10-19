@@ -225,6 +225,7 @@ function setRowView(view){
   $('blockInstanceGroups').classList.toggle('hidden', view !== 'canvas');
   $('rowGroupsByTab').classList.toggle('hidden', view !== 'tab');
   $('rowGroupsTree').classList.toggle('hidden', view !== 'tree');
+  $('treeFoldBtns').classList.toggle('hidden', view !== 'tree'); // only the Tree folds
   if(view === 'tree' && mapping) renderTreeView();
 }
 
@@ -242,6 +243,14 @@ let treeAnchorIndex = null;          // last clicked row's index into treeVisibl
 let treeVisibleRows = [];            // flat list of {id} for every rendered (non-collapsed) row, in DOM order
 let treeRowElements = [];            // {id, el} for every rendered row div, so a plain selection change
                                       // can flip `.selected` in place instead of rebuilding the whole tree
+
+// Collapse all / Expand all (the Rows panel's head): fold or unfold every tab at once.
+function setAllTreeTabsCollapsed(collapsed){
+  if(!mapping) return;
+  treeCollapsedTabIds.clear();
+  if(collapsed) mapping.tabs.forEach(t => treeCollapsedTabIds.add(t.id));
+  renderTreeView();
+}
 
 function renderTreeView(){
   const container = $('rowGroupsTree');

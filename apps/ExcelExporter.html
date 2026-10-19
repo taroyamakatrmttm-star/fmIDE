@@ -801,6 +801,7 @@ var XLSX = (function(){
   /* The rows. */
   .rows-head{ display:flex; align-items:center; gap:10px 14px; flex-wrap:wrap; margin-bottom:10px; }
   .rows-head h2{ margin:0 6px 0 0; }
+  .tree-fold-btns{ display:inline-flex; gap:6px; }
   .sortbar{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:7px 10px; margin-bottom:12px; background:#f8f9fb; border:1px solid var(--border); border-radius:9px; }
   .sortbar-label{ font-size:12.5px; font-weight:600; color:var(--muted); }
   .sortbar select{ padding:4px 8px; font-size:12.5px; }
@@ -1254,6 +1255,10 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
           <button id="viewByTab" class="tbtn-toggle" title="An editable table per Excel tab, label rows included">By Excel Tab</button>
           <button id="viewByCanvas" class="tbtn-toggle" title="An editable table per fmIDE canvas and block instance">By Canvas</button>
         </div>
+        <span class="tree-fold-btns" id="treeFoldBtns">
+          <button id="btnTreeCollapseAll" title="Fold every tab in the Tree">Collapse all</button>
+          <button id="btnTreeExpandAll" title="Unfold every tab in the Tree">Expand all</button>
+        </span>
         <label class="check-line" title="Give each tab INPUTS, CALCULATIONS and OUTPUTS bands. Off: one free list per tab.">
           <input type="checkbox" id="cfgSectionsEnabled"> Sections
         </label>
@@ -8593,6 +8598,7 @@ function setRowView(view){
   $('blockInstanceGroups').classList.toggle('hidden', view !== 'canvas');
   $('rowGroupsByTab').classList.toggle('hidden', view !== 'tab');
   $('rowGroupsTree').classList.toggle('hidden', view !== 'tree');
+  $('treeFoldBtns').classList.toggle('hidden', view !== 'tree'); // only the Tree folds
   if(view === 'tree' && mapping) renderTreeView();
 }
 
@@ -8610,6 +8616,14 @@ let treeAnchorIndex = null;          // last clicked row's index into treeVisibl
 let treeVisibleRows = [];            // flat list of {id} for every rendered (non-collapsed) row, in DOM order
 let treeRowElements = [];            // {id, el} for every rendered row div, so a plain selection change
                                       // can flip `.selected` in place instead of rebuilding the whole tree
+
+// Collapse all / Expand all (the Rows panel's head): fold or unfold every tab at once.
+function setAllTreeTabsCollapsed(collapsed){
+  if(!mapping) return;
+  treeCollapsedTabIds.clear();
+  if(collapsed) mapping.tabs.forEach(t => treeCollapsedTabIds.add(t.id));
+  renderTreeView();
+}
 
 function renderTreeView(){
   const container = $('rowGroupsTree');
@@ -10981,10 +10995,10 @@ const EXCEL_HELP_TOPICS = [
       { see: ['tree-view', 'blocks', 'tabs'] },
     ] },
   { id: 'tree-view', group: 'layout', title: 'The Tree View',
-    keywords: 'tree view select rename right-click menu indent format row shift ctrl',
+    keywords: 'tree view select rename right-click menu indent format row shift ctrl fold collapse expand all',
     summary: 'Every tab\'s rows as one list: select, rename, indent, format and move them.',
     body: [
-      { p: 'The Tree, the Rows panel\'s first view, shows every row of each tab in order, including left-out ones (dimmed), as they will appear in Excel. Click a tab\'s name to fold it.' },
+      { p: 'The Tree, the Rows panel\'s first view, shows every row of each tab in order, including left-out ones (dimmed), as they will appear in Excel. Click a tab\'s name to fold it; Collapse all and Expand all, above the rows, fold or unfold every tab.' },
       { steps: [
         'Click a row to select it. Ctrl-click (Cmd-click on a Mac) adds or removes one, and Shift-click selects a range.',
         'Double-click a row\'s label to rename it.',
@@ -11185,6 +11199,16 @@ const EXCEL_HELP_TOPICS = [
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'tree-collapse-all', date: '2026-10-19', title: 'Collapse all and Expand all in the Tree',
+    summary: 'Two buttons fold or unfold every tab of the Tree View at once.',
+    what: [
+      'Above the rows, beside Tree, By Excel Tab and By Canvas, Collapse all folds every tab of the Tree to its name and row count; Expand all opens them all again.',
+      'A tab\'s name still folds or unfolds just that tab. The buttons show only while the Tree is shown.',
+    ],
+    why: 'A model with many tabs is easier to find your way around when you can close them all and open only the one you need.',
+    how: ['Show the Tree.', 'Press Collapse all.', 'Click the name of the tab you want to open, or press Expand all.'],
+    notes: ['The folds are not saved: loading a model opens every tab.'],
+    see: ['tree-view'] },
   { id: 'excel-number-formats', date: '2026-10-19', title: 'Exact number formats',
     summary: 'A row can carry Excel\'s own number format code, and an imported workbook keeps each row\'s code exactly.',
     what: [
@@ -16911,6 +16935,8 @@ $('btnAddCustomRow').addEventListener('click', addCustomRow);
 $('viewByCanvas').addEventListener('click', () => setRowView('canvas'));
 $('viewByTab').addEventListener('click', () => setRowView('tab'));
 $('viewByTree').addEventListener('click', () => setRowView('tree'));
+$('btnTreeCollapseAll').addEventListener('click', () => setAllTreeTabsCollapsed(true));
+$('btnTreeExpandAll').addEventListener('click', () => setAllTreeTabsCollapsed(false));
 setRowView('tree'); // the Tree is the main row editor
 
 $('cfgInputsEnabled').addEventListener('change', () => setInputsEnabled($('cfgInputsEnabled').checked));

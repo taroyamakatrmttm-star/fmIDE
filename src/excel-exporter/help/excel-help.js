@@ -186,10 +186,10 @@ const EXCEL_HELP_TOPICS = [
       { see: ['tree-view', 'blocks', 'tabs'] },
     ] },
   { id: 'tree-view', group: 'layout', title: 'The Tree View',
-    keywords: 'tree view select rename right-click menu indent format row shift ctrl',
+    keywords: 'tree view select rename right-click menu indent format row shift ctrl fold collapse expand all',
     summary: 'Every tab\'s rows as one list: select, rename, indent, format and move them.',
     body: [
-      { p: 'The Tree, the Rows panel\'s first view, shows every row of each tab in order, including left-out ones (dimmed), as they will appear in Excel. Click a tab\'s name to fold it.' },
+      { p: 'The Tree, the Rows panel\'s first view, shows every row of each tab in order, including left-out ones (dimmed), as they will appear in Excel. Click a tab\'s name to fold it; Collapse all and Expand all, above the rows, fold or unfold every tab.' },
       { steps: [
         'Click a row to select it. Ctrl-click (Cmd-click on a Mac) adds or removes one, and Shift-click selects a range.',
         'Double-click a row\'s label to rename it.',

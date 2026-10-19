@@ -11,6 +11,16 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'tree-collapse-all', date: '2026-10-19', title: 'Collapse all and Expand all in the Tree',
+    summary: 'Two buttons fold or unfold every tab of the Tree View at once.',
+    what: [
+      'Above the rows, beside Tree, By Excel Tab and By Canvas, Collapse all folds every tab of the Tree to its name and row count; Expand all opens them all again.',
+      'A tab\'s name still folds or unfolds just that tab. The buttons show only while the Tree is shown.',
+    ],
+    why: 'A model with many tabs is easier to find your way around when you can close them all and open only the one you need.',
+    how: ['Show the Tree.', 'Press Collapse all.', 'Click the name of the tab you want to open, or press Expand all.'],
+    notes: ['The folds are not saved: loading a model opens every tab.'],
+    see: ['tree-view'] },
   { id: 'excel-number-formats', date: '2026-10-19', title: 'Exact number formats',
     summary: 'A row can carry Excel\'s own number format code, and an imported workbook keeps each row\'s code exactly.',
     what: [
