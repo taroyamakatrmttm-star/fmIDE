@@ -11,6 +11,17 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'import-running-totals', date: '2026-10-19', title: 'Running totals imported live',
+    summary: 'Importing an Excel model now translates a running total such as =SUM($D$8:D8), so it moves with its inputs instead of keeping Excel\'s numbers.',
+    what: [
+      'A SUM along one row, from a fixed first column ($D$8) to this period\'s column (D8), becomes the previous period\'s total plus this period\'s value, through a period shift. In the first period it is the row\'s own value.',
+      'When the running total is the whole formula, the row itself is worked out that way. When it is part of a longer formula, such as =$C$7+SUM($D$5:D5), a rectangle of its own, "Running total of Cash flow", is worked out and the formula reads it.',
+      'A total starting in a later year, in a row whose formula starts that year, starts there. An average or a sum over several rows growing along the periods still keeps Excel\'s numbers, listed in the report.',
+    ],
+    why: 'Running totals are the formula most often left as Excel\'s numbers, so the model did not move with its inputs there.',
+    how: ['Choose File → Import Excel model… and press Import.', 'The report counts the running totals among the calculated cells that agree with Excel.'],
+    see: ['import-excel'] },
+
   { id: 'slider-rows', date: '2026-10-18', title: 'Sliders on the Inputs tab, easier to read',
     summary: 'An input the Dashboard\'s sliders move no longer reaches into the Dashboard in its formula: each slider has a row of its own.',
     what: [

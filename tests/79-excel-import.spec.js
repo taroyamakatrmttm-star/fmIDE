@@ -14,8 +14,9 @@
 // trees (aliases in Excel's order, period shifts, named inputs, constants); the rows not
 // translated and the odd cells as expected.json lists them; circular references cut; what a
 // formula reads outside the rows. Phase 20f: the check (check.js) — the samples agree in every
-// calculated cell; a stale saved value, Excel's errors and a workbook saved without values. No
-// browser.
+// calculated cell; a stale saved value, Excel's errors and a workbook saved without values.
+// Running totals (19 October 2026): SUM($D$5:D5) in the row itself or a shared rectangle,
+// mixed terms, a later anchor, what stays kept (sample 06 and crafted rows). No browser.
 const fs = require('fs');
 const path = require('path');
 const JSZip = require('jszip');
@@ -84,7 +85,7 @@ async function withLimits(limits, fn){
 // ---------- 20b: reading the file ----------
 
 test('every sample reads as ExcelJS reads it: sheets, values, formulas, shared formulas, dates, names', async () => {
-  expect(SAMPLES.length).toBe(5);
+  expect(SAMPLES.length).toBe(6);
   for(const file of SAMPLES){
     const book = await W.xlReadWorkbook(bytesOf(file));
     const ej = new ExcelJS.Workbook();
@@ -639,7 +640,9 @@ test('the trees: aliases in Excel\'s order, period shifts, named inputs, constan
   // A row not translated keeps Excel's saved values as an input.
   expect(val.formulaOf('Growth')).toBeNull();
   expect(val.rect('Growth').text).toBe('Growth\n0.05\n%');
-  expect(val.rect('Cumulative cash').periodValues).toEqual(four.report.rows.find(r => r.label === 'Cumulative cash').cells.map(c => c.saved));
+  // A running total (since running totals were translated): the row's own previous total.
+  expect(val.formulaOf('Cumulative cash')).toBe('+(@Cash flow, if(@Up to 2026, [Cumulative cash: 0|0], shift(-1 @Cumulative cash)))');
+  expect(val.rect('Cumulative cash').periodValues).toBeUndefined();
   expect(val.rect('NPV').text).toMatch(/^NPV\n[0-9.]+\n£$/);
 });
 
@@ -683,6 +686,54 @@ test('what a formula reads outside its rows, circular references, and formulas t
   expect(() => B.xlBuildModel({ sheets: [], names: [] }, [], [])).toThrow('Tick a sheet with periods to import.');
 });
 
+test('running totals: SUM($D$5:D5) the row\'s own previous total, else a shared rectangle; mixed terms, a later anchor, what stays kept', async () => {
+  const { system, report } = await importBook(bytesOf('06-running-totals.xlsx'));
+  const m = shape(system, 'Cash');
+  // The whole formula: the row itself, live (the first period its own cell, then the previous total plus this one).
+  expect(m.formulaOf('Cumulative cash')).toBe('+(@Cash flow, if(@Up to 2026, [Cumulative cash: 0|0], shift(-1 @Cumulative cash)))');
+  expect(m.formulaOf('Cumulative spend')).toBe('+(@Spend, if(@Up to 2026, [Cumulative spend: 0|0], shift(-1 @Cumulative spend)))');
+  // With other terms: a rectangle of its own per row summed (and anchor), shared by the formulas reading it.
+  expect(m.formulaOf('Cash balance')).toBe('+(@Opening cash, @Running total of Cash flow)');
+  expect(m.formulaOf('Net cumulative')).toBe('−(@Running total of Cash flow, @Running total of Spend)');
+  expect(m.formulaOf('Running total of Cash flow')).toBe('+(@Cash flow, if(@Up to 2026, [Running total of Cash flow: 0|0], shift(-1 @Running total of Cash flow)))');
+  expect(m.rect('Running total of Cash flow').text).toBe('Running total of Cash flow\n\n£');
+  expect(m.c.nodes.filter(n => n.type === 'value' && /^Running total of Cash flow\n/.test(n.text)).length).toBe(1);
+  // From a later period, in a row in parts: the total starts at its anchor (2028).
+  expect(m.formulaOf('Cash since 2028')).toBe('@Running total of Cash flow from 2028');
+  expect(m.formulaOf('Running total of Cash flow from 2028')).toBe('+(@Cash flow, if(@Up to 2028, [Running total of Cash flow from 2028: 0|0], shift(-1 @Running total of Cash flow from 2028)))');
+  expect(m.rect('Cash since 2028').literalPeriods).toEqual([0, 1]);
+  // What stays Excel's numbers: an average, and a sum over two rows, growing along the periods.
+  expect(report.notTranslated.map(n => [n.label, n.why])).toEqual([['Average cash flow', 'a range growing along the periods'], ['Spend rows to date', 'a range over several rows growing along the periods']]);
+  // Every translated cell is Excel's saved value, the running totals' rectangles too (no Excel row of their own).
+  for(const x of compare(system, report)) expect(agrees(x), x.where + ': ' + x.got + ' (' + x.error + ') against ' + x.saved).toBe(true);
+  const ir = compileModel(system), res = evaluateModel(ir);
+  const total = m.rect('Running total of Cash flow from 2028');
+  expect([2, 3, 4].map(p => res[0].values[p][total.id])).toEqual([75, 165, 225]);
+
+  // Made by hand: a total of its own row (a circular reference in Excel), one starting after
+  // the first period it is used in, one ending a period back, one of the header row, MIN growing.
+  const cells = (r, label, f) => '<row r="' + r + '"><c r="A' + r + '" t="s"><v>' + label + '</v></c>' +
+    ['B', 'C', 'D'].map(c => '<c r="' + c + r + '"><f>' + f(c) + '</f><v>0</v></c>').join('') + '</row>';
+  const crafted = await importBook(await craft({
+    strings: '<si><t>X</t></si><si><t>Self</t></si><si><t>Late</t></si><si><t>Back</t></si><si><t>Years</t></si><si><t>Least</t></si><si><t>Plus</t></si>',
+    sheets: [{ name: 'S', xml: sheetXml(
+      '<row r="1"><c r="B1"><v>2026</v></c><c r="C1"><v>2027</v></c><c r="D1"><v>2028</v></c></row>' +
+      '<row r="2"><c r="A2" t="s"><v>0</v></c><c r="B2"><v>1</v></c><c r="C2"><v>2</v></c><c r="D2"><v>4</v></c></row>' +
+      cells(3, 1, (c) => 'SUM($B$3:' + c + '3)') + cells(4, 2, (c) => 'SUM($C$2:' + c + '2)') +
+      cells(5, 3, (c) => 'SUM($B$2:' + String.fromCharCode(c.charCodeAt(0) - 1) + '2)') + cells(6, 4, (c) => 'SUM($B$1:' + c + '1)') +
+      cells(7, 5, (c) => 'MIN($B$2:' + c + '2)') +
+      '<row r="8"><c r="A8" t="s"><v>6</v></c><c r="B8"><f>SUM(B2:$B$2)*2+B2</f><v>3</v></c><c r="C8"><f>SUM(C2:$B$2)*2+C2</f><v>8</v></c><c r="D8"><f>SUM(D2:$B$2)*2+D2</f><v>18</v></c></row>') }],
+  }));
+  expect(crafted.report.notTranslated.map(n => [n.label, n.why])).toEqual([
+    ['Self', 'a circular reference'], ['Late', 'a running total used before its first period'],
+    ['Back', 'a running total not ending in its own period'], ['Years', 'a running total of something that isn\'t a row'],
+    ['Least', 'a range growing along the periods']]);
+  // The anchor at the end of the range reads alike; a total in a sum with other terms.
+  const plus = shape(crafted.system, 'S');
+  expect(plus.formulaOf('Plus')).toBe('+(×(@Running total of X, [Plus: 2|2]), @X)');
+  for(const x of compare(crafted.system, crafted.report).filter(x => x.where.includes('(Plus)'))) expect(agrees(x), x.where + ': ' + x.got).toBe(true);
+});
+
 test('names repeated or with line breaks are made one line and unique; a sheet with fewer periods is matched in order', async () => {
   const { system, report } = await importBook(await craft({
     strings: '<si><t>Cost</t></si><si><t>Two\nlines</t></si><si><t>2027</t></si>',
@@ -703,7 +754,7 @@ test('names repeated or with line breaks are made one line and unique; a sheet w
 // ---------- 20f: the check ----------
 
 test('the check: every calculated cell of the samples agrees with Excel', async () => {
-  const want = { '01-simple-rows.xlsx': [15, 0], '02-corkscrew.xlsx': [15, 0], '03-two-sheets.xlsx': [45, 0], '04-not-supported.xlsx': [15, 4], '05-actuals-forecast.xlsx': [55, 0] };
+  const want = { '01-simple-rows.xlsx': [15, 0], '02-corkscrew.xlsx': [15, 0], '03-two-sheets.xlsx': [45, 0], '04-not-supported.xlsx': [20, 3], '05-actuals-forecast.xlsx': [55, 0], '06-running-totals.xlsx': [25, 2] };
   for(const file of SAMPLES){
     const { system, report } = await importBook(bytesOf(file));
     const check = C.xlCheckModel(system, report);
