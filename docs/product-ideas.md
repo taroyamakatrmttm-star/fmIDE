@@ -72,7 +72,7 @@ Tilt to sweep a slider; a phone tutorial; receiving a `.fmide` from another app'
 
 | Idea | Outcome |
 |---|---|
-| A readable pack file name (agreed 4 October 2026) | Built: branch `claude/readable-pack-name`, 19 October 2026 (`docs/decisions.md`); the library's `checker.json` to be moved after |
+| A readable pack file name (agreed 4 October 2026) | Built: #189 (`docs/decisions.md`); the library's `checker.json` to be moved after |
 | Import an existing Excel model (brainstorm #2) | Built: step 20, pull requests #158–#166, follow-ups #168–#177 |
 | Fold one-off typed numbers into the row's own box; one canvas per section | Built: #169, #170 |
 | Keep the Excel layout and look; the round-trip check | Built: #172–#174 |
