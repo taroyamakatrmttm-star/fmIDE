@@ -82,6 +82,8 @@ $('btnAddCustomRow').addEventListener('click', addCustomRow);
 $('viewByCanvas').addEventListener('click', () => setRowView('canvas'));
 $('viewByTab').addEventListener('click', () => setRowView('tab'));
 $('viewByTree').addEventListener('click', () => setRowView('tree'));
+$('btnTreeCollapseAll').addEventListener('click', () => setAllTreeTabsCollapsed(true));
+$('btnTreeExpandAll').addEventListener('click', () => setAllTreeTabsCollapsed(false));
 setRowView('tree'); // the Tree is the main row editor
 
 $('cfgInputsEnabled').addEventListener('change', () => setInputsEnabled($('cfgInputsEnabled').checked));
