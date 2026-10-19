@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## The library: sharing again after attaching or a takedown
+- The library checker accepts the owner's own version shared again with another Excel layout or fmGraph board (fmIDE attaches them without a new version), as a note; everything else about the version must be the same. A version shared again from someone else's pack is still an exact copy.
+- The account that took one of its own packs down may share that pack's versions again (a note); any other account is still refused. The remaining errors say what to do in fmIDE. The library repository moves its `checker.json` to this commit to use it.
+
 ## ExcelExporter: Collapse all and Expand all in the Tree
 - Two buttons in the Rows panel's head, shown with the Tree, fold or unfold every tab at once (`#btnTreeCollapseAll`, `#btnTreeExpandAll`). The folds stay unsaved, as a single tab's always were.
 

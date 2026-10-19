@@ -66,6 +66,14 @@ function itemText(item){
   delete copy.origin;
   return JSON.stringify(copy);
 }
+// The same without its attachments (an Excel layout, an fmGraph board): fmIDE attaches them to
+// a version in place, so the owner may share a version again with other attachments.
+function contentText(item){
+  const copy = Object.assign({}, item);
+  delete copy.origin;
+  delete copy.attachments;
+  return JSON.stringify(copy);
+}
 function sortedObject(o){
   const out = {};
   Object.keys(o).sort().forEach(k => { out[k] = o[k]; });
@@ -238,7 +246,7 @@ function checkLibrary(headDir, opts){
     const f = (Array.isArray(pk.raw.functions) ? pk.raw.functions : []).filter(isObject).map(x => ({ type: 'function', raw: x }));
     return t.concat(f).map(it => Object.assign(it, {
       family: it.raw.family, version: it.raw.version, versionId: it.raw.versionId, kind: it.type === 'template' ? it.raw.kind : undefined,
-      name: it.type === 'template' ? it.raw.name : S.functionNameOf(it.raw), text: itemText(it.raw),
+      name: it.type === 'template' ? it.raw.name : S.functionNameOf(it.raw), text: itemText(it.raw), content: contentText(it.raw),
       where: `pack ${pk.id}: ${it.type} ${quote(it.type === 'template' ? it.raw.name : S.functionNameOf(it.raw))} v${it.raw.version}`,
       pack: pk, reshared: !!(isObject(it.raw.origin) && it.raw.origin.packId !== pk.id) }));
   };
@@ -297,6 +305,8 @@ function checkLibrary(headDir, opts){
   // Version ids of packs taken down: still used.
   const takenDownIds = new Map();
   Object.keys(rec.packs).forEach(id => { if(!packs.has(id)) rec.packs[id].versions.forEach(v => takenDownIds.set(v, id)); });
+  // A pack taken down that was the account's own: its owner may share its versions again.
+  const ownTakedown = (id, acc) => !!(acc && rec.packs[id] && !packs.has(id) && rec.packs[id].accountId === acc.id);
 
   allItems.forEach(it => {
     const acc = accountOf(it.pack) || (opts.account ? opts.account : null);
@@ -305,15 +315,27 @@ function checkLibrary(headDir, opts){
     const first = same[0];
     if(first !== it){
       if(first.family !== it.family || first.version !== it.version || first.type !== it.type) out.error(it.where, `Its version id is already used by ${first.where}, a different version.`);
-      else if(first.text !== it.text) out.error(it.where, `It isn't an exact copy of ${first.where}, which has the same version id. An approved version is never changed; a new version needs a new version id (fmIDE gives one when you save a new version).`);
+      else if(first.text !== it.text){
+        // The owner's own version with other attachments: the version itself is unchanged
+        // (the family rule below still says whose it is).
+        if(first.content === it.content && !it.reshared && !first.reshared) out.note(it.where, `It is ${first.where} with a different Excel layout or fmGraph board; the version itself is unchanged.`);
+        else out.error(it.where, `It isn't an exact copy of ${first.where}, which has the same version id. An approved version is never changed: in fmIDE, use Save as new version on it (that gives it a new version id), then save the pack again.`);
+      }
     }
     // A version of a pack taken down isn't shared again in a new pack, unless an approved
-    // pack still holds it as its owner's.
-    if(takenDownIds.has(it.versionId) && isNewPack(it.pack.id) && !same.some(o => !o.reshared && !isNewPack(o.pack.id))) out.error(it.where, `Its version id was used in the pack ${takenDownIds.get(it.versionId)}, which was taken down; it can't be shared again.`);
+    // pack still holds it as its owner's, or the pack taken down was the submitter's own.
+    if(takenDownIds.has(it.versionId) && isNewPack(it.pack.id) && !same.some(o => !o.reshared && !isNewPack(o.pack.id))){
+      const td = takenDownIds.get(it.versionId);
+      if(ownTakedown(td, acc)) out.note(it.where, `Its version id was used in the pack ${td}, which was taken down; it was the same account's, so its owner shares it again.`);
+      else out.error(it.where, `Its version id was used in the pack ${td}, which was taken down; only that pack's own account can share it again. To share your own work built on it, use Save as new version in fmIDE.`);
+    }
     const clash = allItems.find(o => o !== it && o.family === it.family && o.version === it.version && o.versionId !== it.versionId);
     if(clash) out.error(it.where, `Version ${it.version} of this family is already in the library as a different version (${clash.where}).`);
     // Sharing again: an exact copy of a version approved in the pack its origin names.
-    if(it.reshared){
+    // Sharing again from one's own pack taken down is one's own work (the family rule below).
+    if(it.reshared && !packs.has(it.raw.origin.packId) && ownTakedown(it.raw.origin.packId, acc)){
+      out.note(it.where, `It says it came from the pack ${it.raw.origin.packId}, which was taken down; it was the same account's, so its owner shares it again.`);
+    } else if(it.reshared){
       const o = it.raw.origin;
       const from = packs.get(o.packId);
       if(!from){

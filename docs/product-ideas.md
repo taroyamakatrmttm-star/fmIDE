@@ -65,6 +65,10 @@ From the brainstorm of ten ideas (October 2026), grouped as it was. #2 is built 
 - **Blocks and vintages on a board** — step 15's later ideas.
 - **The scenario waterfall in Excel** — left out of step 19: each case's outputs through a Data Table over the Global Case cell, then a waterfall of them (`docs/step19-fmgraph-in-excel.md`).
 
+### The community library (step 8)
+
+- **Check a pack before uploading it** — today a pack's problems show only after it is uploaded to GitHub, in the pull request's check. On the published site, fmIDE could run the same rules against the library's `index.json` (version ids, families, packs taken down) when the pack is saved, and say what to fix first. Raised on 19 October 2026, after the owner's pack was refused twice; medium (the rules would move into `src/shared/` for both).
+
 ### Phones (step 17)
 
 Tilt to sweep a slider; a phone tutorial; receiving a `.fmide` from another app's share sheet (Android only); light editing in fmIDE on a phone through the hold menu (`docs/step17-phones.md`).
@@ -90,5 +94,6 @@ Tilt to sweep a slider; a phone tutorial; receiving a `.fmide` from another app'
 | Translate running totals in the Excel import (`SUM($D$8:D8)`, as a period shift) | Built: #186; lookups, `SUMIF`/`COUNTIF`, `NPV`/`IRR` and dates remain (section 2) |
 | fmGraph: goal seek ("what price keeps cash above zero?", step 15's later ideas) | Built: #187 — the Goal seek panel under the sliders |
 | fmGraph: line charts (step 15's later ideas), and as Excel line charts on the Dashboard | Built: #188 (board file 10) |
+| The library: share a version again with new attachments, or the items of one's own pack taken down | Built: #193 (19 October 2026) |
 | A readable pack file name (agreed 4 October 2026) | Built: #189 (`docs/decisions.md`); the library's `checker.json` moved to it in fmide-library #17 (19 October 2026) |
 | Exact number formats: a row's own Excel code (`style.excelFormat`), kept by the Excel import | Built: #190 (mapping file 10) |

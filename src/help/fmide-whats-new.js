@@ -12,6 +12,16 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'share-again', date: '2026-10-19', title: 'Share your templates again, attachments and all',
+    summary: 'The community library takes a version you shared before with a new Excel layout or fmGraph board, and the items of a pack you took down yourself.',
+    what: [
+      'Attaching an Excel layout or an fmGraph board to a template changes the template in place, without a new version. A pack that holds a version you shared before, now with another attachment, is accepted: the version itself is unchanged.',
+      'If you took one of your own packs down, you may put its templates and functions in a new pack. Nobody else can bring them back.',
+    ],
+    why: 'Both used to be refused, so a pack holding your earlier work could only be shared after saving a new version of each item.',
+    how: ['Save the pack with {cmd:saveLibraryPack} as usual.', 'Share it with {cmd:shareLibraryPack}; the check on the pull request now passes.'],
+    see: ['share-library-pack'] },
+
   { id: 'readable-pack-name', date: '2026-10-19', title: 'A pack file you can recognise',
     summary: 'Save as Library Pack… names the file after the pack\'s title, with the start of its id in brackets, and the community library takes it under any name.',
     what: [

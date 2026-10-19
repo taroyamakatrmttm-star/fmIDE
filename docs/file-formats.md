@@ -367,7 +367,7 @@ The community library (a GitHub repository of packs, `docs/step8-community-libra
 ```
 
 - `type` is `"template"` (with `kind`: `"module"`, `"system"` or `"recipe"`) or `"function"` (no `kind`).
-- The records are only ever added to: an entry, once approved, is never changed or removed (a change of owner is a maintainer's own pull request). A pack taken down leaves its entries, so its ids are never used again.
+- The records are only ever added to: an entry, once approved, is never changed or removed (a change of owner is a maintainer's own pull request). A pack taken down leaves its entries, so its ids are never used again — except by that pack's own account, which may share its versions again (19 October 2026).
 - `author` follows a pack's author rules (one line, at most 120 characters, no extra spaces); no two accounts share a name (ignoring capitals and spaces).
 
 ## The catalogue's list (`fmIDE-library-index` 1, step 8, phase 8c-3)
