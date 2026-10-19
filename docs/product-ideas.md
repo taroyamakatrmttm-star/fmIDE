@@ -80,3 +80,5 @@ Tilt to sweep a slider; a phone tutorial; receiving a `.fmide` from another app'
 | Space between the Inputs tab's groups (idea 9) | Built: #177 |
 | Sensitivity and sliders on the Inputs tab, easier to read (idea 10) | Built: #179, #180 |
 | fmGraph: a slider's Range and step stays open | Built: #181 |
+| fmGraph: find a rectangle by typing (the search shared with fmIDE's launcher) | Built: #182 |
+| fmGraph: one period for every board, any chart keeping its own | Built: #184 |
