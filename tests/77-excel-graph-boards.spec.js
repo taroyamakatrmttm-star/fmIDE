@@ -199,7 +199,7 @@ test('someone else\'s board file: names as text, numbers forced, the rest left o
   expect(pageErrors).toEqual([]);
 });
 
-test('board versions: 2 has no scenarios, 3 and 8 read, a newer one and the template form are refused', async ({ page }) => {
+test('board versions: 2 has no scenarios, 3, 8 and 9 read, a newer one and the template form are refused', async ({ page }) => {
   await openProfit(page);
   await importFile(page, board('board-v2.board.json'));
   await expect(page.locator('#graphModal')).toBeVisible();
@@ -217,9 +217,13 @@ test('board versions: 2 has no scenarios, 3 and 8 read, a newer one and the temp
   await importFile(page, board('board-newer.board.json')); // version 8 (step 18's), read
   expect(await scenarioNames(page)).toEqual(['Price 14']);
   await page.click('#graphCancel');
+  // Version 9 (fmGraph's shared period) is read since it came; 10 is newer (changed on purpose).
   await importFile(page, board('board-newer-v9.board.json'));
+  await expect(page.locator('#graphModal')).toBeVisible();
+  await page.click('#graphCancel');
+  await importFile(page, board('board-newer-v10.board.json'));
   await expect(genStatus(page)).toHaveClass(/err/);
-  await expect(genStatus(page)).toContainText('format version 9; this ExcelExporter reads up to version 8');
+  await expect(genStatus(page)).toContainText('format version 10; this ExcelExporter reads up to version 9');
   await expect(page.locator('#graphModal')).toBeHidden();
   await importFile(page, board('board-template.board.json'));
   await expect(genStatus(page)).toContainText('is for a template');
@@ -355,7 +359,7 @@ async function graphWithCharts(context){
 
 test('fmGraph\'s Tornado and Spider become analyses: grouped, named, Show 0, the Spider\'s points', async ({ page, context, pageErrors }, testInfo) => {
   const { file } = await graphWithCharts(context);
-  expect(file.version).toBe(8);
+  expect(file.version).toBe(9);
   await openProfit(page);
   await importFile(page, D.tempFile(testInfo, 'charts.board.json', JSON.stringify(file)));
   await expect(page.locator('#graphSensHead')).toBeVisible();

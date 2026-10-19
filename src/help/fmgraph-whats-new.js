@@ -8,6 +8,16 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'shared-period', date: '2026-10-19', title: 'One period for every board',
+    summary: 'Set the periods once and every bar and chart, on every board, follows — while any of them can keep its own.',
+    what: [
+      'Above the bars and charts, Every board chooses the periods for bars and Columns charts (all, one, or a range), and One-period charts in chooses the year for waterfalls, Tornado and Spider charts.',
+      'Each bar and chart follows them while its period list shows Shared (…). Choose a period of its own there and it stays put when the shared periods change; choose Shared to follow again.',
+      'New bars and charts follow. Boards saved before keep the periods they had, so nothing you saved changes.',
+    ],
+    why: 'Looking at another year meant changing every chart, one by one, on every board.',
+    how: ['Above the bars and charts, choose Periods from… Year 2 to Year 4.', 'Every board shows those years. To pin one chart to Year 1, choose One period, Year 1 in its own period list.'],
+    see: ['shared-period'] },
   { id: 'rectangle-search', date: '2026-10-18', title: 'Find a rectangle by typing',
     summary: 'Every list of rectangles — a bar\'s, a slider\'s, a chart\'s steps, groups, outputs and inputs — now opens a search box.',
     what: [

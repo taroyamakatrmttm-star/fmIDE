@@ -444,6 +444,11 @@
   .peek-actions{ display:flex; gap:8px; }
   .peek-actions button{ flex:1 1 0; }
 
+  /* The shared period (05k-shared-period.js): above the bars and charts, for every board. */
+  .shared-period{ display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; margin:-2px 0 10px; font-size:13px; color:var(--soft-ink); }
+  .shared-period .periods-chooser{ display:inline-flex; flex-wrap:wrap; gap:4px; align-items:center; }
+  .shared-period-lead{ font-weight:600; color:var(--ink); }
+  .shared-period-one{ margin-left:6px; }
   /* Searching a rectangle list (05j-rect-search.js): a box under (or above) the list. */
   .rect-search{ position:fixed; z-index:60; display:flex; flex-direction:column; background:var(--card); border:1px solid var(--line-strong); border-radius:9px; box-shadow:0 10px 28px rgba(15,23,42,.18); overflow:hidden; }
   .rect-search-input{ font:inherit; font-size:14px; margin:8px; padding:6px 9px; border:1px solid var(--line-strong); border-radius:7px; }
@@ -644,6 +649,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     </div>
     <div class="board-col board-main">
       <h2 class="col-head">Bars and charts <span id="calcNote" class="calc-note"></span></h2>
+      <div id="sharedPeriodBar" class="shared-period desk-only hidden" role="group" aria-label="Shared period"></div>
       <div id="barList" class="widget-list bars"></div>
       <p id="noBars" class="empty-note"><span class="desk-only">No bars yet: <button type="button" class="link-btn" data-add="bar">+ Bar</button> or <button type="button" class="link-btn" data-add="chart">+ Chart</button></span><span class="phone-only">No bars on this board yet: add them on a tablet or computer, or ☰ → Full app.</span></p>
     </div>
@@ -3663,15 +3669,19 @@ function rectForEntry(w){
 
 // One board read against the loaded model: widgets on rectangles that aren't there, or
 // sliders on rectangles that aren't inputs, are left out (and counted in `dropped`).
-function cleanBoard(raw, dropped){
+// `version`: the file's; before 9 every bar and chart keeps the periods it had (ownPeriod).
+function cleanBoard(raw, dropped, version){
   const out = makeBoard(cleanText(raw && raw.name, 60) || 'Board');
   if(!raw || typeof raw !== 'object') return out;
   const count = model.periods.length;
   const drop = () => { if(dropped) dropped.n++; };
+  // Version 9: a bar or chart follows the shared period unless it keeps its own
+  // (`ownPeriod`, 05k-shared-period.js); before it, every one keeps the periods it had.
+  const own = (w) => !(Number(version) >= 9) || w.ownPeriod === true;
   const bar = (b) => {
     const rect = rectForEntry(b);
     if(!rect){ drop(); return null; }
-    return { id: newWidgetId('b'), kind: 'bar', key: rect.key, periods: cleanPeriods(b.periods, count), wide: b.wide === true, colour: cleanColour(b.colour), scale: cleanScale(b.scale) };
+    return { id: newWidgetId('b'), kind: 'bar', key: rect.key, periods: cleanPeriods(b.periods, count), wide: b.wide === true, colour: cleanColour(b.colour), scale: cleanScale(b.scale), ownPeriod: own(b) };
   };
   const chart = (c) => {
     // A Tornado or Spider whose output isn't in this model is left out (version 8).
@@ -3685,6 +3695,7 @@ function cleanBoard(raw, dropped){
     if(!ch || (named > 0 && !chartKeys(ch).length)){ drop(); return null; }
     ch.wide = c.wide !== false;
     ch.scale = cleanScale(c.scale); // version 5 (04d-scale.js)
+    ch.ownPeriod = own(c);
     return ch;
   };
   let items;
@@ -3707,10 +3718,11 @@ function cleanBoard(raw, dropped){
 function cleanBoards(raw){
   if(!raw || typeof raw !== 'object' || raw.kind !== 'fmIDE-graph-board') return null;
   const dropped = { n: 0 };
-  const list = Array.isArray(raw.boards) ? raw.boards.slice(0, BOARDS_LIMIT).map(b => cleanBoard(b, dropped)) : [cleanBoard(raw, dropped)];
+  const list = Array.isArray(raw.boards) ? raw.boards.slice(0, BOARDS_LIMIT).map(b => cleanBoard(b, dropped, raw.version)) : [cleanBoard(raw, dropped, raw.version)];
   const a = Math.round(Number(raw.active));
   return { boards: list, active: Number.isFinite(a) && a >= 0 && a < list.length ? a : 0, dropped: dropped.n,
-    scenarios: cleanScenarios(raw.scenarios, rectForEntry) }; // version 3 (05f-scenarios.js)
+    scenarios: cleanScenarios(raw.scenarios, rectForEntry), // version 3 (05f-scenarios.js)
+    sharedPeriods: cleanSharedPeriods(raw.sharedPeriods, model.periods.length) }; // version 9 (05k-shared-period.js)
 }
 
 // A board's file form.
@@ -3720,25 +3732,29 @@ function cleanBoards(raw){
 // 04b-charts.js); 5 a bar's or chart's fixed vertical scale (`scale`, 04d-scale.js); 6 a
 // folded slider (`folded`, 05c-arrange.js); 7 a board keeping its own slider positions
 // (`ownSliders`, 03-calc.js); 8 the Tornado and the Spider (charts of layout `tornado` and
-// `spider`, 04b-charts.js). The template form, which carries none of these, stays version 2.
-const BOARD_FILE_VERSION = 8;
+// `spider`, 04b-charts.js); 9 the shared period (`sharedPeriods`, and a bar's or chart's
+// `ownPeriod`, 05k-shared-period.js; each still writes the periods it shows). The template form,
+// which carries none of these, stays version 2.
+const BOARD_FILE_VERSION = 9;
 const TEMPLATE_BOARD_VERSION = 2;
 function boardData(b){
   const at = (key) => { const r = model.byKey.get(key); return { canvasId: r.canvasId, nodeId: r.nodeId, name: r.name }; };
   const scaleOf = (w) => w.scale ? { scale: { min: w.scale.min, max: w.scale.max } } : {};
   return Object.assign({
     name: b.name,
-    items: b.items.map(w => w.kind === 'bar'
+    items: b.items.map(w => Object.assign(w.kind === 'bar'
       ? Object.assign({ type: 'bar' }, at(w.key), { periods: Object.assign({}, w.periods), wide: w.wide }, w.colour ? { colour: w.colour } : {}, scaleOf(w))
-      : Object.assign({ type: 'chart', wide: w.wide }, chartData(w, at), scaleOf(w))),
+      : Object.assign({ type: 'chart', wide: w.wide }, chartData(w, at), scaleOf(w)), w.ownPeriod ? { ownPeriod: true } : {})),
     sliders: b.sliders.map(s => Object.assign(at(s.key), { periods: Object.assign({}, s.periods), mode: s.mode, min: s.min, max: s.max, step: s.step }, s.folded ? { folded: true } : {})),
   }, b.ownSliders ? { ownSliders: true } : {});
 }
 // The file form of these boards (all, or the ones given).
 function boardsData(list){
   const which = list || boards;
+  syncSharedPeriods(); // each writes the periods it shows (05k-shared-period.js)
   const out = { kind: 'fmIDE-graph-board', version: BOARD_FILE_VERSION, active: list ? 0 : Math.max(0, boards.indexOf(board)), boards: which.map(boardData) };
   if(!list && scenarios.length) out.scenarios = scenariosData(); // the model's, with all its boards
+  out.sharedPeriods = { periods: Object.assign({}, sharedPeriods.periods), period: sharedPeriods.period };
   return out;
 }
 
@@ -3772,6 +3788,7 @@ async function loadBoardFor(m, docRaw){
     boards = practiceBoards(practiceStart);
     board = boards[0];
     scenarios = [];
+    sharedPeriods = cleanSharedPeriods(null, m.periods.length);
     resetUndo();
     return;
   }
@@ -3781,6 +3798,7 @@ async function loadBoardFor(m, docRaw){
     boards = fromTemplate.length ? fromTemplate : [startingBoard()];
     board = boards[0];
     scenarios = [];
+    sharedPeriods = cleanSharedPeriods(null, m.periods.length);
     resetUndo();
     return;
   }
@@ -3789,6 +3807,7 @@ async function loadBoardFor(m, docRaw){
     boards = restored.boards;
     board = boards[restored.active];
     scenarios = restored.scenarios;
+    sharedPeriods = restored.sharedPeriods;
     resetUndo();
     setTimeout(saveBoardNow, 0);
     return;
@@ -3810,6 +3829,7 @@ async function loadBoardFor(m, docRaw){
   boards = restored ? restored.boards : fromTemplates.length ? fromTemplates : [startingBoard()];
   board = boards[restored ? restored.active : 0];
   scenarios = restored ? restored.scenarios : [];
+  sharedPeriods = restored ? restored.sharedPeriods : cleanSharedPeriods(null, m.periods.length);
   resetUndo();
 }
 
@@ -3832,7 +3852,8 @@ function startingBoard(){
 function addBar(key, periods){
   const rect = model.byKey.get(key) || model.rects.find(r => !r.input) || model.rects[0];
   if(!rect || board.bars.length >= BOARD_LIMIT) return null;
-  const bar = { id: newWidgetId('b'), kind: 'bar', key: rect.key, periods: cleanPeriods(periods, model.periods.length), wide: false, colour: null };
+  // Given periods, it keeps them; without, it follows the shared periods (05k-shared-period.js).
+  const bar = { id: newWidgetId('b'), kind: 'bar', key: rect.key, periods: cleanPeriods(periods, model.periods.length), wide: false, colour: null, ownPeriod: periods !== undefined };
   board.items.push(bar);
   saveBoardSoon();
   return bar;
@@ -4167,6 +4188,7 @@ function restoreState(text){
   if(!r || !r.boards.length) return;
   boards = r.boards;
   scenarios = r.scenarios;
+  sharedPeriods = r.sharedPeriods; // (05k-shared-period.js)
   boards.forEach((b, bi) => b.sliders.forEach(s => { const v = positions.get(bi + '|' + s.key + '|' + s.mode); if(v !== undefined) s.value = v; }));
   board = boards[Math.min(shown, boards.length - 1)];
   lastState = text;
@@ -4372,13 +4394,15 @@ function rectSelect(selectedKey, onlyInputs){
   return sel;
 }
 
-// Which periods: all, one, or a range.
-function periodsChooser(spec, onChange){
+// Which periods: all, one, or a range. With `shared` ({ following, sharedText, onShared }, a bar
+// or Columns chart, 05k-shared-period.js) the first choice follows the shared periods.
+function periodsChooser(spec, onChange, shared){
   const wrap = make('span', 'periods-chooser');
   const mode = make('select');
   mode.setAttribute('aria-label', 'Periods');
+  if(shared){ const o = make('option', null, shared.sharedText); o.value = 'shared'; if(shared.following) o.selected = true; mode.appendChild(o); }
   [['all', 'All periods'], ['one', 'One period'], ['range', 'Periods from…']].forEach(([v, t]) => {
-    const o = make('option', null, t); o.value = v; if(spec.mode === v) o.selected = true; mode.appendChild(o);
+    const o = make('option', null, t); o.value = v; if(spec.mode === v && !(shared && shared.following)) o.selected = true; mode.appendChild(o);
   });
   const periodSelect = (value, label) => {
     const s = make('select');
@@ -4390,13 +4414,14 @@ function periodsChooser(spec, onChange){
   const to = make('span', null, 'to');
   const b = periodSelect(spec.mode === 'range' ? spec.to : model.periods.length - 1, 'Last period');
   const show = () => {
-    a.classList.toggle('hidden', mode.value === 'all');
+    a.classList.toggle('hidden', mode.value === 'all' || mode.value === 'shared');
     to.classList.toggle('hidden', mode.value !== 'range');
     b.classList.toggle('hidden', mode.value !== 'range');
   };
   const changed = () => {
     show();
     const m = mode.value;
+    if(m === 'shared'){ shared.onShared(); return; }
     onChange(m === 'all' ? { mode: 'all' } : m === 'one' ? { mode: 'one', p: Number(a.value) } : { mode: 'range', from: Number(a.value), to: Number(b.value) });
   };
   [mode, a, b].forEach(el => el.addEventListener('change', changed));
@@ -4427,6 +4452,7 @@ function removeButton(id, what){
 }
 
 function renderBoard(){
+  syncSharedPeriods(); // what follows the shared period takes it (05k-shared-period.js)
   rememberOpenEditors(); // (05b-chart-render.js)
   rememberOpenRanges();
   // A slider's From / to / step box being typed in keeps the focus through the redraw.
@@ -4484,7 +4510,7 @@ function barWidget(b){
   w.addEventListener('pointerdown', (ev) => phoneBarPress(ev, b));
   w.addEventListener('contextmenu', (ev) => { if(isPhone()) ev.preventDefault(); });
   const row = make('div', 'widget-row bar-settings');
-  row.appendChild(periodsChooser(b.periods, (p) => { b.periods = p; saveBoardSoon(); updateValues(); }));
+  row.appendChild(widgetPeriodsChooser(b)); // its own periods, or the shared ones (05k-shared-period.js)
   row.appendChild(colourPicker(b.colour || DEFAULT_BAR_COLOUR, 'Bar colour', (c) => { b.colour = c === DEFAULT_BAR_COLOUR ? null : c; saveBoardSoon(); updateValues(); }));
   row.appendChild(scaleChooser(b, () => { saveBoardSoon(); updateValues(); })); // (04d-scale.js)
   const rect = model.byKey.get(b.key);
@@ -4832,11 +4858,7 @@ function chartEditorParts(c){
   const firstCalc = () => (model.rects.find(r => !r.input) || model.rects[0]).key;
   const periodRow = () => {
     const row = make('div', 'widget-row');
-    const sel = make('select');
-    sel.setAttribute('aria-label', 'Period');
-    model.periods.forEach((name, i) => { const o = make('option', null, name); o.value = String(i); if(i === c.period) o.selected = true; sel.appendChild(o); });
-    sel.addEventListener('change', () => { c.period = Number(sel.value); changed(); });
-    row.append(make('span', null, 'In'), sel);
+    row.append(make('span', null, 'In'), widgetPeriodSelect(c, changed)); // its own, or the shared period (05k)
     return row;
   };
   if(isSensitivity(c)){
@@ -4918,11 +4940,7 @@ function chartEditorParts(c){
   }
   if(c.layout === 'flow'){
     const row = make('div', 'widget-row');
-    const sel = make('select');
-    sel.setAttribute('aria-label', 'Period');
-    model.periods.forEach((name, i) => { const o = make('option', null, name); o.value = String(i); if(i === c.period) o.selected = true; sel.appendChild(o); });
-    sel.addEventListener('change', () => { c.period = Number(sel.value); changed(); });
-    row.append(make('span', null, 'In'), sel);
+    row.append(make('span', null, 'In'), widgetPeriodSelect(c, changed)); // its own, or the shared period (05k)
     box.appendChild(row);
     c.steps.forEach((s, i) => {
       const r = make('div', 'edit-row step-row');
@@ -4946,7 +4964,7 @@ function chartEditorParts(c){
     return box;
   }
   const row = make('div', 'widget-row');
-  row.appendChild(periodsChooser(c.periods, (p) => { c.periods = p; saveBoardSoon(); updateValues(); }));
+  row.appendChild(widgetPeriodsChooser(c)); // its own periods, or the shared ones (05k-shared-period.js)
   box.appendChild(row);
   const checkRow = make('label', 'widget-row check-row');
   const check = make('input');
@@ -5472,6 +5490,7 @@ function drawSpider(c, figures, shown, name, where){
 function renderAll(){ renderTabs(); renderBoard(); syncUndoButtons(); }
 
 function renderTabs(){
+  renderSharedPeriods(); // the shared period, for every board (05k-shared-period.js)
   const strip = $('boardTabs');
   strip.textContent = '';
   if(!model) return;
@@ -5521,7 +5540,7 @@ function addBoard(name){
 }
 function duplicateBoard(){
   if(boards.length >= BOARDS_LIMIT) return null;
-  const r = cleanBoards({ kind: 'fmIDE-graph-board', boards: [boardData(board)] });
+  const r = cleanBoards({ kind: 'fmIDE-graph-board', version: BOARD_FILE_VERSION, boards: [boardData(board)] });
   const copy = r.boards[0];
   copy.name = freeBoardName(board.name + ' copy');
   boards.splice(boards.indexOf(board) + 1, 0, copy);
@@ -5874,7 +5893,7 @@ function updateMovers(results){
     add.type = 'button';
     add.disabled = onBoard || board.bars.length >= BOARD_LIMIT;
     add.title = onBoard ? 'This board has a bar for it' : 'Show ' + m.rect.name + ' as a bar';
-    add.addEventListener('click', () => { if(addBar(m.rect.key, { mode: 'all' })) renderBoard(); });
+    add.addEventListener('click', () => { if(addBar(m.rect.key)) renderBoard(); });
     top.appendChild(add);
     li.append(top, make('div', 'mover-change ' + (m.now.error || m.was.error ? 'err' : (m.now.value > m.was.value ? 'up' : 'down')), moverText(m)));
     list.appendChild(li);
@@ -7520,6 +7539,109 @@ function rectSearchScroll(ev){
   placeRectSearch();
 }
 // ============================================================
+// The shared period (the owner's request, 18 October 2026): one period setting for every bar and
+// chart on every board of the model, which any of them can leave to keep its own.
+// - Two linked settings, above the bars and charts: Periods (all, one, or a range) for bars and
+//   Columns charts, and Period (one year) for the one-period charts — Waterfall, Scenario
+//   waterfall, Tornado and Spider. Kept with the model's boards (`sharedPeriods`, board file 9),
+//   undone and redone like any board change.
+// - A bar or chart follows them unless it keeps its own (`ownPeriod`): its period list's first
+//   choice, "Shared (…)", follows; choosing any period there keeps its own; "Shared" again
+//   follows. A new bar or chart follows; one from a file before version 9, or from a template,
+//   keeps the periods it had (the owner's choice).
+// - What follows takes the shared values into its own `periods` / `period` (syncSharedPeriods),
+//   so the drawing, the calculation and the file read them as before — and ExcelExporter, which
+//   reads a board file's charts, gets the periods each chart shows.
+// - Sliders are not part of it: a slider's periods say which periods it changes.
+// ============================================================
+
+let sharedPeriods = { periods: { mode: 'all' }, period: 0 };
+
+// Bars and Columns charts show several periods; the others one.
+const usesPeriods = (w) => w.kind === 'bar' || w.layout === 'columns';
+
+function cleanSharedPeriods(raw, count){
+  const p = raw && typeof raw === 'object' ? Math.round(Number(raw.period)) : NaN;
+  return { periods: cleanPeriods(raw && raw.periods, count), period: Number.isFinite(p) && p >= 0 && p < count ? p : 0 };
+}
+
+// Every bar and chart following the shared period, on every board, takes it.
+function syncSharedPeriods(){
+  if(!model) return;
+  boards.forEach(b => b.items.forEach(w => {
+    if(w.ownPeriod) return;
+    if(usesPeriods(w)) w.periods = Object.assign({}, sharedPeriods.periods);
+    else w.period = sharedPeriods.period;
+  }));
+}
+
+// A periods spec in words: "All periods", "Year 2", "Year 2 to Year 4".
+function sharedPeriodsText(spec){
+  if(!spec || spec.mode === 'all') return 'All periods';
+  if(spec.mode === 'one') return model.periods[spec.p];
+  return model.periods[spec.from] + ' to ' + model.periods[spec.to];
+}
+
+// The shared settings above the bars and charts. Drawn with the tabs (a model, undo, redo), not
+// with the board, so a change keeps the focus where it is.
+function renderSharedPeriods(){
+  const bar = $('sharedPeriodBar');
+  bar.textContent = '';
+  bar.classList.toggle('hidden', !model);
+  if(!model) return;
+  const multi = periodsChooser(sharedPeriods.periods, (p) => {
+    sharedPeriods.periods = p;
+    sharedPeriodsChanged();
+  });
+  const names = { Periods: 'Shared periods', Period: 'Shared first period', 'Last period': 'Shared last period' };
+  multi.querySelectorAll('select').forEach(s => s.setAttribute('aria-label', names[s.getAttribute('aria-label')] || s.getAttribute('aria-label')));
+  const one = make('select');
+  one.setAttribute('aria-label', 'Shared period for one-period charts');
+  model.periods.forEach((name, i) => { const o = make('option', null, name); o.value = String(i); if(i === sharedPeriods.period) o.selected = true; one.appendChild(o); });
+  one.addEventListener('change', () => { sharedPeriods.period = Number(one.value); sharedPeriodsChanged(); });
+  const lead = make('span', 'shared-period-lead', 'Every board:');
+  lead.title = 'The periods every bar and chart shows, on every board, unless it keeps its own (its period list\'s first choice is Shared)';
+  const oneLabel = make('span', 'shared-period-one', 'One-period charts in');
+  oneLabel.title = 'The year Waterfall, Scenario waterfall, Tornado and Spider charts show';
+  bar.append(lead, multi, oneLabel, one);
+}
+
+function sharedPeriodsChanged(){
+  syncSharedPeriods();
+  saveBoardSoon();
+  renderBoard(); // the widgets' "Shared (…)" choices say the new periods
+}
+
+// A bar's or Columns chart's periods: the shared choice first, then the usual chooser.
+function widgetPeriodsChooser(w){
+  return periodsChooser(w.periods, (p) => {
+    w.periods = p;
+    w.ownPeriod = true;
+    saveBoardSoon(); updateValues();
+  }, {
+    following: !w.ownPeriod,
+    sharedText: 'Shared (' + sharedPeriodsText(sharedPeriods.periods) + ')',
+    onShared: () => { w.ownPeriod = false; syncSharedPeriods(); saveBoardSoon(); updateValues(); },
+  });
+}
+
+// A one-period chart's period: "Shared (Year 1)", then each period.
+function widgetPeriodSelect(c, changed){
+  const sel = make('select');
+  sel.setAttribute('aria-label', 'Period');
+  const shared = make('option', null, 'Shared (' + model.periods[sharedPeriods.period] + ')');
+  shared.value = 'shared';
+  if(!c.ownPeriod) shared.selected = true;
+  sel.appendChild(shared);
+  model.periods.forEach((name, i) => { const o = make('option', null, name); o.value = String(i); if(c.ownPeriod && i === c.period) o.selected = true; sel.appendChild(o); });
+  sel.addEventListener('change', () => {
+    if(sel.value === 'shared'){ c.ownPeriod = false; syncSharedPeriods(); }
+    else { c.period = Number(sel.value); c.ownPeriod = true; }
+    changed();
+  });
+  return sel;
+}
+// ============================================================
 // The page: opening a model (the file picker, a file dropped anywhere, the sample, or fmIDE),
 // the top bar's buttons, and ← Back to fmIDE.
 // ============================================================
@@ -7573,8 +7695,9 @@ const SAMPLE_MODEL = {
     ] },
   ],
 };
+// Version 9: its bars and charts follow the shared period (05k-shared-period.js).
 const SAMPLE_BOARD = {
-  kind: 'fmIDE-graph-board', version: 1,
+  kind: 'fmIDE-graph-board', version: 9,
   sliders: [
     { canvasId: 'cProfit', nodeId: 'price', name: 'Price', periods: { mode: 'all' }, mode: 'set', min: 5, max: 15, step: 0.25 },
     { canvasId: 'cProfit', nodeId: 'vol', name: 'Volume', periods: { mode: 'all' }, mode: 'shift', min: -50, max: 50, step: 1 },
@@ -7778,8 +7901,18 @@ const BOARD_FILE_FORMAT = { 'fmIDE-graph-board': { current: BOARD_FILE_VERSION, 
 // v2 → v3: boards for one model may carry the model's named scenarios; v3 → v4: a chart may be a
 // scenario waterfall; v4 → v5: a bar or chart may have a fixed vertical scale; v5 → v6: a slider
 // may be folded; v6 → v7: a board may keep its own slider positions; v7 → v8: a chart may be a
-// Tornado or a Spider. Nothing to change.
-const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {}, 5: () => {}, 6: () => {}, 7: () => {} } };
+// Tornado or a Spider. Nothing to change. v8 → v9: the shared period (05k-shared-period.js) —
+// every bar and chart saved before it keeps the periods it had (`ownPeriod`), so the file opens
+// as it was saved (the owner's choice).
+function keepOwnPeriods(data){
+  if(!data || typeof data !== 'object' || data.form === 'template') return;
+  const boardsIn = Array.isArray(data.boards) ? data.boards : [data];
+  boardsIn.forEach(b => {
+    if(!b || typeof b !== 'object') return;
+    ['items', 'bars', 'charts'].forEach(k => { if(Array.isArray(b[k])) b[k].forEach(w => { if(w && typeof w === 'object') w.ownPeriod = true; }); });
+  });
+}
+const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {}, 5: () => {}, 6: () => {}, 7: () => {}, 8: keepOwnPeriods } };
 
 function safeFileName(s){ return String(s).replace(/[^A-Za-z0-9 ._()-]+/g, '_').replace(/\s+/g, ' ').trim().slice(0, 80) || 'board'; }
 
@@ -8920,6 +9053,15 @@ const FMGRAPH_HELP_TOPICS = [
       { p: '↶ Undo and ↷ Redo (Ctrl+Z, Ctrl+Y) take back any change to the boards — not where a slider is set, which is a "what if", not a change.' },
       { see: ['board-file', 'charts'] },
     ] },
+  { id: 'shared-period', group: 'board', title: 'One period for every board',
+    keywords: 'period periods year shared same every all boards charts bars own keep follow range',
+    summary: 'Set the periods once, above the bars and charts: every board follows, unless a chart keeps its own.',
+    body: [
+      { p: 'Above the bars and charts, Every board sets the periods for every bar and chart on every board of the model: all periods, one period, or a range. One-period charts in sets the year that waterfalls, scenario waterfalls, Tornado and Spider charts show.' },
+      { p: 'A bar or chart follows them while its own period list shows Shared (…). Choose a period there instead and it keeps its own: the shared periods no longer move it. Choose Shared again to follow once more.' },
+      { p: 'New bars and charts follow the shared periods. Boards saved before this feature keep the periods they had. Sliders aren\'t part of it: a slider\'s periods say which periods it changes. Changes to the shared periods can be undone, and are kept with the boards.' },
+      { see: ['bars', 'charts', 'boards'] },
+    ] },
   { id: 'board-file', group: 'board', title: 'Saving and sharing boards',
     keywords: 'export import file board json share send save template attach pack library add from templates',
     summary: 'Boards travel as a file.',
@@ -9020,6 +9162,16 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'shared-period', date: '2026-10-19', title: 'One period for every board',
+    summary: 'Set the periods once and every bar and chart, on every board, follows — while any of them can keep its own.',
+    what: [
+      'Above the bars and charts, Every board chooses the periods for bars and Columns charts (all, one, or a range), and One-period charts in chooses the year for waterfalls, Tornado and Spider charts.',
+      'Each bar and chart follows them while its period list shows Shared (…). Choose a period of its own there and it stays put when the shared periods change; choose Shared to follow again.',
+      'New bars and charts follow. Boards saved before keep the periods they had, so nothing you saved changes.',
+    ],
+    why: 'Looking at another year meant changing every chart, one by one, on every board.',
+    how: ['Above the bars and charts, choose Periods from… Year 2 to Year 4.', 'Every board shows those years. To pin one chart to Year 1, choose One period, Year 1 in its own period list.'],
+    see: ['shared-period'] },
   { id: 'rectangle-search', date: '2026-10-18', title: 'Find a rectangle by typing',
     summary: 'Every list of rectangles — a bar\'s, a slider\'s, a chart\'s steps, groups, outputs and inputs — now opens a search box.',
     what: [
@@ -9465,6 +9617,7 @@ function stopTutorial(restore){
 function showWelcomeScreen(){
   clearTimeout(saveTimer); clearTimeout(sendTimer); clearTimeout(quietTimer);
   model = null; boards = []; board = null; pinA = null; traceId = null; scenarios = [];
+  sharedPeriods = { periods: { mode: 'all' }, period: 0 };
   linkedToFmide = false; trying = null;
   $('welcome').classList.remove('hidden');
   $('board').classList.add('hidden');
@@ -9669,7 +9822,8 @@ window.fmGraph = Object.freeze({
   value: (rect, period, canvas) => answer(resultOf(currentResults(), findRect(rect, canvas), periodIndex(period))),
   modelValue: (rect, period, canvas) => answer(resultOf(model.base, findRect(rect, canvas), periodIndex(period))),
   addBar: (rect, periods, canvas) => {
-    const b = addBar(findRect(rect, canvas).key, periodSpec(periods));
+    // Periods given: its own; none: it follows the shared periods (05k-shared-period.js).
+    const b = addBar(findRect(rect, canvas).key, periods === undefined ? undefined : periodSpec(periods));
     if(!b) throw new Error('No more bars can be added.');
     renderBoard();
     return b.id;
@@ -9698,6 +9852,7 @@ window.fmGraph = Object.freeze({
       : { layout: 'columns', title: spec.title, periods: periodSpec(spec.periods), check: spec.check === true,
           groups: (spec.groups || []).map(g => ({ name: g.name, parts: (g.parts || []).map(p => at(rectRef(p))) })) };
     const c = cleanChart(raw, (w) => model.byKey.get(keyOf(w.canvasId, w.nodeId)), model.periods.length);
+    c.ownPeriod = spec.periods !== undefined || spec.period !== undefined; // else the shared period (05k)
     board.items.push(c);
     saveBoardSoon();
     renderBoard();

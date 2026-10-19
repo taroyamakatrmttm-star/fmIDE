@@ -39,6 +39,7 @@ function restoreState(text){
   if(!r || !r.boards.length) return;
   boards = r.boards;
   scenarios = r.scenarios;
+  sharedPeriods = r.sharedPeriods; // (05k-shared-period.js)
   boards.forEach((b, bi) => b.sliders.forEach(s => { const v = positions.get(bi + '|' + s.key + '|' + s.mode); if(v !== undefined) s.value = v; }));
   board = boards[Math.min(shown, boards.length - 1)];
   lastState = text;

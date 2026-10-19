@@ -187,7 +187,7 @@ function updateMovers(results){
     add.type = 'button';
     add.disabled = onBoard || board.bars.length >= BOARD_LIMIT;
     add.title = onBoard ? 'This board has a bar for it' : 'Show ' + m.rect.name + ' as a bar';
-    add.addEventListener('click', () => { if(addBar(m.rect.key, { mode: 'all' })) renderBoard(); });
+    add.addEventListener('click', () => { if(addBar(m.rect.key)) renderBoard(); });
     top.appendChild(add);
     li.append(top, make('div', 'mover-change ' + (m.now.error || m.was.error ? 'err' : (m.now.value > m.was.value ? 'up' : 'down')), moverText(m)));
     list.appendChild(li);

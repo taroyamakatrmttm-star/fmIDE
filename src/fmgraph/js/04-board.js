@@ -89,15 +89,19 @@ function rectForEntry(w){
 
 // One board read against the loaded model: widgets on rectangles that aren't there, or
 // sliders on rectangles that aren't inputs, are left out (and counted in `dropped`).
-function cleanBoard(raw, dropped){
+// `version`: the file's; before 9 every bar and chart keeps the periods it had (ownPeriod).
+function cleanBoard(raw, dropped, version){
   const out = makeBoard(cleanText(raw && raw.name, 60) || 'Board');
   if(!raw || typeof raw !== 'object') return out;
   const count = model.periods.length;
   const drop = () => { if(dropped) dropped.n++; };
+  // Version 9: a bar or chart follows the shared period unless it keeps its own
+  // (`ownPeriod`, 05k-shared-period.js); before it, every one keeps the periods it had.
+  const own = (w) => !(Number(version) >= 9) || w.ownPeriod === true;
   const bar = (b) => {
     const rect = rectForEntry(b);
     if(!rect){ drop(); return null; }
-    return { id: newWidgetId('b'), kind: 'bar', key: rect.key, periods: cleanPeriods(b.periods, count), wide: b.wide === true, colour: cleanColour(b.colour), scale: cleanScale(b.scale) };
+    return { id: newWidgetId('b'), kind: 'bar', key: rect.key, periods: cleanPeriods(b.periods, count), wide: b.wide === true, colour: cleanColour(b.colour), scale: cleanScale(b.scale), ownPeriod: own(b) };
   };
   const chart = (c) => {
     // A Tornado or Spider whose output isn't in this model is left out (version 8).
@@ -111,6 +115,7 @@ function cleanBoard(raw, dropped){
     if(!ch || (named > 0 && !chartKeys(ch).length)){ drop(); return null; }
     ch.wide = c.wide !== false;
     ch.scale = cleanScale(c.scale); // version 5 (04d-scale.js)
+    ch.ownPeriod = own(c);
     return ch;
   };
   let items;
@@ -133,10 +138,11 @@ function cleanBoard(raw, dropped){
 function cleanBoards(raw){
   if(!raw || typeof raw !== 'object' || raw.kind !== 'fmIDE-graph-board') return null;
   const dropped = { n: 0 };
-  const list = Array.isArray(raw.boards) ? raw.boards.slice(0, BOARDS_LIMIT).map(b => cleanBoard(b, dropped)) : [cleanBoard(raw, dropped)];
+  const list = Array.isArray(raw.boards) ? raw.boards.slice(0, BOARDS_LIMIT).map(b => cleanBoard(b, dropped, raw.version)) : [cleanBoard(raw, dropped, raw.version)];
   const a = Math.round(Number(raw.active));
   return { boards: list, active: Number.isFinite(a) && a >= 0 && a < list.length ? a : 0, dropped: dropped.n,
-    scenarios: cleanScenarios(raw.scenarios, rectForEntry) }; // version 3 (05f-scenarios.js)
+    scenarios: cleanScenarios(raw.scenarios, rectForEntry), // version 3 (05f-scenarios.js)
+    sharedPeriods: cleanSharedPeriods(raw.sharedPeriods, model.periods.length) }; // version 9 (05k-shared-period.js)
 }
 
 // A board's file form.
@@ -146,25 +152,29 @@ function cleanBoards(raw){
 // 04b-charts.js); 5 a bar's or chart's fixed vertical scale (`scale`, 04d-scale.js); 6 a
 // folded slider (`folded`, 05c-arrange.js); 7 a board keeping its own slider positions
 // (`ownSliders`, 03-calc.js); 8 the Tornado and the Spider (charts of layout `tornado` and
-// `spider`, 04b-charts.js). The template form, which carries none of these, stays version 2.
-const BOARD_FILE_VERSION = 8;
+// `spider`, 04b-charts.js); 9 the shared period (`sharedPeriods`, and a bar's or chart's
+// `ownPeriod`, 05k-shared-period.js; each still writes the periods it shows). The template form,
+// which carries none of these, stays version 2.
+const BOARD_FILE_VERSION = 9;
 const TEMPLATE_BOARD_VERSION = 2;
 function boardData(b){
   const at = (key) => { const r = model.byKey.get(key); return { canvasId: r.canvasId, nodeId: r.nodeId, name: r.name }; };
   const scaleOf = (w) => w.scale ? { scale: { min: w.scale.min, max: w.scale.max } } : {};
   return Object.assign({
     name: b.name,
-    items: b.items.map(w => w.kind === 'bar'
+    items: b.items.map(w => Object.assign(w.kind === 'bar'
       ? Object.assign({ type: 'bar' }, at(w.key), { periods: Object.assign({}, w.periods), wide: w.wide }, w.colour ? { colour: w.colour } : {}, scaleOf(w))
-      : Object.assign({ type: 'chart', wide: w.wide }, chartData(w, at), scaleOf(w))),
+      : Object.assign({ type: 'chart', wide: w.wide }, chartData(w, at), scaleOf(w)), w.ownPeriod ? { ownPeriod: true } : {})),
     sliders: b.sliders.map(s => Object.assign(at(s.key), { periods: Object.assign({}, s.periods), mode: s.mode, min: s.min, max: s.max, step: s.step }, s.folded ? { folded: true } : {})),
   }, b.ownSliders ? { ownSliders: true } : {});
 }
 // The file form of these boards (all, or the ones given).
 function boardsData(list){
   const which = list || boards;
+  syncSharedPeriods(); // each writes the periods it shows (05k-shared-period.js)
   const out = { kind: 'fmIDE-graph-board', version: BOARD_FILE_VERSION, active: list ? 0 : Math.max(0, boards.indexOf(board)), boards: which.map(boardData) };
   if(!list && scenarios.length) out.scenarios = scenariosData(); // the model's, with all its boards
+  out.sharedPeriods = { periods: Object.assign({}, sharedPeriods.periods), period: sharedPeriods.period };
   return out;
 }
 
@@ -198,6 +208,7 @@ async function loadBoardFor(m, docRaw){
     boards = practiceBoards(practiceStart);
     board = boards[0];
     scenarios = [];
+    sharedPeriods = cleanSharedPeriods(null, m.periods.length);
     resetUndo();
     return;
   }
@@ -207,6 +218,7 @@ async function loadBoardFor(m, docRaw){
     boards = fromTemplate.length ? fromTemplate : [startingBoard()];
     board = boards[0];
     scenarios = [];
+    sharedPeriods = cleanSharedPeriods(null, m.periods.length);
     resetUndo();
     return;
   }
@@ -215,6 +227,7 @@ async function loadBoardFor(m, docRaw){
     boards = restored.boards;
     board = boards[restored.active];
     scenarios = restored.scenarios;
+    sharedPeriods = restored.sharedPeriods;
     resetUndo();
     setTimeout(saveBoardNow, 0);
     return;
@@ -236,6 +249,7 @@ async function loadBoardFor(m, docRaw){
   boards = restored ? restored.boards : fromTemplates.length ? fromTemplates : [startingBoard()];
   board = boards[restored ? restored.active : 0];
   scenarios = restored ? restored.scenarios : [];
+  sharedPeriods = restored ? restored.sharedPeriods : cleanSharedPeriods(null, m.periods.length);
   resetUndo();
 }
 
@@ -258,7 +272,8 @@ function startingBoard(){
 function addBar(key, periods){
   const rect = model.byKey.get(key) || model.rects.find(r => !r.input) || model.rects[0];
   if(!rect || board.bars.length >= BOARD_LIMIT) return null;
-  const bar = { id: newWidgetId('b'), kind: 'bar', key: rect.key, periods: cleanPeriods(periods, model.periods.length), wide: false, colour: null };
+  // Given periods, it keeps them; without, it follows the shared periods (05k-shared-period.js).
+  const bar = { id: newWidgetId('b'), kind: 'bar', key: rect.key, periods: cleanPeriods(periods, model.periods.length), wide: false, colour: null, ownPeriod: periods !== undefined };
   board.items.push(bar);
   saveBoardSoon();
   return bar;

@@ -203,7 +203,7 @@ test('the board file: export one or all, import into the same model, a model it 
   expect(dl.suggestedFilename()).toBe('Sample model - Second.board.json');
   const one = JSON.parse(fs.readFileSync(await dl.path(), 'utf8'));
   expect(one.kind).toBe('fmIDE-graph-board');
-  expect(one.version).toBe(8);
+  expect(one.version).toBe(9);
   expect(one.boards.map(b => b.name)).toEqual(['Second']);
   // Export all.
   await page.click('.gbar-menu summary');
@@ -242,7 +242,7 @@ test('the board file is read like any file: wrong kind, not JSON, newer version,
   expect(await g(page, () => fmGraph.importBoards({ kind: 'fmIDE-templates', version: 9, templates: [] }))).toBe(0);
   await expect(page.locator('.note.err')).toContainText("isn't an fmGraph board file");
   // A newer version: asked first.
-  const newer = { kind: 'fmIDE-graph-board', version: 9, boards: [{ name: 'Later', items: [{ type: 'bar', canvasId: 'cProfit', nodeId: 'profit', name: 'Profit' }] }] };
+  const newer = { kind: 'fmIDE-graph-board', version: 10, boards: [{ name: 'Later', items: [{ type: 'bar', canvasId: 'cProfit', nodeId: 'profit', name: 'Profit' }] }] };
   const p = g(page, (d) => fmGraph.importBoards(d), newer);
   await expect(page.locator('#confirmTitle')).toHaveText('Saved by a newer version');
   await page.click('#confirmNo');
@@ -352,7 +352,7 @@ test('folding sliders: one by its ▸, Collapse all / Expand all; undo; kept; th
   await expect(page.locator('.slider-widget').first()).toHaveClass(/folded/);
   // The board file: version 8 (6 brought `folded`), `folded` only on a folded slider; imported back with it.
   const file = await g(page, () => fmGraph.exportBoards(true));
-  expect(file.version).toBe(8);
+  expect(file.version).toBe(9);
   expect(file.boards[0].sliders.map(s => s.folded)).toEqual([true, undefined]);
   expect(await g(page, (d) => fmGraph.importBoards(d), file)).toBe(1);
   await g(page, () => fmGraph.showBoard(1));
@@ -517,7 +517,7 @@ test('a board with its own slider positions: untouched by the others, and back t
   expect(await shown(page)).toEqual([['Price', 14], ['Volume', 1200]]);
   // Kept in the board file (version 8 (7 brought it), `ownSliders` only where true) and after a reload.
   const file = await g(page, () => fmGraph.exportBoards(true));
-  expect(file.version).toBe(8);
+  expect(file.version).toBe(9);
   expect(file.boards.map(b => b.ownSliders)).toEqual([undefined, true]);
   await page.waitForTimeout(500);
   await page.reload();
@@ -557,6 +557,92 @@ test('scenarios and Pin as A on sharing boards take every shared slider, shown o
   expect(await profit1(page)).toBe(both);
   await tabs(page).nth(1).click();
   expect(await shown(page)).toEqual([['Unit cost', 5]]);
+  expect(pageErrors).toEqual([]);
+});
+
+// The shared period (the owner's request, 18 October 2026): one period setting for every bar and
+// chart on every board, which any of them can leave to keep its own.
+test('the shared period: every board follows it, a chart can keep its own and come back; undo, the file, a reload', async ({ page, pageErrors }) => {
+  await openSample(page);
+  const bar = page.locator('#sharedPeriodBar');
+  await expect(bar).toBeVisible();
+  const items = () => g(page, () => fmGraph.board().items.map(w => [w.layout || w.type, w.periods || null, w.period === undefined ? null : w.period, w.ownPeriod === true]));
+  // The sample follows it: all periods, and Year 1 for the waterfall.
+  expect(await items()).toEqual([
+    ['columns', { mode: 'all' }, null, false], ['flow', null, 0, false], ['bar', { mode: 'all' }, null, false], ['bar', { mode: 'all' }, null, false]]);
+  // Year 2 to Year 4, and Year 4 for one-period charts: every bar and chart follows.
+  await bar.locator('select[aria-label="Shared periods"]').selectOption('range');
+  await bar.locator('select[aria-label="Shared first period"]').selectOption('1');
+  await bar.locator('select[aria-label="Shared period for one-period charts"]').selectOption('3');
+  const range = { mode: 'range', from: 1, to: 3 };
+  expect(await items()).toEqual([['columns', range, null, false], ['flow', null, 3, false], ['bar', range, null, false], ['bar', range, null, false]]);
+  const firstBar = page.locator('.bar-widget').first();
+  await expect(firstBar.locator('.bar-settings select[aria-label="Periods"]')).toHaveValue('shared');
+  await expect(firstBar.locator('.bar-settings select[aria-label="Periods"] option').first()).toHaveText('Shared (Year 2 to Year 4)');
+  await expect(firstBar.locator('.bar-settings select[aria-label="Period"]')).toBeHidden();
+  await expect(firstBar.locator('.t-period')).toHaveText(['Year 2', 'Year 3', 'Year 4']);
+  // The waterfall's own list says the same.
+  const flow = page.locator('.chart-widget[data-layout="flow"]');
+  await flow.locator('summary').click();
+  await expect(flow.locator('.chart-edit select[aria-label="Period"]')).toHaveValue('shared');
+  await expect(flow.locator('.chart-edit select[aria-label="Period"] option').first()).toHaveText('Shared (Year 4)');
+  // A bar keeping its own (One period, Year 1): the shared periods no longer move it.
+  await firstBar.locator('.bar-settings select[aria-label="Periods"]').selectOption('one');
+  await firstBar.locator('.bar-settings select[aria-label="Period"]').selectOption('0');
+  await bar.locator('select[aria-label="Shared periods"]').selectOption('all');
+  expect(await items()).toEqual([['columns', { mode: 'all' }, null, false], ['flow', null, 3, false], ['bar', { mode: 'one', p: 0 }, null, true], ['bar', { mode: 'all' }, null, false]]);
+  // The waterfall keeping its own Year 2; the shared one-period year doesn't move it.
+  await flow.locator('.chart-edit select[aria-label="Period"]').selectOption('1');
+  await bar.locator('select[aria-label="Shared period for one-period charts"]').selectOption('2');
+  expect((await items())[1]).toEqual(['flow', null, 1, true]);
+  // Shared again: it follows once more.
+  await page.locator('.chart-widget[data-layout="flow"] .chart-edit select[aria-label="Period"]').selectOption('shared');
+  expect((await items())[1]).toEqual(['flow', null, 2, false]);
+  // Another board: a new bar there follows the same shared periods.
+  await page.locator('#boardTabs').getByRole('button', { name: 'Add an empty board' }).click();
+  await page.click('#btnAddBar');
+  await bar.locator('select[aria-label="Shared periods"]').selectOption('one');
+  await bar.locator('select[aria-label="Shared first period"]').selectOption('3');
+  expect(await items()).toEqual([['bar', { mode: 'one', p: 3 }, null, false]]);
+  // ... and the first board's followers changed with it, its own bar didn't.
+  await g(page, () => fmGraph.showBoard(0));
+  expect(await items()).toEqual([['columns', { mode: 'one', p: 3 }, null, false], ['flow', null, 2, false], ['bar', { mode: 'one', p: 0 }, null, true], ['bar', { mode: 'one', p: 3 }, null, false]]);
+  // Undo takes the last shared change back.
+  await page.click('#btnUndo');
+  await expect(bar.locator('select[aria-label="Shared periods"]')).toHaveValue('one');
+  await expect(bar.locator('select[aria-label="Shared first period"]')).toHaveValue('0');
+  expect((await items())[0]).toEqual(['columns', { mode: 'one', p: 0 }, null, false]);
+  await page.click('#btnRedo');
+  // The board file (version 9): the shared period, `ownPeriod` only where kept, every chart's periods as shown.
+  const file = await g(page, () => fmGraph.exportBoards(true));
+  expect(file.version).toBe(9);
+  expect(file.sharedPeriods).toEqual({ periods: { mode: 'one', p: 3 }, period: 2 });
+  expect(file.boards[0].items.map(w => [w.periods || w.period, w.ownPeriod])).toEqual([[{ mode: 'one', p: 3 }, undefined], [2, undefined], [{ mode: 'one', p: 0 }, true], [{ mode: 'one', p: 3 }, undefined]]);
+  // Kept after a reload.
+  await page.reload();
+  await page.waitForFunction(() => !!window.fmGraph);
+  await page.click('#btnSample');
+  await expect(page.locator('#sharedPeriodBar select[aria-label="Shared periods"]')).toHaveValue('one');
+  await expect(page.locator('#sharedPeriodBar select[aria-label="Shared period for one-period charts"]')).toHaveValue('2');
+  expect((await items())[2]).toEqual(['bar', { mode: 'one', p: 0 }, null, true]);
+  // fmGraph.addBar without periods follows; with periods it keeps them.
+  await g(page, () => fmGraph.addBar('Revenue'));
+  await g(page, () => fmGraph.addBar('Revenue', 2));
+  expect((await items()).slice(-2)).toEqual([['bar', { mode: 'one', p: 3 }, null, false], ['bar', { mode: 'one', p: 1 }, null, true]]);
+  expect(pageErrors).toEqual([]);
+});
+
+test('a version 8 board file opens with every bar and chart keeping its own periods', async ({ page, pageErrors }) => {
+  await openSample(page);
+  const v8 = JSON.parse(fs.readFileSync(require('path').join(__dirname, 'fixtures', 'formats', 'board-v8.json'), 'utf8'));
+  expect(await g(page, (d) => fmGraph.importBoards(d), v8)).toBe(1);
+  await g(page, () => fmGraph.showBoard('Saved before the shared period'));
+  const items = () => g(page, () => fmGraph.board().items.map(w => [w.layout || w.type, w.periods || w.period, w.ownPeriod === true]));
+  expect(await items()).toEqual([['bar', { mode: 'range', from: 1, to: 2 }, true], ['flow', 2, true], ['tornado', 3, true]]);
+  // The shared period doesn't move them.
+  await page.locator('#sharedPeriodBar select[aria-label="Shared period for one-period charts"]').selectOption('0');
+  await page.locator('#sharedPeriodBar select[aria-label="Shared periods"]').selectOption('one');
+  expect(await items()).toEqual([['bar', { mode: 'range', from: 1, to: 2 }, true], ['flow', 2, true], ['tornado', 3, true]]);
   expect(pageErrors).toEqual([]);
 });
 

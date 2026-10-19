@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph: one period for every board
+- A shared period above the bars and charts — periods for bars and Columns charts, a year for the one-period charts — that every bar and chart on every board follows unless it keeps its own (its period list's first choice is Shared). Board file version 9 (`sharedPeriods`, `ownPeriod`); older files keep each chart's periods (the upgrade marks them own). ExcelExporter reads version 9.
+
 ## fmGraph: find a rectangle by typing
 - Every rectangle list (bars, sliders, chart steps, groups, outputs, inputs) opens a search box: the Command Launcher's fuzzy match, now shared (`src/shared/fuzzy-match.js`, moved out of fmIDE), best match first with the canvas beside each; ↑ ↓ Enter, Esc.
 

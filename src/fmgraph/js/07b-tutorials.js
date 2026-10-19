@@ -59,6 +59,7 @@ function stopTutorial(restore){
 function showWelcomeScreen(){
   clearTimeout(saveTimer); clearTimeout(sendTimer); clearTimeout(quietTimer);
   model = null; boards = []; board = null; pinA = null; traceId = null; scenarios = [];
+  sharedPeriods = { periods: { mode: 'all' }, period: 0 };
   linkedToFmide = false; trying = null;
   $('welcome').classList.remove('hidden');
   $('board').classList.add('hidden');
