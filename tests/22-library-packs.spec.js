@@ -60,12 +60,39 @@ test.describe('saving a pack', () => {
     expect(pack.templates.map(t => `${t.name}@${t.version}:${t.kind}`)).toEqual(['Statements@1:recipe', 'Income Statement@1:module', 'Balance Sheet@1:module']);
     // Profit brings the Margin version it calls (v1), not the latest (v2).
     expect(pack.functions.map(f => `${f.family}@${f.version}`)).toEqual(['family-profit@1', 'family-margin@1']);
-    // The file is named after the pack's id, the name the community library requires (it was
-    // the title until 4 October 2026).
+    // The file is named after the title, with the start of the id in brackets (19 October 2026;
+    // the id alone from 4 October, the title alone before): the library takes any name ending
+    // in .fmide-pack.json and reads the id from inside the file.
     const { name, data } = await F.downloadJson(page, () => page.evaluate((info) => fm.saveLibraryPack(Object.assign({}, info, { functions: ['Margin'] })), PACK_INFO));
     expect(data.pack.id).toMatch(/^[A-Za-z0-9-]{8,64}$/);
-    expect(name).toBe(data.pack.id + '.fmide-pack.json');
+    expect(name).toBe('Three statements starter (' + data.pack.id.slice(0, 8) + ').fmide-pack.json');
     expect(data.functions.map(f => f.version)).toEqual([2]);
+  });
+
+  test('the file name is the title made safe for a file, then the start of the id; a title with nothing left gives the id', async ({ page }) => {
+    await fillLibrary(page);
+    const RLO = String.fromCharCode(0x202E), ZWSP = String.fromCharCode(0x200B), BEL = String.fromCharCode(7);
+    const nameFor = async (title) => {
+      const { name, data } = await F.downloadJson(page, () => page.evaluate((t) => fm.saveLibraryPack({ title: t, author: 'Ann Example', functions: ['Margin'] }), title));
+      return { name, short: data.pack.id.slice(0, 8), id: data.pack.id };
+    };
+    // Characters Windows or macOS refuse in a name become spaces; spaces collapse.
+    let r = await nameFor('Plan: A/B \\ "Q1" <draft> | v*2?');
+    expect(r.name).toBe('Plan A B Q1 draft v 2 (' + r.short + ').fmide-pack.json');
+    // Hidden and direction-changing characters can't disguise the name (…txt.exe).
+    r = await nameFor('Innocent ' + RLO + 'txt.exe' + ZWSP + BEL + ' model');
+    expect(r.name).toBe('Innocent txt.exe model (' + r.short + ').fmide-pack.json');
+    // Dots and spaces are trimmed from the ends (no hidden file, nothing Windows drops).
+    r = await nameFor('..Model v01..');
+    expect(r.name).toBe('Model v01 (' + r.short + ').fmide-pack.json');
+    // A long title is cut to 80 characters, with no space left before the bracket.
+    r = await nameFor('Long title '.repeat(10));
+    expect(r.name).toBe('Long title '.repeat(10).slice(0, 80).trim() + ' (' + r.short + ').fmide-pack.json');
+    // Nothing safe left: the id alone.
+    r = await nameFor('???');
+    expect(r.name).toBe(r.id + '.fmide-pack.json');
+    r = await nameFor('<|>' + RLO);
+    expect(r.name).toBe(r.id + '.fmide-pack.json');
   });
 
   test('what can\'t be saved says why', async ({ page }, testInfo) => {
@@ -577,7 +604,7 @@ test.describe('sharing in the community library', () => {
     await expect(page.locator('#helpPanel')).toContainText('Step 6 — See it in the library');
   });
 
-  test('a pack saved from the window is named after its id, and the window names that file', async ({ page }) => {
+  test('a pack saved from the window is named after its title and id, and the window names that file', async ({ page }) => {
     await fillLibrary(page);
     await page.evaluate(() => fm.command('saveLibraryPack'));
     const save = page.locator('.modal-box.library-pack-save');
@@ -585,9 +612,11 @@ test.describe('sharing in the community library', () => {
     await save.locator('input.pack-author').fill('Bo Author');
     await save.locator('label.library-pack-pick', { hasText: /^ Margin/ }).locator('input').check();
     const { name, data } = await F.downloadJson(page, () => save.locator('button.primary', { hasText: 'Save Pack' }).click());
-    expect(name).toBe(data.pack.id + '.fmide-pack.json');
+    expect(name).toBe('Statements b bold b (' + data.pack.id.slice(0, 8) + ').fmide-pack.json');
     const share = page.locator('.modal-box.library-share-box');
     await expect(share.locator('.library-share-saved')).toContainText('It is in your Downloads folder as ' + name);
+    await expect(share.locator('.library-share-saved')).toContainText('You may rename it, as long as the name still ends in .fmide-pack.json.');
+    await expect(share.locator('.library-share-saved')).not.toContainText('Keep that name');
     // The save step is left out: the pack is saved already.
     expect(await share.locator('.library-share-steps li').count()).toBe(5);
     await expect(share.locator('b')).toHaveCount(1);

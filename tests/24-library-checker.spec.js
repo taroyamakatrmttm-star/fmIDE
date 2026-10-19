@@ -98,16 +98,58 @@ test.describe('a whole library', () => {
     expect(r.recordsToAdd).toBeNull();
   });
 
-  test('the layout: packs named after their ids, only packs in packs/, unknown files warned', ({}, testInfo) => {
+  // Any name ending in .fmide-pack.json (19 October 2026; before, a pack had to be named
+  // after its id): the id is read from inside the file.
+  test('the layout: packs under any name ending in .fmide-pack.json, only packs in packs/, unknown files warned', ({}, testInfo) => {
     const dir = library(testInfo, 'lib', lib => {
-      fs.renameSync(path.join(lib.dir, lib.packPath(BOB_PACK)), path.join(lib.dir, lib.packPath('some-other-name')));
+      fs.renameSync(path.join(lib.dir, lib.packPath(BOB_PACK)), path.join(lib.dir, 'packs', 'Markups (06f097dd).fmide-pack.json'));
       lib.write('packs/notes.txt', 'hello');
+      lib.write('packs/notes.json', { kind: 'something-else' });
       lib.write('extra.md', 'hello');
     });
     const r = checkLibrary(dir);
-    expectError(r, /some-other-name.fmide-pack.json \/ file: It must be named 06f097dd-.*\.fmide-pack\.json/);
-    expectError(r, /packs\/notes\.txt: The packs folder holds only packs/);
+    expect(r.packs.map(p => p.file).sort()).toEqual(['packs/Markups (06f097dd).fmide-pack.json', 'packs/' + ANN_PACK + '.fmide-pack.json']);
+    expect(all(r).filter(m => /Markups/.test(m))).toEqual([]);
+    expect(r.summary.packs).toBe(2);
+    expect(r.summary.reshared).toEqual([{ pack: BOB_PACK, type: 'function', family: 'family-margin', version: 1, from: ANN_PACK }]);
+    expectError(r, /packs\/notes\.txt: The packs folder holds only packs, each a file whose name ends in \.fmide-pack\.json/);
+    expectError(r, /packs\/notes\.json: The packs folder holds only packs/);
     expect(all(r, 'warnings').join('\n')).toMatch(/extra\.md: The library doesn't use this file/);
+    // With only the readable name, the library passes.
+    const clean = library(testInfo, 'clean', lib => fs.renameSync(path.join(lib.dir, lib.packPath(BOB_PACK)), path.join(lib.dir, 'packs', 'Markups (06f097dd).fmide-pack.json')));
+    expectPass(checkLibrary(clean));
+  });
+
+  test('two files holding one pack id are refused, whatever their names', ({}, testInfo) => {
+    const dir = library(testInfo, 'lib', lib => fs.copyFileSync(path.join(lib.dir, lib.packPath(BOB_PACK)), path.join(lib.dir, 'packs', 'Markups (06f097dd).fmide-pack.json')));
+    const r = checkLibrary(dir);
+    expectError(r, new RegExp('^packs/(Markups \\(06f097dd\\)|' + BOB_PACK + ')\\.fmide-pack\\.json: Another file holds the pack id ' + BOB_PACK + ' too\\.'));
+    // A pull request adding a second file for an approved pack's id is refused too.
+    const base = library(testInfo, 'base');
+    const head = library(testInfo, 'head', lib => fs.copyFileSync(path.join(lib.dir, lib.packPath(BOB_PACK)), path.join(lib.dir, 'packs', 'My copy.fmide-pack.json')));
+    const p = pr(head, base, BOB);
+    expectError(p, /Another file holds the pack id 06f097dd-.* too/);
+    expectError(p, /^packs\/My copy\.fmide-pack\.json: The pack id 06f097dd-.* was used before/);
+  });
+
+  test('a pull request adding a pack under a readable name passes, its records found by the id inside', ({}, testInfo) => {
+    const base = library(testInfo, 'base', lib => lib.withoutBob());
+    const head = library(testInfo, 'head', lib => { lib.withoutBob(); fs.cpSync(path.join(SAMPLE, 'packs', BOB_PACK + '.fmide-pack.json'), path.join(lib.dir, 'packs', 'Markups (06f097dd).fmide-pack.json')); });
+    // Without its records: worked out for the account, and written when merged.
+    const onMerge = checkLibrary(head, { baseDir: base, account: BOB, date: DATE, recordsOnMerge: true });
+    expectPass(onMerge);
+    expect(onMerge.summary.newPacks.map(x => x.id)).toEqual([BOB_PACK]);
+    expect(Object.keys(onMerge.recordsToAdd.packs)).toEqual([BOB_PACK]);
+    // With its records, as the sample has them: passes as it is.
+    const withRecords = library(testInfo, 'head2', lib => { fs.renameSync(path.join(lib.dir, lib.packPath(BOB_PACK)), path.join(lib.dir, 'packs', 'Markups (06f097dd).fmide-pack.json')); });
+    const r = pr(withRecords, base, BOB);
+    expectPass(r);
+    expect(r.summary.newPacks.map(x => x.id)).toEqual([BOB_PACK]);
+    // Taking it down names its id.
+    const takenDown = library(testInfo, 'down', lib => lib.remove(lib.packPath(BOB_PACK)));
+    const down = pr(takenDown, withRecords, MAINTAINER);
+    expect(down.summary.takedowns).toEqual([BOB_PACK]);
+    expect(all(down, 'warnings').join('\n')).toMatch(/^packs\/Markups \(06f097dd\)\.fmide-pack\.json: The pull request removes this pack: a takedown/m);
   });
 
   test('a pack outside packs/ is refused, even from a maintainer (it would never be checked)', ({}, testInfo) => {
@@ -121,7 +163,7 @@ test.describe('a whole library', () => {
     });
     for(const account of [BOB, MAINTAINER]){
       const r = pr(head, base, account);
-      expectError(r, /^Markups\.fmide-pack\.json: It is a library pack outside the packs folder\. Every pack goes in packs\/, named after its pack id/);
+      expectError(r, /^Markups\.fmide-pack\.json: It is a library pack outside the packs folder\. Every pack goes in packs\/, with a name ending in \.fmide-pack\.json/);
       expectError(r, /^\.github\/renamed\.json: It is a library pack outside the packs folder/);
     }
     // Other JSON files there are not packs.
