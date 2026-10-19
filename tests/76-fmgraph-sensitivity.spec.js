@@ -316,7 +316,7 @@ test('the board file, version 8: written, read back, everything cleaned; never i
   expect(file.version).toBe(9);
   const [t, s] = file.boards[0].items.slice(-2);
   const at = (nodeId, name) => ({ canvasId: 'cProfit', nodeId, name });
-  expect(t).toEqual({ type: 'chart', wide: true, layout: 'tornado', title: 'T', output: at('profit', 'Profit'), period: 1, steps: 5,
+  expect(t).toEqual({ type: 'chart', wide: true, layout: 'tornado', title: 'T', output: at('profit', 'Profit'), period: 1, steps: 5, ownPeriod: true,
     inputs: [Object.assign(at('price', 'Price'), { by: 'percent', low: -10, high: 10 }), Object.assign(at('ucost', 'Unit cost'), { by: 'amount', low: -0.5, high: 2, show: false })] });
   expect(s).toEqual({ type: 'chart', wide: true, layout: 'spider', title: 'S', output: at('profit', 'Profit'), period: 0, steps: 3,
     inputs: [Object.assign(at('vol', 'Volume'), { by: 'percent', low: -20, high: 5 })] });

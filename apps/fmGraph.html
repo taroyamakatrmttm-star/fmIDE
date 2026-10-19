@@ -7576,7 +7576,7 @@ function syncSharedPeriods(){
 }
 
 // A periods spec in words: "All periods", "Year 2", "Year 2 to Year 4".
-function periodsText(spec){
+function sharedPeriodsText(spec){
   if(!spec || spec.mode === 'all') return 'All periods';
   if(spec.mode === 'one') return model.periods[spec.p];
   return model.periods[spec.from] + ' to ' + model.periods[spec.to];
@@ -7620,7 +7620,7 @@ function widgetPeriodsChooser(w){
     saveBoardSoon(); updateValues();
   }, {
     following: !w.ownPeriod,
-    sharedText: 'Shared (' + periodsText(sharedPeriods.periods) + ')',
+    sharedText: 'Shared (' + sharedPeriodsText(sharedPeriods.periods) + ')',
     onShared: () => { w.ownPeriod = false; syncSharedPeriods(); saveBoardSoon(); updateValues(); },
   });
 }
