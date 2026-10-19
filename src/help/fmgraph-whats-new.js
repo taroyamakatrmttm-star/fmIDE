@@ -8,6 +8,17 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'rectangle-search', date: '2026-10-18', title: 'Find a rectangle by typing',
+    summary: 'Every list of rectangles — a bar\'s, a slider\'s, a chart\'s steps, groups, outputs and inputs — now opens a search box.',
+    what: [
+      'Click a rectangle list and a search box opens over it, with every rectangle under its canvas. Type part of a name: the matches come first, best match first, with the canvas beside each.',
+      'It matches the way fmIDE\'s template and command searches do: the letters in order, so "cogs" finds "Cost of goods sold".',
+      '↑ ↓ choose, Enter takes it, Esc closes. Pressing Enter or typing a letter on the list opens the search too.',
+    ],
+    why: 'In a large model, scrolling a long list to pick each waterfall step took a lot of time.',
+    how: ['Open Edit chart on a waterfall.', 'Click a step\'s rectangle and type part of its name.', 'Press Enter.'],
+    see: ['bars', 'charts'] },
+
   { id: 'slider-range-stays-open', date: '2026-10-18', title: 'Range and step stays open while you change it',
     summary: 'Changing a slider\'s From, to or step no longer closes its Range and step.',
     what: ['After you change From, to or step and press Tab or click the next box, Range and step stays open and the cursor is in the box you went to, so you can set all three in one go.'],

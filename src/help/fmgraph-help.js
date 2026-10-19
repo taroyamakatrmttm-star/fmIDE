@@ -45,7 +45,7 @@ const FMGRAPH_HELP_TOPICS = [
     keywords: 'bar chart value period periods ghost outline difference error',
     summary: 'A rectangle\'s value in each period you choose.',
     body: [
-      { p: 'A bar widget shows one rectangle\'s value as a bar for each period: all periods, one period, or a range of periods. Choose the rectangle at the top of the widget.' },
+      { p: 'A bar widget shows one rectangle\'s value as a bar for each period: all periods, one period, or a range of periods. Choose the rectangle at the top of the widget: click the list (or press Enter, or start typing on it) and type part of a name to find it — best match first, with its canvas beside it; ↑ ↓ and Enter take one, Esc closes. Every list of rectangles in fmGraph works this way.' },
       { p: 'When a slider has changed something it reaches, a dashed outline shows the model\'s own value and a label shows the difference, for example +250 (+12%) — or A\'s value, while one is pinned (see Comparing two what-ifs). Point at a bar to read its numbers.' },
       { p: 'A bar marked ! couldn\'t be worked out in that period (for example a division by zero); the reason is listed below the chart.' },
       { steps: ['Press + Bar at the top.', 'Choose a rectangle from the list.', 'Choose which periods to show.'] },

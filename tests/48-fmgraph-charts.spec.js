@@ -86,6 +86,67 @@ test('the sample\'s waterfall: each step from the running total, totals checked'
   await expect(chart.locator('.bar-errors li').first()).toHaveText('Gross profit: the steps before it add up to 20,800, not 5,200.');
 });
 
+// The owner's request (18 October 2026): choosing a rectangle from a long list took too long, so
+// every rectangle list opens a search over it, as fmIDE's template and shortcut searches do.
+test('choosing a rectangle by searching: a waterfall step, a bar and a slider', async ({ page, pageErrors }) => {
+  await openSample(page);
+  const id = await chartId(page, 'Profit');
+  const chart = page.locator('.chart-widget[data-layout="flow"]');
+  await chart.locator('summary').click();
+  const stepPick = () => chart.locator('.step-row').nth(3).locator('select[aria-label="Rectangle"]');
+  // A click on the list opens the search, focused, every rectangle under its canvas, the current one marked.
+  await stepPick().click();
+  const search = page.locator('#rectSearch');
+  await expect(search).toBeVisible();
+  await expect(search.locator('input')).toBeFocused();
+  await expect(search.locator('.rect-search-group')).toHaveText(['Profit', 'Cash', 'Balance sheet']);
+  await expect(search.locator('.rect-search-item.current')).toHaveText('Overheads (input)');
+  await expect(search.locator('.rect-search-item.active')).toHaveText('Overheads (input)');
+  // Typing narrows it, best match first, each with its canvas; the letters matched in bold.
+  await page.keyboard.type('cas');
+  await expect(search.locator('.rect-search-name')).toHaveText(['Opening cash', 'Closing cash', 'Cost of sales']);
+  await expect(search.locator('.rect-search-canvas')).toHaveText(['Cash', 'Cash', 'Profit']);
+  await expect(search.locator('.rect-search-item').first().locator('b')).toHaveText(['c', 'a', 's']);
+  await expect(search.locator('.rect-search-group')).toHaveCount(0);
+  // ↓ then Enter takes it: the step is Closing cash, as choosing it from the list does.
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expect(search).toHaveCount(0);
+  expect((await g(page, (i) => fmGraph.chart(i), id)).map(st => st.name)[3]).toBe('Closing cash');
+  await expect(stepPick()).toBeFocused();
+  // No match says so; Esc closes and changes nothing.
+  await stepPick().click();
+  await page.keyboard.type('zzqq');
+  await expect(search.locator('.rect-search-none')).toHaveText('No rectangle matches "zzqq".');
+  await page.keyboard.press('Escape');
+  await expect(search).toHaveCount(0);
+  expect((await g(page, (i) => fmGraph.chart(i), id)).map(st => st.name)[3]).toBe('Closing cash');
+  // A letter typed on the list starts the search with it; a click on a match takes it.
+  await stepPick().focus();
+  await page.keyboard.press('o');
+  await expect(search.locator('input')).toHaveValue('o');
+  await page.keyboard.type('verh');
+  await search.locator('.rect-search-item', { hasText: 'Overheads' }).click();
+  expect((await g(page, (i) => fmGraph.chart(i), id)).map(st => st.name)[3]).toBe('Overheads');
+  // A click elsewhere closes it.
+  await stepPick().click();
+  await page.locator('#board').click({ position: { x: 5, y: 5 } });
+  await expect(search).toHaveCount(0);
+  // A bar's list: the same search.
+  const bar = page.locator('.bar-widget').first();
+  await bar.locator('.widget-head select').click();
+  await page.keyboard.type('gross');
+  await page.keyboard.press('Enter');
+  expect((await g(page, () => fmGraph.board().bars.map(b => b.name)))[0]).toBe('Gross profit');
+  // A slider's list holds the inputs only, and so does its search.
+  await page.locator('.slider-widget').first().locator('.widget-head select').click();
+  await expect(search.locator('.rect-search-name')).toHaveText(['Price', 'Volume', 'Unit cost', 'Overheads', 'Equipment', 'Debt']);
+  await page.keyboard.type('unit');
+  await page.keyboard.press('Enter');
+  expect((await g(page, () => fmGraph.board().sliders.map(s => s.name)))[0]).toBe('Unit cost');
+  expect(pageErrors).toEqual([]);
+});
+
 // Found on CI (G4b): the browser reports an editor opened a moment after the click, so the board
 // drawn again in between closed it. Now the page itself says which editors are open.
 test('an editor just opened stays open when the board is drawn again at once', async ({ page }) => {

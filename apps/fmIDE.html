@@ -19378,10 +19378,15 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     return items;
   }
 
-  // Returns { score, idx } or null. Contiguous and word-start matches score higher.
+  // fuzzyMatch(q, text): the Command Launcher's match, shared with fmGraph's rectangle search.
+  // ---------- fuzzy match (shared: src/shared/fuzzy-match.js; fmIDE's Command Launcher and
+  // searches, fmGraph's rectangle search) ----------
+  // Returns { score, idx } or null: does `q` match `text`, and how well — a run of the letters
+  // as typed scores highest (higher still at the start of a word), else the letters in order,
+  // a letter right after the last or at a word's start scoring higher. idx: where they matched.
   function fuzzyMatch(q, text){
-    const t = text.toLowerCase();
-    q = q.toLowerCase().trim();
+    const t = String(text).toLowerCase();
+    q = String(q).toLowerCase().trim();
     if(!q) return { score: 0, idx: [] };
     const sub = t.indexOf(q);
     if(sub >= 0){

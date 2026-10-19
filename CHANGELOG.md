@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph: find a rectangle by typing
+- Every rectangle list (bars, sliders, chart steps, groups, outputs, inputs) opens a search box: the Command Launcher's fuzzy match, now shared (`src/shared/fuzzy-match.js`, moved out of fmIDE), best match first with the canvas beside each; ↑ ↓ Enter, Esc.
+
 ## fmGraph: a slider's Range and step stays open
 - Changing From, to or step kept the slider but redrew the board, which closed Range and step and lost the cursor; it now stays open through any redraw (Undo aside), and the cursor stays in the box Tab or a click moved it to.
 

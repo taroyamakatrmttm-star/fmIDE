@@ -433,3 +433,15 @@
   .scenario-hint{ font-size:12.5px; }
   .peek-actions{ display:flex; gap:8px; }
   .peek-actions button{ flex:1 1 0; }
+
+  /* Searching a rectangle list (05j-rect-search.js): a box under (or above) the list. */
+  .rect-search{ position:fixed; z-index:60; display:flex; flex-direction:column; background:var(--card); border:1px solid var(--line-strong); border-radius:9px; box-shadow:0 10px 28px rgba(15,23,42,.18); overflow:hidden; }
+  .rect-search-input{ font:inherit; font-size:14px; margin:8px; padding:6px 9px; border:1px solid var(--line-strong); border-radius:7px; }
+  .rect-search-list{ overflow-y:auto; padding:0 4px 6px; min-height:0; flex:1; }
+  .rect-search-group{ font-weight:700; font-size:12.5px; padding:7px 8px 3px; color:var(--ink); }
+  .rect-search-item{ display:flex; justify-content:space-between; gap:10px; padding:5px 10px 5px 20px; border-radius:6px; cursor:pointer; font-size:13px; }
+  .rect-search-item.current{ font-weight:600; }
+  .rect-search-item.active{ background:var(--brand-soft); box-shadow:inset 3px 0 0 var(--brand); }
+  .rect-search-item b{ color:var(--brand-dark); }
+  .rect-search-canvas{ color:var(--soft-ink); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:45%; }
+  .rect-search-none{ padding:8px 10px; color:var(--soft-ink); font-size:13px; }
