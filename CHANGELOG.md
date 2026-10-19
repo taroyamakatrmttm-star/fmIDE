@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph: dialogs fit the window
+- Boards ▾ → Attach to template… and Export for a template… could run past the bottom of the screen when the model had many canvases made from templates, hiding Only the board shown and the buttons. fmGraph's dialogs are now never taller than the window, and the list of templates (also in Add boards from templates…) scrolls inside them.
+
 ## ExcelExporter: exact number formats
 - A row's own format in the Tree View may carry Excel's own number format code (Excel number format, such as `#,##0;(#,##0)` or `0.0"x"`), written exactly and before any other number format; a code that can't be used is refused. Reset to the Excel style clears it.
 - Importing an Excel model keeps each row's own code exactly (the one most of its period cells use), so the generated workbook shows the original's formatting.

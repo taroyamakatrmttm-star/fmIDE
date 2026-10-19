@@ -141,7 +141,8 @@
 
   /* Questions. */
   .dialog-back{ position:fixed; inset:0; z-index:50; background:rgba(15,23,42,.35); display:flex; align-items:center; justify-content:center; padding:16px; }
-  .dialog{ background:#fff; border-radius:12px; padding:18px 20px; max-width:440px; width:100%; }
+  .dialog{ background:#fff; border-radius:12px; padding:18px 20px; max-width:440px; width:100%; max-height:100%; overflow:auto; display:flex; flex-direction:column; }
+  .dialog > *{ flex-shrink:0; }
   .dialog h3{ margin:0 0 8px; font-size:16px; }
   .dialog p{ margin:0 0 16px; color:var(--soft-ink); }
   .dialog-actions{ display:flex; justify-content:flex-end; gap:8px; }
@@ -313,7 +314,8 @@
   .trial-btn{ padding:3px 10px; }
 
   /* Export for a template (G5a) */
-  .template-choices{ display:flex; flex-direction:column; gap:6px; margin:0 0 12px; }
+  /* A long list scrolls inside the dialog, so its title, tick box and buttons stay in view. */
+  .template-choices{ display:flex; flex-direction:column; gap:6px; margin:0 0 12px; flex-shrink:1; min-height:3em; overflow-y:auto; overscroll-behavior:contain; }
   .template-choices label, .template-only{ display:flex; gap:8px; align-items:baseline; font-size:14px; }
   .template-only{ margin:0 0 10px; color:var(--soft-ink); }
   .dialog p.template-hint{ font-size:12px; margin:0 0 14px; }
@@ -9612,6 +9614,15 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'template-list-scrolls', date: '2026-10-19', title: 'A long list of templates scrolls',
+    summary: 'Attach to template… and Export for a template… fit the window, however many canvases the model has.',
+    what: [
+      'When the model has many canvases made from templates, the list of templates scrolls inside the window. The title, Only the board shown and the buttons stay in view.',
+    ],
+    why: 'With many canvases the window ran past the bottom of the screen, and Attach or Export could not be reached.',
+    how: ['Boards ▾ → Attach to template… (or Export for a template…).', 'Scroll the list to the template, pick it, and press Attach (or Export).'],
+    see: [] },
+
   { id: 'lines-chart', date: '2026-10-19', title: 'Lines charts',
     summary: 'A new kind of chart: several rectangles over the periods, a line each.',
     what: [

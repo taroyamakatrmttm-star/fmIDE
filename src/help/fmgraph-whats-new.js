@@ -8,6 +8,15 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'template-list-scrolls', date: '2026-10-19', title: 'A long list of templates scrolls',
+    summary: 'Attach to template… and Export for a template… fit the window, however many canvases the model has.',
+    what: [
+      'When the model has many canvases made from templates, the list of templates scrolls inside the window. The title, Only the board shown and the buttons stay in view.',
+    ],
+    why: 'With many canvases the window ran past the bottom of the screen, and Attach or Export could not be reached.',
+    how: ['Boards ▾ → Attach to template… (or Export for a template…).', 'Scroll the list to the template, pick it, and press Attach (or Export).'],
+    see: [] },
+
   { id: 'lines-chart', date: '2026-10-19', title: 'Lines charts',
     summary: 'A new kind of chart: several rectangles over the periods, a line each.',
     what: [

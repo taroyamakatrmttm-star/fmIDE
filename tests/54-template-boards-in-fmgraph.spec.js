@@ -6,6 +6,7 @@
 // - Boards ▾ → Attach to template… (the model from fmIDE) sends boards to fmIDE, which asks:
 //   a canvas template's own, or a system template picked from a list; Cancel says so.
 // - Template names are text; a .fmide file's templates count too.
+// - A long list of templates scrolls inside the dialog; its tick box and buttons stay in view.
 const fs = require('fs');
 const { test, expect, openApp } = require('./helpers/apps');
 const F = require('./helpers/fmide');
@@ -192,4 +193,28 @@ test('Attach to template… for a system template: picked from a list; hidden wi
   await expect(alone.locator('#board')).toBeVisible();
   await expect(alone.locator('#btnAttachTemplate')).toBeHidden();
   await alone.close();
+});
+
+test('a long list of templates scrolls inside the dialog; its tick box and buttons stay in view', async ({ page }) => {
+  await page.setViewportSize({ width: 480, height: 600 });
+  await openApp(page, 'fmGraph');
+  await page.waitForFunction(() => !!window.fmGraph);
+  const canvases = Array.from({ length: 30 }, (_, i) => ({ id: 'c' + i, name: 'Canvas ' + i,
+    template: { family: 'fam-canvas-' + String(i).padStart(4, '0'), name: 'Template ' + i },
+    nodes: [{ id: 'n' + i, type: 'value', x: 0, y: 0, text: 'Value ' + i + '\n' + i }], edges: [] }));
+  await page.evaluate((s) => fmGraph.load(s, 'Many'), { kind: 'system', version: 9, periods: ['P1'], canvases });
+  await page.waitForFunction(() => fmGraph.rectangles().length === 30);
+  await openBoardsMenu(page);
+  await page.locator('#btnExportTemplate').click();
+  await expect(page.locator('#templateChoices label')).toHaveCount(31);
+  for(const id of ['#templateTitle', '#templateOnlyShown', '#templateNo', '#templateYes']) await expect(page.locator(id)).toBeInViewport({ ratio: 1 });
+  expect(await page.locator('#templateChoices').evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
+  // The last choice can be scrolled to and picked.
+  const last = page.locator('#templateChoices input[type=radio]').last();
+  await last.scrollIntoViewIfNeeded();
+  await last.check();
+  await expect(last).toBeInViewport();
+  await expect(page.locator('#templateYes')).toBeInViewport({ ratio: 1 });
+  await page.locator('#templateNo').click();
+  await expect(page.locator('#templateBox')).toBeHidden();
 });
