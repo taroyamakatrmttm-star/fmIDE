@@ -223,9 +223,9 @@ function openGraphBoardsWindow(read, source){
       name.textContent = graphChartName(c);
       const what = document.createElement('span');
       what.className = 'graph-scn-what';
-      const kind = c.kind === 'bar' ? 'Bar' : c.kind === 'flow' ? 'Waterfall' : 'Stacked columns';
+      const kind = c.kind === 'bar' ? 'Bar' : c.kind === 'flow' ? 'Waterfall' : c.kind === 'lines' ? 'Lines' : 'Stacked columns';
       what.textContent = kind + ' · ' + (c.kind === 'flow' ? (periodLabels()[c.period] || '') + ' · ' + c.parts.length + ' step' + (c.parts.length === 1 ? '' : 's')
-        : graphPeriodsText(c.periods, periodLabels()) + (c.kind === 'columns' ? ' · ' + c.parts.length + ' part' + (c.parts.length === 1 ? '' : 's') : '')) +
+        : graphPeriodsText(c.periods, periodLabels()) + (c.kind === 'columns' ? ' · ' + c.parts.length + ' part' + (c.parts.length === 1 ? '' : 's') : c.kind === 'lines' ? ' · ' + c.parts.length + ' line' + (c.parts.length === 1 ? '' : 's') : '')) +
         (c.wide ? ' · wide' : '');
       label.append(cb, name, what);
       li.appendChild(label);

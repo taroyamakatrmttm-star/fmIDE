@@ -19,14 +19,14 @@ function chartWidget(c){
   const head = make('div', 'widget-head');
   const title = make('input', 'chart-title');
   title.type = 'text';
-  title.placeholder = c.layout === 'columns' || isSensitivity(c) ? 'Chart title' : 'Waterfall title';
+  title.placeholder = c.layout === 'columns' || c.layout === 'lines' || isSensitivity(c) ? 'Chart title' : 'Waterfall title';
   title.value = c.title;
   title.maxLength = CHART_LIMITS.title;
   title.setAttribute('aria-label', 'Chart title');
   title.addEventListener('change', () => { c.title = cleanText(title.value, CHART_LIMITS.title); saveBoardSoon(); });
   const layout = make('select');
   layout.setAttribute('aria-label', 'Kind of chart');
-  [['columns', 'Columns'], ['flow', 'Waterfall'], ['scenarios', 'Scenario waterfall'], ['tornado', 'Tornado'], ['spider', 'Spider']].forEach(([v, t]) => { const o = make('option', null, t); o.value = v; if(c.layout === v) o.selected = true; layout.appendChild(o); });
+  [['columns', 'Columns'], ['lines', 'Lines'], ['flow', 'Waterfall'], ['scenarios', 'Scenario waterfall'], ['tornado', 'Tornado'], ['spider', 'Spider']].forEach(([v, t]) => { const o = make('option', null, t); o.value = v; if(c.layout === v) o.selected = true; layout.appendChild(o); });
   layout.addEventListener('change', () => { switchLayout(c, layout.value); saveBoardSoon(); renderBoard(); });
   head.append(title, layout, removeButton(c.id, 'chart'));
   w.append(head, make('div', 'bar-chart-host'), make('div', 'chart-key'), make('ul', 'bar-errors'));
@@ -35,16 +35,19 @@ function chartWidget(c){
 }
 
 // Switching kind keeps the rectangles: every part becomes a step (the first a start, the rest
-// added), every step a part of one group, and a scenario waterfall's outputs the first six of
+// added), every step a part of one group, a line each (once each, at most 12; between Columns
+// and Lines the periods are kept, the groups' parts flattened into lines and the lines one group), and a scenario waterfall's outputs the first six of
 // them (calculated rectangles first). A Tornado or Spider measures the first calculated one,
 // moving every input that reaches it (step 18); between the two they keep everything.
 function switchLayout(c, layout){
   if(layout === c.layout) return;
   if(isSensitivity(c) && SENSITIVITY_LAYOUTS.includes(layout)){ c.layout = layout; return; }
   const keys = chartKeys(c);
-  const period = c.layout === 'columns' ? (periodsOf(c.periods)[0] || 0) : c.period;
-  ['groups', 'periods', 'check', 'steps', 'period', 'outputs', 'use', 'output', 'inputs', 'colour', 'colour2'].forEach(k => { delete c[k]; });
-  if(layout === 'flow') Object.assign(c, { layout: 'flow', period, steps: keys.map((key, i) => ({ key, role: i === 0 ? 'start' : 'add' })) });
+  const period = usesPeriods(c) ? (periodsOf(c.periods)[0] || 0) : c.period;
+  const periods = usesPeriods(c) ? Object.assign({}, c.periods) : { mode: 'all' };
+  ['groups', 'periods', 'check', 'steps', 'period', 'outputs', 'use', 'output', 'inputs', 'colour', 'colour2', 'lines'].forEach(k => { delete c[k]; });
+  if(layout === 'lines') Object.assign(c, { layout: 'lines', periods, lines: [...new Set(keys)].slice(0, CHART_LIMITS.lines) });
+  else if(layout === 'flow') Object.assign(c, { layout: 'flow', period, steps: keys.map((key, i) => ({ key, role: i === 0 ? 'start' : 'add' })) });
   else if(layout === 'scenarios'){
     const unique = [...new Set(keys)];
     const calc = unique.filter(k => !model.byKey.get(k).input).concat(unique.filter(k => model.byKey.get(k).input));
@@ -55,7 +58,7 @@ function switchLayout(c, layout){
     c.colours = {};
     Object.assign(c, { layout, period, output: start.output, inputs: start.inputs, steps: SENSITIVITY_LIMITS.defaultSteps, colour: null, colour2: null });
   }
-  else Object.assign(c, { layout: 'columns', periods: { mode: 'all' }, groups: [{ name: '', parts: keys }], check: false });
+  else Object.assign(c, { layout: 'columns', periods, groups: [{ name: '', parts: keys }], check: false });
 }
 
 // Which editors are open, read from the page just before it is drawn again: the browser tells
@@ -175,6 +178,34 @@ function chartEditorParts(c){
     box.appendChild(ticks);
     return box;
   }
+  if(c.layout === 'lines'){
+    const row = make('div', 'widget-row');
+    row.appendChild(widgetPeriodsChooser(c)); // its own periods, or the shared ones (05k-shared-period.js)
+    box.appendChild(row);
+    box.appendChild(make('div', 'edit-head', 'Lines'));
+    if(!c.lines.length) box.appendChild(make('p', 'empty-note', 'None yet: + Rectangle adds one.'));
+    c.lines.forEach((key, i) => {
+      const r = make('div', 'edit-row line-row');
+      const rs = rectSelect(key, false);
+      rs.setAttribute('aria-label', 'Line ' + (i + 1));
+      rs.addEventListener('change', () => { c.lines[i] = rs.value; changed(); });
+      r.append(rs, rowButtons(c.lines, i));
+      box.appendChild(r);
+    });
+    const add = make('button', 'link-btn add-line', '+ Rectangle');
+    add.type = 'button';
+    add.disabled = c.lines.length >= CHART_LIMITS.lines;
+    add.addEventListener('click', () => {
+      // The next calculated rectangle not yet drawn, else the first.
+      const listed = new Set(c.lines);
+      const next = model.rects.find(r => !r.input && !listed.has(r.key)) || model.rects.find(r => !listed.has(r.key));
+      c.lines.push(next ? next.key : firstCalc());
+      chartsEditing.add(c.id);
+      changed();
+    });
+    box.appendChild(add);
+    return box;
+  }
   if(c.layout === 'flow'){
     const row = make('div', 'widget-row');
     row.append(make('span', null, 'In'), widgetPeriodSelect(c, changed)); // its own, or the shared period (05k)
@@ -255,11 +286,12 @@ function drawChart(el, c, results){
   if(c.layout === 'flow') host.appendChild(drawFlow(c, results, problems));
   else if(c.layout === 'scenarios') host.appendChild(drawScenarioFlows(c, problems));
   else if(isSensitivity(c)) host.appendChild(drawSensitivity(c, problems, key));
+  else if(c.layout === 'lines') host.appendChild(drawLines(c, results, problems, key));
   else host.appendChild(drawColumns(c, results, problems, key));
   glide(host);
   // Rectangles in different units side by side or stacked don't add up: say so. (A Tornado's
-  // inputs are only moved, never added up.)
-  const units = isSensitivity(c) ? [] : [...new Set(chartKeys(c).map(k => model.byKey.get(k)).filter(r => r && r.unit).map(r => r.unit))];
+  // inputs are only moved, never added up; a lines chart adds nothing up.)
+  const units = isSensitivity(c) || c.layout === 'lines' ? [] : [...new Set(chartKeys(c).map(k => model.byKey.get(k)).filter(r => r && r.unit).map(r => r.unit))];
   if(units.length > 1) problems.push('This chart mixes units (' + units.join(', ') + '): its totals may not mean much.');
   problems.forEach(t => list.appendChild(make('li', null, t)));
 }
@@ -353,6 +385,77 @@ function drawColumns(c, results, problems, key){
     });
     key.appendChild(line);
   });
+  raiseScaleLabels(chart);
+  return chart;
+}
+
+// A line per rectangle across the periods, a point on each period with its number where there is
+// room; the model's own numbers (or A's) as a dashed line once a slider has changed them. A line
+// is broken where a period can't be worked out, and that period's problem is listed.
+function drawLines(c, results, problems, key){
+  const now = linesFigures(c, results), was = linesFigures(c, compareResults());
+  const colours = partColours(c);
+  const n = Math.max(1, now.length);
+  // Numbers on the points only when they can be read: few periods and few lines.
+  const labels = n <= 12 && c.lines.length <= 3;
+  let lo = 0, hi = 0;
+  now.concat(was).forEach(f => f.values.forEach(r => { if(!r.error){ lo = Math.min(lo, r.value); hi = Math.max(hi, r.value); } }));
+  if(hi === lo) hi = lo + 1;
+  const sc = scaleFor(c, lo, hi); // Auto, or the chart's fixed scale (04d-scale.js)
+  const W = 560, top = 18 + (labels ? 14 : 0), bottom = 22, H = 170 + top + bottom;
+  const plotH = H - top - bottom;
+  const y = scaleY(top, plotH, sc);
+  const slot = (W - 8) / n;
+  const xOf = (i) => 4 + slot * i + slot / 2;
+  const chart = svg('svg', { class: 'bar-chart lines-chart' + (sc.fixed ? ' fixed-scale' : ''), viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'data-layout': 'lines' });
+  chart.setAttribute('aria-label', c.title || 'Lines');
+  drawScaleAxis(chart, sc, y, W, top, plotH);
+  now.forEach((f, i) => {
+    if(n <= 8 || i === 0 || i === n - 1) chart.appendChild(svg('text', { class: 't-period', x: xOf(i), y: H - 6, 'text-anchor': 'middle' }, model.periods[f.p]));
+  });
+  if(!c.lines.length) problems.push('No lines yet: Edit chart adds them.');
+  // A polyline through the runs of points that can be worked out.
+  const path = (g, cls, pts, colour) => {
+    let run = [];
+    const flush = () => { if(run.length > 1) g.appendChild(svg('polyline', Object.assign({ class: cls, points: run.join(' '), fill: 'none' }, colour ? { stroke: colour } : {}))); run = []; };
+    pts.forEach(pt => { if(!pt) flush(); else run.push(pt[0].toFixed(1) + ',' + pt[1].toFixed(1)); });
+    flush();
+  };
+  c.lines.forEach((k, li) => {
+    const name = partLabel(k), colour = colours.get(k);
+    const g = svg('g', { class: 'l-line', 'data-line': name });
+    const vals = now.map(f => f.values[li]), before = was.map(f => f.values[li]);
+    // The model's own (or A's) numbers, dashed, when any of them differs from what is shown.
+    const moved = vals.some((r, i) => !r.error && !before[i].error && !agree(r.value, before[i].value));
+    if(moved) path(g, 'l-base', before.map((r, i) => r.error ? null : [xOf(i), y(r.value)]), null);
+    path(g, 'l-path', vals.map((r, i) => r.error ? null : [xOf(i), y(r.value)]), colour);
+    vals.forEach((r, i) => {
+      const p = now[i].p, cx = xOf(i);
+      if(r.error){
+        problems.push(model.periods[p] + ', ' + name + ': ' + errorText(r.error));
+        g.appendChild(svg('text', { class: 't-err', x: cx, y: top + plotH / 2, 'text-anchor': 'middle' }, '!'));
+        return;
+      }
+      const b = before[i];
+      const diff = !b.error ? fmtDiff(r.value, b.value) : '';
+      const dot = svg('circle', { class: 'l-point', cx, cy: y(r.value), r: 3, fill: colour });
+      dot.appendChild(svg('title', {}, name + ', ' + model.periods[p] + ': ' + fmtNum(r.value) + (diff ? ' — was ' + fmtNum(b.value) + ', ' + diff : '')));
+      g.appendChild(dot);
+      drawOverMarks(g, sc, cx, top, plotH, r.value, r.value);
+      if(labels) g.appendChild(svg('text', { class: 't-value', x: cx, y: y(r.value) - 6, 'text-anchor': 'middle' }, fmtNum(r.value)));
+    });
+    chart.appendChild(g);
+  });
+  // The key: each line's colour; its swatch picks it.
+  const line = make('div', 'key-line');
+  [...new Set(c.lines)].forEach(k => {
+    const item = make('label', 'key-item');
+    const sw = colourPicker(colours.get(k), 'Colour of ' + partLabel(k), (v) => { c.colours = Object.assign({}, c.colours, { [k]: v }); saveBoardSoon(); updateValues(); });
+    sw.classList.add('key-swatch');
+    item.append(sw, document.createTextNode(partLabel(k)));
+    line.appendChild(item);
+  });
+  key.appendChild(line);
   raiseScaleLabels(chart);
   return chart;
 }

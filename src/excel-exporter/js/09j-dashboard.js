@@ -13,7 +13,8 @@
 // a later slider applying to what the earlier ones left; the sensitivity parts come after.
 // Under the sliders, the boards' bars and charts as Excel charts (B5, cfg.graph.charts), in the
 // board's order — wide ones the full width, narrow ones two to a row: a bar a column chart of its
-// row; columns stacked columns (several groups: a small table beside the charts, one column per
+// row; a lines chart an Excel line chart, a series per rectangle across its periods, straight from
+// the rows; columns stacked columns (several groups: a small table beside the charts, one column per
 // period and group, so each group stacks on its own); a flow a stacked-column waterfall over
 // helper rows beside it (from column N, each table its title on a row of its own) — Value, From, To (the running total, as fmGraph works it out), the
 // parts above and below 0, an invisible Base, then Total / Rise / Fall each above and below 0
@@ -264,6 +265,8 @@ function dashChart(c, top, ctx){
         val: { ref: dashRange(pos.tabName, c1, pos.row, c2), values: ps.map(p => num(x.row, p)), numFmt: fmt } });
     });
   }
+  // A lines chart (board file 10): a line per rectangle, its points marked.
+  if(c.kind === 'lines') return { chart: { type: 'line', title: c.name, legend: 'b', valAxis, series }, block };
   const chart = { type: 'bar', title: c.name, bar: { dir: 'col', grouping: c.kind === 'columns' ? 'stacked' : 'clustered', gapWidth: 60 },
     legend: c.kind === 'columns' ? 'b' : null, valAxis, series };
   return { chart, block };

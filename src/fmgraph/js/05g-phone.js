@@ -293,13 +293,13 @@ function showPeekCard(w){
   $('peekBack').classList.remove('hidden');
   $('peekClose').focus({ preventScroll: true });
 }
-// A chart's quick look: each of its rectangles in the period it shows (the first, for columns).
+// A chart's quick look: each of its rectangles in the period it shows (the first, for columns and lines).
 function openChartPeek(c){
   const results = currentResults(), cmp = compareResults();
   peekFor = c;
   peekOpenedAt = performance.now();
-  const p = c.layout === 'columns' ? (periodsOf(c.periods)[0] || 0) : c.period;
-  const kind = { columns: 'Columns', flow: 'Waterfall', scenarios: 'Scenario waterfall', tornado: 'Tornado', spider: 'Spider' }[c.layout] || 'Chart';
+  const p = usesPeriods(c) ? (periodsOf(c.periods)[0] || 0) : c.period;
+  const kind = { columns: 'Columns', lines: 'Lines', flow: 'Waterfall', scenarios: 'Scenario waterfall', tornado: 'Tornado', spider: 'Spider' }[c.layout] || 'Chart';
   $('peekTitle').textContent = c.title || kind;
   $('peekWhere').textContent = kind + ' · ' + model.periods[p];
   $('peekChart').textContent = '';

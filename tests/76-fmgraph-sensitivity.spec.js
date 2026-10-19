@@ -313,7 +313,7 @@ test('the board file, version 8: written, read back, everything cleaned; never i
     { rect: 'Price' }, { rect: 'Unit cost', by: 'amount', low: -0.5, high: 2, show: false }] }));
   await g(page, () => fmGraph.addChart({ layout: 'spider', title: 'S', output: 'Profit', steps: 3, inputs: [{ rect: 'Volume', low: -20, high: 5 }] }));
   const file = await g(page, () => fmGraph.exportBoards(true));
-  expect(file.version).toBe(9);
+  expect(file.version).toBe(10);
   const [t, s] = file.boards[0].items.slice(-2);
   const at = (nodeId, name) => ({ canvasId: 'cProfit', nodeId, name });
   expect(t).toEqual({ type: 'chart', wide: true, layout: 'tornado', title: 'T', output: at('profit', 'Profit'), period: 1, steps: 5, ownPeriod: true,

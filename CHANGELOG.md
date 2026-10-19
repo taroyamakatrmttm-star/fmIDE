@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph: lines charts
+- A new chart kind, Lines: several rectangles over the periods, a line each, with points and their numbers where there is room, the model's own numbers dashed once a slider changes them, errors as gaps listed in words, the key's swatches for colours, the fixed scale; its periods follow the shared period as a Columns chart's do unless it keeps its own; switching between Columns and Lines keeps the rectangles and periods. Board file version 10 (`layout: "lines"`, `lines`); never in the template form. `fmGraph.addChart({ layout: 'lines', … })` and `chart(id)`.
+- ExcelExporter reads board files up to version 10 and draws a lines chart on the Dashboard as an Excel line chart, a series per rectangle from its row; the layout file is version 9 (`cfg.graph.charts` may hold `kind: "lines"`).
+
 ## fmGraph: goal seek
 - A Goal seek panel under the sliders: Set [rectangle] in [period] to [number] by changing [slider] → Seek finds the slider's value (the number set, or the % change), the other sliders as they stand, and puts the slider there. It looks through the slider's range, then further out (to ±1,000,000,000), and narrows down with Brent's method; values the model can't work out are skipped, a jump past the number (a step, or dividing by zero) is no answer. Found outside the range: the range widens (its step kept). Not found: it says what the rectangle stays between. At most 400 runs of the model or 3 seconds. Nothing new in the board file; `fmGraph.goalSeek(…)` for scripts; hidden on the phone layout.
 

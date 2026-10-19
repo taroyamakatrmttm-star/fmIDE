@@ -57,6 +57,7 @@ function templateBoardsData(target, onlyShown){
     b.items.forEach(w => {
       if(w.kind === 'chart' && w.layout === 'scenarios'){ left++; return; } // it needs the model's scenarios, which a template doesn't carry
       if(w.kind === 'chart' && isSensitivity(w)){ left++; return; } // a Tornado or Spider (board file 8) is never in the template form
+      if(w.kind === 'chart' && w.layout === 'lines'){ left++; return; } // nor a lines chart (board file 10): the template form stays version 2
       if(w.kind === 'bar'){
         const r = ref(w.key);
         if(!r){ left++; return; }

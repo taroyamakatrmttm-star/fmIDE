@@ -276,6 +276,9 @@
   .bar-chart .s-base{ stroke:var(--ink); stroke-width:1.5; stroke-dasharray:4 3; }
   .bar-chart .s-axis{ stroke:var(--line-strong); stroke-width:1; }
   .bar-chart .s-path{ stroke-width:2; }
+  /* The lines chart: each line, and the model's own numbers (or A's) dashed under it. */
+  .bar-chart .l-path{ stroke-width:2; }
+  .bar-chart .l-base{ stroke:var(--bar-base); stroke-width:1.5; stroke-dasharray:4 3; }
   .bar-chart.stale{ opacity:.45; }
   .sens-row{ margin-bottom:6px; }
   .sens-row .sens-bound{ width:6em; }
