@@ -10791,8 +10791,8 @@ const EXCEL_HELP_TOPICS = [
         'Press Import. The model loads here, laid out like the workbook — its rows in the same order, its titles and blank rows kept, each row\'s look (bold, colours, lines, number format), the numbers in its formulas written in the formulas — and a report says how it compares with the values Excel saved.',
         'Press Save for fmIDE (in the report or the File menu): it saves an fmIDE document (.fmide) with its Excel layout inside. Open it in fmIDE with File → Open….',
       ] },
-      { p: 'It reads models laid out with rows as line items and columns as periods, one formula copied along each row. A reference to the column on the left becomes a period shift; a first period typed and the formula after it is an opening balance; typed actual years and a forecast formula make a row whose rectangle holds the actuals as its own numbers in those years (ticked under its 🕒), the formula feeding the others; two formulas, one after the other, make a row in parts, which reads each in its own years through one shared rectangle per canvas, such as Up to 2024 (1 in those years, 0 after). SUM, MIN, MAX, AVERAGE, IF, IFERROR, AND, OR, NOT, ROUND, CHOOSE, ABS, LN, EXP, SQRT, INT, TRUNC, MOD and POWER become fmIDE\'s operators.' },
-      { p: 'What it can\'t translate keeps Excel\'s saved values as typed numbers, and the report lists it with why: lookups (VLOOKUP, INDEX, MATCH…), sums across the periods (NPV, IRR, SUMIF, COUNTIF, a running total), dates and text, circular references, and any other function. A cell unlike the rest of its row keeps its saved value in that period, as the rectangle\'s own number there.' },
+      { p: 'It reads models laid out with rows as line items and columns as periods, one formula copied along each row. A reference to the column on the left becomes a period shift; a first period typed and the formula after it is an opening balance; typed actual years and a forecast formula make a row whose rectangle holds the actuals as its own numbers in those years (ticked under its 🕒), the formula feeding the others; two formulas, one after the other, make a row in parts, which reads each in its own years through one shared rectangle per canvas, such as Up to 2024 (1 in those years, 0 after). SUM, MIN, MAX, AVERAGE, IF, IFERROR, AND, OR, NOT, ROUND, CHOOSE, ABS, LN, EXP, SQRT, INT, TRUNC, MOD and POWER become fmIDE\'s operators. A running total such as SUM($D$8:D8) (one row, from a fixed first column to this period) becomes the previous period\'s total plus this period\'s, through a period shift: in the row itself when that is its whole formula, else in a rectangle of its own, Running total of …, that the formulas read.' },
+      { p: 'What it can\'t translate keeps Excel\'s saved values as typed numbers, and the report lists it with why: lookups (VLOOKUP, INDEX, MATCH…), sums across the periods (NPV, IRR, SUMIF, COUNTIF, an average or a sum over several rows growing along them), dates and text, circular references, and any other function. A cell unlike the rest of its row keeps its saved value in that period, as the rectangle\'s own number there.' },
       { p: 'After ⬇ Generate, ExcelExporter also works out the workbook it has just written from its own formulas and compares it with the original: "Recalculated here, the workbook gives the original\'s value in all 670 cells." The report shows the same.' },
       { p: 'The report compares every calculated cell with the value Excel saved for it. A workbook saved by a program that keeps no values (ExcelExporter itself is one) has nothing to compare: open it in Excel, save it, and import it again.' },
       { tip: 'Macros are never read or run, and nothing leaves your browser. Old .xls files and password-protected workbooks can\'t be read: save them as .xlsx without a password first.' },
@@ -11114,6 +11114,17 @@ const EXCEL_HELP_TOPICS = [
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'import-running-totals', date: '2026-10-19', title: 'Running totals imported live',
+    summary: 'Importing an Excel model now translates a running total such as =SUM($D$8:D8), so it moves with its inputs instead of keeping Excel\'s numbers.',
+    what: [
+      'A SUM along one row, from a fixed first column ($D$8) to this period\'s column (D8), becomes the previous period\'s total plus this period\'s value, through a period shift. In the first period it is the row\'s own value.',
+      'When the running total is the whole formula, the row itself is worked out that way. When it is part of a longer formula, such as =$C$7+SUM($D$5:D5), a rectangle of its own, "Running total of Cash flow", is worked out and the formula reads it.',
+      'A total starting in a later year, in a row whose formula starts that year, starts there. An average or a sum over several rows growing along the periods still keeps Excel\'s numbers, listed in the report.',
+    ],
+    why: 'Running totals are the formula most often left as Excel\'s numbers, so the model did not move with its inputs there.',
+    how: ['Choose File → Import Excel model… and press Import.', 'The report counts the running totals among the calculated cells that agree with Excel.'],
+    see: ['import-excel'] },
+
   { id: 'slider-rows', date: '2026-10-18', title: 'Sliders on the Inputs tab, easier to read',
     summary: 'An input the Dashboard\'s sliders move no longer reaches into the Dashboard in its formula: each slider has a row of its own.',
     what: [
@@ -15601,6 +15612,10 @@ function openImportWindow(){
 //     "Up to 2024" (1 up to that period, 0 after): if(Up to 2024, the first, the second);
 //   - a formula reading the column before the first period reads that cell, as Excel does
 //     (a blank is 0): if(@Up to 2020, Excel's C92, …), the same shared switch;
+//   - a running total, SUM($D$8:D8) (an anchored first column to this period, one row),
+//     calculates live: the row itself is X + if(@Up to 2026, 0, the previous period's own
+//     value) when that is its whole formula, else a shared rectangle "Running total of X"
+//     worked out so, read like a row (runningTotal, resolveRuns);
 //   - a row that can't be translated keeps Excel's saved values as an input, and is listed
 //     with why; a circular reference (within one period) is cut the same way.
 // Nothing from the file runs; every name is kept as text, cut to a length fmIDE shows.
@@ -15808,7 +15823,9 @@ function xlBuildModel(book, plans, include, split){
   }
 
   // A range inside SUM, MIN, AND… as a list (empty cells and text left out, as Excel does).
-  function rangeList(self, ctx, rg){
+  // In a SUM (`run`), a range on one row from a fixed period column ($D$8) to this period's
+  // (D8) is a running total: { k: 'run', of, from } (runningTotal).
+  function rangeList(self, ctx, rg, run){
     const { from, to } = rg;
     if(from.col === null || from.row === null || to.col === null || to.row === null) throw new XlNotTranslated('a whole column or row');
     const s = sheetIndex(rg.sheet, self);
@@ -15816,7 +15833,10 @@ function xlBuildModel(book, plans, include, split){
     const imported = canvasOfSheet.has(s);
     const c1 = Math.min(from.col, to.col), c2 = Math.max(from.col, to.col), r1 = Math.min(from.row, to.row), r2 = Math.max(from.row, to.row);
     if(imported && plan.byPeriods && c2 >= plan.firstCol && c1 <= plan.lastCol){
-      if(from.colAbs !== to.colAbs) throw new XlNotTranslated('a range growing along the periods');
+      if(from.colAbs !== to.colAbs){
+        if(!run) throw new XlNotTranslated('a range growing along the periods');
+        return [runningTotal(self, ctx, rg, s, plan)];
+      }
       if(c1 !== c2) throw new XlNotTranslated('a range along the periods');
     }
     if((c2 - c1 + 1) * (r2 - r1 + 1) > XL_RANGE_MAX) throw new XlNotTranslated('a range of more than ' + XL_RANGE_MAX + ' cells');
@@ -15828,6 +15848,40 @@ function xlBuildModel(book, plans, include, split){
       }
     }
     return out;
+  }
+
+  // A running total's range, SUM($D$8:D8): one row, one end a fixed period column (the
+  // anchor), the other this period's. It starts at the anchor, so the formula must be used
+  // only from the anchor's period on (before it Excel would sum backwards: not translated).
+  function runningTotal(self, ctx, rg, s, plan){
+    const fixed = rg.from.colAbs ? rg.from : rg.to, moving = rg.from.colAbs ? rg.to : rg.from;
+    if(ctx.mode !== 'period') throw new XlNotTranslated('a range growing along the periods');
+    if(rg.from.row !== rg.to.row) throw new XlNotTranslated('a range over several rows growing along the periods');
+    if(moving.col !== plan.firstCol) throw new XlNotTranslated('a running total not ending in its own period');
+    if(fixed.col < plan.firstCol || fixed.col > plan.lastCol) throw new XlNotTranslated('a running total starting outside the periods');
+    const anchor = fixed.col - plan.firstCol;
+    if(anchor > (ctx.from || 0)) throw new XlNotTranslated('a running total used before its first period');
+    const x = cellExpr(self, ctx, { sheet: rg.sheet, col: moving.col, row: moving.row, colAbs: false, rowAbs: moving.rowAbs }, false);
+    if(x.k !== 'ref' || x.shift !== 0 || x.entry.extra || x.entry.kind === 'assumption' || x.entry.kind === 'single') throw new XlNotTranslated('a running total of something that isn\'t a row');
+    return { k: 'run', of: x.entry, from: anchor };
+  }
+
+  // A running total of row `of` from period `from`: of + if(@Up to <from>, 0, the previous
+  // period's total). `prev` is the total a period back (a period shift of the rectangle
+  // holding it), read only after the anchor (IF reads one branch).
+  const runTree = (c, of, from, prev) => ({ k: 'op', op: '+', args: [{ k: 'ref', entry: of, shift: 0 },
+    { k: 'op', op: 'if', named: true, args: [upTo(c, from), { k: 'const', value: 0 }, prev] }] });
+  // The running totals of an expression made live: the row's own formula
+  // when it is one (a calculation without cells of its own), else the canvas's shared
+  // rectangle "Running total of X" (from a later anchor, "… from 2028").
+  function resolveRuns(x, entry, whole){
+    if(!x || x.k !== 'run' && x.k !== 'op') return x;
+    if(x.k === 'op') return { ...x, args: x.args.map(a => resolveRuns(a, entry, false)) };
+    const c = entry.canvas;
+    if(whole && entry.kind === 'calculation' && !entry.plan.odd.length && x.from === 0) return runTree(c, x.of, 0, { k: 'ref', entry, shift: -1 });
+    const e = extra(c, 'run|' + x.of.canvas.id + '|' + x.of.id + '|' + x.from, () => ({ name: xlCleanName('Running total of ' + x.of.name + (x.from ? ' from ' + periods[x.from] : '')), unit: x.of.unit, runOf: x.of }));
+    if(!e.expr) e.expr = runTree(c, x.of, x.from, { k: 'ref', entry: e, shift: -1 });
+    return { k: 'ref', entry: e, shift: 0 };
   }
 
   // A name: its cell or range, as if written in the formula.
@@ -15844,12 +15898,12 @@ function xlBuildModel(book, plans, include, split){
 
   // An Excel formula tree as the model's expression.
   function toExpr(tree, self, ctx){
-    const list = (args) => {
+    const list = (args, run) => {
       const out = [];
       for(const a of args){
         let t = a;
         if(t.type === 'name') t = resolveName(self, t);
-        if(t.type === 'range') out.push(...rangeList(self, ctx, t));
+        if(t.type === 'range') out.push(...rangeList(self, ctx, t, run));
         else out.push(toExpr(t, self, ctx));
       }
       return out;
@@ -15883,7 +15937,7 @@ function xlBuildModel(book, plans, include, split){
       case 'func': {
         const f = tree.name, a = tree.args;
         if(XL_LISTS[f]){
-          const l = list(a);
+          const l = list(a, f === 'SUM');
           if(!l.length){
             if(f === 'AVERAGE') throw new XlNotTranslated('an average of nothing (#DIV/0!)');
             return { k: 'const', value: f === 'PRODUCT' || f === 'AND' ? (f === 'AND' ? 1 : 0) : 0 };
@@ -15932,7 +15986,7 @@ function xlBuildModel(book, plans, include, split){
       try{ Object.assign(entry, xlPartsExpr(entry, (sig, from) => {
         let tree;
         try{ tree = xlParseFormula(sig); } catch(e){ throw new XlNotTranslated('a formula that can\'t be read'); }
-        return toExpr(tree, entry.sheet, { mode: 'period', canvas: entry.canvas, kind: 'parts', from, upTo: (to) => upTo(entry.canvas, to) });
+        return resolveRuns(toExpr(tree, entry.sheet, { mode: 'period', canvas: entry.canvas, kind: 'parts', from, upTo: (to) => upTo(entry.canvas, to) }), entry, false);
       }, N, (to) => upTo(entry.canvas, to))); }
       catch(e){
         if(!(e instanceof XlNotTranslated)) throw e;
@@ -15948,7 +16002,7 @@ function xlBuildModel(book, plans, include, split){
       if(!text) throw new XlNotTranslated('a formula that can\'t be read');
       let tree;
       try{ tree = xlParseFormula(text); } catch(e){ throw new XlNotTranslated('a formula that can\'t be read'); }
-      entry.expr = toExpr(tree, entry.sheet, ctx);
+      entry.expr = resolveRuns(toExpr(tree, entry.sheet, ctx), entry, true);
     } catch(e){
       if(!(e instanceof XlNotTranslated)) throw e;
       entry.why = e.why;
@@ -15963,7 +16017,8 @@ function xlBuildModel(book, plans, include, split){
     if(!entry.expr) return [];
     const part = entry.partExprs && entry.partExprs.find(x => p >= x.from && p <= x.to);
     const out = [];
-    const walk = (x) => { if(!x) return; if(x.k === 'ref'){ if(x.shift === 0 && !x.entry.extra) out.push(x.entry); } else if(x.k === 'op') x.args.forEach(walk); };
+    // A running total's rectangle reads its row in the same period.
+    const walk = (x) => { if(!x) return; if(x.k === 'ref'){ if(x.shift === 0 && !x.entry.extra) out.push(x.entry); else if(x.shift === 0 && x.entry.runOf) out.push(x.entry.runOf); } else if(x.k === 'op') x.args.forEach(walk); };
     walk(part ? part.expr : entry.expr);
     return out;
   };
@@ -15985,6 +16040,15 @@ function xlBuildModel(book, plans, include, split){
     const edge = (from, to, port) => { const e = { id: 'e' + (c.nextEdge++), from, to }; if(port !== undefined) e.toPort = port; c.edges.push(e); };
     // The extras first (made while reading the formulas).
     for(const e of [...extras.values()].filter(x => x.canvas === c)){
+      if(e.expr){
+        // A running total: worked out like a row, its tree left of it.
+        const id = add({ id: e.id, type: 'value', x: XL_RECT_X, y, text: xlRectText(e.name, null, e.unit) });
+        const root = xlEmit(e.expr, XL_RECT_X - XL_STEP, y, { c, add, edge, nodeId, label: e.name, constants: c.constants });
+        edge(root.id, id);
+        nodeCount.rectangles++;
+        y += root.lanes * XL_LANE + XL_ROW_GAP;
+        continue;
+      }
       if(e.values){
         const all = e.values.every(v => v === e.values[0]);
         const node = { id: e.id, type: 'value', x: XL_RECT_X, y, text: xlRectText(e.name, e.values[0], '') };

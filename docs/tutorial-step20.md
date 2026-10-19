@@ -149,7 +149,7 @@ Each part below says what the feature is, why you would use it, and the exact cl
 **What it can't translate yet** (kept as Excel's numbers, and listed)
 
 - Lookups: `VLOOKUP`, `HLOOKUP`, `XLOOKUP`, `INDEX`, `MATCH`, `OFFSET`, `INDIRECT`.
-- Sums across the years: `NPV`, `IRR`, `SUMIF`, `COUNTIF`, a running total such as `SUM($D$8:D8)`.
+- Sums across the years: `NPV`, `IRR`, `SUMIF`, `COUNTIF`, an average or a sum over several rows growing along the years. (A running total such as `SUM($D$8:D8)` is translated: it becomes the previous year's total plus this year's, through a period shift.)
 - Dates and text: `EOMONTH`, `TEXT`, joining text with `&`, and checks that give text such as "OK" / "ERROR".
 - Circular references (a row that, in the same year, depends on itself through others).
 - Any other function: the report names it.

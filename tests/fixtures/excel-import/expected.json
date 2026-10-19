@@ -330,7 +330,7 @@
               "row": 11,
               "label": "Cumulative cash",
               "kind": "calculation",
-              "formula": "a sum from the first period: not translated"
+              "formula": "the running total of Cash flow (Cash flow + the previous period's Cumulative cash)"
             },
             {
               "row": 12,
@@ -360,11 +360,6 @@
           "sheet": "Valuation",
           "cells": "C10",
           "why": "NPV"
-        },
-        {
-          "sheet": "Valuation",
-          "cells": "D11:H11",
-          "why": "a range growing along the periods"
         },
         {
           "sheet": "Valuation",
@@ -548,6 +543,115 @@
         }
       },
       "notTranslated": []
+    },
+    "06-running-totals": {
+      "sheets": {
+        "Cash": {
+          "headerRow": 3,
+          "periodColumns": [
+            "D",
+            "E",
+            "F",
+            "G",
+            "H"
+          ],
+          "periods": [
+            "2026",
+            "2027",
+            "2028",
+            "2029",
+            "2030"
+          ],
+          "labelColumn": "A",
+          "unitColumn": "B",
+          "rows": [
+            {
+              "row": 1,
+              "label": "Running totals",
+              "kind": "title"
+            },
+            {
+              "row": 5,
+              "label": "Cash flow",
+              "kind": "input"
+            },
+            {
+              "row": 6,
+              "label": "Cumulative cash",
+              "kind": "calculation",
+              "formula": "the running total of Cash flow, SUM($D$5:D5): Cash flow + the previous period's Cumulative cash"
+            },
+            {
+              "row": 7,
+              "label": "Opening cash",
+              "kind": "assumption"
+            },
+            {
+              "row": 8,
+              "label": "Cash balance",
+              "kind": "calculation",
+              "formula": "Opening cash + the running total of Cash flow (a rectangle of its own, shared)"
+            },
+            {
+              "row": 9,
+              "label": "Spend",
+              "kind": "input"
+            },
+            {
+              "row": 10,
+              "label": "Cumulative spend",
+              "kind": "calculation",
+              "formula": "the running total of Spend, SUM($D9:D9) typed in each cell"
+            },
+            {
+              "row": 11,
+              "label": "Net cumulative",
+              "kind": "calculation",
+              "formula": "the running total of Cash flow − the running total of Spend"
+            },
+            {
+              "row": 12,
+              "label": "Cash since 2028",
+              "kind": "parts",
+              "parts": [
+                {
+                  "cells": "D:E",
+                  "is": "typed"
+                },
+                {
+                  "cells": "F:H",
+                  "is": "formula"
+                }
+              ],
+              "formula": "0 typed in 2026–2027; then the running total of Cash flow from 2028, SUM($F$5:F5)"
+            },
+            {
+              "row": 13,
+              "label": "Average cash flow",
+              "kind": "calculation",
+              "formula": "AVERAGE($D$5:D5), an average growing along the periods: not translated"
+            },
+            {
+              "row": 14,
+              "label": "Spend rows to date",
+              "kind": "calculation",
+              "formula": "SUM($D$9:D10), a sum over two rows growing along the periods: not translated"
+            }
+          ]
+        }
+      },
+      "notTranslated": [
+        {
+          "sheet": "Cash",
+          "cells": "D13:H13",
+          "why": "a range growing along the periods"
+        },
+        {
+          "sheet": "Cash",
+          "cells": "D14:H14",
+          "why": "a range over several rows growing along the periods"
+        }
+      ]
     }
   }
 }

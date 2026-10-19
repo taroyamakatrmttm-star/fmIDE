@@ -5,6 +5,9 @@ Notable changes before this repository existed (recorded from the development hi
 ## fmGraph: goal seek
 - A Goal seek panel under the sliders: Set [rectangle] in [period] to [number] by changing [slider] → Seek finds the slider's value (the number set, or the % change), the other sliders as they stand, and puts the slider there. It looks through the slider's range, then further out (to ±1,000,000,000), and narrows down with Brent's method; values the model can't work out are skipped, a jump past the number (a step, or dividing by zero) is no answer. Found outside the range: the range widens (its step kept). Not found: it says what the rectangle stays between. At most 400 runs of the model or 3 seconds. Nothing new in the board file; `fmGraph.goalSeek(…)` for scripts; hidden on the phone layout.
 
+## ExcelExporter: running totals in an imported Excel model
+- Importing an Excel model translates a running total, `SUM($D$8:D8)` (one row, from a fixed period column to this period's), as the previous period's total plus this period's value through a period shift: in the row itself when it is the whole formula, else in a shared rectangle "Running total of …" that the formulas read; a total from a later period starts there. An average or a sum over several rows growing along the periods still keeps Excel's numbers. New sample `tests/fixtures/excel-import/06-running-totals.xlsx`.
+
 ## fmGraph: one period for every board
 - A shared period above the bars and charts — periods for bars and Columns charts, a year for the one-period charts — that every bar and chart on every board follows unless it keeps its own (its period list's first choice is Shared). Board file version 9 (`sharedPeriods`, `ownPeriod`); older files keep each chart's periods (the upgrade marks them own). ExcelExporter reads version 9.
 
