@@ -4,7 +4,8 @@
 //   records (families.json, authors.json, packs.json) matching them.
 // - The family rule: only a family's owner (the account of its first pack) adds versions;
 //   someone else's version is shared again only as an exact copy, with its origin.
-// - Pack ids and version ids are never used again, even after a takedown.
+// - Pack ids and version ids are never used again, even after a takedown (the pack's own account
+//   may share its versions again); the owner may share a version again with other attachments.
 // - The author name matches the submitting account; one name, one account.
 // - A pull request (--base): records only added, packs never edited, only packs and records
 //   changed by a submitter, new entries naming the submitting account; takedowns; maintainers.
@@ -368,13 +369,67 @@ test.describe('a pull request', () => {
     // Its versions can't be shared again either.
     const reshare = checkLibrary(library(testInfo, 'reshare', lib => lib.remove(lib.packPath(ANN_PACK))));
     expectError(reshare, /came from the pack pack-checker-good-1, which was taken down/);
-    // Nor put in a new pack by its owner.
+    // Nor put in a new pack by another account (Bob's copy of Ann's Margin, without its origin).
+    const other = checkLibrary(library(testInfo, 'other', lib => {
+      const m = lib.pack(ANN_PACK).functions.find(f => f.family === 'family-margin');
+      lib.remove(lib.packPath(ANN_PACK));
+      lib.remove(lib.packPath(BOB_PACK));
+      lib.putPack(newPack(lib, 'bob-second-pack', 'Bob Sample', { functions: [m] }));
+    }), { account: BOB, date: DATE });
+    expectError(other, /function "Margin" v1: Its version id was used in the pack pack-checker-good-1, which was taken down; only that pack's own account can share it again/);
+  });
+
+  test('the owner of a pack taken down may share its versions again (a note)', ({}, testInfo) => {
+    // Changed on purpose (19 October 2026): an owner who withdrew their own pack was refused.
     const again = checkLibrary(library(testInfo, 'again', lib => {
       const income = lib.pack(ANN_PACK).templates.find(t => t.name === 'Income Statement');
       lib.remove(lib.packPath(ANN_PACK));
+      lib.remove(lib.packPath(BOB_PACK));
       lib.putPack(newPack(lib, 'ann-second-pack', 'Ann Example', { templates: [income] }));
     }), { account: ANN, date: DATE });
-    expectError(again, /template "Income Statement" v1: Its version id was used in the pack pack-checker-good-1, which was taken down/);
+    expect(again.errors.every(e => e.missing), all(again).join('\n')).toBe(true);
+    expect(all(again, 'notes').join('\n')).toMatch(/template "Income Statement" v1: Its version id was used in the pack pack-checker-good-1, which was taken down; it was the same account's, so its owner shares it again/);
+    // The same through a copy that names the pack taken down as its origin.
+    const viaOrigin = checkLibrary(library(testInfo, 'origin', lib => {
+      const ann = lib.pack(ANN_PACK);
+      const income = Object.assign({}, ann.templates.find(t => t.name === 'Income Statement'),
+        { origin: { packId: ANN_PACK, packTitle: ann.pack.title, author: ann.pack.author, licence: ann.pack.licence } });
+      lib.remove(lib.packPath(ANN_PACK));
+      lib.remove(lib.packPath(BOB_PACK));
+      lib.putPack(newPack(lib, 'ann-second-pack', 'Ann Example', { templates: [income] }));
+    }), { account: ANN, date: DATE });
+    expect(viaOrigin.errors.every(e => e.missing), all(viaOrigin).join('\n')).toBe(true);
+    expect(all(viaOrigin, 'notes').join('\n')).toMatch(/It says it came from the pack pack-checker-good-1, which was taken down; it was the same account's/);
+    // Bob can't bring it back through its origin.
+    const bob = checkLibrary(library(testInfo, 'bob', lib => {
+      lib.remove(lib.packPath(ANN_PACK));
+    }), { account: BOB, date: DATE });
+    expectError(bob, /came from the pack pack-checker-good-1, which was taken down; it can't be shared again/);
+  });
+
+  test('the owner may share a version again with another Excel layout or fmGraph board; nothing else may change', ({}, testInfo) => {
+    const income = (lib) => lib.pack(ANN_PACK).templates.find(t => t.name === 'Income Statement');
+    const layout = { excel: { family: 'fam-income-statement', name: 'Income Statement', rows: [{ name: 'Revenue', section: 'calc', include: true }] } };
+    const attached = checkLibrary(library(testInfo, 'attached', lib => {
+      const t = Object.assign({}, income(lib), { attachments: layout });
+      lib.putPack(newPack(lib, 'ann-second-pack', 'Ann Example', { templates: [t] }));
+    }), { account: ANN, date: DATE });
+    expect(attached.errors.every(e => e.missing), all(attached).join('\n')).toBe(true);
+    expect(all(attached, 'notes').join('\n')).toMatch(/ann-second-pack: template "Income Statement" v1: It is pack pack-checker-good-1: template "Income Statement" v1 with a different Excel layout or fmGraph board; the version itself is unchanged/);
+    // Anything else changed under the same version id is refused, and the message says what to do.
+    const changed = checkLibrary(library(testInfo, 'changed', lib => {
+      const t = Object.assign({}, income(lib), { attachments: layout, description: 'Changed' });
+      lib.putPack(newPack(lib, 'ann-second-pack', 'Ann Example', { templates: [t] }));
+    }), { account: ANN, date: DATE });
+    expectError(changed, /template "Income Statement" v1: It isn't an exact copy of pack pack-checker-good-1: template "Income Statement" v1, which has the same version id\. An approved version is never changed: in fmIDE, use Save as new version/);
+    // Someone else's version shared again stays an exact copy, attachments included.
+    const bob = checkLibrary(library(testInfo, 'bob', lib => {
+      const ann = lib.pack(ANN_PACK);
+      const t = Object.assign({}, income(lib), { attachments: layout,
+        origin: { packId: ANN_PACK, packTitle: ann.pack.title, author: ann.pack.author, licence: ann.pack.licence } });
+      lib.putPack(newPack(lib, 'bob-second-pack', 'Bob Sample', { templates: [t] }));
+    }), { account: BOB, date: DATE });
+    expectError(bob, /bob-second-pack: template "Income Statement" v1: It isn't an exact copy of the version approved in the pack pack-checker-good-1/);
   });
 
   test('a submitter changes only packs and records; checker.json and .github are the maintainers\'', ({}, testInfo) => {

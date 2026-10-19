@@ -354,6 +354,7 @@ const HELP_TOPICS = [
       { p: 'Step 6 — See it in the library' },
       { p: 'Once accepted, your pack appears on fmIDE\'s website, in {cmd:browseLibrary} and on the /library pages, within about an hour of being accepted. People who add your templates see you as their author.' },
       { tip: 'To share an improved version later: in {cmd:openTemplates}, save the new version (⤴ Save as new version), then save a new pack and upload it the same way. A pack is never changed once it is in the library. Only the account that first shared a template or function can add new versions of it, so nobody else can publish a "new version" of yours.' },
+      { tip: 'You may share a version again in a new pack — as a part a recipe needs, or with an Excel layout or fmGraph board you attached after sharing it — without saving a new version. Items of a pack you took down yourself may be shared again by you; nobody else can.' },
       { tip: 'An fmGraph board shares with its template: attach it to the template first (in fmGraph, Boards ▾ → Attach to template…), then save and share the pack here.' },
       { see: ['library-packs', 'browse-library', 'template-versions'] },
     ] },
