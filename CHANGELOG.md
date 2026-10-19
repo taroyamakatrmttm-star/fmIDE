@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmIDE and the library: a readable pack file name
+- Save as Library Pack… names the file `<title> (<first 8 characters of the id>).fmide-pack.json` (`libraryPackFileName`; the title without the characters Windows or macOS refuse, control or invisible characters, at most 80 characters; a title with nothing left gives `<id>.fmide-pack.json`). The pack checker takes any name ending in `.fmide-pack.json` in the library's `packs/` (the id is read from inside the file; two files with one id are still refused), and the catalogue publishes each pack under its id, so the site's addresses, `index.json` and Browse Library are unchanged. The library repository moves its `checker.json` to this commit to use it.
+
 ## fmGraph: one period for every board
 - A shared period above the bars and charts — periods for bars and Columns charts, a year for the one-period charts — that every bar and chart on every board follows unless it keeps its own (its period list's first choice is Shared). Board file version 9 (`sharedPeriods`, `ownPeriod`); older files keep each chart's periods (the upgrade marks them own). ExcelExporter reads version 9.
 

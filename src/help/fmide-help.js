@@ -302,7 +302,7 @@ const HELP_TOPICS = [
     summary: 'Share templates, recipes and functions with other people as one file.',
     body: [
       { p: '{cmd:saveLibraryPack} puts the templates, recipes and functions you pick into one file, with a title and your name. Everything in a pack is shared under the CC BY 4.0 licence, so share only what is yours.' },
-      { p: 'The pack is saved in your Downloads folder, named after its id (a long code ending in .fmide-pack.json). Keep that name. Send the file to a colleague by email or a shared folder, or share it with everyone in the community library: {cmd:shareLibraryPack}, step by step in "Share your pack in the community library".' },
+      { p: 'The pack is saved in your Downloads folder, named after its title, with the start of its id in brackets: for example Three-Statement Model (c526c522).fmide-pack.json. You may rename it, as long as the name still ends in .fmide-pack.json. Send the file to a colleague by email or a shared folder, or share it with everyone in the community library: {cmd:shareLibraryPack}, step by step in "Share your pack in the community library".' },
       { p: '{cmd:openLibraryPack} shows a pack before anything is added: who made it, and for each item whether it is new or already in your library. Untick what you don\'t want. Nothing of yours is replaced.' },
       { see: ['share-library-pack', 'browse-library', 'templates', 'functions'] },
     ] },
@@ -317,7 +317,7 @@ const HELP_TOPICS = [
         'Choose {cmd:saveLibraryPack}.',
         'Give it a title, your name as the author (use the same name every time you share), a short description and a few tags.',
         'Tick the templates, recipes and functions to share. Share only what is yours: everything in a pack is shared under the CC BY 4.0 licence, so anyone may use and change it, with credit to you.',
-        'Press Save Pack. The file goes to your Downloads folder. Its name is a long code ending in .fmide-pack.json. Don\'t rename it: the library finds packs by that name.',
+        'Press Save Pack. The file goes to your Downloads folder. Its name is the pack\'s title with the start of its id in brackets, ending in .fmide-pack.json. You may rename it, as long as the name still ends in .fmide-pack.json: the library reads the pack\'s id from inside the file.',
         'A window opens with the next steps. Keep it open, or come back to it any time with {cmd:shareLibraryPack}.',
       ] },
       { p: 'Step 2 — Make a free GitHub account (the first time only)' },

@@ -11,7 +11,8 @@
 // packs lack are not errors: the library's CI writes them (--write-records) once the pull
 // request is merged, for the account that opened it, so nobody edits the records by hand.
 //
-// The library folder holds packs/<pack id>.fmide-pack.json and three records, which are only
+// The library folder holds packs/<any name>.fmide-pack.json (each pack's id is read from inside
+// the file; two files with one id are refused) and three records, which are only
 // ever added to (never changed): families.json (who owns each template or function family:
 // the GitHub account of the first approved pack that holds it), authors.json (each account's
 // author name) and packs.json (every approved pack: its account, date, hash and version ids —
@@ -194,11 +195,11 @@ function checkLibrary(headDir, opts){
     // A pack anywhere else would never be checked as one: named like a pack, or a JSON file
     // that says it is one.
     if(top !== PACKS_DIR && (p.toLowerCase().endsWith(PACK_SUFFIX) || looksLikePack(p, buf))) {
-      return out.error(p, `It is a library pack outside the ${PACKS_DIR} folder. Every pack goes in ${PACKS_DIR}/, named after its pack id (${PACKS_DIR}/<pack id>${PACK_SUFFIX}), where it is checked.`);
+      return out.error(p, `It is a library pack outside the ${PACKS_DIR} folder. Every pack goes in ${PACKS_DIR}/, with a name ending in ${PACK_SUFFIX}, where it is checked.`);
     }
     if(p.includes('/')){
       if(!KNOWN_TOP_DIRS.has(top)) out.warning(p, 'The library doesn\'t use this folder.');
-      else if(top === PACKS_DIR && !isPackPath(p)) out.error(p, `The ${PACKS_DIR} folder holds only packs, each named after its pack id (<pack id>${PACK_SUFFIX}).`);
+      else if(top === PACKS_DIR && !isPackPath(p)) out.error(p, `The ${PACKS_DIR} folder holds only packs, each a file whose name ends in ${PACK_SUFFIX}.`);
     } else if(!KNOWN_TOP.has(p)) out.warning(p, 'The library doesn\'t use this file.');
   });
   const checker = readChecker(files, out);
@@ -219,14 +220,8 @@ function checkLibrary(headDir, opts){
   const packs = new Map(); // id -> { id, file, bytes, raw, report }
   files.forEach((buf, p) => {
     if(buf === null || !isPackPath(p)) return;
+    // Any name ending in .fmide-pack.json (isPackPath): the id is the one inside the file.
     const r = checkPack(buf, p);
-    // In the library a pack must be named after its id: the note becomes an error.
-    r.notes = r.notes.filter(n => {
-      if(!/will be named/.test(n.message)) return true;
-      r.errors.push({ where: 'file', message: `It must be named ${r.pack.id}${PACK_SUFFIX} (its pack id).` });
-      r.ok = false;
-      return false;
-    });
     report.packs.push(r);
     if(!r.pack) return;
     let raw = null;
@@ -372,9 +367,12 @@ function checkLibrary(headDir, opts){
     });
     if(!isMaintainer) changed.filter(c => !SUBMITTER_FILES(c.path)).forEach(c => out.error(c.path, `It is ${c.how} by the pull request; only the library's maintainers change its own files. A submission adds a pack and its records.`));
     const addedPacks = changed.filter(c => isPackPath(c.path) && c.how === 'added').map(c => c.path);
+    // The ids of the packs added: read from inside each file (a file that isn't a readable
+    // pack has none; checkPack said so).
+    const addedIds = addedPacks.map(p => packIdOfFile(files.get(p))).filter(Boolean);
     changed.filter(c => isPackPath(c.path) && c.how === 'changed').forEach(c => out.error(c.path, 'An approved pack is never edited. Put a new version in a new pack.'));
     const removed = changed.filter(c => isPackPath(c.path) && c.how === 'removed').map(c => c.path);
-    removed.forEach(p => { report.summary.takedowns.push(packIdOfPath(p)); out.warning(p, 'The pull request removes this pack: a takedown. Its records stay, so its ids are never used again.'); });
+    removed.forEach(p => { report.summary.takedowns.push(packIdOfFile(baseFiles.get(p)) || p); out.warning(p, 'The pull request removes this pack: a takedown. Its records stay, so its ids are never used again.'); });
     if(removed.length && addedPacks.length) out.error('pull request', 'It removes packs and adds packs; a takedown is a pull request of its own.');
     // Records only added.
     Object.keys(RECORD_FILES).forEach(k => {
@@ -389,8 +387,8 @@ function checkLibrary(headDir, opts){
         const e = rec[k][key];
         const accId = k === 'authors' ? Number(key) : e.accountId;
         if(opts.account && accId !== opts.account.id && !isMaintainer) out.error(RECORD_FILES[k], `Its new entry ${quote(key)} names the account ${k === 'authors' ? e.account : e.account}, not the one submitting (${opts.account.login}).`);
-        if(k === 'packs' && !addedPacks.includes(PACKS_DIR + '/' + key + PACK_SUFFIX)) out.error('packs.json', `Its new entry ${quote(key)} is for a pack the pull request doesn't add.`);
-        if(k === 'families' && !addedPacks.includes(PACKS_DIR + '/' + e.firstPack + PACK_SUFFIX)) out.error('families.json', `Its new entry ${quote(key)} names a first pack the pull request doesn't add.`);
+        if(k === 'packs' && !addedIds.includes(key)) out.error('packs.json', `Its new entry ${quote(key)} is for a pack the pull request doesn't add.`);
+        if(k === 'families' && !addedIds.includes(e.firstPack)) out.error('families.json', `Its new entry ${quote(key)} names a first pack the pull request doesn't add.`);
         if(k === 'packs') report.summary.newPacks.push(packSummary(packs.get(key), key));
         if(k === 'families') report.summary.newFamilies.push({ family: key, type: e.type, kind: e.kind, pack: e.firstPack, account: e.account });
         if(k === 'authors') report.summary.newAuthors.push({ accountId: accId, account: e.account });
@@ -398,12 +396,13 @@ function checkLibrary(headDir, opts){
     });
     // A pack id is never used again, even after a takedown.
     addedPacks.forEach(p => {
-      const id = packIdOfPath(p);
+      const id = packIdOfFile(files.get(p));
+      if(!id) return;
       if(has(baseRec.packs, id)) out.error(p, `The pack id ${id} was used before (by a pack that was taken down, or approved already); every pack needs a new id. Save the pack again from fmIDE.`);
       if(!has(rec.packs, id) && !report.summary.newPacks.some(x => x.id === id)) report.summary.newPacks.push(packSummary(packs.get(id), id));
     });
     // Only the pull request's own packs may be missing records; anything else was already wrong.
-    report.errors.forEach(e => { if(e.missing && e.where !== 'authors.json' && !addedPacks.some(p => e.where === p || e.where.startsWith('pack ' + packIdOfPath(p) + ':'))) e.missing = false; });
+    report.errors.forEach(e => { if(e.missing && e.where !== 'authors.json' && !addedPacks.some(p => e.where === p) && !addedIds.some(id => e.where.startsWith('pack ' + id + ':'))) e.missing = false; });
     // Written when merged: the pull request's own missing records become notes.
     if(report.recordsOnMerge && opts.account){
       report.errors = report.errors.filter(e => {
@@ -429,11 +428,20 @@ function looksLikePack(p, buf){
   if(!p.toLowerCase().endsWith('.json')) return false;
   return /"kind"\s*:\s*"fmIDE-library-pack"/.test(buf.subarray(0, 4096).toString('utf8'));
 }
+// A pack in the library: any file directly in packs/ whose name ends in .fmide-pack.json
+// (fmIDE saves "<title> (<start of id>).fmide-pack.json"; before 19 October 2026, "<pack id>…").
 function isPackPath(p){
-  const m = /^packs\/([^/]+)\.fmide-pack\.json$/.exec(p);
-  return !!m && S.isTemplateUid(m[1]);
+  return /^packs\/[^/]+\.fmide-pack\.json$/.test(p);
 }
-function packIdOfPath(p){ return p.slice(PACKS_DIR.length + 1, -PACK_SUFFIX.length); }
+// A pack file's id, read from inside it as the one-pack check reads it; null when it has none.
+function packIdOfFile(buf){
+  if(!buf) return null;
+  try{
+    const raw = JSON.parse(buf.toString('utf8'));
+    const id = isObject(raw) && isObject(raw.pack) ? raw.pack.id : null;
+    return S.isTemplateUid(id) ? id : null;
+  }catch(e){ return null; }
+}
 function packSummary(pk, id){
   const r = pk && pk.report && pk.report.pack;
   return { id, title: r ? r.title : null, author: r ? r.author : null, counts: pk ? pk.report.counts : null };

@@ -100,7 +100,7 @@ The owner approved the recommendations of the 8c-2 plan:
 
 ## Phase 8c-2 — how it turned out (part 1: the checker's library mode)
 
-- **`node tools/check-pack.js --library DIR`** (code in `tools/check-library.js`, Node only, no git, no network) checks a whole library folder: `packs/` holds only `<pack id>.fmide-pack.json` files, each passing the one-pack check; the records (`families.json`, `authors.json`, `packs.json`, `checker.json`, described in `docs/file-formats.md`) are well-formed and match the packs (hash, version ids, accounts, first packs).
+- **`node tools/check-pack.js --library DIR`** (code in `tools/check-library.js`, Node only, no git, no network) checks a whole library folder: `packs/` holds only `<pack id>.fmide-pack.json` files (from 19 October 2026, any name ending in `.fmide-pack.json`, one file per pack id: "A readable pack file name", below), each passing the one-pack check; the records (`families.json`, `authors.json`, `packs.json`, `checker.json`, described in `docs/file-formats.md`) are well-formed and match the packs (hash, version ids, accounts, first packs).
   - **The family rule:** an item without an `origin` is the submitter's own work, so its family must be the pack's account's (or new, and then it becomes theirs).
   - **Sharing again:** an item whose `origin` names another pack must be an exact copy (its JSON apart from `origin`, key order included) of the version that pack holds as its own, and the origin's title, author and licence must be that pack's. fmIDE writes a version shared again exactly as it read it, so real saves pass.
   - **Ids:** a version id is one version everywhere (same family, number and content); a family's version number is one version id; a family is one kind. A version of a pack taken down can't go into a new pack unless an approved pack still holds it as its owner's. The owner repeating one of their approved versions in a new pack (a part a recipe needs) is a note.
@@ -153,7 +153,7 @@ The owner approved the recommendations (27 September 2026): an item shared again
 At the owner's request, sharing in the library is explained for people who know nothing about GitHub, without changing decision 6 (the apps send nothing):
 
 - **Share in the Community Library…** (`shareLibraryPack`, File tab, Library group; `showShareLibraryPack` in `11e-library-packs.js`): the steps in short, **Open the upload page ↗** — `window.open` of the library's GitHub upload page for `packs/` (`LIBRARY_UPLOAD_URL`), in the person's browser, with nothing sent by fmIDE — and the full guide. It opens by itself after Save as Library Pack…, naming the file saved.
-- **The pack's file name is its id** (`libraryPackFileName`), the name the library's checker requires, so nothing is renamed by hand.
+- **The pack's file name is its id** (`libraryPackFileName`), the name the library's checker requires, so nothing is renamed by hand. (Replaced on 19 October 2026 by a readable name: below, "A readable pack file name".)
 - **Help:** fmIDE's topic `share-library-pack` goes through every step (a GitHub account, a fork, the upload, Propose changes, the pull request, the terms box, the check's comment — the records "added automatically when the pull request is merged" — and when the pack appears); fmGraph's topic `share-library` leads there.
 - Tests: group 22.
 
@@ -175,3 +175,13 @@ At the owner's request, a pack merged into the library reaches the live site wit
 - **The pointer** is now only for previews; moving it is no longer needed to publish. GitHub turns off a repository's hourly runs after 60 days without activity; a merge, or Run workflow, starts them again.
 - Tests: the workflow's build step was run locally against the library (an old pinned commit and the latest `main`: the latest was built) and against a library whose latest commit holds a broken pack (the pinned commit was built, the fallback reported).
 
+
+## A readable pack file name (19 October 2026) — how it turned out
+
+Agreed on 4 October 2026 (`docs/decisions.md`), after the owner's first upload was refused for its name: a person following the app should never meet a file-name rule.
+
+- **fmIDE** saves `<title> (<first 8 characters of the id>).fmide-pack.json`, for example `Three-Statement Model v01 (c526c522).fmide-pack.json` (`libraryPackFileName`): the title without the characters Windows or macOS refuse in a name, control characters and invisible or direction-changing ones, spaces collapsed, dots and spaces trimmed from the ends, at most 80 characters; a title with nothing left gives `<id>.fmide-pack.json`. The share window and the help topics say the file may be renamed, as long as the name still ends in `.fmide-pack.json`.
+- **The checker** takes any name ending in `.fmide-pack.json` directly in `packs/`, reading each pack's id from inside the file (for a pull request's added packs, their records and takedowns too); two files with one id are still refused, and so is an approved pack renamed in a pull request (a removal, plus an id used before). The one-pack check notes only a name with another ending.
+- **The catalogue** publishes each pack under its id, as before: `library/packs/<id>.fmide-pack.json`, the pack pages, `index.json` and Browse Library are unchanged whatever the file is called in the library.
+- **The library repository** (not edited from here) needs one pull request by the maintainer once this is in fmIDE's `main`: move `checker.json`'s `fmide.commit` to that commit (until then its CI runs the old checker, which still refuses a readable name — so a pack saved by the new fmIDE should not be uploaded before), and change the file-name rule in its `README.md` (and `SUBMITTING.md`, if it states it) to "any name ending in `.fmide-pack.json`, in `packs/`; the id inside the file is what counts". Packs already there keep their names.
+- Tests: groups 22, 23, 24 and 25.

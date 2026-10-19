@@ -6,7 +6,8 @@
 //
 //   library/index.html                     /library/            every pack
 //   library/<pack id>.html                 /library/<pack id>   one pack: its items and credit
-//   library/packs/<pack id>.fmide-pack.json                     the pack, byte for byte
+//   library/packs/<pack id>.fmide-pack.json                     the pack, byte for byte, under its id
+//                                                               whatever its name in the library's packs/
 //   library/index.json                                          the list, for Browse Library (8d)
 //   library/style.css                                           from src/library/style.css
 //   library/LICENSE-CC-BY-4.0.txt                               the licence of every item
@@ -70,6 +71,8 @@ function buildLibrary(dir){
   files.set('library/index.html', Buffer.from(indexPage(packs), 'utf8'));
   packs.forEach(p => {
     files.set('library/' + p.id + '.html', Buffer.from(packPage(p, byId), 'utf8'));
+    // Published under its id, whatever its file is called in the library (the checker allows any
+    // name ending in .fmide-pack.json, and one file per id): the addresses never change.
     files.set('library/packs/' + p.id + '.fmide-pack.json', p.bytes);
   });
   const index = indexJson(packs);
