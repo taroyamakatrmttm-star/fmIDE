@@ -14,6 +14,7 @@
 function renderAll(){ renderTabs(); renderBoard(); syncUndoButtons(); }
 
 function renderTabs(){
+  renderSharedPeriods(); // the shared period, for every board (05k-shared-period.js)
   const strip = $('boardTabs');
   strip.textContent = '';
   if(!model) return;
@@ -63,7 +64,7 @@ function addBoard(name){
 }
 function duplicateBoard(){
   if(boards.length >= BOARDS_LIMIT) return null;
-  const r = cleanBoards({ kind: 'fmIDE-graph-board', boards: [boardData(board)] });
+  const r = cleanBoards({ kind: 'fmIDE-graph-board', version: BOARD_FILE_VERSION, boards: [boardData(board)] });
   const copy = r.boards[0];
   copy.name = freeBoardName(board.name + ' copy');
   boards.splice(boards.indexOf(board) + 1, 0, copy);

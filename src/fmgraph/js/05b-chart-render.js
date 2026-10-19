@@ -95,11 +95,7 @@ function chartEditorParts(c){
   const firstCalc = () => (model.rects.find(r => !r.input) || model.rects[0]).key;
   const periodRow = () => {
     const row = make('div', 'widget-row');
-    const sel = make('select');
-    sel.setAttribute('aria-label', 'Period');
-    model.periods.forEach((name, i) => { const o = make('option', null, name); o.value = String(i); if(i === c.period) o.selected = true; sel.appendChild(o); });
-    sel.addEventListener('change', () => { c.period = Number(sel.value); changed(); });
-    row.append(make('span', null, 'In'), sel);
+    row.append(make('span', null, 'In'), widgetPeriodSelect(c, changed)); // its own, or the shared period (05k)
     return row;
   };
   if(isSensitivity(c)){
@@ -181,11 +177,7 @@ function chartEditorParts(c){
   }
   if(c.layout === 'flow'){
     const row = make('div', 'widget-row');
-    const sel = make('select');
-    sel.setAttribute('aria-label', 'Period');
-    model.periods.forEach((name, i) => { const o = make('option', null, name); o.value = String(i); if(i === c.period) o.selected = true; sel.appendChild(o); });
-    sel.addEventListener('change', () => { c.period = Number(sel.value); changed(); });
-    row.append(make('span', null, 'In'), sel);
+    row.append(make('span', null, 'In'), widgetPeriodSelect(c, changed)); // its own, or the shared period (05k)
     box.appendChild(row);
     c.steps.forEach((s, i) => {
       const r = make('div', 'edit-row step-row');
@@ -209,7 +201,7 @@ function chartEditorParts(c){
     return box;
   }
   const row = make('div', 'widget-row');
-  row.appendChild(periodsChooser(c.periods, (p) => { c.periods = p; saveBoardSoon(); updateValues(); }));
+  row.appendChild(widgetPeriodsChooser(c)); // its own periods, or the shared ones (05k-shared-period.js)
   box.appendChild(row);
   const checkRow = make('label', 'widget-row check-row');
   const check = make('input');

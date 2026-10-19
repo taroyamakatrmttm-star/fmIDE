@@ -52,8 +52,9 @@ const SAMPLE_MODEL = {
     ] },
   ],
 };
+// Version 9: its bars and charts follow the shared period (05k-shared-period.js).
 const SAMPLE_BOARD = {
-  kind: 'fmIDE-graph-board', version: 1,
+  kind: 'fmIDE-graph-board', version: 9,
   sliders: [
     { canvasId: 'cProfit', nodeId: 'price', name: 'Price', periods: { mode: 'all' }, mode: 'set', min: 5, max: 15, step: 0.25 },
     { canvasId: 'cProfit', nodeId: 'vol', name: 'Volume', periods: { mode: 'all' }, mode: 'shift', min: -50, max: 50, step: 1 },

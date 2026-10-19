@@ -49,13 +49,15 @@ function rectSelect(selectedKey, onlyInputs){
   return sel;
 }
 
-// Which periods: all, one, or a range.
-function periodsChooser(spec, onChange){
+// Which periods: all, one, or a range. With `shared` ({ following, sharedText, onShared }, a bar
+// or Columns chart, 05k-shared-period.js) the first choice follows the shared periods.
+function periodsChooser(spec, onChange, shared){
   const wrap = make('span', 'periods-chooser');
   const mode = make('select');
   mode.setAttribute('aria-label', 'Periods');
+  if(shared){ const o = make('option', null, shared.sharedText); o.value = 'shared'; if(shared.following) o.selected = true; mode.appendChild(o); }
   [['all', 'All periods'], ['one', 'One period'], ['range', 'Periods from…']].forEach(([v, t]) => {
-    const o = make('option', null, t); o.value = v; if(spec.mode === v) o.selected = true; mode.appendChild(o);
+    const o = make('option', null, t); o.value = v; if(spec.mode === v && !(shared && shared.following)) o.selected = true; mode.appendChild(o);
   });
   const periodSelect = (value, label) => {
     const s = make('select');
@@ -67,13 +69,14 @@ function periodsChooser(spec, onChange){
   const to = make('span', null, 'to');
   const b = periodSelect(spec.mode === 'range' ? spec.to : model.periods.length - 1, 'Last period');
   const show = () => {
-    a.classList.toggle('hidden', mode.value === 'all');
+    a.classList.toggle('hidden', mode.value === 'all' || mode.value === 'shared');
     to.classList.toggle('hidden', mode.value !== 'range');
     b.classList.toggle('hidden', mode.value !== 'range');
   };
   const changed = () => {
     show();
     const m = mode.value;
+    if(m === 'shared'){ shared.onShared(); return; }
     onChange(m === 'all' ? { mode: 'all' } : m === 'one' ? { mode: 'one', p: Number(a.value) } : { mode: 'range', from: Number(a.value), to: Number(b.value) });
   };
   [mode, a, b].forEach(el => el.addEventListener('change', changed));
@@ -104,6 +107,7 @@ function removeButton(id, what){
 }
 
 function renderBoard(){
+  syncSharedPeriods(); // what follows the shared period takes it (05k-shared-period.js)
   rememberOpenEditors(); // (05b-chart-render.js)
   rememberOpenRanges();
   // A slider's From / to / step box being typed in keeps the focus through the redraw.
@@ -161,7 +165,7 @@ function barWidget(b){
   w.addEventListener('pointerdown', (ev) => phoneBarPress(ev, b));
   w.addEventListener('contextmenu', (ev) => { if(isPhone()) ev.preventDefault(); });
   const row = make('div', 'widget-row bar-settings');
-  row.appendChild(periodsChooser(b.periods, (p) => { b.periods = p; saveBoardSoon(); updateValues(); }));
+  row.appendChild(widgetPeriodsChooser(b)); // its own periods, or the shared ones (05k-shared-period.js)
   row.appendChild(colourPicker(b.colour || DEFAULT_BAR_COLOUR, 'Bar colour', (c) => { b.colour = c === DEFAULT_BAR_COLOUR ? null : c; saveBoardSoon(); updateValues(); }));
   row.appendChild(scaleChooser(b, () => { saveBoardSoon(); updateValues(); })); // (04d-scale.js)
   const rect = model.byKey.get(b.key);

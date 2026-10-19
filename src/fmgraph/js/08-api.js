@@ -94,7 +94,8 @@ window.fmGraph = Object.freeze({
   value: (rect, period, canvas) => answer(resultOf(currentResults(), findRect(rect, canvas), periodIndex(period))),
   modelValue: (rect, period, canvas) => answer(resultOf(model.base, findRect(rect, canvas), periodIndex(period))),
   addBar: (rect, periods, canvas) => {
-    const b = addBar(findRect(rect, canvas).key, periodSpec(periods));
+    // Periods given: its own; none: it follows the shared periods (05k-shared-period.js).
+    const b = addBar(findRect(rect, canvas).key, periods === undefined ? undefined : periodSpec(periods));
     if(!b) throw new Error('No more bars can be added.');
     renderBoard();
     return b.id;
@@ -123,6 +124,7 @@ window.fmGraph = Object.freeze({
       : { layout: 'columns', title: spec.title, periods: periodSpec(spec.periods), check: spec.check === true,
           groups: (spec.groups || []).map(g => ({ name: g.name, parts: (g.parts || []).map(p => at(rectRef(p))) })) };
     const c = cleanChart(raw, (w) => model.byKey.get(keyOf(w.canvasId, w.nodeId)), model.periods.length);
+    c.ownPeriod = spec.periods !== undefined || spec.period !== undefined; // else the shared period (05k)
     board.items.push(c);
     saveBoardSoon();
     renderBoard();

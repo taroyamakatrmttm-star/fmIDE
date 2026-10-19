@@ -355,7 +355,7 @@ async function graphWithCharts(context){
 
 test('fmGraph\'s Tornado and Spider become analyses: grouped, named, Show 0, the Spider\'s points', async ({ page, context, pageErrors }, testInfo) => {
   const { file } = await graphWithCharts(context);
-  expect(file.version).toBe(8);
+  expect(file.version).toBe(9);
   await openProfit(page);
   await importFile(page, D.tempFile(testInfo, 'charts.board.json', JSON.stringify(file)));
   await expect(page.locator('#graphSensHead')).toBeVisible();
