@@ -2,7 +2,7 @@
 // The boards (G3a: several, as tabs, each a view of the model). A board:
 //   { id, name, items: [bar | chart, …] (in the order shown), sliders: [slider, …], ownSliders }
 //   bar    { id, kind: 'bar', key, periods, wide, colour, scale }
-//   chart  { id, kind: 'chart', wide, layout: 'columns' | 'flow' | 'scenarios' | 'tornado' | 'spider', scale, … } (G2; 04b-charts.js)
+//   chart  { id, kind: 'chart', wide, layout: 'columns' | 'lines' | 'flow' | 'scenarios' | 'tornado' | 'spider', scale, … } (G2; 04b-charts.js)
 // scale: null for Auto, or { min, max } (04d-scale.js).
 //   slider { id, key, periods, mode: 'set' | 'shift', min, max, step, value, folded }
 // periods: { mode: 'all' } · { mode: 'one', p } · { mode: 'range', from, to } (from 0).
@@ -111,6 +111,7 @@ function cleanBoard(raw, dropped, version){
     // on purpose, naming none, is kept).
     const named = c && (isSensitivity(c) ? (c.output ? 1 : 0) + (Array.isArray(c.inputs) ? c.inputs.length : 0) : c.layout === 'flow' ? (Array.isArray(c.steps) ? c.steps.length : 0)
       : c.layout === 'scenarios' ? (Array.isArray(c.outputs) ? c.outputs.length : 0)
+      : c.layout === 'lines' ? (Array.isArray(c.lines) ? c.lines.length : 0)
       : (Array.isArray(c.groups) ? c.groups.reduce((n, gr) => n + (gr && Array.isArray(gr.parts) ? gr.parts.length : 0), 0) : 0));
     if(!ch || (named > 0 && !chartKeys(ch).length)){ drop(); return null; }
     ch.wide = c.wide !== false;
@@ -153,9 +154,10 @@ function cleanBoards(raw){
 // folded slider (`folded`, 05c-arrange.js); 7 a board keeping its own slider positions
 // (`ownSliders`, 03-calc.js); 8 the Tornado and the Spider (charts of layout `tornado` and
 // `spider`, 04b-charts.js); 9 the shared period (`sharedPeriods`, and a bar's or chart's
-// `ownPeriod`, 05k-shared-period.js; each still writes the periods it shows). The template form,
-// which carries none of these, stays version 2.
-const BOARD_FILE_VERSION = 9;
+// `ownPeriod`, 05k-shared-period.js; each still writes the periods it shows); 10 the lines chart
+// (a chart of layout `lines`, 04b-charts.js). The template form, which carries none of these,
+// stays version 2.
+const BOARD_FILE_VERSION = 10;
 const TEMPLATE_BOARD_VERSION = 2;
 function boardData(b){
   const at = (key) => { const r = model.byKey.get(key); return { canvasId: r.canvasId, nodeId: r.nodeId, name: r.name }; };

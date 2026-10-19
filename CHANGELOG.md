@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph: lines charts
+- A new chart kind, Lines: several rectangles over the periods, a line each, with points and their numbers where there is room, the model's own numbers dashed once a slider changes them, errors as gaps listed in words, the key's swatches for colours, the fixed scale; its periods follow the shared period as a Columns chart's do unless it keeps its own; switching between Columns and Lines keeps the rectangles and periods. Board file version 10 (`layout: "lines"`, `lines`); never in the template form. `fmGraph.addChart({ layout: 'lines', … })` and `chart(id)`.
+- ExcelExporter reads board files up to version 10 and draws a lines chart on the Dashboard as an Excel line chart, a series per rectangle from its row; the layout file is version 9 (`cfg.graph.charts` may hold `kind: "lines"`).
+
 ## fmGraph: one period for every board
 - A shared period above the bars and charts — periods for bars and Columns charts, a year for the one-period charts — that every bar and chart on every board follows unless it keeps its own (its period list's first choice is Shared). Board file version 9 (`sharedPeriods`, `ownPeriod`); older files keep each chart's periods (the upgrade marks them own). ExcelExporter reads version 9.
 

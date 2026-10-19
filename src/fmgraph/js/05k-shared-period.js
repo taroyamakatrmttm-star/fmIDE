@@ -2,7 +2,7 @@
 // The shared period (the owner's request, 18 October 2026): one period setting for every bar and
 // chart on every board of the model, which any of them can leave to keep its own.
 // - Two linked settings, above the bars and charts: Periods (all, one, or a range) for bars and
-//   Columns charts, and Period (one year) for the one-period charts — Waterfall, Scenario
+//   Columns and Lines charts, and Period (one year) for the one-period charts — Waterfall, Scenario
 //   waterfall, Tornado and Spider. Kept with the model's boards (`sharedPeriods`, board file 9),
 //   undone and redone like any board change.
 // - A bar or chart follows them unless it keeps its own (`ownPeriod`): its period list's first
@@ -17,8 +17,8 @@
 
 let sharedPeriods = { periods: { mode: 'all' }, period: 0 };
 
-// Bars and Columns charts show several periods; the others one.
-const usesPeriods = (w) => w.kind === 'bar' || w.layout === 'columns';
+// Bars, Columns and Lines charts show several periods; the others one.
+const usesPeriods = (w) => w.kind === 'bar' || w.layout === 'columns' || w.layout === 'lines';
 
 function cleanSharedPeriods(raw, count){
   const p = raw && typeof raw === 'object' ? Math.round(Number(raw.period)) : NaN;

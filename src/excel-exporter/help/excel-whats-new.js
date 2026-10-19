@@ -11,6 +11,17 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'fmgraph-lines', date: '2026-10-19', title: 'fmGraph\'s lines charts on the Dashboard',
+    summary: 'A lines chart on an fmGraph board becomes an Excel line chart on the Dashboard.',
+    what: [
+      'Layout → Use fmGraph boards… now lists a board\'s lines charts too ("Lines · 2028–2030 · 3 lines").',
+      'On the Dashboard each becomes a line chart: a line per rectangle across the chart\'s periods, read straight from the rectangle\'s row, in the colours picked in fmGraph. It moves with the sliders like the other charts.',
+    ],
+    why: 'fmGraph now draws trends as lines; the workbook should show them the same way.',
+    how: ['In fmGraph, add a chart and choose Lines.', 'In ExcelExporter, Layout → Use fmGraph boards…, Use.', 'Press ⬇ Generate and open the Dashboard.'],
+    notes: ['A layout saved with a lines chart is mapping file version 9; an older ExcelExporter asks before opening it.'],
+    see: ['fmgraph-charts'] },
+
   { id: 'slider-rows', date: '2026-10-18', title: 'Sliders on the Inputs tab, easier to read',
     summary: 'An input the Dashboard\'s sliders move no longer reaches into the Dashboard in its formula: each slider has a row of its own.',
     what: [

@@ -90,7 +90,7 @@ Each slider position needs the whole model worked out again (`evaluateModel` on 
 | **Scenarios** (after G5, before G6; the owner's request, 3 October 2026) | Named scenarios instead of only A (as many as wanted, named by the person, e.g. sc01…sc05) to switch between, and a scenario waterfall: for chosen outputs in one period, the change from the start through each scenario in turn. In two phases: S1 named scenarios ✅; S2 the scenario waterfall ✅. |
 | **G6** ✅ | Tutorials |
 
-Later ideas, not in this step: blocks and vintages, line charts, a tornado chart (which inputs matter most), goal seek ("what price keeps cash above zero?"), the live link with fmIDE, phones.
+Later ideas, not in this step: blocks and vintages, line charts, a tornado chart (which inputs matter most), goal seek ("what price keeps cash above zero?"), the live link with fmIDE, phones. (Line charts were built on 19 October 2026: a chart of layout `lines`, board file 10.)
 
 ## How it turned out
 

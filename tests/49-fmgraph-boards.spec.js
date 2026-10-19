@@ -203,7 +203,7 @@ test('the board file: export one or all, import into the same model, a model it 
   expect(dl.suggestedFilename()).toBe('Sample model - Second.board.json');
   const one = JSON.parse(fs.readFileSync(await dl.path(), 'utf8'));
   expect(one.kind).toBe('fmIDE-graph-board');
-  expect(one.version).toBe(9);
+  expect(one.version).toBe(10);
   expect(one.boards.map(b => b.name)).toEqual(['Second']);
   // Export all.
   await page.click('.gbar-menu summary');
@@ -241,8 +241,8 @@ test('the board file is read like any file: wrong kind, not JSON, newer version,
   await expect(page.locator('.note.err')).toContainText("isn't JSON");
   expect(await g(page, () => fmGraph.importBoards({ kind: 'fmIDE-templates', version: 9, templates: [] }))).toBe(0);
   await expect(page.locator('.note.err')).toContainText("isn't an fmGraph board file");
-  // A newer version: asked first.
-  const newer = { kind: 'fmIDE-graph-board', version: 10, boards: [{ name: 'Later', items: [{ type: 'bar', canvasId: 'cProfit', nodeId: 'profit', name: 'Profit' }] }] };
+  // A newer version: asked first (11 since the lines chart made 10 current; changed on purpose).
+  const newer = { kind: 'fmIDE-graph-board', version: 11, boards: [{ name: 'Later', items: [{ type: 'bar', canvasId: 'cProfit', nodeId: 'profit', name: 'Profit' }] }] };
   const p = g(page, (d) => fmGraph.importBoards(d), newer);
   await expect(page.locator('#confirmTitle')).toHaveText('Saved by a newer version');
   await page.click('#confirmNo');
@@ -352,7 +352,7 @@ test('folding sliders: one by its ▸, Collapse all / Expand all; undo; kept; th
   await expect(page.locator('.slider-widget').first()).toHaveClass(/folded/);
   // The board file: version 8 (6 brought `folded`), `folded` only on a folded slider; imported back with it.
   const file = await g(page, () => fmGraph.exportBoards(true));
-  expect(file.version).toBe(9);
+  expect(file.version).toBe(10);
   expect(file.boards[0].sliders.map(s => s.folded)).toEqual([true, undefined]);
   expect(await g(page, (d) => fmGraph.importBoards(d), file)).toBe(1);
   await g(page, () => fmGraph.showBoard(1));
@@ -517,7 +517,7 @@ test('a board with its own slider positions: untouched by the others, and back t
   expect(await shown(page)).toEqual([['Price', 14], ['Volume', 1200]]);
   // Kept in the board file (version 8 (7 brought it), `ownSliders` only where true) and after a reload.
   const file = await g(page, () => fmGraph.exportBoards(true));
-  expect(file.version).toBe(9);
+  expect(file.version).toBe(10);
   expect(file.boards.map(b => b.ownSliders)).toEqual([undefined, true]);
   await page.waitForTimeout(500);
   await page.reload();
@@ -613,9 +613,9 @@ test('the shared period: every board follows it, a chart can keep its own and co
   await expect(bar.locator('select[aria-label="Shared first period"]')).toHaveValue('0');
   expect((await items())[0]).toEqual(['columns', { mode: 'one', p: 0 }, null, false]);
   await page.click('#btnRedo');
-  // The board file (version 9): the shared period, `ownPeriod` only where kept, every chart's periods as shown.
+  // The board file (version 10; 9 brought the shared period): the shared period, `ownPeriod` only where kept, every chart's periods as shown.
   const file = await g(page, () => fmGraph.exportBoards(true));
-  expect(file.version).toBe(9);
+  expect(file.version).toBe(10);
   expect(file.sharedPeriods).toEqual({ periods: { mode: 'one', p: 3 }, period: 2 });
   expect(file.boards[0].items.map(w => [w.periods || w.period, w.ownPeriod])).toEqual([[{ mode: 'one', p: 3 }, undefined], [2, undefined], [{ mode: 'one', p: 0 }, true], [{ mode: 'one', p: 3 }, undefined]]);
   // Kept after a reload.
@@ -646,7 +646,35 @@ test('a version 8 board file opens with every bar and chart keeping its own peri
   expect(pageErrors).toEqual([]);
 });
 
-test('a version 6 board file opens with every board sharing; an ownSliders that isn\'t true shares', async ({ page, pageErrors }) => {
+// Version 9 (before the lines chart): opens as it was saved — the 9 → 10 step changes nothing,
+// so its bars and charts keep following the shared period, and the one kept own stays own.
+test('a version 9 board file opens unchanged: followers follow, its own keeps its own; colours and charts as saved', async ({ page, pageErrors }) => {
+  await openSample(page);
+  const v9 = JSON.parse(fs.readFileSync(require('path').join(__dirname, 'fixtures', 'formats', 'board-v9.json'), 'utf8'));
+  expect(await g(page, (d) => fmGraph.importBoards(d), v9)).toBe(1);
+  await g(page, () => fmGraph.showBoard('Saved before lines charts'));
+  const b = await g(page, () => fmGraph.board());
+  // The model's shared periods (all, Year 1) for the followers; the Revenue bar its own Year 1.
+  expect(b.items.map(w => [w.layout || w.type, w.name || w.title, w.periods || w.period, w.ownPeriod === true])).toEqual([
+    ['bar', 'Profit', { mode: 'all' }, false], ['bar', 'Revenue', { mode: 'one', p: 0 }, true],
+    ['columns', 'Costs', { mode: 'all' }, false], ['flow', 'Profit', 0, false]]);
+  expect(b.items[1].colour).toBe('#ff0000');
+  expect(b.items[2].groups).toEqual([{ name: 'Costs', parts: [
+    { canvasId: 'cProfit', nodeId: 'cogs', name: 'Cost of sales' }, { canvasId: 'cProfit', nodeId: 'over', name: 'Overheads', colour: '#00ff00' }] }]);
+  expect(b.items[3].steps.map(s => [s.name, s.role])).toEqual([['Revenue', 'start'], ['Profit', 'total']]);
+  expect(b.sliders.map(s => [s.name, s.min, s.max, s.step])).toEqual([['Price', 5, 15, 0.5]]);
+  // The shared period moves the followers only.
+  await page.locator('#sharedPeriodBar select[aria-label="Shared periods"]').selectOption('one');
+  const after = await g(page, () => fmGraph.board().items.map(w => w.periods || w.period));
+  expect(after).toEqual([{ mode: 'one', p: 0 }, { mode: 'one', p: 0 }, { mode: 'one', p: 0 }, 0]);
+  await page.locator('#sharedPeriodBar select[aria-label="Shared first period"]').selectOption('2');
+  expect((await g(page, () => fmGraph.board().items.map(w => w.periods || w.period)))[1]).toEqual({ mode: 'one', p: 0 });
+  // Saved again as version 10.
+  expect((await g(page, () => fmGraph.exportBoards(false))).version).toBe(10);
+  expect(pageErrors).toEqual([]);
+});
+
+test('a version 6 board file opens with every board sharing;an ownSliders that isn\'t true shares', async ({ page, pageErrors }) => {
   await openSample(page);
   const v6 = JSON.parse(fs.readFileSync(require('path').join(__dirname, 'fixtures', 'formats', 'board-v6.json'), 'utf8'));
   expect(await g(page, (d) => fmGraph.importBoards(d), v6)).toBe(2);

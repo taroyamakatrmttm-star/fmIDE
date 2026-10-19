@@ -14,7 +14,7 @@ const BOARD_FILE_FORMAT = { 'fmIDE-graph-board': { current: BOARD_FILE_VERSION, 
 // may be folded; v6 → v7: a board may keep its own slider positions; v7 → v8: a chart may be a
 // Tornado or a Spider. Nothing to change. v8 → v9: the shared period (05k-shared-period.js) —
 // every bar and chart saved before it keeps the periods it had (`ownPeriod`), so the file opens
-// as it was saved (the owner's choice).
+// as it was saved (the owner's choice). v9 → v10: a chart may be a lines chart; nothing to change.
 function keepOwnPeriods(data){
   if(!data || typeof data !== 'object' || data.form === 'template') return;
   const boardsIn = Array.isArray(data.boards) ? data.boards : [data];
@@ -23,7 +23,7 @@ function keepOwnPeriods(data){
     ['items', 'bars', 'charts'].forEach(k => { if(Array.isArray(b[k])) b[k].forEach(w => { if(w && typeof w === 'object') w.ownPeriod = true; }); });
   });
 }
-const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {}, 5: () => {}, 6: () => {}, 7: () => {}, 8: keepOwnPeriods } };
+const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {}, 5: () => {}, 6: () => {}, 7: () => {}, 8: keepOwnPeriods, 9: () => {} } };
 
 function safeFileName(s){ return String(s).replace(/[^A-Za-z0-9 ._()-]+/g, '_').replace(/\s+/g, ' ').trim().slice(0, 80) || 'board'; }
 
