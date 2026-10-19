@@ -55,7 +55,6 @@ From the brainstorm of ten ideas (October 2026), grouped as it was. #2 is built 
 
 ### fmGraph and Excel (steps 15–19)
 
-- **Goal seek** ("what price keeps cash above zero?") — from step 15's later ideas.
 - **Line charts**, and blocks and vintages on a board — step 15's later ideas.
 - **The scenario waterfall in Excel** — left out of step 19: each case's outputs through a Data Table over the Global Case cell, then a waterfall of them (`docs/step19-fmgraph-in-excel.md`).
 
@@ -82,4 +81,5 @@ Tilt to sweep a slider; a phone tutorial; receiving a `.fmide` from another app'
 | fmGraph: a slider's Range and step stays open | Built: #181 |
 | fmGraph: find a rectangle by typing (the search shared with fmIDE's launcher) | Built: #182 |
 | fmGraph: one period for every board, any chart keeping its own | Built: #184 |
+| fmGraph: goal seek ("what price keeps cash above zero?", step 15's later ideas) | Built: #187 — the Goal seek panel under the sliders |
 | Translate running totals in the Excel import (`SUM($D$8:D8)`, as a period shift) | Built: #186; lookups, `SUMIF`/`COUNTIF`, `NPV`/`IRR` and dates remain (section 2) |

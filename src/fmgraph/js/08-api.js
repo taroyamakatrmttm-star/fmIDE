@@ -37,6 +37,10 @@
 //   undo(), redo() → whether there was one; exportBoards(all?) → the file's data (downloads it)
 //   importBoards(textOrObject) → Promise<number of boards added>
 //   calcTime()     → how long one run of the model takes, in milliseconds
+//   goalSeek({ rect, canvas?, period, target, slider }) → the slider (its id, or its rectangle's
+//                  name) put where rect equals target in period, as Seek in the Goal seek panel:
+//                  { reached: true, value, range? (when widened: { min, max }), message } or
+//                  { reached: false, low, high, stopped?, jump?, error?, message }
 // ============================================================
 function findRect(rect, canvas){
   if(!model) throw new Error('No model is open.');
@@ -64,6 +68,17 @@ function sliderById(id){
 }
 const answer = (r) => r.error ? { error: r.error } : r.value;
 const rectRef = (x) => (x && typeof x === 'object') ? findRect(x.rect, x.canvas) : findRect(x);
+// A slider a goal seek can change: its id, or its rectangle's name.
+function goalSliderRef(which){
+  const list = goalSeekSliders();
+  const byId = list.find(s => s.id === which);
+  if(byId) return byId;
+  const name = String(which === undefined || which === null ? '' : which).trim().toLowerCase();
+  const named = list.filter(s => model.byKey.get(s.key).name.toLowerCase() === name);
+  if(named.length === 1) return named[0];
+  if(named.length > 1) throw new Error('More than one slider changes "' + String(which).slice(0, 80) + '": give its id.');
+  throw new Error('There is no slider "' + String(which).slice(0, 80) + '" on this board.');
+}
 function chartById(id){
   const c = board.charts.find(x => x.id === id);
   if(!c) throw new Error('There is no chart "' + String(id).slice(0, 40) + '".');
@@ -273,4 +288,16 @@ window.fmGraph = Object.freeze({
     return board.charts.filter(c => chartKeys(c).some(hit)).map(c => c.id).concat(board.bars.filter(b => hit(b.key)).map(b => b.id));
   },
   calcTime: () => model ? model.baseMs : null,
+  goalSeek: (spec) => {
+    spec = spec || {};
+    if(!model) throw new Error('Open a model first.');
+    const rect = findRect(spec.rect, spec.canvas);
+    const p = periodIndex(spec.period === undefined ? 1 : spec.period);
+    const target = typeof spec.target === 'number' || typeof spec.target === 'string' ? Number(spec.target) : NaN;
+    if(String(spec.target).trim() === '' || !isFinite(target)) throw new Error('The number to reach must be a number.');
+    const r = goalSeekNow(goalSliderRef(spec.slider), rect, p, target);
+    if(r.reached) return Object.assign({ reached: true, value: r.value }, r.range ? { range: Object.assign({}, r.range) } : {}, { message: r.message });
+    return Object.assign({ reached: false, low: r.low, high: r.high }, r.stopped ? { stopped: true } : {},
+      r.jump ? { jump: true, at: r.at } : {}, r.low === null ? { error: r.error } : {}, { message: r.message });
+  },
 });
