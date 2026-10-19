@@ -103,9 +103,7 @@ The script pieces are plain fragments of one wrapped function — no `import`/`e
 
 ## Docs
 
-- [`docs/tutorial-step7.md`](docs/tutorial-step7.md) — step-by-step tutorial for everything new since pull request #23: functions, the new operators, and the "differs from fmIDE" list
-- [`docs/tutorial-step20.md`](docs/tutorial-step20.md) — step-by-step guide to pull requests #158 to #165: importing an Excel model into fmIDE (the confirm window, the report, Save for fmIDE, rows with actuals and a forecast)
-- [`docs/tutorial-step18-19.md`](docs/tutorial-step18-19.md) — step-by-step guide to pull requests #144 to #156: Tornado and Spider in fmGraph, and fmGraph boards in Excel (scenarios, sensitivity, the Dashboard's sliders and charts)
+- [`docs/manual/`](docs/manual/README.md) — **the user manual**: step-by-step lessons for fmIDE, ExcelExporter and fmGraph, with a linked table of contents; the basis for the help pages and tutorial videos (being written in phases; it replaces the three earlier tutorials `docs/tutorial-step7.md`, `docs/tutorial-step18-19.md` and `docs/tutorial-step20.md`, which now point to it)
 - [`docs/excel-layouts.md`](docs/excel-layouts.md) — ExcelExporter's two layouts, Mapping and Module Layouts: what each holds, where it is kept, and which one wins
 - [`docs/product-ideas.md`](docs/product-ideas.md) — product ideas for the roadmap, not yet scheduled: what people would choose or pay for, and improvements to what is built
 - [`docs/decisions.md`](docs/decisions.md) — agreed and open product decisions, and the build order
