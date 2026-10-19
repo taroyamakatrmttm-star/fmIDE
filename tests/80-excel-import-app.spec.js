@@ -9,7 +9,8 @@
 // was kept and why, the cells unlike their row — and File → Import Report… while that model is
 // shown. Phase 20g: Save for fmIDE, and the end-to-end test: the workbook imported, generated
 // again by ExcelExporter and recalculated by LibreOffice gives the original's saved values, and
-// the saved file opened in fmIDE gives them too.
+// the saved file opened in fmIDE gives them too. Running totals: sample 06 imported, checked and
+// generated (the round trip agrees).
 const path = require('path');
 const JSZip = require('jszip');
 const { test, expect, fixture, ORIGIN } = require('./helpers/apps');
@@ -149,7 +150,7 @@ test('rows kept as Excel\'s saved values are named in the message', async ({ pag
   await X.openExporter(page);
   await importFile(page, sample('04-not-supported.xlsx'));
   await page.locator('#importOk').click();
-  await expect(page.locator('#loadStatus .status.warn')).toHaveText('Imported 04-not-supported.xlsx — 1 canvas, 9 rectangles, 5 periods. 4 rows kept as Excel\'s saved values: Growth (VLOOKUP), NPV (NPV), Cumulative cash (a range growing along the periods), Years above 220 (COUNTIF). 1 row with cells that differ, kept as Excel\'s saved values there.');
+  await expect(page.locator('#loadStatus .status.warn')).toHaveText('Imported 04-not-supported.xlsx — 1 canvas, 10 rectangles, 5 periods. 3 rows kept as Excel\'s saved values: Growth (VLOOKUP), NPV (NPV), Years above 220 (COUNTIF). 1 row with cells that differ, kept as Excel\'s saved values there.');
 });
 
 test('the report after Import: the check, what was kept and why, cells unlike their row; File → Import Report…', async ({ page }) => {
@@ -158,13 +159,12 @@ test('the report after Import: the check, what was kept and why, cells unlike th
   await page.locator('#importOk').click();
   const modal = page.locator('#importReportModal');
   await expect(modal).toBeVisible();
-  await expect(page.locator('#importReportSource')).toHaveText('04-not-supported.xlsx · 1 canvas, 9 rectangles');
-  await expect(page.locator('#importCheckSummary')).toHaveText('All 15 calculated cells agree with Excel\'s saved values.');
+  await expect(page.locator('#importReportSource')).toHaveText('04-not-supported.xlsx · 1 canvas, 10 rectangles');
+  await expect(page.locator('#importCheckSummary')).toHaveText('All 20 calculated cells agree with Excel\'s saved values.');
   await expect(page.locator('#importCheckSummary')).toHaveClass(/ok/);
   await expect(page.locator('#importDifferHead')).toBeHidden();
   await expect(page.locator('#importKept li')).toHaveText([
-    'Valuation!D6:H6 · Growth: VLOOKUP', 'Valuation!C10 · NPV: NPV',
-    'Valuation!D11:H11 · Cumulative cash: a range growing along the periods', 'Valuation!C13 · Years above 220: COUNTIF']);
+    'Valuation!D6:H6 · Growth: VLOOKUP', 'Valuation!C10 · NPV: NPV', 'Valuation!C13 · Years above 220: COUNTIF']);
   await expect(page.locator('#importOdd li')).toHaveText(['Valuation!F12 · Cash doubled: Excel\'s saved value in that period']);
   await page.keyboard.press('Escape');
   await expect(modal).toBeHidden();
@@ -432,6 +432,23 @@ test('after Generate, the workbook written is recalculated and checked against t
   await X.menuCommand(page, 'btnMenuSample');
   await X.generate(page);
   await expect(page.locator('#genStatus .status.ok').last()).not.toContainText('Recalculated');
+});
+
+test('running totals: imported live, checked, and written by Generate as formulas that give the original\'s values', async ({ page }) => {
+  await X.openExporter(page);
+  await importFile(page, sample('06-running-totals.xlsx'));
+  await page.locator('#importOk').click();
+  await expect(page.locator('#importCheckSummary')).toHaveText('All 25 calculated cells agree with Excel\'s saved values.');
+  await expect(page.locator('#importKept li')).toHaveText([
+    'Cash!D13:H13 · Average cash flow: a range growing along the periods', 'Cash!D14:H14 · Spend rows to date: a range over several rows growing along the periods']);
+  await page.locator('#importReportClose').click();
+  await expect(page.locator('#loadStatus .status.warn')).toContainText('2 rows kept as Excel\'s saved values: Average cash flow (a range growing along the periods), Spend rows to date (a range over several rows growing along the periods).');
+  const { wb } = await X.generate(page);
+  await expect(page.locator('#genStatus .status.ok').last()).toContainText('Recalculated here, the workbook gives the original\'s value in all 25 cells.');
+  // The running totals' own rows are written as rows of formulas.
+  const cash = wb.Sheets['Cash'];
+  expect(X.findRow(cash, 'Running total of Cash flow').length).toBe(1);
+  expect(X.findRow(cash, 'Running total of Cash flow from 2028').length).toBe(1);
 });
 
 test('the .fmide Save for fmIDE writes, opened in ExcelExporter on another computer, brings its Excel layout', async ({ page, browser }, testInfo) => {

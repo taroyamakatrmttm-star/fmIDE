@@ -47,7 +47,7 @@ From the brainstorm of ten ideas (October 2026), grouped as it was. #2 is built 
 | Idea | Today | The idea | Size |
 |---|---|---|---|
 | **Headings visible in fmIDE** | Headings such as "Income Statement" show only as gaps on fmIDE's canvas; they reach Excel through the layout. | A "label" item on the canvas — text that calculates nothing — placed where the heading was; usable by hand to annotate any model, and written by ExcelExporter as a heading row. | Medium (a file-format change) |
-| **Translating more formulas** | A row the import can't translate keeps Excel's saved numbers and doesn't move with its inputs. | Running totals first (`SUM($D$8:D8)`, built with a period shift), then lookups (`INDEX`/`MATCH`, `VLOOKUP`, `XLOOKUP`; perhaps as `choose`), `SUMIF`/`COUNTIF`, `NPV`/`IRR`, dates. Another real model would help choose. | Small (running totals) to large (lookups) |
+| **Translating more formulas** | A row the import can't translate keeps Excel's saved numbers and doesn't move with its inputs. Running totals (`SUM($D$8:D8)`) are translated since 19 October 2026 (section 3). | Lookups (`INDEX`/`MATCH`, `VLOOKUP`, `XLOOKUP`; perhaps as `choose`), `SUMIF`/`COUNTIF`, `NPV`/`IRR`, dates. Another real model would help choose. | Medium to large (lookups) |
 | **Re-importing an updated workbook** | Importing again makes a new model; changes made in fmIDE are lost. | Import onto the open model: matching rows keep their rectangles, new rows are added, removed rows flagged, with a report of what changed. The owner decides whose change wins. Could reuse "Update this canvas". | Large |
 | **Exact number formats** | A format becomes the nearest of ExcelExporter's four kinds; `(1,234)`, `£` or `0.0x` are not kept exactly. | A row's format may carry Excel's own format code, checked for safety. | Small (a layout file change) |
 | **Formula numbers on fmIDE's canvas** | Numbers inside formulas ("365") are back in the formulas in Excel, but each is a small rectangle in fmIDE. | An operator may take a typed number as one of its inputs. Changes the shared calculation: careful. | Medium |
@@ -80,4 +80,7 @@ Tilt to sweep a slider; a phone tutorial; receiving a `.fmide` from another app'
 | Space between the Inputs tab's groups (idea 9) | Built: #177 |
 | Sensitivity and sliders on the Inputs tab, easier to read (idea 10) | Built: #179, #180 |
 | fmGraph: a slider's Range and step stays open | Built: #181 |
-| fmGraph: line charts (step 15's later ideas), and as Excel line charts on the Dashboard | Built: 19 October 2026 (board file 10) |
+| fmGraph: line charts (step 15's later ideas), and as Excel line charts on the Dashboard | Built: #188 (board file 10) |
+| fmGraph: find a rectangle by typing (the search shared with fmIDE's launcher) | Built: #182 |
+| fmGraph: one period for every board, any chart keeping its own | Built: #184 |
+| Translate running totals in the Excel import (`SUM($D$8:D8)`, as a period shift) | Built: #186; lookups, `SUMIF`/`COUNTIF`, `NPV`/`IRR` and dates remain (section 2) |
