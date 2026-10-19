@@ -79,4 +79,6 @@ Tilt to sweep a slider; a phone tutorial; receiving a `.fmide` from another app'
 | Space between the Inputs tab's groups (idea 9) | Built: #177 |
 | Sensitivity and sliders on the Inputs tab, easier to read (idea 10) | Built: #179, #180 |
 | fmGraph: a slider's Range and step stays open | Built: #181 |
-| fmGraph: goal seek ("what price keeps cash above zero?", step 15's later ideas) | Built: branch `claude/fmgraph-goal-seek`, 19 October 2026 — the Goal seek panel under the sliders |
+| fmGraph: find a rectangle by typing (the search shared with fmIDE's launcher) | Built: #182 |
+| fmGraph: one period for every board, any chart keeping its own | Built: #184 |
+| fmGraph: goal seek ("what price keeps cash above zero?", step 15's later ideas) | Built: #187 — the Goal seek panel under the sliders |
