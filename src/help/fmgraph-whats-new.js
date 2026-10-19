@@ -20,6 +20,17 @@ const FMGRAPH_WHATS_NEW = [
     how: ['Press + Chart.', 'Choose Lines at the top of the chart.', 'In Edit chart, choose the rectangles with + Rectangle.'],
     notes: ['Board files saved with a lines chart are version 10; an older fmGraph asks before opening one. A template\'s board never holds a lines chart.'],
     see: ['charts', 'shared-period'] },
+
+  { id: 'goal-seek', date: '2026-10-19', title: 'Goal seek: the slider value that hits a number',
+    summary: 'Ask "what Price makes Cash in Year 4 equal 0?" and fmGraph finds it and moves the slider there.',
+    what: [
+      'The Goal seek panel under the sliders reads: Set [rectangle] in [period] to [number] by changing [slider]. Press Seek.',
+      'fmGraph tries the slider\'s values, with the other sliders where they are, finds the one that makes the rectangle equal the number, and puts the slider there: "Price 7.957 makes Closing cash in Year 4 equal 0".',
+      'It looks past the slider\'s range too: an answer outside it widens the range, and says so. When no value reaches the number, it says what the rectangle stays between.',
+    ],
+    why: 'Finding a break-even price by dragging a slider back and forth took many tries and was never exact.',
+    how: ['Open Goal seek under the sliders.', 'Choose Closing cash, Year 4, type 0, and choose the Price slider.', 'Press Seek.'],
+    see: ['goal-seek'] },
   { id: 'shared-period', date: '2026-10-19', title: 'One period for every board',
     summary: 'Set the periods once and every bar and chart, on every board, follows — while any of them can keep its own.',
     what: [
