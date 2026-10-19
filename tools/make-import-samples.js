@@ -253,6 +253,29 @@ const SAMPLES = {
     const twoRows = run(spend).map((x, i) => x + run(cumSpend)[i]);
     w.row(14, 'Spend rows to date', '£'); w.each(14, (c) => 'SUM($D$9:' + c + '10)', twoRows, '#,##0');
   },
+
+  // Number formats people type in Excel's Format Cells → Custom, to be kept exactly: brackets
+  // for negatives, a pound sign, a dash for zero, red negatives, a multiple, thousands, a text
+  // with "&" in it, and one cell unlike the rest of its row; a row left General has none.
+  '07-number-formats': (wb, results) => {
+    const ws = wb.addWorksheet('Formats');
+    const w = writer(ws, results);
+    w.text('A1', 'Number formats', true);
+    yearHeader(w, 3);
+    const revenue = [1200, 1350, 1500, 1650, 1800], costs = [-900, -1000, -1500, -1200, -1300];
+    w.row(5, 'Revenue', '£'); w.inputs(5, revenue, '"£"#,##0');
+    w.row(6, 'Costs', '£'); w.inputs(6, costs, '#,##0;(#,##0)');
+    const profit = revenue.map((r, i) => r + costs[i]);
+    w.row(7, 'Profit', '£', true); w.shared(7, 'D5+D6', profit, '#,##0;(#,##0);"-"');
+    w.row(8, 'Margin', '%'); w.shared(8, 'D7/D5', profit.map((p, i) => p / revenue[i]), '0.0%;[Red]-0.0%');
+    w.row(9, 'Cover', 'x'); w.shared(9, '-D5/D6', revenue.map((r, i) => -r / costs[i]), '0.0"x"');
+    w.row(10, 'Revenue in pence', 'p'); w.shared(10, 'D5*100', revenue.map(r => r * 100), '#,##0,"k"');
+    // R&D: four cells of one code, one of another — the row keeps the code most cells share.
+    const rd = costs.map(c => -c / 10);
+    w.row(11, 'R&D', '£'); w.shared(11, '-D6/10', rd, '"R&D "#,##0');
+    ws.getCell('H11').numFmt = '0.00';
+    w.row(12, 'Headcount', ''); w.inputs(12, [10, 12, 14, 15, 16]);
+  },
 };
 
 // One sample as a workbook (results: false leaves the saved values out, for LibreOffice).

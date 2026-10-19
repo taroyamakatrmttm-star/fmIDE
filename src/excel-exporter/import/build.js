@@ -600,7 +600,22 @@ export function xlRowLook(labelCell, cells){
   };
   const nf = cell ? xlNumberKind(cell.format) : null;
   if(nf) out.numberFormat = nf;
+  const code = xlRowFormatCode(cells);
+  if(code) out.excelFormat = code;
   return out;
+}
+
+// A row's own number format code in the workbook, kept exactly (ExcelExporter writes it as it
+// is; checked there by cleanExcelNumberFormat): the code most of its period cells share (empty
+// ones left out; equal counts: the first), or null when that is General or none.
+export function xlRowFormatCode(cells){
+  const tally = new Map();
+  for(const c of cells){
+    if(c && !c.empty && typeof c.format === 'string') tally.set(c.format, (tally.get(c.format) || 0) + 1);
+  }
+  let best = null, most = 0;
+  for(const [code, n] of tally) if(n > most){ most = n; best = code; }
+  return best && best.trim() && !/^general$/i.test(best.trim()) ? best : null;
 }
 
 // A number format code as one of ExcelExporter's kinds: { kind, decimals }, from its first

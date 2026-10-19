@@ -11,6 +11,17 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'excel-number-formats', date: '2026-10-19', title: 'Exact number formats',
+    summary: 'A row can carry Excel\'s own number format code, and an imported workbook keeps each row\'s code exactly.',
+    what: [
+      'In the Tree View, 🎨 on a row has a new box, Excel number format. Type a code as in Excel\'s Format Cells → Custom, such as #,##0;(#,##0) or 0.0"x", and every period cell of the row is written with it, before any other number format.',
+      'Importing an Excel model keeps each row\'s own code — the one most of its period cells use — so brackets for negatives, currency signs, multiples and millions come back exactly. A row left General keeps none.',
+      'A code that can\'t be used (an open quote or bracket, more than four parts, over 100 characters) is marked in red and not kept.',
+    ],
+    why: 'Financial models rely on their number formats; ExcelExporter\'s few kinds could not show brackets for negatives or a "x" after a multiple.',
+    how: ['In the Tree View, press 🎨 on a row.', 'Type the code in Excel number format.', 'Press ⬇ Generate: the row\'s cells show it. Reset to the Excel style clears it.'],
+    notes: ['A layout saved with a code is mapping file version 10; an older ExcelExporter asks before opening it and leaves the code out.'],
+    see: ['formats', 'import-excel'] },
   { id: 'fmgraph-lines', date: '2026-10-19', title: 'fmGraph\'s lines charts on the Dashboard',
     summary: 'A lines chart on an fmGraph board becomes an Excel line chart on the Dashboard.',
     what: [

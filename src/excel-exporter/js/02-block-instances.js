@@ -206,6 +206,9 @@ function findAllBlockInstances(model){
   return result;
 }
 function numberFormatToExcel(style, fallback){
+  // A row's own Excel code (cleanRowFormat checked it; checked again, as it is written as is).
+  const own = style && cleanExcelNumberFormat(style.excelFormat);
+  if(own) return own;
   const nf = style && style.numberFormat;
   if(!nf || !nf.kind || nf.kind === 'general') return fallback || 'General';
   const decimals = typeof nf.decimals === 'number' ? nf.decimals : 2;

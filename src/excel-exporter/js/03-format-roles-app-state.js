@@ -142,7 +142,33 @@ function cleanRowFormat(st){
     out.numberFormat = { kind: nf.kind, decimals: Number.isFinite(d) ? Math.max(0, Math.min(10, d)) : 2 };
     if(nf.kind === 'currency') out.numberFormat.currencySymbol = '$';
   }
+  const code = cleanExcelNumberFormat(st.excelFormat);
+  if(code) out.excelFormat = code;
   return out;
+}
+// A row's own Excel number format code (`excelFormat`, such as #,##0;(#,##0) or 0.0"x"),
+// written as it is and winning over the row's other number format. From files, so checked:
+// a string of at most EXCEL_FORMAT_MAX characters, no control characters, quotes and
+// brackets closed, no backslash at the end, at most four sections split by an unquoted ";".
+// General or empty: none. Anything else: null (refused). The writer XML-escapes it as well.
+const EXCEL_FORMAT_MAX = 100;
+function cleanExcelNumberFormat(v){
+  if(typeof v !== 'string') return null;
+  const code = v.trim();
+  if(!code || code.length > EXCEL_FORMAT_MAX || /^general$/i.test(code)) return null;
+  if(/[\u0000-\u001F\u007F-\u009F￾￿]/.test(code) || /[\uD800-\uDFFF]/.test(code)) return null;
+  let sections = 1, quoted = false, bracket = false;
+  for(let i = 0; i < code.length; i++){
+    const ch = code[i];
+    if(quoted){ if(ch === '"') quoted = false; continue; }
+    if(bracket){ if(ch === ']') bracket = false; else if(ch === '[') return null; continue; }
+    if(ch === '\\' || ch === '_' || ch === '*'){ if(i === code.length - 1) return null; i++; continue; }
+    if(ch === '"') quoted = true;
+    else if(ch === '[') bracket = true;
+    else if(ch === ']') return null;
+    else if(ch === ';' && ++sections > 4) return null;
+  }
+  return quoted || bracket ? null : code;
 }
 // A row's own border: solid, one colour, on the sides it names — `sides` left out means all
 // four (as every format before sides existed), none named means no border.
@@ -169,6 +195,7 @@ function withRowFormat(base, fmt){
   out.border = fmt.border.style === 'none' ? { style: 'none' } : { color: fmt.border.color, style: 'solid' };
   if(fmt.border.sides) out.border.sides = fmt.border.sides.slice();
   if(fmt.numberFormat) out.numberFormat = fmt.numberFormat;
+  if(fmt.excelFormat) out.excelFormat = fmt.excelFormat; // Excel's own code: wins (numberFormatToExcel)
   return out;
 }
 // The label cell's Excel style: the row's style plus its indent.

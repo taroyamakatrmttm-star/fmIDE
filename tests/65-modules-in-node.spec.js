@@ -67,6 +67,36 @@ test.describe('the Excel writer, in Node', () => {
     expect(book.getWorksheet('Calc (1)').getCell('A1').value).toEqual({ formula: 'Inputs!B1+1' });
   });
 
+  test('a row\'s own Excel number format code: one custom numFmt per distinct code, XML-escaped, read back by ExcelJS', async () => {
+    const codes = ['#,##0;(#,##0)', '"R&D "#,##0', '[<1000]0;[>=1000]#,##0', '0.0"x"', '#,##0.00,,"m"'];
+    const wb = XLSX.utils.book_new();
+    const sheet = {};
+    codes.forEach((z, i) => {
+      sheet['A' + (i + 1)] = { t: 'n', v: -1234.5, z };
+      sheet['B' + (i + 1)] = { t: 'n', v: 2, z, s: { font: { bold: true } } }; // the same code, another style
+    });
+    sheet.C1 = { t: 'n', v: 1, z: '#,##0' }; // a built-in code keeps its built-in id
+    sheet['!ref'] = 'A1:C' + codes.length;
+    XLSX.utils.book_append_sheet(wb, sheet, 'Formats');
+    XLSX.utils.book_append_sheet(wb, { A1: { t: 'n', v: 3, z: codes[0] } }, 'Other');
+    const bytes = XLSX.write(wb);
+    const styles = await (await JSZip.loadAsync(bytes)).file('xl/styles.xml').async('string');
+    const fmts = [...styles.matchAll(/<numFmt numFmtId="(\d+)" formatCode="([^"]*)"\/>/g)];
+    expect(fmts.map(m => m[2])).toEqual(['#,##0;(#,##0)', '&quot;R&amp;D &quot;#,##0', '[&lt;1000]0;[&gt;=1000]#,##0', '0.0&quot;x&quot;', '#,##0.00,,&quot;m&quot;']);
+    expect(new Set(fmts.map(m => m[1])).size).toBe(codes.length);
+    expect(styles).toContain('<numFmts count="' + codes.length + '">');
+    new SaxesParser().write(styles).close(); // well-formed XML
+    const book = new ExcelJS.Workbook();
+    await book.xlsx.load(Buffer.from(bytes));
+    const ws = book.getWorksheet('Formats');
+    codes.forEach((z, i) => {
+      expect(ws.getCell('A' + (i + 1)).numFmt).toBe(z);
+      expect(ws.getCell('B' + (i + 1)).numFmt).toBe(z);
+    });
+    expect(ws.getCell('C1').numFmt).toBe('#,##0');
+    expect(book.getWorksheet('Other').getCell('A1').numFmt).toBe(codes[0]);
+  });
+
   test('rows grouped in Excel\'s outline (ws[\'!rows\'] levels; idea 10): ExcelJS reads the levels back', async () => {
     const wb = XLSX.utils.book_new();
     const rows = [];

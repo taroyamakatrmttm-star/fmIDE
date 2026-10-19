@@ -85,7 +85,7 @@ async function withLimits(limits, fn){
 // ---------- 20b: reading the file ----------
 
 test('every sample reads as ExcelJS reads it: sheets, values, formulas, shared formulas, dates, names', async () => {
-  expect(SAMPLES.length).toBe(6);
+  expect(SAMPLES.length).toBe(7);
   for(const file of SAMPLES){
     const book = await W.xlReadWorkbook(bytesOf(file));
     const ej = new ExcelJS.Workbook();
@@ -754,7 +754,7 @@ test('names repeated or with line breaks are made one line and unique; a sheet w
 // ---------- 20f: the check ----------
 
 test('the check: every calculated cell of the samples agrees with Excel', async () => {
-  const want = { '01-simple-rows.xlsx': [15, 0], '02-corkscrew.xlsx': [15, 0], '03-two-sheets.xlsx': [45, 0], '04-not-supported.xlsx': [20, 3], '05-actuals-forecast.xlsx': [55, 0], '06-running-totals.xlsx': [25, 2] };
+  const want = { '01-simple-rows.xlsx': [15, 0], '02-corkscrew.xlsx': [15, 0], '03-two-sheets.xlsx': [45, 0], '04-not-supported.xlsx': [20, 3], '05-actuals-forecast.xlsx': [55, 0], '06-running-totals.xlsx': [25, 2], '07-number-formats.xlsx': [25, 0] };
   for(const file of SAMPLES){
     const { system, report } = await importBook(bytesOf(file));
     const check = C.xlCheckModel(system, report);
@@ -987,15 +987,43 @@ test('a cell\'s look: bold, italic, text colour, fill and borders, with the them
   const { layout } = B.xlBuildModel(book, [plan], [true]);
   const items = layout.canvases[0].items;
   expect(items[0]).toEqual({ title: 'Revenue', look: { fill: '#e7f2ff', font: { color: '#3271d2', weight: '700' }, border: { style: 'none' } } });
-  expect(items[1].look).toEqual({ fill: null, font: { color: '#0000ff', weight: 'normal' }, border: { style: 'none' }, numberFormat: { kind: 'percent', decimals: 1 } });
+  expect(items[1].look).toEqual({ fill: null, font: { color: '#0000ff', weight: 'normal' }, border: { style: 'none' }, numberFormat: { kind: 'percent', decimals: 1 }, excelFormat: '0.0%' });
   // Sales (typed, then a formula): its formula cell's look, bold from its label.
   expect(items[2].look).toEqual({ fill: '#a7c0de', font: { color: '#3271d2', weight: '700' },
-    border: { style: 'solid', color: '#000000', sides: ['top', 'bottom'] }, numberFormat: { kind: 'number', decimals: 0 } });
-  // Plain: two cells of the first style against one of the other.
+    border: { style: 'solid', color: '#000000', sides: ['top', 'bottom'] }, numberFormat: { kind: 'number', decimals: 0 },
+    excelFormat: '_(#,##0_)_%;\\(#,##0\\)_%' });
+  // Plain: two cells of the first style against one of the other — General, so no code of its own.
   expect(items[3].look.numberFormat).toEqual({ kind: 'general', decimals: 0 });
+  expect(items[3].look.excelFormat).toBeUndefined();
+  // The row's own code: the one most of its period cells share (empty ones left out), General none.
+  expect(B.xlRowFormatCode([{ format: '0.0x' }, { format: '#,##0' }, { format: '#,##0' }, { empty: true, format: '0%' }])).toBe('#,##0');
+  expect(B.xlRowFormatCode([{ format: 'General' }, { format: 'General' }, { format: '0%' }])).toBeNull();
+  expect(B.xlRowFormatCode([])).toBeNull();
   // No styles in the file: no look.
   const bare = await importBook(await craft({ sheets: [{ name: 'Model', xml: sectionSheet(SECTION_ROWS) }] }));
   expect(bare.layout.canvases[0].items.every(it => it.look === undefined)).toBe(true);
+});
+
+test('each row keeps its own number format code exactly, as expected.json says (sample 07); General keeps none', async () => {
+  const { system, layout } = await importBook(bytesOf('07-number-formats.xlsx'));
+  const want = EXPECTED.samples['07-number-formats'].sheets.Formats.rows;
+  const canvas = system.canvases[0];
+  const byName = new Map();
+  for(const it of layout.canvases[0].items){
+    if(it.node === undefined) continue;
+    const n = canvas.nodes.find(x => x.id === it.node);
+    byName.set(n.text.split('\n')[0], it.look);
+  }
+  for(const r of want.filter(x => x.kind !== 'title')){
+    const look = byName.get(r.label);
+    expect(look, r.label).toBeTruthy();
+    expect(look.excelFormat, r.label).toBe(r.excelFormat);
+  }
+  // Brackets, a pound sign, a multiple, millions, "&": none of them one of ExcelExporter's kinds.
+  expect(byName.get('Costs').numberFormat).toEqual({ kind: 'number', decimals: 0 });
+  expect(byName.get('Headcount').excelFormat).toBeUndefined();
+  // R&D: four cells of its code, one of 0.00 — the code most of them share.
+  expect(byName.get('R&D').excelFormat).toBe('"R&D "#,##0');
 });
 
 test('the round trip: a workbook worked out from its formulas\' text, as Excel would; cells compared with the original\'s', () => {
