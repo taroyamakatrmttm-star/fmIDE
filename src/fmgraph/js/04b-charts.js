@@ -7,6 +7,9 @@
 //            stack downwards); the groups stand side by side. One rectangle per group is a
 //            plain column chart, one group of several a stacked chart, two groups whose totals
 //            should agree (check: true) a balance sheet.
+//   lines    { id, layout: 'lines', title, periods, lines: [key] } (board file 10)
+//            Several rectangles over the periods, a line each (a point per period). The periods
+//            follow the shared period as a Columns chart's do (05k-shared-period.js).
 //   flow     { id, layout: 'flow', title, period, steps: [{ key, role }] }
 //            A waterfall in one period: 'start' (a full bar), 'add' and 'subtract' (floating
 //            steps up or down from the running total), 'total' (a full bar of that rectangle's
@@ -33,7 +36,7 @@
 // Numbers agree when they differ by less than a millionth of their size (AGREE_TOLERANCE):
 // tiny rounding in the calculation is ignored, any real gap is not.
 // ============================================================
-const CHART_LIMITS = { groups: 12, parts: 30, steps: 40, title: 80, name: 60, outputs: 6 };
+const CHART_LIMITS = { groups: 12, parts: 30, steps: 40, title: 80, name: 60, outputs: 6, lines: 12 };
 const FLOW_ROLES = ['start', 'add', 'subtract', 'total'];
 const AGREE_TOLERANCE = 1e-6;
 const agree = (a, b) => Math.abs(a - b) <= AGREE_TOLERANCE * Math.max(1, Math.abs(a), Math.abs(b));
@@ -82,6 +85,10 @@ function cleanChart(raw, rectFor, count, drop){
     const p = Math.round(Number(raw.period));
     return { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'scenarios', title, period: Number.isFinite(p) && p >= 0 && p < count ? p : 0, outputs: [...new Set(outputs)], use, colours: {} };
   }
+  if(raw.layout === 'lines'){
+    const lines = (Array.isArray(raw.lines) ? raw.lines : []).slice(0, CHART_LIMITS.lines).map(l => { const r = l && typeof l === 'object' ? rectFor(l) : null; return r ? keep(l, r).key : null; }).filter(Boolean);
+    return { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'lines', title, periods: cleanPeriods(raw.periods, count), lines, colours };
+  }
   if(raw.layout === 'flow'){
     const steps = (Array.isArray(raw.steps) ? raw.steps : []).slice(0, CHART_LIMITS.steps).map(s => {
       const r = rectFor(s);
@@ -105,6 +112,7 @@ function chartData(c, at){
     inputs: c.inputs.map(i => withColour(i.key, Object.assign({ by: i.by, low: i.low, high: i.high }, i.show ? {} : { show: false }))) },
     c.colour ? { colour: c.colour } : {}, c.colour2 ? { colour2: c.colour2 } : {});
   if(c.layout === 'scenarios') return Object.assign({ layout: 'scenarios', title: c.title, period: c.period, outputs: c.outputs.map(k => at(k)) }, c.use ? { scenarios: c.use.slice() } : {});
+  if(c.layout === 'lines') return { layout: 'lines', title: c.title, periods: Object.assign({}, c.periods), lines: c.lines.map(k => withColour(k)) };
   if(c.layout === 'flow') return { layout: 'flow', title: c.title, period: c.period, steps: c.steps.map(s => withColour(s.key, { role: s.role })) };
   return { layout: 'columns', title: c.title, periods: Object.assign({}, c.periods), check: c.check,
     groups: c.groups.map(g => ({ name: g.name, parts: g.parts.map(k => withColour(k)) })) };
@@ -123,7 +131,12 @@ function addChart(layout){
 }
 
 // Every rectangle a chart shows.
-function chartKeys(c){ return isSensitivity(c) ? [c.output].concat(c.inputs.map(i => i.key)).filter(Boolean) : c.layout === 'flow' ? c.steps.map(s => s.key) : c.layout === 'scenarios' ? c.outputs.slice() : c.groups.flatMap(g => g.parts); }
+function chartKeys(c){ return isSensitivity(c) ? [c.output].concat(c.inputs.map(i => i.key)).filter(Boolean) : c.layout === 'flow' ? c.steps.map(s => s.key) : c.layout === 'scenarios' ? c.outputs.slice() : c.layout === 'lines' ? c.lines.slice() : c.groups.flatMap(g => g.parts); }
+
+// What a lines chart shows in one calculation: per period, each line's result.
+function linesFigures(c, results){
+  return periodsOf(c.periods).map(p => ({ p, values: c.lines.map(key => resultOf(results, model.byKey.get(key), p)) }));
+}
 
 // What a columns chart shows in one calculation: per period, per group, each part's result,
 // the total of what goes up (above zero) and down, and whether the groups' totals agree.

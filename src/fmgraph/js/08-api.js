@@ -9,6 +9,7 @@
 //   addBar(rect, periods?, canvas?)   → the bar's id
 //   addSlider(rect, { periods, mode: 'set' | 'shift', min, max, step, canvas }?) → the slider's id
 //   addChart({ layout: 'columns', title, periods, check, groups: [{ name, parts: [rect…] }] })
+//   addChart({ layout: 'lines', title, periods, lines: [rect…] })  (at most 12 lines)
 //   addChart({ layout: 'flow', title, period, steps: [{ rect, role: 'start'|'add'|'subtract'|'total' }] })
 //   addChart({ layout: 'scenarios', title, period, outputs: [rect…], scenarios?: [name…] })
 //   addChart({ layout: 'tornado' | 'spider', title, output: rect, period, steps (1–10, the Spider's
@@ -17,7 +18,8 @@
 //                  input that reaches it when left out
 //                  → the chart's id; a rect is a name, '#id', or { rect, canvas }
 //   chart(id)      → what it shows now: columns — per period { period, groups: [{ name, total,
-//                    parts: [value or { error }] }], check: { ok, gap } | null }; flow — per step
+//                    parts: [value or { error }] }], check: { ok, gap } | null }; lines — per period
+//                    { period, lines: [{ name, value or { error } }] }; flow — per step
 //                    { name, role, value, from, to, check: { ok, expected } | null }; scenarios — per
 //                    output { name, steps: [{ name, kind: 'start'|'step'|'end', value, from, to }] };
 //                    tornado / spider — { output, period, base, inputs: [{ name, by, low, high, show,
@@ -37,6 +39,10 @@
 //   undo(), redo() → whether there was one; exportBoards(all?) → the file's data (downloads it)
 //   importBoards(textOrObject) → Promise<number of boards added>
 //   calcTime()     → how long one run of the model takes, in milliseconds
+//   goalSeek({ rect, canvas?, period, target, slider }) → the slider (its id, or its rectangle's
+//                  name) put where rect equals target in period, as Seek in the Goal seek panel:
+//                  { reached: true, value, range? (when widened: { min, max }), message } or
+//                  { reached: false, low, high, stopped?, jump?, error?, message }
 // ============================================================
 function findRect(rect, canvas){
   if(!model) throw new Error('No model is open.');
@@ -64,6 +70,17 @@ function sliderById(id){
 }
 const answer = (r) => r.error ? { error: r.error } : r.value;
 const rectRef = (x) => (x && typeof x === 'object') ? findRect(x.rect, x.canvas) : findRect(x);
+// A slider a goal seek can change: its id, or its rectangle's name.
+function goalSliderRef(which){
+  const list = goalSeekSliders();
+  const byId = list.find(s => s.id === which);
+  if(byId) return byId;
+  const name = String(which === undefined || which === null ? '' : which).trim().toLowerCase();
+  const named = list.filter(s => model.byKey.get(s.key).name.toLowerCase() === name);
+  if(named.length === 1) return named[0];
+  if(named.length > 1) throw new Error('More than one slider changes "' + String(which).slice(0, 80) + '": give its id.');
+  throw new Error('There is no slider "' + String(which).slice(0, 80) + '" on this board.');
+}
 function chartById(id){
   const c = board.charts.find(x => x.id === id);
   if(!c) throw new Error('There is no chart "' + String(id).slice(0, 40) + '".');
@@ -114,10 +131,13 @@ window.fmGraph = Object.freeze({
     spec = spec || {};
     if(board.charts.length >= BOARD_LIMIT) throw new Error('No more charts can be added.');
     const at = (r) => ({ canvasId: r.canvasId, nodeId: r.nodeId, name: r.name });
+    if(spec.layout === 'lines' && Array.isArray(spec.lines) && spec.lines.length > CHART_LIMITS.lines) throw new Error('A lines chart draws at most ' + CHART_LIMITS.lines + ' lines.');
     const raw = SENSITIVITY_LAYOUTS.includes(spec.layout) ? sensitivitySpec(spec, at)
       : spec.layout === 'scenarios'
       ? Object.assign({ layout: 'scenarios', title: spec.title, period: spec.period === undefined ? 0 : periodIndex(spec.period),
           outputs: (spec.outputs || []).map(r => at(rectRef(r))) }, Array.isArray(spec.scenarios) ? { scenarios: spec.scenarios.map(String) } : {})
+      : spec.layout === 'lines'
+      ? { layout: 'lines', title: spec.title, periods: periodSpec(spec.periods), lines: (spec.lines || []).map(r => at(rectRef(r))) }
       : spec.layout === 'flow'
       ? { layout: 'flow', title: spec.title, period: spec.period === undefined ? 0 : periodIndex(spec.period),
           steps: (spec.steps || []).map(s => Object.assign(at(rectRef(s.rect)), { role: s.role })) }
@@ -140,6 +160,7 @@ window.fmGraph = Object.freeze({
           i.error ? { error: i.error } : { lowValue: i.lowValue, highValue: i.highValue, swing: i.swing },
           i.points ? { points: i.points.map(p => Object.assign({}, p)) } : {})) };
     }
+    if(c.layout === 'lines') return linesFigures(c, results).map(f => ({ period: model.periods[f.p], lines: f.values.map((r, i) => ({ name: partLabel(c.lines[i]), value: answer(r) })) }));
     if(c.layout === 'flow') return flowFigures(c, results).map((f, i) => Object.assign({ name: partLabel(c.steps[i].key) }, f));
     if(c.layout === 'scenarios'){
       const memo = new Map();
@@ -273,4 +294,16 @@ window.fmGraph = Object.freeze({
     return board.charts.filter(c => chartKeys(c).some(hit)).map(c => c.id).concat(board.bars.filter(b => hit(b.key)).map(b => b.id));
   },
   calcTime: () => model ? model.baseMs : null,
+  goalSeek: (spec) => {
+    spec = spec || {};
+    if(!model) throw new Error('Open a model first.');
+    const rect = findRect(spec.rect, spec.canvas);
+    const p = periodIndex(spec.period === undefined ? 1 : spec.period);
+    const target = typeof spec.target === 'number' || typeof spec.target === 'string' ? Number(spec.target) : NaN;
+    if(String(spec.target).trim() === '' || !isFinite(target)) throw new Error('The number to reach must be a number.');
+    const r = goalSeekNow(goalSliderRef(spec.slider), rect, p, target);
+    if(r.reached) return Object.assign({ reached: true, value: r.value }, r.range ? { range: Object.assign({}, r.range) } : {}, { message: r.message });
+    return Object.assign({ reached: false, low: r.low, high: r.high }, r.stopped ? { stopped: true } : {},
+      r.jump ? { jump: true, at: r.at } : {}, r.low === null ? { error: r.error } : {}, { message: r.message });
+  },
 });

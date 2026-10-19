@@ -235,7 +235,7 @@ test('Save for fmIDE writes the imported model as an fmIDE document carrying its
   expect(fromReport.data.system.canvases.map(c => c.name)).toEqual(['Assets']);
   // Its Excel layout as it is now: a mapping file, sections off, the sheet's title as a label row.
   const layout = fromReport.data.excelLayout;
-  expect([layout.kind, layout.version, layout.cfg.sectionsEnabled]).toEqual(['fmIDE-excel-mapping', 8, false]);
+  expect([layout.kind, layout.version, layout.cfg.sectionsEnabled]).toEqual(['fmIDE-excel-mapping', 9, false]); // 9 since fmGraph's lines chart (19 October 2026)
   expect(layout.customRows.filter(r => r.label).map(r => r.label)).toEqual(['Fixed assets']);
   await page.locator('#importReportClose').click();
   await expect(page.locator('#loadStatus .status.ok')).toHaveText('Saved 02-corkscrew.fmide — open it in fmIDE with File → Open…; its Excel layout goes with it.');

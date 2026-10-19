@@ -265,3 +265,183 @@ test('charts: text shown as text, roles and sizes checked', async ({ page, pageE
   expect((await g(page, (i) => fmGraph.chart(i), many))[0].groups).toHaveLength(12);
   expect(pageErrors).toEqual([]);
 });
+
+// ---- The lines chart (board file 10, 19 October 2026): several rectangles over the periods ----
+const pickColour = (loc, colour) => loc.evaluate((el, c) => { el.value = c; el.dispatchEvent(new Event('change', { bubbles: true })); }, colour);
+const lineFigures = async (page, id) => (await g(page, (i) => fmGraph.chart(i), id)).map(f => [f.period, f.lines.map(l => [l.name, l.value])]);
+
+test('a lines chart built with the mouse: its rectangles, figures, points and key; colours; remembered', async ({ page, pageErrors }) => {
+  await openSample(page);
+  await page.click('#btnAddChart');
+  const chart = page.locator('.chart-widget').nth(2);
+  await chart.locator('select[aria-label="Kind of chart"]').selectOption('lines');
+  await expect(chart).toHaveAttribute('data-layout', 'lines');
+  await expect(chart.locator('details.chart-edit')).toHaveAttribute('open', '');
+  await chart.locator('input.chart-title').fill('Sales and profit');
+  await chart.locator('input.chart-title').press('Tab');
+  // The column's one rectangle became the first line; + Rectangle adds the next calculated one.
+  await expect(chart.locator('.line-row')).toHaveCount(1);
+  await chart.locator('.line-row select').first().selectOption({ label: 'Revenue' });
+  await chart.locator('.add-line').click();
+  await expect(chart.locator('.line-row')).toHaveCount(2);
+  await chart.locator('.line-row select').nth(1).selectOption({ label: 'Profit' });
+  const id = await chartId(page, 'Sales and profit');
+  expect(await lineFigures(page, id)).toEqual([
+    ['Year 1', [['Revenue', 10000], ['Profit', 1500]]], ['Year 2', [['Revenue', 11000], ['Profit', 1900]]],
+    ['Year 3', [['Revenue', 12000], ['Profit', 2300]]], ['Year 4', [['Revenue', 13000], ['Profit', 2700]]],
+  ]);
+  // A line each, a point per period, the numbers on them, the periods under them, a key.
+  await expect(chart.locator('.l-path')).toHaveCount(2);
+  await expect(chart.locator('.l-point')).toHaveCount(8);
+  await expect(chart.locator('.l-line[data-line="Revenue"] .t-value')).toHaveText(['10,000', '11,000', '12,000', '13,000']);
+  await expect(chart.locator('.t-period')).toHaveText(['Year 1', 'Year 2', 'Year 3', 'Year 4']);
+  await expect(chart.locator('.chart-key .key-item')).toHaveText(['Revenue', 'Profit']);
+  await expect(chart.locator('.l-base')).toHaveCount(0);
+  await expect(chart.locator('.bar-errors li')).toHaveCount(0);
+  // Higher numbers higher up: Revenue's points above Profit's.
+  const cy = (name) => chart.locator('.l-line[data-line="' + name + '"] .l-point').first().getAttribute('cy');
+  expect(Number(await cy('Revenue'))).toBeLessThan(Number(await cy('Profit')));
+  // ↑ moves Profit first; × takes Revenue out.
+  await chart.locator('.line-row').nth(1).getByRole('button', { name: 'Move up' }).click();
+  expect((await lineFigures(page, id))[0]).toEqual(['Year 1', [['Profit', 1500], ['Revenue', 10000]]]);
+  await chart.locator('.add-line').click();
+  await chart.locator('.line-row select').nth(2).selectOption({ label: 'Gross profit' });
+  await chart.locator('.line-row').nth(1).getByRole('button', { name: 'Remove' }).click();
+  expect((await lineFigures(page, id))[0]).toEqual(['Year 1', [['Profit', 1500], ['Gross profit', 4000]]]);
+  // The key's swatch picks a line's colour: the line and its points take it.
+  await pickColour(chart.locator('.chart-key input.key-swatch').first(), '#ff0000');
+  await expect(chart.locator('.l-line[data-line="Profit"] .l-path')).toHaveAttribute('stroke', '#ff0000');
+  await expect(chart.locator('.l-line[data-line="Profit"] .l-point').first()).toHaveAttribute('fill', '#ff0000');
+  await expect.poll(async () => (await g(page, (i) => fmGraph.board().charts.find(c => c.id === i), id)).lines.map(l => l.colour || null)).toEqual(['#ff0000', null]);
+  // A fixed scale: the points stay inside it, ▲ where a number goes past it.
+  await g(page, (i) => fmGraph.setScale(i, { min: 0, max: 3000 }), id);
+  await expect(chart.locator('svg.lines-chart.fixed-scale')).toHaveCount(1);
+  await expect(chart.locator('.l-line[data-line="Gross profit"] .t-over')).toHaveCount(4);
+  await expect(chart.locator('.l-line[data-line="Profit"] .t-over')).toHaveCount(0);
+  await g(page, (i) => fmGraph.setScale(i, null), id);
+  // Remembered after a reload.
+  await page.waitForTimeout(500);
+  await page.reload();
+  await page.waitForFunction(() => !!window.fmGraph);
+  await page.click('#btnSample');
+  await expect(page.locator('.chart-widget')).toHaveCount(3);
+  const kept = await g(page, () => fmGraph.board().charts.find(c => c.title === 'Sales and profit'));
+  expect(kept.layout).toBe('lines');
+  expect(kept.lines.map(l => [l.name, l.colour || null])).toEqual([['Profit', '#ff0000'], ['Gross profit', null]]);
+  expect(kept.periods).toEqual({ mode: 'all' });
+  expect(pageErrors).toEqual([]);
+});
+
+test('a lines chart follows the shared period, or keeps its own; a slider moves it, the model\'s own numbers dashed', async ({ page, pageErrors }) => {
+  await openSample(page);
+  const id = await g(page, () => fmGraph.addChart({ layout: 'lines', title: 'Lines', lines: ['Revenue', 'Profit'] }));
+  const chart = chartNamed(page, 'Lines');
+  // Made without periods: it follows the shared ones, as a Columns chart does.
+  expect(await g(page, (i) => fmGraph.board().charts.find(c => c.id === i).ownPeriod, id)).toBeUndefined();
+  const shared = page.locator('#sharedPeriodBar');
+  await shared.locator('select[aria-label="Shared periods"]').selectOption('range');
+  await shared.locator('select[aria-label="Shared first period"]').selectOption('1');
+  expect((await lineFigures(page, id)).map(f => f[0])).toEqual(['Year 2', 'Year 3', 'Year 4']);
+  await expect(chart.locator('.l-point')).toHaveCount(6);
+  await expect(chart.locator('.t-period')).toHaveText(['Year 2', 'Year 3', 'Year 4']);
+  // Its own periods (Edit chart): the shared ones no longer move it; Shared again follows.
+  await chart.locator('summary').click();
+  const periods = chart.locator('.chart-edit select[aria-label="Periods"]');
+  await expect(periods).toHaveValue('shared');
+  await expect(periods.locator('option').first()).toHaveText('Shared (Year 2 to Year 4)');
+  await periods.selectOption('one');
+  await chart.locator('.chart-edit select[aria-label="Period"]').selectOption('0');
+  await shared.locator('select[aria-label="Shared periods"]').selectOption('all');
+  expect((await lineFigures(page, id)).map(f => f[0])).toEqual(['Year 1']);
+  expect(await g(page, (i) => fmGraph.board().charts.find(c => c.id === i).ownPeriod, id)).toBe(true);
+  await chart.locator('.chart-edit select[aria-label="Periods"]').selectOption('shared');
+  expect((await lineFigures(page, id)).map(f => f[0])).toEqual(['Year 1', 'Year 2', 'Year 3', 'Year 4']);
+  // The API's periods given: its own.
+  const own = await g(page, () => fmGraph.addChart({ layout: 'lines', title: 'Own', periods: [2, 3], lines: ['Profit'] }));
+  expect(await g(page, (i) => fmGraph.board().charts.find(c => c.id === i).ownPeriod, own)).toBe(true);
+  expect((await lineFigures(page, own)).map(f => f[0])).toEqual(['Year 2', 'Year 3']);
+  // A slider reaches it: lit while moved; Price up moves both lines, the model's own numbers dashed.
+  const range = page.locator('.slider-widget').first().locator('input[type=range]'); // Price
+  await range.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(chart).toHaveClass(/reached/);
+  await g(page, (s) => fmGraph.setSlider(s, 12), await sliderId(page, 'Price'));
+  expect((await lineFigures(page, id))[0]).toEqual(['Year 1', [['Revenue', 12000], ['Profit', 3500]]]);
+  await expect(chart.locator('.l-base')).toHaveCount(2);
+  await expect(chart.locator('.l-line[data-line="Profit"] .l-point title').first()).toHaveText(/^Profit, Year 1: 3,500 — was 1,500/);
+  await g(page, () => fmGraph.resetAll());
+  await expect(chart.locator('.l-base')).toHaveCount(0);
+  expect(pageErrors).toEqual([]);
+});
+
+test('switching between columns and lines keeps the rectangles and periods; other kinds take the lines', async ({ page, pageErrors }) => {
+  await openSample(page);
+  const id = await g(page, () => fmGraph.addChart({ title: 'Mix', periods: [2, 4], groups: [{ name: 'A', parts: ['Revenue', 'Cost of sales'] }, { name: 'B', parts: ['Profit', 'Revenue'] }] }));
+  const kind = () => page.locator('.chart-widget').nth(2).locator('select[aria-label="Kind of chart"]');
+  const now = () => g(page, (i) => fmGraph.board().charts.find(x => x.id === i), id);
+  await kind().selectOption('lines');
+  // The groups' parts flattened, each once, in order; the periods kept.
+  let c = await now();
+  expect([c.layout, c.lines.map(l => l.name), c.periods]).toEqual(['lines', ['Revenue', 'Cost of sales', 'Profit'], { mode: 'range', from: 1, to: 3 }]);
+  expect((await lineFigures(page, id)).map(f => f[0])).toEqual(['Year 2', 'Year 3', 'Year 4']);
+  // Back to columns: the lines one group, the periods kept.
+  await kind().selectOption('columns');
+  c = await now();
+  expect([c.layout, c.groups.map(gr => gr.parts.map(p => p.name)), c.periods]).toEqual(['columns', [['Revenue', 'Cost of sales', 'Profit']], { mode: 'range', from: 1, to: 3 }]);
+  // Lines → a waterfall: the lines become steps, in the first period shown; and back to lines.
+  await kind().selectOption('lines');
+  await kind().selectOption('flow');
+  c = await now();
+  expect([c.layout, c.steps.map(s => [s.name, s.role]), c.period]).toEqual(['flow', [['Revenue', 'start'], ['Cost of sales', 'add'], ['Profit', 'add']], 1]);
+  await kind().selectOption('lines');
+  c = await now();
+  expect([c.layout, c.lines.map(l => l.name)]).toEqual(['lines', ['Revenue', 'Cost of sales', 'Profit']]);
+  // Undo goes back to the waterfall (the board read back from its file form: found by title).
+  await page.click('#btnUndo');
+  expect((await g(page, () => fmGraph.board().charts.find(x => x.title === 'Mix'))).layout).toBe('flow');
+  // Never in the template form (which stays version 2): left out and counted.
+  const before = await g(page, () => fmGraph.exportForTemplate(fmGraph.templates().length - 1, { onlyShown: true }));
+  await g(page, () => fmGraph.addChart({ layout: 'lines', title: 'Trend', lines: ['Revenue'] }));
+  const forTemplate = await g(page, () => fmGraph.exportForTemplate(fmGraph.templates().length - 1, { onlyShown: true }));
+  expect(forTemplate.data.version).toBe(2);
+  expect(forTemplate.data.boards[0].items.some(w => w.layout === 'lines')).toBe(false);
+  expect(forTemplate.left).toBe(before.left + 1);
+  expect(pageErrors).toEqual([]);
+});
+
+test('lines: names shown as text, an error breaks the line and is listed, at most 12 lines, colours checked', async ({ page, pageErrors }) => {
+  await openApp(page, 'fmGraph');
+  await page.waitForFunction(() => !!window.fmGraph);
+  const evil = '<img src=x onerror="window.__pwned=1">';
+  const model = { kind: 'system', version: 9, periods: ['P1', 'P2', 'P3'], canvases: [{ id: 'c', name: 'C', nodes: [
+    { id: 'one', type: 'value', x: 0, y: 0, text: 'One\n1' }, { id: 'd', type: 'operator', x: 100, y: 0, text: '÷' },
+    { id: 'a', type: 'value', x: 0, y: 100, text: 'Divisor\n5', periodValues: [5, 0, 2] }, { id: 'q', type: 'value', x: 200, y: 0, text: 'Ratio' },
+    { id: 'h', type: 'value', x: 0, y: 200, text: evil + '\n3' },
+  ], edges: [{ id: 'e1', from: 'one', to: 'd' }, { id: 'e2', from: 'a', to: 'd' }, { id: 'e3', from: 'd', to: 'q' }] }] };
+  await g(page, (m) => fmGraph.load(m, 'Evil'), model);
+  const id = await g(page, (e) => fmGraph.addChart({ layout: 'lines', title: e, lines: ['Ratio', '#h'] }), evil);
+  const chart = page.locator('.chart-widget[data-layout="lines"]');
+  await expect(chart.locator('input.chart-title')).toHaveValue(evil);
+  await expect(chart.locator('.chart-key .key-item').nth(1)).toHaveText(evil);
+  await expect(chart.locator('svg.lines-chart')).toHaveAttribute('aria-label', evil);
+  expect(await page.locator('img').count()).toBe(0);
+  expect(await page.evaluate(() => window.__pwned)).toBeUndefined();
+  // 1 ÷ 0 in P2: Ratio's line is broken there (no line through the gap), the reason in words.
+  const f = await g(page, (i) => fmGraph.chart(i), id);
+  expect(f.map(x => x.lines[0].value)).toEqual([0.2, { error: expect.anything() }, 0.5]);
+  await expect(chart.locator('.l-line[data-line="Ratio"] .l-point')).toHaveCount(2);
+  await expect(chart.locator('.l-line[data-line="Ratio"] .l-path')).toHaveCount(0);
+  await expect(chart.locator('.l-line[data-line="Ratio"] .t-err')).toHaveCount(1);
+  await expect(chart.locator('.bar-errors li')).toHaveCount(1);
+  await expect(chart.locator('.bar-errors li').first()).toContainText('P2, Ratio:');
+  // At most 12 lines, from the API and from a file; a colour that isn't one is left out.
+  expect(await g(page, () => { try{ fmGraph.addChart({ layout: 'lines', lines: Array(13).fill('Ratio') }); return 'added'; }catch(e){ return e.message; } })).toBe('A lines chart draws at most 12 lines.');
+  const line = { canvasId: 'c', nodeId: 'q', name: 'Ratio', colour: 'red;background:url(x)' };
+  expect(await g(page, (l) => fmGraph.importBoards({ kind: 'fmIDE-graph-board', version: 10, boards: [{ name: 'Many', items: [
+    { type: 'chart', layout: 'lines', title: 'Many', periods: { mode: 'all' }, lines: Array(20).fill(l).concat([{ canvasId: 'c', nodeId: 'gone', name: 'Gone' }, 'odd', null]) }] }] }), line)).toBe(1);
+  await g(page, () => fmGraph.showBoard('Many'));
+  const many = (await g(page, () => fmGraph.board())).charts[0];
+  expect(many.lines).toHaveLength(12);
+  expect(many.lines.every(l => l.colour === undefined)).toBe(true);
+  expect(pageErrors).toEqual([]);
+});

@@ -8,6 +8,29 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'lines-chart', date: '2026-10-19', title: 'Lines charts',
+    summary: 'A new kind of chart: several rectangles over the periods, a line each.',
+    what: [
+      'Choose Lines at the top of a chart. Each rectangle is a line across the periods, with a point on every period and its number where there is room.',
+      'Edit chart lists the lines: + Rectangle adds one, ↑ ↓ reorder, × removes. Its periods follow the shared period, as a Columns chart\'s do, unless you choose its own.',
+      'When a slider changes something, the model\'s own numbers show as a dashed line. The key\'s swatches pick each line\'s colour, and a fixed scale works as on the other charts.',
+      'Switching between Columns and Lines keeps the rectangles and the periods. ExcelExporter draws a lines chart as an Excel line chart on the Dashboard.',
+    ],
+    why: 'Trends over time — revenue against costs, or margins year by year — read best as lines, and columns made them hard to compare.',
+    how: ['Press + Chart.', 'Choose Lines at the top of the chart.', 'In Edit chart, choose the rectangles with + Rectangle.'],
+    notes: ['Board files saved with a lines chart are version 10; an older fmGraph asks before opening one. A template\'s board never holds a lines chart.'],
+    see: ['charts', 'shared-period'] },
+
+  { id: 'goal-seek', date: '2026-10-19', title: 'Goal seek: the slider value that hits a number',
+    summary: 'Ask "what Price makes Cash in Year 4 equal 0?" and fmGraph finds it and moves the slider there.',
+    what: [
+      'The Goal seek panel under the sliders reads: Set [rectangle] in [period] to [number] by changing [slider]. Press Seek.',
+      'fmGraph tries the slider\'s values, with the other sliders where they are, finds the one that makes the rectangle equal the number, and puts the slider there: "Price 7.957 makes Closing cash in Year 4 equal 0".',
+      'It looks past the slider\'s range too: an answer outside it widens the range, and says so. When no value reaches the number, it says what the rectangle stays between.',
+    ],
+    why: 'Finding a break-even price by dragging a slider back and forth took many tries and was never exact.',
+    how: ['Open Goal seek under the sliders.', 'Choose Closing cash, Year 4, type 0, and choose the Price slider.', 'Press Seek.'],
+    see: ['goal-seek'] },
   { id: 'shared-period', date: '2026-10-19', title: 'One period for every board',
     summary: 'Set the periods once and every bar and chart, on every board, follows — while any of them can keep its own.',
     what: [
