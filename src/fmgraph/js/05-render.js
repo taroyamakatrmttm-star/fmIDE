@@ -135,6 +135,7 @@ function renderBoard(){
   renderSharing(); // (05c-arrange.js)
   renderTraceNote();
   renderScenarios(); // (05f-scenarios.js)
+  renderGoalSeek(); // (05l-goal-seek.js)
   updateValues();
   renderDock(); // on a phone, the sliders' dock (05g-phone.js)
   if(typing){
