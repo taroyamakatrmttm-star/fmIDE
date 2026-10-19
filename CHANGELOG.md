@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: running totals in an imported Excel model
+- Importing an Excel model translates a running total, `SUM($D$8:D8)` (one row, from a fixed period column to this period's), as the previous period's total plus this period's value through a period shift: in the row itself when it is the whole formula, else in a shared rectangle "Running total of …" that the formulas read; a total from a later period starts there. An average or a sum over several rows growing along the periods still keeps Excel's numbers. New sample `tests/fixtures/excel-import/06-running-totals.xlsx`.
+
 ## fmGraph: one period for every board
 - A shared period above the bars and charts — periods for bars and Columns charts, a year for the one-period charts — that every bar and chart on every board follows unless it keeps its own (its period list's first choice is Shared). Board file version 9 (`sharedPeriods`, `ownPeriod`); older files keep each chart's periods (the upgrade marks them own). ExcelExporter reads version 9.
 

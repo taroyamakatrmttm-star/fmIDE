@@ -48,7 +48,7 @@ Before anything is built, the window shows each sheet with what was found: the h
 | Not translated | What happens |
 |---|---|
 | Lookups: `VLOOKUP`, `HLOOKUP`, `XLOOKUP`, `INDEX`, `MATCH`, `OFFSET`, `INDIRECT` | The row keeps Excel's saved values as typed numbers, and is listed |
-| Sums across the periods: `NPV`, `IRR`, `XNPV`, `SUMIF`, `COUNTIF`, a range growing along the periods (`SUM($D$8:D8)`) | The same. fmIDE calculates one period at a time and has no operator reading across periods |
+| Sums across the periods: `NPV`, `IRR`, `XNPV`, `SUMIF`, `COUNTIF`, a range growing along the periods (`AVERAGE($D$8:D8)`, a sum over several rows) | The same. fmIDE calculates one period at a time and has no operator reading across periods. (A running total, `SUM($D$8:D8)`, is translated since 19 October 2026: "Running totals" below) |
 | Dates and text: `EOMONTH`, `DATE`, `TEXT`, `&` | The same |
 | Any other function | The same, naming the function |
 | A circular reference | The loop is cut where the importer meets it again, and listed |
@@ -97,12 +97,13 @@ Each is one pull request, merged when the whole suite is green (the owner's requ
 
 ## The sample workbooks (phase 20a)
 
-`tools/make-import-samples.js` writes four small models with ExcelJS (test tooling only, never loaded by an app), each with the values Excel would have saved, in `tests/fixtures/excel-import/`:
+`tools/make-import-samples.js` writes small models (four at first, six now) with ExcelJS (test tooling only, never loaded by an app), each with the values Excel would have saved, in `tests/fixtures/excel-import/`:
 
 - **01-simple-rows**: one sheet, Volume × Price = Revenue, Revenue × Cost rate = Costs, Revenue − Costs = Profit; titles and blank rows between; shared formulas (as Excel saves a formula filled along a row) and one row typed cell by cell.
 - **02-corkscrew**: an opening balance typed in the first period, then the previous period's closing; a depreciation rate in its own cell, read with `$C$5` in every period.
 - **03-two-sheets**: inputs on one sheet, the calculation on another; a named cell (`TaxRate`); `ROUND`, `SUM`, `MAX`, `IFERROR`, `IF`; a header row linked to the other sheet's; a year with no revenue (so `IFERROR` catches a division by 0) and a year with a loss.
-- **04-not-supported**: dates as the period header; a `VLOOKUP` on another sheet, `NPV` and `COUNTIF` over the periods, a running total, and a typed number in the middle of a formula row.
+- **04-not-supported**: dates as the period header; a `VLOOKUP` on another sheet, `NPV` and `COUNTIF` over the periods, a running total (translated since 19 October 2026), and a typed number in the middle of a formula row.
+- **06-running-totals** (added 19 October 2026): `SUM($D$5:D5)` as a whole formula and with other terms, `SUM($D9:D9)` typed cell by cell, two running totals taken from each other, one from a later period (`SUM($F$5:F5)`) in a row in parts, and two that stay Excel's numbers (`AVERAGE($D$5:D5)`, `SUM($D$9:D10)` over two rows). (05-actuals-forecast is described under 20g.)
 
 `expected.json` says what the importer should find in each: the header row, period and label columns, each row's kind and its formula in words, and what can't be translated. Group 78 checks that the samples are the tool's, that the description fits them, and that LibreOffice, recalculating copies written without saved values, gives the saved values: so the "Excel's saved values" phases 20b–20f compare with are right.
 
@@ -128,7 +129,7 @@ Done (18 October 2026): the canvas spacing, Save for fmIDE, help, What's new, RE
 - **Save for fmIDE** (in the report and the File menu) downloads the model as `<workbook name>.json`, a system file fmIDE's File → Open… reads. Sending it straight to an fmIDE window that opened ExcelExporter is a later idea.
 - **Help**: ExcelExporter's topic "Importing an Excel model" (`import-excel`), linked from "Loading a model"; What's new "Import an Excel model".
 - **End to end** (group 80, with LibreOffice): a sample imported, written out again by ExcelExporter and recalculated by LibreOffice gives the original workbook's saved values in every row and period; the saved file opened in fmIDE gives them too.
-- **Later ideas** (not built): lookups as `choose`, sums across the periods (new operators), number formats onto the canvas, sending the model straight to fmIDE, and real workbooks from the owner's customers as samples.
+- **Later ideas** (not built): lookups as `choose`, sums across the periods other than a running total (new operators; running totals are done, below), number formats onto the canvas, sending the model straight to fmIDE, and real workbooks from the owner's customers as samples.
 
 ## How 20f turned out
 
@@ -233,3 +234,13 @@ Done (18 October 2026): `import/zip.js`, `import/xml.js` and `import/workbook.js
 ## How 20a turned out
 
 Done (18 October 2026): the brief, decision 13, the four samples and their description, test group 78 (Node and LibreOffice).
+
+## Running totals (19 October 2026)
+
+The commonest formula the first version kept as Excel's numbers. A `SUM` whose range runs along **one row** from a **fixed period column** (`$D$8`, or `$D8`) to **this period's column** (`D8`), either way round, is a running total and now calculates live in fmIDE, built with the period shift the corkscrew already uses (`runningTotal` and `resolveRuns` in `import/build.js`):
+
+- **The whole formula** (a calculation row with no cells of its own, from the first period): the row itself is `Cash flow + if(@Up to 2026, 0, the previous period's Cumulative cash)` — in the first period its row's value, after that the previous total plus this period's. `Up to 2026` is the canvas's shared switch of the rows in parts.
+- **With other terms** (`$C$7+SUM($D$5:D5)`), in an opening balance, a row with odd cells or a row in parts: a rectangle of its own at the top of the canvas, **Running total of Cash flow**, worked out the same way and read like a row; every formula of the canvas summing that row from that period shares it. It is a row of formulas on the generated tab too.
+- **A later anchor** (`SUM($F$5:F5)`, from 2028): the total starts there (`Running total of Cash flow from 2028`, its switch `Up to 2028`). Translated only when the formula is used from the anchor's period on — a row in parts whose formula starts there; before the anchor Excel would sum backwards, so such a row stays Excel's numbers ("a running total used before its first period").
+- **Still kept as Excel's numbers:** a range over several rows ("a range over several rows growing along the periods"), one ending a period back ("a running total not ending in its own period"), `AVERAGE`, `MIN`, `MAX` and the others growing along the periods, a running total of the header row or of a cell outside the rows. A row summing itself is a circular reference, as in Excel.
+- **Checked:** sample 06 agrees with Excel's saved values in all 25 translated cells (group 79), and the workbook ExcelExporter writes from it, recalculated, gives the original's values (group 80); sample 04's Cumulative cash is translated now (its expected.json entry, the messages in group 80 and the counts in group 79 changed with it).

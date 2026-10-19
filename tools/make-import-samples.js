@@ -138,8 +138,9 @@ const SAMPLES = {
     w.row(13, 'Loss flag', ''); w.shared(13, 'IF(D11<0,1,0)', flag, '0');
   },
 
-  // What the first version can't translate: a lookup, sums across the periods, a running
-  // total, a typed number in the middle of a formula row; dates as the period header.
+  // What the first version couldn't translate: a lookup, sums across the periods, a running
+  // total (translated since, as a period shift), a typed number in the middle of a formula
+  // row; dates as the period header.
   '04-not-supported': (wb, results) => {
     const ws = wb.addWorksheet('Valuation');
     const lk = wb.addWorksheet('Lookup');
@@ -220,6 +221,37 @@ const SAMPLES = {
     COLS.forEach((c, i) => i < A ? w.f(c + '15', c + '16', paid[i], '#,##0') : w.num(c + '15', paid[i], '#,##0'));
     w.row(16, 'Paid', '£');
     COLS.forEach((c, i) => i < A ? w.num(c + '16', paid[i], '#,##0') : w.f(c + '16', c + '15', paid[i], '#,##0'));
+  },
+
+  // Running totals, as people write them: SUM($D$5:D5) along a row (the whole formula, or with
+  // other terms), $D5:D5 typed in each cell, two of them taken from each other, one from a
+  // later period in a row in parts; and two that stay Excel's numbers: an average growing
+  // along the periods, and a sum over several rows growing along them.
+  '06-running-totals': (wb, results) => {
+    const ws = wb.addWorksheet('Cash');
+    const w = writer(ws, results);
+    w.text('A1', 'Running totals', true);
+    yearHeader(w, 3);
+    // The sum from period `from` to each period (0 before it), added up in order as Excel does.
+    const run = (xs, from = 0) => xs.map((_, i) => xs.slice(from, i + 1).reduce((t, x) => t + x, 0));
+    const flow = [120, -40, 75, 90, 60];
+    w.row(5, 'Cash flow', '£'); w.inputs(5, flow, '#,##0');
+    const cum = run(flow);
+    w.row(6, 'Cumulative cash', '£'); w.shared(6, 'SUM($D$5:D5)', cum, '#,##0');
+    w.row(7, 'Opening cash', '£'); w.num('C7', 1000, '#,##0');
+    w.row(8, 'Cash balance', '£', true); w.shared(8, '$C$7+SUM($D$5:D5)', cum.map(x => 1000 + x), '#,##0');
+    const spend = [30, 35, 40, 45, 50];
+    w.row(9, 'Spend', '£'); w.inputs(9, spend, '#,##0');
+    const cumSpend = run(spend);
+    w.row(10, 'Cumulative spend', '£'); w.each(10, (c) => 'SUM($D9:' + c + '9)', cumSpend, '#,##0');
+    w.row(11, 'Net cumulative', '£'); w.shared(11, 'SUM($D$5:D5)-SUM($D$9:D9)', cum.map((x, i) => x - cumSpend[i]), '#,##0');
+    const later = run(flow, 2);
+    w.row(12, 'Cash since 2028', '£');
+    COLS.forEach((c, i) => i < 2 ? w.num(c + '12', 0, '#,##0') : w.f(c + '12', 'SUM($F$5:' + c + '5)', later[i], '#,##0'));
+    const average = cum.map((x, i) => x / (i + 1));
+    w.row(13, 'Average cash flow', '£'); w.shared(13, 'AVERAGE($D$5:D5)', average, '#,##0.0');
+    const twoRows = run(spend).map((x, i) => x + run(cumSpend)[i]);
+    w.row(14, 'Spend rows to date', '£'); w.each(14, (c) => 'SUM($D$9:' + c + '10)', twoRows, '#,##0');
   },
 };
 
