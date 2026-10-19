@@ -6,6 +6,14 @@ Every idea here has been checked against the project's rules: the apps work offl
 
 Started 18 October 2026 from the brainstorm at the start of step 20 and the ideas raised while building and refining it.
 
+## Status (19 October 2026)
+
+- **Build order:** steps 1–20 are done (H4c, the video links, waits on the owner's recordings). The owner chooses the next step.
+- **Since step 20** (18–19 October 2026, outside the build order, each its own pull request merged once green): the Excel import refined (#165–#177, #186, #190), the Inputs tab's sensitivity and sliders easier to read (#179, #180), fmGraph's slider range, rectangle search, shared period, goal seek and lines charts (#181, #182, #184, #187, #188), the library's readable pack file name (#189), and this file (#183, #185). The full list is section 3.
+- **Waiting on the owner:** the library repository's `checker.json` moved to the fmIDE commit with #189 (until then, a pack saved under its new readable name is refused there); H4c's recordings; the owner's name out of the public places before the project is shared or advertised.
+- **Ready to start, a medium step each, with a choice for the owner:** headings visible in fmIDE (a file-format change), numbers inside formulas on fmIDE's canvas (the shared calculation), lookups in the Excel import, the scenario waterfall in Excel.
+- **The larger product ideas** (section 1), each worth a brief first; the brainstorm recommended G1, the playable single file, next.
+
 ## 1. Product value: what people would choose fmIDE for, or pay for
 
 From the brainstorm of ten ideas (October 2026), grouped as it was. #2 is built (step 20).
@@ -70,7 +78,6 @@ Tilt to sweep a slider; a phone tutorial; receiving a `.fmide` from another app'
 
 | Idea | Outcome |
 |---|---|
-| A readable pack file name (agreed 4 October 2026) | Built: #189 (`docs/decisions.md`); the library's `checker.json` to be moved after |
 | Import an existing Excel model (brainstorm #2) | Built: step 20, pull requests #158–#166, follow-ups #168–#177 |
 | Fold one-off typed numbers into the row's own box; one canvas per section | Built: #169, #170 |
 | Keep the Excel layout and look; the round-trip check | Built: #172–#174 |
@@ -78,9 +85,10 @@ Tilt to sweep a slider; a phone tutorial; receiving a `.fmide` from another app'
 | Space between the Inputs tab's groups (idea 9) | Built: #177 |
 | Sensitivity and sliders on the Inputs tab, easier to read (idea 10) | Built: #179, #180 |
 | fmGraph: a slider's Range and step stays open | Built: #181 |
-| fmGraph: line charts (step 15's later ideas), and as Excel line charts on the Dashboard | Built: #188 (board file 10) |
 | fmGraph: find a rectangle by typing (the search shared with fmIDE's launcher) | Built: #182 |
 | fmGraph: one period for every board, any chart keeping its own | Built: #184 |
-| fmGraph: goal seek ("what price keeps cash above zero?", step 15's later ideas) | Built: #187 — the Goal seek panel under the sliders |
 | Translate running totals in the Excel import (`SUM($D$8:D8)`, as a period shift) | Built: #186; lookups, `SUMIF`/`COUNTIF`, `NPV`/`IRR` and dates remain (section 2) |
+| fmGraph: goal seek ("what price keeps cash above zero?", step 15's later ideas) | Built: #187 — the Goal seek panel under the sliders |
+| fmGraph: line charts (step 15's later ideas), and as Excel line charts on the Dashboard | Built: #188 (board file 10) |
+| A readable pack file name (agreed 4 October 2026) | Built: #189 (`docs/decisions.md`); the library's `checker.json` to be moved after |
 | Exact number formats: a row's own Excel code (`style.excelFormat`), kept by the Excel import | Built: #190 (mapping file 10) |
