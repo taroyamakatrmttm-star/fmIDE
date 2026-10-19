@@ -757,7 +757,7 @@ fmGraph (step 15, phase G3b) with fmIDE, the sample system `formats/sys-current.
 - ExcelExporter opens a version 11 document with boards.
 
 ### 51. fmGraph's exploring (`tests/51-fmgraph-explore.spec.js`; part of `npm run test:fmgraph`)
-fmGraph (step 15, phase G4a), the sample model unless said, through the page and `window.fmGraph`.
+fmGraph (step 15, phase G4a; goal seek, 19 October 2026), the sample model unless said, through the page and `window.fmGraph`.
 - Trace on the Profit bar: 🔍 pressed; the board tracing; the ways "Price → Revenue → Gross profit → Profit" and "Volume → …"; Unit cost and Overheads with + Slider; both sliders and the bar traced; Undo still off; 🔍 again, × and Esc each clear it. No page error.
 - The balance sheet: inputs Unit cost, Overheads, Equipment, Debt; + Slider on Equipment adds a third slider, now a way (and not an input); the waterfall traced instead (one note): Equipment's slider not traced, faded (opacity 0.45); Undo takes the slider back, and then nothing is left to undo.
 - Closing cash traced; → on Price's slider: the board moving, not tracing; blur: tracing again, two sliders lit. + Board and back: no trace. Traced, then removed: no trace.
@@ -766,6 +766,11 @@ fmGraph (step 15, phase G4a), the sample model unless said, through the page and
 - Ten ÷ Split and Ten × Split, the panel closed first: Split at 0 lists nothing; opened: Share first ("was 5, now: …", err), Double "20 → 0 (−20 (−100%))"; `movers()` gives Share's error.
 - Markup as names (an input, the result, the canvas): shown as text in the trace and the movers; no element made, nothing run.
 - By finger (touch, 1024 × 1400): a tap on 🔍 traces; a tap on + Bar in the movers adds the bar; the page saw only touch.
+- Goal seek (19 October 2026), `goalSeek`: Profit in Year 1 = 0 by Price gives exactly 8.5 ("Price 8.5 makes Profit in Year 1 equal 0."), the slider and its box at 8.5, `value` within 1e-9 of 0, Undo still off; Volume by % to 2,000 gives +12.5%; Closing cash (Cash) in Year 4 = 0 by Price within 1e-9 of 6 + 9,000 / 4,600 and of 0. No page error.
+- Goal seek outside the range: Profit 10,000 needs Price 18.5; the range widens to 5 – 18.5, step 0.25 kept, the words say so, Undo on. At Price 6, Profit = 0 by Volume can't be reached: "it stays at −2,500", Volume unmoved.
+- Goal seek on Ten ÷ Split (slider −2 to 2): Share = 4 gives 2.5 past the range (widened to −2 – 3; Split 0 skipped, the words say so), the crossing at 0 rejected; Share = 0 only jumps past it ("jumps from −80 to 80 at Split 0"), the slider unmoved.
+- The Goal seek panel (desk-only): starts on the first bar, Profit; the slider list "Price — all periods", "Volume — all periods, by %"; Seek with no number says so; the rectangle by the search ("closing", Enter), Year 4, 0, Seek: "Price 7.957 makes Closing cash in Year 4 equal 0.", ok, the slider's box 7.9565217391…; the choices stay; Volume and Enter in the number box seeks.
+- `goalSeek` refuses a target that isn't a number (text, empty), period 9, a rectangle or slider not there, moving nothing; numbers as text are read (Profit 1,000 → Price 9.5). In the hostile test, the slider list and the words show the markup as text.
 
 ### 52. fmGraph's A/B snapshot and gliding bars (`tests/52-fmgraph-compare.spec.js`; part of `npm run test:fmgraph`)
 fmGraph (step 15, phase G4b), the sample model unless said, through the page and `window.fmGraph`.

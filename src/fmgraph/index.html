@@ -85,6 +85,17 @@
         <button type="button" id="btnSaveScenario" class="link-btn needs-model" title="Keep where the sliders are now, under a name">+ Save as scenario</button>
         <p class="empty-note phone-only scenario-hint">Hold <strong>A</strong> to look at a scenario; let go to come back.</p>
       </details>
+      <details id="goalSeekPanel" class="goal-seek desk-only">
+        <summary class="col-head" title="Find the value of a slider that makes a rectangle reach a number">Goal seek</summary>
+        <div class="goal-form">
+          <div class="goal-row"><span class="goal-word">Set</span><span id="goalRectHost" class="goal-field"></span></div>
+          <div class="goal-row"><span class="goal-word">in</span><select id="goalPeriod" class="goal-field" aria-label="Period"></select></div>
+          <div class="goal-row"><span class="goal-word">to</span><input id="goalTarget" class="goal-field" type="number" step="any" aria-label="The number to reach" placeholder="a number"></div>
+          <div class="goal-row"><span class="goal-word">by changing</span><select id="goalSlider" class="goal-field" aria-label="The slider to change"></select></div>
+          <button type="button" id="btnGoalSeek" class="needs-model" title="Find the slider's value that makes the rectangle equal the number">Seek</button>
+        </div>
+        <p id="goalSeekNote" class="goal-note" role="status"></p>
+      </details>
       <details id="moversPanel" class="movers" open>
         <summary class="col-head" title="The rectangles the sliders change most, against the model's own numbers">Biggest movers</summary>
         <ol id="moversList" class="movers-list"></ol>
