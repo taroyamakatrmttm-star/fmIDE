@@ -2,7 +2,7 @@
 
 [← Contents](README.md)
 
-Every build step and every pull request, and the lesson that teaches what it built. Use it two ways: to check that the manual covers everything, and to find the lesson for a change you read about in [What's new](https://fmide.pages.dev/help/whats-new/) or the [CHANGELOG](../../CHANGELOG.md).
+Every build step, every pull request up to #194, and from then on every pull request that changes something a person sees, with the lesson that teaches what it built. Use it two ways: to check that the manual covers everything, and to find the lesson for a change you read about in [What's new](https://fmide.pages.dev/help/whats-new/) or the [CHANGELOG](../../CHANGELOG.md).
 
 A lesson marked *(to come)* is planned in the [contents](README.md#contents); its link goes to its part. Developer work (the test suite, the build, publishing, guidance for the sessions that write the code) changes nothing a person sees, so it has no lesson.
 
@@ -244,6 +244,7 @@ Oldest first. *Step* is the build step (and phase) the pull request belongs to; 
 | [#191](https://github.com/taroyamakatrmttm-star/fmIDE/pull/191) | 2026-10-19 | Docs: overall roadmap status after step 20 | — | — *(developer work: no change a person sees)* |
 | [#192](https://github.com/taroyamakatrmttm-star/fmIDE/pull/192) | 2026-10-19 | ExcelExporter: Collapse all and Expand all in the Tree View | after 20 | [5.3](05-excelexporter.md) *(to come)* |
 | [#193](https://github.com/taroyamakatrmttm-star/fmIDE/pull/193) | 2026-10-20 | Library checker: share a version again with new attachments, or the items of one's own pack taken down | after 20 | [3.12](03-reuse.md) *(to come)* |
+| [#194](https://github.com/taroyamakatrmttm-star/fmIDE/pull/194) | 2026-10-19 | Docs: the user manual, phase 1 — contents, lesson style, coverage appendix, three tutorials as lessons | — | — *(this manual)* |
 
 ---
 
