@@ -9,27 +9,27 @@ The manual is written in lessons. Each lesson teaches one thing, in numbered ste
 ## Contents
 
 ### [Part 1 — Getting started](01-getting-started.md)
-1.1 The three apps, and how a model travels between them *(to come)* ·
-1.2 Opening the apps: from a file, from the website, or installed *(to come)* ·
-1.3 Finding your way: the ribbon, the Command Launcher, Help, tutorials and What's new *(to come)* ·
-1.4 Documents: New, Open, Save and autosave *(to come)* ·
-1.5 Your own settings: the ribbon, shortcuts and the Preferences file *(to come)*
+[1.1 The three apps, and how a model travels between them](01-getting-started.md#three-apps) ·
+[1.2 Opening the apps: from a file, from the website, or installed](01-getting-started.md#opening-the-apps) ·
+[1.3 Finding your way: the ribbon, the Command Launcher, Help, tutorials and What's new](01-getting-started.md#finding-your-way) ·
+[1.4 Documents: New, Open, Save and autosave](01-getting-started.md#documents) ·
+[1.5 Your own settings: the ribbon, shortcuts and the Preferences file](01-getting-started.md#your-settings)
 
 ### [Part 2 — Building a model in fmIDE](02-building-models.md)
-2.1 Your first model: rectangles, operators and arrows *(to come)* ·
-2.2 Periods: values over time *(to come)* ·
-2.3 Period shifts and corkscrews *(to come)* ·
-2.4 Operators: arithmetic, comparisons and Excel functions *(to come)* ·
+[2.1 Your first model: rectangles, operators and arrows](02-building-models.md#first-model) ·
+[2.2 Periods: values over time](02-building-models.md#periods) ·
+[2.3 Period shifts and corkscrews](02-building-models.md#period-shifts) ·
+[2.4 Operators: arithmetic, comparisons and Excel functions](02-building-models.md#operators) ·
 [2.5 Timing, conditions and rounding: period, if, choose, round…](02-building-models.md#timing-conditions) ·
-2.6 Canvases and aliases *(to come)* ·
-2.7 Blocks and vertical blocks *(to come)* ·
-2.8 Plugs and sockets *(to come)* ·
-2.9 Building faster: many rectangles at once, snapping and arranging *(to come)* ·
-2.10 Zoom *(to come)* ·
-2.11 The canvas look: formats and number formats *(to come)* ·
+[2.6 Canvases and aliases](02-building-models.md#canvases) ·
+[2.7 Blocks and vertical blocks](02-building-models.md#blocks) ·
+[2.8 Plugs and sockets](02-building-models.md#plugs-sockets) ·
+[2.9 Building faster: many rectangles at once, snapping and arranging](02-building-models.md#building-faster) ·
+[2.10 Zoom](02-building-models.md#zoom) ·
+[2.11 The canvas look: formats and number formats](02-building-models.md#canvas-look) ·
 [2.12 Units, and why fmIDE and Excel give the same numbers](02-building-models.md#same-numbers) ·
-2.13 fmIDE on a tablet *(to come)* ·
-2.14 fmIDE on a phone *(to come)*
+[2.13 fmIDE on a tablet](02-building-models.md#tablet) ·
+[2.14 fmIDE on a phone](02-building-models.md#phone)
 
 ### [Part 3 — Reusing your work: templates, recipes, functions and the library](03-reuse.md)
 3.1 Templates: save a canvas and use it again *(to come)* ·
@@ -144,8 +144,8 @@ The owner chose (19 October 2026) to write the manual by what a person does, not
 
 | Phase | What | Status |
 |---|---|---|
-| 1 | These contents, the lesson style, the coverage appendix, and the three earlier tutorials rewritten as lessons (2.5, 2.12, 3.5–3.9, 4.4, 5.4, 5.5, 5.10, 5.11, 6.6 and Part 7) | ✅ this version |
-| 2 | Parts 1 and 2 | to come |
+| 1 | These contents, the lesson style, the coverage appendix, and the three earlier tutorials rewritten as lessons (2.5, 2.12, 3.5–3.9, 4.4, 5.4, 5.5, 5.10, 5.11, 6.6 and Part 7) | ✅ |
+| 2 | Parts 1 and 2 | ✅ |
 | 3 | Parts 3 and 4 | to come |
 | 4 | Parts 5 and 6 | to come |
 | 5 | The improvements after step 20, the coverage appendix completed, a final read-through | to come |
