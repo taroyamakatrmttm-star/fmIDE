@@ -338,6 +338,11 @@
     choice('Explore the sample model', 'It is already open behind this card', 'welcome-sample', () => hideWelcomeCard());
     choice('Start blank', 'An empty canvas', 'welcome-blank', () => { hideWelcomeCard(); runCommand('newDocument'); });
     choice('❓ Open Help', 'Guides to every feature (F1, any time)', 'welcome-help', () => { hideWelcomeCard(); openHelp(); });
+    const manual = el('a', 'welcome-manual', '📖 The user manual, step by step (online) ↗');
+    manual.href = manualAddress('');
+    manual.target = '_blank';
+    manual.rel = 'noopener noreferrer';
+    card.appendChild(manual);
     document.body.appendChild(card);
   }
   function hideWelcomeCard(){ const c = document.getElementById('welcomeCard'); if(c) c.remove(); }

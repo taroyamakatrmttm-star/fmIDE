@@ -27,6 +27,7 @@
   const help = createHelpPanel({
     groups: HELP_GROUPS, topics: HELP_TOPICS,
     intro: 'Plain-English guides to everything in fmIDE. Pick a topic, or search above. You can keep working while this panel is open.',
+    manual: '',
     placeholder: 'Search help — e.g. "last period" or "templates"',
     commands: {
       get: getCommand,

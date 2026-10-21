@@ -8,6 +8,16 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'user-manual', date: '2026-10-21', title: 'The user manual, one click from Help',
+    summary: 'A link at the top of the Help panel opens the user manual on fmIDE\'s website: lessons step by step, with the numbers you should see.',
+    what: [
+      '📖 The user manual, at the top of the Help panel, opens the manual\'s part about fmGraph in your browser.',
+      'The manual teaches by what you want to do, a lesson at a time: numbered steps to follow with the app open, the numbers you should see, and the Help topic and tutorial that go with each lesson.',
+    ],
+    why: 'The manual was only on the website, and nothing in fmGraph said so.',
+    how: ['Open ❓ Help (or F1).', 'Press 📖 The user manual, step by step (online), at the top.'],
+    notes: ['It needs a connection: the link opens the website in your browser. fmGraph itself never goes online for it.'],
+    see: ['what-is-fmgraph'] },
   { id: 'lines-chart', date: '2026-10-19', title: 'Lines charts',
     summary: 'A new kind of chart: several rectangles over the periods, a line each.',
     what: [

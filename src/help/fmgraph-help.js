@@ -19,6 +19,7 @@ const FMGRAPH_HELP_TOPICS = [
       { p: 'fmGraph shows a model built in fmIDE as bars, and lets you change its inputs with sliders. Move a slider and every bar that depends on that input, directly or through other rectangles, moves with it.' },
       { p: 'It never changes your model. A slider is a "what if": the bars show what the model would give with that number, and Reset puts the model\'s own number back.' },
       { tip: 'Use it to understand a model, to check it (a bar that moves when it shouldn\'t points at a wrong arrow), or to show it to people who don\'t build models.' },
+      { p: '📖 The user manual, at the top of this Help panel, opens the manual\'s part about fmGraph on fmIDE\'s website, in your browser: lessons step by step, with the numbers you should see. It needs a connection; fmGraph itself never goes online for it.' },
       { see: ['open-model', 'tutorials', 'bars', 'charts', 'sliders'] },
     ] },
   { id: 'tutorials', group: 'start', title: 'Tutorials',

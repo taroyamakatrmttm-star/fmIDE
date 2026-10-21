@@ -230,6 +230,8 @@
   .welcome-title{ font-size:16px; margin:0 0 4px; color:#0f172a; }
   .welcome-text{ margin:0 0 10px; color:#475569; }
   .welcome-close{ position:absolute; top:6px; right:8px; border:none; background:none; font-size:18px; cursor:pointer; color:#64748b; }
+  .welcome-manual{ display:block; margin-top:2px; font-size:13px; color:#1d4ed8; text-decoration:none; }
+  .welcome-manual:hover, .welcome-manual:focus-visible{ text-decoration:underline; }
   .welcome-choice{ display:block; width:100%; text-align:left; margin-bottom:6px; padding:7px 10px; }
   .welcome-choice:hover{ background:#eef2ff; border-color:#c7d2fe; }
   .welcome-tour{ border-color:#6366f1; background:#eef2ff; }
@@ -1211,6 +1213,8 @@
 .help-search:focus{ outline:2px solid #a5b4fc; border-color:#6366f1; }
 .help-body{ flex:1; overflow-y:auto; padding:2px 14px 18px; font-size:13px; line-height:1.5; }
 .help-intro, .help-empty{ color:#475569; margin:4px 0 8px; }
+.help-manual{ display:block; margin:0 0 10px; color:#1d4ed8; text-decoration:none; font-weight:600; }
+.help-manual:hover, .help-manual:focus-visible{ text-decoration:underline; }
 .help-group{ font-size:10.5px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin:14px 0 4px; }
 .help-topic-link{
   display:block; width:100%; text-align:left; border:1px solid transparent; background:none; border-radius:8px;
@@ -1877,6 +1881,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         { p: 'To find a command by name, press {cmd:openLauncher} (Ctrl+K, or Cmd+K on a Mac), type part of its name and press Enter. Help topics are found there too.' },
         { p: 'This Help panel opens with F1, with ❓ at the top right, or with {cmd:openHelp}. You can keep working while it is open.' },
         { p: 'What\'s new, at the top of the Help panel (or {cmd:openWhatsNew}), lists every update, newest first: what changed, why, and how to use it. A dot on ❓ means there is something you haven\'t seen yet.' },
+        { p: '📖 The user manual, at the top of this Help panel (and at the bottom of the welcome card), opens the manual on fmIDE\'s website in your browser: lessons that build a model step by step, across fmIDE, ExcelExporter and fmGraph, with the numbers you should see. It needs a connection; fmIDE itself never goes online for it.' },
         { p: 'To read more comfortably, press ⤢ at the top of the panel: it widens to a reading view, and ⤡ brings it back. Or drag its left edge to any width; a double-click on the edge goes back to the usual width. Help remembers the width.' },
         { see: ['launcher-shortcuts', 'canvases'] },
       ] },
@@ -2540,6 +2545,17 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // entry: ids, dates in order, commands and topics that exist.
   // **A change people will notice adds its entry here in the same pull request.**
   const WHATS_NEW = [
+    { id: 'user-manual', date: '2026-10-21', title: 'The user manual, one click from Help',
+      summary: 'A link at the top of the Help panel opens the user manual on fmIDE\'s website: lessons step by step, with the numbers you should see.',
+      what: [
+        '📖 The user manual, at the top of the Help panel, opens the manual\'s contents in your browser.',
+        'The manual teaches by what you want to do, a lesson at a time: numbered steps to follow with the app open, the numbers you should see, and the Help topic and tutorial that go with each lesson.',
+      ],
+      why: 'The manual was only on the website, and nothing in fmIDE said so.',
+      how: ['Open Help (F1), or look at the bottom of the welcome card.', 'Press 📖 The user manual, step by step (online), at the top.'],
+      notes: ['It needs a connection: the link opens the website in your browser. fmIDE itself never goes online for it.'],
+      see: ['finding-your-way'] },
+
     { id: 'share-again', date: '2026-10-19', title: 'Share your templates again, attachments and all',
       summary: 'The community library takes a version you shared before with a new Excel layout or fmGraph board, and the items of a pack you took down yourself.',
       what: [
@@ -3401,6 +3417,10 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   //                      ids] } (texts may hold {cmd:id}); seen.get() is asked each time. An entry dated after the date seen is
   //                      new; with none seen yet, the ones from the last NEWS_FRESH_DAYS days of
   //                      the newest. Opening the list of every update marks them all seen.
+  //   options.manual (optional) — the page of the user manual this app starts at ('' its
+  //                      contents, e.g. '05-excelexporter'): a link at the top of the panel opens
+  //                      it on the published site, in the browser (manualAddress). The app itself
+  //                      never fetches it: the person's click opens it, so the single file stays offline.
   //   richText(tag, cls, text) is returned too: the same {cmd:id} buttons, for the app's own cards.
   //   The styles are src/shared/help-panel.css; each app sets --help-top (where the panel
   //   starts) and makes room for it under body.help-open, using --help-w (the panel's width).
@@ -3418,6 +3438,12 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     if(!m) return '';
     const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     return Number(m[3]) + ' ' + (months[Number(m[2]) - 1] || '') + ' ' + m[1];
+  }
+  // The user manual (docs/manual/), published with the site at /manual (tools/build-manual.js).
+  const MANUAL_ADDRESS = 'https://fmide.pages.dev/manual/';
+  // A page of the manual: '' the contents, else a page name (letters, digits and dashes only).
+  function manualAddress(page){
+    return MANUAL_ADDRESS + (typeof page === 'string' && /^[a-z0-9-]+$/.test(page) ? page : '');
   }
   const HELP_DEFAULT_W = 380, HELP_MIN_W = 300, HELP_WIDE_AT = 600, HELP_KEEP_FREE = 200;
   // A saved size (the person's own setting, but read from storage): numbers in range, or left out.
@@ -3785,6 +3811,13 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     }
     function renderHome(body){
       if(options.intro) body.appendChild(make('p', 'help-intro', options.intro));
+      if(typeof options.manual === 'string'){
+        const a = make('a', 'help-manual', '📖 The user manual, step by step (online) ↗');
+        a.href = manualAddress(options.manual);
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        body.appendChild(a);
+      }
       renderNewsHome(body);
       if(options.homeTop) options.homeTop(body, make);
       groups.forEach(g => {
@@ -3919,6 +3952,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   const help = createHelpPanel({
     groups: HELP_GROUPS, topics: HELP_TOPICS,
     intro: 'Plain-English guides to everything in fmIDE. Pick a topic, or search above. You can keep working while this panel is open.',
+    manual: '',
     placeholder: 'Search help — e.g. "last period" or "templates"',
     commands: {
       get: getCommand,
@@ -4668,6 +4702,11 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     choice('Explore the sample model', 'It is already open behind this card', 'welcome-sample', () => hideWelcomeCard());
     choice('Start blank', 'An empty canvas', 'welcome-blank', () => { hideWelcomeCard(); runCommand('newDocument'); });
     choice('❓ Open Help', 'Guides to every feature (F1, any time)', 'welcome-help', () => { hideWelcomeCard(); openHelp(); });
+    const manual = el('a', 'welcome-manual', '📖 The user manual, step by step (online) ↗');
+    manual.href = manualAddress('');
+    manual.target = '_blank';
+    manual.rel = 'noopener noreferrer';
+    card.appendChild(manual);
     document.body.appendChild(card);
   }
   function hideWelcomeCard(){ const c = document.getElementById('welcomeCard'); if(c) c.remove(); }

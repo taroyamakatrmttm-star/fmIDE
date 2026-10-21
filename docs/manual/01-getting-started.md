@@ -97,7 +97,7 @@ fmIDE opens in its own window, even with the internet turned off.
 > **You need:** fmIDE.
 > **Time:** about 10 minutes.
 > **In the app:** fmIDE Help → *Finding your way around* (`finding-your-way`), *Command Launcher and keyboard shortcuts* (`launcher-shortcuts`) · Tutorial *Your first model* (`first-model`)
-> **Came in:** step 10 · Help [#56](https://github.com/taroyamakatrmttm-star/fmIDE/pull/56); tips and "?" on windows [#57](https://github.com/taroyamakatrmttm-star/fmIDE/pull/57); tutorials and the welcome card [#58](https://github.com/taroyamakatrmttm-star/fmIDE/pull/58), [#59](https://github.com/taroyamakatrmttm-star/fmIDE/pull/59); help pages [#61](https://github.com/taroyamakatrmttm-star/fmIDE/pull/61); the wider panel and What's new [#76](https://github.com/taroyamakatrmttm-star/fmIDE/pull/76)–[#78](https://github.com/taroyamakatrmttm-star/fmIDE/pull/78); resizable windows [#50](https://github.com/taroyamakatrmttm-star/fmIDE/pull/50)
+> **Came in:** step 10 · Help [#56](https://github.com/taroyamakatrmttm-star/fmIDE/pull/56); tips and "?" on windows [#57](https://github.com/taroyamakatrmttm-star/fmIDE/pull/57); tutorials and the welcome card [#58](https://github.com/taroyamakatrmttm-star/fmIDE/pull/58), [#59](https://github.com/taroyamakatrmttm-star/fmIDE/pull/59); help pages [#61](https://github.com/taroyamakatrmttm-star/fmIDE/pull/61); the wider panel and What's new [#76](https://github.com/taroyamakatrmttm-star/fmIDE/pull/76)–[#78](https://github.com/taroyamakatrmttm-star/fmIDE/pull/78); the link to this manual [#PRNUM](https://github.com/taroyamakatrmttm-star/fmIDE/pull/PRNUM); resizable windows [#50](https://github.com/taroyamakatrmttm-star/fmIDE/pull/50)
 
 ### The screen
 
@@ -117,6 +117,7 @@ fmIDE opens in its own window, even with the internet turned off.
 6. **A reading view.** Press **⤢** at the top of the panel to widen it; **⤡** brings it back. Or drag its left edge; a double-click on the edge goes back to the usual width.
 7. **Tutorials.** At the top of the Help panel, pick **Your first model**. A card shows one step at a time, a ring shows what to press, and each step moves on once you've done it. Exit any time.
 8. **What's new.** At the top of the Help panel (or **View → What's New**): every update, newest first, each with a page saying what changed, why, and how to use it. A dot on ❓ means there is something you haven't seen.
+9. **This manual.** At the top of the Help panel (and at the bottom of the welcome card), **📖 The user manual, step by step (online)** opens this manual on fmIDE's website, in your browser. ExcelExporter's and fmGraph's Help panels have the same link, to their own parts of the manual. It needs a connection; the apps themselves never go online for it.
 
 ### Check it
 

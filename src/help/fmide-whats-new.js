@@ -12,6 +12,17 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'user-manual', date: '2026-10-21', title: 'The user manual, one click from Help',
+    summary: 'A link at the top of the Help panel opens the user manual on fmIDE\'s website: lessons step by step, with the numbers you should see.',
+    what: [
+      '📖 The user manual, at the top of the Help panel, opens the manual\'s contents in your browser.',
+      'The manual teaches by what you want to do, a lesson at a time: numbered steps to follow with the app open, the numbers you should see, and the Help topic and tutorial that go with each lesson.',
+    ],
+    why: 'The manual was only on the website, and nothing in fmIDE said so.',
+    how: ['Open Help (F1), or look at the bottom of the welcome card.', 'Press 📖 The user manual, step by step (online), at the top.'],
+    notes: ['It needs a connection: the link opens the website in your browser. fmIDE itself never goes online for it.'],
+    see: ['finding-your-way'] },
+
   { id: 'share-again', date: '2026-10-19', title: 'Share your templates again, attachments and all',
     summary: 'The community library takes a version you shared before with a new Excel layout or fmGraph board, and the items of a pack you took down yourself.',
     what: [

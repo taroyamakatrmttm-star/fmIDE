@@ -186,3 +186,42 @@ test.describe('ExcelExporter', () => {
     await expect(page.locator('#btnHelp')).not.toHaveClass(/\bhas-news\b/);
   });
 });
+
+// The user manual (docs/manual/, the site's /manual): a link at the top of each app's Help panel,
+// to the manual's page for that app. Only the person's click opens it, in the browser: opening
+// Help asks nothing of the network.
+test.describe('the user manual, from Help', () => {
+  const MANUAL = 'https://fmide.pages.dev/manual/';
+  const outside = (page) => { const asked = []; page.on('request', r => { if(!/^(file|data|blob|about):/.test(r.url())) asked.push(r.url()); }); return asked; };
+  const check = async (page, href) => {
+    const a = panel(page).locator('a.help-manual');
+    await expect(a).toHaveCount(1);
+    await expect(a).toBeVisible();
+    await expect(a).toContainText('The user manual');
+    expect(await a.evaluate(e => [e.getAttribute('href'), e.target, e.rel])).toEqual([href, '_blank', 'noopener noreferrer']);
+  };
+  test('fmIDE: the manual\'s contents', async ({ page }) => {
+    await page.setViewportSize({ width: 1400, height: 900 });
+    await F.openFmIDE(page);
+    const asked = outside(page);
+    await page.keyboard.press('F1');
+    await check(page, MANUAL);
+    expect(asked).toEqual([]);
+  });
+  test('ExcelExporter: Part 5, ExcelExporter', async ({ page }) => {
+    await page.setViewportSize({ width: 1400, height: 900 });
+    await openApp(page, 'ExcelExporter');
+    const asked = outside(page);
+    await page.click('#btnHelp');
+    await check(page, MANUAL + '05-excelexporter');
+    expect(asked).toEqual([]);
+  });
+  test('fmGraph: Part 6, fmGraph', async ({ page }) => {
+    await page.setViewportSize({ width: 1400, height: 900 });
+    await openApp(page, 'fmGraph');
+    const asked = outside(page);
+    await page.click('#btnHelp');
+    await check(page, MANUAL + '06-fmgraph');
+    expect(asked).toEqual([]);
+  });
+});

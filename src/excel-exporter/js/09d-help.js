@@ -14,6 +14,7 @@
 const excelHelp = createHelpPanel({
   groups: EXCEL_HELP_GROUPS, topics: EXCEL_HELP_TOPICS,
   intro: 'Plain-English guides to ExcelExporter. Pick a topic, or search above. The "?" beside a heading opens its topic.',
+  manual: '05-excelexporter',
   placeholder: 'Search help — e.g. "scenarios" or "tree view"',
   // H5a: the panel's width, kept in this browser (HELP_SIZE_KEY) for every model.
   size: { get: () => ({}), set: (v) => { layoutStore.put(HELP_SIZE_KEY, JSON.stringify(cleanHelpSize(v))).catch(() => {}); } },

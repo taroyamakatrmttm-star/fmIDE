@@ -11,6 +11,16 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'user-manual', date: '2026-10-21', title: 'The user manual, one click from Help',
+    summary: 'A link at the top of the Help panel opens the user manual on fmIDE\'s website: lessons step by step, with the numbers you should see.',
+    what: [
+      '📖 The user manual, at the top of the Help panel, opens the manual\'s part about ExcelExporter in your browser.',
+      'The manual teaches by what you want to do, a lesson at a time: numbered steps to follow with the app open, the numbers you should see, and the Help topic and tutorial that go with each lesson.',
+    ],
+    why: 'The manual was only on the website, and nothing in ExcelExporter said so.',
+    how: ['Open ❓ Help (or F1).', 'Press 📖 The user manual, step by step (online), at the top.'],
+    notes: ['It needs a connection: the link opens the website in your browser. ExcelExporter itself never goes online for it.'],
+    see: ['what-is-excelexporter'] },
   { id: 'tree-collapse-all', date: '2026-10-19', title: 'Collapse all and Expand all in the Tree',
     summary: 'Two buttons fold or unfold every tab of the Tree View at once.',
     what: [
