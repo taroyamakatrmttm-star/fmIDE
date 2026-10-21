@@ -77,6 +77,9 @@
  "75-excel-attach-layout.spec.js": 8.3,
  "76-fmgraph-sensitivity.spec.js": 16.9,
  "77-excel-graph-boards.spec.js": 25.7,
+ "78-excel-import-samples.spec.js": 1.4,
+ "79-excel-import.spec.js": 2.8,
  "8-snapshots.spec.js": 35.8,
+ "80-excel-import-app.spec.js": 17,
  "9-storage.spec.js": 12.2
 }

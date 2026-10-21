@@ -40,7 +40,7 @@ A lesson may have several numbered **sections** (`### 2.5.1 A corkscrew with if`
 | **Goal** | What the reader can do afterwards, in one sentence starting with a verb. |
 | **You need** | The app, a starting point, and an earlier lesson if it builds on one. Sample files are named by their path in the repository, such as `tests/fixtures/excel-import/03-two-sheets.xlsx`. |
 | **Time** | An honest guess for a first reading with the app open. |
-| **In the app** | The matching Help topic, by its title and id (`src/help/fmide-help.js`, `src/help/fmgraph-help.js`, `src/excel-exporter/help/excel-help.js`), and the in-app tutorial, if there is one (`src/help/fmide-tutorials.js`, `src/help/fmgraph-tutorials.js`). A later check may test that every id named here exists. |
+| **In the app** | The matching Help topic, by its title and id (`src/help/fmide-help.js`, `src/help/fmgraph-help.js`, `src/excel-exporter/help/excel-help.js`), and the in-app tutorial, if there is one (`src/help/fmide-tutorials.js`, `src/help/fmgraph-tutorials.js`). The site's build (`tools/build-manual.js`) and test group 81 check that every id named here exists, with that title, and stop the build if one doesn't. |
 | **Came in** | The build step (and phase) and the pull requests that built what the lesson teaches, linked. [Appendix A](appendix-a-coverage.md) lists the same the other way round. |
 | **Steps** | Numbered. One action each. Name the button exactly as the app shows it, in bold, with the path to it (**Insert → Excel Functions → if**). Give the keyboard way after the click way. |
 | **Check it** | Exact numbers, checked against the apps on `main` before the lesson goes in. Say how they were checked in the pull request. |
@@ -55,7 +55,7 @@ A lesson may have several numbered **sections** (`### 2.5.1 A corkscrew with if`
 - **The words of the app.** Copy button names, window titles and messages exactly from the app (search `src/` for the text). Never describe a button by its colour or position alone.
 - **Same model throughout a part** where possible, so the numbers build on each other.
 - **No claim without a check.** A number in *Check it* is one you saw. A behaviour in *Good to know* is one you tried or one a test pins (name the test group in the pull request).
-- **Up to date.** When a feature changes, its lesson changes in the same pull request, as its Help topic and What's new entry do (the rule is in `CLAUDE.md`, *How we work*, item 4): its steps and *Check it* numbers checked again, the pull request added to its *Came in* line, and a row for the pull request in [Appendix A](appendix-a-coverage.md). A feature whose lesson is still *(to come)* gets its Appendix A row only.
+- **Up to date.** When a feature changes, its lesson changes in the same pull request, as its Help topic and What's new entry do (the rule is in `CLAUDE.md`, *How we work*, item 4): its steps and *Check it* numbers checked again, the pull request added to its *Came in* line, and a row for the pull request in [Appendix A](appendix-a-coverage.md). A feature no lesson teaches yet gets a new lesson in the part it belongs to (or, when it is small, a few lines in the nearest one), added to the contents in `README.md`.
 - **Text from files is shown as it is.** Lessons never suggest pasting text from someone else's file into a formula or a macro without reading it first.
 
 ## Licences

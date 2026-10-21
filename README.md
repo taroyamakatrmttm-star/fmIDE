@@ -103,7 +103,7 @@ The script pieces are plain fragments of one wrapped function — no `import`/`e
 
 ## Docs
 
-- [`docs/manual/`](docs/manual/README.md) — **the user manual**: step-by-step lessons for fmIDE, ExcelExporter and fmGraph, with a linked table of contents; the basis for the help pages and tutorial videos (being written in phases; it replaces the three earlier tutorials `docs/tutorial-step7.md`, `docs/tutorial-step18-19.md` and `docs/tutorial-step20.md`, which now point to it)
+- [`docs/manual/`](docs/manual/README.md) — **the user manual**: step-by-step lessons for fmIDE, ExcelExporter and fmGraph, with a linked table of contents; the basis for the help pages and tutorial videos (67 lessons in seven parts, each checked against the apps; it replaces the three earlier tutorials `docs/tutorial-step7.md`, `docs/tutorial-step18-19.md` and `docs/tutorial-step20.md`, which now point to it)
 - [`docs/excel-layouts.md`](docs/excel-layouts.md) — ExcelExporter's two layouts, Mapping and Module Layouts: what each holds, where it is kept, and which one wins
 - [`docs/product-ideas.md`](docs/product-ideas.md) — product ideas for the roadmap, not yet scheduled: what people would choose or pay for, and improvements to what is built
 - [`docs/decisions.md`](docs/decisions.md) — agreed and open product decisions, and the build order

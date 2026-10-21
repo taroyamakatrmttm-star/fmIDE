@@ -70,6 +70,7 @@ const SITE_FILES = ['src/site/', 'src/library/', 'src/help-pages/', 'LICENSE', '
 const TOOL_INPUTS = {
   'tools/build-help.js': ['src/help/', 'src/excel-exporter/help/', 'src/fmide/js/01-setup-commands-keys.js',
     'src/fmide/js/16-ribbon-keytips.js', 'src/library/style.css', 'src/help-pages/help.css', 'docs/LICENSE-CC-BY-4.0.txt'],
+  'tools/build-manual.js': ['docs/manual/', 'src/help/fmgraph-help.js', 'src/help/fmgraph-tutorials.js', 'src/help-pages/manual.css'],
   'tools/build-library.js': ['src/library/style.css', 'docs/LICENSE-CC-BY-4.0.txt'],
   'tools/video-scripts.js': ['src/help/fmide-tutorials.js'],
   'tools/record-tutorials.js': [APP_PAGES.fmIDE, APP_PAGES.ExcelExporter, APP_PAGES.fmGraph],
