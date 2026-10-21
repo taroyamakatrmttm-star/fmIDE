@@ -4,7 +4,7 @@ A step-by-step guide to the three apps: **fmIDE**, where you build a financial m
 
 The manual is written in lessons. Each lesson teaches one thing, in numbered steps you can follow with the app open, and ends with the numbers you should see. Each part says when its numbers were last checked against the apps. Each lesson also names the matching topic in the apps' own **Help** and, where one exists, the guided tutorial inside the app, so the manual, the Help panel and the videos all say the same thing.
 
-> **Status.** The manual is being written in phases (see [How the manual is being written](#how-the-manual-is-being-written)). Lessons marked *(to come)* are listed so the contents are complete; their link goes to their part, where they will appear. Everything the apps do is covered by the Help panel in the meantime.
+> **Status.** All 67 lessons are written (October 2026), each checked against the apps. When the apps change, the lesson that teaches the change is updated in the same pull request.
 
 ## Contents
 
@@ -32,50 +32,50 @@ The manual is written in lessons. Each lesson teaches one thing, in numbered ste
 [2.14 fmIDE on a phone](02-building-models.md#phone)
 
 ### [Part 3 — Reusing your work: templates, recipes, functions and the library](03-reuse.md)
-3.1 Templates: save a canvas and use it again *(to come)* ·
-3.2 Template versions, and updating a canvas *(to come)* ·
-3.3 System templates, and keeping your templates tidy *(to come)* ·
-3.4 Recipes: templates made of templates *(to come)* ·
+[3.1 Templates: save a canvas and use it again](03-reuse.md#templates) ·
+[3.2 Template versions, and updating a canvas](03-reuse.md#template-versions) ·
+[3.3 System templates, and keeping your templates tidy](03-reuse.md#system-templates) ·
+[3.4 Recipes: templates made of templates](03-reuse.md#recipes) ·
 [3.5 Your first function](03-reuse.md#first-function) ·
 [3.6 A function on the canvas](03-reuse.md#function-on-canvas) ·
 [3.7 Function versions and updating](03-reuse.md#function-versions) ·
 [3.8 Functions that call functions](03-reuse.md#functions-calling-functions) ·
 [3.9 Sharing functions](03-reuse.md#sharing-functions) ·
-3.10 Library packs: templates, recipes and functions in one file *(to come)* ·
-3.11 Browsing the community library *(to come)* ·
-3.12 Sharing your pack with everyone *(to come)*
+[3.10 Library packs: templates, recipes and functions in one file](03-reuse.md#library-packs) ·
+[3.11 Browsing the community library](03-reuse.md#browse-library) ·
+[3.12 Sharing your pack with everyone](03-reuse.md#share-library)
 
 ### [Part 4 — Macros and scripting](04-macros-scripting.md)
-4.1 Recording and running a macro *(to come)* ·
-4.2 The Macro Builder: steps, variables and stepping through *(to come)* ·
-4.3 Macros that keep working when the model changes *(to come)* ·
+[4.1 Recording and running a macro](04-macros-scripting.md#recording-macros) ·
+[4.2 The Macro Builder: steps, variables and stepping through](04-macros-scripting.md#macro-builder) ·
+[4.3 Macros that keep working when the model changes](04-macros-scripting.md#reliable-macros) ·
 [4.4 Scripting fmIDE with `window.fm`](04-macros-scripting.md#scripting-fm) ·
-4.5 Scripting fmGraph with `window.fmGraph` *(to come)*
+[4.5 Scripting fmGraph with `window.fmGraph`](04-macros-scripting.md#scripting-fmgraph)
 
 ### [Part 5 — ExcelExporter: from model to workbook](05-excelexporter.md)
-5.1 Your first workbook *(to come)* ·
-5.2 Finding your way in ExcelExporter *(to come)* ·
-5.3 Tabs, rows and the Tree View *(to come)* ·
+[5.1 Your first workbook](05-excelexporter.md#first-workbook) ·
+[5.2 Finding your way in ExcelExporter](05-excelexporter.md#exporter-tour) ·
+[5.3 Tabs, rows and the Tree View](05-excelexporter.md#tabs-rows) ·
 [5.4 Where the workbook differs from fmIDE](05-excelexporter.md#differences) ·
 [5.5 Functions and the newer operators in Excel](05-excelexporter.md#functions-in-excel) ·
-5.6 The Inputs tab, scenarios and Global Cases *(to come)* ·
-5.7 Blocks in the workbook *(to come)* ·
-5.8 The Excel look: your Excel style and a row's own format *(to come)* ·
-5.9 Layouts that are remembered, and layouts on templates *(to come)* ·
+[5.6 The Inputs tab, scenarios and Global Cases](05-excelexporter.md#inputs-scenarios) ·
+[5.7 Blocks in the workbook](05-excelexporter.md#blocks-in-excel) ·
+[5.8 The Excel look: your Excel style and a row's own format](05-excelexporter.md#excel-look) ·
+[5.9 Layouts that are remembered, and layouts on templates](05-excelexporter.md#layouts) ·
 [5.10 Sensitivity: the Tornado and the Spider in Excel](05-excelexporter.md#sensitivity) ·
 [5.11 fmGraph boards in Excel](05-excelexporter.md#fmgraph-in-excel) ·
-5.12 ExcelExporter on a phone *(to come)*
+[5.12 ExcelExporter on a phone](05-excelexporter.md#exporter-phone)
 
 ### [Part 6 — fmGraph: see how a value moves your model](06-fmgraph.md)
-6.1 Bars and sliders *(to come)* ·
-6.2 Charts: columns, lines and waterfalls *(to come)* ·
-6.3 Boards: tabs, arranging, colours, scales and files *(to come)* ·
-6.4 Trace, Biggest movers, and comparing A with B *(to come)* ·
-6.5 Named scenarios and the scenario waterfall *(to come)* ·
+[6.1 Bars and sliders](06-fmgraph.md#bars-sliders) ·
+[6.2 Charts: columns, lines and waterfalls](06-fmgraph.md#graph-charts) ·
+[6.3 Boards: tabs, arranging, colours, scales and files](06-fmgraph.md#graph-boards) ·
+[6.4 Trace, Biggest movers, and comparing A with B](06-fmgraph.md#graph-explore) ·
+[6.5 Named scenarios and the scenario waterfall](06-fmgraph.md#graph-scenarios) ·
 [6.6 Tornado and Spider: which inputs matter most](06-fmgraph.md#tornado-spider) ·
-6.7 Goal seek *(to come)* ·
-6.8 Boards on templates and in the library *(to come)* ·
-6.9 fmGraph on a phone *(to come)*
+[6.7 Goal seek](06-fmgraph.md#goal-seek) ·
+[6.8 Boards on templates and in the library](06-fmgraph.md#boards-templates) ·
+[6.9 fmGraph on a phone](06-fmgraph.md#fmgraph-phone)
 
 ### [Part 7 — Importing an Excel model](07-excel-import.md)
 [7.1 Which workbooks import well](07-excel-import.md#which-workbooks) ·
@@ -146,9 +146,9 @@ The owner chose (19 October 2026) to write the manual by what a person does, not
 |---|---|---|
 | 1 | These contents, the lesson style, the coverage appendix, and the three earlier tutorials rewritten as lessons (2.5, 2.12, 3.5–3.9, 4.4, 5.4, 5.5, 5.10, 5.11, 6.6 and Part 7) | ✅ |
 | 2 | Parts 1 and 2 | ✅ |
-| 3 | Parts 3 and 4 | to come |
-| 4 | Parts 5 and 6 | to come |
-| 5 | The improvements after step 20, the coverage appendix completed, a final read-through | to come |
+| 3 | Parts 3 and 4 | ✅ |
+| 4 | Parts 5 and 6 | ✅ |
+| 5 | The improvements after step 20 (#165–#193, in their lessons), the coverage appendix completed, a final read-through | ✅ |
 | 6 (optional) | A test that fails when a lesson names a Help topic or command that no longer exists; the manual as pages on the website | to decide |
 
 The three earlier guides, `docs/tutorial-step7.md`, `docs/tutorial-step18-19.md` and `docs/tutorial-step20.md`, now point here.

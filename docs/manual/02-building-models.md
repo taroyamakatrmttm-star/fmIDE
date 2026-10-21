@@ -443,7 +443,7 @@ A **vertical** block runs once per period, each copy (an *instance*, or vintage)
 - **broadcast or indexed.** A *broadcast* input is the same for every copy; an *indexed* one is read at the copy's own period, as Capex here.
 - **How the copies combine.** Added up by default. The output rectangle's **Σ** chip chooses max, min, average or product instead.
 - **🔗 Change block** on a block's box switches it to another block, or to vertical.
-- **In Excel,** a block's copies can get tabs of their own ([lesson 5.7](05-excelexporter.md), *to come*).
+- **In Excel,** a block's copies can get tabs of their own ([lesson 5.7](05-excelexporter.md#blocks-in-excel)).
 - **Order matters** inside a block as anywhere: `−`, `÷` and the comparisons read their inputs left to right ([lesson 2.4](#operators)).
 
 ---
@@ -475,7 +475,7 @@ fmIDE draws an automatic alias of Interest beside the socket, and Cash after int
 - **Several plugs** on one rectangle each feed their own sockets: type another name in the 🔌 editor.
 - **Several plugs into one socket are added together.** The socket then shows **⚡ name ×2** in amber as a warning, since that can double a number by accident; point at it to list the plugs.
 - **A socket nothing is plugged into gives 0,** as in Excel, so what reads it still works out.
-- **Recipes** connect the canvases they build through plugs and sockets ([lesson 3.4](03-reuse.md), *to come*).
+- **Recipes** connect the canvases they build through plugs and sockets ([lesson 3.4](03-reuse.md#recipes)).
 
 ### From a script
 
@@ -575,7 +575,7 @@ Inputs and calculations look different at a glance, and the input's number shows
 
 ### Good to know
 
-- **Two owners of the look.** fmIDE sets how rectangles look on the canvas, and their **number formats**, which go to Excel too. How cells look in Excel (fills, fonts, borders) is set in ExcelExporter, under **⚙ Settings → Excel Style**, once for every model you export ([lesson 5.8](05-excelexporter.md), *to come*).
+- **Two owners of the look.** fmIDE sets how rectangles look on the canvas, and their **number formats**, which go to Excel too. How cells look in Excel (fills, fonts, borders) is set in ExcelExporter, under **⚙ Settings → Excel Style**, once for every model you export ([lesson 5.8](05-excelexporter.md#excel-look)).
 - **Presets** are named looks you can apply again; **⇩ Export Presets** and **⇧ Import Presets** share them.
 - **Older files** still open; Excel-only settings they carried from before step 11 are left out.
 
