@@ -245,6 +245,7 @@ Oldest first. *Step* is the build step (and phase) the pull request belongs to; 
 | [#192](https://github.com/taroyamakatrmttm-star/fmIDE/pull/192) | 2026-10-19 | ExcelExporter: Collapse all and Expand all in the Tree View | after 20 | [5.3](05-excelexporter.md#tabs-rows) |
 | [#193](https://github.com/taroyamakatrmttm-star/fmIDE/pull/193) | 2026-10-20 | Library checker: share a version again with new attachments, or the items of one's own pack taken down | after 20 | [3.12](03-reuse.md#share-library) |
 | [#194](https://github.com/taroyamakatrmttm-star/fmIDE/pull/194) | 2026-10-19 | Docs: the user manual, phase 1 — contents, lesson style, coverage appendix, three tutorials as lessons | — | — *(this manual)* |
+| [#197](https://github.com/taroyamakatrmttm-star/fmIDE/pull/197) | 2026-10-21 | Docs: the user manual, phases 3–6 — Parts 3 to 6, the manual complete, checked by the build and on the website at `/manual/` | — | — *(this manual)* |
 
 ---
 

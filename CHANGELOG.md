@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## The user manual on the website
+- The manual (`docs/manual/`, 67 lessons) is now also on the site, at `/manual/`: a page per part, built with every site build by `tools/build-manual.js` — plain HTML with no JavaScript, under the help pages' security policy, not part of the offline copy. A lesson's Help topics link to the help pages; files of the repository link to GitHub.
+- The build checks the manual: a lesson naming a Help topic or tutorial that doesn't exist (or by another title), a lesson without its card, a link or anchor that leads nowhere, or a lesson the contents don't link stops it. Test group 81.
+
 ## The library: sharing again after attaching or a takedown
 - The library checker accepts the owner's own version shared again with another Excel layout or fmGraph board (fmIDE attaches them without a new version), as a note; everything else about the version must be the same. A version shared again from someone else's pack is still an exact copy.
 - The account that took one of its own packs down may share that pack's versions again (a note); any other account is still refused. The remaining errors say what to do in fmIDE. The library repository moves its `checker.json` to this commit to use it.

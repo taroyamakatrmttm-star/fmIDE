@@ -76,6 +76,7 @@ test('the tools read only what the map says they read', () => {
   const record = (tool, fn) => { reads.clear(); fn(); ran[tool] = [...reads]; };
   try{
     record('tools/build-help.js', () => require('../tools/build-help.js').buildHelp());
+    record('tools/build-manual.js', () => require('../tools/build-manual.js').buildManual());
     record('tools/build-library.js', () => require('../tools/build-library.js').buildLibrary(path.join(ROOT, 'tests', 'fixtures', 'library', 'sample-library')));
     record('tools/video-scripts.js', () => require('../tools/video-scripts.js').loadTutorials());
     record('tools/test-parts.js', () => require('../tools/test-parts.js').readDurations());

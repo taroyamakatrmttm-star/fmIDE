@@ -4,7 +4,7 @@ A step-by-step guide to the three apps: **fmIDE**, where you build a financial m
 
 The manual is written in lessons. Each lesson teaches one thing, in numbered steps you can follow with the app open, and ends with the numbers you should see. Each part says when its numbers were last checked against the apps. Each lesson also names the matching topic in the apps' own **Help** and, where one exists, the guided tutorial inside the app, so the manual, the Help panel and the videos all say the same thing.
 
-> **Status.** All 67 lessons are written (October 2026), each checked against the apps. When the apps change, the lesson that teaches the change is updated in the same pull request.
+> **Status.** All 67 lessons are written (October 2026), each checked against the apps. When the apps change, the lesson that teaches the change is updated in the same pull request. The manual is also on the website, at `/manual/` (its pages are built from these files with every site build; the build stops if a lesson names a Help topic that doesn't exist or a link leads nowhere).
 
 ## Contents
 
@@ -149,7 +149,7 @@ The owner chose (19 October 2026) to write the manual by what a person does, not
 | 3 | Parts 3 and 4 | ✅ |
 | 4 | Parts 5 and 6 | ✅ |
 | 5 | The improvements after step 20 (#165–#193, in their lessons), the coverage appendix completed, a final read-through | ✅ |
-| 6 (optional) | A test that fails when a lesson names a Help topic or command that no longer exists; the manual as pages on the website | to decide |
+| 6 | The manual checked by the build and test group 81 (a lesson's Help topics and tutorials exist with those titles, every link and anchor leads somewhere), and the manual as pages on the website, `/manual/` | ✅ |
 
 The three earlier guides, `docs/tutorial-step7.md`, `docs/tutorial-step18-19.md` and `docs/tutorial-step20.md`, now point here.
 

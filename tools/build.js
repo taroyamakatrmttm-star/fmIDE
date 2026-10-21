@@ -27,6 +27,10 @@
 // are added after the version is worked out and are not in the offline copy (the apps carry
 // their own help); a topic naming a command or topic that doesn't exist stops the build.
 //
+// And the user manual, /manual (tools/build-manual.js, from docs/manual/): the same way, after
+// the version and out of the offline copy; a broken link, lesson or Help topic name in it stops
+// the build.
+//
 // Each app has a page, src/<app>/index.html, in which a line consisting only of a marker
 // is replaced by content:
 //   <!-- build:css styles.css -->   the contents of that file
@@ -81,6 +85,7 @@ const FMIDE_ADDRESS_MARKER = /^<!-- build:fmide-address -->\r?$/;
 const fmideAddressMeta = (forSite) => '<meta name="fmide-address" content="' + (forSite ? './' : 'fmIDE.html') + '">\n';
 const LIBRARY = require('./build-library.js');
 const HELP = require('./build-help.js');
+const MANUAL = require('./build-manual.js');
 const INCLUDE = /^([ \t]*)\/\/ build:include ([A-Za-z0-9._\/-]+)\r?$/;
 
 function fail(msg){
@@ -265,7 +270,8 @@ function listFiles(dir, base){
 // Writes the whole site into outDir (created; files already there are replaced).
 // opts.library: the community library's folder (default library/; null for none);
 // opts.requireLibrary: throw when there is no library. Throws a LibraryError, writing
-// nothing, when the library fails its check, and a HelpError when the help text names a
+// nothing, when the library fails its check, a ManualError when the manual has a broken link,
+// lesson or Help topic name, and a HelpError when the help text names a
 // command or topic that doesn't exist.
 function buildSite(outDir, opts){
   opts = opts || {};
@@ -274,6 +280,7 @@ function buildSite(outDir, opts){
   // Checked before anything is written.
   const catalogue = libraryDir ? LIBRARY.buildLibrary(libraryDir) : null;
   const help = HELP.buildHelp();
+  const manual = MANUAL.buildManual();
   const files = new Map(); // site path → Buffer
   files.set('index.html', Buffer.from(buildApp(APPS[0], true), 'utf8'));
   files.set('ExcelExporter.html', Buffer.from(buildApp(APPS[1], true), 'utf8'));
@@ -297,6 +304,7 @@ function buildSite(outDir, opts){
   // are part of neither.
   if(catalogue) catalogue.files.forEach((data, name) => files.set(name, data));
   help.files.forEach((data, name) => files.set(name, data));
+  manual.files.forEach((data, name) => files.set(name, data));
   for(const [name, data] of files){
     const target = path.join(outDir, ...name.split('/'));
     fs.mkdirSync(path.dirname(target), { recursive: true });
@@ -333,18 +341,20 @@ function siteHeaders(files){
     ...LIBRARY.LIBRARY_HEADERS.map(b => block(b.paths, b.headers)),
     // The help pages' own rules.
     ...HELP.HELP_HEADERS.map(b => block(b.paths, b.headers)),
+    // The manual's own rules (the same policy).
+    ...MANUAL.MANUAL_HEADERS.map(b => block(b.paths, b.headers)),
     ''
   ].join('\n');
 }
 
-module.exports = { buildSite, siteHeaders, appSources, moduleFragment, ModuleError, LibraryError: LIBRARY.LibraryError, HelpError: HELP.HelpError };
+module.exports = { buildSite, siteHeaders, appSources, moduleFragment, ModuleError, LibraryError: LIBRARY.LibraryError, HelpError: HELP.HelpError, ManualError: MANUAL.ManualError };
 if(require.main === module) main();
 
 // Builds the site, reporting a library that fails (or is missing when required) and exiting.
 function siteOrFail(dir, opts){
   try{ return buildSite(dir, opts); }
   catch(e){
-    if(e instanceof LIBRARY.LibraryError || e instanceof HELP.HelpError) fail(e.message);
+    if(e instanceof LIBRARY.LibraryError || e instanceof HELP.HelpError || e instanceof MANUAL.ManualError) fail(e.message);
     throw e;
   }
 }
