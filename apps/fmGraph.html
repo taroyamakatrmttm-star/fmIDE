@@ -494,6 +494,8 @@
 .help-search:focus{ outline:2px solid #a5b4fc; border-color:#6366f1; }
 .help-body{ flex:1; overflow-y:auto; padding:2px 14px 18px; font-size:13px; line-height:1.5; }
 .help-intro, .help-empty{ color:#475569; margin:4px 0 8px; }
+.help-manual{ display:block; margin:0 0 10px; color:#1d4ed8; text-decoration:none; font-weight:600; }
+.help-manual:hover, .help-manual:focus-visible{ text-decoration:underline; }
 .help-group{ font-size:10.5px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin:14px 0 4px; }
 .help-topic-link{
   display:block; width:100%; text-align:left; border:1px solid transparent; background:none; border-radius:8px;
@@ -8858,6 +8860,10 @@ function renderTrialBar(){
 //                      ids] } (texts may hold {cmd:id}); seen.get() is asked each time. An entry dated after the date seen is
 //                      new; with none seen yet, the ones from the last NEWS_FRESH_DAYS days of
 //                      the newest. Opening the list of every update marks them all seen.
+//   options.manual (optional) — the page of the user manual this app starts at ('' its
+//                      contents, e.g. '05-excelexporter'): a link at the top of the panel opens
+//                      it on the published site, in the browser (manualAddress). The app itself
+//                      never fetches it: the person's click opens it, so the single file stays offline.
 //   richText(tag, cls, text) is returned too: the same {cmd:id} buttons, for the app's own cards.
 //   The styles are src/shared/help-panel.css; each app sets --help-top (where the panel
 //   starts) and makes room for it under body.help-open, using --help-w (the panel's width).
@@ -8875,6 +8881,12 @@ function newsDateText(d){
   if(!m) return '';
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   return Number(m[3]) + ' ' + (months[Number(m[2]) - 1] || '') + ' ' + m[1];
+}
+// The user manual (docs/manual/), published with the site at /manual (tools/build-manual.js).
+const MANUAL_ADDRESS = 'https://fmide.pages.dev/manual/';
+// A page of the manual: '' the contents, else a page name (letters, digits and dashes only).
+function manualAddress(page){
+  return MANUAL_ADDRESS + (typeof page === 'string' && /^[a-z0-9-]+$/.test(page) ? page : '');
 }
 const HELP_DEFAULT_W = 380, HELP_MIN_W = 300, HELP_WIDE_AT = 600, HELP_KEEP_FREE = 200;
 // A saved size (the person's own setting, but read from storage): numbers in range, or left out.
@@ -9242,6 +9254,13 @@ function createHelpPanel(options){
   }
   function renderHome(body){
     if(options.intro) body.appendChild(make('p', 'help-intro', options.intro));
+    if(typeof options.manual === 'string'){
+      const a = make('a', 'help-manual', '📖 The user manual, step by step (online) ↗');
+      a.href = manualAddress(options.manual);
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      body.appendChild(a);
+    }
     renderNewsHome(body);
     if(options.homeTop) options.homeTop(body, make);
     groups.forEach(g => {
@@ -9381,6 +9400,7 @@ const FMGRAPH_HELP_TOPICS = [
       { p: 'fmGraph shows a model built in fmIDE as bars, and lets you change its inputs with sliders. Move a slider and every bar that depends on that input, directly or through other rectangles, moves with it.' },
       { p: 'It never changes your model. A slider is a "what if": the bars show what the model would give with that number, and Reset puts the model\'s own number back.' },
       { tip: 'Use it to understand a model, to check it (a bar that moves when it shouldn\'t points at a wrong arrow), or to show it to people who don\'t build models.' },
+      { p: '📖 The user manual, at the top of this Help panel, opens the manual\'s part about fmGraph on fmIDE\'s website, in your browser: lessons step by step, with the numbers you should see. It needs a connection; fmGraph itself never goes online for it.' },
       { see: ['open-model', 'tutorials', 'bars', 'charts', 'sliders'] },
     ] },
   { id: 'tutorials', group: 'start', title: 'Tutorials',
@@ -9612,6 +9632,16 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'user-manual', date: '2026-10-21', title: 'The user manual, one click from Help',
+    summary: 'A link at the top of the Help panel opens the user manual on fmIDE\'s website: lessons step by step, with the numbers you should see.',
+    what: [
+      '📖 The user manual, at the top of the Help panel, opens the manual\'s part about fmGraph in your browser.',
+      'The manual teaches by what you want to do, a lesson at a time: numbered steps to follow with the app open, the numbers you should see, and the Help topic and tutorial that go with each lesson.',
+    ],
+    why: 'The manual was only on the website, and nothing in fmGraph said so.',
+    how: ['Open ❓ Help (or F1).', 'Press 📖 The user manual, step by step (online), at the top.'],
+    notes: ['It needs a connection: the link opens the website in your browser. fmGraph itself never goes online for it.'],
+    see: ['what-is-fmgraph'] },
   { id: 'lines-chart', date: '2026-10-19', title: 'Lines charts',
     summary: 'A new kind of chart: several rectangles over the periods, a line each.',
     what: [
@@ -9952,6 +9982,7 @@ let newsSeen = '';
 const help = createHelpPanel({
   groups: FMGRAPH_HELP_GROUPS, topics: FMGRAPH_HELP_TOPICS,
   intro: 'Plain-English guides to fmGraph. Pick a topic, or search above.',
+  manual: '06-fmgraph',
   placeholder: 'Search help — e.g. "slider" or "reach"',
   homeTop: (body, mk) => renderTutorialList(body, mk), // the tutorials (07b-tutorials.js)
   size: { get: () => ({}), set: (v) => { store.put(HELP_SIZE_KEY, JSON.stringify(cleanHelpSize(v))).catch(() => {}); } },

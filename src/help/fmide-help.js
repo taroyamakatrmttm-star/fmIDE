@@ -73,6 +73,7 @@ const HELP_TOPICS = [
       { p: 'To find a command by name, press {cmd:openLauncher} (Ctrl+K, or Cmd+K on a Mac), type part of its name and press Enter. Help topics are found there too.' },
       { p: 'This Help panel opens with F1, with ❓ at the top right, or with {cmd:openHelp}. You can keep working while it is open.' },
       { p: 'What\'s new, at the top of the Help panel (or {cmd:openWhatsNew}), lists every update, newest first: what changed, why, and how to use it. A dot on ❓ means there is something you haven\'t seen yet.' },
+      { p: '📖 The user manual, at the top of this Help panel (and at the bottom of the welcome card), opens the manual on fmIDE\'s website in your browser: lessons that build a model step by step, across fmIDE, ExcelExporter and fmGraph, with the numbers you should see. It needs a connection; fmIDE itself never goes online for it.' },
       { p: 'To read more comfortably, press ⤢ at the top of the panel: it widens to a reading view, and ⤡ brings it back. Or drag its left edge to any width; a double-click on the edge goes back to the usual width. Help remembers the width.' },
       { see: ['launcher-shortcuts', 'canvases'] },
     ] },

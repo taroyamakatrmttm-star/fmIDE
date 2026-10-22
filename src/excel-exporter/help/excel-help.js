@@ -35,6 +35,7 @@ const EXCEL_HELP_TOPICS = [
       { p: 'Everything happens in your browser: nothing is uploaded, and it works offline.' },
       { p: 'What\'s new, at the top of this Help panel, lists every update to ExcelExporter, newest first, each with what changed, why and how to use it. A dot on ❓ Help means there is something you haven\'t seen yet.' },
       { p: 'This Help panel opens with ❓ or F1. Press ⤢ at its top for a wider reading view (⤡ brings it back), or drag its left edge to any width; it remembers the width.' },
+      { p: '📖 The user manual, at the top of this Help panel, opens the manual\'s part about ExcelExporter on fmIDE\'s website, in your browser: lessons step by step, with the cells you should see. It needs a connection; ExcelExporter itself never goes online for it.' },
       { see: ['load-model', 'generate'] },
     ] },
   { id: 'load-model', group: 'start', title: 'Loading a model',

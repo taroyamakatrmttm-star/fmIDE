@@ -26,6 +26,10 @@
 //                      ids] } (texts may hold {cmd:id}); seen.get() is asked each time. An entry dated after the date seen is
 //                      new; with none seen yet, the ones from the last NEWS_FRESH_DAYS days of
 //                      the newest. Opening the list of every update marks them all seen.
+//   options.manual (optional) — the page of the user manual this app starts at ('' its
+//                      contents, e.g. '05-excelexporter'): a link at the top of the panel opens
+//                      it on the published site, in the browser (manualAddress). The app itself
+//                      never fetches it: the person's click opens it, so the single file stays offline.
 //   richText(tag, cls, text) is returned too: the same {cmd:id} buttons, for the app's own cards.
 //   The styles are src/shared/help-panel.css; each app sets --help-top (where the panel
 //   starts) and makes room for it under body.help-open, using --help-w (the panel's width).
@@ -43,6 +47,12 @@ function newsDateText(d){
   if(!m) return '';
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   return Number(m[3]) + ' ' + (months[Number(m[2]) - 1] || '') + ' ' + m[1];
+}
+// The user manual (docs/manual/), published with the site at /manual (tools/build-manual.js).
+export const MANUAL_ADDRESS = 'https://fmide.pages.dev/manual/';
+// A page of the manual: '' the contents, else a page name (letters, digits and dashes only).
+export function manualAddress(page){
+  return MANUAL_ADDRESS + (typeof page === 'string' && /^[a-z0-9-]+$/.test(page) ? page : '');
 }
 const HELP_DEFAULT_W = 380, HELP_MIN_W = 300, HELP_WIDE_AT = 600, HELP_KEEP_FREE = 200;
 // A saved size (the person's own setting, but read from storage): numbers in range, or left out.
@@ -410,6 +420,13 @@ export function createHelpPanel(options){
   }
   function renderHome(body){
     if(options.intro) body.appendChild(make('p', 'help-intro', options.intro));
+    if(typeof options.manual === 'string'){
+      const a = make('a', 'help-manual', '📖 The user manual, step by step (online) ↗');
+      a.href = manualAddress(options.manual);
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      body.appendChild(a);
+    }
     renderNewsHome(body);
     if(options.homeTop) options.homeTop(body, make);
     groups.forEach(g => {

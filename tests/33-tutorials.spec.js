@@ -219,6 +219,8 @@ test.describe('the welcome card', () => {
     const w = page.locator('#welcomeCard');
     await expect(w).toBeVisible();
     await expect(page.locator('.modal-overlay')).toHaveCount(0);
+    // The user manual, on the published site: a link the person opens in the browser.
+    expect(await w.locator('a.welcome-manual').evaluate(e => [e.getAttribute('href'), e.target, e.rel])).toEqual(['https://fmide.pages.dev/manual/', '_blank', 'noopener noreferrer']);
     // A window opened with it showing is on top of it (its buttons are never covered).
     await page.evaluate(() => fm.command('openTemplates'));
     const z = await page.evaluate(() => [getComputedStyle(document.getElementById('welcomeCard')).zIndex, getComputedStyle(document.querySelector('.modal-overlay')).zIndex].map(Number));

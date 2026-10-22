@@ -15,6 +15,7 @@ let newsSeen = '';
 const help = createHelpPanel({
   groups: FMGRAPH_HELP_GROUPS, topics: FMGRAPH_HELP_TOPICS,
   intro: 'Plain-English guides to fmGraph. Pick a topic, or search above.',
+  manual: '06-fmgraph',
   placeholder: 'Search help — e.g. "slider" or "reach"',
   homeTop: (body, mk) => renderTutorialList(body, mk), // the tutorials (07b-tutorials.js)
   size: { get: () => ({}), set: (v) => { store.put(HELP_SIZE_KEY, JSON.stringify(cleanHelpSize(v))).catch(() => {}); } },
