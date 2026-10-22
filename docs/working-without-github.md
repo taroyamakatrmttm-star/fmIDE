@@ -59,12 +59,14 @@ You need the two backup files, `fmIDE.bundle` and `fmide-library.bundle`, from t
    cd fmIDE
    git remote rename origin github-bundle
    git remote add origin https://codeberg.org/YOU/fmIDE.git
+   git remote set-head github-bundle -d
    git push origin 'refs/remotes/github-bundle/*:refs/heads/*'
    git push origin --tags
 
    cd ../fmide-library
    git remote rename origin github-bundle
    git remote add origin https://codeberg.org/YOU/fmide-library.git
+   git remote set-head github-bundle -d
    git push origin 'refs/remotes/github-bundle/*:refs/heads/*'
    ```
    The `push` line sends every branch in the bundle, not only the ones you have opened. When Git asks for a password, give the token. From now on `git push` sends to Codeberg.
