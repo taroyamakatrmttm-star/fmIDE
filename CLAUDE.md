@@ -96,6 +96,7 @@ Files under `.claude/rules/` load by themselves when a session reads a file they
 | Decisions and the full build order | `docs/architecture/build-order.md` |
 | The user manual: its lessons, their style, what came when | `docs/manual/README.md`, `docs/manual/STYLE.md` |
 | How this guidance is organised, what changed on 12 October 2026 | `docs/architecture/README.md` |
+| Working while GitHub is unavailable: the computer, Codeberg, `npm run deploy`, and going back | `docs/working-without-github.md` |
 
 ## Build order (full history: `docs/architecture/build-order.md`, decisions: `docs/decisions.md`)
 
@@ -106,6 +107,7 @@ Work in the build order and don't jump ahead unless asked. **Tell the owner at t
 - Step 20, importing an Excel model (decision 13; `docs/step20-excel-import.md`; ExcelExporter's File → Import Excel model… rebuilds an `.xlsx` model as an fmIDE model, checked against Excel's saved values; phases merged once green without waiting, the owner's request of 18 October 2026): 20a ✅ the brief and the sample workbooks (`tests/fixtures/excel-import/`, written by `tools/make-import-samples.js`, group 78); 20b ✅ reading the file (`src/excel-exporter/import/` modules, `xl…` names, included by `js/09k-excel-import.js`; group 79 in Node); 20c ✅ the formula parser (`import/formula.js`); 20d ✅ the layout and the confirm screen (`import/layout.js`, File → Import Excel model…, group 80); 20e ✅ building the model (`import/build.js`, Import); 20f ✅ the check (`import/check.js`, the report); 20g ✅ Save for fmIDE, help, the end-to-end test — step 20 done (18 October 2026). Next: the owner chooses the next step.
 - After step 20 (18–19 October 2026, outside the build order): improvements #165–#190 to the Excel import, ExcelExporter's Inputs tab, fmGraph (rectangle search, shared period, goal seek, lines charts) and the library's pack file name — listed in `docs/architecture/build-order.md` and `docs/product-ideas.md` (section 3). The library's `checker.json` names the fmIDE commit with #189 (fmide-library #17).
 - Ideas not yet in the build order, kept for the roadmap: `docs/product-ideas.md` (the owner chooses; move an idea to its "Built or dropped" table when it is done).
+- **GitHub unavailable (since 21 October 2026):** the account is suspended and the owner is appealing. Work happens on the owner's computer, with Codeberg as the copy elsewhere; the whole suite is run locally before a merge, the site is published with `npm run deploy`, and a pull request number is written as the branch name until the branch reaches GitHub. Everything is in `docs/working-without-github.md`, including going back.
 - Deferred: before the project is shared, the owner's name comes out of the public places (`docs/decisions.md`, "Before sharing the project"). Known issues: `docs/decisions.md` ("Known issues, to fix later"), none today.
 - The library repository names the fmIDE commit whose checker it runs in its `checker.json`: a change to the checker reaches the library only when that pointer is moved.
 
