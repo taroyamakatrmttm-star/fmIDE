@@ -164,7 +164,8 @@ test('⇪ Share: a document with a hostile name is shared under a safe file name
   const p = phone.page;
   const ws = { kind: 'fmIDE-workspace', version: 12, system: MODEL };
   const [chooser] = await Promise.all([p.waitForEvent('filechooser'), p.evaluate(() => fm.command('openDocument'))]);
-  await chooser.setFiles(tempFile('<img src=x onerror=alert(1)> plan.fmide', JSON.stringify(ws)));
+  // Handed over from memory: Windows allows no < or > in a file name on disk.
+  await chooser.setFiles({ name: '<img src=x onerror=alert(1)> plan.fmide', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(ws)) });
   await expect(p.locator('#phoneTitle')).toHaveText('<img src=x onerror=alert(1)> plan');
   await phone.menu('phoneShare');
   await expect.poll(() => p.evaluate(() => window.__shared.length)).toBe(1);
