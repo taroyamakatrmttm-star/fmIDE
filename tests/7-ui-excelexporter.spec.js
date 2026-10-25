@@ -638,6 +638,25 @@ test.describe('Inputs tab', () => {
     expect(t['BS']).not.toContain('Volume');
   });
 
+  test('a double-click whose second click lands in the gap under the selection bar still renames the row', async ({ page }) => {
+    await open(page, { inputs: true });
+    await page.click('#viewByTree');
+    const label = treeRow(page, 'Volume', { inputs: true }).locator('.tree-row-label');
+    const at = await label.boundingBox();
+    await page.mouse.click(at.x + 10, at.y + at.height / 2);
+    // The bar has appeared; the second click goes to the Rows panel between it and the tree.
+    const bar = await page.locator('#bulkMoveBar').boundingBox(), list = await page.locator('#rowGroupsTree').boundingBox();
+    const gap = { x: at.x + 10, y: (bar.y + bar.height + list.y) / 2 };
+    expect(list.y - (bar.y + bar.height)).toBeGreaterThan(4);
+    expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y).id, gap)).toBe('rowsPanel');
+    await page.mouse.move(gap.x, gap.y);
+    await page.mouse.down({ clickCount: 2 });
+    await page.mouse.up({ clickCount: 2 });
+    const input = page.locator('.tree-row-label-input');
+    await expect(input).toBeFocused();
+    await expect(input).toHaveValue('Volume');
+  });
+
   test('excluding the source removes it from the Inputs tab', async ({ page }) => {
     await open(page, { inputs: true });
     await page.click('#viewByTree');

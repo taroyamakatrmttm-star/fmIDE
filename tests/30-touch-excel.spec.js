@@ -131,6 +131,29 @@ test('a double-tap renames the row its first tap selected, even when the selecti
   expect(pageErrors).toEqual([]);
 });
 
+test('a double-tap whose second tap lands on a tab\'s heading renames the row, and the box stays open', async ({ page, pageErrors }) => {
+  await open(page);
+  const f = await finger(page);
+  // A row selected first, so the selection bar is already up and nothing moves.
+  await f.tap(await spot(rows(page).nth(1).locator('.tree-row-label')));
+  await expect(page.locator('#bulkMoveBar')).toBeVisible();
+  await page.waitForTimeout(900);
+  const group = page.locator('#rowGroupsTree .canvas-group').nth(1);
+  const row = group.locator('.tree-row').first(), label = await labelOf(row);
+  await group.scrollIntoViewIfNeeded();
+  const r = await row.boundingBox(), h = await group.locator('.tree-tab-header').boundingBox();
+  // The first tap on the row's top edge, the second on the heading's bottom edge, a few pixels up.
+  await f.tap({ x: r.x + 40, y: r.y + 2 });
+  await f.tap({ x: r.x + 40, y: h.y + h.height - 2 });
+  const input = page.locator('#rowGroupsTree .tree-row-label-input');
+  await expect(input).toBeFocused();
+  await expect(input).toHaveValue(label);
+  await page.waitForTimeout(300); // the copied mouse events of the second tap have come and gone
+  await expect(input).toBeFocused();
+  await expect(group.locator('.tree-row').first()).toBeVisible(); // the tab not folded either
+  expect(pageErrors).toEqual([]);
+});
+
 test('a right-click still opens the menu straight away, without the finger\'s items', async ({ page, pageErrors }) => {
   await open(page);
   const row = rows(page).nth(2);
