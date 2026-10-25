@@ -370,6 +370,9 @@ function page(title, description, main){
 // ManualError, with every problem found, when the manual has a broken link, lesson or name.
 function buildManual(src){
   src = src || loadManualSources();
+  // Windows line endings read as Unix ones: `.` doesn't match \r, so a heading line ending in it
+  // would give no anchor (a checkout without core.eol=lf; docs/working-without-github.md).
+  src = Object.assign({}, src, { files: new Map([...src.files].map(([f, t]) => [f, t.replace(/\r\n?/g, '\n')])) });
   const lessons = checkManual(src);
   const files = new Map();
   for(const [file, text] of src.files){

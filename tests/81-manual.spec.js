@@ -51,6 +51,15 @@ test.describe('building the manual', () => {
     }
   });
 
+  test('a manual saved with Windows line endings builds, and gives the same pages', () => {
+    // A checkout on Windows without core.eol=lf has CRLF in every file (docs/working-without-github.md).
+    const crlf = Object.assign({}, SRC, { files: new Map([...SRC.files].map(([f, t]) => [f, t.replace(/\n/g, '\r\n')])) });
+    const lf = buildManual(SRC), r = buildManual(crlf);
+    expect([...r.files.keys()]).toEqual([...lf.files.keys()]);
+    for(const [name, body] of lf.files) expect(r.files.get(name).equals(body), name).toBe(true);
+    expect(r.lessons).toBe(lf.lessons);
+  });
+
   test('a lesson naming a Help topic or tutorial that doesn\'t exist, or by another title, stops the build', () => {
     fails(sources('02-building-models.md', t => t.replace('(`timing-conditions`)', '(`no-such-topic`)')), /lesson 2\.5 names fmIDE Help topic no-such-topic, which doesn't exist/);
     fails(sources('02-building-models.md', t => t.replace('*Timing, conditions and rounding* (`timing-conditions`)', '*Timing and rounding* (`timing-conditions`)')),

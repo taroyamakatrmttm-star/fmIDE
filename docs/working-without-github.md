@@ -35,7 +35,7 @@ You need the two backup files, `fmIDE.bundle` and `fmide-library.bundle`, from t
    ```
    Both are needed. The repository's `.gitattributes` says `* text=auto`, so Git converts line endings to `core.eol`, which on Windows is CRLF by default, even when `core.autocrlf` is false. (Git for Windows also sets `autocrlf=true` in `C:/Program Files/Git/etc/gitconfig`; the global setting overrides it.)
 
-   **If you cloned already without them**, you'll see `npm run build` stop at the manual with *appendix-a-coverage.md: the link STYLE.md#videos leads to no anchor in STYLE.md*, and `git status` show `apps/ExcelExporter.html` and `apps/fmGraph.html` as modified. Set both settings, then in each of `fmIDE`, `fmIDE/library` and `fmide-library` (with nothing uncommitted) rewrite the files:
+   **If you cloned already without them**, `git status` shows `apps/ExcelExporter.html` and `apps/fmGraph.html` as modified after `npm run build`. (Before 25 October 2026 the build also stopped at the manual, with *appendix-a-coverage.md: the link STYLE.md#videos leads to no anchor in STYLE.md*; the manual's builder now reads Windows line endings, branch `claude/manual-crlf`.) Set both settings, then in each of `fmIDE`, `fmIDE/library` and `fmide-library` (with nothing uncommitted) rewrite the files:
    ```
    git rm -r -q --cached . && git reset --hard
    ```
