@@ -26,7 +26,7 @@ You need the two backup files, `fmIDE.bundle` and `fmide-library.bundle`, from t
 
 1. **Install the tools:**
    - **Git**: `winget install Git.Git` on Windows, or the installer from git-scm.com.
-   - **Node.js LTS**: `winget install OpenJS.NodeJS.LTS`, or nodejs.org.
+   - **Node.js LTS**: `winget install OpenJS.NodeJS.LTS`, or nodejs.org. Version 22.13 or later; 24, the current LTS, is what GitHub ran. Node 22.12 prints a warning ("CommonJS module … is loading ES Module … using require()") that fails test group 64. Check with `node --version`; a computer with the package `OpenJS.NodeJS.22` updates with `winget upgrade OpenJS.NodeJS.22`, since `winget upgrade OpenJS.NodeJS.LTS` only updates that other package.
    - **LibreOffice** (optional): the Excel recalculation tests need it. Without it they are skipped, which is fine for everyday work.
 2. **On Windows, set Git's line endings first**, before cloning:
    ```
