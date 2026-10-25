@@ -1101,6 +1101,7 @@ The page side of the importer; fixtures `tests/fixtures/excel-import/`.
 ### 81. The user manual, built and on the site (`tests/81-manual.spec.js`; `npm run test:manual`; manual phase 6)
 `tools/build-manual.js` turns `docs/manual/` into the site's `/manual` pages and checks the manual as it does (`ManualError`, nothing written).
 - **The manual as it is builds**: a page per file (`README.md` → `index`, `STYLE.md` → `writing-lessons`), at least 67 lessons, each heading carrying its anchor (`<h2 id="timing-conditions">Lesson 2.5 — …`) and linked from the contents.
+- **Windows line endings read as Unix ones**: the whole manual with CRLF in every file builds, with the same lessons and byte-for-byte the same pages (a Windows checkout without `core.eol=lf`; without the fix it stopped at "the link STYLE.md#videos leads to no anchor").
 - **A lesson's "In the app" line is checked**: a Help topic or tutorial id that doesn't exist (fmIDE's, ExcelExporter's or fmGraph's) stops the build ("lesson 2.5 names fmIDE Help topic no-such-topic, which doesn't exist"), and so does a title that isn't the topic's ('calls … "Timing and rounding"; its title is "Timing, conditions and rounding"').
 - **A lesson's card**: no anchor line ("lesson 2.1 has no anchor line"), a card line missing ('lesson 2.1 has no "Time" line').
 - **Links**: a missing anchor in another page or on its own, a missing manual page, a missing repository file, an anchor used twice, a lesson the contents don't link, a `javascript:` link — each stops the build, saying where.
