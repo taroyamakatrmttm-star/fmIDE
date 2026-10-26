@@ -251,6 +251,8 @@ Oldest first. *Step* is the build step (and phase) the pull request belongs to; 
 | branch `claude/fmgraph-shared-colours-e9c229` | 2026-10-26 | fmGraph: one colour per rectangle, shared by its slider, bars and charts on every board (board file 11) | after 20 | [6.3](06-fmgraph.md#graph-boards) |
 | branch `claude/objective-merkle-f14472` | 2026-10-27 | fmGraph: one scale for every bar and chart — Auto for all or Fixed for all (board file 12) | after 20 | [6.3](06-fmgraph.md#graph-boards) |
 | branch `claude/fmgraph-play-scenarios` | 2026-10-27 | fmGraph: ▶ Play swings between two scenarios and back, like a pendulum | after 20 | [6.5](06-fmgraph.md#graph-scenarios) |
+| branch `claude/tornado-remove-all-inputs-655a57` | 2026-10-27 | fmGraph: × Remove all inputs in a Tornado's or Spider's Edit chart; ExcelExporter leaves out one with no inputs, and says so | after 20 | [6.6](06-fmgraph.md#tornado-spider), [5.11](05-excelexporter.md#fmgraph-in-excel) |
+| branch `claude/colour-grid-picker-1c5e83` | 2026-10-27 | All three apps: every colour box opens a grid of ready colours (greys, hues by shades, chart colours, colours in use), More… for the browser's own | after 20 | [2.11](02-building-models.md#canvas-look), [5.8](05-excelexporter.md#excel-look), [6.3](06-fmgraph.md#graph-boards) |
 
 ---
 

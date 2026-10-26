@@ -15,7 +15,7 @@ The numbers in this part were checked against the apps on `main` at pull request
 | [6.3 Boards](#graph-boards) | Tabs, arranging, one colour per rectangle, a fixed scale, one scale for all, undo, board files, boards in the document | step 15 G3 ([#85](https://github.com/taroyamakatrmttm-star/fmIDE/pull/85)–[#87](https://github.com/taroyamakatrmttm-star/fmIDE/pull/87)), [#133](https://github.com/taroyamakatrmttm-star/fmIDE/pull/133), branch `claude/fmgraph-shared-colours-e9c229` |
 | [6.4 Trace, Biggest movers, and comparing A with B](#graph-explore) | 🔍 Trace, Biggest movers, 📌 Pin as A | step 15 G4 ([#88](https://github.com/taroyamakatrmttm-star/fmIDE/pull/88), [#89](https://github.com/taroyamakatrmttm-star/fmIDE/pull/89)) |
 | [6.5 Named scenarios and the scenario waterfall](#graph-scenarios) | + Save as scenario, ▶ Show, A, ▶ Play between two scenarios, the scenario waterfall | [#93](https://github.com/taroyamakatrmttm-star/fmIDE/pull/93), [#94](https://github.com/taroyamakatrmttm-star/fmIDE/pull/94) |
-| [6.6 Tornado and Spider: which inputs matter most](#tornado-spider) | The two charts, and choosing each input's Low and High | step 18 ([#146](https://github.com/taroyamakatrmttm-star/fmIDE/pull/146), [#149](https://github.com/taroyamakatrmttm-star/fmIDE/pull/149)) |
+| [6.6 Tornado and Spider: which inputs matter most](#tornado-spider) | The two charts, and choosing each input's Low and High | step 18 ([#146](https://github.com/taroyamakatrmttm-star/fmIDE/pull/146), [#149](https://github.com/taroyamakatrmttm-star/fmIDE/pull/149)); branch `claude/tornado-remove-all-inputs-655a57` |
 | [6.7 Goal seek](#goal-seek) | The slider value that hits a number | [#187](https://github.com/taroyamakatrmttm-star/fmIDE/pull/187) |
 | [6.8 Boards on templates and in the library](#boards-templates) | Export for a template…, Attach to template…, Try in fmGraph | step 15 G5 ([#90](https://github.com/taroyamakatrmttm-star/fmIDE/pull/90)–[#92](https://github.com/taroyamakatrmttm-star/fmIDE/pull/92)) |
 | [6.9 fmGraph on a phone](#fmgraph-phone) | The dock, the mixer, Show, Share | step 17 P1 ([#127](https://github.com/taroyamakatrmttm-star/fmIDE/pull/127), [#128](https://github.com/taroyamakatrmttm-star/fmIDE/pull/128)) |
@@ -102,13 +102,13 @@ At Price 12, the Profit bar shows **160**; a dashed outline keeps the model's ow
 > **You need:** fmGraph with a board.
 > **Time:** about 10 minutes.
 > **In the app:** fmGraph Help → *Boards: tabs, arranging, colours, undo* (`boards`), *A fixed vertical scale* (`scale`), *One scale for every bar and chart* (`common-scale`), *Saving and sharing boards* (`board-file`), *What fmGraph remembers* (`board-kept`)
-> **Came in:** step 15 G3 · boards [#85](https://github.com/taroyamakatrmttm-star/fmIDE/pull/85); colours shown [#86](https://github.com/taroyamakatrmttm-star/fmIDE/pull/86); boards in fmIDE's document [#87](https://github.com/taroyamakatrmttm-star/fmIDE/pull/87); a fixed scale [#133](https://github.com/taroyamakatrmttm-star/fmIDE/pull/133); one colour per rectangle, branch `claude/fmgraph-shared-colours-e9c229`; one scale for every bar and chart, branch `claude/objective-merkle-f14472`
+> **Came in:** step 15 G3 · boards [#85](https://github.com/taroyamakatrmttm-star/fmIDE/pull/85); colours shown [#86](https://github.com/taroyamakatrmttm-star/fmIDE/pull/86); boards in fmIDE's document [#87](https://github.com/taroyamakatrmttm-star/fmIDE/pull/87); a fixed scale [#133](https://github.com/taroyamakatrmttm-star/fmIDE/pull/133); one colour per rectangle, branch `claude/fmgraph-shared-colours-e9c229`; one scale for every bar and chart, branch `claude/objective-merkle-f14472`; the colour grid, branch `claude/colour-grid-picker-1c5e83`
 
 ### Steps
 
 1. **+ Board** adds an empty board as a new tab. **✎** (or a double-click on its tab) renames the board shown; **⧉** duplicates it; **🗑** deletes it after asking (the last board stays).
 2. Drag a bar or chart by its handle **⠿** to move it; **⇔** makes it wide (the whole row) or narrow (half).
-3. Colours belong to rectangles. Click the colour box beside the Price slider's name and choose a colour: the slider's left edge takes it, and so does every bar and chart showing Price, on every board. A bar's colour box (beside its periods) and a rectangle's swatch in a chart's key change the same colour.
+3. Colours belong to rectangles. Click the colour box beside the Price slider's name: a grid of colours opens under it (**Automatic** first, then greys, twelve colours in six shades, the chart colours and those already in use; **More…** for an exact colour). Choose one: the slider's left edge takes it, and so does every bar and chart showing Price, on every board. A bar's colour box (beside its periods) and a rectangle's swatch in a chart's key change the same colour.
 4. On the Profit bar, choose **Fixed scale** (beside its colour). It takes what *Auto* showed, rounded; type other ends if you like. Now move Price: the bar grows and shrinks against the same scale. **📏** fixes it again at what Auto shows now; **Auto scale** goes back.
 5. To compare every bar and chart, choose **Scale: Auto for all** above them, beside the shared period. Every bar and chart, on every board, now stands on one range that takes in all their numbers, and moves with the sliders; **Fixed for all** draws them all from the min to the max in its boxes. A bar's scale list now starts with **Shared**: choosing **Auto scale** there keeps that bar on its own. **Each its own** goes back, each keeping the scale it showed.
 6. **↶ Undo** (Ctrl+Z) takes back the last change to the boards; **↷ Redo** (Ctrl+Y) brings it back.
@@ -121,7 +121,7 @@ In the sample, the Closing cash bar and Closing cash in the Balance sheet are th
 ### Good to know
 
 - **Where the boards are kept:** in this browser, for each model, and in fmIDE's document when fmGraph was opened from fmIDE. Each change to them goes back to fmIDE and marks the document unsaved; saving there keeps the boards with the model.
-- **One colour per rectangle:** a rectangle you haven't coloured takes the chart colours in the order it first appears in a Columns, Lines or Spider chart. A waterfall step keeps its up, down or total colour until you choose one for it; the Tornado's Low and High colours belong to that chart. Choosing a rectangle's automatic colour again goes back to it. Boards saved before keep their colours; where two charts disagreed, the first is kept and fmGraph says how many changed.
+- **One colour per rectangle:** a rectangle you haven't coloured takes the chart colours in the order it first appears in a Columns, Lines or Spider chart. A waterfall step keeps its up, down or total colour until you choose one for it; the Tornado's Low and High colours belong to that chart. Choosing **Automatic** at the top of the colour picker goes back to it (one undo step). Boards saved before keep their colours; where two charts disagreed, the first is kept and fmGraph says how many changed.
 - **One scale for all:** bars and Columns, Lines, Waterfall and Scenario waterfall charts follow it; the Tornado and the Spider keep their own. It starts on Each its own, so boards saved before look as they did. On a phone there is no Scale choice; the bars and charts follow the one chosen on a larger screen. ExcelExporter's Dashboard charts take the same scale ([lesson 5.11](05-excelexporter.md#fmgraph-in-excel)).
 - **Moving a slider is not a change** to the board: Undo leaves it alone, and a board always opens on the model's own numbers.
 - **A board file fits the model it was made from,** or another built from the same templates. Anything it shows that this model hasn't got is left out, and fmGraph says how much.
@@ -202,7 +202,7 @@ The trace note reads **Price → Revenue → Profit**, and lists **Quantity** an
 > **You need:** fmIDE and fmGraph. The example model: Price `10` × Quantity `30` = Revenue; Revenue − Costs (`200`) = Profit, which is 100.
 > **Time:** about 10 minutes.
 > **In the app:** fmGraph Help → *Tornado and Spider: what moves an output most* (`sensitivity`) · fmGraph tutorial *Trace and compare* (`trace-and-compare`, its last two steps)
-> **Came in:** step 18, phases A1 and A2 · [#146](https://github.com/taroyamakatrmttm-star/fmIDE/pull/146), [#149](https://github.com/taroyamakatrmttm-star/fmIDE/pull/149)
+> **Came in:** step 18, phases A1 and A2 · [#146](https://github.com/taroyamakatrmttm-star/fmIDE/pull/146), [#149](https://github.com/taroyamakatrmttm-star/fmIDE/pull/149); × Remove all inputs, branch `claude/tornado-remove-all-inputs-655a57`
 
 Two chart kinds answer the same question: "which inputs matter most for this output?"
 
@@ -221,7 +221,7 @@ Two chart kinds answer the same question: "which inputs matter most for this out
    - **%** or **±**: move it by a percent or by an amount;
    - **Low** and **High**, for example −10 and +10.
 7. Read the line under each row. It shows Low and High in the input's own numbers, for example *Now 10: 9 … 11 in* the period chosen.
-8. Use **+ Input** to add another input, **↑ ↓** to reorder, **×** to remove.
+8. Use **+ Input** to add another input, **↑ ↓** to reorder, **×** to remove. To keep only a few of many inputs, press **× Remove all inputs**: the list empties in one step, and the chart says *No inputs yet: in Edit chart, + Input adds one, or ↻ takes the 3 that reach Profit.* Then press **+ Input** for each one you want and choose it in its list. **Undo** (or **↻**) brings them all back.
 
 ### Check it
 

@@ -85,17 +85,21 @@ function periodsChooser(spec, onChange, shared){
   return wrap;
 }
 
-// A colour box (the browser's own picker); onChange gets '#rrggbb'.
+// A colour box (the shared colour grid opens from it, 09-start.js); onChange gets '#rrggbb';
+// automatic (optional, automaticColour) gives the grid its Automatic swatch.
 const DEFAULT_BAR_COLOUR = '#0f766e';
-function colourPicker(value, label, onChange){
+function colourPicker(value, label, onChange, automatic){
   const c = make('input', 'colour-pick');
   c.type = 'color';
   c.value = cleanColour(value) || DEFAULT_BAR_COLOUR;
   c.title = label;
   c.setAttribute('aria-label', label);
   c.addEventListener('change', () => { const v = cleanColour(c.value); if(v) onChange(v); });
+  if(automatic) c.colourAutomatic = automatic;
   return c;
 }
+
+function redrawColours(){ saveBoardSoon(); renderBoard(); }
 
 function removeButton(id, what){
   const x = make('button', 'widget-remove', '×');
@@ -171,7 +175,7 @@ function barWidget(b){
   const row = make('div', 'widget-row bar-settings');
   row.appendChild(widgetPeriodsChooser(b)); // its own periods, or the shared ones (05k-shared-period.js)
   // The rectangle's colour, shared by its slider and every chart (04e-colours.js).
-  row.appendChild(colourPicker(shownColour(b.key), 'Bar colour', (c) => { chooseRectColour(b.key, c); saveBoardSoon(); renderBoard(); }));
+  row.appendChild(colourPicker(shownColour(b.key), 'Bar colour', (c) => { chooseRectColour(b.key, c); saveBoardSoon(); renderBoard(); }, automaticColour(b.key, DEFAULT_BAR_COLOUR, redrawColours)));
   row.appendChild(scaleChooser(b, () => { saveBoardSoon(); updateValues(); })); // (04d-scale.js)
   const rect = model.byKey.get(b.key);
   w.append(head, row);
@@ -195,7 +199,7 @@ function sliderWidget(s){
     saveBoardSoon(); renderBoard();
   });
   // Its rectangle's colour, as its bars and charts show it; picking it here changes them too (04e-colours.js).
-  const colour = colourPicker(shownColour(s.key), 'Colour of ' + rect.name, (c) => { chooseRectColour(s.key, c); saveBoardSoon(); renderBoard(); });
+  const colour = colourPicker(shownColour(s.key), 'Colour of ' + rect.name, (c) => { chooseRectColour(s.key, c); saveBoardSoon(); renderBoard(); }, automaticColour(s.key, DEFAULT_BAR_COLOUR, redrawColours));
   colour.classList.add('slider-colour');
   w.style.setProperty('--rect-colour', shownColour(s.key));
   head.append(sel, colour, foldButton(s), removeButton(s.id, 'slider')); // (05c-arrange.js)

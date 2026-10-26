@@ -325,6 +325,7 @@ const EXCEL_HELP_TOPICS = [
         'Point at a role\'s name to see which cells it covers.',
       ] },
       { p: 'In the Tree View, 🎨 on a row gives just that row its own look in this workbook.' },
+      { p: 'Every colour box opens a grid of ready colours: greys, twelve colours in six shades and the colours already used in your Excel style and this layout\'s rows. Click one, or move with the arrow keys and press Enter; Esc closes it. More… opens your browser\'s own colour box, for an exact colour.' },
       { p: 'A cell\'s fill, font colour, bold and border come from the first of these that is set:' },
       { steps: [
         'the row\'s own format (🎨 in the Tree View), part of this model\'s layout;',

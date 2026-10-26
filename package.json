@@ -39,6 +39,7 @@
     "test:pinch": "playwright test tests/45-pinch-zoom.spec.js",
     "test:help-site": "playwright test tests/34-help-site.spec.js",
     "test:manual": "playwright test tests/81-manual.spec.js",
+    "test:colour-grid": "playwright test tests/83-colour-grid.spec.js",
     "deploy": "node tools/build.js --site site --require-library && npx --yes wrangler@4 pages deploy site --project-name=fmide --branch=main",
     "test:videos": "playwright test tests/35-video-scripts.spec.js",
     "test:module-layouts": "playwright test tests/36-module-layouts.spec.js",

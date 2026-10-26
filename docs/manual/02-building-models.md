@@ -558,14 +558,14 @@ The control at the bottom right shows the zoom. Its − and + step it; the perce
 > **You need:** fmIDE with a model.
 > **Time:** about 5 minutes.
 > **In the app:** fmIDE Help → *Formats and format roles* (`formats`)
-> **Came in:** the first version; the Excel look moved to ExcelExporter, step 11a ([#63](https://github.com/taroyamakatrmttm-star/fmIDE/pull/63))
+> **Came in:** the first version; the Excel look moved to ExcelExporter, step 11a ([#63](https://github.com/taroyamakatrmttm-star/fmIDE/pull/63)); the colour grid, branch `claude/colour-grid-picker-1c5e83`
 
 ### Steps
 
 1. **Model → Format Presets** (also on the File tab). The window *Format Presets & Roles* lists two **roles**:
    - **Inputs**: every input rectangle, the numbers you type;
    - **Calculations**: every rectangle fed by an arrow (blank at first: the normal look).
-2. Press **✎** on **Inputs**. The window *Edit format preset — Inputs* opens. Set **Number format** to **Number** with **Decimals** `2`, and pick a **Fill color**. (It also has border, font, font size, font weight and name colour.) Press **Save**.
+2. Press **✎** on **Inputs**. The window *Edit format preset — Inputs* opens. Set **Number format** to **Number** with **Decimals** `2`, and pick a **Fill color**: its box opens a grid of colours, with the colours your model already uses at the bottom and **More…** for an exact colour. (It also has border, font, font size, font weight and name colour.) Press **Save**.
 3. Every input rectangle on every canvas takes the new look.
 4. Select one rectangle and press its **🎨** (*Format rectangle*). Give it a look of its own: it no longer follows its role.
 

@@ -11,6 +11,16 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'colour-grid', date: '2026-10-27', title: 'A grid of colours in every colour box',
+    summary: 'A colour box now opens a grid of ready colours, on Windows as on an iPad, with the colours your Excel style already uses.',
+    what: [
+      'Click a colour box in the Excel style or in a row\'s own format: a grid opens under it with greys, twelve colours in six shades from light to dark, and the colours already used in your Excel style and this layout\'s rows. Click one and it is set at once.',
+      'More… at the bottom opens your browser\'s own colour box, for an exact colour by its numbers.',
+      'The keyboard works too: Enter or Space opens the grid, the arrow keys move, Enter picks, Tab reaches More… and Esc closes it.',
+    ],
+    why: 'On Windows, the browser\'s own colour box shows only number fields and a gradient, with no ready colours to pick from; an iPad shows a grid. Now every screen has the grid, and matching a colour already in your style is one click.',
+    how: ['Open Layout → Excel Style….', 'Click a role\'s fill box, then a colour in the grid.', 'For an exact colour, press More… instead.'],
+    see: ['formats'] },
   { id: 'tree-rename-fix', date: '2026-10-26', title: 'Renaming in the Tree, every time',
     summary: 'A double-click or double-tap on a row renames it even when the selection bar has just pushed the list down.',
     what: [

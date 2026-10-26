@@ -140,6 +140,12 @@ function chartEditorParts(c){
     reach.type = 'button';
     reach.addEventListener('click', () => { c.inputs = sensitivityStart(c.output).inputs; changed(); });
     box.appendChild(reach);
+    // The owner's request of 27 October 2026: empty the list in one undo step, to pick a few with + Input.
+    const clear = make('button', 'link-btn sens-clear', '× Remove all inputs');
+    clear.type = 'button';
+    clear.disabled = !c.inputs.length;
+    clear.addEventListener('click', () => { c.inputs = []; changed(); });
+    box.appendChild(clear);
     return box;
   }
   if(c.layout === 'scenarios'){
@@ -218,7 +224,9 @@ function chartEditorParts(c){
       role.addEventListener('change', () => { s.role = role.value; changed(); });
       // Its rectangle's chosen colour, shared by every chart (otherwise by direction: up, down, or a full bar).
       const own = chosenColour(s.key);
-      const pick = colourPicker(own || '#334155', 'Colour of this step', (v) => { setRectColour(s.key, v); changed(); });
+      const byDirection = s.role === 'start' || s.role === 'total' ? '#334155' : '#047857'; // a full bar, or up (down is red)
+      const pick = colourPicker(own || '#334155', 'Colour of this step', (v) => { setRectColour(s.key, v); changed(); },
+        { colour: byDirection, name: 'by direction', chosen: !!own, choose: () => { setRectColour(s.key, null); changed(); } });
       r.append(role, rs, pick, rowButtons(c.steps, i));
       box.appendChild(r);
     });
@@ -376,7 +384,7 @@ function drawColumns(c, results, problems, key){
     grp.parts.forEach(k => {
       const item = make('label', 'key-item');
       // The swatch is the colour box: a click picks this rectangle's colour everywhere.
-      const sw = colourPicker(colours.get(k), 'Colour of ' + partLabel(k), pickRectColour(k));
+      const sw = colourPicker(colours.get(k), 'Colour of ' + partLabel(k), pickRectColour(k), automaticColour(k, PART_COLOURS[0], redrawColours));
       sw.classList.add('key-swatch');
       item.append(sw, document.createTextNode(partLabel(k)));
       line.appendChild(item);
@@ -448,7 +456,7 @@ function drawLines(c, results, problems, key){
   const line = make('div', 'key-line');
   [...new Set(c.lines)].forEach(k => {
     const item = make('label', 'key-item');
-    const sw = colourPicker(colours.get(k), 'Colour of ' + partLabel(k), pickRectColour(k));
+    const sw = colourPicker(colours.get(k), 'Colour of ' + partLabel(k), pickRectColour(k), automaticColour(k, PART_COLOURS[0], redrawColours));
     sw.classList.add('key-swatch');
     item.append(sw, document.createTextNode(partLabel(k)));
     line.appendChild(item);
@@ -674,7 +682,11 @@ function drawSensitivity(c, problems, key){
   const name = c.output ? partLabel(c.output) : '';
   const kind = c.layout === 'tornado' ? 'Tornado' : 'Spider';
   if(!c.output) problems.push('No output yet: Edit chart chooses it.');
-  else if(!c.inputs.length) problems.push('No inputs to move: none reaches ' + name + '.');
+  else if(!c.inputs.length){
+    const reaching = sensitivityStart(c.output).inputs.length;
+    problems.push(reaching ? 'No inputs yet: in Edit chart, + Input adds one, or ↻ takes ' + (reaching === 1 ? 'the one that reaches ' : 'the ' + reaching + ' that reach ') + name + '.'
+      : 'No inputs to move: none reaches ' + name + '.');
+  }
   if(!ready) problems.push('Working out…');
   const W = 560;
   if(!figures || !figures.inputs.length){
@@ -697,18 +709,20 @@ function drawSensitivity(c, problems, key){
   if(!ready) chart.classList.add('stale');
   // The key: its swatches pick the colours.
   const line = make('div', 'key-line');
-  const swatch = (colour, label, text, set) => {
+  const swatch = (colour, label, text, set, automatic) => {
     const item = make('label', 'key-item');
-    const sw = colourPicker(colour, label, (v) => { set(v); saveBoardSoon(); renderBoard(); });
+    const sw = colourPicker(colour, label, (v) => { set(v); saveBoardSoon(); renderBoard(); }, automatic);
     sw.classList.add('key-swatch');
     item.append(sw, document.createTextNode(text));
     line.appendChild(item);
   };
   if(c.layout === 'tornado'){
-    swatch(c.colour || TORNADO_LOW, 'Colour of Low', 'Low', (v) => { c.colour = v; });
-    swatch(c.colour2 || TORNADO_HIGH, 'Colour of High', 'High', (v) => { c.colour2 = v; });
+    // The chart's own colours; Automatic goes back to the usual blue and orange.
+    const usual = (prop, colour) => ({ colour, chosen: !!c[prop], choose: () => { c[prop] = null; redrawColours(); } });
+    swatch(c.colour || TORNADO_LOW, 'Colour of Low', 'Low', (v) => { c.colour = v; }, usual('colour', TORNADO_LOW));
+    swatch(c.colour2 || TORNADO_HIGH, 'Colour of High', 'High', (v) => { c.colour2 = v; }, usual('colour2', TORNADO_HIGH));
   } else {
-    figures.inputs.forEach((f, i) => { if(f.show) swatch(spiderColour(c, f.key, i), 'Colour of ' + partLabel(f.key), partLabel(f.key), (v) => { chooseRectColour(f.key, v); }); });
+    figures.inputs.forEach((f, i) => { if(f.show) swatch(spiderColour(c, f.key, i), 'Colour of ' + partLabel(f.key), partLabel(f.key), (v) => { chooseRectColour(f.key, v); }, automaticColour(f.key, PART_COLOURS[i % PART_COLOURS.length], redrawColours)); });
   }
   key.appendChild(line);
   raiseScaleLabels(chart);
