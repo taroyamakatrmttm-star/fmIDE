@@ -72,6 +72,12 @@ function setRectColour(key, colour){
 
 // The colour a slider, a bar or a key shows: the rectangle's, else the page's usual bar colour.
 function shownColour(key){ return rectColour(key) || DEFAULT_BAR_COLOUR; }
+// A colour box's Automatic (the shared colour grid): the colour the rectangle goes back to,
+// whether one is chosen now, and going back — one undo step, through done().
+function automaticColour(key, fallback, done, name){
+  return { colour: autoColours().get(key) || fallback, name, chosen: !!chosenColour(key),
+    choose: () => { setRectColour(key, null); done(); } };
+}
 // A colour box's pick: choosing what the rectangle would have anyway clears the choice.
 function chooseRectColour(key, colour){
   const c = cleanColour(colour);

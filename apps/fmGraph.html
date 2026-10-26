@@ -558,6 +558,33 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   .help-resize, .help-expand{ display:none; }
 }
 
+/* The colour grid (src/shared/colour-grid.js), shared by fmIDE, fmGraph and ExcelExporter:
+   opens under a colour box, above every window. */
+.colour-grid{
+  position:fixed; z-index:10000; box-sizing:border-box; width:max-content; max-width:calc(100vw - 16px);
+  max-height:calc(100vh - 16px); overflow-y:auto; padding:8px 10px 10px; background:#fff; color:#1e293b;
+  border:1px solid #cbd5e1; border-radius:10px; box-shadow:0 10px 28px rgba(15,23,42,.18); font:12px/1.3 system-ui, sans-serif;
+}
+.colour-grid .cg-title{ font-size:10.5px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.4px; margin:6px 0 4px; }
+.colour-grid .cg-title:first-child{ margin-top:0; }
+.colour-grid .cg-group{ display:grid; grid-template-columns:repeat(12, 22px); gap:3px; }
+.colour-grid .cg-swatch{
+  width:22px; height:22px; padding:0; margin:0; border:1px solid rgba(15,23,42,.18); border-radius:4px; cursor:pointer;
+  touch-action:manipulation; min-width:0; min-height:0;
+}
+.colour-grid .cg-swatch:hover{ transform:scale(1.12); }
+.colour-grid .cg-swatch:focus-visible{ outline:2px solid #1d4ed8; outline-offset:1px; }
+.colour-grid .cg-swatch[aria-pressed="true"]{ box-shadow:0 0 0 2px #fff, 0 0 0 4px #1e293b; }
+.colour-grid .cg-more{
+  display:block; margin:10px 0 0 auto; padding:5px 12px; border:1px solid #cbd5e1; border-radius:6px; background:#f8fafc;
+  color:#1e293b; font:inherit; cursor:pointer;
+}
+.colour-grid .cg-more:hover, .colour-grid .cg-more:focus-visible{ background:#eef2ff; border-color:#6366f1; }
+@media (pointer: coarse){
+  .colour-grid{ width:min(380px, calc(100vw - 16px)); }
+  .colour-grid .cg-group{ grid-template-columns:repeat(12, minmax(0, 1fr)); gap:4px; }
+  .colour-grid .cg-swatch{ width:auto; height:28px; }
+}
   /* The phone's slider (step 17, src/shared/phone.js). Its colours from the page:
      --ps-accent (the fill and knob), --ps-ink, --ps-soft, --ps-line. */
   .ps{ --ps-pad:24px; --ps-accent:#0f766e; --ps-ink:#1b2333; --ps-soft:#5f6b7d; --ps-line:#d5dbe5; position:relative; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
@@ -4489,6 +4516,12 @@ function setRectColour(key, colour){
 
 // The colour a slider, a bar or a key shows: the rectangle's, else the page's usual bar colour.
 function shownColour(key){ return rectColour(key) || DEFAULT_BAR_COLOUR; }
+// A colour box's Automatic (the shared colour grid): the colour the rectangle goes back to,
+// whether one is chosen now, and going back — one undo step, through done().
+function automaticColour(key, fallback, done, name){
+  return { colour: autoColours().get(key) || fallback, name, chosen: !!chosenColour(key),
+    choose: () => { setRectColour(key, null); done(); } };
+}
 // A colour box's pick: choosing what the rectangle would have anyway clears the choice.
 function chooseRectColour(key, colour){
   const c = cleanColour(colour);
@@ -4608,17 +4641,21 @@ function periodsChooser(spec, onChange, shared){
   return wrap;
 }
 
-// A colour box (the browser's own picker); onChange gets '#rrggbb'.
+// A colour box (the shared colour grid opens from it, 09-start.js); onChange gets '#rrggbb';
+// automatic (optional, automaticColour) gives the grid its Automatic swatch.
 const DEFAULT_BAR_COLOUR = '#0f766e';
-function colourPicker(value, label, onChange){
+function colourPicker(value, label, onChange, automatic){
   const c = make('input', 'colour-pick');
   c.type = 'color';
   c.value = cleanColour(value) || DEFAULT_BAR_COLOUR;
   c.title = label;
   c.setAttribute('aria-label', label);
   c.addEventListener('change', () => { const v = cleanColour(c.value); if(v) onChange(v); });
+  if(automatic) c.colourAutomatic = automatic;
   return c;
 }
+
+function redrawColours(){ saveBoardSoon(); renderBoard(); }
 
 function removeButton(id, what){
   const x = make('button', 'widget-remove', '×');
@@ -4693,7 +4730,7 @@ function barWidget(b){
   const row = make('div', 'widget-row bar-settings');
   row.appendChild(widgetPeriodsChooser(b)); // its own periods, or the shared ones (05k-shared-period.js)
   // The rectangle's colour, shared by its slider and every chart (04e-colours.js).
-  row.appendChild(colourPicker(shownColour(b.key), 'Bar colour', (c) => { chooseRectColour(b.key, c); saveBoardSoon(); renderBoard(); }));
+  row.appendChild(colourPicker(shownColour(b.key), 'Bar colour', (c) => { chooseRectColour(b.key, c); saveBoardSoon(); renderBoard(); }, automaticColour(b.key, DEFAULT_BAR_COLOUR, redrawColours)));
   row.appendChild(scaleChooser(b, () => { saveBoardSoon(); updateValues(); })); // (04d-scale.js)
   const rect = model.byKey.get(b.key);
   w.append(head, row);
@@ -4717,7 +4754,7 @@ function sliderWidget(s){
     saveBoardSoon(); renderBoard();
   });
   // Its rectangle's colour, as its bars and charts show it; picking it here changes them too (04e-colours.js).
-  const colour = colourPicker(shownColour(s.key), 'Colour of ' + rect.name, (c) => { chooseRectColour(s.key, c); saveBoardSoon(); renderBoard(); });
+  const colour = colourPicker(shownColour(s.key), 'Colour of ' + rect.name, (c) => { chooseRectColour(s.key, c); saveBoardSoon(); renderBoard(); }, automaticColour(s.key, DEFAULT_BAR_COLOUR, redrawColours));
   colour.classList.add('slider-colour');
   w.style.setProperty('--rect-colour', shownColour(s.key));
   head.append(sel, colour, foldButton(s), removeButton(s.id, 'slider')); // (05c-arrange.js)
@@ -5167,7 +5204,9 @@ function chartEditorParts(c){
       role.addEventListener('change', () => { s.role = role.value; changed(); });
       // Its rectangle's chosen colour, shared by every chart (otherwise by direction: up, down, or a full bar).
       const own = chosenColour(s.key);
-      const pick = colourPicker(own || '#334155', 'Colour of this step', (v) => { setRectColour(s.key, v); changed(); });
+      const byDirection = s.role === 'start' || s.role === 'total' ? '#334155' : '#047857'; // a full bar, or up (down is red)
+      const pick = colourPicker(own || '#334155', 'Colour of this step', (v) => { setRectColour(s.key, v); changed(); },
+        { colour: byDirection, name: 'by direction', chosen: !!own, choose: () => { setRectColour(s.key, null); changed(); } });
       r.append(role, rs, pick, rowButtons(c.steps, i));
       box.appendChild(r);
     });
@@ -5325,7 +5364,7 @@ function drawColumns(c, results, problems, key){
     grp.parts.forEach(k => {
       const item = make('label', 'key-item');
       // The swatch is the colour box: a click picks this rectangle's colour everywhere.
-      const sw = colourPicker(colours.get(k), 'Colour of ' + partLabel(k), pickRectColour(k));
+      const sw = colourPicker(colours.get(k), 'Colour of ' + partLabel(k), pickRectColour(k), automaticColour(k, PART_COLOURS[0], redrawColours));
       sw.classList.add('key-swatch');
       item.append(sw, document.createTextNode(partLabel(k)));
       line.appendChild(item);
@@ -5397,7 +5436,7 @@ function drawLines(c, results, problems, key){
   const line = make('div', 'key-line');
   [...new Set(c.lines)].forEach(k => {
     const item = make('label', 'key-item');
-    const sw = colourPicker(colours.get(k), 'Colour of ' + partLabel(k), pickRectColour(k));
+    const sw = colourPicker(colours.get(k), 'Colour of ' + partLabel(k), pickRectColour(k), automaticColour(k, PART_COLOURS[0], redrawColours));
     sw.classList.add('key-swatch');
     item.append(sw, document.createTextNode(partLabel(k)));
     line.appendChild(item);
@@ -5646,18 +5685,20 @@ function drawSensitivity(c, problems, key){
   if(!ready) chart.classList.add('stale');
   // The key: its swatches pick the colours.
   const line = make('div', 'key-line');
-  const swatch = (colour, label, text, set) => {
+  const swatch = (colour, label, text, set, automatic) => {
     const item = make('label', 'key-item');
-    const sw = colourPicker(colour, label, (v) => { set(v); saveBoardSoon(); renderBoard(); });
+    const sw = colourPicker(colour, label, (v) => { set(v); saveBoardSoon(); renderBoard(); }, automatic);
     sw.classList.add('key-swatch');
     item.append(sw, document.createTextNode(text));
     line.appendChild(item);
   };
   if(c.layout === 'tornado'){
-    swatch(c.colour || TORNADO_LOW, 'Colour of Low', 'Low', (v) => { c.colour = v; });
-    swatch(c.colour2 || TORNADO_HIGH, 'Colour of High', 'High', (v) => { c.colour2 = v; });
+    // The chart's own colours; Automatic goes back to the usual blue and orange.
+    const usual = (prop, colour) => ({ colour, chosen: !!c[prop], choose: () => { c[prop] = null; redrawColours(); } });
+    swatch(c.colour || TORNADO_LOW, 'Colour of Low', 'Low', (v) => { c.colour = v; }, usual('colour', TORNADO_LOW));
+    swatch(c.colour2 || TORNADO_HIGH, 'Colour of High', 'High', (v) => { c.colour2 = v; }, usual('colour2', TORNADO_HIGH));
   } else {
-    figures.inputs.forEach((f, i) => { if(f.show) swatch(spiderColour(c, f.key, i), 'Colour of ' + partLabel(f.key), partLabel(f.key), (v) => { chooseRectColour(f.key, v); }); });
+    figures.inputs.forEach((f, i) => { if(f.show) swatch(spiderColour(c, f.key, i), 'Colour of ' + partLabel(f.key), partLabel(f.key), (v) => { chooseRectColour(f.key, v); }, automaticColour(f.key, PART_COLOURS[i % PART_COLOURS.length], redrawColours)); });
   }
   key.appendChild(line);
   raiseScaleLabels(chart);
@@ -9667,6 +9708,7 @@ const FMGRAPH_HELP_TOPICS = [
       { p: 'A model can have several boards — for example one for the statements and one for pricing — shown as tabs above the board. + Board adds an empty one; ✎ (or a double-click on its tab) renames the board shown, ⧉ duplicates it and 🗑 deletes it (after asking; the last board stays). Each board has its own bars, charts and sliders.' },
       { p: 'Drag a bar, chart or slider by its handle (⠿) to move it among the others — by mouse, by finger (on an iPad too), or with the arrow keys on the handle. ⇔ makes a bar or chart wide (the whole row) or narrow (half of it).' },
       { p: 'Colours belong to rectangles: a rectangle has one colour on its slider, its bars and every chart, on every board. Pick it from the colour box beside a slider\'s name, a bar\'s colour box beside its periods, a rectangle\'s swatch in a chart\'s key, or a waterfall step\'s colour in Edit chart: all of them change together. A rectangle you haven\'t coloured takes the chart colours in the order it first appears in a Columns, Lines or Spider chart; a waterfall step shows up, down or total until you choose its colour. The Tornado\'s Low and High colours are the chart\'s own.' },
+      { p: 'Every colour box opens a grid of ready colours: greys, twelve colours in six shades, the chart colours and the colours already used on this model\'s boards. Click one, or move with the arrow keys and press Enter; Esc closes it. More… opens your browser\'s own colour box, for an exact colour. Automatic, at the top, goes back to the rectangle\'s automatic colour (a waterfall step\'s by direction, the Tornado\'s usual Low and High).' },
       { p: '↶ Undo and ↷ Redo (Ctrl+Z, Ctrl+Y) take back any change to the boards — not where a slider is set, which is a "what if", not a change.' },
       { see: ['board-file', 'charts'] },
     ] },
@@ -9779,6 +9821,17 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'colour-grid', date: '2026-10-27', title: 'A grid of colours in every colour box',
+    summary: 'A colour box now opens a grid of ready colours, on Windows as on an iPad, with the chart colours and the colours this model already uses.',
+    what: [
+      'Click a colour box (beside a slider\'s name, beside a bar\'s periods, a swatch in a chart\'s key, a waterfall step\'s colour): a grid opens under it with greys, twelve colours in six shades from light to dark, the chart colours and the colours already used on this model\'s boards. Click one and the rectangle takes it at once.',
+      'More… at the bottom opens your browser\'s own colour box, for an exact colour by its numbers.',
+      'Automatic, at the top, shows the colour the rectangle has when none is chosen, marked while it has it. Choose it to go back: the rectangle takes its automatic colour again everywhere (a waterfall step its colour by direction; the Tornado its usual Low and High). Undo brings your colour back.',
+      'The keyboard works too: Enter or Space opens the grid, the arrow keys move, Enter picks, Tab reaches More… and Esc closes it.',
+    ],
+    why: 'On Windows, the browser\'s own colour box shows only number fields and a gradient, with no ready colours to pick from; an iPad shows a grid. Now every screen has the grid, and giving two rectangles the same colour is one click. And once a rectangle had a colour chosen, nothing showed what its automatic one had been, so there was no way back.',
+    how: ['Click the colour box beside a slider\'s name.', 'Click a colour in the grid: the slider, its bars and its chart parts take it.', 'For an exact colour, press More… instead.'],
+    see: ['boards'] },
   { id: 'shared-colours', date: '2026-10-26', title: 'One colour per rectangle, everywhere',
     summary: 'A rectangle now has the same colour on its slider, its bars and every chart, on every board. Change it in one place and it changes everywhere.',
     what: [
@@ -9788,7 +9841,7 @@ const FMGRAPH_WHATS_NEW = [
       'Boards saved before keep their colours. Where two charts gave one rectangle different colours, the first one is kept, and a note says how many changed.',
     ],
     why: 'With several charts and boards, the same rectangle could be red in one chart and blue in another, and the sliders had no colour at all. Now the colour tells you which rectangle a slider moves.',
-    how: ['Click the colour box beside a slider\'s name, or a swatch in a chart\'s key, and choose a colour.', 'Every bar, chart and slider showing that rectangle takes it, on every board.', 'Choose its automatic colour again to go back to it.'],
+    how: ['Click the colour box beside a slider\'s name, or a swatch in a chart\'s key, and choose a colour.', 'Every bar, chart and slider showing that rectangle takes it, on every board.', 'To go back to its automatic colour, choose Automatic in the colour picker.'],
     notes: ['On a phone, the sliders show the colour as a stripe; colours are picked on a larger screen.', 'The Tornado\'s Low and High colours belong to that chart, not to a rectangle.', 'The board file is now version 11. ExcelExporter reads it, and its Dashboard charts take the same colours.'],
     see: ['boards'] },
   { id: 'long-lists-scroll', date: '2026-10-26', title: 'Long lists scroll in their window',
@@ -10795,6 +10848,262 @@ function watchForUpdates(opts){
   }
 }
 watchForUpdates({ appName: 'fmGraph', note: 'Your bars and sliders are kept.', beforeReload: () => saveBoardNow() });
+
+// Every colour box opens a grid of ready colours (the owner's request of 27 October 2026).
+
+// ---------- colour grid (shared: src/shared/colour-grid.js; fmIDE, fmGraph and ExcelExporter —
+// Apache in all three, the owner's decision of 27 October 2026) ----------
+// The browser's own colour box shows only RGB / HSL / HEX fields on Windows; an iPad's has a grid.
+// installColourGrid gives every <input type="color"> on the page a grid of ready colours instead:
+// a click (or Enter / Space) on the box opens it under the box — greys, twelve hues in six shades,
+// the app's chart colours and the colours already in use — and "More…" opens the browser's own
+// box for an exact colour. Picking one sets the box's value and sends `input` and `change`, as the
+// browser's box does, so each app's own handlers and colour checks run as before. Nothing is read
+// from a file except colours, and only a plain '#rrggbb' is ever shown; names come from the grid.
+
+const COLOUR_GRID_COLUMNS = 12;
+const COLOUR_GRID_HUES = [
+  ['Red', 0], ['Orange', 28], ['Amber', 42], ['Yellow', 54], ['Lime', 85], ['Green', 135],
+  ['Teal', 172], ['Cyan', 192], ['Blue', 217], ['Indigo', 240], ['Purple', 275], ['Pink', 330],
+];
+const COLOUR_GRID_SHADES = [['lightest', 92], ['lighter', 80], ['light', 66], ['mid', 50], ['dark', 36], ['darkest', 24]];
+const COLOUR_GRID_IN_USE_MAX = 24;
+
+// '#rrggbb' (lower case) for a colour written '#rgb' or '#rrggbb', else null.
+function colourGridHex(v){
+  if(typeof v !== 'string') return null;
+  const s = v.trim().toLowerCase();
+  if(/^#[0-9a-f]{6}$/.test(s)) return s;
+  if(/^#[0-9a-f]{3}$/.test(s)) return '#' + s[1] + s[1] + s[2] + s[2] + s[3] + s[3];
+  return null;
+}
+
+function hslHex(h, s, l){
+  s /= 100; l /= 100;
+  const k = (n) => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n) => Math.round(255 * (l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1))));
+  return '#' + [f(0), f(8), f(4)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+
+// The colours found in plain data (a style, a board, a list): the values of `fill`, `color`,
+// `colour` and `colour2`, and any '#rrggbb' in a list — at most `limit`, each once, 8 deep.
+function coloursIn(data, limit){
+  const max = limit || COLOUR_GRID_IN_USE_MAX, out = [];
+  const add = (v) => { const c = colourGridHex(v); if(c && !out.includes(c) && out.length < max) out.push(c); };
+  const walk = (d, depth) => {
+    if(out.length >= max || depth > 8 || !d || typeof d !== 'object') return;
+    if(Array.isArray(d)){ d.forEach(x => typeof x === 'string' ? add(x) : walk(x, depth + 1)); return; }
+    if(d instanceof Map){ d.forEach(x => typeof x === 'string' ? add(x) : walk(x, depth + 1)); return; }
+    for(const k of Object.keys(d)){
+      const v = d[k];
+      if(typeof v === 'string'){ if(k === 'fill' || k === 'color' || k === 'colour' || k === 'colour2') add(v); }
+      else walk(v, depth + 1);
+    }
+  };
+  walk(data, 0);
+  return out;
+}
+
+// The grid's sections: [{ title, swatches: [{ colour, name, auto? }] }], each row at most 12 wide.
+// automatic (optional): { colour, name } — the colour the box goes back to, first, on its own.
+function colourGridSections(chart, inUse, automatic){
+  const greys = [];
+  for(let i = 0; i < COLOUR_GRID_COLUMNS; i++){
+    const l = Math.round(100 - i * 100 / (COLOUR_GRID_COLUMNS - 1));
+    greys.push({ colour: hslHex(0, 0, l), name: i === 0 ? 'White' : i === COLOUR_GRID_COLUMNS - 1 ? 'Black' : 'Grey ' + (100 - l) + '%' });
+  }
+  const hues = [];
+  COLOUR_GRID_SHADES.forEach(([shade, l]) => COLOUR_GRID_HUES.forEach(([name, h]) => {
+    hues.push({ colour: hslHex(h, l > 85 ? 90 : 75, l), name: name + ', ' + shade });
+  }));
+  const listed = (list, word) => (Array.isArray(list) ? list : []).map(colourGridHex).filter(Boolean)
+    .filter((c, i, all) => all.indexOf(c) === i).slice(0, COLOUR_GRID_IN_USE_MAX)
+    .map((c, i) => ({ colour: c, name: word + ' ' + (i + 1) }));
+  const sections = [{ title: 'Greys', swatches: greys }, { title: 'Colours', swatches: hues }];
+  const autoColour = automatic && colourGridHex(automatic.colour);
+  if(autoColour) sections.unshift({ title: 'Automatic', swatches: [{ colour: autoColour, auto: true,
+    name: 'Automatic' + (automatic.name ? ' (' + automatic.name + ')' : '') }] });
+  const charts = listed(chart, 'Chart colour');
+  if(charts.length) sections.push({ title: 'Chart colours', swatches: charts });
+  const used = listed(inUse, 'In use');
+  if(used.length) sections.push({ title: 'In use', swatches: used });
+  return sections;
+}
+
+let colourGridOpen = null; // { panel, input, close }
+
+function closeColourGrid(){ if(colourGridOpen) colourGridOpen.close(false); }
+
+// Every colour box on the page opens the grid. options.chart() and options.inUse() give the
+// colours of those two sections (either may be left out); options.box(input) may return false
+// to leave a box with the browser's own picker; options.automatic(input) may give a box an
+// Automatic swatch first — { colour, name, chosen, choose() }: chosen false marks it as the
+// box's colour now, and picking it calls choose() (no change event: the app goes back itself).
+function installColourGrid(options){
+  const opts = options || {};
+  const call = (f) => { try { return typeof f === 'function' ? f() : []; } catch(e){ return []; } };
+  let passThrough = null; // the box whose next click goes to the browser's own picker ("More…")
+  const isBox = (t) => t && t.tagName === 'INPUT' && t.type === 'color' && !t.disabled
+    && (!opts.box || opts.box(t) !== false);
+  document.addEventListener('click', (e) => {
+    const t = e.target;
+    if(!isBox(t)) return;
+    if(passThrough === t){ passThrough = null; return; }
+    e.preventDefault();
+    if(colourGridOpen && colourGridOpen.input === t){ closeColourGrid(); return; }
+    openGrid(t);
+  }, true);
+  document.addEventListener('keydown', (e) => {
+    const t = e.target;
+    if(!isBox(t) || (e.key !== 'Enter' && e.key !== ' ') || e.ctrlKey || e.metaKey || e.altKey) return;
+    e.preventDefault();
+    e.stopPropagation();
+    openGrid(t);
+  }, true);
+
+  function openGrid(input){
+    closeColourGrid();
+    const label = input.getAttribute('aria-label') || input.title || 'Colour';
+    let auto = null;
+    try { auto = typeof opts.automatic === 'function' ? opts.automatic(input) : null; } catch(e){ auto = null; }
+    const now = auto && !auto.chosen ? null : colourGridHex(input.value);
+    const panel = document.createElement('div');
+    panel.className = 'colour-grid';
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-label', label);
+    const rows = []; // rows of swatch buttons, for the arrow keys
+    let first = null, current = null;
+    colourGridSections(call(opts.chart), call(opts.inUse), auto).forEach(sec => {
+      const head = document.createElement('div');
+      head.className = 'cg-title';
+      head.textContent = sec.title;
+      const group = document.createElement('div');
+      group.className = 'cg-group';
+      group.setAttribute('role', 'group');
+      group.setAttribute('aria-label', sec.title);
+      let row = null;
+      sec.swatches.forEach((s, i) => {
+        if(i % COLOUR_GRID_COLUMNS === 0){ row = []; rows.push(row); }
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'cg-swatch';
+        b.dataset.colour = s.colour;
+        b.style.background = s.colour;
+        b.title = s.name + ' ' + s.colour;
+        b.setAttribute('aria-label', s.name + ', ' + s.colour);
+        b.tabIndex = -1;
+        if(s.auto){
+          b.classList.add('cg-auto');
+          if(!auto.chosen){ current = b; b.setAttribute('aria-pressed', 'true'); }
+          b.addEventListener('click', () => { close(true); if(input.isConnected && typeof auto.choose === 'function') auto.choose(); });
+        } else {
+          if(s.colour === now && !current){ current = b; b.setAttribute('aria-pressed', 'true'); }
+          b.addEventListener('click', () => pick(s.colour));
+        }
+        row.push(b);
+        if(!first) first = b;
+        group.appendChild(b);
+      });
+      panel.append(head, group);
+    });
+    const more = document.createElement('button');
+    more.type = 'button';
+    more.className = 'cg-more';
+    more.textContent = 'More…';
+    more.title = 'The browser’s own colour box, for an exact colour';
+    more.addEventListener('click', () => {
+      close(false);
+      try {
+        if(typeof input.showPicker === 'function'){ input.showPicker(); return; }
+      } catch(e){ /* the click below instead */ }
+      passThrough = input;
+      input.click();
+    });
+    panel.appendChild(more);
+    const start = current || first;
+    start.tabIndex = 0;
+    // The swatch last focused, however, is the one Tab comes back to.
+    panel.addEventListener('focusin', (e) => {
+      if(!e.target.classList.contains('cg-swatch')) return;
+      rows.forEach(row => row.forEach(b => { b.tabIndex = b === e.target ? 0 : -1; }));
+    });
+
+    // On the window, before the app's own keys: Esc closes the grid only (not the window it
+    // opened from), and no key pressed in the grid reaches the app's shortcuts.
+    const onKey = (e) => {
+      if(e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); close(true); return; }
+      if(!panel.contains(e.target)) return;
+      e.stopPropagation();
+      if(e.key === 'Tab'){ // the grid and More… only, while it is open
+        e.preventDefault();
+        (document.activeElement === more ? panel.querySelector('.cg-swatch[tabindex="0"]') : more).focus();
+        return;
+      }
+      const b = e.target.closest && e.target.closest('.cg-swatch');
+      if(!b) return;
+      let r = rows.findIndex(row => row.includes(b)), c = rows[r].indexOf(b);
+      if(e.key === 'ArrowRight') c++;
+      else if(e.key === 'ArrowLeft') c--;
+      else if(e.key === 'ArrowDown') r++;
+      else if(e.key === 'ArrowUp') r--;
+      else if(e.key === 'Home') c = 0;
+      else if(e.key === 'End') c = rows[r].length - 1;
+      else return;
+      e.preventDefault();
+      r = Math.max(0, Math.min(rows.length - 1, r));
+      if(c < 0 && r > 0){ r--; c = rows[r].length - 1; } // ← at a row's start: the row above's end
+      else if(c >= rows[r].length && r < rows.length - 1 && e.key === 'ArrowRight'){ r++; c = 0; }
+      c = Math.max(0, Math.min(rows[r].length - 1, c));
+      rows[r][c].focus();
+    };
+
+    function pick(colour){
+      const c = colourGridHex(colour);
+      close(true);
+      if(!c || !input.isConnected) return;
+      input.value = c;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    const outside = (e) => { if(!panel.contains(e.target) && e.target !== input) close(false); };
+    // The page or a list scrolling: the grid follows its box (or closes when the box has gone).
+    const moved = (e) => { if(panel.contains(e.target)) return; if(input.isConnected) place(); else close(false); };
+    function close(refocus){
+      if(colourGridOpen !== state) return;
+      colourGridOpen = null;
+      panel.remove();
+      document.removeEventListener('pointerdown', outside, true);
+      document.removeEventListener('scroll', moved, true);
+      window.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('resize', place);
+      if(refocus && input.isConnected) input.focus();
+    }
+    function place(){
+      const r = input.getBoundingClientRect();
+      const w = panel.offsetWidth, h = panel.offsetHeight;
+      const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
+      let left = Math.min(r.left, vw - w - 8), top = r.bottom + 4;
+      if(top + h > vh - 8) top = Math.max(8, r.top - h - 4);
+      panel.style.left = Math.max(8, left) + 'px';
+      panel.style.top = top + 'px';
+    }
+    const state = { panel, input, close };
+    colourGridOpen = state;
+    document.body.appendChild(panel);
+    place();
+    document.addEventListener('pointerdown', outside, true);
+    document.addEventListener('scroll', moved, true);
+    window.addEventListener('keydown', onKey, true);
+    window.addEventListener('resize', place);
+    start.focus();
+  }
+}
+installColourGrid({
+  chart: () => PART_COLOURS,
+  inUse: () => coloursIn([[...rectColours.values()], [...autoColours().values()], board ? board.items : []]),
+  automatic: (input) => input.colourAutomatic || null, // a rectangle's (or the Tornado's) usual colour
+});
 
 syncPageState();
 if(fmideOpener()){

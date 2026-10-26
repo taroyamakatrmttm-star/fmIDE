@@ -213,6 +213,11 @@ $('btnResetMapping').addEventListener('click', async () => {
 // A write started only while the page unloads may not finish, so save when it is hidden.
 document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') writeMapping(); });
 
+// Every colour box opens a grid of ready colours, the Excel style's and rows' colours among them
+// (the owner's request of 27 October 2026).
+// build:include shared/colour-grid.js
+installColourGrid({ inUse: () => coloursIn([excelStyle, mapping ? mapping.rows : []]) });
+
 // On the published site (the service worker already runs this page; fmIDE registers it):
 // say when a new version is ready. The layout is saved first; the model file is not kept.
 // build:include shared/update-notice.js

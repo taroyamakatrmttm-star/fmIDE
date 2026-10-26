@@ -404,6 +404,7 @@ const HELP_TOPICS = [
         'Calculations: every rectangle fed by an arrow.',
       ] },
       { p: 'Change a role and every rectangle in it follows. 🎨 on a rectangle gives it its own look instead.' },
+      { p: 'Every colour box opens a grid of ready colours: greys, twelve colours in six shades and the colours already used in this model and its presets. Click one, or move with the arrow keys and press Enter; Esc closes it. More… opens your browser\'s own colour box, for an exact colour.' },
       { p: 'Only number formats go to Excel: a rectangle\'s own, or its role\'s. How cells look in Excel (fills, fonts, borders) is set in ExcelExporter (⚙ Settings → Excel Style), and is kept there for every model you export.' },
       { see: ['to-excel'] },
     ] },

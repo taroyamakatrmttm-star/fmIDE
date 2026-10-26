@@ -293,14 +293,14 @@ Each time a block is used, it calculates on its own, so each copy gets its own r
 > **You need:** ExcelExporter with a model.
 > **Time:** about 10 minutes.
 > **In the app:** ExcelExporter Help → *How the workbook looks* (`formats`), *The Tree View* (`tree-view`)
-> **Came in:** step 11a, the Excel look in ExcelExporter ([#63](https://github.com/taroyamakatrmttm-star/fmIDE/pull/63)); a row's own format [#46](https://github.com/taroyamakatrmttm-star/fmIDE/pull/46); borders side by side [#98](https://github.com/taroyamakatrmttm-star/fmIDE/pull/98); exact number formats [#190](https://github.com/taroyamakatrmttm-star/fmIDE/pull/190)
+> **Came in:** step 11a, the Excel look in ExcelExporter ([#63](https://github.com/taroyamakatrmttm-star/fmIDE/pull/63)); a row's own format [#46](https://github.com/taroyamakatrmttm-star/fmIDE/pull/46); borders side by side [#98](https://github.com/taroyamakatrmttm-star/fmIDE/pull/98); exact number formats [#190](https://github.com/taroyamakatrmttm-star/fmIDE/pull/190); the colour grid, branch `claude/colour-grid-picker-1c5e83`
 
 How cells look in Excel belongs to ExcelExporter. fmIDE decides only the **number formats** ([lesson 2.11](02-building-models.md#canvas-look)); its canvas colours never reach Excel.
 
 ### Steps
 
 1. **⚙ Settings → Excel Style** (or **Layout → Excel Style…**). Every cell takes its look from one of seven **roles**: *Inputs*, *Calculations*, *Links*, *Headers*, *Section Headers*, *Labels* and *Notes*. Point at a role's name to see which cells it covers.
-2. For **Inputs**, pick a light yellow fill and a blue font colour. Close Settings.
+2. For **Inputs**, pick a light yellow fill and a blue font colour: each colour box opens a grid of colours (light yellow is *Yellow, lightest*; **More…** for an exact colour). Close Settings.
 3. In the Rows panel's Tree, press **🎨** on **Profit**. Tick **Bold**, tick **Top** under the border, and type an **Excel number format** of `#,##0;(#,##0)` (negatives in brackets).
 4. Press **⬇ Generate .xlsx**.
 
