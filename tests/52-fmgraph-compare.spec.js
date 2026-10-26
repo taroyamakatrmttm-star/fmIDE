@@ -120,27 +120,54 @@ test('bars glide to their new values, not while a slider is dragged', async ({ p
   // after typing could come before it).
   await page.evaluate(() => {
     window.__glides = 0;
+    window.__glideAnims = [];
     const own = Element.prototype.animate;
-    Element.prototype.animate = function(...a){ if(this.matches('rect[data-anim]')) window.__glides++; return own.apply(this, a); };
+    Element.prototype.animate = function(...a){
+      const anim = own.apply(this, a);
+      if(this.matches('rect[data-anim]')){ window.__glides++; window.__glideAnims.push(anim); }
+      return anim;
+    };
   });
   // A typed number: the bars glide, and end where the value puts them.
   const box = page.locator('.slider-widget').first().locator('input.slider-value');
   await box.fill('14');
   await box.press('Enter');
   await expect.poll(() => page.evaluate(() => window.__glides)).toBeGreaterThan(10);
-  await page.waitForTimeout(400);
+  // Each glide lasts 0.2 s (ANIM_MS); waited for by the page's own clock, not a fixed pause.
+  const durations = await page.evaluate(async () => {
+    while(document.getAnimations().length) await Promise.all(document.getAnimations().map(a => a.finished));
+    await Promise.all(window.__glideAnims.map(a => a.finished));
+    return Array.from(new Set(window.__glideAnims.map(a => a.effect.getTiming().duration)));
+  });
+  expect(durations).toEqual([200]);
   expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
   const bar = profitBar(page).locator('rect.b-now').first();
   expect(await bar.evaluate(el => getComputedStyle(el).transform)).toBe('none');
-  // Two redraws close together (a drag): the second doesn't glide.
-  const second = await page.evaluate(async (id) => {
-    fmGraph.setSlider(id, 12);
-    await new Promise(r => setTimeout(r, 30));
-    document.getAnimations().forEach(a => a.finish());
-    fmGraph.setSlider(id, 11);
-    return document.getAnimations().length;
-  }, price);
-  expect(second).toBe(0);
+  // Two redraws close together (a drag): the second doesn't glide. "Close" is within
+  // DRAG_GAP_MS (150 ms), measured as fmGraph measures it: the page's clock as each redraw's
+  // startDraw (05e-compare.js) reads it. A busy computer can stretch the gap past 150 ms, which
+  // proves nothing: then it is tried again, a few times, and the test fails if none was close.
+  const attempts = [];
+  for(let i = 0; i < 5 && !attempts.some(a => a.gap < 150); i++){
+    attempts.push(await page.evaluate(async ({ id, value }) => {
+      await new Promise(r => setTimeout(r, 300)); // well apart from any redraw before
+      const own = Performance.prototype.now, reads = [];
+      performance.now = function(){ const t = own.call(performance); if(/\bstartDraw\b/.test(new Error().stack)) reads.push(t); return t; };
+      try{
+        fmGraph.setSlider(id, value);
+        await new Promise(r => setTimeout(r, 30));
+        document.getAnimations().forEach(a => a.finish());
+        fmGraph.setSlider(id, value - 1);
+      }finally{ delete performance.now; }
+      const second = document.getAnimations().length;
+      document.getAnimations().forEach(a => a.finish());
+      return { reads: reads.length, gap: reads.length === 2 ? Math.round(reads[1] - reads[0]) : NaN, second };
+    }, { id: price, value: 12 - i % 2 }));
+    expect(attempts[i].reads).toBe(2); // one reading per redraw
+  }
+  const close = attempts.find(a => a.gap < 150);
+  expect(close, 'no two redraws came within 150 ms: ' + attempts.map(a => a.gap).join(', ') + ' ms').toBeTruthy();
+  expect(close.second).toBe(0);
 });
 
 test('with reduced motion, nothing glides', async ({ page }) => {

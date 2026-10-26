@@ -102,6 +102,12 @@ The way of working in `CLAUDE.md` stays the same: plan, your approval, one chang
    A Claude Code session on your computer does this itself.
 2. **Build and test** as `CLAUDE.md` says: `npm run build`, `npm run build:check`, group 0 and the related groups.
 3. **Before merging, run the whole suite**: `npm test`. This is the check GitHub used to run. It takes about 18 minutes on a computer, against 5 on GitHub. Merge only when it is green.
+
+   **When the whole run is red**, run only the tests that failed, alone:
+   ```
+   npx playwright test --last-failed
+   ```
+   A test that fails again is a real failure: fix it in the branch, as usual. A test that passes alone but failed in the whole run is not passed over, and not run again until it happens to pass: it is reported to the owner with its cause (usually a test that depends on how fast the computer is while every group runs at once — for example a time limit around the test's own steps), and merging waits for the owner's word. The fix belongs in the test, measuring by the page's own clock, never by raising a limit, skipping or retrying the whole test (as in `claude/reliable-timing-tests`, groups 27 and 52).
 4. **Merge** once you have approved:
    ```
    git checkout main
