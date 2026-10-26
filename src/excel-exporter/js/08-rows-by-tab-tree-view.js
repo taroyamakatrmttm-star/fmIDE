@@ -5,21 +5,21 @@
 // After a finger's hold has opened the row menu, or its double-tap has started a rename, the
 // mouse events the browser still copies from that touch (mousedown, mouseup, click) are
 // dropped: they would close the menu, select the row again or take focus from the rename box.
-// Until the next touch goes down, or a second after the finger lifts.
-let droppingTapCopies = false, tapCopiesTimer = null;
+// Until the next touch goes down, or a second after the finger lifts — by the events' own
+// timestamps (a copy carries the touch's time), so a page busy after the tap still drops them.
+let droppingTapCopies = false, tapCopiesUntil = null;
 function dropTapCopies(){
   droppingTapCopies = true;
-  clearTimeout(tapCopiesTimer);
-  tapCopiesTimer = null;
+  tapCopiesUntil = null;
 }
 ['mousedown', 'mouseup', 'click'].forEach(type => document.addEventListener(type, (ev) => {
+  if(droppingTapCopies && tapCopiesUntil !== null && ev.timeStamp >= tapCopiesUntil) droppingTapCopies = false;
   if(droppingTapCopies && isEmulatedMouse(ev)){ ev.preventDefault(); ev.stopImmediatePropagation(); }
 }, true));
 window.addEventListener('pointerdown', (ev) => { if(ev.pointerType !== 'mouse') droppingTapCopies = false; }, true);
 window.addEventListener('pointerup', (ev) => {
   if(ev.pointerType === 'mouse' || !droppingTapCopies) return;
-  clearTimeout(tapCopiesTimer);
-  tapCopiesTimer = setTimeout(() => { droppingTapCopies = false; }, 1000);
+  tapCopiesUntil = ev.timeStamp + 1000;
 });
 
 // ---------- Rows grouped by Excel tab (a live preview of the actual sheet layout) ----------

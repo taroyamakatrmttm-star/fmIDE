@@ -166,12 +166,15 @@ test.describe('the recorder', () => {
         return v.duration;
       }, bytes.toString('base64'));
       expect(seconds, name).toBeGreaterThan(5);
-      // Nothing cut short: at least as long as the recording, plus the moment the window takes to close.
+      // Nothing cut short: at least as long as the recording. Nothing added: the video runs from
+      // when its page opened to when it closed (however long a busy computer takes to open and
+      // close a window), and the recorder begins closing as soon as the closing line ends.
       if(length){
         expect(seconds * 1000, name + ' holds the whole recording').toBeGreaterThanOrEqual(length - 1000);
-        expect(seconds * 1000, name + ' ends soon after the closing line').toBeLessThan(length + 10000);
+        expect(seconds * 1000, name + ' is no longer than its page was open').toBeLessThan(r.life.closed - r.life.opened + 2000);
       }
     }
+    expect(r.life.closing - r.timing['video-outro'].end, 'closing begins as soon as the closing line ends').toBeLessThan(1000);
     expect(r.seconds).toBeGreaterThan(30);
   });
 });

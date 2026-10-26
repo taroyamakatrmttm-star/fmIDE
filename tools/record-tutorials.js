@@ -120,9 +120,11 @@ async function recordTutorial(browser, t, script, outDir){
   await context.addInitScript(POINTER);
   const P = recordPace();
   const { actions, trip } = tutorialActions(P);
+  const opening = Date.now();                  // the video starts with the page
   const page = await context.newPage();
   const t0 = Date.now();
   const now = () => Date.now() - t0;
+  let closing = null;
   let popupAt = null;
   context.on('page', () => { if(popupAt === null) popupAt = now(); });
   const timing = {};
@@ -162,8 +164,11 @@ async function recordTutorial(browser, t, script, outDir){
     await page.waitForTimeout(S.readingTime(line('video-outro').say));
     timing['video-outro'] = { start, end: now() };
   } finally {
+    closing = now();
     await context.close();                     // the videos are written when their pages close
   }
+  // The page's life on the same clock (ms): opened before 0, closing begun, closed.
+  const life = { opened: opening - t0, closing, closed: now() };
   if(blocked.length) throw new Error('record-tutorials: the app tried to reach the network: ' + blocked.join(', '));
 
   const dir = path.join(outDir, t.id);
@@ -183,7 +188,7 @@ async function recordTutorial(browser, t, script, outDir){
   }
   put(t.id + '-script.md', S.scriptMarkdown(script, timing, others));
   fs.rmSync(tmp, { recursive: true, force: true });
-  return { files: written, timing, seconds: Math.round(timing['video-outro'].end / 1000) };
+  return { files: written, timing, life, seconds: Math.round(timing['video-outro'].end / 1000) };
 }
 
 async function main(){

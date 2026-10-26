@@ -41,6 +41,23 @@ async function openGraphFromFmide(page){
   return popup;
 }
 const boardNames = (popup) => popup.evaluate(() => fmGraph.boards().map(b => b.name));
+// What a page's browser storage holds (IndexedDB, the apps' shared store: database `db`, store
+// kv): the values of the keys `keep` picks, or of one key. Read straight, so a test waits for a
+// save to have landed before closing or reloading, not a fixed time.
+const stored = (page, db, keep) => page.evaluate(({ db, keep }) => new Promise((resolve) => {
+  const req = indexedDB.open(db);
+  req.onsuccess = () => {
+    const d = req.result;
+    if(!d.objectStoreNames.contains('kv')){ d.close(); resolve([]); return; }
+    const out = [], cur = d.transaction('kv').objectStore('kv').openCursor();
+    cur.onsuccess = () => { const c = cur.result; if(!c){ d.close(); resolve(out); return; } if(String(c.key).startsWith(keep)) out.push(c.value); c.continue(); };
+  };
+  req.onerror = () => resolve([]);
+}), { db, keep });
+// The board names fmGraph keeps in this browser for each model (fmgraph-board-<signature>).
+const keptBoardNames = async (page) => (await stored(page, 'fmGraph', 'fmgraph-board-')).map(v => JSON.parse(v).boards.map(b => b.name));
+// The board names in fmIDE's autosaved workspace.
+const autosavedBoardNames = async (page) => (await stored(page, 'fmIDE', 'fmIDE-workspace-v1')).map(v => { const g = JSON.parse(v).graphBoards; return g ? g.boards.map(b => b.name) : null; });
 
 test('a change in fmGraph goes back to the document: unsaved, then saved with it; undo too; sliders and tabs do not', async ({ page }, testInfo) => {
   await F.openFmIDE(page);
@@ -73,6 +90,7 @@ test('a change in fmGraph goes back to the document: unsaved, then saved with it
   expect(JSON.stringify(saved.graphBoards)).not.toContain('15');
   await expect.poll(() => D.title(page)).toBe('Plan — fmIDE');
   // The autosave keeps them: after a reload, Open fmGraph shows them again.
+  await expect.poll(() => autosavedBoardNames(page)).toEqual([['Prices']]);
   await popup.close();
   await page.reload();
   await page.waitForFunction(() => window.fm && typeof fm.nodes === 'function');
@@ -87,7 +105,7 @@ test('a document\'s boards win over the browser\'s; a document without boards sh
   await own.waitForFunction(() => !!window.fmGraph);
   await own.evaluate((s) => fmGraph.load(s, 'Plan'), system());
   await own.evaluate(() => fmGraph.renameBoard('From the browser'));
-  await own.waitForTimeout(500); // kept shortly after the change
+  await expect.poll(() => keptBoardNames(own)).toEqual([['From the browser']]); // kept shortly after the change
   await own.close();
 
   await F.openFmIDE(page);
@@ -96,6 +114,7 @@ test('a document\'s boards win over the browser\'s; a document without boards sh
   expect(await boardNames(popup)).toEqual(['From the document']);
   expect(await popup.evaluate(() => fmGraph.board().bars.map(b => b.name))).toEqual(['Revenue']);
   expect(await D.title(page)).toBe('With boards — fmIDE'); // showing them changes nothing
+  await expect.poll(() => keptBoardNames(popup)).toEqual([['From the document']]); // and the browser keeps them
   await popup.close();
 
   // A document without boards: the browser's — and now that the document's were shown, the

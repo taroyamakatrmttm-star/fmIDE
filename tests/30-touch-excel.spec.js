@@ -154,6 +154,44 @@ test('a double-tap whose second tap lands on a tab\'s heading renames the row, a
   expect(pageErrors).toEqual([]);
 });
 
+test('the same double-tap on a page busy for over a second after it: the copied mouse events are still known by their own time', async ({ page, pageErrors }) => {
+  // A slow device (or a busy computer) handles the copies of the second tap more than a second
+  // after the finger lifted; they carry the tap's own time, which is what counts.
+  await open(page);
+  const f = await finger(page);
+  await f.tap(await spot(rows(page).nth(1).locator('.tree-row-label')));
+  await expect(page.locator('#bulkMoveBar')).toBeVisible();
+  await page.waitForTimeout(900);
+  const group = page.locator('#rowGroupsTree .canvas-group').nth(1);
+  const row = group.locator('.tree-row').first(), label = await labelOf(row);
+  await group.scrollIntoViewIfNeeded();
+  const r = await row.boundingBox(), h = await group.locator('.tree-tab-header').boundingBox();
+  await f.tap({ x: r.x + 40, y: r.y + 2 });
+  // After the page's own handling of the second tap's lift (added last, so it runs after the
+  // app's), the page is kept busy for 1.2 s; the copies are handled after it.
+  await page.evaluate(() => {
+    window.__copies = [];
+    window.addEventListener('pointerup', function busy(ev){
+      if(ev.pointerType === 'mouse') return;
+      window.removeEventListener('pointerup', busy);
+      window.__lift = ev.timeStamp;
+      const end = performance.now() + 1200;
+      while(performance.now() < end);
+    });
+    window.addEventListener('mousedown', (ev) => window.__copies.push(performance.now() - window.__lift), true);
+  });
+  await f.tap({ x: r.x + 40, y: h.y + h.height - 2 });
+  const input = page.locator('#rowGroupsTree .tree-row-label-input');
+  await expect(input).toBeFocused();
+  await expect(input).toHaveValue(label);
+  await expect.poll(() => page.evaluate(() => window.__copies.length)).toBeGreaterThan(0);
+  expect(await page.evaluate(() => window.__copies[0])).toBeGreaterThan(1000); // handled over a second after the lift
+  await page.waitForTimeout(300);
+  await expect(input).toBeFocused();
+  await expect(group.locator('.tree-row').first()).toBeVisible(); // the tab not folded either
+  expect(pageErrors).toEqual([]);
+});
+
 test('a right-click still opens the menu straight away, without the finger\'s items', async ({ page, pageErrors }) => {
   await open(page);
   const row = rows(page).nth(2);
