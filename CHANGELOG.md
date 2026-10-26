@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph: long lists scroll in their window
+- Attach to template…, Export for a template…, Add boards from templates… and fmGraph's questions are never taller than the screen: the title and the buttons stay, and the list (or a long question) scrolls inside the window, by finger or mouse. Before, a model with many canvases made from templates gave a list that ran off an iPad's screen with nothing to scroll (the owner's report, 26 October 2026; branch `claude/attach-template-scroll-b4d8a8`). Test group 54.
+
 ## ExcelExporter: renaming in the Tree when the selection bar moves the list
 - The first click on a row brings up the selection bar, which pushes the list down. A double-click whose second click then lands in the gap between the bar and the list, or a double-tap whose second tap lands on a tab's heading, now renames the row, as it already did on the bar itself or a row. Before, nothing happened, or the box closed at once and the tab folded. Seen on Windows, where the bar's buttons wrap onto more lines (branch `claude/tree-rename-fixes`).
 
