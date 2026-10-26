@@ -130,6 +130,11 @@
   body.touch-input .slider-track input[type=range]{ height:40px; }
   .slider-value{ min-width:86px; text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
   .slider-base{ font-size:12px; color:var(--soft-ink); margin-top:2px; }
+  /* A slider in its rectangle's colour, shared with its bars and charts (04e-colours.js). */
+  .slider-widget{ border-left:4px solid var(--rect-colour, transparent); }
+  .slider-widget .widget-head input.slider-colour{ flex:none; }
+  .rect-stripe{ display:inline-block; width:12px; height:12px; border-radius:3px; align-self:center; flex:none; }
+  .fader-name{ border-left:4px solid var(--rect-colour, transparent); }
   .slider-fold{ border:none; background:none; color:var(--soft-ink); padding:2px 6px; font-size:14px; }
   .slider-fold:hover{ color:var(--ink); background:#eef1f5; }
   body.touch-input .slider-fold{ padding:8px 10px; }
@@ -3611,7 +3616,7 @@ function setCalcNote(text){ const el = $('calcNote'); if(el) el.textContent = te
 // ============================================================
 // The boards (G3a: several, as tabs, each a view of the model). A board:
 //   { id, name, items: [bar | chart, …] (in the order shown), sliders: [slider, …], ownSliders }
-//   bar    { id, kind: 'bar', key, periods, wide, colour, scale }
+//   bar    { id, kind: 'bar', key, periods, wide, scale }
 //   chart  { id, kind: 'chart', wide, layout: 'columns' | 'lines' | 'flow' | 'scenarios' | 'tornado' | 'spider', scale, … } (G2; 04b-charts.js)
 // scale: null for Auto, or { min, max } (04d-scale.js).
 //   slider { id, key, periods, mode: 'set' | 'shift', min, max, step, value, folded }
@@ -3620,7 +3625,7 @@ function setCalcNote(text){ const el = $('calcNote'); if(el) el.textContent = te
 // that number in the periods it covers, 'shift' changes them by that many percent.
 //
 // A wide widget takes a whole row of the grid, a narrow one half of it (charts start wide,
-// bars narrow); colour is a bar's own colour (null: the usual one). A folded slider shows only
+// bars narrow). Colours belong to rectangles, shared by every board (04e-colours.js). A folded slider shows only
 // its name, track and number (board file 6; 05c-arrange.js). ownSliders: the board keeps its own
 // slider positions instead of sharing them with the other boards (board file 7; 03-calc.js).
 //
@@ -3700,7 +3705,10 @@ function rectForEntry(w){
 // One board read against the loaded model: widgets on rectangles that aren't there, or
 // sliders on rectangles that aren't inputs, are left out (and counted in `dropped`).
 // `version`: the file's; before 9 every bar and chart keeps the periods it had (ownPeriod).
-function cleanBoard(raw, dropped, version){
+// `sharedColours`: the file has the shared colours (version 11), so the colours its widgets
+// carry (what each showed) are not read; without, they stay on the widgets to be taken in
+// (adoptWidgetColours, 04e-colours.js).
+function cleanBoard(raw, dropped, version, sharedColours){
   const out = makeBoard(cleanText(raw && raw.name, 60) || 'Board');
   if(!raw || typeof raw !== 'object') return out;
   const count = model.periods.length;
@@ -3733,6 +3741,7 @@ function cleanBoard(raw, dropped, version){
   if(Array.isArray(raw.items)) items = raw.items.map(w => w && w.type === 'chart' ? chart(w) : w && w.type === 'bar' ? bar(w) : (drop(), null));
   else items = (Array.isArray(raw.charts) ? raw.charts.map(chart) : []).concat(Array.isArray(raw.bars) ? raw.bars.map(bar) : []); // G1, G2
   out.items = items.filter(Boolean).slice(0, BOARD_LIMIT * 2);
+  if(sharedColours) out.items.forEach(w => { if(w.kind === 'bar') w.colour = null; else w.colours = {}; });
   out.ownSliders = raw.ownSliders === true; // version 7
   (Array.isArray(raw.sliders) ? raw.sliders : []).slice(0, BOARD_LIMIT).forEach(s => {
     const rect = rectForEntry(s);
@@ -3749,11 +3758,13 @@ function cleanBoard(raw, dropped, version){
 function cleanBoards(raw){
   if(!raw || typeof raw !== 'object' || raw.kind !== 'fmIDE-graph-board') return null;
   const dropped = { n: 0 };
-  const list = Array.isArray(raw.boards) ? raw.boards.slice(0, BOARDS_LIMIT).map(b => cleanBoard(b, dropped, raw.version)) : [cleanBoard(raw, dropped, raw.version)];
+  const shared = Array.isArray(raw.colours); // version 11 (04e-colours.js)
+  const list = Array.isArray(raw.boards) ? raw.boards.slice(0, BOARDS_LIMIT).map(b => cleanBoard(b, dropped, raw.version, shared)) : [cleanBoard(raw, dropped, raw.version, shared)];
   const a = Math.round(Number(raw.active));
   return { boards: list, active: Number.isFinite(a) && a >= 0 && a < list.length ? a : 0, dropped: dropped.n,
     scenarios: cleanScenarios(raw.scenarios, rectForEntry), // version 3 (05f-scenarios.js)
-    sharedPeriods: cleanSharedPeriods(raw.sharedPeriods, model.periods.length) }; // version 9 (05k-shared-period.js)
+    sharedPeriods: cleanSharedPeriods(raw.sharedPeriods, model.periods.length), // version 9 (05k-shared-period.js)
+    colours: shared ? cleanRectColours(raw.colours) : new Map() }; // version 11 (04e-colours.js)
 }
 
 // A board's file form.
@@ -3765,9 +3776,11 @@ function cleanBoards(raw){
 // (`ownSliders`, 03-calc.js); 8 the Tornado and the Spider (charts of layout `tornado` and
 // `spider`, 04b-charts.js); 9 the shared period (`sharedPeriods`, and a bar's or chart's
 // `ownPeriod`, 05k-shared-period.js; each still writes the periods it shows); 10 the lines chart
-// (a chart of layout `lines`, 04b-charts.js). The template form, which carries none of these,
-// stays version 2.
-const BOARD_FILE_VERSION = 10;
+// (a chart of layout `lines`, 04b-charts.js); 11 the shared colours (`colours`, each
+// rectangle's chosen colour, 04e-colours.js; each bar, part, step and line still writes the
+// colour it shows). The template form, which carries none of these, stays version 2 (its
+// widgets carry the chosen colours, as before 11).
+const BOARD_FILE_VERSION = 11;
 const TEMPLATE_BOARD_VERSION = 2;
 function boardData(b){
   const at = (key) => { const r = model.byKey.get(key); return { canvasId: r.canvasId, nodeId: r.nodeId, name: r.name }; };
@@ -3775,7 +3788,7 @@ function boardData(b){
   return Object.assign({
     name: b.name,
     items: b.items.map(w => Object.assign(w.kind === 'bar'
-      ? Object.assign({ type: 'bar' }, at(w.key), { periods: Object.assign({}, w.periods), wide: w.wide }, w.colour ? { colour: w.colour } : {}, scaleOf(w))
+      ? Object.assign({ type: 'bar' }, at(w.key), { periods: Object.assign({}, w.periods), wide: w.wide }, rectColour(w.key) ? { colour: rectColour(w.key) } : {}, scaleOf(w))
       : Object.assign({ type: 'chart', wide: w.wide }, chartData(w, at), scaleOf(w)), w.ownPeriod ? { ownPeriod: true } : {})),
     sliders: b.sliders.map(s => Object.assign(at(s.key), { periods: Object.assign({}, s.periods), mode: s.mode, min: s.min, max: s.max, step: s.step }, s.folded ? { folded: true } : {})),
   }, b.ownSliders ? { ownSliders: true } : {});
@@ -3784,14 +3797,17 @@ function boardData(b){
 function boardsData(list){
   const which = list || boards;
   syncSharedPeriods(); // each writes the periods it shows (05k-shared-period.js)
+  adoptWidgetColours(); // an older file's colours, taken in first (04e-colours.js)
   const out = { kind: 'fmIDE-graph-board', version: BOARD_FILE_VERSION, active: list ? 0 : Math.max(0, boards.indexOf(board)), boards: which.map(boardData) };
   if(!list && scenarios.length) out.scenarios = scenariosData(); // the model's, with all its boards
   out.sharedPeriods = { periods: Object.assign({}, sharedPeriods.periods), period: sharedPeriods.period };
+  out.colours = rectColoursData(); // version 11 (04e-colours.js)
   return out;
 }
 
 let saveTimer = null;
 function saveBoardSoon(){
+  forgetAutoColours(); // a chart may have changed (04e-colours.js)
   noteChange(); // undo (04c-undo.js)
   clearTimeout(saveTimer);
   saveTimer = setTimeout(saveBoardNow, 300);
@@ -3821,6 +3837,7 @@ async function loadBoardFor(m, docRaw){
     board = boards[0];
     scenarios = [];
     sharedPeriods = cleanSharedPeriods(null, m.periods.length);
+    rectColours = new Map(); forgetAutoColours();
     resetUndo();
     return;
   }
@@ -3831,6 +3848,7 @@ async function loadBoardFor(m, docRaw){
     board = boards[0];
     scenarios = [];
     sharedPeriods = cleanSharedPeriods(null, m.periods.length);
+    rectColours = new Map(); forgetAutoColours();
     resetUndo();
     return;
   }
@@ -3840,6 +3858,7 @@ async function loadBoardFor(m, docRaw){
     board = boards[restored.active];
     scenarios = restored.scenarios;
     sharedPeriods = restored.sharedPeriods;
+    rectColours = restored.colours; forgetAutoColours();
     resetUndo();
     setTimeout(saveBoardNow, 0);
     return;
@@ -3862,6 +3881,7 @@ async function loadBoardFor(m, docRaw){
   board = boards[restored ? restored.active : 0];
   scenarios = restored ? restored.scenarios : [];
   sharedPeriods = restored ? restored.sharedPeriods : cleanSharedPeriods(null, m.periods.length);
+  rectColours = restored ? restored.colours : new Map(); forgetAutoColours();
   resetUndo();
 }
 
@@ -3950,8 +3970,9 @@ function moveWidget(id, to){
 //            `show: false` keeps an input listed but leaves it out of the drawing. colour /
 //            colour2: the Tornado's Low and High; a Spider's line takes its input's colour.
 //
-// A chart may give any of its rectangles its own colour: colours { key: '#rrggbb' }, kept in the
-// file on that part or step (`colour`).
+// A chart's rectangles take their shared colours (04e-colours.js; board file 11). Each part,
+// step or line still writes the colour it shows (`colour`); a file before 11 kept the chart's
+// own colours there, read into `colours` { key: '#rrggbb' } until adoptWidgetColours takes them in.
 //
 // Numbers agree when they differ by less than a millionth of their size (AGREE_TOLERANCE):
 // tiny rounding in the calculation is ignored, any real gap is not.
@@ -4027,7 +4048,9 @@ function cleanChart(raw, rectFor, count, drop){
 
 // A chart's file form; at(key) gives a rectangle's { canvasId, nodeId, name }.
 function chartData(c, at){
-  const withColour = (key, extra) => Object.assign(at(key), extra || {}, c.colours && c.colours[key] ? { colour: c.colours[key] } : {});
+  // Each writes the colour it shows (04e-colours.js): a waterfall step or a Tornado's input only a chosen one.
+  const shows = (key) => c.layout === 'flow' || c.layout === 'tornado' ? chosenColour(key) : rectColour(key);
+  const withColour = (key, extra) => Object.assign(at(key), extra || {}, shows(key) ? { colour: shows(key) } : {});
   if(isSensitivity(c)) return Object.assign({ layout: c.layout, title: c.title, output: c.output ? at(c.output) : null, period: c.period, steps: c.steps,
     inputs: c.inputs.map(i => withColour(i.key, Object.assign({ by: i.by, low: i.low, high: i.high }, i.show ? {} : { show: false }))) },
     c.colour ? { colour: c.colour } : {}, c.colour2 ? { colour2: c.colour2 } : {});
@@ -4234,6 +4257,7 @@ function restoreState(text){
   boards = r.boards;
   scenarios = r.scenarios;
   sharedPeriods = r.sharedPeriods; // (05k-shared-period.js)
+  rectColours = r.colours; forgetAutoColours(); // (04e-colours.js)
   boards.forEach((b, bi) => b.sliders.forEach(s => { const v = positions.get(bi + '|' + s.key + '|' + s.mode); if(v !== undefined) s.value = v; }));
   board = boards[Math.min(shown, boards.length - 1)];
   lastState = text;
@@ -4389,6 +4413,112 @@ function scaleChooser(w, onChange){
   return wrap;
 }
 // ============================================================
+// Shared colours (the owner's request of 26 October 2026, board file 11): a rectangle has one
+// colour on every board of the model — its slider, its bars, and every chart that shows it —
+// and changing it anywhere changes it everywhere.
+//
+// A rectangle's colour is the one someone chose (`rectColours`, kept in the board file's
+// `colours`), else an automatic one: the chart colours (PART_COLOURS) handed out in the order
+// rectangles first appear in Columns, Lines and Spider charts, board by board, chart by chart
+// (so the first chart looks as each chart did on its own before), else none — a bar then has the
+// page's usual colour, a waterfall step its colour by direction (a step takes only a chosen
+// colour: its colour otherwise says up, down or total). The Tornado's Low and High, and the
+// scenario waterfall, are not colours of a rectangle and stay the chart's own.
+//
+// Files before 11 (and the template form, still 2) kept a colour on each widget (a bar's
+// `colour`, a chart part's or step's `colour`); a file of version 11 always has `colours`, and
+// then the widgets' colours (written for older readers and ExcelExporter: what each shows) are
+// not read. Without it, cleanBoards leaves each widget's colour on the widget (`colour`,
+// `colours`), and adoptWidgetColours takes them into the shared ones before anything is drawn
+// or written: the first one in board order wins (a rectangle that already has a colour keeps
+// it), and a note says how many rectangles had another colour somewhere.
+// ============================================================
+const PART_COLOURS = ['#0f766e', '#2563eb', '#d97706', '#7c3aed', '#db2777', '#0891b2', '#65a30d', '#9f1239'];
+const COLOURS_LIMIT = 2000; // chosen colours read from a file, at most
+let rectColours = new Map(); // rectangle key → '#rrggbb', the chosen ones
+let autoColourMemo = null;   // rectangle key → its automatic colour, until the boards change
+
+// The chosen colours in a file of version 11 (`colours: [{ canvasId, nodeId, name, colour }]`).
+function cleanRectColours(raw){
+  const out = new Map();
+  (Array.isArray(raw) ? raw : []).slice(0, COLOURS_LIMIT).forEach(e => {
+    const r = e && typeof e === 'object' ? rectForEntry(e) : null;
+    const c = e && cleanColour(e.colour);
+    if(r && c && !out.has(r.key)) out.set(r.key, c);
+  });
+  return out;
+}
+// Their file form.
+function rectColoursData(){
+  return [...rectColours].filter(([k]) => model.byKey.has(k)).map(([k, colour]) => {
+    const r = model.byKey.get(k);
+    return { canvasId: r.canvasId, nodeId: r.nodeId, name: r.name, colour };
+  });
+}
+
+// The rectangles a chart colours one each, in its order (Columns, Lines, a Spider's inputs).
+function colouredKeys(c){
+  if(c.layout === 'columns') return c.groups.flatMap(g => g.parts);
+  if(c.layout === 'lines') return c.lines.slice();
+  if(c.layout === 'spider') return c.inputs.map(i => i.key);
+  return [];
+}
+function autoColours(){
+  if(autoColourMemo) return autoColourMemo;
+  const out = new Map();
+  boards.forEach(b => b.charts.forEach(c => colouredKeys(c).forEach(k => {
+    if(!out.has(k)) out.set(k, PART_COLOURS[out.size % PART_COLOURS.length]);
+  })));
+  autoColourMemo = out;
+  return out;
+}
+function forgetAutoColours(){ autoColourMemo = null; }
+
+// A rectangle's colour: chosen, else automatic, else null (the usual look).
+function chosenColour(key){ return rectColours.get(key) || null; }
+function rectColour(key){ return chosenColour(key) || autoColours().get(key) || null; }
+// Chooses a rectangle's colour everywhere (null: back to the automatic one).
+function setRectColour(key, colour){
+  const c = colour === null ? null : cleanColour(colour);
+  if(c) rectColours.set(key, c); else rectColours.delete(key);
+  forgetAutoColours();
+}
+
+// The colour a slider, a bar or a key shows: the rectangle's, else the page's usual bar colour.
+function shownColour(key){ return rectColour(key) || DEFAULT_BAR_COLOUR; }
+// A colour box's pick: choosing what the rectangle would have anyway clears the choice.
+function chooseRectColour(key, colour){
+  const c = cleanColour(colour);
+  setRectColour(key, null);
+  if(c && c !== shownColour(key)) setRectColour(key, c);
+}
+
+// Takes the colours older files kept on widgets into the shared ones (see the top).
+function adoptWidgetColours(){
+  let differ = 0;
+  const differing = new Set();
+  const take = (key, c) => {
+    const colour = cleanColour(c);
+    if(!colour || !model.byKey.has(key)) return;
+    const had = rectColours.get(key);
+    if(!had) rectColours.set(key, colour);
+    else if(had !== colour && !differing.has(key)){ differing.add(key); differ++; }
+  };
+  let any = false;
+  boards.forEach(b => b.items.forEach(w => {
+    if(w.kind === 'bar' && w.colour){ any = true; take(w.key, w.colour); w.colour = null; }
+    if(w.kind === 'chart' && w.colours && Object.keys(w.colours).length){
+      any = true;
+      // In the chart's order, so its first part is first.
+      const order = [...new Set(chartKeys(w))];
+      order.forEach(k => { if(w.colours[k]) take(k, w.colours[k]); });
+      w.colours = {};
+    }
+  }));
+  if(any) forgetAutoColours();
+  if(differ) notify(differ + ' rectangle' + (differ === 1 ? ' had' : 's had') + ' different colours in different bars or charts; each now has one colour everywhere, the first one.', 'info', 'colours');
+}
+// ============================================================
 // Drawing the board. renderBoard() builds every widget; updateValues() redraws only the
 // numbers and bars (it runs on every slider move). Everything from the model (names, canvas
 // and period labels) goes in as text — textContent, or SVG text nodes — never as markup.
@@ -4498,6 +4628,8 @@ function removeButton(id, what){
 
 function renderBoard(){
   syncSharedPeriods(); // what follows the shared period takes it (05k-shared-period.js)
+  adoptWidgetColours(); // an older file's colours, taken in (04e-colours.js)
+  forgetAutoColours();
   rememberOpenEditors(); // (05b-chart-render.js)
   rememberOpenRanges();
   // A slider's From / to / step box being typed in keeps the focus through the redraw.
@@ -4557,7 +4689,8 @@ function barWidget(b){
   w.addEventListener('contextmenu', (ev) => { if(isPhone()) ev.preventDefault(); });
   const row = make('div', 'widget-row bar-settings');
   row.appendChild(widgetPeriodsChooser(b)); // its own periods, or the shared ones (05k-shared-period.js)
-  row.appendChild(colourPicker(b.colour || DEFAULT_BAR_COLOUR, 'Bar colour', (c) => { b.colour = c === DEFAULT_BAR_COLOUR ? null : c; saveBoardSoon(); updateValues(); }));
+  // The rectangle's colour, shared by its slider and every chart (04e-colours.js).
+  row.appendChild(colourPicker(shownColour(b.key), 'Bar colour', (c) => { chooseRectColour(b.key, c); saveBoardSoon(); renderBoard(); }));
   row.appendChild(scaleChooser(b, () => { saveBoardSoon(); updateValues(); })); // (04d-scale.js)
   const rect = model.byKey.get(b.key);
   w.append(head, row);
@@ -4580,7 +4713,11 @@ function sliderWidget(s){
     Object.assign(s, defaultRange(model.byKey.get(s.key), s.periods, s.mode));
     saveBoardSoon(); renderBoard();
   });
-  head.append(sel, foldButton(s), removeButton(s.id, 'slider')); // (05c-arrange.js)
+  // Its rectangle's colour, as its bars and charts show it; picking it here changes them too (04e-colours.js).
+  const colour = colourPicker(shownColour(s.key), 'Colour of ' + rect.name, (c) => { chooseRectColour(s.key, c); saveBoardSoon(); renderBoard(); });
+  colour.classList.add('slider-colour');
+  w.style.setProperty('--rect-colour', shownColour(s.key));
+  head.append(sel, colour, foldButton(s), removeButton(s.id, 'slider')); // (05c-arrange.js)
 
   const row = make('div', 'widget-row slider-more');
   row.appendChild(periodsChooser(s.periods, (p) => {
@@ -4780,7 +4917,7 @@ function drawBars(el, b, results){
     } else {
       const y0 = y(0), y1 = y(r.value);
       const bar = animKey(svg('rect', { class: 'b-now' + (r.value < 0 ? ' neg' : ''), x, y: Math.min(y0, y1), width: bw, height: Math.max(1, Math.abs(y1 - y0)) }), b.id + '|' + p);
-      if(b.colour) bar.style.fill = b.colour; // a style, so the page's usual bar colour doesn't paint over it
+      if(rectColour(b.key)) bar.style.fill = rectColour(b.key); // a style, so the page's usual bar colour doesn't paint over it
       g.appendChild(bar);
       if(!was.error && was.value !== r.value){
         const yb = y(was.value);
@@ -4814,7 +4951,6 @@ function drawBars(el, b, results){
 // it shows the model's own values as dashed outlines once a slider has changed them, and lights
 // up when a slider reaches any of its rectangles.
 // ============================================================
-const PART_COLOURS = ['#0f766e', '#2563eb', '#d97706', '#7c3aed', '#db2777', '#0891b2', '#65a30d', '#9f1239'];
 const chartsEditing = new Set(); // charts whose editor is open (this page only)
 const ROLE_LABELS = { start: 'Start', add: 'Add', subtract: 'Subtract', total: 'Total' };
 
@@ -4864,7 +5000,6 @@ function switchLayout(c, layout){
   }
   else if(SENSITIVITY_LAYOUTS.includes(layout)){
     const start = sensitivityStart(keys.find(k => !model.byKey.get(k).input));
-    c.colours = {};
     Object.assign(c, { layout, period, output: start.output, inputs: start.inputs, steps: SENSITIVITY_LIMITS.defaultSteps, colour: null, colour2: null });
   }
   else Object.assign(c, { layout: 'columns', periods, groups: [{ name: '', parts: keys }], check: false });
@@ -5027,9 +5162,9 @@ function chartEditorParts(c){
       role.setAttribute('aria-label', 'Step');
       FLOW_ROLES.forEach(v => { const o = make('option', null, ROLE_LABELS[v]); o.value = v; if(s.role === v) o.selected = true; role.appendChild(o); });
       role.addEventListener('change', () => { s.role = role.value; changed(); });
-      // Its own colour (otherwise by direction: up, down, or a full bar).
-      const own = c.colours && c.colours[s.key];
-      const pick = colourPicker(own || '#334155', 'Colour of this step', (v) => { c.colours = Object.assign({}, c.colours, { [s.key]: v }); changed(); });
+      // Its rectangle's chosen colour, shared by every chart (otherwise by direction: up, down, or a full bar).
+      const own = chosenColour(s.key);
+      const pick = colourPicker(own || '#334155', 'Colour of this step', (v) => { setRectColour(s.key, v); changed(); });
       r.append(role, rs, pick, rowButtons(c.steps, i));
       box.appendChild(r);
     });
@@ -5105,14 +5240,14 @@ function drawChart(el, c, results){
   problems.forEach(t => list.appendChild(make('li', null, t)));
 }
 
-// The colour of each rectangle, in the order the chart lists them (the same rectangle twice
-// keeps its first colour).
+// The colour of each of the chart's rectangles: its shared one (04e-colours.js).
 function partColours(c){
   const out = new Map();
-  chartKeys(c).forEach(k => { if(!out.has(k)) out.set(k, PART_COLOURS[out.size % PART_COLOURS.length]); });
-  Object.keys(c.colours || {}).forEach(k => { if(out.has(k)) out.set(k, c.colours[k]); });
+  chartKeys(c).forEach(k => { if(!out.has(k)) out.set(k, rectColour(k) || PART_COLOURS[0]); });
   return out;
 }
+// A key's swatch picks the rectangle's colour on every board.
+function pickRectColour(k){ return (v) => { chooseRectColour(k, v); saveBoardSoon(); renderBoard(); }; }
 
 function drawColumns(c, results, problems, key){
   const now = columnsFigures(c, results), was = columnsFigures(c, compareResults()); // A, or the model's own numbers
@@ -5186,8 +5321,8 @@ function drawColumns(c, results, problems, key){
     if(ng > 1) line.appendChild(make('span', 'key-group', groupLabel(c, gi) + ':'));
     grp.parts.forEach(k => {
       const item = make('label', 'key-item');
-      // The swatch is the colour box: a click picks this rectangle's colour in this chart.
-      const sw = colourPicker(colours.get(k), 'Colour of ' + partLabel(k), (v) => { c.colours = Object.assign({}, c.colours, { [k]: v }); saveBoardSoon(); updateValues(); });
+      // The swatch is the colour box: a click picks this rectangle's colour everywhere.
+      const sw = colourPicker(colours.get(k), 'Colour of ' + partLabel(k), pickRectColour(k));
       sw.classList.add('key-swatch');
       item.append(sw, document.createTextNode(partLabel(k)));
       line.appendChild(item);
@@ -5259,7 +5394,7 @@ function drawLines(c, results, problems, key){
   const line = make('div', 'key-line');
   [...new Set(c.lines)].forEach(k => {
     const item = make('label', 'key-item');
-    const sw = colourPicker(colours.get(k), 'Colour of ' + partLabel(k), (v) => { c.colours = Object.assign({}, c.colours, { [k]: v }); saveBoardSoon(); updateValues(); });
+    const sw = colourPicker(colours.get(k), 'Colour of ' + partLabel(k), pickRectColour(k));
     sw.classList.add('key-swatch');
     item.append(sw, document.createTextNode(partLabel(k)));
     line.appendChild(item);
@@ -5297,7 +5432,7 @@ function drawFlow(c, results, problems){
       if(prevEnd !== null && (s.role === 'add' || s.role === 'subtract')) g.appendChild(svg('line', { class: 'f-link', x1: x - (slot - bw), x2: x, y1: y(prevEnd), y2: y(prevEnd) }));
       const kind = (s.role === 'start' || s.role === 'total') ? 'f-total' : (f.to >= f.from ? 'f-up' : 'f-down');
       const rect = animKey(svg('rect', { class: 'f-bar ' + kind, x, y: Math.min(y(f.from), y(f.to)), width: bw, height: Math.max(1, Math.abs(y(f.to) - y(f.from))) }), c.id + '|' + i);
-      if(c.colours && c.colours[s.key]) rect.style.fill = c.colours[s.key]; // a style, over the page's colours by direction
+      if(chosenColour(s.key)) rect.style.fill = chosenColour(s.key); // a style, over the page's colours by direction
       const b = was[i];
       const diff = b && !b.error ? fmtDiff(f.value, b.value) : '';
       rect.appendChild(svg('title', {}, name + ' (' + ROLE_LABELS[s.role].toLowerCase() + '), ' + model.periods[c.period] + ': ' + fmtNum(f.value) + (diff ? ' — was ' + fmtNum(b.value) + ', ' + diff : '')));
@@ -5476,8 +5611,8 @@ function sensitivityInputRow(c, inp, n, changed, rowButtons){
 const TORNADO_LOW = '#2563eb', TORNADO_HIGH = '#d97706';
 const shortName = (name, room) => name.length > room ? name.slice(0, Math.max(1, room - 1)) + '…' : name;
 const signed = (v, by) => (v > 0 ? '+' : v < 0 ? '−' : '') + fmtNum(Math.abs(v)) + (by === 'percent' ? '%' : '');
-// A Spider line's colour: its input's own, else the next of the chart colours.
-function spiderColour(c, key, i){ return (c.colours && c.colours[key]) || PART_COLOURS[i % PART_COLOURS.length]; }
+// A Spider line's colour: its input's shared one (04e-colours.js).
+function spiderColour(c, key, i){ return rectColour(key) || PART_COLOURS[i % PART_COLOURS.length]; }
 
 function drawSensitivity(c, problems, key){
   const { figures, ready } = sensitivityNow(c, shownOverrides());
@@ -5510,7 +5645,7 @@ function drawSensitivity(c, problems, key){
   const line = make('div', 'key-line');
   const swatch = (colour, label, text, set) => {
     const item = make('label', 'key-item');
-    const sw = colourPicker(colour, label, (v) => { set(v); saveBoardSoon(); updateValues(); });
+    const sw = colourPicker(colour, label, (v) => { set(v); saveBoardSoon(); renderBoard(); });
     sw.classList.add('key-swatch');
     item.append(sw, document.createTextNode(text));
     line.appendChild(item);
@@ -5519,7 +5654,7 @@ function drawSensitivity(c, problems, key){
     swatch(c.colour || TORNADO_LOW, 'Colour of Low', 'Low', (v) => { c.colour = v; });
     swatch(c.colour2 || TORNADO_HIGH, 'Colour of High', 'High', (v) => { c.colour2 = v; });
   } else {
-    figures.inputs.forEach((f, i) => { if(f.show) swatch(spiderColour(c, f.key, i), 'Colour of ' + partLabel(f.key), partLabel(f.key), (v) => { c.colours = Object.assign({}, c.colours, { [f.key]: v }); }); });
+    figures.inputs.forEach((f, i) => { if(f.show) swatch(spiderColour(c, f.key, i), 'Colour of ' + partLabel(f.key), partLabel(f.key), (v) => { chooseRectColour(f.key, v); }); });
   }
   key.appendChild(line);
   raiseScaleLabels(chart);
@@ -6752,7 +6887,10 @@ function dockCard(s){
   const card = make('div', 'dock-card');
   card.dataset.id = s.id;
   const head = make('div', 'dock-card-head');
-  head.appendChild(make('span', 'dock-name', rect.name));
+  // Its rectangle's colour, as its bars and charts show it (04e-colours.js; picked on a larger screen).
+  const stripe = make('span', 'rect-stripe');
+  stripe.style.background = shownColour(s.key);
+  head.append(stripe, make('span', 'dock-name', rect.name));
   const when = periodsText(s.periods);
   if(when) head.appendChild(make('span', 'dock-periods', when));
   head.appendChild(make('span', 'dock-change'));
@@ -7143,6 +7281,7 @@ function fader(s, at){
   name.type = 'button';
   name.title = 'Put another slider here';
   name.setAttribute('aria-haspopup', 'menu');
+  name.style.setProperty('--rect-colour', shownColour(s.key)); // its rectangle's colour (04e-colours.js)
   name.addEventListener('click', () => openFaderMenu(name, at));
   const ctl = createPhoneSlider({
     label: rect.name, min: s.min, max: s.max, step: s.step, value: sliderShown(s), base: sliderBase(s), vertical: true,
@@ -8342,6 +8481,8 @@ const BOARD_FILE_FORMAT = { 'fmIDE-graph-board': { current: BOARD_FILE_VERSION, 
 // Tornado or a Spider. Nothing to change. v8 → v9: the shared period (05k-shared-period.js) —
 // every bar and chart saved before it keeps the periods it had (`ownPeriod`), so the file opens
 // as it was saved (the owner's choice). v9 → v10: a chart may be a lines chart; nothing to change.
+// v10 → v11: the shared colours (04e-colours.js); nothing to change — a file without `colours`
+// keeps its colours on its widgets, taken into the shared ones when read (the first one wins).
 function keepOwnPeriods(data){
   if(!data || typeof data !== 'object' || data.form === 'template') return;
   const boardsIn = Array.isArray(data.boards) ? data.boards : [data];
@@ -8350,7 +8491,7 @@ function keepOwnPeriods(data){
     ['items', 'bars', 'charts'].forEach(k => { if(Array.isArray(b[k])) b[k].forEach(w => { if(w && typeof w === 'object') w.ownPeriod = true; }); });
   });
 }
-const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {}, 5: () => {}, 6: () => {}, 7: () => {}, 8: keepOwnPeriods, 9: () => {} } };
+const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {}, 5: () => {}, 6: () => {}, 7: () => {}, 8: keepOwnPeriods, 9: () => {}, 10: () => {} } };
 
 function safeFileName(s){ return String(s).replace(/[^A-Za-z0-9 ._()-]+/g, '_').replace(/\s+/g, ' ').trim().slice(0, 80) || 'board'; }
 
@@ -8408,6 +8549,8 @@ async function importBoardsText(text){
   const room = Math.max(0, BOARDS_LIMIT - boards.length);
   const adding = useful.slice(0, room);
   adding.forEach(b => { b.name = freeBoardName(b.name); boards.push(b); });
+  // Its shared colours (version 11): a rectangle with a colour here keeps it (04e-colours.js).
+  if(adding.length) r.colours.forEach((c, k) => { if(!rectColours.has(k)) rectColours.set(k, c); });
   if(adding.length) board = adding[0];
   scenarios.push(...newScenarios);
   saveBoardSoon();
@@ -8503,7 +8646,8 @@ function templateRefMaker(target){
 function templateBoardsData(target, onlyShown){
   const ref = templateRefMaker(target);
   let left = 0;
-  const colourOf = (c, key) => c.colours && c.colours[key] ? { colour: c.colours[key] } : {};
+  // Each widget carries its rectangles' chosen colours, as the template form did before board file 11 (04e-colours.js).
+  const colourOf = (key) => chosenColour(key) ? { colour: chosenColour(key) } : {};
   const one = (b) => {
     const items = [];
     b.items.forEach(w => {
@@ -8513,16 +8657,16 @@ function templateBoardsData(target, onlyShown){
       if(w.kind === 'bar'){
         const r = ref(w.key);
         if(!r){ left++; return; }
-        items.push(Object.assign({ type: 'bar' }, r, { periods: Object.assign({}, w.periods), wide: w.wide }, w.colour ? { colour: w.colour } : {}));
+        items.push(Object.assign({ type: 'bar' }, r, { periods: Object.assign({}, w.periods), wide: w.wide }, colourOf(w.key)));
         return;
       }
       if(w.layout === 'flow'){
         const steps = [];
-        w.steps.forEach(s => { const r = ref(s.key); if(r) steps.push(Object.assign(r, { role: s.role }, colourOf(w, s.key))); else left++; });
+        w.steps.forEach(s => { const r = ref(s.key); if(r) steps.push(Object.assign(r, { role: s.role }, colourOf(s.key))); else left++; });
         if(!steps.length) return;
         items.push({ type: 'chart', wide: w.wide, layout: 'flow', title: w.title, period: w.period, steps });
       } else {
-        const groups = w.groups.map(g => ({ name: g.name, parts: g.parts.map(k => { const r = ref(k); if(!r) left++; return r ? Object.assign(r, colourOf(w, k)) : null; }).filter(Boolean) }));
+        const groups = w.groups.map(g => ({ name: g.name, parts: g.parts.map(k => { const r = ref(k); if(!r) left++; return r ? Object.assign(r, colourOf(k)) : null; }).filter(Boolean) }));
         if(!groups.some(g => g.parts.length)) return;
         items.push({ type: 'chart', wide: w.wide, layout: 'columns', title: w.title, periods: Object.assign({}, w.periods), check: w.check, groups });
       }
@@ -9514,12 +9658,12 @@ const FMGRAPH_HELP_TOPICS = [
       { see: ['charts', 'sliders', 'speed'] },
     ] },
   { id: 'boards', group: 'board', title: 'Boards: tabs, arranging, colours, undo',
-    keywords: 'board boards tab tabs arrange move drag order wide narrow colour color undo redo rename duplicate delete',
+    keywords: 'board boards tab tabs arrange move drag order wide narrow colour color colours shared same slider undo redo rename duplicate delete',
     summary: 'Several boards per model, arranged as you like.',
     body: [
       { p: 'A model can have several boards — for example one for the statements and one for pricing — shown as tabs above the board. + Board adds an empty one; ✎ (or a double-click on its tab) renames the board shown, ⧉ duplicates it and 🗑 deletes it (after asking; the last board stays). Each board has its own bars, charts and sliders.' },
       { p: 'Drag a bar, chart or slider by its handle (⠿) to move it among the others — by mouse, by finger (on an iPad too), or with the arrow keys on the handle. ⇔ makes a bar or chart wide (the whole row) or narrow (half of it).' },
-      { p: 'Colours: a bar\'s colour box, beside its periods; in a chart, click a rectangle\'s colour in its key; a waterfall step\'s colour is in Edit chart.' },
+      { p: 'Colours belong to rectangles: a rectangle has one colour on its slider, its bars and every chart, on every board. Pick it from the colour box beside a slider\'s name, a bar\'s colour box beside its periods, a rectangle\'s swatch in a chart\'s key, or a waterfall step\'s colour in Edit chart: all of them change together. A rectangle you haven\'t coloured takes the chart colours in the order it first appears in a Columns, Lines or Spider chart; a waterfall step shows up, down or total until you choose its colour. The Tornado\'s Low and High colours are the chart\'s own.' },
       { p: '↶ Undo and ↷ Redo (Ctrl+Z, Ctrl+Y) take back any change to the boards — not where a slider is set, which is a "what if", not a change.' },
       { see: ['board-file', 'charts'] },
     ] },
@@ -9632,6 +9776,18 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'shared-colours', date: '2026-10-26', title: 'One colour per rectangle, everywhere',
+    summary: 'A rectangle now has the same colour on its slider, its bars and every chart, on every board. Change it in one place and it changes everywhere.',
+    what: [
+      'Each slider has a colour box beside its name, and a stripe of its rectangle\'s colour down its left side.',
+      'A bar\'s colour box, a chart key\'s swatches, a waterfall step\'s colour in Edit chart and the slider\'s box all set the same thing: the rectangle\'s colour, on every board of the model.',
+      'A rectangle you haven\'t coloured takes the chart colours in turn, in the order it first appears in a Columns, Lines or Spider chart, so it matches wherever it shows. A waterfall step keeps its up, down or total colour until you choose one for it.',
+      'Boards saved before keep their colours. Where two charts gave one rectangle different colours, the first one is kept, and a note says how many changed.',
+    ],
+    why: 'With several charts and boards, the same rectangle could be red in one chart and blue in another, and the sliders had no colour at all. Now the colour tells you which rectangle a slider moves.',
+    how: ['Click the colour box beside a slider\'s name, or a swatch in a chart\'s key, and choose a colour.', 'Every bar, chart and slider showing that rectangle takes it, on every board.', 'Choose its automatic colour again to go back to it.'],
+    notes: ['On a phone, the sliders show the colour as a stripe; colours are picked on a larger screen.', 'The Tornado\'s Low and High colours belong to that chart, not to a rectangle.', 'The board file is now version 11. ExcelExporter reads it, and its Dashboard charts take the same colours.'],
+    see: ['boards'] },
   { id: 'user-manual', date: '2026-10-21', title: 'The user manual, one click from Help',
     summary: 'A link at the top of the Help panel opens the user manual on fmIDE\'s website: lessons step by step, with the numbers you should see.',
     what: [
@@ -10264,7 +10420,10 @@ $('btnTutorials').addEventListener('click', () => { help.open(); });
 //   boards()       → [{ name, shown }] (G3a); addBoard(name?), showBoard(index or name),
 //   renameBoard(name), duplicateBoard(), removeBoard() (the one shown; the last can't go)
 //   move(id, index) (a bar or chart among the items, a slider among the sliders),
-//   setWide(id, wide), setColour(id, '#rrggbb' or null, rect?) (a bar's, or a chart rectangle's)
+//   setWide(id, wide), setColour(id, '#rrggbb' or null, rect?) (a bar's, a slider's, or a chart
+//                  rectangle's: the rectangle's colour on every board; null back to the automatic one)
+//   rectColour(rect, canvas?) → { colour ('#rrggbb', or null for the usual look), chosen }
+//   colours()      → the chosen colours, [{ canvas, name, colour }] (board file 11)
 //   setScale(id, { min, max } | 'current' | null) → the bar's or chart's vertical scale: fixed,
 //                  fixed at what Auto shows now, or Auto (null); returns { min, max } or null
 //   scale(id)      → its fixed scale { min, max }, or null (Auto)
@@ -10452,18 +10611,25 @@ window.fmGraph = Object.freeze({
   setColour: (id, colour, rect) => {
     const c = colour === null ? null : cleanColour(colour);
     if(colour !== null && !c) throw new Error('A colour is written #rrggbb.');
-    const w = board.items.find(x => x.id === id);
-    if(!w) throw new Error('There is no bar or chart "' + String(id).slice(0, 40) + '".');
-    if(w.kind === 'bar') w.colour = c;
-    else {
-      const k = findRect(rect).key;
+    const w = board.items.find(x => x.id === id) || board.sliders.find(x => x.id === id);
+    if(!w) throw new Error('There is no bar, chart or slider "' + String(id).slice(0, 40) + '".');
+    let k = w.key;
+    if(w.kind === 'chart'){
+      k = findRect(rect).key;
       if(!chartKeys(w).includes(k)) throw new Error('That rectangle isn\'t in this chart.');
-      const next = Object.assign({}, w.colours);
-      if(c) next[k] = c; else delete next[k];
-      w.colours = next;
     }
+    setRectColour(k, c); // the rectangle's, on every board (04e-colours.js)
     saveBoardSoon();
     renderBoard();
+  },
+  rectColour: (rect, canvas) => {
+    adoptWidgetColours();
+    const k = findRect(rect, canvas).key;
+    return { colour: rectColour(k), chosen: !!chosenColour(k) };
+  },
+  colours: () => {
+    adoptWidgetColours();
+    return [...rectColours].filter(([k]) => model.byKey.has(k)).map(([k, colour]) => { const r = model.byKey.get(k); return { canvas: r.canvasName, name: r.name, colour }; });
   },
   // Exploring (G4a). trace(id): pin the trace of a bar or chart (null clears it); returns what
   // reaches it — the sliders' ways there (rectangle names) and the inputs with no slider.

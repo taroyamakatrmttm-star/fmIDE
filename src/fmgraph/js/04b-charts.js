@@ -30,8 +30,9 @@
 //            `show: false` keeps an input listed but leaves it out of the drawing. colour /
 //            colour2: the Tornado's Low and High; a Spider's line takes its input's colour.
 //
-// A chart may give any of its rectangles its own colour: colours { key: '#rrggbb' }, kept in the
-// file on that part or step (`colour`).
+// A chart's rectangles take their shared colours (04e-colours.js; board file 11). Each part,
+// step or line still writes the colour it shows (`colour`); a file before 11 kept the chart's
+// own colours there, read into `colours` { key: '#rrggbb' } until adoptWidgetColours takes them in.
 //
 // Numbers agree when they differ by less than a millionth of their size (AGREE_TOLERANCE):
 // tiny rounding in the calculation is ignored, any real gap is not.
@@ -107,7 +108,9 @@ function cleanChart(raw, rectFor, count, drop){
 
 // A chart's file form; at(key) gives a rectangle's { canvasId, nodeId, name }.
 function chartData(c, at){
-  const withColour = (key, extra) => Object.assign(at(key), extra || {}, c.colours && c.colours[key] ? { colour: c.colours[key] } : {});
+  // Each writes the colour it shows (04e-colours.js): a waterfall step or a Tornado's input only a chosen one.
+  const shows = (key) => c.layout === 'flow' || c.layout === 'tornado' ? chosenColour(key) : rectColour(key);
+  const withColour = (key, extra) => Object.assign(at(key), extra || {}, shows(key) ? { colour: shows(key) } : {});
   if(isSensitivity(c)) return Object.assign({ layout: c.layout, title: c.title, output: c.output ? at(c.output) : null, period: c.period, steps: c.steps,
     inputs: c.inputs.map(i => withColour(i.key, Object.assign({ by: i.by, low: i.low, high: i.high }, i.show ? {} : { show: false }))) },
     c.colour ? { colour: c.colour } : {}, c.colour2 ? { colour2: c.colour2 } : {});

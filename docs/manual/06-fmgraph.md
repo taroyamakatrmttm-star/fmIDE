@@ -12,7 +12,7 @@ The numbers in this part were checked against the apps on `main` at pull request
 |---|---|---|
 | [6.1 Bars and sliders](#bars-sliders) | Open fmGraph, + Bar, + Slider, what a slider reaches, folding sliders, sharing slider positions | step 15 G1 ([#83](https://github.com/taroyamakatrmttm-star/fmIDE/pull/83)), [#142](https://github.com/taroyamakatrmttm-star/fmIDE/pull/142), [#143](https://github.com/taroyamakatrmttm-star/fmIDE/pull/143), [#181](https://github.com/taroyamakatrmttm-star/fmIDE/pull/181), [#182](https://github.com/taroyamakatrmttm-star/fmIDE/pull/182) |
 | [6.2 Charts](#graph-charts) | Columns, Lines, Waterfall; one period for every board | step 15 G2 ([#84](https://github.com/taroyamakatrmttm-star/fmIDE/pull/84)), [#184](https://github.com/taroyamakatrmttm-star/fmIDE/pull/184), [#188](https://github.com/taroyamakatrmttm-star/fmIDE/pull/188) |
-| [6.3 Boards](#graph-boards) | Tabs, arranging, colours, a fixed scale, undo, board files, boards in the document | step 15 G3 ([#85](https://github.com/taroyamakatrmttm-star/fmIDE/pull/85)–[#87](https://github.com/taroyamakatrmttm-star/fmIDE/pull/87)), [#133](https://github.com/taroyamakatrmttm-star/fmIDE/pull/133) |
+| [6.3 Boards](#graph-boards) | Tabs, arranging, one colour per rectangle, a fixed scale, undo, board files, boards in the document | step 15 G3 ([#85](https://github.com/taroyamakatrmttm-star/fmIDE/pull/85)–[#87](https://github.com/taroyamakatrmttm-star/fmIDE/pull/87)), [#133](https://github.com/taroyamakatrmttm-star/fmIDE/pull/133), branch `claude/fmgraph-shared-colours-e9c229` |
 | [6.4 Trace, Biggest movers, and comparing A with B](#graph-explore) | 🔍 Trace, Biggest movers, 📌 Pin as A | step 15 G4 ([#88](https://github.com/taroyamakatrmttm-star/fmIDE/pull/88), [#89](https://github.com/taroyamakatrmttm-star/fmIDE/pull/89)) |
 | [6.5 Named scenarios and the scenario waterfall](#graph-scenarios) | + Save as scenario, ▶ Show, A, the scenario waterfall | [#93](https://github.com/taroyamakatrmttm-star/fmIDE/pull/93), [#94](https://github.com/taroyamakatrmttm-star/fmIDE/pull/94) |
 | [6.6 Tornado and Spider: which inputs matter most](#tornado-spider) | The two charts, and choosing each input's Low and High | step 18 ([#146](https://github.com/taroyamakatrmttm-star/fmIDE/pull/146), [#149](https://github.com/taroyamakatrmttm-star/fmIDE/pull/149)) |
@@ -102,24 +102,25 @@ At Price 12, the Profit bar shows **160**; a dashed outline keeps the model's ow
 > **You need:** fmGraph with a board.
 > **Time:** about 10 minutes.
 > **In the app:** fmGraph Help → *Boards: tabs, arranging, colours, undo* (`boards`), *A fixed vertical scale* (`scale`), *Saving and sharing boards* (`board-file`), *What fmGraph remembers* (`board-kept`)
-> **Came in:** step 15 G3 · boards [#85](https://github.com/taroyamakatrmttm-star/fmIDE/pull/85); colours shown [#86](https://github.com/taroyamakatrmttm-star/fmIDE/pull/86); boards in fmIDE's document [#87](https://github.com/taroyamakatrmttm-star/fmIDE/pull/87); a fixed scale [#133](https://github.com/taroyamakatrmttm-star/fmIDE/pull/133)
+> **Came in:** step 15 G3 · boards [#85](https://github.com/taroyamakatrmttm-star/fmIDE/pull/85); colours shown [#86](https://github.com/taroyamakatrmttm-star/fmIDE/pull/86); boards in fmIDE's document [#87](https://github.com/taroyamakatrmttm-star/fmIDE/pull/87); a fixed scale [#133](https://github.com/taroyamakatrmttm-star/fmIDE/pull/133); one colour per rectangle, branch `claude/fmgraph-shared-colours-e9c229`
 
 ### Steps
 
 1. **+ Board** adds an empty board as a new tab. **✎** (or a double-click on its tab) renames the board shown; **⧉** duplicates it; **🗑** deletes it after asking (the last board stays).
 2. Drag a bar or chart by its handle **⠿** to move it; **⇔** makes it wide (the whole row) or narrow (half).
-3. Click a bar's colour box, beside its periods, to choose its colour. In a chart, click a rectangle's colour in its key.
+3. Colours belong to rectangles. Click the colour box beside the Price slider's name and choose a colour: the slider's left edge takes it, and so does every bar and chart showing Price, on every board. A bar's colour box (beside its periods) and a rectangle's swatch in a chart's key change the same colour.
 4. On the Profit bar, choose **Fixed scale** (beside its colour). It takes what *Auto* showed, rounded; type other ends if you like. Now move Price: the bar grows and shrinks against the same scale. **📏** fixes it again at what Auto shows now; **Auto scale** goes back.
 5. **↶ Undo** (Ctrl+Z) takes back the last change to the boards; **↷ Redo** (Ctrl+Y) brings it back.
 6. **Boards ▾ → Export all boards** saves a board file; **Boards ▾ → Import boards…** (or dropping a board file on the page) adds its boards as new tabs.
 
 ### Check it
 
-With a fixed scale, a Profit that doubles draws a bar twice as tall. A number past the scale is drawn to its edge with ▲ or ▼, and its label still gives the number itself.
+In the sample, the Closing cash bar and Closing cash in the Balance sheet are the same green-blue (#0f766e), and Equipment is blue (#2563eb) in every chart that shows it until you choose another colour. With a fixed scale, a Profit that doubles draws a bar twice as tall. A number past the scale is drawn to its edge with ▲ or ▼, and its label still gives the number itself.
 
 ### Good to know
 
 - **Where the boards are kept:** in this browser, for each model, and in fmIDE's document when fmGraph was opened from fmIDE. Each change to them goes back to fmIDE and marks the document unsaved; saving there keeps the boards with the model.
+- **One colour per rectangle:** a rectangle you haven't coloured takes the chart colours in the order it first appears in a Columns, Lines or Spider chart. A waterfall step keeps its up, down or total colour until you choose one for it; the Tornado's Low and High colours belong to that chart. Choosing a rectangle's automatic colour again goes back to it. Boards saved before keep their colours; where two charts disagreed, the first is kept and fmGraph says how many changed.
 - **Moving a slider is not a change** to the board: Undo leaves it alone, and a board always opens on the model's own numbers.
 - **A board file fits the model it was made from,** or another built from the same templates. Anything it shows that this model hasn't got is left out, and fmGraph says how much.
 - **Into Excel:** ExcelExporter rebuilds a board's sliders, charts and scenarios in the workbook ([lesson 5.11](05-excelexporter.md#fmgraph-in-excel)).

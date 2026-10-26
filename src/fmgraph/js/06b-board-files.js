@@ -15,6 +15,8 @@ const BOARD_FILE_FORMAT = { 'fmIDE-graph-board': { current: BOARD_FILE_VERSION, 
 // Tornado or a Spider. Nothing to change. v8 → v9: the shared period (05k-shared-period.js) —
 // every bar and chart saved before it keeps the periods it had (`ownPeriod`), so the file opens
 // as it was saved (the owner's choice). v9 → v10: a chart may be a lines chart; nothing to change.
+// v10 → v11: the shared colours (04e-colours.js); nothing to change — a file without `colours`
+// keeps its colours on its widgets, taken into the shared ones when read (the first one wins).
 function keepOwnPeriods(data){
   if(!data || typeof data !== 'object' || data.form === 'template') return;
   const boardsIn = Array.isArray(data.boards) ? data.boards : [data];
@@ -23,7 +25,7 @@ function keepOwnPeriods(data){
     ['items', 'bars', 'charts'].forEach(k => { if(Array.isArray(b[k])) b[k].forEach(w => { if(w && typeof w === 'object') w.ownPeriod = true; }); });
   });
 }
-const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {}, 5: () => {}, 6: () => {}, 7: () => {}, 8: keepOwnPeriods, 9: () => {} } };
+const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {}, 5: () => {}, 6: () => {}, 7: () => {}, 8: keepOwnPeriods, 9: () => {}, 10: () => {} } };
 
 function safeFileName(s){ return String(s).replace(/[^A-Za-z0-9 ._()-]+/g, '_').replace(/\s+/g, ' ').trim().slice(0, 80) || 'board'; }
 
@@ -81,6 +83,8 @@ async function importBoardsText(text){
   const room = Math.max(0, BOARDS_LIMIT - boards.length);
   const adding = useful.slice(0, room);
   adding.forEach(b => { b.name = freeBoardName(b.name); boards.push(b); });
+  // Its shared colours (version 11): a rectangle with a colour here keeps it (04e-colours.js).
+  if(adding.length) r.colours.forEach((c, k) => { if(!rectColours.has(k)) rectColours.set(k, c); });
   if(adding.length) board = adding[0];
   scenarios.push(...newScenarios);
   saveBoardSoon();

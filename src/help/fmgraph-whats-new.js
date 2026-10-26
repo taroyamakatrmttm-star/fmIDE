@@ -8,6 +8,18 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'shared-colours', date: '2026-10-26', title: 'One colour per rectangle, everywhere',
+    summary: 'A rectangle now has the same colour on its slider, its bars and every chart, on every board. Change it in one place and it changes everywhere.',
+    what: [
+      'Each slider has a colour box beside its name, and a stripe of its rectangle\'s colour down its left side.',
+      'A bar\'s colour box, a chart key\'s swatches, a waterfall step\'s colour in Edit chart and the slider\'s box all set the same thing: the rectangle\'s colour, on every board of the model.',
+      'A rectangle you haven\'t coloured takes the chart colours in turn, in the order it first appears in a Columns, Lines or Spider chart, so it matches wherever it shows. A waterfall step keeps its up, down or total colour until you choose one for it.',
+      'Boards saved before keep their colours. Where two charts gave one rectangle different colours, the first one is kept, and a note says how many changed.',
+    ],
+    why: 'With several charts and boards, the same rectangle could be red in one chart and blue in another, and the sliders had no colour at all. Now the colour tells you which rectangle a slider moves.',
+    how: ['Click the colour box beside a slider\'s name, or a swatch in a chart\'s key, and choose a colour.', 'Every bar, chart and slider showing that rectangle takes it, on every board.', 'Choose its automatic colour again to go back to it.'],
+    notes: ['On a phone, the sliders show the colour as a stripe; colours are picked on a larger screen.', 'The Tornado\'s Low and High colours belong to that chart, not to a rectangle.', 'The board file is now version 11. ExcelExporter reads it, and its Dashboard charts take the same colours.'],
+    see: ['boards'] },
   { id: 'user-manual', date: '2026-10-21', title: 'The user manual, one click from Help',
     summary: 'A link at the top of the Help panel opens the user manual on fmIDE\'s website: lessons step by step, with the numbers you should see.',
     what: [

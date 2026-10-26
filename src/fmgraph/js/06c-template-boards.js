@@ -51,7 +51,8 @@ function templateRefMaker(target){
 function templateBoardsData(target, onlyShown){
   const ref = templateRefMaker(target);
   let left = 0;
-  const colourOf = (c, key) => c.colours && c.colours[key] ? { colour: c.colours[key] } : {};
+  // Each widget carries its rectangles' chosen colours, as the template form did before board file 11 (04e-colours.js).
+  const colourOf = (key) => chosenColour(key) ? { colour: chosenColour(key) } : {};
   const one = (b) => {
     const items = [];
     b.items.forEach(w => {
@@ -61,16 +62,16 @@ function templateBoardsData(target, onlyShown){
       if(w.kind === 'bar'){
         const r = ref(w.key);
         if(!r){ left++; return; }
-        items.push(Object.assign({ type: 'bar' }, r, { periods: Object.assign({}, w.periods), wide: w.wide }, w.colour ? { colour: w.colour } : {}));
+        items.push(Object.assign({ type: 'bar' }, r, { periods: Object.assign({}, w.periods), wide: w.wide }, colourOf(w.key)));
         return;
       }
       if(w.layout === 'flow'){
         const steps = [];
-        w.steps.forEach(s => { const r = ref(s.key); if(r) steps.push(Object.assign(r, { role: s.role }, colourOf(w, s.key))); else left++; });
+        w.steps.forEach(s => { const r = ref(s.key); if(r) steps.push(Object.assign(r, { role: s.role }, colourOf(s.key))); else left++; });
         if(!steps.length) return;
         items.push({ type: 'chart', wide: w.wide, layout: 'flow', title: w.title, period: w.period, steps });
       } else {
-        const groups = w.groups.map(g => ({ name: g.name, parts: g.parts.map(k => { const r = ref(k); if(!r) left++; return r ? Object.assign(r, colourOf(w, k)) : null; }).filter(Boolean) }));
+        const groups = w.groups.map(g => ({ name: g.name, parts: g.parts.map(k => { const r = ref(k); if(!r) left++; return r ? Object.assign(r, colourOf(k)) : null; }).filter(Boolean) }));
         if(!groups.some(g => g.parts.length)) return;
         items.push({ type: 'chart', wide: w.wide, layout: 'columns', title: w.title, periods: Object.assign({}, w.periods), check: w.check, groups });
       }

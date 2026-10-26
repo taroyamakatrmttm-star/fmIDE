@@ -1,0 +1,37 @@
+{
+  "kind": "fmIDE-graph-board",
+  "version": 10,
+  "active": 0,
+  "boards": [
+    {
+      "name": "Saved before shared colours",
+      "items": [
+        { "type": "chart", "wide": true, "layout": "columns", "title": "Sales", "periods": { "mode": "all" }, "check": false, "groups": [
+          { "name": "", "parts": [
+            { "canvasId": "cProfit", "nodeId": "rev", "name": "Revenue", "colour": "#ff0000" },
+            { "canvasId": "cProfit", "nodeId": "profit", "name": "Profit" }
+          ] }
+        ] },
+        { "type": "bar", "canvasId": "cProfit", "nodeId": "rev", "name": "Revenue", "periods": { "mode": "all" }, "wide": false, "colour": "#00ff00" },
+        { "type": "chart", "wide": true, "layout": "flow", "title": "Profit", "period": 0, "steps": [
+          { "canvasId": "cProfit", "nodeId": "rev", "name": "Revenue", "role": "start" },
+          { "canvasId": "cProfit", "nodeId": "profit", "name": "Profit", "role": "total", "colour": "#0000ff" }
+        ] }
+      ],
+      "sliders": [
+        { "canvasId": "cProfit", "nodeId": "price", "name": "Price", "periods": { "mode": "all" }, "mode": "set", "min": 5, "max": 15, "step": 0.5 }
+      ]
+    },
+    {
+      "name": "Lines before shared colours",
+      "items": [
+        { "type": "chart", "wide": true, "layout": "lines", "title": "Trend", "periods": { "mode": "all" }, "lines": [
+          { "canvasId": "cProfit", "nodeId": "rev", "name": "Revenue", "colour": "#ffff00" },
+          { "canvasId": "cProfit", "nodeId": "gp", "name": "Gross profit" }
+        ] }
+      ],
+      "sliders": []
+    }
+  ],
+  "sharedPeriods": { "periods": { "mode": "all" }, "period": 0 }
+}

@@ -1,7 +1,7 @@
 // ============================================================
 // The boards (G3a: several, as tabs, each a view of the model). A board:
 //   { id, name, items: [bar | chart, …] (in the order shown), sliders: [slider, …], ownSliders }
-//   bar    { id, kind: 'bar', key, periods, wide, colour, scale }
+//   bar    { id, kind: 'bar', key, periods, wide, scale }
 //   chart  { id, kind: 'chart', wide, layout: 'columns' | 'lines' | 'flow' | 'scenarios' | 'tornado' | 'spider', scale, … } (G2; 04b-charts.js)
 // scale: null for Auto, or { min, max } (04d-scale.js).
 //   slider { id, key, periods, mode: 'set' | 'shift', min, max, step, value, folded }
@@ -10,7 +10,7 @@
 // that number in the periods it covers, 'shift' changes them by that many percent.
 //
 // A wide widget takes a whole row of the grid, a narrow one half of it (charts start wide,
-// bars narrow); colour is a bar's own colour (null: the usual one). A folded slider shows only
+// bars narrow). Colours belong to rectangles, shared by every board (04e-colours.js). A folded slider shows only
 // its name, track and number (board file 6; 05c-arrange.js). ownSliders: the board keeps its own
 // slider positions instead of sharing them with the other boards (board file 7; 03-calc.js).
 //
@@ -90,7 +90,10 @@ function rectForEntry(w){
 // One board read against the loaded model: widgets on rectangles that aren't there, or
 // sliders on rectangles that aren't inputs, are left out (and counted in `dropped`).
 // `version`: the file's; before 9 every bar and chart keeps the periods it had (ownPeriod).
-function cleanBoard(raw, dropped, version){
+// `sharedColours`: the file has the shared colours (version 11), so the colours its widgets
+// carry (what each showed) are not read; without, they stay on the widgets to be taken in
+// (adoptWidgetColours, 04e-colours.js).
+function cleanBoard(raw, dropped, version, sharedColours){
   const out = makeBoard(cleanText(raw && raw.name, 60) || 'Board');
   if(!raw || typeof raw !== 'object') return out;
   const count = model.periods.length;
@@ -123,6 +126,7 @@ function cleanBoard(raw, dropped, version){
   if(Array.isArray(raw.items)) items = raw.items.map(w => w && w.type === 'chart' ? chart(w) : w && w.type === 'bar' ? bar(w) : (drop(), null));
   else items = (Array.isArray(raw.charts) ? raw.charts.map(chart) : []).concat(Array.isArray(raw.bars) ? raw.bars.map(bar) : []); // G1, G2
   out.items = items.filter(Boolean).slice(0, BOARD_LIMIT * 2);
+  if(sharedColours) out.items.forEach(w => { if(w.kind === 'bar') w.colour = null; else w.colours = {}; });
   out.ownSliders = raw.ownSliders === true; // version 7
   (Array.isArray(raw.sliders) ? raw.sliders : []).slice(0, BOARD_LIMIT).forEach(s => {
     const rect = rectForEntry(s);
@@ -139,11 +143,13 @@ function cleanBoard(raw, dropped, version){
 function cleanBoards(raw){
   if(!raw || typeof raw !== 'object' || raw.kind !== 'fmIDE-graph-board') return null;
   const dropped = { n: 0 };
-  const list = Array.isArray(raw.boards) ? raw.boards.slice(0, BOARDS_LIMIT).map(b => cleanBoard(b, dropped, raw.version)) : [cleanBoard(raw, dropped, raw.version)];
+  const shared = Array.isArray(raw.colours); // version 11 (04e-colours.js)
+  const list = Array.isArray(raw.boards) ? raw.boards.slice(0, BOARDS_LIMIT).map(b => cleanBoard(b, dropped, raw.version, shared)) : [cleanBoard(raw, dropped, raw.version, shared)];
   const a = Math.round(Number(raw.active));
   return { boards: list, active: Number.isFinite(a) && a >= 0 && a < list.length ? a : 0, dropped: dropped.n,
     scenarios: cleanScenarios(raw.scenarios, rectForEntry), // version 3 (05f-scenarios.js)
-    sharedPeriods: cleanSharedPeriods(raw.sharedPeriods, model.periods.length) }; // version 9 (05k-shared-period.js)
+    sharedPeriods: cleanSharedPeriods(raw.sharedPeriods, model.periods.length), // version 9 (05k-shared-period.js)
+    colours: shared ? cleanRectColours(raw.colours) : new Map() }; // version 11 (04e-colours.js)
 }
 
 // A board's file form.
@@ -155,9 +161,11 @@ function cleanBoards(raw){
 // (`ownSliders`, 03-calc.js); 8 the Tornado and the Spider (charts of layout `tornado` and
 // `spider`, 04b-charts.js); 9 the shared period (`sharedPeriods`, and a bar's or chart's
 // `ownPeriod`, 05k-shared-period.js; each still writes the periods it shows); 10 the lines chart
-// (a chart of layout `lines`, 04b-charts.js). The template form, which carries none of these,
-// stays version 2.
-const BOARD_FILE_VERSION = 10;
+// (a chart of layout `lines`, 04b-charts.js); 11 the shared colours (`colours`, each
+// rectangle's chosen colour, 04e-colours.js; each bar, part, step and line still writes the
+// colour it shows). The template form, which carries none of these, stays version 2 (its
+// widgets carry the chosen colours, as before 11).
+const BOARD_FILE_VERSION = 11;
 const TEMPLATE_BOARD_VERSION = 2;
 function boardData(b){
   const at = (key) => { const r = model.byKey.get(key); return { canvasId: r.canvasId, nodeId: r.nodeId, name: r.name }; };
@@ -165,7 +173,7 @@ function boardData(b){
   return Object.assign({
     name: b.name,
     items: b.items.map(w => Object.assign(w.kind === 'bar'
-      ? Object.assign({ type: 'bar' }, at(w.key), { periods: Object.assign({}, w.periods), wide: w.wide }, w.colour ? { colour: w.colour } : {}, scaleOf(w))
+      ? Object.assign({ type: 'bar' }, at(w.key), { periods: Object.assign({}, w.periods), wide: w.wide }, rectColour(w.key) ? { colour: rectColour(w.key) } : {}, scaleOf(w))
       : Object.assign({ type: 'chart', wide: w.wide }, chartData(w, at), scaleOf(w)), w.ownPeriod ? { ownPeriod: true } : {})),
     sliders: b.sliders.map(s => Object.assign(at(s.key), { periods: Object.assign({}, s.periods), mode: s.mode, min: s.min, max: s.max, step: s.step }, s.folded ? { folded: true } : {})),
   }, b.ownSliders ? { ownSliders: true } : {});
@@ -174,14 +182,17 @@ function boardData(b){
 function boardsData(list){
   const which = list || boards;
   syncSharedPeriods(); // each writes the periods it shows (05k-shared-period.js)
+  adoptWidgetColours(); // an older file's colours, taken in first (04e-colours.js)
   const out = { kind: 'fmIDE-graph-board', version: BOARD_FILE_VERSION, active: list ? 0 : Math.max(0, boards.indexOf(board)), boards: which.map(boardData) };
   if(!list && scenarios.length) out.scenarios = scenariosData(); // the model's, with all its boards
   out.sharedPeriods = { periods: Object.assign({}, sharedPeriods.periods), period: sharedPeriods.period };
+  out.colours = rectColoursData(); // version 11 (04e-colours.js)
   return out;
 }
 
 let saveTimer = null;
 function saveBoardSoon(){
+  forgetAutoColours(); // a chart may have changed (04e-colours.js)
   noteChange(); // undo (04c-undo.js)
   clearTimeout(saveTimer);
   saveTimer = setTimeout(saveBoardNow, 300);
@@ -211,6 +222,7 @@ async function loadBoardFor(m, docRaw){
     board = boards[0];
     scenarios = [];
     sharedPeriods = cleanSharedPeriods(null, m.periods.length);
+    rectColours = new Map(); forgetAutoColours();
     resetUndo();
     return;
   }
@@ -221,6 +233,7 @@ async function loadBoardFor(m, docRaw){
     board = boards[0];
     scenarios = [];
     sharedPeriods = cleanSharedPeriods(null, m.periods.length);
+    rectColours = new Map(); forgetAutoColours();
     resetUndo();
     return;
   }
@@ -230,6 +243,7 @@ async function loadBoardFor(m, docRaw){
     board = boards[restored.active];
     scenarios = restored.scenarios;
     sharedPeriods = restored.sharedPeriods;
+    rectColours = restored.colours; forgetAutoColours();
     resetUndo();
     setTimeout(saveBoardNow, 0);
     return;
@@ -252,6 +266,7 @@ async function loadBoardFor(m, docRaw){
   board = boards[restored ? restored.active : 0];
   scenarios = restored ? restored.scenarios : [];
   sharedPeriods = restored ? restored.sharedPeriods : cleanSharedPeriods(null, m.periods.length);
+  rectColours = restored ? restored.colours : new Map(); forgetAutoColours();
   resetUndo();
 }
 
