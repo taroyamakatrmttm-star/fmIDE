@@ -252,6 +252,7 @@ function openGraphBoardsWindow(read, source){
     if(dash && dash.cantMoveNote) lines.push(dash.cantMoveNote);
     const sl = sensMatched.left;
     if(sl.noOutput) lines.push(sl.noOutput + ' Tornado or Spider chart' + (sl.noOutput === 1 ? '' : 's') + ' whose output this model doesn\'t have.');
+    if(sl.noInputs) lines.push(sl.noInputs + ' Tornado or Spider chart' + (sl.noInputs === 1 ? '' : 's') + ' with no inputs to move.');
     const sIn = (sl.notFound || 0) + (sl.inBlock || 0) + (sl.notInput || 0) + (sl.bad || 0);
     if(sIn) lines.push(sIn + ' input' + (sIn === 1 ? '' : 's') + ' of the Tornado and Spider charts left out (not in this model, inside a block, not an input, or not readable).');
     const cl = chartsMatched.left;

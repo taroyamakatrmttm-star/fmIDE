@@ -400,7 +400,7 @@ The workbook has the tabs **Inputs**, your model's tabs, **Profit drivers**, **T
 > **You need:** fmIDE, fmGraph and ExcelExporter. The example is the Profit model of [lesson 5.10](#sensitivity). It helps to know [lesson 6.6](06-fmgraph.md#tornado-spider).
 > **Time:** about 15 minutes.
 > **In the app:** ExcelExporter Help → *fmGraph in Excel* (`fmgraph-in-excel`), *fmGraph's scenarios as Global Cases* (`fmgraph-scenarios`), *fmGraph's sliders: the Dashboard* (`fmgraph-dashboard`), *fmGraph's charts on the Dashboard* (`fmgraph-charts`) · fmIDE tutorial *fmGraph boards in Excel* (`fmgraph-to-excel`)
-> **Came in:** step 19 · [#145](https://github.com/taroyamakatrmttm-star/fmIDE/pull/145), [#147](https://github.com/taroyamakatrmttm-star/fmIDE/pull/147), [#148](https://github.com/taroyamakatrmttm-star/fmIDE/pull/148), [#150](https://github.com/taroyamakatrmttm-star/fmIDE/pull/150), [#152](https://github.com/taroyamakatrmttm-star/fmIDE/pull/152)–[#156](https://github.com/taroyamakatrmttm-star/fmIDE/pull/156); later [#180](https://github.com/taroyamakatrmttm-star/fmIDE/pull/180), [#188](https://github.com/taroyamakatrmttm-star/fmIDE/pull/188)
+> **Came in:** step 19 · [#145](https://github.com/taroyamakatrmttm-star/fmIDE/pull/145), [#147](https://github.com/taroyamakatrmttm-star/fmIDE/pull/147), [#148](https://github.com/taroyamakatrmttm-star/fmIDE/pull/148), [#150](https://github.com/taroyamakatrmttm-star/fmIDE/pull/150), [#152](https://github.com/taroyamakatrmttm-star/fmIDE/pull/152)–[#156](https://github.com/taroyamakatrmttm-star/fmIDE/pull/156); later [#180](https://github.com/taroyamakatrmttm-star/fmIDE/pull/180), [#188](https://github.com/taroyamakatrmttm-star/fmIDE/pull/188); a Tornado or Spider with no inputs left out, branch `claude/tornado-remove-all-inputs-655a57`
 
 One window in ExcelExporter, **Layout → Use fmGraph boards…**, reads your boards and lists everything it can carry. Each item has a tick box, all ticked at first.
 
@@ -475,6 +475,7 @@ The tabs are, in order: **Dashboard**, **Scenarios**, **Inputs**, your model's t
 | The scroll bars show *This version of Excel doesn't support this control*. | You are on an iPad, iPhone or Excel on the web. Use **Typed** and **Use** instead. |
 | I moved a set slider's scroll bar and nothing happened. | Tick **Use** (or type TRUE) on that row first. |
 | An item can't be carried. | Usually an input inside a block, a rectangle the workbook doesn't write, or a limit reached. The window says which. |
+| A Tornado or Spider isn't in the list. | It moves no inputs this model has: *Not carried* counts it. Add its inputs in fmGraph (**+ Input** or **↻**). |
 | A Tornado bar has no length. | The input is 0, and a percent of 0 is 0. Switch that input to **±** (amount) in fmGraph. |
 
 ---

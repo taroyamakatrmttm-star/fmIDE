@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph: remove all of a Tornado's or Spider's inputs
+- Edit chart has **× Remove all inputs** beside + Input and ↻: it empties the chart's list in one undo step, so the person picks only the inputs they want with + Input (or brings them all back with ↻ or Undo). An empty chart says what to do — "No inputs yet: in Edit chart, + Input adds one, or ↻ takes the 4 that reach Profit." — instead of saying none reaches the output. The board file is unchanged: an empty list was already kept.
+- ExcelExporter's Use fmGraph boards… leaves out a Tornado or Spider left with no inputs to move (emptied in fmGraph, or none of its inputs in this model) and says so under Not carried; before, it was listed with 0 inputs and dropped silently at Generate.
+
 ## fmGraph: one colour per rectangle, shared by every board
 - A rectangle has one colour on its slider, its bars and every Columns, Lines, Waterfall and Spider chart, on every board of the model; changing it anywhere changes it everywhere. Sliders have a colour box and a stripe of their rectangle's colour (the phone's dock and mixer show the stripe). A rectangle not coloured takes the chart colours in the order it first appears in a chart; a waterfall step keeps its colour by direction until one is chosen. The Tornado's Low and High stay the chart's own.
 - The board file is version 11: `colours`, the chosen colours; every widget still writes the colour it shows, so ExcelExporter (now reading up to 11) and older readers show the same. Older files keep their colours, the first one winning where charts disagreed, with a note. `fmGraph.setColour` takes a slider too; new `fmGraph.rectColour` and `fmGraph.colours` (branch `claude/fmgraph-shared-colours-e9c229`).

@@ -5089,6 +5089,12 @@ function chartEditorParts(c){
     reach.type = 'button';
     reach.addEventListener('click', () => { c.inputs = sensitivityStart(c.output).inputs; changed(); });
     box.appendChild(reach);
+    // The owner's request of 27 October 2026: empty the list in one undo step, to pick a few with + Input.
+    const clear = make('button', 'link-btn sens-clear', '× Remove all inputs');
+    clear.type = 'button';
+    clear.disabled = !c.inputs.length;
+    clear.addEventListener('click', () => { c.inputs = []; changed(); });
+    box.appendChild(clear);
     return box;
   }
   if(c.layout === 'scenarios'){
@@ -5623,7 +5629,11 @@ function drawSensitivity(c, problems, key){
   const name = c.output ? partLabel(c.output) : '';
   const kind = c.layout === 'tornado' ? 'Tornado' : 'Spider';
   if(!c.output) problems.push('No output yet: Edit chart chooses it.');
-  else if(!c.inputs.length) problems.push('No inputs to move: none reaches ' + name + '.');
+  else if(!c.inputs.length){
+    const reaching = sensitivityStart(c.output).inputs.length;
+    problems.push(reaching ? 'No inputs yet: in Edit chart, + Input adds one, or ↻ takes ' + (reaching === 1 ? 'the one that reaches ' : 'the ' + reaching + ' that reach ') + name + '.'
+      : 'No inputs to move: none reaches ' + name + '.');
+  }
   if(!ready) problems.push('Working out…');
   const W = 560;
   if(!figures || !figures.inputs.length){
@@ -9655,7 +9665,7 @@ const FMGRAPH_HELP_TOPICS = [
       { p: 'Tornado: one bar per input, from the output\'s number now (the dashed line) to its number with the input at Low and at High, each end labelled. The input with the largest swing (the gap between its two ends) is at the top; equal swings keep the inputs\' order.' },
       { p: 'Spider: one line per input, from Low (left) through the number now (where every line crosses) to High (right), with points in between. A straight line means the effect grows evenly; a bend means it doesn\'t.' },
       { p: 'A new one measures the first calculated rectangle, moving every input that reaches it by −10% … +10%. Edit chart chooses another output (↻ then takes the inputs that reach it), the period, and the Spider\'s points each side (1–10). A number that can\'t be worked out shows as a gap, with the reason below the chart.' },
-      { p: 'Each input has a row in Edit chart: the tick shows it in the chart (unticked, it stays listed but isn\'t drawn); the input itself; % or ± — by a percent or by an amount; then Low and High. Changing % or ± starts from −10 … +10 or −1 … +1. Under the row, Low and High in the input\'s own numbers now, in the chart\'s period: "Now 10: 9 … 11 in Year 1". An input that is 0 doesn\'t move by a percent, and its row says so. + Input adds the next input that reaches the output; ↑ ↓ reorder, × removes. Each input is moved once: choosing one already listed is refused.' },
+      { p: 'Each input has a row in Edit chart: the tick shows it in the chart (unticked, it stays listed but isn\'t drawn); the input itself; % or ± — by a percent or by an amount; then Low and High. Changing % or ± starts from −10 … +10 or −1 … +1. Under the row, Low and High in the input\'s own numbers now, in the chart\'s period: "Now 10: 9 … 11 in Year 1". An input that is 0 doesn\'t move by a percent, and its row says so. + Input adds the next input that reaches the output; ↑ ↓ reorder, × removes. × Remove all inputs empties the list in one step, to start again with only the inputs you choose (+ Input, then pick each one); Undo or ↻ brings them back. Each input is moved once: choosing one already listed is refused.' },
       { steps: ['Press + Chart at the top.', 'Choose Tornado or Spider at the top of the chart.', 'In Edit chart, set each input\'s % or ±, Low and High.', 'Move a slider: the chart is measured again around the new numbers.'] },
       { tip: 'The meanings and limits are the same as ExcelExporter\'s Sensitivity tab: at most 50 inputs, Low and High within ±1,000,000,000. On a large model these charts are worked out once the sliders stop ("Working out…"). A template\'s board never holds one.' },
       { see: ['charts', 'sliders', 'speed'] },
@@ -9779,6 +9789,17 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'remove-all-inputs', date: '2026-10-27', title: 'Remove all inputs from a Tornado or Spider',
+    summary: 'One button empties a Tornado\'s or Spider\'s list of inputs, so you can start again with only the ones you want.',
+    what: [
+      'Edit chart has × Remove all inputs beside + Input and ↻. It takes every input out of the chart in one step.',
+      'The chart then says what to do: + Input adds one, or ↻ takes every input that reaches the output again.',
+      'Undo brings them all back in one step.',
+    ],
+    why: 'An output like Net Income can have 20 or more inputs. All of them are shown at first, which is fine, but picking a few meant pressing × on every other row.',
+    how: ['Open the chart\'s Edit chart.', 'Press × Remove all inputs.', 'Press + Input for each input you want, and choose it in its list.'],
+    notes: ['ExcelExporter leaves a Tornado or Spider with no inputs out of Use fmGraph boards…, and says so.'],
+    see: ['sensitivity'] },
   { id: 'shared-colours', date: '2026-10-26', title: 'One colour per rectangle, everywhere',
     summary: 'A rectangle now has the same colour on its slider, its bars and every chart, on every board. Change it in one place and it changes everywhere.',
     what: [

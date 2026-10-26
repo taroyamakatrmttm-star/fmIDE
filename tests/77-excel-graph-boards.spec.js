@@ -473,6 +473,25 @@ test('a board\'s Tornado and Spider from someone else: outputs and inputs the mo
   expect([ws['D' + (head + 1)].v, ws['E' + (head + 1)].v, ws['F' + (head + 1)].v]).toEqual(['%', -10, 5]);
 });
 
+// fmGraph's × Remove all inputs (27 October 2026): a chart left with no inputs to move is left out, and said.
+test('a Tornado or Spider with no inputs to move is left out and said; the others still come in', async ({ page }, testInfo) => {
+  await openProfit(page);
+  const at = (nodeId, name) => ({ canvasId: 'cProfit', nodeId, name });
+  const f = { kind: 'fmIDE-graph-board', version: 11, boards: [{ name: 'Charts', sliders: [], items: [
+    { type: 'chart', layout: 'tornado', title: 'Emptied', output: at('profit', 'Profit'), inputs: [] },
+    { type: 'chart', layout: 'spider', title: 'None here', output: at('profit', 'Profit'), inputs: [Object.assign(at('nope', 'Nope'), { by: 'percent', low: -1, high: 1 })] },
+    { type: 'chart', layout: 'tornado', title: 'Kept', output: at('profit', 'Profit'), inputs: [Object.assign(at('price', 'Price'), { by: 'percent', low: -10, high: 10 })] }] }] };
+  await importFile(page, D.tempFile(testInfo, 'empty-charts.board.json', JSON.stringify(f)));
+  await expect(page.locator('#graphModal')).toBeVisible();
+  expect(await page.locator('#graphSensList .graph-scn-name').allTextContents()).toEqual(['Kept']);
+  expect(await leftOut(page)).toEqual([
+    '2 Tornado or Spider charts with no inputs to move.',
+    '1 input of the Tornado and Spider charts left out (not in this model, inside a block, not an input, or not readable).',
+    'The Inputs tab will be turned on: the scenarios move inputs there.']);
+  await page.click('#graphUse');
+  expect(await analysisNames(page)).toEqual(['Kept']);
+});
+
 // ---------- Sliders → the Dashboard (step 19, phase B4) ----------
 const sliderNames = (page) => page.locator('#graphSliderList .graph-scn-name').allTextContents();
 const sliderWhats = (page) => page.locator('#graphSliderList .graph-scn-what').allTextContents();
