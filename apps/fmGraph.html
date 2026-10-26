@@ -313,6 +313,14 @@
   .scenario-name{ flex:1 1 90px; min-width:70px; font:inherit; font-size:13px; padding:2px 5px; }
   .scenario-btn{ min-width:26px; padding:2px 6px; font-size:12px; }
   .scenario-btn[aria-pressed="true"]{ background:var(--reach); color:#1b2333; }
+  /* Play between two ends (05m-play.js) */
+  .play-row{ display:flex; flex-wrap:wrap; gap:4px 8px; align-items:center; margin-top:8px; font-size:13px; }
+  .play-row select{ max-width:150px; font:inherit; }
+  .play-bar{ position:sticky; top:var(--gbar-h, 52px); z-index:20; display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:0 0 10px; padding:7px 12px; border:1px solid var(--reach); border-radius:9px; background:#fffbeb; font-size:13px; }
+  .play-text{ flex:1 1 auto; display:flex; gap:4px 12px; flex-wrap:wrap; }
+  .play-at{ font-variant-numeric:tabular-nums; }
+  .slider-widget.playing{ box-shadow:0 0 0 2px var(--reach); }
+  .chart-widget.play-held .bar-chart-host{ opacity:.45; }
   .scenario-what{ flex-basis:100%; font-size:12px; color:var(--soft-ink); overflow-wrap:anywhere; }
 
   /* Try in fmGraph (G5c) */
@@ -654,6 +662,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   <div id="trialBar" class="trial-bar hidden" role="status"></div>
   <div id="compareBar" class="compare-bar hidden" role="status"></div>
   <div id="lookBar" class="look-bar hidden" role="status"></div>
+  <div id="playBar" class="play-bar hidden" role="region" aria-label="Play"></div>
   <section id="board" class="board hidden">
     <div class="board-col">
       <h2 class="col-head">Sliders <button type="button" id="btnFoldSliders" class="link-btn col-tool hidden">Collapse all</button></h2>
@@ -666,6 +675,11 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         <ol id="scenarioList" class="scenario-list"></ol>
         <p id="scenariosEmpty" class="empty-note">Move the sliders, then save where they are.</p>
         <button type="button" id="btnSaveScenario" class="link-btn needs-model" title="Keep where the sliders are now, under a name">+ Save as scenario</button>
+        <div id="playRow" class="play-row" title="Swing back and forth between two ends, like a pendulum, until stopped">
+          <label>Play from <select id="playFrom"></select></label>
+          <label>to <select id="playTo"></select></label>
+          <button type="button" id="btnPlay" class="link-btn needs-model">▶ Play</button>
+        </div>
         <p class="empty-note phone-only scenario-hint">Hold <strong>A</strong> to look at a scenario; let go to come back.</p>
       </details>
       <details id="goalSeekPanel" class="goal-seek desk-only">
@@ -3528,8 +3542,11 @@ function setOwnSliders(b, on){
 
 // While a finger holds A (05h-phone-show.js), the numbers looked at instead of the sliders'.
 let lookingAt = null;
+// While Play runs (05m-play.js): { model, now, from } — the numbers shown, and the "from" end's.
+let playAt = null;
+const playNow = () => playAt && playAt.model === model ? playAt : null;
 // The numbers laid over the model for what the board shows now.
-function shownOverrides(){ return lookingAt ? lookingAt.overrides : overridesFor(liveSliders()); }
+function shownOverrides(){ return lookingAt ? lookingAt.overrides : playNow() ? playAt.now : overridesFor(liveSliders()); }
 function currentResults(){ return resultsWith(shownOverrides()); }
 
 // ---- the Tornado and the Spider (step 18; 04b-charts.js) ----
@@ -3548,6 +3565,7 @@ function sensitivityKey(c, base){
 // The chart's figures for base: { figures, ready }. ready false: being worked out (figures are
 // the last ones worked out, or undefined). now: work them out whatever they cost (fmGraph.chart).
 function sensitivityNow(c, base, now){
+  if(!now && playNow()) base = playAt.from; // held at the "from" end while Play runs
   const key = sensitivityKey(c, base), hit = sensitivityMemo.get(c.id);
   if(hit && hit.key === key) return { figures: hit.figures, ready: true };
   if(!now && model.baseMs * sensitivityRuns(c, base).length > SENSITIVITY_BUDGET_MS){
@@ -3563,7 +3581,7 @@ function workOutSensitivitySoon(){
   const job = ++sensitivityJob;
   sensitivityTimer = setTimeout(() => {
     if(job !== sensitivityJob || !model || !board) return;
-    const base = shownOverrides();
+    const base = playNow() ? playAt.from : shownOverrides();
     const charts = board.charts.filter(c => isSensitivity(c) && (sensitivityMemo.get(c.id) || {}).key !== sensitivityKey(c, base));
     const todo = charts.flatMap(c => sensitivityRuns(c, base));
     setCalcNote('Working out the Tornado and Spider charts…');
@@ -6379,7 +6397,7 @@ function moverText(m){
 
 function updateMovers(results){
   const panel = $('moversPanel');
-  if(!panel || !model || !panel.open) return;
+  if(!panel || !model || !panel.open || playNow()) return; // waits while Play runs (05m-play.js)
   const list = $('moversList');
   const movers = biggestMovers(results, MOVERS_SHOWN);
   list.textContent = '';
@@ -6425,7 +6443,7 @@ document.addEventListener('keydown', (ev) => {
 let pinA = null;   // { overrides, sliders: [{ key, mode, periods, value }], label }
 
 // What the outlines and differences compare with: A, or the model's own numbers.
-function compareResults(){ return pinA ? resultsWith(pinA.overrides) : model.base; }
+function compareResults(){ return playNow() ? resultsWith(playAt.from) : pinA ? resultsWith(pinA.overrides) : model.base; }
 
 function sliderSetting(s){ return { key: s.key, mode: s.mode, periods: JSON.stringify(s.periods), value: s.value }; }
 
@@ -6687,6 +6705,7 @@ function renderScenarios(){
     list.appendChild(li);
   });
   markScenarios();
+  renderPlayRow(); // (05m-play.js)
 }
 // Marks the scenario the sliders match, and the one compared with.
 function markScenarios(){
@@ -8439,6 +8458,270 @@ $('btnGoalSeek').addEventListener('click', () => {
   }, 0);
 });
 // ============================================================
+// Play (the owner's idea of 26 October 2026): the model swings between two ends and back, like
+// a pendulum, until it is stopped — so a change can be seen as it happens. Each end is a
+// scenario, the model's own numbers, or where the sliders are now (the row under the Scenarios
+// panel: Play from [▾] to [▾] ▶ Play).
+// - The motion: each end gives a number per input and period (overridesFor); the play moves
+//   each number in a straight line from one end's to the other's, so a set slider, a change by
+//   %, several sliders, sliders over different periods and inputs with no slider on this board
+//   all move together, and each end is exact. The time follows a pendulum (slow at the ends,
+//   quickest in the middle): PLAY_POSITIONS positions per swing, spaced by a cosine, shown in
+//   turn over PLAY_SWING_MS, PLAY_PAUSE_MS still at each end.
+// - Meanwhile the sliders show where the play has them (what each is set to is never changed),
+//   the dock and the mixer on a phone too, and the bars the moving inputs reach are lit; the
+//   dashed outlines and differences measure from the "from" end (compareResults, 05e); the
+//   Tornado and Spider hold still at the "from" end, faded (sensitivityNow, 03-calc.js), and
+//   Biggest movers waits (05d); the strip #playBar says what plays and where it is.
+// - Cost: the positions are the same every swing, so each is worked out once (resultCache); on
+//   a slow model (SLOW_MS) all are worked out ahead in small pieces ("Working out the play…"),
+//   fewer of them when that would take longer than PLAY_AHEAD_MS — the bars then glide between.
+// - Stopping: ■ Stop, Esc, any key or press outside the strip, a slider moved, another board or
+//   model. Everything is then as it was: nothing is saved, no undo step, nothing in the file.
+// - Reduced motion: no constant motion — the board shows the "to" end against the "from" end's
+//   outlines, and ⇄ on the strip steps between the two.
+// ============================================================
+const PLAY_SWING_MS = 2000;
+const PLAY_PAUSE_MS = 600;
+const PLAY_POSITIONS = 60;      // positions per swing (and one more: both ends)
+const PLAY_MIN_POSITIONS = 12;
+const PLAY_AHEAD_MS = 3000;     // a slow model has fewer positions, worked out within about this
+let playChoice = { from: null, to: null, picked: false }; // 'model', 'sliders' or 'sc:' + name; until the page reloads
+let playing = null;
+
+// The ends offered: [id, words].
+function playOptions(){
+  return [['model', 'The model\'s own numbers'], ['sliders', 'The sliders now']].concat(scenarios.map(sc => ['sc:' + sc.name, sc.name]));
+}
+function playDefaults(){
+  if(scenarios.length >= 2) return { from: 'sc:' + scenarios[0].name, to: 'sc:' + scenarios[1].name };
+  if(scenarios.length === 1) return { from: 'model', to: 'sc:' + scenarios[0].name };
+  return { from: 'model', to: 'sliders' };
+}
+// An end: its words and settings ({ key, mode, periods, value }, as a scenario's), or null.
+function playEnd(id){
+  if(id === 'model') return { id, name: 'the model\'s own numbers', settings: [] };
+  if(id === 'sliders') return { id, name: 'the sliders now', settings: slidersNow() };
+  const sc = scenarios.find(s => 'sc:' + s.name === id);
+  return sc ? { id, name: '“' + sc.name + '”', settings: sc.settings.map(s => Object.assign({}, s, { periods: Object.assign({}, s.periods) })) } : null;
+}
+
+// Between two ends' numbers: per input, both ends' numbers per period (the model's own where an
+// end leaves it), and whether they differ.
+function playPairs(a, b){
+  return [...new Set([...a.keys(), ...b.keys()])].map(k => {
+    const rect = model.byKey.get(k), own = model.periods.map((_, p) => baseValue(rect, p));
+    const x = a.get(k) || own, y = b.get(k) || own;
+    return { key: k, x, y, moves: x.some((v, p) => !Object.is(v, y[p])) };
+  });
+}
+// f of the way from x to y; exact at both ends, and a number the ends share stays exact.
+function mixAt(x, y, f){ return Object.is(x, y) ? x : Number.isFinite(x) && Number.isFinite(y) ? (1 - f) * x + f * y : (f < 0.5 ? x : y); }
+function overridesAt(pairs, f){
+  const out = new Map();
+  pairs.forEach(pr => out.set(pr.key, pr.x.map((v, p) => mixAt(v, pr.y[p], f))));
+  return out;
+}
+
+// Where a slider stands at an end: the end's setting like it, or the model's own number.
+function endSliderValue(settings, s){
+  const k = settingKey(s), o = settings.find(x => settingKey(x) === k);
+  if(o) return o.value;
+  return s.mode === 'shift' ? 0 : baseValue(model.byKey.get(s.key), periodsOf(s.periods)[0] || 0);
+}
+// The settings that differ between the ends, f of the way (for the strip's words).
+function movingSettings(f){
+  const all = [], seen = new Set();
+  playing.from.settings.concat(playing.to.settings).forEach(s => { const k = settingKey(s); if(!seen.has(k)){ seen.add(k); all.push(s); } });
+  return all.map(s => {
+    const a = endSliderValue(playing.from.settings, s), b = endSliderValue(playing.to.settings, s);
+    if(Object.is(a, b)) return null;
+    const v = mixAt(a, b, f);
+    return Object.assign({}, s, { value: f === 0 || f === 1 ? v : Number(v.toPrecision(4)) });
+  }).filter(Boolean);
+}
+
+// Starts playing between two ends (ids as playOptions). Returns the strip's words, or null.
+function startPlay(fromId, toId, opts){
+  if(!model || !board) return null;
+  if(playing) stopPlay();
+  const a = playEnd(fromId), b = playEnd(toId);
+  if(!a || !b) return null;
+  const pairs = playPairs(overridesFor(a.settings), overridesFor(b.settings));
+  if(!pairs.some(p => p.moves)){ notify('From and to give the same numbers: there is nothing to play.', 'err', 'play'); return null; }
+  notify('', null, 'play');
+  opts = opts || {};
+  const per = Math.max(model.baseMs, 0.01);
+  const n = per * (PLAY_POSITIONS + 1) > PLAY_AHEAD_MS ? Math.max(PLAY_MIN_POSITIONS, Math.floor(PLAY_AHEAD_MS / per) - 1) : PLAY_POSITIONS;
+  const fractions = [];
+  for(let i = 0; i <= n; i++) fractions.push(i === 0 ? 0 : i === n ? 1 : (1 - Math.cos(Math.PI * i / n)) / 2);
+  const me = playing = {
+    model, board, from: a, to: b, fractions, positions: fractions.map(f => overridesAt(pairs, f)),
+    moving: pairs.filter(p => p.moves).map(p => p.key),
+    swingMs: Number.isFinite(opts.swingMs) ? Math.max(200, Math.min(60000, opts.swingMs)) : PLAY_SWING_MS,
+    pauseMs: Number.isFinite(opts.pauseMs) ? Math.max(0, Math.min(10000, opts.pauseMs)) : PLAY_PAUSE_MS,
+    still: !!(reducedMotion && reducedMotion.matches), // (05e-compare.js)
+    sliders: JSON.stringify(slidersNow()), index: -1, startedAt: null, runs: 0, ready: false, raf: 0,
+    wake: keepScreenOn(),
+  };
+  document.body.classList.add('playing');
+  renderPlayBar();
+  if(isPhone()) $('playBar').scrollIntoView({ block: 'nearest' });
+  if(me.still){ me.ready = true; showPlayPosition(n); }
+  else if(model.baseMs >= SLOW_MS){
+    // A slow model: every position worked out ahead, in small pieces.
+    const todo = me.positions.slice();
+    setCalcNote('Working out the play…');
+    const piece = () => {
+      if(playing !== me) return;
+      const until = performance.now() + 30;
+      while(todo.length && performance.now() < until){
+        const o = todo.shift();
+        if(!resultCache.has(overridesKey(o))) me.runs++;
+        resultsWith(o);
+      }
+      if(todo.length){ setTimeout(piece, 0); return; }
+      setCalcNote('');
+      me.ready = true;
+    };
+    showPlayPosition(0);
+    setTimeout(piece, 0);
+  } else me.ready = true;
+  me.raf = requestAnimationFrame(playFrame);
+  return playWords();
+}
+
+// The position shown at t ms after the play began: still, up, still, down.
+function playIndexAt(t){
+  const P = playing.pauseMs, S = playing.swingMs, n = playing.fractions.length - 1;
+  t = t % (2 * (P + S));
+  if(t < P) return 0;
+  if(t < P + S) return Math.min(n, Math.round((t - P) / S * n));
+  if(t < 2 * P + S) return n;
+  return Math.max(0, n - Math.round((t - 2 * P - S) / S * n));
+}
+function playFrame(now){
+  if(!playing) return;
+  if(playing.model !== model || playing.board !== board || !model || JSON.stringify(slidersNow()) !== playing.sliders){ stopPlay(); return; }
+  playing.raf = requestAnimationFrame(playFrame);
+  if(!playing.ready || playing.still) return;
+  if(playing.startedAt === null) playing.startedAt = now;
+  const i = playIndexAt(now - playing.startedAt);
+  if(i !== playing.index) showPlayPosition(i);
+}
+function showPlayPosition(i){
+  const me = playing, o = me.positions[i], from = me.positions[0];
+  [o, from].forEach(x => { if(!resultCache.has(overridesKey(x))) me.runs++; });
+  me.index = i;
+  playAt = { model, now: o, from }; // (03-calc.js)
+  updateValues();
+  paintPlay(me.fractions[i]);
+}
+
+// The sliders, the dock, the mixer, the reach and the strip, f of the way.
+function paintPlay(f){
+  board.sliders.forEach(s => {
+    const a = endSliderValue(playing.from.settings, s), b = endSliderValue(playing.to.settings, s);
+    let v = mixAt(a, b, f);
+    if(f !== 0 && f !== 1) v = roundToStep(v, s.step);
+    const el = document.querySelector('.slider-widget[data-id="' + s.id + '"]');
+    if(el){
+      el.classList.toggle('playing', !Object.is(a, b));
+      el.querySelector('input[type="range"]').value = String(v);
+      el.querySelector('.slider-value').value = String(v);
+    }
+    [dockControls.get(s.id), mixerControls.get(s.id)].forEach(c => { if(c && !c.dragging()) c.setValue(v); }); // (05g, 05h)
+  });
+  const reached = new Set(playing.moving);
+  playing.moving.forEach(k => model.reach(k).forEach(r => reached.add(r)));
+  $('board').classList.add('moving');
+  board.bars.forEach(b => { const el = document.querySelector('.bar-widget[data-id="' + b.id + '"]'); if(el) el.classList.toggle('reached', reached.has(b.key)); });
+  board.charts.forEach(c => {
+    const el = document.querySelector('.chart-widget[data-id="' + c.id + '"]');
+    if(!el) return;
+    el.classList.toggle('reached', chartKeys(c).some(k => reached.has(k)));
+    el.classList.toggle('play-held', isSensitivity(c));
+  });
+  const at = $('playAt');
+  if(at) at.textContent = settingsLabel(movingSettings(f));
+}
+
+function playWords(){
+  if(!playing) return null;
+  return playing.still ? 'Showing ' + playing.to.name + ' against ' + playing.from.name : 'Playing ' + playing.from.name + ' ⇄ ' + playing.to.name;
+}
+function renderPlayBar(){
+  const bar = $('playBar');
+  bar.textContent = '';
+  bar.classList.toggle('hidden', !playing);
+  if(!playing) return;
+  const text = make('span', 'play-text');
+  const words = make('strong', 'play-words');
+  words.setAttribute('aria-live', 'polite');
+  if(playing.still){
+    const at = playing.index === 0 ? playing.from : playing.to, other = playing.index === 0 ? playing.to : playing.from;
+    words.textContent = 'Showing ' + at.name + '; the outlines show ' + playing.from.name;
+    text.title = 'Reduced motion is on: ⇄ steps between ' + at.name + ' and ' + other.name;
+  } else words.textContent = playWords();
+  text.appendChild(words);
+  const now = make('span', 'play-at');
+  now.id = 'playAt';
+  text.appendChild(now);
+  bar.appendChild(text);
+  const button = (label, title, fn) => { const b = make('button', 'compare-btn', label); b.type = 'button'; b.title = title; b.addEventListener('click', fn); bar.appendChild(b); return b; };
+  if(playing.still) button('⇄', 'Step to the other end', () => stepPlay()).id = 'btnPlayStep';
+  button('■ Stop', 'Stop playing: everything goes back as it was', () => stopPlay()).id = 'btnPlayStop';
+}
+// Reduced motion: ⇄ shows the other end.
+function stepPlay(){
+  if(!playing || !playing.still) return false;
+  showPlayPosition(playing.index === 0 ? playing.fractions.length - 1 : 0);
+  renderPlayBar();
+  paintPlay(playing.fractions[playing.index]);
+  return true;
+}
+
+// Stops the play: the sliders, A and the outlines are as they were (nothing was changed).
+function stopPlay(){
+  if(!playing) return false;
+  const me = playing;
+  cancelAnimationFrame(me.raf);
+  if(me.wake) me.wake();
+  playing = null;
+  playAt = null;
+  setCalcNote('');
+  document.body.classList.remove('playing');
+  renderPlayBar();
+  if(model && board) renderBoard();
+  return true;
+}
+
+// ---- the row under the scenarios ----
+function renderPlayRow(){
+  const options = playOptions(), ids = options.map(o => o[0]), def = playDefaults();
+  // The defaults follow the scenarios until the person picks an end.
+  if(!playChoice.picked || !ids.includes(playChoice.from)) playChoice.from = def.from;
+  if(!playChoice.picked || !ids.includes(playChoice.to)) playChoice.to = def.to;
+  [['playFrom', 'from'], ['playTo', 'to']].forEach(([id, end]) => {
+    const sel = $(id);
+    sel.textContent = '';
+    options.forEach(([v, words]) => { const o = make('option', null, words); o.value = v; sel.appendChild(o); });
+    sel.value = playChoice[end];
+  });
+}
+$('playFrom').addEventListener('change', () => { playChoice.from = $('playFrom').value; playChoice.picked = true; });
+$('playTo').addEventListener('change', () => { playChoice.to = $('playTo').value; playChoice.picked = true; });
+$('btnPlay').addEventListener('click', () => startPlay(playChoice.from, playChoice.to));
+
+// Any press outside the strip, or any key, stops it (Esc only that).
+document.addEventListener('pointerdown', (ev) => { if(playing && !(ev.target.closest && ev.target.closest('#playBar'))) stopPlay(); }, true);
+document.addEventListener('keydown', (ev) => {
+  if(!playing) return;
+  if(ev.key === 'Escape'){ ev.preventDefault(); ev.stopPropagation(); stopPlay(); return; }
+  if(ev.target.closest && ev.target.closest('#playBar')) return;
+  stopPlay();
+}, true);
+// ============================================================
 // The page: opening a model (the file picker, a file dropped anywhere, the sample, or fmIDE),
 // the top bar's buttons, and ← Back to fmIDE.
 // ============================================================
@@ -9856,7 +10139,7 @@ const FMGRAPH_HELP_TOPICS = [
       { p: 'Swipe sideways across the bars, or use ‹ and ›, for the next board. Hold a bar for a quick look: its value in every period, now against the model\'s own numbers (or A), 🔍 Trace and ⤢ Show. Hold a chart to see its rectangles\' numbers.' },
       { p: 'Turn the phone sideways for the mixer: the sliders stand up as faders at the two edges of the screen, under your thumbs, with the board between them. Each finger moves its own fader, so you can move two (or more) at once and watch the bars follow both. Slide your finger sideways, away from a fader, to make it finer. Tap a fader\'s name to put another slider there; that is remembered for the board.' },
       { p: '⤢ Show puts one bar or chart on the whole screen and keeps the screen on while it shows, for showing someone; ×, Esc or your phone\'s back gesture ends it. The sliders stay beside it.' },
-      { p: 'Saved scenarios are cards: swipe through them; ▶ shows one. Hold a card\'s A to look at that scenario: the bars show it while your finger stays down, and come back when you let go. A quick tap on A compares with it, as before. With 📌 Pin as A, hold the A on the strip to look at A.' },
+      { p: 'Saved scenarios are cards: swipe through them; ▶ shows one. Hold a card\'s A to look at that scenario: the bars show it while your finger stays down, and come back when you let go. A quick tap on A compares with it, as before. With 📌 Pin as A, hold the A on the strip to look at A. ▶ Play under the scenarios swings between two of them: the dock\'s sliders and Show follow, the screen stays on, and a touch anywhere stops it.' },
       { p: '⇪ Share (in Show, and in ☰) sends a picture of the chart, or of the whole board, or the board file, through your phone\'s own Share button: Messages, Mail, AirDrop. The picture is drawn on your phone; nothing is sent until you choose where it goes. Where a browser can\'t share files, they download instead.' },
       { steps: ['Open a model (☰ → Open…), or Try the sample model.', 'Drag a slider in the dock and watch the bars.', 'Slide your finger up to set it exactly.', 'Hold a bar to see every period, then ⤢ Show.', 'Turn the phone sideways and move two faders at once.'] },
       { tip: 'On Android the tick is felt; ☰ → Vibrate on the marks turns that off. An iPhone does not let web pages vibrate, so there the tick is only seen.' },
@@ -9967,13 +10250,15 @@ const FMGRAPH_HELP_TOPICS = [
       { see: ['scenarios', 'sliders', 'explore'] },
     ] },
   { id: 'scenarios', group: 'board', title: 'Named scenarios',
-    keywords: 'scenario scenarios named save switch show compare sc01 what if case version keep',
+    keywords: 'scenario scenarios named save switch show compare sc01 what if case version keep play pendulum swing animate move back and forth',
     summary: 'Save where the sliders are under a name, switch between scenarios, and compare with any of them.',
     body: [
       { p: 'Set the sliders, then press + Save as scenario in the Scenarios panel under the sliders. It is named sc01, sc02 and so on; type a name of your own in its box. Save as many as you like (up to 50 a model).' },
       { p: '▶ puts the sliders where a scenario had them; the scenario the sliders match is marked. A scenario keeps the inputs it changed, whatever board it was saved on: if one of them has no slider on the board you are looking at, fmGraph says so, and + Slider adds one.' },
       { p: 'A compares with a scenario: the dashed outlines, difference labels and Biggest movers measure from it, as with 📌 Pin as A, and the strip names it. Press A again to stop.' },
       { p: '⟳ keeps where the sliders are now in that scenario, ↑ ↓ change the order, and × deletes it.' },
+      { p: 'Play, under the scenarios, swings the model between two ends and back, like a pendulum, so you can watch a change happen: choose each end (a scenario, the model\'s own numbers or the sliders now) and press ▶ Play. Every number the two ends set differently moves smoothly, slower near the ends, with a short pause at each; the bars, the charts and the sliders follow, and the dashed outlines show the first end. The Tornado and Spider charts and Biggest movers wait until it stops.' },
+      { p: '■ Stop, Esc, any key or a click anywhere else stops it, and everything is as it was: Play changes no slider, saves nothing and is not an undo step. With reduced motion turned on in your device\'s settings, nothing swings: the board shows the second end against the first end\'s outlines, and ⇄ steps between them.' },
       { p: 'Scenarios are kept with the model\'s boards: in this browser, in fmIDE\'s document when fmGraph was opened from fmIDE, and in Export all boards. Saving, renaming, updating, moving and deleting them can be undone; showing one is like moving a slider, not a change.' },
       { see: ['compare', 'board-file'] },
     ] },
@@ -10020,6 +10305,18 @@ const FMGRAPH_WHATS_NEW = [
     how: ['Above the bars and charts, choose Scale: Auto for all.', 'Move a slider: every bar and chart grows and shrinks against the same scale.', 'For a bar in other units, choose Auto scale in its own scale list.'],
     notes: ['Boards saved before start on Each its own, so they look as they did.', 'The board file is now version 12. ExcelExporter reads it, and its Dashboard charts take the same scale.', 'On a phone the bars and charts follow the scale chosen on a larger screen.'],
     see: ['common-scale'] },
+  { id: 'play-scenarios', date: '2026-10-27', title: 'Play: swing between two scenarios',
+    summary: 'Watch the model move: ▶ Play swings it between two scenarios and back, like a pendulum, until you stop it.',
+    what: [
+      'Under the scenarios, choose where Play starts and ends: a scenario, the model\'s own numbers or the sliders as they are now.',
+      'Every number the two ends set differently moves smoothly from one to the other and back, slower near the ends, with a short pause at each. Several sliders, a change by %, sliders over some periods and inputs with no slider on the board all move together.',
+      'The bars, the charts and the sliders follow as it goes; the dashed outlines show where it started, and a strip at the top says what plays.',
+      '■ Stop, Esc, any key or a click anywhere else stops it, and everything is just as it was: nothing is saved and there is nothing to undo.',
+    ],
+    why: 'Two scenarios that differ in one number, say a volume of 10 against 100, are easier to understand when you can see every bar move as that number changes.',
+    how: ['Save two scenarios.', 'Under them, choose Play from and to, and press ▶ Play.', 'Press ■ Stop, Esc or anywhere else to stop.'],
+    notes: ['With reduced motion turned on in your device\'s settings nothing swings: the board shows the second end against the first, and ⇄ steps between them.', 'On a large model the positions are worked out first ("Working out the play…"), then it plays smoothly.', 'The Tornado and Spider charts and Biggest movers wait until it stops.'],
+    see: ['scenarios'] },
   { id: 'shared-colours', date: '2026-10-26', title: 'One colour per rectangle, everywhere',
     summary: 'A rectangle now has the same colour on its slider, its bars and every chart, on every board. Change it in one place and it changes everywhere.',
     what: [
@@ -10943,6 +11240,28 @@ window.fmGraph = Object.freeze({
   updateScenario: (name) => updateScenario(findScenario(name)),
   moveScenario: (name, index) => moveScenario(findScenario(name), Number(index)),
   deleteScenario: (name) => deleteScenario(findScenario(name)),
+  // Play (05m-play.js): play({ from, to, seconds?, pause? }) — each end a scenario's name, 'model'
+  // (the model's own numbers) or 'sliders' (where they are now); seconds a swing (2), pause at
+  // each end (0.6) — swings between them until stopPlay() (true when it was playing); returns
+  // the strip's words. playing() → null, or { from, to, still (reduced motion), ready, index,
+  // fraction, positions, worked (positions worked out), runs (calculations it needed), elapsed
+  // (ms on the page's clock since the swinging began, null before), swing, pause (ms) };
+  // stepPlay() shows the other end when still.
+  play: (spec) => {
+    spec = spec || {};
+    if(!model) throw new Error('Open a model first.');
+    const end = (x) => x === 'model' || x === 'sliders' ? x : 'sc:' + findScenario(x).name;
+    const words = startPlay(end(spec.from === undefined ? 'model' : spec.from), end(spec.to === undefined ? 'sliders' : spec.to),
+      { swingMs: spec.seconds === undefined ? undefined : Number(spec.seconds) * 1000, pauseMs: spec.pause === undefined ? undefined : Number(spec.pause) * 1000 });
+    if(!words) throw new Error('From and to give the same numbers: there is nothing to play.');
+    return words;
+  },
+  stopPlay: () => stopPlay(),
+  stepPlay: () => stepPlay(),
+  playing: () => playing ? { from: playing.from.name, to: playing.to.name, still: playing.still, ready: playing.ready, index: playing.index,
+    fraction: playing.index < 0 ? null : playing.fractions[playing.index], positions: playing.positions.length,
+    worked: playing.positions.filter(o => resultCache.has(overridesKey(o))).length, runs: playing.runs,
+    elapsed: playing.startedAt === null ? null : performance.now() - playing.startedAt, swing: playing.swingMs, pause: playing.pauseMs } : null,
   // G6: tutorials. startTutorial(id) → Promise<boolean>; tutorial() → { id, step (its id), index } or null;
   // stopTutorial() puts the model from before back.
   tutorials: () => FMGRAPH_TUTORIALS.map(t => ({ id: t.id, title: t.title, steps: t.steps.length })),

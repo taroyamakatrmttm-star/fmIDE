@@ -303,6 +303,28 @@ window.fmGraph = Object.freeze({
   updateScenario: (name) => updateScenario(findScenario(name)),
   moveScenario: (name, index) => moveScenario(findScenario(name), Number(index)),
   deleteScenario: (name) => deleteScenario(findScenario(name)),
+  // Play (05m-play.js): play({ from, to, seconds?, pause? }) — each end a scenario's name, 'model'
+  // (the model's own numbers) or 'sliders' (where they are now); seconds a swing (2), pause at
+  // each end (0.6) — swings between them until stopPlay() (true when it was playing); returns
+  // the strip's words. playing() → null, or { from, to, still (reduced motion), ready, index,
+  // fraction, positions, worked (positions worked out), runs (calculations it needed), elapsed
+  // (ms on the page's clock since the swinging began, null before), swing, pause (ms) };
+  // stepPlay() shows the other end when still.
+  play: (spec) => {
+    spec = spec || {};
+    if(!model) throw new Error('Open a model first.');
+    const end = (x) => x === 'model' || x === 'sliders' ? x : 'sc:' + findScenario(x).name;
+    const words = startPlay(end(spec.from === undefined ? 'model' : spec.from), end(spec.to === undefined ? 'sliders' : spec.to),
+      { swingMs: spec.seconds === undefined ? undefined : Number(spec.seconds) * 1000, pauseMs: spec.pause === undefined ? undefined : Number(spec.pause) * 1000 });
+    if(!words) throw new Error('From and to give the same numbers: there is nothing to play.');
+    return words;
+  },
+  stopPlay: () => stopPlay(),
+  stepPlay: () => stepPlay(),
+  playing: () => playing ? { from: playing.from.name, to: playing.to.name, still: playing.still, ready: playing.ready, index: playing.index,
+    fraction: playing.index < 0 ? null : playing.fractions[playing.index], positions: playing.positions.length,
+    worked: playing.positions.filter(o => resultCache.has(overridesKey(o))).length, runs: playing.runs,
+    elapsed: playing.startedAt === null ? null : performance.now() - playing.startedAt, swing: playing.swingMs, pause: playing.pauseMs } : null,
   // G6: tutorials. startTutorial(id) → Promise<boolean>; tutorial() → { id, step (its id), index } or null;
   // stopTutorial() puts the model from before back.
   tutorials: () => FMGRAPH_TUTORIALS.map(t => ({ id: t.id, title: t.title, steps: t.steps.length })),

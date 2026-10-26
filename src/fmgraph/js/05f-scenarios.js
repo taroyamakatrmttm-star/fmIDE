@@ -169,6 +169,7 @@ function renderScenarios(){
     list.appendChild(li);
   });
   markScenarios();
+  renderPlayRow(); // (05m-play.js)
 }
 // Marks the scenario the sliders match, and the one compared with.
 function markScenarios(){

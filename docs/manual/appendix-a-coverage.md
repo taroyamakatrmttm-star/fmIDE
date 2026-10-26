@@ -250,6 +250,7 @@ Oldest first. *Step* is the build step (and phase) the pull request belongs to; 
 | branch `claude/tree-rename-fixes` | 2026-10-26 | ExcelExporter: a double-click or double-tap in the Tree renames the row when the selection bar has moved the list | after 20 | [5.3](05-excelexporter.md#tabs-rows) |
 | branch `claude/fmgraph-shared-colours-e9c229` | 2026-10-26 | fmGraph: one colour per rectangle, shared by its slider, bars and charts on every board (board file 11) | after 20 | [6.3](06-fmgraph.md#graph-boards) |
 | branch `claude/objective-merkle-f14472` | 2026-10-27 | fmGraph: one scale for every bar and chart — Auto for all or Fixed for all (board file 12) | after 20 | [6.3](06-fmgraph.md#graph-boards) |
+| branch `claude/fmgraph-play-scenarios` | 2026-10-27 | fmGraph: ▶ Play swings between two scenarios and back, like a pendulum | after 20 | [6.5](06-fmgraph.md#graph-scenarios) |
 
 ---
 

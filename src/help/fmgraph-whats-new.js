@@ -19,6 +19,18 @@ const FMGRAPH_WHATS_NEW = [
     how: ['Above the bars and charts, choose Scale: Auto for all.', 'Move a slider: every bar and chart grows and shrinks against the same scale.', 'For a bar in other units, choose Auto scale in its own scale list.'],
     notes: ['Boards saved before start on Each its own, so they look as they did.', 'The board file is now version 12. ExcelExporter reads it, and its Dashboard charts take the same scale.', 'On a phone the bars and charts follow the scale chosen on a larger screen.'],
     see: ['common-scale'] },
+  { id: 'play-scenarios', date: '2026-10-27', title: 'Play: swing between two scenarios',
+    summary: 'Watch the model move: ▶ Play swings it between two scenarios and back, like a pendulum, until you stop it.',
+    what: [
+      'Under the scenarios, choose where Play starts and ends: a scenario, the model\'s own numbers or the sliders as they are now.',
+      'Every number the two ends set differently moves smoothly from one to the other and back, slower near the ends, with a short pause at each. Several sliders, a change by %, sliders over some periods and inputs with no slider on the board all move together.',
+      'The bars, the charts and the sliders follow as it goes; the dashed outlines show where it started, and a strip at the top says what plays.',
+      '■ Stop, Esc, any key or a click anywhere else stops it, and everything is just as it was: nothing is saved and there is nothing to undo.',
+    ],
+    why: 'Two scenarios that differ in one number, say a volume of 10 against 100, are easier to understand when you can see every bar move as that number changes.',
+    how: ['Save two scenarios.', 'Under them, choose Play from and to, and press ▶ Play.', 'Press ■ Stop, Esc or anywhere else to stop.'],
+    notes: ['With reduced motion turned on in your device\'s settings nothing swings: the board shows the second end against the first, and ⇄ steps between them.', 'On a large model the positions are worked out first ("Working out the play…"), then it plays smoothly.', 'The Tornado and Spider charts and Biggest movers wait until it stops.'],
+    see: ['scenarios'] },
   { id: 'shared-colours', date: '2026-10-26', title: 'One colour per rectangle, everywhere',
     summary: 'A rectangle now has the same colour on its slider, its bars and every chart, on every board. Change it in one place and it changes everywhere.',
     what: [

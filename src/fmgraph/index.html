@@ -71,6 +71,7 @@
   <div id="trialBar" class="trial-bar hidden" role="status"></div>
   <div id="compareBar" class="compare-bar hidden" role="status"></div>
   <div id="lookBar" class="look-bar hidden" role="status"></div>
+  <div id="playBar" class="play-bar hidden" role="region" aria-label="Play"></div>
   <section id="board" class="board hidden">
     <div class="board-col">
       <h2 class="col-head">Sliders <button type="button" id="btnFoldSliders" class="link-btn col-tool hidden">Collapse all</button></h2>
@@ -83,6 +84,11 @@
         <ol id="scenarioList" class="scenario-list"></ol>
         <p id="scenariosEmpty" class="empty-note">Move the sliders, then save where they are.</p>
         <button type="button" id="btnSaveScenario" class="link-btn needs-model" title="Keep where the sliders are now, under a name">+ Save as scenario</button>
+        <div id="playRow" class="play-row" title="Swing back and forth between two ends, like a pendulum, until stopped">
+          <label>Play from <select id="playFrom"></select></label>
+          <label>to <select id="playTo"></select></label>
+          <button type="button" id="btnPlay" class="link-btn needs-model">▶ Play</button>
+        </div>
         <p class="empty-note phone-only scenario-hint">Hold <strong>A</strong> to look at a scenario; let go to come back.</p>
       </details>
       <details id="goalSeekPanel" class="goal-seek desk-only">
