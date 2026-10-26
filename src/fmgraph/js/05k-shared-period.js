@@ -63,7 +63,9 @@ function renderSharedPeriods(){
   lead.title = 'The periods every bar and chart shows, on every board, unless it keeps its own (its period list\'s first choice is Shared)';
   const oneLabel = make('span', 'shared-period-one', 'One-period charts in');
   oneLabel.title = 'The year Waterfall, Scenario waterfall, Tornado and Spider charts show';
-  bar.append(lead, multi, oneLabel, one);
+  const scaleLabel = make('span', 'shared-period-one', 'Scale');
+  scaleLabel.title = 'The vertical scale every bar and chart shows, on every board, unless it keeps its own (its scale list\'s first choice is Shared); the Tornado and Spider keep their own';
+  bar.append(lead, multi, oneLabel, one, scaleLabel, commonScaleChooser());
 }
 
 function sharedPeriodsChanged(){

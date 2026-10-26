@@ -230,14 +230,17 @@ test('board versions: 2 has no scenarios, 3, 8, 9 and 10 read, a newer one and t
   await expect(page.locator('#graphModal')).toBeVisible();
   expect(await scenarioNames(page)).toEqual(['Price 14']);
   await page.click('#graphCancel');
-  // 11 (fmGraph's shared colours) is read since 26 October 2026; 12 is newer (changed on purpose).
-  await importFile(page, board('board-newer-v11.board.json'));
-  await expect(page.locator('#graphModal')).toBeVisible();
-  expect(await scenarioNames(page)).toEqual(['Price 14']);
-  await page.click('#graphCancel');
-  await importFile(page, board('board-newer-v12.board.json'));
+  // 11 (fmGraph's shared colours) is read since 26 October 2026, 12 (its common scale) since 27
+  // October 2026; 13 is newer (changed on purpose).
+  for(const f of ['board-newer-v11.board.json', 'board-newer-v12.board.json']){
+    await importFile(page, board(f));
+    await expect(page.locator('#graphModal')).toBeVisible();
+    expect(await scenarioNames(page)).toEqual(['Price 14']);
+    await page.click('#graphCancel');
+  }
+  await importFile(page, board('board-newer-v13.board.json'));
   await expect(genStatus(page)).toHaveClass(/err/);
-  await expect(genStatus(page)).toContainText('format version 12; this ExcelExporter reads up to version 11');
+  await expect(genStatus(page)).toContainText('format version 13; this ExcelExporter reads up to version 12');
   await expect(page.locator('#graphModal')).toBeHidden();
   await importFile(page, board('board-template.board.json'));
   await expect(genStatus(page)).toContainText('is for a template');
@@ -374,7 +377,7 @@ async function graphWithCharts(context){
 
 test('fmGraph\'s Tornado and Spider become analyses: grouped, named, Show 0, the Spider\'s points', async ({ page, context, pageErrors }, testInfo) => {
   const { file } = await graphWithCharts(context);
-  expect(file.version).toBe(11);
+  expect(file.version).toBe(12);
   await openProfit(page);
   await importFile(page, D.tempFile(testInfo, 'charts.board.json', JSON.stringify(file)));
   await expect(page.locator('#graphSensHead')).toBeVisible();
@@ -865,7 +868,7 @@ test('a lines chart becomes an Excel line chart on the Dashboard: a series per r
   await graph.evaluate((i) => fmGraph.setColour(i, '#2563eb', 'Revenue'), id);
   const figures = await graph.evaluate((i) => fmGraph.chart(i), id);
   const file = await graph.evaluate(() => fmGraph.exportBoards(false));
-  expect(file.version).toBe(11);
+  expect(file.version).toBe(12);
   const lines = file.boards[0].items.find(w => w.layout === 'lines');
   // Each line writes the colour it shows: Profit and Bonus paid their automatic ones (board file 11; changed on purpose).
   expect(lines.lines.map(l => [l.name, l.colour || null])).toEqual([['Revenue', '#2563eb'], ['Profit', '#2563eb'], ['Bonus paid', '#d97706']]);
@@ -914,6 +917,36 @@ test('a lines chart becomes an Excel line chart on the Dashboard: a series per r
   expect(exported.version).toBe(10);
   expect(exported.cfg.graph.charts[1]).toEqual({ kind: 'lines', title: 'Revenue <and> profit', wide: true, scale: null, periods: { mode: 'range', from: 1, to: 3 },
     parts: [{ row: 'cProfit|revenue', name: 'Revenue', colour: '#2563eb' }, { row: 'cProfit|profit', name: 'Profit', colour: '#2563eb' }, { row: 'cProfit|bonus', name: 'Bonus paid', colour: '#d97706' }] });
+  expect(pageErrors).toEqual([]);
+});
+
+// fmGraph's common scale (board file 12, 27 October 2026): each follower writes the scale it
+// shows, so the Dashboard's charts take it as their axis; one keeping its own Auto stays Auto.
+test('the common scale: every follower\'s chart on the Dashboard has its min and max, one of its own stays Auto', async ({ page, context, pageErrors }, testInfo) => {
+  const graph = await context.newPage();
+  await openApp(graph, 'fmGraph');
+  await graph.waitForFunction(() => !!window.fmGraph);
+  await graph.evaluate((t) => fmGraph.load(t, 'Profit'), fs.readFileSync(board('profit.fmide'), 'utf8'));
+  await graph.waitForFunction(() => fmGraph.scenarios().length === 5);
+  await graph.evaluate(() => fmGraph.showBoard('Profit board'));
+  const own = await graph.evaluate(() => {
+    fmGraph.addChart({ layout: 'columns', title: 'Follows', groups: [{ name: '', parts: ['Revenue'] }] });
+    const id = fmGraph.addChart({ layout: 'columns', title: 'Its own', groups: [{ name: '', parts: ['Cost'] }] });
+    fmGraph.setCommonScale({ min: -5000, max: 20000 });
+    fmGraph.setScale(id, null);
+    return id;
+  });
+  expect(await graph.evaluate((i) => fmGraph.scaleShown(i).shared, own)).toBe(false);
+  const file = await graph.evaluate(() => fmGraph.exportBoards(false));
+  expect(file.version).toBe(12);
+  await openProfit(page);
+  await importFile(page, D.tempFile(testInfo, 'common.board.json', JSON.stringify(file)));
+  await expect(page.locator('#graphChartHead')).toBeVisible();
+  expect(await chartNames(page)).toEqual(['Profit', 'Follows', 'Its own']);
+  await page.click('#graphUse');
+  const { wb } = await X.generate(page);
+  const charts = wb.Sheets.Dashboard['!charts'].map(c => c.chart);
+  expect(charts.map(c => [c.title, c.valAxis.min, c.valAxis.max])).toEqual([['Profit', -5000, 20000], ['Follows', -5000, 20000], ['Its own', undefined, undefined]]);
   expect(pageErrors).toEqual([]);
 });
 

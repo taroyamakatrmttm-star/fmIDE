@@ -132,8 +132,11 @@ function setOwnSliders(b, on){
 
 // While a finger holds A (05h-phone-show.js), the numbers looked at instead of the sliders'.
 let lookingAt = null;
+// While Play runs (05m-play.js): { model, now, from } — the numbers shown, and the "from" end's.
+let playAt = null;
+const playNow = () => playAt && playAt.model === model ? playAt : null;
 // The numbers laid over the model for what the board shows now.
-function shownOverrides(){ return lookingAt ? lookingAt.overrides : overridesFor(liveSliders()); }
+function shownOverrides(){ return lookingAt ? lookingAt.overrides : playNow() ? playAt.now : overridesFor(liveSliders()); }
 function currentResults(){ return resultsWith(shownOverrides()); }
 
 // ---- the Tornado and the Spider (step 18; 04b-charts.js) ----
@@ -152,6 +155,7 @@ function sensitivityKey(c, base){
 // The chart's figures for base: { figures, ready }. ready false: being worked out (figures are
 // the last ones worked out, or undefined). now: work them out whatever they cost (fmGraph.chart).
 function sensitivityNow(c, base, now){
+  if(!now && playNow()) base = playAt.from; // held at the "from" end while Play runs
   const key = sensitivityKey(c, base), hit = sensitivityMemo.get(c.id);
   if(hit && hit.key === key) return { figures: hit.figures, ready: true };
   if(!now && model.baseMs * sensitivityRuns(c, base).length > SENSITIVITY_BUDGET_MS){
@@ -167,7 +171,7 @@ function workOutSensitivitySoon(){
   const job = ++sensitivityJob;
   sensitivityTimer = setTimeout(() => {
     if(job !== sensitivityJob || !model || !board) return;
-    const base = shownOverrides();
+    const base = playNow() ? playAt.from : shownOverrides();
     const charts = board.charts.filter(c => isSensitivity(c) && (sensitivityMemo.get(c.id) || {}).key !== sensitivityKey(c, base));
     const todo = charts.flatMap(c => sensitivityRuns(c, base));
     setCalcNote('Working out the Tornado and Spider charts…');

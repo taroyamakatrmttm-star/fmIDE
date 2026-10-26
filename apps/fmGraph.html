@@ -313,6 +313,14 @@
   .scenario-name{ flex:1 1 90px; min-width:70px; font:inherit; font-size:13px; padding:2px 5px; }
   .scenario-btn{ min-width:26px; padding:2px 6px; font-size:12px; }
   .scenario-btn[aria-pressed="true"]{ background:var(--reach); color:#1b2333; }
+  /* Play between two ends (05m-play.js) */
+  .play-row{ display:flex; flex-wrap:wrap; gap:4px 8px; align-items:center; margin-top:8px; font-size:13px; }
+  .play-row select{ max-width:150px; font:inherit; }
+  .play-bar{ position:sticky; top:var(--gbar-h, 52px); z-index:20; display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:0 0 10px; padding:7px 12px; border:1px solid var(--reach); border-radius:9px; background:#fffbeb; font-size:13px; }
+  .play-text{ flex:1 1 auto; display:flex; gap:4px 12px; flex-wrap:wrap; }
+  .play-at{ font-variant-numeric:tabular-nums; }
+  .slider-widget.playing{ box-shadow:0 0 0 2px var(--reach); }
+  .chart-widget.play-held .bar-chart-host{ opacity:.45; }
   .scenario-what{ flex-basis:100%; font-size:12px; color:var(--soft-ink); overflow-wrap:anywhere; }
 
   /* Try in fmGraph (G5c) */
@@ -654,6 +662,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   <div id="trialBar" class="trial-bar hidden" role="status"></div>
   <div id="compareBar" class="compare-bar hidden" role="status"></div>
   <div id="lookBar" class="look-bar hidden" role="status"></div>
+  <div id="playBar" class="play-bar hidden" role="region" aria-label="Play"></div>
   <section id="board" class="board hidden">
     <div class="board-col">
       <h2 class="col-head">Sliders <button type="button" id="btnFoldSliders" class="link-btn col-tool hidden">Collapse all</button></h2>
@@ -666,6 +675,11 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         <ol id="scenarioList" class="scenario-list"></ol>
         <p id="scenariosEmpty" class="empty-note">Move the sliders, then save where they are.</p>
         <button type="button" id="btnSaveScenario" class="link-btn needs-model" title="Keep where the sliders are now, under a name">+ Save as scenario</button>
+        <div id="playRow" class="play-row" title="Swing back and forth between two ends, like a pendulum, until stopped">
+          <label>Play from <select id="playFrom"></select></label>
+          <label>to <select id="playTo"></select></label>
+          <button type="button" id="btnPlay" class="link-btn needs-model">▶ Play</button>
+        </div>
         <p class="empty-note phone-only scenario-hint">Hold <strong>A</strong> to look at a scenario; let go to come back.</p>
       </details>
       <details id="goalSeekPanel" class="goal-seek desk-only">
@@ -3528,8 +3542,11 @@ function setOwnSliders(b, on){
 
 // While a finger holds A (05h-phone-show.js), the numbers looked at instead of the sliders'.
 let lookingAt = null;
+// While Play runs (05m-play.js): { model, now, from } — the numbers shown, and the "from" end's.
+let playAt = null;
+const playNow = () => playAt && playAt.model === model ? playAt : null;
 // The numbers laid over the model for what the board shows now.
-function shownOverrides(){ return lookingAt ? lookingAt.overrides : overridesFor(liveSliders()); }
+function shownOverrides(){ return lookingAt ? lookingAt.overrides : playNow() ? playAt.now : overridesFor(liveSliders()); }
 function currentResults(){ return resultsWith(shownOverrides()); }
 
 // ---- the Tornado and the Spider (step 18; 04b-charts.js) ----
@@ -3548,6 +3565,7 @@ function sensitivityKey(c, base){
 // The chart's figures for base: { figures, ready }. ready false: being worked out (figures are
 // the last ones worked out, or undefined). now: work them out whatever they cost (fmGraph.chart).
 function sensitivityNow(c, base, now){
+  if(!now && playNow()) base = playAt.from; // held at the "from" end while Play runs
   const key = sensitivityKey(c, base), hit = sensitivityMemo.get(c.id);
   if(hit && hit.key === key) return { figures: hit.figures, ready: true };
   if(!now && model.baseMs * sensitivityRuns(c, base).length > SENSITIVITY_BUDGET_MS){
@@ -3563,7 +3581,7 @@ function workOutSensitivitySoon(){
   const job = ++sensitivityJob;
   sensitivityTimer = setTimeout(() => {
     if(job !== sensitivityJob || !model || !board) return;
-    const base = shownOverrides();
+    const base = playNow() ? playAt.from : shownOverrides();
     const charts = board.charts.filter(c => isSensitivity(c) && (sensitivityMemo.get(c.id) || {}).key !== sensitivityKey(c, base));
     const todo = charts.flatMap(c => sensitivityRuns(c, base));
     setCalcNote('Working out the Tornado and Spider charts…');
@@ -3722,7 +3740,7 @@ function cleanBoard(raw, dropped, version, sharedColours){
   const bar = (b) => {
     const rect = rectForEntry(b);
     if(!rect){ drop(); return null; }
-    return { id: newWidgetId('b'), kind: 'bar', key: rect.key, periods: cleanPeriods(b.periods, count), wide: b.wide === true, colour: cleanColour(b.colour), scale: cleanScale(b.scale), ownPeriod: own(b) };
+    return { id: newWidgetId('b'), kind: 'bar', key: rect.key, periods: cleanPeriods(b.periods, count), wide: b.wide === true, colour: cleanColour(b.colour), scale: cleanScale(b.scale), ownPeriod: own(b), ownScale: b.ownScale === true };
   };
   const chart = (c) => {
     // A Tornado or Spider whose output isn't in this model is left out (version 8).
@@ -3738,6 +3756,7 @@ function cleanBoard(raw, dropped, version, sharedColours){
     ch.wide = c.wide !== false;
     ch.scale = cleanScale(c.scale); // version 5 (04d-scale.js)
     ch.ownPeriod = own(c);
+    ch.ownScale = c.ownScale === true; // version 12 (04d-scale.js)
     return ch;
   };
   let items;
@@ -3767,7 +3786,8 @@ function cleanBoards(raw){
   return { boards: list, active: Number.isFinite(a) && a >= 0 && a < list.length ? a : 0, dropped: dropped.n,
     scenarios: cleanScenarios(raw.scenarios, rectForEntry), // version 3 (05f-scenarios.js)
     sharedPeriods: cleanSharedPeriods(raw.sharedPeriods, model.periods.length), // version 9 (05k-shared-period.js)
-    colours: shared ? cleanRectColours(raw.colours) : new Map() }; // version 11 (04e-colours.js)
+    colours: shared ? cleanRectColours(raw.colours) : new Map(), // version 11 (04e-colours.js)
+    commonScale: cleanCommonScale(raw.commonScale) }; // version 12 (04d-scale.js)
 }
 
 // A board's file form.
@@ -3781,13 +3801,19 @@ function cleanBoards(raw){
 // `ownPeriod`, 05k-shared-period.js; each still writes the periods it shows); 10 the lines chart
 // (a chart of layout `lines`, 04b-charts.js); 11 the shared colours (`colours`, each
 // rectangle's chosen colour, 04e-colours.js; each bar, part, step and line still writes the
-// colour it shows). The template form, which carries none of these, stays version 2 (its
-// widgets carry the chosen colours, as before 11).
-const BOARD_FILE_VERSION = 11;
+// colour it shows); 12 the common scale (`commonScale`, and a bar's or chart's `ownScale`,
+// 04d-scale.js; each still writes the scale it shows). The template form, which carries none
+// of these, stays version 2 (its widgets carry the chosen colours, as before 11).
+const BOARD_FILE_VERSION = 12;
 const TEMPLATE_BOARD_VERSION = 2;
-function boardData(b){
+// shown: what the board's followers of the common scale show (shownCommonScale, 04d-scale.js),
+// written as their scale; left out, each writes its own.
+function boardData(b, shown){
   const at = (key) => { const r = model.byKey.get(key); return { canvasId: r.canvasId, nodeId: r.nodeId, name: r.name }; };
-  const scaleOf = (w) => w.scale ? { scale: { min: w.scale.min, max: w.scale.max } } : {};
+  const scaleOf = (w) => {
+    const s = shown !== undefined && followsCommonScale(w) ? shown : w.scale;
+    return Object.assign(s ? { scale: { min: s.min, max: s.max } } : {}, w.ownScale && canFollowScale(w) ? { ownScale: true } : {});
+  };
   return Object.assign({
     name: b.name,
     items: b.items.map(w => Object.assign(w.kind === 'bar'
@@ -3796,15 +3822,18 @@ function boardData(b){
     sliders: b.sliders.map(s => Object.assign(at(s.key), { periods: Object.assign({}, s.periods), mode: s.mode, min: s.min, max: s.max, step: s.step }, s.folded ? { folded: true } : {})),
   }, b.ownSliders ? { ownSliders: true } : {});
 }
-// The file form of these boards (all, or the ones given).
-function boardsData(list){
+// The file form of these boards (all, or the ones given). forUndo: Auto for all's followers
+// keep Auto, so a slider moved isn't a change.
+function boardsData(list, forUndo){
   const which = list || boards;
   syncSharedPeriods(); // each writes the periods it shows (05k-shared-period.js)
+  syncCommonScale(); // and the scale (04d-scale.js)
   adoptWidgetColours(); // an older file's colours, taken in first (04e-colours.js)
-  const out = { kind: 'fmIDE-graph-board', version: BOARD_FILE_VERSION, active: list ? 0 : Math.max(0, boards.indexOf(board)), boards: which.map(boardData) };
+  const out = { kind: 'fmIDE-graph-board', version: BOARD_FILE_VERSION, active: list ? 0 : Math.max(0, boards.indexOf(board)), boards: which.map(b => boardData(b, forUndo || commonScale.mode !== 'auto' ? undefined : shownCommonScale(b))) };
   if(!list && scenarios.length) out.scenarios = scenariosData(); // the model's, with all its boards
   out.sharedPeriods = { periods: Object.assign({}, sharedPeriods.periods), period: sharedPeriods.period };
   out.colours = rectColoursData(); // version 11 (04e-colours.js)
+  out.commonScale = commonScaleData(); // version 12 (04d-scale.js)
   return out;
 }
 
@@ -3840,6 +3869,7 @@ async function loadBoardFor(m, docRaw){
     board = boards[0];
     scenarios = [];
     sharedPeriods = cleanSharedPeriods(null, m.periods.length);
+    commonScale = cleanCommonScale(null);
     rectColours = new Map(); forgetAutoColours();
     resetUndo();
     return;
@@ -3851,6 +3881,7 @@ async function loadBoardFor(m, docRaw){
     board = boards[0];
     scenarios = [];
     sharedPeriods = cleanSharedPeriods(null, m.periods.length);
+    commonScale = cleanCommonScale(null);
     rectColours = new Map(); forgetAutoColours();
     resetUndo();
     return;
@@ -3861,6 +3892,7 @@ async function loadBoardFor(m, docRaw){
     board = boards[restored.active];
     scenarios = restored.scenarios;
     sharedPeriods = restored.sharedPeriods;
+    commonScale = restored.commonScale;
     rectColours = restored.colours; forgetAutoColours();
     resetUndo();
     setTimeout(saveBoardNow, 0);
@@ -3884,6 +3916,7 @@ async function loadBoardFor(m, docRaw){
   board = boards[restored ? restored.active : 0];
   scenarios = restored ? restored.scenarios : [];
   sharedPeriods = restored ? restored.sharedPeriods : cleanSharedPeriods(null, m.periods.length);
+  commonScale = restored ? restored.commonScale : cleanCommonScale(null);
   rectColours = restored ? restored.colours : new Map(); forgetAutoColours();
   resetUndo();
 }
@@ -4231,7 +4264,7 @@ const UNDO_LIMIT = 100;
 let undoStack = [], redoStack = [], lastState = null, restoring = false;
 
 // The boards' state for undo: their file form, without which one is shown.
-function undoState(){ const d = boardsData(); delete d.active; return JSON.stringify(d); }
+function undoState(){ const d = boardsData(null, true); delete d.active; return JSON.stringify(d); }
 
 function resetUndo(){
   undoStack = []; redoStack = [];
@@ -4260,6 +4293,7 @@ function restoreState(text){
   boards = r.boards;
   scenarios = r.scenarios;
   sharedPeriods = r.sharedPeriods; // (05k-shared-period.js)
+  commonScale = r.commonScale; // (04d-scale.js)
   rectColours = r.colours; forgetAutoColours(); // (04e-colours.js)
   boards.forEach((b, bi) => b.sliders.forEach(s => { const v = positions.get(bi + '|' + s.key + '|' + s.mode); if(v !== undefined) s.value = v; }));
   board = boards[Math.min(shown, boards.length - 1)];
@@ -4297,6 +4331,7 @@ function syncUndoButtons(){
 // version 5; the template form leaves it out). A number past a fixed scale is drawn to the
 // edge with ▲ or ▼; its label and hover text still give the number itself. A scenario
 // waterfall's fixed scale is shared by all its outputs.
+// Either may give way to the common scale for every bar and chart (below, board file 12).
 // ============================================================
 const SCALE_LIMIT = 1e15;
 const autoScales = new Map(); // widget id → { lo, hi }: what Auto would show now (Fix at current scale)
@@ -4321,6 +4356,10 @@ function niceScale(lo, hi){
 // Fix at current scale (a scenario waterfall records the range of all its outputs itself).
 function scaleFor(w, lo, hi, record){
   if(record !== false) autoScales.set(w.id, { lo, hi });
+  if(followsCommonScale(w)){ // the common scale, below
+    if(commonScale.mode === 'fixed') return { lo: commonScale.min, hi: commonScale.max, fixed: true };
+    if(commonAuto) return { lo: commonAuto.lo, hi: commonAuto.hi, fixed: false };
+  }
   return w.scale ? { lo: w.scale.min, hi: w.scale.max, fixed: true } : { lo, hi, fixed: false };
 }
 // y for a number on that range, kept inside the plot.
@@ -4350,9 +4389,16 @@ function drawOverMarks(g, sc, cx, top, plotH, highest, lowest){
   if(lowest < sc.lo) mark(false);
 }
 
-// Sets a widget's scale: null (Auto), 'current' (Fix at current scale) or { min, max }.
-// Returns the scale set, or throws when it isn't one.
+// Sets a widget's scale: null (Auto), 'current' (Fix at current scale), { min, max }, or
+// 'shared' (follows the common scale again). While the common scale is on, any other choice
+// keeps the widget's own. Returns the scale set, or throws when it isn't one.
 function setWidgetScale(w, spec){
+  if(spec === 'shared'){
+    w.ownScale = false;
+    syncCommonScale();
+    return w.scale ? Object.assign({}, w.scale) : null;
+  }
+  if(commonScale.mode !== 'own' && canFollowScale(w)) w.ownScale = true;
   if(spec === null){ w.scale = null; return null; }
   if(spec === 'current'){
     const a = autoScales.get(w.id);
@@ -4365,11 +4411,14 @@ function setWidgetScale(w, spec){
   return Object.assign({}, s);
 }
 
-// Scale: Auto or Fixed, from … to …, and 📏 Fix at current scale. onChange after each change.
+// Scale: Auto or Fixed, from … to …, and 📏 Fix at current scale — with "Shared (…)" first
+// while the common scale is on (below). onChange after each change.
 function scaleChooser(w, onChange){
   const wrap = make('span', 'scale-chooser');
   const mode = make('select');
   mode.setAttribute('aria-label', 'Vertical scale');
+  const sharing = commonScale.mode !== 'own' && canFollowScale(w);
+  if(sharing){ const o = make('option', null, commonScaleText()); o.value = 'shared'; mode.appendChild(o); }
   [['auto', 'Auto scale'], ['fixed', 'Fixed scale']].forEach(([v, t]) => { const o = make('option', null, t); o.value = v; mode.appendChild(o); });
   const box = (label) => {
     const i = make('input', 'scale-box');
@@ -4386,14 +4435,22 @@ function scaleChooser(w, onChange){
   fixNow.title = 'Fix at current scale';
   fixNow.setAttribute('aria-label', 'Fix at current scale');
   const show = () => {
-    mode.value = w.scale ? 'fixed' : 'auto';
-    minBox.value = w.scale ? String(w.scale.min) : '';
-    maxBox.value = w.scale ? String(w.scale.max) : '';
-    [minBox, to, maxBox].forEach(el => el.classList.toggle('hidden', !w.scale));
+    const follows = sharing && followsCommonScale(w), own = w.scale && !follows;
+    mode.value = follows ? 'shared' : w.scale ? 'fixed' : 'auto';
+    minBox.value = own ? String(w.scale.min) : '';
+    maxBox.value = own ? String(w.scale.max) : '';
+    [minBox, to, maxBox].forEach(el => el.classList.toggle('hidden', !own));
   };
   const fixCurrent = () => { setWidgetScale(w, 'current'); show(); onChange(); };
   mode.addEventListener('change', () => {
-    if(mode.value === 'auto'){ w.scale = null; show(); onChange(); }
+    if(mode.value === 'shared'){ setWidgetScale(w, 'shared'); show(); onChange(); }
+    else if(mode.value === 'auto'){ setWidgetScale(w, null); show(); onChange(); }
+    else if(followsCommonScale(w)){
+      // Leaving the common scale for a fixed one keeps the range it shows.
+      const sh = shownScale(w);
+      setWidgetScale(w, sh ? (sh.fixed ? { min: sh.min, max: sh.max } : niceScale(sh.min, sh.max)) : 'current');
+      show(); onChange();
+    }
     else fixCurrent();
   });
   fixNow.addEventListener('click', fixCurrent);
@@ -4407,13 +4464,187 @@ function scaleChooser(w, onChange){
     }
     notify('', null, 'scale');
     if(w.scale && w.scale.min === s.min && w.scale.max === s.max) return;
-    w.scale = s;
+    setWidgetScale(w, s);
     onChange();
   };
   [minBox, maxBox].forEach(i => i.addEventListener('change', typed));
   wrap.append(mode, minBox, to, maxBox, fixNow);
   show();
   return wrap;
+}
+
+// ============================================================
+// The common scale (the owner's request, 26 October 2026): one vertical scale for every bar and
+// chart on every board of the model, which any of them can leave to keep its own — on the
+// pattern of the shared period (05k-shared-period.js).
+// - Three settings, beside the shared period above the bars and charts: Each its own (as before,
+//   where every model and every older file starts), Auto for all (one range taking in every
+//   follower on the board shown, and zero) and Fixed for all (from a min to a max). Kept with
+//   the model's boards (`commonScale`, board file 12), undone and redone like any board change.
+// - A bar or chart follows it unless it keeps its own (`ownScale`): its scale list's first
+//   choice, "Shared (…)", follows; Auto scale or Fixed scale there keeps its own. Bars, Columns,
+//   Lines, Waterfall and Scenario waterfall charts can follow; the Tornado and the Spider always
+//   keep their own (their scale is around the output's base number, the Tornado's sideways).
+// - What follows takes Fixed for all into its own `scale`, and Auto for all as Auto
+//   (syncCommonScale), so going back to Each its own keeps what each shows. In a file each
+//   follower writes the scale it shows — under Auto for all its board's range as the file is
+//   written, rounded as 📏 rounds it — so ExcelExporter's Dashboard gets one scale on every chart.
+// - Not in the template form, which carries no scales. Not on the phone, whose views follow it.
+// ============================================================
+let commonScale = { mode: 'own' }; // 'own' (Each its own), 'auto' (Auto for all), or 'fixed' with min and max
+let commonAuto = null;             // { lo, hi }: Auto for all's range on the board shown, worked out before it is drawn
+
+// The common scale from a file, storage or a script; anything unreadable is Each its own.
+function cleanCommonScale(raw){
+  if(!raw || typeof raw !== 'object') return { mode: 'own' };
+  if(raw.mode === 'auto') return { mode: 'auto' };
+  const s = raw.mode === 'fixed' ? cleanScale(raw) : null;
+  return s ? { mode: 'fixed', min: s.min, max: s.max } : { mode: 'own' };
+}
+function commonScaleData(){ return Object.assign({}, commonScale); }
+
+const canFollowScale = (w) => !isSensitivity(w);
+function followsCommonScale(w){ return commonScale.mode !== 'own' && !w.ownScale && canFollowScale(w); }
+
+// Every bar and chart following the common scale, on every board, takes it.
+function syncCommonScale(){
+  if(!model || commonScale.mode === 'own') return;
+  boards.forEach(b => b.items.forEach(w => {
+    if(followsCommonScale(w)) w.scale = commonScale.mode === 'fixed' ? { min: commonScale.min, max: commonScale.max } : null;
+  }));
+}
+
+// The range Auto gives a bar or chart on these results, worked out as its drawing works it out
+// (drawBars, drawColumns, drawLines, drawFlow, drawScenarioFlows): taking in zero and the
+// numbers it is compared with. null for a Tornado or Spider.
+function autoRange(w, results){
+  let lo = 0, hi = 0;
+  const take = (v) => { if(Number.isFinite(v)){ lo = Math.min(lo, v); hi = Math.max(hi, v); } };
+  const cmp = compareResults();
+  if(w.kind === 'bar'){
+    const rect = model.byKey.get(w.key);
+    if(!rect) return null;
+    periodsOf(w.periods).forEach(p => [resultOf(results, rect, p), resultOf(cmp, rect, p)].forEach(r => { if(!r.error) take(r.value); }));
+  } else if(isSensitivity(w)) return null;
+  else if(w.layout === 'flow') flowFigures(w, results).concat(flowFigures(w, cmp)).forEach(f => { if(!f.error){ take(f.from); take(f.to); } });
+  else if(w.layout === 'lines') linesFigures(w, results).concat(linesFigures(w, cmp)).forEach(f => f.values.forEach(r => { if(!r.error) take(r.value); }));
+  else if(w.layout === 'scenarios'){
+    const memo = new Map();
+    const resultsFor = (sc) => { if(!memo.has(sc)) memo.set(sc, scenarioResults(sc)); return memo.get(sc); };
+    w.outputs.forEach(key => scenarioFigures(w, key, resultsFor).forEach(f => { if(!f.error){ take(f.from); take(f.to); } }));
+  }
+  else columnsFigures(w, results).concat(columnsFigures(w, cmp)).forEach(f => f.groups.forEach(g => { take(g.down); take(g.up); }));
+  return { lo, hi };
+}
+// Auto for all's range on a board: its followers' Auto ranges together (all: every bar and
+// chart that can follow). null when there are none.
+function boardAutoRange(b, results, all){
+  let out = null;
+  b.items.forEach(w => {
+    if(!(all ? canFollowScale(w) : followsCommonScale(w))) return;
+    const r = autoRange(w, results);
+    if(!r) return;
+    out = out ? { lo: Math.min(out.lo, r.lo), hi: Math.max(out.hi, r.hi) } : r;
+  });
+  if(out && out.hi === out.lo) out.hi = out.lo + 1;
+  return out;
+}
+// Before the board shown is drawn: Auto for all's range on it.
+function prepareCommonScale(results){
+  commonAuto = commonScale.mode === 'auto' ? boardAutoRange(board, results) : null;
+}
+// The scale a board's followers show, for the file: Fixed for all's, or Auto for all's range
+// on that board's own slider positions, rounded as Fix at current scale rounds it.
+function shownCommonScale(b){
+  if(commonScale.mode === 'fixed') return { min: commonScale.min, max: commonScale.max };
+  if(commonScale.mode !== 'auto') return null;
+  const results = b === board ? currentResults() : resultsWith(overridesFor(liveSliders(b)));
+  const r = boardAutoRange(b, results);
+  return r ? niceScale(r.lo, r.hi) : null;
+}
+
+// Sets the common scale: null or 'own' (Each its own), 'auto', 'current' (Fixed for all at the
+// range the board shown's bars and charts take now) or { min, max }. Returns it, or throws.
+function setCommonScale(spec){
+  if(spec === null || spec === 'own') commonScale = { mode: 'own' };
+  else if(spec === 'auto') commonScale = { mode: 'auto' };
+  else if(spec === 'current'){
+    const r = model ? boardAutoRange(board, currentResults(), true) : null;
+    commonScale = Object.assign({ mode: 'fixed' }, r ? niceScale(r.lo, r.hi) : { min: 0, max: 1 });
+  } else {
+    const s = cleanScale(spec);
+    if(!s) throw new Error('A scale is two numbers, its "from" below its "to".');
+    commonScale = { mode: 'fixed', min: s.min, max: s.max };
+  }
+  syncCommonScale();
+  return commonScaleData();
+}
+
+// A widget's scale list's first choice: "Shared (Auto for all)", "Shared (0 to 1,000)".
+function commonScaleText(){
+  return commonScale.mode === 'fixed' ? 'Shared (' + fmtNum(commonScale.min) + ' to ' + fmtNum(commonScale.max) + ')' : 'Shared (Auto for all)';
+}
+// The scale a bar or chart shows now: { min, max, fixed, shared }, or null before it is drawn.
+function shownScale(w){
+  const follows = followsCommonScale(w);
+  const sc = follows
+    ? (commonScale.mode === 'fixed' ? { lo: commonScale.min, hi: commonScale.max, fixed: true } : commonAuto)
+    : w.scale ? { lo: w.scale.min, hi: w.scale.max, fixed: true } : autoScales.get(w.id);
+  return sc ? { min: sc.lo, max: sc.hi, fixed: !!sc.fixed, shared: follows } : null;
+}
+
+// Scale: Each its own, Auto for all or Fixed for all (from … to …, 📏), above the bars and charts.
+function commonScaleChooser(){
+  const wrap = make('span', 'scale-chooser common-scale');
+  const mode = make('select');
+  mode.setAttribute('aria-label', 'Common scale');
+  mode.title = 'One vertical scale for every bar and chart, on every board, unless it keeps its own (its scale list\'s first choice is Shared). The Tornado and Spider keep their own.';
+  [['own', 'Each its own'], ['auto', 'Auto for all'], ['fixed', 'Fixed for all']].forEach(([v, t]) => { const o = make('option', null, t); o.value = v; mode.appendChild(o); });
+  const box = (label) => {
+    const i = make('input', 'scale-box');
+    i.type = 'number';
+    i.step = 'any';
+    i.setAttribute('aria-label', label);
+    i.title = label;
+    return i;
+  };
+  const minBox = box('Common scale from'), maxBox = box('Common scale to');
+  const to = make('span', 'scale-to', 'to');
+  const fixNow = make('button', 'mini scale-fix', '📏');
+  fixNow.type = 'button';
+  fixNow.title = 'Fix the common scale at the current scale';
+  fixNow.setAttribute('aria-label', 'Fix the common scale at the current scale');
+  // Shown in place, so a change keeps the focus where it is.
+  const show = () => {
+    const fixed = commonScale.mode === 'fixed';
+    mode.value = commonScale.mode;
+    minBox.value = fixed ? String(commonScale.min) : '';
+    maxBox.value = fixed ? String(commonScale.max) : '';
+    [minBox, to, maxBox, fixNow].forEach(el => el.classList.toggle('hidden', !fixed));
+  };
+  const changed = () => { notify('', null, 'scale'); show(); commonScaleChanged(); };
+  mode.addEventListener('change', () => { setCommonScale(mode.value === 'fixed' ? 'current' : mode.value); changed(); });
+  fixNow.addEventListener('click', () => { setCommonScale('current'); changed(); });
+  const typed = () => {
+    const num = (i) => i.value.trim() === '' ? NaN : Number(i.value);
+    const s = cleanScale({ min: num(minBox), max: num(maxBox) });
+    if(!s){
+      notify('The common scale wasn\'t changed: its "from" and "to" must be numbers, "from" below "to".', 'err', 'scale');
+      show();
+      return;
+    }
+    if(commonScale.min === s.min && commonScale.max === s.max) return;
+    setCommonScale(s);
+    changed();
+  };
+  [minBox, maxBox].forEach(i => i.addEventListener('change', typed));
+  wrap.append(mode, minBox, to, maxBox, fixNow);
+  show();
+  return wrap;
+}
+function commonScaleChanged(){
+  saveBoardSoon();
+  renderBoard(); // the widgets' "Shared (…)" choices say the new scale
 }
 // ============================================================
 // Shared colours (the owner's request of 26 October 2026, board file 11): a rectangle has one
@@ -4631,6 +4862,7 @@ function removeButton(id, what){
 
 function renderBoard(){
   syncSharedPeriods(); // what follows the shared period takes it (05k-shared-period.js)
+  syncCommonScale(); // and the common scale (04d-scale.js)
   adoptWidgetColours(); // an older file's colours, taken in (04e-colours.js)
   forgetAutoColours();
   rememberOpenEditors(); // (05b-chart-render.js)
@@ -4856,6 +5088,7 @@ function updateValues(){
   if(!model) return;
   startDraw(); // whether bars glide this time (05e-compare.js)
   const results = currentResults();
+  prepareCommonScale(results); // Auto for all's range on this board (04d-scale.js)
   board.bars.forEach(b => {
     const el = document.querySelector('.bar-widget[data-id="' + b.id + '"]');
     if(el) drawBars(el, b, results);
@@ -6164,7 +6397,7 @@ function moverText(m){
 
 function updateMovers(results){
   const panel = $('moversPanel');
-  if(!panel || !model || !panel.open) return;
+  if(!panel || !model || !panel.open || playNow()) return; // waits while Play runs (05m-play.js)
   const list = $('moversList');
   const movers = biggestMovers(results, MOVERS_SHOWN);
   list.textContent = '';
@@ -6210,7 +6443,7 @@ document.addEventListener('keydown', (ev) => {
 let pinA = null;   // { overrides, sliders: [{ key, mode, periods, value }], label }
 
 // What the outlines and differences compare with: A, or the model's own numbers.
-function compareResults(){ return pinA ? resultsWith(pinA.overrides) : model.base; }
+function compareResults(){ return playNow() ? resultsWith(playAt.from) : pinA ? resultsWith(pinA.overrides) : model.base; }
 
 function sliderSetting(s){ return { key: s.key, mode: s.mode, periods: JSON.stringify(s.periods), value: s.value }; }
 
@@ -6472,6 +6705,7 @@ function renderScenarios(){
     list.appendChild(li);
   });
   markScenarios();
+  renderPlayRow(); // (05m-play.js)
 }
 // Marks the scenario the sliders match, and the one compared with.
 function markScenarios(){
@@ -7894,7 +8128,9 @@ function renderSharedPeriods(){
   lead.title = 'The periods every bar and chart shows, on every board, unless it keeps its own (its period list\'s first choice is Shared)';
   const oneLabel = make('span', 'shared-period-one', 'One-period charts in');
   oneLabel.title = 'The year Waterfall, Scenario waterfall, Tornado and Spider charts show';
-  bar.append(lead, multi, oneLabel, one);
+  const scaleLabel = make('span', 'shared-period-one', 'Scale');
+  scaleLabel.title = 'The vertical scale every bar and chart shows, on every board, unless it keeps its own (its scale list\'s first choice is Shared); the Tornado and Spider keep their own';
+  bar.append(lead, multi, oneLabel, one, scaleLabel, commonScaleChooser());
 }
 
 function sharedPeriodsChanged(){
@@ -8222,6 +8458,270 @@ $('btnGoalSeek').addEventListener('click', () => {
   }, 0);
 });
 // ============================================================
+// Play (the owner's idea of 26 October 2026): the model swings between two ends and back, like
+// a pendulum, until it is stopped — so a change can be seen as it happens. Each end is a
+// scenario, the model's own numbers, or where the sliders are now (the row under the Scenarios
+// panel: Play from [▾] to [▾] ▶ Play).
+// - The motion: each end gives a number per input and period (overridesFor); the play moves
+//   each number in a straight line from one end's to the other's, so a set slider, a change by
+//   %, several sliders, sliders over different periods and inputs with no slider on this board
+//   all move together, and each end is exact. The time follows a pendulum (slow at the ends,
+//   quickest in the middle): PLAY_POSITIONS positions per swing, spaced by a cosine, shown in
+//   turn over PLAY_SWING_MS, PLAY_PAUSE_MS still at each end.
+// - Meanwhile the sliders show where the play has them (what each is set to is never changed),
+//   the dock and the mixer on a phone too, and the bars the moving inputs reach are lit; the
+//   dashed outlines and differences measure from the "from" end (compareResults, 05e); the
+//   Tornado and Spider hold still at the "from" end, faded (sensitivityNow, 03-calc.js), and
+//   Biggest movers waits (05d); the strip #playBar says what plays and where it is.
+// - Cost: the positions are the same every swing, so each is worked out once (resultCache); on
+//   a slow model (SLOW_MS) all are worked out ahead in small pieces ("Working out the play…"),
+//   fewer of them when that would take longer than PLAY_AHEAD_MS — the bars then glide between.
+// - Stopping: ■ Stop, Esc, any key or press outside the strip, a slider moved, another board or
+//   model. Everything is then as it was: nothing is saved, no undo step, nothing in the file.
+// - Reduced motion: no constant motion — the board shows the "to" end against the "from" end's
+//   outlines, and ⇄ on the strip steps between the two.
+// ============================================================
+const PLAY_SWING_MS = 2000;
+const PLAY_PAUSE_MS = 600;
+const PLAY_POSITIONS = 60;      // positions per swing (and one more: both ends)
+const PLAY_MIN_POSITIONS = 12;
+const PLAY_AHEAD_MS = 3000;     // a slow model has fewer positions, worked out within about this
+let playChoice = { from: null, to: null, picked: false }; // 'model', 'sliders' or 'sc:' + name; until the page reloads
+let playing = null;
+
+// The ends offered: [id, words].
+function playOptions(){
+  return [['model', 'The model\'s own numbers'], ['sliders', 'The sliders now']].concat(scenarios.map(sc => ['sc:' + sc.name, sc.name]));
+}
+function playDefaults(){
+  if(scenarios.length >= 2) return { from: 'sc:' + scenarios[0].name, to: 'sc:' + scenarios[1].name };
+  if(scenarios.length === 1) return { from: 'model', to: 'sc:' + scenarios[0].name };
+  return { from: 'model', to: 'sliders' };
+}
+// An end: its words and settings ({ key, mode, periods, value }, as a scenario's), or null.
+function playEnd(id){
+  if(id === 'model') return { id, name: 'the model\'s own numbers', settings: [] };
+  if(id === 'sliders') return { id, name: 'the sliders now', settings: slidersNow() };
+  const sc = scenarios.find(s => 'sc:' + s.name === id);
+  return sc ? { id, name: '“' + sc.name + '”', settings: sc.settings.map(s => Object.assign({}, s, { periods: Object.assign({}, s.periods) })) } : null;
+}
+
+// Between two ends' numbers: per input, both ends' numbers per period (the model's own where an
+// end leaves it), and whether they differ.
+function playPairs(a, b){
+  return [...new Set([...a.keys(), ...b.keys()])].map(k => {
+    const rect = model.byKey.get(k), own = model.periods.map((_, p) => baseValue(rect, p));
+    const x = a.get(k) || own, y = b.get(k) || own;
+    return { key: k, x, y, moves: x.some((v, p) => !Object.is(v, y[p])) };
+  });
+}
+// f of the way from x to y; exact at both ends, and a number the ends share stays exact.
+function mixAt(x, y, f){ return Object.is(x, y) ? x : Number.isFinite(x) && Number.isFinite(y) ? (1 - f) * x + f * y : (f < 0.5 ? x : y); }
+function overridesAt(pairs, f){
+  const out = new Map();
+  pairs.forEach(pr => out.set(pr.key, pr.x.map((v, p) => mixAt(v, pr.y[p], f))));
+  return out;
+}
+
+// Where a slider stands at an end: the end's setting like it, or the model's own number.
+function endSliderValue(settings, s){
+  const k = settingKey(s), o = settings.find(x => settingKey(x) === k);
+  if(o) return o.value;
+  return s.mode === 'shift' ? 0 : baseValue(model.byKey.get(s.key), periodsOf(s.periods)[0] || 0);
+}
+// The settings that differ between the ends, f of the way (for the strip's words).
+function movingSettings(f){
+  const all = [], seen = new Set();
+  playing.from.settings.concat(playing.to.settings).forEach(s => { const k = settingKey(s); if(!seen.has(k)){ seen.add(k); all.push(s); } });
+  return all.map(s => {
+    const a = endSliderValue(playing.from.settings, s), b = endSliderValue(playing.to.settings, s);
+    if(Object.is(a, b)) return null;
+    const v = mixAt(a, b, f);
+    return Object.assign({}, s, { value: f === 0 || f === 1 ? v : Number(v.toPrecision(4)) });
+  }).filter(Boolean);
+}
+
+// Starts playing between two ends (ids as playOptions). Returns the strip's words, or null.
+function startPlay(fromId, toId, opts){
+  if(!model || !board) return null;
+  if(playing) stopPlay();
+  const a = playEnd(fromId), b = playEnd(toId);
+  if(!a || !b) return null;
+  const pairs = playPairs(overridesFor(a.settings), overridesFor(b.settings));
+  if(!pairs.some(p => p.moves)){ notify('From and to give the same numbers: there is nothing to play.', 'err', 'play'); return null; }
+  notify('', null, 'play');
+  opts = opts || {};
+  const per = Math.max(model.baseMs, 0.01);
+  const n = per * (PLAY_POSITIONS + 1) > PLAY_AHEAD_MS ? Math.max(PLAY_MIN_POSITIONS, Math.floor(PLAY_AHEAD_MS / per) - 1) : PLAY_POSITIONS;
+  const fractions = [];
+  for(let i = 0; i <= n; i++) fractions.push(i === 0 ? 0 : i === n ? 1 : (1 - Math.cos(Math.PI * i / n)) / 2);
+  const me = playing = {
+    model, board, from: a, to: b, fractions, positions: fractions.map(f => overridesAt(pairs, f)),
+    moving: pairs.filter(p => p.moves).map(p => p.key),
+    swingMs: Number.isFinite(opts.swingMs) ? Math.max(200, Math.min(60000, opts.swingMs)) : PLAY_SWING_MS,
+    pauseMs: Number.isFinite(opts.pauseMs) ? Math.max(0, Math.min(10000, opts.pauseMs)) : PLAY_PAUSE_MS,
+    still: !!(reducedMotion && reducedMotion.matches), // (05e-compare.js)
+    sliders: JSON.stringify(slidersNow()), index: -1, startedAt: null, runs: 0, ready: false, raf: 0,
+    wake: keepScreenOn(),
+  };
+  document.body.classList.add('playing');
+  renderPlayBar();
+  if(isPhone()) $('playBar').scrollIntoView({ block: 'nearest' });
+  if(me.still){ me.ready = true; showPlayPosition(n); }
+  else if(model.baseMs >= SLOW_MS){
+    // A slow model: every position worked out ahead, in small pieces.
+    const todo = me.positions.slice();
+    setCalcNote('Working out the play…');
+    const piece = () => {
+      if(playing !== me) return;
+      const until = performance.now() + 30;
+      while(todo.length && performance.now() < until){
+        const o = todo.shift();
+        if(!resultCache.has(overridesKey(o))) me.runs++;
+        resultsWith(o);
+      }
+      if(todo.length){ setTimeout(piece, 0); return; }
+      setCalcNote('');
+      me.ready = true;
+    };
+    showPlayPosition(0);
+    setTimeout(piece, 0);
+  } else me.ready = true;
+  me.raf = requestAnimationFrame(playFrame);
+  return playWords();
+}
+
+// The position shown at t ms after the play began: still, up, still, down.
+function playIndexAt(t){
+  const P = playing.pauseMs, S = playing.swingMs, n = playing.fractions.length - 1;
+  t = t % (2 * (P + S));
+  if(t < P) return 0;
+  if(t < P + S) return Math.min(n, Math.round((t - P) / S * n));
+  if(t < 2 * P + S) return n;
+  return Math.max(0, n - Math.round((t - 2 * P - S) / S * n));
+}
+function playFrame(now){
+  if(!playing) return;
+  if(playing.model !== model || playing.board !== board || !model || JSON.stringify(slidersNow()) !== playing.sliders){ stopPlay(); return; }
+  playing.raf = requestAnimationFrame(playFrame);
+  if(!playing.ready || playing.still) return;
+  if(playing.startedAt === null) playing.startedAt = now;
+  const i = playIndexAt(now - playing.startedAt);
+  if(i !== playing.index) showPlayPosition(i);
+}
+function showPlayPosition(i){
+  const me = playing, o = me.positions[i], from = me.positions[0];
+  [o, from].forEach(x => { if(!resultCache.has(overridesKey(x))) me.runs++; });
+  me.index = i;
+  playAt = { model, now: o, from }; // (03-calc.js)
+  updateValues();
+  paintPlay(me.fractions[i]);
+}
+
+// The sliders, the dock, the mixer, the reach and the strip, f of the way.
+function paintPlay(f){
+  board.sliders.forEach(s => {
+    const a = endSliderValue(playing.from.settings, s), b = endSliderValue(playing.to.settings, s);
+    let v = mixAt(a, b, f);
+    if(f !== 0 && f !== 1) v = roundToStep(v, s.step);
+    const el = document.querySelector('.slider-widget[data-id="' + s.id + '"]');
+    if(el){
+      el.classList.toggle('playing', !Object.is(a, b));
+      el.querySelector('input[type="range"]').value = String(v);
+      el.querySelector('.slider-value').value = String(v);
+    }
+    [dockControls.get(s.id), mixerControls.get(s.id)].forEach(c => { if(c && !c.dragging()) c.setValue(v); }); // (05g, 05h)
+  });
+  const reached = new Set(playing.moving);
+  playing.moving.forEach(k => model.reach(k).forEach(r => reached.add(r)));
+  $('board').classList.add('moving');
+  board.bars.forEach(b => { const el = document.querySelector('.bar-widget[data-id="' + b.id + '"]'); if(el) el.classList.toggle('reached', reached.has(b.key)); });
+  board.charts.forEach(c => {
+    const el = document.querySelector('.chart-widget[data-id="' + c.id + '"]');
+    if(!el) return;
+    el.classList.toggle('reached', chartKeys(c).some(k => reached.has(k)));
+    el.classList.toggle('play-held', isSensitivity(c));
+  });
+  const at = $('playAt');
+  if(at) at.textContent = settingsLabel(movingSettings(f));
+}
+
+function playWords(){
+  if(!playing) return null;
+  return playing.still ? 'Showing ' + playing.to.name + ' against ' + playing.from.name : 'Playing ' + playing.from.name + ' ⇄ ' + playing.to.name;
+}
+function renderPlayBar(){
+  const bar = $('playBar');
+  bar.textContent = '';
+  bar.classList.toggle('hidden', !playing);
+  if(!playing) return;
+  const text = make('span', 'play-text');
+  const words = make('strong', 'play-words');
+  words.setAttribute('aria-live', 'polite');
+  if(playing.still){
+    const at = playing.index === 0 ? playing.from : playing.to, other = playing.index === 0 ? playing.to : playing.from;
+    words.textContent = 'Showing ' + at.name + '; the outlines show ' + playing.from.name;
+    text.title = 'Reduced motion is on: ⇄ steps between ' + at.name + ' and ' + other.name;
+  } else words.textContent = playWords();
+  text.appendChild(words);
+  const now = make('span', 'play-at');
+  now.id = 'playAt';
+  text.appendChild(now);
+  bar.appendChild(text);
+  const button = (label, title, fn) => { const b = make('button', 'compare-btn', label); b.type = 'button'; b.title = title; b.addEventListener('click', fn); bar.appendChild(b); return b; };
+  if(playing.still) button('⇄', 'Step to the other end', () => stepPlay()).id = 'btnPlayStep';
+  button('■ Stop', 'Stop playing: everything goes back as it was', () => stopPlay()).id = 'btnPlayStop';
+}
+// Reduced motion: ⇄ shows the other end.
+function stepPlay(){
+  if(!playing || !playing.still) return false;
+  showPlayPosition(playing.index === 0 ? playing.fractions.length - 1 : 0);
+  renderPlayBar();
+  paintPlay(playing.fractions[playing.index]);
+  return true;
+}
+
+// Stops the play: the sliders, A and the outlines are as they were (nothing was changed).
+function stopPlay(){
+  if(!playing) return false;
+  const me = playing;
+  cancelAnimationFrame(me.raf);
+  if(me.wake) me.wake();
+  playing = null;
+  playAt = null;
+  setCalcNote('');
+  document.body.classList.remove('playing');
+  renderPlayBar();
+  if(model && board) renderBoard();
+  return true;
+}
+
+// ---- the row under the scenarios ----
+function renderPlayRow(){
+  const options = playOptions(), ids = options.map(o => o[0]), def = playDefaults();
+  // The defaults follow the scenarios until the person picks an end.
+  if(!playChoice.picked || !ids.includes(playChoice.from)) playChoice.from = def.from;
+  if(!playChoice.picked || !ids.includes(playChoice.to)) playChoice.to = def.to;
+  [['playFrom', 'from'], ['playTo', 'to']].forEach(([id, end]) => {
+    const sel = $(id);
+    sel.textContent = '';
+    options.forEach(([v, words]) => { const o = make('option', null, words); o.value = v; sel.appendChild(o); });
+    sel.value = playChoice[end];
+  });
+}
+$('playFrom').addEventListener('change', () => { playChoice.from = $('playFrom').value; playChoice.picked = true; });
+$('playTo').addEventListener('change', () => { playChoice.to = $('playTo').value; playChoice.picked = true; });
+$('btnPlay').addEventListener('click', () => startPlay(playChoice.from, playChoice.to));
+
+// Any press outside the strip, or any key, stops it (Esc only that).
+document.addEventListener('pointerdown', (ev) => { if(playing && !(ev.target.closest && ev.target.closest('#playBar'))) stopPlay(); }, true);
+document.addEventListener('keydown', (ev) => {
+  if(!playing) return;
+  if(ev.key === 'Escape'){ ev.preventDefault(); ev.stopPropagation(); stopPlay(); return; }
+  if(ev.target.closest && ev.target.closest('#playBar')) return;
+  stopPlay();
+}, true);
+// ============================================================
 // The page: opening a model (the file picker, a file dropped anywhere, the sample, or fmIDE),
 // the top bar's buttons, and ← Back to fmIDE.
 // ============================================================
@@ -8486,6 +8986,8 @@ const BOARD_FILE_FORMAT = { 'fmIDE-graph-board': { current: BOARD_FILE_VERSION, 
 // as it was saved (the owner's choice). v9 → v10: a chart may be a lines chart; nothing to change.
 // v10 → v11: the shared colours (04e-colours.js); nothing to change — a file without `colours`
 // keeps its colours on its widgets, taken into the shared ones when read (the first one wins).
+// v11 → v12: the common scale (04d-scale.js); nothing to change — a file without `commonScale`
+// opens with Each its own, so every bar and chart shows the scale it had.
 function keepOwnPeriods(data){
   if(!data || typeof data !== 'object' || data.form === 'template') return;
   const boardsIn = Array.isArray(data.boards) ? data.boards : [data];
@@ -8494,7 +8996,7 @@ function keepOwnPeriods(data){
     ['items', 'bars', 'charts'].forEach(k => { if(Array.isArray(b[k])) b[k].forEach(w => { if(w && typeof w === 'object') w.ownPeriod = true; }); });
   });
 }
-const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {}, 5: () => {}, 6: () => {}, 7: () => {}, 8: keepOwnPeriods, 9: () => {}, 10: () => {} } };
+const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {}, 5: () => {}, 6: () => {}, 7: () => {}, 8: keepOwnPeriods, 9: () => {}, 10: () => {}, 11: () => {} } };
 
 function safeFileName(s){ return String(s).replace(/[^A-Za-z0-9 ._()-]+/g, '_').replace(/\s+/g, ' ').trim().slice(0, 80) || 'board'; }
 
@@ -9589,7 +10091,18 @@ const FMGRAPH_HELP_TOPICS = [
       { p: 'A number beyond a fixed scale is drawn to its edge with ▲ (above) or ▼ (below); its label and the words when you point at it still give the number itself. The scale\'s two ends are drawn as dotted lines with their numbers.' },
       { p: 'A bar\'s scale sits beside its colour; a chart\'s at the end of Edit chart. A scenario waterfall\'s fixed scale is shared by all its outputs, so they can be compared. The scale is kept with the board, in board files and in fmIDE\'s documents, and each change can be undone; a board exported for a template leaves it out.' },
       { steps: ['Move nothing yet, or set the sliders where you want to start.', 'On a bar, choose Fixed scale beside its colour (on a chart, open Edit chart).', 'Move a slider: the bars grow and shrink against the same scale.'] },
-      { see: ['bars', 'charts'] },
+      { see: ['common-scale', 'bars', 'charts'] },
+    ] },
+  { id: 'common-scale', group: 'board', title: 'One scale for every bar and chart',
+    keywords: 'common shared scale same axis all graphs min max auto for all fixed for all each its own compare boards',
+    summary: 'Put every bar and chart, on every board, on the same vertical scale, so their sizes can be compared.',
+    body: [
+      { p: 'Above the bars and charts, beside the shared period, Scale has three choices. Each its own (where every model starts) leaves each bar and chart on its own scale, Auto or fixed. Auto for all gives every one the same range: one that takes in all their numbers on the board shown, and zero, and moves with the sliders. Fixed for all draws every one from a min to a max: choosing it takes what the bars and charts show at that moment, rounded; type other numbers in its from and to boxes; 📏 fixes it again at what they show now.' },
+      { p: 'A bar or chart follows the common scale unless it keeps its own. While the common scale is on, its scale list starts with Shared (Auto for all, or the min and max); choosing Auto scale or Fixed scale there keeps its own (Fixed scale takes the range it showed), and Shared follows again. The Tornado and the Spider always keep their own scale, which is measured around the output\'s own number.' },
+      { p: 'Going back to Each its own leaves every bar and chart on the scale it showed. The common scale is kept with the model\'s boards and undone like any change. A board file written while it is on gives each follower the scale it shows, so ExcelExporter\'s Dashboard charts share it too: under Auto for all, the range at the moment the file is written, rounded.' },
+      { steps: ['Above the bars and charts, choose Scale: Auto for all (or Fixed for all).', 'Move a slider: every bar and chart grows and shrinks against the same scale.', 'For a bar in other units, choose Auto scale in its own scale list.'] },
+      { tip: 'On a phone there is no Scale choice; the bars and charts follow the one chosen on a larger screen.' },
+      { see: ['scale', 'shared-period'] },
     ] },
   { id: 'sliders', group: 'board', title: 'Sliders',
     keywords: 'slider input change set percent shift range step reset what if fold collapse expand share shared boards own positions linked',
@@ -9626,7 +10139,7 @@ const FMGRAPH_HELP_TOPICS = [
       { p: 'Swipe sideways across the bars, or use ‹ and ›, for the next board. Hold a bar for a quick look: its value in every period, now against the model\'s own numbers (or A), 🔍 Trace and ⤢ Show. Hold a chart to see its rectangles\' numbers.' },
       { p: 'Turn the phone sideways for the mixer: the sliders stand up as faders at the two edges of the screen, under your thumbs, with the board between them. Each finger moves its own fader, so you can move two (or more) at once and watch the bars follow both. Slide your finger sideways, away from a fader, to make it finer. Tap a fader\'s name to put another slider there; that is remembered for the board.' },
       { p: '⤢ Show puts one bar or chart on the whole screen and keeps the screen on while it shows, for showing someone; ×, Esc or your phone\'s back gesture ends it. The sliders stay beside it.' },
-      { p: 'Saved scenarios are cards: swipe through them; ▶ shows one. Hold a card\'s A to look at that scenario: the bars show it while your finger stays down, and come back when you let go. A quick tap on A compares with it, as before. With 📌 Pin as A, hold the A on the strip to look at A.' },
+      { p: 'Saved scenarios are cards: swipe through them; ▶ shows one. Hold a card\'s A to look at that scenario: the bars show it while your finger stays down, and come back when you let go. A quick tap on A compares with it, as before. With 📌 Pin as A, hold the A on the strip to look at A. ▶ Play under the scenarios swings between two of them: the dock\'s sliders and Show follow, the screen stays on, and a touch anywhere stops it.' },
       { p: '⇪ Share (in Show, and in ☰) sends a picture of the chart, or of the whole board, or the board file, through your phone\'s own Share button: Messages, Mail, AirDrop. The picture is drawn on your phone; nothing is sent until you choose where it goes. Where a browser can\'t share files, they download instead.' },
       { steps: ['Open a model (☰ → Open…), or Try the sample model.', 'Drag a slider in the dock and watch the bars.', 'Slide your finger up to set it exactly.', 'Hold a bar to see every period, then ⤢ Show.', 'Turn the phone sideways and move two faders at once.'] },
       { tip: 'On Android the tick is felt; ☰ → Vibrate on the marks turns that off. An iPhone does not let web pages vibrate, so there the tick is only seen.' },
@@ -9737,13 +10250,15 @@ const FMGRAPH_HELP_TOPICS = [
       { see: ['scenarios', 'sliders', 'explore'] },
     ] },
   { id: 'scenarios', group: 'board', title: 'Named scenarios',
-    keywords: 'scenario scenarios named save switch show compare sc01 what if case version keep',
+    keywords: 'scenario scenarios named save switch show compare sc01 what if case version keep play pendulum swing animate move back and forth',
     summary: 'Save where the sliders are under a name, switch between scenarios, and compare with any of them.',
     body: [
       { p: 'Set the sliders, then press + Save as scenario in the Scenarios panel under the sliders. It is named sc01, sc02 and so on; type a name of your own in its box. Save as many as you like (up to 50 a model).' },
       { p: '▶ puts the sliders where a scenario had them; the scenario the sliders match is marked. A scenario keeps the inputs it changed, whatever board it was saved on: if one of them has no slider on the board you are looking at, fmGraph says so, and + Slider adds one.' },
       { p: 'A compares with a scenario: the dashed outlines, difference labels and Biggest movers measure from it, as with 📌 Pin as A, and the strip names it. Press A again to stop.' },
       { p: '⟳ keeps where the sliders are now in that scenario, ↑ ↓ change the order, and × deletes it.' },
+      { p: 'Play, under the scenarios, swings the model between two ends and back, like a pendulum, so you can watch a change happen: choose each end (a scenario, the model\'s own numbers or the sliders now) and press ▶ Play. Every number the two ends set differently moves smoothly, slower near the ends, with a short pause at each; the bars, the charts and the sliders follow, and the dashed outlines show the first end. The Tornado and Spider charts and Biggest movers wait until it stops.' },
+      { p: '■ Stop, Esc, any key or a click anywhere else stops it, and everything is as it was: Play changes no slider, saves nothing and is not an undo step. With reduced motion turned on in your device\'s settings, nothing swings: the board shows the second end against the first end\'s outlines, and ⇄ steps between them.' },
       { p: 'Scenarios are kept with the model\'s boards: in this browser, in fmIDE\'s document when fmGraph was opened from fmIDE, and in Export all boards. Saving, renaming, updating, moving and deleting them can be undone; showing one is like moving a slider, not a change.' },
       { see: ['compare', 'board-file'] },
     ] },
@@ -9779,6 +10294,29 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'common-scale', date: '2026-10-27', title: 'One scale for every bar and chart',
+    summary: 'Above the bars and charts, Scale puts every one of them, on every board, on the same vertical scale: Auto for all or Fixed for all.',
+    what: [
+      'Scale sits beside the shared period. Each its own is how it was; Auto for all gives every bar and chart one range that fits all their numbers and moves with the sliders; Fixed for all draws them all from a min to a max you choose.',
+      'A bar or chart can keep its own scale: its scale list starts with Shared, and Auto scale or Fixed scale there keeps its own.',
+      'Bars, Columns, Lines, Waterfall and Scenario waterfall charts follow it. The Tornado and the Spider keep their own scale.',
+    ],
+    why: 'Bars and charts side by side each stretched to their own numbers, so a small number could look as big as a large one. On one scale, sizes can be compared.',
+    how: ['Above the bars and charts, choose Scale: Auto for all.', 'Move a slider: every bar and chart grows and shrinks against the same scale.', 'For a bar in other units, choose Auto scale in its own scale list.'],
+    notes: ['Boards saved before start on Each its own, so they look as they did.', 'The board file is now version 12. ExcelExporter reads it, and its Dashboard charts take the same scale.', 'On a phone the bars and charts follow the scale chosen on a larger screen.'],
+    see: ['common-scale'] },
+  { id: 'play-scenarios', date: '2026-10-27', title: 'Play: swing between two scenarios',
+    summary: 'Watch the model move: ▶ Play swings it between two scenarios and back, like a pendulum, until you stop it.',
+    what: [
+      'Under the scenarios, choose where Play starts and ends: a scenario, the model\'s own numbers or the sliders as they are now.',
+      'Every number the two ends set differently moves smoothly from one to the other and back, slower near the ends, with a short pause at each. Several sliders, a change by %, sliders over some periods and inputs with no slider on the board all move together.',
+      'The bars, the charts and the sliders follow as it goes; the dashed outlines show where it started, and a strip at the top says what plays.',
+      '■ Stop, Esc, any key or a click anywhere else stops it, and everything is just as it was: nothing is saved and there is nothing to undo.',
+    ],
+    why: 'Two scenarios that differ in one number, say a volume of 10 against 100, are easier to understand when you can see every bar move as that number changes.',
+    how: ['Save two scenarios.', 'Under them, choose Play from and to, and press ▶ Play.', 'Press ■ Stop, Esc or anywhere else to stop.'],
+    notes: ['With reduced motion turned on in your device\'s settings nothing swings: the board shows the second end against the first, and ⇄ steps between them.', 'On a large model the positions are worked out first ("Working out the play…"), then it plays smoothly.', 'The Tornado and Spider charts and Biggest movers wait until it stops.'],
+    see: ['scenarios'] },
   { id: 'shared-colours', date: '2026-10-26', title: 'One colour per rectangle, everywhere',
     summary: 'A rectangle now has the same colour on its slider, its bars and every chart, on every board. Change it in one place and it changes everywhere.',
     what: [
@@ -10435,9 +10973,16 @@ $('btnTutorials').addEventListener('click', () => { help.open(); });
 //                  rectangle's: the rectangle's colour on every board; null back to the automatic one)
 //   rectColour(rect, canvas?) → { colour ('#rrggbb', or null for the usual look), chosen }
 //   colours()      → the chosen colours, [{ canvas, name, colour }] (board file 11)
-//   setScale(id, { min, max } | 'current' | null) → the bar's or chart's vertical scale: fixed,
-//                  fixed at what Auto shows now, or Auto (null); returns { min, max } or null
+//   setScale(id, { min, max } | 'current' | null | 'shared') → the bar's or chart's vertical
+//                  scale: fixed, fixed at what Auto shows now, Auto (null), or following the
+//                  common scale again; while the common scale is on, any other keeps its own;
+//                  returns { min, max } or null
 //   scale(id)      → its fixed scale { min, max }, or null (Auto)
+//   scaleShown(id) → the scale it is drawn on now: { min, max, fixed, shared }
+//   setCommonScale(null | 'own' | 'auto' | 'current' | { min, max }) → the common scale (board
+//                  file 12): Each its own, Auto for all, Fixed for all at the current range or
+//                  from min to max; returns commonScale()
+//   commonScale()  → { mode: 'own' | 'auto' | 'fixed', min?, max? }
 //   undo(), redo() → whether there was one; exportBoards(all?) → the file's data (downloads it)
 //   importBoards(textOrObject) → Promise<number of boards added>
 //   calcTime()     → how long one run of the model takes, in milliseconds
@@ -10619,6 +11164,19 @@ window.fmGraph = Object.freeze({
     if(!w) throw new Error('There is no bar or chart "' + String(id).slice(0, 40) + '".');
     return w.scale ? { min: w.scale.min, max: w.scale.max } : null;
   },
+  scaleShown: (id) => {
+    const w = board.items.find(x => x.id === id);
+    if(!w) throw new Error('There is no bar or chart "' + String(id).slice(0, 40) + '".');
+    return shownScale(w);
+  },
+  setCommonScale: (spec) => {
+    if(!model) throw new Error('Open a model first.');
+    const s = setCommonScale(spec === undefined ? null : spec);
+    saveBoardSoon();
+    renderAll(); // the bar above the bars and charts too
+    return s;
+  },
+  commonScale: () => commonScaleData(),
   setColour: (id, colour, rect) => {
     const c = colour === null ? null : cleanColour(colour);
     if(colour !== null && !c) throw new Error('A colour is written #rrggbb.');
@@ -10682,6 +11240,28 @@ window.fmGraph = Object.freeze({
   updateScenario: (name) => updateScenario(findScenario(name)),
   moveScenario: (name, index) => moveScenario(findScenario(name), Number(index)),
   deleteScenario: (name) => deleteScenario(findScenario(name)),
+  // Play (05m-play.js): play({ from, to, seconds?, pause? }) — each end a scenario's name, 'model'
+  // (the model's own numbers) or 'sliders' (where they are now); seconds a swing (2), pause at
+  // each end (0.6) — swings between them until stopPlay() (true when it was playing); returns
+  // the strip's words. playing() → null, or { from, to, still (reduced motion), ready, index,
+  // fraction, positions, worked (positions worked out), runs (calculations it needed), elapsed
+  // (ms on the page's clock since the swinging began, null before), swing, pause (ms) };
+  // stepPlay() shows the other end when still.
+  play: (spec) => {
+    spec = spec || {};
+    if(!model) throw new Error('Open a model first.');
+    const end = (x) => x === 'model' || x === 'sliders' ? x : 'sc:' + findScenario(x).name;
+    const words = startPlay(end(spec.from === undefined ? 'model' : spec.from), end(spec.to === undefined ? 'sliders' : spec.to),
+      { swingMs: spec.seconds === undefined ? undefined : Number(spec.seconds) * 1000, pauseMs: spec.pause === undefined ? undefined : Number(spec.pause) * 1000 });
+    if(!words) throw new Error('From and to give the same numbers: there is nothing to play.');
+    return words;
+  },
+  stopPlay: () => stopPlay(),
+  stepPlay: () => stepPlay(),
+  playing: () => playing ? { from: playing.from.name, to: playing.to.name, still: playing.still, ready: playing.ready, index: playing.index,
+    fraction: playing.index < 0 ? null : playing.fractions[playing.index], positions: playing.positions.length,
+    worked: playing.positions.filter(o => resultCache.has(overridesKey(o))).length, runs: playing.runs,
+    elapsed: playing.startedAt === null ? null : performance.now() - playing.startedAt, swing: playing.swingMs, pause: playing.pauseMs } : null,
   // G6: tutorials. startTutorial(id) → Promise<boolean>; tutorial() → { id, step (its id), index } or null;
   // stopTutorial() puts the model from before back.
   tutorials: () => FMGRAPH_TUTORIALS.map(t => ({ id: t.id, title: t.title, steps: t.steps.length })),

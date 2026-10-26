@@ -108,6 +108,7 @@ function removeButton(id, what){
 
 function renderBoard(){
   syncSharedPeriods(); // what follows the shared period takes it (05k-shared-period.js)
+  syncCommonScale(); // and the common scale (04d-scale.js)
   adoptWidgetColours(); // an older file's colours, taken in (04e-colours.js)
   forgetAutoColours();
   rememberOpenEditors(); // (05b-chart-render.js)
@@ -333,6 +334,7 @@ function updateValues(){
   if(!model) return;
   startDraw(); // whether bars glide this time (05e-compare.js)
   const results = currentResults();
+  prepareCommonScale(results); // Auto for all's range on this board (04d-scale.js)
   board.bars.forEach(b => {
     const el = document.querySelector('.bar-widget[data-id="' + b.id + '"]');
     if(el) drawBars(el, b, results);

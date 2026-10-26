@@ -303,6 +303,14 @@
   .scenario-name{ flex:1 1 90px; min-width:70px; font:inherit; font-size:13px; padding:2px 5px; }
   .scenario-btn{ min-width:26px; padding:2px 6px; font-size:12px; }
   .scenario-btn[aria-pressed="true"]{ background:var(--reach); color:#1b2333; }
+  /* Play between two ends (05m-play.js) */
+  .play-row{ display:flex; flex-wrap:wrap; gap:4px 8px; align-items:center; margin-top:8px; font-size:13px; }
+  .play-row select{ max-width:150px; font:inherit; }
+  .play-bar{ position:sticky; top:var(--gbar-h, 52px); z-index:20; display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:0 0 10px; padding:7px 12px; border:1px solid var(--reach); border-radius:9px; background:#fffbeb; font-size:13px; }
+  .play-text{ flex:1 1 auto; display:flex; gap:4px 12px; flex-wrap:wrap; }
+  .play-at{ font-variant-numeric:tabular-nums; }
+  .slider-widget.playing{ box-shadow:0 0 0 2px var(--reach); }
+  .chart-widget.play-held .bar-chart-host{ opacity:.45; }
   .scenario-what{ flex-basis:100%; font-size:12px; color:var(--soft-ink); overflow-wrap:anywhere; }
 
   /* Try in fmGraph (G5c) */

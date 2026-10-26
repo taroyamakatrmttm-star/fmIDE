@@ -11,7 +11,7 @@ const UNDO_LIMIT = 100;
 let undoStack = [], redoStack = [], lastState = null, restoring = false;
 
 // The boards' state for undo: their file form, without which one is shown.
-function undoState(){ const d = boardsData(); delete d.active; return JSON.stringify(d); }
+function undoState(){ const d = boardsData(null, true); delete d.active; return JSON.stringify(d); }
 
 function resetUndo(){
   undoStack = []; redoStack = [];
@@ -40,6 +40,7 @@ function restoreState(text){
   boards = r.boards;
   scenarios = r.scenarios;
   sharedPeriods = r.sharedPeriods; // (05k-shared-period.js)
+  commonScale = r.commonScale; // (04d-scale.js)
   rectColours = r.colours; forgetAutoColours(); // (04e-colours.js)
   boards.forEach((b, bi) => b.sliders.forEach(s => { const v = positions.get(bi + '|' + s.key + '|' + s.mode); if(v !== undefined) s.value = v; }));
   board = boards[Math.min(shown, boards.length - 1)];

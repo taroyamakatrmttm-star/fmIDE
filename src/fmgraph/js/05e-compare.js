@@ -15,7 +15,7 @@
 let pinA = null;   // { overrides, sliders: [{ key, mode, periods, value }], label }
 
 // What the outlines and differences compare with: A, or the model's own numbers.
-function compareResults(){ return pinA ? resultsWith(pinA.overrides) : model.base; }
+function compareResults(){ return playNow() ? resultsWith(playAt.from) : pinA ? resultsWith(pinA.overrides) : model.base; }
 
 function sliderSetting(s){ return { key: s.key, mode: s.mode, periods: JSON.stringify(s.periods), value: s.value }; }
 
