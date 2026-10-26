@@ -4,7 +4,7 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 
 ## Setup (once)
 
-1. Install **Node.js LTS** (Windows: `winget install OpenJS.NodeJS.LTS`, or the installer from nodejs.org).
+1. Install **Node.js LTS**, version 22.13 or later (Windows: `winget install OpenJS.NodeJS.LTS`, or the installer from nodejs.org). Node 22.12 prints a warning when the build loads the shared modules, which fails group 64.
 2. In the repository folder:
    ```
    npm install

@@ -2,6 +2,9 @@
   "name": "fmide-tests",
   "private": true,
   "description": "Automated test suite for fmIDE and ExcelExporter (the apps themselves have no dependencies).",
+  "engines": {
+    "node": ">=22.13"
+  },
   "scripts": {
     "build": "node tools/build.js",
     "build:check": "node tools/build.js --check",
