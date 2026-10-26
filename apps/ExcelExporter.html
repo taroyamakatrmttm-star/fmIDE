@@ -9165,11 +9165,12 @@ function applyTreeSelectionHighlight(){
 let treeClickHistory = []; // last two plain row clicks {id, time} — see the dblclick handler
 // The first click of a double-click selects a row, and the selection bar appearing above
 // the tree pushes the list down, so the second click may land on no row at all — the bar
-// itself, a group header, the gap between tabs. A double-click there (not on a button or a
-// field) still renames the row that was just clicked.
+// itself, a group header, the gap between tabs, or the Rows panel's own gap between the bar
+// and the tree. A double-click there (not on a button or a field) still renames the row that
+// was just clicked.
 document.addEventListener('dblclick', (ev) => {
   const t = ev.target;
-  if(!t || !t.closest || !(t.closest('#rowGroupsTree') || t.closest('#bulkMoveBar'))) return;
+  if(!t || !t.closest || !(t.closest('#rowGroupsTree') || t.closest('#bulkMoveBar') || t === $('rowsPanel'))) return;
   if(t.closest('.tree-row') || t.closest('input, button, select, label')) return;
   const last = treeClickHistory[treeClickHistory.length - 1];
   if(!last || Date.now() - last.time > 800) return;
@@ -9177,6 +9178,9 @@ document.addEventListener('dblclick', (ev) => {
   const targetRow = findRowById(last.id);
   if(!target || !targetRow) return;
   ev.preventDefault();
+  // A finger's double-tap (pointer-input.js sends it): the mouse events copied from the second
+  // tap would land where it did and take the focus from the box, so they are dropped.
+  if(!ev.isTrusted) dropTapCopies();
   startTreeRowRename(target.el, target.el.querySelector('.tree-row-label'), targetRow);
 });
 function handleTreeRowClick(ev, flatIndex){
@@ -11219,6 +11223,14 @@ const EXCEL_HELP_TOPICS = [
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'tree-rename-fix', date: '2026-10-26', title: 'Renaming in the Tree, every time',
+    summary: 'A double-click or double-tap on a row renames it even when the selection bar has just pushed the list down.',
+    what: [
+      'The first click on a row selects it, and the selection bar that appears above the Tree pushes the list down, so the second click can land beside the row. A double-click whose second click lands in the gap under the bar, or a double-tap whose second tap lands on a tab\'s name, now opens the row\'s rename box.',
+    ],
+    why: 'On some screens, Windows among them, the bar is taller and the second click missed the row: nothing happened, or by finger the box closed at once.',
+    how: ['Show the Tree.', 'Double-click a row\'s name (or double-tap it).', 'Type the new name and press Enter.'],
+    see: ['tree-view'] },
   { id: 'user-manual', date: '2026-10-21', title: 'The user manual, one click from Help',
     summary: 'A link at the top of the Help panel opens the user manual on fmIDE\'s website: lessons step by step, with the numbers you should see.',
     what: [

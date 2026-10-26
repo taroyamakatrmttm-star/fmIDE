@@ -790,11 +790,12 @@ function applyTreeSelectionHighlight(){
 let treeClickHistory = []; // last two plain row clicks {id, time} — see the dblclick handler
 // The first click of a double-click selects a row, and the selection bar appearing above
 // the tree pushes the list down, so the second click may land on no row at all — the bar
-// itself, a group header, the gap between tabs. A double-click there (not on a button or a
-// field) still renames the row that was just clicked.
+// itself, a group header, the gap between tabs, or the Rows panel's own gap between the bar
+// and the tree. A double-click there (not on a button or a field) still renames the row that
+// was just clicked.
 document.addEventListener('dblclick', (ev) => {
   const t = ev.target;
-  if(!t || !t.closest || !(t.closest('#rowGroupsTree') || t.closest('#bulkMoveBar'))) return;
+  if(!t || !t.closest || !(t.closest('#rowGroupsTree') || t.closest('#bulkMoveBar') || t === $('rowsPanel'))) return;
   if(t.closest('.tree-row') || t.closest('input, button, select, label')) return;
   const last = treeClickHistory[treeClickHistory.length - 1];
   if(!last || Date.now() - last.time > 800) return;
@@ -802,6 +803,9 @@ document.addEventListener('dblclick', (ev) => {
   const targetRow = findRowById(last.id);
   if(!target || !targetRow) return;
   ev.preventDefault();
+  // A finger's double-tap (pointer-input.js sends it): the mouse events copied from the second
+  // tap would land where it did and take the focus from the box, so they are dropped.
+  if(!ev.isTrusted) dropTapCopies();
   startTreeRowRename(target.el, target.el.querySelector('.tree-row-label'), targetRow);
 });
 function handleTreeRowClick(ev, flatIndex){

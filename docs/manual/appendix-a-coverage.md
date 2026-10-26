@@ -247,6 +247,7 @@ Oldest first. *Step* is the build step (and phase) the pull request belongs to; 
 | [#194](https://github.com/taroyamakatrmttm-star/fmIDE/pull/194) | 2026-10-19 | Docs: the user manual, phase 1 — contents, lesson style, coverage appendix, three tutorials as lessons | — | — *(this manual)* |
 | [#197](https://github.com/taroyamakatrmttm-star/fmIDE/pull/197) | 2026-10-21 | Docs: the user manual, phases 3–6 — Parts 3 to 6, the manual complete, checked by the build and on the website at `/manual/` | — | — *(this manual)* |
 | [#198](https://github.com/taroyamakatrmttm-star/fmIDE/pull/198) | 2026-10-21 | The user manual, one click from Help: a link in each app's Help panel and on fmIDE's welcome card | after 20 | [1.3](01-getting-started.md#finding-your-way) |
+| branch `claude/tree-rename-fixes` | 2026-10-26 | ExcelExporter: a double-click or double-tap in the Tree renames the row when the selection bar has moved the list | after 20 | [5.3](05-excelexporter.md#tabs-rows) |
 
 ---
 

@@ -11,6 +11,14 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'tree-rename-fix', date: '2026-10-26', title: 'Renaming in the Tree, every time',
+    summary: 'A double-click or double-tap on a row renames it even when the selection bar has just pushed the list down.',
+    what: [
+      'The first click on a row selects it, and the selection bar that appears above the Tree pushes the list down, so the second click can land beside the row. A double-click whose second click lands in the gap under the bar, or a double-tap whose second tap lands on a tab\'s name, now opens the row\'s rename box.',
+    ],
+    why: 'On some screens, Windows among them, the bar is taller and the second click missed the row: nothing happened, or by finger the box closed at once.',
+    how: ['Show the Tree.', 'Double-click a row\'s name (or double-tap it).', 'Type the new name and press Enter.'],
+    see: ['tree-view'] },
   { id: 'user-manual', date: '2026-10-21', title: 'The user manual, one click from Help',
     summary: 'A link at the top of the Help panel opens the user manual on fmIDE\'s website: lessons step by step, with the numbers you should see.',
     what: [

@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: renaming in the Tree when the selection bar moves the list
+- The first click on a row brings up the selection bar, which pushes the list down. A double-click whose second click then lands in the gap between the bar and the list, or a double-tap whose second tap lands on a tab's heading, now renames the row, as it already did on the bar itself or a row. Before, nothing happened, or the box closed at once and the tab folded. Seen on Windows, where the bar's buttons wrap onto more lines (branch `claude/tree-rename-fixes`).
+
 ## The user manual, one click from Help
 - Each app's Help panel has a link at its top, **📖 The user manual, step by step (online)**, to the manual on the site: fmIDE's to the contents, ExcelExporter's to Part 5, fmGraph's to Part 6. fmIDE's welcome card has it too. It opens in the browser on the person's click; the apps still make no network calls of their own (the shared panel's `options.manual`, `manualAddress`).
 - What's new in all three apps, and a sentence in each app's first Help topic.

@@ -103,7 +103,7 @@ Each rectangle is one row, and the operators became formulas: change Price in Ex
 > **You need:** ExcelExporter with the model of [lesson 5.1](#first-workbook).
 > **Time:** about 10 minutes.
 > **In the app:** ExcelExporter Help → *Tabs* (`tabs`), *Rows: what goes where* (`rows`), *The Tree View* (`tree-view`)
-> **Came in:** the first version; tidier formulas and defaults [#44](https://github.com/taroyamakatrmttm-star/fmIDE/pull/44); a row's own format, indents and the right-click menu [#46](https://github.com/taroyamakatrmttm-star/fmIDE/pull/46); a new layout in formula order [#49](https://github.com/taroyamakatrmttm-star/fmIDE/pull/49); borders side by side [#98](https://github.com/taroyamakatrmttm-star/fmIDE/pull/98); tab names with an apostrophe [#124](https://github.com/taroyamakatrmttm-star/fmIDE/pull/124); Collapse all and Expand all [#192](https://github.com/taroyamakatrmttm-star/fmIDE/pull/192)
+> **Came in:** the first version; tidier formulas and defaults [#44](https://github.com/taroyamakatrmttm-star/fmIDE/pull/44); a row's own format, indents and the right-click menu [#46](https://github.com/taroyamakatrmttm-star/fmIDE/pull/46); a new layout in formula order [#49](https://github.com/taroyamakatrmttm-star/fmIDE/pull/49); borders side by side [#98](https://github.com/taroyamakatrmttm-star/fmIDE/pull/98); tab names with an apostrophe [#124](https://github.com/taroyamakatrmttm-star/fmIDE/pull/124); Collapse all and Expand all [#192](https://github.com/taroyamakatrmttm-star/fmIDE/pull/192); renaming when the selection bar moves the list (branch `claude/tree-rename-fixes`)
 
 Each fmIDE canvas starts as one tab, and each rectangle as one row. Operators, aliases and period shifts never get rows: they become parts of formulas.
 
