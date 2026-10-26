@@ -202,6 +202,7 @@ function autoRange(w, results){
     periodsOf(w.periods).forEach(p => [resultOf(results, rect, p), resultOf(cmp, rect, p)].forEach(r => { if(!r.error) take(r.value); }));
   } else if(isSensitivity(w)) return null;
   else if(w.layout === 'flow') flowFigures(w, results).concat(flowFigures(w, cmp)).forEach(f => { if(!f.error){ take(f.from); take(f.to); } });
+  else if(w.layout === 'free') freeFigures(w, results).concat(freeFigures(w, cmp)).forEach(f => { if(f.parts){ take(f.top); take(f.bottom); take(f.base); } });
   else if(w.layout === 'lines') linesFigures(w, results).concat(linesFigures(w, cmp)).forEach(f => f.values.forEach(r => { if(!r.error) take(r.value); }));
   else if(w.layout === 'scenarios'){
     const memo = new Map();

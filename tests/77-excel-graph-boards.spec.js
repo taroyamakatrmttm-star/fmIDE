@@ -14,7 +14,7 @@
 // - Cut-offs (50 cases, 20 row scenarios) listed; the workbook doesn't follow the board file
 //   once copied.
 const fs = require('fs');
-const { test, expect, fixture, readFixture, openApp } = require('./helpers/apps');
+const { test, expect, fixture, readFixture, openApp, BOARD_FILE_VERSION } = require('./helpers/apps');
 const X = require('./helpers/excel');
 const F = require('./helpers/fmide');
 const D = require('./helpers/documents');
@@ -201,7 +201,7 @@ test('someone else\'s board file: names as text, numbers forced, the rest left o
   expect(pageErrors).toEqual([]);
 });
 
-test('board versions: 2 has no scenarios, 3, 8, 9 and 10 read, a newer one and the template form are refused', async ({ page }) => {
+test('board versions: 2 has no scenarios, 3, 8 to 13 read, a newer one and the template form are refused', async ({ page }) => {
   await openProfit(page);
   await importFile(page, board('board-v2.board.json'));
   await expect(page.locator('#graphModal')).toBeVisible();
@@ -231,16 +231,17 @@ test('board versions: 2 has no scenarios, 3, 8, 9 and 10 read, a newer one and t
   expect(await scenarioNames(page)).toEqual(['Price 14']);
   await page.click('#graphCancel');
   // 11 (fmGraph's shared colours) is read since 26 October 2026, 12 (its common scale) since 27
-  // October 2026; 13 is newer (changed on purpose).
-  for(const f of ['board-newer-v11.board.json', 'board-newer-v12.board.json']){
+  // October 2026, 13 (its Free chart) since 27 October 2026 too; 14 is newer (changed on purpose:
+  // 13 was the newer sample before).
+  for(const f of ['board-newer-v11.board.json', 'board-newer-v12.board.json', 'board-newer-v13.board.json']){
     await importFile(page, board(f));
     await expect(page.locator('#graphModal')).toBeVisible();
     expect(await scenarioNames(page)).toEqual(['Price 14']);
     await page.click('#graphCancel');
   }
-  await importFile(page, board('board-newer-v13.board.json'));
+  await importFile(page, board('board-newer-v14.board.json'));
   await expect(genStatus(page)).toHaveClass(/err/);
-  await expect(genStatus(page)).toContainText('format version 13; this ExcelExporter reads up to version 12');
+  await expect(genStatus(page)).toContainText('format version 14; this ExcelExporter reads up to version 13');
   await expect(page.locator('#graphModal')).toBeHidden();
   await importFile(page, board('board-template.board.json'));
   await expect(genStatus(page)).toContainText('is for a template');
@@ -377,7 +378,7 @@ async function graphWithCharts(context){
 
 test('fmGraph\'s Tornado and Spider become analyses: grouped, named, Show 0, the Spider\'s points', async ({ page, context, pageErrors }, testInfo) => {
   const { file } = await graphWithCharts(context);
-  expect(file.version).toBe(12);
+  expect(file.version).toBe(BOARD_FILE_VERSION);
   await openProfit(page);
   await importFile(page, D.tempFile(testInfo, 'charts.board.json', JSON.stringify(file)));
   await expect(page.locator('#graphSensHead')).toBeVisible();
@@ -763,6 +764,19 @@ function flowBlock(ws, heading, n){
 }
 const near = (a, b) => Math.abs(a - b) <= 1e-6 * Math.max(1, Math.abs(b));
 
+// fmGraph's Free chart (board file 13, phase F1): read, and listed as not carried yet (phase F3).
+test('a board file of version 13: its Free chart is not carried yet, and the window says so', async ({ page }, testInfo) => {
+  await openProfit(page);
+  const f = readFixture('graph-boards', 'board-newer-v13.board.json');
+  const profit = { canvasId: 'cProfit', nodeId: 'profit', name: 'Profit' };
+  f.boards[0].items = [Object.assign({ type: 'bar', periods: { mode: 'all' } }, profit),
+    { type: 'chart', layout: 'free', title: 'Free', period: 0, pieces: [{ id: 'p1', name: 'A', column: 0, sits: { on: 'zero' }, parts: [profit] }] }];
+  await importFile(page, D.tempFile(testInfo, 'free.board.json', JSON.stringify(f)));
+  await expect(page.locator('#graphModal')).toBeVisible();
+  expect(await chartNames(page)).toEqual(['Profit']);
+  expect(await leftOut(page)).toContain('1 Free chart not carried yet.');
+});
+
 test('charts: the window lists the board\'s bars and charts, Use copies them, the Dashboard draws each from the right rows', async ({ page, context, pageErrors }, testInfo) => {
   const { graph, file, flow } = await graphWithBoardCharts(context);
   await openProfit(page);
@@ -887,7 +901,7 @@ test('a lines chart becomes an Excel line chart on the Dashboard: a series per r
   await graph.evaluate((i) => fmGraph.setColour(i, '#2563eb', 'Revenue'), id);
   const figures = await graph.evaluate((i) => fmGraph.chart(i), id);
   const file = await graph.evaluate(() => fmGraph.exportBoards(false));
-  expect(file.version).toBe(12);
+  expect(file.version).toBe(BOARD_FILE_VERSION);
   const lines = file.boards[0].items.find(w => w.layout === 'lines');
   // Each line writes the colour it shows: Profit and Bonus paid their automatic ones (board file 11; changed on purpose).
   expect(lines.lines.map(l => [l.name, l.colour || null])).toEqual([['Revenue', '#2563eb'], ['Profit', '#2563eb'], ['Bonus paid', '#d97706']]);
@@ -957,7 +971,7 @@ test('the common scale: every follower\'s chart on the Dashboard has its min and
   });
   expect(await graph.evaluate((i) => fmGraph.scaleShown(i).shared, own)).toBe(false);
   const file = await graph.evaluate(() => fmGraph.exportBoards(false));
-  expect(file.version).toBe(12);
+  expect(file.version).toBe(BOARD_FILE_VERSION);
   await openProfit(page);
   await importFile(page, D.tempFile(testInfo, 'common.board.json', JSON.stringify(file)));
   await expect(page.locator('#graphChartHead')).toBeVisible();

@@ -13,6 +13,9 @@ const APP_FILES = { ExcelExporter: 'ExcelExporter.html', fmIDE: 'fmIDE.html', fm
 
 function fixture(...parts){ return path.join(FIXTURES, ...parts); }
 function readFixture(...parts){ return JSON.parse(fs.readFileSync(fixture(...parts), 'utf8')); }
+// The board file's current version, as fmGraph writes it (read from the built app, so a test
+// checking "a file is written in the current version" follows a new version by itself).
+const BOARD_FILE_VERSION = Number(/const BOARD_FILE_VERSION = (\d+);/.exec(fs.readFileSync(path.join(APPS_DIR, APP_FILES.fmGraph), 'utf8'))[1]);
 
 const test = base.test.extend({
   // Requests that were blocked because they tried to leave the app.
@@ -52,4 +55,4 @@ async function openApp(page, app){
   await page.goto(ORIGIN + APP_FILES[app]);
 }
 
-module.exports = { test, expect: base.expect, ORIGIN, ROOT, FIXTURES, fixture, readFixture, openApp };
+module.exports = { test, expect: base.expect, ORIGIN, ROOT, FIXTURES, fixture, readFixture, openApp, BOARD_FILE_VERSION };

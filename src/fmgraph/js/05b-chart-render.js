@@ -18,14 +18,14 @@ function chartWidget(c){
   const head = make('div', 'widget-head');
   const title = make('input', 'chart-title');
   title.type = 'text';
-  title.placeholder = c.layout === 'columns' || c.layout === 'lines' || isSensitivity(c) ? 'Chart title' : 'Waterfall title';
+  title.placeholder = c.layout === 'columns' || c.layout === 'lines' || c.layout === 'free' || isSensitivity(c) ? 'Chart title' : 'Waterfall title';
   title.value = c.title;
   title.maxLength = CHART_LIMITS.title;
   title.setAttribute('aria-label', 'Chart title');
   title.addEventListener('change', () => { c.title = cleanText(title.value, CHART_LIMITS.title); saveBoardSoon(); });
   const layout = make('select');
   layout.setAttribute('aria-label', 'Kind of chart');
-  [['columns', 'Columns'], ['lines', 'Lines'], ['flow', 'Waterfall'], ['scenarios', 'Scenario waterfall'], ['tornado', 'Tornado'], ['spider', 'Spider']].forEach(([v, t]) => { const o = make('option', null, t); o.value = v; if(c.layout === v) o.selected = true; layout.appendChild(o); });
+  [['columns', 'Columns'], ['lines', 'Lines'], ['flow', 'Waterfall'], ['free', 'Free'], ['scenarios', 'Scenario waterfall'], ['tornado', 'Tornado'], ['spider', 'Spider']].forEach(([v, t]) => { const o = make('option', null, t); o.value = v; if(c.layout === v) o.selected = true; layout.appendChild(o); });
   layout.addEventListener('change', () => { switchLayout(c, layout.value); saveBoardSoon(); renderBoard(); });
   head.append(title, layout, removeButton(c.id, 'chart'));
   w.append(head, make('div', 'bar-chart-host'), make('div', 'chart-key'), make('ul', 'bar-errors'));
@@ -37,14 +37,31 @@ function chartWidget(c){
 // added), every step a part of one group, a line each (once each, at most 12; between Columns
 // and Lines the periods are kept, the groups' parts flattened into lines and the lines one group), and a scenario waterfall's outputs the first six of
 // them (calculated rectangles first). A Tornado or Spider measures the first calculated one,
-// moving every input that reaches it (step 18); between the two they keep everything.
+// moving every input that reaches it (step 18); between the two they keep everything. A Columns
+// or Waterfall chart becomes a Free chart as + From chart… copies it (04f-free.js), any other
+// its rectangles as one piece; a Free chart becomes Columns with a group per piece (at most 12).
 function switchLayout(c, layout){
   if(layout === c.layout) return;
   if(isSensitivity(c) && SENSITIVITY_LAYOUTS.includes(layout)){ c.layout = layout; return; }
   const keys = chartKeys(c);
   const period = usesPeriods(c) ? (periodsOf(c.periods)[0] || 0) : c.period;
   const periods = usesPeriods(c) ? Object.assign({}, c.periods) : { mode: 'all' };
-  ['groups', 'periods', 'check', 'steps', 'period', 'outputs', 'use', 'output', 'inputs', 'colour', 'colour2', 'lines'].forEach(k => { delete c[k]; });
+  const pieces = layout === 'free'
+    ? (c.layout === 'columns' || c.layout === 'flow' ? piecesFromChart(c, 0)
+      : keys.length ? [{ id: newPieceId(), name: '', column: 0, sits: { on: 'zero' }, minus: false, check: null, parts: [...new Set(keys)].slice(0, FREE_LIMITS.parts) }] : [])
+    : null;
+  const groups = c.layout === 'free' && layout === 'columns' ? c.pieces.slice(0, CHART_LIMITS.groups).map(p => ({ name: p.name, parts: p.parts.slice() })) : null;
+  ['groups', 'periods', 'check', 'steps', 'period', 'outputs', 'use', 'output', 'inputs', 'colour', 'colour2', 'lines', 'pieces', 'notes'].forEach(k => { delete c[k]; });
+  if(pieces){
+    Object.assign(c, { layout: 'free', period, pieces: pieces.slice(0, FREE_LIMITS.pieces), notes: null });
+    c.pieces.forEach(p => { p.column = Math.min(p.column, FREE_LIMITS.columns - 1); });
+    settleColumns(c);
+    return;
+  }
+  if(groups){
+    Object.assign(c, { layout: 'columns', periods: { mode: 'one', p: period }, groups: groups.length ? groups : [{ name: '', parts: [] }], check: false });
+    return;
+  }
   if(layout === 'lines') Object.assign(c, { layout: 'lines', periods, lines: [...new Set(keys)].slice(0, CHART_LIMITS.lines) });
   else if(layout === 'flow') Object.assign(c, { layout: 'flow', period, steps: keys.map((key, i) => ({ key, role: i === 0 ? 'start' : 'add' })) });
   else if(layout === 'scenarios'){
@@ -148,6 +165,7 @@ function chartEditorParts(c){
     box.appendChild(clear);
     return box;
   }
+  if(c.layout === 'free'){ freeEditor(c, box, periodRow(), changed); return box; } // 05n-free-chart.js
   if(c.layout === 'scenarios'){
     box.appendChild(periodRow());
     box.appendChild(make('div', 'edit-head', 'Outputs'));
@@ -290,6 +308,7 @@ function drawChart(el, c, results){
   host.textContent = ''; key.textContent = ''; list.textContent = '';
   const problems = [];
   if(c.layout === 'flow') host.appendChild(drawFlow(c, results, problems));
+  else if(c.layout === 'free') host.appendChild(drawFree(c, results, problems, key)); // 05n-free-chart.js
   else if(c.layout === 'scenarios') host.appendChild(drawScenarioFlows(c, problems));
   else if(isSensitivity(c)) host.appendChild(drawSensitivity(c, problems, key));
   else if(c.layout === 'lines') host.appendChild(drawLines(c, results, problems, key));

@@ -1,0 +1,28 @@
+{
+  "kind": "fmIDE-graph-board",
+  "version": 12,
+  "active": 0,
+  "boards": [
+    {
+      "name": "Saved before the Free chart",
+      "items": [
+        { "type": "bar", "canvasId": "cProfit", "nodeId": "profit", "name": "Profit", "periods": { "mode": "all" }, "wide": false, "scale": { "min": 0, "max": 20000 } },
+        { "type": "chart", "wide": true, "layout": "columns", "title": "Balance sheet", "periods": { "mode": "all" }, "check": true, "scale": { "min": 0, "max": 20000 }, "groups": [
+          { "name": "Assets", "parts": [{ "canvasId": "cCash", "nodeId": "close", "name": "Closing cash" }, { "canvasId": "cBS", "nodeId": "equip", "name": "Equipment" }] },
+          { "name": "Liabilities and equity", "parts": [{ "canvasId": "cBS", "nodeId": "debt", "name": "Debt" }, { "canvasId": "cBS", "nodeId": "equity", "name": "Equity" }] }
+        ] },
+        { "type": "chart", "wide": true, "layout": "flow", "title": "Profit", "period": 0, "ownScale": true, "steps": [
+          { "canvasId": "cProfit", "nodeId": "rev", "name": "Revenue", "role": "start" },
+          { "canvasId": "cProfit", "nodeId": "cogs", "name": "Cost of sales", "role": "subtract" },
+          { "canvasId": "cProfit", "nodeId": "gp", "name": "Gross profit", "role": "total" }
+        ] }
+      ],
+      "sliders": [
+        { "canvasId": "cProfit", "nodeId": "price", "name": "Price", "periods": { "mode": "all" }, "mode": "set", "min": 5, "max": 15, "step": 0.5 }
+      ]
+    }
+  ],
+  "sharedPeriods": { "periods": { "mode": "all" }, "period": 0 },
+  "colours": [{ "canvasId": "cProfit", "nodeId": "rev", "name": "Revenue", "colour": "#2563eb" }],
+  "commonScale": { "mode": "fixed", "min": 0, "max": 20000 }
+}

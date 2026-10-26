@@ -3667,7 +3667,7 @@ function setCalcNote(text){ const el = $('calcNote'); if(el) el.textContent = te
 // The boards (G3a: several, as tabs, each a view of the model). A board:
 //   { id, name, items: [bar | chart, …] (in the order shown), sliders: [slider, …], ownSliders }
 //   bar    { id, kind: 'bar', key, periods, wide, scale }
-//   chart  { id, kind: 'chart', wide, layout: 'columns' | 'lines' | 'flow' | 'scenarios' | 'tornado' | 'spider', scale, … } (G2; 04b-charts.js)
+//   chart  { id, kind: 'chart', wide, layout: 'columns' | 'lines' | 'flow' | 'free' | 'scenarios' | 'tornado' | 'spider', scale, … } (G2; 04b-charts.js)
 // scale: null for Auto, or { min, max } (04d-scale.js).
 //   slider { id, key, periods, mode: 'set' | 'shift', min, max, step, value, folded }
 // periods: { mode: 'all' } · { mode: 'one', p } · { mode: 'range', from, to } (from 0).
@@ -3780,6 +3780,7 @@ function cleanBoard(raw, dropped, version, sharedColours){
     const named = c && (isSensitivity(c) ? (c.output ? 1 : 0) + (Array.isArray(c.inputs) ? c.inputs.length : 0) : c.layout === 'flow' ? (Array.isArray(c.steps) ? c.steps.length : 0)
       : c.layout === 'scenarios' ? (Array.isArray(c.outputs) ? c.outputs.length : 0)
       : c.layout === 'lines' ? (Array.isArray(c.lines) ? c.lines.length : 0)
+      : c.layout === 'free' ? (Array.isArray(c.pieces) ? c.pieces.reduce((n, pc) => n + (pc && Array.isArray(pc.parts) ? pc.parts.length : 0), 0) : 0)
       : (Array.isArray(c.groups) ? c.groups.reduce((n, gr) => n + (gr && Array.isArray(gr.parts) ? gr.parts.length : 0), 0) : 0));
     if(!ch || (named > 0 && !chartKeys(ch).length)){ drop(); return null; }
     ch.wide = c.wide !== false;
@@ -3831,9 +3832,10 @@ function cleanBoards(raw){
 // (a chart of layout `lines`, 04b-charts.js); 11 the shared colours (`colours`, each
 // rectangle's chosen colour, 04e-colours.js; each bar, part, step and line still writes the
 // colour it shows); 12 the common scale (`commonScale`, and a bar's or chart's `ownScale`,
-// 04d-scale.js; each still writes the scale it shows). The template form, which carries none
+// 04d-scale.js; each still writes the scale it shows); 13 the Free chart (a chart of layout
+// `free`, 04f-free.js). The template form, which carries none
 // of these, stays version 2 (its widgets carry the chosen colours, as before 11).
-const BOARD_FILE_VERSION = 12;
+const BOARD_FILE_VERSION = 13;
 const TEMPLATE_BOARD_VERSION = 2;
 // shown: what the board's followers of the common scale show (shownCommonScale, 04d-scale.js),
 // written as their scale; left out, each writes its own.
@@ -4025,6 +4027,10 @@ function moveWidget(id, to){
 //            change from the one before (sc01 − Start, sc02 − sc01, …) — to the last scenario's
 //            number (End). `use`: the scenarios it goes through, in the Scenarios panel's
 //            order; null for every one (05f-scenarios.js).
+//   free     { id, layout: 'free', title, period, pieces: [piece] } (board file 13; 04f-free.js)
+//            Columns and waterfalls together in one period: pieces, each a stack of rectangles
+//            in a grid column, sitting on zero, on top of another piece, where another ends, or
+//            at a number.
 //   tornado / spider (step 18) { id, layout, title, output: key | null, period, steps,
 //            inputs: [{ key, by: 'percent' | 'amount', low, high, show }], colour, colour2 }
 //            What moves one output most, measured around where the sliders stand now: each input
@@ -4091,6 +4097,10 @@ function cleanChart(raw, rectFor, count, drop){
     const p = Math.round(Number(raw.period));
     return { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'scenarios', title, period: Number.isFinite(p) && p >= 0 && p < count ? p : 0, outputs: [...new Set(outputs)], use, colours: {} };
   }
+  if(raw.layout === 'free'){ // board file 13 (04f-free.js)
+    const read = cleanFreePieces(raw.pieces, rectFor, keep, drop);
+    return { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'free', title, period: periodOf(), pieces: read.pieces, notes: read.notes, colours };
+  }
   if(raw.layout === 'lines'){
     const lines = (Array.isArray(raw.lines) ? raw.lines : []).slice(0, CHART_LIMITS.lines).map(l => { const r = l && typeof l === 'object' ? rectFor(l) : null; return r ? keep(l, r).key : null; }).filter(Boolean);
     return { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'lines', title, periods: cleanPeriods(raw.periods, count), lines, colours };
@@ -4121,16 +4131,20 @@ function chartData(c, at){
     c.colour ? { colour: c.colour } : {}, c.colour2 ? { colour2: c.colour2 } : {});
   if(c.layout === 'scenarios') return Object.assign({ layout: 'scenarios', title: c.title, period: c.period, outputs: c.outputs.map(k => at(k)) }, c.use ? { scenarios: c.use.slice() } : {});
   if(c.layout === 'lines') return { layout: 'lines', title: c.title, periods: Object.assign({}, c.periods), lines: c.lines.map(k => withColour(k)) };
+  if(c.layout === 'free') return { layout: 'free', title: c.title, period: c.period, pieces: c.pieces.map(p => freePieceData(p, (k) => withColour(k))) };
   if(c.layout === 'flow') return { layout: 'flow', title: c.title, period: c.period, steps: c.steps.map(s => withColour(s.key, { role: s.role })) };
   return { layout: 'columns', title: c.title, periods: Object.assign({}, c.periods), check: c.check,
     groups: c.groups.map(g => ({ name: g.name, parts: g.parts.map(k => withColour(k)) })) };
 }
 
-// A new chart: columns with one group holding one calculated rectangle, or a flow with one step.
+// A new chart: columns with one group holding one calculated rectangle, a flow with one step,
+// or an empty Free chart.
 function addChart(layout){
   if(board.charts.length >= BOARD_LIMIT) return null;
   const first = model.rects.find(r => !r.input) || model.rects[0];
-  const c = layout === 'flow'
+  const c = layout === 'free'
+    ? { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'free', title: '', period: 0, pieces: [], notes: null, colours: {} }
+    : layout === 'flow'
     ? { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'flow', title: '', period: 0, steps: first ? [{ key: first.key, role: 'start' }] : [], colours: {} }
     : { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'columns', title: '', periods: { mode: 'all' }, groups: [{ name: '', parts: first ? [first.key] : [] }], check: false, colours: {} };
   board.items.push(c);
@@ -4139,7 +4153,7 @@ function addChart(layout){
 }
 
 // Every rectangle a chart shows.
-function chartKeys(c){ return isSensitivity(c) ? [c.output].concat(c.inputs.map(i => i.key)).filter(Boolean) : c.layout === 'flow' ? c.steps.map(s => s.key) : c.layout === 'scenarios' ? c.outputs.slice() : c.layout === 'lines' ? c.lines.slice() : c.groups.flatMap(g => g.parts); }
+function chartKeys(c){ return isSensitivity(c) ? [c.output].concat(c.inputs.map(i => i.key)).filter(Boolean) : c.layout === 'flow' ? c.steps.map(s => s.key) : c.layout === 'scenarios' ? c.outputs.slice() : c.layout === 'lines' ? c.lines.slice() : c.layout === 'free' ? c.pieces.flatMap(p => p.parts) : c.groups.flatMap(g => g.parts); }
 
 // What a lines chart shows in one calculation: per period, each line's result.
 function linesFigures(c, results){
@@ -4556,6 +4570,7 @@ function autoRange(w, results){
     periodsOf(w.periods).forEach(p => [resultOf(results, rect, p), resultOf(cmp, rect, p)].forEach(r => { if(!r.error) take(r.value); }));
   } else if(isSensitivity(w)) return null;
   else if(w.layout === 'flow') flowFigures(w, results).concat(flowFigures(w, cmp)).forEach(f => { if(!f.error){ take(f.from); take(f.to); } });
+  else if(w.layout === 'free') freeFigures(w, results).concat(freeFigures(w, cmp)).forEach(f => { if(f.parts){ take(f.top); take(f.bottom); take(f.base); } });
   else if(w.layout === 'lines') linesFigures(w, results).concat(linesFigures(w, cmp)).forEach(f => f.values.forEach(r => { if(!r.error) take(r.value); }));
   else if(w.layout === 'scenarios'){
     const memo = new Map();
@@ -4682,7 +4697,7 @@ function commonScaleChanged(){
 //
 // A rectangle's colour is the one someone chose (`rectColours`, kept in the board file's
 // `colours`), else an automatic one: the chart colours (PART_COLOURS) handed out in the order
-// rectangles first appear in Columns, Lines and Spider charts, board by board, chart by chart
+// rectangles first appear in Columns, Lines, Free and Spider charts, board by board, chart by chart
 // (so the first chart looks as each chart did on its own before), else none — a bar then has the
 // page's usual colour, a waterfall step its colour by direction (a step takes only a chosen
 // colour: its colour otherwise says up, down or total). The Tornado's Low and High, and the
@@ -4719,10 +4734,11 @@ function rectColoursData(){
   });
 }
 
-// The rectangles a chart colours one each, in its order (Columns, Lines, a Spider's inputs).
+// The rectangles a chart colours one each, in its order (Columns, Lines, Free, a Spider's inputs).
 function colouredKeys(c){
   if(c.layout === 'columns') return c.groups.flatMap(g => g.parts);
   if(c.layout === 'lines') return c.lines.slice();
+  if(c.layout === 'free') return c.pieces.flatMap(p => p.parts);
   if(c.layout === 'spider') return c.inputs.map(i => i.key);
   return [];
 }
@@ -4786,6 +4802,246 @@ function adoptWidgetColours(){
   }));
   if(any) forgetAutoColours();
   if(differ) notify(differ + ' rectangle' + (differ === 1 ? ' had' : 's had') + ' different colours in different bars or charts; each now has one colour everywhere, the first one.', 'info', 'colours');
+}
+// ============================================================
+// The Free chart (phase F1, docs/fmgraph-free-chart.md; board file 13): columns and waterfalls
+// together, in one period. A chart of layout `free` is made of pieces, each a stack of
+// rectangles (one rectangle: a plain bar) standing in a whole grid column and saying where it
+// sits:
+//   free { id, layout: 'free', title, period, pieces: [piece], notes }
+//   piece { id, name, column (0–39), sits: { on: 'zero' | 'top' | 'end' | 'level', of, value },
+//           minus, check (a piece's id, or null), parts: [key] }
+// - on zero: the bar stands on the axis; on top of another piece: it starts at that piece's
+//   highest point (its lowest, when that piece only goes down); where another piece ends: it
+//   starts at that piece's end (a waterfall step); at a number: it starts at `value`.
+// - minus: the piece shows its value with the sign turned round (a Flow's subtract step).
+// - check: the piece's total should equal that piece's end (✓ / ✗, `agree`).
+// - Two pieces share a column only when one rests on the other (through any chain of top / end).
+// A piece's value is the sum of its rectangles in the chart's period (turned round with minus);
+// its positive part goes up from where it sits, its negative part down; its end is where it
+// sits plus its value. `notes` (never saved) counts what reading the file put right: pieces in
+// a loop put on zero, pieces moved to a free column.
+// ============================================================
+const FREE_LIMITS = { pieces: 40, parts: 30, columns: 40, level: 1e9 };
+const FREE_SITS = ['zero', 'top', 'end', 'level'];
+let freePieceCount = 0;
+const newPieceId = () => 'q' + (++freePieceCount);
+
+// A number from a file (numbers as text too), cut to ±1e9; anything else 0.
+function cleanLevel(v){
+  const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN;
+  return Number.isFinite(n) ? Math.max(-FREE_LIMITS.level, Math.min(FREE_LIMITS.level, n)) : 0;
+}
+
+// The piece p rests on (its `of`), or null.
+function restsOn(c, p){
+  if(p.sits.on !== 'top' && p.sits.on !== 'end') return null;
+  return c.pieces.find(q => q.id === p.sits.of) || null;
+}
+// Whether a rests on b, through any chain of pieces.
+function restsOnChain(c, a, b){
+  const seen = new Set();
+  for(let q = restsOn(c, a); q && !seen.has(q.id); q = restsOn(c, q)){
+    if(q === b) return true;
+    seen.add(q.id);
+  }
+  return false;
+}
+const freeRelated = (c, a, b) => restsOnChain(c, a, b) || restsOnChain(c, b, a);
+// Whether piece p may stand in column col: every other piece there rests on it, or it on them.
+function fitsColumn(c, p, col){
+  return c.pieces.every(q => q === p || q.column !== col || freeRelated(c, p, q));
+}
+// Whether p resting on piece `of` would make a loop.
+function wouldLoop(c, p, ofId){
+  const of = c.pieces.find(q => q.id === ofId);
+  return !of || of === p || restsOnChain(c, of, p);
+}
+
+// Rule 4 (the owner's choice, 27 October 2026): a piece standing in a column with one it isn't
+// resting on (nor it on this one) moves to the next free column, the later piece in the list
+// moving. Returns how many moved.
+function settleColumns(c){
+  let moved = 0;
+  c.pieces.forEach((p, i) => {
+    const earlier = c.pieces.slice(0, i);
+    const fits = (col) => earlier.every(q => q.column !== col || freeRelated(c, p, q));
+    if(fits(p.column)) return;
+    for(let k = 1; k < FREE_LIMITS.columns; k++){
+      const col = (p.column + k) % FREE_LIMITS.columns;
+      if(fits(col)){ p.column = col; moved++; return; }
+    }
+  });
+  return moved;
+}
+// The next column no piece stands in (after the last one used), for a new piece.
+function nextFreeColumn(c){
+  const used = new Set(c.pieces.map(p => p.column));
+  const last = c.pieces.length ? Math.max(...c.pieces.map(p => p.column)) : -1;
+  for(let k = 1; k <= FREE_LIMITS.columns; k++){
+    const col = (last + k) % FREE_LIMITS.columns;
+    if(!used.has(col)) return col;
+  }
+  return 0;
+}
+
+// The pieces of a Free chart read from a file (or storage). rectFor finds a rectangle; keep
+// notes a part's colour. Rectangles not in the model are left out (counted through drop).
+function cleanFreePieces(rawPieces, rectFor, keep, drop){
+  const c = { pieces: [] };
+  const fileIds = new Map();
+  (Array.isArray(rawPieces) ? rawPieces : []).slice(0, FREE_LIMITS.pieces).forEach(raw => {
+    if(!raw || typeof raw !== 'object' || Array.isArray(raw)) return;
+    const col = Math.round(Number(raw.column));
+    const sits = raw.sits && typeof raw.sits === 'object' ? raw.sits : {};
+    const on = FREE_SITS.includes(sits.on) ? sits.on : 'zero';
+    const parts = [];
+    (Array.isArray(raw.parts) ? raw.parts : []).slice(0, FREE_LIMITS.parts).forEach(x => {
+      const r = x && typeof x === 'object' ? rectFor(x) : null;
+      if(!r){ if(drop) drop(); return; }
+      parts.push(keep(x, r).key);
+    });
+    const p = { id: newPieceId(), name: cleanText(raw.name, CHART_LIMITS.name), column: Number.isFinite(col) && col >= 0 && col < FREE_LIMITS.columns ? col : -1,
+      sits: on === 'level' ? { on, value: cleanLevel(sits.value) } : { on }, minus: raw.minus === true, check: null, parts,
+      fileOf: typeof sits.of === 'string' ? sits.of : null, fileCheck: typeof raw.check === 'string' ? raw.check : null };
+    if(typeof raw.id === 'string' && !fileIds.has(raw.id)) fileIds.set(raw.id, p.id);
+    c.pieces.push(p);
+  });
+  // `of` and `check` naming no piece (or the piece itself) read as on zero and none.
+  c.pieces.forEach(p => {
+    if(p.sits.on === 'top' || p.sits.on === 'end'){
+      const of = fileIds.get(p.fileOf);
+      if(of && of !== p.id) p.sits.of = of; else p.sits = { on: 'zero' };
+    }
+    const chk = fileIds.get(p.fileCheck);
+    p.check = chk && chk !== p.id ? chk : null;
+    delete p.fileOf; delete p.fileCheck;
+  });
+  // A loop (A on top of B, B where A ends): the pieces in it go on zero, and are counted.
+  let loops = 0;
+  c.pieces.forEach(p => {
+    const path = [];
+    for(let q = p; q; q = restsOn(c, q)){
+      const at = path.indexOf(q);
+      if(at >= 0){ path.slice(at).forEach(x => { x.sits = { on: 'zero' }; loops++; }); break; }
+      path.push(q);
+    }
+  });
+  // Rule 4 for the pieces with a column; then a piece with none takes the next free one.
+  const moved = settleColumns(c);
+  c.pieces.forEach(p => { if(p.column < 0) p.column = nextFreeColumn({ pieces: c.pieces.filter(x => x.column >= 0) }); });
+  return { pieces: c.pieces, notes: { loops, moved } };
+}
+
+// A piece's file form; partOf(key) gives a rectangle's { canvasId, nodeId, name } with its colour.
+function freePieceData(p, partOf){
+  const sits = p.sits.on === 'level' ? { on: 'level', value: p.sits.value } : p.sits.of ? { on: p.sits.on, of: p.sits.of } : { on: 'zero' };
+  return Object.assign({ id: p.id, name: p.name, column: p.column, sits }, p.minus ? { minus: true } : {}, p.check ? { check: p.check } : {},
+    { parts: p.parts.map(partOf) });
+}
+
+// A piece's name as shown: its own, else its one rectangle's, else "Piece n"; "−" with Minus.
+function pieceLabel(c, p){
+  const name = p.name || (p.parts.length === 1 ? partLabel(p.parts[0]) : 'Piece ' + (c.pieces.indexOf(p) + 1));
+  return (p.minus ? '−' : '') + name;
+}
+
+// What a Free chart shows in one calculation, a figure per piece in the list's order:
+// { value, up, down, base, top, bottom, end, parts: [{ value, from, to }], check } — or
+// { error: code, part } when one of its rectangles can't be worked out, or { blocked: name }
+// when the piece it rests on can't be drawn. check: { agree, a (this piece's total), b (that
+// piece's end) }, { error: true }, or null.
+function freeFigures(c, results){
+  const figs = new Map(), busy = new Set();
+  const figure = (p) => {
+    if(figs.has(p.id)) return figs.get(p.id);
+    if(busy.has(p.id)) return { value: 0, up: 0, down: 0, base: 0, top: 0, bottom: 0, end: 0, parts: [] }; // never: loops are put right when read
+    busy.add(p.id);
+    let f;
+    const rs = p.parts.map(key => resultOf(results, model.byKey.get(key), c.period));
+    const bad = rs.findIndex(r => r.error);
+    if(bad >= 0) f = { error: rs[bad].error, part: bad };
+    else {
+      const vals = rs.map(r => p.minus ? -r.value : r.value);
+      const up = vals.reduce((s, v) => s + Math.max(0, v), 0), down = vals.reduce((s, v) => s + Math.min(0, v), 0);
+      const value = vals.reduce((s, v) => s + v, 0);
+      let base = 0;
+      const of = restsOn(c, p);
+      if(p.sits.on === 'level') base = p.sits.value;
+      else if(of){
+        const o = figure(of);
+        if(o.error !== undefined || o.blocked !== undefined) f = { blocked: pieceLabel(c, of), why: o.error !== undefined ? 'error' : 'blocked' };
+        else base = p.sits.on === 'end' ? o.end : (o.up > 0 || o.down === 0 ? o.top : o.bottom);
+      }
+      if(!f){
+        let u = base, d = base;
+        const parts = vals.map(v => { const from = v >= 0 ? u : d, to = from + v; if(v >= 0) u = to; else d = to; return { value: v, from, to }; });
+        f = { value, up, down, base, top: base + up, bottom: base + down, end: base + value, parts };
+      }
+    }
+    busy.delete(p.id);
+    figs.set(p.id, f);
+    return f;
+  };
+  return c.pieces.map(p => {
+    const f = Object.assign({}, figure(p));
+    const other = p.check ? c.pieces.find(q => q.id === p.check) : null;
+    f.check = null;
+    if(other){
+      const o = figure(other);
+      f.check = f.value === undefined || o.end === undefined ? { error: true } : { agree: agree(f.value, o.end), a: f.value, b: o.end };
+    }
+    return f;
+  });
+}
+
+// A Columns or Flow chart's rectangles as pieces (+ From chart…, and switching to Free),
+// starting at column `from`: a Columns chart's groups on zero (with its check, each later group
+// should equal the first); a Flow's steps — start and total on zero, add where the step before
+// ends, subtract the same with Minus, total should equal where the step before ends.
+function piecesFromChart(src, from){
+  const out = [];
+  if(src.layout === 'columns'){
+    src.groups.forEach(g => out.push({ id: newPieceId(), name: g.name, column: from + out.length, sits: { on: 'zero' }, minus: false, check: null, parts: g.parts.slice(0, FREE_LIMITS.parts) }));
+    if(src.check) out.slice(1).forEach(p => { if(p.parts.length && out[0].parts.length) p.check = out[0].id; });
+  } else if(src.layout === 'flow'){
+    src.steps.forEach((s, i) => {
+      const prev = out[i - 1];
+      const p = { id: newPieceId(), name: '', column: from + i, sits: { on: 'zero' }, minus: false, check: null, parts: [s.key] };
+      if(prev && (s.role === 'add' || s.role === 'subtract')) p.sits = { on: 'end', of: prev.id };
+      if(s.role === 'subtract') p.minus = true;
+      if(s.role === 'total' && prev) p.check = prev.id;
+      out.push(p);
+    });
+  }
+  return out;
+}
+// Adds a chart's pieces to a Free chart, after its last column; at most 40 pieces in all.
+// Returns how many were left out.
+function addPiecesFrom(c, src){
+  const from = c.pieces.length ? Math.max(...c.pieces.map(p => p.column)) + 1 : 0;
+  const all = piecesFromChart(src, from);
+  const room = FREE_LIMITS.pieces - c.pieces.length;
+  const taken = all.slice(0, Math.max(0, room));
+  const ids = new Set(taken.map(p => p.id));
+  taken.forEach(p => {
+    p.column = Math.min(p.column, FREE_LIMITS.columns - 1);
+    if(p.sits.of && !ids.has(p.sits.of)) p.sits = { on: 'zero' };
+    if(p.check && !ids.has(p.check)) p.check = null;
+  });
+  c.pieces.push(...taken);
+  settleColumns(c);
+  return all.length - taken.length;
+}
+
+// Removes a piece; pieces resting on it go on zero, checks against it go.
+function removePiece(c, p){
+  c.pieces = c.pieces.filter(q => q !== p);
+  c.pieces.forEach(q => {
+    if(q.sits.of === p.id) q.sits = { on: 'zero' };
+    if(q.check === p.id) q.check = null;
+  });
+  settleColumns(c);
 }
 // ============================================================
 // Drawing the board. renderBoard() builds every widget; updateValues() redraws only the
@@ -5239,14 +5495,14 @@ function chartWidget(c){
   const head = make('div', 'widget-head');
   const title = make('input', 'chart-title');
   title.type = 'text';
-  title.placeholder = c.layout === 'columns' || c.layout === 'lines' || isSensitivity(c) ? 'Chart title' : 'Waterfall title';
+  title.placeholder = c.layout === 'columns' || c.layout === 'lines' || c.layout === 'free' || isSensitivity(c) ? 'Chart title' : 'Waterfall title';
   title.value = c.title;
   title.maxLength = CHART_LIMITS.title;
   title.setAttribute('aria-label', 'Chart title');
   title.addEventListener('change', () => { c.title = cleanText(title.value, CHART_LIMITS.title); saveBoardSoon(); });
   const layout = make('select');
   layout.setAttribute('aria-label', 'Kind of chart');
-  [['columns', 'Columns'], ['lines', 'Lines'], ['flow', 'Waterfall'], ['scenarios', 'Scenario waterfall'], ['tornado', 'Tornado'], ['spider', 'Spider']].forEach(([v, t]) => { const o = make('option', null, t); o.value = v; if(c.layout === v) o.selected = true; layout.appendChild(o); });
+  [['columns', 'Columns'], ['lines', 'Lines'], ['flow', 'Waterfall'], ['free', 'Free'], ['scenarios', 'Scenario waterfall'], ['tornado', 'Tornado'], ['spider', 'Spider']].forEach(([v, t]) => { const o = make('option', null, t); o.value = v; if(c.layout === v) o.selected = true; layout.appendChild(o); });
   layout.addEventListener('change', () => { switchLayout(c, layout.value); saveBoardSoon(); renderBoard(); });
   head.append(title, layout, removeButton(c.id, 'chart'));
   w.append(head, make('div', 'bar-chart-host'), make('div', 'chart-key'), make('ul', 'bar-errors'));
@@ -5258,14 +5514,31 @@ function chartWidget(c){
 // added), every step a part of one group, a line each (once each, at most 12; between Columns
 // and Lines the periods are kept, the groups' parts flattened into lines and the lines one group), and a scenario waterfall's outputs the first six of
 // them (calculated rectangles first). A Tornado or Spider measures the first calculated one,
-// moving every input that reaches it (step 18); between the two they keep everything.
+// moving every input that reaches it (step 18); between the two they keep everything. A Columns
+// or Waterfall chart becomes a Free chart as + From chart… copies it (04f-free.js), any other
+// its rectangles as one piece; a Free chart becomes Columns with a group per piece (at most 12).
 function switchLayout(c, layout){
   if(layout === c.layout) return;
   if(isSensitivity(c) && SENSITIVITY_LAYOUTS.includes(layout)){ c.layout = layout; return; }
   const keys = chartKeys(c);
   const period = usesPeriods(c) ? (periodsOf(c.periods)[0] || 0) : c.period;
   const periods = usesPeriods(c) ? Object.assign({}, c.periods) : { mode: 'all' };
-  ['groups', 'periods', 'check', 'steps', 'period', 'outputs', 'use', 'output', 'inputs', 'colour', 'colour2', 'lines'].forEach(k => { delete c[k]; });
+  const pieces = layout === 'free'
+    ? (c.layout === 'columns' || c.layout === 'flow' ? piecesFromChart(c, 0)
+      : keys.length ? [{ id: newPieceId(), name: '', column: 0, sits: { on: 'zero' }, minus: false, check: null, parts: [...new Set(keys)].slice(0, FREE_LIMITS.parts) }] : [])
+    : null;
+  const groups = c.layout === 'free' && layout === 'columns' ? c.pieces.slice(0, CHART_LIMITS.groups).map(p => ({ name: p.name, parts: p.parts.slice() })) : null;
+  ['groups', 'periods', 'check', 'steps', 'period', 'outputs', 'use', 'output', 'inputs', 'colour', 'colour2', 'lines', 'pieces', 'notes'].forEach(k => { delete c[k]; });
+  if(pieces){
+    Object.assign(c, { layout: 'free', period, pieces: pieces.slice(0, FREE_LIMITS.pieces), notes: null });
+    c.pieces.forEach(p => { p.column = Math.min(p.column, FREE_LIMITS.columns - 1); });
+    settleColumns(c);
+    return;
+  }
+  if(groups){
+    Object.assign(c, { layout: 'columns', periods: { mode: 'one', p: period }, groups: groups.length ? groups : [{ name: '', parts: [] }], check: false });
+    return;
+  }
   if(layout === 'lines') Object.assign(c, { layout: 'lines', periods, lines: [...new Set(keys)].slice(0, CHART_LIMITS.lines) });
   else if(layout === 'flow') Object.assign(c, { layout: 'flow', period, steps: keys.map((key, i) => ({ key, role: i === 0 ? 'start' : 'add' })) });
   else if(layout === 'scenarios'){
@@ -5369,6 +5642,7 @@ function chartEditorParts(c){
     box.appendChild(clear);
     return box;
   }
+  if(c.layout === 'free'){ freeEditor(c, box, periodRow(), changed); return box; } // 05n-free-chart.js
   if(c.layout === 'scenarios'){
     box.appendChild(periodRow());
     box.appendChild(make('div', 'edit-head', 'Outputs'));
@@ -5511,6 +5785,7 @@ function drawChart(el, c, results){
   host.textContent = ''; key.textContent = ''; list.textContent = '';
   const problems = [];
   if(c.layout === 'flow') host.appendChild(drawFlow(c, results, problems));
+  else if(c.layout === 'free') host.appendChild(drawFree(c, results, problems, key)); // 05n-free-chart.js
   else if(c.layout === 'scenarios') host.appendChild(drawScenarioFlows(c, problems));
   else if(isSensitivity(c)) host.appendChild(drawSensitivity(c, problems, key));
   else if(c.layout === 'lines') host.appendChild(drawLines(c, results, problems, key));
@@ -7399,7 +7674,7 @@ function openChartPeek(c){
   peekFor = c;
   peekOpenedAt = performance.now();
   const p = usesPeriods(c) ? (periodsOf(c.periods)[0] || 0) : c.period;
-  const kind = { columns: 'Columns', lines: 'Lines', flow: 'Waterfall', scenarios: 'Scenario waterfall', tornado: 'Tornado', spider: 'Spider' }[c.layout] || 'Chart';
+  const kind = { columns: 'Columns', lines: 'Lines', flow: 'Waterfall', free: 'Free', scenarios: 'Scenario waterfall', tornado: 'Tornado', spider: 'Spider' }[c.layout] || 'Chart';
   $('peekTitle').textContent = c.title || kind;
   $('peekWhere').textContent = kind + ' · ' + model.periods[p];
   $('peekChart').textContent = '';
@@ -7850,7 +8125,7 @@ async function drawPicture(title, widgets){
   return new Promise((resolve, reject) => canvas.toBlob(b => b ? resolve(b) : reject(new Error('The picture could not be made.')), 'image/png'));
 }
 
-const widgetName = (w) => w.kind === 'chart' ? (w.title || ({ columns: 'Columns', lines: 'Lines', flow: 'Waterfall', scenarios: 'Scenario waterfall', tornado: 'Tornado', spider: 'Spider' }[w.layout] || 'Chart')) : model.byKey.get(w.key).name;
+const widgetName = (w) => w.kind === 'chart' ? (w.title || ({ columns: 'Columns', lines: 'Lines', flow: 'Waterfall', free: 'Free', scenarios: 'Scenario waterfall', tornado: 'Tornado', spider: 'Spider' }[w.layout] || 'Chart')) : model.byKey.get(w.key).name;
 
 async function sharePicture(title, widgets, fileName){
   try{
@@ -8775,6 +9050,271 @@ document.addEventListener('keydown', (ev) => {
   stopPlay();
 }, true);
 // ============================================================
+// Drawing and editing the Free chart (phase F1; the data is 04f-free.js). Each piece is drawn
+// as a bar or a stack in its grid column, its name under the column, its total above it (with
+// the difference against A, or the model's own numbers), a dashed connector from the piece it
+// rests on, and its check's ✓ / ✗. Edit chart lists the pieces: name, Sits, the column (← →),
+// Minus, Should equal…, the rectangles; + Piece and + From chart….
+// ============================================================
+
+// The key's items, worked out before anything is drawn (so which ones show can be chosen in
+// one place later): per piece, its label and its rectangles with their colours. A piece that is
+// just its one rectangle (named after it, or not named, and without Minus) has no label: label null.
+function freeKeyItems(c, colours){
+  return c.pieces.map(p => {
+    const items = p.parts.map(k => ({ key: k, name: partLabel(k), colour: colours.get(k) }));
+    const plain = items.length === 1 && !p.minus && (!p.name || p.name === items[0].name);
+    return { label: plain ? null : pieceLabel(c, p), items };
+  }).filter(g => g.items.length);
+}
+// Draws key groups ({ label, items }) into the key, a line each; the groups without a label
+// share one line. A swatch per rectangle picks its colour, once each.
+function drawKeyGroups(key, groups){
+  const seen = new Set();
+  const item = (it) => {
+    const el = make('label', 'key-item');
+    const sw = colourPicker(it.colour, 'Colour of ' + it.name, pickRectColour(it.key), automaticColour(it.key, PART_COLOURS[0], redrawColours));
+    sw.classList.add('key-swatch');
+    el.append(sw, document.createTextNode(it.name));
+    return el;
+  };
+  const labelled = groups.filter(g => g.label !== null), plain = groups.filter(g => g.label === null);
+  labelled.forEach(g => {
+    const line = make('div', 'key-line');
+    line.appendChild(make('span', 'key-group', g.label + ':'));
+    g.items.forEach(it => line.appendChild(item(it)));
+    key.appendChild(line);
+  });
+  const rest = plain.flatMap(g => g.items).filter(it => !seen.has(it.key) && seen.add(it.key));
+  if(rest.length){
+    const line = make('div', 'key-line');
+    rest.forEach(it => line.appendChild(item(it)));
+    key.appendChild(line);
+  }
+}
+
+function drawFree(c, results, problems, key){
+  const now = freeFigures(c, results), was = freeFigures(c, compareResults()); // A, or the model's own numbers
+  const colours = partColours(c);
+  const drawn = (f) => !!f.parts;
+  const ncols = Math.max(1, ...c.pieces.map(p => p.column + 1));
+  const labels = ncols <= 16;
+  let lo = 0, hi = 0;
+  now.concat(was).forEach(f => { if(drawn(f)){ lo = Math.min(lo, f.bottom, f.base); hi = Math.max(hi, f.top, f.base); } });
+  if(hi === lo) hi = lo + 1;
+  const sc = scaleFor(c, lo, hi); // Auto, the common scale, or the chart's fixed scale (04d-scale.js)
+  const checked = now.some(f => f.check);
+  const W = 560, top = 18 + (labels ? 30 : 0) + (checked ? 4 : 0), bottom = 36, H = 170 + top + bottom;
+  const plotH = H - top - bottom;
+  const y = scaleY(top, plotH, sc);
+  const slot = (W - 8) / ncols, bw = Math.max(3, Math.min(46, slot * 0.62));
+  const cxOf = (col) => 4 + slot * col + slot / 2;
+  const chart = svg('svg', { class: 'bar-chart free-chart' + (sc.fixed ? ' fixed-scale' : ''), viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'data-layout': 'free' });
+  chart.setAttribute('aria-label', (c.title || 'Free') + ', ' + model.periods[c.period]);
+  drawScaleAxis(chart, sc, y, W, top, plotH);
+  if(!c.pieces.length) problems.push('Add a piece to start: Edit chart, then + Piece or + From chart….');
+  c.pieces.forEach((p, i) => {
+    const f = now[i], b = was[i], label = pieceLabel(c, p);
+    const cx = cxOf(p.column), x = cx - bw / 2;
+    const g = svg('g', { class: 'fr-piece', 'data-piece': i, 'data-column': p.column });
+    if(f.error !== undefined){
+      g.appendChild(svg('rect', { class: 'b-err', x, y: top, width: bw, height: plotH }));
+      g.appendChild(svg('text', { class: 't-err', x: cx, y: top + plotH / 2, 'text-anchor': 'middle' }, '!'));
+      problems.push(label + ', ' + partLabel(p.parts[f.part]) + ': ' + errorText(f.error));
+    } else if(f.blocked !== undefined){
+      const t = svg('text', { class: 't-err', x: cx, y: top + plotH / 2, 'text-anchor': 'middle' }, '!');
+      g.appendChild(t);
+      problems.push(label + ' is not drawn: it rests on ' + f.blocked + ', which ' + (f.why === 'error' ? 'has an error' : 'can\'t be drawn either') + '.');
+    } else {
+      // The dashed connector from the piece it rests on, when that one stands in another column.
+      const of = restsOn(c, p), fo = of ? now[c.pieces.indexOf(of)] : null;
+      if(of && fo && drawn(fo) && of.column !== p.column){
+        const x1 = cxOf(of.column) + (of.column < p.column ? bw / 2 : -bw / 2), x2 = of.column < p.column ? x : x + bw;
+        g.appendChild(svg('line', { class: 'f-link', x1, x2, y1: y(f.base), y2: y(f.base) }));
+      }
+      f.parts.forEach((pt, pi) => {
+        const k = p.parts[pi];
+        const rect = animKey(svg('rect', { class: 'c-part', x, y: Math.min(y(pt.from), y(pt.to)), width: bw, height: Math.max(pt.value === 0 ? 0 : 1, Math.abs(y(pt.to) - y(pt.from))), fill: colours.get(k) }), c.id + '|' + p.id + '|' + pi);
+        const before = drawn(b) ? b.parts[pi] : null;
+        const diff = before ? fmtDiff(pt.value, before.value) : '';
+        rect.appendChild(svg('title', {}, label + ' · ' + partLabel(k) + ', ' + model.periods[c.period] + ': ' + fmtNum(pt.value) + (diff ? ' — was ' + fmtNum(before.value) + ', ' + diff : '')));
+        g.appendChild(rect);
+      });
+      drawOverMarks(g, sc, cx, top, plotH, f.top, f.bottom);
+      if(drawn(b) && (!agree(b.top, f.top) || !agree(b.bottom, f.bottom))){
+        g.appendChild(svg('rect', { class: 'b-base', x, y: y(b.top), width: bw, height: Math.max(1, y(b.bottom) - y(b.top)) }));
+      }
+      if(labels){
+        const diff = drawn(b) ? fmtDiff(f.value, b.value) : '';
+        const topY = y(f.top);
+        g.appendChild(svg('text', { class: 't-value', x: cx, y: topY - 4, 'text-anchor': 'middle' }, fmtNum(f.value)));
+        if(diff) g.appendChild(svg('text', { class: 't-diff ' + (f.value > b.value ? 'up' : 'down'), x: cx, y: topY - 17, 'text-anchor': 'middle' }, diff.split(' ')[0]));
+      }
+    }
+    if(f.check){
+      const other = c.pieces.find(q => q.id === p.check), otherLabel = other ? pieceLabel(c, other) : '?';
+      const mark = f.check.error ? '?' : f.check.agree ? '✓' : '✗';
+      const t = svg('text', { class: 't-check ' + (f.check.agree ? 'ok' : 'bad'), x: cx, y: 13, 'text-anchor': 'middle' }, mark);
+      t.appendChild(svg('title', {}, f.check.error ? 'Can\'t check: a rectangle couldn\'t be worked out'
+        : f.check.agree ? label + ' equals where ' + otherLabel + ' ends' : label + ' is ' + fmtNum(f.check.a) + '; ' + otherLabel + ' ends at ' + fmtNum(f.check.b)));
+      g.appendChild(t);
+      if(!f.check.error && !f.check.agree) problems.push(label + ' should equal ' + otherLabel + ': it is ' + fmtNum(f.check.a) + ', and ' + otherLabel + ' ends at ' + fmtNum(f.check.b) + '.');
+    }
+    chart.appendChild(g);
+  });
+  // Each column's names under it, shortened to fit (in full when pointed at).
+  const room = Math.max(3, Math.floor(slot / 6.2));
+  [...new Set(c.pieces.map(p => p.column))].forEach(col => {
+    const name = c.pieces.filter(p => p.column === col).map(p => pieceLabel(c, p)).join(' / ');
+    const t = svg('text', { class: 't-period', x: cxOf(col), y: H - 20, 'text-anchor': 'middle' }, name.length > room ? name.slice(0, room - 1) + '…' : name);
+    t.appendChild(svg('title', {}, name));
+    chart.appendChild(t);
+  });
+  chart.appendChild(svg('text', { class: 't-period', x: W / 2, y: H - 4, 'text-anchor': 'middle' }, model.periods[c.period]));
+  // What reading the file put right (never saved: the file is written as it is now).
+  const n = c.notes || {};
+  if(n.loops) problems.push(n.loops + ' piece' + (n.loops === 1 ? ' was' : 's were') + ' in a loop (resting on each other) and now sit' + (n.loops === 1 ? 's' : '') + ' on zero.');
+  if(n.moved) problems.push(n.moved + ' piece' + (n.moved === 1 ? '' : 's') + ' moved to a free column: two pieces share a column only when one rests on the other.');
+  drawKeyGroups(key, freeKeyItems(c, colours));
+  raiseScaleLabels(chart);
+  return chart;
+}
+
+// Edit chart's list of pieces (box: the editor; periodRow: its "In" period row).
+function freeEditor(c, box, periodRow, changed){
+  box.appendChild(periodRow);
+  box.appendChild(make('div', 'edit-head', 'Pieces'));
+  if(!c.pieces.length) box.appendChild(make('p', 'empty-note', 'None yet: + Piece adds one, or + From chart… copies a Columns or Waterfall chart.'));
+  const firstCalc = () => (model.rects.find(r => !r.input) || model.rects[0]).key;
+  const button = (cls, text, label, fn, off) => {
+    const x = make('button', cls, text);
+    x.type = 'button';
+    if(label){ x.title = label; x.setAttribute('aria-label', label); }
+    x.disabled = !!off;
+    x.addEventListener('click', fn);
+    return x;
+  };
+  c.pieces.forEach((p, i) => {
+    const set = make('fieldset', 'group-edit piece-edit');
+    set.dataset.piece = String(i);
+    const head = make('div', 'edit-row piece-head');
+    const name = make('input', 'group-name piece-name');
+    name.type = 'text';
+    name.placeholder = pieceLabel(c, Object.assign({}, p, { name: '', minus: false }));
+    name.value = p.name;
+    name.maxLength = CHART_LIMITS.name;
+    name.setAttribute('aria-label', 'Piece name');
+    name.addEventListener('change', () => { p.name = cleanText(name.value, CHART_LIMITS.name); saveBoardSoon(); updateValues(); });
+    // Sits: on zero, on top of another piece, where another ends, at a number.
+    const sits = make('select', 'piece-sits');
+    sits.setAttribute('aria-label', 'Sits');
+    const option = (value, text) => { const o = make('option', null, text); o.value = value; sits.appendChild(o); };
+    option('zero', 'On zero');
+    c.pieces.forEach(q => { if(q !== p) option('top:' + q.id, 'On top of ' + pieceLabel(c, q)); });
+    c.pieces.forEach(q => { if(q !== p) option('end:' + q.id, 'Where ' + pieceLabel(c, q) + ' ends'); });
+    option('level', 'At a number');
+    sits.value = p.sits.on === 'level' ? 'level' : p.sits.of ? p.sits.on + ':' + p.sits.of : 'zero';
+    sits.addEventListener('change', () => {
+      const v = sits.value;
+      if(v === 'zero') p.sits = { on: 'zero' };
+      else if(v === 'level') p.sits = { on: 'level', value: 0 };
+      else {
+        const [on, of] = [v.slice(0, v.indexOf(':')), v.slice(v.indexOf(':') + 1)];
+        if(wouldLoop(c, p, of)){
+          const q = c.pieces.find(x => x.id === of);
+          notify('That would make a loop: ' + (q ? pieceLabel(c, q) : 'that piece') + ' already rests on ' + pieceLabel(c, p) + '.', 'err');
+          renderBoard();
+          return;
+        }
+        p.sits = { on, of };
+        // On top of another piece: into its column, as a second stack on the first.
+        const q = c.pieces.find(x => x.id === of);
+        if(on === 'top' && q && fitsColumn(c, p, q.column)) p.column = q.column;
+      }
+      settleColumns(c);
+      changed();
+    });
+    head.append(name, make('span', null, 'Sits'), sits);
+    if(p.sits.on === 'level'){
+      const level = make('input', 'piece-level');
+      level.type = 'number';
+      level.value = String(p.sits.value);
+      level.setAttribute('aria-label', 'Sits at');
+      level.addEventListener('change', () => { p.sits = { on: 'level', value: cleanLevel(level.value) }; changed(); });
+      head.appendChild(level);
+    }
+    // The column: ← → to the next one it may stand in.
+    const step = (dir) => { for(let col = p.column + dir; col >= 0 && col < FREE_LIMITS.columns; col += dir) if(fitsColumn(c, p, col)) return col; return null; };
+    const moveTo = (col) => () => { if(col === null) return; p.column = col; changed(); };
+    const cols = make('span', 'row-buttons piece-columns');
+    cols.append(button('mini piece-left', '←', 'Column to the left', moveTo(step(-1)), step(-1) === null),
+      make('span', 'piece-column', 'Column ' + (p.column + 1)),
+      button('mini piece-right', '→', 'Column to the right', moveTo(step(1)), step(1) === null),
+      button('mini piece-remove', '×', 'Remove this piece', () => { removePiece(c, p); changed(); }));
+    head.appendChild(cols);
+    set.appendChild(head);
+    const more = make('div', 'edit-row piece-more');
+    const minusLabel = make('label', 'piece-minus-label');
+    const minus = make('input', 'piece-minus');
+    minus.type = 'checkbox';
+    minus.checked = p.minus;
+    minus.addEventListener('change', () => { p.minus = minus.checked; changed(); });
+    minusLabel.append(minus, document.createTextNode(' Minus'));
+    const check = make('select', 'piece-check');
+    check.setAttribute('aria-label', 'Should equal');
+    const none = make('option', null, 'Nothing');
+    none.value = '';
+    check.appendChild(none);
+    c.pieces.forEach(q => { if(q !== p){ const o = make('option', null, 'Where ' + pieceLabel(c, q) + ' ends'); o.value = q.id; check.appendChild(o); } });
+    check.value = p.check || '';
+    check.addEventListener('change', () => { p.check = check.value || null; changed(); });
+    more.append(minusLabel, make('span', null, 'Should equal'), check);
+    set.appendChild(more);
+    p.parts.forEach((k, pi) => {
+      const r = make('div', 'edit-row part-row');
+      const rs = rectSelect(k, false);
+      rs.setAttribute('aria-label', 'Rectangle ' + (pi + 1) + ' of ' + pieceLabel(c, p));
+      rs.addEventListener('change', () => { p.parts[pi] = rs.value; changed(); });
+      const b = make('span', 'row-buttons');
+      b.append(button('mini', '↑', 'Move up', () => { [p.parts[pi - 1], p.parts[pi]] = [p.parts[pi], p.parts[pi - 1]]; changed(); }, pi === 0),
+        button('mini', '↓', 'Move down', () => { [p.parts[pi + 1], p.parts[pi]] = [p.parts[pi], p.parts[pi + 1]]; changed(); }, pi === p.parts.length - 1),
+        button('mini', '×', 'Remove', () => { p.parts.splice(pi, 1); changed(); }));
+      r.append(rs, b);
+      set.appendChild(r);
+    });
+    set.appendChild(button('link-btn add-piece-part', '+ Rectangle', null, () => { p.parts.push(firstCalc()); changed(); }, p.parts.length >= FREE_LIMITS.parts));
+    box.appendChild(set);
+  });
+  const add = button('link-btn add-piece', '+ Piece', null, () => {
+    c.pieces.push({ id: newPieceId(), name: '', column: nextFreeColumn(c), sits: { on: 'zero' }, minus: false, check: null, parts: [firstCalc()] });
+    chartsEditing.add(c.id);
+    changed();
+  }, c.pieces.length >= FREE_LIMITS.pieces);
+  box.appendChild(add);
+  // + From chart…: another Columns or Waterfall chart on this board, copied in as pieces.
+  const sources = board.charts.filter(x => x !== c && (x.layout === 'columns' || x.layout === 'flow'));
+  const from = make('select', 'piece-from');
+  from.setAttribute('aria-label', 'Copy pieces from a chart');
+  const head = make('option', null, '+ From chart…');
+  head.value = '';
+  from.appendChild(head);
+  sources.forEach((x, i) => {
+    const o = make('option', null, (x.title || (x.layout === 'flow' ? 'Waterfall' : 'Columns')) + ' (' + (x.layout === 'flow' ? 'Waterfall' : 'Columns') + ')');
+    o.value = String(i);
+    from.appendChild(o);
+  });
+  from.disabled = !sources.length || c.pieces.length >= FREE_LIMITS.pieces;
+  from.addEventListener('change', () => {
+    const src = sources[Number(from.value)];
+    if(!src) return;
+    const left = addPiecesFrom(c, src);
+    if(left) notify(left + ' piece' + (left === 1 ? '' : 's') + ' left out: a Free chart holds at most ' + FREE_LIMITS.pieces + '.', 'info');
+    chartsEditing.add(c.id);
+    changed();
+  });
+  box.appendChild(from);
+}
+// ============================================================
 // The page: opening a model (the file picker, a file dropped anywhere, the sample, or fmIDE),
 // the top bar's buttons, and ← Back to fmIDE.
 // ============================================================
@@ -9041,6 +9581,7 @@ const BOARD_FILE_FORMAT = { 'fmIDE-graph-board': { current: BOARD_FILE_VERSION, 
 // keeps its colours on its widgets, taken into the shared ones when read (the first one wins).
 // v11 → v12: the common scale (04d-scale.js); nothing to change — a file without `commonScale`
 // opens with Each its own, so every bar and chart shows the scale it had.
+// v12 → v13: a chart may be a Free chart (04f-free.js); nothing to change.
 function keepOwnPeriods(data){
   if(!data || typeof data !== 'object' || data.form === 'template') return;
   const boardsIn = Array.isArray(data.boards) ? data.boards : [data];
@@ -9049,7 +9590,7 @@ function keepOwnPeriods(data){
     ['items', 'bars', 'charts'].forEach(k => { if(Array.isArray(b[k])) b[k].forEach(w => { if(w && typeof w === 'object') w.ownPeriod = true; }); });
   });
 }
-const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {}, 5: () => {}, 6: () => {}, 7: () => {}, 8: keepOwnPeriods, 9: () => {}, 10: () => {}, 11: () => {} } };
+const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {}, 5: () => {}, 6: () => {}, 7: () => {}, 8: keepOwnPeriods, 9: () => {}, 10: () => {}, 11: () => {}, 12: () => {} } };
 
 function safeFileName(s){ return String(s).replace(/[^A-Za-z0-9 ._()-]+/g, '_').replace(/\s+/g, ' ').trim().slice(0, 80) || 'board'; }
 
@@ -9212,6 +9753,7 @@ function templateBoardsData(target, onlyShown){
       if(w.kind === 'chart' && w.layout === 'scenarios'){ left++; return; } // it needs the model's scenarios, which a template doesn't carry
       if(w.kind === 'chart' && isSensitivity(w)){ left++; return; } // a Tornado or Spider (board file 8) is never in the template form
       if(w.kind === 'chart' && w.layout === 'lines'){ left++; return; } // nor a lines chart (board file 10): the template form stays version 2
+      if(w.kind === 'chart' && w.layout === 'free'){ left++; return; } // nor a Free chart (board file 13)
       if(w.kind === 'bar'){
         const r = ref(w.key);
         if(!r){ left++; return; }
@@ -9392,7 +9934,7 @@ function boardsFromTemplate(src){
       items: (Array.isArray(b.items) ? b.items : []).map(w => {
         if(!w || typeof w !== 'object') return w;
         if(w.type === 'bar') return at(w);
-        if(isSensitivity(w) || w.layout === 'lines') return null; // never in the template form (board files 8 and 10)
+        if(isSensitivity(w) || w.layout === 'lines' || w.layout === 'free') return null; // never in the template form (board files 8, 10 and 13)
         if(w.layout === 'flow') return Object.assign({}, w, { steps: (Array.isArray(w.steps) ? w.steps : []).map(at) });
         return Object.assign({}, w, { groups: (Array.isArray(w.groups) ? w.groups : []).map(g => Object.assign({}, g, { parts: (g && Array.isArray(g.parts) ? g.parts : []).map(at) })) });
       }),
@@ -10203,7 +10745,7 @@ const FMGRAPH_HELP_TOPICS = [
     keywords: 'chart columns stacked side by side group lines line trend over time waterfall bridge balance sheet income statement check total scenario waterfall cases tornado spider',
     summary: 'Building blocks for any statement: columns of groups, lines over the periods, and waterfalls.',
     body: [
-      { p: '+ Chart adds a chart. There are six kinds, chosen at its top; all are made from your own rectangles, so they fit any model. This topic covers Columns, Lines, Waterfall and Scenario waterfall; the Tornado and the Spider have a topic of their own.' },
+      { p: '+ Chart adds a chart. There are seven kinds, chosen at its top; all are made from your own rectangles, so they fit any model. This topic covers Columns, Lines, Waterfall and Scenario waterfall; the Free chart, which puts columns and waterfalls together, and the Tornado and the Spider have topics of their own.' },
       { p: 'Columns: a chart is a list of groups. Each group is one column per period, its rectangles stacked (values below zero stack downwards), and the groups stand side by side. One rectangle per group gives a plain column chart; one group of several a stacked chart; two groups — Assets, and Liabilities and equity — a balance sheet.' },
       { p: 'Tick "Check that the groups\' totals agree" and each period shows ✓ when the groups\' totals agree, or ✗ and the gap when they don\'t — a quick test that a balance sheet balances, also while you move a slider.' },
       { p: 'Lines: several rectangles over the periods, a line each, with a point on every period and its number where there is room. Edit chart lists the lines (up to 12): + Rectangle adds the next calculated one, ↑ ↓ reorder, × removes; it also chooses the periods, which follow the shared period as a Columns chart\'s do unless you choose its own. Once a slider has changed something, the model\'s own numbers show as a dashed line under each line. A period that can\'t be worked out leaves a gap, with the reason below the chart. The key\'s swatches pick each line\'s colour. Switching between Columns and Lines keeps the rectangles (a Columns chart\'s groups become one list of lines, and back as one group) and the periods. In ExcelExporter, Use fmGraph boards… draws it as an Excel line chart on the Dashboard. A template\'s board never holds one.' },
@@ -10211,7 +10753,21 @@ const FMGRAPH_HELP_TOPICS = [
       { p: 'Scenario waterfall: for each output you choose, in one period, a waterfall from the model\'s own number (Start) through each of your named scenarios in turn — each step the change from the one before — to the last scenario\'s number (End). Each output gets its own small waterfall. It shows the scenarios, not where the sliders are now, and follows them as you update, reorder, rename or delete them. Edit chart chooses the period, the outputs (up to six) and which scenarios it goes through, in the Scenarios panel\'s order. A template\'s board never holds one, since templates carry no scenarios.' },
       { steps: ['Press + Chart at the top. Its editor opens.', 'Choose the rectangles: + Rectangle adds one to a group, + Group a new group; ↑ ↓ reorder, × removes.', 'Or choose Lines at the top of the chart for a line per rectangle, or Waterfall, then each step\'s role.'] },
       { tip: 'Numbers agree when they differ by less than a millionth of their size, so tiny rounding never shows as ✗. A chart mixing units says so below it.' },
-      { see: ['bars', 'scale', 'reach', 'scenarios', 'sensitivity'] },
+      { see: ['free-chart', 'bars', 'scale', 'reach', 'scenarios', 'sensitivity'] },
+    ] },
+  { id: 'free-chart', group: 'board', title: 'The Free chart: columns and waterfalls together',
+    keywords: 'free chart pieces piece stack column waterfall step balance sheet cash flow together sits on zero on top of where ends at a number minus should equal check grid',
+    summary: 'One chart for a balance sheet and the cash flow that moved it: pieces, each a stack of rectangles, placed in columns.',
+    body: [
+      { p: 'A Free chart shows one period. It is made of pieces: each piece is a stack of your rectangles (one rectangle makes a plain bar) standing in a column of its own. Values above zero go up from where the piece sits, values below zero hang down, as in a Columns chart.' },
+      { p: 'Each piece says where it sits. On zero: it stands on the axis. On top of another piece: it starts at that piece\'s highest point, as a second stack on the first. Where another piece ends: it starts at that piece\'s end, as a waterfall step does. At a number: it starts at the number you type, such as a target.' },
+      { p: 'Minus shows a piece with its sign turned round, as a waterfall\'s subtract step does: CFI of 100 hangs down 100 from where CFO ended, and the key calls it −CFI. Should equal… checks a piece against another: ✓ when its total equals where that piece ends, or ✗ and both numbers in words. Asset should equal L + Eq; Cash EB should equal where CFF ends.' },
+      { p: 'Each piece stands in a column; ← and → move it. Two pieces may share a column only when one rests on the other (on top of it, or where it ends); a piece moved into a taken column is put in the next free one. A piece can\'t rest on one that rests on it: the editor refuses such a loop. A file with one has those pieces put on zero, and the words under the chart say so.' },
+      { p: 'A piece with a rectangle that can\'t be worked out shows ! with the reason; the pieces resting on it are not drawn, and the words under the chart say why. Moving a slider moves every bar it reaches, and the pieces resting on them move along.' },
+      { steps: ['Press + Chart and choose Free at the chart\'s top (a Columns or Waterfall chart turns into the same pieces).', 'Open Edit chart. + Piece adds a piece: give it a name, its rectangles, and where it Sits.', 'Or choose a Columns or Waterfall chart in + From chart… to copy its groups or steps in as pieces.', 'Tick Minus, or choose Should equal…, where you need them.'] },
+      { tip: 'Two charts become one in a few clicks: on a board with a balance sheet and a cash-flow waterfall, add a Free chart and choose each of them in + From chart…. The old charts stay until you remove them.' },
+      { p: 'A Free chart follows the shared period and the common scale, its rectangles take their shared colours, and Trace, A and Play work on it as on any chart. Choosing Columns at its top makes a group of each piece (up to 12). A template\'s board never holds one, and ExcelExporter\'s Dashboard does not draw it yet: Use fmGraph boards… lists it as not carried.' },
+      { see: ['charts', 'common-scale', 'shared-period', 'compare'] },
     ] },
   { id: 'sensitivity', group: 'board', title: 'Tornado and Spider: what moves an output most',
     keywords: 'tornado spider sensitivity swing low high percent amount percentage point inputs matter most',
@@ -10348,6 +10904,18 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'free-chart', date: '2026-10-27', title: 'The Free chart: columns and waterfalls together',
+    summary: 'A balance sheet and the cash flow that moved it, side by side in one chart on one scale: a new kind of chart, Free, made of pieces you place in columns.',
+    what: [
+      'Choose Free at a chart\'s top. Each piece is a stack of rectangles (or a single bar) in a column of its own.',
+      'A piece sits on zero, on top of another piece, where another piece ends (a waterfall step), or at a number you type.',
+      'Minus turns a piece\'s sign round, as a waterfall\'s subtract step does; Should equal… checks it against where another piece ends, with ✓ or ✗.',
+      '+ From chart… copies a Columns or Waterfall chart in as pieces, so two charts become one in a few clicks.',
+    ],
+    why: 'A balance sheet and its cash flow were two charts on two scales. In one chart the cash in the balance sheet and the cash at the end of the cash flow stand side by side and move together when a slider moves.',
+    how: ['Press + Chart and choose Free at its top.', 'Open Edit chart and press + Piece, or copy a chart in with + From chart….', 'Choose where each piece Sits, and Should equal… for the checks.'],
+    notes: ['The board file is now version 13; ExcelExporter reads it, and lists a Free chart as not carried to its Dashboard yet.', 'A template\'s board never holds a Free chart.', 'Dragging pieces on a grid comes later.'],
+    see: ['free-chart'] },
   { id: 'common-scale', date: '2026-10-27', title: 'One scale for every bar and chart',
     summary: 'Above the bars and charts, Scale puts every one of them, on every board, on the same vertical scale: Auto for all or Fixed for all.',
     what: [
@@ -11025,6 +11593,9 @@ $('btnTutorials').addEventListener('click', () => { help.open(); });
 //   addChart({ layout: 'lines', title, periods, lines: [rect…] })  (at most 12 lines)
 //   addChart({ layout: 'flow', title, period, steps: [{ rect, role: 'start'|'add'|'subtract'|'total' }] })
 //   addChart({ layout: 'scenarios', title, period, outputs: [rect…], scenarios?: [name…] })
+//   addChart({ layout: 'free', title, period, pieces: [{ name, column (from 0), sits: { on: 'zero' |
+//              'top' | 'end' | 'level', of (a piece's place in the list, from 0), value }, minus,
+//              check (a piece's place), parts: [rect…] }] })  (board file 13; at most 40 pieces)
 //   addChart({ layout: 'tornado' | 'spider', title, output: rect, period, steps (1–10, the Spider's
 //              points each side), inputs: [{ rect, by: 'percent' | 'amount', low, high, show }] })
 //                  (step 18) output: the first calculated rectangle when left out; inputs: every
@@ -11033,7 +11604,10 @@ $('btnTutorials').addEventListener('click', () => { help.open(); });
 //   chart(id)      → what it shows now: columns — per period { period, groups: [{ name, total,
 //                    parts: [value or { error }] }], check: { ok, gap } | null }; lines — per period
 //                    { period, lines: [{ name, value or { error } }] }; flow — per step
-//                    { name, role, value, from, to, check: { ok, expected } | null }; scenarios — per
+//                    { name, role, value, from, to, check: { ok, expected } | null }; free —
+//                    { period, pieces: [{ name, column, value, base, top, bottom, end, parts: [{ name,
+//                    value, from, to }], check: { agree, a, b } | { error } | null } or { name, column,
+//                    error } or { name, column, blocked (the piece it rests on) }] }; scenarios — per
 //                    output { name, steps: [{ name, kind: 'start'|'step'|'end', value, from, to }] };
 //                    tornado / spider — { output, period, base, inputs: [{ name, by, low, high, show,
 //                    lowValue, highValue, swing } or { …, error }] } around where the sliders stand
@@ -11155,10 +11729,20 @@ window.fmGraph = Object.freeze({
     if(board.charts.length >= BOARD_LIMIT) throw new Error('No more charts can be added.');
     const at = (r) => ({ canvasId: r.canvasId, nodeId: r.nodeId, name: r.name });
     if(spec.layout === 'lines' && Array.isArray(spec.lines) && spec.lines.length > CHART_LIMITS.lines) throw new Error('A lines chart draws at most ' + CHART_LIMITS.lines + ' lines.');
+    if(spec.layout === 'free' && Array.isArray(spec.pieces) && spec.pieces.length > FREE_LIMITS.pieces) throw new Error('A Free chart holds at most ' + FREE_LIMITS.pieces + ' pieces.');
     const raw = SENSITIVITY_LAYOUTS.includes(spec.layout) ? sensitivitySpec(spec, at)
       : spec.layout === 'scenarios'
       ? Object.assign({ layout: 'scenarios', title: spec.title, period: spec.period === undefined ? 0 : periodIndex(spec.period),
           outputs: (spec.outputs || []).map(r => at(rectRef(r))) }, Array.isArray(spec.scenarios) ? { scenarios: spec.scenarios.map(String) } : {})
+      : spec.layout === 'free'
+      ? { layout: 'free', title: spec.title, period: spec.period === undefined ? 0 : periodIndex(spec.period),
+          pieces: (spec.pieces || []).map((pc, i) => {
+            pc = pc || {};
+            const sits = pc.sits && typeof pc.sits === 'object' ? pc.sits : { on: 'zero' };
+            const place = (n) => n === undefined || n === null ? undefined : 'p' + Number(n);
+            return { id: 'p' + i, name: pc.name, column: pc.column, sits: { on: sits.on, of: place(sits.of), value: sits.value }, minus: pc.minus === true,
+              check: place(pc.check), parts: (pc.parts || []).map(r => at(rectRef(r))) };
+          }) }
       : spec.layout === 'lines'
       ? { layout: 'lines', title: spec.title, periods: periodSpec(spec.periods), lines: (spec.lines || []).map(r => at(rectRef(r))) }
       : spec.layout === 'flow'
@@ -11185,6 +11769,13 @@ window.fmGraph = Object.freeze({
     }
     if(c.layout === 'lines') return linesFigures(c, results).map(f => ({ period: model.periods[f.p], lines: f.values.map((r, i) => ({ name: partLabel(c.lines[i]), value: answer(r) })) }));
     if(c.layout === 'flow') return flowFigures(c, results).map((f, i) => Object.assign({ name: partLabel(c.steps[i].key) }, f));
+    if(c.layout === 'free') return { period: model.periods[c.period], pieces: freeFigures(c, results).map((f, i) => {
+      const p = c.pieces[i], head = { name: pieceLabel(c, p), column: p.column };
+      if(f.error !== undefined) return Object.assign(head, { error: f.error });
+      if(f.blocked !== undefined) return Object.assign(head, { blocked: f.blocked });
+      return Object.assign(head, { value: f.value, base: f.base, top: f.top, bottom: f.bottom, end: f.end,
+        parts: f.parts.map((pt, pi) => ({ name: partLabel(p.parts[pi]), value: pt.value, from: pt.from, to: pt.to })), check: f.check });
+    }) };
     if(c.layout === 'scenarios'){
       const memo = new Map();
       const resultsFor = (sc) => { if(!memo.has(sc)) memo.set(sc, scenarioResults(sc)); return memo.get(sc); };

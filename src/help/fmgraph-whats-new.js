@@ -8,6 +8,18 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'free-chart', date: '2026-10-27', title: 'The Free chart: columns and waterfalls together',
+    summary: 'A balance sheet and the cash flow that moved it, side by side in one chart on one scale: a new kind of chart, Free, made of pieces you place in columns.',
+    what: [
+      'Choose Free at a chart\'s top. Each piece is a stack of rectangles (or a single bar) in a column of its own.',
+      'A piece sits on zero, on top of another piece, where another piece ends (a waterfall step), or at a number you type.',
+      'Minus turns a piece\'s sign round, as a waterfall\'s subtract step does; Should equal… checks it against where another piece ends, with ✓ or ✗.',
+      '+ From chart… copies a Columns or Waterfall chart in as pieces, so two charts become one in a few clicks.',
+    ],
+    why: 'A balance sheet and its cash flow were two charts on two scales. In one chart the cash in the balance sheet and the cash at the end of the cash flow stand side by side and move together when a slider moves.',
+    how: ['Press + Chart and choose Free at its top.', 'Open Edit chart and press + Piece, or copy a chart in with + From chart….', 'Choose where each piece Sits, and Should equal… for the checks.'],
+    notes: ['The board file is now version 13; ExcelExporter reads it, and lists a Free chart as not carried to its Dashboard yet.', 'A template\'s board never holds a Free chart.', 'Dragging pieces on a grid comes later.'],
+    see: ['free-chart'] },
   { id: 'common-scale', date: '2026-10-27', title: 'One scale for every bar and chart',
     summary: 'Above the bars and charts, Scale puts every one of them, on every board, on the same vertical scale: Auto for all or Fixed for all.',
     what: [

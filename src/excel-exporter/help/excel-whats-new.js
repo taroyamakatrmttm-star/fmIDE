@@ -11,6 +11,12 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'fmgraph-free-chart-listed', date: '2026-10-27', title: 'fmGraph boards with a Free chart',
+    summary: 'Use fmGraph boards… reads fmGraph\'s newest board files, which may hold its new Free chart.',
+    what: ['Boards saved by the newest fmGraph (board file version 13) open in Use fmGraph boards… as before.', 'A Free chart on a board is not drawn on the Dashboard yet: the window lists it as not carried.'],
+    why: 'fmGraph\'s new Free chart changed its board file; without this, ExcelExporter would have refused every board saved since.',
+    how: ['Layout → Use fmGraph boards… as before.', 'Read the list of what is not carried at the bottom of the window.'],
+    see: ['fmgraph-charts'] },
   { id: 'busy-taps', date: '2026-10-27', title: 'Taps on a busy tablet still count as taps',
     summary: 'In the Tree View on a tablet that is slow to answer, a double-tap that renames a row, or a hold that opens its menu, is no longer undone by its own copy a moment later.',
     what: [

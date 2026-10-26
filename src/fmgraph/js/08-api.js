@@ -12,6 +12,9 @@
 //   addChart({ layout: 'lines', title, periods, lines: [rect…] })  (at most 12 lines)
 //   addChart({ layout: 'flow', title, period, steps: [{ rect, role: 'start'|'add'|'subtract'|'total' }] })
 //   addChart({ layout: 'scenarios', title, period, outputs: [rect…], scenarios?: [name…] })
+//   addChart({ layout: 'free', title, period, pieces: [{ name, column (from 0), sits: { on: 'zero' |
+//              'top' | 'end' | 'level', of (a piece's place in the list, from 0), value }, minus,
+//              check (a piece's place), parts: [rect…] }] })  (board file 13; at most 40 pieces)
 //   addChart({ layout: 'tornado' | 'spider', title, output: rect, period, steps (1–10, the Spider's
 //              points each side), inputs: [{ rect, by: 'percent' | 'amount', low, high, show }] })
 //                  (step 18) output: the first calculated rectangle when left out; inputs: every
@@ -20,7 +23,10 @@
 //   chart(id)      → what it shows now: columns — per period { period, groups: [{ name, total,
 //                    parts: [value or { error }] }], check: { ok, gap } | null }; lines — per period
 //                    { period, lines: [{ name, value or { error } }] }; flow — per step
-//                    { name, role, value, from, to, check: { ok, expected } | null }; scenarios — per
+//                    { name, role, value, from, to, check: { ok, expected } | null }; free —
+//                    { period, pieces: [{ name, column, value, base, top, bottom, end, parts: [{ name,
+//                    value, from, to }], check: { agree, a, b } | { error } | null } or { name, column,
+//                    error } or { name, column, blocked (the piece it rests on) }] }; scenarios — per
 //                    output { name, steps: [{ name, kind: 'start'|'step'|'end', value, from, to }] };
 //                    tornado / spider — { output, period, base, inputs: [{ name, by, low, high, show,
 //                    lowValue, highValue, swing } or { …, error }] } around where the sliders stand
@@ -142,10 +148,20 @@ window.fmGraph = Object.freeze({
     if(board.charts.length >= BOARD_LIMIT) throw new Error('No more charts can be added.');
     const at = (r) => ({ canvasId: r.canvasId, nodeId: r.nodeId, name: r.name });
     if(spec.layout === 'lines' && Array.isArray(spec.lines) && spec.lines.length > CHART_LIMITS.lines) throw new Error('A lines chart draws at most ' + CHART_LIMITS.lines + ' lines.');
+    if(spec.layout === 'free' && Array.isArray(spec.pieces) && spec.pieces.length > FREE_LIMITS.pieces) throw new Error('A Free chart holds at most ' + FREE_LIMITS.pieces + ' pieces.');
     const raw = SENSITIVITY_LAYOUTS.includes(spec.layout) ? sensitivitySpec(spec, at)
       : spec.layout === 'scenarios'
       ? Object.assign({ layout: 'scenarios', title: spec.title, period: spec.period === undefined ? 0 : periodIndex(spec.period),
           outputs: (spec.outputs || []).map(r => at(rectRef(r))) }, Array.isArray(spec.scenarios) ? { scenarios: spec.scenarios.map(String) } : {})
+      : spec.layout === 'free'
+      ? { layout: 'free', title: spec.title, period: spec.period === undefined ? 0 : periodIndex(spec.period),
+          pieces: (spec.pieces || []).map((pc, i) => {
+            pc = pc || {};
+            const sits = pc.sits && typeof pc.sits === 'object' ? pc.sits : { on: 'zero' };
+            const place = (n) => n === undefined || n === null ? undefined : 'p' + Number(n);
+            return { id: 'p' + i, name: pc.name, column: pc.column, sits: { on: sits.on, of: place(sits.of), value: sits.value }, minus: pc.minus === true,
+              check: place(pc.check), parts: (pc.parts || []).map(r => at(rectRef(r))) };
+          }) }
       : spec.layout === 'lines'
       ? { layout: 'lines', title: spec.title, periods: periodSpec(spec.periods), lines: (spec.lines || []).map(r => at(rectRef(r))) }
       : spec.layout === 'flow'
@@ -172,6 +188,13 @@ window.fmGraph = Object.freeze({
     }
     if(c.layout === 'lines') return linesFigures(c, results).map(f => ({ period: model.periods[f.p], lines: f.values.map((r, i) => ({ name: partLabel(c.lines[i]), value: answer(r) })) }));
     if(c.layout === 'flow') return flowFigures(c, results).map((f, i) => Object.assign({ name: partLabel(c.steps[i].key) }, f));
+    if(c.layout === 'free') return { period: model.periods[c.period], pieces: freeFigures(c, results).map((f, i) => {
+      const p = c.pieces[i], head = { name: pieceLabel(c, p), column: p.column };
+      if(f.error !== undefined) return Object.assign(head, { error: f.error });
+      if(f.blocked !== undefined) return Object.assign(head, { blocked: f.blocked });
+      return Object.assign(head, { value: f.value, base: f.base, top: f.top, bottom: f.bottom, end: f.end,
+        parts: f.parts.map((pt, pi) => ({ name: partLabel(p.parts[pi]), value: pt.value, from: pt.from, to: pt.to })), check: f.check });
+    }) };
     if(c.layout === 'scenarios'){
       const memo = new Map();
       const resultsFor = (sc) => { if(!memo.has(sc)) memo.set(sc, scenarioResults(sc)); return memo.get(sc); };

@@ -2,7 +2,7 @@
 // The boards (G3a: several, as tabs, each a view of the model). A board:
 //   { id, name, items: [bar | chart, …] (in the order shown), sliders: [slider, …], ownSliders }
 //   bar    { id, kind: 'bar', key, periods, wide, scale }
-//   chart  { id, kind: 'chart', wide, layout: 'columns' | 'lines' | 'flow' | 'scenarios' | 'tornado' | 'spider', scale, … } (G2; 04b-charts.js)
+//   chart  { id, kind: 'chart', wide, layout: 'columns' | 'lines' | 'flow' | 'free' | 'scenarios' | 'tornado' | 'spider', scale, … } (G2; 04b-charts.js)
 // scale: null for Auto, or { min, max } (04d-scale.js).
 //   slider { id, key, periods, mode: 'set' | 'shift', min, max, step, value, folded }
 // periods: { mode: 'all' } · { mode: 'one', p } · { mode: 'range', from, to } (from 0).
@@ -115,6 +115,7 @@ function cleanBoard(raw, dropped, version, sharedColours){
     const named = c && (isSensitivity(c) ? (c.output ? 1 : 0) + (Array.isArray(c.inputs) ? c.inputs.length : 0) : c.layout === 'flow' ? (Array.isArray(c.steps) ? c.steps.length : 0)
       : c.layout === 'scenarios' ? (Array.isArray(c.outputs) ? c.outputs.length : 0)
       : c.layout === 'lines' ? (Array.isArray(c.lines) ? c.lines.length : 0)
+      : c.layout === 'free' ? (Array.isArray(c.pieces) ? c.pieces.reduce((n, pc) => n + (pc && Array.isArray(pc.parts) ? pc.parts.length : 0), 0) : 0)
       : (Array.isArray(c.groups) ? c.groups.reduce((n, gr) => n + (gr && Array.isArray(gr.parts) ? gr.parts.length : 0), 0) : 0));
     if(!ch || (named > 0 && !chartKeys(ch).length)){ drop(); return null; }
     ch.wide = c.wide !== false;
@@ -166,9 +167,10 @@ function cleanBoards(raw){
 // (a chart of layout `lines`, 04b-charts.js); 11 the shared colours (`colours`, each
 // rectangle's chosen colour, 04e-colours.js; each bar, part, step and line still writes the
 // colour it shows); 12 the common scale (`commonScale`, and a bar's or chart's `ownScale`,
-// 04d-scale.js; each still writes the scale it shows). The template form, which carries none
+// 04d-scale.js; each still writes the scale it shows); 13 the Free chart (a chart of layout
+// `free`, 04f-free.js). The template form, which carries none
 // of these, stays version 2 (its widgets carry the chosen colours, as before 11).
-const BOARD_FILE_VERSION = 12;
+const BOARD_FILE_VERSION = 13;
 const TEMPLATE_BOARD_VERSION = 2;
 // shown: what the board's followers of the common scale show (shownCommonScale, 04d-scale.js),
 // written as their scale; left out, each writes its own.

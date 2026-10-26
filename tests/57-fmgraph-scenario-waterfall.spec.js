@@ -6,7 +6,7 @@
 //   sliders are; built with the mouse; kept (board file 4); never in a template's board.
 // - Problems said in words; names as text; window.fmGraph.addChart / chart.
 const fs = require('fs');
-const { test, expect, openApp, readFixture } = require('./helpers/apps');
+const { test, expect, openApp, readFixture, BOARD_FILE_VERSION } = require('./helpers/apps');
 
 async function openSample(page){
   await openApp(page, 'fmGraph');
@@ -104,7 +104,7 @@ test('built with the mouse, kept after a reload and in the board file (version 4
   await sc.locator('input.chart-title').press('Enter');
   await page.waitForTimeout(600);
   const all = await g(page, () => fmGraph.exportBoards(true));
-  expect(all.version).toBe(12);
+  expect(all.version).toBe(BOARD_FILE_VERSION);
   const saved = all.boards[0].items.find(i => i.layout === 'scenarios');
   expect(saved).toMatchObject({ type: 'chart', layout: 'scenarios', title: 'Cases', period: 1 });
   expect(saved).not.toHaveProperty('scenarios'); // every scenario
