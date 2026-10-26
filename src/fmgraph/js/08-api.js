@@ -36,9 +36,16 @@
 //                  rectangle's: the rectangle's colour on every board; null back to the automatic one)
 //   rectColour(rect, canvas?) → { colour ('#rrggbb', or null for the usual look), chosen }
 //   colours()      → the chosen colours, [{ canvas, name, colour }] (board file 11)
-//   setScale(id, { min, max } | 'current' | null) → the bar's or chart's vertical scale: fixed,
-//                  fixed at what Auto shows now, or Auto (null); returns { min, max } or null
+//   setScale(id, { min, max } | 'current' | null | 'shared') → the bar's or chart's vertical
+//                  scale: fixed, fixed at what Auto shows now, Auto (null), or following the
+//                  common scale again; while the common scale is on, any other keeps its own;
+//                  returns { min, max } or null
 //   scale(id)      → its fixed scale { min, max }, or null (Auto)
+//   scaleShown(id) → the scale it is drawn on now: { min, max, fixed, shared }
+//   setCommonScale(null | 'own' | 'auto' | 'current' | { min, max }) → the common scale (board
+//                  file 12): Each its own, Auto for all, Fixed for all at the current range or
+//                  from min to max; returns commonScale()
+//   commonScale()  → { mode: 'own' | 'auto' | 'fixed', min?, max? }
 //   undo(), redo() → whether there was one; exportBoards(all?) → the file's data (downloads it)
 //   importBoards(textOrObject) → Promise<number of boards added>
 //   calcTime()     → how long one run of the model takes, in milliseconds
@@ -220,6 +227,19 @@ window.fmGraph = Object.freeze({
     if(!w) throw new Error('There is no bar or chart "' + String(id).slice(0, 40) + '".');
     return w.scale ? { min: w.scale.min, max: w.scale.max } : null;
   },
+  scaleShown: (id) => {
+    const w = board.items.find(x => x.id === id);
+    if(!w) throw new Error('There is no bar or chart "' + String(id).slice(0, 40) + '".');
+    return shownScale(w);
+  },
+  setCommonScale: (spec) => {
+    if(!model) throw new Error('Open a model first.');
+    const s = setCommonScale(spec === undefined ? null : spec);
+    saveBoardSoon();
+    renderAll(); // the bar above the bars and charts too
+    return s;
+  },
+  commonScale: () => commonScaleData(),
   setColour: (id, colour, rect) => {
     const c = colour === null ? null : cleanColour(colour);
     if(colour !== null && !c) throw new Error('A colour is written #rrggbb.');

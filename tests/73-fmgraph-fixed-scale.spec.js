@@ -202,7 +202,7 @@ test('undo and redo, kept after a reload, the board file version 5, imported bac
   await expect(profitBar(page).locator('input[aria-label="Scale to"]')).toHaveValue('8000');
   // The board file: version 8 (5 brought the scale), the bar's scale; another bar on Auto carries none.
   const file = await g(page, () => fmGraph.exportBoards(true));
-  expect(file.version).toBe(11);
+  expect(file.version).toBe(12);
   const profit = file.boards[0].items.find(w => w.type === 'bar' && w.name === 'Profit');
   const cash = file.boards[0].items.find(w => w.type === 'bar' && w.name === 'Closing cash');
   expect(profit.scale).toEqual({ min: 0, max: 8000 });
@@ -272,6 +272,218 @@ test('on a phone: the bar\'s quick look and Show keep its fixed scale', async ({
   await expect(page.locator('#showBody svg.bar-chart')).toHaveClass(/fixed-scale/);
   await expect(page.locator('#showBody .t-over')).toHaveCount(4);
   expect(blocked).toEqual([]);
+  expect(errors).toEqual([]);
+  await context.close();
+});
+
+// ---------- The common scale (the owner's request, 26 October 2026; board file 12) ----------
+// One vertical scale for every bar and chart on every board, beside the shared period: Each its
+// own (where every model starts), Auto for all (one range taking in every follower on the board
+// shown) or Fixed for all. A bar or chart follows unless it keeps its own; the Tornado and the
+// Spider always keep their own.
+const common = (page) => page.locator('#sharedPeriodBar select[aria-label="Common scale"]');
+const barId = (page, name) => g(page, (n) => fmGraph.board().items.find(w => w.type === 'bar' && w.name === n).id, name);
+const shown = (page, id) => g(page, (i) => fmGraph.scaleShown(i), id);
+const cashBar = (page) => page.locator('.bar-widget').filter({ has: page.locator('svg[aria-label="Closing cash"]') });
+
+test('the common scale: Auto for all is one range taking in every follower; a bar keeps its own, then follows again', async ({ page, pageErrors }) => {
+  await openSample(page);
+  const profit = await barId(page, 'Profit'), cash = await barId(page, 'Closing cash');
+  // Each its own to start: every bar on its own Auto, no "Shared" choice.
+  await expect(common(page)).toHaveValue('own');
+  expect(await g(page, () => fmGraph.commonScale())).toEqual({ mode: 'own' });
+  await expect(profitBar(page).locator('select[aria-label="Vertical scale"] option[value="shared"]')).toHaveCount(0);
+  const a = await shown(page, profit), b = await shown(page, cash);
+  expect(a.shared).toBe(false);
+  expect([a.min, a.max]).not.toEqual([b.min, b.max]);
+  // Auto for all: every bar and chart on the range that takes in every one (the sample's board
+  // has two bars and two charts).
+  const all = await g(page, () => fmGraph.board().items.map(w => fmGraph.scaleShown(w.id)));
+  expect(all.length).toBe(4);
+  await common(page).selectOption('auto');
+  const range = { min: Math.min(...all.map(r => r.min)), max: Math.max(...all.map(r => r.max)), fixed: false, shared: true };
+  expect(await shown(page, profit)).toEqual(range);
+  expect(await shown(page, cash)).toEqual(range);
+  await expect(profitBar(page).locator('select[aria-label="Vertical scale"]')).toHaveValue('shared');
+  await expect(profitBar(page).locator('select[aria-label="Vertical scale"] option[value="shared"]')).toHaveText('Shared (Auto for all)');
+  await expect(profitBar(page).locator('svg.bar-chart')).not.toHaveClass(/fixed-scale/);
+  // A slider moved: the range moves with the numbers, still one for both.
+  await g(page, (s) => fmGraph.setSlider(s, 14), await sliderId(page, 'Price'));
+  const moved = await shown(page, profit);
+  expect(moved).toEqual(await shown(page, cash));
+  expect(moved.max).toBeGreaterThan(range.max);
+  // Profit keeps its own Auto: it leaves; Closing cash's range is its own numbers alone.
+  await profitBar(page).locator('select[aria-label="Vertical scale"]').selectOption('auto');
+  expect((await shown(page, profit)).shared).toBe(false);
+  expect((await shown(page, cash)).shared).toBe(true);
+  expect(await g(page, () => fmGraph.board().items.find(w => w.name === 'Profit').ownScale)).toBe(true);
+  // Shared again: follows.
+  await profitBar(page).locator('select[aria-label="Vertical scale"]').selectOption('shared');
+  expect(await shown(page, profit)).toEqual(await shown(page, cash));
+  expect(await g(page, (i) => fmGraph.setScale(i, 'shared'), profit)).toBe(null);
+  expect(pageErrors).toEqual([]);
+});
+
+test('Fixed for all: typed, ▲ past it, charts follow, the Tornado keeps its own; Each its own keeps what each shows; undo', async ({ page, pageErrors }) => {
+  await openSample(page);
+  const profit = await barId(page, 'Profit'), cash = await barId(page, 'Closing cash');
+  await g(page, () => fmGraph.saveScenario('Base'));
+  const ids = await g(page, () => ({
+    columns: fmGraph.addChart({ layout: 'columns', title: 'Parts', groups: [{ name: '', parts: ['Profit'] }] }),
+    flow: fmGraph.addChart({ layout: 'flow', title: 'Walk', steps: [{ rect: 'Revenue', role: 'start' }, { rect: 'Profit', role: 'total' }] }),
+    lines: fmGraph.addChart({ layout: 'lines', title: 'Trend', lines: ['Profit'] }),
+    cases: fmGraph.addChart({ layout: 'scenarios', title: 'Cases', outputs: ['Profit'] }),
+    tornado: fmGraph.addChart({ layout: 'tornado', title: 'What moves Profit', output: 'Profit' }),
+  }));
+  // Fixed for all: what the bars and charts take now, rounded; the boxes show it.
+  await common(page).selectOption('fixed');
+  const bar = page.locator('#sharedPeriodBar');
+  const to = bar.locator('input[aria-label="Common scale to"]'), from = bar.locator('input[aria-label="Common scale from"]');
+  await expect(to).toBeVisible();
+  const first = await g(page, () => fmGraph.commonScale());
+  expect(first.mode).toBe('fixed');
+  expect(await to.inputValue()).toBe(String(first.max));
+  // Typed by the keyboard: below every profit, so ▲ on each of Profit's bars.
+  await to.fill('1000');
+  await to.press('Enter');
+  await expect(to).toBeFocused();
+  expect(await g(page, () => fmGraph.commonScale())).toEqual({ mode: 'fixed', min: 0, max: 1000 });
+  await expect(profitBar(page).locator('.t-axis')).toHaveText(['1,000', '0']);
+  await expect(profitBar(page).locator('.t-over')).toHaveCount(4);
+  await expect(profitBar(page).locator('select[aria-label="Vertical scale"] option[value="shared"]')).toHaveText('Shared (0 to 1,000)');
+  for(const k of ['columns', 'flow', 'lines']){
+    expect(await shown(page, ids[k])).toEqual({ min: 0, max: 1000, fixed: true, shared: true });
+    await expect(page.locator('.chart-widget[data-id="' + ids[k] + '"] svg.bar-chart')).toHaveClass(/fixed-scale/);
+  }
+  await expect(page.locator('.chart-widget[data-id="' + ids.cases + '"] svg.scenario-flow .t-axis')).toHaveText(['1,000', '0']);
+  // The Tornado keeps its own: no Shared choice, not on the common scale.
+  expect((await shown(page, ids.tornado)).shared).toBe(false);
+  const tornado = page.locator('.chart-widget[data-id="' + ids.tornado + '"]');
+  await tornado.locator('summary').first().click();
+  await expect(tornado.locator('.scale-row select[aria-label="Vertical scale"] option[value="shared"]')).toHaveCount(0);
+  // Not a scale: refused in words, the boxes put back.
+  await from.fill('5000');
+  await from.press('Enter');
+  await expect(page.locator('#notices .note.err')).toContainText('"from" below "to"');
+  await expect(from).toHaveValue('0');
+  await expect(g(page, () => fmGraph.setCommonScale({ min: 3, max: 3 }))).rejects.toThrow('below');
+  // A bar leaving it for Fixed scale keeps the range it shows.
+  await cashBar(page).locator('select[aria-label="Vertical scale"]').selectOption('fixed');
+  expect(await g(page, (i) => fmGraph.scale(i), cash)).toEqual({ min: 0, max: 1000 });
+  expect((await shown(page, cash)).shared).toBe(false);
+  // Each its own: every bar and chart keeps what it showed, now its own.
+  await common(page).selectOption('own');
+  await expect(to).toBeHidden();
+  expect(await g(page, (i) => fmGraph.scale(i), profit)).toEqual({ min: 0, max: 1000 });
+  expect(await shown(page, ids.lines)).toEqual({ min: 0, max: 1000, fixed: true, shared: false });
+  // Undo: one step back to Fixed for all (0 to 1,000).
+  expect(await g(page, () => fmGraph.undo())).toBe(true);
+  expect(await g(page, () => fmGraph.commonScale())).toEqual({ mode: 'fixed', min: 0, max: 1000 });
+  await expect(common(page)).toHaveValue('fixed');
+  expect(pageErrors).toEqual([]);
+});
+
+test('the board file 12: the common scale, ownScale, each follower\'s shown scale; kept after a reload; a slider moved is no undo step', async ({ page }) => {
+  await openSample(page);
+  const profit = await barId(page, 'Profit'), cash = await barId(page, 'Closing cash');
+  await g(page, () => fmGraph.setCommonScale({ min: -500, max: 20000 }));
+  await g(page, (i) => fmGraph.setScale(i, null), cash); // keeps its own Auto
+  let file = await g(page, () => fmGraph.exportBoards(true));
+  expect(file.version).toBe(12);
+  expect(file.commonScale).toEqual({ mode: 'fixed', min: -500, max: 20000 });
+  const item = (f, n) => f.boards[0].items.find(w => w.type === 'bar' && w.name === n);
+  expect(item(file, 'Profit').scale).toEqual({ min: -500, max: 20000 });
+  expect('ownScale' in item(file, 'Profit')).toBe(false);
+  expect(item(file, 'Closing cash').ownScale).toBe(true);
+  expect('scale' in item(file, 'Closing cash')).toBe(false);
+  // Auto for all: each follower writes its board's range as the file is written, rounded as 📏 rounds it.
+  await g(page, () => fmGraph.setCommonScale('auto'));
+  const range = await shown(page, profit);
+  file = await g(page, () => fmGraph.exportBoards(true));
+  expect(file.commonScale).toEqual({ mode: 'auto' });
+  const written = item(file, 'Profit').scale;
+  expect(written.min).toBeLessThanOrEqual(range.min);
+  expect(written.max).toBeGreaterThanOrEqual(range.max);
+  expect(written.max).toBeLessThan(range.max * 1.1);
+  // A slider moved changes that range, but a change that changes nothing is still no undo step:
+  // the step before is the one to Auto for all.
+  await g(page, (s) => fmGraph.setSlider(s, 14), await sliderId(page, 'Price'));
+  await g(page, () => fmGraph.setWide(fmGraph.board().items[0].id, fmGraph.board().items[0].wide));
+  expect(await g(page, () => fmGraph.undo())).toBe(true);
+  expect(await g(page, () => fmGraph.commonScale().mode)).toBe('fixed');
+  expect(await g(page, () => fmGraph.redo())).toBe(true);
+  // Kept after a reload.
+  await page.waitForTimeout(500);
+  await page.reload();
+  await page.waitForFunction(() => !!window.fmGraph);
+  await page.click('#btnSample');
+  await expect(common(page)).toHaveValue('auto');
+  expect((await shown(page, await barId(page, 'Profit'))).shared).toBe(true);
+  expect((await shown(page, await barId(page, 'Closing cash'))).shared).toBe(false);
+  // Imported back as a new board: its followers follow.
+  expect(await g(page, (d) => fmGraph.importBoards(d), file)).toBe(1);
+  await g(page, () => fmGraph.showBoard(1));
+  expect((await shown(page, await barId(page, 'Profit'))).shared).toBe(true);
+});
+
+test('a version 11 board file opens with Each its own, its scales as they were; hostile common scales read as Each its own', async ({ page, pageErrors }) => {
+  await openSample(page);
+  expect(await g(page, (d) => fmGraph.importBoards(d), readFixture('formats', 'board-v11.json'))).toBe(1);
+  await g(page, () => fmGraph.showBoard('Saved before the common scale'));
+  expect(await g(page, () => fmGraph.commonScale())).toEqual({ mode: 'own' });
+  const profit = await barId(page, 'Profit'), rev = await barId(page, 'Revenue');
+  expect(await shown(page, profit)).toEqual({ min: 0, max: 2000, fixed: true, shared: false });
+  expect((await shown(page, rev)).fixed).toBe(false);
+  // Turned on, every bar and chart follows, the one fixed before too (undo puts it back).
+  await g(page, () => fmGraph.setCommonScale('auto'));
+  expect((await shown(page, profit)).shared).toBe(true);
+  expect(await shown(page, profit)).toEqual(await shown(page, rev));
+  expect(await g(page, () => fmGraph.undo())).toBe(true);
+  expect(await g(page, (i) => fmGraph.scale(i), await barId(page, 'Profit'))).toEqual({ min: 0, max: 2000 }); // (undo makes the widgets anew)
+  // A document's boards with a common scale: a good one read, hostile ones as Each its own.
+  const doc = readFixture('graph-boards', 'profit.fmide');
+  const open = (commonScale) => g(page, async ([d, c]) => {
+    d.graphBoards = Object.assign({}, d.graphBoards, { version: 12, commonScale: c });
+    await fmGraph.load(JSON.stringify(d), 'Profit');
+    return fmGraph.commonScale();
+  }, [doc, commonScale]);
+  expect(await open({ mode: 'fixed', min: 0, max: 9 })).toEqual({ mode: 'fixed', min: 0, max: 9 });
+  expect(await open({ mode: 'auto' })).toEqual({ mode: 'auto' });
+  for(const bad of [{ mode: 'fixed', min: 5, max: 1 }, { mode: 'fixed', min: '0', max: 9 }, { mode: 'AUTO' }, 'auto', [1, 2], { mode: 'fixed', min: 0, max: 1e300 }, null]){
+    expect(await open(bad)).toEqual({ mode: 'own' });
+  }
+  expect(pageErrors).toEqual([]);
+});
+
+test('on a phone: Show follows Fixed for all, and so does the bar\'s quick look', async ({ browser }) => {
+  const URL = 'http://local.test/fmGraph.html';
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, screen: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  await context.route('**/*', route => route.request().url() === URL
+    ? route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: fs.readFileSync(path.join(ROOT, 'apps', 'fmGraph.html')) })
+    : route.abort());
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto(URL);
+  await page.waitForFunction(() => !!window.fmGraph);
+  await page.click('#btnSample');
+  await expect(page.locator('body')).toHaveClass(/phone/);
+  await expect(page.locator('#sharedPeriodBar')).toBeHidden(); // no control on the phone
+  await g(page, () => fmGraph.setCommonScale({ min: 0, max: 1000 })); // below the profits
+  const cdp = await context.newCDPSession(page);
+  const bar = page.locator('.bar-widget').first();
+  await bar.evaluate(e => e.scrollIntoView({ block: 'center' }));
+  const box = await bar.locator('.bar-chart-host').boundingBox();
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: box.x + box.width / 2, y: box.y + box.height / 2, id: 1 }] });
+  await page.waitForTimeout(700);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await expect(page.locator('#peekCard')).toBeVisible();
+  const ys = await page.locator('#peekChart .peek-dot').evaluateAll(els => els.map(e => Number(e.getAttribute('cy'))));
+  expect(ys.length).toBe(4);
+  ys.forEach(y => expect(y).toBeCloseTo(8, 3)); // every point on the scale's top edge
+  await page.locator('#peekShow').click();
+  await expect(page.locator('#showBody svg.bar-chart')).toHaveClass(/fixed-scale/);
+  await expect(page.locator('#showBody .t-axis')).toHaveText(['1,000', '0']);
   expect(errors).toEqual([]);
   await context.close();
 });

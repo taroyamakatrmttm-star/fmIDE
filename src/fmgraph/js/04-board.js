@@ -104,7 +104,7 @@ function cleanBoard(raw, dropped, version, sharedColours){
   const bar = (b) => {
     const rect = rectForEntry(b);
     if(!rect){ drop(); return null; }
-    return { id: newWidgetId('b'), kind: 'bar', key: rect.key, periods: cleanPeriods(b.periods, count), wide: b.wide === true, colour: cleanColour(b.colour), scale: cleanScale(b.scale), ownPeriod: own(b) };
+    return { id: newWidgetId('b'), kind: 'bar', key: rect.key, periods: cleanPeriods(b.periods, count), wide: b.wide === true, colour: cleanColour(b.colour), scale: cleanScale(b.scale), ownPeriod: own(b), ownScale: b.ownScale === true };
   };
   const chart = (c) => {
     // A Tornado or Spider whose output isn't in this model is left out (version 8).
@@ -120,6 +120,7 @@ function cleanBoard(raw, dropped, version, sharedColours){
     ch.wide = c.wide !== false;
     ch.scale = cleanScale(c.scale); // version 5 (04d-scale.js)
     ch.ownPeriod = own(c);
+    ch.ownScale = c.ownScale === true; // version 12 (04d-scale.js)
     return ch;
   };
   let items;
@@ -149,7 +150,8 @@ function cleanBoards(raw){
   return { boards: list, active: Number.isFinite(a) && a >= 0 && a < list.length ? a : 0, dropped: dropped.n,
     scenarios: cleanScenarios(raw.scenarios, rectForEntry), // version 3 (05f-scenarios.js)
     sharedPeriods: cleanSharedPeriods(raw.sharedPeriods, model.periods.length), // version 9 (05k-shared-period.js)
-    colours: shared ? cleanRectColours(raw.colours) : new Map() }; // version 11 (04e-colours.js)
+    colours: shared ? cleanRectColours(raw.colours) : new Map(), // version 11 (04e-colours.js)
+    commonScale: cleanCommonScale(raw.commonScale) }; // version 12 (04d-scale.js)
 }
 
 // A board's file form.
@@ -163,13 +165,19 @@ function cleanBoards(raw){
 // `ownPeriod`, 05k-shared-period.js; each still writes the periods it shows); 10 the lines chart
 // (a chart of layout `lines`, 04b-charts.js); 11 the shared colours (`colours`, each
 // rectangle's chosen colour, 04e-colours.js; each bar, part, step and line still writes the
-// colour it shows). The template form, which carries none of these, stays version 2 (its
-// widgets carry the chosen colours, as before 11).
-const BOARD_FILE_VERSION = 11;
+// colour it shows); 12 the common scale (`commonScale`, and a bar's or chart's `ownScale`,
+// 04d-scale.js; each still writes the scale it shows). The template form, which carries none
+// of these, stays version 2 (its widgets carry the chosen colours, as before 11).
+const BOARD_FILE_VERSION = 12;
 const TEMPLATE_BOARD_VERSION = 2;
-function boardData(b){
+// shown: what the board's followers of the common scale show (shownCommonScale, 04d-scale.js),
+// written as their scale; left out, each writes its own.
+function boardData(b, shown){
   const at = (key) => { const r = model.byKey.get(key); return { canvasId: r.canvasId, nodeId: r.nodeId, name: r.name }; };
-  const scaleOf = (w) => w.scale ? { scale: { min: w.scale.min, max: w.scale.max } } : {};
+  const scaleOf = (w) => {
+    const s = shown !== undefined && followsCommonScale(w) ? shown : w.scale;
+    return Object.assign(s ? { scale: { min: s.min, max: s.max } } : {}, w.ownScale && canFollowScale(w) ? { ownScale: true } : {});
+  };
   return Object.assign({
     name: b.name,
     items: b.items.map(w => Object.assign(w.kind === 'bar'
@@ -178,15 +186,18 @@ function boardData(b){
     sliders: b.sliders.map(s => Object.assign(at(s.key), { periods: Object.assign({}, s.periods), mode: s.mode, min: s.min, max: s.max, step: s.step }, s.folded ? { folded: true } : {})),
   }, b.ownSliders ? { ownSliders: true } : {});
 }
-// The file form of these boards (all, or the ones given).
-function boardsData(list){
+// The file form of these boards (all, or the ones given). forUndo: Auto for all's followers
+// keep Auto, so a slider moved isn't a change.
+function boardsData(list, forUndo){
   const which = list || boards;
   syncSharedPeriods(); // each writes the periods it shows (05k-shared-period.js)
+  syncCommonScale(); // and the scale (04d-scale.js)
   adoptWidgetColours(); // an older file's colours, taken in first (04e-colours.js)
-  const out = { kind: 'fmIDE-graph-board', version: BOARD_FILE_VERSION, active: list ? 0 : Math.max(0, boards.indexOf(board)), boards: which.map(boardData) };
+  const out = { kind: 'fmIDE-graph-board', version: BOARD_FILE_VERSION, active: list ? 0 : Math.max(0, boards.indexOf(board)), boards: which.map(b => boardData(b, forUndo || commonScale.mode !== 'auto' ? undefined : shownCommonScale(b))) };
   if(!list && scenarios.length) out.scenarios = scenariosData(); // the model's, with all its boards
   out.sharedPeriods = { periods: Object.assign({}, sharedPeriods.periods), period: sharedPeriods.period };
   out.colours = rectColoursData(); // version 11 (04e-colours.js)
+  out.commonScale = commonScaleData(); // version 12 (04d-scale.js)
   return out;
 }
 
@@ -222,6 +233,7 @@ async function loadBoardFor(m, docRaw){
     board = boards[0];
     scenarios = [];
     sharedPeriods = cleanSharedPeriods(null, m.periods.length);
+    commonScale = cleanCommonScale(null);
     rectColours = new Map(); forgetAutoColours();
     resetUndo();
     return;
@@ -233,6 +245,7 @@ async function loadBoardFor(m, docRaw){
     board = boards[0];
     scenarios = [];
     sharedPeriods = cleanSharedPeriods(null, m.periods.length);
+    commonScale = cleanCommonScale(null);
     rectColours = new Map(); forgetAutoColours();
     resetUndo();
     return;
@@ -243,6 +256,7 @@ async function loadBoardFor(m, docRaw){
     board = boards[restored.active];
     scenarios = restored.scenarios;
     sharedPeriods = restored.sharedPeriods;
+    commonScale = restored.commonScale;
     rectColours = restored.colours; forgetAutoColours();
     resetUndo();
     setTimeout(saveBoardNow, 0);
@@ -266,6 +280,7 @@ async function loadBoardFor(m, docRaw){
   board = boards[restored ? restored.active : 0];
   scenarios = restored ? restored.scenarios : [];
   sharedPeriods = restored ? restored.sharedPeriods : cleanSharedPeriods(null, m.periods.length);
+  commonScale = restored ? restored.commonScale : cleanCommonScale(null);
   rectColours = restored ? restored.colours : new Map(); forgetAutoColours();
   resetUndo();
 }

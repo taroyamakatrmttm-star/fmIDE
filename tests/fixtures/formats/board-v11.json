@@ -1,0 +1,23 @@
+{
+  "kind": "fmIDE-graph-board",
+  "version": 11,
+  "active": 0,
+  "boards": [
+    {
+      "name": "Saved before the common scale",
+      "items": [
+        { "type": "bar", "canvasId": "cProfit", "nodeId": "profit", "name": "Profit", "periods": { "mode": "all" }, "wide": false, "scale": { "min": 0, "max": 2000 } },
+        { "type": "bar", "canvasId": "cProfit", "nodeId": "rev", "name": "Revenue", "periods": { "mode": "all" }, "wide": false, "colour": "#2563eb" },
+        { "type": "chart", "wide": true, "layout": "flow", "title": "Profit", "period": 0, "steps": [
+          { "canvasId": "cProfit", "nodeId": "rev", "name": "Revenue", "role": "start" },
+          { "canvasId": "cProfit", "nodeId": "profit", "name": "Profit", "role": "total" }
+        ] }
+      ],
+      "sliders": [
+        { "canvasId": "cProfit", "nodeId": "price", "name": "Price", "periods": { "mode": "all" }, "mode": "set", "min": 5, "max": 15, "step": 0.5 }
+      ]
+    }
+  ],
+  "sharedPeriods": { "periods": { "mode": "all" }, "period": 0 },
+  "colours": [{ "canvasId": "cProfit", "nodeId": "rev", "name": "Revenue", "colour": "#2563eb" }]
+}

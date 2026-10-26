@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph: one scale for every bar and chart
+- Above the bars and charts, beside the shared period, **Scale** puts every bar and chart on every board on one vertical scale: Each its own (as before, and where every model and older file starts), Auto for all (one range that takes in all their numbers on the board shown, moving with the sliders) or Fixed for all (from a min to a max; 📏 fixes it at what they show now). A bar or chart keeps its own by choosing Auto scale or Fixed scale in its scale list, whose first choice is now Shared; the Tornado and the Spider keep their own. Not on the phone, whose views follow it. `fmGraph.setCommonScale`, `commonScale`, `scaleShown`, `setScale(id, 'shared')`.
+- The board file is version 12: `commonScale` and a widget's `ownScale`; every follower still writes the scale it shows (under Auto for all the range when the file is written, rounded as 📏 rounds it), so ExcelExporter (now reading up to 12) gives its Dashboard charts the same axes. Older files open unchanged. Branch `claude/objective-merkle-f14472`.
+
 ## fmGraph: one colour per rectangle, shared by every board
 - A rectangle has one colour on its slider, its bars and every Columns, Lines, Waterfall and Spider chart, on every board of the model; changing it anywhere changes it everywhere. Sliders have a colour box and a stripe of their rectangle's colour (the phone's dock and mixer show the stripe). A rectangle not coloured takes the chart colours in the order it first appears in a chart; a waterfall step keeps its colour by direction until one is chosen. The Tornado's Low and High stay the chart's own.
 - The board file is version 11: `colours`, the chosen colours; every widget still writes the colour it shows, so ExcelExporter (now reading up to 11) and older readers show the same. Older files keep their colours, the first one winning where charts disagreed, with a note. `fmGraph.setColour` takes a slider too; new `fmGraph.rectColour` and `fmGraph.colours` (branch `claude/fmgraph-shared-colours-e9c229`).

@@ -17,6 +17,8 @@ const BOARD_FILE_FORMAT = { 'fmIDE-graph-board': { current: BOARD_FILE_VERSION, 
 // as it was saved (the owner's choice). v9 → v10: a chart may be a lines chart; nothing to change.
 // v10 → v11: the shared colours (04e-colours.js); nothing to change — a file without `colours`
 // keeps its colours on its widgets, taken into the shared ones when read (the first one wins).
+// v11 → v12: the common scale (04d-scale.js); nothing to change — a file without `commonScale`
+// opens with Each its own, so every bar and chart shows the scale it had.
 function keepOwnPeriods(data){
   if(!data || typeof data !== 'object' || data.form === 'template') return;
   const boardsIn = Array.isArray(data.boards) ? data.boards : [data];
@@ -25,7 +27,7 @@ function keepOwnPeriods(data){
     ['items', 'bars', 'charts'].forEach(k => { if(Array.isArray(b[k])) b[k].forEach(w => { if(w && typeof w === 'object') w.ownPeriod = true; }); });
   });
 }
-const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {}, 5: () => {}, 6: () => {}, 7: () => {}, 8: keepOwnPeriods, 9: () => {}, 10: () => {} } };
+const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {}, 5: () => {}, 6: () => {}, 7: () => {}, 8: keepOwnPeriods, 9: () => {}, 10: () => {}, 11: () => {} } };
 
 function safeFileName(s){ return String(s).replace(/[^A-Za-z0-9 ._()-]+/g, '_').replace(/\s+/g, ' ').trim().slice(0, 80) || 'board'; }
 
