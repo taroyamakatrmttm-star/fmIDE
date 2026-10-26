@@ -35,6 +35,8 @@ async function useBoards(page){
   await expect(page.locator('#graphModal')).toBeVisible();
 }
 // File → Import fmGraph boards…, answered with `file`.
+// The file is read after this returns: wait for #graphModal before reading the window's lists
+// (allTextContents and evaluateAll don't wait, and on a busy computer the window isn't there yet).
 async function importFile(page, file){
   const [chooser] = await Promise.all([page.waitForEvent('filechooser'), X.menuCommand(page, 'btnImportGraphBoards')]);
   await chooser.setFiles(file);
@@ -212,9 +214,11 @@ test('board versions: 2 has no scenarios, 3, 8, 9 and 10 read, a newer one and t
   await expect(page.locator('#graphUse')).toBeDisabled();
   await page.click('#graphCancel');
   await importFile(page, board('board-v3.board.json'));
+  await expect(page.locator('#graphModal')).toBeVisible();
   expect(await scenarioNames(page)).toEqual(['Price 14']);
   await page.click('#graphCancel');
   await importFile(page, board('board-newer.board.json')); // version 8 (step 18's), read
+  await expect(page.locator('#graphModal')).toBeVisible();
   expect(await scenarioNames(page)).toEqual(['Price 14']);
   await page.click('#graphCancel');
   // Version 9 (fmGraph's shared period) is read since it came, 10 (the lines chart) since 19
@@ -290,6 +294,7 @@ test('cut-offs: past 49 scenarios and past 20 row scenarios are listed, in the w
   const at = { canvasId: 'cProfit', nodeId: 'price', name: 'Price', mode: 'set', periods: { mode: 'all' } };
   f.scenarios = Array.from({ length: 50 }, (_, i) => ({ name: 'S' + (i + 1), sliders: [Object.assign({ value: 100 + i }, at)] }));
   await importFile(page, D.tempFile(testInfo, 'many.board.json', JSON.stringify(f)));
+  await expect(page.locator('#graphModal')).toBeVisible();
   const lines = await leftOut(page);
   expect(lines).toContain('Scenarios after the 49th are not written: S50.');
   expect(lines).toContain('“Price” needs 50 row scenarios; S20, S21, S22, S23, S24, S25, S26, S27, S28, S29, S30, S31, S32, S33, S34, S35, S36, S37, S38, S39, S40, S41, S42, S43, S44, S45, S46, S47, S48, S49 use its scenario 1 in Excel.');
@@ -447,6 +452,7 @@ test('a board\'s Tornado and Spider from someone else: outputs and inputs the mo
     { type: 'chart', layout: 'spider', title: 'Lost', output: at('nope', 'Nope'), inputs: [] },
     { type: 'chart', layout: 'tornado', title: 'No output', inputs: [] }] }] };
   await importFile(page, D.tempFile(testInfo, 'strangers-charts.board.json', JSON.stringify(f)));
+  await expect(page.locator('#graphModal')).toBeVisible();
   expect(await page.locator('#graphSensList .graph-scn-name').allTextContents()).toEqual(['<b>Bold</b>']);
   await expect(page.locator('#graphSensList b')).toHaveCount(0);
   expect(await page.locator('#graphSensList .graph-scn-what').allTextContents()).toEqual(['Tornado: Profit · 1 input · 2027']);
@@ -643,6 +649,7 @@ test('sliders from someone else: like ones once, a range that isn\'t one, past 3
 test('sliders: the copy is the layout\'s, using again asks first, Remove takes them out', async ({ page }) => {
   await openProfit(page);
   await importFile(page, board('profit.board.json'));
+  await expect(page.locator('#graphModal')).toBeVisible();
   await page.locator('#graphScenarioList input').evaluateAll(list => list.forEach(c => { c.checked = false; }));
   await page.locator('#graphScenarioList').dispatchEvent('change');
   await page.locator('#graphChartList input').evaluateAll(list => list.forEach(c => { c.checked = false; }));
@@ -990,6 +997,7 @@ test('charts from someone else: names as text, colours and scales checked, roles
 test('charts: using the boards again asks first, Remove takes them out, a row left out of the workbook is said', async ({ page }, testInfo) => {
   await openProfit(page);
   await importFile(page, board('profit.board.json'));
+  await expect(page.locator('#graphModal')).toBeVisible();
   await page.locator('#graphScenarioList input, #graphSliderList input').evaluateAll(list => list.forEach(c => { c.checked = false; }));
   await page.locator('#graphScenarioList').dispatchEvent('change');
   await page.click('#graphUse');
