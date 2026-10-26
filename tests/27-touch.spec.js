@@ -284,25 +284,59 @@ test('the menu draws an arrow: "Draw arrow from here", then a tap on the target'
 test('a menu item chosen straight after a tap that cancelled the arrow still counts', async ({ page, pageErrors }) => {
   // The cancelling tap's own click is dropped, and only that one: a quick hold (0.55 s) and a
   // menu choice within 0.8 s of it used to be lost, and the banner never came.
+  // The 0.8 s is timed by the page's own clock (event timestamps), from the cancelling tap's
+  // press to the menu choice's click; the touches go straight through the DevTools Protocol.
+  // A busy computer can make an attempt slower than 0.8 s, which proves nothing either way:
+  // then it is tried again, a few times, and the test fails if no attempt was quick enough.
   const { b } = await setup(page);
   const f = await finger(page);
-  await holdNode(page, f, b);
-  await menuItem(page, 'Draw arrow from here').tap();
-  const vp = await box(page.locator('#viewport'));
-  await f.tap({ x: vp.x + 700, y: vp.y + 500 });
-  await expect(page.locator('#tapArrowBanner')).toHaveCount(0);
-  const p = centre(await box(nodeEl(page, b).locator('.label, .opsym').first()));
   const cdp = await page.context().newCDPSession(page);
-  const started = Date.now();
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [p] });
-  await page.waitForTimeout(550);
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  await expect(menu(page)).toBeVisible();
-  await menuItem(page, 'Draw arrow from here').tap();
-  expect(Date.now() - started).toBeLessThan(800);
-  await expect(page.locator('#tapArrowBanner')).toBeVisible();
-  await page.locator('#tapArrowBanner button', { hasText: 'Cancel' }).tap();
-  await expect(page.locator('#tapArrowBanner')).toHaveCount(0);
+  const touch = (type, points) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points });
+  const vp = await box(page.locator('#viewport'));
+  const empty = { x: vp.x + 700, y: vp.y + 500 };
+  const p = centre(await box(nodeEl(page, b).locator('.label, .opsym').first()));
+  await page.evaluate(() => {
+    window.__seen = [];
+    // On window, capturing: before the arrow mode's own listeners on the document.
+    window.addEventListener('pointerdown', (ev) => window.__seen.push({ type: 'down', t: ev.timeStamp, banner: !!document.getElementById('tapArrowBanner') }), true);
+    window.addEventListener('click', (ev) => {
+      const item = ev.target.closest && ev.target.closest('.touch-menu button');
+      window.__seen.push({ type: 'click', t: ev.timeStamp, item: item ? item.textContent : null });
+    }, true);
+  });
+  // The menu opens where the node is held, so its item is where the first hold shows it: the
+  // choice's touch goes there at once, without waiting on the page in between.
+  let at = null;
+  const times = [];
+  for(let attempt = 0; attempt < 5 && !times.some(ms => ms < 800); attempt++){
+    await holdNode(page, f, b);
+    if(!at) at = centre(await box(menuItem(page, 'Draw arrow from here')));
+    await menuItem(page, 'Draw arrow from here').tap();
+    await expect(page.locator('#tapArrowBanner')).toBeVisible();
+    await page.evaluate(() => { window.__seen = []; });
+    await touch('touchStart', [empty]); await touch('touchEnd', []);         // cancels the arrow
+    await touch('touchStart', [p]);                                          // a quick hold
+    await page.waitForTimeout(550);
+    await touch('touchEnd', []);
+    await touch('touchStart', [at]); await touch('touchEnd', []);            // the menu choice
+    const seen = await page.evaluate(() => window.__seen);
+    const downs = seen.filter(e => e.type === 'down');
+    expect(downs.map(e => e.banner).slice(0, 2)).toEqual([true, false]);     // the tap cancelled, before the hold
+    const choice = seen.find(e => e.type === 'click' && e.item && e.item.includes('Draw arrow from here'));
+    if(!choice){
+      // The menu was not up yet when the choice came (a busy computer): too slow to prove anything.
+      times.push(Infinity);
+      await page.keyboard.press('Escape');
+      await expect(menu(page)).toHaveCount(0);
+      await expect(page.locator('#tapArrowBanner')).toHaveCount(0);
+      continue;
+    }
+    await expect(page.locator('#tapArrowBanner')).toBeVisible();             // it counted
+    times.push(Math.round(choice.t - downs[0].t));
+    await page.locator('#tapArrowBanner button', { hasText: 'Cancel' }).tap();
+    await expect(page.locator('#tapArrowBanner')).toHaveCount(0);
+  }
+  expect(times.some(ms => ms < 800), 'no attempt chose within 0.8 s of the cancelling tap: ' + times.join(', ') + ' ms').toBe(true);
   expect(pageErrors).toEqual([]);
 });
 
