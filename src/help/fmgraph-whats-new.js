@@ -8,6 +8,16 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'play-keeps-going', date: '2026-10-27', title: 'Play keeps going while you look around',
+    summary: 'While ▶ Play swings, you can scroll, tap, open panels and switch boards: only ■ Stop, Esc or moving a slider stops it.',
+    what: [
+      'Scrolling the page, a tap or click, a key, opening a panel and Edit chart no longer stop Play. On an iPad, a finger scrolling the page leaves it playing.',
+      'Switching to another board keeps it playing: Play moves the model\'s inputs, so the board you switch to shows the play too.',
+      '■ Stop or Esc stops it. Moving a slider yourself stops it as well, and the slider stays where you put it.',
+    ],
+    why: 'Play is for watching a change happen across the model. It stopped every time the screen was touched, so it could not be watched while scrolling to another chart or another board.',
+    how: ['Save two scenarios and press ▶ Play.', 'Scroll down, or switch to another board: the bars keep moving.', 'Press ■ Stop or Esc to stop.'],
+    see: ['scenarios'] },
   { id: 'common-scale', date: '2026-10-27', title: 'One scale for every bar and chart',
     summary: 'Above the bars and charts, Scale puts every one of them, on every board, on the same vertical scale: Auto for all or Fixed for all.',
     what: [
@@ -25,10 +35,10 @@ const FMGRAPH_WHATS_NEW = [
       'Under the scenarios, choose where Play starts and ends: a scenario, the model\'s own numbers or the sliders as they are now.',
       'Every number the two ends set differently moves smoothly from one to the other and back, slower near the ends, with a short pause at each. Several sliders, a change by %, sliders over some periods and inputs with no slider on the board all move together.',
       'The bars, the charts and the sliders follow as it goes; the dashed outlines show where it started, and a strip at the top says what plays.',
-      '■ Stop, Esc, any key or a click anywhere else stops it, and everything is just as it was: nothing is saved and there is nothing to undo.',
+      '■ Stop or Esc stops it, and everything is just as it was: nothing is saved and there is nothing to undo.',
     ],
     why: 'Two scenarios that differ in one number, say a volume of 10 against 100, are easier to understand when you can see every bar move as that number changes.',
-    how: ['Save two scenarios.', 'Under them, choose Play from and to, and press ▶ Play.', 'Press ■ Stop, Esc or anywhere else to stop.'],
+    how: ['Save two scenarios.', 'Under them, choose Play from and to, and press ▶ Play.', 'Press ■ Stop or Esc to stop.'],
     notes: ['With reduced motion turned on in your device\'s settings nothing swings: the board shows the second end against the first, and ⇄ steps between them.', 'On a large model the positions are worked out first ("Working out the play…"), then it plays smoothly.', 'The Tornado and Spider charts and Biggest movers wait until it stops.'],
     see: ['scenarios'] },
   { id: 'remove-all-inputs', date: '2026-10-27', title: 'Remove all inputs from a Tornado or Spider',
