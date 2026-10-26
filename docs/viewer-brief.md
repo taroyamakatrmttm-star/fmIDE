@@ -265,6 +265,8 @@ The coordinator assigns the numbers ("group NN").
 
 ## Open questions for the owner
 
+**Decided 27 October 2026:** the owner accepted every recommendation below ("Yes: accept all 11 recommendations in the viewer brief.").
+
 1. **The mark**: "Made with fmIDE" as plain text, or a link to the site? (Recommended: a link the visitor may click, nothing loaded; and only after the owner's name is out of the public places, `docs/decisions.md`, "Before sharing the project". Until then, text only.) May an author turn it off? (Recommended: yes, `mark: false`, as a courtesy for teaching material.)
 2. **The app's name**: fmViewer, fmShow or fmShowcase? (Recommended: **fmShowcase** for the app, "viewer" for the file people open: it says what it is for.)
 3. **Is the gallery public**, on the live site for everyone, or a page only the owner links to? (Recommended: public, it is the advert; but only models the owner chose to publish, listed in the gallery folder.)
