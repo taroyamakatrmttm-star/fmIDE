@@ -9,7 +9,7 @@ The owner's request (26 October 2026), two ideas in one:
 
 *The owner's screenshot (26 October 2026, CC BY 4.0 with the rest of `docs/`): today a balance sheet and a cash flow are two charts. The owner wants them as one.*
 
-This is the brief. It is not in the build order: the owner chooses when it is built. Nothing is built yet.
+This is the brief, approved by the owner on 26 October 2026 (staged: F1, F2, F3). It is not in the build order yet: the owner chooses when it is built. Nothing is built yet.
 
 ## The owner's choices (26 October 2026)
 
@@ -17,7 +17,7 @@ This is the brief. It is not in the build order: the owner chooses when it is bu
 2. **One period**, as in the screenshot. The chart follows the shared period like the other one-period charts do.
 3. **Where a piece sits vertically** is one of four places: **on zero**, **on top of** another piece, **where another piece ends** (a waterfall step), or **at a number** typed in. A piece does not float at a height dragged by hand: a height a person drags means nothing in the model, and it could not be drawn the same way in Excel.
 4. **Whole grid columns.** Across the chart, a piece stands in a whole column (0, 1, 2…), never between two. This keeps the chart something Excel can draw (see "ExcelExporter's Dashboard").
-5. **ExcelExporter's Dashboard: a phase of its own, last (F3).** This was my recommendation; the owner had asked what I recommend, so it waits for the owner's yes (see "Open points").
+5. **ExcelExporter's Dashboard: a phase of its own, last (F3)**, starting with a check in Excel (see "ExcelExporter's Dashboard"). The order is F1, F2, F3.
 6. **fmIDE's snapping moves to `src/shared/`.** fmIDE and fmGraph then use the same code, and nothing is copied. Both apps are under the Apache licence, so the move changes no licence.
 7. **The screenshot is kept beside this brief** under CC BY 4.0, as above.
 8. **The name is "Free".** `layout: "free"` in the file, and "Free" in + Chart and in the layout menu.
@@ -66,8 +66,8 @@ The list in Edit chart stays and always shows the same thing as the grid: a pers
 
 ## How it fits with the work under way
 
-- **One colour per rectangle (board file 11, another session):** a piece's rectangles take their shared colour, so the cash bar in the Asset stack has the same colour as Cash EB in the waterfall and as the Cash slider. A Free chart keeps no colours of its own beyond what that work allows a chart.
-- **A common min/max scale (board file 12, another session):** the Free chart takes the board's common scale like every chart, or its own fixed `scale` (board file 5).
+- **One colour per rectangle across all the model's boards (board file 11, settled by the owner):** a piece's rectangles take their shared colour, so the cash bar in the Asset stack has the same colour as Cash EB in the waterfall and as the Cash slider. A Free chart keeps no colours of its own beyond what that work allows a chart.
+- **A common min/max scale (board file 12, settled by the owner):** the Free chart takes the board's common scale like every chart, or its own fixed `scale` (board file 5).
 - **"Play" between two scenarios (later):** while play moves the sliders, the pieces glide like any bar (`glide`, never with reduced motion), and where each piece sits is worked out again in every frame, so a step resting on a moving piece rides along with it.
 - **The shared period (board file 9):** the chart's `period` follows the shared one unless the chart keeps its own (`ownPeriod`), as the Flow and Tornado charts do.
 
@@ -148,9 +148,9 @@ F1 is useful on its own: it answers the owner's first idea completely. F2 and F3
 
 ## Open points for the owner
 
-1. **F3, the Dashboard**: my recommendation is to build it as its own last phase, starting with the check in Excel and leaving the chart out (and saying so) if Excel can't draw it faithfully. Yes or no?
-2. **A tutorial step** for the Free chart (in "Charts" or a new tutorial), or help only?
-3. **When to build it**, and which phase first after F1 (F2 the grid, or F3 Excel).
+1. **A tutorial step** for the Free chart (in "Charts" or a new tutorial), or help only?
+2. **When to build it** (F1, F2, F3 in that order, as chosen).
+3. **If F3's check in Excel fails both methods**: the chart is left out of the Dashboard and listed as such, unless the owner then chooses otherwise.
 
 ## Risks
 
