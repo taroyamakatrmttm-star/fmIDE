@@ -43,10 +43,12 @@ async function openPhone(browser, options = PHONE, { vibrate = true } = {}){
   const touch = (type, points) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points.map(p => ({ x: p.x, y: p.y })) });
   const api = {
     context, page, errors, touch,
-    // A finger down at a, through each point, then lifted.
+    // A finger down at a, through each point, then lifted. The moves come 16 ms apart, as a
+    // finger's on a 60 Hz screen: sent back to back, Chromium on Windows leaves the dock's swipe
+    // part-scrolled, without snapping to the next card.
     async drag(a, points, { lift = true } = {}){
       await touch('touchStart', [a]);
-      for(const p of points) await touch('touchMove', [p]);
+      for(const p of points){ await touch('touchMove', [p]); await page.waitForTimeout(16); }
       if(lift) await touch('touchEnd', []);
     },
     async tap(p){ await touch('touchStart', [p]); await touch('touchEnd', []); },
