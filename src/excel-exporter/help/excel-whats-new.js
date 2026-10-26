@@ -11,6 +11,15 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'busy-taps', date: '2026-10-27', title: 'Taps on a busy tablet still count as taps',
+    summary: 'In the Tree View on a tablet that is slow to answer, a double-tap that renames a row, or a hold that opens its menu, is no longer undone by its own copy a moment later.',
+    what: [
+      'After a tap, the browser also sends a copy of it as a mouse click, which ExcelExporter leaves out. It used to recognise the copy only if it handled it within a second of your finger lifting; a tablet busy for longer than that took the copy for a real click, which could close the rename box or fold the tab.',
+      'Now the copy is recognised by the time your finger actually lifted, however long the tablet takes to get to it.',
+    ],
+    why: 'On a slow device, a double-tap whose second tap landed on a tab\'s heading could fold the tab instead of keeping the rename box open.',
+    how: ['Nothing to do: in the Tree View on a tablet, double-tap a row to rename it, or hold it for its menu, as before.'],
+    see: ['tree-view'] },
   { id: 'colour-grid', date: '2026-10-27', title: 'A grid of colours in every colour box',
     summary: 'A colour box now opens a grid of ready colours, on Windows as on an iPad, with the colours your Excel style already uses.',
     what: [

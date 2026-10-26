@@ -12,6 +12,15 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'busy-taps', date: '2026-10-27', title: 'Taps on a busy tablet still count as taps',
+    summary: 'On a tablet that is slow to answer (a big model, an older device), a tap is no longer mistaken for a mouse click a moment later.',
+    what: [
+      'After a tap, the browser also sends a copy of it as a mouse click, which fmIDE leaves out. It used to recognise the copy only if it handled it within a second of your finger lifting; a tablet busy for longer than that (working out a big model, for example) took the copy for a real click.',
+      'Now the copy is recognised by the time your finger actually lifted, however long the tablet takes to get to it.',
+    ],
+    why: 'A double-tap that opened a box could have it closed again, or a menu reopened, by its own copy on a slow device.',
+    how: ['Nothing to do: double-tap a rectangle on a tablet, as before, to edit it.'],
+    see: ['touch'] },
   { id: 'colour-grid', date: '2026-10-27', title: 'A grid of colours in every colour box',
     summary: 'A colour box now opens a grid of ready colours, on Windows as on an iPad, with the colours your model already uses.',
     what: [

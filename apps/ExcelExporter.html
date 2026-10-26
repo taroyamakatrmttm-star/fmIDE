@@ -8272,21 +8272,23 @@ function toggleCustomRowStyleEditor(afterRowEl, row){
 // sending a double-click, and body.touch-input (larger touch areas, text boxes that don't make
 // the browser zoom).
 const touchPointersDown = new Set();
-let lastTouchLift = null; // { x, y, time } where the last finger or pen lifted
+let lastTouchLift = null; // { x, y, time } where the last finger or pen lifted (time: the event's own)
 window.addEventListener('pointerdown', (ev) => { if(ev.pointerType !== 'mouse') touchPointersDown.add(ev.pointerId); }, true);
 function noteTouchLift(ev){
   if(ev.pointerType === 'mouse') return;
   touchPointersDown.delete(ev.pointerId);
-  lastTouchLift = { x: ev.clientX, y: ev.clientY, time: performance.now() };
+  lastTouchLift = { x: ev.clientX, y: ev.clientY, time: ev.timeStamp };
 }
 window.addEventListener('pointerup', noteTouchLift, true);
 window.addEventListener('pointercancel', noteTouchLift, true);
 
 // A mouse event the browser made from a finger or pen: one is down, or one just lifted there.
+// Timed by the events' own timestamps, not when the page gets to them: a copy carries the
+// touch's time, so a page busy for a while after a tap (a big model, a slow phone) still knows it.
 function isEmulatedMouse(ev){
   if(touchPointersDown.size) return true;
   const t = lastTouchLift;
-  return !!t && performance.now() - t.time < 1000 && Math.abs(ev.clientX - t.x) < 30 && Math.abs(ev.clientY - t.y) < 30;
+  return !!t && Math.abs(ev.timeStamp - t.time) < 1000 && Math.abs(ev.clientX - t.x) < 30 && Math.abs(ev.clientY - t.y) < 30;
 }
 
 // Run handler(ev) when a mouse button, a finger or a pen goes down on el. Only the first
@@ -8409,21 +8411,21 @@ window.addEventListener('pointermove', (ev) => { if(ev.pointerType === 'mouse' &
 // After a finger's hold has opened the row menu, or its double-tap has started a rename, the
 // mouse events the browser still copies from that touch (mousedown, mouseup, click) are
 // dropped: they would close the menu, select the row again or take focus from the rename box.
-// Until the next touch goes down, or a second after the finger lifts.
-let droppingTapCopies = false, tapCopiesTimer = null;
+// Until the next touch goes down, or a second after the finger lifts — by the events' own
+// timestamps (a copy carries the touch's time), so a page busy after the tap still drops them.
+let droppingTapCopies = false, tapCopiesUntil = null;
 function dropTapCopies(){
   droppingTapCopies = true;
-  clearTimeout(tapCopiesTimer);
-  tapCopiesTimer = null;
+  tapCopiesUntil = null;
 }
 ['mousedown', 'mouseup', 'click'].forEach(type => document.addEventListener(type, (ev) => {
+  if(droppingTapCopies && tapCopiesUntil !== null && ev.timeStamp >= tapCopiesUntil) droppingTapCopies = false;
   if(droppingTapCopies && isEmulatedMouse(ev)){ ev.preventDefault(); ev.stopImmediatePropagation(); }
 }, true));
 window.addEventListener('pointerdown', (ev) => { if(ev.pointerType !== 'mouse') droppingTapCopies = false; }, true);
 window.addEventListener('pointerup', (ev) => {
   if(ev.pointerType === 'mouse' || !droppingTapCopies) return;
-  clearTimeout(tapCopiesTimer);
-  tapCopiesTimer = setTimeout(() => { droppingTapCopies = false; }, 1000);
+  tapCopiesUntil = ev.timeStamp + 1000;
 });
 
 // ---------- Rows grouped by Excel tab (a live preview of the actual sheet layout) ----------
@@ -11253,6 +11255,15 @@ const EXCEL_HELP_TOPICS = [
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'busy-taps', date: '2026-10-27', title: 'Taps on a busy tablet still count as taps',
+    summary: 'In the Tree View on a tablet that is slow to answer, a double-tap that renames a row, or a hold that opens its menu, is no longer undone by its own copy a moment later.',
+    what: [
+      'After a tap, the browser also sends a copy of it as a mouse click, which ExcelExporter leaves out. It used to recognise the copy only if it handled it within a second of your finger lifting; a tablet busy for longer than that took the copy for a real click, which could close the rename box or fold the tab.',
+      'Now the copy is recognised by the time your finger actually lifted, however long the tablet takes to get to it.',
+    ],
+    why: 'On a slow device, a double-tap whose second tap landed on a tab\'s heading could fold the tab instead of keeping the rename box open.',
+    how: ['Nothing to do: in the Tree View on a tablet, double-tap a row to rename it, or hold it for its menu, as before.'],
+    see: ['tree-view'] },
   { id: 'colour-grid', date: '2026-10-27', title: 'A grid of colours in every colour box',
     summary: 'A colour box now opens a grid of ready colours, on Windows as on an iPad, with the colours your Excel style already uses.',
     what: [

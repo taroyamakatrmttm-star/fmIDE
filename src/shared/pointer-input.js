@@ -8,21 +8,23 @@
 // sending a double-click, and body.touch-input (larger touch areas, text boxes that don't make
 // the browser zoom).
 export const touchPointersDown = new Set();
-let lastTouchLift = null; // { x, y, time } where the last finger or pen lifted
+let lastTouchLift = null; // { x, y, time } where the last finger or pen lifted (time: the event's own)
 window.addEventListener('pointerdown', (ev) => { if(ev.pointerType !== 'mouse') touchPointersDown.add(ev.pointerId); }, true);
 function noteTouchLift(ev){
   if(ev.pointerType === 'mouse') return;
   touchPointersDown.delete(ev.pointerId);
-  lastTouchLift = { x: ev.clientX, y: ev.clientY, time: performance.now() };
+  lastTouchLift = { x: ev.clientX, y: ev.clientY, time: ev.timeStamp };
 }
 window.addEventListener('pointerup', noteTouchLift, true);
 window.addEventListener('pointercancel', noteTouchLift, true);
 
 // A mouse event the browser made from a finger or pen: one is down, or one just lifted there.
+// Timed by the events' own timestamps, not when the page gets to them: a copy carries the
+// touch's time, so a page busy for a while after a tap (a big model, a slow phone) still knows it.
 export function isEmulatedMouse(ev){
   if(touchPointersDown.size) return true;
   const t = lastTouchLift;
-  return !!t && performance.now() - t.time < 1000 && Math.abs(ev.clientX - t.x) < 30 && Math.abs(ev.clientY - t.y) < 30;
+  return !!t && Math.abs(ev.timeStamp - t.time) < 1000 && Math.abs(ev.clientX - t.x) < 30 && Math.abs(ev.clientY - t.y) < 30;
 }
 
 // Run handler(ev) when a mouse button, a finger or a pen goes down on el. Only the first

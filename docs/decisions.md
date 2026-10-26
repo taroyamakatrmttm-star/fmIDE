@@ -49,7 +49,7 @@ Workflow since step 3a: edit `src/` → `npm run build` → `npm test` (the file
 
 Found and agreed with the owner; each waits for its own session, branch and pull request.
 
-None at the moment.
+- **fmGraph loses a board change made in the last 0.3 s before its window closes** (found 27 Oct 2026, looking into group 50 failing once in a whole local run; the owner's decision the same day: fix later, on its own branch). fmGraph keeps the boards in the browser 0.3 s after a change (`saveBoardSoon`, `src/fmgraph/js/04-board.js`), and on closing writes what is still waiting (`pagehide`, `06-page.js`). Measured in Chromium: a change made just before the window is closed was lost 10 times in 10, also when the window was closed as a person closes it (its closing steps run); saving on `beforeunload` as well kept only 3 in 10. A write to the browser's database begun while the window closes doesn't finish. fmIDE seems safe only because its "Leave site?" question keeps the window open. Proposed fix: on closing, also write the waiting boards at once to `localStorage` (which writes immediately) and take them back at the next start — a storage change (`docs/architecture/storage.md`). Group 50 now waits until the boards are kept before it closes the window.
 
 Fixed:
 
