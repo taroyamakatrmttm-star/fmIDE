@@ -1,0 +1,27 @@
+/* The colour grid (src/shared/colour-grid.js), shared by fmIDE, fmGraph and ExcelExporter:
+   opens under a colour box, above every window. */
+.colour-grid{
+  position:fixed; z-index:10000; box-sizing:border-box; width:max-content; max-width:calc(100vw - 16px);
+  max-height:calc(100vh - 16px); overflow-y:auto; padding:8px 10px 10px; background:#fff; color:#1e293b;
+  border:1px solid #cbd5e1; border-radius:10px; box-shadow:0 10px 28px rgba(15,23,42,.18); font:12px/1.3 system-ui, sans-serif;
+}
+.colour-grid .cg-title{ font-size:10.5px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.4px; margin:6px 0 4px; }
+.colour-grid .cg-title:first-child{ margin-top:0; }
+.colour-grid .cg-group{ display:grid; grid-template-columns:repeat(12, 22px); gap:3px; }
+.colour-grid .cg-swatch{
+  width:22px; height:22px; padding:0; margin:0; border:1px solid rgba(15,23,42,.18); border-radius:4px; cursor:pointer;
+  touch-action:manipulation; min-width:0; min-height:0;
+}
+.colour-grid .cg-swatch:hover{ transform:scale(1.12); }
+.colour-grid .cg-swatch:focus-visible{ outline:2px solid #1d4ed8; outline-offset:1px; }
+.colour-grid .cg-swatch[aria-pressed="true"]{ box-shadow:0 0 0 2px #fff, 0 0 0 4px #1e293b; }
+.colour-grid .cg-more{
+  display:block; margin:10px 0 0 auto; padding:5px 12px; border:1px solid #cbd5e1; border-radius:6px; background:#f8fafc;
+  color:#1e293b; font:inherit; cursor:pointer;
+}
+.colour-grid .cg-more:hover, .colour-grid .cg-more:focus-visible{ background:#eef2ff; border-color:#6366f1; }
+@media (pointer: coarse){
+  .colour-grid{ width:min(380px, calc(100vw - 16px)); }
+  .colour-grid .cg-group{ grid-template-columns:repeat(12, minmax(0, 1fr)); gap:4px; }
+  .colour-grid .cg-swatch{ width:auto; height:28px; }
+}

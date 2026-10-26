@@ -314,6 +314,11 @@
     });
   }
 
+  // Every colour box opens a grid of ready colours, the colours in use among them
+  // (the owner's request of 27 October 2026).
+  // build:include shared/colour-grid.js
+  installColourGrid({ inUse: () => coloursIn([nodes, canvases.map(c => c.nodes), FORMAT_PRESETS]) });
+
   // Builds the number-format/fill/border/font fields shared by the per-rectangle
   // formatting dialog and the format-preset editor. Appends fields into `box` (before
   // any element already in it — callers add their own rows/actions after calling this)

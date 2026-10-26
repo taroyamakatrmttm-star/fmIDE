@@ -1132,6 +1132,14 @@ Every motion check is timed by the page's own clock: `fmGraph.playing()` (its `e
 - **The API**: with no scenarios the row offers the model's own numbers → the sliders now, and ▶ Play says there is nothing to play (`.note[data-slot="play"]`); the same ends, a scenario named in other capitals, or an unknown scenario throw; `play({ from: 'High', to: 'model' })`; `stepPlay` false while it moves.
 - **A phone**: the dock's first card shows 14 at the end and 8 at the start; a touch on a bar stops it, the card back at 10.
 
+### 83. The colour grid (`tests/83-colour-grid.spec.js`; `npm run test:colour-grid`; the owner's request of 27 October 2026)
+Every colour box in the three apps opens the shared grid (`src/shared/colour-grid.js`) instead of the browser's own box; a pick sets the box and sends `input` and `change`, so the apps' own handlers run.
+- **In Node**: Greys (12, White to Black), Colours (72, "Red, lightest" first), Chart colours and In use — only `#rrggbb` (`#abc` widened, `red`, `url(x)`, `#12345` left out, each once); `coloursIn` reads `fill`, `color`, `colour` values and colours in lists, nothing else.
+- **fmGraph**: a slider's colour box opens the grid (a dialog named after the box), with 8 chart colours and the sample's Closing cash and Equipment in use; every swatch named ("White, #ffffff"); the focus on the box's colour, marked pressed. Esc closes and gives the focus back; Enter opens; the arrows move ("Orange, lightest"); Tab goes to More… and back; Enter picks: Price's colour chosen, the box showing it; Ctrl+Z takes it back. A click picks on a bar; scrolling the page keeps the grid open; a press outside picks nothing. More… closes the grid and calls the browser's `showPicker`. No page error.
+- **fmGraph's Automatic** (the owner's yes, 27 October 2026): the Balance sheet's first key swatch opens the grid with Automatic first — Closing cash's `#0f766e`, marked and focused, named "Automatic, #0f766e"; Black chooses `#000000`; opened again, Automatic still shows `#0f766e`, unmarked, Black marked; Automatic clears the choice: `rectColour('Closing cash')` back to `#0f766e`, not chosen, the key swatch and the Closing cash bar too; Ctrl+Z brings Black back. In Node, an `automatic` colour is the first section.
+- **fmIDE**: the rectangle format window's Fill opens the grid with Greys, Colours and In use (another rectangle's `#fde68a`); Esc closes the grid, not the window; picking it and Save fill the rectangle. No page error.
+- **ExcelExporter**: the Excel style's Links font colour opens the grid with the Inputs fill `#eff6ff` in use; picking Black sets it and unticks Automatic, as the browser's box does. No page error.
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.

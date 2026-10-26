@@ -12,6 +12,16 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'colour-grid', date: '2026-10-27', title: 'A grid of colours in every colour box',
+    summary: 'A colour box now opens a grid of ready colours, on Windows as on an iPad, with the colours your model already uses.',
+    what: [
+      'Click a colour box in a rectangle\'s formatting or a format preset (fill, border, name colour): a grid opens under it with greys, twelve colours in six shades from light to dark, and the colours already used in this model and its presets. Click one and it is set at once.',
+      'More… at the bottom opens your browser\'s own colour box, for an exact colour by its numbers.',
+      'The keyboard works too: Enter or Space opens the grid, the arrow keys move, Enter picks, Tab reaches More… and Esc closes it (the window stays open).',
+    ],
+    why: 'On Windows, the browser\'s own colour box shows only number fields and a gradient, with no ready colours to pick from; an iPad shows a grid. Now every screen has the grid, and using a colour again is one click.',
+    how: ['Press 🎨 on a rectangle.', 'Click the Fill color box, then a colour in the grid.', 'Untick No fill and press Save.'],
+    see: ['formats'] },
   { id: 'user-manual', date: '2026-10-21', title: 'The user manual, one click from Help',
     summary: 'A link at the top of the Help panel opens the user manual on fmIDE\'s website: lessons step by step, with the numbers you should see.',
     what: [
