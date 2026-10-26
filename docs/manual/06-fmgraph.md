@@ -15,7 +15,7 @@ The numbers in this part were checked against the apps on `main` at pull request
 | [6.3 Boards](#graph-boards) | Tabs, arranging, one colour per rectangle, a fixed scale, one scale for all, undo, board files, boards in the document | step 15 G3 ([#85](https://github.com/taroyamakatrmttm-star/fmIDE/pull/85)–[#87](https://github.com/taroyamakatrmttm-star/fmIDE/pull/87)), [#133](https://github.com/taroyamakatrmttm-star/fmIDE/pull/133), branch `claude/fmgraph-shared-colours-e9c229` |
 | [6.4 Trace, Biggest movers, and comparing A with B](#graph-explore) | 🔍 Trace, Biggest movers, 📌 Pin as A | step 15 G4 ([#88](https://github.com/taroyamakatrmttm-star/fmIDE/pull/88), [#89](https://github.com/taroyamakatrmttm-star/fmIDE/pull/89)) |
 | [6.5 Named scenarios and the scenario waterfall](#graph-scenarios) | + Save as scenario, ▶ Show, A, ▶ Play between two scenarios, the scenario waterfall | [#93](https://github.com/taroyamakatrmttm-star/fmIDE/pull/93), [#94](https://github.com/taroyamakatrmttm-star/fmIDE/pull/94) |
-| [6.6 Tornado and Spider: which inputs matter most](#tornado-spider) | The two charts, and choosing each input's Low and High | step 18 ([#146](https://github.com/taroyamakatrmttm-star/fmIDE/pull/146), [#149](https://github.com/taroyamakatrmttm-star/fmIDE/pull/149)) |
+| [6.6 Tornado and Spider: which inputs matter most](#tornado-spider) | The two charts, and choosing each input's Low and High | step 18 ([#146](https://github.com/taroyamakatrmttm-star/fmIDE/pull/146), [#149](https://github.com/taroyamakatrmttm-star/fmIDE/pull/149)); branch `claude/tornado-remove-all-inputs-655a57` |
 | [6.7 Goal seek](#goal-seek) | The slider value that hits a number | [#187](https://github.com/taroyamakatrmttm-star/fmIDE/pull/187) |
 | [6.8 Boards on templates and in the library](#boards-templates) | Export for a template…, Attach to template…, Try in fmGraph | step 15 G5 ([#90](https://github.com/taroyamakatrmttm-star/fmIDE/pull/90)–[#92](https://github.com/taroyamakatrmttm-star/fmIDE/pull/92)) |
 | [6.9 fmGraph on a phone](#fmgraph-phone) | The dock, the mixer, Show, Share | step 17 P1 ([#127](https://github.com/taroyamakatrmttm-star/fmIDE/pull/127), [#128](https://github.com/taroyamakatrmttm-star/fmIDE/pull/128)) |
@@ -202,7 +202,7 @@ The trace note reads **Price → Revenue → Profit**, and lists **Quantity** an
 > **You need:** fmIDE and fmGraph. The example model: Price `10` × Quantity `30` = Revenue; Revenue − Costs (`200`) = Profit, which is 100.
 > **Time:** about 10 minutes.
 > **In the app:** fmGraph Help → *Tornado and Spider: what moves an output most* (`sensitivity`) · fmGraph tutorial *Trace and compare* (`trace-and-compare`, its last two steps)
-> **Came in:** step 18, phases A1 and A2 · [#146](https://github.com/taroyamakatrmttm-star/fmIDE/pull/146), [#149](https://github.com/taroyamakatrmttm-star/fmIDE/pull/149)
+> **Came in:** step 18, phases A1 and A2 · [#146](https://github.com/taroyamakatrmttm-star/fmIDE/pull/146), [#149](https://github.com/taroyamakatrmttm-star/fmIDE/pull/149); × Remove all inputs, branch `claude/tornado-remove-all-inputs-655a57`
 
 Two chart kinds answer the same question: "which inputs matter most for this output?"
 
@@ -221,7 +221,7 @@ Two chart kinds answer the same question: "which inputs matter most for this out
    - **%** or **±**: move it by a percent or by an amount;
    - **Low** and **High**, for example −10 and +10.
 7. Read the line under each row. It shows Low and High in the input's own numbers, for example *Now 10: 9 … 11 in* the period chosen.
-8. Use **+ Input** to add another input, **↑ ↓** to reorder, **×** to remove.
+8. Use **+ Input** to add another input, **↑ ↓** to reorder, **×** to remove. To keep only a few of many inputs, press **× Remove all inputs**: the list empties in one step, and the chart says *No inputs yet: in Edit chart, + Input adds one, or ↻ takes the 3 that reach Profit.* Then press **+ Input** for each one you want and choose it in its list. **Undo** (or **↻**) brings them all back.
 
 ### Check it
 

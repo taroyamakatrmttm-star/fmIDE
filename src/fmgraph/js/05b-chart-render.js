@@ -140,6 +140,12 @@ function chartEditorParts(c){
     reach.type = 'button';
     reach.addEventListener('click', () => { c.inputs = sensitivityStart(c.output).inputs; changed(); });
     box.appendChild(reach);
+    // The owner's request of 27 October 2026: empty the list in one undo step, to pick a few with + Input.
+    const clear = make('button', 'link-btn sens-clear', '× Remove all inputs');
+    clear.type = 'button';
+    clear.disabled = !c.inputs.length;
+    clear.addEventListener('click', () => { c.inputs = []; changed(); });
+    box.appendChild(clear);
     return box;
   }
   if(c.layout === 'scenarios'){
@@ -674,7 +680,11 @@ function drawSensitivity(c, problems, key){
   const name = c.output ? partLabel(c.output) : '';
   const kind = c.layout === 'tornado' ? 'Tornado' : 'Spider';
   if(!c.output) problems.push('No output yet: Edit chart chooses it.');
-  else if(!c.inputs.length) problems.push('No inputs to move: none reaches ' + name + '.');
+  else if(!c.inputs.length){
+    const reaching = sensitivityStart(c.output).inputs.length;
+    problems.push(reaching ? 'No inputs yet: in Edit chart, + Input adds one, or ↻ takes ' + (reaching === 1 ? 'the one that reaches ' : 'the ' + reaching + ' that reach ') + name + '.'
+      : 'No inputs to move: none reaches ' + name + '.');
+  }
   if(!ready) problems.push('Working out…');
   const W = 560;
   if(!figures || !figures.inputs.length){

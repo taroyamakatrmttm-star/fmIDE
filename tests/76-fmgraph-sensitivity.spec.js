@@ -245,6 +245,55 @@ test('adding one: + Chart → Tornado measures the first calculated rectangle; S
   expect(pageErrors).toEqual([]);
 });
 
+// The owner's request of 27 October 2026: one button empties the list, to pick a few with + Input.
+test('× Remove all inputs: one undo step, the chart says what to do, + Input and ↻ afterwards; kept empty in the file', async ({ page, pageErrors }) => {
+  await openSample(page);
+  const id = await g(page, () => fmGraph.addChart({ layout: 'tornado', output: 'Profit' }));
+  const w = page.locator('.chart-widget[data-layout="tornado"]');
+  await w.locator('details.chart-edit > summary').click();
+  const item = async () => (await g(page, () => fmGraph.board())).items.at(-1);
+  expect((await item()).inputs.map(i => i.name)).toEqual(['Price', 'Volume', 'Unit cost', 'Overheads']);
+  const clear = w.locator('.sens-clear');
+  await expect(clear).toHaveText('× Remove all inputs');
+  await expect(clear).toBeEnabled();
+  await clear.click();
+  expect((await item()).inputs).toEqual([]);
+  await expect(w.locator('.sens-row')).toHaveCount(0);
+  await expect(w.locator('.sens-clear')).toBeDisabled();
+  await expect(w.locator('.empty-note')).toContainText('None yet');
+  // What to do, in words: not "none reaches".
+  await expect(w.locator('.bar-errors')).toContainText('No inputs yet: in Edit chart, + Input adds one, or ↻ takes the 4 that reach Profit.');
+  await expect(w.locator('.bar-errors')).not.toContainText('none reaches');
+  expect((await chart(page, id)).inputs).toEqual([]);
+  // One undo step brings all four back; redo empties them again.
+  expect(await g(page, () => fmGraph.undo())).toBe(true);
+  expect((await item()).inputs.map(i => i.name)).toEqual(['Price', 'Volume', 'Unit cost', 'Overheads']);
+  await expect(w.locator('.sens-row')).toHaveCount(4);
+  expect(await g(page, () => fmGraph.redo())).toBe(true);
+  expect((await item()).inputs).toEqual([]);
+  // + Input adds one that reaches the output; ↻ brings them all back. (Undo puts the board back
+  // as it was, Edit chart closed: opened again.)
+  if(await w.locator('details.chart-edit').getAttribute('open') === null) await w.locator('details.chart-edit > summary').click();
+  await w.locator('.sens-add').click();
+  expect((await item()).inputs.map(i => i.name)).toEqual(['Price']);
+  await expect(w.locator('.sens-clear')).toBeEnabled();
+  await w.locator('.sens-clear').click();
+  // Kept empty in the board file and read back empty.
+  const file = await g(page, () => fmGraph.exportBoards(true));
+  expect(file.boards[0].items.at(-1)).toMatchObject({ layout: 'tornado', inputs: [] });
+  expect(await g(page, (d) => fmGraph.importBoards(d), file)).toBe(1);
+  await g(page, () => fmGraph.showBoard(1));
+  expect((await item()).inputs).toEqual([]);
+  await g(page, () => fmGraph.showBoard(0));
+  await w.locator('.sens-reach').click();
+  expect((await item()).inputs.map(i => i.name)).toEqual(['Price', 'Volume', 'Unit cost', 'Overheads']);
+  // An empty list from a script too.
+  const empty = await g(page, () => fmGraph.addChart({ layout: 'spider', output: 'Profit', inputs: [] }));
+  expect((await chart(page, empty)).inputs).toEqual([]);
+  await expect(page.locator('.chart-widget[data-layout="spider"] .bar-errors')).toContainText('No inputs yet');
+  expect(pageErrors).toEqual([]);
+});
+
 test('Edit chart (A2): each input\'s mode, Low, High and Show; + Input; in the input\'s own numbers', async ({ page, pageErrors }) => {
   await openSample(page);
   const id = await g(page, () => fmGraph.addChart({ layout: 'tornado', output: 'Profit', inputs: [{ rect: 'Price' }, { rect: 'Volume' }] }));

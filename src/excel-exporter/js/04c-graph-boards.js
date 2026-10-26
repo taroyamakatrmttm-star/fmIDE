@@ -326,10 +326,11 @@ function graphRectRow(r){
   return mapping.rows.find(x => x.id === pathKey([], r.canvasId, r.nodeId)) || null;
 }
 // A board's Tornado and Spider charts matched to the open model: the output a rectangle row
-// of it (else the chart is left out), each input as a scenario's setting is (else left out).
-// → { charts: [{ layout, title, output (row id), outputName, period, steps, variables }], left: { noOutput, notFound, inBlock, notInput, bad } }
+// of it (else the chart is left out), each input as a scenario's setting is (else left out);
+// a chart left with no inputs to move is left out too (noInputs).
+// → { charts: [{ layout, title, output (row id), outputName, period, steps, variables }], left: { noOutput, noInputs, notFound, inBlock, notInput, bad } }
 function matchGraphSensCharts(board){
-  const left = { noOutput: 0, notFound: 0, inBlock: 0, notInput: 0, bad: 0 };
+  const left = { noOutput: 0, noInputs: 0, notFound: 0, inBlock: 0, notInput: 0, bad: 0 };
   const charts = [];
   (board && board.sensCharts || []).forEach(c => {
     left.bad += c.badInputs;
@@ -345,6 +346,7 @@ function matchGraphSensCharts(board){
       if(v.show === false) spec.show = false;
       variables.push(spec);
     });
+    if(!variables.length){ left.noInputs++; return; }
     charts.push({ layout: c.layout, title: c.title, output: outRow.id, outputName: outRow.label || c.output.name,
       period: c.period < model.periods.length ? c.period : 0, steps: c.steps, variables }); // a period the model hasn't got: 0, as fmGraph reads it
   });

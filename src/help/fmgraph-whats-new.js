@@ -31,6 +31,17 @@ const FMGRAPH_WHATS_NEW = [
     how: ['Save two scenarios.', 'Under them, choose Play from and to, and press ▶ Play.', 'Press ■ Stop, Esc or anywhere else to stop.'],
     notes: ['With reduced motion turned on in your device\'s settings nothing swings: the board shows the second end against the first, and ⇄ steps between them.', 'On a large model the positions are worked out first ("Working out the play…"), then it plays smoothly.', 'The Tornado and Spider charts and Biggest movers wait until it stops.'],
     see: ['scenarios'] },
+  { id: 'remove-all-inputs', date: '2026-10-27', title: 'Remove all inputs from a Tornado or Spider',
+    summary: 'One button empties a Tornado\'s or Spider\'s list of inputs, so you can start again with only the ones you want.',
+    what: [
+      'Edit chart has × Remove all inputs beside + Input and ↻. It takes every input out of the chart in one step.',
+      'The chart then says what to do: + Input adds one, or ↻ takes every input that reaches the output again.',
+      'Undo brings them all back in one step.',
+    ],
+    why: 'An output like Net Income can have 20 or more inputs. All of them are shown at first, which is fine, but picking a few meant pressing × on every other row.',
+    how: ['Open the chart\'s Edit chart.', 'Press × Remove all inputs.', 'Press + Input for each input you want, and choose it in its list.'],
+    notes: ['ExcelExporter leaves a Tornado or Spider with no inputs out of Use fmGraph boards…, and says so.'],
+    see: ['sensitivity'] },
   { id: 'shared-colours', date: '2026-10-26', title: 'One colour per rectangle, everywhere',
     summary: 'A rectangle now has the same colour on its slider, its bars and every chart, on every board. Change it in one place and it changes everywhere.',
     what: [
