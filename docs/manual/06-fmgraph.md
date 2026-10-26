@@ -14,7 +14,7 @@ The numbers in this part were checked against the apps on `main` at pull request
 | [6.2 Charts](#graph-charts) | Columns, Lines, Waterfall; one period for every board | step 15 G2 ([#84](https://github.com/taroyamakatrmttm-star/fmIDE/pull/84)), [#184](https://github.com/taroyamakatrmttm-star/fmIDE/pull/184), [#188](https://github.com/taroyamakatrmttm-star/fmIDE/pull/188) |
 | [6.3 Boards](#graph-boards) | Tabs, arranging, one colour per rectangle, a fixed scale, undo, board files, boards in the document | step 15 G3 ([#85](https://github.com/taroyamakatrmttm-star/fmIDE/pull/85)–[#87](https://github.com/taroyamakatrmttm-star/fmIDE/pull/87)), [#133](https://github.com/taroyamakatrmttm-star/fmIDE/pull/133), branch `claude/fmgraph-shared-colours-e9c229` |
 | [6.4 Trace, Biggest movers, and comparing A with B](#graph-explore) | 🔍 Trace, Biggest movers, 📌 Pin as A | step 15 G4 ([#88](https://github.com/taroyamakatrmttm-star/fmIDE/pull/88), [#89](https://github.com/taroyamakatrmttm-star/fmIDE/pull/89)) |
-| [6.5 Named scenarios and the scenario waterfall](#graph-scenarios) | + Save as scenario, ▶ Show, A, the scenario waterfall | [#93](https://github.com/taroyamakatrmttm-star/fmIDE/pull/93), [#94](https://github.com/taroyamakatrmttm-star/fmIDE/pull/94) |
+| [6.5 Named scenarios and the scenario waterfall](#graph-scenarios) | + Save as scenario, ▶ Show, A, ▶ Play between two scenarios, the scenario waterfall | [#93](https://github.com/taroyamakatrmttm-star/fmIDE/pull/93), [#94](https://github.com/taroyamakatrmttm-star/fmIDE/pull/94) |
 | [6.6 Tornado and Spider: which inputs matter most](#tornado-spider) | The two charts, and choosing each input's Low and High | step 18 ([#146](https://github.com/taroyamakatrmttm-star/fmIDE/pull/146), [#149](https://github.com/taroyamakatrmttm-star/fmIDE/pull/149)) |
 | [6.7 Goal seek](#goal-seek) | The slider value that hits a number | [#187](https://github.com/taroyamakatrmttm-star/fmIDE/pull/187) |
 | [6.8 Boards on templates and in the library](#boards-templates) | Export for a template…, Attach to template…, Try in fmGraph | step 15 G5 ([#90](https://github.com/taroyamakatrmttm-star/fmIDE/pull/90)–[#92](https://github.com/taroyamakatrmttm-star/fmIDE/pull/92)) |
@@ -161,9 +161,9 @@ The trace note reads **Price → Revenue → Profit**, and lists **Quantity** an
 
 > **Goal:** save what-ifs under names, switch between them, and show how each one changes a result.
 > **You need:** the board of [lesson 6.1](#bars-sliders).
-> **Time:** about 10 minutes.
+> **Time:** about 12 minutes.
 > **In the app:** fmGraph Help → *Named scenarios* (`scenarios`), *Charts: columns, lines and waterfalls* (`charts`) · fmGraph tutorial *Scenarios* (`scenarios`)
-> **Came in:** named scenarios, S1 ([#93](https://github.com/taroyamakatrmttm-star/fmIDE/pull/93)); the scenario waterfall, S2 ([#94](https://github.com/taroyamakatrmttm-star/fmIDE/pull/94))
+> **Came in:** named scenarios, S1 ([#93](https://github.com/taroyamakatrmttm-star/fmIDE/pull/93)); the scenario waterfall, S2 ([#94](https://github.com/taroyamakatrmttm-star/fmIDE/pull/94)); Play (branch `claude/fmgraph-play-scenarios`, 27 October 2026)
 
 ### Steps
 
@@ -171,6 +171,7 @@ The trace note reads **Price → Revenue → Profit**, and lists **Quantity** an
 2. Set Price to **12** and save again: `High price`.
 3. Press **▶** on *Low price*: the sliders go where it had them. The scenario the sliders match is marked.
 4. Press **Reset all**. Press **+ Chart** and choose **Scenario waterfall**. In Edit chart, choose **Profit** as its output.
+5. Under the scenarios, set **Play from** to *Low price* and **to** to *High price*, and press **▶ Play**. Price swings from 8 to 12 and back, like a pendulum, pausing at each end; the Profit bar follows, and its dashed outline marks *Low price*. Press **Esc**: everything is as it was before.
 
 ### Check it
 
@@ -185,6 +186,7 @@ The trace note reads **Price → Revenue → Profit**, and lists **Quantity** an
 
 - **A** on a scenario compares with it, as 📌 Pin as A does ([lesson 6.4](#graph-explore)). **⟳** keeps where the sliders are now in that scenario; **↑ ↓** reorder; **×** deletes.
 - **A scenario keeps the inputs it changed,** whatever board it was saved on. If one has no slider on the board you're looking at, fmGraph says so.
+- **▶ Play** can swing between any two ends: a scenario, the model's own numbers or the sliders now. Every number the two ends set differently moves together, slower near the ends. **■ Stop**, **Esc**, any key or a click elsewhere stops it; it changes no slider and saves nothing. With reduced motion turned on in your device's settings nothing swings: the board shows the second end against the first, and **⇄** steps between them.
 - **Up to 50 scenarios** a model. They are kept with the boards, in fmIDE's document and in **Export all boards**; saving, renaming and deleting them can be undone.
 - **A scenario waterfall** follows the scenarios as you update, reorder or rename them. Edit chart chooses the period, up to six outputs, and which scenarios it goes through.
 - **In Excel,** the scenarios become Global Cases ([lesson 5.11](05-excelexporter.md#fmgraph-in-excel)).

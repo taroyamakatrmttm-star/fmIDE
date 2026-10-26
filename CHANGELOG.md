@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph: Play between two scenarios
+- Under the scenarios, **▶ Play** swings the model between two ends and back, like a pendulum, until stopped: each end a scenario, the model's own numbers or the sliders now. Every number the ends set differently moves in a straight line, the positions spaced by a cosine (slow at the ends), 2 s a swing with 0.6 s still at each end; the bars, charts, sliders, dock and mixer follow, the dashed outlines mark the first end, the Tornado and Spider hold still and Biggest movers waits.
+- Each position is worked out once (a slow model works them all out ahead, fewer of them when that would take long). ■ Stop, Esc, any key or press, a slider moved or another board stops it, and everything is as it was: no slider changed, nothing saved, no undo step, not in the board file. With reduced motion there is no motion: the second end against the first's outlines, ⇄ to step. `fmGraph.play`, `stopPlay`, `stepPlay`, `playing`; test group 82.
+
 ## fmGraph: one colour per rectangle, shared by every board
 - A rectangle has one colour on its slider, its bars and every Columns, Lines, Waterfall and Spider chart, on every board of the model; changing it anywhere changes it everywhere. Sliders have a colour box and a stripe of their rectangle's colour (the phone's dock and mixer show the stripe). A rectangle not coloured takes the chart colours in the order it first appears in a chart; a waterfall step keeps its colour by direction until one is chosen. The Tornado's Low and High stay the chart's own.
 - The board file is version 11: `colours`, the chosen colours; every widget still writes the colour it shows, so ExcelExporter (now reading up to 11) and older readers show the same. Older files keep their colours, the first one winning where charts disagreed, with a note. `fmGraph.setColour` takes a slider too; new `fmGraph.rectColour` and `fmGraph.colours` (branch `claude/fmgraph-shared-colours-e9c229`).

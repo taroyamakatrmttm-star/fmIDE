@@ -171,7 +171,7 @@ function moverText(m){
 
 function updateMovers(results){
   const panel = $('moversPanel');
-  if(!panel || !model || !panel.open) return;
+  if(!panel || !model || !panel.open || playNow()) return; // waits while Play runs (05m-play.js)
   const list = $('moversList');
   const movers = biggestMovers(results, MOVERS_SHOWN);
   list.textContent = '';
