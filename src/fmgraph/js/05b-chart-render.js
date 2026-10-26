@@ -5,7 +5,6 @@
 // it shows the model's own values as dashed outlines once a slider has changed them, and lights
 // up when a slider reaches any of its rectangles.
 // ============================================================
-const PART_COLOURS = ['#0f766e', '#2563eb', '#d97706', '#7c3aed', '#db2777', '#0891b2', '#65a30d', '#9f1239'];
 const chartsEditing = new Set(); // charts whose editor is open (this page only)
 const ROLE_LABELS = { start: 'Start', add: 'Add', subtract: 'Subtract', total: 'Total' };
 
@@ -55,7 +54,6 @@ function switchLayout(c, layout){
   }
   else if(SENSITIVITY_LAYOUTS.includes(layout)){
     const start = sensitivityStart(keys.find(k => !model.byKey.get(k).input));
-    c.colours = {};
     Object.assign(c, { layout, period, output: start.output, inputs: start.inputs, steps: SENSITIVITY_LIMITS.defaultSteps, colour: null, colour2: null });
   }
   else Object.assign(c, { layout: 'columns', periods, groups: [{ name: '', parts: keys }], check: false });
@@ -218,9 +216,9 @@ function chartEditorParts(c){
       role.setAttribute('aria-label', 'Step');
       FLOW_ROLES.forEach(v => { const o = make('option', null, ROLE_LABELS[v]); o.value = v; if(s.role === v) o.selected = true; role.appendChild(o); });
       role.addEventListener('change', () => { s.role = role.value; changed(); });
-      // Its own colour (otherwise by direction: up, down, or a full bar).
-      const own = c.colours && c.colours[s.key];
-      const pick = colourPicker(own || '#334155', 'Colour of this step', (v) => { c.colours = Object.assign({}, c.colours, { [s.key]: v }); changed(); });
+      // Its rectangle's chosen colour, shared by every chart (otherwise by direction: up, down, or a full bar).
+      const own = chosenColour(s.key);
+      const pick = colourPicker(own || '#334155', 'Colour of this step', (v) => { setRectColour(s.key, v); changed(); });
       r.append(role, rs, pick, rowButtons(c.steps, i));
       box.appendChild(r);
     });
@@ -296,14 +294,14 @@ function drawChart(el, c, results){
   problems.forEach(t => list.appendChild(make('li', null, t)));
 }
 
-// The colour of each rectangle, in the order the chart lists them (the same rectangle twice
-// keeps its first colour).
+// The colour of each of the chart's rectangles: its shared one (04e-colours.js).
 function partColours(c){
   const out = new Map();
-  chartKeys(c).forEach(k => { if(!out.has(k)) out.set(k, PART_COLOURS[out.size % PART_COLOURS.length]); });
-  Object.keys(c.colours || {}).forEach(k => { if(out.has(k)) out.set(k, c.colours[k]); });
+  chartKeys(c).forEach(k => { if(!out.has(k)) out.set(k, rectColour(k) || PART_COLOURS[0]); });
   return out;
 }
+// A key's swatch picks the rectangle's colour on every board.
+function pickRectColour(k){ return (v) => { chooseRectColour(k, v); saveBoardSoon(); renderBoard(); }; }
 
 function drawColumns(c, results, problems, key){
   const now = columnsFigures(c, results), was = columnsFigures(c, compareResults()); // A, or the model's own numbers
@@ -377,8 +375,8 @@ function drawColumns(c, results, problems, key){
     if(ng > 1) line.appendChild(make('span', 'key-group', groupLabel(c, gi) + ':'));
     grp.parts.forEach(k => {
       const item = make('label', 'key-item');
-      // The swatch is the colour box: a click picks this rectangle's colour in this chart.
-      const sw = colourPicker(colours.get(k), 'Colour of ' + partLabel(k), (v) => { c.colours = Object.assign({}, c.colours, { [k]: v }); saveBoardSoon(); updateValues(); });
+      // The swatch is the colour box: a click picks this rectangle's colour everywhere.
+      const sw = colourPicker(colours.get(k), 'Colour of ' + partLabel(k), pickRectColour(k));
       sw.classList.add('key-swatch');
       item.append(sw, document.createTextNode(partLabel(k)));
       line.appendChild(item);
@@ -450,7 +448,7 @@ function drawLines(c, results, problems, key){
   const line = make('div', 'key-line');
   [...new Set(c.lines)].forEach(k => {
     const item = make('label', 'key-item');
-    const sw = colourPicker(colours.get(k), 'Colour of ' + partLabel(k), (v) => { c.colours = Object.assign({}, c.colours, { [k]: v }); saveBoardSoon(); updateValues(); });
+    const sw = colourPicker(colours.get(k), 'Colour of ' + partLabel(k), pickRectColour(k));
     sw.classList.add('key-swatch');
     item.append(sw, document.createTextNode(partLabel(k)));
     line.appendChild(item);
@@ -488,7 +486,7 @@ function drawFlow(c, results, problems){
       if(prevEnd !== null && (s.role === 'add' || s.role === 'subtract')) g.appendChild(svg('line', { class: 'f-link', x1: x - (slot - bw), x2: x, y1: y(prevEnd), y2: y(prevEnd) }));
       const kind = (s.role === 'start' || s.role === 'total') ? 'f-total' : (f.to >= f.from ? 'f-up' : 'f-down');
       const rect = animKey(svg('rect', { class: 'f-bar ' + kind, x, y: Math.min(y(f.from), y(f.to)), width: bw, height: Math.max(1, Math.abs(y(f.to) - y(f.from))) }), c.id + '|' + i);
-      if(c.colours && c.colours[s.key]) rect.style.fill = c.colours[s.key]; // a style, over the page's colours by direction
+      if(chosenColour(s.key)) rect.style.fill = chosenColour(s.key); // a style, over the page's colours by direction
       const b = was[i];
       const diff = b && !b.error ? fmtDiff(f.value, b.value) : '';
       rect.appendChild(svg('title', {}, name + ' (' + ROLE_LABELS[s.role].toLowerCase() + '), ' + model.periods[c.period] + ': ' + fmtNum(f.value) + (diff ? ' — was ' + fmtNum(b.value) + ', ' + diff : '')));
@@ -667,8 +665,8 @@ function sensitivityInputRow(c, inp, n, changed, rowButtons){
 const TORNADO_LOW = '#2563eb', TORNADO_HIGH = '#d97706';
 const shortName = (name, room) => name.length > room ? name.slice(0, Math.max(1, room - 1)) + '…' : name;
 const signed = (v, by) => (v > 0 ? '+' : v < 0 ? '−' : '') + fmtNum(Math.abs(v)) + (by === 'percent' ? '%' : '');
-// A Spider line's colour: its input's own, else the next of the chart colours.
-function spiderColour(c, key, i){ return (c.colours && c.colours[key]) || PART_COLOURS[i % PART_COLOURS.length]; }
+// A Spider line's colour: its input's shared one (04e-colours.js).
+function spiderColour(c, key, i){ return rectColour(key) || PART_COLOURS[i % PART_COLOURS.length]; }
 
 function drawSensitivity(c, problems, key){
   const { figures, ready } = sensitivityNow(c, shownOverrides());
@@ -701,7 +699,7 @@ function drawSensitivity(c, problems, key){
   const line = make('div', 'key-line');
   const swatch = (colour, label, text, set) => {
     const item = make('label', 'key-item');
-    const sw = colourPicker(colour, label, (v) => { set(v); saveBoardSoon(); updateValues(); });
+    const sw = colourPicker(colour, label, (v) => { set(v); saveBoardSoon(); renderBoard(); });
     sw.classList.add('key-swatch');
     item.append(sw, document.createTextNode(text));
     line.appendChild(item);
@@ -710,7 +708,7 @@ function drawSensitivity(c, problems, key){
     swatch(c.colour || TORNADO_LOW, 'Colour of Low', 'Low', (v) => { c.colour = v; });
     swatch(c.colour2 || TORNADO_HIGH, 'Colour of High', 'High', (v) => { c.colour2 = v; });
   } else {
-    figures.inputs.forEach((f, i) => { if(f.show) swatch(spiderColour(c, f.key, i), 'Colour of ' + partLabel(f.key), partLabel(f.key), (v) => { c.colours = Object.assign({}, c.colours, { [f.key]: v }); }); });
+    figures.inputs.forEach((f, i) => { if(f.show) swatch(spiderColour(c, f.key, i), 'Colour of ' + partLabel(f.key), partLabel(f.key), (v) => { chooseRectColour(f.key, v); }); });
   }
   key.appendChild(line);
   raiseScaleLabels(chart);

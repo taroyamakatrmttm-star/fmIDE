@@ -80,7 +80,10 @@ function dockCard(s){
   const card = make('div', 'dock-card');
   card.dataset.id = s.id;
   const head = make('div', 'dock-card-head');
-  head.appendChild(make('span', 'dock-name', rect.name));
+  // Its rectangle's colour, as its bars and charts show it (04e-colours.js; picked on a larger screen).
+  const stripe = make('span', 'rect-stripe');
+  stripe.style.background = shownColour(s.key);
+  head.append(stripe, make('span', 'dock-name', rect.name));
   const when = periodsText(s.periods);
   if(when) head.appendChild(make('span', 'dock-periods', when));
   head.appendChild(make('span', 'dock-change'));

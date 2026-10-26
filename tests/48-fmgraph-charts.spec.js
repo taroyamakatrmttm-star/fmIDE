@@ -267,6 +267,7 @@ test('charts: text shown as text, roles and sizes checked', async ({ page, pageE
 });
 
 // ---- The lines chart (board file 10, 19 October 2026): several rectangles over the periods ----
+const AUTO = expect.stringMatching(/^#[0-9a-f]{6}$/); // an automatic colour (04e-colours.js)
 const pickColour = (loc, colour) => loc.evaluate((el, c) => { el.value = c; el.dispatchEvent(new Event('change', { bubbles: true })); }, colour);
 const lineFigures = async (page, id) => (await g(page, (i) => fmGraph.chart(i), id)).map(f => [f.period, f.lines.map(l => [l.name, l.value])]);
 
@@ -312,7 +313,7 @@ test('a lines chart built with the mouse: its rectangles, figures, points and ke
   await pickColour(chart.locator('.chart-key input.key-swatch').first(), '#ff0000');
   await expect(chart.locator('.l-line[data-line="Profit"] .l-path')).toHaveAttribute('stroke', '#ff0000');
   await expect(chart.locator('.l-line[data-line="Profit"] .l-point').first()).toHaveAttribute('fill', '#ff0000');
-  await expect.poll(async () => (await g(page, (i) => fmGraph.board().charts.find(c => c.id === i), id)).lines.map(l => l.colour || null)).toEqual(['#ff0000', null]);
+  await expect.poll(async () => (await g(page, (i) => fmGraph.board().charts.find(c => c.id === i), id)).lines.map(l => l.colour || null)).toEqual(['#ff0000', AUTO]); // Gross profit its automatic colour (board file 11; changed on purpose)
   // A fixed scale: the points stay inside it, ▲ where a number goes past it.
   await g(page, (i) => fmGraph.setScale(i, { min: 0, max: 3000 }), id);
   await expect(chart.locator('svg.lines-chart.fixed-scale')).toHaveCount(1);
@@ -327,7 +328,8 @@ test('a lines chart built with the mouse: its rectangles, figures, points and ke
   await expect(page.locator('.chart-widget')).toHaveCount(3);
   const kept = await g(page, () => fmGraph.board().charts.find(c => c.title === 'Sales and profit'));
   expect(kept.layout).toBe('lines');
-  expect(kept.lines.map(l => [l.name, l.colour || null])).toEqual([['Profit', '#ff0000'], ['Gross profit', null]]);
+  expect(kept.lines.map(l => [l.name, l.colour || null])).toEqual([['Profit', '#ff0000'], ['Gross profit', AUTO]]);
+  expect(await g(page, () => fmGraph.rectColour('Gross profit').chosen)).toBe(false);
   expect(kept.periods).toEqual({ mode: 'all' });
   expect(pageErrors).toEqual([]);
 });
@@ -442,6 +444,8 @@ test('lines: names shown as text, an error breaks the line and is listed, at mos
   await g(page, () => fmGraph.showBoard('Many'));
   const many = (await g(page, () => fmGraph.board())).charts[0];
   expect(many.lines).toHaveLength(12);
-  expect(many.lines.every(l => l.colour === undefined)).toBe(true);
+  // Each line writes the colour it shows: Ratio's automatic one, never the file's (board file 11; changed on purpose).
+  expect(many.lines.every(l => /^#[0-9a-f]{6}$/.test(l.colour))).toBe(true);
+  expect(await g(page, () => fmGraph.rectColour('Ratio').chosen)).toBe(false);
   expect(pageErrors).toEqual([]);
 });

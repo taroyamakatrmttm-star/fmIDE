@@ -32,7 +32,10 @@
 //   boards()       → [{ name, shown }] (G3a); addBoard(name?), showBoard(index or name),
 //   renameBoard(name), duplicateBoard(), removeBoard() (the one shown; the last can't go)
 //   move(id, index) (a bar or chart among the items, a slider among the sliders),
-//   setWide(id, wide), setColour(id, '#rrggbb' or null, rect?) (a bar's, or a chart rectangle's)
+//   setWide(id, wide), setColour(id, '#rrggbb' or null, rect?) (a bar's, a slider's, or a chart
+//                  rectangle's: the rectangle's colour on every board; null back to the automatic one)
+//   rectColour(rect, canvas?) → { colour ('#rrggbb', or null for the usual look), chosen }
+//   colours()      → the chosen colours, [{ canvas, name, colour }] (board file 11)
 //   setScale(id, { min, max } | 'current' | null) → the bar's or chart's vertical scale: fixed,
 //                  fixed at what Auto shows now, or Auto (null); returns { min, max } or null
 //   scale(id)      → its fixed scale { min, max }, or null (Auto)
@@ -220,18 +223,25 @@ window.fmGraph = Object.freeze({
   setColour: (id, colour, rect) => {
     const c = colour === null ? null : cleanColour(colour);
     if(colour !== null && !c) throw new Error('A colour is written #rrggbb.');
-    const w = board.items.find(x => x.id === id);
-    if(!w) throw new Error('There is no bar or chart "' + String(id).slice(0, 40) + '".');
-    if(w.kind === 'bar') w.colour = c;
-    else {
-      const k = findRect(rect).key;
+    const w = board.items.find(x => x.id === id) || board.sliders.find(x => x.id === id);
+    if(!w) throw new Error('There is no bar, chart or slider "' + String(id).slice(0, 40) + '".');
+    let k = w.key;
+    if(w.kind === 'chart'){
+      k = findRect(rect).key;
       if(!chartKeys(w).includes(k)) throw new Error('That rectangle isn\'t in this chart.');
-      const next = Object.assign({}, w.colours);
-      if(c) next[k] = c; else delete next[k];
-      w.colours = next;
     }
+    setRectColour(k, c); // the rectangle's, on every board (04e-colours.js)
     saveBoardSoon();
     renderBoard();
+  },
+  rectColour: (rect, canvas) => {
+    adoptWidgetColours();
+    const k = findRect(rect, canvas).key;
+    return { colour: rectColour(k), chosen: !!chosenColour(k) };
+  },
+  colours: () => {
+    adoptWidgetColours();
+    return [...rectColours].filter(([k]) => model.byKey.has(k)).map(([k, colour]) => { const r = model.byKey.get(k); return { canvas: r.canvasName, name: r.name, colour }; });
   },
   // Exploring (G4a). trace(id): pin the trace of a bar or chart (null clears it); returns what
   // reaches it — the sliders' ways there (rectangle names) and the inputs with no slider.

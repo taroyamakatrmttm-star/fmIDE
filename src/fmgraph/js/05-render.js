@@ -108,6 +108,8 @@ function removeButton(id, what){
 
 function renderBoard(){
   syncSharedPeriods(); // what follows the shared period takes it (05k-shared-period.js)
+  adoptWidgetColours(); // an older file's colours, taken in (04e-colours.js)
+  forgetAutoColours();
   rememberOpenEditors(); // (05b-chart-render.js)
   rememberOpenRanges();
   // A slider's From / to / step box being typed in keeps the focus through the redraw.
@@ -167,7 +169,8 @@ function barWidget(b){
   w.addEventListener('contextmenu', (ev) => { if(isPhone()) ev.preventDefault(); });
   const row = make('div', 'widget-row bar-settings');
   row.appendChild(widgetPeriodsChooser(b)); // its own periods, or the shared ones (05k-shared-period.js)
-  row.appendChild(colourPicker(b.colour || DEFAULT_BAR_COLOUR, 'Bar colour', (c) => { b.colour = c === DEFAULT_BAR_COLOUR ? null : c; saveBoardSoon(); updateValues(); }));
+  // The rectangle's colour, shared by its slider and every chart (04e-colours.js).
+  row.appendChild(colourPicker(shownColour(b.key), 'Bar colour', (c) => { chooseRectColour(b.key, c); saveBoardSoon(); renderBoard(); }));
   row.appendChild(scaleChooser(b, () => { saveBoardSoon(); updateValues(); })); // (04d-scale.js)
   const rect = model.byKey.get(b.key);
   w.append(head, row);
@@ -190,7 +193,11 @@ function sliderWidget(s){
     Object.assign(s, defaultRange(model.byKey.get(s.key), s.periods, s.mode));
     saveBoardSoon(); renderBoard();
   });
-  head.append(sel, foldButton(s), removeButton(s.id, 'slider')); // (05c-arrange.js)
+  // Its rectangle's colour, as its bars and charts show it; picking it here changes them too (04e-colours.js).
+  const colour = colourPicker(shownColour(s.key), 'Colour of ' + rect.name, (c) => { chooseRectColour(s.key, c); saveBoardSoon(); renderBoard(); });
+  colour.classList.add('slider-colour');
+  w.style.setProperty('--rect-colour', shownColour(s.key));
+  head.append(sel, colour, foldButton(s), removeButton(s.id, 'slider')); // (05c-arrange.js)
 
   const row = make('div', 'widget-row slider-more');
   row.appendChild(periodsChooser(s.periods, (p) => {
@@ -390,7 +397,7 @@ function drawBars(el, b, results){
     } else {
       const y0 = y(0), y1 = y(r.value);
       const bar = animKey(svg('rect', { class: 'b-now' + (r.value < 0 ? ' neg' : ''), x, y: Math.min(y0, y1), width: bw, height: Math.max(1, Math.abs(y1 - y0)) }), b.id + '|' + p);
-      if(b.colour) bar.style.fill = b.colour; // a style, so the page's usual bar colour doesn't paint over it
+      if(rectColour(b.key)) bar.style.fill = rectColour(b.key); // a style, so the page's usual bar colour doesn't paint over it
       g.appendChild(bar);
       if(!was.error && was.value !== r.value){
         const yb = y(was.value);

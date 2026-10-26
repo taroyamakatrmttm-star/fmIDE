@@ -230,9 +230,14 @@ test('board versions: 2 has no scenarios, 3, 8, 9 and 10 read, a newer one and t
   await expect(page.locator('#graphModal')).toBeVisible();
   expect(await scenarioNames(page)).toEqual(['Price 14']);
   await page.click('#graphCancel');
+  // 11 (fmGraph's shared colours) is read since 26 October 2026; 12 is newer (changed on purpose).
   await importFile(page, board('board-newer-v11.board.json'));
+  await expect(page.locator('#graphModal')).toBeVisible();
+  expect(await scenarioNames(page)).toEqual(['Price 14']);
+  await page.click('#graphCancel');
+  await importFile(page, board('board-newer-v12.board.json'));
   await expect(genStatus(page)).toHaveClass(/err/);
-  await expect(genStatus(page)).toContainText('format version 11; this ExcelExporter reads up to version 10');
+  await expect(genStatus(page)).toContainText('format version 12; this ExcelExporter reads up to version 11');
   await expect(page.locator('#graphModal')).toBeHidden();
   await importFile(page, board('board-template.board.json'));
   await expect(genStatus(page)).toContainText('is for a template');
@@ -369,7 +374,7 @@ async function graphWithCharts(context){
 
 test('fmGraph\'s Tornado and Spider become analyses: grouped, named, Show 0, the Spider\'s points', async ({ page, context, pageErrors }, testInfo) => {
   const { file } = await graphWithCharts(context);
-  expect(file.version).toBe(10);
+  expect(file.version).toBe(11);
   await openProfit(page);
   await importFile(page, D.tempFile(testInfo, 'charts.board.json', JSON.stringify(file)));
   await expect(page.locator('#graphSensHead')).toBeVisible();
@@ -789,10 +794,11 @@ test('charts: the window lists the board\'s bars and charts, Use copies them, th
   expect(['O', 'P', 'Q', 'V'].map(c => d[c + ioTop])).toEqual([undefined, undefined, undefined, undefined]); // nothing beside the title
   expect(d['N' + ioHead].v).toBe('Part');
   expect(['O', 'P', 'Q', 'V'].map(c => d[c + ioHead].v)).toEqual(['2027 · In', '2027 · Out', '2028 · In', '2030 · Out']);
+  // Cost and Bonus paid in the colours fmGraph shows them in, its automatic ones (board file 11; changed on purpose).
   expect(io.series.map(s => [s.name.text, s.val.ref, s.color])).toEqual([
     ['Revenue', "'Dashboard'!$O$" + (ioHead + 1) + ':$V$' + (ioHead + 1), '2563EB'],
-    ['Cost', "'Dashboard'!$O$" + (ioHead + 2) + ':$V$' + (ioHead + 2), undefined],
-    ['Bonus paid', "'Dashboard'!$O$" + (ioHead + 3) + ':$V$' + (ioHead + 3), undefined]]);
+    ['Cost', "'Dashboard'!$O$" + (ioHead + 2) + ':$V$' + (ioHead + 2), '2563EB'],
+    ['Bonus paid', "'Dashboard'!$O$" + (ioHead + 3) + ':$V$' + (ioHead + 3), 'D97706']]);
   expect(io.series[0].cat.ref).toBe("'Dashboard'!$O$" + ioHead + ':$V$' + ioHead);
   expect(d['N' + (ioHead + 1)].v).toBe('Revenue');
   expect(X.formulaOf(d['O' + (ioHead + 1)])).toBe("'Profit'!$" + col(0) + '$' + row('Revenue'));
@@ -859,9 +865,10 @@ test('a lines chart becomes an Excel line chart on the Dashboard: a series per r
   await graph.evaluate((i) => fmGraph.setColour(i, '#2563eb', 'Revenue'), id);
   const figures = await graph.evaluate((i) => fmGraph.chart(i), id);
   const file = await graph.evaluate(() => fmGraph.exportBoards(false));
-  expect(file.version).toBe(10);
+  expect(file.version).toBe(11);
   const lines = file.boards[0].items.find(w => w.layout === 'lines');
-  expect(lines.lines.map(l => [l.name, l.colour || null])).toEqual([['Revenue', '#2563eb'], ['Profit', null], ['Bonus paid', null]]);
+  // Each line writes the colour it shows: Profit and Bonus paid their automatic ones (board file 11; changed on purpose).
+  expect(lines.lines.map(l => [l.name, l.colour || null])).toEqual([['Revenue', '#2563eb'], ['Profit', '#2563eb'], ['Bonus paid', '#d97706']]);
   // A line on a rectangle the model hasn't got, and junk: left out and counted.
   lines.lines.push({ canvasId: 'cProfit', nodeId: 'gone', name: 'Gone' }, 'junk');
 
@@ -884,7 +891,7 @@ test('a lines chart becomes an Excel line chart on the Dashboard: a series per r
   const row = (label) => X.findRow(pr, label).filter(r => r > 3)[0];
   const ref = (r) => "'Profit'!$" + col(1) + '$' + row(r) + ':$' + col(3) + '$' + row(r);
   expect(line.series.map(s => [s.name.text, s.val.ref, s.color])).toEqual([
-    ['Revenue', ref('Revenue'), '2563EB'], ['Profit', ref('Profit'), undefined], ['Bonus paid', ref('Bonus paid'), undefined]]);
+    ['Revenue', ref('Revenue'), '2563EB'], ['Profit', ref('Profit'), '2563EB'], ['Bonus paid', ref('Bonus paid'), 'D97706']]); // fmGraph's shared colours (board file 11; changed on purpose)
   line.series.forEach(s => {
     expect(s.cat.ref).toBe("'Profit'!$" + col(1) + '$2:$' + col(3) + '$2');
     expect(s.cat.values).toEqual(['2028', '2029', '2030']);
@@ -906,7 +913,7 @@ test('a lines chart becomes an Excel line chart on the Dashboard: a series per r
   const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
   expect(exported.version).toBe(10);
   expect(exported.cfg.graph.charts[1]).toEqual({ kind: 'lines', title: 'Revenue <and> profit', wide: true, scale: null, periods: { mode: 'range', from: 1, to: 3 },
-    parts: [{ row: 'cProfit|revenue', name: 'Revenue', colour: '#2563eb' }, { row: 'cProfit|profit', name: 'Profit' }, { row: 'cProfit|bonus', name: 'Bonus paid' }] });
+    parts: [{ row: 'cProfit|revenue', name: 'Revenue', colour: '#2563eb' }, { row: 'cProfit|profit', name: 'Profit', colour: '#2563eb' }, { row: 'cProfit|bonus', name: 'Bonus paid', colour: '#d97706' }] });
   expect(pageErrors).toEqual([]);
 });
 

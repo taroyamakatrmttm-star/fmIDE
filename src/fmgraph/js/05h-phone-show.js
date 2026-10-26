@@ -85,6 +85,7 @@ function fader(s, at){
   name.type = 'button';
   name.title = 'Put another slider here';
   name.setAttribute('aria-haspopup', 'menu');
+  name.style.setProperty('--rect-colour', shownColour(s.key)); // its rectangle's colour (04e-colours.js)
   name.addEventListener('click', () => openFaderMenu(name, at));
   const ctl = createPhoneSlider({
     label: rect.name, min: s.min, max: s.max, step: s.step, value: sliderShown(s), base: sliderBase(s), vertical: true,

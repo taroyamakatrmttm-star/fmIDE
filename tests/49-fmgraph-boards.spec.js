@@ -145,12 +145,14 @@ test('colours: a bar, a chart\'s rectangle, a waterfall step; in the file; a bad
   expect(d.items[1].steps[0].colour).toBe('#0000ff');
   // Through the API; a colour that isn't #rrggbb is refused, and one from a file ignored.
   expect(await g(page, () => { try{ fmGraph.setColour(fmGraph.board().items[2].id, 'red'); return 'set'; }catch(e){ return e.message; } })).toMatch(/#rrggbb/);
+  const before = await g(page, () => fmGraph.colours());
   const n = await g(page, () => fmGraph.importBoards({ kind: 'fmIDE-graph-board', version: 1, boards: [{ name: 'Odd', items: [
     { type: 'bar', canvasId: 'cProfit', nodeId: 'profit', name: 'Profit', colour: 'url(javascript:alert(1))' },
     { type: 'bar', canvasId: 'cProfit', nodeId: 'rev', name: 'Revenue', colour: '#12345' }] }] }));
   expect(n).toBe(1);
-  expect((await g(page, () => fmGraph.board())).items.map(i => i.colour)).toEqual([undefined, undefined]);
-  expect(await shown(page.locator('.bar-widget .b-now').first())).toBe('rgb(15, 118, 110)'); // the usual colour
+  // The file's colours are ignored: the rectangles keep their shared colours (board file 11; changed on purpose).
+  expect(await g(page, () => fmGraph.colours())).toEqual(before);
+  expect(await shown(page.locator('.bar-widget .b-now').first())).toBe('rgb(255, 0, 0)');
 });
 
 test('undo and redo: every board change, by button and keyboard; a slider move is not one', async ({ page }) => {
@@ -203,7 +205,7 @@ test('the board file: export one or all, import into the same model, a model it 
   expect(dl.suggestedFilename()).toBe('Sample model - Second.board.json');
   const one = JSON.parse(fs.readFileSync(await dl.path(), 'utf8'));
   expect(one.kind).toBe('fmIDE-graph-board');
-  expect(one.version).toBe(10);
+  expect(one.version).toBe(11);
   expect(one.boards.map(b => b.name)).toEqual(['Second']);
   // Export all.
   await page.click('.gbar-menu summary');
@@ -241,8 +243,8 @@ test('the board file is read like any file: wrong kind, not JSON, newer version,
   await expect(page.locator('.note.err')).toContainText("isn't JSON");
   expect(await g(page, () => fmGraph.importBoards({ kind: 'fmIDE-templates', version: 9, templates: [] }))).toBe(0);
   await expect(page.locator('.note.err')).toContainText("isn't an fmGraph board file");
-  // A newer version: asked first (11 since the lines chart made 10 current; changed on purpose).
-  const newer = { kind: 'fmIDE-graph-board', version: 11, boards: [{ name: 'Later', items: [{ type: 'bar', canvasId: 'cProfit', nodeId: 'profit', name: 'Profit' }] }] };
+  // A newer version: asked first (12 since the shared colours made 11 current; changed on purpose).
+  const newer = { kind: 'fmIDE-graph-board', version: 12, boards: [{ name: 'Later', items: [{ type: 'bar', canvasId: 'cProfit', nodeId: 'profit', name: 'Profit' }] }] };
   const p = g(page, (d) => fmGraph.importBoards(d), newer);
   await expect(page.locator('#confirmTitle')).toHaveText('Saved by a newer version');
   await page.click('#confirmNo');
@@ -352,7 +354,7 @@ test('folding sliders: one by its ▸, Collapse all / Expand all; undo; kept; th
   await expect(page.locator('.slider-widget').first()).toHaveClass(/folded/);
   // The board file: version 8 (6 brought `folded`), `folded` only on a folded slider; imported back with it.
   const file = await g(page, () => fmGraph.exportBoards(true));
-  expect(file.version).toBe(10);
+  expect(file.version).toBe(11);
   expect(file.boards[0].sliders.map(s => s.folded)).toEqual([true, undefined]);
   expect(await g(page, (d) => fmGraph.importBoards(d), file)).toBe(1);
   await g(page, () => fmGraph.showBoard(1));
@@ -517,7 +519,7 @@ test('a board with its own slider positions: untouched by the others, and back t
   expect(await shown(page)).toEqual([['Price', 14], ['Volume', 1200]]);
   // Kept in the board file (version 8 (7 brought it), `ownSliders` only where true) and after a reload.
   const file = await g(page, () => fmGraph.exportBoards(true));
-  expect(file.version).toBe(10);
+  expect(file.version).toBe(11);
   expect(file.boards.map(b => b.ownSliders)).toEqual([undefined, true]);
   await page.waitForTimeout(500);
   await page.reload();
@@ -615,7 +617,7 @@ test('the shared period: every board follows it, a chart can keep its own and co
   await page.click('#btnRedo');
   // The board file (version 10; 9 brought the shared period): the shared period, `ownPeriod` only where kept, every chart's periods as shown.
   const file = await g(page, () => fmGraph.exportBoards(true));
-  expect(file.version).toBe(10);
+  expect(file.version).toBe(11);
   expect(file.sharedPeriods).toEqual({ periods: { mode: 'one', p: 3 }, period: 2 });
   expect(file.boards[0].items.map(w => [w.periods || w.period, w.ownPeriod])).toEqual([[{ mode: 'one', p: 3 }, undefined], [2, undefined], [{ mode: 'one', p: 0 }, true], [{ mode: 'one', p: 3 }, undefined]]);
   // Kept after a reload.
@@ -659,8 +661,9 @@ test('a version 9 board file opens unchanged: followers follow, its own keeps it
     ['bar', 'Profit', { mode: 'all' }, false], ['bar', 'Revenue', { mode: 'one', p: 0 }, true],
     ['columns', 'Costs', { mode: 'all' }, false], ['flow', 'Profit', 0, false]]);
   expect(b.items[1].colour).toBe('#ff0000');
-  expect(b.items[2].groups).toEqual([{ name: 'Costs', parts: [
-    { canvasId: 'cProfit', nodeId: 'cogs', name: 'Cost of sales' }, { canvasId: 'cProfit', nodeId: 'over', name: 'Overheads', colour: '#00ff00' }] }]);
+  // Its colours are the rectangles' now (board file 11; changed on purpose): Cost of sales an automatic one.
+  expect(b.items[2].groups[0].parts.map(p => [p.name, p.colour])).toEqual([['Cost of sales', expect.stringMatching(/^#[0-9a-f]{6}$/)], ['Overheads', '#00ff00']]);
+  expect(await g(page, () => fmGraph.colours().map(c => [c.name, c.colour]))).toEqual([['Revenue', '#ff0000'], ['Overheads', '#00ff00']]);
   expect(b.items[3].steps.map(s => [s.name, s.role])).toEqual([['Revenue', 'start'], ['Profit', 'total']]);
   expect(b.sliders.map(s => [s.name, s.min, s.max, s.step])).toEqual([['Price', 5, 15, 0.5]]);
   // The shared period moves the followers only.
@@ -670,7 +673,7 @@ test('a version 9 board file opens unchanged: followers follow, its own keeps it
   await page.locator('#sharedPeriodBar select[aria-label="Shared first period"]').selectOption('2');
   expect((await g(page, () => fmGraph.board().items.map(w => w.periods || w.period)))[1]).toEqual({ mode: 'one', p: 0 });
   // Saved again as version 10.
-  expect((await g(page, () => fmGraph.exportBoards(false))).version).toBe(10);
+  expect((await g(page, () => fmGraph.exportBoards(false))).version).toBe(11);
   expect(pageErrors).toEqual([]);
 });
 
@@ -699,5 +702,95 @@ test('a version 6 board file opens with every board sharing;an ownSliders that i
   const owns = [];
   for(const name of ['Odd 0', 'Odd 1', 'Odd 2', 'Odd 3', 'Odd 4', 'Own']){ await g(page, (n) => fmGraph.showBoard(n), name); owns.push((await g(page, () => fmGraph.board())).ownSliders === true); }
   expect(owns).toEqual([false, false, false, false, false, true]);
+  expect(pageErrors).toEqual([]);
+});
+
+// Shared colours (the owner's request of 26 October 2026, board file 11): a rectangle has one
+// colour on every board — its slider, its bars, every chart — picked in any of them.
+test('shared colours: one colour per rectangle on every board, picked from a slider, a bar or a chart; undo, the file, a reload', async ({ page, pageErrors }) => {
+  await openSample(page);
+  const shown = (loc) => loc.evaluate(el => getComputedStyle(el).fill);
+  const rgb = (hex) => 'rgb(' + [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)).join(', ') + ')';
+  // Closing cash: the Balance sheet's first part, so its bar takes the chart's first colour.
+  expect(await g(page, () => fmGraph.rectColour('Closing cash'))).toEqual({ colour: '#0f766e', chosen: false });
+  const equip = (await g(page, () => fmGraph.rectColour('Equipment'))).colour;
+  expect(equip).toBe('#2563eb');
+  // Profit is in no Columns, Lines or Spider chart: the usual look, and its waterfall step by direction.
+  expect(await g(page, () => fmGraph.rectColour('Profit'))).toEqual({ colour: null, chosen: false });
+  // A second board: a lines chart and a bar of Equipment take the same colour.
+  await g(page, () => { fmGraph.addBoard('Second'); fmGraph.addChart({ layout: 'lines', title: 'Trend', lines: ['Debt', 'Equipment'] }); fmGraph.addBar('Equipment'); fmGraph.addSlider('Price'); fmGraph.addBar('Price'); });
+  const second = page.locator('.chart-widget').first();
+  await expect(second.locator('.l-line[data-line="Equipment"] .l-path')).toHaveAttribute('stroke', equip);
+  await expect.poll(() => shown(page.locator('.bar-widget').first().locator('.b-now').first())).toBe(rgb(equip));
+  // The slider's colour box picks Price's colour: its bar takes it, and the slider's stripe.
+  await pickColour(page.locator('.slider-widget').first().locator('input.slider-colour'), '#ff00ff');
+  await expect.poll(() => shown(page.locator('.bar-widget').nth(1).locator('.b-now').first())).toBe('rgb(255, 0, 255)');
+  await expect(page.locator('.slider-widget').first()).toHaveCSS('border-left-color', 'rgb(255, 0, 255)');
+  expect(await g(page, () => fmGraph.rectColour('Price'))).toEqual({ colour: '#ff00ff', chosen: true });
+  // A key's swatch here changes Equipment on the first board too, and its bar.
+  await pickColour(second.locator('.chart-key input.key-swatch').nth(1), '#00ff00');
+  await expect.poll(() => shown(page.locator('.bar-widget').first().locator('.b-now').first())).toBe('rgb(0, 255, 0)');
+  await g(page, () => fmGraph.showBoard(0));
+  const bs = page.locator('.chart-widget').first();
+  await expect(bs.locator('.chart-key input.key-swatch').nth(1)).toHaveValue('#00ff00');
+  await expect.poll(() => shown(bs.locator('.c-period').first().locator('.c-part').nth(1))).toBe('rgb(0, 255, 0)');
+  // A waterfall step keeps its colour by direction until one is chosen for it; then everywhere.
+  const flow = page.locator('.chart-widget').nth(1);
+  const upColour = await shown(flow.locator('.f-bar').first());
+  await flow.locator('summary').click();
+  await pickColour(flow.locator('.step-row').nth(4).locator('input.colour-pick'), '#123456');
+  await expect.poll(() => shown(flow.locator('.f-bar').nth(4))).toBe('rgb(18, 52, 86)');
+  expect(await shown(flow.locator('.f-bar').first())).toBe(upColour);
+  await expect.poll(() => shown(page.locator('.bar-widget').first().locator('.b-now').first())).toBe('rgb(18, 52, 86)'); // the Profit bar
+  // In the file: the chosen colours, and each widget the colour it shows.
+  const file = await g(page, () => fmGraph.exportBoards(true));
+  expect(file.version).toBe(11);
+  expect(file.colours.map(c => [c.name, c.colour])).toEqual([['Price', '#ff00ff'], ['Equipment', '#00ff00'], ['Profit', '#123456']]);
+  expect(file.boards[0].items.find(w => w.layout === 'columns').groups[0].parts.map(p => p.colour)).toEqual(['#0f766e', '#00ff00']);
+  expect(file.boards[1].items.find(w => w.type === 'bar').colour).toBe('#00ff00');
+  // Undo puts back the step's colour; the others stay.
+  await g(page, () => fmGraph.undo());
+  expect(await g(page, () => fmGraph.colours().map(c => c.name))).toEqual(['Price', 'Equipment']);
+  // Through the API on a slider; null goes back to the automatic colour.
+  await g(page, () => { fmGraph.showBoard('Second'); fmGraph.setColour(fmGraph.board().sliders[0].id, '#00ffff'); });
+  expect(await g(page, () => fmGraph.rectColour('Price').colour)).toBe('#00ffff');
+  await g(page, () => fmGraph.setColour(fmGraph.board().charts[0].id, null, 'Equipment'));
+  expect(await g(page, () => fmGraph.rectColour('Equipment'))).toEqual({ colour: '#2563eb', chosen: false });
+  // Kept after a reload.
+  await page.waitForTimeout(500);
+  await page.reload();
+  await page.waitForFunction(() => !!window.fmGraph);
+  await page.click('#btnSample');
+  await expect.poll(() => g(page, () => fmGraph.boards().length)).toBe(2);
+  expect(await g(page, () => fmGraph.colours().map(c => [c.name, c.colour]))).toEqual([['Price', '#00ffff']]);
+  expect(pageErrors).toEqual([]);
+});
+
+test('a version 10 board file: its colours become the rectangles\' shared ones, the first one winning, with a note', async ({ page, pageErrors }) => {
+  await openSample(page);
+  const v10 = JSON.parse(fs.readFileSync(require('path').join(__dirname, 'fixtures', 'formats', 'board-v10.json'), 'utf8'));
+  expect(await g(page, (d) => fmGraph.importBoards(d), v10)).toBe(2);
+  // Revenue: red in the Columns chart first, green on its bar, yellow in a lines chart: red.
+  await expect(page.locator('.note[data-slot="colours"]')).toContainText('1 rectangle had different colours in different bars or charts');
+  expect(await g(page, () => fmGraph.colours().map(c => [c.name, c.colour]))).toEqual([['Revenue', '#ff0000'], ['Profit', '#0000ff']]);
+  await g(page, () => fmGraph.showBoard('Saved before shared colours'));
+  const shown = (loc) => loc.evaluate(el => getComputedStyle(el).fill);
+  await expect.poll(() => shown(page.locator('.bar-widget .b-now').first())).toBe('rgb(255, 0, 0)');
+  await g(page, () => fmGraph.showBoard('Lines before shared colours'));
+  await expect(page.locator('.l-line[data-line="Revenue"] .l-path')).toHaveAttribute('stroke', '#ff0000');
+  // Saved again as version 11, each widget with the colour it shows.
+  const file = await g(page, () => fmGraph.exportBoards(true));
+  expect(file.version).toBe(11);
+  const saved = file.boards.find(b => b.name === 'Saved before shared colours');
+  expect(saved.items.find(w => w.type === 'bar').colour).toBe('#ff0000');
+  expect(saved.items.find(w => w.layout === 'flow').steps.map(s => s.colour || null)).toEqual(['#ff0000', '#0000ff']);
+  // A version 11 file's colours are read from `colours`, not from its widgets; a bad one ignored.
+  const v11 = { kind: 'fmIDE-graph-board', version: 11,
+    colours: [{ canvasId: 'cProfit', nodeId: 'gp', name: 'Gross profit', colour: '#ABCDEF' }, { canvasId: 'cProfit', nodeId: 'gp', name: 'Gross profit', colour: 'red' }, { canvasId: 'cProfit', nodeId: 'cogs', name: 'Cost of sales', colour: 'url(javascript:alert(1))' }],
+    boards: [{ name: 'Eleven', items: [{ type: 'bar', canvasId: 'cProfit', nodeId: 'over', name: 'Overheads', colour: '#000000' }, { type: 'bar', canvasId: 'cProfit', nodeId: 'gp', name: 'Gross profit' }, { type: 'bar', canvasId: 'cProfit', nodeId: 'cogs', name: 'Cost of sales' }] }] };
+  expect(await g(page, (d) => fmGraph.importBoards(d), v11)).toBe(1);
+  expect(await g(page, () => fmGraph.rectColour('Overheads').chosen)).toBe(false);
+  expect(await g(page, () => fmGraph.rectColour('Cost of sales').chosen)).toBe(false);
+  expect(await g(page, () => fmGraph.rectColour('Gross profit'))).toEqual({ colour: '#abcdef', chosen: true });
   expect(pageErrors).toEqual([]);
 });

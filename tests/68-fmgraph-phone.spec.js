@@ -4,7 +4,8 @@
 // page by a stand-in that records what it was asked (the app is not changed for testing).
 // - Which screens take the phone layout: a phone upright and sideways; not a tablet, not a
 //   narrow window with a mouse.
-// - The sample on a phone: the board first, the sliders in the dock, nothing to build with.
+// - The sample on a phone: the board first, the sliders in the dock (each with its rectangle's
+//   colour as a stripe), nothing to build with.
 // - The phone slider: grabbed anywhere without a jump, finer by moving the finger up, the notch
 //   at the model's own number and the tick (and its switch), − and + (held: repeating), typing,
 //   a double-tap, the keys; the numbers always fmIDE's calculation.
@@ -148,6 +149,11 @@ test('the sample on a phone: the board first, the sliders in the dock, nothing t
   await phone.drag({ x: 330, y }, steps({ x: 330, y }, { x: 40, y }, 10));
   await expect(p.locator('#dockDots .dock-dot').nth(1)).toHaveClass(/on/);
   await expect.poll(async () => Math.round((await card(p, 1).boundingBox()).x)).toBe(0);
+  // Each card shows its rectangle's colour as a stripe (board file 11), with no colour box to pick it.
+  await expect(card(p, 0).locator('.rect-stripe')).toHaveCSS('background-color', 'rgb(15, 118, 110)');
+  await p.evaluate(() => fmGraph.setColour(fmGraph.board().sliders[0].id, '#ff00ff'));
+  await expect(card(p, 0).locator('.rect-stripe')).toHaveCSS('background-color', 'rgb(255, 0, 255)');
+  await expect(p.locator('#sliderDock input[type=color]')).toHaveCount(0);
   await phone.done();
 });
 
