@@ -20,6 +20,14 @@ const FMGRAPH_WHATS_NEW = [
     how: ['Click the colour box beside a slider\'s name, or a swatch in a chart\'s key, and choose a colour.', 'Every bar, chart and slider showing that rectangle takes it, on every board.', 'Choose its automatic colour again to go back to it.'],
     notes: ['On a phone, the sliders show the colour as a stripe; colours are picked on a larger screen.', 'The Tornado\'s Low and High colours belong to that chart, not to a rectangle.', 'The board file is now version 11. ExcelExporter reads it, and its Dashboard charts take the same colours.'],
     see: ['boards'] },
+  { id: 'long-lists-scroll', date: '2026-10-26', title: 'Long lists scroll in their window',
+    summary: 'Attach to template…, Export for a template… and Add boards from templates… stay on the screen, however long their list.',
+    what: [
+      'A model with many canvases made from templates gave a list longer than an iPad\'s screen, with the title and the buttons out of reach.',
+      'The window now stays within the screen: the list scrolls inside it, by finger, mouse wheel or trackpad, and the buttons stay where you can press them. So does a long question.',
+    ],
+    why: 'On an iPad the list ran off the screen and nothing scrolled, so the boards could not be attached.',
+    how: ['Boards ▾ → Attach to template… (with the model from fmIDE), then scroll the list.'] },
   { id: 'user-manual', date: '2026-10-21', title: 'The user manual, one click from Help',
     summary: 'A link at the top of the Help panel opens the user manual on fmIDE\'s website: lessons step by step, with the numbers you should see.',
     what: [

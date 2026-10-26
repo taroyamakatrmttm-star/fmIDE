@@ -193,3 +193,50 @@ test('Attach to template… for a system template: picked from a list; hidden wi
   await expect(alone.locator('#btnAttachTemplate')).toBeHidden();
   await alone.close();
 });
+
+// The owner's report, 26 October 2026: on an iPad the list ran off the screen and nothing scrolled.
+test.describe('on an iPad', () => {
+  test.use({ viewport: { width: 1024, height: 768 }, hasTouch: true });
+  test('Attach to template…: a long list scrolls inside the window, by mouse and by finger; the buttons stay on screen', async ({ page }, testInfo) => {
+    await F.openFmIDE(page);
+    await importTemplates(page, testInfo, [sales(1, null)]);
+    await page.evaluate(() => { fm.clearCanvas(); fm.insertTemplate('Sales', 'here'); for(let i = 0; i < 45; i++) fm.insertTemplate('Sales', 'newCanvas'); });
+    const graph = await openGraph(page);
+    await openBoardsMenu(graph);
+    await graph.locator('#btnAttachTemplate').click();
+    const list = graph.locator('#templateChoices');
+    await expect(list.locator('label')).toHaveCount(47);
+    const fits = () => graph.evaluate(() => {
+      const d = document.querySelector('#templateBox .dialog').getBoundingClientRect(), l = document.getElementById('templateChoices');
+      return { top: d.top >= 0, bottom: d.bottom <= innerHeight, scrolls: l.scrollHeight > l.clientHeight };
+    });
+    expect(await fits()).toEqual({ top: true, bottom: true, scrolls: true });
+    await expect(graph.locator('#templateTitle')).toBeInViewport();
+    await expect(graph.locator('#templateYes')).toBeInViewport();
+    // By mouse: the wheel over the list scrolls it.
+    const scrollTop = () => list.evaluate(l => l.scrollTop);
+    await list.hover();
+    await graph.mouse.wheel(0, 300);
+    await expect.poll(scrollTop).toBeGreaterThan(0);
+    // By finger: a drag up the list scrolls it further.
+    await list.evaluate(l => { l.scrollTop = 0; });
+    const box = await list.boundingBox();
+    const cdp = await graph.context().newCDPSession(graph);
+    const x = box.x + box.width / 2, y = box.y + box.height - 20;
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+    for(let i = 1; i <= 10; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y - i * 20 }] });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await expect.poll(scrollTop).toBeGreaterThan(0);
+    // The last choice, reached by scrolling, still attaches.
+    await list.locator('input[type=radio]').last().check();
+    await graph.locator('#templateYes').click();
+    expect(await F.dialogText(page)).toMatch(/There is no system template in your library/);
+    await F.dismissMessage(page);
+    // Held upright (820 × 1180): it still fits.
+    await openBoardsMenu(graph);
+    await graph.locator('#btnAttachTemplate').click();
+    await graph.setViewportSize({ width: 820, height: 1180 });
+    expect(await fits()).toEqual({ top: true, bottom: true, scrolls: true });
+    await expect(graph.locator('#templateYes')).toBeInViewport();
+  });
+});

@@ -146,7 +146,10 @@
 
   /* Questions. */
   .dialog-back{ position:fixed; inset:0; z-index:50; background:rgba(15,23,42,.35); display:flex; align-items:center; justify-content:center; padding:16px; }
-  .dialog{ background:#fff; border-radius:12px; padding:18px 20px; max-width:440px; width:100%; }
+  .dialog{ background:#fff; border-radius:12px; padding:18px 20px; max-width:440px; width:100%; max-height:100%; display:flex; flex-direction:column; }
+  /* Never taller than the screen (an iPad's list of templates was): the title and the buttons stay, the list scrolls. */
+  .dialog > *{ flex-shrink:0; }
+  .dialog > .dialog-scroll{ flex-shrink:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; }
   .dialog h3{ margin:0 0 8px; font-size:16px; }
   .dialog p{ margin:0 0 16px; color:var(--soft-ink); }
   .dialog-actions{ display:flex; justify-content:flex-end; gap:8px; }
@@ -744,7 +747,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   <div class="dialog">
     <h3 id="templateTitle">Export for a template</h3>
     <p>Which template are these boards for?</p>
-    <div id="templateChoices" class="template-choices" role="radiogroup" aria-labelledby="templateTitle"></div>
+    <div id="templateChoices" class="template-choices dialog-scroll" role="radiogroup" aria-labelledby="templateTitle"></div>
     <label class="template-only"><input type="checkbox" id="templateOnlyShown"> Only the board shown</label>
     <p class="template-hint" id="templateHint">Then, in fmIDE: Templates → 📈 Attach fmGraph board….</p>
     <div class="dialog-actions">
@@ -758,7 +761,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   <div class="dialog">
     <h3 id="fromTemplatesTitle">Add boards from templates</h3>
     <p>The boards this model's templates carry:</p>
-    <div id="fromTemplatesChoices" class="template-choices"></div>
+    <div id="fromTemplatesChoices" class="template-choices dialog-scroll"></div>
     <div class="dialog-actions">
       <button id="fromTemplatesNo">Cancel</button>
       <button id="fromTemplatesYes" class="primary">Add</button>
@@ -769,7 +772,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
 <div id="confirmBox" class="dialog-back hidden" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
   <div class="dialog">
     <h3 id="confirmTitle"></h3>
-    <p id="confirmText"></p>
+    <p id="confirmText" class="dialog-scroll"></p>
     <div class="dialog-actions">
       <button id="confirmNo">Cancel</button>
       <button id="confirmYes" class="primary">OK</button>
@@ -9788,6 +9791,14 @@ const FMGRAPH_WHATS_NEW = [
     how: ['Click the colour box beside a slider\'s name, or a swatch in a chart\'s key, and choose a colour.', 'Every bar, chart and slider showing that rectangle takes it, on every board.', 'Choose its automatic colour again to go back to it.'],
     notes: ['On a phone, the sliders show the colour as a stripe; colours are picked on a larger screen.', 'The Tornado\'s Low and High colours belong to that chart, not to a rectangle.', 'The board file is now version 11. ExcelExporter reads it, and its Dashboard charts take the same colours.'],
     see: ['boards'] },
+  { id: 'long-lists-scroll', date: '2026-10-26', title: 'Long lists scroll in their window',
+    summary: 'Attach to template…, Export for a template… and Add boards from templates… stay on the screen, however long their list.',
+    what: [
+      'A model with many canvases made from templates gave a list longer than an iPad\'s screen, with the title and the buttons out of reach.',
+      'The window now stays within the screen: the list scrolls inside it, by finger, mouse wheel or trackpad, and the buttons stay where you can press them. So does a long question.',
+    ],
+    why: 'On an iPad the list ran off the screen and nothing scrolled, so the boards could not be attached.',
+    how: ['Boards ▾ → Attach to template… (with the model from fmIDE), then scroll the list.'] },
   { id: 'user-manual', date: '2026-10-21', title: 'The user manual, one click from Help',
     summary: 'A link at the top of the Help panel opens the user manual on fmIDE\'s website: lessons step by step, with the numbers you should see.',
     what: [
