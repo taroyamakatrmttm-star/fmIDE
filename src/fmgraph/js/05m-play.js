@@ -17,8 +17,11 @@
 // - Cost: the positions are the same every swing, so each is worked out once (resultCache); on
 //   a slow model (SLOW_MS) all are worked out ahead in small pieces ("Working out the play…"),
 //   fewer of them when that would take longer than PLAY_AHEAD_MS — the bars then glide between.
-// - Stopping: ■ Stop, Esc, any key or press outside the strip, a slider moved, another board or
-//   model. Everything is then as it was: nothing is saved, no undo step, nothing in the file.
+// - Stopping: only ■ Stop, Esc, a slider moved (a deliberate change) or another model (the owner's
+//   request of 27 October 2026). Scrolling, a tap or press, a key, opening a panel, Edit chart
+//   and another board leave it playing: Play moves the model's inputs, not one board's sliders,
+//   so the board now shown is painted (playFrame notices a redraw). Everything is then as it
+//   was: nothing is saved, no undo step, nothing in the file.
 // - Reduced motion: no constant motion — the board shows the "to" end against the "from" end's
 //   outlines, and ⇄ on the strip steps between the two.
 // ============================================================
@@ -27,6 +30,9 @@ const PLAY_PAUSE_MS = 600;
 const PLAY_POSITIONS = 60;      // positions per swing (and one more: both ends)
 const PLAY_MIN_POSITIONS = 12;
 const PLAY_AHEAD_MS = 3000;     // a slow model has fewer positions, worked out within about this
+// The animated-GIF writer, for a GIF of the play (makeGif; not used yet: the button comes next).
+// build:include shared/gif.js
+
 let playChoice = { from: null, to: null, picked: false }; // 'model', 'sliders' or 'sc:' + name; until the page reloads
 let playing = null;
 
@@ -102,7 +108,7 @@ function startPlay(fromId, toId, opts){
     swingMs: Number.isFinite(opts.swingMs) ? Math.max(200, Math.min(60000, opts.swingMs)) : PLAY_SWING_MS,
     pauseMs: Number.isFinite(opts.pauseMs) ? Math.max(0, Math.min(10000, opts.pauseMs)) : PLAY_PAUSE_MS,
     still: !!(reducedMotion && reducedMotion.matches), // (05e-compare.js)
-    sliders: JSON.stringify(slidersNow()), index: -1, startedAt: null, runs: 0, ready: false, raf: 0,
+    sliders: sliderPositions(), painted: null, index: -1, startedAt: null, runs: 0, ready: false, raf: 0,
     wake: keepScreenOn(),
   };
   document.body.classList.add('playing');
@@ -141,14 +147,32 @@ function playIndexAt(t){
   if(t < 2 * P + S) return n;
   return Math.max(0, n - Math.round((t - 2 * P - S) / S * n));
 }
+// Where every slider on every board stands (id → value): a slider moved stops the play; one
+// added or removed does not.
+function sliderPositions(){
+  syncShared(); // (03-calc.js) so a board shown for the first time takes the shared positions first
+  const out = new Map();
+  boards.forEach(b => b.sliders.forEach(s => out.set(s.id, s.value)));
+  return out;
+}
+function sliderMoved(){
+  const now = sliderPositions();
+  const moved = [...now].some(([id, v]) => playing.sliders.has(id) && !Object.is(playing.sliders.get(id), v));
+  playing.sliders = now;
+  return moved;
+}
+// What the play last painted: the board and its first widgets, so a redraw (another board, a
+// panel, Edit chart) is painted again.
+const paintMark = () => [board, $('sliderList').firstElementChild, $('barList').firstElementChild];
 function playFrame(now){
   if(!playing) return;
-  if(playing.model !== model || playing.board !== board || !model || JSON.stringify(slidersNow()) !== playing.sliders){ stopPlay(); return; }
+  if(playing.model !== model || !model || !board || sliderMoved()){ stopPlay(); return; }
   playing.raf = requestAnimationFrame(playFrame);
-  if(!playing.ready || playing.still) return;
+  const mark = paintMark(), redrawn = !playing.painted || mark.some((x, i) => x !== playing.painted[i]);
+  if(playing.still || !playing.ready){ if(redrawn && playing.index >= 0) showPlayPosition(playing.index); return; }
   if(playing.startedAt === null) playing.startedAt = now;
   const i = playIndexAt(now - playing.startedAt);
-  if(i !== playing.index) showPlayPosition(i);
+  if(i !== playing.index || redrawn) showPlayPosition(i);
 }
 function showPlayPosition(i){
   const me = playing, o = me.positions[i], from = me.positions[0];
@@ -157,6 +181,7 @@ function showPlayPosition(i){
   playAt = { model, now: o, from }; // (03-calc.js)
   updateValues();
   paintPlay(me.fractions[i]);
+  me.painted = paintMark();
 }
 
 // The sliders, the dock, the mixer, the reach and the strip, f of the way.
@@ -254,11 +279,8 @@ $('playFrom').addEventListener('change', () => { playChoice.from = $('playFrom')
 $('playTo').addEventListener('change', () => { playChoice.to = $('playTo').value; playChoice.picked = true; });
 $('btnPlay').addEventListener('click', () => startPlay(playChoice.from, playChoice.to));
 
-// Any press outside the strip, or any key, stops it (Esc only that).
-document.addEventListener('pointerdown', (ev) => { if(playing && !(ev.target.closest && ev.target.closest('#playBar'))) stopPlay(); }, true);
+// Esc stops it (and does only that); a press, a scroll or another key leaves it playing.
 document.addEventListener('keydown', (ev) => {
-  if(!playing) return;
-  if(ev.key === 'Escape'){ ev.preventDefault(); ev.stopPropagation(); stopPlay(); return; }
-  if(ev.target.closest && ev.target.closest('#playBar')) return;
-  stopPlay();
+  if(!playing || ev.key !== 'Escape') return;
+  ev.preventDefault(); ev.stopPropagation(); stopPlay();
 }, true);

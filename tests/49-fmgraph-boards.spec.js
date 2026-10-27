@@ -2,7 +2,7 @@
 // arranging widgets in the grid (drag by mouse, finger or keyboard; wide or narrow), colours,
 // undo and redo, and the board file (fmIDE-graph-board 1: export, import, dropped on the page).
 const fs = require('fs');
-const { test, expect, openApp } = require('./helpers/apps');
+const { test, expect, openApp, BOARD_FILE_VERSION } = require('./helpers/apps');
 
 async function openSample(page){
   await openApp(page, 'fmGraph');
@@ -205,7 +205,7 @@ test('the board file: export one or all, import into the same model, a model it 
   expect(dl.suggestedFilename()).toBe('Sample model - Second.board.json');
   const one = JSON.parse(fs.readFileSync(await dl.path(), 'utf8'));
   expect(one.kind).toBe('fmIDE-graph-board');
-  expect(one.version).toBe(12);
+  expect(one.version).toBe(BOARD_FILE_VERSION);
   expect(one.boards.map(b => b.name)).toEqual(['Second']);
   // Export all.
   await page.click('.gbar-menu summary');
@@ -243,8 +243,8 @@ test('the board file is read like any file: wrong kind, not JSON, newer version,
   await expect(page.locator('.note.err')).toContainText("isn't JSON");
   expect(await g(page, () => fmGraph.importBoards({ kind: 'fmIDE-templates', version: 9, templates: [] }))).toBe(0);
   await expect(page.locator('.note.err')).toContainText("isn't an fmGraph board file");
-  // A newer version: asked first (13 since the common scale made 12 current; changed on purpose).
-  const newer = { kind: 'fmIDE-graph-board', version: 13, boards: [{ name: 'Later', items: [{ type: 'bar', canvasId: 'cProfit', nodeId: 'profit', name: 'Profit' }] }] };
+  // A newer version: asked first (one past the current version, BOARD_FILE_VERSION + 1; changed on purpose: it was 13 when 12 was current).
+  const newer = { kind: 'fmIDE-graph-board', version: BOARD_FILE_VERSION + 1, boards: [{ name: 'Later', items: [{ type: 'bar', canvasId: 'cProfit', nodeId: 'profit', name: 'Profit' }] }] };
   const p = g(page, (d) => fmGraph.importBoards(d), newer);
   await expect(page.locator('#confirmTitle')).toHaveText('Saved by a newer version');
   await page.click('#confirmNo');
@@ -354,7 +354,7 @@ test('folding sliders: one by its ▸, Collapse all / Expand all; undo; kept; th
   await expect(page.locator('.slider-widget').first()).toHaveClass(/folded/);
   // The board file: version 8 (6 brought `folded`), `folded` only on a folded slider; imported back with it.
   const file = await g(page, () => fmGraph.exportBoards(true));
-  expect(file.version).toBe(12);
+  expect(file.version).toBe(BOARD_FILE_VERSION);
   expect(file.boards[0].sliders.map(s => s.folded)).toEqual([true, undefined]);
   expect(await g(page, (d) => fmGraph.importBoards(d), file)).toBe(1);
   await g(page, () => fmGraph.showBoard(1));
@@ -519,7 +519,7 @@ test('a board with its own slider positions: untouched by the others, and back t
   expect(await shown(page)).toEqual([['Price', 14], ['Volume', 1200]]);
   // Kept in the board file (version 8 (7 brought it), `ownSliders` only where true) and after a reload.
   const file = await g(page, () => fmGraph.exportBoards(true));
-  expect(file.version).toBe(12);
+  expect(file.version).toBe(BOARD_FILE_VERSION);
   expect(file.boards.map(b => b.ownSliders)).toEqual([undefined, true]);
   await page.waitForTimeout(500);
   await page.reload();
@@ -617,7 +617,7 @@ test('the shared period: every board follows it, a chart can keep its own and co
   await page.click('#btnRedo');
   // The board file (version 10; 9 brought the shared period): the shared period, `ownPeriod` only where kept, every chart's periods as shown.
   const file = await g(page, () => fmGraph.exportBoards(true));
-  expect(file.version).toBe(12);
+  expect(file.version).toBe(BOARD_FILE_VERSION);
   expect(file.sharedPeriods).toEqual({ periods: { mode: 'one', p: 3 }, period: 2 });
   expect(file.boards[0].items.map(w => [w.periods || w.period, w.ownPeriod])).toEqual([[{ mode: 'one', p: 3 }, undefined], [2, undefined], [{ mode: 'one', p: 0 }, true], [{ mode: 'one', p: 3 }, undefined]]);
   // Kept after a reload.
@@ -673,7 +673,7 @@ test('a version 9 board file opens unchanged: followers follow, its own keeps it
   await page.locator('#sharedPeriodBar select[aria-label="Shared first period"]').selectOption('2');
   expect((await g(page, () => fmGraph.board().items.map(w => w.periods || w.period)))[1]).toEqual({ mode: 'one', p: 0 });
   // Saved again as version 10.
-  expect((await g(page, () => fmGraph.exportBoards(false))).version).toBe(12);
+  expect((await g(page, () => fmGraph.exportBoards(false))).version).toBe(BOARD_FILE_VERSION);
   expect(pageErrors).toEqual([]);
 });
 
@@ -744,7 +744,7 @@ test('shared colours: one colour per rectangle on every board, picked from a sli
   await expect.poll(() => shown(page.locator('.bar-widget').first().locator('.b-now').first())).toBe('rgb(18, 52, 86)'); // the Profit bar
   // In the file: the chosen colours, and each widget the colour it shows.
   const file = await g(page, () => fmGraph.exportBoards(true));
-  expect(file.version).toBe(12);
+  expect(file.version).toBe(BOARD_FILE_VERSION);
   expect(file.colours.map(c => [c.name, c.colour])).toEqual([['Price', '#ff00ff'], ['Equipment', '#00ff00'], ['Profit', '#123456']]);
   expect(file.boards[0].items.find(w => w.layout === 'columns').groups[0].parts.map(p => p.colour)).toEqual(['#0f766e', '#00ff00']);
   expect(file.boards[1].items.find(w => w.type === 'bar').colour).toBe('#00ff00');
@@ -780,7 +780,7 @@ test('a version 10 board file: its colours become the rectangles\' shared ones, 
   await expect(page.locator('.l-line[data-line="Revenue"] .l-path')).toHaveAttribute('stroke', '#ff0000');
   // Saved again as version 11, each widget with the colour it shows.
   const file = await g(page, () => fmGraph.exportBoards(true));
-  expect(file.version).toBe(12);
+  expect(file.version).toBe(BOARD_FILE_VERSION);
   const saved = file.boards.find(b => b.name === 'Saved before shared colours');
   expect(saved.items.find(w => w.type === 'bar').colour).toBe('#ff0000');
   expect(saved.items.find(w => w.layout === 'flow').steps.map(s => s.colour || null)).toEqual(['#ff0000', '#0000ff']);

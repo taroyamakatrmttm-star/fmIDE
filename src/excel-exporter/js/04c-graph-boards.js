@@ -18,7 +18,7 @@
 //   cleanGraphCopy(raw, periods) → the layout's cfg.graph (mapping file 4; sliders from file 7, charts from 8), checked
 // ============================================================
 const GRAPH_BOARD_KIND = 'fmIDE-graph-board';
-const GRAPH_BOARD_VERSION = 12; // the newest version this reader knows (8: step 18's Tornado and Spider charts; 9: fmGraph's shared period — each chart still names the periods it shows, so nothing here reads it; 10: the lines chart; 11: fmGraph's shared colours — each bar, part and step still carries the colour it shows, so nothing here reads them; 12: fmGraph's common scale — each bar and chart still carries the scale it shows, so nothing here reads it)
+const GRAPH_BOARD_VERSION = 13; // the newest version this reader knows (8: step 18's Tornado and Spider charts; 9: fmGraph's shared period — each chart still names the periods it shows, so nothing here reads it; 10: the lines chart; 11: fmGraph's shared colours — each bar, part and step still carries the colour it shows, so nothing here reads them; 12: fmGraph's common scale — each bar and chart still carries the scale it shows, so nothing here reads it; 13: fmGraph's Free chart, not carried to the Dashboard yet — counted, phase F3)
 const GRAPH_LIMITS = { boards: 20, scenarios: 50, settings: 40, sliders: 40, boardName: 60, scenarioName: 40, rectName: 60, value: 1e15,
   items: 40, title: 80, groups: 12, parts: 30, steps: 40, lines: 12 };
 const GRAPH_FLOW_ROLES = ['start', 'add', 'subtract', 'total'];
@@ -218,7 +218,7 @@ function graphRect(r){
 // format says (text cut, colours checked, at most 12 groups of 30 parts, 12 lines, 40 steps); a scenario waterfall
 // is kept only to be listed as not carried, a Tornado or Spider not here (they become analyses).
 // The form before boards had tabs (no `items`) is read charts first. Not yet matched to a model:
-// [{ kind: 'bar' | 'columns' | 'lines' | 'flow' | 'scenarios', title, wide, scale, periods | period, … }]
+// [{ kind: 'bar' | 'columns' | 'lines' | 'flow' | 'scenarios' | 'free', title, wide, scale, periods | period, … }]
 function readGraphCharts(b, version){
   const items = Array.isArray(b.items) ? b.items
     : (Array.isArray(b.charts) ? b.charts.map(c => Object.assign({}, c, { type: 'chart' })) : [])
@@ -236,6 +236,7 @@ function readGraphCharts(b, version){
     if(it.type !== 'chart') return;
     const title = graphText(it.title, GRAPH_LIMITS.title), wide = it.wide !== false;
     if(it.layout === 'scenarios'){ out.push({ kind: 'scenarios', title, wide, scale, parts: [], bad: 0 }); return; }
+    if(it.layout === 'free'){ out.push({ kind: 'free', title, wide, scale, parts: [], bad: 0 }); return; } // version 13: not carried yet (fmGraph's phase F3)
     if(it.layout === 'flow'){
       const parts = [];
       let bad = 0;
@@ -280,13 +281,15 @@ function readGraphCharts(b, version){
 }
 // A board's bars and charts matched to the open model, in the layout's form: each part kept
 // where the model has its rectangle (any value rectangle with a row, outside any block); a
-// chart with no part left is left out. A scenario waterfall is counted as not carried.
-// → { charts: [cfg.graph.charts entry], left: { notFound, bad, empty, scenarios } }
+// chart with no part left is left out. A scenario waterfall, and a Free chart (board file 13), is
+// counted as not carried.
+// → { charts: [cfg.graph.charts entry], left: { notFound, bad, empty, scenarios, free } }
 function matchGraphCharts(board){
-  const left = { notFound: 0, bad: 0, empty: 0, scenarios: 0 };
+  const left = { notFound: 0, bad: 0, empty: 0, scenarios: 0, free: 0 };
   const charts = [];
   (board && board.charts || []).forEach(c => {
     if(c.kind === 'scenarios'){ left.scenarios++; return; }
+    if(c.kind === 'free'){ left.free++; return; }
     left.bad += c.bad;
     const parts = [];
     c.parts.forEach(x => {

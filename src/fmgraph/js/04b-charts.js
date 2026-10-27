@@ -20,6 +20,10 @@
 //            change from the one before (sc01 − Start, sc02 − sc01, …) — to the last scenario's
 //            number (End). `use`: the scenarios it goes through, in the Scenarios panel's
 //            order; null for every one (05f-scenarios.js).
+//   free     { id, layout: 'free', title, period, pieces: [piece] } (board file 13; 04f-free.js)
+//            Columns and waterfalls together in one period: pieces, each a stack of rectangles
+//            in a grid column, sitting on zero, on top of another piece, where another ends, or
+//            at a number.
 //   tornado / spider (step 18) { id, layout, title, output: key | null, period, steps,
 //            inputs: [{ key, by: 'percent' | 'amount', low, high, show }], colour, colour2 }
 //            What moves one output most, measured around where the sliders stand now: each input
@@ -86,6 +90,10 @@ function cleanChart(raw, rectFor, count, drop){
     const p = Math.round(Number(raw.period));
     return { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'scenarios', title, period: Number.isFinite(p) && p >= 0 && p < count ? p : 0, outputs: [...new Set(outputs)], use, colours: {} };
   }
+  if(raw.layout === 'free'){ // board file 13 (04f-free.js)
+    const read = cleanFreePieces(raw.pieces, rectFor, keep, drop);
+    return { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'free', title, period: periodOf(), pieces: read.pieces, notes: read.notes, colours };
+  }
   if(raw.layout === 'lines'){
     const lines = (Array.isArray(raw.lines) ? raw.lines : []).slice(0, CHART_LIMITS.lines).map(l => { const r = l && typeof l === 'object' ? rectFor(l) : null; return r ? keep(l, r).key : null; }).filter(Boolean);
     return { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'lines', title, periods: cleanPeriods(raw.periods, count), lines, colours };
@@ -116,16 +124,20 @@ function chartData(c, at){
     c.colour ? { colour: c.colour } : {}, c.colour2 ? { colour2: c.colour2 } : {});
   if(c.layout === 'scenarios') return Object.assign({ layout: 'scenarios', title: c.title, period: c.period, outputs: c.outputs.map(k => at(k)) }, c.use ? { scenarios: c.use.slice() } : {});
   if(c.layout === 'lines') return { layout: 'lines', title: c.title, periods: Object.assign({}, c.periods), lines: c.lines.map(k => withColour(k)) };
+  if(c.layout === 'free') return { layout: 'free', title: c.title, period: c.period, pieces: c.pieces.map(p => freePieceData(p, (k) => withColour(k))) };
   if(c.layout === 'flow') return { layout: 'flow', title: c.title, period: c.period, steps: c.steps.map(s => withColour(s.key, { role: s.role })) };
   return { layout: 'columns', title: c.title, periods: Object.assign({}, c.periods), check: c.check,
     groups: c.groups.map(g => ({ name: g.name, parts: g.parts.map(k => withColour(k)) })) };
 }
 
-// A new chart: columns with one group holding one calculated rectangle, or a flow with one step.
+// A new chart: columns with one group holding one calculated rectangle, a flow with one step,
+// or an empty Free chart.
 function addChart(layout){
   if(board.charts.length >= BOARD_LIMIT) return null;
   const first = model.rects.find(r => !r.input) || model.rects[0];
-  const c = layout === 'flow'
+  const c = layout === 'free'
+    ? { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'free', title: '', period: 0, pieces: [], notes: null, colours: {} }
+    : layout === 'flow'
     ? { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'flow', title: '', period: 0, steps: first ? [{ key: first.key, role: 'start' }] : [], colours: {} }
     : { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'columns', title: '', periods: { mode: 'all' }, groups: [{ name: '', parts: first ? [first.key] : [] }], check: false, colours: {} };
   board.items.push(c);
@@ -134,7 +146,7 @@ function addChart(layout){
 }
 
 // Every rectangle a chart shows.
-function chartKeys(c){ return isSensitivity(c) ? [c.output].concat(c.inputs.map(i => i.key)).filter(Boolean) : c.layout === 'flow' ? c.steps.map(s => s.key) : c.layout === 'scenarios' ? c.outputs.slice() : c.layout === 'lines' ? c.lines.slice() : c.groups.flatMap(g => g.parts); }
+function chartKeys(c){ return isSensitivity(c) ? [c.output].concat(c.inputs.map(i => i.key)).filter(Boolean) : c.layout === 'flow' ? c.steps.map(s => s.key) : c.layout === 'scenarios' ? c.outputs.slice() : c.layout === 'lines' ? c.lines.slice() : c.layout === 'free' ? c.pieces.flatMap(p => p.parts) : c.groups.flatMap(g => g.parts); }
 
 // What a lines chart shows in one calculation: per period, each line's result.
 function linesFigures(c, results){

@@ -11,7 +11,7 @@ The numbers in this part were checked against the apps on `main` at pull request
 | Lesson | What you learn | Came in |
 |---|---|---|
 | [6.1 Bars and sliders](#bars-sliders) | Open fmGraph, + Bar, + Slider, what a slider reaches, folding sliders, sharing slider positions | step 15 G1 ([#83](https://github.com/taroyamakatrmttm-star/fmIDE/pull/83)), [#142](https://github.com/taroyamakatrmttm-star/fmIDE/pull/142), [#143](https://github.com/taroyamakatrmttm-star/fmIDE/pull/143), [#181](https://github.com/taroyamakatrmttm-star/fmIDE/pull/181), [#182](https://github.com/taroyamakatrmttm-star/fmIDE/pull/182) |
-| [6.2 Charts](#graph-charts) | Columns, Lines, Waterfall; one period for every board | step 15 G2 ([#84](https://github.com/taroyamakatrmttm-star/fmIDE/pull/84)), [#184](https://github.com/taroyamakatrmttm-star/fmIDE/pull/184), [#188](https://github.com/taroyamakatrmttm-star/fmIDE/pull/188) |
+| [6.2 Charts](#graph-charts) | Columns, Lines, Waterfall, Free; one period for every board; the key leaving out rectangles at 0 | step 15 G2 ([#84](https://github.com/taroyamakatrmttm-star/fmIDE/pull/84)), [#184](https://github.com/taroyamakatrmttm-star/fmIDE/pull/184), [#188](https://github.com/taroyamakatrmttm-star/fmIDE/pull/188), branch `claude/fmgraph-free-chart-f1`, branch `claude/fmgraph-key-hides-zeros` |
 | [6.3 Boards](#graph-boards) | Tabs, arranging, one colour per rectangle, a fixed scale, one scale for all, undo, board files, boards in the document | step 15 G3 ([#85](https://github.com/taroyamakatrmttm-star/fmIDE/pull/85)–[#87](https://github.com/taroyamakatrmttm-star/fmIDE/pull/87)), [#133](https://github.com/taroyamakatrmttm-star/fmIDE/pull/133), branch `claude/fmgraph-shared-colours-e9c229` |
 | [6.4 Trace, Biggest movers, and comparing A with B](#graph-explore) | 🔍 Trace, Biggest movers, 📌 Pin as A | step 15 G4 ([#88](https://github.com/taroyamakatrmttm-star/fmIDE/pull/88), [#89](https://github.com/taroyamakatrmttm-star/fmIDE/pull/89)) |
 | [6.5 Named scenarios and the scenario waterfall](#graph-scenarios) | + Save as scenario, ▶ Show, A, ▶ Play between two scenarios, the scenario waterfall | [#93](https://github.com/taroyamakatrmttm-star/fmIDE/pull/93), [#94](https://github.com/taroyamakatrmttm-star/fmIDE/pull/94) |
@@ -65,17 +65,18 @@ At Price 12, the Profit bar shows **160**; a dashed outline keeps the model's ow
 > **Goal:** show several rectangles together: a check that two totals agree, a trend, and a bridge from revenue to profit.
 > **You need:** the board of [lesson 6.1](#bars-sliders), with Price at 12.
 > **Time:** about 10 minutes.
-> **In the app:** fmGraph Help → *Charts: columns, lines and waterfalls* (`charts`), *One period for every board* (`shared-period`) · fmGraph tutorial *Charts* (`charts`)
-> **Came in:** step 15 G2 ([#84](https://github.com/taroyamakatrmttm-star/fmIDE/pull/84)); one period for every board [#184](https://github.com/taroyamakatrmttm-star/fmIDE/pull/184); lines charts [#188](https://github.com/taroyamakatrmttm-star/fmIDE/pull/188)
+> **In the app:** fmGraph Help → *Charts: columns, lines and waterfalls* (`charts`), *The Free chart: columns and waterfalls together* (`free-chart`), *One period for every board* (`shared-period`) · fmGraph tutorial *Charts* (`charts`)
+> **Came in:** step 15 G2 ([#84](https://github.com/taroyamakatrmttm-star/fmIDE/pull/84)); one period for every board [#184](https://github.com/taroyamakatrmttm-star/fmIDE/pull/184); lines charts [#188](https://github.com/taroyamakatrmttm-star/fmIDE/pull/188); the Free chart, branch `claude/fmgraph-free-chart-f1`; the key leaving out rectangles at 0, branch `claude/fmgraph-key-hides-zeros`
 
-**+ Chart** adds a chart; its kind is chosen at its top: **Columns**, **Lines**, **Waterfall**, **Scenario waterfall** ([lesson 6.5](#graph-scenarios)), **Tornado** and **Spider** ([lesson 6.6](#tornado-spider)). Every chart is made of your own rectangles, so it fits any model.
+**+ Chart** adds a chart; its kind is chosen at its top: **Columns**, **Lines**, **Waterfall**, **Free** (columns and waterfalls together), **Scenario waterfall** ([lesson 6.5](#graph-scenarios)), **Tornado** and **Spider** ([lesson 6.6](#tornado-spider)). Every chart is made of your own rectangles, so it fits any model.
 
 ### Steps
 
 1. **Columns.** Press **+ Chart** and choose **Columns** at its top. In **Edit chart**, make two groups: *In*, holding Revenue, and *Out*, holding Costs and Profit (**+ Group** adds a group, **+ Rectangle** a rectangle to it). Tick **Check that the groups' totals agree**.
 2. **Waterfall.** Press **+ Chart** again and choose **Waterfall** at its top. In Edit chart, make three steps: Revenue as **Start**, Costs as **Subtract**, Profit as **Total** (**+ Step** adds one).
 3. **Lines.** Press **+ Chart** again and choose **Lines**. Add Revenue and Profit.
-4. Move the Price slider and watch all three.
+4. **Free.** Press **+ Chart** again and choose **Free**: the chart's one rectangle becomes its first piece; remove it with **×** in Edit chart. Then, in **+ From chart…**, choose the Columns chart, then the Waterfall: their groups and steps become pieces, side by side on one scale.
+5. Move the Price slider and watch all four.
 
 ### Check it
 
@@ -84,6 +85,7 @@ At Price 12, the Profit bar shows **160**; a dashed outline keeps the model's ow
 | Columns | *In* 360; *Out* 200 + 160 = 360; ✓ (the groups agree) |
 | Waterfall | Revenue 360, down 200 for Costs, to Profit 160; ✓ above Profit (the steps add up to it) |
 | Lines | Revenue 360 and Profit 160 in every period, with the model's own numbers dashed underneath |
+| Free | *In* 360 and *Out* 360 (✓ above *Out*: it equals where *In* ends); Revenue 360, −Costs from 360 down to 160, Profit 160 (✓) |
 
 ### Good to know
 
@@ -92,6 +94,8 @@ At Price 12, the Profit bar shows **160**; a dashed outline keeps the model's ow
 - **Numbers agree** when they differ by less than a millionth of their size, so rounding never shows as ✗. A chart mixing units says so.
 - **One period for every board:** above the bars and charts, **Every board** sets the periods for every bar and chart, and **One-period charts in** the period of the waterfalls, Tornado and Spider. A bar or chart follows while its period list shows *Shared (…)*; choose its own period to stop following.
 - **Lines** draws up to 12 rectangles. Switching between Columns and Lines keeps the rectangles and the periods.
+- **The key lists only the rectangles that aren't 0.** A rectangle that is 0 in every period the chart shows, now and in the dashed outlines, is left out (its bars are still drawn); **+N at 0** at the end of the key lists them too, faded, so you can pick their colours, and **Hide the N at 0** leaves them out again. A slider that makes one something else brings it back; one that can't be worked out is always listed; while Play runs, both its ends count. On the sample nothing is 0, so every key lists all its rectangles.
+- **The Free chart** shows one period. Each piece is a stack of rectangles in a column, and **Sits** on zero, on top of another piece, where another piece ends, or at a number. **Minus** turns a piece's sign round (−Costs), **Should equal…** checks it against where another piece ends. Two pieces share a column only when one rests on the other. ExcelExporter's Dashboard does not draw a Free chart yet: Use fmGraph boards… lists it as not carried.
 
 ---
 
@@ -165,7 +169,7 @@ The trace note reads **Price → Revenue → Profit**, and lists **Quantity** an
 > **You need:** the board of [lesson 6.1](#bars-sliders).
 > **Time:** about 12 minutes.
 > **In the app:** fmGraph Help → *Named scenarios* (`scenarios`), *Charts: columns, lines and waterfalls* (`charts`) · fmGraph tutorial *Scenarios* (`scenarios`)
-> **Came in:** named scenarios, S1 ([#93](https://github.com/taroyamakatrmttm-star/fmIDE/pull/93)); the scenario waterfall, S2 ([#94](https://github.com/taroyamakatrmttm-star/fmIDE/pull/94)); Play (branch `claude/fmgraph-play-scenarios`, 27 October 2026)
+> **Came in:** named scenarios, S1 ([#93](https://github.com/taroyamakatrmttm-star/fmIDE/pull/93)); the scenario waterfall, S2 ([#94](https://github.com/taroyamakatrmttm-star/fmIDE/pull/94)); Play (branch `claude/fmgraph-play-scenarios`, 27 October 2026); Play keeping going while you scroll or switch boards (branch `claude/fmgraph-play-keeps-going`, 27 October 2026)
 
 ### Steps
 
@@ -188,7 +192,7 @@ The trace note reads **Price → Revenue → Profit**, and lists **Quantity** an
 
 - **A** on a scenario compares with it, as 📌 Pin as A does ([lesson 6.4](#graph-explore)). **⟳** keeps where the sliders are now in that scenario; **↑ ↓** reorder; **×** deletes.
 - **A scenario keeps the inputs it changed,** whatever board it was saved on. If one has no slider on the board you're looking at, fmGraph says so.
-- **▶ Play** can swing between any two ends: a scenario, the model's own numbers or the sliders now. Every number the two ends set differently moves together, slower near the ends. **■ Stop**, **Esc**, any key or a click elsewhere stops it; it changes no slider and saves nothing. With reduced motion turned on in your device's settings nothing swings: the board shows the second end against the first, and **⇄** steps between them.
+- **▶ Play** can swing between any two ends: a scenario, the model's own numbers or the sliders now. Every number the two ends set differently moves together, slower near the ends. It keeps playing while you scroll, tap, open a panel or switch boards (the board shown follows it). **■ Stop** or **Esc** stops it, and so does moving a slider yourself; it changes no slider and saves nothing. With reduced motion turned on in your device's settings nothing swings: the board shows the second end against the first, and **⇄** steps between them.
 - **Up to 50 scenarios** a model. They are kept with the boards, in fmIDE's document and in **Export all boards**; saving, renaming and deleting them can be undone.
 - **A scenario waterfall** follows the scenarios as you update, reorder or rename them. Edit chart chooses the period, up to six outputs, and which scenarios it goes through.
 - **In Excel,** the scenarios become Global Cases ([lesson 5.11](05-excelexporter.md#fmgraph-in-excel)).

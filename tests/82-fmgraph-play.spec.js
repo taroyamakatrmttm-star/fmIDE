@@ -7,10 +7,12 @@
 //   fmGraph.playing().elapsed, sampled every frame inside the page), never by a wall-clock
 //   limit around Playwright steps.
 // - A %-change slider, a slider over some periods and an input with no slider all move.
-// - Stopping (■ Stop, Esc, a key, a press, a slider moved, another board) leaves everything as
-//   it was: nothing saved, no undo step, A kept.
+// - Only ■ Stop, Esc and a slider moved stop it (the owner's request of 27 October 2026), and
+//   leave everything as it was: nothing saved, no undo step, A kept. A press, a key, a scroll
+//   and another board leave it playing; the board then shown follows the play.
 // - Each position worked out once; a slow model works them all out ahead.
-// - Reduced motion: no motion, ⇄ steps between the ends. A phone: the dock follows, a touch stops.
+// - Reduced motion: no motion, ⇄ steps between the ends. A phone: the dock follows; a touch and a
+//   swipe leave it playing, ■ Stop stops it.
 // - window.fmGraph: play, stopPlay, stepPlay, playing.
 const fs = require('fs');
 const path = require('path');
@@ -162,7 +164,7 @@ test('a change by %, a slider over some periods and an input with no slider all 
   expect(pageErrors).toEqual([]);
 });
 
-test('stopping by Stop, Esc, a key, a press, a slider or another board leaves everything as it was', async ({ page, pageErrors }) => {
+test('stopping by Stop, Esc or a slider moved leaves everything as it was', async ({ page, pageErrors }) => {
   await openSample(page);
   const { price } = await lowAndHigh(page);
   await g(page, (i) => fmGraph.setSlider(i, 9), price);
@@ -180,8 +182,6 @@ test('stopping by Stop, Esc, a key, a press, a slider or another board leaves ev
   };
   await play(); await page.click('#btnPlayStop'); await stopped();
   await play(); await page.keyboard.press('Escape'); await stopped();
-  await play(); await page.keyboard.press('Shift'); await stopped();
-  await play(); await page.locator('.board-col .col-head').first().click(); await stopped();
   expect(await g(page, () => JSON.stringify({ board: fmGraph.board(), scenarios: fmGraph.scenarios(), comparing: fmGraph.comparing(), boards: fmGraph.boards() }))).toBe(before);
   await expect(page.locator('.slider-widget .slider-value').first()).toHaveValue('9');
   // No undo step: the last one is still saving High.
@@ -189,10 +189,67 @@ test('stopping by Stop, Esc, a key, a press, a slider or another board leaves ev
   expect(await g(page, () => fmGraph.scenarios().map(s => s.name))).toEqual(['Low']);
   expect(await g(page, () => fmGraph.redo())).toBe(true);
   const priceNow = await g(page, () => fmGraph.board().sliders[0].id); // undo gives the board new ids
-  // A slider moved, or another board shown, stops it too.
+  // A slider moved stops it: by the API, and dragged by the mouse (a deliberate change).
   await play(); await g(page, (i) => fmGraph.setSlider(i, 12), priceNow); await stopped();
   expect(await g(page, () => fmGraph.board().sliders[0].value)).toBe(12);
-  await play(); await g(page, () => fmGraph.addBoard('Second')); await stopped();
+  await play();
+  const range = page.locator('.slider-widget input[type="range"]').first();
+  const box = await range.boundingBox();
+  await page.mouse.move(box.x + box.width * 0.2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.3, box.y + box.height / 2, { steps: 4 });
+  await page.mouse.up();
+  await stopped();
+  const dragged = await g(page, () => fmGraph.board().sliders[0].value);
+  expect(dragged).not.toBe(12);
+  await expect(page.locator('.slider-widget .slider-value').first()).toHaveValue(String(dragged));
+  expect(pageErrors).toEqual([]);
+});
+
+test('a press, a key or a scroll leaves it playing', async ({ page, pageErrors }) => {
+  await openSample(page);
+  await lowAndHigh(page);
+  await g(page, () => fmGraph.play({ from: 'Low', to: 'High', seconds: 0.3, pause: 0.8 }));
+  // Still playing, and still moving: it reaches both ends again after each thing done.
+  const goesOn = async () => {
+    await page.waitForFunction(() => fmGraph.playing() && fmGraph.playing().index === fmGraph.playing().positions - 1);
+    await page.waitForFunction(() => fmGraph.playing() && fmGraph.playing().index === 0);
+    await expect(page.locator('#playBar')).toBeVisible();
+  };
+  await goesOn();
+  await page.locator('.board-col .col-head').first().click(); await goesOn();
+  await page.locator('.bar-widget svg').first().click(); await goesOn();
+  await page.keyboard.press('Shift'); await goesOn();
+  await page.keyboard.press('a'); await goesOn();
+  await page.mouse.move(300, 300); await page.mouse.wheel(0, 400); await goesOn();
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => fmGraph.playing() === null);
+  expect(pageErrors).toEqual([]);
+});
+
+test('another board leaves it playing, and the board shown follows the play', async ({ page, pageErrors }) => {
+  await openSample(page);
+  await lowAndHigh(page);
+  await g(page, () => fmGraph.play({ from: 'Low', to: 'High', seconds: 0.3, pause: 0.8 }));
+  const goesOn = async () => {
+    await page.waitForFunction(() => fmGraph.playing() && fmGraph.playing().index === fmGraph.playing().positions - 1);
+    await page.waitForFunction(() => fmGraph.playing() && fmGraph.playing().index === 0);
+    await expect(page.locator('#playBar')).toBeVisible();
+  };
+  // Another board: still playing; back on the first, its slider shows where the play is.
+  await g(page, () => fmGraph.addBoard('Second'));
+  expect(await g(page, () => fmGraph.boards().find(b => b.shown).name)).toBe('Second');
+  await goesOn();
+  await page.locator('.board-tab').first().click();
+  expect(await g(page, () => fmGraph.boards()[0].shown)).toBe(true);
+  await page.waitForFunction(() => fmGraph.playing() && fmGraph.playing().index === fmGraph.playing().positions - 1);
+  await expect(page.locator('.slider-widget .slider-value').first()).toHaveValue('14');
+  await expect(page.locator('.slider-widget').first()).toHaveClass(/playing/);
+  await page.waitForFunction(() => fmGraph.playing() && fmGraph.playing().index === 0);
+  await expect(page.locator('.slider-widget .slider-value').first()).toHaveValue('8');
+  expect(await g(page, () => fmGraph.board().sliders[0].value)).toBe(null); // what it is set to, unchanged
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => fmGraph.playing() === null);
   expect(pageErrors).toEqual([]);
 });
 
@@ -295,7 +352,7 @@ test('window.fmGraph: play refuses ends that give the same numbers, or an unknow
   expect(pageErrors).toEqual([]);
 });
 
-test('on a phone: the dock follows the play, and a touch stops it', async ({ browser }) => {
+test('on a phone: the dock follows the play; a touch and a swipe leave it playing, ■ Stop stops it', async ({ browser }) => {
   const URL = 'http://local.test/fmGraph.html';
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, screen: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   await context.route('**/*', route => route.request().url() === URL
@@ -319,6 +376,22 @@ test('on a phone: the dock follows the play, and a touch stops it', async ({ bro
     const cdp = await context.newCDPSession(page);
     const box = await page.locator('.bar-widget').first().boundingBox();
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: box.x + 20, y: box.y + 10 }] });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await page.waitForFunction(() => fmGraph.playing() && fmGraph.playing().index === fmGraph.playing().positions - 1);
+    await expect(value).toHaveText('14');
+    // A finger scrolling the page (as on an iPad) leaves it playing too.
+    const top = await g(page, () => scrollY);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 200, y: 400 }] });
+    for(const y of [370, 330, 290, 250]) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 200, y }] });
+    await page.waitForTimeout(300); // the finger rests before it lifts, so the page does not glide on
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 200, y: 250 }] });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await page.waitForFunction(() => fmGraph.playing() && fmGraph.playing().index === 0);
+    await expect(value).toHaveText('8');
+    expect(await g(page, () => scrollY)).toBeGreaterThan(top); // it did scroll
+    // A tap on ■ Stop stops it.
+    const stop = await page.locator('#btnPlayStop').boundingBox();
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: stop.x + stop.width / 2, y: stop.y + stop.height / 2 }] });
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     await page.waitForFunction(() => fmGraph.playing() === null);
     await expect(value).toHaveText('10');

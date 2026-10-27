@@ -257,6 +257,7 @@ function openGraphBoardsWindow(read, source){
     if(sIn) lines.push(sIn + ' input' + (sIn === 1 ? '' : 's') + ' of the Tornado and Spider charts left out (not in this model, inside a block, not an input, or not readable).');
     const cl = chartsMatched.left;
     if(cl.scenarios) lines.push(cl.scenarios + ' scenario waterfall' + (cl.scenarios === 1 ? '' : 's') + ' not carried: Excel would need every case worked out at once.');
+    if(cl.free) lines.push(cl.free + ' Free chart' + (cl.free === 1 ? '' : 's') + ' not carried yet.');
     const cOut = (cl.notFound || 0) + (cl.bad || 0);
     if(cOut) lines.push(cOut + ' rectangle' + (cOut === 1 ? '' : 's') + ' of the bars and charts left out (not in this model, inside a block, or not readable).');
     if(cl.empty) lines.push(cl.empty + ' bar' + (cl.empty === 1 ? '' : 's') + ' or chart' + (cl.empty === 1 ? '' : 's') + ' with nothing of this model to show.');
