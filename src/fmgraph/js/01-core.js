@@ -21,6 +21,7 @@
 // build:include shared/file-formats.js
 // build:include shared/store.js
 // build:include shared/pointer-input.js
+// build:include shared/snap.js
 
 const $ = (id) => document.getElementById(id);
 

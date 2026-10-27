@@ -44,6 +44,10 @@ function stopTutorial(restore){
   if(!practice) return;
   const back = practice.back;
   clearInterval(practice.timer);
+  // A practice change still waiting to be saved (saveBoardSoon) is dropped: once practiceStart
+  // is cleared it would be saved, while the model from before is still being opened, over the
+  // person's own boards for the same model (found 27 October 2026).
+  clearTimeout(saveTimer); clearTimeout(sendTimer);
   practice = null;
   practiceStart = null;
   document.body.classList.remove('practising');
@@ -84,6 +88,12 @@ function checkPasses(c){
     if(c.steps && !(ch.steps && ch.steps.length === c.steps.length && c.steps.every(([n, role], i) => sameText(rectNamed(ch.steps[i].key), n) && ch.steps[i].role === role))) return false;
     if(c.outputs && !(ch.outputs && c.outputs.every(n => ch.outputs.some(k => sameText(rectNamed(k), n))))) return false;
     if(c.output && !(ch.output && sameText(rectNamed(ch.output), c.output))) return false;
+    // A Free chart's piece sitting as said (F2): [its name, 'zero' | 'top' | 'end' | 'level', the piece it rests on].
+    if(c.piece){
+      const named = (p, n) => sameText(pieceLabel(ch, Object.assign({}, p, { minus: false })), n);
+      const [n, on, ofName] = c.piece;
+      if(!(ch.pieces && ch.pieces.some(p => named(p, n) && p.sits.on === on && (!ofName || ch.pieces.some(q => q.id === p.sits.of && named(q, ofName)))))) return false;
+    }
     return true;
   });
   if('traced' in c) return (traceId !== null) === !!c.traced;

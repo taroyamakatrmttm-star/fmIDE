@@ -638,6 +638,7 @@ fmIDE at 1400 × 900 (the touch test at 1024 × 768 with a touchscreen); rectang
 - Alt held from the start: an alias of C lands at 500, 100, C stays. Alt pressed after the drag has started: C dropped at 503, 102 stays at 503, 102.
 - Recorded as one `move` step of −100, −400; exported at 500, 100; one undo puts it back at 600, 500.
 - 400 rectangles (two calls of `fm.createRects`, grids of 20 across), one dragged across them in 30 moves: under 15 seconds, and it moved.
+- **Distribute** (added before F2 moved it into `src/shared/snap.js`, and passing on the code before the move): A 100 wide at 100, B 170 at 400, C 60 at 250, D 200 at 800 distributed across with `fm.distribute('h', …)`: A and D stay, C at 200 + 370 / 3 and B 60 + 370 / 3 after it (equal gaps between edges); one undo puts them back; down, at 100, 150, 590, 700 they go to 100, 300, 500, 700; two nodes: nothing moves.
 - By touch: a finger drag of C to 503, 101 lands at 500, 100; the page saw only touch.
 
 ### 42. The Help panel's width (`tests/42-help-width.spec.js`; step 10, phase H5a)
@@ -838,8 +839,9 @@ fmGraph with its sample model (step 15, scenarios S2); sc01 Price 13, sc02 Price
 ### 58. fmGraph's tutorials (`tests/58-fmgraph-tutorials.spec.js`; part of `npm run test:fmgraph`)
 fmGraph (step 15, G6); each tutorial played with real clicks and typing.
 - From the first screen (🎓 Learn with a tutorial): Help lists the four, with their minutes. Sliders and bars: the practice board has the two sliders and nothing else; Next; + Bar; Profit chosen; 12 typed for Price; Reset all; Back shows "reset" and waits for Next; Finish: the first screen, nothing stored for boards.
-- Charts, with the sample open and a board "Mine" added: + Chart, Waterfall, three steps (Revenue start, Cost of sales subtract, Gross profit total) with ✓, Price 14; Finish: the boards "Board" and "Mine" back, storage unchanged.
+- Charts, with the sample open and a board "Mine" added: + Chart, Waterfall, three steps (Revenue start, Cost of sales subtract, Gross profit total) with ✓, Price 14; Free at the chart's top and Gross profit dragged up by its own height, the guide reading "where −Cost of sales ends" (F2); Finish: the boards "Board" and "Mine" back, storage unchanged.
 - Trace and compare (4 min): 🔍, Price 12, Pin as A, Volume 10, Unpin, + Chart as a Tornado, Profit as its output; then ↻ draws four rows. Scenarios: Price 12, save, Volume 10, save, ▶ on sc01, + Chart as a scenario waterfall of Profit (four bars).
+- A practice change just before the tutorial ends (a bar added, then `fmGraph.stopTutorial()`, with the browser's reads of the stored boards made 0.6 s slow) leaves the stored boards exactly as before (found by F2, 27 October 2026: the change waiting to be saved was saved over the person's boards for the sample model).
 - Exit puts the sample back; a model opened during a tutorial ends it. With the model from fmIDE: changes in practice don't mark fmIDE's document; Exit shows fmIDE's model again.
 
 ### 59. ExcelExporter reads fmIDE's model (`tests/59-excel-from-fmide.spec.js`; `npm run test:excel-from-fmide`)
@@ -887,6 +889,7 @@ The module folders (`package.json`: `{ "type": "module" }`): `src/shared/`, `src
 - fmIDE's expression parser (`src/fmide/modules/expression.js`, given its variables and its way to stop): precedence, from the left, %, signs, exponents, `.5` and `1.`; min / max / round / floor / ceil / abs in any case; variables as numbers, number text and a list item, a text variable, an unset one and a bad one each said plainly; a missing bracket, text left over and nothing at all said with the text; hostile text (`alert(1)`, `constructor`, `process.exit(1)`, `Math.random()`, `1;2`…) refused, never run. `readNumber`: numbers, true / false, text, an expression; not finite and empty refused with the label. `readBool`: the words for yes and no; anything else refused.
 - ExcelExporter's formula building (`src/excel-exporter/formulas/`, given a model's IR through `useModelIR`): one canvas — Price × Volume = Revenue, a corkscrew Closing, Big = IF(Volume > Revenue, …) — with rows from 5 on the tab Calc: inputs as numbers, `=E5*E6`, the corkscrew's period 1 as 0 then `=E8+F7`, `=IF(E6>E7,E7,E6)`; rows classed input / calc / output, operators and shifts none. From another tab `='Calc'!E5*'Calc'!E6`; two helper columns move period 1 to G. Volume left out of the layout: `=E5*0` and Volume reported once; Price a Constant: `=10*E6`. Sheet names cleaned and cut to 31, references with `$`, blank and text cells, row keys with a vintage, an Inputs-tab mirror's id.
 - Sheet names and references (changed on purpose, 8 October 2026: the test pinned the broken form `'O'Brien'!E$5`): an apostrophe in a name is doubled in a reference (`'O''Brien'!E$5`, `'Bob''s ''Q1'''!$A$6`); none may start or end a name (`'Quoted'` → `Quoted`, `'''` → `Sheet`); one inside stays (`Bob's`).
+- Snapping (`src/shared/snap.js`, phase F2 of `docs/fmgraph-free-chart.md`): `snapPlace` — C at 503, 102 beside A at 100 and B at 300 goes to 500, 100 (equal spacing, A's top as the guide) with the gaps 270–300 and 470–500; a tie at 502 with an edge at 504 goes to alignment; 6 away is too far; `equalSpacingSnap` never offers a place below 0, and with columns as boxes (0 and 2) takes 4.4 to 4; `distributePositions` across (the group 41 numbers, in the order given) and down (100, 300, 500, 700), none for two boxes.
 
 ### 66. The suite's parts for GitHub (`tests/66-test-parts.spec.js`; `npm run test:test-parts`)
 Node only; `tools/test-parts.js` and `tests/test-durations.json` (seconds per test file, from a GitHub run's log).
@@ -1186,6 +1189,18 @@ fmGraph with the sample and two scenarios, Low (Price 8) and High (Price 14), th
 - **🎞 on one chart**: on every bar and chart; a download named `fmGraph-<the chart's title>.gif`, the same checks; `fmGraph.makePlayGif({ ids })` while Play runs gives the same frames (bytes, blob `image/gif`, name, 720 wide) from the play's own ends, and the play is stopped.
 - **Nothing to play** (no scenarios, sliders untouched): `makePlayGif` gives "Nothing to play…"; 🎞 GIF in the full screen says it in the strip; no progress, no download.
 - **The cap**: `maxBytes` 20,000 — "The GIF would be … MB, more than …: show fewer charts", `tooLarge`, its size. **Cancel**: while "Making the GIF… N%" shows, Cancel → `{ problem: 'The GIF was cancelled.', cancelled: true }`, the strip and stage gone, `cancelPlayGif()` then false; the board unchanged.
+
+### 89. Placing a Free chart's pieces on the grid (`tests/89-fmgraph-free-grid.spec.js`; `npm run test:fmgraph`; phase F2 of `docs/fmgraph-free-chart.md`)
+A model in one period P1 (Cash 100, Neg −30, CFO 50, Loan 300, X 20) and a Free chart: A (Cash, Neg: up to 100, down to −30, ends at 70) in column 0, B (CFO) in 1, L (Loan) in 3 with More (X) on top of it, T (X) in 5; a real mouse on the board, at screen distances measured from the drawn bars. Every test: no page error where checked.
+- **Across**: the chart is `.free-grid` with Align bottoms, Distribute and Tidy; L dragged a column left takes More with it (columns 0, 1, 2, 2, 5), a target column marked while the button is down, nothing left after; B dragged onto L's column swaps with L and More (0, 2, 1, 1, 5), Edit chart's list saying Column 3; each move one undo step.
+- **Equal spacing**: pieces in columns 0 and 2 and Z in 6; Z dragged to 4.4 snaps to 4 with the marks (6 lines) while the button is down, none after; from 4 to 5.3 it takes 5, no marks.
+- **Up and down**: B dragged up 100 shows the guide "on top of A" and sits at 100; down 30, "where A ends", at 70; up to 200, no guide, and it stays where A ends (the owner's choice 1a). `fmGraph.movePiece` refuses a loop and puts T where B ends in column 6 (base 120).
+- **Several**: Shift+click A and B, Align bottoms (B back on zero); A, B and T Distributed from columns 0, 1, 5 to 0, 3, 5 — L and More, in column 3, moving on together to 6 — then Tidy (0, 1, 3, 3, 2) and Tidy disabled; one undo.
+- **A box** dragged from the chart's empty corner over A and B selects those two; a click on the empty chart clears them.
+- **Keys** on B: → column 2; ↑ where T ends (20), where A ends (70), on top of A (100); ↓ 70; ← column 1.
+- **Not in the full screen**: in `#showView` the chart is drawn without `.free-grid`, `.free-tools` or focusable pieces. **A phone** (390 × 844, touch): `body.phone`, the chart drawn, no `.free-grid` or `.free-tools`.
+- **A name with markup** (`<img … onerror>`) in the guide's words is text: no image on the board, nothing run.
+- **A finger** (1024 × 768, real touch through the Chrome DevTools Protocol): a quick swipe across B moves nothing; held 0.7 s, then moved a column, it moves B one column right.
 
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.

@@ -9,7 +9,7 @@ The owner's request (26 October 2026), two ideas in one:
 
 *The owner's screenshot (26 October 2026, CC BY 4.0 with the rest of `docs/`): today a balance sheet and a cash flow are two charts. The owner wants them as one.*
 
-This is the brief, approved by the owner on 26 October 2026 (staged: F1, F2, F3). It is not in the build order yet: the owner chooses when it is built. F1 is built (27 October 2026, branch `claude/fmgraph-free-chart-f1`; see "How F1 turned out" at the end); F2 and F3 are not.
+This is the brief, approved by the owner on 26 October 2026 (staged: F1, F2, F3). It is not in the build order yet: the owner chooses when it is built. F1 is built (27 October 2026, branch `claude/fmgraph-free-chart-f1`; see "How F1 turned out" at the end), and F2 (27 October 2026, branch `claude/fmgraph-free-chart-f2`; "How F2 turned out"); F3 is not.
 
 ## The owner's choices (26 October 2026)
 
@@ -169,3 +169,22 @@ Built as briefed, with the owner's answers of 27 October 2026 to the plan's choi
 4. **Two pieces in one column with neither resting on the other** (from a file, or after a change in the editor): the later one in the list moves to the next free column, counted in the words under the chart. "Resting on" goes through any chain, so a stack of three in one column is allowed; two pieces both on top of a third are not.
 
 Also: the code is in two new files, `src/fmgraph/js/04f-free.js` (reading, the numbers, + From chart…) and `05n-free-chart.js` (drawing and the editor); the key's items are worked out as a list before they are drawn (`freeKeyItems`, `drawKeyGroups`), and a piece that is just its one rectangle has no label of its own in the key. **+ Chart** still starts a Columns chart; choosing Free turns its one rectangle into the first piece (the API's `addChart({ layout: 'free' })` starts empty, with "Add a piece to start"). On top of… moves a piece into that piece's column when it may stand there. The column is shown counting from 1 in the editor ("Column 1"), from 0 in the file and the API. The phone's quick look is the chart's (its rectangles in its period), as for any chart. Test group 84; the version written out in five groups became the helpers' `BOARD_FILE_VERSION`.
+
+## How F2 turned out (27 October 2026)
+
+Built as briefed, with the owner's answers of 27 October 2026 to the plan's choices (all four recommendations):
+
+1. **Letting go with no guide near**: the piece keeps its Sits. A height is only ever chosen from the model.
+2. **Dropped on a column it can't share**: the piece there (and its stack) swaps to the column the dragged piece left.
+3. **What moves across with a piece**: the pieces resting on it in its own column (a stack on a stack); waterfall steps resting on it in other columns stay where they are.
+4. **The tutorial**: one step, `free`, added to fmGraph's Charts tutorial (now 5 minutes): choose Free, then drag Gross profit up onto the guide "where −Cost of sales ends".
+
+Also, where the code as it was changed the brief:
+
+- **No separate handle**: a mouse drags a piece by its bars; a finger or pen holds it still first (`waitForHold`), so a quick swipe still scrolls the page. Dragging is on the board only: never on a phone (Edit chart's list), in the full screen or in a GIF, which draw the same chart.
+- **fmIDE had no test of Distribute**: one was added to group 41 and shown passing on the old code (its own commit) before the move into `src/shared/snap.js` (`snapPlace`, `equalSpacingSnap`, `distributePositions`); `computeSnap` keeps its clamp at 0 and `SNAP_THRESHOLD / zoom`.
+- **Places at the same height** (a piece that only goes down has its "top" where it ends): the piece's own Sits wins, then on top of a piece in the column it is going to, then where a piece in another column ends — so a waterfall step is offered "where … ends".
+- **Guides** take the piece within 10 screen pixels; **equal spacing** across within half a column. **Align bottoms** needs two pieces chosen, **Distribute** three columns; **Tidy** works on the whole chart. A chosen piece's ↑ ↓ go to the next place it could sit above or below.
+- `fmGraph.movePiece(chartId, index, { column, sits })` as briefed, returning `chart(chartId)`. No file format change. Code in `src/fmgraph/js/05p-free-grid.js` (the drag, the selection, the keys and the buttons) and `04f-free.js` (`pieceStack`, `sitsChoices`, `placePiece`, `alignPieceBottoms`, `distributePieces`, `tidyPieces`). Test group 89; groups 41, 58 and 65 extended.
+- Not checked on a real iPad: the hold-then-drag is tested with Chromium's emulated touch only.
+- **Found while testing**: a tutorial's practice change made less than 0.3 s before Finish could be saved over the person's own boards for the same model while the model from before was being opened again; fixed (`stopTutorial` drops a waiting save), with a test in group 58 that fails without the fix.

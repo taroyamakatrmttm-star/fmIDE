@@ -306,9 +306,10 @@ function groupLabel(c, gi){ return c.groups[gi].name || 'Group ' + (gi + 1); }
 function drawChart(el, c, results){
   const host = el.querySelector('.bar-chart-host'), key = el.querySelector('.chart-key'), list = el.querySelector('.bar-errors');
   host.textContent = ''; key.textContent = ''; list.textContent = '';
+  if(c.layout !== 'free'){ const tools = el.querySelector('.free-tools'); if(tools) tools.remove(); }
   const problems = [];
   if(c.layout === 'flow') host.appendChild(drawFlow(c, results, problems));
-  else if(c.layout === 'free') host.appendChild(drawFree(c, results, problems, key)); // 05n-free-chart.js
+  else if(c.layout === 'free'){ const chart = drawFree(c, results, problems, key); host.appendChild(chart); freeGridHook(el, c, chart); } // 05n-free-chart.js, 05p-free-grid.js
   else if(c.layout === 'scenarios') host.appendChild(drawScenarioFlows(c, problems));
   else if(isSensitivity(c)) host.appendChild(drawSensitivity(c, problems, key));
   else if(c.layout === 'lines') host.appendChild(drawLines(c, results, problems, key));

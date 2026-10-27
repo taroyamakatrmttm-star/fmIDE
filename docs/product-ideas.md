@@ -65,7 +65,7 @@ From the brainstorm of ten ideas (October 2026), grouped as it was. #2 is built 
 
 - **Blocks and vintages on a board** — step 15's later ideas.
 - **The scenario waterfall in Excel** — left out of step 19: each case's outputs through a Data Table over the Global Case cell, then a waterfall of them (`docs/step19-fmgraph-in-excel.md`).
-- **The Free chart** (the owner's request of 26 October 2026) — columns and a waterfall in one chart, each piece (a bar or a stack) sitting on zero, on top of another, where another ends, or at a number; later dragged on a grid with fmIDE's snapping, moved into `src/shared/`. Brief with the owner's choices: `docs/fmgraph-free-chart.md`. Phases F1 (from a list, medium — built 27 October 2026, board file 13), F2 (the grid, medium to large), F3 (the Excel Dashboard, medium, starting with a check in Excel).
+- **The Free chart** (the owner's request of 26 October 2026) — columns and a waterfall in one chart, each piece (a bar or a stack) sitting on zero, on top of another, where another ends, or at a number; later dragged on a grid with fmIDE's snapping, moved into `src/shared/`. Brief with the owner's choices: `docs/fmgraph-free-chart.md`. Phases F1 (from a list, medium — built 27 October 2026, board file 13), F2 (the grid, medium to large — built 27 October 2026, `src/shared/snap.js`), F3 (the Excel Dashboard, medium, starting with a check in Excel).
 
 ### The community library (step 8)
 
