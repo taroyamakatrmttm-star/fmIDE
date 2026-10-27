@@ -904,7 +904,7 @@ Node only; `tools/test-parts.js` and `tests/test-durations.json` (seconds per te
 - The 4 parts hold every test file exactly once; the longest part is at most a quarter longer than the shortest; at most 3 files are missing from the table.
 - `node tools/test-parts.js N 4` prints the same files every time; the 4 lists together are every test file; no path printed holds another (Playwright reads each as a pattern).
 - Three files of 100, 50 and 50 s and a new one (counted as the average, 66.7 s) in 2 parts: a and c, b and the new one. 0 parts is refused; `5 4` is refused with the usage; a part with nothing to run (500 of 500, more parts than files) is refused rather than printing nothing (which would run every test).
-- From a log: lines "› tests/NAME.spec.js:L:C › … (1.5s)", "(250ms)", "(1.2m)" add up per file (1.8 and 72); other lines are ignored.
+- From a log: lines "› tests/NAME.spec.js:L:C › … (1.5s)", "(250ms)", "(1.2m)" add up per file (1.8 and 72); other lines are ignored. A log from a run on Windows, "› tests\NAME.spec.js…", gives the same; a file in a folder under `tests\` is not one of the suite's and is ignored (28 October 2026).
 
 ### 67. Sensitivity in ExcelExporter (`tests/67-excel-sensitivity.spec.js`; `npm run test:sensitivity`; step 16, several analyses step 19 B3a)
 The sample `models/scenario-unit-price-volume.json` (Unit Price 10 × Volume 5 = Revenue 50) and `models/vertical-depreciation-block.json`.
