@@ -12,7 +12,7 @@
 // - On a phone: the bar's quick look and Show on its fixed scale.
 const fs = require('fs');
 const path = require('path');
-const { test, expect, openApp, readFixture, ROOT } = require('./helpers/apps');
+const { test, expect, openApp, readFixture, ROOT, BOARD_FILE_VERSION } = require('./helpers/apps');
 
 async function openSample(page){
   await openApp(page, 'fmGraph');
@@ -202,7 +202,7 @@ test('undo and redo, kept after a reload, the board file version 5, imported bac
   await expect(profitBar(page).locator('input[aria-label="Scale to"]')).toHaveValue('8000');
   // The board file: version 8 (5 brought the scale), the bar's scale; another bar on Auto carries none.
   const file = await g(page, () => fmGraph.exportBoards(true));
-  expect(file.version).toBe(12);
+  expect(file.version).toBe(BOARD_FILE_VERSION);
   const profit = file.boards[0].items.find(w => w.type === 'bar' && w.name === 'Profit');
   const cash = file.boards[0].items.find(w => w.type === 'bar' && w.name === 'Closing cash');
   expect(profit.scale).toEqual({ min: 0, max: 8000 });
@@ -389,7 +389,7 @@ test('the board file 12: the common scale, ownScale, each follower\'s shown scal
   await g(page, () => fmGraph.setCommonScale({ min: -500, max: 20000 }));
   await g(page, (i) => fmGraph.setScale(i, null), cash); // keeps its own Auto
   let file = await g(page, () => fmGraph.exportBoards(true));
-  expect(file.version).toBe(12);
+  expect(file.version).toBe(BOARD_FILE_VERSION);
   expect(file.commonScale).toEqual({ mode: 'fixed', min: -500, max: 20000 });
   const item = (f, n) => f.boards[0].items.find(w => w.type === 'bar' && w.name === n);
   expect(item(file, 'Profit').scale).toEqual({ min: -500, max: 20000 });

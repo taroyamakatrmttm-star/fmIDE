@@ -442,6 +442,30 @@ test('holding a bar: its quick look — every period, now and the model\'s, Trac
   await phone.done();
 });
 
+// The Free chart (phase F1): drawn as on a computer; holding it opens its quick look.
+test('holding a Free chart: its quick look lists its rectangles in its period', async ({ browser }) => {
+  const phone = await openPhone(browser);
+  const p = phone.page;
+  await sample(p);
+  await p.evaluate(() => fmGraph.addChart({ layout: 'free', title: 'Both', pieces: [
+    { name: 'Assets', column: 0, parts: ['Closing cash', 'Equipment'] },
+    { name: 'Revenue', column: 2, parts: ['Revenue'] },
+    { name: 'Costs', column: 3, sits: { on: 'end', of: 1 }, minus: true, parts: ['Cost of sales'] }] }));
+  const chart = p.locator('.chart-widget[data-layout="free"]');
+  await expect(chart.locator('.c-part')).toHaveCount(4);
+  await chart.evaluate(e => e.scrollIntoView({ block: 'start' }));
+  const b = await chart.boundingBox();
+  await phone.hold({ x: b.x + b.width / 2, y: b.y + 120 });
+  await expect(p.locator('#peekCard')).toBeVisible();
+  await expect(p.locator('#peekTitle')).toHaveText('Both');
+  await expect(p.locator('#peekWhere')).toHaveText('Free · Year 1');
+  await expect(p.locator('#peekTable tbody tr')).toHaveCount(4);
+  await expect(p.locator('#peekTable tbody tr').first()).toContainText('Closing cash');
+  await p.keyboard.press('Escape');
+  await expect(p.locator('#peekBack')).toBeHidden();
+  await phone.done();
+});
+
 // What fmGraph keeps for ☰ → Full app ('1', '' or null), read from its browser storage.
 const fullAppKept = (page) => page.evaluate(() => new Promise((resolve) => {
   const req = indexedDB.open('fmGraph');

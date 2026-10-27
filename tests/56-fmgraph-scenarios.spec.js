@@ -8,7 +8,7 @@
 //   fmIDE's document; read like any file (inputs only, names unique, markup as text).
 // - window.fmGraph: saveScenario, scenarios, showScenario, compareWith, renameScenario,
 //   updateScenario, moveScenario, deleteScenario.
-const { test, expect, openApp, readFixture } = require('./helpers/apps');
+const { test, expect, openApp, readFixture, BOARD_FILE_VERSION } = require('./helpers/apps');
 const F = require('./helpers/fmide');
 
 async function openSample(page){
@@ -138,7 +138,7 @@ test('kept: after a reload, in the board file (version 3 and later), and importe
   expect(await values(page)).toEqual([null, null]);                       // sliders start on the model's numbers
   // Export all: version 4 (since the scenario waterfall) with the scenarios; one board: none.
   const all = await g(page, () => fmGraph.exportBoards(true));
-  expect(all.version).toBe(12);
+  expect(all.version).toBe(BOARD_FILE_VERSION);
   expect(all.scenarios).toEqual([{ name: 'Eleven', sliders: [{ canvasId: 'cProfit', nodeId: 'price', name: 'Price', mode: 'set', periods: { mode: 'all' }, value: 11 }] }]);
   expect(await g(page, () => fmGraph.exportBoards(false))).not.toHaveProperty('scenarios');
   // Importing: a new name is added, a name used here keeps yours.

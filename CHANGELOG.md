@@ -2,6 +2,15 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph: a chart's key leaves out rectangles at 0
+- The owner's idea (27 October 2026): a balance sheet with only cash and a loan lists those two in its key, not every account. A rectangle is left out of a Columns, Lines, Free or Spider chart's key when it is 0 in every period the chart shows, both in the numbers on screen and in the dashed outlines (A, or the model's own numbers); during Play both of its ends count, so the key doesn't flicker. One that can't be worked out stays listed; its bars are still drawn. **+N at 0** at the end of the key lists them too (faded, with their colour boxes), **Hide the N at 0** goes back. One helper, `keyChoice` in `05b-chart-render.js`, decides for every chart. Always on, nothing saved, no board file change.
+- Tests: new group 85 (`tests/85-fmgraph-key-zeros.spec.js`); no existing test needed changing.
+
+## fmGraph: the Free chart, columns and waterfalls together (phase F1)
+- A new kind of chart, **Free** (`docs/fmgraph-free-chart.md`): one period, made of pieces, each a stack of rectangles in a grid column that sits on zero, on top of another piece, where another piece ends (a waterfall step) or at a number. **Minus** turns a piece's sign round; **Should equal…** checks its total against where another piece ends (✓ / ✗, in words). Edit chart lists the pieces (+ Piece, Sits, the column ← →, Minus, Should equal, the rectangles); **+ From chart…** and the layout menu turn a Columns or Waterfall chart into pieces; Free back to Columns makes a group per piece. A loop is refused in the editor; an error shows the piece as ! and the pieces resting on it as not drawn, in words. `fmGraph.addChart({ layout: 'free', … })` and `chart(id)`.
+- The board file is version 13 (the 12 → 13 step changes nothing). A file's loops are put on zero and two pieces in one column with neither resting on the other are moved to the next free column, both counted in words. Never in the template form. ExcelExporter reads version 13 and lists a Free chart in Use fmGraph boards… as not carried yet (the Dashboard comes in phase F3).
+- Tests: `BOARD_FILE_VERSION` in the test helpers (`tests/helpers/apps.js`, read from the built fmGraph) replaces the version written out in five groups.
+
 ## A tap's copied mouse events known by their own time (all three apps)
 - After a finger's tap the browser sends copies of it as mouse events, which the apps leave out (`isEmulatedMouse`, `src/shared/pointer-input.js`). They were recognised only if handled within 1 s of the lift by the page's clock, so a page busy for longer (a big model, a slow device, or a computer running the whole test suite) took them for a real mouse press: a double-tap's rename box in ExcelExporter's Tree View could lose its focus, or the tab fold. Now the lift and the copies are compared by the events' own timestamps (a copy carries the touch's time); ExcelExporter's dropping of a hold's or double-tap's copies (`dropTapCopies`) ends a second after the lift by the same timestamps instead of a timer. Test: group 30.
 

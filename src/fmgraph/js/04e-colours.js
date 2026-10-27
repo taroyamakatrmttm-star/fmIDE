@@ -5,7 +5,7 @@
 //
 // A rectangle's colour is the one someone chose (`rectColours`, kept in the board file's
 // `colours`), else an automatic one: the chart colours (PART_COLOURS) handed out in the order
-// rectangles first appear in Columns, Lines and Spider charts, board by board, chart by chart
+// rectangles first appear in Columns, Lines, Free and Spider charts, board by board, chart by chart
 // (so the first chart looks as each chart did on its own before), else none — a bar then has the
 // page's usual colour, a waterfall step its colour by direction (a step takes only a chosen
 // colour: its colour otherwise says up, down or total). The Tornado's Low and High, and the
@@ -42,10 +42,11 @@ function rectColoursData(){
   });
 }
 
-// The rectangles a chart colours one each, in its order (Columns, Lines, a Spider's inputs).
+// The rectangles a chart colours one each, in its order (Columns, Lines, Free, a Spider's inputs).
 function colouredKeys(c){
   if(c.layout === 'columns') return c.groups.flatMap(g => g.parts);
   if(c.layout === 'lines') return c.lines.slice();
+  if(c.layout === 'free') return c.pieces.flatMap(p => p.parts);
   if(c.layout === 'spider') return c.inputs.map(i => i.key);
   return [];
 }

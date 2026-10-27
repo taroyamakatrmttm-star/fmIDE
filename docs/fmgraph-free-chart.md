@@ -9,7 +9,7 @@ The owner's request (26 October 2026), two ideas in one:
 
 *The owner's screenshot (26 October 2026, CC BY 4.0 with the rest of `docs/`): today a balance sheet and a cash flow are two charts. The owner wants them as one.*
 
-This is the brief, approved by the owner on 26 October 2026 (staged: F1, F2, F3). It is not in the build order yet: the owner chooses when it is built. Nothing is built yet.
+This is the brief, approved by the owner on 26 October 2026 (staged: F1, F2, F3). It is not in the build order yet: the owner chooses when it is built. F1 is built (27 October 2026, branch `claude/fmgraph-free-chart-f1`; see "How F1 turned out" at the end); F2 and F3 are not.
 
 ## The owner's choices (26 October 2026)
 
@@ -158,3 +158,14 @@ F1 is useful on its own: it answers the owner's first idea completely. F2 and F3
 - **Moving fmIDE's snapping into shared code** (F2) touches every drag on fmIDE's canvas. It is moved first with no change to behaviour, and proven by fmIDE's existing tests, before fmGraph uses it.
 - **Many choices per piece** could make Edit chart long. Each piece's row shows its name and Sits on one line, with the rest under a fold, as the sliders' Range and step is.
 - **Board file numbers** depend on the order the other sessions land; the number is fixed when F1 starts.
+
+## How F1 turned out (27 October 2026)
+
+Built as briefed, with the owner's answers of 27 October 2026 to the plan's choices:
+
+1. **ExcelExporter reads board file 13** now, not in F3: otherwise Use fmGraph boards… would have refused every board saved after F1. A Free chart is listed under Not carried as "N Free charts not carried yet.".
+2. **Help only**, no tutorial step (open point 1).
+3. **Free back to Columns** makes a group of each piece (up to 12).
+4. **Two pieces in one column with neither resting on the other** (from a file, or after a change in the editor): the later one in the list moves to the next free column, counted in the words under the chart. "Resting on" goes through any chain, so a stack of three in one column is allowed; two pieces both on top of a third are not.
+
+Also: the code is in two new files, `src/fmgraph/js/04f-free.js` (reading, the numbers, + From chart…) and `05n-free-chart.js` (drawing and the editor); the key's items are worked out as a list before they are drawn (`freeKeyItems`, `drawKeyGroups`), and a piece that is just its one rectangle has no label of its own in the key. **+ Chart** still starts a Columns chart; choosing Free turns its one rectangle into the first piece (the API's `addChart({ layout: 'free' })` starts empty, with "Add a piece to start"). On top of… moves a piece into that piece's column when it may stand there. The column is shown counting from 1 in the editor ("Column 1"), from 0 in the file and the API. The phone's quick look is the chart's (its rectangles in its period), as for any chart. Test group 84; the version written out in five groups became the helpers' `BOARD_FILE_VERSION`.

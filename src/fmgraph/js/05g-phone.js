@@ -302,7 +302,7 @@ function openChartPeek(c){
   peekFor = c;
   peekOpenedAt = performance.now();
   const p = usesPeriods(c) ? (periodsOf(c.periods)[0] || 0) : c.period;
-  const kind = { columns: 'Columns', lines: 'Lines', flow: 'Waterfall', scenarios: 'Scenario waterfall', tornado: 'Tornado', spider: 'Spider' }[c.layout] || 'Chart';
+  const kind = { columns: 'Columns', lines: 'Lines', flow: 'Waterfall', free: 'Free', scenarios: 'Scenario waterfall', tornado: 'Tornado', spider: 'Spider' }[c.layout] || 'Chart';
   $('peekTitle').textContent = c.title || kind;
   $('peekWhere').textContent = kind + ' · ' + model.periods[p];
   $('peekChart').textContent = '';
