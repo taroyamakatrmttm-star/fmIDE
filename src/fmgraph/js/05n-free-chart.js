@@ -131,6 +131,8 @@ function drawFree(c, results, problems, key){
   drawKeyGroups(key, groups.map(g => Object.assign({}, g, { items: g.items.filter(it => choice.shows(it.key)) })).filter(g => g.items.length), choice);
   drawKeyZeros(key, c, choice);
   raiseScaleLabels(chart);
+  // The grid's geometry, for placing pieces by dragging (05p-free-grid.js).
+  chart.freeGeo = { W, top, plotH, slot, bw, ncols, cxOf, y, figs: now };
   return chart;
 }
 

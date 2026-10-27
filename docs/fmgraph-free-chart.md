@@ -9,7 +9,7 @@ The owner's request (26 October 2026), two ideas in one:
 
 *The owner's screenshot (26 October 2026, CC BY 4.0 with the rest of `docs/`): today a balance sheet and a cash flow are two charts. The owner wants them as one.*
 
-This is the brief, approved by the owner on 26 October 2026 (staged: F1, F2, F3). It is not in the build order yet: the owner chooses when it is built. F1 is built (27 October 2026, branch `claude/fmgraph-free-chart-f1`; see "How F1 turned out" at the end); F2 and F3 are not.
+This is the brief, approved by the owner on 26 October 2026 (staged: F1, F2, F3). It is not in the build order yet: the owner chooses when it is built. F1 is built (27 October 2026, branch `claude/fmgraph-free-chart-f1`; see "How F1 turned out" at the end), F2 (27 October 2026, branch `claude/fmgraph-free-chart-f2`; "How F2 turned out") and F3 (27 October 2026, branch `claude/excel-free-chart-f3`; "How F3 turned out") too.
 
 ## The owner's choices (26 October 2026)
 
@@ -169,3 +169,35 @@ Built as briefed, with the owner's answers of 27 October 2026 to the plan's choi
 4. **Two pieces in one column with neither resting on the other** (from a file, or after a change in the editor): the later one in the list moves to the next free column, counted in the words under the chart. "Resting on" goes through any chain, so a stack of three in one column is allowed; two pieces both on top of a third are not.
 
 Also: the code is in two new files, `src/fmgraph/js/04f-free.js` (reading, the numbers, + From chart…) and `05n-free-chart.js` (drawing and the editor); the key's items are worked out as a list before they are drawn (`freeKeyItems`, `drawKeyGroups`), and a piece that is just its one rectangle has no label of its own in the key. **+ Chart** still starts a Columns chart; choosing Free turns its one rectangle into the first piece (the API's `addChart({ layout: 'free' })` starts empty, with "Add a piece to start"). On top of… moves a piece into that piece's column when it may stand there. The column is shown counting from 1 in the editor ("Column 1"), from 0 in the file and the API. The phone's quick look is the chart's (its rectangles in its period), as for any chart. Test group 84; the version written out in five groups became the helpers' `BOARD_FILE_VERSION`.
+
+## How F2 turned out (27 October 2026)
+
+Built as briefed, with the owner's answers of 27 October 2026 to the plan's choices (all four recommendations):
+
+1. **Letting go with no guide near**: the piece keeps its Sits. A height is only ever chosen from the model.
+2. **Dropped on a column it can't share**: the piece there (and its stack) swaps to the column the dragged piece left.
+3. **What moves across with a piece**: the pieces resting on it in its own column (a stack on a stack); waterfall steps resting on it in other columns stay where they are.
+4. **The tutorial**: one step, `free`, added to fmGraph's Charts tutorial (now 5 minutes): choose Free, then drag Gross profit up onto the guide "where −Cost of sales ends".
+
+Also, where the code as it was changed the brief:
+
+- **No separate handle**: a mouse drags a piece by its bars; a finger or pen holds it still first (`waitForHold`), so a quick swipe still scrolls the page. Dragging is on the board only: never on a phone (Edit chart's list), in the full screen or in a GIF, which draw the same chart.
+- **fmIDE had no test of Distribute**: one was added to group 41 and shown passing on the old code (its own commit) before the move into `src/shared/snap.js` (`snapPlace`, `equalSpacingSnap`, `distributePositions`); `computeSnap` keeps its clamp at 0 and `SNAP_THRESHOLD / zoom`.
+- **Places at the same height** (a piece that only goes down has its "top" where it ends): the piece's own Sits wins, then on top of a piece in the column it is going to, then where a piece in another column ends — so a waterfall step is offered "where … ends".
+- **Guides** take the piece within 10 screen pixels; **equal spacing** across within half a column. **Align bottoms** needs two pieces chosen, **Distribute** three columns; **Tidy** works on the whole chart. A chosen piece's ↑ ↓ go to the next place it could sit above or below.
+- `fmGraph.movePiece(chartId, index, { column, sits })` as briefed, returning `chart(chartId)`. No file format change. Code in `src/fmgraph/js/05p-free-grid.js` (the drag, the selection, the keys and the buttons) and `04f-free.js` (`pieceStack`, `sitsChoices`, `placePiece`, `alignPieceBottoms`, `distributePieces`, `tidyPieces`). Test group 89; groups 41, 58 and 65 extended.
+- Not checked on a real iPad: the hold-then-drag is tested with Chromium's emulated touch only.
+- **Found while testing**: a tutorial's practice change made less than 0.3 s before Finish could be saved over the person's own boards for the same model while the model from before was being opened again; fixed (`stopTutorial` drops a waiting save), with a test in group 58 that fails without the fix.
+
+## How F3 turned out (27 October 2026)
+
+Built by the method the brief set out first, with the owner's answers of 27 October 2026 to the plan's choices (1a, 2a, 3a, 4a):
+
+- **The check in Excel came first.** Test group 90 wrote a workbook by hand with ExcelExporter's own writer: the owner's balance sheet and cash flow (group 84's case) plus a stack, "On CFF", resting where CFF ends, with scroll bars for CFO (−300 to 300) and Other (−200 to 200). The owner checked it in Excel on Windows and the iPad: "F3 check passed on Windows and the iPad, and the pushed-aside overlap case is fine." The scatter-chart method was not needed.
+- **The method**: stacked columns, one category per grid column (empty ones too). Excel stacks positives up from 0 and negatives down from 0, each in the order of the series, so per piece there is a hidden filler above 0 and one below 0 (from 0, or what the piece under it in its column was drawn to, to the piece), and per rectangle four series: its part above 0 while negative, then while positive, its part below 0 while positive, then while negative. A rectangle changing sign keeps its place in the stack. In a column, a piece comes after every piece it rests on (through any chain). 2 series per piece and 4 per rectangle: the owner's case needs 72; an Excel chart holds at most 255, and a larger Free chart is listed in the window as not carried.
+- **The helper tables** beside the chart, from column N, all formulas: the pieces, a column each (Column, Sits, Value, Up, Down, Sits at, Top, Bottom, End, Check ✓ / ✗, Filler above 0, Drawn up to, Filler below 0, Drawn down to, Overlaps); the rectangles, a row each (Value, From, To, Above 0, Below 0); the chart's series, a row each.
+- **Choice 1a**: a piece hanging back into the one under it (More, on top of L + Eq, when CFO is negative) is drawn just beyond it, and its Overlaps cell reads "overlaps". **2a**: totals in the table only. **3a**: the key lists each rectangle once; its four series share its colour (the board's, else Excel's own Office colours in turn). **4a**: group 90's workbook now comes from ExcelExporter itself, same file name.
+- **Reading**: ExcelExporter's own reader (`readGraphFree` in `04c-graph-boards.js`, no code from fmGraph) follows the board file's documented rules as fmGraph reads a file: `of` and `check` naming no other piece, loops on zero, two pieces in a column moved on, a missing column the next free one after the last used. The layout keeps `of` and `check` as places in the list.
+- **The layout file is version 11** (`kind: "free"` in `cfg.graph.charts`, its `pieces`, each part's `piece`); the 10 → 11 step changes nothing; samples `map-v10` (opens as it is) and `map-newer-v12` (asks first).
+- **Also**: the import's recalculation (`xlRecalc`) learnt `ISNUMBER`, which the Dashboard's Value cells use, so group 90 can work the whole workbook out in Node with the sliders typed.
+- **Checked**: group 90 — the window, the chart (72 series, the key, colours, categories, the numbers shown before recalculating), the helper rows against fmGraph's `chart(id)` at six slider positions, Excel's stacking against where fmGraph draws each rectangle (only the flagged overlap differs), someone else's file read as fmGraph reads it, too many series, the layout kept; LibreOffice where installed (not on the owner's computer, so it runs on CI only). Groups 6, 59, 67, 77, 80 (the layout's version), 79 (`ISNUMBER`).

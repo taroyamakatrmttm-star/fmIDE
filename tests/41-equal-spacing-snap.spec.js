@@ -181,6 +181,33 @@ test('a large canvas still drags quickly', async ({ page }) => {
   expect((await pos(page, id)).x).toBeGreaterThan(400);
 });
 
+// Distribute (the rule step 12a's equal spacing shares, now in src/shared/snap.js): pinned on
+// the code before the move, so the move is proven to change nothing.
+test('Distribute across and down: equal gaps between edges, the first and last kept; one undo step', async ({ page, pageErrors }) => {
+  const ids = await place(page, [
+    { name: 'A', x: 100, y: 100, w: 100 }, { name: 'B', x: 400, y: 300, w: 170 },
+    { name: 'C', x: 250, y: 500, w: 60 }, { name: 'D', x: 800, y: 700, w: 200 }]);
+  const all = async () => Promise.all(ids.map(id => pos(page, id)));
+  // Across: span 100…1000 (900), widths 530, so three gaps of 370 / 3. In x order A, C, B, D.
+  await page.evaluate((ids) => fm.distribute('h', ids.map(id => '#' + id)), ids);
+  let p = await all();
+  expect(p[0].x).toBe(100); expect(p[3].x).toBe(800);
+  expect(p[2].x).toBeCloseTo(200 + 370 / 3, 6);
+  expect(p[1].x).toBeCloseTo(200 + 370 / 3 + 60 + 370 / 3, 6);
+  expect(p.map(q => q.y)).toEqual([100, 300, 500, 700]);
+  await page.evaluate(() => fm.command('undo'));
+  expect((await all()).map(q => q.x)).toEqual([100, 400, 250, 800]);
+  // Down: span 100…764 (664), heights 4 × 64, gaps 136: 100, 300, 500, 700 already; move B and C.
+  await page.evaluate((ids) => { fm.move('#' + ids[1], 0, -150); fm.move('#' + ids[2], 0, 90); }, ids);
+  await page.evaluate((ids) => fm.distribute('v', ids.map(id => '#' + id)), ids);
+  p = await all();
+  expect(p.map(q => q.y)).toEqual([100, 300, 500, 700]);
+  // Fewer than three: nothing moves.
+  await page.evaluate((ids) => { fm.move('#' + ids[1], 0, 13); fm.distribute('v', [ '#' + ids[0], '#' + ids[1] ]); }, ids);
+  expect((await pos(page, ids[1])).y).toBe(313);
+  expect(pageErrors).toEqual([]);
+});
+
 test.describe('by touch', () => {
   test.use({ hasTouch: true, viewport: { width: 1024, height: 768 } });
   test('a finger drag snaps to equal spacing', async ({ page }) => {

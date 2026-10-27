@@ -4,7 +4,7 @@
 // the import's own parser (formula.js) — never run as code. It knows the functions the
 // workbook ExcelExporter writes uses (the arithmetic, comparisons, SUM, MIN, MAX, AVERAGE,
 // PRODUCT, AND, OR, NOT, IF, IFERROR, the roundings, ABS, LN, EXP, SQRT, INT, TRUNC, MOD,
-// POWER, CHOOSE, INDEX, N, NA); anything else is #NAME?, which the round trip counts as not
+// POWER, CHOOSE, INDEX, N, NA, ISNUMBER); anything else is #NAME?, which the round trip counts as not
 // checked. A value is a number, text, TRUE/FALSE, or { error: '#N/A' }.
 // xlRoundTrip(valueOf, cells) compares cells of it with Excel's saved values: { compared,
 // agree, differ, unchecked }.
@@ -227,6 +227,7 @@ export function xlRecalc(wb){
       }
       case 'N': { const v = arg(0); return xlIsErr(v) ? v : typeof v === 'number' ? v : typeof v === 'boolean' ? (v ? 1 : 0) : 0; }
       case 'NA': return xlErr('#N/A');
+      case 'ISNUMBER': return typeof arg(0) === 'number'; // an error, text or a blank: FALSE (the Dashboard's Typed cells)
       case 'TRUE': return true;
       case 'FALSE': return false;
       default: return xlErr('#NAME?');

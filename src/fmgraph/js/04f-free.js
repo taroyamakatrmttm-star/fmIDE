@@ -238,3 +238,85 @@ function removePiece(c, p){
   });
   settleColumns(c);
 }
+
+// ---- placing on the grid (phase F2) ----
+// The pieces that move across with p: p and those resting on it (through any chain) in its own
+// column — a stack on a stack goes with it; a waterfall step in another column stays (the owner's
+// choice 3a, 27 October 2026).
+function pieceStack(c, p){ return c.pieces.filter(q => q === p || (q.column === p.column && restsOnChain(c, q, p))); }
+const sameSits = (a, b) => a.on === b.on && (a.on === 'level' ? a.value === b.value : (a.of || null) === (b.of || null));
+
+// Where p could sit, as the drag's guides propose it: on zero, then on top of and where each other
+// piece ends (none that would make a loop, none that can't be worked out), each with the level
+// it gives in figs (freeFigures, in the list's order).
+function sitsChoices(c, p, figs){
+  const out = [{ sits: { on: 'zero' }, level: 0, label: 'on zero' }];
+  c.pieces.forEach((q, i) => {
+    const f = figs[i];
+    if(q === p || wouldLoop(c, p, q.id) || !f || f.top === undefined) return;
+    out.push({ sits: { on: 'top', of: q.id }, level: f.up > 0 || f.down === 0 ? f.top : f.bottom, label: 'on top of ' + pieceLabel(c, q) });
+    out.push({ sits: { on: 'end', of: q.id }, level: f.end, label: 'where ' + pieceLabel(c, q) + ' ends' });
+  });
+  return out;
+}
+
+// Puts piece p in column col (0–39) and, when sits is given, sits it there. Its stack moves with
+// it; a piece already in that column which can't share it with p swaps to the column p left (the
+// owner's choice 2a). If p still can't stand there (it no longer rests on a piece in its own
+// column), its stack moves to the nearest column it fits. Returns null, or why it was refused.
+function placePiece(c, p, col, sits){
+  if(sits && (sits.on === 'top' || sits.on === 'end') && wouldLoop(c, p, sits.of)) return 'loop';
+  col = Math.round(Number(col));
+  if(!Number.isFinite(col)) return 'column';
+  col = Math.max(0, Math.min(FREE_LIMITS.columns - 1, col));
+  const stack = pieceStack(c, p), from = p.column;
+  if(sits) p.sits = sits.on === 'level' ? { on: 'level', value: cleanLevel(sits.value) } : sits.of ? { on: sits.on, of: sits.of } : { on: 'zero' };
+  if(col !== from){
+    stack.forEach(q => { q.column = col; });
+    c.pieces.forEach(q => { if(!stack.includes(q) && q.column === col && !freeRelated(c, p, q)) q.column = from; });
+  }
+  const fits = (at) => c.pieces.every(q => stack.includes(q) || q.column !== at || stack.every(s => freeRelated(c, s, q)));
+  if(!fits(p.column)){
+    for(let k = 1; k < FREE_LIMITS.columns; k++){
+      const at = [p.column + k, p.column - k].find(x => x >= 0 && x < FREE_LIMITS.columns && fits(x));
+      if(at !== undefined){ stack.forEach(q => { q.column = at; }); break; }
+    }
+  }
+  settleColumns(c);
+  return null;
+}
+
+// Align bottoms: the pieces on zero, staying in their columns where they may.
+function alignPieceBottoms(c, list){
+  list.forEach(p => { p.sits = { on: 'zero' }; });
+  settleColumns(c);
+}
+// Distribute (the rule of fmIDE's Distribute, src/shared/snap.js): the columns the pieces stand
+// in, three or more, spread evenly across the columns they span, whole columns, each column's
+// pieces moving together. Returns false when there are fewer than three columns.
+function distributePieces(c, list){
+  const cols = [...new Set(list.map(p => p.column))].sort((a, b) => a - b);
+  const at = distributePositions(cols.map(x => ({ x, y: 0, w: 1, h: 1 })), 'h');
+  if(!at) return false;
+  const to = new Map(cols.map((x, i) => [x, Math.round(at[i])]));
+  const moving = c.pieces.filter(p => to.has(p.column));
+  const still = c.pieces.filter(p => !to.has(p.column));
+  moving.forEach(p => { p.column = to.get(p.column); });
+  // Pieces not chosen standing where a column moved to go, their column together, to the next
+  // free one.
+  const displaced = [...new Set(still.filter(p => moving.some(q => q.column === p.column && !freeRelated(c, p, q))).map(p => p.column))];
+  displaced.forEach(col => {
+    const group = still.filter(p => p.column === col);
+    group.forEach(p => { p.column = -1; });
+    const free = nextFreeColumn({ pieces: c.pieces.filter(x => x.column >= 0) });
+    group.forEach(p => { p.column = free; });
+  });
+  settleColumns(c);
+  return true;
+}
+// Tidy: the empty columns closed up, the pieces keeping their order.
+function tidyPieces(c){
+  const cols = [...new Set(c.pieces.map(p => p.column))].sort((a, b) => a - b);
+  const to = new Map(cols.map((x, i) => [x, i]));
+  c.pieces.forEach(p => { p.column = to.get(p.column); });
+}

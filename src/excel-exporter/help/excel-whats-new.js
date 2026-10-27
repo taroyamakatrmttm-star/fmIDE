@@ -11,9 +11,20 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'fmgraph-free-chart-dashboard', date: '2026-10-27', title: 'fmGraph\'s Free chart on the Dashboard',
+    summary: 'A Free chart on an fmGraph board, columns and waterfalls together, now becomes an Excel chart on the Dashboard that follows the sliders.',
+    what: [
+      'Use fmGraph boards… lists a board\'s Free charts with its other charts. Each becomes stacked columns on the Dashboard, one column per grid column, with every piece where fmGraph puts it: on zero, on top of another, where another ends, or at a number.',
+      'Beside the chart, tables of formulas work it out: each piece\'s Top, Bottom, End and check, each rectangle\'s From and To, and the chart\'s series. Move a slider and the pieces resting on a moved piece move with it, across 0 too.',
+      'A piece that hangs back into the one under it can\'t be drawn that way in Excel: it is drawn just beyond it, and its Overlaps cell says so.',
+    ],
+    why: 'The balance sheet and the cash flow that moved it, in one picture, should travel with the workbook like fmGraph\'s other charts.',
+    how: ['Layout → Use fmGraph boards…, keep the Free chart ticked, and press Use.', 'Press ⬇ Generate .xlsx and open the Dashboard tab.'],
+    notes: ['An Excel chart holds at most 255 series; a larger Free chart is listed as not carried.', 'Totals are in the table beside the chart, not on it.'],
+    see: ['fmgraph-charts'] },
   { id: 'fmgraph-free-chart-listed', date: '2026-10-27', title: 'fmGraph boards with a Free chart',
     summary: 'Use fmGraph boards… reads fmGraph\'s newest board files, which may hold its new Free chart.',
-    what: ['Boards saved by the newest fmGraph (board file version 13) open in Use fmGraph boards… as before.', 'A Free chart on a board is not drawn on the Dashboard yet: the window lists it as not carried.'],
+    what: ['Boards saved by the newest fmGraph (board file version 13) open in Use fmGraph boards… as before.', 'At first a Free chart was listed as not carried; it is now drawn on the Dashboard (see fmGraph\'s Free chart on the Dashboard).'],
     why: 'fmGraph\'s new Free chart changed its board file; without this, ExcelExporter would have refused every board saved since.',
     how: ['Layout → Use fmGraph boards… as before.', 'Read the list of what is not carried at the bottom of the window.'],
     see: ['fmgraph-charts'] },

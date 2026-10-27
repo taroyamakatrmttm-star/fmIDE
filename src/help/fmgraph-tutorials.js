@@ -6,9 +6,10 @@
 //   { bar: name | null }                     a bar on that rectangle (null: any bar)
 //   { slider: name, moved: true }            that rectangle's slider moved off the model's number
 //   { reset: true }                          every slider on the model's numbers
-//   { chart: layout, steps?, outputs?, output? }  a chart of that kind ('columns', 'flow', 'scenarios',
-//                                            'tornado', 'spider'); steps: [[name, role]…] exactly;
-//                                            outputs: names it shows; output: a Tornado's or Spider's output
+//   { chart: layout, steps?, outputs?, output?, piece? }  a chart of that kind ('columns', 'flow', 'scenarios',
+//                                            'tornado', 'spider', 'free'); steps: [[name, role]…] exactly;
+//                                            outputs: names it shows; output: a Tornado's or Spider's output;
+//                                            piece: [name, sits ('zero' | 'top' | 'end' | 'level'), the piece it rests on]
 //   { traced: true | false }, { pinned: true | false }
 //   { scenarios: n }                         at least n scenarios
 //   { scenarioShown: i }                     the sliders where the i-th scenario (from 0) has them
@@ -23,13 +24,14 @@ const FMGRAPH_TUTORIALS = [
       { id: 'reset', text: 'Press Reset all to put the sliders back on the model\'s own numbers. fmGraph never changes the model itself.', point: '#btnResetAll', done: [{ reset: true }] },
       { id: 'end', text: 'That\'s the heart of fmGraph: sliders on inputs, bars on what they reach. Finish to go back to your own model.' },
     ] },
-  { id: 'charts', title: 'Charts', minutes: 4, topic: 'charts', board: 'sliders',
+  { id: 'charts', title: 'Charts', minutes: 5, topic: 'charts', board: 'sliders',
     summary: 'Build a waterfall from Revenue to Gross profit, with its check.',
     steps: [
       { id: 'add-chart', text: 'Press + Chart at the top. A chart is made of your own rectangles; its editor opens.', point: '#btnAddChart', done: [{ chart: 'columns' }] },
       { id: 'waterfall', text: 'At the chart\'s top, choose Waterfall: steps in one year, up and down from a start.', point: '.chart-widget select[aria-label="Kind of chart"]', done: [{ chart: 'flow' }] },
       { id: 'steps', text: 'In Edit chart, make three steps: Revenue as Start, Cost of sales as Subtract, and Gross profit as Total. + Step adds one; each step has its role and its rectangle.', point: '.chart-widget .chart-edit', done: [{ chart: 'flow', steps: [['Revenue', 'start'], ['Cost of sales', 'subtract'], ['Gross profit', 'total']] }] },
       { id: 'check', text: 'The ✓ above Gross profit says the steps before it add up to it. Now move Price: the bars move and the check still holds.', point: '.slider-widget input[type=range]', done: [{ slider: 'Price', moved: true }] },
+      { id: 'free', text: 'Now choose Free at the chart\'s top: the waterfall becomes pieces on a grid. Drag the Gross profit bar up until the blue guide says "where −Cost of sales ends", and let go. A guide offers only places from the model; Undo puts it back.', point: '.chart-widget select[aria-label="Kind of chart"]', done: [{ chart: 'free', piece: ['Gross profit', 'end', 'Cost of sales'] }] },
       { id: 'end', text: 'A balance sheet is a Columns chart of two groups with "Check that the groups\' totals agree". Finish to go back to your own model.' },
     ] },
   { id: 'trace-and-compare', title: 'Trace and compare', minutes: 4, topic: 'compare', board: 'sample',

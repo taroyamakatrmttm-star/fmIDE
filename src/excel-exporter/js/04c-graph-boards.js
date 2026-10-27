@@ -13,12 +13,12 @@
 //   readGraphBoards(raw)         → { error } or { version, boards, scenarios, badScenarios, badSettings }
 //   matchGraphScenarios(read)    → the scenarios with each setting matched to a layout row
 //   matchGraphSliders(read)      → every board's sliders matched to layout rows, like ones once (B4)
-//   readGraphCharts(board, version) → a board's bars, columns, lines and flow charts (B5), not yet matched
+//   readGraphCharts(board, version) → a board's bars, columns, lines and flow charts (B5) and Free charts (F3), not yet matched
 //   matchGraphCharts(board)      → those charts matched to layout rows, for the Dashboard (B5)
-//   cleanGraphCopy(raw, periods) → the layout's cfg.graph (mapping file 4; sliders from file 7, charts from 8), checked
+//   cleanGraphCopy(raw, periods) → the layout's cfg.graph (mapping file 4; sliders from file 7, charts from 8, Free charts from 11), checked
 // ============================================================
 const GRAPH_BOARD_KIND = 'fmIDE-graph-board';
-const GRAPH_BOARD_VERSION = 13; // the newest version this reader knows (8: step 18's Tornado and Spider charts; 9: fmGraph's shared period — each chart still names the periods it shows, so nothing here reads it; 10: the lines chart; 11: fmGraph's shared colours — each bar, part and step still carries the colour it shows, so nothing here reads them; 12: fmGraph's common scale — each bar and chart still carries the scale it shows, so nothing here reads it; 13: fmGraph's Free chart, not carried to the Dashboard yet — counted, phase F3)
+const GRAPH_BOARD_VERSION = 13; // the newest version this reader knows (8: step 18's Tornado and Spider charts; 9: fmGraph's shared period — each chart still names the periods it shows, so nothing here reads it; 10: the lines chart; 11: fmGraph's shared colours — each bar, part and step still carries the colour it shows, so nothing here reads them; 12: fmGraph's common scale — each bar and chart still carries the scale it shows, so nothing here reads it; 13: fmGraph's Free chart, drawn on the Dashboard as stacked columns, phase F3)
 const GRAPH_LIMITS = { boards: 20, scenarios: 50, settings: 40, sliders: 40, boardName: 60, scenarioName: 40, rectName: 60, value: 1e15,
   items: 40, title: 80, groups: 12, parts: 30, steps: 40, lines: 12 };
 const GRAPH_FLOW_ROLES = ['start', 'add', 'subtract', 'total'];
@@ -214,6 +214,128 @@ function graphRect(r){
     && r.canvasId && r.nodeId && r.canvasId.length <= 200 && r.nodeId.length <= 200
     ? { canvasId: r.canvasId, nodeId: r.nodeId, name: graphText(r.name, GRAPH_LIMITS.rectName) } : null;
 }
+// ---------- fmGraph's Free chart (board file 13; phase F3 of docs/fmgraph-free-chart.md) ----------
+// A chart of pieces, each a stack of rectangles standing in a whole grid column (0–39) and
+// saying where it sits: on zero, on top of another piece (its highest point; its lowest when
+// that piece only goes down), where another piece ends, or at a number. Read as the format
+// says, and put right as fmGraph puts it right when it reads a file: `of` and `check` naming no
+// other piece read as on zero and none; pieces in a loop go on zero; two pieces in one column
+// with neither resting on the other (through any chain): the later moves to the next column it
+// fits; a piece with no column takes the next free one. Here a piece's `of` and `check` are its
+// place in the list (0, 1…), and its rectangles are the chart's `parts`, each with its `piece`.
+const GRAPH_FREE_LIMITS = { pieces: 40, parts: 30, columns: 40, level: 1e9, series: 255 };
+const GRAPH_FREE_SITS = ['zero', 'top', 'end', 'level'];
+// A level from a file (numbers as text too), cut to ±1e9; anything else 0.
+function graphFreeLevel(v){
+  const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN;
+  return Number.isFinite(n) ? Math.max(-GRAPH_FREE_LIMITS.level, Math.min(GRAPH_FREE_LIMITS.level, n)) : 0;
+}
+// The place of the piece pieces[i] rests on, or -1.
+function graphFreeRestsOn(pieces, i){
+  const s = pieces[i] && pieces[i].sits;
+  return s && (s.on === 'top' || s.on === 'end') && Number.isInteger(s.of) && s.of !== i && pieces[s.of] ? s.of : -1;
+}
+// Whether piece a rests on piece b, through any chain of pieces.
+function graphFreeOnChain(pieces, a, b){
+  const seen = new Set();
+  for(let q = graphFreeRestsOn(pieces, a); q >= 0 && !seen.has(q); q = graphFreeRestsOn(pieces, q)){
+    if(q === b) return true;
+    seen.add(q);
+  }
+  return false;
+}
+const graphFreeRelated = (pieces, a, b) => graphFreeOnChain(pieces, a, b) || graphFreeOnChain(pieces, b, a);
+// Loops on zero, then the columns put right (as above). Changes `pieces`; → { loops, moved }.
+function settleGraphFree(pieces){
+  const L = GRAPH_FREE_LIMITS.columns;
+  let loops = 0, moved = 0;
+  pieces.forEach((_, i) => {
+    const path = [];
+    for(let q = i; q >= 0; q = graphFreeRestsOn(pieces, q)){
+      const at = path.indexOf(q);
+      if(at >= 0){ path.slice(at).forEach(x => { pieces[x].sits = { on: 'zero' }; loops++; }); break; }
+      path.push(q);
+    }
+  });
+  pieces.forEach((p, i) => {
+    const fits = (col) => pieces.slice(0, i).every((q, j) => q.column !== col || graphFreeRelated(pieces, i, j));
+    if(fits(p.column)) return;
+    for(let k = 1; k < L; k++){
+      const col = (p.column + k) % L;
+      if(fits(col)){ p.column = col; moved++; return; }
+    }
+  });
+  pieces.forEach(p => {
+    if(p.column >= 0) return;
+    const placed = pieces.filter(x => x.column >= 0), used = new Set(placed.map(x => x.column));
+    const last = placed.length ? Math.max(...placed.map(x => x.column)) : -1;
+    p.column = 0;
+    for(let k = 1; k <= L; k++){ const col = (last + k) % L; if(!used.has(col)){ p.column = col; break; } }
+  });
+  return { loops, moved };
+}
+// A piece as the layout keeps it: { name, column, sits: { on, of | value }, minus?, check? }.
+function graphFreePieceOut(p){
+  const sits = p.sits.on === 'level' ? { on: 'level', value: p.sits.value } : Number.isInteger(p.sits.of) ? { on: p.sits.on, of: p.sits.of } : { on: 'zero' };
+  return Object.assign({ name: p.name, column: p.column, sits }, p.minus === true ? { minus: true } : {}, Number.isInteger(p.check) ? { check: p.check } : {});
+}
+// A Free chart's pieces and rectangles from a board file: { pieces, parts: [{ canvasId, nodeId, name, colour, piece }], bad }.
+function readGraphFree(it){
+  const pieces = [], parts = [], fileIds = new Map(), fileOf = [], fileCheck = [];
+  let bad = 0;
+  (Array.isArray(it.pieces) ? it.pieces : []).slice(0, GRAPH_FREE_LIMITS.pieces).forEach(raw => {
+    if(!raw || typeof raw !== 'object' || Array.isArray(raw)) return;
+    const i = pieces.length;
+    const col = Math.round(Number(raw.column));
+    const sits = raw.sits && typeof raw.sits === 'object' ? raw.sits : {};
+    const on = GRAPH_FREE_SITS.includes(sits.on) ? sits.on : 'zero';
+    (Array.isArray(raw.parts) ? raw.parts : []).slice(0, GRAPH_FREE_LIMITS.parts).forEach(x => {
+      const r = graphRect(x);
+      if(!r){ bad++; return; }
+      parts.push(Object.assign(r, { colour: graphColour(x.colour), piece: i }));
+    });
+    pieces.push({ name: graphText(raw.name, GRAPH_LIMITS.rectName), column: Number.isFinite(col) && col >= 0 && col < GRAPH_FREE_LIMITS.columns ? col : -1,
+      sits: on === 'level' ? { on, value: graphFreeLevel(sits.value) } : { on }, minus: raw.minus === true, check: null });
+    fileOf.push(typeof sits.of === 'string' ? sits.of : null);
+    fileCheck.push(typeof raw.check === 'string' ? raw.check : null);
+    if(typeof raw.id === 'string' && !fileIds.has(raw.id)) fileIds.set(raw.id, i);
+  });
+  pieces.forEach((p, i) => {
+    if(p.sits.on === 'top' || p.sits.on === 'end'){
+      const of = fileIds.get(fileOf[i]);
+      if(of !== undefined && of !== i) p.sits.of = of; else p.sits = { on: 'zero' };
+    }
+    const chk = fileIds.get(fileCheck[i]);
+    if(chk !== undefined && chk !== i) p.check = chk;
+  });
+  settleGraphFree(pieces);
+  return { pieces: pieces.map(graphFreePieceOut), parts, bad };
+}
+// The series a Free chart needs in Excel: per piece a hidden filler above and below 0, per
+// rectangle four (above and below 0, each as a positive and as a negative part).
+const graphFreeSeries = (c) => 2 * c.pieces.length + 4 * c.parts.length;
+// A Free chart's pieces as a layout keeps them (mapping file 11), checked: a name cut, a column
+// 0–39, `sits` one of the four (`of` another piece's place, a level cut to ±1e9), `check`
+// another piece's place; then loops and columns put right as from a board file. A piece that
+// isn't one is kept as an empty piece on zero, so the places after it stay as they were.
+function cleanGraphFreePieces(raw){
+  const pieces = (Array.isArray(raw) ? raw : []).slice(0, GRAPH_FREE_LIMITS.pieces).map(p => {
+    if(!p || typeof p !== 'object' || Array.isArray(p)) return { name: '', column: -1, sits: { on: 'zero' }, minus: false, check: null };
+    const col = Number(p.column), s = p.sits && typeof p.sits === 'object' && !Array.isArray(p.sits) ? p.sits : {};
+    const on = GRAPH_FREE_SITS.includes(s.on) ? s.on : 'zero';
+    return { name: graphText(p.name, GRAPH_LIMITS.rectName), column: Number.isInteger(col) && col >= 0 && col < GRAPH_FREE_LIMITS.columns ? col : -1,
+      sits: on === 'level' ? { on, value: graphFreeLevel(s.value) } : on === 'zero' ? { on } : { on, of: Number(s.of) },
+      minus: p.minus === true, check: Number.isInteger(p.check) ? p.check : null };
+  });
+  const n = pieces.length;
+  pieces.forEach((p, i) => {
+    if((p.sits.on === 'top' || p.sits.on === 'end') && !(Number.isInteger(p.sits.of) && p.sits.of >= 0 && p.sits.of < n && p.sits.of !== i)) p.sits = { on: 'zero' };
+    if(p.check !== null && !(p.check >= 0 && p.check < n && p.check !== i)) p.check = null;
+  });
+  settleGraphFree(pieces);
+  return pieces.map(graphFreePieceOut);
+}
+
 // A board's bars and its columns, lines and flow charts, in the board's order, each read as the
 // format says (text cut, colours checked, at most 12 groups of 30 parts, 12 lines, 40 steps); a scenario waterfall
 // is kept only to be listed as not carried, a Tornado or Spider not here (they become analyses).
@@ -236,7 +358,11 @@ function readGraphCharts(b, version){
     if(it.type !== 'chart') return;
     const title = graphText(it.title, GRAPH_LIMITS.title), wide = it.wide !== false;
     if(it.layout === 'scenarios'){ out.push({ kind: 'scenarios', title, wide, scale, parts: [], bad: 0 }); return; }
-    if(it.layout === 'free'){ out.push({ kind: 'free', title, wide, scale, parts: [], bad: 0 }); return; } // version 13: not carried yet (fmGraph's phase F3)
+    if(it.layout === 'free'){ // version 13 (phase F3)
+      const f = readGraphFree(it);
+      out.push({ kind: 'free', title, wide, scale, period: period(it.period), pieces: f.pieces, parts: f.parts, bad: f.bad });
+      return;
+    }
     if(it.layout === 'flow'){
       const parts = [];
       let bad = 0;
@@ -281,15 +407,14 @@ function readGraphCharts(b, version){
 }
 // A board's bars and charts matched to the open model, in the layout's form: each part kept
 // where the model has its rectangle (any value rectangle with a row, outside any block); a
-// chart with no part left is left out. A scenario waterfall, and a Free chart (board file 13), is
-// counted as not carried.
-// → { charts: [cfg.graph.charts entry], left: { notFound, bad, empty, scenarios, free } }
+// chart with no part left is left out. A scenario waterfall is counted as not carried, and so is
+// a Free chart needing more series than an Excel chart holds (255).
+// → { charts: [cfg.graph.charts entry], left: { notFound, bad, empty, scenarios, tooManySeries } }
 function matchGraphCharts(board){
-  const left = { notFound: 0, bad: 0, empty: 0, scenarios: 0, free: 0 };
+  const left = { notFound: 0, bad: 0, empty: 0, scenarios: 0, tooManySeries: 0 };
   const charts = [];
   (board && board.charts || []).forEach(c => {
     if(c.kind === 'scenarios'){ left.scenarios++; return; }
-    if(c.kind === 'free'){ left.free++; return; }
     left.bad += c.bad;
     const parts = [];
     c.parts.forEach(x => {
@@ -299,11 +424,16 @@ function matchGraphCharts(board){
       if(x.colour) part.colour = x.colour;
       if(c.kind === 'flow') part.role = x.role;
       if(c.kind === 'columns') part.group = x.group;
+      if(c.kind === 'free') part.piece = x.piece;
       parts.push(part);
     });
     if(!parts.length){ left.empty++; return; }
     const out = { kind: c.kind, title: c.title, wide: c.wide, scale: c.scale, parts };
-    if(c.kind === 'flow') out.period = c.period < model.periods.length ? c.period : 0; // as fmGraph reads a period it hasn't got
+    if(c.kind === 'free'){
+      out.pieces = c.pieces.map(p => JSON.parse(JSON.stringify(p)));
+      if(graphFreeSeries(out) > GRAPH_FREE_LIMITS.series){ left.tooManySeries++; return; }
+    }
+    if(c.kind === 'flow' || c.kind === 'free') out.period = c.period < model.periods.length ? c.period : 0; // as fmGraph reads a period it hasn't got
     else out.periods = cleanGraphPeriods(c.periods, model.periods.length);
     if(c.kind === 'columns') out.groups = c.groups.slice();
     charts.push(out);
@@ -315,7 +445,7 @@ function matchGraphCharts(board){
 function graphChartName(c){
   if(c.title) return c.title;
   const names = c.parts.map(x => x.name).filter(Boolean);
-  const text = c.kind === 'bar' ? (names[0] || 'Bar') : names.join(', ') || (c.kind === 'flow' ? 'Waterfall' : c.kind === 'lines' ? 'Lines' : 'Columns');
+  const text = c.kind === 'bar' ? (names[0] || 'Bar') : c.kind === 'free' ? 'Free' : names.join(', ') || (c.kind === 'flow' ? 'Waterfall' : c.kind === 'lines' ? 'Lines' : 'Columns');
   return text.length > GRAPH_LIMITS.title ? text.slice(0, GRAPH_LIMITS.title - 1) + '…' : text;
 }
 
@@ -388,7 +518,9 @@ function row0Label(rowId){ const r = mapping.rows.find(x => x.id === rowId); ret
 //     charts: [{ kind: 'bar' | 'columns' | 'lines' | 'flow', title, wide, scale: { min, max } | null,
 //       periods (bar, columns, lines) | period (flow), groups: [names] (columns),
 //       parts: [{ row, name, colour?, role (flow), group (columns) }] }] (mapping file 8, B5;
-//       `lines`, a line per part, mapping file 9) }
+//       `lines`, a line per part, mapping file 9;
+//       `free`, fmGraph's Free chart, mapping file 11: period, pieces: [{ name, column, sits: { on, of | value },
+//       minus?, check? }] (`of` and `check` a piece's place), parts: [{ row, name, colour?, piece }]) }
 function defaultGraphCopy(){ return { from: [], board: '', scenarios: [], sliders: [], charts: [] }; }
 function cleanGraphCopy(raw, periodCount){
   const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
@@ -422,13 +554,15 @@ function cleanGraphCopy(raw, periodCount){
   });
   // The Dashboard's charts: a kind not known, or a chart with no part, is left out.
   (Array.isArray(src.charts) ? src.charts : []).forEach(c => {
-    if(!c || typeof c !== 'object' || Array.isArray(c) || !['bar', 'columns', 'lines', 'flow'].includes(c.kind)) return;
+    if(!c || typeof c !== 'object' || Array.isArray(c) || !['bar', 'columns', 'lines', 'flow', 'free'].includes(c.kind)) return;
     if(out.charts.length >= GRAPH_LIMITS.items) return;
     const chart = { kind: c.kind, title: graphText(c.title, GRAPH_LIMITS.title), wide: c.wide === true, scale: graphScale(c.scale) };
-    if(c.kind === 'flow'){ const n = Number(c.period); chart.period = Number.isInteger(n) && n >= 0 && n < Math.max(1, periodCount || 1) ? n : 0; }
+    if(c.kind === 'flow' || c.kind === 'free'){ const n = Number(c.period); chart.period = Number.isInteger(n) && n >= 0 && n < Math.max(1, periodCount || 1) ? n : 0; }
     else chart.periods = cleanGraphPeriods(c.periods, periodCount);
     if(c.kind === 'columns') chart.groups = (Array.isArray(c.groups) ? c.groups : []).slice(0, GRAPH_LIMITS.groups).map(g => graphText(g, GRAPH_LIMITS.rectName));
-    const most = c.kind === 'bar' ? 1 : c.kind === 'flow' ? GRAPH_LIMITS.steps : c.kind === 'lines' ? GRAPH_LIMITS.lines : GRAPH_LIMITS.groups * GRAPH_LIMITS.parts;
+    if(c.kind === 'free') chart.pieces = cleanGraphFreePieces(c.pieces);
+    const most = c.kind === 'bar' ? 1 : c.kind === 'flow' ? GRAPH_LIMITS.steps : c.kind === 'lines' ? GRAPH_LIMITS.lines
+      : c.kind === 'free' ? GRAPH_FREE_LIMITS.pieces * GRAPH_FREE_LIMITS.parts : GRAPH_LIMITS.groups * GRAPH_LIMITS.parts;
     chart.parts = [];
     (Array.isArray(c.parts) ? c.parts : []).forEach(x => {
       if(!x || typeof x !== 'object' || typeof x.row !== 'string' || !x.row || x.row.length > 400 || chart.parts.length >= most) return;
@@ -440,6 +574,11 @@ function cleanGraphCopy(raw, periodCount){
         const g = Number(x.group);
         if(!Number.isInteger(g) || g < 0 || g >= chart.groups.length) return;
         part.group = g;
+      }
+      if(c.kind === 'free'){
+        const k = Number(x.piece);
+        if(!Number.isInteger(k) || k < 0 || k >= chart.pieces.length || chart.parts.filter(y => y.piece === k).length >= GRAPH_FREE_LIMITS.parts) return;
+        part.piece = k;
       }
       chart.parts.push(part);
     });

@@ -7549,29 +7549,9 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     list = list || selectedNodesList();
     if(list.length < 3) return;
     pushHistory();
-    if(axis === 'h'){
-      const sorted = list.slice().sort((a,b) => a.x - b.x);
-      const first = sorted[0], last = sorted[sorted.length-1];
-      const span = (last.x + last.w) - first.x;
-      const totalW = sorted.reduce((s,n) => s + n.w, 0);
-      const gap = (span - totalW) / (sorted.length - 1);
-      let cursor = first.x + first.w + gap;
-      for(let i=1;i<sorted.length-1;i++){
-        sorted[i].x = cursor;
-        cursor = sorted[i].x + sorted[i].w + gap;
-      }
-    } else {
-      const sorted = list.slice().sort((a,b) => a.y - b.y);
-      const first = sorted[0], last = sorted[sorted.length-1];
-      const span = (last.y + last.h) - first.y;
-      const totalH = sorted.reduce((s,n) => s + n.h, 0);
-      const gap = (span - totalH) / (sorted.length - 1);
-      let cursor = first.y + first.h + gap;
-      for(let i=1;i<sorted.length-1;i++){
-        sorted[i].y = cursor;
-        cursor = sorted[i].y + sorted[i].h + gap;
-      }
-    }
+    // Equal gaps between edges, the first and last kept (the shared rule, src/shared/snap.js).
+    const at = distributePositions(list.map(n => ({ x: n.x, y: n.y, w: n.w, h: n.h })), axis);
+    list.forEach((n, i) => { if(axis === 'h') n.x = at[i]; else n.y = at[i]; });
     clearComputed();
     render();
   }
@@ -10014,22 +9994,30 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     }).filter(b => isFinite(b.x) && isFinite(b.y));
   }
 
-  // Where a node dragged to x, y snaps. Each direction on its own: lining up an edge or the
-  // middle with another node (the blue guides), or equal spacing with the nodes in its row
-  // (horizontally) or column (vertically) — step 12a: after the last of a run, before the
-  // first, or halfway between two neighbours, with the gaps between edges equal (the same rule
-  // as Distribute). The nearer snap wins, alignment on a tie; nothing further than
-  // SNAP_THRESHOLD. `gaps` are the equal gaps to mark while it snaps.
-  function computeSnap(movingNode, x, y, excludeIds, boxes){
-    const w = movingNode.w, h = movingNode.h;
-    const others = boxes || snapBoxes(excludeIds);
-    // The same distance on the screen at every zoom (07b): 6 pixels.
-    let bestX = x, bestXDist = SNAP_THRESHOLD / zoom, guideX = null;
-    let bestY = y, bestYDist = SNAP_THRESHOLD / zoom, guideY = null;
+  // Where a node dragged to x, y snaps: the shared rule (src/shared/snap.js, step 12a — lining
+  // up an edge or the middle with another node, the blue guides, or equal spacing with the nodes
+  // in its row or column), nothing as far as SNAP_THRESHOLD on the screen, never left of or
+  // above 0. `gaps` are the equal gaps to mark while it snaps.
+  // ---------- snapping (shared: src/shared/snap.js; fmIDE's canvas and fmGraph's Free chart) ----------
+  // The geometry of fmIDE's snapping (step 12a), moved here for fmGraph's Free chart (phase F2 of
+  // docs/fmgraph-free-chart.md) with no change to what it does: plain functions on boxes
+  // { x, y, w, h } and a distance. fmIDE passes SNAP_THRESHOLD / zoom (6 pixels on the screen at
+  // every zoom); fmGraph passes columns as boxes. Nothing here touches the page.
+
+  // Where a w × h box dragged to x, y snaps among `boxes`. Each direction on its own: lining up an
+  // edge or the middle with another box (the guides, guideX / guideY), or equal spacing with the
+  // boxes in its row (horizontally) or column (vertically): after the last of a run, before the
+  // first, or halfway between two neighbours, with the gaps between edges equal (the rule of
+  // distributePositions). The nearer snap wins, alignment on a tie; nothing as far as `threshold`.
+  // `gaps` are the equal gaps to mark while it snaps. Positions are not kept inside anything:
+  // the caller does that.
+  function snapPlace(boxes, x, y, w, h, threshold){
+    let bestX = x, bestXDist = threshold, guideX = null;
+    let bestY = y, bestYDist = threshold, guideY = null;
     const me = { left:x, right:x+w, centerX:x+w/2 };
     const meY = { top:y, bottom:y+h, centerY:y+h/2 };
 
-    others.forEach(o => {
+    boxes.forEach(o => {
       const oe = { left:o.x, right:o.x+o.w, centerX:o.x+o.w/2 };
       const oeY = { top:o.y, bottom:o.y+o.h, centerY:o.y+o.h/2 };
       ['left','right','centerX'].forEach(k => {
@@ -10051,28 +10039,29 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     });
 
     const gaps = [];
-    const ex = equalSpacingSnap(others, x, y, w, h, 'x');
+    const ex = equalSpacingSnap(boxes, x, y, w, h, 'x', threshold);
     if(ex && ex.dist < bestXDist){ bestX = ex.pos; guideX = null; gaps.push(...ex.gaps); }
-    const ey = equalSpacingSnap(others, x, y, w, h, 'y');
+    const ey = equalSpacingSnap(boxes, x, y, w, h, 'y', threshold);
     if(ey && ey.dist < bestYDist){ bestY = ey.pos; guideY = null; gaps.push(...ey.gaps); }
-    return { x: Math.max(0,bestX), y: Math.max(0,bestY), guideX, guideY, gaps };
+    return { x: bestX, y: bestY, guideX, guideY, gaps };
   }
 
-  // Equal spacing along one axis ('x': a row, 'y': a column) for a w × h node at x, y: the
-  // nearest place within SNAP_THRESHOLD, or null. `gaps` lists each equal gap as
-  // { axis, from, to, at } (from/to along the axis, `at` across it).
-  function equalSpacingSnap(boxes, x, y, w, h, axis){
+  // Equal spacing along one axis ('x': a row, 'y': a column) for a w × h box at x, y: the
+  // nearest place closer than `threshold`, or null. `gaps` lists each equal gap as
+  // { axis, from, to, at } (from / to along the axis, `at` across it). A place below 0 is never
+  // offered.
+  function equalSpacingSnap(boxes, x, y, w, h, axis, threshold){
     const X = axis === 'x';
     const pos = X ? x : y, len = X ? w : h;
     const crossA = X ? y : x, crossB = crossA + (X ? h : w);
     const lo = b => X ? b.x : b.y, hi = b => X ? b.x + b.w : b.y + b.h;
     const cLo = b => X ? b.y : b.x, cHi = b => X ? b.y + b.h : b.x + b.w;
-    // The row (or column): nodes overlapping the dragged node across the axis, in order.
+    // The row (or column): boxes overlapping the dragged one across the axis, in order.
     const line = boxes.filter(b => cLo(b) < crossB && cHi(b) > crossA).sort((p, q) => lo(p) - lo(q) || hi(p) - hi(q));
     if(line.length < 2) return null;
     const free = (a, b) => line.every(o => hi(o) <= a || lo(o) >= b);
     // Where the gap between two boxes is marked across the axis: the middle of what they share
-    // across it, or the dragged node's middle.
+    // across it, or the dragged box's middle.
     const at = (p, q) => {
       const a = Math.max(cLo(p), cLo(q)), b = Math.min(cHi(p), cHi(q));
       return a < b ? (a + b) / 2 : (crossA + crossB) / 2;
@@ -10081,7 +10070,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     let best = null;
     const consider = (p, gapList) => {
       const dist = Math.abs(p - pos);
-      if(p >= 0 && dist < SNAP_THRESHOLD / zoom && (!best || dist < best.dist)) best = { pos: p, dist, gaps: gapList };
+      if(p >= 0 && dist < threshold && (!best || dist < best.dist)) best = { pos: p, dist, gaps: gapList };
     };
     const mark = (p, q) => ({ axis, from: hi(p), to: lo(q), at: at(p, q) });
     for(let i = 0; i + 1 < line.length; i++){
@@ -10098,6 +10087,34 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       if(g >= len){ const mid = hi(A) + (g - len) / 2; const C = me(mid); consider(mid, [mark(A, C), mark(C, B)]); }
     }
     return best;
+  }
+
+  // Distribute: the boxes spread along one axis ('h' across, 'v' down) with equal gaps between
+  // their edges, the first and the last staying where they are. Gives each box's new x (or y),
+  // in the order the boxes were given; null for fewer than three.
+  function distributePositions(boxes, axis){
+    if(boxes.length < 3) return null;
+    const H = axis === 'h';
+    const at = b => H ? b.x : b.y, len = b => H ? b.w : b.h;
+    const out = boxes.map(at);
+    const order = boxes.map((b, i) => i).sort((i, j) => at(boxes[i]) - at(boxes[j]));
+    const first = boxes[order[0]], last = boxes[order[order.length - 1]];
+    const span = (at(last) + len(last)) - at(first);
+    const total = order.reduce((s, i) => s + len(boxes[i]), 0);
+    const gap = (span - total) / (order.length - 1);
+    let cursor = at(first) + len(first) + gap;
+    for(let k = 1; k < order.length - 1; k++){
+      const i = order[k];
+      out[i] = cursor;
+      cursor = out[i] + len(boxes[i]) + gap;
+    }
+    return out;
+  }
+  function computeSnap(movingNode, x, y, excludeIds, boxes){
+    const others = boxes || snapBoxes(excludeIds);
+    // The same distance on the screen at every zoom (07b): 6 pixels.
+    const s = snapPlace(others, x, y, movingNode.w, movingNode.h, SNAP_THRESHOLD / zoom);
+    return { x: Math.max(0, s.x), y: Math.max(0, s.y), guideX: s.guideX, guideY: s.guideY, gaps: s.gaps };
   }
 
   // The equal-gap markers (⟷ / ↕) shown while a drag snaps to equal spacing.

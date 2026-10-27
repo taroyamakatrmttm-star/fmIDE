@@ -8,6 +8,18 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'free-chart-grid', date: '2026-10-27', title: 'Place a Free chart\'s pieces by dragging them',
+    summary: 'Drag a piece across the Free chart\'s columns, or up onto a blue guide such as "where CFO ends", as you place boxes on fmIDE\'s canvas.',
+    what: [
+      'Across, a piece moves column by column, with whatever is stacked on it. The pink equal-gap marks show where the empty columns either side match those between its neighbours, and it snaps there. Dropped on a column it can\'t share, the piece there swaps with it.',
+      'Up and down, a blue guide offers where it could sit: on zero, on top of another piece, or where another ends. Letting go takes the one shown; away from every guide it keeps where it sat.',
+      'Shift+click, or a box dragged round them, chooses several: Align bottoms puts them on zero, Distribute spreads them evenly, Tidy closes up empty columns. A chosen piece\'s arrow keys move it too.',
+      'Edit chart\'s list always shows the same as the chart, and each move is one Undo.',
+    ],
+    why: 'Arranging a balance sheet next to its cash flow is quicker by hand than through a list, and it should feel like arranging a model on fmIDE\'s canvas: the same guides, gaps and Distribute.',
+    how: ['Make a Free chart (choose Free at a chart\'s top).', 'Drag a piece sideways to another column.', 'Drag it up until the guide says where it should sit, and let go.', 'Shift+click several pieces and press Distribute or Tidy.'],
+    notes: ['On an iPad, hold a piece still a moment before dragging it, so a swipe still scrolls the page.', 'On a phone, and in the full screen, pieces are placed with Edit chart only.', 'The board file is unchanged: a piece keeps its column and where it sits, as before.'],
+    see: ['free-chart'] },
   { id: 'play-gif', date: '2026-10-27', title: 'A GIF of Play, to send or put in a slide',
     summary: '🎞 GIF in the full screen turns Play into an animated GIF of the charts shown; 🎞 on a chart makes one of that chart alone.',
     what: [

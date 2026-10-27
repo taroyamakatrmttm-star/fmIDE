@@ -16,8 +16,9 @@ const FILE_FORMATS = {
   // v7: the Dashboard's sliders, `cfg.graph.sliders` (step 19 B4).
   // v8: the Dashboard's charts, `cfg.graph.charts` (step 19 B5); v9: a chart there may be a
   // lines chart, `kind: 'lines'` (fmGraph's lines chart, board file 10); v10: a row's own
-  // format may carry Excel's own number format code, `style.excelFormat`.
-  'fmIDE-excel-mapping': { current: 10, label: 'ExcelExporter mapping file' },
+  // format may carry Excel's own number format code, `style.excelFormat`; v11: a Dashboard chart
+  // may be fmGraph's Free chart, `kind: 'free'` with its `pieces` (phase F3).
+  'fmIDE-excel-mapping': { current: 11, label: 'ExcelExporter mapping file' },
   // The person's own Excel style (step 11a): how every cell looks, by role.
   'fmIDE-excel-style':   { current: 1, label: 'ExcelExporter Excel style file' },
   // The layouts remembered per module (step 11b); v2: a module's block instances' layout, `instance` (step 11d).
@@ -64,7 +65,10 @@ const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
     8: (d) => { d.version = 9; return d; },
     // v10: a row's own format may carry Excel's own number format code (`style.excelFormat`,
     // cleanExcelNumberFormat); a v9 file has none, so it reads as it is.
-    9: (d) => { d.version = 10; return d; } },
+    9: (d) => { d.version = 10; return d; },
+    // v11: a Dashboard chart may be fmGraph's Free chart (`kind: 'free'`, its `pieces`, each
+    // part's `piece`; phase F3); a v10 file has none, so it reads as it is.
+    10: (d) => { d.version = 11; return d; } },
   'fmIDE-excel-module-layouts': { 1: (d) => { d.version = 2; return d; } }
 });
 // Returns { error } or { kind, data (migrated copy), fromVersion, newer, newerParts }.

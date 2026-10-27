@@ -223,8 +223,9 @@ function openGraphBoardsWindow(read, source){
       name.textContent = graphChartName(c);
       const what = document.createElement('span');
       what.className = 'graph-scn-what';
-      const kind = c.kind === 'bar' ? 'Bar' : c.kind === 'flow' ? 'Waterfall' : c.kind === 'lines' ? 'Lines' : 'Stacked columns';
+      const kind = c.kind === 'bar' ? 'Bar' : c.kind === 'flow' ? 'Waterfall' : c.kind === 'lines' ? 'Lines' : c.kind === 'free' ? 'Free' : 'Stacked columns';
       what.textContent = kind + ' · ' + (c.kind === 'flow' ? (periodLabels()[c.period] || '') + ' · ' + c.parts.length + ' step' + (c.parts.length === 1 ? '' : 's')
+        : c.kind === 'free' ? (periodLabels()[c.period] || '') + ' · ' + c.pieces.length + ' piece' + (c.pieces.length === 1 ? '' : 's')
         : graphPeriodsText(c.periods, periodLabels()) + (c.kind === 'columns' ? ' · ' + c.parts.length + ' part' + (c.parts.length === 1 ? '' : 's') : c.kind === 'lines' ? ' · ' + c.parts.length + ' line' + (c.parts.length === 1 ? '' : 's') : '')) +
         (c.wide ? ' · wide' : '');
       label.append(cb, name, what);
@@ -257,7 +258,7 @@ function openGraphBoardsWindow(read, source){
     if(sIn) lines.push(sIn + ' input' + (sIn === 1 ? '' : 's') + ' of the Tornado and Spider charts left out (not in this model, inside a block, not an input, or not readable).');
     const cl = chartsMatched.left;
     if(cl.scenarios) lines.push(cl.scenarios + ' scenario waterfall' + (cl.scenarios === 1 ? '' : 's') + ' not carried: Excel would need every case worked out at once.');
-    if(cl.free) lines.push(cl.free + ' Free chart' + (cl.free === 1 ? '' : 's') + ' not carried yet.');
+    if(cl.tooManySeries) lines.push(cl.tooManySeries + ' Free chart' + (cl.tooManySeries === 1 ? '' : 's') + ' not carried: an Excel chart holds at most ' + GRAPH_FREE_LIMITS.series + ' series.');
     const cOut = (cl.notFound || 0) + (cl.bad || 0);
     if(cOut) lines.push(cOut + ' rectangle' + (cOut === 1 ? '' : 's') + ' of the bars and charts left out (not in this model, inside a block, or not readable).');
     if(cl.empty) lines.push(cl.empty + ' bar' + (cl.empty === 1 ? '' : 's') + ' or chart' + (cl.empty === 1 ? '' : 's') + ' with nothing of this model to show.');

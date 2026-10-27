@@ -52,6 +52,10 @@
 //                  file 12): Each its own, Auto for all, Fixed for all at the current range or
 //                  from min to max; returns commonScale()
 //   commonScale()  → { mode: 'own' | 'auto' | 'fixed', min?, max? }
+//   movePiece(chartId, index, { column, sits }) (F2) → a Free chart's piece (its place in the list,
+//                  from 0) put in column (from 0; its stack with it, a piece there it can't share
+//                  swapping) and/or sat as sits says (of: a piece's place); a loop refused;
+//                  one undo step; returns chart(chartId)
 //   undo(), redo() → whether there was one; exportBoards(all?) → the file's data (downloads it)
 //   importBoards(textOrObject) → Promise<number of boards added>
 //   calcTime()     → how long one run of the model takes, in milliseconds
@@ -203,6 +207,28 @@ window.fmGraph = Object.freeze({
     }
     return columnsFigures(c, results).map(f => ({ period: model.periods[f.p], check: f.check,
       groups: f.groups.map((g, gi) => ({ name: groupLabel(c, gi), total: g.error ? { error: true } : g.total, parts: g.parts.map(answer) })) }));
+  },
+  movePiece: (id, index, to) => {
+    const c = chartById(id);
+    if(c.layout !== 'free') throw new Error('Only a Free chart has pieces.');
+    const p = c.pieces[Number(index)];
+    if(!p) throw new Error('No piece ' + index + ' in that chart.');
+    to = to || {};
+    let sits = null;
+    if(to.sits){
+      const on = FREE_SITS.includes(to.sits.on) ? to.sits.on : 'zero';
+      if(on === 'top' || on === 'end'){
+        const of = c.pieces[Number(to.sits.of)];
+        if(!of) throw new Error('No piece ' + to.sits.of + ' to rest on.');
+        sits = { on, of: of.id };
+      } else sits = on === 'level' ? { on, value: to.sits.value } : { on };
+    }
+    const why = placePiece(c, p, to.column === undefined ? p.column : to.column, sits);
+    if(why === 'loop') throw new Error('That would make a loop: the pieces would rest on each other.');
+    if(why) throw new Error('A column is a whole number from 0.');
+    saveBoardSoon();
+    renderBoard();
+    return window.fmGraph.chart(id);
   },
   setSlider: (id, value) => {
     const s = sliderById(id);
