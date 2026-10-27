@@ -18,6 +18,7 @@
 // build:include shared/input-rule.js
 // build:include shared/functions.js
 // build:include shared/ir.js
+// build:include shared/error-words.js
 // build:include shared/file-formats.js
 // build:include shared/format-roles.js
 // build:include shared/canvas-geometry.js
@@ -78,34 +79,6 @@ function askConfirm(title, text, okLabel){
     $('confirmYes').focus();
   });
 }
-
-// What an error code means, in plain words (the calculation's codes, src/shared/ir.js).
-const ERROR_WORDS = {
-  'cycle': 'part of a circular reference',
-  'alias-unset': 'an alias that points to nothing',
-  'alias-missing-canvas': 'an alias to a canvas that no longer exists',
-  'alias-missing-node': 'an alias to a rectangle that no longer exists',
-  'no-input': 'nothing is connected to it',
-  'ambiguous': 'several arrows go straight into it',
-  'missing-input': 'something it reads could not be worked out',
-  'period-out-of-range': 'it reads a period outside the timeline',
-  'math-error': 'an invalid result (for example dividing by zero)',
-  'unary-only': 'an operator that takes one input has more',
-  'needs-two': 'a comparison needs two inputs',
-  'block-missing-def': 'its block no longer exists',
-  'block-missing-output': 'the block output it reads no longer exists',
-  'block-cycle': 'a block that contains itself',
-  'operator-unknown': 'an operator this version doesn\'t know',
-  'operator-input-unwired': 'an operator input is not connected',
-  'choose-out-of-range': 'a choose whose index picks no choice',
-  'function-missing': 'a function the model doesn\'t carry',
-  'function-unreadable': 'a function whose formula can\'t be read',
-  'function-cycle': 'a function that calls itself',
-  'function-too-deep': 'functions nested too deeply',
-  'function-arguments': 'a function called with the wrong inputs',
-  'function-input-unwired': 'a function input is not connected',
-};
-function errorWords(code){ return Object.prototype.hasOwnProperty.call(ERROR_WORDS, code) ? ERROR_WORDS[code] : 'could not be worked out'; }
 
 // The page as a phone shows it (the shared isPhoneScreen), decided once at start.
 const onPhone = isPhoneScreen();

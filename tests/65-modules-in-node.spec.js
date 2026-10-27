@@ -688,3 +688,23 @@ test.describe('the canvas geometry and number formats, alone in Node', () => {
     expect([N.shiftLabel(-1), N.shiftLabel(2), N.shiftLabel(0)]).toEqual(['t−1', 't+2', 't']);
   });
 });
+// ---------- the calculation's errors in plain words (src/shared/error-words.js; fmGraph and the
+// showcase viewer, phase V2) ----------
+test('every error code the shared calculation gives has its plain words', () => {
+  const { ERROR_WORDS, errorWords } = require('../src/shared/error-words.js');
+  // Every code written by the calculation, its operators and its functions.
+  const codes = new Set();
+  ['ir.js', 'operators.js', 'functions.js'].forEach(f => {
+    const text = fs.readFileSync(path.join(__dirname, '..', 'src', 'shared', f), 'utf8');
+    for(const m of text.matchAll(/(?:error: |errors\[key\] = |status = |c\.status = )'([a-z]+(?:-[a-z]+)*)'/g)) codes.add(m[1]);
+  });
+  ['cycle', 'function-too-deep'].forEach(c => codes.add(c)); // written through other names
+  expect(codes.size).toBeGreaterThan(20);
+  expect([...codes].filter(c => c !== 'ok' && !(c in ERROR_WORDS))).toEqual([]);
+  expect(errorWords('math-error')).toBe('an invalid result (for example dividing by zero)');
+  expect(errorWords('operator-unknown')).toBe('an operator this version doesn\'t know');
+  expect(errorWords('missing-input')).toBe('something it reads could not be worked out');
+  // Anything else, also a name an object carries, reads the same plain words.
+  ['a-later-code', 'toString', '__proto__', undefined, 3].forEach(c => expect(errorWords(c)).toBe('could not be worked out'));
+  expect(Object.isFrozen(ERROR_WORDS)).toBe(true);
+});

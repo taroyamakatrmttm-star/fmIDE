@@ -18,6 +18,7 @@
 // build:include shared/input-rule.js
 // build:include shared/functions.js
 // build:include shared/ir.js
+// build:include shared/error-words.js
 // build:include shared/file-formats.js
 // build:include shared/store.js
 // build:include shared/pointer-input.js
@@ -92,32 +93,6 @@ function fmtDiff(now, base){
   return t;
 }
 
-// What an error code means, in plain words (the calculation's codes, src/shared/ir.js).
-function errorText(code){
-  const T = {
-    'cycle': 'part of a circular reference',
-    'alias-unset': 'an alias that points to nothing',
-    'alias-missing-canvas': 'an alias to a canvas that no longer exists',
-    'alias-missing-node': 'an alias to a rectangle that no longer exists',
-    'no-input': 'nothing is connected to it',
-    'ambiguous': 'several arrows go straight into it',
-    'missing-input': 'something it reads could not be worked out',
-    'period-out-of-range': 'it reads a period outside the timeline',
-    'math-error': 'an invalid result (e.g. dividing by zero)',
-    'unary-only': 'an operator that takes one input has more',
-    'needs-two': 'a comparison needs two inputs',
-    'block-missing-def': 'its block no longer exists',
-    'block-missing-output': 'the block output it reads no longer exists',
-    'block-cycle': 'a block that contains itself',
-    'operator-unknown': 'an operator fmGraph doesn\'t know',
-    'operator-input-unwired': 'an operator input is not connected',
-    'choose-out-of-range': 'a choose whose index picks no choice',
-    'function-missing': 'a function the model doesn\'t carry',
-    'function-unreadable': 'a function whose formula can\'t be read',
-    'function-cycle': 'a function that calls itself',
-    'function-too-deep': 'functions nested too deeply',
-    'function-arguments': 'a function called with the wrong inputs',
-    'function-input-unwired': 'a function input is not connected',
-  };
-  return T[code] || 'could not be worked out';
-}
+// What an error code means, in plain words (the calculation's codes; the shared words,
+// src/shared/error-words.js, which the showcase viewer uses too).
+function errorText(code){ return errorWords(code); }
