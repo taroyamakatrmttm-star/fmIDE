@@ -8877,8 +8877,11 @@ $('btnGoalSeek').addEventListener('click', () => {
 // - Cost: the positions are the same every swing, so each is worked out once (resultCache); on
 //   a slow model (SLOW_MS) all are worked out ahead in small pieces ("Working out the play…"),
 //   fewer of them when that would take longer than PLAY_AHEAD_MS — the bars then glide between.
-// - Stopping: ■ Stop, Esc, any key or press outside the strip, a slider moved, another board or
-//   model. Everything is then as it was: nothing is saved, no undo step, nothing in the file.
+// - Stopping: only ■ Stop, Esc, a slider moved (a deliberate change) or another model (the owner's
+//   request of 27 October 2026). Scrolling, a tap or press, a key, opening a panel, Edit chart
+//   and another board leave it playing: Play moves the model's inputs, not one board's sliders,
+//   so the board now shown is painted (playFrame notices a redraw). Everything is then as it
+//   was: nothing is saved, no undo step, nothing in the file.
 // - Reduced motion: no constant motion — the board shows the "to" end against the "from" end's
 //   outlines, and ⇄ on the strip steps between the two.
 // ============================================================
@@ -8962,7 +8965,7 @@ function startPlay(fromId, toId, opts){
     swingMs: Number.isFinite(opts.swingMs) ? Math.max(200, Math.min(60000, opts.swingMs)) : PLAY_SWING_MS,
     pauseMs: Number.isFinite(opts.pauseMs) ? Math.max(0, Math.min(10000, opts.pauseMs)) : PLAY_PAUSE_MS,
     still: !!(reducedMotion && reducedMotion.matches), // (05e-compare.js)
-    sliders: JSON.stringify(slidersNow()), index: -1, startedAt: null, runs: 0, ready: false, raf: 0,
+    sliders: sliderPositions(), painted: null, index: -1, startedAt: null, runs: 0, ready: false, raf: 0,
     wake: keepScreenOn(),
   };
   document.body.classList.add('playing');
@@ -9001,14 +9004,32 @@ function playIndexAt(t){
   if(t < 2 * P + S) return n;
   return Math.max(0, n - Math.round((t - 2 * P - S) / S * n));
 }
+// Where every slider on every board stands (id → value): a slider moved stops the play; one
+// added or removed does not.
+function sliderPositions(){
+  syncShared(); // (03-calc.js) so a board shown for the first time takes the shared positions first
+  const out = new Map();
+  boards.forEach(b => b.sliders.forEach(s => out.set(s.id, s.value)));
+  return out;
+}
+function sliderMoved(){
+  const now = sliderPositions();
+  const moved = [...now].some(([id, v]) => playing.sliders.has(id) && !Object.is(playing.sliders.get(id), v));
+  playing.sliders = now;
+  return moved;
+}
+// What the play last painted: the board and its first widgets, so a redraw (another board, a
+// panel, Edit chart) is painted again.
+const paintMark = () => [board, $('sliderList').firstElementChild, $('barList').firstElementChild];
 function playFrame(now){
   if(!playing) return;
-  if(playing.model !== model || playing.board !== board || !model || JSON.stringify(slidersNow()) !== playing.sliders){ stopPlay(); return; }
+  if(playing.model !== model || !model || !board || sliderMoved()){ stopPlay(); return; }
   playing.raf = requestAnimationFrame(playFrame);
-  if(!playing.ready || playing.still) return;
+  const mark = paintMark(), redrawn = !playing.painted || mark.some((x, i) => x !== playing.painted[i]);
+  if(playing.still || !playing.ready){ if(redrawn && playing.index >= 0) showPlayPosition(playing.index); return; }
   if(playing.startedAt === null) playing.startedAt = now;
   const i = playIndexAt(now - playing.startedAt);
-  if(i !== playing.index) showPlayPosition(i);
+  if(i !== playing.index || redrawn) showPlayPosition(i);
 }
 function showPlayPosition(i){
   const me = playing, o = me.positions[i], from = me.positions[0];
@@ -9017,6 +9038,7 @@ function showPlayPosition(i){
   playAt = { model, now: o, from }; // (03-calc.js)
   updateValues();
   paintPlay(me.fractions[i]);
+  me.painted = paintMark();
 }
 
 // The sliders, the dock, the mixer, the reach and the strip, f of the way.
@@ -9114,13 +9136,10 @@ $('playFrom').addEventListener('change', () => { playChoice.from = $('playFrom')
 $('playTo').addEventListener('change', () => { playChoice.to = $('playTo').value; playChoice.picked = true; });
 $('btnPlay').addEventListener('click', () => startPlay(playChoice.from, playChoice.to));
 
-// Any press outside the strip, or any key, stops it (Esc only that).
-document.addEventListener('pointerdown', (ev) => { if(playing && !(ev.target.closest && ev.target.closest('#playBar'))) stopPlay(); }, true);
+// Esc stops it (and does only that); a press, a scroll or another key leaves it playing.
 document.addEventListener('keydown', (ev) => {
-  if(!playing) return;
-  if(ev.key === 'Escape'){ ev.preventDefault(); ev.stopPropagation(); stopPlay(); return; }
-  if(ev.target.closest && ev.target.closest('#playBar')) return;
-  stopPlay();
+  if(!playing || ev.key !== 'Escape') return;
+  ev.preventDefault(); ev.stopPropagation(); stopPlay();
 }, true);
 // ============================================================
 // Drawing and editing the Free chart (phase F1; the data is 04f-free.js). Each piece is drawn
@@ -10812,7 +10831,7 @@ const FMGRAPH_HELP_TOPICS = [
       { p: 'Swipe sideways across the bars, or use ‹ and ›, for the next board. Hold a bar for a quick look: its value in every period, now against the model\'s own numbers (or A), 🔍 Trace and ⤢ Show. Hold a chart to see its rectangles\' numbers.' },
       { p: 'Turn the phone sideways for the mixer: the sliders stand up as faders at the two edges of the screen, under your thumbs, with the board between them. Each finger moves its own fader, so you can move two (or more) at once and watch the bars follow both. Slide your finger sideways, away from a fader, to make it finer. Tap a fader\'s name to put another slider there; that is remembered for the board.' },
       { p: '⤢ Show puts one bar or chart on the whole screen and keeps the screen on while it shows, for showing someone; ×, Esc or your phone\'s back gesture ends it. The sliders stay beside it.' },
-      { p: 'Saved scenarios are cards: swipe through them; ▶ shows one. Hold a card\'s A to look at that scenario: the bars show it while your finger stays down, and come back when you let go. A quick tap on A compares with it, as before. With 📌 Pin as A, hold the A on the strip to look at A. ▶ Play under the scenarios swings between two of them: the dock\'s sliders and Show follow, the screen stays on, and a touch anywhere stops it.' },
+      { p: 'Saved scenarios are cards: swipe through them; ▶ shows one. Hold a card\'s A to look at that scenario: the bars show it while your finger stays down, and come back when you let go. A quick tap on A compares with it, as before. With 📌 Pin as A, hold the A on the strip to look at A. ▶ Play under the scenarios swings between two of them: the dock\'s sliders and Show follow, the screen stays on, and it keeps playing while you scroll, tap or swipe to another board; ■ Stop stops it, and so does moving a slider.' },
       { p: '⇪ Share (in Show, and in ☰) sends a picture of the chart, or of the whole board, or the board file, through your phone\'s own Share button: Messages, Mail, AirDrop. The picture is drawn on your phone; nothing is sent until you choose where it goes. Where a browser can\'t share files, they download instead.' },
       { steps: ['Open a model (☰ → Open…), or Try the sample model.', 'Drag a slider in the dock and watch the bars.', 'Slide your finger up to set it exactly.', 'Hold a bar to see every period, then ⤢ Show.', 'Turn the phone sideways and move two faders at once.'] },
       { tip: 'On Android the tick is felt; ☰ → Vibrate on the marks turns that off. An iPhone does not let web pages vibrate, so there the tick is only seen.' },
@@ -10947,7 +10966,7 @@ const FMGRAPH_HELP_TOPICS = [
       { p: 'A compares with a scenario: the dashed outlines, difference labels and Biggest movers measure from it, as with 📌 Pin as A, and the strip names it. Press A again to stop.' },
       { p: '⟳ keeps where the sliders are now in that scenario, ↑ ↓ change the order, and × deletes it.' },
       { p: 'Play, under the scenarios, swings the model between two ends and back, like a pendulum, so you can watch a change happen: choose each end (a scenario, the model\'s own numbers or the sliders now) and press ▶ Play. Every number the two ends set differently moves smoothly, slower near the ends, with a short pause at each; the bars, the charts and the sliders follow, and the dashed outlines show the first end. The Tornado and Spider charts and Biggest movers wait until it stops.' },
-      { p: '■ Stop, Esc, any key or a click anywhere else stops it, and everything is as it was: Play changes no slider, saves nothing and is not an undo step. With reduced motion turned on in your device\'s settings, nothing swings: the board shows the second end against the first end\'s outlines, and ⇄ steps between them.' },
+      { p: 'It keeps playing while you scroll, click, open a panel, edit a chart or switch to another board (the board shown follows it). ■ Stop or Esc stops it, and so does moving a slider yourself; everything is then as it was: Play changes no slider, saves nothing and is not an undo step. With reduced motion turned on in your device\'s settings, nothing swings: the board shows the second end against the first end\'s outlines, and ⇄ steps between them.' },
       { p: 'Scenarios are kept with the model\'s boards: in this browser, in fmIDE\'s document when fmGraph was opened from fmIDE, and in Export all boards. Saving, renaming, updating, moving and deleting them can be undone; showing one is like moving a slider, not a change.' },
       { see: ['compare', 'board-file'] },
     ] },
@@ -11007,6 +11026,16 @@ const FMGRAPH_WHATS_NEW = [
     how: ['Press + Chart and choose Free at its top.', 'Open Edit chart and press + Piece, or copy a chart in with + From chart….', 'Choose where each piece Sits, and Should equal… for the checks.'],
     notes: ['The board file is now version 13; ExcelExporter reads it, and lists a Free chart as not carried to its Dashboard yet.', 'A template\'s board never holds a Free chart.', 'Dragging pieces on a grid comes later.'],
     see: ['free-chart'] },
+  { id: 'play-keeps-going', date: '2026-10-27', title: 'Play keeps going while you look around',
+    summary: 'While ▶ Play swings, you can scroll, tap, open panels and switch boards: only ■ Stop, Esc or moving a slider stops it.',
+    what: [
+      'Scrolling the page, a tap or click, a key, opening a panel and Edit chart no longer stop Play. On an iPad, a finger scrolling the page leaves it playing.',
+      'Switching to another board keeps it playing: Play moves the model\'s inputs, so the board you switch to shows the play too.',
+      '■ Stop or Esc stops it. Moving a slider yourself stops it as well, and the slider stays where you put it.',
+    ],
+    why: 'Play is for watching a change happen across the model. It stopped every time the screen was touched, so it could not be watched while scrolling to another chart or another board.',
+    how: ['Save two scenarios and press ▶ Play.', 'Scroll down, or switch to another board: the bars keep moving.', 'Press ■ Stop or Esc to stop.'],
+    see: ['scenarios'] },
   { id: 'common-scale', date: '2026-10-27', title: 'One scale for every bar and chart',
     summary: 'Above the bars and charts, Scale puts every one of them, on every board, on the same vertical scale: Auto for all or Fixed for all.',
     what: [
@@ -11024,10 +11053,10 @@ const FMGRAPH_WHATS_NEW = [
       'Under the scenarios, choose where Play starts and ends: a scenario, the model\'s own numbers or the sliders as they are now.',
       'Every number the two ends set differently moves smoothly from one to the other and back, slower near the ends, with a short pause at each. Several sliders, a change by %, sliders over some periods and inputs with no slider on the board all move together.',
       'The bars, the charts and the sliders follow as it goes; the dashed outlines show where it started, and a strip at the top says what plays.',
-      '■ Stop, Esc, any key or a click anywhere else stops it, and everything is just as it was: nothing is saved and there is nothing to undo.',
+      '■ Stop or Esc stops it, and everything is just as it was: nothing is saved and there is nothing to undo.',
     ],
     why: 'Two scenarios that differ in one number, say a volume of 10 against 100, are easier to understand when you can see every bar move as that number changes.',
-    how: ['Save two scenarios.', 'Under them, choose Play from and to, and press ▶ Play.', 'Press ■ Stop, Esc or anywhere else to stop.'],
+    how: ['Save two scenarios.', 'Under them, choose Play from and to, and press ▶ Play.', 'Press ■ Stop or Esc to stop.'],
     notes: ['With reduced motion turned on in your device\'s settings nothing swings: the board shows the second end against the first, and ⇄ steps between them.', 'On a large model the positions are worked out first ("Working out the play…"), then it plays smoothly.', 'The Tornado and Spider charts and Biggest movers wait until it stops.'],
     see: ['scenarios'] },
   { id: 'remove-all-inputs', date: '2026-10-27', title: 'Remove all inputs from a Tornado or Spider',
