@@ -72,29 +72,9 @@
     list = list || selectedNodesList();
     if(list.length < 3) return;
     pushHistory();
-    if(axis === 'h'){
-      const sorted = list.slice().sort((a,b) => a.x - b.x);
-      const first = sorted[0], last = sorted[sorted.length-1];
-      const span = (last.x + last.w) - first.x;
-      const totalW = sorted.reduce((s,n) => s + n.w, 0);
-      const gap = (span - totalW) / (sorted.length - 1);
-      let cursor = first.x + first.w + gap;
-      for(let i=1;i<sorted.length-1;i++){
-        sorted[i].x = cursor;
-        cursor = sorted[i].x + sorted[i].w + gap;
-      }
-    } else {
-      const sorted = list.slice().sort((a,b) => a.y - b.y);
-      const first = sorted[0], last = sorted[sorted.length-1];
-      const span = (last.y + last.h) - first.y;
-      const totalH = sorted.reduce((s,n) => s + n.h, 0);
-      const gap = (span - totalH) / (sorted.length - 1);
-      let cursor = first.y + first.h + gap;
-      for(let i=1;i<sorted.length-1;i++){
-        sorted[i].y = cursor;
-        cursor = sorted[i].y + sorted[i].h + gap;
-      }
-    }
+    // Equal gaps between edges, the first and last kept (the shared rule, src/shared/snap.js).
+    const at = distributePositions(list.map(n => ({ x: n.x, y: n.y, w: n.w, h: n.h })), axis);
+    list.forEach((n, i) => { if(axis === 'h') n.x = at[i]; else n.y = at[i]; });
     clearComputed();
     render();
   }
