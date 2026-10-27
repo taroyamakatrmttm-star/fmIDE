@@ -1,5 +1,5 @@
 // 87. The animated-GIF writer (src/shared/gif.js; the owner's idea of 27 October 2026, a GIF of
-// fmGraph's Play): makeGif written here with no library, read back by a small GIF decoder
+// the graph app's Play; nothing here opens an app): makeGif written here with no library, read back by a small GIF decoder
 // written in this file, in Node. The frames' pixels come back as written (exactly, with at most
 // 255 colours; near, with more), with the loop block, each frame's delay and disposal, and only
 // the rectangle that changed; bad input is refused. One test also has Chromium's own decoder

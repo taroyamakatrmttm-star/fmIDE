@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph: full screen for one or several bars and charts
+- The owner's idea (27 October 2026): **⛶** on every bar's and chart's header puts it on the whole screen, on any screen (before, only a phone's quick look had ⤢ Show, for one). The browser's own full screen of the whole page where it can (an iPad too; an iPhone has none, so the view just covers the page). Chips in the strip add or take away the board's other bars and charts, by a tap; several share the screen in the grid that gives each the largest drawing. The strip — the chips, ▶ Play / ■ Stop (Play's own, from the ends chosen under Scenarios; a tap in the view never stops it), ⇪ Share where the device shares (a picture of what is shown), ? and × — fades after 3 seconds and comes back on a tap, a key or the mouse; × stays. ×, Esc (only the view: a play goes on), the back gesture or leaving the browser's full screen closes it; the screen is kept on meanwhile. Nothing saved, no board file change. Free charts draw in it as on the board.
+- Tests: new group 86 (`tests/86-fmgraph-full-screen.spec.js`); groups 68 and 69 (the phone's Show) unchanged. Branch `claude/fmgraph-full-screen`.
+
 ## fmGraph: a chart's key leaves out rectangles at 0
 - The owner's idea (27 October 2026): a balance sheet with only cash and a loan lists those two in its key, not every account. A rectangle is left out of a Columns, Lines, Free or Spider chart's key when it is 0 in every period the chart shows, both in the numbers on screen and in the dashed outlines (A, or the model's own numbers); during Play both of its ends count, so the key doesn't flicker. One that can't be worked out stays listed; its bars are still drawn. **+N at 0** at the end of the key lists them too (faded, with their colour boxes), **Hide the N at 0** goes back. One helper, `keyChoice` in `05b-chart-render.js`, decides for every chart. Always on, nothing saved, no board file change.
 - Tests: new group 85 (`tests/85-fmgraph-key-zeros.spec.js`); no existing test needed changing.

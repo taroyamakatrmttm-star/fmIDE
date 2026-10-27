@@ -1,6 +1,6 @@
 // ============================================================
 // Sharing from a phone (step 17, phase P1b): ☰ → Share a picture of the board or the board
-// file, and ⇪ Share in Show (the chart shown), through the phone's own share sheet (shared
+// file, and ⇪ Share in the full screen (what it shows), through the phone's own share sheet (shared
 // shareFiles: the person picks where it goes; where a browser can't share files, it
 // downloads). The picture is drawn here, on the page: each widget's SVG with its look written
 // into it, drawn on a canvas under the board's and model's names, the widgets' names, a chart's
@@ -130,10 +130,12 @@ function shareBoardPicture(){
   const widgets = board.items.map(w => ({ el: document.querySelector('#barList .widget[data-id="' + w.id + '"]'), name: widgetName(w) })).filter(w => w.el);
   return sharePicture(board.name, widgets, model.name + ' - ' + board.name);
 }
-function shareWidgetPicture(w){
-  const el = $('showBody').querySelector('.show-widget');
-  if(!model || !el) return Promise.resolve(null);
-  return sharePicture(widgetName(w), [{ el, name: '' }], model.name + ' - ' + widgetName(w));
+// What the full screen shows (05h-phone-show.js): one under its own name, several under the board's.
+function shareShownPicture(list){
+  const widgets = list.map(w => ({ el: $('showBody').querySelector('.show-widget[data-id="' + w.id + '"]'), name: list.length > 1 ? widgetName(w) : '' })).filter(w => w.el);
+  if(!model || !widgets.length) return Promise.resolve(null);
+  const title = list.length > 1 ? board.name : widgetName(list[0]);
+  return sharePicture(title, widgets, model.name + ' - ' + title);
 }
 async function shareBoardFile(){
   if(!model || !board) return null;

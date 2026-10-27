@@ -8,6 +8,18 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'full-screen', date: '2026-10-27', title: 'Full screen: your bars and charts, bigger',
+    summary: '⛶ on a bar or chart puts it on the whole screen, without the rest of the page; tap others in the strip to show several at once.',
+    what: [
+      '⛶ at the top of every bar and chart opens it full screen, on a computer, an iPad or a phone. Where the browser can, it goes truly full screen.',
+      'The strip at the top lists the board\'s bars and charts: tap one to show it too, tap it again to take it away. Several share the screen, laid out to fit it.',
+      'It follows the sliders, A and the shared period like the board. ▶ Play in the strip plays between the ends chosen under Scenarios; a tap on the screen leaves it playing.',
+      'The strip fades after a few seconds, leaving only the charts; a tap, a key or the mouse brings it back. × stays in the corner.',
+    ],
+    why: 'To show a model to someone — in a meeting, on a projector or on an iPad — the charts should be big, with no buttons and lists around them.',
+    how: ['Press ⛶ on a chart.', 'Tap another bar or chart\'s name in the strip to show it too.', 'Press ▶ Play to watch them move together.', 'Press ×, Esc or the back gesture to come back.'],
+    notes: ['Which bars and charts were shown is not saved: the board and its file are unchanged.', 'An iPhone has no full screen for web pages: the view still covers the page.', 'On a phone, ⤢ Show in a quick look opens the same view, with the slider dock beside it.'],
+    see: ['full-screen'] },
   { id: 'key-hides-zeros', date: '2026-10-27', title: 'A chart\'s key leaves out rectangles at 0',
     summary: 'A balance sheet with only cash and a loan now lists those two in its key, not every account: the rectangles at 0 are left out, and "+N at 0" shows them.',
     what: [
