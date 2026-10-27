@@ -37,8 +37,7 @@
   const E2_FUNCTION_OPS = ['ln', 'exp', 'sqrt', 'int', 'trunc'].map(sym => OPS.indexOf(sym));
   // Phase E2b's choose, with them.
   const E2B_FUNCTION_OPS = ['choose'].map(sym => OPS.indexOf(sym));
-  // Height of an operator box with `count` named inputs: its symbol, then a row per input.
-  function operatorPortsHeight(count){ return 26 + count * 20 + 6; }
+  // The height of an operator box with named inputs is operatorPortsHeight (shared/canvas-geometry.js, 07-rendering.js).
 
   // ---------- built-in templates ----------
   let TEMPLATES = []; // built-in starter templates removed by request — this now holds only user-saved templates
@@ -303,9 +302,6 @@
   // A value rectangle's name, typed number and unit (parseRectText: src/shared/ir.js).
   function parseNode(n){ return parseRectText(n.text); }
 
-  function formatNum(v){
-    if(v === null || v === undefined || !isFinite(v)) return '?';
-    const r = Math.round(v * 1e6) / 1e6;
-    return r.toString();
-  }
+  // formatNum, formatByNumberFormat and shiftLabel: how a value is written on the canvas (shared with the showcase viewer).
+  // build:include shared/number-format.js
 
