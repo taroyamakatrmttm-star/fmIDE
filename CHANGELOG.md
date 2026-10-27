@@ -2,6 +2,9 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## An animated-GIF writer (internal, nothing visible yet)
+- `src/shared/gif.js` (`makeGif`) writes an animated GIF with no library — for a GIF of fmGraph's Play, which comes next; fmGraph carries it but nothing uses it yet. Test group 87 (branch `claude/shared-gif-encoder`).
+
 ## A tap's copied mouse events known by their own time (all three apps)
 - After a finger's tap the browser sends copies of it as mouse events, which the apps leave out (`isEmulatedMouse`, `src/shared/pointer-input.js`). They were recognised only if handled within 1 s of the lift by the page's clock, so a page busy for longer (a big model, a slow device, or a computer running the whole test suite) took them for a real mouse press: a double-tap's rename box in ExcelExporter's Tree View could lose its focus, or the tab fold. Now the lift and the copies are compared by the events' own timestamps (a copy carries the touch's time); ExcelExporter's dropping of a hold's or double-tap's copies (`dropTapCopies`) ends a second after the lift by the same timestamps instead of a timer. Test: group 30.
 

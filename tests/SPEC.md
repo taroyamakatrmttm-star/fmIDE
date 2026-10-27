@@ -1140,6 +1140,17 @@ Every colour box in the three apps opens the shared grid (`src/shared/colour-gri
 - **fmIDE**: the rectangle format window's Fill opens the grid with Greys, Colours and In use (another rectangle's `#fde68a`); Esc closes the grid, not the window; picking it and Save fill the rectangle. No page error.
 - **ExcelExporter**: the Excel style's Links font colour opens the grid with the Inputs fill `#eff6ff` in use; picking Black sets it and unticks Automatic, as the browser's box does. No page error.
 
+### 87. The animated-GIF writer (`tests/87-gif-encoder.spec.js`; `npm run test:gif`; the owner's idea of 27 October 2026, a GIF of fmGraph's Play)
+`src/shared/gif.js` (`makeGif`, `gifLzw`, `GIF_LIMITS`) in Node, read back by a small GIF decoder written in the test file; one test in a page, with Chromium's own decoder.
+- Four chart-like frames of 64 × 48 (white, grid greys, a bar, greys at its top): `GIF89a`, the size, the NETSCAPE2.0 loop 0, four frames, delays 100 / 40 / 1000 / 64 ms as 10 / 4 / 100 / 6 hundredths, disposal 1 each, the first frame whole and without a transparent index; every frame's pixels exactly as written; the second only the changed rectangle (20 × 11 at the bar), the third (nothing changed) one pixel, the fourth 20 × 31; a 16-colour table.
+- The loop as a count (3), none (`loop: null`: no loop block, one frame); clear pixels come out white, half-clear black as 127 grey; 5 ms as 1 hundredth.
+- LZW alone: 60,000 values in 256, 4 and 13 values (minimum code sizes 8, 2, 4), long enough to fill and clear the table many times, decode exactly; one value too.
+- A 96 × 64 frame of more than 255 colours: 256 entries in the table, every channel within 64 and on average under 16 of what was written.
+- Refused, saying what is wrong: no options; a width or height of 0, 2.5, `'2'` or over 4096; no frames or not a list; a frame without `rgba` or of the wrong size; a delay negative, `NaN` or text; a loop of −1 or 1.5.
+- 70 frames of 720 × 400 written in under 10 s (about 1–2 s here, 27 October 2026), the last frame read back exactly.
+- Chromium's `ImageDecoder` (on an `https://gif.test/` page the test answers itself) reads the same frames, durations and loop (for ever; 2) as the test's decoder — frames of a few colours exactly as written, a set with a frame of more than 255 colours as the test's decoder reads them.
+- With a deliberate LZW bug (the code size raised one code late), every test but the refusals fails (checked 27 October 2026).
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.

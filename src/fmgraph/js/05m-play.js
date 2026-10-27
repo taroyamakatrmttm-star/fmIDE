@@ -27,6 +27,9 @@ const PLAY_PAUSE_MS = 600;
 const PLAY_POSITIONS = 60;      // positions per swing (and one more: both ends)
 const PLAY_MIN_POSITIONS = 12;
 const PLAY_AHEAD_MS = 3000;     // a slow model has fewer positions, worked out within about this
+// The animated-GIF writer, for a GIF of the play (makeGif; not used yet: the button comes next).
+// build:include shared/gif.js
+
 let playChoice = { from: null, to: null, picked: false }; // 'model', 'sliders' or 'sc:' + name; until the page reloads
 let playing = null;
 
