@@ -5256,8 +5256,9 @@ const FILE_FORMATS = {
   // v7: the Dashboard's sliders, `cfg.graph.sliders` (step 19 B4).
   // v8: the Dashboard's charts, `cfg.graph.charts` (step 19 B5); v9: a chart there may be a
   // lines chart, `kind: 'lines'` (fmGraph's lines chart, board file 10); v10: a row's own
-  // format may carry Excel's own number format code, `style.excelFormat`.
-  'fmIDE-excel-mapping': { current: 10, label: 'ExcelExporter mapping file' },
+  // format may carry Excel's own number format code, `style.excelFormat`; v11: a Dashboard chart
+  // may be fmGraph's Free chart, `kind: 'free'` with its `pieces` (phase F3).
+  'fmIDE-excel-mapping': { current: 11, label: 'ExcelExporter mapping file' },
   // The person's own Excel style (step 11a): how every cell looks, by role.
   'fmIDE-excel-style':   { current: 1, label: 'ExcelExporter Excel style file' },
   // The layouts remembered per module (step 11b); v2: a module's block instances' layout, `instance` (step 11d).
@@ -5304,7 +5305,10 @@ const FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
     8: (d) => { d.version = 9; return d; },
     // v10: a row's own format may carry Excel's own number format code (`style.excelFormat`,
     // cleanExcelNumberFormat); a v9 file has none, so it reads as it is.
-    9: (d) => { d.version = 10; return d; } },
+    9: (d) => { d.version = 10; return d; },
+    // v11: a Dashboard chart may be fmGraph's Free chart (`kind: 'free'`, its `pieces`, each
+    // part's `piece`; phase F3); a v10 file has none, so it reads as it is.
+    10: (d) => { d.version = 11; return d; } },
   'fmIDE-excel-module-layouts': { 1: (d) => { d.version = 2; return d; } }
 });
 // Returns { error } or { kind, data (migrated copy), fromVersion, newer, newerParts }.
@@ -6129,12 +6133,12 @@ $('moduleLayoutsFileInput').addEventListener('change', () => {
 //   readGraphBoards(raw)         → { error } or { version, boards, scenarios, badScenarios, badSettings }
 //   matchGraphScenarios(read)    → the scenarios with each setting matched to a layout row
 //   matchGraphSliders(read)      → every board's sliders matched to layout rows, like ones once (B4)
-//   readGraphCharts(board, version) → a board's bars, columns, lines and flow charts (B5), not yet matched
+//   readGraphCharts(board, version) → a board's bars, columns, lines and flow charts (B5) and Free charts (F3), not yet matched
 //   matchGraphCharts(board)      → those charts matched to layout rows, for the Dashboard (B5)
-//   cleanGraphCopy(raw, periods) → the layout's cfg.graph (mapping file 4; sliders from file 7, charts from 8), checked
+//   cleanGraphCopy(raw, periods) → the layout's cfg.graph (mapping file 4; sliders from file 7, charts from 8, Free charts from 11), checked
 // ============================================================
 const GRAPH_BOARD_KIND = 'fmIDE-graph-board';
-const GRAPH_BOARD_VERSION = 13; // the newest version this reader knows (8: step 18's Tornado and Spider charts; 9: fmGraph's shared period — each chart still names the periods it shows, so nothing here reads it; 10: the lines chart; 11: fmGraph's shared colours — each bar, part and step still carries the colour it shows, so nothing here reads them; 12: fmGraph's common scale — each bar and chart still carries the scale it shows, so nothing here reads it; 13: fmGraph's Free chart, not carried to the Dashboard yet — counted, phase F3)
+const GRAPH_BOARD_VERSION = 13; // the newest version this reader knows (8: step 18's Tornado and Spider charts; 9: fmGraph's shared period — each chart still names the periods it shows, so nothing here reads it; 10: the lines chart; 11: fmGraph's shared colours — each bar, part and step still carries the colour it shows, so nothing here reads them; 12: fmGraph's common scale — each bar and chart still carries the scale it shows, so nothing here reads it; 13: fmGraph's Free chart, drawn on the Dashboard as stacked columns, phase F3)
 const GRAPH_LIMITS = { boards: 20, scenarios: 50, settings: 40, sliders: 40, boardName: 60, scenarioName: 40, rectName: 60, value: 1e15,
   items: 40, title: 80, groups: 12, parts: 30, steps: 40, lines: 12 };
 const GRAPH_FLOW_ROLES = ['start', 'add', 'subtract', 'total'];
@@ -6330,6 +6334,128 @@ function graphRect(r){
     && r.canvasId && r.nodeId && r.canvasId.length <= 200 && r.nodeId.length <= 200
     ? { canvasId: r.canvasId, nodeId: r.nodeId, name: graphText(r.name, GRAPH_LIMITS.rectName) } : null;
 }
+// ---------- fmGraph's Free chart (board file 13; phase F3 of docs/fmgraph-free-chart.md) ----------
+// A chart of pieces, each a stack of rectangles standing in a whole grid column (0–39) and
+// saying where it sits: on zero, on top of another piece (its highest point; its lowest when
+// that piece only goes down), where another piece ends, or at a number. Read as the format
+// says, and put right as fmGraph puts it right when it reads a file: `of` and `check` naming no
+// other piece read as on zero and none; pieces in a loop go on zero; two pieces in one column
+// with neither resting on the other (through any chain): the later moves to the next column it
+// fits; a piece with no column takes the next free one. Here a piece's `of` and `check` are its
+// place in the list (0, 1…), and its rectangles are the chart's `parts`, each with its `piece`.
+const GRAPH_FREE_LIMITS = { pieces: 40, parts: 30, columns: 40, level: 1e9, series: 255 };
+const GRAPH_FREE_SITS = ['zero', 'top', 'end', 'level'];
+// A level from a file (numbers as text too), cut to ±1e9; anything else 0.
+function graphFreeLevel(v){
+  const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN;
+  return Number.isFinite(n) ? Math.max(-GRAPH_FREE_LIMITS.level, Math.min(GRAPH_FREE_LIMITS.level, n)) : 0;
+}
+// The place of the piece pieces[i] rests on, or -1.
+function graphFreeRestsOn(pieces, i){
+  const s = pieces[i] && pieces[i].sits;
+  return s && (s.on === 'top' || s.on === 'end') && Number.isInteger(s.of) && s.of !== i && pieces[s.of] ? s.of : -1;
+}
+// Whether piece a rests on piece b, through any chain of pieces.
+function graphFreeOnChain(pieces, a, b){
+  const seen = new Set();
+  for(let q = graphFreeRestsOn(pieces, a); q >= 0 && !seen.has(q); q = graphFreeRestsOn(pieces, q)){
+    if(q === b) return true;
+    seen.add(q);
+  }
+  return false;
+}
+const graphFreeRelated = (pieces, a, b) => graphFreeOnChain(pieces, a, b) || graphFreeOnChain(pieces, b, a);
+// Loops on zero, then the columns put right (as above). Changes `pieces`; → { loops, moved }.
+function settleGraphFree(pieces){
+  const L = GRAPH_FREE_LIMITS.columns;
+  let loops = 0, moved = 0;
+  pieces.forEach((_, i) => {
+    const path = [];
+    for(let q = i; q >= 0; q = graphFreeRestsOn(pieces, q)){
+      const at = path.indexOf(q);
+      if(at >= 0){ path.slice(at).forEach(x => { pieces[x].sits = { on: 'zero' }; loops++; }); break; }
+      path.push(q);
+    }
+  });
+  pieces.forEach((p, i) => {
+    const fits = (col) => pieces.slice(0, i).every((q, j) => q.column !== col || graphFreeRelated(pieces, i, j));
+    if(fits(p.column)) return;
+    for(let k = 1; k < L; k++){
+      const col = (p.column + k) % L;
+      if(fits(col)){ p.column = col; moved++; return; }
+    }
+  });
+  pieces.forEach(p => {
+    if(p.column >= 0) return;
+    const placed = pieces.filter(x => x.column >= 0), used = new Set(placed.map(x => x.column));
+    const last = placed.length ? Math.max(...placed.map(x => x.column)) : -1;
+    p.column = 0;
+    for(let k = 1; k <= L; k++){ const col = (last + k) % L; if(!used.has(col)){ p.column = col; break; } }
+  });
+  return { loops, moved };
+}
+// A piece as the layout keeps it: { name, column, sits: { on, of | value }, minus?, check? }.
+function graphFreePieceOut(p){
+  const sits = p.sits.on === 'level' ? { on: 'level', value: p.sits.value } : Number.isInteger(p.sits.of) ? { on: p.sits.on, of: p.sits.of } : { on: 'zero' };
+  return Object.assign({ name: p.name, column: p.column, sits }, p.minus === true ? { minus: true } : {}, Number.isInteger(p.check) ? { check: p.check } : {});
+}
+// A Free chart's pieces and rectangles from a board file: { pieces, parts: [{ canvasId, nodeId, name, colour, piece }], bad }.
+function readGraphFree(it){
+  const pieces = [], parts = [], fileIds = new Map(), fileOf = [], fileCheck = [];
+  let bad = 0;
+  (Array.isArray(it.pieces) ? it.pieces : []).slice(0, GRAPH_FREE_LIMITS.pieces).forEach(raw => {
+    if(!raw || typeof raw !== 'object' || Array.isArray(raw)) return;
+    const i = pieces.length;
+    const col = Math.round(Number(raw.column));
+    const sits = raw.sits && typeof raw.sits === 'object' ? raw.sits : {};
+    const on = GRAPH_FREE_SITS.includes(sits.on) ? sits.on : 'zero';
+    (Array.isArray(raw.parts) ? raw.parts : []).slice(0, GRAPH_FREE_LIMITS.parts).forEach(x => {
+      const r = graphRect(x);
+      if(!r){ bad++; return; }
+      parts.push(Object.assign(r, { colour: graphColour(x.colour), piece: i }));
+    });
+    pieces.push({ name: graphText(raw.name, GRAPH_LIMITS.rectName), column: Number.isFinite(col) && col >= 0 && col < GRAPH_FREE_LIMITS.columns ? col : -1,
+      sits: on === 'level' ? { on, value: graphFreeLevel(sits.value) } : { on }, minus: raw.minus === true, check: null });
+    fileOf.push(typeof sits.of === 'string' ? sits.of : null);
+    fileCheck.push(typeof raw.check === 'string' ? raw.check : null);
+    if(typeof raw.id === 'string' && !fileIds.has(raw.id)) fileIds.set(raw.id, i);
+  });
+  pieces.forEach((p, i) => {
+    if(p.sits.on === 'top' || p.sits.on === 'end'){
+      const of = fileIds.get(fileOf[i]);
+      if(of !== undefined && of !== i) p.sits.of = of; else p.sits = { on: 'zero' };
+    }
+    const chk = fileIds.get(fileCheck[i]);
+    if(chk !== undefined && chk !== i) p.check = chk;
+  });
+  settleGraphFree(pieces);
+  return { pieces: pieces.map(graphFreePieceOut), parts, bad };
+}
+// The series a Free chart needs in Excel: per piece a hidden filler above and below 0, per
+// rectangle four (above and below 0, each as a positive and as a negative part).
+const graphFreeSeries = (c) => 2 * c.pieces.length + 4 * c.parts.length;
+// A Free chart's pieces as a layout keeps them (mapping file 11), checked: a name cut, a column
+// 0–39, `sits` one of the four (`of` another piece's place, a level cut to ±1e9), `check`
+// another piece's place; then loops and columns put right as from a board file. A piece that
+// isn't one is kept as an empty piece on zero, so the places after it stay as they were.
+function cleanGraphFreePieces(raw){
+  const pieces = (Array.isArray(raw) ? raw : []).slice(0, GRAPH_FREE_LIMITS.pieces).map(p => {
+    if(!p || typeof p !== 'object' || Array.isArray(p)) return { name: '', column: -1, sits: { on: 'zero' }, minus: false, check: null };
+    const col = Number(p.column), s = p.sits && typeof p.sits === 'object' && !Array.isArray(p.sits) ? p.sits : {};
+    const on = GRAPH_FREE_SITS.includes(s.on) ? s.on : 'zero';
+    return { name: graphText(p.name, GRAPH_LIMITS.rectName), column: Number.isInteger(col) && col >= 0 && col < GRAPH_FREE_LIMITS.columns ? col : -1,
+      sits: on === 'level' ? { on, value: graphFreeLevel(s.value) } : on === 'zero' ? { on } : { on, of: Number(s.of) },
+      minus: p.minus === true, check: Number.isInteger(p.check) ? p.check : null };
+  });
+  const n = pieces.length;
+  pieces.forEach((p, i) => {
+    if((p.sits.on === 'top' || p.sits.on === 'end') && !(Number.isInteger(p.sits.of) && p.sits.of >= 0 && p.sits.of < n && p.sits.of !== i)) p.sits = { on: 'zero' };
+    if(p.check !== null && !(p.check >= 0 && p.check < n && p.check !== i)) p.check = null;
+  });
+  settleGraphFree(pieces);
+  return pieces.map(graphFreePieceOut);
+}
+
 // A board's bars and its columns, lines and flow charts, in the board's order, each read as the
 // format says (text cut, colours checked, at most 12 groups of 30 parts, 12 lines, 40 steps); a scenario waterfall
 // is kept only to be listed as not carried, a Tornado or Spider not here (they become analyses).
@@ -6352,7 +6478,11 @@ function readGraphCharts(b, version){
     if(it.type !== 'chart') return;
     const title = graphText(it.title, GRAPH_LIMITS.title), wide = it.wide !== false;
     if(it.layout === 'scenarios'){ out.push({ kind: 'scenarios', title, wide, scale, parts: [], bad: 0 }); return; }
-    if(it.layout === 'free'){ out.push({ kind: 'free', title, wide, scale, parts: [], bad: 0 }); return; } // version 13: not carried yet (fmGraph's phase F3)
+    if(it.layout === 'free'){ // version 13 (phase F3)
+      const f = readGraphFree(it);
+      out.push({ kind: 'free', title, wide, scale, period: period(it.period), pieces: f.pieces, parts: f.parts, bad: f.bad });
+      return;
+    }
     if(it.layout === 'flow'){
       const parts = [];
       let bad = 0;
@@ -6397,15 +6527,14 @@ function readGraphCharts(b, version){
 }
 // A board's bars and charts matched to the open model, in the layout's form: each part kept
 // where the model has its rectangle (any value rectangle with a row, outside any block); a
-// chart with no part left is left out. A scenario waterfall, and a Free chart (board file 13), is
-// counted as not carried.
-// → { charts: [cfg.graph.charts entry], left: { notFound, bad, empty, scenarios, free } }
+// chart with no part left is left out. A scenario waterfall is counted as not carried, and so is
+// a Free chart needing more series than an Excel chart holds (255).
+// → { charts: [cfg.graph.charts entry], left: { notFound, bad, empty, scenarios, tooManySeries } }
 function matchGraphCharts(board){
-  const left = { notFound: 0, bad: 0, empty: 0, scenarios: 0, free: 0 };
+  const left = { notFound: 0, bad: 0, empty: 0, scenarios: 0, tooManySeries: 0 };
   const charts = [];
   (board && board.charts || []).forEach(c => {
     if(c.kind === 'scenarios'){ left.scenarios++; return; }
-    if(c.kind === 'free'){ left.free++; return; }
     left.bad += c.bad;
     const parts = [];
     c.parts.forEach(x => {
@@ -6415,11 +6544,16 @@ function matchGraphCharts(board){
       if(x.colour) part.colour = x.colour;
       if(c.kind === 'flow') part.role = x.role;
       if(c.kind === 'columns') part.group = x.group;
+      if(c.kind === 'free') part.piece = x.piece;
       parts.push(part);
     });
     if(!parts.length){ left.empty++; return; }
     const out = { kind: c.kind, title: c.title, wide: c.wide, scale: c.scale, parts };
-    if(c.kind === 'flow') out.period = c.period < model.periods.length ? c.period : 0; // as fmGraph reads a period it hasn't got
+    if(c.kind === 'free'){
+      out.pieces = c.pieces.map(p => JSON.parse(JSON.stringify(p)));
+      if(graphFreeSeries(out) > GRAPH_FREE_LIMITS.series){ left.tooManySeries++; return; }
+    }
+    if(c.kind === 'flow' || c.kind === 'free') out.period = c.period < model.periods.length ? c.period : 0; // as fmGraph reads a period it hasn't got
     else out.periods = cleanGraphPeriods(c.periods, model.periods.length);
     if(c.kind === 'columns') out.groups = c.groups.slice();
     charts.push(out);
@@ -6431,7 +6565,7 @@ function matchGraphCharts(board){
 function graphChartName(c){
   if(c.title) return c.title;
   const names = c.parts.map(x => x.name).filter(Boolean);
-  const text = c.kind === 'bar' ? (names[0] || 'Bar') : names.join(', ') || (c.kind === 'flow' ? 'Waterfall' : c.kind === 'lines' ? 'Lines' : 'Columns');
+  const text = c.kind === 'bar' ? (names[0] || 'Bar') : c.kind === 'free' ? 'Free' : names.join(', ') || (c.kind === 'flow' ? 'Waterfall' : c.kind === 'lines' ? 'Lines' : 'Columns');
   return text.length > GRAPH_LIMITS.title ? text.slice(0, GRAPH_LIMITS.title - 1) + '…' : text;
 }
 
@@ -6504,7 +6638,9 @@ function row0Label(rowId){ const r = mapping.rows.find(x => x.id === rowId); ret
 //     charts: [{ kind: 'bar' | 'columns' | 'lines' | 'flow', title, wide, scale: { min, max } | null,
 //       periods (bar, columns, lines) | period (flow), groups: [names] (columns),
 //       parts: [{ row, name, colour?, role (flow), group (columns) }] }] (mapping file 8, B5;
-//       `lines`, a line per part, mapping file 9) }
+//       `lines`, a line per part, mapping file 9;
+//       `free`, fmGraph's Free chart, mapping file 11: period, pieces: [{ name, column, sits: { on, of | value },
+//       minus?, check? }] (`of` and `check` a piece's place), parts: [{ row, name, colour?, piece }]) }
 function defaultGraphCopy(){ return { from: [], board: '', scenarios: [], sliders: [], charts: [] }; }
 function cleanGraphCopy(raw, periodCount){
   const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
@@ -6538,13 +6674,15 @@ function cleanGraphCopy(raw, periodCount){
   });
   // The Dashboard's charts: a kind not known, or a chart with no part, is left out.
   (Array.isArray(src.charts) ? src.charts : []).forEach(c => {
-    if(!c || typeof c !== 'object' || Array.isArray(c) || !['bar', 'columns', 'lines', 'flow'].includes(c.kind)) return;
+    if(!c || typeof c !== 'object' || Array.isArray(c) || !['bar', 'columns', 'lines', 'flow', 'free'].includes(c.kind)) return;
     if(out.charts.length >= GRAPH_LIMITS.items) return;
     const chart = { kind: c.kind, title: graphText(c.title, GRAPH_LIMITS.title), wide: c.wide === true, scale: graphScale(c.scale) };
-    if(c.kind === 'flow'){ const n = Number(c.period); chart.period = Number.isInteger(n) && n >= 0 && n < Math.max(1, periodCount || 1) ? n : 0; }
+    if(c.kind === 'flow' || c.kind === 'free'){ const n = Number(c.period); chart.period = Number.isInteger(n) && n >= 0 && n < Math.max(1, periodCount || 1) ? n : 0; }
     else chart.periods = cleanGraphPeriods(c.periods, periodCount);
     if(c.kind === 'columns') chart.groups = (Array.isArray(c.groups) ? c.groups : []).slice(0, GRAPH_LIMITS.groups).map(g => graphText(g, GRAPH_LIMITS.rectName));
-    const most = c.kind === 'bar' ? 1 : c.kind === 'flow' ? GRAPH_LIMITS.steps : c.kind === 'lines' ? GRAPH_LIMITS.lines : GRAPH_LIMITS.groups * GRAPH_LIMITS.parts;
+    if(c.kind === 'free') chart.pieces = cleanGraphFreePieces(c.pieces);
+    const most = c.kind === 'bar' ? 1 : c.kind === 'flow' ? GRAPH_LIMITS.steps : c.kind === 'lines' ? GRAPH_LIMITS.lines
+      : c.kind === 'free' ? GRAPH_FREE_LIMITS.pieces * GRAPH_FREE_LIMITS.parts : GRAPH_LIMITS.groups * GRAPH_LIMITS.parts;
     chart.parts = [];
     (Array.isArray(c.parts) ? c.parts : []).forEach(x => {
       if(!x || typeof x !== 'object' || typeof x.row !== 'string' || !x.row || x.row.length > 400 || chart.parts.length >= most) return;
@@ -6556,6 +6694,11 @@ function cleanGraphCopy(raw, periodCount){
         const g = Number(x.group);
         if(!Number.isInteger(g) || g < 0 || g >= chart.groups.length) return;
         part.group = g;
+      }
+      if(c.kind === 'free'){
+        const k = Number(x.piece);
+        if(!Number.isInteger(k) || k < 0 || k >= chart.pieces.length || chart.parts.filter(y => y.piece === k).length >= GRAPH_FREE_LIMITS.parts) return;
+        part.piece = k;
       }
       chart.parts.push(part);
     });
@@ -11145,7 +11288,7 @@ const EXCEL_HELP_TOPICS = [
       { see: ['fmgraph-charts', 'fmgraph-in-excel', 'inputs-tab'] },
     ] },
   { id: 'fmgraph-charts', group: 'inputs', title: 'fmGraph\'s charts on the Dashboard',
-    keywords: 'fmgraph graph board bar bars chart charts columns stacked lines line flow waterfall dashboard colour scale',
+    keywords: 'fmgraph graph board bar bars chart charts columns stacked lines line flow waterfall free piece pieces overlaps dashboard colour scale',
     summary: 'The picked board\'s bars and charts become Excel charts on the Dashboard, under the sliders, and follow them.',
     body: [
       { p: 'Layout → Use fmGraph boards… lists the picked board\'s bars and charts with a tick box each. Press Use, then ⬇ Generate .xlsx. They go on the Dashboard, under the sliders, in the board\'s order: a wide one takes the full width, narrow ones sit two to a row. A model with charts but no sliders still gets a Dashboard.' },
@@ -11154,9 +11297,12 @@ const EXCEL_HELP_TOPICS = [
         'A columns chart becomes stacked columns, one series per rectangle. With several groups, a small table beside the chart has a column per period and group, so each group stacks on its own.',
         'A lines chart becomes an Excel line chart, one line per rectangle over its periods, each read straight from the rectangle\'s row, its points marked.',
         'A flow becomes a waterfall. Beside it (from column N), rows of formulas work it out: Value, From and To (the running total, as fmGraph works it out), then the parts Excel stacks: an invisible Base, and Total, Rise and Fall above and below 0.',
+        'A Free chart becomes stacked columns, one column per grid column. Beside it, three tables of formulas work it out: the pieces (where each sits, its Top, Bottom and End, its check ✓ or ✗), the rectangles (their From and To), and the chart\'s series, with a hidden filler under each piece. The key lists each rectangle once, in its colour.',
       ] },
+      { p: 'In a Free chart, the pieces of one column stack in the order they rest on each other. A piece that hangs back into the one under it (for example a negative piece on top of another) can\'t be drawn that way in Excel: it is drawn just beyond the piece under it, and its Overlaps cell says "overlaps". Its numbers in the table are still right. Totals are in the table, not on the chart.' },
       { p: 'Every chart reads its numbers from the model\'s rows, so it moves with the sliders, the Global Case and anything you change in Excel. Titles, names and the colours you picked in fmGraph come along; a fixed scale becomes the axis\'s minimum and maximum. Before Excel recalculates, the charts show fmIDE\'s numbers.' },
       { tip: 'A rectangle left out of the workbook, or made a constant, can\'t be charted: ⬇ Generate says which.' },
+      { tip: 'An Excel chart holds at most 255 series, and a Free chart needs two for each piece and four for each rectangle. A larger one is listed in the window as not carried.' },
       { see: ['fmgraph-dashboard', 'fmgraph-in-excel'] },
     ] },
   { id: 'sensitivity', group: 'inputs', title: 'Sensitivity: the Tornado and the Spider',
@@ -11258,9 +11404,20 @@ const EXCEL_HELP_TOPICS = [
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'fmgraph-free-chart-dashboard', date: '2026-10-27', title: 'fmGraph\'s Free chart on the Dashboard',
+    summary: 'A Free chart on an fmGraph board, columns and waterfalls together, now becomes an Excel chart on the Dashboard that follows the sliders.',
+    what: [
+      'Use fmGraph boards… lists a board\'s Free charts with its other charts. Each becomes stacked columns on the Dashboard, one column per grid column, with every piece where fmGraph puts it: on zero, on top of another, where another ends, or at a number.',
+      'Beside the chart, tables of formulas work it out: each piece\'s Top, Bottom, End and check, each rectangle\'s From and To, and the chart\'s series. Move a slider and the pieces resting on a moved piece move with it, across 0 too.',
+      'A piece that hangs back into the one under it can\'t be drawn that way in Excel: it is drawn just beyond it, and its Overlaps cell says so.',
+    ],
+    why: 'The balance sheet and the cash flow that moved it, in one picture, should travel with the workbook like fmGraph\'s other charts.',
+    how: ['Layout → Use fmGraph boards…, keep the Free chart ticked, and press Use.', 'Press ⬇ Generate .xlsx and open the Dashboard tab.'],
+    notes: ['An Excel chart holds at most 255 series; a larger Free chart is listed as not carried.', 'Totals are in the table beside the chart, not on it.'],
+    see: ['fmgraph-charts'] },
   { id: 'fmgraph-free-chart-listed', date: '2026-10-27', title: 'fmGraph boards with a Free chart',
     summary: 'Use fmGraph boards… reads fmGraph\'s newest board files, which may hold its new Free chart.',
-    what: ['Boards saved by the newest fmGraph (board file version 13) open in Use fmGraph boards… as before.', 'A Free chart on a board is not drawn on the Dashboard yet: the window lists it as not carried.'],
+    what: ['Boards saved by the newest fmGraph (board file version 13) open in Use fmGraph boards… as before.', 'At first a Free chart was listed as not carried; it is now drawn on the Dashboard (see fmGraph\'s Free chart on the Dashboard).'],
     why: 'fmGraph\'s new Free chart changed its board file; without this, ExcelExporter would have refused every board saved since.',
     how: ['Layout → Use fmGraph boards… as before.', 'Read the list of what is not carried at the bottom of the window.'],
     see: ['fmgraph-charts'] },
@@ -13644,8 +13801,9 @@ function openGraphBoardsWindow(read, source){
       name.textContent = graphChartName(c);
       const what = document.createElement('span');
       what.className = 'graph-scn-what';
-      const kind = c.kind === 'bar' ? 'Bar' : c.kind === 'flow' ? 'Waterfall' : c.kind === 'lines' ? 'Lines' : 'Stacked columns';
+      const kind = c.kind === 'bar' ? 'Bar' : c.kind === 'flow' ? 'Waterfall' : c.kind === 'lines' ? 'Lines' : c.kind === 'free' ? 'Free' : 'Stacked columns';
       what.textContent = kind + ' · ' + (c.kind === 'flow' ? (periodLabels()[c.period] || '') + ' · ' + c.parts.length + ' step' + (c.parts.length === 1 ? '' : 's')
+        : c.kind === 'free' ? (periodLabels()[c.period] || '') + ' · ' + c.pieces.length + ' piece' + (c.pieces.length === 1 ? '' : 's')
         : graphPeriodsText(c.periods, periodLabels()) + (c.kind === 'columns' ? ' · ' + c.parts.length + ' part' + (c.parts.length === 1 ? '' : 's') : c.kind === 'lines' ? ' · ' + c.parts.length + ' line' + (c.parts.length === 1 ? '' : 's') : '')) +
         (c.wide ? ' · wide' : '');
       label.append(cb, name, what);
@@ -13678,7 +13836,7 @@ function openGraphBoardsWindow(read, source){
     if(sIn) lines.push(sIn + ' input' + (sIn === 1 ? '' : 's') + ' of the Tornado and Spider charts left out (not in this model, inside a block, not an input, or not readable).');
     const cl = chartsMatched.left;
     if(cl.scenarios) lines.push(cl.scenarios + ' scenario waterfall' + (cl.scenarios === 1 ? '' : 's') + ' not carried: Excel would need every case worked out at once.');
-    if(cl.free) lines.push(cl.free + ' Free chart' + (cl.free === 1 ? '' : 's') + ' not carried yet.');
+    if(cl.tooManySeries) lines.push(cl.tooManySeries + ' Free chart' + (cl.tooManySeries === 1 ? '' : 's') + ' not carried: an Excel chart holds at most ' + GRAPH_FREE_LIMITS.series + ' series.');
     const cOut = (cl.notFound || 0) + (cl.bad || 0);
     if(cOut) lines.push(cOut + ' rectangle' + (cOut === 1 ? '' : 's') + ' of the bars and charts left out (not in this model, inside a block, or not readable).');
     if(cl.empty) lines.push(cl.empty + ' bar' + (cl.empty === 1 ? '' : 's') + ' or chart' + (cl.empty === 1 ? '' : 's') + ' with nothing of this model to show.');
@@ -13855,7 +14013,9 @@ function importGraphBoardsText(text, fileName){
 // period and group, so each group stacks on its own); a flow a stacked-column waterfall over
 // helper rows beside it (from column N, each table its title on a row of its own) — Value, From, To (the running total, as fmGraph works it out), the
 // parts above and below 0, an invisible Base, then Total / Rise / Fall each above and below 0
-// (Excel stacks the two signs apart) — all formulas, so the charts follow the sliders.
+// (Excel stacks the two signs apart) — all formulas, so the charts follow the sliders; a Free
+// chart (phase F3, layout file 11) stacked columns over hidden fillers, one category per grid
+// column, with its pieces, rectangles and series as helper rows beside it (dashFreeChart).
 // ============================================================
 const DASH_POSITIONS = 30000;  // the most a form-control scroll bar takes
 const DASH_FIRST_ROW = 5;      // row 1 title, 2 the note, 4 the headers
@@ -13947,7 +14107,7 @@ const DASH_FLOW_COLOURS = { total: '64748B', rise: '16A34A', fall: 'DC2626' };
 function graphChartPlan(){
   if(!mapping || !graphChartsInLayout()) return null;
   const byId = new Map(mapping.rows.map(r => [r.id, r]));
-  const charts = [], missing = [], gone = [];
+  const charts = [], missing = [], gone = [], tooMany = [];
   mapping.cfg.graph.charts.forEach(c => {
     const parts = c.parts.filter(x => {
       const r = byId.get(x.row);
@@ -13957,11 +14117,13 @@ function graphChartPlan(){
       return false;
     });
     if(!parts.length){ gone.push(graphChartName(c)); return; }
+    if(c.kind === 'free' && graphFreeSeries(Object.assign({}, c, { parts })) > GRAPH_FREE_LIMITS.series){ tooMany.push(graphChartName(c)); return; }
     charts.push(Object.assign({}, c, { parts, name: graphChartName(c) }));
   });
   const notes = [];
   if(missing.length) notes.push('Not in the Dashboard\'s charts (left out of the workbook, or a constant): ' + missing.join(', ') + '.');
   if(gone.length) notes.push('Charts not written (none of their rows is in the workbook): ' + gone.join(', ') + '.');
+  if(tooMany.length) notes.push('Free charts not written (an Excel chart holds at most ' + GRAPH_FREE_LIMITS.series + ' series): ' + tooMany.join(', ') + '.');
   return { charts, notes };
 }
 function graphChartNotes(){ const p = graphChartPlan(); return p ? p.notes : []; }
@@ -14004,6 +14166,226 @@ function dashFlowParts(from, to){
 const DASH_FLOW_ROWS = ['Value', 'From', 'To', 'Above 0', 'Below 0', 'Base (hidden)',
   'Total above 0', 'Total below 0', 'Rise above 0', 'Rise below 0', 'Fall above 0', 'Fall below 0'];
 
+// ---------- fmGraph's Free chart (phase F3 of docs/fmgraph-free-chart.md) ----------
+// Drawn as stacked columns, one category per grid column. Excel stacks positive numbers up from
+// 0 and negative ones down from 0, each in the order of the series, so: per piece a hidden
+// filler above 0 (from 0, or what the piece under it in its column was drawn to, up to its
+// lowest point above 0) and one below 0; per rectangle four series — its part above 0 while it
+// is negative, then while it is positive, its part below 0 while positive, then while negative —
+// so a rectangle changing sign keeps its place in the stack (negatives hang down from where the
+// piece sits, the last lowest; positives go up, the last highest). The pieces of a column stack
+// in the order they rest on each other. A piece hanging back into the one under it can't be
+// drawn so: it is drawn pushed aside, and its Overlaps cell says "overlaps" (the owner's choice
+// 1a). Totals are in the helper table only (2a); the key lists each rectangle once (3a).
+const DASH_FREE_ROWS = ['Column', 'Sits', 'Value', 'Up', 'Down', 'Sits at', 'Top', 'Bottom', 'End', 'Check',
+  'Filler above 0', 'Drawn up to', 'Filler below 0', 'Drawn down to', 'Overlaps'];
+const DASH_FREE_RECT_COLS = ['Value', 'From', 'To', 'Above 0', 'Below 0'];
+// Excel's own series colours (the Office theme), for a rectangle the board gives none: the same
+// colour on its four series.
+const DASH_FREE_COLOURS = ['4472C4', 'ED7D31', 'A5A5A5', 'FFC000', '5B9BD5', '70AD47', '264478', '9E480E', '636363', '997300'];
+// A piece's name as fmGraph shows it: its own, else its one rectangle's, else "Piece n"; "−" with Minus.
+function dashFreeLabel(c, i){
+  const p = c.pieces[i], parts = c.parts.filter(x => x.piece === i);
+  return (p.minus ? '−' : '') + (p.name || (parts.length === 1 ? parts[0].name : '') || 'Piece ' + (i + 1));
+}
+// The pieces in the order Excel stacks them: in each column a piece after every one it rests on
+// (through any chain), else in the list's order. → { order, under: [the piece drawn just before
+// in its column, or -1] }
+function dashFreeOrder(c){
+  const ps = c.pieces;
+  const depth = ps.map((p, i) => ps.filter((q, j) => j !== i && q.column === p.column && graphFreeOnChain(ps, i, j)).length);
+  const order = ps.map((_, i) => i).sort((a, b) => depth[a] - depth[b] || a - b);
+  const under = ps.map(() => -1);
+  order.forEach((i, k) => { const before = order.slice(0, k).filter(j => ps[j].column === ps[i].column); under[i] = before.length ? before[before.length - 1] : -1; });
+  return { order, under };
+}
+// What the helper rows hold, from fmIDE's numbers (Excel shows it until it recalculates), as
+// fmGraph works it out: per piece { value, up, down, base, top, bottom, end, parts: [{ value,
+// from, to, above, below }], check, fillerUp, drawnUp, fillerDown, drawnDown, overlaps } or null
+// (a number that can't be worked out, or resting on one).
+function dashFreeFigures(c, num){
+  const ps = c.pieces, figs = ps.map(() => undefined);
+  const figure = (i, depth) => {
+    if(figs[i] !== undefined) return figs[i];
+    if(depth > ps.length) return null;
+    const p = ps[i];
+    const vals = c.parts.filter(x => x.piece === i).map(x => { const v = num(x.row, c.period); return v === null ? null : p.minus ? -v : v; });
+    let f = null;
+    if(!vals.includes(null)){
+      const up = vals.reduce((s, v) => s + Math.max(0, v), 0), down = vals.reduce((s, v) => s + Math.min(0, v), 0);
+      const value = vals.reduce((s, v) => s + v, 0);
+      const of = graphFreeRestsOn(ps, i);
+      let base = 0;
+      if(p.sits.on === 'level') base = p.sits.value;
+      else if(of >= 0){ const o = figure(of, depth + 1); base = !o ? null : p.sits.on === 'end' ? o.end : (o.up > 0 || o.down === 0 ? o.top : o.bottom); }
+      if(base !== null){
+        let u = base, d = base;
+        const parts = vals.map(v => {
+          const from = v >= 0 ? u : d, to = from + v;
+          if(v >= 0) u = to; else d = to;
+          const lo = Math.min(from, to), hi = Math.max(from, to);
+          return { value: v, from, to, above: Math.max(0, hi) - Math.max(0, lo), below: Math.min(0, lo) - Math.min(0, hi) };
+        });
+        f = { value, up, down, base, top: base + up, bottom: base + down, end: base + value, parts };
+      }
+    }
+    figs[i] = f;
+    return f;
+  };
+  ps.forEach((_, i) => figure(i, 0));
+  const { order, under } = dashFreeOrder(c);
+  order.forEach(i => {
+    const f = figs[i];
+    if(!f) return;
+    const q = under[i] >= 0 ? figs[under[i]] : { drawnUp: 0, drawnDown: 0 };
+    if(!q || q.drawnUp === null){ Object.assign(f, { fillerUp: null, drawnUp: null, fillerDown: null, drawnDown: null, overlaps: null }); return; }
+    f.fillerUp = Math.max(0, Math.max(0, f.bottom) - q.drawnUp);
+    f.drawnUp = q.drawnUp + f.fillerUp + f.parts.reduce((s, x) => s + x.above, 0);
+    f.fillerDown = Math.min(0, Math.min(0, f.top) - q.drawnDown);
+    f.drawnDown = q.drawnDown + f.fillerDown + f.parts.reduce((s, x) => s + x.below, 0);
+    f.overlaps = (f.top > 0 && Math.max(0, f.bottom) < q.drawnUp - 1e-9) || (f.bottom < 0 && Math.min(0, f.top) > q.drawnDown + 1e-9);
+  });
+  ps.forEach((p, i) => {
+    const f = figs[i];
+    if(!f) return;
+    const o = Number.isInteger(p.check) ? figs[p.check] : undefined;
+    f.check = o === undefined ? null : !o ? null : Math.abs(f.value - o.end) <= 1e-6 * Math.max(1, Math.abs(f.value), Math.abs(o.end)) ? '✓' : '✗';
+  });
+  return { figs, order, under };
+}
+// The chart and its helper block (from row `top`, labels in column N): the pieces (a column
+// each), the rectangles (a row each), then the chart's series (a row each, a column per grid
+// column) — all formulas, so the chart follows the sliders.
+function dashFreeChart(c, top, ctx, valAxis){
+  const { sheet, cellPos, num, labels, styles } = ctx;
+  const fmt = mapping.cfg.fallbackFormat || 'General';
+  const L = (k) => colLetter(k), N = L(DASH_TABLE_COL);
+  const ps = c.pieces, n = ps.length;
+  const { figs, order, under } = dashFreeFigures(c, num);
+  const rects = [];
+  ps.forEach((_, i) => c.parts.forEach((x, j) => { if(x.piece === i) rects.push({ piece: i, part: x, k: rects.filter(r => r.piece === i).length }); }));
+  const fig = (i) => figs[i];
+  const rectFig = (r) => figs[r.piece] ? figs[r.piece].parts[r.k] : null;
+  const columns = Math.max(...ps.map(p => p.column)) + 1;
+  const head = top + 1;
+  const PC = (i) => L(DASH_TABLE_COL + 1 + i);
+  const PR = (name) => head + 1 + DASH_FREE_ROWS.indexOf(name);
+  const rectHead = PR('Overlaps') + 2;
+  const RC = (name) => L(DASH_TABLE_COL + 1 + DASH_FREE_RECT_COLS.indexOf(name));
+  rects.forEach((r, k) => { r.row = rectHead + 1 + k; });
+  const serHead = rectHead + rects.length + 2;
+  const GC = (col) => L(DASH_TABLE_COL + 1 + col);
+  // The series, in Excel's order (see above).
+  const series = [];
+  order.forEach(i => {
+    const mine = rects.filter(r => r.piece === i), rev = mine.slice().reverse();
+    series.push({ piece: i, filler: 'up' });
+    rev.forEach(r => series.push({ piece: i, rect: r, side: 'Above 0', neg: true }));
+    mine.forEach(r => series.push({ piece: i, rect: r, side: 'Above 0', neg: false }));
+    series.push({ piece: i, filler: 'down' });
+    rev.forEach(r => series.push({ piece: i, rect: r, side: 'Below 0', neg: false }));
+    mine.forEach(r => series.push({ piece: i, rect: r, side: 'Below 0', neg: true }));
+  });
+  series.forEach((s, k) => { s.row = serHead + 1 + k; });
+  const label = (i) => dashFreeLabel(c, i);
+  const catNames = Array.from({ length: columns }, (_, col) => order.filter(i => ps[i].column === col).map(label).join(' / '));
+  // A colour per rectangle: the board's, else Excel's own in turn.
+  const colourOf = new Map();
+  let spare = 0;
+  c.parts.forEach(x => { if(!colourOf.has(x.row)) colourOf.set(x.row, x.colour ? x.colour.slice(1).toUpperCase() : DASH_FREE_COLOURS[spare++ % DASH_FREE_COLOURS.length]); });
+  const seriesValue = (s) => {
+    const f = fig(s.piece);
+    if(!f) return null;
+    if(s.filler) return s.filler === 'up' ? f.fillerUp : f.fillerDown;
+    const q = rectFig(s.rect);
+    return (s.neg ? q.value < 0 : q.value >= 0) ? (s.side === 'Above 0' ? q.above : q.below) : 0;
+  };
+  const cat = { ref: dashRange(sheet, GC(0), serHead, GC(columns - 1)), values: catNames };
+  const seen = new Set();
+  const chartSeries = series.map(s => {
+    const val = { ref: dashRange(sheet, GC(0), s.row, GC(columns - 1)), values: catNames.map((_, col) => col === ps[s.piece].column ? seriesValue(s) : null), numFmt: fmt };
+    if(s.filler) return { name: { text: label(s.piece) + (s.filler === 'up' ? ' filler above 0' : ' filler below 0') }, cat, val, noFill: true };
+    const x = s.rect.part;
+    const key = !s.neg && s.side === 'Above 0' && !seen.has(x.row);
+    if(key) seen.add(x.row);
+    return Object.assign({ name: { text: x.name }, cat, val, color: colourOf.get(x.row) }, key ? {} : { noLegend: true });
+  });
+  const chart = { type: 'bar', title: c.name, bar: { dir: 'col', grouping: 'stacked', gapWidth: 50 }, legend: 'b', valAxis, series: chartSeries };
+  const write = (ws) => {
+    const calc = (addr, f, v) => { ws[addr] = Object.assign({ t: 'n', f, s: styles.calc }, v === null || v === undefined ? {} : { v }); };
+    const calcText = (addr, f, v) => { ws[addr] = Object.assign({ t: 's', f, s: styles.calc }, v ? { v } : {}); };
+    ws[N + top] = textCell('Chart data: ' + c.name + ' (' + (labels[c.period] || '') + ')', styles.title);
+    // The pieces.
+    ws[N + head] = textCell('Piece', styles.head);
+    DASH_FREE_ROWS.forEach(r => { ws[N + PR(r)] = textCell(r, styles.label); });
+    ps.forEach((p, i) => {
+      const C = PC(i), at = (r) => C + PR(r), f = fig(i);
+      const mine = rects.filter(r => r.piece === i);
+      const v = (k) => f ? f[k] : null;
+      const sum = (wrap) => mine.length ? mine.map(r => wrap(RC('Value') + r.row)).join('+') : '0';
+      ws[C + head] = textCell(label(i), styles.head);
+      ws[at('Column')] = { t: 'n', v: p.column + 1, s: styles.calc };
+      ws[at('Sits')] = textCell(p.sits.on === 'zero' ? 'on zero' : p.sits.on === 'level' ? 'at ' + p.sits.value
+        : (p.sits.on === 'top' ? 'on top of ' : 'where ') + label(p.sits.of) + (p.sits.on === 'end' ? ' ends' : ''), styles.label);
+      calc(at('Value'), sum(x => x), v('value'));
+      calc(at('Up'), sum(x => 'MAX(0,' + x + ')'), v('up'));
+      calc(at('Down'), sum(x => 'MIN(0,' + x + ')'), v('down'));
+      const of = graphFreeRestsOn(ps, i), O = of >= 0 ? PC(of) : null;
+      if(p.sits.on === 'level') ws[at('Sits at')] = { t: 'n', v: p.sits.value, s: styles.calc };
+      else if(of < 0) ws[at('Sits at')] = { t: 'n', v: 0, s: styles.calc };
+      else if(p.sits.on === 'end') calc(at('Sits at'), O + PR('End'), v('base'));
+      else calc(at('Sits at'), 'IF(OR(' + O + PR('Up') + '>0,' + O + PR('Down') + '=0),' + O + PR('Top') + ',' + O + PR('Bottom') + ')', v('base'));
+      calc(at('Top'), at('Sits at') + '+' + at('Up'), v('top'));
+      calc(at('Bottom'), at('Sits at') + '+' + at('Down'), v('bottom'));
+      calc(at('End'), at('Sits at') + '+' + at('Value'), v('end'));
+      if(Number.isInteger(p.check) && ps[p.check]){
+        const a = at('Value'), b = PC(p.check) + PR('End');
+        calcText(at('Check'), 'IF(ABS(' + a + '-' + b + ')<=0.000001*MAX(1,ABS(' + a + '),ABS(' + b + ')),"✓","✗")', v('check'));
+      }
+      const q = under[i];
+      const upTo = q < 0 ? '0' : PC(q) + PR('Drawn up to'), downTo = q < 0 ? '0' : PC(q) + PR('Drawn down to');
+      const sumOf = (col) => mine.length ? '+' + mine.map(r => RC(col) + r.row).join('+') : '';
+      calc(at('Filler above 0'), 'MAX(0,MAX(0,' + at('Bottom') + ')-' + upTo + ')', v('fillerUp'));
+      calc(at('Drawn up to'), upTo + '+' + at('Filler above 0') + sumOf('Above 0'), v('drawnUp'));
+      calc(at('Filler below 0'), 'MIN(0,MIN(0,' + at('Top') + ')-' + downTo + ')', v('fillerDown'));
+      calc(at('Drawn down to'), downTo + '+' + at('Filler below 0') + sumOf('Below 0'), v('drawnDown'));
+      calcText(at('Overlaps'), 'IF(OR(AND(' + at('Top') + '>0,MAX(0,' + at('Bottom') + ')<' + upTo + '-0.000000001),AND(' +
+        at('Bottom') + '<0,MIN(0,' + at('Top') + ')>' + downTo + '+0.000000001)),"overlaps","")', f && f.overlaps ? 'overlaps' : '');
+    });
+    // The rectangles: positives up from where the piece sits, negatives down, in order.
+    ws[N + rectHead] = textCell('Rectangle', styles.head);
+    DASH_FREE_RECT_COLS.forEach(h => { ws[RC(h) + rectHead] = textCell(h, styles.head); });
+    rects.forEach(r => {
+      const p = ps[r.piece], row = r.row, base = PC(r.piece) + PR('Sits at'), q = rectFig(r);
+      const pos = cellPos[r.part.row];
+      const before = rects.filter(y => y.piece === r.piece && y.k < r.k).map(y => RC('Value') + y.row);
+      const V = RC('Value') + row, F = RC('From') + row, T = RC('To') + row;
+      ws[N + row] = textCell(label(r.piece) + ' · ' + r.part.name, styles.label);
+      ws[V] = Object.assign({ t: 'n', f: (p.minus ? '-' : '') + sheetRef(pos.tabName, '$' + colLetter(periodCol(c.period)), pos.row, sheet, true), s: styles.link }, q ? { v: q.value } : {});
+      calc(F, before.length ? base + '+IF(' + V + '>=0,' + before.map(x => 'MAX(0,' + x + ')').join('+') + ',' + before.map(x => 'MIN(0,' + x + ')').join('+') + ')' : base, q && q.from);
+      calc(T, F + '+' + V, q && q.to);
+      calc(RC('Above 0') + row, 'MAX(0,MAX(' + F + ',' + T + '))-MAX(0,MIN(' + F + ',' + T + '))', q && q.above);
+      calc(RC('Below 0') + row, 'MIN(0,MIN(' + F + ',' + T + '))-MIN(0,MAX(' + F + ',' + T + '))', q && q.below);
+    });
+    // The chart's series: each only in its piece's column.
+    ws[N + serHead] = textCell('Series', styles.head);
+    catNames.forEach((name, col) => { ws[GC(col) + serHead] = textCell(name, styles.head); });
+    series.forEach(s => {
+      const cell = GC(ps[s.piece].column) + s.row, P = PC(s.piece);
+      if(s.filler){
+        ws[N + s.row] = textCell(label(s.piece) + (s.filler === 'up' ? ' · filler above 0 (hidden)' : ' · filler below 0 (hidden)'), styles.label);
+        calc(cell, P + PR(s.filler === 'up' ? 'Filler above 0' : 'Filler below 0'), seriesValue(s));
+        return;
+      }
+      const r = s.rect;
+      ws[N + s.row] = textCell(label(s.piece) + ' · ' + r.part.name + ' · ' + (s.side === 'Above 0' ? 'above 0' : 'below 0') + (s.neg ? ', while negative' : ', while positive'), styles.label);
+      calc(cell, 'IF(' + RC('Value') + r.row + (s.neg ? '<0,' : '>=0,') + RC(s.side) + r.row + ',0)', seriesValue(s));
+    });
+  };
+  const rows = serHead + series.length - top + 1;
+  return { chart, block: { rows, cols: DASH_TABLE_COL + Math.max(n, DASH_FREE_RECT_COLS.length, columns), write } };
+}
+
 // One chart: { chart, block: { rows: n, cols: n, write(ws) } | null }. Its data table sits beside
 // the charts from row `top`: the title on its own row, then the names, then the figures — labels in
 // column N (DASH_TABLE_COL), figures from O, columns of their own width.
@@ -14013,6 +14395,7 @@ function dashChart(c, top, ctx){
   const hex = (col) => col ? col.slice(1).toUpperCase() : undefined;
   const valAxis = Object.assign({ numFmt: fmt }, c.scale ? { min: c.scale.min, max: c.scale.max } : {});
   const L = (k) => colLetter(k);
+  if(c.kind === 'free') return dashFreeChart(c, top, ctx, valAxis);
   if(c.kind === 'flow'){
     const n = c.parts.length, figs = dashFlowFigures(c, num);
     const col = (k) => L(DASH_TABLE_COL + 1 + k), first = col(0), last = col(n - 1), head = top + 1;
@@ -16688,7 +17071,7 @@ function xlCheckModel(system, report){
 // the import's own parser (formula.js) — never run as code. It knows the functions the
 // workbook ExcelExporter writes uses (the arithmetic, comparisons, SUM, MIN, MAX, AVERAGE,
 // PRODUCT, AND, OR, NOT, IF, IFERROR, the roundings, ABS, LN, EXP, SQRT, INT, TRUNC, MOD,
-// POWER, CHOOSE, INDEX, N, NA); anything else is #NAME?, which the round trip counts as not
+// POWER, CHOOSE, INDEX, N, NA, ISNUMBER); anything else is #NAME?, which the round trip counts as not
 // checked. A value is a number, text, TRUE/FALSE, or { error: '#N/A' }.
 // xlRoundTrip(valueOf, cells) compares cells of it with Excel's saved values: { compared,
 // agree, differ, unchecked }.
@@ -16908,6 +17291,7 @@ function xlRecalc(wb){
       }
       case 'N': { const v = arg(0); return xlIsErr(v) ? v : typeof v === 'number' ? v : typeof v === 'boolean' ? (v ? 1 : 0) : 0; }
       case 'NA': return xlErr('#N/A');
+      case 'ISNUMBER': return typeof arg(0) === 'number'; // an error, text or a blank: FALSE (the Dashboard's Typed cells)
       case 'TRUE': return true;
       case 'FALSE': return false;
       default: return xlErr('#NAME?');

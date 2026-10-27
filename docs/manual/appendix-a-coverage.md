@@ -259,6 +259,7 @@ Oldest first. *Step* is the build step (and phase) the pull request belongs to; 
 | branch `claude/fmgraph-full-screen` | 2026-10-27 | fmGraph: ⛶ full screen on any screen — one or several bars and charts, chosen by chips, Play in its strip | after 20 | [6.3](06-fmgraph.md#graph-boards), [6.9](06-fmgraph.md#fmgraph-phone) |
 | branch `claude/fmgraph-play-gif` | 2026-10-27 | fmGraph: 🎞 a GIF of Play — of the charts in the full screen or of one chart — shared or downloaded | after 20 | [6.5](06-fmgraph.md#graph-scenarios), [6.3](06-fmgraph.md#graph-boards) |
 | branch `claude/fmgraph-free-chart-f2` | 2026-10-27 | fmGraph: a Free chart's pieces placed by dragging — guides for where a piece sits, equal-gap marks, Align bottoms, Distribute, Tidy; fmIDE's snapping moved into shared code, unchanged | after 20 | [6.2](06-fmgraph.md#graph-charts) |
+| branch `claude/excel-free-chart-f3` | 2026-10-27 | ExcelExporter: fmGraph's Free chart on the Dashboard — stacked columns over hidden fillers, following the sliders (layout file 11) | after 20 | [5.11](05-excelexporter.md#fmgraph-in-excel), [6.2](06-fmgraph.md#graph-charts) |
 
 ---
 
