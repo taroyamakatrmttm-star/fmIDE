@@ -254,6 +254,7 @@ Oldest first. *Step* is the build step (and phase) the pull request belongs to; 
 | branch `claude/tornado-remove-all-inputs-655a57` | 2026-10-27 | fmGraph: × Remove all inputs in a Tornado's or Spider's Edit chart; ExcelExporter leaves out one with no inputs, and says so | after 20 | [6.6](06-fmgraph.md#tornado-spider), [5.11](05-excelexporter.md#fmgraph-in-excel) |
 | branch `claude/fmgraph-free-chart-f1` | 2026-10-27 | fmGraph: the Free chart — columns and waterfalls together, pieces in grid columns (board file 13); ExcelExporter lists it as not carried | after 20 | [6.2](06-fmgraph.md#graph-charts) |
 | branch `claude/colour-grid-picker-1c5e83` | 2026-10-27 | All three apps: every colour box opens a grid of ready colours (greys, hues by shades, chart colours, colours in use), More… for the browser's own | after 20 | [2.11](02-building-models.md#canvas-look), [5.8](05-excelexporter.md#excel-look), [6.3](06-fmgraph.md#graph-boards) |
+| branch `claude/fmgraph-key-hides-zeros` | 2026-10-27 | fmGraph: a chart's key leaves out the rectangles at 0 in every period it shows; +N at 0 lists them | after 20 | [6.2](06-fmgraph.md#graph-charts) |
 
 ---
 

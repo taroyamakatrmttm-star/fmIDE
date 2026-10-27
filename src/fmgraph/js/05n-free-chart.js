@@ -18,10 +18,11 @@ function freeKeyItems(c, colours){
 }
 // Draws key groups ({ label, items }) into the key, a line each; the groups without a label
 // share one line. A swatch per rectangle picks its colour, once each.
-function drawKeyGroups(key, groups){
+function drawKeyGroups(key, groups, choice){
   const seen = new Set();
   const item = (it) => {
     const el = make('label', 'key-item');
+    if(choice) markKeyZero(el, it.key, choice);
     const sw = colourPicker(it.colour, 'Colour of ' + it.name, pickRectColour(it.key), automaticColour(it.key, PART_COLOURS[0], redrawColours));
     sw.classList.add('key-swatch');
     el.append(sw, document.createTextNode(it.name));
@@ -124,7 +125,11 @@ function drawFree(c, results, problems, key){
   const n = c.notes || {};
   if(n.loops) problems.push(n.loops + ' piece' + (n.loops === 1 ? ' was' : 's were') + ' in a loop (resting on each other) and now sit' + (n.loops === 1 ? 's' : '') + ' on zero.');
   if(n.moved) problems.push(n.moved + ' piece' + (n.moved === 1 ? '' : 's') + ' moved to a free column: two pieces share a column only when one rests on the other.');
-  drawKeyGroups(key, freeKeyItems(c, colours));
+  // The key, those at 0 left out (05b-chart-render.js, keyChoice).
+  const groups = freeKeyItems(c, colours);
+  const choice = keyChoice(c, groups.flatMap(g => g.items.map(it => it.key)), [c.period], results);
+  drawKeyGroups(key, groups.map(g => Object.assign({}, g, { items: g.items.filter(it => choice.shows(it.key)) })).filter(g => g.items.length), choice);
+  drawKeyZeros(key, c, choice);
   raiseScaleLabels(chart);
   return chart;
 }

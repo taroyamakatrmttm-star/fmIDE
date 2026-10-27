@@ -154,6 +154,10 @@
   .key-group{ font-weight:600; color:var(--ink); }
   .key-item{ display:inline-flex; align-items:center; gap:5px; }
   .key-swatch{ width:11px; height:11px; border-radius:3px; display:inline-block; }
+  /* The rectangles at 0, left out of the key: "+N at 0" shows them, faded. */
+  .key-zeros{ font:inherit; font-size:12px; padding:1px 8px; border:1px dashed var(--line-strong); border-radius:10px; background:transparent; color:var(--soft-ink); cursor:pointer; }
+  .key-zeros:hover, .key-zeros:focus-visible{ color:var(--ink); border-style:solid; }
+  .key-item.key-zero{ opacity:.6; }
   .bar-chart .c-part{ stroke:#fff; stroke-width:.6; }
   .bar-chart .t-check{ font-size:13px; font-weight:700; }
   .bar-chart .t-check.ok{ fill:var(--up); }

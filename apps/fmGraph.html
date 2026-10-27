@@ -164,6 +164,10 @@
   .key-group{ font-weight:600; color:var(--ink); }
   .key-item{ display:inline-flex; align-items:center; gap:5px; }
   .key-swatch{ width:11px; height:11px; border-radius:3px; display:inline-block; }
+  /* The rectangles at 0, left out of the key: "+N at 0" shows them, faded. */
+  .key-zeros{ font:inherit; font-size:12px; padding:1px 8px; border:1px dashed var(--line-strong); border-radius:10px; background:transparent; color:var(--soft-ink); cursor:pointer; }
+  .key-zeros:hover, .key-zeros:focus-visible{ color:var(--ink); border-style:solid; }
+  .key-item.key-zero{ opacity:.6; }
   .bar-chart .c-part{ stroke:#fff; stroke-width:.6; }
   .bar-chart .t-check{ font-size:13px; font-weight:700; }
   .bar-chart .t-check.ok{ fill:var(--up); }
@@ -5807,6 +5811,58 @@ function partColours(c){
 // A key's swatch picks the rectangle's colour on every board.
 function pickRectColour(k){ return (v) => { chooseRectColour(k, v); saveBoardSoon(); renderBoard(); }; }
 
+// ---- the key leaves out rectangles at 0 (the owner's idea of 27 October 2026) ----
+// A balance sheet with only cash and a loan shouldn't list every account. A rectangle is left
+// out of a chart's key when it is 0 in every period the chart shows, in the numbers on screen
+// and in the dashed outlines (A, or the model's own numbers) — and while Play runs, at both of
+// its ends, so the key doesn't change as it plays. One that can't be worked out stays listed.
+// Its bars are still drawn; "+N at 0" at the end of the key shows them (Edit chart still
+// chooses their colours). Always on: nothing about it is saved.
+const keyZerosOpen = new Set(); // charts whose key shows the rectangles at 0 too (this page only)
+// The calculations a key looks at.
+function keyResults(results){
+  const list = [results, compareResults()];
+  // Play's two ends (05m-play.js): its first and last positions.
+  const ends = playing && playing.model === model && Array.isArray(playing.positions) ? playing.positions : null;
+  if(ends && ends.length) list.push(resultsWith(ends[0]), resultsWith(ends[ends.length - 1]));
+  return list;
+}
+// Whether rectangle k is 0 in every one of the periods, in every one of the calculations.
+function keyAtZero(k, periods, list){
+  const rect = model.byKey.get(k);
+  if(!rect || !periods.length) return false;
+  return list.every(rs => periods.every(p => { const r = resultOf(rs, rect, p); return !r.error && r.value === 0; }));
+}
+// Which of the keys the key lists: { shows(k), hidden (how many left out, once each), open }.
+function keyChoice(c, keys, periods, results){
+  const list = keyResults(results), zero = new Set();
+  [...new Set(keys)].forEach(k => { if(keyAtZero(k, periods, list)) zero.add(k); });
+  const open = keyZerosOpen.has(c.id);
+  return { shows: (k) => open || !zero.has(k), zero, hidden: zero.size, open };
+}
+// The key's last line: "+N at 0" (shows them), or, once shown, a way back.
+function drawKeyZeros(key, c, choice){
+  if(!choice.hidden) return;
+  const line = make('div', 'key-line key-zeros-line');
+  const n = choice.hidden, them = n === 1 ? 'the rectangle' : 'the ' + n + ' rectangles';
+  const b = make('button', 'key-zeros', choice.open ? 'Hide the ' + n + ' at 0' : '+' + n + ' at 0');
+  b.type = 'button';
+  b.title = choice.open ? 'Leave out of the key ' + them + ' at 0 in every period shown'
+    : (n === 1 ? '1 rectangle is' : n + ' rectangles are') + ' 0 in every period shown: list ' + (n === 1 ? 'it' : 'them') + ' too';
+  b.setAttribute('aria-expanded', choice.open ? 'true' : 'false');
+  b.addEventListener('click', () => {
+    if(keyZerosOpen.has(c.id)) keyZerosOpen.delete(c.id); else keyZerosOpen.add(c.id);
+    const inShow = !!b.closest('#showView');
+    updateValues();
+    const again = document.querySelector((inShow ? '#showView .show-widget' : '.chart-widget[data-id="' + c.id + '"]') + ' .key-zeros');
+    if(again) again.focus({ preventScroll: true });
+  });
+  line.appendChild(b);
+  key.appendChild(line);
+}
+// A key item for rectangle k, marked when it is one at 0 shown on request.
+function markKeyZero(item, k, choice){ if(choice.zero.has(k)) item.classList.add('key-zero'); return item; }
+
 function drawColumns(c, results, problems, key){
   const now = columnsFigures(c, results), was = columnsFigures(c, compareResults()); // A, or the model's own numbers
   const colours = partColours(c);
@@ -5873,12 +5929,15 @@ function drawColumns(c, results, problems, key){
     if(n <= 8 || i === 0 || i === n - 1) g.appendChild(svg('text', { class: 't-period', x: slotX + slot / 2, y: H - 6, 'text-anchor': 'middle' }, model.periods[f.p]));
     chart.appendChild(g);
   });
-  // The key: each group, left to right, with its rectangles' colours.
+  // The key: each group, left to right, with its rectangles' colours (those at 0 left out).
+  const choice = keyChoice(c, c.groups.flatMap(g => g.parts), periodsOf(c.periods), results);
   c.groups.forEach((grp, gi) => {
+    const parts = grp.parts.filter(choice.shows);
+    if(!parts.length && grp.parts.length) return;
     const line = make('div', 'key-line');
     if(ng > 1) line.appendChild(make('span', 'key-group', groupLabel(c, gi) + ':'));
-    grp.parts.forEach(k => {
-      const item = make('label', 'key-item');
+    parts.forEach(k => {
+      const item = markKeyZero(make('label', 'key-item'), k, choice);
       // The swatch is the colour box: a click picks this rectangle's colour everywhere.
       const sw = colourPicker(colours.get(k), 'Colour of ' + partLabel(k), pickRectColour(k), automaticColour(k, PART_COLOURS[0], redrawColours));
       sw.classList.add('key-swatch');
@@ -5887,6 +5946,7 @@ function drawColumns(c, results, problems, key){
     });
     key.appendChild(line);
   });
+  drawKeyZeros(key, c, choice);
   raiseScaleLabels(chart);
   return chart;
 }
@@ -5948,16 +6008,18 @@ function drawLines(c, results, problems, key){
     });
     chart.appendChild(g);
   });
-  // The key: each line's colour; its swatch picks it.
+  // The key: each line's colour; its swatch picks it (those at 0 left out).
+  const choice = keyChoice(c, c.lines, periodsOf(c.periods), results);
   const line = make('div', 'key-line');
-  [...new Set(c.lines)].forEach(k => {
-    const item = make('label', 'key-item');
+  [...new Set(c.lines)].filter(choice.shows).forEach(k => {
+    const item = markKeyZero(make('label', 'key-item'), k, choice);
     const sw = colourPicker(colours.get(k), 'Colour of ' + partLabel(k), pickRectColour(k), automaticColour(k, PART_COLOURS[0], redrawColours));
     sw.classList.add('key-swatch');
     item.append(sw, document.createTextNode(partLabel(k)));
     line.appendChild(item);
   });
   key.appendChild(line);
+  drawKeyZeros(key, c, choice);
   raiseScaleLabels(chart);
   return chart;
 }
@@ -6218,7 +6280,18 @@ function drawSensitivity(c, problems, key){
     swatch(c.colour || TORNADO_LOW, 'Colour of Low', 'Low', (v) => { c.colour = v; }, usual('colour', TORNADO_LOW));
     swatch(c.colour2 || TORNADO_HIGH, 'Colour of High', 'High', (v) => { c.colour2 = v; }, usual('colour2', TORNADO_HIGH));
   } else {
-    figures.inputs.forEach((f, i) => { if(f.show) swatch(spiderColour(c, f.key, i), 'Colour of ' + partLabel(f.key), partLabel(f.key), (v) => { chooseRectColour(f.key, v); }, automaticColour(f.key, PART_COLOURS[i % PART_COLOURS.length], redrawColours)); });
+    // An input at 0 whose line stays flat (it moves nothing) is left out, as at 0 elsewhere.
+    const flatAtZero = new Set(shown.filter(f => !f.error && f.swing === 0).map(f => f.key));
+    const choice = keyChoice(c, [...flatAtZero], [c.period], currentResults());
+    figures.inputs.forEach((f, i) => {
+      if(!f.show || !choice.shows(f.key)) return;
+      swatch(spiderColour(c, f.key, i), 'Colour of ' + partLabel(f.key), partLabel(f.key), (v) => { chooseRectColour(f.key, v); }, automaticColour(f.key, PART_COLOURS[i % PART_COLOURS.length], redrawColours));
+      markKeyZero(line.lastChild, f.key, choice);
+    });
+    key.appendChild(line);
+    drawKeyZeros(key, c, choice);
+    raiseScaleLabels(chart);
+    return chart;
   }
   key.appendChild(line);
   raiseScaleLabels(chart);
@@ -9069,10 +9142,11 @@ function freeKeyItems(c, colours){
 }
 // Draws key groups ({ label, items }) into the key, a line each; the groups without a label
 // share one line. A swatch per rectangle picks its colour, once each.
-function drawKeyGroups(key, groups){
+function drawKeyGroups(key, groups, choice){
   const seen = new Set();
   const item = (it) => {
     const el = make('label', 'key-item');
+    if(choice) markKeyZero(el, it.key, choice);
     const sw = colourPicker(it.colour, 'Colour of ' + it.name, pickRectColour(it.key), automaticColour(it.key, PART_COLOURS[0], redrawColours));
     sw.classList.add('key-swatch');
     el.append(sw, document.createTextNode(it.name));
@@ -9175,7 +9249,11 @@ function drawFree(c, results, problems, key){
   const n = c.notes || {};
   if(n.loops) problems.push(n.loops + ' piece' + (n.loops === 1 ? ' was' : 's were') + ' in a loop (resting on each other) and now sit' + (n.loops === 1 ? 's' : '') + ' on zero.');
   if(n.moved) problems.push(n.moved + ' piece' + (n.moved === 1 ? '' : 's') + ' moved to a free column: two pieces share a column only when one rests on the other.');
-  drawKeyGroups(key, freeKeyItems(c, colours));
+  // The key, those at 0 left out (05b-chart-render.js, keyChoice).
+  const groups = freeKeyItems(c, colours);
+  const choice = keyChoice(c, groups.flatMap(g => g.items.map(it => it.key)), [c.period], results);
+  drawKeyGroups(key, groups.map(g => Object.assign({}, g, { items: g.items.filter(it => choice.shows(it.key)) })).filter(g => g.items.length), choice);
+  drawKeyZeros(key, c, choice);
   raiseScaleLabels(chart);
   return chart;
 }
@@ -10742,7 +10820,7 @@ const FMGRAPH_HELP_TOPICS = [
       { see: ['sliders', 'explore', 'compare'] },
     ] },
   { id: 'charts', group: 'board', title: 'Charts: columns, lines and waterfalls',
-    keywords: 'chart columns stacked side by side group lines line trend over time waterfall bridge balance sheet income statement check total scenario waterfall cases tornado spider',
+    keywords: 'chart columns stacked side by side group lines line trend over time waterfall bridge balance sheet income statement check total scenario waterfall cases tornado spider key legend zero hidden at 0',
     summary: 'Building blocks for any statement: columns of groups, lines over the periods, and waterfalls.',
     body: [
       { p: '+ Chart adds a chart. There are seven kinds, chosen at its top; all are made from your own rectangles, so they fit any model. This topic covers Columns, Lines, Waterfall and Scenario waterfall; the Free chart, which puts columns and waterfalls together, and the Tornado and the Spider have topics of their own.' },
@@ -10752,6 +10830,7 @@ const FMGRAPH_HELP_TOPICS = [
       { p: 'Waterfall: a list of steps in one period. A start is a full bar; add and subtract step up or down from the running total; a total is a full bar of its own rectangle\'s value, checked against the steps before it (✓, or ✗ and what they add up to). An income statement is Revenue (start), costs (subtract) and each profit line (total); a cash bridge or a cost walk work the same way.' },
       { p: 'Scenario waterfall: for each output you choose, in one period, a waterfall from the model\'s own number (Start) through each of your named scenarios in turn — each step the change from the one before — to the last scenario\'s number (End). Each output gets its own small waterfall. It shows the scenarios, not where the sliders are now, and follows them as you update, reorder, rename or delete them. Edit chart chooses the period, the outputs (up to six) and which scenarios it goes through, in the Scenarios panel\'s order. A template\'s board never holds one, since templates carry no scenarios.' },
       { steps: ['Press + Chart at the top. Its editor opens.', 'Choose the rectangles: + Rectangle adds one to a group, + Group a new group; ↑ ↓ reorder, × removes.', 'Or choose Lines at the top of the chart for a line per rectangle, or Waterfall, then each step\'s role.'] },
+      { p: 'The key under a chart lists only the rectangles that aren\'t 0: a balance sheet with only cash and a loan lists those two, not every account. A rectangle is left out when it is 0 in every period the chart shows, both now and in the dashed outlines (A, or the model\'s own numbers); it comes back as soon as a slider makes it something else, and one that can\'t be worked out is always listed. Its bars are still drawn. "+3 at 0" at the end of the key lists them too, faded, so you can pick their colours; "Hide the 3 at 0" leaves them out again. While Play runs, both of its ends count, so the key stays the same as it plays. This is the same in Columns, Lines, Free and Spider charts (a Spider leaves out an input at 0 whose line stays flat).' },
       { tip: 'Numbers agree when they differ by less than a millionth of their size, so tiny rounding never shows as ✗. A chart mixing units says so below it.' },
       { see: ['free-chart', 'bars', 'scale', 'reach', 'scenarios', 'sensitivity'] },
     ] },
@@ -10904,6 +10983,18 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'key-hides-zeros', date: '2026-10-27', title: 'A chart\'s key leaves out rectangles at 0',
+    summary: 'A balance sheet with only cash and a loan now lists those two in its key, not every account: the rectangles at 0 are left out, and "+N at 0" shows them.',
+    what: [
+      'A rectangle is left out of a chart\'s key when it is 0 in every period the chart shows, both now and in the dashed outlines (A, or the model\'s own numbers).',
+      'It comes back as soon as a slider makes it something other than 0. One that can\'t be worked out is always listed.',
+      '"+3 at 0" at the end of the key lists them too, faded, with their colour boxes; "Hide the 3 at 0" leaves them out again.',
+      'Columns, Lines, Free and Spider charts all do it. While Play runs both of its ends count, so the key doesn\'t change as it plays. The bars at 0 are still drawn.',
+    ],
+    why: 'A key listing every account of a balance sheet, most of them 0, made the chart busy and the rectangles that matter hard to find.',
+    how: ['Look at a chart\'s key: only the rectangles that aren\'t 0 are listed.', 'Press "+N at 0" to list the others and pick their colours.', 'Press "Hide the N at 0" to leave them out again.'],
+    notes: ['It is always on, and nothing about it is saved: the board file is unchanged.', 'A shared picture of a board lists what its key shows.'],
+    see: ['charts'] },
   { id: 'free-chart', date: '2026-10-27', title: 'The Free chart: columns and waterfalls together',
     summary: 'A balance sheet and the cash flow that moved it, side by side in one chart on one scale: a new kind of chart, Free, made of pieces you place in columns.',
     what: [

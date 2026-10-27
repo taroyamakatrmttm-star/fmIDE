@@ -330,6 +330,58 @@ function partColours(c){
 // A key's swatch picks the rectangle's colour on every board.
 function pickRectColour(k){ return (v) => { chooseRectColour(k, v); saveBoardSoon(); renderBoard(); }; }
 
+// ---- the key leaves out rectangles at 0 (the owner's idea of 27 October 2026) ----
+// A balance sheet with only cash and a loan shouldn't list every account. A rectangle is left
+// out of a chart's key when it is 0 in every period the chart shows, in the numbers on screen
+// and in the dashed outlines (A, or the model's own numbers) — and while Play runs, at both of
+// its ends, so the key doesn't change as it plays. One that can't be worked out stays listed.
+// Its bars are still drawn; "+N at 0" at the end of the key shows them (Edit chart still
+// chooses their colours). Always on: nothing about it is saved.
+const keyZerosOpen = new Set(); // charts whose key shows the rectangles at 0 too (this page only)
+// The calculations a key looks at.
+function keyResults(results){
+  const list = [results, compareResults()];
+  // Play's two ends (05m-play.js): its first and last positions.
+  const ends = playing && playing.model === model && Array.isArray(playing.positions) ? playing.positions : null;
+  if(ends && ends.length) list.push(resultsWith(ends[0]), resultsWith(ends[ends.length - 1]));
+  return list;
+}
+// Whether rectangle k is 0 in every one of the periods, in every one of the calculations.
+function keyAtZero(k, periods, list){
+  const rect = model.byKey.get(k);
+  if(!rect || !periods.length) return false;
+  return list.every(rs => periods.every(p => { const r = resultOf(rs, rect, p); return !r.error && r.value === 0; }));
+}
+// Which of the keys the key lists: { shows(k), hidden (how many left out, once each), open }.
+function keyChoice(c, keys, periods, results){
+  const list = keyResults(results), zero = new Set();
+  [...new Set(keys)].forEach(k => { if(keyAtZero(k, periods, list)) zero.add(k); });
+  const open = keyZerosOpen.has(c.id);
+  return { shows: (k) => open || !zero.has(k), zero, hidden: zero.size, open };
+}
+// The key's last line: "+N at 0" (shows them), or, once shown, a way back.
+function drawKeyZeros(key, c, choice){
+  if(!choice.hidden) return;
+  const line = make('div', 'key-line key-zeros-line');
+  const n = choice.hidden, them = n === 1 ? 'the rectangle' : 'the ' + n + ' rectangles';
+  const b = make('button', 'key-zeros', choice.open ? 'Hide the ' + n + ' at 0' : '+' + n + ' at 0');
+  b.type = 'button';
+  b.title = choice.open ? 'Leave out of the key ' + them + ' at 0 in every period shown'
+    : (n === 1 ? '1 rectangle is' : n + ' rectangles are') + ' 0 in every period shown: list ' + (n === 1 ? 'it' : 'them') + ' too';
+  b.setAttribute('aria-expanded', choice.open ? 'true' : 'false');
+  b.addEventListener('click', () => {
+    if(keyZerosOpen.has(c.id)) keyZerosOpen.delete(c.id); else keyZerosOpen.add(c.id);
+    const inShow = !!b.closest('#showView');
+    updateValues();
+    const again = document.querySelector((inShow ? '#showView .show-widget' : '.chart-widget[data-id="' + c.id + '"]') + ' .key-zeros');
+    if(again) again.focus({ preventScroll: true });
+  });
+  line.appendChild(b);
+  key.appendChild(line);
+}
+// A key item for rectangle k, marked when it is one at 0 shown on request.
+function markKeyZero(item, k, choice){ if(choice.zero.has(k)) item.classList.add('key-zero'); return item; }
+
 function drawColumns(c, results, problems, key){
   const now = columnsFigures(c, results), was = columnsFigures(c, compareResults()); // A, or the model's own numbers
   const colours = partColours(c);
@@ -396,12 +448,15 @@ function drawColumns(c, results, problems, key){
     if(n <= 8 || i === 0 || i === n - 1) g.appendChild(svg('text', { class: 't-period', x: slotX + slot / 2, y: H - 6, 'text-anchor': 'middle' }, model.periods[f.p]));
     chart.appendChild(g);
   });
-  // The key: each group, left to right, with its rectangles' colours.
+  // The key: each group, left to right, with its rectangles' colours (those at 0 left out).
+  const choice = keyChoice(c, c.groups.flatMap(g => g.parts), periodsOf(c.periods), results);
   c.groups.forEach((grp, gi) => {
+    const parts = grp.parts.filter(choice.shows);
+    if(!parts.length && grp.parts.length) return;
     const line = make('div', 'key-line');
     if(ng > 1) line.appendChild(make('span', 'key-group', groupLabel(c, gi) + ':'));
-    grp.parts.forEach(k => {
-      const item = make('label', 'key-item');
+    parts.forEach(k => {
+      const item = markKeyZero(make('label', 'key-item'), k, choice);
       // The swatch is the colour box: a click picks this rectangle's colour everywhere.
       const sw = colourPicker(colours.get(k), 'Colour of ' + partLabel(k), pickRectColour(k), automaticColour(k, PART_COLOURS[0], redrawColours));
       sw.classList.add('key-swatch');
@@ -410,6 +465,7 @@ function drawColumns(c, results, problems, key){
     });
     key.appendChild(line);
   });
+  drawKeyZeros(key, c, choice);
   raiseScaleLabels(chart);
   return chart;
 }
@@ -471,16 +527,18 @@ function drawLines(c, results, problems, key){
     });
     chart.appendChild(g);
   });
-  // The key: each line's colour; its swatch picks it.
+  // The key: each line's colour; its swatch picks it (those at 0 left out).
+  const choice = keyChoice(c, c.lines, periodsOf(c.periods), results);
   const line = make('div', 'key-line');
-  [...new Set(c.lines)].forEach(k => {
-    const item = make('label', 'key-item');
+  [...new Set(c.lines)].filter(choice.shows).forEach(k => {
+    const item = markKeyZero(make('label', 'key-item'), k, choice);
     const sw = colourPicker(colours.get(k), 'Colour of ' + partLabel(k), pickRectColour(k), automaticColour(k, PART_COLOURS[0], redrawColours));
     sw.classList.add('key-swatch');
     item.append(sw, document.createTextNode(partLabel(k)));
     line.appendChild(item);
   });
   key.appendChild(line);
+  drawKeyZeros(key, c, choice);
   raiseScaleLabels(chart);
   return chart;
 }
@@ -741,7 +799,18 @@ function drawSensitivity(c, problems, key){
     swatch(c.colour || TORNADO_LOW, 'Colour of Low', 'Low', (v) => { c.colour = v; }, usual('colour', TORNADO_LOW));
     swatch(c.colour2 || TORNADO_HIGH, 'Colour of High', 'High', (v) => { c.colour2 = v; }, usual('colour2', TORNADO_HIGH));
   } else {
-    figures.inputs.forEach((f, i) => { if(f.show) swatch(spiderColour(c, f.key, i), 'Colour of ' + partLabel(f.key), partLabel(f.key), (v) => { chooseRectColour(f.key, v); }, automaticColour(f.key, PART_COLOURS[i % PART_COLOURS.length], redrawColours)); });
+    // An input at 0 whose line stays flat (it moves nothing) is left out, as at 0 elsewhere.
+    const flatAtZero = new Set(shown.filter(f => !f.error && f.swing === 0).map(f => f.key));
+    const choice = keyChoice(c, [...flatAtZero], [c.period], currentResults());
+    figures.inputs.forEach((f, i) => {
+      if(!f.show || !choice.shows(f.key)) return;
+      swatch(spiderColour(c, f.key, i), 'Colour of ' + partLabel(f.key), partLabel(f.key), (v) => { chooseRectColour(f.key, v); }, automaticColour(f.key, PART_COLOURS[i % PART_COLOURS.length], redrawColours));
+      markKeyZero(line.lastChild, f.key, choice);
+    });
+    key.appendChild(line);
+    drawKeyZeros(key, c, choice);
+    raiseScaleLabels(chart);
+    return chart;
   }
   key.appendChild(line);
   raiseScaleLabels(chart);

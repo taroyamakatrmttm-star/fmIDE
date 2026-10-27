@@ -8,6 +8,18 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'key-hides-zeros', date: '2026-10-27', title: 'A chart\'s key leaves out rectangles at 0',
+    summary: 'A balance sheet with only cash and a loan now lists those two in its key, not every account: the rectangles at 0 are left out, and "+N at 0" shows them.',
+    what: [
+      'A rectangle is left out of a chart\'s key when it is 0 in every period the chart shows, both now and in the dashed outlines (A, or the model\'s own numbers).',
+      'It comes back as soon as a slider makes it something other than 0. One that can\'t be worked out is always listed.',
+      '"+3 at 0" at the end of the key lists them too, faded, with their colour boxes; "Hide the 3 at 0" leaves them out again.',
+      'Columns, Lines, Free and Spider charts all do it. While Play runs both of its ends count, so the key doesn\'t change as it plays. The bars at 0 are still drawn.',
+    ],
+    why: 'A key listing every account of a balance sheet, most of them 0, made the chart busy and the rectangles that matter hard to find.',
+    how: ['Look at a chart\'s key: only the rectangles that aren\'t 0 are listed.', 'Press "+N at 0" to list the others and pick their colours.', 'Press "Hide the N at 0" to leave them out again.'],
+    notes: ['It is always on, and nothing about it is saved: the board file is unchanged.', 'A shared picture of a board lists what its key shows.'],
+    see: ['charts'] },
   { id: 'free-chart', date: '2026-10-27', title: 'The Free chart: columns and waterfalls together',
     summary: 'A balance sheet and the cash flow that moved it, side by side in one chart on one scale: a new kind of chart, Free, made of pieces you place in columns.',
     what: [
