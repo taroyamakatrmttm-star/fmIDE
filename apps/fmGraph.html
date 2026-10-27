@@ -222,6 +222,15 @@
   /* Exploring (G4a): Trace and Biggest movers */
   .widget-trace{ border:none; background:none; padding:2px 6px; font-size:14px; opacity:.7; }
   .widget-trace:hover{ opacity:1; background:none; }
+  .widget-full{ border:none; background:none; padding:2px 6px; font-size:15px; opacity:.7; }
+  .widget-full:hover{ opacity:1; background:#e0f2f1; border-radius:6px; }
+  /* A GIF of the play (05o-play-gif.js): 🎞 on a header (not on a phone: Show has it), the stage off the page, the progress strip. */
+  .widget-gif{ border:none; background:none; padding:2px 5px; font-size:14px; opacity:.6; }
+  .widget-gif:hover{ opacity:1; background:#e0f2f1; border-radius:6px; }
+  body.phone .widget-gif{ display:none; }
+  .gif-stage{ position:fixed; left:-20000px; top:0; width:720px; pointer-events:none; }
+  .gif-progress{ position:fixed; z-index:60; left:50%; bottom:calc(var(--dock-h, 0px) + 18px); transform:translateX(-50%); display:flex; align-items:center; gap:10px; padding:9px 14px; border-radius:12px; background:#1b2333; color:#fff; font-size:14px; box-shadow:0 6px 24px rgba(16,24,40,.25); }
+  .gif-progress button{ font-size:13px; padding:4px 10px; }
   .widget-trace[aria-pressed="true"]{ opacity:1; background:#e0f2f1; border-radius:6px; }
   .board.tracing .slider-widget{ opacity:.45; }
   .board.tracing .slider-widget.traced{ opacity:1; box-shadow:0 0 0 2px var(--reach); }
@@ -377,7 +386,7 @@
   body.phone .chart-title{ pointer-events:none; font-size:15px; }
   body.phone .bar-widget{ -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
   body.phone .bar-chart text{ font-size:12px; }
-  body.phone .widget-trace{ font-size:18px; padding:4px 10px; }
+  body.phone .widget-trace, body.phone .widget-full{ font-size:18px; padding:4px 10px; }
   body.phone .scenario-btn{ min-width:40px; min-height:36px; font-size:14px; }
   /* The dock: the sliders under the thumb. */
   .slider-dock{ position:fixed; left:0; right:0; bottom:0; z-index:35; background:var(--card); border-top:1px solid var(--line); border-radius:18px 18px 0 0; box-shadow:0 -8px 28px rgba(16,24,40,.16); padding:0 0 calc(8px + env(safe-area-inset-bottom, 0px)); }
@@ -453,17 +462,33 @@
   .fader-change{ min-height:16px; font-size:11.5px; font-weight:600; color:var(--reach); text-align:center; font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; }
   .fader.moved .ps-value{ color:var(--brand-dark); }
   .fader-menu{ top:60px; right:auto; }
-  /* Show: one bar or chart on the whole screen. */
+  /* Full screen (Show): one or several bars and charts on the whole screen (05h-phone-show.js). */
   .show-view{ position:fixed; z-index:40; inset:0; top:0; background:var(--page); display:flex; flex-direction:column; padding:8px 12px calc(var(--dock-h, 0px) + 8px); }
   body.mixing .show-view{ left:var(--mix-l, 0px); right:var(--mix-r, 0px); padding-bottom:8px; }
-  .show-head{ display:flex; align-items:center; gap:8px; padding-top:env(safe-area-inset-top, 0px); }
-  .show-head h2{ flex:1 1 auto; margin:0; font-size:20px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .show-btn{ font-size:15px; padding:8px 14px; border-radius:10px; }
-  .show-close{ font-size:22px; padding:4px 14px; }
-  .show-body{ flex:1 1 auto; min-height:0; display:flex; align-items:center; justify-content:center; overflow:auto; }
-  .show-widget{ width:100%; }
-  .show-widget .bar-chart{ max-height:calc(100vh - var(--dock-h, 0px) - 120px); font-size:13px; }
-  .show-widget .chart-key{ font-size:14px; }
+  .show-head{ position:absolute; z-index:2; top:0; left:0; right:0; display:flex; align-items:center; gap:8px; padding:calc(6px + env(safe-area-inset-top, 0px)) 12px 6px; background:rgba(244,245,248,.94); border-bottom:1px solid var(--line); transition:opacity .35s, background .35s, border-color .35s; }
+  .show-head h2{ flex:0 1 auto; margin:0; font-size:18px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .show-chips{ flex:1 1 auto; min-width:0; display:flex; gap:6px; overflow-x:auto; scrollbar-width:thin; padding:2px 0; }
+  .show-chip{ flex:0 0 auto; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; padding:5px 11px; border-radius:999px; border:1px solid var(--line-strong); background:var(--card); color:var(--soft-ink); }
+  .show-chip[aria-pressed="true"]{ background:var(--brand-soft); border-color:var(--brand); color:var(--ink); font-weight:600; }
+  .show-chip[aria-pressed="true"]::before{ content:"✓ "; }
+  .show-note{ font-size:12.5px; color:var(--soft-ink); }
+  .show-more:empty{ display:none; }
+  .show-btn{ flex:0 0 auto; font-size:15px; padding:7px 13px; border-radius:10px; }
+  .show-help{ padding:7px 11px; }
+  .show-close{ font-size:22px; padding:2px 14px; }
+  /* Quiet: the strip fades after a few seconds; a tap, a key or the mouse brings it back. × stays. */
+  .show-view.quiet .show-head{ background:transparent; border-color:transparent; }
+  .show-view.quiet .show-head > :not(.show-close){ opacity:0; pointer-events:none; transition:opacity .35s; }
+  .show-view.quiet .show-close{ opacity:.45; }
+  @media (prefers-reduced-motion: reduce){ .show-head, .show-head > *{ transition:none !important; } }
+  .show-body{ flex:1 1 auto; min-height:0; display:grid; grid-template-columns:repeat(var(--show-cols, 1), minmax(0, 1fr)); grid-template-rows:repeat(var(--show-rows, 1), minmax(0, 1fr)); gap:12px; padding-top:var(--show-top, 50px); }
+  .show-widget{ min-width:0; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
+  .show-widget.boxed{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:8px 10px; }
+  .show-name{ margin:0 0 2px; font-size:15px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:0 0 auto; }
+  .show-widget .bar-chart-host{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; gap:6px; }
+  .show-widget .bar-chart{ flex:1 1 0; min-height:0; height:auto; margin:0; font-size:13px; }
+  .show-widget .chart-key, .show-widget .bar-errors{ flex:0 0 auto; }
+  .show-widget .chart-key{ font-size:14px; max-height:30%; overflow:auto; }
   body.showing .slider-dock{ z-index:41; }
   body.showing .mixer{ z-index:41; top:0; }
   /* Holding A to look. */
@@ -749,14 +774,20 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
 <aside id="mixerLeft" class="mixer mixer-left phone-only hidden" aria-label="Sliders on the left"></aside>
 <aside id="mixerRight" class="mixer mixer-right phone-only hidden" aria-label="Sliders on the right"></aside>
 <div id="faderMenu" class="phone-menu fader-menu hidden" role="menu" aria-label="Put another slider here"></div>
-<section id="showView" class="show-view hidden" role="dialog" aria-labelledby="showTitle">
-  <div class="show-head">
+<section id="showView" class="show-view hidden" role="dialog" aria-label="Full screen">
+  <div id="showStrip" class="show-head">
     <h2 id="showTitle"></h2>
+    <div id="showChips" class="show-chips" role="group" aria-label="Bars and charts shown"></div>
+    <button type="button" id="showPlay" class="show-btn show-play" title="Play between the ends chosen under Scenarios">▶ Play</button>
+    <span id="showNote" class="show-note" aria-live="polite"></span>
+    <span id="showMore" class="show-more"><button type="button" id="showGif" class="show-btn" title="GIF: an animated GIF of what is shown, playing between the ends chosen under Scenarios">🎞 GIF</button></span>
     <button type="button" id="showShare" class="show-btn">⇪ Share</button>
-    <button type="button" id="showClose" class="show-btn show-close" aria-label="Close">×</button>
+    <button type="button" id="showHelp" class="show-btn show-help" aria-label="Help: full screen" title="Help: full screen">?</button>
+    <button type="button" id="showClose" class="show-btn show-close" aria-label="Close" title="Close (Esc)">×</button>
   </div>
   <div id="showBody" class="show-body"></div>
 </section>
+<div id="gifProgress" class="gif-progress hidden" role="status" aria-live="polite"><span id="gifProgressText"></span> <button type="button" id="btnGifCancel">Cancel</button></div>
 <div id="phoneMenu" class="phone-menu hidden" role="menu" aria-label="Menu">
   <button type="button" role="menuitem" id="phoneOpen">📂 Open…</button>
   <button type="button" role="menuitem" id="phoneFromFmide" class="hidden">↻ From fmIDE</button>
@@ -5182,6 +5213,8 @@ function renderBoard(){
     const head = el.querySelector('.widget-head');
     head.prepend(arrangeControls(w, el));
     head.insertBefore(traceButton(w), head.querySelector('.widget-remove')); // Trace (05d-explore.js)
+    head.insertBefore(fullScreenButton(w), head.querySelector('.widget-remove')); // ⛶ (05h-phone-show.js)
+    head.insertBefore(gifButton(w), head.querySelector('.widget-remove')); // 🎞 a GIF of the play (05o-play-gif.js)
     bars.appendChild(el);
   });
   board.sliders.forEach(s => { const el = sliders.querySelector('.slider-widget[data-id="' + s.id + '"]'); if(el) el.querySelector('.widget-head').prepend(arrangeControls(s, el)); });
@@ -5401,7 +5434,7 @@ function updateValues(){
     if(!el) return;
     el.querySelector('.slider-base').textContent = sliderBaseText(s);
   });
-  drawShow(results); // one shown on the whole screen, on a phone (05h-phone-show.js)
+  drawShow(results); // those on the whole screen (05h-phone-show.js)
   updateMovers(results);
   markScenarios(); // (05f-scenarios.js)
   paintReach();
@@ -5823,7 +5856,9 @@ const keyZerosOpen = new Set(); // charts whose key shows the rectangles at 0 to
 function keyResults(results){
   const list = [results, compareResults()];
   // Play's two ends (05m-play.js): its first and last positions.
-  const ends = playing && playing.model === model && Array.isArray(playing.positions) ? playing.positions : null;
+  // (While a GIF of the play is made, its ends: 05o-play-gif.js.)
+  const now = playing && playing.model === model ? playing : gifMaking && gifMaking.model === model ? gifMaking : null;
+  const ends = now && Array.isArray(now.positions) ? now.positions : null;
   if(ends && ends.length) list.push(resultsWith(ends[0]), resultsWith(ends[ends.length - 1]));
   return list;
 }
@@ -7840,9 +7875,10 @@ $('btnPhoneLayout').addEventListener('click', () => setFullApp(false));
 //   its own fader, so several move at once. Which sliders: the board's first ones, or those
 //   picked by a tap on a fader's name (#faderMenu), remembered in this browser per model and
 //   board (fmgraph-mixer, the person's own setting, never in a file).
-// - Show: one bar or chart on the whole screen (#showView), from its quick look; the screen
-//   is kept on while it shows (keepScreenOn); ×, Esc or the phone's back gesture ends it. It
-//   follows the sliders like the board.
+// - Show, the full screen (on any screen, the owner's idea of 27 October 2026): one or several
+//   bars and charts on the whole screen (#showView), from ⛶ on a header or a phone's quick look;
+//   the screen is kept on while it shows (keepScreenOn); ×, Esc, the back gesture or leaving
+//   the browser's full screen ends it. It follows the sliders and Play like the board.
 // - Holding A: while a finger is on a scenario's A (05f-scenarios.js) or on the compare strip's
 //   A (05e-compare.js), the bars show those numbers instead of the sliders' (lookingAt,
 //   03-calc.js), with #lookBar saying so; letting go brings the sliders' numbers back. A quick
@@ -7980,52 +8016,237 @@ store.ready.then(() => store.get(MIXER_KEY)).then(raw => {
   if(isMixing()) renderMixer();
 }, () => {});
 
-// ---- Show ----
-let showing = null;       // the bar or chart shown
+// ---- Full screen (Show) ----
+// One or several of the board's bars and charts on the whole screen, on any screen: ⛶ on a bar's
+// or chart's header (or ⤢ Show in a phone's quick look) opens it with that one; the chips in the
+// strip add or take away the others (a tap, so it works on an iPad); several share the screen in
+// a grid that fits it best (showGrid). The browser's own full screen where it can (the whole
+// page, so Help and the phone's dock and mixer stay over it; an iPhone has none: the view still
+// covers the page). The strip — the chips, ▶ Play / ■ Stop, ⇪ Share, ?, × — fades after
+// SHOW_STRIP_MS; a tap, a key or the mouse brings it back, and × stays. ×, Esc, the back gesture
+// (a history step) or leaving the browser's full screen ends it. It follows the sliders and Play
+// like the board (drawShow, from updateValues) and keeps the screen on; a tap in it never stops
+// Play. Which are shown is this page's only: never saved, nothing in the board file.
+// #showMore in the strip, before ⇪ Share, holds more buttons: 🎞 GIF of what is shown (05o-play-gif.js).
+const SHOW_STRIP_MS = 3000;
+const SHOW_ASPECT = 1.6;   // a bar's or chart's drawing, about this much wider than tall
+const SHOW_GAP = 12;       // pixels between two shown
+let showing = null;       // the ids shown, in the board's order; null when closed
 let letScreenSleep = null;
+let showFull = false;     // the browser's own full screen is on, asked for by this view
+let showItemsMark = '';   // the board's widgets when the chips were made
+let showQuietTimer = null;
+
+// The widgets shown, as they are on the board now.
+const shownWidgets = () => showing && board ? board.items.filter(w => showing.includes(w.id)) : [];
+
 function openShow(w){
   if(!model || !board.items.includes(w)) return;
-  if(showing) closeShow();
-  showing = w;
-  $('showTitle').textContent = w.kind === 'chart' ? (w.title || 'Chart') : model.byKey.get(w.key).name;
-  const body = $('showBody');
-  body.textContent = '';
-  const el = make('div', 'show-widget');
-  el.dataset.id = w.id;
-  el.append(make('div', 'bar-chart-host'), make('div', 'chart-key'), make('ul', 'bar-errors'));
-  body.appendChild(el);
+  if(showing){ showing = [w.id]; buildShowBody(); drawShow(currentResults()); return; }
+  showing = [w.id];
   $('showView').classList.remove('hidden');
   document.body.classList.add('showing');
   letScreenSleep = keepScreenOn();
   try{ history.pushState({ fmGraphShow: true }, ''); }catch(e){ /* no history: × and Esc still close */ }
+  enterFullScreen();
+  buildShowBody();
   drawShow(currentResults());
+  wakeShowStrip();
   $('showClose').focus({ preventScroll: true });
 }
 // fromHistory: the back gesture already took the step back.
 function closeShow(fromHistory){
   if(!showing) return;
   showing = null;
+  clearTimeout(showQuietTimer);
   $('showView').classList.add('hidden');
+  $('showView').classList.remove('quiet');
   $('showBody').textContent = '';
+  $('showChips').textContent = '';
+  $('showNote').textContent = '';
   document.body.classList.remove('showing');
   if(letScreenSleep){ letScreenSleep(); letScreenSleep = null; }
+  leaveFullScreen();
   if(!fromHistory && history.state && history.state.fmGraphShow){ try{ history.back(); }catch(e){ /* stays */ } }
 }
+
+// The browser's own full screen, where it has one (Safari on an iPad: webkit…; an iPhone none).
+const fullScreenElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+function enterFullScreen(){
+  const el = document.documentElement;
+  const ask = el.requestFullscreen || el.webkitRequestFullscreen;
+  if(!ask || fullScreenElement()) return;
+  try{
+    const p = ask.call(el);
+    if(p && p.catch) p.catch(() => { /* refused: the view still covers the page */ });
+  }catch(e){ /* the same */ }
+}
+function leaveFullScreen(){
+  if(!showFull) return;
+  showFull = false;
+  const leave = document.exitFullscreen || document.webkitExitFullscreen;
+  if(leave && fullScreenElement()){ try{ const p = leave.call(document); if(p && p.catch) p.catch(() => {}); }catch(e){ /* stays */ } }
+}
+function fullScreenChanged(){
+  if(fullScreenElement()){ if(showing) showFull = true; }
+  else if(showFull){ showFull = false; closeShow(); } // the browser's full screen left: the view goes too
+  if(showing) fitShowGrid();
+}
+document.addEventListener('fullscreenchange', fullScreenChanged);
+document.addEventListener('webkitfullscreenchange', fullScreenChanged);
+
+// The chips: every bar and chart on the board, those shown pressed.
+function renderShowChips(){
+  const box = $('showChips');
+  box.textContent = '';
+  showItemsMark = board.items.map(w => w.id).join('|');
+  box.classList.toggle('hidden', board.items.length < 2);
+  board.items.forEach(w => {
+    const on = showing.includes(w.id);
+    const b = make('button', 'show-chip', widgetName(w)); // (05i-phone-share.js)
+    b.type = 'button';
+    b.dataset.id = w.id;
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    b.title = on ? (showing.length > 1 ? 'Take it away' : 'Shown') : 'Show it too';
+    b.addEventListener('click', () => toggleShown(w.id));
+    box.appendChild(b);
+  });
+}
+// A chip tapped: shown too, or taken away (the last one stays).
+function toggleShown(id){
+  if(!showing || !board.items.some(w => w.id === id)) return false;
+  if(showing.includes(id)){
+    if(showing.length === 1) return false;
+    showing = showing.filter(x => x !== id);
+  } else showing = board.items.filter(w => w.id === id || showing.includes(w.id)).map(w => w.id);
+  const scroll = $('showChips').scrollLeft;
+  buildShowBody();
+  $('showChips').scrollLeft = scroll;
+  drawShow(currentResults());
+  return true;
+}
+
+// A place for each widget shown, laid out in the grid.
+function buildShowBody(){
+  const body = $('showBody');
+  body.textContent = '';
+  const list = shownWidgets();
+  list.forEach(w => {
+    const el = make('div', 'show-widget' + (list.length > 1 ? ' boxed' : ''));
+    el.dataset.id = w.id;
+    if(list.length > 1) el.appendChild(make('h3', 'show-name', widgetName(w)));
+    el.append(make('div', 'bar-chart-host'), make('div', 'chart-key'), make('ul', 'bar-errors'));
+    body.appendChild(el);
+  });
+  const title = $('showTitle');
+  title.textContent = list.length === 1 ? widgetName(list[0]) : '';
+  title.classList.toggle('hidden', list.length !== 1);
+  renderShowChips();
+  fitShowGrid();
+}
+// Columns and rows for n on a w × h space: the largest drawing each can have.
+function showGrid(n, w, h, gap){
+  let best = { cols: 1, rows: Math.max(1, n), size: -1 };
+  for(let cols = 1; cols <= Math.max(1, n); cols++){
+    const rows = Math.ceil(n / cols);
+    const cw = (w - gap * (cols - 1)) / cols, ch = (h - gap * (rows - 1)) / rows;
+    const size = Math.min(cw, ch * SHOW_ASPECT);
+    if(size > best.size + 0.5) best = { cols, rows, size };
+  }
+  return best;
+}
+function fitShowGrid(){
+  if(!showing) return;
+  const view = $('showView'), body = $('showBody');
+  body.style.setProperty('--show-top', $('showStrip').offsetHeight + 'px');
+  const cs = getComputedStyle(body);
+  const w = body.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+  const h = body.clientHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0);
+  const g = showGrid(shownWidgets().length, Math.max(1, w), Math.max(1, h), SHOW_GAP);
+  body.style.setProperty('--show-cols', String(g.cols));
+  body.style.setProperty('--show-rows', String(g.rows));
+  view.dataset.cols = String(g.cols);
+  view.dataset.rows = String(g.rows);
+}
+window.addEventListener('resize', () => { if(showing) fitShowGrid(); });
+
 // Drawn like the board's own, without gliding (its bars sit elsewhere than the board's).
 function drawShow(results){
   if(!showing) return;
-  if(!board.items.includes(showing)){ closeShow(); return; }
-  const el = $('showBody').querySelector('.show-widget');
+  const list = shownWidgets();
+  if(!list.length){ closeShow(); return; }
+  if(list.length !== showing.length){ showing = list.map(w => w.id); buildShowBody(); }
+  else if(board.items.map(w => w.id).join('|') !== showItemsMark) renderShowChips();
   const kept = new Map(lastGeometry), glides = animateNow;
   animateNow = false;
-  if(showing.kind === 'chart') drawChart(el, showing, results); else drawBars(el, showing, results);
+  list.forEach(w => {
+    const el = $('showBody').querySelector('.show-widget[data-id="' + w.id + '"]');
+    if(!el) return;
+    if(w.kind === 'chart') drawChart(el, w, results); else drawBars(el, w, results);
+  });
   lastGeometry = kept;
   animateNow = glides;
+  syncShowStrip();
 }
+// ▶ Play or ■ Stop, as Play is now (05m-play.js); ⇪ Share where sharing is (a phone, or a
+// browser that shares files).
+function syncShowStrip(){
+  const b = $('showPlay'), on = !!playing;
+  const text = on ? '■ Stop' : '▶ Play';
+  if(b.textContent !== text){ b.textContent = text; b.title = on ? 'Stop playing' : 'Play between the ends chosen under Scenarios'; }
+  b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  if(on) $('showNote').textContent = '';
+  $('showShare').classList.toggle('hidden', !(isPhone() || (navigator.share && navigator.canShare)));
+}
+$('showPlay').addEventListener('click', () => {
+  if(playing){ stopPlay(); return; }
+  renderPlayRow(); // the ends chosen under Scenarios, or the usual ones (05m-play.js)
+  const words = startPlay(playChoice.from, playChoice.to);
+  $('showNote').textContent = words ? '' : 'Nothing to play: choose two different ends under Scenarios.';
+  syncShowStrip();
+});
+
+// The strip fades after a few seconds; anything the person does in the view brings it back.
+function wakeShowStrip(){
+  if(!showing) return;
+  $('showView').classList.remove('quiet');
+  clearTimeout(showQuietTimer);
+  showQuietTimer = setTimeout(quietShowStrip, SHOW_STRIP_MS);
+}
+function quietShowStrip(){
+  if(!showing) return;
+  const strip = $('showStrip');
+  // Not while the mouse is on it, or the keys are working in it.
+  if(strip.matches(':hover') || strip.querySelector(':focus-visible:not(.show-close)')){ wakeShowStrip(); return; }
+  $('showView').classList.add('quiet');
+}
+['pointerdown', 'focusin'].forEach(t => $('showView').addEventListener(t, wakeShowStrip, true));
+document.addEventListener('keydown', () => { if(showing) wakeShowStrip(); }, true);
+$('showView').addEventListener('pointermove', (ev) => { if(ev.pointerType === 'mouse') wakeShowStrip(); });
+
 $('showClose').addEventListener('click', () => closeShow());
-$('showShare').addEventListener('click', () => { if(showing) shareWidgetPicture(showing); }); // (05i-phone-share.js)
+$('showHelp').addEventListener('click', () => help.open('full-screen')); // (07-help.js)
+$('showShare').addEventListener('click', () => { if(showing) shareShownPicture(shownWidgets()); }); // (05i-phone-share.js)
 window.addEventListener('popstate', () => { if(showing) closeShow(true); });
-document.addEventListener('keydown', (ev) => { if(ev.key === 'Escape' && showing && $('peekBack').classList.contains('hidden')){ ev.stopPropagation(); closeShow(); } }, true);
+// Esc ends the view, and does only that (a play goes on: a second Esc stops it): on the window,
+// before the page's other keys. Not while the quick look, a rectangle search or the colour grid
+// is open (each closes itself).
+window.addEventListener('keydown', (ev) => {
+  if(ev.key !== 'Escape' || !showing || !$('peekBack').classList.contains('hidden')) return;
+  if(document.querySelector('.colour-grid') || document.getElementById('rectSearch')) return;
+  ev.preventDefault(); ev.stopPropagation(); closeShow();
+}, true);
+
+// ⛶ on a bar's or chart's header (05-render.js).
+function fullScreenButton(w){
+  const b = make('button', 'widget-full', '⛶');
+  b.type = 'button';
+  const label = 'Full screen: show this ' + (w.kind === 'chart' ? 'chart' : 'bar') + ' on the whole screen';
+  b.title = label;
+  b.setAttribute('aria-label', label);
+  b.addEventListener('click', () => openShow(w));
+  return b;
+}
 
 // ---- Holding A to look ----
 const LOOK_HOLD_MS = 220;
@@ -8087,7 +8308,7 @@ store.ready.then(() => Promise.all([store.get(FULL_APP_KEY), store.get(VIBRATE_K
 }, () => {});
 // ============================================================
 // Sharing from a phone (step 17, phase P1b): ☰ → Share a picture of the board or the board
-// file, and ⇪ Share in Show (the chart shown), through the phone's own share sheet (shared
+// file, and ⇪ Share in the full screen (what it shows), through the phone's own share sheet (shared
 // shareFiles: the person picks where it goes; where a browser can't share files, it
 // downloads). The picture is drawn here, on the page: each widget's SVG with its look written
 // into it, drawn on a canvas under the board's and model's names, the widgets' names, a chart's
@@ -8102,12 +8323,14 @@ const PICTURE_FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Hel
 const SVG_LOOK = ['fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'opacity', 'fill-opacity', 'font-size', 'font-weight', 'font-family', 'text-anchor', 'paint-order'];
 
 // An SVG on the page as an image: its look (from the style sheet) written into each element.
-function svgPicture(el){
+// The copy is taken at once (the page may change after); the image arrives later. crisp: the
+// rectangles drawn without smoothing their edges (a GIF's frames: fewer colours).
+function svgPicture(el, crisp){
   const copy = el.cloneNode(true);
   const from = el.querySelectorAll('*'), to = copy.querySelectorAll('*');
   from.forEach((e, i) => {
     const cs = getComputedStyle(e);
-    to[i].setAttribute('style', SVG_LOOK.map(p => p + ':' + cs.getPropertyValue(p)).join(';'));
+    to[i].setAttribute('style', SVG_LOOK.map(p => p + ':' + cs.getPropertyValue(p)).join(';') + (crisp && e.tagName === 'rect' ? ';shape-rendering:crispEdges' : ''));
   });
   copy.querySelectorAll('title').forEach(t => t.remove());
   const vb = el.viewBox && el.viewBox.baseVal;
@@ -8138,20 +8361,24 @@ function wrapText(ctx, text, width){
 }
 
 // The widgets (their elements on the page, and names) drawn as one PNG. Resolves a Blob.
-async function drawPicture(title, widgets){
-  const inner = PICTURE_W - 2 * PICTURE_PAD;
-  const parts = [];
-  for(const w of widgets){
-    const images = [];
-    for(const s of w.el.querySelectorAll('.bar-chart-host svg')) images.push(await svgPicture(s));
+// What a picture shows of each widget ({ el, name }): its drawings (promises, taken now), its key
+// as lines of text and its problems.
+function pictureParts(widgets, crisp){
+  return widgets.map(w => {
+    const images = [...w.el.querySelectorAll('.bar-chart-host svg')].map(s => svgPicture(s, crisp));
     // A chart's key, a line per group: "Assets: Closing cash, Equipment".
     const key = [...w.el.querySelectorAll('.chart-key .key-line')].map(l => {
       const group = l.querySelector('.key-group'), items = [...l.querySelectorAll('.key-item')].map(i => i.textContent.trim()).filter(Boolean);
       return ((group ? group.textContent.trim() + ' ' : '') + items.join(', ')).trim();
     }).filter(Boolean);
     const problems = [...w.el.querySelectorAll('.bar-errors li')].map(l => l.textContent);
-    parts.push({ name: w.name, images, key, problems });
-  }
+    return { name: w.name, images, key, problems };
+  });
+}
+async function drawPicture(title, widgets){
+  const inner = PICTURE_W - 2 * PICTURE_PAD;
+  const parts = pictureParts(widgets);
+  for(const p of parts) p.images = await Promise.all(p.images);
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   const font = (size, weight) => { ctx.font = (weight || 400) + ' ' + size + 'px ' + PICTURE_FONT; };
@@ -8217,10 +8444,12 @@ function shareBoardPicture(){
   const widgets = board.items.map(w => ({ el: document.querySelector('#barList .widget[data-id="' + w.id + '"]'), name: widgetName(w) })).filter(w => w.el);
   return sharePicture(board.name, widgets, model.name + ' - ' + board.name);
 }
-function shareWidgetPicture(w){
-  const el = $('showBody').querySelector('.show-widget');
-  if(!model || !el) return Promise.resolve(null);
-  return sharePicture(widgetName(w), [{ el, name: '' }], model.name + ' - ' + widgetName(w));
+// What the full screen shows (05h-phone-show.js): one under its own name, several under the board's.
+function shareShownPicture(list){
+  const widgets = list.map(w => ({ el: $('showBody').querySelector('.show-widget[data-id="' + w.id + '"]'), name: list.length > 1 ? widgetName(w) : '' })).filter(w => w.el);
+  if(!model || !widgets.length) return Promise.resolve(null);
+  const title = list.length > 1 ? board.name : widgetName(list[0]);
+  return sharePicture(title, widgets, model.name + ' - ' + title);
 }
 async function shareBoardFile(){
   if(!model || !board) return null;
@@ -8890,250 +9119,6 @@ const PLAY_PAUSE_MS = 600;
 const PLAY_POSITIONS = 60;      // positions per swing (and one more: both ends)
 const PLAY_MIN_POSITIONS = 12;
 const PLAY_AHEAD_MS = 3000;     // a slow model has fewer positions, worked out within about this
-// The animated-GIF writer, for a GIF of the play (makeGif; not used yet: the button comes next).
-// ---------- animated GIF writer (shared: src/shared/gif.js; Apache, as the rest of src/shared/) ----------
-// makeGif({ width, height, frames: [{ rgba, delayMs }], loop }) → Uint8Array, the bytes of an
-// animated GIF (GIF89a), written here with no library:
-// - one global colour table: the frames' own colours when there are at most 255 (charts have
-//   few colours and some anti-aliasing greys), else 255 colours by median cut, each pixel the
-//   nearest of them; the last index is kept for "unchanged" (transparent). A pixel's alpha is
-//   laid over white (a canvas's clear pixels come out white, not black).
-// - each frame after the first holds only the rectangle that changed since the frame before
-//   (its unchanged pixels transparent, so they compress well), drawn over what is shown
-//   (disposal 1, "leave it"); a frame with nothing changed is one transparent pixel.
-// - its delay in hundredths of a second (delayMs / 10, rounded; browsers show under 2 as 10);
-//   the NETSCAPE2.0 loop: loop 0 (the default) repeats for ever, n plays n + 1 times in most
-//   viewers, loop null plays once (no loop block).
-// - LZW as the GIF standard has it: variable code size up to 12 bits, a clear code when the
-//   table is full.
-// Inputs are checked (whole sizes within GIF_LIMITS, every frame's rgba the size's length):
-// anything else throws an Error saying what is wrong.
-
-const GIF_LIMITS = { maxSide: 4096, maxFrames: 2000, maxDelayMs: 655350, maxLoop: 65535 };
-
-function makeGif(options){
-  const { width, height, frames } = gifCheckInput(options);
-  const loop = options.loop === undefined ? 0 : options.loop;
-  const n = width * height;
-  // The colours, as 0xRRGGBB per pixel per frame (alpha laid over white).
-  const pixels = frames.map(f => gifRgb(f.rgba, n));
-  const palette = gifPalette(pixels);
-  const indexOf = gifIndexer(palette);
-  const transparent = palette.length; // the index after the colours: "unchanged"
-  let bits = 1;
-  while((1 << bits) < palette.length + 1) bits++;
-  const out = new GifBytes(n * frames.length / 4 + 1024);
-  out.text('GIF89a');
-  out.u16(width); out.u16(height);
-  out.byte(0x80 | (7 << 4) | (bits - 1)); out.byte(0); out.byte(0);
-  for(let i = 0; i < (1 << bits); i++){
-    const c = palette[i] || 0;
-    out.byte(c >> 16); out.byte((c >> 8) & 255); out.byte(c & 255);
-  }
-  if(loop !== null){
-    out.byte(0x21); out.byte(0xff); out.byte(11); out.text('NETSCAPE2.0');
-    out.byte(3); out.byte(1); out.u16(loop); out.byte(0);
-  }
-  let shown = null; // the indexes shown after the frame before
-  frames.forEach((f, k) => {
-    const idx = new Uint8Array(n);
-    const px = pixels[k];
-    for(let i = 0; i < n; i++) idx[i] = indexOf(px[i]);
-    let x0 = 0, y0 = 0, x1 = width - 1, y1 = height - 1, data = idx;
-    if(shown){
-      // The rectangle that changed; outside it nothing is written.
-      x0 = width; y0 = height; x1 = -1; y1 = -1;
-      for(let y = 0, i = 0; y < height; y++){
-        for(let x = 0; x < width; x++, i++){
-          if(idx[i] !== shown[i]){
-            if(x < x0) x0 = x; if(x > x1) x1 = x;
-            if(y < y0) y0 = y; y1 = y;
-          }
-        }
-      }
-      if(x1 < 0){ x0 = 0; y0 = 0; x1 = 0; y1 = 0; }
-      const w = x1 - x0 + 1, h = y1 - y0 + 1;
-      data = new Uint8Array(w * h);
-      for(let y = 0; y < h; y++){
-        for(let x = 0; x < w; x++){
-          const i = (y0 + y) * width + x0 + x;
-          data[y * w + x] = idx[i] === shown[i] ? transparent : idx[i];
-        }
-      }
-    }
-    out.byte(0x21); out.byte(0xf9); out.byte(4);
-    out.byte((1 << 2) | (shown ? 1 : 0));
-    out.u16(Math.round(f.delayMs / 10)); out.byte(shown ? transparent : 0); out.byte(0);
-    out.byte(0x2c); out.u16(x0); out.u16(y0); out.u16(x1 - x0 + 1); out.u16(y1 - y0 + 1); out.byte(0);
-    const minCode = Math.max(2, bits);
-    out.byte(minCode);
-    gifSubBlocks(out, gifLzw(data, minCode));
-    shown = idx;
-  });
-  out.byte(0x3b);
-  return out.bytes();
-}
-
-function gifCheckInput(options){
-  if(!options || typeof options !== 'object') throw new Error('makeGif: options must be an object');
-  const { width, height, frames, loop } = options;
-  const side = (v, name) => {
-    if(!Number.isInteger(v) || v < 1 || v > GIF_LIMITS.maxSide) throw new Error('makeGif: ' + name + ' must be a whole number from 1 to ' + GIF_LIMITS.maxSide);
-  };
-  side(width, 'width'); side(height, 'height');
-  if(!Array.isArray(frames) || frames.length < 1 || frames.length > GIF_LIMITS.maxFrames) throw new Error('makeGif: frames must be a list of 1 to ' + GIF_LIMITS.maxFrames);
-  frames.forEach((f, k) => {
-    if(!f || !(f.rgba instanceof Uint8ClampedArray || f.rgba instanceof Uint8Array)) throw new Error('makeGif: frame ' + (k + 1) + ' has no rgba pixels');
-    if(f.rgba.length !== width * height * 4) throw new Error('makeGif: frame ' + (k + 1) + ' is not ' + width + ' × ' + height);
-    const d = f.delayMs === undefined ? 0 : f.delayMs;
-    if(typeof d !== 'number' || !Number.isFinite(d) || d < 0 || d > GIF_LIMITS.maxDelayMs) throw new Error('makeGif: frame ' + (k + 1) + "'s delay must be from 0 to " + GIF_LIMITS.maxDelayMs + ' ms');
-  });
-  if(loop !== undefined && loop !== null && (!Number.isInteger(loop) || loop < 0 || loop > GIF_LIMITS.maxLoop)) throw new Error('makeGif: loop must be null or a whole number from 0 to ' + GIF_LIMITS.maxLoop);
-  return { width, height, frames: frames.map(f => ({ rgba: f.rgba, delayMs: f.delayMs || 0 })) };
-}
-
-function gifRgb(rgba, n){
-  const out = new Int32Array(n);
-  for(let i = 0, j = 0; i < n; i++, j += 4){
-    const a = rgba[j + 3];
-    if(a === 255) out[i] = (rgba[j] << 16) | (rgba[j + 1] << 8) | rgba[j + 2];
-    else {
-      const over = (c) => Math.round((c * a + 255 * (255 - a)) / 255);
-      out[i] = (over(rgba[j]) << 16) | (over(rgba[j + 1]) << 8) | over(rgba[j + 2]);
-    }
-  }
-  return out;
-}
-
-// The colours of every frame: exact when at most 255, else 255 by median cut.
-function gifPalette(pixels){
-  const counts = new Map();
-  for(const px of pixels){
-    let last = -1;
-    for(let i = 0; i < px.length; i++){
-      const c = px[i];
-      if(c === last) continue;
-      last = c;
-      counts.set(c, (counts.get(c) || 0) + 1);
-    }
-  }
-  if(counts.size <= 255) return [...counts.keys()].sort((a, b) => a - b);
-  return gifMedianCut([...counts.entries()], 255);
-}
-
-function gifMedianCut(entries, size){
-  const ch = (c, k) => (c >> (16 - 8 * k)) & 255;
-  const boxes = [entries];
-  while(boxes.length < size){
-    // Split the box with the widest channel range (of those with more than one colour).
-    let best = -1, bestRange = -1, bestCh = 0;
-    boxes.forEach((b, i) => {
-      if(b.length < 2) return;
-      for(let k = 0; k < 3; k++){
-        let lo = 255, hi = 0;
-        for(const [c] of b){ const v = ch(c, k); if(v < lo) lo = v; if(v > hi) hi = v; }
-        if(hi - lo > bestRange){ bestRange = hi - lo; best = i; bestCh = k; }
-      }
-    });
-    if(best < 0) break;
-    const b = boxes[best].sort((p, q) => ch(p[0], bestCh) - ch(q[0], bestCh));
-    // At the median pixel (by count), keeping both halves non-empty.
-    let total = 0; for(const e of b) total += e[1];
-    let run = 0, cut = 1;
-    for(let i = 0; i < b.length - 1; i++){ run += b[i][1]; if(run * 2 >= total){ cut = i + 1; break; } cut = i + 1; }
-    boxes.splice(best, 1, b.slice(0, cut), b.slice(cut));
-  }
-  return boxes.map(b => {
-    let r = 0, g = 0, bl = 0, w = 0;
-    for(const [c, k] of b){ r += ch(c, 0) * k; g += ch(c, 1) * k; bl += ch(c, 2) * k; w += k; }
-    return (Math.round(r / w) << 16) | (Math.round(g / w) << 8) | Math.round(bl / w);
-  });
-}
-
-// colour → palette index: exact, else the nearest (remembered per colour).
-function gifIndexer(palette){
-  const known = new Map(palette.map((c, i) => [c, i]));
-  let lastC = -1, lastI = 0;
-  return (c) => {
-    if(c === lastC) return lastI;
-    let i = known.get(c);
-    if(i === undefined){
-      const r = c >> 16, g = (c >> 8) & 255, b = c & 255;
-      let bestD = Infinity;
-      for(let k = 0; k < palette.length; k++){
-        const p = palette[k];
-        const dr = r - (p >> 16), dg = g - ((p >> 8) & 255), db = b - (p & 255);
-        const d = dr * dr + dg * dg + db * db;
-        if(d < bestD){ bestD = d; i = k; }
-      }
-      known.set(c, i);
-    }
-    lastC = c; lastI = i;
-    return i;
-  };
-}
-
-// LZW (GIF's form): codes from minCode + 1 bits up to 12, least significant bit first.
-let gifLzwTables = null;
-function gifLzw(data, minCode){
-  const clear = 1 << minCode, eoi = clear + 1;
-  // (prefix, pixel) → code, valid when its stamp is this table's; kept between calls (a clear
-  // is a new stamp, not 8 MB written again).
-  if(!gifLzwTables || gifLzwTables.codes.length < (4096 << minCode)){
-    gifLzwTables = { codes: new Int32Array(4096 << 8), stamps: new Int32Array(4096 << 8), stamp: 0 };
-  }
-  const { codes, stamps } = gifLzwTables;
-  let stamp = ++gifLzwTables.stamp, next = eoi + 1, size = minCode + 1;
-  const out = new GifBytes(data.length / 2 + 16);
-  let acc = 0, accBits = 0;
-  const emit = (code) => {
-    acc |= code << accBits; accBits += size;
-    while(accBits >= 8){ out.byte(acc & 255); acc >>>= 8; accBits -= 8; }
-  };
-  emit(clear);
-  let prefix = data.length ? data[0] : -1;
-  for(let i = 1; i < data.length; i++){
-    const k = data[i];
-    const key = (prefix << minCode) | k;
-    if(stamps[key] === stamp){ prefix = codes[key]; continue; }
-    emit(prefix);
-    if(next === 4096){
-      emit(clear);
-      stamp = ++gifLzwTables.stamp; next = eoi + 1; size = minCode + 1;
-    } else {
-      if(next >= (1 << size)) size++;
-      stamps[key] = stamp; codes[key] = next++;
-    }
-    prefix = k;
-  }
-  if(prefix >= 0) emit(prefix);
-  emit(eoi);
-  if(accBits > 0) out.byte(acc & 255);
-  return out.bytes();
-}
-
-function gifSubBlocks(out, bytes){
-  for(let i = 0; i < bytes.length; i += 255){
-    const len = Math.min(255, bytes.length - i);
-    out.byte(len);
-    out.append(bytes.subarray(i, i + len));
-  }
-  out.byte(0);
-}
-
-class GifBytes {
-  constructor(size){ this.buf = new Uint8Array(Math.max(64, Math.ceil(size))); this.n = 0; }
-  room(k){
-    if(this.n + k <= this.buf.length) return;
-    const b = new Uint8Array(Math.max(this.buf.length * 2, this.n + k));
-    b.set(this.buf.subarray(0, this.n)); this.buf = b;
-  }
-  byte(v){ this.room(1); this.buf[this.n++] = v; }
-  u16(v){ this.byte(v & 255); this.byte((v >> 8) & 255); }
-  text(s){ for(let i = 0; i < s.length; i++) this.byte(s.charCodeAt(i)); }
-  append(bytes){ this.room(bytes.length); this.buf.set(bytes, this.n); this.n += bytes.length; }
-  bytes(){ return this.buf.slice(0, this.n); }
-}
 
 let playChoice = { from: null, to: null, picked: false }; // 'model', 'sliders' or 'sc:' + name; until the page reloads
 let playing = null;
@@ -9190,6 +9175,14 @@ function movingSettings(f){
   }).filter(Boolean);
 }
 
+// The n + 1 positions of a swing, f of the way: spaced by a cosine (slow at the ends), exact at
+// both (also the GIF's, 05o-play-gif.js).
+function playFractions(n){
+  const out = [];
+  for(let i = 0; i <= n; i++) out.push(i === 0 ? 0 : i === n ? 1 : (1 - Math.cos(Math.PI * i / n)) / 2);
+  return out;
+}
+
 // Starts playing between two ends (ids as playOptions). Returns the strip's words, or null.
 function startPlay(fromId, toId, opts){
   if(!model || !board) return null;
@@ -9202,8 +9195,7 @@ function startPlay(fromId, toId, opts){
   opts = opts || {};
   const per = Math.max(model.baseMs, 0.01);
   const n = per * (PLAY_POSITIONS + 1) > PLAY_AHEAD_MS ? Math.max(PLAY_MIN_POSITIONS, Math.floor(PLAY_AHEAD_MS / per) - 1) : PLAY_POSITIONS;
-  const fractions = [];
-  for(let i = 0; i <= n; i++) fractions.push(i === 0 ? 0 : i === n ? 1 : (1 - Math.cos(Math.PI * i / n)) / 2);
+  const fractions = playFractions(n);
   const me = playing = {
     model, board, from: a, to: b, fractions, positions: fractions.map(f => overridesAt(pairs, f)),
     moving: pairs.filter(p => p.moves).map(p => p.key),
@@ -9656,6 +9648,486 @@ function freeEditor(c, box, periodRow, changed){
   });
   box.appendChild(from);
 }
+// ============================================================
+// A GIF of the play (the owner's idea of 27 October 2026: "can GIF file be generated for "Play"
+// for selected graph(s)?"): 🎞 GIF in the full screen's strip makes an animated GIF of what it
+// shows, and 🎞 on a bar's or chart's header one of that one alone, playing between the ends
+// chosen under Scenarios (Play's own: playChoice, 05m-play.js), so it can be put in a message,
+// a slide or a document.
+// - Frames: one full swing there and back at about GIF_FPS frames a second — Play's own
+//   positions (playFractions, every other of PLAY_POSITIONS, so a play already watched has them
+//   worked out in resultCache), each end held PLAY_PAUSE_MS. Each is drawn off the page (the
+//   stage, #gifStage) exactly as the board draws it — playAt set only while drawing, so the
+//   page itself never shows the GIF's positions — and turned to pixels as ⇪ Share does
+//   (svgPicture, 05i-phone-share.js: works from a file opened from disk and on an iPad), GIF_W
+//   pixels wide, the rectangles' edges crisp (fewer colours: the chart colours stay exact more
+//   often; the writer keeps 255 by median cut beyond). The swing back reuses the frames there.
+// - The page stays free: a frame at a time, then a pause; #gifProgress says how far it is
+//   ("Making the GIF… 40%") with Cancel. Over GIF_MAX_BYTES it stops and says so.
+// - Then the share sheet where files can be shared (an iPad: Save to Files, Photos, Messages),
+//   else a download, fmGraph-<the chart's or the board's name>.gif. Nothing is saved with the
+//   board, no undo step, no board file change.
+// ============================================================
+// The animated-GIF writer (makeGif, GIF_LIMITS).
+// ---------- animated GIF writer (shared: src/shared/gif.js; Apache, as the rest of src/shared/) ----------
+// makeGif({ width, height, frames: [{ rgba, delayMs }], loop }) → Uint8Array, the bytes of an
+// animated GIF (GIF89a), written here with no library:
+// - one global colour table: the frames' own colours when there are at most 255 (charts have
+//   few colours and some anti-aliasing greys), else 255 colours by median cut, each pixel the
+//   nearest of them; the last index is kept for "unchanged" (transparent). A pixel's alpha is
+//   laid over white (a canvas's clear pixels come out white, not black).
+// - each frame after the first holds only the rectangle that changed since the frame before
+//   (its unchanged pixels transparent, so they compress well), drawn over what is shown
+//   (disposal 1, "leave it"); a frame with nothing changed is one transparent pixel.
+// - its delay in hundredths of a second (delayMs / 10, rounded; browsers show under 2 as 10);
+//   the NETSCAPE2.0 loop: loop 0 (the default) repeats for ever, n plays n + 1 times in most
+//   viewers, loop null plays once (no loop block).
+// - LZW as the GIF standard has it: variable code size up to 12 bits, a clear code when the
+//   table is full.
+// Inputs are checked (whole sizes within GIF_LIMITS, every frame's rgba the size's length):
+// anything else throws an Error saying what is wrong.
+
+const GIF_LIMITS = { maxSide: 4096, maxFrames: 2000, maxDelayMs: 655350, maxLoop: 65535 };
+
+function makeGif(options){
+  const { width, height, frames } = gifCheckInput(options);
+  const loop = options.loop === undefined ? 0 : options.loop;
+  const n = width * height;
+  // The colours, as 0xRRGGBB per pixel per frame (alpha laid over white).
+  const pixels = frames.map(f => gifRgb(f.rgba, n));
+  const palette = gifPalette(pixels);
+  const indexOf = gifIndexer(palette);
+  const transparent = palette.length; // the index after the colours: "unchanged"
+  let bits = 1;
+  while((1 << bits) < palette.length + 1) bits++;
+  const out = new GifBytes(n * frames.length / 4 + 1024);
+  out.text('GIF89a');
+  out.u16(width); out.u16(height);
+  out.byte(0x80 | (7 << 4) | (bits - 1)); out.byte(0); out.byte(0);
+  for(let i = 0; i < (1 << bits); i++){
+    const c = palette[i] || 0;
+    out.byte(c >> 16); out.byte((c >> 8) & 255); out.byte(c & 255);
+  }
+  if(loop !== null){
+    out.byte(0x21); out.byte(0xff); out.byte(11); out.text('NETSCAPE2.0');
+    out.byte(3); out.byte(1); out.u16(loop); out.byte(0);
+  }
+  let shown = null; // the indexes shown after the frame before
+  frames.forEach((f, k) => {
+    const idx = new Uint8Array(n);
+    const px = pixels[k];
+    for(let i = 0; i < n; i++) idx[i] = indexOf(px[i]);
+    let x0 = 0, y0 = 0, x1 = width - 1, y1 = height - 1, data = idx;
+    if(shown){
+      // The rectangle that changed; outside it nothing is written.
+      x0 = width; y0 = height; x1 = -1; y1 = -1;
+      for(let y = 0, i = 0; y < height; y++){
+        for(let x = 0; x < width; x++, i++){
+          if(idx[i] !== shown[i]){
+            if(x < x0) x0 = x; if(x > x1) x1 = x;
+            if(y < y0) y0 = y; y1 = y;
+          }
+        }
+      }
+      if(x1 < 0){ x0 = 0; y0 = 0; x1 = 0; y1 = 0; }
+      const w = x1 - x0 + 1, h = y1 - y0 + 1;
+      data = new Uint8Array(w * h);
+      for(let y = 0; y < h; y++){
+        for(let x = 0; x < w; x++){
+          const i = (y0 + y) * width + x0 + x;
+          data[y * w + x] = idx[i] === shown[i] ? transparent : idx[i];
+        }
+      }
+    }
+    out.byte(0x21); out.byte(0xf9); out.byte(4);
+    out.byte((1 << 2) | (shown ? 1 : 0));
+    out.u16(Math.round(f.delayMs / 10)); out.byte(shown ? transparent : 0); out.byte(0);
+    out.byte(0x2c); out.u16(x0); out.u16(y0); out.u16(x1 - x0 + 1); out.u16(y1 - y0 + 1); out.byte(0);
+    const minCode = Math.max(2, bits);
+    out.byte(minCode);
+    gifSubBlocks(out, gifLzw(data, minCode));
+    shown = idx;
+  });
+  out.byte(0x3b);
+  return out.bytes();
+}
+
+function gifCheckInput(options){
+  if(!options || typeof options !== 'object') throw new Error('makeGif: options must be an object');
+  const { width, height, frames, loop } = options;
+  const side = (v, name) => {
+    if(!Number.isInteger(v) || v < 1 || v > GIF_LIMITS.maxSide) throw new Error('makeGif: ' + name + ' must be a whole number from 1 to ' + GIF_LIMITS.maxSide);
+  };
+  side(width, 'width'); side(height, 'height');
+  if(!Array.isArray(frames) || frames.length < 1 || frames.length > GIF_LIMITS.maxFrames) throw new Error('makeGif: frames must be a list of 1 to ' + GIF_LIMITS.maxFrames);
+  frames.forEach((f, k) => {
+    if(!f || !(f.rgba instanceof Uint8ClampedArray || f.rgba instanceof Uint8Array)) throw new Error('makeGif: frame ' + (k + 1) + ' has no rgba pixels');
+    if(f.rgba.length !== width * height * 4) throw new Error('makeGif: frame ' + (k + 1) + ' is not ' + width + ' × ' + height);
+    const d = f.delayMs === undefined ? 0 : f.delayMs;
+    if(typeof d !== 'number' || !Number.isFinite(d) || d < 0 || d > GIF_LIMITS.maxDelayMs) throw new Error('makeGif: frame ' + (k + 1) + "'s delay must be from 0 to " + GIF_LIMITS.maxDelayMs + ' ms');
+  });
+  if(loop !== undefined && loop !== null && (!Number.isInteger(loop) || loop < 0 || loop > GIF_LIMITS.maxLoop)) throw new Error('makeGif: loop must be null or a whole number from 0 to ' + GIF_LIMITS.maxLoop);
+  return { width, height, frames: frames.map(f => ({ rgba: f.rgba, delayMs: f.delayMs || 0 })) };
+}
+
+function gifRgb(rgba, n){
+  const out = new Int32Array(n);
+  for(let i = 0, j = 0; i < n; i++, j += 4){
+    const a = rgba[j + 3];
+    if(a === 255) out[i] = (rgba[j] << 16) | (rgba[j + 1] << 8) | rgba[j + 2];
+    else {
+      const over = (c) => Math.round((c * a + 255 * (255 - a)) / 255);
+      out[i] = (over(rgba[j]) << 16) | (over(rgba[j + 1]) << 8) | over(rgba[j + 2]);
+    }
+  }
+  return out;
+}
+
+// The colours of every frame: exact when at most 255, else 255 by median cut.
+function gifPalette(pixels){
+  const counts = new Map();
+  for(const px of pixels){
+    let last = -1;
+    for(let i = 0; i < px.length; i++){
+      const c = px[i];
+      if(c === last) continue;
+      last = c;
+      counts.set(c, (counts.get(c) || 0) + 1);
+    }
+  }
+  if(counts.size <= 255) return [...counts.keys()].sort((a, b) => a - b);
+  return gifMedianCut([...counts.entries()], 255);
+}
+
+function gifMedianCut(entries, size){
+  const ch = (c, k) => (c >> (16 - 8 * k)) & 255;
+  const boxes = [entries];
+  while(boxes.length < size){
+    // Split the box with the widest channel range (of those with more than one colour).
+    let best = -1, bestRange = -1, bestCh = 0;
+    boxes.forEach((b, i) => {
+      if(b.length < 2) return;
+      for(let k = 0; k < 3; k++){
+        let lo = 255, hi = 0;
+        for(const [c] of b){ const v = ch(c, k); if(v < lo) lo = v; if(v > hi) hi = v; }
+        if(hi - lo > bestRange){ bestRange = hi - lo; best = i; bestCh = k; }
+      }
+    });
+    if(best < 0) break;
+    const b = boxes[best].sort((p, q) => ch(p[0], bestCh) - ch(q[0], bestCh));
+    // At the median pixel (by count), keeping both halves non-empty.
+    let total = 0; for(const e of b) total += e[1];
+    let run = 0, cut = 1;
+    for(let i = 0; i < b.length - 1; i++){ run += b[i][1]; if(run * 2 >= total){ cut = i + 1; break; } cut = i + 1; }
+    boxes.splice(best, 1, b.slice(0, cut), b.slice(cut));
+  }
+  return boxes.map(b => {
+    let r = 0, g = 0, bl = 0, w = 0;
+    for(const [c, k] of b){ r += ch(c, 0) * k; g += ch(c, 1) * k; bl += ch(c, 2) * k; w += k; }
+    return (Math.round(r / w) << 16) | (Math.round(g / w) << 8) | Math.round(bl / w);
+  });
+}
+
+// colour → palette index: exact, else the nearest (remembered per colour).
+function gifIndexer(palette){
+  const known = new Map(palette.map((c, i) => [c, i]));
+  let lastC = -1, lastI = 0;
+  return (c) => {
+    if(c === lastC) return lastI;
+    let i = known.get(c);
+    if(i === undefined){
+      const r = c >> 16, g = (c >> 8) & 255, b = c & 255;
+      let bestD = Infinity;
+      for(let k = 0; k < palette.length; k++){
+        const p = palette[k];
+        const dr = r - (p >> 16), dg = g - ((p >> 8) & 255), db = b - (p & 255);
+        const d = dr * dr + dg * dg + db * db;
+        if(d < bestD){ bestD = d; i = k; }
+      }
+      known.set(c, i);
+    }
+    lastC = c; lastI = i;
+    return i;
+  };
+}
+
+// LZW (GIF's form): codes from minCode + 1 bits up to 12, least significant bit first.
+let gifLzwTables = null;
+function gifLzw(data, minCode){
+  const clear = 1 << minCode, eoi = clear + 1;
+  // (prefix, pixel) → code, valid when its stamp is this table's; kept between calls (a clear
+  // is a new stamp, not 8 MB written again).
+  if(!gifLzwTables || gifLzwTables.codes.length < (4096 << minCode)){
+    gifLzwTables = { codes: new Int32Array(4096 << 8), stamps: new Int32Array(4096 << 8), stamp: 0 };
+  }
+  const { codes, stamps } = gifLzwTables;
+  let stamp = ++gifLzwTables.stamp, next = eoi + 1, size = minCode + 1;
+  const out = new GifBytes(data.length / 2 + 16);
+  let acc = 0, accBits = 0;
+  const emit = (code) => {
+    acc |= code << accBits; accBits += size;
+    while(accBits >= 8){ out.byte(acc & 255); acc >>>= 8; accBits -= 8; }
+  };
+  emit(clear);
+  let prefix = data.length ? data[0] : -1;
+  for(let i = 1; i < data.length; i++){
+    const k = data[i];
+    const key = (prefix << minCode) | k;
+    if(stamps[key] === stamp){ prefix = codes[key]; continue; }
+    emit(prefix);
+    if(next === 4096){
+      emit(clear);
+      stamp = ++gifLzwTables.stamp; next = eoi + 1; size = minCode + 1;
+    } else {
+      if(next >= (1 << size)) size++;
+      stamps[key] = stamp; codes[key] = next++;
+    }
+    prefix = k;
+  }
+  if(prefix >= 0) emit(prefix);
+  emit(eoi);
+  if(accBits > 0) out.byte(acc & 255);
+  return out.bytes();
+}
+
+function gifSubBlocks(out, bytes){
+  for(let i = 0; i < bytes.length; i += 255){
+    const len = Math.min(255, bytes.length - i);
+    out.byte(len);
+    out.append(bytes.subarray(i, i + len));
+  }
+  out.byte(0);
+}
+
+class GifBytes {
+  constructor(size){ this.buf = new Uint8Array(Math.max(64, Math.ceil(size))); this.n = 0; }
+  room(k){
+    if(this.n + k <= this.buf.length) return;
+    const b = new Uint8Array(Math.max(this.buf.length * 2, this.n + k));
+    b.set(this.buf.subarray(0, this.n)); this.buf = b;
+  }
+  byte(v){ this.room(1); this.buf[this.n++] = v; }
+  u16(v){ this.byte(v & 255); this.byte((v >> 8) & 255); }
+  text(s){ for(let i = 0; i < s.length; i++) this.byte(s.charCodeAt(i)); }
+  append(bytes){ this.room(bytes.length); this.buf.set(bytes, this.n); this.n += bytes.length; }
+  bytes(){ return this.buf.slice(0, this.n); }
+}
+
+const GIF_W = 720;                  // pixels across
+const GIF_FPS = 15;                 // about this many frames a second while it swings
+const GIF_MAX_BYTES = 10 * 1024 * 1024;
+const GIF_PAD = 20;
+const GIF_GAP = 16;
+let gifMaking = null;               // while a GIF is made: { model, positions, cancelled }
+
+// The frames' positions: indexes into playFractions(PLAY_POSITIONS), one swing, both ends included.
+function gifSwingIndexes(){
+  const k = Math.max(2, Math.round(PLAY_SWING_MS / 1000 * GIF_FPS));
+  const out = [];
+  for(let j = 0; j <= k; j++) out.push(Math.round(j * PLAY_POSITIONS / k));
+  return out;
+}
+// The order the frames are shown in: there (0 … k), and back (k − 1 … 1); then it loops.
+function gifOrder(k){
+  const out = [];
+  for(let j = 0; j <= k; j++) out.push(j);
+  for(let j = k - 1; j >= 1; j--) out.push(j);
+  return out;
+}
+
+// Makes the GIF of the play for the board's widgets ids. Resolves { bytes, blob, name, frames,
+// width, height, ms, colours }, or { problem: words } (nothing to play, too large, cancelled,
+// another model), never throws for those.
+async function makePlayGif(ids, opts){
+  opts = opts || {};
+  if(!model || !board) return { problem: 'Open a model first.' };
+  if(gifMaking) return { problem: 'A GIF is being made already.' };
+  const list = board.items.filter(w => ids.includes(w.id));
+  if(!list.length) return { problem: 'Choose a bar or chart for the GIF.' };
+  // The ends: those playing now, else those chosen under Scenarios.
+  let fromId, toId;
+  if(playing){ fromId = playing.from.id; toId = playing.to.id; stopPlay(); }
+  else { renderPlayRow(); fromId = playChoice.from; toId = playChoice.to; }
+  const a = playEnd(fromId), b = playEnd(toId);
+  const pairs = a && b ? playPairs(overridesFor(a.settings), overridesFor(b.settings)) : [];
+  if(!pairs.some(p => p.moves)) return { problem: 'Nothing to play: choose two different ends under Scenarios.' };
+  const fractions = playFractions(PLAY_POSITIONS), indexes = gifSwingIndexes();
+  const positions = indexes.map(i => overridesAt(pairs, fractions[i]));
+  const maxBytes = Number.isFinite(opts.maxBytes) && opts.maxBytes > 0 ? opts.maxBytes : GIF_MAX_BYTES;
+  const title = list.length > 1 ? board.name : widgetName(list[0]); // (05i-phone-share.js)
+  const me = gifMaking = { model, board, positions, cancelled: false };
+  const started = performance.now();
+  const stage = gifStage(list);
+  showGifProgress(0);
+  try{
+    const shots = [];
+    let height = 0;
+    for(let k = 0; k < positions.length; k++){
+      if(me.cancelled) return { problem: 'The GIF was cancelled.', cancelled: true };
+      if(model !== me.model || board !== me.board) return { problem: 'The model or board changed: the GIF was not made.' };
+      const parts = gifDrawPosition(stage, list, positions[k], positions[0]);
+      const words = 'Playing ' + a.name + ' ⇄ ' + b.name + ': ' + gifSettingsWords(a, b, fractions[indexes[k]]);
+      for(const p of parts) p.images = await Promise.all(p.images);
+      const frame = gifFrame(title, words, parts, height);
+      height = frame.height;
+      shots.push(frame.rgba);
+      showGifProgress((k + 1) / positions.length * 0.9);
+      await gifPause();
+    }
+    if(me.cancelled) return { problem: 'The GIF was cancelled.', cancelled: true };
+    const k = positions.length - 1, step = Math.round(1000 / GIF_FPS / 10) * 10;
+    const frames = gifOrder(k).map(j => ({ rgba: shots[j], delayMs: j === 0 || j === k ? PLAY_PAUSE_MS : step }));
+    showGifProgress(0.95);
+    await gifPause();
+    const bytes = makeGif({ width: GIF_W, height, frames, loop: 0 });
+    if(bytes.length > maxBytes){
+      const mb = (n) => (n / 1024 / 1024).toFixed(1).replace(/\.0$/, '');
+      return { problem: 'The GIF would be ' + mb(bytes.length) + ' MB, more than the ' + mb(maxBytes) + ' MB it may be: show fewer charts in it.', tooLarge: true, size: bytes.length };
+    }
+    const name = 'fmGraph-' + safeFileName(title) + '.gif'; // (06b-board-files.js)
+    return { bytes, blob: new Blob([bytes], { type: 'image/gif' }), name, frames: frames.length, width: GIF_W, height, ms: Math.round(performance.now() - started) };
+  } catch(e){
+    return { problem: 'The GIF could not be made: ' + String(e && e.message || e).slice(0, 200) };
+  } finally {
+    if(gifMaking === me) gifMaking = null;
+    stage.remove();
+    hideGifProgress();
+    if(model) updateValues(); // the key as it is again
+  }
+}
+
+// What the frame's line says: where the moving sliders stand, f of the way (as Play's strip).
+function gifSettingsWords(a, b, f){
+  const was = playing;
+  playing = { from: a, to: b }; // movingSettings reads the ends from it (05m-play.js)
+  try{ return settingsLabel(movingSettings(f)); } finally { playing = was; }
+}
+
+// The stage: a place off the page for each widget, drawn as the board draws it.
+function gifStage(list){
+  const stage = make('div', 'gif-stage');
+  stage.id = 'gifStage';
+  stage.setAttribute('aria-hidden', 'true');
+  list.forEach(w => {
+    const el = make('div', 'gif-widget');
+    el.append(make('div', 'bar-chart-host'), make('div', 'chart-key'), make('ul', 'bar-errors'));
+    stage.appendChild(el);
+  });
+  document.body.appendChild(stage);
+  return stage;
+}
+// One position drawn on the stage; returns pictureParts (the drawings taken at once, before the
+// page can change). playAt is set only while drawing.
+function gifDrawPosition(stage, list, now, from){
+  const kept = new Map(lastGeometry), glides = animateNow, was = playAt;
+  animateNow = false;
+  playAt = { model, now, from }; // (03-calc.js)
+  try{
+    const results = resultsWith(now);
+    prepareCommonScale(results); // (04d-scale.js)
+    const els = [...stage.children];
+    list.forEach((w, i) => { if(w.kind === 'chart') drawChart(els[i], w, results); else drawBars(els[i], w, results); });
+    return pictureParts(list.map((w, i) => ({ el: els[i], name: list.length > 1 ? widgetName(w) : '' })), true);
+  } finally {
+    playAt = was;
+    lastGeometry = kept;
+    animateNow = glides;
+  }
+}
+
+// A frame: the title, the play's words, the widgets in a grid (side by side when several), each
+// its name, drawings, key and problems; the height is the first frame's for every later one.
+function gifFrame(title, words, parts, fixedHeight){
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const inner = GIF_W - 2 * GIF_PAD;
+  const cols = parts.length <= 1 ? 1 : parts.length <= 4 ? 2 : 3;
+  const cellW = (inner - GIF_GAP * (cols - 1)) / cols;
+  const font = (size, weight) => { ctx.font = (weight || 400) + ' ' + size + 'px ' + PICTURE_FONT; };
+  const ops = [];
+  const text = (t, x, y, width, size, weight, colour) => {
+    font(size, weight);
+    wrapText(ctx, t, width).forEach(line => { ops.push({ t: line, x, y: y + size, size, weight, colour }); y += Math.round(size * 1.3); });
+    return y;
+  };
+  let y = GIF_PAD;
+  y = text(title, GIF_PAD, y, inner, 24, 700, '#1b2333') + 2;
+  y = text(model.name, GIF_PAD, y, inner, 14, 400, '#5f6b7d');
+  y = text(words, GIF_PAD, y, inner, 14, 400, '#5f6b7d') + 12;
+  for(let r = 0; r < parts.length; r += cols){
+    let bottom = y;
+    parts.slice(r, r + cols).forEach((p, c) => {
+      const x = GIF_PAD + c * (cellW + GIF_GAP);
+      let cy = y;
+      if(p.name) cy = text(p.name, x, cy, cellW, 16, 700, '#1b2333') + 4;
+      p.images.forEach(im => {
+        const w = Math.min(cellW, im.w * PICTURE_ZOOM), h = Math.round(w * im.h / im.w);
+        ops.push({ im: im.img, x: x + (cellW - w) / 2, y: cy, w, h });
+        cy += h + 6;
+      });
+      p.key.forEach(k => { cy = text(k, x, cy, cellW, 12, 400, '#5f6b7d'); });
+      p.problems.forEach(k => { cy = text(k, x, cy, cellW, 12, 400, '#b42318'); });
+      bottom = Math.max(bottom, cy);
+    });
+    y = bottom + GIF_GAP;
+  }
+  y = text('Made with fmGraph', GIF_PAD, y, inner, 11, 400, '#94a3b8');
+  const height = fixedHeight || Math.min(GIF_LIMITS.maxSide, Math.round(y + GIF_PAD));
+  canvas.width = GIF_W;
+  canvas.height = height;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, GIF_W, height);
+  ops.forEach(op => {
+    if(op.y > height) return;
+    if(op.im){ ctx.drawImage(op.im, op.x, op.y, op.w, op.h); return; }
+    font(op.size, op.weight);
+    ctx.fillStyle = op.colour;
+    ctx.fillText(op.t, op.x, op.y);
+  });
+  return { rgba: ctx.getImageData(0, 0, GIF_W, height).data, height };
+}
+
+const gifPause = () => new Promise(r => setTimeout(r, 0));
+
+// ---- the progress strip, with Cancel ----
+function showGifProgress(f){
+  $('gifProgress').classList.remove('hidden');
+  $('gifProgressText').textContent = 'Making the GIF… ' + Math.round(f * 100) + '%';
+}
+function hideGifProgress(){ $('gifProgress').classList.add('hidden'); }
+function cancelPlayGif(){
+  if(!gifMaking) return false;
+  gifMaking.cancelled = true;
+  return true;
+}
+$('btnGifCancel').addEventListener('click', () => cancelPlayGif());
+
+// Made, then shared or downloaded; any problem said where the person is (the strip, or a notice).
+async function playGifFor(ids){
+  const say = (words, kind) => {
+    if(showing) $('showNote').textContent = words; // (05h-phone-show.js)
+    notify(words, kind, 'gif');
+  };
+  say('', null);
+  const r = await makePlayGif(ids);
+  if(r.problem){ say(r.cancelled ? '' : r.problem, 'err'); return r; }
+  const file = new File([r.blob], r.name, { type: 'image/gif' });
+  const how = await shareFiles([file], r.name);
+  if(how === 'downloaded') say('Saved the GIF: ' + r.name + '.', 'ok');
+  return Object.assign(r, { how });
+}
+
+// 🎞 on a bar's or chart's header (05-render.js).
+function gifButton(w){
+  const b = make('button', 'widget-gif', '🎞');
+  b.type = 'button';
+  const label = 'GIF of this ' + (w.kind === 'chart' ? 'chart' : 'bar') + ': make an animated GIF of it playing between the ends chosen under Scenarios';
+  b.title = label;
+  b.setAttribute('aria-label', label);
+  b.addEventListener('click', () => playGifFor([w.id]));
+  return b;
+}
+$('showGif').addEventListener('click', () => { if(showing) playGifFor(showing.slice()); });
 // ============================================================
 // The page: opening a model (the file picker, a file dropped anywhere, the sample, or fmIDE),
 // the top bar's buttons, and ← Back to fmIDE.
@@ -11075,13 +11547,26 @@ const FMGRAPH_HELP_TOPICS = [
       { p: 'There is a notch at the model\'s own number: the slider settles there when you pass close, with a tick. Tap the number to type one; − and + step it (hold them to keep going, faster and faster); double-tap the slider to go back to the model\'s number.' },
       { p: 'Swipe sideways across the bars, or use ‹ and ›, for the next board. Hold a bar for a quick look: its value in every period, now against the model\'s own numbers (or A), 🔍 Trace and ⤢ Show. Hold a chart to see its rectangles\' numbers.' },
       { p: 'Turn the phone sideways for the mixer: the sliders stand up as faders at the two edges of the screen, under your thumbs, with the board between them. Each finger moves its own fader, so you can move two (or more) at once and watch the bars follow both. Slide your finger sideways, away from a fader, to make it finer. Tap a fader\'s name to put another slider there; that is remembered for the board.' },
-      { p: '⤢ Show puts one bar or chart on the whole screen and keeps the screen on while it shows, for showing someone; ×, Esc or your phone\'s back gesture ends it. The sliders stay beside it.' },
+      { p: '⤢ Show puts the bar or chart on the whole screen and keeps the screen on while it shows, for showing someone; tap another\'s name at the top to show it too. ×, Esc or your phone\'s back gesture ends it. The sliders stay beside it.' },
       { p: 'Saved scenarios are cards: swipe through them; ▶ shows one. Hold a card\'s A to look at that scenario: the bars show it while your finger stays down, and come back when you let go. A quick tap on A compares with it, as before. With 📌 Pin as A, hold the A on the strip to look at A. ▶ Play under the scenarios swings between two of them: the dock\'s sliders and Show follow, the screen stays on, and it keeps playing while you scroll, tap or swipe to another board; ■ Stop stops it, and so does moving a slider.' },
       { p: '⇪ Share (in Show, and in ☰) sends a picture of the chart, or of the whole board, or the board file, through your phone\'s own Share button: Messages, Mail, AirDrop. The picture is drawn on your phone; nothing is sent until you choose where it goes. Where a browser can\'t share files, they download instead.' },
       { steps: ['Open a model (☰ → Open…), or Try the sample model.', 'Drag a slider in the dock and watch the bars.', 'Slide your finger up to set it exactly.', 'Hold a bar to see every period, then ⤢ Show.', 'Turn the phone sideways and move two faders at once.'] },
       { tip: 'On Android the tick is felt; ☰ → Vibrate on the marks turns that off. An iPhone does not let web pages vibrate, so there the tick is only seen.' },
       { p: 'Adding bars, charts and sliders, arranging them and the tutorials are left to a tablet or computer. ☰ → Full app shows the whole page on a phone too; 📱 Phone layout goes back. Both are remembered in this browser.' },
       { see: ['sliders', 'explore', 'compare'] },
+    ] },
+  { id: 'full-screen', group: 'board', title: 'Full screen: bars and charts, bigger',
+    keywords: 'full screen fullscreen bigger large present presentation show meeting projector tv ipad tablet chips several many grid hide play share gif animated animation video movie',
+    summary: '⛶ shows one or several bars and charts on the whole screen, without the rest of the page.',
+    body: [
+      { p: '⛶ at the top of a bar or chart puts it on the whole screen, as big as the screen allows, with nothing else around it: for a meeting, a projector or an iPad on the table. Where the browser can, it goes truly full screen (its own bars go too); on an iPhone, which can\'t, the view still covers the page.' },
+      { p: 'The strip at the top lists every bar and chart on the board. Tap one to show it too, tap it again to take it away: several share the screen, laid out to fit it, each as large as it can be. Which ones are shown is not saved; the board stays as it is.' },
+      { p: 'What is shown follows the sliders, A and the shared period exactly as the board does. ▶ Play in the strip plays between the ends chosen under Scenarios (and ■ Stop stops it); tapping the screen leaves it playing. ⇪ Share, where your device shares pictures, sends a picture of what is shown.' },
+      { p: '🎞 GIF in the strip makes an animated GIF of what is shown, playing between those same ends: one swing there and back, pausing at each end, 720 pixels wide, repeating for ever — for a message, a slide or a document. "Making the GIF… 40%" shows how far it is, with Cancel. On an iPad or a phone the share sheet opens (Save to Files, Photos, Messages); elsewhere it downloads as fmGraph-<name>.gif. A GIF may be up to 10 MB: show fewer charts if it would be larger. 🎞 on a bar\'s or chart\'s header makes one of that one alone.' },
+      { p: 'After a few seconds the strip fades so only the charts are left (× stays, faintly, in the corner); a tap, a key or moving the mouse brings it back. × or Esc ends it, and so do the back gesture and leaving the browser\'s full screen. If Play is running it keeps running; Esc again stops it. The screen is kept on meanwhile.' },
+      { p: 'On a phone, ⤢ Show in a bar\'s quick look does the same, with the slider dock (or, sideways, the faders) still beside it.' },
+      { steps: ['Press ⛶ on a chart.', 'Tap another chart\'s name in the strip to show it too.', 'Press ▶ Play to watch them change together.', 'Press × or Esc to come back.'] },
+      { see: ['charts', 'scenarios', 'phone'] },
     ] },
   { id: 'charts', group: 'board', title: 'Charts: columns, lines and waterfalls',
     keywords: 'chart columns stacked side by side group lines line trend over time waterfall bridge balance sheet income statement check total scenario waterfall cases tornado spider key legend zero hidden at 0',
@@ -11203,7 +11688,7 @@ const FMGRAPH_HELP_TOPICS = [
       { see: ['scenarios', 'sliders', 'explore'] },
     ] },
   { id: 'scenarios', group: 'board', title: 'Named scenarios',
-    keywords: 'scenario scenarios named save switch show compare sc01 what if case version keep play pendulum swing animate move back and forth',
+    keywords: 'scenario scenarios named save switch show compare sc01 what if case version keep play pendulum swing animate move back and forth gif animated',
     summary: 'Save where the sliders are under a name, switch between scenarios, and compare with any of them.',
     body: [
       { p: 'Set the sliders, then press + Save as scenario in the Scenarios panel under the sliders. It is named sc01, sc02 and so on; type a name of your own in its box. Save as many as you like (up to 50 a model).' },
@@ -11212,6 +11697,7 @@ const FMGRAPH_HELP_TOPICS = [
       { p: '⟳ keeps where the sliders are now in that scenario, ↑ ↓ change the order, and × deletes it.' },
       { p: 'Play, under the scenarios, swings the model between two ends and back, like a pendulum, so you can watch a change happen: choose each end (a scenario, the model\'s own numbers or the sliders now) and press ▶ Play. Every number the two ends set differently moves smoothly, slower near the ends, with a short pause at each; the bars, the charts and the sliders follow, and the dashed outlines show the first end. The Tornado and Spider charts and Biggest movers wait until it stops.' },
       { p: 'It keeps playing while you scroll, click, open a panel, edit a chart or switch to another board (the board shown follows it). ■ Stop or Esc stops it, and so does moving a slider yourself; everything is then as it was: Play changes no slider, saves nothing and is not an undo step. With reduced motion turned on in your device\'s settings, nothing swings: the board shows the second end against the first end\'s outlines, and ⇄ steps between them.' },
+      { p: '🎞 on a bar or chart (or 🎞 GIF in the full screen, for what it shows) turns the play into an animated GIF to send or put in a slide: one swing between the two ends chosen here and back, repeating. If Play is running, the GIF uses its ends and the play stops.' },
       { p: 'Scenarios are kept with the model\'s boards: in this browser, in fmIDE\'s document when fmGraph was opened from fmIDE, and in Export all boards. Saving, renaming, updating, moving and deleting them can be undone; showing one is like moving a slider, not a change.' },
       { see: ['compare', 'board-file'] },
     ] },
@@ -11247,6 +11733,30 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'play-gif', date: '2026-10-27', title: 'A GIF of Play, to send or put in a slide',
+    summary: '🎞 GIF in the full screen turns Play into an animated GIF of the charts shown; 🎞 on a chart makes one of that chart alone.',
+    what: [
+      'The GIF shows one swing between the two ends chosen under Scenarios and back, pausing at each end, and repeats for ever. It is 720 pixels wide, with the board\'s or chart\'s name and where the sliders stand above the charts.',
+      'In the full screen, 🎞 GIF makes one of every chart shown there, side by side. 🎞 at the top of a bar or chart makes one of that one alone.',
+      '"Making the GIF… 40%" shows how far it is, with Cancel; the page keeps working meanwhile. If Play is running, the GIF uses its ends and the play stops.',
+      'On an iPad or a phone the share sheet opens (Save to Files, Photos, Messages); on a computer it downloads as fmGraph-<name>.gif.',
+    ],
+    why: 'Play shows a change happening across the model, but only on your own screen. A GIF carries it into an email, a chat, a slide or a document, where anyone can watch it without fmGraph.',
+    how: ['Save two scenarios.', 'Press ⛶ on a chart and tap another chart\'s name to show it too.', 'Press 🎞 GIF in the strip.', 'Save or send the GIF.'],
+    notes: ['A GIF may be up to 10 MB: if it would be larger, fmGraph says so; show fewer charts.', 'Nothing is saved with the board, and the board file is unchanged.', 'It works from a file opened from disk too, with nothing sent anywhere.'],
+    see: ['full-screen', 'scenarios'] },
+  { id: 'full-screen', date: '2026-10-27', title: 'Full screen: your bars and charts, bigger',
+    summary: '⛶ on a bar or chart puts it on the whole screen, without the rest of the page; tap others in the strip to show several at once.',
+    what: [
+      '⛶ at the top of every bar and chart opens it full screen, on a computer, an iPad or a phone. Where the browser can, it goes truly full screen.',
+      'The strip at the top lists the board\'s bars and charts: tap one to show it too, tap it again to take it away. Several share the screen, laid out to fit it.',
+      'It follows the sliders, A and the shared period like the board. ▶ Play in the strip plays between the ends chosen under Scenarios; a tap on the screen leaves it playing.',
+      'The strip fades after a few seconds, leaving only the charts; a tap, a key or the mouse brings it back. × stays in the corner.',
+    ],
+    why: 'To show a model to someone — in a meeting, on a projector or on an iPad — the charts should be big, with no buttons and lists around them.',
+    how: ['Press ⛶ on a chart.', 'Tap another bar or chart\'s name in the strip to show it too.', 'Press ▶ Play to watch them move together.', 'Press ×, Esc or the back gesture to come back.'],
+    notes: ['Which bars and charts were shown is not saved: the board and its file are unchanged.', 'An iPhone has no full screen for web pages: the view still covers the page.', 'On a phone, ⤢ Show in a quick look opens the same view, with the slider dock beside it.'],
+    see: ['full-screen'] },
   { id: 'key-hides-zeros', date: '2026-10-27', title: 'A chart\'s key leaves out rectangles at 0',
     summary: 'A balance sheet with only cash and a loan now lists those two in its key, not every account: the rectangles at 0 are left out, and "+N at 0" shows them.',
     what: [
@@ -12294,6 +12804,20 @@ window.fmGraph = Object.freeze({
     fraction: playing.index < 0 ? null : playing.fractions[playing.index], positions: playing.positions.length,
     worked: playing.positions.filter(o => resultCache.has(overridesKey(o))).length, runs: playing.runs,
     elapsed: playing.startedAt === null ? null : performance.now() - playing.startedAt, swing: playing.swingMs, pause: playing.pauseMs } : null,
+  // A GIF of the play (05o-play-gif.js): makePlayGif({ ids?, maxBytes?, share? }) — the bars and
+  // charts by id (default: those in the full screen, else the board's first) playing between the
+  // ends playing now or chosen under Scenarios; resolves { bytes (Uint8Array), blob, name, frames,
+  // width, height, ms } (share: true also shares or downloads it, as 🎞 does: { how }), or
+  // { problem: words } (nothing to play, too large — over maxBytes, 10 MB — cancelled).
+  // cancelPlayGif() → true when one was being made.
+  makePlayGif: async (spec) => {
+    spec = spec || {};
+    if(!model) throw new Error('Open a model first.');
+    const ids = Array.isArray(spec.ids) ? spec.ids.map(String) : showing ? showing.slice() : board.items.slice(0, 1).map(w => w.id);
+    if(spec.share){ const r = await playGifFor(ids); return r.problem ? { problem: r.problem } : r; }
+    return makePlayGif(ids, { maxBytes: Number(spec.maxBytes) });
+  },
+  cancelPlayGif: () => cancelPlayGif(),
   // G6: tutorials. startTutorial(id) → Promise<boolean>; tutorial() → { id, step (its id), index } or null;
   // stopTutorial() puts the model from before back.
   tutorials: () => FMGRAPH_TUTORIALS.map(t => ({ id: t.id, title: t.title, steps: t.steps.length })),

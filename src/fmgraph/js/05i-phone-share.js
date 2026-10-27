@@ -1,6 +1,6 @@
 // ============================================================
 // Sharing from a phone (step 17, phase P1b): ☰ → Share a picture of the board or the board
-// file, and ⇪ Share in Show (the chart shown), through the phone's own share sheet (shared
+// file, and ⇪ Share in the full screen (what it shows), through the phone's own share sheet (shared
 // shareFiles: the person picks where it goes; where a browser can't share files, it
 // downloads). The picture is drawn here, on the page: each widget's SVG with its look written
 // into it, drawn on a canvas under the board's and model's names, the widgets' names, a chart's
@@ -15,12 +15,14 @@ const PICTURE_FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Hel
 const SVG_LOOK = ['fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'opacity', 'fill-opacity', 'font-size', 'font-weight', 'font-family', 'text-anchor', 'paint-order'];
 
 // An SVG on the page as an image: its look (from the style sheet) written into each element.
-function svgPicture(el){
+// The copy is taken at once (the page may change after); the image arrives later. crisp: the
+// rectangles drawn without smoothing their edges (a GIF's frames: fewer colours).
+function svgPicture(el, crisp){
   const copy = el.cloneNode(true);
   const from = el.querySelectorAll('*'), to = copy.querySelectorAll('*');
   from.forEach((e, i) => {
     const cs = getComputedStyle(e);
-    to[i].setAttribute('style', SVG_LOOK.map(p => p + ':' + cs.getPropertyValue(p)).join(';'));
+    to[i].setAttribute('style', SVG_LOOK.map(p => p + ':' + cs.getPropertyValue(p)).join(';') + (crisp && e.tagName === 'rect' ? ';shape-rendering:crispEdges' : ''));
   });
   copy.querySelectorAll('title').forEach(t => t.remove());
   const vb = el.viewBox && el.viewBox.baseVal;
@@ -51,20 +53,24 @@ function wrapText(ctx, text, width){
 }
 
 // The widgets (their elements on the page, and names) drawn as one PNG. Resolves a Blob.
-async function drawPicture(title, widgets){
-  const inner = PICTURE_W - 2 * PICTURE_PAD;
-  const parts = [];
-  for(const w of widgets){
-    const images = [];
-    for(const s of w.el.querySelectorAll('.bar-chart-host svg')) images.push(await svgPicture(s));
+// What a picture shows of each widget ({ el, name }): its drawings (promises, taken now), its key
+// as lines of text and its problems.
+function pictureParts(widgets, crisp){
+  return widgets.map(w => {
+    const images = [...w.el.querySelectorAll('.bar-chart-host svg')].map(s => svgPicture(s, crisp));
     // A chart's key, a line per group: "Assets: Closing cash, Equipment".
     const key = [...w.el.querySelectorAll('.chart-key .key-line')].map(l => {
       const group = l.querySelector('.key-group'), items = [...l.querySelectorAll('.key-item')].map(i => i.textContent.trim()).filter(Boolean);
       return ((group ? group.textContent.trim() + ' ' : '') + items.join(', ')).trim();
     }).filter(Boolean);
     const problems = [...w.el.querySelectorAll('.bar-errors li')].map(l => l.textContent);
-    parts.push({ name: w.name, images, key, problems });
-  }
+    return { name: w.name, images, key, problems };
+  });
+}
+async function drawPicture(title, widgets){
+  const inner = PICTURE_W - 2 * PICTURE_PAD;
+  const parts = pictureParts(widgets);
+  for(const p of parts) p.images = await Promise.all(p.images);
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   const font = (size, weight) => { ctx.font = (weight || 400) + ' ' + size + 'px ' + PICTURE_FONT; };
@@ -130,10 +136,12 @@ function shareBoardPicture(){
   const widgets = board.items.map(w => ({ el: document.querySelector('#barList .widget[data-id="' + w.id + '"]'), name: widgetName(w) })).filter(w => w.el);
   return sharePicture(board.name, widgets, model.name + ' - ' + board.name);
 }
-function shareWidgetPicture(w){
-  const el = $('showBody').querySelector('.show-widget');
-  if(!model || !el) return Promise.resolve(null);
-  return sharePicture(widgetName(w), [{ el, name: '' }], model.name + ' - ' + widgetName(w));
+// What the full screen shows (05h-phone-show.js): one under its own name, several under the board's.
+function shareShownPicture(list){
+  const widgets = list.map(w => ({ el: $('showBody').querySelector('.show-widget[data-id="' + w.id + '"]'), name: list.length > 1 ? widgetName(w) : '' })).filter(w => w.el);
+  if(!model || !widgets.length) return Promise.resolve(null);
+  const title = list.length > 1 ? board.name : widgetName(list[0]);
+  return sharePicture(title, widgets, model.name + ' - ' + title);
 }
 async function shareBoardFile(){
   if(!model || !board) return null;

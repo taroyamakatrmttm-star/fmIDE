@@ -133,6 +133,8 @@ function renderBoard(){
     const head = el.querySelector('.widget-head');
     head.prepend(arrangeControls(w, el));
     head.insertBefore(traceButton(w), head.querySelector('.widget-remove')); // Trace (05d-explore.js)
+    head.insertBefore(fullScreenButton(w), head.querySelector('.widget-remove')); // ⛶ (05h-phone-show.js)
+    head.insertBefore(gifButton(w), head.querySelector('.widget-remove')); // 🎞 a GIF of the play (05o-play-gif.js)
     bars.appendChild(el);
   });
   board.sliders.forEach(s => { const el = sliders.querySelector('.slider-widget[data-id="' + s.id + '"]'); if(el) el.querySelector('.widget-head').prepend(arrangeControls(s, el)); });
@@ -352,7 +354,7 @@ function updateValues(){
     if(!el) return;
     el.querySelector('.slider-base').textContent = sliderBaseText(s);
   });
-  drawShow(results); // one shown on the whole screen, on a phone (05h-phone-show.js)
+  drawShow(results); // those on the whole screen (05h-phone-show.js)
   updateMovers(results);
   markScenarios(); // (05f-scenarios.js)
   paintReach();

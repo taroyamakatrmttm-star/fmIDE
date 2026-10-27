@@ -154,10 +154,13 @@ function loadsOf(spec){
     // 'fmIDE-excel-style', test titles), so it counts only where a test can open it: its
     // opener and helper, its page, openApp with its name, the other apps' Back to fmIDE and
     // the address they use for it (the owner's decision, 12 October 2026). The site opens all.
+    // Comments don't count (27 October 2026): a test that only mentions an app in its notes,
+    // such as group 87's "for fmGraph's Play", doesn't open it.
+    const code = codeLines(text);
     if(f !== 'tests/helpers/apps.js'){
-      if(OPENS_FMIDE.test(text)) loads.add(APP_PAGES.fmIDE);
-      if(/ExcelExporter|openExporter|openExcel|\bexporter\b/i.test(text)) loads.add(APP_PAGES.ExcelExporter);
-      if(/fmgraph/i.test(text)) loads.add(APP_PAGES.fmGraph);
+      if(OPENS_FMIDE.test(code)) loads.add(APP_PAGES.fmIDE);
+      if(/ExcelExporter|openExporter|openExcel|\bexporter\b/i.test(code)) loads.add(APP_PAGES.ExcelExporter);
+      if(/fmgraph/i.test(code)) loads.add(APP_PAGES.fmGraph);
     }
     if(/helpers\/site|require\('\.\/site'\)/.test(text)) loads.add(SITE);
     for(const m of text.matchAll(/\btools\/([a-z0-9-]+)(?:\.js)?\b/g)) tools.add('tools/' + m[1] + '.js');
@@ -167,7 +170,6 @@ function loadsOf(spec){
     for(const m of text.matchAll(/(?:'fixtures'|FIXTURES),\s*'([a-z0-9-]+)'/g)) loads.add('tests/fixtures/' + m[1] + '/');
     for(const m of text.matchAll(/\bfixtures\/([a-z0-9-]+)/g)) loads.add('tests/fixtures/' + m[1] + '/');
     if(/toMatchSnapshot|helpers\/snapshot|\bsnapshots\b/.test(text)) loads.add('tests/snapshots/');
-    const code = codeLines(text);
     for(const m of code.matchAll(/\bdocs\/[A-Za-z0-9_.\/-]+/g)) loads.add(m[0]);
     for(const m of code.matchAll(/'docs',\s*'([A-Za-z0-9_.-]+)'/g)) loads.add('docs/' + m[1]);
   }

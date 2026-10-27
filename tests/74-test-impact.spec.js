@@ -161,6 +161,20 @@ test('an fmGraph-only change runs fmGraph\'s groups, not the Excel or calculatio
   expect(r.tests.length).toBeLessThan(ALL.length / 2);
 });
 
+test('an app named only in a test\'s comments is not opened by it (27 October 2026)', () => {
+  // Group 6 names fmGraph's boards and group 65 fmGraph's fixed scale only in comments: neither
+  // opens fmGraph. Group 88 opens it (openApp(page, 'fmGraph')), and mentions it in comments too.
+  for(const t of ['tests/6-formats-fmide.spec.js', 'tests/65-modules-in-node.spec.js']){
+    const text = fs.readFileSync(path.join(ROOT, t), 'utf8');
+    expect(text, t).toMatch(/^\s*\/\/.*fmGraph/m);
+    expect(I.loadsOf(t).has(I.APP_PAGES.fmGraph), t).toBe(false);
+  }
+  expect(I.loadsOf('tests/88-fmgraph-play-gif.spec.js').has(I.APP_PAGES.fmGraph)).toBe(true);
+  const r = pick('src/fmgraph/js/05-render.js').tests;
+  for(const t of ['6-formats-fmide', '65-modules-in-node']) expect(r, t).not.toContain('tests/' + t + '.spec.js');
+  expect(r).toContain('tests/88-fmgraph-play-gif.spec.js');
+});
+
 test('an fmIDE-only change runs the groups that can open fmIDE, not those that only name it', () => {
   const r = pick('src/fmide/js/07b-zoom.js');
   expect(r.full).toBe(false);

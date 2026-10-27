@@ -342,7 +342,9 @@ const keyZerosOpen = new Set(); // charts whose key shows the rectangles at 0 to
 function keyResults(results){
   const list = [results, compareResults()];
   // Play's two ends (05m-play.js): its first and last positions.
-  const ends = playing && playing.model === model && Array.isArray(playing.positions) ? playing.positions : null;
+  // (While a GIF of the play is made, its ends: 05o-play-gif.js.)
+  const now = playing && playing.model === model ? playing : gifMaking && gifMaking.model === model ? gifMaking : null;
+  const ends = now && Array.isArray(now.positions) ? now.positions : null;
   if(ends && ends.length) list.push(resultsWith(ends[0]), resultsWith(ends[ends.length - 1]));
   return list;
 }

@@ -12,9 +12,9 @@ The numbers in this part were checked against the apps on `main` at pull request
 |---|---|---|
 | [6.1 Bars and sliders](#bars-sliders) | Open fmGraph, + Bar, + Slider, what a slider reaches, folding sliders, sharing slider positions | step 15 G1 ([#83](https://github.com/taroyamakatrmttm-star/fmIDE/pull/83)), [#142](https://github.com/taroyamakatrmttm-star/fmIDE/pull/142), [#143](https://github.com/taroyamakatrmttm-star/fmIDE/pull/143), [#181](https://github.com/taroyamakatrmttm-star/fmIDE/pull/181), [#182](https://github.com/taroyamakatrmttm-star/fmIDE/pull/182) |
 | [6.2 Charts](#graph-charts) | Columns, Lines, Waterfall, Free; one period for every board; the key leaving out rectangles at 0 | step 15 G2 ([#84](https://github.com/taroyamakatrmttm-star/fmIDE/pull/84)), [#184](https://github.com/taroyamakatrmttm-star/fmIDE/pull/184), [#188](https://github.com/taroyamakatrmttm-star/fmIDE/pull/188), branch `claude/fmgraph-free-chart-f1`, branch `claude/fmgraph-key-hides-zeros` |
-| [6.3 Boards](#graph-boards) | Tabs, arranging, one colour per rectangle, a fixed scale, one scale for all, undo, board files, boards in the document | step 15 G3 ([#85](https://github.com/taroyamakatrmttm-star/fmIDE/pull/85)–[#87](https://github.com/taroyamakatrmttm-star/fmIDE/pull/87)), [#133](https://github.com/taroyamakatrmttm-star/fmIDE/pull/133), branch `claude/fmgraph-shared-colours-e9c229` |
+| [6.3 Boards](#graph-boards) | Tabs, arranging, one colour per rectangle, a fixed scale, one scale for all, full screen, undo, board files, boards in the document | step 15 G3 ([#85](https://github.com/taroyamakatrmttm-star/fmIDE/pull/85)–[#87](https://github.com/taroyamakatrmttm-star/fmIDE/pull/87)), [#133](https://github.com/taroyamakatrmttm-star/fmIDE/pull/133), branch `claude/fmgraph-shared-colours-e9c229`, branch `claude/fmgraph-full-screen` |
 | [6.4 Trace, Biggest movers, and comparing A with B](#graph-explore) | 🔍 Trace, Biggest movers, 📌 Pin as A | step 15 G4 ([#88](https://github.com/taroyamakatrmttm-star/fmIDE/pull/88), [#89](https://github.com/taroyamakatrmttm-star/fmIDE/pull/89)) |
-| [6.5 Named scenarios and the scenario waterfall](#graph-scenarios) | + Save as scenario, ▶ Show, A, ▶ Play between two scenarios, the scenario waterfall | [#93](https://github.com/taroyamakatrmttm-star/fmIDE/pull/93), [#94](https://github.com/taroyamakatrmttm-star/fmIDE/pull/94) |
+| [6.5 Named scenarios and the scenario waterfall](#graph-scenarios) | + Save as scenario, ▶ Show, A, ▶ Play between two scenarios, a GIF of the play, the scenario waterfall | [#93](https://github.com/taroyamakatrmttm-star/fmIDE/pull/93), [#94](https://github.com/taroyamakatrmttm-star/fmIDE/pull/94), branch `claude/fmgraph-play-gif` |
 | [6.6 Tornado and Spider: which inputs matter most](#tornado-spider) | The two charts, and choosing each input's Low and High | step 18 ([#146](https://github.com/taroyamakatrmttm-star/fmIDE/pull/146), [#149](https://github.com/taroyamakatrmttm-star/fmIDE/pull/149)); branch `claude/tornado-remove-all-inputs-655a57` |
 | [6.7 Goal seek](#goal-seek) | The slider value that hits a number | [#187](https://github.com/taroyamakatrmttm-star/fmIDE/pull/187) |
 | [6.8 Boards on templates and in the library](#boards-templates) | Export for a template…, Attach to template…, Try in fmGraph | step 15 G5 ([#90](https://github.com/taroyamakatrmttm-star/fmIDE/pull/90)–[#92](https://github.com/taroyamakatrmttm-star/fmIDE/pull/92)) |
@@ -105,8 +105,8 @@ At Price 12, the Profit bar shows **160**; a dashed outline keeps the model's ow
 > **Goal:** organise several boards, make them readable, and move them between computers.
 > **You need:** fmGraph with a board.
 > **Time:** about 10 minutes.
-> **In the app:** fmGraph Help → *Boards: tabs, arranging, colours, undo* (`boards`), *A fixed vertical scale* (`scale`), *One scale for every bar and chart* (`common-scale`), *Saving and sharing boards* (`board-file`), *What fmGraph remembers* (`board-kept`)
-> **Came in:** step 15 G3 · boards [#85](https://github.com/taroyamakatrmttm-star/fmIDE/pull/85); colours shown [#86](https://github.com/taroyamakatrmttm-star/fmIDE/pull/86); boards in fmIDE's document [#87](https://github.com/taroyamakatrmttm-star/fmIDE/pull/87); a fixed scale [#133](https://github.com/taroyamakatrmttm-star/fmIDE/pull/133); one colour per rectangle, branch `claude/fmgraph-shared-colours-e9c229`; one scale for every bar and chart, branch `claude/objective-merkle-f14472`; the colour grid, branch `claude/colour-grid-picker-1c5e83`
+> **In the app:** fmGraph Help → *Boards: tabs, arranging, colours, undo* (`boards`), *A fixed vertical scale* (`scale`), *One scale for every bar and chart* (`common-scale`), *Full screen: bars and charts, bigger* (`full-screen`), *Saving and sharing boards* (`board-file`), *What fmGraph remembers* (`board-kept`)
+> **Came in:** step 15 G3 · boards [#85](https://github.com/taroyamakatrmttm-star/fmIDE/pull/85); colours shown [#86](https://github.com/taroyamakatrmttm-star/fmIDE/pull/86); boards in fmIDE's document [#87](https://github.com/taroyamakatrmttm-star/fmIDE/pull/87); a fixed scale [#133](https://github.com/taroyamakatrmttm-star/fmIDE/pull/133); one colour per rectangle, branch `claude/fmgraph-shared-colours-e9c229`; one scale for every bar and chart, branch `claude/objective-merkle-f14472`; the colour grid, branch `claude/colour-grid-picker-1c5e83`; full screen, branch `claude/fmgraph-full-screen`; its 🎞 GIF, branch `claude/fmgraph-play-gif`
 
 ### Steps
 
@@ -117,6 +117,7 @@ At Price 12, the Profit bar shows **160**; a dashed outline keeps the model's ow
 5. To compare every bar and chart, choose **Scale: Auto for all** above them, beside the shared period. Every bar and chart, on every board, now stands on one range that takes in all their numbers, and moves with the sliders; **Fixed for all** draws them all from the min to the max in its boxes. A bar's scale list now starts with **Shared**: choosing **Auto scale** there keeps that bar on its own. **Each its own** goes back, each keeping the scale it showed.
 6. **↶ Undo** (Ctrl+Z) takes back the last change to the boards; **↷ Redo** (Ctrl+Y) brings it back.
 7. **Boards ▾ → Export all boards** saves a board file; **Boards ▾ → Import boards…** (or dropping a board file on the page) adds its boards as new tabs.
+8. Press **⛶** at the top of the Balance sheet chart: it fills the screen, with nothing else around it. In the strip at the top, tap **Closing cash** to show it too: the two share the screen, side by side. Move the mouse away and wait: after a few seconds the strip fades, leaving only the charts (× stays in the corner). Press **×** or **Esc** to come back.
 
 ### Check it
 
@@ -127,6 +128,7 @@ In the sample, the Closing cash bar and Closing cash in the Balance sheet are th
 - **Where the boards are kept:** in this browser, for each model, and in fmIDE's document when fmGraph was opened from fmIDE. Each change to them goes back to fmIDE and marks the document unsaved; saving there keeps the boards with the model.
 - **One colour per rectangle:** a rectangle you haven't coloured takes the chart colours in the order it first appears in a Columns, Lines or Spider chart. A waterfall step keeps its up, down or total colour until you choose one for it; the Tornado's Low and High colours belong to that chart. Choosing **Automatic** at the top of the colour picker goes back to it (one undo step). Boards saved before keep their colours; where two charts disagreed, the first is kept and fmGraph says how many changed.
 - **One scale for all:** bars and Columns, Lines, Waterfall and Scenario waterfall charts follow it; the Tornado and the Spider keep their own. It starts on Each its own, so boards saved before look as they did. On a phone there is no Scale choice; the bars and charts follow the one chosen on a larger screen. ExcelExporter's Dashboard charts take the same scale ([lesson 5.11](05-excelexporter.md#fmgraph-in-excel)).
+- **Full screen** uses the browser's own full screen where it can (on an iPad too; an iPhone can't, and the view then covers the page). What it shows follows the sliders and A like the board; **▶ Play** in its strip plays between the ends chosen under Scenarios, and a tap leaves it playing; **🎞 GIF** there makes a GIF of the charts shown, playing ([lesson 6.5](#graph-scenarios)). The back gesture, or leaving the browser's full screen, ends it too. Which bars and charts were shown is not saved.
 - **Moving a slider is not a change** to the board: Undo leaves it alone, and a board always opens on the model's own numbers.
 - **A board file fits the model it was made from,** or another built from the same templates. Anything it shows that this model hasn't got is left out, and fmGraph says how much.
 - **Into Excel:** ExcelExporter rebuilds a board's sliders, charts and scenarios in the workbook ([lesson 5.11](05-excelexporter.md#fmgraph-in-excel)).
@@ -168,8 +170,8 @@ The trace note reads **Price → Revenue → Profit**, and lists **Quantity** an
 > **Goal:** save what-ifs under names, switch between them, and show how each one changes a result.
 > **You need:** the board of [lesson 6.1](#bars-sliders).
 > **Time:** about 12 minutes.
-> **In the app:** fmGraph Help → *Named scenarios* (`scenarios`), *Charts: columns, lines and waterfalls* (`charts`) · fmGraph tutorial *Scenarios* (`scenarios`)
-> **Came in:** named scenarios, S1 ([#93](https://github.com/taroyamakatrmttm-star/fmIDE/pull/93)); the scenario waterfall, S2 ([#94](https://github.com/taroyamakatrmttm-star/fmIDE/pull/94)); Play (branch `claude/fmgraph-play-scenarios`, 27 October 2026); Play keeping going while you scroll or switch boards (branch `claude/fmgraph-play-keeps-going`, 27 October 2026)
+> **In the app:** fmGraph Help → *Named scenarios* (`scenarios`), *Charts: columns, lines and waterfalls* (`charts`), *Full screen: bars and charts, bigger* (`full-screen`) · fmGraph tutorial *Scenarios* (`scenarios`)
+> **Came in:** named scenarios, S1 ([#93](https://github.com/taroyamakatrmttm-star/fmIDE/pull/93)); the scenario waterfall, S2 ([#94](https://github.com/taroyamakatrmttm-star/fmIDE/pull/94)); Play (branch `claude/fmgraph-play-scenarios`, 27 October 2026); Play keeping going while you scroll or switch boards (branch `claude/fmgraph-play-keeps-going`, 27 October 2026); a GIF of the play (branch `claude/fmgraph-play-gif`, 27 October 2026)
 
 ### Steps
 
@@ -178,6 +180,7 @@ The trace note reads **Price → Revenue → Profit**, and lists **Quantity** an
 3. Press **▶** on *Low price*: the sliders go where it had them. The scenario the sliders match is marked.
 4. Press **Reset all**. Press **+ Chart** and choose **Scenario waterfall**. In Edit chart, choose **Profit** as its output.
 5. Under the scenarios, set **Play from** to *Low price* and **to** to *High price*, and press **▶ Play**. Price swings from 8 to 12 and back, like a pendulum, pausing at each end; the Profit bar follows, and its dashed outline marks *Low price*. Press **Esc**: everything is as it was before.
+6. Press **🎞** at the top of the Profit bar. "Making the GIF…" counts up for a few seconds, then the GIF downloads as *fmGraph-Profit.gif* (on an iPad or a phone, the share sheet opens instead). Open it: Price swings from 8 to 12 and back, pausing at each end, again and again.
 
 ### Check it
 
@@ -193,6 +196,7 @@ The trace note reads **Price → Revenue → Profit**, and lists **Quantity** an
 - **A** on a scenario compares with it, as 📌 Pin as A does ([lesson 6.4](#graph-explore)). **⟳** keeps where the sliders are now in that scenario; **↑ ↓** reorder; **×** deletes.
 - **A scenario keeps the inputs it changed,** whatever board it was saved on. If one has no slider on the board you're looking at, fmGraph says so.
 - **▶ Play** can swing between any two ends: a scenario, the model's own numbers or the sliders now. Every number the two ends set differently moves together, slower near the ends. It keeps playing while you scroll, tap, open a panel or switch boards (the board shown follows it). **■ Stop** or **Esc** stops it, and so does moving a slider yourself; it changes no slider and saves nothing. With reduced motion turned on in your device's settings nothing swings: the board shows the second end against the first, and **⇄** steps between them.
+- **A GIF of the play** (🎞 on a bar or chart, or **🎞 GIF** in the full screen for every chart shown there, side by side) is one swing there and back, about 15 frames a second, each end held 0.6 s, 720 pixels wide, repeating for ever — for an email, a chat or a slide. **Cancel** on its progress strip stops it; if Play is running, the GIF uses its ends and the play stops. A GIF may be up to 10 MB (two charts come to about 0.3 MB); over that, fmGraph says so. Nothing is saved with the board.
 - **Up to 50 scenarios** a model. They are kept with the boards, in fmIDE's document and in **Export all boards**; saving, renaming and deleting them can be undone.
 - **A scenario waterfall** follows the scenarios as you update, reorder or rename them. Edit chart chooses the period, up to six outputs, and which scenarios it goes through.
 - **In Excel,** the scenarios become Global Cases ([lesson 5.11](05-excelexporter.md#fmgraph-in-excel)).
@@ -345,7 +349,7 @@ The slider settles with a tick at the model's own number when you pass close to 
 
 - **Tap the number** to type one; **− and +** step it (hold them to keep going).
 - **Swipe across the bars,** or use ‹ and ›, for the next board.
-- **⤢ Show** puts one bar or chart on the whole screen and keeps the screen on, for showing someone; ×, Esc or the back gesture ends it.
+- **⤢ Show** puts the bar or chart on the whole screen and keeps the screen on, for showing someone; tap another's name at the top to show it too ([lesson 6.3](#graph-boards)). ×, Esc or the back gesture ends it.
 - **Scenarios are cards:** swipe through them; ▶ shows one. Hold a card's **A** to look at that scenario while your finger stays down.
 - **⇪ Share** sends a picture of the chart or the whole board, or the board file, through your phone's share sheet. The picture is drawn on your phone; nothing is sent until you choose where.
 - **Building boards** (adding bars, charts and sliders), goal seek and the tutorials stay on a tablet or computer, or **☰ → Full app**.
