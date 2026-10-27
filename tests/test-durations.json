@@ -86,5 +86,6 @@
  "84-fmgraph-free-chart.spec.js": 12.3,
  "85-fmgraph-key-zeros.spec.js": 9,
  "87-gif-encoder.spec.js": 8.7,
+ "90-excel-free-chart.spec.js": 10,
  "9-storage.spec.js": 17.9
 }
