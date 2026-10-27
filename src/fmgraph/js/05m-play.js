@@ -30,8 +30,6 @@ const PLAY_PAUSE_MS = 600;
 const PLAY_POSITIONS = 60;      // positions per swing (and one more: both ends)
 const PLAY_MIN_POSITIONS = 12;
 const PLAY_AHEAD_MS = 3000;     // a slow model has fewer positions, worked out within about this
-// The animated-GIF writer, for a GIF of the play (makeGif; not used yet: the button comes next).
-// build:include shared/gif.js
 
 let playChoice = { from: null, to: null, picked: false }; // 'model', 'sliders' or 'sc:' + name; until the page reloads
 let playing = null;
@@ -88,6 +86,14 @@ function movingSettings(f){
   }).filter(Boolean);
 }
 
+// The n + 1 positions of a swing, f of the way: spaced by a cosine (slow at the ends), exact at
+// both (also the GIF's, 05o-play-gif.js).
+function playFractions(n){
+  const out = [];
+  for(let i = 0; i <= n; i++) out.push(i === 0 ? 0 : i === n ? 1 : (1 - Math.cos(Math.PI * i / n)) / 2);
+  return out;
+}
+
 // Starts playing between two ends (ids as playOptions). Returns the strip's words, or null.
 function startPlay(fromId, toId, opts){
   if(!model || !board) return null;
@@ -100,8 +106,7 @@ function startPlay(fromId, toId, opts){
   opts = opts || {};
   const per = Math.max(model.baseMs, 0.01);
   const n = per * (PLAY_POSITIONS + 1) > PLAY_AHEAD_MS ? Math.max(PLAY_MIN_POSITIONS, Math.floor(PLAY_AHEAD_MS / per) - 1) : PLAY_POSITIONS;
-  const fractions = [];
-  for(let i = 0; i <= n; i++) fractions.push(i === 0 ? 0 : i === n ? 1 : (1 - Math.cos(Math.PI * i / n)) / 2);
+  const fractions = playFractions(n);
   const me = playing = {
     model, board, from: a, to: b, fractions, positions: fractions.map(f => overridesAt(pairs, f)),
     moving: pairs.filter(p => p.moves).map(p => p.key),

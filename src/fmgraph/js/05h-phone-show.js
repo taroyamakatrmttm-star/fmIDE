@@ -158,7 +158,7 @@ store.ready.then(() => store.get(MIXER_KEY)).then(raw => {
 // (a history step) or leaving the browser's full screen ends it. It follows the sliders and Play
 // like the board (drawShow, from updateValues) and keeps the screen on; a tap in it never stops
 // Play. Which are shown is this page's only: never saved, nothing in the board file.
-// #showMore in the strip, before ⇪ Share, is kept for more buttons (a GIF of the play, next).
+// #showMore in the strip, before ⇪ Share, holds more buttons: 🎞 GIF of what is shown (05o-play-gif.js).
 const SHOW_STRIP_MS = 3000;
 const SHOW_ASPECT = 1.6;   // a bar's or chart's drawing, about this much wider than tall
 const SHOW_GAP = 12;       // pixels between two shown

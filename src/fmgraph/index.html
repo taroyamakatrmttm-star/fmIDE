@@ -134,13 +134,14 @@
     <div id="showChips" class="show-chips" role="group" aria-label="Bars and charts shown"></div>
     <button type="button" id="showPlay" class="show-btn show-play" title="Play between the ends chosen under Scenarios">▶ Play</button>
     <span id="showNote" class="show-note" aria-live="polite"></span>
-    <span id="showMore" class="show-more"></span>
+    <span id="showMore" class="show-more"><button type="button" id="showGif" class="show-btn" title="GIF: an animated GIF of what is shown, playing between the ends chosen under Scenarios">🎞 GIF</button></span>
     <button type="button" id="showShare" class="show-btn">⇪ Share</button>
     <button type="button" id="showHelp" class="show-btn show-help" aria-label="Help: full screen" title="Help: full screen">?</button>
     <button type="button" id="showClose" class="show-btn show-close" aria-label="Close" title="Close (Esc)">×</button>
   </div>
   <div id="showBody" class="show-body"></div>
 </section>
+<div id="gifProgress" class="gif-progress hidden" role="status" aria-live="polite"><span id="gifProgressText"></span> <button type="button" id="btnGifCancel">Cancel</button></div>
 <div id="phoneMenu" class="phone-menu hidden" role="menu" aria-label="Menu">
   <button type="button" role="menuitem" id="phoneOpen">📂 Open…</button>
   <button type="button" role="menuitem" id="phoneFromFmide" class="hidden">↻ From fmIDE</button>

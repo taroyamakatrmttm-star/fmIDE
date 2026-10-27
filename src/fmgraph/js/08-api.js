@@ -348,6 +348,20 @@ window.fmGraph = Object.freeze({
     fraction: playing.index < 0 ? null : playing.fractions[playing.index], positions: playing.positions.length,
     worked: playing.positions.filter(o => resultCache.has(overridesKey(o))).length, runs: playing.runs,
     elapsed: playing.startedAt === null ? null : performance.now() - playing.startedAt, swing: playing.swingMs, pause: playing.pauseMs } : null,
+  // A GIF of the play (05o-play-gif.js): makePlayGif({ ids?, maxBytes?, share? }) — the bars and
+  // charts by id (default: those in the full screen, else the board's first) playing between the
+  // ends playing now or chosen under Scenarios; resolves { bytes (Uint8Array), blob, name, frames,
+  // width, height, ms } (share: true also shares or downloads it, as 🎞 does: { how }), or
+  // { problem: words } (nothing to play, too large — over maxBytes, 10 MB — cancelled).
+  // cancelPlayGif() → true when one was being made.
+  makePlayGif: async (spec) => {
+    spec = spec || {};
+    if(!model) throw new Error('Open a model first.');
+    const ids = Array.isArray(spec.ids) ? spec.ids.map(String) : showing ? showing.slice() : board.items.slice(0, 1).map(w => w.id);
+    if(spec.share){ const r = await playGifFor(ids); return r.problem ? { problem: r.problem } : r; }
+    return makePlayGif(ids, { maxBytes: Number(spec.maxBytes) });
+  },
+  cancelPlayGif: () => cancelPlayGif(),
   // G6: tutorials. startTutorial(id) → Promise<boolean>; tutorial() → { id, step (its id), index } or null;
   // stopTutorial() puts the model from before back.
   tutorials: () => FMGRAPH_TUTORIALS.map(t => ({ id: t.id, title: t.title, steps: t.steps.length })),

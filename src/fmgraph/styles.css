@@ -214,6 +214,13 @@
   .widget-trace:hover{ opacity:1; background:none; }
   .widget-full{ border:none; background:none; padding:2px 6px; font-size:15px; opacity:.7; }
   .widget-full:hover{ opacity:1; background:#e0f2f1; border-radius:6px; }
+  /* A GIF of the play (05o-play-gif.js): 🎞 on a header (not on a phone: Show has it), the stage off the page, the progress strip. */
+  .widget-gif{ border:none; background:none; padding:2px 5px; font-size:14px; opacity:.6; }
+  .widget-gif:hover{ opacity:1; background:#e0f2f1; border-radius:6px; }
+  body.phone .widget-gif{ display:none; }
+  .gif-stage{ position:fixed; left:-20000px; top:0; width:720px; pointer-events:none; }
+  .gif-progress{ position:fixed; z-index:60; left:50%; bottom:calc(var(--dock-h, 0px) + 18px); transform:translateX(-50%); display:flex; align-items:center; gap:10px; padding:9px 14px; border-radius:12px; background:#1b2333; color:#fff; font-size:14px; box-shadow:0 6px 24px rgba(16,24,40,.25); }
+  .gif-progress button{ font-size:13px; padding:4px 10px; }
   .widget-trace[aria-pressed="true"]{ opacity:1; background:#e0f2f1; border-radius:6px; }
   .board.tracing .slider-widget{ opacity:.45; }
   .board.tracing .slider-widget.traced{ opacity:1; box-shadow:0 0 0 2px var(--reach); }

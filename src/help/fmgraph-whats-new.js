@@ -8,6 +8,18 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'play-gif', date: '2026-10-27', title: 'A GIF of Play, to send or put in a slide',
+    summary: '🎞 GIF in the full screen turns Play into an animated GIF of the charts shown; 🎞 on a chart makes one of that chart alone.',
+    what: [
+      'The GIF shows one swing between the two ends chosen under Scenarios and back, pausing at each end, and repeats for ever. It is 720 pixels wide, with the board\'s or chart\'s name and where the sliders stand above the charts.',
+      'In the full screen, 🎞 GIF makes one of every chart shown there, side by side. 🎞 at the top of a bar or chart makes one of that one alone.',
+      '"Making the GIF… 40%" shows how far it is, with Cancel; the page keeps working meanwhile. If Play is running, the GIF uses its ends and the play stops.',
+      'On an iPad or a phone the share sheet opens (Save to Files, Photos, Messages); on a computer it downloads as fmGraph-<name>.gif.',
+    ],
+    why: 'Play shows a change happening across the model, but only on your own screen. A GIF carries it into an email, a chat, a slide or a document, where anyone can watch it without fmGraph.',
+    how: ['Save two scenarios.', 'Press ⛶ on a chart and tap another chart\'s name to show it too.', 'Press 🎞 GIF in the strip.', 'Save or send the GIF.'],
+    notes: ['A GIF may be up to 10 MB: if it would be larger, fmGraph says so; show fewer charts.', 'Nothing is saved with the board, and the board file is unchanged.', 'It works from a file opened from disk too, with nothing sent anywhere.'],
+    see: ['full-screen', 'scenarios'] },
   { id: 'full-screen', date: '2026-10-27', title: 'Full screen: your bars and charts, bigger',
     summary: '⛶ on a bar or chart puts it on the whole screen, without the rest of the page; tap others in the strip to show several at once.',
     what: [
