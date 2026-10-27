@@ -628,3 +628,31 @@ test.describe('ExcelExporter\'s formula building, in Node', () => {
     expect(FX.mirrorIdFor('c1|n1')).toBe('inp|c1|n1');
   });
 });
+
+// ---------- snapping (src/shared/snap.js, fmIDE's canvas and fmGraph's Free chart, F2) ----------
+test.describe('snapping, alone in Node', () => {
+  const { snapPlace, equalSpacingSnap, distributePositions } = require('../src/shared/snap.js');
+  const box = (x, y, w = 170, h = 64) => ({ x, y, w, h });
+  test('lining up and equal spacing, the nearer winning, alignment on a tie; nothing as far as the distance', () => {
+    // A at 100 and B at 300 (gap 30): C at 503, 102 goes to 500 (equal spacing) and 100 (A's top).
+    let s = snapPlace([box(100, 100), box(300, 100)], 503, 102, 170, 64, 6);
+    expect([s.x, s.y, s.guideX, s.guideY]).toEqual([500, 100, null, 100]);
+    expect(s.gaps.map(g => [g.axis, g.from, g.to])).toEqual([['x', 270, 300], ['x', 470, 500]]);
+    // E's left edge at 504 in another row: a tie at 502 goes to alignment.
+    s = snapPlace([box(100, 100), box(300, 100), box(504, 400)], 502, 100, 170, 64, 6);
+    expect([s.x, s.guideX]).toEqual([504, 504]);
+    // 6 away is too far; a place below 0 is never offered (fmIDE keeps its clamp itself).
+    expect(snapPlace([box(100, 100)], 106, 300, 170, 64, 6).x).toBe(106);
+    expect(equalSpacingSnap([box(150, 0), box(350, 0)], -48, 0, 170, 64, 'x', 6)).toBeNull(); // before the first: -50
+    // Columns as boxes (fmGraph): one empty column either side of the second.
+    expect(equalSpacingSnap([box(0, 0, 1, 1), box(2, 0, 1, 1)], 4.4, 0, 1, 1, 'x', 0.5).pos).toBe(4);
+  });
+  test('Distribute: equal gaps between edges, the first and last kept, in the order given; fewer than three none', () => {
+    const at = distributePositions([box(100, 0, 100), box(400, 0, 170), box(250, 0, 60), box(800, 0, 200)], 'h');
+    expect(at[0]).toBe(100); expect(at[3]).toBe(800);
+    expect(at[2]).toBeCloseTo(200 + 370 / 3, 9);
+    expect(at[1]).toBeCloseTo(200 + 370 / 3 + 60 + 370 / 3, 9);
+    expect(distributePositions([box(0, 100), box(0, 150), box(0, 590), box(0, 700)], 'v')).toEqual([100, 300, 500, 700]);
+    expect(distributePositions([box(0, 0), box(10, 0)], 'h')).toBeNull();
+  });
+});

@@ -50,7 +50,7 @@ test('Sliders and bars, from the first screen: played through; the first screen 
   await openFmGraph(page);
   await page.click('#btnTutorials');
   await expect(page.locator('.help-tutorial')).toHaveCount(4);
-  expect(await page.locator('.help-tutorial .help-command-name').allTextContents()).toEqual(['🎓 Sliders and bars · 3 min', '🎓 Charts · 4 min', '🎓 Trace and compare · 4 min', '🎓 Scenarios · 4 min']);
+  expect(await page.locator('.help-tutorial .help-command-name').allTextContents()).toEqual(['🎓 Sliders and bars · 3 min', '🎓 Charts · 5 min', '🎓 Trace and compare · 4 min', '🎓 Scenarios · 4 min']);
   await page.locator('.help-tutorial[data-tutorial="sliders-and-bars"] .help-tutorial-start').click();
   await stepIs(page, 'intro');
   await expect(page.locator('#helpPanel')).toBeHidden();
@@ -105,8 +105,20 @@ test('Charts: a waterfall built step by step; the model from before comes back w
   await stepIs(page, 'check');
   await expect(chart.locator('.t-check.ok')).toHaveCount(1);
   await typeSlider(page, 0, 14);
-  await stepIs(page, 'end');
+  await stepIs(page, 'free');
   await expect(chart.locator('.t-check.ok')).toHaveCount(1);
+  // Free (F2): the waterfall as pieces; Gross profit dragged up by its own height, onto the
+  // guide "where −Cost of sales ends".
+  await page.locator('.chart-widget select[aria-label="Kind of chart"]').first().selectOption('free');
+  const gp = page.locator('.chart-widget').first().locator('.fr-piece[data-piece="2"] .c-part').first();
+  const b = await gp.boundingBox();
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2 - b.height / 2, { steps: 4 });
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2 - b.height, { steps: 4 });
+  await expect(page.locator('.chart-widget .fr-guide-label')).toHaveText('where −Cost of sales ends');
+  await page.mouse.up();
+  await stepIs(page, 'end');
   await card(page).locator('.tutorial-finish').click();
   // The sample model again, with its boards as they were (Mine included); nothing changed in storage.
   await expect.poll(() => g(page, () => fmGraph.boards())).toEqual([{ name: 'Board', shown: false }, { name: 'Mine', shown: true }]);
@@ -169,6 +181,36 @@ test('Scenarios: played through, ending with a scenario waterfall', async ({ pag
   await card(page).locator('.tutorial-finish').click();
   await expect(page.locator('#welcome')).toBeVisible();
   expect(pageErrors).toEqual([]);
+});
+
+// Found by F2 (27 October 2026): a practice change made just before Finish was saved, once the
+// tutorial had ended, over the person's own boards for the same (sample) model.
+test('a practice change just before Finish never reaches the person\'s stored boards', async ({ page }) => {
+  await openFmGraph(page);
+  await openSample(page);
+  await g(page, () => fmGraph.addBoard('Mine'));
+  await page.waitForTimeout(500);
+  const before = await storedBoards(page);
+  expect(await g(page, () => fmGraph.startTutorial('charts'))).toBe(true);
+  // The browser slow to read the stored boards back (as it can be): each read finishes 0.6 s
+  // late, so the model from before is still being opened when 0.3 s have passed.
+  await g(page, () => {
+    const open = IDBDatabase.prototype.transaction;
+    IDBDatabase.prototype.transaction = function(store, mode){
+      const t = open.call(this, store, mode);
+      if(mode === 'readonly'){
+        let done = null;
+        Object.defineProperty(t, 'oncomplete', { configurable: true, get: () => done, set: (f) => { done = f; } });
+        t.addEventListener('complete', (ev) => setTimeout(() => { if(done) done.call(t, ev); }, 600));
+      }
+      return t;
+    };
+    fmGraph.addBar('Profit');
+    fmGraph.stopTutorial();
+  });
+  await expect.poll(() => g(page, () => fmGraph.boards())).toEqual([{ name: 'Board', shown: false }, { name: 'Mine', shown: true }]);
+  await page.waitForTimeout(800);
+  expect(await storedBoards(page)).toEqual(before);
 });
 
 test('Exit puts the model back; opening another model during a tutorial ends it', async ({ page }) => {
