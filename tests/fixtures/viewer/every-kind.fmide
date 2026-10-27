@@ -1,0 +1,831 @@
+{
+ "version": 13,
+ "kind": "fmIDE-workspace",
+ "system": {
+  "version": 9,
+  "kind": "system",
+  "nextId": 79,
+  "nextCanvasId": 5,
+  "activeCanvasId": "c4",
+  "periods": [
+   "Period 1",
+   "Period 2",
+   "Period 3"
+  ],
+  "currentPeriod": 0,
+  "canvases": [
+   {
+    "id": "c2",
+    "name": "Inputs",
+    "nodes": [
+     {
+      "id": "n19",
+      "type": "value",
+      "x": 80,
+      "y": 80,
+      "w": 170,
+      "h": 64,
+      "text": "Tax rate\n0.25",
+      "plugs": [],
+      "style": {
+       "numberFormat": {
+        "kind": "percent",
+        "decimals": 1
+       }
+      }
+     },
+     {
+      "id": "n20",
+      "type": "value",
+      "x": 80,
+      "y": 200,
+      "w": 170,
+      "h": 64,
+      "text": "Extra sales\n7\nt",
+      "plugs": [
+       "extra"
+      ]
+     }
+    ],
+    "edges": []
+   },
+   {
+    "id": "c3",
+    "name": "Block",
+    "nodes": [
+     {
+      "id": "n21",
+      "type": "value",
+      "x": 80,
+      "y": 80,
+      "w": 170,
+      "h": 64,
+      "text": "Base\n0",
+      "plugs": [],
+      "blockRole": "input"
+     },
+     {
+      "id": "n22",
+      "type": "value",
+      "x": 80,
+      "y": 220,
+      "w": 170,
+      "h": 64,
+      "text": "Share\n0.3",
+      "plugs": []
+     },
+     {
+      "id": "n23",
+      "type": "operator",
+      "x": 320,
+      "y": 150,
+      "w": 56,
+      "h": 56,
+      "text": "×",
+      "socket": ""
+     },
+     {
+      "id": "n24",
+      "type": "value",
+      "x": 480,
+      "y": 140,
+      "w": 170,
+      "h": 64,
+      "text": "Out\n0",
+      "plugs": [],
+      "blockRole": "output"
+     }
+    ],
+    "edges": [
+     {
+      "id": "e25",
+      "from": "n21",
+      "to": "n23"
+     },
+     {
+      "id": "e26",
+      "from": "n22",
+      "to": "n23"
+     },
+     {
+      "id": "e27",
+      "from": "n23",
+      "to": "n24"
+     }
+    ]
+   },
+   {
+    "id": "c4",
+    "name": "Model",
+    "nodes": [
+     {
+      "id": "n28",
+      "type": "value",
+      "x": 60,
+      "y": 60,
+      "w": 170,
+      "h": 64,
+      "text": "Price\n12\n$/t",
+      "plugs": [],
+      "style": {
+       "numberFormat": {
+        "kind": "currency",
+        "decimals": 2,
+        "currencySymbol": "$"
+       },
+       "fill": "#fef3c7",
+       "border": {
+        "color": "#d97706",
+        "width": 2,
+        "style": "dashed"
+       },
+       "font": {
+        "family": "",
+        "size": 16,
+        "weight": "bold",
+        "color": "#92400e"
+       }
+      }
+     },
+     {
+      "id": "n29",
+      "type": "value",
+      "x": 60,
+      "y": 180,
+      "w": 170,
+      "h": 64,
+      "text": "Volume\n1000\nt",
+      "plugs": [],
+      "periodValues": [
+       1000,
+       1100,
+       1250
+      ],
+      "periodValuesRange": {
+       "min": 0,
+       "max": 1250
+      }
+     },
+     {
+      "id": "n30",
+      "type": "operator",
+      "x": 300,
+      "y": 120,
+      "w": 56,
+      "h": 56,
+      "text": "×",
+      "socket": ""
+     },
+     {
+      "id": "n31",
+      "type": "value",
+      "x": 420,
+      "y": 110,
+      "w": 170,
+      "h": 64,
+      "text": "Revenue\n0",
+      "plugs": [],
+      "style": {
+       "numberFormat": {
+        "kind": "number",
+        "decimals": 0
+       }
+      }
+     },
+     {
+      "id": "n35",
+      "type": "operator",
+      "x": 300,
+      "y": 300,
+      "w": 56,
+      "h": 56,
+      "text": "+",
+      "socket": "extra"
+     },
+     {
+      "id": "n36",
+      "type": "alias",
+      "auto": true,
+      "x": 100,
+      "y": 300,
+      "w": 170,
+      "h": 64,
+      "sourceCanvasId": "c2",
+      "sourceNodeId": "n20",
+      "plugs": []
+     },
+     {
+      "id": "n38",
+      "type": "value",
+      "x": 420,
+      "y": 290,
+      "w": 170,
+      "h": 64,
+      "text": "Sales\n0\nt",
+      "plugs": []
+     },
+     {
+      "id": "n41",
+      "type": "periodShift",
+      "x": 680,
+      "y": 40,
+      "w": 56,
+      "h": 56,
+      "shift": -1
+     },
+     {
+      "id": "n42",
+      "type": "value",
+      "x": 800,
+      "y": 30,
+      "w": 170,
+      "h": 64,
+      "text": "Revenue before\n0",
+      "plugs": []
+     },
+     {
+      "id": "n45",
+      "type": "value",
+      "x": 60,
+      "y": 420,
+      "w": 170,
+      "h": 64,
+      "text": "Switch\n1",
+      "plugs": []
+     },
+     {
+      "id": "n46",
+      "type": "operator",
+      "x": 680,
+      "y": 400,
+      "w": 120,
+      "h": 92,
+      "text": "if",
+      "socket": ""
+     },
+     {
+      "id": "n47",
+      "type": "value",
+      "x": 900,
+      "y": 410,
+      "w": 170,
+      "h": 64,
+      "text": "Chosen\n0",
+      "plugs": []
+     },
+     {
+      "id": "n52",
+      "type": "alias",
+      "x": 680,
+      "y": 560,
+      "w": 170,
+      "h": 64,
+      "sourceCanvasId": "c4",
+      "sourceNodeId": "n28",
+      "plugs": []
+     },
+     {
+      "id": "n53",
+      "type": "alias",
+      "x": 60,
+      "y": 560,
+      "w": 170,
+      "h": 64,
+      "sourceCanvasId": "c2",
+      "sourceNodeId": "n19",
+      "plugs": []
+     },
+     {
+      "id": "n54",
+      "type": "operator",
+      "x": 300,
+      "y": 560,
+      "w": 56,
+      "h": 56,
+      "text": "×",
+      "socket": ""
+     },
+     {
+      "id": "n55",
+      "type": "value",
+      "x": 420,
+      "y": 550,
+      "w": 170,
+      "h": 64,
+      "text": "Tax\n0",
+      "plugs": []
+     },
+     {
+      "id": "n59",
+      "type": "operator",
+      "x": 880,
+      "y": 560,
+      "w": 56,
+      "h": 56,
+      "text": "−",
+      "socket": ""
+     },
+     {
+      "id": "n60",
+      "type": "value",
+      "x": 1000,
+      "y": 550,
+      "w": 170,
+      "h": 64,
+      "text": "Price less tax\n0",
+      "plugs": []
+     },
+     {
+      "id": "n64",
+      "type": "blockInstance",
+      "x": 680,
+      "y": 220,
+      "w": 190,
+      "h": 54,
+      "blockDefCanvasId": "c3",
+      "vertical": false
+     },
+     {
+      "id": "n65",
+      "type": "value",
+      "x": 940,
+      "y": 220,
+      "w": 170,
+      "h": 64,
+      "text": "Block share\n0",
+      "plugs": []
+     },
+     {
+      "id": "n68",
+      "type": "function",
+      "x": 680,
+      "y": 720,
+      "w": 190,
+      "h": 74,
+      "fn": {
+       "family": "c5e270aa-4644-4f66-a1f6-8a2e17e97f28",
+       "version": 1,
+       "versionId": "eb7e5797-d22d-4c70-8c47-d5bba9baa312",
+       "name": "Margin"
+      }
+     },
+     {
+      "id": "n69",
+      "type": "value",
+      "x": 940,
+      "y": 730,
+      "w": 170,
+      "h": 64,
+      "text": "Margin\n0",
+      "plugs": [],
+      "style": {
+       "numberFormat": {
+        "kind": "percent",
+        "decimals": 2
+       }
+      }
+     },
+     {
+      "id": "n73",
+      "type": "value",
+      "x": 60,
+      "y": 700,
+      "w": 170,
+      "h": 64,
+      "text": "Zero\n0",
+      "plugs": []
+     },
+     {
+      "id": "n74",
+      "type": "operator",
+      "x": 300,
+      "y": 720,
+      "w": 56,
+      "h": 56,
+      "text": "÷",
+      "socket": ""
+     },
+     {
+      "id": "n75",
+      "type": "value",
+      "x": 420,
+      "y": 710,
+      "w": 170,
+      "h": 64,
+      "text": "Broken\n0",
+      "plugs": []
+     }
+    ],
+    "edges": [
+     {
+      "id": "e32",
+      "from": "n28",
+      "to": "n30"
+     },
+     {
+      "id": "e33",
+      "from": "n29",
+      "to": "n30"
+     },
+     {
+      "id": "e34",
+      "from": "n30",
+      "to": "n31"
+     },
+     {
+      "id": "e37",
+      "from": "n36",
+      "to": "n35",
+      "auto": true
+     },
+     {
+      "id": "e39",
+      "from": "n29",
+      "to": "n35"
+     },
+     {
+      "id": "e40",
+      "from": "n35",
+      "to": "n38"
+     },
+     {
+      "id": "e43",
+      "from": "n31",
+      "to": "n41"
+     },
+     {
+      "id": "e44",
+      "from": "n41",
+      "to": "n42"
+     },
+     {
+      "id": "e48",
+      "from": "n45",
+      "to": "n46",
+      "toPort": 0
+     },
+     {
+      "id": "e49",
+      "from": "n31",
+      "to": "n46",
+      "toPort": 1
+     },
+     {
+      "id": "e50",
+      "from": "n28",
+      "to": "n46",
+      "toPort": 2
+     },
+     {
+      "id": "e51",
+      "from": "n46",
+      "to": "n47"
+     },
+     {
+      "id": "e56",
+      "from": "n31",
+      "to": "n54"
+     },
+     {
+      "id": "e57",
+      "from": "n53",
+      "to": "n54"
+     },
+     {
+      "id": "e58",
+      "from": "n54",
+      "to": "n55"
+     },
+     {
+      "id": "e61",
+      "from": "n52",
+      "to": "n59"
+     },
+     {
+      "id": "e62",
+      "from": "n55",
+      "to": "n59"
+     },
+     {
+      "id": "e63",
+      "from": "n59",
+      "to": "n60"
+     },
+     {
+      "id": "e66",
+      "from": "n31",
+      "to": "n64",
+      "toPort": 0
+     },
+     {
+      "id": "e67",
+      "from": "n64",
+      "to": "n65",
+      "fromPort": 0
+     },
+     {
+      "id": "e70",
+      "from": "n31",
+      "to": "n68",
+      "toPort": 0
+     },
+     {
+      "id": "e71",
+      "from": "n55",
+      "to": "n68",
+      "toPort": 1
+     },
+     {
+      "id": "e72",
+      "from": "n68",
+      "to": "n69"
+     },
+     {
+      "id": "e76",
+      "from": "n28",
+      "to": "n74"
+     },
+     {
+      "id": "e77",
+      "from": "n73",
+      "to": "n74"
+     },
+     {
+      "id": "e78",
+      "from": "n74",
+      "to": "n75"
+     }
+    ]
+   }
+  ],
+  "formatPresets": [
+   {
+    "id": "fmt-role-inputs",
+    "name": "Inputs",
+    "style": {
+     "numberFormat": {
+      "kind": "general",
+      "decimals": 2,
+      "currencySymbol": "$"
+     },
+     "fill": "#eff6ff",
+     "border": {
+      "color": "#93c5fd",
+      "width": 1.5,
+      "style": "solid"
+     },
+     "font": {
+      "family": "",
+      "size": 14,
+      "weight": "normal",
+      "color": "#1e3a8a"
+     }
+    }
+   },
+   {
+    "id": "fmt-role-calculations",
+    "name": "Calculations",
+    "style": {
+     "numberFormat": {
+      "kind": "general",
+      "decimals": 2,
+      "currencySymbol": "$"
+     },
+     "fill": null,
+     "border": null,
+     "font": {
+      "family": "",
+      "size": null,
+      "weight": "normal",
+      "color": null
+     }
+    }
+   }
+  ],
+  "functions": [
+   {
+    "family": "c5e270aa-4644-4f66-a1f6-8a2e17e97f28",
+    "version": 1,
+    "versionId": "eb7e5797-d22d-4c70-8c47-d5bba9baa312",
+    "text": "Margin(Revenue, Cost) = (Revenue - Cost) / Revenue",
+    "description": "",
+    "note": "",
+    "calls": []
+   }
+  ]
+ },
+ "templates": [],
+ "formatPresets": [
+  {
+   "id": "fmt-role-inputs",
+   "name": "Inputs",
+   "style": {
+    "numberFormat": {
+     "kind": "general",
+     "decimals": 2,
+     "currencySymbol": "$"
+    },
+    "fill": "#eff6ff",
+    "border": {
+     "color": "#93c5fd",
+     "width": 1.5,
+     "style": "solid"
+    },
+    "font": {
+     "family": "",
+     "size": 14,
+     "weight": "normal",
+     "color": "#1e3a8a"
+    }
+   }
+  },
+  {
+   "id": "fmt-role-calculations",
+   "name": "Calculations",
+   "style": {
+    "numberFormat": {
+     "kind": "general",
+     "decimals": 2,
+     "currencySymbol": "$"
+    },
+    "fill": null,
+    "border": null,
+    "font": {
+     "family": "",
+     "size": null,
+     "weight": "normal",
+     "color": null
+    }
+   }
+  }
+ ],
+ "shortcutBindings": {
+  "undo": "Mod+Z",
+  "redo": "Mod+Shift+Z",
+  "copy": "Mod+C",
+  "cut": "Mod+X",
+  "paste": "Mod+V",
+  "deleteSel": "Delete",
+  "selectAll": "Mod+A",
+  "deselect": "Escape",
+  "addRect": null,
+  "addManyRects": null,
+  "addOperator": null,
+  "addAlias": null,
+  "addBlock": null,
+  "addPeriodShift": null,
+  "newCanvas": null,
+  "prevCanvas": "Alt+PageUp",
+  "nextCanvas": "Alt+PageDown",
+  "renameCanvas": null,
+  "deleteCanvas": null,
+  "clearCanvas": null,
+  "clearAll": null,
+  "moveCanvasLeft": null,
+  "moveCanvasRight": null,
+  "alignLeft": null,
+  "alignCenterH": null,
+  "alignRight": null,
+  "alignTop": null,
+  "alignCenterV": null,
+  "alignBottom": null,
+  "distH": null,
+  "distV": null,
+  "evaluate": "F9",
+  "prevPeriod": null,
+  "nextPeriod": null,
+  "managePeriods": null,
+  "saveSystem": null,
+  "loadSystem": null,
+  "addSystem": null,
+  "saveModule": null,
+  "loadModule": null,
+  "exportWorkspace": null,
+  "importWorkspace": null,
+  "exportPreferences": null,
+  "importPreferences": null,
+  "openTemplates": null,
+  "openFunctions": null,
+  "importFunctions": null,
+  "browseLibrary": null,
+  "openLibraryPack": null,
+  "saveLibraryPack": null,
+  "shareLibraryPack": null,
+  "insertFunction": null,
+  "updateFunction": null,
+  "removeDuplicateTemplates": null,
+  "removeOldTemplateVersions": null,
+  "clearAllTemplates": null,
+  "updateCanvasTemplate": null,
+  "unlinkCanvasTemplate": null,
+  "openFormats": null,
+  "newDocument": null,
+  "openDocument": "Mod+O",
+  "saveDocument": "Mod+S",
+  "saveDocumentAs": "Mod+Shift+S",
+  "openRecent": null,
+  "openExcelExporter": null,
+  "openFmGraph": null,
+  "installApp": null,
+  "openLauncher": "Mod+K",
+  "openShortcuts": null,
+  "toggleRibbon": "Mod+F1",
+  "customizeRibbon": null,
+  "openHelp": "F1",
+  "openWhatsNew": null,
+  "zoomIn": "Mod+=",
+  "zoomOut": "Mod+-",
+  "zoomReset": "Mod+0",
+  "zoomFit": null,
+  "zoomSelection": null,
+  "openMacros": null,
+  "toggleRecord": null,
+  "runLastMacro": null,
+  "copyReference": null,
+  "insertOp0": null,
+  "insertOp1": null,
+  "insertOp2": null,
+  "insertOp3": null,
+  "insertOp4": null,
+  "insertOp5": null,
+  "insertOp6": null,
+  "insertOp7": null,
+  "insertOp8": null,
+  "insertOp9": null,
+  "insertOp10": null,
+  "insertOp11": null,
+  "insertOp12": null,
+  "insertOp13": null,
+  "insertOp14": null,
+  "insertOp15": null,
+  "insertOp16": null,
+  "insertOp17": null,
+  "insertOp18": null,
+  "insertOp19": null,
+  "insertOp20": null,
+  "insertOp21": null,
+  "insertOp22": null,
+  "insertOp23": null,
+  "insertOp24": null,
+  "insertOp25": null,
+  "insertOp26": null,
+  "insertOp27": null,
+  "insertOp28": null,
+  "insertOp29": null,
+  "insertOp30": null
+ },
+ "shortcutBindingsVersion": 2,
+ "macros": [],
+ "functions": [
+  {
+   "family": "c5e270aa-4644-4f66-a1f6-8a2e17e97f28",
+   "version": 1,
+   "versionId": "eb7e5797-d22d-4c70-8c47-d5bba9baa312",
+   "text": "Margin(Revenue, Cost) = (Revenue - Cost) / Revenue",
+   "description": "",
+   "note": "",
+   "calls": []
+  }
+ ],
+ "ui": {
+  "ribbon": null,
+  "ribbonCustomized": false,
+  "ribbonCollapsed": false,
+  "activeTab": "home",
+  "keytipTrigger": {
+   "type": "tap",
+   "key": "Alt"
+  },
+  "comboVersion": 2,
+  "launcherRecent": [],
+  "lastRunMacroId": null,
+  "dedupeMatch": {
+   "name": true,
+   "layout": false,
+   "group": false,
+   "description": false
+  },
+  "documentGroupAdded": true,
+  "functionsGroupAdded": true,
+  "functionCommandsAdded": true,
+  "operatorsE1Added": true,
+  "operatorsE2Added": true,
+  "operatorsE2bAdded": true,
+  "libraryPacksAdded": true,
+  "libraryBrowseAdded": true,
+  "libraryShareAdded": true,
+  "helpAdded": true,
+  "whatsNewAdded": true,
+  "zoomGroupAdded": true,
+  "addManyRectsAdded": true,
+  "fmGraphAdded": true,
+  "canvasSwitchAdded": true,
+  "copyReferenceAdded": true,
+  "libraryAuthor": "",
+  "windowSizes": {},
+  "templateGroupsClosed": [],
+  "helpSize": {},
+  "whatsNewSeen": "",
+  "canvasZoom": {}
+ }
+}
