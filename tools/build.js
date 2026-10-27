@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-// Builds the three single-file apps in apps/ (fmIDE, ExcelExporter, fmGraph) from their sources
+// Builds the four single-file apps in apps/ (fmIDE, ExcelExporter, fmGraph, fmShowcase) from their sources
 // in src/, and the installable web app (PWA) in site/.
 //
-//   node tools/build.js              write apps/fmIDE.html, apps/ExcelExporter.html, apps/fmGraph.html and site/
+//   node tools/build.js              write apps/fmIDE.html, apps/ExcelExporter.html, apps/fmGraph.html,
+//                                    apps/fmViewer.html and site/
 //   node tools/build.js --check      build in memory; exit 1 if apps/ differs from src/
 //   node tools/build.js --site DIR   write only the site, into DIR
 // Options for the site: --library DIR (the community library's folder; default library/, the
@@ -10,7 +11,7 @@
 //
 // site/ is not committed (it is rebuilt wherever it is needed): index.html (fmIDE, with the
 // lines of its <!-- build:site-head --> marker, which is empty in apps/), ExcelExporter.html,
-// fmGraph.html (step 15),
+// fmGraph.html (step 15), fmViewer.html (fmShowcase, the showcase viewer: docs/viewer-brief.md),
 // the files of src/site/ (manifest, icons), the licence files (LICENSE.txt, NOTICE.txt,
 // ExcelExporter-LICENSE.txt), plus sw.js with its version and file list
 // filled in. The version is a hash of the site's files, so any change gives a new version.
@@ -70,6 +71,7 @@ const APPS = [
   { src: path.join(ROOT, 'src', 'fmide'), out: path.join(ROOT, 'apps', 'fmIDE.html') },
   { src: path.join(ROOT, 'src', 'excel-exporter'), out: path.join(ROOT, 'apps', 'ExcelExporter.html') },
   { src: path.join(ROOT, 'src', 'fmgraph'), out: path.join(ROOT, 'apps', 'fmGraph.html') },
+  { src: path.join(ROOT, 'src', 'viewer'), out: path.join(ROOT, 'apps', 'fmViewer.html') },
 ];
 const SITE_SRC = path.join(ROOT, 'src', 'site');
 const MARKER = /^<!-- build:(css|js) ([A-Za-z0-9._\/-]+) -->\r?$/; // \r: CRLF checkouts on Windows
@@ -285,6 +287,7 @@ function buildSite(outDir, opts){
   files.set('index.html', Buffer.from(buildApp(APPS[0], true), 'utf8'));
   files.set('ExcelExporter.html', Buffer.from(buildApp(APPS[1], true), 'utf8'));
   files.set('fmGraph.html', Buffer.from(buildApp(APPS[2], true), 'utf8'));
+  files.set('fmViewer.html', Buffer.from(buildApp(APPS[3], true), 'utf8'));
   listFiles(SITE_SRC).filter(f => f !== 'sw.js').forEach(f => files.set(f, fs.readFileSync(path.join(SITE_SRC, ...f.split('/')))));
   // The licences travel with the published app (see LICENSING.md).
   [['LICENSE.txt', 'LICENSE'], ['NOTICE.txt', 'NOTICE'], ['ExcelExporter-LICENSE.txt', 'src/excel-exporter/LICENSE']]
@@ -336,6 +339,7 @@ function siteHeaders(files){
     block(['/', '/index.html'], ['Content-Security-Policy: ' + policy('index.html')]),
     block(['/ExcelExporter', '/ExcelExporter.html'], ['Content-Security-Policy: ' + policy('ExcelExporter.html')]),
     block(['/fmGraph', '/fmGraph.html'], ['Content-Security-Policy: ' + policy('fmGraph.html')]),
+    block(['/fmViewer', '/fmViewer.html'], ['Content-Security-Policy: ' + policy('fmViewer.html')]),
     block(['/sw.js'], ["Content-Security-Policy: default-src 'self'", 'Cache-Control: no-cache']),
     // The catalogue's own rules, always there (so the version is the same with or without it).
     ...LIBRARY.LIBRARY_HEADERS.map(b => block(b.paths, b.headers)),

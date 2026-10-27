@@ -1,0 +1,32 @@
+{
+ "kind": "fmIDE-showcase",
+ "version": 1,
+ "id": "../../etc/passwd",
+ "title": "<img src=x onerror=alert(1)> and a very long title that goes on and on and on past the eighty characters a title may have",
+ "description": "<script>alert(1)</script>\u0000\u0007 text",
+ "author": "<a href=javascript:alert(1)>me</a>",
+ "licence": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+ "mark": "yes",
+ "canvases": {
+  "show": [
+   123,
+   {},
+   "nope",
+   "c1",
+   "c1"
+  ],
+  "start": "zzz"
+ },
+ "periods": {
+  "mode": "range",
+  "from": "0",
+  "to": -1
+ },
+ "excel": {
+  "file": "<x>:*?.xlsx"
+ },
+ "boards": "not a board",
+ "play": {
+  "from": "Base"
+ }
+}

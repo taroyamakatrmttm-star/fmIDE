@@ -1,0 +1,25 @@
+{
+ "kind": "fmIDE-showcase",
+ "version": 1,
+ "id": "every-kind",
+ "title": "Every kind of node",
+ "description": "Price times volume, a block, a function and a period shift.\nTap a rectangle to see how it is worked out.",
+ "author": "The fmIDE tests",
+ "licence": "CC BY 4.0",
+ "mark": true,
+ "canvases": {
+  "show": [
+   "c4",
+   "c2"
+  ],
+  "start": "c4"
+ },
+ "periods": {
+  "mode": "range",
+  "from": 1,
+  "to": 2
+ },
+ "excel": {
+  "file": "Every kind.xlsx"
+ }
+}

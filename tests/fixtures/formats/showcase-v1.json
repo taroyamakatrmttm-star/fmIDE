@@ -1,0 +1,36 @@
+{
+ "kind": "fmIDE-showcase",
+ "version": 1,
+ "id": "loan-basics",
+ "title": "How a loan is repaid",
+ "description": "Move the rate and the term and watch the interest.",
+ "author": "A teacher",
+ "licence": "CC BY 4.0",
+ "mark": false,
+ "canvases": {
+  "show": [
+   "c1",
+   "c3"
+  ],
+  "start": "c3"
+ },
+ "boards": {
+  "kind": "fmIDE-graph-board",
+  "version": 12,
+  "active": 0,
+  "boards": [],
+  "scenarios": []
+ },
+ "play": {
+  "from": "Base",
+  "to": "High rate"
+ },
+ "periods": {
+  "mode": "range",
+  "from": 0,
+  "to": 9
+ },
+ "excel": {
+  "file": "Loan basics"
+ }
+}

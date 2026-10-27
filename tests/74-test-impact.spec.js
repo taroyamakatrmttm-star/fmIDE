@@ -49,8 +49,8 @@ test('every test file is found to load something, and every fixture folder is lo
 
 test('the build\'s own list of each app\'s files: its page, styles, every script piece, includes and modules', () => {
   const apps = appSources();
-  expect(apps.map(a => a.app)).toEqual(['fmIDE', 'ExcelExporter', 'fmGraph']);
-  const dirs = { fmIDE: 'src/fmide', ExcelExporter: 'src/excel-exporter', fmGraph: 'src/fmgraph' };
+  expect(apps.map(a => a.app)).toEqual(['fmIDE', 'ExcelExporter', 'fmGraph', 'fmViewer']);
+  const dirs = { fmIDE: 'src/fmide', ExcelExporter: 'src/excel-exporter', fmGraph: 'src/fmgraph', fmViewer: 'src/viewer' };
   for(const a of apps){
     const d = dirs[a.app];
     expect(a.files).toContain(d + '/index.html');
@@ -63,6 +63,7 @@ test('the build\'s own list of each app\'s files: its page, styles, every script
   expect(apps[1].files).toContain('src/excel-exporter/js-head/01-xlsx-writer.js');
   expect(apps[0].files).toContain('src/fmide/modules/expression.js');
   expect(apps[2].files).not.toContain('src/excel-exporter/formulas/core-translation.js');
+  expect(apps[3].files.filter(f => f.startsWith('src/excel-exporter/'))).toEqual([]);
 });
 
 test('the tools read only what the map says they read', () => {
@@ -115,7 +116,7 @@ test('package.json: only test: shortcuts changed runs the files they name; anyth
   expect(withPackage(changed(p => { p.scripts['test:x'] = 'playwright test tests/73-fmgraph-fixed-scale.spec.js'; })).tests)
     .toEqual([I.SMOKE, 'tests/73-fmgraph-fixed-scale.spec.js']);
   expect(withPackage(changed(p => { p.scripts['test:y'] = 'playwright test tests/6-formats tests/44-zoom.spec.js'; })).tests)
-    .toEqual([I.SMOKE, 'tests/6-formats-excelexporter.spec.js', 'tests/6-formats-fmide.spec.js', 'tests/44-zoom.spec.js']);
+    .toEqual([I.SMOKE, 'tests/6-formats-excelexporter.spec.js', 'tests/6-formats-fmide.spec.js', 'tests/6-formats-showcase.spec.js', 'tests/44-zoom.spec.js']);
   // One changed: every file it now names; one taken out, or the same file: smoke only.
   expect(withPackage(changed(p => { p.scripts['test:pinch'] += ' tests/27-touch.spec.js'; })).tests)
     .toEqual([I.SMOKE, 'tests/27-touch.spec.js', 'tests/45-pinch-zoom.spec.js']);
@@ -159,6 +160,19 @@ test('an fmGraph-only change runs fmGraph\'s groups, not the Excel or calculatio
     expect(r.tests, t).not.toContain('tests/' + t + '.spec.js');
   }
   expect(r.tests.length).toBeLessThan(ALL.length / 2);
+});
+
+// The showcase viewer (phase V1 of docs/viewer-brief.md): a change to its own pieces runs its group,
+// (and the site's, which carries it), not fmGraph's own, ExcelExporter's or the calculation's.
+test('a viewer-only change runs the viewer\'s group, not the Excel, fmGraph or calculation ones', () => {
+  const r = pick('src/viewer/js/03-view.js');
+  expect(r.full).toBe(false);
+  expect(r.tests).toContain('tests/91-viewer.spec.js');
+  for(const t of ['1-excel-structure', '17-agreement', '18-ir', '68-fmgraph-phone', '82-fmgraph-play', '6-formats-showcase', '7-ui-fmide']){
+    expect(r.tests, t).not.toContain('tests/' + t + '.spec.js');
+  }
+  expect(I.loadsOf('tests/91-viewer.spec.js').has(I.APP_PAGES.fmViewer)).toBe(true);
+  expect(r.tests.length).toBeLessThan(ALL.length / 4);
 });
 
 test('an app named only in a test\'s comments is not opened by it (27 October 2026)', () => {

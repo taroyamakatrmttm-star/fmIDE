@@ -34,7 +34,7 @@ const { spawnSync } = require('child_process');
 const ROOT = path.join(__dirname, '..');
 const TESTS = path.join(ROOT, 'tests');
 const SMOKE = 'tests/0-smoke.spec.js';
-const APP_PAGES = { fmIDE: 'apps/fmIDE.html', ExcelExporter: 'apps/ExcelExporter.html', fmGraph: 'apps/fmGraph.html' };
+const APP_PAGES = { fmIDE: 'apps/fmIDE.html', ExcelExporter: 'apps/ExcelExporter.html', fmGraph: 'apps/fmGraph.html', fmViewer: 'apps/fmViewer.html' };
 // The site the build writes (tests/helpers/site.js and tools/build.js build all of it).
 const SITE = 'site';
 
@@ -161,6 +161,7 @@ function loadsOf(spec){
       if(OPENS_FMIDE.test(code)) loads.add(APP_PAGES.fmIDE);
       if(/ExcelExporter|openExporter|openExcel|\bexporter\b/i.test(code)) loads.add(APP_PAGES.ExcelExporter);
       if(/fmgraph/i.test(code)) loads.add(APP_PAGES.fmGraph);
+      if(/fmviewer|fmshowcase/i.test(code)) loads.add(APP_PAGES.fmViewer);
     }
     if(/helpers\/site|require\('\.\/site'\)/.test(text)) loads.add(SITE);
     for(const m of text.matchAll(/\btools\/([a-z0-9-]+)(?:\.js)?\b/g)) tools.add('tools/' + m[1] + '.js');

@@ -1,0 +1,54 @@
+/* ---------- the read-only canvas (shared: src/shared/canvas-view.css, with canvas-view.js) ----------
+   fmIDE's canvas look (src/fmide/styles.css: .node, .operator, .alias, .periodshift, the block
+   and function boxes, the arrows), for an SVG drawing. Colours a rectangle's own format sets
+   are laid over these by canvas-view.js, through safeColor. */
+.cv-node .box{ fill:#ffffff; stroke:#cbd5e1; stroke-width:1.5; }
+.cv-node text{ font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; fill:#0f172a; }
+.cv-node text.name{ font-size:14px; }
+.cv-node text.value, .cv-node text.unit, .cv-node text.opsym, .cv-node text.shift, .cv-node .result text, .cv-node text.io-value, .cv-node .chip text{ font-family:Menlo, Consolas, monospace; }
+.cv-node text.value{ font-size:12px; }
+.cv-node text.value.literal{ fill:#334155; font-weight:600; }
+.cv-node text.value.computed{ fill:#4f46e5; font-weight:700; }
+.cv-node text.value.error{ fill:#ef4444; font-weight:700; }
+.cv-node text.unit{ font-size:10px; fill:#94a3b8; }
+.cv-node text.unit.auto{ font-style:italic; }
+.cv-operator .box{ fill:#fef3c7; stroke:#f59e0b; }
+.cv-operator text.opsym{ font-size:24px; font-weight:700; fill:#92400e; }
+.cv-operator text.opsym.word{ font-size:13px; font-weight:800; }
+.cv-operator text.io-label{ fill:#92400e; }
+.cv-periodShift .box{ fill:#fdf4ff; stroke:#a855f7; }
+.cv-periodShift text.shift{ font-size:15px; font-weight:700; fill:#7e22ce; }
+.cv-alias .box{ fill:#ecfeff; stroke:#0891b2; stroke-dasharray:5 3; }
+.cv-node .result rect{ fill:#ffffff; stroke:#f59e0b; stroke-width:1; }
+.cv-node .result text{ font-size:11px; fill:#92400e; }
+.cv-node .result.err text{ fill:#ef4444; }
+.cv-blockInstance .box{ fill:#ffffff; stroke:#7c3aed; }
+.cv-blockInstance.vertical .box{ stroke:#7c3aed; stroke-width:2.5; }
+.cv-blockInstance .header{ fill:#f5f3ff; }
+.cv-blockInstance .header-text{ font-size:12px; font-weight:700; fill:#5b21b6; }
+.cv-function .box{ fill:#ffffff; stroke:#0f766e; }
+.cv-function .header{ fill:#f0fdfa; }
+.cv-function .header-text{ font-size:12px; font-weight:700; fill:#115e59; }
+.cv-function text.warning{ font-size:10.5px; fill:#b45309; }
+.cv-node text.io-label{ font-size:11px; fill:#374151; }
+.cv-node text.io-value{ font-size:11px; fill:#4f46e5; }
+.cv-node text.io-value.err{ fill:#ef4444; }
+.cv-node .port{ fill:#ffffff; stroke:#7c3aed; stroke-width:2; }
+.cv-function .port{ stroke:#0f766e; }
+.cv-operator .port{ stroke:#f59e0b; }
+.cv-node .chip rect{ fill:#ede9fe; stroke:#c4b5fd; stroke-width:1; }
+.cv-node .chip text{ font-size:10px; fill:#6d28d9; }
+.cv-node .chip.role-in rect{ fill:#dcfce7; stroke:#86efac; }
+.cv-node .chip.role-in text{ fill:#15803d; }
+.cv-node .chip.role-out rect{ fill:#dbeafe; stroke:#93c5fd; }
+.cv-node .chip.role-out text{ fill:#1d4ed8; }
+.cv-node .chip.role-index rect{ fill:#fef3c7; stroke:#fcd34d; }
+.cv-node .chip.role-index text{ fill:#b45309; }
+.cv-edge path.line{ fill:none; stroke:#64748b; stroke-width:1.6; }
+.cv-edge.auto path.line{ stroke:#8b5cf6; stroke-dasharray:6 4; }
+.cv-edge .order-badge circle{ fill:#ffffff; stroke:#94a3b8; stroke-width:1.5; }
+.cv-edge.auto .order-badge circle{ stroke:#8b5cf6; }
+.cv-edge .order-badge text{ font-size:10px; fill:#334155; font-family:-apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+/* A node the visitor tapped, and the ones it reads. */
+.cv-node.picked .box{ stroke:#2563eb; stroke-width:3; }
+.cv-node.reads .box{ stroke:#60a5fa; stroke-width:2.5; }
