@@ -48,7 +48,7 @@
       if(opPorts){
         // Its size follows its inputs (a file may carry another), and one row per input.
         n.h = operatorPortsHeight(opPorts.length);
-        if(!n.w || n.w < 100) n.w = 120;
+        n.w = portNodeWidth(n.w, 100, 120);
         const box = el.querySelector('.op-inputs');
         if(box && box.dataset.for !== n.text + ':' + opPorts.length){
           box.dataset.for = n.text + ':' + opPorts.length; // a choose grows with its arrows
@@ -297,10 +297,10 @@
     const def = canvases.find(c => c.id === n.blockDefCanvasId);
     const { inputs, outputs } = blockPortsOf(def);
     const rows = Math.max(inputs.length, outputs.length, 1);
-    const rowH = 20;
-    const headerH = 26;
-    n.h = headerH + rows * rowH + 8;
-    if(!n.w || n.w < 150) n.w = 190;
+    const rowH = PORT_ROW_H;
+    const headerH = PORT_HEADER_H;
+    n.h = blockInstanceHeight(rows);
+    n.w = portNodeWidth(n.w, 150, 190);
 
     el.innerHTML = '';
     const header = document.createElement('div');
@@ -379,23 +379,8 @@
     });
   }
 
-  function rectOf(n){ return {x:n.x, y:n.y, w:n.w, h:n.h, cx:n.x+n.w/2, cy:n.y+n.h/2}; }
-
-  function borderPoint(rect, tx, ty){
-    const dx = tx - rect.cx, dy = ty - rect.cy;
-    if(dx === 0 && dy === 0) return {x:rect.cx, y:rect.cy};
-    const hw = rect.w/2, hh = rect.h/2;
-    const scaleX = hw / Math.abs(dx || 1e-6);
-    const scaleY = hh / Math.abs(dy || 1e-6);
-    const scale = Math.min(scaleX, scaleY);
-    return { x: rect.cx + dx*scale, y: rect.cy + dy*scale };
-  }
-
-  function edgePath(fromRect, toRect){
-    const p1 = borderPoint(fromRect, toRect.cx, toRect.cy);
-    const p2 = borderPoint(toRect, fromRect.cx, fromRect.cy);
-    return {p1, p2, d:`M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`};
-  }
+  // rectOf, borderPoint, edgePath and the sizes of nodes with ports (shared with the showcase viewer).
+  // build:include shared/canvas-geometry.js
 
   function getPortCanvasPos(nodeId, portIndex, dir){
     const sel = `.node[data-id="${nodeId}"] .io-port[data-port-index="${portIndex}"][data-port-dir="${dir}"]`;

@@ -30,6 +30,39 @@ test.describe('canvas', () => {
     expect(markup.replace(/></g, '>\n<') + '\n').toMatchSnapshot('fmide-revenue-arrows.svg');
   });
 
+  // Written before fmIDE's arrow geometry, node sizes and number formats moved into shared code
+  // for the showcase viewer (phase V1, docs/viewer-brief.md): every kind of node and arrow — into
+  // and out of ports, aliases, period shifts, a block instance, a function node, a plug's
+  // automatic arrow — keeps its place, its size and the text of its value, in two periods.
+  test('every kind of node and arrow keeps its place, size and value text', async ({ page }) => {
+    await F.openFmIDE(page);
+    const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.evaluate(() => fm.command('openDocument'))]);
+    await chooser.setFiles(require('./helpers/apps').fixture('viewer', 'every-kind.fmide'));
+    await expect.poll(() => page.evaluate(() => fm.canvases().map(c => c.name).join(','))).toBe('Inputs,Block,Model');
+    const lines = [];
+    for(const name of ['Inputs', 'Block', 'Model']){
+      for(const period of [1, 2]){
+        const shown = await page.evaluate(([n, p]) => {
+          fm.switchCanvas(n); fm.setPeriod(p);
+          const r = (v) => Math.round(v * 100) / 100;
+          const out = ['## ' + n + ', period ' + p];
+          document.querySelectorAll('#canvas .node').forEach(el => {
+            const text = [...el.querySelectorAll('.line-name, .line-value, .line-uom, .opsym, .op-result, .ps-label, .block-header, .io-label, .io-value')]
+              .map(t => t.textContent.trim()).filter(Boolean).join(' / ');
+            out.push('node ' + el.dataset.id + ' ' + [el.offsetLeft, el.offsetTop, el.offsetWidth, el.offsetHeight].join(',') + ' ' + text);
+          });
+          document.querySelectorAll('svg#edges g.edge').forEach(g => {
+            const badge = g.querySelector('.order-badge text');
+            out.push('arrow ' + g.dataset.id + ' ' + g.querySelector('path.line').getAttribute('d').replace(/-?\d+(\.\d+)?(e-?\d+)?/g, m => String(r(Number(m)))) + (badge ? ' #' + badge.textContent : ''));
+          });
+          return out;
+        }, [name, period]);
+        lines.push(...shown);
+      }
+    }
+    expect(lines.join('\n') + '\n').toMatchSnapshot('fmide-every-kind.txt');
+  });
+
   test('a rectangle fed by an operator with no inputs gets the Inputs look', async ({ page }) => {
     await F.openFmIDE(page);
     const ids = await page.evaluate(() => {

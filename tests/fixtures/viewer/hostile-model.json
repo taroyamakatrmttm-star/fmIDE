@@ -1,0 +1,118 @@
+{
+ "kind": "system",
+ "version": 9,
+ "periods": [
+  "<b>P1</b>",
+  "P2"
+ ],
+ "canvases": [
+  {
+   "id": "c1",
+   "name": "</script><script>alert(1)</script>",
+   "nodes": [
+    {
+     "id": "n1",
+     "type": "value",
+     "text": "<img src=x onerror=alert(1)>\n5\n<i>units</i>",
+     "x": "abc",
+     "y": 1000000000000,
+     "w": -5,
+     "h": "64",
+     "style": {
+      "fill": "red;background:url(http://evil.test/x)",
+      "border": {
+       "color": "url(http://evil.test/b)",
+       "width": "99",
+       "style": "solid;x:y"
+      },
+      "font": {
+       "family": "x;}</style><script>alert(1)</script>",
+       "size": 9999,
+       "weight": "<b>",
+       "color": "javascript:alert(1)"
+      },
+      "numberFormat": {
+       "kind": "currency",
+       "decimals": 2,
+       "currencySymbol": "<script>"
+      }
+     }
+    },
+    {
+     "id": "n2",
+     "type": "operator",
+     "text": "<b>×</b>",
+     "x": 300,
+     "y": 100,
+     "socket": "<svg onload=alert(1)>"
+    },
+    {
+     "id": "n3",
+     "type": "value",
+     "text": "<svg><script>alert(1)</script></svg>\n0",
+     "x": 420,
+     "y": 100,
+     "w": 170,
+     "h": 64
+    },
+    {
+     "id": "n4",
+     "type": "alias",
+     "x": 100,
+     "y": 300,
+     "w": 170,
+     "h": 64,
+     "sourceCanvasId": "nope",
+     "sourceNodeId": "x"
+    },
+    {
+     "id": "n5\"><script>alert(1)</script>",
+     "type": "value",
+     "text": "Odd id\n3",
+     "x": 100,
+     "y": 400,
+     "w": 170,
+     "h": 64
+    },
+    {
+     "id": "n6",
+     "type": "<script>",
+     "text": "?",
+     "x": 600,
+     "y": 300
+    },
+    {
+     "id": "n7",
+     "type": "value",
+     "text": "Big\n1",
+     "x": null,
+     "y": -1000000000,
+     "w": 1000000000,
+     "h": 1000000000
+    }
+   ],
+   "edges": [
+    {
+     "id": "e1",
+     "from": "n1",
+     "to": "n2"
+    },
+    {
+     "id": "e2",
+     "from": "n2",
+     "to": "n3"
+    },
+    {
+     "id": "e3",
+     "from": "n5\"><script>alert(1)</script>",
+     "to": "n2"
+    },
+    {
+     "id": "e4",
+     "from": "missing",
+     "to": "n3"
+    }
+   ]
+  }
+ ]
+}

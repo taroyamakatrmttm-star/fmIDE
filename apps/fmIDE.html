@@ -1552,8 +1552,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   const E2_FUNCTION_OPS = ['ln', 'exp', 'sqrt', 'int', 'trunc'].map(sym => OPS.indexOf(sym));
   // Phase E2b's choose, with them.
   const E2B_FUNCTION_OPS = ['choose'].map(sym => OPS.indexOf(sym));
-  // Height of an operator box with `count` named inputs: its symbol, then a row per input.
-  function operatorPortsHeight(count){ return 26 + count * 20 + 6; }
+  // The height of an operator box with named inputs is operatorPortsHeight (shared/canvas-geometry.js, 07-rendering.js).
 
   // ---------- built-in templates ----------
   let TEMPLATES = []; // built-in starter templates removed by request — this now holds only user-saved templates
@@ -1818,10 +1817,44 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // A value rectangle's name, typed number and unit (parseRectText: src/shared/ir.js).
   function parseNode(n){ return parseRectText(n.text); }
 
+  // formatNum, formatByNumberFormat and shiftLabel: how a value is written on the canvas (shared with the showcase viewer).
+  // ---------- numbers on the canvas (shared: src/shared/number-format.js; fmIDE's canvas and the showcase viewer) ----------
+  // How fmIDE writes a value on its canvas: plainly (formatNum), or in a rectangle's number
+  // format (General, Number, Percent, Currency), and a period shift's label. Moved out of fmIDE
+  // (01-setup-commands-keys.js, 02-uom-format-roles.js) unchanged for the showcase viewer
+  // (phase V1 of docs/viewer-brief.md). fmIDE still chooses which format applies
+  // (formatNumForNode); this only writes the number.
+
+  // A number as fmIDE shows it without a format: up to six decimals, "?" for none.
   function formatNum(v){
     if(v === null || v === undefined || !isFinite(v)) return '?';
     const r = Math.round(v * 1e6) / 1e6;
     return r.toString();
+  }
+
+  // A number in a number format ({ kind, decimals, currencySymbol }); none, or General, is
+  // formatNum's. "?" for no number.
+  function formatByNumberFormat(v, fmt){
+    if(v === null || v === undefined || !isFinite(v)) return '?';
+    if(!fmt || !fmt.kind || fmt.kind === 'general') return formatNum(v);
+    const decimals = (typeof fmt.decimals === 'number') ? fmt.decimals : 2;
+    if(fmt.kind === 'percent'){
+      return (v * 100).toFixed(decimals) + '%';
+    }
+    if(fmt.kind === 'currency'){
+      return (fmt.currencySymbol || '$') + v.toLocaleString(undefined, { minimumFractionDigits:decimals, maximumFractionDigits:decimals });
+    }
+    if(fmt.kind === 'number'){
+      return v.toLocaleString(undefined, { minimumFractionDigits:decimals, maximumFractionDigits:decimals });
+    }
+    return formatNum(v);
+  }
+
+  // A period shift's label: t, t+1, t−1.
+  function shiftLabel(offset){
+    if(offset > 0) return 't+' + offset;
+    if(offset < 0) return 't−' + Math.abs(offset);
+    return 't';
   }
 
   // =====================================================================================
@@ -5004,25 +5037,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   function formatNumForNode(v, n){
     if(v === null || v === undefined || !isFinite(v)) return '?';
     const rs = n && resolveNodeStyle(n);
-    const fmt = rs && rs.numberFormat;
-    if(!fmt || !fmt.kind || fmt.kind === 'general') return formatNum(v);
-    const decimals = (typeof fmt.decimals === 'number') ? fmt.decimals : 2;
-    if(fmt.kind === 'percent'){
-      return (v * 100).toFixed(decimals) + '%';
-    }
-    if(fmt.kind === 'currency'){
-      return (fmt.currencySymbol || '$') + v.toLocaleString(undefined, { minimumFractionDigits:decimals, maximumFractionDigits:decimals });
-    }
-    if(fmt.kind === 'number'){
-      return v.toLocaleString(undefined, { minimumFractionDigits:decimals, maximumFractionDigits:decimals });
-    }
-    return formatNum(v);
-  }
-
-  function shiftLabel(offset){
-    if(offset > 0) return 't+' + offset;
-    if(offset < 0) return 't−' + Math.abs(offset);
-    return 't';
+    return formatByNumberFormat(v, rs && rs.numberFormat);
   }
 
   function errorTitle(code){
@@ -9211,7 +9226,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       if(opPorts){
         // Its size follows its inputs (a file may carry another), and one row per input.
         n.h = operatorPortsHeight(opPorts.length);
-        if(!n.w || n.w < 100) n.w = 120;
+        n.w = portNodeWidth(n.w, 100, 120);
         const box = el.querySelector('.op-inputs');
         if(box && box.dataset.for !== n.text + ':' + opPorts.length){
           box.dataset.for = n.text + ':' + opPorts.length; // a choose grows with its arrows
@@ -9460,10 +9475,10 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     const def = canvases.find(c => c.id === n.blockDefCanvasId);
     const { inputs, outputs } = blockPortsOf(def);
     const rows = Math.max(inputs.length, outputs.length, 1);
-    const rowH = 20;
-    const headerH = 26;
-    n.h = headerH + rows * rowH + 8;
-    if(!n.w || n.w < 150) n.w = 190;
+    const rowH = PORT_ROW_H;
+    const headerH = PORT_HEADER_H;
+    n.h = blockInstanceHeight(rows);
+    n.w = portNodeWidth(n.w, 150, 190);
 
     el.innerHTML = '';
     const header = document.createElement('div');
@@ -9542,8 +9557,18 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     });
   }
 
+  // rectOf, borderPoint, edgePath and the sizes of nodes with ports (shared with the showcase viewer).
+  // ---------- canvas geometry (shared: src/shared/canvas-geometry.js; fmIDE's canvas and the showcase viewer) ----------
+  // Where fmIDE's arrows meet a node's edge, and the sizes fmIDE gives the nodes whose size
+  // follows their ports. Moved out of fmIDE (07-rendering.js, 01-setup-commands-keys.js,
+  // 11d-function-nodes.js) unchanged for the showcase viewer's read-only drawing (phase V1 of
+  // docs/viewer-brief.md), so both draw a canvas alike. Plain functions on numbers: nothing here
+  // touches the page.
+
+  // A node's box with its middle.
   function rectOf(n){ return {x:n.x, y:n.y, w:n.w, h:n.h, cx:n.x+n.w/2, cy:n.y+n.h/2}; }
 
+  // Where the line from a box's middle towards (tx, ty) leaves the box.
   function borderPoint(rect, tx, ty){
     const dx = tx - rect.cx, dy = ty - rect.cy;
     if(dx === 0 && dy === 0) return {x:rect.cx, y:rect.cy};
@@ -9554,11 +9579,25 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     return { x: rect.cx + dx*scale, y: rect.cy + dy*scale };
   }
 
+  // An arrow between two boxes: from edge to edge, along the line joining their middles.
   function edgePath(fromRect, toRect){
     const p1 = borderPoint(fromRect, toRect.cx, toRect.cy);
     const p2 = borderPoint(toRect, fromRect.cx, fromRect.cy);
     return {p1, p2, d:`M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`};
   }
+
+  // Nodes with a row per port: a header, then the rows.
+  const PORT_HEADER_H = 26;
+  const PORT_ROW_H = 20;
+
+  // An operator with named inputs (if, round, choose…): its height for `count` inputs.
+  function operatorPortsHeight(count){ return 26 + count * 20 + 6; }
+  // A block instance with `rows` rows (the more of its inputs and outputs, at least 1).
+  function blockInstanceHeight(rows){ return PORT_HEADER_H + rows * PORT_ROW_H + 8; }
+  // A function node with `inputs` input rows (and a warning row).
+  function functionNodeHeight(inputs, warn){ return 26 + (warn ? 20 : 0) + Math.max(inputs, 2) * 20 + 8; }
+  // The width such a node keeps: its own, unless it has none or one narrower than `min`.
+  function portNodeWidth(w, min, wide){ return (!w || w < min) ? wide : w; }
 
   function getPortCanvasPos(nodeId, portIndex, dir){
     const sel = `.node[data-id="${nodeId}"] .io-port[data-port-index="${portIndex}"][data-port-dir="${dir}"]`;
@@ -15498,16 +15537,15 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     for(let i = 0; i < count; i++) out.push('#' + (i + 1));
     return out;
   }
-  // Size of a function node with `inputs` input rows (and a warning row).
-  function functionNodeHeight(inputs, warn){ return 26 + (warn ? 20 : 0) + Math.max(inputs, 2) * 20 + 8; }
+  // The size of a function node with `inputs` input rows is functionNodeHeight (shared/canvas-geometry.js).
 
   function renderFunctionNodeBody(el, n){
     const st = functionNodeState(n);
     const ports = functionNodePorts(n, st);
     const warn = !!st.problem;
-    const rowH = 20, headerH = 26;
+    const rowH = PORT_ROW_H, headerH = PORT_HEADER_H;
     n.h = functionNodeHeight(ports.length, warn);
-    if(!n.w || n.w < 150) n.w = 190;
+    n.w = portNodeWidth(n.w, 150, 190);
     el.innerHTML = '';
     el.classList.toggle('fn-problem', warn);
 

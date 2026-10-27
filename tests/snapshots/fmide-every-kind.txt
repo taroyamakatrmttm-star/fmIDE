@@ -1,0 +1,126 @@
+## Inputs, period 1
+node n19 80,80,170,64 Tax rate / 25.0%
+node n20 80,200,170,64 Extra sales / 7 / t
+## Inputs, period 2
+node n19 80,80,170,64 Tax rate / 25.0%
+node n20 80,200,170,64 Extra sales / 7 / t
+## Block, period 1
+node n21 80,80,170,64 Base / 0
+node n22 80,220,170,64 Share / 0.3
+node n23 320,150,56,56 × / = 0
+node n24 480,140,170,64 Out / = 0
+arrow e25 M 250 142.66 L 320 167.9 #1
+arrow e26 M 244.14 220 L 320 189.32 #2
+arrow e27 M 376 177.23 L 480 174.35
+## Block, period 2
+node n21 80,80,170,64 Base / 0
+node n22 80,220,170,64 Share / 0.3
+node n23 320,150,56,56 × / = 0
+node n24 480,140,170,64 Out / = 0
+arrow e25 M 250 142.66 L 320 167.9 #1
+arrow e26 M 244.14 220 L 320 189.32 #2
+arrow e27 M 376 177.23 L 480 174.35
+## Model, period 1
+node n28 60,60,170,64 Price / $12.00 / $/t
+node n29 60,180,170,64 Volume / 📈 1000 / t
+node n30 300,120,56,56 × / = 12000
+node n31 420,110,170,64 Revenue / = 12,000 / $
+node n35 300,300,56,56 + / = 1007
+node n38 420,290,170,64 Sales / = 1007 / t
+node n41 680,40,56,56 t−1 / ?
+node n42 800,30,170,64 Revenue before / = 0 / $
+node n45 60,420,170,64 Switch / 1
+node n46 680,400,120,92 if / condition / then / else / = 12000
+node n47 900,410,170,64 Chosen / = 12000
+node n52 680,560,170,64 🔗 Price / = 12 / $/t
+node n53 60,560,170,64 🔗 Inputs ▸ Tax rate / = 0.25
+node n54 300,560,56,56 × / = 3000
+node n55 420,550,170,64 Tax / = 3000
+node n59 880,560,56,56 − / = 2988
+node n60 1000,550,170,64 Price less tax / = 2988
+node n64 680,220,190,54 Block / Base / Out / =3600
+node n65 940,220,170,64 Block share / = 3600
+node n68 680,720,190,74 ƒ Margin v1 / Revenue / Cost / = 0.75
+node n69 940,730,170,64 Margin / = 75.00%
+node n73 60,700,170,64 Zero / 0
+node n74 300,720,56,56 ÷ / ?
+node n75 420,710,170,64 Broken / ?
+node n79 100,300,170,64 🔗 Inputs ▸ Extra sales / = 7 / t
+arrow e32 M 230 118.01 L 300 139.43 #1
+arrow e33 M 230 182.27 L 300 157.79 #2
+arrow e34 M 356 147.05 L 420 144.88
+arrow e39 M 195.48 244 L 300 310.25 #1
+arrow e40 M 356 327.05 L 420 324.88
+arrow e43 M 590 111.01 L 680 78.21
+arrow e44 M 736 67.05 L 800 64.88
+arrow e48 M 230 451.14 L 688 437
+arrow e49 M 529.74 174 L 688 457
+arrow e50 M 198.79 124 L 688 477
+arrow e51 M 800 445.02 L 900 443.39
+arrow e56 M 492.3 174 L 339.11 560 #2
+arrow e57 M 230 590.14 L 300 588.61 #1
+arrow e58 M 356 587.05 L 420 584.88
+arrow e61 M 850 589.62 L 880 588.78 #2
+arrow e62 M 590 583.27 L 880 587.58 #1
+arrow e63 M 936 587.05 L 1000 584.88
+arrow e66 M 587.29 174 L 688 257
+arrow e67 M 862 257 L 940 250.3
+arrow e70 M 519.05 174 L 688 757
+arrow e71 M 554.37 614 L 688 777
+arrow e72 M 862 757 L 940 760.3
+arrow e76 M 153.93 124 L 320.19 720 #1
+arrow e77 M 230 739.43 L 300 745.55 #2
+arrow e78 M 356 747.05 L 420 744.88
+arrow e80 M 270 329.62 L 300 328.78 #2
+## Model, period 2
+node n28 60,60,170,64 Price / $12.00 / $/t
+node n29 60,180,170,64 Volume / 📈 1100 / t
+node n30 300,120,56,56 × / = 13200
+node n31 420,110,170,64 Revenue / = 13,200 / $
+node n35 300,300,56,56 + / = 1107
+node n38 420,290,170,64 Sales / = 1107 / t
+node n41 680,40,56,56 t−1 / = 12000
+node n42 800,30,170,64 Revenue before / = 12000 / $
+node n45 60,420,170,64 Switch / 1
+node n46 680,400,120,92 if / condition / then / else / = 13200
+node n47 900,410,170,64 Chosen / = 13200
+node n52 680,560,170,64 🔗 Price / = 12 / $/t
+node n53 60,560,170,64 🔗 Inputs ▸ Tax rate / = 0.25
+node n54 300,560,56,56 × / = 3300
+node n55 420,550,170,64 Tax / = 3300
+node n59 880,560,56,56 − / = 3288
+node n60 1000,550,170,64 Price less tax / = 3288
+node n64 680,220,190,54 Block / Base / Out / =3960
+node n65 940,220,170,64 Block share / = 3960
+node n68 680,720,190,74 ƒ Margin v1 / Revenue / Cost / = 0.75
+node n69 940,730,170,64 Margin / = 75.00%
+node n73 60,700,170,64 Zero / 0
+node n74 300,720,56,56 ÷ / ?
+node n75 420,710,170,64 Broken / ?
+node n79 100,300,170,64 🔗 Inputs ▸ Extra sales / = 7 / t
+arrow e32 M 230 118.01 L 300 139.43 #1
+arrow e33 M 230 182.27 L 300 157.79 #2
+arrow e34 M 356 147.05 L 420 144.88
+arrow e39 M 195.48 244 L 300 310.25 #1
+arrow e40 M 356 327.05 L 420 324.88
+arrow e43 M 590 111.01 L 680 78.21
+arrow e44 M 736 67.05 L 800 64.88
+arrow e48 M 230 451.14 L 688 437
+arrow e49 M 529.74 174 L 688 457
+arrow e50 M 198.79 124 L 688 477
+arrow e51 M 800 445.02 L 900 443.39
+arrow e56 M 492.3 174 L 339.11 560 #2
+arrow e57 M 230 590.14 L 300 588.61 #1
+arrow e58 M 356 587.05 L 420 584.88
+arrow e61 M 850 589.62 L 880 588.78 #2
+arrow e62 M 590 583.27 L 880 587.58 #1
+arrow e63 M 936 587.05 L 1000 584.88
+arrow e66 M 587.29 174 L 688 257
+arrow e67 M 862 257 L 940 250.3
+arrow e70 M 519.05 174 L 688 757
+arrow e71 M 554.37 614 L 688 777
+arrow e72 M 862 757 L 940 760.3
+arrow e76 M 153.93 124 L 320.19 720 #1
+arrow e77 M 230 739.43 L 300 745.55 #2
+arrow e78 M 356 747.05 L 420 744.88
+arrow e80 M 270 329.62 L 300 328.78 #2

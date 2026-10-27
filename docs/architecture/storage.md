@@ -21,6 +21,7 @@ Autosave lives in IndexedDB, through `createStore(dbName)` in `src/shared/store.
 | fmGraph | `fmGraph` | `fmgraph-board-<model signature>` — the model's boards (the `fmIDE-graph-board` file's form, never the sliders' positions; G1–G2 kept one board) for one model (signature: a hash of its canvas and rectangle ids); `fmgraph-last-board` — the last boards used, offered to a model with none whose rectangles have the same ids and names; saved shortly after each change and when the page is hidden |
 | fmGraph | `fmGraph` | `fmgraph-help-size`, `fmgraph-whats-new-seen` — the Help panel's width and the newest update seen |
 | fmGraph | `fmGraph` | `fmgraph-full-app` (`'1'`: the full page on a phone), `fmgraph-vibrate` (`'off'`: no vibration on the marks), `fmgraph-mixer` (the sliders picked for the mixer, per model and board) — step 17; saved when changed |
+| fmShowcase | — | Nothing yet: phase V1 of the showcase viewer keeps nothing in the browser. (Phase V2 keeps the visitor's slider positions and scenario on the device, keyed by the showcase's `id` and a hash of it; it is added here then.) |
 | all | (same) | `<dbName>/migrated-from-localStorage`, `<dbName>/persistence-requested` — bookkeeping |
 
 - **Migration:** on start, keys an older version left in `localStorage` are copied into IndexedDB once (the marker records it, so a later delete is not undone). The `localStorage` copies are kept; never delete user data in the same step that moves it.

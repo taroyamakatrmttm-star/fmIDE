@@ -1,0 +1,19 @@
+{
+ "kind": "fmIDE-showcase",
+ "version": 1,
+ "form": "recipe",
+ "title": "{model}",
+ "author": "A teacher",
+ "licence": "CC BY 4.0",
+ "boards": {
+  "kind": "fmIDE-graph-board",
+  "version": 2,
+  "form": "template",
+  "boards": []
+ },
+ "auto": {
+  "sliders": "inputs",
+  "bars": "outputs",
+  "range": 50
+ }
+}

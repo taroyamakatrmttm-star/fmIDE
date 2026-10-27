@@ -7,6 +7,7 @@ A visual logic builder for financial models, and a companion that turns those mo
 | **fmIDE** | `apps/fmIDE.html` | Build a model as a graph of rectangles (values), operators, aliases, period shifts and blocks, across canvases and periods. |
 | **ExcelExporter** | `apps/ExcelExporter.html` | Load an fmIDE system or workspace export and generate an `.xlsx` with real formulas: tabs, Inputs tab, scenarios and global cases, vertical-block vintages, format roles. Also the other way: **File → Import Excel model…** rebuilds an Excel workbook as an fmIDE model. |
 | **fmGraph** | `apps/fmGraph.html` | See how a value moves the model: bars show rectangles' values, sliders change inputs, and every bar that depends on a slider's input moves with it. |
+| **fmShowcase** | `apps/fmViewer.html` | Show a model to others, read-only: drop a `.fmide` (and a showcase file, if you have one) on it to see its canvases as fmIDE draws them — drag, zoom, tap a rectangle for its value in every period and how it is worked out. Nothing can be edited. The first part of the showcase viewer (`docs/viewer-brief.md`): sliders, making a viewer in fmIDE, Excel and the gallery come next. |
 
 All three are single self-contained HTML files with no external dependencies: open them in any modern browser, online or offline. Nothing is uploaded anywhere, and the single files never connect to anything (only the published site's fmIDE reads the site's own library, when you browse it).
 

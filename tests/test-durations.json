@@ -56,6 +56,7 @@
  "59-excel-from-fmide.spec.js": 26.3,
  "6-formats-excelexporter.spec.js": 34.4,
  "6-formats-fmide.spec.js": 107,
+ "6-formats-showcase.spec.js": 0.1,
  "60-long-messages.spec.js": 11.4,
  "61-canvas-switching.spec.js": 9.8,
  "62-nested-recipes.spec.js": 10,
@@ -90,5 +91,6 @@
  "88-fmgraph-play-gif.spec.js": 29.2,
  "89-fmgraph-free-grid.spec.js": 13.5,
  "9-storage.spec.js": 13.6,
- "90-excel-free-chart.spec.js": 16.9
+ "90-excel-free-chart.spec.js": 16.9,
+ "91-viewer.spec.js": 18
 }

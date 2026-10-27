@@ -23,7 +23,7 @@ From the brainstorm of ten ideas (October 2026), grouped as it was. #2 is built 
 | # | Idea | What it gives | Builds on | Size |
 |---|---|---|---|---|
 | G1 | **Share a model as a playable single file** | One click in fmIDE writes a self-contained, read-only HTML file with fmGraph's boards and sliders. A founder emails it to investors, who move the sliders without installing anything. A small "Made with fmIDE" mark makes every shared model an advert. | The single-file apps; fmGraph | Medium |
-| G1+ | **The showcase viewer** (G1 grown by the owner, 27 October 2026) | A read-only fmIDE, fmGraph and Excel in one HTML file per model, made in one click or 100 at a time, plus a gallery on the site. The brief: `docs/viewer-brief.md` (waiting for the owner's approval; after fmGraph's Free chart F1). | G1; fmGraph; ExcelExporter's Dashboard (step 19) | Large |
+| G1+ | **The showcase viewer** (G1 grown by the owner, 27 October 2026) | A read-only fmIDE, fmGraph and Excel in one HTML file per model, made in one click or 100 at a time, plus a gallery on the site. The brief: `docs/viewer-brief.md` (approved 27 October 2026 with all 11 recommendations; being built in six phases, V1 — the Logic view and the showcase format — on branch `claude/viewer-v1`). | G1; fmGraph; ExcelExporter's Dashboard (step 19) | Large |
 | G3 | **"Fundraising model in 30 minutes" wizard** | A guided start for startups, property developers and small businesses: about 10 questions give a working model, an Excel workbook and an fmGraph dashboard. For people who can't afford a modelling consultant. | Templates and recipes (step 6); ExcelExporter; fmGraph boards on templates | Medium–large |
 
 ### Value: things people would pay for

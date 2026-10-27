@@ -656,3 +656,35 @@ test.describe('snapping, alone in Node', () => {
     expect(distributePositions([box(0, 0), box(10, 0)], 'h')).toBeNull();
   });
 });
+
+// ---------- the canvas's geometry and numbers (src/shared/canvas-geometry.js, number-format.js;
+// fmIDE's canvas and the showcase viewer, phase V1) ----------
+test.describe('the canvas geometry and number formats, alone in Node', () => {
+  const G = require('../src/shared/canvas-geometry.js');
+  const N = require('../src/shared/number-format.js');
+  test('an arrow runs edge to edge along the line between the middles; port nodes keep fmIDE\'s sizes', () => {
+    const a = G.rectOf({ x: 0, y: 0, w: 100, h: 50 }), b = G.rectOf({ x: 300, y: 0, w: 100, h: 50 });
+    expect([a.cx, a.cy]).toEqual([50, 25]);
+    expect(G.edgePath(a, b)).toEqual({ p1: { x: 100, y: 25 }, p2: { x: 300, y: 25 }, d: 'M 100 25 L 300 25' });
+    // Diagonal: the box's side it meets first.
+    expect(G.borderPoint(a, 50 + 100, 25 + 100)).toEqual({ x: 75, y: 50 });
+    expect(G.borderPoint(a, 50, 25)).toEqual({ x: 50, y: 25 });
+    expect(G.operatorPortsHeight(3)).toBe(92);
+    expect(G.blockInstanceHeight(1)).toBe(54);
+    expect(G.functionNodeHeight(1, false)).toBe(74);
+    expect(G.functionNodeHeight(3, true)).toBe(114);
+    expect([G.portNodeWidth(0, 150, 190), G.portNodeWidth(120, 150, 190), G.portNodeWidth(220, 150, 190)]).toEqual([190, 190, 220]);
+  });
+  test('numbers in each format, and the period shift labels', () => {
+    expect([N.formatNum(1 / 3), N.formatNum(12000), N.formatNum(NaN), N.formatNum(null)]).toEqual(['0.333333', '12000', '?', '?']);
+    expect(N.formatByNumberFormat(0.25, { kind: 'percent', decimals: 1 })).toBe('25.0%');
+    expect(N.formatByNumberFormat(0.25, { kind: 'general' })).toBe('0.25');
+    expect(N.formatByNumberFormat(0.25)).toBe('0.25');
+    expect(N.formatByNumberFormat(Infinity, { kind: 'percent' })).toBe('?');
+    const local = (v, d) => v.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+    expect(N.formatByNumberFormat(12000, { kind: 'number', decimals: 0 })).toBe(local(12000, 0));
+    expect(N.formatByNumberFormat(12, { kind: 'currency', decimals: 2, currencySymbol: '€' })).toBe('€' + local(12, 2));
+    expect(N.formatByNumberFormat(12, { kind: 'currency' })).toBe('$' + local(12, 2));
+    expect([N.shiftLabel(-1), N.shiftLabel(2), N.shiftLabel(0)]).toEqual(['t−1', 't+2', 't']);
+  });
+});

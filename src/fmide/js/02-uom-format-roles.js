@@ -64,25 +64,7 @@
   function formatNumForNode(v, n){
     if(v === null || v === undefined || !isFinite(v)) return '?';
     const rs = n && resolveNodeStyle(n);
-    const fmt = rs && rs.numberFormat;
-    if(!fmt || !fmt.kind || fmt.kind === 'general') return formatNum(v);
-    const decimals = (typeof fmt.decimals === 'number') ? fmt.decimals : 2;
-    if(fmt.kind === 'percent'){
-      return (v * 100).toFixed(decimals) + '%';
-    }
-    if(fmt.kind === 'currency'){
-      return (fmt.currencySymbol || '$') + v.toLocaleString(undefined, { minimumFractionDigits:decimals, maximumFractionDigits:decimals });
-    }
-    if(fmt.kind === 'number'){
-      return v.toLocaleString(undefined, { minimumFractionDigits:decimals, maximumFractionDigits:decimals });
-    }
-    return formatNum(v);
-  }
-
-  function shiftLabel(offset){
-    if(offset > 0) return 't+' + offset;
-    if(offset < 0) return 't−' + Math.abs(offset);
-    return 't';
+    return formatByNumberFormat(v, rs && rs.numberFormat);
   }
 
   function errorTitle(code){

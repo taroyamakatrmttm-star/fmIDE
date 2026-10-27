@@ -3,7 +3,7 @@
 Since 12 October 2026 (the owner's request: less read for an ordinary small change, nothing lost), the guidance that was one 128 KB `CLAUDE.md` is in three places:
 
 - **`CLAUDE.md`** — always loaded. What the project is, how we work, how the code is built, the licences, the non-negotiable rules, the rules that apply wherever a change is made, where the details are, the build order's status and how to check a change.
-- **`.claude/rules/*.md`** — each starts with `paths:`; Claude Code loads it only when a session reads a file matching one of them. Module-specific rules: fmIDE's areas, fmGraph, ExcelExporter, shared code, pointer input, format roles, file formats, the site, the calculation tests.
+- **`.claude/rules/*.md`** — each starts with `paths:`; Claude Code loads it only when a session reads a file matching one of them. Module-specific rules: fmIDE's areas, fmGraph, the showcase viewer (`viewer.md`, 27 October 2026), ExcelExporter, shared code, pointer input, format roles, file formats, the site, the calculation tests.
 - **`docs/architecture/`** — reference read on purpose: `storage.md` (every database and key), `build-order.md` (the decisions and the full build order), and this file.
 
 Every line of the old `CLAUDE.md` was moved word for word, each to exactly one place, apart from the four below. The old file is in Git's history (the commit before this change). Later the same day the owner's decisions (below) reworded a few lines and dropped the test-group list, `tests/SPEC.md` covering it.

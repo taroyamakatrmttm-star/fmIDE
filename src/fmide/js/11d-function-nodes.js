@@ -67,16 +67,15 @@
     for(let i = 0; i < count; i++) out.push('#' + (i + 1));
     return out;
   }
-  // Size of a function node with `inputs` input rows (and a warning row).
-  function functionNodeHeight(inputs, warn){ return 26 + (warn ? 20 : 0) + Math.max(inputs, 2) * 20 + 8; }
+  // The size of a function node with `inputs` input rows is functionNodeHeight (shared/canvas-geometry.js).
 
   function renderFunctionNodeBody(el, n){
     const st = functionNodeState(n);
     const ports = functionNodePorts(n, st);
     const warn = !!st.problem;
-    const rowH = 20, headerH = 26;
+    const rowH = PORT_ROW_H, headerH = PORT_HEADER_H;
     n.h = functionNodeHeight(ports.length, warn);
-    if(!n.w || n.w < 150) n.w = 190;
+    n.w = portNodeWidth(n.w, 150, 190);
     el.innerHTML = '';
     el.classList.toggle('fn-problem', warn);
 

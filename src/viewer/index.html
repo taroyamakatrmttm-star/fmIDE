@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<!-- Generated from src/ by `npm run build` — edit src/, not this file. -->
+<!-- fmShowcase — Copyright 2026 Taro Yamaka. Licensed under the Apache License 2.0: see LICENSE and NOTICE (LICENSE.txt, NOTICE.txt in the web app). The model and showcase a viewer carries are their author's. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
+<title>fmShowcase — see how a model works</title>
+<style>
+<!-- build:css styles.css -->
+<!-- build:css ../shared/canvas-view.css -->
+</style>
+</head>
+<body>
+
+<header class="vbar">
+  <div class="vbar-side vbar-titles">
+    <span class="vbar-app">fmShowcase</span>
+    <h1 id="showTitle" class="vbar-title"></h1>
+  </div>
+  <div class="vbar-side">
+    <button type="button" id="btnCanvasMenu" class="vbar-btn phone-only hidden" aria-haspopup="menu" aria-expanded="false" aria-controls="canvasMenu">☰ <span id="canvasMenuName"></span></button>
+    <button type="button" id="btnOpen" class="vbar-btn" title="Open a model saved by fmIDE (.fmide or .json), and a showcase file if you have one">Open…</button>
+  </div>
+</header>
+
+<div id="notices" class="notices" aria-live="polite"></div>
+
+<section id="about" class="about hidden">
+  <p id="showDescription" class="about-text"></p>
+  <p id="showByline" class="about-by"></p>
+</section>
+
+<section id="welcome" class="welcome">
+  <h2>See how a model works</h2>
+  <div id="dropBox" class="dropbox" role="button" tabindex="0">
+    <span class="dropbox-main desk-only">Drop a .fmide or .json model here</span>
+    <span class="dropbox-main phone-only">Choose a .fmide or .json model</span>
+    <span class="dropbox-sub">and a showcase file, if you have one</span>
+  </div>
+</section>
+
+<nav id="canvasTabs" class="canvas-tabs desk-only hidden" role="tablist" aria-label="Canvases"></nav>
+<div id="canvasMenu" class="canvas-menu hidden" role="menu" aria-label="Canvases"></div>
+
+<main id="logic" class="logic hidden">
+  <div id="stage" class="stage" aria-label="The canvas: drag to move, wheel or pinch to zoom, tap a rectangle">
+    <svg id="canvasSvg" class="canvas-svg" xmlns="http://www.w3.org/2000/svg"><g id="world"></g></svg>
+  </div>
+  <div class="zoom-tools" role="group" aria-label="Zoom">
+    <button type="button" id="btnZoomOut" aria-label="Zoom out" title="Zoom out">−</button>
+    <button type="button" id="btnZoomIn" aria-label="Zoom in" title="Zoom in">+</button>
+    <button type="button" id="btnFit" title="Show the whole canvas">Fit</button>
+  </div>
+  <p id="periodNote" class="period-note"></p>
+  <p class="hint desk-only">Drag to move · wheel or pinch to zoom · tap a rectangle</p>
+  <p class="hint phone-only">Drag to move · pinch to zoom · tap a rectangle</p>
+</main>
+
+<aside id="card" class="card hidden" role="dialog" aria-labelledby="cardTitle">
+  <div class="card-head">
+    <div>
+      <h2 id="cardTitle"></h2>
+      <p id="cardWhere" class="card-where"></p>
+    </div>
+    <button type="button" id="cardClose" class="card-close" aria-label="Close" title="Close (Esc)">×</button>
+  </div>
+  <div id="cardBody" class="card-body"></div>
+</aside>
+
+<footer id="mark" class="mark hidden"><span>Made with fmIDE</span><span id="markLicence" class="mark-licence"></span></footer>
+
+<div id="confirmBox" class="dialog-back hidden" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+  <div class="dialog">
+    <h3 id="confirmTitle"></h3>
+    <p id="confirmText"></p>
+    <div class="dialog-actions">
+      <button type="button" id="confirmNo">Cancel</button>
+      <button type="button" id="confirmYes" class="primary">OK</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept=".fmide,application/json,.json" multiple hidden>
+
+<!-- A viewer made for one model carries its showcase and model here (data, never run: the
+     browser runs no script of these types). Empty in the bare app. -->
+<script type="application/json" id="showcase"></script>
+<script type="application/json" id="model"></script>
+
+<script>
+<!-- build:js js -->
+</script>
+</body>
+</html>

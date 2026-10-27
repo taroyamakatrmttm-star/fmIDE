@@ -111,6 +111,7 @@ test('the apps carry each module they take in without its imports and exports, a
     'fmIDE.html': ['fmide/js'],
     'ExcelExporter.html': ['excel-exporter/js-head', 'excel-exporter/js'],
     'fmGraph.html': ['fmgraph/js'],
+    'fmViewer.html': ['viewer/js'],
   };
   const carried = new Set();
   for(const [app, dirs] of Object.entries(apps)){

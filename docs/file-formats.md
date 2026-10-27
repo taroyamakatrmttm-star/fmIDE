@@ -34,6 +34,45 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 | `fmIDE-excel-style` | 1 | ExcelExporter's Excel style: how every cell in the workbook looks, by role (step 11a, below) | ExcelExporter: Import Excel Style |
 | `fmIDE-excel-module-layouts` | 2 | ExcelExporter's layouts remembered per module (step 11b, below); v2: the layout of a module's block instances, `instance` (step 11d) | ExcelExporter: Import Module Layouts |
 | `fmIDE-graph-board` | 13 | fmGraph's boards: bars, charts and sliders showing one model (step 15, below); v2: the template form, for a template's `attachments.graph` (G5a); v3: the model's named scenarios, `scenarios`; v4: the scenario waterfall, a chart of layout `scenarios`; v5: a bar's or chart's fixed vertical scale, `scale`; v6: a folded slider, `folded`; v7: a board keeping its own slider positions, `ownSliders`; v8: the Tornado and the Spider, charts of layout `tornado` and `spider` (step 18; the template form stays version 2); v9: the shared period, `sharedPeriods` and a bar's or chart's `ownPeriod`; v10: the lines chart, a chart of layout `lines`; v11: the shared colours, `colours`; v12: the common scale, `commonScale` and a bar's or chart's `ownScale`; v13: the Free chart, a chart of layout `free` | fmGraph: Boards → Import boards… (or dropped on the page) · ExcelExporter: File → Import fmGraph boards… (its scenarios, Tornado and Spider charts, sliders, bars and charts, below) |
+| `fmIDE-showcase` | 1 | What a showcase viewer shows: for one model (its canvases, boards, Play, periods, title, description, author, licence, mark), or a recipe for many models built alike (below) | fmShowcase (`fmViewer.html`): dropped with the model, or carried in a made viewer; a recipe goes to the tool that makes many viewers |
+
+## Showcases (`fmIDE-showcase` 1, the showcase viewer)
+
+A showcase says what a viewer shows (`docs/viewer-brief.md`). **It never holds the model**: it sits beside a `.fmide` document or system file and names only canvases (and, in the recipe form, rectangles by name). Read by `src/shared/showcase.js`; the viewer shows every text in it as plain text.
+
+**For one model** (no `form`):
+
+```json
+{ "kind": "fmIDE-showcase", "version": 1,
+  "id": "loan-basics",
+  "title": "How a loan is repaid",
+  "description": "Move the rate and the term and watch the interest.",
+  "author": "A teacher", "licence": "CC BY 4.0",
+  "mark": true,
+  "canvases": { "show": ["c1", "c3"], "start": "c1" },
+  "boards": { "kind": "fmIDE-graph-board", "version": 12, "active": 0, "boards": [], "scenarios": [] },
+  "play": { "from": "Base", "to": "High rate" },
+  "periods": { "mode": "range", "from": 0, "to": 9 },
+  "excel": { "file": "Loan basics.xlsx" } }
+```
+
+| Field | Rule (a value that breaks it is left out, and the viewer says so) |
+|---|---|
+| `id` | Letters, digits and dashes, 1–60. Names a made viewer's file and its gallery address. |
+| `title`, `author` | Text, at most 80 characters, on one line (control characters become spaces). |
+| `description` | Text, at most 400 characters; line breaks kept. |
+| `licence` | Text, at most 60 characters (for example `CC BY 4.0`, or `All rights reserved`): how visitors may reuse the model. |
+| `mark` | `true` or `false`: whether "Made with fmIDE" shows; `true` when absent. |
+| `canvases.show` | A list of canvas ids (at most 500, no repeats): the canvases the visitor may see, in this order. Absent: every canvas. Ids the model doesn't have are left out. Hiding a canvas only keeps it off the screen: the whole model is inside a viewer. |
+| `canvases.start` | A canvas id among those shown: the one the viewer opens on (else the first shown). |
+| `boards` | An `fmIDE-graph-board` file (not its template form), kept for the viewer's Board (phase V2). |
+| `play` | `from` and `to`, scenario names (at most 120 characters): where Play starts. |
+| `periods` | `{ "mode": "range", "from", "to" }`, whole numbers counted from 0, `from` ≤ `to`: the periods shown (cut to the model's last). Visitors cannot change them; the canvas shows the numbers of the first, a rectangle's card every one. |
+| `excel.file` | The downloaded workbook's file name (characters a file name can't hold become spaces; `.xlsx` added), at most 120. |
+
+**The recipe form** (`"form": "recipe"`), for making viewers of many models built the same way: `title` (may use `{model}`, the model's file name or title), `description`, `author`, `licence`, `mark`; `boards` in the board file's **template form** (rectangles by name, `form: "template"`); and `auto` (optional) — `sliders: "inputs"` (a slider on each input rectangle, up to 12), `bars: "outputs"` (a bar on each rectangle nothing else reads, up to 12), `range` (1–100, the sliders' reach in % either side; 50 when absent). The viewer refuses a recipe: it is for the batch tool (phase V5).
+
+Versions: 1 is the first. A file from a newer version opens only after asking, like every other kind; anything the newer version added is ignored.
 
 ## The Dashboard's charts (`fmIDE-excel-mapping` 8, step 19 B5; lines charts 9; Free charts 11)
 
