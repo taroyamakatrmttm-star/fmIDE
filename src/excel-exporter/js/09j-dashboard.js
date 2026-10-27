@@ -18,7 +18,9 @@
 // period and group, so each group stacks on its own); a flow a stacked-column waterfall over
 // helper rows beside it (from column N, each table its title on a row of its own) — Value, From, To (the running total, as fmGraph works it out), the
 // parts above and below 0, an invisible Base, then Total / Rise / Fall each above and below 0
-// (Excel stacks the two signs apart) — all formulas, so the charts follow the sliders.
+// (Excel stacks the two signs apart) — all formulas, so the charts follow the sliders; a Free
+// chart (phase F3, layout file 11) stacked columns over hidden fillers, one category per grid
+// column, with its pieces, rectangles and series as helper rows beside it (dashFreeChart).
 // ============================================================
 const DASH_POSITIONS = 30000;  // the most a form-control scroll bar takes
 const DASH_FIRST_ROW = 5;      // row 1 title, 2 the note, 4 the headers
@@ -110,7 +112,7 @@ const DASH_FLOW_COLOURS = { total: '64748B', rise: '16A34A', fall: 'DC2626' };
 function graphChartPlan(){
   if(!mapping || !graphChartsInLayout()) return null;
   const byId = new Map(mapping.rows.map(r => [r.id, r]));
-  const charts = [], missing = [], gone = [];
+  const charts = [], missing = [], gone = [], tooMany = [];
   mapping.cfg.graph.charts.forEach(c => {
     const parts = c.parts.filter(x => {
       const r = byId.get(x.row);
@@ -120,11 +122,13 @@ function graphChartPlan(){
       return false;
     });
     if(!parts.length){ gone.push(graphChartName(c)); return; }
+    if(c.kind === 'free' && graphFreeSeries(Object.assign({}, c, { parts })) > GRAPH_FREE_LIMITS.series){ tooMany.push(graphChartName(c)); return; }
     charts.push(Object.assign({}, c, { parts, name: graphChartName(c) }));
   });
   const notes = [];
   if(missing.length) notes.push('Not in the Dashboard\'s charts (left out of the workbook, or a constant): ' + missing.join(', ') + '.');
   if(gone.length) notes.push('Charts not written (none of their rows is in the workbook): ' + gone.join(', ') + '.');
+  if(tooMany.length) notes.push('Free charts not written (an Excel chart holds at most ' + GRAPH_FREE_LIMITS.series + ' series): ' + tooMany.join(', ') + '.');
   return { charts, notes };
 }
 function graphChartNotes(){ const p = graphChartPlan(); return p ? p.notes : []; }
@@ -167,6 +171,226 @@ function dashFlowParts(from, to){
 const DASH_FLOW_ROWS = ['Value', 'From', 'To', 'Above 0', 'Below 0', 'Base (hidden)',
   'Total above 0', 'Total below 0', 'Rise above 0', 'Rise below 0', 'Fall above 0', 'Fall below 0'];
 
+// ---------- fmGraph's Free chart (phase F3 of docs/fmgraph-free-chart.md) ----------
+// Drawn as stacked columns, one category per grid column. Excel stacks positive numbers up from
+// 0 and negative ones down from 0, each in the order of the series, so: per piece a hidden
+// filler above 0 (from 0, or what the piece under it in its column was drawn to, up to its
+// lowest point above 0) and one below 0; per rectangle four series — its part above 0 while it
+// is negative, then while it is positive, its part below 0 while positive, then while negative —
+// so a rectangle changing sign keeps its place in the stack (negatives hang down from where the
+// piece sits, the last lowest; positives go up, the last highest). The pieces of a column stack
+// in the order they rest on each other. A piece hanging back into the one under it can't be
+// drawn so: it is drawn pushed aside, and its Overlaps cell says "overlaps" (the owner's choice
+// 1a). Totals are in the helper table only (2a); the key lists each rectangle once (3a).
+const DASH_FREE_ROWS = ['Column', 'Sits', 'Value', 'Up', 'Down', 'Sits at', 'Top', 'Bottom', 'End', 'Check',
+  'Filler above 0', 'Drawn up to', 'Filler below 0', 'Drawn down to', 'Overlaps'];
+const DASH_FREE_RECT_COLS = ['Value', 'From', 'To', 'Above 0', 'Below 0'];
+// Excel's own series colours (the Office theme), for a rectangle the board gives none: the same
+// colour on its four series.
+const DASH_FREE_COLOURS = ['4472C4', 'ED7D31', 'A5A5A5', 'FFC000', '5B9BD5', '70AD47', '264478', '9E480E', '636363', '997300'];
+// A piece's name as fmGraph shows it: its own, else its one rectangle's, else "Piece n"; "−" with Minus.
+function dashFreeLabel(c, i){
+  const p = c.pieces[i], parts = c.parts.filter(x => x.piece === i);
+  return (p.minus ? '−' : '') + (p.name || (parts.length === 1 ? parts[0].name : '') || 'Piece ' + (i + 1));
+}
+// The pieces in the order Excel stacks them: in each column a piece after every one it rests on
+// (through any chain), else in the list's order. → { order, under: [the piece drawn just before
+// in its column, or -1] }
+function dashFreeOrder(c){
+  const ps = c.pieces;
+  const depth = ps.map((p, i) => ps.filter((q, j) => j !== i && q.column === p.column && graphFreeOnChain(ps, i, j)).length);
+  const order = ps.map((_, i) => i).sort((a, b) => depth[a] - depth[b] || a - b);
+  const under = ps.map(() => -1);
+  order.forEach((i, k) => { const before = order.slice(0, k).filter(j => ps[j].column === ps[i].column); under[i] = before.length ? before[before.length - 1] : -1; });
+  return { order, under };
+}
+// What the helper rows hold, from fmIDE's numbers (Excel shows it until it recalculates), as
+// fmGraph works it out: per piece { value, up, down, base, top, bottom, end, parts: [{ value,
+// from, to, above, below }], check, fillerUp, drawnUp, fillerDown, drawnDown, overlaps } or null
+// (a number that can't be worked out, or resting on one).
+function dashFreeFigures(c, num){
+  const ps = c.pieces, figs = ps.map(() => undefined);
+  const figure = (i, depth) => {
+    if(figs[i] !== undefined) return figs[i];
+    if(depth > ps.length) return null;
+    const p = ps[i];
+    const vals = c.parts.filter(x => x.piece === i).map(x => { const v = num(x.row, c.period); return v === null ? null : p.minus ? -v : v; });
+    let f = null;
+    if(!vals.includes(null)){
+      const up = vals.reduce((s, v) => s + Math.max(0, v), 0), down = vals.reduce((s, v) => s + Math.min(0, v), 0);
+      const value = vals.reduce((s, v) => s + v, 0);
+      const of = graphFreeRestsOn(ps, i);
+      let base = 0;
+      if(p.sits.on === 'level') base = p.sits.value;
+      else if(of >= 0){ const o = figure(of, depth + 1); base = !o ? null : p.sits.on === 'end' ? o.end : (o.up > 0 || o.down === 0 ? o.top : o.bottom); }
+      if(base !== null){
+        let u = base, d = base;
+        const parts = vals.map(v => {
+          const from = v >= 0 ? u : d, to = from + v;
+          if(v >= 0) u = to; else d = to;
+          const lo = Math.min(from, to), hi = Math.max(from, to);
+          return { value: v, from, to, above: Math.max(0, hi) - Math.max(0, lo), below: Math.min(0, lo) - Math.min(0, hi) };
+        });
+        f = { value, up, down, base, top: base + up, bottom: base + down, end: base + value, parts };
+      }
+    }
+    figs[i] = f;
+    return f;
+  };
+  ps.forEach((_, i) => figure(i, 0));
+  const { order, under } = dashFreeOrder(c);
+  order.forEach(i => {
+    const f = figs[i];
+    if(!f) return;
+    const q = under[i] >= 0 ? figs[under[i]] : { drawnUp: 0, drawnDown: 0 };
+    if(!q || q.drawnUp === null){ Object.assign(f, { fillerUp: null, drawnUp: null, fillerDown: null, drawnDown: null, overlaps: null }); return; }
+    f.fillerUp = Math.max(0, Math.max(0, f.bottom) - q.drawnUp);
+    f.drawnUp = q.drawnUp + f.fillerUp + f.parts.reduce((s, x) => s + x.above, 0);
+    f.fillerDown = Math.min(0, Math.min(0, f.top) - q.drawnDown);
+    f.drawnDown = q.drawnDown + f.fillerDown + f.parts.reduce((s, x) => s + x.below, 0);
+    f.overlaps = (f.top > 0 && Math.max(0, f.bottom) < q.drawnUp - 1e-9) || (f.bottom < 0 && Math.min(0, f.top) > q.drawnDown + 1e-9);
+  });
+  ps.forEach((p, i) => {
+    const f = figs[i];
+    if(!f) return;
+    const o = Number.isInteger(p.check) ? figs[p.check] : undefined;
+    f.check = o === undefined ? null : !o ? null : Math.abs(f.value - o.end) <= 1e-6 * Math.max(1, Math.abs(f.value), Math.abs(o.end)) ? '✓' : '✗';
+  });
+  return { figs, order, under };
+}
+// The chart and its helper block (from row `top`, labels in column N): the pieces (a column
+// each), the rectangles (a row each), then the chart's series (a row each, a column per grid
+// column) — all formulas, so the chart follows the sliders.
+function dashFreeChart(c, top, ctx, valAxis){
+  const { sheet, cellPos, num, labels, styles } = ctx;
+  const fmt = mapping.cfg.fallbackFormat || 'General';
+  const L = (k) => colLetter(k), N = L(DASH_TABLE_COL);
+  const ps = c.pieces, n = ps.length;
+  const { figs, order, under } = dashFreeFigures(c, num);
+  const rects = [];
+  ps.forEach((_, i) => c.parts.forEach((x, j) => { if(x.piece === i) rects.push({ piece: i, part: x, k: rects.filter(r => r.piece === i).length }); }));
+  const fig = (i) => figs[i];
+  const rectFig = (r) => figs[r.piece] ? figs[r.piece].parts[r.k] : null;
+  const columns = Math.max(...ps.map(p => p.column)) + 1;
+  const head = top + 1;
+  const PC = (i) => L(DASH_TABLE_COL + 1 + i);
+  const PR = (name) => head + 1 + DASH_FREE_ROWS.indexOf(name);
+  const rectHead = PR('Overlaps') + 2;
+  const RC = (name) => L(DASH_TABLE_COL + 1 + DASH_FREE_RECT_COLS.indexOf(name));
+  rects.forEach((r, k) => { r.row = rectHead + 1 + k; });
+  const serHead = rectHead + rects.length + 2;
+  const GC = (col) => L(DASH_TABLE_COL + 1 + col);
+  // The series, in Excel's order (see above).
+  const series = [];
+  order.forEach(i => {
+    const mine = rects.filter(r => r.piece === i), rev = mine.slice().reverse();
+    series.push({ piece: i, filler: 'up' });
+    rev.forEach(r => series.push({ piece: i, rect: r, side: 'Above 0', neg: true }));
+    mine.forEach(r => series.push({ piece: i, rect: r, side: 'Above 0', neg: false }));
+    series.push({ piece: i, filler: 'down' });
+    rev.forEach(r => series.push({ piece: i, rect: r, side: 'Below 0', neg: false }));
+    mine.forEach(r => series.push({ piece: i, rect: r, side: 'Below 0', neg: true }));
+  });
+  series.forEach((s, k) => { s.row = serHead + 1 + k; });
+  const label = (i) => dashFreeLabel(c, i);
+  const catNames = Array.from({ length: columns }, (_, col) => order.filter(i => ps[i].column === col).map(label).join(' / '));
+  // A colour per rectangle: the board's, else Excel's own in turn.
+  const colourOf = new Map();
+  let spare = 0;
+  c.parts.forEach(x => { if(!colourOf.has(x.row)) colourOf.set(x.row, x.colour ? x.colour.slice(1).toUpperCase() : DASH_FREE_COLOURS[spare++ % DASH_FREE_COLOURS.length]); });
+  const seriesValue = (s) => {
+    const f = fig(s.piece);
+    if(!f) return null;
+    if(s.filler) return s.filler === 'up' ? f.fillerUp : f.fillerDown;
+    const q = rectFig(s.rect);
+    return (s.neg ? q.value < 0 : q.value >= 0) ? (s.side === 'Above 0' ? q.above : q.below) : 0;
+  };
+  const cat = { ref: dashRange(sheet, GC(0), serHead, GC(columns - 1)), values: catNames };
+  const seen = new Set();
+  const chartSeries = series.map(s => {
+    const val = { ref: dashRange(sheet, GC(0), s.row, GC(columns - 1)), values: catNames.map((_, col) => col === ps[s.piece].column ? seriesValue(s) : null), numFmt: fmt };
+    if(s.filler) return { name: { text: label(s.piece) + (s.filler === 'up' ? ' filler above 0' : ' filler below 0') }, cat, val, noFill: true };
+    const x = s.rect.part;
+    const key = !s.neg && s.side === 'Above 0' && !seen.has(x.row);
+    if(key) seen.add(x.row);
+    return Object.assign({ name: { text: x.name }, cat, val, color: colourOf.get(x.row) }, key ? {} : { noLegend: true });
+  });
+  const chart = { type: 'bar', title: c.name, bar: { dir: 'col', grouping: 'stacked', gapWidth: 50 }, legend: 'b', valAxis, series: chartSeries };
+  const write = (ws) => {
+    const calc = (addr, f, v) => { ws[addr] = Object.assign({ t: 'n', f, s: styles.calc }, v === null || v === undefined ? {} : { v }); };
+    const calcText = (addr, f, v) => { ws[addr] = Object.assign({ t: 's', f, s: styles.calc }, v ? { v } : {}); };
+    ws[N + top] = textCell('Chart data: ' + c.name + ' (' + (labels[c.period] || '') + ')', styles.title);
+    // The pieces.
+    ws[N + head] = textCell('Piece', styles.head);
+    DASH_FREE_ROWS.forEach(r => { ws[N + PR(r)] = textCell(r, styles.label); });
+    ps.forEach((p, i) => {
+      const C = PC(i), at = (r) => C + PR(r), f = fig(i);
+      const mine = rects.filter(r => r.piece === i);
+      const v = (k) => f ? f[k] : null;
+      const sum = (wrap) => mine.length ? mine.map(r => wrap(RC('Value') + r.row)).join('+') : '0';
+      ws[C + head] = textCell(label(i), styles.head);
+      ws[at('Column')] = { t: 'n', v: p.column + 1, s: styles.calc };
+      ws[at('Sits')] = textCell(p.sits.on === 'zero' ? 'on zero' : p.sits.on === 'level' ? 'at ' + p.sits.value
+        : (p.sits.on === 'top' ? 'on top of ' : 'where ') + label(p.sits.of) + (p.sits.on === 'end' ? ' ends' : ''), styles.label);
+      calc(at('Value'), sum(x => x), v('value'));
+      calc(at('Up'), sum(x => 'MAX(0,' + x + ')'), v('up'));
+      calc(at('Down'), sum(x => 'MIN(0,' + x + ')'), v('down'));
+      const of = graphFreeRestsOn(ps, i), O = of >= 0 ? PC(of) : null;
+      if(p.sits.on === 'level') ws[at('Sits at')] = { t: 'n', v: p.sits.value, s: styles.calc };
+      else if(of < 0) ws[at('Sits at')] = { t: 'n', v: 0, s: styles.calc };
+      else if(p.sits.on === 'end') calc(at('Sits at'), O + PR('End'), v('base'));
+      else calc(at('Sits at'), 'IF(OR(' + O + PR('Up') + '>0,' + O + PR('Down') + '=0),' + O + PR('Top') + ',' + O + PR('Bottom') + ')', v('base'));
+      calc(at('Top'), at('Sits at') + '+' + at('Up'), v('top'));
+      calc(at('Bottom'), at('Sits at') + '+' + at('Down'), v('bottom'));
+      calc(at('End'), at('Sits at') + '+' + at('Value'), v('end'));
+      if(Number.isInteger(p.check) && ps[p.check]){
+        const a = at('Value'), b = PC(p.check) + PR('End');
+        calcText(at('Check'), 'IF(ABS(' + a + '-' + b + ')<=0.000001*MAX(1,ABS(' + a + '),ABS(' + b + ')),"✓","✗")', v('check'));
+      }
+      const q = under[i];
+      const upTo = q < 0 ? '0' : PC(q) + PR('Drawn up to'), downTo = q < 0 ? '0' : PC(q) + PR('Drawn down to');
+      const sumOf = (col) => mine.length ? '+' + mine.map(r => RC(col) + r.row).join('+') : '';
+      calc(at('Filler above 0'), 'MAX(0,MAX(0,' + at('Bottom') + ')-' + upTo + ')', v('fillerUp'));
+      calc(at('Drawn up to'), upTo + '+' + at('Filler above 0') + sumOf('Above 0'), v('drawnUp'));
+      calc(at('Filler below 0'), 'MIN(0,MIN(0,' + at('Top') + ')-' + downTo + ')', v('fillerDown'));
+      calc(at('Drawn down to'), downTo + '+' + at('Filler below 0') + sumOf('Below 0'), v('drawnDown'));
+      calcText(at('Overlaps'), 'IF(OR(AND(' + at('Top') + '>0,MAX(0,' + at('Bottom') + ')<' + upTo + '-0.000000001),AND(' +
+        at('Bottom') + '<0,MIN(0,' + at('Top') + ')>' + downTo + '+0.000000001)),"overlaps","")', f && f.overlaps ? 'overlaps' : '');
+    });
+    // The rectangles: positives up from where the piece sits, negatives down, in order.
+    ws[N + rectHead] = textCell('Rectangle', styles.head);
+    DASH_FREE_RECT_COLS.forEach(h => { ws[RC(h) + rectHead] = textCell(h, styles.head); });
+    rects.forEach(r => {
+      const p = ps[r.piece], row = r.row, base = PC(r.piece) + PR('Sits at'), q = rectFig(r);
+      const pos = cellPos[r.part.row];
+      const before = rects.filter(y => y.piece === r.piece && y.k < r.k).map(y => RC('Value') + y.row);
+      const V = RC('Value') + row, F = RC('From') + row, T = RC('To') + row;
+      ws[N + row] = textCell(label(r.piece) + ' · ' + r.part.name, styles.label);
+      ws[V] = Object.assign({ t: 'n', f: (p.minus ? '-' : '') + sheetRef(pos.tabName, '$' + colLetter(periodCol(c.period)), pos.row, sheet, true), s: styles.link }, q ? { v: q.value } : {});
+      calc(F, before.length ? base + '+IF(' + V + '>=0,' + before.map(x => 'MAX(0,' + x + ')').join('+') + ',' + before.map(x => 'MIN(0,' + x + ')').join('+') + ')' : base, q && q.from);
+      calc(T, F + '+' + V, q && q.to);
+      calc(RC('Above 0') + row, 'MAX(0,MAX(' + F + ',' + T + '))-MAX(0,MIN(' + F + ',' + T + '))', q && q.above);
+      calc(RC('Below 0') + row, 'MIN(0,MIN(' + F + ',' + T + '))-MIN(0,MAX(' + F + ',' + T + '))', q && q.below);
+    });
+    // The chart's series: each only in its piece's column.
+    ws[N + serHead] = textCell('Series', styles.head);
+    catNames.forEach((name, col) => { ws[GC(col) + serHead] = textCell(name, styles.head); });
+    series.forEach(s => {
+      const cell = GC(ps[s.piece].column) + s.row, P = PC(s.piece);
+      if(s.filler){
+        ws[N + s.row] = textCell(label(s.piece) + (s.filler === 'up' ? ' · filler above 0 (hidden)' : ' · filler below 0 (hidden)'), styles.label);
+        calc(cell, P + PR(s.filler === 'up' ? 'Filler above 0' : 'Filler below 0'), seriesValue(s));
+        return;
+      }
+      const r = s.rect;
+      ws[N + s.row] = textCell(label(s.piece) + ' · ' + r.part.name + ' · ' + (s.side === 'Above 0' ? 'above 0' : 'below 0') + (s.neg ? ', while negative' : ', while positive'), styles.label);
+      calc(cell, 'IF(' + RC('Value') + r.row + (s.neg ? '<0,' : '>=0,') + RC(s.side) + r.row + ',0)', seriesValue(s));
+    });
+  };
+  const rows = serHead + series.length - top + 1;
+  return { chart, block: { rows, cols: DASH_TABLE_COL + Math.max(n, DASH_FREE_RECT_COLS.length, columns), write } };
+}
+
 // One chart: { chart, block: { rows: n, cols: n, write(ws) } | null }. Its data table sits beside
 // the charts from row `top`: the title on its own row, then the names, then the figures — labels in
 // column N (DASH_TABLE_COL), figures from O, columns of their own width.
@@ -176,6 +400,7 @@ function dashChart(c, top, ctx){
   const hex = (col) => col ? col.slice(1).toUpperCase() : undefined;
   const valAxis = Object.assign({ numFmt: fmt }, c.scale ? { min: c.scale.min, max: c.scale.max } : {});
   const L = (k) => colLetter(k);
+  if(c.kind === 'free') return dashFreeChart(c, top, ctx, valAxis);
   if(c.kind === 'flow'){
     const n = c.parts.length, figs = dashFlowFigures(c, num);
     const col = (k) => L(DASH_TABLE_COL + 1 + k), first = col(0), last = col(n - 1), head = top + 1;

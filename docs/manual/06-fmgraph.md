@@ -66,7 +66,7 @@ At Price 12, the Profit bar shows **160**; a dashed outline keeps the model's ow
 > **You need:** the board of [lesson 6.1](#bars-sliders), with Price at 12.
 > **Time:** about 10 minutes.
 > **In the app:** fmGraph Help → *Charts: columns, lines and waterfalls* (`charts`), *The Free chart: columns and waterfalls together* (`free-chart`), *One period for every board* (`shared-period`) · fmGraph tutorial *Charts* (`charts`)
-> **Came in:** step 15 G2 ([#84](https://github.com/taroyamakatrmttm-star/fmIDE/pull/84)); one period for every board [#184](https://github.com/taroyamakatrmttm-star/fmIDE/pull/184); lines charts [#188](https://github.com/taroyamakatrmttm-star/fmIDE/pull/188); the Free chart, branch `claude/fmgraph-free-chart-f1`; the key leaving out rectangles at 0, branch `claude/fmgraph-key-hides-zeros`
+> **Came in:** step 15 G2 ([#84](https://github.com/taroyamakatrmttm-star/fmIDE/pull/84)); one period for every board [#184](https://github.com/taroyamakatrmttm-star/fmIDE/pull/184); lines charts [#188](https://github.com/taroyamakatrmttm-star/fmIDE/pull/188); the Free chart, branch `claude/fmgraph-free-chart-f1` (in Excel, branch `claude/excel-free-chart-f3`); the key leaving out rectangles at 0, branch `claude/fmgraph-key-hides-zeros`
 
 **+ Chart** adds a chart; its kind is chosen at its top: **Columns**, **Lines**, **Waterfall**, **Free** (columns and waterfalls together), **Scenario waterfall** ([lesson 6.5](#graph-scenarios)), **Tornado** and **Spider** ([lesson 6.6](#tornado-spider)). Every chart is made of your own rectangles, so it fits any model.
 
@@ -95,7 +95,7 @@ At Price 12, the Profit bar shows **160**; a dashed outline keeps the model's ow
 - **One period for every board:** above the bars and charts, **Every board** sets the periods for every bar and chart, and **One-period charts in** the period of the waterfalls, Tornado and Spider. A bar or chart follows while its period list shows *Shared (…)*; choose its own period to stop following.
 - **Lines** draws up to 12 rectangles. Switching between Columns and Lines keeps the rectangles and the periods.
 - **The key lists only the rectangles that aren't 0.** A rectangle that is 0 in every period the chart shows, now and in the dashed outlines, is left out (its bars are still drawn); **+N at 0** at the end of the key lists them too, faded, so you can pick their colours, and **Hide the N at 0** leaves them out again. A slider that makes one something else brings it back; one that can't be worked out is always listed; while Play runs, both its ends count. On the sample nothing is 0, so every key lists all its rectangles.
-- **The Free chart** shows one period. Each piece is a stack of rectangles in a column, and **Sits** on zero, on top of another piece, where another piece ends, or at a number. **Minus** turns a piece's sign round (−Costs), **Should equal…** checks it against where another piece ends. Two pieces share a column only when one rests on the other. ExcelExporter's Dashboard does not draw a Free chart yet: Use fmGraph boards… lists it as not carried.
+- **The Free chart** shows one period. Each piece is a stack of rectangles in a column, and **Sits** on zero, on top of another piece, where another piece ends, or at a number. **Minus** turns a piece's sign round (−Costs), **Should equal…** checks it against where another piece ends. Two pieces share a column only when one rests on the other. ExcelExporter draws it on the Dashboard as stacked columns that follow the sliders ([lesson 5.11](05-excelexporter.md#fmgraph-in-excel)).
 
 ---
 

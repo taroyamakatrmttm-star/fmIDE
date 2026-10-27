@@ -1036,6 +1036,7 @@ test('the round trip: a workbook worked out from its formulas\' text, as Excel w
       E10: f('INDEX($E$4:$F$4,2)'), E11: f('INDEX(E4:F5,2,1)'), E12: f('E4>12'), E13: f('AND(E3=1,NOT(F3=1))'), E14: f('MAX(0,-E4)+MIN(E4:F4)+AVERAGE(E4:F4)'),
       E15: f('1/0'), E16: f('MOD(-7,3)+ABS(-2)+INT(-1.5)+TRUNC(-1.5)+POWER(2,3)+SQRT(16)'), E17: f('N(TRUE)+N(\'In puts\'!B5)+SUM(\'In puts\'!B2:B5)'),
       E18: f('E19+1'), E19: f('E18+1'), E20: f('VLOOKUP(1,E4:F4,2)'), E21: f('E99*3'), E22: f('5%'), E23: f('-E4^2'),
+      E24: f('IF(ISNUMBER(E3),1,0)+IF(ISNUMBER(E99),10,0)+IF(ISNUMBER(\'In puts\'!B4),100,0)+IF(ISNUMBER(E15),1000,0)'), // ISNUMBER, as the Dashboard's Value cells
     } } };
   const { valueOf } = R.xlRecalc(wb);
   expect(valueOf('Calc', 'E4')).toBeCloseTo(12.5, 12);
@@ -1058,6 +1059,7 @@ test('the round trip: a workbook worked out from its formulas\' text, as Excel w
   expect(valueOf('Calc', 'E20')).toEqual({ error: '#NAME?' });
   expect(valueOf('Calc', 'E21')).toBe(0); // an empty cell is 0
   expect(valueOf('Calc', 'E22')).toBeCloseTo(0.05, 12);
+  expect(valueOf('Calc', 'E24')).toBe(1); // a number only: a blank, text and an error are not
   expect(valueOf('Calc', 'E23')).toBeCloseTo(156.25, 12); // -E4^2 is (-E4)^2, as in Excel
   // The comparison: agree, differ, an Excel error agreeing with an error, what isn't checked.
   const at = (a) => ({ tab: 'Calc', address: a });

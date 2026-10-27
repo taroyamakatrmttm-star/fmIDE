@@ -105,7 +105,7 @@ test.describe('mapping files', () => {
     const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
     const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
     expect(exported.kind).toBe('fmIDE-excel-mapping');
-    expect(exported.version).toBe(10); // v2: a row may carry its own format and indent; v3: cfg.sensitivity; v4: cfg.graph; v5: cfg.sensitivities; v6: origin and show; v7: cfg.graph.sliders; v8: cfg.graph.charts; v9: a lines chart; v10: a row's style.excelFormat
+    expect(exported.version).toBe(11); // v2: a row may carry its own format and indent; v3: cfg.sensitivity; v4: cfg.graph; v5: cfg.sensitivities; v6: origin and show; v7: cfg.graph.sliders; v8: cfg.graph.charts; v9: a lines chart; v10: a row's style.excelFormat; v11: a Free chart
     expect(exported.cfg.sensitivities).toEqual([{ name: 'Sensitivity', enabled: false, outputs: [], period: 0, steps: 5, charts: 'tabs', variables: [] }]);
     // The first analysis, also as version 4's one cfg.sensitivity, for an older ExcelExporter.
     expect(exported.cfg.sensitivity).toEqual({ enabled: false, outputs: [], period: 0, steps: 5, charts: 'tabs', variables: [] });
@@ -132,7 +132,7 @@ test.describe('mapping files', () => {
       await expect(page.locator('#cfgSensEnabled')).not.toBeChecked();
       const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
       const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
-      expect(exported.version).toBe(10);
+      expect(exported.version).toBe(11);
       expect(exported.cfg.graph).toEqual({ from: [], board: '', scenarios: [], sliders: [], charts: [] }); // sliders: version 7 (step 19 B4); charts: version 8 (B5)
       expect(exported.cfg.sensitivities).toEqual([{ name: 'Sensitivity', enabled: false, outputs: [], period: 0, steps: 5, charts: 'tabs', variables: [] }]);
     });
@@ -151,7 +151,7 @@ test.describe('mapping files', () => {
     await expect(page.locator('#sensOutputs .sens-name')).toHaveText(['1. Revenue — Revenue Model']);
     const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
     const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
-    expect(exported.version).toBe(10);
+    expect(exported.version).toBe(11);
     const one = { enabled: true, outputs: ['c1|n22'], period: 0, steps: 3, charts: 'sheet', variables: [] };
     expect(exported.cfg.sensitivities).toEqual([Object.assign({ name: 'Sensitivity' }, one)]);
     expect(exported.cfg.sensitivity).toEqual(one);
@@ -168,7 +168,7 @@ test.describe('mapping files', () => {
     await expect(page.locator('#cfgSensSteps')).toHaveValue('3');
     const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
     const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
-    expect(exported.version).toBe(10);
+    expect(exported.version).toBe(11);
     expect(exported.cfg.sensitivities).toEqual([{ name: 'Sensitivity', enabled: true, outputs: ['c1|n22'], period: 0, steps: 3, charts: 'sheet', variables: [] }]);
   });
 
@@ -181,7 +181,7 @@ test.describe('mapping files', () => {
     await expect(page.locator('#sensAnalyses .sens-state')).toHaveText(['fmGraph']);
     const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
     const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
-    expect(exported.version).toBe(10);
+    expect(exported.version).toBe(11);
     expect(exported.cfg.sensitivities[0].origin).toBe('fmGraph');
     expect(exported.cfg.sensitivities[0].variables).toEqual([{ row: 'c1|n19', by: 'percent', low: -10, high: 10, show: false }]);
     expect(exported.cfg.graph.sliders).toEqual([]);
@@ -194,7 +194,7 @@ test.describe('mapping files', () => {
     await expect(genStatus(page)).toHaveText('Mapping imported.');
     const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
     const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
-    expect(exported.version).toBe(10);
+    expect(exported.version).toBe(11);
     expect(exported.cfg.graph.sliders).toEqual([{ row: 'c1|n19', name: 'Unit Price', mode: 'set', periods: { mode: 'all' }, min: 5, max: 15, step: 0.5 }]);
     expect(exported.cfg.graph.charts).toEqual([]);
   });
@@ -206,7 +206,7 @@ test.describe('mapping files', () => {
     await expect(genStatus(page)).toHaveText('Mapping imported.');
     const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
     const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
-    expect(exported.version).toBe(10);
+    expect(exported.version).toBe(11);
     expect(exported.cfg.graph.charts).toEqual([{ kind: 'columns', title: 'Revenue and cash', wide: true, scale: null, periods: { mode: 'all' }, groups: [''],
       parts: [{ row: 'c1|n22', name: 'Revenue', colour: '#2563eb', group: 0 }, { row: 'c1|n27', name: 'Cash', group: 0 }] }]);
   });
@@ -218,7 +218,7 @@ test.describe('mapping files', () => {
     await expect(genStatus(page)).toHaveText('Mapping imported.');
     const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
     const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
-    expect(exported.version).toBe(10);
+    expect(exported.version).toBe(11);
     expect(exported.cfg.graph.charts.map(c => c.kind)).toEqual(['columns', 'lines']);
     const revenue = exported.rows.find(r => r.id === 'c1|n22');
     expect(revenue.style.numberFormat).toEqual({ kind: 'number', decimals: 1 });
@@ -242,7 +242,7 @@ test.describe('mapping files', () => {
     await expect(genStatus(page)).toHaveText('Mapping imported.');
     const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
     const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
-    expect(exported.version).toBe(10);
+    expect(exported.version).toBe(11);
     const style = (id) => exported.rows.find(r => r.id === id).style;
     expect(style('c1|n22').excelFormat).toBe(code);
     ['c1|n19', 'c1|n20', 'c1|n27'].forEach(id => {
@@ -259,18 +259,36 @@ test.describe('mapping files', () => {
     expect(book.getWorksheet('Revenue Model').getCell(col + row('Revenue')).numFmt).toBe(code);
   });
 
-  // map-newer-v11: version 10 is now current (map-newer-v10 is no longer newer, since a row's own
-  // Excel number format code, 19 October 2026; changed on purpose).
-  test('map-newer-v11 asks first', async ({ page }) => {
-    await renameFirstTab(page, 'Before Import');
+  // map-v10: a version 10 file (before a Dashboard chart could be fmGraph's Free chart) reads as
+  // it is: its charts and its row's own Excel number format code kept.
+  test('map-v10 imports as it is', async ({ page }) => {
+    await importMapping(page, file('map-v10'));
+    await expect(genStatus(page)).toHaveText('Mapping imported.');
+    const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
+    const exported = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
+    expect(exported.version).toBe(11);
+    expect(exported.cfg.graph.charts.map(c => c.kind)).toEqual(['columns', 'lines']);
+    expect(exported.rows.find(r => r.id === 'c1|n22').style.excelFormat).toBe('#,##0.0;(#,##0.0);"–"');
+  });
+
+  test('map-newer-v11, now the current version, imports without asking', async ({ page }) => {
     await importMapping(page, file('map-newer-v11'));
+    await expect(genStatus(page)).toHaveText('Mapping imported.');
+    await expect(page.locator('#confirmModal')).toBeHidden();
+  });
+
+  // map-newer-v12: version 11 is now current (map-newer-v11 is no longer newer, since fmGraph's
+  // Free chart on the Dashboard, 27 October 2026; changed on purpose).
+  test('map-newer-v12 asks first', async ({ page }) => {
+    await renameFirstTab(page, 'Before Import');
+    await importMapping(page, file('map-newer-v12'));
     await expect(page.locator('#confirmModal')).toBeVisible();
-    await expect(page.locator('#confirmMessage')).toContainText('format version 11');
+    await expect(page.locator('#confirmMessage')).toContainText('format version 12');
     await page.click('#confirmCancel');
     await expect(genStatus(page)).toHaveText('Mapping not imported.');
     expect(await tabNames(page)).toEqual(['Before Import']);
 
-    await importMapping(page, file('map-newer-v11'));
+    await importMapping(page, file('map-newer-v12'));
     await page.click('#confirmOk');
     await expect(genStatus(page)).toHaveText('Mapping imported.');
     expect(await tabNames(page)).toEqual(['Revenue Model']);

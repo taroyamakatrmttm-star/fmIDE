@@ -205,7 +205,7 @@ test('the Excel layout travels with the document: a change in ExcelExporter is k
   await tab.dispatchEvent('change');
   await expect.poll(async () => { const l = (await exportedWorkspace(page)).excelLayout; return l && l.tabs[0].name; }, { timeout: 5000 }).toBe('My Pay');
   const ws = await exportedWorkspace(page);
-  expect([ws.version, ws.excelLayout.kind, ws.excelLayout.version]).toEqual([13, 'fmIDE-excel-mapping', 10]); // 10 since a row's own Excel number format code (9: fmGraph's lines chart; 19 October 2026)
+  expect([ws.version, ws.excelLayout.kind, ws.excelLayout.version]).toEqual([13, 'fmIDE-excel-mapping', 11]); // 11 since fmGraph's Free chart on the Dashboard (27 October 2026; 10: a row's own Excel number format code)
   expect(await D.title(page)).toMatch(/•/);
 
   // Another computer (a browser with nothing kept): the document opens with its layout, and a
