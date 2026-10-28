@@ -175,6 +175,22 @@ test('a viewer-only change runs the viewer\'s group, not the Excel, fmGraph or c
   expect(r.tests.length).toBeLessThan(ALL.length / 4);
 });
 
+// fmGraph's board engine (phase V2): the viewer takes its fragments in, so the map has an engine
+// fragment in both apps' pages and runs the viewer's groups for it; fmGraph's editing is in
+// fmGraph's page alone.
+test('a change to fmGraph\'s board engine reaches the viewer\'s page and groups; one to its editing only fmGraph\'s page', () => {
+  const pages = (f) => (I.map().appsOf.get(f) || []).slice().sort();
+  expect(pages('src/fmgraph/js/05b-chart-render.js')).toEqual(['apps/fmGraph.html', 'apps/fmViewer.html']);
+  expect(pages('src/fmgraph/board.css')).toEqual(['apps/fmGraph.html', 'apps/fmViewer.html']);
+  expect(pages('src/fmgraph/js/05p-free-grid.js')).toEqual(['apps/fmGraph.html']);
+  expect(pages('src/fmgraph/js/05b-chart-render-edit.js')).toEqual(['apps/fmGraph.html']);
+  const engine = pick('src/fmgraph/js/05b-chart-render.js');
+  for(const t of ['91-viewer', '93-viewer-board', '48-fmgraph-charts', '92-fmgraph-board-engine']) expect(engine.tests, t).toContain('tests/' + t + '.spec.js');
+  const edit = pick('src/fmgraph/js/05p-free-grid.js');
+  expect(edit.tests).toContain('tests/89-fmgraph-free-grid.spec.js');
+  for(const t of ['1-excel-structure', '18-ir']) expect(edit.tests, t).not.toContain('tests/' + t + '.spec.js');
+});
+
 test('an app named only in a test\'s comments is not opened by it (27 October 2026)', () => {
   // Group 6 names fmGraph's boards and group 65 fmGraph's fixed scale only in comments: neither
   // opens fmGraph. Group 88 opens it (openApp(page, 'fmGraph')), and mentions it in comments too.

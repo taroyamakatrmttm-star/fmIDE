@@ -185,4 +185,24 @@ test.describe('the board engine, in Node', () => {
       expect(wiring, f).toEqual([]);
     });
   });
+
+  test('the showcase viewer takes in exactly the engine, defines the page interface, and declares no name twice', () => {
+    const { appSources } = require('../tools/build.js');
+    const viewer = appSources().find(a => a.app === 'fmViewer');
+    const taken = viewer.files.filter(f => f.startsWith('src/fmgraph/'));
+    expect(taken.filter(f => f.endsWith('.js'))).toEqual(ENGINE.map(f => 'src/fmgraph/js/' + f));
+    expect(taken.filter(f => !f.endsWith('.js'))).toEqual(['src/fmgraph/board.css']);
+    // Its own fragments define every name of the page interface.
+    const dir = path.join(ROOT, 'src', 'viewer', 'js');
+    const own = fs.readdirSync(dir).map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
+    const defined = new Set([...own.matchAll(/^(?:async )?(?:function\*? |const |let |var )([A-Za-z0-9_$]+)/gm)].map(m => m[1]));
+    expect(PAGE_INTERFACE.filter(n => !defined.has(n))).toEqual([]);
+    // The built script: no name declared twice at its top level (its fragments share one scope,
+    // where a second function of the same name would silently win).
+    const html = fs.readFileSync(path.join(ROOT, 'apps', 'fmViewer.html'), 'utf8');
+    const script = html.slice(html.indexOf('(function(){'));
+    const names = [...script.matchAll(/^(?:async )?(?:function\*? |const |let |var |class )([A-Za-z0-9_$]+)/gm)].map(m => m[1]);
+    expect(names.length).toBeGreaterThan(500);
+    expect([...new Set(names.filter((n, i) => names.indexOf(n) !== i))]).toEqual([]);
+  });
 });

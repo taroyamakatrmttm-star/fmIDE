@@ -9,30 +9,81 @@ const ZOOM_MIN = 0.1, ZOOM_MAX = 4, ZOOM_STEP = 1.25;
 // what the visitor may see; state.period: the period the canvas's numbers are for (the first
 // shown: decision 3, visitors don't change the periods); state.canvasId: the canvas shown;
 // state.layout / state.texts: its drawing; state.views: zoom and pan per canvas.
+// state.moved: key → a number per period, the inputs the Board's sliders or scenario moved
+// (06-board.js); state.viewName: 'board' or 'logic'.
 const state = { model: null, vm: null, showcase: null, shown: null, period: 0, canvasId: null, layout: null, texts: null,
-  views: new Map(), card: null, modelJson: '' };
+  views: new Map(), card: null, modelJson: '', moved: new Map(), viewName: 'logic', loads: 0 };
 
-function showModel(m, showcase){
+// Shows a model (and its showcase): the Board when it has boards (the showcase's, else a
+// document's own), else the Logic view. Resolves true when shown.
+async function showModel(m, showcase){
+  let vm;
+  try{ vm = viewModel(m.system, m.presets); }
+  catch(e){ notify('That model could not be shown.', 'err', 'load'); return false; }
+  const boardsRaw = showcase && showcase.boards ? showcase.boards : m.boards;
+  let read = null, built = null;
+  if(boardsRaw){
+    try{ built = buildModel(m.system, m.name); }catch(e){ built = null; }
+    if(built){
+      const was = model;
+      model = built; // the boards are read against the model they show (04-board.js)
+      read = await readBoards(boardsRaw);
+      if(!read) model = was;
+    }
+  }
   state.model = m;
   state.modelJson = JSON.stringify(m.system);
-  try{ state.vm = viewModel(m.system, m.presets); }
-  catch(e){ notify('That model could not be shown.', 'err', 'load'); return; }
+  state.vm = vm;
   state.showcase = showcase || null;
   const canvases = state.vm.canvases.map(c => ({ id: c.id, name: c.name }));
   const r = resolveShowcase(state.showcase, canvases, state.vm.periods.length);
   if(r.problems.length) notify('The showcase: ' + r.problems.join(' '), 'warn', 'resolve');
   else notify('', '', 'resolve');
   state.shown = r;
-  state.period = r.periods.length ? r.periods[0] : 0;
+  if(read){ model = built; useBoards(read); } else { model = null; useBoards(null); }
+  if(read && showcase && showcase.periods) applyShowcasePeriods(r.periods);
+  // The canvas's one period: the boards' (what their one-period charts show) when it has
+  // boards, else the first shown (the owner's choice 4 of phases V1 and V2).
+  state.period = read ? sharedPeriods.period : (r.periods.length ? r.periods[0] : 0);
+  if(!r.periods.includes(state.period)) state.period = r.periods.length ? r.periods[0] : 0;
+  state.moved = new Map();
   state.views = new Map();
+  playFromShowcase = showcase && showcase.play ? showcase.play : null;
+  stateKey = read ? viewerStateKey(showcase, m.system, showcase && showcase.boards ? null : m.boards) : null;
   closeCard();
   notify('', '', 'load');
   renderAbout();
   $('welcome').classList.add('hidden');
-  $('logic').classList.remove('hidden');
   document.body.classList.add('has-model');
+  document.body.classList.toggle('has-board', !!read);
+  $('viewSwitch').classList.toggle('hidden', !read);
+  $('phoneViews').classList.toggle('hidden', !read);
   renderCanvasList();
-  showCanvas(r.start, { quiet: true });
+  showView(read ? 'board' : 'logic', { first: true });
+  if(read){ renderBoard(); await restoreState(); }
+  state.loads++; // how many models have been shown (the tests wait for the next)
+  return true;
+}
+
+// The Board or the Logic view (tabs at the top; at the bottom on a phone).
+function showView(name, opts){
+  const onBoard = name === 'board' && boardsShown;
+  state.viewName = onBoard ? 'board' : 'logic';
+  $('boardView').classList.toggle('hidden', !onBoard);
+  $('logic').classList.toggle('hidden', onBoard);
+  const several = !!(state.shown && state.shown.canvases.length > 1);
+  $('canvasTabs').classList.toggle('hidden', onBoard || !several);
+  $('btnCanvasMenu').classList.toggle('hidden', onBoard || !several);
+  [['tabBoard', 'phoneTabBoard', true], ['tabLogic', 'phoneTabLogic', false]].forEach(([a, b, isBoard]) => {
+    [a, b].forEach(id => $(id).setAttribute('aria-selected', isBoard === onBoard ? 'true' : 'false'));
+  });
+  document.body.classList.toggle('on-board', onBoard);
+  if(onBoard){ closeCard(); closeCanvasMenu(); return true; }
+  if(boardsShown) setLogicNumbers(null); // the Board's numbers (06-board.js)
+  if(opts && opts.first) showCanvas(state.shown.start, { quiet: true });
+  else if(state.canvasId) showCanvas(state.canvasId, { keepCard: true });
+  else showCanvas(state.shown.start, { quiet: true });
+  return true;
 }
 
 // The title, description, author and licence, and the mark.
@@ -53,6 +104,11 @@ function renderAbout(){
 }
 
 function canvasName(id){ const c = state.vm && state.vm.byId.get(id); return c ? c.name : ''; }
+// The number an input the Board moved has in a period, or null when it isn't moved.
+function movedValue(canvasId, nodeId, period){
+  const values = state.moved.get(canvasId + '\u0000' + nodeId);
+  return values && typeof values[period] === 'number' && Number.isFinite(values[period]) ? values[period] : null;
+}
 
 // The canvases a visitor may see: tabs on a computer or an iPad, a menu on a phone.
 function renderCanvasList(){
@@ -102,7 +158,15 @@ function drawShown(){
   canvasDefs(svg);
   state.layout = canvasLayout(state.vm, state.canvasId);
   state.texts = nodeTexts(state.vm, state.canvasId, state.period, state.layout);
+  // An input the Board moved shows the number it has now (the drawing writes its own number).
+  const canvas = state.vm.byId.get(state.canvasId);
+  state.layout.nodes.forEach(b => {
+    const v = movedValue(state.canvasId, b.id, state.period), t = state.texts.get(b.id);
+    const line = v !== null && t && t.lines.find(l => l.cls === 'value literal');
+    if(line) line.text = (Array.isArray(b.node.periodValues) ? '📈 ' : '') + formatFor(state.vm, canvas, b.node, v);
+  });
   drawCanvas($('world'), state.layout, state.texts);
+  document.querySelectorAll('#world .cv-node').forEach(e => e.classList.toggle('moved', state.moved.has(state.canvasId + '\u0000' + e.dataset.id)));
   const name = state.vm.periods[state.period] || '';
   $('periodNote').textContent = name ? 'Numbers for ' + name : '';
   markPicked();
@@ -219,10 +283,11 @@ function wireStage(){
   document.addEventListener('keydown', (ev) => {
     if(!$('confirmBox').classList.contains('hidden')) return;
     if(ev.key === 'Escape'){ closeCard(); closeCanvasMenu(); return; }
+    if(state.viewName !== 'logic') return;
     if(!state.vm || (ev.target && /^(INPUT|BUTTON|SELECT|TEXTAREA)$/.test(ev.target.tagName) && ev.key !== '+' && ev.key !== '-')) return;
     if(ev.key === '+' || ev.key === '='){ zoomCentre(ZOOM_STEP); ev.preventDefault(); }
     else if(ev.key === '-'){ zoomCentre(1 / ZOOM_STEP); ev.preventDefault(); }
     else if(ev.key === '0'){ fitView(); ev.preventDefault(); }
   });
-  window.addEventListener('resize', () => { if(state.vm && state.canvasId && !state.views.has(state.canvasId)) fitView(); });
+  window.addEventListener('resize', () => { if(state.vm && state.viewName === 'logic' && state.canvasId && !state.views.has(state.canvasId)) fitView(); });
 }

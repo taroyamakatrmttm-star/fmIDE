@@ -26,9 +26,11 @@ async function openViewer(page){
   await openApp(page, 'fmViewer');
   await page.waitForFunction(() => !!window.fmViewer);
 }
+// Opens files and waits until they are shown (the next model shown, not the one already open).
 async function openFiles(page, files){
+  const before = await page.evaluate(() => fmViewer.state().loads);
   await page.setInputFiles('#fileInput', files);
-  await page.waitForFunction(() => fmViewer.state().loaded);
+  await page.waitForFunction((n) => fmViewer.state().loads > n, before);
 }
 // The bare app with the page's data blocks filled in, written as a viewer is (every < as <).
 function madeViewer(dir, showcase, model){
@@ -279,8 +281,10 @@ test('pan, zoom and Fit; nothing a visitor does changes the model, and nothing c
   await page.locator('#canvasTabs .canvas-tab', { hasText: 'Inputs' }).click();
   await page.locator('#canvasTabs .canvas-tab', { hasText: 'Model' }).click();
   expect(await view()).toEqual(zoomed);
-  // No editing control exists: no text box, nothing editable, only the file box.
-  expect(await page.locator('textarea, select, [contenteditable]').count()).toBe(0);
+  // No editing control exists: no text box, nothing editable, only the file box (and, since
+  // phase V2, the Board's two Play choosers, which only choose what plays).
+  expect(await page.locator('textarea, [contenteditable]').count()).toBe(0);
+  expect(await page.locator('select').evaluateAll(els => els.map(e => e.id))).toEqual(['playFrom', 'playTo']);
   expect(await page.locator('input').evaluateAll(els => els.map(e => e.id))).toEqual(['fileInput']);
   await page.keyboard.press('Delete'); await page.keyboard.press('Control+z'); await page.keyboard.press('Control+x');
   expect(await V(page, () => fmViewer.modelText() === fmViewer.modelTextAtLoad())).toBe(true);
@@ -400,12 +404,13 @@ test('on a phone: the canvases in a menu, the card from the bottom of the screen
   await context.close();
 });
 
-test('the viewer is made from shared code and its own: nothing of ExcelExporter\'s, nothing of fmGraph\'s yet', () => {
+test('the viewer is made from shared code, the board engine and its own: nothing of ExcelExporter\'s', () => {
   const { appSources } = require('../tools/build.js');
   const viewer = appSources().find(a => a.app === 'fmViewer');
   expect(viewer.out).toBe('apps/fmViewer.html');
   expect(viewer.files.filter(f => f.startsWith('src/excel-exporter/'))).toEqual([]);
-  expect(viewer.files.filter(f => f.startsWith('src/fmgraph/') || f.startsWith('src/fmide/'))).toEqual([]);
+  expect(viewer.files.filter(f => f.startsWith('src/fmide/'))).toEqual([]);
+  // Since phase V2 it also takes in the board engine, exactly that: group 92 checks it.
   expect(viewer.files).toEqual(expect.arrayContaining(['src/shared/canvas-view.js', 'src/shared/showcase.js', 'src/viewer/index.html']));
   // The licence notice stays at the top of the page.
   expect(fs.readFileSync(path.join(ROOT, 'apps', 'fmViewer.html'), 'utf8').split('\n')[2]).toMatch(/^<!-- fmShowcase — Copyright 2026 .* Apache License 2\.0/);

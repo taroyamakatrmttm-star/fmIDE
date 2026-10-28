@@ -92,5 +92,7 @@
  "89-fmgraph-free-grid.spec.js": 13.5,
  "9-storage.spec.js": 13.6,
  "90-excel-free-chart.spec.js": 16.9,
- "91-viewer.spec.js": 18
+ "91-viewer.spec.js": 18,
+ "92-fmgraph-board-engine.spec.js": 19.9,
+ "93-viewer-board.spec.js": 29.1
 }
