@@ -159,7 +159,7 @@ test('an fmGraph-only change runs fmGraph\'s groups, not the Excel or calculatio
   for(const t of ['1-excel-structure', '2-excel-values', '3-excel-layout', '17-agreement', '18-ir', '19-excel-ir', '27-touch', '44-zoom', '67-excel-sensitivity']){
     expect(r.tests, t).not.toContain('tests/' + t + '.spec.js');
   }
-  expect(r.tests.length).toBeLessThan(ALL.length / 2);
+  expect(r.tests.length).toBeLessThanOrEqual(ALL.length / 2); // at most half: made viewers carry fmGraph's board engine (the owner's choice, 29 October 2026)
 });
 
 // The showcase viewer (phase V1 of docs/viewer-brief.md): a change to its own pieces runs its group,
@@ -173,6 +173,34 @@ test('a viewer-only change runs the viewer\'s group, not the Excel, fmGraph or c
   }
   expect(I.loadsOf('tests/91-viewer.spec.js').has(I.APP_PAGES.fmViewer)).toBe(true);
   expect(r.tests.length).toBeLessThan(ALL.length / 4);
+});
+
+// fmIDE carries the viewer packed (phase V3, the build's <!-- build:viewer-page -->): the viewer's
+// sources stay the viewer's, so a viewer change runs the group that makes viewers in fmIDE (94)
+// besides the viewer's own, and not fmIDE's other groups; the packer is part of the build.
+test('a viewer change reaches the group making viewers, not fmIDE\'s others; the packer runs everything', () => {
+  const r = pick('src/viewer/js/03-view.js');
+  for(const t of ['91-viewer', '93-viewer-board', '94-make-showcase-viewer']) expect(r.tests, t).toContain('tests/' + t + '.spec.js');
+  for(const t of ['10-documents', '6-formats-fmide', '31-help']) expect(r.tests, t).not.toContain('tests/' + t + '.spec.js');
+  const fmide = appSources().find(a => a.app === 'fmIDE').files;
+  expect(fmide.filter(f => f.startsWith('src/viewer/'))).toEqual([]);
+  expect(pick('tools/pack.js').full).toBe(true);
+});
+
+// fmGraph's board engine (phase V2): the viewer takes its fragments in, so the map has an engine
+// fragment in both apps' pages and runs the viewer's groups for it; fmGraph's editing is in
+// fmGraph's page alone.
+test('a change to fmGraph\'s board engine reaches the viewer\'s page and groups; one to its editing only fmGraph\'s page', () => {
+  const pages = (f) => (I.map().appsOf.get(f) || []).slice().sort();
+  expect(pages('src/fmgraph/js/05b-chart-render.js')).toEqual(['apps/fmGraph.html', 'apps/fmViewer.html']);
+  expect(pages('src/fmgraph/board.css')).toEqual(['apps/fmGraph.html', 'apps/fmViewer.html']);
+  expect(pages('src/fmgraph/js/05p-free-grid.js')).toEqual(['apps/fmGraph.html']);
+  expect(pages('src/fmgraph/js/05b-chart-render-edit.js')).toEqual(['apps/fmGraph.html']);
+  const engine = pick('src/fmgraph/js/05b-chart-render.js');
+  for(const t of ['91-viewer', '93-viewer-board', '48-fmgraph-charts', '92-fmgraph-board-engine']) expect(engine.tests, t).toContain('tests/' + t + '.spec.js');
+  const edit = pick('src/fmgraph/js/05p-free-grid.js');
+  expect(edit.tests).toContain('tests/89-fmgraph-free-grid.spec.js');
+  for(const t of ['1-excel-structure', '18-ir']) expect(edit.tests, t).not.toContain('tests/' + t + '.spec.js');
 });
 
 test('an app named only in a test\'s comments is not opened by it (27 October 2026)', () => {

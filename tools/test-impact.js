@@ -44,6 +44,7 @@ const SITE = 'site';
 const FULL_SUITE = [
   ['src/shared/', 'shared code goes into every app'],
   ['tools/build.js', 'the build makes every app and the site'],
+  ['tools/pack.js', 'the build packs the showcase viewer into fmIDE with it'],
   ['tests/helpers/', 'the test helpers are used by every test'],
   ['tests/fixtures/formats/', 'a file format\'s samples'],
   ['src/fmide/js/04-file-formats.js', 'a file format or its upgrades'],

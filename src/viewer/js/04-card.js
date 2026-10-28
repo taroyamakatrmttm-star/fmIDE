@@ -41,7 +41,8 @@ function valueText(canvasId, nodeId, period){
   const r = nodeResult(state.vm, canvasId, nodeId, period);
   if(r.error) return { text: '?', error: r.error };
   if(n && n.type === 'value' && !cvHasIncoming(c, nodeId)){
-    const lit = effectiveLiteral(n, period);
+    const moved = movedValue(canvasId, nodeId, period); // moved on the Board (06-board.js)
+    const lit = moved !== null ? moved : effectiveLiteral(n, period);
     return { text: formatFor(state.vm, c, n, lit !== null ? lit : 0) };
   }
   if(r.value === undefined) return { text: '—' };
@@ -167,6 +168,10 @@ function openCard(canvasId, nodeId){
   // What it is, and how it is worked out.
   if(ex.kind === 'input'){
     body.appendChild(make('p', 'card-kind', 'An input: a number typed into the model.'));
+    if(movedValue(canvasId, nodeId, state.period) !== null){
+      const lit = effectiveLiteral(n, state.period);
+      body.appendChild(make('p', 'card-kind card-moved', 'Moved on the Board, from ' + formatFor(state.vm, state.vm.byId.get(canvasId), n, lit !== null ? lit : 0) + ' (the model\'s number).'));
+    }
   } else if(ex.kind === 'alias'){
     body.appendChild(make('p', 'card-kind', 'Shows another rectangle\'s value.'));
   } else if(ex.kind === 'block'){

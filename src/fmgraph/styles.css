@@ -93,26 +93,9 @@
   .board.moving .bar-widget.reached{ opacity:1; box-shadow:0 0 0 2px var(--reach); }
   .slider-widget.active{ box-shadow:0 0 0 2px var(--reach); }
 
-  /* A bar widget's chart. */
-  .bar-chart{ display:block; width:100%; height:auto; margin-top:6px; overflow:visible; }
-  .bar-chart .b-now{ fill:var(--bar-now); }
-  .bar-chart .b-now.neg{ fill:var(--bar-neg); }
-  .bar-chart .b-base{ fill:none; stroke:var(--bar-base); stroke-width:1.5; stroke-dasharray:4 3; }
-  .bar-chart .b-zero{ stroke:var(--line-strong); stroke-width:1; }
-  .bar-chart .b-err{ fill:#fef3f2; stroke:var(--down); stroke-width:1; stroke-dasharray:3 2; }
-  .bar-chart text{ font-size:11px; fill:var(--ink); }
-  .bar-chart .t-period{ fill:var(--soft-ink); }
-  .bar-chart .t-diff.up{ fill:var(--up); font-weight:600; }
-  .bar-chart .t-diff.down{ fill:var(--down); font-weight:600; }
-  .bar-chart .t-err{ fill:var(--down); font-weight:600; }
-  /* A fixed vertical scale (04d-scale.js): its two ends, and ▲ / ▼ where a number goes past it. */
-  .bar-chart .b-scale-edge{ stroke:var(--line-strong); stroke-width:1; stroke-dasharray:2 3; }
-  .bar-chart .t-axis{ font-size:9.5px; fill:var(--soft-ink); stroke:#fff; stroke-width:3; paint-order:stroke; }
-  .bar-chart .t-over{ font-size:10px; fill:var(--ink); stroke:#fff; stroke-width:2.5; paint-order:stroke; }
   .scale-chooser{ display:inline-flex; flex-wrap:wrap; align-items:center; gap:4px; }
   .scale-chooser .scale-box{ width:84px; font:inherit; font-size:12.5px; padding:2px 4px; }
   .scale-chooser .scale-to{ font-size:12.5px; color:var(--soft-ink); }
-  .bar-errors{ margin:6px 0 0; padding:0; list-style:none; font-size:12px; color:var(--down); }
 
   /* A slider widget. */
   .slider-track{ display:flex; gap:8px; align-items:center; margin-top:10px; }
@@ -149,23 +132,6 @@
   .board.moving .chart-widget.reached{ opacity:1; box-shadow:0 0 0 2px var(--reach); }
   .chart-title{ flex:1 1 auto; font:inherit; font-weight:600; font-size:14px; padding:4px 6px; border:1px solid transparent; border-radius:6px; background:transparent; color:var(--ink); min-width:0; }
   .chart-title:hover, .chart-title:focus{ border-color:var(--line-strong); background:#fff; }
-  .chart-key{ display:flex; flex-direction:column; gap:3px; margin-top:4px; font-size:12px; color:var(--soft-ink); }
-  .key-line{ display:flex; flex-wrap:wrap; gap:4px 12px; align-items:center; }
-  .key-group{ font-weight:600; color:var(--ink); }
-  .key-item{ display:inline-flex; align-items:center; gap:5px; }
-  .key-swatch{ width:11px; height:11px; border-radius:3px; display:inline-block; }
-  /* The rectangles at 0, left out of the key: "+N at 0" shows them, faded. */
-  .key-zeros{ font:inherit; font-size:12px; padding:1px 8px; border:1px dashed var(--line-strong); border-radius:10px; background:transparent; color:var(--soft-ink); cursor:pointer; }
-  .key-zeros:hover, .key-zeros:focus-visible{ color:var(--ink); border-style:solid; }
-  .key-item.key-zero{ opacity:.6; }
-  .bar-chart .c-part{ stroke:#fff; stroke-width:.6; }
-  .bar-chart .t-check{ font-size:13px; font-weight:700; }
-  .bar-chart .t-check.ok{ fill:var(--up); }
-  .bar-chart .t-check.bad{ fill:var(--down); }
-  .bar-chart .f-total{ fill:#334155; }
-  .bar-chart .f-up{ fill:var(--up); }
-  .bar-chart .f-down{ fill:var(--down); }
-  .bar-chart .f-link{ stroke:var(--line-strong); stroke-width:1; stroke-dasharray:3 2; }
   /* Placing a Free chart's pieces on the grid (05p-free-grid.js): fmIDE's blue guides and pink equal-gap marks. */
   .free-grid .fr-piece{ cursor:grab; outline:none; }
   .free-grid .fr-piece:focus-visible .c-part, .free-grid .fr-piece.selected .c-part{ stroke:#2563eb; stroke-width:2; }
@@ -275,7 +241,6 @@
   .compare-text{ flex:1 1 auto; }
   .compare-btn{ padding:3px 10px; }
   .gbar-btn[aria-pressed="true"]{ background:var(--reach); color:#1b2333; }
-  .bar-chart rect[data-anim]{ transform-box:view-box; transform-origin:0 0; }
 
   /* Tutorials (G6): the coach card, the ring, the list in Help */
   .tutorial-card{
@@ -300,19 +265,7 @@
   .help-tutorial{ display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid #f1f5f9; }
   body.practising main{ padding-bottom:220px; } /* room to scroll past the coach card */
 
-  /* The scenario waterfall */
-  .scenario-flows{ display:flex; flex-wrap:wrap; gap:10px; }
-  .scenario-flows .scenario-flow{ flex:1 1 260px; max-width:100%; }
-  .bar-chart .t-flow-title{ fill:var(--ink); font-weight:600; }
   .edit-head{ font-size:12px; font-weight:600; color:var(--soft-ink); margin:8px 0 4px; }
-  /* The Tornado and the Spider (step 18) */
-  .bar-chart .s-base{ stroke:var(--ink); stroke-width:1.5; stroke-dasharray:4 3; }
-  .bar-chart .s-axis{ stroke:var(--line-strong); stroke-width:1; }
-  .bar-chart .s-path{ stroke-width:2; }
-  /* The lines chart: each line, and the model's own numbers (or A's) dashed under it. */
-  .bar-chart .l-path{ stroke-width:2; }
-  .bar-chart .l-base{ stroke:var(--bar-base); stroke-width:1.5; stroke-dasharray:4 3; }
-  .bar-chart.stale{ opacity:.45; }
   .sens-row{ margin-bottom:6px; }
   .sens-row .sens-bound{ width:6em; }
   .sens-own{ font-size:12px; color:var(--soft-ink); margin:2px 0 0 24px; }
@@ -335,7 +288,6 @@
   .play-text{ flex:1 1 auto; display:flex; gap:4px 12px; flex-wrap:wrap; }
   .play-at{ font-variant-numeric:tabular-nums; }
   .slider-widget.playing{ box-shadow:0 0 0 2px var(--reach); }
-  .chart-widget.play-held .bar-chart-host{ opacity:.45; }
   .scenario-what{ flex-basis:100%; font-size:12px; color:var(--soft-ink); overflow-wrap:anywhere; }
 
   /* Try in fmGraph (G5c) */

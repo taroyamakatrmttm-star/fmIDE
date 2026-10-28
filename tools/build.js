@@ -40,6 +40,11 @@
 //                                   next to the page: fmIDE.html in apps/, the site's
 //                                   front page (./) in site/ ("Back to fmIDE" in ExcelExporter
 //                                   and fmGraph)
+//   <!-- build:viewer-page -->      the showcase viewer's page as apps/ has it, packed
+//                                   (tools/pack.js: deflate, then base64) in a
+//                                   <script type="application/octet-stream" id="viewerPage">:
+//                                   fmIDE's File → Make showcase viewer… unpacks it (phase V3 of
+//                                   docs/viewer-brief.md). The same in apps/ and site/.
 // Inside a .js piece, a line consisting only of an include marker pulls in another file,
 // path relative to src/: shared code that both apps use (src/shared/), or an app's help text
 // (src/help/, src/excel-exporter/help/):
@@ -84,6 +89,8 @@ const SITE_HEAD = [
   '<link rel="apple-touch-icon" href="icons/icon-192.png">',
 ].join('\n') + '\n';
 const FMIDE_ADDRESS_MARKER = /^<!-- build:fmide-address -->\r?$/;
+const VIEWER_PAGE_MARKER = /^<!-- build:viewer-page -->\r?$/;
+const PACK = require('./pack.js');
 const fmideAddressMeta = (forSite) => '<meta name="fmide-address" content="' + (forSite ? './' : 'fmIDE.html') + '">\n';
 const LIBRARY = require('./build-library.js');
 const HELP = require('./build-help.js');
@@ -225,6 +232,7 @@ function buildApp(app, forSite){
     const last = i === lines.length - 1;
     if(SITE_HEAD_MARKER.test(line)){ if(forSite) out += SITE_HEAD; return; }
     if(FMIDE_ADDRESS_MARKER.test(line)){ out += fmideAddressMeta(forSite); return; }
+    if(VIEWER_PAGE_MARKER.test(line)){ out += viewerPageBlock(); return; }
     const m = MARKER.exec(line);
     if(!m){
       out += last ? line : line + '\n';
@@ -235,6 +243,19 @@ function buildApp(app, forSite){
   });
   checkImports(path.basename(app.out), included);
   return out;
+}
+
+// The showcase viewer's page, packed for fmIDE: built as apps/ has it (a made viewer opens from
+// disk) and packed so it is the same bytes on any computer (tools/pack.js). Its sources are the
+// viewer's, not fmIDE's (appSources): a change to the viewer reaches the tests that open the
+// viewer and those that make one, not every test of fmIDE.
+function viewerPageBlock(){
+  const viewer = APPS.find(a => path.basename(a.out) === 'fmViewer.html');
+  const reading = piecesRead;
+  piecesRead = null;
+  let page;
+  try{ page = buildApp(viewer, false); } finally { piecesRead = reading; }
+  return '<script type="application/octet-stream" id="viewerPage">' + PACK.packBase64(Buffer.from(page, 'utf8')) + '</script>\n';
 }
 
 // Which source files go into each app: [{ app: 'fmIDE', out: 'apps/fmIDE.html', files: [paths

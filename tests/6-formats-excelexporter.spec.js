@@ -1,6 +1,6 @@
 // 6. File formats — ExcelExporter: models and mapping files.
 const fs = require('fs');
-const { test, expect, fixture } = require('./helpers/apps');
+const { test, expect, fixture, readFixture } = require('./helpers/apps');
 const X = require('./helpers/excel');
 const S = require('./helpers/storage');
 
@@ -363,14 +363,27 @@ test.describe('workspace v6 (origins)', () => {
     expect(await page.evaluate(() => window.__pwned)).toBeUndefined();
     expect(pageErrors).toEqual([]);
   });
-  // Workspace v13 is current since step 20's Excel layout: a newer one is v14.
-  test('a v14 workspace asks first', async ({ page }, testInfo) => {
+  // Workspace v14 is current since the showcase viewer's phase V3: a newer one is v15.
+  test('a v15 workspace asks first', async ({ page }, testInfo) => {
     const ws = withOrigins();
-    ws.version = 14;
-    const p = testInfo.outputPath('ws-v14.json');
+    ws.version = 15;
+    const p = testInfo.outputPath('ws-v15.json');
     fs.writeFileSync(p, JSON.stringify(ws));
     await page.setInputFiles('#fileInput', p);
     await expect(page.locator('#confirmModal')).toBeVisible();
-    await expect(page.locator('#confirmMessage')).toContainText('format version 14');
+    await expect(page.locator('#confirmMessage')).toContainText('format version 15');
+  });
+  // A v13 document (fmGraph's boards and the Excel layout) and a v14 one keeping its showcase
+  // (phase V3 of the showcase viewer) load without a question; the showcase changes nothing here.
+  test('ws-v13 and a v14 workspace with a showcase load without a question', async ({ page }, testInfo) => {
+    await page.setInputFiles('#fileInput', file('ws-v13'));
+    await expect(loadStatus(page)).toHaveClass(/ok/);
+    await expect(page.locator('#confirmModal')).toBeHidden();
+    const ws = Object.assign(readFixture('formats', 'ws-v13.json'), { version: 14, showcase: readFixture('formats', 'showcase-v1.json') });
+    const p = testInfo.outputPath('ws-v14-showcase.json');
+    fs.writeFileSync(p, JSON.stringify(ws));
+    await page.setInputFiles('#fileInput', p);
+    await expect(loadStatus(page)).toHaveClass(/ok/);
+    await expect(page.locator('#confirmModal')).toBeHidden();
   });
 });

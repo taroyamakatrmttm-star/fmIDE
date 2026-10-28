@@ -228,3 +228,15 @@ $('phoneShareSliders').addEventListener('click', () => { closePhoneMenu(); if(bo
 
 // The top bar's height (--gbar-h), for the Sliders column that stays on screen under it.
 if(window.ResizeObserver) new ResizeObserver(() => document.body.style.setProperty('--gbar-h', document.querySelector('.gbar').offsetHeight + 'px')).observe(document.querySelector('.gbar'));
+
+// Keep this board's own positions (on), or share them (off: it takes the shared positions).
+function setOwnSliders(b, on){
+  on = !!on;
+  if(!!b.ownSliders === on) return false;
+  syncShared(); // what moved so far is shared before the board leaves or joins
+  b.ownSliders = on;
+  b.sliders.forEach(s => { delete s._sharedKey; delete s._sharedValue; });
+  saveBoardSoon();
+  renderAll();
+  return true;
+}

@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- Generated from src/ by `npm run build` — edit src/, not this file. -->
-<!-- fmShowcase — Copyright 2026 Taro Yamaka. Licensed under the Apache License 2.0: see LICENSE and NOTICE (LICENSE.txt, NOTICE.txt in the web app). The model and showcase a viewer carries are their author's. -->
+<!-- fmShowcase — Copyright 2026 Taro Yamaka. Licensed under the Apache License 2.0: see LICENSE and NOTICE (LICENSE.txt, NOTICE.txt in the web app). Its help text (src/help/) is licensed under CC BY 4.0, https://creativecommons.org/licenses/by/4.0/ The model and showcase a viewer carries are their author's. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -9,6 +9,10 @@
 <style>
 <!-- build:css styles.css -->
 <!-- build:css ../shared/canvas-view.css -->
+<!-- build:css ../fmgraph/board.css -->
+<!-- build:css ../shared/phone.css -->
+<!-- build:css ../shared/help-panel.css -->
+<!-- build:css board-view.css -->
 </style>
 </head>
 <body>
@@ -19,8 +23,13 @@
     <h1 id="showTitle" class="vbar-title"></h1>
   </div>
   <div class="vbar-side">
+    <nav id="viewSwitch" class="view-switch desk-only hidden" role="tablist" aria-label="Views">
+      <button type="button" id="tabBoard" class="view-tab" role="tab" aria-selected="true">Board</button>
+      <button type="button" id="tabLogic" class="view-tab" role="tab" aria-selected="false">Logic</button>
+    </nav>
     <button type="button" id="btnCanvasMenu" class="vbar-btn phone-only hidden" aria-haspopup="menu" aria-expanded="false" aria-controls="canvasMenu">☰ <span id="canvasMenuName"></span></button>
     <button type="button" id="btnOpen" class="vbar-btn" title="Open a model saved by fmIDE (.fmide or .json), and a showcase file if you have one">Open…</button>
+    <button type="button" id="btnHelp" class="vbar-btn vbar-help" title="Help (F1)" aria-label="Help">?</button>
   </div>
 </header>
 
@@ -38,7 +47,42 @@
     <span class="dropbox-main phone-only">Choose a .fmide or .json model</span>
     <span class="dropbox-sub">and a showcase file, if you have one</span>
   </div>
+  <p class="welcome-actions"><button type="button" id="btnSample" class="primary">Try the sample</button></p>
 </section>
+
+<!-- The Board: the bars and charts the author chose, with their sliders (fmGraph's drawing,
+     src/fmgraph/js, the board engine; nothing here edits the boards). -->
+<main id="boardView" class="board-view hidden">
+  <nav id="boardTabs" class="board-tabs hidden" role="tablist" aria-label="Boards"></nav>
+  <div id="compareBar" class="compare-bar hidden" role="status"></div>
+  <div id="playBar" class="play-bar hidden" role="region" aria-label="Play"></div>
+  <section id="board" class="board">
+    <div class="board-side">
+      <div id="scenarioRow" class="scenario-row hidden" role="group" aria-label="Scenarios"></div>
+      <p id="scenarioNote" class="scenario-note hidden" role="status"></p>
+      <div id="sliderList" class="slider-list" aria-label="Sliders"></div>
+      <div class="board-actions">
+        <button type="button" id="btnReset" class="act" title="Every slider back on the model's own numbers; what this device kept is forgotten">Reset</button>
+        <button type="button" id="btnPinA" class="act" aria-pressed="false" title="Keep the numbers now as A, and compare with it">📌 Pin as A</button>
+      </div>
+      <div id="playRow" class="play-row hidden" title="Swing back and forth between two ends until stopped">
+        <label>Play from <select id="playFrom"></select></label>
+        <label>to <select id="playTo"></select></label>
+        <button type="button" id="btnPlay" class="act">▶ Play</button>
+      </div>
+      <details id="moversPanel" class="movers">
+        <summary title="The rectangles that changed most, against the model's own numbers (or A)">Biggest movers</summary>
+        <ol id="moversList" class="movers-list"></ol>
+        <p id="moversEmpty" class="empty-note">Move a slider: what it changes most shows here.</p>
+      </details>
+    </div>
+    <div class="board-main">
+      <p class="board-head"><span id="calcNote" class="calc-note"></span></p>
+      <div id="barList" class="widget-list bars"></div>
+      <p id="noBars" class="empty-note hidden">This board shows nothing.</p>
+    </div>
+  </section>
+</main>
 
 <nav id="canvasTabs" class="canvas-tabs desk-only hidden" role="tablist" aria-label="Canvases"></nav>
 <div id="canvasMenu" class="canvas-menu hidden" role="menu" aria-label="Canvases"></div>
@@ -56,6 +100,11 @@
   <p class="hint desk-only">Drag to move · wheel or pinch to zoom · tap a rectangle</p>
   <p class="hint phone-only">Drag to move · pinch to zoom · tap a rectangle</p>
 </main>
+
+<nav id="phoneViews" class="phone-views phone-only hidden" role="tablist" aria-label="Views">
+  <button type="button" id="phoneTabBoard" class="phone-view" role="tab" aria-selected="true">Board</button>
+  <button type="button" id="phoneTabLogic" class="phone-view" role="tab" aria-selected="false">Logic</button>
+</nav>
 
 <aside id="card" class="card hidden" role="dialog" aria-labelledby="cardTitle">
   <div class="card-head">

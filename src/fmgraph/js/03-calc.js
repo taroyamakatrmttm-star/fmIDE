@@ -118,17 +118,6 @@ function slidersFromOtherBoards(){
   const here = new Set(board.sliders.map(settingKey));
   return liveSliders().filter(s => !here.has(settingKey(s)) && s.value !== null && isFinite(s.value));
 }
-// Keep this board's own positions (on), or share them (off: it takes the shared positions).
-function setOwnSliders(b, on){
-  on = !!on;
-  if(!!b.ownSliders === on) return false;
-  syncShared(); // what moved so far is shared before the board leaves or joins
-  b.ownSliders = on;
-  b.sliders.forEach(s => { delete s._sharedKey; delete s._sharedValue; });
-  saveBoardSoon();
-  renderAll();
-  return true;
-}
 
 // While a finger holds A (05h-phone-show.js), the numbers looked at instead of the sliders'.
 let lookingAt = null;

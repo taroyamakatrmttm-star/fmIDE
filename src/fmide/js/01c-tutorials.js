@@ -18,7 +18,7 @@
   function practiceSavedDirty(){ return !!(practice && practice.saved.doc.dirty); }
   // Commands that would read or write your own files or document: not while practising.
   const PRACTICE_BLOCKED = new Set(['newDocument', 'openDocument', 'saveDocument', 'saveDocumentAs', 'openRecent',
-    'loadSystem', 'addSystem', 'importWorkspace']);
+    'loadSystem', 'addSystem', 'importWorkspace', 'makeShowcaseViewer']);
   function practiceBlocks(id){
     if(!practice || !PRACTICE_BLOCKED.has(id)) return false;
     toast('Finish or exit the tutorial first: practice never touches your files.', 3200);

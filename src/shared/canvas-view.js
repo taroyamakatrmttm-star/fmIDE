@@ -32,7 +32,7 @@ const DEFAULT_SIZE = { value: [170, 64], alias: [170, 64], operator: [56, 56], p
 const SVGNS = 'http://www.w3.org/2000/svg';
 
 const clampNum = (v, lo, hi, fallback) => { const n = Number(v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : fallback; };
-const cleanText = (v, max) => (typeof v === 'string' || typeof v === 'number') ? String(v).slice(0, max || CANVAS_VIEW_LIMITS.text) : '';
+const cvText = (v, max) => (typeof v === 'string' || typeof v === 'number') ? String(v).slice(0, max || CANVAS_VIEW_LIMITS.text) : '';
 const cleanId = (v) => (typeof v === 'string' || typeof v === 'number') ? String(v).slice(0, 200) : '';
 
 // ---------- the model as drawn ----------
@@ -53,7 +53,7 @@ export function viewModel(system, presets){
     const seen = ir.order[index] && ir.order[index].raw;
     const nodes = (Array.isArray(seen && seen.nodes) ? seen.nodes : []).filter(n => n && typeof n === 'object' && cleanId(n.id)).slice(0, CANVAS_VIEW_LIMITS.nodes);
     const edges = (Array.isArray(seen && seen.edges) ? seen.edges : []).filter(e => e && typeof e === 'object');
-    const canvas = { id, name: cleanText(c.name, 80) || 'Canvas', index, raw: { nodes, edges }, nodes, edges,
+    const canvas = { id, name: cvText(c.name, 80) || 'Canvas', index, raw: { nodes, edges }, nodes, edges,
       nodeById: new Map() };
     nodes.forEach(n => { const k = cleanId(n.id); if(!canvas.nodeById.has(k)) canvas.nodeById.set(k, n); });
     canvases.push(canvas);
@@ -96,7 +96,7 @@ export function portResult(vm, canvasId, nodeId, port, period){
 // A rectangle's name, typed number and unit (the shared parseRectText), cut to size.
 export function rectParts(n){
   const p = parseRectText(typeof (n && n.text) === 'string' ? n.text : '');
-  return { name: cleanText(String(p.name || '').trim()), literal: p.literal, uom: cleanText(p.uom || '', 40) };
+  return { name: cvText(String(p.name || '').trim()), literal: p.literal, uom: cvText(p.uom || '', 40) };
 }
 export function cvHasIncoming(canvas, nodeId){ return canvas.edges.some(e => cleanId(e.to) === nodeId); }
 export function cvIsInput(canvas, n){ return isInputRectangle(canvas.raw, n); }
@@ -120,7 +120,7 @@ export function unitText(vm, canvas, n){
   const key = canvas.id + '\u0000' + cleanId(n.id);
   if(!vm.units.has(key)){
     let t = '';
-    try{ const u = unitOf(vm.ir, canvas.id, cleanId(n.id)); t = u ? cleanText(formatUOM(u), 40) : ''; }catch(e){ t = ''; }
+    try{ const u = unitOf(vm.ir, canvas.id, cleanId(n.id)); t = u ? cvText(formatUOM(u), 40) : ''; }catch(e){ t = ''; }
     vm.units.set(key, t);
   }
   return { text: vm.units.get(key), auto: true };
@@ -149,10 +149,10 @@ export function functionPorts(vm, canvas, n){
   const compiledNode = vm.ir.canvases.get(canvas.id) && vm.ir.canvases.get(canvas.id).byId.get(n.id);
   const call = compiledNode && compiledNode.call;
   const problem = !call ? 'missing' : (call.parseError ? 'unreadable' : null);
-  const name = cleanText((call && typeof call.name === 'string' && call.name) || (n.fn && typeof n.fn.name === 'string' && n.fn.name.trim()) || '', 80) || '(unnamed)';
+  const name = cvText((call && typeof call.name === 'string' && call.name) || (n.fn && typeof n.fn.name === 'string' && n.fn.name.trim()) || '', 80) || '(unnamed)';
   const version = n.fn && Number.isInteger(n.fn.version) ? n.fn.version : '?';
   let params;
-  if(!problem) params = call.params.map(p => cleanText(p, 80));
+  if(!problem) params = call.params.map(p => cvText(p, 80));
   else {
     let count = 0;
     canvas.edges.forEach(e => { if(cleanId(e.to) === cleanId(n.id) && Number.isInteger(e.toPort) && e.toPort >= 0 && e.toPort < 50) count = Math.max(count, e.toPort + 1); });
@@ -261,7 +261,7 @@ export function nodeTexts(vm, canvasId, period, layout){
     const resultText = () => res.value !== undefined ? '= ' + formatNum(res.value) : (res.error ? '?' : '');
     if(b.type === 'value'){
       const parts = rectParts(n);
-      const plugs = plugsOf(n).map(p => cleanText(p, 60));
+      const plugs = plugsOf(n).map(p => cvText(p, 60));
       if(plugs.length) t.chips.push({ text: '🔌 ' + plugs.join(' · '), cls: 'plug', at: 'top' });
       if(n.blockRole === 'input') t.chips.push({ text: '→ IN', cls: 'role-in', at: 'bottom' });
       else if(n.blockRole === 'output') t.chips.push({ text: 'OUT →', cls: 'role-out', at: 'bottom' });
@@ -280,7 +280,7 @@ export function nodeTexts(vm, canvasId, period, layout){
       if(u.text) t.lines.push({ text: u.text, cls: 'unit' + (u.auto ? ' auto' : '') });
       t.style = styleOf(vm, canvas, n);
     } else if(b.type === 'alias'){
-      const plugs = plugsOf(n).map(p => cleanText(p, 60));
+      const plugs = plugsOf(n).map(p => cvText(p, 60));
       if(plugs.length) t.chips.push({ text: '🔌 ' + plugs.join(' · '), cls: 'plug', at: 'top' });
       const src = vm.byId.get(cleanId(n.sourceCanvasId));
       const srcNode = src ? src.nodeById.get(cleanId(n.sourceNodeId)) : null;
@@ -300,8 +300,8 @@ export function nodeTexts(vm, canvasId, period, layout){
       t.lines.push({ text: shiftLabel(typeof n.shift === 'number' && isFinite(n.shift) ? n.shift : -1), cls: 'shift' });
       t.result = resultText();
     } else if(b.type === 'operator'){
-      t.lines.push({ text: cleanText(n.text, 20), cls: 'opsym' + (operatorForSymbol(n.text) && operatorForSymbol(n.text).fn ? ' word' : '') });
-      if(typeof n.socket === 'string' && n.socket.trim()) t.chips.push({ text: '⚡ ' + cleanText(n.socket, 60), cls: 'socket', at: 'top' });
+      t.lines.push({ text: cvText(n.text, 20), cls: 'opsym' + (operatorForSymbol(n.text) && operatorForSymbol(n.text).fn ? ' word' : '') });
+      if(typeof n.socket === 'string' && n.socket.trim()) t.chips.push({ text: '⚡ ' + cvText(n.socket, 60), cls: 'socket', at: 'top' });
       t.result = resultText();
     } else if(b.type === 'blockInstance'){
       t.ports = b.outs.map((o, i) => { const r = portResult(vm, canvasId, b.id, i, period); return r.value !== undefined ? '=' + formatNum(r.value) : (r.error ? '?' : ''); });

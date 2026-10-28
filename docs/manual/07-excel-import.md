@@ -1,6 +1,6 @@
 # Part 7 — Importing an Excel model
 
-[← Part 6](06-fmgraph.md) · [Contents](README.md)
+[← Part 6](06-fmgraph.md) · [Contents](README.md) · [Part 8 →](08-showcase.md)
 
 ExcelExporter turns an fmIDE model into a workbook; it also goes the other way. **File → Import Excel model…** reads a financial model built in Excel and rebuilds it as an fmIDE model, with a report saying how closely it matches Excel. Open a spreadsheet you inherited, and get it back as a picture of rectangles and arrows that you can check, change and carry on with in fmIDE.
 
@@ -414,6 +414,6 @@ The import treats every workbook as possibly hostile, since it may come from any
 
 ---
 
-[← Part 6](06-fmgraph.md) · [Contents](README.md)
+[← Part 6](06-fmgraph.md) · [Contents](README.md) · [Part 8 →](08-showcase.md)
 
 *Part 7 describes ExcelExporter. Like the rest of `docs/`, it is licensed under the [Apache License 2.0](../../LICENSE).*

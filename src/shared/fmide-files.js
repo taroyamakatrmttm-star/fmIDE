@@ -2,12 +2,13 @@
 import { SHARED_FILE_VERSIONS, SHARED_FILE_MIGRATIONS, upgradeNodePlugs, upgradeTemplateEntries, dropExcelOnlyPresets, dropExcelOnlyNodeStyles, inferFileKind, upgradeFileData, fileDataProblem } from './file-formats.js';
 import { cleanFunctionDefinition } from './functions.js';
 import { LIBRARY_PACK_LIMITS, LIBRARY_INDEX_LIMITS, cleanLibraryPackInfo, cleanItemOrigin, cleanLibraryIndexEntry } from './library-pack.js';
+import { SHOWCASE_KIND, readShowcaseData, cleanShowcase, showcaseForFile } from './showcase.js';
 // The kinds of file fmIDE reads, their current versions and upgrade steps, the reader that
 // identifies, checks and upgrades them (readFmData), and the checks on the templates,
 // recipes and library functions they hold. Pure functions: fmIDE reads its files with them,
 // and so does the library's checker (tools/check-pack.js, in Node), so both read a file
 // exactly alike. fmIDE only: ExcelExporter reads its own kinds (its js/04-file-formats.js).
-// Uses file-formats.js (the kinds both apps read), functions.js and library-pack.js.
+// Uses file-formats.js (the kinds both apps read), functions.js, library-pack.js and showcase.js.
 
 // Every kind fmIDE knows: its current version, what people call it, and where it is opened.
 export const FILE_FORMATS = {
@@ -112,6 +113,10 @@ export function readFmData(raw, accept, migrations){
       ? 'That is an ExcelExporter Excel style file — import it in ExcelExporter (Import Excel Style).'
       : kind === 'fmIDE-excel-module-layouts'
       ? 'That is an ExcelExporter module layouts file — import it in ExcelExporter (Import Module Layouts).'
+      : kind === 'fmIDE-graph-board'
+      ? 'That is an fmGraph board file — open it in fmGraph (Boards → Import).'
+      : kind === SHOWCASE_KIND
+      ? 'That is a showcase: it says what a showcase viewer shows. Open it in fmShowcase (fmViewer.html) together with its model.'
       : "That file isn't an fmIDE file this version recognises" + (kind ? ` (kind "${String(kind).slice(0, 40)}")` : '') + '.' };
   }
   if(!accept.includes(kind)){
@@ -227,6 +232,21 @@ export function cleanGraphBoards(raw){ return keptFileOfKind(raw, 'fmIDE-graph-b
 // own checks (readKnownFile, reconcileMapping) when it shows the model.
 export const EXCEL_LAYOUT_LIMITS = { bytes: 4 * 1024 * 1024, depth: 16 };
 export function cleanExcelLayout(raw){ return keptFileOfKind(raw, 'fmIDE-excel-mapping', EXCEL_LAYOUT_LIMITS); }
+
+// A document's showcase (workspace v14, `showcase`; phase V3 of docs/viewer-brief.md): what its
+// showcase viewer shows, kept so that making the viewer again remembers every choice. It is an
+// fmIDE-showcase file for one model (never the recipe form): plain data, at most 16 deep and
+// 1.5 MB as text (its boards alone may be 1 MB, as graphBoards), read with the showcase's own
+// checks (cleanShowcase); one from a newer version is kept as it came. Anything else: null.
+export const SHOWCASE_DOC_LIMITS = { bytes: 1536 * 1024, depth: 16 };
+export function cleanDocumentShowcase(raw){
+  const kept = keptFileOfKind(raw, SHOWCASE_KIND, SHOWCASE_DOC_LIMITS);
+  if(!kept) return null;
+  const r = readShowcaseData(kept);
+  if(r.error || r.recipe) return null;
+  if(r.newer) return kept;
+  return showcaseForFile(cleanShowcase(r.data).value);
+}
 
 // Another app's file kept with a document: that kind, plain data, at most `limits.depth`
 // deep and `limits.bytes` as text, as a copy; anything else is dropped (null).

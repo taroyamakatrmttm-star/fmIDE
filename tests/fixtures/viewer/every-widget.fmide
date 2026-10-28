@@ -1,0 +1,907 @@
+{
+ "kind": "fmIDE-workspace",
+ "version": 13,
+ "system": {
+  "kind": "system",
+  "version": 9,
+  "periods": [
+   "Year 1",
+   "Year 2",
+   "Year 3",
+   "Year 4"
+  ],
+  "canvases": [
+   {
+    "id": "cProfit",
+    "name": "Profit",
+    "nodes": [
+     {
+      "id": "price",
+      "type": "value",
+      "x": 0,
+      "y": 0,
+      "w": 150,
+      "h": 64,
+      "text": "Price\n10"
+     },
+     {
+      "id": "vol",
+      "type": "value",
+      "x": 0,
+      "y": 100,
+      "w": 150,
+      "h": 64,
+      "text": "Volume\n1000",
+      "periodValues": [
+       1000,
+       1100,
+       1200,
+       1300
+      ]
+     },
+     {
+      "id": "ucost",
+      "type": "value",
+      "x": 0,
+      "y": 200,
+      "w": 150,
+      "h": 64,
+      "text": "Unit cost\n6"
+     },
+     {
+      "id": "m1",
+      "type": "operator",
+      "x": 180,
+      "y": 50,
+      "text": "×"
+     },
+     {
+      "id": "rev",
+      "type": "value",
+      "x": 250,
+      "y": 50,
+      "w": 150,
+      "h": 64,
+      "text": "Revenue"
+     },
+     {
+      "id": "m2",
+      "type": "operator",
+      "x": 180,
+      "y": 180,
+      "text": "×"
+     },
+     {
+      "id": "cogs",
+      "type": "value",
+      "x": 250,
+      "y": 180,
+      "w": 150,
+      "h": 64,
+      "text": "Cost of sales"
+     },
+     {
+      "id": "s1",
+      "type": "operator",
+      "x": 420,
+      "y": 110,
+      "text": "−"
+     },
+     {
+      "id": "gp",
+      "type": "value",
+      "x": 450,
+      "y": 110,
+      "w": 150,
+      "h": 64,
+      "text": "Gross profit"
+     },
+     {
+      "id": "over",
+      "type": "value",
+      "x": 500,
+      "y": 260,
+      "w": 150,
+      "h": 64,
+      "text": "Overheads\n2500"
+     },
+     {
+      "id": "s2",
+      "type": "operator",
+      "x": 640,
+      "y": 180,
+      "text": "−"
+     },
+     {
+      "id": "profit",
+      "type": "value",
+      "x": 700,
+      "y": 180,
+      "w": 150,
+      "h": 64,
+      "text": "Profit"
+     }
+    ],
+    "edges": [
+     {
+      "id": "e1",
+      "from": "price",
+      "to": "m1"
+     },
+     {
+      "id": "e2",
+      "from": "vol",
+      "to": "m1"
+     },
+     {
+      "id": "e3",
+      "from": "m1",
+      "to": "rev"
+     },
+     {
+      "id": "e4",
+      "from": "vol",
+      "to": "m2"
+     },
+     {
+      "id": "e5",
+      "from": "ucost",
+      "to": "m2"
+     },
+     {
+      "id": "e6",
+      "from": "m2",
+      "to": "cogs"
+     },
+     {
+      "id": "e7",
+      "from": "rev",
+      "to": "s1"
+     },
+     {
+      "id": "e8",
+      "from": "cogs",
+      "to": "s1"
+     },
+     {
+      "id": "e9",
+      "from": "s1",
+      "to": "gp"
+     },
+     {
+      "id": "e10",
+      "from": "gp",
+      "to": "s2"
+     },
+     {
+      "id": "e11",
+      "from": "over",
+      "to": "s2"
+     },
+     {
+      "id": "e12",
+      "from": "s2",
+      "to": "profit"
+     }
+    ]
+   },
+   {
+    "id": "cCash",
+    "name": "Cash",
+    "nodes": [
+     {
+      "id": "open",
+      "type": "value",
+      "x": 0,
+      "y": 0,
+      "w": 150,
+      "h": 64,
+      "text": "Opening cash\n1000",
+      "literalPeriods": [
+       0
+      ]
+     },
+     {
+      "id": "pr",
+      "type": "alias",
+      "x": 0,
+      "y": 100,
+      "w": 150,
+      "h": 64,
+      "sourceCanvasId": "cProfit",
+      "sourceNodeId": "profit"
+     },
+     {
+      "id": "add",
+      "type": "operator",
+      "x": 180,
+      "y": 50,
+      "text": "+"
+     },
+     {
+      "id": "close",
+      "type": "value",
+      "x": 250,
+      "y": 50,
+      "w": 150,
+      "h": 64,
+      "text": "Closing cash"
+     },
+     {
+      "id": "ps",
+      "type": "periodShift",
+      "x": 250,
+      "y": 160,
+      "shift": -1
+     }
+    ],
+    "edges": [
+     {
+      "id": "c1",
+      "from": "open",
+      "to": "add"
+     },
+     {
+      "id": "c2",
+      "from": "pr",
+      "to": "add"
+     },
+     {
+      "id": "c3",
+      "from": "add",
+      "to": "close"
+     },
+     {
+      "id": "c4",
+      "from": "close",
+      "to": "ps"
+     },
+     {
+      "id": "c5",
+      "from": "ps",
+      "to": "open"
+     }
+    ]
+   },
+   {
+    "id": "cBS",
+    "name": "Balance sheet",
+    "nodes": [
+     {
+      "id": "bcash",
+      "type": "alias",
+      "x": 0,
+      "y": 0,
+      "w": 150,
+      "h": 64,
+      "sourceCanvasId": "cCash",
+      "sourceNodeId": "close"
+     },
+     {
+      "id": "equip",
+      "type": "value",
+      "x": 0,
+      "y": 100,
+      "w": 150,
+      "h": 64,
+      "text": "Equipment\n500"
+     },
+     {
+      "id": "debt",
+      "type": "value",
+      "x": 0,
+      "y": 200,
+      "w": 150,
+      "h": 64,
+      "text": "Debt\n800"
+     },
+     {
+      "id": "eqopen",
+      "type": "value",
+      "x": 0,
+      "y": 300,
+      "w": 150,
+      "h": 64,
+      "text": "Opening equity\n700",
+      "literalPeriods": [
+       0
+      ]
+     },
+     {
+      "id": "bprofit",
+      "type": "alias",
+      "x": 0,
+      "y": 400,
+      "w": 150,
+      "h": 64,
+      "sourceCanvasId": "cProfit",
+      "sourceNodeId": "profit"
+     },
+     {
+      "id": "eqadd",
+      "type": "operator",
+      "x": 180,
+      "y": 350,
+      "text": "+"
+     },
+     {
+      "id": "equity",
+      "type": "value",
+      "x": 250,
+      "y": 350,
+      "w": 150,
+      "h": 64,
+      "text": "Equity"
+     },
+     {
+      "id": "eqps",
+      "type": "periodShift",
+      "x": 250,
+      "y": 450,
+      "shift": -1
+     }
+    ],
+    "edges": [
+     {
+      "id": "b1",
+      "from": "eqopen",
+      "to": "eqadd"
+     },
+     {
+      "id": "b2",
+      "from": "bprofit",
+      "to": "eqadd"
+     },
+     {
+      "id": "b3",
+      "from": "eqadd",
+      "to": "equity"
+     },
+     {
+      "id": "b4",
+      "from": "equity",
+      "to": "eqps"
+     },
+     {
+      "id": "b5",
+      "from": "eqps",
+      "to": "eqopen"
+     }
+    ]
+   },
+   {
+    "id": "cChecks",
+    "name": "Checks",
+    "nodes": [
+     {
+      "id": "nothing",
+      "type": "alias",
+      "x": 0,
+      "y": 0,
+      "w": 150,
+      "h": 64
+     },
+     {
+      "id": "broken",
+      "type": "value",
+      "x": 250,
+      "y": 0,
+      "w": 150,
+      "h": 64,
+      "text": "Broken"
+     }
+    ],
+    "edges": [
+     {
+      "id": "k1",
+      "from": "nothing",
+      "to": "broken"
+     }
+    ]
+   }
+  ]
+ },
+ "graphBoards": {
+  "kind": "fmIDE-graph-board",
+  "version": 13,
+  "active": 0,
+  "boards": [
+   {
+    "name": "Everything",
+    "items": [
+     {
+      "type": "bar",
+      "canvasId": "cProfit",
+      "nodeId": "profit",
+      "name": "Profit",
+      "periods": {
+       "mode": "all"
+      },
+      "wide": false,
+      "colour": "#7c3aed",
+      "scale": {
+       "min": 0,
+       "max": 22000
+      }
+     },
+     {
+      "type": "bar",
+      "canvasId": "cCash",
+      "nodeId": "close",
+      "name": "Closing cash",
+      "periods": {
+       "mode": "range",
+       "from": 1,
+       "to": 3
+      },
+      "wide": false,
+      "colour": "#0f766e",
+      "scale": {
+       "min": 0,
+       "max": 22000
+      },
+      "ownPeriod": true
+     },
+     {
+      "type": "bar",
+      "canvasId": "cChecks",
+      "nodeId": "broken",
+      "name": "Broken",
+      "periods": {
+       "mode": "all"
+      },
+      "wide": false,
+      "scale": {
+       "min": 0,
+       "max": 22000
+      }
+     },
+     {
+      "type": "chart",
+      "wide": true,
+      "layout": "columns",
+      "title": "Balance sheet",
+      "periods": {
+       "mode": "all"
+      },
+      "check": true,
+      "groups": [
+       {
+        "name": "Assets",
+        "parts": [
+         {
+          "canvasId": "cCash",
+          "nodeId": "close",
+          "name": "Closing cash",
+          "colour": "#0f766e"
+         },
+         {
+          "canvasId": "cBS",
+          "nodeId": "equip",
+          "name": "Equipment",
+          "colour": "#2563eb"
+         }
+        ]
+       },
+       {
+        "name": "Liabilities and equity",
+        "parts": [
+         {
+          "canvasId": "cBS",
+          "nodeId": "debt",
+          "name": "Debt",
+          "colour": "#d97706"
+         },
+         {
+          "canvasId": "cBS",
+          "nodeId": "equity",
+          "name": "Equity",
+          "colour": "#7c3aed"
+         }
+        ]
+       }
+      ],
+      "scale": {
+       "min": 0,
+       "max": 22000
+      }
+     },
+     {
+      "type": "chart",
+      "wide": true,
+      "layout": "flow",
+      "title": "Profit, year 1",
+      "period": 0,
+      "steps": [
+       {
+        "canvasId": "cProfit",
+        "nodeId": "rev",
+        "name": "Revenue",
+        "role": "start"
+       },
+       {
+        "canvasId": "cProfit",
+        "nodeId": "cogs",
+        "name": "Cost of sales",
+        "role": "subtract"
+       },
+       {
+        "canvasId": "cProfit",
+        "nodeId": "gp",
+        "name": "Gross profit",
+        "role": "total"
+       },
+       {
+        "canvasId": "cProfit",
+        "nodeId": "over",
+        "name": "Overheads",
+        "role": "subtract"
+       },
+       {
+        "canvasId": "cProfit",
+        "nodeId": "profit",
+        "name": "Profit",
+        "role": "total",
+        "colour": "#7c3aed"
+       }
+      ],
+      "scale": {
+       "min": 0,
+       "max": 22000
+      },
+      "ownPeriod": true
+     },
+     {
+      "type": "chart",
+      "wide": true,
+      "layout": "lines",
+      "title": "Revenue and costs",
+      "periods": {
+       "mode": "all"
+      },
+      "lines": [
+       {
+        "canvasId": "cProfit",
+        "nodeId": "rev",
+        "name": "Revenue",
+        "colour": "#db2777"
+       },
+       {
+        "canvasId": "cProfit",
+        "nodeId": "cogs",
+        "name": "Cost of sales",
+        "colour": "#0891b2"
+       },
+       {
+        "canvasId": "cProfit",
+        "nodeId": "over",
+        "name": "Overheads",
+        "colour": "#65a30d"
+       }
+      ],
+      "scale": {
+       "min": 0,
+       "max": 22000
+      }
+     },
+     {
+      "type": "chart",
+      "wide": true,
+      "layout": "free",
+      "title": "Where the profit goes",
+      "period": 1,
+      "pieces": [
+       {
+        "id": "q1",
+        "name": "Revenue",
+        "column": 1,
+        "sits": {
+         "on": "zero"
+        },
+        "parts": [
+         {
+          "canvasId": "cProfit",
+          "nodeId": "rev",
+          "name": "Revenue",
+          "colour": "#db2777"
+         }
+        ]
+       },
+       {
+        "id": "q2",
+        "name": "Costs",
+        "column": 2,
+        "sits": {
+         "on": "top",
+         "of": "q1"
+        },
+        "minus": true,
+        "parts": [
+         {
+          "canvasId": "cProfit",
+          "nodeId": "cogs",
+          "name": "Cost of sales",
+          "colour": "#0891b2"
+         },
+         {
+          "canvasId": "cProfit",
+          "nodeId": "over",
+          "name": "Overheads",
+          "colour": "#65a30d"
+         }
+        ]
+       },
+       {
+        "id": "q3",
+        "name": "Profit",
+        "column": 0,
+        "sits": {
+         "on": "zero"
+        },
+        "check": "q2",
+        "parts": [
+         {
+          "canvasId": "cProfit",
+          "nodeId": "profit",
+          "name": "Profit",
+          "colour": "#7c3aed"
+         }
+        ]
+       }
+      ],
+      "scale": {
+       "min": 0,
+       "max": 22000
+      },
+      "ownPeriod": true
+     },
+     {
+      "type": "chart",
+      "wide": true,
+      "layout": "tornado",
+      "title": "What moves profit",
+      "output": {
+       "canvasId": "cProfit",
+       "nodeId": "profit",
+       "name": "Profit"
+      },
+      "period": 2,
+      "steps": 5,
+      "inputs": [
+       {
+        "canvasId": "cProfit",
+        "nodeId": "price",
+        "name": "Price",
+        "by": "percent",
+        "low": -10,
+        "high": 10
+       },
+       {
+        "canvasId": "cProfit",
+        "nodeId": "vol",
+        "name": "Volume",
+        "by": "percent",
+        "low": -20,
+        "high": 20
+       },
+       {
+        "canvasId": "cProfit",
+        "nodeId": "ucost",
+        "name": "Unit cost",
+        "by": "amount",
+        "low": -1,
+        "high": 1
+       }
+      ],
+      "ownPeriod": true
+     },
+     {
+      "type": "chart",
+      "wide": true,
+      "layout": "spider",
+      "title": "Profit, input by input",
+      "output": {
+       "canvasId": "cProfit",
+       "nodeId": "profit",
+       "name": "Profit"
+      },
+      "period": 2,
+      "steps": 4,
+      "inputs": [
+       {
+        "canvasId": "cProfit",
+        "nodeId": "price",
+        "name": "Price",
+        "by": "percent",
+        "low": -10,
+        "high": 10,
+        "colour": "#0f766e"
+       },
+       {
+        "canvasId": "cProfit",
+        "nodeId": "vol",
+        "name": "Volume",
+        "by": "percent",
+        "low": -20,
+        "high": 20,
+        "colour": "#2563eb"
+       }
+      ],
+      "ownPeriod": true
+     },
+     {
+      "type": "chart",
+      "wide": true,
+      "layout": "scenarios",
+      "title": "Scenarios",
+      "period": 2,
+      "outputs": [
+       {
+        "canvasId": "cProfit",
+        "nodeId": "profit",
+        "name": "Profit"
+       },
+       {
+        "canvasId": "cCash",
+        "nodeId": "close",
+        "name": "Closing cash"
+       }
+      ],
+      "scale": {
+       "min": 0,
+       "max": 22000
+      },
+      "ownPeriod": true
+     }
+    ],
+    "sliders": [
+     {
+      "canvasId": "cProfit",
+      "nodeId": "price",
+      "name": "Price",
+      "periods": {
+       "mode": "all"
+      },
+      "mode": "set",
+      "min": 5,
+      "max": 15,
+      "step": 0.25
+     },
+     {
+      "canvasId": "cProfit",
+      "nodeId": "vol",
+      "name": "Volume",
+      "periods": {
+       "mode": "all"
+      },
+      "mode": "shift",
+      "min": -50,
+      "max": 50,
+      "step": 1
+     },
+     {
+      "canvasId": "cProfit",
+      "nodeId": "ucost",
+      "name": "Unit cost",
+      "periods": {
+       "mode": "one",
+       "p": 1
+      },
+      "mode": "set",
+      "min": 3,
+      "max": 9,
+      "step": 0.5
+     },
+     {
+      "canvasId": "cProfit",
+      "nodeId": "over",
+      "name": "Overheads",
+      "periods": {
+       "mode": "range",
+       "from": 1,
+       "to": 3
+      },
+      "mode": "set",
+      "min": 1000,
+      "max": 4000,
+      "step": 100
+     }
+    ]
+   },
+   {
+    "name": "Own sliders",
+    "items": [
+     {
+      "type": "bar",
+      "canvasId": "cBS",
+      "nodeId": "equity",
+      "name": "Equity",
+      "periods": {
+       "mode": "all"
+      },
+      "wide": false,
+      "colour": "#7c3aed",
+      "scale": {
+       "min": 0,
+       "max": 9100
+      }
+     }
+    ],
+    "sliders": [
+     {
+      "canvasId": "cProfit",
+      "nodeId": "over",
+      "name": "Overheads",
+      "periods": {
+       "mode": "all"
+      },
+      "mode": "set",
+      "min": 1000,
+      "max": 4000,
+      "step": 100
+     }
+    ],
+    "ownSliders": true
+   }
+  ],
+  "scenarios": [
+   {
+    "name": "High price",
+    "sliders": [
+     {
+      "canvasId": "cProfit",
+      "nodeId": "price",
+      "name": "Price",
+      "mode": "set",
+      "periods": {
+       "mode": "all"
+      },
+      "value": 13
+     }
+    ]
+   },
+   {
+    "name": "Big year",
+    "sliders": [
+     {
+      "canvasId": "cProfit",
+      "nodeId": "price",
+      "name": "Price",
+      "mode": "set",
+      "periods": {
+       "mode": "all"
+      },
+      "value": 13
+     },
+     {
+      "canvasId": "cProfit",
+      "nodeId": "vol",
+      "name": "Volume",
+      "mode": "shift",
+      "periods": {
+       "mode": "all"
+      },
+      "value": 20
+     }
+    ]
+   }
+  ],
+  "sharedPeriods": {
+   "periods": {
+    "mode": "all"
+   },
+   "period": 0
+  },
+  "colours": [
+   {
+    "canvasId": "cProfit",
+    "nodeId": "profit",
+    "name": "Profit",
+    "colour": "#7c3aed"
+   }
+  ],
+  "commonScale": {
+   "mode": "auto"
+  }
+ }
+}

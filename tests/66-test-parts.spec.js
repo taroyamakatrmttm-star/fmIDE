@@ -64,3 +64,13 @@ test('the durations come from a run\'s log, file by file', () => {
   ].join('\n');
   expect(durationsFromLog(log)).toEqual({ '1-a.spec.js': 1.8, '2-b.spec.js': 72 });
 });
+
+test('a log from a run on Windows (tests\\…) gives the same durations', () => {
+  const log = [
+    '  ✓  1 [chromium] › tests\\1-a.spec.js:10:3 › one (1.5s)',
+    '  ✓  2 [chromium] › tests\\1-a.spec.js:20:3 › two › nested (250ms)',
+    '  ✓  3 [chromium] › tests/2-b.spec.js:5:1 › a long one (1.2m)',
+    '  ✓  4 [chromium] › tests\\sub\\3-c.spec.js:5:1 › not a test file of the suite (2s)',
+  ].join('\n');
+  expect(durationsFromLog(log)).toEqual({ '1-a.spec.js': 1.8, '2-b.spec.js': 72 });
+});

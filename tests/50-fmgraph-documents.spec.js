@@ -7,7 +7,7 @@
 // - fmIDE keeps the boards as they came but drops anything that isn't a board file, plain data,
 //   at most 16 deep and 1 MB; a message from another window, or one during a tutorial, is ignored.
 // - New, a system file and Import Workspace; ExcelExporter opens a document with boards.
-const { test, expect, readFixture, openApp } = require('./helpers/apps');
+const { test, expect, readFixture, openApp, fixture } = require('./helpers/apps');
 const F = require('./helpers/fmide');
 const D = require('./helpers/documents');
 const E = require('./helpers/excel');
@@ -74,7 +74,7 @@ test('a change in fmGraph goes back to the document: unsaved, then saved with it
   await popup.evaluate(() => fmGraph.addBoard('Volumes'));
   await expect.poll(() => D.title(page)).toBe('Plan • — fmIDE');
   let data = await exported(page);
-  expect(data.version).toBe(13);
+  expect(data.version).toBe(14);
   expect(data.graphBoards.kind).toBe('fmIDE-graph-board');
   expect(data.graphBoards.boards.map(b => b.name)).toEqual(['Prices', 'Volumes']);
   // Showing the first board again sends nothing.
@@ -220,4 +220,21 @@ test('ExcelExporter opens a document with fmGraph\'s boards', async ({ page }, t
   await expect(page.locator('#loadStatus .status.ok')).toBeVisible();
   await expect(page.locator('#afterLoad')).toBeVisible();
   await expect(page.locator('#btnGenerate')).toBeEnabled();
+});
+
+// Make Showcase Viewer… (the showcase viewer's phase V3; the rest in group 94) with no boards: it
+// opens fmGraph, and a board made there reaches the open window with the boards fmGraph sends back.
+test('no boards: the line, and Open fmGraph to make one; a board made there appears in the window', async ({ page }) => {
+  await F.openFmIDE(page);
+  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.evaluate(() => fm.command('openDocument'))]);
+  await chooser.setFiles(fixture('formats', 'sys-current.json'));
+  await expect.poll(() => page.evaluate(() => fm.canvases()[0].name)).toBe('Revenue Model');
+  await page.evaluate(() => fm.command('makeShowcaseViewer'));
+  const box = page.locator('.modal-box.showcase-maker');
+  await expect(box.locator('.sm-no-boards')).toHaveText('This model has no fmGraph boards yet, so the viewer will show its logic only.');
+  const [popup] = await Promise.all([page.waitForEvent('popup'), box.locator('.sm-open-fmgraph').click()]);
+  await popup.waitForFunction(() => !!window.fmGraph && fmGraph.rectangles().length > 0 && fmGraph.boards().length > 0);
+  await popup.evaluate(() => fmGraph.addBoard('Volumes'));
+  await expect(box.locator('.sm-board')).not.toHaveCount(0);
+  expect(await box.locator('.sm-board').allTextContents()).toContain(' Volumes');
 });

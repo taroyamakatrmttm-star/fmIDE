@@ -247,6 +247,7 @@
     if(!cleaned || JSON.stringify(cleaned) === JSON.stringify(graphBoards)) return;
     graphBoards = cleaned;
     markDocDirty();
+    if(showcaseMaker) showcaseMaker.refreshBoards(); // an open Make showcase viewer… window lists them
   }
   // ExcelExporter's layout for this model, changed there ('excel:layout'): kept with the
   // document, which then has unsaved changes — not an undo step (ExcelExporter keeps its own).

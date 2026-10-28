@@ -12,6 +12,17 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'showcase-viewer', date: '2026-10-28', title: 'Share a model as a showcase viewer',
+    summary: 'File → Make Showcase Viewer… makes one web page that shows your model read-only, with its boards and sliders, to email or share.',
+    what: [
+      'The page opens in any browser, offline, with nothing installed. The visitor sees the canvases you chose, read-only, and taps a rectangle to see how it is worked out.',
+      'On the Board, they move the sliders you set up in fmGraph, switch between Base and your scenarios, and play from one to another. They can\'t change the model, and nothing they do is sent anywhere.',
+      'Your choices are kept in the document, so making the viewer again after a change starts from them.',
+    ],
+    why: 'A model is easier to understand, and to trust, when someone can play with it without being able to break it: a client, an investor or a class.',
+    how: ['Set up a board in fmGraph ({cmd:openFmGraph}), if you want sliders.', 'Open {cmd:makeShowcaseViewer}, give it a title and tick what to show.', 'Press Make viewer, then open the file it downloads.'],
+    notes: ['Everything in the model goes into the file, shown or not: don\'t share a confidential model this way.', 'An Excel workbook to download from the viewer comes next.'],
+    see: ['showcase-viewer'] },
   { id: 'busy-taps', date: '2026-10-27', title: 'Taps on a busy tablet still count as taps',
     summary: 'On a tablet that is slow to answer (a big model, an older device), a tap is no longer mistaken for a mouse click a moment later.',
     what: [
