@@ -316,6 +316,7 @@
       zoomGroupAdded: true, // 13a: the View tab's Zoom group
       addManyRectsAdded: true, // 12b: Add Many Rectangles… after Add Rectangle
       fmGraphAdded: true, // 15 G1: Open fmGraph after Open ExcelExporter
+      showcaseViewerAdded: true, // viewer V3: Make Showcase Viewer… after Open fmGraph
       canvasSwitchAdded: true, // Previous / Next Canvas after Move Canvas Right
       copyReferenceAdded: true, // Copy Reference after Run Last Macro
       libraryAuthor,
@@ -427,6 +428,17 @@
     g.items.splice(at + 1, 0, { cmd: 'openFmGraph', size: (g.items[at] && g.items[at].size) || undefined });
     if(g.items[at + 1].size === undefined) delete g.items[at + 1].size;
   }
+  // One-time update (showcase viewer, phase V3) of a customised ribbon: Make Showcase Viewer…
+  // right after Open fmGraph (none: left alone; already there: left alone).
+  function addShowcaseViewerCommandToRibbon(){
+    const groups = [];
+    ribbonState.config.tabs.forEach(t => (t && Array.isArray(t.groups) ? t.groups : []).forEach(g => { if(g && Array.isArray(g.items)) groups.push(g); }));
+    if(groups.some(g => g.items.some(it => it && it.cmd === 'makeShowcaseViewer'))) return;
+    const g = groups.find(x => x.items.some(it => it && it.cmd === 'openFmGraph'));
+    if(!g) return;
+    const at = g.items.findIndex(it => it && it.cmd === 'openFmGraph');
+    g.items.splice(at + 1, 0, { cmd: 'makeShowcaseViewer' });
+  }
   // One-time update (step 12b) of a customised ribbon: Add Many Rectangles… right after every
   // Add Rectangle it has (none: left alone; already there: left alone).
   // One-time update of a customised ribbon: Previous Canvas and Next Canvas after Move Canvas
@@ -512,6 +524,7 @@
       if(ui.zoomGroupAdded !== true) addZoomGroupToRibbon();
       if(ui.addManyRectsAdded !== true) addManyRectsCommandToRibbon();
       if(ui.fmGraphAdded !== true) addFmGraphCommandToRibbon();
+      if(ui.showcaseViewerAdded !== true) addShowcaseViewerCommandToRibbon();
       if(ui.canvasSwitchAdded !== true) addCanvasSwitchCommandsToRibbon();
       if(ui.copyReferenceAdded !== true) addCopyReferenceToRibbon();
     }

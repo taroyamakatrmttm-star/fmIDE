@@ -322,7 +322,7 @@ test('fmIDE: Open fmGraph shows its model straight away, ↻ From fmIDE shows it
 test('fmIDE: Open fmGraph sits in the File tab\'s App group, and a customised ribbon gets it once', async ({ page }, testInfo) => {
   await openFmIDE(page);
   const app = await page.evaluate(() => __fmIDE.getRibbonConfig().tabs.find(t => t.id === 'file').groups.find(g => g.label === 'App').items.map(i => i.cmd));
-  expect(app).toEqual(['openExcelExporter', 'openFmGraph', 'installApp']);
+  expect(app).toEqual(['openExcelExporter', 'openFmGraph', 'makeShowcaseViewer', 'installApp']); // Make Showcase Viewer… since viewer V3 (group 94)
   // A ribbon customised before step 15: Open fmGraph goes in after its Open ExcelExporter, once.
   const load = async (ui, name) => {
     const file = testInfo.outputPath(name);
@@ -334,10 +334,31 @@ test('fmIDE: Open fmGraph sits in the File tab\'s App group, and a customised ri
   };
   const older = { ribbonCustomized: true, zoomGroupAdded: true, documentGroupAdded: true, functionsGroupAdded: true, functionCommandsAdded: true, operatorsE1Added: true,
     operatorsE2Added: true, operatorsE2bAdded: true, libraryPacksAdded: true, libraryBrowseAdded: true, helpAdded: true, whatsNewAdded: true, addManyRectsAdded: true,
+    showcaseViewerAdded: true, // (its own one-time addition is group 94's)
     ribbon: { tabs: [{ id: 'mine', label: 'Mine', groups: [{ label: 'Apps', items: [{ cmd: 'openExcelExporter', size: 'large' }, { cmd: 'undo' }] }] }] } };
   expect(await load(older, 'older.json')).toEqual([['Apps:openExcelExporter,openFmGraph,undo']]);
   // Once added, a ribbon without it (removed by the person) stays without it.
   expect(await load(Object.assign({}, older, { fmGraphAdded: true }), 'removed.json')).toEqual([['Apps:openExcelExporter,undo']]);
+});
+
+// Make Showcase Viewer… (the showcase viewer's phase V3) comes after Open fmGraph, once, in a ribbon
+// customised before it.
+test('a ribbon customised before gets Make Showcase Viewer… once, after Open fmGraph', async ({ page }, testInfo) => {
+  await openFmIDE(page);
+  const load = async (ui, name) => {
+    const file = testInfo.outputPath(name);
+    const ws = { kind: 'fmIDE-workspace', version: 13, system: { kind: 'system', version: 9, periods: ['P1'], activeCanvasId: 'c1', canvases: [{ id: 'c1', name: 'Model', nodes: [], edges: [] }] }, ui };
+    fs.writeFileSync(file, JSON.stringify(ws));
+    await importViaCommand(page, 'importWorkspace', file);
+    await acceptAll(page);
+    return page.evaluate(() => __fmIDE.getRibbonConfig().tabs.map(t => t.groups.map(g => g.label + ':' + g.items.map(i => i.cmd).join(','))));
+  };
+  const older = { ribbonCustomized: true, zoomGroupAdded: true, documentGroupAdded: true, functionsGroupAdded: true, functionCommandsAdded: true, operatorsE1Added: true,
+    operatorsE2Added: true, operatorsE2bAdded: true, libraryPacksAdded: true, libraryBrowseAdded: true, libraryShareAdded: true, helpAdded: true, whatsNewAdded: true,
+    addManyRectsAdded: true, fmGraphAdded: true, canvasSwitchAdded: true, copyReferenceAdded: true,
+    ribbon: { tabs: [{ id: 'mine', label: 'Mine', groups: [{ label: 'Apps', items: [{ cmd: 'openFmGraph', size: 'large' }, { cmd: 'undo' }] }] }] } };
+  expect(await load(older, 'older.json')).toEqual([['Apps:openFmGraph,makeShowcaseViewer,undo']]);
+  expect(await load(Object.assign({}, older, { showcaseViewerAdded: true }), 'removed.json')).toEqual([['Apps:openFmGraph,undo']]);
 });
 
 test('a large model: grabbing a slider works out its steps ahead, then dragging reads them', async ({ page }) => {

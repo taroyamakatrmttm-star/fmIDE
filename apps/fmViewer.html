@@ -7492,9 +7492,10 @@ function parseFileText(text){
   return { raw };
 }
 
-// A model's text read into { system, presets, name, boards } (null after a message). boards: a
-// workspace's own fmGraph boards (graphBoards, as data), shown when no showcase names any (the
-// owner's choice 10 of phase V2).
+// A model's text read into { system, presets, name, boards, showcase } (null after a message).
+// boards: a workspace's own fmGraph boards (graphBoards, as data), shown when no showcase names
+// any (the owner's choice 10 of phase V2). showcase: the showcase a document keeps (workspace
+// v14, phase V3), as data, used when no showcase file comes with it (choice 8 of phase V3).
 async function readModelText(text, name){
   const p = parseFileText(text);
   if(p.error){ notify(p.error, 'err', 'load'); return null; }
@@ -7510,7 +7511,9 @@ async function readModelText(text, name){
   const presets = r.kind === 'fmIDE-workspace' && Array.isArray(r.data.formatPresets) ? r.data.formatPresets
     : (Array.isArray(system.formatPresets) ? system.formatPresets : null);
   const boards = r.kind === 'fmIDE-workspace' && r.data.graphBoards && typeof r.data.graphBoards === 'object' && !Array.isArray(r.data.graphBoards) ? r.data.graphBoards : null;
-  return { system, presets, boards, name: showcaseText(String(name || '').replace(/\.(fmide|json)$/i, ''), 120) || 'Model' };
+  const showcase = r.kind === 'fmIDE-workspace' && r.data.showcase && typeof r.data.showcase === 'object' && !Array.isArray(r.data.showcase)
+    && r.data.showcase.kind === SHOWCASE_KIND ? r.data.showcase : null;
+  return { system, presets, boards, showcase, name: showcaseText(String(name || '').replace(/\.(fmide|json)$/i, ''), 120) || 'Model' };
 }
 
 // A showcase's parsed data read into its clean form (null after a message). A recipe is
@@ -7556,6 +7559,8 @@ async function openFiles(files){
   if(modelFile){
     const m = await readModelText(modelFile.text, modelFile.name);
     if(!m) return false;
+    // A document keeping its own showcase opens as its viewer would, unless a showcase file came too.
+    if(!showcaseRaw && m.showcase) showcase = await readShowcase(m.showcase);
     return showModel(m, showcase);
   }
   if(!state.model){ notify('That is a showcase: open the model it shows with it (both files at once).', 'warn', 'load'); return false; }

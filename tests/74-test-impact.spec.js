@@ -175,6 +175,18 @@ test('a viewer-only change runs the viewer\'s group, not the Excel, fmGraph or c
   expect(r.tests.length).toBeLessThan(ALL.length / 4);
 });
 
+// fmIDE carries the viewer packed (phase V3, the build's <!-- build:viewer-page -->): the viewer's
+// sources stay the viewer's, so a viewer change runs the group that makes viewers in fmIDE (94)
+// besides the viewer's own, and not fmIDE's other groups; the packer is part of the build.
+test('a viewer change reaches the group making viewers, not fmIDE\'s others; the packer runs everything', () => {
+  const r = pick('src/viewer/js/03-view.js');
+  for(const t of ['91-viewer', '93-viewer-board', '94-make-showcase-viewer']) expect(r.tests, t).toContain('tests/' + t + '.spec.js');
+  for(const t of ['10-documents', '6-formats-fmide', '31-help']) expect(r.tests, t).not.toContain('tests/' + t + '.spec.js');
+  const fmide = appSources().find(a => a.app === 'fmIDE').files;
+  expect(fmide.filter(f => f.startsWith('src/viewer/'))).toEqual([]);
+  expect(pick('tools/pack.js').full).toBe(true);
+});
+
 // fmGraph's board engine (phase V2): the viewer takes its fragments in, so the map has an engine
 // fragment in both apps' pages and runs the viewer's groups for it; fmGraph's editing is in
 // fmGraph's page alone.

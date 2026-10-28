@@ -1,12 +1,14 @@
 // 94. Making a showcase viewer (phase V3 of docs/viewer-brief.md): the packer the build uses to
 // carry the viewer's page inside fmIDE (tools/pack.js), the made page's two data blocks
 // (fillViewerPage in src/shared/showcase.js) and the showcase built from an author's choices
-// (showcaseFromChoices, showcaseBoardList, showcaseIdFrom). Node, plus a made viewer opened from
-// disk. fmIDE's File → Make showcase viewer… comes with the rest of V3.
+// (showcaseFromChoices, showcaseBoardList, showcaseIdFrom), in Node; and fmIDE's File → Make
+// Showcase Viewer… (src/fmide/js/11g-showcase-maker.js, the actions in 14d), from the window to
+// the made file opened from disk in a browser, as a visitor opens it.
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
-const { test, expect, ROOT, fixture, readFixture } = require('./helpers/apps');
+const { test, expect, ROOT, fixture, readFixture, openApp } = require('./helpers/apps');
+const F = require('./helpers/fmide');
 const { deflateRaw, packBase64 } = require('../tools/pack.js');
 const S = require('../src/shared/showcase.js');
 
@@ -216,8 +218,10 @@ test.describe('the showcase from an author\'s choices', () => {
 // inline script: nothing there may end the script early, and no script may hold both "<!--" and
 // "<script" (the parser would then read past its real end).
 test('every closing script tag in the apps ends a script the page opened', () => {
-  for(const app of ['fmIDE', 'ExcelExporter', 'fmGraph', 'fmViewer']){
-    const page = fs.readFileSync(path.join(ROOT, 'apps', app + '.html'), 'utf8');
+  const apps = fs.readdirSync(path.join(ROOT, 'apps')).filter(f => f.endsWith('.html'));
+  expect(apps).toHaveLength(4);
+  for(const app of apps){
+    const page = fs.readFileSync(path.join(ROOT, 'apps', app), 'utf8');
     const opened = page.split('\n').filter(l => /^\s*<script[\s>]/i.test(l)).length;
     const closed = (page.match(/<\/script/gi) || []).length;
     expect(closed, app).toBe(opened);
@@ -225,4 +229,202 @@ test('every closing script tag in the apps ends a script the page opened', () =>
       expect(m[1].includes('<!--') && /<script/i.test(m[1]), app).toBe(false);
     }
   }
+});
+
+// ---------- fmIDE: File → Make Showcase Viewer… ----------
+
+const WIDGET = fixture('viewer', 'every-widget.fmide');
+const maker = (page) => page.locator('.modal-box.showcase-maker');
+async function openDocument(page, file){
+  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.evaluate(() => fm.command('openDocument'))]);
+  await chooser.setFiles(file);
+}
+async function fmideWith(page, file, firstCanvas){
+  await F.openFmIDE(page);
+  await openDocument(page, file);
+  await expect.poll(() => page.evaluate(() => fm.canvases()[0].id)).toBe(firstCanvas);
+}
+// The download Make viewer gives: its name and text.
+async function makeFromWindow(page){
+  const [download] = await Promise.all([page.waitForEvent('download'), maker(page).locator('.sm-make').click()]);
+  return { name: download.suggestedFilename(), text: fs.readFileSync(await download.path(), 'utf8') };
+}
+// A made page opened from disk in a context of its own; every request that isn't the file is counted.
+async function openMade(browser, testInfo, made){
+  const file = testInfo.outputPath(made.name);
+  fs.writeFileSync(file, made.text);
+  const context = await browser.newContext({ viewport: { width: 1400, height: 900 } });
+  const outside = [];
+  await context.route('**/*', route => { const u = route.request().url(); if(u.startsWith('file:')) return route.continue(); outside.push(u); return route.abort(); });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  page.on('dialog', d => { errors.push('dialog: ' + d.message()); d.dismiss(); });
+  await page.goto('file://' + file);
+  await page.waitForFunction(() => window.fmViewer && fmViewer.state().loaded);
+  return { context, page, outside, errors };
+}
+
+test.describe('fmIDE: Make Showcase Viewer…', () => {
+  test('the command opens the window, with its "?", started from the document', async ({ page }) => {
+    await fmideWith(page, WIDGET, 'cProfit');
+    // (Its place in the ribbon, and a customised ribbon getting it once: group 47, beside the command it follows.)
+    await page.evaluate(() => fm.command('makeShowcaseViewer'));
+    const box = maker(page);
+    await expect(box).toBeVisible();
+    await expect(box.locator('.window-help')).toHaveAttribute('data-topic', 'showcase-viewer');
+    await expect(box.locator('.sm-title')).toHaveValue('every-widget');
+    await expect(box.locator('.sm-id')).toHaveValue('every-widget');
+    expect(await box.locator('.sm-canvas input').evaluateAll(l => l.map(i => [i.dataset.id, i.checked]))).toEqual([['cProfit', true], ['cCash', true], ['cBS', true], ['cChecks', true]]);
+    expect(await box.locator('.sm-board').allTextContents()).toEqual([' Everything', ' Own sliders']);
+    expect(await box.locator('.sm-board input').evaluateAll(l => l.map(i => i.checked))).toEqual([true, true]);
+    await expect(box.locator('.sm-play-from')).toHaveValue('Base');
+    await expect(box.locator('.sm-play-to')).toHaveValue('High price');
+    await expect(box.locator('.sm-from')).toHaveValue('0');
+    await expect(box.locator('.sm-to')).toHaveValue('3');
+    await expect(box.locator('.sm-secrecy')).toContainText('Everything in the model goes into the file');
+    // Typing a title changes the file name until the person changes it.
+    await box.locator('.sm-title').fill('Prices and cash');
+    await expect(box.locator('.sm-id')).toHaveValue('prices-and-cash');
+    await page.keyboard.press('Escape');
+    await expect(box).toHaveCount(0);
+  });
+
+  test('the whole way: choose, make, open the file from disk, move a slider; making again remembers every choice', async ({ page, browser }, testInfo) => {
+    await fmideWith(page, WIDGET, 'cProfit');
+    await page.evaluate(() => fm.command('makeShowcaseViewer'));
+    const box = maker(page);
+    await box.locator('.sm-title').fill('Prices and <b>cash</b>');
+    await box.locator('.sm-description').fill('Move the price.');
+    await box.locator('.sm-author').fill('A teacher');
+    await box.locator('.sm-licence').fill('CC BY 4.0');
+    await box.locator('.sm-canvas input[data-id="cChecks"]').uncheck();
+    await box.locator('.sm-start').selectOption('cCash');
+    await box.locator('.sm-from').selectOption('1');
+    await box.locator('.sm-to').selectOption('2');
+    await box.locator('.sm-board input[data-index="1"]').uncheck();
+    await box.locator('.sm-play-to').selectOption('Big year');
+    const made = await makeFromWindow(page);
+    expect(made.name).toBe('prices-and-b-cash-b.html');
+    await expect(box).toHaveCount(0);
+    await expect(page.locator('#fmToast')).toContainText('Made prices-and-b-cash-b.html (');
+    await expect.poll(() => page.evaluate(() => document.title)).toContain('•'); // kept in the document: unsaved
+    const kept = await page.evaluate(() => fm.showcase());
+    expect(kept).toMatchObject({ kind: 'fmIDE-showcase', version: 1, id: 'prices-and-b-cash-b', title: 'Prices and <b>cash</b>', author: 'A teacher',
+      licence: 'CC BY 4.0', canvases: { show: ['cProfit', 'cCash', 'cBS'], start: 'cCash' }, periods: { mode: 'range', from: 1, to: 2 }, play: { from: 'Base', to: 'Big year' } });
+    expect(kept.boards.boards.map(b => b.name)).toEqual(['Everything']);
+    // The made file opens offline on the author's choices.
+    const v = await openMade(browser, testInfo, made);
+    const st = await v.page.evaluate(() => fmViewer.state());
+    expect(st.title).toBe('Prices and <b>cash</b>');
+    expect(st.canvases).toEqual(['cProfit', 'cCash', 'cBS']);
+    expect(st.periods).toEqual([1, 2]);
+    expect(st.hasBoard).toBe(true);
+    expect((await v.page.evaluate(() => fmViewer.board())).boards).toEqual(['Everything']);
+    expect(await v.page.locator('#showTitle b').count()).toBe(0);
+    expect(await v.page.locator('script').count()).toBe(3);
+    // A slider moved in the viewer gives fmIDE's own number for that price.
+    await v.page.evaluate(() => fmViewer.setSlider('Price', 12));
+    const inViewer = await v.page.evaluate(() => fmViewer.value('cProfit', 'rev', 1));
+    await page.evaluate(() => { fm.switchCanvas({ canvas: '#cProfit' }); fm.setValue({ node: '#price', value: '12' }); });
+    const inFmide = await page.evaluate(() => fm.getValue({ node: '#rev', period: 2 }));
+    expect(inViewer).toBe(inFmide);
+    expect(inViewer).toBe(13200); // 12 × 1,100 (Volume in Year 2)
+    expect(v.outside).toEqual([]);
+    expect(v.errors).toEqual([]);
+    await v.context.close();
+    // Making it again starts from every choice, also after a reload (the autosave).
+    await page.evaluate(() => new Promise(r => setTimeout(r, 2600)));
+    await page.reload();
+    await page.waitForFunction(() => window.fm && typeof fm.nodes === 'function');
+    await page.evaluate(() => fm.command('makeShowcaseViewer'));
+    await expect(box.locator('.sm-title')).toHaveValue('Prices and <b>cash</b>');
+    await expect(box.locator('.sm-author')).toHaveValue('A teacher');
+    expect(await box.locator('.sm-canvas input').evaluateAll(l => l.map(i => i.checked))).toEqual([true, true, true, false]);
+    await expect(box.locator('.sm-start')).toHaveValue('cCash');
+    await expect(box.locator('.sm-from')).toHaveValue('1');
+    await expect(box.locator('.sm-to')).toHaveValue('2');
+    expect(await box.locator('.sm-board input').evaluateAll(l => l.map(i => i.checked))).toEqual([true, false]);
+    await expect(box.locator('.sm-play-to')).toHaveValue('Big year');
+    await expect(box.locator('.sm-notes')).toBeHidden();
+  });
+
+  test('a canvas gone since is said; a new one comes unticked', async ({ page }) => {
+    await fmideWith(page, WIDGET, 'cProfit');
+    await page.evaluate(() => fm.makeShowcaseViewer({ canvases: ['cProfit', 'cChecks'] }));
+    await page.evaluate(() => { fm.deleteCanvas({ canvas: '#cChecks' }); fm.addCanvas({ name: 'Brand new' }); });
+    await page.evaluate(() => fm.command('makeShowcaseViewer'));
+    const box = maker(page);
+    await expect(box.locator('.sm-notes')).toHaveText('A canvas chosen before is no longer in the model: it is left out.');
+    expect(await box.locator('.sm-canvas input').evaluateAll(l => l.map(i => i.checked))).toEqual([true, false, false, false]);
+  });
+
+  test('a hostile model makes a viewer that shows its names as text and runs nothing', async ({ page, browser }, testInfo) => {
+    await fmideWith(page, fixture('viewer', 'hostile-model.json'), 'c1');
+    const evil = '</script><script>window.__pwned=1</script><!-- <img src=x onerror="window.__pwned=2">';
+    const made = await page.evaluate((t) => fm.makeShowcaseViewer({ title: t, description: t, author: t }).then(r => ({ name: r.fileName, text: r.text, bytes: r.bytes })), evil);
+    expect(made.name).toMatch(/^[a-z0-9-]+\.html$/);
+    expect(made.bytes).toBe(Buffer.byteLength(made.text));
+    const v = await openMade(browser, testInfo, made);
+    expect(await v.page.evaluate(() => fmViewer.state().title)).toBe(evil.slice(0, 80));
+    expect(await v.page.evaluate(() => window.__pwned)).toBeUndefined();
+    expect(await v.page.locator('script').count()).toBe(3);
+    expect(await v.page.locator('img, iframe, object, embed').count()).toBe(0);
+    expect(v.errors).toEqual([]);
+    expect(v.outside).toEqual([]);
+    await v.context.close();
+  });
+
+  test('the action: a Promise of the file, nothing downloaded; refusals in words; no DecompressionStream is said', async ({ page }) => {
+    await fmideWith(page, WIDGET, 'cProfit');
+    let downloads = 0;
+    page.on('download', () => downloads++);
+    const r = await page.evaluate(() => fm.makeShowcaseViewer({ boards: [1], play: { from: 'High price', to: 'Base' } })
+      .then(x => ({ fileName: x.fileName, problems: x.problems, showcase: x.showcase, start: x.text.slice(0, 2) })));
+    expect(r.fileName).toBe('every-widget.html');
+    expect(r.problems).toEqual([]);
+    expect(r.start).toBe('<!');
+    expect(r.showcase.boards.boards.map(b => b.name)).toEqual(['Own sliders']);
+    expect(r.showcase.play).toEqual({ from: 'High price', to: 'Base' });
+    expect(await page.evaluate(() => fm.showcase())).toEqual(r.showcase);
+    expect(downloads).toBe(0);
+    await expect(page.evaluate(() => fm.makeShowcaseViewer({ canvases: [] }))).rejects.toThrow('Choose at least one canvas to show.');
+    await page.evaluate(() => { delete window.DecompressionStream; });
+    await expect(page.evaluate(() => fm.makeShowcaseViewer())).rejects.toThrow('This browser can\'t make a viewer. Use a current Chrome, Edge, Firefox or Safari.');
+  });
+
+  test('practice refuses it: a tutorial\'s model isn\'t your document', async ({ page }) => {
+    await fmideWith(page, WIDGET, 'cProfit');
+    await page.keyboard.press('F1');
+    await page.locator('#helpPanel .help-tutorial[data-tutorial="first-model"] .help-tutorial-start').click();
+    await page.evaluate(() => fm.command('makeShowcaseViewer'));
+    await expect(page.locator('#fmToast')).toContainText('Finish or exit the tutorial first');
+    await expect(maker(page)).toHaveCount(0);
+    await expect(page.evaluate(() => fm.makeShowcaseViewer())).rejects.toThrow('Not while practising a tutorial');
+  });
+});
+
+test('fmIDE carries today\'s viewer: its packed page unpacks to apps/fmViewer.html exactly', () => {
+  const ide = fs.readFileSync(path.join(ROOT, 'apps', 'fmIDE.html'), 'utf8');
+  const m = /<script type="application\/octet-stream" id="viewerPage">([A-Za-z0-9+/=]+)<\/script>/.exec(ide);
+  expect(m).not.toBeNull();
+  expect(zlib.inflateRawSync(Buffer.from(m[1], 'base64')).equals(fs.readFileSync(VIEWER))).toBe(true);
+});
+
+test('a document dropped on fmShowcase that keeps its showcase opens as its viewer would', async ({ page }, testInfo) => {
+  const doc = readFixture('viewer', 'every-widget.fmide');
+  doc.version = 14;
+  doc.showcase = S.showcaseFromChoices({ title: 'Kept in the document', canvases: ['cCash', 'cProfit'], start: 'cCash', boards: [1] }, doc.graphBoards,
+    { canvases: doc.system.canvases, periodCount: doc.system.periods.length }).value;
+  const file = testInfo.outputPath('kept.fmide');
+  fs.writeFileSync(file, JSON.stringify(doc));
+  await openApp(page, 'fmViewer');
+  await page.waitForFunction(() => !!window.fmViewer);
+  const before = await page.evaluate(() => fmViewer.state().loads);
+  await page.setInputFiles('#fileInput', file);
+  await page.waitForFunction((n) => fmViewer.state().loads > n, before);
+  const st = await page.evaluate(() => fmViewer.state());
+  expect(st.title).toBe('Kept in the document');
+  expect(st.canvases).toEqual(['cProfit', 'cCash']);
+  expect((await page.evaluate(() => fmViewer.board())).boards).toEqual(['Own sliders']);
 });

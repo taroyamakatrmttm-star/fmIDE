@@ -439,7 +439,24 @@ const HELP_TOPICS = [
       { p: 'The boards you set up in fmGraph — its bars, charts and sliders — are kept in your document: a change to them there marks the document unsaved here, and {cmd:saveDocument} keeps them with the model. Opening the document brings them back, ahead of the ones fmGraph remembered in the browser. Moving a slider changes nothing.' },
       { p: 'The boards go into Excel too: {cmd:openExcelExporter}, then its Layout → Use fmGraph boards… writes the scenarios as Global Cases, the Tornado and Spider as sensitivity tabs, and the sliders and charts on a Dashboard tab (its Help, "fmGraph in Excel", says how).' },
       { tip: 'fmGraph can also open a saved .fmide file on its own, and has its own Help (❓).' },
-      { see: ['to-excel'] },
+      { see: ['to-excel', 'showcase-viewer'] },
+    ] },
+
+  { id: 'showcase-viewer', group: 'sharing', title: 'Share a model as a showcase viewer',
+    keywords: 'showcase viewer fmshowcase share email web page html read-only display teach students client investor play sliders',
+    summary: 'One web page that shows your model read-only, with its boards and sliders: the visitor can play with it, not change it.',
+    body: [
+      { p: 'A showcase viewer is a single web page made from your model. Anyone can open it in a browser, from an email or a disk, with nothing installed and nothing sent anywhere. They see your canvases read-only, tap a rectangle to see how it is worked out, and, on the Board, move the sliders you set up in fmGraph, switch scenarios and play between them. They can\'t change the model.' },
+      { steps: [
+        'Set up a board in fmGraph if you want sliders and charts ({cmd:openFmGraph}): its bars, charts, sliders and scenarios are what the visitor gets.',
+        'Open {cmd:makeShowcaseViewer}. Give it a title, a description, your name and a licence.',
+        'Tick the canvases the visitor sees and the one it opens on, the periods shown, and the boards. Choose where Play starts: Base (the model\'s own numbers) or a scenario.',
+        'Press Make viewer. fmIDE writes the page (its name is the file name shown, with .html) and downloads it, or offers the share sheet on an iPhone or iPad.',
+      ] },
+      { p: 'Your choices are kept in the document: {cmd:saveDocument} keeps them, and making the viewer again after you change the model starts from them. A canvas or board added since then comes unticked, and one that is gone is left out and said.' },
+      { p: 'Hiding is not secrecy: everything in the model goes into the file, shown or not, so someone determined can read it all. Don\'t share a confidential model this way.' },
+      { tip: 'Opening the page shows exactly what a visitor will see. What a visitor changes stays on their own device, and Reset puts it back.' },
+      { see: ['fmgraph', 'documents'] },
     ] },
 
   // ---------- Working faster ----------
@@ -673,6 +690,7 @@ const COMMAND_HELP = {
   openRecent: 'Lists the documents you opened lately.',
   openExcelExporter: 'Opens ExcelExporter, which turns your model into an Excel workbook.',
   openFmGraph: 'Opens fmGraph with this model: bars and sliders that show how one value moves the rest.',
+  makeShowcaseViewer: 'Makes one web page that shows this model read-only, with its fmGraph boards and sliders, to email or share.',
   installApp: 'Installs fmIDE as an app with its own window, working offline.',
   openLauncher: 'Finds any command, macro or help topic as you type its name.',
   openShortcuts: 'Shows every keyboard shortcut and lets you change them.',

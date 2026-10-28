@@ -4,7 +4,7 @@ A step-by-step guide to the three apps: **fmIDE**, where you build a financial m
 
 The manual is written in lessons. Each lesson teaches one thing, in numbered steps you can follow with the app open, and ends with the numbers you should see. Each part says when its numbers were last checked against the apps. Each lesson also names the matching topic in the apps' own **Help** and, where one exists, the guided tutorial inside the app, so the manual, the Help panel and the videos all say the same thing.
 
-> **Status.** All 67 lessons are written (October 2026), each checked against the apps. When the apps change, the lesson that teaches the change is updated in the same pull request. The manual is also on the website, at `/manual/` (its pages are built from these files with every site build; the build stops if a lesson names a Help topic that doesn't exist or a link leads nowhere).
+> **Status.** All 68 lessons are written (October 2026), each checked against the apps. When the apps change, the lesson that teaches the change is updated in the same pull request. The manual is also on the website, at `/manual/` (its pages are built from these files with every site build; the build stops if a lesson names a Help topic that doesn't exist or a link leads nowhere).
 
 ## Contents
 
@@ -89,6 +89,9 @@ The manual is written in lessons. Each lesson teaches one thing, in numbered ste
 [7.9 The round trip: checking the new workbook](07-excel-import.md#round-trip) ·
 [7.10 Safety, limits and troubleshooting](07-excel-import.md#import-troubleshooting)
 
+### [Part 8 — Sharing a model: showcase viewers](08-showcase.md)
+[8.1 Make a showcase viewer](08-showcase.md#showcase-viewer)
+
 ### Appendices
 - [A — What came when: every build step and pull request, and the lesson that covers it](appendix-a-coverage.md)
 - [How the lessons are written](STYLE.md) (for anyone writing or recording a lesson)
@@ -101,6 +104,7 @@ The manual is written in lessons. Each lesson teaches one thing, in numbered ste
 | Turn a model into an Excel workbook | 2.1, then Part 5 from 5.1 |
 | Bring an existing Excel model into fmIDE | Part 7 (7.1–7.5 is enough to start) |
 | Show someone how inputs move the results | 6.1–6.6, then 5.11 to give them the same in Excel |
+| Send someone a model they can play with but not change | 6.1, then 8.1 |
 | Reuse calculations across models | Part 3 |
 | Automate repetitive work | Part 4 |
 

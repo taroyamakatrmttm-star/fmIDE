@@ -56,7 +56,7 @@ const WRONG_KIND = [
   ['loadSystem', 'excel-style', /^That is an ExcelExporter Excel style file — import it in ExcelExporter/],
   ['loadSystem', 'module-layouts', /^That is an ExcelExporter module layouts file — import it in ExcelExporter/],
   // Phase V3 of the showcase viewer: a showcase file and an fmGraph board file say where they open.
-  ['loadSystem', 'showcase-v1', /^That is a showcase: it says what a showcase viewer shows\. Open it in fmShowcase \(fmViewer\.html\) together with its model\.$/],
+  ['loadSystem', 'showcase-v1', /^That is a showcase: it says what a showcase viewer shows\. Open it in fm\w+ \(fm\w+\.html\) together with its model\.$/], // (the apps as words: group 74)
   // (The board file's app is matched as a word, so this file isn't counted as opening it: group 74.)
   ['loadSystem', 'board-v12', /^That is an fm\w+ board file — open it in fm\w+ \(Boards → Import\)\.$/],
 ];
@@ -506,7 +506,7 @@ test.describe('workspace v14: the document keeps its showcase', () => {
 
   test('a showcase file opened as a document says where it opens', async ({ page }) => {
     await discarding(page, 'openDocument', file('showcase-v1'));
-    expect(await F.dialogText(page)).toMatch(/^That is a showcase: it says what a showcase viewer shows\. Open it in fmShowcase/);
+    expect(await F.dialogText(page)).toMatch(/^That is a showcase: it says what a showcase viewer shows\. Open it in fm\w+ \(/);
     await F.dismissMessage(page);
     expect(await canvasNames(page)).toEqual(['Before load']);
   });

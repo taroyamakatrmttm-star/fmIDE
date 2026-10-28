@@ -260,6 +260,9 @@ Oldest first. *Step* is the build step (and phase) the pull request belongs to; 
 | branch `claude/fmgraph-play-gif` | 2026-10-27 | fmGraph: 🎞 a GIF of Play — of the charts in the full screen or of one chart — shared or downloaded | after 20 | [6.5](06-fmgraph.md#graph-scenarios), [6.3](06-fmgraph.md#graph-boards) |
 | branch `claude/fmgraph-free-chart-f2` | 2026-10-27 | fmGraph: a Free chart's pieces placed by dragging — guides for where a piece sits, equal-gap marks, Align bottoms, Distribute, Tidy; fmIDE's snapping moved into shared code, unchanged | after 20 | [6.2](06-fmgraph.md#graph-charts) |
 | branch `claude/excel-free-chart-f3` | 2026-10-27 | ExcelExporter: fmGraph's Free chart on the Dashboard — stacked columns over hidden fillers, following the sliders (layout file 11) | after 20 | [5.11](05-excelexporter.md#fmgraph-in-excel), [6.2](06-fmgraph.md#graph-charts) |
+| branch `claude/viewer-v1` | 2026-10-27 | fmShowcase, the showcase viewer: the Logic view — a model's canvases read-only, a rectangle's card; the showcase file | after 20 | [8.1](08-showcase.md#showcase-viewer) |
+| branch `claude/viewer-v2` | 2026-10-28 | fmShowcase: the Board — fmGraph's bars, charts and sliders, scenarios, Play, A/B and Trace, read-only; fmGraph's board engine separated, fmGraph unchanged | after 20 | [8.1](08-showcase.md#showcase-viewer) |
+| branch `claude/viewer-v3` | 2026-10-28 | fmIDE: File → Make Showcase Viewer… — one web page showing the model read-only, to email or share; the choices kept in the document (workspace 14) | after 20 | [8.1](08-showcase.md#showcase-viewer) |
 
 ---
 
