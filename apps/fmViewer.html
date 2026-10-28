@@ -44,6 +44,11 @@ body.phone .vbar-app{ display:none; }
 .dropbox:hover, .dropbox.over{ border-color:var(--accent); background:#eff6ff; }
 .dropbox-main{ font-size:17px; font-weight:600; }
 .dropbox-sub{ font-size:14px; color:var(--muted); }
+/* A finger chooses a file (an iPhone or iPad: a viewer saved in Files opens here); a mouse can drop one. */
+.choose-words{ display:none; }
+@media (pointer: coarse){ .drop-words{ display:none; } .choose-words{ display:inline; } }
+body.phone .drop-words{ display:none; }
+body.phone .choose-words{ display:inline; }
 
 .canvas-tabs{ flex:none; display:flex; gap:4px; padding:8px 16px 0; overflow-x:auto; }
 .canvas-tab{ min-height:40px; padding:6px 16px; border:1px solid var(--line); border-bottom:none; border-radius:8px 8px 0 0; background:#e2e8f0; cursor:pointer; white-space:nowrap; }
@@ -345,13 +350,30 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
 .scenario-btn.current{ background:#fffbeb; border-color:var(--reach); box-shadow:inset 0 0 0 1px var(--reach); }
 .scenario-note{ margin:0; font-size:13px; color:var(--muted); background:#f8fafc; border:1px solid var(--line); border-radius:8px; padding:6px 10px; }
 
-.slider-list{ display:flex; flex-direction:column; gap:8px; }
 .widget{ background:var(--card); border:1px solid var(--line); border-radius:11px; padding:10px 12px 12px; transition:opacity .15s, box-shadow .15s; }
-.slider-widget{ border-left:4px solid var(--rect-colour, transparent); }
-.slider-head{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px; }
-.slider-name{ font-weight:700; }
-.slider-when, .slider-unit{ font-size:12.5px; color:var(--muted); }
-.slider-base{ font-size:12px; color:var(--muted); margin-top:2px; text-align:center; }
+/* The sliders: one short row each — the name, the slider, the number — in a list that scrolls on
+   its own, so the bars and charts stay in view (the owner's request, 29 October 2026). The
+   shared phone slider (src/shared/phone.js) is laid out again here, for the viewer only: its
+   track and number side by side, 36 px tall (a finger's target), − and + left out (the keys,
+   typing and a double tap stay). A finger swiping up or down on a track scrolls the list
+   (touch-action: pan-y); 06-board.js puts back anything that swipe moved. */
+.slider-list{ display:flex; flex-direction:column; gap:4px; overflow-y:auto; overscroll-behavior:contain; min-height:0; }
+.slider-widget{ position:relative; flex:none; display:flex; align-items:center; gap:6px; padding:2px 6px 2px 8px; border-radius:9px; border-left:4px solid var(--rect-colour, transparent); }
+.slider-head{ flex:0 0 36%; min-width:0; display:flex; align-items:center; gap:5px; margin:0; overflow:hidden; white-space:nowrap; }
+.slider-name{ flex:0 1 auto; min-width:3.5em; overflow:hidden; text-overflow:ellipsis; font-weight:700; font-size:14px; }
+.slider-when, .slider-unit{ flex:0 6 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; font-size:11.5px; color:var(--muted); }
+/* Where the model's own number is: the notch on the track shows it; the words stay for a screen
+   reader and as the row's tooltip. */
+.slider-base{ position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+.slider-widget .ps{ --ps-pad:14px; flex:1 1 auto; min-width:0; display:flex; align-items:center; gap:4px; }
+.slider-widget .ps-track{ order:1; flex:1 1 auto; min-width:0; height:36px; touch-action:pan-y; }
+.slider-widget .ps-row{ order:2; flex:none; }
+.slider-widget .ps-step{ display:none; }
+.slider-widget .ps-value, .slider-widget .ps-type{ height:36px; min-width:56px; max-width:92px; padding:0 4px; font-size:15px !important; border-radius:8px; }
+.slider-widget .ps .ps-row input.ps-type:not([type=range]):not([type=file]){ width:92px; font-size:16px !important; }
+.slider-widget .ps-thumb{ width:26px; height:26px; margin:-13px 0 0 -13px; }
+.slider-widget .ps-notch{ top:-7px; bottom:-7px; }
+.slider-widget .ps-bubble{ bottom:calc(50% + 15px); }
 .rect-stripe{ display:inline-block; width:12px; height:12px; border-radius:3px; flex:none; }
 .slider-widget.moved .ps-value{ color:#115e59; }
 .slider-widget.active, .slider-widget.playing{ box-shadow:0 0 0 2px var(--reach); }
@@ -407,16 +429,37 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
 .phone-view{ flex:1 1 0; min-height:44px; border:none; border-radius:9px; background:transparent; color:#cbd5e1; font-weight:700; font-size:15px; cursor:pointer; }
 .phone-view[aria-selected="true"]{ background:#f8fafc; color:#0f172a; }
 body.phone.has-board{ padding-bottom:calc(52px + env(safe-area-inset-bottom, 0px)); }
-body.phone .board-view{ padding:8px 10px 170px; }
+body.phone .board-view{ padding:8px 10px 250px; }
 body.phone .board{ display:flex; flex-direction:column; gap:12px; }
 body.phone .board-main{ order:-1; }
 body.phone .widget-list.bars{ grid-template-columns:minmax(0, 1fr); }
-body.phone.on-board .slider-list{ position:fixed; left:0; right:0; bottom:calc(52px + env(safe-area-inset-bottom, 0px)); z-index:25; flex-direction:row; overflow-x:auto; scroll-snap-type:x mandatory; gap:8px; padding:8px 10px; background:var(--card); border-top:1px solid var(--line); box-shadow:0 -6px 20px rgba(15,23,42,.12); }
-body.phone.on-board .slider-list > .slider-widget{ flex:0 0 88%; scroll-snap-align:center; }
+body.phone.on-board .slider-list{ position:fixed; left:0; right:0; bottom:calc(52px + env(safe-area-inset-bottom, 0px)); z-index:25; max-height:min(34vh, 230px); padding:6px 10px; background:var(--card); border-top:1px solid var(--line); box-shadow:0 -6px 20px rgba(15,23,42,.12); }
 body.phone .scenario-btn, body.phone .act{ min-height:44px; }
 body.phone.has-board .mark{ bottom:calc(60px + env(safe-area-inset-bottom, 0px)); }
 body.phone.on-board .mark{ display:none; }
 body.phone.has-board .card{ bottom:calc(52px + env(safe-area-inset-bottom, 0px)); }
+
+/* A computer or a tablet held sideways: the board fills the window and its two sides scroll
+   apart — the sliders' list on its own inside the side, the bars and charts beside it — so the
+   charts stay in view while the lower sliders are reached. */
+@media (min-width: 821px){
+  body:not(.phone) .board-view{ display:flex; flex-direction:column; overflow:hidden; padding-bottom:8px; }
+  body:not(.phone) .board-view > *{ flex:none; }
+  body:not(.phone) .board-view > .board{ flex:1 1 auto; min-height:0; grid-template-rows:minmax(0, 1fr); align-items:stretch; }
+  body:not(.phone) .board-side{ min-height:0; overflow-y:auto; padding-bottom:72px; } /* clear of the mark */
+  body:not(.phone) .board-side > *{ flex-shrink:0; }
+  body:not(.phone) .board-side > .slider-list{ flex:0 1 auto; min-height:min(140px, 100%); }
+  body:not(.phone) .board-main{ min-height:0; overflow-y:auto; padding-bottom:40px; }
+}
+/* A narrower window or a tablet held upright: the bars and charts first, the sliders' list held
+   at the foot of the screen, as on a phone. */
+@media (max-width: 820px){
+  body:not(.phone) .board{ display:flex; flex-direction:column; align-items:stretch; gap:12px; }
+  body:not(.phone) .board-main{ order:-1; }
+  body:not(.phone).on-board .slider-list{ position:fixed; left:0; right:0; bottom:0; z-index:25; max-height:min(34vh, 280px); padding:6px 12px calc(6px + env(safe-area-inset-bottom, 0px)); background:var(--card); border-top:1px solid var(--line); box-shadow:0 -6px 20px rgba(15,23,42,.12); }
+  body:not(.phone).on-board .board-view{ padding-bottom:300px; }
+  body:not(.phone).on-board .mark{ display:none; }
+}
 </style>
 </head>
 <body>
@@ -432,7 +475,7 @@ body.phone.has-board .card{ bottom:calc(52px + env(safe-area-inset-bottom, 0px))
       <button type="button" id="tabLogic" class="view-tab" role="tab" aria-selected="false">Logic</button>
     </nav>
     <button type="button" id="btnCanvasMenu" class="vbar-btn phone-only hidden" aria-haspopup="menu" aria-expanded="false" aria-controls="canvasMenu">☰ <span id="canvasMenuName"></span></button>
-    <button type="button" id="btnOpen" class="vbar-btn" title="Open a model saved by fmIDE (.fmide or .json), and a showcase file if you have one">Open…</button>
+    <button type="button" id="btnOpen" class="vbar-btn" title="Open a viewer made by fmIDE (.html), or a model saved by fmIDE (.fmide or .json) and a showcase file if you have one">Open…</button>
     <button type="button" id="btnHelp" class="vbar-btn vbar-help" title="Help (F1)" aria-label="Help">?</button>
   </div>
 </header>
@@ -447,9 +490,10 @@ body.phone.has-board .card{ bottom:calc(52px + env(safe-area-inset-bottom, 0px))
 <section id="welcome" class="welcome">
   <h2>See how a model works</h2>
   <div id="dropBox" class="dropbox" role="button" tabindex="0">
-    <span class="dropbox-main desk-only">Drop a .fmide or .json model here</span>
-    <span class="dropbox-main phone-only">Choose a .fmide or .json model</span>
-    <span class="dropbox-sub">and a showcase file, if you have one</span>
+    <span class="dropbox-main drop-words">Drop a .fmide or .json model here</span>
+    <span class="dropbox-main choose-words"><strong>Choose</strong> a viewer (.html) or a model (.fmide, .json)</span>
+    <span class="dropbox-sub drop-words">and a showcase file, if you have one — or a viewer made by fmIDE (.html)</span>
+    <span class="dropbox-sub choose-words">and a showcase file, if you have one</span>
   </div>
   <p class="welcome-actions"><button type="button" id="btnSample" class="primary">Try the sample</button></p>
 </section>
@@ -534,7 +578,7 @@ body.phone.has-board .card{ bottom:calc(52px + env(safe-area-inset-bottom, 0px))
   </div>
 </div>
 
-<input type="file" id="fileInput" accept=".fmide,application/json,.json" multiple hidden>
+<input type="file" id="fileInput" accept=".fmide,application/json,.json,.html,.htm" multiple hidden>
 
 <!-- A viewer made for one model carries its showcase and model here (data, never run: the
      browser runs no script of these types). Empty in the bare app. -->
@@ -7532,9 +7576,52 @@ async function readShowcase(raw){
 }
 
 // The page's own data blocks (a viewer made for one model): their text, or '' when empty.
+// After a made viewer was opened as a file (below), its blocks stand in for the page's.
+let openedBlocks = null;
 function dataBlock(id){
+  if(openedBlocks) return openedBlocks[id] || '';
   const el = $(id);
   return el && el.type === 'application/json' ? String(el.textContent || '').trim() : '';
+}
+
+// ---- A made viewer opened as a file ----
+// On an iPhone or iPad a viewer saved in Files opens only in a preview, which runs no script;
+// so this page also takes the made viewer's .html itself. Only its data blocks are read, as
+// text: the page is parsed by DOMParser into an inert document (no script in it runs, nothing
+// is fetched, nothing of it is put in this page), each block found by its id and type, at most
+// once, and its text then goes through the same checks as any file (parseFileText, in
+// startFromPage). `excel` is V4's block, read already so a viewer with one opens whole.
+const MADE_VIEWER_BLOCKS = ['showcase', 'model', 'excel'];
+function looksLikeHtml(name, text){
+  return /\.html?$/i.test(String(name || '')) || /^\s*</.test(String(text).slice(0, 200));
+}
+// { blocks: { showcase, model, excel } } (each its text, '' when absent) or { error }.
+function readMadeViewerText(text){
+  const big = fileTextProblem(text);
+  if(big) return { error: big };
+  const notViewer = { error: "That page isn't a viewer made by fmIDE (File → Make Showcase Viewer…), so fmShowcase can't open it." };
+  let doc = null;
+  try{ doc = new DOMParser().parseFromString(text, 'text/html'); }catch(e){ doc = null; }
+  if(!doc) return notViewer;
+  const scripts = Array.from(doc.getElementsByTagName('script'));
+  const blocks = {};
+  for(const id of MADE_VIEWER_BLOCKS){
+    const found = scripts.filter(el => el.id === id);
+    if(found.length > 1 || (found.length && found[0].type !== 'application/json')) return notViewer;
+    if(!found.length && id !== 'excel') return notViewer;
+    blocks[id] = found.length ? String(found[0].textContent || '').trim() : '';
+  }
+  if(!blocks.model) return { error: "That is fmShowcase's own page, with no model in it: open a viewer made for a model, or a model saved by fmIDE." };
+  return { blocks };
+}
+async function openMadeViewer(text){
+  const r = readMadeViewerText(text);
+  if(r.error){ notify(r.error, 'err', 'load'); return false; }
+  const was = openedBlocks;
+  openedBlocks = r.blocks;
+  const ok = await startFromPage();
+  if(!ok) openedBlocks = was;
+  return ok;
 }
 
 // Files dropped or chosen: a model, a showcase, or both. A showcase on its own is laid over
@@ -7546,6 +7633,8 @@ async function openFiles(files){
   for(const f of list){
     let text;
     try{ text = await f.text(); }catch(e){ notify('That file could not be read.', 'err', 'load'); return false; }
+    // A made viewer's .html opens on its own, as it would from disk.
+    if(looksLikeHtml(f.name, text)) return openMadeViewer(text);
     const p = parseFileText(text);
     if(p.error){ notify(p.error, 'err', 'load'); return false; }
     if(p.raw && typeof p.raw === 'object' && !Array.isArray(p.raw) && p.raw.kind === SHOWCASE_KIND) showcaseRaw = p.raw;
@@ -7559,6 +7648,7 @@ async function openFiles(files){
   if(modelFile){
     const m = await readModelText(modelFile.text, modelFile.name);
     if(!m) return false;
+    openedBlocks = null;
     // A document keeping its own showcase opens as its viewer would, unless a showcase file came too.
     if(!showcaseRaw && m.showcase) showcase = await readShowcase(m.showcase);
     return showModel(m, showcase);
@@ -8393,10 +8483,33 @@ function sliderWidget(s){
     onEnd: () => quietSoon(1200),
   });
   sliderControls.set(s.id, ctl);
+  keepThroughSwipe(s, ctl);
   w.append(head, ctl.el, make('div', 'slider-base'));
   w.addEventListener('pointerenter', () => { if(!onPhone) setActiveSlider(s.id); });
   w.addEventListener('pointerleave', () => { if(!onPhone) quietSoon(0); });
   return w;
+}
+// The sliders' list scrolls with a finger, even when the swipe starts on a track (its
+// touch-action is pan-y, board-view.css): the browser then takes the gesture over and cancels
+// the pointer. Whatever that swipe moved before the browser took it is put back — the slider's
+// number, and the scenario that was shown — so scrolling never moves a slider.
+function keepThroughSwipe(s, ctl){
+  let before = null;
+  ctl.el.addEventListener('pointerdown', (ev) => {
+    before = ev.pointerType === 'mouse' ? null : { id: ev.pointerId, value: s.value, scenario: shownScenario };
+  }, true);
+  ctl.el.addEventListener('pointerup', (ev) => { if(before && before.id === ev.pointerId) before = null; }, true);
+  ctl.el.addEventListener('pointercancel', (ev) => {
+    const b = before;
+    before = null;
+    if(!b || b.id !== ev.pointerId || (s.value === b.value && shownScenario === b.scenario)) return;
+    const sc = b.scenario && scenarios.find(x => x.name === b.scenario);
+    if(sc){ showScenarioExact(sc); saveStateSoon(); return; }
+    s.value = b.value;
+    ctl.setValue(sliderShown(s));
+    scheduleUpdate();
+    saveStateSoon();
+  }, true);
 }
 // A visitor moved slider s to v (null: back on the model's own number).
 function moveSlider(s, v, atBase){
@@ -8440,6 +8553,7 @@ function updateValues(){
     const el = document.querySelector('.slider-widget[data-id="' + s.id + '"]');
     if(!el) return;
     el.querySelector('.slider-base').textContent = sliderBaseText(s);
+    el.title = sliderBaseText(s); // the notch shows it; the words as the row's tooltip (board-view.css)
     el.classList.toggle('moved', s.value !== null);
     const ctl = sliderControls.get(s.id);
     if(ctl && !ctl.dragging() && !playNow()) ctl.setValue(sliderShown(s));
@@ -8861,7 +8975,20 @@ const VIEWER_HELP_TOPICS = [
     body: [
       { p: 'This page shows a financial model built in fmIDE. On the Board you move its sliders and watch the bars and charts follow; on the Logic you see how every number is worked out.' },
       { p: 'Nothing you do changes the model. A slider is a "what if": the numbers show what the model would give, and Reset puts the model\'s own numbers back.' },
-      { see: ['board', 'sliders', 'logic-view'] },
+      { see: ['board', 'sliders', 'logic-view', 'open-ipad'] },
+    ] },
+  { id: 'open-ipad', group: 'start', title: 'Opening a viewer on an iPhone or iPad',
+    keywords: 'open iphone ipad files preview safari choose html file viewer',
+    summary: 'In Safari, open fmShowcase and choose the viewer\'s file.',
+    body: [
+      { p: 'On an iPhone or iPad, a viewer saved in Files opens only in a preview, which shows the page but can\'t run it. Open it in fmShowcase instead:' },
+      { steps: [
+        'In Safari, go to https://fmide.pages.dev/fmViewer.',
+        'Tap Choose (or Open…).',
+        'Pick the viewer\'s .html file in Files.',
+      ] },
+      { p: 'It opens exactly as it would on a computer. Only the model and showcase inside the file are read; nothing in it runs, and nothing is sent anywhere. A page that isn\'t a viewer made by fmIDE is refused.' },
+      { tip: 'The same Open… takes a model saved by fmIDE (.fmide or .json) and a showcase file, too.' },
     ] },
   { id: 'board', group: 'board', title: 'The Board',
     keywords: 'bars charts board tabs waterfall columns lines tornado spider',
@@ -8873,10 +9000,11 @@ const VIEWER_HELP_TOPICS = [
       { see: ['sliders', 'scenarios', 'trace'] },
     ] },
   { id: 'sliders', group: 'board', title: 'Sliders',
-    keywords: 'slider move drag type number range step minus plus reset',
+    keywords: 'slider move drag type number range step keys reset row scroll list',
     summary: 'Move an input within the author\'s range.',
     body: [
-      { p: 'Drag a slider, press − or +, or tap its number and type one. It stays within the range and steps the author chose; a double tap puts it back on the model\'s own number.' },
+      { p: 'Each slider is one row: its name, the slider, its number. Drag it, use the arrow keys, or tap its number and type one. It stays within the range and steps the author chose; the small mark on it is the model\'s own number, and a double tap puts it back there.' },
+      { p: 'The list of sliders scrolls on its own, so the bars and charts stay in view while you reach the lower ones. Swiping the list up or down with a finger scrolls it and never moves a slider.' },
       { p: 'While you move a slider, the bars and charts it reaches are lit and the others fade.' },
       { p: 'Reset puts every slider back on the model\'s own numbers.' },
       { see: ['scenarios', 'kept'] },

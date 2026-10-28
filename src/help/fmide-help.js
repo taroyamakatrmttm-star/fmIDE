@@ -443,7 +443,7 @@ const HELP_TOPICS = [
     ] },
 
   { id: 'showcase-viewer', group: 'sharing', title: 'Share a model as a showcase viewer',
-    keywords: 'showcase viewer fmshowcase share email web page html read-only display teach students client investor play sliders',
+    keywords: 'showcase viewer fmshowcase share email web page html read-only display teach students client investor play sliders iphone ipad files open',
     summary: 'One web page that shows your model read-only, with its boards and sliders: the visitor can play with it, not change it.',
     body: [
       { p: 'A showcase viewer is a single web page made from your model. Anyone can open it in a browser, from an email or a disk, with nothing installed and nothing sent anywhere. They see your canvases read-only, tap a rectangle to see how it is worked out, and, on the Board, move the sliders you set up in fmGraph, switch scenarios and play between them. They can\'t change the model.' },
@@ -453,6 +453,7 @@ const HELP_TOPICS = [
         'Tick the canvases the visitor sees and the one it opens on, the periods shown, and the boards. Choose where Play starts: Base (the model\'s own numbers) or a scenario.',
         'Press Make viewer. fmIDE writes the page (its name is the file name shown, with .html) and downloads it, or offers the share sheet on an iPhone or iPad.',
       ] },
+      { p: 'On an iPhone or iPad, a viewer saved in Files opens only in a preview, which can\'t run it. To open one there: in Safari, go to https://fmide.pages.dev/fmViewer, tap Choose, and pick the file. It opens just as it does on a computer.' },
       { p: 'Your choices are kept in the document: {cmd:saveDocument} keeps them, and making the viewer again after you change the model starts from them. A canvas or board added since then comes unticked, and one that is gone is left out and said.' },
       { p: 'Hiding is not secrecy: everything in the model goes into the file, shown or not, so someone determined can read it all. Don\'t share a confidential model this way.' },
       { tip: 'Opening the page shows exactly what a visitor will see. What a visitor changes stays on their own device, and Reset puts it back.' },

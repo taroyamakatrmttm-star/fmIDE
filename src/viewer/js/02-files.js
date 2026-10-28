@@ -60,9 +60,52 @@ async function readShowcase(raw){
 }
 
 // The page's own data blocks (a viewer made for one model): their text, or '' when empty.
+// After a made viewer was opened as a file (below), its blocks stand in for the page's.
+let openedBlocks = null;
 function dataBlock(id){
+  if(openedBlocks) return openedBlocks[id] || '';
   const el = $(id);
   return el && el.type === 'application/json' ? String(el.textContent || '').trim() : '';
+}
+
+// ---- A made viewer opened as a file ----
+// On an iPhone or iPad a viewer saved in Files opens only in a preview, which runs no script;
+// so this page also takes the made viewer's .html itself. Only its data blocks are read, as
+// text: the page is parsed by DOMParser into an inert document (no script in it runs, nothing
+// is fetched, nothing of it is put in this page), each block found by its id and type, at most
+// once, and its text then goes through the same checks as any file (parseFileText, in
+// startFromPage). `excel` is V4's block, read already so a viewer with one opens whole.
+const MADE_VIEWER_BLOCKS = ['showcase', 'model', 'excel'];
+function looksLikeHtml(name, text){
+  return /\.html?$/i.test(String(name || '')) || /^\s*</.test(String(text).slice(0, 200));
+}
+// { blocks: { showcase, model, excel } } (each its text, '' when absent) or { error }.
+function readMadeViewerText(text){
+  const big = fileTextProblem(text);
+  if(big) return { error: big };
+  const notViewer = { error: "That page isn't a viewer made by fmIDE (File → Make Showcase Viewer…), so fmShowcase can't open it." };
+  let doc = null;
+  try{ doc = new DOMParser().parseFromString(text, 'text/html'); }catch(e){ doc = null; }
+  if(!doc) return notViewer;
+  const scripts = Array.from(doc.getElementsByTagName('script'));
+  const blocks = {};
+  for(const id of MADE_VIEWER_BLOCKS){
+    const found = scripts.filter(el => el.id === id);
+    if(found.length > 1 || (found.length && found[0].type !== 'application/json')) return notViewer;
+    if(!found.length && id !== 'excel') return notViewer;
+    blocks[id] = found.length ? String(found[0].textContent || '').trim() : '';
+  }
+  if(!blocks.model) return { error: "That is fmShowcase's own page, with no model in it: open a viewer made for a model, or a model saved by fmIDE." };
+  return { blocks };
+}
+async function openMadeViewer(text){
+  const r = readMadeViewerText(text);
+  if(r.error){ notify(r.error, 'err', 'load'); return false; }
+  const was = openedBlocks;
+  openedBlocks = r.blocks;
+  const ok = await startFromPage();
+  if(!ok) openedBlocks = was;
+  return ok;
 }
 
 // Files dropped or chosen: a model, a showcase, or both. A showcase on its own is laid over
@@ -74,6 +117,8 @@ async function openFiles(files){
   for(const f of list){
     let text;
     try{ text = await f.text(); }catch(e){ notify('That file could not be read.', 'err', 'load'); return false; }
+    // A made viewer's .html opens on its own, as it would from disk.
+    if(looksLikeHtml(f.name, text)) return openMadeViewer(text);
     const p = parseFileText(text);
     if(p.error){ notify(p.error, 'err', 'load'); return false; }
     if(p.raw && typeof p.raw === 'object' && !Array.isArray(p.raw) && p.raw.kind === SHOWCASE_KIND) showcaseRaw = p.raw;
@@ -87,6 +132,7 @@ async function openFiles(files){
   if(modelFile){
     const m = await readModelText(modelFile.text, modelFile.name);
     if(!m) return false;
+    openedBlocks = null;
     // A document keeping its own showcase opens as its viewer would, unless a showcase file came too.
     if(!showcaseRaw && m.showcase) showcase = await readShowcase(m.showcase);
     return showModel(m, showcase);

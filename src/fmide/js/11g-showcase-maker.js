@@ -66,11 +66,15 @@
     return { fileName, bytes: new Blob([filled.page]).size, text: filled.page, showcase: cloneData(made.value), problems: made.problems.slice() };
   }
 
+  // A touch screen (an iPhone or iPad): the file goes to the share sheet, and the window says how
+  // to open a viewer there (a viewer saved in Files opens only in a preview, which runs no script).
+  function onTouchScreen(){
+    return navigator.maxTouchPoints > 0 && !!window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+  }
   // The file to the person: the share sheet on a touch screen (an iPhone or iPad), else a download.
   async function giveViewerFile(made){
     const file = new File([made.text], made.fileName, { type: 'text/html' });
-    const touch = navigator.maxTouchPoints > 0 && window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-    if(touch) return shareFiles([file], made.fileName);
+    if(onTouchScreen()) return shareFiles([file], made.fileName);
     const url = URL.createObjectURL(file);
     const a = document.createElement('a');
     a.href = url;
@@ -209,6 +213,7 @@
     if(!start.notes.length) notes.classList.add('hidden');
     box.appendChild(notes);
     box.appendChild(el('p', 'sm-secrecy', 'Everything in the model goes into the file, shown or not. Don\'t share a confidential model this way.'));
+    if(onTouchScreen()) box.appendChild(el('p', 'sm-ipad', 'On an iPhone or iPad, a viewer saved in Files opens only in a preview, which can\'t run it. To open one there: in Safari, go to https://fmide.pages.dev/fmViewer, tap Choose, and pick the file.'));
 
     const actions = el('div', 'modal-actions');
     const cancelBtn = el('button', null, 'Cancel');

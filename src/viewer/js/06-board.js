@@ -219,10 +219,33 @@ function sliderWidget(s){
     onEnd: () => quietSoon(1200),
   });
   sliderControls.set(s.id, ctl);
+  keepThroughSwipe(s, ctl);
   w.append(head, ctl.el, make('div', 'slider-base'));
   w.addEventListener('pointerenter', () => { if(!onPhone) setActiveSlider(s.id); });
   w.addEventListener('pointerleave', () => { if(!onPhone) quietSoon(0); });
   return w;
+}
+// The sliders' list scrolls with a finger, even when the swipe starts on a track (its
+// touch-action is pan-y, board-view.css): the browser then takes the gesture over and cancels
+// the pointer. Whatever that swipe moved before the browser took it is put back — the slider's
+// number, and the scenario that was shown — so scrolling never moves a slider.
+function keepThroughSwipe(s, ctl){
+  let before = null;
+  ctl.el.addEventListener('pointerdown', (ev) => {
+    before = ev.pointerType === 'mouse' ? null : { id: ev.pointerId, value: s.value, scenario: shownScenario };
+  }, true);
+  ctl.el.addEventListener('pointerup', (ev) => { if(before && before.id === ev.pointerId) before = null; }, true);
+  ctl.el.addEventListener('pointercancel', (ev) => {
+    const b = before;
+    before = null;
+    if(!b || b.id !== ev.pointerId || (s.value === b.value && shownScenario === b.scenario)) return;
+    const sc = b.scenario && scenarios.find(x => x.name === b.scenario);
+    if(sc){ showScenarioExact(sc); saveStateSoon(); return; }
+    s.value = b.value;
+    ctl.setValue(sliderShown(s));
+    scheduleUpdate();
+    saveStateSoon();
+  }, true);
 }
 // A visitor moved slider s to v (null: back on the model's own number).
 function moveSlider(s, v, atBase){
@@ -266,6 +289,7 @@ function updateValues(){
     const el = document.querySelector('.slider-widget[data-id="' + s.id + '"]');
     if(!el) return;
     el.querySelector('.slider-base').textContent = sliderBaseText(s);
+    el.title = sliderBaseText(s); // the notch shows it; the words as the row's tooltip (board-view.css)
     el.classList.toggle('moved', s.value !== null);
     const ctl = sliderControls.get(s.id);
     if(ctl && !ctl.dragging() && !playNow()) ctl.setValue(sliderShown(s));

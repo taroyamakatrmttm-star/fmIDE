@@ -35,6 +35,11 @@ body.phone .vbar-app{ display:none; }
 .dropbox:hover, .dropbox.over{ border-color:var(--accent); background:#eff6ff; }
 .dropbox-main{ font-size:17px; font-weight:600; }
 .dropbox-sub{ font-size:14px; color:var(--muted); }
+/* A finger chooses a file (an iPhone or iPad: a viewer saved in Files opens here); a mouse can drop one. */
+.choose-words{ display:none; }
+@media (pointer: coarse){ .drop-words{ display:none; } .choose-words{ display:inline; } }
+body.phone .drop-words{ display:none; }
+body.phone .choose-words{ display:inline; }
 
 .canvas-tabs{ flex:none; display:flex; gap:4px; padding:8px 16px 0; overflow-x:auto; }
 .canvas-tab{ min-height:40px; padding:6px 16px; border:1px solid var(--line); border-bottom:none; border-radius:8px 8px 0 0; background:#e2e8f0; cursor:pointer; white-space:nowrap; }

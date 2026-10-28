@@ -530,7 +530,7 @@
   .sm-periods, .sm-play{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
   .sm-notes, .sm-warn{ color:#b45309; font-size:12px; }
   .sm-notes.hidden{ display:none; }
-  .sm-secrecy{ color:#6b7280; font-size:12px; }
+  .sm-secrecy, .sm-ipad{ color:#6b7280; font-size:12px; }
   .sm-no-boards, .sm-scenarios{ font-size:13px; color:#374151; }
   .modal-box p.library-pack-heading{ font-weight:600; font-size:13px; margin:12px 0 4px; }
   .modal-box p.library-pack-licence, .modal-box p.library-pack-by, .modal-box p.library-pack-tags{ font-size:12px; color:#475569; margin:6px 0; }
