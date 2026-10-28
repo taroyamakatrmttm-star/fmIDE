@@ -159,7 +159,7 @@ test('an fmGraph-only change runs fmGraph\'s groups, not the Excel or calculatio
   for(const t of ['1-excel-structure', '2-excel-values', '3-excel-layout', '17-agreement', '18-ir', '19-excel-ir', '27-touch', '44-zoom', '67-excel-sensitivity']){
     expect(r.tests, t).not.toContain('tests/' + t + '.spec.js');
   }
-  expect(r.tests.length).toBeLessThan(ALL.length / 2);
+  expect(r.tests.length).toBeLessThanOrEqual(ALL.length / 2); // at most half: made viewers carry fmGraph's board engine (the owner's choice, 29 October 2026)
 });
 
 // The showcase viewer (phase V1 of docs/viewer-brief.md): a change to its own pieces runs its group,
