@@ -59,7 +59,8 @@ function splitIntoParts(files, durations, count){
 // Seconds per test file from a GitHub run's log: every "› tests/NAME.spec.js:L:C › … (12.3s)".
 function durationsFromLog(text){
   const out = {};
-  const line = /›\s+tests\/([\w.-]+\.spec\.js):\d+:\d+ › .*\((\d+(?:\.\d+)?)(ms|s|m)\)\s*$/;
+  // tests/… on Linux and macOS, tests\… in a log from a run on Windows.
+  const line = /›\s+tests[\\/]([\w.-]+\.spec\.js):\d+:\d+ › .*\((\d+(?:\.\d+)?)(ms|s|m)\)\s*$/;
   text.split('\n').forEach(l => {
     const m = line.exec(l);
     if(!m) return;
