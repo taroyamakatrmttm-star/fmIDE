@@ -180,34 +180,7 @@ window.fmGraph = Object.freeze({
     renderBoard();
     return c.id;
   },
-  chart: (id) => {
-    const c = chartById(id), results = currentResults();
-    if(isSensitivity(c)){
-      const f = sensitivityNow(c, shownOverrides(), true).figures;
-      if(!f) return null;
-      return { output: partLabel(c.output), period: model.periods[c.period], base: f.base,
-        inputs: f.inputs.map(i => Object.assign({ name: partLabel(i.key), by: i.by, low: i.low, high: i.high, show: i.show },
-          i.error ? { error: i.error } : { lowValue: i.lowValue, highValue: i.highValue, swing: i.swing },
-          i.points ? { points: i.points.map(p => Object.assign({}, p)) } : {})) };
-    }
-    if(c.layout === 'lines') return linesFigures(c, results).map(f => ({ period: model.periods[f.p], lines: f.values.map((r, i) => ({ name: partLabel(c.lines[i]), value: answer(r) })) }));
-    if(c.layout === 'flow') return flowFigures(c, results).map((f, i) => Object.assign({ name: partLabel(c.steps[i].key) }, f));
-    if(c.layout === 'free') return { period: model.periods[c.period], pieces: freeFigures(c, results).map((f, i) => {
-      const p = c.pieces[i], head = { name: pieceLabel(c, p), column: p.column };
-      if(f.error !== undefined) return Object.assign(head, { error: f.error });
-      if(f.blocked !== undefined) return Object.assign(head, { blocked: f.blocked });
-      return Object.assign(head, { value: f.value, base: f.base, top: f.top, bottom: f.bottom, end: f.end,
-        parts: f.parts.map((pt, pi) => ({ name: partLabel(p.parts[pi]), value: pt.value, from: pt.from, to: pt.to })), check: f.check });
-    }) };
-    if(c.layout === 'scenarios'){
-      const memo = new Map();
-      const resultsFor = (sc) => { if(!memo.has(sc)) memo.set(sc, scenarioResults(sc)); return memo.get(sc); };
-      return c.outputs.map(k => ({ name: partLabel(k), steps: scenarioFigures(c, k, resultsFor).map(f => f.error ? { name: f.name, kind: f.kind, error: f.error }
-        : { name: f.name, kind: f.kind, value: f.value, from: f.from, to: f.to }) }));
-    }
-    return columnsFigures(c, results).map(f => ({ period: model.periods[f.p], check: f.check,
-      groups: f.groups.map((g, gi) => ({ name: groupLabel(c, gi), total: g.error ? { error: true } : g.total, parts: g.parts.map(answer) })) }));
-  },
+  chart: (id) => chartAnswer(chartById(id)), // (04b-charts.js, shared with the showcase viewer)
   movePiece: (id, index, to) => {
     const c = chartById(id);
     if(c.layout !== 'free') throw new Error('Only a Free chart has pieces.');

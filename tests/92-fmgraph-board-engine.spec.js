@@ -7,11 +7,39 @@
 //   (tests/fixtures/viewer/every-widget.fmide, made with fmGraph's own API), in several states,
 //   on a desk and on a phone, compared with snapshots taken before the split;
 // - window.fmGraph's commands, and every function fmGraph defined then, still there.
+// Then, in Node, the separation itself:
+// - the board engine's fragments (ENGINE) use nothing defined only in fmGraph's page and editing
+//   fragments, except the page interface (PAGE_INTERFACE: what each app that draws boards
+//   defines for itself), and fmGraph defines every name of it;
+// - they do nothing when they load: declarations only, so a page can take them in.
 const fs = require('fs');
 const path = require('path');
 const { test, expect, fixture, openApp, ROOT } = require('./helpers/apps');
 
 const EVERY_WIDGET = fixture('viewer', 'every-widget.fmide');
+const FMGRAPH_JS = path.join(ROOT, 'src', 'fmgraph', 'js');
+// The board engine: fmGraph's fragments the showcase viewer takes in (src/viewer/js/01-core.js).
+const ENGINE = ['01b-numbers.js', '02-model.js', '03-calc.js', '04-board.js', '04a-board-file.js', '04b-charts.js', '04d-scale.js',
+  '04e-colours.js', '04f-free.js', '05-render.js', '05b-chart-render.js', '05d-explore.js', '05e-compare.js', '05f-scenarios.js',
+  '05k-shared-period.js', '05m-play.js', '05n-free-chart.js', '06a-sample.js'];
+// The names the engine calls that each page defines for itself (.claude/rules/fmgraph.md).
+const PAGE_INTERFACE = ['$', 'make', 'notify', 'isPhone', 'renderBoard', 'updateValues', 'scheduleUpdate', 'renderCompareBar',
+  'paintMark', 'paintPlay', 'renderPlayBar', 'rectKeySwatch', 'chartKeySwatch', 'freeGridHook'];
+
+// Each fragment's top-level names, and the names a fragment uses (outside comments and strings,
+// not after a dot), less those it declares itself anywhere (a local `const back`).
+function fragments(){
+  const out = new Map();
+  fs.readdirSync(FMGRAPH_JS).filter(f => f.endsWith('.js')).sort().forEach(f => {
+    const text = fs.readFileSync(path.join(FMGRAPH_JS, f), 'utf8');
+    const top = new Set([...text.matchAll(/^(?:async )?(?:function\*? |const |let |var )([A-Za-z0-9_$]+)/gm)].map(m => m[1]));
+    const code = text.replace(/\/\/.*$/gm, '').replace(/'(?:[^'\\\n]|\\.)*'/g, "''").replace(/`(?:[^`\\]|\\.)*`/g, '``').replace(/"(?:[^"\\\n]|\\.)*"/g, '""');
+    const own = new Set([...code.matchAll(/\b(?:const|let|var|function)\s+([A-Za-z_$][\w$]*)/g)].map(m => m[1]));
+    const used = new Set([...code.matchAll(/(?<![.\w$])([A-Za-z_$][\w$]*)/g)].map(m => m[1]));
+    out.set(f, { text, top, own, used });
+  });
+  return out;
+}
 
 // The page as text: each element's tag, id, classes and attributes, the state of its controls
 // and its own text, one line each, indented by depth. Numbers in attributes are rounded to 0.01,
@@ -122,4 +150,39 @@ test('window.fmGraph keeps every command, and fmGraph every function it had', as
   if(!fs.existsSync(file)) fs.writeFileSync(file, names.join('\n') + '\n');
   const before = fs.readFileSync(file, 'utf8').split('\n').filter(Boolean);
   expect(before.filter(n => !names.includes(n)), 'functions fmGraph no longer defines').toEqual([]);
+});
+
+test.describe('the board engine, in Node', () => {
+  test('uses nothing of fmGraph\'s page or editing but the page interface, which fmGraph defines', () => {
+    const all = fragments();
+    ENGINE.forEach(f => expect(all.has(f), f).toBe(true));
+    const inEngine = new Set(ENGINE.flatMap(f => [...all.get(f).top]));
+    const outside = new Map(); // name → the fmGraph-only fragment defining it
+    all.forEach((v, f) => { if(!ENGINE.includes(f)) v.top.forEach(n => { if(!inEngine.has(n)) outside.set(n, f); }); });
+    const wrong = [], interfaceUsed = new Set();
+    ENGINE.forEach(f => {
+      const { used, own } = all.get(f);
+      used.forEach(n => {
+        if(!outside.has(n) || own.has(n)) return;
+        if(PAGE_INTERFACE.includes(n)) interfaceUsed.add(n);
+        else wrong.push(f + ' uses ' + n + ' (' + outside.get(n) + ')');
+      });
+    });
+    expect(wrong, 'engine fragments reaching into fmGraph\'s page or editing').toEqual([]);
+    // Every name of the page interface is used by the engine, and fmGraph's page defines it.
+    expect(PAGE_INTERFACE.filter(n => !interfaceUsed.has(n)), 'page-interface names the engine no longer uses').toEqual([]);
+    expect(PAGE_INTERFACE.filter(n => !outside.has(n)), 'page-interface names fmGraph doesn\'t define').toEqual([]);
+  });
+
+  test('does nothing when it loads: declarations only', () => {
+    ENGINE.forEach(f => {
+      const lines = fs.readFileSync(path.join(FMGRAPH_JS, f), 'utf8').split('\n');
+      const running = lines.map((l, i) => [i + 1, l]).filter(([, l]) => l && !/^[ \t]/.test(l)
+        && !/^(?:\/\/|(?:async )?function\b|const |let |var |[}\])])/.test(l));
+      expect(running.map(([n, l]) => f + ':' + n + ': ' + l.slice(0, 80)), f).toEqual([]);
+      // Nor a const whose value wires the page (a listener, an element looked up).
+      const wiring = lines.filter(l => /^(?:const|let|var) /.test(l) && /\$\(|document\.|addEventListener/.test(l));
+      expect(wiring, f).toEqual([]);
+    });
+  });
 });

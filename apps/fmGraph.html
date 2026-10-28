@@ -103,26 +103,9 @@
   .board.moving .bar-widget.reached{ opacity:1; box-shadow:0 0 0 2px var(--reach); }
   .slider-widget.active{ box-shadow:0 0 0 2px var(--reach); }
 
-  /* A bar widget's chart. */
-  .bar-chart{ display:block; width:100%; height:auto; margin-top:6px; overflow:visible; }
-  .bar-chart .b-now{ fill:var(--bar-now); }
-  .bar-chart .b-now.neg{ fill:var(--bar-neg); }
-  .bar-chart .b-base{ fill:none; stroke:var(--bar-base); stroke-width:1.5; stroke-dasharray:4 3; }
-  .bar-chart .b-zero{ stroke:var(--line-strong); stroke-width:1; }
-  .bar-chart .b-err{ fill:#fef3f2; stroke:var(--down); stroke-width:1; stroke-dasharray:3 2; }
-  .bar-chart text{ font-size:11px; fill:var(--ink); }
-  .bar-chart .t-period{ fill:var(--soft-ink); }
-  .bar-chart .t-diff.up{ fill:var(--up); font-weight:600; }
-  .bar-chart .t-diff.down{ fill:var(--down); font-weight:600; }
-  .bar-chart .t-err{ fill:var(--down); font-weight:600; }
-  /* A fixed vertical scale (04d-scale.js): its two ends, and ▲ / ▼ where a number goes past it. */
-  .bar-chart .b-scale-edge{ stroke:var(--line-strong); stroke-width:1; stroke-dasharray:2 3; }
-  .bar-chart .t-axis{ font-size:9.5px; fill:var(--soft-ink); stroke:#fff; stroke-width:3; paint-order:stroke; }
-  .bar-chart .t-over{ font-size:10px; fill:var(--ink); stroke:#fff; stroke-width:2.5; paint-order:stroke; }
   .scale-chooser{ display:inline-flex; flex-wrap:wrap; align-items:center; gap:4px; }
   .scale-chooser .scale-box{ width:84px; font:inherit; font-size:12.5px; padding:2px 4px; }
   .scale-chooser .scale-to{ font-size:12.5px; color:var(--soft-ink); }
-  .bar-errors{ margin:6px 0 0; padding:0; list-style:none; font-size:12px; color:var(--down); }
 
   /* A slider widget. */
   .slider-track{ display:flex; gap:8px; align-items:center; margin-top:10px; }
@@ -159,23 +142,6 @@
   .board.moving .chart-widget.reached{ opacity:1; box-shadow:0 0 0 2px var(--reach); }
   .chart-title{ flex:1 1 auto; font:inherit; font-weight:600; font-size:14px; padding:4px 6px; border:1px solid transparent; border-radius:6px; background:transparent; color:var(--ink); min-width:0; }
   .chart-title:hover, .chart-title:focus{ border-color:var(--line-strong); background:#fff; }
-  .chart-key{ display:flex; flex-direction:column; gap:3px; margin-top:4px; font-size:12px; color:var(--soft-ink); }
-  .key-line{ display:flex; flex-wrap:wrap; gap:4px 12px; align-items:center; }
-  .key-group{ font-weight:600; color:var(--ink); }
-  .key-item{ display:inline-flex; align-items:center; gap:5px; }
-  .key-swatch{ width:11px; height:11px; border-radius:3px; display:inline-block; }
-  /* The rectangles at 0, left out of the key: "+N at 0" shows them, faded. */
-  .key-zeros{ font:inherit; font-size:12px; padding:1px 8px; border:1px dashed var(--line-strong); border-radius:10px; background:transparent; color:var(--soft-ink); cursor:pointer; }
-  .key-zeros:hover, .key-zeros:focus-visible{ color:var(--ink); border-style:solid; }
-  .key-item.key-zero{ opacity:.6; }
-  .bar-chart .c-part{ stroke:#fff; stroke-width:.6; }
-  .bar-chart .t-check{ font-size:13px; font-weight:700; }
-  .bar-chart .t-check.ok{ fill:var(--up); }
-  .bar-chart .t-check.bad{ fill:var(--down); }
-  .bar-chart .f-total{ fill:#334155; }
-  .bar-chart .f-up{ fill:var(--up); }
-  .bar-chart .f-down{ fill:var(--down); }
-  .bar-chart .f-link{ stroke:var(--line-strong); stroke-width:1; stroke-dasharray:3 2; }
   /* Placing a Free chart's pieces on the grid (05p-free-grid.js): fmIDE's blue guides and pink equal-gap marks. */
   .free-grid .fr-piece{ cursor:grab; outline:none; }
   .free-grid .fr-piece:focus-visible .c-part, .free-grid .fr-piece.selected .c-part{ stroke:#2563eb; stroke-width:2; }
@@ -285,7 +251,6 @@
   .compare-text{ flex:1 1 auto; }
   .compare-btn{ padding:3px 10px; }
   .gbar-btn[aria-pressed="true"]{ background:var(--reach); color:#1b2333; }
-  .bar-chart rect[data-anim]{ transform-box:view-box; transform-origin:0 0; }
 
   /* Tutorials (G6): the coach card, the ring, the list in Help */
   .tutorial-card{
@@ -310,19 +275,7 @@
   .help-tutorial{ display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid #f1f5f9; }
   body.practising main{ padding-bottom:220px; } /* room to scroll past the coach card */
 
-  /* The scenario waterfall */
-  .scenario-flows{ display:flex; flex-wrap:wrap; gap:10px; }
-  .scenario-flows .scenario-flow{ flex:1 1 260px; max-width:100%; }
-  .bar-chart .t-flow-title{ fill:var(--ink); font-weight:600; }
   .edit-head{ font-size:12px; font-weight:600; color:var(--soft-ink); margin:8px 0 4px; }
-  /* The Tornado and the Spider (step 18) */
-  .bar-chart .s-base{ stroke:var(--ink); stroke-width:1.5; stroke-dasharray:4 3; }
-  .bar-chart .s-axis{ stroke:var(--line-strong); stroke-width:1; }
-  .bar-chart .s-path{ stroke-width:2; }
-  /* The lines chart: each line, and the model's own numbers (or A's) dashed under it. */
-  .bar-chart .l-path{ stroke-width:2; }
-  .bar-chart .l-base{ stroke:var(--bar-base); stroke-width:1.5; stroke-dasharray:4 3; }
-  .bar-chart.stale{ opacity:.45; }
   .sens-row{ margin-bottom:6px; }
   .sens-row .sens-bound{ width:6em; }
   .sens-own{ font-size:12px; color:var(--soft-ink); margin:2px 0 0 24px; }
@@ -345,7 +298,6 @@
   .play-text{ flex:1 1 auto; display:flex; gap:4px 12px; flex-wrap:wrap; }
   .play-at{ font-variant-numeric:tabular-nums; }
   .slider-widget.playing{ box-shadow:0 0 0 2px var(--reach); }
-  .chart-widget.play-held .bar-chart-host{ opacity:.45; }
   .scenario-what{ flex-basis:100%; font-size:12px; color:var(--soft-ink); overflow-wrap:anywhere; }
 
   /* Try in fmGraph (G5c) */
@@ -534,6 +486,58 @@
   .rect-search-item b{ color:var(--brand-dark); }
   .rect-search-canvas{ color:var(--soft-ink); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:45%; }
   .rect-search-none{ padding:8px 10px; color:var(--soft-ink); font-size:13px; }
+  /* The board engine's drawing of bars and charts (05-render.js, 05b-chart-render.js, 05n-free-chart.js):
+     fmGraph's page and the showcase viewer both take it in, after their own styles, which give
+     the colours it uses (--bar-now, --bar-neg, --bar-base, --up, --down, --ink, --soft-ink,
+     --line, --line-strong). Moved out of styles.css unchanged (phase V2). */
+  /* A bar widget's chart. */
+  .bar-chart{ display:block; width:100%; height:auto; margin-top:6px; overflow:visible; }
+  .bar-chart .b-now{ fill:var(--bar-now); }
+  .bar-chart .b-now.neg{ fill:var(--bar-neg); }
+  .bar-chart .b-base{ fill:none; stroke:var(--bar-base); stroke-width:1.5; stroke-dasharray:4 3; }
+  .bar-chart .b-zero{ stroke:var(--line-strong); stroke-width:1; }
+  .bar-chart .b-err{ fill:#fef3f2; stroke:var(--down); stroke-width:1; stroke-dasharray:3 2; }
+  .bar-chart text{ font-size:11px; fill:var(--ink); }
+  .bar-chart .t-period{ fill:var(--soft-ink); }
+  .bar-chart .t-diff.up{ fill:var(--up); font-weight:600; }
+  .bar-chart .t-diff.down{ fill:var(--down); font-weight:600; }
+  .bar-chart .t-err{ fill:var(--down); font-weight:600; }
+  /* A fixed vertical scale (04d-scale.js): its two ends, and ▲ / ▼ where a number goes past it. */
+  .bar-chart .b-scale-edge{ stroke:var(--line-strong); stroke-width:1; stroke-dasharray:2 3; }
+  .bar-chart .t-axis{ font-size:9.5px; fill:var(--soft-ink); stroke:#fff; stroke-width:3; paint-order:stroke; }
+  .bar-chart .t-over{ font-size:10px; fill:var(--ink); stroke:#fff; stroke-width:2.5; paint-order:stroke; }
+  .bar-errors{ margin:6px 0 0; padding:0; list-style:none; font-size:12px; color:var(--down); }
+  .chart-key{ display:flex; flex-direction:column; gap:3px; margin-top:4px; font-size:12px; color:var(--soft-ink); }
+  .key-line{ display:flex; flex-wrap:wrap; gap:4px 12px; align-items:center; }
+  .key-group{ font-weight:600; color:var(--ink); }
+  .key-item{ display:inline-flex; align-items:center; gap:5px; }
+  .key-swatch{ width:11px; height:11px; border-radius:3px; display:inline-block; }
+  /* The rectangles at 0, left out of the key: "+N at 0" shows them, faded. */
+  .key-zeros{ font:inherit; font-size:12px; padding:1px 8px; border:1px dashed var(--line-strong); border-radius:10px; background:transparent; color:var(--soft-ink); cursor:pointer; }
+  .key-zeros:hover, .key-zeros:focus-visible{ color:var(--ink); border-style:solid; }
+  .key-item.key-zero{ opacity:.6; }
+  .bar-chart .c-part{ stroke:#fff; stroke-width:.6; }
+  .bar-chart .t-check{ font-size:13px; font-weight:700; }
+  .bar-chart .t-check.ok{ fill:var(--up); }
+  .bar-chart .t-check.bad{ fill:var(--down); }
+  .bar-chart .f-total{ fill:#334155; }
+  .bar-chart .f-up{ fill:var(--up); }
+  .bar-chart .f-down{ fill:var(--down); }
+  .bar-chart .f-link{ stroke:var(--line-strong); stroke-width:1; stroke-dasharray:3 2; }
+  .bar-chart rect[data-anim]{ transform-box:view-box; transform-origin:0 0; }
+  /* The scenario waterfall */
+  .scenario-flows{ display:flex; flex-wrap:wrap; gap:10px; }
+  .scenario-flows .scenario-flow{ flex:1 1 260px; max-width:100%; }
+  .bar-chart .t-flow-title{ fill:var(--ink); font-weight:600; }
+  /* The Tornado and the Spider (step 18) */
+  .bar-chart .s-base{ stroke:var(--ink); stroke-width:1.5; stroke-dasharray:4 3; }
+  .bar-chart .s-axis{ stroke:var(--line-strong); stroke-width:1; }
+  .bar-chart .s-path{ stroke-width:2; }
+  /* The lines chart: each line, and the model's own numbers (or A's) dashed under it. */
+  .bar-chart .l-path{ stroke-width:2; }
+  .bar-chart .l-base{ stroke:var(--bar-base); stroke-width:1.5; stroke-dasharray:4 3; }
+  .bar-chart.stale{ opacity:.45; }
+  .chart-widget.play-held .bar-chart-host{ opacity:.45; }
 /* The Help panel (build step 10; docs/step10-help.md), shared by fmIDE and ExcelExporter with
    src/shared/help-panel.js. Each app sets --help-top (where the panel starts) and makes room
    for the panel under body.help-open. */
@@ -3365,6 +3369,10 @@ function askConfirm(title, text, okLabel){
     $('confirmYes').focus();
   });
 }
+// ============================================================
+// Numbers and the calculation's errors as people read them. Part of the board engine, which
+// the showcase viewer takes in too (docs/viewer-brief.md, phase V2): nothing here edits.
+// ============================================================
 
 // Numbers as people read them: thousands separated, at most a few decimals.
 function fmtNum(v){
@@ -3374,6 +3382,7 @@ function fmtNum(v){
   const digits = a === 0 ? 0 : a >= 100 ? 2 : a >= 1 ? 3 : 4;
   return v.toLocaleString('en-US', { maximumFractionDigits: digits }).replace('-', '−');
 }
+
 function fmtDiff(now, base){
   const d = now - base;
   if(!isFinite(d) || Math.abs(d) < 1e-12 * Math.max(1, Math.abs(base))) return '';
@@ -3389,39 +3398,9 @@ function fmtDiff(now, base){
 // src/shared/error-words.js, which the showcase viewer uses too).
 function errorText(code){ return errorWords(code); }
 // ============================================================
-// Reading a model: an fmIDE system, or a workspace (a .fmide document is one). Every file goes
-// through readModelData: the kind is identified (older files by shape), a file of another
-// kind is refused with where it belongs, older versions are upgraded step by step with the
-// shared upgrades, and a file from a newer version is opened only after asking.
+// Opening a model in fmGraph (the model itself is read and built in 02-model.js, which the
+// showcase viewer takes in too): fmGraph's trial, tutorial, templates and boards around it.
 // ============================================================
-const FILE_FORMATS = {
-  'system':          { current: SHARED_FILE_VERSIONS['system'], label: 'fmIDE system' },
-  'fmIDE-workspace': { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'fmIDE workspace' },
-};
-
-// Returns { error } or { kind, data (an upgraded copy), fromVersion, newer, newerParts }.
-function readModelData(raw){
-  if(!raw || typeof raw !== 'object' || Array.isArray(raw)) return { error: "That file doesn't hold an fmIDE model." };
-  const kind = inferFileKind(raw);
-  if(!kind || !FILE_FORMATS[kind]){
-    if(typeof kind === 'string' && /^(module|fmIDE-)/.test(kind)){
-      return { error: 'That is an fmIDE file of another kind ("' + kind.slice(0, 40) + '"), not a whole model. In fmIDE, save the model with File → Save (a .fmide document) or Save System.' };
-    }
-    return { error: "That file isn't an fmIDE model this version recognises." };
-  }
-  const data = JSON.parse(JSON.stringify(raw));
-  const { fromVersion, newer } = upgradeFileData(data, kind, FILE_FORMATS, SHARED_FILE_MIGRATIONS);
-  const newerParts = [];
-  if(kind === 'fmIDE-workspace'){
-    if(!data.system || typeof data.system !== 'object') return { error: 'That workspace holds no model.' };
-    const r = readModelData(data.system);
-    if(r.error) return { error: "The workspace's model is unreadable: " + r.error };
-    if(r.kind !== 'system') return { error: "The workspace's model is unreadable." };
-    data.system = r.data;
-    if(r.newer) newerParts.push('its model (format version ' + r.fromVersion + ')');
-  }
-  return { kind, data, fromVersion, newer, newerParts };
-}
 
 // Opens a file's text (from the disk, a drop or fmIDE). Resolves true when a model was loaded.
 // opts.boards: the document's own boards (an fmIDE-graph-board file, parsed or as text) —
@@ -3462,6 +3441,55 @@ async function openModelText(text, name, opts){
   return true;
 }
 
+async function loadModel(system, name, opts){
+  const m = buildModel(system, name);
+  model = m;
+  linkedToFmide = !!(opts && opts.fromFmide);
+  trying = opts && opts.trial ? opts.trial : null; // G5c (06e-trial.js)
+  practiceStart = opts && opts.practice ? opts.practice : null; // G6 (07b-tutorials.js)
+  clearResultCache();
+  resetSharedValues(); // (03-calc.js)
+  pinA = null; forgetGeometry(); renderCompareBar(); // a new model: no A, nothing to glide from (05e-compare.js)
+  m.templateSources = cleanTemplateSources(opts && opts.templates); // its templates' boards (06d-template-sources.js)
+  await loadBoardFor(m, opts && opts.boards);
+  renderTrialBar();
+  showBoard();
+}
+// ============================================================
+// Reading a model: an fmIDE system, or a workspace (a .fmide document is one). Every file goes
+// through readModelData: the kind is identified (older files by shape), a file of another
+// kind is refused with where it belongs, older versions are upgraded step by step with the
+// shared upgrades, and a file from a newer version is opened only after asking.
+// ============================================================
+const FILE_FORMATS = {
+  'system':          { current: SHARED_FILE_VERSIONS['system'], label: 'fmIDE system' },
+  'fmIDE-workspace': { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'fmIDE workspace' },
+};
+
+// Returns { error } or { kind, data (an upgraded copy), fromVersion, newer, newerParts }.
+function readModelData(raw){
+  if(!raw || typeof raw !== 'object' || Array.isArray(raw)) return { error: "That file doesn't hold an fmIDE model." };
+  const kind = inferFileKind(raw);
+  if(!kind || !FILE_FORMATS[kind]){
+    if(typeof kind === 'string' && /^(module|fmIDE-)/.test(kind)){
+      return { error: 'That is an fmIDE file of another kind ("' + kind.slice(0, 40) + '"), not a whole model. In fmIDE, save the model with File → Save (a .fmide document) or Save System.' };
+    }
+    return { error: "That file isn't an fmIDE model this version recognises." };
+  }
+  const data = JSON.parse(JSON.stringify(raw));
+  const { fromVersion, newer } = upgradeFileData(data, kind, FILE_FORMATS, SHARED_FILE_MIGRATIONS);
+  const newerParts = [];
+  if(kind === 'fmIDE-workspace'){
+    if(!data.system || typeof data.system !== 'object') return { error: 'That workspace holds no model.' };
+    const r = readModelData(data.system);
+    if(r.error) return { error: "The workspace's model is unreadable: " + r.error };
+    if(r.kind !== 'system') return { error: "The workspace's model is unreadable." };
+    data.system = r.data;
+    if(r.newer) newerParts.push('its model (format version ' + r.fromVersion + ')');
+  }
+  return { kind, data, fromVersion, newer, newerParts };
+}
+
 // ---- the loaded model ----
 // model: { name, periods, ir, rects (every value rectangle), byKey, inputs, reach, base,
 //          baseMs, signature }
@@ -3475,7 +3503,10 @@ function rectName(n){
   return (name || '#' + n.id).slice(0, 120);
 }
 
-async function loadModel(system, name, opts){
+// The model as fmGraph and the showcase viewer use it: the IR compiled once, every value
+// rectangle (its key, name, unit, whether it is an input), the model's own numbers, what each
+// rectangle reaches. Throws when there is nothing to show.
+function buildModel(system, name){
   if(!system || !Array.isArray(system.canvases) || system.canvases.length === 0){
     throw new Error('That model has no canvases.');
   }
@@ -3512,17 +3543,7 @@ async function loadModel(system, name, opts){
   });
   const m = { name: typeof name === 'string' && name ? name.slice(0, 120) : 'Model', periods, ir, canvasIndex, rects, byKey, canvasTemplates, canvasVersionIds,
     inputs: rects.filter(r => r.input), base, baseMs, signature: modelSignature(ir), reach: reachMap(ir) };
-  model = m;
-  linkedToFmide = !!(opts && opts.fromFmide);
-  trying = opts && opts.trial ? opts.trial : null; // G5c (06e-trial.js)
-  practiceStart = opts && opts.practice ? opts.practice : null; // G6 (07b-tutorials.js)
-  clearResultCache();
-  resetSharedValues(); // (03-calc.js)
-  pinA = null; forgetGeometry(); renderCompareBar(); // a new model: no A, nothing to glide from (05e-compare.js)
-  m.templateSources = cleanTemplateSources(opts && opts.templates); // its templates' boards (06d-template-sources.js)
-  await loadBoardFor(m, opts && opts.boards);
-  renderTrialBar();
-  showBoard();
+  return m;
 }
 
 // The model's signature: its canvas and rectangle ids, as a short hash. A board is remembered
@@ -3724,17 +3745,6 @@ function slidersFromOtherBoards(){
   const here = new Set(board.sliders.map(settingKey));
   return liveSliders().filter(s => !here.has(settingKey(s)) && s.value !== null && isFinite(s.value));
 }
-// Keep this board's own positions (on), or share them (off: it takes the shared positions).
-function setOwnSliders(b, on){
-  on = !!on;
-  if(!!b.ownSliders === on) return false;
-  syncShared(); // what moved so far is shared before the board leaves or joins
-  b.ownSliders = on;
-  b.sliders.forEach(s => { delete s._sharedKey; delete s._sharedValue; });
-  saveBoardSoon();
-  renderAll();
-  return true;
-}
 
 // While a finger holds A (05h-phone-show.js), the numbers looked at instead of the sliders'.
 let lookingAt = null;
@@ -3831,6 +3841,160 @@ function workOutAhead(s){
 
 function setCalcNote(text){ const el = $('calcNote'); if(el) el.textContent = text; }
 // ============================================================
+// fmGraph's boards kept in this browser, and the board changes made on fmGraph's page (adding,
+// removing and moving widgets). Reading boards is 04-board.js, the board engine's.
+// ============================================================
+
+const store = createStore('fmGraph');
+
+const BOARD_PREFIX = 'fmgraph-board-';
+
+const LAST_BOARD_KEY = 'fmgraph-last-board';
+
+let saveTimer = null;
+
+function saveBoardSoon(){
+  forgetAutoColours(); // a chart may have changed (04e-colours.js)
+  noteChange(); // undo (04c-undo.js)
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveBoardNow, 300);
+}
+
+function saveBoardNow(){
+  clearTimeout(saveTimer);
+  if(!model || trying || practiceStart) return; // a template tried from the library (G5c), or a tutorial's practice (G6), is never kept
+  const text = JSON.stringify(boardsData());
+  Promise.all([store.put(BOARD_PREFIX + model.signature, text), store.put(LAST_BOARD_KEY, text)])
+    .catch(() => notify('This browser could not keep the boards; they will be gone after a reload.', 'err', 'storage'));
+}
+
+// The document's own boards (G3b), when it brings any with something on them, win over the
+// ones this browser keeps for the model, and are then kept here too.
+function documentBoards(raw){
+  try{
+    const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if(!data || typeof data !== 'object' || fileDataProblem(data)) return null;
+    const r = cleanBoards(data);
+    return r && r.boards.some(b => b.items.length || b.sliders.length) ? r : null;
+  }catch(e){ return null; }
+}
+
+async function loadBoardFor(m, docRaw){
+  // A tutorial's practice copy (G6): its starting board, nothing read from or kept in the browser.
+  if(practiceStart){
+    boards = practiceBoards(practiceStart);
+    board = boards[0];
+    scenarios = [];
+    sharedPeriods = cleanSharedPeriods(null, m.periods.length);
+    commonScale = cleanCommonScale(null);
+    rectColours = new Map(); forgetAutoColours();
+    resetUndo();
+    return;
+  }
+  // A template tried from the library (G5c): its own boards, nothing read from or kept in the browser.
+  if(trying){
+    const fromTemplate = (m.templateSources || []).flatMap(src => boardsFromTemplate(src).boards).slice(0, BOARDS_LIMIT);
+    boards = fromTemplate.length ? fromTemplate : [startingBoard()];
+    board = boards[0];
+    scenarios = [];
+    sharedPeriods = cleanSharedPeriods(null, m.periods.length);
+    commonScale = cleanCommonScale(null);
+    rectColours = new Map(); forgetAutoColours();
+    resetUndo();
+    return;
+  }
+  let restored = docRaw ? documentBoards(docRaw) : null;
+  if(restored){
+    boards = restored.boards;
+    board = boards[restored.active];
+    scenarios = restored.scenarios;
+    sharedPeriods = restored.sharedPeriods;
+    commonScale = restored.commonScale;
+    rectColours = restored.colours; forgetAutoColours();
+    resetUndo();
+    setTimeout(saveBoardNow, 0);
+    return;
+  }
+  try{
+    await store.ready;
+    let raw = await store.get(BOARD_PREFIX + m.signature);
+    let fromLast = false;
+    if(typeof raw !== 'string' || !raw){ raw = await store.get(LAST_BOARD_KEY); fromLast = true; }
+    if(typeof raw === 'string' && raw){
+      const r = cleanBoards(JSON.parse(raw));
+      if(r && r.boards.some(b => b.items.length || b.sliders.length)) restored = r;
+      if(restored && fromLast) setTimeout(saveBoardNow, 0);
+    }
+  }catch(e){ /* unreadable: start a new board */ }
+  // None of its own: its templates' boards (G5b, 06d-template-sources.js), else a starting board.
+  const fromTemplates = restored ? [] : templateStartBoards();
+  if(fromTemplates.length) setTimeout(saveBoardNow, 0);
+  boards = restored ? restored.boards : fromTemplates.length ? fromTemplates : [startingBoard()];
+  board = boards[restored ? restored.active : 0];
+  scenarios = restored ? restored.scenarios : [];
+  sharedPeriods = restored ? restored.sharedPeriods : cleanSharedPeriods(null, m.periods.length);
+  commonScale = restored ? restored.commonScale : cleanCommonScale(null);
+  rectColours = restored ? restored.colours : new Map(); forgetAutoColours();
+  resetUndo();
+}
+
+// A new model's board: a slider on the first input that reaches a calculated rectangle, and
+// a bar on the last rectangle it reaches, so something moves straight away.
+function startingBoard(){
+  const b = makeBoard('Board');
+  for(const input of model.inputs){
+    const reached = model.reach(input.key);
+    const targets = model.rects.filter(r => !r.input && reached.has(r.key));
+    if(!targets.length) continue;
+    const periods = { mode: 'all' };
+    b.sliders.push(Object.assign({ id: newWidgetId('s'), key: input.key, periods, mode: 'set', value: null }, defaultRange(input, periods, 'set')));
+    b.items.push({ id: newWidgetId('b'), kind: 'bar', key: targets[targets.length - 1].key, periods: { mode: 'all' }, wide: false, colour: null });
+    break;
+  }
+  return b;
+}
+
+function addBar(key, periods){
+  const rect = model.byKey.get(key) || model.rects.find(r => !r.input) || model.rects[0];
+  if(!rect || board.bars.length >= BOARD_LIMIT) return null;
+  // Given periods, it keeps them; without, it follows the shared periods (05k-shared-period.js).
+  const bar = { id: newWidgetId('b'), kind: 'bar', key: rect.key, periods: cleanPeriods(periods, model.periods.length), wide: false, colour: null, ownPeriod: periods !== undefined };
+  board.items.push(bar);
+  saveBoardSoon();
+  return bar;
+}
+
+function addSlider(key, periods, mode, range){
+  const rect = (model.byKey.get(key) && model.byKey.get(key).input) ? model.byKey.get(key) : model.inputs[0];
+  if(!rect || board.sliders.length >= BOARD_LIMIT) return null;
+  const p = cleanPeriods(periods, model.periods.length);
+  const m = mode === 'shift' ? 'shift' : 'set';
+  const s = Object.assign({ id: newWidgetId('s'), key: rect.key, periods: p, mode: m, value: null }, cleanRange(range || {}, defaultRange(rect, p, m)));
+  board.sliders.push(s);
+  saveBoardSoon();
+  return s;
+}
+
+function removeWidget(id){
+  const before = board.items.length + board.sliders.length;
+  board.items = board.items.filter(w => w.id !== id);
+  board.sliders = board.sliders.filter(s => s.id !== id);
+  if(board.items.length + board.sliders.length !== before) saveBoardSoon();
+}
+
+// Moves a widget (a bar or chart among the items, or a slider among the sliders) to index `to`.
+function moveWidget(id, to){
+  const list = board.items.some(w => w.id === id) ? board.items : board.sliders;
+  const from = list.findIndex(w => w.id === id);
+  if(from < 0) return false;
+  const at = Math.max(0, Math.min(list.length - 1, to));
+  if(at === from) return false;
+  const [w] = list.splice(from, 1);
+  list.splice(at, 0, w);
+  saveBoardSoon();
+  return true;
+}
+// ============================================================
 // The boards (G3a: several, as tabs, each a view of the model). A board:
 //   { id, name, items: [bar | chart, …] (in the order shown), sliders: [slider, …], ownSliders }
 //   bar    { id, kind: 'bar', key, periods, wide, scale }
@@ -3856,9 +4020,6 @@ function setCalcNote(text){ const el = $('calcNote'); if(el) el.textContent = te
 // use the same ids never picks up these boards. The form G1 and G2 kept in the browser (one
 // board: bars, charts, sliders) is read as one board.
 // ============================================================
-const store = createStore('fmGraph');
-const BOARD_PREFIX = 'fmgraph-board-';
-const LAST_BOARD_KEY = 'fmgraph-last-board';
 const BOARD_LIMIT = 40; // bars, charts and sliders on a board, each at most
 const BOARDS_LIMIT = 20; // boards for a model
 let boards = [];         // every board of the model
@@ -4034,143 +4195,52 @@ function boardsData(list, forUndo){
   out.commonScale = commonScaleData(); // version 12 (04d-scale.js)
   return out;
 }
+// ============================================================
+// The board file's upgrades, one version at a time (moved from 06b-board-files.js, unchanged, so
+// the showcase viewer reads a showcase's boards as fmGraph's Import boards does).
+// ============================================================
 
-let saveTimer = null;
-function saveBoardSoon(){
-  forgetAutoColours(); // a chart may have changed (04e-colours.js)
-  noteChange(); // undo (04c-undo.js)
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveBoardNow, 300);
-}
-function saveBoardNow(){
-  clearTimeout(saveTimer);
-  if(!model || trying || practiceStart) return; // a template tried from the library (G5c), or a tutorial's practice (G6), is never kept
-  const text = JSON.stringify(boardsData());
-  Promise.all([store.put(BOARD_PREFIX + model.signature, text), store.put(LAST_BOARD_KEY, text)])
-    .catch(() => notify('This browser could not keep the boards; they will be gone after a reload.', 'err', 'storage'));
-}
+const BOARD_FILE_FORMAT = { 'fmIDE-graph-board': { current: BOARD_FILE_VERSION, label: 'fmGraph board file' } };
 
-// The document's own boards (G3b), when it brings any with something on them, win over the
-// ones this browser keeps for the model, and are then kept here too.
-function documentBoards(raw){
-  try{
-    const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    if(!data || typeof data !== 'object' || fileDataProblem(data)) return null;
-    const r = cleanBoards(data);
-    return r && r.boards.some(b => b.items.length || b.sliders.length) ? r : null;
-  }catch(e){ return null; }
-}
-async function loadBoardFor(m, docRaw){
-  // A tutorial's practice copy (G6): its starting board, nothing read from or kept in the browser.
-  if(practiceStart){
-    boards = practiceBoards(practiceStart);
-    board = boards[0];
-    scenarios = [];
-    sharedPeriods = cleanSharedPeriods(null, m.periods.length);
-    commonScale = cleanCommonScale(null);
-    rectColours = new Map(); forgetAutoColours();
-    resetUndo();
-    return;
-  }
-  // A template tried from the library (G5c): its own boards, nothing read from or kept in the browser.
-  if(trying){
-    const fromTemplate = (m.templateSources || []).flatMap(src => boardsFromTemplate(src).boards).slice(0, BOARDS_LIMIT);
-    boards = fromTemplate.length ? fromTemplate : [startingBoard()];
-    board = boards[0];
-    scenarios = [];
-    sharedPeriods = cleanSharedPeriods(null, m.periods.length);
-    commonScale = cleanCommonScale(null);
-    rectColours = new Map(); forgetAutoColours();
-    resetUndo();
-    return;
-  }
-  let restored = docRaw ? documentBoards(docRaw) : null;
-  if(restored){
-    boards = restored.boards;
-    board = boards[restored.active];
-    scenarios = restored.scenarios;
-    sharedPeriods = restored.sharedPeriods;
-    commonScale = restored.commonScale;
-    rectColours = restored.colours; forgetAutoColours();
-    resetUndo();
-    setTimeout(saveBoardNow, 0);
-    return;
-  }
-  try{
-    await store.ready;
-    let raw = await store.get(BOARD_PREFIX + m.signature);
-    let fromLast = false;
-    if(typeof raw !== 'string' || !raw){ raw = await store.get(LAST_BOARD_KEY); fromLast = true; }
-    if(typeof raw === 'string' && raw){
-      const r = cleanBoards(JSON.parse(raw));
-      if(r && r.boards.some(b => b.items.length || b.sliders.length)) restored = r;
-      if(restored && fromLast) setTimeout(saveBoardNow, 0);
-    }
-  }catch(e){ /* unreadable: start a new board */ }
-  // None of its own: its templates' boards (G5b, 06d-template-sources.js), else a starting board.
-  const fromTemplates = restored ? [] : templateStartBoards();
-  if(fromTemplates.length) setTimeout(saveBoardNow, 0);
-  boards = restored ? restored.boards : fromTemplates.length ? fromTemplates : [startingBoard()];
-  board = boards[restored ? restored.active : 0];
-  scenarios = restored ? restored.scenarios : [];
-  sharedPeriods = restored ? restored.sharedPeriods : cleanSharedPeriods(null, m.periods.length);
-  commonScale = restored ? restored.commonScale : cleanCommonScale(null);
-  rectColours = restored ? restored.colours : new Map(); forgetAutoColours();
-  resetUndo();
+// v1 → v2: a board file may be in the template form (G5a); a v1 file is boards for one model.
+// v2 → v3: boards for one model may carry the model's named scenarios; v3 → v4: a chart may be a
+// scenario waterfall; v4 → v5: a bar or chart may have a fixed vertical scale; v5 → v6: a slider
+// may be folded; v6 → v7: a board may keep its own slider positions; v7 → v8: a chart may be a
+// Tornado or a Spider. Nothing to change. v8 → v9: the shared period (05k-shared-period.js) —
+// every bar and chart saved before it keeps the periods it had (`ownPeriod`), so the file opens
+// as it was saved (the owner's choice). v9 → v10: a chart may be a lines chart; nothing to change.
+// v10 → v11: the shared colours (04e-colours.js); nothing to change — a file without `colours`
+// keeps its colours on its widgets, taken into the shared ones when read (the first one wins).
+// v11 → v12: the common scale (04d-scale.js); nothing to change — a file without `commonScale`
+// opens with Each its own, so every bar and chart shows the scale it had.
+// v12 → v13: a chart may be a Free chart (04f-free.js); nothing to change.
+function keepOwnPeriods(data){
+  if(!data || typeof data !== 'object' || data.form === 'template') return;
+  const boardsIn = Array.isArray(data.boards) ? data.boards : [data];
+  boardsIn.forEach(b => {
+    if(!b || typeof b !== 'object') return;
+    ['items', 'bars', 'charts'].forEach(k => { if(Array.isArray(b[k])) b[k].forEach(w => { if(w && typeof w === 'object') w.ownPeriod = true; }); });
+  });
 }
 
-// A new model's board: a slider on the first input that reaches a calculated rectangle, and
-// a bar on the last rectangle it reaches, so something moves straight away.
-function startingBoard(){
-  const b = makeBoard('Board');
-  for(const input of model.inputs){
-    const reached = model.reach(input.key);
-    const targets = model.rects.filter(r => !r.input && reached.has(r.key));
-    if(!targets.length) continue;
-    const periods = { mode: 'all' };
-    b.sliders.push(Object.assign({ id: newWidgetId('s'), key: input.key, periods, mode: 'set', value: null }, defaultRange(input, periods, 'set')));
-    b.items.push({ id: newWidgetId('b'), kind: 'bar', key: targets[targets.length - 1].key, periods: { mode: 'all' }, wide: false, colour: null });
-    break;
-  }
-  return b;
-}
+const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {}, 5: () => {}, 6: () => {}, 7: () => {}, 8: keepOwnPeriods, 9: () => {}, 10: () => {}, 11: () => {}, 12: () => {} } };
+// ============================================================
+// A new chart, on fmGraph's page (+ Chart). The charts' reading and figures are 04b-charts.js.
+// ============================================================
 
-function addBar(key, periods){
-  const rect = model.byKey.get(key) || model.rects.find(r => !r.input) || model.rects[0];
-  if(!rect || board.bars.length >= BOARD_LIMIT) return null;
-  // Given periods, it keeps them; without, it follows the shared periods (05k-shared-period.js).
-  const bar = { id: newWidgetId('b'), kind: 'bar', key: rect.key, periods: cleanPeriods(periods, model.periods.length), wide: false, colour: null, ownPeriod: periods !== undefined };
-  board.items.push(bar);
+// A new chart: columns with one group holding one calculated rectangle, a flow with one step,
+// or an empty Free chart.
+function addChart(layout){
+  if(board.charts.length >= BOARD_LIMIT) return null;
+  const first = model.rects.find(r => !r.input) || model.rects[0];
+  const c = layout === 'free'
+    ? { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'free', title: '', period: 0, pieces: [], notes: null, colours: {} }
+    : layout === 'flow'
+    ? { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'flow', title: '', period: 0, steps: first ? [{ key: first.key, role: 'start' }] : [], colours: {} }
+    : { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'columns', title: '', periods: { mode: 'all' }, groups: [{ name: '', parts: first ? [first.key] : [] }], check: false, colours: {} };
+  board.items.push(c);
   saveBoardSoon();
-  return bar;
-}
-function addSlider(key, periods, mode, range){
-  const rect = (model.byKey.get(key) && model.byKey.get(key).input) ? model.byKey.get(key) : model.inputs[0];
-  if(!rect || board.sliders.length >= BOARD_LIMIT) return null;
-  const p = cleanPeriods(periods, model.periods.length);
-  const m = mode === 'shift' ? 'shift' : 'set';
-  const s = Object.assign({ id: newWidgetId('s'), key: rect.key, periods: p, mode: m, value: null }, cleanRange(range || {}, defaultRange(rect, p, m)));
-  board.sliders.push(s);
-  saveBoardSoon();
-  return s;
-}
-function removeWidget(id){
-  const before = board.items.length + board.sliders.length;
-  board.items = board.items.filter(w => w.id !== id);
-  board.sliders = board.sliders.filter(s => s.id !== id);
-  if(board.items.length + board.sliders.length !== before) saveBoardSoon();
-}
-// Moves a widget (a bar or chart among the items, or a slider among the sliders) to index `to`.
-function moveWidget(id, to){
-  const list = board.items.some(w => w.id === id) ? board.items : board.sliders;
-  const from = list.findIndex(w => w.id === id);
-  if(from < 0) return false;
-  const at = Math.max(0, Math.min(list.length - 1, to));
-  if(at === from) return false;
-  const [w] = list.splice(from, 1);
-  list.splice(at, 0, w);
-  saveBoardSoon();
-  return true;
+  return c;
 }
 // ============================================================
 // Charts (G2): two general building blocks, made of the same bars as a bar widget. Nothing
@@ -4302,21 +4372,6 @@ function chartData(c, at){
   if(c.layout === 'flow') return { layout: 'flow', title: c.title, period: c.period, steps: c.steps.map(s => withColour(s.key, { role: s.role })) };
   return { layout: 'columns', title: c.title, periods: Object.assign({}, c.periods), check: c.check,
     groups: c.groups.map(g => ({ name: g.name, parts: g.parts.map(k => withColour(k)) })) };
-}
-
-// A new chart: columns with one group holding one calculated rectangle, a flow with one step,
-// or an empty Free chart.
-function addChart(layout){
-  if(board.charts.length >= BOARD_LIMIT) return null;
-  const first = model.rects.find(r => !r.input) || model.rects[0];
-  const c = layout === 'free'
-    ? { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'free', title: '', period: 0, pieces: [], notes: null, colours: {} }
-    : layout === 'flow'
-    ? { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'flow', title: '', period: 0, steps: first ? [{ key: first.key, role: 'start' }] : [], colours: {} }
-    : { id: newWidgetId('c'), kind: 'chart', wide: true, layout: 'columns', title: '', periods: { mode: 'all' }, groups: [{ name: '', parts: first ? [first.key] : [] }], check: false, colours: {} };
-  board.items.push(c);
-  saveBoardSoon();
-  return c;
 }
 
 // Every rectangle a chart shows.
@@ -4461,6 +4516,38 @@ function sensitivityFigures(c, base){
   if(c.layout === 'tornado') inputs.sort((x, y) => (x.error ? 1 : 0) - (y.error ? 1 : 0) || (y.swing || 0) - (x.swing || 0) || x.n - y.n);
   return { base: b.error ? { error: b.error } : b.value, inputs };
 }
+
+// A chart's figures as the pages' scripting answers them, with the numbers shown (fmGraph.chart,
+// fmViewer.chart): moved out of 08-api.js unchanged, so fmGraph and the showcase viewer answer alike.
+function chartAnswer(c){
+  const answer = (r) => r.error ? { error: r.error } : r.value;
+  const results = currentResults();
+  if(isSensitivity(c)){
+    const f = sensitivityNow(c, shownOverrides(), true).figures;
+    if(!f) return null;
+    return { output: partLabel(c.output), period: model.periods[c.period], base: f.base,
+      inputs: f.inputs.map(i => Object.assign({ name: partLabel(i.key), by: i.by, low: i.low, high: i.high, show: i.show },
+        i.error ? { error: i.error } : { lowValue: i.lowValue, highValue: i.highValue, swing: i.swing },
+        i.points ? { points: i.points.map(p => Object.assign({}, p)) } : {})) };
+  }
+  if(c.layout === 'lines') return linesFigures(c, results).map(f => ({ period: model.periods[f.p], lines: f.values.map((r, i) => ({ name: partLabel(c.lines[i]), value: answer(r) })) }));
+  if(c.layout === 'flow') return flowFigures(c, results).map((f, i) => Object.assign({ name: partLabel(c.steps[i].key) }, f));
+  if(c.layout === 'free') return { period: model.periods[c.period], pieces: freeFigures(c, results).map((f, i) => {
+    const p = c.pieces[i], head = { name: pieceLabel(c, p), column: p.column };
+    if(f.error !== undefined) return Object.assign(head, { error: f.error });
+    if(f.blocked !== undefined) return Object.assign(head, { blocked: f.blocked });
+    return Object.assign(head, { value: f.value, base: f.base, top: f.top, bottom: f.bottom, end: f.end,
+      parts: f.parts.map((pt, pi) => ({ name: partLabel(p.parts[pi]), value: pt.value, from: pt.from, to: pt.to })), check: f.check });
+  }) };
+  if(c.layout === 'scenarios'){
+    const memo = new Map();
+    const resultsFor = (sc) => { if(!memo.has(sc)) memo.set(sc, scenarioResults(sc)); return memo.get(sc); };
+    return c.outputs.map(k => ({ name: partLabel(k), steps: scenarioFigures(c, k, resultsFor).map(f => f.error ? { name: f.name, kind: f.kind, error: f.error }
+      : { name: f.name, kind: f.kind, value: f.value, from: f.from, to: f.to }) }));
+  }
+  return columnsFigures(c, results).map(f => ({ period: model.periods[f.p], check: f.check,
+    groups: f.groups.map((g, gi) => ({ name: groupLabel(c, gi), total: g.error ? { error: true } : g.total, parts: g.parts.map(answer) })) }));
+}
 // ============================================================
 // Undo and Redo (G3a) for every change to the boards: adding, removing, moving, resizing and
 // colouring widgets, editing charts, sliders' settings, boards added, renamed or deleted, a
@@ -4534,70 +4621,9 @@ function syncUndoButtons(){
   if($('phoneUndo')){ $('phoneUndo').disabled = u.disabled; $('phoneRedo').disabled = r.disabled; } // ☰ on a phone (05g-phone.js)
 }
 // ============================================================
-// A bar's or chart's vertical scale (the owner's request, 12 October 2026). Auto, as before:
-// stretched to the numbers shown and always taking in zero, so it changes as a slider moves.
-// Fixed: from a min to a max the person chose, so a change shows as a change in size. A
-// widget's `scale` is absent or null (Auto) or { min, max } with min below max (board file
-// version 5; the template form leaves it out). A number past a fixed scale is drawn to the
-// edge with ▲ or ▼; its label and hover text still give the number itself. A scenario
-// waterfall's fixed scale is shared by all its outputs.
-// Either may give way to the common scale for every bar and chart (below, board file 12).
+// Choosing a scale on fmGraph's page: a bar's or chart's own, and the common scale's chooser.
+// Working a scale out and drawing it are 04d-scale.js, the board engine's.
 // ============================================================
-const SCALE_LIMIT = 1e15;
-const autoScales = new Map(); // widget id → { lo, hi }: what Auto would show now (Fix at current scale)
-
-// A scale from a file, storage or a script: { min, max }, or null (Auto).
-function cleanScale(raw){
-  if(!raw || typeof raw !== 'object' || typeof raw.min !== 'number' || typeof raw.max !== 'number') return null;
-  const { min, max } = raw;
-  if(!Number.isFinite(min) || !Number.isFinite(max) || Math.abs(min) > SCALE_LIMIT || Math.abs(max) > SCALE_LIMIT || !(min < max)) return null;
-  return { min, max };
-}
-
-// Auto's range rounded outwards to two significant figures of its span: 0 to 1,234.5 → 0 to 1,300.
-function niceScale(lo, hi){
-  if(!(hi > lo)) return { min: lo, max: lo + 1 };
-  const step = Math.pow(10, Math.floor(Math.log10(hi - lo)) - 1);
-  const r = (x) => Number(x.toPrecision(12));
-  return { min: r(Math.floor(lo / step + 1e-9) * step), max: r(Math.ceil(hi / step - 1e-9) * step) };
-}
-
-// The range a widget is drawn on: its fixed scale, or Auto's. record: remember Auto's range for
-// Fix at current scale (a scenario waterfall records the range of all its outputs itself).
-function scaleFor(w, lo, hi, record){
-  if(record !== false) autoScales.set(w.id, { lo, hi });
-  if(followsCommonScale(w)){ // the common scale, below
-    if(commonScale.mode === 'fixed') return { lo: commonScale.min, hi: commonScale.max, fixed: true };
-    if(commonAuto) return { lo: commonAuto.lo, hi: commonAuto.hi, fixed: false };
-  }
-  return w.scale ? { lo: w.scale.min, hi: w.scale.max, fixed: true } : { lo, hi, fixed: false };
-}
-// y for a number on that range, kept inside the plot.
-function scaleY(top, plotH, sc){
-  return (v) => top + (sc.hi - Math.max(sc.lo, Math.min(sc.hi, v))) / (sc.hi - sc.lo) * plotH;
-}
-// The zero line (when zero is on the scale) and, on a fixed scale, its two ends.
-function drawScaleAxis(chart, sc, y, W, top, plotH){
-  if(sc.lo <= 0 && sc.hi >= 0) chart.appendChild(svg('line', { class: 'b-zero', x1: 0, x2: W, y1: y(0), y2: y(0) }));
-  if(!sc.fixed) return;
-  chart.appendChild(svg('line', { class: 'b-scale-edge', x1: 0, x2: W, y1: top, y2: top }));
-  chart.appendChild(svg('line', { class: 'b-scale-edge', x1: 0, x2: W, y1: top + plotH, y2: top + plotH }));
-  chart.appendChild(svg('text', { class: 't-axis', x: W - 2, y: top + 10, 'text-anchor': 'end' }, fmtNum(sc.hi)));
-  chart.appendChild(svg('text', { class: 't-axis', x: W - 2, y: top + plotH - 3, 'text-anchor': 'end' }, fmtNum(sc.lo)));
-}
-// The scale's two numbers drawn last, over the bars.
-function raiseScaleLabels(chart){ chart.querySelectorAll('.t-axis').forEach(t => chart.appendChild(t)); }
-// ▲ / ▼ where a number goes past a fixed scale.
-function drawOverMarks(g, sc, cx, top, plotH, highest, lowest){
-  if(!sc.fixed) return;
-  const mark = (up) => {
-    const t = svg('text', { class: 't-over', x: cx, y: up ? top + 11 : top + plotH - 3, 'text-anchor': 'middle' }, up ? '▲' : '▼');
-    t.appendChild(svg('title', {}, up ? 'Above the scale (' + fmtNum(sc.hi) + ')' : 'Below the scale (' + fmtNum(sc.lo) + ')'));
-    g.appendChild(t);
-  };
-  if(highest > sc.hi) mark(true);
-  if(lowest < sc.lo) mark(false);
-}
 
 // Sets a widget's scale: null (Auto), 'current' (Fix at current scale), { min, max }, or
 // 'shared' (follows the common scale again). While the common scale is on, any other choice
@@ -4681,6 +4707,143 @@ function scaleChooser(w, onChange){
   wrap.append(mode, minBox, to, maxBox, fixNow);
   show();
   return wrap;
+}
+
+// Sets the common scale: null or 'own' (Each its own), 'auto', 'current' (Fixed for all at the
+// range the board shown's bars and charts take now) or { min, max }. Returns it, or throws.
+function setCommonScale(spec){
+  if(spec === null || spec === 'own') commonScale = { mode: 'own' };
+  else if(spec === 'auto') commonScale = { mode: 'auto' };
+  else if(spec === 'current'){
+    const r = model ? boardAutoRange(board, currentResults(), true) : null;
+    commonScale = Object.assign({ mode: 'fixed' }, r ? niceScale(r.lo, r.hi) : { min: 0, max: 1 });
+  } else {
+    const s = cleanScale(spec);
+    if(!s) throw new Error('A scale is two numbers, its "from" below its "to".');
+    commonScale = { mode: 'fixed', min: s.min, max: s.max };
+  }
+  syncCommonScale();
+  return commonScaleData();
+}
+
+// Scale: Each its own, Auto for all or Fixed for all (from … to …, 📏), above the bars and charts.
+function commonScaleChooser(){
+  const wrap = make('span', 'scale-chooser common-scale');
+  const mode = make('select');
+  mode.setAttribute('aria-label', 'Common scale');
+  mode.title = 'One vertical scale for every bar and chart, on every board, unless it keeps its own (its scale list\'s first choice is Shared). The Tornado and Spider keep their own.';
+  [['own', 'Each its own'], ['auto', 'Auto for all'], ['fixed', 'Fixed for all']].forEach(([v, t]) => { const o = make('option', null, t); o.value = v; mode.appendChild(o); });
+  const box = (label) => {
+    const i = make('input', 'scale-box');
+    i.type = 'number';
+    i.step = 'any';
+    i.setAttribute('aria-label', label);
+    i.title = label;
+    return i;
+  };
+  const minBox = box('Common scale from'), maxBox = box('Common scale to');
+  const to = make('span', 'scale-to', 'to');
+  const fixNow = make('button', 'mini scale-fix', '📏');
+  fixNow.type = 'button';
+  fixNow.title = 'Fix the common scale at the current scale';
+  fixNow.setAttribute('aria-label', 'Fix the common scale at the current scale');
+  // Shown in place, so a change keeps the focus where it is.
+  const show = () => {
+    const fixed = commonScale.mode === 'fixed';
+    mode.value = commonScale.mode;
+    minBox.value = fixed ? String(commonScale.min) : '';
+    maxBox.value = fixed ? String(commonScale.max) : '';
+    [minBox, to, maxBox, fixNow].forEach(el => el.classList.toggle('hidden', !fixed));
+  };
+  const changed = () => { notify('', null, 'scale'); show(); commonScaleChanged(); };
+  mode.addEventListener('change', () => { setCommonScale(mode.value === 'fixed' ? 'current' : mode.value); changed(); });
+  fixNow.addEventListener('click', () => { setCommonScale('current'); changed(); });
+  const typed = () => {
+    const num = (i) => i.value.trim() === '' ? NaN : Number(i.value);
+    const s = cleanScale({ min: num(minBox), max: num(maxBox) });
+    if(!s){
+      notify('The common scale wasn\'t changed: its "from" and "to" must be numbers, "from" below "to".', 'err', 'scale');
+      show();
+      return;
+    }
+    if(commonScale.min === s.min && commonScale.max === s.max) return;
+    setCommonScale(s);
+    changed();
+  };
+  [minBox, maxBox].forEach(i => i.addEventListener('change', typed));
+  wrap.append(mode, minBox, to, maxBox, fixNow);
+  show();
+  return wrap;
+}
+
+function commonScaleChanged(){
+  saveBoardSoon();
+  renderBoard(); // the widgets' "Shared (…)" choices say the new scale
+}
+// ============================================================
+// A bar's or chart's vertical scale (the owner's request, 12 October 2026). Auto, as before:
+// stretched to the numbers shown and always taking in zero, so it changes as a slider moves.
+// Fixed: from a min to a max the person chose, so a change shows as a change in size. A
+// widget's `scale` is absent or null (Auto) or { min, max } with min below max (board file
+// version 5; the template form leaves it out). A number past a fixed scale is drawn to the
+// edge with ▲ or ▼; its label and hover text still give the number itself. A scenario
+// waterfall's fixed scale is shared by all its outputs.
+// Either may give way to the common scale for every bar and chart (below, board file 12).
+// ============================================================
+const SCALE_LIMIT = 1e15;
+const autoScales = new Map(); // widget id → { lo, hi }: what Auto would show now (Fix at current scale)
+
+// A scale from a file, storage or a script: { min, max }, or null (Auto).
+function cleanScale(raw){
+  if(!raw || typeof raw !== 'object' || typeof raw.min !== 'number' || typeof raw.max !== 'number') return null;
+  const { min, max } = raw;
+  if(!Number.isFinite(min) || !Number.isFinite(max) || Math.abs(min) > SCALE_LIMIT || Math.abs(max) > SCALE_LIMIT || !(min < max)) return null;
+  return { min, max };
+}
+
+// Auto's range rounded outwards to two significant figures of its span: 0 to 1,234.5 → 0 to 1,300.
+function niceScale(lo, hi){
+  if(!(hi > lo)) return { min: lo, max: lo + 1 };
+  const step = Math.pow(10, Math.floor(Math.log10(hi - lo)) - 1);
+  const r = (x) => Number(x.toPrecision(12));
+  return { min: r(Math.floor(lo / step + 1e-9) * step), max: r(Math.ceil(hi / step - 1e-9) * step) };
+}
+
+// The range a widget is drawn on: its fixed scale, or Auto's. record: remember Auto's range for
+// Fix at current scale (a scenario waterfall records the range of all its outputs itself).
+function scaleFor(w, lo, hi, record){
+  if(record !== false) autoScales.set(w.id, { lo, hi });
+  if(followsCommonScale(w)){ // the common scale, below
+    if(commonScale.mode === 'fixed') return { lo: commonScale.min, hi: commonScale.max, fixed: true };
+    if(commonAuto) return { lo: commonAuto.lo, hi: commonAuto.hi, fixed: false };
+  }
+  return w.scale ? { lo: w.scale.min, hi: w.scale.max, fixed: true } : { lo, hi, fixed: false };
+}
+// y for a number on that range, kept inside the plot.
+function scaleY(top, plotH, sc){
+  return (v) => top + (sc.hi - Math.max(sc.lo, Math.min(sc.hi, v))) / (sc.hi - sc.lo) * plotH;
+}
+// The zero line (when zero is on the scale) and, on a fixed scale, its two ends.
+function drawScaleAxis(chart, sc, y, W, top, plotH){
+  if(sc.lo <= 0 && sc.hi >= 0) chart.appendChild(svg('line', { class: 'b-zero', x1: 0, x2: W, y1: y(0), y2: y(0) }));
+  if(!sc.fixed) return;
+  chart.appendChild(svg('line', { class: 'b-scale-edge', x1: 0, x2: W, y1: top, y2: top }));
+  chart.appendChild(svg('line', { class: 'b-scale-edge', x1: 0, x2: W, y1: top + plotH, y2: top + plotH }));
+  chart.appendChild(svg('text', { class: 't-axis', x: W - 2, y: top + 10, 'text-anchor': 'end' }, fmtNum(sc.hi)));
+  chart.appendChild(svg('text', { class: 't-axis', x: W - 2, y: top + plotH - 3, 'text-anchor': 'end' }, fmtNum(sc.lo)));
+}
+// The scale's two numbers drawn last, over the bars.
+function raiseScaleLabels(chart){ chart.querySelectorAll('.t-axis').forEach(t => chart.appendChild(t)); }
+// ▲ / ▼ where a number goes past a fixed scale.
+function drawOverMarks(g, sc, cx, top, plotH, highest, lowest){
+  if(!sc.fixed) return;
+  const mark = (up) => {
+    const t = svg('text', { class: 't-over', x: cx, y: up ? top + 11 : top + plotH - 3, 'text-anchor': 'middle' }, up ? '▲' : '▼');
+    t.appendChild(svg('title', {}, up ? 'Above the scale (' + fmtNum(sc.hi) + ')' : 'Below the scale (' + fmtNum(sc.lo) + ')'));
+    g.appendChild(t);
+  };
+  if(highest > sc.hi) mark(true);
+  if(lowest < sc.lo) mark(false);
 }
 
 // ============================================================
@@ -4774,23 +4937,6 @@ function shownCommonScale(b){
   return r ? niceScale(r.lo, r.hi) : null;
 }
 
-// Sets the common scale: null or 'own' (Each its own), 'auto', 'current' (Fixed for all at the
-// range the board shown's bars and charts take now) or { min, max }. Returns it, or throws.
-function setCommonScale(spec){
-  if(spec === null || spec === 'own') commonScale = { mode: 'own' };
-  else if(spec === 'auto') commonScale = { mode: 'auto' };
-  else if(spec === 'current'){
-    const r = model ? boardAutoRange(board, currentResults(), true) : null;
-    commonScale = Object.assign({ mode: 'fixed' }, r ? niceScale(r.lo, r.hi) : { min: 0, max: 1 });
-  } else {
-    const s = cleanScale(spec);
-    if(!s) throw new Error('A scale is two numbers, its "from" below its "to".');
-    commonScale = { mode: 'fixed', min: s.min, max: s.max };
-  }
-  syncCommonScale();
-  return commonScaleData();
-}
-
 // A widget's scale list's first choice: "Shared (Auto for all)", "Shared (0 to 1,000)".
 function commonScaleText(){
   return commonScale.mode === 'fixed' ? 'Shared (' + fmtNum(commonScale.min) + ' to ' + fmtNum(commonScale.max) + ')' : 'Shared (Auto for all)';
@@ -4803,59 +4949,30 @@ function shownScale(w){
     : w.scale ? { lo: w.scale.min, hi: w.scale.max, fixed: true } : autoScales.get(w.id);
   return sc ? { min: sc.lo, max: sc.hi, fixed: !!sc.fixed, shared: follows } : null;
 }
+// ============================================================
+// Choosing a rectangle's colour on fmGraph's page (a colour box, its Automatic swatch). Looking
+// colours up is 04e-colours.js, the board engine's.
+// ============================================================
 
-// Scale: Each its own, Auto for all or Fixed for all (from … to …, 📏), above the bars and charts.
-function commonScaleChooser(){
-  const wrap = make('span', 'scale-chooser common-scale');
-  const mode = make('select');
-  mode.setAttribute('aria-label', 'Common scale');
-  mode.title = 'One vertical scale for every bar and chart, on every board, unless it keeps its own (its scale list\'s first choice is Shared). The Tornado and Spider keep their own.';
-  [['own', 'Each its own'], ['auto', 'Auto for all'], ['fixed', 'Fixed for all']].forEach(([v, t]) => { const o = make('option', null, t); o.value = v; mode.appendChild(o); });
-  const box = (label) => {
-    const i = make('input', 'scale-box');
-    i.type = 'number';
-    i.step = 'any';
-    i.setAttribute('aria-label', label);
-    i.title = label;
-    return i;
-  };
-  const minBox = box('Common scale from'), maxBox = box('Common scale to');
-  const to = make('span', 'scale-to', 'to');
-  const fixNow = make('button', 'mini scale-fix', '📏');
-  fixNow.type = 'button';
-  fixNow.title = 'Fix the common scale at the current scale';
-  fixNow.setAttribute('aria-label', 'Fix the common scale at the current scale');
-  // Shown in place, so a change keeps the focus where it is.
-  const show = () => {
-    const fixed = commonScale.mode === 'fixed';
-    mode.value = commonScale.mode;
-    minBox.value = fixed ? String(commonScale.min) : '';
-    maxBox.value = fixed ? String(commonScale.max) : '';
-    [minBox, to, maxBox, fixNow].forEach(el => el.classList.toggle('hidden', !fixed));
-  };
-  const changed = () => { notify('', null, 'scale'); show(); commonScaleChanged(); };
-  mode.addEventListener('change', () => { setCommonScale(mode.value === 'fixed' ? 'current' : mode.value); changed(); });
-  fixNow.addEventListener('click', () => { setCommonScale('current'); changed(); });
-  const typed = () => {
-    const num = (i) => i.value.trim() === '' ? NaN : Number(i.value);
-    const s = cleanScale({ min: num(minBox), max: num(maxBox) });
-    if(!s){
-      notify('The common scale wasn\'t changed: its "from" and "to" must be numbers, "from" below "to".', 'err', 'scale');
-      show();
-      return;
-    }
-    if(commonScale.min === s.min && commonScale.max === s.max) return;
-    setCommonScale(s);
-    changed();
-  };
-  [minBox, maxBox].forEach(i => i.addEventListener('change', typed));
-  wrap.append(mode, minBox, to, maxBox, fixNow);
-  show();
-  return wrap;
+// Chooses a rectangle's colour everywhere (null: back to the automatic one).
+function setRectColour(key, colour){
+  const c = colour === null ? null : cleanColour(colour);
+  if(c) rectColours.set(key, c); else rectColours.delete(key);
+  forgetAutoColours();
 }
-function commonScaleChanged(){
-  saveBoardSoon();
-  renderBoard(); // the widgets' "Shared (…)" choices say the new scale
+
+// A colour box's Automatic (the shared colour grid): the colour the rectangle goes back to,
+// whether one is chosen now, and going back — one undo step, through done().
+function automaticColour(key, fallback, done, name){
+  return { colour: autoColours().get(key) || fallback, name, chosen: !!chosenColour(key),
+    choose: () => { setRectColour(key, null); done(); } };
+}
+
+// A colour box's pick: choosing what the rectangle would have anyway clears the choice.
+function chooseRectColour(key, colour){
+  const c = cleanColour(colour);
+  setRectColour(key, null);
+  if(c && c !== shownColour(key)) setRectColour(key, c);
 }
 // ============================================================
 // Shared colours (the owner's request of 26 October 2026, board file 11): a rectangle has one
@@ -4879,6 +4996,7 @@ function commonScaleChanged(){
 // it), and a note says how many rectangles had another colour somewhere.
 // ============================================================
 const PART_COLOURS = ['#0f766e', '#2563eb', '#d97706', '#7c3aed', '#db2777', '#0891b2', '#65a30d', '#9f1239'];
+const DEFAULT_BAR_COLOUR = '#0f766e'; // the page's usual bar colour
 const COLOURS_LIMIT = 2000; // chosen colours read from a file, at most
 let rectColours = new Map(); // rectangle key → '#rrggbb', the chosen ones
 let autoColourMemo = null;   // rectangle key → its automatic colour, until the boards change
@@ -4923,27 +5041,9 @@ function forgetAutoColours(){ autoColourMemo = null; }
 // A rectangle's colour: chosen, else automatic, else null (the usual look).
 function chosenColour(key){ return rectColours.get(key) || null; }
 function rectColour(key){ return chosenColour(key) || autoColours().get(key) || null; }
-// Chooses a rectangle's colour everywhere (null: back to the automatic one).
-function setRectColour(key, colour){
-  const c = colour === null ? null : cleanColour(colour);
-  if(c) rectColours.set(key, c); else rectColours.delete(key);
-  forgetAutoColours();
-}
 
 // The colour a slider, a bar or a key shows: the rectangle's, else the page's usual bar colour.
 function shownColour(key){ return rectColour(key) || DEFAULT_BAR_COLOUR; }
-// A colour box's Automatic (the shared colour grid): the colour the rectangle goes back to,
-// whether one is chosen now, and going back — one undo step, through done().
-function automaticColour(key, fallback, done, name){
-  return { colour: autoColours().get(key) || fallback, name, chosen: !!chosenColour(key),
-    choose: () => { setRectColour(key, null); done(); } };
-}
-// A colour box's pick: choosing what the rectangle would have anyway clears the choice.
-function chooseRectColour(key, colour){
-  const c = cleanColour(colour);
-  setRectColour(key, null);
-  if(c && c !== shownColour(key)) setRectColour(key, c);
-}
 
 // Takes the colours older files kept on widgets into the shared ones (see the top).
 function adoptWidgetColours(){
@@ -4969,6 +5069,145 @@ function adoptWidgetColours(){
   }));
   if(any) forgetAutoColours();
   if(differ) notify(differ + ' rectangle' + (differ === 1 ? ' had' : 's had') + ' different colours in different bars or charts; each now has one colour everywhere, the first one.', 'info', 'colours');
+}
+// ============================================================
+// Changing a Free chart's pieces on fmGraph's page (+ From chart…, removing, placing, align,
+// distribute, tidy). Reading and working out the pieces are 04f-free.js, the board engine's.
+// ============================================================
+
+// A Columns or Flow chart's rectangles as pieces (+ From chart…, and switching to Free),
+// starting at column `from`: a Columns chart's groups on zero (with its check, each later group
+// should equal the first); a Flow's steps — start and total on zero, add where the step before
+// ends, subtract the same with Minus, total should equal where the step before ends.
+function piecesFromChart(src, from){
+  const out = [];
+  if(src.layout === 'columns'){
+    src.groups.forEach(g => out.push({ id: newPieceId(), name: g.name, column: from + out.length, sits: { on: 'zero' }, minus: false, check: null, parts: g.parts.slice(0, FREE_LIMITS.parts) }));
+    if(src.check) out.slice(1).forEach(p => { if(p.parts.length && out[0].parts.length) p.check = out[0].id; });
+  } else if(src.layout === 'flow'){
+    src.steps.forEach((s, i) => {
+      const prev = out[i - 1];
+      const p = { id: newPieceId(), name: '', column: from + i, sits: { on: 'zero' }, minus: false, check: null, parts: [s.key] };
+      if(prev && (s.role === 'add' || s.role === 'subtract')) p.sits = { on: 'end', of: prev.id };
+      if(s.role === 'subtract') p.minus = true;
+      if(s.role === 'total' && prev) p.check = prev.id;
+      out.push(p);
+    });
+  }
+  return out;
+}
+
+// Adds a chart's pieces to a Free chart, after its last column; at most 40 pieces in all.
+// Returns how many were left out.
+function addPiecesFrom(c, src){
+  const from = c.pieces.length ? Math.max(...c.pieces.map(p => p.column)) + 1 : 0;
+  const all = piecesFromChart(src, from);
+  const room = FREE_LIMITS.pieces - c.pieces.length;
+  const taken = all.slice(0, Math.max(0, room));
+  const ids = new Set(taken.map(p => p.id));
+  taken.forEach(p => {
+    p.column = Math.min(p.column, FREE_LIMITS.columns - 1);
+    if(p.sits.of && !ids.has(p.sits.of)) p.sits = { on: 'zero' };
+    if(p.check && !ids.has(p.check)) p.check = null;
+  });
+  c.pieces.push(...taken);
+  settleColumns(c);
+  return all.length - taken.length;
+}
+
+// Removes a piece; pieces resting on it go on zero, checks against it go.
+function removePiece(c, p){
+  c.pieces = c.pieces.filter(q => q !== p);
+  c.pieces.forEach(q => {
+    if(q.sits.of === p.id) q.sits = { on: 'zero' };
+    if(q.check === p.id) q.check = null;
+  });
+  settleColumns(c);
+}
+
+// ---- placing on the grid (phase F2) ----
+// The pieces that move across with p: p and those resting on it (through any chain) in its own
+// column — a stack on a stack goes with it; a waterfall step in another column stays (the owner's
+// choice 3a, 27 October 2026).
+function pieceStack(c, p){ return c.pieces.filter(q => q === p || (q.column === p.column && restsOnChain(c, q, p))); }
+
+const sameSits = (a, b) => a.on === b.on && (a.on === 'level' ? a.value === b.value : (a.of || null) === (b.of || null));
+
+// Where p could sit, as the drag's guides propose it: on zero, then on top of and where each other
+// piece ends (none that would make a loop, none that can't be worked out), each with the level
+// it gives in figs (freeFigures, in the list's order).
+function sitsChoices(c, p, figs){
+  const out = [{ sits: { on: 'zero' }, level: 0, label: 'on zero' }];
+  c.pieces.forEach((q, i) => {
+    const f = figs[i];
+    if(q === p || wouldLoop(c, p, q.id) || !f || f.top === undefined) return;
+    out.push({ sits: { on: 'top', of: q.id }, level: f.up > 0 || f.down === 0 ? f.top : f.bottom, label: 'on top of ' + pieceLabel(c, q) });
+    out.push({ sits: { on: 'end', of: q.id }, level: f.end, label: 'where ' + pieceLabel(c, q) + ' ends' });
+  });
+  return out;
+}
+
+// Puts piece p in column col (0–39) and, when sits is given, sits it there. Its stack moves with
+// it; a piece already in that column which can't share it with p swaps to the column p left (the
+// owner's choice 2a). If p still can't stand there (it no longer rests on a piece in its own
+// column), its stack moves to the nearest column it fits. Returns null, or why it was refused.
+function placePiece(c, p, col, sits){
+  if(sits && (sits.on === 'top' || sits.on === 'end') && wouldLoop(c, p, sits.of)) return 'loop';
+  col = Math.round(Number(col));
+  if(!Number.isFinite(col)) return 'column';
+  col = Math.max(0, Math.min(FREE_LIMITS.columns - 1, col));
+  const stack = pieceStack(c, p), from = p.column;
+  if(sits) p.sits = sits.on === 'level' ? { on: 'level', value: cleanLevel(sits.value) } : sits.of ? { on: sits.on, of: sits.of } : { on: 'zero' };
+  if(col !== from){
+    stack.forEach(q => { q.column = col; });
+    c.pieces.forEach(q => { if(!stack.includes(q) && q.column === col && !freeRelated(c, p, q)) q.column = from; });
+  }
+  const fits = (at) => c.pieces.every(q => stack.includes(q) || q.column !== at || stack.every(s => freeRelated(c, s, q)));
+  if(!fits(p.column)){
+    for(let k = 1; k < FREE_LIMITS.columns; k++){
+      const at = [p.column + k, p.column - k].find(x => x >= 0 && x < FREE_LIMITS.columns && fits(x));
+      if(at !== undefined){ stack.forEach(q => { q.column = at; }); break; }
+    }
+  }
+  settleColumns(c);
+  return null;
+}
+
+// Align bottoms: the pieces on zero, staying in their columns where they may.
+function alignPieceBottoms(c, list){
+  list.forEach(p => { p.sits = { on: 'zero' }; });
+  settleColumns(c);
+}
+
+// Distribute (the rule of fmIDE's Distribute, src/shared/snap.js): the columns the pieces stand
+// in, three or more, spread evenly across the columns they span, whole columns, each column's
+// pieces moving together. Returns false when there are fewer than three columns.
+function distributePieces(c, list){
+  const cols = [...new Set(list.map(p => p.column))].sort((a, b) => a - b);
+  const at = distributePositions(cols.map(x => ({ x, y: 0, w: 1, h: 1 })), 'h');
+  if(!at) return false;
+  const to = new Map(cols.map((x, i) => [x, Math.round(at[i])]));
+  const moving = c.pieces.filter(p => to.has(p.column));
+  const still = c.pieces.filter(p => !to.has(p.column));
+  moving.forEach(p => { p.column = to.get(p.column); });
+  // Pieces not chosen standing where a column moved to go, their column together, to the next
+  // free one.
+  const displaced = [...new Set(still.filter(p => moving.some(q => q.column === p.column && !freeRelated(c, p, q))).map(p => p.column))];
+  displaced.forEach(col => {
+    const group = still.filter(p => p.column === col);
+    group.forEach(p => { p.column = -1; });
+    const free = nextFreeColumn({ pieces: c.pieces.filter(x => x.column >= 0) });
+    group.forEach(p => { p.column = free; });
+  });
+  settleColumns(c);
+  return true;
+}
+
+// Tidy: the empty columns closed up, the pieces keeping their order.
+function tidyPieces(c){
+  const cols = [...new Set(c.pieces.map(p => p.column))].sort((a, b) => a - b);
+  const to = new Map(cols.map((x, i) => [x, i]));
+  c.pieces.forEach(p => { p.column = to.get(p.column); });
 }
 // ============================================================
 // The Free chart (phase F1, docs/fmgraph-free-chart.md; board file 13): columns and waterfalls
@@ -5161,152 +5400,16 @@ function freeFigures(c, results){
     return f;
   });
 }
-
-// A Columns or Flow chart's rectangles as pieces (+ From chart…, and switching to Free),
-// starting at column `from`: a Columns chart's groups on zero (with its check, each later group
-// should equal the first); a Flow's steps — start and total on zero, add where the step before
-// ends, subtract the same with Minus, total should equal where the step before ends.
-function piecesFromChart(src, from){
-  const out = [];
-  if(src.layout === 'columns'){
-    src.groups.forEach(g => out.push({ id: newPieceId(), name: g.name, column: from + out.length, sits: { on: 'zero' }, minus: false, check: null, parts: g.parts.slice(0, FREE_LIMITS.parts) }));
-    if(src.check) out.slice(1).forEach(p => { if(p.parts.length && out[0].parts.length) p.check = out[0].id; });
-  } else if(src.layout === 'flow'){
-    src.steps.forEach((s, i) => {
-      const prev = out[i - 1];
-      const p = { id: newPieceId(), name: '', column: from + i, sits: { on: 'zero' }, minus: false, check: null, parts: [s.key] };
-      if(prev && (s.role === 'add' || s.role === 'subtract')) p.sits = { on: 'end', of: prev.id };
-      if(s.role === 'subtract') p.minus = true;
-      if(s.role === 'total' && prev) p.check = prev.id;
-      out.push(p);
-    });
-  }
-  return out;
-}
-// Adds a chart's pieces to a Free chart, after its last column; at most 40 pieces in all.
-// Returns how many were left out.
-function addPiecesFrom(c, src){
-  const from = c.pieces.length ? Math.max(...c.pieces.map(p => p.column)) + 1 : 0;
-  const all = piecesFromChart(src, from);
-  const room = FREE_LIMITS.pieces - c.pieces.length;
-  const taken = all.slice(0, Math.max(0, room));
-  const ids = new Set(taken.map(p => p.id));
-  taken.forEach(p => {
-    p.column = Math.min(p.column, FREE_LIMITS.columns - 1);
-    if(p.sits.of && !ids.has(p.sits.of)) p.sits = { on: 'zero' };
-    if(p.check && !ids.has(p.check)) p.check = null;
-  });
-  c.pieces.push(...taken);
-  settleColumns(c);
-  return all.length - taken.length;
-}
-
-// Removes a piece; pieces resting on it go on zero, checks against it go.
-function removePiece(c, p){
-  c.pieces = c.pieces.filter(q => q !== p);
-  c.pieces.forEach(q => {
-    if(q.sits.of === p.id) q.sits = { on: 'zero' };
-    if(q.check === p.id) q.check = null;
-  });
-  settleColumns(c);
-}
-
-// ---- placing on the grid (phase F2) ----
-// The pieces that move across with p: p and those resting on it (through any chain) in its own
-// column — a stack on a stack goes with it; a waterfall step in another column stays (the owner's
-// choice 3a, 27 October 2026).
-function pieceStack(c, p){ return c.pieces.filter(q => q === p || (q.column === p.column && restsOnChain(c, q, p))); }
-const sameSits = (a, b) => a.on === b.on && (a.on === 'level' ? a.value === b.value : (a.of || null) === (b.of || null));
-
-// Where p could sit, as the drag's guides propose it: on zero, then on top of and where each other
-// piece ends (none that would make a loop, none that can't be worked out), each with the level
-// it gives in figs (freeFigures, in the list's order).
-function sitsChoices(c, p, figs){
-  const out = [{ sits: { on: 'zero' }, level: 0, label: 'on zero' }];
-  c.pieces.forEach((q, i) => {
-    const f = figs[i];
-    if(q === p || wouldLoop(c, p, q.id) || !f || f.top === undefined) return;
-    out.push({ sits: { on: 'top', of: q.id }, level: f.up > 0 || f.down === 0 ? f.top : f.bottom, label: 'on top of ' + pieceLabel(c, q) });
-    out.push({ sits: { on: 'end', of: q.id }, level: f.end, label: 'where ' + pieceLabel(c, q) + ' ends' });
-  });
-  return out;
-}
-
-// Puts piece p in column col (0–39) and, when sits is given, sits it there. Its stack moves with
-// it; a piece already in that column which can't share it with p swaps to the column p left (the
-// owner's choice 2a). If p still can't stand there (it no longer rests on a piece in its own
-// column), its stack moves to the nearest column it fits. Returns null, or why it was refused.
-function placePiece(c, p, col, sits){
-  if(sits && (sits.on === 'top' || sits.on === 'end') && wouldLoop(c, p, sits.of)) return 'loop';
-  col = Math.round(Number(col));
-  if(!Number.isFinite(col)) return 'column';
-  col = Math.max(0, Math.min(FREE_LIMITS.columns - 1, col));
-  const stack = pieceStack(c, p), from = p.column;
-  if(sits) p.sits = sits.on === 'level' ? { on: 'level', value: cleanLevel(sits.value) } : sits.of ? { on: sits.on, of: sits.of } : { on: 'zero' };
-  if(col !== from){
-    stack.forEach(q => { q.column = col; });
-    c.pieces.forEach(q => { if(!stack.includes(q) && q.column === col && !freeRelated(c, p, q)) q.column = from; });
-  }
-  const fits = (at) => c.pieces.every(q => stack.includes(q) || q.column !== at || stack.every(s => freeRelated(c, s, q)));
-  if(!fits(p.column)){
-    for(let k = 1; k < FREE_LIMITS.columns; k++){
-      const at = [p.column + k, p.column - k].find(x => x >= 0 && x < FREE_LIMITS.columns && fits(x));
-      if(at !== undefined){ stack.forEach(q => { q.column = at; }); break; }
-    }
-  }
-  settleColumns(c);
-  return null;
-}
-
-// Align bottoms: the pieces on zero, staying in their columns where they may.
-function alignPieceBottoms(c, list){
-  list.forEach(p => { p.sits = { on: 'zero' }; });
-  settleColumns(c);
-}
-// Distribute (the rule of fmIDE's Distribute, src/shared/snap.js): the columns the pieces stand
-// in, three or more, spread evenly across the columns they span, whole columns, each column's
-// pieces moving together. Returns false when there are fewer than three columns.
-function distributePieces(c, list){
-  const cols = [...new Set(list.map(p => p.column))].sort((a, b) => a - b);
-  const at = distributePositions(cols.map(x => ({ x, y: 0, w: 1, h: 1 })), 'h');
-  if(!at) return false;
-  const to = new Map(cols.map((x, i) => [x, Math.round(at[i])]));
-  const moving = c.pieces.filter(p => to.has(p.column));
-  const still = c.pieces.filter(p => !to.has(p.column));
-  moving.forEach(p => { p.column = to.get(p.column); });
-  // Pieces not chosen standing where a column moved to go, their column together, to the next
-  // free one.
-  const displaced = [...new Set(still.filter(p => moving.some(q => q.column === p.column && !freeRelated(c, p, q))).map(p => p.column))];
-  displaced.forEach(col => {
-    const group = still.filter(p => p.column === col);
-    group.forEach(p => { p.column = -1; });
-    const free = nextFreeColumn({ pieces: c.pieces.filter(x => x.column >= 0) });
-    group.forEach(p => { p.column = free; });
-  });
-  settleColumns(c);
-  return true;
-}
-// Tidy: the empty columns closed up, the pieces keeping their order.
-function tidyPieces(c){
-  const cols = [...new Set(c.pieces.map(p => p.column))].sort((a, b) => a - b);
-  const to = new Map(cols.map((x, i) => [x, i]));
-  c.pieces.forEach(p => { p.column = to.get(p.column); });
-}
 // ============================================================
-// Drawing the board. renderBoard() builds every widget; updateValues() redraws only the
-// numbers and bars (it runs on every slider move). Everything from the model (names, canvas
-// and period labels) goes in as text — textContent, or SVG text nodes — never as markup.
+// fmGraph's board page: renderBoard() builds every widget with its editing controls;
+// updateValues() redraws only the numbers and bars (it runs on every slider move). The SVG of the
+// bars is 05-render.js, the board engine's. Everything from the model goes in as text.
 // ============================================================
-const SVG_NS = 'http://www.w3.org/2000/svg';
-function svg(tag, attrs, text){
-  const el = document.createElementNS(SVG_NS, tag);
-  Object.keys(attrs || {}).forEach(k => el.setAttribute(k, String(attrs[k])));
-  if(text !== undefined) el.textContent = String(text);
-  return el;
-}
 
 let activeSlider = null;   // the slider being moved or pointed at: its reach is lit
+
 let quietTimer = null;
+
 let updatePending = false;
 
 function showBoard(){
@@ -5381,7 +5484,6 @@ function periodsChooser(spec, onChange, shared){
 
 // A colour box (the shared colour grid opens from it, 09-start.js); onChange gets '#rrggbb';
 // automatic (optional, automaticColour) gives the grid its Automatic swatch.
-const DEFAULT_BAR_COLOUR = '#0f766e';
 function colourPicker(value, label, onChange, automatic){
   const c = make('input', 'colour-pick');
   c.type = 'color';
@@ -5450,6 +5552,7 @@ function renderBoard(){
 
 // The sliders whose Range and step is open: kept open through a redraw (the page's own, not saved).
 const slidersRanging = new Set();
+
 function rememberOpenRanges(){
   document.querySelectorAll('#sliderList .slider-widget').forEach(el => {
     const box = el.querySelector('details.slider-range');
@@ -5583,13 +5686,6 @@ function sliderWidget(s){
   return w;
 }
 
-// What a slider shows: its value, or where the model's own number sits.
-function sliderShown(s){
-  if(s.value !== null) return s.value;
-  if(s.mode === 'shift') return 0;
-  return baseValue(model.byKey.get(s.key), periodsOf(s.periods)[0] || 0);
-}
-
 function moveSlider(s, v){
   s.value = v;
   setActiveSlider(s.id);
@@ -5608,10 +5704,12 @@ function setActiveSlider(id){
   activeSlider = id;
   paintReach();
 }
+
 function quietSoon(ms){
   clearTimeout(quietTimer);
   quietTimer = setTimeout(() => { activeSlider = null; paintReach(); }, ms);
 }
+
 function paintReach(){
   if(!model || !board) return; // (a timer after the model has gone: the first screen again)
   const s = board.sliders.find(x => x.id === activeSlider);
@@ -5653,6 +5751,25 @@ function updateValues(){
   markScenarios(); // (05f-scenarios.js)
   paintReach();
   updateDock(); // (05g-phone.js)
+}
+// ============================================================
+// Drawing the board. renderBoard() builds every widget; updateValues() redraws only the
+// numbers and bars (it runs on every slider move). Everything from the model (names, canvas
+// and period labels) goes in as text — textContent, or SVG text nodes — never as markup.
+// ============================================================
+const SVG_NS = 'http://www.w3.org/2000/svg';
+function svg(tag, attrs, text){
+  const el = document.createElementNS(SVG_NS, tag);
+  Object.keys(attrs || {}).forEach(k => el.setAttribute(k, String(attrs[k])));
+  if(text !== undefined) el.textContent = String(text);
+  return el;
+}
+
+// What a slider shows: its value, or where the model's own number sits.
+function sliderShown(s){
+  if(s.value !== null) return s.value;
+  if(s.mode === 'shift') return 0;
+  return baseValue(model.byKey.get(s.key), periodsOf(s.periods)[0] || 0);
 }
 
 // "Model's number: 10", or the first and last when the periods it covers differ.
@@ -5727,14 +5844,11 @@ function drawBars(el, b, results){
   problems.forEach((periods, code) => list.appendChild(make('li', null, periods.join(', ') + ': ' + errorText(code))));
 }
 // ============================================================
-// Drawing and editing charts (G2; the data is 04b-charts.js). A chart widget has its chart, a
-// key of what each colour is, any problems (errors, totals that don't agree) as text, and
-// "Edit chart", where its groups and rectangles (or its steps) are chosen. Like a bar widget,
-// it shows the model's own values as dashed outlines once a slider has changed them, and lights
-// up when a slider reaches any of its rectangles.
+// fmGraph's charts on its page: each chart's widget, Edit chart, and the key's colour boxes.
+// Drawing the charts is 05b-chart-render.js, the board engine's.
 // ============================================================
+
 const chartsEditing = new Set(); // charts whose editor is open (this page only)
-const ROLE_LABELS = { start: 'Start', add: 'Add', subtract: 'Subtract', total: 'Total' };
 
 function chartWidget(c){
   const w = make('div', 'widget chart-widget');
@@ -5823,6 +5937,7 @@ function chartEditor(c){
   box.appendChild(scaleRow);
   return box;
 }
+
 function chartEditorParts(c){
   const box = make('details', 'chart-edit');
   if(chartsEditing.has(c.id)) box.open = true;
@@ -6028,6 +6143,105 @@ function chartEditorParts(c){
   return box;
 }
 
+// A key's swatch picks the rectangle's colour on every board.
+function pickRectColour(k){ return (v) => { chooseRectColour(k, v); saveBoardSoon(); renderBoard(); }; }
+// The swatch of rectangle k in a chart's key (the board engine asks for it): its colour box,
+// with an Automatic swatch of `automatic` when nothing is chosen.
+function rectKeySwatch(k, colour, label, automatic){
+  const sw = colourPicker(colour, label, pickRectColour(k), automaticColour(k, automatic, redrawColours));
+  sw.classList.add('key-swatch');
+  return sw;
+}
+// The swatch of a chart's own colour (a Tornado's Low, `colour`, and High, `colour2`): Automatic
+// goes back to `usual`.
+function chartKeySwatch(c, prop, colour, label, usual){
+  const sw = colourPicker(colour, label, (v) => { c[prop] = v; saveBoardSoon(); renderBoard(); },
+    { colour: usual, chosen: !!c[prop], choose: () => { c[prop] = null; redrawColours(); } });
+  sw.classList.add('key-swatch');
+  return sw;
+}
+
+// ---- the Tornado and the Spider (step 18; figures in 04b-charts.js, kept in 03-calc.js) ----
+// One input's row in Edit chart (A2): shown or not, the input, by percent or amount, Low and High,
+// and what those are in the input's own numbers now ("now 10: 9 … 11", in the chart's period,
+// with the sliders where they are).
+function sensitivityInputRow(c, inp, n, changed, rowButtons){
+  const wrap = make('div', 'sens-row');
+  wrap.dataset.input = partLabel(inp.key);
+  const row = make('div', 'edit-row');
+  const show = make('input');
+  show.type = 'checkbox';
+  show.checked = inp.show;
+  show.title = 'Show in the chart';
+  show.setAttribute('aria-label', 'Show in the chart');
+  show.addEventListener('change', () => { inp.show = show.checked; changed(); });
+  const rs = rectSelect(inp.key, true);
+  rs.addEventListener('change', () => {
+    if(c.inputs.some((x, i) => i !== n && x.key === rs.value)){
+      notify(partLabel(rs.value) + ' is already in this chart: each input is moved once.', 'err', 'chart');
+      rs.value = inp.key;
+      return;
+    }
+    notify('', null, 'chart');
+    inp.key = rs.value;
+    changed();
+  });
+  const by = make('select');
+  by.setAttribute('aria-label', 'Change by');
+  [['percent', '%'], ['amount', '±']].forEach(([v, t]) => { const o = make('option', null, t); o.value = v; o.title = v === 'percent' ? 'By a percent' : 'By an amount'; if(inp.by === v) o.selected = true; by.appendChild(o); });
+  by.title = 'By a percent (%) or an amount (±)';
+  // Another mode starts from its own Low and High (−10% … +10%, or −1 … +1).
+  by.addEventListener('change', () => { Object.assign(inp, { by: by.value }, defaultBounds(by.value)); changed(); });
+  const note = make('div', 'sens-own');
+  const writeNote = () => {
+    const rect = model.byKey.get(inp.key);
+    const now = (shownOverrides().get(inp.key) || [])[c.period];
+    const v = typeof now === 'number' ? now : baseValue(rect, c.period);
+    const at = (x) => inp.by === 'amount' ? v + x : v * (1 + x / 100);
+    note.textContent = 'Now ' + fmtNum(v) + ': ' + fmtNum(at(inp.low)) + ' … ' + fmtNum(at(inp.high)) + ' in ' + model.periods[c.period]
+      + (inp.by === 'percent' && model.periods.every((_, p) => baseValue(rect, p) === 0) ? ' — it is 0, so a percent doesn\'t move it: choose ±.' : '');
+  };
+  const bound = (label, side) => {
+    const box = make('input', 'sens-bound');
+    box.type = 'number';
+    box.step = 'any';
+    box.value = String(inp[side]);
+    box.title = label + (inp.by === 'percent' ? ' (%)' : '');
+    box.setAttribute('aria-label', label);
+    box.addEventListener('change', () => {
+      const v = box.value.trim() === '' ? NaN : Number(box.value);
+      if(!Number.isFinite(v)){
+        notify(label + ' wasn\'t changed: it must be a number.', 'err', 'chart');
+        box.value = String(inp[side]);
+        return;
+      }
+      notify('', null, 'chart');
+      inp[side] = cleanBound(v, inp[side]);
+      box.value = String(inp[side]);
+      writeNote();
+      saveBoardSoon();
+      updateValues();
+    });
+    return box;
+  };
+  row.append(show, rs, by, bound('Low', 'low'), make('span', 'scale-to', 'to'), bound('High', 'high'), rowButtons(c.inputs, n));
+  writeNote();
+  wrap.append(row, note);
+  return wrap;
+}
+// ============================================================
+// Drawing and editing charts (G2; the data is 04b-charts.js). A chart widget has its chart, a
+// key of what each colour is, any problems (errors, totals that don't agree) as text, and
+// "Edit chart", where its groups and rectangles (or its steps) are chosen. Like a bar widget,
+// it shows the model's own values as dashed outlines once a slider has changed them, and lights
+// up when a slider reaches any of its rectangles.
+// The drawing is the board engine's (the showcase viewer draws charts with it too); the widget,
+// Edit chart and the key's colour boxes are fmGraph's page (05b-chart-render-edit.js). A key's
+// swatch comes from the page: rectKeySwatch / chartKeySwatch (fmGraph's a colour box, the
+// viewer's a plain mark), and a Free chart's grid from freeGridHook (05p-free-grid.js).
+// ============================================================
+const ROLE_LABELS = { start: 'Start', add: 'Add', subtract: 'Subtract', total: 'Total' };
+
 function partLabel(key){ const r = model.byKey.get(key); return r ? r.name : '?'; }
 function groupLabel(c, gi){ return c.groups[gi].name || 'Group ' + (gi + 1); }
 
@@ -6056,8 +6270,6 @@ function partColours(c){
   chartKeys(c).forEach(k => { if(!out.has(k)) out.set(k, rectColour(k) || PART_COLOURS[0]); });
   return out;
 }
-// A key's swatch picks the rectangle's colour on every board.
-function pickRectColour(k){ return (v) => { chooseRectColour(k, v); saveBoardSoon(); renderBoard(); }; }
 
 // ---- the key leaves out rectangles at 0 (the owner's idea of 27 October 2026) ----
 // A balance sheet with only cash and a loan shouldn't list every account. A rectangle is left
@@ -6067,6 +6279,7 @@ function pickRectColour(k){ return (v) => { chooseRectColour(k, v); saveBoardSoo
 // Its bars are still drawn; "+N at 0" at the end of the key shows them (Edit chart still
 // chooses their colours). Always on: nothing about it is saved.
 const keyZerosOpen = new Set(); // charts whose key shows the rectangles at 0 too (this page only)
+let gifMaking = null;               // while a GIF is made: { model, positions, cancelled } (05o-play-gif.js)
 // The calculations a key looks at.
 function keyResults(results){
   const list = [results, compareResults()];
@@ -6189,8 +6402,7 @@ function drawColumns(c, results, problems, key){
     parts.forEach(k => {
       const item = markKeyZero(make('label', 'key-item'), k, choice);
       // The swatch is the colour box: a click picks this rectangle's colour everywhere.
-      const sw = colourPicker(colours.get(k), 'Colour of ' + partLabel(k), pickRectColour(k), automaticColour(k, PART_COLOURS[0], redrawColours));
-      sw.classList.add('key-swatch');
+      const sw = rectKeySwatch(k, colours.get(k), 'Colour of ' + partLabel(k), PART_COLOURS[0]);
       item.append(sw, document.createTextNode(partLabel(k)));
       line.appendChild(item);
     });
@@ -6263,8 +6475,7 @@ function drawLines(c, results, problems, key){
   const line = make('div', 'key-line');
   [...new Set(c.lines)].filter(choice.shows).forEach(k => {
     const item = markKeyZero(make('label', 'key-item'), k, choice);
-    const sw = colourPicker(colours.get(k), 'Colour of ' + partLabel(k), pickRectColour(k), automaticColour(k, PART_COLOURS[0], redrawColours));
-    sw.classList.add('key-swatch');
+    const sw = rectKeySwatch(k, colours.get(k), 'Colour of ' + partLabel(k), PART_COLOURS[0]);
     item.append(sw, document.createTextNode(partLabel(k)));
     line.appendChild(item);
   });
@@ -6409,75 +6620,6 @@ function drawScenarioFlow(c, key, oi, figs, problems){
   return chart;
 }
 
-// ---- the Tornado and the Spider (step 18; figures in 04b-charts.js, kept in 03-calc.js) ----
-// One input's row in Edit chart (A2): shown or not, the input, by percent or amount, Low and High,
-// and what those are in the input's own numbers now ("now 10: 9 … 11", in the chart's period,
-// with the sliders where they are).
-function sensitivityInputRow(c, inp, n, changed, rowButtons){
-  const wrap = make('div', 'sens-row');
-  wrap.dataset.input = partLabel(inp.key);
-  const row = make('div', 'edit-row');
-  const show = make('input');
-  show.type = 'checkbox';
-  show.checked = inp.show;
-  show.title = 'Show in the chart';
-  show.setAttribute('aria-label', 'Show in the chart');
-  show.addEventListener('change', () => { inp.show = show.checked; changed(); });
-  const rs = rectSelect(inp.key, true);
-  rs.addEventListener('change', () => {
-    if(c.inputs.some((x, i) => i !== n && x.key === rs.value)){
-      notify(partLabel(rs.value) + ' is already in this chart: each input is moved once.', 'err', 'chart');
-      rs.value = inp.key;
-      return;
-    }
-    notify('', null, 'chart');
-    inp.key = rs.value;
-    changed();
-  });
-  const by = make('select');
-  by.setAttribute('aria-label', 'Change by');
-  [['percent', '%'], ['amount', '±']].forEach(([v, t]) => { const o = make('option', null, t); o.value = v; o.title = v === 'percent' ? 'By a percent' : 'By an amount'; if(inp.by === v) o.selected = true; by.appendChild(o); });
-  by.title = 'By a percent (%) or an amount (±)';
-  // Another mode starts from its own Low and High (−10% … +10%, or −1 … +1).
-  by.addEventListener('change', () => { Object.assign(inp, { by: by.value }, defaultBounds(by.value)); changed(); });
-  const note = make('div', 'sens-own');
-  const writeNote = () => {
-    const rect = model.byKey.get(inp.key);
-    const now = (shownOverrides().get(inp.key) || [])[c.period];
-    const v = typeof now === 'number' ? now : baseValue(rect, c.period);
-    const at = (x) => inp.by === 'amount' ? v + x : v * (1 + x / 100);
-    note.textContent = 'Now ' + fmtNum(v) + ': ' + fmtNum(at(inp.low)) + ' … ' + fmtNum(at(inp.high)) + ' in ' + model.periods[c.period]
-      + (inp.by === 'percent' && model.periods.every((_, p) => baseValue(rect, p) === 0) ? ' — it is 0, so a percent doesn\'t move it: choose ±.' : '');
-  };
-  const bound = (label, side) => {
-    const box = make('input', 'sens-bound');
-    box.type = 'number';
-    box.step = 'any';
-    box.value = String(inp[side]);
-    box.title = label + (inp.by === 'percent' ? ' (%)' : '');
-    box.setAttribute('aria-label', label);
-    box.addEventListener('change', () => {
-      const v = box.value.trim() === '' ? NaN : Number(box.value);
-      if(!Number.isFinite(v)){
-        notify(label + ' wasn\'t changed: it must be a number.', 'err', 'chart');
-        box.value = String(inp[side]);
-        return;
-      }
-      notify('', null, 'chart');
-      inp[side] = cleanBound(v, inp[side]);
-      box.value = String(inp[side]);
-      writeNote();
-      saveBoardSoon();
-      updateValues();
-    });
-    return box;
-  };
-  row.append(show, rs, by, bound('Low', 'low'), make('span', 'scale-to', 'to'), bound('High', 'high'), rowButtons(c.inputs, n));
-  writeNote();
-  wrap.append(row, note);
-  return wrap;
-}
-
 const TORNADO_LOW = '#2563eb', TORNADO_HIGH = '#d97706';
 const shortName = (name, room) => name.length > room ? name.slice(0, Math.max(1, room - 1)) + '…' : name;
 const signed = (v, by) => (v > 0 ? '+' : v < 0 ? '−' : '') + fmtNum(Math.abs(v)) + (by === 'percent' ? '%' : '');
@@ -6515,27 +6657,24 @@ function drawSensitivity(c, problems, key){
   if(flat.length) problems.push(flat.map(f => partLabel(f.key)).join(', ') + ' is 0: a change by percent doesn\'t move it (an amount would).');
   const chart = c.layout === 'tornado' ? drawTornado(c, figures, shown, name, where) : drawSpider(c, figures, shown, name, where);
   if(!ready) chart.classList.add('stale');
-  // The key: its swatches pick the colours.
+  // The key: its swatches pick the colours (on fmGraph's page).
   const line = make('div', 'key-line');
-  const swatch = (colour, label, text, set, automatic) => {
+  const swatch = (sw, text) => {
     const item = make('label', 'key-item');
-    const sw = colourPicker(colour, label, (v) => { set(v); saveBoardSoon(); renderBoard(); }, automatic);
-    sw.classList.add('key-swatch');
     item.append(sw, document.createTextNode(text));
     line.appendChild(item);
   };
   if(c.layout === 'tornado'){
     // The chart's own colours; Automatic goes back to the usual blue and orange.
-    const usual = (prop, colour) => ({ colour, chosen: !!c[prop], choose: () => { c[prop] = null; redrawColours(); } });
-    swatch(c.colour || TORNADO_LOW, 'Colour of Low', 'Low', (v) => { c.colour = v; }, usual('colour', TORNADO_LOW));
-    swatch(c.colour2 || TORNADO_HIGH, 'Colour of High', 'High', (v) => { c.colour2 = v; }, usual('colour2', TORNADO_HIGH));
+    swatch(chartKeySwatch(c, 'colour', c.colour || TORNADO_LOW, 'Colour of Low', TORNADO_LOW), 'Low');
+    swatch(chartKeySwatch(c, 'colour2', c.colour2 || TORNADO_HIGH, 'Colour of High', TORNADO_HIGH), 'High');
   } else {
     // An input at 0 whose line stays flat (it moves nothing) is left out, as at 0 elsewhere.
     const flatAtZero = new Set(shown.filter(f => !f.error && f.swing === 0).map(f => f.key));
     const choice = keyChoice(c, [...flatAtZero], [c.period], currentResults());
     figures.inputs.forEach((f, i) => {
       if(!f.show || !choice.shows(f.key)) return;
-      swatch(spiderColour(c, f.key, i), 'Colour of ' + partLabel(f.key), partLabel(f.key), (v) => { chooseRectColour(f.key, v); }, automaticColour(f.key, PART_COLOURS[i % PART_COLOURS.length], redrawColours));
+      swatch(rectKeySwatch(f.key, spiderColour(c, f.key, i), 'Colour of ' + partLabel(f.key), PART_COLOURS[i % PART_COLOURS.length]), partLabel(f.key));
       markKeyZero(line.lastChild, f.key, choice);
     });
     key.appendChild(line);
@@ -6875,26 +7014,22 @@ $('phoneShareSliders').addEventListener('click', () => { closePhoneMenu(); if(bo
 
 // The top bar's height (--gbar-h), for the Sliders column that stays on screen under it.
 if(window.ResizeObserver) new ResizeObserver(() => document.body.style.setProperty('--gbar-h', document.querySelector('.gbar').offsetHeight + 'px')).observe(document.querySelector('.gbar'));
+
+// Keep this board's own positions (on), or share them (off: it takes the shared positions).
+function setOwnSliders(b, on){
+  on = !!on;
+  if(!!b.ownSliders === on) return false;
+  syncShared(); // what moved so far is shared before the board leaves or joins
+  b.ownSliders = on;
+  b.sliders.forEach(s => { delete s._sharedKey; delete s._sharedValue; });
+  saveBoardSoon();
+  renderAll();
+  return true;
+}
 // ============================================================
-// Exploring (G4a).
-// - Trace: 🔍 on a bar or chart pins what reaches it. The sliders on the board that reach it
-//   light up (the others fade), and a note under its heading says, in words, the way each one
-//   gets there ("Price → Revenue → Profit"), and which inputs reach it with no slider yet
-//   (+ Slider). 🔍 again, × on the note or Esc clears it. Moving a slider shows that slider's
-//   reach meanwhile, as before; the trace comes back when it is still. Worked out from the
-//   arrows (model.reach, model.reach.path), like the lighting.
-// - Biggest movers: the rectangles whose values the sliders change most, against the model's
-//   own numbers (the owner's choice: the dashed outlines' comparison, steady while dragging) —
-//   or against A while one is pinned (G4b, 05e-compare.js),
-//   from the whole model, not only the board. Ranked by the change in % in the period where it
-//   is largest (a rectangle that couldn't be worked out before, or can't now, comes first);
-//   inputs left out (the sliders set them). + Bar puts one on the board. Worked out only while
-//   the panel is open.
-// Nothing here changes the model or the boards (+ Bar and + Slider do, as their buttons).
+// Trace and Biggest movers on fmGraph's page: the 🔍 buttons, the note under a traced widget
+// (with + Slider), the movers' panel (with + Bar). What reaches what is 05d-explore.js.
 // ============================================================
-const MOVERS_SHOWN = 8;
-const TRACE_INPUTS_SHOWN = 12;
-let traceId = null;            // the bar or chart traced, or null
 
 function traceButton(w){
   const t = make('button', 'widget-trace', '🔍');
@@ -6915,31 +7050,6 @@ function setTrace(id){
   });
   renderTraceNote();
   paintReach();
-}
-
-// The keys a bar or chart shows.
-function itemKeys(w){ return w.kind === 'chart' ? chartKeys(w) : [w.key]; }
-
-// What reaches a bar or chart: for each slider on the board and each input, the way there.
-function traceOf(w, withPaths = true){
-  const keys = itemKeys(w).filter(k => model.byKey.has(k));
-  // Whether an input reaches it: the reach sets are kept (cheap); the way there is worked out
-  // only for the sliders, whose ways are shown.
-  const reaches = (from) => { const r = model.reach(from); return keys.some(k => k === from || r.has(k)); };
-  const wayTo = (from) => {
-    for(const k of keys){ const p = model.reach.path(from, k); if(p) return p; }
-    return null;
-  };
-  const names = (path) => path.filter(k => model.byKey.has(k)).map(k => model.byKey.get(k).name);
-  const sliders = [], withSlider = new Set();
-  board.sliders.forEach(s => {
-    if(!reaches(s.key)) return;
-    withSlider.add(s.key);
-    if(!withPaths){ sliders.push({ id: s.id, key: s.key }); return; }
-    sliders.push({ id: s.id, key: s.key, path: names(wayTo(s.key)) });
-  });
-  const inputs = withPaths ? model.inputs.filter(r => !withSlider.has(r.key) && reaches(r.key)).map(r => ({ key: r.key, name: r.name, canvas: r.canvasName })) : [];
-  return { sliders, inputs };
 }
 
 function renderTraceNote(){
@@ -6995,6 +7105,83 @@ function renderTraceNote(){
   el.querySelector('.widget-head').after(note);
 }
 
+function updateMovers(results){
+  const panel = $('moversPanel');
+  if(!panel || !model || !panel.open || playNow()) return; // waits while Play runs (05m-play.js)
+  const list = $('moversList');
+  const movers = biggestMovers(results, MOVERS_SHOWN);
+  list.textContent = '';
+  $('moversEmpty').classList.toggle('hidden', movers.length > 0);
+  movers.forEach(m => {
+    const li = make('li', 'mover');
+    li.dataset.key = m.rect.key;
+    const top = make('div', 'mover-top');
+    top.appendChild(make('span', 'mover-name', m.rect.name));
+    top.appendChild(make('span', 'mover-where', m.rect.canvasName + ' · ' + model.periods[m.p]));
+    const onBoard = board.bars.some(b => b.key === m.rect.key);
+    const add = make('button', 'link-btn', onBoard ? 'On the board' : '+ Bar');
+    add.type = 'button';
+    add.disabled = onBoard || board.bars.length >= BOARD_LIMIT;
+    add.title = onBoard ? 'This board has a bar for it' : 'Show ' + m.rect.name + ' as a bar';
+    add.addEventListener('click', () => { if(addBar(m.rect.key)) renderBoard(); });
+    top.appendChild(add);
+    li.append(top, make('div', 'mover-change ' + (m.now.error || m.was.error ? 'err' : (m.now.value > m.was.value ? 'up' : 'down')), moverText(m)));
+    list.appendChild(li);
+  });
+}
+
+$('moversPanel').addEventListener('toggle', () => { if(model) updateMovers(currentResults()); });
+document.addEventListener('keydown', (ev) => {
+  if(ev.key !== 'Escape' || !traceId || ev.defaultPrevented) return;
+  if(!$('confirmBox').classList.contains('hidden')) return;
+  setTrace(null);
+});
+// ============================================================
+// Exploring (G4a).
+// - Trace: 🔍 on a bar or chart pins what reaches it. The sliders on the board that reach it
+//   light up (the others fade), and a note under its heading says, in words, the way each one
+//   gets there ("Price → Revenue → Profit"), and which inputs reach it with no slider yet
+//   (+ Slider). 🔍 again, × on the note or Esc clears it. Moving a slider shows that slider's
+//   reach meanwhile, as before; the trace comes back when it is still. Worked out from the
+//   arrows (model.reach, model.reach.path), like the lighting.
+// - Biggest movers: the rectangles whose values the sliders change most, against the model's
+//   own numbers (the owner's choice: the dashed outlines' comparison, steady while dragging) —
+//   or against A while one is pinned (G4b, 05e-compare.js),
+//   from the whole model, not only the board. Ranked by the change in % in the period where it
+//   is largest (a rectangle that couldn't be worked out before, or can't now, comes first);
+//   inputs left out (the sliders set them). + Bar puts one on the board. Worked out only while
+//   the panel is open.
+// Nothing here changes the model or the boards (+ Bar and + Slider do, as their buttons).
+// ============================================================
+const MOVERS_SHOWN = 8;
+const TRACE_INPUTS_SHOWN = 12;
+let traceId = null;            // the bar or chart traced, or null
+
+// The keys a bar or chart shows.
+function itemKeys(w){ return w.kind === 'chart' ? chartKeys(w) : [w.key]; }
+
+// What reaches a bar or chart: for each slider on the board and each input, the way there.
+function traceOf(w, withPaths = true){
+  const keys = itemKeys(w).filter(k => model.byKey.has(k));
+  // Whether an input reaches it: the reach sets are kept (cheap); the way there is worked out
+  // only for the sliders, whose ways are shown.
+  const reaches = (from) => { const r = model.reach(from); return keys.some(k => k === from || r.has(k)); };
+  const wayTo = (from) => {
+    for(const k of keys){ const p = model.reach.path(from, k); if(p) return p; }
+    return null;
+  };
+  const names = (path) => path.filter(k => model.byKey.has(k)).map(k => model.byKey.get(k).name);
+  const sliders = [], withSlider = new Set();
+  board.sliders.forEach(s => {
+    if(!reaches(s.key)) return;
+    withSlider.add(s.key);
+    if(!withPaths){ sliders.push({ id: s.id, key: s.key }); return; }
+    sliders.push({ id: s.id, key: s.key, path: names(wayTo(s.key)) });
+  });
+  const inputs = withPaths ? model.inputs.filter(r => !withSlider.has(r.key) && reaches(r.key)).map(r => ({ key: r.key, name: r.name, canvas: r.canvasName })) : [];
+  return { sliders, inputs };
+}
+
 // The trace's lighting (paintReach calls it when no slider is being moved): returns false
 // when there is nothing traced.
 function paintTrace(){
@@ -7045,38 +7232,30 @@ function moverText(m){
   if(m.was.error) return 'now ' + fmtNum(m.now.value) + ' (couldn\'t be worked out before)';
   return fmtNum(m.was.value) + ' → ' + fmtNum(m.now.value) + ' (' + fmtDiff(m.now.value, m.was.value) + ')';
 }
+// ============================================================
+// The compare strip on fmGraph's page (A, ⇄ Swap, Unpin) and 📌 Pin as A. A itself and the
+// gliding bars are 05e-compare.js, the board engine's.
+// ============================================================
 
-function updateMovers(results){
-  const panel = $('moversPanel');
-  if(!panel || !model || !panel.open || playNow()) return; // waits while Play runs (05m-play.js)
-  const list = $('moversList');
-  const movers = biggestMovers(results, MOVERS_SHOWN);
-  list.textContent = '';
-  $('moversEmpty').classList.toggle('hidden', movers.length > 0);
-  movers.forEach(m => {
-    const li = make('li', 'mover');
-    li.dataset.key = m.rect.key;
-    const top = make('div', 'mover-top');
-    top.appendChild(make('span', 'mover-name', m.rect.name));
-    top.appendChild(make('span', 'mover-where', m.rect.canvasName + ' · ' + model.periods[m.p]));
-    const onBoard = board.bars.some(b => b.key === m.rect.key);
-    const add = make('button', 'link-btn', onBoard ? 'On the board' : '+ Bar');
-    add.type = 'button';
-    add.disabled = onBoard || board.bars.length >= BOARD_LIMIT;
-    add.title = onBoard ? 'This board has a bar for it' : 'Show ' + m.rect.name + ' as a bar';
-    add.addEventListener('click', () => { if(addBar(m.rect.key)) renderBoard(); });
-    top.appendChild(add);
-    li.append(top, make('div', 'mover-change ' + (m.now.error || m.was.error ? 'err' : (m.now.value > m.was.value ? 'up' : 'down')), moverText(m)));
-    list.appendChild(li);
-  });
+function renderCompareBar(){
+  const bar = $('compareBar');
+  bar.textContent = '';
+  bar.classList.toggle('hidden', !pinA || !model);
+  $('btnPinA').setAttribute('aria-pressed', pinA ? 'true' : 'false');
+  if(!pinA || !model) return;
+  const mark = make('span', 'compare-mark', 'A');
+  holdToLook(mark, () => pinA ? { overrides: pinA.overrides, label: 'A' } : null); // on a phone (05h-phone-show.js)
+  bar.appendChild(mark);
+  const text = make('span', 'compare-text');
+  text.appendChild(make('strong', null, 'Comparing with A: '));
+  text.appendChild(document.createTextNode(pinA.label));
+  bar.appendChild(text);
+  const button = (label, title, fn) => { const b = make('button', 'compare-btn', label); b.type = 'button'; b.title = title; b.addEventListener('click', fn); bar.appendChild(b); return b; };
+  button('⇄ Swap', 'Put the sliders where A had them, and keep where they are now as A', () => swapWithA());
+  button('Unpin', 'Compare with the model\'s own numbers again', () => unpinA());
 }
 
-$('moversPanel').addEventListener('toggle', () => { if(model) updateMovers(currentResults()); });
-document.addEventListener('keydown', (ev) => {
-  if(ev.key !== 'Escape' || !traceId || ev.defaultPrevented) return;
-  if(!$('confirmBox').classList.contains('hidden')) return;
-  setTrace(null);
-});
+$('btnPinA').addEventListener('click', () => pinAsA());
 // ============================================================
 // Comparing and moving (G4b).
 // - The A/B snapshot: 📌 Pin as A keeps where the sliders are now (the numbers they lay over
@@ -7134,26 +7313,6 @@ function swapWithA(){
   return pinA.label;
 }
 
-function renderCompareBar(){
-  const bar = $('compareBar');
-  bar.textContent = '';
-  bar.classList.toggle('hidden', !pinA || !model);
-  $('btnPinA').setAttribute('aria-pressed', pinA ? 'true' : 'false');
-  if(!pinA || !model) return;
-  const mark = make('span', 'compare-mark', 'A');
-  holdToLook(mark, () => pinA ? { overrides: pinA.overrides, label: 'A' } : null); // on a phone (05h-phone-show.js)
-  bar.appendChild(mark);
-  const text = make('span', 'compare-text');
-  text.appendChild(make('strong', null, 'Comparing with A: '));
-  text.appendChild(document.createTextNode(pinA.label));
-  bar.appendChild(text);
-  const button = (label, title, fn) => { const b = make('button', 'compare-btn', label); b.type = 'button'; b.title = title; b.addEventListener('click', fn); bar.appendChild(b); return b; };
-  button('⇄ Swap', 'Put the sliders where A had them, and keep where they are now as A', () => swapWithA());
-  button('Unpin', 'Compare with the model\'s own numbers again', () => unpinA());
-}
-
-$('btnPinA').addEventListener('click', () => pinAsA());
-
 // ---- Animation ----
 const ANIM_MS = 200;
 const DRAG_GAP_MS = 150;
@@ -7185,6 +7344,136 @@ function glide(host){
   });
 }
 function forgetGeometry(){ lastGeometry = new Map(); }
+// ============================================================
+// The Scenarios panel on fmGraph's page: saving, renaming, updating, moving, deleting and
+// showing scenarios. Reading them and their numbers are 05f-scenarios.js, the board engine's.
+// ============================================================
+
+function freeScenarioName(){
+  for(let i = 1; ; i++){ const n = 'sc' + String(i).padStart(2, '0'); if(!scenarios.some(s => sameName(s.name, n))) return n; }
+}
+
+function saveScenario(name){
+  if(!model) return null;
+  if(scenarios.length >= SCENARIOS_LIMIT){ notify('A model has at most ' + SCENARIOS_LIMIT + ' scenarios.', 'err', 'scenarios'); return null; }
+  let n = cleanText(name, SCENARIO_NAME_MAX);
+  if(n && scenarios.some(s => sameName(s.name, n))){ notify('There is already a scenario called “' + n + '”.', 'err', 'scenarios'); return null; }
+  if(!n) n = freeScenarioName();
+  scenarios.push({ name: n, settings: slidersNow() });
+  saveBoardSoon();
+  renderBoard();
+  return n;
+}
+
+function renameScenario(sc, name){
+  const n = cleanText(name, SCENARIO_NAME_MAX);
+  if(!n || n === sc.name) return false;
+  if(scenarios.some(s => s !== sc && sameName(s.name, n))){ notify('There is already a scenario called “' + n + '”.', 'err', 'scenarios'); renderScenarios(); return false; }
+  if(pinA && pinA.scenario === sc.name){ pinA.scenario = n; pinA.label = scenarioLabel(n, sc.settings); renderCompareBar(); }
+  eachScenarioChart(c => { c.use = c.use.map(u => sameName(u, sc.name) ? n : u); }); // scenario waterfalls follow the name
+  sc.name = n;
+  saveBoardSoon();
+  renderBoard();
+  return true;
+}
+
+function updateScenario(sc){
+  sc.settings = slidersNow();
+  saveBoardSoon();
+  renderBoard();
+}
+
+function moveScenario(sc, to){
+  const from = scenarios.indexOf(sc);
+  const i = Math.max(0, Math.min(scenarios.length - 1, to));
+  if(from < 0 || from === i) return;
+  scenarios.splice(from, 1);
+  scenarios.splice(i, 0, sc);
+  saveBoardSoon();
+  renderBoard();
+}
+
+function deleteScenario(sc){
+  scenarios = scenarios.filter(s => s !== sc);
+  eachScenarioChart(c => { c.use = c.use.filter(u => !sameName(u, sc.name)); });
+  saveBoardSoon();
+  renderBoard();
+}
+
+// Every scenario waterfall that names its scenarios, on every board (04b-charts.js).
+function eachScenarioChart(fn){ boards.forEach(b => b.items.forEach(w => { if(w.kind === 'chart' && w.layout === 'scenarios' && w.use) fn(w); })); }
+
+// ▶ Show: the board's sliders where the scenario had them. Returns how many of the inputs it
+// changes have no slider on this board.
+function showScenario(sc){
+  const left = sc.settings.slice();
+  liveSliders().forEach(s => {
+    const i = left.findIndex(o => settingKey(o) === settingKey(s));
+    s.value = i >= 0 ? left.splice(i, 1)[0].value : null;
+  });
+  renderBoard();
+  if(left.length){
+    const names = [...new Set(left.map(s => model.byKey.get(s.key).name))];
+    notify('“' + sc.name + '” also changes ' + names.join(', ') + ', with no slider ' + (names.length === 1 ? 'like it' : 'like them') + ' on this board: + Slider adds one.', 'info', 'scenarios');
+  }
+  return left.length;
+}
+
+// ---- the panel ----
+function renderScenarios(){
+  const list = $('scenarioList');
+  list.textContent = '';
+  $('scenariosEmpty').classList.toggle('hidden', !!scenarios.length);
+  if(!model) return;
+  scenarios.forEach((sc, i) => {
+    const li = make('li', 'scenario');
+    li.dataset.name = sc.name;
+    const name = make('input', 'scenario-name');
+    name.type = 'text';
+    name.value = sc.name;
+    name.maxLength = SCENARIO_NAME_MAX;
+    name.setAttribute('aria-label', 'Scenario name');
+    name.addEventListener('change', () => { if(!renameScenario(sc, name.value)) name.value = sc.name; });
+    name.addEventListener('keydown', (ev) => { if(ev.key === 'Enter') name.blur(); });
+    const button = (cls, label, title, fn) => { const b = make('button', 'scenario-btn ' + cls, label); b.type = 'button'; b.title = title; b.setAttribute('aria-label', title); b.addEventListener('click', fn); return b; };
+    li.append(name,
+      button('scenario-show', '▶', 'Show: put the sliders where this scenario has them', () => showScenario(sc)),
+      button('scenario-compare', 'A', 'Compare with this scenario', () => { if(pinA && pinA.scenario === sc.name) unpinA(); else compareWithScenario(sc); markScenarios(); }),
+      button('scenario-update', '⟳', 'Keep where the sliders are now in this scenario', () => updateScenario(sc)),
+      button('scenario-up', '↑', 'Move up', () => moveScenario(sc, i - 1)),
+      button('scenario-down', '↓', 'Move down', () => moveScenario(sc, i + 1)),
+      button('scenario-delete', '×', 'Delete this scenario', () => deleteScenario(sc)));
+    // On a phone, a finger held on A looks at the scenario until it lifts (05h-phone-show.js).
+    holdToLook(li.querySelector('.scenario-compare'), () => ({ overrides: overridesFor(sc.settings), label: 'scenario “' + sc.name + '”' }));
+    li.querySelector('.scenario-up').disabled = i === 0;
+    li.querySelector('.scenario-down').disabled = i === scenarios.length - 1;
+    const what = make('div', 'scenario-what', sc.settings.length ? settingsLabel(sc.settings) : 'The model\'s own numbers');
+    li.appendChild(what);
+    list.appendChild(li);
+  });
+  markScenarios();
+  renderPlayRow(); // (05m-play.js)
+}
+
+// Marks the scenario the sliders match, and the one compared with.
+function markScenarios(){
+  if(!model) return;
+  document.querySelectorAll('#scenarioList .scenario').forEach(li => {
+    const sc = scenarios.find(s => s.name === li.dataset.name);
+    if(!sc) return;
+    const shown = scenarioShown(sc);
+    li.classList.toggle('current', shown);
+    li.querySelector('.scenario-show').setAttribute('aria-pressed', shown ? 'true' : 'false');
+    li.querySelector('.scenario-compare').setAttribute('aria-pressed', pinA && pinA.scenario === sc.name ? 'true' : 'false');
+  });
+}
+
+$('btnSaveScenario').addEventListener('click', () => {
+  const n = saveScenario();
+  if(!n) return;
+  const box = document.querySelector('#scenarioList .scenario[data-name="' + CSS.escape(n) + '"] .scenario-name');
+  if(box){ box.focus(); box.select(); }
+});
 // ============================================================
 // Named scenarios (step 15, after G5; the owner's request, 3 October 2026). A scenario is a
 // name and where sliders were when it was saved — each slider's input, mode, periods and value
@@ -7231,9 +7520,6 @@ function scenariosData(){
   return scenarios.map(sc => ({ name: sc.name, sliders: sc.settings.map(s => Object.assign(at(s.key), { mode: s.mode, periods: Object.assign({}, s.periods), value: s.value })) }));
 }
 const sameName = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
-function freeScenarioName(){
-  for(let i = 1; ; i++){ const n = 'sc' + String(i).padStart(2, '0'); if(!scenarios.some(s => sameName(s.name, n))) return n; }
-}
 function findScenario(name){
   const s = scenarios.find(x => sameName(x.name, String(name)));
   if(!s) throw new Error('There is no scenario "' + String(name).slice(0, 60) + '".');
@@ -7254,65 +7540,6 @@ function scenarioShown(sc){
 // The scenario's numbers worked out (results, as resultsWith).
 function scenarioResults(sc){ return resultsWith(overridesFor(sc.settings)); }
 
-function saveScenario(name){
-  if(!model) return null;
-  if(scenarios.length >= SCENARIOS_LIMIT){ notify('A model has at most ' + SCENARIOS_LIMIT + ' scenarios.', 'err', 'scenarios'); return null; }
-  let n = cleanText(name, SCENARIO_NAME_MAX);
-  if(n && scenarios.some(s => sameName(s.name, n))){ notify('There is already a scenario called “' + n + '”.', 'err', 'scenarios'); return null; }
-  if(!n) n = freeScenarioName();
-  scenarios.push({ name: n, settings: slidersNow() });
-  saveBoardSoon();
-  renderBoard();
-  return n;
-}
-function renameScenario(sc, name){
-  const n = cleanText(name, SCENARIO_NAME_MAX);
-  if(!n || n === sc.name) return false;
-  if(scenarios.some(s => s !== sc && sameName(s.name, n))){ notify('There is already a scenario called “' + n + '”.', 'err', 'scenarios'); renderScenarios(); return false; }
-  if(pinA && pinA.scenario === sc.name){ pinA.scenario = n; pinA.label = scenarioLabel(n, sc.settings); renderCompareBar(); }
-  eachScenarioChart(c => { c.use = c.use.map(u => sameName(u, sc.name) ? n : u); }); // scenario waterfalls follow the name
-  sc.name = n;
-  saveBoardSoon();
-  renderBoard();
-  return true;
-}
-function updateScenario(sc){
-  sc.settings = slidersNow();
-  saveBoardSoon();
-  renderBoard();
-}
-function moveScenario(sc, to){
-  const from = scenarios.indexOf(sc);
-  const i = Math.max(0, Math.min(scenarios.length - 1, to));
-  if(from < 0 || from === i) return;
-  scenarios.splice(from, 1);
-  scenarios.splice(i, 0, sc);
-  saveBoardSoon();
-  renderBoard();
-}
-function deleteScenario(sc){
-  scenarios = scenarios.filter(s => s !== sc);
-  eachScenarioChart(c => { c.use = c.use.filter(u => !sameName(u, sc.name)); });
-  saveBoardSoon();
-  renderBoard();
-}
-// Every scenario waterfall that names its scenarios, on every board (04b-charts.js).
-function eachScenarioChart(fn){ boards.forEach(b => b.items.forEach(w => { if(w.kind === 'chart' && w.layout === 'scenarios' && w.use) fn(w); })); }
-// ▶ Show: the board's sliders where the scenario had them. Returns how many of the inputs it
-// changes have no slider on this board.
-function showScenario(sc){
-  const left = sc.settings.slice();
-  liveSliders().forEach(s => {
-    const i = left.findIndex(o => settingKey(o) === settingKey(s));
-    s.value = i >= 0 ? left.splice(i, 1)[0].value : null;
-  });
-  renderBoard();
-  if(left.length){
-    const names = [...new Set(left.map(s => model.byKey.get(s.key).name))];
-    notify('“' + sc.name + '” also changes ' + names.join(', ') + ', with no slider ' + (names.length === 1 ? 'like it' : 'like them') + ' on this board: + Slider adds one.', 'info', 'scenarios');
-  }
-  return left.length;
-}
 function scenarioLabel(name, settings){ return 'scenario “' + name + '”' + (settings.length ? ' (' + settingsLabel(settings) + ')' : ' (the model\'s own numbers)'); }
 // A: compare with this scenario, as with a pinned A (05e-compare.js).
 function compareWithScenario(sc){
@@ -7322,61 +7549,6 @@ function compareWithScenario(sc){
   updateValues();
   return pinA.label;
 }
-
-// ---- the panel ----
-function renderScenarios(){
-  const list = $('scenarioList');
-  list.textContent = '';
-  $('scenariosEmpty').classList.toggle('hidden', !!scenarios.length);
-  if(!model) return;
-  scenarios.forEach((sc, i) => {
-    const li = make('li', 'scenario');
-    li.dataset.name = sc.name;
-    const name = make('input', 'scenario-name');
-    name.type = 'text';
-    name.value = sc.name;
-    name.maxLength = SCENARIO_NAME_MAX;
-    name.setAttribute('aria-label', 'Scenario name');
-    name.addEventListener('change', () => { if(!renameScenario(sc, name.value)) name.value = sc.name; });
-    name.addEventListener('keydown', (ev) => { if(ev.key === 'Enter') name.blur(); });
-    const button = (cls, label, title, fn) => { const b = make('button', 'scenario-btn ' + cls, label); b.type = 'button'; b.title = title; b.setAttribute('aria-label', title); b.addEventListener('click', fn); return b; };
-    li.append(name,
-      button('scenario-show', '▶', 'Show: put the sliders where this scenario has them', () => showScenario(sc)),
-      button('scenario-compare', 'A', 'Compare with this scenario', () => { if(pinA && pinA.scenario === sc.name) unpinA(); else compareWithScenario(sc); markScenarios(); }),
-      button('scenario-update', '⟳', 'Keep where the sliders are now in this scenario', () => updateScenario(sc)),
-      button('scenario-up', '↑', 'Move up', () => moveScenario(sc, i - 1)),
-      button('scenario-down', '↓', 'Move down', () => moveScenario(sc, i + 1)),
-      button('scenario-delete', '×', 'Delete this scenario', () => deleteScenario(sc)));
-    // On a phone, a finger held on A looks at the scenario until it lifts (05h-phone-show.js).
-    holdToLook(li.querySelector('.scenario-compare'), () => ({ overrides: overridesFor(sc.settings), label: 'scenario “' + sc.name + '”' }));
-    li.querySelector('.scenario-up').disabled = i === 0;
-    li.querySelector('.scenario-down').disabled = i === scenarios.length - 1;
-    const what = make('div', 'scenario-what', sc.settings.length ? settingsLabel(sc.settings) : 'The model\'s own numbers');
-    li.appendChild(what);
-    list.appendChild(li);
-  });
-  markScenarios();
-  renderPlayRow(); // (05m-play.js)
-}
-// Marks the scenario the sliders match, and the one compared with.
-function markScenarios(){
-  if(!model) return;
-  document.querySelectorAll('#scenarioList .scenario').forEach(li => {
-    const sc = scenarios.find(s => s.name === li.dataset.name);
-    if(!sc) return;
-    const shown = scenarioShown(sc);
-    li.classList.toggle('current', shown);
-    li.querySelector('.scenario-show').setAttribute('aria-pressed', shown ? 'true' : 'false');
-    li.querySelector('.scenario-compare').setAttribute('aria-pressed', pinA && pinA.scenario === sc.name ? 'true' : 'false');
-  });
-}
-
-$('btnSaveScenario').addEventListener('click', () => {
-  const n = saveScenario();
-  if(!n) return;
-  const box = document.querySelector('#scenarioList .scenario[data-name="' + CSS.escape(n) + '"] .scenario-name');
-  if(box){ box.focus(); box.select(); }
-});
 // ============================================================
 // fmGraph on a phone (step 17, phase P1a; docs/step17-phones.md). On a touchscreen whose
 // shorter side is under 600 pixels (isPhoneScreen, src/shared/phone.js) the page takes its
@@ -8909,48 +9081,9 @@ function rectSearchScroll(ev){
   placeRectSearch();
 }
 // ============================================================
-// The shared period (the owner's request, 18 October 2026): one period setting for every bar and
-// chart on every board of the model, which any of them can leave to keep its own.
-// - Two linked settings, above the bars and charts: Periods (all, one, or a range) for bars and
-//   Columns and Lines charts, and Period (one year) for the one-period charts — Waterfall, Scenario
-//   waterfall, Tornado and Spider. Kept with the model's boards (`sharedPeriods`, board file 9),
-//   undone and redone like any board change.
-// - A bar or chart follows them unless it keeps its own (`ownPeriod`): its period list's first
-//   choice, "Shared (…)", follows; choosing any period there keeps its own; "Shared" again
-//   follows. A new bar or chart follows; one from a file before version 9, or from a template,
-//   keeps the periods it had (the owner's choice).
-// - What follows takes the shared values into its own `periods` / `period` (syncSharedPeriods),
-//   so the drawing, the calculation and the file read them as before — and ExcelExporter, which
-//   reads a board file's charts, gets the periods each chart shows.
-// - Sliders are not part of it: a slider's periods say which periods it changes.
+// Choosing the shared period on fmGraph's page, and a widget's own. Reading and following it
+// are 05k-shared-period.js, the board engine's.
 // ============================================================
-
-let sharedPeriods = { periods: { mode: 'all' }, period: 0 };
-
-// Bars, Columns and Lines charts show several periods; the others one.
-const usesPeriods = (w) => w.kind === 'bar' || w.layout === 'columns' || w.layout === 'lines';
-
-function cleanSharedPeriods(raw, count){
-  const p = raw && typeof raw === 'object' ? Math.round(Number(raw.period)) : NaN;
-  return { periods: cleanPeriods(raw && raw.periods, count), period: Number.isFinite(p) && p >= 0 && p < count ? p : 0 };
-}
-
-// Every bar and chart following the shared period, on every board, takes it.
-function syncSharedPeriods(){
-  if(!model) return;
-  boards.forEach(b => b.items.forEach(w => {
-    if(w.ownPeriod) return;
-    if(usesPeriods(w)) w.periods = Object.assign({}, sharedPeriods.periods);
-    else w.period = sharedPeriods.period;
-  }));
-}
-
-// A periods spec in words: "All periods", "Year 2", "Year 2 to Year 4".
-function sharedPeriodsText(spec){
-  if(!spec || spec.mode === 'all') return 'All periods';
-  if(spec.mode === 'one') return model.periods[spec.p];
-  return model.periods[spec.from] + ' to ' + model.periods[spec.to];
-}
 
 // The shared settings above the bars and charts. Drawn with the tabs (a model, undo, redo), not
 // with the board, so a change keeps the focus where it is.
@@ -9012,6 +9145,49 @@ function widgetPeriodSelect(c, changed){
     changed();
   });
   return sel;
+}
+// ============================================================
+// The shared period (the owner's request, 18 October 2026): one period setting for every bar and
+// chart on every board of the model, which any of them can leave to keep its own.
+// - Two linked settings, above the bars and charts: Periods (all, one, or a range) for bars and
+//   Columns and Lines charts, and Period (one year) for the one-period charts — Waterfall, Scenario
+//   waterfall, Tornado and Spider. Kept with the model's boards (`sharedPeriods`, board file 9),
+//   undone and redone like any board change.
+// - A bar or chart follows them unless it keeps its own (`ownPeriod`): its period list's first
+//   choice, "Shared (…)", follows; choosing any period there keeps its own; "Shared" again
+//   follows. A new bar or chart follows; one from a file before version 9, or from a template,
+//   keeps the periods it had (the owner's choice).
+// - What follows takes the shared values into its own `periods` / `period` (syncSharedPeriods),
+//   so the drawing, the calculation and the file read them as before — and ExcelExporter, which
+//   reads a board file's charts, gets the periods each chart shows.
+// - Sliders are not part of it: a slider's periods say which periods it changes.
+// ============================================================
+
+let sharedPeriods = { periods: { mode: 'all' }, period: 0 };
+
+// Bars, Columns and Lines charts show several periods; the others one.
+const usesPeriods = (w) => w.kind === 'bar' || w.layout === 'columns' || w.layout === 'lines';
+
+function cleanSharedPeriods(raw, count){
+  const p = raw && typeof raw === 'object' ? Math.round(Number(raw.period)) : NaN;
+  return { periods: cleanPeriods(raw && raw.periods, count), period: Number.isFinite(p) && p >= 0 && p < count ? p : 0 };
+}
+
+// Every bar and chart following the shared period, on every board, takes it.
+function syncSharedPeriods(){
+  if(!model) return;
+  boards.forEach(b => b.items.forEach(w => {
+    if(w.ownPeriod) return;
+    if(usesPeriods(w)) w.periods = Object.assign({}, sharedPeriods.periods);
+    else w.period = sharedPeriods.period;
+  }));
+}
+
+// A periods spec in words: "All periods", "Year 2", "Year 2 to Year 4".
+function sharedPeriodsText(spec){
+  if(!spec || spec.mode === 'all') return 'All periods';
+  if(spec.mode === 'one') return model.periods[spec.p];
+  return model.periods[spec.from] + ' to ' + model.periods[spec.to];
 }
 // ============================================================
 // Goal seek (19 October 2026; docs/step15-fmgraph.md, later ideas): "what value of this
@@ -9303,6 +9479,89 @@ $('btnGoalSeek').addEventListener('click', () => {
   }, 0);
 });
 // ============================================================
+// Play on fmGraph's page: the row under the scenarios, the strip, its sliders, dock and mixer
+// painted as it plays, Esc. The motion and its clock are 05m-play.js, the board engine's.
+// ============================================================
+
+// What the play last painted: the board and its first widgets, so a redraw (another board, a
+// panel, Edit chart) is painted again.
+const paintMark = () => [board, $('sliderList').firstElementChild, $('barList').firstElementChild];
+
+// The sliders, the dock, the mixer, the reach and the strip, f of the way.
+function paintPlay(f){
+  board.sliders.forEach(s => {
+    const a = endSliderValue(playing.from.settings, s), b = endSliderValue(playing.to.settings, s);
+    let v = mixAt(a, b, f);
+    if(f !== 0 && f !== 1) v = roundToStep(v, s.step);
+    const el = document.querySelector('.slider-widget[data-id="' + s.id + '"]');
+    if(el){
+      el.classList.toggle('playing', !Object.is(a, b));
+      el.querySelector('input[type="range"]').value = String(v);
+      el.querySelector('.slider-value').value = String(v);
+    }
+    [dockControls.get(s.id), mixerControls.get(s.id)].forEach(c => { if(c && !c.dragging()) c.setValue(v); }); // (05g, 05h)
+  });
+  const reached = new Set(playing.moving);
+  playing.moving.forEach(k => model.reach(k).forEach(r => reached.add(r)));
+  $('board').classList.add('moving');
+  board.bars.forEach(b => { const el = document.querySelector('.bar-widget[data-id="' + b.id + '"]'); if(el) el.classList.toggle('reached', reached.has(b.key)); });
+  board.charts.forEach(c => {
+    const el = document.querySelector('.chart-widget[data-id="' + c.id + '"]');
+    if(!el) return;
+    el.classList.toggle('reached', chartKeys(c).some(k => reached.has(k)));
+    el.classList.toggle('play-held', isSensitivity(c));
+  });
+  const at = $('playAt');
+  if(at) at.textContent = settingsLabel(movingSettings(f));
+}
+
+function renderPlayBar(){
+  const bar = $('playBar');
+  bar.textContent = '';
+  bar.classList.toggle('hidden', !playing);
+  if(!playing) return;
+  const text = make('span', 'play-text');
+  const words = make('strong', 'play-words');
+  words.setAttribute('aria-live', 'polite');
+  if(playing.still){
+    const at = playing.index === 0 ? playing.from : playing.to, other = playing.index === 0 ? playing.to : playing.from;
+    words.textContent = 'Showing ' + at.name + '; the outlines show ' + playing.from.name;
+    text.title = 'Reduced motion is on: ⇄ steps between ' + at.name + ' and ' + other.name;
+  } else words.textContent = playWords();
+  text.appendChild(words);
+  const now = make('span', 'play-at');
+  now.id = 'playAt';
+  text.appendChild(now);
+  bar.appendChild(text);
+  const button = (label, title, fn) => { const b = make('button', 'compare-btn', label); b.type = 'button'; b.title = title; b.addEventListener('click', fn); bar.appendChild(b); return b; };
+  if(playing.still) button('⇄', 'Step to the other end', () => stepPlay()).id = 'btnPlayStep';
+  button('■ Stop', 'Stop playing: everything goes back as it was', () => stopPlay()).id = 'btnPlayStop';
+}
+
+// ---- the row under the scenarios ----
+function renderPlayRow(){
+  const options = playOptions(), ids = options.map(o => o[0]), def = playDefaults();
+  // The defaults follow the scenarios until the person picks an end.
+  if(!playChoice.picked || !ids.includes(playChoice.from)) playChoice.from = def.from;
+  if(!playChoice.picked || !ids.includes(playChoice.to)) playChoice.to = def.to;
+  [['playFrom', 'from'], ['playTo', 'to']].forEach(([id, end]) => {
+    const sel = $(id);
+    sel.textContent = '';
+    options.forEach(([v, words]) => { const o = make('option', null, words); o.value = v; sel.appendChild(o); });
+    sel.value = playChoice[end];
+  });
+}
+
+$('playFrom').addEventListener('change', () => { playChoice.from = $('playFrom').value; playChoice.picked = true; });
+$('playTo').addEventListener('change', () => { playChoice.to = $('playTo').value; playChoice.picked = true; });
+$('btnPlay').addEventListener('click', () => startPlay(playChoice.from, playChoice.to));
+
+// Esc stops it (and does only that); a press, a scroll or another key leaves it playing.
+document.addEventListener('keydown', (ev) => {
+  if(!playing || ev.key !== 'Escape') return;
+  ev.preventDefault(); ev.stopPropagation(); stopPlay();
+}, true);
+// ============================================================
 // Play (the owner's idea of 26 October 2026): the model swings between two ends and back, like
 // a pendulum, until it is stopped — so a change can be seen as it happens. Each end is a
 // scenario, the model's own numbers, or where the sliders are now (the row under the Scenarios
@@ -9470,9 +9729,6 @@ function sliderMoved(){
   playing.sliders = now;
   return moved;
 }
-// What the play last painted: the board and its first widgets, so a redraw (another board, a
-// panel, Edit chart) is painted again.
-const paintMark = () => [board, $('sliderList').firstElementChild, $('barList').firstElementChild];
 function playFrame(now){
   if(!playing) return;
   if(playing.model !== model || !model || !board || sliderMoved()){ stopPlay(); return; }
@@ -9493,59 +9749,9 @@ function showPlayPosition(i){
   me.painted = paintMark();
 }
 
-// The sliders, the dock, the mixer, the reach and the strip, f of the way.
-function paintPlay(f){
-  board.sliders.forEach(s => {
-    const a = endSliderValue(playing.from.settings, s), b = endSliderValue(playing.to.settings, s);
-    let v = mixAt(a, b, f);
-    if(f !== 0 && f !== 1) v = roundToStep(v, s.step);
-    const el = document.querySelector('.slider-widget[data-id="' + s.id + '"]');
-    if(el){
-      el.classList.toggle('playing', !Object.is(a, b));
-      el.querySelector('input[type="range"]').value = String(v);
-      el.querySelector('.slider-value').value = String(v);
-    }
-    [dockControls.get(s.id), mixerControls.get(s.id)].forEach(c => { if(c && !c.dragging()) c.setValue(v); }); // (05g, 05h)
-  });
-  const reached = new Set(playing.moving);
-  playing.moving.forEach(k => model.reach(k).forEach(r => reached.add(r)));
-  $('board').classList.add('moving');
-  board.bars.forEach(b => { const el = document.querySelector('.bar-widget[data-id="' + b.id + '"]'); if(el) el.classList.toggle('reached', reached.has(b.key)); });
-  board.charts.forEach(c => {
-    const el = document.querySelector('.chart-widget[data-id="' + c.id + '"]');
-    if(!el) return;
-    el.classList.toggle('reached', chartKeys(c).some(k => reached.has(k)));
-    el.classList.toggle('play-held', isSensitivity(c));
-  });
-  const at = $('playAt');
-  if(at) at.textContent = settingsLabel(movingSettings(f));
-}
-
 function playWords(){
   if(!playing) return null;
   return playing.still ? 'Showing ' + playing.to.name + ' against ' + playing.from.name : 'Playing ' + playing.from.name + ' ⇄ ' + playing.to.name;
-}
-function renderPlayBar(){
-  const bar = $('playBar');
-  bar.textContent = '';
-  bar.classList.toggle('hidden', !playing);
-  if(!playing) return;
-  const text = make('span', 'play-text');
-  const words = make('strong', 'play-words');
-  words.setAttribute('aria-live', 'polite');
-  if(playing.still){
-    const at = playing.index === 0 ? playing.from : playing.to, other = playing.index === 0 ? playing.to : playing.from;
-    words.textContent = 'Showing ' + at.name + '; the outlines show ' + playing.from.name;
-    text.title = 'Reduced motion is on: ⇄ steps between ' + at.name + ' and ' + other.name;
-  } else words.textContent = playWords();
-  text.appendChild(words);
-  const now = make('span', 'play-at');
-  now.id = 'playAt';
-  text.appendChild(now);
-  bar.appendChild(text);
-  const button = (label, title, fn) => { const b = make('button', 'compare-btn', label); b.type = 'button'; b.title = title; b.addEventListener('click', fn); bar.appendChild(b); return b; };
-  if(playing.still) button('⇄', 'Step to the other end', () => stepPlay()).id = 'btnPlayStep';
-  button('■ Stop', 'Stop playing: everything goes back as it was', () => stopPlay()).id = 'btnPlayStop';
 }
 // Reduced motion: ⇄ shows the other end.
 function stepPlay(){
@@ -9570,166 +9776,9 @@ function stopPlay(){
   if(model && board) renderBoard();
   return true;
 }
-
-// ---- the row under the scenarios ----
-function renderPlayRow(){
-  const options = playOptions(), ids = options.map(o => o[0]), def = playDefaults();
-  // The defaults follow the scenarios until the person picks an end.
-  if(!playChoice.picked || !ids.includes(playChoice.from)) playChoice.from = def.from;
-  if(!playChoice.picked || !ids.includes(playChoice.to)) playChoice.to = def.to;
-  [['playFrom', 'from'], ['playTo', 'to']].forEach(([id, end]) => {
-    const sel = $(id);
-    sel.textContent = '';
-    options.forEach(([v, words]) => { const o = make('option', null, words); o.value = v; sel.appendChild(o); });
-    sel.value = playChoice[end];
-  });
-}
-$('playFrom').addEventListener('change', () => { playChoice.from = $('playFrom').value; playChoice.picked = true; });
-$('playTo').addEventListener('change', () => { playChoice.to = $('playTo').value; playChoice.picked = true; });
-$('btnPlay').addEventListener('click', () => startPlay(playChoice.from, playChoice.to));
-
-// Esc stops it (and does only that); a press, a scroll or another key leaves it playing.
-document.addEventListener('keydown', (ev) => {
-  if(!playing || ev.key !== 'Escape') return;
-  ev.preventDefault(); ev.stopPropagation(); stopPlay();
-}, true);
 // ============================================================
-// Drawing and editing the Free chart (phase F1; the data is 04f-free.js). Each piece is drawn
-// as a bar or a stack in its grid column, its name under the column, its total above it (with
-// the difference against A, or the model's own numbers), a dashed connector from the piece it
-// rests on, and its check's ✓ / ✗. Edit chart lists the pieces: name, Sits, the column (← →),
-// Minus, Should equal…, the rectangles; + Piece and + From chart….
+// A Free chart's editor in Edit chart, on fmGraph's page. Drawing it is 05n-free-chart.js.
 // ============================================================
-
-// The key's items, worked out before anything is drawn (so which ones show can be chosen in
-// one place later): per piece, its label and its rectangles with their colours. A piece that is
-// just its one rectangle (named after it, or not named, and without Minus) has no label: label null.
-function freeKeyItems(c, colours){
-  return c.pieces.map(p => {
-    const items = p.parts.map(k => ({ key: k, name: partLabel(k), colour: colours.get(k) }));
-    const plain = items.length === 1 && !p.minus && (!p.name || p.name === items[0].name);
-    return { label: plain ? null : pieceLabel(c, p), items };
-  }).filter(g => g.items.length);
-}
-// Draws key groups ({ label, items }) into the key, a line each; the groups without a label
-// share one line. A swatch per rectangle picks its colour, once each.
-function drawKeyGroups(key, groups, choice){
-  const seen = new Set();
-  const item = (it) => {
-    const el = make('label', 'key-item');
-    if(choice) markKeyZero(el, it.key, choice);
-    const sw = colourPicker(it.colour, 'Colour of ' + it.name, pickRectColour(it.key), automaticColour(it.key, PART_COLOURS[0], redrawColours));
-    sw.classList.add('key-swatch');
-    el.append(sw, document.createTextNode(it.name));
-    return el;
-  };
-  const labelled = groups.filter(g => g.label !== null), plain = groups.filter(g => g.label === null);
-  labelled.forEach(g => {
-    const line = make('div', 'key-line');
-    line.appendChild(make('span', 'key-group', g.label + ':'));
-    g.items.forEach(it => line.appendChild(item(it)));
-    key.appendChild(line);
-  });
-  const rest = plain.flatMap(g => g.items).filter(it => !seen.has(it.key) && seen.add(it.key));
-  if(rest.length){
-    const line = make('div', 'key-line');
-    rest.forEach(it => line.appendChild(item(it)));
-    key.appendChild(line);
-  }
-}
-
-function drawFree(c, results, problems, key){
-  const now = freeFigures(c, results), was = freeFigures(c, compareResults()); // A, or the model's own numbers
-  const colours = partColours(c);
-  const drawn = (f) => !!f.parts;
-  const ncols = Math.max(1, ...c.pieces.map(p => p.column + 1));
-  const labels = ncols <= 16;
-  let lo = 0, hi = 0;
-  now.concat(was).forEach(f => { if(drawn(f)){ lo = Math.min(lo, f.bottom, f.base); hi = Math.max(hi, f.top, f.base); } });
-  if(hi === lo) hi = lo + 1;
-  const sc = scaleFor(c, lo, hi); // Auto, the common scale, or the chart's fixed scale (04d-scale.js)
-  const checked = now.some(f => f.check);
-  const W = 560, top = 18 + (labels ? 30 : 0) + (checked ? 4 : 0), bottom = 36, H = 170 + top + bottom;
-  const plotH = H - top - bottom;
-  const y = scaleY(top, plotH, sc);
-  const slot = (W - 8) / ncols, bw = Math.max(3, Math.min(46, slot * 0.62));
-  const cxOf = (col) => 4 + slot * col + slot / 2;
-  const chart = svg('svg', { class: 'bar-chart free-chart' + (sc.fixed ? ' fixed-scale' : ''), viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'data-layout': 'free' });
-  chart.setAttribute('aria-label', (c.title || 'Free') + ', ' + model.periods[c.period]);
-  drawScaleAxis(chart, sc, y, W, top, plotH);
-  if(!c.pieces.length) problems.push('Add a piece to start: Edit chart, then + Piece or + From chart….');
-  c.pieces.forEach((p, i) => {
-    const f = now[i], b = was[i], label = pieceLabel(c, p);
-    const cx = cxOf(p.column), x = cx - bw / 2;
-    const g = svg('g', { class: 'fr-piece', 'data-piece': i, 'data-column': p.column });
-    if(f.error !== undefined){
-      g.appendChild(svg('rect', { class: 'b-err', x, y: top, width: bw, height: plotH }));
-      g.appendChild(svg('text', { class: 't-err', x: cx, y: top + plotH / 2, 'text-anchor': 'middle' }, '!'));
-      problems.push(label + ', ' + partLabel(p.parts[f.part]) + ': ' + errorText(f.error));
-    } else if(f.blocked !== undefined){
-      const t = svg('text', { class: 't-err', x: cx, y: top + plotH / 2, 'text-anchor': 'middle' }, '!');
-      g.appendChild(t);
-      problems.push(label + ' is not drawn: it rests on ' + f.blocked + ', which ' + (f.why === 'error' ? 'has an error' : 'can\'t be drawn either') + '.');
-    } else {
-      // The dashed connector from the piece it rests on, when that one stands in another column.
-      const of = restsOn(c, p), fo = of ? now[c.pieces.indexOf(of)] : null;
-      if(of && fo && drawn(fo) && of.column !== p.column){
-        const x1 = cxOf(of.column) + (of.column < p.column ? bw / 2 : -bw / 2), x2 = of.column < p.column ? x : x + bw;
-        g.appendChild(svg('line', { class: 'f-link', x1, x2, y1: y(f.base), y2: y(f.base) }));
-      }
-      f.parts.forEach((pt, pi) => {
-        const k = p.parts[pi];
-        const rect = animKey(svg('rect', { class: 'c-part', x, y: Math.min(y(pt.from), y(pt.to)), width: bw, height: Math.max(pt.value === 0 ? 0 : 1, Math.abs(y(pt.to) - y(pt.from))), fill: colours.get(k) }), c.id + '|' + p.id + '|' + pi);
-        const before = drawn(b) ? b.parts[pi] : null;
-        const diff = before ? fmtDiff(pt.value, before.value) : '';
-        rect.appendChild(svg('title', {}, label + ' · ' + partLabel(k) + ', ' + model.periods[c.period] + ': ' + fmtNum(pt.value) + (diff ? ' — was ' + fmtNum(before.value) + ', ' + diff : '')));
-        g.appendChild(rect);
-      });
-      drawOverMarks(g, sc, cx, top, plotH, f.top, f.bottom);
-      if(drawn(b) && (!agree(b.top, f.top) || !agree(b.bottom, f.bottom))){
-        g.appendChild(svg('rect', { class: 'b-base', x, y: y(b.top), width: bw, height: Math.max(1, y(b.bottom) - y(b.top)) }));
-      }
-      if(labels){
-        const diff = drawn(b) ? fmtDiff(f.value, b.value) : '';
-        const topY = y(f.top);
-        g.appendChild(svg('text', { class: 't-value', x: cx, y: topY - 4, 'text-anchor': 'middle' }, fmtNum(f.value)));
-        if(diff) g.appendChild(svg('text', { class: 't-diff ' + (f.value > b.value ? 'up' : 'down'), x: cx, y: topY - 17, 'text-anchor': 'middle' }, diff.split(' ')[0]));
-      }
-    }
-    if(f.check){
-      const other = c.pieces.find(q => q.id === p.check), otherLabel = other ? pieceLabel(c, other) : '?';
-      const mark = f.check.error ? '?' : f.check.agree ? '✓' : '✗';
-      const t = svg('text', { class: 't-check ' + (f.check.agree ? 'ok' : 'bad'), x: cx, y: 13, 'text-anchor': 'middle' }, mark);
-      t.appendChild(svg('title', {}, f.check.error ? 'Can\'t check: a rectangle couldn\'t be worked out'
-        : f.check.agree ? label + ' equals where ' + otherLabel + ' ends' : label + ' is ' + fmtNum(f.check.a) + '; ' + otherLabel + ' ends at ' + fmtNum(f.check.b)));
-      g.appendChild(t);
-      if(!f.check.error && !f.check.agree) problems.push(label + ' should equal ' + otherLabel + ': it is ' + fmtNum(f.check.a) + ', and ' + otherLabel + ' ends at ' + fmtNum(f.check.b) + '.');
-    }
-    chart.appendChild(g);
-  });
-  // Each column's names under it, shortened to fit (in full when pointed at).
-  const room = Math.max(3, Math.floor(slot / 6.2));
-  [...new Set(c.pieces.map(p => p.column))].forEach(col => {
-    const name = c.pieces.filter(p => p.column === col).map(p => pieceLabel(c, p)).join(' / ');
-    const t = svg('text', { class: 't-period', x: cxOf(col), y: H - 20, 'text-anchor': 'middle' }, name.length > room ? name.slice(0, room - 1) + '…' : name);
-    t.appendChild(svg('title', {}, name));
-    chart.appendChild(t);
-  });
-  chart.appendChild(svg('text', { class: 't-period', x: W / 2, y: H - 4, 'text-anchor': 'middle' }, model.periods[c.period]));
-  // What reading the file put right (never saved: the file is written as it is now).
-  const n = c.notes || {};
-  if(n.loops) problems.push(n.loops + ' piece' + (n.loops === 1 ? ' was' : 's were') + ' in a loop (resting on each other) and now sit' + (n.loops === 1 ? 's' : '') + ' on zero.');
-  if(n.moved) problems.push(n.moved + ' piece' + (n.moved === 1 ? '' : 's') + ' moved to a free column: two pieces share a column only when one rests on the other.');
-  // The key, those at 0 left out (05b-chart-render.js, keyChoice).
-  const groups = freeKeyItems(c, colours);
-  const choice = keyChoice(c, groups.flatMap(g => g.items.map(it => it.key)), [c.period], results);
-  drawKeyGroups(key, groups.map(g => Object.assign({}, g, { items: g.items.filter(it => choice.shows(it.key)) })).filter(g => g.items.length), choice);
-  drawKeyZeros(key, c, choice);
-  raiseScaleLabels(chart);
-  // The grid's geometry, for placing pieces by dragging (05p-free-grid.js).
-  chart.freeGeo = { W, top, plotH, slot, bw, ncols, cxOf, y, figs: now };
-  return chart;
-}
 
 // Edit chart's list of pieces (box: the editor; periodRow: its "In" period row).
 function freeEditor(c, box, periodRow, changed){
@@ -9864,6 +9913,143 @@ function freeEditor(c, box, periodRow, changed){
     changed();
   });
   box.appendChild(from);
+}
+// ============================================================
+// Drawing the Free chart (phase F1; the data is 04f-free.js; its editor is fmGraph's page,
+// 05n-free-chart-edit.js, and its grid 05p-free-grid.js). Each piece is drawn
+// as a bar or a stack in its grid column, its name under the column, its total above it (with
+// the difference against A, or the model's own numbers), a dashed connector from the piece it
+// rests on, and its check's ✓ / ✗. Edit chart lists the pieces: name, Sits, the column (← →),
+// Minus, Should equal…, the rectangles; + Piece and + From chart….
+// ============================================================
+
+// The key's items, worked out before anything is drawn (so which ones show can be chosen in
+// one place later): per piece, its label and its rectangles with their colours. A piece that is
+// just its one rectangle (named after it, or not named, and without Minus) has no label: label null.
+function freeKeyItems(c, colours){
+  return c.pieces.map(p => {
+    const items = p.parts.map(k => ({ key: k, name: partLabel(k), colour: colours.get(k) }));
+    const plain = items.length === 1 && !p.minus && (!p.name || p.name === items[0].name);
+    return { label: plain ? null : pieceLabel(c, p), items };
+  }).filter(g => g.items.length);
+}
+// Draws key groups ({ label, items }) into the key, a line each; the groups without a label
+// share one line. A swatch per rectangle picks its colour, once each.
+function drawKeyGroups(key, groups, choice){
+  const seen = new Set();
+  const item = (it) => {
+    const el = make('label', 'key-item');
+    if(choice) markKeyZero(el, it.key, choice);
+    const sw = rectKeySwatch(it.key, it.colour, 'Colour of ' + it.name, PART_COLOURS[0]);
+    el.append(sw, document.createTextNode(it.name));
+    return el;
+  };
+  const labelled = groups.filter(g => g.label !== null), plain = groups.filter(g => g.label === null);
+  labelled.forEach(g => {
+    const line = make('div', 'key-line');
+    line.appendChild(make('span', 'key-group', g.label + ':'));
+    g.items.forEach(it => line.appendChild(item(it)));
+    key.appendChild(line);
+  });
+  const rest = plain.flatMap(g => g.items).filter(it => !seen.has(it.key) && seen.add(it.key));
+  if(rest.length){
+    const line = make('div', 'key-line');
+    rest.forEach(it => line.appendChild(item(it)));
+    key.appendChild(line);
+  }
+}
+
+function drawFree(c, results, problems, key){
+  const now = freeFigures(c, results), was = freeFigures(c, compareResults()); // A, or the model's own numbers
+  const colours = partColours(c);
+  const drawn = (f) => !!f.parts;
+  const ncols = Math.max(1, ...c.pieces.map(p => p.column + 1));
+  const labels = ncols <= 16;
+  let lo = 0, hi = 0;
+  now.concat(was).forEach(f => { if(drawn(f)){ lo = Math.min(lo, f.bottom, f.base); hi = Math.max(hi, f.top, f.base); } });
+  if(hi === lo) hi = lo + 1;
+  const sc = scaleFor(c, lo, hi); // Auto, the common scale, or the chart's fixed scale (04d-scale.js)
+  const checked = now.some(f => f.check);
+  const W = 560, top = 18 + (labels ? 30 : 0) + (checked ? 4 : 0), bottom = 36, H = 170 + top + bottom;
+  const plotH = H - top - bottom;
+  const y = scaleY(top, plotH, sc);
+  const slot = (W - 8) / ncols, bw = Math.max(3, Math.min(46, slot * 0.62));
+  const cxOf = (col) => 4 + slot * col + slot / 2;
+  const chart = svg('svg', { class: 'bar-chart free-chart' + (sc.fixed ? ' fixed-scale' : ''), viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'data-layout': 'free' });
+  chart.setAttribute('aria-label', (c.title || 'Free') + ', ' + model.periods[c.period]);
+  drawScaleAxis(chart, sc, y, W, top, plotH);
+  if(!c.pieces.length) problems.push('Add a piece to start: Edit chart, then + Piece or + From chart….');
+  c.pieces.forEach((p, i) => {
+    const f = now[i], b = was[i], label = pieceLabel(c, p);
+    const cx = cxOf(p.column), x = cx - bw / 2;
+    const g = svg('g', { class: 'fr-piece', 'data-piece': i, 'data-column': p.column });
+    if(f.error !== undefined){
+      g.appendChild(svg('rect', { class: 'b-err', x, y: top, width: bw, height: plotH }));
+      g.appendChild(svg('text', { class: 't-err', x: cx, y: top + plotH / 2, 'text-anchor': 'middle' }, '!'));
+      problems.push(label + ', ' + partLabel(p.parts[f.part]) + ': ' + errorText(f.error));
+    } else if(f.blocked !== undefined){
+      const t = svg('text', { class: 't-err', x: cx, y: top + plotH / 2, 'text-anchor': 'middle' }, '!');
+      g.appendChild(t);
+      problems.push(label + ' is not drawn: it rests on ' + f.blocked + ', which ' + (f.why === 'error' ? 'has an error' : 'can\'t be drawn either') + '.');
+    } else {
+      // The dashed connector from the piece it rests on, when that one stands in another column.
+      const of = restsOn(c, p), fo = of ? now[c.pieces.indexOf(of)] : null;
+      if(of && fo && drawn(fo) && of.column !== p.column){
+        const x1 = cxOf(of.column) + (of.column < p.column ? bw / 2 : -bw / 2), x2 = of.column < p.column ? x : x + bw;
+        g.appendChild(svg('line', { class: 'f-link', x1, x2, y1: y(f.base), y2: y(f.base) }));
+      }
+      f.parts.forEach((pt, pi) => {
+        const k = p.parts[pi];
+        const rect = animKey(svg('rect', { class: 'c-part', x, y: Math.min(y(pt.from), y(pt.to)), width: bw, height: Math.max(pt.value === 0 ? 0 : 1, Math.abs(y(pt.to) - y(pt.from))), fill: colours.get(k) }), c.id + '|' + p.id + '|' + pi);
+        const before = drawn(b) ? b.parts[pi] : null;
+        const diff = before ? fmtDiff(pt.value, before.value) : '';
+        rect.appendChild(svg('title', {}, label + ' · ' + partLabel(k) + ', ' + model.periods[c.period] + ': ' + fmtNum(pt.value) + (diff ? ' — was ' + fmtNum(before.value) + ', ' + diff : '')));
+        g.appendChild(rect);
+      });
+      drawOverMarks(g, sc, cx, top, plotH, f.top, f.bottom);
+      if(drawn(b) && (!agree(b.top, f.top) || !agree(b.bottom, f.bottom))){
+        g.appendChild(svg('rect', { class: 'b-base', x, y: y(b.top), width: bw, height: Math.max(1, y(b.bottom) - y(b.top)) }));
+      }
+      if(labels){
+        const diff = drawn(b) ? fmtDiff(f.value, b.value) : '';
+        const topY = y(f.top);
+        g.appendChild(svg('text', { class: 't-value', x: cx, y: topY - 4, 'text-anchor': 'middle' }, fmtNum(f.value)));
+        if(diff) g.appendChild(svg('text', { class: 't-diff ' + (f.value > b.value ? 'up' : 'down'), x: cx, y: topY - 17, 'text-anchor': 'middle' }, diff.split(' ')[0]));
+      }
+    }
+    if(f.check){
+      const other = c.pieces.find(q => q.id === p.check), otherLabel = other ? pieceLabel(c, other) : '?';
+      const mark = f.check.error ? '?' : f.check.agree ? '✓' : '✗';
+      const t = svg('text', { class: 't-check ' + (f.check.agree ? 'ok' : 'bad'), x: cx, y: 13, 'text-anchor': 'middle' }, mark);
+      t.appendChild(svg('title', {}, f.check.error ? 'Can\'t check: a rectangle couldn\'t be worked out'
+        : f.check.agree ? label + ' equals where ' + otherLabel + ' ends' : label + ' is ' + fmtNum(f.check.a) + '; ' + otherLabel + ' ends at ' + fmtNum(f.check.b)));
+      g.appendChild(t);
+      if(!f.check.error && !f.check.agree) problems.push(label + ' should equal ' + otherLabel + ': it is ' + fmtNum(f.check.a) + ', and ' + otherLabel + ' ends at ' + fmtNum(f.check.b) + '.');
+    }
+    chart.appendChild(g);
+  });
+  // Each column's names under it, shortened to fit (in full when pointed at).
+  const room = Math.max(3, Math.floor(slot / 6.2));
+  [...new Set(c.pieces.map(p => p.column))].forEach(col => {
+    const name = c.pieces.filter(p => p.column === col).map(p => pieceLabel(c, p)).join(' / ');
+    const t = svg('text', { class: 't-period', x: cxOf(col), y: H - 20, 'text-anchor': 'middle' }, name.length > room ? name.slice(0, room - 1) + '…' : name);
+    t.appendChild(svg('title', {}, name));
+    chart.appendChild(t);
+  });
+  chart.appendChild(svg('text', { class: 't-period', x: W / 2, y: H - 4, 'text-anchor': 'middle' }, model.periods[c.period]));
+  // What reading the file put right (never saved: the file is written as it is now).
+  const n = c.notes || {};
+  if(n.loops) problems.push(n.loops + ' piece' + (n.loops === 1 ? ' was' : 's were') + ' in a loop (resting on each other) and now sit' + (n.loops === 1 ? 's' : '') + ' on zero.');
+  if(n.moved) problems.push(n.moved + ' piece' + (n.moved === 1 ? '' : 's') + ' moved to a free column: two pieces share a column only when one rests on the other.');
+  // The key, those at 0 left out (05b-chart-render.js, keyChoice).
+  const groups = freeKeyItems(c, colours);
+  const choice = keyChoice(c, groups.flatMap(g => g.items.map(it => it.key)), [c.period], results);
+  drawKeyGroups(key, groups.map(g => Object.assign({}, g, { items: g.items.filter(it => choice.shows(it.key)) })).filter(g => g.items.length), choice);
+  drawKeyZeros(key, c, choice);
+  raiseScaleLabels(chart);
+  // The grid's geometry, for placing pieces by dragging (05p-free-grid.js).
+  chart.freeGeo = { W, top, plotH, slot, bw, ncols, cxOf, y, figs: now };
+  return chart;
 }
 // ============================================================
 // A GIF of the play (the owner's idea of 27 October 2026: "can GIF file be generated for "Play"
@@ -10135,7 +10321,6 @@ const GIF_FPS = 15;                 // about this many frames a second while it 
 const GIF_MAX_BYTES = 10 * 1024 * 1024;
 const GIF_PAD = 20;
 const GIF_GAP = 16;
-let gifMaking = null;               // while a GIF is made: { model, positions, cancelled }
 
 // The frames' positions: indexes into playFractions(PLAY_POSITIONS), one swing, both ends included.
 function gifSwingIndexes(){
@@ -10645,80 +10830,6 @@ function renderFreeTools(el, c){
 // the top bar's buttons, and ← Back to fmIDE.
 // ============================================================
 
-// A small model to try things with: a profit calculation and the cash it builds up.
-const SAMPLE_MODEL = {
-  kind: 'system', version: 9, periods: ['Year 1', 'Year 2', 'Year 3', 'Year 4'],
-  canvases: [
-    { id: 'cProfit', name: 'Profit', nodes: [
-      { id: 'price', type: 'value', x: 0, y: 0, w: 150, h: 64, text: 'Price\n10' },
-      { id: 'vol', type: 'value', x: 0, y: 100, w: 150, h: 64, text: 'Volume\n1000', periodValues: [1000, 1100, 1200, 1300] },
-      { id: 'ucost', type: 'value', x: 0, y: 200, w: 150, h: 64, text: 'Unit cost\n6' },
-      { id: 'm1', type: 'operator', x: 180, y: 50, text: '×' },
-      { id: 'rev', type: 'value', x: 250, y: 50, w: 150, h: 64, text: 'Revenue' },
-      { id: 'm2', type: 'operator', x: 180, y: 180, text: '×' },
-      { id: 'cogs', type: 'value', x: 250, y: 180, w: 150, h: 64, text: 'Cost of sales' },
-      { id: 's1', type: 'operator', x: 420, y: 110, text: '−' },
-      { id: 'gp', type: 'value', x: 450, y: 110, w: 150, h: 64, text: 'Gross profit' },
-      { id: 'over', type: 'value', x: 500, y: 260, w: 150, h: 64, text: 'Overheads\n2500' },
-      { id: 's2', type: 'operator', x: 640, y: 180, text: '−' },
-      { id: 'profit', type: 'value', x: 700, y: 180, w: 150, h: 64, text: 'Profit' },
-    ], edges: [
-      { id: 'e1', from: 'price', to: 'm1' }, { id: 'e2', from: 'vol', to: 'm1' }, { id: 'e3', from: 'm1', to: 'rev' },
-      { id: 'e4', from: 'vol', to: 'm2' }, { id: 'e5', from: 'ucost', to: 'm2' }, { id: 'e6', from: 'm2', to: 'cogs' },
-      { id: 'e7', from: 'rev', to: 's1' }, { id: 'e8', from: 'cogs', to: 's1' }, { id: 'e9', from: 's1', to: 'gp' },
-      { id: 'e10', from: 'gp', to: 's2' }, { id: 'e11', from: 'over', to: 's2' }, { id: 'e12', from: 's2', to: 'profit' },
-    ] },
-    { id: 'cCash', name: 'Cash', nodes: [
-      { id: 'open', type: 'value', x: 0, y: 0, w: 150, h: 64, text: 'Opening cash\n1000', literalPeriods: [0] },
-      { id: 'pr', type: 'alias', x: 0, y: 100, w: 150, h: 64, sourceCanvasId: 'cProfit', sourceNodeId: 'profit' },
-      { id: 'add', type: 'operator', x: 180, y: 50, text: '+' },
-      { id: 'close', type: 'value', x: 250, y: 50, w: 150, h: 64, text: 'Closing cash' },
-      { id: 'ps', type: 'periodShift', x: 250, y: 160, shift: -1 },
-    ], edges: [
-      { id: 'c1', from: 'open', to: 'add' }, { id: 'c2', from: 'pr', to: 'add' }, { id: 'c3', from: 'add', to: 'close' },
-      { id: 'c4', from: 'close', to: 'ps' }, { id: 'c5', from: 'ps', to: 'open' },
-    ] },
-    // A balance sheet that balances every year: the cash comes from Cash, equity grows by the profit.
-    { id: 'cBS', name: 'Balance sheet', nodes: [
-      { id: 'bcash', type: 'alias', x: 0, y: 0, w: 150, h: 64, sourceCanvasId: 'cCash', sourceNodeId: 'close' },
-      { id: 'equip', type: 'value', x: 0, y: 100, w: 150, h: 64, text: 'Equipment\n500' },
-      { id: 'debt', type: 'value', x: 0, y: 200, w: 150, h: 64, text: 'Debt\n800' },
-      { id: 'eqopen', type: 'value', x: 0, y: 300, w: 150, h: 64, text: 'Opening equity\n700', literalPeriods: [0] },
-      { id: 'bprofit', type: 'alias', x: 0, y: 400, w: 150, h: 64, sourceCanvasId: 'cProfit', sourceNodeId: 'profit' },
-      { id: 'eqadd', type: 'operator', x: 180, y: 350, text: '+' },
-      { id: 'equity', type: 'value', x: 250, y: 350, w: 150, h: 64, text: 'Equity' },
-      { id: 'eqps', type: 'periodShift', x: 250, y: 450, shift: -1 },
-    ], edges: [
-      { id: 'b1', from: 'eqopen', to: 'eqadd' }, { id: 'b2', from: 'bprofit', to: 'eqadd' }, { id: 'b3', from: 'eqadd', to: 'equity' },
-      { id: 'b4', from: 'equity', to: 'eqps' }, { id: 'b5', from: 'eqps', to: 'eqopen' },
-    ] },
-  ],
-};
-// Version 9: its bars and charts follow the shared period (05k-shared-period.js).
-const SAMPLE_BOARD = {
-  kind: 'fmIDE-graph-board', version: 9,
-  sliders: [
-    { canvasId: 'cProfit', nodeId: 'price', name: 'Price', periods: { mode: 'all' }, mode: 'set', min: 5, max: 15, step: 0.25 },
-    { canvasId: 'cProfit', nodeId: 'vol', name: 'Volume', periods: { mode: 'all' }, mode: 'shift', min: -50, max: 50, step: 1 },
-  ],
-  bars: [
-    { canvasId: 'cProfit', nodeId: 'profit', name: 'Profit', periods: { mode: 'all' } },
-    { canvasId: 'cCash', nodeId: 'close', name: 'Closing cash', periods: { mode: 'all' } },
-  ],
-  charts: [
-    { layout: 'columns', title: 'Balance sheet', periods: { mode: 'all' }, check: true, groups: [
-      { name: 'Assets', parts: [{ canvasId: 'cCash', nodeId: 'close', name: 'Closing cash' }, { canvasId: 'cBS', nodeId: 'equip', name: 'Equipment' }] },
-      { name: 'Liabilities and equity', parts: [{ canvasId: 'cBS', nodeId: 'debt', name: 'Debt' }, { canvasId: 'cBS', nodeId: 'equity', name: 'Equity' }] },
-    ] },
-    { layout: 'flow', title: 'Profit', period: 0, steps: [
-      { canvasId: 'cProfit', nodeId: 'rev', name: 'Revenue', role: 'start' },
-      { canvasId: 'cProfit', nodeId: 'cogs', name: 'Cost of sales', role: 'subtract' },
-      { canvasId: 'cProfit', nodeId: 'gp', name: 'Gross profit', role: 'total' },
-      { canvasId: 'cProfit', nodeId: 'over', name: 'Overheads', role: 'subtract' },
-      { canvasId: 'cProfit', nodeId: 'profit', name: 'Profit', role: 'total' },
-    ] },
-  ],
-};
 async function loadSample(){
   await store.ready;
   // The sample starts on its own board the first time (after that, as it was left).
@@ -10887,6 +10998,86 @@ back.addEventListener('click', (ev) => {
   }
 });
 // ============================================================
+// A small model to try things with: a profit calculation and the cash it builds up, with its
+// board (the showcase viewer's Try the sample uses it too).
+// ============================================================
+
+// A small model to try things with: a profit calculation and the cash it builds up.
+const SAMPLE_MODEL = {
+  kind: 'system', version: 9, periods: ['Year 1', 'Year 2', 'Year 3', 'Year 4'],
+  canvases: [
+    { id: 'cProfit', name: 'Profit', nodes: [
+      { id: 'price', type: 'value', x: 0, y: 0, w: 150, h: 64, text: 'Price\n10' },
+      { id: 'vol', type: 'value', x: 0, y: 100, w: 150, h: 64, text: 'Volume\n1000', periodValues: [1000, 1100, 1200, 1300] },
+      { id: 'ucost', type: 'value', x: 0, y: 200, w: 150, h: 64, text: 'Unit cost\n6' },
+      { id: 'm1', type: 'operator', x: 180, y: 50, text: '×' },
+      { id: 'rev', type: 'value', x: 250, y: 50, w: 150, h: 64, text: 'Revenue' },
+      { id: 'm2', type: 'operator', x: 180, y: 180, text: '×' },
+      { id: 'cogs', type: 'value', x: 250, y: 180, w: 150, h: 64, text: 'Cost of sales' },
+      { id: 's1', type: 'operator', x: 420, y: 110, text: '−' },
+      { id: 'gp', type: 'value', x: 450, y: 110, w: 150, h: 64, text: 'Gross profit' },
+      { id: 'over', type: 'value', x: 500, y: 260, w: 150, h: 64, text: 'Overheads\n2500' },
+      { id: 's2', type: 'operator', x: 640, y: 180, text: '−' },
+      { id: 'profit', type: 'value', x: 700, y: 180, w: 150, h: 64, text: 'Profit' },
+    ], edges: [
+      { id: 'e1', from: 'price', to: 'm1' }, { id: 'e2', from: 'vol', to: 'm1' }, { id: 'e3', from: 'm1', to: 'rev' },
+      { id: 'e4', from: 'vol', to: 'm2' }, { id: 'e5', from: 'ucost', to: 'm2' }, { id: 'e6', from: 'm2', to: 'cogs' },
+      { id: 'e7', from: 'rev', to: 's1' }, { id: 'e8', from: 'cogs', to: 's1' }, { id: 'e9', from: 's1', to: 'gp' },
+      { id: 'e10', from: 'gp', to: 's2' }, { id: 'e11', from: 'over', to: 's2' }, { id: 'e12', from: 's2', to: 'profit' },
+    ] },
+    { id: 'cCash', name: 'Cash', nodes: [
+      { id: 'open', type: 'value', x: 0, y: 0, w: 150, h: 64, text: 'Opening cash\n1000', literalPeriods: [0] },
+      { id: 'pr', type: 'alias', x: 0, y: 100, w: 150, h: 64, sourceCanvasId: 'cProfit', sourceNodeId: 'profit' },
+      { id: 'add', type: 'operator', x: 180, y: 50, text: '+' },
+      { id: 'close', type: 'value', x: 250, y: 50, w: 150, h: 64, text: 'Closing cash' },
+      { id: 'ps', type: 'periodShift', x: 250, y: 160, shift: -1 },
+    ], edges: [
+      { id: 'c1', from: 'open', to: 'add' }, { id: 'c2', from: 'pr', to: 'add' }, { id: 'c3', from: 'add', to: 'close' },
+      { id: 'c4', from: 'close', to: 'ps' }, { id: 'c5', from: 'ps', to: 'open' },
+    ] },
+    // A balance sheet that balances every year: the cash comes from Cash, equity grows by the profit.
+    { id: 'cBS', name: 'Balance sheet', nodes: [
+      { id: 'bcash', type: 'alias', x: 0, y: 0, w: 150, h: 64, sourceCanvasId: 'cCash', sourceNodeId: 'close' },
+      { id: 'equip', type: 'value', x: 0, y: 100, w: 150, h: 64, text: 'Equipment\n500' },
+      { id: 'debt', type: 'value', x: 0, y: 200, w: 150, h: 64, text: 'Debt\n800' },
+      { id: 'eqopen', type: 'value', x: 0, y: 300, w: 150, h: 64, text: 'Opening equity\n700', literalPeriods: [0] },
+      { id: 'bprofit', type: 'alias', x: 0, y: 400, w: 150, h: 64, sourceCanvasId: 'cProfit', sourceNodeId: 'profit' },
+      { id: 'eqadd', type: 'operator', x: 180, y: 350, text: '+' },
+      { id: 'equity', type: 'value', x: 250, y: 350, w: 150, h: 64, text: 'Equity' },
+      { id: 'eqps', type: 'periodShift', x: 250, y: 450, shift: -1 },
+    ], edges: [
+      { id: 'b1', from: 'eqopen', to: 'eqadd' }, { id: 'b2', from: 'bprofit', to: 'eqadd' }, { id: 'b3', from: 'eqadd', to: 'equity' },
+      { id: 'b4', from: 'equity', to: 'eqps' }, { id: 'b5', from: 'eqps', to: 'eqopen' },
+    ] },
+  ],
+};
+
+// Version 9: its bars and charts follow the shared period (05k-shared-period.js).
+const SAMPLE_BOARD = {
+  kind: 'fmIDE-graph-board', version: 9,
+  sliders: [
+    { canvasId: 'cProfit', nodeId: 'price', name: 'Price', periods: { mode: 'all' }, mode: 'set', min: 5, max: 15, step: 0.25 },
+    { canvasId: 'cProfit', nodeId: 'vol', name: 'Volume', periods: { mode: 'all' }, mode: 'shift', min: -50, max: 50, step: 1 },
+  ],
+  bars: [
+    { canvasId: 'cProfit', nodeId: 'profit', name: 'Profit', periods: { mode: 'all' } },
+    { canvasId: 'cCash', nodeId: 'close', name: 'Closing cash', periods: { mode: 'all' } },
+  ],
+  charts: [
+    { layout: 'columns', title: 'Balance sheet', periods: { mode: 'all' }, check: true, groups: [
+      { name: 'Assets', parts: [{ canvasId: 'cCash', nodeId: 'close', name: 'Closing cash' }, { canvasId: 'cBS', nodeId: 'equip', name: 'Equipment' }] },
+      { name: 'Liabilities and equity', parts: [{ canvasId: 'cBS', nodeId: 'debt', name: 'Debt' }, { canvasId: 'cBS', nodeId: 'equity', name: 'Equity' }] },
+    ] },
+    { layout: 'flow', title: 'Profit', period: 0, steps: [
+      { canvasId: 'cProfit', nodeId: 'rev', name: 'Revenue', role: 'start' },
+      { canvasId: 'cProfit', nodeId: 'cogs', name: 'Cost of sales', role: 'subtract' },
+      { canvasId: 'cProfit', nodeId: 'gp', name: 'Gross profit', role: 'total' },
+      { canvasId: 'cProfit', nodeId: 'over', name: 'Overheads', role: 'subtract' },
+      { canvasId: 'cProfit', nodeId: 'profit', name: 'Profit', role: 'total' },
+    ] },
+  ],
+};
+// ============================================================
 // The board file (G3a; kind fmIDE-graph-board, version 1, docs/file-formats.md): Export this
 // board, Export all boards, Import boards… (Board menu), or a board file dropped on the page.
 // A board file names rectangles by canvas id, node id and name, so it fits the model it was
@@ -10895,28 +11086,6 @@ back.addEventListener('click', (ev) => {
 // the boards kept in the browser are; widgets whose rectangles aren't in this model are left
 // out and counted. Imported boards are added as new tabs (a name already used gets "(2)").
 // ============================================================
-const BOARD_FILE_FORMAT = { 'fmIDE-graph-board': { current: BOARD_FILE_VERSION, label: 'fmGraph board file' } };
-// v1 → v2: a board file may be in the template form (G5a); a v1 file is boards for one model.
-// v2 → v3: boards for one model may carry the model's named scenarios; v3 → v4: a chart may be a
-// scenario waterfall; v4 → v5: a bar or chart may have a fixed vertical scale; v5 → v6: a slider
-// may be folded; v6 → v7: a board may keep its own slider positions; v7 → v8: a chart may be a
-// Tornado or a Spider. Nothing to change. v8 → v9: the shared period (05k-shared-period.js) —
-// every bar and chart saved before it keeps the periods it had (`ownPeriod`), so the file opens
-// as it was saved (the owner's choice). v9 → v10: a chart may be a lines chart; nothing to change.
-// v10 → v11: the shared colours (04e-colours.js); nothing to change — a file without `colours`
-// keeps its colours on its widgets, taken into the shared ones when read (the first one wins).
-// v11 → v12: the common scale (04d-scale.js); nothing to change — a file without `commonScale`
-// opens with Each its own, so every bar and chart shows the scale it had.
-// v12 → v13: a chart may be a Free chart (04f-free.js); nothing to change.
-function keepOwnPeriods(data){
-  if(!data || typeof data !== 'object' || data.form === 'template') return;
-  const boardsIn = Array.isArray(data.boards) ? data.boards : [data];
-  boardsIn.forEach(b => {
-    if(!b || typeof b !== 'object') return;
-    ['items', 'bars', 'charts'].forEach(k => { if(Array.isArray(b[k])) b[k].forEach(w => { if(w && typeof w === 'object') w.ownPeriod = true; }); });
-  });
-}
-const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {}, 5: () => {}, 6: () => {}, 7: () => {}, 8: keepOwnPeriods, 9: () => {}, 10: () => {}, 11: () => {}, 12: () => {} } };
 
 function safeFileName(s){ return String(s).replace(/[^A-Za-z0-9 ._()-]+/g, '_').replace(/\s+/g, ' ').trim().slice(0, 80) || 'board'; }
 
@@ -13174,34 +13343,7 @@ window.fmGraph = Object.freeze({
     renderBoard();
     return c.id;
   },
-  chart: (id) => {
-    const c = chartById(id), results = currentResults();
-    if(isSensitivity(c)){
-      const f = sensitivityNow(c, shownOverrides(), true).figures;
-      if(!f) return null;
-      return { output: partLabel(c.output), period: model.periods[c.period], base: f.base,
-        inputs: f.inputs.map(i => Object.assign({ name: partLabel(i.key), by: i.by, low: i.low, high: i.high, show: i.show },
-          i.error ? { error: i.error } : { lowValue: i.lowValue, highValue: i.highValue, swing: i.swing },
-          i.points ? { points: i.points.map(p => Object.assign({}, p)) } : {})) };
-    }
-    if(c.layout === 'lines') return linesFigures(c, results).map(f => ({ period: model.periods[f.p], lines: f.values.map((r, i) => ({ name: partLabel(c.lines[i]), value: answer(r) })) }));
-    if(c.layout === 'flow') return flowFigures(c, results).map((f, i) => Object.assign({ name: partLabel(c.steps[i].key) }, f));
-    if(c.layout === 'free') return { period: model.periods[c.period], pieces: freeFigures(c, results).map((f, i) => {
-      const p = c.pieces[i], head = { name: pieceLabel(c, p), column: p.column };
-      if(f.error !== undefined) return Object.assign(head, { error: f.error });
-      if(f.blocked !== undefined) return Object.assign(head, { blocked: f.blocked });
-      return Object.assign(head, { value: f.value, base: f.base, top: f.top, bottom: f.bottom, end: f.end,
-        parts: f.parts.map((pt, pi) => ({ name: partLabel(p.parts[pi]), value: pt.value, from: pt.from, to: pt.to })), check: f.check });
-    }) };
-    if(c.layout === 'scenarios'){
-      const memo = new Map();
-      const resultsFor = (sc) => { if(!memo.has(sc)) memo.set(sc, scenarioResults(sc)); return memo.get(sc); };
-      return c.outputs.map(k => ({ name: partLabel(k), steps: scenarioFigures(c, k, resultsFor).map(f => f.error ? { name: f.name, kind: f.kind, error: f.error }
-        : { name: f.name, kind: f.kind, value: f.value, from: f.from, to: f.to }) }));
-    }
-    return columnsFigures(c, results).map(f => ({ period: model.periods[f.p], check: f.check,
-      groups: f.groups.map((g, gi) => ({ name: groupLabel(c, gi), total: g.error ? { error: true } : g.total, parts: g.parts.map(answer) })) }));
-  },
+  chart: (id) => chartAnswer(chartById(id)), // (04b-charts.js, shared with the showcase viewer)
   movePiece: (id, index, to) => {
     const c = chartById(id);
     if(c.layout !== 'free') throw new Error('Only a Free chart has pieces.');

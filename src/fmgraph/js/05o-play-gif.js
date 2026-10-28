@@ -26,7 +26,6 @@ const GIF_FPS = 15;                 // about this many frames a second while it 
 const GIF_MAX_BYTES = 10 * 1024 * 1024;
 const GIF_PAD = 20;
 const GIF_GAP = 16;
-let gifMaking = null;               // while a GIF is made: { model, positions, cancelled }
 
 // The frames' positions: indexes into playFractions(PLAY_POSITIONS), one swing, both ends included.
 function gifSwingIndexes(){

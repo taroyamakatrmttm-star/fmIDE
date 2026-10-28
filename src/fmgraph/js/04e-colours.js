@@ -20,6 +20,7 @@
 // it), and a note says how many rectangles had another colour somewhere.
 // ============================================================
 const PART_COLOURS = ['#0f766e', '#2563eb', '#d97706', '#7c3aed', '#db2777', '#0891b2', '#65a30d', '#9f1239'];
+const DEFAULT_BAR_COLOUR = '#0f766e'; // the page's usual bar colour
 const COLOURS_LIMIT = 2000; // chosen colours read from a file, at most
 let rectColours = new Map(); // rectangle key → '#rrggbb', the chosen ones
 let autoColourMemo = null;   // rectangle key → its automatic colour, until the boards change
@@ -64,27 +65,9 @@ function forgetAutoColours(){ autoColourMemo = null; }
 // A rectangle's colour: chosen, else automatic, else null (the usual look).
 function chosenColour(key){ return rectColours.get(key) || null; }
 function rectColour(key){ return chosenColour(key) || autoColours().get(key) || null; }
-// Chooses a rectangle's colour everywhere (null: back to the automatic one).
-function setRectColour(key, colour){
-  const c = colour === null ? null : cleanColour(colour);
-  if(c) rectColours.set(key, c); else rectColours.delete(key);
-  forgetAutoColours();
-}
 
 // The colour a slider, a bar or a key shows: the rectangle's, else the page's usual bar colour.
 function shownColour(key){ return rectColour(key) || DEFAULT_BAR_COLOUR; }
-// A colour box's Automatic (the shared colour grid): the colour the rectangle goes back to,
-// whether one is chosen now, and going back — one undo step, through done().
-function automaticColour(key, fallback, done, name){
-  return { colour: autoColours().get(key) || fallback, name, chosen: !!chosenColour(key),
-    choose: () => { setRectColour(key, null); done(); } };
-}
-// A colour box's pick: choosing what the rectangle would have anyway clears the choice.
-function chooseRectColour(key, colour){
-  const c = cleanColour(colour);
-  setRectColour(key, null);
-  if(c && c !== shownColour(key)) setRectColour(key, c);
-}
 
 // Takes the colours older files kept on widgets into the shared ones (see the top).
 function adoptWidgetColours(){
