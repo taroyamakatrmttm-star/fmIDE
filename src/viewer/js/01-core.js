@@ -28,6 +28,7 @@
 // build:include shared/number-format.js
 // build:include shared/canvas-view.js
 // build:include shared/showcase.js
+// build:include shared/xlsx-patch.js
 // build:include shared/pointer-input.js
 // build:include shared/phone.js
 // build:include shared/file-picker.js

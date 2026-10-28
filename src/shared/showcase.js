@@ -282,19 +282,25 @@ export function showcaseForFile(value){
   return JSON.parse(JSON.stringify(out));
 }
 
-// A viewer made for one model: the viewer's page (apps/fmViewer.html as built) with its two empty
-// data blocks filled with the showcase and the model (both plain data, written as JSON). Each
-// block must be in the page exactly once, else nothing is made. Every "<" in the JSON is written
-// <, so no name in a model can end the block early or start markup of its own; JSON.parse
-// turns it back. Nothing else of the page changes. Returns { page } or { error }.
+
+// A viewer made for one model: the viewer's page (apps/fmViewer.html as built) with its empty
+// data blocks filled — the showcase and the model (both plain data, written as JSON), and, when
+// the viewer carries Excel (phase V4), the workbook block (`excel`, an fmIDE-viewer-workbook,
+// below). Each block filled must be in the page exactly once, else nothing is made; a viewer
+// made without Excel leaves its excel block empty. Every "<" in the JSON is written <, so
+// no name in a model can end the block early or start markup of its own; JSON.parse turns it
+// back. Nothing else of the page changes. Returns { page } or { error }.
 // (This file is inside the apps' own scripts: its texts never spell the closing tag out, so
 // the page's script doesn't end there, and the blocks are found only where the page has them.)
 const VIEWER_BLOCK_END = '<\/script>';
-export const VIEWER_BLOCKS = { showcase: '<script type="application/json" id="showcase">' + VIEWER_BLOCK_END, model: '<script type="application/json" id="model">' + VIEWER_BLOCK_END };
+export const VIEWER_BLOCKS = { showcase: '<script type="application/json" id="showcase">' + VIEWER_BLOCK_END, model: '<script type="application/json" id="model">' + VIEWER_BLOCK_END,
+  excel: '<script type="application/json" id="excel">' + VIEWER_BLOCK_END };
 export function showcaseJsonForPage(value){ return JSON.stringify(value).replace(/</g, '\\u003c'); }
-export function fillViewerPage(page, showcase, model){
+export function fillViewerPage(page, showcase, model, excel){
   if(typeof page !== 'string') return { error: 'The viewer page isn\'t as expected.' };
-  for(const key of Object.keys(VIEWER_BLOCKS)){
+  const values = { showcase, model };
+  if(excel !== undefined && excel !== null) values.excel = excel;
+  for(const key of Object.keys(values)){
     const at = page.indexOf(VIEWER_BLOCKS[key]);
     if(at < 0 || page.indexOf(VIEWER_BLOCKS[key], at + 1) >= 0) return { error: 'The viewer page isn\'t as expected (its ' + key + ' block).' };
   }
@@ -304,5 +310,177 @@ export function fillViewerPage(page, showcase, model){
     const open = block.slice(0, block.length - VIEWER_BLOCK_END.length);
     return text.slice(0, at) + open + showcaseJsonForPage(value) + VIEWER_BLOCK_END + text.slice(at + block.length);
   };
-  return { page: fill(fill(page, 'showcase', showcase), 'model', model) };
+  let out = page;
+  Object.keys(values).forEach(key => { out = fill(out, key, values[key]); });
+  return { page: out };
+}
+
+// ---------- Excel in a viewer (phase V4): the workbook block and its cell map ----------
+// A made viewer may carry the workbook its author made with ExcelExporter (ExcelExporter's
+// output, the author's — never ExcelExporter's code), packed, with its cell map: which cell
+// holds the Global Case (the case the workbook runs: 1 is Base, the model's own numbers; each
+// scenario a further case) and, for each slider on the Dashboard, its Typed cell and, for a
+// set slider, its Use cell (docs/file-formats.md, kind "fmIDE-viewer-workbook", version 1).
+// The viewer writes the visitor's state into those cells (excelPatchPlan, then
+// src/shared/xlsx-patch.js). Read from a file that may come from anyone: sheet names and cells
+// checked, names cut, numbers forced; nothing is run.
+export const VIEWER_WORKBOOK_KIND = 'fmIDE-viewer-workbook';
+export const VIEWER_WORKBOOK_FORMATS = { 'fmIDE-viewer-workbook': { current: 1, label: 'workbook for a viewer' } };
+export const VIEWER_WORKBOOK_MIGRATIONS = { 'fmIDE-viewer-workbook': {} };
+export const CELL_MAP_LIMITS = { sliders: 40, cases: 50, notes: 40, note: 300, sheet: 31, name: 60, workbook: 20 * 1024 * 1024, value: 1e15 };
+
+// A cell's address, A1 to XFD1048576 (upper case), else null.
+export function showcaseCellAddress(v){
+  const m = /^([A-Z]{1,3})([1-9][0-9]{0,6})$/.exec(typeof v === 'string' ? v.trim().toUpperCase() : '');
+  if(!m) return null;
+  let col = 0;
+  for(const ch of m[1]) col = col * 26 + (ch.charCodeAt(0) - 64);
+  return col <= 16384 && Number(m[2]) <= 1048576 ? m[1] + m[2] : null;
+}
+// { sheet, cell } with a sheet name Excel allows (1–31 characters, none of [ ] : * ? / \), else null.
+function cellRef(v){
+  if(!isObject(v) || typeof v.sheet !== 'string') return null;
+  const sheet = v.sheet;
+  if(!sheet || sheet.length > CELL_MAP_LIMITS.sheet || /[\[\]:*?\/\\\u0000-\u001f]/.test(sheet)) return null;
+  const cell = showcaseCellAddress(v.cell);
+  return cell ? { sheet, cell } : null;
+}
+function cleanMapPeriods(p){
+  const whole = (x) => Number.isInteger(x) && x >= 0 && x < SHOWCASE_LIMITS.periods;
+  if(isObject(p) && p.mode === 'one' && whole(p.p)) return { mode: 'one', p: p.p };
+  if(isObject(p) && p.mode === 'range' && whole(p.from) && whole(p.to) && p.from <= p.to) return { mode: 'range', from: p.from, to: p.to };
+  return { mode: 'all' };
+}
+const mapNumber = (v) => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= CELL_MAP_LIMITS.value ? v : null;
+
+// The cell map: { value: { case: { sheet, cell } | null, cases: [{ name, case, missing }],
+// sliders: [{ canvasId, nodeId, name, mode, periods, typed, use, rest }] }, problems }.
+// `rest`: what a change by % gives with nothing typed (one that can't rest on 0 rests on
+// another number); null for a set slider (with Use off it changes nothing).
+export function cleanCellMap(raw){
+  const problems = [];
+  const d = isObject(raw) ? raw : {};
+  if(!isObject(raw)) problems.push('The cell map is not a list of cells.');
+  const v = { case: null, cases: [], sliders: [] };
+  if(d.case !== undefined && d.case !== null){
+    v.case = cellRef(d.case);
+    if(!v.case) problems.push('The Global Case cell is not a sheet and a cell: scenarios can\'t be written.');
+  }
+  const names = new Set();
+  (Array.isArray(d.cases) ? d.cases : []).forEach(c => {
+    const name = isObject(c) ? showcaseText(c.name, SHOWCASE_LIMITS.scenario) : '';
+    const n = isObject(c) ? c.case : null;
+    if(!name || names.has(name.toLowerCase()) || !Number.isInteger(n) || n < 2 || n > CELL_MAP_LIMITS.cases || v.cases.length >= CELL_MAP_LIMITS.cases - 1){
+      problems.push('A scenario in the cell map has no name of its own or no case: left out.');
+      return;
+    }
+    names.add(name.toLowerCase());
+    const missing = Number.isInteger(c.missing) && c.missing > 0 && c.missing <= 1000 ? c.missing : 0;
+    v.cases.push({ name, case: n, missing });
+  });
+  if(d.cases !== undefined && !Array.isArray(d.cases)) problems.push('The cell map\'s scenarios are not a list: left out.');
+  (Array.isArray(d.sliders) ? d.sliders : []).forEach(s => {
+    const ok = isObject(s) && typeof s.canvasId === 'string' && s.canvasId && s.canvasId.length <= SHOWCASE_LIMITS.canvasId &&
+      typeof s.nodeId === 'string' && s.nodeId && s.nodeId.length <= SHOWCASE_LIMITS.canvasId && (s.mode === 'set' || s.mode === 'shift');
+    const typed = ok ? cellRef(s.typed) : null;
+    const use = ok && s.mode === 'set' ? cellRef(s.use) : null;
+    if(!ok || !typed || (s.mode === 'set' && !use) || v.sliders.length >= CELL_MAP_LIMITS.sliders){
+      problems.push('A slider in the cell map is not one the workbook can take: left out.');
+      return;
+    }
+    v.sliders.push({ canvasId: s.canvasId, nodeId: s.nodeId, name: showcaseText(s.name, CELL_MAP_LIMITS.name), mode: s.mode,
+      periods: cleanMapPeriods(s.periods), typed, use, rest: s.mode === 'shift' ? (mapNumber(s.rest) === null ? 0 : mapNumber(s.rest)) : null });
+  });
+  if(d.sliders !== undefined && !Array.isArray(d.sliders)) problems.push('The cell map\'s sliders are not a list: left out.');
+  return { value: v, problems };
+}
+
+// The workbook block a made viewer carries: { kind, version, packed: "deflate-raw", size,
+// workbook (base64 of the workbook packed with deflate), cells (the cell map), notes }.
+export function viewerWorkbookFor(base64, size, cells, notes){
+  return { kind: VIEWER_WORKBOOK_KIND, version: 1, packed: 'deflate-raw', size, workbook: base64,
+    cells: cleanCellMap(cells).value, notes: (Array.isArray(notes) ? notes : []).map(n => showcaseText(n, CELL_MAP_LIMITS.note)).filter(Boolean).slice(0, CELL_MAP_LIMITS.notes) };
+}
+// Reads the block's parsed data: { error } or { value: { size, workbook, cells, notes }, problems }.
+export function readViewerWorkbook(raw){
+  if(!isObject(raw) || raw.kind !== VIEWER_WORKBOOK_KIND) return { error: 'The viewer\'s workbook is not one it can read.' };
+  const data = JSON.parse(JSON.stringify(raw));
+  const { newer } = upgradeFileData(data, VIEWER_WORKBOOK_KIND, VIEWER_WORKBOOK_FORMATS, VIEWER_WORKBOOK_MIGRATIONS);
+  if(newer) return { error: 'The viewer\'s workbook was made by a newer fmIDE: this viewer can\'t download it.', newer: true };
+  if(data.packed !== 'deflate-raw') return { error: 'The viewer\'s workbook is packed in a way this viewer doesn\'t read.' };
+  const size = data.size;
+  if(!Number.isInteger(size) || size < 22 || size > CELL_MAP_LIMITS.workbook) return { error: 'The viewer\'s workbook is not a size it can be.' };
+  const b64 = typeof data.workbook === 'string' ? data.workbook : '';
+  if(!b64 || b64.length % 4 !== 0 || b64.length > Math.ceil(CELL_MAP_LIMITS.workbook / 3) * 4 + 4 || !/^[A-Za-z0-9+/]*={0,2}$/.test(b64)) return { error: 'The viewer\'s workbook is damaged.' };
+  const cells = cleanCellMap(data.cells);
+  const notes = (Array.isArray(data.notes) ? data.notes : []).map(n => showcaseText(n, CELL_MAP_LIMITS.note)).filter(Boolean).slice(0, CELL_MAP_LIMITS.notes);
+  return { value: { size, workbook: b64, cells: cells.value, notes }, problems: cells.problems };
+}
+
+// The periods a slider covers, as indexes (of periodCount), for comparing two sliders.
+function coveredPeriods(p, periodCount){
+  const n = Math.max(1, periodCount || 1);
+  const all = Array.from({ length: n }, (_, i) => i);
+  if(!isObject(p) || p.mode === 'all') return all;
+  if(p.mode === 'one') return [Math.min(n - 1, Math.max(0, p.p))];
+  return all.filter(i => i >= Math.min(p.from, p.to) && i <= Math.max(p.from, p.to));
+}
+const showNumber = (x) => String(Number(Number(x).toPrecision(10)));
+
+// What the download writes for the visitor's state (the owner's choice 3 of phase V2): a scenario
+// shown exactly writes only the Global Case (and 0 into a change by % that doesn't rest on 0);
+// anything else is Base (case 1) plus each moved slider in its Typed cell (TRUE in Use for a set
+// slider). state: { scenario: name | null, sliders: [{ canvasId, nodeId, name, mode, periods,
+// value (null: not moved) }] } — the sliders that count on the board shown, in order.
+// Returns { writes: [{ sheet, cell, value }], line, missing: [names], suffix }.
+export function excelPatchPlan(cells, state, periodCount){
+  const map = isObject(cells) ? cells : { case: null, cases: [], sliders: [] };
+  const st = isObject(state) ? state : {};
+  const writes = [], missing = [];
+  const keyOf = (s) => s.canvasId + '\u0000' + s.nodeId + '\u0000' + s.mode + '\u0000' + coveredPeriods(s.periods, periodCount).join(',');
+  const restWrites = (taken) => map.sliders.forEach(m => {
+    if(m.mode === 'shift' && m.rest !== 0 && m.rest !== null && !taken.has(keyOf(m))) writes.push({ sheet: m.typed.sheet, cell: m.typed.cell, value: 0 });
+  });
+  const scenario = typeof st.scenario === 'string' && st.scenario ? st.scenario : null;
+  if(scenario){
+    const c = map.cases.find(x => x.name === scenario) || map.cases.find(x => x.name.toLowerCase() === scenario.toLowerCase());
+    if(c && map.case){
+      writes.push({ sheet: map.case.sheet, cell: map.case.cell, value: c.case });
+      restWrites(new Set());
+      return { writes, missing, suffix: ' – ' + scenario,
+        line: 'Scenario: ' + scenario + (c.missing ? ' (in the workbook without ' + c.missing + ' of its change' + (c.missing === 1 ? '' : 's') + ')' : '') };
+    }
+    if(map.case) writes.push({ sheet: map.case.sheet, cell: map.case.cell, value: 1 });
+    restWrites(new Set());
+    return { writes, missing: [scenario], suffix: '', line: 'The model\'s own numbers — the scenario “' + scenario + '” isn\'t in the workbook' };
+  }
+  if(map.case) writes.push({ sheet: map.case.sheet, cell: map.case.cell, value: 1 });
+  const moved = (Array.isArray(st.sliders) ? st.sliders : []).filter(s => isObject(s) && typeof s.value === 'number' && Number.isFinite(s.value));
+  const byKey = new Map(map.sliders.map(m => [keyOf(m), m]));
+  const taken = new Set(), words = [];
+  moved.forEach(s => {
+    const name = showcaseText(s.name, CELL_MAP_LIMITS.name) || 'A slider';
+    const m = byKey.get(keyOf(s));
+    const said = s.mode === 'shift' ? name + ' ' + (s.value >= 0 ? '+' : '') + showNumber(s.value) + '%' : name + ' set to ' + showNumber(s.value);
+    if(!m){ if(!missing.includes(name)) missing.push(name); return; }
+    if(taken.has(keyOf(m))) return;
+    taken.add(keyOf(m));
+    if(m.mode === 'set'){
+      writes.push({ sheet: m.typed.sheet, cell: m.typed.cell, value: s.value }, { sheet: m.use.sheet, cell: m.use.cell, value: true });
+      words.push(said);
+      return;
+    }
+    if(s.value !== m.rest) writes.push({ sheet: m.typed.sheet, cell: m.typed.cell, value: s.value });
+    if(s.value !== 0) words.push(said);
+  });
+  restWrites(taken);
+  let line = words.length ? words.join(', ') : 'The model\'s own numbers';
+  if(missing.length) line += ' — ' + missing.join(', ') + (missing.length === 1 ? ' isn\'t' : ' aren\'t') + ' in the workbook';
+  return { writes, missing, suffix: words.length ? ' – my sliders' : '', line };
+}
+// The downloaded workbook's name: the author's, with what it holds added (" – High price").
+export function showcaseDownloadName(file, suffix){
+  const base = showcaseFileName(file) || 'Model.xlsx';
+  if(!suffix) return base;
+  return showcaseFileName(base.replace(/\.xlsx$/i, '') + suffix) || base;
 }
