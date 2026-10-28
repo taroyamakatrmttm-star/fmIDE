@@ -55,6 +55,10 @@ const WRONG_KIND = [
   ['loadSystem', 'functions', /^That is an fmIDE functions file, not a system\. Open it with Functions → Import Functions\.$/],
   ['loadSystem', 'excel-style', /^That is an ExcelExporter Excel style file — import it in ExcelExporter/],
   ['loadSystem', 'module-layouts', /^That is an ExcelExporter module layouts file — import it in ExcelExporter/],
+  // Phase V3 of the showcase viewer: a showcase file and an fmGraph board file say where they open.
+  ['loadSystem', 'showcase-v1', /^That is a showcase: it says what a showcase viewer shows\. Open it in fmShowcase \(fmViewer\.html\) together with its model\.$/],
+  // (The board file's app is matched as a word, so this file isn't counted as opening it: group 74.)
+  ['loadSystem', 'board-v12', /^That is an fm\w+ board file — open it in fm\w+ \(Boards → Import\)\.$/],
 ];
 for(const [command, name, message] of WRONG_KIND){
   test(`${name} via ${command} is rejected with a message`, async ({ page }) => {
@@ -112,16 +116,17 @@ for(const name of ['sys-newer-v5', 'sys-newer-v6', 'sys-newer-v7']){
 // Files from before function definitions (workspace v3, module v2, templates v3), from
 // before the operators of phase E1 (workspace v4, module v3, templates v4) and from before
 // those of phase E2a (workspace v8, system v7, module v5, templates v7) or E2b (workspace v9, system v8, module v6, templates v8) still open, and
-// are saved in the current versions (workspace v13 since step 20's Excel layout, system v9 and module v7 since phase E2b); a
-// workspace v10 (before fmGraph's boards), v11 (before boards on templates, step 15 G5a) and v12 (before the Excel layout) too.
-for(const [name, sys] of [['ws-v3', 'v4'], ['ws-v4', 'v5'], ['ws-v8', 'v7'], ['ws-v9', 'v8'], ['ws-v10', 'v9'], ['ws-v11', 'v9'], ['ws-v12', 'v9']]){
-test(`${name} imports, with its ${sys} system and its templates, and exports as v13`, async ({ page }) => {
+// are saved in the current versions (workspace v14 since the showcase viewer's phase V3, system v9 and module v7 since phase E2b); a
+// workspace v10 (before fmGraph's boards), v11 (before boards on templates, step 15 G5a), v12 (before the Excel layout) and
+// v13 (before the showcase) too.
+for(const [name, sys] of [['ws-v3', 'v4'], ['ws-v4', 'v5'], ['ws-v8', 'v7'], ['ws-v9', 'v8'], ['ws-v10', 'v9'], ['ws-v11', 'v9'], ['ws-v12', 'v9'], ['ws-v13', 'v9']]){
+test(`${name} imports, with its ${sys} system and its templates, and exports as v14`, async ({ page }) => {
   await F.importViaCommand(page, 'importWorkspace', file(name));
   const seen = await F.acceptAll(page);
   expect(seen[0]).toMatch(/^Import this workspace\?/);
   expect(await canvasNames(page)).toEqual(['Revenue Model']);
   const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
-  expect(data.version).toBe(13);
+  expect(data.version).toBe(14);
   expect(data.system.version).toBe(9);
   expect(data.functions).toEqual([]);
   expect(data.system).not.toHaveProperty('functions');
@@ -227,7 +232,7 @@ test('ws-v6-excel-settings: imports; its system, template and presets lose the E
   const seen = await F.acceptAll(page);
   expect(seen[0]).toMatch(/^Import this workspace\?/);
   const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
-  expect(data.version).toBe(13);
+  expect(data.version).toBe(14);
   expect(data.system.version).toBe(9);
   expect(JSON.stringify(data)).not.toMatch(EXCEL_ONLY);
   expectPresetsClean(data.formatPresets);
@@ -351,7 +356,7 @@ test.describe('origin: files from before templates v6, workspace v6 and function
     expect(seen[0]).toMatch(/^Import this workspace\?/);
     expect(await canvasNames(page)).toEqual(['Revenue Model']);
     const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
-    expect(data.version).toBe(13);
+    expect(data.version).toBe(14);
     expect(data.functions.map(d => d.family + '@' + d.version)).toEqual(['family-margin@1', 'family-margin@2', 'family-profit@1']);
     expect(data.templates.map(t => t.name)).toEqual(expect.arrayContaining(['Income Statement', 'Balance Sheet', 'Cash Flow']));
     expect(JSON.stringify(data)).not.toContain('"origin"');
@@ -390,5 +395,119 @@ test.describe('origin: files from before templates v6, workspace v6 and function
     fs.writeFileSync(p, JSON.stringify(newer));
     await F.importViaDialog(page, 'openTemplates', '⇧ Import Templates', p);
     expect(await F.dialogText(page)).toMatch(/^This templates file was saved by a newer version of fmIDE \(format version 11; this fmIDE reads up to version 10\)/);
+  });
+});
+
+// Workspace v14 (phase V3 of the showcase viewer, docs/viewer-brief.md): a document may keep its
+// showcase, `showcase` — what its viewer shows — so making the viewer again remembers every
+// choice. fmIDE keeps it as a showcase for one model, read with the showcase's own checks.
+test.describe('workspace v14: the document keeps its showcase', () => {
+  const workspaceWith = (extra) => Object.assign(readFixture('formats', 'ws-v13.json'), { version: 14 }, extra);
+  async function importWorkspace(page, testInfo, data, name = 'ws.json'){
+    const p = testInfo.outputPath(name);
+    fs.writeFileSync(p, JSON.stringify(data));
+    await F.importViaCommand(page, 'importWorkspace', p);
+    return F.acceptAll(page);
+  }
+  const exported = async (page) => (await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()))).data;
+  // New and Open ask first about the unsaved changes: Don't save, then (Open) pick the file.
+  async function discarding(page, command, file){
+    const dontSave = page.locator('#saveChangesDialog button', { hasText: "Don't save" });
+    if(!file){
+      await page.evaluate((c) => fm.command(c), command);
+      await dontSave.click();
+      return;
+    }
+    await page.evaluate((c) => fm.command(c), command);
+    const [chooser] = await Promise.all([page.waitForEvent('filechooser'), dontSave.click()]);
+    await chooser.setFiles(file);
+  }
+
+  test('ws-v13 keeps its boards and Excel layout and has no showcase; saved again it is v14', async ({ page }) => {
+    await F.importViaCommand(page, 'importWorkspace', file('ws-v13'));
+    await F.acceptAll(page);
+    const data = await exported(page);
+    expect(data.version).toBe(14);
+    expect(data.graphBoards).toEqual(readFixture('formats', 'ws-v13.json').graphBoards);
+    expect(data.excelLayout).toEqual(readFixture('formats', 'ws-v13.json').excelLayout);
+    expect(data).not.toHaveProperty('showcase');
+  });
+
+  test('a showcase is kept through Import Workspace, the autosave and Open; New clears it', async ({ page }, testInfo) => {
+    const showcase = readFixture('formats', 'showcase-v1.json');
+    await importWorkspace(page, testInfo, workspaceWith({ showcase }));
+    let data = await exported(page);
+    expect(data.showcase).toMatchObject({ kind: 'fmIDE-showcase', version: 1, id: 'loan-basics', title: 'How a loan is repaid',
+      author: 'A teacher', licence: 'CC BY 4.0', mark: false, canvases: { show: ['c1', 'c3'], start: 'c3' },
+      play: { from: 'Base', to: 'High rate' }, periods: { mode: 'range', from: 0, to: 9 }, excel: { file: 'Loan basics.xlsx' } });
+    expect(data.showcase.boards).toEqual(showcase.boards);
+    await page.reload();
+    await page.waitForFunction(() => window.fm && typeof window.fm.canvases === 'function');
+    expect((await exported(page)).showcase.id).toBe('loan-basics');
+    await discarding(page, 'newDocument');
+    expect(await exported(page)).not.toHaveProperty('showcase');
+    await page.evaluate(() => fm.renameCanvas({ canvas: '@current', name: 'Changed' }));
+    const p = testInfo.outputPath('Loan.fmide');
+    fs.writeFileSync(p, JSON.stringify(workspaceWith({ showcase })));
+    await discarding(page, 'openDocument', p);
+    await expect.poll(() => canvasNames(page)).toEqual(['Revenue Model']);
+    expect((await exported(page)).showcase.title).toBe('How a loan is repaid');
+    // A system file opened as a document has no showcase.
+    await page.evaluate(() => fm.renameCanvas({ canvas: '@current', name: 'Changed again' }));
+    await discarding(page, 'openDocument', file('sys-current'));
+    await expect.poll(() => canvasNames(page)).toEqual(['Revenue Model']);
+    expect(await exported(page)).not.toHaveProperty('showcase');
+  });
+
+  test('a showcase that is not one is dropped; markup in it stays text, never run', async ({ page }, testInfo) => {
+    const evil = '<img src=x onerror="window.__pwned=1"></script><!--';
+    for(const showcase of [
+      { kind: 'fmIDE-showcase', version: 1, form: 'recipe', title: '{model}' },            // the recipe form is for many models
+      { kind: 'fmIDE-graph-board', version: 13, boards: [] },                             // another kind
+      'a showcase', [1, 2, 3],
+      { kind: 'fmIDE-showcase', version: 1, title: 'x'.repeat(2 * 1024 * 1024) },        // too big
+    ]){
+      await importWorkspace(page, testInfo, workspaceWith({ showcase }));
+      expect(await exported(page)).not.toHaveProperty('showcase');
+    }
+    await importWorkspace(page, testInfo, workspaceWith({ showcase: { kind: 'fmIDE-showcase', version: 1, id: 'Not an id!', title: evil, description: 7 } }));
+    const kept = (await exported(page)).showcase;
+    expect(kept.title).toBe(evil.slice(0, 80));
+    expect(kept).not.toHaveProperty('id');
+    expect(kept.description).toBe('7');
+    expect(await page.evaluate(() => window.__pwned)).toBeUndefined();
+  });
+
+  test('a showcase from a newer viewer format is kept as it came', async ({ page }, testInfo) => {
+    const showcase = { kind: 'fmIDE-showcase', version: 2, title: 'Later', somethingNew: [1] };
+    await importWorkspace(page, testInfo, workspaceWith({ showcase }));
+    expect((await exported(page)).showcase).toEqual(showcase);
+  });
+
+  // Workspace v14 is current: a newer one is v15.
+  test('a v15 workspace asks first', async ({ page }, testInfo) => {
+    const p = testInfo.outputPath('ws-v15.json');
+    fs.writeFileSync(p, JSON.stringify(workspaceWith({ version: 15 })));
+    await F.importViaCommand(page, 'importWorkspace', p);
+    expect(await F.dialogText(page)).toMatch(/^This workspace was saved by a newer version of fmIDE \(format version 15; this fmIDE reads up to version 14\)/);
+  });
+
+  test('a made showcase viewer (a web page) opened in fmIDE says so', async ({ page }, testInfo) => {
+    const p = testInfo.outputPath('loan-basics.html');
+    fs.writeFileSync(p, '<!doctype html>\n<html><head><title>x</title></head><body>\n<script type="application/json" id="showcase">{}</script>\n</body></html>\n');
+    await F.importViaCommand(page, 'loadSystem', p);
+    expect(await F.dialogText(page)).toBe('That is a showcase viewer, a web page: open it in your browser, not in fmIDE.');
+    await F.dismissMessage(page);
+    await discarding(page, 'openDocument', p);
+    expect(await F.dialogText(page)).toBe('That is a showcase viewer, a web page: open it in your browser, not in fmIDE.');
+    await F.dismissMessage(page);
+    expect(await canvasNames(page)).toEqual(['Before load']);
+  });
+
+  test('a showcase file opened as a document says where it opens', async ({ page }) => {
+    await discarding(page, 'openDocument', file('showcase-v1'));
+    expect(await F.dialogText(page)).toMatch(/^That is a showcase: it says what a showcase viewer shows\. Open it in fmShowcase/);
+    await F.dismissMessage(page);
+    expect(await canvasNames(page)).toEqual(['Before load']);
   });
 });

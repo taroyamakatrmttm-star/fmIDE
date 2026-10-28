@@ -15,6 +15,7 @@
   // ExcelExporter: change those in src/shared/file-formats.js.
   // ============================================================
   // build:include shared/file-formats.js
+  // build:include shared/showcase.js
   // build:include shared/fmide-files.js
   // fmIDE's upgrade steps: the shared ones, plus the shortcuts file's.
   const FILE_MIGRATIONS = Object.assign({}, FMIDE_FILE_MIGRATIONS, {
@@ -37,6 +38,10 @@
     }
     return r;
   }
+  // A made showcase viewer (an .html page carrying its showcase, phase V3) opened by mistake.
+  function isShowcaseViewerPage(text){
+    return /^\s*</.test(text) && /<script type="application\/json" id="showcase">/.test(text);
+  }
   // UI wrapper: parse → read → (warn if newer) → onOk(data, result). Returns nothing.
   // A file that is too large or nested too deep is refused first (FILE_LIMITS).
   function openFmFileText(text, accept, onOk){
@@ -44,7 +49,7 @@
     if(tooBig){ showMessage(tooBig); return; }
     let raw;
     try{ raw = JSON.parse(text); }
-    catch(err){ showMessage('That file is not valid JSON.'); return; }
+    catch(err){ showMessage(isShowcaseViewerPage(text) ? 'That is a showcase viewer, a web page: open it in your browser, not in fmIDE.' : 'That file is not valid JSON.'); return; }
     const shape = fileDataProblem(raw);
     if(shape){ showMessage(shape); return; }
     const r = readFmFile(raw, accept);

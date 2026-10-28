@@ -2410,7 +2410,7 @@ function errorWords(code){
 // (docs/file-formats.md). To change one of these formats: raise its version here and add
 // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
 // exactly one version.
-const SHARED_FILE_VERSIONS = { 'system': 9, 'fmIDE-workspace': 13 };
+const SHARED_FILE_VERSIONS = { 'system': 9, 'fmIDE-workspace': 14 };
 // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
 // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
 function upgradeNodePlugs(nodes){
@@ -2504,7 +2504,10 @@ const SHARED_FILE_MIGRATIONS = {
     11: () => {},
     // v12 → v13: a document may carry its model's Excel layout (`excelLayout`, an
     // fmIDE-excel-mapping file, step 20); older ones have none.
-    12: () => {}
+    12: () => {},
+    // v13 → v14: a document may keep what its showcase viewer shows (`showcase`, an
+    // fmIDE-showcase file, phase V3 of docs/viewer-brief.md); older ones have none.
+    13: () => {}
   },
   'system': {
     // v1 systems were accepted with fields the loader already defaults (periods, ids…);
@@ -3343,6 +3346,128 @@ function resolveShowcase(sc, canvases, periodCount){
     else periods = periods.filter(p => p >= from && p <= to);
   }
   return { canvases: show, start, periods, problems };
+}
+
+// ---------- making a viewer (phase V3: fmIDE's Make showcase viewer…; later tools/make-viewers.js) ----------
+
+// An id (and so the viewer's file name) from a title: letters and digits kept (accents taken
+// off), everything else a dash, at most 60; "showcase" when nothing is left.
+function showcaseIdFrom(title){
+  const t = showcaseText(title, 200).normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, SHOWCASE_LIMITS.id).replace(/-+$/g, '');
+  return t || 'showcase';
+}
+
+// What an author can choose from a document's fmGraph boards (an fmIDE-graph-board file, kept
+// as data): only the boards' and scenarios' names are read. `kept`: the showcase made before,
+// whose boards' names say which to tick again (a board not there before comes unticked).
+// Returns { boards: [{ name, chosen }], scenarios: [names] }.
+function showcaseBoardList(graphBoards, kept){
+  const out = { boards: [], scenarios: [] };
+  if(!isObject(graphBoards) || graphBoards.form === 'template') return out;
+  const keptNames = kept && isObject(kept.boards) && Array.isArray(kept.boards.boards)
+    ? kept.boards.boards.map(b => isObject(b) ? showcaseText(b.name, SHOWCASE_LIMITS.title) : '') : null;
+  (Array.isArray(graphBoards.boards) ? graphBoards.boards : []).forEach((b, i) => {
+    const name = (isObject(b) ? showcaseText(b.name, SHOWCASE_LIMITS.title) : '') || 'Board ' + (i + 1);
+    out.boards.push({ name, chosen: kept ? !!keptNames && keptNames.includes(name) : true });
+  });
+  (Array.isArray(graphBoards.scenarios) ? graphBoards.scenarios : []).forEach(sc => {
+    const name = isObject(sc) ? showcaseText(sc.name, SHOWCASE_LIMITS.scenario) : '';
+    if(name && !out.scenarios.includes(name)) out.scenarios.push(name);
+  });
+  return out;
+}
+
+// The showcase for one model from an author's choices. choices: { id, title, description, author,
+// licence, mark, canvases: [ids ticked], start, periods: { from, to } | null, boards: [indexes
+// into graphBoards.boards], play: { from, to } | null }; graphBoards: the document's board file
+// (or null); model: { canvases: [{ id }], periodCount }. Play's ends are "Base" (the model's own
+// numbers) or a scenario's name. Every period chosen writes no `periods`. Returns { value (a
+// cleaned showcase), problems, error }: error (nothing made) when no canvas is ticked.
+function showcaseFromChoices(choices, graphBoards, model){
+  const c = isObject(choices) ? choices : {};
+  const problems = [];
+  const known = (model && Array.isArray(model.canvases) ? model.canvases : []).map(x => x && x.id).filter(id => typeof id === 'string');
+  const ticked = (Array.isArray(c.canvases) ? c.canvases : []).filter(id => typeof id === 'string');
+  const show = known.filter(id => ticked.includes(id));
+  if(ticked.length > show.length) problems.push('A canvas chosen is no longer in the model: it is left out.');
+  if(!show.length) return { value: null, problems, error: 'Choose at least one canvas to show.' };
+  const title = showcaseText(c.title, SHOWCASE_LIMITS.title);
+  const sc = {
+    kind: SHOWCASE_KIND, version: 1,
+    id: typeof c.id === 'string' && SHOWCASE_ID.test(c.id) ? c.id : showcaseIdFrom(c.id || title),
+    title, description: c.description, author: c.author, licence: c.licence, mark: c.mark !== false,
+    canvases: { show, start: show.includes(c.start) ? c.start : show[0] }
+  };
+  const count = Math.max(1, Number.isInteger(model && model.periodCount) ? model.periodCount : 1);
+  if(isObject(c.periods)){
+    const num = (v, dflt) => Number.isFinite(Number(v)) && v !== null && v !== '' ? Math.trunc(Number(v)) : dflt;
+    const from = Math.max(0, Math.min(count - 1, num(c.periods.from, 0)));
+    const to = Math.max(from, Math.min(count - 1, num(c.periods.to, count - 1)));
+    if(from > 0 || to < count - 1) sc.periods = { mode: 'range', from, to };
+  }
+  const all = isObject(graphBoards) && graphBoards.form !== 'template' && Array.isArray(graphBoards.boards) ? graphBoards.boards : [];
+  const picked = [];
+  let gone = false;
+  (Array.isArray(c.boards) ? c.boards : []).forEach(i => {
+    if(Number.isInteger(i) && i >= 0 && i < all.length){ if(!picked.includes(i)) picked.push(i); }
+    else gone = true;
+  });
+  if(gone) problems.push('A board chosen is no longer in the model: it is left out.');
+  picked.sort((a, b) => a - b);
+  if(picked.length){
+    sc.boards = JSON.parse(JSON.stringify(Object.assign({}, graphBoards, { active: 0, boards: picked.map(i => all[i]) })));
+    const names = showcaseBoardList(graphBoards).scenarios;
+    if(names.includes('Base')) problems.push('A scenario is named "Base", which Play keeps for the model\'s own numbers: it can\'t be one of Play\'s ends.');
+    if(isObject(c.play)){
+      const end = (v) => { const t = showcaseText(v, SHOWCASE_LIMITS.scenario); return t === 'Base' || names.includes(t) ? t : ''; };
+      const from = end(c.play.from), to = end(c.play.to);
+      if(from && to && from !== to) sc.play = { from, to };
+      else problems.push('Play needs two different ends, Base or a scenario: left out.');
+    }
+  }
+  const cleaned = cleanShowcase(sc);
+  return { value: showcaseForFile(cleaned.value), problems: problems.concat(cleaned.problems), error: null };
+}
+
+// A cleaned showcase as a file writes it: what cleanShowcase marks as none (null) left out, so
+// reading the file again finds nothing to complain about.
+function showcaseForFile(value){
+  if(!isObject(value)) return value;
+  const out = {};
+  Object.keys(value).forEach(k => { if(value[k] !== null) out[k] = value[k]; });
+  if(isObject(out.canvases)){
+    const c = {};
+    if(out.canvases.show !== null && out.canvases.show !== undefined) c.show = out.canvases.show;
+    if(out.canvases.start !== null && out.canvases.start !== undefined) c.start = out.canvases.start;
+    if(Object.keys(c).length) out.canvases = c; else delete out.canvases;
+  }
+  return JSON.parse(JSON.stringify(out));
+}
+
+// A viewer made for one model: the viewer's page (apps/fmViewer.html as built) with its two empty
+// data blocks filled with the showcase and the model (both plain data, written as JSON). Each
+// block must be in the page exactly once, else nothing is made. Every "<" in the JSON is written
+// <, so no name in a model can end the block early or start markup of its own; JSON.parse
+// turns it back. Nothing else of the page changes. Returns { page } or { error }.
+// (This file is inside the apps' own scripts: its texts never spell the closing tag out, so
+// the page's script doesn't end there, and the blocks are found only where the page has them.)
+const VIEWER_BLOCK_END = '<\/script>';
+const VIEWER_BLOCKS = { showcase: '<script type="application/json" id="showcase">' + VIEWER_BLOCK_END, model: '<script type="application/json" id="model">' + VIEWER_BLOCK_END };
+function showcaseJsonForPage(value){ return JSON.stringify(value).replace(/</g, '\\u003c'); }
+function fillViewerPage(page, showcase, model){
+  if(typeof page !== 'string') return { error: 'The viewer page isn\'t as expected.' };
+  for(const key of Object.keys(VIEWER_BLOCKS)){
+    const at = page.indexOf(VIEWER_BLOCKS[key]);
+    if(at < 0 || page.indexOf(VIEWER_BLOCKS[key], at + 1) >= 0) return { error: 'The viewer page isn\'t as expected (its ' + key + ' block).' };
+  }
+  const fill = (text, key, value) => {
+    const block = VIEWER_BLOCKS[key];
+    const at = text.indexOf(block);
+    const open = block.slice(0, block.length - VIEWER_BLOCK_END.length);
+    return text.slice(0, at) + open + showcaseJsonForPage(value) + VIEWER_BLOCK_END + text.slice(at + block.length);
+  };
+  return { page: fill(fill(page, 'showcase', showcase), 'model', model) };
 }
 // ---------- pointer input: mouse, touch and pen (shared: src/shared/pointer-input.js, used by both apps) ----------
 // Step 9 (docs/step9-touch.md). A mouse keeps the mouse events it always had: an action starts

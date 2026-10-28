@@ -94,5 +94,6 @@
  "90-excel-free-chart.spec.js": 16.9,
  "91-viewer.spec.js": 18,
  "92-fmgraph-board-engine.spec.js": 19.9,
- "93-viewer-board.spec.js": 29.1
+ "93-viewer-board.spec.js": 29.1,
+ "94-make-showcase-viewer.spec.js": 5
 }

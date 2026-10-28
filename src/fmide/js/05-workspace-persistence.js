@@ -12,6 +12,10 @@
   // ('excel:layout', 21-web-app.js) or the document brought, kept as it came (cleanExcelLayout),
   // never read here. Saved with the document and the autosave; null: none.
   let excelLayout = null;
+  // The open document's showcase (phase V3 of docs/viewer-brief.md, workspace v14): what its
+  // showcase viewer shows, kept so that making the viewer again remembers every choice
+  // (cleanDocumentShowcase). Saved with the document and the autosave; null: none.
+  let docShowcase = null;
 
   function buildWorkspacePayload(){
     return {
@@ -25,6 +29,7 @@
       functions: cloneData(FUNCTIONS),
       ...(graphBoards ? { graphBoards: cloneData(graphBoards) } : {}),
       ...(excelLayout ? { excelLayout: cloneData(excelLayout) } : {}),
+      ...(docShowcase ? { showcase: cloneData(docShowcase) } : {}),
       ui: buildUiPayload()
     };
   }
@@ -50,6 +55,7 @@
       applySystemDataDirect(data.system);
       graphBoards = cleanGraphBoards(data.graphBoards); // the boards belong to the model
       excelLayout = cleanExcelLayout(data.excelLayout); // and so does its Excel layout
+      docShowcase = cleanDocumentShowcase(data.showcase); // and its showcase
     }
     // (A workspace has always read a kind other than 'system' as a canvas template.)
     if(fromImport) addMissingTemplates((Array.isArray(data.templates) ? data.templates : [])
