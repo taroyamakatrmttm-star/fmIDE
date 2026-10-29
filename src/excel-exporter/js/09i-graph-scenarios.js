@@ -311,7 +311,6 @@ function openGraphBoardsWindow(read, source){
 // Copies the chosen scenarios (and, from B3, the Tornado and Spider charts as analyses) into
 // the layout, after asking when it replaces cases or fmGraph's analyses there.
 async function useGraphScenarios(copy){
-  const analyses = copy.analyses || [];
   const had = graphScenariosInLayout();
   const hadAnalyses = graphAnalysesInLayout();
   const hadSliders = graphSlidersInLayout();
@@ -330,6 +329,28 @@ async function useGraphScenarios(copy){
     const ok = await showConfirm('Replace the cases?', parts.join(' '), 'Replace');
     if(!ok){ setStatus($('genStatus'), 'fmGraph scenarios not used.', 'info'); return; }
   }
+  const { plan, added, past, turnedOn } = await applyGraphCopy(copy);
+  saveMapping(); renderAll();
+  const n = plan ? plan.byMirror.size : 0;
+  const dash = graphSliderPlan();
+  const nSliders = mapping.cfg.graph.sliders.length;
+  const nCharts = mapping.cfg.graph.charts.length;
+  const notes = (plan ? plan.notes : []).concat(dash ? dash.notes : [], graphChartNotes(), past.length ? ['Analyses past ' + SENS_MAX_ANALYSES + ' in all are not added: ' + past.map(a => a.name).join(', ') + '.'] : []);
+  const sensText = (added.length ? added.length + ' sensitivity analys' + (added.length === 1 ? 'is' : 'es') + ' from its Tornado and Spider charts.' : '') +
+    (nSliders ? (added.length ? ' ' : '') + nSliders + ' slider' + (nSliders === 1 ? '' : 's') + ' on the Dashboard.' : '') +
+    (nCharts ? (added.length || nSliders ? ' ' : '') + nCharts + ' chart' + (nCharts === 1 ? '' : 's') + ' on the Dashboard.' : '');
+  const msg = (copy.scenarios.length
+      ? 'fmGraph scenarios used: ' + (plan ? plan.cases.length : 1) + ' Global Cases (Base and ' + copy.scenarios.length + '), ' +
+        n + ' input' + (n === 1 ? '' : 's') + ' with scenarios.' + (sensText ? ' Also ' + sensText.charAt(0).toLowerCase() + sensText.slice(1) : '')
+      : 'fmGraph boards used: ' + (sensText || 'nothing chosen.')) +
+    (turnedOn ? ' The Inputs tab is on.' : '') + (notes.length ? ' ' + notes.join(' ') : '');
+  setStatus($('genStatus'), msg, notes.length ? 'warn' : 'ok');
+}
+// The copy put into the layout, without asking or saving (Use, above; and the workbook for a
+// showcase viewer, 09l, on a layout it puts back afterwards): the Inputs tab on, cfg.graph,
+// fmGraph's analyses (the person's own kept), the Global Cases. → { plan, added, past, turnedOn }.
+async function applyGraphCopy(copy){
+  const analyses = copy.analyses || [];
   const turnedOn = !inputsEnabled();
   if(turnedOn) await setInputsEnabled(true);
   mapping.cfg.graph = cleanGraphCopy(copy, model.periods.length);
@@ -349,21 +370,7 @@ async function useGraphScenarios(copy){
     plan.byMirror.forEach((e, id) => { const m = inputMirrorRows().find(x => x.id === id); if(m) delete m.scenarios; });
     inputsCfg().globalCases = plan.cases.length;
   }
-  saveMapping(); renderAll();
-  const n = plan ? plan.byMirror.size : 0;
-  const dash = graphSliderPlan();
-  const nSliders = mapping.cfg.graph.sliders.length;
-  const nCharts = mapping.cfg.graph.charts.length;
-  const notes = (plan ? plan.notes : []).concat(dash ? dash.notes : [], graphChartNotes(), past.length ? ['Analyses past ' + SENS_MAX_ANALYSES + ' in all are not added: ' + past.map(a => a.name).join(', ') + '.'] : []);
-  const sensText = (added.length ? added.length + ' sensitivity analys' + (added.length === 1 ? 'is' : 'es') + ' from its Tornado and Spider charts.' : '') +
-    (nSliders ? (added.length ? ' ' : '') + nSliders + ' slider' + (nSliders === 1 ? '' : 's') + ' on the Dashboard.' : '') +
-    (nCharts ? (added.length || nSliders ? ' ' : '') + nCharts + ' chart' + (nCharts === 1 ? '' : 's') + ' on the Dashboard.' : '');
-  const msg = (copy.scenarios.length
-      ? 'fmGraph scenarios used: ' + (plan ? plan.cases.length : 1) + ' Global Cases (Base and ' + copy.scenarios.length + '), ' +
-        n + ' input' + (n === 1 ? '' : 's') + ' with scenarios.' + (sensText ? ' Also ' + sensText.charAt(0).toLowerCase() + sensText.slice(1) : '')
-      : 'fmGraph boards used: ' + (sensText || 'nothing chosen.')) +
-    (turnedOn ? ' The Inputs tab is on.' : '') + (notes.length ? ' ' + notes.join(' ') : '');
-  setStatus($('genStatus'), msg, notes.length ? 'warn' : 'ok');
+  return { plan, added, past, turnedOn };
 }
 async function removeGraphScenarios(){
   const withAnalyses = graphAnalysesInLayout();

@@ -68,6 +68,7 @@ async function restoreState(){
   return true;
 }
 function saveStateSoon(){
+  refreshExcel(); // ⬇ Excel's line follows every change (10b-excel.js)
   if(!stateKey) return;
   clearTimeout(stateTimer);
   stateTimer = setTimeout(saveStateNow, 300);

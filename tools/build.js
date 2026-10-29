@@ -95,6 +95,7 @@ const fmideAddressMeta = (forSite) => '<meta name="fmide-address" content="' + (
 const LIBRARY = require('./build-library.js');
 const HELP = require('./build-help.js');
 const MANUAL = require('./build-manual.js');
+const GALLERY = require('./build-gallery.js');
 const INCLUDE = /^([ \t]*)\/\/ build:include ([A-Za-z0-9._\/-]+)\r?$/;
 
 function fail(msg){
@@ -292,6 +293,8 @@ function listFiles(dir, base){
 
 // Writes the whole site into outDir (created; files already there are replaced).
 // opts.library: the community library's folder (default library/; null for none);
+// opts.gallery: a folder of made showcase viewers for /gallery (phase V6; none when absent —
+// the command line gives gallery/ when it holds any, or --gallery DIR);
 // opts.requireLibrary: throw when there is no library. Throws a LibraryError, writing
 // nothing, when the library fails its check, a ManualError when the manual has a broken link,
 // lesson or Help topic name, and a HelpError when the help text names a
@@ -304,6 +307,9 @@ function buildSite(outDir, opts){
   const catalogue = libraryDir ? LIBRARY.buildLibrary(libraryDir) : null;
   const help = HELP.buildHelp();
   const manual = MANUAL.buildManual();
+  // The gallery: its viewers rebuilt with the viewer's page as the site serves it.
+  const galleryDir = opts.gallery ? GALLERY.findGallery(opts.gallery) : null;
+  const gallery = galleryDir ? GALLERY.buildGallery(galleryDir, buildApp(APPS[3], true)) : null;
   const files = new Map(); // site path → Buffer
   files.set('index.html', Buffer.from(buildApp(APPS[0], true), 'utf8'));
   files.set('ExcelExporter.html', Buffer.from(buildApp(APPS[1], true), 'utf8'));
@@ -329,12 +335,13 @@ function buildSite(outDir, opts){
   if(catalogue) catalogue.files.forEach((data, name) => files.set(name, data));
   help.files.forEach((data, name) => files.set(name, data));
   manual.files.forEach((data, name) => files.set(name, data));
+  if(gallery) gallery.files.forEach((data, name) => files.set(name, data));
   for(const [name, data] of files){
     const target = path.join(outDir, ...name.split('/'));
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, data);
   }
-  return { version, files: [...files.keys()].sort(), library: catalogue ? { packs: catalogue.packs } : null };
+  return { version, files: [...files.keys()].sort(), library: catalogue ? { packs: catalogue.packs } : null, gallery: gallery ? { viewers: gallery.viewers.length } : null };
 }
 
 // The site's HTTP headers, in Cloudflare Pages' _headers format (tools/pages-server.js
@@ -343,12 +350,12 @@ function buildSite(outDir, opts){
 // site itself; nothing from another site can be loaded, sent to or embedded.
 function siteHeaders(files){
   const crypto = require('crypto');
-  const policy = (page) => {
+  const policy = (page, connect) => {
     const scripts = [...files.get(page).toString('utf8').matchAll(/<script>([\s\S]*?)<\/script>/g)]
       .map(m => "'sha256-" + crypto.createHash('sha256').update(m[1], 'utf8').digest('base64') + "'");
     return [
       "default-src 'self'", "script-src 'self' " + scripts.join(' '), "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob:", "font-src 'self' data:", "connect-src 'self'", "worker-src 'self'",
+      "img-src 'self' data: blob:", "font-src 'self' data:", 'connect-src ' + (connect || "'self'"), "worker-src 'self'",
       "manifest-src 'self'", "object-src 'none'", "base-uri 'none'", "form-action 'none'", "frame-ancestors 'none'"
     ].join('; ');
   };
@@ -360,7 +367,8 @@ function siteHeaders(files){
     block(['/', '/index.html'], ['Content-Security-Policy: ' + policy('index.html')]),
     block(['/ExcelExporter', '/ExcelExporter.html'], ['Content-Security-Policy: ' + policy('ExcelExporter.html')]),
     block(['/fmGraph', '/fmGraph.html'], ['Content-Security-Policy: ' + policy('fmGraph.html')]),
-    block(['/fmViewer', '/fmViewer.html'], ['Content-Security-Policy: ' + policy('fmViewer.html')]),
+    // The viewer makes no network calls at all, so its page may connect to nothing (phase V6).
+    block(['/fmViewer', '/fmViewer.html'], ['Content-Security-Policy: ' + policy('fmViewer.html', "'none'")]),
     block(['/sw.js'], ["Content-Security-Policy: default-src 'self'", 'Cache-Control: no-cache']),
     // The catalogue's own rules, always there (so the version is the same with or without it).
     ...LIBRARY.LIBRARY_HEADERS.map(b => block(b.paths, b.headers)),
@@ -368,24 +376,30 @@ function siteHeaders(files){
     ...HELP.HELP_HEADERS.map(b => block(b.paths, b.headers)),
     // The manual's own rules (the same policy).
     ...MANUAL.MANUAL_HEADERS.map(b => block(b.paths, b.headers)),
+    // The gallery's two rules, always there (so a viewer added never changes the version): its
+    // page runs no script; its viewers, the viewer's own scripts only, and connect to nothing.
+    ...GALLERY.galleryHeaders(policy('fmViewer.html', "'none'")).map(b => block(b.paths, b.headers)),
     ''
   ].join('\n');
 }
 
-module.exports = { buildSite, siteHeaders, appSources, moduleFragment, ModuleError, LibraryError: LIBRARY.LibraryError, HelpError: HELP.HelpError, ManualError: MANUAL.ManualError };
+module.exports = { buildSite, siteHeaders, appSources, moduleFragment, ModuleError, LibraryError: LIBRARY.LibraryError, HelpError: HELP.HelpError, ManualError: MANUAL.ManualError, GalleryError: GALLERY.GalleryError };
 if(require.main === module) main();
 
 // Builds the site, reporting a library that fails (or is missing when required) and exiting.
 function siteOrFail(dir, opts){
   try{ return buildSite(dir, opts); }
   catch(e){
-    if(e instanceof LIBRARY.LibraryError || e instanceof HELP.HelpError || e instanceof MANUAL.ManualError) fail(e.message);
+    if(e instanceof LIBRARY.LibraryError || e instanceof HELP.HelpError || e instanceof MANUAL.ManualError || e instanceof GALLERY.GalleryError) fail(e.message);
     throw e;
   }
 }
 function libraryNote(r){
   return r.library ? '; the library: ' + r.library.packs + ' pack' + (r.library.packs === 1 ? '' : 's')
     : '; no library/ folder, so no catalogue';
+}
+function galleryNote(r){
+  return r.gallery ? '; the gallery: ' + r.gallery.viewers + ' viewer' + (r.gallery.viewers === 1 ? '' : 's') : '';
 }
 
 function main(){
@@ -394,10 +408,14 @@ function main(){
   const libraryArg = valueOf('--library');
   const siteOpts = { requireLibrary: argv.includes('--require-library') };
   if(libraryArg !== undefined) siteOpts.library = path.resolve(libraryArg);
+  // The gallery (phase V6): --gallery DIR, else gallery/ when it holds any viewer (its own
+  // repository, a submodule there, once the owner has made it).
+  const galleryArg = valueOf('--gallery');
+  siteOpts.gallery = galleryArg !== undefined ? path.resolve(galleryArg) : path.join(ROOT, 'gallery');
   const siteArg = valueOf('--site');
   if(siteArg !== undefined){
     const r = siteOrFail(path.resolve(siteArg), siteOpts);
-    console.log('built site ' + siteArg + ' (version ' + r.version + libraryNote(r) + ')');
+    console.log('built site ' + siteArg + ' (version ' + r.version + libraryNote(r) + galleryNote(r) + ')');
     return;
   }
   const check = process.argv.includes('--check');
@@ -427,6 +445,6 @@ function main(){
     fs.rmSync(siteDir, { recursive: true, force: true });
     fs.cpSync(tmp, siteDir, { recursive: true });
     fs.rmSync(tmp, { recursive: true, force: true });
-    console.log('built site/ (version ' + r.version + libraryNote(r) + ')');
+    console.log('built site/ (version ' + r.version + libraryNote(r) + galleryNote(r) + ')');
   }
 }

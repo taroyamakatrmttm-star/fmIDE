@@ -1,0 +1,16 @@
+/* The showcase gallery's page (/gallery, written by tools/build-gallery.js; phase V6 of
+   docs/viewer-brief.md), after the catalogue's style sheet (src/library/style.css). Plain HTML
+   with no JavaScript: this and the catalogue's are its only styling. Apache License 2.0. */
+main { max-width: 1100px; }
+.viewer-note { color: var(--muted); font-size: 14px; }
+.viewer-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.viewer-card { display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; min-width: 0; }
+.viewer-card h3 { margin: 6px 0 4px; }
+.viewer-card h3 a { text-decoration: none; }
+.viewer-card p { margin: 4px 0; overflow-wrap: anywhere; white-space: pre-line; }
+.viewer-picture img { display: block; width: 100%; height: auto; border-radius: 6px; border: 1px solid var(--line); background: #fff; }
+.viewer-by { color: var(--muted); font-size: 14px; }
+.viewer-actions { margin-top: auto !important; padding-top: 8px; display: flex; gap: 14px; align-items: center; }
+.viewer-actions a { display: inline-block; min-height: 44px; line-height: 44px; }
+.viewer-actions a.viewer-open { background: var(--accent); color: var(--accent-fg); border-radius: 8px; padding: 0 18px; text-decoration: none; font-weight: 600; }
+@media (max-width: 600px) { .viewer-cards { grid-template-columns: 1fr; } }

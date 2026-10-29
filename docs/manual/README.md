@@ -90,7 +90,10 @@ The manual is written in lessons. Each lesson teaches one thing, in numbered ste
 [7.10 Safety, limits and troubleshooting](07-excel-import.md#import-troubleshooting)
 
 ### [Part 8 — Sharing a model: showcase viewers](08-showcase.md)
-[8.1 Make a showcase viewer](08-showcase.md#showcase-viewer)
+[8.1 Make a showcase viewer](08-showcase.md#showcase-viewer) ·
+[8.2 Put Excel in a showcase viewer](08-showcase.md#showcase-excel) ·
+[8.3 Make many viewers at once](08-showcase.md#showcase-many) ·
+[8.4 Share viewers in the gallery](08-showcase.md#showcase-gallery)
 
 ### Appendices
 - [A — What came when: every build step and pull request, and the lesson that covers it](appendix-a-coverage.md)
@@ -104,7 +107,7 @@ The manual is written in lessons. Each lesson teaches one thing, in numbered ste
 | Turn a model into an Excel workbook | 2.1, then Part 5 from 5.1 |
 | Bring an existing Excel model into fmIDE | Part 7 (7.1–7.5 is enough to start) |
 | Show someone how inputs move the results | 6.1–6.6, then 5.11 to give them the same in Excel |
-| Send someone a model they can play with but not change | 6.1, then 8.1 |
+| Send someone a model they can play with but not change | 6.1, then 8.1 (and 8.2 for Excel) |
 | Reuse calculations across models | Part 3 |
 | Automate repetitive work | Part 4 |
 

@@ -12,6 +12,46 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'showcase-gallery', date: '2026-10-29', title: 'A gallery of showcase viewers on the website',
+    summary: 'Viewers can be published in a gallery on the site, to share with a link, and they work better on an iPad and a phone.',
+    what: [
+      'The site has a gallery page of showcase viewers, built from a folder of viewers you made. Each opens from a link and runs in the browser: on an iPhone or iPad, that is the way to share one. ⇪ Share link at the top of a gallery viewer sends its address.',
+      'In any viewer, a bar\'s title opens its card: how its number is worked out, and Show in Logic. On a wide screen, Both shows the Board and the Logic side by side. On a phone held sideways, the bars and the sliders sit side by side.',
+    ],
+    why: 'A viewer saved on an iPhone or iPad opens only in a preview that can\'t run it, so sharing a file there didn\'t work.',
+    how: ['Make viewers with npm run make-viewers -- --pictures --gallery gallery …, then publish the site.', 'Send the viewer\'s address, https://fmide.pages.dev/gallery/v/<its name>.'],
+    notes: ['Every viewer in the gallery runs the current viewer, and connects to nothing.'],
+    see: ['showcase-viewer'] },
+  { id: 'showcase-many', date: '2026-10-29', title: 'Showcase viewers for many models at once, and Choose for me',
+    summary: 'A model with no fmGraph board can have one chosen for it, and a whole folder of models can become viewers in one go.',
+    what: [
+      'Make Showcase Viewer… has Choose for me, for a model with no fmGraph boards: it adds a board with a slider on each input that moves something and a bar on each result, at most 12 of each. Open fmGraph to change it before you make the viewer.',
+      'On a computer, npm run make-viewers makes a viewer for every model in a folder: a recipe names the sliders, bars and canvases by name, so one recipe fits many models built alike. Each viewer carries its Excel workbook, and a report says what each shows and anything not found.',
+    ],
+    why: 'A course or a client may need dozens of small models shown the same way: choosing sliders and bars by hand for each one takes too long.',
+    how: ['Open {cmd:makeShowcaseViewer} on a model with no boards and press Choose for me.', 'For many models, see lesson 8.3 of the user manual.'],
+    notes: ['A rectangle a recipe names that a model doesn\'t have is left out of that viewer and listed in the report, never silently.'],
+    see: ['showcase-viewer'] },
+  { id: 'showcase-excel', date: '2026-10-29', title: 'Showcase viewers carry Excel',
+    summary: 'A showcase viewer can now carry the model\'s Excel workbook: a visitor downloads it with their scenario and sliders written in.',
+    what: [
+      'Make Showcase Viewer… has a new tick box, Include an Excel workbook. ExcelExporter opens for a moment and makes the workbook, with your fmGraph scenarios as Global Cases and your sliders on a Dashboard, and fmIDE puts it inside the viewer.',
+      'The visitor\'s ⬇ Excel downloads it, with the scenario they show or the sliders they moved typed into its input cells. It opens in Excel on the numbers they saw.',
+    ],
+    why: 'Someone who played with your model can take it further in Excel, without you sending a second file.',
+    how: ['Open {cmd:makeShowcaseViewer} and leave Include an Excel workbook ticked.', 'Press Make viewer, then open the file and try ⬇ Excel.'],
+    notes: ['Your own Excel layout in ExcelExporter is not changed.', 'In an iPhone\'s or iPad\'s home-screen app, make the viewer in Safari or on a computer to include Excel.'],
+    see: ['showcase-viewer'] },
+  { id: 'showcase-viewer-ipad', date: '2026-10-29', title: 'Open a showcase viewer on an iPhone or iPad',
+    summary: 'A viewer saved in Files opens only in a preview there, which can\'t run it: now fmShowcase on the site opens the file itself.',
+    what: [
+      'In Safari, go to https://fmide.pages.dev/fmViewer, tap Choose, and pick the viewer\'s .html file. It opens just as it does on a computer.',
+      'Only the model and showcase inside the file are read; nothing in it runs. A page that isn\'t a viewer made by fmIDE is refused.',
+      'The viewer\'s sliders are shorter too: each is one row, its name, the slider and its number, and the list scrolls on its own, so the bars and charts stay in view.',
+    ],
+    why: 'On an iPhone or iPad, the Files app shows a web page in a preview that runs no script, so a viewer could only be looked at, never used.',
+    how: ['Make a viewer ({cmd:makeShowcaseViewer}) and save it in Files.', 'In Safari, go to https://fmide.pages.dev/fmViewer.', 'Tap Choose and pick the file.'],
+    see: ['showcase-viewer'] },
   { id: 'showcase-viewer', date: '2026-10-28', title: 'Share a model as a showcase viewer',
     summary: 'File → Make Showcase Viewer… makes one web page that shows your model read-only, with its boards and sliders, to email or share.',
     what: [

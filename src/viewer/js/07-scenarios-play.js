@@ -155,6 +155,9 @@ function renderPlayBar(){
   bar.textContent = '';
   bar.classList.toggle('hidden', !playing);
   $('board').classList.toggle('playing', !!playing);
+  // ⬇ Excel is off while Play runs, however Play was started or stopped (a button, a key,
+  // fmViewer.play): its line follows at once, not only after the visitor's next click.
+  if(typeof refreshExcel === 'function') setTimeout(refreshExcel, 0);
   if(!playing) return;
   if(lookingAt){ lookingAt = null; shownScenario = null; } // Play shows its own numbers
   const from = playEndWords(playing.from.id), to = playEndWords(playing.to.id);

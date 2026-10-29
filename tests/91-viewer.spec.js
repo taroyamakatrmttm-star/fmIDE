@@ -12,6 +12,8 @@
 //   no editing control at all.
 // - Hostile files shown as text; a phone's layout; the viewer's sources hold nothing of
 //   ExcelExporter's; the site's page under its own security policy.
+// - A made viewer's .html chosen in the bare app (an iPhone or iPad, where Files only previews
+//   it) opens as it does from disk; a page that isn't one is refused; a hostile one runs nothing.
 const fs = require('fs');
 const path = require('path');
 const { test, expect, ROOT, fixture, readFixture, openApp } = require('./helpers/apps');
@@ -114,7 +116,7 @@ test('a viewer made for one model opens from disk on its showcase, with nothing 
     await expect(page.locator('#mark')).toBeHidden();
     expect(await V(page, () => window.__ran)).toBeUndefined();
     await expect(page.locator('#world .cv-node[data-id="n31"]')).toContainText('</script><script>w');
-    expect(await page.locator('script').count()).toBe(3); // the two data blocks and the app's own
+    expect(await page.locator('script').count()).toBe(4); // the three data blocks (V4: excel) and the app's own
     // The model is read, never changed: its text after looking around is as it was.
     await page.locator('#btnZoomIn').click();
     await V(page, () => fmViewer.openCard('c4', 'n55'));
@@ -339,7 +341,7 @@ test('hostile files are shown as text: no markup, no colour or font from them, n
   await expect(page.locator('#notices .note.warn').first()).toContainText('The showcase:');
   // Nothing from the files became an element or a handler.
   expect(await page.locator('img, iframe, a, object, embed').count()).toBe(0);
-  expect(await page.locator('script').count()).toBe(3);
+  expect(await page.locator('script').count()).toBe(4); // the app's script and its three data blocks (V4: excel)
   expect(await page.evaluate(() => [...document.querySelectorAll('*')].some(e => [...e.attributes].some(a => /^on/i.test(a.name))))).toBe(false);
   await expect(page.locator('#world .cv-node[data-id="n1"] text.name').first()).toContainText('<img src=x');
   await expect(page.locator('#world .cv-node[data-id="n3"] text.name').first()).toContainText('<svg><script>');
@@ -434,9 +436,176 @@ test('on the site: the viewer\'s page runs under its own security policy, offlin
     await expect(page.locator('#world .cv-node')).toHaveCount(25);
     expect(violations).toEqual([]);
     expect(seen.filter(u => !u.startsWith(site.origin))).toEqual([]);
+    // Phase V6: the viewer connects to nothing, so its page may not (the owner's decision).
+    expect(headers).toMatch(/\/fmViewer\.html\n  Content-Security-Policy: [^\n]*connect-src 'none'/);
+    // Not in a gallery: no ← Gallery, no ⇪ Share link.
+    expect(await page.evaluate(() => fmViewer.inGallery())).toBe(false);
+    await expect(page.locator('#galleryLink')).toBeHidden();
   } finally {
     await context.close();
     await site.close().catch(() => {});
     fs.rmSync(site.dir, { recursive: true, force: true });
   }
+});
+
+// Phase V6: the site's /gallery, built from tests/fixtures/viewer/gallery/ (viewers made with an
+// older, smaller page: the build rebuilds them with today's).
+test('the gallery on the site: its page runs no script; each viewer runs today\'s viewer under its policy, connecting to nothing, with ← Gallery and ⇪ Share link', async ({ browser }) => {
+  const W = require('./helpers/site');
+  const plain = await W.startSiteServer();
+  const site = await W.startSiteServer({ gallery: fixture('viewer', 'gallery') });
+  const context = await browser.newContext({ viewport: { width: 1400, height: 900 } });
+  // A share sheet to see what the page hands it (Chromium on a computer has none).
+  await context.addInitScript(() => { window.__shared = []; navigator.share = (d) => { window.__shared.push(d); return Promise.resolve(); }; });
+  const seen = [];
+  context.on('request', r => seen.push(r.url()));
+  try{
+    // A gallery never changes the app's version, nor the offline copy's list.
+    expect(site.version).toBe(plain.version);
+    const sw = fs.readFileSync(path.join(site.dir, 'sw.js'), 'utf8');
+    expect(sw).not.toContain('gallery');
+    const headers = fs.readFileSync(path.join(site.dir, '_headers'), 'utf8');
+    expect(headers).toBe(fs.readFileSync(path.join(plain.dir, '_headers'), 'utf8'));
+    // At most 100 rules (Cloudflare Pages' limit): one for all the gallery's viewers.
+    const rules = headers.split('\n').filter(l => l.startsWith('/'));
+    expect(rules.length).toBeLessThanOrEqual(100);
+    const policyOf = (p) => { const at = headers.indexOf('\n' + p + '\n'); return headers.slice(at).split('\n')[2].replace(/^\s*Content-Security-Policy: /, ''); };
+    expect(policyOf('/gallery/')).toMatch(/^default-src 'none';/);
+    expect(policyOf('/gallery/v/*')).toBe(policyOf('/fmViewer.html'));
+    const page = await context.newPage();
+    const violations = [];
+    page.on('console', m => { if(/Content Security Policy|Refused to/i.test(m.text())) violations.push(m.text()); });
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    const list = await page.goto(site.origin + 'gallery/');
+    expect(list.headers()['content-security-policy']).toMatch(/^default-src 'none';/);
+    await expect(page.locator('h1')).toHaveText('Models for the course');
+    await expect(page.locator('.viewer-card')).toHaveCount(3);
+    // The markup in a viewer's texts is text: nothing of it became an element.
+    expect(await page.locator('main img:not([src="p/loan.png"]), main script, main b:not(.viewer-note b), main i').count()).toBe(0);
+    await expect(page.locator('.viewer-card').nth(2).locator('h3')).toHaveText('<script>alert(1)</script> & "quotes"');
+    await page.locator('.viewer-card').first().locator('a.viewer-open').click();
+    await page.waitForFunction(() => window.fmViewer && fmViewer.state().loaded);
+    expect(new URL(page.url()).pathname).toBe('/gallery/v/loan');
+    expect(await page.evaluate(() => [fmViewer.inGallery(), fmViewer.state().title])).toEqual([true, 'How a shop makes a profit']);
+    // Today's viewer: the page the site serves at /fmViewer.html, with the made viewer's blocks.
+    const served = await (await page.request.get(site.origin + 'gallery/v/loan.html')).text();
+    const today = fs.readFileSync(path.join(site.dir, 'fmViewer.html'), 'utf8');
+    expect(served.replace(/(<script type="application\/json" id="[a-z]+">)[^<]*(<\/script>)/g, '$1$2')).toBe(today);
+    await page.locator('#btnShareLink').click();
+    expect(await page.evaluate(() => window.__shared)).toEqual([{ title: 'How a shop makes a profit — fmShowcase', url: site.origin + 'gallery/v/loan' }]);
+    await page.locator('#galleryLink').click();
+    await expect(page.locator('h1')).toHaveText('Models for the course');
+    // The viewer with a workbook carries it.
+    await page.goto(site.origin + 'gallery/v/shop-b');
+    await page.waitForFunction(() => window.fmViewer && fmViewer.state().loaded);
+    await expect(page.locator('#excelWrap')).toBeVisible();
+    expect(violations).toEqual([]);
+    expect(errors).toEqual([]);
+    expect(seen.filter(u => !u.startsWith(site.origin))).toEqual([]);
+  } finally {
+    await context.close();
+    for(const s of [site, plain]){ await s.close().catch(() => {}); fs.rmSync(s.dir, { recursive: true, force: true }); }
+  }
+});
+
+// ---- A made viewer chosen as a file (an iPhone or iPad: Files only previews it) ----
+// What a viewer shows, to compare two openings of it (everything but how many loads).
+async function shown(page){
+  return page.evaluate(() => {
+    const s = fmViewer.state(); delete s.loads;
+    return { state: s, layout: fmViewer.layout(), board: fmViewer.board(), key: fmViewer.stateKey(), model: fmViewer.modelTextAtLoad(),
+      about: [document.getElementById('showDescription').textContent, document.getElementById('showByline').textContent],
+      bars: [...document.querySelectorAll('#barList > .widget')].map(w => w.textContent) };
+  });
+}
+async function chooseAndWait(page, file){
+  const before = await page.evaluate(() => fmViewer.state().loads);
+  await page.setInputFiles('#fileInput', file);
+  await page.waitForFunction((n) => fmViewer.state().loads > n, before);
+}
+
+test('a made viewer chosen as a file opens exactly as it does from disk: the Logic view and the Board', async ({ page, browser, pageErrors }) => {
+  await openViewer(page);
+  expect((await page.locator('#fileInput').getAttribute('accept')).split(',')).toEqual(expect.arrayContaining(['.html', '.htm', '.fmide', '.json']));
+  const cases = [
+    ['logic', readFixture('viewer', 'every-kind.showcase.json'), JSON.parse(fs.readFileSync(EVERY, 'utf8'))],
+    ['board', readFixture('viewer', 'every-widget.showcase.json'), readFixture('viewer', 'every-widget.fmide')],
+  ];
+  for(const [name, sc, doc] of cases){
+    const file = madeViewer(test.info().outputPath(name), sc, doc);
+    const disk = await fromDisk(browser, file);
+    let fromDiskShown;
+    try{
+      await disk.page.waitForFunction(() => fmViewer.state().loaded);
+      fromDiskShown = await shown(disk.page);
+      expect(disk.outside).toEqual([]);
+      expect(disk.errors).toEqual([]);
+    } finally { await disk.context.close(); }
+    // The bare app, fresh for each (as on the site), with the file chosen.
+    if(name !== 'logic') await openViewer(page);
+    await chooseAndWait(page, file);
+    expect(await shown(page), name).toEqual(fromDiskShown);
+    await expect(page.locator('#welcome')).toBeHidden();
+  }
+  // It works as the viewer does: a slider on the Board moves within its range, the model unchanged.
+  expect(await V(page, () => fmViewer.setSlider('Price', 12))).toBe(12);
+  expect(await V(page, () => fmViewer.modelText() === fmViewer.modelTextAtLoad())).toBe(true);
+  expect(pageErrors).toEqual([]);
+});
+
+test('a page that isn\'t a made viewer is refused with a plain message, the bare app\'s own page too', async ({ page, pageErrors }) => {
+  await openViewer(page);
+  const dir = test.info().outputPath('pages');
+  fs.mkdirSync(dir, { recursive: true });
+  const NOT = "isn't a viewer made by fmIDE";
+  const pages = {
+    'plain.html': ['<!DOCTYPE html><html><body><h1>Hello</h1><p>Just a page.</p></body></html>', NOT],
+    'other-type.htm': ['<html><body><script id="showcase">window.__ran = 1</script><script type="application/json" id="model">{}</script></body></html>', NOT],
+    'two-models.html': ['<html><body><script type="application/json" id="showcase"></script><script type="application/json" id="model">{}</script><script type="application/json" id="model">{}</script></body></html>', NOT],
+    'fmViewer.html': [fs.readFileSync(path.join(ROOT, 'apps', 'fmViewer.html'), 'utf8'), "fmShowcase's own page, with no model in it"],
+    'fmIDE.html': [fs.readFileSync(path.join(ROOT, 'apps', 'fmIDE.html'), 'utf8'), NOT],
+  };
+  for(const [name, [html, words]] of Object.entries(pages)){
+    fs.writeFileSync(path.join(dir, name), html);
+    await V(page, () => { document.getElementById('notices').textContent = ''; });
+    await page.setInputFiles('#fileInput', path.join(dir, name));
+    await expect(page.locator('#notices .note.err'), name).toContainText(words);
+    expect(await V(page, () => fmViewer.state().loaded), name).toBe(false);
+    await expect(page.locator('#welcome')).toBeVisible();
+  }
+  expect(await V(page, () => window.__ran)).toBeUndefined();
+  // A viewer whose model block is nested past the limit: the same check as any file.
+  let deep = '0';
+  for(let i = 0; i < 150; i++) deep = '[' + deep + ']';
+  fs.writeFileSync(path.join(dir, 'deep.html'), '<html><body><script type="application/json" id="showcase"></script><script type="application/json" id="model">' + deep + '</script></body></html>');
+  await V(page, () => { document.getElementById('notices').textContent = ''; });
+  await page.setInputFiles('#fileInput', path.join(dir, 'deep.html'));
+  await expect(page.locator('#notices .note.err')).toContainText('nested too deeply');
+  expect(await V(page, () => fmViewer.state().loaded)).toBe(false);
+  expect(pageErrors).toEqual([]);
+});
+
+test('a hostile made viewer chosen as a file runs nothing and fetches nothing: its names shown as text', async ({ page, pageErrors }) => {
+  // (The page fixture fails the test if anything is requested off the app, evil.test included.)
+  await openViewer(page);
+  const dir = test.info().outputPath('hostile');
+  let html = fs.readFileSync(madeViewer(dir, readFixture('viewer', 'hostile-showcase.json'), readFixture('viewer', 'hostile-model.json')), 'utf8');
+  // Everything a page could try, around its data blocks.
+  html = html.replace('<body>', () => '<body><meta http-equiv="refresh" content="0;url=http://evil.test/"><img src="http://evil.test/a.png" onerror="window.__ran = 2">'
+    + '<iframe src="http://evil.test/"></iframe><link rel="stylesheet" href="http://evil.test/s.css"><script>window.__ran = 3</script>'
+    + '<script src="http://evil.test/x.js"></script><svg onload="window.__ran = 4"></svg>');
+  const file = path.join(dir, 'hostile.html');
+  fs.writeFileSync(file, html);
+  await chooseAndWait(page, file);
+  expect(await V(page, () => window.__ran)).toBeUndefined();
+  await expect(page.locator('#showTitle')).toContainText('<img src=x onerror=alert(1)>');
+  await expect(page.locator('#showByline')).toHaveText('By <a href=javascript:alert(1)>me</a>');
+  await expect(page.locator('#world .cv-node[data-id="n1"] text.name').first()).toContainText('<img src=x');
+  expect(await page.locator('img, iframe, a, object, embed, link, meta[http-equiv]').count()).toBe(0);
+  expect(await page.locator('script').count()).toBe(4); // the page's own three data blocks (showcase, model, excel) and its script
+  expect(await page.evaluate(() => [...document.querySelectorAll('*')].some(e => [...e.attributes].some(a => /^on/i.test(a.name))))).toBe(false);
+  await page.waitForTimeout(300); // a refresh would have left by now
+  expect(await V(page, () => fmViewer.state().loaded)).toBe(true);
+  expect(pageErrors).toEqual([]);
 });

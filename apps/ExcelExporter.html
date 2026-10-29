@@ -5500,8 +5500,9 @@ function reconcileMapping(){
 // would be gone after a reload unless exported. Clears itself when a save succeeds again.
 // Writes are asynchronous; the browser applies them in the order they were made.
 let mappingSaveFailing = false;
+let layoutHeld = false; // true while a showcase viewer's workbook is made on a lent copy (09l-viewer-workbook.js)
 function saveMapping(){
-  if(!mappingKey) return;
+  if(!mappingKey || layoutHeld) return; // a layout lent for a viewer's workbook is never saved (09l)
   graphPlanCache = null; // the fmGraph scenarios' plan follows the layout (09i)
   layoutStore.requestPersistence(); // once, ever — on the first change, not at start-up
   writeMapping();
@@ -9988,7 +9989,10 @@ function buildWorkbook(){
     });
     appendDashboardSheet(wb, ctx.dash, dashName, ownRow, dashCharts, ctx.cellPos);
   }
-  return { wb, tooLong };
+  // `dash` and `cases`: where the Dashboard's sliders and the Global Case are, for a workbook
+  // made for a showcase viewer (09l-viewer-workbook.js, its cell map).
+  return { wb, tooLong, dash: dashName && ctx.dash && ctx.dash.rows.length ? { sheet: dashName, rows: ctx.dash.rows } : null,
+    cases: nCases ? { sheet: scenarioSheetName, cell: 'C2', names: graphPlan ? graphPlan.cases.slice() : [] } : null };
   }finally{ useHelperColumns(0); }
 }
 
@@ -11259,6 +11263,7 @@ const EXCEL_HELP_TOPICS = [
       { p: 'Get the boards with the model: open ExcelExporter from fmIDE, or open the .fmide document here. For a board file saved with Export all boards in fmGraph, choose File → Import fmGraph boards…. Then Layout → Use fmGraph boards…, untick what you don\'t want, and press Use. What can\'t be carried is listed in the window, with the reason.' },
       { p: 'Everything chosen is copied into this model\'s layout and saved with it. Changing the boards in fmGraph later changes nothing here until you use the window again; it asks before it replaces what is there. Remove from Layout, in the same window, takes it all out.' },
       { tip: 'A scenario waterfall is not carried: Excel would have to work out every case at once.' },
+      { p: 'fmIDE\'s Make Showcase Viewer… asks ExcelExporter for a workbook made this way, from the viewer\'s boards, to put inside the viewer. It is made on a copy: your layout here is not changed.' },
       { see: ['fmgraph-scenarios', 'fmgraph-dashboard', 'fmgraph-charts', 'sensitivity'] },
     ] },
   { id: 'fmgraph-scenarios', group: 'inputs', title: 'fmGraph\'s scenarios as Global Cases',
@@ -13892,7 +13897,6 @@ function openGraphBoardsWindow(read, source){
 // Copies the chosen scenarios (and, from B3, the Tornado and Spider charts as analyses) into
 // the layout, after asking when it replaces cases or fmGraph's analyses there.
 async function useGraphScenarios(copy){
-  const analyses = copy.analyses || [];
   const had = graphScenariosInLayout();
   const hadAnalyses = graphAnalysesInLayout();
   const hadSliders = graphSlidersInLayout();
@@ -13911,6 +13915,28 @@ async function useGraphScenarios(copy){
     const ok = await showConfirm('Replace the cases?', parts.join(' '), 'Replace');
     if(!ok){ setStatus($('genStatus'), 'fmGraph scenarios not used.', 'info'); return; }
   }
+  const { plan, added, past, turnedOn } = await applyGraphCopy(copy);
+  saveMapping(); renderAll();
+  const n = plan ? plan.byMirror.size : 0;
+  const dash = graphSliderPlan();
+  const nSliders = mapping.cfg.graph.sliders.length;
+  const nCharts = mapping.cfg.graph.charts.length;
+  const notes = (plan ? plan.notes : []).concat(dash ? dash.notes : [], graphChartNotes(), past.length ? ['Analyses past ' + SENS_MAX_ANALYSES + ' in all are not added: ' + past.map(a => a.name).join(', ') + '.'] : []);
+  const sensText = (added.length ? added.length + ' sensitivity analys' + (added.length === 1 ? 'is' : 'es') + ' from its Tornado and Spider charts.' : '') +
+    (nSliders ? (added.length ? ' ' : '') + nSliders + ' slider' + (nSliders === 1 ? '' : 's') + ' on the Dashboard.' : '') +
+    (nCharts ? (added.length || nSliders ? ' ' : '') + nCharts + ' chart' + (nCharts === 1 ? '' : 's') + ' on the Dashboard.' : '');
+  const msg = (copy.scenarios.length
+      ? 'fmGraph scenarios used: ' + (plan ? plan.cases.length : 1) + ' Global Cases (Base and ' + copy.scenarios.length + '), ' +
+        n + ' input' + (n === 1 ? '' : 's') + ' with scenarios.' + (sensText ? ' Also ' + sensText.charAt(0).toLowerCase() + sensText.slice(1) : '')
+      : 'fmGraph boards used: ' + (sensText || 'nothing chosen.')) +
+    (turnedOn ? ' The Inputs tab is on.' : '') + (notes.length ? ' ' + notes.join(' ') : '');
+  setStatus($('genStatus'), msg, notes.length ? 'warn' : 'ok');
+}
+// The copy put into the layout, without asking or saving (Use, above; and the workbook for a
+// showcase viewer, 09l, on a layout it puts back afterwards): the Inputs tab on, cfg.graph,
+// fmGraph's analyses (the person's own kept), the Global Cases. → { plan, added, past, turnedOn }.
+async function applyGraphCopy(copy){
+  const analyses = copy.analyses || [];
   const turnedOn = !inputsEnabled();
   if(turnedOn) await setInputsEnabled(true);
   mapping.cfg.graph = cleanGraphCopy(copy, model.periods.length);
@@ -13930,21 +13956,7 @@ async function useGraphScenarios(copy){
     plan.byMirror.forEach((e, id) => { const m = inputMirrorRows().find(x => x.id === id); if(m) delete m.scenarios; });
     inputsCfg().globalCases = plan.cases.length;
   }
-  saveMapping(); renderAll();
-  const n = plan ? plan.byMirror.size : 0;
-  const dash = graphSliderPlan();
-  const nSliders = mapping.cfg.graph.sliders.length;
-  const nCharts = mapping.cfg.graph.charts.length;
-  const notes = (plan ? plan.notes : []).concat(dash ? dash.notes : [], graphChartNotes(), past.length ? ['Analyses past ' + SENS_MAX_ANALYSES + ' in all are not added: ' + past.map(a => a.name).join(', ') + '.'] : []);
-  const sensText = (added.length ? added.length + ' sensitivity analys' + (added.length === 1 ? 'is' : 'es') + ' from its Tornado and Spider charts.' : '') +
-    (nSliders ? (added.length ? ' ' : '') + nSliders + ' slider' + (nSliders === 1 ? '' : 's') + ' on the Dashboard.' : '') +
-    (nCharts ? (added.length || nSliders ? ' ' : '') + nCharts + ' chart' + (nCharts === 1 ? '' : 's') + ' on the Dashboard.' : '');
-  const msg = (copy.scenarios.length
-      ? 'fmGraph scenarios used: ' + (plan ? plan.cases.length : 1) + ' Global Cases (Base and ' + copy.scenarios.length + '), ' +
-        n + ' input' + (n === 1 ? '' : 's') + ' with scenarios.' + (sensText ? ' Also ' + sensText.charAt(0).toLowerCase() + sensText.slice(1) : '')
-      : 'fmGraph boards used: ' + (sensText || 'nothing chosen.')) +
-    (turnedOn ? ' The Inputs tab is on.' : '') + (notes.length ? ' ' + notes.join(' ') : '');
-  setStatus($('genStatus'), msg, notes.length ? 'warn' : 'ok');
+  return { plan, added, past, turnedOn };
 }
 async function removeGraphScenarios(){
   const withAnalyses = graphAnalysesInLayout();
@@ -17328,6 +17340,163 @@ function xlRoundTrip(valueOf, cells){
   }
   return out;
 }
+// ============================================================
+// A workbook for a showcase viewer (phase V4 of docs/viewer-brief.md). fmIDE's Make Showcase
+// Viewer… (and, later, tools/make-viewers.js) asks for the model's workbook with the showcase's
+// fmGraph boards used on it: every scenario a Global Case, every slider on the Dashboard, the
+// first board's bars, charts, Tornado and Spider — exactly what Layout → Use fmGraph boards…
+// would copy, but without asking and on a lent layout: the person's own layout is put back
+// afterwards exactly as it was, never saved, never sent to fmIDE (layoutHeld, 04-file-formats.js).
+// The answer is the workbook's bytes (what ⬇ Generate writes) and its cell map — the Global Case
+// cell, each scenario's case, each Dashboard slider's Typed and Use cells — in the documented
+// form (docs/file-formats.md, "fmIDE-viewer-workbook"), which the viewer's own code reads.
+// Only the workbook, which is the author's, leaves this page; none of this code does.
+// Asked through a window message from fmIDE ('fmIDE:viewer-workbook', answered
+// 'excel:viewer-workbook' or 'excel:viewer-workbook-failed') and the page global
+// window.fmExcel.viewerWorkbook.
+// ============================================================
+
+// The model (a workspace or system file's text) and the showcase's boards (a board file, parsed,
+// or null): a Promise of { bytes (Uint8Array), map, notes }. Throws with plain words.
+// style (phase V5, tools/make-viewers.js --excel-style): an Excel style file, parsed, used for
+// this workbook only — lent like the layout and put back after, never saved.
+async function viewerWorkbook(modelText, boards, style){
+  if(typeof modelText !== 'string' || !modelText) throw new Error('No model came to make the workbook from.');
+  let lentStyle = null;
+  if(style !== undefined && style !== null){
+    const r = readExcelStyleData(style);
+    if(r.error) throw new Error('The Excel style: ' + r.error);
+    lentStyle = r.style;
+  }
+  await excelStyleLoaded; // the style kept in this browser is read first, so the lent one isn't overwritten
+  const before = model;
+  await tryLoad(modelText, 'the showcase viewer\'s model', 'Model for a showcase viewer');
+  if(!model || model === before){
+    const said = $('loadStatus').textContent.replace(/×\s*$/, '').trim();
+    throw new Error(said || 'The model could not be read.');
+  }
+  const read = boards ? readGraphBoards(boards) : null;
+  if(read && read.error) throw new Error(read.error);
+  const saved = JSON.stringify(mapping), savedPicked = sensPicked, savedStyle = excelStyle;
+  layoutHeld = true;
+  if(lentStyle) excelStyle = lentStyle;
+  try{
+    const notes = [];
+    let matched = null;
+    if(read && read.boards.length){
+      matched = matchGraphScenarios(read);
+      const sliders = matchGraphSliders(read);
+      const first = read.boards[0];
+      const analyses = graphSensAnalyses(matchGraphSensCharts(first).charts);
+      const charts = matchGraphCharts(first).charts;
+      const copy = { from: read.boards.map(b => b.name), board: first.name, scenarios: matched.scenarios, analyses,
+        sliders: sliders.sliders.map(s => ({ row: s.row, name: s.name, mode: s.mode, periods: s.periods, min: s.min, max: s.max, step: s.step })), charts };
+      const applied = await applyGraphCopy(copy);
+      const left = sliders.left;
+      const out = left.notFound + left.inBlock + left.notInput + left.bad + left.past;
+      if(out) notes.push(out + ' slider' + (out === 1 ? '' : 's') + ' can\'t move in Excel (not in this model, inside a block, not an input, or past ' + GRAPH_LIMITS.sliders + ').');
+      notes.push(...(applied.plan ? applied.plan.notes : []), ...graphSliderNotes(), ...graphChartNotes());
+      if(applied.past.length) notes.push('Analyses past ' + SENS_MAX_ANALYSES + ' in all are not added: ' + applied.past.map(a => a.name).join(', ') + '.');
+    }
+    graphPlanCache = null;
+    const built = buildWorkbook();
+    if(built.tooLong.length) notes.push(built.tooLong.length + ' cell' + (built.tooLong.length === 1 ? '' : 's') + ' too long for Excel are written as NA().');
+    const bytes = XLSX.write(built.wb);
+    const map = viewerCellMap(built, read, matched);
+    return { bytes, map, notes: [...new Set(notes)].slice(0, 40) };
+  }finally{
+    mapping = JSON.parse(saved);
+    sensPicked = savedPicked;
+    excelStyle = savedStyle;
+    graphPlanCache = null;
+    layoutHeld = false;
+    renderAll();
+  }
+}
+
+// The cell map of a workbook just built (buildWorkbook's `dash` and `cases`), while the lent
+// layout is still in place: { case, cases: [{ name, case, missing }], sliders: [{ canvasId,
+// nodeId, name, mode, periods, typed, use, rest }] }.
+function viewerCellMap(built, read, matched){
+  const map = { case: null, cases: [], sliders: [] };
+  if(built.cases && built.cases.sheet){
+    map.case = { sheet: built.cases.sheet, cell: built.cases.cell };
+    const plan = graphScenarioPlan();
+    (built.cases.names || []).forEach((name, k) => {
+      if(k === 0) return; // case 1 is Base
+      const i = matched ? matched.scenarios.findIndex(sc => sc.name === name) : -1;
+      let missing = 0;
+      if(i >= 0){
+        missing = read.scenarios[i].settings.length - matched.scenarios[i].settings.length;
+        missing += matched.scenarios[i].settings.filter(s => !plan || !plan.bySource.has(s.row)).length;
+        const entry = plan && [...plan.bySource.values()].find(e => e.over.includes(name));
+        if(entry) missing++;
+      }
+      map.cases.push({ name, case: k + 1, missing });
+    });
+  }
+  if(built.dash){
+    built.dash.rows.forEach((d, i) => {
+      const row = mapping.rows.find(r => r.id === d.slider.row);
+      if(!row) return;
+      const r = DASH_FIRST_ROW + i;
+      map.sliders.push({ canvasId: row.canvasId, nodeId: row.nodeId, name: d.label, mode: d.slider.mode, periods: d.slider.periods,
+        typed: { sheet: built.dash.sheet, cell: DASH_COL.typed + r },
+        use: d.slider.mode === 'set' ? { sheet: built.dash.sheet, cell: DASH_COL.use + r } : null,
+        rest: d.slider.mode === 'shift' ? d.value0 : null });
+    });
+  }
+  return map;
+}
+
+// ---- asked by fmIDE, the window that opened this one (the same rules as 'fmIDE:model', 09f) ----
+window.addEventListener('message', (ev) => {
+  if(!fmideWindowBehind() || ev.source !== window.opener) return;
+  if(ownOrigin() && ev.origin !== ownOrigin()) return;
+  const d = ev.data;
+  if(!d || typeof d !== 'object' || d.type !== 'fmIDE:viewer-workbook' || typeof d.text !== 'string') return;
+  const id = typeof d.id === 'string' ? d.id.slice(0, 80) : '';
+  let boards = null;
+  if(typeof d.boards === 'string' && d.boards){
+    const p = parseFileText(d.boards);
+    if(p.error){ answerViewerWorkbook({ type: 'excel:viewer-workbook-failed', id, text: 'The boards: ' + p.error }); return; }
+    boards = p.parsed;
+  }
+  setStatus($('genStatus'), 'Making the workbook for a showcase viewer…', 'info');
+  fmideLoading = fmideLoading.then(async () => {
+    try{
+      const made = await viewerWorkbook(d.text, boards);
+      modelFromFmide = true;
+      const buffer = made.bytes.buffer.slice(made.bytes.byteOffset, made.bytes.byteOffset + made.bytes.byteLength);
+      answerViewerWorkbook({ type: 'excel:viewer-workbook', id, bytes: buffer, map: JSON.stringify(made.map), notes: made.notes }, [buffer]);
+      setStatus($('genStatus'), 'Made the workbook for fmIDE\'s showcase viewer. Your layout is unchanged.', 'ok');
+    }catch(err){
+      const text = String(err && err.message ? err.message : err).slice(0, 300);
+      answerViewerWorkbook({ type: 'excel:viewer-workbook-failed', id, text });
+      setStatus($('genStatus'), 'The workbook for the showcase viewer couldn\'t be made: ' + text, 'err');
+    }
+  }).catch(() => {});
+});
+function answerViewerWorkbook(message, transfer){
+  try{ window.opener.postMessage(message, ownOrigin() || '*', transfer || []); }catch(e){ /* fmIDE's window went away */ }
+}
+
+// For tools/make-viewers.js (phase V5), which drives this page in a browser without a window,
+// and the tests: the same workbook and cell map. A Promise of { bytes: [numbers], map, notes }.
+// options (phase V5): { style: an Excel style file, parsed, for this workbook only; base64: true
+// gives the bytes as base64 text (quicker for the tool to carry) instead of a list of numbers }.
+window.fmExcel = Object.freeze({
+  viewerWorkbook: async (modelText, boards, options) => {
+    const o = options && typeof options === 'object' ? options : {};
+    const made = await viewerWorkbook(modelText, boards && typeof boards === 'object' ? boards : null, o.style && typeof o.style === 'object' ? o.style : null);
+    if(o.base64 === true){
+      let bin = '';
+      for(let i = 0; i < made.bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, made.bytes.subarray(i, i + 0x8000));
+      return { base64: btoa(bin), map: made.map, notes: made.notes };
+    }
+    return { bytes: Array.from(made.bytes), map: made.map, notes: made.notes };
+  }
+});
 // ============================================================
 // Wiring
 // ============================================================

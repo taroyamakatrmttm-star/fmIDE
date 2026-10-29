@@ -12,10 +12,11 @@ const { startPagesServer } = require('../../tools/pages-server.js');
 const APPS = path.resolve(__dirname, '..', '..', 'apps');
 
 // Resolves { origin, dir, version, close() }. opts.library: a community library folder to
-// build the catalogue from (default none, so the tests never depend on the library/ submodule).
+// build the catalogue from (default none, so the tests never depend on the library/ submodule);
+// opts.gallery: a folder of made showcase viewers for /gallery (default none, phase V6).
 async function startSiteServer(opts){
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fmide-site-'));
-  const { version } = buildSite(dir, { library: (opts && opts.library) || null });
+  const { version } = buildSite(dir, { library: (opts && opts.library) || null, gallery: (opts && opts.gallery) || null });
   const extra = (urlPath) => urlPath.startsWith('/apps/') ? path.join(APPS, path.basename(urlPath)) : null;
   const { origin, close } = await startPagesServer(dir, { extra });
   return { origin, dir, version, close };

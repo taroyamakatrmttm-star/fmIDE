@@ -35,6 +35,8 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 | `fmIDE-excel-module-layouts` | 2 | ExcelExporter's layouts remembered per module (step 11b, below); v2: the layout of a module's block instances, `instance` (step 11d) | ExcelExporter: Import Module Layouts |
 | `fmIDE-graph-board` | 13 | fmGraph's boards: bars, charts and sliders showing one model (step 15, below); v2: the template form, for a template's `attachments.graph` (G5a); v3: the model's named scenarios, `scenarios`; v4: the scenario waterfall, a chart of layout `scenarios`; v5: a bar's or chart's fixed vertical scale, `scale`; v6: a folded slider, `folded`; v7: a board keeping its own slider positions, `ownSliders`; v8: the Tornado and the Spider, charts of layout `tornado` and `spider` (step 18; the template form stays version 2); v9: the shared period, `sharedPeriods` and a bar's or chart's `ownPeriod`; v10: the lines chart, a chart of layout `lines`; v11: the shared colours, `colours`; v12: the common scale, `commonScale` and a bar's or chart's `ownScale`; v13: the Free chart, a chart of layout `free` | fmGraph: Boards → Import boards… (or dropped on the page) · ExcelExporter: File → Import fmGraph boards… (its scenarios, Tornado and Spider charts, sliders, bars and charts, below) |
 | `fmIDE-showcase` | 1 | What a showcase viewer shows: for one model (its canvases, boards, Play, periods, title, description, author, licence, mark), or a recipe for many models built alike (below) | fmShowcase (`fmViewer.html`): dropped with the model, or carried in a made viewer; a recipe goes to the tool that makes many viewers |
+| `fmIDE-gallery` | 1 | The showcase gallery's list: its title, a line of introduction and its sections (phase V6, below) | `tools/build-gallery.js`, from the gallery's folder; never opened by an app |
+| `fmIDE-viewer-workbook` | 1 | The Excel workbook a showcase viewer carries, packed, with its cell map (phase V4, below) | fmShowcase: the made viewer's `excel` block; never opened as a file |
 
 ## Showcases (`fmIDE-showcase` 1, the showcase viewer)
 
@@ -70,11 +72,31 @@ A showcase says what a viewer shows (`docs/viewer-brief.md`). **It never holds t
 | `periods` | `{ "mode": "range", "from", "to" }`, whole numbers counted from 0, `from` ≤ `to`: the periods shown (cut to the model's last). Visitors cannot change them. With boards they are the boards' shared periods (a bar or chart the author gave its own periods keeps them; the one-period charts show the first) and the canvas shows the first; a rectangle's card shows every one. Absent, with boards: the boards' shared periods as the author set them, and the canvas shows the boards' one period. |
 | `excel.file` | The downloaded workbook's file name (characters a file name can't hold become spaces; `.xlsx` added), at most 120. |
 
-**The recipe form** (`"form": "recipe"`), for making viewers of many models built the same way: `title` (may use `{model}`, the model's file name or title), `description`, `author`, `licence`, `mark`; `boards` in the board file's **template form** (rectangles by name, `form: "template"`); and `auto` (optional) — `sliders: "inputs"` (a slider on each input rectangle, up to 12), `bars: "outputs"` (a bar on each rectangle nothing else reads, up to 12), `range` (1–100, the sliders' reach in % either side; 50 when absent). The viewer refuses a recipe: it is for the batch tool (phase V5).
+**The recipe form** (`"form": "recipe"`), for making viewers of many models built the same way: `title` (may use `{model}`, the model's file name or title), `description`, `author`, `licence`, `mark`; `boards` in the board file's **template form** (rectangles by name, `form: "template"`); and `auto` (optional) — `sliders: "inputs"` (a slider on each input rectangle, up to 12), `bars: "outputs"` (a bar on each rectangle nothing else reads, up to 12), `range` (1–100, the sliders' reach in % either side; 50 when absent). The viewer refuses a recipe: it is for the batch tool (phase V5, `tools/make-viewers.js`).
+
+Since phase V5 a recipe may also carry, still in version 1 (no app writes a recipe, and every reader before V5 refuses one, so nothing older reads these fields wrongly): `canvases` — `show`, a list of canvas **names** (at most 80 characters each, capitals ignored when matched), and `start`, a canvas name — and `play`, `periods` and `excel` as in the one-model form (`excel.file` may use `{model}`). A name a model doesn't have is left out of that model's viewer and listed in the tool's report. A rectangle in the recipe's boards may leave out `canvas` when its name is unique in the whole model (a system template's form; fmGraph's own template form always names the canvas). A canvas template's form (`template: { kind: "module", family }`) places the boards on each canvas made from that template.
+
+**The batch tool's report** (`report.json`, written by `tools/make-viewers.js`, read by nothing in the apps): kind `fmIDE-viewer-report`, version 1 — `made`, `failed`, `withNotes`, `bytes`, `recipe`, `excel`, `seconds`, and `viewers`: one entry per model file, `{ file, id, fileName, title, source ("recipe", "showcase", "boards", "auto" or "logic"), canvases, boards, sliders, bars (names), charts, scenarios, notFound: [{ name, canvas }], canvasesNotFound, excel: { file, size, notes } | { error } | null, size, notes, error }`.
 
 Versions: 1 is the first. A file from a newer version opens only after asking, like every other kind; anything the newer version added is ignored.
 
-**A made viewer** (`<id>.html`, phase V3): the viewer's page (`apps/fmViewer.html`) with its two data blocks filled — `<script type="application/json" id="showcase">` the showcase, and `id="model"` the model (a system file) — each JSON text with every `<` written `<`, so nothing in a name can end the block; nothing else of the page changes, so every viewer runs the same script (`fillViewerPage` in `src/shared/showcase.js`). A block is data: the browser never runs a script of that type. Opened in fmIDE by mistake, a made viewer says "That is a showcase viewer, a web page: open it in your browser"; a showcase file says it opens in fmShowcase.
+**A made viewer** (`<id>.html`, phase V3): the viewer's page (`apps/fmViewer.html`) with its data blocks filled — `<script type="application/json" id="showcase">` the showcase, and `id="model"` the model (a system file) — each JSON text with every `<` written `<`, so nothing in a name can end the block; nothing else of the page changes, so every viewer runs the same script (`fillViewerPage` in `src/shared/showcase.js`). A block is data: the browser never runs a script of that type. Opened in fmIDE by mistake, a made viewer says "That is a showcase viewer, a web page: open it in your browser"; a showcase file says it opens in fmShowcase.
+
+**A viewer with Excel** (phase V4): a third data block, `<script type="application/json" id="excel">`, holds the author's workbook (made once by ExcelExporter, the author's) and its cell map — kind `fmIDE-viewer-workbook`, version 1 (`viewerWorkbookFor`, `readViewerWorkbook`, `cleanCellMap` in `src/shared/showcase.js`), empty in a viewer made without Excel; every `<` written `<` as in the other blocks:
+
+```json
+{ "kind": "fmIDE-viewer-workbook", "version": 1, "packed": "deflate-raw", "size": 193022, "workbook": "<base64>",
+  "cells": { "case": { "sheet": "Scenarios", "cell": "C2" },
+             "cases": [ { "name": "High price", "case": 2, "missing": 0 } ],
+             "sliders": [ { "canvasId": "cProfit", "nodeId": "price", "name": "Price", "mode": "set", "periods": { "mode": "all" },
+                            "typed": { "sheet": "Dashboard", "cell": "F5" }, "use": { "sheet": "Dashboard", "cell": "I5" }, "rest": null } ] },
+  "notes": [] }
+```
+
+- `workbook`: the `.xlsx` packed with raw deflate, in base64; `size` its length unpacked (at most 20 MB).
+- `cells`, **the cell map**: `case` the Global Case cell (the case the workbook runs: 1 is Base, the model's own numbers), or null when the workbook has no cases; `cases` each scenario's case (2 and up, at most 50), by name, with `missing` the scenario's changes the workbook couldn't hold; `sliders` each Dashboard slider — the rectangle (`canvasId`, `nodeId`, `name`), `mode` (`set` or `shift`, a change by %), `periods` (as the board file writes them), its **Typed** cell, for a set slider its **Use** cell (TRUE makes it count), and `rest`, what a change by % gives with nothing typed (0, unless 0 isn't on its steps). A sheet name is 1–31 characters without `[ ] : * ? / \`; a cell `A1` to `XFD1048576`; at most 40 sliders.
+- `notes`: what ExcelExporter left out, in words (at most 40).
+- **What the viewer writes** (`excelPatchPlan`, then `patchXlsx` in `src/shared/xlsx-patch.js`): a scenario shown exactly → its case into `case`; anything else → 1 into `case`, and each moved slider's value into its Typed cell (TRUE into Use for a set slider); a change by % whose `rest` isn't 0 gets 0 typed when it isn't moved. Only a number or TRUE / FALSE is ever written, into a cell already in the sheet; nothing else in the workbook changes. A newer version of the block: no ⬇ Excel.
 
 ## The Dashboard's charts (`fmIDE-excel-mapping` 8, step 19 B5; lines charts 9; Free charts 11)
 
@@ -680,3 +702,14 @@ Files may come from other people (the planned community library), so text from a
 ---
 
 This document is licensed under [Creative Commons Attribution 4.0 International](LICENSE-CC-BY-4.0.txt) (CC BY 4.0): anyone may use it — for example to build tools that read or write fmIDE files — with credit to fmIDE (Copyright 2026 Taro Yamaka). See [LICENSING.md](../LICENSING.md).
+
+## The showcase gallery's list (`fmIDE-gallery` 1, phase V6 of `docs/viewer-brief.md`)
+
+`gallery.json`, optional, in the folder of made viewers the site's `/gallery` is built from (`tools/build-gallery.js`):
+
+```json
+{ "kind": "fmIDE-gallery", "version": 1, "title": "Models for the course", "intro": "Three small models.",
+  "sections": [ { "title": "Week 1", "viewers": ["loan", "shop-b"] } ] }
+```
+
+`title` at most 80 characters, `intro` 600 (lines kept), at most 50 sections of at most 1,000 viewers each, a section's `title` 80; each viewer named by its showcase's `id` (letters, digits and dashes), once. A viewer in the folder that no section names is listed after them, by title. Read by `cleanGalleryList` (`src/shared/showcase.js`): every problem in words — the build stops on any, and on a section naming a viewer the folder doesn't hold. Every text is shown escaped; ids are only compared.

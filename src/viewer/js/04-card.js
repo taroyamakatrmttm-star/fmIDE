@@ -264,11 +264,32 @@ function markPicked(){
   const ex = explain(state.card.canvasId, state.card.nodeId, state.period);
   (ex.leaves || []).forEach(l => { if(l.canvasId === state.canvasId){ const e = find(l.nodeId); if(e && e !== me) e.classList.add('reads'); } });
 }
-// Goes to a rectangle: its canvas, the rectangle in the middle, its card open.
+// Goes to a rectangle: its canvas, the rectangle in the middle, its card open (from the Board,
+// a bar's card: the Logic view first).
 function goTo(canvasId, nodeId){
+  if(state.viewName === 'board') showView('logic');
   if(canvasId !== state.canvasId && !showCanvas(canvasId, { keepCard: true })) return false;
   openCard(canvasId, nodeId);
   centreOn(nodeId);
+  return true;
+}
+
+// A bar's card (phase V6): the card of the rectangle a bar shows, opened from the Board by its
+// title — its value in each period shown, how it is worked out, with the Board's numbers — and,
+// on the Board, Show in Logic (to it on its canvas, when that canvas is shown).
+function openBarCard(barId){
+  const b = board && board.items.find(w => w.id === barId && w.kind === 'bar');
+  const rect = b && model.byKey.get(b.key);
+  if(!rect) return false;
+  setLogicNumbers(null); // the Board's numbers (06-board.js)
+  if(!openCard(rect.canvasId, rect.nodeId)) return false;
+  if(state.viewName === 'board'){
+    const go = make('button', 'card-show-logic', 'Show in Logic');
+    go.type = 'button';
+    if(state.shown.canvases.includes(rect.canvasId)) go.addEventListener('click', () => goTo(rect.canvasId, rect.nodeId));
+    else { go.disabled = true; go.title = 'Its canvas is not shown here'; }
+    $('cardBody').appendChild(go);
+  }
   return true;
 }
 

@@ -8,9 +8,11 @@ A **showcase viewer** is one web page made from your model. Anyone can open it i
 
 | Lesson | What you learn | Came in |
 |---|---|---|
-| [8.1 Make a showcase viewer](#showcase-viewer) | File → Make Showcase Viewer…, what goes into the file, making it again | the showcase viewer's phases V1–V3 (branches `claude/viewer-v1`, `claude/viewer-v2`, `claude/viewer-v3`) |
+| [8.1 Make a showcase viewer](#showcase-viewer) | File → Make Showcase Viewer…, what goes into the file, making it again | the showcase viewer's phases V1–V3 (branches `claude/viewer-v1`, `claude/viewer-v2`, `claude/viewer-v3`), opening one on an iPhone or iPad (`claude/viewer-ipad-sliders`) |
+| [8.2 Put Excel in a showcase viewer](#showcase-excel) | Include an Excel workbook; a visitor's ⬇ Excel, with their scenario or sliders written in | phase V4 (branch `claude/viewer-v4`) |
+| [8.3 Make many viewers at once](#showcase-many) | Choose for me; `npm run make-viewers` with a recipe naming sliders and bars by name; the report | phase V5 (branch `claude/viewer-v5`) |
+| [8.4 Share viewers in the gallery](#showcase-gallery) | `--pictures` and `--gallery`, `gallery.json`, the site's `/gallery`, sending a link to an iPhone or iPad | phase V6 (branch `claude/viewer-v6`) |
 
-An Excel workbook to download from the viewer, making many viewers at once and a gallery of them on the website come later.
 
 ---
 
@@ -21,7 +23,7 @@ An Excel workbook to download from the viewer, making many viewers at once and a
 > **You need:** fmIDE, and a model with an fmGraph board: the sample `tests/fixtures/viewer/every-widget.fmide` has two boards and two scenarios.
 > **Time:** about 5 minutes.
 > **In the app:** fmIDE Help → *Share a model as a showcase viewer* (`showcase-viewer`)
-> **Came in:** the showcase viewer's phases V1–V3 · branches `claude/viewer-v1`, `claude/viewer-v2`, `claude/viewer-v3`
+> **Came in:** the showcase viewer's phases V1–V3 · branches `claude/viewer-v1`, `claude/viewer-v2`, `claude/viewer-v3`, `claude/viewer-ipad-sliders`
 
 You choose what the visitor sees; fmIDE writes the page. Your choices stay in the document, so making the viewer again after a change takes one click.
 
@@ -33,12 +35,13 @@ You choose what the visitor sees; fmIDE writes the page. Your choices stay in th
 4. Fill in **Description**, **Author** and **Licence** if you like (the licence says how visitors may reuse the model, for example `CC BY 4.0`).
 5. Under **Canvases the visitor sees**, untick **Checks**. Set **Opens on** to **Cash**.
 6. Set **Periods shown** from **Year 2** to **Year 3**.
-7. Under **Boards (from fmGraph)**, untick **Own sliders**. Set **Play starts with** from **Base** to **Big year**.
+7. Under **Boards (from fmGraph)**, untick **Own sliders**. Set **Play starts with** from **Base** to **Big year**. Untick **Include an Excel workbook** for now: lesson 8.2 adds it.
 8. Press **Make viewer**. fmIDE downloads `prices-and-cash.html` (on an iPhone or iPad, the share sheet opens) and says *Made prices-and-cash.html (… KB). It opens in any browser, offline, and changes nothing in your model.*
-9. Open the file in your browser. On the **Board**, move the **Price** slider to 12. Then choose **Logic**, the **Profit** tab, and tap **Revenue**.
+9. Open the file in your browser (on an iPhone or iPad, see *Good to know*). On the **Board**, move the **Price** slider to 12. Then choose **Logic**, the **Profit** tab, and tap **Revenue**.
 
 ### Check it
 
+- Each slider is one short row: its name, the slider and its number. The list of sliders scrolls on its own; the bars and charts stay where they are.
 - The page opens on the Board, with the board **Everything** only, and the tabs **Profit**, **Cash** and **Balance sheet** in the Logic view (no Checks).
 - The canvas shows the numbers of **Year 2**, and a rectangle's card shows Year 2 and Year 3.
 - With Price at 12, Revenue in Year 2 is **13,200** (12 × 1,100); at the model's own Price of 10 it is 11,000.
@@ -51,6 +54,7 @@ You choose what the visitor sees; fmIDE writes the page. Your choices stay in th
 - **Hiding is not secrecy.** Everything in the model goes into the file, shown or not: someone determined can read every canvas and number. Don't share a confidential model this way.
 - **No boards yet?** The window says the viewer will show the model's logic only, and offers **Open fmGraph to make one**. A board you make there appears in the open window.
 - **What the visitor changes stays on their own device.** Opening the file again shows the same sliders; **Reset** puts the model's own numbers back.
+- **On an iPhone or iPad**, a viewer saved in Files opens only in a preview, which can't run it. To open one there: in Safari, go to https://fmide.pages.dev/fmViewer, tap **Choose**, and pick the file. It opens just as it does on a computer; only the model and showcase inside it are read, and a page that isn't a made viewer is refused with *That page isn't a viewer made by fmIDE (File → Make Showcase Viewer…), so fmShowcase can't open it.*
 - **Opened in fmIDE by mistake**, a made viewer says *That is a showcase viewer, a web page: open it in your browser, not in fmIDE.*
 - **fmShowcase on its own** (`apps/fmViewer.html`) also opens a `.fmide` document dropped on it: a document whose viewer you made opens as that viewer.
 - The browser must be a current Chrome, Edge, Firefox or Safari; an older one says it can't make a viewer.
@@ -65,6 +69,134 @@ fm.showcase();   // the choices the document now keeps
 ```
 
 It answers later (a Promise), so it can't be a macro step.
+
+---
+
+<a id="showcase-excel"></a>
+## Lesson 8.2 — Put Excel in a showcase viewer
+
+> **Goal:** a viewer whose visitors can download the model in Excel, on the numbers they are looking at.
+> **You need:** fmIDE and ExcelExporter side by side (the same folder, or the website), and the viewer from lesson 8.1.
+> **Time:** about 5 minutes.
+> **In the app:** fmIDE Help → *Share a model as a showcase viewer* (`showcase-viewer`)
+> **Came in:** the showcase viewer's phase V4 · branch `claude/viewer-v4`
+
+ExcelExporter makes the workbook once, when you make the viewer; it goes inside the page. When a visitor presses ⬇ Excel, the viewer types their scenario or sliders into the workbook's input cells, and Excel works everything out when the file opens.
+
+### Steps
+
+1. With `every-widget.fmide` open, choose **File → Make Showcase Viewer…**. Your choices from lesson 8.1 are there.
+2. Tick **Include an Excel workbook**. **Workbook name** says `Prices and cash.xlsx`.
+3. Press **Make viewer**. ExcelExporter opens for a moment, makes the workbook and closes again. fmIDE downloads `prices-and-cash.html` and says it was made *with its Excel workbook*.
+4. Open the file in your browser. Beside **⬇ Excel** at the top, the line says *The model's own numbers*.
+5. Tap the scenario **High price**. The line says *Scenario: High price*. Press **⬇ Excel**: you get `Prices and cash – High price.xlsx`. Open it in Excel.
+6. Back in the viewer, tap **Base**, move **Price** to 13 and **Volume** to +10%. The line says *Price set to 13, Volume +10%*. Press **⬇ Excel** again: `Prices and cash – my sliders.xlsx`. Open it in Excel.
+
+### Check it
+
+- In `… – High price.xlsx`, the **Scenarios** tab's C2 is **2** and D2 says **High price**. On the **Profit** tab, Profit in the second period column (the model's Year 2) is **5,200**, and Revenue **14,300** — as the viewer shows them.
+- In `… – my sliders.xlsx`, C2 is **1** (Base). On the **Dashboard**, Price's **Typed** is **13** with **Use** TRUE, and Volume's Typed is **10**. Profit in Year 2 is **5,970** (Revenue 13 × 1,210 = 15,730, less cost of sales 7,260 and overheads 2,500).
+- Your own layout in ExcelExporter is as it was: its ⬇ Generate still writes the workbook you had before.
+
+### Good to know
+
+- **A scenario then a slider**: a scenario shown exactly is written as its Global Case. Once you move a slider, the viewer shows the model's own numbers with your sliders, and the workbook is written the same way — so a scenario's changes to inputs without a slider are not in it.
+- **What the workbook holds** is what ExcelExporter's **Layout → Use fmGraph boards…** would make from the viewer's boards: every scenario a Global Case, every slider a row on the Dashboard, the first board's bars and charts as Excel charts. A slider it can't hold (inside a block, for example) is named in the line beside ⬇ Excel.
+- **On an iPhone or iPad**, ⬇ Excel opens the share sheet. The Dashboard's scroll bars don't show in Excel there; its Typed cells work.
+- **In an iPhone's or iPad's home-screen app** ExcelExporter can't open beside fmIDE, so the box is off: make the viewer in Safari or on a computer.
+- **While Play runs**, ⬇ Excel waits: stop Play first.
+- The workbook adds about 10–30 KB to a small model's viewer.
+
+### From a script
+
+```js
+const made = await fm.makeShowcaseViewer({ excel: { file: 'Prices and cash.xlsx' }, download: true });
+made.excel;   // { file, bytes, notes }: what ExcelExporter made
+```
+
+In the viewer, `fmViewer.excelPlan()` says which cells ⬇ Excel would write, and `fmViewer.excelBytes()` gives the file without downloading it.
+
+---
+
+<a id="showcase-many"></a>
+## Lesson 8.3 — Make many viewers at once
+
+> **Goal:** a viewer for every model in a folder, each showing the same sliders and bars, with its workbook — and a model with no board given one chosen for it.
+> **You need:** a computer with the fmIDE repository and its test tooling (`npm install`), and the three shop models in `tests/fixtures/viewer/batch/`.
+> **Time:** about 10 minutes.
+> **In the app:** fmIDE Help → *Share a model as a showcase viewer* (`showcase-viewer`)
+> **Came in:** the showcase viewer's phase V5 · branch `claude/viewer-v5`
+
+A **recipe** is a showcase for many models: it names canvases, sliders and bars **by name**, never by id, so one recipe fits every model built the same way. The command `npm run make-viewers` reads each model, places the recipe's boards in it, has ExcelExporter make its workbook (in a browser without a window), and writes a viewer per model and a report.
+
+### Steps
+
+1. In fmIDE, open `shop-a.fmide` (it has no fmGraph board) and choose **File → Make Showcase Viewer…**. Under **Boards**, press **Choose for me**. A board **Chosen for me** appears, ticked, and the line says *Chosen for me: 3 sliders (Price, Volume, Unit cost) and 1 bar (Margin).* Close the window without making a viewer.
+2. Open a terminal in the repository's folder and run:
+   `npm run make-viewers -- --out out/shops --recipe tests/fixtures/viewer/batch/shops.recipe.json tests/fixtures/viewer/batch/shop-*.fmide`
+3. It says *3 viewers made in … (3 with notes: see report.txt)* and how big they are in all.
+4. Open `out/shops/report.txt`. Each model has its file, what it shows and its workbook. Under `shop-c.fmide` it says *Not found: Volume (on Shop) — left out*: that model calls it Units.
+5. Open `out/shops/shop-a-the-shop.html` in your browser. Its Board has the sliders **Price** and **Volume**, the bars **Profit** and **Margin** and the chart *Revenue and costs*.
+6. Move **Price** to 13 and press **⬇ Excel**.
+
+### Check it
+
+- In the viewer, **Profit** in 2025 is **400** before you move anything (10 × 100 − 100 × 6) and **700** with Price at 13.
+- In `shop-a workbook – my sliders.xlsx`, Profit on the **Shop** tab, in 2025, is **700**.
+- `shop-c`'s viewer has only the Price slider; its report line says why.
+
+### Good to know
+
+- **Where each viewer's choices come from**: a recipe given, for every model; without one, the document's own showcase (kept by Make Showcase Viewer…), else its fmGraph boards, else — with `--auto` — sliders and bars chosen for it, as Choose for me does; else the logic only.
+- **`--auto`** puts a slider on each input that moves a calculated rectangle (a number the same in every period gets a slider from half to one and a half times it; numbers that change by period get a change by %), and a bar on each result — a calculated rectangle nothing else reads — at most 12 of each.
+- **`--write-recipe FILE`** writes a recipe from the first viewer's boards, by name: make one viewer the way you like, write its recipe, adjust it, and use it for the rest.
+- **`--no-excel`** makes the viewers without workbooks, in a fraction of a second and with no browser; **`--excel-style FILE`** gives every workbook your Excel style (ExcelExporter's *Export Excel Style*).
+- A recipe's `title` and `excel.file` may use `{model}`, the model's file name. Two viewers of the same title get `-2`, `-3`… on their file names.
+- A small model's viewer is about 570 KB, workbook included; 100 of them took about a minute on the owner's computer and came to about 55 MB.
+
+### From a script
+
+The command's own work is `tools/viewer-batch.js` (`makeViewers`, `reportText`, `recipeFrom`), usable from Node. In fmIDE, `fm.showcaseChooseForMe()` does what Choose for me does and returns what it chose, by name.
+
+---
+
+<a id="showcase-gallery"></a>
+## Lesson 8.4 — Share viewers in the gallery
+
+> **Goal:** viewers on the website, in a gallery, opened from a link — the way to share them with someone on an iPhone or iPad.
+> **You need:** a computer with the fmIDE repository, the viewers from lesson 8.3, and the right to publish the site (`npm run deploy`).
+> **Time:** about 10 minutes.
+> **In the app:** fmIDE Help → *Share a model as a showcase viewer* (`showcase-viewer`)
+> **Came in:** the showcase viewer's phase V6 · branch `claude/viewer-v6`
+
+On an iPhone or iPad, a viewer saved in Files opens only in a preview, which can't run it. A viewer **on the website** is just a link: tapped, it runs in Safari with everything working, ⬇ Excel included. The gallery is a page of such viewers, built with the site from a folder of made viewers.
+
+### Steps
+
+1. Make the viewers with pictures, straight into a gallery folder:
+   `npm run make-viewers -- --out out/shops --recipe tests/fixtures/viewer/batch/shops.recipe.json --pictures --gallery gallery tests/fixtures/viewer/batch/shop-*.fmide`
+2. Optionally, put a `gallery.json` in the folder: the gallery's title, a line of introduction and its sections (see `tests/fixtures/viewer/gallery/gallery.json`). Without one, the viewers are listed by title.
+3. Build the site and look at it on your computer: `npm run build`, then `npm run serve`, and open `http://localhost:8080/gallery/`.
+4. Click **Open** on *shop-a: the shop*. The viewer opens at `/gallery/v/shop-a-the-shop`, with **← Gallery** at the top.
+5. When it looks right, publish: `npm run deploy`. Send someone the address `https://fmide.pages.dev/gallery/v/shop-a-the-shop`.
+
+### Check it
+
+- The gallery page shows three cards, each with its picture, title, author, licence and size, and **Open** and **Download**.
+- In the viewer, **Profit** in 2025 is **400**, as in lesson 8.3: the gallery's viewer is the same model.
+- On an iPhone or iPad, the link opens the viewer in Safari; **⇪ Share link** at the top hands its address to the share sheet.
+
+### Good to know
+
+- **Every viewer in the gallery runs today's viewer.** The build reads only the model, the showcase and the workbook out of each file and puts them into the viewer the site serves, so a viewer made months ago gets every fix — and nothing else in the file is ever served.
+- **Nothing is sent anywhere, and nothing loads from another site.** The gallery page runs no script at all; each viewer runs only the viewer's own code and may connect to nothing (the site's security policy says so).
+- **The gallery's folder**: `npm run build` and `npm run deploy` take `gallery/` in the repository when it holds any viewer, or another folder with `--gallery DIR`. It is meant to be a repository of its own, added as a submodule, like the community library.
+- A gallery viewer remembers what a visitor moved on their device, as any viewer does. A new viewer in the gallery never makes fmIDE's site a new version.
+- **Hiding is not secrecy**, here as anywhere: every number of a model in the gallery can be read by anyone. Publish only what may be public.
+
+### From a script
+
+`tools/build-gallery.js` (`buildGallery(folder, viewerPage)`) is what the build uses; in a gallery viewer, `fmViewer.inGallery()` is true.
 
 ---
 

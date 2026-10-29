@@ -60,10 +60,11 @@ const FULL_SUITE = [
   ['.gitignore', 'what Git leaves out'],
   ['.gitmodules', 'the library submodule'],
   ['library', 'the community library (submodule)'],
+  ['gallery', 'the showcase gallery (its own repository, a submodule)'],
 ];
 
 // Files that go into the built site but into no app (the build and tests/helpers/site.js).
-const SITE_FILES = ['src/site/', 'src/library/', 'src/help-pages/', 'LICENSE', 'NOTICE', 'src/excel-exporter/LICENSE', 'docs/LICENSE-CC-BY-4.0.txt'];
+const SITE_FILES = ['src/site/', 'src/library/', 'src/help-pages/', 'src/gallery/', 'LICENSE', 'NOTICE', 'src/excel-exporter/LICENSE', 'docs/LICENSE-CC-BY-4.0.txt'];
 
 // What each tool reads besides the tools it requires (found from its require lines). A test
 // that runs the tool loads these too. Group 74 runs the tools and checks every file they read
@@ -73,10 +74,14 @@ const TOOL_INPUTS = {
     'src/fmide/js/16-ribbon-keytips.js', 'src/library/style.css', 'src/help-pages/help.css', 'docs/LICENSE-CC-BY-4.0.txt'],
   'tools/build-manual.js': ['docs/manual/', 'src/help/fmgraph-help.js', 'src/help/fmgraph-tutorials.js', 'src/help-pages/manual.css'],
   'tools/build-library.js': ['src/library/style.css', 'docs/LICENSE-CC-BY-4.0.txt'],
+  'tools/build-gallery.js': ['src/library/style.css', 'src/gallery/gallery.css'],
   'tools/video-scripts.js': ['src/help/fmide-tutorials.js'],
   'tools/record-tutorials.js': [APP_PAGES.fmIDE, APP_PAGES.ExcelExporter, APP_PAGES.fmGraph],
   'tools/bench-calc.js': [APP_PAGES.fmIDE, APP_PAGES.ExcelExporter, APP_PAGES.fmGraph],
   'tools/test-parts.js': ['tests/test-durations.json'],
+  // The batch of showcase viewers (phase V5): the viewer's page and ExcelExporter, driven for the
+  // workbooks. Its own work, tools/viewer-batch.js, reads no app (group 97 gives it a stand-in page).
+  'tools/make-viewers.js': [APP_PAGES.fmViewer, APP_PAGES.ExcelExporter],
   'tools/build.js': [SITE],
 };
 

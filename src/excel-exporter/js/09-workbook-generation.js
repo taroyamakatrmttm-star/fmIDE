@@ -603,7 +603,10 @@ function buildWorkbook(){
     });
     appendDashboardSheet(wb, ctx.dash, dashName, ownRow, dashCharts, ctx.cellPos);
   }
-  return { wb, tooLong };
+  // `dash` and `cases`: where the Dashboard's sliders and the Global Case are, for a workbook
+  // made for a showcase viewer (09l-viewer-workbook.js, its cell map).
+  return { wb, tooLong, dash: dashName && ctx.dash && ctx.dash.rows.length ? { sheet: dashName, rows: ctx.dash.rows } : null,
+    cases: nCases ? { sheet: scenarioSheetName, cell: 'C2', names: graphPlan ? graphPlan.cases.slice() : [] } : null };
   }finally{ useHelperColumns(0); }
 }
 

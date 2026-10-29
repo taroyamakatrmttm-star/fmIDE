@@ -35,6 +35,11 @@ body.phone .vbar-app{ display:none; }
 .dropbox:hover, .dropbox.over{ border-color:var(--accent); background:#eff6ff; }
 .dropbox-main{ font-size:17px; font-weight:600; }
 .dropbox-sub{ font-size:14px; color:var(--muted); }
+/* A finger chooses a file (an iPhone or iPad: a viewer saved in Files opens here); a mouse can drop one. */
+.choose-words{ display:none; }
+@media (pointer: coarse){ .drop-words{ display:none; } .choose-words{ display:inline; } }
+body.phone .drop-words{ display:none; }
+body.phone .choose-words{ display:inline; }
 
 .canvas-tabs{ flex:none; display:flex; gap:4px; padding:8px 16px 0; overflow-x:auto; }
 .canvas-tab{ min-height:40px; padding:6px 16px; border:1px solid var(--line); border-bottom:none; border-radius:8px 8px 0 0; background:#e2e8f0; cursor:pointer; white-space:nowrap; }
@@ -93,3 +98,11 @@ body.has-model .mark{ left:28px; bottom:44px; }
 .dialog-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
 .dialog-actions button{ min-height:40px; padding:6px 16px; border-radius:8px; border:1px solid var(--line); background:#fff; cursor:pointer; }
 .dialog-actions .primary{ background:var(--accent); color:#fff; border-color:var(--accent); }
+
+/* ⬇ Excel (phase V4): the button and, beside it on a desk, the line saying what the file holds. */
+.excel-wrap{ display:flex; align-items:center; gap:8px; min-width:0; }
+.excel-wrap.hidden{ display:none; }
+.vbar-excel{ background:#166534; border-color:#15803d; font-weight:600; }
+.vbar-excel:hover{ background:#15803d; }
+.vbar-excel:disabled{ opacity:.55; cursor:default; }
+.excel-note{ font-size:12px; color:#cbd5e1; max-width:280px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }

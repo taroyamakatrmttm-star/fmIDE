@@ -101,7 +101,7 @@ test('the same numbers as fmGraph\'s for the same sliders, in every chart', asyn
   await graph.close();
 });
 
-test('a slider stays in the author\'s range: dragging, the keys, − and +, a typed number, a double tap', async ({ page }) => {
+test('a slider stays in the author\'s range: dragging, the keys, a typed number, a double tap', async ({ page }) => {
   await openBoard(page);
   const price = page.locator('.slider-widget').first();
   // Typed past the end: kept at the end of the range.
@@ -115,13 +115,16 @@ test('a slider stays in the author\'s range: dragging, the keys, − and +, a ty
   await price.locator('input.ps-type').fill('7.1');
   await price.locator('input.ps-type').press('Enter');
   await expect.poll(() => V(page, () => fmViewer.board().sliders[0].value)).toBe(7);
-  // The keys, and − / +.
+  // The keys (− and + are left out of the viewer's one-row slider: the keys, typing and a
+  // double tap stay).
+  await expect(price.locator('.ps-minus')).toBeHidden();
+  await expect(price.locator('.ps-plus')).toBeHidden();
   await price.locator('.ps-track').focus();
   await page.keyboard.press('Home');
   expect(await V(page, () => fmViewer.board().sliders[0].value)).toBe(5);
-  await price.locator('.ps-minus').click();
+  await page.keyboard.press('ArrowLeft');
   expect(await V(page, () => fmViewer.board().sliders[0].value)).toBe(5);
-  await price.locator('.ps-plus').click();
+  await page.keyboard.press('ArrowRight');
   expect(await V(page, () => fmViewer.board().sliders[0].value)).toBe(5.25);
   // A drag far past the end.
   const track = await price.locator('.ps-track').boundingBox();
@@ -310,7 +313,7 @@ test('no editing control: nothing to add, remove, colour, arrange or rename, and
   expect(await V(page, () => fmViewer.modelText() === fmViewer.modelTextAtLoad())).toBe(true);
 });
 
-test('on a phone: Board and Logic at the bottom, the sliders in a row above them', async ({ browser }) => {
+test('on a phone: Board and Logic at the bottom, the sliders\' list above them', async ({ browser }) => {
   const PHONE = { viewport: { width: 390, height: 844 }, screen: { width: 390, height: 844 }, hasTouch: true, isMobile: true };
   const { context, page, errors } = await serve(browser, madeViewer(readFixture('viewer', 'every-widget.showcase.json'), readFixture('viewer', 'every-widget.fmide')), PHONE);
   expect(await page.evaluate(() => document.body.classList.contains('phone'))).toBe(true);
@@ -334,6 +337,132 @@ test('on a phone: Board and Logic at the bottom, the sliders in a row above them
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   expect(errors).toEqual([]);
   await context.close();
+});
+
+// ---- The sliders: one short row each, in a list that scrolls on its own (29 October 2026) ----
+// Each slider at most SLIDER_ROW_MAX pixels tall (183 before), its track and number at least
+// FINGER pixels (a finger's target).
+const SLIDER_ROW_MAX = 44, FINGER = 32;
+// The sample's board with 16 sliders (each of its four in each of the four years), so the list
+// is longer than its place on any screen.
+function manySliders(){
+  const sc = readFixture('viewer', 'every-widget.showcase.json');
+  const b = sc.boards.boards[0];
+  b.sliders = b.sliders.flatMap(s => [0, 1, 2, 3].map(p => Object.assign({}, s, { periods: { mode: 'one', p } })));
+  return madeViewer(sc, readFixture('viewer', 'every-widget.fmide'));
+}
+const SCREENS = {
+  phone: { viewport: { width: 390, height: 844 }, screen: { width: 390, height: 844 }, hasTouch: true, isMobile: true },
+  ipad: { viewport: { width: 1024, height: 768 }, screen: { width: 1024, height: 768 }, hasTouch: true },
+  computer: { viewport: { width: 1400, height: 900 } },
+};
+// Each slider's row: the name, the track and the number, and their boxes.
+const sliderRows = (page) => page.locator('#sliderList > .slider-widget').evaluateAll(els => els.map(w => {
+  const box = (sel) => { const r = (sel ? w.querySelector(sel) : w).getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height, mid: r.y + r.height / 2 }; };
+  return { row: box(null), name: box('.slider-name'), track: box('.ps-track'), number: box('.ps-value') };
+}));
+
+test('each slider is one short row: its name, the slider and its number side by side', async ({ browser }) => {
+  for(const [screen, options] of Object.entries(SCREENS)){
+    const { context, page, errors } = await serve(browser, madeViewer(readFixture('viewer', 'every-widget.showcase.json'), readFixture('viewer', 'every-widget.fmide')), options);
+    try{
+      const rows = await sliderRows(page);
+      expect(rows.length, screen).toBe(4);
+      for(const r of rows){
+        expect(r.row.h, screen).toBeLessThanOrEqual(SLIDER_ROW_MAX);
+        // On one row: the name, then the track, then the number, their middles level.
+        expect(Math.abs(r.name.mid - r.track.mid), screen).toBeLessThanOrEqual(4);
+        expect(Math.abs(r.number.mid - r.track.mid), screen).toBeLessThanOrEqual(4);
+        expect(r.name.x + r.name.w, screen).toBeLessThanOrEqual(r.track.x + 1);
+        expect(r.track.x + r.track.w, screen).toBeLessThanOrEqual(r.number.x + 1);
+        // Big enough for a finger, and long enough to move.
+        expect(r.track.h, screen).toBeGreaterThanOrEqual(FINGER);
+        expect(r.number.h, screen).toBeGreaterThanOrEqual(FINGER);
+        expect(r.track.w, screen).toBeGreaterThanOrEqual(100);
+      }
+      // The words "model's own" are kept for a screen reader and as the row's tooltip.
+      expect(await page.locator('#sliderList > .slider-widget').first().getAttribute('title')).toMatch(/\d/);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth), screen).toBeLessThanOrEqual(options.viewport.width);
+      expect(errors).toEqual([]);
+    } finally { await context.close(); }
+  }
+});
+
+test('the sliders\' list scrolls on its own: the bars and charts stay on screen while the lowest slider is reached', async ({ browser }) => {
+  for(const screen of ['phone', 'ipad']){
+    const options = SCREENS[screen];
+    const { context, page, errors } = await serve(browser, manySliders(), options);
+    try{
+      expect(await V(page, () => fmViewer.board().sliders.length)).toBe(16);
+      const list = page.locator('#sliderList');
+      const before = await list.evaluate(el => ({ scroll: el.scrollHeight, client: el.clientHeight, y: el.getBoundingClientRect().y }));
+      expect(before.scroll, screen).toBeGreaterThan(before.client + 100); // longer than its place: it scrolls
+      const chart = page.locator('#barList > .widget').first();
+      const chartBefore = await chart.boundingBox();
+      const inView = (b) => b.y >= 0 && b.y + 40 <= options.viewport.height;
+      expect(inView(chartBefore), screen).toBe(true);
+      // The mouse wheel on a computer, a finger on a touch screen: either way the list's own scroll.
+      const lb = await list.boundingBox();
+      await page.mouse.move(lb.x + 20, lb.y + 10);
+      await page.mouse.wheel(0, 2000);
+      await expect.poll(() => list.evaluate(el => el.scrollTop), screen).toBe(before.scroll - before.client);
+      // The lowest slider is in the list's view and on the screen; the chart has not moved.
+      const last = await page.locator('#sliderList > .slider-widget').last().boundingBox();
+      expect(last.y + last.height, screen).toBeLessThanOrEqual(lb.y + lb.height + 1);
+      expect(last.y + last.height, screen).toBeLessThanOrEqual(options.viewport.height);
+      expect(await chart.boundingBox(), screen).toEqual(chartBefore);
+      expect(await page.evaluate(() => [document.scrollingElement.scrollTop, document.getElementById('boardView').scrollTop]), screen).toEqual([0, 0]);
+      // And the lowest slider works there.
+      const t = await page.locator('#sliderList > .slider-widget').last().locator('.ps-track').boundingBox();
+      await page.mouse.move(t.x + t.width / 2, t.y + t.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(t.x + t.width, t.y + t.height / 2, { steps: 4 });
+      await page.mouse.up();
+      expect(await V(page, () => fmViewer.board().sliders[15].value), screen).not.toBeNull();
+      expect(await chart.boundingBox(), screen).toEqual(chartBefore);
+      expect(errors).toEqual([]);
+    } finally { await context.close(); }
+  }
+});
+
+test('a finger swiping the sliders\' list scrolls it and moves no slider, even one starting on a track', async ({ browser }) => {
+  for(const screen of ['phone', 'ipad']){
+    const { context, page, errors } = await serve(browser, manySliders(), SCREENS[screen]);
+    try{
+      const cdp = await context.newCDPSession(page);
+      const touch = (type, p) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: p ? [{ x: p.x, y: p.y }] : [] });
+      // A swipe up from the middle of a track, drifting sideways as a thumb does (6 px a step:
+      // enough to move the slider before the browser takes the swipe for a scroll).
+      const swipe = async (index) => {
+        const t = await page.locator('#sliderList > .slider-widget').nth(index).locator('.ps-track').boundingBox();
+        const x = t.x + t.width / 2, y = t.y + t.height / 2;
+        await touch('touchStart', { x, y });
+        for(let i = 1; i <= 10; i++) await touch('touchMove', { x: x + i * 6, y: y - i * 12 });
+        await touch('touchEnd');
+      };
+      const values = () => V(page, () => fmViewer.board().sliders.map(s => s.value));
+      const untouched = await values();
+      await swipe(1);
+      await expect.poll(() => page.locator('#sliderList').evaluate(el => el.scrollTop), screen).toBeGreaterThan(50);
+      expect(await values(), screen).toEqual(untouched);
+      // With a scenario shown: still shown after a swipe.
+      await V(page, () => fmViewer.showScenario('High price'));
+      const inScenario = await values();
+      await page.locator('#sliderList').evaluate(el => { el.scrollTop = 0; });
+      await swipe(2);
+      await expect.poll(() => page.locator('#sliderList').evaluate(el => el.scrollTop), screen).toBeGreaterThan(50);
+      expect(await V(page, () => fmViewer.board().shownScenario), screen).toBe('High price');
+      expect(await values(), screen).toEqual(inScenario);
+      // A finger along a track still moves its slider.
+      await page.locator('#sliderList').evaluate(el => { el.scrollTop = 0; });
+      const t0 = await page.locator('#sliderList > .slider-widget').first().locator('.ps-track').boundingBox();
+      await touch('touchStart', { x: t0.x + t0.width / 2, y: t0.y + t0.height / 2 });
+      for(let i = 1; i <= 6; i++) await touch('touchMove', { x: t0.x + t0.width / 2 + i * 8, y: t0.y + t0.height / 2 });
+      await touch('touchEnd');
+      expect((await values())[0], screen).not.toBe(inScenario[0]);
+      expect(errors).toEqual([]);
+    } finally { await context.close(); }
+  }
 });
 
 test('Help: ? and F1 open the viewer\'s topics, asking nothing of the network', async ({ page }) => {
@@ -405,4 +534,86 @@ test('hostile names in the boards are shown as text; older board files open', as
   expect((await V(page, () => fmViewer.board())).boards).toEqual(['Profit board']); // its empty second board left out
   await expect(page.locator('#scenarioRow .scenario-btn')).toHaveText(['Base', 'High price', 'Volume up', 'Mixed', 'Also high', 'Cost cut']);
   expect(pageErrors).toEqual([]);
+});
+
+// ---- Phase V6: the phone and iPad pass ----
+
+test('a bar\'s title opens its card: its value in each period with the Board\'s numbers, how it is worked out; Show in Logic goes to it', async ({ page }) => {
+  await openBoard(page);
+  await V(page, () => fmViewer.setSlider('Price', 13));
+  const bar = page.locator('#barList .bar-widget').first();
+  await expect(bar.locator('.bar-card-open')).toHaveText('Profit');
+  // It looks tappable without a hover (a touch screen has none): underlined, with a ›.
+  expect(await bar.locator('.bar-card-open').evaluate(b => [getComputedStyle(b).textDecorationLine, getComputedStyle(b, '::after').content]))
+    .toEqual(['underline', '" ›"']);
+  await bar.locator('.bar-card-open').click();
+  await expect(page.locator('#card')).toBeVisible();
+  await expect(page.locator('#cardTitle')).toHaveText('Profit');
+  expect(await V(page, () => fmViewer.state().view)).toBe('board');
+  // Its numbers are the Board's (Price at 13), as the Logic view would show them.
+  const shown = await page.locator('#cardBody .card-values tr td:last-child').first().textContent();
+  expect(shown.replace(/[^0-9.-]/g, '')).toBe(String(await V(page, () => fmViewer.value('cProfit', 'profit', 0))));
+  await page.locator('#cardBody .card-show-logic').click();
+  expect(await V(page, () => [fmViewer.state().view, fmViewer.state().canvas])).toEqual(['logic', 'cProfit']);
+  await expect(page.locator('#card')).toBeVisible();
+  await expect(page.locator('#world .cv-node.picked')).toHaveCount(1);
+  // From the Board again, the API opens the same card.
+  await page.locator('#tabBoard').click();
+  await expect(page.locator('#card')).toBeHidden();
+  const id = await V(page, () => fmViewer.board().items.find(w => w.kind === 'bar').id);
+  expect(await V(page, (i) => fmViewer.openBarCard(i), id)).toBe(true);
+  expect(await V(page, () => fmViewer.openBarCard('nothing'))).toBe(false);
+});
+
+test('Both on a wide screen: the Board and the Logic side by side, the Logic following each slider; kept on this device; a narrower window goes back to the Board', async ({ browser }) => {
+  const html = madeViewer(readFixture('viewer', 'every-widget.showcase.json'), readFixture('viewer', 'every-widget.fmide'));
+  const { context, page, errors } = await serve(browser, html, { viewport: { width: 1366, height: 900 } });
+  await expect(page.locator('#tabBoth')).toBeVisible();
+  await page.locator('#tabBoth').click();
+  expect(await V(page, () => fmViewer.state().view)).toBe('both');
+  const board = await page.locator('#boardView').boundingBox(), logic = await page.locator('#logic').boundingBox();
+  expect(board.x + board.width).toBeLessThanOrEqual(logic.x + 1);
+  expect(board.width).toBeGreaterThan(500);
+  expect(logic.width).toBeGreaterThan(500);
+  await expect(page.locator('#world .cv-node').first()).toBeVisible();
+  // A slider moved on the left: the canvas on the right shows the moved number, ringed.
+  const profitText = () => page.locator('#world .cv-node[data-id="profit"]').textContent();
+  const before = await profitText();
+  await V(page, () => fmViewer.setSlider('Price', 13));
+  await expect.poll(profitText).not.toBe(before);
+  await expect(page.locator('#world .cv-node[data-id="price"].moved')).toHaveCount(1);
+  // Kept: a reload opens on Both again.
+  await page.waitForTimeout(400);
+  await page.reload();
+  await page.waitForFunction(() => !!window.fmViewer && fmViewer.state().loaded);
+  await expect.poll(() => V(page, () => fmViewer.state().view)).toBe('both');
+  // Narrower than 1180 pixels: back to the Board, no Both tab.
+  await page.setViewportSize({ width: 1000, height: 900 });
+  await expect.poll(() => V(page, () => fmViewer.state().view)).toBe('board');
+  await expect(page.locator('#tabBoth')).toBeHidden();
+  expect(errors).toEqual([]);
+  await context.close();
+  // Never on a phone.
+  const phone = await serve(browser, html, { viewport: { width: 844, height: 390 }, screen: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
+  expect(await V(phone.page, () => fmViewer.bothFits())).toBe(false);
+  await phone.context.close();
+});
+
+test('a phone held sideways: the bars on the left, the sliders\' list on the right, each scrolling on its own', async ({ browser }) => {
+  const SIDEWAYS = { viewport: { width: 844, height: 390 }, screen: { width: 844, height: 390 }, hasTouch: true, isMobile: true };
+  const { context, page, errors } = await serve(browser, madeViewer(readFixture('viewer', 'every-widget.showcase.json'), readFixture('viewer', 'every-widget.fmide')), SIDEWAYS);
+  expect(await page.evaluate(() => document.body.classList.contains('phone'))).toBe(true);
+  const bars = await page.locator('.board-main').boundingBox(), list = await page.locator('#sliderList').boundingBox();
+  expect(bars.x + bars.width).toBeLessThanOrEqual(list.x + 1);
+  expect(await page.locator('#sliderList').evaluate(e => getComputedStyle(e).position)).toBe('static');
+  // The rows don't run into each other, and the side scrolls to the last slider.
+  const rows = await page.locator('#sliderList .slider-widget').evaluateAll(els => els.map(e => e.getBoundingClientRect()).map(r => [r.top, r.bottom]));
+  for(let i = 1; i < rows.length; i++) expect(rows[i][0]).toBeGreaterThanOrEqual(rows[i - 1][1] - 0.5);
+  const side = page.locator('.board-side');
+  expect(await side.evaluate(e => getComputedStyle(e).overflowY)).toBe('auto');
+  await page.locator('#sliderList .slider-widget').last().scrollIntoViewIfNeeded();
+  await expect(page.locator('#sliderList .slider-widget').last()).toBeInViewport();
+  await expect(page.locator('#phoneViews')).toBeVisible();
+  expect(errors).toEqual([]);
+  await context.close();
 });

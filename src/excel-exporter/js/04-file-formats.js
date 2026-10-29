@@ -257,8 +257,9 @@ function reconcileMapping(){
 // would be gone after a reload unless exported. Clears itself when a save succeeds again.
 // Writes are asynchronous; the browser applies them in the order they were made.
 let mappingSaveFailing = false;
+let layoutHeld = false; // true while a showcase viewer's workbook is made on a lent copy (09l-viewer-workbook.js)
 function saveMapping(){
-  if(!mappingKey) return;
+  if(!mappingKey || layoutHeld) return; // a layout lent for a viewer's workbook is never saved (09l)
   graphPlanCache = null; // the fmGraph scenarios' plan follows the layout (09i)
   layoutStore.requestPersistence(); // once, ever — on the first change, not at start-up
   writeMapping();

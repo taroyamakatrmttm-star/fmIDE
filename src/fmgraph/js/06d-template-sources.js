@@ -53,30 +53,10 @@ function versionFor(src, canvasId){
 // A template's boards placed in this model: { boards (as cleanBoards gives them), total, missing } —
 // how many rectangles they name, and how many of those this model doesn't have by that name.
 function boardsFromTemplate(src){
-  const lower = (s) => String(s).trim().toLowerCase();
-  const rectsOn = (canvasId) => model.rects.filter(r => r.canvasId === canvasId);
-  const unique = (list, key) => { const m = new Map(); list.forEach(x => { const k = key(x); m.set(k, m.has(k) ? null : x); }); return m; };
-  // Where a reference lands: { canvasId, nodeId, name }, or one that cleanBoards leaves out.
-  let resolve, copies;
-  if(src.kind === 'module'){
-    const canvasIds = [...model.canvasTemplates.entries()].filter(([, ct]) => ct.family === src.family).map(([id]) => id);
-    copies = canvasIds.map(id => ({ id, label: (model.rects.find(r => r.canvasId === id) || { canvasName: id }).canvasName, names: unique(rectsOn(id), r => lower(r.name)) }));
-    resolve = (copy, ref) => {
-      const r = ref && typeof ref.name === 'string' ? copy.names.get(lower(ref.name)) : null;
-      return r ? { canvasId: r.canvasId, nodeId: r.nodeId, name: r.name } : { canvasId: '', nodeId: '', name: '' };
-    };
-  } else {
-    const canvases = unique([...new Set(model.rects.map(r => r.canvasId))].map(id => ({ id, name: model.rects.find(r => r.canvasId === id).canvasName })), c => lower(c.name));
-    const names = new Map();
-    copies = [{ id: null, label: null }];
-    resolve = (copy, ref) => {
-      const c = ref && typeof ref.canvas === 'string' ? canvases.get(lower(ref.canvas)) : null;
-      if(!c) return { canvasId: '', nodeId: '', name: '' };
-      if(!names.has(c.id)) names.set(c.id, unique(rectsOn(c.id), r => lower(r.name)));
-      const r = typeof ref.name === 'string' ? names.get(c.id).get(lower(ref.name)) : null;
-      return r ? { canvasId: r.canvasId, nodeId: r.nodeId, name: r.name } : { canvasId: '', nodeId: '', name: '' };
-    };
-  }
+  // Where each reference lands: the shared rule (src/shared/showcase-boards.js), which the batch
+  // tool for showcase viewers places a recipe's boards with too.
+  const copies = sbTemplatePlaces(src.kind, src.family, model.rects, model.canvasTemplates);
+  const resolve = (copy, ref) => copy.find(ref) || { canvasId: '', nodeId: '', name: '' };
   const out = [];
   let total = 0, missing = 0;
   copies.forEach(copy => {
@@ -87,17 +67,8 @@ function boardsFromTemplate(src){
       return Object.assign({}, ref && typeof ref === 'object' ? ref : {}, where);
     };
     const v = versionFor(src, copy.id);
-    const boardsIn = v.board.boards.slice(0, BOARDS_LIMIT).filter(b => b && typeof b === 'object').map(b => ({
-      name: (typeof b.name === 'string' && b.name.trim() ? b.name : src.name) + (copies.length > 1 ? ' — ' + copy.label : ''),
-      items: (Array.isArray(b.items) ? b.items : []).map(w => {
-        if(!w || typeof w !== 'object') return w;
-        if(w.type === 'bar') return at(w);
-        if(isSensitivity(w) || w.layout === 'lines' || w.layout === 'free') return null; // never in the template form (board files 8, 10 and 13)
-        if(w.layout === 'flow') return Object.assign({}, w, { steps: (Array.isArray(w.steps) ? w.steps : []).map(at) });
-        return Object.assign({}, w, { groups: (Array.isArray(w.groups) ? w.groups : []).map(g => Object.assign({}, g, { parts: (g && Array.isArray(g.parts) ? g.parts : []).map(at) })) });
-      }),
-      sliders: (Array.isArray(b.sliders) ? b.sliders : []).map(at),
-    }));
+    const boardsIn = v.board.boards.slice(0, BOARDS_LIMIT).filter(b => b && typeof b === 'object').map(b => Object.assign({
+      name: (typeof b.name === 'string' && b.name.trim() ? b.name : src.name) + (copies.length > 1 ? ' — ' + copy.label : '') }, sbPlaceTemplateBoard(b, at)));
     const r = cleanBoards({ kind: 'fmIDE-graph-board', version: TEMPLATE_BOARD_VERSION, boards: boardsIn });
     if(!r) return;
     r.boards.forEach(b => { if(b.items.length || b.sliders.length) out.push(b); });
