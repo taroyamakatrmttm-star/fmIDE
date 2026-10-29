@@ -230,6 +230,18 @@
       box.appendChild(row);
       canvasTicks.push({ id: cv.id, name: String(cv.name || cv.id), cb });
     });
+    // Select all / Unselect all (the owner's request of 29 October 2026), under the heading.
+    if(canvasTicks.length > 1){
+      const allRow = el('div', 'sm-canvas-all-row');
+      const tickAll = (on) => { canvasTicks.forEach(t => { t.cb.checked = on; }); syncStart(); };
+      [['sm-canvas-all', 'Select all', true], ['sm-canvas-none', 'Unselect all', false]].forEach(([cls, words, on]) => {
+        const b = el('button', cls, words);
+        b.type = 'button';
+        b.addEventListener('click', () => tickAll(on));
+        allRow.appendChild(b);
+      });
+      box.insertBefore(allRow, canvasTicks[0].cb.parentNode);
+    }
     syncStart();
     startSel.value = c.start && c.canvases.includes(c.start) ? c.start : startSel.value;
     field('Opens on', startSel);

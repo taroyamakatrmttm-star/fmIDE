@@ -542,6 +542,7 @@
   .sm-secrecy, .sm-ipad{ color:#6b7280; font-size:12px; }
   .sm-no-boards, .sm-scenarios, .sm-chosen{ font-size:13px; color:#374151; }
   .sm-choose-for-me{ margin-left:8px; }
+  .sm-canvas-all-row{ display:flex; gap:6px; margin:0 0 4px; }
   .modal-box p.library-pack-heading{ font-weight:600; font-size:13px; margin:12px 0 4px; }
   .modal-box p.library-pack-licence, .modal-box p.library-pack-by, .modal-box p.library-pack-tags{ font-size:12px; color:#475569; margin:6px 0; }
   .modal-box p.library-pack-title{ font-size:16px; font-weight:700; margin:0 0 2px; }
@@ -2333,7 +2334,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
         { steps: [
           'Set up a board in fmGraph if you want sliders and charts ({cmd:openFmGraph}): its bars, charts, sliders and scenarios are what the visitor gets. Or press Choose for me in the window: it adds a board with a slider on each input that moves something and a bar on each result, at most 12 of each, which you can change in fmGraph. A board with nothing on it counts as no board: it isn\'t listed, and Choose for me takes its place; beside boards that show something, the chosen one is added under a name of its own.',
           'Open {cmd:makeShowcaseViewer}. Give it a title, a description, your name and a licence.',
-          'Tick the canvases the visitor sees and the one it opens on, the periods shown, and the boards. Choose where Play starts: Base (the model\'s own numbers) or a scenario.',
+          'Tick the canvases the visitor sees (Select all and Unselect all tick every one or none) and the one it opens on, the periods shown, and the boards. Choose where Play starts: Base (the model\'s own numbers) or a scenario.',
           'Leave Include an Excel workbook ticked to put the model\'s workbook in the viewer, and give it a name.',
           'Press Make viewer. With Excel, ExcelExporter opens for a moment and makes the workbook. fmIDE writes the page (its name is the file name shown, with .html) and downloads it, or offers the share sheet on an iPhone or iPad.',
         ] },
@@ -2658,6 +2659,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       summary: 'A model with no fmGraph board can have one chosen for it, and a whole folder of models can become viewers in one go.',
       what: [
         'Make Showcase Viewer… has Choose for me: it adds a board with a slider on each input that moves something and a bar on each result, at most 12 of each. A model with no boards, or only empty ones, gets it in their place; a model with boards gets it beside them. Open fmGraph to change it before you make the viewer.',
+        'Its canvases have Select all and Unselect all, so a model with many canvases can show just a few.',
         'On a computer, npm run make-viewers makes a viewer for every model in a folder: a recipe names the sliders, bars and canvases by name, so one recipe fits many models built alike. Each viewer carries its Excel workbook, and a report says what each shows and anything not found.',
       ],
       why: 'A course or a client may need dozens of small models shown the same way: choosing sliders and bars by hand for each one takes too long.',
@@ -18202,6 +18204,18 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       box.appendChild(row);
       canvasTicks.push({ id: cv.id, name: String(cv.name || cv.id), cb });
     });
+    // Select all / Unselect all (the owner's request of 29 October 2026), under the heading.
+    if(canvasTicks.length > 1){
+      const allRow = el('div', 'sm-canvas-all-row');
+      const tickAll = (on) => { canvasTicks.forEach(t => { t.cb.checked = on; }); syncStart(); };
+      [['sm-canvas-all', 'Select all', true], ['sm-canvas-none', 'Unselect all', false]].forEach(([cls, words, on]) => {
+        const b = el('button', cls, words);
+        b.type = 'button';
+        b.addEventListener('click', () => tickAll(on));
+        allRow.appendChild(b);
+      });
+      box.insertBefore(allRow, canvasTicks[0].cb.parentNode);
+    }
     syncStart();
     startSel.value = c.start && c.canvases.includes(c.start) ? c.start : startSel.value;
     field('Opens on', startSel);

@@ -23,7 +23,7 @@ A **showcase viewer** is one web page made from your model. Anyone can open it i
 > **You need:** fmIDE, and a model with an fmGraph board: the sample `tests/fixtures/viewer/every-widget.fmide` has two boards and two scenarios.
 > **Time:** about 5 minutes.
 > **In the app:** fmIDE Help → *Share a model as a showcase viewer* (`showcase-viewer`)
-> **Came in:** the showcase viewer's phases V1–V3 · branches `claude/viewer-v1`, `claude/viewer-v2`, `claude/viewer-v3`, `claude/viewer-ipad-sliders`
+> **Came in:** the showcase viewer's phases V1–V3 · branches `claude/viewer-v1`, `claude/viewer-v2`, `claude/viewer-v3`, `claude/viewer-ipad-sliders`, `claude/showcase-canvases-select-all`
 
 You choose what the visitor sees; fmIDE writes the page. Your choices stay in the document, so making the viewer again after a change takes one click.
 
@@ -33,7 +33,7 @@ You choose what the visitor sees; fmIDE writes the page. Your choices stay in th
 2. Choose **File → Make Showcase Viewer…** (the File tab's App group, after Open fmGraph). A window titled *Make a showcase viewer* opens.
 3. Type a **Title**, such as `Prices and cash`. The **File name** below follows it: `prices-and-cash`, with `.html`.
 4. Fill in **Description**, **Author** and **Licence** if you like (the licence says how visitors may reuse the model, for example `CC BY 4.0`).
-5. Under **Canvases the visitor sees**, untick **Checks**. Set **Opens on** to **Cash**.
+5. Under **Canvases the visitor sees**, untick **Checks**. Set **Opens on** to **Cash**. (With many canvases, **Unselect all** and then ticking the few you want is quicker; **Select all** ticks every one again.)
 6. Set **Periods shown** from **Year 2** to **Year 3**.
 7. Under **Boards (from fmGraph)**, untick **Own sliders**. Set **Play starts with** from **Base** to **Big year**. Untick **Include an Excel workbook** for now: lesson 8.2 adds it.
 8. Press **Make viewer**. fmIDE downloads `prices-and-cash.html` (on an iPhone or iPad, the share sheet opens) and says *Made prices-and-cash.html (… KB). It opens in any browser, offline, and changes nothing in your model.*
