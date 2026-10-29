@@ -8,6 +8,17 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'slider-colours', date: '2026-10-30', title: 'Each slider in its rectangle\'s colour',
+    summary: 'A slider\'s grip and the filled part of its bar now take the colour of its rectangle, the same as the box beside its name and the stripe on its left edge.',
+    what: [
+      'On a computer, on a phone (the dock and the faders held sideways) and in a showcase viewer, the slider is drawn in its rectangle\'s colour instead of always teal.',
+      'A very pale colour, such as a light yellow, is drawn a little darker on the slider only, so the grip and bar stay easy to see on white. The colour box and stripe keep the exact colour.',
+      'Changing the colour changes the slider at once, with its bars and charts.',
+    ],
+    why: 'With several sliders, matching each to its bars and charts is quicker when the slider itself has the colour.',
+    how: ['Click the colour box beside a slider\'s name.', 'Choose a colour: the slider takes it.'],
+    notes: ['At the model\'s own number the grip\'s ring stays grey on a phone, as before.', 'The board file is unchanged.'],
+    see: ['boards'] },
   { id: 'free-chart-grid', date: '2026-10-27', title: 'Place a Free chart\'s pieces by dragging them',
     summary: 'Drag a piece across the Free chart\'s columns, or up onto a blue guide such as "where CFO ends", as you place boxes on fmIDE\'s canvas.',
     what: [

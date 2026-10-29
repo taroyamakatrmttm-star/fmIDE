@@ -62,7 +62,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
           input checked="" id="shareSliders" type="checkbox" .value="on" .checked=true
         p class="shared-note hidden" id="sharedNote"
         div class="widget-list" id="sliderList"
-          div class="widget slider-widget" data-id="s12" style="--rect-colour: #0f766e;"
+          div class="widget slider-widget" data-id="s12" style="--rect-colour: #0f766e; --slider-accent: #0f766e;"
             div class="widget-head"
               span class="arrange"
                 button aria-label="Move" class="drag-handle" title="Drag to move (or ← → with the keyboard)" type="button" | ⠿
@@ -114,7 +114,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   input data-range="step" step="any" type="number" .value="0.25"
             div class="widget-row slider-more"
               button title="Back to the model's own number" type="button" | Reset
-          div class="widget slider-widget" data-id="s13" style="--rect-colour: #2563eb;"
+          div class="widget slider-widget" data-id="s13" style="--rect-colour: #2563eb; --slider-accent: #2563eb;"
             div class="widget-head"
               span class="arrange"
                 button aria-label="Move" class="drag-handle" title="Drag to move (or ← → with the keyboard)" type="button" | ⠿
@@ -167,7 +167,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   input data-range="step" step="any" type="number" .value="1"
             div class="widget-row slider-more"
               button title="Back to the model's own number" type="button" | Reset
-          div class="widget slider-widget" data-id="s14" style="--rect-colour: #0f766e;"
+          div class="widget slider-widget" data-id="s14" style="--rect-colour: #0f766e; --slider-accent: #0f766e;"
             div class="widget-head"
               span class="arrange"
                 button aria-label="Move" class="drag-handle" title="Drag to move (or ← → with the keyboard)" type="button" | ⠿
@@ -219,7 +219,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   input data-range="step" step="any" type="number" .value="0.5"
             div class="widget-row slider-more"
               button title="Back to the model's own number" type="button" | Reset
-          div class="widget slider-widget" data-id="s15" style="--rect-colour: #65a30d;"
+          div class="widget slider-widget" data-id="s15" style="--rect-colour: #65a30d; --slider-accent: #65a30d;"
             div class="widget-head"
               span class="arrange"
                 button aria-label="Move" class="drag-handle" title="Drag to move (or ← → with the keyboard)" type="button" | ⠿
@@ -2200,7 +2200,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
           input checked="" id="shareSliders" type="checkbox" .value="on" .checked=true
         p class="shared-note hidden" id="sharedNote"
         div class="widget-list" id="sliderList"
-          div class="widget slider-widget" data-id="s12" style="--rect-colour: #0f766e;"
+          div class="widget slider-widget" data-id="s12" style="--rect-colour: #0f766e; --slider-accent: #0f766e;"
             div class="widget-head"
               span class="arrange"
                 button aria-label="Move" class="drag-handle" title="Drag to move (or ← → with the keyboard)" type="button" | ⠿
@@ -2252,7 +2252,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   input data-range="step" step="any" type="number" .value="0.25"
             div class="widget-row slider-more"
               button title="Back to the model's own number" type="button" | Reset
-          div class="widget slider-widget" data-id="s13" style="--rect-colour: #2563eb;"
+          div class="widget slider-widget" data-id="s13" style="--rect-colour: #2563eb; --slider-accent: #2563eb;"
             div class="widget-head"
               span class="arrange"
                 button aria-label="Move" class="drag-handle" title="Drag to move (or ← → with the keyboard)" type="button" | ⠿
@@ -2305,7 +2305,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   input data-range="step" step="any" type="number" .value="1"
             div class="widget-row slider-more"
               button title="Back to the model's own number" type="button" | Reset
-          div class="widget slider-widget" data-id="s14" style="--rect-colour: #0f766e;"
+          div class="widget slider-widget" data-id="s14" style="--rect-colour: #0f766e; --slider-accent: #0f766e;"
             div class="widget-head"
               span class="arrange"
                 button aria-label="Move" class="drag-handle" title="Drag to move (or ← → with the keyboard)" type="button" | ⠿
@@ -2357,7 +2357,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   input data-range="step" step="any" type="number" .value="0.5"
             div class="widget-row slider-more"
               button title="Back to the model's own number" type="button" | Reset
-          div class="widget slider-widget" data-id="s15" style="--rect-colour: #65a30d;"
+          div class="widget slider-widget" data-id="s15" style="--rect-colour: #65a30d; --slider-accent: #65a30d;"
             div class="widget-head"
               span class="arrange"
                 button aria-label="Move" class="drag-handle" title="Drag to move (or ← → with the keyboard)" type="button" | ⠿
@@ -4438,7 +4438,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
           input checked="" id="shareSliders" type="checkbox" .value="on" .checked=true
         p class="shared-note hidden" id="sharedNote"
         div class="widget-list" id="sliderList"
-          div class="widget slider-widget traced" data-id="s12" style="--rect-colour: #0f766e;"
+          div class="widget slider-widget traced" data-id="s12" style="--rect-colour: #0f766e; --slider-accent: #0f766e;"
             div class="widget-head"
               span class="arrange"
                 button aria-label="Move" class="drag-handle" title="Drag to move (or ← → with the keyboard)" type="button" | ⠿
@@ -4490,7 +4490,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   input data-range="step" step="any" type="number" .value="0.25"
             div class="widget-row slider-more"
               button title="Back to the model's own number" type="button" | Reset
-          div class="widget slider-widget traced" data-id="s13" style="--rect-colour: #2563eb;"
+          div class="widget slider-widget traced" data-id="s13" style="--rect-colour: #2563eb; --slider-accent: #2563eb;"
             div class="widget-head"
               span class="arrange"
                 button aria-label="Move" class="drag-handle" title="Drag to move (or ← → with the keyboard)" type="button" | ⠿
@@ -4543,7 +4543,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   input data-range="step" step="any" type="number" .value="1"
             div class="widget-row slider-more"
               button title="Back to the model's own number" type="button" | Reset
-          div class="widget slider-widget traced" data-id="s14" style="--rect-colour: #0f766e;"
+          div class="widget slider-widget traced" data-id="s14" style="--rect-colour: #0f766e; --slider-accent: #0f766e;"
             div class="widget-head"
               span class="arrange"
                 button aria-label="Move" class="drag-handle" title="Drag to move (or ← → with the keyboard)" type="button" | ⠿
@@ -4595,7 +4595,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   input data-range="step" step="any" type="number" .value="0.5"
             div class="widget-row slider-more"
               button title="Back to the model's own number" type="button" | Reset
-          div class="widget slider-widget traced" data-id="s15" style="--rect-colour: #65a30d;"
+          div class="widget slider-widget traced" data-id="s15" style="--rect-colour: #65a30d; --slider-accent: #65a30d;"
             div class="widget-head"
               span class="arrange"
                 button aria-label="Move" class="drag-handle" title="Drag to move (or ← → with the keyboard)" type="button" | ⠿
@@ -6677,7 +6677,7 @@ body class="playing" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h
           input checked="" id="shareSliders" type="checkbox" .value="on" .checked=true
         p class="shared-note hidden" id="sharedNote"
         div class="widget-list" id="sliderList"
-          div class="widget slider-widget playing" data-id="s12" style="--rect-colour: #0f766e;"
+          div class="widget slider-widget playing" data-id="s12" style="--rect-colour: #0f766e; --slider-accent: #0f766e;"
             div class="widget-head"
               span class="arrange"
                 button aria-label="Move" class="drag-handle" title="Drag to move (or ← → with the keyboard)" type="button" | ⠿
@@ -6729,7 +6729,7 @@ body class="playing" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h
                   input data-range="step" step="any" type="number" .value="0.25"
             div class="widget-row slider-more"
               button title="Back to the model's own number" type="button" | Reset
-          div class="widget slider-widget playing" data-id="s13" style="--rect-colour: #2563eb;"
+          div class="widget slider-widget playing" data-id="s13" style="--rect-colour: #2563eb; --slider-accent: #2563eb;"
             div class="widget-head"
               span class="arrange"
                 button aria-label="Move" class="drag-handle" title="Drag to move (or ← → with the keyboard)" type="button" | ⠿
@@ -6782,7 +6782,7 @@ body class="playing" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h
                   input data-range="step" step="any" type="number" .value="1"
             div class="widget-row slider-more"
               button title="Back to the model's own number" type="button" | Reset
-          div class="widget slider-widget" data-id="s14" style="--rect-colour: #0f766e;"
+          div class="widget slider-widget" data-id="s14" style="--rect-colour: #0f766e; --slider-accent: #0f766e;"
             div class="widget-head"
               span class="arrange"
                 button aria-label="Move" class="drag-handle" title="Drag to move (or ← → with the keyboard)" type="button" | ⠿
@@ -6834,7 +6834,7 @@ body class="playing" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h
                   input data-range="step" step="any" type="number" .value="0.5"
             div class="widget-row slider-more"
               button title="Back to the model's own number" type="button" | Reset
-          div class="widget slider-widget" data-id="s15" style="--rect-colour: #65a30d;"
+          div class="widget slider-widget" data-id="s15" style="--rect-colour: #65a30d; --slider-accent: #65a30d;"
             div class="widget-head"
               span class="arrange"
                 button aria-label="Move" class="drag-handle" title="Drag to move (or ← → with the keyboard)" type="button" | ⠿
@@ -8862,7 +8862,7 @@ body class="" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
           input checked="" id="shareSliders" type="checkbox" .value="on" .checked=false
         p class="shared-note hidden" id="sharedNote"
         div class="widget-list" id="sliderList"
-          div class="widget slider-widget" data-id="s18" style="--rect-colour: #65a30d;"
+          div class="widget slider-widget" data-id="s18" style="--rect-colour: #65a30d; --slider-accent: #65a30d;"
             div class="widget-head"
               span class="arrange"
                 button aria-label="Move" class="drag-handle" title="Drag to move (or ← → with the keyboard)" type="button" | ⠿

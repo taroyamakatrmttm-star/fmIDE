@@ -109,7 +109,7 @@
 
   /* A slider widget. */
   .slider-track{ display:flex; gap:8px; align-items:center; margin-top:10px; }
-  .slider-track input[type=range]{ flex:1 1 auto; accent-color:var(--brand); height:28px; touch-action:none; }
+  .slider-track input[type=range]{ flex:1 1 auto; accent-color:var(--slider-accent, var(--brand)); height:28px; touch-action:none; }
   body.touch-input .slider-track input[type=range]{ height:40px; }
   .slider-value{ min-width:86px; text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
   .slider-base{ font-size:12px; color:var(--soft-ink); margin-top:2px; }
@@ -316,6 +316,8 @@
   body.phone .desk-only{ display:none !important; }
   .phone-boards:empty{ display:none; }
   .ps{ --ps-accent:var(--brand); --ps-ink:var(--ink); --ps-soft:var(--soft-ink); --ps-line:var(--line-strong); }
+  /* The slider takes its rectangle's colour (--slider-accent, 04e-colours.js); more specific than phone.css, which comes after. */
+  .dock-card .ps, .fader .ps{ --ps-accent:var(--slider-accent, var(--brand)); }
   body.phone{ font-size:15px; -webkit-text-size-adjust:100%; }
   body.phone main{ padding:10px 12px calc(var(--dock-h, 0px) + 24px); }
   /* The top bar: ←, the model's name, ☰. */
@@ -5320,6 +5322,25 @@ function rectColour(key){ return chosenColour(key) || autoColours().get(key) || 
 // The colour a slider, a bar or a key shows: the rectangle's, else the page's usual bar colour.
 function shownColour(key){ return rectColour(key) || DEFAULT_BAR_COLOUR; }
 
+// The colour a slider's grip and filled bar take (the owner's request of 30 October 2026): the
+// rectangle's colour, darkened only when it is too pale to see on white — until its contrast
+// with white is 3:1 (WCAG's relative luminance), keeping its hue. The stripe and colour box keep
+// the exact colour. Anything that is not a checked #rrggbb colour gives the usual bar colour.
+function sliderAccent(colour){
+  const c = cleanColour(colour) || DEFAULT_BAR_COLOUR;
+  const rgb = [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16));
+  const lin = (v) => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); };
+  const contrast = (p) => 1.05 / (0.2126 * lin(p[0]) + 0.7152 * lin(p[1]) + 0.0722 * lin(p[2]) + 0.05);
+  if(contrast(rgb) >= 3) return c;
+  // Scaling every channel by one factor keeps the hue; the darkest factor that still reaches 3:1.
+  let lo = 0, hi = 1;
+  for(let i = 0; i < 24; i++){
+    const mid = (lo + hi) / 2;
+    if(contrast(rgb.map(v => Math.round(v * mid))) >= 3) lo = mid; else hi = mid;
+  }
+  return '#' + rgb.map(v => Math.round(v * lo).toString(16).padStart(2, '0')).join('');
+}
+
 // Takes the colours older files kept on widgets into the shared ones (see the top).
 function adoptWidgetColours(){
   let differ = 0;
@@ -5876,6 +5897,7 @@ function sliderWidget(s){
   const colour = colourPicker(shownColour(s.key), 'Colour of ' + rect.name, (c) => { chooseRectColour(s.key, c); saveBoardSoon(); renderBoard(); }, automaticColour(s.key, DEFAULT_BAR_COLOUR, redrawColours));
   colour.classList.add('slider-colour');
   w.style.setProperty('--rect-colour', shownColour(s.key));
+  w.style.setProperty('--slider-accent', sliderAccent(shownColour(s.key))); // the grip and filled bar, darkened if pale
   head.append(sel, colour, foldButton(s), removeButton(s.id, 'slider')); // (05c-arrange.js)
 
   const row = make('div', 'widget-row slider-more');
@@ -8221,6 +8243,7 @@ function dockCard(s){
   const rect = model.byKey.get(s.key);
   const card = make('div', 'dock-card');
   card.dataset.id = s.id;
+  card.style.setProperty('--slider-accent', sliderAccent(shownColour(s.key))); // the slider takes its colour
   const head = make('div', 'dock-card-head');
   // Its rectangle's colour, as its bars and charts show it (04e-colours.js; picked on a larger screen).
   const stripe = make('span', 'rect-stripe');
@@ -8613,6 +8636,7 @@ function fader(s, at){
   const rect = model.byKey.get(s.key);
   const el = make('div', 'fader');
   el.dataset.id = s.id;
+  el.style.setProperty('--slider-accent', sliderAccent(shownColour(s.key))); // the fader takes its colour (04e-colours.js)
   const name = make('button', 'fader-name', rect.name);
   name.type = 'button';
   name.title = 'Put another slider here';
@@ -12545,7 +12569,7 @@ const FMGRAPH_HELP_TOPICS = [
     body: [
       { p: 'A model can have several boards — for example one for the statements and one for pricing — shown as tabs above the board. + Board adds an empty one; ✎ (or a double-click on its tab) renames the board shown, ⧉ duplicates it and 🗑 deletes it (after asking; the last board stays). Each board has its own bars, charts and sliders.' },
       { p: 'Drag a bar, chart or slider by its handle (⠿) to move it among the others — by mouse, by finger (on an iPad too), or with the arrow keys on the handle. ⇔ makes a bar or chart wide (the whole row) or narrow (half of it).' },
-      { p: 'Colours belong to rectangles: a rectangle has one colour on its slider, its bars and every chart, on every board. Pick it from the colour box beside a slider\'s name, a bar\'s colour box beside its periods, a rectangle\'s swatch in a chart\'s key, or a waterfall step\'s colour in Edit chart: all of them change together. A rectangle you haven\'t coloured takes the chart colours in the order it first appears in a Columns, Lines or Spider chart; a waterfall step shows up, down or total until you choose its colour. The Tornado\'s Low and High colours are the chart\'s own.' },
+      { p: 'Colours belong to rectangles: a rectangle has one colour on its slider, its bars and every chart, on every board. Pick it from the colour box beside a slider\'s name, a bar\'s colour box beside its periods, a rectangle\'s swatch in a chart\'s key, or a waterfall step\'s colour in Edit chart: all of them change together, and the slider itself (its grip and filled bar) takes the colour too, drawn a little darker when the colour is too pale to see on white. A rectangle you haven\'t coloured takes the chart colours in the order it first appears in a Columns, Lines or Spider chart; a waterfall step shows up, down or total until you choose its colour. The Tornado\'s Low and High colours are the chart\'s own.' },
       { p: 'Every colour box opens a grid of ready colours: greys, twelve colours in six shades, the chart colours and the colours already used on this model\'s boards. Click one, or move with the arrow keys and press Enter; Esc closes it. More… opens your browser\'s own colour box, for an exact colour. Automatic, at the top, goes back to the rectangle\'s automatic colour (a waterfall step\'s by direction, the Tornado\'s usual Low and High).' },
       { p: '↶ Undo and ↷ Redo (Ctrl+Z, Ctrl+Y) take back any change to the boards — not where a slider is set, which is a "what if", not a change.' },
       { see: ['board-file', 'charts'] },
@@ -12662,6 +12686,17 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'slider-colours', date: '2026-10-30', title: 'Each slider in its rectangle\'s colour',
+    summary: 'A slider\'s grip and the filled part of its bar now take the colour of its rectangle, the same as the box beside its name and the stripe on its left edge.',
+    what: [
+      'On a computer, on a phone (the dock and the faders held sideways) and in a showcase viewer, the slider is drawn in its rectangle\'s colour instead of always teal.',
+      'A very pale colour, such as a light yellow, is drawn a little darker on the slider only, so the grip and bar stay easy to see on white. The colour box and stripe keep the exact colour.',
+      'Changing the colour changes the slider at once, with its bars and charts.',
+    ],
+    why: 'With several sliders, matching each to its bars and charts is quicker when the slider itself has the colour.',
+    how: ['Click the colour box beside a slider\'s name.', 'Choose a colour: the slider takes it.'],
+    notes: ['At the model\'s own number the grip\'s ring stays grey on a phone, as before.', 'The board file is unchanged.'],
+    see: ['boards'] },
   { id: 'free-chart-grid', date: '2026-10-27', title: 'Place a Free chart\'s pieces by dragging them',
     summary: 'Drag a piece across the Free chart\'s columns, or up onto a blue guide such as "where CFO ends", as you place boxes on fmIDE\'s canvas.',
     what: [

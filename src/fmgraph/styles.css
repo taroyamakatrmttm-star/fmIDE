@@ -99,7 +99,7 @@
 
   /* A slider widget. */
   .slider-track{ display:flex; gap:8px; align-items:center; margin-top:10px; }
-  .slider-track input[type=range]{ flex:1 1 auto; accent-color:var(--brand); height:28px; touch-action:none; }
+  .slider-track input[type=range]{ flex:1 1 auto; accent-color:var(--slider-accent, var(--brand)); height:28px; touch-action:none; }
   body.touch-input .slider-track input[type=range]{ height:40px; }
   .slider-value{ min-width:86px; text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
   .slider-base{ font-size:12px; color:var(--soft-ink); margin-top:2px; }
@@ -306,6 +306,8 @@
   body.phone .desk-only{ display:none !important; }
   .phone-boards:empty{ display:none; }
   .ps{ --ps-accent:var(--brand); --ps-ink:var(--ink); --ps-soft:var(--soft-ink); --ps-line:var(--line-strong); }
+  /* The slider takes its rectangle's colour (--slider-accent, 04e-colours.js); more specific than phone.css, which comes after. */
+  .dock-card .ps, .fader .ps{ --ps-accent:var(--slider-accent, var(--brand)); }
   body.phone{ font-size:15px; -webkit-text-size-adjust:100%; }
   body.phone main{ padding:10px 12px calc(var(--dock-h, 0px) + 24px); }
   /* The top bar: ←, the model's name, ☰. */

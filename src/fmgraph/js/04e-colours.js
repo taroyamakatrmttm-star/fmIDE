@@ -69,6 +69,25 @@ function rectColour(key){ return chosenColour(key) || autoColours().get(key) || 
 // The colour a slider, a bar or a key shows: the rectangle's, else the page's usual bar colour.
 function shownColour(key){ return rectColour(key) || DEFAULT_BAR_COLOUR; }
 
+// The colour a slider's grip and filled bar take (the owner's request of 30 October 2026): the
+// rectangle's colour, darkened only when it is too pale to see on white — until its contrast
+// with white is 3:1 (WCAG's relative luminance), keeping its hue. The stripe and colour box keep
+// the exact colour. Anything that is not a checked #rrggbb colour gives the usual bar colour.
+function sliderAccent(colour){
+  const c = cleanColour(colour) || DEFAULT_BAR_COLOUR;
+  const rgb = [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16));
+  const lin = (v) => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); };
+  const contrast = (p) => 1.05 / (0.2126 * lin(p[0]) + 0.7152 * lin(p[1]) + 0.0722 * lin(p[2]) + 0.05);
+  if(contrast(rgb) >= 3) return c;
+  // Scaling every channel by one factor keeps the hue; the darkest factor that still reaches 3:1.
+  let lo = 0, hi = 1;
+  for(let i = 0; i < 24; i++){
+    const mid = (lo + hi) / 2;
+    if(contrast(rgb.map(v => Math.round(v * mid))) >= 3) lo = mid; else hi = mid;
+  }
+  return '#' + rgb.map(v => Math.round(v * lo).toString(16).padStart(2, '0')).join('');
+}
+
 // Takes the colours older files kept on widgets into the shared ones (see the top).
 function adoptWidgetColours(){
   let differ = 0;

@@ -545,3 +545,25 @@ test('a model\'s hostile names stay text on a phone', async ({ browser }) => {
   expect(await p.evaluate(() => window.__pwned)).toBeUndefined();
   await phone.done();
 });
+
+test('a dock card\'s slider and a fader take the rectangle\'s colour (a pale one darkened)', async ({ browser }) => {
+  const phone = await openPhone(browser);
+  const p = phone.page;
+  await sample(p);
+  const fill = () => card(p, 0).locator('.ps-fill').evaluate(el => getComputedStyle(el).backgroundColor);
+  expect(await fill()).toBe('rgb(15, 118, 110)');
+  await p.evaluate(() => fmGraph.setColour(fmGraph.board().sliders[0].id, '#db2777'));
+  await expect.poll(fill).toBe('rgb(219, 39, 119)');
+  // A pale yellow: the stripe keeps it, the slider is darker.
+  await p.evaluate(() => fmGraph.setColour(fmGraph.board().sliders[0].id, '#fde68a'));
+  await expect(card(p, 0).locator('.rect-stripe')).toHaveCSS('background-color', 'rgb(253, 230, 138)');
+  await expect.poll(fill).not.toBe('rgb(253, 230, 138)');
+  expect(await fill()).not.toBe('rgb(15, 118, 110)');
+  await phone.done();
+  // Sideways, the mixer's fader takes it too.
+  const side = await openPhone(browser, SIDEWAYS);
+  await side.page.click('#btnSample');
+  await side.page.evaluate(() => fmGraph.setColour(fmGraph.board().sliders[0].id, '#db2777'));
+  await expect.poll(() => side.page.locator('.fader').first().locator('.ps-fill').evaluate(el => getComputedStyle(el).backgroundColor)).toBe('rgb(219, 39, 119)');
+  await side.done();
+});

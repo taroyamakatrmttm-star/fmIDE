@@ -617,3 +617,27 @@ test('a phone held sideways: the bars on the left, the sliders\' list on the rig
   expect(errors).toEqual([]);
   await context.close();
 });
+
+test('a slider row takes its rectangle\'s colour: the filled bar, a pale one darkened, the stripe exact', async ({ browser }) => {
+  const showcase = readFixture('viewer', 'every-widget.showcase.json');
+  showcase.boards.colours = showcase.boards.colours.concat([
+    { canvasId: 'cProfit', nodeId: 'price', name: 'Price', colour: '#db2777' },
+    { canvasId: 'cProfit', nodeId: 'vol', name: 'Volume', colour: '#fde68a' },
+  ]);
+  const { context, page, outside, errors } = await serve(browser, madeViewer(showcase, readFixture('viewer', 'every-widget.fmide')));
+  const row = (i) => page.locator('#sliderList > .slider-widget').nth(i);
+  const css = (loc, prop) => loc.evaluate((el, p) => getComputedStyle(el)[p], prop);
+  await expect(row(0).locator('.ps-fill')).toHaveCSS('background-color', 'rgb(219, 39, 119)');
+  await expect(row(0).locator('.rect-stripe')).toHaveCSS('background-color', 'rgb(219, 39, 119)');
+  // The pale one: the stripe exact, the slider darker.
+  await expect(row(1).locator('.rect-stripe')).toHaveCSS('background-color', 'rgb(253, 230, 138)');
+  const pale = await css(row(1).locator('.ps-fill'), 'backgroundColor');
+  expect(pale).not.toBe('rgb(253, 230, 138)');
+  const [r, g, b] = pale.match(/\d+/g).map(Number).map(v => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); });
+  expect(1.05 / (0.2126 * r + 0.7152 * g + 0.0722 * b + 0.05)).toBeGreaterThanOrEqual(3);
+  // A rectangle with no colour of its own: the usual one.
+  expect(await css(row(2).locator('.ps-fill'), 'backgroundColor')).toBe(await css(row(2).locator('.rect-stripe'), 'backgroundColor'));
+  expect(outside).toEqual([]);
+  expect(errors).toEqual([]);
+  await context.close();
+});

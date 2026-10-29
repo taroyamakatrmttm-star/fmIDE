@@ -1,7 +1,7 @@
 /* The Board (phase V2): the bars and charts with their sliders. The drawing's own styles are
    fmGraph's (src/fmgraph/board.css); these are the viewer's page around it. */
 :root{ --bar-now:#0f766e; --bar-neg:#b45309; --bar-base:#94a3b8; --up:#047857; --down:#b42318; --soft-ink:#5f6b7d; --line-strong:#c9cfda; --reach:#f59e0b; --brand:#0f766e; --brand-soft:#e6f4f2; }
-.ps{ --ps-accent:var(--brand); --ps-ink:var(--ink); --ps-soft:var(--soft-ink); --ps-line:var(--line-strong); }
+.ps{ --ps-accent:var(--slider-accent, var(--brand)); --ps-ink:var(--ink); --ps-soft:var(--soft-ink); --ps-line:var(--line-strong); }
 
 .vbar-help{ min-width:40px; font-weight:700; }
 .view-switch{ display:flex; gap:2px; background:#1e293b; border-radius:9px; padding:2px; }

@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph and fmShowcase: sliders in their rectangle's colour
+- A slider's grip and filled bar take its rectangle's colour (`--slider-accent`, set on each slider card, dock card, fader and viewer row from `sliderAccent(shownColour(key))` in the board engine's `04e-colours.js`), on the desktop (`accent-color`), the phone's dock and faders and the viewer's rows (the shared slider's `--ps-accent`). A colour with less than 3:1 contrast against white is darkened on the slider only, keeping its hue; the stripe and colour box keep the exact colour. No change to `src/shared/` or the board file.
+- Tests: groups 49, 68 and 93 one new test each; group 92's snapshots `fmgraph-every-widget.txt` and `fmgraph-every-widget-phone.txt` updated on purpose (the new style property). Branch `claude/slider-colours`.
+
 ## fmShowcase: Select all and Unselect all for the canvases
 - Make Showcase Viewer…'s **Canvases the visitor sees** has **Select all** and **Unselect all** (`.sm-canvas-all`, `.sm-canvas-none`; shown with two canvases or more), Opens on following. Help, What's new, lesson 8.1.
 - Tests: group 94 one new test. Branch `claude/showcase-canvases-select-all`.

@@ -79,6 +79,7 @@ function dockCard(s){
   const rect = model.byKey.get(s.key);
   const card = make('div', 'dock-card');
   card.dataset.id = s.id;
+  card.style.setProperty('--slider-accent', sliderAccent(shownColour(s.key))); // the slider takes its colour
   const head = make('div', 'dock-card-head');
   // Its rectangle's colour, as its bars and charts show it (04e-colours.js; picked on a larger screen).
   const stripe = make('span', 'rect-stripe');

@@ -199,6 +199,7 @@ function sliderWidget(s){
   const colour = colourPicker(shownColour(s.key), 'Colour of ' + rect.name, (c) => { chooseRectColour(s.key, c); saveBoardSoon(); renderBoard(); }, automaticColour(s.key, DEFAULT_BAR_COLOUR, redrawColours));
   colour.classList.add('slider-colour');
   w.style.setProperty('--rect-colour', shownColour(s.key));
+  w.style.setProperty('--slider-accent', sliderAccent(shownColour(s.key))); // the grip and filled bar, darkened if pale
   head.append(sel, colour, foldButton(s), removeButton(s.id, 'slider')); // (05c-arrange.js)
 
   const row = make('div', 'widget-row slider-more');
