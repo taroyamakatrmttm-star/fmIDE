@@ -266,6 +266,26 @@ async function openMade(browser, testInfo, made){
 }
 
 test.describe('fmIDE: Make Showcase Viewer…', () => {
+  // The owner's request of 29 October 2026.
+  test('the canvases\' Select all and Unselect all tick every box or none, and Opens on follows', async ({ page }) => {
+    await fmideWith(page, WIDGET, 'cProfit');
+    await page.evaluate(() => fm.command('makeShowcaseViewer'));
+    const box = maker(page);
+    const ticks = () => box.locator('.sm-canvas input').evaluateAll(l => l.map(i => i.checked));
+    await box.locator('.sm-canvas-none').click();
+    expect(await ticks()).toEqual([false, false, false, false]);
+    await expect(box.locator('.sm-start option')).toHaveCount(0);
+    await box.locator('.sm-canvas-all').click();
+    expect(await ticks()).toEqual([true, true, true, true]);
+    await expect(box.locator('.sm-start option')).toHaveCount(4);
+    await expect(box.locator('.sm-canvas-all')).toHaveText('Select all');
+    await expect(box.locator('.sm-canvas-none')).toHaveText('Unselect all');
+    // With no canvas ticked, Make viewer says so and makes nothing (as before).
+    await box.locator('.sm-canvas-none').click();
+    await box.locator('.sm-make').click();
+    await expect(page.getByText('Choose at least one canvas to show.')).toBeVisible();
+  });
+
   test('the command opens the window, with its "?", started from the document', async ({ page }) => {
     await fmideWith(page, WIDGET, 'cProfit');
     // (Its place in the ribbon, and a customised ribbon getting it once: group 47, beside the command it follows.)

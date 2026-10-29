@@ -26,6 +26,7 @@ const WHATS_NEW = [
     summary: 'A model with no fmGraph board can have one chosen for it, and a whole folder of models can become viewers in one go.',
     what: [
       'Make Showcase Viewer… has Choose for me: it adds a board with a slider on each input that moves something and a bar on each result, at most 12 of each. A model with no boards, or only empty ones, gets it in their place; a model with boards gets it beside them. Open fmGraph to change it before you make the viewer.',
+      'Its canvases have Select all and Unselect all, so a model with many canvases can show just a few.',
       'On a computer, npm run make-viewers makes a viewer for every model in a folder: a recipe names the sliders, bars and canvases by name, so one recipe fits many models built alike. Each viewer carries its Excel workbook, and a report says what each shows and anything not found.',
     ],
     why: 'A course or a client may need dozens of small models shown the same way: choosing sliders and bars by hand for each one takes too long.',
