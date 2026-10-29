@@ -179,6 +179,7 @@ async function loadModel(m){
   reconcileMapping();
   moduleLayoutsApplied = [];
   if(!restored){ sortNewLayout(); applyModuleLayouts(); }
+  else layOutNewCanvasTabs(); // a canvas new since the layout was saved
   resetModuleBaselines();
   renderAll();
 }
@@ -200,16 +201,31 @@ function reconcileMapping(){
   if(!mapping.cfg.inputsTab) mapping.cfg.inputsTab = { enabled: false, name: 'Inputs', groupBy: 'tab', orderWithin: 'sheet' };
   if(typeof mapping.cfg.sectionsEnabled !== 'boolean') mapping.cfg.sectionsEnabled = true; // back-compat for mappings saved before the section toggle existed
   const existingIds = new Set(mapping.rows.map(r => r.id));
-  const defaultTabId = mapping.tabs[0] ? mapping.tabs[0].id : null;
+  // Every canvas has a tab of its own, as a new layout gives it (buildDefaultMapping): a
+  // canvas added in fmIDE after this layout was saved gets one now, at the end, named after
+  // it. Its rows that an earlier load put on the Inputs tab (the first tab, where new rows
+  // went before) move there — a canvas's own row never belongs on the Inputs tab, whose
+  // rows are the mirrors in mapping.inputRows.
+  newCanvasTabIds = [];
+  model.canvases.forEach((c, i) => {
+    if(mapping.tabs.some(t => t.id === 'tab_' + c.id)) return;
+    const order = mapping.tabs.reduce((n, t) => Math.max(n, typeof t.order === 'number' ? t.order : 0), -1) + 1;
+    const tab = { id: 'tab_' + c.id, name: uniqueTabName(c.name || ('Canvas ' + (i + 1)), null).name, order };
+    mapping.tabs.push(tab);
+    newCanvasTabIds.push(tab.id);
+    mapping.rows.forEach(r => {
+      if(r.canvasId === c.id && !(r.path && r.path.length) && r.tabId === INPUTS_TAB_ID) r.tabId = tab.id;
+    });
+  });
   model.canvases.forEach(c => {
-    let tabForCanvas = mapping.tabs.find(t => t.id === 'tab_' + c.id);
+    const tabForCanvas = mapping.tabs.find(t => t.id === 'tab_' + c.id);
     exportableNodesOf(c).forEach((n, i) => {
       const id = pathKey([], c.id, n.id);
       if(!existingIds.has(id)){
         const section = classifyNode(c, n);
         mapping.rows.push({
           id, canvasId: c.id, nodeId: n.id, path: [],
-          tabId: (tabForCanvas || mapping.tabs[0] || { id: defaultTabId }).id,
+          tabId: tabForCanvas.id,
           section, order: 1000 + i, label: nodeDisplayName(canvasById, n), include: true, inlineConstant: false
         });
       }
@@ -250,6 +266,20 @@ function reconcileMapping(){
   // so flipping the toggle later never lands on a row with a stale/missing value in
   // whichever dimension it hasn't been using.
   mapping.tabs.forEach(t => { ensureSectionOrderAll(t.id); ensureFlatOrder(t.id); });
+}
+
+// The tabs reconcileMapping just made for canvases the saved layout didn't know (ids), so
+// they are laid out as a new layout would lay them out: sorted (NEW_LAYOUT_SORT, with
+// sections and without), then the module's remembered or template layout, if it has one.
+let newCanvasTabIds = [];
+function layOutNewCanvasTabs(){
+  if(!newCanvasTabIds.length) return;
+  const was = mapping.cfg.sectionsEnabled;
+  newCanvasTabIds.forEach(tabId => {
+    [true, false].forEach(on => { mapping.cfg.sectionsEnabled = on; sortRows(NEW_LAYOUT_SORT[0], NEW_LAYOUT_SORT[1], 'tab:' + tabId); });
+  });
+  mapping.cfg.sectionsEnabled = was;
+  model.canvases.forEach(c => { if(newCanvasTabIds.includes('tab_' + c.id)) applyModuleLayoutFor(c); });
 }
 
 // The layout autosaves on every change (and again when the page is hidden). If the browser

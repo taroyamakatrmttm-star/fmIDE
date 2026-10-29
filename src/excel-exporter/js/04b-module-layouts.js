@@ -395,23 +395,27 @@ function applyModuleLayout(canvas, m){
   return applyTabLayout(spec, m);
 }
 
+// One module canvas's tab, laid out from its remembered layout, else its template's — for a
+// new layout (below) and for a canvas's tab made new in a saved one (layOutNewCanvasTabs, 04).
+function applyModuleLayoutFor(c){
+  const mod = canvasModules[c.id];
+  if(!mod) return;
+  const own = hasTabLayout(moduleLayouts[mod.family]) ? moduleLayouts[mod.family] : null;
+  const m = own || templateLayoutFor(mod, hasTabLayout);
+  if(!m) return;
+  const r = applyModuleLayout(c, m);
+  if(!r) return;
+  if(!own) tabLayoutFromTemplate[moduleTabId(c.id)] = true;
+  moduleLayoutsApplied.push(Object.assign({ canvas: c.name, module: mod.name, fromTemplate: !own }, r));
+}
+
 // A new layout: every module canvas with a remembered layout gets it; one without, the
 // layout attached to its template, if the loaded document carries one (step 11c-2). The
 // same for the tabs of a module's block instances (step 11d).
 function applyModuleLayouts(){
   moduleLayoutsApplied = [];
   tabLayoutFromTemplate = {};
-  model.canvases.forEach(c => {
-    const mod = canvasModules[c.id];
-    if(!mod) return;
-    const own = hasTabLayout(moduleLayouts[mod.family]) ? moduleLayouts[mod.family] : null;
-    const m = own || templateLayoutFor(mod, hasTabLayout);
-    if(!m) return;
-    const r = applyModuleLayout(c, m);
-    if(!r) return;
-    if(!own) tabLayoutFromTemplate[moduleTabId(c.id)] = true;
-    moduleLayoutsApplied.push(Object.assign({ canvas: c.name, module: mod.name, fromTemplate: !own }, r));
-  });
+  model.canvases.forEach(applyModuleLayoutFor);
   blockInstanceTabs().forEach(inst => {
     const mod = canvasModules[inst.defCanvas.id];
     if(!mod) return;

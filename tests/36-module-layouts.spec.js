@@ -131,6 +131,29 @@ test('a layout saved for the whole model wins; after a reload the remembered lay
   for(const t of names) expect((await sheet(page, t)).labels).toEqual(a.labels);
 });
 
+test('a module canvas added after the model\'s layout was saved gets its tab laid out as remembered', async ({ page }, testInfo) => {
+  const a = await arrangeA(page);
+  // Model B's layout saved before its module canvas existed: B with Overview alone.
+  const full = JSON.parse(fs.readFileSync(sample('model-b'), 'utf8'));
+  const before = Object.assign({}, full, { canvases: full.canvases.filter(c => !c.template) });
+  const beforeFile = testInfo.outputPath('model-b-before.json');
+  fs.writeFileSync(beforeFile, JSON.stringify(before));
+  await X.loadModelFile(page, beforeFile);
+  await expect(page.locator('#afterLoad')).toBeVisible();
+  const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
+  const layout = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
+  // Now the whole of B, in a document carrying that layout.
+  const doc = testInfo.outputPath('model-b-grown.fmide');
+  fs.writeFileSync(doc, JSON.stringify({ kind: 'fmIDE-workspace', version: 14, system: full, excelLayout: layout }));
+  await X.loadModelFile(page, doc);
+  await expect(page.locator('#afterLoad')).toBeVisible();
+  expect(await tabNames(page)).toEqual(['Overview', 'Sales plan']);
+  await expect(page.locator('#moduleLayoutsStatus .status')).toHaveText("1 tab laid out from its module' remembered layout: 5 rows matched, 2 new.");
+  const b = await sheet(page, 'Sales plan');
+  expect(b.labels.filter(l => l !== 'Discount' && l !== 'Net revenue')).toEqual(a.labels);
+  expect(b.indent('Price')).toBe(1);
+});
+
 test('with sections on, each band keeps its remembered order', async ({ page }) => {
   await load(page, 'model-a');
   await X.setSections(page, true);
