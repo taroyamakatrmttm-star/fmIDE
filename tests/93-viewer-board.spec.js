@@ -543,6 +543,9 @@ test('a bar\'s title opens its card: its value in each period with the Board\'s 
   await V(page, () => fmViewer.setSlider('Price', 13));
   const bar = page.locator('#barList .bar-widget').first();
   await expect(bar.locator('.bar-card-open')).toHaveText('Profit');
+  // It looks tappable without a hover (a touch screen has none): underlined, with a ›.
+  expect(await bar.locator('.bar-card-open').evaluate(b => [getComputedStyle(b).textDecorationLine, getComputedStyle(b, '::after').content]))
+    .toEqual(['underline', '" ›"']);
   await bar.locator('.bar-card-open').click();
   await expect(page.locator('#card')).toBeVisible();
   await expect(page.locator('#cardTitle')).toHaveText('Profit');

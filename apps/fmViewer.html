@@ -469,9 +469,10 @@ body.phone.has-board .card{ bottom:calc(52px + env(safe-area-inset-bottom, 0px))
   body:not(.phone).on-board .mark{ display:none; }
 }
 
-/* Phase V6. A bar's title opens its card. */
-.bar-card-open{ border:none; background:none; padding:0; margin:0; min-height:36px; text-align:left; cursor:pointer; font:inherit; font-weight:700; color:inherit; }
-.bar-card-open:hover, .bar-card-open:focus-visible{ text-decoration:underline; text-decoration-style:dotted; }
+/* Phase V6. A bar's title opens its card: underlined with a › always, since a touch screen has no hover to show it can be tapped (the owner, 29 October 2026). */
+.bar-card-open{ border:none; background:none; padding:0; margin:0; min-height:36px; text-align:left; cursor:pointer; font:inherit; font-weight:700; color:inherit; text-decoration:underline; text-decoration-style:dotted; text-underline-offset:3px; }
+.bar-card-open::after{ content:" \203A"; color:var(--accent); }
+.bar-card-open:hover, .bar-card-open:focus-visible{ text-decoration-style:solid; }
 .card-show-logic{ margin-top:12px; min-height:44px; width:100%; border-radius:8px; border:1px solid var(--accent); background:#eff6ff; color:#1e3a8a; font-weight:600; cursor:pointer; }
 .card-show-logic:disabled{ border-color:var(--line); background:#f8fafc; color:var(--muted); cursor:default; }
 
