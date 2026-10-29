@@ -691,6 +691,69 @@ test.describe('Inputs tab', () => {
   });
 });
 
+// ---------- A canvas added after the layout was saved ----------
+test.describe('a canvas added after the layout was saved', () => {
+  const fs = require('fs');
+  // The layout as Export Mapping writes it.
+  async function exportMapping(page){
+    const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
+    return JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
+  }
+  // The sample model with two canvases more (one named as an existing tab), in a workspace
+  // carrying `layout` as its Excel layout — as fmIDE saves a document whose model grew.
+  function grownWorkspace(layout, testInfo){
+    const system = JSON.parse(fs.readFileSync(MODEL, 'utf8'));
+    system.canvases.push(
+      { id: 'cNew', name: 'Extra', nodes: [
+        { id: 'x1', type: 'value', x: 100, y: 40, text: 'Extra input\n5' },
+        { id: 'x2', type: 'value', x: 100, y: 140, text: 'Extra two\n3' }], edges: [] },
+      { id: 'cNew2', name: 'BS', nodes: [{ id: 'y1', type: 'value', x: 100, y: 40, text: 'Second input\n7' }], edges: [] });
+    const file = testInfo.outputPath('grown.fmide');
+    fs.writeFileSync(file, JSON.stringify({ kind: 'fmIDE-workspace', version: 14, system, excelLayout: layout }));
+    return file;
+  }
+  const newRows = (layout) => layout.rows.filter(r => r.canvasId === 'cNew' || r.canvasId === 'cNew2');
+
+  test('a new canvas gets its own tab, at the end, with its rows; none of them on the Inputs tab', async ({ page }, testInfo) => {
+    await open(page, { inputs: true });
+    const saved = await exportMapping(page);
+    expect(saved.tabs.map(t => t.id)).not.toContain('tab_cNew');
+    await X.loadModelFile(page, grownWorkspace(saved, testInfo));
+    // The first model's page is already showing: wait for this file's own load message.
+    await expect(page.locator('#loadStatus')).toContainText('Loaded grown.fmide');
+    expect(await tabNames(page)).toEqual(['Inputs', 'BS', 'Corkscrew', 'Extra', 'BS 2']);
+    await page.click('#viewByTree');
+    const t = await tree(page);
+    expect(t['Extra']).toEqual(['Extra input', 'Extra two']);
+    expect(t['BS 2']).toEqual(['Second input']);
+    const now = await exportMapping(page);
+    const rows = newRows(now);
+    expect(rows).toHaveLength(3);
+    for(const r of rows) expect(r.tabId, r.id).toBe('tab_' + r.canvasId);
+    // Their numbers are still typed on the Inputs tab, through its own rows (mirrors).
+    expect(now.inputRows.map(m => m.sourceRowId)).toEqual(expect.arrayContaining(rows.map(r => r.id)));
+  });
+
+  test('rows an earlier load put on the Inputs tab move to the new tab; others stay where they were put', async ({ page }, testInfo) => {
+    await open(page, { inputs: true });
+    const saved = await exportMapping(page);
+    // As the earlier ExcelExporter left it: the new canvas's rows on the Inputs tab, no tab of its own.
+    saved.rows.push(
+      { id: 'cNew|x1', canvasId: 'cNew', nodeId: 'x1', path: [], tabId: 'tab__inputs', section: 'input', order: 50, label: 'Extra input', include: true, inlineConstant: false },
+      { id: 'cNew|x2', canvasId: 'cNew', nodeId: 'x2', path: [], tabId: 'tab_cCK', section: 'input', order: 50, label: 'Extra two', include: true, inlineConstant: false });
+    await X.loadModelFile(page, grownWorkspace(saved, testInfo));
+    // The first model's page is already showing: wait for this file's own load message.
+    await expect(page.locator('#loadStatus')).toContainText('Loaded grown.fmide');
+    const now = await exportMapping(page);
+    const byNode = Object.fromEntries(newRows(now).map(r => [r.nodeId, r.tabId]));
+    expect(byNode).toEqual({ x1: 'tab_cNew', x2: 'tab_cCK', y1: 'tab_cNew2' });
+    await page.click('#viewByTree');
+    const t = await tree(page);
+    expect(t['Extra']).toEqual(['Extra input']);
+    expect(t['Corkscrew']).toContain('Extra two');
+  });
+});
+
 // ---------- Storage failure ----------
 test('storage failure shows a warning, and it clears once saving works', async ({ page }) => {
   await open(page);

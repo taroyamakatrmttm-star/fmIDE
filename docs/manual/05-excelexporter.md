@@ -324,7 +324,7 @@ Every input cell is yellow with a blue font, in this workbook and every workbook
 > **You need:** ExcelExporter opened from fmIDE, with a model that has a canvas made from a template (such as *Region North* in [lesson 3.1](03-reuse.md#templates)).
 > **Time:** about 10 minutes.
 > **In the app:** ExcelExporter Help → *What is remembered, and which layout wins* (`remembered`), *Modules remember their layout* (`module-layouts`), *A template's attached layout* (`template-layouts`)
-> **Came in:** step 11 · modules remember their layout [#64](https://github.com/taroyamakatrmttm-star/fmIDE/pull/64); a template carries a layout [#65](https://github.com/taroyamakatrmttm-star/fmIDE/pull/65), [#66](https://github.com/taroyamakatrmttm-star/fmIDE/pull/66); instance tabs [#67](https://github.com/taroyamakatrmttm-star/fmIDE/pull/67); attaching without a file [#139](https://github.com/taroyamakatrmttm-star/fmIDE/pull/139); the layout in the document [#176](https://github.com/taroyamakatrmttm-star/fmIDE/pull/176); explained [#178](https://github.com/taroyamakatrmttm-star/fmIDE/pull/178)
+> **Came in:** step 11 · modules remember their layout [#64](https://github.com/taroyamakatrmttm-star/fmIDE/pull/64); a template carries a layout [#65](https://github.com/taroyamakatrmttm-star/fmIDE/pull/65), [#66](https://github.com/taroyamakatrmttm-star/fmIDE/pull/66); instance tabs [#67](https://github.com/taroyamakatrmttm-star/fmIDE/pull/67); attaching without a file [#139](https://github.com/taroyamakatrmttm-star/fmIDE/pull/139); the layout in the document [#176](https://github.com/taroyamakatrmttm-star/fmIDE/pull/176); explained [#178](https://github.com/taroyamakatrmttm-star/fmIDE/pull/178); a canvas added later gets its own tab (branch `claude/excel-new-canvas-tabs`)
 
 ExcelExporter keeps three things in your browser:
 
@@ -349,6 +349,7 @@ Under Tabs, a line says the layout was attached. In fmIDE's Templates window, th
 ### Good to know
 
 - **Which layout a model gets,** first that exists: the one this browser saved for the model; the one its `.fmide` document carries; otherwise a new layout, where each module's tab takes your own remembered layout for it, else the layout attached to its template, else the automatic sort.
+- **A canvas added later:** a canvas added in fmIDE after the layout was saved gets a tab of its own at the end, laid out as a new layout would lay it out (a module's tab with its remembered layout).
 - **Your own wins:** a template's attached layout is used only for a module you have never arranged yourself, and its tab then reads *layout from the template*.
 - **Files:** **Export / Import Mapping** move one model's whole layout; **Export / Import Module Layouts** move every remembered module layout (fmIDE's *Attach Excel layout…* takes just the one for its template).
 - **The layout in the document:** opened from fmIDE, each change here goes back to fmIDE and marks the document unsaved; saved there, the layout goes to any computer with the file.
