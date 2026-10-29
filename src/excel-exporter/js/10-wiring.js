@@ -146,6 +146,7 @@ $('mappingFileInput').addEventListener('change', () => {
       delete imported.kind; delete imported.version; // file envelope, not part of the mapping itself
       mapping = imported;
       reconcileMapping();
+      layOutNewCanvasTabs(); // a canvas the file's layout didn't know gets its tab laid out
       saveMapping();
       renderAll();
       setStatus($('genStatus'), 'Mapping imported.', 'ok');

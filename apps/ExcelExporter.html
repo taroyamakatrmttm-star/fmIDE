@@ -5422,6 +5422,7 @@ async function loadModel(m){
   reconcileMapping();
   moduleLayoutsApplied = [];
   if(!restored){ sortNewLayout(); applyModuleLayouts(); }
+  else layOutNewCanvasTabs(); // a canvas new since the layout was saved
   resetModuleBaselines();
   renderAll();
 }
@@ -5443,16 +5444,31 @@ function reconcileMapping(){
   if(!mapping.cfg.inputsTab) mapping.cfg.inputsTab = { enabled: false, name: 'Inputs', groupBy: 'tab', orderWithin: 'sheet' };
   if(typeof mapping.cfg.sectionsEnabled !== 'boolean') mapping.cfg.sectionsEnabled = true; // back-compat for mappings saved before the section toggle existed
   const existingIds = new Set(mapping.rows.map(r => r.id));
-  const defaultTabId = mapping.tabs[0] ? mapping.tabs[0].id : null;
+  // Every canvas has a tab of its own, as a new layout gives it (buildDefaultMapping): a
+  // canvas added in fmIDE after this layout was saved gets one now, at the end, named after
+  // it. Its rows that an earlier load put on the Inputs tab (the first tab, where new rows
+  // went before) move there — a canvas's own row never belongs on the Inputs tab, whose
+  // rows are the mirrors in mapping.inputRows.
+  newCanvasTabIds = [];
+  model.canvases.forEach((c, i) => {
+    if(mapping.tabs.some(t => t.id === 'tab_' + c.id)) return;
+    const order = mapping.tabs.reduce((n, t) => Math.max(n, typeof t.order === 'number' ? t.order : 0), -1) + 1;
+    const tab = { id: 'tab_' + c.id, name: uniqueTabName(c.name || ('Canvas ' + (i + 1)), null).name, order };
+    mapping.tabs.push(tab);
+    newCanvasTabIds.push(tab.id);
+    mapping.rows.forEach(r => {
+      if(r.canvasId === c.id && !(r.path && r.path.length) && r.tabId === INPUTS_TAB_ID) r.tabId = tab.id;
+    });
+  });
   model.canvases.forEach(c => {
-    let tabForCanvas = mapping.tabs.find(t => t.id === 'tab_' + c.id);
+    const tabForCanvas = mapping.tabs.find(t => t.id === 'tab_' + c.id);
     exportableNodesOf(c).forEach((n, i) => {
       const id = pathKey([], c.id, n.id);
       if(!existingIds.has(id)){
         const section = classifyNode(c, n);
         mapping.rows.push({
           id, canvasId: c.id, nodeId: n.id, path: [],
-          tabId: (tabForCanvas || mapping.tabs[0] || { id: defaultTabId }).id,
+          tabId: tabForCanvas.id,
           section, order: 1000 + i, label: nodeDisplayName(canvasById, n), include: true, inlineConstant: false
         });
       }
@@ -5493,6 +5509,20 @@ function reconcileMapping(){
   // so flipping the toggle later never lands on a row with a stale/missing value in
   // whichever dimension it hasn't been using.
   mapping.tabs.forEach(t => { ensureSectionOrderAll(t.id); ensureFlatOrder(t.id); });
+}
+
+// The tabs reconcileMapping just made for canvases the saved layout didn't know (ids), so
+// they are laid out as a new layout would lay them out: sorted (NEW_LAYOUT_SORT, with
+// sections and without), then the module's remembered or template layout, if it has one.
+let newCanvasTabIds = [];
+function layOutNewCanvasTabs(){
+  if(!newCanvasTabIds.length) return;
+  const was = mapping.cfg.sectionsEnabled;
+  newCanvasTabIds.forEach(tabId => {
+    [true, false].forEach(on => { mapping.cfg.sectionsEnabled = on; sortRows(NEW_LAYOUT_SORT[0], NEW_LAYOUT_SORT[1], 'tab:' + tabId); });
+  });
+  mapping.cfg.sectionsEnabled = was;
+  model.canvases.forEach(c => { if(newCanvasTabIds.includes('tab_' + c.id)) applyModuleLayoutFor(c); });
 }
 
 // The layout autosaves on every change (and again when the page is hidden). If the browser
@@ -5926,23 +5956,27 @@ function applyModuleLayout(canvas, m){
   return applyTabLayout(spec, m);
 }
 
+// One module canvas's tab, laid out from its remembered layout, else its template's — for a
+// new layout (below) and for a canvas's tab made new in a saved one (layOutNewCanvasTabs, 04).
+function applyModuleLayoutFor(c){
+  const mod = canvasModules[c.id];
+  if(!mod) return;
+  const own = hasTabLayout(moduleLayouts[mod.family]) ? moduleLayouts[mod.family] : null;
+  const m = own || templateLayoutFor(mod, hasTabLayout);
+  if(!m) return;
+  const r = applyModuleLayout(c, m);
+  if(!r) return;
+  if(!own) tabLayoutFromTemplate[moduleTabId(c.id)] = true;
+  moduleLayoutsApplied.push(Object.assign({ canvas: c.name, module: mod.name, fromTemplate: !own }, r));
+}
+
 // A new layout: every module canvas with a remembered layout gets it; one without, the
 // layout attached to its template, if the loaded document carries one (step 11c-2). The
 // same for the tabs of a module's block instances (step 11d).
 function applyModuleLayouts(){
   moduleLayoutsApplied = [];
   tabLayoutFromTemplate = {};
-  model.canvases.forEach(c => {
-    const mod = canvasModules[c.id];
-    if(!mod) return;
-    const own = hasTabLayout(moduleLayouts[mod.family]) ? moduleLayouts[mod.family] : null;
-    const m = own || templateLayoutFor(mod, hasTabLayout);
-    if(!m) return;
-    const r = applyModuleLayout(c, m);
-    if(!r) return;
-    if(!own) tabLayoutFromTemplate[moduleTabId(c.id)] = true;
-    moduleLayoutsApplied.push(Object.assign({ canvas: c.name, module: mod.name, fromTemplate: !own }, r));
-  });
+  model.canvases.forEach(applyModuleLayoutFor);
   blockInstanceTabs().forEach(inst => {
     const mod = canvasModules[inst.defCanvas.id];
     if(!mod) return;
@@ -11180,6 +11214,7 @@ const EXCEL_HELP_TOPICS = [
         '…or, without one, the layout attached to its template (only from a .fmide document or workspace)…',
         '…or, without that, the automatic sort. Tabs not from a module always start from the automatic sort.',
       ] },
+      { p: 'A canvas added in fmIDE after the layout was saved gets a tab of its own at the end, named after it and laid out as a new layout would lay it out: a module\'s tab takes its remembered layout, any other tab the automatic sort.' },
       { p: 'Block instance tabs follow the same order, using the module\'s instance layout. A new layout starts with the Inputs tab off, no scenarios and no sensitivity, since module layouts carry none.' },
       { tip: 'Export Mapping saves one model\'s whole layout, as listed above, to load again for the same model. Export Module Layouts saves the per-module layouts, for reuse in other models and for fmIDE\'s Attach Excel layout….' },
       { see: ['module-layouts', 'template-layouts', 'formats', 'generate'] },
@@ -11412,6 +11447,15 @@ const EXCEL_HELP_TOPICS = [
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'new-canvas-tabs', date: '2026-10-30', title: 'A canvas added later gets its own tab',
+    summary: 'A canvas added in fmIDE after the layout was saved now gets a tab of its own, instead of its rows landing on the Inputs tab.',
+    what: [
+      'When a model comes back with a layout saved before one of its canvases existed, that canvas gets a tab at the end, named after it, with its rows sorted as a new layout sorts them. A module\'s tab takes its remembered layout.',
+      'Rows that an earlier ExcelExporter put on the Inputs tab for such a canvas move to its new tab. Rows you moved to another tab yourself stay where you put them.',
+    ],
+    why: 'Before, the new canvas had no tab, and its rows went to the first tab, usually the Inputs tab, where they did not belong.',
+    how: ['Add a canvas in fmIDE, then File → Open ExcelExporter (or load the saved document) as usual.', 'Find the new tab at the end of the Tabs panel.'],
+    see: ['remembered'] },
   { id: 'fmgraph-free-chart-dashboard', date: '2026-10-27', title: 'fmGraph\'s Free chart on the Dashboard',
     summary: 'A Free chart on an fmGraph board, columns and waterfalls together, now becomes an Excel chart on the Dashboard that follows the sliders.',
     what: [
@@ -17660,6 +17704,7 @@ $('mappingFileInput').addEventListener('change', () => {
       delete imported.kind; delete imported.version; // file envelope, not part of the mapping itself
       mapping = imported;
       reconcileMapping();
+      layOutNewCanvasTabs(); // a canvas the file's layout didn't know gets its tab laid out
       saveMapping();
       renderAll();
       setStatus($('genStatus'), 'Mapping imported.', 'ok');

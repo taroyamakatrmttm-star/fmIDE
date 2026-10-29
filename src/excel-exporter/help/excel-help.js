@@ -164,6 +164,7 @@ const EXCEL_HELP_TOPICS = [
         '…or, without one, the layout attached to its template (only from a .fmide document or workspace)…',
         '…or, without that, the automatic sort. Tabs not from a module always start from the automatic sort.',
       ] },
+      { p: 'A canvas added in fmIDE after the layout was saved gets a tab of its own at the end, named after it and laid out as a new layout would lay it out: a module\'s tab takes its remembered layout, any other tab the automatic sort.' },
       { p: 'Block instance tabs follow the same order, using the module\'s instance layout. A new layout starts with the Inputs tab off, no scenarios and no sensitivity, since module layouts carry none.' },
       { tip: 'Export Mapping saves one model\'s whole layout, as listed above, to load again for the same model. Export Module Layouts saves the per-module layouts, for reuse in other models and for fmIDE\'s Attach Excel layout….' },
       { see: ['module-layouts', 'template-layouts', 'formats', 'generate'] },

@@ -11,6 +11,15 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'new-canvas-tabs', date: '2026-10-30', title: 'A canvas added later gets its own tab',
+    summary: 'A canvas added in fmIDE after the layout was saved now gets a tab of its own, instead of its rows landing on the Inputs tab.',
+    what: [
+      'When a model comes back with a layout saved before one of its canvases existed, that canvas gets a tab at the end, named after it, with its rows sorted as a new layout sorts them. A module\'s tab takes its remembered layout.',
+      'Rows that an earlier ExcelExporter put on the Inputs tab for such a canvas move to its new tab. Rows you moved to another tab yourself stay where you put them.',
+    ],
+    why: 'Before, the new canvas had no tab, and its rows went to the first tab, usually the Inputs tab, where they did not belong.',
+    how: ['Add a canvas in fmIDE, then File → Open ExcelExporter (or load the saved document) as usual.', 'Find the new tab at the end of the Tabs panel.'],
+    see: ['remembered'] },
   { id: 'fmgraph-free-chart-dashboard', date: '2026-10-27', title: 'fmGraph\'s Free chart on the Dashboard',
     summary: 'A Free chart on an fmGraph board, columns and waterfalls together, now becomes an Excel chart on the Dashboard that follows the sliders.',
     what: [
