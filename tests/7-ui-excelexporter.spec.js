@@ -719,7 +719,8 @@ test.describe('a canvas added after the layout was saved', () => {
     const saved = await exportMapping(page);
     expect(saved.tabs.map(t => t.id)).not.toContain('tab_cNew');
     await X.loadModelFile(page, grownWorkspace(saved, testInfo));
-    await expect(page.locator('#afterLoad')).toBeVisible();
+    // The first model's page is already showing: wait for this file's own load message.
+    await expect(page.locator('#loadStatus')).toContainText('Loaded grown.fmide');
     expect(await tabNames(page)).toEqual(['Inputs', 'BS', 'Corkscrew', 'Extra', 'BS 2']);
     await page.click('#viewByTree');
     const t = await tree(page);
@@ -741,7 +742,8 @@ test.describe('a canvas added after the layout was saved', () => {
       { id: 'cNew|x1', canvasId: 'cNew', nodeId: 'x1', path: [], tabId: 'tab__inputs', section: 'input', order: 50, label: 'Extra input', include: true, inlineConstant: false },
       { id: 'cNew|x2', canvasId: 'cNew', nodeId: 'x2', path: [], tabId: 'tab_cCK', section: 'input', order: 50, label: 'Extra two', include: true, inlineConstant: false });
     await X.loadModelFile(page, grownWorkspace(saved, testInfo));
-    await expect(page.locator('#afterLoad')).toBeVisible();
+    // The first model's page is already showing: wait for this file's own load message.
+    await expect(page.locator('#loadStatus')).toContainText('Loaded grown.fmide');
     const now = await exportMapping(page);
     const byNode = Object.fromEntries(newRows(now).map(r => [r.nodeId, r.tabId]));
     expect(byNode).toEqual({ x1: 'tab_cNew', x2: 'tab_cCK', y1: 'tab_cNew2' });
