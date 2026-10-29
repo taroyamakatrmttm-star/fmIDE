@@ -231,10 +231,11 @@ test('no boards: the line, and Open fmGraph to make one; a board made there appe
   await expect.poll(() => page.evaluate(() => fm.canvases()[0].name)).toBe('Revenue Model');
   await page.evaluate(() => fm.command('makeShowcaseViewer'));
   const box = page.locator('.modal-box.showcase-maker');
-  await expect(box.locator('.sm-no-boards')).toHaveText('This model has no fmGraph boards yet, so the viewer will show its logic only.');
+  await expect(box.locator('.sm-no-boards')).toHaveText('This model has no fmGraph boards with anything on them yet, so the viewer will show its logic only.'); // an empty board counts as none (changed on purpose, 29 October 2026)
   const [popup] = await Promise.all([page.waitForEvent('popup'), box.locator('.sm-open-fmgraph').click()]);
   await popup.waitForFunction(() => !!window.fmGraph && fmGraph.rectangles().length > 0 && fmGraph.boards().length > 0);
-  await popup.evaluate(() => fmGraph.addBoard('Volumes'));
+  // A board with something on it (an empty one isn't offered: changed on purpose, 29 October 2026).
+  await popup.evaluate(() => { fmGraph.addBoard('Volumes'); fmGraph.showBoard('Volumes'); fmGraph.addBar(fmGraph.rectangles()[0].name); });
   await expect(box.locator('.sm-board')).not.toHaveCount(0);
   expect(await box.locator('.sm-board').allTextContents()).toContain(' Volumes');
 });

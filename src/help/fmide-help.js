@@ -448,7 +448,7 @@ const HELP_TOPICS = [
     body: [
       { p: 'A showcase viewer is a single web page made from your model. Anyone can open it in a browser, from an email or a disk, with nothing installed and nothing sent anywhere. They see your canvases read-only, tap a rectangle to see how it is worked out, and, on the Board, move the sliders you set up in fmGraph, switch scenarios and play between them. They can\'t change the model.' },
       { steps: [
-        'Set up a board in fmGraph if you want sliders and charts ({cmd:openFmGraph}): its bars, charts, sliders and scenarios are what the visitor gets. A model with no board yet can press Choose for me in the window instead: it adds a board with a slider on each input that moves something and a bar on each result, at most 12 of each, which you can change in fmGraph.',
+        'Set up a board in fmGraph if you want sliders and charts ({cmd:openFmGraph}): its bars, charts, sliders and scenarios are what the visitor gets. Or press Choose for me in the window: it adds a board with a slider on each input that moves something and a bar on each result, at most 12 of each, which you can change in fmGraph. A board with nothing on it counts as no board: it isn\'t listed, and Choose for me takes its place; beside boards that show something, the chosen one is added under a name of its own.',
         'Open {cmd:makeShowcaseViewer}. Give it a title, a description, your name and a licence.',
         'Tick the canvases the visitor sees and the one it opens on, the periods shown, and the boards. Choose where Play starts: Base (the model\'s own numbers) or a scenario.',
         'Leave Include an Excel workbook ticked to put the model\'s workbook in the viewer, and give it a name.',

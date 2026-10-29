@@ -96,6 +96,11 @@ function boardsSummary(file){
   });
   return out;
 }
+// A board file with a bar, chart or slider on some board: one whose boards are all empty (fmGraph's
+// first board, never filled) counts as no boards, so --auto chooses for it (the owner's report of
+// 29 October 2026).
+const boardsShowSomething = (file) => !!file && Array.isArray(file.boards) && file.boards.some(b =>
+  !!b && typeof b === 'object' && ['items', 'bars', 'charts', 'sliders'].some(k => Array.isArray(b[k]) && b[k].length));
 const scenarioNames = (file) => (file && Array.isArray(file.scenarios) ? file.scenarios : []).map(s => s && typeof s.name === 'string' ? SC.showcaseText(s.name, SC.SHOWCASE_LIMITS.scenario) : '').filter(Boolean);
 
 // What one model's viewer shows (the owner's choice 1 of V5): a recipe given, for every model
@@ -154,11 +159,15 @@ function chooseFor(m, opts){
     c.problems.forEach(p => notes.push('The document\'s showcase: ' + p));
     sc = SC.showcaseForFile(c.value);
     boards = sc.boards || m.graphBoards || null;
+    if(!boardsShowSomething(boards) && autoChoice){
+      const chosen = autoBoards(sc.periods ? { from: sc.periods.from, to: sc.periods.to } : null);
+      if(chosen){ boards = chosen; sc.boards = chosen; notes.push('The document\'s showcase has no board with anything on it, so its sliders and bars were chosen for it (auto).'); }
+    }
     if(!opts.excel) delete sc.excel;
     else if(!sc.excel) sc.excel = { file: SC.showcaseFileName(sc.title || m.name) || 'Model.xlsx' };
   } else {
     sc = { kind: SC.SHOWCASE_KIND, version: 1, title: m.name };
-    if(m.graphBoards && Array.isArray(m.graphBoards.boards) && m.graphBoards.boards.length){ source = 'boards'; boards = m.graphBoards; }
+    if(boardsShowSomething(m.graphBoards)){ source = 'boards'; boards = m.graphBoards; }
     else if(autoChoice){ boards = autoBoards(null); source = boards ? 'auto' : 'logic'; }
     else source = 'logic';
     if(opts.excel) sc.excel = { file: SC.showcaseFileName(m.name) || 'Model.xlsx' };

@@ -16,18 +16,36 @@
   // to the document's fmGraph boards (the owner's choice 6 of V5), so fmGraph shows it to adjust.
   // Kept with the document like boards made in fmGraph (unsaved changes, not an undo step).
   // Returns { sliders, bars, notes } (each slider and bar by name), or fails in words.
+  // A board with nothing on it (fmGraph's first board, never filled) counts as no board: it isn't
+  // listed and Choose for me replaces it (the owner's report of 29 October 2026). A model with
+  // boards that show something gets the chosen one beside them, under a name of its own — the
+  // board file's upgrades past 9 change nothing, so it reads in a newer file as in its own.
   const CHOOSE_FOR_ME_RANGE = 50;
+  const CHOOSE_FOR_ME_BOARDS = 20; // fmGraph's boards for a model, at most
+  const boardShowsSomething = (b) => !!b && typeof b === 'object' && ['items', 'bars', 'charts', 'sliders'].some(k => Array.isArray(b[k]) && b[k].length);
+  const filledBoards = (file) => file && typeof file === 'object' && file.form !== 'template' && Array.isArray(file.boards)
+    ? file.boards.map((b, i) => boardShowsSomething(b) ? i : -1).filter(i => i >= 0) : [];
   function chooseShowcaseBoards(){
     if(inPractice()) fail('Not while practising a tutorial: the practice model isn\'t your document.');
-    if(showcaseBoardList(graphBoards).boards.length) fail('This model has fmGraph boards already: choose among them, or change them in fmGraph.');
     const r = autoShowcaseBoards(buildSystemPayload(), { sliders: 'inputs', bars: 'outputs', range: CHOOSE_FOR_ME_RANGE });
     if(!r.file) fail('Nothing to choose: this model has no input that moves a calculated rectangle, and no result.');
-    const kept = cleanGraphBoards(r.file);
+    let file = JSON.parse(JSON.stringify(r.file));
+    const board = file.boards[0];
+    if(filledBoards(graphBoards).length){
+      file = JSON.parse(JSON.stringify(graphBoards));
+      if(file.boards.length >= CHOOSE_FOR_ME_BOARDS) fail('This model has ' + CHOOSE_FOR_ME_BOARDS + ' fmGraph boards, the most it can have: remove one in fmGraph first.');
+      const names = file.boards.map(b => b && typeof b.name === 'string' ? b.name.trim() : '');
+      for(let n = 2; names.includes(board.name); n++) board.name = 'Chosen for me ' + n;
+      file.boards.push(board);
+    } else if(graphBoards && Array.isArray(graphBoards.scenarios) && graphBoards.scenarios.length){
+      file.scenarios = JSON.parse(JSON.stringify(graphBoards.scenarios)); // the empty boards' scenarios go along
+    }
+    const kept = cleanGraphBoards(file);
     if(!kept) fail('The board chosen couldn\'t be kept.');
     graphBoards = kept;
     markDocDirty();
-    if(showcaseMaker) showcaseMaker.refreshBoards();
-    return { sliders: r.sliders, bars: r.bars, notes: r.notes };
+    if(showcaseMaker) showcaseMaker.refreshBoards(board.name);
+    return { name: board.name, sliders: r.sliders, bars: r.bars, notes: r.notes };
   }
   const chosenWords = (r) => {
     const list = (items) => items.map(x => x.name).join(', ');
@@ -72,13 +90,14 @@
       : { from: 'Base', to: ends[1] || 'Base' };
     const title = kept && kept.title ? kept.title : showcaseText(docDisplayName(), SHOWCASE_LIMITS.title);
     // Excel (phase V4): as chosen last time, else ticked when the model has boards.
-    const excel = kept ? (kept.excel ? { file: kept.excel.file } : null) : (list.boards.length ? { file: showcaseFileName(title || 'Model') } : null);
+    const filled = filledBoards(graphBoards);
+    const excel = kept ? (kept.excel ? { file: kept.excel.file } : null) : (filled.length ? { file: showcaseFileName(title || 'Model') } : null);
     return { notes, list, ends, choices: { excel,
       id: kept && kept.id ? kept.id : showcaseIdFrom(title), title,
       description: kept ? kept.description || '' : '', author: kept && kept.author ? kept.author : libraryAuthor,
       licence: kept ? kept.licence || '' : '', mark: kept ? kept.mark !== false : true,
       canvases: ticked, start, periods: per,
-      boards: list.boards.map((b, i) => b.chosen ? i : -1).filter(i => i >= 0), play } };
+      boards: list.boards.map((b, i) => b.chosen && filled.includes(i) ? i : -1).filter(i => i >= 0), play } };
   }
 
   // Makes the viewer from the choices: { fileName, bytes, text, showcase, problems, excel }. Keeps
@@ -235,24 +254,29 @@
       boardsBox.textContent = '';
       boardTicks = []; playFrom = playTo = null;
       boardsBox.appendChild(el('p', 'library-pack-heading', 'Boards (from fmGraph)'));
-      if(chosenLine && list.boards.length) boardsBox.appendChild(el('p', 'sm-chosen', chosenLine));
-      if(!list.boards.length){
-        boardsBox.appendChild(el('p', 'sm-no-boards', 'This model has no fmGraph boards yet, so the viewer will show its logic only.'));
+      const filled = filledBoards(graphBoards);
+      if(chosenLine && filled.length) boardsBox.appendChild(el('p', 'sm-chosen', chosenLine));
+      // Choose for me: offered always — with no board (or only empty ones) it makes the first,
+      // else it adds one beside them.
+      const choose = el('button', 'sm-choose-for-me', 'Choose for me');
+      choose.type = 'button';
+      choose.title = filled.length ? 'Add one more board, with a slider on each input and a bar on each result, to adjust in fmGraph'
+        : 'Add a board with a slider on each input and a bar on each result, to adjust in fmGraph';
+      choose.addEventListener('click', () => {
+        try{ const r = chooseShowcaseBoards(); chosenLine = chosenWords(r); refreshBoards(r.name); }
+        catch(err){ showMessage(String(err && err.message ? err.message : err)); }
+      });
+      if(!filled.length){
+        boardsBox.appendChild(el('p', 'sm-no-boards', 'This model has no fmGraph boards with anything on them yet, so the viewer will show its logic only.'));
         const open = el('button', 'sm-open-fmgraph', 'Open fmGraph to make one');
         open.type = 'button';
         open.addEventListener('click', () => runCommand('openFmGraph'));
         boardsBox.appendChild(open);
-        const choose = el('button', 'sm-choose-for-me', 'Choose for me');
-        choose.type = 'button';
-        choose.title = 'Add a board with a slider on each input and a bar on each result, to adjust in fmGraph';
-        choose.addEventListener('click', () => {
-          try{ chosenLine = chosenWords(chooseShowcaseBoards()); refreshBoards(); }
-          catch(err){ showMessage(String(err && err.message ? err.message : err)); }
-        });
         boardsBox.appendChild(choose);
         return;
       }
       list.boards.forEach((b, i) => {
+        if(!filled.includes(i)) return; // an empty board isn't offered
         const row = el('label', 'function-export-row sm-board');
         const cb = el('input');
         cb.type = 'checkbox'; cb.checked = chosen.includes(i); cb.dataset.index = String(i);
@@ -260,7 +284,8 @@
         boardsBox.appendChild(row);
         boardTicks.push(cb);
       });
-      const ends = ['Base'].concat(list.scenarios.filter(n => n !== 'Base'));
+      boardsBox.appendChild(choose);
+      const ends =['Base'].concat(list.scenarios.filter(n => n !== 'Base'));
       if(list.scenarios.length) boardsBox.appendChild(el('p', 'sm-scenarios', 'Scenarios: ' + list.scenarios.join(', ')));
       if(list.scenarios.includes('Base')) boardsBox.appendChild(el('p', 'sm-warn', 'A scenario is named "Base", which Play keeps for the model\'s own numbers: it can\'t be one of Play\'s ends.'));
       const endSel = (cls, value) => { const s = el('select', cls); ends.forEach(n => { const o = el('option', null, n); o.value = n; s.appendChild(o); }); s.value = ends.includes(value) ? value : ends[0]; return s; };
@@ -344,11 +369,18 @@
       make(choices, opened);
     });
     // Boards fmGraph sends while the window is open (takeGraphBoards): listed again, ticks kept by name.
-    function refreshBoards(){
+    // A board Choose for me just added (`tick`, its name) is ticked.
+    function refreshBoards(tick){
       const was = boardTicks.map(cb => ({ name: start.list.boards[Number(cb.dataset.index)] && start.list.boards[Number(cb.dataset.index)].name, on: cb.checked }));
       const play = playFrom ? { from: playFrom.value, to: playTo.value } : c.play;
       const list = showcaseBoardList(graphBoards);
-      const chosen = list.boards.map((b, i) => { const w = was.find(x => x.name === b.name); return w ? (w.on ? i : -1) : (was.length ? -1 : i); }).filter(i => i >= 0);
+      const filled = filledBoards(graphBoards);
+      const chosen = list.boards.map((b, i) => {
+        if(!filled.includes(i)) return -1;
+        if(typeof tick === 'string' && b.name === tick) return i;
+        const w = was.find(x => x.name === b.name);
+        return w ? (w.on ? i : -1) : (was.length ? -1 : i);
+      }).filter(i => i >= 0);
       start.list = list;
       renderBoards(list, chosen, play);
     }

@@ -448,13 +448,52 @@ test('no boards: Choose for me adds "Chosen for me" to the document\'s boards, t
   expect(await v.page.evaluate(() => fmViewer.board().sliders.map(s => [s.name, s.mode]))).toEqual([['Unit Price', 'set'], ['Volume', 'set']]);
   expect(v.errors).toEqual([]);
   await v.context.close();
-  // Once the model has boards, there is nothing to choose for it.
-  expect(await page.evaluate(() => { try{ fm.showcaseChooseForMe(); return 'chose'; }catch(e){ return e.message; } })).toMatch(/has fmGraph boards already/);
+  // Once the model has a board, choosing again adds one beside it, under a name of its own
+  // (changed on purpose, 29 October 2026: it used to refuse).
+  expect((await page.evaluate(() => fm.showcaseChooseForMe())).name).toBe('Chosen for me 2');
+});
+
+// The owner's report of 29 October 2026: a document whose only fmGraph board is empty (fmGraph's
+// first board, never filled) had no Choose for me, and its viewer showed an empty board.
+const docWithBoards = (testInfo, name, boards) => {
+  const doc = readFixture('viewer', 'every-widget.fmide');
+  doc.graphBoards.boards = boards(doc.graphBoards.boards);
+  const file = testInfo.outputPath(name);
+  fs.writeFileSync(file, JSON.stringify(doc));
+  return { file, first: doc.system.canvases[0].id, scenarios: (doc.graphBoards.scenarios || []).map(s => s.name) };
+};
+test('only an empty board: it counts as none — not listed, Choose for me offered, the chosen board in its place with the scenarios kept', async ({ page }, testInfo) => {
+  const d = docWithBoards(testInfo, 'empty-board.fmide', () => [{ name: 'Board', items: [], sliders: [] }]);
+  expect(d.scenarios.length).toBeGreaterThan(0);
+  await fmideWith(page, d.file, d.first);
+  await page.evaluate(() => fm.command('makeShowcaseViewer'));
+  const box = maker(page);
+  await expect(box.locator('.sm-no-boards')).toBeVisible();
+  await expect(box.locator('.sm-board')).toHaveCount(0);
+  await box.locator('.sm-choose-for-me').click();
+  await expect(box.locator('.sm-board')).toHaveText([' Chosen for me']);
+  await expect(box.locator('.sm-board input')).toBeChecked();
+  const kept = (await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()))).data.graphBoards;
+  expect(kept.boards.map(b => b.name)).toEqual(['Chosen for me']);
+  expect(kept.scenarios.map(s => s.name)).toEqual(d.scenarios);
+});
+test('boards that show something: Choose for me adds one beside them, ticked, the others as they were; an empty one among them is not listed', async ({ page }, testInfo) => {
+  let names;
+  const d = docWithBoards(testInfo, 'with-boards.fmide', (bs) => { names = bs.map(b => b.name); return bs.concat([{ name: 'Empty', items: [], sliders: [] }]); });
+  await fmideWith(page, d.file, d.first);
+  await page.evaluate(() => fm.command('makeShowcaseViewer'));
+  const box = maker(page);
+  await expect(box.locator('.sm-board')).toHaveText(names.map(n => ' ' + n));
+  await box.locator('.sm-board input').first().uncheck();
+  await box.locator('.sm-choose-for-me').click();
+  await expect(box.locator('.sm-board')).toHaveText(names.concat(['Chosen for me']).map(n => ' ' + n));
+  expect(await box.locator('.sm-board input').evaluateAll(cs => cs.map(c => c.checked))).toEqual([false].concat(names.slice(1).map(() => true), [true]));
+  await expect(box.locator('.sm-chosen')).toHaveText(/^Chosen for me: \d+ sliders? \(/);
 });
 
 test('fm.showcaseChooseForMe on a model with no boards: what it chose, by name', async ({ page }) => {
   await fmideWith(page, fixture('formats', 'sys-current.json'), 'c1');
-  expect(await page.evaluate(() => fm.showcaseChooseForMe())).toEqual({
+  expect(await page.evaluate(() => fm.showcaseChooseForMe())).toEqual({ name: 'Chosen for me',
     sliders: [{ name: 'Unit Price', canvas: expect.any(String), mode: 'set', min: expect.any(Number), max: expect.any(Number), step: expect.any(Number) },
       { name: 'Volume', canvas: expect.any(String), mode: 'set', min: expect.any(Number), max: expect.any(Number), step: expect.any(Number) }],
     bars: [{ name: 'Revenue', canvas: expect.any(String) }], notes: [] });
