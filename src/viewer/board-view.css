@@ -136,3 +136,34 @@ body.phone.has-board .card{ bottom:calc(52px + env(safe-area-inset-bottom, 0px))
   body:not(.phone).on-board .board-view{ padding-bottom:300px; }
   body:not(.phone).on-board .mark{ display:none; }
 }
+
+/* Phase V6. A bar's title opens its card. */
+.bar-card-open{ border:none; background:none; padding:0; margin:0; min-height:36px; text-align:left; cursor:pointer; font:inherit; font-weight:700; color:inherit; }
+.bar-card-open:hover, .bar-card-open:focus-visible{ text-decoration:underline; text-decoration-style:dotted; }
+.card-show-logic{ margin-top:12px; min-height:44px; width:100%; border-radius:8px; border:1px solid var(--accent); background:#eff6ff; color:#1e3a8a; font-weight:600; cursor:pointer; }
+.card-show-logic:disabled{ border-color:var(--line); background:#f8fafc; color:var(--muted); cursor:default; }
+
+/* A phone held sideways (a short, wide screen): the bars on the left, the sliders' list on the
+   right, each scrolling on its own, instead of the list held at the foot of the screen. */
+@media (orientation: landscape) and (max-height: 520px){
+  body.phone.on-board .board-view{ display:flex; flex-direction:column; overflow:hidden; padding:6px 10px 6px; }
+  body.phone.on-board .board-view > *{ flex:none; }
+  body.phone.on-board .board-view > .board{ flex:1 1 auto; min-height:0; display:grid; grid-template-columns:minmax(0, 1.5fr) minmax(0, 1fr); grid-template-rows:minmax(0, 1fr); gap:10px; align-items:stretch; }
+  body.phone.on-board .board-main{ order:-1; min-height:0; overflow-y:auto; }
+  body.phone.on-board .board-side{ min-height:0; overflow-y:auto; }
+  body.phone.on-board .slider-list{ position:static; flex:none; max-height:none; padding:0; background:none; border:none; box-shadow:none; overflow:visible; }
+  body.phone.on-board .board-side > *{ flex-shrink:0; }
+}
+
+/* Both (from 1180 pixels wide, not a phone): the Board on the left, the Logic on the right. */
+body.both{ display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); grid-template-rows:auto auto auto auto minmax(0, 1fr); }
+body.both > *{ grid-column:1 / -1; }
+body.both > .vbar{ grid-row:1; }
+body.both > #notices{ grid-row:2; }
+body.both > #about{ grid-row:3; }
+body.both > #boardView{ grid-column:1; grid-row:4 / 6; min-height:0; }
+body.both > #canvasTabs{ grid-column:2; grid-row:4; }
+body.both > #logic{ grid-column:2; grid-row:5; margin-left:0; min-height:0; }
+body.both > #canvasTabs.hidden + #canvasMenu + #logic{ grid-row:4 / 6; border-radius:10px; }
+body.both .board{ grid-template-columns:minmax(220px, 300px) minmax(0, 1fr); }
+body.both .widget-list.bars{ grid-template-columns:minmax(0, 1fr); }

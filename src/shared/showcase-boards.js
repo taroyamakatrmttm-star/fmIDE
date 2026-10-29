@@ -21,9 +21,11 @@ import { compileModel, evaluateModel, parseRectText, irBlockPorts } from './ir.j
 export const SB_LEFT_OUT_LAYOUTS = ['tornado', 'spider', 'lines', 'free'];
 // At most this many sliders and bars chosen for the author.
 export const SB_AUTO_LIMIT = 12;
-// The board file version the boards here are written in: before the shared period (9), so every
-// bar keeps the periods it names, as the template form's boards always have.
-export const SB_BOARD_VERSION = 8;
+// The board file version the boards here are written in: 9, the shared period, with no bar or
+// chart keeping its own (no `ownPeriod`), so a showcase's `periods` — the boards' shared periods
+// in the viewer — say what every bar shows (written as 8, every bar kept its own periods and the
+// recipe's periods showed nowhere). Each still names the periods it shows, for older readers.
+export const SB_BOARD_VERSION = 9;
 
 const sbLower = (s) => String(s).trim().toLowerCase();
 const sbIsObject = (v) => !!v && typeof v === 'object' && !Array.isArray(v);

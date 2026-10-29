@@ -150,7 +150,12 @@ function barFrame(b){
   const w = make('div', 'widget bar-widget');
   w.dataset.id = b.id;
   const head = make('div', 'widget-head');
-  head.append(make('span', 'widget-title', rect ? rect.name : ''), traceButton(b));
+  // Its title opens its card (phase V6, 04-card.js): its value in each period, how it is worked out.
+  const title = make('button', 'widget-title bar-card-open', rect ? rect.name : '');
+  title.type = 'button';
+  title.title = 'How it is worked out';
+  title.addEventListener('click', () => openBarCard(b.id));
+  head.append(title, traceButton(b));
   w.appendChild(head);
   if(rect && rect.unit) w.appendChild(make('div', 'widget-unit', 'In ' + rect.unit));
   w.append(make('div', 'bar-chart-host'), make('ul', 'bar-errors'));

@@ -26,12 +26,15 @@
     <nav id="viewSwitch" class="view-switch desk-only hidden" role="tablist" aria-label="Views">
       <button type="button" id="tabBoard" class="view-tab" role="tab" aria-selected="true">Board</button>
       <button type="button" id="tabLogic" class="view-tab" role="tab" aria-selected="false">Logic</button>
+      <button type="button" id="tabBoth" class="view-tab hidden" role="tab" aria-selected="false" title="The Board and the Logic side by side">Both</button>
     </nav>
     <button type="button" id="btnCanvasMenu" class="vbar-btn phone-only hidden" aria-haspopup="menu" aria-expanded="false" aria-controls="canvasMenu">☰ <span id="canvasMenuName"></span></button>
     <div id="excelWrap" class="excel-wrap hidden">
       <button type="button" id="btnExcel" class="vbar-btn vbar-excel">⬇ Excel</button>
       <span id="excelNote" class="excel-note desk-only" aria-live="polite"></span>
     </div>
+    <button type="button" id="galleryLink" class="vbar-btn hidden" title="Back to the gallery">← Gallery</button>
+    <button type="button" id="btnShareLink" class="vbar-btn hidden" title="Send this viewer's address with your device's share sheet">⇪ Share link</button>
     <button type="button" id="btnOpen" class="vbar-btn" title="Open a viewer made by fmIDE (.html), or a model saved by fmIDE (.fmide or .json) and a showcase file if you have one">Open…</button>
     <button type="button" id="btnHelp" class="vbar-btn vbar-help" title="Help (F1)" aria-label="Help">?</button>
   </div>

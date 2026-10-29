@@ -535,3 +535,82 @@ test('hostile names in the boards are shown as text; older board files open', as
   await expect(page.locator('#scenarioRow .scenario-btn')).toHaveText(['Base', 'High price', 'Volume up', 'Mixed', 'Also high', 'Cost cut']);
   expect(pageErrors).toEqual([]);
 });
+
+// ---- Phase V6: the phone and iPad pass ----
+
+test('a bar\'s title opens its card: its value in each period with the Board\'s numbers, how it is worked out; Show in Logic goes to it', async ({ page }) => {
+  await openBoard(page);
+  await V(page, () => fmViewer.setSlider('Price', 13));
+  const bar = page.locator('#barList .bar-widget').first();
+  await expect(bar.locator('.bar-card-open')).toHaveText('Profit');
+  await bar.locator('.bar-card-open').click();
+  await expect(page.locator('#card')).toBeVisible();
+  await expect(page.locator('#cardTitle')).toHaveText('Profit');
+  expect(await V(page, () => fmViewer.state().view)).toBe('board');
+  // Its numbers are the Board's (Price at 13), as the Logic view would show them.
+  const shown = await page.locator('#cardBody .card-values tr td:last-child').first().textContent();
+  expect(shown.replace(/[^0-9.-]/g, '')).toBe(String(await V(page, () => fmViewer.value('cProfit', 'profit', 0))));
+  await page.locator('#cardBody .card-show-logic').click();
+  expect(await V(page, () => [fmViewer.state().view, fmViewer.state().canvas])).toEqual(['logic', 'cProfit']);
+  await expect(page.locator('#card')).toBeVisible();
+  await expect(page.locator('#world .cv-node.picked')).toHaveCount(1);
+  // From the Board again, the API opens the same card.
+  await page.locator('#tabBoard').click();
+  await expect(page.locator('#card')).toBeHidden();
+  const id = await V(page, () => fmViewer.board().items.find(w => w.kind === 'bar').id);
+  expect(await V(page, (i) => fmViewer.openBarCard(i), id)).toBe(true);
+  expect(await V(page, () => fmViewer.openBarCard('nothing'))).toBe(false);
+});
+
+test('Both on a wide screen: the Board and the Logic side by side, the Logic following each slider; kept on this device; a narrower window goes back to the Board', async ({ browser }) => {
+  const html = madeViewer(readFixture('viewer', 'every-widget.showcase.json'), readFixture('viewer', 'every-widget.fmide'));
+  const { context, page, errors } = await serve(browser, html, { viewport: { width: 1366, height: 900 } });
+  await expect(page.locator('#tabBoth')).toBeVisible();
+  await page.locator('#tabBoth').click();
+  expect(await V(page, () => fmViewer.state().view)).toBe('both');
+  const board = await page.locator('#boardView').boundingBox(), logic = await page.locator('#logic').boundingBox();
+  expect(board.x + board.width).toBeLessThanOrEqual(logic.x + 1);
+  expect(board.width).toBeGreaterThan(500);
+  expect(logic.width).toBeGreaterThan(500);
+  await expect(page.locator('#world .cv-node').first()).toBeVisible();
+  // A slider moved on the left: the canvas on the right shows the moved number, ringed.
+  const profitText = () => page.locator('#world .cv-node[data-id="profit"]').textContent();
+  const before = await profitText();
+  await V(page, () => fmViewer.setSlider('Price', 13));
+  await expect.poll(profitText).not.toBe(before);
+  await expect(page.locator('#world .cv-node[data-id="price"].moved')).toHaveCount(1);
+  // Kept: a reload opens on Both again.
+  await page.waitForTimeout(400);
+  await page.reload();
+  await page.waitForFunction(() => !!window.fmViewer && fmViewer.state().loaded);
+  await expect.poll(() => V(page, () => fmViewer.state().view)).toBe('both');
+  // Narrower than 1180 pixels: back to the Board, no Both tab.
+  await page.setViewportSize({ width: 1000, height: 900 });
+  await expect.poll(() => V(page, () => fmViewer.state().view)).toBe('board');
+  await expect(page.locator('#tabBoth')).toBeHidden();
+  expect(errors).toEqual([]);
+  await context.close();
+  // Never on a phone.
+  const phone = await serve(browser, html, { viewport: { width: 844, height: 390 }, screen: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
+  expect(await V(phone.page, () => fmViewer.bothFits())).toBe(false);
+  await phone.context.close();
+});
+
+test('a phone held sideways: the bars on the left, the sliders\' list on the right, each scrolling on its own', async ({ browser }) => {
+  const SIDEWAYS = { viewport: { width: 844, height: 390 }, screen: { width: 844, height: 390 }, hasTouch: true, isMobile: true };
+  const { context, page, errors } = await serve(browser, madeViewer(readFixture('viewer', 'every-widget.showcase.json'), readFixture('viewer', 'every-widget.fmide')), SIDEWAYS);
+  expect(await page.evaluate(() => document.body.classList.contains('phone'))).toBe(true);
+  const bars = await page.locator('.board-main').boundingBox(), list = await page.locator('#sliderList').boundingBox();
+  expect(bars.x + bars.width).toBeLessThanOrEqual(list.x + 1);
+  expect(await page.locator('#sliderList').evaluate(e => getComputedStyle(e).position)).toBe('static');
+  // The rows don't run into each other, and the side scrolls to the last slider.
+  const rows = await page.locator('#sliderList .slider-widget').evaluateAll(els => els.map(e => e.getBoundingClientRect()).map(r => [r.top, r.bottom]));
+  for(let i = 1; i < rows.length; i++) expect(rows[i][0]).toBeGreaterThanOrEqual(rows[i - 1][1] - 0.5);
+  const side = page.locator('.board-side');
+  expect(await side.evaluate(e => getComputedStyle(e).overflowY)).toBe('auto');
+  await page.locator('#sliderList .slider-widget').last().scrollIntoViewIfNeeded();
+  await expect(page.locator('#sliderList .slider-widget').last()).toBeInViewport();
+  await expect(page.locator('#phoneViews')).toBeVisible();
+  expect(errors).toEqual([]);
+  await context.close();
+});

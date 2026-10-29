@@ -473,6 +473,8 @@ test.describe('tools/make-viewers.js: many viewers at once, with Excel', () => {
     const v = await openMade(browser, testInfo, 'shop-a.html', text);
     expect(await v.page.evaluate(() => fmViewer.state().view)).toBe('board');
     expect(await v.page.evaluate(() => fmViewer.board().sliders.map(s => s.name))).toEqual(['Price', 'Volume']);
+    // The recipe's periods (2025 to 2027) are what its bars show.
+    expect((await v.page.evaluate(() => fmViewer.bar(fmViewer.board().items[0].id))).map(x => x.period)).toEqual(['2025', '2026', '2027']);
     expect(await v.page.locator('#showTitle').textContent()).toBe('shop-a: the shop');
     // Profit in 2025: 10 × 100 − 100 × 6 = 400; with Price at 13, 700. The downloaded workbook agrees.
     expect(await v.page.evaluate(() => fmViewer.value('cShop', 'profit', 0))).toBe(400);
@@ -490,6 +492,21 @@ test.describe('tools/make-viewers.js: many viewers at once, with Excel', () => {
     const plain = testInfo.outputPath('plain');
     expect(makeViewers(['--out', plain, '--recipe', path.join(BATCH, 'shops.recipe.json'), path.join(BATCH, 'shop-a.fmide')]).status).toBe(0);
     expect((await fontColours(workbookOf(fs.readFileSync(path.join(plain, 'shop-a-the-shop.html'), 'utf8')))).has('FFDC2626')).toBe(false);
+  });
+
+  // Phase V6: a picture of each viewer for its gallery card, and the viewers copied into a gallery folder.
+  test('--pictures and --gallery: a 960 × 600 picture of each viewer\'s first screen, and the folder the site\'s gallery is built from', async ({}, testInfo) => {
+    const out = testInfo.outputPath('pictured'), gallery = testInfo.outputPath('gallery');
+    const r = makeViewers(['--out', out, '--no-excel', '--recipe', path.join(BATCH, 'shops.recipe.json'), '--pictures', '--gallery', gallery, path.join(BATCH, 'shop-a.fmide'), path.join(BATCH, 'shop-b.fmide')]);
+    expect(r.status, r.stderr).toBe(0);
+    expect(fs.readdirSync(gallery).sort()).toEqual(['shop-a-the-shop.html', 'shop-a-the-shop.png', 'shop-b-the-shop.html', 'shop-b-the-shop.png']);
+    const png = fs.readFileSync(path.join(gallery, 'shop-a-the-shop.png'));
+    expect(png.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]))).toBe(true);
+    expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([960, 600]);
+    // The gallery's build takes the folder as it is, with the real viewer page.
+    const G = require('../tools/build-gallery.js');
+    const built = G.buildGallery(gallery, fs.readFileSync(path.join(ROOT, 'apps', 'fmViewer.html'), 'utf8'));
+    expect(built.viewers.map(v => [v.id, v.picture])).toEqual([['shop-a-the-shop', true], ['shop-b-the-shop', true]]);
   });
 
   test('--no-excel and --auto over a folder: no browser needed, no workbook block; --write-recipe; refusals in words', async ({ browser }, testInfo) => {

@@ -436,10 +436,76 @@ test('on the site: the viewer\'s page runs under its own security policy, offlin
     await expect(page.locator('#world .cv-node')).toHaveCount(25);
     expect(violations).toEqual([]);
     expect(seen.filter(u => !u.startsWith(site.origin))).toEqual([]);
+    // Phase V6: the viewer connects to nothing, so its page may not (the owner's decision).
+    expect(headers).toMatch(/\/fmViewer\.html\n  Content-Security-Policy: [^\n]*connect-src 'none'/);
+    // Not in a gallery: no ← Gallery, no ⇪ Share link.
+    expect(await page.evaluate(() => fmViewer.inGallery())).toBe(false);
+    await expect(page.locator('#galleryLink')).toBeHidden();
   } finally {
     await context.close();
     await site.close().catch(() => {});
     fs.rmSync(site.dir, { recursive: true, force: true });
+  }
+});
+
+// Phase V6: the site's /gallery, built from tests/fixtures/viewer/gallery/ (viewers made with an
+// older, smaller page: the build rebuilds them with today's).
+test('the gallery on the site: its page runs no script; each viewer runs today\'s viewer under its policy, connecting to nothing, with ← Gallery and ⇪ Share link', async ({ browser }) => {
+  const W = require('./helpers/site');
+  const plain = await W.startSiteServer();
+  const site = await W.startSiteServer({ gallery: fixture('viewer', 'gallery') });
+  const context = await browser.newContext({ viewport: { width: 1400, height: 900 } });
+  // A share sheet to see what the page hands it (Chromium on a computer has none).
+  await context.addInitScript(() => { window.__shared = []; navigator.share = (d) => { window.__shared.push(d); return Promise.resolve(); }; });
+  const seen = [];
+  context.on('request', r => seen.push(r.url()));
+  try{
+    // A gallery never changes the app's version, nor the offline copy's list.
+    expect(site.version).toBe(plain.version);
+    const sw = fs.readFileSync(path.join(site.dir, 'sw.js'), 'utf8');
+    expect(sw).not.toContain('gallery');
+    const headers = fs.readFileSync(path.join(site.dir, '_headers'), 'utf8');
+    expect(headers).toBe(fs.readFileSync(path.join(plain.dir, '_headers'), 'utf8'));
+    // At most 100 rules (Cloudflare Pages' limit): one for all the gallery's viewers.
+    const rules = headers.split('\n').filter(l => l.startsWith('/'));
+    expect(rules.length).toBeLessThanOrEqual(100);
+    const policyOf = (p) => { const at = headers.indexOf('\n' + p + '\n'); return headers.slice(at).split('\n')[2].replace(/^\s*Content-Security-Policy: /, ''); };
+    expect(policyOf('/gallery/')).toMatch(/^default-src 'none';/);
+    expect(policyOf('/gallery/v/*')).toBe(policyOf('/fmViewer.html'));
+    const page = await context.newPage();
+    const violations = [];
+    page.on('console', m => { if(/Content Security Policy|Refused to/i.test(m.text())) violations.push(m.text()); });
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    const list = await page.goto(site.origin + 'gallery/');
+    expect(list.headers()['content-security-policy']).toMatch(/^default-src 'none';/);
+    await expect(page.locator('h1')).toHaveText('Models for the course');
+    await expect(page.locator('.viewer-card')).toHaveCount(3);
+    // The markup in a viewer's texts is text: nothing of it became an element.
+    expect(await page.locator('main img:not([src="p/loan.png"]), main script, main b:not(.viewer-note b), main i').count()).toBe(0);
+    await expect(page.locator('.viewer-card').nth(2).locator('h3')).toHaveText('<script>alert(1)</script> & "quotes"');
+    await page.locator('.viewer-card').first().locator('a.viewer-open').click();
+    await page.waitForFunction(() => window.fmViewer && fmViewer.state().loaded);
+    expect(new URL(page.url()).pathname).toBe('/gallery/v/loan');
+    expect(await page.evaluate(() => [fmViewer.inGallery(), fmViewer.state().title])).toEqual([true, 'How a shop makes a profit']);
+    // Today's viewer: the page the site serves at /fmViewer.html, with the made viewer's blocks.
+    const served = await (await page.request.get(site.origin + 'gallery/v/loan.html')).text();
+    const today = fs.readFileSync(path.join(site.dir, 'fmViewer.html'), 'utf8');
+    expect(served.replace(/(<script type="application\/json" id="[a-z]+">)[^<]*(<\/script>)/g, '$1$2')).toBe(today);
+    await page.locator('#btnShareLink').click();
+    expect(await page.evaluate(() => window.__shared)).toEqual([{ title: 'How a shop makes a profit — fmShowcase', url: site.origin + 'gallery/v/loan' }]);
+    await page.locator('#galleryLink').click();
+    await expect(page.locator('h1')).toHaveText('Models for the course');
+    // The viewer with a workbook carries it.
+    await page.goto(site.origin + 'gallery/v/shop-b');
+    await page.waitForFunction(() => window.fmViewer && fmViewer.state().loaded);
+    await expect(page.locator('#excelWrap')).toBeVisible();
+    expect(violations).toEqual([]);
+    expect(errors).toEqual([]);
+    expect(seen.filter(u => !u.startsWith(site.origin))).toEqual([]);
+  } finally {
+    await context.close();
+    for(const s of [site, plain]){ await s.close().catch(() => {}); fs.rmSync(s.dir, { recursive: true, force: true }); }
   }
 });
 

@@ -468,6 +468,37 @@ body.phone.has-board .card{ bottom:calc(52px + env(safe-area-inset-bottom, 0px))
   body:not(.phone).on-board .board-view{ padding-bottom:300px; }
   body:not(.phone).on-board .mark{ display:none; }
 }
+
+/* Phase V6. A bar's title opens its card. */
+.bar-card-open{ border:none; background:none; padding:0; margin:0; min-height:36px; text-align:left; cursor:pointer; font:inherit; font-weight:700; color:inherit; }
+.bar-card-open:hover, .bar-card-open:focus-visible{ text-decoration:underline; text-decoration-style:dotted; }
+.card-show-logic{ margin-top:12px; min-height:44px; width:100%; border-radius:8px; border:1px solid var(--accent); background:#eff6ff; color:#1e3a8a; font-weight:600; cursor:pointer; }
+.card-show-logic:disabled{ border-color:var(--line); background:#f8fafc; color:var(--muted); cursor:default; }
+
+/* A phone held sideways (a short, wide screen): the bars on the left, the sliders' list on the
+   right, each scrolling on its own, instead of the list held at the foot of the screen. */
+@media (orientation: landscape) and (max-height: 520px){
+  body.phone.on-board .board-view{ display:flex; flex-direction:column; overflow:hidden; padding:6px 10px 6px; }
+  body.phone.on-board .board-view > *{ flex:none; }
+  body.phone.on-board .board-view > .board{ flex:1 1 auto; min-height:0; display:grid; grid-template-columns:minmax(0, 1.5fr) minmax(0, 1fr); grid-template-rows:minmax(0, 1fr); gap:10px; align-items:stretch; }
+  body.phone.on-board .board-main{ order:-1; min-height:0; overflow-y:auto; }
+  body.phone.on-board .board-side{ min-height:0; overflow-y:auto; }
+  body.phone.on-board .slider-list{ position:static; flex:none; max-height:none; padding:0; background:none; border:none; box-shadow:none; overflow:visible; }
+  body.phone.on-board .board-side > *{ flex-shrink:0; }
+}
+
+/* Both (from 1180 pixels wide, not a phone): the Board on the left, the Logic on the right. */
+body.both{ display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); grid-template-rows:auto auto auto auto minmax(0, 1fr); }
+body.both > *{ grid-column:1 / -1; }
+body.both > .vbar{ grid-row:1; }
+body.both > #notices{ grid-row:2; }
+body.both > #about{ grid-row:3; }
+body.both > #boardView{ grid-column:1; grid-row:4 / 6; min-height:0; }
+body.both > #canvasTabs{ grid-column:2; grid-row:4; }
+body.both > #logic{ grid-column:2; grid-row:5; margin-left:0; min-height:0; }
+body.both > #canvasTabs.hidden + #canvasMenu + #logic{ grid-row:4 / 6; border-radius:10px; }
+body.both .board{ grid-template-columns:minmax(220px, 300px) minmax(0, 1fr); }
+body.both .widget-list.bars{ grid-template-columns:minmax(0, 1fr); }
 </style>
 </head>
 <body>
@@ -481,12 +512,15 @@ body.phone.has-board .card{ bottom:calc(52px + env(safe-area-inset-bottom, 0px))
     <nav id="viewSwitch" class="view-switch desk-only hidden" role="tablist" aria-label="Views">
       <button type="button" id="tabBoard" class="view-tab" role="tab" aria-selected="true">Board</button>
       <button type="button" id="tabLogic" class="view-tab" role="tab" aria-selected="false">Logic</button>
+      <button type="button" id="tabBoth" class="view-tab hidden" role="tab" aria-selected="false" title="The Board and the Logic side by side">Both</button>
     </nav>
     <button type="button" id="btnCanvasMenu" class="vbar-btn phone-only hidden" aria-haspopup="menu" aria-expanded="false" aria-controls="canvasMenu">☰ <span id="canvasMenuName"></span></button>
     <div id="excelWrap" class="excel-wrap hidden">
       <button type="button" id="btnExcel" class="vbar-btn vbar-excel">⬇ Excel</button>
       <span id="excelNote" class="excel-note desk-only" aria-live="polite"></span>
     </div>
+    <button type="button" id="galleryLink" class="vbar-btn hidden" title="Back to the gallery">← Gallery</button>
+    <button type="button" id="btnShareLink" class="vbar-btn hidden" title="Send this viewer's address with your device's share sheet">⇪ Share link</button>
     <button type="button" id="btnOpen" class="vbar-btn" title="Open a viewer made by fmIDE (.html), or a model saved by fmIDE (.fmide or .json) and a showcase file if you have one">Open…</button>
     <button type="button" id="btnHelp" class="vbar-btn vbar-help" title="Help (F1)" aria-label="Help">?</button>
   </div>
@@ -3764,6 +3798,37 @@ function showcaseDownloadName(file, suffix){
   const base = showcaseFileName(file) || 'Model.xlsx';
   if(!suffix) return base;
   return showcaseFileName(base.replace(/\.xlsx$/i, '') + suffix) || base;
+}
+
+// ---------- the gallery's list (phase V6): gallery.json beside the viewers ----------
+// kind "fmIDE-gallery", version 1 (docs/file-formats.md): { title, intro, sections: [{ title,
+// viewers: [ids] }] }, every part optional. Read by tools/build-gallery.js, which writes the
+// site's /gallery page from a folder of made viewers; the texts are shown escaped, the ids only
+// compared with the viewers' own.
+const GALLERY_KIND = 'fmIDE-gallery';
+const GALLERY_FORMATS = { 'fmIDE-gallery': { current: 1, label: 'showcase gallery list' } };
+const GALLERY_MIGRATIONS = { 'fmIDE-gallery': {} };
+const GALLERY_LIMITS = { title: 80, intro: 600, sections: 50, section: 80, viewers: 1000 };
+// Reads a parsed gallery.json: { error } or { value: { title, intro, sections: [{ title, viewers }] },
+// problems, newer }.
+function cleanGalleryList(raw){
+  if(!isObject(raw) || raw.kind !== GALLERY_KIND) return { error: 'gallery.json is not a gallery list (kind "' + GALLERY_KIND + '").' };
+  const data = JSON.parse(JSON.stringify(raw));
+  const { newer } = upgradeFileData(data, GALLERY_KIND, GALLERY_FORMATS, GALLERY_MIGRATIONS);
+  const problems = [];
+  const value = { title: showcaseText(data.title, GALLERY_LIMITS.title), intro: showcaseText(data.intro, GALLERY_LIMITS.intro, true), sections: [] };
+  if(data.sections !== undefined && !Array.isArray(data.sections)) problems.push('"sections" is not a list: every viewer is listed by its title.');
+  const seen = new Set();
+  (Array.isArray(data.sections) ? data.sections : []).slice(0, GALLERY_LIMITS.sections).forEach((s, i) => {
+    if(!isObject(s)){ problems.push('Section ' + (i + 1) + ' is not a section: left out.'); return; }
+    const ids = [];
+    (Array.isArray(s.viewers) ? s.viewers : []).slice(0, GALLERY_LIMITS.viewers).forEach(id => {
+      if(typeof id === 'string' && SHOWCASE_ID.test(id) && !seen.has(id)){ seen.add(id); ids.push(id); }
+      else problems.push('Section ' + (i + 1) + ' names a viewer that is not an id, or one named before: left out.');
+    });
+    value.sections.push({ title: showcaseText(s.title, GALLERY_LIMITS.section) || 'Section ' + (i + 1), viewers: ids });
+  });
+  return { value, problems, newer };
 }
 // ---------- writing a few input cells into a prebuilt workbook (shared: src/shared/xlsx-patch.js) ----------
 // The showcase viewer's ⬇ Excel (phase V4 of docs/viewer-brief.md): a viewer carries the
@@ -8290,7 +8355,7 @@ const ZOOM_MIN = 0.1, ZOOM_MAX = 4, ZOOM_STEP = 1.25;
 // shown: decision 3, visitors don't change the periods); state.canvasId: the canvas shown;
 // state.layout / state.texts: its drawing; state.views: zoom and pan per canvas.
 // state.moved: key → a number per period, the inputs the Board's sliders or scenario moved
-// (06-board.js); state.viewName: 'board' or 'logic'.
+// (06-board.js); state.viewName: 'board', 'logic' or 'both' (side by side, 03b-layout.js).
 const state = { model: null, vm: null, showcase: null, shown: null, period: 0, canvasId: null, layout: null, texts: null,
   views: new Map(), card: null, modelJson: '', moved: new Map(), viewName: 'logic', loads: 0 };
 
@@ -8341,23 +8406,29 @@ async function showModel(m, showcase){
   renderCanvasList();
   showView(read ? 'board' : 'logic', { first: true });
   if(read){ renderBoard(); await restoreState(); }
+  syncBothTab();
+  if(read) await restoreLayout();
   state.loads++; // how many models have been shown (the tests wait for the next)
   return true;
 }
 
-// The Board or the Logic view (tabs at the top; at the bottom on a phone).
+// The Board or the Logic view (tabs at the top; at the bottom on a phone), or both side by side
+// on a wide screen (phase V6, 03b-layout.js).
 function showView(name, opts){
-  const onBoard = name === 'board' && boardsShown;
-  state.viewName = onBoard ? 'board' : 'logic';
-  $('boardView').classList.toggle('hidden', !onBoard);
+  const both = name === 'both' && boardsShown && bothFits();
+  const onBoard = !both && name === 'board' && boardsShown;
+  state.viewName = both ? 'both' : onBoard ? 'board' : 'logic';
+  $('boardView').classList.toggle('hidden', !(onBoard || both));
   $('logic').classList.toggle('hidden', onBoard);
   const several = !!(state.shown && state.shown.canvases.length > 1);
   $('canvasTabs').classList.toggle('hidden', onBoard || !several);
   $('btnCanvasMenu').classList.toggle('hidden', onBoard || !several);
-  [['tabBoard', 'phoneTabBoard', true], ['tabLogic', 'phoneTabLogic', false]].forEach(([a, b, isBoard]) => {
-    [a, b].forEach(id => $(id).setAttribute('aria-selected', isBoard === onBoard ? 'true' : 'false'));
+  [['tabBoard', 'phoneTabBoard', 'board'], ['tabLogic', 'phoneTabLogic', 'logic']].forEach(([a, b, view]) => {
+    [a, b].forEach(id => $(id).setAttribute('aria-selected', state.viewName === view ? 'true' : 'false'));
   });
+  $('tabBoth').setAttribute('aria-selected', both ? 'true' : 'false');
   document.body.classList.toggle('on-board', onBoard);
+  document.body.classList.toggle('both', both);
   if(onBoard){ closeCard(); closeCanvasMenu(); return true; }
   if(boardsShown) setLogicNumbers(null); // the Board's numbers (06-board.js)
   if(opts && opts.first) showCanvas(state.shown.start, { quiet: true });
@@ -8563,13 +8634,72 @@ function wireStage(){
   document.addEventListener('keydown', (ev) => {
     if(!$('confirmBox').classList.contains('hidden')) return;
     if(ev.key === 'Escape'){ closeCard(); closeCanvasMenu(); return; }
-    if(state.viewName !== 'logic') return;
+    if(!logicShown()) return;
     if(!state.vm || (ev.target && /^(INPUT|BUTTON|SELECT|TEXTAREA)$/.test(ev.target.tagName) && ev.key !== '+' && ev.key !== '-')) return;
     if(ev.key === '+' || ev.key === '='){ zoomCentre(ZOOM_STEP); ev.preventDefault(); }
     else if(ev.key === '-'){ zoomCentre(1 / ZOOM_STEP); ev.preventDefault(); }
     else if(ev.key === '0'){ fitView(); ev.preventDefault(); }
   });
-  window.addEventListener('resize', () => { if(state.vm && state.viewName === 'logic' && state.canvasId && !state.views.has(state.canvasId)) fitView(); });
+  window.addEventListener('resize', () => { if(state.vm && logicShown() && state.canvasId && !state.views.has(state.canvasId)) fitView(); });
+}
+// ============================================================
+// Phase V6 of docs/viewer-brief.md: the Board and the Logic side by side, and a viewer served
+// from the site's gallery.
+// - **Both** (a third tab beside Board | Logic, from BOTH_MIN_WIDTH pixels wide — an iPad held
+//   sideways, a computer — never on a phone): the Board on the left, the Logic on the right,
+//   which follows every slider as it does (logicFollows, 06-board.js). Not the default; the
+//   choice is kept on this device (`viewer-layout` in the fmShowcase store,
+//   docs/architecture/storage.md) and comes back when the window is wide enough. A window made
+//   narrower goes back to the Board.
+// - **A viewer in the gallery** (the page at /gallery/v/<id> on the site, written by
+//   tools/build-gallery.js): "← Gallery", back to the gallery's page, and, where the
+//   device has a share sheet, "⇪ Share link", which hands the sheet this page's address — the
+//   device's own sheet; the page sends nothing. Neither exists anywhere else (from disk, in the
+//   bare app).
+// ============================================================
+const BOTH_MIN_WIDTH = 1180;
+const LAYOUT_KEY = 'viewer-layout';
+
+function bothFits(){ return !onPhone && window.innerWidth >= BOTH_MIN_WIDTH; }
+const logicShown = () => state.viewName === 'logic' || state.viewName === 'both';
+
+// The Both tab shown when it can be used; a window too narrow for it goes back to the Board.
+function syncBothTab(){
+  const can = boardsShown && bothFits();
+  $('tabBoth').classList.toggle('hidden', !can);
+  if(!can && state.viewName === 'both') showView('board');
+}
+function rememberLayout(){
+  try{ viewerStore.put(LAYOUT_KEY, state.viewName === 'both' ? 'both' : '').catch(() => {}); }catch(e){ /* not kept: fine */ }
+}
+async function restoreLayout(){
+  if(!boardsShown || !bothFits() || state.viewName !== 'board') return;
+  let v = '';
+  try{ await viewerStore.ready; v = await viewerStore.get(LAYOUT_KEY); }catch(e){ return; }
+  if(v === 'both' && state.viewName === 'board' && bothFits()) showView('both');
+}
+
+// Served from the site's gallery: /gallery/v/<id> (or .html), over http(s).
+const GALLERY_PAGE = /\/gallery\/v\/[A-Za-z0-9-]+(?:\.html)?$/;
+function inGallery(){ return (location.protocol === 'https:' || location.protocol === 'http:') && GALLERY_PAGE.test(location.pathname); }
+function wireHosted(){
+  if(!inGallery()) return;
+  const back = $('galleryLink');
+  back.classList.remove('hidden');
+  // A button, not a link: the page holds no <a> of its own (a link in it could only be a file's).
+  back.addEventListener('click', () => { location.assign('../'); });
+  if(typeof navigator.share !== 'function') return;
+  const b = $('btnShareLink');
+  b.classList.remove('hidden');
+  b.addEventListener('click', () => {
+    try{ navigator.share({ title: document.title, url: location.href }).catch(() => { /* closed: nothing to do */ }); }
+    catch(e){ notify('This browser can\'t share the link: copy it from the address bar.', 'info', 'share'); }
+  });
+}
+function wireLayout(){
+  $('tabBoth').addEventListener('click', () => { showView('both'); rememberLayout(); });
+  window.addEventListener('resize', () => { if(state.vm) syncBothTab(); });
+  wireHosted();
 }
 // ============================================================
 // A node's card: what it is, its value in every period shown, and how it is worked out — the
@@ -8837,11 +8967,32 @@ function markPicked(){
   const ex = explain(state.card.canvasId, state.card.nodeId, state.period);
   (ex.leaves || []).forEach(l => { if(l.canvasId === state.canvasId){ const e = find(l.nodeId); if(e && e !== me) e.classList.add('reads'); } });
 }
-// Goes to a rectangle: its canvas, the rectangle in the middle, its card open.
+// Goes to a rectangle: its canvas, the rectangle in the middle, its card open (from the Board,
+// a bar's card: the Logic view first).
 function goTo(canvasId, nodeId){
+  if(state.viewName === 'board') showView('logic');
   if(canvasId !== state.canvasId && !showCanvas(canvasId, { keepCard: true })) return false;
   openCard(canvasId, nodeId);
   centreOn(nodeId);
+  return true;
+}
+
+// A bar's card (phase V6): the card of the rectangle a bar shows, opened from the Board by its
+// title — its value in each period shown, how it is worked out, with the Board's numbers — and,
+// on the Board, Show in Logic (to it on its canvas, when that canvas is shown).
+function openBarCard(barId){
+  const b = board && board.items.find(w => w.id === barId && w.kind === 'bar');
+  const rect = b && model.byKey.get(b.key);
+  if(!rect) return false;
+  setLogicNumbers(null); // the Board's numbers (06-board.js)
+  if(!openCard(rect.canvasId, rect.nodeId)) return false;
+  if(state.viewName === 'board'){
+    const go = make('button', 'card-show-logic', 'Show in Logic');
+    go.type = 'button';
+    if(state.shown.canvases.includes(rect.canvasId)) go.addEventListener('click', () => goTo(rect.canvasId, rect.nodeId));
+    else { go.disabled = true; go.title = 'Its canvas is not shown here'; }
+    $('cardBody').appendChild(go);
+  }
   return true;
 }
 
@@ -9000,7 +9151,12 @@ function barFrame(b){
   const w = make('div', 'widget bar-widget');
   w.dataset.id = b.id;
   const head = make('div', 'widget-head');
-  head.append(make('span', 'widget-title', rect ? rect.name : ''), traceButton(b));
+  // Its title opens its card (phase V6, 04-card.js): its value in each period, how it is worked out.
+  const title = make('button', 'widget-title bar-card-open', rect ? rect.name : '');
+  title.type = 'button';
+  title.title = 'How it is worked out';
+  title.addEventListener('click', () => openBarCard(b.id));
+  head.append(title, traceButton(b));
   w.appendChild(head);
   if(rect && rect.unit) w.appendChild(make('div', 'widget-unit', 'In ' + rect.unit));
   w.append(make('div', 'bar-chart-host'), make('ul', 'bar-errors'));
@@ -9578,14 +9734,17 @@ const VIEWER_HELP_TOPICS = [
         'Pick the viewer\'s .html file in Files.',
       ] },
       { p: 'It opens exactly as it would on a computer. Only the model and showcase inside the file are read; nothing in it runs, and nothing is sent anywhere. A page that isn\'t a viewer made by fmIDE is refused.' },
+      { p: 'A viewer in the gallery on the website needs none of this: tap its link and it runs in Safari. ⇪ Share link at the top sends its address with your device\'s share sheet.' },
       { tip: 'The same Open… takes a model saved by fmIDE (.fmide or .json) and a showcase file, too.' },
     ] },
   { id: 'board', group: 'board', title: 'The Board',
-    keywords: 'bars charts board tabs waterfall columns lines tornado spider',
+    keywords: 'bars charts board tabs waterfall columns lines tornado spider both side by side ipad sideways card',
     summary: 'The bars and charts the model\'s author chose.',
     body: [
       { p: 'Each bar shows a rectangle of the model in each period; each chart shows several. When a slider changes them, the dashed outlines show the model\'s own numbers and the small labels the difference.' },
       { p: 'When the author made several boards, tabs at the top switch between them.' },
+      { p: 'Tap a bar\'s title to see how its number is worked out: its card shows its value in each period and the numbers it reads, and Show in Logic goes to it on its canvas.' },
+      { p: 'On a wide screen (an iPad held sideways, a computer), Both at the top shows the Board and the Logic side by side: the canvas\'s numbers follow each slider as you move it. This device remembers the choice. On a phone held sideways, the bars and the sliders sit side by side.' },
       { tip: 'A grey label "+2 at 0" under a chart\'s key lists the rectangles that are 0 in every period shown.' },
       { see: ['sliders', 'scenarios', 'trace'] },
     ] },
@@ -9633,6 +9792,7 @@ const VIEWER_HELP_TOPICS = [
     summary: 'Tap a rectangle to see its numbers and formula.',
     body: [
       { p: 'Tapping a rectangle opens its card: its value in each period, and how it is worked out, with names and with numbers ("Revenue = Price × Volume: 12 × 1,000"). Tap a number it reads to go to it, on whatever canvas it is.' },
+      { p: 'On the Board, a bar\'s title opens the same card for the rectangle it shows.' },
     ] },
   { id: 'excel', group: 'board', title: 'Download the model in Excel',
     keywords: 'excel workbook download xlsx spreadsheet scenario sliders dashboard',
@@ -9647,7 +9807,7 @@ const VIEWER_HELP_TOPICS = [
     keywords: 'kept saved remember storage reset privacy offline sent',
     summary: 'Your sliders, on this device only.',
     body: [
-      { p: 'Where you left the sliders, the scenario and the board are kept in this browser, so opening the page again shows them. Reset forgets them. In a private window nothing is kept.' },
+      { p: 'Where you left the sliders, the scenario and the board are kept in this browser, so opening the page again shows them. Reset forgets them. Whether you chose Both is kept too. In a private window nothing is kept.' },
       { p: 'Nothing is ever sent anywhere: the page works offline, and the model is inside it.' },
     ] },
 ];
@@ -9838,10 +9998,10 @@ window.fmViewer = {
       mark: !$('mark').classList.contains('hidden'), view: state.viewName, hasBoard: boardsShown, loads: state.loads };
   },
   canvases(){ return state.vm ? state.shown.canvases.map(id => ({ id, name: canvasName(id) })) : []; },
-  showCanvas(id){ if(state.viewName !== 'logic') showView('logic'); return showCanvas(String(id)); },
-  openCard(canvasId, nodeId){ if(state.viewName !== 'logic') showView('logic'); if(canvasId !== state.canvasId && !showCanvas(String(canvasId), { keepCard: true })) return false; return openCard(String(canvasId), String(nodeId)); },
+  showCanvas(id){ if(!logicShown()) showView('logic'); return showCanvas(String(id)); },
+  openCard(canvasId, nodeId){ if(!logicShown()) showView('logic'); if(canvasId !== state.canvasId && !showCanvas(String(canvasId), { keepCard: true })) return false; return openCard(String(canvasId), String(nodeId)); },
   closeCard(){ closeCard(); },
-  goTo(canvasId, nodeId){ if(state.viewName !== 'logic') showView('logic'); return goTo(String(canvasId), String(nodeId)); },
+  goTo(canvasId, nodeId){ if(!logicShown()) showView('logic'); return goTo(String(canvasId), String(nodeId)); },
   // A node's number in a period (from 0), with the Board's sliders: the number, or { error }, or null.
   value(canvasId, nodeId, period){
     if(!state.vm) return null;
@@ -9922,6 +10082,14 @@ window.fmViewer = {
   // The workbook as ⬇ Excel gives it, without downloading: a Promise of { fileName, bytes: [numbers], line }.
   async excelBytes(){ const made = await excelBytesNow(); return { fileName: made.fileName, bytes: Array.from(made.bytes), line: made.line }; },
   excelNotes(){ return excelBook ? excelBook.notes.slice() : []; },
+
+  // ---- phase V6 ----
+  // A bar's card (as its title's click opens it): true when it opened.
+  openBarCard(id){ return openBarCard(String(id)); },
+  // Whether Both (Board and Logic side by side) can be shown in this window.
+  bothFits(){ return !!(boardsShown && bothFits()); },
+  // Whether this page is a viewer served from the site's gallery (← Gallery, ⇪ Share link).
+  inGallery(){ return inGallery(); },
 };
 
 wireFiles();
@@ -9932,6 +10100,9 @@ wireHelp();
 wireExcel();
 $('tabBoard').addEventListener('click', () => showView('board'));
 $('tabLogic').addEventListener('click', () => showView('logic'));
+$('tabBoard').addEventListener('click', () => rememberLayout());
+$('tabLogic').addEventListener('click', () => rememberLayout());
+wireLayout();
 $('phoneTabBoard').addEventListener('click', () => showView('board'));
 $('phoneTabLogic').addEventListener('click', () => showView('logic'));
 window.addEventListener('pagehide', () => saveStateNow());

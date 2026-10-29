@@ -2,6 +2,14 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmShowcase: the gallery and finishing (phase V6)
+- The site's `/gallery` (`tools/build-gallery.js`), from a folder of made viewers (`--gallery DIR`, else `gallery/`): a plain page with no script, a card per viewer in `gallery.json`'s sections (kind `fmIDE-gallery` 1), each viewer at `/gallery/v/<id>` rebuilt with today's viewer page from its data blocks; two policies on paths that never overlap. `npm run make-viewers` gains `--pictures` and `--gallery`.
+- The viewer's page connects to nothing (`connect-src 'none'`, `/fmViewer.html` and the gallery's viewers).
+- The viewer: a bar's title opens its card (Show in Logic); **Both**, the Board and the Logic side by side from 1180 pixels wide (kept on the device, `viewer-layout`); a phone held sideways shows the bars and sliders side by side; a gallery viewer has ← Gallery and ⇪ Share link.
+- Fixed (from V5): the batch's boards are board file 9 with no bar keeping its own periods, so a recipe's `periods` are what the bars show.
+- What's new *A gallery of showcase viewers on the website*; the manual's lesson 8.4; Help in both apps.
+- Tests: new group 98 (Node, a stand-in page); group 91 the site with a gallery (and the viewer's `connect-src 'none'`); group 93 the card, Both, sideways; group 96 `--pictures --gallery`. Branch `claude/viewer-v6`.
+
 ## fmShowcase: many viewers at once (phase V5)
 - `npm run make-viewers -- --out DIR [--recipe R] [--auto] [--no-excel] [--excel-style S] [--write-recipe F] MODELS…` (`tools/make-viewers.js`, its own work in `tools/viewer-batch.js`): a viewer per model, the same page Make Showcase Viewer… writes, with its Excel workbook made by ExcelExporter in a browser without a window (`window.fmExcel.viewerWorkbook`, which gains `style` and `base64`); `report.json` (kind `fmIDE-viewer-report` 1) and `report.txt`. Each model shows the recipe's choices (rectangles and canvases by name), else its document's showcase, else its fmGraph boards, else `auto`, else the logic only. Measured: a small model's viewer 572 KB; 100 models with Excel in 58 s, 55 MB.
 - The recipe form gains `canvases` by name, `play`, `periods` and `excel.file` with `{model}` (still `fmIDE-showcase` version 1). `src/shared/showcase-boards.js` (new, Apache): the template form placed by name (fmGraph's boards from templates use it now, unchanged in behaviour), `auto`. `madeViewerBlocks` reads a made viewer's blocks in Node.

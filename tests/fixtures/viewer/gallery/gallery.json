@@ -1,0 +1,15 @@
+{
+ "kind": "fmIDE-gallery",
+ "version": 1,
+ "title": "Models for the course",
+ "intro": "Three small models.",
+ "sections": [
+  {
+   "title": "Week 1",
+   "viewers": [
+    "loan",
+    "shop-b"
+   ]
+  }
+ ]
+}

@@ -144,6 +144,8 @@ A browser window opens; sign in with the account that holds the `fmide` project.
 
 **A preview first** (what a pull request's preview link used to be): after `npm run build`, run `npx --yes wrangler@4 pages deploy site --project-name=fmide --branch=my-change`. It prints a preview address; the live site is not touched.
 
+**The showcase gallery** (phase V6): `npm run build` and `npm run deploy` put `/gallery` on the site when `gallery/` holds made viewers (or give `node tools/build.js --site site --gallery DIR`). `gallery/` is meant to be a repository of its own on Codeberg, added as a submodule (`git submodule add <its address> gallery`); until then any folder works with `--gallery`.
+
 **What no longer happens by itself:**
 - The hourly rebuild that published newly merged library packs. Publish by hand after the library changes.
 - Pull-request previews.

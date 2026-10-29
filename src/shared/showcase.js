@@ -544,3 +544,34 @@ export function showcaseDownloadName(file, suffix){
   if(!suffix) return base;
   return showcaseFileName(base.replace(/\.xlsx$/i, '') + suffix) || base;
 }
+
+// ---------- the gallery's list (phase V6): gallery.json beside the viewers ----------
+// kind "fmIDE-gallery", version 1 (docs/file-formats.md): { title, intro, sections: [{ title,
+// viewers: [ids] }] }, every part optional. Read by tools/build-gallery.js, which writes the
+// site's /gallery page from a folder of made viewers; the texts are shown escaped, the ids only
+// compared with the viewers' own.
+export const GALLERY_KIND = 'fmIDE-gallery';
+export const GALLERY_FORMATS = { 'fmIDE-gallery': { current: 1, label: 'showcase gallery list' } };
+export const GALLERY_MIGRATIONS = { 'fmIDE-gallery': {} };
+export const GALLERY_LIMITS = { title: 80, intro: 600, sections: 50, section: 80, viewers: 1000 };
+// Reads a parsed gallery.json: { error } or { value: { title, intro, sections: [{ title, viewers }] },
+// problems, newer }.
+export function cleanGalleryList(raw){
+  if(!isObject(raw) || raw.kind !== GALLERY_KIND) return { error: 'gallery.json is not a gallery list (kind "' + GALLERY_KIND + '").' };
+  const data = JSON.parse(JSON.stringify(raw));
+  const { newer } = upgradeFileData(data, GALLERY_KIND, GALLERY_FORMATS, GALLERY_MIGRATIONS);
+  const problems = [];
+  const value = { title: showcaseText(data.title, GALLERY_LIMITS.title), intro: showcaseText(data.intro, GALLERY_LIMITS.intro, true), sections: [] };
+  if(data.sections !== undefined && !Array.isArray(data.sections)) problems.push('"sections" is not a list: every viewer is listed by its title.');
+  const seen = new Set();
+  (Array.isArray(data.sections) ? data.sections : []).slice(0, GALLERY_LIMITS.sections).forEach((s, i) => {
+    if(!isObject(s)){ problems.push('Section ' + (i + 1) + ' is not a section: left out.'); return; }
+    const ids = [];
+    (Array.isArray(s.viewers) ? s.viewers : []).slice(0, GALLERY_LIMITS.viewers).forEach(id => {
+      if(typeof id === 'string' && SHOWCASE_ID.test(id) && !seen.has(id)){ seen.add(id); ids.push(id); }
+      else problems.push('Section ' + (i + 1) + ' names a viewer that is not an id, or one named before: left out.');
+    });
+    value.sections.push({ title: showcaseText(s.title, GALLERY_LIMITS.section) || 'Section ' + (i + 1), viewers: ids });
+  });
+  return { value, problems, newer };
+}

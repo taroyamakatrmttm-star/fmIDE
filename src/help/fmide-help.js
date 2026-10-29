@@ -458,6 +458,7 @@ const HELP_TOPICS = [
       { p: 'On an iPhone or iPad, a viewer saved in Files opens only in a preview, which can\'t run it. To open one there: in Safari, go to https://fmide.pages.dev/fmViewer, tap Choose, and pick the file. It opens just as it does on a computer.' },
       { p: 'Your choices are kept in the document: {cmd:saveDocument} keeps them, and making the viewer again after you change the model starts from them. A canvas or board added since then comes unticked, and one that is gone is left out and said.' },
       { p: 'Hiding is not secrecy: everything in the model goes into the file, shown or not, so someone determined can read it all. Don\'t share a confidential model this way.' },
+      { p: 'To share with someone on an iPhone or iPad, put the viewer in the gallery on the website and send its link: it runs in Safari, with nothing to save. The gallery is built with the site from a folder of made viewers (the user manual, lesson 8.4).' },
       { p: 'Many models at once: on a computer, npm run make-viewers makes a viewer for every model in a folder, with a recipe naming the sliders and bars by name (or chosen for each model), each with its workbook, and a report of anything not found. See the user manual, lesson 8.3.' },
       { tip: 'Opening the page shows exactly what a visitor will see. What a visitor changes stays on their own device, and Reset puts it back.' },
       { see: ['fmgraph', 'documents'] },

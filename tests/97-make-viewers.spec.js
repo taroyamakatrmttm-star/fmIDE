@@ -38,6 +38,9 @@ test('a recipe placed by name in each model: its canvases, sliders, bars and cha
   expect(a.id).toBe('shop-a-the-shop');
   expect(sa.canvases).toEqual({ show: ['cShop', 'cSum'], start: 'cShop' });
   expect(sa.periods).toEqual({ mode: 'range', from: 0, to: 2 });
+  // Board file 9 with no bar keeping its own periods: the recipe's periods are what every bar shows.
+  expect(sa.boards.version).toBe(9);
+  expect(sa.boards.boards[0].items.some(w => 'ownPeriod' in w)).toBe(false);
   expect(sa.description).toBe('Move the price and watch the profit.');
   expect(sliderNames(sa.boards)).toEqual(['Price', 'Volume']);
   expect(barNames(sa.boards)).toEqual(['Profit', 'Margin']); // Margin named without its canvas: unique in the model

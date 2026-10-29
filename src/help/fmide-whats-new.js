@@ -12,6 +12,16 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'showcase-gallery', date: '2026-10-29', title: 'A gallery of showcase viewers on the website',
+    summary: 'Viewers can be published in a gallery on the site, to share with a link, and they work better on an iPad and a phone.',
+    what: [
+      'The site has a gallery page of showcase viewers, built from a folder of viewers you made. Each opens from a link and runs in the browser: on an iPhone or iPad, that is the way to share one. ⇪ Share link at the top of a gallery viewer sends its address.',
+      'In any viewer, a bar\'s title opens its card: how its number is worked out, and Show in Logic. On a wide screen, Both shows the Board and the Logic side by side. On a phone held sideways, the bars and the sliders sit side by side.',
+    ],
+    why: 'A viewer saved on an iPhone or iPad opens only in a preview that can\'t run it, so sharing a file there didn\'t work.',
+    how: ['Make viewers with npm run make-viewers -- --pictures --gallery gallery …, then publish the site.', 'Send the viewer\'s address, https://fmide.pages.dev/gallery/v/<its name>.'],
+    notes: ['Every viewer in the gallery runs the current viewer, and connects to nothing.'],
+    see: ['showcase-viewer'] },
   { id: 'showcase-many', date: '2026-10-29', title: 'Showcase viewers for many models at once, and Choose for me',
     summary: 'A model with no fmGraph board can have one chosen for it, and a whole folder of models can become viewers in one go.',
     what: [

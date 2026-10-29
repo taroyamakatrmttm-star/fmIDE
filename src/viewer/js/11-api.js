@@ -25,10 +25,10 @@ window.fmViewer = {
       mark: !$('mark').classList.contains('hidden'), view: state.viewName, hasBoard: boardsShown, loads: state.loads };
   },
   canvases(){ return state.vm ? state.shown.canvases.map(id => ({ id, name: canvasName(id) })) : []; },
-  showCanvas(id){ if(state.viewName !== 'logic') showView('logic'); return showCanvas(String(id)); },
-  openCard(canvasId, nodeId){ if(state.viewName !== 'logic') showView('logic'); if(canvasId !== state.canvasId && !showCanvas(String(canvasId), { keepCard: true })) return false; return openCard(String(canvasId), String(nodeId)); },
+  showCanvas(id){ if(!logicShown()) showView('logic'); return showCanvas(String(id)); },
+  openCard(canvasId, nodeId){ if(!logicShown()) showView('logic'); if(canvasId !== state.canvasId && !showCanvas(String(canvasId), { keepCard: true })) return false; return openCard(String(canvasId), String(nodeId)); },
   closeCard(){ closeCard(); },
-  goTo(canvasId, nodeId){ if(state.viewName !== 'logic') showView('logic'); return goTo(String(canvasId), String(nodeId)); },
+  goTo(canvasId, nodeId){ if(!logicShown()) showView('logic'); return goTo(String(canvasId), String(nodeId)); },
   // A node's number in a period (from 0), with the Board's sliders: the number, or { error }, or null.
   value(canvasId, nodeId, period){
     if(!state.vm) return null;
@@ -109,6 +109,14 @@ window.fmViewer = {
   // The workbook as ⬇ Excel gives it, without downloading: a Promise of { fileName, bytes: [numbers], line }.
   async excelBytes(){ const made = await excelBytesNow(); return { fileName: made.fileName, bytes: Array.from(made.bytes), line: made.line }; },
   excelNotes(){ return excelBook ? excelBook.notes.slice() : []; },
+
+  // ---- phase V6 ----
+  // A bar's card (as its title's click opens it): true when it opened.
+  openBarCard(id){ return openBarCard(String(id)); },
+  // Whether Both (Board and Logic side by side) can be shown in this window.
+  bothFits(){ return !!(boardsShown && bothFits()); },
+  // Whether this page is a viewer served from the site's gallery (← Gallery, ⇪ Share link).
+  inGallery(){ return inGallery(); },
 };
 
 wireFiles();
@@ -119,6 +127,9 @@ wireHelp();
 wireExcel();
 $('tabBoard').addEventListener('click', () => showView('board'));
 $('tabLogic').addEventListener('click', () => showView('logic'));
+$('tabBoard').addEventListener('click', () => rememberLayout());
+$('tabLogic').addEventListener('click', () => rememberLayout());
+wireLayout();
 $('phoneTabBoard').addEventListener('click', () => showView('board'));
 $('phoneTabLogic').addEventListener('click', () => showView('logic'));
 window.addEventListener('pagehide', () => saveStateNow());

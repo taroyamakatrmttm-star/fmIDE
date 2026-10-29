@@ -1300,6 +1300,17 @@ The sample `viewer/every-widget.fmide` and its showcase.
 - **`recipeFrom`**: a recipe from a viewer's choices, by name, reads with no problem and chooses the same when run again; the report's kind, counts, bytes and words.
 - **The recipe's fields of phase V5** (`cleanShowcaseRecipe`): canvases by name (repeats and non-names left out), play, periods, `excel.file` with `{model}`, bad values each said; the old recipe sample `formats/showcase-recipe-v1.json` reads with no problem; a one-model showcase refused as a recipe.
 
+### 98. The showcase gallery (`tests/98-gallery.spec.js`; Node; phase V6 of `docs/viewer-brief.md`)
+`tools/build-gallery.js` with a stand-in for the viewer's page. Samples `viewer/gallery/`: `loan` (with `loan.png`), `shop-b` (a workbook block), `markup` (markup in every text), made with an older, smaller page; `gallery.json` (Week 1: loan, shop-b).
+- **The page**: the files written; no script and no handler in any tag; Week 1 then More, the cards in that order; every text escaped; every link and file name an id's (or the page's own); Download with `download`; the picture as it was.
+- **Each viewer rebuilt**: its scripts exactly today's page's (the older page's gone), its model, showcase id and workbook block as they were, no `<` in its blocks.
+- **Refused, nothing written** (`GalleryError`): a page that isn't a viewer, the bare page, a recipe, an unreadable model, a workbook packed otherwise, an id twice, a list naming a viewer not there, a list that isn't JSON, a picture that isn't a PNG; a viewer without an id takes its file's name; `findGallery`.
+- **The policy**: the page's rule (`default-src 'none'`, no `script-src`) and the viewers' (the page's policy given) on paths no page is under twice; four paths whatever the number of viewers.
+- **`gallery.json`** (`cleanGalleryList`): sections in order, texts cut, bad entries each said (4), another kind refused, a newer version flagged; the old-version sample `formats/gallery-v1.json` reads with no problem.
+- **In group 91**: the site with the sample gallery — the same version, `_headers` and offline list as without, at most 100 rules, the gallery page's policy `default-src 'none'` and the viewers' the viewer's; the page's cards, markup as text; Open to `/gallery/v/loan` running today's viewer (the served page equal to `/fmViewer.html` but its blocks), ⇪ Share link handing the share sheet its address, ← Gallery back; the viewer with a workbook shows ⬇ Excel; no policy refusal, no page error, nothing requested elsewhere; `/fmViewer.html`'s `connect-src 'none'`.
+- **In group 93**: a bar's title opening its card with the Board's numbers, Show in Logic, `fmViewer.openBarCard`; Both at 1366 × 900 (side by side, the Logic following a slider with its ring, kept after a reload, gone under 1180 pixels, never on a phone); a phone held sideways (844 × 390: the bars left of a static slider list, rows not overlapping, the side scrolling).
+- **In group 96**: `--pictures --gallery` (960 × 600 PNGs, the folder `buildGallery` takes with the real page).
+
 ## Deliverable
 - The suite, `package.json`, the GitHub Actions workflow, and a short `tests/README.md` on how to run it and how to update snapshots.
 - Everything passes against the current apps. If a check fails against the current apps, report it rather than weakening the test.

@@ -31,14 +31,17 @@ const VIEWER_HELP_TOPICS = [
         'Pick the viewer\'s .html file in Files.',
       ] },
       { p: 'It opens exactly as it would on a computer. Only the model and showcase inside the file are read; nothing in it runs, and nothing is sent anywhere. A page that isn\'t a viewer made by fmIDE is refused.' },
+      { p: 'A viewer in the gallery on the website needs none of this: tap its link and it runs in Safari. ⇪ Share link at the top sends its address with your device\'s share sheet.' },
       { tip: 'The same Open… takes a model saved by fmIDE (.fmide or .json) and a showcase file, too.' },
     ] },
   { id: 'board', group: 'board', title: 'The Board',
-    keywords: 'bars charts board tabs waterfall columns lines tornado spider',
+    keywords: 'bars charts board tabs waterfall columns lines tornado spider both side by side ipad sideways card',
     summary: 'The bars and charts the model\'s author chose.',
     body: [
       { p: 'Each bar shows a rectangle of the model in each period; each chart shows several. When a slider changes them, the dashed outlines show the model\'s own numbers and the small labels the difference.' },
       { p: 'When the author made several boards, tabs at the top switch between them.' },
+      { p: 'Tap a bar\'s title to see how its number is worked out: its card shows its value in each period and the numbers it reads, and Show in Logic goes to it on its canvas.' },
+      { p: 'On a wide screen (an iPad held sideways, a computer), Both at the top shows the Board and the Logic side by side: the canvas\'s numbers follow each slider as you move it. This device remembers the choice. On a phone held sideways, the bars and the sliders sit side by side.' },
       { tip: 'A grey label "+2 at 0" under a chart\'s key lists the rectangles that are 0 in every period shown.' },
       { see: ['sliders', 'scenarios', 'trace'] },
     ] },
@@ -86,6 +89,7 @@ const VIEWER_HELP_TOPICS = [
     summary: 'Tap a rectangle to see its numbers and formula.',
     body: [
       { p: 'Tapping a rectangle opens its card: its value in each period, and how it is worked out, with names and with numbers ("Revenue = Price × Volume: 12 × 1,000"). Tap a number it reads to go to it, on whatever canvas it is.' },
+      { p: 'On the Board, a bar\'s title opens the same card for the rectangle it shows.' },
     ] },
   { id: 'excel', group: 'board', title: 'Download the model in Excel',
     keywords: 'excel workbook download xlsx spreadsheet scenario sliders dashboard',
@@ -100,7 +104,7 @@ const VIEWER_HELP_TOPICS = [
     keywords: 'kept saved remember storage reset privacy offline sent',
     summary: 'Your sliders, on this device only.',
     body: [
-      { p: 'Where you left the sliders, the scenario and the board are kept in this browser, so opening the page again shows them. Reset forgets them. In a private window nothing is kept.' },
+      { p: 'Where you left the sliders, the scenario and the board are kept in this browser, so opening the page again shows them. Reset forgets them. Whether you chose Both is kept too. In a private window nothing is kept.' },
       { p: 'Nothing is ever sent anywhere: the page works offline, and the model is inside it.' },
     ] },
 ];

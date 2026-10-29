@@ -10,7 +10,7 @@ const ZOOM_MIN = 0.1, ZOOM_MAX = 4, ZOOM_STEP = 1.25;
 // shown: decision 3, visitors don't change the periods); state.canvasId: the canvas shown;
 // state.layout / state.texts: its drawing; state.views: zoom and pan per canvas.
 // state.moved: key → a number per period, the inputs the Board's sliders or scenario moved
-// (06-board.js); state.viewName: 'board' or 'logic'.
+// (06-board.js); state.viewName: 'board', 'logic' or 'both' (side by side, 03b-layout.js).
 const state = { model: null, vm: null, showcase: null, shown: null, period: 0, canvasId: null, layout: null, texts: null,
   views: new Map(), card: null, modelJson: '', moved: new Map(), viewName: 'logic', loads: 0 };
 
@@ -61,23 +61,29 @@ async function showModel(m, showcase){
   renderCanvasList();
   showView(read ? 'board' : 'logic', { first: true });
   if(read){ renderBoard(); await restoreState(); }
+  syncBothTab();
+  if(read) await restoreLayout();
   state.loads++; // how many models have been shown (the tests wait for the next)
   return true;
 }
 
-// The Board or the Logic view (tabs at the top; at the bottom on a phone).
+// The Board or the Logic view (tabs at the top; at the bottom on a phone), or both side by side
+// on a wide screen (phase V6, 03b-layout.js).
 function showView(name, opts){
-  const onBoard = name === 'board' && boardsShown;
-  state.viewName = onBoard ? 'board' : 'logic';
-  $('boardView').classList.toggle('hidden', !onBoard);
+  const both = name === 'both' && boardsShown && bothFits();
+  const onBoard = !both && name === 'board' && boardsShown;
+  state.viewName = both ? 'both' : onBoard ? 'board' : 'logic';
+  $('boardView').classList.toggle('hidden', !(onBoard || both));
   $('logic').classList.toggle('hidden', onBoard);
   const several = !!(state.shown && state.shown.canvases.length > 1);
   $('canvasTabs').classList.toggle('hidden', onBoard || !several);
   $('btnCanvasMenu').classList.toggle('hidden', onBoard || !several);
-  [['tabBoard', 'phoneTabBoard', true], ['tabLogic', 'phoneTabLogic', false]].forEach(([a, b, isBoard]) => {
-    [a, b].forEach(id => $(id).setAttribute('aria-selected', isBoard === onBoard ? 'true' : 'false'));
+  [['tabBoard', 'phoneTabBoard', 'board'], ['tabLogic', 'phoneTabLogic', 'logic']].forEach(([a, b, view]) => {
+    [a, b].forEach(id => $(id).setAttribute('aria-selected', state.viewName === view ? 'true' : 'false'));
   });
+  $('tabBoth').setAttribute('aria-selected', both ? 'true' : 'false');
   document.body.classList.toggle('on-board', onBoard);
+  document.body.classList.toggle('both', both);
   if(onBoard){ closeCard(); closeCanvasMenu(); return true; }
   if(boardsShown) setLogicNumbers(null); // the Board's numbers (06-board.js)
   if(opts && opts.first) showCanvas(state.shown.start, { quiet: true });
@@ -283,11 +289,11 @@ function wireStage(){
   document.addEventListener('keydown', (ev) => {
     if(!$('confirmBox').classList.contains('hidden')) return;
     if(ev.key === 'Escape'){ closeCard(); closeCanvasMenu(); return; }
-    if(state.viewName !== 'logic') return;
+    if(!logicShown()) return;
     if(!state.vm || (ev.target && /^(INPUT|BUTTON|SELECT|TEXTAREA)$/.test(ev.target.tagName) && ev.key !== '+' && ev.key !== '-')) return;
     if(ev.key === '+' || ev.key === '='){ zoomCentre(ZOOM_STEP); ev.preventDefault(); }
     else if(ev.key === '-'){ zoomCentre(1 / ZOOM_STEP); ev.preventDefault(); }
     else if(ev.key === '0'){ fitView(); ev.preventDefault(); }
   });
-  window.addEventListener('resize', () => { if(state.vm && state.viewName === 'logic' && state.canvasId && !state.views.has(state.canvasId)) fitView(); });
+  window.addEventListener('resize', () => { if(state.vm && logicShown() && state.canvasId && !state.views.has(state.canvasId)) fitView(); });
 }
