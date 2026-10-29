@@ -1,0 +1,64 @@
+{
+ "kind": "fmIDE-viewer-workbook",
+ "version": 1,
+ "packed": "deflate-raw",
+ "size": 6388,
+ "workbook": "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",
+ "cells": {
+  "case": {
+   "sheet": "Scenarios",
+   "cell": "C2"
+  },
+  "cases": [
+   {
+    "name": "High rate",
+    "case": 2,
+    "missing": 0
+   },
+   {
+    "name": "Low rate",
+    "case": 3,
+    "missing": 1
+   }
+  ],
+  "sliders": [
+   {
+    "canvasId": "c1",
+    "nodeId": "rate",
+    "name": "Rate",
+    "mode": "set",
+    "periods": {
+     "mode": "all"
+    },
+    "typed": {
+     "sheet": "Dashboard",
+     "cell": "F5"
+    },
+    "use": {
+     "sheet": "Dashboard",
+     "cell": "I5"
+    },
+    "rest": null
+   },
+   {
+    "canvasId": "c1",
+    "nodeId": "term",
+    "name": "Term",
+    "mode": "shift",
+    "periods": {
+     "mode": "range",
+     "from": 1,
+     "to": 3
+    },
+    "typed": {
+     "sheet": "Dashboard",
+     "cell": "F6"
+    },
+    "rest": 0
+   }
+  ]
+ },
+ "notes": [
+  "One slider (inside a block) can't move in Excel."
+ ]
+}

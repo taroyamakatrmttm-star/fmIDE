@@ -93,14 +93,69 @@
     const origin = ownOrigin();
     if(origin && ev.origin !== origin) return;
     const type = ev.data && typeof ev.data === 'object' ? ev.data.type : null;
-    if(type !== 'excel:want-model' && type !== 'excel:attach-layout' && type !== 'excel:layout') return;
+    if(type !== 'excel:want-model' && type !== 'excel:attach-layout' && type !== 'excel:layout'
+      && type !== 'excel:viewer-workbook' && type !== 'excel:viewer-workbook-failed') return;
     // A window this page opened before it was reloaded is still its own: taken back on asking.
     if(!excelWindow){ try{ if(ev.source && ev.source !== window && ev.source.opener === window && ev.source.name === 'fmIDE-ExcelExporter') excelWindow = ev.source; }catch(e){ /* not ours */ } }
     if(!excelWindow || ev.source !== excelWindow) return;
-    if(type === 'excel:want-model') sendModelToExcel(excelWindow);
+    if(type === 'excel:want-model'){ sendModelToExcel(excelWindow); sendViewerWorkbookAsk(); }
+    else if(type === 'excel:viewer-workbook' || type === 'excel:viewer-workbook-failed') takeViewerWorkbook(ev.data);
     else if(type === 'excel:layout') takeExcelLayout(ev.data.text); // the layout changed there (below)
     else askToAttachExcelLayout(ev.data.text); // Layout → Attach to Template… (askToAttachFromApp, below)
   });
+  // ---- a workbook for a showcase viewer (phase V4 of docs/viewer-brief.md) ----
+  // Make Showcase Viewer… with "Include an Excel workbook" asks ExcelExporter, in its window as
+  // Open ExcelExporter opens it, for the model's workbook with the showcase's boards used on it
+  // ('fmIDE:viewer-workbook': the model as sendModelToExcel sends it, and the boards). Its answer
+  // is the workbook's bytes and cell map ('excel:viewer-workbook'), or why not
+  // ('excel:viewer-workbook-failed'). fmIDE only carries the bytes into the viewer, as data; the
+  // window is closed again when it was opened for this. One ask at a time.
+  const VIEWER_WORKBOOK_WAIT = 60000;
+  let viewerWorkbookAsk = null; // { id, boards, sent, opened, resolve, reject, timer }
+  // ExcelExporter's window, opened now (so the browser treats it as the click's): true when it
+  // was opened for this, false when one was open already; null when the browser blocked it.
+  function excelWindowForViewer(){
+    try{
+      if(excelWindow && excelWindow !== window && !excelWindow.closed && excelWindow.opener === window) return false;
+    }catch(e){ /* open it again */ }
+    try{ sessionStorage.setItem('fmIDE-opened-ExcelExporter', '1'); }catch(e){ /* storage off */ }
+    const w = window.open('ExcelExporter.html', 'fmIDE-ExcelExporter');
+    excelWindow = w || null;
+    return w ? true : null;
+  }
+  // A Promise of { bytes (Uint8Array), map, notes }. `opened`: from excelWindowForViewer.
+  function askExcelForViewerWorkbook(boards, opened){
+    if(opened === null) return Promise.reject(new Error('The browser blocked the ExcelExporter window. Allow pop-ups for fmIDE.'));
+    if(viewerWorkbookAsk) viewerWorkbookAsk.reject(new Error('Asked again.'));
+    return new Promise((resolve, reject) => {
+      const ask = { id: 'vw-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8), boards: boards ? JSON.stringify(boards) : '', sent: false, opened, resolve, reject };
+      const done = () => { clearTimeout(ask.timer); if(viewerWorkbookAsk === ask) viewerWorkbookAsk = null;
+        if(ask.opened){ try{ if(excelWindow && !excelWindow.closed) excelWindow.close(); }catch(e){ /* gone */ } excelWindow = null; } };
+      ask.resolve = (v) => { done(); resolve(v); };
+      ask.reject = (e) => { done(); reject(e); };
+      ask.timer = setTimeout(() => ask.reject(new Error('ExcelExporter didn\'t answer within a minute.')), VIEWER_WORKBOOK_WAIT);
+      viewerWorkbookAsk = ask;
+      if(!opened) sendViewerWorkbookAsk(); // a window already open has its page: ask now
+    });
+  }
+  // Sent once ExcelExporter's page is there (it asks for the model first, 'excel:want-model').
+  function sendViewerWorkbookAsk(){
+    const ask = viewerWorkbookAsk;
+    if(!ask || ask.sent || !excelWindow) return;
+    ask.sent = true;
+    try{ excelWindow.postMessage({ type: 'fmIDE:viewer-workbook', id: ask.id, name: docDisplayName(), text: JSON.stringify(buildExcelPayload()), boards: ask.boards }, ownOrigin() || '*'); }
+    catch(e){ ask.reject(new Error('ExcelExporter\'s window went away.')); }
+  }
+  function takeViewerWorkbook(d){
+    const ask = viewerWorkbookAsk;
+    if(!ask || d.id !== ask.id) return;
+    if(d.type === 'excel:viewer-workbook-failed'){ ask.reject(new Error(typeof d.text === 'string' && d.text ? d.text.slice(0, 300) : 'ExcelExporter couldn\'t make it.')); return; }
+    if(!(d.bytes instanceof ArrayBuffer) || typeof d.map !== 'string'){ ask.reject(new Error('ExcelExporter\'s answer wasn\'t a workbook.')); return; }
+    let map;
+    try{ map = JSON.parse(d.map); }catch(e){ ask.reject(new Error('ExcelExporter\'s answer wasn\'t a workbook.')); return; }
+    ask.resolve({ bytes: new Uint8Array(d.bytes), map, notes: Array.isArray(d.notes) ? d.notes.filter(n => typeof n === 'string').slice(0, 40) : [] });
+  }
+
   function sendModelToGraph(target){
     const origin = ownOrigin();
     const boards = (graphBoards && !inPractice()) ? JSON.stringify(graphBoards) : null;

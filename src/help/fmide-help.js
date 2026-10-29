@@ -443,7 +443,7 @@ const HELP_TOPICS = [
     ] },
 
   { id: 'showcase-viewer', group: 'sharing', title: 'Share a model as a showcase viewer',
-    keywords: 'showcase viewer fmshowcase share email web page html read-only display teach students client investor play sliders',
+    keywords: 'showcase viewer fmshowcase share email web page html read-only display teach students client investor play sliders excel workbook download',
     summary: 'One web page that shows your model read-only, with its boards and sliders: the visitor can play with it, not change it.',
     body: [
       { p: 'A showcase viewer is a single web page made from your model. Anyone can open it in a browser, from an email or a disk, with nothing installed and nothing sent anywhere. They see your canvases read-only, tap a rectangle to see how it is worked out, and, on the Board, move the sliders you set up in fmGraph, switch scenarios and play between them. They can\'t change the model.' },
@@ -451,8 +451,10 @@ const HELP_TOPICS = [
         'Set up a board in fmGraph if you want sliders and charts ({cmd:openFmGraph}): its bars, charts, sliders and scenarios are what the visitor gets.',
         'Open {cmd:makeShowcaseViewer}. Give it a title, a description, your name and a licence.',
         'Tick the canvases the visitor sees and the one it opens on, the periods shown, and the boards. Choose where Play starts: Base (the model\'s own numbers) or a scenario.',
-        'Press Make viewer. fmIDE writes the page (its name is the file name shown, with .html) and downloads it, or offers the share sheet on an iPhone or iPad.',
+        'Leave Include an Excel workbook ticked to put the model\'s workbook in the viewer, and give it a name.',
+        'Press Make viewer. With Excel, ExcelExporter opens for a moment and makes the workbook. fmIDE writes the page (its name is the file name shown, with .html) and downloads it, or offers the share sheet on an iPhone or iPad.',
       ] },
+      { p: 'With Excel, the visitor\'s ⬇ Excel downloads the workbook with their scenario or sliders written in, so it opens in Excel on the numbers they see. The workbook is made as Use fmGraph boards… in ExcelExporter makes one: the scenarios as Global Cases, the sliders on a Dashboard, the first board\'s bars and charts. Your own Excel layout is not changed. In an iPhone\'s or iPad\'s home-screen app ExcelExporter can\'t open beside fmIDE: make the viewer in Safari or on a computer to include Excel.' },
       { p: 'Your choices are kept in the document: {cmd:saveDocument} keeps them, and making the viewer again after you change the model starts from them. A canvas or board added since then comes unticked, and one that is gone is left out and said.' },
       { p: 'Hiding is not secrecy: everything in the model goes into the file, shown or not, so someone determined can read it all. Don\'t share a confidential model this way.' },
       { tip: 'Opening the page shows exactly what a visitor will see. What a visitor changes stays on their own device, and Reset puts it back.' },

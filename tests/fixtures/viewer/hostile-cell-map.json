@@ -1,0 +1,625 @@
+{
+ "kind": "fmIDE-viewer-workbook",
+ "version": 1,
+ "packed": "deflate-raw",
+ "size": 100,
+ "workbook": "AAAA",
+ "cells": {
+  "case": {
+   "sheet": "Scen[arios",
+   "cell": "C2"
+  },
+  "cases": [
+   {
+    "name": "<b>High</b>",
+    "case": 2
+   },
+   {
+    "name": "<b>high</b>",
+    "case": 3
+   },
+   {
+    "name": "",
+    "case": 4
+   },
+   {
+    "name": "Neg",
+    "case": -1
+   },
+   {
+    "name": "Text",
+    "case": "2"
+   }
+  ],
+  "sliders": [
+   {
+    "canvasId": "c1",
+    "nodeId": "n",
+    "name": "<img src=x onerror=alert(1)><img src=x onerror=alert(1)><img src=x onerror=alert(1)><img src=x onerror=alert(1)><img src=x onerror=alert(1)>",
+    "mode": "set",
+    "typed": {
+     "sheet": "D",
+     "cell": "F5"
+    },
+    "use": {
+     "sheet": "D",
+     "cell": "ZZZZ1"
+    }
+   },
+   {
+    "canvasId": "c1",
+    "nodeId": "n",
+    "mode": "grow",
+    "typed": {
+     "sheet": "D",
+     "cell": "F6"
+    }
+   },
+   {
+    "canvasId": "c1",
+    "nodeId": "n",
+    "mode": "shift",
+    "typed": {
+     "sheet": "A sheet name that is far too long for Excel",
+     "cell": "F7"
+    }
+   },
+   {
+    "canvasId": "c1",
+    "nodeId": "n2",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "f8"
+    },
+    "rest": "5",
+    "periods": {
+     "mode": "range",
+     "from": 3,
+     "to": 1
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x0",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A1"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x1",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A2"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x2",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A3"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x3",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A4"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x4",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A5"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x5",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A6"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x6",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A7"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x7",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A8"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x8",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A9"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x9",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A10"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x10",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A11"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x11",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A12"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x12",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A13"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x13",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A14"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x14",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A15"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x15",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A16"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x16",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A17"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x17",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A18"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x18",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A19"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x19",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A20"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x20",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A21"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x21",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A22"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x22",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A23"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x23",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A24"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x24",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A25"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x25",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A26"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x26",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A27"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x27",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A28"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x28",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A29"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x29",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A30"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x30",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A31"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x31",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A32"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x32",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A33"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x33",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A34"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x34",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A35"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x35",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A36"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x36",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A37"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x37",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A38"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x38",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A39"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x39",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A40"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x40",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A41"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x41",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A42"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x42",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A43"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x43",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A44"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x44",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A45"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x45",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A46"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x46",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A47"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x47",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A48"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x48",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A49"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x49",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A50"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x50",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A51"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x51",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A52"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x52",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A53"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x53",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A54"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x54",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A55"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x55",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A56"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x56",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A57"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x57",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A58"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x58",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A59"
+    }
+   },
+   {
+    "canvasId": "c",
+    "nodeId": "x59",
+    "mode": "shift",
+    "typed": {
+     "sheet": "D",
+     "cell": "A60"
+    }
+   }
+  ]
+ },
+ "notes": "not a list"
+}

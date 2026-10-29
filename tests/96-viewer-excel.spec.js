@@ -216,6 +216,195 @@ test.describe('the patched workbook gives the viewer\'s numbers', () => {
   });
 });
 
+// ---------- making a viewer with Excel in fmIDE, and ⬇ Excel in the made file ----------
+const F = require('./helpers/fmide');
+const maker = (page) => page.locator('.modal-box.showcase-maker');
+async function fmideWithWidget(page){
+  await F.openFmIDE(page);
+  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.evaluate(() => fm.command('openDocument'))]);
+  await chooser.setFiles(MODEL);
+  await expect.poll(() => page.evaluate(() => fm.canvases()[0].id)).toBe('cProfit');
+}
+// A made page opened from disk in a context of its own; every request that isn't the file is counted.
+async function openMade(browser, testInfo, name, text, options){
+  const file = testInfo.outputPath(name);
+  fs.writeFileSync(file, text);
+  const context = await browser.newContext(Object.assign({ viewport: { width: 1400, height: 900 }, acceptDownloads: true }, options || {}));
+  const outside = [];
+  await context.route('**/*', route => { const u = route.request().url(); if(u.startsWith('file:')) return route.continue(); outside.push(u); return route.abort(); });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto('file://' + file);
+  await page.waitForFunction(() => window.fmViewer && fmViewer.state().loaded);
+  return { context, page, outside, errors };
+}
+const blockOf = (text, id) => {
+  const open = '<script type="application/json" id="' + id + '">';
+  const at = text.indexOf(open);
+  return text.slice(at + open.length, text.indexOf('</script>', at));
+};
+// ⬇ Excel pressed: the file's name and bytes.
+async function downloadExcel(page){
+  const [download] = await Promise.all([page.waitForEvent('download'), page.click('#btnExcel')]);
+  return { name: download.suggestedFilename(), bytes: new Uint8Array(fs.readFileSync(await download.path())) };
+}
+// The cells a workbook's Dashboard and Scenarios hold (to compare with what the plan wrote).
+async function inputCells(bytes){
+  const { book } = await recalcBytes(bytes);
+  const at = (sheet, a) => { const s = book.sheets.find(x => x.name === sheet); const c = s && s.cells.get(a); return c ? c.value : null; };
+  return { C2: at('Scenarios', 'C2'), F5: at('Dashboard', 'F5'), I5: at('Dashboard', 'I5'), F6: at('Dashboard', 'F6'), F7: at('Dashboard', 'F7'), I7: at('Dashboard', 'I7') };
+}
+
+test.describe('fmIDE: Make Showcase Viewer… with Excel', () => {
+  test('the window\'s Excel row; Make viewer opens ExcelExporter, takes its workbook, closes it; the file carries it', async ({ page, context }) => {
+    await fmideWithWidget(page);
+    await page.evaluate(() => fm.command('makeShowcaseViewer'));
+    const box = maker(page);
+    await expect(box.locator('.sm-excel')).toBeChecked(); // the model has boards
+    await expect(box.locator('.sm-excel-file')).toHaveValue('every-widget.xlsx');
+    await box.locator('.sm-excel-file').fill('Every widget.xlsx');
+    const popups = [];
+    context.on('page', p => popups.push(p));
+    const [download] = await Promise.all([page.waitForEvent('download'), box.locator('.sm-make').click()]);
+    const text = fs.readFileSync(await download.path(), 'utf8');
+    expect(popups.length).toBe(1);
+    await expect.poll(() => popups[0].isClosed()).toBe(true); // opened for this, so closed again
+    const block = S.readViewerWorkbook(JSON.parse(blockOf(text, 'excel')));
+    expect(block.error).toBeUndefined();
+    expect(block.problems).toEqual([]);
+    expect(block.value.cells.sliders.map(s => s.typed.cell)).toEqual(['F5', 'F6', 'F7', 'F8', 'F9']);
+    expect(blockOf(text, 'excel')).not.toContain('<');
+    // The choice is kept in the document, so making it again remembers it.
+    expect(await page.evaluate(() => fm.showcase().excel)).toEqual({ file: 'Every widget.xlsx' });
+    await page.evaluate(() => fm.command('makeShowcaseViewer'));
+    await expect(maker(page).locator('.sm-excel-file')).toHaveValue('Every widget.xlsx');
+    // The made page's own script is the bare viewer's, byte for byte (one policy hash fits every viewer).
+    const scripts = (t) => [...t.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
+    expect(scripts(text)).toEqual(scripts(fs.readFileSync(path.join(ROOT, 'apps', 'fmViewer.html'), 'utf8')));
+  });
+
+  test('ExcelExporter can\'t be opened: asked, and "without it" makes the viewer with no workbook', async ({ page }) => {
+    await fmideWithWidget(page);
+    await page.evaluate(() => { window.open = () => null; }); // as a browser blocking the window
+    await page.evaluate(() => fm.command('makeShowcaseViewer'));
+    await maker(page).locator('.sm-make').click();
+    const question = page.locator('.message-box').last();
+    await expect(question).toContainText('The Excel workbook couldn\'t be made: The browser blocked the ExcelExporter window.');
+    await expect(question).toContainText('Make the viewer without it?');
+    const [download] = await Promise.all([page.waitForEvent('download'), question.locator('button.danger').click()]);
+    const text = fs.readFileSync(await download.path(), 'utf8');
+    expect(blockOf(text, 'excel')).toBe('');
+    // The action says the same, as an error.
+    await expect(page.evaluate(() => fm.makeShowcaseViewer({ excel: true }))).rejects.toThrow('The Excel workbook couldn\'t be made');
+    // excel: false makes none, without asking ExcelExporter.
+    const r = await page.evaluate(() => fm.makeShowcaseViewer({ excel: false }).then(x => ({ excel: x.excel, sc: x.showcase.excel })));
+    expect(r).toEqual({ excel: null, sc: undefined });
+  });
+});
+
+test.describe('⬇ Excel in a made viewer', () => {
+  test('its line, the file for each state, the cells the plan wrote, the viewer\'s numbers; off while Play runs', async ({ page, browser }, testInfo) => {
+    test.setTimeout(180_000);
+    await fmideWithWidget(page);
+    const made = await page.evaluate(() => fm.makeShowcaseViewer({ excel: { file: 'Loan & cash.xlsx' } }).then(r => ({ name: r.fileName, text: r.text, excel: r.excel })));
+    expect(made.excel).toMatchObject({ file: 'Loan & cash.xlsx', notes: [] });
+    const v = await openMade(browser, testInfo, made.name, made.text);
+    await expect(v.page.locator('#btnExcel')).toBeVisible();
+    await expect(v.page.locator('#excelNote')).toHaveText('The model\'s own numbers');
+    const cases = [
+      { set: () => {}, name: 'Loan & cash.xlsx', cells: { C2: 1, F5: null, I5: false, F6: null } },
+      { set: () => fmViewer.showScenario('High price'), name: 'Loan & cash – High price.xlsx', line: 'Scenario: High price', cells: { C2: 2, F5: null, I5: false } },
+      { set: () => { fmViewer.showScenario('Big year'); fmViewer.setSlider('Volume', 5); }, name: 'Loan & cash – my sliders.xlsx', line: 'Price set to 13, Volume +5%', cells: { C2: 1, F5: 13, I5: true, F6: 5 } },
+      { set: () => { fmViewer.reset(); fmViewer.setSlider('Unit cost', 7); fmViewer.setSlider('Volume', -10); }, name: 'Loan & cash – my sliders.xlsx', line: 'Volume -10%, Unit cost set to 7', cells: { C2: 1, F5: null, F6: -10, F7: 7, I7: true } },
+    ];
+    for(const c of cases){
+      await v.page.evaluate(c.set);
+      if(c.line) await expect(v.page.locator('#excelNote')).toHaveText(c.line);
+      const file = await downloadExcel(v.page);
+      expect(file.name).toBe(c.name);
+      expect(await inputCells(file.bytes)).toMatchObject(c.cells);
+      const { book, valueOf } = await recalcBytes(file.bytes);
+      const want = await v.page.evaluate(([outs, n]) => outs.map(([cv, id]) => Array.from({ length: n }, (_, p) => fmViewer.value(cv, id, p))), [OUTPUTS, PERIODS]);
+      OUTPUTS.forEach(([, , tab, label], k) => PERIOD_COLS.forEach((col, p) => {
+        const got = valueOf(tab, col + rowOf(book, tab, label));
+        expect(Math.abs(got - want[k][p]), c.name + ' ' + label + ' ' + col).toBeLessThanOrEqual(1e-6 * Math.max(1, Math.abs(want[k][p])));
+      }));
+    }
+    // The plan the hand-built states of the owner's check use is the viewer's own.
+    await v.page.evaluate(() => { fmViewer.reset(); fmViewer.setSlider('Price', 13); fmViewer.setSlider('Volume', 10); fmViewer.setSlider('Unit cost', 7); });
+    const viewerPlan = await v.page.evaluate(() => fmViewer.excelPlan());
+    const map = S.readViewerWorkbook(JSON.parse(blockOf(made.text, 'excel'))).value.cells;
+    expect(viewerPlan).toEqual(S.excelPatchPlan(map, STATES[2].state({ price: 13, vol: 10, cost: 7 }), PERIODS));
+    // The numbers lesson 8.2 of the manual gives (docs/manual/08-showcase.md).
+    const lesson = await v.page.evaluate(() => {
+      fmViewer.showScenario('High price');
+      const high = [fmViewer.value('cProfit', 'profit', 1), fmViewer.value('cProfit', 'rev', 1)];
+      fmViewer.showScenario('Base'); fmViewer.setSlider('Price', 13); fmViewer.setSlider('Volume', 10);
+      return { high, sliders: fmViewer.value('cProfit', 'profit', 1), line: fmViewer.excelPlan().line };
+    });
+    expect(lesson).toEqual({ high: [5200, 14300], sliders: 5970, line: 'Price set to 13, Volume +10%' });
+    // While Play runs the button is off, and says why.
+    await v.page.evaluate(() => fmViewer.play('Base', 'High price'));
+    await expect(v.page.locator('#btnExcel')).toBeDisabled();
+    await expect(v.page.locator('#excelNote')).toHaveText('Stop Play to download');
+    await v.page.evaluate(() => fmViewer.stopPlay());
+    await v.page.locator('#tabBoard').click();
+    await expect(v.page.locator('#btnExcel')).toBeEnabled();
+    // Another model opened in the viewer has no workbook: no ⬇ Excel.
+    const loads = await v.page.evaluate(() => fmViewer.state().loads);
+    await v.page.setInputFiles('#fileInput', fixture('viewer', 'every-kind.fmide'));
+    await v.page.waitForFunction((n) => fmViewer.state().loads > n, loads);
+    await expect(v.page.locator('#excelWrap')).toBeHidden();
+    expect(await v.page.evaluate(() => fmViewer.excelPlan())).toBeNull();
+    expect(v.outside).toEqual([]);
+    expect(v.errors).toEqual([]);
+    await v.context.close();
+  });
+
+  test('no workbook, or a hostile or newer one: no ⬇ Excel (or a refusal in words), nothing run', async ({ page, browser }, testInfo) => {
+    await fmideWithWidget(page);
+    const plain = await page.evaluate(() => fm.makeShowcaseViewer({ excel: false }).then(r => r.text));
+    let v = await openMade(browser, testInfo, 'plain.html', plain);
+    await expect(v.page.locator('#excelWrap')).toBeHidden();
+    expect(await v.page.evaluate(() => fmViewer.excelPlan())).toBeNull();
+    await v.context.close();
+    // A hostile excel block: markup, a cell map naming what can't be, a workbook that isn't one.
+    const hostile = JSON.stringify({ kind: 'fmIDE-viewer-workbook', version: 1, packed: 'deflate-raw', size: 100,
+      workbook: Buffer.from('</script><script>window.__pwned=1</script>').toString('base64').replace(/=+$/, '') + '==',
+      cells: { case: { sheet: 'Scen<b>arios', cell: 'C2' }, sliders: [{ canvasId: 'cProfit', nodeId: 'price', mode: 'set', typed: { sheet: 'D', cell: 'ZZZZ1' } }] } }).replace(/</g, '\\u003c');
+    const page2 = plain.replace('<script type="application/json" id="excel"></script>', () => '<script type="application/json" id="excel">' + hostile + '</script>');
+    v = await openMade(browser, testInfo, 'hostile.html', page2);
+    expect(await v.page.evaluate(() => window.__pwned)).toBeUndefined();
+    const shown = await v.page.locator('#excelWrap').isVisible();
+    if(shown){
+      // It may show (the block reads), but the download refuses with words and writes nothing.
+      await v.page.click('#btnExcel');
+      await expect(v.page.locator('.note.err')).toContainText(/workbook/);
+    }
+    // A newer workbook block: no ⬇ Excel, and the visitor is told once.
+    const newer = plain.replace('<script type="application/json" id="excel"></script>', () => '<script type="application/json" id="excel">' + JSON.stringify({ kind: 'fmIDE-viewer-workbook', version: 99 }) + '</script>');
+    const v2 = await openMade(browser, testInfo, 'newer.html', newer);
+    await expect(v2.page.locator('#excelWrap')).toBeHidden();
+    await expect(v2.page.locator('#notices')).toContainText('newer fmIDE');
+    await v2.context.close();
+    await v.context.close();
+  });
+
+  test('on a phone-sized touch screen the share sheet\'s fallback downloads the file', async ({ page, browser }, testInfo) => {
+    await fmideWithWidget(page);
+    const made = await page.evaluate(() => fm.makeShowcaseViewer({ excel: true }).then(r => ({ name: r.fileName, text: r.text })));
+    const v = await openMade(browser, testInfo, made.name, made.text, { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    await expect(v.page.locator('#btnExcel')).toBeVisible();
+    await expect(v.page.locator('#excelNote')).toBeHidden(); // the line is the button's tooltip on a phone
+    expect(await v.page.locator('#btnExcel').getAttribute('title')).toContain('The model\'s own numbers');
+    const file = await downloadExcel(v.page);
+    expect(file.name).toBe('every-widget.xlsx');
+    expect(v.errors).toEqual([]);
+    await v.context.close();
+  });
+});
+
 // ---------- the licences (the sources are checked in group 95) ----------
 test.describe('nothing of ExcelExporter\'s in the built viewer or fmIDE', () => {
   test('no Apache source (shared code, the viewer, fmIDE, fmGraph) takes in an ExcelExporter file', () => {

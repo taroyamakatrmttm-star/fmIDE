@@ -113,7 +113,7 @@ test.describe('fillViewerPage: the made viewer\'s two data blocks', () => {
     const st = await page.evaluate(() => fmViewer.state());
     expect(st.title).toBe(showcase.title);
     expect(await page.evaluate(() => window.__pwned)).toBeUndefined();
-    expect(await page.locator('script').count()).toBe(3);
+    expect(await page.locator('script').count()).toBe(4); // the app's script and its three data blocks (V4: excel)
     expect(errors).toEqual([]);
     expect(outside).toEqual([]);
     await context.close();
@@ -322,7 +322,7 @@ test.describe('fmIDE: Make Showcase Viewer…', () => {
     expect(st.hasBoard).toBe(true);
     expect((await v.page.evaluate(() => fmViewer.board())).boards).toEqual(['Everything']);
     expect(await v.page.locator('#showTitle b').count()).toBe(0);
-    expect(await v.page.locator('script').count()).toBe(3);
+    expect(await v.page.locator('script').count()).toBe(4); // the app's script and its three data blocks (V4: excel)
     // A slider moved in the viewer gives fmIDE's own number for that price.
     await v.page.evaluate(() => fmViewer.setSlider('Price', 12));
     const inViewer = await v.page.evaluate(() => fmViewer.value('cProfit', 'rev', 1));
@@ -368,7 +368,7 @@ test.describe('fmIDE: Make Showcase Viewer…', () => {
     const v = await openMade(browser, testInfo, made);
     expect(await v.page.evaluate(() => fmViewer.state().title)).toBe(evil.slice(0, 80));
     expect(await v.page.evaluate(() => window.__pwned)).toBeUndefined();
-    expect(await v.page.locator('script').count()).toBe(3);
+    expect(await v.page.locator('script').count()).toBe(4); // the app's script and its three data blocks (V4: excel)
     expect(await v.page.locator('img, iframe, object, embed').count()).toBe(0);
     expect(v.errors).toEqual([]);
     expect(v.outside).toEqual([]);

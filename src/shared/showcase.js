@@ -263,6 +263,8 @@ export function showcaseFromChoices(choices, graphBoards, model){
       else problems.push('Play needs two different ends, Base or a scenario: left out.');
     }
   }
+  // Excel (phase V4): { file } includes the workbook, named so (the title's name when none is given).
+  if(isObject(c.excel)) sc.excel = { file: showcaseFileName(c.excel.file) || showcaseFileName(title || 'Model') };
   const cleaned = cleanShowcase(sc);
   return { value: showcaseForFile(cleaned.value), problems: problems.concat(cleaned.problems), error: null };
 }

@@ -102,6 +102,13 @@ window.fmViewer = {
   saveNow(){ saveStateNow(); },
   // The key this viewer keeps its state under on this device (08-state.js), or null.
   stateKey(){ return stateKey; },
+
+  // ---- ⬇ Excel (phase V4) ----
+  // What the download would write now: { writes, line, missing, suffix }, or null without a workbook.
+  excelPlan(){ return excelShown() ? excelPlanNow() : null; },
+  // The workbook as ⬇ Excel gives it, without downloading: a Promise of { fileName, bytes: [numbers], line }.
+  async excelBytes(){ const made = await excelBytesNow(); return { fileName: made.fileName, bytes: Array.from(made.bytes), line: made.line }; },
+  excelNotes(){ return excelBook ? excelBook.notes.slice() : []; },
 };
 
 wireFiles();
@@ -109,6 +116,7 @@ wireStage();
 wireCard();
 wireBoard();
 wireHelp();
+wireExcel();
 $('tabBoard').addEventListener('click', () => showView('board'));
 $('tabLogic').addEventListener('click', () => showView('logic'));
 $('phoneTabBoard').addEventListener('click', () => showView('board'));

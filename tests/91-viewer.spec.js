@@ -114,7 +114,7 @@ test('a viewer made for one model opens from disk on its showcase, with nothing 
     await expect(page.locator('#mark')).toBeHidden();
     expect(await V(page, () => window.__ran)).toBeUndefined();
     await expect(page.locator('#world .cv-node[data-id="n31"]')).toContainText('</script><script>w');
-    expect(await page.locator('script').count()).toBe(3); // the two data blocks and the app's own
+    expect(await page.locator('script').count()).toBe(4); // the three data blocks (V4: excel) and the app's own
     // The model is read, never changed: its text after looking around is as it was.
     await page.locator('#btnZoomIn').click();
     await V(page, () => fmViewer.openCard('c4', 'n55'));
@@ -339,7 +339,7 @@ test('hostile files are shown as text: no markup, no colour or font from them, n
   await expect(page.locator('#notices .note.warn').first()).toContainText('The showcase:');
   // Nothing from the files became an element or a handler.
   expect(await page.locator('img, iframe, a, object, embed').count()).toBe(0);
-  expect(await page.locator('script').count()).toBe(3);
+  expect(await page.locator('script').count()).toBe(4); // the app's script and its three data blocks (V4: excel)
   expect(await page.evaluate(() => [...document.querySelectorAll('*')].some(e => [...e.attributes].some(a => /^on/i.test(a.name))))).toBe(false);
   await expect(page.locator('#world .cv-node[data-id="n1"] text.name').first()).toContainText('<img src=x');
   await expect(page.locator('#world .cv-node[data-id="n3"] text.name').first()).toContainText('<svg><script>');

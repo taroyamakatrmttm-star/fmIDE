@@ -44,7 +44,9 @@
     const play = kept && kept.play && ends.includes(kept.play.from) && ends.includes(kept.play.to) ? Object.assign({}, kept.play)
       : { from: 'Base', to: ends[1] || 'Base' };
     const title = kept && kept.title ? kept.title : showcaseText(docDisplayName(), SHOWCASE_LIMITS.title);
-    return { notes, list, ends, choices: {
+    // Excel (phase V4): as chosen last time, else ticked when the model has boards.
+    const excel = kept ? (kept.excel ? { file: kept.excel.file } : null) : (list.boards.length ? { file: showcaseFileName(title || 'Model') } : null);
+    return { notes, list, ends, choices: { excel,
       id: kept && kept.id ? kept.id : showcaseIdFrom(title), title,
       description: kept ? kept.description || '' : '', author: kept && kept.author ? kept.author : libraryAuthor,
       licence: kept ? kept.licence || '' : '', mark: kept ? kept.mark !== false : true,
@@ -52,19 +54,49 @@
       boards: list.boards.map((b, i) => b.chosen ? i : -1).filter(i => i >= 0), play } };
   }
 
-  // Makes the viewer from the choices: { fileName, bytes, text, showcase, problems }. Keeps the
-  // showcase in the document (marked unsaved when it changed). A Promise.
-  async function makeShowcaseViewerFile(choices){
+  // Makes the viewer from the choices: { fileName, bytes, text, showcase, problems, excel }. Keeps
+  // the showcase in the document (marked unsaved when it changed). A Promise. With choices.excel
+  // ({ file }), ExcelExporter makes the workbook first (askExcelForViewerWorkbook, 21-web-app.js;
+  // `excelOpened`: its window, opened by the click — else opened here); if it can't, the error
+  // carries `excel: true` and nothing is made. `withoutExcel` makes it without, as chosen.
+  async function makeShowcaseViewerFile(choices, excelOpened){
     if(inPractice()) fail('Not while practising a tutorial: the practice model isn\'t your document.');
     const made = showcaseFromChoices(choices, graphBoards, { canvases, periodCount: periods.length });
     if(made.error) fail(made.error);
     const page = await viewerPageText();
-    const filled = fillViewerPage(page, made.value, buildSystemPayload());
+    let excel = null, excelInfo = null;
+    if(made.value.excel){
+      const opened = excelOpened === undefined ? excelWindowForViewer() : excelOpened;
+      try{
+        const book = await askExcelForViewerWorkbook(made.value.boards || null, opened);
+        excel = await viewerWorkbookBlock(book);
+        excelInfo = { file: made.value.excel.file, bytes: book.bytes.length, notes: book.notes.slice() };
+      }catch(err){
+        const e = new Error('The Excel workbook couldn\'t be made: ' + (err && err.message ? err.message : String(err)));
+        e.excel = true;
+        throw e;
+      }
+    }
+    const filled = fillViewerPage(page, made.value, buildSystemPayload(), excel);
     if(filled.error) fail(filled.error);
     if(JSON.stringify(made.value) !== JSON.stringify(docShowcase)){ docShowcase = made.value; markDocDirty(); }
     const fileName = made.value.id + '.html';
-    return { fileName, bytes: new Blob([filled.page]).size, text: filled.page, showcase: cloneData(made.value), problems: made.problems.slice() };
+    return { fileName, bytes: new Blob([filled.page]).size, text: filled.page, showcase: cloneData(made.value), problems: made.problems.slice(), excel: excelInfo };
   }
+  // The workbook from ExcelExporter as the viewer's excel block: checked (a zip, at most
+  // CELL_MAP_LIMITS.workbook; the cell map cleaned), packed with the browser's own deflate, base64.
+  async function viewerWorkbookBlock(book){
+    const b = book.bytes;
+    if(!(b instanceof Uint8Array) || b.length < 22 || b[0] !== 0x50 || b[1] !== 0x4B) fail('ExcelExporter\'s answer isn\'t a workbook.');
+    if(b.length > CELL_MAP_LIMITS.workbook) fail('The workbook is too big to go in a viewer (over ' + Math.round(CELL_MAP_LIMITS.workbook / 1048576) + ' MB).');
+    if(typeof CompressionStream !== 'function') fail('This browser can\'t pack the workbook. Use a current Chrome, Edge, Firefox or Safari.');
+    const packed = new Uint8Array(await new Response(new Blob([b]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer());
+    let bin = '';
+    for(let i = 0; i < packed.length; i += 0x8000) bin += String.fromCharCode.apply(null, packed.subarray(i, i + 0x8000));
+    return viewerWorkbookFor(btoa(bin), b.length, book.map, book.notes);
+  }
+  // In an iPhone's or iPad's home-screen app, ExcelExporter opens in fmIDE's place, not beside it.
+  const excelCantOpenBeside = () => navigator.standalone === true;
 
   // The file to the person: the share sheet on a touch screen (an iPhone or iPad), else a download.
   async function giveViewerFile(made){
@@ -200,6 +232,25 @@
     }
     renderBoards(start.list, c.boards, c.play);
 
+    // ---- Excel (phase V4): the workbook ExcelExporter makes, carried in the viewer ----
+    const excelRow = el('label', 'function-export-row sm-excel-row');
+    const excelBox = el('input', 'sm-excel');
+    excelBox.type = 'checkbox'; excelBox.checked = !!c.excel && !excelCantOpenBeside();
+    excelRow.append(excelBox, document.createTextNode(' Include an Excel workbook'));
+    box.appendChild(excelRow);
+    const excelFile = text('sm-excel-file', c.excel ? c.excel.file : showcaseFileName(c.title || 'Model'), SHOWCASE_LIMITS.file);
+    const excelFileLabel = el('label', 'fn-editor-label', 'Workbook name');
+    box.appendChild(excelFileLabel);
+    box.appendChild(excelFile);
+    const excelNote = el('p', 'template-desc sm-excel-note', excelCantOpenBeside()
+      ? 'Make it in Safari or on a computer to include Excel: here ExcelExporter can\'t open beside fmIDE.'
+      : 'ExcelExporter opens for a moment to make it. Visitors download it with their scenario and sliders written in.');
+    box.appendChild(excelNote);
+    if(excelCantOpenBeside()) excelBox.disabled = true;
+    const syncExcel = () => { excelFile.disabled = !excelBox.checked; };
+    excelBox.addEventListener('change', syncExcel);
+    syncExcel();
+
     const markRow = el('label', 'function-export-row');
     const mark = el('input', 'sm-mark');
     mark.type = 'checkbox'; mark.checked = c.mark;
@@ -222,22 +273,34 @@
       canvases: canvasTicks.filter(t => t.cb.checked).map(t => t.id), start: startSel.value,
       periods: { from: Number(fromSel.value), to: Math.max(Number(fromSel.value), Number(toSel.value)) },
       boards: boardTicks.filter(cb => cb.checked).map(cb => Number(cb.dataset.index)),
-      play: playFrom ? { from: playFrom.value, to: playTo.value } : null });
-    makeBtn.addEventListener('click', async () => {
+      play: playFrom ? { from: playFrom.value, to: playTo.value } : null,
+      excel: excelBox.checked ? { file: excelFile.value } : null });
+    async function make(choices, excelOpened){
       makeBtn.disabled = true;
       try{
-        const made = await makeShowcaseViewerFile(choicesNow());
+        const made = await makeShowcaseViewerFile(choices, excelOpened);
         if(author.value.trim()){ libraryAuthor = author.value.trim().slice(0, SHOWCASE_LIMITS.author); saveWorkspaceSoon(); }
         const how = await giveViewerFile(made);
         close();
         if(how === 'cancelled') return;
-        const said = 'Made ' + made.fileName + ' (' + viewerSizeText(made.bytes) + '). It opens in any browser, offline, and changes nothing in your model.';
-        if(made.problems.length) showMessage(said + '\n\n' + made.problems.join('\n'));
+        const said = 'Made ' + made.fileName + ' (' + viewerSizeText(made.bytes) + ')' + (made.excel ? ', with its Excel workbook' : '') +
+          '. It opens in any browser, offline, and changes nothing in your model.';
+        const notes = made.problems.concat(made.excel ? made.excel.notes : []);
+        if(notes.length) showMessage(said + '\n\n' + notes.join('\n'));
         else toast(said, 6000);
       }catch(err){
         makeBtn.disabled = false;
-        showMessage(err && err.message ? err.message : String(err));
+        const text = err && err.message ? err.message : String(err);
+        // ExcelExporter couldn't make the workbook: the viewer without it, if the author wants.
+        if(err && err.excel) showConfirm(text + '\n\nMake the viewer without it?', () => make(Object.assign({}, choices, { excel: null }), false));
+        else showMessage(text);
       }
+    }
+    makeBtn.addEventListener('click', () => {
+      const choices = choicesNow();
+      // ExcelExporter's window opens now, while the click counts (a window opened later is blocked).
+      const opened = choices.excel ? excelWindowForViewer() : false;
+      make(choices, opened);
     });
     // Boards fmGraph sends while the window is open (takeGraphBoards): listed again, ticks kept by name.
     function refreshBoards(){

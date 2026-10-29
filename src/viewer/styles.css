@@ -93,3 +93,11 @@ body.has-model .mark{ left:28px; bottom:44px; }
 .dialog-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
 .dialog-actions button{ min-height:40px; padding:6px 16px; border-radius:8px; border:1px solid var(--line); background:#fff; cursor:pointer; }
 .dialog-actions .primary{ background:var(--accent); color:#fff; border-color:var(--accent); }
+
+/* ⬇ Excel (phase V4): the button and, beside it on a desk, the line saying what the file holds. */
+.excel-wrap{ display:flex; align-items:center; gap:8px; min-width:0; }
+.excel-wrap.hidden{ display:none; }
+.vbar-excel{ background:#166534; border-color:#15803d; font-weight:600; }
+.vbar-excel:hover{ background:#15803d; }
+.vbar-excel:disabled{ opacity:.55; cursor:default; }
+.excel-note{ font-size:12px; color:#cbd5e1; max-width:280px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }

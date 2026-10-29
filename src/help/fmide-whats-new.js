@@ -12,6 +12,16 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'showcase-excel', date: '2026-10-29', title: 'Showcase viewers carry Excel',
+    summary: 'A showcase viewer can now carry the model\'s Excel workbook: a visitor downloads it with their scenario and sliders written in.',
+    what: [
+      'Make Showcase Viewer… has a new tick box, Include an Excel workbook. ExcelExporter opens for a moment and makes the workbook, with your fmGraph scenarios as Global Cases and your sliders on a Dashboard, and fmIDE puts it inside the viewer.',
+      'The visitor\'s ⬇ Excel downloads it, with the scenario they show or the sliders they moved typed into its input cells. It opens in Excel on the numbers they saw.',
+    ],
+    why: 'Someone who played with your model can take it further in Excel, without you sending a second file.',
+    how: ['Open {cmd:makeShowcaseViewer} and leave Include an Excel workbook ticked.', 'Press Make viewer, then open the file and try ⬇ Excel.'],
+    notes: ['Your own Excel layout in ExcelExporter is not changed.', 'In an iPhone\'s or iPad\'s home-screen app, make the viewer in Safari or on a computer to include Excel.'],
+    see: ['showcase-viewer'] },
   { id: 'showcase-viewer', date: '2026-10-28', title: 'Share a model as a showcase viewer',
     summary: 'File → Make Showcase Viewer… makes one web page that shows your model read-only, with its boards and sliders, to email or share.',
     what: [

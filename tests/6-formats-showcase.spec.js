@@ -95,3 +95,49 @@ test('each limit holds; names, lists and file names are cleaned', () => {
   // No showcase: every canvas, the first opening, every period.
   expect(S.resolveShowcase(null, [{ id: 'a' }, { id: 'b' }], 2)).toEqual({ canvases: ['a', 'b'], start: 'a', periods: [0, 1], problems: [] });
 });
+
+// ---------- the workbook a viewer carries (kind fmIDE-viewer-workbook, version 1; phase V4) ----------
+test('a viewer\'s workbook block is read whole, its cell map as written', async () => {
+  const r = S.readViewerWorkbook(readFixture('formats', 'viewer-workbook-v1.json'));
+  expect(r.error).toBeUndefined();
+  expect(r.problems).toEqual([]);
+  expect(r.value.size).toBeGreaterThan(1000);
+  expect(r.value.notes).toEqual(['One slider (inside a block) can\'t move in Excel.']);
+  expect(r.value.cells).toEqual({ case: { sheet: 'Scenarios', cell: 'C2' },
+    cases: [{ name: 'High rate', case: 2, missing: 0 }, { name: 'Low rate', case: 3, missing: 1 }],
+    sliders: [
+      { canvasId: 'c1', nodeId: 'rate', name: 'Rate', mode: 'set', periods: { mode: 'all' }, typed: { sheet: 'Dashboard', cell: 'F5' }, use: { sheet: 'Dashboard', cell: 'I5' }, rest: null },
+      { canvasId: 'c1', nodeId: 'term', name: 'Term', mode: 'shift', periods: { mode: 'range', from: 1, to: 3 }, typed: { sheet: 'Dashboard', cell: 'F6' }, use: null, rest: 0 }] });
+  // What viewerWorkbookFor writes reads back the same.
+  const again = S.readViewerWorkbook(JSON.parse(JSON.stringify(S.viewerWorkbookFor(r.value.workbook, r.value.size, r.value.cells, r.value.notes))));
+  expect(again.value).toEqual(r.value);
+  expect(again.problems).toEqual([]);
+});
+
+test('a hostile cell map: every bad entry left out and said, names kept as text', () => {
+  const r = S.readViewerWorkbook(readFixture('viewer', 'hostile-cell-map.json'));
+  expect(r.error).toBeUndefined();
+  const m = r.value.cells;
+  expect(m.case).toBeNull(); // a sheet name with "["
+  expect(m.cases).toEqual([{ name: '<b>High</b>', case: 2, missing: 0 }]); // the rest: same name again, none, negative, text
+  expect(m.sliders.length).toBe(40); // the limit
+  expect(m.sliders[0]).toMatchObject({ nodeId: 'n2', mode: 'shift', typed: { sheet: 'D', cell: 'F8' }, rest: 0, periods: { mode: 'all' } });
+  expect(r.problems.length).toBeGreaterThanOrEqual(8);
+  expect(r.value.notes).toEqual([]);
+  // Anything that isn't the kind, a newer version, another packing, a size or text that can't be: refused.
+  const base = readFixture('formats', 'viewer-workbook-v1.json');
+  expect(S.readViewerWorkbook({ kind: 'fmIDE-showcase' }).error).toMatch(/not one it can read/);
+  expect(S.readViewerWorkbook(Object.assign({}, base, { version: 2 })).error).toMatch(/newer fmIDE/);
+  expect(S.readViewerWorkbook(Object.assign({}, base, { packed: 'gzip' })).error).toMatch(/packed in a way/);
+  expect(S.readViewerWorkbook(Object.assign({}, base, { size: 21 * 1024 * 1024 })).error).toMatch(/not a size/);
+  expect(S.readViewerWorkbook(Object.assign({}, base, { size: '900' })).error).toMatch(/not a size/);
+  expect(S.readViewerWorkbook(Object.assign({}, base, { workbook: '<script>' })).error).toMatch(/damaged/);
+  expect(S.readViewerWorkbook(Object.assign({}, base, { workbook: 'abc' })).error).toMatch(/damaged/);
+});
+
+test('a showcase keeps excel.file from the author\'s choices, named from the title when none is given', () => {
+  const model = { canvases: [{ id: 'c1' }], periodCount: 3 };
+  expect(S.showcaseFromChoices({ title: 'Loan', canvases: ['c1'], excel: { file: 'Loan basics' } }, null, model).value.excel).toEqual({ file: 'Loan basics.xlsx' });
+  expect(S.showcaseFromChoices({ title: 'Loan / cash', canvases: ['c1'], excel: { file: '' } }, null, model).value.excel).toEqual({ file: 'Loan cash.xlsx' });
+  expect(S.showcaseFromChoices({ title: 'Loan', canvases: ['c1'], excel: null }, null, model).value.excel).toBeUndefined();
+});

@@ -263,6 +263,7 @@ Oldest first. *Step* is the build step (and phase) the pull request belongs to; 
 | branch `claude/viewer-v1` | 2026-10-27 | fmShowcase, the showcase viewer: the Logic view — a model's canvases read-only, a rectangle's card; the showcase file | after 20 | [8.1](08-showcase.md#showcase-viewer) |
 | branch `claude/viewer-v2` | 2026-10-28 | fmShowcase: the Board — fmGraph's bars, charts and sliders, scenarios, Play, A/B and Trace, read-only; fmGraph's board engine separated, fmGraph unchanged | after 20 | [8.1](08-showcase.md#showcase-viewer) |
 | branch `claude/viewer-v3` | 2026-10-28 | fmIDE: File → Make Showcase Viewer… — one web page showing the model read-only, to email or share; the choices kept in the document (workspace 14) | after 20 | [8.1](08-showcase.md#showcase-viewer) |
+| branch `claude/viewer-v4` | 2026-10-29 | Showcase viewers carry Excel: Make Showcase Viewer…'s Include an Excel workbook (ExcelExporter makes it), the visitor's ⬇ Excel with their scenario or sliders written in | after 20 | [8.2](08-showcase.md#showcase-excel) |
 
 ---
 

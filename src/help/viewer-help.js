@@ -73,6 +73,15 @@ const VIEWER_HELP_TOPICS = [
     body: [
       { p: 'Tapping a rectangle opens its card: its value in each period, and how it is worked out, with names and with numbers ("Revenue = Price × Volume: 12 × 1,000"). Tap a number it reads to go to it, on whatever canvas it is.' },
     ] },
+  { id: 'excel', group: 'board', title: 'Download the model in Excel',
+    keywords: 'excel workbook download xlsx spreadsheet scenario sliders dashboard',
+    summary: '⬇ Excel gives you the model\'s workbook, on the numbers you see.',
+    body: [
+      { p: 'When the author included Excel, ⬇ Excel at the top downloads the model\'s workbook (on an iPhone or iPad, through the share sheet). The line beside it says what the file will hold.' },
+      { p: 'A scenario you show is the case the workbook runs. When you have moved sliders, the workbook runs the model\'s own numbers with your sliders typed in on its Dashboard. Excel works every formula out when the file opens, so it shows the numbers you see here, and you can go on changing them in Excel.' },
+      { p: 'A slider the workbook can\'t hold is named in the line. While Play runs, stop it first.' },
+      { see: ['sliders', 'scenarios'] },
+    ] },
   { id: 'kept', group: 'start', title: 'What this device keeps',
     keywords: 'kept saved remember storage reset privacy offline sent',
     summary: 'Your sliders, on this device only.',

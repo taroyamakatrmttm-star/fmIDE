@@ -102,6 +102,14 @@ body.has-model .mark{ left:28px; bottom:44px; }
 .dialog-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
 .dialog-actions button{ min-height:40px; padding:6px 16px; border-radius:8px; border:1px solid var(--line); background:#fff; cursor:pointer; }
 .dialog-actions .primary{ background:var(--accent); color:#fff; border-color:var(--accent); }
+
+/* ⬇ Excel (phase V4): the button and, beside it on a desk, the line saying what the file holds. */
+.excel-wrap{ display:flex; align-items:center; gap:8px; min-width:0; }
+.excel-wrap.hidden{ display:none; }
+.vbar-excel{ background:#166534; border-color:#15803d; font-weight:600; }
+.vbar-excel:hover{ background:#15803d; }
+.vbar-excel:disabled{ opacity:.55; cursor:default; }
+.excel-note{ font-size:12px; color:#cbd5e1; max-width:280px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 /* ---------- the read-only canvas (shared: src/shared/canvas-view.css, with canvas-view.js) ----------
    fmIDE's canvas look (src/fmide/styles.css: .node, .operator, .alias, .periodshift, the block
    and function boxes, the arrows), for an SVG drawing. Colours a rectangle's own format sets
@@ -432,6 +440,10 @@ body.phone.has-board .card{ bottom:calc(52px + env(safe-area-inset-bottom, 0px))
       <button type="button" id="tabLogic" class="view-tab" role="tab" aria-selected="false">Logic</button>
     </nav>
     <button type="button" id="btnCanvasMenu" class="vbar-btn phone-only hidden" aria-haspopup="menu" aria-expanded="false" aria-controls="canvasMenu">☰ <span id="canvasMenuName"></span></button>
+    <div id="excelWrap" class="excel-wrap hidden">
+      <button type="button" id="btnExcel" class="vbar-btn vbar-excel">⬇ Excel</button>
+      <span id="excelNote" class="excel-note desk-only" aria-live="polite"></span>
+    </div>
     <button type="button" id="btnOpen" class="vbar-btn" title="Open a model saved by fmIDE (.fmide or .json), and a showcase file if you have one">Open…</button>
     <button type="button" id="btnHelp" class="vbar-btn vbar-help" title="Help (F1)" aria-label="Help">?</button>
   </div>
@@ -536,10 +548,12 @@ body.phone.has-board .card{ bottom:calc(52px + env(safe-area-inset-bottom, 0px))
 
 <input type="file" id="fileInput" accept=".fmide,application/json,.json" multiple hidden>
 
-<!-- A viewer made for one model carries its showcase and model here (data, never run: the
-     browser runs no script of these types). Empty in the bare app. -->
+<!-- A viewer made for one model carries its showcase and model here, and, made with Excel,
+     its author's workbook and cell map (data, never run: the browser runs no script of these
+     types). Empty in the bare app. -->
 <script type="application/json" id="showcase"></script>
 <script type="application/json" id="model"></script>
+<script type="application/json" id="excel"></script>
 
 <script>
 (function(){
@@ -3426,6 +3440,8 @@ function showcaseFromChoices(choices, graphBoards, model){
       else problems.push('Play needs two different ends, Base or a scenario: left out.');
     }
   }
+  // Excel (phase V4): { file } includes the workbook, named so (the title's name when none is given).
+  if(isObject(c.excel)) sc.excel = { file: showcaseFileName(c.excel.file) || showcaseFileName(title || 'Model') };
   const cleaned = cleanShowcase(sc);
   return { value: showcaseForFile(cleaned.value), problems: problems.concat(cleaned.problems), error: null };
 }
@@ -9333,6 +9349,7 @@ async function restoreState(){
   return true;
 }
 function saveStateSoon(){
+  refreshExcel(); // ⬇ Excel's line follows every change (10b-excel.js)
   if(!stateKey) return;
   clearTimeout(stateTimer);
   stateTimer = setTimeout(saveStateNow, 300);
@@ -9428,6 +9445,15 @@ const VIEWER_HELP_TOPICS = [
     body: [
       { p: 'Tapping a rectangle opens its card: its value in each period, and how it is worked out, with names and with numbers ("Revenue = Price × Volume: 12 × 1,000"). Tap a number it reads to go to it, on whatever canvas it is.' },
     ] },
+  { id: 'excel', group: 'board', title: 'Download the model in Excel',
+    keywords: 'excel workbook download xlsx spreadsheet scenario sliders dashboard',
+    summary: '⬇ Excel gives you the model\'s workbook, on the numbers you see.',
+    body: [
+      { p: 'When the author included Excel, ⬇ Excel at the top downloads the model\'s workbook (on an iPhone or iPad, through the share sheet). The line beside it says what the file will hold.' },
+      { p: 'A scenario you show is the case the workbook runs. When you have moved sliders, the workbook runs the model\'s own numbers with your sliders typed in on its Dashboard. Excel works every formula out when the file opens, so it shows the numbers you see here, and you can go on changing them in Excel.' },
+      { p: 'A slider the workbook can\'t hold is named in the line. While Play runs, stop it first.' },
+      { see: ['sliders', 'scenarios'] },
+    ] },
   { id: 'kept', group: 'start', title: 'What this device keeps',
     keywords: 'kept saved remember storage reset privacy offline sent',
     summary: 'Your sliders, on this device only.',
@@ -9479,6 +9505,122 @@ async function openSample(){
   const c = cleanShowcase(sampleShowcase());
   const m = { system: JSON.parse(JSON.stringify(SAMPLE_MODEL)), presets: null, boards: null, name: 'Sample model' };
   return showModel(m, c.value);
+}
+// ============================================================
+// ⬇ Excel (phase V4 of docs/viewer-brief.md). A viewer made with Excel carries its author's
+// workbook — made once by ExcelExporter when the viewer was made: its output, never its code —
+// packed in the page's `excel` data block with its cell map (an fmIDE-viewer-workbook,
+// src/shared/showcase.js). On ⬇ Excel the visitor's state is written into the workbook's input
+// cells (excelPatchPlan: a scenario shown exactly → its Global Case; anything else → Base plus
+// the moved sliders, the owner's choice 3 of phase V2) by the shared patch
+// (src/shared/xlsx-patch.js), and the file is given to the visitor: the share sheet on an
+// iPhone or iPad, else a download. A line beside the button says what the file will hold.
+// Nothing is sent anywhere. Off while Play runs (the owner's choice 9 of phase V4).
+// ============================================================
+let excelBook = null;      // the block read: { size, workbook (base64), cells, notes }, or null
+let excelLoads = -1;       // the model shown (state.loads) the workbook was read for
+let excelTimer = null;
+
+// The viewer's excel block (dataBlock, 02-files.js: the page's own, or a made viewer opened as a
+// file), read for the model shown: only when that model is the block's own (a model opened
+// afterwards has no workbook). A bare app has none; a bad one leaves ⬇ Excel out, said once.
+function readExcelBlock(){
+  const text = dataBlock('excel');
+  if(!text) return null;
+  const modelText = dataBlock('model');
+  let same = false;
+  try{ const raw = JSON.parse(modelText); same = JSON.stringify(raw && raw.kind === 'fmIDE-workspace' ? raw.system : raw) === state.modelJson; }catch(e){ same = false; }
+  if(!same) return null;
+  const p = parseFileText(text);
+  const r = p.error ? { error: p.error } : readViewerWorkbook(p.raw);
+  if(r.error){ notify('Excel: ' + r.error, 'warn', 'excel'); return null; }
+  return r.value;
+}
+
+// The visitor's state as the download plans it: the scenario shown exactly, else the sliders
+// that count on the board shown.
+function excelState(){
+  if(!board) return { scenario: null, sliders: [] };
+  return { scenario: shownScenario || null, sliders: liveSliders().map(s => {
+    const rect = model.byKey.get(s.key);
+    return { canvasId: rect.canvasId, nodeId: rect.nodeId, name: rect.name, mode: s.mode, periods: s.periods,
+      value: s.value === null || !Number.isFinite(s.value) ? null : s.value };
+  }) };
+}
+// The workbook for the model shown (read again when another model is shown).
+function excelShown(){
+  if(state.loads !== excelLoads && state.loads >= 1){ excelLoads = state.loads; excelBook = state.model ? readExcelBlock() : null; }
+  return !!excelBook && state.loads === excelLoads;
+}
+function excelPlanNow(){ return excelPatchPlan(excelBook.cells, excelState(), model ? model.periods.length : 1); }
+
+// The button and its line, as the state is now.
+function refreshExcel(){
+  const wrap = $('excelWrap');
+  if(!wrap) return;
+  const on = excelShown();
+  wrap.classList.toggle('hidden', !on);
+  if(!on) return;
+  const btn = $('btnExcel');
+  btn.disabled = !!playing;
+  const line = playing ? 'Stop Play to download' : excelPlanNow().line;
+  $('excelNote').textContent = line;
+  btn.title = 'Download the model in Excel: ' + line;
+  clearTimeout(excelTimer);
+  if(playing) excelTimer = setTimeout(refreshExcel, 400); // until Play stops
+}
+
+// The workbook with the visitor's state written in: a Promise of { fileName, bytes, line }.
+async function excelBytesNow(){
+  if(!excelShown()) throw new Error('This viewer carries no Excel workbook.');
+  if(playing) throw new Error('Stop Play first: the workbook holds what you set, not a moment of Play.');
+  if(typeof DecompressionStream !== 'function') throw new Error('This browser can\'t unpack the workbook. Use a current Chrome, Edge, Firefox or Safari.');
+  const packed = Uint8Array.from(atob(excelBook.workbook), c => c.charCodeAt(0));
+  const reader = new Blob([packed]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader();
+  const bytes = new Uint8Array(excelBook.size);
+  let filled = 0;
+  try{
+    for(;;){
+      const step = await reader.read();
+      if(step.done) break;
+      if(filled + step.value.length > bytes.length){ reader.cancel().catch(() => {}); throw new Error('size'); }
+      bytes.set(step.value, filled);
+      filled += step.value.length;
+    }
+  }catch(e){ throw new Error('The workbook in this viewer is damaged.'); }
+  if(filled !== bytes.length) throw new Error('The workbook in this viewer is damaged.');
+  const plan = excelPlanNow();
+  const r = await patchXlsx(bytes, plan.writes);
+  if(r.error) throw new Error('The workbook could not be written: ' + r.error);
+  const file = showcaseState() && showcaseState().excel ? showcaseState().excel.file : '';
+  return { fileName: showcaseDownloadName(file || ($('showTitle').textContent || 'Model') + '.xlsx', plan.suffix), bytes: r.bytes, line: plan.line };
+}
+// The showcase shown (its excel.file names the workbook).
+function showcaseState(){ return state.showcase || null; }
+
+async function downloadExcel(){
+  const btn = $('btnExcel');
+  btn.disabled = true;
+  try{
+    const made = await excelBytesNow();
+    const file = new File([made.bytes], made.fileName, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const how = await shareFiles([file], made.fileName);
+    if(how !== 'cancelled') notify(made.fileName + ': ' + made.line + '. It opens in Excel on the numbers you see.', 'ok', 'excel');
+  }catch(err){
+    notify(err && err.message ? err.message : String(err), 'err', 'excel');
+  }finally{
+    refreshExcel();
+  }
+}
+
+function wireExcel(){
+  $('btnExcel').addEventListener('click', () => { downloadExcel(); });
+  // Until the first model is shown (a made viewer opens on its own), then on every change.
+  let tries = 0;
+  const waitForFirst = () => { if(state.loads >= 1){ refreshExcel(); return; } if(++tries < 300) setTimeout(waitForFirst, 100); };
+  waitForFirst();
+  // Whatever the visitor does goes through these: the line follows (a model opened later too).
+  ['click', 'keyup', 'pointerup', 'input', 'change', 'drop'].forEach(t => document.addEventListener(t, () => { setTimeout(refreshExcel, 0); setTimeout(refreshExcel, 800); }, true));
 }
 // ============================================================
 // window.fmViewer: what the tests read and do, through the page as a visitor would (V4 adds
@@ -9584,6 +9726,13 @@ window.fmViewer = {
   saveNow(){ saveStateNow(); },
   // The key this viewer keeps its state under on this device (08-state.js), or null.
   stateKey(){ return stateKey; },
+
+  // ---- ⬇ Excel (phase V4) ----
+  // What the download would write now: { writes, line, missing, suffix }, or null without a workbook.
+  excelPlan(){ return excelShown() ? excelPlanNow() : null; },
+  // The workbook as ⬇ Excel gives it, without downloading: a Promise of { fileName, bytes: [numbers], line }.
+  async excelBytes(){ const made = await excelBytesNow(); return { fileName: made.fileName, bytes: Array.from(made.bytes), line: made.line }; },
+  excelNotes(){ return excelBook ? excelBook.notes.slice() : []; },
 };
 
 wireFiles();
@@ -9591,6 +9740,7 @@ wireStage();
 wireCard();
 wireBoard();
 wireHelp();
+wireExcel();
 $('tabBoard').addEventListener('click', () => showView('board'));
 $('tabLogic').addEventListener('click', () => showView('logic'));
 $('phoneTabBoard').addEventListener('click', () => showView('board'));

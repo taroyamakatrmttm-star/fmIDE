@@ -28,6 +28,10 @@
       <button type="button" id="tabLogic" class="view-tab" role="tab" aria-selected="false">Logic</button>
     </nav>
     <button type="button" id="btnCanvasMenu" class="vbar-btn phone-only hidden" aria-haspopup="menu" aria-expanded="false" aria-controls="canvasMenu">☰ <span id="canvasMenuName"></span></button>
+    <div id="excelWrap" class="excel-wrap hidden">
+      <button type="button" id="btnExcel" class="vbar-btn vbar-excel">⬇ Excel</button>
+      <span id="excelNote" class="excel-note desk-only" aria-live="polite"></span>
+    </div>
     <button type="button" id="btnOpen" class="vbar-btn" title="Open a model saved by fmIDE (.fmide or .json), and a showcase file if you have one">Open…</button>
     <button type="button" id="btnHelp" class="vbar-btn vbar-help" title="Help (F1)" aria-label="Help">?</button>
   </div>
@@ -132,10 +136,12 @@
 
 <input type="file" id="fileInput" accept=".fmide,application/json,.json" multiple hidden>
 
-<!-- A viewer made for one model carries its showcase and model here (data, never run: the
-     browser runs no script of these types). Empty in the bare app. -->
+<!-- A viewer made for one model carries its showcase and model here, and, made with Excel,
+     its author's workbook and cell map (data, never run: the browser runs no script of these
+     types). Empty in the bare app. -->
 <script type="application/json" id="showcase"></script>
 <script type="application/json" id="model"></script>
+<script type="application/json" id="excel"></script>
 
 <script>
 <!-- build:js js -->

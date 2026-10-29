@@ -12,12 +12,16 @@
       P('canvases','json',{ optional:true, help:'a list of canvas ids' }), P('start','string',{ optional:true, help:'the canvas it opens on' }),
       P('periods','json',{ optional:true, help:'{ "from": 0, "to": 4 }' }), P('boards','json',{ optional:true, help:'a list like [0, 2]' }),
       P('play','json',{ optional:true, help:'{ "from": "Base", "to": "High price" }' }), P('mark','bool',{ optional:true }),
+      P('excel','json',{ optional:true, help:'true, or { "file": "Loan basics.xlsx" }: ExcelExporter makes the workbook (phase V4); false: none' }),
       P('download','bool',{ def:false }) ],
     run(a){
       if(runCtx) fail(SHOWCASE_NOT_IN_MACROS);
       const choices = showcaseStartChoices().choices;
       ['title', 'description', 'author', 'licence', 'id', 'canvases', 'start', 'periods', 'boards', 'play', 'mark']
         .forEach(k => { if(a[k] !== null && a[k] !== undefined) choices[k] = a[k]; });
+      if(a.excel === true) choices.excel = choices.excel || { file: showcaseFileName(choices.title || 'Model') };
+      else if(a.excel === false) choices.excel = null;
+      else if(a.excel && typeof a.excel === 'object') choices.excel = { file: a.excel.file };
       return makeShowcaseViewerFile(choices).then(async made => {
         if(a.download) await giveViewerFile(made);
         return made;
