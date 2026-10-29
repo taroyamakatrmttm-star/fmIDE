@@ -17358,8 +17358,17 @@ function xlRoundTrip(valueOf, cells){
 
 // The model (a workspace or system file's text) and the showcase's boards (a board file, parsed,
 // or null): a Promise of { bytes (Uint8Array), map, notes }. Throws with plain words.
-async function viewerWorkbook(modelText, boards){
+// style (phase V5, tools/make-viewers.js --excel-style): an Excel style file, parsed, used for
+// this workbook only — lent like the layout and put back after, never saved.
+async function viewerWorkbook(modelText, boards, style){
   if(typeof modelText !== 'string' || !modelText) throw new Error('No model came to make the workbook from.');
+  let lentStyle = null;
+  if(style !== undefined && style !== null){
+    const r = readExcelStyleData(style);
+    if(r.error) throw new Error('The Excel style: ' + r.error);
+    lentStyle = r.style;
+  }
+  await excelStyleLoaded; // the style kept in this browser is read first, so the lent one isn't overwritten
   const before = model;
   await tryLoad(modelText, 'the showcase viewer\'s model', 'Model for a showcase viewer');
   if(!model || model === before){
@@ -17368,8 +17377,9 @@ async function viewerWorkbook(modelText, boards){
   }
   const read = boards ? readGraphBoards(boards) : null;
   if(read && read.error) throw new Error(read.error);
-  const saved = JSON.stringify(mapping), savedPicked = sensPicked;
+  const saved = JSON.stringify(mapping), savedPicked = sensPicked, savedStyle = excelStyle;
   layoutHeld = true;
+  if(lentStyle) excelStyle = lentStyle;
   try{
     const notes = [];
     let matched = null;
@@ -17397,6 +17407,7 @@ async function viewerWorkbook(modelText, boards){
   }finally{
     mapping = JSON.parse(saved);
     sensPicked = savedPicked;
+    excelStyle = savedStyle;
     graphPlanCache = null;
     layoutHeld = false;
     renderAll();
@@ -17472,9 +17483,17 @@ function answerViewerWorkbook(message, transfer){
 
 // For tools/make-viewers.js (phase V5), which drives this page in a browser without a window,
 // and the tests: the same workbook and cell map. A Promise of { bytes: [numbers], map, notes }.
+// options (phase V5): { style: an Excel style file, parsed, for this workbook only; base64: true
+// gives the bytes as base64 text (quicker for the tool to carry) instead of a list of numbers }.
 window.fmExcel = Object.freeze({
-  viewerWorkbook: async (modelText, boards) => {
-    const made = await viewerWorkbook(modelText, boards && typeof boards === 'object' ? boards : null);
+  viewerWorkbook: async (modelText, boards, options) => {
+    const o = options && typeof options === 'object' ? options : {};
+    const made = await viewerWorkbook(modelText, boards && typeof boards === 'object' ? boards : null, o.style && typeof o.style === 'object' ? o.style : null);
+    if(o.base64 === true){
+      let bin = '';
+      for(let i = 0; i < made.bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, made.bytes.subarray(i, i + 0x8000));
+      return { base64: btoa(bin), map: made.map, notes: made.notes };
+    }
     return { bytes: Array.from(made.bytes), map: made.map, notes: made.notes };
   }
 });

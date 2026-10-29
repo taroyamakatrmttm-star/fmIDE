@@ -91,7 +91,8 @@ The manual is written in lessons. Each lesson teaches one thing, in numbered ste
 
 ### [Part 8 — Sharing a model: showcase viewers](08-showcase.md)
 [8.1 Make a showcase viewer](08-showcase.md#showcase-viewer) ·
-[8.2 Put Excel in a showcase viewer](08-showcase.md#showcase-excel)
+[8.2 Put Excel in a showcase viewer](08-showcase.md#showcase-excel) ·
+[8.3 Make many viewers at once](08-showcase.md#showcase-many)
 
 ### Appendices
 - [A — What came when: every build step and pull request, and the lesson that covers it](appendix-a-coverage.md)

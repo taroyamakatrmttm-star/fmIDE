@@ -10,8 +10,9 @@ A **showcase viewer** is one web page made from your model. Anyone can open it i
 |---|---|---|
 | [8.1 Make a showcase viewer](#showcase-viewer) | File → Make Showcase Viewer…, what goes into the file, making it again | the showcase viewer's phases V1–V3 (branches `claude/viewer-v1`, `claude/viewer-v2`, `claude/viewer-v3`), opening one on an iPhone or iPad (`claude/viewer-ipad-sliders`) |
 | [8.2 Put Excel in a showcase viewer](#showcase-excel) | Include an Excel workbook; a visitor's ⬇ Excel, with their scenario or sliders written in | phase V4 (branch `claude/viewer-v4`) |
+| [8.3 Make many viewers at once](#showcase-many) | Choose for me; `npm run make-viewers` with a recipe naming sliders and bars by name; the report | phase V5 (branch `claude/viewer-v5`) |
 
-Making many viewers at once and a gallery of them on the website come later.
+A gallery of viewers on the website comes later.
 
 ---
 
@@ -114,6 +115,48 @@ made.excel;   // { file, bytes, notes }: what ExcelExporter made
 ```
 
 In the viewer, `fmViewer.excelPlan()` says which cells ⬇ Excel would write, and `fmViewer.excelBytes()` gives the file without downloading it.
+
+---
+
+<a id="showcase-many"></a>
+## Lesson 8.3 — Make many viewers at once
+
+> **Goal:** a viewer for every model in a folder, each showing the same sliders and bars, with its workbook — and a model with no board given one chosen for it.
+> **You need:** a computer with the fmIDE repository and its test tooling (`npm install`), and the three shop models in `tests/fixtures/viewer/batch/`.
+> **Time:** about 10 minutes.
+> **In the app:** fmIDE Help → *Share a model as a showcase viewer* (`showcase-viewer`)
+> **Came in:** the showcase viewer's phase V5 · branch `claude/viewer-v5`
+
+A **recipe** is a showcase for many models: it names canvases, sliders and bars **by name**, never by id, so one recipe fits every model built the same way. The command `npm run make-viewers` reads each model, places the recipe's boards in it, has ExcelExporter make its workbook (in a browser without a window), and writes a viewer per model and a report.
+
+### Steps
+
+1. In fmIDE, open `shop-a.fmide` (it has no fmGraph board) and choose **File → Make Showcase Viewer…**. Under **Boards**, press **Choose for me**. A board **Chosen for me** appears, ticked, and the line says *Chosen for me: 3 sliders (Price, Volume, Unit cost) and 1 bar (Margin).* Close the window without making a viewer.
+2. Open a terminal in the repository's folder and run:
+   `npm run make-viewers -- --out out/shops --recipe tests/fixtures/viewer/batch/shops.recipe.json tests/fixtures/viewer/batch/shop-*.fmide`
+3. It says *3 viewers made in … (3 with notes: see report.txt)* and how big they are in all.
+4. Open `out/shops/report.txt`. Each model has its file, what it shows and its workbook. Under `shop-c.fmide` it says *Not found: Volume (on Shop) — left out*: that model calls it Units.
+5. Open `out/shops/shop-a-the-shop.html` in your browser. Its Board has the sliders **Price** and **Volume**, the bars **Profit** and **Margin** and the chart *Revenue and costs*.
+6. Move **Price** to 13 and press **⬇ Excel**.
+
+### Check it
+
+- In the viewer, **Profit** in 2025 is **400** before you move anything (10 × 100 − 100 × 6) and **700** with Price at 13.
+- In `shop-a workbook – my sliders.xlsx`, Profit on the **Shop** tab, in 2025, is **700**.
+- `shop-c`'s viewer has only the Price slider; its report line says why.
+
+### Good to know
+
+- **Where each viewer's choices come from**: a recipe given, for every model; without one, the document's own showcase (kept by Make Showcase Viewer…), else its fmGraph boards, else — with `--auto` — sliders and bars chosen for it, as Choose for me does; else the logic only.
+- **`--auto`** puts a slider on each input that moves a calculated rectangle (a number the same in every period gets a slider from half to one and a half times it; numbers that change by period get a change by %), and a bar on each result — a calculated rectangle nothing else reads — at most 12 of each.
+- **`--write-recipe FILE`** writes a recipe from the first viewer's boards, by name: make one viewer the way you like, write its recipe, adjust it, and use it for the rest.
+- **`--no-excel`** makes the viewers without workbooks, in a fraction of a second and with no browser; **`--excel-style FILE`** gives every workbook your Excel style (ExcelExporter's *Export Excel Style*).
+- A recipe's `title` and `excel.file` may use `{model}`, the model's file name. Two viewers of the same title get `-2`, `-3`… on their file names.
+- A small model's viewer is about 570 KB, workbook included; 100 of them took about a minute on the owner's computer and came to about 55 MB.
+
+### From a script
+
+The command's own work is `tools/viewer-batch.js` (`makeViewers`, `reportText`, `recipeFrom`), usable from Node. In fmIDE, `fm.showcaseChooseForMe()` does what Choose for me does and returns what it chose, by name.
 
 ---
 

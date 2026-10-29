@@ -18,6 +18,7 @@
 // build:include shared/input-rule.js
 // build:include shared/functions.js
 // build:include shared/ir.js
+// build:include shared/showcase-boards.js
 // build:include shared/error-words.js
 // build:include shared/file-formats.js
 // build:include shared/store.js

@@ -1,0 +1,25 @@
+{
+ "kind": "system",
+ "version": 9,
+ "periods": [
+  "1"
+ ],
+ "canvases": [
+  {
+   "id": "c",
+   "name": "Notes",
+   "nodes": [
+    {
+     "id": "a",
+     "type": "value",
+     "x": 0,
+     "y": 0,
+     "w": 150,
+     "h": 64,
+     "text": "Just a number\n5"
+    }
+   ],
+   "edges": []
+  }
+ ]
+}

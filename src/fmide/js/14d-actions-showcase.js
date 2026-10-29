@@ -28,6 +28,14 @@
       });
     } });
 
+  defineAction({ name:'showcaseChooseForMe', label:'Choose Boards for Me', category:'File', icon:'🖼', returns:'value', mutates:false, tx:false, record:false, macro:false,
+    desc:'For a model with no fmGraph boards: adds one, "Chosen for me", to the document\'s boards — a slider on each input that moves a calculated rectangle and a bar on each result, at most 12 of each (phase V5) — as Choose for me in Make showcase viewer… does. Returns { sliders, bars, notes }, each slider and bar by name. Not in macros.',
+    params:[],
+    run(){
+      if(runCtx) fail('Choosing boards isn\'t a macro step: use File → Make showcase viewer… → Choose for me.');
+      return chooseShowcaseBoards();
+    } });
+
   defineAction({ name:'showcase', label:'Showcase Kept', category:'File', icon:'🖼', returns:'value', mutates:false, tx:false, record:false,
     desc:'The showcase the document keeps (what its showcase viewer shows, workspace v14), or null.',
     run(){ return docShowcase ? cloneData(docShowcase) : null; } });

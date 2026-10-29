@@ -429,6 +429,96 @@ test.describe('nothing of ExcelExporter\'s in the built viewer or fmIDE', () => 
   });
 });
 
+// Phase V5: tools/make-viewers.js end to end — the real viewer page, ExcelExporter driven without
+// a window for each model's workbook, the made files opened from disk. (The batch's own choices,
+// with a stand-in page, are group 97's.)
+test.describe('tools/make-viewers.js: many viewers at once, with Excel', () => {
+  const { spawnSync } = require('child_process');
+  const zlib = require('zlib');
+  const BATCH = path.join(ROOT, 'tests', 'fixtures', 'viewer', 'batch');
+  const makeViewers = (args) => spawnSync(process.execPath, [path.join(ROOT, 'tools', 'make-viewers.js'), ...args], { cwd: ROOT, encoding: 'utf8', timeout: 240000 });
+  const workbookOf = (text) => {
+    const block = S.readViewerWorkbook(JSON.parse(blockOf(text, 'excel'))).value;
+    return new Uint8Array(zlib.inflateRawSync(Buffer.from(block.workbook, 'base64')));
+  };
+  // The font colours a workbook's cells use, as Excel writes them (ARGB).
+  async function fontColours(bytes){
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(Buffer.from(bytes));
+    const out = new Set();
+    wb.eachSheet(ws => ws.eachRow(row => row.eachCell(c => { const col = c.font && c.font.color && c.font.color.argb; if(col) out.add(col.toUpperCase()); })));
+    return out;
+  }
+
+  test('a recipe over three models: each viewer opens from disk, its Board placed by name, its ⬇ Excel giving its numbers; the report; the Excel style', async ({ browser }, testInfo) => {
+    const out = testInfo.outputPath('viewers');
+    const style = testInfo.outputPath('style.json');
+    fs.writeFileSync(style, fs.readFileSync(fixture('formats', 'excel-style.json'))); // Links in red, #dc2626
+    // The pattern is passed as it is (no shell): the tool works it out, as a Windows terminal won't.
+    const r = makeViewers(['--out', out, '--recipe', path.join(BATCH, 'shops.recipe.json'), '--excel-style', style, path.join(BATCH, 'shop-*.fmide')]);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout).toMatch(/^3 viewers made in .* \(3 with notes: see report\.txt\)\. [0-9.]+ MB in all, [0-9.]+ s\.\s*$/);
+    const report = JSON.parse(fs.readFileSync(path.join(out, 'report.json'), 'utf8'));
+    expect(report).toMatchObject({ kind: 'fmIDE-viewer-report', version: 1, made: 3, failed: 0, excel: true });
+    expect(report.viewers.map(e => [e.file, e.fileName, !!(e.excel && e.excel.size)])).toEqual([
+      ['shop-a.fmide', 'shop-a-the-shop.html', true], ['shop-b.fmide', 'shop-b-the-shop.html', true], ['shop-c.fmide', 'shop-c-the-shop.html', true]]);
+    expect(fs.readFileSync(path.join(out, 'report.txt'), 'utf8')).toContain('Not found: Volume (on Shop) — left out');
+    const text = fs.readFileSync(path.join(out, 'shop-a-the-shop.html'), 'utf8');
+    // The page is the viewer as built, with only its data blocks filled; none of ExcelExporter's code.
+    const page = fs.readFileSync(path.join(ROOT, 'apps', 'fmViewer.html'), 'utf8');
+    expect(text.replace(/(<script type="application\/json" id="[a-z]+">)[^<]*(<\/script>)/g, '$1$2')).toBe(page);
+    for(const m of ['export var XLSX', 'function viewerWorkbook(', 'function buildWorkbook']) expect(text).not.toContain(m);
+    // The workbook's look is the Excel style given: the Summary tab's links in its red.
+    expect((await fontColours(workbookOf(text))).has('FFDC2626')).toBe(true);
+    const v = await openMade(browser, testInfo, 'shop-a.html', text);
+    expect(await v.page.evaluate(() => fmViewer.state().view)).toBe('board');
+    expect(await v.page.evaluate(() => fmViewer.board().sliders.map(s => s.name))).toEqual(['Price', 'Volume']);
+    expect(await v.page.locator('#showTitle').textContent()).toBe('shop-a: the shop');
+    // Profit in 2025: 10 × 100 − 100 × 6 = 400; with Price at 13, 700. The downloaded workbook agrees.
+    expect(await v.page.evaluate(() => fmViewer.value('cShop', 'profit', 0))).toBe(400);
+    await v.page.evaluate(() => fmViewer.setSlider('Price', 13));
+    expect(await v.page.evaluate(() => fmViewer.value('cShop', 'profit', 0))).toBe(700);
+    await expect(v.page.locator('#excelNote')).toHaveText('Price set to 13');
+    const got = await downloadExcel(v.page);
+    expect(got.name).toBe('shop-a workbook – my sliders.xlsx');
+    const { book, valueOf } = await recalcBytes(got.bytes);
+    expect(valueOf('Shop', 'E' + rowOf(book, 'Shop', 'Profit'))).toBeCloseTo(700, 9);
+    expect(v.outside).toEqual([]);
+    expect(v.errors).toEqual([]);
+    await v.context.close();
+    // Without the style, the workbook has no red.
+    const plain = testInfo.outputPath('plain');
+    expect(makeViewers(['--out', plain, '--recipe', path.join(BATCH, 'shops.recipe.json'), path.join(BATCH, 'shop-a.fmide')]).status).toBe(0);
+    expect((await fontColours(workbookOf(fs.readFileSync(path.join(plain, 'shop-a-the-shop.html'), 'utf8')))).has('FFDC2626')).toBe(false);
+  });
+
+  test('--no-excel and --auto over a folder: no browser needed, no workbook block; --write-recipe; refusals in words', async ({ browser }, testInfo) => {
+    const out = testInfo.outputPath('quick');
+    const recipe = testInfo.outputPath('chosen.recipe.json');
+    const r = makeViewers(['--out', out, '--no-excel', '--auto', '--write-recipe', recipe, BATCH]);
+    expect(r.status, r.stderr).toBe(0);
+    const report = JSON.parse(fs.readFileSync(path.join(out, 'report.json'), 'utf8'));
+    // The folder's recipe is not a model: passed over. hostile.fmide, no-inputs.json and the shops are.
+    expect(report.viewers.map(e => [e.file, e.source])).toEqual([['hostile.fmide', 'auto'], ['no-inputs.json', 'logic'], ['shop-a.fmide', 'auto'], ['shop-b.fmide', 'showcase'], ['shop-c.fmide', 'auto']]);
+    const text = fs.readFileSync(path.join(out, 'shop-a.html'), 'utf8');
+    expect(blockOf(text, 'excel')).toBe('');
+    expect(JSON.parse(fs.readFileSync(recipe, 'utf8'))).toMatchObject({ kind: 'fmIDE-showcase', form: 'recipe', title: '{model}' });
+    const v = await openMade(browser, testInfo, 'shop-a.html', text);
+    expect(await v.page.evaluate(() => fmViewer.board().boards)).toEqual(['Chosen for me']);
+    await expect(v.page.locator('#excelWrap')).toBeHidden();
+    await v.context.close();
+    // The hostile model's names, shown as text in the viewer: nothing of them runs.
+    const h = await openMade(browser, testInfo, 'hostile.html', fs.readFileSync(path.join(out, 'hostile.html'), 'utf8'));
+    await h.page.evaluate(() => fmViewer.showView('logic'));
+    expect(await h.page.locator('img, iframe, object, embed').count()).toBe(0);
+    expect(h.errors).toEqual([]);
+    await h.context.close();
+    expect(makeViewers(['--no-excel', BATCH]).stderr).toMatch(/give --out DIR/);
+    expect(makeViewers(['--out', out, '--recipe', fixture('viewer', 'every-widget.showcase.json'), BATCH]).stderr).toMatch(/not a recipe/);
+    expect(makeViewers(['--out', out, '--no-excel', '--excel-style', fixture('formats', 'excel-style.json'), BATCH]).stderr).toMatch(/leave out --no-excel/);
+  });
+});
+
 // The owner's check (phase V4): the author's workbook and the four patched ones, with a
 // checklist of what each should show in Excel on Windows and on the iPad.
 function writeCheckFiles(authorBytes, results){

@@ -8,6 +8,33 @@
   // since then comes unticked. Nothing is sent anywhere: the file is downloaded (on a touch
   // screen, the share sheet).
 
+  // build:include shared/showcase-boards.js
+
+  // Choose for me (phase V5): a model with no fmGraph boards gets one, "Chosen for me" — a slider
+  // on each input that reaches a calculated rectangle and a bar on each result, at most 12 of
+  // each (autoShowcaseBoards, src/shared/showcase-boards.js, the batch tool's `auto` too) — added
+  // to the document's fmGraph boards (the owner's choice 6 of V5), so fmGraph shows it to adjust.
+  // Kept with the document like boards made in fmGraph (unsaved changes, not an undo step).
+  // Returns { sliders, bars, notes } (each slider and bar by name), or fails in words.
+  const CHOOSE_FOR_ME_RANGE = 50;
+  function chooseShowcaseBoards(){
+    if(inPractice()) fail('Not while practising a tutorial: the practice model isn\'t your document.');
+    if(showcaseBoardList(graphBoards).boards.length) fail('This model has fmGraph boards already: choose among them, or change them in fmGraph.');
+    const r = autoShowcaseBoards(buildSystemPayload(), { sliders: 'inputs', bars: 'outputs', range: CHOOSE_FOR_ME_RANGE });
+    if(!r.file) fail('Nothing to choose: this model has no input that moves a calculated rectangle, and no result.');
+    const kept = cleanGraphBoards(r.file);
+    if(!kept) fail('The board chosen couldn\'t be kept.');
+    graphBoards = kept;
+    markDocDirty();
+    if(showcaseMaker) showcaseMaker.refreshBoards();
+    return { sliders: r.sliders, bars: r.bars, notes: r.notes };
+  }
+  const chosenWords = (r) => {
+    const list = (items) => items.map(x => x.name).join(', ');
+    return 'Chosen for me: ' + r.sliders.length + ' slider' + (r.sliders.length === 1 ? '' : 's') + (r.sliders.length ? ' (' + list(r.sliders) + ')' : '')
+      + ' and ' + r.bars.length + ' bar' + (r.bars.length === 1 ? '' : 's') + (r.bars.length ? ' (' + list(r.bars) + ')' : '') + '. Open fmGraph to adjust them.';
+  };
+
   // The viewer's page as the build packed it: a Promise of its text.
   async function viewerPageText(){
     const el = document.getElementById('viewerPage');
@@ -203,17 +230,26 @@
     // ---- the boards ----
     const boardsBox = el('div', 'sm-boards');
     box.appendChild(boardsBox);
-    let boardTicks = [], playFrom = null, playTo = null;
+    let boardTicks = [], playFrom = null, playTo = null, chosenLine = '';
     function renderBoards(list, chosen, play){
       boardsBox.textContent = '';
       boardTicks = []; playFrom = playTo = null;
       boardsBox.appendChild(el('p', 'library-pack-heading', 'Boards (from fmGraph)'));
+      if(chosenLine && list.boards.length) boardsBox.appendChild(el('p', 'sm-chosen', chosenLine));
       if(!list.boards.length){
         boardsBox.appendChild(el('p', 'sm-no-boards', 'This model has no fmGraph boards yet, so the viewer will show its logic only.'));
         const open = el('button', 'sm-open-fmgraph', 'Open fmGraph to make one');
         open.type = 'button';
         open.addEventListener('click', () => runCommand('openFmGraph'));
         boardsBox.appendChild(open);
+        const choose = el('button', 'sm-choose-for-me', 'Choose for me');
+        choose.type = 'button';
+        choose.title = 'Add a board with a slider on each input and a bar on each result, to adjust in fmGraph';
+        choose.addEventListener('click', () => {
+          try{ chosenLine = chosenWords(chooseShowcaseBoards()); refreshBoards(); }
+          catch(err){ showMessage(String(err && err.message ? err.message : err)); }
+        });
+        boardsBox.appendChild(choose);
         return;
       }
       list.boards.forEach((b, i) => {

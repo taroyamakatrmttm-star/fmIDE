@@ -97,5 +97,6 @@
  "93-viewer-board.spec.js": 41.9,
  "94-make-showcase-viewer.spec.js": 14.1,
  "95-xlsx-patch.spec.js": 6.5,
- "96-viewer-excel.spec.js": 60
+ "96-viewer-excel.spec.js": 78,
+ "97-make-viewers.spec.js": 4
 }

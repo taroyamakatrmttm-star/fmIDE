@@ -14,7 +14,7 @@ export const SHOWCASE_FORMATS = { 'fmIDE-showcase': { current: 1, label: 'fmIDE 
 // One step per version, upgrading a copy (none yet: version 1 is the first).
 export const SHOWCASE_MIGRATIONS = { 'fmIDE-showcase': {} };
 export const SHOWCASE_LIMITS = { id: 60, title: 80, description: 400, author: 80, licence: 60, canvases: 500, canvasId: 200,
-  scenario: 120, file: 120, periods: 10000, range: 100 };
+  scenario: 120, file: 120, periods: 10000, range: 100, canvasName: 80 };
 
 const isObject = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 // A text from the file: a string (or number), control characters out, spaces at the ends
@@ -105,6 +105,11 @@ export function cleanShowcase(d){
     }
   }
   v.boards = cleanBoardsField(d.boards, problems, false);
+  cleanPlayPeriodsExcel(d, v, problems);
+  return { value: v, problems };
+}
+// play, periods and excel, the same in both forms (a recipe's excel.file may use {model}).
+function cleanPlayPeriodsExcel(d, v, problems){
   v.play = null;
   if(d.play !== undefined){
     const from = isObject(d.play) ? showcaseText(d.play.from, SHOWCASE_LIMITS.scenario) : '';
@@ -125,15 +130,39 @@ export function cleanShowcase(d){
     if(file) v.excel = { file };
     else problems.push('"excel.file" is not a file name: left out.');
   }
-  return { value: v, problems };
 }
 
 // A recipe: { value, problems }. value: { kind, version, form: 'recipe', title, description,
-// author, licence, mark, boards (template form) | null, auto: { sliders, bars, range } | null }.
+// author, licence, mark, boards (template form) | null, canvases: { show: [names] | null, start:
+// name | null }, play, periods, excel (phase V5; as in the one-model form, the canvases by
+// name), auto: { sliders, bars, range } | null }.
 export function cleanShowcaseRecipe(d){
   const problems = [];
   const v = Object.assign({ kind: SHOWCASE_KIND, version: 1, form: 'recipe' }, cleanCommon(d, problems, true));
   v.boards = cleanBoardsField(d.boards, problems, true);
+  // Phase V5: the canvases by name (a recipe fits many models, whose ids differ), and play,
+  // periods and excel as in the one-model form.
+  v.canvases = { show: null, start: null };
+  if(d.canvases !== undefined){
+    if(!isObject(d.canvases)) problems.push('"canvases" is not a list of canvas names: every canvas is shown.');
+    else {
+      if(d.canvases.show !== undefined){
+        if(!Array.isArray(d.canvases.show)) problems.push('"canvases.show" is not a list of canvas names: every canvas is shown.');
+        else {
+          const names = [];
+          d.canvases.show.forEach(x => { const n = showcaseText(x, SHOWCASE_LIMITS.canvasName); if(n && !names.some(m => m.toLowerCase() === n.toLowerCase()) && names.length < SHOWCASE_LIMITS.canvases) names.push(n); });
+          if(names.length < d.canvases.show.length) problems.push('Some entries of "canvases.show" are not canvas names, or repeat: they are left out.');
+          v.canvases.show = names;
+        }
+      }
+      if(d.canvases.start !== undefined){
+        const n = showcaseText(d.canvases.start, SHOWCASE_LIMITS.canvasName);
+        if(n) v.canvases.start = n;
+        else problems.push('"canvases.start" is not a canvas name: the first canvas shown opens.');
+      }
+    }
+  }
+  cleanPlayPeriodsExcel(d, v, problems);
   v.auto = null;
   if(d.auto !== undefined){
     if(!isObject(d.auto)) problems.push('"auto" is not a set of choices: left out.');
@@ -315,6 +344,35 @@ export function fillViewerPage(page, showcase, model, excel){
   let out = page;
   Object.keys(values).forEach(key => { out = fill(out, key, values[key]); });
   return { page: out };
+}
+
+// The data blocks of a made viewer, read as text (phase V5: the batch tool and the gallery, in
+// Node; the viewer itself reads a made viewer opened as a file through DOMParser, 02-files.js).
+// Each block is looked for exactly as fillViewerPage writes it, at most once (the model's
+// required, the showcase's and Excel's may be empty); its text ends at the first closing tag,
+// which is safe because inside a block every "<" is written as its < escape — a block holding a "<" of
+// its own wasn't written by fillViewerPage and is refused. Nothing else of the page is kept.
+// Returns { blocks: { showcase, model, excel } } (each its text, '' when empty) or { error }.
+export function madeViewerBlocks(text){
+  const notViewer = { error: 'That page isn\'t a viewer made by fmIDE.' };
+  if(typeof text !== 'string') return notViewer;
+  const blocks = {};
+  for(const key of Object.keys(VIEWER_BLOCKS)){
+    const open = VIEWER_BLOCKS[key].slice(0, VIEWER_BLOCKS[key].length - VIEWER_BLOCK_END.length);
+    // A block is the opening tag, text with no "<", then the closing tag; the opening tag's
+    // words met anywhere else (the page's own script names them) are not a block.
+    const found = [];
+    for(let at = text.indexOf(open); at >= 0; at = text.indexOf(open, at + 1)){
+      const start = at + open.length;
+      const next = text.indexOf('<', start);
+      if(next >= 0 && text.slice(next, next + 8).toLowerCase() === '<\/script') found.push(text.slice(start, next));
+    }
+    if(found.length > 1) return notViewer;
+    if(!found.length){ if(key === 'excel'){ blocks.excel = ''; continue; } return notViewer; }
+    blocks[key] = found[0].trim();
+  }
+  if(!blocks.model) return { error: 'That page holds no model: it is fmShowcase\'s own page, not a viewer made for a model.' };
+  return { blocks };
 }
 
 // ---------- Excel in a viewer (phase V4): the workbook block and its cell map ----------

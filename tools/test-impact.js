@@ -77,6 +77,9 @@ const TOOL_INPUTS = {
   'tools/record-tutorials.js': [APP_PAGES.fmIDE, APP_PAGES.ExcelExporter, APP_PAGES.fmGraph],
   'tools/bench-calc.js': [APP_PAGES.fmIDE, APP_PAGES.ExcelExporter, APP_PAGES.fmGraph],
   'tools/test-parts.js': ['tests/test-durations.json'],
+  // The batch of showcase viewers (phase V5): the viewer's page and ExcelExporter, driven for the
+  // workbooks. Its own work, tools/viewer-batch.js, reads no app (group 97 gives it a stand-in page).
+  'tools/make-viewers.js': [APP_PAGES.fmViewer, APP_PAGES.ExcelExporter],
   'tools/build.js': [SITE],
 };
 

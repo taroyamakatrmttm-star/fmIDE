@@ -12,6 +12,16 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'showcase-many', date: '2026-10-29', title: 'Showcase viewers for many models at once, and Choose for me',
+    summary: 'A model with no fmGraph board can have one chosen for it, and a whole folder of models can become viewers in one go.',
+    what: [
+      'Make Showcase Viewer… has Choose for me, for a model with no fmGraph boards: it adds a board with a slider on each input that moves something and a bar on each result, at most 12 of each. Open fmGraph to change it before you make the viewer.',
+      'On a computer, npm run make-viewers makes a viewer for every model in a folder: a recipe names the sliders, bars and canvases by name, so one recipe fits many models built alike. Each viewer carries its Excel workbook, and a report says what each shows and anything not found.',
+    ],
+    why: 'A course or a client may need dozens of small models shown the same way: choosing sliders and bars by hand for each one takes too long.',
+    how: ['Open {cmd:makeShowcaseViewer} on a model with no boards and press Choose for me.', 'For many models, see lesson 8.3 of the user manual.'],
+    notes: ['A rectangle a recipe names that a model doesn\'t have is left out of that viewer and listed in the report, never silently.'],
+    see: ['showcase-viewer'] },
   { id: 'showcase-excel', date: '2026-10-29', title: 'Showcase viewers carry Excel',
     summary: 'A showcase viewer can now carry the model\'s Excel workbook: a visitor downloads it with their scenario and sliders written in.',
     what: [

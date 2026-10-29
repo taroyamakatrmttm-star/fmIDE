@@ -428,3 +428,34 @@ test('a document dropped on fmShowcase that keeps its showcase opens as its view
   expect(st.canvases).toEqual(['cProfit', 'cCash']);
   expect((await page.evaluate(() => fmViewer.board())).boards).toEqual(['Own sliders']);
 });
+
+// Choose for me (phase V5): a model with no fmGraph boards gets one chosen for it — a slider on
+// each input that moves something, a bar on each result — added to the document's boards, so the
+// window ticks it and fmGraph would show it; the viewer made opens on it.
+test('no boards: Choose for me adds "Chosen for me" to the document\'s boards, ticked; the viewer opens on it; fm.showcaseChooseForMe', async ({ page, browser }, testInfo) => {
+  await fmideWith(page, fixture('formats', 'sys-current.json'), 'c1');
+  await page.evaluate(() => fm.command('makeShowcaseViewer'));
+  const box = maker(page);
+  await expect(box.locator('.sm-choose-for-me')).toHaveText('Choose for me');
+  await box.locator('.sm-choose-for-me').click();
+  await expect(box.locator('.sm-board')).toHaveCount(1);
+  expect(await box.locator('.sm-board').textContent()).toBe(' Chosen for me');
+  await expect(box.locator('.sm-board input')).toBeChecked();
+  await expect(box.locator('.sm-chosen')).toHaveText('Chosen for me: 2 sliders (Unit Price, Volume) and 1 bar (Revenue). Open fmGraph to adjust them.');
+  const made = await makeFromWindow(page);
+  const v = await openMade(browser, testInfo, made);
+  expect(await v.page.evaluate(() => fmViewer.board().boards)).toEqual(['Chosen for me']);
+  expect(await v.page.evaluate(() => fmViewer.board().sliders.map(s => [s.name, s.mode]))).toEqual([['Unit Price', 'set'], ['Volume', 'set']]);
+  expect(v.errors).toEqual([]);
+  await v.context.close();
+  // Once the model has boards, there is nothing to choose for it.
+  expect(await page.evaluate(() => { try{ fm.showcaseChooseForMe(); return 'chose'; }catch(e){ return e.message; } })).toMatch(/has fmGraph boards already/);
+});
+
+test('fm.showcaseChooseForMe on a model with no boards: what it chose, by name', async ({ page }) => {
+  await fmideWith(page, fixture('formats', 'sys-current.json'), 'c1');
+  expect(await page.evaluate(() => fm.showcaseChooseForMe())).toEqual({
+    sliders: [{ name: 'Unit Price', canvas: expect.any(String), mode: 'set', min: expect.any(Number), max: expect.any(Number), step: expect.any(Number) },
+      { name: 'Volume', canvas: expect.any(String), mode: 'set', min: expect.any(Number), max: expect.any(Number), step: expect.any(Number) }],
+    bars: [{ name: 'Revenue', canvas: expect.any(String) }], notes: [] });
+});
