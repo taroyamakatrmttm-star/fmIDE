@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmShowcase: Choose for me for any model
+- An fmGraph board with nothing on it (fmGraph's first board, never filled) counts as no board: Make Showcase Viewer… doesn't list it and offers Choose for me, whose board takes its place (its scenarios kept); a model with boards that show something gets Choose for me too, adding *Chosen for me* (or *Chosen for me 2*…) beside them, ticked. `fm.showcaseChooseForMe()` returns the board's `name` and no longer refuses a model with boards. `npm run make-viewers --auto` chooses for a document whose boards, or whose showcase's boards, are all empty (they gave an empty board before).
+- Tests: group 94 two new tests, its Choose for me tests changed on purpose (choosing twice adds *Chosen for me 2*; the API returns `name`); group 97 one new test; group 50 changed on purpose (the no-boards line's words, a board made in fmGraph given a bar to be offered). Branch `claude/choose-for-me-empty-boards`.
+
 ## fmShowcase: the gallery and finishing (phase V6)
 - The site's `/gallery` (`tools/build-gallery.js`), from a folder of made viewers (`--gallery DIR`, else `gallery/`): a plain page with no script, a card per viewer in `gallery.json`'s sections (kind `fmIDE-gallery` 1), each viewer at `/gallery/v/<id>` rebuilt with today's viewer page from its data blocks; two policies on paths that never overlap. `npm run make-viewers` gains `--pictures` and `--gallery`.
 - The viewer's page connects to nothing (`connect-src 'none'`, `/fmViewer.html` and the gallery's viewers).

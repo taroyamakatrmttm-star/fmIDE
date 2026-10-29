@@ -125,13 +125,13 @@ In the viewer, `fmViewer.excelPlan()` says which cells ⬇ Excel would write, an
 > **You need:** a computer with the fmIDE repository and its test tooling (`npm install`), and the three shop models in `tests/fixtures/viewer/batch/`.
 > **Time:** about 10 minutes.
 > **In the app:** fmIDE Help → *Share a model as a showcase viewer* (`showcase-viewer`)
-> **Came in:** the showcase viewer's phase V5 · branch `claude/viewer-v5`
+> **Came in:** the showcase viewer's phase V5 · branches `claude/viewer-v5`, `claude/choose-for-me-empty-boards`
 
 A **recipe** is a showcase for many models: it names canvases, sliders and bars **by name**, never by id, so one recipe fits every model built the same way. The command `npm run make-viewers` reads each model, places the recipe's boards in it, has ExcelExporter make its workbook (in a browser without a window), and writes a viewer per model and a report.
 
 ### Steps
 
-1. In fmIDE, open `shop-a.fmide` (it has no fmGraph board) and choose **File → Make Showcase Viewer…**. Under **Boards**, press **Choose for me**. A board **Chosen for me** appears, ticked, and the line says *Chosen for me: 3 sliders (Price, Volume, Unit cost) and 1 bar (Margin).* Close the window without making a viewer.
+1. In fmIDE, open `shop-a.fmide` (it has no fmGraph board) and choose **File → Make Showcase Viewer…**. Under **Boards**, press **Choose for me**. A board **Chosen for me** appears, ticked, and the line says *Chosen for me: 3 sliders (Price, Volume, Unit cost) and 1 bar (Margin).* Close the window without making a viewer. (Choose for me is there for any model: a board with nothing on it — fmGraph's first board, never filled — counts as none and is replaced; beside boards that show something, it adds one more, *Chosen for me 2* if the name is taken.)
 2. Open a terminal in the repository's folder and run:
    `npm run make-viewers -- --out out/shops --recipe tests/fixtures/viewer/batch/shops.recipe.json tests/fixtures/viewer/batch/shop-*.fmide`
 3. It says *3 viewers made in … (3 with notes: see report.txt)* and how big they are in all.
@@ -147,7 +147,7 @@ A **recipe** is a showcase for many models: it names canvases, sliders and bars 
 
 ### Good to know
 
-- **Where each viewer's choices come from**: a recipe given, for every model; without one, the document's own showcase (kept by Make Showcase Viewer…), else its fmGraph boards, else — with `--auto` — sliders and bars chosen for it, as Choose for me does; else the logic only.
+- **Where each viewer's choices come from**: a recipe given, for every model; without one, the document's own showcase (kept by Make Showcase Viewer…), else its fmGraph boards, else — with `--auto` — sliders and bars chosen for it, as Choose for me does; else the logic only. Boards with nothing on them count as none, so `--auto` chooses for them too.
 - **`--auto`** puts a slider on each input that moves a calculated rectangle (a number the same in every period gets a slider from half to one and a half times it; numbers that change by period get a change by %), and a bar on each result — a calculated rectangle nothing else reads — at most 12 of each.
 - **`--write-recipe FILE`** writes a recipe from the first viewer's boards, by name: make one viewer the way you like, write its recipe, adjust it, and use it for the rest.
 - **`--no-excel`** makes the viewers without workbooks, in a fraction of a second and with no browser; **`--excel-style FILE`** gives every workbook your Excel style (ExcelExporter's *Export Excel Style*).

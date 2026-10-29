@@ -83,6 +83,23 @@ test('without a recipe: the document\'s own showcase, else its boards, else auto
   expect(entryOf(none, 'no-inputs.json').source).toBe('logic');
 });
 
+// The owner's report of 29 October 2026: a document whose only board is empty (fmGraph's first,
+// never filled) got that empty board instead of auto's choice.
+test('boards with nothing on them count as none: auto chooses, in the document\'s boards and in its showcase\'s; without auto, the logic only', async () => {
+  const withEmpty = (showcase) => {
+    const doc = JSON.parse(sample('shop-a.fmide').text);
+    doc.graphBoards = { kind: 'fmIDE-graph-board', version: 13, active: 0, boards: [{ name: 'Board', items: [], sliders: [] }] };
+    if(showcase) doc.showcase = { kind: 'fmIDE-showcase', version: 1, id: 'kept', title: 'Kept', boards: doc.graphBoards };
+    return { fileName: showcase ? 'kept.fmide' : 'empty.fmide', text: JSON.stringify(doc) };
+  };
+  const auto = await B.makeViewers([withEmpty(false), withEmpty(true)], { auto: true, viewerPage: PAGE, excel: false });
+  expect(auto.report.viewers.map(e => e.source)).toEqual(['auto', 'showcase']);
+  auto.viewers.forEach(v => expect(sliderNames(showcaseOf(v).boards)).toEqual(['Price', 'Volume', 'Unit cost']));
+  expect(entryOf(auto, 'kept.fmide').notes.join(' ')).toMatch(/no board with anything on it/);
+  const plain = await B.makeViewers([withEmpty(false)], { viewerPage: PAGE, excel: false });
+  expect(plain.report.viewers[0].source).toBe('logic');
+});
+
 test('auto: sliders on inputs that move something (set or shift), bars on results, at most 12, the fallback', () => {
   const shop = JSON.parse(sample('shop-a.fmide').text).system;
   const r = SB.autoShowcaseBoards(shop, { sliders: 'inputs', bars: 'outputs', range: 50 });
