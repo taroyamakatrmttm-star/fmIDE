@@ -22,6 +22,16 @@ const WHATS_NEW = [
     how: ['Open {cmd:makeShowcaseViewer} and leave Include an Excel workbook ticked.', 'Press Make viewer, then open the file and try ⬇ Excel.'],
     notes: ['Your own Excel layout in ExcelExporter is not changed.', 'In an iPhone\'s or iPad\'s home-screen app, make the viewer in Safari or on a computer to include Excel.'],
     see: ['showcase-viewer'] },
+  { id: 'showcase-viewer-ipad', date: '2026-10-29', title: 'Open a showcase viewer on an iPhone or iPad',
+    summary: 'A viewer saved in Files opens only in a preview there, which can\'t run it: now fmShowcase on the site opens the file itself.',
+    what: [
+      'In Safari, go to https://fmide.pages.dev/fmViewer, tap Choose, and pick the viewer\'s .html file. It opens just as it does on a computer.',
+      'Only the model and showcase inside the file are read; nothing in it runs. A page that isn\'t a viewer made by fmIDE is refused.',
+      'The viewer\'s sliders are shorter too: each is one row, its name, the slider and its number, and the list scrolls on its own, so the bars and charts stay in view.',
+    ],
+    why: 'On an iPhone or iPad, the Files app shows a web page in a preview that runs no script, so a viewer could only be looked at, never used.',
+    how: ['Make a viewer ({cmd:makeShowcaseViewer}) and save it in Files.', 'In Safari, go to https://fmide.pages.dev/fmViewer.', 'Tap Choose and pick the file.'],
+    see: ['showcase-viewer'] },
   { id: 'showcase-viewer', date: '2026-10-28', title: 'Share a model as a showcase viewer',
     summary: 'File → Make Showcase Viewer… makes one web page that shows your model read-only, with its boards and sliders, to email or share.',
     what: [

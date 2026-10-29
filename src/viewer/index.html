@@ -32,7 +32,7 @@
       <button type="button" id="btnExcel" class="vbar-btn vbar-excel">⬇ Excel</button>
       <span id="excelNote" class="excel-note desk-only" aria-live="polite"></span>
     </div>
-    <button type="button" id="btnOpen" class="vbar-btn" title="Open a model saved by fmIDE (.fmide or .json), and a showcase file if you have one">Open…</button>
+    <button type="button" id="btnOpen" class="vbar-btn" title="Open a viewer made by fmIDE (.html), or a model saved by fmIDE (.fmide or .json) and a showcase file if you have one">Open…</button>
     <button type="button" id="btnHelp" class="vbar-btn vbar-help" title="Help (F1)" aria-label="Help">?</button>
   </div>
 </header>
@@ -47,9 +47,10 @@
 <section id="welcome" class="welcome">
   <h2>See how a model works</h2>
   <div id="dropBox" class="dropbox" role="button" tabindex="0">
-    <span class="dropbox-main desk-only">Drop a .fmide or .json model here</span>
-    <span class="dropbox-main phone-only">Choose a .fmide or .json model</span>
-    <span class="dropbox-sub">and a showcase file, if you have one</span>
+    <span class="dropbox-main drop-words">Drop a .fmide or .json model here</span>
+    <span class="dropbox-main choose-words"><strong>Choose</strong> a viewer (.html) or a model (.fmide, .json)</span>
+    <span class="dropbox-sub drop-words">and a showcase file, if you have one — or a viewer made by fmIDE (.html)</span>
+    <span class="dropbox-sub choose-words">and a showcase file, if you have one</span>
   </div>
   <p class="welcome-actions"><button type="button" id="btnSample" class="primary">Try the sample</button></p>
 </section>
@@ -134,7 +135,7 @@
   </div>
 </div>
 
-<input type="file" id="fileInput" accept=".fmide,application/json,.json" multiple hidden>
+<input type="file" id="fileInput" accept=".fmide,application/json,.json,.html,.htm" multiple hidden>
 
 <!-- A viewer made for one model carries its showcase and model here, and, made with Excel,
      its author's workbook and cell map (data, never run: the browser runs no script of these

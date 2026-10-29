@@ -264,6 +264,7 @@ Oldest first. *Step* is the build step (and phase) the pull request belongs to; 
 | branch `claude/viewer-v2` | 2026-10-28 | fmShowcase: the Board — fmGraph's bars, charts and sliders, scenarios, Play, A/B and Trace, read-only; fmGraph's board engine separated, fmGraph unchanged | after 20 | [8.1](08-showcase.md#showcase-viewer) |
 | branch `claude/viewer-v3` | 2026-10-28 | fmIDE: File → Make Showcase Viewer… — one web page showing the model read-only, to email or share; the choices kept in the document (workspace 14) | after 20 | [8.1](08-showcase.md#showcase-viewer) |
 | branch `claude/viewer-v4` | 2026-10-29 | Showcase viewers carry Excel: Make Showcase Viewer…'s Include an Excel workbook (ExcelExporter makes it), the visitor's ⬇ Excel with their scenario or sliders written in | after 20 | [8.2](08-showcase.md#showcase-excel) |
+| branch `claude/viewer-ipad-sliders` | 2026-10-29 | fmShowcase: a made viewer's .html chosen in it opens as from disk (for an iPhone or iPad, where Files only previews it); the sliders one short row each, in a list that scrolls on its own | after 20 | [8.1](08-showcase.md#showcase-viewer) |
 
 ---
 
