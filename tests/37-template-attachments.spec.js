@@ -55,10 +55,10 @@ test('Attach Excel layout… takes this family\'s entry from an ExcelExporter fi
   await expect(picker(page).locator('.template-attachment')).toContainText('An Excel layout is attached');
 
   const ws = await library(page);
-  expect(ws.version).toBe(14);
+  expect(ws.version).toBe(15);
   expect(ws.templates.find(t => t.name === 'Sales').attachments).toEqual({ excel: LAYOUT });
   const { data: tf } = await F.downloadJson(page, () => picker(page).locator('button', { hasText: '⇩ Export Templates' }).click());
-  expect(tf.version).toBe(10);
+  expect(tf.version).toBe(11);
   expect(tf.templates.find(t => t.name === 'Sales').attachments).toEqual({ excel: LAYOUT });
 
   await page.waitForTimeout(2500); // the autosave
@@ -159,11 +159,11 @@ test('a library pack carries the layout: shown in the preview, added with the te
   expect((await library(page)).templates.filter(t => t.name === 'Sales').map(t => t.attachments)).toEqual([{ excel: LAYOUT }]);
 });
 
-test('Save as Library Pack writes pack v4 with the layout, and the pack checker passes it', async ({ page }, testInfo) => {
+test('Save as Library Pack writes pack v5 with the layout, and the pack checker passes it', async ({ page }, testInfo) => {
   await importTemplates(page, testInfo, [salesTemplate({ excel: LAYOUT })]);
   const saved = await page.evaluate(() => fm.saveLibraryPack({ title: 'Sales module', author: 'Ann Example', templates: ['Sales'], download: false }));
   const data = typeof saved === 'string' ? JSON.parse(saved) : saved;
-  expect(data.version).toBe(4);
+  expect(data.version).toBe(5);
   expect(data.templates[0].attachments).toEqual({ excel: LAYOUT });
   const r = checkPack(JSON.stringify(data, null, 2), data.pack.id + '.fmide-pack.json');
   expect(r.errors).toEqual([]);

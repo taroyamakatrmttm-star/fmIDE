@@ -167,7 +167,7 @@ function checkPack(content, fileName){
 
   const templates = checkTemplates(rawTemplates.slice(0, max), raw.version, { error, warning, note }, p);
   const functions = checkFunctions(rawFunctions.slice(0, max), { error, warning, note }, p);
-  checkRecipeParts(templates, rawTemplates, error);
+  checkRecipeParts(templates, rawTemplates, error, warning);
   report.counts = { templates: templates.filter(t => t.kind !== 'recipe').length, recipes: templates.filter(t => t.kind === 'recipe').length, functions: functions.length };
 
   // ---- the same result as fmIDE ----
@@ -346,6 +346,16 @@ function checkRecipe(t, where, err){
     if(found) err(`Its ${w}'s name contains a hidden character (${found}).`);
   });
   if(!clean || clean.parts.length !== parts.length) err('fmIDE would leave out some of the recipe\'s parts.');
+  // Its links (pack v5), as fmIDE reads them (cleanRecipeLinks): every link must survive.
+  const links = t.data.links;
+  if(links === undefined) return;
+  if(!Array.isArray(links)){ err('Its links aren\'t a list.'); return; }
+  if(links.length > S.RECIPE_MAX_LINKS){ err(`The recipe has ${links.length} links; fmIDE reads at most ${S.RECIPE_MAX_LINKS}.`); return; }
+  links.forEach((l, j) => [isObject(l) ? l.to : null, isObject(l) ? l.from : null].forEach(e => {
+    const found = isObject(e) ? hiddenCharacter(e.rectangle) : null;
+    if(found) err(`Its link ${j + 1} names a rectangle with a hidden character (${found}).`);
+  }));
+  if(S.cleanRecipeLinks(links).length !== links.length) err('fmIDE would leave out some of the recipe\'s links (one malformed, one feeding a rectangle another link feeds, or a rectangle feeding itself).');
 }
 // A canvas or system template's model: read and upgraded by the shared reader, then its
 // shape checked and its calculation tried.
@@ -447,7 +457,7 @@ function checkCanvasShape(c, cw, err){
 // it pins, or any version for "latest"). A recipe inside a recipe is built in its place, as
 // fmIDE does, at most RECIPE_MAX_DEPTH deep; one that contains itself is an error.
 const RECIPE_MAX_DEPTH = 8;
-function checkRecipeParts(templates, rawList, error){
+function checkRecipeParts(templates, rawList, error, warning){
   const resolve = (part) => {
     const same = templates.filter(x => x.family === part.family);
     if(part.version === 'latest') return same.sort((a, b) => b.version - a.version)[0];
@@ -481,6 +491,24 @@ function checkRecipeParts(templates, rawList, error){
       if(hit.kind !== 'module' && hit.kind !== 'recipe') return error(t.where, `The recipe's part ${shown} is not a canvas template or a recipe.`);
       if(part.version !== 'latest' && part.versionId && hit.versionId !== part.versionId) error(t.where, `The recipe was made with a different ${shown}${vText} than the one in the pack.`);
     });
+    if(depth === 'loop' || !Array.isArray(t.raw.data.links)) return;
+    // Its links: each end a canvas template it builds, with that rectangle (fmIDE builds a
+    // link that won't hold with a warning, so these are warnings too).
+    const leaves = new Map();
+    const walk = (r, d) => r.raw.data.parts.forEach(part => {
+      const hit = resolve(part);
+      if(hit && hit.kind === 'module' && !leaves.has(hit.family)) leaves.set(hit.family, hit);
+      if(hit && hit.kind === 'recipe' && d < RECIPE_MAX_DEPTH) walk(hit, d + 1);
+    });
+    walk(t, 0);
+    t.raw.data.links.forEach((l, j) => [[l.to, true], [l.from, false]].forEach(([e, feeds]) => {
+      const leaf = leaves.get(e.family);
+      if(!leaf) return warning(t.where, `Its link ${j + 1} names a template that isn't one of its parts.`);
+      const model = leaf.raw.data, name = e.rectangle.trim().toLowerCase();
+      const hits = (model.nodes || []).filter(n => isObject(n) && n.type === 'value' && (S.parseRectText(n.text).name || '').trim().toLowerCase() === name);
+      if(hits.length !== 1) return warning(t.where, `Its link ${j + 1}: ${quote(leaf.name)} has ${hits.length ? 'more than one rectangle' : 'no rectangle'} called ${quote(e.rectangle)}.`);
+      if(feeds && !S.isInputRectangle({ nodes: model.nodes, edges: model.edges || [] }, hits[0])) warning(t.where, `Its link ${j + 1}: ${quote(e.rectangle)} in ${quote(leaf.name)} isn't an input rectangle, so fmIDE won't draw it.`);
+    }));
   });
 }
 

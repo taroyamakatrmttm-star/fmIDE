@@ -272,6 +272,7 @@ Oldest first. *Step* is the build step (and phase) the pull request belongs to; 
 | branch `claude/slider-colours` | 2026-10-30 | fmGraph and fmShowcase: a slider's grip and filled bar take its rectangle's colour (a very pale one darkened to stay visible) | after 20 | [6.3](06-fmgraph.md#graph-boards) |
 | branch `claude/fmgraph-copy-move-261200` | 2026-10-30 | fmGraph: ⇄ copies or moves a slider, bar or chart to another board (or a new one) | after 20 | [6.3](06-fmgraph.md#graph-boards) |
 | branch `claude/excel-new-canvas-tabs` | 2026-10-30 | ExcelExporter: a canvas added after the layout was saved gets its own tab (its rows no longer land on the Inputs tab) | after 20 | [5.9](05-excelexporter.md#layouts) |
+| branch `claude/recipe-links` | 2026-10-30 | fmIDE: a recipe links an input rectangle of one part to a rectangle of another (templates file 11, workspace 15, library pack 5) | after 20 | [3.4](03-reuse.md#recipes) |
 
 ---
 

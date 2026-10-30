@@ -2503,7 +2503,7 @@ function errorWords(code){
 // (docs/file-formats.md). To change one of these formats: raise its version here and add
 // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
 // exactly one version.
-const SHARED_FILE_VERSIONS = { 'system': 9, 'fmIDE-workspace': 14 };
+const SHARED_FILE_VERSIONS = { 'system': 9, 'fmIDE-workspace': 15 };
 // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
 // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
 function upgradeNodePlugs(nodes){
@@ -2600,7 +2600,10 @@ const SHARED_FILE_MIGRATIONS = {
     12: () => {},
     // v13 → v14: a document may keep what its showcase viewer shows (`showcase`, an
     // fmIDE-showcase file, phase V3 of docs/viewer-brief.md); older ones have none.
-    13: () => {}
+    13: () => {},
+    // v14 → v15: its recipes may link their parts' rectangles (`links`, templates v11);
+    // older ones have none.
+    14: () => {}
   },
   'system': {
     // v1 systems were accepted with fields the loader already defaults (periods, ids…);

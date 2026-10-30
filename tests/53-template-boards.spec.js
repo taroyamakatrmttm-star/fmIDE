@@ -186,7 +186,7 @@ test('a pack carries a template\'s board: the preview marks it, and offers it fo
   // Save as Library Pack writes version 4 with it, and the checker passes it.
   const saved = await page.evaluate(() => fm.saveLibraryPack({ title: 'Plan', author: 'Ann Example', templates: ['Plan'], download: false }));
   const pack = typeof saved === 'string' ? JSON.parse(saved) : saved;
-  expect(pack.version).toBe(4);
+  expect(pack.version).toBe(5);
   const r = checkPack(JSON.stringify(pack, null, 2), pack.pack.id + '.fmide-pack.json');
   expect(r.errors).toEqual([]);
   expect(r.notes.map(n => n.message).join('\n')).toContain('It carries an fmGraph board.');

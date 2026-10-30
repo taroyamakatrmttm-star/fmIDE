@@ -15,13 +15,13 @@ export const FILE_FORMATS = {
   'system':               { current: SHARED_FILE_VERSIONS['system'], label: 'system', where: 'File → Load System' },
   'module':               { current: 7, label: 'module',              where: 'File → Load Module' },
   'fmIDE-workspace':      { current: SHARED_FILE_VERSIONS['fmIDE-workspace'], label: 'workspace', where: 'File → Import Workspace' },
-  'fmIDE-templates':      { current: 10, label: 'templates file',      where: 'Templates → Import Templates' },
+  'fmIDE-templates':      { current: 11, label: 'templates file',      where: 'Templates → Import Templates' },
   'fmIDE-functions':      { current: 2, label: 'functions file',      where: 'Functions → Import Functions' },
   'fmIDE-format-presets': { current: 2, label: 'format presets file', where: 'Format Presets → Import Presets' },
   'fmIDE-shortcuts':      { current: 2, label: 'shortcuts file',      where: 'Keyboard Shortcuts → Import Shortcuts' },
   'fmIDE-macros':         { current: 1, label: 'macros file',         where: 'Macro Builder → Import' },
   'fmIDE-preferences':    { current: 1, label: 'preferences file',    where: 'File → Import Preferences' },
-  'fmIDE-library-pack':   { current: 4, label: 'library pack',        where: 'File → Open Library Pack' },
+  'fmIDE-library-pack':   { current: 5, label: 'library pack',        where: 'File → Open Library Pack' },
   // The library's list, /library/index.json: written by the site's build, read from the site by
   // Browse Library (phase 8d); never opened as a file.
   'fmIDE-library-index':  { current: 1, label: 'library list',        where: 'File → Browse Library (fmIDE reads it from its website)' }
@@ -74,7 +74,10 @@ export const FMIDE_FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
     8: () => {},
     // v9 → v10: a canvas or system template may carry an fmGraph board (`attachments.graph`,
     // step 15 G5a); older ones have none.
-    9: () => {}
+    9: () => {},
+    // v10 → v11: a recipe may link a rectangle of one part to an input rectangle of another
+    // (`links`); older recipes have none.
+    10: () => {}
   },
   // v1 → v2: an item in a pack may say which pack it came from before (`origin`, phase 8b),
   // so re-sharing keeps its author's credit; older packs have no such record.
@@ -85,7 +88,10 @@ export const FMIDE_FILE_MIGRATIONS = Object.assign({}, SHARED_FILE_MIGRATIONS, {
     2: () => {},
     // v3 → v4: a canvas or system template in a pack may carry an fmGraph board
     // (`attachments.graph`, step 15 G5a); older packs have none.
-    3: () => {}
+    3: () => {},
+    // v4 → v5: a recipe in a pack may carry links between its parts' rectangles (`links`);
+    // older packs have none.
+    4: () => {}
   },
   // v1 → v2: a definition may say which library pack it came from (`origin`, phase 8b);
   // older ones have no such record.
@@ -158,6 +164,32 @@ export function cleanTemplateNote(v){ return typeof v === 'string' ? v.trim().sl
 export const RECIPE_MAX_PARTS = 50;
 // The kinds a template can be. A workspace has always read an unknown kind as a canvas template.
 export function templateKindOf(k){ return k === 'system' || k === 'recipe' ? k : 'module'; }
+// A recipe's links (templates v11): each feeds an input rectangle of one part from a
+// rectangle of another — { from: { family, rectangle }, to: { family, rectangle } }, a
+// rectangle by its name. At most this many; a name at most RECIPE_LINK_NAME_MAX characters.
+export const RECIPE_MAX_LINKS = 100;
+export const RECIPE_LINK_NAME_MAX = 200;
+function cleanRecipeLinkEnd(e){
+  if(!e || typeof e !== 'object' || !isTemplateUid(e.family) || typeof e.rectangle !== 'string') return null;
+  const rectangle = e.rectangle.trim().slice(0, RECIPE_LINK_NAME_MAX);
+  return rectangle ? { family: e.family, rectangle } : null;
+}
+// A recipe's links from a file (untrusted): bad ones dropped, a rectangle fed once (the first
+// link to it wins), never a rectangle from itself.
+export function cleanRecipeLinks(list){
+  if(!Array.isArray(list)) return [];
+  const out = [], fed = new Set();
+  list.slice(0, RECIPE_MAX_LINKS).forEach(l => {
+    if(!l || typeof l !== 'object') return;
+    const from = cleanRecipeLinkEnd(l.from), to = cleanRecipeLinkEnd(l.to);
+    if(!from || !to) return;
+    const key = (e) => e.family + '\u0000' + e.rectangle.toLowerCase();
+    if(key(from) === key(to) || fed.has(key(to))) return;
+    fed.add(key(to));
+    out.push({ from, to });
+  });
+  return out;
+}
 // A recipe's data read from a file (untrusted): bad parts are dropped; null when none is left.
 export function cleanRecipeData(d){
   if(!d || typeof d !== 'object' || !Array.isArray(d.parts)) return null;
@@ -171,7 +203,9 @@ export function cleanRecipeData(d){
     if(version !== 'latest' && isTemplateUid(p.versionId)) part.versionId = p.versionId;
     parts.push(part);
   });
-  return parts.length ? { kind: 'recipe', parts } : null;
+  if(!parts.length) return null;
+  const links = cleanRecipeLinks(d.links);
+  return links.length ? { kind: 'recipe', parts, links } : { kind: 'recipe', parts };
 }
 
 // ---------- a template's attachments (step 11c; fmGraph's, step 15 G5a) ----------

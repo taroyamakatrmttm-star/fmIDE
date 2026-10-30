@@ -12,6 +12,16 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'recipe-links', date: '2026-10-30', title: 'Recipes link templates that don\'t know each other',
+    summary: 'A recipe can feed an input rectangle of one part from a rectangle of another: Accounts Receivable · Sales ← Revenue · Total revenue.',
+    what: [
+      'A recipe\'s new Links list joins its parts without changing their templates. Each link names an input rectangle of one part and the rectangle it takes its value from in another, by name. Build draws it as an ordinary alias and arrow.',
+      'A link joins only the canvases of the same build: build the recipe twice and each Accounts Receivable is linked to its own Revenue. Updating a canvas to a new template version draws its link again to the same canvas.',
+    ],
+    why: 'Plugs and sockets connect parts only when both templates were made with matching names. Templates made separately, or shared by someone else, couldn\'t be joined without editing them.',
+    how: ['Open {cmd:openTemplates}, choose a recipe and press Edit as new version… (or + New Recipe…).', 'Under Links, press + Add link and pick the input rectangle, then the rectangle it takes its value from. Save.', 'Build: the summary says how many rectangles it linked.'],
+    notes: ['A link that can\'t be drawn, for example to a rectangle a newer template renamed, is a warning when you build, never a block. The recipe\'s check lists it beforehand.'],
+    see: ['recipes'] },
   { id: 'showcase-gallery', date: '2026-10-29', title: 'A gallery of showcase viewers on the website',
     summary: 'Viewers can be published in a gallery on the site, to share with a link, and they work better on an iPad and a phone.',
     what: [

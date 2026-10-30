@@ -1,0 +1,89 @@
+{
+ "version": 11,
+ "kind": "fmIDE-templates",
+ "templates": [
+  {
+   "name": "Revenue", "description": "", "group": "Working capital", "kind": "module",
+   "family": "fam-revenue-0001", "version": 1, "note": "", "versionId": "vid-revenue-v1",
+   "data": { "version": 7, "kind": "module", "name": "Revenue", "selfCanvasId": "c1", "nextId": 20,
+    "nodes": [
+     { "id": "n1", "type": "value", "x": 60, "y": 60, "w": 170, "h": 64, "text": "Units\n10" },
+     { "id": "n2", "type": "value", "x": 60, "y": 180, "w": 170, "h": 64, "text": "Price\n5" },
+     { "id": "n3", "type": "operator", "x": 300, "y": 120, "w": 56, "h": 56, "text": "×" },
+     { "id": "n4", "type": "value", "x": 420, "y": 116, "w": 170, "h": 64, "text": "Total revenue\n0" }
+    ],
+    "edges": [ { "id": "e1", "from": "n1", "to": "n3" }, { "id": "e2", "from": "n2", "to": "n3" }, { "id": "e3", "from": "n3", "to": "n4" } ] }
+  },
+  {
+   "name": "Revenue", "description": "", "group": "Working capital", "kind": "module",
+   "family": "fam-revenue-0001", "version": 2, "note": "a discount", "versionId": "vid-revenue-v2",
+   "data": { "version": 7, "kind": "module", "name": "Revenue", "selfCanvasId": "c1", "nextId": 20,
+    "nodes": [
+     { "id": "n1", "type": "value", "x": 60, "y": 60, "w": 170, "h": 64, "text": "Units\n10" },
+     { "id": "n2", "type": "value", "x": 60, "y": 180, "w": 170, "h": 64, "text": "Price\n5" },
+     { "id": "n3", "type": "operator", "x": 300, "y": 120, "w": 56, "h": 56, "text": "×" },
+     { "id": "n5", "type": "value", "x": 320, "y": 330, "w": 170, "h": 64, "text": "Discount\n10" },
+     { "id": "n6", "type": "operator", "x": 520, "y": 240, "w": 56, "h": 56, "text": "−" },
+     { "id": "n4", "type": "value", "x": 420, "y": 236, "w": 170, "h": 64, "text": "Total revenue\n0" }
+    ],
+    "edges": [ { "id": "e1", "from": "n1", "to": "n3" }, { "id": "e2", "from": "n2", "to": "n3" },
+     { "id": "e3", "from": "n3", "to": "n6" }, { "id": "e4", "from": "n5", "to": "n6" }, { "id": "e5", "from": "n6", "to": "n4" } ] }
+  },
+  {
+   "name": "Revenue", "description": "", "group": "Working capital", "kind": "module",
+   "family": "fam-revenue-0001", "version": 3, "note": "renamed the total", "versionId": "vid-revenue-v3",
+   "data": { "version": 7, "kind": "module", "name": "Revenue", "selfCanvasId": "c1", "nextId": 20,
+    "nodes": [
+     { "id": "n1", "type": "value", "x": 60, "y": 60, "w": 170, "h": 64, "text": "Units\n10" },
+     { "id": "n2", "type": "value", "x": 60, "y": 180, "w": 170, "h": 64, "text": "Price\n5" },
+     { "id": "n3", "type": "operator", "x": 300, "y": 120, "w": 56, "h": 56, "text": "×" },
+     { "id": "n4", "type": "value", "x": 420, "y": 116, "w": 170, "h": 64, "text": "Sales total\n0" }
+    ],
+    "edges": [ { "id": "e1", "from": "n1", "to": "n3" }, { "id": "e2", "from": "n2", "to": "n3" }, { "id": "e3", "from": "n3", "to": "n4" } ] }
+  },
+  {
+   "name": "Accounts Receivable", "description": "", "group": "Working capital", "kind": "module",
+   "family": "fam-receivable-01", "version": 1, "note": "", "versionId": "vid-receivable-v1",
+   "data": { "version": 7, "kind": "module", "name": "Accounts Receivable", "selfCanvasId": "c1", "nextId": 20,
+    "nodes": [
+     { "id": "n1", "type": "value", "x": 300, "y": 60, "w": 170, "h": 64, "text": "Sales\n100" },
+     { "id": "n2", "type": "value", "x": 300, "y": 180, "w": 170, "h": 64, "text": "Unpaid share\n0.25" },
+     { "id": "n3", "type": "operator", "x": 540, "y": 120, "w": 56, "h": 56, "text": "×" },
+     { "id": "n4", "type": "value", "x": 660, "y": 116, "w": 170, "h": 64, "text": "Accounts receivable\n0" }
+    ],
+    "edges": [ { "id": "e1", "from": "n1", "to": "n3" }, { "id": "e2", "from": "n2", "to": "n3" }, { "id": "e3", "from": "n3", "to": "n4" } ] }
+  },
+  {
+   "name": "Accounts Receivable", "description": "", "group": "Working capital", "kind": "module",
+   "family": "fam-receivable-01", "version": 2, "note": "a half share", "versionId": "vid-receivable-v2",
+   "data": { "version": 7, "kind": "module", "name": "Accounts Receivable", "selfCanvasId": "c1", "nextId": 20,
+    "nodes": [
+     { "id": "n1", "type": "value", "x": 300, "y": 60, "w": 170, "h": 64, "text": "Sales\n100" },
+     { "id": "n2", "type": "value", "x": 300, "y": 180, "w": 170, "h": 64, "text": "Unpaid share\n0.5" },
+     { "id": "n3", "type": "operator", "x": 540, "y": 120, "w": 56, "h": 56, "text": "×" },
+     { "id": "n4", "type": "value", "x": 660, "y": 116, "w": 170, "h": 64, "text": "Accounts receivable\n0" }
+    ],
+    "edges": [ { "id": "e1", "from": "n1", "to": "n3" }, { "id": "e2", "from": "n2", "to": "n3" }, { "id": "e3", "from": "n3", "to": "n4" } ] }
+  },
+  {
+   "name": "Working Capital", "description": "Receivables from revenue", "group": "Working capital", "kind": "recipe",
+   "family": "fam-working-capital", "version": 1, "note": "", "versionId": "vid-working-v1",
+   "data": { "kind": "recipe",
+    "parts": [ { "family": "fam-revenue-0001", "version": 1, "versionId": "vid-revenue-v1", "name": "Revenue" },
+               { "family": "fam-receivable-01", "version": 1, "versionId": "vid-receivable-v1", "name": "Accounts Receivable" } ],
+    "links": [ { "to": { "family": "fam-receivable-01", "rectangle": "Sales" }, "from": { "family": "fam-revenue-0001", "rectangle": "Total revenue" } } ] }
+  },
+  {
+   "name": "Broken Links", "description": "", "group": "Working capital", "kind": "recipe",
+   "family": "fam-broken-links", "version": 1, "note": "", "versionId": "vid-broken-v1",
+   "data": { "kind": "recipe",
+    "parts": [ { "family": "fam-revenue-0001", "version": 1, "versionId": "vid-revenue-v1", "name": "Revenue" },
+               { "family": "fam-receivable-01", "version": 1, "versionId": "vid-receivable-v1", "name": "Accounts Receivable" } ],
+    "links": [
+     { "to": { "family": "fam-receivable-01", "rectangle": "Nope <img src=x onerror=alert(1)>" }, "from": { "family": "fam-revenue-0001", "rectangle": "Total revenue" } },
+     { "to": { "family": "fam-receivable-01", "rectangle": "Accounts receivable" }, "from": { "family": "fam-revenue-0001", "rectangle": "Units" } },
+     { "to": { "family": "fam-receivable-01", "rectangle": "Unpaid share" }, "from": { "family": "fam-not-a-part", "rectangle": "Anything" } }
+    ] }
+  }
+ ]
+}
