@@ -13,14 +13,33 @@ const { matchSnapshot } = require('./helpers/snapshot');
 const jsonIn = (dir) => fs.readdirSync(path.join(FIXTURES, dir)).filter(f => f.endsWith('.json')).sort().map(f => [dir, f]);
 const CASES = jsonIn('models').concat(jsonIn('agreement'), jsonIn('ir'));
 
-// Everything fmIDE shows for one model: { canvas: { nodeId: { values[], unit? } } }, where a
-// value is a number, a block instance's list of outputs, or the error message.
-async function fmideState(page, file){
+// Open `file` in fmIDE, answering its questions, and wait until its model is the one shown.
+async function openModel(page, file){
   await openFmIDE(page);
   const json = JSON.parse(fs.readFileSync(file, 'utf8'));
   await importViaCommand(page, json.kind === 'fmIDE-workspace' ? 'importWorkspace' : 'loadSystem', file);
   await acceptAll(page);
-  await page.waitForFunction((n) => fm.canvases().length === n, (json.system || json).canvases.length);
+  // Wait for the file's model: its canvases by name, and the canvas shown holding the file's nodes
+  // for it (aliases left out: fmIDE makes a plug's anew) — fmIDE's own starting model also has one
+  // canvas, even one of the same name and id, so a count can't tell them apart. On a busy
+  // computer a question can come after acceptAll has stopped waiting for one: answer any that
+  // comes meanwhile.
+  const canvases = (json.system || json).canvases;
+  const want = { names: canvases.map(c => c.name), nodes: Object.fromEntries(canvases.map(c => [c.id, c.nodes.filter(n => n.type !== 'alias').map(n => n.id)])) };
+  await expect.poll(async () => {
+    if(await page.evaluate((w) => {
+      const shown = fm.canvases(), active = shown.find(c => c.active), ids = new Set(fm.nodes().map(n => n.id));
+      return JSON.stringify(shown.map(c => c.name)) === JSON.stringify(w.names) && !!active && (w.nodes[active.id] || [null]).every(id => ids.has(id));
+    }, want)) return true;
+    await acceptAll(page, 1);
+    return false;
+  }, { timeout: 60_000 }).toBe(true);
+}
+
+// Everything fmIDE shows for one model: { canvas: { nodeId: { values[], unit? } } }, where a
+// value is a number, a block instance's list of outputs, or the error message.
+async function fmideState(page, file){
+  await openModel(page, file);
   return page.evaluate(() => {
     const out = {};
     fm.canvases().forEach(c => {
@@ -71,10 +90,7 @@ test('units on the canvas: worked out from the inputs, or typed', async ({ page 
 
 // Changing a unit shows at once, before any Evaluate, and so does undoing it.
 test('units follow an edit and its undo straight away', async ({ page }) => {
-  await openFmIDE(page);
-  await importViaCommand(page, 'loadSystem', fixture('ir', 'units.json'));
-  await acceptAll(page);
-  await page.waitForFunction(() => fm.canvases().length === 3);
+  await openModel(page, fixture('ir', 'units.json'));
   const unitOn = (id) => page.locator(`.node[data-id="${id}"] .line-uom`);
   await expect(unitOn('rev')).toHaveText('$k');
   await page.evaluate(() => fm.setUOM('#price', '€/t'));

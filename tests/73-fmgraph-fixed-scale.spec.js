@@ -468,6 +468,7 @@ test('on a phone: Show follows Fixed for all, and so does the bar\'s quick look'
   await page.waitForFunction(() => !!window.fmGraph);
   await page.click('#btnSample');
   await expect(page.locator('body')).toHaveClass(/phone/);
+  await expect(page.locator('.bar-widget')).toHaveCount(2); // the sample's board shown, not only its model
   await expect(page.locator('#sharedPeriodBar')).toBeHidden(); // no control on the phone
   await g(page, () => fmGraph.setCommonScale({ min: 0, max: 1000 })); // below the profits
   const cdp = await context.newCDPSession(page);
