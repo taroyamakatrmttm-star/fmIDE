@@ -20,6 +20,18 @@ const FMGRAPH_WHATS_NEW = [
     how: ['Press ⇄ on the header of a bar, chart or slider.', 'Under Copy to or Move to, choose a board, or New board.'],
     notes: ['A board that already has the same slider (the same rectangle, periods and kind) doesn\'t get a second one: a note says so.', 'Not on a phone, where boards are not edited.', 'The board file is unchanged.'],
     see: ['boards'] },
+  { id: 'show-sliders', date: '2026-10-30', title: 'Sliders beside the full screen, and a slider at its minimum',
+    summary: '🎚 Sliders in the full screen\'s strip shows the board\'s sliders beside the chart, and a slider can now shrink to one short row: Open, Folded or Minimum.',
+    what: [
+      'In the full screen (⛶ on a bar or chart), 🎚 Sliders shows the board\'s sliders on the right, or at the foot when the screen is taller than wide. Moving one moves the chart at once and the board\'s own slider with it. A slider that reaches nothing shown is greyed.',
+      'This device remembers whether the sliders are shown. On a phone the dock and the mixer are the sliders there: 🎚 hides or shows them.',
+      'A slider\'s ▾ / ▸ button now steps through three looks: Open (all its settings), Folded (its rectangle, the slider and its number) and Minimum (▪, one short row with its name, the slider and its number, as in a showcase viewer).',
+      'Collapse all / Expand all became All: Open · Folded · Minimum beside the Sliders heading. Each change is one Undo.',
+    ],
+    why: 'Presenting a chart full screen while changing its inputs needed the sliders beside it; and with many sliders, one short row each keeps the whole list in view.',
+    how: ['Click ⛶ on a chart, then 🎚 Sliders in the strip at the top.', 'Click All: Minimum beside the Sliders heading, or a slider\'s own button until it shows ▪.'],
+    notes: ['A slider\'s look is kept with the board (board file version 14; older files open as they were saved). A showcase viewer always shows one short row per slider.', 'The full screen in a showcase viewer has 🎚 Sliders too.'],
+    see: ['full-screen', 'sliders'] },
   { id: 'slider-colours', date: '2026-10-30', title: 'Each slider in its rectangle\'s colour',
     summary: 'A slider\'s grip and the filled part of its bar now take the colour of its rectangle, the same as the box beside its name and the stripe on its left edge.',
     what: [

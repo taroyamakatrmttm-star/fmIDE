@@ -463,7 +463,6 @@ setBoardName
 setCalcNote
 setCommonScale
 setDockState
-setFolded
 setFullApp
 setOwnSliders
 setRectColour

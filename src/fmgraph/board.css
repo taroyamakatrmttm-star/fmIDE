@@ -50,3 +50,43 @@
   .bar-chart .l-base{ stroke:var(--bar-base); stroke-width:1.5; stroke-dasharray:4 3; }
   .bar-chart.stale{ opacity:.45; }
   .chart-widget.play-held .bar-chart-host{ opacity:.45; }
+
+  /* Full screen (Show): one or several bars and charts on the whole screen (05gs-show.js; fmGraph and the showcase viewer). */
+  .show-view{ position:fixed; z-index:40; inset:0; top:0; background:var(--page); display:flex; flex-direction:column; padding:8px 12px calc(var(--dock-h, 0px) + 8px); }
+  .show-head{ position:absolute; z-index:2; top:0; left:0; right:0; display:flex; align-items:center; gap:8px; padding:calc(6px + env(safe-area-inset-top, 0px)) 12px 6px; background:rgba(244,245,248,.94); border-bottom:1px solid var(--line); transition:opacity .35s, background .35s, border-color .35s; }
+  .show-head h2{ flex:0 1 auto; margin:0; font-size:18px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .show-chips{ flex:1 1 auto; min-width:0; display:flex; gap:6px; overflow-x:auto; scrollbar-width:thin; padding:2px 0; }
+  .show-chip{ flex:0 0 auto; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; padding:5px 11px; border-radius:999px; border:1px solid var(--line-strong); background:var(--card); color:var(--soft-ink); }
+  .show-chip[aria-pressed="true"]{ background:var(--brand-soft); border-color:var(--brand); color:var(--ink); font-weight:600; }
+  .show-chip[aria-pressed="true"]::before{ content:"✓ "; }
+  .show-note{ font-size:12.5px; color:var(--soft-ink); }
+  .show-more:empty{ display:none; }
+  .show-btn{ flex:0 0 auto; font-size:15px; padding:7px 13px; border-radius:10px; }
+  .show-help{ padding:7px 11px; }
+  .show-close{ font-size:22px; padding:2px 14px; }
+  /* Quiet: the strip fades after a few seconds; a tap, a key or the mouse brings it back. × stays. */
+  .show-view.quiet .show-head{ background:transparent; border-color:transparent; }
+  .show-view.quiet .show-head > :not(.show-close){ opacity:0; pointer-events:none; transition:opacity .35s; }
+  .show-view.quiet .show-close{ opacity:.45; }
+  @media (prefers-reduced-motion: reduce){ .show-head, .show-head > *{ transition:none !important; } }
+  .show-body{ flex:1 1 auto; min-height:0; display:grid; grid-template-columns:repeat(var(--show-cols, 1), minmax(0, 1fr)); grid-template-rows:repeat(var(--show-rows, 1), minmax(0, 1fr)); gap:12px; padding-top:var(--show-top, 50px); }
+  .show-widget{ min-width:0; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
+  .show-widget.boxed{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:8px 10px; }
+  .show-name{ margin:0 0 2px; font-size:15px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:0 0 auto; }
+  .show-widget .bar-chart-host{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; gap:6px; }
+  .show-widget .bar-chart{ flex:1 1 0; min-height:0; height:auto; margin:0; font-size:13px; }
+  .show-widget .chart-key, .show-widget .bar-errors{ flex:0 0 auto; }
+  .show-widget .chart-key{ font-size:14px; max-height:30%; overflow:auto; }
+  /* 🎚 Sliders beside the full screen (05gs-show.js): on the right when the view is wider than
+     tall, at its foot when taller; one short row each (src/shared/phone.css). */
+  .show-view.with-sliders{ display:grid; grid-template-columns:minmax(0, 1fr) minmax(220px, 300px); grid-template-rows:minmax(0, 1fr); gap:12px; }
+  .show-view.with-sliders[data-shape="tall"]{ grid-template-columns:minmax(0, 1fr); grid-template-rows:minmax(0, 1fr) auto; }
+  .show-sliders{ min-height:0; overflow-y:auto; overscroll-behavior:contain; display:flex; flex-direction:column; gap:4px; }
+  .show-view[data-shape="wide"] .show-sliders{ padding-top:var(--show-top, 50px); }
+  .show-view[data-shape="tall"] .show-sliders{ max-height:min(34vh, 280px); padding-top:6px; border-top:1px solid var(--line); }
+  .show-sliders .slider-widget{ background:var(--card); }
+  .show-sliders .slider-widget.unreached{ opacity:.45; }
+  .show-sliders-none{ margin:4px 0; font-size:13px; color:var(--soft-ink); }
+  .show-sliders-btn[aria-pressed="true"]{ background:var(--brand-soft); border-color:var(--brand); }
+  /* A phone's strip has no room for its words: 🎚 alone (its name stays for a screen reader). */
+  @media (max-width: 520px){ .show-btn-words{ display:none; } .show-sliders-btn{ padding-left:10px; padding-right:10px; } }

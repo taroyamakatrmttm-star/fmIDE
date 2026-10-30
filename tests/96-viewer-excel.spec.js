@@ -475,7 +475,7 @@ test.describe('tools/make-viewers.js: many viewers at once, with Excel', () => {
     expect(await v.page.evaluate(() => fmViewer.board().sliders.map(s => s.name))).toEqual(['Price', 'Volume']);
     // The recipe's periods (2025 to 2027) are what its bars show.
     expect((await v.page.evaluate(() => fmViewer.bar(fmViewer.board().items[0].id))).map(x => x.period)).toEqual(['2025', '2026', '2027']);
-    expect(await v.page.locator('#showTitle').textContent()).toBe('shop-a: the shop');
+    expect(await v.page.locator('#showcaseTitle').textContent()).toBe('shop-a: the shop');
     // Profit in 2025: 10 × 100 − 100 × 6 = 400; with Price at 13, 700. The downloaded workbook agrees.
     expect(await v.page.evaluate(() => fmViewer.value('cShop', 'profit', 0))).toBe(400);
     await v.page.evaluate(() => fmViewer.setSlider('Price', 13));

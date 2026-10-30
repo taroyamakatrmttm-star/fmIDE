@@ -224,8 +224,8 @@ test('+ From chart… and the layout menu: a Columns and a Waterfall chart becom
   expect(pageErrors).toEqual([]);
 });
 
-test('the file: version 13, its pieces read back; loops, shared columns, bad values and markup read safely', async ({ page, pageErrors }) => {
-  expect(BOARD_FILE_VERSION).toBe(13);
+test('the file: version 13 brought the Free chart (now 14), its pieces read back; loops, shared columns, bad values and markup read safely', async ({ page, pageErrors }) => {
+  expect(BOARD_FILE_VERSION).toBe(14); // 13 brought the Free chart; 14 a slider's Minimum
   await openModel(page);
   const id = await g(page, (s) => fmGraph.addChart(s), OWNER);
   const before = await figures(page, id);
@@ -272,7 +272,7 @@ test('the file: version 13, its pieces read back; loops, shared columns, bad val
   expect(pageErrors).toEqual([]);
 });
 
-test('a version 12 board file opens unchanged, and is written again as version 13', async ({ page, pageErrors }) => {
+test('a version 12 board file opens unchanged, and is written again as version 14', async ({ page, pageErrors }) => {
   await openSample(page);
   expect(await g(page, (d) => fmGraph.importBoards(d), readFixture('formats', 'board-v12.json'))).toBe(1);
   await g(page, () => fmGraph.showBoard('Saved before the Free chart'));
@@ -283,7 +283,7 @@ test('a version 12 board file opens unchanged, and is written again as version 1
   expect((await figures(page, ids[1])).map(s => s.value)).toEqual([10000, 6000, 4000]);
   expect(await g(page, (i) => fmGraph.scale(i), ids[0])).toEqual({ min: 0, max: 20000 });
   const file = await g(page, () => fmGraph.exportBoards(false));
-  expect(file.version).toBe(13);
+  expect(file.version).toBe(14);
   expect(file.boards[0].items.map(w => w.layout || w.type)).toEqual(['bar', 'columns', 'flow']);
   expect(file.boards[0].items[2].ownScale).toBe(true);
   expect(file.colours).toEqual([{ canvasId: 'cProfit', nodeId: 'rev', name: 'Revenue', colour: '#2563eb' }]);

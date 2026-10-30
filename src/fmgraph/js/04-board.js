@@ -4,7 +4,7 @@
 //   bar    { id, kind: 'bar', key, periods, wide, scale }
 //   chart  { id, kind: 'chart', wide, layout: 'columns' | 'lines' | 'flow' | 'free' | 'scenarios' | 'tornado' | 'spider', scale, … } (G2; 04b-charts.js)
 // scale: null for Auto, or { min, max } (04d-scale.js).
-//   slider { id, key, periods, mode: 'set' | 'shift', min, max, step, value, folded }
+//   slider { id, key, periods, mode: 'set' | 'shift', min, max, step, value, folded: false | true | 'min' }
 // periods: { mode: 'all' } · { mode: 'one', p } · { mode: 'range', from, to } (from 0).
 // A slider's value is null until it moves (the model's own numbers); 'set' gives the input
 // that number in the periods it covers, 'shift' changes them by that many percent.
@@ -133,7 +133,7 @@ function cleanBoard(raw, dropped, version, sharedColours){
     const periods = cleanPeriods(s.periods, count);
     const mode = s.mode === 'shift' ? 'shift' : 'set';
     out.sliders.push(Object.assign({ id: newWidgetId('s'), key: rect.key, periods, mode, value: null },
-      cleanRange(s, defaultRange(rect, periods, mode)), { folded: s.folded === true })); // version 6
+      cleanRange(s, defaultRange(rect, periods, mode)), { folded: s.folded === 'min' ? 'min' : s.folded === true })); // version 6; 'min' version 14
   });
   return out;
 }
@@ -165,9 +165,9 @@ function cleanBoards(raw){
 // rectangle's chosen colour, 04e-colours.js; each bar, part, step and line still writes the
 // colour it shows); 12 the common scale (`commonScale`, and a bar's or chart's `ownScale`,
 // 04d-scale.js; each still writes the scale it shows); 13 the Free chart (a chart of layout
-// `free`, 04f-free.js). The template form, which carries none
+// `free`, 04f-free.js); 14 a slider at its minimum (`folded: "min"`, 05c-arrange.js). The template form, which carries none
 // of these, stays version 2 (its widgets carry the chosen colours, as before 11).
-const BOARD_FILE_VERSION = 13;
+const BOARD_FILE_VERSION = 14;
 const TEMPLATE_BOARD_VERSION = 2;
 // shown: what the board's followers of the common scale show (shownCommonScale, 04d-scale.js),
 // written as their scale; left out, each writes its own.
@@ -182,7 +182,7 @@ function boardData(b, shown){
     items: b.items.map(w => Object.assign(w.kind === 'bar'
       ? Object.assign({ type: 'bar' }, at(w.key), { periods: Object.assign({}, w.periods), wide: w.wide }, rectColour(w.key) ? { colour: rectColour(w.key) } : {}, scaleOf(w))
       : Object.assign({ type: 'chart', wide: w.wide }, chartData(w, at), scaleOf(w)), w.ownPeriod ? { ownPeriod: true } : {})),
-    sliders: b.sliders.map(s => Object.assign(at(s.key), { periods: Object.assign({}, s.periods), mode: s.mode, min: s.min, max: s.max, step: s.step }, s.folded ? { folded: true } : {})),
+    sliders: b.sliders.map(s => Object.assign(at(s.key), { periods: Object.assign({}, s.periods), mode: s.mode, min: s.min, max: s.max, step: s.step }, s.folded ? { folded: s.folded === 'min' ? 'min' : true } : {})),
   }, b.ownSliders ? { ownSliders: true } : {});
 }
 // The file form of these boards (all, or the ones given). forUndo: Auto for all's followers

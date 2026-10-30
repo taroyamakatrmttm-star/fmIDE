@@ -14,6 +14,7 @@
 // The board engine's globals (model, boards, board, scenarios, …) hold the Board's state;
 // these are the page's own.
 const sliderControls = new Map(); // slider id → its shared phone slider ({ el, setValue, … })
+const showControls = new Map();   // the same, for the sliders beside the full screen (05gs-show.js)
 let activeSlider = null;          // the slider being moved: its reach is lit
 let quietTimer = null;
 let updatePending = false;
@@ -155,7 +156,7 @@ function barFrame(b){
   title.type = 'button';
   title.title = 'How it is worked out';
   title.addEventListener('click', () => openBarCard(b.id));
-  head.append(title, traceButton(b));
+  head.append(title, traceButton(b), fullScreenButton(b)); // ⛶ (05gs-show.js)
   w.appendChild(head);
   if(rect && rect.unit) w.appendChild(make('div', 'widget-unit', 'In ' + rect.unit));
   w.append(make('div', 'bar-chart-host'), make('ul', 'bar-errors'));
@@ -168,7 +169,7 @@ function chartFrame(c){
   w.dataset.id = c.id;
   w.dataset.layout = c.layout;
   const head = make('div', 'widget-head');
-  head.append(make('span', 'widget-title', c.title || LAYOUT_NAMES[c.layout] || 'Chart'), traceButton(c));
+  head.append(make('span', 'widget-title', c.title || LAYOUT_NAMES[c.layout] || 'Chart'), traceButton(c), fullScreenButton(c)); // ⛶ (05gs-show.js)
   w.append(head, make('div', 'bar-chart-host'), make('div', 'chart-key'), make('ul', 'bar-errors'));
   return w;
 }
@@ -198,61 +199,69 @@ function inRange(s, v){
   const c = Math.min(s.max, Math.max(s.min, v));
   return roundToStep(s.min + Math.round((c - s.min) / s.step) * s.step, s.step);
 }
-function sliderWidget(s){
+function sliderWidget(s, controls){
   const rect = model.byKey.get(s.key);
-  const w = make('div', 'widget slider-widget');
-  w.dataset.id = s.id;
-  w.style.setProperty('--rect-colour', shownColour(s.key));
-  w.style.setProperty('--slider-accent', sliderAccent(shownColour(s.key))); // the slider takes its colour (04e-colours.js)
-  const head = make('div', 'slider-head');
-  const stripe = make('span', 'rect-stripe');
-  stripe.style.background = shownColour(s.key);
-  head.append(stripe, make('span', 'slider-name', rect.name));
-  const when = sliderPeriodsText(s.periods);
-  if(when) head.appendChild(make('span', 'slider-when', when));
-  if(rect.unit && s.mode === 'set') head.appendChild(make('span', 'slider-unit', rect.unit));
-  const ctl = createPhoneSlider({
-    label: rect.name, min: s.min, max: s.max, step: s.step, value: sliderShown(s), base: sliderBase(s),
-    format: (v) => sliderText(s, v),
-    vibrate: () => true,
-    onStart: () => { setActiveSlider(s.id); workOutAhead(s); },
-    onInput: (v, atBase) => {
-      // A typed number stays in the author's range, on a step (the slider takes no other).
-      const kept = atBase ? v : inRange(s, v);
-      if(kept !== v) ctl.setValue(kept);
-      moveSlider(s, kept, atBase || kept === sliderBase(s));
+  // One short row (the shared createSliderLine, src/shared/phone.js and phone.css).
+  let ctl = null;
+  const line = createSliderLine({
+    className: 'widget slider-widget',
+    name: rect.name, when: sliderPeriodsText(s.periods), unit: rect.unit && s.mode === 'set' ? rect.unit : '',
+    colour: shownColour(s.key), accent: sliderAccent(shownColour(s.key)), // the slider takes its colour (04e-colours.js)
+    slider: {
+      label: rect.name, min: s.min, max: s.max, step: s.step, value: sliderShown(s), base: sliderBase(s),
+      format: (v) => sliderText(s, v),
+      vibrate: () => true,
+      onStart: () => { setActiveSlider(s.id); workOutAhead(s); },
+      onInput: (v, atBase) => {
+        // A typed number stays in the author's range, on a step (the slider takes no other).
+        const kept = atBase ? v : inRange(s, v);
+        if(kept !== v) ctl.setValue(kept);
+        moveSlider(s, kept, atBase || kept === sliderBase(s));
+      },
+      onEnd: () => quietSoon(1200),
     },
-    onEnd: () => quietSoon(1200),
   });
-  sliderControls.set(s.id, ctl);
-  keepThroughSwipe(s, ctl);
-  w.append(head, ctl.el, make('div', 'slider-base'));
-  w.addEventListener('pointerenter', () => { if(!onPhone) setActiveSlider(s.id); });
-  w.addEventListener('pointerleave', () => { if(!onPhone) quietSoon(0); });
-  return w;
-}
-// The sliders' list scrolls with a finger, even when the swipe starts on a track (its
-// touch-action is pan-y, board-view.css): the browser then takes the gesture over and cancels
-// the pointer. Whatever that swipe moved before the browser took it is put back — the slider's
-// number, and the scenario that was shown — so scrolling never moves a slider.
-function keepThroughSwipe(s, ctl){
-  let before = null;
-  ctl.el.addEventListener('pointerdown', (ev) => {
-    before = ev.pointerType === 'mouse' ? null : { id: ev.pointerId, value: s.value, scenario: shownScenario };
-  }, true);
-  ctl.el.addEventListener('pointerup', (ev) => { if(before && before.id === ev.pointerId) before = null; }, true);
-  ctl.el.addEventListener('pointercancel', (ev) => {
-    const b = before;
-    before = null;
-    if(!b || b.id !== ev.pointerId || (s.value === b.value && shownScenario === b.scenario)) return;
+  ctl = line.ctl;
+  const w = line.el;
+  w.dataset.id = s.id;
+  (controls || sliderControls).set(s.id, ctl);
+  // A finger's swipe scrolls the list: what it moved — the number, and the scenario that was
+  // shown — is put back, so scrolling never moves a slider.
+  keepThroughSwipe(ctl, () => ({ value: s.value, scenario: shownScenario }), (b) => {
+    if(s.value === b.value && shownScenario === b.scenario) return;
     const sc = b.scenario && scenarios.find(x => x.name === b.scenario);
     if(sc){ showScenarioExact(sc); saveStateSoon(); return; }
     s.value = b.value;
     ctl.setValue(sliderShown(s));
     scheduleUpdate();
     saveStateSoon();
-  }, true);
+  });
+  w.addEventListener('pointerenter', () => { if(!onPhone) setActiveSlider(s.id); });
+  w.addEventListener('pointerleave', () => { if(!onPhone) quietSoon(0); });
+  return w;
 }
+// A slider's controls: on the Board, and beside the full screen.
+function sliderControlsOf(s){
+  return [sliderControls.get(s.id), showControls.get(s.id)].filter(ctl => ctl && ctl.el.isConnected);
+}
+
+// ---- Full screen (05gs-show.js): what this page gives it ----
+function showStripExtras(){ /* no buttons of its own in the strip */ }
+function showSliderRow(s){
+  const row = sliderWidget(s, showControls);
+  row.classList.add('show-slider');
+  return row;
+}
+const SHOW_SLIDERS_KEY = 'viewer-show-sliders';
+function rememberShowSliders(on){ try{ viewerStore.put(SHOW_SLIDERS_KEY, on ? 'on' : 'off').catch(() => {}); }catch(e){ /* not kept: fine */ } }
+async function restoreShowSliders(){
+  let v = null;
+  try{ await viewerStore.ready; v = await viewerStore.get(SHOW_SLIDERS_KEY); }catch(e){ return; }
+  if(v === 'on' || v === 'off') setShowSliders(v === 'on', true);
+}
+// Esc belongs to a question open over it.
+function showEscapeBlocked(){ return !$('confirmBox').classList.contains('hidden'); }
+
 // A visitor moved slider s to v (null: back on the model's own number).
 function moveSlider(s, v, atBase){
   if(shownScenario) leaveScenario();
@@ -294,12 +303,14 @@ function updateValues(){
   board.sliders.forEach(s => {
     const el = document.querySelector('.slider-widget[data-id="' + s.id + '"]');
     if(!el) return;
-    el.querySelector('.slider-base').textContent = sliderBaseText(s);
-    el.title = sliderBaseText(s); // the notch shows it; the words as the row's tooltip (board-view.css)
-    el.classList.toggle('moved', s.value !== null);
-    const ctl = sliderControls.get(s.id);
-    if(ctl && !ctl.dragging() && !playNow()) ctl.setValue(sliderShown(s));
+    document.querySelectorAll('.slider-widget[data-id="' + s.id + '"]').forEach(row => {
+      row.querySelector('.slider-base').textContent = sliderBaseText(s);
+      row.title = sliderBaseText(s); // the notch shows it; the words as the row's tooltip (board-view.css)
+      row.classList.toggle('moved', s.value !== null);
+    });
+    sliderControlsOf(s).forEach(ctl => { if(!ctl.dragging() && !playNow()) ctl.setValue(sliderShown(s)); });
   });
+  drawShow(results); // those on the whole screen (05gs-show.js)
   updateMovers(results);
   markScenarioRow();
   paintReach();

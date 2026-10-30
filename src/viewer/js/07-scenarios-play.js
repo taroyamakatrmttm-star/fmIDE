@@ -184,9 +184,8 @@ function paintPlay(f){
     let v = mixAt(a, b, f);
     if(f !== 0 && f !== 1) v = roundToStep(v, s.step);
     const el = document.querySelector('.slider-widget[data-id="' + s.id + '"]');
-    if(el) el.classList.toggle('playing', !Object.is(a, b));
-    const ctl = sliderControls.get(s.id);
-    if(ctl && !ctl.dragging()) ctl.setValue(v);
+    document.querySelectorAll('.slider-widget[data-id="' + s.id + '"]').forEach(row => row.classList.toggle('playing', !Object.is(a, b)));
+    sliderControlsOf(s).forEach(ctl => { if(!ctl.dragging()) ctl.setValue(v); });
   });
   const reached = new Set(playing.moving);
   playing.moving.forEach(k => model.reach(k).forEach(r => reached.add(r)));

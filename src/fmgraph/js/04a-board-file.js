@@ -16,7 +16,8 @@ const BOARD_FILE_FORMAT = { 'fmIDE-graph-board': { current: BOARD_FILE_VERSION, 
 // keeps its colours on its widgets, taken into the shared ones when read (the first one wins).
 // v11 → v12: the common scale (04d-scale.js); nothing to change — a file without `commonScale`
 // opens with Each its own, so every bar and chart shows the scale it had.
-// v12 → v13: a chart may be a Free chart (04f-free.js); nothing to change.
+// v12 → v13: a chart may be a Free chart (04f-free.js); nothing to change. v13 → v14: a slider
+// may be at its minimum, one short row (`folded: "min"`, 05c-arrange.js); nothing to change.
 function keepOwnPeriods(data){
   if(!data || typeof data !== 'object' || data.form === 'template') return;
   const boardsIn = Array.isArray(data.boards) ? data.boards : [data];
@@ -26,4 +27,4 @@ function keepOwnPeriods(data){
   });
 }
 
-const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {}, 5: () => {}, 6: () => {}, 7: () => {}, 8: keepOwnPeriods, 9: () => {}, 10: () => {}, 11: () => {}, 12: () => {} } };
+const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {}, 5: () => {}, 6: () => {}, 7: () => {}, 8: keepOwnPeriods, 9: () => {}, 10: () => {}, 11: () => {}, 12: () => {}, 13: () => {} } };

@@ -27,31 +27,9 @@
 .scenario-note{ margin:0; font-size:13px; color:var(--muted); background:#f8fafc; border:1px solid var(--line); border-radius:8px; padding:6px 10px; }
 
 .widget{ background:var(--card); border:1px solid var(--line); border-radius:11px; padding:10px 12px 12px; transition:opacity .15s, box-shadow .15s; }
-/* The sliders: one short row each — the name, the slider, the number — in a list that scrolls on
-   its own, so the bars and charts stay in view (the owner's request, 29 October 2026). The
-   shared phone slider (src/shared/phone.js) is laid out again here, for the viewer only: its
-   track and number side by side, 36 px tall (a finger's target), − and + left out (the keys,
-   typing and a double tap stay). A finger swiping up or down on a track scrolls the list
-   (touch-action: pan-y); 06-board.js puts back anything that swipe moved. */
+/* The sliders: one short row each (src/shared/phone.css, .ps-line) in a list that scrolls on its
+   own, so the bars and charts stay in view (the owner's request, 29 October 2026). */
 .slider-list{ display:flex; flex-direction:column; gap:4px; overflow-y:auto; overscroll-behavior:contain; min-height:0; }
-.slider-widget{ position:relative; flex:none; display:flex; align-items:center; gap:6px; padding:2px 6px 2px 8px; border-radius:9px; border-left:4px solid var(--rect-colour, transparent); }
-.slider-head{ flex:0 0 36%; min-width:0; display:flex; align-items:center; gap:5px; margin:0; overflow:hidden; white-space:nowrap; }
-.slider-name{ flex:0 1 auto; min-width:3.5em; overflow:hidden; text-overflow:ellipsis; font-weight:700; font-size:14px; }
-.slider-when, .slider-unit{ flex:0 6 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; font-size:11.5px; color:var(--muted); }
-/* Where the model's own number is: the notch on the track shows it; the words stay for a screen
-   reader and as the row's tooltip. */
-.slider-base{ position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
-.slider-widget .ps{ --ps-pad:14px; flex:1 1 auto; min-width:0; display:flex; align-items:center; gap:4px; }
-.slider-widget .ps-track{ order:1; flex:1 1 auto; min-width:0; height:36px; touch-action:pan-y; }
-.slider-widget .ps-row{ order:2; flex:none; }
-.slider-widget .ps-step{ display:none; }
-.slider-widget .ps-value, .slider-widget .ps-type{ height:36px; min-width:56px; max-width:92px; padding:0 4px; font-size:15px !important; border-radius:8px; }
-.slider-widget .ps .ps-row input.ps-type:not([type=range]):not([type=file]){ width:92px; font-size:16px !important; }
-.slider-widget .ps-thumb{ width:26px; height:26px; margin:-13px 0 0 -13px; }
-.slider-widget .ps-notch{ top:-7px; bottom:-7px; }
-.slider-widget .ps-bubble{ bottom:calc(50% + 15px); }
-.rect-stripe{ display:inline-block; width:12px; height:12px; border-radius:3px; flex:none; }
-.slider-widget.moved .ps-value{ color:#115e59; }
 .slider-widget.active, .slider-widget.playing{ box-shadow:0 0 0 2px var(--reach); }
 
 .board-actions{ display:flex; gap:8px; flex-wrap:wrap; }
@@ -168,3 +146,10 @@ body.both > #logic{ grid-column:2; grid-row:5; margin-left:0; min-height:0; }
 body.both > #canvasTabs.hidden + #canvasMenu + #logic{ grid-row:4 / 6; border-radius:10px; }
 body.both .board{ grid-template-columns:minmax(220px, 300px) minmax(0, 1fr); }
 body.both .widget-list.bars{ grid-template-columns:minmax(0, 1fr); }
+
+/* Full screen (05gs-show.js; its look is fmGraph's board.css): the viewer's buttons around it. */
+.widget-full{ border:none; background:none; min-width:36px; min-height:36px; font-size:15px; opacity:.7; cursor:pointer; border-radius:8px; }
+.widget-full:hover, .widget-full:focus-visible{ opacity:1; background:#e0f2f1; }
+.show-btn{ border:1px solid var(--line-strong); background:#fff; color:var(--ink); cursor:pointer; min-height:40px; }
+.show-chip{ cursor:pointer; min-height:34px; }
+.show-sliders .slider-widget{ padding:2px 6px 2px 8px; }

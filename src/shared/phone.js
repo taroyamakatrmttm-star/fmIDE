@@ -17,6 +17,14 @@
 //   Each finger is followed by its own pointer id, so several sliders move at once.
 //   With `vertical`, it stands on end (a fader: up is more) and sliding the finger sideways,
 //   away from it, makes it finer.
+// - createSliderLine(options): a slider as one short row — a colour stripe, its name, its periods
+//   and unit in small letters, then the phone's slider laid flat: track and number side by side,
+//   − and + left out (the keys, typing and a double tap stay), and the "model's own" words for a
+//   screen reader (phone.css, .ps-line). The showcase viewer's sliders (the owner's request of
+//   29 October 2026), fmGraph's slider at its minimum and the sliders beside a full screen.
+// - keepThroughSwipe(ctl, take, putBack): a finger swiping up or down on a short row's track
+//   scrolls its list (touch-action: pan-y); the browser then takes the gesture over and cancels
+//   the pointer, and whatever that swipe moved is put back — take() before, putBack(it) after.
 // - shareFiles(files, title): the phone's own share sheet (Messages, Mail, AirDrop…); the
 //   person picks where the files go, nothing is sent first. Where a browser can't share files,
 //   they download instead.
@@ -269,6 +277,44 @@ export function createPhoneSlider(options){
     value: () => value,
     dragging: () => drags > 0,
   };
+}
+
+// options: { name, when, unit, colour (a checked colour: the stripe and --rect-colour), accent
+//   (--slider-accent: the fill and knob), className, slider: createPhoneSlider's options }.
+// Returns { el, ctl (the phone slider), base (the screen reader's words) }.
+export function createSliderLine(options){
+  const o = options || {};
+  const mk = (tag, cls, text) => {
+    const e = document.createElement(tag);
+    e.className = cls;
+    if(text !== undefined && text !== null) e.textContent = String(text);
+    return e;
+  };
+  const el = mk('div', 'ps-line' + (o.className ? ' ' + o.className : ''));
+  if(o.colour) el.style.setProperty('--rect-colour', o.colour);
+  if(o.accent) el.style.setProperty('--slider-accent', o.accent);
+  const head = mk('div', 'slider-head');
+  const stripe = mk('span', 'rect-stripe');
+  if(o.colour) stripe.style.background = o.colour;
+  head.append(stripe, mk('span', 'slider-name', o.name));
+  if(o.when) head.appendChild(mk('span', 'slider-when', o.when));
+  if(o.unit) head.appendChild(mk('span', 'slider-unit', o.unit));
+  const ctl = createPhoneSlider(o.slider);
+  const base = mk('div', 'slider-base');
+  el.append(head, ctl.el, base);
+  return { el, ctl, base };
+}
+export function keepThroughSwipe(ctl, take, putBack){
+  let before = null;
+  ctl.el.addEventListener('pointerdown', (ev) => {
+    before = ev.pointerType === 'mouse' ? null : { id: ev.pointerId, was: take() };
+  }, true);
+  ctl.el.addEventListener('pointerup', (ev) => { if(before && before.id === ev.pointerId) before = null; }, true);
+  ctl.el.addEventListener('pointercancel', (ev) => {
+    const b = before;
+    before = null;
+    if(b && b.id === ev.pointerId) putBack(b.was);
+  }, true);
 }
 
 // The phone's share sheet for these files (File objects); else they download. Resolves

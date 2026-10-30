@@ -18,7 +18,7 @@
 //   cleanGraphCopy(raw, periods) → the layout's cfg.graph (mapping file 4; sliders from file 7, charts from 8, Free charts from 11), checked
 // ============================================================
 const GRAPH_BOARD_KIND = 'fmIDE-graph-board';
-const GRAPH_BOARD_VERSION = 13; // the newest version this reader knows (8: step 18's Tornado and Spider charts; 9: fmGraph's shared period — each chart still names the periods it shows, so nothing here reads it; 10: the lines chart; 11: fmGraph's shared colours — each bar, part and step still carries the colour it shows, so nothing here reads them; 12: fmGraph's common scale — each bar and chart still carries the scale it shows, so nothing here reads it; 13: fmGraph's Free chart, drawn on the Dashboard as stacked columns, phase F3)
+const GRAPH_BOARD_VERSION = 14; // the newest version this reader knows (8: step 18's Tornado and Spider charts; 9: fmGraph's shared period — each chart still names the periods it shows, so nothing here reads it; 10: the lines chart; 11: fmGraph's shared colours — each bar, part and step still carries the colour it shows, so nothing here reads them; 12: fmGraph's common scale — each bar and chart still carries the scale it shows, so nothing here reads it; 13: fmGraph's Free chart, drawn on the Dashboard as stacked columns, phase F3; 14: a slider at its minimum, one short row in fmGraph — how a slider looks, so nothing here reads it)
 const GRAPH_LIMITS = { boards: 20, scenarios: 50, settings: 40, sliders: 40, boardName: 60, scenarioName: 40, rectName: 60, value: 1e15,
   items: 40, title: 80, groups: 12, parts: 30, steps: 40, lines: 12 };
 const GRAPH_FLOW_ROLES = ['start', 'add', 'subtract', 'total'];

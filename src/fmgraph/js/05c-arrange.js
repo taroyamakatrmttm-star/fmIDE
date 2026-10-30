@@ -6,9 +6,11 @@
 //   chart among the bars and charts, a slider among the sliders — by mouse, finger or pen
 //   (shared pointer-input.js), or press ← ↑ / → ↓ on it. ⇔ makes a bar or chart wide (the
 //   whole row) or narrow (half). Every change is one undo step.
-// - A slider folds (▸) to its name, track and number, and unfolds (▾) to all its settings;
-//   Collapse all / Expand all beside the Sliders heading. Kept with the board (`folded`, board
-//   file 6); each is one undo step. On a wide page the Sliders column stays on screen beside
+// - A slider has three looks: Open (all its settings), Folded (its rectangle, track and number)
+//   and Minimum (one short row: its name, track and number, as the showcase viewer's — the shared
+//   createSliderLine). Its button steps through them (▾ → ▸ → ▪ → ▾); All: Open · Folded ·
+//   Minimum beside the Sliders heading. Kept with the board (`folded`: true, or "min", board
+//   files 6 and 14); each is one undo step. The phone's dock and mixer show every slider their way. On a wide page the Sliders column stays on screen beside
 //   the bars and charts, scrolling on its own when it is longer than the screen (styles.css).
 // ============================================================
 function renderAll(){ renderTabs(); renderBoard(); syncUndoButtons(); }
@@ -176,36 +178,104 @@ function startDrag(ev, w, el){
   });
 }
 
-// ---- folding sliders ----
+// ---- a slider's look: Open, Folded, Minimum ----
+const SLIDER_LOOKS = ['open', 'folded', 'min'];
+const LOOK_NAMES = { open: 'Open', folded: 'Folded', min: 'Minimum' };
+const LOOK_MARKS = { open: '▾', folded: '▸', min: '▪' };
+const LOOK_WORDS = { open: 'all of its settings', folded: 'its rectangle, the slider and its number', min: 'one short row: its name, the slider and its number' };
+const sliderLook = (s) => s.folded === 'min' ? 'min' : s.folded ? 'folded' : 'open';
+const nextLook = (look) => SLIDER_LOOKS[(SLIDER_LOOKS.indexOf(look) + 1) % SLIDER_LOOKS.length];
 function foldButton(s){
-  const b = make('button', 'slider-fold', s.folded ? '▸' : '▾');
+  const look = sliderLook(s), next = nextLook(look);
+  const b = make('button', 'slider-fold', LOOK_MARKS[look]);
   b.type = 'button';
-  b.title = s.folded ? 'Show all of this slider' : 'Show only the slider and its number';
-  b.setAttribute('aria-label', 'Folded');
-  b.setAttribute('aria-pressed', s.folded ? 'true' : 'false');
-  b.addEventListener('click', () => { setFolded([s], !s.folded); });
+  b.title = LOOK_NAMES[look] + '. Next: ' + LOOK_NAMES[next] + ', ' + LOOK_WORDS[next];
+  b.setAttribute('aria-label', 'Slider look: ' + LOOK_NAMES[look]);
+  b.dataset.look = look;
+  b.addEventListener('click', () => { setSliderLook([s], next); });
   return b;
 }
-// Fold or unfold these sliders (one undo step); false when nothing changed.
-function setFolded(list, on){
-  const changing = list.filter(s => !!s.folded !== on);
+// Gives these sliders a look (one undo step); false when nothing changed.
+function setSliderLook(list, look){
+  const to = look === 'min' ? 'min' : look === 'folded';
+  const changing = list.filter(s => sliderLook(s) !== look);
   if(!changing.length) return false;
-  changing.forEach(s => { s.folded = on; });
+  changing.forEach(s => { s.folded = to; });
   saveBoardSoon();
   renderBoard();
   return true;
 }
-// Collapse all while any slider is unfolded, else Expand all.
+// All: Open · Folded · Minimum — the look every slider has is marked.
 function syncFoldAll(){
-  const b = $('btnFoldSliders');
+  const group = $('sliderLooks');
   const some = !!board && board.sliders.length > 0;
-  b.classList.toggle('hidden', !some);
+  group.classList.toggle('hidden', !some);
   if(!some) return;
-  const fold = board.sliders.some(s => !s.folded);
-  b.textContent = fold ? 'Collapse all' : 'Expand all';
-  b.title = fold ? 'Show every slider as its name, track and number only' : 'Show all of every slider\'s settings';
+  const looks = new Set(board.sliders.map(sliderLook));
+  group.querySelectorAll('button[data-look]').forEach(b => {
+    b.setAttribute('aria-pressed', looks.size === 1 && looks.has(b.dataset.look) ? 'true' : 'false');
+  });
 }
-$('btnFoldSliders').addEventListener('click', () => { if(board) setFolded(board.sliders, board.sliders.some(s => !s.folded)); });
+$('sliderLooks').querySelectorAll('button[data-look]').forEach(b => {
+  b.addEventListener('click', () => { if(board) setSliderLook(board.sliders, b.dataset.look); });
+});
+
+// ---- a slider as one short row: at its minimum, and beside the full screen (05h-phone-show.js) ----
+const lineControls = new Map(); // a short row's element → { s, ctl }
+function sliderLine(s, className){
+  const rect = model.byKey.get(s.key);
+  let ctl = null;
+  const line = createSliderLine({
+    className,
+    name: rect.name, when: periodsText(s.periods), unit: rect.unit && s.mode === 'set' ? rect.unit : '',
+    colour: shownColour(s.key), accent: sliderAccent(shownColour(s.key)), // its rectangle's colour (04e-colours.js)
+    slider: {
+      label: rect.name, min: s.min, max: s.max, step: s.step, value: sliderShown(s), base: sliderBase(s),
+      format: (v) => sliderText(s, v),
+      vibrate: () => vibrateOn,
+      onStart: () => { setActiveSlider(s.id); workOutAhead(s); },
+      onInput: (v, atBase) => {
+        if(atBase){ s.value = null; setActiveSlider(s.id); quietSoon(1500); scheduleUpdate(); }
+        else moveSlider(s, v);
+      },
+      onEnd: () => quietSoon(1200),
+    },
+  });
+  ctl = line.ctl;
+  const w = line.el;
+  w.dataset.id = s.id;
+  lineControls.set(w, { s, ctl });
+  // A finger's swipe up or down scrolls the list; what it moved is put back.
+  keepThroughSwipe(ctl, () => s.value, (was) => {
+    if(Object.is(s.value, was)) return;
+    s.value = was;
+    ctl.setValue(sliderShown(s));
+    scheduleUpdate();
+  });
+  w.addEventListener('pointerenter', () => setActiveSlider(s.id));
+  w.addEventListener('pointerleave', () => { if(!ctl.dragging()) quietSoon(0); });
+  return w;
+}
+// A slider at its minimum, on the board: the short row, its handle first and its look's button last.
+function minimumSlider(s){
+  const w = sliderLine(s, 'widget slider-widget minimum');
+  w.querySelector('.slider-head').classList.add('widget-head'); // the handle goes here (renderBoard)
+  w.appendChild(foldButton(s));
+  return w;
+}
+// The short rows' positions and words, after every redraw (updateValues) and while Play runs.
+function updateLines(playValue){
+  if(!playValue && playNow()) return; // Play shows its own positions (paintPlay)
+  lineControls.forEach((it, el) => {
+    if(!el.isConnected){ lineControls.delete(el); return; }
+    const v = playValue ? playValue(it.s) : sliderShown(it.s);
+    if(!it.ctl.dragging()) it.ctl.setValue(v);
+    el.querySelector('.slider-base').textContent = sliderBaseText(it.s);
+    el.title = sliderBaseText(it.s);
+    el.classList.toggle('moved', it.s.value !== null);
+    if(!playValue) el.classList.remove('playing');
+  });
+}
 // ---- shared slider positions (03-calc.js) ----
 // The tick box under the Sliders heading (with two boards or more), and the note naming the
 // moved sliders on other boards that count here too; on a phone, the ☰ menu's switch.

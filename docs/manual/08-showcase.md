@@ -23,7 +23,7 @@ A **showcase viewer** is one web page made from your model. Anyone can open it i
 > **You need:** fmIDE, and a model with an fmGraph board: the sample `tests/fixtures/viewer/every-widget.fmide` has two boards and two scenarios.
 > **Time:** about 5 minutes.
 > **In the app:** fmIDE Help → *Share a model as a showcase viewer* (`showcase-viewer`)
-> **Came in:** the showcase viewer's phases V1–V3 · branches `claude/viewer-v1`, `claude/viewer-v2`, `claude/viewer-v3`, `claude/viewer-ipad-sliders`, `claude/showcase-canvases-select-all`
+> **Came in:** the showcase viewer's phases V1–V3 · branches `claude/viewer-v1`, `claude/viewer-v2`, `claude/viewer-v3`, `claude/viewer-ipad-sliders`, `claude/showcase-canvases-select-all`, `claude/slider-fullscreen-min-0c2e3f`
 
 You choose what the visitor sees; fmIDE writes the page. Your choices stay in the document, so making the viewer again after a change takes one click.
 
@@ -37,7 +37,7 @@ You choose what the visitor sees; fmIDE writes the page. Your choices stay in th
 6. Set **Periods shown** from **Year 2** to **Year 3**.
 7. Under **Boards (from fmGraph)**, untick **Own sliders**. Set **Play starts with** from **Base** to **Big year**. Untick **Include an Excel workbook** for now: lesson 8.2 adds it.
 8. Press **Make viewer**. fmIDE downloads `prices-and-cash.html` (on an iPhone or iPad, the share sheet opens) and says *Made prices-and-cash.html (… KB). It opens in any browser, offline, and changes nothing in your model.*
-9. Open the file in your browser (on an iPhone or iPad, see *Good to know*). On the **Board**, move the **Price** slider to 12. Then choose **Logic**, the **Profit** tab, and tap **Revenue**.
+9. Open the file in your browser (on an iPhone or iPad, see *Good to know*). On the **Board**, move the **Price** slider to 12. Press **⛶** at the top of the **Balance sheet** chart: it fills the screen. Press **🎚 Sliders**: the four sliders appear beside it. Move **Price** there, then press **×**. Then choose **Logic**, the **Profit** tab, and tap **Revenue**.
 
 ### Check it
 
@@ -53,6 +53,7 @@ You choose what the visitor sees; fmIDE writes the page. Your choices stay in th
 - **Making it again** (**File → Make Showcase Viewer…** after you change the model) starts from every choice you made. A canvas or board you added since comes unticked; one you deleted is left out, and the window says so.
 - **Hiding is not secrecy.** Everything in the model goes into the file, shown or not: someone determined can read every canvas and number. Don't share a confidential model this way.
 - **No boards yet?** The window says the viewer will show the model's logic only, and offers **Open fmGraph to make one**. A board you make there appears in the open window.
+- **Full screen** (⛶ on a bar or chart) is for showing the model to a room: the names at the top add other bars and charts, **▶ Play** plays, and **🎚 Sliders** shows the sliders beside it (at the foot on a screen taller than wide). A slider moved there is the Board's own. The device remembers whether the sliders are shown; on a phone they are shown at first.
 - **What the visitor changes stays on their own device.** Opening the file again shows the same sliders; **Reset** puts the model's own numbers back.
 - **On an iPhone or iPad**, a viewer saved in Files opens only in a preview, which can't run it. To open one there: in Safari, go to https://fmide.pages.dev/fmViewer, tap **Choose**, and pick the file. It opens just as it does on a computer; only the model and showcase inside it are read, and a page that isn't a made viewer is refused with *That page isn't a viewer made by fmIDE (File → Make Showcase Viewer…), so fmShowcase can't open it.*
 - **Opened in fmIDE by mistake**, a made viewer says *That is a showcase viewer, a web page: open it in your browser, not in fmIDE.*

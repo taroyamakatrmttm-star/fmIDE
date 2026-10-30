@@ -57,7 +57,10 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
     section class="board" id="board"
       div class="board-col"
         h2 class="col-head" | Sliders
-          button class="link-btn col-tool" id="btnFoldSliders" title="Show every slider as its name, track and number only" type="button" | Collapse all
+          span aria-label="Every slider's look" class="slider-looks col-tool" id="sliderLooks" role="group" | All: · ·
+            button aria-pressed="true" class="link-btn" data-look="open" title="Every slider open: all of its settings" type="button" | Open
+            button aria-pressed="false" class="link-btn" data-look="folded" title="Every slider folded: its rectangle, the slider and its number" type="button" | Folded
+            button aria-pressed="false" class="link-btn" data-look="min" title="Every slider at its minimum: one short row each" type="button" | Minimum
         label class="share-sliders" id="shareSlidersRow" title="Ticked: the sliders stand in the same place on every board that shares, and a slider moved on another board moves this board's numbers too. Unticked: this board keeps its own positions." | Share slider positions with other boards
           input checked="" id="shareSliders" type="checkbox" .value="on" .checked=true
         p class="shared-note hidden" id="sharedNote"
@@ -76,7 +79,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   option value="cBS\u0000equip" | Equipment
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Price" class="colour-pick slider-colour" title="Colour of Price" type="color" .value="#0f766e"
-              button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-label="Slider look: Open" class="slider-fold" data-look="open" title="Open. Next: Folded, its rectangle, the slider and its number" type="button" | ▾
               button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
@@ -129,7 +132,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   option value="cBS\u0000equip" | Equipment
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Volume" class="colour-pick slider-colour" title="Colour of Volume" type="color" .value="#2563eb"
-              button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-label="Slider look: Open" class="slider-fold" data-look="open" title="Open. Next: Folded, its rectangle, the slider and its number" type="button" | ▾
               button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
@@ -183,7 +186,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   option value="cBS\u0000equip" | Equipment
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Unit cost" class="colour-pick slider-colour" title="Colour of Unit cost" type="color" .value="#0f766e"
-              button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-label="Slider look: Open" class="slider-fold" data-look="open" title="Open. Next: Folded, its rectangle, the slider and its number" type="button" | ▾
               button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
@@ -236,7 +239,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   option value="cBS\u0000equip" | Equipment
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Overheads" class="colour-pick slider-colour" title="Colour of Overheads" type="color" .value="#65a30d"
-              button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-label="Slider look: Open" class="slider-fold" data-look="open" title="Open. Next: Folded, its rectangle, the slider and its number" type="button" | ▾
               button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
@@ -2085,6 +2088,8 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
       h2 id="showTitle"
       div aria-label="Bars and charts shown" class="show-chips" id="showChips" role="group"
       button class="show-btn show-play" id="showPlay" title="Play between the ends chosen under Scenarios" type="button" | ▶ Play
+      button aria-label="Sliders" aria-pressed="false" class="show-btn show-sliders-btn" id="showSlidersBtn" title="Show the board's sliders beside the full screen" type="button" | 🎚
+        span class="show-btn-words" | Sliders
       span aria-live="polite" class="show-note" id="showNote"
       span class="show-more" id="showMore"
         button class="show-btn" id="showGif" title="GIF: an animated GIF of what is shown, playing between the ends chosen under Scenarios" type="button" | 🎞 GIF
@@ -2092,6 +2097,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
       button aria-label="Help: full screen" class="show-btn show-help" id="showHelp" title="Help: full screen" type="button" | ?
       button aria-label="Close" class="show-btn show-close" id="showClose" title="Close (Esc)" type="button" | ×
     div class="show-body" id="showBody"
+    div aria-label="Sliders" class="show-sliders hidden" id="showSliders" role="group"
   div aria-live="polite" class="gif-progress hidden" id="gifProgress" role="status"
     span id="gifProgressText"
     button id="btnGifCancel" type="button" | Cancel
@@ -2209,7 +2215,10 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
     section class="board" id="board"
       div class="board-col"
         h2 class="col-head" | Sliders
-          button class="link-btn col-tool" id="btnFoldSliders" title="Show every slider as its name, track and number only" type="button" | Collapse all
+          span aria-label="Every slider's look" class="slider-looks col-tool" id="sliderLooks" role="group" | All: · ·
+            button aria-pressed="true" class="link-btn" data-look="open" title="Every slider open: all of its settings" type="button" | Open
+            button aria-pressed="false" class="link-btn" data-look="folded" title="Every slider folded: its rectangle, the slider and its number" type="button" | Folded
+            button aria-pressed="false" class="link-btn" data-look="min" title="Every slider at its minimum: one short row each" type="button" | Minimum
         label class="share-sliders" id="shareSlidersRow" title="Ticked: the sliders stand in the same place on every board that shares, and a slider moved on another board moves this board's numbers too. Unticked: this board keeps its own positions." | Share slider positions with other boards
           input checked="" id="shareSliders" type="checkbox" .value="on" .checked=true
         p class="shared-note hidden" id="sharedNote"
@@ -2228,7 +2237,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   option value="cBS\u0000equip" | Equipment
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Price" class="colour-pick slider-colour" title="Colour of Price" type="color" .value="#0f766e"
-              button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-label="Slider look: Open" class="slider-fold" data-look="open" title="Open. Next: Folded, its rectangle, the slider and its number" type="button" | ▾
               button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
@@ -2281,7 +2290,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   option value="cBS\u0000equip" | Equipment
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Volume" class="colour-pick slider-colour" title="Colour of Volume" type="color" .value="#2563eb"
-              button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-label="Slider look: Open" class="slider-fold" data-look="open" title="Open. Next: Folded, its rectangle, the slider and its number" type="button" | ▾
               button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
@@ -2335,7 +2344,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   option value="cBS\u0000equip" | Equipment
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Unit cost" class="colour-pick slider-colour" title="Colour of Unit cost" type="color" .value="#0f766e"
-              button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-label="Slider look: Open" class="slider-fold" data-look="open" title="Open. Next: Folded, its rectangle, the slider and its number" type="button" | ▾
               button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
@@ -2388,7 +2397,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   option value="cBS\u0000equip" | Equipment
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Overheads" class="colour-pick slider-colour" title="Colour of Overheads" type="color" .value="#65a30d"
-              button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-label="Slider look: Open" class="slider-fold" data-look="open" title="Open. Next: Folded, its rectangle, the slider and its number" type="button" | ▾
               button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
@@ -4332,6 +4341,8 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
       h2 id="showTitle"
       div aria-label="Bars and charts shown" class="show-chips" id="showChips" role="group"
       button class="show-btn show-play" id="showPlay" title="Play between the ends chosen under Scenarios" type="button" | ▶ Play
+      button aria-label="Sliders" aria-pressed="false" class="show-btn show-sliders-btn" id="showSlidersBtn" title="Show the board's sliders beside the full screen" type="button" | 🎚
+        span class="show-btn-words" | Sliders
       span aria-live="polite" class="show-note" id="showNote"
       span class="show-more" id="showMore"
         button class="show-btn" id="showGif" title="GIF: an animated GIF of what is shown, playing between the ends chosen under Scenarios" type="button" | 🎞 GIF
@@ -4339,6 +4350,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
       button aria-label="Help: full screen" class="show-btn show-help" id="showHelp" title="Help: full screen" type="button" | ?
       button aria-label="Close" class="show-btn show-close" id="showClose" title="Close (Esc)" type="button" | ×
     div class="show-body" id="showBody"
+    div aria-label="Sliders" class="show-sliders hidden" id="showSliders" role="group"
   div aria-live="polite" class="gif-progress hidden" id="gifProgress" role="status"
     span id="gifProgressText"
     button id="btnGifCancel" type="button" | Cancel
@@ -4461,7 +4473,10 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
     section class="board tracing" id="board"
       div class="board-col"
         h2 class="col-head" | Sliders
-          button class="link-btn col-tool" id="btnFoldSliders" title="Show every slider as its name, track and number only" type="button" | Collapse all
+          span aria-label="Every slider's look" class="slider-looks col-tool" id="sliderLooks" role="group" | All: · ·
+            button aria-pressed="true" class="link-btn" data-look="open" title="Every slider open: all of its settings" type="button" | Open
+            button aria-pressed="false" class="link-btn" data-look="folded" title="Every slider folded: its rectangle, the slider and its number" type="button" | Folded
+            button aria-pressed="false" class="link-btn" data-look="min" title="Every slider at its minimum: one short row each" type="button" | Minimum
         label class="share-sliders" id="shareSlidersRow" title="Ticked: the sliders stand in the same place on every board that shares, and a slider moved on another board moves this board's numbers too. Unticked: this board keeps its own positions." | Share slider positions with other boards
           input checked="" id="shareSliders" type="checkbox" .value="on" .checked=true
         p class="shared-note hidden" id="sharedNote"
@@ -4480,7 +4495,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   option value="cBS\u0000equip" | Equipment
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Price" class="colour-pick slider-colour" title="Colour of Price" type="color" .value="#0f766e"
-              button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-label="Slider look: Open" class="slider-fold" data-look="open" title="Open. Next: Folded, its rectangle, the slider and its number" type="button" | ▾
               button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
@@ -4533,7 +4548,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   option value="cBS\u0000equip" | Equipment
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Volume" class="colour-pick slider-colour" title="Colour of Volume" type="color" .value="#2563eb"
-              button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-label="Slider look: Open" class="slider-fold" data-look="open" title="Open. Next: Folded, its rectangle, the slider and its number" type="button" | ▾
               button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
@@ -4587,7 +4602,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   option value="cBS\u0000equip" | Equipment
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Unit cost" class="colour-pick slider-colour" title="Colour of Unit cost" type="color" .value="#0f766e"
-              button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-label="Slider look: Open" class="slider-fold" data-look="open" title="Open. Next: Folded, its rectangle, the slider and its number" type="button" | ▾
               button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
@@ -4640,7 +4655,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   option value="cBS\u0000equip" | Equipment
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Overheads" class="colour-pick slider-colour" title="Colour of Overheads" type="color" .value="#65a30d"
-              button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-label="Slider look: Open" class="slider-fold" data-look="open" title="Open. Next: Folded, its rectangle, the slider and its number" type="button" | ▾
               button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
@@ -6585,6 +6600,8 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
       h2 id="showTitle"
       div aria-label="Bars and charts shown" class="show-chips" id="showChips" role="group"
       button class="show-btn show-play" id="showPlay" title="Play between the ends chosen under Scenarios" type="button" | ▶ Play
+      button aria-label="Sliders" aria-pressed="false" class="show-btn show-sliders-btn" id="showSlidersBtn" title="Show the board's sliders beside the full screen" type="button" | 🎚
+        span class="show-btn-words" | Sliders
       span aria-live="polite" class="show-note" id="showNote"
       span class="show-more" id="showMore"
         button class="show-btn" id="showGif" title="GIF: an animated GIF of what is shown, playing between the ends chosen under Scenarios" type="button" | 🎞 GIF
@@ -6592,6 +6609,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
       button aria-label="Help: full screen" class="show-btn show-help" id="showHelp" title="Help: full screen" type="button" | ?
       button aria-label="Close" class="show-btn show-close" id="showClose" title="Close (Esc)" type="button" | ×
     div class="show-body" id="showBody"
+    div aria-label="Sliders" class="show-sliders hidden" id="showSliders" role="group"
   div aria-live="polite" class="gif-progress hidden" id="gifProgress" role="status"
     span id="gifProgressText"
     button id="btnGifCancel" type="button" | Cancel
@@ -6714,7 +6732,10 @@ body class="playing" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h
     section class="board moving" id="board"
       div class="board-col"
         h2 class="col-head" | Sliders
-          button class="link-btn col-tool" id="btnFoldSliders" title="Show every slider as its name, track and number only" type="button" | Collapse all
+          span aria-label="Every slider's look" class="slider-looks col-tool" id="sliderLooks" role="group" | All: · ·
+            button aria-pressed="true" class="link-btn" data-look="open" title="Every slider open: all of its settings" type="button" | Open
+            button aria-pressed="false" class="link-btn" data-look="folded" title="Every slider folded: its rectangle, the slider and its number" type="button" | Folded
+            button aria-pressed="false" class="link-btn" data-look="min" title="Every slider at its minimum: one short row each" type="button" | Minimum
         label class="share-sliders" id="shareSlidersRow" title="Ticked: the sliders stand in the same place on every board that shares, and a slider moved on another board moves this board's numbers too. Unticked: this board keeps its own positions." | Share slider positions with other boards
           input checked="" id="shareSliders" type="checkbox" .value="on" .checked=true
         p class="shared-note hidden" id="sharedNote"
@@ -6733,7 +6754,7 @@ body class="playing" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h
                   option value="cBS\u0000equip" | Equipment
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Price" class="colour-pick slider-colour" title="Colour of Price" type="color" .value="#0f766e"
-              button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-label="Slider look: Open" class="slider-fold" data-look="open" title="Open. Next: Folded, its rectangle, the slider and its number" type="button" | ▾
               button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
@@ -6786,7 +6807,7 @@ body class="playing" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h
                   option value="cBS\u0000equip" | Equipment
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Volume" class="colour-pick slider-colour" title="Colour of Volume" type="color" .value="#2563eb"
-              button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-label="Slider look: Open" class="slider-fold" data-look="open" title="Open. Next: Folded, its rectangle, the slider and its number" type="button" | ▾
               button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
@@ -6840,7 +6861,7 @@ body class="playing" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h
                   option value="cBS\u0000equip" | Equipment
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Unit cost" class="colour-pick slider-colour" title="Colour of Unit cost" type="color" .value="#0f766e"
-              button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-label="Slider look: Open" class="slider-fold" data-look="open" title="Open. Next: Folded, its rectangle, the slider and its number" type="button" | ▾
               button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
@@ -6893,7 +6914,7 @@ body class="playing" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h
                   option value="cBS\u0000equip" | Equipment
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Overheads" class="colour-pick slider-colour" title="Colour of Overheads" type="color" .value="#65a30d"
-              button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-label="Slider look: Open" class="slider-fold" data-look="open" title="Open. Next: Folded, its rectangle, the slider and its number" type="button" | ▾
               button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
@@ -8789,6 +8810,8 @@ body class="playing" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h
       h2 id="showTitle"
       div aria-label="Bars and charts shown" class="show-chips" id="showChips" role="group"
       button class="show-btn show-play" id="showPlay" title="Play between the ends chosen under Scenarios" type="button" | ▶ Play
+      button aria-label="Sliders" aria-pressed="false" class="show-btn show-sliders-btn" id="showSlidersBtn" title="Show the board's sliders beside the full screen" type="button" | 🎚
+        span class="show-btn-words" | Sliders
       span aria-live="polite" class="show-note" id="showNote"
       span class="show-more" id="showMore"
         button class="show-btn" id="showGif" title="GIF: an animated GIF of what is shown, playing between the ends chosen under Scenarios" type="button" | 🎞 GIF
@@ -8796,6 +8819,7 @@ body class="playing" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h
       button aria-label="Help: full screen" class="show-btn show-help" id="showHelp" title="Help: full screen" type="button" | ?
       button aria-label="Close" class="show-btn show-close" id="showClose" title="Close (Esc)" type="button" | ×
     div class="show-body" id="showBody"
+    div aria-label="Sliders" class="show-sliders hidden" id="showSliders" role="group"
   div aria-live="polite" class="gif-progress hidden" id="gifProgress" role="status"
     span id="gifProgressText"
     button id="btnGifCancel" type="button" | Cancel
@@ -8913,7 +8937,10 @@ body class="" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
     section class="board" id="board"
       div class="board-col"
         h2 class="col-head" | Sliders
-          button class="link-btn col-tool" id="btnFoldSliders" title="Show every slider as its name, track and number only" type="button" | Collapse all
+          span aria-label="Every slider's look" class="slider-looks col-tool" id="sliderLooks" role="group" | All: · ·
+            button aria-pressed="true" class="link-btn" data-look="open" title="Every slider open: all of its settings" type="button" | Open
+            button aria-pressed="false" class="link-btn" data-look="folded" title="Every slider folded: its rectangle, the slider and its number" type="button" | Folded
+            button aria-pressed="false" class="link-btn" data-look="min" title="Every slider at its minimum: one short row each" type="button" | Minimum
         label class="share-sliders" id="shareSlidersRow" title="Ticked: the sliders stand in the same place on every board that shares, and a slider moved on another board moves this board's numbers too. Unticked: this board keeps its own positions." | Share slider positions with other boards
           input checked="" id="shareSliders" type="checkbox" .value="on" .checked=false
         p class="shared-note hidden" id="sharedNote"
@@ -8932,7 +8959,7 @@ body class="" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   option value="cBS\u0000equip" | Equipment
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Overheads" class="colour-pick slider-colour" title="Colour of Overheads" type="color" .value="#65a30d"
-              button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-label="Slider look: Open" class="slider-fold" data-look="open" title="Open. Next: Folded, its rectangle, the slider and its number" type="button" | ▾
               button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
@@ -9174,6 +9201,8 @@ body class="" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
       h2 id="showTitle"
       div aria-label="Bars and charts shown" class="show-chips" id="showChips" role="group"
       button class="show-btn show-play" id="showPlay" title="Play between the ends chosen under Scenarios" type="button" | ▶ Play
+      button aria-label="Sliders" aria-pressed="false" class="show-btn show-sliders-btn" id="showSlidersBtn" title="Show the board's sliders beside the full screen" type="button" | 🎚
+        span class="show-btn-words" | Sliders
       span aria-live="polite" class="show-note" id="showNote"
       span class="show-more" id="showMore"
         button class="show-btn" id="showGif" title="GIF: an animated GIF of what is shown, playing between the ends chosen under Scenarios" type="button" | 🎞 GIF
@@ -9181,6 +9210,7 @@ body class="" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
       button aria-label="Help: full screen" class="show-btn show-help" id="showHelp" title="Help: full screen" type="button" | ?
       button aria-label="Close" class="show-btn show-close" id="showClose" title="Close (Esc)" type="button" | ×
     div class="show-body" id="showBody"
+    div aria-label="Sliders" class="show-sliders hidden" id="showSliders" role="group"
   div aria-live="polite" class="gif-progress hidden" id="gifProgress" role="status"
     span id="gifProgressText"
     button id="btnGifCancel" type="button" | Cancel

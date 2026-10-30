@@ -13,13 +13,20 @@ function paintPlay(f){
     const a = endSliderValue(playing.from.settings, s), b = endSliderValue(playing.to.settings, s);
     let v = mixAt(a, b, f);
     if(f !== 0 && f !== 1) v = roundToStep(v, s.step);
-    const el = document.querySelector('.slider-widget[data-id="' + s.id + '"]');
+    // Its row on the board, and beside the full screen (05gs-show.js).
+    document.querySelectorAll('.slider-widget[data-id="' + s.id + '"]').forEach(row => row.classList.toggle('playing', !Object.is(a, b)));
+    const el = document.querySelector('#sliderList .slider-widget[data-id="' + s.id + '"]');
     if(el){
-      el.classList.toggle('playing', !Object.is(a, b));
-      el.querySelector('input[type="range"]').value = String(v);
-      el.querySelector('.slider-value').value = String(v);
+      const range = el.querySelector('input[type="range"]'), box = el.querySelector('.slider-value');
+      if(range) range.value = String(v); // a short row has none: updateLines below
+      if(box) box.value = String(v);
     }
     [dockControls.get(s.id), mixerControls.get(s.id)].forEach(c => { if(c && !c.dragging()) c.setValue(v); }); // (05g, 05h)
+  });
+  updateLines((s) => { // the short rows: at their minimum, and beside the full screen (05c-arrange.js)
+    const a = endSliderValue(playing.from.settings, s), b = endSliderValue(playing.to.settings, s);
+    const v = mixAt(a, b, f);
+    return f !== 0 && f !== 1 ? roundToStep(v, s.step) : v;
   });
   const reached = new Set(playing.moving);
   playing.moving.forEach(k => model.reach(k).forEach(r => reached.add(r)));

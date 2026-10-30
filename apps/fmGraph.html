@@ -132,6 +132,11 @@
   .slider-widget.folded{ padding:6px 10px 6px; }
   .slider-widget.folded .slider-more{ display:none; }
   .slider-widget.folded .slider-track{ margin-top:4px; }
+  /* A slider at its minimum: one short row (src/shared/phone.css, .ps-line), its handle first. */
+  .slider-widget.minimum .slider-head .drag-handle{ padding:2px 3px; }
+  .slider-widget.minimum > .slider-fold{ flex:none; }
+  .slider-looks{ display:inline-flex; align-items:center; gap:4px; }
+  .slider-looks .link-btn[aria-pressed="true"]{ color:var(--ink); text-decoration:underline; text-underline-offset:3px; }
   .slider-range summary{ cursor:pointer; font-size:12.5px; color:var(--soft-ink); margin-top:8px; }
 
   /* Questions. */
@@ -435,33 +440,13 @@
   .fader-change{ min-height:16px; font-size:11.5px; font-weight:600; color:var(--reach); text-align:center; font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; }
   .fader.moved .ps-value{ color:var(--brand-dark); }
   .fader-menu{ top:60px; right:auto; }
-  /* Full screen (Show): one or several bars and charts on the whole screen (05h-phone-show.js). */
-  .show-view{ position:fixed; z-index:40; inset:0; top:0; background:var(--page); display:flex; flex-direction:column; padding:8px 12px calc(var(--dock-h, 0px) + 8px); }
+  /* Full screen (Show, 05gs-show.js; its look is in board.css): on a phone, the dock and the mixer
+     are its sliders, over it; 🎚 Sliders off hides them. */
   body.mixing .show-view{ left:var(--mix-l, 0px); right:var(--mix-r, 0px); padding-bottom:8px; }
-  .show-head{ position:absolute; z-index:2; top:0; left:0; right:0; display:flex; align-items:center; gap:8px; padding:calc(6px + env(safe-area-inset-top, 0px)) 12px 6px; background:rgba(244,245,248,.94); border-bottom:1px solid var(--line); transition:opacity .35s, background .35s, border-color .35s; }
-  .show-head h2{ flex:0 1 auto; margin:0; font-size:18px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .show-chips{ flex:1 1 auto; min-width:0; display:flex; gap:6px; overflow-x:auto; scrollbar-width:thin; padding:2px 0; }
-  .show-chip{ flex:0 0 auto; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; padding:5px 11px; border-radius:999px; border:1px solid var(--line-strong); background:var(--card); color:var(--soft-ink); }
-  .show-chip[aria-pressed="true"]{ background:var(--brand-soft); border-color:var(--brand); color:var(--ink); font-weight:600; }
-  .show-chip[aria-pressed="true"]::before{ content:"✓ "; }
-  .show-note{ font-size:12.5px; color:var(--soft-ink); }
-  .show-more:empty{ display:none; }
-  .show-btn{ flex:0 0 auto; font-size:15px; padding:7px 13px; border-radius:10px; }
-  .show-help{ padding:7px 11px; }
-  .show-close{ font-size:22px; padding:2px 14px; }
-  /* Quiet: the strip fades after a few seconds; a tap, a key or the mouse brings it back. × stays. */
-  .show-view.quiet .show-head{ background:transparent; border-color:transparent; }
-  .show-view.quiet .show-head > :not(.show-close){ opacity:0; pointer-events:none; transition:opacity .35s; }
-  .show-view.quiet .show-close{ opacity:.45; }
-  @media (prefers-reduced-motion: reduce){ .show-head, .show-head > *{ transition:none !important; } }
-  .show-body{ flex:1 1 auto; min-height:0; display:grid; grid-template-columns:repeat(var(--show-cols, 1), minmax(0, 1fr)); grid-template-rows:repeat(var(--show-rows, 1), minmax(0, 1fr)); gap:12px; padding-top:var(--show-top, 50px); }
-  .show-widget{ min-width:0; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
-  .show-widget.boxed{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:8px 10px; }
-  .show-name{ margin:0 0 2px; font-size:15px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:0 0 auto; }
-  .show-widget .bar-chart-host{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; gap:6px; }
-  .show-widget .bar-chart{ flex:1 1 0; min-height:0; height:auto; margin:0; font-size:13px; }
-  .show-widget .chart-key, .show-widget .bar-errors{ flex:0 0 auto; }
-  .show-widget .chart-key{ font-size:14px; max-height:30%; overflow:auto; }
+  body.phone .show-sliders{ display:none !important; }
+  body.phone .show-view.with-sliders{ display:flex; }
+  body.phone.show-hide-sliders .slider-dock, body.phone.show-hide-sliders .mixer{ display:none !important; }
+  body.phone.show-hide-sliders .show-view{ left:0; right:0; padding-bottom:calc(8px + env(safe-area-inset-bottom, 0px)); }
   body.showing .slider-dock{ z-index:41; }
   body.showing .mixer{ z-index:41; top:0; }
   /* Holding A to look. */
@@ -547,6 +532,46 @@
   .bar-chart .l-base{ stroke:var(--bar-base); stroke-width:1.5; stroke-dasharray:4 3; }
   .bar-chart.stale{ opacity:.45; }
   .chart-widget.play-held .bar-chart-host{ opacity:.45; }
+
+  /* Full screen (Show): one or several bars and charts on the whole screen (05gs-show.js; fmGraph and the showcase viewer). */
+  .show-view{ position:fixed; z-index:40; inset:0; top:0; background:var(--page); display:flex; flex-direction:column; padding:8px 12px calc(var(--dock-h, 0px) + 8px); }
+  .show-head{ position:absolute; z-index:2; top:0; left:0; right:0; display:flex; align-items:center; gap:8px; padding:calc(6px + env(safe-area-inset-top, 0px)) 12px 6px; background:rgba(244,245,248,.94); border-bottom:1px solid var(--line); transition:opacity .35s, background .35s, border-color .35s; }
+  .show-head h2{ flex:0 1 auto; margin:0; font-size:18px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .show-chips{ flex:1 1 auto; min-width:0; display:flex; gap:6px; overflow-x:auto; scrollbar-width:thin; padding:2px 0; }
+  .show-chip{ flex:0 0 auto; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; padding:5px 11px; border-radius:999px; border:1px solid var(--line-strong); background:var(--card); color:var(--soft-ink); }
+  .show-chip[aria-pressed="true"]{ background:var(--brand-soft); border-color:var(--brand); color:var(--ink); font-weight:600; }
+  .show-chip[aria-pressed="true"]::before{ content:"✓ "; }
+  .show-note{ font-size:12.5px; color:var(--soft-ink); }
+  .show-more:empty{ display:none; }
+  .show-btn{ flex:0 0 auto; font-size:15px; padding:7px 13px; border-radius:10px; }
+  .show-help{ padding:7px 11px; }
+  .show-close{ font-size:22px; padding:2px 14px; }
+  /* Quiet: the strip fades after a few seconds; a tap, a key or the mouse brings it back. × stays. */
+  .show-view.quiet .show-head{ background:transparent; border-color:transparent; }
+  .show-view.quiet .show-head > :not(.show-close){ opacity:0; pointer-events:none; transition:opacity .35s; }
+  .show-view.quiet .show-close{ opacity:.45; }
+  @media (prefers-reduced-motion: reduce){ .show-head, .show-head > *{ transition:none !important; } }
+  .show-body{ flex:1 1 auto; min-height:0; display:grid; grid-template-columns:repeat(var(--show-cols, 1), minmax(0, 1fr)); grid-template-rows:repeat(var(--show-rows, 1), minmax(0, 1fr)); gap:12px; padding-top:var(--show-top, 50px); }
+  .show-widget{ min-width:0; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
+  .show-widget.boxed{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:8px 10px; }
+  .show-name{ margin:0 0 2px; font-size:15px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:0 0 auto; }
+  .show-widget .bar-chart-host{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; gap:6px; }
+  .show-widget .bar-chart{ flex:1 1 0; min-height:0; height:auto; margin:0; font-size:13px; }
+  .show-widget .chart-key, .show-widget .bar-errors{ flex:0 0 auto; }
+  .show-widget .chart-key{ font-size:14px; max-height:30%; overflow:auto; }
+  /* 🎚 Sliders beside the full screen (05gs-show.js): on the right when the view is wider than
+     tall, at its foot when taller; one short row each (src/shared/phone.css). */
+  .show-view.with-sliders{ display:grid; grid-template-columns:minmax(0, 1fr) minmax(220px, 300px); grid-template-rows:minmax(0, 1fr); gap:12px; }
+  .show-view.with-sliders[data-shape="tall"]{ grid-template-columns:minmax(0, 1fr); grid-template-rows:minmax(0, 1fr) auto; }
+  .show-sliders{ min-height:0; overflow-y:auto; overscroll-behavior:contain; display:flex; flex-direction:column; gap:4px; }
+  .show-view[data-shape="wide"] .show-sliders{ padding-top:var(--show-top, 50px); }
+  .show-view[data-shape="tall"] .show-sliders{ max-height:min(34vh, 280px); padding-top:6px; border-top:1px solid var(--line); }
+  .show-sliders .slider-widget{ background:var(--card); }
+  .show-sliders .slider-widget.unreached{ opacity:.45; }
+  .show-sliders-none{ margin:4px 0; font-size:13px; color:var(--soft-ink); }
+  .show-sliders-btn[aria-pressed="true"]{ background:var(--brand-soft); border-color:var(--brand); }
+  /* A phone's strip has no room for its words: 🎚 alone (its name stays for a screen reader). */
+  @media (max-width: 520px){ .show-btn-words{ display:none; } .show-sliders-btn{ padding-left:10px; padding-right:10px; } }
 /* The Help panel (build step 10; docs/step10-help.md), shared by fmIDE and ExcelExporter with
    src/shared/help-panel.js. Each app sets --help-top (where the panel starts) and makes room
    for the panel under body.help-open. */
@@ -683,6 +708,28 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   .ps.vertical .ps-notch{ left:-9px; right:-9px; width:auto; top:auto; height:3px; margin:0 0 -1.5px 0; bottom:calc(var(--ps-n) * 100%); }
   .ps.vertical .ps-thumb{ left:50%; top:auto; margin:0 0 -17px -17px; bottom:calc(var(--ps-pad) + var(--ps-f) * (100% - 2 * var(--ps-pad))); }
   .ps.vertical .ps-bubble{ bottom:auto; left:50%; }
+  /* A slider as one short row (createSliderLine): its name, the slider and its number side by
+     side, the track 36 px tall (a finger's target), − and + left out. A finger swiping up or down
+     on a track scrolls the list (touch-action: pan-y; keepThroughSwipe puts back what it moved).
+     div.ps-line outweighs an app's own .widget. */
+  div.ps-line{ position:relative; flex:none; display:flex; align-items:center; gap:6px; padding:2px 6px 2px 8px; border-radius:9px; border-left:4px solid var(--rect-colour, transparent); }
+  .ps-line .slider-head{ flex:0 0 36%; min-width:0; display:flex; align-items:center; gap:5px; margin:0; overflow:hidden; white-space:nowrap; }
+  .ps-line .slider-name{ flex:0 1 auto; min-width:3.5em; overflow:hidden; text-overflow:ellipsis; font-weight:700; font-size:14px; }
+  .ps-line .slider-when, .ps-line .slider-unit{ flex:0 6 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; font-size:11.5px; color:var(--muted, var(--soft-ink, #5f6b7d)); }
+  /* Where the model's own number is: the notch on the track shows it; the words stay for a screen
+     reader and as the row's tooltip. */
+  .ps-line .slider-base{ position:absolute; width:1px; height:1px; margin:0; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+  .ps-line .rect-stripe{ display:inline-block; width:12px; height:12px; border-radius:3px; flex:none; }
+  .ps-line .ps{ --ps-pad:14px; --ps-accent:var(--slider-accent, #0f766e); flex:1 1 auto; min-width:0; display:flex; align-items:center; gap:4px; }
+  .ps-line .ps-track{ order:1; flex:1 1 auto; min-width:0; height:36px; touch-action:pan-y; }
+  .ps-line .ps-row{ order:2; flex:none; }
+  .ps-line .ps-step{ display:none; }
+  .ps-line .ps-value, .ps-line .ps-type{ height:36px; min-width:56px; max-width:92px; padding:0 4px; font-size:15px !important; border-radius:8px; }
+  .ps-line .ps .ps-row input.ps-type:not([type=range]):not([type=file]){ width:92px; font-size:16px !important; }
+  .ps-line .ps-thumb{ width:26px; height:26px; margin:-13px 0 0 -13px; }
+  .ps-line .ps-notch{ top:-7px; bottom:-7px; }
+  .ps-line .ps-bubble{ bottom:calc(50% + 15px); }
+  .ps-line.moved .ps-value{ color:#115e59; }
 </style>
 </head>
 <body>
@@ -746,7 +793,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   <div id="playBar" class="play-bar hidden" role="region" aria-label="Play"></div>
   <section id="board" class="board hidden">
     <div class="board-col">
-      <h2 class="col-head">Sliders <button type="button" id="btnFoldSliders" class="link-btn col-tool hidden">Collapse all</button></h2>
+      <h2 class="col-head">Sliders <span id="sliderLooks" class="slider-looks col-tool hidden" role="group" aria-label="Every slider's look">All: <button type="button" class="link-btn" data-look="open" title="Every slider open: all of its settings">Open</button> · <button type="button" class="link-btn" data-look="folded" title="Every slider folded: its rectangle, the slider and its number">Folded</button> · <button type="button" class="link-btn" data-look="min" title="Every slider at its minimum: one short row each">Minimum</button></span></h2>
       <label id="shareSlidersRow" class="share-sliders hidden" title="Ticked: the sliders stand in the same place on every board that shares, and a slider moved on another board moves this board's numbers too. Unticked: this board keeps its own positions."><input type="checkbox" id="shareSliders" checked> Share slider positions with other boards</label>
       <p id="sharedNote" class="shared-note hidden"></p>
       <div id="sliderList" class="widget-list"></div>
@@ -804,6 +851,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     <h2 id="showTitle"></h2>
     <div id="showChips" class="show-chips" role="group" aria-label="Bars and charts shown"></div>
     <button type="button" id="showPlay" class="show-btn show-play" title="Play between the ends chosen under Scenarios">▶ Play</button>
+    <button type="button" id="showSlidersBtn" class="show-btn show-sliders-btn" aria-pressed="false" aria-label="Sliders" title="Show the board's sliders beside the full screen">🎚<span class="show-btn-words"> Sliders</span></button>
     <span id="showNote" class="show-note" aria-live="polite"></span>
     <span id="showMore" class="show-more"><button type="button" id="showGif" class="show-btn" title="GIF: an animated GIF of what is shown, playing between the ends chosen under Scenarios">🎞 GIF</button></span>
     <button type="button" id="showShare" class="show-btn">⇪ Share</button>
@@ -811,6 +859,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     <button type="button" id="showClose" class="show-btn show-close" aria-label="Close" title="Close (Esc)">×</button>
   </div>
   <div id="showBody" class="show-body"></div>
+  <div id="showSliders" class="show-sliders hidden" role="group" aria-label="Sliders"></div>
 </section>
 <div id="gifProgress" class="gif-progress hidden" role="status" aria-live="polite"><span id="gifProgressText"></span> <button type="button" id="btnGifCancel">Cancel</button></div>
 <div id="phoneMenu" class="phone-menu hidden" role="menu" aria-label="Menu">
@@ -4335,7 +4384,7 @@ function moveWidgetTo(id, to){ return copyWidgetTo(id, to, true); }
 //   bar    { id, kind: 'bar', key, periods, wide, scale }
 //   chart  { id, kind: 'chart', wide, layout: 'columns' | 'lines' | 'flow' | 'free' | 'scenarios' | 'tornado' | 'spider', scale, … } (G2; 04b-charts.js)
 // scale: null for Auto, or { min, max } (04d-scale.js).
-//   slider { id, key, periods, mode: 'set' | 'shift', min, max, step, value, folded }
+//   slider { id, key, periods, mode: 'set' | 'shift', min, max, step, value, folded: false | true | 'min' }
 // periods: { mode: 'all' } · { mode: 'one', p } · { mode: 'range', from, to } (from 0).
 // A slider's value is null until it moves (the model's own numbers); 'set' gives the input
 // that number in the periods it covers, 'shift' changes them by that many percent.
@@ -4464,7 +4513,7 @@ function cleanBoard(raw, dropped, version, sharedColours){
     const periods = cleanPeriods(s.periods, count);
     const mode = s.mode === 'shift' ? 'shift' : 'set';
     out.sliders.push(Object.assign({ id: newWidgetId('s'), key: rect.key, periods, mode, value: null },
-      cleanRange(s, defaultRange(rect, periods, mode)), { folded: s.folded === true })); // version 6
+      cleanRange(s, defaultRange(rect, periods, mode)), { folded: s.folded === 'min' ? 'min' : s.folded === true })); // version 6; 'min' version 14
   });
   return out;
 }
@@ -4496,9 +4545,9 @@ function cleanBoards(raw){
 // rectangle's chosen colour, 04e-colours.js; each bar, part, step and line still writes the
 // colour it shows); 12 the common scale (`commonScale`, and a bar's or chart's `ownScale`,
 // 04d-scale.js; each still writes the scale it shows); 13 the Free chart (a chart of layout
-// `free`, 04f-free.js). The template form, which carries none
+// `free`, 04f-free.js); 14 a slider at its minimum (`folded: "min"`, 05c-arrange.js). The template form, which carries none
 // of these, stays version 2 (its widgets carry the chosen colours, as before 11).
-const BOARD_FILE_VERSION = 13;
+const BOARD_FILE_VERSION = 14;
 const TEMPLATE_BOARD_VERSION = 2;
 // shown: what the board's followers of the common scale show (shownCommonScale, 04d-scale.js),
 // written as their scale; left out, each writes its own.
@@ -4513,7 +4562,7 @@ function boardData(b, shown){
     items: b.items.map(w => Object.assign(w.kind === 'bar'
       ? Object.assign({ type: 'bar' }, at(w.key), { periods: Object.assign({}, w.periods), wide: w.wide }, rectColour(w.key) ? { colour: rectColour(w.key) } : {}, scaleOf(w))
       : Object.assign({ type: 'chart', wide: w.wide }, chartData(w, at), scaleOf(w)), w.ownPeriod ? { ownPeriod: true } : {})),
-    sliders: b.sliders.map(s => Object.assign(at(s.key), { periods: Object.assign({}, s.periods), mode: s.mode, min: s.min, max: s.max, step: s.step }, s.folded ? { folded: true } : {})),
+    sliders: b.sliders.map(s => Object.assign(at(s.key), { periods: Object.assign({}, s.periods), mode: s.mode, min: s.min, max: s.max, step: s.step }, s.folded ? { folded: s.folded === 'min' ? 'min' : true } : {})),
   }, b.ownSliders ? { ownSliders: true } : {});
 }
 // The file form of these boards (all, or the ones given). forUndo: Auto for all's followers
@@ -4548,7 +4597,8 @@ const BOARD_FILE_FORMAT = { 'fmIDE-graph-board': { current: BOARD_FILE_VERSION, 
 // keeps its colours on its widgets, taken into the shared ones when read (the first one wins).
 // v11 → v12: the common scale (04d-scale.js); nothing to change — a file without `commonScale`
 // opens with Each its own, so every bar and chart shows the scale it had.
-// v12 → v13: a chart may be a Free chart (04f-free.js); nothing to change.
+// v12 → v13: a chart may be a Free chart (04f-free.js); nothing to change. v13 → v14: a slider
+// may be at its minimum, one short row (`folded: "min"`, 05c-arrange.js); nothing to change.
 function keepOwnPeriods(data){
   if(!data || typeof data !== 'object' || data.form === 'template') return;
   const boardsIn = Array.isArray(data.boards) ? data.boards : [data];
@@ -4558,7 +4608,7 @@ function keepOwnPeriods(data){
   });
 }
 
-const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {}, 5: () => {}, 6: () => {}, 7: () => {}, 8: keepOwnPeriods, 9: () => {}, 10: () => {}, 11: () => {}, 12: () => {} } };
+const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {}, 5: () => {}, 6: () => {}, 7: () => {}, 8: keepOwnPeriods, 9: () => {}, 10: () => {}, 11: () => {}, 12: () => {}, 13: () => {} } };
 // ============================================================
 // A new chart, on fmGraph's page (+ Chart). The charts' reading and figures are 04b-charts.js.
 // ============================================================
@@ -6013,6 +6063,7 @@ function barWidget(b){
 }
 
 function sliderWidget(s){
+  if(s.folded === 'min') return minimumSlider(s); // one short row (05c-arrange.js)
   const rect = model.byKey.get(s.key);
   const w = make('div', 'widget slider-widget' + (s.folded ? ' folded' : ''));
   w.dataset.id = s.id;
@@ -6173,7 +6224,13 @@ function updateValues(){
     const el = document.querySelector('.slider-widget[data-id="' + s.id + '"]');
     if(!el) return;
     el.querySelector('.slider-base').textContent = sliderBaseText(s);
+    // Moved elsewhere (beside the full screen, a short row): the slider and its box follow, unless
+    // being typed in or dragged, or Play is showing its own positions (paintPlay).
+    if(playNow()) return;
+    const v = String(sliderShown(s));
+    el.querySelectorAll('input[type="range"], input.slider-value').forEach(i => { if(document.activeElement !== i && i.value !== v) i.value = v; });
   });
+  updateLines(); // the short rows (05c-arrange.js)
   drawShow(results); // those on the whole screen (05h-phone-show.js)
   updateMovers(results);
   markScenarios(); // (05f-scenarios.js)
@@ -7220,9 +7277,11 @@ function drawSpider(c, figures, shown, name, where){
 //   chart among the bars and charts, a slider among the sliders — by mouse, finger or pen
 //   (shared pointer-input.js), or press ← ↑ / → ↓ on it. ⇔ makes a bar or chart wide (the
 //   whole row) or narrow (half). Every change is one undo step.
-// - A slider folds (▸) to its name, track and number, and unfolds (▾) to all its settings;
-//   Collapse all / Expand all beside the Sliders heading. Kept with the board (`folded`, board
-//   file 6); each is one undo step. On a wide page the Sliders column stays on screen beside
+// - A slider has three looks: Open (all its settings), Folded (its rectangle, track and number)
+//   and Minimum (one short row: its name, track and number, as the showcase viewer's — the shared
+//   createSliderLine). Its button steps through them (▾ → ▸ → ▪ → ▾); All: Open · Folded ·
+//   Minimum beside the Sliders heading. Kept with the board (`folded`: true, or "min", board
+//   files 6 and 14); each is one undo step. The phone's dock and mixer show every slider their way. On a wide page the Sliders column stays on screen beside
 //   the bars and charts, scrolling on its own when it is longer than the screen (styles.css).
 // ============================================================
 function renderAll(){ renderTabs(); renderBoard(); syncUndoButtons(); }
@@ -7390,36 +7449,104 @@ function startDrag(ev, w, el){
   });
 }
 
-// ---- folding sliders ----
+// ---- a slider's look: Open, Folded, Minimum ----
+const SLIDER_LOOKS = ['open', 'folded', 'min'];
+const LOOK_NAMES = { open: 'Open', folded: 'Folded', min: 'Minimum' };
+const LOOK_MARKS = { open: '▾', folded: '▸', min: '▪' };
+const LOOK_WORDS = { open: 'all of its settings', folded: 'its rectangle, the slider and its number', min: 'one short row: its name, the slider and its number' };
+const sliderLook = (s) => s.folded === 'min' ? 'min' : s.folded ? 'folded' : 'open';
+const nextLook = (look) => SLIDER_LOOKS[(SLIDER_LOOKS.indexOf(look) + 1) % SLIDER_LOOKS.length];
 function foldButton(s){
-  const b = make('button', 'slider-fold', s.folded ? '▸' : '▾');
+  const look = sliderLook(s), next = nextLook(look);
+  const b = make('button', 'slider-fold', LOOK_MARKS[look]);
   b.type = 'button';
-  b.title = s.folded ? 'Show all of this slider' : 'Show only the slider and its number';
-  b.setAttribute('aria-label', 'Folded');
-  b.setAttribute('aria-pressed', s.folded ? 'true' : 'false');
-  b.addEventListener('click', () => { setFolded([s], !s.folded); });
+  b.title = LOOK_NAMES[look] + '. Next: ' + LOOK_NAMES[next] + ', ' + LOOK_WORDS[next];
+  b.setAttribute('aria-label', 'Slider look: ' + LOOK_NAMES[look]);
+  b.dataset.look = look;
+  b.addEventListener('click', () => { setSliderLook([s], next); });
   return b;
 }
-// Fold or unfold these sliders (one undo step); false when nothing changed.
-function setFolded(list, on){
-  const changing = list.filter(s => !!s.folded !== on);
+// Gives these sliders a look (one undo step); false when nothing changed.
+function setSliderLook(list, look){
+  const to = look === 'min' ? 'min' : look === 'folded';
+  const changing = list.filter(s => sliderLook(s) !== look);
   if(!changing.length) return false;
-  changing.forEach(s => { s.folded = on; });
+  changing.forEach(s => { s.folded = to; });
   saveBoardSoon();
   renderBoard();
   return true;
 }
-// Collapse all while any slider is unfolded, else Expand all.
+// All: Open · Folded · Minimum — the look every slider has is marked.
 function syncFoldAll(){
-  const b = $('btnFoldSliders');
+  const group = $('sliderLooks');
   const some = !!board && board.sliders.length > 0;
-  b.classList.toggle('hidden', !some);
+  group.classList.toggle('hidden', !some);
   if(!some) return;
-  const fold = board.sliders.some(s => !s.folded);
-  b.textContent = fold ? 'Collapse all' : 'Expand all';
-  b.title = fold ? 'Show every slider as its name, track and number only' : 'Show all of every slider\'s settings';
+  const looks = new Set(board.sliders.map(sliderLook));
+  group.querySelectorAll('button[data-look]').forEach(b => {
+    b.setAttribute('aria-pressed', looks.size === 1 && looks.has(b.dataset.look) ? 'true' : 'false');
+  });
 }
-$('btnFoldSliders').addEventListener('click', () => { if(board) setFolded(board.sliders, board.sliders.some(s => !s.folded)); });
+$('sliderLooks').querySelectorAll('button[data-look]').forEach(b => {
+  b.addEventListener('click', () => { if(board) setSliderLook(board.sliders, b.dataset.look); });
+});
+
+// ---- a slider as one short row: at its minimum, and beside the full screen (05h-phone-show.js) ----
+const lineControls = new Map(); // a short row's element → { s, ctl }
+function sliderLine(s, className){
+  const rect = model.byKey.get(s.key);
+  let ctl = null;
+  const line = createSliderLine({
+    className,
+    name: rect.name, when: periodsText(s.periods), unit: rect.unit && s.mode === 'set' ? rect.unit : '',
+    colour: shownColour(s.key), accent: sliderAccent(shownColour(s.key)), // its rectangle's colour (04e-colours.js)
+    slider: {
+      label: rect.name, min: s.min, max: s.max, step: s.step, value: sliderShown(s), base: sliderBase(s),
+      format: (v) => sliderText(s, v),
+      vibrate: () => vibrateOn,
+      onStart: () => { setActiveSlider(s.id); workOutAhead(s); },
+      onInput: (v, atBase) => {
+        if(atBase){ s.value = null; setActiveSlider(s.id); quietSoon(1500); scheduleUpdate(); }
+        else moveSlider(s, v);
+      },
+      onEnd: () => quietSoon(1200),
+    },
+  });
+  ctl = line.ctl;
+  const w = line.el;
+  w.dataset.id = s.id;
+  lineControls.set(w, { s, ctl });
+  // A finger's swipe up or down scrolls the list; what it moved is put back.
+  keepThroughSwipe(ctl, () => s.value, (was) => {
+    if(Object.is(s.value, was)) return;
+    s.value = was;
+    ctl.setValue(sliderShown(s));
+    scheduleUpdate();
+  });
+  w.addEventListener('pointerenter', () => setActiveSlider(s.id));
+  w.addEventListener('pointerleave', () => { if(!ctl.dragging()) quietSoon(0); });
+  return w;
+}
+// A slider at its minimum, on the board: the short row, its handle first and its look's button last.
+function minimumSlider(s){
+  const w = sliderLine(s, 'widget slider-widget minimum');
+  w.querySelector('.slider-head').classList.add('widget-head'); // the handle goes here (renderBoard)
+  w.appendChild(foldButton(s));
+  return w;
+}
+// The short rows' positions and words, after every redraw (updateValues) and while Play runs.
+function updateLines(playValue){
+  if(!playValue && playNow()) return; // Play shows its own positions (paintPlay)
+  lineControls.forEach((it, el) => {
+    if(!el.isConnected){ lineControls.delete(el); return; }
+    const v = playValue ? playValue(it.s) : sliderShown(it.s);
+    if(!it.ctl.dragging()) it.ctl.setValue(v);
+    el.querySelector('.slider-base').textContent = sliderBaseText(it.s);
+    el.title = sliderBaseText(it.s);
+    el.classList.toggle('moved', it.s.value !== null);
+    if(!playValue) el.classList.remove('playing');
+  });
+}
 // ---- shared slider positions (03-calc.js) ----
 // The tick box under the Sliders heading (with two boards or more), and the note naming the
 // moved sliders on other boards that count here too; on a phone, the ☰ menu's switch.
@@ -8014,6 +8141,14 @@ function compareWithScenario(sc){
 //   Each finger is followed by its own pointer id, so several sliders move at once.
 //   With `vertical`, it stands on end (a fader: up is more) and sliding the finger sideways,
 //   away from it, makes it finer.
+// - createSliderLine(options): a slider as one short row — a colour stripe, its name, its periods
+//   and unit in small letters, then the phone's slider laid flat: track and number side by side,
+//   − and + left out (the keys, typing and a double tap stay), and the "model's own" words for a
+//   screen reader (phone.css, .ps-line). The showcase viewer's sliders (the owner's request of
+//   29 October 2026), fmGraph's slider at its minimum and the sliders beside a full screen.
+// - keepThroughSwipe(ctl, take, putBack): a finger swiping up or down on a short row's track
+//   scrolls its list (touch-action: pan-y); the browser then takes the gesture over and cancels
+//   the pointer, and whatever that swipe moved is put back — take() before, putBack(it) after.
 // - shareFiles(files, title): the phone's own share sheet (Messages, Mail, AirDrop…); the
 //   person picks where the files go, nothing is sent first. Where a browser can't share files,
 //   they download instead.
@@ -8266,6 +8401,44 @@ function createPhoneSlider(options){
     value: () => value,
     dragging: () => drags > 0,
   };
+}
+
+// options: { name, when, unit, colour (a checked colour: the stripe and --rect-colour), accent
+//   (--slider-accent: the fill and knob), className, slider: createPhoneSlider's options }.
+// Returns { el, ctl (the phone slider), base (the screen reader's words) }.
+function createSliderLine(options){
+  const o = options || {};
+  const mk = (tag, cls, text) => {
+    const e = document.createElement(tag);
+    e.className = cls;
+    if(text !== undefined && text !== null) e.textContent = String(text);
+    return e;
+  };
+  const el = mk('div', 'ps-line' + (o.className ? ' ' + o.className : ''));
+  if(o.colour) el.style.setProperty('--rect-colour', o.colour);
+  if(o.accent) el.style.setProperty('--slider-accent', o.accent);
+  const head = mk('div', 'slider-head');
+  const stripe = mk('span', 'rect-stripe');
+  if(o.colour) stripe.style.background = o.colour;
+  head.append(stripe, mk('span', 'slider-name', o.name));
+  if(o.when) head.appendChild(mk('span', 'slider-when', o.when));
+  if(o.unit) head.appendChild(mk('span', 'slider-unit', o.unit));
+  const ctl = createPhoneSlider(o.slider);
+  const base = mk('div', 'slider-base');
+  el.append(head, ctl.el, base);
+  return { el, ctl, base };
+}
+function keepThroughSwipe(ctl, take, putBack){
+  let before = null;
+  ctl.el.addEventListener('pointerdown', (ev) => {
+    before = ev.pointerType === 'mouse' ? null : { id: ev.pointerId, was: take() };
+  }, true);
+  ctl.el.addEventListener('pointerup', (ev) => { if(before && before.id === ev.pointerId) before = null; }, true);
+  ctl.el.addEventListener('pointercancel', (ev) => {
+    const b = before;
+    before = null;
+    if(b && b.id === ev.pointerId) putBack(b.was);
+  }, true);
 }
 
 // The phone's share sheet for these files (File objects); else they download. Resolves
@@ -8684,6 +8857,313 @@ $('btnPhoneLayout').addEventListener('click', () => setFullApp(false));
 
 // The phone layout starts at the end of 05h-phone-show.js, once everything it draws is defined.
 // ============================================================
+// Full screen (Show): one or several of the board's bars and charts on the whole screen, on any
+// screen. Part of the board engine (moved from 05h-phone-show.js on 30 October 2026, unchanged
+// but for the sliders, so the showcase viewer has it too): declarations only; the page calls
+// wireShow() once, when it starts. ⛶ on a bar's or chart's header (or ⤢ Show in fmGraph's quick look on a phone)
+// opens it with that one; the chips in the strip add or take away the others (a tap, so it works
+// on an iPad); several share the screen in a grid that fits it best (showGrid). The browser's own
+// full screen where it can (the whole page, so Help and fmGraph's phone dock and mixer stay over
+// it; an iPhone has none: the view still covers the page). The strip — the chips, ▶ Play / ■ Stop,
+// 🎚 Sliders, the page's own buttons, ?, × — fades after SHOW_STRIP_MS; a tap, a key or the mouse
+// brings it back, and × stays. ×, Esc, the back gesture (a history step) or leaving the browser's
+// full screen ends it. It follows the sliders and Play like the board (drawShow, from the page's
+// updateValues) and keeps the screen on; a tap in it never stops Play. Which are shown is the
+// page's only: never saved, nothing in the board file.
+// 🎚 Sliders (the owner's request of 30 October 2026): the board's sliders beside what is shown,
+// one short row each (the page's showSliderRow) — on the right when the view is wider than tall,
+// at its foot when taller; a slider reaching none of those shown is dimmed. Moving one moves the
+// board's own. On or off is kept on this device by the page (rememberShowSliders); until chosen,
+// on for a phone (fmGraph's dock and mixer there, which it hides when off), off elsewhere.
+// The page defines, beside the usual page interface: renderPlayRow (the Play ends), help (topic
+// full-screen), showStripExtras() (its own buttons in the strip), showSliderRow(s),
+// rememberShowSliders(on) and showEscapeBlocked() (Esc belongs to something open over the view).
+// ============================================================
+const SHOW_STRIP_MS = 3000;
+const SHOW_ASPECT = 1.6;   // a bar's or chart's drawing, about this much wider than tall
+const SHOW_GAP = 12;       // pixels between two shown
+let showing = null;       // the ids shown, in the board's order; null when closed
+let letScreenSleep = null;
+let showFull = false;     // the browser's own full screen is on, asked for by this view
+let showItemsMark = '';   // the board's widgets when the chips were made
+let showQuietTimer = null;
+let showSlidersOn = null; // 🎚 Sliders: true or false once chosen; null, not yet (on for a phone)
+let showSlidersMark = ''; // the board's sliders when their rows were made
+let showSliderObjects = [];
+
+// The widgets shown, as they are on the board now.
+const shownWidgets = () => showing && board ? board.items.filter(w => showing.includes(w.id)) : [];
+// A bar's or chart's name: its rectangle's, its title, or its kind.
+const widgetName = (w) => w.kind === 'chart' ? (w.title || ({ columns: 'Columns', lines: 'Lines', flow: 'Waterfall', free: 'Free', scenarios: 'Scenario waterfall', tornado: 'Tornado', spider: 'Spider' }[w.layout] || 'Chart')) : model.byKey.get(w.key).name;
+const showSlidersShown = () => showSlidersOn === null ? isPhone() : showSlidersOn;
+
+function openShow(w){
+  if(!model || !board.items.includes(w)) return;
+  if(showing){ showing = [w.id]; buildShowBody(); drawShow(currentResults()); return; }
+  showing = [w.id];
+  $('showView').classList.remove('hidden');
+  document.body.classList.add('showing');
+  letScreenSleep = keepScreenOn();
+  try{ history.pushState({ fmGraphShow: true }, ''); }catch(e){ /* no history: × and Esc still close */ }
+  enterFullScreen();
+  syncShowSliders();
+  buildShowBody();
+  drawShow(currentResults());
+  wakeShowStrip();
+  $('showClose').focus({ preventScroll: true });
+}
+// fromHistory: the back gesture already took the step back.
+function closeShow(fromHistory){
+  if(!showing) return;
+  showing = null;
+  clearTimeout(showQuietTimer);
+  $('showView').classList.add('hidden');
+  $('showView').classList.remove('quiet');
+  $('showBody').textContent = '';
+  $('showChips').textContent = '';
+  $('showNote').textContent = '';
+  $('showSliders').textContent = '';
+  showSlidersMark = '';
+  showSliderObjects = [];
+  document.body.classList.remove('showing', 'show-hide-sliders');
+  if(letScreenSleep){ letScreenSleep(); letScreenSleep = null; }
+  leaveFullScreen();
+  if(!fromHistory && history.state && history.state.fmGraphShow){ try{ history.back(); }catch(e){ /* stays */ } }
+}
+
+// The browser's own full screen, where it has one (Safari on an iPad: webkit…; an iPhone none).
+function fullScreenElement(){ return document.fullscreenElement || document.webkitFullscreenElement || null; }
+function enterFullScreen(){
+  const el = document.documentElement;
+  const ask = el.requestFullscreen || el.webkitRequestFullscreen;
+  if(!ask || fullScreenElement()) return;
+  try{
+    const p = ask.call(el);
+    if(p && p.catch) p.catch(() => { /* refused: the view still covers the page */ });
+  }catch(e){ /* the same */ }
+}
+function leaveFullScreen(){
+  if(!showFull) return;
+  showFull = false;
+  const leave = document.exitFullscreen || document.webkitExitFullscreen;
+  if(leave && fullScreenElement()){ try{ const p = leave.call(document); if(p && p.catch) p.catch(() => {}); }catch(e){ /* stays */ } }
+}
+function fullScreenChanged(){
+  if(fullScreenElement()){ if(showing) showFull = true; }
+  else if(showFull){ showFull = false; closeShow(); } // the browser's full screen left: the view goes too
+  if(showing) fitShowGrid();
+}
+
+// The chips: every bar and chart on the board, those shown pressed.
+function renderShowChips(){
+  const box = $('showChips');
+  box.textContent = '';
+  showItemsMark = board.items.map(w => w.id).join('|');
+  box.classList.toggle('hidden', board.items.length < 2);
+  board.items.forEach(w => {
+    const on = showing.includes(w.id);
+    const b = make('button', 'show-chip', widgetName(w));
+    b.type = 'button';
+    b.dataset.id = w.id;
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    b.title = on ? (showing.length > 1 ? 'Take it away' : 'Shown') : 'Show it too';
+    b.addEventListener('click', () => toggleShown(w.id));
+    box.appendChild(b);
+  });
+}
+// A chip tapped: shown too, or taken away (the last one stays).
+function toggleShown(id){
+  if(!showing || !board.items.some(w => w.id === id)) return false;
+  if(showing.includes(id)){
+    if(showing.length === 1) return false;
+    showing = showing.filter(x => x !== id);
+  } else showing = board.items.filter(w => w.id === id || showing.includes(w.id)).map(w => w.id);
+  const scroll = $('showChips').scrollLeft;
+  buildShowBody();
+  $('showChips').scrollLeft = scroll;
+  drawShow(currentResults());
+  return true;
+}
+
+// A place for each widget shown, laid out in the grid.
+function buildShowBody(){
+  const body = $('showBody');
+  body.textContent = '';
+  const list = shownWidgets();
+  list.forEach(w => {
+    const el = make('div', 'show-widget' + (list.length > 1 ? ' boxed' : ''));
+    el.dataset.id = w.id;
+    if(list.length > 1) el.appendChild(make('h3', 'show-name', widgetName(w)));
+    el.append(make('div', 'bar-chart-host'), make('div', 'chart-key'), make('ul', 'bar-errors'));
+    body.appendChild(el);
+  });
+  const title = $('showTitle');
+  title.textContent = list.length === 1 ? widgetName(list[0]) : '';
+  title.classList.toggle('hidden', list.length !== 1);
+  renderShowChips();
+  fitShowGrid();
+}
+// Columns and rows for n on a w × h space: the largest drawing each can have.
+function showGrid(n, w, h, gap){
+  let best = { cols: 1, rows: Math.max(1, n), size: -1 };
+  for(let cols = 1; cols <= Math.max(1, n); cols++){
+    const rows = Math.ceil(n / cols);
+    const cw = (w - gap * (cols - 1)) / cols, ch = (h - gap * (rows - 1)) / rows;
+    const size = Math.min(cw, ch * SHOW_ASPECT);
+    if(size > best.size + 0.5) best = { cols, rows, size };
+  }
+  return best;
+}
+function fitShowGrid(){
+  if(!showing) return;
+  const view = $('showView'), body = $('showBody');
+  // The sliders beside (wider than tall) or at the foot (taller): decided before measuring.
+  view.dataset.shape = view.clientWidth >= view.clientHeight ? 'wide' : 'tall';
+  const top = $('showStrip').offsetHeight + 'px';
+  body.style.setProperty('--show-top', top);
+  $('showSliders').style.setProperty('--show-top', top);
+  const cs = getComputedStyle(body);
+  const w = body.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+  const h = body.clientHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0);
+  const g = showGrid(shownWidgets().length, Math.max(1, w), Math.max(1, h), SHOW_GAP);
+  body.style.setProperty('--show-cols', String(g.cols));
+  body.style.setProperty('--show-rows', String(g.rows));
+  view.dataset.cols = String(g.cols);
+  view.dataset.rows = String(g.rows);
+}
+
+// Drawn like the board's own, without gliding (its bars sit elsewhere than the board's).
+function drawShow(results){
+  if(!showing) return;
+  const list = shownWidgets();
+  if(!list.length){ closeShow(); return; }
+  if(list.length !== showing.length){ showing = list.map(w => w.id); buildShowBody(); }
+  else if(board.items.map(w => w.id).join('|') !== showItemsMark) renderShowChips();
+  if(showSlidersShown() && showSlidersChanged()) renderShowSliders();
+  const kept = new Map(lastGeometry), glides = animateNow;
+  animateNow = false;
+  list.forEach(w => {
+    const el = $('showBody').querySelector('.show-widget[data-id="' + w.id + '"]');
+    if(!el) return;
+    if(w.kind === 'chart') drawChart(el, w, results); else drawBars(el, w, results);
+  });
+  lastGeometry = kept;
+  animateNow = glides;
+  paintShowSliders();
+  syncShowStrip();
+}
+// ▶ Play or ■ Stop, as Play is now (05m-play.js); the page's own buttons.
+function syncShowStrip(){
+  const b = $('showPlay'), on = !!playing;
+  const text = on ? '■ Stop' : '▶ Play';
+  if(b.textContent !== text){ b.textContent = text; b.title = on ? 'Stop playing' : 'Play between the ends chosen under Scenarios'; }
+  b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  if(on) $('showNote').textContent = '';
+  showStripExtras();
+}
+
+// ---- 🎚 Sliders beside the full screen ----
+// The board's sliders as they stand: which, on which rectangle, over what range.
+function slidersSignature(){ return board.sliders.map(s => [s.id, s.key, s.mode, s.min, s.max, s.step, JSON.stringify(s.periods)].join(' ')).join('|'); }
+function showSlidersChanged(){
+  return showSliderObjects.length !== board.sliders.length || board.sliders.some((s, i) => s !== showSliderObjects[i]) || slidersSignature() !== showSlidersMark;
+}
+function setShowSliders(on, quiet){
+  showSlidersOn = !!on;
+  if(!quiet) rememberShowSliders(showSlidersOn);
+  syncShowSliders();
+  if(!showing) return;
+  fitShowGrid();
+  drawShow(currentResults());
+}
+function syncShowSliders(){
+  const on = showSlidersShown();
+  const b = $('showSlidersBtn');
+  b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  b.title = on ? 'Hide the sliders' : 'Show the board\'s sliders beside the full screen';
+  $('showView').classList.toggle('with-sliders', on);
+  document.body.classList.toggle('show-hide-sliders', !!showing && !on);
+  renderShowSliders();
+}
+function renderShowSliders(){
+  const box = $('showSliders');
+  box.textContent = '';
+  const on = !!showing && !!board && showSlidersShown();
+  box.classList.toggle('hidden', !on);
+  showSlidersMark = '';
+  showSliderObjects = [];
+  if(!on) return;
+  showSliderObjects = board.sliders.slice();
+  showSlidersMark = slidersSignature();
+  if(!board.sliders.length){ box.appendChild(make('p', 'show-sliders-none', 'This board has no sliders.')); return; }
+  board.sliders.forEach(s => box.appendChild(showSliderRow(s)));
+  paintShowSliders();
+}
+// A slider reaching none of the bars and charts shown is dimmed (it still moves).
+function paintShowSliders(){
+  if(!showing || !showSlidersShown()) return;
+  const keys = new Set(shownWidgets().flatMap(itemKeys));
+  $('showSliders').querySelectorAll('.slider-widget').forEach(el => {
+    const s = board.sliders.find(x => x.id === el.dataset.id);
+    if(!s) return;
+    const reaches = keys.has(s.key) || [...model.reach(s.key)].some(k => keys.has(k));
+    el.classList.toggle('unreached', !reaches);
+  });
+}
+
+// The strip fades after a few seconds; anything the person does in the view brings it back.
+function wakeShowStrip(){
+  if(!showing) return;
+  $('showView').classList.remove('quiet');
+  clearTimeout(showQuietTimer);
+  showQuietTimer = setTimeout(quietShowStrip, SHOW_STRIP_MS);
+}
+function quietShowStrip(){
+  if(!showing) return;
+  const strip = $('showStrip');
+  // Not while the mouse is on it, or the keys are working in it.
+  if(strip.matches(':hover') || strip.querySelector(':focus-visible:not(.show-close)')){ wakeShowStrip(); return; }
+  $('showView').classList.add('quiet');
+}
+
+// ⛶ on a bar's or chart's header.
+function fullScreenButton(w){
+  const b = make('button', 'widget-full', '⛶');
+  b.type = 'button';
+  const label = 'Full screen: show this ' + (w.kind === 'chart' ? 'chart' : 'bar') + ' on the whole screen';
+  b.title = label;
+  b.setAttribute('aria-label', label);
+  b.addEventListener('click', () => openShow(w));
+  return b;
+}
+
+// The view's buttons and keys, wired once by the page.
+function wireShow(){
+  document.addEventListener('fullscreenchange', fullScreenChanged);
+  document.addEventListener('webkitfullscreenchange', fullScreenChanged);
+  window.addEventListener('resize', () => { if(showing) fitShowGrid(); });
+  $('showPlay').addEventListener('click', () => {
+    if(playing){ stopPlay(); return; }
+    renderPlayRow(); // the ends chosen under Scenarios, or the usual ones (05m-play.js)
+    const words = startPlay(playChoice.from, playChoice.to);
+    $('showNote').textContent = words ? '' : 'Nothing to play: choose two different ends under Scenarios.';
+    syncShowStrip();
+  });
+  $('showSlidersBtn').addEventListener('click', () => setShowSliders(!showSlidersShown()));
+  ['pointerdown', 'focusin'].forEach(t => $('showView').addEventListener(t, wakeShowStrip, true));
+  document.addEventListener('keydown', () => { if(showing) wakeShowStrip(); }, true);
+  $('showView').addEventListener('pointermove', (ev) => { if(ev.pointerType === 'mouse') wakeShowStrip(); });
+  $('showClose').addEventListener('click', () => closeShow());
+  $('showHelp').addEventListener('click', () => help.open('full-screen'));
+  window.addEventListener('popstate', () => { if(showing) closeShow(true); });
+  // Esc ends the view, and does only that (a play goes on: a second Esc stops it): on the window,
+  // before the page's other keys. Not while something open over it takes Esc itself.
+  window.addEventListener('keydown', (ev) => {
+    if(ev.key !== 'Escape' || !showing || showEscapeBlocked()) return;
+    ev.preventDefault(); ev.stopPropagation(); closeShow();
+  }, true);
+}
+// ============================================================
 // fmGraph on a phone, sideways and showing (step 17, phase P1b; docs/step17-phones.md).
 // - The mixer: a phone turned sideways shows the board's sliders as faders standing on end,
 //   at the screen's two edges under the thumbs (#mixerLeft, #mixerRight; at most MIXER_MAX),
@@ -8833,237 +9313,25 @@ store.ready.then(() => store.get(MIXER_KEY)).then(raw => {
   if(isMixing()) renderMixer();
 }, () => {});
 
-// ---- Full screen (Show) ----
-// One or several of the board's bars and charts on the whole screen, on any screen: ⛶ on a bar's
-// or chart's header (or ⤢ Show in a phone's quick look) opens it with that one; the chips in the
-// strip add or take away the others (a tap, so it works on an iPad); several share the screen in
-// a grid that fits it best (showGrid). The browser's own full screen where it can (the whole
-// page, so Help and the phone's dock and mixer stay over it; an iPhone has none: the view still
-// covers the page). The strip — the chips, ▶ Play / ■ Stop, ⇪ Share, ?, × — fades after
-// SHOW_STRIP_MS; a tap, a key or the mouse brings it back, and × stays. ×, Esc, the back gesture
-// (a history step) or leaving the browser's full screen ends it. It follows the sliders and Play
-// like the board (drawShow, from updateValues) and keeps the screen on; a tap in it never stops
-// Play. Which are shown is this page's only: never saved, nothing in the board file.
+// ---- Full screen (Show): the board engine's 05gs-show.js, and fmGraph's own part ----
 // #showMore in the strip, before ⇪ Share, holds more buttons: 🎞 GIF of what is shown (05o-play-gif.js).
-const SHOW_STRIP_MS = 3000;
-const SHOW_ASPECT = 1.6;   // a bar's or chart's drawing, about this much wider than tall
-const SHOW_GAP = 12;       // pixels between two shown
-let showing = null;       // the ids shown, in the board's order; null when closed
-let letScreenSleep = null;
-let showFull = false;     // the browser's own full screen is on, asked for by this view
-let showItemsMark = '';   // the board's widgets when the chips were made
-let showQuietTimer = null;
-
-// The widgets shown, as they are on the board now.
-const shownWidgets = () => showing && board ? board.items.filter(w => showing.includes(w.id)) : [];
-
-function openShow(w){
-  if(!model || !board.items.includes(w)) return;
-  if(showing){ showing = [w.id]; buildShowBody(); drawShow(currentResults()); return; }
-  showing = [w.id];
-  $('showView').classList.remove('hidden');
-  document.body.classList.add('showing');
-  letScreenSleep = keepScreenOn();
-  try{ history.pushState({ fmGraphShow: true }, ''); }catch(e){ /* no history: × and Esc still close */ }
-  enterFullScreen();
-  buildShowBody();
-  drawShow(currentResults());
-  wakeShowStrip();
-  $('showClose').focus({ preventScroll: true });
-}
-// fromHistory: the back gesture already took the step back.
-function closeShow(fromHistory){
-  if(!showing) return;
-  showing = null;
-  clearTimeout(showQuietTimer);
-  $('showView').classList.add('hidden');
-  $('showView').classList.remove('quiet');
-  $('showBody').textContent = '';
-  $('showChips').textContent = '';
-  $('showNote').textContent = '';
-  document.body.classList.remove('showing');
-  if(letScreenSleep){ letScreenSleep(); letScreenSleep = null; }
-  leaveFullScreen();
-  if(!fromHistory && history.state && history.state.fmGraphShow){ try{ history.back(); }catch(e){ /* stays */ } }
-}
-
-// The browser's own full screen, where it has one (Safari on an iPad: webkit…; an iPhone none).
-const fullScreenElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
-function enterFullScreen(){
-  const el = document.documentElement;
-  const ask = el.requestFullscreen || el.webkitRequestFullscreen;
-  if(!ask || fullScreenElement()) return;
-  try{
-    const p = ask.call(el);
-    if(p && p.catch) p.catch(() => { /* refused: the view still covers the page */ });
-  }catch(e){ /* the same */ }
-}
-function leaveFullScreen(){
-  if(!showFull) return;
-  showFull = false;
-  const leave = document.exitFullscreen || document.webkitExitFullscreen;
-  if(leave && fullScreenElement()){ try{ const p = leave.call(document); if(p && p.catch) p.catch(() => {}); }catch(e){ /* stays */ } }
-}
-function fullScreenChanged(){
-  if(fullScreenElement()){ if(showing) showFull = true; }
-  else if(showFull){ showFull = false; closeShow(); } // the browser's full screen left: the view goes too
-  if(showing) fitShowGrid();
-}
-document.addEventListener('fullscreenchange', fullScreenChanged);
-document.addEventListener('webkitfullscreenchange', fullScreenChanged);
-
-// The chips: every bar and chart on the board, those shown pressed.
-function renderShowChips(){
-  const box = $('showChips');
-  box.textContent = '';
-  showItemsMark = board.items.map(w => w.id).join('|');
-  box.classList.toggle('hidden', board.items.length < 2);
-  board.items.forEach(w => {
-    const on = showing.includes(w.id);
-    const b = make('button', 'show-chip', widgetName(w)); // (05i-phone-share.js)
-    b.type = 'button';
-    b.dataset.id = w.id;
-    b.setAttribute('aria-pressed', on ? 'true' : 'false');
-    b.title = on ? (showing.length > 1 ? 'Take it away' : 'Shown') : 'Show it too';
-    b.addEventListener('click', () => toggleShown(w.id));
-    box.appendChild(b);
-  });
-}
-// A chip tapped: shown too, or taken away (the last one stays).
-function toggleShown(id){
-  if(!showing || !board.items.some(w => w.id === id)) return false;
-  if(showing.includes(id)){
-    if(showing.length === 1) return false;
-    showing = showing.filter(x => x !== id);
-  } else showing = board.items.filter(w => w.id === id || showing.includes(w.id)).map(w => w.id);
-  const scroll = $('showChips').scrollLeft;
-  buildShowBody();
-  $('showChips').scrollLeft = scroll;
-  drawShow(currentResults());
-  return true;
-}
-
-// A place for each widget shown, laid out in the grid.
-function buildShowBody(){
-  const body = $('showBody');
-  body.textContent = '';
-  const list = shownWidgets();
-  list.forEach(w => {
-    const el = make('div', 'show-widget' + (list.length > 1 ? ' boxed' : ''));
-    el.dataset.id = w.id;
-    if(list.length > 1) el.appendChild(make('h3', 'show-name', widgetName(w)));
-    el.append(make('div', 'bar-chart-host'), make('div', 'chart-key'), make('ul', 'bar-errors'));
-    body.appendChild(el);
-  });
-  const title = $('showTitle');
-  title.textContent = list.length === 1 ? widgetName(list[0]) : '';
-  title.classList.toggle('hidden', list.length !== 1);
-  renderShowChips();
-  fitShowGrid();
-}
-// Columns and rows for n on a w × h space: the largest drawing each can have.
-function showGrid(n, w, h, gap){
-  let best = { cols: 1, rows: Math.max(1, n), size: -1 };
-  for(let cols = 1; cols <= Math.max(1, n); cols++){
-    const rows = Math.ceil(n / cols);
-    const cw = (w - gap * (cols - 1)) / cols, ch = (h - gap * (rows - 1)) / rows;
-    const size = Math.min(cw, ch * SHOW_ASPECT);
-    if(size > best.size + 0.5) best = { cols, rows, size };
-  }
-  return best;
-}
-function fitShowGrid(){
-  if(!showing) return;
-  const view = $('showView'), body = $('showBody');
-  body.style.setProperty('--show-top', $('showStrip').offsetHeight + 'px');
-  const cs = getComputedStyle(body);
-  const w = body.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
-  const h = body.clientHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0);
-  const g = showGrid(shownWidgets().length, Math.max(1, w), Math.max(1, h), SHOW_GAP);
-  body.style.setProperty('--show-cols', String(g.cols));
-  body.style.setProperty('--show-rows', String(g.rows));
-  view.dataset.cols = String(g.cols);
-  view.dataset.rows = String(g.rows);
-}
-window.addEventListener('resize', () => { if(showing) fitShowGrid(); });
-
-// Drawn like the board's own, without gliding (its bars sit elsewhere than the board's).
-function drawShow(results){
-  if(!showing) return;
-  const list = shownWidgets();
-  if(!list.length){ closeShow(); return; }
-  if(list.length !== showing.length){ showing = list.map(w => w.id); buildShowBody(); }
-  else if(board.items.map(w => w.id).join('|') !== showItemsMark) renderShowChips();
-  const kept = new Map(lastGeometry), glides = animateNow;
-  animateNow = false;
-  list.forEach(w => {
-    const el = $('showBody').querySelector('.show-widget[data-id="' + w.id + '"]');
-    if(!el) return;
-    if(w.kind === 'chart') drawChart(el, w, results); else drawBars(el, w, results);
-  });
-  lastGeometry = kept;
-  animateNow = glides;
-  syncShowStrip();
-}
-// ▶ Play or ■ Stop, as Play is now (05m-play.js); ⇪ Share where sharing is (a phone, or a
-// browser that shares files).
-function syncShowStrip(){
-  const b = $('showPlay'), on = !!playing;
-  const text = on ? '■ Stop' : '▶ Play';
-  if(b.textContent !== text){ b.textContent = text; b.title = on ? 'Stop playing' : 'Play between the ends chosen under Scenarios'; }
-  b.setAttribute('aria-pressed', on ? 'true' : 'false');
-  if(on) $('showNote').textContent = '';
+// ⇪ Share where sharing is (a phone, or a browser that shares files).
+function showStripExtras(){
   $('showShare').classList.toggle('hidden', !(isPhone() || (navigator.share && navigator.canShare)));
 }
-$('showPlay').addEventListener('click', () => {
-  if(playing){ stopPlay(); return; }
-  renderPlayRow(); // the ends chosen under Scenarios, or the usual ones (05m-play.js)
-  const words = startPlay(playChoice.from, playChoice.to);
-  $('showNote').textContent = words ? '' : 'Nothing to play: choose two different ends under Scenarios.';
-  syncShowStrip();
-});
-
-// The strip fades after a few seconds; anything the person does in the view brings it back.
-function wakeShowStrip(){
-  if(!showing) return;
-  $('showView').classList.remove('quiet');
-  clearTimeout(showQuietTimer);
-  showQuietTimer = setTimeout(quietShowStrip, SHOW_STRIP_MS);
+// A slider beside the full screen: one short row, as at its minimum (05c-arrange.js). On a phone
+// the dock and the mixer are the sliders there (styles.css), shown or hidden by 🎚 Sliders.
+function showSliderRow(s){ return sliderLine(s, 'widget slider-widget show-slider'); }
+const SHOW_SLIDERS_KEY = 'fmgraph-show-sliders';
+function rememberShowSliders(on){ store.put(SHOW_SLIDERS_KEY, on ? 'on' : 'off').catch(() => {}); }
+store.ready.then(() => store.get(SHOW_SLIDERS_KEY)).then(raw => {
+  if(raw === 'on' || raw === 'off') setShowSliders(raw === 'on', true);
+}, () => {});
+// Esc belongs to the quick look, a rectangle search or the colour grid while one is open.
+function showEscapeBlocked(){
+  return !$('peekBack').classList.contains('hidden') || !!document.querySelector('.colour-grid') || !!document.getElementById('rectSearch');
 }
-function quietShowStrip(){
-  if(!showing) return;
-  const strip = $('showStrip');
-  // Not while the mouse is on it, or the keys are working in it.
-  if(strip.matches(':hover') || strip.querySelector(':focus-visible:not(.show-close)')){ wakeShowStrip(); return; }
-  $('showView').classList.add('quiet');
-}
-['pointerdown', 'focusin'].forEach(t => $('showView').addEventListener(t, wakeShowStrip, true));
-document.addEventListener('keydown', () => { if(showing) wakeShowStrip(); }, true);
-$('showView').addEventListener('pointermove', (ev) => { if(ev.pointerType === 'mouse') wakeShowStrip(); });
-
-$('showClose').addEventListener('click', () => closeShow());
-$('showHelp').addEventListener('click', () => help.open('full-screen')); // (07-help.js)
 $('showShare').addEventListener('click', () => { if(showing) shareShownPicture(shownWidgets()); }); // (05i-phone-share.js)
-window.addEventListener('popstate', () => { if(showing) closeShow(true); });
-// Esc ends the view, and does only that (a play goes on: a second Esc stops it): on the window,
-// before the page's other keys. Not while the quick look, a rectangle search or the colour grid
-// is open (each closes itself).
-window.addEventListener('keydown', (ev) => {
-  if(ev.key !== 'Escape' || !showing || !$('peekBack').classList.contains('hidden')) return;
-  if(document.querySelector('.colour-grid') || document.getElementById('rectSearch')) return;
-  ev.preventDefault(); ev.stopPropagation(); closeShow();
-}, true);
-
-// ⛶ on a bar's or chart's header (05-render.js).
-function fullScreenButton(w){
-  const b = make('button', 'widget-full', '⛶');
-  b.type = 'button';
-  const label = 'Full screen: show this ' + (w.kind === 'chart' ? 'chart' : 'bar') + ' on the whole screen';
-  b.title = label;
-  b.setAttribute('aria-label', label);
-  b.addEventListener('click', () => openShow(w));
-  return b;
-}
 
 // ---- Holding A to look ----
 const LOOK_HOLD_MS = 220;
@@ -9242,7 +9510,7 @@ async function drawPicture(title, widgets){
   return new Promise((resolve, reject) => canvas.toBlob(b => b ? resolve(b) : reject(new Error('The picture could not be made.')), 'image/png'));
 }
 
-const widgetName = (w) => w.kind === 'chart' ? (w.title || ({ columns: 'Columns', lines: 'Lines', flow: 'Waterfall', free: 'Free', scenarios: 'Scenario waterfall', tornado: 'Tornado', spider: 'Spider' }[w.layout] || 'Chart')) : model.byKey.get(w.key).name;
+// widgetName(w): the board engine's (05gs-show.js).
 
 async function sharePicture(title, widgets, fileName){
   try{
@@ -9923,13 +10191,20 @@ function paintPlay(f){
     const a = endSliderValue(playing.from.settings, s), b = endSliderValue(playing.to.settings, s);
     let v = mixAt(a, b, f);
     if(f !== 0 && f !== 1) v = roundToStep(v, s.step);
-    const el = document.querySelector('.slider-widget[data-id="' + s.id + '"]');
+    // Its row on the board, and beside the full screen (05gs-show.js).
+    document.querySelectorAll('.slider-widget[data-id="' + s.id + '"]').forEach(row => row.classList.toggle('playing', !Object.is(a, b)));
+    const el = document.querySelector('#sliderList .slider-widget[data-id="' + s.id + '"]');
     if(el){
-      el.classList.toggle('playing', !Object.is(a, b));
-      el.querySelector('input[type="range"]').value = String(v);
-      el.querySelector('.slider-value').value = String(v);
+      const range = el.querySelector('input[type="range"]'), box = el.querySelector('.slider-value');
+      if(range) range.value = String(v); // a short row has none: updateLines below
+      if(box) box.value = String(v);
     }
     [dockControls.get(s.id), mixerControls.get(s.id)].forEach(c => { if(c && !c.dragging()) c.setValue(v); }); // (05g, 05h)
+  });
+  updateLines((s) => { // the short rows: at their minimum, and beside the full screen (05c-arrange.js)
+    const a = endSliderValue(playing.from.settings, s), b = endSliderValue(playing.to.settings, s);
+    const v = mixAt(a, b, f);
+    return f !== 0 && f !== 1 ? roundToStep(v, s.step) : v;
   });
   const reached = new Set(playing.moving);
   playing.moving.forEach(k => model.reach(k).forEach(r => reached.add(r)));
@@ -12596,13 +12871,13 @@ const FMGRAPH_HELP_TOPICS = [
       { see: ['scale', 'shared-period'] },
     ] },
   { id: 'sliders', group: 'board', title: 'Sliders',
-    keywords: 'slider input change set percent shift range step reset what if fold collapse expand share shared boards own positions linked',
+    keywords: 'slider input change set percent shift range step reset what if fold collapse expand minimum short row compact look share shared boards own positions linked',
     summary: 'Change an input rectangle and watch the bars move.',
     body: [
       { p: 'A slider changes an input rectangle: one with no arrow into it (or only one from an operator that nothing feeds). It can set the input to a number, or change it by a percentage, in all periods, one period or a range of periods.' },
       { p: 'Drag the slider, use the arrow keys, or type a number in the box beside it. The slider stops at its steps; Range and step changes where it starts, ends and stops.' },
       { p: 'Reset puts one slider back to the model\'s own number; Reset all at the top puts every slider back.' },
-      { p: '▾ folds a slider to its name, the slider and its number, so many fit on the screen; ▸ shows all its settings again. Collapse all and Expand all sit beside the Sliders heading. Folding is kept with the board. On a wide screen the Sliders column stays beside the bars and charts as the page scrolls, and scrolls by itself when it is longer than the screen.' },
+      { p: 'A slider has three looks, and the button at its top right steps through them: ▾ Open shows all its settings; ▸ Folded only its rectangle, the slider and its number; ▪ Minimum one short row (its name, the slider and its number) so many fit on the screen. All: Open · Folded · Minimum beside the Sliders heading sets every slider at once. The look is kept with the board. On a wide screen the Sliders column stays beside the bars and charts as the page scrolls, and scrolls by itself when it is longer than the screen.' },
       { p: 'With several boards, the boards share where the sliders stand: move Price on one board and every board that shares shows its numbers with that price, whether it has a Price slider or not ("Also moved on other boards" under the Sliders heading names the ones it hasn\'t). A like slider on another board — the same rectangle, periods and kind — stands in the same place. Each board still shows only its own sliders. Untick "Share slider positions with other boards" to give a board its own positions, as on a separate sheet; its tab is marked ◇. Ticking it again takes the shared positions.' },
       { steps: ['Press + Slider at the top.', 'Choose an input rectangle.', 'Choose the periods and whether to set the number or change it by %.', 'Move the slider.'] },
       { tip: 'Two sliders on the same input apply one after the other: a change by % applies to what the slider above it left.' },
@@ -12638,7 +12913,7 @@ const FMGRAPH_HELP_TOPICS = [
       { see: ['sliders', 'explore', 'compare'] },
     ] },
   { id: 'full-screen', group: 'board', title: 'Full screen: bars and charts, bigger',
-    keywords: 'full screen fullscreen bigger large present presentation show meeting projector tv ipad tablet chips several many grid hide play share gif animated animation video movie',
+    keywords: 'full screen fullscreen bigger large present presentation show meeting projector tv ipad tablet chips several many grid hide play share gif animated animation video movie sliders beside',
     summary: '⛶ shows one or several bars and charts on the whole screen, without the rest of the page.',
     body: [
       { p: '⛶ at the top of a bar or chart puts it on the whole screen, as big as the screen allows, with nothing else around it: for a meeting, a projector or an iPad on the table. Where the browser can, it goes truly full screen (its own bars go too); on an iPhone, which can\'t, the view still covers the page.' },
@@ -12646,7 +12921,8 @@ const FMGRAPH_HELP_TOPICS = [
       { p: 'What is shown follows the sliders, A and the shared period exactly as the board does. ▶ Play in the strip plays between the ends chosen under Scenarios (and ■ Stop stops it); tapping the screen leaves it playing. ⇪ Share, where your device shares pictures, sends a picture of what is shown.' },
       { p: '🎞 GIF in the strip makes an animated GIF of what is shown, playing between those same ends: one swing there and back, pausing at each end, 720 pixels wide, repeating for ever — for a message, a slide or a document. "Making the GIF… 40%" shows how far it is, with Cancel. On an iPad or a phone the share sheet opens (Save to Files, Photos, Messages); elsewhere it downloads as fmGraph-<name>.gif. A GIF may be up to 10 MB: show fewer charts if it would be larger. 🎞 on a bar\'s or chart\'s header makes one of that one alone.' },
       { p: 'After a few seconds the strip fades so only the charts are left (× stays, faintly, in the corner); a tap, a key or moving the mouse brings it back. × or Esc ends it, and so do the back gesture and leaving the browser\'s full screen. If Play is running it keeps running; Esc again stops it. The screen is kept on meanwhile.' },
-      { p: 'On a phone, ⤢ Show in a bar\'s quick look does the same, with the slider dock (or, sideways, the faders) still beside it.' },
+      { p: '🎚 Sliders in the strip shows the board\'s sliders beside what is shown (on the right, or at the foot when the screen is taller than wide), one short row each. Moving one moves the charts at once and the board\'s own slider with it; a slider that reaches nothing shown is greyed. Press it again to hide them. This device remembers the choice.' },
+      { p: 'On a phone, ⤢ Show in a bar\'s quick look does the same, with the slider dock (or, sideways, the faders) still beside it; 🎚 hides or shows them.' },
       { steps: ['Press ⛶ on a chart.', 'Tap another chart\'s name in the strip to show it too.', 'Press ▶ Play to watch them change together.', 'Press × or Esc to come back.'] },
       { see: ['charts', 'scenarios', 'phone'] },
     ] },
@@ -12830,6 +13106,18 @@ const FMGRAPH_WHATS_NEW = [
     how: ['Press ⇄ on the header of a bar, chart or slider.', 'Under Copy to or Move to, choose a board, or New board.'],
     notes: ['A board that already has the same slider (the same rectangle, periods and kind) doesn\'t get a second one: a note says so.', 'Not on a phone, where boards are not edited.', 'The board file is unchanged.'],
     see: ['boards'] },
+  { id: 'show-sliders', date: '2026-10-30', title: 'Sliders beside the full screen, and a slider at its minimum',
+    summary: '🎚 Sliders in the full screen\'s strip shows the board\'s sliders beside the chart, and a slider can now shrink to one short row: Open, Folded or Minimum.',
+    what: [
+      'In the full screen (⛶ on a bar or chart), 🎚 Sliders shows the board\'s sliders on the right, or at the foot when the screen is taller than wide. Moving one moves the chart at once and the board\'s own slider with it. A slider that reaches nothing shown is greyed.',
+      'This device remembers whether the sliders are shown. On a phone the dock and the mixer are the sliders there: 🎚 hides or shows them.',
+      'A slider\'s ▾ / ▸ button now steps through three looks: Open (all its settings), Folded (its rectangle, the slider and its number) and Minimum (▪, one short row with its name, the slider and its number, as in a showcase viewer).',
+      'Collapse all / Expand all became All: Open · Folded · Minimum beside the Sliders heading. Each change is one Undo.',
+    ],
+    why: 'Presenting a chart full screen while changing its inputs needed the sliders beside it; and with many sliders, one short row each keeps the whole list in view.',
+    how: ['Click ⛶ on a chart, then 🎚 Sliders in the strip at the top.', 'Click All: Minimum beside the Sliders heading, or a slider\'s own button until it shows ▪.'],
+    notes: ['A slider\'s look is kept with the board (board file version 14; older files open as they were saved). A showcase viewer always shows one short row per slider.', 'The full screen in a showcase viewer has 🎚 Sliders too.'],
+    see: ['full-screen', 'sliders'] },
   { id: 'slider-colours', date: '2026-10-30', title: 'Each slider in its rectangle\'s colour',
     summary: 'A slider\'s grip and the filled part of its bar now take the colour of its rectangle, the same as the box beside its name and the stripe on its left edge.',
     what: [
@@ -13621,6 +13909,8 @@ $('btnTutorials').addEventListener('click', () => { help.open(); });
 //                    (the Tornado's sorted by swing), a Spider's inputs also with points: [{ at
 //                    (−1 … 1, the share of Low or High), change, value or error }]
 //   setSlider(id, value), resetSlider(id), resetAll(), remove(id)
+//   setSliderLook(id or 'all', 'open' | 'folded' | 'min') → whether it changed (one undo step;
+//                  board file 14); sliderLook(id) → its look
 //   board()        → the board ({ kind: 'fmIDE-graph-board', … }) with each slider's value
 //   reached(id)    → the ids of the bars a slider reaches
 //   boards()       → [{ name, shown }] (G3a); addBoard(name?), showBoard(index or name),
@@ -13817,6 +14107,12 @@ window.fmGraph = Object.freeze({
     renderBoard();
   },
   resetSlider: (id) => { sliderById(id).value = null; renderBoard(); },
+  setSliderLook: (id, look) => {
+    if(!SLIDER_LOOKS.includes(look)) throw new Error('A slider\'s look is open, folded or min.');
+    if(!model) throw new Error('Open a model first.');
+    return setSliderLook(id === 'all' ? board.sliders : [sliderById(id)], look);
+  },
+  sliderLook: (id) => sliderLook(sliderById(id)),
   resetAll: () => { liveSliders().forEach(s => { s.value = null; }); renderBoard(); },
   // Whether the board shown keeps its own slider positions (true) or shares them (false).
   setOwnSliders: (on) => { if(!model) throw new Error('Open a model first.'); setOwnSliders(board, !!on); return !!board.ownSliders; },
@@ -14340,6 +14636,7 @@ installColourGrid({
 });
 
 syncPageState();
+wireShow(); // the full screen's buttons and keys (05gs-show.js)
 if(fmideOpener()){
   $('btnFromFmide').classList.remove('hidden');
   askFmideForModel();

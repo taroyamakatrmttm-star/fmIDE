@@ -310,55 +310,104 @@ test('a slider\'s Range and step stays open while From, to and step are changed 
   expect(pageErrors).toEqual([]);
 });
 
-test('folding sliders: one by its ▸, Collapse all / Expand all; undo; kept; the board file version 6', async ({ page, pageErrors }) => {
+// Changed on purpose (board file 14, the owner's request of 30 October 2026): a slider has three
+// looks — Open, Folded, Minimum — its button steps through them, and Collapse all / Expand all
+// became All: Open · Folded · Minimum.
+test('a slider\'s look: Open, Folded, Minimum by its button and for all; undo; kept; the board file', async ({ page, pageErrors }) => {
   await openSample(page);
-  const sliders = page.locator('.slider-widget');
+  const sliders = page.locator('#sliderList > .slider-widget');
   await expect(sliders).toHaveCount(2);
-  const folded = () => g(page, () => fmGraph.board().sliders.map(s => s.folded === true));
-  // Unfolded at first: every setting shows; the column's button collapses all.
+  const looks = () => g(page, () => fmGraph.board().sliders.map(s => s.folded || false));
+  const all = (look) => page.locator('#sliderLooks button[data-look="' + look + '"]');
+  // Open at first: every setting shows; All: Open is marked.
   await expect(sliders.first().locator('.slider-base')).toBeVisible();
-  await expect(page.locator('#btnFoldSliders')).toHaveText('Collapse all');
-  // One slider folded: its name, track and number only.
-  await sliders.first().getByRole('button', { name: 'Folded' }).click();
+  await expect(all('open')).toHaveAttribute('aria-pressed', 'true');
+  await expect(all('min')).toHaveAttribute('aria-pressed', 'false');
+  // Its button: Folded — its rectangle, track and number only.
+  await sliders.first().getByRole('button', { name: 'Slider look: Open' }).click();
   await expect(sliders.first()).toHaveClass(/folded/);
-  await expect(sliders.first().getByRole('button', { name: 'Folded' })).toHaveAttribute('aria-pressed', 'true');
   for(const hidden of ['.slider-base', '.slider-range', 'select[aria-label="What the slider does"]', 'button:text("Reset")']) await expect(sliders.first().locator(hidden)).toBeHidden();
   await expect(sliders.first().locator('.widget-head select')).toBeVisible();
   await expect(sliders.first().locator('input[type=range]')).toBeVisible();
   await expect(sliders.first().locator('input.slider-value')).toBeVisible();
   await expect(sliders.nth(1).locator('.slider-base')).toBeVisible();
-  expect(await folded()).toEqual([true, false]);
+  expect(await looks()).toEqual([true, false]);
+  await expect(all('open')).toHaveAttribute('aria-pressed', 'false');
   // A folded slider still moves the bars.
   const before = await g(page, () => fmGraph.value('Profit', 1));
   await sliders.first().locator('input.slider-value').fill('14');
   await sliders.first().locator('input.slider-value').press('Enter');
   expect(await g(page, () => fmGraph.value('Profit', 1))).not.toBe(before);
-  // Collapse all, then Expand all: one undo step each.
-  await page.click('#btnFoldSliders');
-  expect(await folded()).toEqual([true, true]);
-  await expect(page.locator('#btnFoldSliders')).toHaveText('Expand all');
-  await page.click('#btnFoldSliders');
-  expect(await folded()).toEqual([false, false]);
+  // Again: Minimum — one short row, its name, the slider and its number, its handle and its button.
+  await sliders.first().getByRole('button', { name: 'Slider look: Folded' }).click();
+  await expect(sliders.first()).toHaveClass(/minimum/);
+  expect(await looks()).toEqual(['min', false]);
+  const row = sliders.first();
+  await expect(row.locator('.slider-name')).toHaveText('Price');
+  await expect(row.locator('.ps-track')).toBeVisible();
+  await expect(row.locator('.ps-value')).toHaveText('14');
+  await expect(row.locator('.drag-handle')).toBeVisible();
+  for(const gone of ['select', 'input.slider-colour', '.widget-remove', '.ps-minus']) await expect(row.locator(gone)).toBeHidden();
+  const box = await row.boundingBox();
+  expect(box.height).toBeLessThanOrEqual(48);
+  const mid = (sel) => row.locator(sel).evaluate(el => { const r = el.getBoundingClientRect(); return r.y + r.height / 2; });
+  expect(Math.abs(await mid('.slider-name') - await mid('.ps-track'))).toBeLessThan(4); // side by side
+  // It moves the bars, by its keys; and follows a slider moved elsewhere.
+  const at14 = await g(page, () => fmGraph.value('Profit', 1));
+  await row.locator('.ps-track').focus();
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(() => g(page, () => fmGraph.value('Profit', 1))).not.toBe(at14);
+  await g(page, () => fmGraph.setSlider(fmGraph.board().sliders[0].id, 12));
+  await expect(row.locator('.ps-value')).toHaveText('12');
+  // Again: Open.
+  await row.getByRole('button', { name: 'Slider look: Minimum' }).click();
+  expect(await looks()).toEqual([false, false]);
+  await expect(sliders.first().locator('.slider-base')).toBeVisible();
+  // All: Minimum, then All: Folded — one undo step each.
+  await all('min').click();
+  expect(await looks()).toEqual(['min', 'min']);
+  await expect(all('min')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#sliderList > .slider-widget.minimum')).toHaveCount(2);
+  await all('folded').click();
+  expect(await looks()).toEqual([true, true]);
   expect(await g(page, () => fmGraph.undo())).toBe(true);
-  expect(await folded()).toEqual([true, true]);
+  expect(await looks()).toEqual(['min', 'min']);
   expect(await g(page, () => fmGraph.undo())).toBe(true);
-  expect(await folded()).toEqual([true, false]);
-  await expect(sliders.nth(1).locator('.slider-base')).toBeVisible();
+  expect(await looks()).toEqual([false, false]);
+  // The API, and a mixed board: no All button marked.
+  expect(await g(page, () => fmGraph.setSliderLook(fmGraph.board().sliders[0].id, 'min'))).toBe(true);
+  expect(await g(page, () => fmGraph.setSliderLook(fmGraph.board().sliders[1].id, 'folded'))).toBe(true);
+  expect(await g(page, () => fmGraph.sliderLook(fmGraph.board().sliders[0].id))).toBe('min');
+  for(const look of ['open', 'folded', 'min']) await expect(all(look)).toHaveAttribute('aria-pressed', 'false');
+  expect(await g(page, () => { try{ fmGraph.setSliderLook('all', 'tiny'); return 'no'; }catch(e){ return e.message; } })).toMatch(/open, folded or min/);
   // Kept after a reload.
   await page.waitForTimeout(500);
   await page.reload();
   await page.waitForFunction(() => !!window.fmGraph);
   await page.click('#btnSample');
-  await expect(page.locator('.slider-widget')).toHaveCount(2);
-  expect(await folded()).toEqual([true, false]);
-  await expect(page.locator('.slider-widget').first()).toHaveClass(/folded/);
-  // The board file: version 8 (6 brought `folded`), `folded` only on a folded slider; imported back with it.
+  await expect(page.locator('#sliderList > .slider-widget')).toHaveCount(2);
+  expect(await looks()).toEqual(['min', true]);
+  await expect(page.locator('#sliderList > .slider-widget').first()).toHaveClass(/minimum/);
+  // The board file: version 14 brought "min" (6 brought `folded`); imported back with it.
   const file = await g(page, () => fmGraph.exportBoards(true));
   expect(file.version).toBe(BOARD_FILE_VERSION);
-  expect(file.boards[0].sliders.map(s => s.folded)).toEqual([true, undefined]);
+  expect(file.boards[0].sliders.map(s => s.folded)).toEqual(['min', true]);
   expect(await g(page, (d) => fmGraph.importBoards(d), file)).toBe(1);
   await g(page, () => fmGraph.showBoard(1));
-  expect(await folded()).toEqual([true, false]);
+  expect(await looks()).toEqual(['min', true]);
+  expect(pageErrors).toEqual([]);
+});
+
+test('a version 13 board file opens as it was saved: folded sliders folded, the others open', async ({ page, pageErrors }) => {
+  await openSample(page);
+  const v13 = JSON.parse(fs.readFileSync(require('path').join(__dirname, 'fixtures', 'formats', 'board-v13.json'), 'utf8'));
+  expect(v13.version).toBe(13);
+  expect(await g(page, (d) => fmGraph.importBoards(d), v13)).toBe(1);
+  await g(page, () => fmGraph.showBoard('Saved before the minimum'));
+  const b = await g(page, () => fmGraph.board());
+  expect(b.sliders.map(s => [s.name, s.folded])).toEqual([['Price', true], ['Volume', undefined]]);
+  await expect(page.locator('#sliderList > .slider-widget.folded')).toHaveCount(1);
+  await expect(page.locator('#sliderList > .slider-widget.minimum')).toHaveCount(0);
   expect(pageErrors).toEqual([]);
 });
 
@@ -398,7 +447,7 @@ test('the Sliders column stays on screen beside the bars and scrolls on its own'
   // Folded, the sliders take well under half the room.
   const tall = () => g(page, () => document.querySelector('#sliderList').offsetHeight);
   const unfolded = await tall();
-  await page.click('#btnFoldSliders');
+  await page.click('#sliderLooks button[data-look="folded"]'); // All: Folded (changed on purpose: was Collapse all)
   expect(await tall()).toBeLessThan(unfolded / 2);
 });
 
