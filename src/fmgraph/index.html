@@ -76,7 +76,7 @@
   <div id="playBar" class="play-bar hidden" role="region" aria-label="Play"></div>
   <section id="board" class="board hidden">
     <div class="board-col">
-      <h2 class="col-head">Sliders <button type="button" id="btnFoldSliders" class="link-btn col-tool hidden">Collapse all</button></h2>
+      <h2 class="col-head">Sliders <span id="sliderLooks" class="slider-looks col-tool hidden" role="group" aria-label="Every slider's look">All: <button type="button" class="link-btn" data-look="open" title="Every slider open: all of its settings">Open</button> · <button type="button" class="link-btn" data-look="folded" title="Every slider folded: its rectangle, the slider and its number">Folded</button> · <button type="button" class="link-btn" data-look="min" title="Every slider at its minimum: one short row each">Minimum</button></span></h2>
       <label id="shareSlidersRow" class="share-sliders hidden" title="Ticked: the sliders stand in the same place on every board that shares, and a slider moved on another board moves this board's numbers too. Unticked: this board keeps its own positions."><input type="checkbox" id="shareSliders" checked> Share slider positions with other boards</label>
       <p id="sharedNote" class="shared-note hidden"></p>
       <div id="sliderList" class="widget-list"></div>

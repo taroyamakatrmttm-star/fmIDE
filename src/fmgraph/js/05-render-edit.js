@@ -184,6 +184,7 @@ function barWidget(b){
 }
 
 function sliderWidget(s){
+  if(s.folded === 'min') return minimumSlider(s); // one short row (05c-arrange.js)
   const rect = model.byKey.get(s.key);
   const w = make('div', 'widget slider-widget' + (s.folded ? ' folded' : ''));
   w.dataset.id = s.id;
@@ -345,6 +346,7 @@ function updateValues(){
     if(!el) return;
     el.querySelector('.slider-base').textContent = sliderBaseText(s);
   });
+  updateLines(); // the short rows (05c-arrange.js)
   drawShow(results); // those on the whole screen (05h-phone-show.js)
   updateMovers(results);
   markScenarios(); // (05f-scenarios.js)

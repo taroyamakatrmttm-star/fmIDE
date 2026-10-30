@@ -33,6 +33,8 @@
 //                    (the Tornado's sorted by swing), a Spider's inputs also with points: [{ at
 //                    (−1 … 1, the share of Low or High), change, value or error }]
 //   setSlider(id, value), resetSlider(id), resetAll(), remove(id)
+//   setSliderLook(id or 'all', 'open' | 'folded' | 'min') → whether it changed (one undo step;
+//                  board file 14); sliderLook(id) → its look
 //   board()        → the board ({ kind: 'fmIDE-graph-board', … }) with each slider's value
 //   reached(id)    → the ids of the bars a slider reaches
 //   boards()       → [{ name, shown }] (G3a); addBoard(name?), showBoard(index or name),
@@ -211,6 +213,12 @@ window.fmGraph = Object.freeze({
     renderBoard();
   },
   resetSlider: (id) => { sliderById(id).value = null; renderBoard(); },
+  setSliderLook: (id, look) => {
+    if(!SLIDER_LOOKS.includes(look)) throw new Error('A slider\'s look is open, folded or min.');
+    if(!model) throw new Error('Open a model first.');
+    return setSliderLook(id === 'all' ? board.sliders : [sliderById(id)], look);
+  },
+  sliderLook: (id) => sliderLook(sliderById(id)),
   resetAll: () => { liveSliders().forEach(s => { s.value = null; }); renderBoard(); },
   // Whether the board shown keeps its own slider positions (true) or shares them (false).
   setOwnSliders: (on) => { if(!model) throw new Error('Open a model first.'); setOwnSliders(board, !!on); return !!board.ownSliders; },

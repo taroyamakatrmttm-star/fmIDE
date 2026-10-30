@@ -233,15 +233,16 @@ test('board versions: 2 has no scenarios, 3, 8 to 13 read, a newer one and the t
   // 11 (fmGraph's shared colours) is read since 26 October 2026, 12 (its common scale) since 27
   // October 2026, 13 (its Free chart) since 27 October 2026 too; 14 is newer (changed on purpose:
   // 13 was the newer sample before).
-  for(const f of ['board-newer-v11.board.json', 'board-newer-v12.board.json', 'board-newer-v13.board.json']){
+  for(const f of ['board-newer-v11.board.json', 'board-newer-v12.board.json', 'board-newer-v13.board.json', 'board-newer-v14.board.json']){
     await importFile(page, board(f));
     await expect(page.locator('#graphModal')).toBeVisible();
     expect(await scenarioNames(page)).toEqual(['Price 14']);
     await page.click('#graphCancel');
   }
-  await importFile(page, board('board-newer-v14.board.json'));
+  // Changed on purpose (board file 14, a slider at its minimum): 14 now opens, 15 is the newer one.
+  await importFile(page, board('board-newer-v15.board.json'));
   await expect(genStatus(page)).toHaveClass(/err/);
-  await expect(genStatus(page)).toContainText('format version 14; this ExcelExporter reads up to version 13');
+  await expect(genStatus(page)).toContainText('format version 15; this ExcelExporter reads up to version 14');
   await expect(page.locator('#graphModal')).toBeHidden();
   await importFile(page, board('board-template.board.json'));
   await expect(genStatus(page)).toContainText('is for a template');
