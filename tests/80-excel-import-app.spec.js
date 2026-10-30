@@ -230,7 +230,7 @@ test('Save for fmIDE writes the imported model as an fmIDE document carrying its
   await page.locator('#importOk').click();
   const fromReport = await FM.downloadJson(page, () => page.locator('#importSave').click());
   expect(fromReport.name).toBe('02-corkscrew.fmide');
-  expect([fromReport.data.kind, fromReport.data.version]).toEqual(['fmIDE-workspace', 14]);
+  expect([fromReport.data.kind, fromReport.data.version]).toEqual(['fmIDE-workspace', 15]);
   expect([fromReport.data.system.kind, fromReport.data.system.version, fromReport.data.system.periods.length]).toEqual(['system', 9, 5]);
   expect(fromReport.data.system.canvases.map(c => c.name)).toEqual(['Assets']);
   // Its Excel layout as it is now: a mapping file, sections off, the sheet's title as a label row.
