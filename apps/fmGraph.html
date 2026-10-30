@@ -676,6 +676,28 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   .ps.vertical .ps-notch{ left:-9px; right:-9px; width:auto; top:auto; height:3px; margin:0 0 -1.5px 0; bottom:calc(var(--ps-n) * 100%); }
   .ps.vertical .ps-thumb{ left:50%; top:auto; margin:0 0 -17px -17px; bottom:calc(var(--ps-pad) + var(--ps-f) * (100% - 2 * var(--ps-pad))); }
   .ps.vertical .ps-bubble{ bottom:auto; left:50%; }
+  /* A slider as one short row (createSliderLine): its name, the slider and its number side by
+     side, the track 36 px tall (a finger's target), − and + left out. A finger swiping up or down
+     on a track scrolls the list (touch-action: pan-y; keepThroughSwipe puts back what it moved).
+     div.ps-line outweighs an app's own .widget. */
+  div.ps-line{ position:relative; flex:none; display:flex; align-items:center; gap:6px; padding:2px 6px 2px 8px; border-radius:9px; border-left:4px solid var(--rect-colour, transparent); }
+  .ps-line .slider-head{ flex:0 0 36%; min-width:0; display:flex; align-items:center; gap:5px; margin:0; overflow:hidden; white-space:nowrap; }
+  .ps-line .slider-name{ flex:0 1 auto; min-width:3.5em; overflow:hidden; text-overflow:ellipsis; font-weight:700; font-size:14px; }
+  .ps-line .slider-when, .ps-line .slider-unit{ flex:0 6 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; font-size:11.5px; color:var(--muted, var(--soft-ink, #5f6b7d)); }
+  /* Where the model's own number is: the notch on the track shows it; the words stay for a screen
+     reader and as the row's tooltip. */
+  .ps-line .slider-base{ position:absolute; width:1px; height:1px; margin:0; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+  .ps-line .rect-stripe{ display:inline-block; width:12px; height:12px; border-radius:3px; flex:none; }
+  .ps-line .ps{ --ps-pad:14px; --ps-accent:var(--slider-accent, #0f766e); flex:1 1 auto; min-width:0; display:flex; align-items:center; gap:4px; }
+  .ps-line .ps-track{ order:1; flex:1 1 auto; min-width:0; height:36px; touch-action:pan-y; }
+  .ps-line .ps-row{ order:2; flex:none; }
+  .ps-line .ps-step{ display:none; }
+  .ps-line .ps-value, .ps-line .ps-type{ height:36px; min-width:56px; max-width:92px; padding:0 4px; font-size:15px !important; border-radius:8px; }
+  .ps-line .ps .ps-row input.ps-type:not([type=range]):not([type=file]){ width:92px; font-size:16px !important; }
+  .ps-line .ps-thumb{ width:26px; height:26px; margin:-13px 0 0 -13px; }
+  .ps-line .ps-notch{ top:-7px; bottom:-7px; }
+  .ps-line .ps-bubble{ bottom:calc(50% + 15px); }
+  .ps-line.moved .ps-value{ color:#115e59; }
 </style>
 </head>
 <body>
@@ -4277,7 +4299,7 @@ function moveWidget(id, to){
 //   bar    { id, kind: 'bar', key, periods, wide, scale }
 //   chart  { id, kind: 'chart', wide, layout: 'columns' | 'lines' | 'flow' | 'free' | 'scenarios' | 'tornado' | 'spider', scale, … } (G2; 04b-charts.js)
 // scale: null for Auto, or { min, max } (04d-scale.js).
-//   slider { id, key, periods, mode: 'set' | 'shift', min, max, step, value, folded }
+//   slider { id, key, periods, mode: 'set' | 'shift', min, max, step, value, folded: false | true | 'min' }
 // periods: { mode: 'all' } · { mode: 'one', p } · { mode: 'range', from, to } (from 0).
 // A slider's value is null until it moves (the model's own numbers); 'set' gives the input
 // that number in the periods it covers, 'shift' changes them by that many percent.
@@ -4406,7 +4428,7 @@ function cleanBoard(raw, dropped, version, sharedColours){
     const periods = cleanPeriods(s.periods, count);
     const mode = s.mode === 'shift' ? 'shift' : 'set';
     out.sliders.push(Object.assign({ id: newWidgetId('s'), key: rect.key, periods, mode, value: null },
-      cleanRange(s, defaultRange(rect, periods, mode)), { folded: s.folded === true })); // version 6
+      cleanRange(s, defaultRange(rect, periods, mode)), { folded: s.folded === 'min' ? 'min' : s.folded === true })); // version 6; 'min' version 14
   });
   return out;
 }
@@ -4438,9 +4460,9 @@ function cleanBoards(raw){
 // rectangle's chosen colour, 04e-colours.js; each bar, part, step and line still writes the
 // colour it shows); 12 the common scale (`commonScale`, and a bar's or chart's `ownScale`,
 // 04d-scale.js; each still writes the scale it shows); 13 the Free chart (a chart of layout
-// `free`, 04f-free.js). The template form, which carries none
+// `free`, 04f-free.js); 14 a slider at its minimum (`folded: "min"`, 05c-arrange.js). The template form, which carries none
 // of these, stays version 2 (its widgets carry the chosen colours, as before 11).
-const BOARD_FILE_VERSION = 13;
+const BOARD_FILE_VERSION = 14;
 const TEMPLATE_BOARD_VERSION = 2;
 // shown: what the board's followers of the common scale show (shownCommonScale, 04d-scale.js),
 // written as their scale; left out, each writes its own.
@@ -4455,7 +4477,7 @@ function boardData(b, shown){
     items: b.items.map(w => Object.assign(w.kind === 'bar'
       ? Object.assign({ type: 'bar' }, at(w.key), { periods: Object.assign({}, w.periods), wide: w.wide }, rectColour(w.key) ? { colour: rectColour(w.key) } : {}, scaleOf(w))
       : Object.assign({ type: 'chart', wide: w.wide }, chartData(w, at), scaleOf(w)), w.ownPeriod ? { ownPeriod: true } : {})),
-    sliders: b.sliders.map(s => Object.assign(at(s.key), { periods: Object.assign({}, s.periods), mode: s.mode, min: s.min, max: s.max, step: s.step }, s.folded ? { folded: true } : {})),
+    sliders: b.sliders.map(s => Object.assign(at(s.key), { periods: Object.assign({}, s.periods), mode: s.mode, min: s.min, max: s.max, step: s.step }, s.folded ? { folded: s.folded === 'min' ? 'min' : true } : {})),
   }, b.ownSliders ? { ownSliders: true } : {});
 }
 // The file form of these boards (all, or the ones given). forUndo: Auto for all's followers
@@ -4490,7 +4512,8 @@ const BOARD_FILE_FORMAT = { 'fmIDE-graph-board': { current: BOARD_FILE_VERSION, 
 // keeps its colours on its widgets, taken into the shared ones when read (the first one wins).
 // v11 → v12: the common scale (04d-scale.js); nothing to change — a file without `commonScale`
 // opens with Each its own, so every bar and chart shows the scale it had.
-// v12 → v13: a chart may be a Free chart (04f-free.js); nothing to change.
+// v12 → v13: a chart may be a Free chart (04f-free.js); nothing to change. v13 → v14: a slider
+// may be at its minimum, one short row (`folded: "min"`, 05c-arrange.js); nothing to change.
 function keepOwnPeriods(data){
   if(!data || typeof data !== 'object' || data.form === 'template') return;
   const boardsIn = Array.isArray(data.boards) ? data.boards : [data];
@@ -4500,7 +4523,7 @@ function keepOwnPeriods(data){
   });
 }
 
-const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {}, 5: () => {}, 6: () => {}, 7: () => {}, 8: keepOwnPeriods, 9: () => {}, 10: () => {}, 11: () => {}, 12: () => {} } };
+const BOARD_FILE_MIGRATIONS = { 'fmIDE-graph-board': { 1: () => {}, 2: () => {}, 3: () => {}, 4: () => {}, 5: () => {}, 6: () => {}, 7: () => {}, 8: keepOwnPeriods, 9: () => {}, 10: () => {}, 11: () => {}, 12: () => {}, 13: () => {} } };
 // ============================================================
 // A new chart, on fmGraph's page (+ Chart). The charts' reading and figures are 04b-charts.js.
 // ============================================================
@@ -7883,6 +7906,14 @@ function compareWithScenario(sc){
 //   Each finger is followed by its own pointer id, so several sliders move at once.
 //   With `vertical`, it stands on end (a fader: up is more) and sliding the finger sideways,
 //   away from it, makes it finer.
+// - createSliderLine(options): a slider as one short row — a colour stripe, its name, its periods
+//   and unit in small letters, then the phone's slider laid flat: track and number side by side,
+//   − and + left out (the keys, typing and a double tap stay), and the "model's own" words for a
+//   screen reader (phone.css, .ps-line). The showcase viewer's sliders (the owner's request of
+//   29 October 2026), fmGraph's slider at its minimum and the sliders beside a full screen.
+// - keepThroughSwipe(ctl, take, putBack): a finger swiping up or down on a short row's track
+//   scrolls its list (touch-action: pan-y); the browser then takes the gesture over and cancels
+//   the pointer, and whatever that swipe moved is put back — take() before, putBack(it) after.
 // - shareFiles(files, title): the phone's own share sheet (Messages, Mail, AirDrop…); the
 //   person picks where the files go, nothing is sent first. Where a browser can't share files,
 //   they download instead.
@@ -8135,6 +8166,44 @@ function createPhoneSlider(options){
     value: () => value,
     dragging: () => drags > 0,
   };
+}
+
+// options: { name, when, unit, colour (a checked colour: the stripe and --rect-colour), accent
+//   (--slider-accent: the fill and knob), className, slider: createPhoneSlider's options }.
+// Returns { el, ctl (the phone slider), base (the screen reader's words) }.
+function createSliderLine(options){
+  const o = options || {};
+  const mk = (tag, cls, text) => {
+    const e = document.createElement(tag);
+    e.className = cls;
+    if(text !== undefined && text !== null) e.textContent = String(text);
+    return e;
+  };
+  const el = mk('div', 'ps-line' + (o.className ? ' ' + o.className : ''));
+  if(o.colour) el.style.setProperty('--rect-colour', o.colour);
+  if(o.accent) el.style.setProperty('--slider-accent', o.accent);
+  const head = mk('div', 'slider-head');
+  const stripe = mk('span', 'rect-stripe');
+  if(o.colour) stripe.style.background = o.colour;
+  head.append(stripe, mk('span', 'slider-name', o.name));
+  if(o.when) head.appendChild(mk('span', 'slider-when', o.when));
+  if(o.unit) head.appendChild(mk('span', 'slider-unit', o.unit));
+  const ctl = createPhoneSlider(o.slider);
+  const base = mk('div', 'slider-base');
+  el.append(head, ctl.el, base);
+  return { el, ctl, base };
+}
+function keepThroughSwipe(ctl, take, putBack){
+  let before = null;
+  ctl.el.addEventListener('pointerdown', (ev) => {
+    before = ev.pointerType === 'mouse' ? null : { id: ev.pointerId, was: take() };
+  }, true);
+  ctl.el.addEventListener('pointerup', (ev) => { if(before && before.id === ev.pointerId) before = null; }, true);
+  ctl.el.addEventListener('pointercancel', (ev) => {
+    const b = before;
+    before = null;
+    if(b && b.id === ev.pointerId) putBack(b.was);
+  }, true);
 }
 
 // The phone's share sheet for these files (File objects); else they download. Resolves

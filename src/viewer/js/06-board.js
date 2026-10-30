@@ -200,58 +200,44 @@ function inRange(s, v){
 }
 function sliderWidget(s){
   const rect = model.byKey.get(s.key);
-  const w = make('div', 'widget slider-widget');
-  w.dataset.id = s.id;
-  w.style.setProperty('--rect-colour', shownColour(s.key));
-  w.style.setProperty('--slider-accent', sliderAccent(shownColour(s.key))); // the slider takes its colour (04e-colours.js)
-  const head = make('div', 'slider-head');
-  const stripe = make('span', 'rect-stripe');
-  stripe.style.background = shownColour(s.key);
-  head.append(stripe, make('span', 'slider-name', rect.name));
-  const when = sliderPeriodsText(s.periods);
-  if(when) head.appendChild(make('span', 'slider-when', when));
-  if(rect.unit && s.mode === 'set') head.appendChild(make('span', 'slider-unit', rect.unit));
-  const ctl = createPhoneSlider({
-    label: rect.name, min: s.min, max: s.max, step: s.step, value: sliderShown(s), base: sliderBase(s),
-    format: (v) => sliderText(s, v),
-    vibrate: () => true,
-    onStart: () => { setActiveSlider(s.id); workOutAhead(s); },
-    onInput: (v, atBase) => {
-      // A typed number stays in the author's range, on a step (the slider takes no other).
-      const kept = atBase ? v : inRange(s, v);
-      if(kept !== v) ctl.setValue(kept);
-      moveSlider(s, kept, atBase || kept === sliderBase(s));
+  // One short row (the shared createSliderLine, src/shared/phone.js and phone.css).
+  let ctl = null;
+  const line = createSliderLine({
+    className: 'widget slider-widget',
+    name: rect.name, when: sliderPeriodsText(s.periods), unit: rect.unit && s.mode === 'set' ? rect.unit : '',
+    colour: shownColour(s.key), accent: sliderAccent(shownColour(s.key)), // the slider takes its colour (04e-colours.js)
+    slider: {
+      label: rect.name, min: s.min, max: s.max, step: s.step, value: sliderShown(s), base: sliderBase(s),
+      format: (v) => sliderText(s, v),
+      vibrate: () => true,
+      onStart: () => { setActiveSlider(s.id); workOutAhead(s); },
+      onInput: (v, atBase) => {
+        // A typed number stays in the author's range, on a step (the slider takes no other).
+        const kept = atBase ? v : inRange(s, v);
+        if(kept !== v) ctl.setValue(kept);
+        moveSlider(s, kept, atBase || kept === sliderBase(s));
+      },
+      onEnd: () => quietSoon(1200),
     },
-    onEnd: () => quietSoon(1200),
   });
+  ctl = line.ctl;
+  const w = line.el;
+  w.dataset.id = s.id;
   sliderControls.set(s.id, ctl);
-  keepThroughSwipe(s, ctl);
-  w.append(head, ctl.el, make('div', 'slider-base'));
-  w.addEventListener('pointerenter', () => { if(!onPhone) setActiveSlider(s.id); });
-  w.addEventListener('pointerleave', () => { if(!onPhone) quietSoon(0); });
-  return w;
-}
-// The sliders' list scrolls with a finger, even when the swipe starts on a track (its
-// touch-action is pan-y, board-view.css): the browser then takes the gesture over and cancels
-// the pointer. Whatever that swipe moved before the browser took it is put back — the slider's
-// number, and the scenario that was shown — so scrolling never moves a slider.
-function keepThroughSwipe(s, ctl){
-  let before = null;
-  ctl.el.addEventListener('pointerdown', (ev) => {
-    before = ev.pointerType === 'mouse' ? null : { id: ev.pointerId, value: s.value, scenario: shownScenario };
-  }, true);
-  ctl.el.addEventListener('pointerup', (ev) => { if(before && before.id === ev.pointerId) before = null; }, true);
-  ctl.el.addEventListener('pointercancel', (ev) => {
-    const b = before;
-    before = null;
-    if(!b || b.id !== ev.pointerId || (s.value === b.value && shownScenario === b.scenario)) return;
+  // A finger's swipe scrolls the list: what it moved — the number, and the scenario that was
+  // shown — is put back, so scrolling never moves a slider.
+  keepThroughSwipe(ctl, () => ({ value: s.value, scenario: shownScenario }), (b) => {
+    if(s.value === b.value && shownScenario === b.scenario) return;
     const sc = b.scenario && scenarios.find(x => x.name === b.scenario);
     if(sc){ showScenarioExact(sc); saveStateSoon(); return; }
     s.value = b.value;
     ctl.setValue(sliderShown(s));
     scheduleUpdate();
     saveStateSoon();
-  }, true);
+  });
+  w.addEventListener('pointerenter', () => { if(!onPhone) setActiveSlider(s.id); });
+  w.addEventListener('pointerleave', () => { if(!onPhone) quietSoon(0); });
+  return w;
 }
 // A visitor moved slider s to v (null: back on the model's own number).
 function moveSlider(s, v, atBase){

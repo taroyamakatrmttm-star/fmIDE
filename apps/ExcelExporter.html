@@ -6176,7 +6176,7 @@ $('moduleLayoutsFileInput').addEventListener('change', () => {
 //   cleanGraphCopy(raw, periods) → the layout's cfg.graph (mapping file 4; sliders from file 7, charts from 8, Free charts from 11), checked
 // ============================================================
 const GRAPH_BOARD_KIND = 'fmIDE-graph-board';
-const GRAPH_BOARD_VERSION = 13; // the newest version this reader knows (8: step 18's Tornado and Spider charts; 9: fmGraph's shared period — each chart still names the periods it shows, so nothing here reads it; 10: the lines chart; 11: fmGraph's shared colours — each bar, part and step still carries the colour it shows, so nothing here reads them; 12: fmGraph's common scale — each bar and chart still carries the scale it shows, so nothing here reads it; 13: fmGraph's Free chart, drawn on the Dashboard as stacked columns, phase F3)
+const GRAPH_BOARD_VERSION = 14; // the newest version this reader knows (8: step 18's Tornado and Spider charts; 9: fmGraph's shared period — each chart still names the periods it shows, so nothing here reads it; 10: the lines chart; 11: fmGraph's shared colours — each bar, part and step still carries the colour it shows, so nothing here reads them; 12: fmGraph's common scale — each bar and chart still carries the scale it shows, so nothing here reads it; 13: fmGraph's Free chart, drawn on the Dashboard as stacked columns, phase F3; 14: a slider at its minimum, one short row in fmGraph — how a slider looks, so nothing here reads it)
 const GRAPH_LIMITS = { boards: 20, scenarios: 50, settings: 40, sliders: 40, boardName: 60, scenarioName: 40, rectName: 60, value: 1e15,
   items: 40, title: 80, groups: 12, parts: 30, steps: 40, lines: 12 };
 const GRAPH_FLOW_ROLES = ['start', 'add', 'subtract', 'total'];
@@ -13208,6 +13208,14 @@ if($('cfgSensCharts')) $('cfgSensCharts').addEventListener('change', () => {
 //   Each finger is followed by its own pointer id, so several sliders move at once.
 //   With `vertical`, it stands on end (a fader: up is more) and sliding the finger sideways,
 //   away from it, makes it finer.
+// - createSliderLine(options): a slider as one short row — a colour stripe, its name, its periods
+//   and unit in small letters, then the phone's slider laid flat: track and number side by side,
+//   − and + left out (the keys, typing and a double tap stay), and the "model's own" words for a
+//   screen reader (phone.css, .ps-line). The showcase viewer's sliders (the owner's request of
+//   29 October 2026), fmGraph's slider at its minimum and the sliders beside a full screen.
+// - keepThroughSwipe(ctl, take, putBack): a finger swiping up or down on a short row's track
+//   scrolls its list (touch-action: pan-y); the browser then takes the gesture over and cancels
+//   the pointer, and whatever that swipe moved is put back — take() before, putBack(it) after.
 // - shareFiles(files, title): the phone's own share sheet (Messages, Mail, AirDrop…); the
 //   person picks where the files go, nothing is sent first. Where a browser can't share files,
 //   they download instead.
@@ -13460,6 +13468,44 @@ function createPhoneSlider(options){
     value: () => value,
     dragging: () => drags > 0,
   };
+}
+
+// options: { name, when, unit, colour (a checked colour: the stripe and --rect-colour), accent
+//   (--slider-accent: the fill and knob), className, slider: createPhoneSlider's options }.
+// Returns { el, ctl (the phone slider), base (the screen reader's words) }.
+function createSliderLine(options){
+  const o = options || {};
+  const mk = (tag, cls, text) => {
+    const e = document.createElement(tag);
+    e.className = cls;
+    if(text !== undefined && text !== null) e.textContent = String(text);
+    return e;
+  };
+  const el = mk('div', 'ps-line' + (o.className ? ' ' + o.className : ''));
+  if(o.colour) el.style.setProperty('--rect-colour', o.colour);
+  if(o.accent) el.style.setProperty('--slider-accent', o.accent);
+  const head = mk('div', 'slider-head');
+  const stripe = mk('span', 'rect-stripe');
+  if(o.colour) stripe.style.background = o.colour;
+  head.append(stripe, mk('span', 'slider-name', o.name));
+  if(o.when) head.appendChild(mk('span', 'slider-when', o.when));
+  if(o.unit) head.appendChild(mk('span', 'slider-unit', o.unit));
+  const ctl = createPhoneSlider(o.slider);
+  const base = mk('div', 'slider-base');
+  el.append(head, ctl.el, base);
+  return { el, ctl, base };
+}
+function keepThroughSwipe(ctl, take, putBack){
+  let before = null;
+  ctl.el.addEventListener('pointerdown', (ev) => {
+    before = ev.pointerType === 'mouse' ? null : { id: ev.pointerId, was: take() };
+  }, true);
+  ctl.el.addEventListener('pointerup', (ev) => { if(before && before.id === ev.pointerId) before = null; }, true);
+  ctl.el.addEventListener('pointercancel', (ev) => {
+    const b = before;
+    before = null;
+    if(b && b.id === ev.pointerId) putBack(b.was);
+  }, true);
 }
 
 // The phone's share sheet for these files (File objects); else they download. Resolves
