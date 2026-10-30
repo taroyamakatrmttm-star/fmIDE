@@ -203,6 +203,7 @@ function sliderWidget(s){
   const w = make('div', 'widget slider-widget');
   w.dataset.id = s.id;
   w.style.setProperty('--rect-colour', shownColour(s.key));
+  w.style.setProperty('--slider-accent', sliderAccent(shownColour(s.key))); // the slider takes its colour (04e-colours.js)
   const head = make('div', 'slider-head');
   const stripe = make('span', 'rect-stripe');
   stripe.style.background = shownColour(s.key);

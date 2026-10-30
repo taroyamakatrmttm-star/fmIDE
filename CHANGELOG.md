@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph and fmShowcase: sliders in their rectangle's colour
+- A slider's grip and filled bar take its rectangle's colour (`--slider-accent`, set on each slider card, dock card, fader and viewer row from `sliderAccent(shownColour(key))` in the board engine's `04e-colours.js`), on the desktop (`accent-color`), the phone's dock and faders and the viewer's rows (the shared slider's `--ps-accent`). A colour with less than 3:1 contrast against white is darkened on the slider only, keeping its hue; the stripe and colour box keep the exact colour. No change to `src/shared/` or the board file.
+- Tests: groups 49, 68 and 93 one new test each; group 92's snapshots `fmgraph-every-widget.txt` and `fmgraph-every-widget-phone.txt` updated on purpose (the new style property). Branch `claude/slider-colours`.
+
 ## ExcelExporter: a canvas added after the layout was saved gets its own tab
 - Fixed: a model loaded with a layout saved before one of its canvases existed (kept in the browser, a document's `excelLayout`, or Import Mapping) gave that canvas no tab, and its rows went to the first tab, usually the Inputs tab. `reconcileMapping` now gives such a canvas its tab `tab_<canvas id>` at the end (its name made unique), sorted as a new layout is, a module's tab laid out from its remembered or template layout (`layOutNewCanvasTabs`, `applyModuleLayoutFor`); its rows an earlier load left on the Inputs tab move there. Deleted canvases' tabs unchanged. No file format change. Help (*What is remembered*), What's new, lesson 5.9.
 - Tests: group 7 two new tests, group 36 one new test. Branch `claude/excel-new-canvas-tabs`.

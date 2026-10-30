@@ -269,6 +269,7 @@ Oldest first. *Step* is the build step (and phase) the pull request belongs to; 
 | branch `claude/choose-for-me-empty-boards` | 2026-10-29 | Choose for me offered for any model: an empty fmGraph board counts as none (replaced), beside real boards it adds one more; the batch's `--auto` chooses for a model whose boards are all empty | after 20 | [8.3](08-showcase.md#showcase-many) |
 | branch `claude/showcase-canvases-select-all` | 2026-10-29 | Make Showcase Viewer…: Select all and Unselect all for the canvases the visitor sees | after 20 | [8.1](08-showcase.md#showcase-viewer) |
 | branch `claude/viewer-ipad-sliders` | 2026-10-29 | fmShowcase: a made viewer's .html chosen in it opens as from disk (for an iPhone or iPad, where Files only previews it); the sliders one short row each, in a list that scrolls on its own | after 20 | [8.1](08-showcase.md#showcase-viewer) |
+| branch `claude/slider-colours` | 2026-10-30 | fmGraph and fmShowcase: a slider's grip and filled bar take its rectangle's colour (a very pale one darkened to stay visible) | after 20 | [6.3](06-fmgraph.md#graph-boards) |
 | branch `claude/excel-new-canvas-tabs` | 2026-10-30 | ExcelExporter: a canvas added after the layout was saved gets its own tab (its rows no longer land on the Inputs tab) | after 20 | [5.9](05-excelexporter.md#layouts) |
 
 ---

@@ -794,3 +794,38 @@ test('a version 10 board file: its colours become the rectangles\' shared ones, 
   expect(await g(page, () => fmGraph.rectColour('Gross profit'))).toEqual({ colour: '#abcdef', chosen: true });
   expect(pageErrors).toEqual([]);
 });
+
+// The contrast of an 'rgb(r, g, b)' colour against white (WCAG's relative luminance).
+function contrastWithWhite(rgb){
+  const [r, gr, b] = rgb.match(/\d+/g).map(Number).map(v => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); });
+  return 1.05 / (0.2126 * r + 0.7152 * gr + 0.0722 * b + 0.05);
+}
+
+test('a slider takes its rectangle\'s colour: the grip and the filled bar, a pale one darkened to 3:1 (stripe exact)', async ({ page, pageErrors }) => {
+  await openSample(page);
+  const slider = page.locator('#sliderList .slider-widget').first();
+  const range = slider.locator('.slider-track input[type=range]');
+  const accent = () => range.evaluate(el => getComputedStyle(el).accentColor);
+  // The sample's Price slider has the usual colour.
+  expect(await accent()).toBe('rgb(15, 118, 110)');
+  // A colour set through the API reaches the slider at once, exactly.
+  await g(page, () => fmGraph.setColour(fmGraph.board().sliders[0].id, '#db2777'));
+  await expect.poll(accent).toBe('rgb(219, 39, 119)');
+  await expect(slider).toHaveCSS('border-left-color', 'rgb(219, 39, 119)');
+  // A pale yellow: the stripe and colour box keep it, the slider is darker, with the same hue, at 3:1.
+  await g(page, () => fmGraph.setColour(fmGraph.board().sliders[0].id, '#fde68a'));
+  await expect(slider).toHaveCSS('border-left-color', 'rgb(253, 230, 138)');
+  await expect(slider.locator('input.slider-colour')).toHaveValue('#fde68a');
+  const pale = await accent();
+  expect(pale).not.toBe('rgb(253, 230, 138)');
+  const c = contrastWithWhite(pale);
+  expect(c).toBeGreaterThanOrEqual(3);
+  expect(c).toBeLessThan(3.1); // no darker than it needs
+  const [r, gr, b] = pale.match(/\d+/g).map(Number);
+  expect(Math.abs(r / b - 253 / 138)).toBeLessThan(0.1); // the hue kept
+  expect(Math.abs(gr / b - 230 / 138)).toBeLessThan(0.1);
+  // Back to the automatic colour: the usual one again.
+  await g(page, () => fmGraph.setColour(fmGraph.board().sliders[0].id, null));
+  await expect.poll(accent).toBe('rgb(15, 118, 110)');
+  expect(pageErrors).toEqual([]);
+});

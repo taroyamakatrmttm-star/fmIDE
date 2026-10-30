@@ -69,7 +69,7 @@ body class="touch-input phone-screen phone" style="--gbar-h: 46px; --mix-l: 0px;
           input checked="" id="shareSliders" type="checkbox" .value="on" .checked=true
         p class="shared-note hidden" id="sharedNote"
         div class="widget-list" id="sliderList"
-          div class="widget slider-widget" data-id="s12" style="--rect-colour: #0f766e;"
+          div class="widget slider-widget" data-id="s12" style="--rect-colour: #0f766e; --slider-accent: #0f766e;"
             div class="widget-head"
               span class="arrange"
                 button aria-label="Move" class="drag-handle" title="Drag to move (or ← → with the keyboard)" type="button" | ⠿
@@ -121,7 +121,7 @@ body class="touch-input phone-screen phone" style="--gbar-h: 46px; --mix-l: 0px;
                   input data-range="step" step="any" type="number" .value="0.25"
             div class="widget-row slider-more"
               button title="Back to the model's own number" type="button" | Reset
-          div class="widget slider-widget" data-id="s13" style="--rect-colour: #2563eb;"
+          div class="widget slider-widget" data-id="s13" style="--rect-colour: #2563eb; --slider-accent: #2563eb;"
             div class="widget-head"
               span class="arrange"
                 button aria-label="Move" class="drag-handle" title="Drag to move (or ← → with the keyboard)" type="button" | ⠿
@@ -174,7 +174,7 @@ body class="touch-input phone-screen phone" style="--gbar-h: 46px; --mix-l: 0px;
                   input data-range="step" step="any" type="number" .value="1"
             div class="widget-row slider-more"
               button title="Back to the model's own number" type="button" | Reset
-          div class="widget slider-widget" data-id="s14" style="--rect-colour: #0f766e;"
+          div class="widget slider-widget" data-id="s14" style="--rect-colour: #0f766e; --slider-accent: #0f766e;"
             div class="widget-head"
               span class="arrange"
                 button aria-label="Move" class="drag-handle" title="Drag to move (or ← → with the keyboard)" type="button" | ⠿
@@ -226,7 +226,7 @@ body class="touch-input phone-screen phone" style="--gbar-h: 46px; --mix-l: 0px;
                   input data-range="step" step="any" type="number" .value="0.5"
             div class="widget-row slider-more"
               button title="Back to the model's own number" type="button" | Reset
-          div class="widget slider-widget" data-id="s15" style="--rect-colour: #65a30d;"
+          div class="widget slider-widget" data-id="s15" style="--rect-colour: #65a30d; --slider-accent: #65a30d;"
             div class="widget-head"
               span class="arrange"
                 button aria-label="Move" class="drag-handle" title="Drag to move (or ← → with the keyboard)" type="button" | ⠿
@@ -2064,7 +2064,7 @@ body class="touch-input phone-screen phone" style="--gbar-h: 46px; --mix-l: 0px;
       span class="dock-grip"
       span class="dock-handle-text" id="dockHandleText"
     div class="dock-cards" id="dockCards"
-      div class="dock-card" data-id="s12"
+      div class="dock-card" data-id="s12" style="--slider-accent: #0f766e;"
         div class="dock-card-head"
           span class="rect-stripe" style="background: rgb(15, 118, 110);"
           span class="dock-name" | Price
@@ -2081,7 +2081,7 @@ body class="touch-input phone-screen phone" style="--gbar-h: 46px; --mix-l: 0px;
             div class="ps-thumb"
             div aria-hidden="true" class="ps-bubble"
         div class="dock-base" | Model's number: 10
-      div class="dock-card" data-id="s13"
+      div class="dock-card" data-id="s13" style="--slider-accent: #2563eb;"
         div class="dock-card-head"
           span class="rect-stripe" style="background: rgb(37, 99, 235);"
           span class="dock-name" | Volume
@@ -2098,7 +2098,7 @@ body class="touch-input phone-screen phone" style="--gbar-h: 46px; --mix-l: 0px;
             div class="ps-thumb"
             div aria-hidden="true" class="ps-bubble"
         div class="dock-base" | Model's numbers: 1,000 (Year 1) to 1,300 (Year 4)
-      div class="dock-card" data-id="s14"
+      div class="dock-card" data-id="s14" style="--slider-accent: #0f766e;"
         div class="dock-card-head"
           span class="rect-stripe" style="background: rgb(15, 118, 110);"
           span class="dock-name" | Unit cost
@@ -2116,7 +2116,7 @@ body class="touch-input phone-screen phone" style="--gbar-h: 46px; --mix-l: 0px;
             div class="ps-thumb"
             div aria-hidden="true" class="ps-bubble"
         div class="dock-base" | Model's number: 6
-      div class="dock-card" data-id="s15"
+      div class="dock-card" data-id="s15" style="--slider-accent: #65a30d;"
         div class="dock-card-head"
           span class="rect-stripe" style="background: rgb(101, 163, 13);"
           span class="dock-name" | Overheads
@@ -2284,7 +2284,7 @@ body class="touch-input phone-screen phone" style="--gbar-h: 46px; --mix-l: 0px;
           input checked="" id="shareSliders" type="checkbox" .value="on" .checked=true
         p class="shared-note hidden" id="sharedNote"
         div class="widget-list" id="sliderList"
-          div class="widget slider-widget" data-id="s12" style="--rect-colour: #0f766e;"
+          div class="widget slider-widget" data-id="s12" style="--rect-colour: #0f766e; --slider-accent: #0f766e;"
             div class="widget-head"
               span class="arrange"
                 button aria-label="Move" class="drag-handle" title="Drag to move (or ← → with the keyboard)" type="button" | ⠿
@@ -2336,7 +2336,7 @@ body class="touch-input phone-screen phone" style="--gbar-h: 46px; --mix-l: 0px;
                   input data-range="step" step="any" type="number" .value="0.25"
             div class="widget-row slider-more"
               button title="Back to the model's own number" type="button" | Reset
-          div class="widget slider-widget" data-id="s13" style="--rect-colour: #2563eb;"
+          div class="widget slider-widget" data-id="s13" style="--rect-colour: #2563eb; --slider-accent: #2563eb;"
             div class="widget-head"
               span class="arrange"
                 button aria-label="Move" class="drag-handle" title="Drag to move (or ← → with the keyboard)" type="button" | ⠿
@@ -2389,7 +2389,7 @@ body class="touch-input phone-screen phone" style="--gbar-h: 46px; --mix-l: 0px;
                   input data-range="step" step="any" type="number" .value="1"
             div class="widget-row slider-more"
               button title="Back to the model's own number" type="button" | Reset
-          div class="widget slider-widget" data-id="s14" style="--rect-colour: #0f766e;"
+          div class="widget slider-widget" data-id="s14" style="--rect-colour: #0f766e; --slider-accent: #0f766e;"
             div class="widget-head"
               span class="arrange"
                 button aria-label="Move" class="drag-handle" title="Drag to move (or ← → with the keyboard)" type="button" | ⠿
@@ -2441,7 +2441,7 @@ body class="touch-input phone-screen phone" style="--gbar-h: 46px; --mix-l: 0px;
                   input data-range="step" step="any" type="number" .value="0.5"
             div class="widget-row slider-more"
               button title="Back to the model's own number" type="button" | Reset
-          div class="widget slider-widget" data-id="s15" style="--rect-colour: #65a30d;"
+          div class="widget slider-widget" data-id="s15" style="--rect-colour: #65a30d; --slider-accent: #65a30d;"
             div class="widget-head"
               span class="arrange"
                 button aria-label="Move" class="drag-handle" title="Drag to move (or ← → with the keyboard)" type="button" | ⠿
@@ -4365,7 +4365,7 @@ body class="touch-input phone-screen phone" style="--gbar-h: 46px; --mix-l: 0px;
       span class="dock-grip"
       span class="dock-handle-text" id="dockHandleText"
     div class="dock-cards" id="dockCards"
-      div class="dock-card moved" data-id="s12"
+      div class="dock-card moved" data-id="s12" style="--slider-accent: #0f766e;"
         div class="dock-card-head"
           span class="rect-stripe" style="background: rgb(15, 118, 110);"
           span class="dock-name" | Price
@@ -4382,7 +4382,7 @@ body class="touch-input phone-screen phone" style="--gbar-h: 46px; --mix-l: 0px;
             div class="ps-thumb"
             div aria-hidden="true" class="ps-bubble"
         div class="dock-base" | Model's number: 10 · double-tap to go back
-      div class="dock-card" data-id="s13"
+      div class="dock-card" data-id="s13" style="--slider-accent: #2563eb;"
         div class="dock-card-head"
           span class="rect-stripe" style="background: rgb(37, 99, 235);"
           span class="dock-name" | Volume
@@ -4399,7 +4399,7 @@ body class="touch-input phone-screen phone" style="--gbar-h: 46px; --mix-l: 0px;
             div class="ps-thumb"
             div aria-hidden="true" class="ps-bubble"
         div class="dock-base" | Model's numbers: 1,000 (Year 1) to 1,300 (Year 4)
-      div class="dock-card" data-id="s14"
+      div class="dock-card" data-id="s14" style="--slider-accent: #0f766e;"
         div class="dock-card-head"
           span class="rect-stripe" style="background: rgb(15, 118, 110);"
           span class="dock-name" | Unit cost
@@ -4417,7 +4417,7 @@ body class="touch-input phone-screen phone" style="--gbar-h: 46px; --mix-l: 0px;
             div class="ps-thumb"
             div aria-hidden="true" class="ps-bubble"
         div class="dock-base" | Model's number: 6
-      div class="dock-card" data-id="s15"
+      div class="dock-card" data-id="s15" style="--slider-accent: #65a30d;"
         div class="dock-card-head"
           span class="rect-stripe" style="background: rgb(101, 163, 13);"
           span class="dock-name" | Overheads

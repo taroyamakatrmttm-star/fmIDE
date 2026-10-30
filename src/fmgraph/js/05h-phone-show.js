@@ -82,6 +82,7 @@ function fader(s, at){
   const rect = model.byKey.get(s.key);
   const el = make('div', 'fader');
   el.dataset.id = s.id;
+  el.style.setProperty('--slider-accent', sliderAccent(shownColour(s.key))); // the fader takes its colour (04e-colours.js)
   const name = make('button', 'fader-name', rect.name);
   name.type = 'button';
   name.title = 'Put another slider here';
