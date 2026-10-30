@@ -14,6 +14,7 @@ installColourGrid({
 });
 
 syncPageState();
+wireShow(); // the full screen's buttons and keys (05gs-show.js)
 if(fmideOpener()){
   $('btnFromFmide').classList.remove('hidden');
   askFmideForModel();

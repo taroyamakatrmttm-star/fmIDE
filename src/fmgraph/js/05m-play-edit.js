@@ -13,9 +13,10 @@ function paintPlay(f){
     const a = endSliderValue(playing.from.settings, s), b = endSliderValue(playing.to.settings, s);
     let v = mixAt(a, b, f);
     if(f !== 0 && f !== 1) v = roundToStep(v, s.step);
-    const el = document.querySelector('.slider-widget[data-id="' + s.id + '"]');
+    // Its row on the board, and beside the full screen (05gs-show.js).
+    document.querySelectorAll('.slider-widget[data-id="' + s.id + '"]').forEach(row => row.classList.toggle('playing', !Object.is(a, b)));
+    const el = document.querySelector('#sliderList .slider-widget[data-id="' + s.id + '"]');
     if(el){
-      el.classList.toggle('playing', !Object.is(a, b));
       const range = el.querySelector('input[type="range"]'), box = el.querySelector('.slider-value');
       if(range) range.value = String(v); // a short row has none: updateLines below
       if(box) box.value = String(v);

@@ -14,6 +14,7 @@
 // The board engine's globals (model, boards, board, scenarios, …) hold the Board's state;
 // these are the page's own.
 const sliderControls = new Map(); // slider id → its shared phone slider ({ el, setValue, … })
+const showControls = new Map();   // the same, for the sliders beside the full screen (05gs-show.js)
 let activeSlider = null;          // the slider being moved: its reach is lit
 let quietTimer = null;
 let updatePending = false;
@@ -155,7 +156,7 @@ function barFrame(b){
   title.type = 'button';
   title.title = 'How it is worked out';
   title.addEventListener('click', () => openBarCard(b.id));
-  head.append(title, traceButton(b));
+  head.append(title, traceButton(b), fullScreenButton(b)); // ⛶ (05gs-show.js)
   w.appendChild(head);
   if(rect && rect.unit) w.appendChild(make('div', 'widget-unit', 'In ' + rect.unit));
   w.append(make('div', 'bar-chart-host'), make('ul', 'bar-errors'));
@@ -168,7 +169,7 @@ function chartFrame(c){
   w.dataset.id = c.id;
   w.dataset.layout = c.layout;
   const head = make('div', 'widget-head');
-  head.append(make('span', 'widget-title', c.title || LAYOUT_NAMES[c.layout] || 'Chart'), traceButton(c));
+  head.append(make('span', 'widget-title', c.title || LAYOUT_NAMES[c.layout] || 'Chart'), traceButton(c), fullScreenButton(c)); // ⛶ (05gs-show.js)
   w.append(head, make('div', 'bar-chart-host'), make('div', 'chart-key'), make('ul', 'bar-errors'));
   return w;
 }
@@ -198,7 +199,7 @@ function inRange(s, v){
   const c = Math.min(s.max, Math.max(s.min, v));
   return roundToStep(s.min + Math.round((c - s.min) / s.step) * s.step, s.step);
 }
-function sliderWidget(s){
+function sliderWidget(s, controls){
   const rect = model.byKey.get(s.key);
   // One short row (the shared createSliderLine, src/shared/phone.js and phone.css).
   let ctl = null;
@@ -223,7 +224,7 @@ function sliderWidget(s){
   ctl = line.ctl;
   const w = line.el;
   w.dataset.id = s.id;
-  sliderControls.set(s.id, ctl);
+  (controls || sliderControls).set(s.id, ctl);
   // A finger's swipe scrolls the list: what it moved — the number, and the scenario that was
   // shown — is put back, so scrolling never moves a slider.
   keepThroughSwipe(ctl, () => ({ value: s.value, scenario: shownScenario }), (b) => {
@@ -239,6 +240,28 @@ function sliderWidget(s){
   w.addEventListener('pointerleave', () => { if(!onPhone) quietSoon(0); });
   return w;
 }
+// A slider's controls: on the Board, and beside the full screen.
+function sliderControlsOf(s){
+  return [sliderControls.get(s.id), showControls.get(s.id)].filter(ctl => ctl && ctl.el.isConnected);
+}
+
+// ---- Full screen (05gs-show.js): what this page gives it ----
+function showStripExtras(){ /* no buttons of its own in the strip */ }
+function showSliderRow(s){
+  const row = sliderWidget(s, showControls);
+  row.classList.add('show-slider');
+  return row;
+}
+const SHOW_SLIDERS_KEY = 'viewer-show-sliders';
+function rememberShowSliders(on){ try{ viewerStore.put(SHOW_SLIDERS_KEY, on ? 'on' : 'off').catch(() => {}); }catch(e){ /* not kept: fine */ } }
+async function restoreShowSliders(){
+  let v = null;
+  try{ await viewerStore.ready; v = await viewerStore.get(SHOW_SLIDERS_KEY); }catch(e){ return; }
+  if(v === 'on' || v === 'off') setShowSliders(v === 'on', true);
+}
+// Esc belongs to a question open over it.
+function showEscapeBlocked(){ return !$('confirmBox').classList.contains('hidden'); }
+
 // A visitor moved slider s to v (null: back on the model's own number).
 function moveSlider(s, v, atBase){
   if(shownScenario) leaveScenario();
@@ -280,12 +303,14 @@ function updateValues(){
   board.sliders.forEach(s => {
     const el = document.querySelector('.slider-widget[data-id="' + s.id + '"]');
     if(!el) return;
-    el.querySelector('.slider-base').textContent = sliderBaseText(s);
-    el.title = sliderBaseText(s); // the notch shows it; the words as the row's tooltip (board-view.css)
-    el.classList.toggle('moved', s.value !== null);
-    const ctl = sliderControls.get(s.id);
-    if(ctl && !ctl.dragging() && !playNow()) ctl.setValue(sliderShown(s));
+    document.querySelectorAll('.slider-widget[data-id="' + s.id + '"]').forEach(row => {
+      row.querySelector('.slider-base').textContent = sliderBaseText(s);
+      row.title = sliderBaseText(s); // the notch shows it; the words as the row's tooltip (board-view.css)
+      row.classList.toggle('moved', s.value !== null);
+    });
+    sliderControlsOf(s).forEach(ctl => { if(!ctl.dragging() && !playNow()) ctl.setValue(sliderShown(s)); });
   });
+  drawShow(results); // those on the whole screen (05gs-show.js)
   updateMovers(results);
   markScenarioRow();
   paintReach();

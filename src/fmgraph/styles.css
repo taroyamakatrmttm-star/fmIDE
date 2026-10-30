@@ -423,33 +423,13 @@
   .fader-change{ min-height:16px; font-size:11.5px; font-weight:600; color:var(--reach); text-align:center; font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; }
   .fader.moved .ps-value{ color:var(--brand-dark); }
   .fader-menu{ top:60px; right:auto; }
-  /* Full screen (Show): one or several bars and charts on the whole screen (05h-phone-show.js). */
-  .show-view{ position:fixed; z-index:40; inset:0; top:0; background:var(--page); display:flex; flex-direction:column; padding:8px 12px calc(var(--dock-h, 0px) + 8px); }
+  /* Full screen (Show, 05gs-show.js; its look is in board.css): on a phone, the dock and the mixer
+     are its sliders, over it; 🎚 Sliders off hides them. */
   body.mixing .show-view{ left:var(--mix-l, 0px); right:var(--mix-r, 0px); padding-bottom:8px; }
-  .show-head{ position:absolute; z-index:2; top:0; left:0; right:0; display:flex; align-items:center; gap:8px; padding:calc(6px + env(safe-area-inset-top, 0px)) 12px 6px; background:rgba(244,245,248,.94); border-bottom:1px solid var(--line); transition:opacity .35s, background .35s, border-color .35s; }
-  .show-head h2{ flex:0 1 auto; margin:0; font-size:18px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .show-chips{ flex:1 1 auto; min-width:0; display:flex; gap:6px; overflow-x:auto; scrollbar-width:thin; padding:2px 0; }
-  .show-chip{ flex:0 0 auto; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; padding:5px 11px; border-radius:999px; border:1px solid var(--line-strong); background:var(--card); color:var(--soft-ink); }
-  .show-chip[aria-pressed="true"]{ background:var(--brand-soft); border-color:var(--brand); color:var(--ink); font-weight:600; }
-  .show-chip[aria-pressed="true"]::before{ content:"✓ "; }
-  .show-note{ font-size:12.5px; color:var(--soft-ink); }
-  .show-more:empty{ display:none; }
-  .show-btn{ flex:0 0 auto; font-size:15px; padding:7px 13px; border-radius:10px; }
-  .show-help{ padding:7px 11px; }
-  .show-close{ font-size:22px; padding:2px 14px; }
-  /* Quiet: the strip fades after a few seconds; a tap, a key or the mouse brings it back. × stays. */
-  .show-view.quiet .show-head{ background:transparent; border-color:transparent; }
-  .show-view.quiet .show-head > :not(.show-close){ opacity:0; pointer-events:none; transition:opacity .35s; }
-  .show-view.quiet .show-close{ opacity:.45; }
-  @media (prefers-reduced-motion: reduce){ .show-head, .show-head > *{ transition:none !important; } }
-  .show-body{ flex:1 1 auto; min-height:0; display:grid; grid-template-columns:repeat(var(--show-cols, 1), minmax(0, 1fr)); grid-template-rows:repeat(var(--show-rows, 1), minmax(0, 1fr)); gap:12px; padding-top:var(--show-top, 50px); }
-  .show-widget{ min-width:0; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
-  .show-widget.boxed{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:8px 10px; }
-  .show-name{ margin:0 0 2px; font-size:15px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:0 0 auto; }
-  .show-widget .bar-chart-host{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; gap:6px; }
-  .show-widget .bar-chart{ flex:1 1 0; min-height:0; height:auto; margin:0; font-size:13px; }
-  .show-widget .chart-key, .show-widget .bar-errors{ flex:0 0 auto; }
-  .show-widget .chart-key{ font-size:14px; max-height:30%; overflow:auto; }
+  body.phone .show-sliders{ display:none !important; }
+  body.phone .show-view.with-sliders{ display:flex; }
+  body.phone.show-hide-sliders .slider-dock, body.phone.show-hide-sliders .mixer{ display:none !important; }
+  body.phone.show-hide-sliders .show-view{ left:0; right:0; padding-bottom:calc(8px + env(safe-area-inset-bottom, 0px)); }
   body.showing .slider-dock{ z-index:41; }
   body.showing .mixer{ z-index:41; top:0; }
   /* Holding A to look. */

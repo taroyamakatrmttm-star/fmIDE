@@ -20,7 +20,7 @@
 <header class="vbar">
   <div class="vbar-side vbar-titles">
     <span class="vbar-app">fmShowcase</span>
-    <h1 id="showTitle" class="vbar-title"></h1>
+    <h1 id="showcaseTitle" class="vbar-title"></h1>
   </div>
   <div class="vbar-side">
     <nav id="viewSwitch" class="view-switch desk-only hidden" role="tablist" aria-label="Views">
@@ -127,6 +127,19 @@
 
 <footer id="mark" class="mark hidden"><span>Made with fmIDE</span><span id="markLicence" class="mark-licence"></span></footer>
 
+<section id="showView" class="show-view hidden" role="dialog" aria-label="Full screen">
+  <div id="showStrip" class="show-head">
+    <h2 id="showTitle"></h2>
+    <div id="showChips" class="show-chips" role="group" aria-label="Bars and charts shown"></div>
+    <button type="button" id="showPlay" class="show-btn show-play" title="Play between the ends chosen under Scenarios">▶ Play</button>
+    <button type="button" id="showSlidersBtn" class="show-btn show-sliders-btn" aria-pressed="false" aria-label="Sliders" title="Show the board's sliders beside the full screen">🎚<span class="show-btn-words"> Sliders</span></button>
+    <span id="showNote" class="show-note" aria-live="polite"></span>
+    <button type="button" id="showHelp" class="show-btn show-help" aria-label="Help: full screen" title="Help: full screen">?</button>
+    <button type="button" id="showClose" class="show-btn show-close" aria-label="Close" title="Close (Esc)">×</button>
+  </div>
+  <div id="showBody" class="show-body"></div>
+  <div id="showSliders" class="show-sliders hidden" role="group" aria-label="Sliders"></div>
+</section>
 <div id="confirmBox" class="dialog-back hidden" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
   <div class="dialog">
     <h3 id="confirmTitle"></h3>

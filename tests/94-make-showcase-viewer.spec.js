@@ -341,7 +341,7 @@ test.describe('fmIDE: Make Showcase Viewer…', () => {
     expect(st.periods).toEqual([1, 2]);
     expect(st.hasBoard).toBe(true);
     expect((await v.page.evaluate(() => fmViewer.board())).boards).toEqual(['Everything']);
-    expect(await v.page.locator('#showTitle b').count()).toBe(0);
+    expect(await v.page.locator('#showcaseTitle b').count()).toBe(0);
     expect(await v.page.locator('script').count()).toBe(4); // the app's script and its three data blocks (V4: excel)
     // A slider moved in the viewer gives fmIDE's own number for that price.
     await v.page.evaluate(() => fmViewer.setSlider('Price', 12));

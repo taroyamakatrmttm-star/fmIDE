@@ -243,3 +243,133 @@ test('the Free chart in the view: its pieces drawn, larger; ? opens its help; na
   expect(await g(page, () => window.__pwned)).toBeUndefined();
   expect(pageErrors).toEqual([]);
 });
+
+// 🎚 Sliders (the owner's request of 30 October 2026; 05gs-show.js): the board's sliders beside
+// the full screen, one short row each, the unreached dimmed; kept on this device.
+const rows = (page) => page.locator('#showSliders .slider-widget');
+const box = (page, sel) => page.locator(sel).boundingBox();
+
+test('🎚 Sliders: the board\'s sliders beside the full screen, the unreached dimmed; moving one moves the chart and the board\'s', async ({ page, pageErrors }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openSample(page);
+  await g(page, () => fmGraph.addSlider('Equipment'));
+  const before = await boardText(page);
+  // The Profit bar on its own: off at first.
+  await page.locator('.bar-widget').first().locator('.widget-full').click();
+  await expect(view(page)).toBeVisible();
+  await expect(page.locator('#showTitle')).toHaveText('Profit');
+  await expect(page.locator('#showSlidersBtn')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#showSliders')).toBeHidden();
+  const alone = await box(page, '#showBody .show-widget');
+  // On: the board's three sliders, at the right of the screen (wider than tall), the bar narrower.
+  await page.click('#showSlidersBtn');
+  await expect(page.locator('#showSlidersBtn')).toHaveAttribute('aria-pressed', 'true');
+  await expect(rows(page)).toHaveCount(3);
+  await expect(rows(page).locator('.slider-name')).toHaveText(['Price', 'Volume', 'Equipment']);
+  await expect(view(page)).toHaveAttribute('data-shape', 'wide');
+  const side = await box(page, '#showSliders'), body = await box(page, '#showBody');
+  expect(side.x).toBeGreaterThanOrEqual(body.x + body.width - 1);
+  expect(side.width).toBeGreaterThan(200);
+  expect((await box(page, '#showBody .show-widget')).width).toBeLessThan(alone.width);
+  expect((await fitted(page)).inside).toBe(true);
+  // Each one short row; Equipment reaches nothing shown: dimmed.
+  for(const r of await rows(page).all()) expect((await r.boundingBox()).height).toBeLessThanOrEqual(48);
+  expect(await rows(page).evaluateAll(els => els.map(e => e.classList.contains('unreached')))).toEqual([false, false, true]);
+  // The Balance sheet shown too: Equipment is in it.
+  await page.locator('.show-chip', { hasText: 'Balance sheet' }).click();
+  await expect(shown(page)).toHaveCount(2);
+  expect(await rows(page).evaluateAll(els => els.map(e => e.classList.contains('unreached')))).toEqual([false, false, false]);
+  // Moving one (its keys): the chart shown follows, and so do the board's slider and its box.
+  const label = () => page.locator('#showBody .t-value').first().textContent();
+  const was = await label();
+  const price = rows(page).first();
+  await price.locator('.ps-track').focus();
+  for(let i = 0; i < 4; i++) await page.keyboard.press('ArrowRight');
+  await expect.poll(label).not.toBe(was);
+  const moved = await g(page, () => fmGraph.board().sliders[0].value);
+  expect(moved).not.toBe(null);
+  await expect(price.locator('.ps-value')).toHaveText(String(moved));
+  await expect(page.locator('#sliderList > .slider-widget').first().locator('input.slider-value')).toHaveValue(String(moved));
+  // Moved elsewhere (window.fmGraph), the row follows.
+  await g(page, () => fmGraph.setSlider(fmGraph.board().sliders[0].id, 12));
+  await expect(price.locator('.ps-value')).toHaveText('12');
+  // A slider added on the board shows up beside it; nothing about the board changed but positions.
+  await page.keyboard.press('Escape');
+  await expect(view(page)).toBeHidden();
+  expect(await boardText(page)).toBe(before);
+  expect(pageErrors).toEqual([]);
+});
+
+test('🎚 Sliders: at the foot when the screen is taller than wide; Play moves the rows', async ({ page, pageErrors }) => {
+  await page.setViewportSize({ width: 760, height: 1000 });
+  await openSample(page);
+  const price = await g(page, () => fmGraph.board().sliders[0].id);
+  await g(page, (i) => { fmGraph.setSlider(i, 8); fmGraph.saveScenario('Low'); fmGraph.setSlider(i, 14); fmGraph.saveScenario('High'); fmGraph.resetAll(); }, price);
+  await page.locator('.chart-widget').first().locator('.widget-full').click();
+  await page.click('#showSlidersBtn');
+  await expect(view(page)).toHaveAttribute('data-shape', 'tall');
+  await expect(rows(page)).toHaveCount(2);
+  const foot = await box(page, '#showSliders'), body = await box(page, '#showBody');
+  expect(foot.y).toBeGreaterThanOrEqual(body.y + body.height - 1);
+  expect(foot.y + foot.height).toBeLessThanOrEqual(1001);
+  expect((await fitted(page)).inside).toBe(true);
+  // Play from the strip: the Price row moves with it, marked as playing.
+  await page.click('#showPlay');
+  await expect.poll(() => g(page, () => !!fmGraph.playing())).toBe(true);
+  await expect(rows(page).first()).toHaveClass(/playing/);
+  const seen = new Set();
+  for(let i = 0; i < 30 && seen.size < 3; i++){ seen.add(await rows(page).first().locator('.ps-value').textContent()); await page.waitForTimeout(100); }
+  expect(seen.size).toBeGreaterThan(1);
+  expect(await g(page, (i) => fmGraph.board().sliders.find(s => s.id === i).value, price)).toBe(null); // its own number untouched
+  await page.click('#showPlay');
+  await expect.poll(() => g(page, () => fmGraph.playing())).toBe(null);
+  expect(pageErrors).toEqual([]);
+});
+
+test('🎚 Sliders is kept on this device; off hides them again', async ({ page, pageErrors }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openSample(page);
+  await page.locator('.chart-widget').first().locator('.widget-full').click();
+  await page.click('#showSlidersBtn');
+  await expect(rows(page)).toHaveCount(2);
+  await page.waitForTimeout(300);
+  await page.reload();
+  await page.waitForFunction(() => !!window.fmGraph);
+  await page.click('#btnSample');
+  await page.locator('.chart-widget').first().locator('.widget-full').click();
+  await expect(page.locator('#showSlidersBtn')).toHaveAttribute('aria-pressed', 'true');
+  await expect(rows(page)).toHaveCount(2);
+  await page.click('#showSlidersBtn');
+  await expect(page.locator('#showSliders')).toBeHidden();
+  await page.waitForTimeout(300);
+  await page.reload();
+  await page.waitForFunction(() => !!window.fmGraph);
+  await page.click('#btnSample');
+  await page.locator('.chart-widget').first().locator('.widget-full').click();
+  await expect(page.locator('#showSlidersBtn')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#showSliders')).toBeHidden();
+  expect(pageErrors).toEqual([]);
+});
+
+test.describe('on a phone', () => {
+  test.use({ viewport: { width: 390, height: 844 }, screen: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  test('🎚 Sliders shows or hides the dock over the full screen (on at first, as before)', async ({ page, pageErrors }) => {
+    await openApp(page, 'fmGraph');
+    await page.waitForFunction(() => !!window.fmGraph);
+    await page.click('#btnSample');
+    await expect(page.locator('#sliderDock')).toBeVisible();
+    await page.locator('.chart-widget').first().locator('.widget-full').dispatchEvent('click');
+    await expect(view(page)).toBeVisible();
+    await expect(page.locator('#showSlidersBtn')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#sliderDock')).toBeVisible();
+    await expect(page.locator('#showSliders')).toBeHidden(); // the dock is the sliders here
+    await page.locator('#showSlidersBtn').tap();
+    await expect(page.locator('#showSlidersBtn')).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.locator('#sliderDock')).toBeHidden();
+    // Closed, the dock is back on the board.
+    await page.locator('#showClose').tap();
+    await expect(view(page)).toBeHidden();
+    await expect(page.locator('#sliderDock')).toBeVisible();
+    expect(pageErrors).toEqual([]);
+  });
+});

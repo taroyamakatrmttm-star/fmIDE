@@ -46,9 +46,11 @@ setCommonScale
 setOwnSliders
 setScale
 setSlider
+setSliderLook
 setWide
 showBoard
 showScenario
+sliderLook
 startTutorial
 stepPlay
 stopPlay

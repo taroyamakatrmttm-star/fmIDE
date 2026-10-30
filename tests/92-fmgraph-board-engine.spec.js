@@ -20,11 +20,14 @@ const EVERY_WIDGET = fixture('viewer', 'every-widget.fmide');
 const FMGRAPH_JS = path.join(ROOT, 'src', 'fmgraph', 'js');
 // The board engine: fmGraph's fragments the showcase viewer takes in (src/viewer/js/01-core.js).
 const ENGINE = ['01b-numbers.js', '02-model.js', '03-calc.js', '04-board.js', '04a-board-file.js', '04b-charts.js', '04d-scale.js',
-  '04e-colours.js', '04f-free.js', '05-render.js', '05b-chart-render.js', '05d-explore.js', '05e-compare.js', '05f-scenarios.js',
-  '05k-shared-period.js', '05m-play.js', '05n-free-chart.js', '06a-sample.js'];
+  '04e-colours.js', '04f-free.js', '05-render.js', '05b-chart-render.js', '05d-explore.js', '05e-compare.js', '05f-scenarios.js', '05gs-show.js',
+  '05k-shared-period.js', '05m-play.js', '05n-free-chart.js', '06a-sample.js']; // 05gs: the full screen (changed on purpose, 30 October 2026)
 // The names the engine calls that each page defines for itself (.claude/rules/fmgraph.md).
 const PAGE_INTERFACE = ['$', 'make', 'notify', 'isPhone', 'renderBoard', 'updateValues', 'scheduleUpdate', 'renderCompareBar',
-  'paintMark', 'paintPlay', 'renderPlayBar', 'rectKeySwatch', 'chartKeySwatch', 'freeGridHook'];
+  'paintMark', 'paintPlay', 'renderPlayBar', 'rectKeySwatch', 'chartKeySwatch', 'freeGridHook',
+  // The full screen's (05gs-show.js; changed on purpose, 30 October 2026): the Play ends, Help, the
+  // strip's own buttons, a slider's short row, keeping 🎚 Sliders, and Esc taken by what is open.
+  'renderPlayRow', 'help', 'showStripExtras', 'showSliderRow', 'rememberShowSliders', 'showEscapeBlocked'];
 
 // Each fragment's top-level names, and the names a fragment uses (outside comments and strings,
 // not after a dot), less those it declares itself anywhere (a local `const back`).

@@ -96,7 +96,7 @@ function showView(name, opts){
 function renderAbout(){
   const sc = state.showcase;
   const title = sc && sc.title ? sc.title : state.model.name;
-  $('showTitle').textContent = title;
+  $('showcaseTitle').textContent = title;
   document.title = title + ' — fmShowcase';
   const about = $('about');
   $('showDescription').textContent = sc ? sc.description : '';

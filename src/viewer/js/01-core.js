@@ -54,6 +54,7 @@
 // build:include fmgraph/js/05d-explore.js
 // build:include fmgraph/js/05e-compare.js
 // build:include fmgraph/js/05f-scenarios.js
+// build:include fmgraph/js/05gs-show.js
 // build:include fmgraph/js/05k-shared-period.js
 // build:include fmgraph/js/05m-play.js
 // build:include fmgraph/js/05n-free-chart.js

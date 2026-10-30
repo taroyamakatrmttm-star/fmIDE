@@ -641,3 +641,57 @@ test('a slider row takes its rectangle\'s colour: the filled bar, a pale one dar
   expect(errors).toEqual([]);
   await context.close();
 });
+
+// The full screen (the owner's request of 30 October 2026; fmGraph's 05gs-show.js, taken in with
+// the engine): ⛶ on a bar or chart, 🎚 Sliders beside it moving the Board's own; read-only still.
+test('⛶ full screen: a chart on the whole screen, 🎚 Sliders beside it moving the Board\'s; nothing to edit; kept on this device', async ({ page, pageErrors }) => {
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await openBoard(page);
+  await expect(page.locator('#barList > .widget .widget-full')).toHaveCount(10);
+  const chart = page.locator('#barList > .chart-widget').first();
+  const title = await chart.locator('.widget-title').textContent();
+  await chart.locator('.widget-full').click();
+  await expect(page.locator('#showView')).toBeVisible();
+  await expect(page.locator('#showTitle')).toHaveText(title);
+  await expect(page.locator('#showBody svg.bar-chart')).toHaveCount(1);
+  await expect(page.locator('.show-chip')).toHaveCount(10);
+  // 🎚 Sliders: off at first on a computer; on, the Board's four, one short row each, on the right.
+  await expect(page.locator('#showSlidersBtn')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#showSliders')).toBeHidden();
+  await page.click('#showSlidersBtn');
+  const rows = page.locator('#showSliders .slider-widget');
+  await expect(rows.locator('.slider-name')).toHaveText(['Price', 'Volume', 'Unit cost', 'Overheads']);
+  for(const r of await rows.all()) expect((await r.boundingBox()).height).toBeLessThanOrEqual(44);
+  const side = await page.locator('#showSliders').boundingBox(), body = await page.locator('#showBody').boundingBox();
+  expect(side.x).toBeGreaterThanOrEqual(body.x + body.width - 1);
+  // Moving one moves the chart shown and the Board's slider, kept in the author's range.
+  const drawing = () => page.locator('#showBody svg.bar-chart').innerHTML();
+  const was = await drawing();
+  await rows.first().locator('.ps-track').focus();
+  for(let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight');
+  await expect.poll(drawing).not.toBe(was);
+  const price = (await V(page, () => fmViewer.board())).sliders[0];
+  expect(price.value).not.toBe(null);
+  expect(price.value).toBeLessThanOrEqual(price.max);
+  await expect(rows.first().locator('.ps-value')).toHaveText(await page.locator('#sliderList .slider-widget').first().locator('.ps-value').textContent());
+  await V(page, () => fmViewer.setSlider('Price', fmViewer.board().sliders[0].min));
+  await expect(rows.first().locator('.ps-value')).toHaveText(await page.locator('#sliderList .slider-widget').first().locator('.ps-value').textContent());
+  // Nothing to edit in it either, and the model unchanged.
+  for(const sel of ['input[type=color]', '.drag-handle', '.widget-remove', '.chart-edit', 'select', '.slider-fold', '[contenteditable]', 'textarea'])
+    expect(await page.locator('#showView ' + sel).count(), sel).toBe(0);
+  expect(await V(page, () => fmViewer.modelText() === fmViewer.modelTextAtLoad())).toBe(true);
+  // Esc goes back to the Board; ? opens its help.
+  await page.click('#showHelp');
+  await expect(page.locator('#helpPanel')).toContainText('Full screen');
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#showView')).toBeHidden();
+  // Kept on this device: shown at once next time.
+  await page.waitForTimeout(300);
+  await page.reload();
+  await openBoard(page);
+  await page.locator('#barList > .bar-widget').first().locator('.widget-full').click();
+  await expect(page.locator('#showSlidersBtn')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#showSliders .slider-widget')).toHaveCount(4);
+  expect(pageErrors).toEqual([]);
+});

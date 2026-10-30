@@ -265,6 +265,7 @@ function minimumSlider(s){
 }
 // The short rows' positions and words, after every redraw (updateValues) and while Play runs.
 function updateLines(playValue){
+  if(!playValue && playNow()) return; // Play shows its own positions (paintPlay)
   lineControls.forEach((it, el) => {
     if(!el.isConnected){ lineControls.delete(el); return; }
     const v = playValue ? playValue(it.s) : sliderShown(it.s);
@@ -272,6 +273,7 @@ function updateLines(playValue){
     el.querySelector('.slider-base').textContent = sliderBaseText(it.s);
     el.title = sliderBaseText(it.s);
     el.classList.toggle('moved', it.s.value !== null);
+    if(!playValue) el.classList.remove('playing');
   });
 }
 // ---- shared slider positions (03-calc.js) ----

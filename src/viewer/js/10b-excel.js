@@ -85,7 +85,7 @@ async function excelBytesNow(){
   const r = await patchXlsx(bytes, plan.writes);
   if(r.error) throw new Error('The workbook could not be written: ' + r.error);
   const file = showcaseState() && showcaseState().excel ? showcaseState().excel.file : '';
-  return { fileName: showcaseDownloadName(file || ($('showTitle').textContent || 'Model') + '.xlsx', plan.suffix), bytes: r.bytes, line: plan.line };
+  return { fileName: showcaseDownloadName(file || ($('showcaseTitle').textContent || 'Model') + '.xlsx', plan.suffix), bytes: r.bytes, line: plan.line };
 }
 // The showcase shown (its excel.file names the workbook).
 function showcaseState(){ return state.showcase || null; }

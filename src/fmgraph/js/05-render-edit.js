@@ -345,6 +345,11 @@ function updateValues(){
     const el = document.querySelector('.slider-widget[data-id="' + s.id + '"]');
     if(!el) return;
     el.querySelector('.slider-base').textContent = sliderBaseText(s);
+    // Moved elsewhere (beside the full screen, a short row): the slider and its box follow, unless
+    // being typed in or dragged, or Play is showing its own positions (paintPlay).
+    if(playNow()) return;
+    const v = String(sliderShown(s));
+    el.querySelectorAll('input[type="range"], input.slider-value').forEach(i => { if(document.activeElement !== i && i.value !== v) i.value = v; });
   });
   updateLines(); // the short rows (05c-arrange.js)
   drawShow(results); // those on the whole screen (05h-phone-show.js)

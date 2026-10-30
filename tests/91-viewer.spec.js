@@ -335,7 +335,7 @@ test('hostile files are shown as text: no markup, no colour or font from them, n
   await openFiles(page, [fixture('viewer', 'hostile-model.json'), fixture('viewer', 'hostile-showcase.json')]);
   const s = await V(page, () => fmViewer.state());
   expect(s.canvases).toEqual(['c1']);
-  await expect(page.locator('#showTitle')).toContainText('<img src=x onerror=alert(1)>');
+  await expect(page.locator('#showcaseTitle')).toContainText('<img src=x onerror=alert(1)>');
   await expect(page.locator('#showByline')).toHaveText('By <a href=javascript:alert(1)>me</a>');
   await expect(page.locator('#canvasTabs')).toBeHidden(); // one canvas: no tabs
   await expect(page.locator('#notices .note.warn').first()).toContainText('The showcase:');
@@ -599,7 +599,7 @@ test('a hostile made viewer chosen as a file runs nothing and fetches nothing: i
   fs.writeFileSync(file, html);
   await chooseAndWait(page, file);
   expect(await V(page, () => window.__ran)).toBeUndefined();
-  await expect(page.locator('#showTitle')).toContainText('<img src=x onerror=alert(1)>');
+  await expect(page.locator('#showcaseTitle')).toContainText('<img src=x onerror=alert(1)>');
   await expect(page.locator('#showByline')).toHaveText('By <a href=javascript:alert(1)>me</a>');
   await expect(page.locator('#world .cv-node[data-id="n1"] text.name').first()).toContainText('<img src=x');
   expect(await page.locator('img, iframe, a, object, embed, link, meta[http-equiv]').count()).toBe(0);

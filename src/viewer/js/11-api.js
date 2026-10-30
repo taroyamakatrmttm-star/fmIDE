@@ -19,7 +19,7 @@ const answerOf = (r) => r.error ? { error: r.error } : r.value;
 
 window.fmViewer = {
   state(){
-    return { loaded: !!state.vm, title: $('showTitle').textContent, canvases: state.shown ? state.shown.canvases.slice() : [],
+    return { loaded: !!state.vm, title: $('showcaseTitle').textContent, canvases: state.shown ? state.shown.canvases.slice() : [],
       canvas: state.canvasId, period: state.period, periods: state.shown ? state.shown.periods.slice() : [],
       zoom: state.vm ? currentView().zoom : null, card: state.card ? Object.assign({}, state.card) : null,
       mark: !$('mark').classList.contains('hidden'), view: state.viewName, hasBoard: boardsShown, loads: state.loads };
@@ -123,6 +123,8 @@ wireFiles();
 wireStage();
 wireCard();
 wireBoard();
+wireShow(); // the full screen (05gs-show.js)
+restoreShowSliders();
 wireHelp();
 wireExcel();
 $('tabBoard').addEventListener('click', () => showView('board'));

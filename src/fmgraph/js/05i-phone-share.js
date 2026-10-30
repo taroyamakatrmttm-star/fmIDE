@@ -117,7 +117,7 @@ async function drawPicture(title, widgets){
   return new Promise((resolve, reject) => canvas.toBlob(b => b ? resolve(b) : reject(new Error('The picture could not be made.')), 'image/png'));
 }
 
-const widgetName = (w) => w.kind === 'chart' ? (w.title || ({ columns: 'Columns', lines: 'Lines', flow: 'Waterfall', free: 'Free', scenarios: 'Scenario waterfall', tornado: 'Tornado', spider: 'Spider' }[w.layout] || 'Chart')) : model.byKey.get(w.key).name;
+// widgetName(w): the board engine's (05gs-show.js).
 
 async function sharePicture(title, widgets, fileName){
   try{
