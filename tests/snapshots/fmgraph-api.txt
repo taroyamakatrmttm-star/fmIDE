@@ -11,6 +11,7 @@ colours
 commonScale
 compareWith
 comparing
+copyTo
 deleteScenario
 duplicateBoard
 exportBoards
@@ -23,6 +24,7 @@ modelValue
 move
 movePiece
 moveScenario
+moveTo
 movers
 pinA
 play

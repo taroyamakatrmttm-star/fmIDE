@@ -77,6 +77,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Price" class="colour-pick slider-colour" title="Colour of Price" type="color" .value="#0f766e"
               button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
               span class="periods-chooser"
@@ -129,6 +130,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Volume" class="colour-pick slider-colour" title="Colour of Volume" type="color" .value="#2563eb"
               button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
               span class="periods-chooser"
@@ -182,6 +184,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Unit cost" class="colour-pick slider-colour" title="Colour of Unit cost" type="color" .value="#0f766e"
               button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
               span class="periods-chooser"
@@ -234,6 +237,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Overheads" class="colour-pick slider-colour" title="Colour of Overheads" type="color" .value="#65a30d"
               button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
               span class="periods-chooser"
@@ -400,6 +404,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this bar" aria-pressed="false" class="widget-trace" title="Trace: what reaches this bar" type="button" | 🔍
               button aria-label="Full screen: show this bar on the whole screen" class="widget-full" title="Full screen: show this bar on the whole screen" type="button" | ⛶
               button aria-label="GIF of this bar: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this bar: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this bar" class="widget-remove" title="Remove this bar" type="button" | ×
             div class="widget-row bar-settings"
               span class="periods-chooser"
@@ -482,6 +487,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this bar" aria-pressed="false" class="widget-trace" title="Trace: what reaches this bar" type="button" | 🔍
               button aria-label="Full screen: show this bar on the whole screen" class="widget-full" title="Full screen: show this bar on the whole screen" type="button" | ⛶
               button aria-label="GIF of this bar: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this bar: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this bar" class="widget-remove" title="Remove this bar" type="button" | ×
             div class="widget-row bar-settings"
               span class="periods-chooser"
@@ -559,6 +565,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this bar" aria-pressed="false" class="widget-trace" title="Trace: what reaches this bar" type="button" | 🔍
               button aria-label="Full screen: show this bar on the whole screen" class="widget-full" title="Full screen: show this bar on the whole screen" type="button" | ⛶
               button aria-label="GIF of this bar: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this bar: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this bar" class="widget-remove" title="Remove this bar" type="button" | ×
             div class="widget-row bar-settings"
               span class="periods-chooser"
@@ -630,6 +637,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               svg aria-label="Balance sheet" class="bar-chart" role="img" viewBox="0 0 560 242"
@@ -879,6 +887,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               svg aria-label="Profit, year 1, Year 1" class="bar-chart flow-chart" role="img" viewBox="0 0 560 254"
@@ -1115,6 +1124,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               svg aria-label="Revenue and costs" class="bar-chart lines-chart" data-layout="lines" role="img" viewBox="0 0 560 224"
@@ -1298,6 +1308,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               svg aria-label="Where the profit goes, Year 2" class="bar-chart free-chart free-grid" data-layout="free" role="img" viewBox="0 0 560 258"
@@ -1561,6 +1572,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               svg aria-label="What moves profit: what moves Profit, Year 3" class="bar-chart sens-chart tornado-chart" data-layout="tornado" role="img" viewBox="0 0 560 128"
@@ -1730,6 +1742,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               svg aria-label="Profit, input by input: what moves Profit, Year 3" class="bar-chart sens-chart spider-chart" data-layout="spider" role="img" viewBox="0 0 560 230"
@@ -1910,6 +1923,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               div class="scenario-flows"
@@ -2215,6 +2229,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Price" class="colour-pick slider-colour" title="Colour of Price" type="color" .value="#0f766e"
               button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
               span class="periods-chooser"
@@ -2267,6 +2282,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Volume" class="colour-pick slider-colour" title="Colour of Volume" type="color" .value="#2563eb"
               button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
               span class="periods-chooser"
@@ -2320,6 +2336,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Unit cost" class="colour-pick slider-colour" title="Colour of Unit cost" type="color" .value="#0f766e"
               button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
               span class="periods-chooser"
@@ -2372,6 +2389,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Overheads" class="colour-pick slider-colour" title="Colour of Overheads" type="color" .value="#65a30d"
               button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
               span class="periods-chooser"
@@ -2586,6 +2604,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this bar" aria-pressed="false" class="widget-trace" title="Trace: what reaches this bar" type="button" | 🔍
               button aria-label="Full screen: show this bar on the whole screen" class="widget-full" title="Full screen: show this bar on the whole screen" type="button" | ⛶
               button aria-label="GIF of this bar: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this bar: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this bar" class="widget-remove" title="Remove this bar" type="button" | ×
             div class="widget-row bar-settings"
               span class="periods-chooser"
@@ -2676,6 +2695,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this bar" aria-pressed="false" class="widget-trace" title="Trace: what reaches this bar" type="button" | 🔍
               button aria-label="Full screen: show this bar on the whole screen" class="widget-full" title="Full screen: show this bar on the whole screen" type="button" | ⛶
               button aria-label="GIF of this bar: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this bar: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this bar" class="widget-remove" title="Remove this bar" type="button" | ×
             div class="widget-row bar-settings"
               span class="periods-chooser"
@@ -2759,6 +2779,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this bar" aria-pressed="false" class="widget-trace" title="Trace: what reaches this bar" type="button" | 🔍
               button aria-label="Full screen: show this bar on the whole screen" class="widget-full" title="Full screen: show this bar on the whole screen" type="button" | ⛶
               button aria-label="GIF of this bar: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this bar: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this bar" class="widget-remove" title="Remove this bar" type="button" | ×
             div class="widget-row bar-settings"
               span class="periods-chooser"
@@ -2830,6 +2851,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               svg aria-label="Balance sheet" class="bar-chart" role="img" viewBox="0 0 560 242"
@@ -3095,6 +3117,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               svg aria-label="Profit, year 1, Year 1" class="bar-chart flow-chart" role="img" viewBox="0 0 560 254"
@@ -3340,6 +3363,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               svg aria-label="Revenue and costs" class="bar-chart lines-chart" data-layout="lines" role="img" viewBox="0 0 560 224"
@@ -3525,6 +3549,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               svg aria-label="Where the profit goes, Year 2" class="bar-chart free-chart free-grid" data-layout="free" role="img" viewBox="0 0 560 258"
@@ -3794,6 +3819,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               svg aria-label="What moves profit: what moves Profit, Year 3" class="bar-chart sens-chart tornado-chart" data-layout="tornado" role="img" viewBox="0 0 560 128"
@@ -3963,6 +3989,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               svg aria-label="Profit, input by input: what moves Profit, Year 3" class="bar-chart sens-chart spider-chart" data-layout="spider" role="img" viewBox="0 0 560 230"
@@ -4143,6 +4170,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               div class="scenario-flows"
@@ -4453,6 +4481,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Price" class="colour-pick slider-colour" title="Colour of Price" type="color" .value="#0f766e"
               button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
               span class="periods-chooser"
@@ -4505,6 +4534,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Volume" class="colour-pick slider-colour" title="Colour of Volume" type="color" .value="#2563eb"
               button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
               span class="periods-chooser"
@@ -4558,6 +4588,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Unit cost" class="colour-pick slider-colour" title="Colour of Unit cost" type="color" .value="#0f766e"
               button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
               span class="periods-chooser"
@@ -4610,6 +4641,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Overheads" class="colour-pick slider-colour" title="Colour of Overheads" type="color" .value="#65a30d"
               button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
               span class="periods-chooser"
@@ -4818,6 +4850,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this bar" aria-pressed="true" class="widget-trace" title="Trace: what reaches this bar" type="button" | 🔍
               button aria-label="Full screen: show this bar on the whole screen" class="widget-full" title="Full screen: show this bar on the whole screen" type="button" | ⛶
               button aria-label="GIF of this bar: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this bar: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this bar" class="widget-remove" title="Remove this bar" type="button" | ×
             div class="trace-note" role="status"
               div class="trace-head"
@@ -4917,6 +4950,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this bar" aria-pressed="false" class="widget-trace" title="Trace: what reaches this bar" type="button" | 🔍
               button aria-label="Full screen: show this bar on the whole screen" class="widget-full" title="Full screen: show this bar on the whole screen" type="button" | ⛶
               button aria-label="GIF of this bar: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this bar: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this bar" class="widget-remove" title="Remove this bar" type="button" | ×
             div class="widget-row bar-settings"
               span class="periods-chooser"
@@ -5000,6 +5034,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this bar" aria-pressed="false" class="widget-trace" title="Trace: what reaches this bar" type="button" | 🔍
               button aria-label="Full screen: show this bar on the whole screen" class="widget-full" title="Full screen: show this bar on the whole screen" type="button" | ⛶
               button aria-label="GIF of this bar: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this bar: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this bar" class="widget-remove" title="Remove this bar" type="button" | ×
             div class="widget-row bar-settings"
               span class="periods-chooser"
@@ -5071,6 +5106,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               svg aria-label="Balance sheet" class="bar-chart" role="img" viewBox="0 0 560 242"
@@ -5336,6 +5372,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               svg aria-label="Profit, year 1, Year 1" class="bar-chart flow-chart" role="img" viewBox="0 0 560 254"
@@ -5580,6 +5617,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               svg aria-label="Revenue and costs" class="bar-chart lines-chart" data-layout="lines" role="img" viewBox="0 0 560 224"
@@ -5764,6 +5802,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               svg aria-label="Where the profit goes, Year 2" class="bar-chart free-chart free-grid" data-layout="free" role="img" viewBox="0 0 560 258"
@@ -6032,6 +6071,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               svg aria-label="What moves profit: what moves Profit, Year 3" class="bar-chart sens-chart tornado-chart" data-layout="tornado" role="img" viewBox="0 0 560 128"
@@ -6202,6 +6242,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               svg aria-label="Profit, input by input: what moves Profit, Year 3" class="bar-chart sens-chart spider-chart" data-layout="spider" role="img" viewBox="0 0 560 230"
@@ -6382,6 +6423,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               div class="scenario-flows"
@@ -6692,6 +6734,7 @@ body class="playing" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Price" class="colour-pick slider-colour" title="Colour of Price" type="color" .value="#0f766e"
               button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
               span class="periods-chooser"
@@ -6744,6 +6787,7 @@ body class="playing" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Volume" class="colour-pick slider-colour" title="Colour of Volume" type="color" .value="#2563eb"
               button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
               span class="periods-chooser"
@@ -6797,6 +6841,7 @@ body class="playing" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Unit cost" class="colour-pick slider-colour" title="Colour of Unit cost" type="color" .value="#0f766e"
               button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
               span class="periods-chooser"
@@ -6849,6 +6894,7 @@ body class="playing" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Overheads" class="colour-pick slider-colour" title="Colour of Overheads" type="color" .value="#65a30d"
               button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
               span class="periods-chooser"
@@ -7015,6 +7061,7 @@ body class="playing" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h
               button aria-label="Trace: what reaches this bar" aria-pressed="false" class="widget-trace" title="Trace: what reaches this bar" type="button" | 🔍
               button aria-label="Full screen: show this bar on the whole screen" class="widget-full" title="Full screen: show this bar on the whole screen" type="button" | ⛶
               button aria-label="GIF of this bar: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this bar: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this bar" class="widget-remove" title="Remove this bar" type="button" | ×
             div class="widget-row bar-settings"
               span class="periods-chooser"
@@ -7105,6 +7152,7 @@ body class="playing" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h
               button aria-label="Trace: what reaches this bar" aria-pressed="false" class="widget-trace" title="Trace: what reaches this bar" type="button" | 🔍
               button aria-label="Full screen: show this bar on the whole screen" class="widget-full" title="Full screen: show this bar on the whole screen" type="button" | ⛶
               button aria-label="GIF of this bar: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this bar: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this bar" class="widget-remove" title="Remove this bar" type="button" | ×
             div class="widget-row bar-settings"
               span class="periods-chooser"
@@ -7188,6 +7236,7 @@ body class="playing" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h
               button aria-label="Trace: what reaches this bar" aria-pressed="false" class="widget-trace" title="Trace: what reaches this bar" type="button" | 🔍
               button aria-label="Full screen: show this bar on the whole screen" class="widget-full" title="Full screen: show this bar on the whole screen" type="button" | ⛶
               button aria-label="GIF of this bar: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this bar: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this bar" class="widget-remove" title="Remove this bar" type="button" | ×
             div class="widget-row bar-settings"
               span class="periods-chooser"
@@ -7259,6 +7308,7 @@ body class="playing" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               svg aria-label="Balance sheet" class="bar-chart" role="img" viewBox="0 0 560 242"
@@ -7524,6 +7574,7 @@ body class="playing" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               svg aria-label="Profit, year 1, Year 1" class="bar-chart flow-chart" role="img" viewBox="0 0 560 254"
@@ -7769,6 +7820,7 @@ body class="playing" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               svg aria-label="Revenue and costs" class="bar-chart lines-chart" data-layout="lines" role="img" viewBox="0 0 560 224"
@@ -7954,6 +8006,7 @@ body class="playing" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               svg aria-label="Where the profit goes, Year 2" class="bar-chart free-chart free-grid" data-layout="free" role="img" viewBox="0 0 560 258"
@@ -8223,6 +8276,7 @@ body class="playing" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               svg aria-label="What moves profit: what moves Profit, Year 3" class="bar-chart sens-chart tornado-chart" data-layout="tornado" role="img" viewBox="0 0 560 128"
@@ -8392,6 +8446,7 @@ body class="playing" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               svg aria-label="Profit, input by input: what moves Profit, Year 3" class="bar-chart sens-chart spider-chart" data-layout="spider" role="img" viewBox="0 0 560 230"
@@ -8572,6 +8627,7 @@ body class="playing" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h
               button aria-label="Trace: what reaches this chart" aria-pressed="false" class="widget-trace" title="Trace: what reaches this chart" type="button" | 🔍
               button aria-label="Full screen: show this chart on the whole screen" class="widget-full" title="Full screen: show this chart on the whole screen" type="button" | ⛶
               button aria-label="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this chart: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this chart" class="widget-remove" title="Remove this chart" type="button" | ×
             div class="bar-chart-host"
               div class="scenario-flows"
@@ -8877,6 +8933,7 @@ body class="" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
                   option value="cBS\u0000debt" | Debt
               input aria-label="Colour of Overheads" class="colour-pick slider-colour" title="Colour of Overheads" type="color" .value="#65a30d"
               button aria-label="Folded" aria-pressed="false" class="slider-fold" title="Show only the slider and its number" type="button" | ▾
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this slider" class="widget-remove" title="Remove this slider" type="button" | ×
             div class="widget-row slider-more"
               span class="periods-chooser"
@@ -9043,6 +9100,7 @@ body class="" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
               button aria-label="Trace: what reaches this bar" aria-pressed="false" class="widget-trace" title="Trace: what reaches this bar" type="button" | 🔍
               button aria-label="Full screen: show this bar on the whole screen" class="widget-full" title="Full screen: show this bar on the whole screen" type="button" | ⛶
               button aria-label="GIF of this bar: make an animated GIF of it playing between the ends chosen under Scenarios" class="widget-gif" title="GIF of this bar: make an animated GIF of it playing between the ends chosen under Scenarios" type="button" | 🎞
+              button aria-haspopup="menu" aria-label="Copy or move to another board" class="widget-send" title="Copy or move to another board" type="button" | ⇄
               button aria-label="Remove this bar" class="widget-remove" title="Remove this bar" type="button" | ×
             div class="widget-row bar-settings"
               span class="periods-chooser"

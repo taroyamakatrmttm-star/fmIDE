@@ -104,6 +104,78 @@ function removeButton(id, what){
   return x;
 }
 
+// ⇄: copy or move this widget to another board, or to a new one (04-board-edit.js). Desk only.
+function sendButton(id){
+  const b = make('button', 'widget-send', '⇄');
+  b.type = 'button';
+  b.title = 'Copy or move to another board';
+  b.setAttribute('aria-label', 'Copy or move to another board');
+  b.setAttribute('aria-haspopup', 'menu');
+  b.addEventListener('click', () => { if(sendMenu && sendMenu.dataset.id === id) closeSendMenu(); else openSendMenu(id, b); });
+  return b;
+}
+let sendMenu = null;
+function closeSendMenu(){
+  if(!sendMenu) return;
+  sendMenu.remove();
+  if(sendMenu.anchor) sendMenu.anchor.setAttribute('aria-expanded', 'false');
+  sendMenu = null;
+  document.removeEventListener('pointerdown', sendMenuOutside, true);
+}
+function sendMenuOutside(ev){ if(sendMenu && !sendMenu.contains(ev.target) && !ev.target.closest('.widget-send')) closeSendMenu(); }
+function openSendMenu(id, anchor){
+  closeSendMenu();
+  const from = boardOfWidget(id);
+  if(!from) return;
+  const menu = make('div', 'send-menu');
+  menu.setAttribute('role', 'menu');
+  menu.dataset.id = id;
+  const item = (text, fn, off) => {
+    const x = make('button', 'send-item', text);
+    x.type = 'button';
+    x.setAttribute('role', 'menuitem');
+    x.disabled = !!off;
+    x.addEventListener('click', () => { closeSendMenu(); anchor.focus(); fn(); });
+    menu.appendChild(x);
+  };
+  const full = boards.length >= BOARDS_LIMIT;
+  menu.appendChild(make('div', 'send-head', 'Copy to'));
+  boards.forEach(b => item(b === from ? b.name + ' (this board)' : b.name, () => sendWidget(id, b, false)));
+  item('New board', () => sendWidget(id, 'new', false), full);
+  menu.appendChild(make('div', 'send-head', 'Move to'));
+  boards.filter(b => b !== from).forEach(b => item(b.name, () => sendWidget(id, b, true)));
+  item('New board', () => sendWidget(id, 'new', true), full);
+  menu.addEventListener('keydown', (ev) => {
+    const items = [...menu.querySelectorAll('.send-item:not(:disabled)')];
+    const i = items.indexOf(document.activeElement);
+    if(ev.key === 'Escape'){ ev.preventDefault(); closeSendMenu(); anchor.focus(); }
+    else if(ev.key === 'ArrowDown' || ev.key === 'ArrowUp'){
+      ev.preventDefault();
+      const next = items[(i + (ev.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length];
+      if(next) next.focus();
+    }
+    else if(ev.key === 'Tab') closeSendMenu();
+  });
+  document.body.appendChild(menu);
+  const r = anchor.getBoundingClientRect();
+  menu.style.left = (window.scrollX + Math.max(8, Math.min(r.right - menu.offsetWidth, document.documentElement.clientWidth - menu.offsetWidth - 8))) + 'px';
+  menu.style.top = (window.scrollY + r.bottom + 4) + 'px';
+  sendMenu = menu;
+  menu.anchor = anchor;
+  anchor.setAttribute('aria-expanded', 'true');
+  document.addEventListener('pointerdown', sendMenuOutside, true);
+  const first = menu.querySelector('.send-item:not(:disabled)');
+  if(first) first.focus();
+}
+// The board shown stays shown; a note says where it went, or why it couldn't.
+function sendWidget(id, to, moving){
+  const r = moving ? moveWidgetTo(id, to) : copyWidgetTo(id, to);
+  if(r.problem){ notify(r.problem, 'err', 'send'); return null; }
+  notify((moving ? 'Moved to "' : 'Copied to "') + r.board.name + '".', 'ok', 'send');
+  renderAll();
+  return r;
+}
+
 function renderBoard(){
   syncSharedPeriods(); // what follows the shared period takes it (05k-shared-period.js)
   syncCommonScale(); // and the common scale (04d-scale.js)
@@ -129,9 +201,10 @@ function renderBoard(){
     head.insertBefore(traceButton(w), head.querySelector('.widget-remove')); // Trace (05d-explore.js)
     head.insertBefore(fullScreenButton(w), head.querySelector('.widget-remove')); // ⛶ (05h-phone-show.js)
     head.insertBefore(gifButton(w), head.querySelector('.widget-remove')); // 🎞 a GIF of the play (05o-play-gif.js)
+    head.insertBefore(sendButton(w.id), head.querySelector('.widget-remove')); // ⇄ to another board
     bars.appendChild(el);
   });
-  board.sliders.forEach(s => { const el = sliders.querySelector('.slider-widget[data-id="' + s.id + '"]'); if(el) el.querySelector('.widget-head').prepend(arrangeControls(s, el)); });
+  board.sliders.forEach(s => { const el = sliders.querySelector('.slider-widget[data-id="' + s.id + '"]'); if(el){ const head = el.querySelector('.widget-head'); head.prepend(arrangeControls(s, el)); head.insertBefore(sendButton(s.id), head.querySelector('.widget-remove')); } });
   $('noBars').classList.toggle('hidden', board.items.length > 0);
   $('noSliders').classList.toggle('hidden', board.sliders.length > 0);
   syncFoldAll(); // (05c-arrange.js)

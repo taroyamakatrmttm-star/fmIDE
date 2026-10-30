@@ -8,6 +8,18 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'copy-move-widgets', date: '2026-10-30', title: 'Copy or move a slider, bar or chart to another board',
+    summary: '⇄ on a bar\'s, chart\'s or slider\'s header copies it, or moves it, to another board or to a new one.',
+    what: [
+      'Copy to puts a copy on the board you choose, this one included (the copy goes just after the original). Move to takes it off this board and puts it on the other.',
+      'The copy keeps everything: its periods (or following the shared period), wide or narrow, its scale, all of a chart\'s settings, and a slider\'s range, step and folding. Colours belong to the rectangle, so they are the same everywhere already.',
+      'A slider on a board that shares slider positions stands where the same slider stands on the other boards; on a board keeping its own positions, it stands where it stood when copied.',
+      'You stay on the board you were looking at, and a note says where it went. Each copy or move is one Undo.',
+    ],
+    why: 'Building a second board out of pieces of the first was only possible by duplicating the whole board and deleting what wasn\'t wanted.',
+    how: ['Press ⇄ on the header of a bar, chart or slider.', 'Under Copy to or Move to, choose a board, or New board.'],
+    notes: ['A board that already has the same slider (the same rectangle, periods and kind) doesn\'t get a second one: a note says so.', 'Not on a phone, where boards are not edited.', 'The board file is unchanged.'],
+    see: ['boards'] },
   { id: 'slider-colours', date: '2026-10-30', title: 'Each slider in its rectangle\'s colour',
     summary: 'A slider\'s grip and the filled part of its bar now take the colour of its rectangle, the same as the box beside its name and the stripe on its left edge.',
     what: [
