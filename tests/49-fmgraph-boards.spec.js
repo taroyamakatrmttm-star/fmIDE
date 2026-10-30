@@ -829,3 +829,145 @@ test('a slider takes its rectangle\'s colour: the grip and the filled bar, a pal
   await expect.poll(accent).toBe('rgb(15, 118, 110)');
   expect(pageErrors).toEqual([]);
 });
+
+// ---- copying or moving a widget to another board (⇄, 04-board-edit.js; the owner's request of 30 October 2026) ----
+// Every board's file form; a Free chart's piece ids (made anew whenever a chart is read) as places in its list.
+const allBoards = (page) => g(page, () => fmGraph.exportBoards(true).boards.map(b => Object.assign(b, { items: b.items.map(w => {
+  if(!w.pieces) return w;
+  const at = (id) => w.pieces.findIndex(p => p.id === id);
+  return Object.assign(w, { pieces: w.pieces.map(({ id, ...p }) => Object.assign(p, p.sits && p.sits.of ? { sits: Object.assign({}, p.sits, { of: at(p.sits.of) }) } : {}, p.check ? { check: at(p.check) } : {})) });
+}) })));
+// A window.fmGraph call's error, in words ('Error: …'), or what it gave.
+const apiError = (page, call, args) => page.evaluate(([c, a]) => { try{ return fmGraph[c](...a); }catch(e){ return 'Error: ' + e.message; } }, [call, args]);
+
+test('⇄ copies or moves a bar, a chart of every kind or a slider to another board, with all it carries; one undo step each', async ({ page, pageErrors }) => {
+  await openSample(page);
+  // Charts of the other kinds, and settings of every sort to carry.
+  await g(page, () => {
+    fmGraph.addChart({ layout: 'lines', title: 'Lines', periods: [1, 2], lines: ['Revenue', 'Profit'] });
+    fmGraph.addChart({ layout: 'tornado', title: 'What matters', output: 'Profit', period: 1 });
+    fmGraph.addChart({ layout: 'free', title: 'Free', period: 1, pieces: [{ name: 'Rev', column: 0, parts: ['Revenue'] }, { name: 'Cost', column: 0, sits: { on: 'top', of: 0 }, parts: ['Cost of sales'] }] });
+    const b = fmGraph.board();
+    fmGraph.setScale(b.items[0].id, { min: 0, max: 900 });
+    fmGraph.setWide(b.items[2].id, true);
+  });
+  await page.locator('.slider-widget').first().locator('.slider-fold').click();
+  await g(page, () => { fmGraph.addBoard('Other'); fmGraph.showBoard(0); });
+  const before = await allBoards(page);
+  const ids = await g(page, () => { const b = fmGraph.board(); return { items: b.items.map(w => w.id), sliders: b.sliders.map(s => s.id) }; });
+  // The menu: Copy to every board (this one too) and a new one; Move to the others and a new one.
+  const send = page.locator('.chart-widget').first().locator('.widget-send');
+  await send.click();
+  await expect(page.locator('.send-menu .send-head')).toHaveText(['Copy to', 'Move to']);
+  await expect(page.locator('.send-menu .send-item')).toHaveText(['Board (this board)', 'Other', 'New board', 'Other', 'New board']);
+  await expect(send).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator('.send-menu .send-item').first()).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator('.send-menu .send-item').nth(1)).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.send-menu')).toHaveCount(0);
+  await expect(send).toHaveAttribute('aria-expanded', 'false');
+  await send.click();
+  await page.locator('.send-menu .send-item').nth(1).click();
+  await expect(page.locator('.send-menu')).toHaveCount(0);
+  await expect(page.locator('#notices .note.ok[data-slot="send"]')).toContainText('Copied to "Other".');
+  await expect(tabs(page).first()).toHaveAttribute('aria-selected', 'true'); // this board stays shown
+  await expect(page.locator('#barList > .widget')).toHaveCount(7);
+  // The other charts and the folded Price slider by the API; the Profit bar moved.
+  for(const id of [ids.items[1], ids.items[4], ids.items[5], ids.items[6]]) await g(page, (i) => fmGraph.copyTo(i, 'Other'), id);
+  await g(page, (i) => fmGraph.copyTo(i, 1), ids.sliders[0]);
+  const moved = await g(page, (i) => fmGraph.moveTo(i, 'Other'), ids.items[2]);
+  expect(ids.items).not.toContain(moved);
+  await expect(page.locator('#barList > .widget')).toHaveCount(6);
+  const after = await allBoards(page);
+  const src = before[0].items;
+  expect(after[1].items).toEqual([src[0], src[1], src[4], src[5], src[6], src[2]]);
+  expect(after[1].items[0].scale).toEqual({ min: 0, max: 900 });
+  expect(after[1].items[5].wide).toBe(true);
+  expect(after[1].sliders).toEqual([before[0].sliders[0]]);
+  expect(after[1].sliders[0].folded).toBe(true);
+  expect(after[0].items).toEqual(src.filter((_, i) => i !== 2));
+  expect(after[0].sliders).toEqual(before[0].sliders);
+  // Each copy and the move one undo step: the move back in one, everything as before in all seven.
+  expect(await g(page, () => fmGraph.undo())).toBe(true);
+  const one = await allBoards(page);
+  expect(one[0].items).toEqual(src);
+  expect(one[1].items).toEqual(after[1].items.slice(0, 5));
+  for(let i = 0; i < 6; i++) expect(await g(page, () => fmGraph.undo())).toBe(true);
+  expect(await allBoards(page)).toEqual(before);
+  for(let i = 0; i < 7; i++) await g(page, () => fmGraph.redo());
+  expect(await allBoards(page)).toEqual(after);
+  // A copy on its own board goes just after the original.
+  await g(page, () => fmGraph.copyTo(fmGraph.board().items[2].id, 0)); // ids are made anew by undo and redo
+  expect((await order(page)).slice(2, 4)).toEqual(['Closing cash', 'Closing cash']);
+  // Kept after a reload.
+  await page.waitForTimeout(500);
+  await page.reload();
+  await page.waitForFunction(() => !!window.fmGraph);
+  await page.click('#btnSample');
+  await expect(tabs(page)).toHaveText(['Board', 'Other']);
+  await g(page, () => fmGraph.showBoard('Other'));
+  await expect(page.locator('#barList > .widget')).toHaveCount(6);
+  await expect(page.locator('.slider-widget')).toHaveCount(1);
+  expect(pageErrors).toEqual([]);
+});
+
+test('⇄ for a slider: a like one already there refused with a note; the position shared, or kept on a board of its own; a new board; a full board', async ({ page, pageErrors }) => {
+  await openSample(page);
+  await typeSlider(page, 'Price', 14);
+  const ids = await g(page, () => fmGraph.board().sliders.map(s => s.id));
+  // Copied to its own board: refused, nothing added, nothing to undo.
+  await page.locator('.slider-widget').first().locator('.widget-send').click();
+  await page.locator('.send-menu .send-item', { hasText: 'Board (this board)' }).click();
+  await expect(page.locator('#notices .note.err[data-slot="send"]')).toContainText('"Board" already has this slider.');
+  expect(await shown(page)).toEqual([['Price', 14], ['Volume', null]]);
+  await expect(page.locator('#btnUndo')).toBeDisabled();
+  // A board keeping its own positions: the copy stands where the slider stands now, then on its own.
+  await g(page, () => fmGraph.addBoard('Own'));
+  await page.locator('#shareSliders').uncheck();
+  await g(page, () => fmGraph.showBoard(0));
+  await g(page, (i) => fmGraph.copyTo(i, 'Own'), ids[0]);
+  expect(await apiError(page, 'copyTo', [ids[0], 'Own'])).toBe('Error: "Own" already has this slider.');
+  expect(await apiError(page, 'moveTo', [ids[0], 0])).toBe('Error: It is on "Board" already.');
+  expect(await apiError(page, 'copyTo', [ids[0], 'Nowhere'])).toBe('Error: There is no board "Nowhere".');
+  expect(await apiError(page, 'copyTo', ['s999', 0])).toBe('Error: There is no bar, chart or slider "s999".');
+  await g(page, () => fmGraph.showBoard('Own'));
+  expect(await shown(page)).toEqual([['Price', 14]]);
+  await typeSlider(page, 'Price', 6);
+  await g(page, () => fmGraph.showBoard(0));
+  expect(await shown(page)).toEqual([['Price', 14], ['Volume', null]]);
+  // A slider of another kind on the same rectangle is another setting: added.
+  await g(page, () => fmGraph.showBoard('Own'));
+  const shift = await g(page, () => fmGraph.addSlider('Price', { mode: 'shift' }));
+  await g(page, (i) => fmGraph.copyTo(i, 0), shift);
+  expect(await g(page, () => fmGraph.exportBoards(true).boards[0].sliders.map(s => s.mode))).toEqual(['set', 'shift', 'shift']);
+  // Moved to a new board (sharing): it takes the shared position; one undo step takes the board away too.
+  await g(page, () => fmGraph.showBoard(0));
+  await typeSlider(page, 'Price', 12);
+  await g(page, (i) => fmGraph.moveTo(i, 'new'), ids[0]);
+  expect(await g(page, () => fmGraph.boards())).toEqual([{ name: 'Board', shown: true }, { name: 'Own', shown: false }, { name: 'Board (2)', shown: false }]);
+  expect(await shown(page)).toEqual([['Volume', null], ['Price', null]]);
+  await g(page, () => fmGraph.showBoard('Board (2)'));
+  expect(await shown(page)).toEqual([['Price', 12]]);
+  await g(page, () => fmGraph.undo());
+  expect((await g(page, () => fmGraph.boards())).map(b => b.name)).toEqual(['Board', 'Own']);
+  // A full board refuses.
+  await g(page, () => { fmGraph.showBoard('Own'); for(let i = 0; i < 40; i++) fmGraph.addBar('Profit'); fmGraph.showBoard(0); });
+  const bar = await g(page, () => fmGraph.board().bars[0].id);
+  expect(await apiError(page, 'copyTo', [bar, 'Own'])).toBe('Error: "Own" has as many bars as a board can hold.');
+  expect(pageErrors).toEqual([]);
+});
+
+test('⇄ is not on a phone, where the boards are not edited', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const page = await context.newPage();
+  await page.route('**/*', route => route.request().url() === 'http://local.test/fmGraph.html'
+    ? route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: fs.readFileSync(require('path').join(__dirname, '..', 'apps', 'fmGraph.html')) })
+    : route.abort());
+  await page.goto('http://local.test/fmGraph.html');
+  await page.click('#btnSample');
+  await expect(page.locator('body.phone')).toHaveCount(1);
+  await expect(page.locator('.widget-send')).toHaveCount(6);
+  for(const b of await page.locator('.widget-send').all()) await expect(b).toBeHidden();
+  await context.close();
+});

@@ -83,6 +83,13 @@
   .widget-head select{ flex:1 1 auto; font-weight:600; }
   .widget-remove{ border:none; background:none; color:var(--soft-ink); padding:2px 8px; font-size:16px; }
   .widget-remove:hover{ color:var(--down); background:#fef3f2; }
+  .widget-send{ border:none; background:none; color:var(--soft-ink); padding:2px 6px; font-size:15px; }
+  .widget-send:hover, .widget-send[aria-expanded="true"]{ color:var(--brand); background:var(--brand-soft); }
+  .send-menu{ position:absolute; z-index:60; min-width:180px; max-height:60vh; overflow:auto; background:var(--card); border:1px solid var(--line); border-radius:8px; box-shadow:0 8px 24px rgba(16,24,40,.16); padding:4px 0; }
+  .send-head{ font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--soft-ink); padding:6px 12px 2px; }
+  .send-item{ display:block; width:100%; text-align:left; border:none; background:none; padding:5px 12px; font-size:13px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .send-item:hover:not(:disabled), .send-item:focus-visible{ background:var(--brand-soft); outline:none; }
+  .send-item:disabled{ color:var(--soft-ink); }
   .widget-row{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:8px; font-size:12.5px; color:var(--soft-ink); }
   .widget-row select{ max-width:100%; }
   .widget-row input[type=number]{ width:84px; }
@@ -336,7 +343,7 @@
   body.phone .board-col:first-child > .col-head, body.phone #sliderList, body.phone #noSliders{ display:none; }
   body.phone .board-main > .col-head{ display:none; }
   body.phone .widget-list.bars{ grid-template-columns:minmax(0, 1fr); }
-  body.phone .arrange, body.phone .widget-remove, body.phone .bar-widget .widget-head select, body.phone .bar-settings,
+  body.phone .arrange, body.phone .widget-remove, body.phone .widget-send, body.phone .send-menu, body.phone .bar-widget .widget-head select, body.phone .bar-settings,
   body.phone .chart-widget .widget-head select, body.phone .chart-edit, body.phone .chart-key input.key-swatch{ display:none !important; }
   body.phone .widget-title{ flex:1 1 auto; font-weight:700; font-size:15px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   body.phone .chart-title{ pointer-events:none; font-size:15px; }

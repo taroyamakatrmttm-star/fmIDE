@@ -38,6 +38,10 @@
 //   boards()       → [{ name, shown }] (G3a); addBoard(name?), showBoard(index or name),
 //   renameBoard(name), duplicateBoard(), removeBoard() (the one shown; the last can't go)
 //   move(id, index) (a bar or chart among the items, a slider among the sliders),
+//   copyTo(id, board), moveTo(id, board) → the copy's id: a bar, chart or slider on any board
+//                  copied, or moved, to a board (its index, its name, or 'new' for a new one); the
+//                  board shown stays shown; one undo step; a like slider already there, or a full
+//                  board, refused
 //   setWide(id, wide), setColour(id, '#rrggbb' or null, rect?) (a bar's, a slider's, or a chart
 //                  rectangle's: the rectangle's colour on every board; null back to the automatic one)
 //   rectColour(rect, canvas?) → { colour ('#rrggbb', or null for the usual look), chosen }
@@ -100,6 +104,20 @@ function goalSliderRef(which){
   if(named.length === 1) return named[0];
   if(named.length > 1) throw new Error('More than one slider changes "' + String(which).slice(0, 80) + '": give its id.');
   throw new Error('There is no slider "' + String(which).slice(0, 80) + '" on this board.');
+}
+// copyTo / moveTo (04-board-edit.js): the board by index or name, or 'new'.
+function sendFromApi(id, which, moving){
+  if(!model) throw new Error('Open a model first.');
+  let to = 'new';
+  if(which !== 'new'){
+    const i = typeof which === 'number' ? which : boards.findIndex(b => b.name === String(which));
+    if(!boards[i]) throw new Error('There is no board "' + String(which).slice(0, 60) + '".');
+    to = boards[i];
+  }
+  const r = moving ? moveWidgetTo(String(id), to) : copyWidgetTo(String(id), to);
+  if(r.problem) throw new Error(r.problem);
+  renderAll();
+  return r.widget.id;
 }
 function chartById(id){
   const c = board.charts.find(x => x.id === id);
@@ -234,6 +252,8 @@ window.fmGraph = Object.freeze({
   renameBoard: (name) => { setBoardName(board, String(name)); renderAll(); return board.name; },
   duplicateBoard: () => { const b = duplicateBoard(); if(!b) throw new Error('No more boards can be added.'); return b.name; },
   removeBoard: () => { if(boards.length < 2) throw new Error('The last board can\'t be removed.'); removeBoard(board); },
+  copyTo: (id, to) => sendFromApi(id, to, false),
+  moveTo: (id, to) => sendFromApi(id, to, true),
   move: (id, index) => { const ok = moveWidget(id, Number(index)); renderBoard(); return ok; },
   setWide: (id, wide) => { const w = board.items.find(x => x.id === id); if(!w) throw new Error('There is no bar or chart "' + String(id).slice(0, 40) + '".'); w.wide = !!wide; saveBoardSoon(); renderBoard(); },
   setScale: (id, spec) => {

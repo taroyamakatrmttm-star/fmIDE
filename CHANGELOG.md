@@ -2,6 +2,10 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph: copy or move a slider, bar or chart to another board
+- ⇄ on every bar's, chart's and slider's header (`sendButton`, `openSendMenu` in `05-render-edit.js`; hidden on a phone) opens Copy to (every board, this one too, the copy just after the original) and Move to (the others), each with New board. The copy is made through the widget's file form, as Duplicate board makes one (`copyWidgetTo` / `moveWidgetTo` in `04-board-edit.js`), so it keeps periods or following the shared period, width, scale or following the common scale, every chart setting and a slider's range, step and folding. A like slider (`settingKey`) already on the target, or a full board, is refused with a note; a slider copied to a board keeping its own positions keeps where it stands. The board shown stays shown. One undo step, a new board included. `fmGraph.copyTo(id, board)`, `moveTo(id, board)` (an index, a name or `'new'`). No board file change.
+- Tests: group 49 three new tests; group 92's snapshots `fmgraph-every-widget.txt`, `fmgraph-every-widget-phone.txt` (⇄ on every header) and `fmgraph-api.txt` (`copyTo`, `moveTo`) updated on purpose. Branch `claude/fmgraph-copy-move-261200`.
+
 ## fmGraph and fmShowcase: sliders in their rectangle's colour
 - A slider's grip and filled bar take its rectangle's colour (`--slider-accent`, set on each slider card, dock card, fader and viewer row from `sliderAccent(shownColour(key))` in the board engine's `04e-colours.js`), on the desktop (`accent-color`), the phone's dock and faders and the viewer's rows (the shared slider's `--ps-accent`). A colour with less than 3:1 contrast against white is darkened on the slider only, keeping its hue; the stripe and colour box keep the exact colour. No change to `src/shared/` or the board file.
 - Tests: groups 49, 68 and 93 one new test each; group 92's snapshots `fmgraph-every-widget.txt` and `fmgraph-every-widget-phone.txt` updated on purpose (the new style property). Branch `claude/slider-colours`.

@@ -93,6 +93,13 @@
   .widget-head select{ flex:1 1 auto; font-weight:600; }
   .widget-remove{ border:none; background:none; color:var(--soft-ink); padding:2px 8px; font-size:16px; }
   .widget-remove:hover{ color:var(--down); background:#fef3f2; }
+  .widget-send{ border:none; background:none; color:var(--soft-ink); padding:2px 6px; font-size:15px; }
+  .widget-send:hover, .widget-send[aria-expanded="true"]{ color:var(--brand); background:var(--brand-soft); }
+  .send-menu{ position:absolute; z-index:60; min-width:180px; max-height:60vh; overflow:auto; background:var(--card); border:1px solid var(--line); border-radius:8px; box-shadow:0 8px 24px rgba(16,24,40,.16); padding:4px 0; }
+  .send-head{ font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--soft-ink); padding:6px 12px 2px; }
+  .send-item{ display:block; width:100%; text-align:left; border:none; background:none; padding:5px 12px; font-size:13px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .send-item:hover:not(:disabled), .send-item:focus-visible{ background:var(--brand-soft); outline:none; }
+  .send-item:disabled{ color:var(--soft-ink); }
   .widget-row{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:8px; font-size:12.5px; color:var(--soft-ink); }
   .widget-row select{ max-width:100%; }
   .widget-row input[type=number]{ width:84px; }
@@ -346,7 +353,7 @@
   body.phone .board-col:first-child > .col-head, body.phone #sliderList, body.phone #noSliders{ display:none; }
   body.phone .board-main > .col-head{ display:none; }
   body.phone .widget-list.bars{ grid-template-columns:minmax(0, 1fr); }
-  body.phone .arrange, body.phone .widget-remove, body.phone .bar-widget .widget-head select, body.phone .bar-settings,
+  body.phone .arrange, body.phone .widget-remove, body.phone .widget-send, body.phone .send-menu, body.phone .bar-widget .widget-head select, body.phone .bar-settings,
   body.phone .chart-widget .widget-head select, body.phone .chart-edit, body.phone .chart-key input.key-swatch{ display:none !important; }
   body.phone .widget-title{ flex:1 1 auto; font-weight:700; font-size:15px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   body.phone .chart-title{ pointer-events:none; font-size:15px; }
@@ -4271,6 +4278,54 @@ function moveWidget(id, to){
   saveBoardSoon();
   return true;
 }
+
+// ---- copying or moving a widget to another board (the ⇄ menu, 05-render-edit.js) ----
+// The copy is made as Duplicate board makes one, through the widget's file form, so it keeps
+// everything the board file keeps: periods or following the shared period, wide, scale or
+// following the common scale, a chart's settings, a slider's range, step and folding. Colours
+// are the rectangle's on every board already. One undo step, a move and a new board included.
+function boardOfWidget(id){
+  return boards.find(b => b.items.some(w => w.id === id) || b.sliders.some(s => s.id === id)) || null;
+}
+// to: a board, or 'new' for a new one after the others. { widget, board }, or { problem } in words.
+function copyWidgetTo(id, to, moving){
+  const from = boardOfWidget(id);
+  if(!from) return { problem: 'There is no bar, chart or slider "' + String(id).slice(0, 40) + '".' };
+  const item = from.items.find(w => w.id === id) || null;
+  const slider = item ? null : from.sliders.find(s => s.id === id);
+  if(to === 'new'){ if(boards.length >= BOARDS_LIMIT) return { problem: 'No more boards can be added.' }; }
+  else if(boards.indexOf(to) < 0) return { problem: 'There is no such board.' };
+  else if(moving && to === from) return { problem: 'It is on "' + to.name + '" already.' };
+  else if(slider){
+    if(to.sliders.length >= BOARD_LIMIT) return { problem: '"' + to.name + '" has as many sliders as a board can hold.' };
+    // A like slider (same rectangle, periods and kind) would be a second one for one setting.
+    if(to.sliders.some(s => settingKey(s) === settingKey(slider))) return { problem: '"' + to.name + '" already has this slider.' };
+  }
+  else if((item.kind === 'bar' ? to.bars : to.charts).length >= BOARD_LIMIT) return { problem: '"' + to.name + '" has as many ' + (item.kind === 'bar' ? 'bars' : 'charts') + ' as a board can hold.' };
+  syncSharedPeriods(); // it writes the periods and scale it shows (05k-shared-period.js, 04d-scale.js)
+  syncCommonScale();
+  const one = Object.assign(makeBoard(from.name), { items: item ? [item] : [], sliders: slider ? [slider] : [] });
+  // colours: [] — the file has the shared colours, so the copy's own are not read (04e-colours.js).
+  const r = cleanBoards({ kind: 'fmIDE-graph-board', version: BOARD_FILE_VERSION, colours: [], boards: [boardData(one)] });
+  const copy = r && (r.boards[0].items[0] || r.boards[0].sliders[0]);
+  if(!copy) return { problem: 'It could not be copied.' };
+  const target = to === 'new' ? makeBoard(freeBoardName('Board')) : to;
+  if(to === 'new') boards.push(target);
+  // A board keeping its own positions takes where the slider stands now; a sharing one, the
+  // shared position (03-calc.js).
+  if(slider && target.ownSliders) copy.value = slider.value;
+  if(item){
+    const at = moving || target !== from ? target.items.length : from.items.indexOf(item) + 1;
+    target.items.splice(at, 0, copy);
+  } else target.sliders.push(copy);
+  if(moving){
+    from.items = from.items.filter(w => w !== item);
+    from.sliders = from.sliders.filter(s => s !== slider);
+  }
+  saveBoardSoon();
+  return { widget: copy, board: target };
+}
+function moveWidgetTo(id, to){ return copyWidgetTo(id, to, true); }
 // ============================================================
 // The boards (G3a: several, as tabs, each a view of the model). A board:
 //   { id, name, items: [bar | chart, …] (in the order shown), sliders: [slider, …], ownSliders }
@@ -5802,6 +5857,78 @@ function removeButton(id, what){
   return x;
 }
 
+// ⇄: copy or move this widget to another board, or to a new one (04-board-edit.js). Desk only.
+function sendButton(id){
+  const b = make('button', 'widget-send', '⇄');
+  b.type = 'button';
+  b.title = 'Copy or move to another board';
+  b.setAttribute('aria-label', 'Copy or move to another board');
+  b.setAttribute('aria-haspopup', 'menu');
+  b.addEventListener('click', () => { if(sendMenu && sendMenu.dataset.id === id) closeSendMenu(); else openSendMenu(id, b); });
+  return b;
+}
+let sendMenu = null;
+function closeSendMenu(){
+  if(!sendMenu) return;
+  sendMenu.remove();
+  if(sendMenu.anchor) sendMenu.anchor.setAttribute('aria-expanded', 'false');
+  sendMenu = null;
+  document.removeEventListener('pointerdown', sendMenuOutside, true);
+}
+function sendMenuOutside(ev){ if(sendMenu && !sendMenu.contains(ev.target) && !ev.target.closest('.widget-send')) closeSendMenu(); }
+function openSendMenu(id, anchor){
+  closeSendMenu();
+  const from = boardOfWidget(id);
+  if(!from) return;
+  const menu = make('div', 'send-menu');
+  menu.setAttribute('role', 'menu');
+  menu.dataset.id = id;
+  const item = (text, fn, off) => {
+    const x = make('button', 'send-item', text);
+    x.type = 'button';
+    x.setAttribute('role', 'menuitem');
+    x.disabled = !!off;
+    x.addEventListener('click', () => { closeSendMenu(); anchor.focus(); fn(); });
+    menu.appendChild(x);
+  };
+  const full = boards.length >= BOARDS_LIMIT;
+  menu.appendChild(make('div', 'send-head', 'Copy to'));
+  boards.forEach(b => item(b === from ? b.name + ' (this board)' : b.name, () => sendWidget(id, b, false)));
+  item('New board', () => sendWidget(id, 'new', false), full);
+  menu.appendChild(make('div', 'send-head', 'Move to'));
+  boards.filter(b => b !== from).forEach(b => item(b.name, () => sendWidget(id, b, true)));
+  item('New board', () => sendWidget(id, 'new', true), full);
+  menu.addEventListener('keydown', (ev) => {
+    const items = [...menu.querySelectorAll('.send-item:not(:disabled)')];
+    const i = items.indexOf(document.activeElement);
+    if(ev.key === 'Escape'){ ev.preventDefault(); closeSendMenu(); anchor.focus(); }
+    else if(ev.key === 'ArrowDown' || ev.key === 'ArrowUp'){
+      ev.preventDefault();
+      const next = items[(i + (ev.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length];
+      if(next) next.focus();
+    }
+    else if(ev.key === 'Tab') closeSendMenu();
+  });
+  document.body.appendChild(menu);
+  const r = anchor.getBoundingClientRect();
+  menu.style.left = (window.scrollX + Math.max(8, Math.min(r.right - menu.offsetWidth, document.documentElement.clientWidth - menu.offsetWidth - 8))) + 'px';
+  menu.style.top = (window.scrollY + r.bottom + 4) + 'px';
+  sendMenu = menu;
+  menu.anchor = anchor;
+  anchor.setAttribute('aria-expanded', 'true');
+  document.addEventListener('pointerdown', sendMenuOutside, true);
+  const first = menu.querySelector('.send-item:not(:disabled)');
+  if(first) first.focus();
+}
+// The board shown stays shown; a note says where it went, or why it couldn't.
+function sendWidget(id, to, moving){
+  const r = moving ? moveWidgetTo(id, to) : copyWidgetTo(id, to);
+  if(r.problem){ notify(r.problem, 'err', 'send'); return null; }
+  notify((moving ? 'Moved to "' : 'Copied to "') + r.board.name + '".', 'ok', 'send');
+  renderAll();
+  return r;
+}
+
 function renderBoard(){
   syncSharedPeriods(); // what follows the shared period takes it (05k-shared-period.js)
   syncCommonScale(); // and the common scale (04d-scale.js)
@@ -5827,9 +5954,10 @@ function renderBoard(){
     head.insertBefore(traceButton(w), head.querySelector('.widget-remove')); // Trace (05d-explore.js)
     head.insertBefore(fullScreenButton(w), head.querySelector('.widget-remove')); // ⛶ (05h-phone-show.js)
     head.insertBefore(gifButton(w), head.querySelector('.widget-remove')); // 🎞 a GIF of the play (05o-play-gif.js)
+    head.insertBefore(sendButton(w.id), head.querySelector('.widget-remove')); // ⇄ to another board
     bars.appendChild(el);
   });
-  board.sliders.forEach(s => { const el = sliders.querySelector('.slider-widget[data-id="' + s.id + '"]'); if(el) el.querySelector('.widget-head').prepend(arrangeControls(s, el)); });
+  board.sliders.forEach(s => { const el = sliders.querySelector('.slider-widget[data-id="' + s.id + '"]'); if(el){ const head = el.querySelector('.widget-head'); head.prepend(arrangeControls(s, el)); head.insertBefore(sendButton(s.id), head.querySelector('.widget-remove')); } });
   $('noBars').classList.toggle('hidden', board.items.length > 0);
   $('noSliders').classList.toggle('hidden', board.sliders.length > 0);
   syncFoldAll(); // (05c-arrange.js)
@@ -12564,11 +12692,12 @@ const FMGRAPH_HELP_TOPICS = [
       { see: ['charts', 'sliders', 'speed'] },
     ] },
   { id: 'boards', group: 'board', title: 'Boards: tabs, arranging, colours, undo',
-    keywords: 'board boards tab tabs arrange move drag order wide narrow colour color colours shared same slider undo redo rename duplicate delete',
+    keywords: 'board boards tab tabs arrange move drag order wide narrow colour color colours shared same slider undo redo rename duplicate delete copy another',
     summary: 'Several boards per model, arranged as you like.',
     body: [
       { p: 'A model can have several boards — for example one for the statements and one for pricing — shown as tabs above the board. + Board adds an empty one; ✎ (or a double-click on its tab) renames the board shown, ⧉ duplicates it and 🗑 deletes it (after asking; the last board stays). Each board has its own bars, charts and sliders.' },
       { p: 'Drag a bar, chart or slider by its handle (⠿) to move it among the others — by mouse, by finger (on an iPad too), or with the arrow keys on the handle. ⇔ makes a bar or chart wide (the whole row) or narrow (half of it).' },
+      { p: '⇄ on a bar\'s, chart\'s or slider\'s header copies it, or moves it, to another board or to a new one: choose the board under Copy to or Move to. The copy keeps its periods, scale, width and settings (a slider its range, step and folding), and you stay on the board shown. A board that already has the same slider (same rectangle, periods and kind) doesn\'t take a second one. A slider copied to a board keeping its own positions stands where it stood; on a sharing board it stands where the shared slider does. Each copy or move is one undo step.' },
       { p: 'Colours belong to rectangles: a rectangle has one colour on its slider, its bars and every chart, on every board. Pick it from the colour box beside a slider\'s name, a bar\'s colour box beside its periods, a rectangle\'s swatch in a chart\'s key, or a waterfall step\'s colour in Edit chart: all of them change together, and the slider itself (its grip and filled bar) takes the colour too, drawn a little darker when the colour is too pale to see on white. A rectangle you haven\'t coloured takes the chart colours in the order it first appears in a Columns, Lines or Spider chart; a waterfall step shows up, down or total until you choose its colour. The Tornado\'s Low and High colours are the chart\'s own.' },
       { p: 'Every colour box opens a grid of ready colours: greys, twelve colours in six shades, the chart colours and the colours already used on this model\'s boards. Click one, or move with the arrow keys and press Enter; Esc closes it. More… opens your browser\'s own colour box, for an exact colour. Automatic, at the top, goes back to the rectangle\'s automatic colour (a waterfall step\'s by direction, the Tornado\'s usual Low and High).' },
       { p: '↶ Undo and ↷ Redo (Ctrl+Z, Ctrl+Y) take back any change to the boards — not where a slider is set, which is a "what if", not a change.' },
@@ -12686,6 +12815,18 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'copy-move-widgets', date: '2026-10-30', title: 'Copy or move a slider, bar or chart to another board',
+    summary: '⇄ on a bar\'s, chart\'s or slider\'s header copies it, or moves it, to another board or to a new one.',
+    what: [
+      'Copy to puts a copy on the board you choose, this one included (the copy goes just after the original). Move to takes it off this board and puts it on the other.',
+      'The copy keeps everything: its periods (or following the shared period), wide or narrow, its scale, all of a chart\'s settings, and a slider\'s range, step and folding. Colours belong to the rectangle, so they are the same everywhere already.',
+      'A slider on a board that shares slider positions stands where the same slider stands on the other boards; on a board keeping its own positions, it stands where it stood when copied.',
+      'You stay on the board you were looking at, and a note says where it went. Each copy or move is one Undo.',
+    ],
+    why: 'Building a second board out of pieces of the first was only possible by duplicating the whole board and deleting what wasn\'t wanted.',
+    how: ['Press ⇄ on the header of a bar, chart or slider.', 'Under Copy to or Move to, choose a board, or New board.'],
+    notes: ['A board that already has the same slider (the same rectangle, periods and kind) doesn\'t get a second one: a note says so.', 'Not on a phone, where boards are not edited.', 'The board file is unchanged.'],
+    see: ['boards'] },
   { id: 'slider-colours', date: '2026-10-30', title: 'Each slider in its rectangle\'s colour',
     summary: 'A slider\'s grip and the filled part of its bar now take the colour of its rectangle, the same as the box beside its name and the stripe on its left edge.',
     what: [
@@ -13482,6 +13623,10 @@ $('btnTutorials').addEventListener('click', () => { help.open(); });
 //   boards()       → [{ name, shown }] (G3a); addBoard(name?), showBoard(index or name),
 //   renameBoard(name), duplicateBoard(), removeBoard() (the one shown; the last can't go)
 //   move(id, index) (a bar or chart among the items, a slider among the sliders),
+//   copyTo(id, board), moveTo(id, board) → the copy's id: a bar, chart or slider on any board
+//                  copied, or moved, to a board (its index, its name, or 'new' for a new one); the
+//                  board shown stays shown; one undo step; a like slider already there, or a full
+//                  board, refused
 //   setWide(id, wide), setColour(id, '#rrggbb' or null, rect?) (a bar's, a slider's, or a chart
 //                  rectangle's: the rectangle's colour on every board; null back to the automatic one)
 //   rectColour(rect, canvas?) → { colour ('#rrggbb', or null for the usual look), chosen }
@@ -13544,6 +13689,20 @@ function goalSliderRef(which){
   if(named.length === 1) return named[0];
   if(named.length > 1) throw new Error('More than one slider changes "' + String(which).slice(0, 80) + '": give its id.');
   throw new Error('There is no slider "' + String(which).slice(0, 80) + '" on this board.');
+}
+// copyTo / moveTo (04-board-edit.js): the board by index or name, or 'new'.
+function sendFromApi(id, which, moving){
+  if(!model) throw new Error('Open a model first.');
+  let to = 'new';
+  if(which !== 'new'){
+    const i = typeof which === 'number' ? which : boards.findIndex(b => b.name === String(which));
+    if(!boards[i]) throw new Error('There is no board "' + String(which).slice(0, 60) + '".');
+    to = boards[i];
+  }
+  const r = moving ? moveWidgetTo(String(id), to) : copyWidgetTo(String(id), to);
+  if(r.problem) throw new Error(r.problem);
+  renderAll();
+  return r.widget.id;
 }
 function chartById(id){
   const c = board.charts.find(x => x.id === id);
@@ -13678,6 +13837,8 @@ window.fmGraph = Object.freeze({
   renameBoard: (name) => { setBoardName(board, String(name)); renderAll(); return board.name; },
   duplicateBoard: () => { const b = duplicateBoard(); if(!b) throw new Error('No more boards can be added.'); return b.name; },
   removeBoard: () => { if(boards.length < 2) throw new Error('The last board can\'t be removed.'); removeBoard(board); },
+  copyTo: (id, to) => sendFromApi(id, to, false),
+  moveTo: (id, to) => sendFromApi(id, to, true),
   move: (id, index) => { const ok = moveWidget(id, Number(index)); renderBoard(); return ok; },
   setWide: (id, wide) => { const w = board.items.find(x => x.id === id); if(!w) throw new Error('There is no bar or chart "' + String(id).slice(0, 40) + '".'); w.wide = !!wide; saveBoardSoon(); renderBoard(); },
   setScale: (id, spec) => {

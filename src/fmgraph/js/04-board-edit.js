@@ -152,3 +152,51 @@ function moveWidget(id, to){
   saveBoardSoon();
   return true;
 }
+
+// ---- copying or moving a widget to another board (the ⇄ menu, 05-render-edit.js) ----
+// The copy is made as Duplicate board makes one, through the widget's file form, so it keeps
+// everything the board file keeps: periods or following the shared period, wide, scale or
+// following the common scale, a chart's settings, a slider's range, step and folding. Colours
+// are the rectangle's on every board already. One undo step, a move and a new board included.
+function boardOfWidget(id){
+  return boards.find(b => b.items.some(w => w.id === id) || b.sliders.some(s => s.id === id)) || null;
+}
+// to: a board, or 'new' for a new one after the others. { widget, board }, or { problem } in words.
+function copyWidgetTo(id, to, moving){
+  const from = boardOfWidget(id);
+  if(!from) return { problem: 'There is no bar, chart or slider "' + String(id).slice(0, 40) + '".' };
+  const item = from.items.find(w => w.id === id) || null;
+  const slider = item ? null : from.sliders.find(s => s.id === id);
+  if(to === 'new'){ if(boards.length >= BOARDS_LIMIT) return { problem: 'No more boards can be added.' }; }
+  else if(boards.indexOf(to) < 0) return { problem: 'There is no such board.' };
+  else if(moving && to === from) return { problem: 'It is on "' + to.name + '" already.' };
+  else if(slider){
+    if(to.sliders.length >= BOARD_LIMIT) return { problem: '"' + to.name + '" has as many sliders as a board can hold.' };
+    // A like slider (same rectangle, periods and kind) would be a second one for one setting.
+    if(to.sliders.some(s => settingKey(s) === settingKey(slider))) return { problem: '"' + to.name + '" already has this slider.' };
+  }
+  else if((item.kind === 'bar' ? to.bars : to.charts).length >= BOARD_LIMIT) return { problem: '"' + to.name + '" has as many ' + (item.kind === 'bar' ? 'bars' : 'charts') + ' as a board can hold.' };
+  syncSharedPeriods(); // it writes the periods and scale it shows (05k-shared-period.js, 04d-scale.js)
+  syncCommonScale();
+  const one = Object.assign(makeBoard(from.name), { items: item ? [item] : [], sliders: slider ? [slider] : [] });
+  // colours: [] — the file has the shared colours, so the copy's own are not read (04e-colours.js).
+  const r = cleanBoards({ kind: 'fmIDE-graph-board', version: BOARD_FILE_VERSION, colours: [], boards: [boardData(one)] });
+  const copy = r && (r.boards[0].items[0] || r.boards[0].sliders[0]);
+  if(!copy) return { problem: 'It could not be copied.' };
+  const target = to === 'new' ? makeBoard(freeBoardName('Board')) : to;
+  if(to === 'new') boards.push(target);
+  // A board keeping its own positions takes where the slider stands now; a sharing one, the
+  // shared position (03-calc.js).
+  if(slider && target.ownSliders) copy.value = slider.value;
+  if(item){
+    const at = moving || target !== from ? target.items.length : from.items.indexOf(item) + 1;
+    target.items.splice(at, 0, copy);
+  } else target.sliders.push(copy);
+  if(moving){
+    from.items = from.items.filter(w => w !== item);
+    from.sliders = from.sliders.filter(s => s !== slider);
+  }
+  saveBoardSoon();
+  return { widget: copy, board: target };
+}
+function moveWidgetTo(id, to){ return copyWidgetTo(id, to, true); }
