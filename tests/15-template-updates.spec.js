@@ -165,7 +165,7 @@ test('an alias on another canvas still points at a matched rectangle after the u
   });
   await salesV2(page);
   const r = await page.evaluate(() => fm.updateCanvasFromTemplate());
-  expect(r).toEqual({ version: 2, kept: 2, lostAliases: ['Summary'] });
+  expect(r).toEqual({ version: 2, kept: 2, lostAliases: ['Summary'], lostLinks: [] });
   expect(await page.evaluate(() => { fm.switchCanvas('Summary'); return fm.nodes().map(n => n.name); })).toContain('Revenue');
   expect(await valueOn(page, 'Summary', 'Revenue')).toBe(50);
 });

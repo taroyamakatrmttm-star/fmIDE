@@ -146,10 +146,13 @@
   // canvas (a module) or every canvas (a system). A system keeps each canvas's link to the
   // canvas template it came from, as Save System does, so the canvases added from it stay
   // linked (and ExcelExporter still sees them as modules).
+  // A canvas template leaves out the links a recipe drew (withoutRecipeLinks): the template
+  // stays on its own, and the recipe draws them again.
   function openModelAsTemplateData(kind, name){
     syncActiveIntoRegistry();
+    const own = withoutRecipeLinks({ nodes, edges });
     const payload = kind === 'module'
-      ? withFunctions({ version: FILE_FORMATS['module'].current, kind:'module', name, selfCanvasId: activeCanvasId, nextId, nodes, edges }, [{ nodes }])
+      ? withFunctions({ version: FILE_FORMATS['module'].current, kind:'module', name, selfCanvasId: activeCanvasId, nextId, nodes: own.nodes, edges: own.edges }, [{ nodes: own.nodes }])
       : withFunctions({ version: SHARED_FILE_VERSIONS['system'], kind:'system', nextId, nextCanvasId, activeCanvasId,
           canvases: canvases.map(c => Object.assign({ id:c.id, name:c.name, nodes:c.nodes, edges:c.edges }, c.template ? { template: c.template } : {})) }, canvases);
     return cloneData(payload);
@@ -637,8 +640,13 @@
   // same model; when in doubt (two otherwise identical rectangles wired differently) the
   // texts differ, so templates are only ever treated as the same when they really are.
   function templateLogicKey(t, layout){
-    // A recipe is its list of parts (the names shown for them don't count).
-    if(t.kind === 'recipe') return stableJSON({ recipe: ((t.data && t.data.parts) || []).map(p => [p.family, p.version, p.versionId || null]) });
+    // A recipe is its list of parts (the names shown for them don't count), and its links.
+    if(t.kind === 'recipe'){
+      const key = { recipe: ((t.data && t.data.parts) || []).map(p => [p.family, p.version, p.versionId || null]) };
+      const links = (t.data && t.data.links) || [];
+      if(links.length) key.links = links.map(l => [l.from.family, l.from.rectangle.toLowerCase(), l.to.family, l.to.rectangle.toLowerCase()]);
+      return stableJSON(key);
+    }
     const d = t.data || {};
     const canvases = t.kind === 'system'
       ? (Array.isArray(d.canvases) ? d.canvases : [])
@@ -980,17 +988,145 @@
   }
   // Sockets nothing feeds among the versions a recipe would use.
   function recipeUnfedSockets(parts, own){ return unfedSocketsIn(recipeCanvasList(parts, own)); }
-  // The socket check shown for a recipe: unfed sockets, and sockets more than one plug feeds.
-  function recipeCheckText(parts, own){
+  // The socket check shown for a recipe: unfed sockets, and sockets more than one plug feeds;
+  // then the recipe's own `links` that won't hold in these parts.
+  function recipeCheckText(parts, own, links){
     const list = recipeCanvasList(parts, own);
     const unfed = unfedSocketsIn(list), multi = multiFedSocketsIn(list);
     const lines = [];
     if(unfed.length) lines.push(unfedSocketsText(unfed));
     if(multi.length) lines.push(multiFedSocketsText(multi));
-    return { warn: lines.length > 0, text: lines.length ? lines.join('\n') : 'Every socket is fed by a plug in these parts.' };
+    if(!lines.length) lines.push('Every socket is fed by a plug in these parts.');
+    const problems = recipeLinkProblems(links || [], parts, own);
+    return { warn: unfed.length > 0 || multi.length > 0 || problems.length > 0, text: lines.concat(problems).join('\n') };
   }
   function unfedSocketsText(list){
     return 'Sockets nothing feeds: ' + list.map(u => `“${u.socket}” (${u.canvas})`).join(', ') + '.';
+  }
+
+  // ---------- a recipe's links (templates v11) ----------
+  // A link feeds an input rectangle of one part from a rectangle of another, though neither
+  // template knows the other: { from: { family, rectangle }, to: { family, rectangle } }, by
+  // template family and rectangle name (cleanRecipeLinks in src/shared/fmide-files.js).
+  // Building draws each as an ordinary alias of the source beside the input, with an arrow
+  // into it (an arrow alone when both are on one canvas), both marked `recipeLink`, between
+  // the canvases of that same build only — never matched by name across the model, so a
+  // recipe built twice gives two separate pairs. The calculation, ExcelExporter and fmGraph
+  // see an ordinary alias; fmIDE leaves them out of the plug sync (not `auto`), out of a
+  // canvas's "changes of its own" and out of a canvas template saved from the canvas
+  // (withoutRecipeLinks), and updating the canvas draws them again (applyCanvasUpdate).
+  function recipeLinkTemplateName(family, parts){
+    const t = latestOfFamily(family);
+    if(t) return t.name;
+    const p = (parts || []).find(x => x.family === family);
+    return (p && p.name) || 'A part';
+  }
+  // "Accounts Receivable · Sales ← Revenue · Total revenue" (shown as plain text only).
+  function recipeLinkText(l, parts){
+    return `${recipeLinkTemplateName(l.to.family, parts)} · ${l.to.rectangle} ← ${recipeLinkTemplateName(l.from.family, parts)} · ${l.from.rectangle}`;
+  }
+  // A canvas { nodes, edges } without the links a recipe drew: new lists.
+  function withoutRecipeLinks(c){
+    const aliasIds = new Set(c.nodes.filter(n => n.type === 'alias' && n.recipeLink).map(n => n.id));
+    return { nodes: c.nodes.filter(n => !aliasIds.has(n.id)),
+      edges: c.edges.filter(e => !e.recipeLink && !aliasIds.has(e.from) && !aliasIds.has(e.to)) };
+  }
+  // The value rectangle called `name` (trimmed, any capitals) among `list`: null when there is
+  // none, 'many' when more than one has that name.
+  function recipeRectangleIn(list, name){
+    const k = String(name || '').trim().toLowerCase();
+    const hits = (list || []).filter(n => n && n.type === 'value' && (parseNode(n).name || '').trim().toLowerCase() === k);
+    return hits.length > 1 ? 'many' : (hits[0] || null);
+  }
+  // The rectangle names of a canvas template version: { all, inputs } (inputs: the ones a
+  // link may feed), each name once.
+  function recipeRectangleNames(t){
+    const canvas = { nodes: (t.data.nodes || []).filter(Boolean), edges: (t.data.edges || []).filter(Boolean) };
+    const all = [], inputs = [], seen = new Set();
+    canvas.nodes.forEach(n => {
+      if(n.type !== 'value') return;
+      const name = (parseNode(n).name || '').trim(), k = name.toLowerCase();
+      if(!name || seen.has(k)) return;
+      seen.add(k);
+      all.push(name);
+      if(isInputRectangle(canvas, n)) inputs.push(name);
+    });
+    return { all, inputs };
+  }
+  // Every link building `t` draws: its own, then those of the recipes inside it (each recipe
+  // once). [{ link, parts (of the recipe it belongs to, for names) }]
+  function recipeAllLinks(t){
+    const out = [], seen = new Set();
+    const walk = (rec, depth) => {
+      if(seen.has(rec.family) || depth > RECIPE_MAX_DEPTH) return;
+      seen.add(rec.family);
+      (rec.data.links || []).forEach(l => out.push({ link: l, parts: rec.data.parts }));
+      rec.data.parts.forEach(p => { const st = recipePartStatus(p); if(st.recipe && st.template) walk(st.template, depth + 1); });
+    };
+    walk(t, 0);
+    return out;
+  }
+  // Why one end of a link can't be drawn among `list` (a canvas's or template's nodes and
+  // edges, called `where`), or null. `feeds`: the end that is fed must be an input rectangle.
+  function recipeLinkEndProblem(end, list, where, feeds){
+    const n = recipeRectangleIn(list.nodes, end.rectangle);
+    if(!n) return `${where} has no rectangle “${end.rectangle}”`;
+    if(n === 'many') return `${where} has more than one rectangle called “${end.rectangle}”`;
+    if(feeds && !isInputRectangle(list, n)) return `“${end.rectangle}” in ${where} isn't an input rectangle (something already feeds it)`;
+    return null;
+  }
+  // The links of a recipe of these parts that won't hold, as sentences, against the template
+  // versions its parts would build with.
+  function recipeLinkProblems(links, parts, own){
+    if(!links.length) return [];
+    const leaves = recipeBuildLeaves(parts, own).filter(l => l.st.template);
+    const out = [], fed = new Set();
+    links.forEach(l => {
+      const key = l.to.family + '\u0000' + l.to.rectangle.toLowerCase();
+      if(fed.has(key)){ out.push(`Link ${recipeLinkText(l, parts)}: another link already feeds “${l.to.rectangle}”, so this one is left out.`); return; }
+      fed.add(key);
+      if(key === l.from.family + '\u0000' + l.from.rectangle.toLowerCase()){ out.push(`Link ${recipeLinkText(l, parts)}: a rectangle can't feed itself, so this one is left out.`); return; }
+      const problem = [[l.to, true], [l.from, false]].map(([end, feeds]) => {
+        const leaf = leaves.find(x => x.part.family === end.family);
+        if(!leaf) return `${recipeLinkTemplateName(end.family, parts)} isn't one of its parts`;
+        const t = leaf.st.template;
+        return recipeLinkEndProblem(end, { nodes: (t.data.nodes || []).filter(Boolean), edges: (t.data.edges || []).filter(Boolean) }, t.name, feeds);
+      }).find(Boolean);
+      if(problem) out.push(`Link ${recipeLinkText(l, parts)}: ${problem}.`);
+    });
+    return out;
+  }
+  // Draws `links` ([{ link, parts }], recipeAllLinks) between the canvases of one build:
+  // `canvasOf(family)` gives the canvas that part was built on (or the one already here it
+  // stands for), or null. Changes the canvases' lists in the registry (the caller syncs and
+  // recalculates). `beforeFirst` (optional) runs before the first link is drawn. Returns
+  // { drawn, warnings }.
+  function drawRecipeLinks(links, canvasOf, beforeFirst){
+    syncActiveIntoRegistry();
+    const warnings = [];
+    let drawn = 0;
+    links.forEach(({ link: l, parts }) => {
+      const to = canvasOf(l.to.family), from = canvasOf(l.from.family);
+      const missing = !to ? l.to : !from ? l.from : null;
+      const problem = missing ? `${recipeLinkTemplateName(missing.family, parts)} isn't built here`
+        : recipeLinkEndProblem(l.to, to, `canvas “${to.name}”`, true) || recipeLinkEndProblem(l.from, from, `canvas “${from.name}”`, false);
+      if(problem){ warnings.push(`Link not drawn: ${recipeLinkText(l, parts)} — ${problem}.`); return; }
+      const target = recipeRectangleIn(to.nodes, l.to.rectangle), source = recipeRectangleIn(from.nodes, l.from.rectangle);
+      if(!drawn && beforeFirst){ beforeFirst(); syncActiveIntoRegistry(); }
+      to.edges.push(recipeLinkInto(to, target, from.id, source.id));
+      drawn++;
+    });
+    return { drawn, warnings };
+  }
+  // Puts the link from `sourceNodeId` on canvas `sourceCanvasId` into rectangle `target` of
+  // canvas `c`: an alias beside it (added to c.nodes) when the source is elsewhere. Returns
+  // the arrow, for the caller to add. `aliasId`: the alias's id to use (an update keeps it).
+  function recipeLinkInto(c, target, sourceCanvasId, sourceNodeId, aliasId){
+    if(sourceCanvasId === c.id) return { id: uid('e'), from: sourceNodeId, to: target.id, recipeLink: true };
+    const spot = findFreeSpot(c.nodes, 170, 64, Math.max(0, target.x - 220), target.y);
+    const id = aliasId || uid('n');
+    c.nodes.push({ id, type: 'alias', recipeLink: true, x: spot.x, y: spot.y, w: 170, h: 64, sourceCanvasId, sourceNodeId, plugs: [] });
+    return { id: uid('e'), from: id, to: target.id, recipeLink: true };
   }
 
   // Builds recipe `t` into the open system (the caller is an action: one undo step).
@@ -1038,7 +1174,17 @@
       if(!partOfFamily.has(part.family)) partOfFamily.set(part.family, c.id);
     });
     if(!made.length && !skipped.length) fail(`Nothing to build: none of the parts of "${t.name}" is in your library.`);
-    if(!made.length) return { canvases: [], parts, warnings, skipped, unfedSockets: [], multiFedSockets: [] };
+    // The recipe's links join the canvases of this build only: each part's family its first
+    // canvas here (built, or already here and skipped).
+    const links = recipeAllLinks(t);
+    const canvasOfFamily = new Map();
+    recipeBuildLeaves(t.data.parts, t.family).forEach(({ part }, i) => {
+      if(parts[i] && !canvasOfFamily.has(part.family)) canvasOfFamily.set(part.family, parts[i]);
+    });
+    // Nothing built: a link drawn is the change, so the undo point comes before the first one.
+    const drawn = links.length ? drawRecipeLinks(links, family => canvases.find(c => c.id === canvasOfFamily.get(family)) || null, made.length ? null : pushHistory) : { drawn: 0, warnings: [] };
+    drawn.warnings.forEach(w => warnings.push(w));
+    if(!made.length && !drawn.drawn) return { canvases: [], parts, warnings, skipped, unfedSockets: [], multiFedSockets: [], links: 0 };
     syncAutoConnections();
     clearComputed();
     evaluateAll();
@@ -1049,11 +1195,12 @@
     // is on a canvas it added) — e.g. a part whose canvas was already in the model.
     const newNames = new Set(made.map(id => canvases.find(c => c.id === id).name));
     const multi = multiFedSocketsIn(all).filter(m => newNames.has(m.canvas) || m.sources.some(s => newNames.has(s.split('::')[0])));
-    return { canvases: made, parts, warnings, skipped, unfedSockets: unfed, multiFedSockets: multi };
+    return { canvases: made, parts, warnings, skipped, unfedSockets: unfed, multiFedSockets: multi, links: drawn.drawn };
   }
   function recipeBuildSummary(t, r){
     const lines = [r.canvases.length ? `Built ${t.name}: ${r.canvases.length} canvas${r.canvases.length === 1 ? '' : 'es'}.`
       : `Nothing new to add for ${t.name}: every part is already here.`];
+    if(r.links) lines[0] += ` Linked ${r.links} rectangle${r.links === 1 ? '' : 's'}.`;
     (r.skipped || []).forEach(s => lines.push(s));
     r.warnings.forEach(w => lines.push(w));
     if(r.unfedSockets.length) lines.push(unfedSocketsText(r.unfedSockets));
@@ -1061,7 +1208,8 @@
     return lines.join('\n');
   }
 
-  // Saves a recipe of these parts: a new family, or (newVersionOf) the next version of one.
+  // Saves a recipe of these parts (and `links`, if any): a new family, or (newVersionOf) the
+  // next version of one.
   function saveRecipeTemplate(opts){
     const base = opts.newVersionOf ? latestOfFamily(opts.newVersionOf.family) : null;
     const t = {
@@ -1072,15 +1220,18 @@
       note: cleanTemplateNote(opts.note), versionId: newRandomId(),
       data: { kind: 'recipe', parts: cloneData(opts.parts) }
     };
+    const links = cleanRecipeLinks(opts.links);
+    if(links.length) t.data.links = links;
     TEMPLATES.push(t);
     saveWorkspaceSoon();
     return t;
   }
 
   // The recipe window: name etc. (new recipe), parts with their version, a live socket check.
-  // `from` (a recipe) starts from its parts and saves the next version of it.
+  // `from` (a recipe) starts from its parts and links and saves the next version of it.
   function showRecipeEditor(from, onSaved){
     let parts = from ? cloneData(from.data.parts) : [];
+    const links = from ? cloneData(from.data.links || []) : [];
     // The families a part can be: canvas templates, and recipes — not this one, nor one that
     // contains it (that would be a loop).
     const own = from ? from.family : null;
@@ -1120,8 +1271,63 @@
     const head = document.createElement('p'); head.className = 'recipe-parts-head'; head.textContent = 'Parts (canvas templates, or recipes built in their place; added in this order)';
     const list = document.createElement('div'); list.className = 'recipe-parts';
     const addBtn = document.createElement('button'); addBtn.className = 'recipe-add-part'; addBtn.textContent = '+ Add part';
+    const linksHead = document.createElement('p'); linksHead.className = 'recipe-parts-head'; linksHead.textContent = 'Links (an input rectangle of one part takes its value from a rectangle of another)';
+    const linkList = document.createElement('div'); linkList.className = 'recipe-links';
+    const addLinkBtn = document.createElement('button'); addLinkBtn.className = 'recipe-add-link'; addLinkBtn.textContent = '+ Add link';
     const check = document.createElement('p'); check.className = 'recipe-check';
-    box.append(head, list, addBtn, check);
+    box.append(head, list, addBtn, linksHead, linkList, addLinkBtn, check);
+
+    // The canvas templates a link can join: the recipe's canvases, each family once.
+    const linkable = () => {
+      const seen = new Set();
+      return recipeBuildLeaves(parts, own).filter(l => l.st.template && !seen.has(l.part.family) && seen.add(l.part.family)).map(l => l.st.template);
+    };
+    const option = (sel, value, text) => { const o = document.createElement('option'); o.value = value; o.textContent = text; sel.appendChild(o); };
+    function renderLinks(){
+      linkList.innerHTML = '';
+      const temps = linkable();
+      links.forEach((l, i) => {
+        const row = document.createElement('div'); row.className = 'recipe-link';
+        // One end: its template, then its rectangle (an input rectangle for the end fed).
+        const end = (which, feeds) => {
+          const e = l[which];
+          const tSel = document.createElement('select'); tSel.className = `recipe-link-${which}-template`;
+          if(!temps.some(t => t.family === e.family)) option(tSel, e.family, recipeLinkTemplateName(e.family, parts) + ' (not a part)');
+          temps.forEach(t => option(tSel, t.family, t.name));
+          tSel.value = e.family;
+          const rSel = document.createElement('select'); rSel.className = `recipe-link-${which}-rectangle`;
+          const t = temps.find(x => x.family === e.family);
+          const names = t ? recipeRectangleNames(t)[feeds ? 'inputs' : 'all'] : [];
+          if(!names.some(n => n.toLowerCase() === e.rectangle.toLowerCase())) option(rSel, e.rectangle, e.rectangle + ' (missing)');
+          names.forEach(n => option(rSel, n, n));
+          rSel.value = names.find(n => n.toLowerCase() === e.rectangle.toLowerCase()) || e.rectangle;
+          tSel.addEventListener('change', () => {
+            const nt = temps.find(x => x.family === tSel.value);
+            const first = nt ? recipeRectangleNames(nt)[feeds ? 'inputs' : 'all'][0] : '';
+            l[which] = { family: tSel.value, rectangle: first || e.rectangle };
+            render();
+          });
+          rSel.addEventListener('change', () => { l[which] = { family: e.family, rectangle: rSel.value }; render(); });
+          return [tSel, rSel];
+        };
+        const arrow = document.createElement('span'); arrow.className = 'recipe-link-arrow'; arrow.textContent = '←';
+        const rm = document.createElement('button'); rm.className = 'recipe-link-remove'; rm.textContent = '✕';
+        rm.addEventListener('click', () => { links.splice(i, 1); render(); });
+        row.append(...end('to', true), arrow, ...end('from', false), rm);
+        linkList.appendChild(row);
+      });
+      addLinkBtn.disabled = !temps.some(t => recipeRectangleNames(t).inputs.length) || links.length >= RECIPE_MAX_LINKS;
+    }
+    addLinkBtn.addEventListener('click', () => {
+      const temps = linkable();
+      const to = temps.find(t => recipeRectangleNames(t).inputs.length);
+      if(!to) return;
+      const from = temps.find(t => t !== to && recipeRectangleNames(t).all.length) || to;
+      const target = recipeRectangleNames(to).inputs[0];
+      const source = recipeRectangleNames(from).all.find(n => from !== to || n !== target) || target;
+      links.push({ to: { family: to.family, rectangle: target }, from: { family: from.family, rectangle: source } });
+      render();
+    });
 
     const actions = document.createElement('div'); actions.className = 'modal-actions';
     const cancelBtn = document.createElement('button'); cancelBtn.textContent = 'Cancel'; cancelBtn.addEventListener('click', close);
@@ -1177,7 +1383,8 @@
       });
       if(!parts.length){ const p = document.createElement('p'); p.className = 'template-desc'; p.textContent = 'No parts yet.'; list.appendChild(p); }
       addBtn.disabled = !modules().length || parts.length >= RECIPE_MAX_PARTS;
-      const chk = recipeCheckText(parts, own);
+      renderLinks();
+      const chk = recipeCheckText(parts, own, links);
       const loop = recipeBuildLeaves(parts, own).find(l => l.st.state === 'loop');
       check.classList.toggle('warn', parts.length > 0 && (chk.warn || !!loop));
       check.textContent = !parts.length ? '' : loop ? loop.st.label + '.' : chk.text;
@@ -1190,12 +1397,12 @@
     });
     saveBtn.addEventListener('click', () => {
       const note = cleanTemplateNote(noteIn.value);
-      if(from){ close(); onSaved(saveRecipeTemplate({ newVersionOf: from, parts, note })); return; }
+      if(from){ close(); onSaved(saveRecipeTemplate({ newVersionOf: from, parts, links, note })); return; }
       const name = nameIn.value.trim();
       if(!name){ nameIn.focus(); return; }
       const other = familiesNamed(name).find(f => f.kind !== 'recipe');
       if(other){ showMessage(`There is already a ${other.kind === 'system' ? 'system' : 'canvas'} template called "${other.name}". Choose another name.`); return; }
-      const opts = { name, group: groupIn.value.trim() || 'My Templates', description: descIn.value.trim(), parts, note };
+      const opts = { name, group: groupIn.value.trim() || 'My Templates', description: descIn.value.trim(), parts, links, note };
       const taken = familiesNamed(name, 'recipe');
       if(taken.length){
         askNameTaken(taken[0], () => { close(); onSaved(saveRecipeTemplate(Object.assign(opts, { newVersionOf: taken[0] }))); }, () => { nameIn.focus(); nameIn.select(); });
@@ -1318,8 +1525,27 @@
   // more than once on either side matches nothing). Matched rectangles keep their ids, so
   // aliases and block ports elsewhere still find them; each input rectangle of the new
   // version keeps the value typed on the canvas when the old one was an input too.
+  // The links a recipe drew into the canvas (`recipeLinks`: each target rectangle's id, the
+  // source canvas and rectangle, the alias's id) are set aside and drawn again afterwards to
+  // the same source; the canvas is otherwise compared and matched without them.
   function planCanvasUpdate(c, t){
-    const old = { nodes: c.id === activeCanvasId ? nodes : c.nodes, edges: c.id === activeCanvasId ? edges : c.edges };
+    const here = { nodes: c.id === activeCanvasId ? nodes : c.nodes, edges: c.id === activeCanvasId ? edges : c.edges };
+    const old = withoutRecipeLinks(here);
+    const linkAliases = new Map(here.nodes.filter(n => n.type === 'alias' && n.recipeLink).map(n => [n.id, n]));
+    const nameIn = (canvasId, nodeId) => {
+      const list = canvasId === c.id ? here.nodes : ((canvases.find(x => x.id === canvasId) || {}).nodes || []);
+      const n = list.find(x => x.id === nodeId);
+      const sc = canvases.find(x => x.id === canvasId);
+      return `${sc ? sc.name : 'another canvas'} · ${n ? (parseNode(n).name || 'a rectangle') : 'a rectangle'}`;
+    };
+    const recipeLinks = here.edges.filter(e => e.recipeLink || linkAliases.has(e.from)).map(e => {
+      const a = linkAliases.get(e.from);
+      const r = a ? { to: e.to, sourceCanvasId: a.sourceCanvasId, sourceNodeId: a.sourceNodeId, aliasId: a.id }
+        : { to: e.to, sourceCanvasId: c.id, sourceNodeId: e.from };
+      const target = here.nodes.find(n => n.id === e.to);
+      r.text = `${target ? parseNode(target).name || 'a rectangle' : 'a rectangle'} ← ${nameIn(r.sourceCanvasId, r.sourceNodeId)}`;
+      return r;
+    });
     const neu = { nodes: t.data.nodes || [], edges: t.data.edges || [] };
     const byName = (canvas) => {
       const m = new Map(), dup = new Set();
@@ -1346,7 +1572,7 @@
       if(!n || !isInputRectangle(neu, n)) dropped.push(o);
     });
     const source = linkedTemplate(c.template);
-    return { canvas: c, target: t, keepIds, kept, dropped, source,
+    return { canvas: c, target: t, keepIds, kept, dropped, source, recipeLinks,
       ownChanges: source ? canvasDiffersFromTemplate(old, c.id, source) : null };
   }
 
@@ -1370,7 +1596,9 @@
   }
 
   // Replaces the canvas's content with the planned version's. The caller has pushed history.
-  // Returns { kept, lostAliases }.
+  // Returns { kept, lostAliases, lostLinks }: lostLinks, the recipe's links that could not be
+  // drawn again (their rectangle gone, or no longer an input) — into this canvas, or from it
+  // into others (those aliases are removed).
   function applyCanvasUpdate(plan){
     const c = plan.canvas;
     if(c.id !== activeCanvasId){
@@ -1393,12 +1621,32 @@
       });
       if(Array.isArray(n.periodValues)) n.periodValues = padPeriodValuesArray(n.periodValues, periods.length);
     });
+    // The recipe's links into this canvas, drawn again from the same source canvas and rectangle.
+    const lostLinks = [];
+    const ids = new Set(nodes.map(n => n.id));
+    (plan.recipeLinks || []).forEach(r => {
+      const target = nodes.find(n => n.id === r.to);
+      const from = r.sourceCanvasId === c.id ? nodes : ((canvases.find(x => x.id === r.sourceCanvasId) || {}).nodes || []);
+      if(!target || target.type !== 'value' || !from.some(n => n.id === r.sourceNodeId) || !isInputRectangle({ nodes, edges }, target)){ lostLinks.push(r.text); return; }
+      edges.push(recipeLinkInto({ id: c.id, nodes }, target, r.sourceCanvasId, r.sourceNodeId, r.aliasId));
+    });
+    // The recipe's links from this canvas into others, whose rectangle is gone: removed.
+    canvases.forEach(o => {
+      if(o === c) return;
+      const gone = new Set(o.nodes.filter(n => n.type === 'alias' && n.recipeLink && n.sourceCanvasId === c.id && !ids.has(n.sourceNodeId)).map(n => n.id));
+      if(!gone.size) return;
+      o.edges.filter(e => gone.has(e.from)).forEach(e => {
+        const target = o.nodes.find(n => n.id === e.to);
+        lostLinks.push(`${o.name} · ${target ? parseNode(target).name || 'a rectangle' : 'a rectangle'} ← ${c.name}`);
+      });
+      o.nodes = o.nodes.filter(n => !gone.has(n.id));
+      o.edges = o.edges.filter(e => !gone.has(e.from));
+    });
     syncAutoConnections();
     clearComputed();
     evaluateAll();
     syncActiveIntoRegistry();
     setCanvasTemplateLink(c, plan.target);
-    const ids = new Set(nodes.map(n => n.id));
     const lostAliases = [];
     canvases.forEach(o => {
       if(o === c) return;
@@ -1406,7 +1654,7 @@
         if(n.type === 'alias' && n.sourceCanvasId === c.id && !ids.has(n.sourceNodeId)) lostAliases.push(o.name);
       });
     });
-    return { kept: plan.kept.length, lostAliases };
+    return { kept: plan.kept.length, lostAliases, lostLinks };
   }
 
   // "Update this canvas…": choose a version, see what happens, then Update (one undo step).
@@ -1499,6 +1747,7 @@
   function updateSummary(r){
     let text = `Updated to v${r.version}. Kept ${r.kept} input value${r.kept === 1 ? '' : 's'}.`;
     if(r.lostAliases.length) text += ` ${r.lostAliases.length} alias${r.lostAliases.length === 1 ? '' : 'es'} on other canvases lost what ${r.lostAliases.length === 1 ? 'it' : 'they'} pointed to (on ${Array.from(new Set(r.lostAliases)).join(', ')}).`;
+    if(r.lostLinks && r.lostLinks.length) text += ` A recipe's link${r.lostLinks.length === 1 ? '' : 's'} could not be drawn again: ${r.lostLinks.join('; ')}.`;
     return text;
   }
 
@@ -1921,7 +2170,18 @@
         ul.appendChild(li);
       });
       detail.appendChild(ul);
-      const chk = recipeCheckText(selected.data.parts, selected.family);
+      // Its links, and those of the recipes inside it: "To · rectangle ← From · rectangle".
+      const allLinks = recipeAllLinks(selected);
+      if(allLinks.length){
+        const lh = document.createElement('p');
+        lh.className = 'recipe-parts-head';
+        lh.textContent = 'Links';
+        const lu = document.createElement('ul');
+        lu.className = 'recipe-detail-links';
+        allLinks.forEach(({ link, parts }) => { const li = document.createElement('li'); li.textContent = recipeLinkText(link, parts); lu.appendChild(li); });
+        detail.append(lh, lu);
+      }
+      const chk = recipeCheckText(selected.data.parts, selected.family, allLinks.map(x => x.link));
       const check = document.createElement('p');
       check.className = 'recipe-check' + (chk.warn ? ' warn' : '');
       check.textContent = chk.text;

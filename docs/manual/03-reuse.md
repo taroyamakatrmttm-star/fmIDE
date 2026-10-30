@@ -127,7 +127,7 @@ The list shows one version of that template. If a version was still in use, the 
 > **You need:** two canvas templates that connect by a plug and a socket. The example: **Sales** (Units `100` × Price `2` = Revenue, with a plug named `Revenue`) and **Profit** (a `+` with the socket `Revenue` into *Sales revenue*; *Costs* = Sales revenue × Cost ratio `0.6`; *Profit* = Sales revenue − Costs). Save each with **+ Save Canvas as Template** ([lesson 3.1](#templates)).
 > **Time:** about 10 minutes.
 > **In the app:** fmIDE Help → *Recipes* (`recipes`), *Plugs and sockets* (`plugs-sockets`)
-> **Came in:** step 6 ([#21](https://github.com/taroyamakatrmttm-star/fmIDE/pull/21)); skipping parts already built [#54](https://github.com/taroyamakatrmttm-star/fmIDE/pull/54); recipes within a recipe [#101](https://github.com/taroyamakatrmttm-star/fmIDE/pull/101)
+> **Came in:** step 6 ([#21](https://github.com/taroyamakatrmttm-star/fmIDE/pull/21)); skipping parts already built [#54](https://github.com/taroyamakatrmttm-star/fmIDE/pull/54); recipes within a recipe [#101](https://github.com/taroyamakatrmttm-star/fmIDE/pull/101); links between parts branch `claude/recipe-links`
 
 A **recipe** lists canvas templates to build together, such as an income statement, a balance sheet and a cash flow. Plugs and sockets ([lesson 2.8](02-building-models.md#plugs-sockets)) connect the canvases it builds by name.
 
@@ -148,12 +148,16 @@ Two canvases, **Sales** and **Profit**, and Profit shows **80** (Costs 120 = 200
 - **Sockets nothing feeds** are listed when you build, so you can see what is missing. Several plugs into one socket are listed too.
 - **A part can be another recipe:** it builds in its place, with its own parts, so a full model can be made from smaller recipes. A recipe can't contain itself.
 - **Edit as new version…** changes a recipe's parts as its next version.
+- **Links join parts that don't know each other.** Plugs and sockets need both templates made with the same name. When they weren't, a link does the job in the recipe: under **Links**, press **+ Add link**, pick an input rectangle of one part, then the rectangle of another part it takes its value from. For example, *Accounts Receivable · Sales ← Revenue · Total revenue*: a Revenue of 10 units × 5 = 50 makes Sales 50, and with an unpaid share of 0.25 Accounts receivable is 12.5. Build draws each link as an ordinary alias and arrow, and says *Linked 1 rectangle.*
+- **A link stays within its own build.** Build the recipe twice and each Accounts Receivable takes its value from the Revenue built with it. Updating a canvas to a newer template version draws its link again to the same canvas. A link that can't be drawn, for example because a newer version renamed the rectangle, is a warning when you build, never a block, and the recipe's check lists it beforehand.
 
 ### From a script
 
 ```js
 fm.saveRecipe({ name: 'Small P&L', parts: ['Sales', 'Profit'] });
-const made = fm.insertTemplate({ template: 'Small P&L', mode: 'add' });   // { parts: [canvas ids], unfedSockets: [], … }
+const made = fm.insertTemplate({ template: 'Small P&L', mode: 'add' });   // { parts: [canvas ids], unfedSockets: [], links: 0, … }
+fm.saveRecipe({ name: 'Working Capital', parts: ['Revenue', 'Accounts Receivable'],
+  links: [{ to: { template: 'Accounts Receivable', rectangle: 'Sales' }, from: { template: 'Revenue', rectangle: 'Total revenue' } }] });
 ```
 
 ---

@@ -378,10 +378,11 @@
     } });
 
   defineAction({ name:'saveRecipe', label:'Save Recipe', category:'Insert', icon:'🧾', returns:'value',
-    desc:'Saves a recipe: canvas templates (or other recipes, built in their place) added together, each "Name" / "Name@latest" (follows the latest version) or "Name@2" (that version). A name already in use fails unless newVersionOf names that recipe; a part that contains the recipe itself fails. Returns the recipe as "Name@version".',
+    desc:'Saves a recipe: canvas templates (or other recipes, built in their place) added together, each "Name" / "Name@latest" (follows the latest version) or "Name@2" (that version). A name already in use fails unless newVersionOf names that recipe; a part that contains the recipe itself fails. links (optional) joins parts that don\'t know each other: each { to: { template, rectangle }, from: { template, rectangle } } feeds an input rectangle of one part from a rectangle of another, drawn as an alias each time the recipe is built; a link that won\'t hold fails. A new version without links keeps the ones before. Returns the recipe as "Name@version".',
     params:[ P('name','string',{ def:'' }), P('parts','json',{ help:'list of template references' }),
       P('group','string',{ def:'My Templates' }), P('description','string',{ def:'' }), P('note','string',{ def:'' }),
-      P('newVersionOf','string',{ def:'', help:'a recipe to save the next version of' }) ],
+      P('newVersionOf','string',{ def:'', help:'a recipe to save the next version of' }),
+      P('links','json',{ optional:true, help:'e.g. [{"to":{"template":"Accounts Receivable","rectangle":"Sales"},"from":{"template":"Revenue","rectangle":"Total revenue"}}]' }) ],
     run(a){
       if(!Array.isArray(a.parts) || !a.parts.length) fail('A recipe needs a list of parts, e.g. ["Income Statement@latest", "Balance Sheet@2"].');
       if(a.parts.length > RECIPE_MAX_PARTS) fail(`A recipe can have at most ${RECIPE_MAX_PARTS} parts.`);
@@ -403,11 +404,24 @@
         const taken = familiesNamed(name)[0];
         if(taken) fail(`There is already a template called "${taken.name}". Choose another name, or use newVersionOf to save its next version.`);
       }
-      const t = saveRecipeTemplate({ name: a.name.trim(), group: a.group.trim() || 'My Templates', description: a.description, note: a.note, parts, newVersionOf: base });
+      let links = base && a.links == null ? cloneData(latestOfFamily(base.family).data.links || []) : [];
+      if(a.links != null){
+        if(!Array.isArray(a.links)) fail('links must be a list, e.g. [{ "to": { "template": "Accounts Receivable", "rectangle": "Sales" }, "from": { "template": "Revenue", "rectangle": "Total revenue" } }].');
+        if(a.links.length > RECIPE_MAX_LINKS) fail(`A recipe can have at most ${RECIPE_MAX_LINKS} links.`);
+        const end = (e, which, k) => {
+          if(!e || typeof e !== 'object' || typeof e.rectangle !== 'string' || !e.rectangle.trim()) fail(`Link ${k + 1} needs ${which}: { template, rectangle }.`);
+          const t = resolveTemplateRef(String(e.template == null ? '' : e.template).trim());
+          return { family: t.family, rectangle: e.rectangle.trim() };
+        };
+        links = a.links.map((l, k) => ({ to: end(l && l.to, 'to', k), from: end(l && l.from, 'from', k) }));
+      }
+      const problems = recipeLinkProblems(links, parts, base ? base.family : null);
+      if(a.links != null && problems.length) fail(problems[0]);
+      const t = saveRecipeTemplate({ name: a.name.trim(), group: a.group.trim() || 'My Templates', description: a.description, note: a.note, parts, links, newVersionOf: base });
       return t.name + '@' + t.version;
     } });
   defineAction({ name:'updateCanvasFromTemplate', label:'Update Canvas from Template', category:'Insert', icon:'⬆',
-    desc:'Rebuilds a canvas made from a canvas template from another version of it ("latest", or a number). Input values typed on the canvas are kept (matched by rectangle name); everything else comes from that version. Returns { version, kept, lostAliases }.',
+    desc:'Rebuilds a canvas made from a canvas template from another version of it ("latest", or a number). Input values typed on the canvas are kept (matched by rectangle name); everything else comes from that version; links a recipe drew into it are drawn again from the same canvas. Returns { version, kept, lostAliases, lostLinks }.',
     params:[ P('canvas','canvas',{ def:'@current' }), P('version','string',{ def:'latest', help:'"latest" or a version number' }) ],
     run(a){
       const st = templateLinkStatus(a.canvas);
@@ -420,7 +434,7 @@
       const plan = planCanvasUpdate(a.canvas, t);
       pushHistory();
       const r = applyCanvasUpdate(plan);
-      return { version: t.version, kept: r.kept, lostAliases: r.lostAliases };
+      return { version: t.version, kept: r.kept, lostAliases: r.lostAliases, lostLinks: r.lostLinks };
     } });
   defineAction({ name:'unlinkCanvasFromTemplate', label:'Unlink Canvas from Template', category:'Insert', icon:'⛓',
     desc:'Makes a canvas forget the canvas template it was made from (no more update notices). Its content stays.',

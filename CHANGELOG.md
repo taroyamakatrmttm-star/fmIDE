@@ -2,6 +2,12 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmIDE: a recipe's links
+- A recipe may link an input rectangle of one part to a rectangle of another, by template family and rectangle name, though neither template knows the other (Accounts Receivable · Sales ← Revenue · Total revenue): the recipe editor's Links list, the Templates window's list and check, `fm.saveRecipe`'s `links`. Building draws each as an ordinary alias and arrow marked `recipeLink`, between the canvases of that same build only (a recipe built twice gives two separate pairs); a link that can't be drawn is a warning. Updating a canvas draws its links again from the same source canvas (`lostLinks` when it can't). The calculation, ExcelExporter, fmGraph and fmShowcase are unchanged: they see an ordinary alias.
+- Formats: templates file 11, workspace 15 (both apps), library pack 5 (the checker checks links); the system file is unchanged (9).
+- Help (*Recipes*), What's new, lesson 3.4, `docs/file-formats.md`.
+- Tests: new group 99; groups 6, 14, 15, 16, 20, 22, 23, 37, 50, 53 and `6-formats-excelexporter` changed on purpose (the new current versions; group 15: `updateCanvasFromTemplate` also returns `lostLinks`); old samples `formats/templates-v10.json`, `formats/ws-v14.json`, `library/pack-v4.json`. Branch `claude/recipe-links`.
+
 ## fmGraph and fmShowcase: sliders in their rectangle's colour
 - A slider's grip and filled bar take its rectangle's colour (`--slider-accent`, set on each slider card, dock card, fader and viewer row from `sliderAccent(shownColour(key))` in the board engine's `04e-colours.js`), on the desktop (`accent-color`), the phone's dock and faders and the viewer's rows (the shared slider's `--ps-accent`). A colour with less than 3:1 contrast against white is darkened on the slider only, keeping its hue; the stripe and colour box keep the exact colour. No change to `src/shared/` or the board file.
 - Tests: groups 49, 68 and 93 one new test each; group 92's snapshots `fmgraph-every-widget.txt` and `fmgraph-every-widget-phone.txt` updated on purpose (the new style property). Branch `claude/slider-colours`.

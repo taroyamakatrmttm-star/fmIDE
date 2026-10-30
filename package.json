@@ -50,6 +50,7 @@
     "test:add-many": "playwright test tests/40-add-many-rectangles.spec.js",
     "test:equal-spacing": "playwright test tests/41-equal-spacing-snap.spec.js",
     "test:nested-recipes": "playwright test tests/62-nested-recipes.spec.js",
+    "test:recipe-links": "playwright test tests/99-recipe-links.spec.js",
     "test:macro-references": "playwright test tests/63-macro-references.spec.js",
     "test:shared-modules": "playwright test tests/64-shared-modules.spec.js",
     "test:modules-in-node": "playwright test tests/65-modules-in-node.spec.js",
