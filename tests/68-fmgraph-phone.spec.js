@@ -341,7 +341,13 @@ test('boards: a swipe sideways across the bars, ‹ and ›; up and down scrolls
   await p.evaluate(() => window.scrollTo(0, 0));
   const c2 = await p.locator('.chart-widget').first().boundingBox();
   const a2 = { x: 320, y: c2.y + 120 };
-  await phone.drag(a2, steps(a2, { x: 60, y: a2.y + 10 }, 6));
+  // A swipe is quick: fmGraph takes one that lasts under 0.9 s. On a busy computer sending the
+  // finger's moves can take longer, and then rightly no swipe: send it again, up to three times.
+  for(let tries = 1; ; tries++){
+    const t0 = Date.now();
+    await phone.drag(a2, steps(a2, { x: 60, y: a2.y + 10 }, 6));
+    if(Date.now() - t0 < 700 || tries === 3 || await shown() === 1) break;
+  }
   await expect.poll(shown).toBe(1);
   await expect(p.locator('#phoneBoards .phone-board-title')).toHaveText('Second <b>board</b>');
   await expect(p.locator('#phoneBoards b')).toHaveCount(0);
