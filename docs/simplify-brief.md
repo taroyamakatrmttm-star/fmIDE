@@ -57,6 +57,10 @@ Measured without the boards' own rectangles and scenarios (the window adds them:
 - **Unused function definitions** in the copy's `functions` (only those its function nodes call).
 - **Fixed numbers gathered on one canvas** ("Given in this lesson") instead of staying where they were (choice 2B), for lessons that want the givens in one place.
 
+## How phase 2 turned out
+
+Same branch, approved by the owner ("sure build phase2 now"). Make Showcase Viewer… has **Simplify to the sliders** (`.sm-simplify`) and **Show what goes…**, the list with Keep anyway ticks. On Make the model is simplified for the sliders of the boards ticked (each scenario one more run; the boards' bars and charts kept as fixed numbers unless 0): the viewer's model block is the simplified system, ExcelExporter is asked for the workbook with it (`askExcelForViewerWorkbook`'s new `payload`), and the showcase in the viewer has its boards pruned and its shown canvases cut to what is left. The document keeps its whole model and the choices — **showcase v2**'s `simplify: { on, keep }` (choice 6A). `fm.makeShowcaseViewer({ simplify })`. Tests: `tests/100-simplify-viewer.spec.js` (group 100) — the window, the made viewer's numbers with the slider moved and the scenario shown, the workbook without the removed canvas and rows — and showcase v2 in `6-formats-showcase`. The batch tool (`tools/make-viewers.js`) doesn't read `simplify` yet: phase 3.
+
 ## How phase 1 turned out
 
 Branch `claude/simplify-to-sliders-5cfd71`. `src/shared/simplify.js` (Apache, shared; fmIDE now, the batch tool in phase 3), fmIDE's `11h-simplify.js` (the window, the copy, the banner) and `14e-actions-simplify.js` (the API), workspace v16 with `cleanDocumentSimplified`. Help topic `simplify`, What's new, lesson 8.5. Tests: group 100 (`tests/100-simplify.spec.js` in Node, `tests/100-simplify-fmide.spec.js` in fmIDE).

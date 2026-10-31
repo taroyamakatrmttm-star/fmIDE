@@ -123,12 +123,13 @@
     excelWindow = w || null;
     return w ? true : null;
   }
-  // A Promise of { bytes (Uint8Array), map, notes }. `opened`: from excelWindowForViewer.
-  function askExcelForViewerWorkbook(boards, opened){
+  // A Promise of { bytes (Uint8Array), map, notes }. `opened`: from excelWindowForViewer. `payload`:
+  // the workspace to make it from (Simplify to the sliders: the simplified model), else the document's.
+  function askExcelForViewerWorkbook(boards, opened, payload){
     if(opened === null) return Promise.reject(new Error('The browser blocked the ExcelExporter window. Allow pop-ups for fmIDE.'));
     if(viewerWorkbookAsk) viewerWorkbookAsk.reject(new Error('Asked again.'));
     return new Promise((resolve, reject) => {
-      const ask = { id: 'vw-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8), boards: boards ? JSON.stringify(boards) : '', sent: false, opened, resolve, reject };
+      const ask = { id: 'vw-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8), boards: boards ? JSON.stringify(boards) : '', payload: payload || null, sent: false, opened, resolve, reject };
       const done = () => { clearTimeout(ask.timer); if(viewerWorkbookAsk === ask) viewerWorkbookAsk = null;
         if(ask.opened){ try{ if(excelWindow && !excelWindow.closed) excelWindow.close(); }catch(e){ /* gone */ } excelWindow = null; } };
       ask.resolve = (v) => { done(); resolve(v); };
@@ -143,7 +144,7 @@
     const ask = viewerWorkbookAsk;
     if(!ask || ask.sent || !excelWindow) return;
     ask.sent = true;
-    try{ excelWindow.postMessage({ type: 'fmIDE:viewer-workbook', id: ask.id, name: docDisplayName(), text: JSON.stringify(buildExcelPayload()), boards: ask.boards }, ownOrigin() || '*'); }
+    try{ excelWindow.postMessage({ type: 'fmIDE:viewer-workbook', id: ask.id, name: docDisplayName(), text: JSON.stringify(ask.payload || buildExcelPayload()), boards: ask.boards }, ownOrigin() || '*'); }
     catch(e){ ask.reject(new Error('ExcelExporter\'s window went away.')); }
   }
   function takeViewerWorkbook(d){

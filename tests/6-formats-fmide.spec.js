@@ -437,7 +437,7 @@ test.describe('workspace v14: the document keeps its showcase', () => {
     const showcase = readFixture('formats', 'showcase-v1.json');
     await importWorkspace(page, testInfo, workspaceWith({ showcase }));
     let data = await exported(page);
-    expect(data.showcase).toMatchObject({ kind: 'fmIDE-showcase', version: 1, id: 'loan-basics', title: 'How a loan is repaid',
+    expect(data.showcase).toMatchObject({ kind: 'fmIDE-showcase', version: 2, id: 'loan-basics', title: 'How a loan is repaid', // kept as the current version
       author: 'A teacher', licence: 'CC BY 4.0', mark: false, canvases: { show: ['c1', 'c3'], start: 'c3' },
       play: { from: 'Base', to: 'High rate' }, periods: { mode: 'range', from: 0, to: 9 }, excel: { file: 'Loan basics.xlsx' } });
     expect(data.showcase.boards).toEqual(showcase.boards);
@@ -479,7 +479,7 @@ test.describe('workspace v14: the document keeps its showcase', () => {
   });
 
   test('a showcase from a newer viewer format is kept as it came', async ({ page }, testInfo) => {
-    const showcase = { kind: 'fmIDE-showcase', version: 2, title: 'Later', somethingNew: [1] };
+    const showcase = { kind: 'fmIDE-showcase', version: 3, title: 'Later', somethingNew: [1] }; // 2 is current since Simplify to the sliders
     await importWorkspace(page, testInfo, workspaceWith({ showcase }));
     expect((await exported(page)).showcase).toEqual(showcase);
   });

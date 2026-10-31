@@ -2,6 +2,12 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Make Showcase Viewer…: Simplify to the sliders
+- Phase 2 of `docs/simplify-brief.md`: **Simplify to the sliders** in Make Showcase Viewer… (with **Show what goes…** and Keep anyway): the viewer's model and the Excel workbook ExcelExporter makes for it hold only what the ticked boards' sliders move — each scenario tried too, the boards' bars and charts kept as fixed numbers unless 0 — checked against the full model; the boards and shown canvases cleaned to match. The document keeps its whole model. `fm.makeShowcaseViewer({ simplify })`.
+- Format: **showcase 2** — `simplify: { on, keep }` (the 1 → 2 step changes nothing; fmShowcase reads v2 and leaves it alone).
+- Help, What's new, lesson 8.5, `docs/file-formats.md`.
+- Tests: group 100's `tests/100-simplify-viewer.spec.js` (new); `6-formats-showcase` (new test; changed on purpose: a v1 showcase is read as version 2, the newer sample is now `formats/showcase-newer-v3.json`); `6-formats-fmide` (changed on purpose: a kept showcase is version 2, a newer one 3). Branch `claude/simplify-to-sliders-5cfd71`.
+
 ## fmIDE: Simplify for inputs
 - **File → Simplify for Inputs…** (the owner's idea of 1 November 2026, phase 1 of `docs/simplify-brief.md`): choose inputs and a range for each — or take the fmGraph boards' sliders — and get a copy holding only what they move, every other input staying at today's number. The shared calculation is run at every step of each input, at the corners and at 200 random combinations (`src/shared/simplify.js`, new, Apache); what never moves goes. Where something kept reads it, it stays as a fixed number in place; a fixed 0 is dropped from a + (or a − after its first input); a × by a fixed −1 feeding the second input of a two-input + or − is folded into it. Period shifts, errors and blocks in use stay; canvases left empty go; the rest are unlinked from their templates; positions and formats kept. The window lists what goes and why, with Keep anyway; the copy is checked against the full model, then opens as a new, unsaved document ("‹name› (simplified)") or is saved; the model it came from is never changed. A banner on the copy says what it was simplified for. `fm.simplifyPlan`, `fm.simplifyForInputs`, `fm.simplified`.
 - Format: **workspace 16** (both apps): `simplified`, what a copy was made from and for (`cleanDocumentSimplified`); the 15 → 16 step changes nothing.

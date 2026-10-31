@@ -1,0 +1,8 @@
+{
+ "kind": "fmIDE-showcase",
+ "version": 3,
+ "title": "From a newer fmIDE",
+ "somethingNew": {
+  "a": 1
+ }
+}

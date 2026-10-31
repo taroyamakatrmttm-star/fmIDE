@@ -37,8 +37,8 @@
   }
   // The boards' sliders (each setting once), their scenarios as extra runs, and every rectangle
   // their bars and charts show.
-  function simplifyFromBoards(){
-    const f = simplifyBoardFile();
+  function simplifyFromBoards(file){
+    const f = file === undefined ? simplifyBoardFile() : file;
     const sliders = [], seen = new Set(), shown = [];
     if(!f) return { sliders, scenarios: [], shown };
     const isRef = (o) => o && typeof o === 'object' && typeof o.canvasId === 'string' && typeof o.nodeId === 'string';
@@ -129,6 +129,84 @@
       kept: r.kept, total: r.total, runs: r.runs, fixed: r.fixed, removed: r.removed });
     return data;
   }
+  // Simplify to the sliders (phase 2, Make Showcase Viewer…): the model simplified for the sliders
+  // of the showcase's boards — each scenario one more run, their bars and charts kept as fixed
+  // numbers unless 0 — and Keep anyway from `sc.simplify.keep`. Returns a Promise of { system
+  // (the viewer's model block), showcase (its boards and shown canvases cleaned the same way),
+  // excelPayload (the workspace ExcelExporter makes the workbook from), result }. The document
+  // itself is not changed.
+  function simplifyForViewer(sc, onProgress){
+    const boards = simplifyFromBoards(sc && sc.boards ? sc.boards : null);
+    if(!boards.sliders.length) return Promise.reject(new FmError('Simplify to the sliders needs a board with sliders: tick one, or set them up in fmGraph.'));
+    const { inputs, problems } = simplifyInputs(buildSystemPayload(), boards.sliders);
+    if(!inputs.length) return Promise.reject(new FmError('The boards\' sliders are on no input rectangle of this model' + (problems.length ? ': ' + problems.join(' ') : '.')));
+    const keep = sc.simplify && Array.isArray(sc.simplify.keep) ? sc.simplify.keep : [];
+    const running = runSimplify(inputs, { keep, extraRuns: boards.scenarios, shown: boards.shown }, onProgress);
+    return running.promise.then(r => simplifiedForViewer(sc, r));
+  }
+  function simplifiedForViewer(sc, r){
+    const system = cloneData(r.system);
+    const present = new Set(), ids = system.canvases.map(c => c.id);
+    system.canvases.forEach(c => c.nodes.forEach(n => present.add(c.id + '\u0000' + n.id)));
+    const showcase = cloneData(sc);
+    if(showcase.boards) showcase.boards = simplifyPruneBoards(showcase.boards, present);
+    const shown = showcase.canvases && Array.isArray(showcase.canvases.show) ? showcase.canvases.show.filter(id => ids.includes(id)) : ids.slice();
+    showcase.canvases = { show: shown.length ? shown : ids.slice(0, 1) };
+    showcase.canvases.start = sc.canvases && showcase.canvases.show.includes(sc.canvases.start) ? sc.canvases.start : showcase.canvases.show[0];
+    const excelPayload = Object.assign(buildExcelPayload(), { system });
+    if(excelPayload.graphBoards) excelPayload.graphBoards = simplifyPruneBoards(excelPayload.graphBoards, present);
+    return { system, showcase, excelPayload, result: r };
+  }
+
+  // A result in a few words: "keeps 154 of 528 items on 14 of 29 canvases".
+  function simplifyWords(r){
+    return 'keeps ' + r.kept + ' of ' + r.total + ' items on ' + r.canvases.kept + ' of ' + r.canvases.total + ' canvases';
+  }
+  // Make Showcase Viewer…'s Show what goes…: the list with Keep anyway ticks, redone at once from
+  // the same runs (result.rebuild). Done gives back the ticks: onDone(keep, result).
+  function showSimplifyKeepWindow(result, keep, onDone){
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const box = document.createElement('div');
+    box.className = 'modal-box simplify-box simplify-keep-box';
+    addWindowHelp(box, 'simplify');
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    const el = (tag, cls, text) => { const e = document.createElement(tag); if(cls) e.className = cls; if(text !== undefined) e.textContent = text; return e; };
+    const keepTicks = { nodes: new Set(), canvases: new Set(), names: new Map() };
+    (keep || []).forEach(k => { if(k && k.nodeId !== undefined) keepTicks.nodes.add(k.canvasId + '\u0000' + k.nodeId); else if(k) keepTicks.canvases.add(k.canvasId); });
+    const keepList = () => [...keepTicks.canvases].map(canvasId => ({ canvasId }))
+      .concat([...keepTicks.nodes].map(k => { const [canvasId, nodeId] = k.split('\u0000'); return { canvasId, nodeId }; }));
+    let r = result;
+    const summary = el('p', 'sim-summary');
+    const list = el('div', 'sim-list');
+    const draw = () => {
+      summary.textContent = 'The viewer ' + simplifyWords(r) + ' · ' + r.fixed.length + ' fixed number' + (r.fixed.length === 1 ? '' : 's') + ' · ' + r.zeros + ' zero' + (r.zeros === 1 ? '' : 's') + ' dropped';
+      list.textContent = '';
+      appendSimplifyList(list, r.removed, r.fixed, keepTicks);
+    };
+    list.addEventListener('change', (ev) => {
+      const t = ev.target;
+      if(!t || t.type !== 'checkbox') return;
+      if(t.classList.contains('sim-keep')){ const k = t.dataset.canvas + '\u0000' + t.dataset.node; if(t.checked) keepTicks.nodes.add(k); else keepTicks.nodes.delete(k); }
+      else if(t.classList.contains('sim-keep-canvas')){ if(t.checked) keepTicks.canvases.add(t.dataset.canvas); else keepTicks.canvases.delete(t.dataset.canvas); }
+      else return;
+      const scroll = list.scrollTop;
+      r = r.rebuild(keepList());
+      draw();
+      list.scrollTop = scroll;
+    });
+    const actions = el('div', 'modal-actions');
+    const done = el('button', 'primary sim-keep-done', 'Done');
+    const close = () => { overlay.remove(); onDone(keepList(), r); };
+    done.addEventListener('click', close);
+    overlay.addEventListener('mousedown', (ev) => { if(ev.target === overlay) close(); });
+    actions.appendChild(done);
+    box.append(el('p', 'showcase-maker-title', 'What goes from the viewer'), el('p', 'template-desc', 'Tick what to keep anyway. It is checked again when the viewer is made.'), summary, list, actions);
+    draw();
+    done.focus();
+  }
+
   function simplifiedName(){ return (docDisplayName() + ' (simplified)').slice(0, 120); }
 
   // Opens the copy as a new, unsaved document (the one open now asked about first when it has

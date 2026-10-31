@@ -34,18 +34,18 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 | `fmIDE-excel-style` | 1 | ExcelExporter's Excel style: how every cell in the workbook looks, by role (step 11a, below) | ExcelExporter: Import Excel Style |
 | `fmIDE-excel-module-layouts` | 2 | ExcelExporter's layouts remembered per module (step 11b, below); v2: the layout of a module's block instances, `instance` (step 11d) | ExcelExporter: Import Module Layouts |
 | `fmIDE-graph-board` | 14 | fmGraph's boards: bars, charts and sliders showing one model (step 15, below); v2: the template form, for a template's `attachments.graph` (G5a); v3: the model's named scenarios, `scenarios`; v4: the scenario waterfall, a chart of layout `scenarios`; v5: a bar's or chart's fixed vertical scale, `scale`; v6: a folded slider, `folded`; v7: a board keeping its own slider positions, `ownSliders`; v8: the Tornado and the Spider, charts of layout `tornado` and `spider` (step 18; the template form stays version 2); v9: the shared period, `sharedPeriods` and a bar's or chart's `ownPeriod`; v10: the lines chart, a chart of layout `lines`; v11: the shared colours, `colours`; v12: the common scale, `commonScale` and a bar's or chart's `ownScale`; v13: the Free chart, a chart of layout `free`; v14: a slider at its minimum, one short row, `folded: "min"` (`true` stays Folded) | fmGraph: Boards → Import boards… (or dropped on the page) · ExcelExporter: File → Import fmGraph boards… (its scenarios, Tornado and Spider charts, sliders, bars and charts, below) |
-| `fmIDE-showcase` | 1 | What a showcase viewer shows: for one model (its canvases, boards, Play, periods, title, description, author, licence, mark), or a recipe for many models built alike (below) | fmShowcase (`fmViewer.html`): dropped with the model, or carried in a made viewer; a recipe goes to the tool that makes many viewers |
+| `fmIDE-showcase` | 2 | What a showcase viewer shows: for one model (its canvases, boards, Play, periods, title, description, author, licence, mark; v2: `simplify`, Simplify to the sliders), or a recipe for many models built alike (below) | fmShowcase (`fmViewer.html`): dropped with the model, or carried in a made viewer; a recipe goes to the tool that makes many viewers |
 | `fmIDE-gallery` | 1 | The showcase gallery's list: its title, a line of introduction and its sections (phase V6, below) | `tools/build-gallery.js`, from the gallery's folder; never opened by an app |
 | `fmIDE-viewer-workbook` | 1 | The Excel workbook a showcase viewer carries, packed, with its cell map (phase V4, below) | fmShowcase: the made viewer's `excel` block; never opened as a file |
 
-## Showcases (`fmIDE-showcase` 1, the showcase viewer)
+## Showcases (`fmIDE-showcase` 2, the showcase viewer)
 
 A showcase says what a viewer shows (`docs/viewer-brief.md`). **It never holds the model**: it sits beside a `.fmide` document or system file and names only canvases (and, in the recipe form, rectangles by name). Read by `src/shared/showcase.js`; the viewer shows every text in it as plain text.
 
 **For one model** (no `form`):
 
 ```json
-{ "kind": "fmIDE-showcase", "version": 1,
+{ "kind": "fmIDE-showcase", "version": 2,
   "id": "loan-basics",
   "title": "How a loan is repaid",
   "description": "Move the rate and the term and watch the interest.",
@@ -55,7 +55,8 @@ A showcase says what a viewer shows (`docs/viewer-brief.md`). **It never holds t
   "boards": { "kind": "fmIDE-graph-board", "version": 12, "active": 0, "boards": [], "scenarios": [] },
   "play": { "from": "Base", "to": "High rate" },
   "periods": { "mode": "range", "from": 0, "to": 9 },
-  "excel": { "file": "Loan basics.xlsx" } }
+  "excel": { "file": "Loan basics.xlsx" },
+  "simplify": { "on": true, "keep": [ { "canvasId": "c3" }, { "canvasId": "c1", "nodeId": "n12" } ] } }
 ```
 
 | Field | Rule (a value that breaks it is left out, and the viewer says so) |
@@ -71,10 +72,11 @@ A showcase says what a viewer shows (`docs/viewer-brief.md`). **It never holds t
 | `play` | `from` and `to` (at most 120 characters each): where Play starts — a scenario's name, or `"Base"` for the model's own numbers (so a scenario named Base can't be an end). An end that names no scenario: fmGraph's usual ends. The visitor may pick others, and "My sliders". |
 | `periods` | `{ "mode": "range", "from", "to" }`, whole numbers counted from 0, `from` ≤ `to`: the periods shown (cut to the model's last). Visitors cannot change them. With boards they are the boards' shared periods (a bar or chart the author gave its own periods keeps them; the one-period charts show the first) and the canvas shows the first; a rectangle's card shows every one. Absent, with boards: the boards' shared periods as the author set them, and the canvas shows the boards' one period. |
 | `excel.file` | The downloaded workbook's file name (characters a file name can't hold become spaces; `.xlsx` added), at most 120. |
+| `simplify` | Version 2 (Simplify to the sliders, `docs/simplify-brief.md`): `on` — `true` when the viewer's model and its workbook hold only what the boards' sliders move (anything else is off); `keep` — what is kept anyway, at most 2,000, each a canvas id alone (the whole canvas) or with a rectangle's `nodeId` (ids of at most 200 characters, no repeats; others left out and said). fmIDE reads it to make the viewer and keeps it in the document; the viewer reads it and does nothing with it — its model block is already simplified. Older showcases (v1) have none: the 1 → 2 step changes nothing (sample `formats/showcase-v1.json`); an older viewer asks before opening a v2 file. |
 
 **The recipe form** (`"form": "recipe"`), for making viewers of many models built the same way: `title` (may use `{model}`, the model's file name or title), `description`, `author`, `licence`, `mark`; `boards` in the board file's **template form** (rectangles by name, `form: "template"`); and `auto` (optional) — `sliders: "inputs"` (a slider on each input rectangle, up to 12), `bars: "outputs"` (a bar on each rectangle nothing else reads, up to 12), `range` (1–100, the sliders' reach in % either side; 50 when absent). The viewer refuses a recipe: it is for the batch tool (phase V5, `tools/make-viewers.js`).
 
-Since phase V5 a recipe may also carry, still in version 1 (no app writes a recipe, and every reader before V5 refuses one, so nothing older reads these fields wrongly): `canvases` — `show`, a list of canvas **names** (at most 80 characters each, capitals ignored when matched), and `start`, a canvas name — and `play`, `periods` and `excel` as in the one-model form (`excel.file` may use `{model}`). A name a model doesn't have is left out of that model's viewer and listed in the tool's report. A rectangle in the recipe's boards may leave out `canvas` when its name is unique in the whole model (a system template's form; fmGraph's own template form always names the canvas). A canvas template's form (`template: { kind: "module", family }`) places the boards on each canvas made from that template.
+Since phase V5 a recipe may also carry (in version 1, and as written still with no `simplify`) (no app writes a recipe, and every reader before V5 refuses one, so nothing older reads these fields wrongly): `canvases` — `show`, a list of canvas **names** (at most 80 characters each, capitals ignored when matched), and `start`, a canvas name — and `play`, `periods` and `excel` as in the one-model form (`excel.file` may use `{model}`). A name a model doesn't have is left out of that model's viewer and listed in the tool's report. A rectangle in the recipe's boards may leave out `canvas` when its name is unique in the whole model (a system template's form; fmGraph's own template form always names the canvas). A canvas template's form (`template: { kind: "module", family }`) places the boards on each canvas made from that template.
 
 **The batch tool's report** (`report.json`, written by `tools/make-viewers.js`, read by nothing in the apps): kind `fmIDE-viewer-report`, version 1 — `made`, `failed`, `withNotes`, `bytes`, `recipe`, `excel`, `seconds`, and `viewers`: one entry per model file, `{ file, id, fileName, title, source ("recipe", "showcase", "boards", "auto" or "logic"), canvases, boards, sliders, bars (names), charts, scenarios, notFound: [{ name, canvas }], canvasesNotFound, excel: { file, size, notes } | { error } | null, size, notes, error }`.
 

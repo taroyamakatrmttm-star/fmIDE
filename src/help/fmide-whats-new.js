@@ -20,7 +20,7 @@ const WHATS_NEW = [
     ],
     why: 'A step-by-step course starts from simple transactions and adds more on top. A lesson\'s model, and the Excel workbook made from it, should hold only what that lesson has taught.',
     how: ['Open {cmd:simplifyForInputs}.', 'Use the boards\' sliders, or add inputs and type their ranges. Press Work out.', 'Tick Keep anyway where you want, then press Open the copy.'],
-    notes: ['The fixed numbers are right only while the other inputs stay as they were.'],
+    notes: ['The fixed numbers are right only while the other inputs stay as they were.', 'For a showcase viewer, tick Simplify to the sliders in {cmd:makeShowcaseViewer}: the viewer and its Excel workbook hold only what the boards\' sliders move, and your document keeps its whole model.'],
     see: ['simplify'] },
   { id: 'recipe-links', date: '2026-10-30', title: 'Recipes link templates that don\'t know each other',
     summary: 'A recipe can feed an input rectangle of one part from a rectangle of another: Accounts Receivable · Sales ← Revenue · Total revenue.',
