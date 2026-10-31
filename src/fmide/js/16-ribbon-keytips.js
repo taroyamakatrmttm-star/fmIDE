@@ -24,7 +24,7 @@
         { label:'Module', items:[ { cmd:'saveModule', size:'large' }, { cmd:'loadModule' } ] },
         { label:'Workspace', items:[ { cmd:'exportWorkspace' }, { cmd:'importWorkspace' } ] },
         { label:'Preferences', items:[ { cmd:'exportPreferences' }, { cmd:'importPreferences' } ] },
-        { label:'App', items:[ { cmd:'openExcelExporter', size:'large' }, { cmd:'openFmGraph', size:'large' }, { cmd:'makeShowcaseViewer' }, { cmd:'installApp' } ] },
+        { label:'App', items:[ { cmd:'openExcelExporter', size:'large' }, { cmd:'openFmGraph', size:'large' }, { cmd:'makeShowcaseViewer' }, { cmd:'simplifyForInputs' }, { cmd:'installApp' } ] },
         { label:'Library', items:[ { cmd:'openTemplates', size:'large' }, { cmd:'openFunctions', size:'large' }, { cmd:'openFormats', size:'large' }, { cmd:'browseLibrary' }, { cmd:'openLibraryPack' }, { cmd:'saveLibraryPack' }, { cmd:'shareLibraryPack' } ] },
       ]},
       { id:'home', label:'Home', keytip:'H', groups:[
@@ -50,7 +50,7 @@
       { id:'model', label:'Model', keytip:'M', groups:[
         { label:'Compute', items:[ { cmd:'evaluate', size:'large' } ] },
         { label:'Periods', items:[ { cmd:'prevPeriod' }, { cmd:'managePeriods' }, { cmd:'nextPeriod' } ] },
-        { label:'Canvas', items:[ { cmd:'newCanvas', size:'large' }, { cmd:'renameCanvas' }, { cmd:'deleteCanvas' }, { cmd:'clearCanvas' }, { cmd:'moveCanvasLeft' }, { cmd:'moveCanvasRight' }, { cmd:'prevCanvas' }, { cmd:'nextCanvas' }, { cmd:'clearAll', size:'large' } ] },
+        { label:'Canvas', items:[ { cmd:'newCanvas', size:'large' }, { cmd:'renameCanvas' }, { cmd:'deleteCanvas' }, { cmd:'clearCanvas' }, { cmd:'moveCanvasLeft' }, { cmd:'moveCanvasRight' }, { cmd:'prevCanvas' }, { cmd:'nextCanvas' }, { cmd:'alwaysKeepCanvas' }, { cmd:'clearAll', size:'large' } ] },
         { label:'Formatting', items:[ { cmd:'openFormats', size:'large' } ] },
       ]},
       { id:'view', label:'View', keytip:'W', groups:[

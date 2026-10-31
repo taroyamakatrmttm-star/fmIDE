@@ -22,7 +22,7 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 |---|---|---|---|
 | `system` | 9 | A whole model (all canvases, periods); v4: a canvas may remember the canvas template it came from; v5: the function definitions its function nodes use; v6: the operators of phase E1 (below); v7: no Excel-only format settings (step 11a, below); v8: the operators of phase E2a (below); v9: `choose` (phase E2b, below) | fmIDE: File → Load System · ExcelExporter |
 | `module` | 7 | One canvas; v3: the function definitions it uses; v4: the operators of phase E1; v5: no Excel-only format settings; v6: the operators of phase E2a; v7: `choose` | fmIDE: File → Load Module |
-| `fmIDE-workspace` | 15 | Everything: system + templates, format presets, shortcuts, macros; v4: the function library; v5: its system and templates may use the operators of phase E1; v6: its templates and library functions may say which library pack they came from (`origin`, below); v7: no Excel-only format roles or settings; v8: its templates may carry `attachments` (below); v9: its system and templates may use the operators of phase E2a; v10: `choose`; v11: `graphBoards`, the model's fmGraph boards (below); v12: its templates — canvas and system — may carry an fmGraph board (`attachments.graph`, below); v13: `excelLayout`, the model's Excel layout (below); v14: `showcase`, what its showcase viewer shows (below); v15: its recipes may carry `links` (below). A **`.fmide` document** is exactly this, with the `.fmide` extension | fmIDE: File → Open… (a document) or Import Workspace (a full replace) · ExcelExporter |
+| `fmIDE-workspace` | 16 | Everything: system + templates, format presets, shortcuts, macros; v4: the function library; v5: its system and templates may use the operators of phase E1; v6: its templates and library functions may say which library pack they came from (`origin`, below); v7: no Excel-only format roles or settings; v8: its templates may carry `attachments` (below); v9: its system and templates may use the operators of phase E2a; v10: `choose`; v11: `graphBoards`, the model's fmGraph boards (below); v12: its templates — canvas and system — may carry an fmGraph board (`attachments.graph`, below); v13: `excelLayout`, the model's Excel layout (below); v14: `showcase`, what its showcase viewer shows (below); v15: its recipes may carry `links` (below); v16: `simplified`, what a simplified copy was made from and for (below). A **`.fmide` document** is exactly this, with the `.fmide` extension | fmIDE: File → Open… (a document) or Import Workspace (a full replace) · ExcelExporter |
 | `fmIDE-templates` | 11 | Saved templates (each holds a module, a system or a recipe), with their families and versions; v4: a template's model may carry function definitions; v5: it may use the operators of phase E1; v6: a template may carry `origin`; v7: a canvas template may carry `attachments` (below); v8: it may use the operators of phase E2a; v9: `choose`; v10: a canvas or system template may carry an fmGraph board (`attachments.graph`); v11: a recipe may carry `links` (below) | fmIDE: Templates → Import Templates |
 | `fmIDE-functions` | 2 | Function definitions (a library of functions); v2: a definition may carry `origin` | fmIDE: Functions → Import Functions |
 | `fmIDE-format-presets` | 2 | Format presets, including the canvas format roles; v2: no Excel-only roles or settings | fmIDE: Format Presets → Import Presets |
@@ -34,18 +34,18 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 | `fmIDE-excel-style` | 1 | ExcelExporter's Excel style: how every cell in the workbook looks, by role (step 11a, below) | ExcelExporter: Import Excel Style |
 | `fmIDE-excel-module-layouts` | 2 | ExcelExporter's layouts remembered per module (step 11b, below); v2: the layout of a module's block instances, `instance` (step 11d) | ExcelExporter: Import Module Layouts |
 | `fmIDE-graph-board` | 14 | fmGraph's boards: bars, charts and sliders showing one model (step 15, below); v2: the template form, for a template's `attachments.graph` (G5a); v3: the model's named scenarios, `scenarios`; v4: the scenario waterfall, a chart of layout `scenarios`; v5: a bar's or chart's fixed vertical scale, `scale`; v6: a folded slider, `folded`; v7: a board keeping its own slider positions, `ownSliders`; v8: the Tornado and the Spider, charts of layout `tornado` and `spider` (step 18; the template form stays version 2); v9: the shared period, `sharedPeriods` and a bar's or chart's `ownPeriod`; v10: the lines chart, a chart of layout `lines`; v11: the shared colours, `colours`; v12: the common scale, `commonScale` and a bar's or chart's `ownScale`; v13: the Free chart, a chart of layout `free`; v14: a slider at its minimum, one short row, `folded: "min"` (`true` stays Folded) | fmGraph: Boards → Import boards… (or dropped on the page) · ExcelExporter: File → Import fmGraph boards… (its scenarios, Tornado and Spider charts, sliders, bars and charts, below) |
-| `fmIDE-showcase` | 1 | What a showcase viewer shows: for one model (its canvases, boards, Play, periods, title, description, author, licence, mark), or a recipe for many models built alike (below) | fmShowcase (`fmViewer.html`): dropped with the model, or carried in a made viewer; a recipe goes to the tool that makes many viewers |
+| `fmIDE-showcase` | 2 | What a showcase viewer shows: for one model (its canvases, boards, Play, periods, title, description, author, licence, mark; v2: `simplify`, Simplify to the sliders), or a recipe for many models built alike (below) | fmShowcase (`fmViewer.html`): dropped with the model, or carried in a made viewer; a recipe goes to the tool that makes many viewers |
 | `fmIDE-gallery` | 1 | The showcase gallery's list: its title, a line of introduction and its sections (phase V6, below) | `tools/build-gallery.js`, from the gallery's folder; never opened by an app |
 | `fmIDE-viewer-workbook` | 1 | The Excel workbook a showcase viewer carries, packed, with its cell map (phase V4, below) | fmShowcase: the made viewer's `excel` block; never opened as a file |
 
-## Showcases (`fmIDE-showcase` 1, the showcase viewer)
+## Showcases (`fmIDE-showcase` 2, the showcase viewer)
 
 A showcase says what a viewer shows (`docs/viewer-brief.md`). **It never holds the model**: it sits beside a `.fmide` document or system file and names only canvases (and, in the recipe form, rectangles by name). Read by `src/shared/showcase.js`; the viewer shows every text in it as plain text.
 
 **For one model** (no `form`):
 
 ```json
-{ "kind": "fmIDE-showcase", "version": 1,
+{ "kind": "fmIDE-showcase", "version": 2,
   "id": "loan-basics",
   "title": "How a loan is repaid",
   "description": "Move the rate and the term and watch the interest.",
@@ -55,7 +55,8 @@ A showcase says what a viewer shows (`docs/viewer-brief.md`). **It never holds t
   "boards": { "kind": "fmIDE-graph-board", "version": 12, "active": 0, "boards": [], "scenarios": [] },
   "play": { "from": "Base", "to": "High rate" },
   "periods": { "mode": "range", "from": 0, "to": 9 },
-  "excel": { "file": "Loan basics.xlsx" } }
+  "excel": { "file": "Loan basics.xlsx" },
+  "simplify": { "on": true, "keep": [ { "canvasId": "c3" }, { "canvasId": "c1", "nodeId": "n12" } ], "off": [ { "canvasId": "c1", "nodeId": "n4" } ] } }
 ```
 
 | Field | Rule (a value that breaks it is left out, and the viewer says so) |
@@ -71,10 +72,11 @@ A showcase says what a viewer shows (`docs/viewer-brief.md`). **It never holds t
 | `play` | `from` and `to` (at most 120 characters each): where Play starts — a scenario's name, or `"Base"` for the model's own numbers (so a scenario named Base can't be an end). An end that names no scenario: fmGraph's usual ends. The visitor may pick others, and "My sliders". |
 | `periods` | `{ "mode": "range", "from", "to" }`, whole numbers counted from 0, `from` ≤ `to`: the periods shown (cut to the model's last). Visitors cannot change them. With boards they are the boards' shared periods (a bar or chart the author gave its own periods keeps them; the one-period charts show the first) and the canvas shows the first; a rectangle's card shows every one. Absent, with boards: the boards' shared periods as the author set them, and the canvas shows the boards' one period. |
 | `excel.file` | The downloaded workbook's file name (characters a file name can't hold become spaces; `.xlsx` added), at most 120. |
+| `simplify` | Version 2 (Simplify to the sliders, `docs/simplify-brief.md`): `on` — `true` when the viewer's model and its workbook hold only what the boards' sliders move (anything else is off); `keep` — what is kept anyway, at most 2,000, each a canvas id alone (the whole canvas) or with a rectangle's `nodeId` (ids of at most 200 characters, no repeats; others left out and said); `off` (optional) — the inputs left out, each a `canvasId` and `nodeId`, at most 2,000: their sliders, and every scenario setting one, are left out of the viewer and its workbook. fmIDE reads it to make the viewer and keeps it in the document; the viewer reads it and does nothing with it — its model block is already simplified. Older showcases (v1) have none: the 1 → 2 step changes nothing (sample `formats/showcase-v1.json`); an older viewer asks before opening a v2 file. |
 
 **The recipe form** (`"form": "recipe"`), for making viewers of many models built the same way: `title` (may use `{model}`, the model's file name or title), `description`, `author`, `licence`, `mark`; `boards` in the board file's **template form** (rectangles by name, `form: "template"`); and `auto` (optional) — `sliders: "inputs"` (a slider on each input rectangle, up to 12), `bars: "outputs"` (a bar on each rectangle nothing else reads, up to 12), `range` (1–100, the sliders' reach in % either side; 50 when absent). The viewer refuses a recipe: it is for the batch tool (phase V5, `tools/make-viewers.js`).
 
-Since phase V5 a recipe may also carry, still in version 1 (no app writes a recipe, and every reader before V5 refuses one, so nothing older reads these fields wrongly): `canvases` — `show`, a list of canvas **names** (at most 80 characters each, capitals ignored when matched), and `start`, a canvas name — and `play`, `periods` and `excel` as in the one-model form (`excel.file` may use `{model}`). A name a model doesn't have is left out of that model's viewer and listed in the tool's report. A rectangle in the recipe's boards may leave out `canvas` when its name is unique in the whole model (a system template's form; fmGraph's own template form always names the canvas). A canvas template's form (`template: { kind: "module", family }`) places the boards on each canvas made from that template.
+Since phase V5 a recipe may also carry (in version 1, and as written still with no `simplify`) (no app writes a recipe, and every reader before V5 refuses one, so nothing older reads these fields wrongly): `canvases` — `show`, a list of canvas **names** (at most 80 characters each, capitals ignored when matched), and `start`, a canvas name — and `play`, `periods` and `excel` as in the one-model form (`excel.file` may use `{model}`). A name a model doesn't have is left out of that model's viewer and listed in the tool's report. A rectangle in the recipe's boards may leave out `canvas` when its name is unique in the whole model (a system template's form; fmGraph's own template form always names the canvas). A canvas template's form (`template: { kind: "module", family }`) places the boards on each canvas made from that template.
 
 **The batch tool's report** (`report.json`, written by `tools/make-viewers.js`, read by nothing in the apps): kind `fmIDE-viewer-report`, version 1 — `made`, `failed`, `withNotes`, `bytes`, `recipe`, `excel`, `seconds`, and `viewers`: one entry per model file, `{ file, id, fileName, title, source ("recipe", "showcase", "boards", "auto" or "logic"), canvases, boards, sliders, bars (names), charts, scenarios, notFound: [{ name, canvas }], canvasesNotFound, excel: { file, size, notes } | { error } | null, size, notes, error }`.
 
@@ -401,6 +403,30 @@ A workspace — and so a `.fmide` document — may carry `showcase`: an `fmIDE-s
 - It belongs to the model, as `graphBoards` does: opening a document or importing a workspace takes the file's (or none); opening a system file and New have none; saving and the autosave write it when there is one.
 - ExcelExporter and fmGraph read a v14 workspace as before and leave the showcase alone.
 - Older workspaces (v1–v13) have none; the 13 → 14 step changes nothing. An older fmIDE, ExcelExporter or fmGraph asks before opening a v14 file.
+
+### What a simplified copy was made for (`fmIDE-workspace` 16, Simplify for inputs)
+
+A workspace — and so a `.fmide` document — made by **File → Simplify for Inputs…** (`docs/simplify-brief.md`) carries `simplified`: what the copy was made from and for, so fmIDE can say so on it.
+
+```json
+"simplified": {
+  "from": "Lesson model", "made": "2026-11-01T10:00:00.000Z",
+  "inputs": [ { "canvasId": "c743", "nodeId": "n59355", "name": "Equity contribution", "min": 0, "max": 100, "step": 0.5,
+                "mode": "set", "periods": { "mode": "one", "p": 1 } } ],
+  "kept": 154, "total": 528, "runs": 496,
+  "fixed":   [ { "canvasId": "c738", "canvas": "Loan Interest", "nodeId": "n1", "name": "Interest rate" } ],
+  "removed": [ { "canvasId": "c739", "canvas": "CAPEX Depreciation", "nodeId": "n2", "name": "Capex", "why": "never-moved", "text": "never moved across 496 runs" } ]
+}
+```
+
+- `inputs`: the inputs and their ranges, as a slider's (`periods` counted from 0; `mode` `set` or `shift`, a % change). `kept` / `total`: the items in the copy and in the model it came from (the aliases plugs make not counted). `fixed`: what stays as a fixed number. `removed`: what went, `why` one of `never-moved`, `zero` (0 in every period, dropped from a + or −), `folded` (a × −1 folded into a minus, or what only it read), `block` (inside a block nothing kept uses), with its words in `text`.
+- **Reading** (`cleanDocumentSimplified`, `SIMPLIFIED_LIMITS` in `src/shared/fmide-files.js`): anything but an object is dropped; texts cut short (names 120 characters, words 200), numbers forced to numbers (else 0), `periods` checked, at most 20 inputs, 2,000 fixed and 5,000 removed. fmIDE shows them as plain text only.
+- It belongs to the model, as `showcase` does: opening a document or restoring the autosave takes the file's (or none); New and opening a system file have none.
+- **`simplifyAlwaysKeep`** (also v16, any document): the ids of the canvases marked **Always Keep When Simplifying** (Model → Canvas), which simplifying keeps whole every time — a list of strings of at most 200 characters, at most 500, no repeats (`cleanSimplifyAlwaysKeep`); an id no canvas has is ignored. It belongs to the model like `simplified`.
+- **The copy's Excel layout**: a simplified copy carries the document's `excelLayout` cut to what is left (`simplifyExcelLayout` in `src/shared/simplify.js`, reading only this documented format): a tab with no item row left goes, an item row whose rectangle is gone goes, the Inputs tab's group headings and spacers for a tab gone go, and an empty custom row (no label) stays only when the row just above or below it, among the rows left, is an item row — never two together (per tab and section; per tab when sections are off; the Inputs tab as one). Everything else is kept as it was.
+- The model in the copy is an ordinary system: its fixed numbers are value rectangles holding a number per period (`periodValues` when they differ), so every reader of a system reads it as before.
+- ExcelExporter and fmGraph read a v16 workspace as before and leave `simplified` alone.
+- Older workspaces (v1–v15) have none; the 15 → 16 step changes nothing (sample `formats/ws-v15.json`). An older fmIDE, ExcelExporter or fmGraph asks before opening a v16 file.
 
 ## Template attachments (`fmIDE-templates` 7 and 10, `fmIDE-workspace` 8 and 12, `fmIDE-library-pack` 3 and 4; steps 11c and 15 G5a)
 

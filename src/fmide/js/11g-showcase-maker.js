@@ -92,7 +92,9 @@
     // Excel (phase V4): as chosen last time, else ticked when the model has boards.
     const filled = filledBoards(graphBoards);
     const excel = kept ? (kept.excel ? { file: kept.excel.file } : null) : (filled.length ? { file: showcaseFileName(title || 'Model') } : null);
-    return { notes, list, ends, choices: { excel,
+    // Simplify to the sliders (Simplify for inputs, phase 2): as chosen last time, else off.
+    const simplify = kept && kept.simplify ? cloneData(kept.simplify) : null;
+    return { notes, list, ends, choices: { excel, simplify,
       id: kept && kept.id ? kept.id : showcaseIdFrom(title), title,
       description: kept ? kept.description || '' : '', author: kept && kept.author ? kept.author : libraryAuthor,
       licence: kept ? kept.licence || '' : '', mark: kept ? kept.mark !== false : true,
@@ -105,16 +107,31 @@
   // ({ file }), ExcelExporter makes the workbook first (askExcelForViewerWorkbook, 21-web-app.js;
   // `excelOpened`: its window, opened by the click — else opened here); if it can't, the error
   // carries `excel: true` and nothing is made. `withoutExcel` makes it without, as chosen.
-  async function makeShowcaseViewerFile(choices, excelOpened){
+  // With choices.simplify.on, the viewer's model and its workbook hold only what the boards'
+  // sliders move (simplifyForViewer, 11h-simplify.js; `onProgress` sees the work); the showcase kept
+  // in the document is the author's choices, for the whole model.
+  async function makeShowcaseViewerFile(choices, excelOpened, onProgress){
     if(inPractice()) fail('Not while practising a tutorial: the practice model isn\'t your document.');
     const made = showcaseFromChoices(choices, graphBoards, { canvases, periodCount: periods.length });
     if(made.error) fail(made.error);
     const page = await viewerPageText();
+    let model = null, shown = made.value, excelPayload = null, simplified = null;
+    if(made.value.simplify && made.value.simplify.on){
+      try{
+        const s = await simplifyForViewer(made.value, onProgress);
+        model = s.system; shown = s.showcase; excelPayload = s.excelPayload; simplified = simplifySummary(s.result);
+        simplified.scenariosLeft.forEach(x => made.problems.push('Scenario ' + x.name + ' is left out of the viewer: it sets ' + x.because.join(', ') + ', which is left out.'));
+      }catch(err){
+        // ExcelExporter's window, opened by the click for this, isn't needed after all.
+        if(excelOpened === true){ try{ if(excelWindow && !excelWindow.closed) excelWindow.close(); }catch(e){ /* gone */ } excelWindow = null; }
+        throw err;
+      }
+    }
     let excel = null, excelInfo = null;
     if(made.value.excel){
       const opened = excelOpened === undefined ? excelWindowForViewer() : excelOpened;
       try{
-        const book = await askExcelForViewerWorkbook(made.value.boards || null, opened);
+        const book = await askExcelForViewerWorkbook(shown.boards || null, opened, excelPayload);
         excel = await viewerWorkbookBlock(book);
         excelInfo = { file: made.value.excel.file, bytes: book.bytes.length, notes: book.notes.slice() };
       }catch(err){
@@ -123,11 +140,12 @@
         throw e;
       }
     }
-    const filled = fillViewerPage(page, made.value, buildSystemPayload(), excel);
+    const filled = fillViewerPage(page, shown, model || buildSystemPayload(), excel);
     if(filled.error) fail(filled.error);
     if(JSON.stringify(made.value) !== JSON.stringify(docShowcase)){ docShowcase = made.value; markDocDirty(); }
     const fileName = made.value.id + '.html';
-    return { fileName, bytes: new Blob([filled.page]).size, text: filled.page, showcase: cloneData(made.value), problems: made.problems.slice(), excel: excelInfo };
+    return { fileName, bytes: new Blob([filled.page]).size, text: filled.page, showcase: cloneData(made.value), problems: made.problems.slice(), excel: excelInfo,
+      simplified, shownShowcase: simplified ? cloneData(shown) : null };
   }
   // The workbook from ExcelExporter as the viewer's excel block: checked (a zip, at most
   // CELL_MAP_LIMITS.workbook; the cell map cleaned), packed with the browser's own deflate, base64.
@@ -328,6 +346,38 @@
     excelBox.addEventListener('change', syncExcel);
     syncExcel();
 
+    // ---- Simplify to the sliders (Simplify for inputs, phase 2) ----
+    const simplifyRow = el('label', 'function-export-row sm-simplify-row');
+    const simplifyBox = el('input', 'sm-simplify');
+    simplifyBox.type = 'checkbox'; simplifyBox.checked = !!(c.simplify && c.simplify.on);
+    simplifyRow.append(simplifyBox, document.createTextNode(' Simplify to the sliders'));
+    box.appendChild(simplifyRow);
+    let simplifyKeep = c.simplify && Array.isArray(c.simplify.keep) ? c.simplify.keep.slice() : [];
+    let simplifyOff = c.simplify && Array.isArray(c.simplify.off) ? c.simplify.off.slice() : [];
+    const simplifyTools = el('div', 'sm-simplify-tools');
+    const simplifyList = el('button', 'sm-simplify-list', 'Show what goes…');
+    const simplifyNote = el('span', 'sm-simplify-note');
+    simplifyTools.append(simplifyList, simplifyNote);
+    box.appendChild(simplifyTools);
+    box.appendChild(el('p', 'template-desc sm-simplify-desc', 'The viewer and its workbook hold only what the ticked boards\' sliders move; what they still read is a fixed number. For a lesson that should show only what it teaches.'));
+    const syncSimplify = () => { simplifyList.disabled = !simplifyBox.checked; };
+    simplifyBox.addEventListener('change', syncSimplify);
+    syncSimplify();
+    const simplifyProgress = (job) => { simplifyNote.textContent = 'Simplifying… ' + Math.round(job.progress * 100) + '%'; };
+    simplifyList.addEventListener('click', () => {
+      const choicesFor = (off, keep) => showcaseFromChoices(Object.assign(choicesNow(), { simplify: { on: true, keep, off } }), graphBoards, { canvases, periodCount: periods.length });
+      const made = choicesFor(simplifyOff, simplifyKeep);
+      if(made.error){ showMessage(made.error); return; }
+      simplifyList.disabled = true;
+      const rerun = (off, keep) => simplifyForViewer(choicesFor(off, keep).value, simplifyProgress).then(x => ({ result: x.result, plan: x.plan }));
+      simplifyForViewer(made.value, simplifyProgress).then(s => {
+        simplifyNote.textContent = 'The viewer ' + simplifyWords(s.result) + '.';
+        showSimplifyKeepWindow(s.result, simplifyKeep, (keep, r, off) => { simplifyKeep = keep; simplifyOff = off; simplifyNote.textContent = 'The viewer ' + simplifyWords(r) + '.'; },
+          { plan: s.plan, off: simplifyOff, rerun });
+      }).catch(err => { simplifyNote.textContent = ''; showMessage(err && err.message ? err.message : String(err)); })
+        .finally(() => { syncSimplify(); });
+    });
+
     const markRow = el('label', 'function-export-row');
     const mark = el('input', 'sm-mark');
     mark.type = 'checkbox'; mark.checked = c.mark;
@@ -352,22 +402,25 @@
       periods: { from: Number(fromSel.value), to: Math.max(Number(fromSel.value), Number(toSel.value)) },
       boards: boardTicks.filter(cb => cb.checked).map(cb => Number(cb.dataset.index)),
       play: playFrom ? { from: playFrom.value, to: playTo.value } : null,
-      excel: excelBox.checked ? { file: excelFile.value } : null });
+      excel: excelBox.checked ? { file: excelFile.value } : null,
+      simplify: simplifyBox.checked || simplifyKeep.length || simplifyOff.length ? { on: simplifyBox.checked, keep: simplifyKeep, off: simplifyOff } : null });
     async function make(choices, excelOpened){
       makeBtn.disabled = true;
       try{
-        const made = await makeShowcaseViewerFile(choices, excelOpened);
+        const made = await makeShowcaseViewerFile(choices, excelOpened, simplifyProgress);
         if(author.value.trim()){ libraryAuthor = author.value.trim().slice(0, SHOWCASE_LIMITS.author); saveWorkspaceSoon(); }
         const how = await giveViewerFile(made);
         close();
         if(how === 'cancelled') return;
         const said = 'Made ' + made.fileName + ' (' + viewerSizeText(made.bytes) + ')' + (made.excel ? ', with its Excel workbook' : '') +
-          '. It opens in any browser, offline, and changes nothing in your model.';
+          '. It opens in any browser, offline, and changes nothing in your model.' +
+          (made.simplified ? ' Simplified to the sliders, it ' + simplifyWords(made.simplified) + '.' : '');
         const notes = made.problems.concat(made.excel ? made.excel.notes : []);
         if(notes.length) showMessage(said + '\n\n' + notes.join('\n'));
         else toast(said, 6000);
       }catch(err){
         makeBtn.disabled = false;
+        simplifyNote.textContent = '';
         const text = err && err.message ? err.message : String(err);
         // ExcelExporter couldn't make the workbook: the viewer without it, if the author wants.
         if(err && err.excel) showConfirm(text + '\n\nMake the viewer without it?', () => make(Object.assign({}, choices, { excel: null }), false));

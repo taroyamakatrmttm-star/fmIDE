@@ -1,4 +1,4 @@
-// 6. The showcase file (kind fmIDE-showcase, version 1; src/shared/showcase.js), read in Node:
+// 6. The showcase file (kind fmIDE-showcase, version 2 since Simplify to the sliders, 1 November 2026; src/shared/showcase.js), read in Node:
 // both forms, every limit, hostile values cleaned or refused with a message, another kind
 // refused, a newer version flagged. Phase V1 of docs/viewer-brief.md.
 const { test, expect, readFixture } = require('./helpers/apps');
@@ -13,14 +13,32 @@ test('a showcase for one model is read whole, as it was written', () => {
   expect([r.fromVersion, r.newer, r.recipe]).toEqual([1, false, false]);
   const c = S.cleanShowcase(r.data);
   expect(c.problems).toEqual([]);
-  expect(c.value).toMatchObject({ kind: 'fmIDE-showcase', version: 1, id: 'loan-basics', title: 'How a loan is repaid', author: 'A teacher',
+  expect(c.value).toMatchObject({ kind: 'fmIDE-showcase', version: 2, id: 'loan-basics', title: 'How a loan is repaid', author: 'A teacher',
     licence: 'CC BY 4.0', mark: false, canvases: { show: ['c1', 'c3'], start: 'c3' }, play: { from: 'Base', to: 'High rate' },
     periods: { mode: 'range', from: 0, to: 9 }, excel: { file: 'Loan basics.xlsx' } });
   expect(c.value.boards).toMatchObject({ kind: 'fmIDE-graph-board', version: 12 });
   // Left out, the mark shows and every canvas is listed.
   const bare = S.cleanShowcase(S.readShowcaseData({ kind: 'fmIDE-showcase', version: 1 }).data);
   expect(bare.problems).toEqual([]);
-  expect(bare.value).toMatchObject({ mark: true, id: null, title: '', canvases: { show: null, start: null }, boards: null, periods: null, excel: null });
+  expect(bare.value).toMatchObject({ mark: true, id: null, title: '', canvases: { show: null, start: null }, boards: null, periods: null, excel: null, simplify: null });
+});
+
+test('version 1 → 2: a v1 showcase has no simplify; a v2 one keeps Simplify to the sliders, cleaned', () => {
+  const r = S.readShowcaseData(readFixture('formats', 'showcase-v1.json'));
+  expect([r.fromVersion, r.data.version, r.newer]).toEqual([1, 2, false]);
+  expect(S.cleanShowcase(r.data).value.simplify).toBeNull();
+  const keep = [{ canvasId: 'c1' }, { canvasId: 'c1', nodeId: 'n2' }, { canvasId: 'c1' }, { canvasId: 7 }, 'x', { canvasId: 'c2', nodeId: '' }];
+  const c = S.cleanShowcase({ simplify: { on: 'yes', keep } });
+  expect(c.value.simplify).toEqual({ on: false, keep: [{ canvasId: 'c1' }, { canvasId: 'c1', nodeId: 'n2' }] });
+  expect(c.problems).toEqual(['Some of "simplify.keep" are not canvas or rectangle ids, or repeat: they are left out.']);
+  expect(S.cleanShowcase({ simplify: { on: true } }).value.simplify).toEqual({ on: true, keep: [] });
+  expect(S.cleanShowcase({ simplify: [1] }).problems).toEqual(['"simplify" is not a choice: the model is not simplified.']);
+  const many = Array.from({ length: 2500 }, (_, i) => ({ canvasId: 'c' + i }));
+  expect(S.cleanShowcase({ simplify: { on: true, keep: many } }).value.simplify.keep.length).toBe(S.SHOWCASE_LIMITS.keep);
+  // The choices write it when given, for the document to keep.
+  const made = S.showcaseFromChoices({ title: 'T', canvases: ['c1'], simplify: { on: true, keep: [{ canvasId: 'c1' }] } }, null, { canvases: [{ id: 'c1' }], periodCount: 1 });
+  expect([made.value.version, made.value.simplify]).toEqual([2, { on: true, keep: [{ canvasId: 'c1' }] }]);
+  expect(S.showcaseFromChoices({ title: 'T', canvases: ['c1'] }, null, { canvases: [{ id: 'c1' }], periodCount: 1 }).value.simplify).toBeUndefined();
 });
 
 test('the recipe form is read, and its boards must be the template form', () => {
@@ -42,8 +60,9 @@ test('another kind is refused with what it is, a newer version is flagged', () =
   expect(S.readShowcaseData({ kind: 'system', canvases: [] }).error).toMatch(/another kind \("system"\)/);
   expect(S.readShowcaseData([1, 2]).error).toMatch(/isn't a showcase/);
   expect(S.readShowcaseData(null).error).toMatch(/isn't a showcase/);
-  const r = S.readShowcaseData(readFixture('formats', 'showcase-newer.json'));
-  expect([r.fromVersion, r.newer]).toEqual([2, true]);
+  // Version 2 is current since Simplify to the sliders: a newer one is 3 (changed on purpose).
+  const r = S.readShowcaseData(readFixture('formats', 'showcase-newer-v3.json'));
+  expect([r.fromVersion, r.newer]).toEqual([3, true]);
   // The reader works on a copy.
   const raw = { kind: 'fmIDE-showcase' };
   S.readShowcaseData(raw);

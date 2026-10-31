@@ -2563,7 +2563,7 @@ function errorWords(code){
 // (docs/file-formats.md). To change one of these formats: raise its version here and add
 // SHARED_FILE_MIGRATIONS[kind][oldVersion], which upgrades a copy of an old payload by
 // exactly one version.
-const SHARED_FILE_VERSIONS = { 'system': 9, 'fmIDE-workspace': 15 };
+const SHARED_FILE_VERSIONS = { 'system': 9, 'fmIDE-workspace': 16 };
 // Before system v3 (module v2) a rectangle had one plug name, `plug: "Revenue"`; now it
 // has a list, `plugs: ["Revenue", …]`. Upgrades a list of nodes in place.
 function upgradeNodePlugs(nodes){
@@ -2663,7 +2663,10 @@ const SHARED_FILE_MIGRATIONS = {
     13: () => {},
     // v14 → v15: its recipes may link their parts' rectangles (`links`, templates v11);
     // older ones have none.
-    14: () => {}
+    14: () => {},
+    // v15 → v16: a document simplified for some inputs may carry what it was simplified from
+    // and for (`simplified`, cleanDocumentSimplified; docs/simplify-brief.md); older ones have none.
+    15: () => {}
   },
   'system': {
     // v1 systems were accepted with fields the loader already defaults (periods, ids…);
@@ -3320,7 +3323,7 @@ function canvasDefs(svg){
 }
 // ---------- showcase files (shared: src/shared/showcase.js; the showcase viewer, later fmIDE and tools/make-viewers.js) ----------
 // A showcase says what a viewer shows (docs/viewer-brief.md, docs/file-formats.md): kind
-// "fmIDE-showcase", version 1, in two forms — for one model (which canvases, boards, sliders,
+// "fmIDE-showcase", version 2, in two forms — for one model (which canvases, boards, sliders,
 // scenarios, the title), and the recipe form ("form": "recipe") that names rectangles by name
 // for many models at once. The model itself is never in it.
 //
@@ -3329,11 +3332,13 @@ function canvasDefs(svg){
 // numbers, ids checked against a pattern and only ever compared. Nothing is run.
 
 const SHOWCASE_KIND = 'fmIDE-showcase';
-const SHOWCASE_FORMATS = { 'fmIDE-showcase': { current: 1, label: 'fmIDE showcase' } };
-// One step per version, upgrading a copy (none yet: version 1 is the first).
-const SHOWCASE_MIGRATIONS = { 'fmIDE-showcase': {} };
+const SHOWCASE_FORMATS = { 'fmIDE-showcase': { current: 2, label: 'fmIDE showcase' } };
+// One step per version, upgrading a copy. 1 → 2: a showcase for one model may say to simplify
+// the model to its sliders (`simplify`, Simplify for inputs phase 2, docs/simplify-brief.md);
+// older ones don't. The recipe form is unchanged.
+const SHOWCASE_MIGRATIONS = { 'fmIDE-showcase': { 1: () => {} } };
 const SHOWCASE_LIMITS = { id: 60, title: 80, description: 400, author: 80, licence: 60, canvases: 500, canvasId: 200,
-  scenario: 120, file: 120, periods: 10000, range: 100, canvasName: 80 };
+  scenario: 120, file: 120, periods: 10000, range: 100, canvasName: 80, keep: 2000 };
 
 const isObject = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 // A text from the file: a string (or number), control characters out, spaces at the ends
@@ -3395,10 +3400,10 @@ function cleanBoardsField(v, problems, template){
 
 // A showcase for one model: { value, problems }.
 // value: { kind, version, id, title, description, author, licence, mark,
-//          canvases: { show: [ids] | null, start: id | null }, boards, play, periods, excel }
+//          canvases: { show: [ids] | null, start: id | null }, boards, play, periods, excel, simplify }
 function cleanShowcase(d){
   const problems = [];
-  const v = Object.assign({ kind: SHOWCASE_KIND, version: 1 }, cleanCommon(d, problems, false));
+  const v = Object.assign({ kind: SHOWCASE_KIND, version: SHOWCASE_FORMATS[SHOWCASE_KIND].current }, cleanCommon(d, problems, false));
   v.id = null;
   if(d.id !== undefined){
     if(typeof d.id === 'string' && SHOWCASE_ID.test(d.id)) v.id = d.id;
@@ -3425,7 +3430,34 @@ function cleanShowcase(d){
   }
   v.boards = cleanBoardsField(d.boards, problems, false);
   cleanPlayPeriodsExcel(d, v, problems);
+  v.simplify = cleanSimplifyField(d.simplify, problems);
   return { value: v, problems };
+}
+// Simplify to the sliders (version 2): { on, keep, off } — whether the viewer's model, and its
+// workbook, hold only what the boards' sliders move; what is kept anyway (canvas ids, or a
+// canvas and a rectangle id; src/shared/simplify.js); and the inputs left out (a canvas and a
+// rectangle id each: their sliders, and the scenarios setting them). Ids are only ever compared.
+function cleanSimplifyField(v, problems){
+  if(v === undefined || v === null) return null;
+  if(!isObject(v)){ problems.push('"simplify" is not a choice: the model is not simplified.'); return null; }
+  const id = (x) => typeof x === 'string' && x && x.length <= SHOWCASE_LIMITS.canvasId;
+  const keep = [], seen = new Set();
+  (Array.isArray(v.keep) ? v.keep : []).forEach(k => {
+    if(!isObject(k) || !id(k.canvasId) || (k.nodeId !== undefined && !id(k.nodeId)) || keep.length >= SHOWCASE_LIMITS.keep) return;
+    const key = k.canvasId + '\u0000' + (k.nodeId === undefined ? '' : k.nodeId);
+    if(seen.has(key)) return;
+    seen.add(key);
+    keep.push(k.nodeId === undefined ? { canvasId: k.canvasId } : { canvasId: k.canvasId, nodeId: k.nodeId });
+  });
+  if(v.keep !== undefined && (!Array.isArray(v.keep) || keep.length < v.keep.length)) problems.push('Some of "simplify.keep" are not canvas or rectangle ids, or repeat: they are left out.');
+  const off = [], seenOff = new Set();
+  (Array.isArray(v.off) ? v.off : []).forEach(k => {
+    if(!isObject(k) || !id(k.canvasId) || !id(k.nodeId) || off.length >= SHOWCASE_LIMITS.keep || seenOff.has(k.canvasId + '\u0000' + k.nodeId)) return;
+    seenOff.add(k.canvasId + '\u0000' + k.nodeId);
+    off.push({ canvasId: k.canvasId, nodeId: k.nodeId });
+  });
+  if(v.off !== undefined && (!Array.isArray(v.off) || off.length < v.off.length)) problems.push('Some of "simplify.off" are not rectangles, or repeat: they are left out.');
+  return off.length ? { on: v.on === true, keep, off } : { on: v.on === true, keep };
 }
 // play, periods and excel, the same in both forms (a recipe's excel.file may use {model}).
 function cleanPlayPeriodsExcel(d, v, problems){
@@ -3565,7 +3597,7 @@ function showcaseBoardList(graphBoards, kept){
 
 // The showcase for one model from an author's choices. choices: { id, title, description, author,
 // licence, mark, canvases: [ids ticked], start, periods: { from, to } | null, boards: [indexes
-// into graphBoards.boards], play: { from, to } | null }; graphBoards: the document's board file
+// into graphBoards.boards], play: { from, to } | null, excel: { file } | null, simplify: { on, keep } | null }; graphBoards: the document's board file
 // (or null); model: { canvases: [{ id }], periodCount }. Play's ends are "Base" (the model's own
 // numbers) or a scenario's name. Every period chosen writes no `periods`. Returns { value (a
 // cleaned showcase), problems, error }: error (nothing made) when no canvas is ticked.
@@ -3579,7 +3611,7 @@ function showcaseFromChoices(choices, graphBoards, model){
   if(!show.length) return { value: null, problems, error: 'Choose at least one canvas to show.' };
   const title = showcaseText(c.title, SHOWCASE_LIMITS.title);
   const sc = {
-    kind: SHOWCASE_KIND, version: 1,
+    kind: SHOWCASE_KIND, version: SHOWCASE_FORMATS[SHOWCASE_KIND].current,
     id: typeof c.id === 'string' && SHOWCASE_ID.test(c.id) ? c.id : showcaseIdFrom(c.id || title),
     title, description: c.description, author: c.author, licence: c.licence, mark: c.mark !== false,
     canvases: { show, start: show.includes(c.start) ? c.start : show[0] }
@@ -3613,6 +3645,9 @@ function showcaseFromChoices(choices, graphBoards, model){
   }
   // Excel (phase V4): { file } includes the workbook, named so (the title's name when none is given).
   if(isObject(c.excel)) sc.excel = { file: showcaseFileName(c.excel.file) || showcaseFileName(title || 'Model') };
+  // Simplify to the sliders (version 2): kept whenever chosen once, so its Keep anyway ticks stay.
+  if(isObject(c.simplify)) sc.simplify = Object.assign({ on: c.simplify.on === true, keep: Array.isArray(c.simplify.keep) ? c.simplify.keep : [] },
+    Array.isArray(c.simplify.off) && c.simplify.off.length ? { off: c.simplify.off } : {});
   const cleaned = cleanShowcase(sc);
   return { value: showcaseForFile(cleaned.value), problems: problems.concat(cleaned.problems), error: null };
 }

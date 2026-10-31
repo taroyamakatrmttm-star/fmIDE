@@ -157,7 +157,7 @@ test.describe('the showcase from an author\'s choices', () => {
       mark: false, canvases: ['c3', 'c1'], start: 'c3', periods: { from: 1, to: 3 }, boards: [2, 0], play: { from: 'Base', to: 'High price' } }, boards, model);
     expect(r.error).toBeNull();
     expect(r.problems).toEqual([]);
-    expect(r.value).toMatchObject({ kind: 'fmIDE-showcase', version: 1, id: 'how-prices-move-cash', title: 'How prices move cash', description: 'Move the price.',
+    expect(r.value).toMatchObject({ kind: 'fmIDE-showcase', version: 2, id: 'how-prices-move-cash', // version 2 since Simplify to the sliders title: 'How prices move cash', description: 'Move the price.',
       author: 'A teacher', licence: 'CC BY 4.0', mark: false, canvases: { show: ['c1', 'c3'], start: 'c3' }, periods: { mode: 'range', from: 1, to: 3 },
       play: { from: 'Base', to: 'High price' } });
     expect(r.value).not.toHaveProperty('excel');
@@ -330,7 +330,7 @@ test.describe('fmIDE: Make Showcase Viewer…', () => {
     await expect(page.locator('#fmToast')).toContainText('Made prices-and-b-cash-b.html (');
     await expect.poll(() => page.evaluate(() => document.title)).toContain('•'); // kept in the document: unsaved
     const kept = await page.evaluate(() => fm.showcase());
-    expect(kept).toMatchObject({ kind: 'fmIDE-showcase', version: 1, id: 'prices-and-b-cash-b', title: 'Prices and <b>cash</b>', author: 'A teacher',
+    expect(kept).toMatchObject({ kind: 'fmIDE-showcase', version: 2, id: 'prices-and-b-cash-b', // version 2 since Simplify to the sliders title: 'Prices and <b>cash</b>', author: 'A teacher',
       licence: 'CC BY 4.0', canvases: { show: ['cProfit', 'cCash', 'cBS'], start: 'cCash' }, periods: { mode: 'range', from: 1, to: 2 }, play: { from: 'Base', to: 'Big year' } });
     expect(kept.boards.boards.map(b => b.name)).toEqual(['Everything']);
     // The made file opens offline on the author's choices.

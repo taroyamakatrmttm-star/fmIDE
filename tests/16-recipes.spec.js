@@ -208,15 +208,15 @@ test('recipes travel in templates files and the autosave; bad ones are skipped; 
   expect(await page.evaluate(() => window.__pwned)).toBeUndefined();
 });
 
-test('saved workspaces are version 15; a version 16 workspace asks first', async ({ page }, testInfo) => {
+test('saved workspaces are version 16; a version 17 workspace asks first', async ({ page }, testInfo) => {
   await saveRecipe(page, { name: 'Three Statements', parts: ['Income Statement'] });
   const ws = await library(page);
-  expect(ws.version).toBe(15);
-  ws.version = 16;
+  expect(ws.version).toBe(16);
+  ws.version = 17;
   const path = testInfo.outputPath('newer.json');
   fs.writeFileSync(path, JSON.stringify(ws));
   await F.importViaCommand(page, 'importWorkspace', path);
-  expect(await F.dialogText(page)).toMatch(/^This workspace was saved by a newer version of fmIDE \(format version 16; this fmIDE reads up to version 15\)/);
+  expect(await F.dialogText(page)).toMatch(/^This workspace was saved by a newer version of fmIDE \(format version 17; this fmIDE reads up to version 16\)/);
 });
 
 test('a macro records building a recipe', async ({ page }) => {

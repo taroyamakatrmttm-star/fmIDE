@@ -1,0 +1,31 @@
+{
+  "kind": "fmIDE-workspace",
+  "version": 16,
+  "system": {
+    "version": 9,
+    "periods": ["2025", "2026"],
+    "canvases": [
+      { "id": "c1", "name": "Sales",
+        "nodes": [
+          { "id": "units", "type": "value", "x": 40, "y": 40, "w": 170, "h": 64, "text": "Units\n4" },
+          { "id": "price", "type": "value", "x": 40, "y": 140, "w": 170, "h": 64, "text": "Price\n10" },
+          { "id": "m", "type": "operator", "x": 260, "y": 90, "w": 56, "h": 56, "text": "×" },
+          { "id": "rev", "type": "value", "x": 360, "y": 86, "w": 170, "h": 64, "text": "Revenue" },
+          { "id": "fixed", "type": "value", "x": 40, "y": 300, "w": 170, "h": 64, "text": "Fixed cost\n5" },
+          { "id": "over", "type": "value", "x": 40, "y": 400, "w": 170, "h": 64, "text": "Overhead\n2" },
+          { "id": "p", "type": "operator", "x": 260, "y": 350, "w": 56, "h": 56, "text": "+" },
+          { "id": "costs", "type": "value", "x": 360, "y": 346, "w": 170, "h": 64, "text": "Costs" },
+          { "id": "s", "type": "operator", "x": 590, "y": 220, "w": 56, "h": 56, "text": "−" },
+          { "id": "profit", "type": "value", "x": 690, "y": 216, "w": 170, "h": 64, "text": "Profit" }
+        ],
+        "edges": [
+          { "id": "e1", "from": "units", "to": "m" }, { "id": "e2", "from": "price", "to": "m" }, { "id": "e3", "from": "m", "to": "rev" },
+          { "id": "e4", "from": "fixed", "to": "p" }, { "id": "e5", "from": "over", "to": "p" }, { "id": "e6", "from": "p", "to": "costs" },
+          { "id": "e7", "from": "rev", "to": "s" }, { "id": "e8", "from": "costs", "to": "s" }, { "id": "e9", "from": "s", "to": "profit" }
+        ] },
+      { "id": "c2", "name": "Notes",
+        "nodes": [ { "id": "n1", "type": "value", "x": 40, "y": 40, "w": 170, "h": 64, "text": "Unrelated\n3" } ],
+        "edges": [] }
+    ]
+  }
+}

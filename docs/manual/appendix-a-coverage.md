@@ -274,6 +274,7 @@ Oldest first. *Step* is the build step (and phase) the pull request belongs to; 
 | branch `claude/slider-fullscreen-min-0c2e3f` | 2026-10-30 | fmGraph and fmShowcase: 🎚 Sliders beside the full screen (the viewer gets ⛶ full screen too); fmGraph: a slider's third look, Minimum, one short row (board file 14) | after 20 | [6.1](06-fmgraph.md#bars-sliders), [6.3](06-fmgraph.md#graph-boards), [8.1](08-showcase.md#showcase-viewer) |
 | branch `claude/excel-new-canvas-tabs` | 2026-10-30 | ExcelExporter: a canvas added after the layout was saved gets its own tab (its rows no longer land on the Inputs tab) | after 20 | [5.9](05-excelexporter.md#layouts) |
 | branch `claude/recipe-links` | 2026-10-30 | fmIDE: a recipe links an input rectangle of one part to a rectangle of another (templates file 11, workspace 15, library pack 5) | after 20 | [3.4](03-reuse.md#recipes) |
+| branch `claude/simplify-to-sliders-5cfd71` | 2026-11-01 | fmIDE: File → Simplify for Inputs… — a copy holding only what chosen inputs move, fixed numbers for what it still reads, checked against the full model (workspace 16); Make Showcase Viewer…'s Simplify to the sliders, the viewer and its workbook too (showcase 2) | after 20 | [8.5](08-showcase.md#simplify) |
 
 ---
 

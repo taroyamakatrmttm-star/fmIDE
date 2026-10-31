@@ -363,15 +363,15 @@ test.describe('workspace v6 (origins)', () => {
     expect(await page.evaluate(() => window.__pwned)).toBeUndefined();
     expect(pageErrors).toEqual([]);
   });
-  // Workspace v15 is current since recipe links: a newer one is v16.
-  test('a v16 workspace asks first', async ({ page }, testInfo) => {
+  // Workspace v16 is current since simplify for inputs: a newer one is v17.
+  test('a v17 workspace asks first', async ({ page }, testInfo) => {
     const ws = withOrigins();
-    ws.version = 16;
-    const p = testInfo.outputPath('ws-v16.json');
+    ws.version = 17;
+    const p = testInfo.outputPath('ws-v17.json');
     fs.writeFileSync(p, JSON.stringify(ws));
     await page.setInputFiles('#fileInput', p);
     await expect(page.locator('#confirmModal')).toBeVisible();
-    await expect(page.locator('#confirmMessage')).toContainText('format version 16');
+    await expect(page.locator('#confirmMessage')).toContainText('format version 17');
   });
   // A v13 document (fmGraph's boards and the Excel layout) and a v14 one keeping its showcase
   // (phase V3 of the showcase viewer) load without a question; the showcase changes nothing here.

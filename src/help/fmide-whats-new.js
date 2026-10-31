@@ -12,6 +12,16 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'simplify-for-inputs', date: '2026-11-01', title: 'Simplify a model for some inputs',
+    summary: 'A copy of the model that holds only what chosen inputs move: a lesson can show just the calculations it teaches.',
+    what: [
+      'Simplify for Inputs… takes inputs and a range for each, or your boards\' sliders, and works the model out at every step, at the corners and at random combinations. Whatever never moves goes. What something kept still reads stays as a fixed number, and a fixed 0 drops out of its +.',
+      'You see what goes and why, canvas by canvas, and can keep anything anyway. The copy opens as a new document and says what it was simplified for; the model you started from is not changed.',
+    ],
+    why: 'A step-by-step course starts from simple transactions and adds more on top. A lesson\'s model, and the Excel workbook made from it, should hold only what that lesson has taught.',
+    how: ['Open {cmd:simplifyForInputs}.', 'Use the boards\' sliders, or add inputs and type their ranges. Press Work out.', 'Tick Keep anyway where you want, then press Open the copy.'],
+    notes: ['The fixed numbers are right only while the other inputs stay as they were.', 'Mark a canvas you always want, such as an audit, with {cmd:alwaysKeepCanvas}.', 'The copy keeps your Excel layout for what is left, without runs of empty rows.', 'For a showcase viewer, tick Simplify to the sliders in {cmd:makeShowcaseViewer}: the viewer and its Excel workbook hold only what the boards\' sliders move, and your document keeps its whole model.'],
+    see: ['simplify'] },
   { id: 'recipe-links', date: '2026-10-30', title: 'Recipes link templates that don\'t know each other',
     summary: 'A recipe can feed an input rectangle of one part from a rectangle of another: Accounts Receivable · Sales ← Revenue · Total revenue.',
     what: [

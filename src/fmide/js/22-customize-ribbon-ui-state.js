@@ -317,6 +317,8 @@
       addManyRectsAdded: true, // 12b: Add Many Rectangles… after Add Rectangle
       fmGraphAdded: true, // 15 G1: Open fmGraph after Open ExcelExporter
       showcaseViewerAdded: true, // viewer V3: Make Showcase Viewer… after Open fmGraph
+      simplifyAdded: true, // Simplify for Inputs… after Make Showcase Viewer… (1 November 2026)
+      alwaysKeepAdded: true, // Always Keep When Simplifying after Next Canvas (1 November 2026)
       canvasSwitchAdded: true, // Previous / Next Canvas after Move Canvas Right
       copyReferenceAdded: true, // Copy Reference after Run Last Macro
       libraryAuthor,
@@ -439,6 +441,28 @@
     const at = g.items.findIndex(it => it && it.cmd === 'openFmGraph');
     g.items.splice(at + 1, 0, { cmd: 'makeShowcaseViewer' });
   }
+  // One-time update (1 November 2026) of a customised ribbon: Simplify for Inputs… right after
+  // Make Showcase Viewer… (none: left alone; already there: left alone).
+  function addSimplifyCommandToRibbon(){
+    const groups = [];
+    ribbonState.config.tabs.forEach(t => (t && Array.isArray(t.groups) ? t.groups : []).forEach(g => { if(g && Array.isArray(g.items)) groups.push(g); }));
+    if(groups.some(g => g.items.some(it => it && it.cmd === 'simplifyForInputs'))) return;
+    const g = groups.find(x => x.items.some(it => it && it.cmd === 'makeShowcaseViewer'));
+    if(!g) return;
+    const at = g.items.findIndex(it => it && it.cmd === 'makeShowcaseViewer');
+    g.items.splice(at + 1, 0, { cmd: 'simplifyForInputs' });
+  }
+  // One-time update (1 November 2026) of a customised ribbon: Always Keep When Simplifying right
+  // after Next Canvas (none: left alone; already there: left alone).
+  function addAlwaysKeepToRibbon(){
+    const groups = [];
+    ribbonState.config.tabs.forEach(t => (t && Array.isArray(t.groups) ? t.groups : []).forEach(g => { if(g && Array.isArray(g.items)) groups.push(g); }));
+    if(groups.some(g => g.items.some(it => it && it.cmd === 'alwaysKeepCanvas'))) return;
+    const g = groups.find(x => x.items.some(it => it && it.cmd === 'nextCanvas'));
+    if(!g) return;
+    const at = g.items.findIndex(it => it && it.cmd === 'nextCanvas');
+    g.items.splice(at + 1, 0, { cmd: 'alwaysKeepCanvas' });
+  }
   // One-time update (step 12b) of a customised ribbon: Add Many Rectangles… right after every
   // Add Rectangle it has (none: left alone; already there: left alone).
   // One-time update of a customised ribbon: Previous Canvas and Next Canvas after Move Canvas
@@ -525,6 +549,8 @@
       if(ui.addManyRectsAdded !== true) addManyRectsCommandToRibbon();
       if(ui.fmGraphAdded !== true) addFmGraphCommandToRibbon();
       if(ui.showcaseViewerAdded !== true) addShowcaseViewerCommandToRibbon();
+      if(ui.simplifyAdded !== true) addSimplifyCommandToRibbon();
+      if(ui.alwaysKeepAdded !== true) addAlwaysKeepToRibbon();
       if(ui.canvasSwitchAdded !== true) addCanvasSwitchCommandsToRibbon();
       if(ui.copyReferenceAdded !== true) addCopyReferenceToRibbon();
     }

@@ -6,13 +6,14 @@
   const SHOWCASE_NOT_IN_MACROS = 'A showcase viewer can\'t be made in a macro: making one waits for the browser. Use File → Make showcase viewer….';
 
   defineAction({ name:'makeShowcaseViewer', label:'Make Showcase Viewer', category:'File', icon:'🖼', returns:'value', mutates:false, tx:false, record:false, macro:false,
-    desc:'Makes a showcase viewer of the open model: one web page showing it read-only, with the chosen canvases, periods and fmGraph boards. Each choice left out is as the Make showcase viewer… window would start (the choices kept in the document, else every canvas and board). canvases: a list of canvas ids; periods: { from, to } counted from 0; boards: places in the document\'s board list (from 0); play: { from, to }, "Base" or a scenario\'s name. Keeps the showcase in the document and returns a Promise of { fileName, bytes, text, showcase, problems }; downloads it only when download is true. Not in macros.',
+    desc:'Makes a showcase viewer of the open model: one web page showing it read-only, with the chosen canvases, periods and fmGraph boards. Each choice left out is as the Make showcase viewer… window would start (the choices kept in the document, else every canvas and board). canvases: a list of canvas ids; periods: { from, to } counted from 0; boards: places in the document\'s board list (from 0); play: { from, to }, "Base" or a scenario\'s name. simplify: true makes the viewer and its workbook hold only what the boards\' sliders move (each scenario tried too; simplify.keep kept anyway). Keeps the showcase in the document and returns a Promise of { fileName, bytes, text, showcase, problems, excel, simplified }; downloads it only when download is true. Not in macros.',
     params:[ P('title','string',{ optional:true }), P('description','text',{ optional:true }), P('author','string',{ optional:true }),
       P('licence','string',{ optional:true }), P('id','string',{ optional:true, help:'the file name, letters, digits and dashes' }),
       P('canvases','json',{ optional:true, help:'a list of canvas ids' }), P('start','string',{ optional:true, help:'the canvas it opens on' }),
       P('periods','json',{ optional:true, help:'{ "from": 0, "to": 4 }' }), P('boards','json',{ optional:true, help:'a list like [0, 2]' }),
       P('play','json',{ optional:true, help:'{ "from": "Base", "to": "High price" }' }), P('mark','bool',{ optional:true }),
       P('excel','json',{ optional:true, help:'true, or { "file": "Loan basics.xlsx" }: ExcelExporter makes the workbook (phase V4); false: none' }),
+      P('simplify','json',{ optional:true, help:'true, or { "keep": [{ "canvasId": "c1" }], "off": [{ "canvasId": "c1", "nodeId": "n2" }] }: only what the boards\' sliders move, the inputs in off left out; false: the whole model' }),
       P('download','bool',{ def:false }) ],
     run(a){
       if(runCtx) fail(SHOWCASE_NOT_IN_MACROS);
@@ -22,6 +23,12 @@
       if(a.excel === true) choices.excel = choices.excel || { file: showcaseFileName(choices.title || 'Model') };
       else if(a.excel === false) choices.excel = null;
       else if(a.excel && typeof a.excel === 'object') choices.excel = { file: a.excel.file };
+      const keptKeep = choices.simplify && Array.isArray(choices.simplify.keep) ? choices.simplify.keep : [];
+      const keptOff = choices.simplify && Array.isArray(choices.simplify.off) ? choices.simplify.off : [];
+      if(a.simplify === true) choices.simplify = { on: true, keep: keptKeep, off: keptOff };
+      else if(a.simplify === false) choices.simplify = keptKeep.length || keptOff.length ? { on: false, keep: keptKeep, off: keptOff } : null;
+      else if(a.simplify && typeof a.simplify === 'object') choices.simplify = { on: a.simplify.on !== false, keep: Array.isArray(a.simplify.keep) ? a.simplify.keep : keptKeep,
+        off: Array.isArray(a.simplify.off) ? a.simplify.off : keptOff };
       return makeShowcaseViewerFile(choices).then(async made => {
         if(a.download) await giveViewerFile(made);
         return made;
