@@ -467,7 +467,7 @@ const HELP_TOPICS = [
     ] },
 
   { id: 'simplify', group: 'sharing', title: 'Simplify a model for some inputs',
-    keywords: 'simplify lesson tutorial teach step by step inputs sliders range remove fixed numbers copy smaller model only what moves',
+    keywords: 'simplify lesson tutorial teach step by step inputs sliders range remove fixed numbers copy smaller model only what moves always keep audit scenario excel layout',
     summary: 'A copy of the model holding only what some inputs move: for a lesson that shows only the calculations it teaches.',
     body: [
       { p: 'Choose some inputs and a range for each. Every other input stays at today\'s number. fmIDE works the model out at every step of each input, at the corners (each input at its smallest or largest together) and at random combinations, and keeps only what moves. The copy opens as a new document: this model is not changed.' },
@@ -479,6 +479,9 @@ const HELP_TOPICS = [
       ] },
       { p: 'Where something kept reads something that never moves, that one stays as a fixed number, with its numbers for each period. A fixed number that is 0 in every period is dropped from a + (or from a − after its first input), so the + 0 goes. A × by a fixed −1 that feeds the second input of a + or − with two inputs is folded into it: the + becomes −. A period shift always stays. Canvases left empty go, and the canvases that stay are unlinked from their templates, so an update can\'t put back what went. Bars and charts on the boards that never move stay as fixed numbers, unless they are 0.' },
       { p: 'Before it opens, the copy is checked: worked out at every run and at fresh random ones, everything it keeps must give the full model\'s numbers.' },
+      { p: 'A canvas you always want, such as an audit or check canvas, can be marked: open it and press {cmd:alwaysKeepCanvas} (Model → Canvas). Its tab shows ⚓, the mark is saved with the document, and simplifying always keeps it whole, as Keep anyway would. Press it again to unmark.' },
+      { p: 'The boards\' scenarios are tried too. Simplify for Inputs… tries a scenario only when every input it sets is one of yours; in Make Showcase Viewer…, Show what goes… lists every input the boards move with why — a slider on a board, or set by a scenario — and you can untick one: its sliders and the scenarios setting it are left out of the viewer.' },
+      { p: 'The copy keeps your Excel layout for what is left: the tabs of canvases that went go, and of the empty rows between rows, one stays where it sat next to a row that is kept, never two together.' },
       { p: 'The copy remembers what it was simplified from and for: a note at the bottom says so, and What was removed… lists it.' },
       { p: 'For a showcase viewer, you don\'t need a copy: in {cmd:makeShowcaseViewer}, tick Simplify to the sliders. The viewer, and the Excel workbook it carries, then hold only what the ticked boards\' sliders move, each scenario tried too. Show what goes… lists the rest, with Keep anyway; your document keeps its whole model and remembers the choice.' },
       { tip: 'The fixed numbers are right only while the other inputs stay as they were. Change an input that isn\'t one of the chosen ones in the full model, and simplify again.' },
@@ -718,6 +721,7 @@ const COMMAND_HELP = {
   openFmGraph: 'Opens fmGraph with this model: bars and sliders that show how one value moves the rest.',
   makeShowcaseViewer: 'Makes one web page that shows this model read-only, with its fmGraph boards and sliders, to email or share.',
   simplifyForInputs: 'Makes a copy of the model holding only what some inputs move within their ranges, for a lesson that teaches just those calculations.',
+  alwaysKeepCanvas: 'Marks the current canvas to be always kept, whole, when the model is simplified (press again to unmark): for checks such as an audit canvas.',
   installApp: 'Installs fmIDE as an app with its own window, working offline.',
   openLauncher: 'Finds any command, macro or help topic as you type its name.',
   openShortcuts: 'Shows every keyboard shortcut and lets you change them.',

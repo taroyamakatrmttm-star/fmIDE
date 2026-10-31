@@ -236,6 +236,8 @@ A course built step by step starts with simple transactions and adds more on top
 - **With fmGraph boards**, the window starts from their sliders and ranges; each scenario is tried too, and a bar that never moves stays as a fixed number unless it is 0.
 - **The check.** Before the copy opens, it is worked out at every run and at fresh random ones, and everything it keeps must give the full model's numbers.
 - Canvases left empty go. The canvases that stay are unlinked from their templates, so an update can't put back what went. Positions and formats are kept, so each lesson's items sit where the student saw them before.
+- **Always kept.** A canvas you always want, such as an audit canvas: open it and press **Model → Canvas → Always Keep When Simplifying** (⚓ on its tab). The mark is saved with the document.
+- **Your Excel layout comes along.** The copy keeps the document's Excel layout for what is left: tabs of canvases that went go, and of the empty rows between rows, one stays where it sat beside a kept row, never two together.
 - **The fixed numbers are right only while the other inputs stay as they were.** Change the full model and simplify again.
 - On a large model it takes seconds (the owner's model of 528 items: about 6 seconds for two sliders); **Stop** stops it.
 
@@ -251,6 +253,7 @@ You don't need a copy to make a lesson's viewer: Make Showcase Viewer… can sim
 **Check it:** the message ends *Simplified to the sliders, it keeps 7 of 11 items on 1 of 2 canvases.* In the viewer, the Logic view shows only **Sales**, with Costs **7**; Profit is **33**, and **93** with Units at 10. Your document still has both canvases. With **Include an Excel workbook** ticked, the workbook has no Notes tab and no Fixed cost row.
 
 - **Each scenario** of the boards is tried too, and a bar or chart that never moves stays as a fixed number, unless it is 0.
+- **Show what goes…** lists every input the boards move, with why: *slider on board …* or *set by scenario …*. Untick one to leave it out: its sliders and every scenario setting it leave the viewer too, and the list says which.
 - The choice and its Keep anyway ticks are kept in the document (the showcase, version 2), so making the viewer again remembers them.
 
 ### From a script

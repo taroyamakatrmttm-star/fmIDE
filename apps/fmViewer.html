@@ -3433,9 +3433,10 @@ function cleanShowcase(d){
   v.simplify = cleanSimplifyField(d.simplify, problems);
   return { value: v, problems };
 }
-// Simplify to the sliders (version 2): { on, keep } — whether the viewer's model, and its
-// workbook, hold only what the boards' sliders move, and what is kept anyway (canvas ids, or a
-// canvas and a rectangle id; src/shared/simplify.js). Ids are only ever compared.
+// Simplify to the sliders (version 2): { on, keep, off } — whether the viewer's model, and its
+// workbook, hold only what the boards' sliders move; what is kept anyway (canvas ids, or a
+// canvas and a rectangle id; src/shared/simplify.js); and the inputs left out (a canvas and a
+// rectangle id each: their sliders, and the scenarios setting them). Ids are only ever compared.
 function cleanSimplifyField(v, problems){
   if(v === undefined || v === null) return null;
   if(!isObject(v)){ problems.push('"simplify" is not a choice: the model is not simplified.'); return null; }
@@ -3449,7 +3450,14 @@ function cleanSimplifyField(v, problems){
     keep.push(k.nodeId === undefined ? { canvasId: k.canvasId } : { canvasId: k.canvasId, nodeId: k.nodeId });
   });
   if(v.keep !== undefined && (!Array.isArray(v.keep) || keep.length < v.keep.length)) problems.push('Some of "simplify.keep" are not canvas or rectangle ids, or repeat: they are left out.');
-  return { on: v.on === true, keep };
+  const off = [], seenOff = new Set();
+  (Array.isArray(v.off) ? v.off : []).forEach(k => {
+    if(!isObject(k) || !id(k.canvasId) || !id(k.nodeId) || off.length >= SHOWCASE_LIMITS.keep || seenOff.has(k.canvasId + '\u0000' + k.nodeId)) return;
+    seenOff.add(k.canvasId + '\u0000' + k.nodeId);
+    off.push({ canvasId: k.canvasId, nodeId: k.nodeId });
+  });
+  if(v.off !== undefined && (!Array.isArray(v.off) || off.length < v.off.length)) problems.push('Some of "simplify.off" are not rectangles, or repeat: they are left out.');
+  return off.length ? { on: v.on === true, keep, off } : { on: v.on === true, keep };
 }
 // play, periods and excel, the same in both forms (a recipe's excel.file may use {model}).
 function cleanPlayPeriodsExcel(d, v, problems){
@@ -3638,7 +3646,8 @@ function showcaseFromChoices(choices, graphBoards, model){
   // Excel (phase V4): { file } includes the workbook, named so (the title's name when none is given).
   if(isObject(c.excel)) sc.excel = { file: showcaseFileName(c.excel.file) || showcaseFileName(title || 'Model') };
   // Simplify to the sliders (version 2): kept whenever chosen once, so its Keep anyway ticks stay.
-  if(isObject(c.simplify)) sc.simplify = { on: c.simplify.on === true, keep: Array.isArray(c.simplify.keep) ? c.simplify.keep : [] };
+  if(isObject(c.simplify)) sc.simplify = Object.assign({ on: c.simplify.on === true, keep: Array.isArray(c.simplify.keep) ? c.simplify.keep : [] },
+    Array.isArray(c.simplify.off) && c.simplify.off.length ? { off: c.simplify.off } : {});
   const cleaned = cleanShowcase(sc);
   return { value: showcaseForFile(cleaned.value), problems: problems.concat(cleaned.problems), error: null };
 }

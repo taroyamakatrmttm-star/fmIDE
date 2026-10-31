@@ -111,6 +111,109 @@ test('fm.makeShowcaseViewer({ simplify }): the viewer gives the full model\'s nu
   await expect(page.evaluate(() => fm.makeShowcaseViewer({ simplify: true, excel: false, boards: [] }))).rejects.toThrow('Simplify to the sliders needs a board with sliders');
 });
 
+test('Show what goes… lists each input with why; unticking Price leaves out the scenario setting it, in the viewer too, and is remembered', async ({ page }, testInfo) => {
+  await fmideWith(page, lessonDoc(testInfo));
+  await page.evaluate(() => fm.command('makeShowcaseViewer'));
+  const box = maker(page);
+  await box.locator('.sm-excel').uncheck();
+  await box.locator('.sm-simplify').check();
+  await box.locator('.sm-simplify-list').click();
+  const keepBox = page.locator('.simplify-keep-box');
+  await expect(keepBox.locator('.sim-input-why')).toHaveText([' Units — slider on board Lesson', ' Price — set by scenario Cheap']);
+  await keepBox.locator('.sim-input-on[data-node="price"]').uncheck();
+  await expect(keepBox.locator('.sim-summary')).toContainText('· 1 scenario left out');
+  await expect(keepBox.locator('.sim-scenario-left')).toHaveText('Scenario Cheap left out: it sets Price, which is left out.');
+  await expect(keepBox.locator('.sim-input-on[data-node="price"]')).not.toBeChecked();
+  await keepBox.locator('.sim-keep-done').click();
+  const [download] = await Promise.all([page.waitForEvent('download'), box.locator('.sm-make').click()]);
+  const text = fs.readFileSync(await download.path(), 'utf8');
+  const shown = JSON.parse(blockOf(text, 'showcase'));
+  expect(shown.boards.scenarios).toEqual([]);
+  expect(shown.boards.boards[0].sliders.map(s => s.nodeId)).toEqual(['units']);
+  expect(shown.simplify.off).toEqual([{ canvasId: 'c1', nodeId: 'price' }]);
+  await expect(page.locator('.message-box').last()).toContainText('Scenario Cheap is left out of the viewer: it sets Price, which is left out.');
+  // The document keeps its scenario, and the choice for next time.
+  expect(await page.evaluate(() => fm.showcase().simplify.off)).toEqual([{ canvasId: 'c1', nodeId: 'price' }]);
+  // Every input left out: refused in words.
+  await expect(page.evaluate(() => fm.makeShowcaseViewer({ excel: false, simplify: { off: [{ canvasId: 'c1', nodeId: 'price' }, { canvasId: 'c1', nodeId: 'units' }] } })))
+    .rejects.toThrow('Every input is left out: tick at least one.');
+});
+
+test('Always Keep When Simplifying: the command marks the canvas (⚓, saved), simplifying keeps it whole and says so; pressed again it unmarks', async ({ page }, testInfo) => {
+  await fmideWith(page, lessonDoc(testInfo));
+  expect(await page.evaluate(() => __fmIDE.getRibbonConfig().tabs.flatMap(t => t.groups).find(g => g.label === 'Canvas').items.map(i => i.cmd))).toContain('alwaysKeepCanvas');
+  await page.evaluate(() => { fm.switchCanvas('Notes'); fm.command('alwaysKeepCanvas'); });
+  await expect(page.locator('.canvas-tab.always-kept')).toHaveCount(1);
+  await expect(page.locator('.canvas-tab.always-kept .name')).toHaveText('Notes');
+  expect(await page.evaluate(() => document.title)).toContain('•');
+  const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
+  expect(data.simplifyAlwaysKeep).toEqual(['c2']);
+  const made = await page.evaluate(() => fm.makeShowcaseViewer({ simplify: true, excel: false }));
+  expect(made.simplified.alwaysKept).toEqual([{ canvasId: 'c2', canvas: 'Notes' }]);
+  expect(JSON.parse(blockOf(made.text, 'model')).canvases.map(c => c.id)).toEqual(['c1', 'c2']);
+  const plan = await page.evaluate(() => fm.simplifyPlan({ sliders: true }));
+  expect(plan.alwaysKept.map(c => c.canvas)).toEqual(['Notes']);
+  await page.evaluate(() => fm.command('alwaysKeepCanvas'));
+  await expect(page.locator('.canvas-tab.always-kept')).toHaveCount(0);
+  expect(await page.evaluate(() => fm.alwaysKeepWhenSimplifying({ canvas: 'Sales' }))).toEqual(['Sales']);
+  // From a file: checked (only ids, no repeats).
+  const file = testInfo.outputPath('marked.fmide');
+  const doc = JSON.parse(fs.readFileSync(lessonDoc(testInfo), 'utf8'));
+  fs.writeFileSync(file, JSON.stringify(Object.assign(doc, { simplifyAlwaysKeep: ['c2', 'c2', 7, '<b>'] })));
+  await page.evaluate(() => fm.command('openDocument'));
+  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.locator('#saveChangesDialog button', { hasText: "Don't save" }).click()]);
+  await chooser.setFiles(file);
+  await expect(page.locator('.canvas-tab.always-kept .name')).toHaveText('Notes');
+  const again = (await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()))).data;
+  expect(again.simplifyAlwaysKeep).toEqual(['c2', '<b>']);
+});
+
+test('with Excel and the document\'s Excel layout: the workbook keeps the look of what is left, one empty row where it sat beside a kept row', async ({ page }, testInfo) => {
+  const file = lessonDoc(testInfo);
+  const doc = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const row = (id, order, extra) => Object.assign({ id: 'c1|' + id, canvasId: 'c1', nodeId: id, path: [], tabId: 'tab_c1', section: 'calc', order, flatOrder: order, label: id[0].toUpperCase() + id.slice(1), include: true, inlineConstant: false }, extra || {});
+  const empty = (id, order) => ({ id, isCustom: true, tabId: 'tab_c1', section: 'calc', label: '', style: null, showPeriodLabels: false, order, flatOrder: order });
+  doc.excelLayout = { kind: 'fmIDE-excel-mapping', version: 11,
+    tabs: [{ id: 'tab_c1', name: 'Sales', order: 0 }, { id: 'tab_c2', name: 'Notes', order: 1 }],
+    rows: [row('units', 0), row('price', 1), row('rev', 3, { label: 'Revenue' }), row('fixed', 6, { label: 'Fixed cost' }), row('over', 7, { label: 'Overhead' }), row('costs', 9),
+      row('profit', 11, { style: { font: { color: '#b91c1c', weight: 'bold' } } }),
+      { id: 'c2|n1', canvasId: 'c2', nodeId: 'n1', path: [], tabId: 'tab_c2', section: 'input', order: 0, flatOrder: 0, label: 'Unrelated', include: true, inlineConstant: false }],
+    customRows: [empty('e2', 2), empty('e4', 4), empty('e5', 5), empty('e8', 8), empty('e10', 10)],
+    inputRows: [], cfg: { startLabel: '2027', frequency: 'annual', fallbackFormat: '#,##0', fileName: 'Lesson', sectionsEnabled: false } };
+  fs.writeFileSync(file, JSON.stringify(doc));
+  await fmideWith(page, file);
+  const labelsOf = async (made) => {
+    const block = S.readViewerWorkbook(JSON.parse(blockOf(made.text, 'excel')));
+    const zip = await JSZip.loadAsync(zlib.inflateRawSync(Buffer.from(block.value.workbook, 'base64')));
+    const wb = await zip.file('xl/workbook.xml').async('string');
+    const names = [...wb.matchAll(/<sheet [^>]*name="([^"]+)"/g)].map(m => m[1]);
+    const strings = zip.file('xl/sharedStrings.xml') ? [...(await zip.file('xl/sharedStrings.xml').async('string')).matchAll(/<si>([\s\S]*?)<\/si>/g)].map(m => m[1].replace(/<[^>]+>/g, '')) : [];
+    const xml = await zip.file('xl/worksheets/sheet' + (names.indexOf('Sales') + 1) + '.xml').async('string');
+    const out = {};
+    // Column A's cells; an empty row's are written <c …/>.
+    for(const m of xml.matchAll(/<c r="A(\d+)"([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)){
+      const body = m[3] || '';
+      const v = /<v>([^<]*)<\/v>/.exec(body), is = /<t[^>]*>([^<]*)<\/t>/.exec(body);
+      const t = /t="s"/.test(m[2]) && v ? strings[Number(v[1])] : is ? is[1] : v ? v[1] : '';
+      const s = /\ss="(\d+)"/.exec(m[2]);
+      if(t) out[t] = { row: Number(m[1]), style: s ? s[1] : '0' };
+    }
+    return { names, out };
+  };
+  const full = await labelsOf(await page.evaluate(() => fm.makeShowcaseViewer({ simplify: false, excel: true })));
+  const simp = await labelsOf(await page.evaluate(() => fm.makeShowcaseViewer({ simplify: true, excel: true })));
+  expect(full.names).toContain('Notes');
+  expect(simp.names).not.toContain('Notes');
+  // Rows in order with one empty row where it sat beside a kept row: Units, Price, _, Revenue, _, Costs, _, Profit.
+  const at = (x, k) => x.out[k] && x.out[k].row;
+  const r0 = at(simp, 'Units');
+  expect(['Price', 'Revenue', 'Costs', 'Profit'].map(k => at(simp, k) - r0)).toEqual([1, 3, 5, 7]);
+  expect(simp.out['Fixed cost']).toBeUndefined();
+  // Profit keeps its own look: the same cell style as in the whole model's workbook.
+  expect(simp.out.Profit.style).toBe(full.out.Profit.style);
+  expect(full.out.Profit.style).not.toBe(full.out.Revenue.style);
+});
+
 test('with Excel: ExcelExporter makes the workbook from the simplified model — no Notes tab, no Fixed cost row', async ({ page, context }, testInfo) => {
   await fmideWith(page, lessonDoc(testInfo));
   const popups = [];

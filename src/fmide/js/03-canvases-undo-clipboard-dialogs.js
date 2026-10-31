@@ -208,6 +208,7 @@
       let tab = existing.get(c.id);
       if(tab) existing.delete(c.id); else tab = buildCanvasTab(c.id);
       tab.classList.toggle('active', c.id === activeCanvasId);
+      tab.classList.toggle('always-kept', docAlwaysKeep.includes(c.id)); // Always Keep When Simplifying
       if(!tab.dataset.renaming){
         const nameSpan = tab.querySelector('.name');
         if(nameSpan && nameSpan.textContent !== c.name) nameSpan.textContent = c.name;

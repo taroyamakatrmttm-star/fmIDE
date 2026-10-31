@@ -120,6 +120,7 @@
       try{
         const s = await simplifyForViewer(made.value, onProgress);
         model = s.system; shown = s.showcase; excelPayload = s.excelPayload; simplified = simplifySummary(s.result);
+        simplified.scenariosLeft.forEach(x => made.problems.push('Scenario ' + x.name + ' is left out of the viewer: it sets ' + x.because.join(', ') + ', which is left out.'));
       }catch(err){
         // ExcelExporter's window, opened by the click for this, isn't needed after all.
         if(excelOpened === true){ try{ if(excelWindow && !excelWindow.closed) excelWindow.close(); }catch(e){ /* gone */ } excelWindow = null; }
@@ -352,6 +353,7 @@
     simplifyRow.append(simplifyBox, document.createTextNode(' Simplify to the sliders'));
     box.appendChild(simplifyRow);
     let simplifyKeep = c.simplify && Array.isArray(c.simplify.keep) ? c.simplify.keep.slice() : [];
+    let simplifyOff = c.simplify && Array.isArray(c.simplify.off) ? c.simplify.off.slice() : [];
     const simplifyTools = el('div', 'sm-simplify-tools');
     const simplifyList = el('button', 'sm-simplify-list', 'Show what goes…');
     const simplifyNote = el('span', 'sm-simplify-note');
@@ -363,12 +365,15 @@
     syncSimplify();
     const simplifyProgress = (job) => { simplifyNote.textContent = 'Simplifying… ' + Math.round(job.progress * 100) + '%'; };
     simplifyList.addEventListener('click', () => {
-      const made = showcaseFromChoices(Object.assign(choicesNow(), { simplify: { on: true, keep: simplifyKeep } }), graphBoards, { canvases, periodCount: periods.length });
+      const choicesFor = (off, keep) => showcaseFromChoices(Object.assign(choicesNow(), { simplify: { on: true, keep, off } }), graphBoards, { canvases, periodCount: periods.length });
+      const made = choicesFor(simplifyOff, simplifyKeep);
       if(made.error){ showMessage(made.error); return; }
       simplifyList.disabled = true;
+      const rerun = (off, keep) => simplifyForViewer(choicesFor(off, keep).value, simplifyProgress).then(x => ({ result: x.result, plan: x.plan }));
       simplifyForViewer(made.value, simplifyProgress).then(s => {
         simplifyNote.textContent = 'The viewer ' + simplifyWords(s.result) + '.';
-        showSimplifyKeepWindow(s.result, simplifyKeep, (keep, r) => { simplifyKeep = keep; simplifyNote.textContent = 'The viewer ' + simplifyWords(r) + '.'; });
+        showSimplifyKeepWindow(s.result, simplifyKeep, (keep, r, off) => { simplifyKeep = keep; simplifyOff = off; simplifyNote.textContent = 'The viewer ' + simplifyWords(r) + '.'; },
+          { plan: s.plan, off: simplifyOff, rerun });
       }).catch(err => { simplifyNote.textContent = ''; showMessage(err && err.message ? err.message : String(err)); })
         .finally(() => { syncSimplify(); });
     });
@@ -398,7 +403,7 @@
       boards: boardTicks.filter(cb => cb.checked).map(cb => Number(cb.dataset.index)),
       play: playFrom ? { from: playFrom.value, to: playTo.value } : null,
       excel: excelBox.checked ? { file: excelFile.value } : null,
-      simplify: simplifyBox.checked || simplifyKeep.length ? { on: simplifyBox.checked, keep: simplifyKeep } : null });
+      simplify: simplifyBox.checked || simplifyKeep.length || simplifyOff.length ? { on: simplifyBox.checked, keep: simplifyKeep, off: simplifyOff } : null });
     async function make(choices, excelOpened){
       makeBtn.disabled = true;
       try{

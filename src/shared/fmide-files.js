@@ -312,6 +312,16 @@ export function cleanDocumentSimplified(raw){
   };
 }
 
+// The canvases a document always keeps when it is simplified (workspace v16, `simplifyAlwaysKeep`;
+// Model → Always Keep When Simplifying): canvas ids, each a string of at most 200 characters,
+// at most 500, no repeats; anything else is dropped. An id no canvas has is harmless (ignored).
+export const SIMPLIFY_ALWAYS_KEEP_MAX = 500;
+export function cleanSimplifyAlwaysKeep(raw){
+  const out = [];
+  (Array.isArray(raw) ? raw : []).forEach(id => { if(typeof id === 'string' && id && id.length <= 200 && !out.includes(id) && out.length < SIMPLIFY_ALWAYS_KEEP_MAX) out.push(id); });
+  return out;
+}
+
 // Another app's file kept with a document: that kind, plain data, at most `limits.depth`
 // deep and `limits.bytes` as text, as a copy; anything else is dropped (null).
 function keptFileOfKind(raw, kind, limits){

@@ -35,37 +35,27 @@
     const f = sc && typeof sc === 'object' ? sc : graphBoards;
     return f && typeof f === 'object' && Array.isArray(f.boards) ? f : null;
   }
-  // The boards' sliders (each setting once), their scenarios as extra runs, and every rectangle
-  // their bars and charts show.
-  function simplifyFromBoards(file){
+  // What a board file moves (src/shared/simplify.js, simplifyBoardInputs): every input with why —
+  // the boards its sliders are on, the scenarios setting it — the sliders on the inputs left on, the
+  // scenarios kept and those left out (setting an input in `off`), and every rectangle shown.
+  function simplifyFromBoards(file, off){
     const f = file === undefined ? simplifyBoardFile() : file;
-    const sliders = [], seen = new Set(), shown = [];
-    if(!f) return { sliders, scenarios: [], shown };
-    const isRef = (o) => o && typeof o === 'object' && typeof o.canvasId === 'string' && typeof o.nodeId === 'string';
-    const walk = (v) => {
-      if(Array.isArray(v)) v.forEach(walk);
-      else if(v && typeof v === 'object'){ if(isRef(v)) shown.push({ canvasId: v.canvasId, nodeId: v.nodeId }); Object.keys(v).forEach(k => walk(v[k])); }
-    };
-    f.boards.forEach(b => {
-      if(!b || typeof b !== 'object') return;
-      (Array.isArray(b.sliders) ? b.sliders : []).forEach(s => {
-        if(!isRef(s)) return;
-        const k = s.canvasId + '\u0000' + s.nodeId + '|' + JSON.stringify(s.periods || null) + '|' + s.mode;
-        if(seen.has(k)) return;
-        seen.add(k);
-        sliders.push({ canvasId: s.canvasId, nodeId: s.nodeId, min: s.min, max: s.max, step: s.step, mode: s.mode, periods: s.periods });
-      });
-      ['items', 'bars', 'charts'].forEach(k => walk(b[k]));
-    });
-    const scenarios = (Array.isArray(f.scenarios) ? f.scenarios : [])
-      .map(sc => (sc && Array.isArray(sc.sliders) ? sc.sliders : []).filter(isRef).map(s => ({ canvasId: s.canvasId, nodeId: s.nodeId, value: s.value, mode: s.mode, periods: s.periods })))
-      .filter(list => list.length);
-    return { sliders, scenarios, shown };
+    return simplifyBoardInputs(f && typeof f === 'object' && Array.isArray(f.boards) ? f : null, off || []);
+  }
+  // Simplify for Inputs…: the boards' scenarios are tried only when every input they set is one of
+  // the inputs chosen (the rest are left out of the runs and of the copy's boards), and the boards'
+  // rectangles are kept as fixed numbers unless 0.
+  function simplifyBoardsFor(inputs){
+    const chosen = new Set(inputs.map(x => x.canvasId + '\u0000' + x.nodeId));
+    const off = simplifyFromBoards().inputs.filter(x => !chosen.has(x.canvasId + '\u0000' + x.nodeId));
+    const plan = simplifyFromBoards(undefined, off);
+    return { extraRuns: plan.scenarios.kept.map(sc => sc.settings), shown: plan.shown, left: plan.scenarios.left };
   }
 
   // Works it out in pieces, the page staying responsive. Returns { promise, stop }.
   function runSimplify(inputs, opts, onProgress){
-    const job = simplifyJob(buildSystemPayload(), inputs, opts);
+    // The canvases marked Always Keep When Simplifying are kept every time.
+    const job = simplifyJob(buildSystemPayload(), inputs, Object.assign({ alwaysKeep: docAlwaysKeep.slice() }, opts));
     let stopped = false;
     const promise = new Promise((resolve, reject) => {
       const piece = () => {
@@ -85,8 +75,8 @@
   function simplifySummary(r){
     return { kept: r.kept, total: r.total, canvases: cloneData(r.canvases), inputs: cloneData(r.inputs),
       removed: cloneData(r.removed), fixed: cloneData(r.fixed), folded: cloneData(r.folded),
-      removedCanvases: cloneData(r.removedCanvases), unlinked: cloneData(r.unlinked), zeros: r.zeros,
-      runs: r.runs, ms: r.ms, checked: cloneData(r.checked) };
+      removedCanvases: cloneData(r.removedCanvases), unlinked: cloneData(r.unlinked), alwaysKept: cloneData(r.alwaysKept || []), zeros: r.zeros,
+      runs: r.runs, ms: r.ms, checked: cloneData(r.checked), scenariosLeft: cloneData(r.scenariosLeft || []) };
   }
 
   // A board file with what the copy no longer has left out: every widget or part naming a
@@ -112,15 +102,19 @@
 
   // The copy as a document: this one's workspace with the simplified model, its boards and
   // showcase pruned to what is left, and the record of what it was simplified from and for.
+  // Its Excel layout is cut to what is left (simplifyExcelLayout), so ExcelExporter keeps the look
+  // of what stays; the scenarios left out (r.scenariosLeft) leave its boards.
   function simplifiedDocument(r){
     const data = buildWorkspacePayload();
     data.system = cloneData(r.system);
     const present = new Set();
     data.system.canvases.forEach(c => c.nodes.forEach(n => present.add(c.id + '\u0000' + n.id)));
-    if(data.graphBoards) data.graphBoards = simplifyPruneBoards(data.graphBoards, present);
+    const left = r.scenariosLeft || [];
+    if(data.graphBoards) data.graphBoards = simplifyPruneBoards(simplifyBoardsWithout(data.graphBoards, [], left), present);
+    if(data.excelLayout) data.excelLayout = simplifyExcelLayout(data.excelLayout, data.system).layout;
     if(data.showcase){
       const sc = data.showcase;
-      if(sc.boards) sc.boards = simplifyPruneBoards(sc.boards, present);
+      if(sc.boards) sc.boards = simplifyPruneBoards(simplifyBoardsWithout(sc.boards, [], left), present);
       const ids = new Set(data.system.canvases.map(c => c.id));
       if(sc.canvases && Array.isArray(sc.canvases.show)) sc.canvases.show = sc.canvases.show.filter(id => ids.has(id));
       if(sc.canvases && sc.canvases.start && !ids.has(sc.canvases.start)) delete sc.canvases.start;
@@ -131,30 +125,43 @@
   }
   // Simplify to the sliders (phase 2, Make Showcase Viewer…): the model simplified for the sliders
   // of the showcase's boards — each scenario one more run, their bars and charts kept as fixed
-  // numbers unless 0 — and Keep anyway from `sc.simplify.keep`. Returns a Promise of { system
-  // (the viewer's model block), showcase (its boards and shown canvases cleaned the same way),
-  // excelPayload (the workspace ExcelExporter makes the workbook from), result }. The document
-  // itself is not changed.
+  // numbers unless 0 — with Keep anyway from `sc.simplify.keep` and the inputs left out in
+  // `sc.simplify.off` (their sliders, and every scenario setting them, out of the runs and the
+  // viewer). Returns a Promise of { system (the viewer's model block), showcase (its boards and
+  // shown canvases cleaned the same way), excelPayload (the workspace ExcelExporter makes the
+  // workbook from, its Excel layout cut to match), result, plan (simplifyBoardInputs) }. The
+  // document itself is not changed.
   function simplifyForViewer(sc, onProgress){
-    const boards = simplifyFromBoards(sc && sc.boards ? sc.boards : null);
-    if(!boards.sliders.length) return Promise.reject(new FmError('Simplify to the sliders needs a board with sliders: tick one, or set them up in fmGraph.'));
-    const { inputs, problems } = simplifyInputs(buildSystemPayload(), boards.sliders);
-    if(!inputs.length) return Promise.reject(new FmError('The boards\' sliders are on no input rectangle of this model' + (problems.length ? ': ' + problems.join(' ') : '.')));
+    const off = sc && sc.simplify && Array.isArray(sc.simplify.off) ? sc.simplify.off : [];
+    const plan = simplifyFromBoards(sc && sc.boards ? sc.boards : null, off);
+    if(!plan.inputs.length) return Promise.reject(new FmError('Simplify to the sliders needs a board with sliders: tick one, or set them up in fmGraph.'));
+    const { inputs, problems } = simplifyInputs(buildSystemPayload(), plan.sliders);
+    if(!inputs.length && !plan.scenarios.kept.length){
+      return Promise.reject(new FmError(plan.inputs.every(x => !x.on) ? 'Every input is left out: tick at least one.'
+        : 'The boards\' sliders are on no input rectangle of this model' + (problems.length ? ': ' + problems.join(' ') : '.')));
+    }
     const keep = sc.simplify && Array.isArray(sc.simplify.keep) ? sc.simplify.keep : [];
-    const running = runSimplify(inputs, { keep, extraRuns: boards.scenarios, shown: boards.shown }, onProgress);
-    return running.promise.then(r => simplifiedForViewer(sc, r));
+    const running = runSimplify(inputs, { keep, extraRuns: plan.scenarios.kept.map(x => x.settings), shown: plan.shown }, onProgress);
+    return running.promise.then(r => {
+      r.scenariosLeft = plan.scenarios.left;
+      return Object.assign(simplifiedForViewer(sc, r, off, plan.scenarios.left), { plan });
+    });
   }
-  function simplifiedForViewer(sc, r){
+  function simplifiedForViewer(sc, r, off, left){
     const system = cloneData(r.system);
     const present = new Set(), ids = system.canvases.map(c => c.id);
     system.canvases.forEach(c => c.nodes.forEach(n => present.add(c.id + '\u0000' + n.id)));
     const showcase = cloneData(sc);
-    if(showcase.boards) showcase.boards = simplifyPruneBoards(showcase.boards, present);
+    if(showcase.boards) showcase.boards = simplifyPruneBoards(simplifyBoardsWithout(showcase.boards, off, left), present);
+    // Play can't end on a scenario left out.
+    const leftNames = new Set((left || []).map(x => x.name));
+    if(showcase.play && (leftNames.has(showcase.play.from) || leftNames.has(showcase.play.to))) delete showcase.play;
     const shown = showcase.canvases && Array.isArray(showcase.canvases.show) ? showcase.canvases.show.filter(id => ids.includes(id)) : ids.slice();
     showcase.canvases = { show: shown.length ? shown : ids.slice(0, 1) };
     showcase.canvases.start = sc.canvases && showcase.canvases.show.includes(sc.canvases.start) ? sc.canvases.start : showcase.canvases.show[0];
     const excelPayload = Object.assign(buildExcelPayload(), { system });
-    if(excelPayload.graphBoards) excelPayload.graphBoards = simplifyPruneBoards(excelPayload.graphBoards, present);
+    if(excelPayload.graphBoards) excelPayload.graphBoards = simplifyPruneBoards(simplifyBoardsWithout(excelPayload.graphBoards, off, left), present);
+    if(excelPayload.excelLayout) excelPayload.excelLayout = simplifyExcelLayout(excelPayload.excelLayout, system).layout;
     return { system, showcase, excelPayload, result: r };
   }
 
@@ -162,9 +169,13 @@
   function simplifyWords(r){
     return 'keeps ' + r.kept + ' of ' + r.total + ' items on ' + r.canvases.kept + ' of ' + r.canvases.total + ' canvases';
   }
-  // Make Showcase Viewer…'s Show what goes…: the list with Keep anyway ticks, redone at once from
-  // the same runs (result.rebuild). Done gives back the ticks: onDone(keep, result).
-  function showSimplifyKeepWindow(result, keep, onDone){
+  // Make Showcase Viewer…'s Show what goes…: the inputs the boards move, each with why (its
+  // boards' sliders, the scenarios setting it) and a tick — unticking one works it out again
+  // without it (`rerun(off)`, a Promise of { result, plan }) — then the list with Keep anyway
+  // ticks, redone at once from the same runs (result.rebuild). Done gives back the choices:
+  // onDone(keep, result, off).
+  function showSimplifyKeepWindow(result, keep, onDone, more){
+    more = more || {};
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
@@ -177,32 +188,65 @@
     (keep || []).forEach(k => { if(k && k.nodeId !== undefined) keepTicks.nodes.add(k.canvasId + '\u0000' + k.nodeId); else if(k) keepTicks.canvases.add(k.canvasId); });
     const keepList = () => [...keepTicks.canvases].map(canvasId => ({ canvasId }))
       .concat([...keepTicks.nodes].map(k => { const [canvasId, nodeId] = k.split('\u0000'); return { canvasId, nodeId }; }));
-    let r = result;
+    let r = result, plan = more.plan || null, off = (more.off || []).slice(), busy = false;
+    const inputsBox = el('div', 'sim-inputs-why');
     const summary = el('p', 'sim-summary');
     const list = el('div', 'sim-list');
+    const why = (x) => [x.boards.length ? 'slider on board ' + x.boards.join(', ') : '', x.scenarios.length ? 'set by scenario' + (x.scenarios.length === 1 ? ' ' : 's ') + x.scenarios.join(', ') : '']
+      .filter(Boolean).join('; ');
+    const drawInputs = () => {
+      inputsBox.textContent = '';
+      if(!plan) return;
+      inputsBox.appendChild(el('p', 'sim-head', 'Inputs'));
+      plan.inputs.forEach(x => {
+        const row = el('label', 'sim-input-why');
+        const tick = el('input', 'sim-input-on'); tick.type = 'checkbox'; tick.checked = x.on; tick.disabled = busy || !more.rerun;
+        tick.dataset.canvas = x.canvasId; tick.dataset.node = x.nodeId;
+        row.append(tick, el('b', null, ' ' + x.name), el('span', 'sim-why', ' — ' + why(x)));
+        inputsBox.appendChild(row);
+      });
+    };
     const draw = () => {
-      summary.textContent = 'The viewer ' + simplifyWords(r) + ' · ' + r.fixed.length + ' fixed number' + (r.fixed.length === 1 ? '' : 's') + ' · ' + r.zeros + ' zero' + (r.zeros === 1 ? '' : 's') + ' dropped';
+      summary.textContent = 'The viewer ' + simplifyWords(r) + ' · ' + r.fixed.length + ' fixed number' + (r.fixed.length === 1 ? '' : 's') + ' · ' + r.zeros + ' zero' + (r.zeros === 1 ? '' : 's') + ' dropped'
+        + ((r.scenariosLeft || []).length ? ' · ' + r.scenariosLeft.length + ' scenario' + (r.scenariosLeft.length === 1 ? '' : 's') + ' left out' : '');
+      drawInputs();
       list.textContent = '';
+      appendSimplifyNotes(list, r);
       appendSimplifyList(list, r.removed, r.fixed, keepTicks);
     };
+    inputsBox.addEventListener('change', (ev) => {
+      const t = ev.target;
+      if(!t || !t.classList.contains('sim-input-on') || !more.rerun) return;
+      const k = t.dataset.canvas + '\u0000' + t.dataset.node;
+      off = off.filter(o => o.canvasId + '\u0000' + o.nodeId !== k);
+      if(!t.checked) off.push({ canvasId: t.dataset.canvas, nodeId: t.dataset.node });
+      busy = true;
+      drawInputs();
+      summary.textContent = 'Working it out again…';
+      more.rerun(off, keepList()).then(x => { r = x.result; plan = x.plan; })
+        .catch(e => { summary.textContent = e && e.message ? e.message : String(e); })
+        .finally(() => { busy = false; draw(); });
+    });
     list.addEventListener('change', (ev) => {
       const t = ev.target;
-      if(!t || t.type !== 'checkbox') return;
+      if(!t || t.type !== 'checkbox' || busy) return;
       if(t.classList.contains('sim-keep')){ const k = t.dataset.canvas + '\u0000' + t.dataset.node; if(t.checked) keepTicks.nodes.add(k); else keepTicks.nodes.delete(k); }
       else if(t.classList.contains('sim-keep-canvas')){ if(t.checked) keepTicks.canvases.add(t.dataset.canvas); else keepTicks.canvases.delete(t.dataset.canvas); }
       else return;
       const scroll = list.scrollTop;
-      r = r.rebuild(keepList());
+      r = Object.assign(r.rebuild(keepList()), { scenariosLeft: r.scenariosLeft });
       draw();
       list.scrollTop = scroll;
     });
     const actions = el('div', 'modal-actions');
     const done = el('button', 'primary sim-keep-done', 'Done');
-    const close = () => { overlay.remove(); onDone(keepList(), r); };
+    const close = () => { if(busy) return; overlay.remove(); onDone(keepList(), r, off); };
     done.addEventListener('click', close);
     overlay.addEventListener('mousedown', (ev) => { if(ev.target === overlay) close(); });
     actions.appendChild(done);
-    box.append(el('p', 'showcase-maker-title', 'What goes from the viewer'), el('p', 'template-desc', 'Tick what to keep anyway. It is checked again when the viewer is made.'), summary, list, actions);
+    box.append(el('p', 'showcase-maker-title', 'What goes from the viewer'),
+      el('p', 'template-desc', 'Untick an input to leave it out, with its sliders and the scenarios setting it. Tick what to keep anyway. It is checked again when the viewer is made.'),
+      inputsBox, summary, list, actions);
     draw();
     done.focus();
   }
@@ -253,6 +297,12 @@
       + (s.fixed.length ? 'Its ' + s.fixed.length + ' fixed number' + (s.fixed.length === 1 ? ' is' : 's are') + ' right only while the other inputs stay as they were.' : 'The other inputs stay as they were.');
   }
 
+  // The canvases always kept, and the scenarios left out, as notes above a list.
+  function appendSimplifyNotes(host, r){
+    const el = (tag, cls, text) => { const e = document.createElement(tag); if(cls) e.className = cls; if(text !== undefined) e.textContent = text; return e; };
+    if(r.alwaysKept && r.alwaysKept.length) host.appendChild(el('p', 'sim-note sim-always', 'Always kept (Always Keep When Simplifying): ' + r.alwaysKept.map(c => c.canvas).join(', ') + '.'));
+    (r.scenariosLeft || []).forEach(sc => host.appendChild(el('p', 'sim-note sim-scenario-left', 'Scenario ' + sc.name + ' left out: it sets ' + sc.because.join(', ') + ', which is left out.')));
+  }
   // The list in a window: by canvas, each item and why (the record's words, as text).
   function appendSimplifyList(host, removed, fixed, keepTicks){
     const el = (tag, cls, text) => { const e = document.createElement(tag); if(cls) e.className = cls; if(text !== undefined) e.textContent = text; return e; };
@@ -454,6 +504,7 @@
       if(r.checked.ok === false) list.appendChild(el('p', 'sim-warning', 'These still differ from the full model: ' + r.checked.mismatches.map(x => x.name + ' on ' + x.canvas).join(', ') + '.'));
       if(r.unlinked.length) list.appendChild(el('p', 'sim-note', 'Unlinked from their templates (so an update can\'t put back what went): ' + r.unlinked.map(c => c.canvas).join(', ') + '.'));
       if(r.removedCanvases.length) list.appendChild(el('p', 'sim-note', 'Canvases left empty, removed: ' + r.removedCanvases.map(c => c.canvas).join(', ') + '.'));
+      appendSimplifyNotes(list, r);
       if(r.folded.length) list.appendChild(el('p', 'sim-note', 'Folded into a minus: ' + r.folded.length + ' × −1 (a + became −, or a − became +).'));
       appendSimplifyList(list, r.removed, r.fixed, keepTicks);
       refreshActions();
@@ -465,22 +516,23 @@
       else if(t.classList.contains('sim-keep-canvas')){ if(t.checked) keepTicks.canvases.add(t.dataset.canvas); else keepTicks.canvases.delete(t.dataset.canvas); }
       else return;
       const scroll = list.scrollTop;
-      result = result.rebuild(keepList());
+      result = Object.assign(result.rebuild(keepList()), { scenariosLeft: result.scenariosLeft });
       resultFor = inputsKey() + keepKey();
       result.checked.ok = null;
       showResult();
       list.scrollTop = scroll;
     });
 
-    const opts = () => ({ keep: keepList(), extraRuns: fromBoards.scenarios, shown: fromBoards.shown });
     function workOut(){
       const { inputs: clean, problems } = simplifyInputs(buildSystemPayload(), inputs);
       if(problems.length){ showMessage(problems.join('\n')); return Promise.resolve(null); }
-      running = runSimplify(clean, opts(), (job) => { progress.textContent = job.label + ' ' + Math.round(job.progress * 100) + '%'; });
+      const boards = simplifyBoardsFor(clean);
+      running = runSimplify(clean, { keep: keepList(), extraRuns: boards.extraRuns, shown: boards.shown }, (job) => { progress.textContent = job.label + ' ' + Math.round(job.progress * 100) + '%'; });
       stop.hidden = false; progress.textContent = 'Working out…';
       refreshActions();
       const forKey = inputsKey() + keepKey();
       return running.promise.then(r => {
+        r.scenariosLeft = boards.left;
         result = r; resultFor = forKey;
         showResult();
         return r;

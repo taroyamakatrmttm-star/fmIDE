@@ -13,7 +13,7 @@
       P('periods','json',{ optional:true, help:'{ "from": 0, "to": 4 }' }), P('boards','json',{ optional:true, help:'a list like [0, 2]' }),
       P('play','json',{ optional:true, help:'{ "from": "Base", "to": "High price" }' }), P('mark','bool',{ optional:true }),
       P('excel','json',{ optional:true, help:'true, or { "file": "Loan basics.xlsx" }: ExcelExporter makes the workbook (phase V4); false: none' }),
-      P('simplify','json',{ optional:true, help:'true, or { "keep": [{ "canvasId": "c1" }] }: only what the boards\' sliders move; false: the whole model' }),
+      P('simplify','json',{ optional:true, help:'true, or { "keep": [{ "canvasId": "c1" }], "off": [{ "canvasId": "c1", "nodeId": "n2" }] }: only what the boards\' sliders move, the inputs in off left out; false: the whole model' }),
       P('download','bool',{ def:false }) ],
     run(a){
       if(runCtx) fail(SHOWCASE_NOT_IN_MACROS);
@@ -24,9 +24,11 @@
       else if(a.excel === false) choices.excel = null;
       else if(a.excel && typeof a.excel === 'object') choices.excel = { file: a.excel.file };
       const keptKeep = choices.simplify && Array.isArray(choices.simplify.keep) ? choices.simplify.keep : [];
-      if(a.simplify === true) choices.simplify = { on: true, keep: keptKeep };
-      else if(a.simplify === false) choices.simplify = keptKeep.length ? { on: false, keep: keptKeep } : null;
-      else if(a.simplify && typeof a.simplify === 'object') choices.simplify = { on: a.simplify.on !== false, keep: Array.isArray(a.simplify.keep) ? a.simplify.keep : keptKeep };
+      const keptOff = choices.simplify && Array.isArray(choices.simplify.off) ? choices.simplify.off : [];
+      if(a.simplify === true) choices.simplify = { on: true, keep: keptKeep, off: keptOff };
+      else if(a.simplify === false) choices.simplify = keptKeep.length || keptOff.length ? { on: false, keep: keptKeep, off: keptOff } : null;
+      else if(a.simplify && typeof a.simplify === 'object') choices.simplify = { on: a.simplify.on !== false, keep: Array.isArray(a.simplify.keep) ? a.simplify.keep : keptKeep,
+        off: Array.isArray(a.simplify.off) ? a.simplify.off : keptOff };
       return makeShowcaseViewerFile(choices).then(async made => {
         if(a.download) await giveViewerFile(made);
         return made;

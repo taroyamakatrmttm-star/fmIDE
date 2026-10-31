@@ -201,6 +201,7 @@
       excelLayout = null;
       docShowcase = null;
       docSimplified = null;
+      docAlwaysKeep = [];
       showSimplifiedBanner();
       render();
       Object.assign(currentDoc, { name: null, fileName: null, handle: null, recentId: null, serial: currentDoc.serial + 1 });
@@ -279,6 +280,7 @@
     excelLayout = kind === 'fmIDE-workspace' ? cleanExcelLayout(data.excelLayout) : null;
     docShowcase = kind === 'fmIDE-workspace' ? cleanDocumentShowcase(data.showcase) : null;
     docSimplified = kind === 'fmIDE-workspace' ? cleanDocumentSimplified(data.simplified) : null;
+    docAlwaysKeep = kind === 'fmIDE-workspace' ? cleanSimplifyAlwaysKeep(data.simplifyAlwaysKeep) : [];
     showSimplifiedBanner();
     const presets = (kind === 'fmIDE-workspace' && Array.isArray(data.formatPresets) && data.formatPresets.length)
       ? data.formatPresets : system.formatPresets;

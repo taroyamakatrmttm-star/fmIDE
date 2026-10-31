@@ -358,7 +358,16 @@ export function simplifyBuild(m, base, moved, inputs, opts){
     else if(k.canvasId !== undefined) keepCanvases.add(String(k.canvasId));
   });
   if(opts.keepMore) opts.keepMore.forEach(k => keepKeys.add(k));
-  const itemOf = (canvasId, nodeId) => m.byKey.get(simKey(canvasId, nodeId));
+  // Canvases marked "Always keep when simplifying" (the document's `simplifyAlwaysKeep`): kept
+  // as Keep anyway keeps a canvas, every time.
+  const alwaysKept = [];
+  (Array.isArray(opts.alwaysKeep) ? opts.alwaysKeep : []).forEach(id => {
+    const c = typeof id === 'string' && ir.canvases.get(id);
+    if(!c || alwaysKept.some(x => x.canvasId === id)) return;
+    keepCanvases.add(id);
+    alwaysKept.push({ canvasId: id, canvas: String(c.name || '') });
+  });
+  const itemOf =(canvasId, nodeId) => m.byKey.get(simKey(canvasId, nodeId));
   const baseValues = (it) => Array.from({ length: P }, (_, p) => simToken(base, it, p));
   const hasError = (toks) => toks.some(t => Array.isArray(t) ? t.some(x => typeof x === 'string') : typeof t === 'string');
 
@@ -673,7 +682,7 @@ export function simplifyBuild(m, base, moved, inputs, opts){
       total: m.items.length, kept: keptCount,
       canvases: { total: (sys && sys.canvases || []).length, kept: outCanvases.length },
       inputs: inputs.map(x => ({ canvasId: x.canvasId, nodeId: x.nodeId, name: x.name, min: x.min, max: x.max, step: x.step, mode: x.mode, periods: x.periods })),
-      removed, fixed: fixedList, folded: foldList, removedCanvases, unlinked,
+      removed, fixed: fixedList, folded: foldList, removedCanvases, unlinked, alwaysKept,
       zeros: removed.filter(r => r.why === 'zero').length,
     },
   };
@@ -693,3 +702,116 @@ function simFreshId(sc, base){
   return id;
 }
 function cloneJson(v){ return v === undefined ? undefined : JSON.parse(JSON.stringify(v)); }
+
+// ---- the inputs a board file moves, and why (Make Showcase Viewer…'s Simplify to the sliders) ----
+// Every input rectangle a board's slider or a scenario moves, each with why: the boards its
+// sliders are on and the scenarios setting it; `off` (inputs unticked, [{ canvasId, nodeId }])
+// leaves an input out — its sliders, and every scenario setting it, with the reason. Returns
+// { inputs: [{ canvasId, nodeId, name, boards, scenarios, on }], sliders (the settings of the
+// sliders on inputs still on, each once), scenarios: { kept: [{ name, settings }], left:
+// [{ name, because: [names] }] }, shown (every rectangle a bar or chart shows) }. Names and ids
+// from the file are only compared and shown as text.
+export function simplifyBoardInputs(file, off){
+  const isRef = (o) => !!o && typeof o === 'object' && typeof o.canvasId === 'string' && typeof o.nodeId === 'string';
+  const key = (o) => o.canvasId + '\u0000' + o.nodeId;
+  const offKeys = new Set((Array.isArray(off) ? off : []).filter(isRef).map(key));
+  const byKey = new Map(), sliders = [], seen = new Set(), shown = [];
+  const entry = (o) => {
+    const k = key(o);
+    if(!byKey.has(k)) byKey.set(k, { canvasId: o.canvasId, nodeId: o.nodeId, name: typeof o.name === 'string' && o.name ? o.name.slice(0, 120) : '#' + o.nodeId, boards: [], scenarios: [], on: !offKeys.has(k) });
+    return byKey.get(k);
+  };
+  const walk = (v) => {
+    if(Array.isArray(v)) v.forEach(walk);
+    else if(v && typeof v === 'object'){ if(isRef(v)) shown.push({ canvasId: v.canvasId, nodeId: v.nodeId }); Object.keys(v).forEach(k => walk(v[k])); }
+  };
+  const boards = file && typeof file === 'object' && Array.isArray(file.boards) ? file.boards : [];
+  boards.forEach((b, i) => {
+    if(!b || typeof b !== 'object') return;
+    const bname = typeof b.name === 'string' && b.name ? b.name.slice(0, 80) : 'Board ' + (i + 1);
+    (Array.isArray(b.sliders) ? b.sliders : []).forEach(s => {
+      if(!isRef(s)) return;
+      const e = entry(s);
+      if(!e.boards.includes(bname)) e.boards.push(bname);
+      if(!e.on) return;
+      const k = key(s) + '|' + JSON.stringify(s.periods || { mode: 'all' }) + '|' + s.mode;
+      if(seen.has(k)) return;
+      seen.add(k);
+      sliders.push({ canvasId: s.canvasId, nodeId: s.nodeId, min: s.min, max: s.max, step: s.step, mode: s.mode, periods: s.periods });
+    });
+    ['items', 'bars', 'charts'].forEach(k => walk(b[k]));
+  });
+  const kept = [], left = [];
+  (file && Array.isArray(file.scenarios) ? file.scenarios : []).forEach((sc, i) => {
+    if(!sc || typeof sc !== 'object') return;
+    const name = typeof sc.name === 'string' && sc.name ? sc.name.slice(0, 120) : 'Scenario ' + (i + 1);
+    const settings = (Array.isArray(sc.sliders) ? sc.sliders : []).filter(isRef);
+    settings.forEach(s => { const e = entry(s); if(!e.scenarios.includes(name)) e.scenarios.push(name); });
+    const because = settings.filter(s => offKeys.has(key(s))).map(s => byKey.get(key(s)).name);
+    if(because.length) left.push({ name, because: [...new Set(because)] });
+    else if(settings.length) kept.push({ name, settings: settings.map(s => ({ canvasId: s.canvasId, nodeId: s.nodeId, value: s.value, mode: s.mode, periods: s.periods })) });
+  });
+  return { inputs: [...byKey.values()], sliders, scenarios: { kept, left }, shown };
+}
+// The board file with the sliders on inputs `off` and the scenarios `left` taken out (a copy).
+export function simplifyBoardsWithout(file, off, left){
+  if(!file || typeof file !== 'object' || !Array.isArray(file.boards)) return file;
+  const out = cloneJson(file);
+  const offKeys = new Set((Array.isArray(off) ? off : []).map(o => o && o.canvasId + '\u0000' + o.nodeId));
+  const names = new Set((Array.isArray(left) ? left : []).map(s => s.name));
+  out.boards.forEach(b => { if(b && Array.isArray(b.sliders)) b.sliders = b.sliders.filter(s => !(s && offKeys.has(s.canvasId + '\u0000' + s.nodeId))); });
+  if(Array.isArray(out.scenarios)) out.scenarios = out.scenarios.filter(sc => !(sc && names.has(typeof sc.name === 'string' ? sc.name.slice(0, 120) : '')));
+  return out;
+}
+
+// ---- the Excel layout of a simplified model (ExcelExporter's `fmIDE-excel-mapping`, docs/file-formats.md) ----
+// The layout a document carries, cut to the simplified model, so ExcelExporter keeps the person's
+// look for what is left: a tab with no item row left (a canvas or block instance gone) goes; an
+// item row whose rectangle is gone goes (ExcelExporter would drop it too); the Inputs tab's group
+// headings and spacers for a tab gone go; and empty custom rows (no label) follow the owner's
+// rule, per tab and section (per tab when sections are off; the Inputs tab as one): an empty row
+// stays only when the row just above or below it, among the rows left, is an item row, and never
+// two in a row — a run of them becomes one. Everything else (labels, styles, borders, indent,
+// order, cfg) is kept as it was. Only the documented format is read, none of ExcelExporter's
+// code. Returns { layout, dropped: { tabs, rows, empties } }.
+export function simplifyExcelLayout(layout, system){
+  const none = { layout, dropped: { tabs: 0, rows: 0, empties: 0 } };
+  if(!layout || typeof layout !== 'object' || !Array.isArray(layout.tabs) || !Array.isArray(layout.rows)) return none;
+  const out = cloneJson(layout);
+  const nodes = new Set();
+  (system && Array.isArray(system.canvases) ? system.canvases : []).forEach(c => (c && Array.isArray(c.nodes) ? c.nodes : []).forEach(n => { if(n) nodes.add(c.id + '\u0000' + n.id); }));
+  const lives = (r) => !!r && nodes.has(r.canvasId + '\u0000' + r.nodeId) && (!Array.isArray(r.path) || r.path.every(h => h && nodes.has(h.canvasId + '\u0000' + h.nodeId)));
+  const INPUTS = 'tab__inputs';
+  const hadInputRows = Array.isArray(out.inputRows);
+  const rowsBefore = out.rows.length + (hadInputRows ? out.inputRows.length : 0), tabsBefore = out.tabs.length;
+  out.rows = out.rows.filter(lives);
+  if(hadInputRows) out.inputRows = out.inputRows.filter(lives);
+  const itemTabs = new Set(out.rows.concat(hadInputRows ? out.inputRows : []).map(r => r.tabId));
+  out.tabs = out.tabs.filter(t => t && (t.id === INPUTS || itemTabs.has(t.id)));
+  const tabIds = new Set(out.tabs.map(t => t.id));
+  const groupTab = (r) => typeof r.autoInputsGroup === 'string' ? r.autoInputsGroup.replace(/^spacer:/, '').replace(/^tab:/, '') : null;
+  const custom = (Array.isArray(out.customRows) ? out.customRows : [])
+    .filter(r => r && tabIds.has(r.tabId) && !(groupTab(r) !== null && !tabIds.has(groupTab(r))));
+  const isEmpty = (r) => !!r.isCustom && !(typeof r.label === 'string' && r.label.trim());
+  const sectioned = !(out.cfg && out.cfg.sectionsEnabled === false);
+  const orderKey = sectioned ? 'order' : 'flatOrder';
+  const num = (v) => typeof v === 'number' && isFinite(v) ? v : 0;
+  const groups = new Map();
+  out.rows.concat(hadInputRows ? out.inputRows : [], custom).forEach(r => {
+    const g = r.tabId + '|' + (sectioned && r.tabId !== INPUTS ? r.section || '' : '');
+    if(!groups.has(g)) groups.set(g, []);
+    groups.get(g).push(r);
+  });
+  const drop = new Set();
+  const item = (r) => !!r && !r.isCustom;
+  groups.forEach(list => {
+    list.sort((a, b) => num(a[orderKey]) - num(b[orderKey]));
+    list.forEach((r, i) => { if(isEmpty(r) && !item(list[i - 1]) && !item(list[i + 1])) drop.add(r); });
+    const left = list.filter(r => !drop.has(r));
+    left.forEach((r, i) => { if(isEmpty(r) && i > 0 && isEmpty(left[i - 1])) drop.add(r); });
+  });
+  const empties = custom.filter(r => drop.has(r)).length;
+  if(Array.isArray(out.customRows)) out.customRows = custom.filter(r => !drop.has(r));
+  return { layout: out, dropped: { tabs: tabsBefore - out.tabs.length,
+    rows: rowsBefore - out.rows.length - (hadInputRows ? out.inputRows.length : 0), empties } };
+}

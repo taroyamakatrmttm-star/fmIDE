@@ -333,6 +333,81 @@ test.describe('100. Simplify for inputs (Node)', () => {
     expect(rectValues(r.system, r.inputs, [10]).get('c1/profit')).toEqual([93, 93]);
   });
 
+  test('canvases always kept (the document\'s simplifyAlwaysKeep) are kept whole and listed; an id no canvas has is ignored', () => {
+    const sys = profitModel();
+    sys.canvases.push(canvas('audit', 'Audit', [value('chk', 'Check', 1, at(0, 0)), value('chk2', 'Check two', 0, at(0, 100))], []));
+    const r = simplify(sys, [UNITS], { alwaysKeep: ['audit', 'nope', 'audit'] });
+    expect(r.alwaysKept).toEqual([{ canvasId: 'audit', canvas: 'Audit' }]);
+    expect(r.system.canvases.map(c => c.id)).toEqual(['c1', 'audit']);
+    expect(r.system.canvases[1].nodes.map(n => n.id)).toEqual(['chk', 'chk2']);
+  });
+
+  test('the inputs a board file moves, each with why; an input left out takes its sliders and the scenarios setting it', () => {
+    const file = { kind: 'fmIDE-graph-board', version: 14,
+      boards: [{ name: 'Lesson', items: [{ type: 'bar', canvasId: 'c1', nodeId: 'profit' }],
+        sliders: [{ canvasId: 'c1', nodeId: 'units', name: 'Units', min: 0, max: 10, step: 1, mode: 'set', periods: { mode: 'all' } },
+          { canvasId: 'c1', nodeId: 'price', name: 'Price', min: 5, max: 15, step: 1, mode: 'set', periods: { mode: 'all' } }] },
+      { name: 'More', items: [], sliders: [{ canvasId: 'c1', nodeId: 'units', name: 'Units', min: 0, max: 10, step: 1, mode: 'set', periods: { mode: 'all' } }] }],
+      scenarios: [{ name: 'Cheap', sliders: [{ canvasId: 'c1', nodeId: 'price', name: 'Price', value: 5, mode: 'set', periods: { mode: 'all' } }] },
+        { name: 'Big', sliders: [{ canvasId: 'c1', nodeId: 'units', name: 'Units', value: 9, mode: 'set' }, { canvasId: 'c1', nodeId: 'fixed', name: 'Fixed cost', value: 1, mode: 'set' }] }] };
+    let p = S.simplifyBoardInputs(file, []);
+    expect(p.inputs.map(x => [x.name, x.boards, x.scenarios, x.on])).toEqual([
+      ['Units', ['Lesson', 'More'], ['Big'], true], ['Price', ['Lesson'], ['Cheap'], true], ['Fixed cost', [], ['Big'], true]]);
+    expect(p.sliders.map(s => s.nodeId)).toEqual(['units', 'price']); // Units once
+    expect(p.scenarios.kept.map(s => s.name)).toEqual(['Cheap', 'Big']);
+    expect(p.shown).toEqual([{ canvasId: 'c1', nodeId: 'profit' }]);
+    p = S.simplifyBoardInputs(file, [{ canvasId: 'c1', nodeId: 'price' }, { canvasId: 'c1', nodeId: 'fixed' }]);
+    expect(p.sliders.map(s => s.nodeId)).toEqual(['units']);
+    expect(p.scenarios.kept).toEqual([]);
+    expect(p.scenarios.left).toEqual([{ name: 'Cheap', because: ['Price'] }, { name: 'Big', because: ['Fixed cost'] }]);
+    const pruned = S.simplifyBoardsWithout(file, [{ canvasId: 'c1', nodeId: 'price' }], p.scenarios.left);
+    expect(pruned.boards[0].sliders.map(s => s.nodeId)).toEqual(['units']);
+    expect(pruned.scenarios).toEqual([]);
+    expect(file.scenarios.length).toBe(2); // a copy
+    // Simplified with Units alone (Price and Fixed cost left out): Price stays an input, Costs fixed.
+    const r = simplify(profitModel(), p.sliders, { extraRuns: p.scenarios.kept.map(s => s.settings), shown: p.shown });
+    expect(r.kept).toBe(7);
+  });
+
+  test('the Excel layout: tabs and rows of what is gone go; an empty row stays only beside a kept row, never two together; looks kept', () => {
+    const sys = profitModel();
+    sys.canvases.push(canvas('c2', 'Notes', [value('n1', 'Unrelated', 3, at(0, 0))], []));
+    const row = (id, order, extra) => Object.assign({ id: 'c1|' + id, canvasId: 'c1', nodeId: id, path: [], tabId: 'tab_c1', section: 'calc', order, flatOrder: order, label: id, include: true }, extra || {});
+    const empty = (id, order, tabId) => ({ id, isCustom: true, tabId: tabId || 'tab_c1', section: 'calc', label: '', style: null, order, flatOrder: order });
+    const layout = { kind: 'fmIDE-excel-mapping', version: 11,
+      tabs: [{ id: 'tab__inputs', name: 'Inputs', order: 0 }, { id: 'tab_c1', name: 'Sales', order: 1 }, { id: 'tab_c2', name: 'Notes', order: 2 }],
+      rows: [row('units', 0), row('price', 1), row('rev', 3), row('fixed', 6), row('over', 7), row('costs', 9), row('profit', 11, { style: { font: { color: '#475569', weight: 'bold' } } }),
+        { id: 'c2|n1', canvasId: 'c2', nodeId: 'n1', path: [], tabId: 'tab_c2', section: 'input', order: 0, flatOrder: 0, label: 'Unrelated' }],
+      customRows: [empty('e2', 2), empty('e4', 4), empty('e5', 5), empty('e8', 8), empty('e10', 10), { id: 'h1', isCustom: true, tabId: 'tab_c1', section: 'calc', label: 'Costs below', order: 5.5, flatOrder: 5.5 },
+        empty('n-e', 1, 'tab_c2'), { id: 'custom_inpgrp_tab:tab_c2', isCustom: true, autoInputsGroup: 'tab:tab_c2', tabId: 'tab__inputs', section: 'input', label: 'Notes', order: 0, flatOrder: 0 }],
+      inputRows: [{ id: 'inp|c2|n1', sourceRowId: 'c2|n1', isInputMirror: true, tabId: 'tab__inputs', canvasId: 'c2', nodeId: 'n1', path: [], order: 1, flatOrder: 1 }],
+      cfg: { sectionsEnabled: false, inputsTab: { enabled: true } } };
+    const r = simplify(sys, [UNITS]);
+    const before = JSON.stringify(layout);
+    const x = S.simplifyExcelLayout(layout, r.system);
+    expect(JSON.stringify(layout)).toBe(before); // a copy
+    expect(x.layout.tabs.map(t => t.id)).toEqual(['tab__inputs', 'tab_c1']);
+    expect(x.layout.rows.map(rw => rw.nodeId)).toEqual(['units', 'price', 'rev', 'costs', 'profit']);
+    expect(x.layout.rows.find(rw => rw.nodeId === 'profit').style).toEqual({ font: { color: '#475569', weight: 'bold' } });
+    // Units Price e2 Rev e4 (e5 gone: no kept row beside it) [Costs below] e8 Costs e10 Profit: e4 beside Rev, e8
+    // beside Costs, e10 between Costs and Profit; the heading stays.
+    expect(x.layout.customRows.map(c => c.id)).toEqual(['e2', 'e4', 'e8', 'e10', 'h1']);
+    expect(x.layout.inputRows).toEqual([]);
+    expect(x.dropped).toEqual({ tabs: 1, rows: 4, empties: 1 });
+    // Without the heading, e4 and e8 would be two empties together: one goes.
+    const noHeading = Object.assign({}, layout, { customRows: layout.customRows.filter(c => c.id !== 'h1') });
+    expect(S.simplifyExcelLayout(noHeading, r.system).layout.customRows.map(c => c.id)).toEqual(['e2', 'e4', 'e10']);
+    // With sections on, each section is a run of its own (by `order`): Costs and e8 in output; in calc,
+    // e4 and e10 end up together, so e10 goes.
+    const sectioned = JSON.parse(JSON.stringify(noHeading));
+    sectioned.cfg.sectionsEnabled = true;
+    sectioned.rows.find(rw => rw.nodeId === 'costs').section = 'output';
+    sectioned.customRows.find(c => c.id === 'e8').section = 'output';
+    expect(S.simplifyExcelLayout(sectioned, r.system).layout.customRows.map(c => c.id)).toEqual(['e2', 'e4', 'e8']);
+    // Not a layout: left as it was.
+    expect(S.simplifyExcelLayout(null, r.system).layout).toBeNull();
+  });
+
   test('a job works in pieces and reports its progress', () => {
     const sys = profitModel();
     const { inputs } = S.simplifyInputs(sys, [UNITS]);

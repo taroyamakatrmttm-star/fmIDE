@@ -2,6 +2,12 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Simplify: the Excel layout kept, the inputs' reasons, Always Keep When Simplifying
+- A simplified copy, and the workbook ExcelExporter makes for a simplified viewer, carry the document's Excel layout cut to what is left (`simplifyExcelLayout`): no tabs for canvases that went, no runs of empty rows — an empty row stays only beside a kept row, one at most — and every kept row's own look.
+- Make Showcase Viewer…'s Show what goes… lists each input the boards move with why (a slider on a board, set by scenarios), each with a tick: unticked, its sliders and the scenarios setting it are left out (showcase 2's `simplify.off`). Simplify for Inputs… tries a scenario only when every input it sets is chosen.
+- **Always Keep When Simplifying** (Model → Canvas, ⚓): a canvas always kept whole (workspace 16's `simplifyAlwaysKeep`); `fm.alwaysKeepWhenSimplifying`.
+- Tests: group 100 (Node: the layout rule, the inputs and their reasons, canvases always kept; fmIDE: unticking an input, Always Keep, the workbook keeping the layout). Branch `claude/simplify-to-sliders-5cfd71`.
+
 ## Make Showcase Viewer…: Simplify to the sliders
 - Phase 2 of `docs/simplify-brief.md`: **Simplify to the sliders** in Make Showcase Viewer… (with **Show what goes…** and Keep anyway): the viewer's model and the Excel workbook ExcelExporter makes for it hold only what the ticked boards' sliders move — each scenario tried too, the boards' bars and charts kept as fixed numbers unless 0 — checked against the full model; the boards and shown canvases cleaned to match. The document keeps its whole model. `fm.makeShowcaseViewer({ simplify })`.
 - Format: **showcase 2** — `simplify: { on, keep }` (the 1 → 2 step changes nothing; fmShowcase reads v2 and leaves it alone).

@@ -37,13 +37,13 @@
     const { inputs, problems } = simplifyInputs(buildSystemPayload(), simplifyInputsFromArgs(a.sliders ? null : a.inputs));
     if(problems.length) fail(problems.join(' '));
     if(!inputs.length) fail('No inputs to simplify for.');
-    const boards = simplifyFromBoards();
+    const boards = simplifyBoardsFor(inputs);
     const keep = Array.isArray(a.keep) ? a.keep : [];
-    return runSimplify(inputs, { keep, extraRuns: boards.scenarios, shown: boards.shown }).promise;
+    return runSimplify(inputs, { keep, extraRuns: boards.extraRuns, shown: boards.shown }).promise.then(r => Object.assign(r, { scenariosLeft: boards.left }));
   }
 
   defineAction({ name:'simplifyPlan', label:'Simplify Plan', category:'File', icon:'✂', returns:'value', mutates:false, tx:false, record:false, macro:false,
-    desc:'Works out what Simplify for Inputs… would keep, without making the copy: the model at every step of each input, at the corners and at random combinations, every other input at today\'s number. inputs: [{ rectangle, canvas, min, max, step, mode, periods }] (periods: "all", a period counted from 1, or { from, to }); left out, or sliders true, the fmGraph boards\' sliders. keep: [{ canvasId, nodeId }] or [{ canvasId }], kept anyway. Returns a Promise of { kept, total, canvases, removed, fixed, folded, removedCanvases, unlinked, zeros, runs, ms, checked }. Not in macros.',
+    desc:'Works out what Simplify for Inputs… would keep, without making the copy: the model at every step of each input, at the corners and at random combinations, every other input at today\'s number. inputs: [{ rectangle, canvas, min, max, step, mode, periods }] (periods: "all", a period counted from 1, or { from, to }); left out, or sliders true, the fmGraph boards\' sliders. keep: [{ canvasId, nodeId }] or [{ canvasId }], kept anyway. The boards\' scenarios are tried when every input they set is one of these (else left out: scenariosLeft); the canvases marked Always Keep When Simplifying are kept (alwaysKept). Returns a Promise of { kept, total, canvases, removed, fixed, folded, removedCanvases, unlinked, alwaysKept, scenariosLeft, zeros, runs, ms, checked }. Not in macros.',
     params:[ P('sliders','bool',{ def:false, help:'the fmGraph boards\' sliders as the inputs (as when inputs is left out)' }),
       P('inputs','json',{ optional:true, help:'[{ "rectangle": "Units", "min": 0, "max": 10, "step": 1 }]' }),
       P('keep','json',{ optional:true, help:'[{ "canvasId": "c1", "nodeId": "n5" }]' }) ],
@@ -64,6 +64,23 @@
         else openSimplifiedCopy(data, name);
         return Object.assign(simplifySummary(r), { name, opened: !a.download, downloaded: !!a.download });
       });
+    } });
+
+  defineAction({ name:'alwaysKeepWhenSimplifying', label:'Always Keep When Simplifying', category:'Canvas', icon:'⚓', returns:'value', mutates:false, tx:false, record:false, macro:false,
+    desc:'Marks a canvas (the current one if left out) to be always kept when the model is simplified — by Simplify for Inputs… and Make Showcase Viewer…\'s Simplify to the sliders — or, with on false, unmarks it. Kept in the document (workspace v16, simplifyAlwaysKeep), so it marks the document unsaved; not an undo step. Returns the names of the canvases marked.',
+    params:[ P('canvas','canvas',{ optional:true }), P('on','bool',{ def:true }) ],
+    run(a){
+      if(inPractice()) fail('Not while practising a tutorial: the practice model isn\'t your document.');
+      const c = a.canvas || activeCanvas();
+      const had = docAlwaysKeep.includes(c.id);
+      if(a.on && !had) docAlwaysKeep.push(c.id);
+      else if(!a.on && had) docAlwaysKeep = docAlwaysKeep.filter(id => id !== c.id);
+      if(had !== !!a.on){
+        markDocDirty();
+        renderCanvasTabs();
+        toast(a.on ? 'Canvas ' + c.name + ' is always kept when simplifying.' : 'Canvas ' + c.name + ' is no longer always kept when simplifying.', 3500);
+      }
+      return canvases.filter(x => docAlwaysKeep.includes(x.id)).map(x => x.name);
     } });
 
   defineAction({ name:'simplified', label:'Simplified For', category:'File', icon:'✂', returns:'value', mutates:false, tx:false, record:false,
