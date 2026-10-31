@@ -230,7 +230,7 @@ test('the file: version 13 brought the Free chart (now 14), its pieces read back
   const id = await g(page, (s) => fmGraph.addChart(s), OWNER);
   const before = await figures(page, id);
   const file = await g(page, () => fmGraph.exportBoards(true));
-  expect(file.version).toBe(13);
+  expect(file.version).toBe(14);
   const chart = file.boards[0].items.find(w => w.layout === 'free');
   expect(chart.pieces.length).toBe(9);
   const ids = chart.pieces.map(p => p.id);
