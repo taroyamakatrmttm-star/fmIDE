@@ -192,7 +192,7 @@ test('templates file v11 and workspace v15 keep the links', async ({ page }) => 
   expect(data.templates.find(t => t.name === 'Working Capital').data.links).toEqual(readFixture('recipe-links', 'templates.json').templates[5].data.links);
   await picker(page).locator('.modal-actions button', { hasText: /^Close$/ }).click();
   const ws = (await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()))).data;
-  expect(ws.version).toBe(15);
+  expect(ws.version).toBe(16);
   expect(ws.templates.find(t => t.name === 'Working Capital').data.links).toHaveLength(1);
 });
 

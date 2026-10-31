@@ -22,7 +22,7 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 |---|---|---|---|
 | `system` | 9 | A whole model (all canvases, periods); v4: a canvas may remember the canvas template it came from; v5: the function definitions its function nodes use; v6: the operators of phase E1 (below); v7: no Excel-only format settings (step 11a, below); v8: the operators of phase E2a (below); v9: `choose` (phase E2b, below) | fmIDE: File → Load System · ExcelExporter |
 | `module` | 7 | One canvas; v3: the function definitions it uses; v4: the operators of phase E1; v5: no Excel-only format settings; v6: the operators of phase E2a; v7: `choose` | fmIDE: File → Load Module |
-| `fmIDE-workspace` | 15 | Everything: system + templates, format presets, shortcuts, macros; v4: the function library; v5: its system and templates may use the operators of phase E1; v6: its templates and library functions may say which library pack they came from (`origin`, below); v7: no Excel-only format roles or settings; v8: its templates may carry `attachments` (below); v9: its system and templates may use the operators of phase E2a; v10: `choose`; v11: `graphBoards`, the model's fmGraph boards (below); v12: its templates — canvas and system — may carry an fmGraph board (`attachments.graph`, below); v13: `excelLayout`, the model's Excel layout (below); v14: `showcase`, what its showcase viewer shows (below); v15: its recipes may carry `links` (below). A **`.fmide` document** is exactly this, with the `.fmide` extension | fmIDE: File → Open… (a document) or Import Workspace (a full replace) · ExcelExporter |
+| `fmIDE-workspace` | 16 | Everything: system + templates, format presets, shortcuts, macros; v4: the function library; v5: its system and templates may use the operators of phase E1; v6: its templates and library functions may say which library pack they came from (`origin`, below); v7: no Excel-only format roles or settings; v8: its templates may carry `attachments` (below); v9: its system and templates may use the operators of phase E2a; v10: `choose`; v11: `graphBoards`, the model's fmGraph boards (below); v12: its templates — canvas and system — may carry an fmGraph board (`attachments.graph`, below); v13: `excelLayout`, the model's Excel layout (below); v14: `showcase`, what its showcase viewer shows (below); v15: its recipes may carry `links` (below); v16: `simplified`, what a simplified copy was made from and for (below). A **`.fmide` document** is exactly this, with the `.fmide` extension | fmIDE: File → Open… (a document) or Import Workspace (a full replace) · ExcelExporter |
 | `fmIDE-templates` | 11 | Saved templates (each holds a module, a system or a recipe), with their families and versions; v4: a template's model may carry function definitions; v5: it may use the operators of phase E1; v6: a template may carry `origin`; v7: a canvas template may carry `attachments` (below); v8: it may use the operators of phase E2a; v9: `choose`; v10: a canvas or system template may carry an fmGraph board (`attachments.graph`); v11: a recipe may carry `links` (below) | fmIDE: Templates → Import Templates |
 | `fmIDE-functions` | 2 | Function definitions (a library of functions); v2: a definition may carry `origin` | fmIDE: Functions → Import Functions |
 | `fmIDE-format-presets` | 2 | Format presets, including the canvas format roles; v2: no Excel-only roles or settings | fmIDE: Format Presets → Import Presets |
@@ -401,6 +401,28 @@ A workspace — and so a `.fmide` document — may carry `showcase`: an `fmIDE-s
 - It belongs to the model, as `graphBoards` does: opening a document or importing a workspace takes the file's (or none); opening a system file and New have none; saving and the autosave write it when there is one.
 - ExcelExporter and fmGraph read a v14 workspace as before and leave the showcase alone.
 - Older workspaces (v1–v13) have none; the 13 → 14 step changes nothing. An older fmIDE, ExcelExporter or fmGraph asks before opening a v14 file.
+
+### What a simplified copy was made for (`fmIDE-workspace` 16, Simplify for inputs)
+
+A workspace — and so a `.fmide` document — made by **File → Simplify for Inputs…** (`docs/simplify-brief.md`) carries `simplified`: what the copy was made from and for, so fmIDE can say so on it.
+
+```json
+"simplified": {
+  "from": "Lesson model", "made": "2026-11-01T10:00:00.000Z",
+  "inputs": [ { "canvasId": "c743", "nodeId": "n59355", "name": "Equity contribution", "min": 0, "max": 100, "step": 0.5,
+                "mode": "set", "periods": { "mode": "one", "p": 1 } } ],
+  "kept": 154, "total": 528, "runs": 496,
+  "fixed":   [ { "canvasId": "c738", "canvas": "Loan Interest", "nodeId": "n1", "name": "Interest rate" } ],
+  "removed": [ { "canvasId": "c739", "canvas": "CAPEX Depreciation", "nodeId": "n2", "name": "Capex", "why": "never-moved", "text": "never moved across 496 runs" } ]
+}
+```
+
+- `inputs`: the inputs and their ranges, as a slider's (`periods` counted from 0; `mode` `set` or `shift`, a % change). `kept` / `total`: the items in the copy and in the model it came from (the aliases plugs make not counted). `fixed`: what stays as a fixed number. `removed`: what went, `why` one of `never-moved`, `zero` (0 in every period, dropped from a + or −), `folded` (a × −1 folded into a minus, or what only it read), `block` (inside a block nothing kept uses), with its words in `text`.
+- **Reading** (`cleanDocumentSimplified`, `SIMPLIFIED_LIMITS` in `src/shared/fmide-files.js`): anything but an object is dropped; texts cut short (names 120 characters, words 200), numbers forced to numbers (else 0), `periods` checked, at most 20 inputs, 2,000 fixed and 5,000 removed. fmIDE shows them as plain text only.
+- It belongs to the model, as `showcase` does: opening a document or restoring the autosave takes the file's (or none); New and opening a system file have none.
+- The model in the copy is an ordinary system: its fixed numbers are value rectangles holding a number per period (`periodValues` when they differ), so every reader of a system reads it as before.
+- ExcelExporter and fmGraph read a v16 workspace as before and leave `simplified` alone.
+- Older workspaces (v1–v15) have none; the 15 → 16 step changes nothing (sample `formats/ws-v15.json`). An older fmIDE, ExcelExporter or fmGraph asks before opening a v16 file.
 
 ## Template attachments (`fmIDE-templates` 7 and 10, `fmIDE-workspace` 8 and 12, `fmIDE-library-pack` 3 and 4; steps 11c and 15 G5a)
 

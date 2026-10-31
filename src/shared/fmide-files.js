@@ -282,6 +282,36 @@ export function cleanDocumentShowcase(raw){
   return showcaseForFile(cleanShowcase(r.data).value);
 }
 
+// What a simplified copy was made from and for (workspace v16, `simplified`; Simplify for
+// inputs…, src/shared/simplify.js): the model it came from, when, the inputs and their ranges,
+// how much it kept, and what was fixed or removed — for the banner on the copy and its list.
+// Read from a file, so every field is checked: names and words cut short, numbers forced to
+// numbers, lists capped. Anything else: null.
+export const SIMPLIFIED_LIMITS = { inputs: 20, fixed: 2000, removed: 5000, text: 200 };
+export function cleanDocumentSimplified(raw){
+  if(!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const str = (v, n) => typeof v === 'string' ? v.slice(0, n || SIMPLIFIED_LIMITS.text) : '';
+  const num = (v) => typeof v === 'number' && Number.isFinite(v) ? v : null;
+  const count = (v) => { const n = num(v); return n !== null && n >= 0 ? Math.floor(n) : 0; };
+  const list = (v, max) => Array.isArray(v) ? v.filter(x => x && typeof x === 'object' && !Array.isArray(x)).slice(0, max) : [];
+  const periods = (p) => {
+    if(p && p.mode === 'one' && count(p.p) === p.p) return { mode: 'one', p: p.p };
+    if(p && p.mode === 'range' && count(p.from) === p.from && count(p.to) === p.to) return { mode: 'range', from: p.from, to: p.to };
+    return { mode: 'all' };
+  };
+  const inputs = list(raw.inputs, SIMPLIFIED_LIMITS.inputs).map(x => ({
+    canvasId: str(x.canvasId, 80), nodeId: str(x.nodeId, 80), name: str(x.name, 120),
+    min: num(x.min) === null ? 0 : x.min, max: num(x.max) === null ? 0 : x.max, step: num(x.step) === null ? 0 : x.step,
+    mode: x.mode === 'shift' ? 'shift' : 'set', periods: periods(x.periods) }));
+  const where = (x) => ({ canvasId: str(x.canvasId, 80), canvas: str(x.canvas, 80), nodeId: str(x.nodeId, 80), name: str(x.name, 120) });
+  return {
+    from: str(raw.from, 120), made: str(raw.made, 40), inputs,
+    kept: count(raw.kept), total: count(raw.total), runs: count(raw.runs),
+    fixed: list(raw.fixed, SIMPLIFIED_LIMITS.fixed).map(where),
+    removed: list(raw.removed, SIMPLIFIED_LIMITS.removed).map(x => Object.assign(where(x), { why: str(x.why, 20), text: str(x.text) })),
+  };
+}
+
 // Another app's file kept with a document: that kind, plain data, at most `limits.depth`
 // deep and `limits.bytes` as text, as a copy; anything else is dropped (null).
 function keptFileOfKind(raw, kind, limits){

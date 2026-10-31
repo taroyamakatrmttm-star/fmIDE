@@ -465,6 +465,24 @@ const HELP_TOPICS = [
       { see: ['fmgraph', 'documents'] },
     ] },
 
+  { id: 'simplify', group: 'sharing', title: 'Simplify a model for some inputs',
+    keywords: 'simplify lesson tutorial teach step by step inputs sliders range remove fixed numbers copy smaller model only what moves',
+    summary: 'A copy of the model holding only what some inputs move: for a lesson that shows only the calculations it teaches.',
+    body: [
+      { p: 'Choose some inputs and a range for each. Every other input stays at today\'s number. fmIDE works the model out at every step of each input, at the corners (each input at its smallest or largest together) and at random combinations, and keeps only what moves. The copy opens as a new document: this model is not changed.' },
+      { steps: [
+        'Open {cmd:simplifyForInputs}. With fmGraph boards, it starts from their sliders and ranges; else, add inputs from the list and type each one\'s range and step, and the periods it changes.',
+        'Press Work out. It shows how much it keeps, and lists, canvas by canvas, what goes and why.',
+        'Tick Keep anyway beside anything you want to keep, or a whole canvas: it stays with its own calculation, back to the rectangles it reads.',
+        'Press Open the copy (you are asked about unsaved changes first), or Save the copy… to keep this model open.',
+      ] },
+      { p: 'Where something kept reads something that never moves, that one stays as a fixed number, with its numbers for each period. A fixed number that is 0 in every period is dropped from a + (or from a − after its first input), so the + 0 goes. A × by a fixed −1 that feeds the second input of a + or − with two inputs is folded into it: the + becomes −. A period shift always stays. Canvases left empty go, and the canvases that stay are unlinked from their templates, so an update can\'t put back what went. Bars and charts on the boards that never move stay as fixed numbers, unless they are 0.' },
+      { p: 'Before it opens, the copy is checked: worked out at every run and at fresh random ones, everything it keeps must give the full model\'s numbers.' },
+      { p: 'The copy remembers what it was simplified from and for: a note at the bottom says so, and What was removed… lists it.' },
+      { tip: 'The fixed numbers are right only while the other inputs stay as they were. Change an input that isn\'t one of the chosen ones in the full model, and simplify again.' },
+      { see: ['showcase-viewer', 'fmgraph'] },
+    ] },
+
   // ---------- Working faster ----------
   { id: 'launcher-shortcuts', group: 'faster', title: 'Command Launcher and keyboard shortcuts',
     keywords: 'launcher search command keyboard shortcut keys ctrl+k keytips alt',
@@ -697,6 +715,7 @@ const COMMAND_HELP = {
   openExcelExporter: 'Opens ExcelExporter, which turns your model into an Excel workbook.',
   openFmGraph: 'Opens fmGraph with this model: bars and sliders that show how one value moves the rest.',
   makeShowcaseViewer: 'Makes one web page that shows this model read-only, with its fmGraph boards and sliders, to email or share.',
+  simplifyForInputs: 'Makes a copy of the model holding only what some inputs move within their ranges, for a lesson that teaches just those calculations.',
   installApp: 'Installs fmIDE as an app with its own window, working offline.',
   openLauncher: 'Finds any command, macro or help topic as you type its name.',
   openShortcuts: 'Shows every keyboard shortcut and lets you change them.',

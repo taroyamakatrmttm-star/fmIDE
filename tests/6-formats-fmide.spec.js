@@ -116,17 +116,17 @@ for(const name of ['sys-newer-v5', 'sys-newer-v6', 'sys-newer-v7']){
 // Files from before function definitions (workspace v3, module v2, templates v3), from
 // before the operators of phase E1 (workspace v4, module v3, templates v4) and from before
 // those of phase E2a (workspace v8, system v7, module v5, templates v7) or E2b (workspace v9, system v8, module v6, templates v8) still open, and
-// are saved in the current versions (workspace v15 since recipe links, system v9 and module v7 since phase E2b); a
+// are saved in the current versions (workspace v16 since simplify for inputs, system v9 and module v7 since phase E2b); a
 // workspace v10 (before fmGraph's boards), v11 (before boards on templates, step 15 G5a), v12 (before the Excel layout) and
-// v13 (before the showcase) and v14 (before recipe links) too.
-for(const [name, sys] of [['ws-v3', 'v4'], ['ws-v4', 'v5'], ['ws-v8', 'v7'], ['ws-v9', 'v8'], ['ws-v10', 'v9'], ['ws-v11', 'v9'], ['ws-v12', 'v9'], ['ws-v13', 'v9'], ['ws-v14', 'v9']]){
-test(`${name} imports, with its ${sys} system and its templates, and exports as v15`, async ({ page }) => {
+// v13 (before the showcase) and v14 (before recipe links) and v15 (before simplify for inputs) too.
+for(const [name, sys] of [['ws-v3', 'v4'], ['ws-v4', 'v5'], ['ws-v8', 'v7'], ['ws-v9', 'v8'], ['ws-v10', 'v9'], ['ws-v11', 'v9'], ['ws-v12', 'v9'], ['ws-v13', 'v9'], ['ws-v14', 'v9'], ['ws-v15', 'v9']]){
+test(`${name} imports, with its ${sys} system and its templates, and exports as v16`, async ({ page }) => {
   await F.importViaCommand(page, 'importWorkspace', file(name));
   const seen = await F.acceptAll(page);
   expect(seen[0]).toMatch(/^Import this workspace\?/);
   expect(await canvasNames(page)).toEqual(['Revenue Model']);
   const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
-  expect(data.version).toBe(15);
+  expect(data.version).toBe(16);
   expect(data.system.version).toBe(9);
   expect(data.functions).toEqual([]);
   expect(data.system).not.toHaveProperty('functions');
@@ -232,7 +232,7 @@ test('ws-v6-excel-settings: imports; its system, template and presets lose the E
   const seen = await F.acceptAll(page);
   expect(seen[0]).toMatch(/^Import this workspace\?/);
   const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
-  expect(data.version).toBe(15);
+  expect(data.version).toBe(16);
   expect(data.system.version).toBe(9);
   expect(JSON.stringify(data)).not.toMatch(EXCEL_ONLY);
   expectPresetsClean(data.formatPresets);
@@ -356,7 +356,7 @@ test.describe('origin: files from before templates v6, workspace v6 and function
     expect(seen[0]).toMatch(/^Import this workspace\?/);
     expect(await canvasNames(page)).toEqual(['Revenue Model']);
     const { data } = await F.downloadJson(page, () => page.evaluate(() => fm.exportWorkspace()));
-    expect(data.version).toBe(15);
+    expect(data.version).toBe(16);
     expect(data.functions.map(d => d.family + '@' + d.version)).toEqual(['family-margin@1', 'family-margin@2', 'family-profit@1']);
     expect(data.templates.map(t => t.name)).toEqual(expect.arrayContaining(['Income Statement', 'Balance Sheet', 'Cash Flow']));
     expect(JSON.stringify(data)).not.toContain('"origin"');
@@ -427,7 +427,7 @@ test.describe('workspace v14: the document keeps its showcase', () => {
     await F.importViaCommand(page, 'importWorkspace', file('ws-v13'));
     await F.acceptAll(page);
     const data = await exported(page);
-    expect(data.version).toBe(15);
+    expect(data.version).toBe(16);
     expect(data.graphBoards).toEqual(readFixture('formats', 'ws-v13.json').graphBoards);
     expect(data.excelLayout).toEqual(readFixture('formats', 'ws-v13.json').excelLayout);
     expect(data).not.toHaveProperty('showcase');
@@ -484,12 +484,12 @@ test.describe('workspace v14: the document keeps its showcase', () => {
     expect((await exported(page)).showcase).toEqual(showcase);
   });
 
-  // Workspace v15 is current (recipe links): a newer one is v16.
-  test('a v16 workspace asks first', async ({ page }, testInfo) => {
-    const p = testInfo.outputPath('ws-v16.json');
-    fs.writeFileSync(p, JSON.stringify(workspaceWith({ version: 16 })));
+  // Workspace v16 is current (simplify for inputs): a newer one is v17.
+  test('a v17 workspace asks first', async ({ page }, testInfo) => {
+    const p = testInfo.outputPath('ws-v17.json');
+    fs.writeFileSync(p, JSON.stringify(workspaceWith({ version: 17 })));
     await F.importViaCommand(page, 'importWorkspace', p);
-    expect(await F.dialogText(page)).toMatch(/^This workspace was saved by a newer version of fmIDE \(format version 16; this fmIDE reads up to version 15\)/);
+    expect(await F.dialogText(page)).toMatch(/^This workspace was saved by a newer version of fmIDE \(format version 17; this fmIDE reads up to version 16\)/);
   });
 
   test('a made showcase viewer (a web page) opened in fmIDE says so', async ({ page }, testInfo) => {

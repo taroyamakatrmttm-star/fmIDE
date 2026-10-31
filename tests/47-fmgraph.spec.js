@@ -322,7 +322,7 @@ test('fmIDE: Open fmGraph shows its model straight away, ↻ From fmIDE shows it
 test('fmIDE: Open fmGraph sits in the File tab\'s App group, and a customised ribbon gets it once', async ({ page }, testInfo) => {
   await openFmIDE(page);
   const app = await page.evaluate(() => __fmIDE.getRibbonConfig().tabs.find(t => t.id === 'file').groups.find(g => g.label === 'App').items.map(i => i.cmd));
-  expect(app).toEqual(['openExcelExporter', 'openFmGraph', 'makeShowcaseViewer', 'installApp']); // Make Showcase Viewer… since viewer V3 (group 94)
+  expect(app).toEqual(['openExcelExporter', 'openFmGraph', 'makeShowcaseViewer', 'simplifyForInputs', 'installApp']); // Make Showcase Viewer… since viewer V3 (group 94); Simplify for Inputs… since 1 November 2026 (group 100)
   // A ribbon customised before step 15: Open fmGraph goes in after its Open ExcelExporter, once.
   const load = async (ui, name) => {
     const file = testInfo.outputPath(name);
@@ -357,7 +357,9 @@ test('a ribbon customised before gets Make Showcase Viewer… once, after Open f
     operatorsE2Added: true, operatorsE2bAdded: true, libraryPacksAdded: true, libraryBrowseAdded: true, libraryShareAdded: true, helpAdded: true, whatsNewAdded: true,
     addManyRectsAdded: true, fmGraphAdded: true, canvasSwitchAdded: true, copyReferenceAdded: true,
     ribbon: { tabs: [{ id: 'mine', label: 'Mine', groups: [{ label: 'Apps', items: [{ cmd: 'openFmGraph', size: 'large' }, { cmd: 'undo' }] }] }] } };
-  expect(await load(older, 'older.json')).toEqual([['Apps:openFmGraph,makeShowcaseViewer,undo']]);
+  // Simplify for Inputs… (1 November 2026) follows it in, once, unless already given (simplifyAdded).
+  expect(await load(older, 'older.json')).toEqual([['Apps:openFmGraph,makeShowcaseViewer,simplifyForInputs,undo']]);
+  expect(await load(Object.assign({}, older, { simplifyAdded: true }), 'older-simplified.json')).toEqual([['Apps:openFmGraph,makeShowcaseViewer,undo']]);
   expect(await load(Object.assign({}, older, { showcaseViewerAdded: true }), 'removed.json')).toEqual([['Apps:openFmGraph,undo']]);
 });
 

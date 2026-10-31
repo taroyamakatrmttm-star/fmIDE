@@ -12,6 +12,7 @@ A **showcase viewer** is one web page made from your model. Anyone can open it i
 | [8.2 Put Excel in a showcase viewer](#showcase-excel) | Include an Excel workbook; a visitor's ⬇ Excel, with their scenario or sliders written in | phase V4 (branch `claude/viewer-v4`) |
 | [8.3 Make many viewers at once](#showcase-many) | Choose for me; `npm run make-viewers` with a recipe naming sliders and bars by name; the report | phase V5 (branch `claude/viewer-v5`) |
 | [8.4 Share viewers in the gallery](#showcase-gallery) | `--pictures` and `--gallery`, `gallery.json`, the site's `/gallery`, sending a link to an iPhone or iPad | phase V6 (branch `claude/viewer-v6`) |
+| [8.5 Simplify a model for a lesson](#simplify) | File → Simplify for Inputs…: a copy holding only what some inputs move, fixed numbers, Keep anyway | Simplify for inputs, phase 1 (branch `claude/simplify-to-sliders-5cfd71`) |
 
 
 ---
@@ -198,6 +199,53 @@ On an iPhone or iPad, a viewer saved in Files opens only in a preview, which can
 ### From a script
 
 `tools/build-gallery.js` (`buildGallery(folder, viewerPage)`) is what the build uses; in a gallery viewer, `fmViewer.inGallery()` is true.
+
+<a id="simplify"></a>
+## Lesson 8.5 — Simplify a model for a lesson
+
+> **Goal:** make a copy of a model that holds only what some inputs move, for a lesson that should show just the calculations it teaches.
+> **You need:** fmIDE and the sample `tests/fixtures/simplify/profit-plan.fmide`.
+> **Time:** about 5 minutes.
+> **In the app:** fmIDE Help → *Simplify a model for some inputs* (`simplify`)
+> **Came in:** Simplify for inputs, phase 1 · branch `claude/simplify-to-sliders-5cfd71`
+
+A course built step by step starts with simple transactions and adds more on top. Each lesson's viewer, and the Excel workbook it carries, should hold only what that lesson has taught. **Simplify for Inputs…** makes such a copy from the full model: you choose the inputs a lesson moves, and a range for each; everything those inputs can't move goes.
+
+### Steps
+
+1. Open the sample: **File → Open…** and pick `tests/fixtures/simplify/profit-plan.fmide`. Its **Sales** canvas works out **Profit** = Units × Price − Costs, and Costs = Fixed cost + Overhead. Its **Notes** canvas holds one rectangle nothing reads.
+2. Open **File → Simplify for Inputs…**.
+3. In **+ Add an input…**, choose **Sales · Units**. Type **0** in *from*, **10** in *to* and **1** in *step*; leave **All periods**.
+4. Press **Work out**.
+5. Read the list: under *Kept as fixed numbers*, **Costs** and **Price**; under *Removed*, **Fixed cost**, **Overhead** and the **+** on Sales, and **Unrelated** on Notes, each "never moved across 11 runs".
+6. Press **Open the copy**.
+
+### Check it
+
+- The summary says **Keeps 7 of 11 items on 1 of 2 canvases · 2 fixed numbers · 0 zeros dropped · 11 runs** and ends with **checked**.
+- The copy is called **profit-plan (simplified)**, unsaved, with one canvas, **Sales**: Units **4** and Price **10** into ×, Revenue **40**, Costs **7** (now a typed number), Profit **33**. Type **10** in Units: Profit is **93**, as in the full model.
+- A note at the bottom says **Simplified from “profit-plan” for Units (0 to 10)** and that its 2 fixed numbers are right only while the other inputs stay as they were. **What was removed…** lists what went.
+- The sample file itself is unchanged.
+
+### Good to know
+
+- **How it decides.** It works the model out at every step of each input, the others at today's numbers; with two inputs or more, also at the corners (each at its smallest or largest together) and 200 random combinations. What gives the same number (within rounding) in every run, in every period, never moves.
+- **What stays as a fixed number.** Something kept that reads something that never moves reads a fixed number instead, in the same place. An input stays as it is. A 0 in every period is dropped from a + (or from a − after its first input), so a "+ 0" goes. A × by a fixed −1 feeding the second input of a + or − is folded into it: the + becomes −.
+- **What always stays.** A period shift a kept item reads (what it reads is fixed instead); anything with an error in some period; a block that moves, with its whole definition.
+- **Keep anyway.** Tick an item, or a whole canvas, to keep it with its own calculation. The list is redone at once; **Open the copy** works it out again and checks it.
+- **With fmGraph boards**, the window starts from their sliders and ranges; each scenario is tried too, and a bar that never moves stays as a fixed number unless it is 0.
+- **The check.** Before the copy opens, it is worked out at every run and at fresh random ones, and everything it keeps must give the full model's numbers.
+- Canvases left empty go. The canvases that stay are unlinked from their templates, so an update can't put back what went. Positions and formats are kept, so each lesson's items sit where the student saw them before.
+- **The fixed numbers are right only while the other inputs stay as they were.** Change the full model and simplify again.
+- On a large model it takes seconds (the owner's model of 528 items: about 6 seconds for two sliders); **Stop** stops it.
+
+### From a script
+
+```js
+await fm.simplifyPlan({ inputs: [{ rectangle: 'Units', canvas: 'Sales', min: 0, max: 10, step: 1 }] });   // kept: 7, total: 11
+await fm.simplifyForInputs({ inputs: [{ rectangle: 'Units', canvas: 'Sales', min: 0, max: 10, step: 1 }] }); // opens the copy
+fm.simplified();   // what it was made from and for
+```
 
 ---
 

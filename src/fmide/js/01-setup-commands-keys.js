@@ -151,6 +151,7 @@
     { id:'openExcelExporter', label:'Open ExcelExporter', icon:'📊', category:'File', defaultShortcut:null, action:() => openExcelExporter() },
     { id:'openFmGraph', label:'Open fmGraph',          icon:'📶', category:'File', defaultShortcut:null, action:() => openFmGraph() },
     { id:'makeShowcaseViewer', label:'Make Showcase Viewer…', icon:'🖼', category:'File', defaultShortcut:null, action:() => showShowcaseMaker() },
+    { id:'simplifyForInputs', label:'Simplify for Inputs…', icon:'✂', category:'File', defaultShortcut:null, action:() => showSimplifyWindow() },
     { id:'installApp',  label:'Install fmIDE',         icon:'⤓', category:'File', defaultShortcut:null, enabled:() => !!installPrompt, action:() => installApp() },
 
     { id:'openLauncher',label:'Command Launcher',      icon:'🔎', category:'View', defaultShortcut:'Mod+K', action:() => openLauncher() },

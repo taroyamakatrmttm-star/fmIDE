@@ -16,6 +16,8 @@
   // showcase viewer shows, kept so that making the viewer again remembers every choice
   // (cleanDocumentShowcase). Saved with the document and the autosave; null: none.
   let docShowcase = null;
+  // What a simplified copy was made from and for (workspace v16; 11h-simplify.js), or null.
+  let docSimplified = null;
 
   function buildWorkspacePayload(){
     return {
@@ -30,6 +32,7 @@
       ...(graphBoards ? { graphBoards: cloneData(graphBoards) } : {}),
       ...(excelLayout ? { excelLayout: cloneData(excelLayout) } : {}),
       ...(docShowcase ? { showcase: cloneData(docShowcase) } : {}),
+      ...(docSimplified ? { simplified: cloneData(docSimplified) } : {}),
       ui: buildUiPayload()
     };
   }
@@ -56,6 +59,8 @@
       graphBoards = cleanGraphBoards(data.graphBoards); // the boards belong to the model
       excelLayout = cleanExcelLayout(data.excelLayout); // and so does its Excel layout
       docShowcase = cleanDocumentShowcase(data.showcase); // and its showcase
+      docSimplified = cleanDocumentSimplified(data.simplified); // and what it was simplified for
+      showSimplifiedBanner();
     }
     // (A workspace has always read a kind other than 'system' as a canvas template.)
     if(fromImport) addMissingTemplates((Array.isArray(data.templates) ? data.templates : [])
