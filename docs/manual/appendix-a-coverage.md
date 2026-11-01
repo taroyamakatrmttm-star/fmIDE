@@ -276,6 +276,7 @@ Oldest first. *Step* is the build step (and phase) the pull request belongs to; 
 | branch `claude/recipe-links` | 2026-10-30 | fmIDE: a recipe links an input rectangle of one part to a rectangle of another (templates file 11, workspace 15, library pack 5) | after 20 | [3.4](03-reuse.md#recipes) |
 | branch `claude/excel-document-layout` | 2026-11-01 | ExcelExporter: a document's Excel layout comes before the one this browser remembers (kept aside, Layout → Use This Browser's Layout…); the layout saved on hiding only when changed | after 20 | [5.9](05-excelexporter.md#layouts) |
 | branch `claude/simplify-to-sliders-5cfd71` | 2026-11-01 | fmIDE: File → Simplify for Inputs… — a copy holding only what chosen inputs move, fixed numbers for what it still reads, checked against the full model (workspace 16); Make Showcase Viewer…'s Simplify to the sliders, the viewer and its workbook too (showcase 2) | after 20 | [8.5](08-showcase.md#simplify) |
+| branch `claude/simplify-graph-boards` | 2026-11-02 | fmIDE: Simplify for Inputs… takes fmGraph's boards as they are now (not a showcase's copy); a slider on a block's input rectangle named by it | after 20 | [8.5](08-showcase.md#simplify) |
 
 ---
 

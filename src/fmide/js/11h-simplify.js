@@ -13,13 +13,18 @@
   const SIMPLIFY_PIECE_MS = 30;
 
   // The model's input rectangles, for the picker: { canvasId, nodeId, canvas, name, value }.
-  function simplifyInputRects(){
+  // `names` (a Map, optional) is filled with every rectangle's own name, by canvas and id, so a
+  // slider on a rectangle the picker leaves out (a block's input rectangle) is still named by it.
+  function simplifyInputRects(names){
     const ir = compileModel(buildSystemPayload());
     const out = [];
     ir.order.forEach(c => c.list.forEach(n => {
-      if(n.type !== 'value' || !(n.isInput || n.incoming.length === 0) || n.blockRole) return;
+      if(n.type !== 'value') return;
       const p = parseRectText(n.node.text);
-      out.push({ canvasId: c.id, nodeId: n.id, canvas: String(c.name || ''), name: String(p.name || '').trim() || '#' + n.id, value: p.literal === null ? 0 : p.literal });
+      const name = String(p.name || '').trim();
+      if(names && name) names.set(c.id + '\u0000' + n.id, name);
+      if(!(n.isInput || n.incoming.length === 0) || n.blockRole) return;
+      out.push({ canvasId: c.id, nodeId: n.id, canvas: String(c.name || ''), name: name || '#' + n.id, value: p.literal === null ? 0 : p.literal });
     }));
     return out;
   }
@@ -29,10 +34,11 @@
     const half = Math.abs(v) / 2;
     return { min: v - half, max: v + half, step: Math.abs(v) / 100 };
   }
-  // The document's board file: its showcase's, else its fmGraph boards.
+  // The document's board file for Simplify for Inputs… (the window, its scenarios, the API): its
+  // fmGraph boards, as they are now. Never the showcase's boards: those are a copy taken when Make
+  // Showcase Viewer… was last run (that window passes them itself, simplifyForViewer).
   function simplifyBoardFile(){
-    const sc = docShowcase && docShowcase.boards;
-    const f = sc && typeof sc === 'object' ? sc : graphBoards;
+    const f = graphBoards;
     return f && typeof f === 'object' && Array.isArray(f.boards) ? f : null;
   }
   // What a board file moves (src/shared/simplify.js, simplifyBoardInputs): every input with why —
@@ -383,7 +389,8 @@
   function showSimplifyWindow(){
     if(inPractice()){ showMessage('Not while practising a tutorial: the practice model isn\'t your document.'); return; }
     if(simplifyWin) simplifyWin.close();
-    const rects = simplifyInputRects();
+    const rectNames = new Map();
+    const rects = simplifyInputRects(rectNames);
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
@@ -445,7 +452,13 @@
       });
       work.disabled = !inputs.length || !!running;
     }
-    const nameOf = (canvasId, nodeId) => { const r = rects.find(r => r.canvasId === canvasId && r.nodeId === nodeId); return r ? r.name : '#' + nodeId; };
+    // A row's name: the rectangle's own, whether or not the picker lists it; else the slider's; else its id.
+    const nameOf = (canvasId, nodeId) => {
+      const k = canvasId + '\u0000' + nodeId;
+      if(rectNames.has(k)) return rectNames.get(k);
+      const b = fromBoards.inputs.find(x => x.canvasId === canvasId && x.nodeId === nodeId);
+      return b && b.name && b.name !== '#' + nodeId ? b.name : '#' + nodeId;
+    };
     pick.addEventListener('change', () => {
       const r = rects[Number(pick.value)];
       pick.value = '';

@@ -76,6 +76,49 @@ test('the window: the boards\' sliders, Work out, the list, Keep anyway, and the
   await expect(page.locator('.simplify-record .sim-item', { hasText: 'Fixed cost' })).toBeVisible();
 });
 
+test('the window takes fmGraph\'s boards as they are now, never the showcase\'s copy of older boards', async ({ page }, testInfo) => {
+  const slider = (nodeId, name) => ({ canvasId: 'c1', nodeId, name, periods: { mode: 'all' }, mode: 'set', min: 0, max: 10, step: 1 });
+  const graphBoards = { kind: 'fmIDE-graph-board', version: 14, boards: [{ name: 'BS', items: [{ type: 'bar', canvasId: 'c1', nodeId: 'profit' }],
+    sliders: [slider('units', 'Units'), slider('price', 'Price'), slider('fixed', 'Fixed cost')] }] };
+  // The showcase's boards: what Make Showcase Viewer… copied when it was last run.
+  const showcase = { kind: 'fmIDE-showcase', version: 2, title: 'Old viewer',
+    boards: { kind: 'fmIDE-graph-board', version: 14, boards: [{ name: 'Viewer', items: [{ type: 'bar', canvasId: 'c1', nodeId: 'profit' }], sliders: [slider('over', 'Overhead')] }] } };
+  await fmideWith(page, profitDoc(testInfo, { graphBoards, showcase }));
+  await page.evaluate(() => fm.command('simplifyForInputs'));
+  const b = box(page);
+  await expect(b.locator('.sim-use-sliders')).toHaveText('Use the boards\' sliders (3)');
+  await expect(b.locator('.sim-input .sim-input-name')).toHaveText(['Units', 'Price', 'Fixed cost']);
+  // The API's sliders are the same.
+  await page.keyboard.press('Escape');
+  const plan = await page.evaluate(() => fm.simplifyPlan({ sliders: true }));
+  expect(plan.removed.map(x => x.name)).not.toContain('Fixed cost');
+  expect(plan.fixed.map(x => x.name)).toContain('Overhead');
+});
+
+test('a slider on a block\'s input rectangle is named by the rectangle, and Work out finishes', async ({ page }, testInfo) => {
+  const v = (id, text, x, y, more) => Object.assign({ id, type: 'value', x, y, w: 170, h: 64, text }, more || {});
+  const system = { version: 9, periods: ['P1', 'P2'], canvases: [
+    { id: 'c1', name: 'Top', nodes: [{ id: 'b1', type: 'blockInstance', x: 150, y: 0, w: 170, h: 90, blockDefCanvasId: 'd1' }, v('r1', 'Facility', 400, 0)],
+      edges: [{ id: 'e1', from: 'b1', to: 'r1', fromPort: 0 }] },
+    { id: 'd1', name: 'Loan', nodes: [v('n59185', 'Draw down\n100', 0, 0, { blockRole: 'input' }), v('two', 'Rate\n2', 0, 100),
+      { id: 'm', type: 'operator', x: 200, y: 50, w: 56, h: 56, text: '×' }, v('out', 'Out', 300, 50, { blockRole: 'output' })],
+      edges: [{ id: 'e2', from: 'n59185', to: 'm' }, { id: 'e3', from: 'two', to: 'm' }, { id: 'e4', from: 'm', to: 'out' }] },
+  ] };
+  const graphBoards = { kind: 'fmIDE-graph-board', version: 14, boards: [{ name: 'BS', items: [{ type: 'bar', canvasId: 'c1', nodeId: 'r1' }],
+    sliders: [{ canvasId: 'd1', nodeId: 'n59185', periods: { mode: 'all' }, mode: 'set', min: 0, max: 200, step: 10 }] }] };
+  const file = testInfo.outputPath('Loan plan.fmide');
+  fs.writeFileSync(file, JSON.stringify({ kind: 'fmIDE-workspace', version: 16, system, graphBoards }));
+  await fmideWith(page, file);
+  await page.evaluate(() => fm.command('simplifyForInputs'));
+  const b = box(page);
+  await expect(b.locator('.sim-input .sim-input-name')).toHaveText(['Draw down']);
+  // The picker's list is as it was: a block's input rectangle isn't in it.
+  await expect(b.locator('.sim-pick option', { hasText: 'Draw down' })).toHaveCount(0);
+  await b.locator('.sim-work').click();
+  await expect(b.locator('.sim-summary')).toHaveText(/^Keeps .* · checked$/);
+  await expect(b.locator('.sim-open')).toBeEnabled();
+});
+
 test('fm.simplifyPlan and fm.simplifyForInputs: the plan, the copy, its numbers, unsaved changes, a download', async ({ page }, testInfo) => {
   await fmideWith(page, profitDoc(testInfo));
   const profitBefore = await page.evaluate(() => { fm.switchCanvas('Sales'); return fm.getValue({ node: 'Profit' }); });
