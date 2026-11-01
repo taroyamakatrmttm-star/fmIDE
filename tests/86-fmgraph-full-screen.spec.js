@@ -160,7 +160,8 @@ test('the strip fades after a few seconds, × stays; a tap, a key or the mouse b
   await page.mouse.move(5, 400);
   await expect(view(page)).not.toHaveClass(/quiet/);
   await expect(view(page)).toHaveClass(/quiet/, { timeout: 6000 });
-  expect(await page.locator('#showChips').evaluate(e => getComputedStyle(e).opacity)).toBe('0');
+  // The strip fades over 0.35 s once quiet (board.css): wait for the fade to end.
+  await expect.poll(() => page.locator('#showChips').evaluate(e => getComputedStyle(e).opacity)).toBe('0');
   expect(Number(await page.locator('#showClose').evaluate(e => getComputedStyle(e).opacity))).toBeGreaterThan(0.3);
   await page.mouse.click(400, 500);
   await expect(view(page)).not.toHaveClass(/quiet/);
