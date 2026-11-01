@@ -1137,6 +1137,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
           <div class="menu-sep" role="separator"></div>
           <button type="button" role="menuitem" id="btnMenuStyle" title="How cells look in Excel: edit, import, export or reset your Excel style">Excel Style…</button>
           <div class="menu-sep" role="separator"></div>
+          <button type="button" role="menuitem" id="btnUseKeptLayout" class="hidden needs-model" title="Go back to the layout this browser remembered before the document's replaced it">Use This Browser's Layout…</button>
           <button type="button" role="menuitem" id="btnResetMapping" class="danger needs-model" title="Discard this model's saved layout and start again">Reset Mapping to Defaults…</button>
         </div>
       </div>
@@ -5397,7 +5398,7 @@ async function loadModel(m){
   // time it redraws them); a layout saved under the older key, which counted them, is
   // still found.
   const key = signatureOf(systemData, true);
-  let restored = null;
+  let restored = null, rememberedText = null;
   await excelStyleLoaded; // the person's Excel style, read from this browser once
   await moduleLayoutsLoaded; // and the layouts remembered per module (04b-module-layouts.js)
   try{
@@ -5407,15 +5408,27 @@ async function loadModel(m){
       const older = signatureOf(systemData, false);
       if(older !== key) raw = await layoutStore.get(older);
     }
-    if(typeof raw === 'string' && raw) restored = JSON.parse(raw);
-  }catch(err){ /* ignore */ }
-  // None in this browser: the layout the document carries (workspace v13, `excelLayout`; a
-  // .fmide that Save for fmIDE wrote, or fmIDE sent), read as Import Mapping reads a file.
-  layoutFromDocument = false;
-  if(!restored){
-    restored = documentLayout(m);
-    layoutFromDocument = !!restored;
+    if(typeof raw === 'string' && raw){ restored = JSON.parse(raw); rememberedText = raw; }
+  }catch(err){ restored = null; rememberedText = null; }
+  // The layout the document carries (workspace v13, `excelLayout`; a .fmide that Save for
+  // fmIDE wrote, or fmIDE sent), read as Import Mapping reads a file, wins over the one this
+  // browser remembers (the owner's decision, 1 November 2026) and becomes the remembered one.
+  // A different one remembered before is kept aside (keepLayoutAside), never deleted:
+  // Layout → Use This Browser's Layout brings it back.
+  layoutFromDocument = false; layoutReplacedRemembered = false;
+  mappingUnsaved = false; mappingWriteGen++; // a write still under way for the last model clears nothing now
+  const fromDocument = documentLayout(m);
+  if(fromDocument){
+    layoutFromDocument = true;
+    const docText = JSON.stringify(fromDocument);
+    const differs = !!rememberedText && !sameLayoutText(rememberedText, docText);
+    if(differs){ layoutReplacedRemembered = true; await keepLayoutAside(key, rememberedText); }
+    if(!rememberedText || differs){
+      try{ await layoutStore.put(key, docText); }catch(err){ onMappingSaveFailed(err); }
+    }
+    restored = JSON.parse(docText);
   }
+  await readLayoutKeptAside(key, restored ? JSON.stringify(restored) : null);
   model = loaded;
   useModelIR(ir);
   canvasModules = readCanvasModules(systemData);
@@ -5540,20 +5553,81 @@ let layoutHeld = false; // true while a showcase viewer's workbook is made on a 
 function saveMapping(){
   if(!mappingKey || layoutHeld) return; // a layout lent for a viewer's workbook is never saved (09l)
   graphPlanCache = null; // the fmGraph scenarios' plan follows the layout (09i)
+  mappingUnsaved = true;  // until the browser confirms the write below
   layoutStore.requestPersistence(); // once, ever — on the first change, not at start-up
   writeMapping();
   rememberModuleLayouts(); // a module tab that changed is remembered for that module
   sendLayoutToFmideSoon(); // fmIDE's model: its document keeps the layout (09f)
 }
+// A change not yet confirmed saved (mappingUnsaved): set by saveMapping, cleared when the
+// browser confirms the latest write. Hiding the page, going back to fmIDE and reloading for an
+// update write again only then (writeMappingIfUnsaved): a change made just before is kept,
+// and a layout nobody changed (a fresh load, Reset Mapping to Defaults…) is never written.
+let mappingUnsaved = false;
+let mappingWriteGen = 0;
 function writeMapping(){
   if(!mappingKey) return;
   let text;
   syncSensitivityCopy(); // the first analysis, as an older ExcelExporter reads it (09g)
   try{ text = JSON.stringify(mapping); }
   catch(err){ onMappingSaveFailed(err); return; }
+  const gen = ++mappingWriteGen;
   return layoutStore.put(mappingKey, text).then(() => {
+    if(gen === mappingWriteGen) mappingUnsaved = false;
     if(mappingSaveFailing){ mappingSaveFailing = false; $('storageWarn').classList.add('hidden'); }
   }, onMappingSaveFailed);
+}
+function writeMappingIfUnsaved(){
+  if(!mappingUnsaved || layoutHeld) return;
+  return writeMapping();
+}
+
+// ---- the layout kept aside ----
+// One per model, `fmide-excelprev-<signature>` (the remembered layout's key with "excelprev"
+// for "excelmap"): the layout this browser remembered before a document's replaced it.
+// Overwritten only by the next one replaced; never deleted.
+let layoutReplacedRemembered = false; // this load's document layout replaced a different remembered one
+let layoutKeptAside = null;           // the text kept aside for this model, offered while it differs
+function asideKeyOf(key){ return String(key).replace(/^fmide-excelmap-/, 'fmide-excelprev-'); }
+// Two layouts' texts the same, whatever the order of their fields.
+function sameLayoutText(a, b){
+  const canon = (v) => Array.isArray(v) ? v.map(canon)
+    : (v && typeof v === 'object') ? Object.keys(v).sort().reduce((o, k) => { o[k] = canon(v[k]); return o; }, {}) : v;
+  try{ return JSON.stringify(canon(JSON.parse(a))) === JSON.stringify(canon(JSON.parse(b))); }
+  catch(err){ return a === b; }
+}
+async function keepLayoutAside(key, text){
+  try{ await layoutStore.put(asideKeyOf(key), text); }catch(err){ onMappingSaveFailed(err); }
+}
+// The copy kept aside for this model, offered (Layout → Use This Browser's Layout) only while
+// it differs from the layout shown at load.
+async function readLayoutKeptAside(key, shownText){
+  layoutKeptAside = null;
+  try{
+    const raw = await layoutStore.get(asideKeyOf(key));
+    if(typeof raw === 'string' && raw && !(shownText && sameLayoutText(raw, shownText))){
+      const data = JSON.parse(raw);
+      if(data && typeof data === 'object' && Array.isArray(data.tabs) && Array.isArray(data.rows)) layoutKeptAside = raw;
+    }
+  }catch(err){ layoutKeptAside = null; }
+}
+// Layout → Use This Browser's Layout: the layout kept aside, taken as Import Mapping takes a
+// file (saved, and sent back to fmIDE's document). The copy stays where it is.
+function useLayoutKeptAside(){
+  if(!model || !layoutKeptAside) return false;
+  let data;
+  try{ data = JSON.parse(layoutKeptAside); }catch(err){ return false; }
+  if(!data || typeof data !== 'object' || !Array.isArray(data.tabs) || !Array.isArray(data.rows)) return false;
+  mapping = data;
+  reconcileMapping();
+  layOutNewCanvasTabs();
+  resetModuleBaselines();
+  layoutKeptAside = null;
+  layoutReplacedRemembered = false;
+  saveMapping();
+  renderAll();
+  syncPageState();
+  return true;
 }
 function onMappingSaveFailed(err){
   if(mappingSaveFailing) return;
@@ -10468,7 +10542,7 @@ async function backToFmide(ev){
     if(model && !modelFromFmide && !(await showConfirm('Close ExcelExporter?',
       'fmIDE is open in its own window. Your layout is kept; you\'ll load this file again next time (fmIDE sends its own model by itself).',
       'Close'))) return;
-    writeMapping();
+    writeMappingIfUnsaved();
     window.close();
     // Closing is refused only in rare cases: then go back a page if fmIDE is there, or say so.
     setTimeout(() => {
@@ -10480,11 +10554,11 @@ async function backToFmide(ev){
   }
   if(openedFromFmide && history.length > 1){
     ev.preventDefault();
-    writeMapping();
+    writeMappingIfUnsaved();
     goBackToFmide();
     return;
   }
-  writeMapping(); // case 3: the link navigates
+  writeMappingIfUnsaved(); // case 3: the link navigates
 }
 
 function goBackToFmide(){
@@ -11106,7 +11180,7 @@ const EXCEL_HELP_TOPICS = [
       ] },
       { p: 'A system file (Save System) or a workspace (Export Workspace) works too, and File → Paste JSON… takes a model\'s text. The number formats you set in fmIDE come across; how cells look is your own Excel style (⚙ Settings → Excel Style).' },
       { p: 'To see how it works first, press ▶ Load Sample Model (also in the File menu).' },
-      { p: 'Your layout (tabs, rows, names, order) is remembered in this browser for each model, so loading the same model again brings it back. A model from fmIDE keeps it in its .fmide document too: each change here goes back to fmIDE, and on another computer the document brings it.' },
+      { p: 'Your layout (tabs, rows, names, order) is remembered in this browser for each model, so loading the same model again brings it back. A model from fmIDE keeps it in its .fmide document too: each change here goes back to fmIDE, and on another computer the document brings it. A layout the document brings is used before the one this browser remembers.' },
       { p: 'An Excel workbook instead of an fmIDE file? File → Import Excel model… rebuilds it as a model.' },
       { see: ['what-is-excelexporter', 'import-excel', 'remembered', 'back-to-fmide'] },
     ] },
@@ -11214,12 +11288,13 @@ const EXCEL_HELP_TOPICS = [
       { p: 'A module\'s layout holds only that module\'s tab: its name, row order, labels, label and blank rows, Include and Constant, formats and indents. No Inputs tab, scenarios or sensitivity.' },
       { p: 'When you load a file, the layout comes from the first of these that exists:' },
       { steps: [
-        'The layout saved in this browser for this model. If there is one, it is used as it is, and nothing below is looked at.',
-        'The layout the .fmide document or workspace carries (its Excel layout), used as it is too.',
+        'The layout the .fmide document or workspace carries (its Excel layout). If there is one, it is used as it is, and nothing below is looked at. It also becomes the layout this browser remembers for the model.',
+        'The layout saved in this browser for this model, used as it is too.',
         'Otherwise a new layout is built. Each module\'s tab takes your own remembered layout for that module…',
         '…or, without one, the layout attached to its template (only from a .fmide document or workspace)…',
         '…or, without that, the automatic sort. Tabs not from a module always start from the automatic sort.',
       ] },
+      { p: 'When the document\'s layout differs from the one this browser remembered, the load message says so, and the browser\'s is kept aside, not deleted: Layout → Use This Browser\'s Layout… brings it back (and, with fmIDE\'s model, sends it to fmIDE\'s document).' },
       { p: 'A canvas added in fmIDE after the layout was saved gets a tab of its own at the end, named after it and laid out as a new layout would lay it out: a module\'s tab takes its remembered layout, any other tab the automatic sort.' },
       { p: 'Block instance tabs follow the same order, using the module\'s instance layout. A new layout starts with the Inputs tab off, no scenarios and no sensitivity, since module layouts carry none.' },
       { tip: 'Export Mapping saves one model\'s whole layout, as listed above, to load again for the same model. Export Module Layouts saves the per-module layouts, for reuse in other models and for fmIDE\'s Attach Excel layout….' },
@@ -11453,6 +11528,16 @@ const EXCEL_HELP_TOPICS = [
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'document-layout-wins', date: '2026-11-01', title: 'A document\'s Excel layout comes first',
+    summary: 'A .fmide document that carries an Excel layout now opens with it, even when this browser remembers another layout for the same model.',
+    what: [
+      'Before, a layout this browser remembered for the model came first, so a document\'s own layout, a simplified copy\'s for example, could be passed over for a plain default.',
+      'Now the document\'s layout is used and becomes the one remembered. When the two differed, the load message says so, and the browser\'s layout is kept aside: Layout → Use This Browser\'s Layout… brings it back.',
+      'The layout is also saved only when you have changed something. Switching away after Reset Mapping to Defaults…, or after just opening a model, no longer saves a layout you never touched.',
+    ],
+    why: 'The layout that travels with the document is the one its author meant, and an untouched default should never get in its way.',
+    how: ['Open a .fmide document with an Excel layout, from fmIDE or as a file.', 'If the message says the layout came in place of this browser\'s, use Layout → Use This Browser\'s Layout… to go back.'],
+    see: ['remembered'] },
   { id: 'new-canvas-tabs', date: '2026-10-30', title: 'A canvas added later gets its own tab',
     summary: 'A canvas added in fmIDE after the layout was saved now gets a tab of its own, instead of its rows landing on the Inputs tab.',
     what: [
@@ -12197,6 +12282,7 @@ function syncPageState(){
     b.disabled = !loaded;
     b.title = loaded ? b.dataset.tip : 'Load a model first';
   });
+  $('btnUseKeptLayout').classList.toggle('hidden', !(loaded && layoutKeptAside)); // a layout kept aside (04-file-formats.js)
   $('settingsTabWorkbook').disabled = !loaded;
   $('modelName').textContent = loaded ? currentModelLabel : '';
   $('modelName').title = loaded ? `${model.canvases.length} canvas${model.canvases.length === 1 ? '' : 'es'}, ${model.periods.length} periods` : '';
@@ -17627,7 +17713,8 @@ async function tryLoad(jsonText, label, name){
     setStatus($('genStatus'), '', null); // a message about the last model's workbook
     setStatus($('loadStatus'), `Loaded ${label} — ${model.canvases.length} canvas${model.canvases.length === 1 ? '' : 'es'}, ${model.periods.length} periods.` +
       (modelGraphBoards ? ' It has fmGraph boards: Layout → Use fmGraph boards….' : '') +
-      (layoutFromDocument ? ' Its Excel layout came with it.' : ''), 'ok');
+      (layoutReplacedRemembered ? ' Its Excel layout came with it, in place of the one this browser remembered (Layout → Use This Browser\'s Layout to go back).'
+        : layoutFromDocument ? ' Its Excel layout came with it.' : ''), 'ok');
   }catch(err){
     setStatus($('loadStatus'), 'Could not read that as an fmIDE system export: ' + err.message, 'err');
   }
@@ -17800,6 +17887,7 @@ function showConfirm(title, message, okLabel){
 // Deliberately does NOT save afterwards (same as a first load): the next real edit saves.
 async function resetMappingToDefaults(){
   if(!model) return;
+  mappingUnsaved = false; mappingWriteGen++; // nothing to write until the next real edit, hiding the page included
   try{ await layoutStore.remove(mappingKey); }catch(err){ /* ignore */ }
   mapping = buildDefaultMapping(model);
   reconcileMapping();
@@ -17821,8 +17909,20 @@ $('btnResetMapping').addEventListener('click', async () => {
   setStatus($('genStatus'), 'Mapping reset to defaults.', 'ok');
 });
 
-// A write started only while the page unloads may not finish, so save when it is hidden.
-document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') writeMapping(); });
+$('btnUseKeptLayout').addEventListener('click', async () => {
+  if(!model || !layoutKeptAside) return;
+  const ok = await showConfirm(
+    'Use this browser\'s layout?',
+    'This replaces the layout shown now (the one the document brought) with the one this browser remembered before. With fmIDE\'s model, fmIDE\'s document takes it too.',
+    'Use It'
+  );
+  if(!ok) return;
+  if(useLayoutKeptAside()) setStatus($('genStatus'), 'This browser\'s layout is back.', 'ok');
+});
+
+// A write started only while the page unloads may not finish, so save when it is hidden —
+// only while a change is unsaved (writeMappingIfUnsaved, 04-file-formats.js).
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') writeMappingIfUnsaved(); });
 
 // Every colour box opens a grid of ready colours, the Excel style's and rows' colours among them
 // (the owner's request of 27 October 2026).
@@ -18156,13 +18256,14 @@ function watchForUpdates(opts){
 watchForUpdates({
   appName: 'ExcelExporter',
   note: 'Your layout is kept; load your file again after reloading.',
-  beforeReload: () => writeMapping(),
+  beforeReload: () => writeMappingIfUnsaved(),
 });
 
 $('btnClearAll').addEventListener('click', () => {
   model = null; useModelIR(null); mapping = null; mappingKey = null;
   canvasModules = {}; moduleBaselines = {}; moduleLayoutsApplied = []; templateLayouts = {}; tabLayoutFromTemplate = {};
   modelGraphBoards = null; graphPlanCache = null;
+  layoutKeptAside = null; layoutReplacedRemembered = false;
   $('fileInput').value = '';
   $('afterLoad').classList.add('hidden');
   $('pasteArea').value = '';

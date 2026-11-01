@@ -148,7 +148,7 @@ async function loadModel(m){
   // time it redraws them); a layout saved under the older key, which counted them, is
   // still found.
   const key = signatureOf(systemData, true);
-  let restored = null;
+  let restored = null, rememberedText = null;
   await excelStyleLoaded; // the person's Excel style, read from this browser once
   await moduleLayoutsLoaded; // and the layouts remembered per module (04b-module-layouts.js)
   try{
@@ -158,15 +158,27 @@ async function loadModel(m){
       const older = signatureOf(systemData, false);
       if(older !== key) raw = await layoutStore.get(older);
     }
-    if(typeof raw === 'string' && raw) restored = JSON.parse(raw);
-  }catch(err){ /* ignore */ }
-  // None in this browser: the layout the document carries (workspace v13, `excelLayout`; a
-  // .fmide that Save for fmIDE wrote, or fmIDE sent), read as Import Mapping reads a file.
-  layoutFromDocument = false;
-  if(!restored){
-    restored = documentLayout(m);
-    layoutFromDocument = !!restored;
+    if(typeof raw === 'string' && raw){ restored = JSON.parse(raw); rememberedText = raw; }
+  }catch(err){ restored = null; rememberedText = null; }
+  // The layout the document carries (workspace v13, `excelLayout`; a .fmide that Save for
+  // fmIDE wrote, or fmIDE sent), read as Import Mapping reads a file, wins over the one this
+  // browser remembers (the owner's decision, 1 November 2026) and becomes the remembered one.
+  // A different one remembered before is kept aside (keepLayoutAside), never deleted:
+  // Layout → Use This Browser's Layout brings it back.
+  layoutFromDocument = false; layoutReplacedRemembered = false;
+  mappingUnsaved = false; mappingWriteGen++; // a write still under way for the last model clears nothing now
+  const fromDocument = documentLayout(m);
+  if(fromDocument){
+    layoutFromDocument = true;
+    const docText = JSON.stringify(fromDocument);
+    const differs = !!rememberedText && !sameLayoutText(rememberedText, docText);
+    if(differs){ layoutReplacedRemembered = true; await keepLayoutAside(key, rememberedText); }
+    if(!rememberedText || differs){
+      try{ await layoutStore.put(key, docText); }catch(err){ onMappingSaveFailed(err); }
+    }
+    restored = JSON.parse(docText);
   }
+  await readLayoutKeptAside(key, restored ? JSON.stringify(restored) : null);
   model = loaded;
   useModelIR(ir);
   canvasModules = readCanvasModules(systemData);
@@ -291,20 +303,81 @@ let layoutHeld = false; // true while a showcase viewer's workbook is made on a 
 function saveMapping(){
   if(!mappingKey || layoutHeld) return; // a layout lent for a viewer's workbook is never saved (09l)
   graphPlanCache = null; // the fmGraph scenarios' plan follows the layout (09i)
+  mappingUnsaved = true;  // until the browser confirms the write below
   layoutStore.requestPersistence(); // once, ever — on the first change, not at start-up
   writeMapping();
   rememberModuleLayouts(); // a module tab that changed is remembered for that module
   sendLayoutToFmideSoon(); // fmIDE's model: its document keeps the layout (09f)
 }
+// A change not yet confirmed saved (mappingUnsaved): set by saveMapping, cleared when the
+// browser confirms the latest write. Hiding the page, going back to fmIDE and reloading for an
+// update write again only then (writeMappingIfUnsaved): a change made just before is kept,
+// and a layout nobody changed (a fresh load, Reset Mapping to Defaults…) is never written.
+let mappingUnsaved = false;
+let mappingWriteGen = 0;
 function writeMapping(){
   if(!mappingKey) return;
   let text;
   syncSensitivityCopy(); // the first analysis, as an older ExcelExporter reads it (09g)
   try{ text = JSON.stringify(mapping); }
   catch(err){ onMappingSaveFailed(err); return; }
+  const gen = ++mappingWriteGen;
   return layoutStore.put(mappingKey, text).then(() => {
+    if(gen === mappingWriteGen) mappingUnsaved = false;
     if(mappingSaveFailing){ mappingSaveFailing = false; $('storageWarn').classList.add('hidden'); }
   }, onMappingSaveFailed);
+}
+function writeMappingIfUnsaved(){
+  if(!mappingUnsaved || layoutHeld) return;
+  return writeMapping();
+}
+
+// ---- the layout kept aside ----
+// One per model, `fmide-excelprev-<signature>` (the remembered layout's key with "excelprev"
+// for "excelmap"): the layout this browser remembered before a document's replaced it.
+// Overwritten only by the next one replaced; never deleted.
+let layoutReplacedRemembered = false; // this load's document layout replaced a different remembered one
+let layoutKeptAside = null;           // the text kept aside for this model, offered while it differs
+function asideKeyOf(key){ return String(key).replace(/^fmide-excelmap-/, 'fmide-excelprev-'); }
+// Two layouts' texts the same, whatever the order of their fields.
+function sameLayoutText(a, b){
+  const canon = (v) => Array.isArray(v) ? v.map(canon)
+    : (v && typeof v === 'object') ? Object.keys(v).sort().reduce((o, k) => { o[k] = canon(v[k]); return o; }, {}) : v;
+  try{ return JSON.stringify(canon(JSON.parse(a))) === JSON.stringify(canon(JSON.parse(b))); }
+  catch(err){ return a === b; }
+}
+async function keepLayoutAside(key, text){
+  try{ await layoutStore.put(asideKeyOf(key), text); }catch(err){ onMappingSaveFailed(err); }
+}
+// The copy kept aside for this model, offered (Layout → Use This Browser's Layout) only while
+// it differs from the layout shown at load.
+async function readLayoutKeptAside(key, shownText){
+  layoutKeptAside = null;
+  try{
+    const raw = await layoutStore.get(asideKeyOf(key));
+    if(typeof raw === 'string' && raw && !(shownText && sameLayoutText(raw, shownText))){
+      const data = JSON.parse(raw);
+      if(data && typeof data === 'object' && Array.isArray(data.tabs) && Array.isArray(data.rows)) layoutKeptAside = raw;
+    }
+  }catch(err){ layoutKeptAside = null; }
+}
+// Layout → Use This Browser's Layout: the layout kept aside, taken as Import Mapping takes a
+// file (saved, and sent back to fmIDE's document). The copy stays where it is.
+function useLayoutKeptAside(){
+  if(!model || !layoutKeptAside) return false;
+  let data;
+  try{ data = JSON.parse(layoutKeptAside); }catch(err){ return false; }
+  if(!data || typeof data !== 'object' || !Array.isArray(data.tabs) || !Array.isArray(data.rows)) return false;
+  mapping = data;
+  reconcileMapping();
+  layOutNewCanvasTabs();
+  resetModuleBaselines();
+  layoutKeptAside = null;
+  layoutReplacedRemembered = false;
+  saveMapping();
+  renderAll();
+  syncPageState();
+  return true;
 }
 function onMappingSaveFailed(err){
   if(mappingSaveFailing) return;
