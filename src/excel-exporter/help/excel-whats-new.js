@@ -11,6 +11,16 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'document-layout-wins', date: '2026-11-01', title: 'A document\'s Excel layout comes first',
+    summary: 'A .fmide document that carries an Excel layout now opens with it, even when this browser remembers another layout for the same model.',
+    what: [
+      'Before, a layout this browser remembered for the model came first, so a document\'s own layout, a simplified copy\'s for example, could be passed over for a plain default.',
+      'Now the document\'s layout is used and becomes the one remembered. When the two differed, the load message says so, and the browser\'s layout is kept aside: Layout → Use This Browser\'s Layout… brings it back.',
+      'The layout is also saved only when you have changed something. Switching away after Reset Mapping to Defaults…, or after just opening a model, no longer saves a layout you never touched.',
+    ],
+    why: 'The layout that travels with the document is the one its author meant, and an untouched default should never get in its way.',
+    how: ['Open a .fmide document with an Excel layout, from fmIDE or as a file.', 'If the message says the layout came in place of this browser\'s, use Layout → Use This Browser\'s Layout… to go back.'],
+    see: ['remembered'] },
   { id: 'new-canvas-tabs', date: '2026-10-30', title: 'A canvas added later gets its own tab',
     summary: 'A canvas added in fmIDE after the layout was saved now gets a tab of its own, instead of its rows landing on the Inputs tab.',
     what: [

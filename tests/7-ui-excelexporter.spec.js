@@ -146,6 +146,121 @@ test.describe('Start Over and Reset Mapping', () => {
   });
 });
 
+// ---------- A document's layout and the one this browser remembers (1 November 2026) ----------
+test.describe('a document\'s layout wins over the browser\'s; hiding the page writes only an unsaved change', () => {
+  const fs = require('fs');
+  const ASIDE = 'fmide-excelprev-';
+  async function exportMapping(page){
+    const [download] = await Promise.all([page.waitForEvent('download'), X.menuCommand(page, 'btnExportMapping')]);
+    return JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
+  }
+  // The sample model in a workspace carrying `layout` as its Excel layout, as fmIDE saves it.
+  function documentWith(layout, testInfo, name){
+    const system = JSON.parse(fs.readFileSync(MODEL, 'utf8'));
+    const file = testInfo.outputPath(name || 'With layout.fmide');
+    fs.writeFileSync(file, JSON.stringify({ kind: 'fmIDE-workspace', version: 16, system, excelLayout: layout }));
+    return file;
+  }
+  const storedText = async (page, prefix) => Object.values(await S.storedEntries(page, 'ExcelExporter', prefix)).join('');
+  // Every IndexedDB write's key, from now on (the app is not changed: the browser's own put is wrapped).
+  const recordPuts = (page) => page.evaluate(() => {
+    const real = IDBObjectStore.prototype.put;
+    window.__puts = [];
+    IDBObjectStore.prototype.put = function(value, key){ window.__puts.push(String(key)); return real.apply(this, arguments); };
+  });
+  const layoutPuts = (page) => page.evaluate(() => window.__puts.filter(k => k.startsWith('fmide-excelmap-')).length);
+
+  test('a different remembered layout is replaced by the document\'s, kept aside, and Use This Browser\'s Layout brings it back', async ({ page }, testInfo) => {
+    await open(page);
+    // The document's layout: BS named "Doc BS".
+    await renameTab(page, 'BS', 'Doc BS');
+    const docLayout = await exportMapping(page);
+    // This browser remembers another: "Browser BS" (as after opening the bare system file).
+    await renameTab(page, 'Doc BS', 'Browser BS');
+    await expect.poll(() => storedText(page, 'fmide-excelmap-')).toContain('Browser BS');
+    await expect(page.locator('#btnUseKeptLayout')).toBeHidden();
+
+    await X.loadModelFile(page, documentWith(docLayout, testInfo));
+    await expect(page.locator('#loadStatus')).toContainText('Loaded With layout.fmide');
+    await expect(page.locator('#loadStatus .status.ok')).toContainText('in place of the one this browser remembered');
+    expect(await tabNames(page)).toContain('Doc BS');
+    // The document's is now the remembered one; the browser's is kept aside, not deleted.
+    await expect.poll(() => storedText(page, 'fmide-excelmap-')).toContain('Doc BS');
+    expect(await storedText(page, 'fmide-excelmap-')).not.toContain('Browser BS');
+    expect(await storedText(page, ASIDE)).toContain('Browser BS');
+    expect(await savedLayouts(page)).toHaveLength(1);
+
+    // Opening the same document again: the same layout, nothing replaced.
+    await X.menuCommand(page, 'btnClearAll');
+    await X.loadModelFile(page, documentWith(docLayout, testInfo));
+    await expect(page.locator('#loadStatus .status.ok')).toContainText('Its Excel layout came with it.');
+    await expect(page.locator('#loadStatus .status.ok')).not.toContainText('in place of');
+    expect(await tabNames(page)).toContain('Doc BS');
+
+    // Use This Browser's Layout (it asks first; Cancel changes nothing).
+    await X.menuCommand(page, 'btnUseKeptLayout');
+    await page.click('#confirmCancel');
+    expect(await tabNames(page)).toContain('Doc BS');
+    await X.menuCommand(page, 'btnUseKeptLayout');
+    await page.click('#confirmOk');
+    await expect(page.locator('#genStatus')).toContainText('This browser\'s layout is back.');
+    expect(await tabNames(page)).toContain('Browser BS');
+    await expect(page.locator('#btnUseKeptLayout')).toBeHidden();
+    await expect.poll(() => storedText(page, 'fmide-excelmap-')).toContain('Browser BS');
+    expect(await storedText(page, ASIDE)).toContain('Browser BS'); // the copy stays
+
+    // A bare system file brings no layout: the browser's is used, nothing offered.
+    await X.menuCommand(page, 'btnClearAll');
+    await X.loadModelFile(page, MODEL);
+    expect(await tabNames(page)).toContain('Browser BS');
+    await expect(page.locator('#loadStatus .status.ok')).not.toContainText('Excel layout');
+    await page.click('#menuLayout');
+    await expect(page.locator('#btnUseKeptLayout')).toBeHidden();
+  });
+
+  test('Reset Mapping to Defaults…, then hiding the page, writes nothing', async ({ page }) => {
+    await open(page);
+    await renameTab(page, 'BS', 'Balance Sheet');
+    await expect.poll(() => savedLayouts(page)).toHaveLength(1);
+    await X.menuCommand(page, 'btnResetMapping');
+    await page.click('#confirmOk');
+    await expect(page.locator('#genStatus')).toContainText('Mapping reset to defaults.');
+    await recordPuts(page);
+    await S.hidePage(page);
+    await page.waitForTimeout(300);
+    expect(await layoutPuts(page)).toBe(0);
+    expect(await savedLayouts(page)).toHaveLength(0);
+    // A fresh load, then hiding: nothing written either.
+    await X.menuCommand(page, 'btnClearAll');
+    await X.loadModelFile(page, MODEL);
+    await S.hidePage(page);
+    await page.waitForTimeout(300);
+    expect(await layoutPuts(page)).toBe(0);
+    expect(await savedLayouts(page)).toHaveLength(0);
+  });
+
+  test('a change made just before the page is hidden is written again on hiding; a saved one is not', async ({ page }) => {
+    await open(page);
+    await recordPuts(page);
+    // The change and the hiding in one go: the change's own write has not finished yet.
+    await page.evaluate(() => {
+      const input = document.querySelector('#tabsBody input[type=text]');
+      input.value = 'Just Before';
+      input.dispatchEvent(new Event('change'));
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+      document.dispatchEvent(new Event('visibilitychange'));
+      delete document.visibilityState;
+    });
+    expect(await layoutPuts(page)).toBe(2);
+    await expect.poll(() => storedText(page, 'fmide-excelmap-')).toContain('Just Before');
+    // Once that is saved, hiding again writes nothing.
+    await page.waitForTimeout(300);
+    await S.hidePage(page);
+    await page.waitForTimeout(300);
+    expect(await layoutPuts(page)).toBe(2);
+  });
+});
+
 // ---------- Sorting ----------
 test.describe('sorting', () => {
   const BS_CALC_UP = ['Unit Price', 'Volume', 'AR outstanding rate', 'Revenue', 'Accounts Receivable', 'Cash', 'Inventory', 'Total Assets'];

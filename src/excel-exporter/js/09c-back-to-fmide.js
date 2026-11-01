@@ -42,7 +42,7 @@ async function backToFmide(ev){
     if(model && !modelFromFmide && !(await showConfirm('Close ExcelExporter?',
       'fmIDE is open in its own window. Your layout is kept; you\'ll load this file again next time (fmIDE sends its own model by itself).',
       'Close'))) return;
-    writeMapping();
+    writeMappingIfUnsaved();
     window.close();
     // Closing is refused only in rare cases: then go back a page if fmIDE is there, or say so.
     setTimeout(() => {
@@ -54,11 +54,11 @@ async function backToFmide(ev){
   }
   if(openedFromFmide && history.length > 1){
     ev.preventDefault();
-    writeMapping();
+    writeMappingIfUnsaved();
     goBackToFmide();
     return;
   }
-  writeMapping(); // case 3: the link navigates
+  writeMappingIfUnsaved(); // case 3: the link navigates
 }
 
 function goBackToFmide(){

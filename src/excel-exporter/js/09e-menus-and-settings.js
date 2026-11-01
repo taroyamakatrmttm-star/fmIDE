@@ -19,6 +19,7 @@ function syncPageState(){
     b.disabled = !loaded;
     b.title = loaded ? b.dataset.tip : 'Load a model first';
   });
+  $('btnUseKeptLayout').classList.toggle('hidden', !(loaded && layoutKeptAside)); // a layout kept aside (04-file-formats.js)
   $('settingsTabWorkbook').disabled = !loaded;
   $('modelName').textContent = loaded ? currentModelLabel : '';
   $('modelName').title = loaded ? `${model.canvases.length} canvas${model.canvases.length === 1 ? '' : 'es'}, ${model.periods.length} periods` : '';

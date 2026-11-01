@@ -32,7 +32,8 @@ async function tryLoad(jsonText, label, name){
     setStatus($('genStatus'), '', null); // a message about the last model's workbook
     setStatus($('loadStatus'), `Loaded ${label} — ${model.canvases.length} canvas${model.canvases.length === 1 ? '' : 'es'}, ${model.periods.length} periods.` +
       (modelGraphBoards ? ' It has fmGraph boards: Layout → Use fmGraph boards….' : '') +
-      (layoutFromDocument ? ' Its Excel layout came with it.' : ''), 'ok');
+      (layoutReplacedRemembered ? ' Its Excel layout came with it, in place of the one this browser remembered (Layout → Use This Browser\'s Layout to go back).'
+        : layoutFromDocument ? ' Its Excel layout came with it.' : ''), 'ok');
   }catch(err){
     setStatus($('loadStatus'), 'Could not read that as an fmIDE system export: ' + err.message, 'err');
   }
@@ -190,6 +191,7 @@ function showConfirm(title, message, okLabel){
 // Deliberately does NOT save afterwards (same as a first load): the next real edit saves.
 async function resetMappingToDefaults(){
   if(!model) return;
+  mappingUnsaved = false; mappingWriteGen++; // nothing to write until the next real edit, hiding the page included
   try{ await layoutStore.remove(mappingKey); }catch(err){ /* ignore */ }
   mapping = buildDefaultMapping(model);
   reconcileMapping();
@@ -211,8 +213,20 @@ $('btnResetMapping').addEventListener('click', async () => {
   setStatus($('genStatus'), 'Mapping reset to defaults.', 'ok');
 });
 
-// A write started only while the page unloads may not finish, so save when it is hidden.
-document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') writeMapping(); });
+$('btnUseKeptLayout').addEventListener('click', async () => {
+  if(!model || !layoutKeptAside) return;
+  const ok = await showConfirm(
+    'Use this browser\'s layout?',
+    'This replaces the layout shown now (the one the document brought) with the one this browser remembered before. With fmIDE\'s model, fmIDE\'s document takes it too.',
+    'Use It'
+  );
+  if(!ok) return;
+  if(useLayoutKeptAside()) setStatus($('genStatus'), 'This browser\'s layout is back.', 'ok');
+});
+
+// A write started only while the page unloads may not finish, so save when it is hidden —
+// only while a change is unsaved (writeMappingIfUnsaved, 04-file-formats.js).
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') writeMappingIfUnsaved(); });
 
 // Every colour box opens a grid of ready colours, the Excel style's and rows' colours among them
 // (the owner's request of 27 October 2026).
@@ -225,13 +239,14 @@ installColourGrid({ inUse: () => coloursIn([excelStyle, mapping ? mapping.rows :
 watchForUpdates({
   appName: 'ExcelExporter',
   note: 'Your layout is kept; load your file again after reloading.',
-  beforeReload: () => writeMapping(),
+  beforeReload: () => writeMappingIfUnsaved(),
 });
 
 $('btnClearAll').addEventListener('click', () => {
   model = null; useModelIR(null); mapping = null; mappingKey = null;
   canvasModules = {}; moduleBaselines = {}; moduleLayoutsApplied = []; templateLayouts = {}; tabLayoutFromTemplate = {};
   modelGraphBoards = null; graphPlanCache = null;
+  layoutKeptAside = null; layoutReplacedRemembered = false;
   $('fileInput').value = '';
   $('afterLoad').classList.add('hidden');
   $('pasteArea').value = '';
