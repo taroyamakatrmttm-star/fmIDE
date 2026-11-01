@@ -472,7 +472,7 @@ const HELP_TOPICS = [
     body: [
       { p: 'Choose some inputs and a range for each. Every other input stays at today\'s number. fmIDE works the model out at every step of each input, at the corners (each input at its smallest or largest together) and at random combinations, and keeps only what moves. The copy opens as a new document: this model is not changed.' },
       { steps: [
-        'Open {cmd:simplifyForInputs}. With fmGraph boards, it starts from their sliders and ranges; else, add inputs from the list and type each one\'s range and step, and the periods it changes.',
+        'Open {cmd:simplifyForInputs}. With fmGraph boards, it starts from their sliders and ranges, as the boards are in fmGraph now (a showcase viewer keeps its own boards); else, add inputs from the list and type each one\'s range and step, and the periods it changes.',
         'Press Work out. It shows how much it keeps, and lists, canvas by canvas, what goes and why.',
         'Tick Keep anyway beside anything you want to keep, or a whole canvas: it stays with its own calculation, back to the rectangles it reads.',
         'Press Open the copy (you are asked about unsaved changes first), or Save the copy… to keep this model open.',

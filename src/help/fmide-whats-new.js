@@ -12,6 +12,16 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'simplify-graph-boards', date: '2026-11-02', title: 'Simplify for Inputs… takes the boards you have now',
+    summary: 'Simplify for Inputs… starts from fmGraph\'s boards as they are now, and names every slider by its rectangle.',
+    what: [
+      'Simplify for Inputs… now takes its sliders from your fmGraph boards as they are now. Before, a document with a showcase viewer used the boards copied when the viewer was last made, so new sliders were missing.',
+      'A slider on a block\'s input rectangle is named by that rectangle, such as Draw down, instead of a number like #n59185.',
+    ],
+    why: 'The sliders you simplify for should be the ones on your boards today, each called by its name.',
+    how: ['Open {cmd:simplifyForInputs}: your boards\' sliders are filled in.'],
+    notes: ['Make Showcase Viewer…\'s Simplify to the sliders still uses the viewer\'s own boards.'],
+    see: ['simplify'] },
   { id: 'simplify-for-inputs', date: '2026-11-01', title: 'Simplify a model for some inputs',
     summary: 'A copy of the model that holds only what chosen inputs move: a lesson can show just the calculations it teaches.',
     what: [

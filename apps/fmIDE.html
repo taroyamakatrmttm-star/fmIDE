@@ -2406,7 +2406,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       body: [
         { p: 'Choose some inputs and a range for each. Every other input stays at today\'s number. fmIDE works the model out at every step of each input, at the corners (each input at its smallest or largest together) and at random combinations, and keeps only what moves. The copy opens as a new document: this model is not changed.' },
         { steps: [
-          'Open {cmd:simplifyForInputs}. With fmGraph boards, it starts from their sliders and ranges; else, add inputs from the list and type each one\'s range and step, and the periods it changes.',
+          'Open {cmd:simplifyForInputs}. With fmGraph boards, it starts from their sliders and ranges, as the boards are in fmGraph now (a showcase viewer keeps its own boards); else, add inputs from the list and type each one\'s range and step, and the periods it changes.',
           'Press Work out. It shows how much it keeps, and lists, canvas by canvas, what goes and why.',
           'Tick Keep anyway beside anything you want to keep, or a whole canvas: it stays with its own calculation, back to the rectangles it reads.',
           'Press Open the copy (you are asked about unsaved changes first), or Save the copy… to keep this model open.',
@@ -2721,6 +2721,16 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   // entry: ids, dates in order, commands and topics that exist.
   // **A change people will notice adds its entry here in the same pull request.**
   const WHATS_NEW = [
+    { id: 'simplify-graph-boards', date: '2026-11-02', title: 'Simplify for Inputs… takes the boards you have now',
+      summary: 'Simplify for Inputs… starts from fmGraph\'s boards as they are now, and names every slider by its rectangle.',
+      what: [
+        'Simplify for Inputs… now takes its sliders from your fmGraph boards as they are now. Before, a document with a showcase viewer used the boards copied when the viewer was last made, so new sliders were missing.',
+        'A slider on a block\'s input rectangle is named by that rectangle, such as Draw down, instead of a number like #n59185.',
+      ],
+      why: 'The sliders you simplify for should be the ones on your boards today, each called by its name.',
+      how: ['Open {cmd:simplifyForInputs}: your boards\' sliders are filled in.'],
+      notes: ['Make Showcase Viewer…\'s Simplify to the sliders still uses the viewer\'s own boards.'],
+      see: ['simplify'] },
     { id: 'simplify-for-inputs', date: '2026-11-01', title: 'Simplify a model for some inputs',
       summary: 'A copy of the model that holds only what chosen inputs move: a lesson can show just the calculations it teaches.',
       what: [
@@ -19734,13 +19744,18 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   const SIMPLIFY_PIECE_MS = 30;
 
   // The model's input rectangles, for the picker: { canvasId, nodeId, canvas, name, value }.
-  function simplifyInputRects(){
+  // `names` (a Map, optional) is filled with every rectangle's own name, by canvas and id, so a
+  // slider on a rectangle the picker leaves out (a block's input rectangle) is still named by it.
+  function simplifyInputRects(names){
     const ir = compileModel(buildSystemPayload());
     const out = [];
     ir.order.forEach(c => c.list.forEach(n => {
-      if(n.type !== 'value' || !(n.isInput || n.incoming.length === 0) || n.blockRole) return;
+      if(n.type !== 'value') return;
       const p = parseRectText(n.node.text);
-      out.push({ canvasId: c.id, nodeId: n.id, canvas: String(c.name || ''), name: String(p.name || '').trim() || '#' + n.id, value: p.literal === null ? 0 : p.literal });
+      const name = String(p.name || '').trim();
+      if(names && name) names.set(c.id + '\u0000' + n.id, name);
+      if(!(n.isInput || n.incoming.length === 0) || n.blockRole) return;
+      out.push({ canvasId: c.id, nodeId: n.id, canvas: String(c.name || ''), name: name || '#' + n.id, value: p.literal === null ? 0 : p.literal });
     }));
     return out;
   }
@@ -19750,10 +19765,11 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     const half = Math.abs(v) / 2;
     return { min: v - half, max: v + half, step: Math.abs(v) / 100 };
   }
-  // The document's board file: its showcase's, else its fmGraph boards.
+  // The document's board file for Simplify for Inputs… (the window, its scenarios, the API): its
+  // fmGraph boards, as they are now. Never the showcase's boards: those are a copy taken when Make
+  // Showcase Viewer… was last run (that window passes them itself, simplifyForViewer).
   function simplifyBoardFile(){
-    const sc = docShowcase && docShowcase.boards;
-    const f = sc && typeof sc === 'object' ? sc : graphBoards;
+    const f = graphBoards;
     return f && typeof f === 'object' && Array.isArray(f.boards) ? f : null;
   }
   // What a board file moves (src/shared/simplify.js, simplifyBoardInputs): every input with why —
@@ -20104,7 +20120,8 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
   function showSimplifyWindow(){
     if(inPractice()){ showMessage('Not while practising a tutorial: the practice model isn\'t your document.'); return; }
     if(simplifyWin) simplifyWin.close();
-    const rects = simplifyInputRects();
+    const rectNames = new Map();
+    const rects = simplifyInputRects(rectNames);
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     const box = document.createElement('div');
@@ -20166,7 +20183,13 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
       });
       work.disabled = !inputs.length || !!running;
     }
-    const nameOf = (canvasId, nodeId) => { const r = rects.find(r => r.canvasId === canvasId && r.nodeId === nodeId); return r ? r.name : '#' + nodeId; };
+    // A row's name: the rectangle's own, whether or not the picker lists it; else the slider's; else its id.
+    const nameOf = (canvasId, nodeId) => {
+      const k = canvasId + '\u0000' + nodeId;
+      if(rectNames.has(k)) return rectNames.get(k);
+      const b = fromBoards.inputs.find(x => x.canvasId === canvasId && x.nodeId === nodeId);
+      return b && b.name && b.name !== '#' + nodeId ? b.name : '#' + nodeId;
+    };
     pick.addEventListener('change', () => {
       const r = rects[Number(pick.value)];
       pick.value = '';

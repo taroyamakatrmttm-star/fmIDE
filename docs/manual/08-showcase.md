@@ -12,7 +12,7 @@ A **showcase viewer** is one web page made from your model. Anyone can open it i
 | [8.2 Put Excel in a showcase viewer](#showcase-excel) | Include an Excel workbook; a visitor's ⬇ Excel, with their scenario or sliders written in | phase V4 (branch `claude/viewer-v4`) |
 | [8.3 Make many viewers at once](#showcase-many) | Choose for me; `npm run make-viewers` with a recipe naming sliders and bars by name; the report | phase V5 (branch `claude/viewer-v5`) |
 | [8.4 Share viewers in the gallery](#showcase-gallery) | `--pictures` and `--gallery`, `gallery.json`, the site's `/gallery`, sending a link to an iPhone or iPad | phase V6 (branch `claude/viewer-v6`) |
-| [8.5 Simplify a model for a lesson](#simplify) | File → Simplify for Inputs…: a copy holding only what some inputs move, fixed numbers, Keep anyway; a viewer simplified to its sliders | Simplify for inputs, phases 1 and 2 (branch `claude/simplify-to-sliders-5cfd71`) |
+| [8.5 Simplify a model for a lesson](#simplify) | File → Simplify for Inputs…: a copy holding only what some inputs move, fixed numbers, Keep anyway; a viewer simplified to its sliders | Simplify for inputs, phases 1 and 2 (branches `claude/simplify-to-sliders-5cfd71`, `claude/simplify-graph-boards`) |
 
 
 ---
@@ -207,7 +207,7 @@ On an iPhone or iPad, a viewer saved in Files opens only in a preview, which can
 > **You need:** fmIDE and the sample `tests/fixtures/simplify/profit-plan.fmide`.
 > **Time:** about 5 minutes.
 > **In the app:** fmIDE Help → *Simplify a model for some inputs* (`simplify`)
-> **Came in:** Simplify for inputs, phases 1 and 2 · branch `claude/simplify-to-sliders-5cfd71`
+> **Came in:** Simplify for inputs, phases 1 and 2 · branches `claude/simplify-to-sliders-5cfd71`, `claude/simplify-graph-boards`
 
 A course built step by step starts with simple transactions and adds more on top. Each lesson's viewer, and the Excel workbook it carries, should hold only what that lesson has taught. **Simplify for Inputs…** makes such a copy from the full model: you choose the inputs a lesson moves, and a range for each; everything those inputs can't move goes.
 

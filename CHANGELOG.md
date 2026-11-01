@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## Simplify for Inputs…: fmGraph's boards as they are now; sliders named by their rectangles
+- Simplify for Inputs… (the window, Use the boards' sliders, its scenarios, and `fm.simplifyPlan` / `fm.simplifyForInputs` without inputs) takes the sliders from the document's fmGraph boards (`graphBoards`) only. Before, a document with a showcase used the showcase's boards — a copy taken when Make Showcase Viewer… last ran — so a model with 10 sliders on fmGraph's board offered the showcase's 2. Make Showcase Viewer…'s Simplify to the sliders still uses the showcase's boards.
+- A row for a slider on a rectangle the picker doesn't list (a block's input rectangle) is named by the rectangle's own name, else the slider's, and only then `#id` (it showed "#n59185" for Draw down).
+- Tests: group 100 (`tests/100-simplify-fmide.spec.js`, two new tests: a showcase whose boards differ from fmGraph's; a slider on a block's input rectangle). Branch `claude/simplify-graph-boards`.
+
 ## Simplify: the Excel layout kept, the inputs' reasons, Always Keep When Simplifying
 - A simplified copy, and the workbook ExcelExporter makes for a simplified viewer, carry the document's Excel layout cut to what is left (`simplifyExcelLayout`): no tabs for canvases that went, no runs of empty rows — an empty row stays only beside a kept row, one at most — and every kept row's own look.
 - Make Showcase Viewer…'s Show what goes… lists each input the boards move with why (a slider on a board, set by scenarios), each with a tick: unticked, its sliders and the scenarios setting it are left out (showcase 2's `simplify.off`). Simplify for Inputs… tries a scenario only when every input it sets is chosen.
