@@ -27,7 +27,9 @@ const PAGE_INTERFACE = ['$', 'make', 'notify', 'isPhone', 'renderBoard', 'update
   'paintMark', 'paintPlay', 'renderPlayBar', 'rectKeySwatch', 'chartKeySwatch', 'freeGridHook',
   // The full screen's (05gs-show.js; changed on purpose, 30 October 2026): the Play ends, Help, the
   // strip's own buttons, a slider's short row, keeping 🎚 Sliders, and Esc taken by what is open.
-  'renderPlayRow', 'help', 'showStripExtras', 'showSliderRow', 'rememberShowSliders', 'showEscapeBlocked'];
+  'renderPlayRow', 'help', 'showStripExtras', 'showSliderRow', 'rememberShowSliders', 'showEscapeBlocked',
+  // Play's own choice to animate with reduced motion, kept by each page (changed on purpose, 2 November 2026).
+  'rememberPlayMotion'];
 
 // Each fragment's top-level names, and the names a fragment uses (outside comments and strings,
 // not after a dot), less those it declares itself anywhere (a local `const back`).

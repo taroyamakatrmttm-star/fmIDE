@@ -2165,6 +2165,7 @@ body class="touch-input phone-screen phone" style="--gbar-h: 46px; --mix-l: 0px;
       h2 id="showTitle"
       div aria-label="Bars and charts shown" class="show-chips" id="showChips" role="group"
       button class="show-btn show-play" id="showPlay" title="Play between the ends chosen under Scenarios" type="button" | ▶ Play
+      button class="show-btn show-motion hidden" id="showMotion" type="button"
       button aria-label="Sliders" aria-pressed="false" class="show-btn show-sliders-btn" id="showSlidersBtn" title="Show the board's sliders beside the full screen" type="button" | 🎚
         span class="show-btn-words" | Sliders
       span aria-live="polite" class="show-note" id="showNote"
@@ -4486,6 +4487,7 @@ body class="touch-input phone-screen phone" style="--gbar-h: 46px; --mix-l: 0px;
       h2 id="showTitle"
       div aria-label="Bars and charts shown" class="show-chips" id="showChips" role="group"
       button class="show-btn show-play" id="showPlay" title="Play between the ends chosen under Scenarios" type="button" | ▶ Play
+      button class="show-btn show-motion hidden" id="showMotion" type="button"
       button aria-label="Sliders" aria-pressed="false" class="show-btn show-sliders-btn" id="showSlidersBtn" title="Show the board's sliders beside the full screen" type="button" | 🎚
         span class="show-btn-words" | Sliders
       span aria-live="polite" class="show-note" id="showNote"

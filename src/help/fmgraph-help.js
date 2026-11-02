@@ -253,7 +253,7 @@ const FMGRAPH_HELP_TOPICS = [
       { see: ['scenarios', 'sliders', 'explore'] },
     ] },
   { id: 'scenarios', group: 'board', title: 'Named scenarios',
-    keywords: 'scenario scenarios named save switch show compare sc01 what if case version keep play pendulum swing animate move back and forth gif animated',
+    keywords: 'scenario scenarios named save switch show compare sc01 what if case version keep play pendulum swing animate move back and forth gif animated reduced motion still remote desktop',
     summary: 'Save where the sliders are under a name, switch between scenarios, and compare with any of them.',
     body: [
       { p: 'Set the sliders, then press + Save as scenario in the Scenarios panel under the sliders. It is named sc01, sc02 and so on; type a name of your own in its box. Save as many as you like (up to 50 a model).' },
@@ -261,7 +261,7 @@ const FMGRAPH_HELP_TOPICS = [
       { p: 'A compares with a scenario: the dashed outlines, difference labels and Biggest movers measure from it, as with 📌 Pin as A, and the strip names it. Press A again to stop.' },
       { p: '⟳ keeps where the sliders are now in that scenario, ↑ ↓ change the order, and × deletes it.' },
       { p: 'Play, under the scenarios, swings the model between two ends and back, like a pendulum, so you can watch a change happen: choose each end (a scenario, the model\'s own numbers or the sliders now) and press ▶ Play. Every number the two ends set differently moves smoothly, slower near the ends, with a short pause at each; the bars, the charts and the sliders follow, and the dashed outlines show the first end. The Tornado and Spider charts and Biggest movers wait until it stops.' },
-      { p: 'It keeps playing while you scroll, click, open a panel, edit a chart or switch to another board (the board shown follows it). ■ Stop or Esc stops it, and so does moving a slider yourself; everything is then as it was: Play changes no slider, saves nothing and is not an undo step. With reduced motion turned on in your device\'s settings, nothing swings: the board shows the second end against the first end\'s outlines, and ⇄ steps between them.' },
+      { p: 'It keeps playing while you scroll, click, open a panel, edit a chart or switch to another board (the board shown follows it). ■ Stop or Esc stops it, and so does moving a slider yourself; everything is then as it was: Play changes no slider, saves nothing and is not an undo step. With reduced motion turned on in your device\'s settings, nothing swings: the board shows the second end against the first end\'s outlines, and ⇄ steps between them. If your device asks for reduced motion when you would rather see it move — Remote Desktop and thin clients often do — press ▶ Animate beside ⇄: Play swings anyway, and this browser remembers it. ⇄ Still in the same place goes back to still. The full screen\'s strip has the same button.' },
       { p: '🎞 on a bar or chart (or 🎞 GIF in the full screen, for what it shows) turns the play into an animated GIF to send or put in a slide: one swing between the two ends chosen here and back, repeating. If Play is running, the GIF uses its ends and the play stops.' },
       { p: 'Scenarios are kept with the model\'s boards: in this browser, in fmIDE\'s document when fmGraph was opened from fmIDE, and in Export all boards. Saving, renaming, updating, moving and deleting them can be undone; showing one is like moving a slider, not a change.' },
       { see: ['compare', 'board-file'] },

@@ -851,6 +851,7 @@ body.help-resizing, body.help-resizing *{ user-select:none !important; cursor:ew
     <h2 id="showTitle"></h2>
     <div id="showChips" class="show-chips" role="group" aria-label="Bars and charts shown"></div>
     <button type="button" id="showPlay" class="show-btn show-play" title="Play between the ends chosen under Scenarios">▶ Play</button>
+    <button type="button" id="showMotion" class="show-btn show-motion hidden"></button>
     <button type="button" id="showSlidersBtn" class="show-btn show-sliders-btn" aria-pressed="false" aria-label="Sliders" title="Show the board's sliders beside the full screen">🎚<span class="show-btn-words"> Sliders</span></button>
     <span id="showNote" class="show-note" aria-live="polite"></span>
     <span id="showMore" class="show-more"><button type="button" id="showGif" class="show-btn" title="GIF: an animated GIF of what is shown, playing between the ends chosen under Scenarios">🎞 GIF</button></span>
@@ -8881,6 +8882,8 @@ $('btnPhoneLayout').addEventListener('click', () => setFullApp(false));
 // The page defines, beside the usual page interface: renderPlayRow (the Play ends), help (topic
 // full-screen), showStripExtras() (its own buttons in the strip), showSliderRow(s),
 // rememberShowSliders(on) and showEscapeBlocked() (Esc belongs to something open over the view).
+// With reduced motion, ▶ Animate / ⇄ Still #showMotion beside ▶ Play / ■ Stop sets Play's own
+// choice (setPlayMotion, 05m-play.js; the page's rememberPlayMotion keeps it).
 // ============================================================
 const SHOW_STRIP_MS = 3000;
 const SHOW_ASPECT = 1.6;   // a bar's or chart's drawing, about this much wider than tall
@@ -9062,6 +9065,13 @@ function syncShowStrip(){
   if(b.textContent !== text){ b.textContent = text; b.title = on ? 'Stop playing' : 'Play between the ends chosen under Scenarios'; }
   b.setAttribute('aria-pressed', on ? 'true' : 'false');
   if(on) $('showNote').textContent = '';
+  // The device asks for less motion: ▶ Animate while Play stands still, ⇄ Still while it moves (05m-play.js).
+  const m = $('showMotion'), offer = on && motionReduced();
+  m.classList.toggle('hidden', !offer);
+  if(offer){
+    const words = playing.still ? '▶ Animate' : '⇄ Still';
+    if(m.textContent !== words){ m.textContent = words; m.title = playMotionTitle(playing.still); }
+  }
   showStripExtras();
 }
 
@@ -9152,6 +9162,7 @@ function wireShow(){
     $('showNote').textContent = words ? '' : 'Nothing to play: choose two different ends under Scenarios.';
     syncShowStrip();
   });
+  $('showMotion').addEventListener('click', () => setPlayMotion(!playMotionAnyway));
   $('showSlidersBtn').addEventListener('click', () => setShowSliders(!showSlidersShown()));
   ['pointerdown', 'focusin'].forEach(t => $('showView').addEventListener(t, wakeShowStrip, true));
   document.addEventListener('keydown', () => { if(showing) wakeShowStrip(); }, true);
@@ -10243,8 +10254,17 @@ function renderPlayBar(){
   bar.appendChild(text);
   const button = (label, title, fn) => { const b = make('button', 'compare-btn', label); b.type = 'button'; b.title = title; b.addEventListener('click', fn); bar.appendChild(b); return b; };
   if(playing.still) button('⇄', 'Step to the other end', () => stepPlay()).id = 'btnPlayStep';
+  // The device asks for less motion: animate anyway, or back to still (05m-play.js).
+  if(motionReduced()) button(playing.still ? '▶ Animate' : '⇄ Still', playMotionTitle(playing.still), () => setPlayMotion(!playMotionAnyway)).id = 'btnPlayMotion';
   button('■ Stop', 'Stop playing: everything goes back as it was', () => stopPlay()).id = 'btnPlayStop';
 }
+
+// Animate Play even with reduced motion: this browser's choice (the board engine's setPlayMotion).
+const PLAY_MOTION_KEY = 'fmgraph-play-motion';
+function rememberPlayMotion(on){ store.put(PLAY_MOTION_KEY, on ? 'on' : 'off').catch(() => {}); }
+store.ready.then(() => store.get(PLAY_MOTION_KEY)).then(raw => {
+  if(raw === 'on' || raw === 'off') setPlayMotion(raw === 'on', true);
+}, () => {});
 
 // ---- the row under the scenarios ----
 function renderPlayRow(){
@@ -10294,7 +10314,13 @@ document.addEventListener('keydown', (ev) => {
 //   so the board now shown is painted (playFrame notices a redraw). Everything is then as it
 //   was: nothing is saved, no undo step, nothing in the file.
 // - Reduced motion: no constant motion — the board shows the "to" end against the "from" end's
-//   outlines, and ⇄ on the strip steps between the two.
+//   outlines, and ⇄ on the strip steps between the two. Unless this device's own choice says to
+//   animate Play anyway (playMotionAnyway, the owner's request of 2 November 2026: Remote Desktop
+//   or a thin client often asks for reduced motion when the person wants the motion): ▶ Animate
+//   beside ⇄ on the strip (and in the full screen's) turns it on and plays again, moving; ⇄ Still
+//   there turns it off. setPlayMotion(on, quiet) sets it; the page keeps it on the device
+//   (rememberPlayMotion, part of the page interface) and reads it back with quiet set. Off until
+//   chosen, so reduced motion is respected unless the person asks.
 // ============================================================
 const PLAY_SWING_MS = 2000;
 const PLAY_PAUSE_MS = 600;
@@ -10304,6 +10330,28 @@ const PLAY_AHEAD_MS = 3000;     // a slow model has fewer positions, worked out 
 
 let playChoice = { from: null, to: null, picked: false }; // 'model', 'sliders' or 'sc:' + name; until the page reloads
 let playing = null;
+let playMotionAnyway = false; // animate Play even when the device asks for reduced motion (this device's choice)
+
+// The device asks for reduced motion (05e-compare.js); Play then stands still unless chosen otherwise.
+const motionReduced = () => !!(reducedMotion && reducedMotion.matches);
+const playStill = () => motionReduced() && !playMotionAnyway;
+// The words on ▶ Animate (still) and ⇄ Still (moving), on the strip and in the full screen.
+function playMotionTitle(still){
+  return still ? 'This device asks for less motion, so Play shows the two ends still. Animate Play anyway (remembered in this browser)'
+    : 'Show Play still again, as this device asks for less motion (remembered in this browser)';
+}
+// Sets the choice; a play running plays again between the same ends, still or moving.
+// quiet: not remembered (the page reading it back). Returns the choice.
+function setPlayMotion(on, quiet){
+  playMotionAnyway = !!on;
+  if(!quiet) rememberPlayMotion(playMotionAnyway);
+  if(playing && playing.still !== playStill()){
+    const me = playing;
+    startPlay(me.from.id, me.to.id, { swingMs: me.swingMs, pauseMs: me.pauseMs });
+  }
+  if(showing) syncShowStrip(); // (05gs-show.js)
+  return playMotionAnyway;
+}
 
 // The ends offered: [id, words].
 function playOptions(){
@@ -10383,7 +10431,7 @@ function startPlay(fromId, toId, opts){
     moving: pairs.filter(p => p.moves).map(p => p.key),
     swingMs: Number.isFinite(opts.swingMs) ? Math.max(200, Math.min(60000, opts.swingMs)) : PLAY_SWING_MS,
     pauseMs: Number.isFinite(opts.pauseMs) ? Math.max(0, Math.min(10000, opts.pauseMs)) : PLAY_PAUSE_MS,
-    still: !!(reducedMotion && reducedMotion.matches), // (05e-compare.js)
+    still: playStill(),
     sliders: sliderPositions(), painted: null, index: -1, startedAt: null, runs: 0, ready: false, raf: 0,
     wake: keepScreenOn(),
   };
@@ -13052,7 +13100,7 @@ const FMGRAPH_HELP_TOPICS = [
       { see: ['scenarios', 'sliders', 'explore'] },
     ] },
   { id: 'scenarios', group: 'board', title: 'Named scenarios',
-    keywords: 'scenario scenarios named save switch show compare sc01 what if case version keep play pendulum swing animate move back and forth gif animated',
+    keywords: 'scenario scenarios named save switch show compare sc01 what if case version keep play pendulum swing animate move back and forth gif animated reduced motion still remote desktop',
     summary: 'Save where the sliders are under a name, switch between scenarios, and compare with any of them.',
     body: [
       { p: 'Set the sliders, then press + Save as scenario in the Scenarios panel under the sliders. It is named sc01, sc02 and so on; type a name of your own in its box. Save as many as you like (up to 50 a model).' },
@@ -13060,7 +13108,7 @@ const FMGRAPH_HELP_TOPICS = [
       { p: 'A compares with a scenario: the dashed outlines, difference labels and Biggest movers measure from it, as with 📌 Pin as A, and the strip names it. Press A again to stop.' },
       { p: '⟳ keeps where the sliders are now in that scenario, ↑ ↓ change the order, and × deletes it.' },
       { p: 'Play, under the scenarios, swings the model between two ends and back, like a pendulum, so you can watch a change happen: choose each end (a scenario, the model\'s own numbers or the sliders now) and press ▶ Play. Every number the two ends set differently moves smoothly, slower near the ends, with a short pause at each; the bars, the charts and the sliders follow, and the dashed outlines show the first end. The Tornado and Spider charts and Biggest movers wait until it stops.' },
-      { p: 'It keeps playing while you scroll, click, open a panel, edit a chart or switch to another board (the board shown follows it). ■ Stop or Esc stops it, and so does moving a slider yourself; everything is then as it was: Play changes no slider, saves nothing and is not an undo step. With reduced motion turned on in your device\'s settings, nothing swings: the board shows the second end against the first end\'s outlines, and ⇄ steps between them.' },
+      { p: 'It keeps playing while you scroll, click, open a panel, edit a chart or switch to another board (the board shown follows it). ■ Stop or Esc stops it, and so does moving a slider yourself; everything is then as it was: Play changes no slider, saves nothing and is not an undo step. With reduced motion turned on in your device\'s settings, nothing swings: the board shows the second end against the first end\'s outlines, and ⇄ steps between them. If your device asks for reduced motion when you would rather see it move — Remote Desktop and thin clients often do — press ▶ Animate beside ⇄: Play swings anyway, and this browser remembers it. ⇄ Still in the same place goes back to still. The full screen\'s strip has the same button.' },
       { p: '🎞 on a bar or chart (or 🎞 GIF in the full screen, for what it shows) turns the play into an animated GIF to send or put in a slide: one swing between the two ends chosen here and back, repeating. If Play is running, the GIF uses its ends and the play stops.' },
       { p: 'Scenarios are kept with the model\'s boards: in this browser, in fmIDE\'s document when fmGraph was opened from fmIDE, and in Export all boards. Saving, renaming, updating, moving and deleting them can be undone; showing one is like moving a slider, not a change.' },
       { see: ['compare', 'board-file'] },
@@ -13097,6 +13145,17 @@ const FMGRAPH_HELP_TOPICS = [
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'play-motion-anyway', date: '2026-11-02', title: 'Play can move even when your device asks for reduced motion',
+    summary: 'If your device asks for reduced motion, ▶ Animate on Play\'s strip makes Play swing anyway, and this browser remembers it.',
+    what: [
+      'With reduced motion, Play stands still: it shows the second end against the first end\'s outlines, and ⇄ steps between them. That is still how it starts.',
+      'Next to ⇄ there is now ▶ Animate. It plays again between the same ends, swinging as it does on any other device. ⇄ Still, in the same place, goes back to still.',
+      'This browser remembers the choice, so the next play moves at once. The full screen\'s strip has the same button, and so does a showcase viewer.',
+    ],
+    why: 'Remote Desktop and thin clients often tell the browser to reduce motion, even when the person wants to see Play move.',
+    how: ['Choose the ends under Scenarios and press ▶ Play.', 'On the strip, press ▶ Animate.'],
+    notes: ['Shown only when your device asks for reduced motion. Off until you choose it.', 'Nothing is saved in the board file.'],
+    see: ['scenarios'] },
   { id: 'copy-move-widgets', date: '2026-10-30', title: 'Copy or move a slider, bar or chart to another board',
     summary: '⇄ on a bar\'s, chart\'s or slider\'s header copies it, or moves it, to another board or to a new one.',
     what: [
@@ -14250,6 +14309,11 @@ window.fmGraph = Object.freeze({
   },
   stopPlay: () => stopPlay(),
   stepPlay: () => stepPlay(),
+  // Animate Play even when the device asks for reduced motion (this browser's choice, kept):
+  // setPlayMotion(on) → the choice (a play running plays again, still or moving); playMotion() →
+  // { animateAnyway, reducedMotion (the device asks for it), still (Play would stand still) }.
+  setPlayMotion: (on) => setPlayMotion(!!on),
+  playMotion: () => ({ animateAnyway: playMotionAnyway, reducedMotion: motionReduced(), still: playStill() }),
   playing: () => playing ? { from: playing.from.name, to: playing.to.name, still: playing.still, ready: playing.ready, index: playing.index,
     fraction: playing.index < 0 ? null : playing.fractions[playing.index], positions: playing.positions.length,
     worked: playing.positions.filter(o => resultCache.has(overridesKey(o))).length, runs: playing.runs,

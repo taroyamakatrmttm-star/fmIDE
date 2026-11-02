@@ -28,6 +28,7 @@ moveTo
 movers
 pinA
 play
+playMotion
 playing
 reached
 rectColour
@@ -46,6 +47,7 @@ scenarios
 setColour
 setCommonScale
 setOwnSliders
+setPlayMotion
 setScale
 setSlider
 setSliderLook

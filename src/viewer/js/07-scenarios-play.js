@@ -175,7 +175,17 @@ function renderPlayBar(){
   bar.appendChild(text);
   const button = (label, title, fn) => { const b = make('button', 'compare-btn', label); b.type = 'button'; b.title = title; b.addEventListener('click', fn); bar.appendChild(b); return b; };
   if(playing.still) button('⇄', 'Step to the other end', () => stepPlay()).id = 'btnPlayStep';
+  // The device asks for less motion: animate anyway, or back to still (the engine's setPlayMotion).
+  if(motionReduced()) button(playing.still ? '▶ Animate' : '⇄ Still', playMotionTitle(playing.still), () => setPlayMotion(!playMotionAnyway)).id = 'btnPlayMotion';
   button('■ Stop', 'Stop playing: everything goes back as it was', () => stopPlay()).id = 'btnPlayStop';
+}
+// Animate Play even with reduced motion: a display choice kept on this device, as 🎚 Sliders is.
+const PLAY_MOTION_KEY = 'viewer-play-motion';
+function rememberPlayMotion(on){ try{ viewerStore.put(PLAY_MOTION_KEY, on ? 'on' : 'off').catch(() => {}); }catch(e){ /* not kept: fine */ } }
+async function restorePlayMotion(){
+  let v = null;
+  try{ await viewerStore.ready; v = await viewerStore.get(PLAY_MOTION_KEY); }catch(e){ return; }
+  if(v === 'on' || v === 'off') setPlayMotion(v === 'on', true);
 }
 // The sliders and the reach, f of the way between the ends.
 function paintPlay(f){

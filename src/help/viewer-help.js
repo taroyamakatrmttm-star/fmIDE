@@ -65,11 +65,11 @@ const VIEWER_HELP_TOPICS = [
       { see: ['scenarios', 'kept'] },
     ] },
   { id: 'scenarios', group: 'board', title: 'Scenarios and Play',
-    keywords: 'scenario base play stop swing animate pendulum compare',
+    keywords: 'scenario base play stop swing animate pendulum compare reduced motion still',
     summary: 'Show a scenario, or swing between two.',
     body: [
       { p: 'The buttons above the sliders show each scenario the author saved, and Base the model\'s own numbers. A scenario may change inputs that have no slider here: its numbers are shown in full. Moving a slider then leaves the scenario.' },
-      { p: 'Play swings the model between two ends — Base, a scenario, or My sliders — back and forth until you press ■ Stop or Esc. With reduced motion turned on in your device, it shows one end against the other, and ⇄ steps between them.' },
+      { p: 'Play swings the model between two ends — Base, a scenario, or My sliders — back and forth until you press ■ Stop or Esc. With reduced motion turned on in your device, it shows one end against the other, and ⇄ steps between them; ▶ Animate beside it plays it moving anyway (Remote Desktop often asks for reduced motion), and this device remembers it. ⇄ Still goes back.' },
       { see: ['compare', 'sliders'] },
     ] },
   { id: 'compare', group: 'board', title: 'Comparing with A',

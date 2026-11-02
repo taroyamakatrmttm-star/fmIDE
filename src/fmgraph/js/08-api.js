@@ -371,6 +371,11 @@ window.fmGraph = Object.freeze({
   },
   stopPlay: () => stopPlay(),
   stepPlay: () => stepPlay(),
+  // Animate Play even when the device asks for reduced motion (this browser's choice, kept):
+  // setPlayMotion(on) → the choice (a play running plays again, still or moving); playMotion() →
+  // { animateAnyway, reducedMotion (the device asks for it), still (Play would stand still) }.
+  setPlayMotion: (on) => setPlayMotion(!!on),
+  playMotion: () => ({ animateAnyway: playMotionAnyway, reducedMotion: motionReduced(), still: playStill() }),
   playing: () => playing ? { from: playing.from.name, to: playing.to.name, still: playing.still, ready: playing.ready, index: playing.index,
     fraction: playing.index < 0 ? null : playing.fractions[playing.index], positions: playing.positions.length,
     worked: playing.positions.filter(o => resultCache.has(overridesKey(o))).length, runs: playing.runs,

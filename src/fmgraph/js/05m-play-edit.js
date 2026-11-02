@@ -62,8 +62,17 @@ function renderPlayBar(){
   bar.appendChild(text);
   const button = (label, title, fn) => { const b = make('button', 'compare-btn', label); b.type = 'button'; b.title = title; b.addEventListener('click', fn); bar.appendChild(b); return b; };
   if(playing.still) button('⇄', 'Step to the other end', () => stepPlay()).id = 'btnPlayStep';
+  // The device asks for less motion: animate anyway, or back to still (05m-play.js).
+  if(motionReduced()) button(playing.still ? '▶ Animate' : '⇄ Still', playMotionTitle(playing.still), () => setPlayMotion(!playMotionAnyway)).id = 'btnPlayMotion';
   button('■ Stop', 'Stop playing: everything goes back as it was', () => stopPlay()).id = 'btnPlayStop';
 }
+
+// Animate Play even with reduced motion: this browser's choice (the board engine's setPlayMotion).
+const PLAY_MOTION_KEY = 'fmgraph-play-motion';
+function rememberPlayMotion(on){ store.put(PLAY_MOTION_KEY, on ? 'on' : 'off').catch(() => {}); }
+store.ready.then(() => store.get(PLAY_MOTION_KEY)).then(raw => {
+  if(raw === 'on' || raw === 'off') setPlayMotion(raw === 'on', true);
+}, () => {});
 
 // ---- the row under the scenarios ----
 function renderPlayRow(){

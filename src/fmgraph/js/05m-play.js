@@ -23,7 +23,13 @@
 //   so the board now shown is painted (playFrame notices a redraw). Everything is then as it
 //   was: nothing is saved, no undo step, nothing in the file.
 // - Reduced motion: no constant motion — the board shows the "to" end against the "from" end's
-//   outlines, and ⇄ on the strip steps between the two.
+//   outlines, and ⇄ on the strip steps between the two. Unless this device's own choice says to
+//   animate Play anyway (playMotionAnyway, the owner's request of 2 November 2026: Remote Desktop
+//   or a thin client often asks for reduced motion when the person wants the motion): ▶ Animate
+//   beside ⇄ on the strip (and in the full screen's) turns it on and plays again, moving; ⇄ Still
+//   there turns it off. setPlayMotion(on, quiet) sets it; the page keeps it on the device
+//   (rememberPlayMotion, part of the page interface) and reads it back with quiet set. Off until
+//   chosen, so reduced motion is respected unless the person asks.
 // ============================================================
 const PLAY_SWING_MS = 2000;
 const PLAY_PAUSE_MS = 600;
@@ -33,6 +39,28 @@ const PLAY_AHEAD_MS = 3000;     // a slow model has fewer positions, worked out 
 
 let playChoice = { from: null, to: null, picked: false }; // 'model', 'sliders' or 'sc:' + name; until the page reloads
 let playing = null;
+let playMotionAnyway = false; // animate Play even when the device asks for reduced motion (this device's choice)
+
+// The device asks for reduced motion (05e-compare.js); Play then stands still unless chosen otherwise.
+const motionReduced = () => !!(reducedMotion && reducedMotion.matches);
+const playStill = () => motionReduced() && !playMotionAnyway;
+// The words on ▶ Animate (still) and ⇄ Still (moving), on the strip and in the full screen.
+function playMotionTitle(still){
+  return still ? 'This device asks for less motion, so Play shows the two ends still. Animate Play anyway (remembered in this browser)'
+    : 'Show Play still again, as this device asks for less motion (remembered in this browser)';
+}
+// Sets the choice; a play running plays again between the same ends, still or moving.
+// quiet: not remembered (the page reading it back). Returns the choice.
+function setPlayMotion(on, quiet){
+  playMotionAnyway = !!on;
+  if(!quiet) rememberPlayMotion(playMotionAnyway);
+  if(playing && playing.still !== playStill()){
+    const me = playing;
+    startPlay(me.from.id, me.to.id, { swingMs: me.swingMs, pauseMs: me.pauseMs });
+  }
+  if(showing) syncShowStrip(); // (05gs-show.js)
+  return playMotionAnyway;
+}
 
 // The ends offered: [id, words].
 function playOptions(){
@@ -112,7 +140,7 @@ function startPlay(fromId, toId, opts){
     moving: pairs.filter(p => p.moves).map(p => p.key),
     swingMs: Number.isFinite(opts.swingMs) ? Math.max(200, Math.min(60000, opts.swingMs)) : PLAY_SWING_MS,
     pauseMs: Number.isFinite(opts.pauseMs) ? Math.max(0, Math.min(10000, opts.pauseMs)) : PLAY_PAUSE_MS,
-    still: !!(reducedMotion && reducedMotion.matches), // (05e-compare.js)
+    still: playStill(),
     sliders: sliderPositions(), painted: null, index: -1, startedAt: null, runs: 0, ready: false, raf: 0,
     wake: keepScreenOn(),
   };

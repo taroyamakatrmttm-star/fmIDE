@@ -2088,6 +2088,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
       h2 id="showTitle"
       div aria-label="Bars and charts shown" class="show-chips" id="showChips" role="group"
       button class="show-btn show-play" id="showPlay" title="Play between the ends chosen under Scenarios" type="button" | ▶ Play
+      button class="show-btn show-motion hidden" id="showMotion" type="button"
       button aria-label="Sliders" aria-pressed="false" class="show-btn show-sliders-btn" id="showSlidersBtn" title="Show the board's sliders beside the full screen" type="button" | 🎚
         span class="show-btn-words" | Sliders
       span aria-live="polite" class="show-note" id="showNote"
@@ -4341,6 +4342,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
       h2 id="showTitle"
       div aria-label="Bars and charts shown" class="show-chips" id="showChips" role="group"
       button class="show-btn show-play" id="showPlay" title="Play between the ends chosen under Scenarios" type="button" | ▶ Play
+      button class="show-btn show-motion hidden" id="showMotion" type="button"
       button aria-label="Sliders" aria-pressed="false" class="show-btn show-sliders-btn" id="showSlidersBtn" title="Show the board's sliders beside the full screen" type="button" | 🎚
         span class="show-btn-words" | Sliders
       span aria-live="polite" class="show-note" id="showNote"
@@ -6600,6 +6602,7 @@ body style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
       h2 id="showTitle"
       div aria-label="Bars and charts shown" class="show-chips" id="showChips" role="group"
       button class="show-btn show-play" id="showPlay" title="Play between the ends chosen under Scenarios" type="button" | ▶ Play
+      button class="show-btn show-motion hidden" id="showMotion" type="button"
       button aria-label="Sliders" aria-pressed="false" class="show-btn show-sliders-btn" id="showSlidersBtn" title="Show the board's sliders beside the full screen" type="button" | 🎚
         span class="show-btn-words" | Sliders
       span aria-live="polite" class="show-note" id="showNote"
@@ -6728,6 +6731,7 @@ body class="playing" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h
         strong aria-live="polite" class="play-words" | Showing “Big year”; the outlines show the model's own numbers
         span class="play-at" id="playAt" | Price 13, Volume +20%
       button class="compare-btn" id="btnPlayStep" title="Step to the other end" type="button" | ⇄
+      button class="compare-btn" id="btnPlayMotion" title="This device asks for less motion, so Play shows the two ends still. Animate Play anyway (remembered in this browser)" type="button" | ▶ Animate
       button class="compare-btn" id="btnPlayStop" title="Stop playing: everything goes back as it was" type="button" | ■ Stop
     section class="board moving" id="board"
       div class="board-col"
@@ -8810,6 +8814,7 @@ body class="playing" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h
       h2 id="showTitle"
       div aria-label="Bars and charts shown" class="show-chips" id="showChips" role="group"
       button class="show-btn show-play" id="showPlay" title="Play between the ends chosen under Scenarios" type="button" | ▶ Play
+      button class="show-btn show-motion hidden" id="showMotion" type="button"
       button aria-label="Sliders" aria-pressed="false" class="show-btn show-sliders-btn" id="showSlidersBtn" title="Show the board's sliders beside the full screen" type="button" | 🎚
         span class="show-btn-words" | Sliders
       span aria-live="polite" class="show-note" id="showNote"
@@ -9201,6 +9206,7 @@ body class="" style="--gbar-h: 48px; --mix-l: 0px; --mix-r: 0px; --dock-h: 0px;"
       h2 id="showTitle"
       div aria-label="Bars and charts shown" class="show-chips" id="showChips" role="group"
       button class="show-btn show-play" id="showPlay" title="Play between the ends chosen under Scenarios" type="button" | ▶ Play
+      button class="show-btn show-motion hidden" id="showMotion" type="button"
       button aria-label="Sliders" aria-pressed="false" class="show-btn show-sliders-btn" id="showSlidersBtn" title="Show the board's sliders beside the full screen" type="button" | 🎚
         span class="show-btn-words" | Sliders
       span aria-live="polite" class="show-note" id="showNote"
