@@ -223,11 +223,23 @@ test('reduced motion: Play shows one end against the other, and ⇄ steps', asyn
 test('reduced motion: ▶ Animate plays it moving, remembered after a reload; ⇄ Still goes back', async ({ browser }) => {
   const { context, page, errors } = await serve(browser, madeViewer(readFixture('viewer', 'every-widget.showcase.json'), readFixture('viewer', 'every-widget.fmide')), { reducedMotion: 'reduce' });
   expect(await V(page, () => fmViewer.playMotion())).toEqual({ animateAnyway: false, reducedMotion: true, still: true });
-  const indexes = () => V(page, () => new Promise(done => {
-    const t0 = performance.now(), seen = new Set();
-    const tick = () => { const p = fmViewer.board().playing; seen.add(p.index); if(performance.now() - t0 < 1500) requestAnimationFrame(tick); else done({ seen: [...seen], still: p.still }); };
-    requestAnimationFrame(tick);
-  }));
+  // (Under load Play may first work its positions out ahead: wait until it is ready, then watch
+  // for up to 5 s until it has shown six positions.)
+  const indexes = async () => {
+    await page.waitForFunction(() => { const p = fmViewer.board().playing; return !!p && p.ready !== false; });
+    return V(page, () => new Promise(done => {
+      const t0 = performance.now(), seen = new Set();
+      const tick = () => { const p = fmViewer.board().playing; seen.add(p.index); if(performance.now() - t0 < 5000 && seen.size < 7) requestAnimationFrame(tick); else done({ seen: [...seen], still: p.still }); };
+      requestAnimationFrame(tick);
+    }));
+  };
+  // The strip goes quiet after 3 s and a first tap only wakes it; the mouse over the strip wakes it
+  // and keeps it awake, so the press reaches the button.
+  const pressInStrip = async (sel) => {
+    await page.hover('#showStrip', { position: { x: 4, y: 4 } });
+    await expect(page.locator('#showView')).not.toHaveClass(/quiet/);
+    await page.locator(sel).click();
+  };
   await page.locator('#btnPlay').click();
   await expect(page.locator('#btnPlayMotion')).toHaveText('▶ Animate');
   await page.locator('#btnPlayMotion').click();
@@ -247,10 +259,10 @@ test('reduced motion: ▶ Animate plays it moving, remembered after a reload; �
   // The full screen's strip: ⇄ Still there goes back to still, and that is kept too.
   await page.locator('#barList .widget-full').first().click();
   await expect(page.locator('#showMotion')).toHaveText('⇄ Still');
-  await page.locator('#showMotion').click();
+  await pressInStrip('#showMotion');
   expect((await V(page, () => fmViewer.board())).playing.still).toBe(true);
   await expect(page.locator('#showMotion')).toHaveText('▶ Animate');
-  await page.locator('#showClose').click();
+  await pressInStrip('#showClose');
   await expect(page.locator('#btnPlayStep')).toHaveCount(1);
   await page.reload();
   await page.waitForFunction(() => !!window.fmViewer && fmViewer.state().loaded);
