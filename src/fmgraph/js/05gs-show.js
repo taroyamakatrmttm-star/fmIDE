@@ -20,6 +20,8 @@
 // The page defines, beside the usual page interface: renderPlayRow (the Play ends), help (topic
 // full-screen), showStripExtras() (its own buttons in the strip), showSliderRow(s),
 // rememberShowSliders(on) and showEscapeBlocked() (Esc belongs to something open over the view).
+// With reduced motion, ▶ Animate / ⇄ Still #showMotion beside ▶ Play / ■ Stop sets Play's own
+// choice (setPlayMotion, 05m-play.js; the page's rememberPlayMotion keeps it).
 // ============================================================
 const SHOW_STRIP_MS = 3000;
 const SHOW_ASPECT = 1.6;   // a bar's or chart's drawing, about this much wider than tall
@@ -201,6 +203,13 @@ function syncShowStrip(){
   if(b.textContent !== text){ b.textContent = text; b.title = on ? 'Stop playing' : 'Play between the ends chosen under Scenarios'; }
   b.setAttribute('aria-pressed', on ? 'true' : 'false');
   if(on) $('showNote').textContent = '';
+  // The device asks for less motion: ▶ Animate while Play stands still, ⇄ Still while it moves (05m-play.js).
+  const m = $('showMotion'), offer = on && motionReduced();
+  m.classList.toggle('hidden', !offer);
+  if(offer){
+    const words = playing.still ? '▶ Animate' : '⇄ Still';
+    if(m.textContent !== words){ m.textContent = words; m.title = playMotionTitle(playing.still); }
+  }
   showStripExtras();
 }
 
@@ -291,6 +300,7 @@ function wireShow(){
     $('showNote').textContent = words ? '' : 'Nothing to play: choose two different ends under Scenarios.';
     syncShowStrip();
   });
+  $('showMotion').addEventListener('click', () => setPlayMotion(!playMotionAnyway));
   $('showSlidersBtn').addEventListener('click', () => setShowSliders(!showSlidersShown()));
   ['pointerdown', 'focusin'].forEach(t => $('showView').addEventListener(t, wakeShowStrip, true));
   document.addEventListener('keydown', () => { if(showing) wakeShowStrip(); }, true);

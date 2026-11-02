@@ -219,6 +219,50 @@ test('reduced motion: Play shows one end against the other, and ⇄ steps', asyn
   await context.close();
 });
 
+// The owner's request of 2 November 2026: a display choice, kept on the device, to animate Play anyway.
+test('reduced motion: ▶ Animate plays it moving, remembered after a reload; ⇄ Still goes back', async ({ browser }) => {
+  const { context, page, errors } = await serve(browser, madeViewer(readFixture('viewer', 'every-widget.showcase.json'), readFixture('viewer', 'every-widget.fmide')), { reducedMotion: 'reduce' });
+  expect(await V(page, () => fmViewer.playMotion())).toEqual({ animateAnyway: false, reducedMotion: true, still: true });
+  const indexes = () => V(page, () => new Promise(done => {
+    const t0 = performance.now(), seen = new Set();
+    const tick = () => { const p = fmViewer.board().playing; seen.add(p.index); if(performance.now() - t0 < 1500) requestAnimationFrame(tick); else done({ seen: [...seen], still: p.still }); };
+    requestAnimationFrame(tick);
+  }));
+  await page.locator('#btnPlay').click();
+  await expect(page.locator('#btnPlayMotion')).toHaveText('▶ Animate');
+  await page.locator('#btnPlayMotion').click();
+  let seen = await indexes();
+  expect(seen.still).toBe(false);
+  expect(seen.seen.length).toBeGreaterThan(5);
+  await expect(page.locator('#playBar')).toContainText('Playing Base ⇄ High price');
+  await expect(page.locator('#btnPlayMotion')).toHaveText('⇄ Still');
+  await V(page, () => fmViewer.stopPlay());
+  // Kept on this device: after a reload Play moves at once.
+  await page.reload();
+  await page.waitForFunction(() => !!window.fmViewer && fmViewer.state().loaded && fmViewer.playMotion().animateAnyway === true);
+  await page.locator('#btnPlay').click();
+  seen = await indexes();
+  expect(seen.still).toBe(false);
+  expect(seen.seen.length).toBeGreaterThan(5);
+  // The full screen's strip: ⇄ Still there goes back to still, and that is kept too.
+  await page.locator('#barList .widget-full').first().click();
+  await expect(page.locator('#showMotion')).toHaveText('⇄ Still');
+  await page.locator('#showMotion').click();
+  expect((await V(page, () => fmViewer.board())).playing.still).toBe(true);
+  await expect(page.locator('#showMotion')).toHaveText('▶ Animate');
+  await page.locator('#showClose').click();
+  await expect(page.locator('#btnPlayStep')).toHaveCount(1);
+  await page.reload();
+  await page.waitForFunction(() => !!window.fmViewer && fmViewer.state().loaded);
+  await page.locator('#btnPlay').click();
+  expect((await V(page, () => fmViewer.board())).playing.still).toBe(true);
+  expect(await V(page, () => fmViewer.playMotion().animateAnyway)).toBe(false);
+  // The model is never changed.
+  expect(await V(page, () => fmViewer.modelText() === fmViewer.modelTextAtLoad())).toBe(true);
+  expect(errors).toEqual([]);
+  await context.close();
+});
+
 test('the Logic view follows the Board: the numbers, a ring on what moved, the card', async ({ page, browser }) => {
   await openBoard(page);
   await V(page, () => fmViewer.setSlider('Price', 12));

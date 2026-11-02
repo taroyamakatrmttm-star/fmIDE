@@ -277,6 +277,7 @@ Oldest first. *Step* is the build step (and phase) the pull request belongs to; 
 | branch `claude/excel-document-layout` | 2026-11-01 | ExcelExporter: a document's Excel layout comes before the one this browser remembers (kept aside, Layout → Use This Browser's Layout…); the layout saved on hiding only when changed | after 20 | [5.9](05-excelexporter.md#layouts) |
 | branch `claude/simplify-to-sliders-5cfd71` | 2026-11-01 | fmIDE: File → Simplify for Inputs… — a copy holding only what chosen inputs move, fixed numbers for what it still reads, checked against the full model (workspace 16); Make Showcase Viewer…'s Simplify to the sliders, the viewer and its workbook too (showcase 2) | after 20 | [8.5](08-showcase.md#simplify) |
 | branch `claude/simplify-graph-boards` | 2026-11-02 | fmIDE: Simplify for Inputs… takes fmGraph's boards as they are now (not a showcase's copy); a slider on a block's input rectangle named by it | after 20 | [8.5](08-showcase.md#simplify) |
+| branch `claude/play-motion-anyway` | 2026-11-02 | fmGraph and fmShowcase: ▶ Animate makes Play move even when the device asks for reduced motion, remembered in the browser | after 20 | [6.5](06-fmgraph.md#graph-scenarios) |
 
 ---
 

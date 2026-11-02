@@ -2,6 +2,12 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## fmGraph and fmShowcase: Play can move even with reduced motion
+- When the device asks for reduced motion (Remote Desktop and thin clients often do), Play still starts still, but its strip now has **▶ Animate** beside ⇄ (`#btnPlayMotion`): Play plays again between the same ends, moving. **⇄ Still** in the same place goes back. The full screen's strip has the same button (`#showMotion`). Shown only with reduced motion; off until chosen.
+- Kept in the browser: fmGraph's `fmgraph-play-motion`, the viewer's `viewer-play-motion` (`docs/architecture/storage.md`). Nothing in the board file.
+- The board engine's `playMotionAnyway` and `setPlayMotion(on, quiet)` (`05m-play.js`); a new page-interface name, `rememberPlayMotion(on)`. `fmGraph.setPlayMotion(on)` / `playMotion()`, the same on `window.fmViewer`.
+- Tests: group 82 (two new tests), group 93 (one new test), group 92 (changed on purpose: `rememberPlayMotion` in `PAGE_INTERFACE`; the `fmgraph-api.txt` snapshot gains `playMotion` and `setPlayMotion`, `fmgraph-every-widget.txt` and `-phone.txt` the hidden `#showMotion` and, with reduced motion, `#btnPlayMotion`). Branch `claude/play-motion-anyway`.
+
 ## Simplify for Inputs…: fmGraph's boards as they are now; sliders named by their rectangles
 - Simplify for Inputs… (the window, Use the boards' sliders, its scenarios, and `fm.simplifyPlan` / `fm.simplifyForInputs` without inputs) takes the sliders from the document's fmGraph boards (`graphBoards`) only. Before, a document with a showcase used the showcase's boards — a copy taken when Make Showcase Viewer… last ran — so a model with 10 sliders on fmGraph's board offered the showcase's 2. Make Showcase Viewer…'s Simplify to the sliders still uses the showcase's boards.
 - A row for a slider on a rectangle the picker doesn't list (a block's input rectangle) is named by the rectangle's own name, else the slider's, and only then `#id` (it showed "#n59185" for Draw down).

@@ -8,6 +8,17 @@
 // person would notice. **A change people will notice adds its entry here in the same pull
 // request.**
 const FMGRAPH_WHATS_NEW = [
+  { id: 'play-motion-anyway', date: '2026-11-02', title: 'Play can move even when your device asks for reduced motion',
+    summary: 'If your device asks for reduced motion, ▶ Animate on Play\'s strip makes Play swing anyway, and this browser remembers it.',
+    what: [
+      'With reduced motion, Play stands still: it shows the second end against the first end\'s outlines, and ⇄ steps between them. That is still how it starts.',
+      'Next to ⇄ there is now ▶ Animate. It plays again between the same ends, swinging as it does on any other device. ⇄ Still, in the same place, goes back to still.',
+      'This browser remembers the choice, so the next play moves at once. The full screen\'s strip has the same button, and so does a showcase viewer.',
+    ],
+    why: 'Remote Desktop and thin clients often tell the browser to reduce motion, even when the person wants to see Play move.',
+    how: ['Choose the ends under Scenarios and press ▶ Play.', 'On the strip, press ▶ Animate.'],
+    notes: ['Shown only when your device asks for reduced motion. Off until you choose it.', 'Nothing is saved in the board file.'],
+    see: ['scenarios'] },
   { id: 'copy-move-widgets', date: '2026-10-30', title: 'Copy or move a slider, bar or chart to another board',
     summary: '⇄ on a bar\'s, chart\'s or slider\'s header copies it, or moves it, to another board or to a new one.',
     what: [

@@ -332,6 +332,75 @@ test('reduced motion: no motion; ⇄ steps between the ends', async ({ page, pag
   expect(pageErrors).toEqual([]);
 });
 
+// The owner's request of 2 November 2026: Remote Desktop asks for reduced motion, so fmGraph has
+// its own choice to animate Play anyway — ▶ Animate on the strip, ⇄ Still back, kept in the browser.
+test('reduced motion: ▶ Animate plays it moving, remembered after a reload; ⇄ Still goes back', async ({ page, pageErrors }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openSample(page);
+  await lowAndHigh(page);
+  expect(await g(page, () => fmGraph.playMotion())).toEqual({ animateAnyway: false, reducedMotion: true, still: true });
+  await g(page, () => fmGraph.play({ from: 'Low', to: 'High', seconds: 0.5, pause: 0.1 }));
+  expect(await g(page, () => fmGraph.playing().still)).toBe(true);
+  await expect(page.locator('#btnPlayMotion')).toHaveText('▶ Animate');
+  await page.click('#btnPlayMotion');
+  // Playing again, moving: the positions advance on the page's clock.
+  const moving = async () => {
+    const seen = await g(page, () => new Promise(done => {
+      const t0 = performance.now(), seen = new Set();
+      const tick = () => { const p = fmGraph.playing(); seen.add(p.index); if(performance.now() - t0 < 1200) requestAnimationFrame(tick); else done({ seen: [...seen], p }); };
+      requestAnimationFrame(tick);
+    }));
+    expect(seen.p.still).toBe(false);
+    expect(seen.seen.length).toBeGreaterThan(5);
+    expect(seen.seen.some(i => i > 0 && i < seen.p.positions - 1)).toBe(true);
+  };
+  await moving();
+  await expect(page.locator('#playBar .play-words')).toHaveText('Playing “Low” ⇄ “High”');
+  await expect(page.locator('#btnPlayStep')).toHaveCount(0);
+  await expect(page.locator('#btnPlayMotion')).toHaveText('⇄ Still');
+  await g(page, () => fmGraph.stopPlay());
+  // Kept in this browser: after a reload Play moves at once.
+  await page.reload();
+  await page.waitForFunction(() => !!window.fmGraph && fmGraph.playMotion().animateAnyway === true);
+  await page.click('#btnSample');
+  await lowAndHigh(page);
+  await g(page, () => fmGraph.play({ from: 'Low', to: 'High', seconds: 0.5, pause: 0.1 }));
+  await moving();
+  // The full screen's strip offers the same choice: ⇄ Still there stops the motion.
+  await page.locator('.bar-widget .widget-full').first().click();
+  await expect(page.locator('#showMotion')).toHaveText('⇄ Still');
+  await page.click('#showMotion');
+  expect(await g(page, () => fmGraph.playing().still)).toBe(true);
+  await expect(page.locator('#showMotion')).toHaveText('▶ Animate');
+  await page.click('#showClose');
+  await expect(page.locator('#btnPlayMotion')).toHaveText('▶ Animate');
+  await expect(page.locator('#btnPlayStep')).toHaveCount(1);
+  // Off again, and remembered so.
+  await page.reload();
+  await page.waitForFunction(() => !!window.fmGraph);
+  await page.click('#btnSample');
+  await lowAndHigh(page);
+  await g(page, () => fmGraph.play({ from: 'Low', to: 'High' }));
+  expect(await g(page, () => fmGraph.playing().still)).toBe(true);
+  expect(await g(page, () => fmGraph.setPlayMotion(true))).toBe(true);
+  expect(await g(page, () => fmGraph.playing().still)).toBe(false);
+  expect(await g(page, () => fmGraph.setPlayMotion(false))).toBe(false);
+  expect(await g(page, () => fmGraph.playing().still)).toBe(true);
+  expect(pageErrors).toEqual([]);
+});
+
+test('without reduced motion: no ▶ Animate, Play moves whatever the choice', async ({ page, pageErrors }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await openSample(page);
+  await lowAndHigh(page);
+  await g(page, () => fmGraph.play({ from: 'Low', to: 'High' }));
+  expect(await g(page, () => fmGraph.playing().still)).toBe(false);
+  await expect(page.locator('#btnPlayMotion')).toHaveCount(0);
+  await page.locator('.bar-widget .widget-full').first().click();
+  await expect(page.locator('#showMotion')).toBeHidden();
+  expect(pageErrors).toEqual([]);
+});
+
 test('window.fmGraph: play refuses ends that give the same numbers, or an unknown scenario', async ({ page, pageErrors }) => {
   await openSample(page);
   // No scenarios: the model's own numbers to the sliders now.

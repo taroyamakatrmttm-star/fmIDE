@@ -80,6 +80,9 @@ window.fmViewer = {
   play(from, to){ const w = startPlay(playEndId(from), playEndId(to)); if(!w) throw new Error('From and to give the same numbers: there is nothing to play.'); return w; },
   stopPlay(){ return stopPlay(); },
   stepPlay(){ return stepPlay(); },
+  // Animate Play even with reduced motion (kept on this device), as fmGraph.setPlayMotion / playMotion.
+  setPlayMotion(on){ return setPlayMotion(!!on); },
+  playMotion(){ return { animateAnyway: playMotionAnyway, reducedMotion: motionReduced(), still: playStill() }; },
   pinA(){ return pinNow(); },
   unpinA(){ unpinA(); },
   swapA(){ return swapNow(); },
@@ -125,6 +128,7 @@ wireCard();
 wireBoard();
 wireShow(); // the full screen (05gs-show.js)
 restoreShowSliders();
+restorePlayMotion();
 wireHelp();
 wireExcel();
 $('tabBoard').addEventListener('click', () => showView('board'));
