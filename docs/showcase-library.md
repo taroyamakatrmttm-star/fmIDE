@@ -23,16 +23,11 @@ Each new section gets its own maker folder under `gallery/makers/`.
 
 | No. | Shown by | How much |
 |---|---|---|
-| 1 | CA01 Buying PPE with cash | In full: total assets stay 100 as cash becomes PPE; profit stays 0. |
-| 2 | CA02 Borrowing | In full: assets and the loan grow together; equity and profit don't move. |
-| 3 | CA03 Repaying loan principal | In full: a debt-service waterfall splits the interest (an expense) from the principal (not one). |
-| 4 | CA04 Customer deposits | In full: cash arrives with the deposit; revenue comes only when the goods are delivered. |
-| 5 | CA05 A cash sale; also Sale - cash or AR | In full: a margin bridge from the cash received to the profit. |
-| 13 | Purchase - cash or AP | In full: the purchase creates inventory, and the income statement stays at zero. |
-| 12 | Purchase - cash or AP, Period 2 | Paying the AP moves cash only; there is no new expense. |
-| 11, 14 | Sale - cash or AR | Revenue in Period 1 before the cash; collecting in Period 2 creates no revenue. |
+| 1–20 | CA01–CA20, the section "Counterintuitive accounting, Level 1: fundamentals" | In full: one showcase per item, made by the lessons maker (3 November 2026). |
+| 5, 11, 14 | Also Sale - cash or AR | The same points with inventory: cash of 100 against a profit of 10; revenue before the cash. |
+| 12, 13 | Also Purchase - cash or AP | The purchase creates inventory, not an expense; paying the AP moves only cash. |
 | 25, 26 | Sale - cash or AR, Purchase - cash or AP; 06 AR and 07 AP in Zero to Dividend | AR growth uses operating cash, and AP growth keeps it, in the cash flow waterfalls. |
-| 8 | 01 Equity in Zero to Dividend | The owners' contribution reaches the balance sheet, not the income statement. |
+| 8 | Also 01 Equity in Zero to Dividend | The owners' contribution reaches the balance sheet, not the income statement. |
 
 ## Level 1 — Accounting fundamentals (1–20)
 
