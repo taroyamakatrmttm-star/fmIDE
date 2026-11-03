@@ -1,8 +1,11 @@
 // The showcase gallery (phase V6 of docs/viewer-brief.md): from a folder of made viewers (the
 // .html files File → Make Showcase Viewer… or npm run make-viewers write), the site's /gallery —
-//   gallery/index.html       a plain page, no JavaScript: a card per viewer (its picture, title,
-//                            description, author, licence, size, Open and Download), in the
-//                            sections gallery.json gives, else by title
+//   gallery/index.html       a card per viewer (its picture, title, description, author, licence,
+//                            size, Open and Download), in the sections gallery.json gives, else
+//                            by title; and a list of the same viewers, a row each (hidden), the
+//                            search box and the Grid / List switch (hidden): its one small
+//                            script, src/gallery/gallery.js, shows them — without it, the cards
+//                            as before
 //   gallery/style.css        the catalogue's style sheet (src/library/style.css) and the gallery's
 //                            own (src/gallery/gallery.css)
 //   gallery/v/<id>.html      each viewer, REBUILT with the viewer's current page: only its three
@@ -12,8 +15,10 @@
 //                            own viewer code (one script hash, the policy's), whatever made it
 //   gallery/p/<id>.png       its picture, when the folder has one (make-viewers --pictures)
 // and the two rules of its security policy, on paths that never overlap (every matching _headers
-// rule applies): the page runs no script at all; the viewers run only the viewer's own and
-// connect to nothing. The viewers sit in a folder of their own, v/, so one rule covers them all
+// rule applies): the page runs only its own script, allowed by its exact hash (GALLERY_SCRIPT_HASH,
+// worked out from the script's bytes; the owner's choice of 3 November 2026), loads nothing and
+// connects to nothing; the viewers run only the viewer's own and connect to nothing.
+// The viewers sit in a folder of their own, v/, so one rule covers them all
 // (Cloudflare allows 100 rules in _headers). Every text through escapeXml, every link and file
 // name from a checked id. A viewer that doesn't read, an id used twice or a list naming a viewer
 // that isn't there stops the build (GalleryError, nothing written).
@@ -21,6 +26,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { escapeXml } = require('../src/shared/escaping.js');
 const { fileTextProblem } = require('../src/shared/file-formats.js');
 const { readFmData, FMIDE_FILE_MIGRATIONS } = require('../src/shared/fmide-files.js');
@@ -28,7 +34,11 @@ const SC = require('../src/shared/showcase.js');
 
 const ROOT = path.join(__dirname, '..');
 const h = (s) => escapeXml(String(s));
-const GALLERY_POLICY = "default-src 'none'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+// The page's one script, its line ends made LF so its hash is the same on every computer.
+const GALLERY_SCRIPT = fs.readFileSync(path.join(ROOT, 'src', 'gallery', 'gallery.js'), 'utf8').replace(/\r\n?/g, '\n');
+if(/<\/script/i.test(GALLERY_SCRIPT) || /<!--/.test(GALLERY_SCRIPT)) throw new Error('src/gallery/gallery.js must not spell out a closing script tag or <!--.');
+const GALLERY_SCRIPT_HASH = "'sha256-" + crypto.createHash('sha256').update(GALLERY_SCRIPT, 'utf8').digest('base64') + "'";
+const GALLERY_POLICY = "default-src 'none'; script-src " + GALLERY_SCRIPT_HASH + "; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 const PICTURE_MAX = 2 * 1024 * 1024;
 const PNG = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
 
@@ -85,10 +95,21 @@ function rebuildViewer(file, text, viewerPage){
 
 const sizeText = (n) => n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
 
-function card(v, picture){
+// What the page's search looks in: the title, the description and the section's name, one line.
+const searchText = (v, section) => [v.title, v.description, section].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+// A description as one line for the list, cut at a word near 160 characters.
+function oneLine(text){
+  const t = String(text).replace(/\s+/g, ' ').trim();
+  if(t.length <= 160) return t;
+  const cut = t.slice(0, 160);
+  const at = cut.lastIndexOf(' ');
+  return (at > 100 ? cut.slice(0, at) : cut).replace(/[\s.,;:–—-]+$/, '') + '…';
+}
+
+function card(v, picture, section){
   const by = [v.author, v.licence, sizeText(v.size)].filter(Boolean).map(h).join(' · ');
   return [
-    '<article class="viewer-card">',
+    '<article class="viewer-card" data-id="' + v.id + '" data-search="' + h(searchText(v, section)) + '">',
     picture ? '<a class="viewer-picture" href="v/' + v.id + '"><img src="p/' + v.id + '.png" alt="" loading="lazy"></a>' : '',
     '<h3><a href="v/' + v.id + '">' + h(v.title) + '</a></h3>',
     v.description ? '<p>' + h(v.description) + '</p>' : '',
@@ -97,6 +118,29 @@ function card(v, picture){
     '</article>',
   ].filter(Boolean).join('\n');
 }
+
+function row(v, section){
+  const desc = oneLine(v.description);
+  return [
+    '<li class="viewer-row" data-id="' + v.id + '" data-search="' + h(searchText(v, section)) + '">',
+    '<a class="row-title" href="v/' + v.id + '">' + h(v.title) + '</a>',
+    section ? '<span class="row-section">' + h(section) + '</span>' : '',
+    desc ? '<span class="row-description">' + h(desc) + '</span>' : '',
+    '<span class="row-actions"><a class="viewer-open" href="v/' + v.id + '">Open</a> <a href="v/' + v.id + '.html" download="' + v.id + '.html">Download</a></span>',
+    '</li>',
+  ].filter(Boolean).join('\n');
+}
+
+// The search box and the Grid / List switch, hidden until the script shows them.
+const TOOLS = [
+  '<div class="gallery-tools" id="galleryTools" hidden>',
+  '<label class="gallery-search" for="gallerySearch">Search</label>',
+  '<input type="search" id="gallerySearch" autocomplete="off" spellcheck="false" placeholder="Title, description or section">',
+  '<span class="gallery-count" id="galleryCount" aria-live="polite"></span>',
+  '<span class="gallery-views" role="group" aria-label="Show the viewers as"><button type="button" id="viewGrid" aria-pressed="true">Grid</button><button type="button" id="viewList" aria-pressed="false">List</button></span>',
+  '</div>',
+  '<p class="gallery-none" id="galleryNone" hidden>No viewer matches your search.</p>',
+].join('\n');
 
 function indexPage(list, viewers, pictures){
   const byId = new Map(viewers.map(v => [v.id, v]));
@@ -111,12 +155,18 @@ function indexPage(list, viewers, pictures){
   main.push('<p class="lead">' + (list.intro ? h(list.intro) : 'Models made with fmIDE: open one to move its sliders, see how each number is worked out and download it in Excel. Nothing is installed, and nothing you do leaves your device.') + '</p>');
   main.push('<p class="viewer-note">On an iPhone or iPad, <b>Open</b> runs a viewer in Safari; send its address to share it. A downloaded viewer opens there only in a preview, so keep downloads for a computer.</p>');
   if(!viewers.length) main.push('<p>No viewers yet.</p>');
+  else main.push(TOOLS);
+  main.push('<div id="viewerGrid">');
   sections.forEach(s => {
     main.push('<section>' + (s.title ? '<h2>' + h(s.title) + '</h2>' : ''));
     main.push('<div class="viewer-cards">');
-    s.viewers.forEach(v => main.push(card(v, pictures.has(v.id))));
+    s.viewers.forEach(v => main.push(card(v, pictures.has(v.id), s.title)));
     main.push('</div></section>');
   });
+  main.push('</div>');
+  main.push('<ul class="viewer-rows" id="viewerList" hidden>');
+  sections.forEach(s => s.viewers.forEach(v => main.push(row(v, s.title))));
+  main.push('</ul>');
   return [
     '<!doctype html>', '<html lang="en">', '<head>', '<meta charset="utf-8">',
     '<meta name="viewport" content="width=device-width, initial-scale=1">',
@@ -125,6 +175,8 @@ function indexPage(list, viewers, pictures){
     '<header class="top"><a class="home" href="./">' + h(title) + '</a><a href="../">Open fmIDE</a></header>',
     '<main>', main.join('\n'), '</main>',
     '<footer><p>Each model © its author, under the licence its card names. The viewer, fmShowcase, is licensed under the Apache License 2.0 (<a href="../LICENSE.txt">the full text</a>).</p></footer>',
+    // The page's one script (search, Grid / List), allowed by its hash; none without viewers.
+    ...(viewers.length ? ['<script>' + GALLERY_SCRIPT + '</script>'] : []),
     '</body>', '</html>', ''
   ].join('\n');
 }
@@ -170,4 +222,4 @@ function buildGallery(dir, viewerPage){
   return { files, viewers: viewers.map(v => ({ id: v.id, title: v.title, size: v.size, picture: pictures.has(v.id) })) };
 }
 
-module.exports = { buildGallery, findGallery, galleryHeaders, GalleryError, GALLERY_POLICY, pageScripts };
+module.exports = { buildGallery, findGallery, galleryHeaders, GalleryError, GALLERY_POLICY, GALLERY_SCRIPT, GALLERY_SCRIPT_HASH, pageScripts };

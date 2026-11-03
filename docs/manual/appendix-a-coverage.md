@@ -278,6 +278,7 @@ Oldest first. *Step* is the build step (and phase) the pull request belongs to; 
 | branch `claude/simplify-to-sliders-5cfd71` | 2026-11-01 | fmIDE: File → Simplify for Inputs… — a copy holding only what chosen inputs move, fixed numbers for what it still reads, checked against the full model (workspace 16); Make Showcase Viewer…'s Simplify to the sliders, the viewer and its workbook too (showcase 2) | after 20 | [8.5](08-showcase.md#simplify) |
 | branch `claude/simplify-graph-boards` | 2026-11-02 | fmIDE: Simplify for Inputs… takes fmGraph's boards as they are now (not a showcase's copy); a slider on a block's input rectangle named by it | after 20 | [8.5](08-showcase.md#simplify) |
 | branch `claude/play-motion-anyway` | 2026-11-02 | fmGraph and fmShowcase: ▶ Animate makes Play move even when the device asks for reduced motion, remembered in the browser | after 20 | [6.5](06-fmgraph.md#graph-scenarios) |
+| branch `claude/gallery-list-search` | 2026-11-03 | The showcase gallery: a search box that filters as you type (title, description, section; every word), Grid or List (a row per viewer), the choice remembered in the browser; the page's one small script allowed by its hash | after 20 | [8.4](08-showcase.md#showcase-gallery) |
 
 ---
 

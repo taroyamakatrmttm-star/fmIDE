@@ -450,7 +450,7 @@ test('on the site: the viewer\'s page runs under its own security policy, offlin
 
 // Phase V6: the site's /gallery, built from tests/fixtures/viewer/gallery/ (viewers made with an
 // older, smaller page: the build rebuilds them with today's).
-test('the gallery on the site: its page runs no script; each viewer runs today\'s viewer under its policy, connecting to nothing, with ← Gallery and ⇪ Share link', async ({ browser }) => {
+test('the gallery on the site: its page runs only its own script; each viewer runs today\'s viewer under its policy, connecting to nothing, with ← Gallery and ⇪ Share link', async ({ browser }) => {
   const W = require('./helpers/site');
   const plain = await W.startSiteServer();
   const site = await W.startSiteServer({ gallery: fixture('viewer', 'gallery') });
@@ -506,6 +506,116 @@ test('the gallery on the site: its page runs no script; each viewer runs today\'
   } finally {
     await context.close();
     for(const s of [site, plain]){ await s.close().catch(() => {}); fs.rmSync(s.dir, { recursive: true, force: true }); }
+  }
+});
+
+// The gallery page's one script (branch claude/gallery-list-search): search and Grid / List,
+// allowed by its hash; without script the page shows its cards as before.
+test('the gallery page: search filters as you type, Grid / List kept after a reload, its one script refused nothing; without script the cards as before', async ({ browser }) => {
+  const W = require('./helpers/site');
+  const site = await W.startSiteServer({ gallery: fixture('viewer', 'gallery') });
+  const context = await browser.newContext({ viewport: { width: 1400, height: 900 } });
+  await context.addInitScript(() => { window.__refused = []; document.addEventListener('securitypolicyviolation', e => window.__refused.push(e.violatedDirective + ' ' + e.blockedURI)); });
+  const seen = [];
+  context.on('request', r => seen.push(r.url()));
+  const plain = await browser.newContext({ viewport: { width: 1400, height: 900 }, javaScriptEnabled: false });
+  try{
+    const page = await context.newPage();
+    const violations = [];
+    page.on('console', m => { if(/Content Security Policy|Refused to/i.test(m.text())) violations.push(m.text()); });
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    const res = await page.goto(site.origin + 'gallery/');
+    expect(res.headers()['content-security-policy']).toMatch(/^default-src 'none'; script-src 'sha256-[A-Za-z0-9+/]+=*';/);
+    expect(res.headers()['content-security-policy']).not.toContain('connect-src');
+    // The script ran: the tools are shown, Grid pressed, the cards shown and the list hidden.
+    await expect(page.locator('#galleryTools')).toBeVisible();
+    await expect(page.locator('#galleryCount')).toHaveText('3 viewers');
+    await expect(page.locator('#viewGrid')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#viewList')).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.locator('.viewer-card')).toHaveCount(3);
+    await expect(page.locator('#viewerGrid')).toBeVisible();
+    await expect(page.locator('#viewerList')).toBeHidden();
+    const visibleCards = () => page.locator('.viewer-card:visible h3');
+    const visibleSections = () => page.locator('#viewerGrid section:visible h2');
+    // Every word typed, in any case, in the title, description or section.
+    const box = page.locator('#gallerySearch');
+    await box.click();
+    await page.keyboard.type('SHOP week');
+    await expect(page.locator('#galleryCount')).toHaveText('2 of 3');
+    await expect(visibleCards()).toHaveText(['How a shop makes a profit', 'Shop B']);
+    await expect(visibleSections()).toHaveText(['Week 1']); // "More" left empty: hidden
+    await expect(page.locator('#galleryNone')).toBeHidden();
+    await box.fill('quotes');
+    await expect(page.locator('#galleryCount')).toHaveText('1 of 3');
+    await expect(visibleCards()).toHaveText(['<script>alert(1)</script> & "quotes"']);
+    await expect(visibleSections()).toHaveText(['More']);
+    await box.fill('shop more');
+    await expect(page.locator('#galleryCount')).toHaveText('0 of 3');
+    await expect(page.locator('#galleryNone')).toBeVisible();
+    await expect(page.locator('#galleryNone')).toHaveText('No viewer matches your search.');
+    await expect(visibleSections()).toHaveCount(0);
+    // Escape clears.
+    await box.press('Escape');
+    await expect(box).toHaveValue('');
+    await expect(page.locator('#galleryCount')).toHaveText('3 viewers');
+    await expect(page.locator('#galleryNone')).toBeHidden();
+    await expect(visibleCards()).toHaveCount(3);
+    // List: a row per viewer, the search the same there.
+    await page.locator('#viewList').click();
+    await expect(page.locator('#viewList')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#viewGrid')).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.locator('#viewerGrid')).toBeHidden();
+    await expect(page.locator('.viewer-row:visible')).toHaveCount(3);
+    await expect(page.locator('.viewer-row').nth(2).locator('.row-title')).toHaveText('<script>alert(1)</script> & "quotes"');
+    await box.fill('profit');
+    await expect(page.locator('#galleryCount')).toHaveText('1 of 3');
+    await expect(page.locator('.viewer-row:visible .row-title')).toHaveText(['How a shop makes a profit']);
+    await expect(page.locator('.viewer-row:visible .row-section')).toHaveText(['Week 1']);
+    // Kept after a reload, on this browser.
+    await page.reload();
+    await expect(page.locator('#viewList')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#viewerList')).toBeVisible();
+    await expect(page.locator('#viewerGrid')).toBeHidden();
+    await page.locator('#viewGrid').click();
+    await page.reload();
+    await expect(page.locator('#viewGrid')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#viewerGrid')).toBeVisible();
+    // The markup in a viewer's texts is text in the rows too: nothing of it became an element.
+    expect(await page.locator('main script, main i, #viewerList img, #viewerList b').count()).toBe(0);
+    // No sideways scroll at phone width, in either view.
+    await page.setViewportSize({ width: 360, height: 760 });
+    for(const view of ['#viewGrid', '#viewList']){
+      await page.locator(view).click();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), view).toBe(true);
+    }
+    expect(await page.evaluate(() => window.__refused)).toEqual([]);
+    expect(violations).toEqual([]);
+    expect(errors).toEqual([]);
+    expect(seen.filter(u => !u.startsWith(site.origin))).toEqual([]);
+    // Storage blocked (it throws): the page still works, Grid by default.
+    const blocked = await context.newPage();
+    await blocked.addInitScript(() => { Object.defineProperty(window, 'localStorage', { get(){ throw new Error('blocked'); } }); });
+    const blockedErrors = [];
+    blocked.on('pageerror', e => blockedErrors.push(e.message));
+    await blocked.goto(site.origin + 'gallery/');
+    await expect(blocked.locator('#galleryTools')).toBeVisible();
+    await expect(blocked.locator('#viewGrid')).toHaveAttribute('aria-pressed', 'true');
+    await blocked.locator('#viewList').click();
+    await expect(blocked.locator('#viewerList')).toBeVisible();
+    expect(blockedErrors).toEqual([]);
+    // Without script: every viewer as cards, the tools and the list hidden.
+    const off = await plain.newPage();
+    await off.goto(site.origin + 'gallery/');
+    await expect(off.locator('.viewer-card:visible')).toHaveCount(3);
+    await expect(off.locator('#galleryTools')).toBeHidden();
+    await expect(off.locator('#viewerList')).toBeHidden();
+    await expect(off.locator('#galleryNone')).toBeHidden();
+  } finally {
+    await context.close();
+    await plain.close();
+    await site.close().catch(() => {});
+    fs.rmSync(site.dir, { recursive: true, force: true });
   }
 });
 

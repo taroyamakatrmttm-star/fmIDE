@@ -2,6 +2,12 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## The showcase gallery: search, and Grid or List
+- The site's `/gallery` has a **Search** box at the top that filters as you type: every word typed must be in a viewer's title, description or section name, in any case; sections left empty are hidden, a count says "N of M", a plain line says when nothing matches, and Esc clears it.
+- **Grid / List** beside it (two buttons, `aria-pressed`): Grid, the picture cards, stays the default; List shows a compact row per viewer — title, section, its description on one line (cut at a word), **Open** and **Download**. The choice is remembered in this browser (`localStorage`, `fmGallery.view`); with storage blocked the page still works.
+- The gallery page now runs **one small script of its own** (`src/gallery/gallery.js`, put in the page by `tools/build-gallery.js`), allowed by its exact hash in the page's policy: `default-src 'none'; script-src 'sha256-…'; …` — still nothing loaded from or sent anywhere (no `connect-src`). The script reads the page's own text and escaped data attributes and only sets `hidden`, `aria-pressed` and `textContent`. Without it, the switch, the search box and the list stay hidden and the cards show as before. The viewers' policy is unchanged.
+- Tests: group 98 (a new test for the list, search box and switch; changed on purpose: "its one script only" in place of "no script", the handler check setting quoted attribute values aside, and the policy now checked for the script's exact hash and no `connect-src`); group 91 (a new test in the browser: search, Grid / List kept after a reload, storage blocked, no policy refusal, without script; the existing gallery test's title now says "its own script"). Branch `claude/gallery-list-search`.
+
 ## fmGraph and fmShowcase: Play can move even with reduced motion
 - When the device asks for reduced motion (Remote Desktop and thin clients often do), Play still starts still, but its strip now has **▶ Animate** beside ⇄ (`#btnPlayMotion`): Play plays again between the same ends, moving. **⇄ Still** in the same place goes back. The full screen's strip has the same button (`#showMotion`). Shown only with reduced motion; off until chosen.
 - Kept in the browser: fmGraph's `fmgraph-play-motion`, the viewer's `viewer-play-motion` (`docs/architecture/storage.md`). Nothing in the board file.
