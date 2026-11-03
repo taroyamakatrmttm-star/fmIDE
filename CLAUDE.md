@@ -97,6 +97,7 @@ Files under `.claude/rules/` load by themselves when a session reads a file they
 | File formats: current versions, how to change one | `.claude/rules/file-formats.md` |
 | The calculation tests (IR, agreement) | `.claude/rules/testing.md` |
 | Browser storage: every database and key | `docs/architecture/storage.md` |
+| Which Excel layout and fmGraph boards a model opens with (two flowcharts) | `docs/architecture/which-layout-wins.md` |
 | Decisions and the full build order | `docs/architecture/build-order.md` |
 | The user manual: its lessons, their style, what came when | `docs/manual/README.md`, `docs/manual/STYLE.md` |
 | How this guidance is organised, what changed on 12 October 2026 | `docs/architecture/README.md` |
