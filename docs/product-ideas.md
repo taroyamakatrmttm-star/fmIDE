@@ -42,7 +42,7 @@ From the brainstorm of ten ideas (October 2026), grouped as it was. #2 is built 
 |---|---|---|---|---|
 | R9 | **fmIDE Academy and certification** | The interactive tutorials become a paid course with an exam and a "Certified fmIDE Modeller" badge; seat licences for universities and bank training. Finish the video links (H4c) first. | Tutorials and help (step 10) | Medium (mostly content) |
 | R10 | **A paid template marketplace** | Professionals sell checked, industry-specific packs (SaaS, real estate, project finance, LBO) and the project takes a share. Payment on the website, never in the apps, so they stay offline. | The community library and its pack checker (step 8) | Medium (mostly the website) |
-| R11 | **The Counterintuitive Accounting Library** | 100 showcase ideas in five levels, each an accounting fact that surprises learners, with the visualization that shows it (the owner's list, 3 November 2026; items 49–70 and 72 still to come). Made one gallery section at a time, each by its own maker in `gallery/makers/`. Full list: `docs/showcase-library.md`. | The showcase gallery (V6) and its makers | Large (mostly content) |
+| R11 | **The Counterintuitive Accounting Library** | 100 showcase ideas in five levels, each an accounting fact that surprises learners, with the visualization that shows it (the owner's list, 3 November 2026). Made one gallery section at a time, each by its own maker in `gallery/makers/`. Full list: `docs/showcase-library.md`. | The showcase gallery (V6) and its makers | Large (mostly content) |
 
 ### Decisions that are the owner's before any of these
 
