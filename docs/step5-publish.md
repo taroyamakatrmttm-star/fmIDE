@@ -48,7 +48,7 @@ A PWA needs three things the single files can't carry: a **web app manifest** (n
 
 ## The showcase gallery (phase V6 of `docs/viewer-brief.md`)
 
-The site carries `/gallery` when the build is given a folder of made showcase viewers (`--gallery DIR`, else `gallery/` when it holds any): a plain page with no JavaScript (`default-src 'none'`) and each viewer at `/gallery/v/<id>`, rebuilt with the site's own viewer page from the viewer's data blocks, so it runs only the viewer's own code, under the viewer's policy, which connects to nothing. Like the catalogue, it is left out of the offline copy and the app's version.
+The site carries `/gallery` when the build is given a folder of made showcase viewers (`--gallery DIR`, else `gallery/` when it holds any): a plain page whose only JavaScript is its own small script for the search and the Grid / List switch (`src/gallery/gallery.js`, 3 November 2026), allowed by its exact hash (`default-src 'none'; script-src 'sha256-…'`, no `connect-src`; without the script the page shows every viewer as cards), and each viewer at `/gallery/v/<id>`, rebuilt with the site's own viewer page from the viewer's data blocks, so it runs only the viewer's own code, under the viewer's policy, which connects to nothing. Like the catalogue, it is left out of the offline copy and the app's version.
 
 ## The community library's catalogue (step 8, phase 8c-3)
 
