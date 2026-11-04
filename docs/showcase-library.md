@@ -25,8 +25,8 @@ The gallery is organised as a course: journeys that follow one company step by s
 
 | # | Series | What it covers | Status |
 |---|---|---|---|
-| 1 | From founding to dividend | One trading company's first year in 14 steps, and the whole year | Building |
-| 2 | The operating cycle | Growth and working capital, the cash conversion cycle, a seasonal business, bad debts, warranties, inventory write-downs, tax (current and deferred) | Planned |
+| 1 | From founding to dividend | One trading company's first year in 14 steps, and the whole year (FD01–FD15) | Live (5 November 2026) |
+| 2 | The operating cycle | Year 2 of the same company (OC01–OC13): growth on credit and working capital, a warranty provision, a bad debt, a stock write-down, income tax; the bridge from profit to cash from operations | Live (5 November 2026) |
 | 3 | Investing in other companies | One investor, one target: 10% (cost method), 30% (equity method), 60% (control: consolidation, goodwill, non-controlling interest), sales within the group, profit on stock held in the group, buying the rest, losing control, goodwill impairment, a bargain purchase, a foreign subsidiary | Planned |
 | 4 | Long-term assets and financing | Depreciation methods, impairment, a disposal gain, leases, refinancing, share issue and buyback, share-based pay | Planned |
 | 5 | From statements to value | Free cash flow, EBITDA to free cash flow, a DCF, terminal value, enterprise value to equity value, multiples, NPV against IRR | Planned |
@@ -36,7 +36,7 @@ The gallery is organised as a course: journeys that follow one company step by s
 | — | Counterintuitive accounting, Level 1 | CA01–CA20, one point each | Live |
 | — | Counterintuitive accounting, Levels 2–5 | CA21–CA100, made as the journeys reach them | Planned |
 | — | Journal entries: the 11 patterns | JE01–JE12 | Live |
-| — | From Zero to Dividend (the owner's full model) | 01 Equity – 08 Dividend | Live; keep as "the full model" or retire: the owner's choice |
+| — | From Zero to Dividend (the owner's full model) | 01 Equity – 08 Dividend | Live, kept as "the full model" (the owner's decision, 5 November 2026) |
 
 ## Overlaps, and new items in their place (5 November 2026)
 
