@@ -23,11 +23,11 @@ Each new section gets its own maker folder under `gallery/makers/`.
 
 | No. | Shown by | How much |
 |---|---|---|
-| 1–20 | CA01–CA20, the section "Counterintuitive accounting, Level 1: fundamentals" | In full: one showcase per item, made by the lessons maker (3 November 2026). |
+| 1–7, 9–20 | CA01–CA07 and CA09–CA20, the section "Counterintuitive accounting, Level 1: fundamentals" | In full: one showcase per item, made by the lessons maker (3 November 2026; reworked to make each point only, 4 November 2026). |
+| 8 | CA07 | CA08 was removed on 4 November 2026 (the owner's review): CA07 makes the same point. Its number is kept free. |
 | 5, 11, 14 | Also Sale - cash or AR | The same points with inventory: cash of 100 against a profit of 10; revenue before the cash. |
 | 12, 13 | Also Purchase - cash or AP | The purchase creates inventory, not an expense; paying the AP moves only cash. |
 | 25, 26 | Sale - cash or AR, Purchase - cash or AP; 06 AR and 07 AP in Zero to Dividend | AR growth uses operating cash, and AP growth keeps it, in the cash flow waterfalls. |
-| 8 | Also 01 Equity in Zero to Dividend | The owners' contribution reaches the balance sheet, not the income statement. |
 
 ## Level 1 — Accounting fundamentals (1–20)
 
