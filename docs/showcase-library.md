@@ -27,7 +27,7 @@ The gallery is organised as a course: journeys that follow one company step by s
 |---|---|---|---|
 | 1 | From founding to dividend | One trading company's first year in 14 steps, and the whole year (FD01–FD15) | Live (5 November 2026) |
 | 2 | The operating cycle | Year 2 of the same company (OC01–OC13): growth on credit and working capital, a warranty provision, a bad debt, a stock write-down, income tax; the bridge from profit to cash from operations | Live (5 November 2026) |
-| 3 | Investing in other companies | Part 1 (IC01–IC15; IFRS, NCI at its share of net assets, the earlier stake re-measured on control): 10% (cost method), 30% (equity method), the re-measurement gain, control (consolidation, goodwill, non-controlling interest), the subsidiary's profit and dividend, a sale within the group, buying the rest, goodwill impairment. Part 2: losing control, a bargain purchase, a foreign subsidiary | Part 1 live (5 November 2026); part 2 next |
+| 3 | Investing in other companies | Part 1 (IC01–IC15; IFRS, NCI at its share of net assets, the earlier stake re-measured on control): 10% (cost method), 30% (equity method), the re-measurement gain, control (consolidation, goodwill, non-controlling interest), the subsidiary's profit and dividend, a sale within the group, buying the rest, goodwill impairment. Part 2: losing control, a bargain purchase, a foreign subsidiary | Live (5 November 2026): part 1 IC01–IC15, part 2 IC16–IC20 |
 | 4 | Long-term assets and financing | Depreciation methods, impairment, a disposal gain, leases, refinancing, share issue and buyback, share-based pay | Planned |
 | 5 | From statements to value | Free cash flow, EBITDA to free cash flow, a DCF, terminal value, enterprise value to equity value, multiples, NPV against IRR | Planned |
 | 6 | Deals | A leveraged buyout (leverage and returns), EPS accretion or dilution, EPS against value created | Planned |
@@ -56,7 +56,7 @@ A review of the 100 items found points made more than once. Each overlap keeps i
 | Growth uses cash | 21, 61 | both | 21 reworded: growth ties cash up in receivables and inventory (working capital); 61 stays the forecast view |
 | Expense before the bill | 15, 17 | both | 15 kept strictly as "no bill at all" (accrued wages) |
 
-Still to place: foreign-currency translation moves equity, not profit (series 3). The rows for the freed numbers are rewritten when their showcases are made.
+Foreign-currency translation (equity, not profit) is shown by IC19; it takes the next freed number when one comes free. The rows for the freed numbers are rewritten when their showcases are made.
 
 ## Already shown, in whole or in part
 
