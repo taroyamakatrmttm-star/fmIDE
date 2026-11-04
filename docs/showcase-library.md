@@ -19,12 +19,50 @@ Each new section gets its own maker folder under `gallery/makers/`.
 
 **The lessons maker** (`gallery/makers/lessons/`, 3 November 2026) makes one showcase per row from a short lesson file: the model as one-line formulas, the charts, one slider and its scenarios. It builds and lays out the model in fmIDE, fixes the scale from measurements, checks the viewer (balance checks, nothing past the scale's edge, Play, the workbook, no errors or outside requests) and publishes only when every lesson passes. Its README explains how to write the next lesson.
 
+## The series roadmap (agreed 5 November 2026)
+
+The gallery is organised as a course: journeys that follow one company step by step, with each step linking to the lessons (CA) whose surprise it shows and to its journal-entry pattern (JE). Each journey has its own Excel workbook.
+
+| # | Series | What it covers | Status |
+|---|---|---|---|
+| 1 | From founding to dividend | One trading company's first year in 14 steps, and the whole year | Building |
+| 2 | The operating cycle | Growth and working capital, the cash conversion cycle, a seasonal business, bad debts, warranties, inventory write-downs, tax (current and deferred) | Planned |
+| 3 | Investing in other companies | One investor, one target: 10% (cost method), 30% (equity method), 60% (control: consolidation, goodwill, non-controlling interest), sales within the group, profit on stock held in the group, buying the rest, losing control, goodwill impairment, a bargain purchase, a foreign subsidiary | Planned |
+| 4 | Long-term assets and financing | Depreciation methods, impairment, a disposal gain, leases, refinancing, share issue and buyback, share-based pay | Planned |
+| 5 | From statements to value | Free cash flow, EBITDA to free cash flow, a DCF, terminal value, enterprise value to equity value, multiples, NPV against IRR | Planned |
+| 6 | Deals | A leveraged buyout (leverage and returns), EPS accretion or dilution, EPS against value created | Planned |
+| 7 | Reading the statements | DuPont, liquidity against solvency, interest cover, quality of earnings, red flags | Planned |
+| 8 | Industry models | SaaS, retail, project finance, real estate, banks | Idea |
+| — | Counterintuitive accounting, Level 1 | CA01–CA20, one point each | Live |
+| — | Counterintuitive accounting, Levels 2–5 | CA21–CA100, made as the journeys reach them | Planned |
+| — | Journal entries: the 11 patterns | JE01–JE12 | Live |
+| — | From Zero to Dividend (the owner's full model) | 01 Equity – 08 Dividend | Live; keep as "the full model" or retire: the owner's choice |
+
+## Overlaps, and new items in their place (5 November 2026)
+
+A review of the 100 items found points made more than once. Each overlap keeps its clearest item; the numbers freed take points the library was missing. Items keep their numbers, so links and videos stay valid.
+
+| Overlap | Items | Kept | Number freed, and what goes there |
+|---|---|---|---|
+| Profit and cash on credit sales | 6, 22, 25 | 6, 22 | 25: Retained earnings are not cash |
+| Buying and depreciating PPE | 10, 24, 34 | 10, 24 | 34: Revenue recognised over time: profit on a half-finished contract |
+| Paying suppliers later | 26, 27, 32 | 26, 32 | 27: Warranty provisions: the expense now, the cash years later |
+| Inventory and cash | 13, 28, 46, 54 | 13, 54 | 28: FIFO against average cost: the same goods, a different profit; 46: Other comprehensive income: equity moves without passing profit |
+| EBITDA is not cash | 30, 31, 42 | 31, 42 | 30: Refinancing debt: no cash, yet a gain or a loss |
+| CapEx and profit | 33, 41 | 41 | 33: Capitalised development or interest costs flatter profit |
+| Dividends and losses | 9, 39 | 9 | 39: Share-based pay: an expense with no cash, and equity goes up |
+| Discount rate and multiples | 71, 72 | 71 | 72: The cost method: a 10% stake earns only its dividends |
+| Goodwill impairment is non-cash | 85, 86 | 85 | 86: The equity method: a share of the investee's profit is income with no cash; its dividends are cash with no income |
+| Growth uses cash | 21, 61 | both | 21 reworded: growth ties cash up in receivables and inventory (working capital); 61 stays the forecast view |
+| Expense before the bill | 15, 17 | both | 15 kept strictly as "no bill at all" (accrued wages) |
+
+Still to place: foreign-currency translation moves equity, not profit (series 3). The rows for the freed numbers are rewritten when their showcases are made.
+
 ## Already shown, in whole or in part
 
 | No. | Shown by | How much |
 |---|---|---|
-| 1–7, 9–20 | CA01–CA07 and CA09–CA20, the section "Counterintuitive accounting, Level 1: fundamentals" | In full: one showcase per item, made by the lessons maker (3 November 2026; reworked to make each point only, 4 November 2026). |
-| 8 | CA07 | CA08 was removed on 4 November 2026 (the owner's review): CA07 makes the same point. Its number is kept free. |
+| 1–20 | CA01–CA20, the section "Counterintuitive accounting, Level 1: fundamentals" | In full: one showcase per item, made by the lessons maker (3 November 2026; reworked to make each point only, 4 November 2026). Item 8 was "owner contributions are not revenue" until 5 November 2026, when CA07 took that point and 8 became bad debts. |
 | 5, 11, 14 | Also Sale - cash or AR | The same points with inventory: cash of 100 against a profit of 10; revenue before the cash. |
 | 12, 13 | Also Purchase - cash or AP | The purchase creates inventory, not an expense; paying the AP moves only cash. |
 | 25, 26 | Sale - cash or AR, Purchase - cash or AP; 06 AR and 07 AP in Zero to Dividend | AR growth uses operating cash, and AP growth keeps it, in the cash flow waterfalls. |
@@ -40,7 +78,7 @@ Each new section gets its own maker folder under `gallery/makers/`.
 | 5 | A cash sale is not all profit | The cash received includes recovery of the cost of goods sold, not just profit. | Two-entry sale animation; margin bridge | Revenue and cost of sales are different |
 | 6 | A profitable company can have less cash | Profit includes non-cash items and timing differences in working capital. | Net income vs cash bridge | Accrual profit is not cash movement |
 | 7 | A company can have cash without making a profit | Borrowing and capital contributions can generate cash without generating earnings. | Cash sources waterfall | Financing cash is not operating earnings |
-| 8 | Owner contributions are not revenue | Cash comes into the company, but it comes from owners rather than customers. | Source-of-funds map | Capital comes from owners, not customers |
+| 8 | A sale can make a profit and bring in no cash: bad debts | Revenue is counted when the sale is made; if the customer never pays, the receivable becomes an expense and the cash never arrives. | Sale on credit, then the write-off; revenue, the bad debt and the cash received side by side | Revenue is earned at the sale; a bad debt takes the profit back without any cash ever moving |
 | 9 | Dividends are generally not operating expenses | Cash is distributed, but the distribution is to owners rather than a cost of earning revenue. | Equity roll-forward and cash flow | Distribution to owners is not cost of earning revenue |
 | 10 | Depreciation reduces profit without a current cash payment | Profit decreases even though no cash is paid when depreciation is recorded. | PPE roll-forward and indirect CFO bridge | Expense allocation differs from cash payment |
 | 11 | Collecting receivables does not create new revenue | Cash increases, but the revenue was already recognized when the receivable arose. | AR-to-cash animation | Settlement of an existing asset |
