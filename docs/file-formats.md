@@ -35,7 +35,7 @@ A `.fmide` file is an `fmIDE-workspace` file (same `kind`, same version, same re
 | `fmIDE-excel-module-layouts` | 2 | ExcelExporter's layouts remembered per module (step 11b, below); v2: the layout of a module's block instances, `instance` (step 11d) | ExcelExporter: Import Module Layouts |
 | `fmIDE-graph-board` | 14 | fmGraph's boards: bars, charts and sliders showing one model (step 15, below); v2: the template form, for a template's `attachments.graph` (G5a); v3: the model's named scenarios, `scenarios`; v4: the scenario waterfall, a chart of layout `scenarios`; v5: a bar's or chart's fixed vertical scale, `scale`; v6: a folded slider, `folded`; v7: a board keeping its own slider positions, `ownSliders`; v8: the Tornado and the Spider, charts of layout `tornado` and `spider` (step 18; the template form stays version 2); v9: the shared period, `sharedPeriods` and a bar's or chart's `ownPeriod`; v10: the lines chart, a chart of layout `lines`; v11: the shared colours, `colours`; v12: the common scale, `commonScale` and a bar's or chart's `ownScale`; v13: the Free chart, a chart of layout `free`; v14: a slider at its minimum, one short row, `folded: "min"` (`true` stays Folded) | fmGraph: Boards → Import boards… (or dropped on the page) · ExcelExporter: File → Import fmGraph boards… (its scenarios, Tornado and Spider charts, sliders, bars and charts, below) |
 | `fmIDE-showcase` | 2 | What a showcase viewer shows: for one model (its canvases, boards, Play, periods, title, description, author, licence, mark; v2: `simplify`, Simplify to the sliders), or a recipe for many models built alike (below) | fmShowcase (`fmViewer.html`): dropped with the model, or carried in a made viewer; a recipe goes to the tool that makes many viewers |
-| `fmIDE-gallery` | 1 | The showcase gallery's list: its title, a line of introduction and its sections (phase V6, below) | `tools/build-gallery.js`, from the gallery's folder; never opened by an app |
+| `fmIDE-gallery` | 2 | The showcase gallery's list: its title, a line of introduction and its sections (phase V6, below); v2: `guide`, how the series connect, drawn on the page | `tools/build-gallery.js`, from the gallery's folder; never opened by an app |
 | `fmIDE-viewer-workbook` | 1 | The Excel workbook a showcase viewer carries, packed, with its cell map (phase V4, below) | fmShowcase: the made viewer's `excel` block; never opened as a file |
 
 ## Showcases (`fmIDE-showcase` 2, the showcase viewer)
@@ -745,13 +745,26 @@ Files may come from other people (the planned community library), so text from a
 
 This document is licensed under [Creative Commons Attribution 4.0 International](LICENSE-CC-BY-4.0.txt) (CC BY 4.0): anyone may use it — for example to build tools that read or write fmIDE files — with credit to fmIDE (Copyright 2026 Taro Yamaka). See [LICENSING.md](../LICENSING.md).
 
-## The showcase gallery's list (`fmIDE-gallery` 1, phase V6 of `docs/viewer-brief.md`)
+## The showcase gallery's list (`fmIDE-gallery` 2, phase V6 of `docs/viewer-brief.md`)
 
 `gallery.json`, optional, in the folder of made viewers the site's `/gallery` is built from (`tools/build-gallery.js`):
 
 ```json
-{ "kind": "fmIDE-gallery", "version": 1, "title": "Models for the course", "intro": "Three small models.",
+{ "kind": "fmIDE-gallery", "version": 2, "title": "Models for the course", "intro": "Three small models.",
   "sections": [ { "title": "Week 1", "viewers": ["loan", "shop-b"] } ] }
 ```
 
 `title` at most 80 characters, `intro` 600 (lines kept), at most 50 sections of at most 1,000 viewers each, a section's `title` 80; each viewer named by its showcase's `id` (letters, digits and dashes), once. A viewer in the folder that no section names is listed after them, by title. Read by `cleanGalleryList` (`src/shared/showcase.js`): every problem in words — the build stops on any, and on a section naming a viewer the folder doesn't hold. Every text is shown escaped; ids are only compared.
+
+**Version 2: the guide** (5 November 2026, the owner's request), optional: how the gallery's series connect, folded at the top of the page under its `title` (80; "How the series connect" when none). The build draws it — nothing in the file is markup:
+
+```json
+"guide": { "title": "How the series connect", "caption": "Solid green: …",
+  "legend": { "sequence": "starts from the last state of", "related": "related" },
+  "labels": [ { "row": 0, "text": "Foundations" } ],
+  "boxes": [ { "id": "fd", "row": 1, "col": 0, "span": 1, "title": "1 Founding to\ndividend", "note": "year 1", "kind": "sequence" } ],
+  "arrows": [ { "from": "fd", "to": "oc", "kind": "sequence", "label": "FD15's end\nopens year 2" } ],
+  "table": { "head": ["Order", "Series"], "rows": [ ["1", "From founding to dividend"] ] } }
+```
+
+Boxes (at most 40) sit on a grid of 8 rows and 6 columns: `row`, `col` and `span` whole numbers that fit; `id` letters, digits and dashes, once; `title` one or two lines of 60; `note` one line (only under a one-line title); `kind` `plain`, `sequence` (a series that opens from another's last state, drawn in green) or `planned` (dashed). Arrows (80) join two boxes by id, `kind` `sequence` (solid green) or `related` (dashed), a `label` of up to two lines. `labels` (10) name a row. `caption` 400; `legend` the two kinds' words, 80 each. `table`: a heading row of up to 8 cells (80) and up to 40 rows, each cell 300, cut to the heading's width. A part that can't be drawn is left out and said. Version 1 reads as version 2 with no guide (an upgrade with nothing to change).

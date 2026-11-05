@@ -239,13 +239,15 @@ async function openDocument(page, file){
   const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.evaluate(() => fm.command('openDocument'))]);
   await chooser.setFiles(file);
 }
-// The file is in only once the canvases have changed: fmIDE's starter model, made when nothing is
-// saved, has its first canvas called c1 too, so the id alone could pass before the file is read.
+// The file is in only once the page's title names it: fmIDE's starter model, made when nothing is
+// saved, has its first canvas c1 too — and for sys-current.json the very same canvases ("Revenue
+// Model"), so neither the id nor the canvas list tells the two apart (changed on purpose,
+// 5 November 2026: waiting for the canvases to change never ended for that file).
 async function fmideWith(page, file, firstCanvas){
   await F.openFmIDE(page);
-  const before = await page.evaluate(() => JSON.stringify(fm.canvases()));
+  const before = await page.title();
   await openDocument(page, file);
-  await expect.poll(() => page.evaluate((b) => JSON.stringify(fm.canvases()) !== b ? fm.canvases()[0].id : null, before)).toBe(firstCanvas);
+  await expect.poll(() => page.evaluate((b) => document.title !== b ? fm.canvases()[0].id : null, before)).toBe(firstCanvas);
 }
 // The download Make viewer gives: its name and text.
 async function makeFromWindow(page){

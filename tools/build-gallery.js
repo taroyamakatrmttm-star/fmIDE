@@ -142,6 +142,76 @@ const TOOLS = [
   '<p class="gallery-none" id="galleryNone" hidden>No viewer matches your search.</p>',
 ].join('\n');
 
+// The guide (gallery.json version 2, `cleanGalleryGuide`): how the series connect, drawn here as
+// an SVG from its boxes and arrows — every word through h(), every number from the grid, styled by
+// the page's own style sheet (src/gallery/gallery.css), so the page's policy is unchanged — then
+// its legend, caption and table, folded under a <details> so the viewers stay at the top.
+const GRID = { x: 20, y: 30, col: 230, row: 115, w: 150, h: 60 };
+function guideSvg(g){
+  const at = new Map(g.boxes.map(b => {
+    const x = GRID.x + b.col * GRID.col, y = GRID.y + b.row * GRID.row, w = GRID.w + (b.span - 1) * GRID.col;
+    return [b.id, { x, y, w, cx: x + w / 2, cy: y + GRID.h / 2, b }];
+  }));
+  const width = Math.max(...[...at.values()].map(p => p.x + p.w)) + GRID.x;
+  const height = Math.max(...[...at.values()].map(p => p.y + GRID.h)) + 46;
+  const out = [];
+  const text = (x, y, s, cls, anchor) => '<text x="' + x + '" y="' + y + '"' + ' class="' + [cls, anchor ? 'guide-' + anchor : ''].filter(Boolean).join(' ') + '"' + '>' + h(s) + '</text>';
+  const line = (x1, y1, x2, y2, kind) => '<line class="guide-arrow ' + kind + '" x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" marker-end="url(#guide-' + kind + ')"/>';
+  g.labels.forEach(l => out.push(text(GRID.x, GRID.y + l.row * GRID.row - 10, l.text.toUpperCase(), 'guide-row', 'start')));
+  const diagonalsInto = new Map();
+  g.arrows.forEach(a => {
+    const f = at.get(a.from), t = at.get(a.to);
+    if(f.b.row === t.b.row){ // across: below the arrow, its label
+      const [l, r] = f.x < t.x ? [f, t] : [t, f];
+      const y = f.cy, x1 = f === l ? l.x + l.w : r.x, x2 = f === l ? r.x - 2 : l.x + l.w + 2, mid = (l.x + l.w + r.x) / 2;
+      out.push(line(x1, y, x2, y, a.kind));
+      a.label.forEach((s, k) => out.push(text(mid, y + 46 + k * 13, s, 'guide-label')));
+      return;
+    }
+    const down = f.b.row < t.b.row, lo = Math.max(f.x, t.x), hi = Math.min(f.x + f.w, t.x + t.w);
+    if(hi - lo >= 20){ // up or down, at the narrower box's middle
+      const narrow = f.w <= t.w ? f : t, x = Math.min(Math.max(narrow.cx, lo + 10), hi - 10);
+      const y1 = down ? f.y + GRID.h : f.y, y2 = down ? t.y - 4 : t.y + GRID.h + 4;
+      out.push(line(x, y1, x, y2, a.kind));
+      if(down) a.label.forEach((s, k) => out.push(text(x + 10, t.y - 24 + k * 13, s, 'guide-label', 'start')));
+      else a.label.forEach((s, k) => out.push(text(x - 10, (y1 + y2) / 2 - 6 + k * 13, s, 'guide-label', 'end')));
+      return;
+    }
+    // Diagonal: from the facing edge's middle to the facing edge of the other, each further one
+    // into the same box landing a little further along it.
+    const k = diagonalsInto.get(a.to) || 0; diagonalsInto.set(a.to, k + 1);
+    const side = f.cx > t.cx ? 1 : -1;
+    const fx = f.cx, fy = down ? f.y + GRID.h : f.y, tx = t.cx + side * Math.min(t.w / 2 - 8, 25 + 30 * k), ty = down ? t.y - 4 : t.y + GRID.h + 4;
+    out.push(line(fx, fy, tx, ty, a.kind));
+    a.label.forEach((s, n) => out.push(text(fx + side * 12, fy + 14 + n * 13, s, 'guide-label guide-muted', side > 0 ? 'start' : 'end')));
+  });
+  g.boxes.forEach(b => {
+    const p = at.get(b.id);
+    out.push('<rect class="guide-box ' + b.kind + '" x="' + p.x + '" y="' + p.y + '" width="' + p.w + '" height="' + GRID.h + '" rx="6"/>');
+    const lines = b.title.map(s => [s, 'guide-title']).concat(b.note ? [[b.note, 'guide-note']] : []);
+    const top = lines.length > 1 ? p.cy - 4 : p.cy + 5;
+    lines.forEach(([s, cls], i) => out.push(text(p.cx, top + i * 18, s, cls)));
+  });
+  return '<svg class="guide-svg" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="' + h(g.caption || g.title) + '">'
+    + '<defs><marker id="guide-sequence" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="guide-head sequence" d="M0,0 L10,5 L0,10 z"/></marker>'
+    + '<marker id="guide-related" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="guide-head related" d="M0,0 L10,5 L0,10 z"/></marker></defs>'
+    + out.join('') + '</svg>';
+}
+function guideHtml(g){
+  if(!g) return '';
+  const parts = ['<details class="gallery-guide" id="galleryGuide"><summary>' + h(g.title) + '</summary>'];
+  if(g.boxes.length){
+    parts.push('<div class="guide-scroll">' + guideSvg(g) + '</div>');
+    const keys = [['sequence', g.legend.sequence], ['related', g.legend.related]].filter(([, t]) => t);
+    if(keys.length) parts.push('<p class="guide-legend">' + keys.map(([k, t]) => '<span class="guide-key ' + k + '"></span>' + h(t)).join(' ') + '</p>');
+  }
+  if(g.caption) parts.push('<p class="guide-caption">' + h(g.caption) + '</p>');
+  if(g.table) parts.push('<div class="guide-table"><table><thead><tr>' + g.table.head.map(c => '<th>' + h(c) + '</th>').join('') + '</tr></thead><tbody>'
+    + g.table.rows.map(r => '<tr>' + r.map(c => '<td>' + h(c) + '</td>').join('') + '</tr>').join('') + '</tbody></table></div>');
+  parts.push('</details>');
+  return parts.join('\n');
+}
+
 function indexPage(list, viewers, pictures){
   const byId = new Map(viewers.map(v => [v.id, v]));
   const title = list.title || 'Showcase gallery';
@@ -154,6 +224,7 @@ function indexPage(list, viewers, pictures){
   main.push('<h1>' + h(title) + '</h1>');
   main.push('<p class="lead">' + (list.intro ? h(list.intro) : 'Models made with fmIDE: open one to move its sliders, see how each number is worked out and download it in Excel. Nothing is installed, and nothing you do leaves your device.') + '</p>');
   main.push('<p class="viewer-note">On an iPhone or iPad, <b>Open</b> runs a viewer in Safari; send its address to share it. A downloaded viewer opens there only in a preview, so keep downloads for a computer.</p>');
+  if(list.guide) main.push(guideHtml(list.guide));
   if(!viewers.length) main.push('<p>No viewers yet.</p>');
   else main.push(TOOLS);
   main.push('<div id="viewerGrid">');
@@ -222,4 +293,4 @@ function buildGallery(dir, viewerPage){
   return { files, viewers: viewers.map(v => ({ id: v.id, title: v.title, size: v.size, picture: pictures.has(v.id) })) };
 }
 
-module.exports = { buildGallery, findGallery, galleryHeaders, GalleryError, GALLERY_POLICY, GALLERY_SCRIPT, GALLERY_SCRIPT_HASH, pageScripts };
+module.exports = { buildGallery, findGallery, galleryHeaders, GalleryError, guideHtml, GALLERY_POLICY, GALLERY_SCRIPT, GALLERY_SCRIPT_HASH, pageScripts };

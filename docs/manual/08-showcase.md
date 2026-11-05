@@ -11,7 +11,7 @@ A **showcase viewer** is one web page made from your model. Anyone can open it i
 | [8.1 Make a showcase viewer](#showcase-viewer) | File → Make Showcase Viewer…, what goes into the file, making it again | the showcase viewer's phases V1–V3 (branches `claude/viewer-v1`, `claude/viewer-v2`, `claude/viewer-v3`), opening one on an iPhone or iPad (`claude/viewer-ipad-sliders`) |
 | [8.2 Put Excel in a showcase viewer](#showcase-excel) | Include an Excel workbook; a visitor's ⬇ Excel, with their scenario or sliders written in | phase V4 (branch `claude/viewer-v4`) |
 | [8.3 Make many viewers at once](#showcase-many) | Choose for me; `npm run make-viewers` with a recipe naming sliders and bars by name; the report | phase V5 (branch `claude/viewer-v5`) |
-| [8.4 Share viewers in the gallery](#showcase-gallery) | `--pictures` and `--gallery`, `gallery.json`, the site's `/gallery`, its search and Grid / List, sending a link to an iPhone or iPad | phase V6 (branches `claude/viewer-v6`, `claude/gallery-list-search`) |
+| [8.4 Share viewers in the gallery](#showcase-gallery) | `--pictures` and `--gallery`, `gallery.json`, the site's `/gallery`, its search and Grid / List, sending a link to an iPhone or iPad | phase V6 (branches `claude/viewer-v6`, `claude/gallery-list-search`, `claude/gallery-guide`) |
 | [8.5 Simplify a model for a lesson](#simplify) | File → Simplify for Inputs…: a copy holding only what some inputs move, fixed numbers, Keep anyway; a viewer simplified to its sliders | Simplify for inputs, phases 1 and 2 (branches `claude/simplify-to-sliders-5cfd71`, `claude/simplify-graph-boards`) |
 
 
@@ -169,7 +169,7 @@ The command's own work is `tools/viewer-batch.js` (`makeViewers`, `reportText`, 
 > **You need:** a computer with the fmIDE repository, the viewers from lesson 8.3, and the right to publish the site (`npm run deploy`).
 > **Time:** about 10 minutes.
 > **In the app:** fmIDE Help → *Share a model as a showcase viewer* (`showcase-viewer`)
-> **Came in:** the showcase viewer's phase V6 · branches `claude/viewer-v6`, `claude/gallery-list-search`
+> **Came in:** the showcase viewer's phase V6 · branches `claude/viewer-v6`, `claude/gallery-list-search`, `claude/gallery-guide`
 
 On an iPhone or iPad, a viewer saved in Files opens only in a preview, which can't run it. A viewer **on the website** is just a link: tapped, it runs in Safari with everything working, ⬇ Excel included. The gallery is a page of such viewers, built with the site from a folder of made viewers.
 
@@ -195,6 +195,7 @@ On an iPhone or iPad, a viewer saved in Files opens only in a preview, which can
 - **Every viewer in the gallery runs today's viewer.** The build reads only the model, the showcase and the workbook out of each file and puts them into the viewer the site serves, so a viewer made months ago gets every fix — and nothing else in the file is ever served.
 - **Nothing is sent anywhere, and nothing loads from another site.** The gallery page runs one small script of its own — the search and the Grid / List switch — which the site's security policy allows by its exact fingerprint (hash), and which loads and sends nothing; without it, the page still shows every viewer as cards. Each viewer runs only the viewer's own code and may connect to nothing (the site's security policy says so).
 - **The gallery's folder**: `npm run build` and `npm run deploy` take `gallery/` in the repository when it holds any viewer, or another folder with `--gallery DIR`. It is meant to be a repository of its own, added as a submodule, like the community library.
+- **A guide** at the top of the gallery, folded until opened, can show how its series connect (a flowchart) and what each is for (a table): `gallery.json` version 2's `guide` — boxes on a grid, arrows and the table's rows, as data the build draws (`docs/file-formats.md`). The fmIDE gallery's own is written by `gallery/makers/guide.js`.
 - **Search** looks in each viewer's title, description and section name; every word typed must be there, in any case. Sections with nothing left are hidden.
 - A gallery viewer remembers what a visitor moved on their device, as any viewer does. A new viewer in the gallery never makes fmIDE's site a new version.
 - **Hiding is not secrecy**, here as anywhere: every number of a model in the gallery can be read by anyone. Publish only what may be public.
