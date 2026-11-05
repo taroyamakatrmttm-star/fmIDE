@@ -279,6 +279,7 @@ Oldest first. *Step* is the build step (and phase) the pull request belongs to; 
 | branch `claude/simplify-graph-boards` | 2026-11-02 | fmIDE: Simplify for Inputs… takes fmGraph's boards as they are now (not a showcase's copy); a slider on a block's input rectangle named by it | after 20 | [8.5](08-showcase.md#simplify) |
 | branch `claude/play-motion-anyway` | 2026-11-02 | fmGraph and fmShowcase: ▶ Animate makes Play move even when the device asks for reduced motion, remembered in the browser | after 20 | [6.5](06-fmgraph.md#graph-scenarios) |
 | branch `claude/gallery-list-search` | 2026-11-03 | The showcase gallery: a search box that filters as you type (title, description, section; every word), Grid or List (a row per viewer), the choice remembered in the browser; the page's one small script allowed by its hash | after 20 | [8.4](08-showcase.md#showcase-gallery) |
+| branch `claude/gallery-guide` | 2026-11-05 | The showcase gallery: a guide folded at the top — a flowchart of how the series connect and a table of what each is for, from `gallery.json` version 2's `guide`, drawn by the build | after 20 | [8.4](08-showcase.md#showcase-gallery) |
 
 ---
 

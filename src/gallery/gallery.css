@@ -47,3 +47,35 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid 
   .gallery-views { margin-left: 0; }
   .gallery-tools input[type="search"] { max-width: none; flex-basis: 100%; }
 }
+
+/* The guide (gallery.json version 2): how the series connect, folded at the top. The flowchart
+   is an inline SVG drawn by the build; every colour comes from here (the page allows no inline
+   style). Green marks a series that opens from another's last state. */
+:root { --guide-seq: #15803d; }
+@media (prefers-color-scheme: dark) { :root { --guide-seq: #4ade80; } }
+.gallery-guide { margin: 16px 0; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 0 14px; }
+.gallery-guide summary { min-height: 44px; line-height: 44px; font-weight: 600; cursor: pointer; }
+.gallery-guide[open] { padding-bottom: 14px; }
+.guide-scroll, .guide-table { overflow-x: auto; }
+.guide-svg { display: block; width: 100%; min-width: 760px; height: auto; font: 13px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.guide-svg text { fill: var(--fg); text-anchor: middle; }
+.guide-svg .guide-title { font-weight: 600; }
+.guide-svg .guide-start { text-anchor: start; }
+.guide-svg .guide-end { text-anchor: end; }
+.guide-svg .guide-note, .guide-svg .guide-label, .guide-svg .guide-row { font-size: 11px; }
+.guide-svg .guide-row, .guide-svg .guide-muted { fill: var(--muted); }
+.guide-svg .guide-row { letter-spacing: .06em; }
+.guide-box { fill: var(--bg); stroke: var(--muted); stroke-width: 1; }
+.guide-box.sequence { stroke: var(--guide-seq); stroke-width: 2; }
+.guide-box.planned { stroke-dasharray: 6 4; }
+.guide-arrow { fill: none; stroke: var(--fg); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.guide-arrow.sequence { stroke: var(--guide-seq); stroke-width: 3; stroke-dasharray: none; }
+.guide-head.related { fill: var(--fg); }
+.guide-head.sequence { fill: var(--guide-seq); }
+.guide-legend, .guide-caption { color: var(--muted); font-size: 14px; margin: 8px 0; }
+.guide-key { display: inline-block; width: 36px; margin: 0 6px 0 12px; vertical-align: middle; border-top: 3px solid var(--guide-seq); }
+.guide-key:first-child { margin-left: 0; }
+.guide-key.related { border-top: 2px dashed var(--fg); }
+.guide-table table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 14px; }
+.guide-table th, .guide-table td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.guide-table th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }

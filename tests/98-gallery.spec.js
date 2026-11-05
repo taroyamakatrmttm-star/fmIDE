@@ -179,8 +179,68 @@ test('gallery.json read: sections and their order, texts cut, bad entries each s
   expect(r.value.sections).toEqual([{ title: 'A', viewers: ['loan'] }, { title: 'Section 3', viewers: ['shop-b'] }]);
   expect(r.problems.length).toBe(4);
   expect(S.cleanGalleryList({ kind: 'fmIDE-showcase' }).error).toMatch(/not a gallery list/);
-  expect(S.cleanGalleryList({ kind: 'fmIDE-gallery', version: 2 }).newer).toBe(true);
+  expect(S.cleanGalleryList({ kind: 'fmIDE-gallery', version: 3 }).newer).toBe(true);
+  // Version 1 (no guide) reads as written, and with no guide (changed on purpose with version 2).
   const old = S.cleanGalleryList(JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'formats', 'gallery-v1.json'), 'utf8')));
   expect(old.problems).toEqual([]);
-  expect(old.value).toEqual({ title: 'Models for the course', intro: 'Three small models.', sections: [{ title: 'Week 1', viewers: ['loan', 'shop-b'] }, { title: 'Week 2', viewers: ['markup'] }] });
+  expect(old.newer).toBe(false);
+  expect(old.value).toEqual({ title: 'Models for the course', intro: 'Three small models.', sections: [{ title: 'Week 1', viewers: ['loan', 'shop-b'] }, { title: 'Week 2', viewers: ['markup'] }], guide: null });
+});
+
+// Version 2's guide (5 November 2026): how the series connect, as data the build draws.
+const MARK = '<script>alert(1)</script> & "q"';
+const GUIDE = {
+  title: 'How they connect ' + MARK, caption: 'Green: ' + MARK, legend: { sequence: 'follows ' + MARK, related: 'related' },
+  labels: [{ row: 0, text: 'Row ' + MARK }, { row: 99, text: 'off the grid' }],
+  boxes: [
+    { id: 'a', row: 0, col: 0, title: 'First\n' + MARK, kind: 'sequence' },
+    { id: 'b', row: 0, col: 1, title: 'Second', note: 'a note', kind: 'sequence' },
+    { id: 'c', row: 1, col: 0, span: 2, title: 'Under both', kind: 'planned' },
+    { id: 'd', row: 2, col: 3, title: 'Far', kind: 'odd' },
+    { id: 'a', row: 3, col: 0, title: 'the same id' }, { id: 'e', row: 0, col: 5, span: 3, title: 'too wide' }, { id: 'f', row: 0, col: 0 }, 'nope',
+  ],
+  arrows: [
+    { from: 'a', to: 'b', kind: 'sequence', label: 'across\n' + MARK }, { from: 'c', to: 'a', label: 'up' }, { from: 'b', to: 'd', label: 'aslant' },
+    { from: 'a', to: 'nowhere' }, { from: 'a', to: 'a' },
+  ],
+  table: { head: ['Order', 'Series ' + MARK], rows: [['1', MARK, 'beyond the heading'], 'not a row'] },
+};
+test('gallery.json version 2: the guide read, every part that can\'t be drawn said; drawn escaped, no style, script or link of its own', () => {
+  const r = S.cleanGalleryList({ kind: 'fmIDE-gallery', version: 2, guide: GUIDE });
+  const g = r.value.guide;
+  expect(g.boxes.map(b => [b.id, b.kind, b.span])).toEqual([['a', 'sequence', 1], ['b', 'sequence', 1], ['c', 'planned', 2], ['d', 'plain', 1]]);
+  expect(g.boxes[0].title).toEqual(['First', MARK]);
+  expect(g.arrows.map(a => [a.from, a.to, a.kind])).toEqual([['a', 'b', 'sequence'], ['c', 'a', 'related'], ['b', 'd', 'related']]);
+  expect(g.labels).toEqual([{ row: 0, text: 'Row ' + MARK }]);
+  expect(g.table).toEqual({ head: ['Order', 'Series ' + MARK], rows: [['1', MARK]] });
+  // A label off the grid, four boxes, two arrows and a table row: each said.
+  expect(r.problems.length).toBe(8);
+  expect(S.cleanGalleryList({ kind: 'fmIDE-gallery', version: 2, guide: 'a guide' }).problems).toEqual(['"guide" is not a guide: left out.']);
+  expect(S.cleanGalleryList({ kind: 'fmIDE-gallery', version: 2 }).value.guide).toBe(null);
+  const html = G.guideHtml(g);
+  expect(html).not.toContain('<script');
+  expect(html).not.toMatch(/\sstyle=|\son[a-z]+=|href=|src=|<foreignObject|<image/i);
+  expect(html.split('&lt;script&gt;alert(1)&lt;/script&gt; &amp; &quot;q&quot;').length - 1).toBe(8); // the summary, the drawing's label, the caption, the legend, a box, an arrow, a heading, a cell
+  expect(html).toContain('ROW &lt;SCRIPT&gt;ALERT(1)&lt;/SCRIPT&gt;'); // a row's label, in capitals
+  expect(html).toContain('<details class="gallery-guide" id="galleryGuide"><summary>How they connect &lt;script&gt;');
+  expect((html.match(/<rect class="guide-box /g) || []).length).toBe(4);
+  expect((html.match(/<line class="guide-arrow sequence"/g) || []).length).toBe(1);
+  expect((html.match(/<line class="guide-arrow related"/g) || []).length).toBe(2);
+  expect(html).toContain('<rect class="guide-box planned" x="20" y="145" width="380" height="60"');
+  expect((html.match(/<td>/g) || []).length).toBe(2);
+  // Every number in the drawing is the grid's.
+  for(const [, n] of html.matchAll(/ (?:x|y|x1|y1|x2|y2|width|height)="([^"]*)"/g)) expect(n).toMatch(/^-?\d+(\.\d+)?$/);
+  // The page: the guide above the viewers; no guide, no section.
+  const dir = path.join(__dirname, 'fixtures', 'viewer', 'gallery');
+  const list = JSON.parse(fs.readFileSync(path.join(dir, 'gallery.json'), 'utf8'));
+  expect(G.buildGallery(dir, PAGE).files.get('gallery/index.html').toString('utf8')).not.toContain('gallery-guide');
+  const tmp = test.info().outputPath('with-guide');
+  fs.mkdirSync(tmp, { recursive: true });
+  fs.readdirSync(dir).forEach(n => fs.copyFileSync(path.join(dir, n), path.join(tmp, n)));
+  fs.writeFileSync(path.join(tmp, 'gallery.json'), JSON.stringify(Object.assign(list, { version: 2, guide: { boxes: [{ id: 'x', row: 0, col: 0, title: 'One' }] } })));
+  const page = G.buildGallery(tmp, PAGE).files.get('gallery/index.html').toString('utf8');
+  expect(page.indexOf('gallery-guide')).toBeGreaterThan(0);
+  expect(page.indexOf('gallery-guide')).toBeLessThan(page.indexOf('id="viewerGrid"'));
+  expect(G.pageScripts(page)).toEqual([G.GALLERY_SCRIPT]);
+  expect(text(G.buildGallery(tmp, PAGE), 'gallery/style.css')).toContain('.guide-arrow.sequence');
 });

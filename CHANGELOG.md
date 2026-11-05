@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## The showcase gallery: how the series connect
+- The site's `/gallery` can open with **a guide**, folded under its title above the viewers: a flowchart of how the gallery's series connect — solid green where a series opens from another's last state, dashed where they share ideas — its legend and caption, and a table of what each series is for and the order to learn them in (the owner's request, 5 November 2026).
+- It comes from `gallery.json`, now **version 2** (`fmIDE-gallery`): an optional `guide` of boxes on a grid, arrows and a table, read by `cleanGalleryGuide` (`src/shared/showcase.js`) and drawn by `tools/build-gallery.js` as an inline SVG — every word escaped, every number from the grid, every colour from the page's own style sheet, so its policy is unchanged. Version 1 reads as before, with no guide. The gallery's guide is written by `gallery/makers/guide.js`; the same diagram and table for reading here: `docs/gallery-series.md`.
+- Tests: group 98 (a new test for the guide; changed on purpose: the old-version sample now reads with `guide: null`, and the newer version flagged is 3); group 94 (changed on purpose: it waits for the page title to name the file opened — waiting for the canvases to change never ended for `sys-current.json`, whose canvases are the starter model's, so two tests had failed on `main` since 4 November). Whole suite run locally: 1,666 passed, 56 skipped (LibreOffice), the 2 of group 94 then fixed and the group run again, 28 passed. Branch `claude/gallery-guide`.
+
 ## The showcase gallery: search, and Grid or List
 - The site's `/gallery` has a **Search** box at the top that filters as you type: every word typed must be in a viewer's title, description or section name, in any case; sections left empty are hidden, a count says "N of M", a plain line says when nothing matches, and Esc clears it.
 - **Grid / List** beside it (two buttons, `aria-pressed`): Grid, the picture cards, stays the default; List shows a compact row per viewer — title, section, its description on one line (cut at a word), **Open** and **Download**. The choice is remembered in this browser (`localStorage`, `fmGallery.view`); with storage blocked the page still works.

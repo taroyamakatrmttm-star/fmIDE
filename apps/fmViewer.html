@@ -3901,16 +3901,71 @@ function showcaseDownloadName(file, suffix){
 }
 
 // ---------- the gallery's list (phase V6): gallery.json beside the viewers ----------
-// kind "fmIDE-gallery", version 1 (docs/file-formats.md): { title, intro, sections: [{ title,
-// viewers: [ids] }] }, every part optional. Read by tools/build-gallery.js, which writes the
+// kind "fmIDE-gallery", version 2 (docs/file-formats.md): { title, intro, sections: [{ title,
+// viewers: [ids] }], guide }, every part optional. Read by tools/build-gallery.js, which writes the
 // site's /gallery page from a folder of made viewers; the texts are shown escaped, the ids only
-// compared with the viewers' own.
+// compared with the viewers' own. Version 2 (5 November 2026, the owner's request) adds `guide`:
+// how the gallery's series connect, as data the build draws — boxes on a grid, arrows between
+// them, and a table — so nothing from the file is ever markup.
 const GALLERY_KIND = 'fmIDE-gallery';
-const GALLERY_FORMATS = { 'fmIDE-gallery': { current: 1, label: 'showcase gallery list' } };
-const GALLERY_MIGRATIONS = { 'fmIDE-gallery': {} };
+const GALLERY_FORMATS = { 'fmIDE-gallery': { current: 2, label: 'showcase gallery list' } };
+const GALLERY_MIGRATIONS = { 'fmIDE-gallery': { 1: () => {} } }; // 1 → 2: no guide yet
 const GALLERY_LIMITS = { title: 80, intro: 600, sections: 50, section: 80, viewers: 1000 };
-// Reads a parsed gallery.json: { error } or { value: { title, intro, sections: [{ title, viewers }] },
-// problems, newer }.
+const GUIDE_LIMITS = { title: 80, caption: 400, legend: 80, boxes: 40, arrows: 80, labels: 10, rows: 8, cols: 6,
+  line: 60, columns: 8, tableRows: 40, cell: 300 };
+const GUIDE_BOX_KINDS = ['plain', 'sequence', 'planned'];
+const GUIDE_ARROW_KINDS = ['related', 'sequence'];
+// A box's or an arrow's words: at most two lines of GUIDE_LIMITS.line.
+const guideLines = (v) => showcaseText(v, GUIDE_LIMITS.line * 2 + 1, true).split('\n').map(l => showcaseText(l, GUIDE_LIMITS.line)).filter(Boolean).slice(0, 2);
+const guideInt = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi ? v : null;
+// The guide of a gallery list (null when it has none): { title, caption, legend: { sequence, related },
+// labels: [{ row, text }], boxes: [{ id, row, col, span, title: [lines], note, kind }],
+// arrows: [{ from, to, kind, label: [lines] }], table: { head: [], rows: [[]] } | null }. A part
+// that can't be drawn is left out and said in `problems`.
+function cleanGalleryGuide(g, problems){
+  if(g === undefined || g === null) return null;
+  if(!isObject(g)){ problems.push('"guide" is not a guide: left out.'); return null; }
+  const L = GUIDE_LIMITS;
+  const legend = isObject(g.legend) ? g.legend : {};
+  const out = { title: showcaseText(g.title, L.title) || 'How the series connect', caption: showcaseText(g.caption, L.caption),
+    legend: { sequence: showcaseText(legend.sequence, L.legend), related: showcaseText(legend.related, L.legend) },
+    labels: [], boxes: [], arrows: [], table: null };
+  (Array.isArray(g.labels) ? g.labels : []).slice(0, L.labels).forEach((x, i) => {
+    const row = isObject(x) ? guideInt(x.row, 0, L.rows - 1) : null, text = isObject(x) ? showcaseText(x.text, L.legend) : '';
+    if(row === null || !text) problems.push('Guide label ' + (i + 1) + ' has no row or no text: left out.');
+    else out.labels.push({ row, text });
+  });
+  const ids = new Set();
+  (Array.isArray(g.boxes) ? g.boxes : []).slice(0, L.boxes).forEach((b, i) => {
+    if(!isObject(b)){ problems.push('Guide box ' + (i + 1) + ' is not a box: left out.'); return; }
+    const row = guideInt(b.row, 0, L.rows - 1), col = guideInt(b.col, 0, L.cols - 1);
+    const span = b.span === undefined ? 1 : guideInt(b.span, 1, L.cols);
+    const title = guideLines(b.title);
+    if(typeof b.id !== 'string' || !SHOWCASE_ID.test(b.id) || ids.has(b.id) || row === null || col === null || span === null || col + span > L.cols || !title.length){
+      problems.push('Guide box ' + (i + 1) + ' needs an id of its own, a row, a column, a span that fits and a title: left out.'); return;
+    }
+    ids.add(b.id);
+    out.boxes.push({ id: b.id, row, col, span, title, note: title.length > 1 ? '' : showcaseText(b.note, L.line * 2),
+      kind: GUIDE_BOX_KINDS.includes(b.kind) ? b.kind : 'plain' });
+  });
+  (Array.isArray(g.arrows) ? g.arrows : []).slice(0, L.arrows).forEach((a, i) => {
+    if(!isObject(a) || !ids.has(a.from) || !ids.has(a.to) || a.from === a.to){ problems.push('Guide arrow ' + (i + 1) + ' does not join two boxes: left out.'); return; }
+    out.arrows.push({ from: a.from, to: a.to, kind: GUIDE_ARROW_KINDS.includes(a.kind) ? a.kind : 'related', label: guideLines(a.label) });
+  });
+  if(g.table !== undefined){
+    const t = g.table;
+    const head = isObject(t) && Array.isArray(t.head) ? t.head.slice(0, L.columns).map(c => showcaseText(c, L.legend)) : [];
+    if(!head.length){ problems.push('The guide\'s table has no heading row: left out.'); return out; }
+    const rows = (Array.isArray(t.rows) ? t.rows : []).slice(0, L.tableRows).filter((r, i) => {
+      if(Array.isArray(r)) return true;
+      problems.push('Row ' + (i + 1) + ' of the guide\'s table is not a list: left out.'); return false;
+    }).map(r => head.map((_, k) => showcaseText(r[k], L.cell)));
+    out.table = { head, rows };
+  }
+  return out;
+}
+// Reads a parsed gallery.json: { error } or { value: { title, intro, sections: [{ title, viewers }],
+// guide }, problems, newer }.
 function cleanGalleryList(raw){
   if(!isObject(raw) || raw.kind !== GALLERY_KIND) return { error: 'gallery.json is not a gallery list (kind "' + GALLERY_KIND + '").' };
   const data = JSON.parse(JSON.stringify(raw));
@@ -3928,6 +3983,7 @@ function cleanGalleryList(raw){
     });
     value.sections.push({ title: showcaseText(s.title, GALLERY_LIMITS.section) || 'Section ' + (i + 1), viewers: ids });
   });
+  value.guide = cleanGalleryGuide(data.guide, problems);
   return { value, problems, newer };
 }
 // ---------- writing a few input cells into a prebuilt workbook (shared: src/shared/xlsx-patch.js) ----------
