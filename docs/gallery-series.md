@@ -17,7 +17,7 @@ flowchart LR
   sv["5 From statements<br>to value"]
   dl["6 Deals<br>a buyout, EPS"]
   rs["7 Reading the<br>statements"]
-  dcf(["9 Building a<br>DCF model (planned)"])
+  dcf["9 Building a<br>DCF model<br>a tutorial, DC01–DC09"]
   ind["8 Industry models<br>SA, RT, PF, RE, BK"]
   ic1["3 Investing, part 1<br>IC01–IC15"]
   ic2["3 Investing, part 2<br>IC16–IC20"]
@@ -51,4 +51,4 @@ flowchart LR
 | 8 | 6 Deals (DL01–DL07) | A leveraged buyout of the same company, and EPS accretion against value | Why debt lifts returns both ways, and why EPS can rise while value falls | Uses SV's plan |
 | 9 | Counterintuitive accounting, Levels 2–5 (CA21–CA100) | One point each on working capital, judgments, valuation, groups, leases and tax | Small, focused versions of what the journeys show, for revision or a single question | Use alongside 2–8: each names the journey steps that show it |
 | 10 | 8 Industry models (SaaS, retail, project finance, real estate, banks) | What is counterintuitive in five industries, four showcases each | The same ideas where they bite hardest: deferred revenue, negative working capital, the cash waterfall, cap rates, bank capital | Best after the journeys and SV |
-| 11 | 9 Building a DCF model (planned) | A tutorial: build the valuation of series 5 in fmIDE, step by step | From reading a model to making one | SV, and the journeys' cash from operations |
+| 11 | 9 Building a DCF model (DC01–DC09) | A tutorial: the valuation of series 5 built in fmIDE, one canvas a step, with the years as periods, from revenue to the equity value | From reading a model to making one: drivers, prev(), cash from operations from net income, a check, a running total | SV (the same numbers and equity value, 1,654), and the journeys' cash from operations |
