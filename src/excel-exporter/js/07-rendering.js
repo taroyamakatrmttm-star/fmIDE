@@ -52,7 +52,7 @@ function renderTabs(){
     nameInput.setAttribute('aria-label', 'Tab name');
     nameInput.addEventListener('change', () => {
       if(isInputsTab){ setInputsTabName(nameInput.value); return; }
-      tab.name = sanitizeSheetName(nameInput.value); nameInput.value = tab.name; saveMapping(); renderRows();
+      tab.name = freeSheetName(nameInput.value, new Set(mapping.tabs.filter(t => t !== tab).map(t => t.name.toLowerCase()))); nameInput.value = tab.name; saveMapping(); renderRows();
     });
     nameLine.appendChild(nameInput);
     if(isInputsTab){ const tg = document.createElement('span'); tg.className = 'link-tag'; tg.textContent = 'Inputs'; tg.title = 'Gathered input rows — see Inputs & scenarios below'; nameLine.appendChild(tg); }

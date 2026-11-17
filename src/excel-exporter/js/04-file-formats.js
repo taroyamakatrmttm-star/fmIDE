@@ -278,6 +278,20 @@ function reconcileMapping(){
   // so flipping the toggle later never lands on a row with a stale/missing value in
   // whichever dimension it hasn't been using.
   mapping.tabs.forEach(t => { ensureSectionOrderAll(t.id); ensureFlatOrder(t.id); });
+  makeTabNamesUnique();
+}
+
+// Excel refuses two sheets of the same name (capitals ignored). Two canvases whose names
+// agree in their first 31 characters, or a block canvas and its instance tab, would give
+// the same cut name: the later tab is numbered (uniqueSheetNames). Names already unique
+// are left exactly as they are. Returns true when a name changed.
+function makeTabNamesUnique(){
+  const names = uniqueSheetNames(mapping.tabs.map(t => t.name || ''));
+  let changed = false;
+  mapping.tabs.forEach((t, i) => { if(t.name !== names[i]){ t.name = names[i]; changed = true; } });
+  const t = inputsTab();
+  if(t && mapping.cfg.inputsTab && mapping.cfg.inputsTab.name !== t.name) mapping.cfg.inputsTab.name = t.name;
+  return changed;
 }
 
 // The tabs reconcileMapping just made for canvases the saved layout didn't know (ids), so

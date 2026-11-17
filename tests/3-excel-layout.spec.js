@@ -1,5 +1,5 @@
 // 3. Excel output — layout rules.
-const { test, expect } = require('./helpers/apps');
+const { test, expect, fixture } = require('./helpers/apps');
 const X = require('./helpers/excel');
 const { MODELS, INPUTS_MODES } = require('./helpers/models');
 
@@ -316,4 +316,55 @@ test.describe('an input read from another tab', () => {
     expect(firstFormula(wb, 'Inventory', 'Days in a period')).toMatch(/^'Days in a Period'!E\d+$/);
     expect(firstFormula(wb, 'AP', 'Days in a period')).toMatch(/^'Days in a Period'!E\d+$/);
   });
+});
+
+// Excel's tab names: at most 31 characters, and no two alike (capitals ignored). Canvases whose
+// names agree in their first 31 characters, and a block canvas with its instance tab, used to
+// give two tabs of one name: Excel offered to repair the file and exceljs refused to open it.
+test.describe('tab names made unique', () => {
+  for(const inputsOn of INPUTS_MODES){
+    test(`long canvas names and a block's instance tab — Inputs tab ${inputsOn ? 'on' : 'off'}`, async ({ page }) => {
+      await X.openExporter(page);
+      await X.loadModelFile(page, fixture('sheet-names', 'long-canvas-names.json'));
+      await expect(page.locator('#loadStatus .status.ok')).toBeVisible();
+      await X.setInputsTab(page, inputsOn);
+      const { wb, bytes } = await X.generate(page);
+      const names = wb.SheetNames;
+      for(const n of names) expect(n.length, n).toBeLessThanOrEqual(31);
+      expect(new Set(names.map(n => n.toLowerCase())).size, names.join(' | ')).toBe(names.length);
+      // A name that is free keeps its cut form; the later ones are numbered.
+      expect(names).toEqual(expect.arrayContaining([
+        'Capital expenditure schedule -', 'Capital expenditure schedul (2)', 'CAPITAL EXPENDITURE SCHEDUL (3)',
+        'Depreciation Block - Straight l', 'Depreciation Block - Straig (2)']));
+      // Every formula's other tab is a tab of the workbook, by its final name.
+      const lower = new Set(names.map(n => n.toLowerCase()));
+      const missing = [];
+      let crossSheet = 0;
+      for(const name of names){
+        const ws = wb.Sheets[name];
+        for(const addr of X.cellAddrs(ws)){
+          const f = X.formulaOf(ws[addr]);
+          if(!f) continue;
+          for(const m of f.matchAll(/'((?:[^']|'')+)'!/g)){
+            crossSheet++;
+            const target = m[1].replace(/''/g, "'");
+            if(!lower.has(target.toLowerCase())) missing.push(name + '!' + addr + ' → ' + target);
+          }
+        }
+      }
+      expect(missing).toEqual([]);
+      expect(crossSheet).toBeGreaterThan(0);
+      // The second canvas reads the first's Grand Total; the third the second's.
+      const readsFrom = (tab, label) => {
+        const ws = wb.Sheets[tab];
+        const [row] = X.findRow(ws, label);
+        return X.formulaOf(ws[X.numToCol(X.periodOneCol(ws)) + row]) || '';
+      };
+      expect(readsFrom('Capital expenditure schedul (2)', 'Grand Total Doubled')).toContain("'Capital expenditure schedule -'!");
+      expect(readsFrom('CAPITAL EXPENDITURE SCHEDUL (3)', 'Back to Grand Total')).toContain("'Capital expenditure schedul (2)'!");
+      // exceljs opens the file, with every tab.
+      const book = await X.readBack(bytes);
+      expect(book.worksheets.map(w => w.name)).toEqual(names);
+    });
+  }
 });

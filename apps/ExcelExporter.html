@@ -3328,6 +3328,34 @@ function periodCol(periodIndex){ return 5 + helperColCount + periodIndex; } // +
 function sanitizeSheetName(name){
   return (name || 'Sheet').replace(/[\\/?*\[\]:]/g, ' ').slice(0, 31).trim().replace(/^'+|'+$/g, '').trim() || 'Sheet';
 }
+// Excel also needs every sheet name to be different, capitals ignored ("Sales" and "SALES"
+// clash). A cut name is kept when it is free; on a clash it is shortened and numbered,
+// "Depreciation Block - Straig (2)", still within 31 characters. `taken` holds the names
+// already used, in lower case.
+function freeSheetName(name, taken){
+  const base = sanitizeSheetName(name);
+  if(!taken.has(base.toLowerCase())) return base;
+  for(let n = 2; ; n++){
+    const suffix = ' (' + n + ')';
+    const cand = base.slice(0, 31 - suffix.length).trim() + suffix;
+    if(!taken.has(cand.toLowerCase())) return cand;
+  }
+}
+// The same for a whole list, in order: the first of a clashing set keeps its name, the
+// later ones are numbered, never onto a name another sheet in the list already has.
+function uniqueSheetNames(names){
+  const all = new Set(names.map(n => sanitizeSheetName(n).toLowerCase()));
+  const used = new Set();
+  return names.map(n => {
+    const base = sanitizeSheetName(n);
+    const key = base.toLowerCase();
+    if(!used.has(key)){ used.add(key); return base; }
+    const taken = new Set([...all, ...used]);
+    const out = freeSheetName(base, taken);
+    used.add(out.toLowerCase());
+    return out;
+  });
+}
 // Another sheet's cell in a formula: the name in quotes, an apostrophe in it doubled
 // ('Bob''s Model'!E4), as Excel needs.
 function sheetRef(tabName, col, row, currentTabName, absRow){
@@ -5528,6 +5556,20 @@ function reconcileMapping(){
   // so flipping the toggle later never lands on a row with a stale/missing value in
   // whichever dimension it hasn't been using.
   mapping.tabs.forEach(t => { ensureSectionOrderAll(t.id); ensureFlatOrder(t.id); });
+  makeTabNamesUnique();
+}
+
+// Excel refuses two sheets of the same name (capitals ignored). Two canvases whose names
+// agree in their first 31 characters, or a block canvas and its instance tab, would give
+// the same cut name: the later tab is numbered (uniqueSheetNames). Names already unique
+// are left exactly as they are. Returns true when a name changed.
+function makeTabNamesUnique(){
+  const names = uniqueSheetNames(mapping.tabs.map(t => t.name || ''));
+  let changed = false;
+  mapping.tabs.forEach((t, i) => { if(t.name !== names[i]){ t.name = names[i]; changed = true; } });
+  const t = inputsTab();
+  if(t && mapping.cfg.inputsTab && mapping.cfg.inputsTab.name !== t.name) mapping.cfg.inputsTab.name = t.name;
+  return changed;
 }
 
 // The tabs reconcileMapping just made for canvases the saved layout didn't know (ids), so
@@ -5888,7 +5930,10 @@ function captureModuleLayout(canvas){
   const spec = mod && moduleTabSpec(canvas);
   if(!spec) return null;
   const out = Object.assign({ family: mod.family, name: mod.name }, captureTabLayout(spec));
-  if(spec.tab.name !== sanitizeSheetName(canvas.name || '')) out.tabName = spec.tab.name;
+  // A name only numbered to keep it apart from another tab's (makeTabNamesUnique) is not a rename.
+  const own = sanitizeSheetName(canvas.name || '');
+  const numbered = spec.tab.name.match(/^(.*) \(\d+\)$/);
+  if(spec.tab.name !== own && !(numbered && own.startsWith(numbered[1]))) out.tabName = spec.tab.name;
   return out;
 }
 function resetModuleBaselines(){
@@ -8128,7 +8173,7 @@ function renderTabs(){
     nameInput.setAttribute('aria-label', 'Tab name');
     nameInput.addEventListener('change', () => {
       if(isInputsTab){ setInputsTabName(nameInput.value); return; }
-      tab.name = sanitizeSheetName(nameInput.value); nameInput.value = tab.name; saveMapping(); renderRows();
+      tab.name = freeSheetName(nameInput.value, new Set(mapping.tabs.filter(t => t !== tab).map(t => t.name.toLowerCase()))); nameInput.value = tab.name; saveMapping(); renderRows();
     });
     nameLine.appendChild(nameInput);
     if(isInputsTab){ const tg = document.createElement('span'); tg.className = 'link-tag'; tg.textContent = 'Inputs'; tg.title = 'Gathered input rows — see Inputs & scenarios below'; nameLine.appendChild(tg); }
@@ -9520,6 +9565,7 @@ function periodLabels(){
 }
 
 function buildCtx(){
+  makeTabNamesUnique(); // every formula below names a tab by its final, unique name
   const canvasById = {}; model.canvases.forEach(c => { if(!canvasById[c.id]) canvasById[c.id] = c; });
   const tabById = {}; mapping.tabs.forEach(t => tabById[t.id] = t);
   // Row ids (canvasId|nodeId, same key shape operandRef uses) flagged to be spliced
@@ -11225,6 +11271,7 @@ const EXCEL_HELP_TOPICS = [
     body: [
       { p: 'The Tabs panel, on the left, lists the workbook\'s tabs in order. Each fmIDE canvas starts as its own tab. Rename a tab by typing its name, move it with ↑ and ↓, add one with + Add Tab, or delete one with 🗑 (its rows move to the first remaining tab).' },
       { p: 'A tab\'s row count (for example "3 rows") takes you to its rows. Which rows go on which tab is set in the Rows panel.' },
+      { p: 'Excel allows at most 31 characters in a tab name, and no two tabs of the same name, capitals ignored. A longer name is cut; when two names would then be the same (two canvases whose names begin alike, or a block and its instance tab), the later one is shortened and numbered, for example "Depreciation Block - Straig (2)".' },
       { see: ['rows', 'module-layouts', 'inputs-tab'] },
     ] },
   { id: 'module-layouts', group: 'layout', title: 'Modules remember their layout',
@@ -11528,6 +11575,15 @@ const EXCEL_HELP_TOPICS = [
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'unique-tab-names', date: '2026-11-17', title: 'Long canvas names no longer give two tabs of one name',
+    summary: 'Every tab in the workbook now has a name of its own, so Excel opens it without offering to repair it.',
+    what: [
+      'Excel allows at most 31 characters in a tab name. Two canvases whose names began with the same 31 characters, or a block canvas and its instance tab, were cut to the same name, and Excel then offered to repair the file.',
+      'Now the first keeps its cut name and the later ones are shortened and numbered, for example "Depreciation Block - Straig (2)", capitals ignored as Excel compares them. Every formula reading those tabs uses the new name. Workbooks whose names were already different are unchanged.',
+    ],
+    why: 'A workbook should open in Excel as it was written, whatever the canvases are called.',
+    how: ['Load a model and press ⬇ Generate .xlsx: the Tabs panel shows each tab\'s name as the workbook will have it.', 'Rename a tab there if you prefer another name.'],
+    see: ['tabs'] },
   { id: 'document-layout-wins', date: '2026-11-01', title: 'A document\'s Excel layout comes first',
     summary: 'A .fmide document that carries an Excel layout now opens with it, even when this browser remembers another layout for the same model.',
     what: [

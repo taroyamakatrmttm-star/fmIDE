@@ -20,6 +20,7 @@ function periodLabels(){
 }
 
 function buildCtx(){
+  makeTabNamesUnique(); // every formula below names a tab by its final, unique name
   const canvasById = {}; model.canvases.forEach(c => { if(!canvasById[c.id]) canvasById[c.id] = c; });
   const tabById = {}; mapping.tabs.forEach(t => tabById[t.id] = t);
   // Row ids (canvasId|nodeId, same key shape operandRef uses) flagged to be spliced

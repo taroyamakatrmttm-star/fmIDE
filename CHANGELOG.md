@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## ExcelExporter: every tab name unique
+- Excel's tab names are at most 31 characters and must all differ, capitals ignored. Two canvases whose names agreed in their first 31 characters, or a block canvas and its instance tab ("Depreciation Block - Straight line" and its vintage tab), were cut to the same name: Excel offered to repair the file and exceljs refused it. Now the first keeps its cut name and the later ones are shortened and numbered ("Depreciation Block - Straig (2)"), within 31 characters, never onto another tab's name.
+- `uniqueSheetNames` and `freeSheetName` (`src/excel-exporter/formulas/core-translation.js`); `makeTabNamesUnique` (`04-file-formats.js`) runs at the end of every load and layout reconcile and again at the start of every build (`buildCtx`), so every formula, the Sensitivity and Dashboard tabs, the viewer's workbook and `window.fmExcel` use the final names; a tab renamed to another tab's name is numbered too. A numbered name is not remembered as a module tab's rename. Workbooks without a clash are unchanged (the snapshots stay the same).
+- Tests: group 3 (a new test, `tests/fixtures/sheet-names/long-canvas-names.json`, Inputs tab off and on), group 65 (new checks in "sheet names, cells and row keys").
+
 ## The showcase gallery: how the series connect
 - The site's `/gallery` can open with **a guide**, folded under its title above the viewers: a flowchart of how the gallery's series connect — solid green where a series opens from another's last state, dashed where they share ideas — its legend and caption, and a table of what each series is for and the order to learn them in (the owner's request, 5 November 2026).
 - It comes from `gallery.json`, now **version 2** (`fmIDE-gallery`): an optional `guide` of boxes on a grid, arrows and a table, read by `cleanGalleryGuide` (`src/shared/showcase.js`) and drawn by `tools/build-gallery.js` as an inline SVG — every word escaped, every number from the grid, every colour from the page's own style sheet, so its policy is unchanged. Version 1 reads as before, with no guide. The gallery's guide is written by `gallery/makers/guide.js`; the same diagram and table for reading here: `docs/gallery-series.md`.

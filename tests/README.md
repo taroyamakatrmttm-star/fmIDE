@@ -19,7 +19,7 @@ One command runs every check, locally and on GitHub (`.github/workflows/tests.ym
 |---|---|
 | `npm test` | everything |
 | `npm run test:changed` | `npm run build:check`, then only the test files the change reaches (see "Which tests a change reaches" below) |
-| `npm run test:excel` | Excel output: structure, LibreOffice values, layout, the Excel style (group 4) |
+| `npm run test:excel` | Excel output: structure, LibreOffice values, layout (with tab names made unique, `fixtures/sheet-names/`), the Excel style (group 4) |
 | `npm run test:security` | the malicious-file checks, both apps |
 | `npm run test:formats` | file formats, both apps |
 | `npm run test:ui` | UI flows, both apps |
