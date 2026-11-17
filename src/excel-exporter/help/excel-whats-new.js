@@ -11,6 +11,15 @@
 // ExcelExporter has no command list, so texts name buttons in words. Test group 43 checks it.
 // **A change people will notice adds its entry here in the same pull request.**
 const EXCEL_WHATS_NEW = [
+  { id: 'unique-tab-names', date: '2026-11-17', title: 'Long canvas names no longer give two tabs of one name',
+    summary: 'Every tab in the workbook now has a name of its own, so Excel opens it without offering to repair it.',
+    what: [
+      'Excel allows at most 31 characters in a tab name. Two canvases whose names began with the same 31 characters, or a block canvas and its instance tab, were cut to the same name, and Excel then offered to repair the file.',
+      'Now the first keeps its cut name and the later ones are shortened and numbered, for example "Depreciation Block - Straig (2)", capitals ignored as Excel compares them. Every formula reading those tabs uses the new name. Workbooks whose names were already different are unchanged.',
+    ],
+    why: 'A workbook should open in Excel as it was written, whatever the canvases are called.',
+    how: ['Load a model and press ⬇ Generate .xlsx: the Tabs panel shows each tab\'s name as the workbook will have it.', 'Rename a tab there if you prefer another name.'],
+    see: ['tabs'] },
   { id: 'document-layout-wins', date: '2026-11-01', title: 'A document\'s Excel layout comes first',
     summary: 'A .fmide document that carries an Excel layout now opens with it, even when this browser remembers another layout for the same model.',
     what: [

@@ -46,6 +46,34 @@ export function periodCol(periodIndex){ return 5 + helperColCount + periodIndex;
 export function sanitizeSheetName(name){
   return (name || 'Sheet').replace(/[\\/?*\[\]:]/g, ' ').slice(0, 31).trim().replace(/^'+|'+$/g, '').trim() || 'Sheet';
 }
+// Excel also needs every sheet name to be different, capitals ignored ("Sales" and "SALES"
+// clash). A cut name is kept when it is free; on a clash it is shortened and numbered,
+// "Depreciation Block - Straig (2)", still within 31 characters. `taken` holds the names
+// already used, in lower case.
+export function freeSheetName(name, taken){
+  const base = sanitizeSheetName(name);
+  if(!taken.has(base.toLowerCase())) return base;
+  for(let n = 2; ; n++){
+    const suffix = ' (' + n + ')';
+    const cand = base.slice(0, 31 - suffix.length).trim() + suffix;
+    if(!taken.has(cand.toLowerCase())) return cand;
+  }
+}
+// The same for a whole list, in order: the first of a clashing set keeps its name, the
+// later ones are numbered, never onto a name another sheet in the list already has.
+export function uniqueSheetNames(names){
+  const all = new Set(names.map(n => sanitizeSheetName(n).toLowerCase()));
+  const used = new Set();
+  return names.map(n => {
+    const base = sanitizeSheetName(n);
+    const key = base.toLowerCase();
+    if(!used.has(key)){ used.add(key); return base; }
+    const taken = new Set([...all, ...used]);
+    const out = freeSheetName(base, taken);
+    used.add(out.toLowerCase());
+    return out;
+  });
+}
 // Another sheet's cell in a formula: the name in quotes, an apostrophe in it doubled
 // ('Bob''s Model'!E4), as Excel needs.
 export function sheetRef(tabName, col, row, currentTabName, absRow){

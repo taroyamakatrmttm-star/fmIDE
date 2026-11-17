@@ -247,7 +247,10 @@ function captureModuleLayout(canvas){
   const spec = mod && moduleTabSpec(canvas);
   if(!spec) return null;
   const out = Object.assign({ family: mod.family, name: mod.name }, captureTabLayout(spec));
-  if(spec.tab.name !== sanitizeSheetName(canvas.name || '')) out.tabName = spec.tab.name;
+  // A name only numbered to keep it apart from another tab's (makeTabNamesUnique) is not a rename.
+  const own = sanitizeSheetName(canvas.name || '');
+  const numbered = spec.tab.name.match(/^(.*) \(\d+\)$/);
+  if(spec.tab.name !== own && !(numbered && own.startsWith(numbered[1]))) out.tabName = spec.tab.name;
   return out;
 }
 function resetModuleBaselines(){

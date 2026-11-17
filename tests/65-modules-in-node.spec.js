@@ -620,6 +620,16 @@ test.describe('ExcelExporter\'s formula building, in Node', () => {
     expect(FX.sanitizeSheetName("'' x ''")).toBe('x');
     expect(FX.sanitizeSheetName("'''")).toBe('Sheet');
     expect(FX.sanitizeSheetName("Bob's")).toBe("Bob's");
+    // Unique names, capitals ignored: a free name is kept as it is, a clash numbered within 31.
+    expect(FX.uniqueSheetNames(['Calc', 'BS', 'Inputs'])).toEqual(['Calc', 'BS', 'Inputs']);
+    const long = 'Depreciation Block - Straight line';
+    expect(FX.uniqueSheetNames([long, long + ' (instance 1)', 'DEPRECIATION BLOCK - STRAIGHT LINE x']))
+      .toEqual(['Depreciation Block - Straight l', 'Depreciation Block - Straig (2)', 'DEPRECIATION BLOCK - STRAIG (3)']);
+    // A number is never put onto a name another tab already has.
+    expect(FX.uniqueSheetNames(['A', 'a', 'A (2)'])).toEqual(['A', 'a (3)', 'A (2)']);
+    expect(FX.uniqueSheetNames(['x'.repeat(40), 'x'.repeat(35)]).map(n => n.length)).toEqual([31, 31]);
+    expect(FX.freeSheetName('Calc', new Set(['bs']))).toBe('Calc');
+    expect(FX.freeSheetName('calc', new Set(['calc']))).toBe('calc (2)');
     expect(FX.blankCell(null, '0.0')).toEqual({ t: 'z', z: '0.0' });
     expect(FX.textCell('')).toEqual({ t: 'z', z: 'General' });
     expect(FX.textCell('Name', { font: { bold: true } })).toEqual({ t: 's', v: 'Name', s: { font: { bold: true } } });

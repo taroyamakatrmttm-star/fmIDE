@@ -103,7 +103,7 @@ Each rectangle is one row, and the operators became formulas: change Price in Ex
 > **You need:** ExcelExporter with the model of [lesson 5.1](#first-workbook).
 > **Time:** about 10 minutes.
 > **In the app:** ExcelExporter Help → *Tabs* (`tabs`), *Rows: what goes where* (`rows`), *The Tree View* (`tree-view`)
-> **Came in:** the first version; tidier formulas and defaults [#44](https://github.com/taroyamakatrmttm-star/fmIDE/pull/44); a row's own format, indents and the right-click menu [#46](https://github.com/taroyamakatrmttm-star/fmIDE/pull/46); a new layout in formula order [#49](https://github.com/taroyamakatrmttm-star/fmIDE/pull/49); borders side by side [#98](https://github.com/taroyamakatrmttm-star/fmIDE/pull/98); tab names with an apostrophe [#124](https://github.com/taroyamakatrmttm-star/fmIDE/pull/124); Collapse all and Expand all [#192](https://github.com/taroyamakatrmttm-star/fmIDE/pull/192); renaming when the selection bar moves the list (branch `claude/tree-rename-fixes`)
+> **Came in:** the first version; tidier formulas and defaults [#44](https://github.com/taroyamakatrmttm-star/fmIDE/pull/44); a row's own format, indents and the right-click menu [#46](https://github.com/taroyamakatrmttm-star/fmIDE/pull/46); a new layout in formula order [#49](https://github.com/taroyamakatrmttm-star/fmIDE/pull/49); borders side by side [#98](https://github.com/taroyamakatrmttm-star/fmIDE/pull/98); tab names with an apostrophe [#124](https://github.com/taroyamakatrmttm-star/fmIDE/pull/124); Collapse all and Expand all [#192](https://github.com/taroyamakatrmttm-star/fmIDE/pull/192); renaming when the selection bar moves the list (branch `claude/tree-rename-fixes`); every tab name unique (branch `claude/excel-unique-sheet-names`)
 
 Each fmIDE canvas starts as one tab, and each rectangle as one row. Operators, aliases and period shifts never get rows: they become parts of formulas.
 
@@ -127,6 +127,7 @@ The workbook's tab is named *P&L*, the row reads *Operating costs*, and *Results
 - **Sections** (a tick box) splits each tab into INPUTS, CALCULATIONS and OUTPUTS bands; untick it for one free list.
 - **Other views** of the same rows: one table per Excel tab, or one per canvas.
 - **Indent** labels with **Alt+Shift+→** and **Alt+Shift+←**, like Excel's Increase Indent.
+- **Tab names** are at most 31 characters, and no two alike, capitals ignored. A longer name is cut; if two cut names would be the same (two canvases whose names begin alike, or a block and its instance tab), the later one is shortened and numbered, such as *Depreciation Block - Straig (2)*.
 - **Collapse all** and **Expand all** fold every tab in the Tree. On a tablet, press and hold a row for its menu, and double-tap to rename.
 
 ---

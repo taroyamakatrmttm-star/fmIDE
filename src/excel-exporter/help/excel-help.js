@@ -95,6 +95,7 @@ const EXCEL_HELP_TOPICS = [
     body: [
       { p: 'The Tabs panel, on the left, lists the workbook\'s tabs in order. Each fmIDE canvas starts as its own tab. Rename a tab by typing its name, move it with ↑ and ↓, add one with + Add Tab, or delete one with 🗑 (its rows move to the first remaining tab).' },
       { p: 'A tab\'s row count (for example "3 rows") takes you to its rows. Which rows go on which tab is set in the Rows panel.' },
+      { p: 'Excel allows at most 31 characters in a tab name, and no two tabs of the same name, capitals ignored. A longer name is cut; when two names would then be the same (two canvases whose names begin alike, or a block and its instance tab), the later one is shortened and numbered, for example "Depreciation Block - Straig (2)".' },
       { see: ['rows', 'module-layouts', 'inputs-tab'] },
     ] },
   { id: 'module-layouts', group: 'layout', title: 'Modules remember their layout',
