@@ -279,12 +279,14 @@
   function fmtNumberPlain(v){
     if(v === 0) v = 0;
     const a = Math.abs(v), digits = a === 0 ? 0 : a >= 100 ? 2 : a >= 1 ? 3 : 4;
-    return v.toLocaleString('en-US', { maximumFractionDigits: digits }).replace('-', '−');
+    const text = v.toLocaleString('en-US', { maximumFractionDigits: digits });
+    return /[1-9]/.test(text) ? text.replace('-', '−') : '0'; // −0.00001 rounds to 0, not −0
   }
   function phoneDiff(now, was){
     const d = now - was;
     if(!isFinite(d) || Math.abs(d) < 1e-12 * Math.max(1, Math.abs(was))) return '';
-    let t = (d > 0 ? '+' : '−') + fmtNumberPlain(Math.abs(d));
+    const size = fmtNumberPlain(Math.abs(d));
+    let t = (size === '0' ? '' : d > 0 ? '+' : '−') + size; // a change that rounds to 0 has no sign
     if(was !== 0 && isFinite(was)) t += ' (' + (d > 0 ? '+' : '−') + Math.abs(d / Math.abs(was) * 100).toLocaleString('en-US', { maximumFractionDigits: 1 }) + '%)';
     return t;
   }

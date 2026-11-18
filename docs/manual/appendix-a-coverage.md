@@ -281,6 +281,7 @@ Oldest first. *Step* is the build step (and phase) the pull request belongs to; 
 | branch `claude/gallery-list-search` | 2026-11-03 | The showcase gallery: a search box that filters as you type (title, description, section; every word), Grid or List (a row per viewer), the choice remembered in the browser; the page's one small script allowed by its hash | after 20 | [8.4](08-showcase.md#showcase-gallery) |
 | branch `claude/gallery-guide` | 2026-11-05 | The showcase gallery: a guide folded at the top — a flowchart of how the series connect and a table of what each is for, from `gallery.json` version 2's `guide`, drawn by the build | after 20 | [8.4](08-showcase.md#showcase-gallery) |
 | branch `claude/excel-unique-sheet-names` | 2026-11-17 | ExcelExporter: every tab name unique — two canvases whose names begin with the same 31 characters, or a block and its instance tab, are numbered instead of clashing | after 20 | [5.3](05-excelexporter.md#tabs-rows) |
+| branch `claude/no-negative-zero` | 2026-11-18 | fmIDE, fmGraph and fmShowcase: a value that rounds to zero in its number format shows as 0.0 (0.0%, 0), never -0.0, as in Excel; real negatives unchanged | after 20 | [2.11](02-building-models.md#canvas-look) |
 
 ---
 

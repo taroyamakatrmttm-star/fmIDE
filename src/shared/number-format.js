@@ -13,21 +13,29 @@ export function formatNum(v){
 }
 
 // A number in a number format ({ kind, decimals, currencySymbol }); none, or General, is
-// formatNum's. "?" for no number.
+// formatNum's. "?" for no number. A value that rounds to zero at the shown decimals (−0, or
+// −0.00001 at one decimal) is written as zero, with no minus sign, as Excel writes it.
 export function formatByNumberFormat(v, fmt){
   if(v === null || v === undefined || !isFinite(v)) return '?';
   if(!fmt || !fmt.kind || fmt.kind === 'general') return formatNum(v);
   const decimals = (typeof fmt.decimals === 'number') ? fmt.decimals : 2;
   if(fmt.kind === 'percent'){
-    return (v * 100).toFixed(decimals) + '%';
+    return unsignedZero(v * 100, x => x.toFixed(decimals)) + '%';
   }
+  const local = x => x.toLocaleString(undefined, { minimumFractionDigits:decimals, maximumFractionDigits:decimals });
   if(fmt.kind === 'currency'){
-    return (fmt.currencySymbol || '$') + v.toLocaleString(undefined, { minimumFractionDigits:decimals, maximumFractionDigits:decimals });
+    return (fmt.currencySymbol || '$') + unsignedZero(v, local);
   }
   if(fmt.kind === 'number'){
-    return v.toLocaleString(undefined, { minimumFractionDigits:decimals, maximumFractionDigits:decimals });
+    return unsignedZero(v, local);
   }
   return formatNum(v);
+}
+
+// write(v), or write(0) when what it writes shows no digit but 0: never "-0.0".
+function unsignedZero(v, write){
+  const text = write(v);
+  return /[1-9]/.test(text) ? text : write(0);
 }
 
 // A period shift's label: t, t+1, t−1.

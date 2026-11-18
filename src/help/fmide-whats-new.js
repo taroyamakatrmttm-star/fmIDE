@@ -12,6 +12,15 @@
 // entry: ids, dates in order, commands and topics that exist.
 // **A change people will notice adds its entry here in the same pull request.**
 const WHATS_NEW = [
+  { id: 'no-negative-zero', date: '2026-11-18', title: 'No more -0.0',
+    summary: 'A value that rounds to zero in its number format shows as 0.0, as Excel shows it, not -0.0.',
+    what: [
+      'A rectangle whose value is a tiny negative number, or minus zero (for example −1 × 0), used to show -0.0 in a number format such as Number with 1 decimal. It now shows 0.0, as Excel does; 0.0% and 0 in their formats too.',
+      'Real negative numbers are unchanged: −0.06 with 1 decimal still shows -0.1. fmGraph and showcase viewers show 0 in the same way.',
+    ],
+    why: 'A minus sign on zero looks like a mistake in the model, and Excel never shows one.',
+    how: ['Give a rectangle a number format with {cmd:openFormats}, or its own format: a value that rounds to zero shows 0.0.'],
+    see: ['formats'] },
   { id: 'simplify-graph-boards', date: '2026-11-02', title: 'Simplify for Inputs… takes the boards you have now',
     summary: 'Simplify for Inputs… starts from fmGraph\'s boards as they are now, and names every slider by its rectangle.',
     what: [

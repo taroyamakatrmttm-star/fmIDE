@@ -2,6 +2,11 @@
 
 Notable changes before this repository existed (recorded from the development history). From here on, Git keeps the detail.
 
+## No negative zero on the canvas
+- A value that rounds to zero in its number format showed a minus sign: −1 × 0 (which is −0), Negatize(0), or a tiny −0.00001 shown with one decimal read `-0.0`, where Excel shows `0.0`. Now every number format (Number, Percent `0.0%`, Currency) writes such a value as zero, with no minus sign; a real negative that still shows a digit (−0.06 shown as `-0.1`) keeps its sign. The canvas's number formats have no sections, so fmIDE has no separate zero section to show; an Excel code such as `#,##0.0;(#,##0.0)` is ExcelExporter's and Excel's own.
+- In `formatByNumberFormat` (`src/shared/number-format.js`), so fmIDE's canvas and the showcase viewer's Logic view both follow it; fmGraph's numbers (the board engine's `fmtNum` / `fmtDiff`, which the viewer's Board uses too) and fmIDE's phone Inputs and Watch (`21b-phone.js`) no longer write `−0` for a value or a change that rounds to zero.
+- Tests: group 65 (a new test), group 7-ui-fmide (a new test on the canvas), group 92 (a new test, the engine's numbers in Node). Branch `claude/no-negative-zero`.
+
 ## ExcelExporter: every tab name unique
 - Excel's tab names are at most 31 characters and must all differ, capitals ignored. Two canvases whose names agreed in their first 31 characters, or a block canvas and its instance tab ("Depreciation Block - Straight line" and its vintage tab), were cut to the same name: Excel offered to repair the file and exceljs refused it. Now the first keeps its cut name and the later ones are shortened and numbered ("Depreciation Block - Straig (2)"), within 31 characters, never onto another tab's name.
 - `uniqueSheetNames` and `freeSheetName` (`src/excel-exporter/formulas/core-translation.js`); `makeTabNamesUnique` (`04-file-formats.js`) runs at the end of every load and layout reconcile and again at the start of every build (`buildCtx`), so every formula, the Sensitivity and Dashboard tabs, the viewer's workbook and `window.fmExcel` use the final names; a tab renamed to another tab's name is numbered too. A numbered name is not remembered as a module tab's rename. Workbooks without a clash are unchanged (the snapshots stay the same).
