@@ -2,7 +2,7 @@
 
 How fmIDE is built, tested, kept and published now: on the owner's computer, with GitHub as the main copy elsewhere and Codeberg as a second copy, and with GitHub's automatic runs switched off.
 
-**How it came to this.** On 21 October 2026 GitHub suspended the account that owns the repositories. From 22 October the work moved to the owner's computer, with Codeberg (a free code host) as the copy elsewhere. The account came back about 14 November 2026, and on 18 November GitHub became the main copy again. The owner chose to keep **GitHub Actions** (GitHub's automatic test and publishing runs) **switched off**, since heavy use of them may have led to the suspension, so the tests and publishing stay on this computer. The file keeps its old name so the links to it still work.
+**How it came to this.** On 21 October 2026 GitHub suspended the account that owns the repositories. From 22 October the work moved to the owner's computer, with Codeberg (a free code host) as the copy elsewhere. The account came back about 14 November 2026, and on 18 November GitHub became the main copy again. The owner chose to keep **GitHub Actions** (GitHub's automatic test and publishing runs) **switched off**, since heavy use of them may have led to the suspension, so the tests and publishing stay on this computer. The file keeps its old name so the links to it still work. The pull requests opened on GitHub before the suspension (numbers, branches, merge commits) are listed in `docs/history/pull-requests.md`.
 
 | What | Where it happens now |
 |---|---|
