@@ -63,6 +63,37 @@ test.describe('canvas', () => {
     expect(lines.join('\n') + '\n').toMatchSnapshot('fmide-every-kind.txt');
   });
 
+  // A value that rounds to zero in its number format shows no minus sign, as Excel shows it:
+  // −1 × 0 is −0, and a tiny negative is rounded away. A real negative keeps its sign.
+  test('a value that rounds to zero in its number format shows as 0.0, never -0.0', async ({ page }) => {
+    await F.openFmIDE(page);
+    const ids = await page.evaluate(() => {
+      fm.clearCanvas();
+      fm.createRect({ x: 100, y: 80, name: 'Minus One', value: '-1' });
+      fm.createRect({ x: 100, y: 200, name: 'Nothing', value: '0' });
+      const op = fm.createOperator({ x: 300, y: 140, op: '×' });
+      const zero = fm.createRect({ x: 450, y: 130, name: 'Minus Zero', value: '0' });
+      fm.connect('Minus One', op); fm.connect('Nothing', op); fm.connect(op, 'Minus Zero');
+      const tiny = fm.createRect({ x: 100, y: 340, name: 'Tiny', value: '-0.00001' });
+      const pct = fm.createRect({ x: 300, y: 340, name: 'Tiny Pct', value: '-0.00001' });
+      const real = fm.createRect({ x: 500, y: 340, name: 'Real', value: '-0.06' });
+      const number1 = { kind: 'number', decimals: 1, currencySymbol: '$' };
+      fm.setStyle('Minus Zero', { numberFormat: number1 });
+      fm.setStyle('Tiny', { numberFormat: number1 });
+      fm.setStyle('Tiny Pct', { numberFormat: { kind: 'percent', decimals: 1, currencySymbol: '$' } });
+      fm.setStyle('Real', { numberFormat: number1 });
+      return { zero, tiny, pct, real };
+    });
+    const local = (v) => page.evaluate((x) => x.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }), v);
+    const shown = (id) => nodeEl(page, id).locator('.line-value').textContent();
+    expect(await page.evaluate((id) => Object.is(fm.getValue({ node: id }), -0), ids.zero)).toBe(true);
+    await expect.poll(() => shown(ids.zero)).toBe('= ' + await local(0));
+    expect(await shown(ids.tiny)).toBe(await local(0));
+    expect(await shown(ids.pct)).toBe('0.0%');
+    expect(await shown(ids.real)).toBe(await local(-0.06));
+    expect(await shown(ids.real)).toMatch(/^-/);
+  });
+
   test('a rectangle fed by an operator with no inputs gets the Inputs look', async ({ page }) => {
     await F.openFmIDE(page);
     const ids = await page.evaluate(() => {

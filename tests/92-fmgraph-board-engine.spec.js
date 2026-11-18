@@ -211,3 +211,14 @@ test.describe('the board engine, in Node', () => {
     expect([...new Set(names.filter((n, i) => names.indexOf(n) !== i))]).toEqual([]);
   });
 });
+
+// The board engine's numbers (01b-numbers.js), alone in Node: a value that rounds to zero at the
+// decimals shown reads 0, never −0, in fmGraph and the showcase viewer; a real number keeps its sign.
+test('fmtNum: a value that rounds to zero has no minus sign; a real negative keeps it', () => {
+  const vm = require('vm');
+  const code = fs.readFileSync(path.join(FMGRAPH_JS, '01b-numbers.js'), 'utf8');
+  const { fmtNum, fmtDiff } = vm.runInContext(code + '\n;({ fmtNum, fmtDiff })', vm.createContext({}));
+  expect([fmtNum(-0), fmtNum(-0.00001), fmtNum(-0.000049), fmtNum(0)]).toEqual(['0', '0', '0', '0']);
+  expect([fmtNum(-0.0002), fmtNum(-1.5), fmtNum(-1234.567)]).toEqual(['−0.0002', '−1.5', '−1,234.57']);
+  expect([fmtDiff(-0.00001, 0), fmtDiff(8, 10)]).toEqual(['0', '−2 (−20%)']);
+});

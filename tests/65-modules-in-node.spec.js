@@ -697,6 +697,26 @@ test.describe('the canvas geometry and number formats, alone in Node', () => {
     expect(N.formatByNumberFormat(12, { kind: 'currency' })).toBe('$' + local(12, 2));
     expect([N.shiftLabel(-1), N.shiftLabel(2), N.shiftLabel(0)]).toEqual(['t−1', 't+2', 't']);
   });
+  test('a value that rounds to zero at the shown decimals has no minus sign, as in Excel; a real number keeps its own', () => {
+    const local = (v, d) => v.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+    const f = N.formatByNumberFormat;
+    // −0 (for example Negatize(0), or −1 × 0) and tiny negatives rounded away.
+    expect(f(-0, { kind: 'number', decimals: 1 })).toBe(local(0, 1));
+    expect(f(-0.00001, { kind: 'number', decimals: 1 })).toBe(local(0, 1));
+    expect(f(-0.4, { kind: 'number', decimals: 0 })).toBe(local(0, 0));
+    expect(f(-0.00001, { kind: 'percent', decimals: 1 })).toBe('0.0%');
+    expect(f(-0, { kind: 'percent', decimals: 0 })).toBe('0%');
+    expect(f(-0.004, { kind: 'currency', decimals: 2, currencySymbol: '€' })).toBe('€' + local(0, 2));
+    expect([f(-0), f(-0.0000001, { kind: 'general' }), N.formatNum(-0), N.formatNum(-1e-9)]).toEqual(['0', '0', '0', '0']);
+    for(const s of [f(-0, { kind: 'number', decimals: 1 }), f(-1e-9, { kind: 'percent', decimals: 2 }), f(-0.001, { kind: 'currency', decimals: 2 })]) expect(s).not.toMatch(/[-−]/);
+    // Real numbers, even small ones that still show a digit, keep their minus sign.
+    expect(f(-0.06, { kind: 'number', decimals: 1 })).toBe(local(-0.06, 1));
+    expect(f(-0.06, { kind: 'number', decimals: 1 })).toMatch(/^-/);
+    expect(f(-0.0006, { kind: 'percent', decimals: 2 })).toBe('-0.06%');
+    expect(f(-1234.5, { kind: 'number', decimals: 1 })).toBe(local(-1234.5, 1));
+    expect(f(-5, { kind: 'currency', decimals: 0, currencySymbol: '$' })).toBe('$' + local(-5, 0));
+    expect(f(0.00001, { kind: 'number', decimals: 1 })).toBe(local(0, 1));
+  });
 });
 // ---------- the calculation's errors in plain words (src/shared/error-words.js; fmGraph and the
 // showcase viewer, phase V2) ----------

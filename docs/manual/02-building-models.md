@@ -558,7 +558,7 @@ The control at the bottom right shows the zoom. Its − and + step it; the perce
 > **You need:** fmIDE with a model.
 > **Time:** about 5 minutes.
 > **In the app:** fmIDE Help → *Formats and format roles* (`formats`)
-> **Came in:** the first version; the Excel look moved to ExcelExporter, step 11a ([#63](https://github.com/taroyamakatrmttm-star/fmIDE/pull/63)); the colour grid, branch `claude/colour-grid-picker-1c5e83`
+> **Came in:** the first version; the Excel look moved to ExcelExporter, step 11a ([#63](https://github.com/taroyamakatrmttm-star/fmIDE/pull/63)); the colour grid, branch `claude/colour-grid-picker-1c5e83`; no minus sign on a value that rounds to zero, branch `claude/no-negative-zero`
 
 ### Steps
 
@@ -577,6 +577,7 @@ Inputs and calculations look different at a glance, and the input's number shows
 
 - **Two owners of the look.** fmIDE sets how rectangles look on the canvas, and their **number formats**, which go to Excel too. How cells look in Excel (fills, fonts, borders) is set in ExcelExporter, under **⚙ Settings → Excel Style**, once for every model you export ([lesson 5.8](05-excelexporter.md#excel-look)).
 - **Presets** are named looks you can apply again; **⇩ Export Presets** and **⇧ Import Presets** share them.
+- **Zero has no minus sign.** A value that rounds to zero at the decimals shown — minus zero, or −0.00001 with 1 decimal — shows as `0.0` (or `0.0%`, `0`), as Excel shows it. A real negative keeps its sign: −0.06 with 1 decimal shows `-0.1`.
 - **Older files** still open; Excel-only settings they carried from before step 11 are left out.
 
 ---
