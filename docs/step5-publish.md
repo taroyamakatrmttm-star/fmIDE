@@ -1,6 +1,6 @@
 # Build step 5 — publish the web app
 
-> While GitHub is unavailable (from 21 October 2026), the site is published by hand with `npm run deploy`: see `docs/working-without-github.md`.
+> Since 21 October 2026 the site is published by hand with `npm run deploy`, and GitHub Actions stay switched off now that GitHub is back: see `docs/working-without-github.md`.
 
 **Goal:** fmIDE becomes an installable web app (PWA — progressive web app): it installs like a normal program (own window and icon), works offline, updates itself safely, and opens `.fmide` files by double-click where the browser allows. Then it is published at a public HTTPS address.
 
